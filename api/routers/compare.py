@@ -123,7 +123,7 @@ def run_comparison(
     # reicht den ContextVar-Kontext nicht an seine Arbeiter weiter.
     # Issue #2961 (ADR-0117): der Sofortvergleich ist ein interaktiver
     # Ausloeser und bucht auf das interaktive Kontingent des Nutzers.
-    with interaktiver_abruf():
+    with interaktiver_abruf(user_id):
         result = run_comparison_parallel(
             locations=selected,
             time_window=(time_window_start, time_window_end),

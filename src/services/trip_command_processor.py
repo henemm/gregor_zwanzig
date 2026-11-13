@@ -1197,7 +1197,14 @@ class TripCommandProcessor:
         # #2673: Kontosprache je Nachricht aus DEREN Nutzer (kein "default").
         self._lang = resolve_user_lang(msg.user_id)
         try:
-            ergebnis = self._process(msg)
+            # Issue #2961 (ADR-0117 Nachtrag): Antwort-Befehle aller Kanaele
+            # buchen user_manual; passt die Obergrenze des Befehls nicht mehr ins
+            # Tageskontingent, wird nichts abgerufen und nichts zugestellt.
+            from services.forecast_budget import manueller_abruf
+            with manueller_abruf(msg.user_id, self._manuelle_schaetzung(msg)) as kontingent:
+                ergebnis = self._process(msg)
+            if kontingent.abgelehnt:
+                ergebnis = self._kontingent_antwort(ergebnis)
         except Exception:
             # #2961: nur das Befehlswort (gekuerzt), nie der ganze Text.
             logger.exception(
@@ -1211,6 +1218,33 @@ class TripCommandProcessor:
             )
         self._logge_dauer(msg, t0)
         return ergebnis
+
+    def _manuelle_schaetzung(self, msg: InboundMessage) -> int:
+        """Obergrenze der Abruf-Einheiten dieses Befehls (ADR-0117 Nachtrag):
+        aus dem Trip bzw. dem Ortsvergleich, sonst die Radar-Mindestschaetzung."""
+        from services.manuelles_kontingent import (
+            MINDESTSCHAETZUNG, schaetzung_trip, schaetzung_vergleich,
+        )
+        try:
+            if msg.resolved_kind == "vergleich" and msg.resolved_preset_id:
+                from app.loader import load_compare_presets
+                preset = next((p for p in load_compare_presets(user_id=msg.user_id)
+                               if p.id == msg.resolved_preset_id), None)
+                return schaetzung_vergleich(len(getattr(preset, "location_ids", None) or []))
+            trip = self._find_trip(msg.trip_name, msg.user_id)
+            return schaetzung_trip(trip) if trip else MINDESTSCHAETZUNG
+        except Exception:  # noqa: BLE001 -- Schaetzung darf keinen Befehl kippen
+            return MINDESTSCHAETZUNG
+
+    def _kontingent_antwort(self, ergebnis: CommandResult) -> CommandResult:
+        """Kurze Antwort, wenn das Tageskontingent fuer Abrufe erschoepft ist
+        (Kurzform-Kanaele im Zeichenlimit, s. sms_format.md)."""
+        return CommandResult(
+            success=False, command=ergebnis.command,
+            confirmation_subject=self._m("antwort.kontingent.betreff"),
+            confirmation_body=self._m("antwort.kontingent.text"),
+            trip_name=ergebnis.trip_name,
+        )
 
     def _logge_dauer(self, msg: InboundMessage, t0: float) -> None:
         """#2439 (AC-1): Befehl und Trip fuer die Dauer-Zeile ermitteln. Laeuft eine

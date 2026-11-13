@@ -365,7 +365,7 @@ def alert_preview(
 
     # Issue #1737: echte user_id -> Stundenreihen der Vorschau nutzergebunden.
     # Issue #2961 (ADR-0117): interaktiver Ausloeser, eigenes Kontingent.
-    with interaktiver_abruf() as kontingent:
+    with interaktiver_abruf(user_id) as kontingent:
         antwort = render_alert_preview(trip_obj, body, user_id=user_id)
     if kontingent.gedrosselt:
         raise kontingent_erschoepft(user_id)
@@ -397,7 +397,7 @@ def briefing_alert_preview(
     from services.compare_alert_preview_service import render_compare_alert_preview
 
     try:
-        with interaktiver_abruf() as kontingent:  # ADR-0117
+        with interaktiver_abruf(user_id) as kontingent:  # ADR-0117
             antwort = render_compare_alert_preview(entity_id, user_id=user_id, body=body)
         if kontingent.gedrosselt:
             raise kontingent_erschoepft(user_id)

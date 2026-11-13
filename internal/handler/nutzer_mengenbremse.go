@@ -149,6 +149,7 @@ type NutzerBremsen struct {
 	vergleich     *NutzerBremse
 	etappenwetter *NutzerBremse
 	vorschau      *NutzerBremse
+	vorhersage    *NutzerBremse
 	gpx           *NutzerBremse
 }
 
@@ -186,6 +187,7 @@ func NeueNutzerBremsen(aus, staging bool) *NutzerBremsen {
 		vergleich:     NewNutzerBremse("abruf", BremseAbrufJeMinute*f, time.Minute, parallel),
 		etappenwetter: NewNutzerBremse("abruf", BremseAbrufJeMinute*f, time.Minute, parallel),
 		vorschau:      NewNutzerBremse("abruf", BremseAbrufJeMinute*f, time.Minute, parallel),
+		vorhersage:    NewNutzerBremse("abruf", BremseAbrufJeMinute*f, time.Minute, parallel),
 		gpx:           NewNutzerBremse("gpx", BremseGpxJeStunde*f, time.Hour, nil),
 	}
 }
@@ -225,6 +227,12 @@ func (n *NutzerBremsen) Etappenwetter(h http.HandlerFunc) http.HandlerFunc {
 // Vorschau: SMS-Vorschau und beide Alarm-Vorschau-Routen (gemeinsam).
 func (n *NutzerBremsen) Vorschau(h http.HandlerFunc) http.HandlerFunc {
 	return n.legeUm(n.vorschau, h)
+}
+
+// Vorhersage: GET /api/forecast (#2961, ADR-0117 Nachtrag) — eigenes
+// Minutenfenster, teilt die Gleichzeitigkeit mit den uebrigen Abrufwegen.
+func (n *NutzerBremsen) Vorhersage(h http.HandlerFunc) http.HandlerFunc {
+	return n.legeUm(n.vorhersage, h)
 }
 
 // Gpx: POST /api/gpx/parse.

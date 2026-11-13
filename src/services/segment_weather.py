@@ -232,6 +232,10 @@ class SegmentWeatherService:
         # + #1539 S1b) -- NUR bei Cache-Miss, ein Hit verbraucht kein Kontingent.
         if not budget_gate.reserve(priority):
             self._debug.add(f"budget.throttled: priority={priority}")
+            # ADR-0117: die markierte Anfrage erfaehrt davon (Vorschau -> 429,
+            # Handversand/Befehl -> Abbruch vor jeder Zustellung).
+            from services.forecast_budget import melde_drosselung
+            melde_drosselung()
             return _Raw("throttled")
 
         # Step 2 & 3: Log segment info and create Location

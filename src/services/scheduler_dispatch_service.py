@@ -944,6 +944,12 @@ def send_one_compare_preset(
         if not weather_failure_as_outcome:
             raise
         raise SendOutcomeError("no_weather") from exc
+    # Issue #2961 (ADR-0117 Nachtrag): Handversand/Befehl am erschoepften
+    # Tageskontingent -- vor jeder Zustellung abbrechen, kein Teil-Briefing.
+    # Ohne manuellen Kontext (Zeitplan) immer False.
+    from services.forecast_budget import manuell_abgelehnt
+    if manuell_abgelehnt():
+        raise SendOutcomeError("kontingent_erschoepft")
     # Issue #2280 (AC-6) / Fix #2286 (AC-4): kein einziger Ort mit
     # Wetterdaten ⇒ no_weather -- im Handversand UND im Cron (ADR-0018:
     # Fallback nicht kaschieren; sonst zaehlt eine Provider-Stoerung als

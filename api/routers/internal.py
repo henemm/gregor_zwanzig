@@ -100,7 +100,7 @@ def stages_weather(
 
     try:
         # Issue #2961 (ADR-0117): Etappenwetter ist ein interaktiver Ausloeser.
-        with interaktiver_abruf():
+        with interaktiver_abruf(user_id):
             results, gedrosselt = compute_stage_weather_mit_status(
                 trip, provider, user_id=user_id,
             )

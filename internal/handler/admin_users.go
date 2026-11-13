@@ -33,6 +33,8 @@ type AdminUser struct {
 	OpenMeteoCallsToday int `json:"open_meteo_calls_today"`
 	// Davon interaktiv (Vergleich, Etappenwetter, Vorschau; ADR-0117, #2961).
 	OpenMeteoInteractiveCallsToday int `json:"open_meteo_interactive_calls_today"`
+	// Davon Handversand und Antwort-Befehle (user_manual, ADR-0117 Nachtrag).
+	OpenMeteoManualCallsToday int `json:"open_meteo_manual_calls_today"`
 }
 
 func adminUserDTO(u *model.User, sched *scheduler.Scheduler) AdminUser {
@@ -51,6 +53,7 @@ func adminUserDTO(u *model.User, sched *scheduler.Scheduler) AdminUser {
 
 		OpenMeteoCallsToday:            sched.UserForecastCalls(u.ID),
 		OpenMeteoInteractiveCallsToday: sched.UserForecastInteractiveCalls(u.ID),
+		OpenMeteoManualCallsToday:      sched.UserForecastManualCalls(u.ID),
 	}
 }
 

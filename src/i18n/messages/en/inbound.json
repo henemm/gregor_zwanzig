@@ -1,6 +1,8 @@
 {
   "inbound.antwort.fehler.betreff": "Command failed",
   "inbound.antwort.fehler.text": "Command could not be run safely. Please check with STATUS before you send it again.",
+  "inbound.antwort.kontingent.betreff": "Daily quota used up",
+  "inbound.antwort.kontingent.text": "Daily request quota used up, scheduled briefings and alerts continue.",
   "inbound.antwort.intern.betreff": "Error",
   "inbound.antwort.intern.text": "Internal error.",
   "inbound.antwort.intern.query": "Unknown query key.",

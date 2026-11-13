@@ -1831,9 +1831,15 @@ never leaks another user's error text. No recorded run for the caller yet →
 Spec: `docs/specs/modules/security_haertung_2026_11_abruf_kontingent_interaktiv.md`.
 Sofortvergleich, Etappenwetter, SMS-Vorschau, Alarm-Vorschau (Trip und Ortsvergleich) und
 `GET /api/forecast` buchen das Open-Meteo-Tageskontingent mit der Priorität `user_interactive`:
-je Nutzer höchstens `max(6300 / N, 1500)` Einheiten (N = heute aktive Nutzer), global nur bis
-70 % der Tagesmenge (6300 von 9000). Zeitplan-Versand und Handversand buchen unverändert
+je Nutzer höchstens 1500 Einheiten am Tag (fest, Nachtrag der Fix-Runde), global nur bis 70 % der
+Tagesmenge (6300 von 9000). **Nachtrag:** Handversand (`POST /api/briefings/{id}/send`,
+`/api/trips/{id}/send`, `/api/compare/presets/{id}/send`) und Antwort-Befehle aller Kanäle buchen
+`user_manual`: je Nutzer 1500 Einheiten, global nur bis 90 % (8100); ein Versand bucht beim ersten
+Abruf seine ganze Obergrenze und wird abgelehnt, bevor etwas abgerufen oder zugestellt wird, wenn
+sie nicht mehr passt (ungenutzter Rest wird erstattet). Nur der Zeitplan-Versand bucht
 `user_briefing`. Cache-Treffer buchen nichts und werden auch bei erschöpftem Kontingent geliefert.
+`GET /api/forecast` ist je Nutzer gebremst wie die übrigen Abrufwege (60 je Minute, Variante
+`rate_limit_exceeded_abruf`, höchstens 4 gleichzeitig).
 
 | Route | Status | `code` / Feld | Fall |
 |---|---|---|---|
@@ -1845,13 +1851,18 @@ je Nutzer höchstens `max(6300 / N, 1500)` Einheiten (N = heute aktive Nutzer), 
 | `GET /api/trips/{id}/stages/weather` | 429 | `abruf_kontingent_erschoepft`, `Retry-After` (Go reicht den Header durch) | keine Etappe lieferbar |
 | `GET /api/preview/{trip_id}/sms`, `POST /api/trips/{id}/alert-preview`, `POST /api/briefings/{id}/alert-preview` | 429 | `abruf_kontingent_erschoepft`, `Retry-After` | mindestens ein Abruf der Vorschau vom Kontingent abgelehnt (keine still unvollständige Vorschau) |
 | `POST /api/_internal/forecast-budget/reserve` | 200 | `priority=user_interactive` zulässig | Go-Vorhersage bucht seit ADR-0117 interaktiv |
+| `POST /api/briefings/{id}/send` (und Alt-Routen) | 429 | `kontingent_erschoepft` (Text `versand.ergebnis.kontingent_erschoepft`, Form `{"detail","code"}`), `Retry-After` | manuelles Tageskontingent reicht für diesen Versand nicht; nichts abgerufen, nichts zugestellt |
+| Antwort-Befehle (Telegram, E-Mail, SMS, Premium-SMS) | — | Antworttext `inbound.antwort.kontingent.*` | dasselbe für Befehle; Kurzform-Kanäle englisch, unter 160 Zeichen |
 
 **Statusfelder (additiv):** `GET /api/scheduler/status` → `forecast_budget` trägt
 `interactive_calls_today` (int), `interactive_budget` (int, 6300) und `interactive_throttled`
-(bool, Tageszähler hat die interaktive Obergrenze erreicht); `throttle_level` ist unverändert.
-`GET /api/admin/users` → `AdminUser.open_meteo_interactive_calls_today` (int, davon interaktiv).
+(bool, Tageszähler hat die interaktive Obergrenze erreicht), dazu `manual_calls_today`,
+`manual_budget` (8100) und `manual_throttled`; `throttle_level` ist unverändert.
+`GET /api/admin/users` → `AdminUser.open_meteo_interactive_calls_today` und
+`open_meteo_manual_calls_today` (int).
 Zählerdateien: global zusätzlich `interactive_calls: {"openmeteo": n}`, je Nutzer
-`interactive: {"openmeteo": n}` und `interactive_warned` (bool, eine Warnzeile je Tag).
+`interactive: {"openmeteo": n}` und `interactive_warned` (bool, eine Warnzeile je Tag);
+`manual_calls` bzw. `manual` analog für `user_manual`.
 
 ### Admin-API Nutzerverwaltung (Issue #2155 S3, ADR-0080)
 
@@ -1862,7 +1873,7 @@ vorhanden, kein `omitempty`): `id`, `email`, `display_name`, `tier`, `requested_
 `requested_at`, `email_verified_at`, `created_at`, `disabled` (bool), `is_test_user` (bool),
 `last_trip_report_run` (`{"time","status","error"}` oder `null`), `open_meteo_calls_today`
 (int, heutiger Open-Meteo-Verbrauch des Nutzers, UTC-Tag; 0 bei fehlender/kaputter/gestriger
-Zaehlerdatei, #2475), `open_meteo_interactive_calls_today` (int, davon interaktiv; ADR-0117, #2961). Nie `password_hash`,
+Zaehlerdatei, #2475), `open_meteo_interactive_calls_today` (int, davon interaktiv; ADR-0117, #2961), `open_meteo_manual_calls_today` (int, davon Handversand/Befehle). Nie `password_hash`,
 Passkey- oder Token-/Code-Felder.
 
 **`PUT /api/admin/users/{id}/tier`**, Body `{"tier":"free|standard|premium"}` -> 200 mit

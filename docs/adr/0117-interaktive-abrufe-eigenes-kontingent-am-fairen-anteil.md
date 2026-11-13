@@ -87,3 +87,47 @@ gesperrt. Die Mengenbremsen aus ADR-0114 begrenzen die Geschwindigkeit, nicht de
   Priorität: sie sind der Weg unterwegs und dürfen nicht an einem Bürotag-Kontingent scheitern.
 - Die nutzerfreie Radar-Anreicherung im Anbieter (ADR-0075 Punkt 4) bucht weiterhin
   unattributiert und wird vom interaktiven Kontext nicht erfasst.
+
+## Nachtrag 2026-11-13 (Gegenprüfung, Fix-Runde): `user_manual`, feste Grenze je Nutzer, Anreicherung
+
+Die Gegenprüfung (Verdict BROKEN) zeigte, dass ein einzelnes Konto das Kontingent weiter leeren
+konnte. Dieser Nachtrag **ändert Punkt 1 und Punkt 2** und hebt die zwei letzten Konsequenzen oben
+auf; alles Übrige gilt unverändert.
+
+1. **Neue Priorität `user_manual`** (ändert Punkt 1). Handversand (Trip, Ortsvergleich,
+   kind-neutral) und die Antwort-Befehle aller Kanäle (Telegram, E-Mail, SMS, Premium-SMS) buchen
+   nicht mehr `user_briefing`. Begründung: Ein Free-Konto erreichte mit drei Trips und einem
+   Ortsvergleich über die erlaubten 480 Handversände je Tag rund 8800 von 9000 Einheiten, mit
+   wegpunktreichen Touren schon nach wenigen Versänden. `user_briefing` bleibt ausschließlich dem
+   Zeitplan-Versand vorbehalten.
+   - **Je Nutzer 1500 Einheiten am Tag.** Ein typischer Versand (Etappe mit vier Abschnitten,
+     Nacht, drei Trend-Etappen) kostet 17 Einheiten, also rund 88 Versände oder Antworten je Tag.
+   - **Global nie über 90 %** (8100 Einheiten). Alarm-Prüfungen werden erst ab 95 % gedrosselt
+     und bleiben damit geschützt; Zeitplan-Briefings nie.
+   - **Kein Teil-Briefing.** Ein Versand oder Befehl bucht beim ersten Abruf seine ganze
+     Obergrenze auf einmal (`manuelles_kontingent.py`: die vier abschnittsreichsten Etappen plus
+     Nacht plus Anreicherung der Zieletappe, beim Ortsvergleich zwei je Ort, mindestens sieben).
+     Passt sie nicht mehr, wird nichts abgerufen und nichts zugestellt: Web antwortet 429
+     `kontingent_erschoepft` mit Katalogtext und `Retry-After`, ein Antwort-Befehl mit der kurzen
+     Antwort „Tageskontingent für Abrufe erschöpft, automatische Briefings und Alarme laufen
+     weiter" (Kurzform-Kanäle englisch, unter 160 Zeichen). Nicht verbrauchtes Guthaben (Cache-
+     Treffer) wird nach dem Versand erstattet; Cache-Treffer zählen also nicht.
+   - Die Fairness von `alert_check`/`polling` rechnet ohne interaktiven und manuellen Verbrauch.
+2. **Feste Grenze je Nutzer für `user_interactive`** (ändert Punkt 2): 1500 Einheiten, kein Teilen
+   durch die aktiven Nutzer mehr. Vorher konnte der erste aktive Nutzer des Tages (N = 1) die ganzen
+   6300 allein verbrauchen. Die globale Grenze 6300 bleibt zusätzlich.
+   **Restrisiko „mehrere abgestimmte Konten":** ab fünf Konten mit voll genutzter Grenze ist der
+   interaktive Topf (6300) dicht, ebenso können sechs Konten den manuellen Topf bis 90 % füllen.
+   Briefings und Alarme bleiben in beiden Fällen unberührt (Reserven bis 70 % bzw. 90 %, Alarme ab
+   95 %). Gebremst ist das durch die Registrierungsbremse (5 je Stunde und IP), die
+   Bestätigungspflicht der Adresse und die Mengenbremsen je Nutzer aus ADR-0114.
+   `GET /api/forecast` bekommt dieselbe Mengenbremse wie die übrigen Abrufwege (60 je Minute,
+   höchstens 4 gleichzeitig).
+3. **Anreicherung wird zugerechnet** (hebt die letzte Konsequenz oben auf). Innerhalb einer
+   markierten interaktiven oder manuellen Anfrage bucht auch die Radar-/Gewitter-Anreicherung im
+   Anbieter beim auslösenden Nutzer mit dessen Priorität. Lehnt das Kontingent ab, entfällt nur die
+   Anreicherung mit dem üblichen Verhalten „ohne Anreicherung" (`NowcastResult.throttled`,
+   Health-Journal `self_throttled`, ADR-0018/0047): die Vorhersage bleibt, nichts wird kaschiert.
+   Außerhalb markierter Anfragen bleibt sie nutzerfrei wie bisher (ADR-0075 Punkt 4).
+4. **Sichtbarkeit:** Betriebsstatus `manual_calls_today`, `manual_budget`, `manual_throttled`;
+   Admin-Liste `open_meteo_manual_calls_today`.
