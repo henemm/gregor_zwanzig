@@ -30,6 +30,18 @@ export interface RegisteredPasskey {
 }
 
 /**
+ * Issue #2961 (ADR-0115): Passkey hinzufuegen/entfernen verlangt einen frischen
+ * Nachweis; ohne ihn antwortet der Server 403 `reauth_required`. Dieser Fall
+ * wird als `Error('reauth_required')` weitergereicht, damit die Konto-Seite den
+ * Nachweis-Dialog oeffnen kann.
+ */
+async function nachweisFehlt(res: Response): Promise<boolean> {
+	if (res.status !== 403) return false;
+	const body = (await res.json().catch(() => ({}))) as { code?: string; error?: string };
+	return body.code === 'reauth_required' || body.error === 'reauth_required';
+}
+
+/**
  * Register a new Passkey for the currently-authenticated user. Requires a
  * valid session cookie. Throws on any failure (network, user-cancel, server
  * rejection).
@@ -40,7 +52,7 @@ export async function registerPasskey(label: string): Promise<RegisteredPasskey>
 		credentials: 'include'
 	});
 	if (!beginRes.ok) {
-		throw new Error('register_begin_failed');
+		throw new Error((await nachweisFehlt(beginRes)) ? 'reauth_required' : 'register_begin_failed');
 	}
 	const options = parseCreationOptionsFromJSON(await beginRes.json());
 
@@ -54,7 +66,7 @@ export async function registerPasskey(label: string): Promise<RegisteredPasskey>
 		body: JSON.stringify({ ...credential.toJSON(), label })
 	});
 	if (!finishRes.ok) {
-		throw new Error('register_finish_failed');
+		throw new Error((await nachweisFehlt(finishRes)) ? 'reauth_required' : 'register_finish_failed');
 	}
 	return (await finishRes.json()) as RegisteredPasskey;
 }
@@ -160,6 +172,6 @@ export async function deletePasskey(credentialId: string): Promise<void> {
 		credentials: 'include'
 	});
 	if (!res.ok) {
-		throw new Error('delete_failed');
+		throw new Error((await nachweisFehlt(res)) ? 'reauth_required' : 'delete_failed');
 	}
 }

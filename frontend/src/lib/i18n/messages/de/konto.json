@@ -156,5 +156,15 @@
 	"konto.fehler.sms_not_allowed": "SMS gibt es ab Level Standard — bitte den Tarif prüfen.",
 	"konto.fehler.no_number": "Es ist keine Handynummer hinterlegt.",
 	"konto.fehler.rate_limit_exceeded": "Zu viele Anfragen — bitte später noch einmal versuchen.",
-	"konto.fehler.speichern_fehlgeschlagen": "Speichern fehlgeschlagen"
+	"konto.fehler.speichern_fehlgeschlagen": "Speichern fehlgeschlagen",
+	"konto.nachweis.titel": "Änderung bestätigen",
+	"konto.nachweis.frage_mit_passwort": "Zum Schutz deines Kontos bestätige diese Änderung mit deinem Passwort oder einem Code per E-Mail an deine bisherige Adresse. Danach kannst du 10 Minuten lang weitere Änderungen vornehmen.",
+	"konto.nachweis.frage_ohne_passwort": "Zum Schutz deines Kontos bestätige diese Änderung mit einem Code per E-Mail an deine bisherige Adresse. Danach kannst du 10 Minuten lang weitere Änderungen vornehmen.",
+	"konto.nachweis.code": "Bestätigungscode",
+	"konto.nachweis.bestaetigen": "Bestätigen",
+	"konto.nachweis.fehlt": "Bitte Passwort oder Code eingeben.",
+	"konto.nachweis.fehlgeschlagen": "Bestätigung fehlgeschlagen",
+	"konto.anmeldungen.passkeys_bleiben.one": "Hinweis: Dein Passkey bleibt gültig und meldet dich weiterhin an.",
+	"konto.anmeldungen.passkeys_bleiben.other": "Hinweis: Deine {count} Passkeys bleiben gültig und melden dich weiterhin an.",
+	"konto.anmeldungen.passkeys_verwalten": "Passkeys verwalten"
 }

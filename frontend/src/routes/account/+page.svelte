@@ -35,6 +35,7 @@
 	import { t, tn, locale, type MessageKey } from '$lib/i18n';
 	import { fmtRelativeMinutes } from '$lib/i18n/format';
 	import { deleteErrorText } from './deleteErrorText';
+	import { brauchtNachweis, nachweisFehlerText } from './nachweis';
 	import { textTeile } from './textTeile';
 	let { data } = $props();
 
@@ -381,7 +382,10 @@
 			passkeySuccessMsg = $t('konto.passkey.angelegt');
 			setTimeout(() => (passkeySuccessMsg = null), 4000);
 		} catch (e: unknown) {
-			passkeyErrorMsg = passkeyFehlertext(e, $t('konto.passkey.anlegen_fehler'));
+			// Issue #2961: erst Nachweis, dann den Anlegen-Dialog erneut oeffnen —
+			// die Geraeteabfrage braucht einen frischen Klick des Nutzers.
+			if (brauchtNachweis(e)) verlangeNachweis(() => (showPasskeyDialog = true));
+			else passkeyErrorMsg = passkeyFehlertext(e, $t('konto.passkey.anlegen_fehler'));
 		} finally {
 			passkeyBusy = false;
 			showPasskeyDialog = false;
@@ -404,8 +408,9 @@
 			await invalidateAll();
 			passkeySuccessMsg = $t('konto.passkey.entfernt');
 			setTimeout(() => (passkeySuccessMsg = null), 4000);
-		} catch {
-			passkeyErrorMsg = $t('konto.passkey.entfernen_fehler');
+		} catch (e: unknown) {
+			if (brauchtNachweis(e)) verlangeNachweis(() => removePasskey(id));
+			else passkeyErrorMsg = $t('konto.passkey.entfernen_fehler');
 		}
 	}
 
@@ -425,6 +430,11 @@
 			// der Hinweis sofort erscheint.
 			await invalidateAll();
 		} catch (e: unknown) {
+			// Issue #2961: Adresswechsel nur mit frischem Nachweis — danach erneut speichern.
+			if (brauchtNachweis(e)) {
+				verlangeNachweis(save);
+				return;
+			}
 			const body = e as { detail?: string; error?: string; status?: number };
 			errorMsg = profileSaveErrorMessage(body?.status ?? 0, body);
 		}
@@ -513,21 +523,60 @@
 	// Fehlertexte beim Loeschen: deleteErrorText.ts (konto.fehler.*).
 
 	function deleteAccount() {
+		oeffneNachweisDialog(null);
+	}
+
+	// Issue #2961 (ADR-0115): derselbe Dialog dient als Nachweis vor einer
+	// Kontoaenderung (Adresse, Passkey). `nachweisDanach` ist die Aenderung, die
+	// nach erfolgreichem Nachweis wiederholt wird; null = Konto loeschen.
+	let nachweisDanach = $state<(() => unknown) | null>(null);
+	const nachweisModus = $derived(nachweisDanach !== null);
+
+	function oeffneNachweisDialog(danach: (() => unknown) | null) {
 		deletePassword = '';
 		deleteCode = '';
 		deleteCodeSent = false;
 		deleteDialogMsg = null;
+		nachweisDanach = danach;
 		showDeleteAccountDialog = true;
+	}
+
+	function verlangeNachweis(danach: () => unknown) {
+		oeffneNachweisDialog(danach);
+	}
+
+	function schliesseNachweisDialog() {
+		showDeleteAccountDialog = false;
+		nachweisDanach = null;
 	}
 
 	async function requestDeleteCode() {
 		deleteBusy = true;
 		deleteDialogMsg = null;
+		const nachweis = nachweisModus;
 		try {
-			await api.post('/api/auth/account/delete-code', {});
+			await api.post(nachweis ? '/api/auth/reauth/code' : '/api/auth/account/delete-code', {});
 			deleteCodeSent = true;
 		} catch (e: unknown) {
-			deleteDialogMsg = deleteErrorText(e, $t('konto.loeschen.code_versand_fehlgeschlagen'));
+			deleteDialogMsg = nachweis
+				? nachweisFehlerText(e, $t('konto.loeschen.code_versand_fehlgeschlagen'))
+				: deleteErrorText(e, $t('konto.loeschen.code_versand_fehlgeschlagen'));
+		} finally {
+			deleteBusy = false;
+		}
+	}
+
+	async function confirmNachweis() {
+		const body = deletePassword ? { password: deletePassword } : { code: deleteCode.trim() };
+		deleteBusy = true;
+		deleteDialogMsg = null;
+		try {
+			await api.post('/api/auth/reauth', body);
+			const danach = nachweisDanach;
+			schliesseNachweisDialog();
+			await danach?.();
+		} catch (e: unknown) {
+			deleteDialogMsg = nachweisFehlerText(e, $t('konto.nachweis.fehlgeschlagen'));
 		} finally {
 			deleteBusy = false;
 		}
@@ -551,6 +600,12 @@
 		} finally {
 			deleteBusy = false;
 		}
+	}
+
+	// Issue #2961: aus dem Abmelde-Dialog zur Passkey-Verwaltung springen.
+	function zuDenPasskeys() {
+		showLogoutAllDialog = false;
+		document.querySelector('[data-testid="passkeys-card"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
 
 	// Issue #2129 AC-17: auf allen Geräten abmelden — mit Bestätigungsschritt,
@@ -1445,6 +1500,18 @@
 					{$t('konto.anmeldungen.dialog_text')}
 				</Dialog.Description>
 			</Dialog.Header>
+			{#if passkeys.length > 0}
+				<!-- Issue #2961: Abmelden beendet nur Sitzungen; Passkeys bleiben. -->
+				<p class="text-sm" data-testid="logout-all-passkey-hinweis">
+					{$tn('konto.anmeldungen.passkeys_bleiben', passkeys.length)}
+					<button
+						type="button"
+						class="text-[var(--g-info)] underline"
+						data-testid="logout-all-passkeys-verwalten"
+						onclick={zuDenPasskeys}>{$t('konto.anmeldungen.passkeys_verwalten')}</button
+					>
+				</p>
+			{/if}
 			<Dialog.Footer>
 				<Btn variant="outline" onclick={() => (showLogoutAllDialog = false)}>{$t('aktionen.abbrechen')}</Btn>
 				<Btn variant="destructive" onclick={confirmLogoutAllDevices}>{$t('nav.abmelden')}</Btn>
@@ -1455,13 +1522,17 @@
 	<!-- Account löschen Dialog -->
 	<Dialog.Root
 		open={showDeleteAccountDialog}
-		onOpenChange={(open) => { if (!open) showDeleteAccountDialog = false; }}
+		onOpenChange={(open) => { if (!open) schliesseNachweisDialog(); }}
 	>
 		<Dialog.Content>
 			<Dialog.Header>
-				<Dialog.Title>{$t('konto.loeschen.titel')}</Dialog.Title>
+				<Dialog.Title>{nachweisModus ? $t('konto.nachweis.titel') : $t('konto.loeschen.titel')}</Dialog.Title>
 				<Dialog.Description>
-					{deleteHasPassword ? $t('konto.loeschen.frage_mit_passwort') : $t('konto.loeschen.frage_ohne_passwort')}
+					{#if nachweisModus}
+						{deleteHasPassword ? $t('konto.nachweis.frage_mit_passwort') : $t('konto.nachweis.frage_ohne_passwort')}
+					{:else}
+						{deleteHasPassword ? $t('konto.loeschen.frage_mit_passwort') : $t('konto.loeschen.frage_ohne_passwort')}
+					{/if}
 				</Dialog.Description>
 			</Dialog.Header>
 			<div class="space-y-4">
@@ -1472,7 +1543,7 @@
 							id="deletePassword"
 							type="password"
 							autocomplete="current-password"
-							data-testid="delete-account-password"
+							data-testid={nachweisModus ? 'reauth-password' : 'delete-account-password'}
 							bind:value={deletePassword}
 							class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 						/>
@@ -1482,7 +1553,7 @@
 					<Btn
 						variant="outline"
 						class="h-auto w-full min-w-0 whitespace-normal [overflow-wrap:anywhere]"
-						data-testid="delete-account-send-code"
+						data-testid={nachweisModus ? 'reauth-send-code' : 'delete-account-send-code'}
 						disabled={deleteBusy}
 						onclick={requestDeleteCode}
 					>
@@ -1491,31 +1562,33 @@
 					{#if deleteCodeSent}
 						<p class="text-sm">{$t('konto.loeschen.code_verschickt')}</p>
 					{/if}
-					<label for="deleteCode" class="block text-sm font-medium">{$t('konto.loeschen.code')}</label>
+					<label for="deleteCode" class="block text-sm font-medium"
+						>{nachweisModus ? $t('konto.nachweis.code') : $t('konto.loeschen.code')}</label
+					>
 					<input
 						id="deleteCode"
 						type="text"
 						inputmode="numeric"
 						autocomplete="one-time-code"
 						maxlength="6"
-						data-testid="delete-account-code"
+						data-testid={nachweisModus ? 'reauth-code' : 'delete-account-code'}
 						bind:value={deleteCode}
 						class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					/>
 				</div>
 				{#if deleteDialogMsg}
-					<p class="text-sm text-[var(--g-danger-fg)]" data-testid="delete-account-error">{deleteDialogMsg}</p>
+					<p class="text-sm text-[var(--g-danger-fg)]" data-testid={nachweisModus ? 'reauth-error' : 'delete-account-error'}>{deleteDialogMsg}</p>
 				{/if}
 			</div>
 			<Dialog.Footer>
-				<Btn variant="outline" onclick={() => (showDeleteAccountDialog = false)}>{$t('aktionen.abbrechen')}</Btn>
+				<Btn variant="outline" onclick={schliesseNachweisDialog}>{$t('aktionen.abbrechen')}</Btn>
 				<Btn
-					variant="destructive"
-					data-testid="delete-account-confirm"
+					variant={nachweisModus ? 'default' : 'destructive'}
+					data-testid={nachweisModus ? 'reauth-confirm' : 'delete-account-confirm'}
 					disabled={deleteBusy || (!deletePassword && deleteCode.trim() === '')}
-					onclick={confirmDeleteAccount}
+					onclick={nachweisModus ? confirmNachweis : confirmDeleteAccount}
 				>
-					{$t('konto.loeschen.titel')}
+					{nachweisModus ? $t('konto.nachweis.bestaetigen') : $t('konto.loeschen.titel')}
 				</Btn>
 			</Dialog.Footer>
 		</Dialog.Content>
