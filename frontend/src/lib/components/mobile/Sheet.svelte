@@ -128,7 +128,7 @@
 					{/if}
 				</div>
 				{#if onClose}
-					<IconBtn kind="close" onclick={onClose} label={$t('aktionen.schliessen')} />
+					<IconBtn kind="close" onclick={onClose} label={$t('aktionen.schliessen')} testid="sheet-close" />
 				{/if}
 			</div>
 		{/if}
