@@ -6,9 +6,13 @@ Project-own hooks import this module (e.g. ``import hook_utils`` or
 shim loads the real module from the installed agent-os-openspec plugin and
 re-exports all of its public attributes, so both import styles keep working.
 """
+import fcntl as _gz_fcntl
 import importlib.util
 import json
 import os
+import stat as _gz_stat
+import tempfile as _gz_tempfile
+from pathlib import Path as _GzPath
 
 
 def _resolve_plugin_module():
@@ -54,3 +58,125 @@ globals().update(
         if not _name.startswith("__")
     }
 )
+
+
+# --- Projekt-eigen (#2125): Prod-Versand-Freigabe ---------------------------
+# Gemeinsam fuer Schreiber (prod_send_release.py) und Leser (prod_send_gate.py),
+# damit beide dieselbe Datei im Haupt-Repo treffen (auch aus einem Worktree).
+# Bewusst NACH dem Plugin-Re-Export definiert: lokale Namen gewinnen.
+PROD_SEND_RELEASE_FILE = "prod_send_release.json"
+
+
+def _gz_main_from_gitfile(base: "_GzPath", git_file: "_GzPath") -> "_GzPath | None":
+    """Worktree-`.git`-Datei (`gitdir: <main>/.git/worktrees/<n>`) -> <main>."""
+    try:
+        first = git_file.read_text().splitlines()[0].strip()
+    except (OSError, IndexError):
+        return None
+    if not first.startswith("gitdir:"):
+        return None
+    gitdir = _GzPath(first[len("gitdir:"):].strip())
+    if not gitdir.is_absolute():
+        gitdir = base / gitdir
+    gitdir = _GzPath(os.path.normpath(str(gitdir)))
+    if gitdir.parent.name != "worktrees" or gitdir.parent.parent.name != ".git":
+        return None
+    return gitdir.parent.parent.parent
+
+
+def main_repo_root() -> "_GzPath | None":
+    """Haupt-Repo-Wurzel ab CLAUDE_PROJECT_DIR (sonst cwd); None = unbekannt.
+
+    Normales Repo (`.git` ist Ordner) -> dieser Ordner. Worktree (`.git` ist
+    Datei mit `gitdir:`) -> das Haupt-Repo, nie der Worktree selbst (#2125).
+    """
+    start = os.environ.get("CLAUDE_PROJECT_DIR", "").strip() or os.getcwd()
+    base = _GzPath(start)
+    for cand in (base, *base.parents):
+        git = cand / ".git"
+        if git.is_dir() and not git.is_symlink():
+            return cand
+        if git.is_file():
+            return _gz_main_from_gitfile(cand, git)
+    return None
+
+
+def prod_send_release_path() -> "_GzPath | None":
+    root = main_repo_root()
+    return None if root is None else root / ".claude" / PROD_SEND_RELEASE_FILE
+
+
+def _gz_open_locked(path: "_GzPath", create: bool) -> int:
+    """Oeffnet die Freigabe-Datei ohne Symlink-Folgen (O_NOFOLLOW), exklusiv
+    gesperrt. Prueft nach dem Sperren, dass der Pfad noch dieselbe Datei ist
+    (ein Vorgaenger kann sie per rename ersetzt haben)."""
+    flags = os.O_RDWR | os.O_NOFOLLOW | (os.O_CREAT if create else 0)
+    for _ in range(5):
+        fd = os.open(str(path), flags, 0o600)
+        try:
+            _gz_fcntl.flock(fd, _gz_fcntl.LOCK_EX)
+            st = os.fstat(fd)
+            if not _gz_stat.S_ISREG(st.st_mode):
+                raise OSError(f"{path} ist keine regulaere Datei")
+            try:
+                same = os.lstat(str(path)).st_ino == st.st_ino
+            except FileNotFoundError:
+                same = False
+        except BaseException:
+            os.close(fd)
+            raise
+        if same:
+            return fd
+        os.close(fd)
+    raise OSError(f"{path} wird gleichzeitig veraendert")
+
+
+def _gz_read_releases(fd: int) -> dict:
+    with os.fdopen(os.dup(fd), "r") as fh:
+        raw = fh.read()
+    try:
+        data = json.loads(raw) if raw.strip() else {}
+    except json.JSONDecodeError:
+        data = {}
+    releases = data.get("releases") if isinstance(data, dict) else None
+    return releases if isinstance(releases, dict) else {}
+
+
+def _gz_write_releases(path: "_GzPath", releases: dict) -> None:
+    fd, tmp_name = _gz_tempfile.mkstemp(
+        dir=str(path.parent), prefix=".prod_send_release_", suffix=".tmp"
+    )
+    try:
+        with os.fdopen(fd, "w") as fh:
+            json.dump({"version": 1, "releases": releases}, fh)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.rename(tmp_name, str(path))
+    except BaseException:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
+def update_prod_send_releases(mutate, create: bool = False):
+    """Gesperrtes Lesen-Aendern-Schreiben der Prod-Versand-Freigaben.
+
+    `mutate(releases) -> (changed, result)`; bei changed wird atomar
+    (mkstemp + rename, Rechte 0600) zurueckgeschrieben. Liefert `result`.
+    Wirft OSError (Wurzel unbekannt, Symlink, keine Rechte); der Aufrufer
+    entscheidet fail-closed.
+    """
+    path = prod_send_release_path()
+    if path is None:
+        raise OSError("Haupt-Repo nicht ermittelbar")
+    fd = _gz_open_locked(path, create)
+    try:
+        releases = _gz_read_releases(fd)
+        changed, result = mutate(releases)
+        if changed:
+            _gz_write_releases(path, releases)
+        return result
+    finally:
+        os.close(fd)

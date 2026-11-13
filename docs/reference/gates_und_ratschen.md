@@ -713,7 +713,7 @@ liegen **nicht** in `.claude/hooks/`.
 | Ereignis | Hook | Wirkung | Abschnitt / Beleg |
 |---|---|---|---|
 | PreToolUse Bash | `renderer_mail_gate.py` | blockt Commit an Mail-Inhalts-Dateien ohne frischen Matrix-Test + Validator | oben „Renderer-Commit-Gate" |
-| PreToolUse Bash | `prod_send_gate.py` | blockt Bash-Kommandos, die einen echten Versand gegen Prod auslösen (Send-Pfad + Prod-Ziel Port 8000/8090 bzw. `gregor20.henemm.com` ohne `staging.` + kein reines GET) oder direkt `smtp.resend.com` ansprechen; Override `.claude/user_override_token.json` (TTL 1 h) | #1148, Spec `gate_1148_prod_send_deny.md` |
+| PreToolUse Bash | `prod_send_gate.py` | blockt Bash-Kommandos, die einen echten Versand gegen Prod auslösen (Send-Pfad + Prod-Ziel Port 8000/8090 bzw. `gregor20.henemm.com` ohne `staging.` + kein reines GET) oder direkt `smtp.resend.com` ansprechen; eigener Notausgang: der PO tippt allein `prod-versand freigeben` → genau ein Prod-Versand in dieser Sitzung (an `session_id` gebunden, 1 h, Datei `<Haupt-Repo>/.claude/prod_send_release.json`); das allgemeine `override` öffnet dieses Gate nicht | #1148, #2125, Specs `gate_1148_prod_send_deny.md`, `gate_2125_prod_send_release.md` |
 | PreToolUse Bash | `broad_test_run_gate.py` | blockt `uv run pytest` ohne benannte Testdateien | oben „Breiter Testlauf gesperrt" |
 | PreToolUse Bash | `touched_tests_gate.py` | blockt Commit, der einen Test der berührten Dateien rot macht | oben „#1481 A" |
 | PreToolUse Bash | `pendant_gate.py` | blockt Neuanlage einseitiger Trip-/Compare-Dateien | oben „Pendant-Sperre" |
@@ -722,6 +722,7 @@ liegen **nicht** in `.claude/hooks/`.
 | PreToolUse Write\|Edit | `data_schema_backup.py` | Snapshot von `data/users/` nach `.backups/data-pre-rework-<ts>.tar.gz` vor Edit/Write an Schema-Dateien (Retention 20, übersprungen bei Snapshot < 5 Min) | CLAUDE.md „Daten-Schema-Reworks“, #102 |
 | PostToolUse * | `secret_output_gate.py` | ersetzt Klartextwerte von `.env`-Geheimnissen in **Tool-Ergebnissen** durch `***<SCHLÜSSEL>***` | #1537 S2 |
 | UserPromptSubmit | `context_budget_guard.py` | `⚑`-Zeile ab 180k Kontext, Aufforderung zu `/clear` ab 260k; blockiert nie | CLAUDE.md „Parallele Sessions & Token-Budget" |
+| UserPromptSubmit | `prod_send_release.py` | allein getippte Phrase `prod-versand freigeben` → einmalige Prod-Versand-Freigabe für diese Sitzung (1 h) für `prod_send_gate.py`, sichtbare Bestätigung; blockiert nie | #2125, Spec `gate_2125_prod_send_release.md` |
 | Stop | `terminology_gate.py` | weist eine Antwort mit „Tour"/„Touren" zurück (Exit 2; Zitatzeilen `>` ausgenommen; fail-open) | Produktbegriffe Trip/Etappe/Ortsvergleich/Briefing |
 | Stop | `track_token_usage.py` | schreibt Token-Verbrauch ins Workflow-State-JSON (`token_usage`); immer Exit 0 | #829 |
 | Stop | `notify_sound.py` | Benachrichtigungston | — |
