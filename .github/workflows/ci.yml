@@ -270,7 +270,10 @@ jobs:
       # PWA-Lauf verbraucht haben, startet der Job den Go-Dienst vor dem
       # Drittlauf neu (`ci-stack.sh restart-go`, eigener Schritt): frischer
       # Zaehler, Daten und Sitzungen bleiben (dateibasiert). Gemessen lokal am
-      # zusammengefuehrten Stand: 10 Anmeldungen im Hauptlauf, 10 im PWA-Lauf.
+      # zusammengefuehrten Stand (Go-Zugriffslog, POST /api/auth/login):
+      # Hauptlauf 9-10, PWA-Lauf 8 (vor der Sitzungs-Wiederverwendung fuer
+      # Nutzer B: 10); nach dem Neustart nimmt der Drittlauf genau 30 Versuche
+      # an und beantwortet die folgenden mit 429 -- unabhaengig vom Vorlauf.
       #
       # 🔴 ZWEITER Aufruf ab #2128: die PWA-Strecke (`--project=pwa`).
       # Sie laeuft NICHT ueber die Positivliste, sondern ueber die feste
