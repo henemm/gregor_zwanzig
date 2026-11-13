@@ -7,6 +7,8 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
 	kennungImPfad,
 	proxyAnfrageKopfzeilen,
@@ -23,17 +25,18 @@ describe('AC-2: Kennungen bleiben genau ein Pfadsegment', () => {
 		assert.equal(kennungImPfad('mühlbach'), 'm%C3%BChlbach');
 	});
 
-	test('Abfrage- und Ankerzeichen werden kodiert und veraendern die Zieladresse nicht', () => {
-		const kodiert = kennungImPfad('abc?x=1#y');
-		assert.equal(kodiert, 'abc%3Fx=1%23y');
+	test('Leerzeichen und Sonderzeichen gueltiger Kennungen werden kodiert, ohne die Adresse zu veraendern', () => {
+		const kodiert = kennungImPfad('Etappe 2 Sóller');
+		assert.equal(kodiert, 'Etappe%202%20S%C3%B3ller');
 		const ziel = new URL(`http://go.invalid/api/trips/${kodiert}`);
 		assert.equal(ziel.search, '');
-		assert.equal(ziel.hash, '');
-		assert.equal(ziel.pathname, '/api/trips/abc%3Fx=1%23y');
+		assert.equal(ziel.pathname, '/api/trips/Etappe%202%20S%C3%B3ller');
 	});
 
-	test('Prozentzeichen werden kodiert (keine Doppel-Dekodierung bei der Go-API)', () => {
-		assert.equal(kennungImPfad('a%2Fb'), 'a%252Fb');
+	test('Abfrage-, Anker- und Prozentzeichen sind wie bei der Go-API unzulaessig', () => {
+		assert.equal(kennungImPfad('abc?x=1'), null);
+		assert.equal(kennungImPfad('abc#y'), null);
+		assert.equal(kennungImPfad('a%2Fb'), null);
 	});
 
 	for (const ungueltig of ['', '.', '..', '.versteckt', '../x', 'a/b', 'a\\b', 'a\x00b']) {
@@ -122,4 +125,32 @@ describe('AC-3: der Durchreicher gibt nur Kopfzeilen der Positivliste weiter', (
 	test('ohne Sitzung geht gar kein Cookie weiter', () => {
 		assert.equal(proxyAnfrageKopfzeilen(eingang, undefined).get('cookie'), null);
 	});
+});
+
+// Issue #2961 (F009): dieselbe Wahrheitstabelle wie Go (internal/store/entity_id_test.go)
+// und Python (tests/unit/test_entity_id_pattern_parity.py) — driftet das
+// Frontend-Muster ab, wird genau dieser Test rot.
+const FAELLE = JSON.parse(
+	readFileSync(
+		fileURLToPath(new URL('../../../../../tests/fixtures/entity_id_pattern_parity/faelle.json', import.meta.url)),
+		'utf-8'
+	)
+) as { invalid: string[]; valid: string[] };
+
+describe('AC-2: Kennungsmuster gleich der Go-Quelle (geteilte Wahrheitstabelle)', () => {
+	test('die Tabelle ist nicht leer', () => {
+		assert.ok(FAELLE.invalid.length > 10 && FAELLE.valid.length > 3);
+	});
+	for (const fall of FAELLE.invalid) {
+		test(`ungueltig: ${JSON.stringify(fall)}`, () => {
+			assert.equal(kennungImPfad(fall), null);
+		});
+	}
+	for (const fall of FAELLE.valid) {
+		test(`gueltig: ${JSON.stringify(fall)}`, () => {
+			const kodiert = kennungImPfad(fall);
+			assert.notEqual(kodiert, null);
+			assert.equal(decodeURIComponent(kodiert!), fall);
+		});
+	}
 });

@@ -1,6 +1,7 @@
 import type { PageServerLoad } from './$types.js';
 import type { ComparePreset, Location } from '$lib/types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
+import { kennungImPfad } from '$lib/server/apiPfad.js';
 
 // Issue #440 — Compare-Wizard Create-Modus. Locations-Library fuer Step 2.
 // Issue #443 — Profil parallel laden (fail-soft) fuer Step 5 (Kanal-Hints).
@@ -9,9 +10,12 @@ import { apiBase as API } from '$lib/server/apiBase.js';
 // Issue #2277 S2c — ?from=<id>: eigenen Vergleich als Vorlage laden (Session-Cookie,
 // Nutzertrennung ueber die Go-API). Nicht-OK/Fehler/ungueltig => vorlage: null, nie Fehlerseite.
 async function ladeVorlage(from: string | null, headers: Record<string, string>) {
-	if (!from) return null;
+	// #2961: dasselbe Kennungsmuster wie fuer alle Pfade zur Go-API (Punkt-
+	// Segmente, Trenner, ?/#/% sind ungueltig => keine Vorlage, kein Abruf).
+	const kennung = kennungImPfad(from);
+	if (!kennung) return null;
 	try {
-		const res = await fetch(`${API()}/api/compare/presets/${encodeURIComponent(from)}`, { headers });
+		const res = await fetch(`${API()}/api/compare/presets/${kennung}`, { headers });
 		if (!res.ok) return null;
 		const preset = (await res.json()) as ComparePreset | null;
 		return preset && Array.isArray(preset.location_ids) ? preset : null;

@@ -9,10 +9,13 @@
 /**
  * Zulassungsmuster fuer Entitaets-Kennungen (Trip, Ort, Vergleich), gleich der
  * kanonischen Go-Quelle `store.ValidEntityIDRe` (internal/store/pathsafe.go):
- * erstes Zeichen weder Punkt noch Trenner noch NUL, danach kein Trenner und
- * kein NUL. Bewusst keine ASCII-Liste — Bestandskennungen tragen Umlaute.
+ * erstes Zeichen kein Punkt; nirgends Trenner (`/`, `\\`), Steuerzeichen
+ * (U+0000–U+001F, U+007F–U+009F), Zeilen-/Absatztrenner (U+2028/U+2029) oder
+ * `?`, `#`, `%`. Bewusst keine ASCII-Liste — Bestandskennungen tragen Umlaute.
+ * Paritaet ueber tests/fixtures/entity_id_pattern_parity/faelle.json.
  */
-const ENTITAETS_KENNUNG = /^[^./\\\x00][^/\\\x00]*$/u;
+const ENTITAETS_KENNUNG =
+	/^[^./\\\x00-\x1f\x7f-\x9f\u2028\u2029?#%][^/\\\x00-\x1f\x7f-\x9f\u2028\u2029?#%]*$/u;
 
 /**
  * Wie Go `url.PathEscape`: diese Zeichen sind in einem Pfadsegment erlaubt und

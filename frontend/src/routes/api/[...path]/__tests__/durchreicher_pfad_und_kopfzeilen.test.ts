@@ -134,22 +134,23 @@ describe('AC-2: Seiten-Loader kodieren die Kennung', () => {
 		url: new URL(`http://localhost/x/${encodeURIComponent(id)}`)
 	});
 
-	test('Trip-Ansicht: eine Kennung mit Abfragezeichen bleibt ein Pfadsegment', async () => {
+	test('Trip-Ansicht: eine Kennung mit Leerzeichen und Umlaut bleibt ein Pfadsegment', async () => {
 		const { load } = await import(
 			pathToFileURL(path.join(FRONTEND, 'src/routes/trips/[id]/+page.server.ts')).href
 		);
 		ankuenfte.length = 0;
-		await load(ereignis('abc?admin=1'));
+		await load(ereignis('Etappe 2 Sóller'));
 		const trip = ankuenfte.find((a) => a.pfad.startsWith('/api/trips/'));
-		assert.equal(trip?.pfad, '/api/trips/abc%3Fadmin=1');
+		assert.equal(trip?.pfad, '/api/trips/Etappe%202%20S%C3%B3ller');
 	});
 
-	test('Trip-Ansicht: eine Kennung mit Pfadtrenner ergibt 404 ohne Aufruf', async () => {
+	test('Trip-Ansicht: Kennung mit Pfadtrenner oder Abfragezeichen ergibt 404 ohne Aufruf', async () => {
 		const { load } = await import(
 			pathToFileURL(path.join(FRONTEND, 'src/routes/trips/[id]/+page.server.ts')).href
 		);
 		ankuenfte.length = 0;
 		await assert.rejects(load(ereignis('../auth/profile')), (e: { status?: number }) => e.status === 404);
+		await assert.rejects(load(ereignis('abc?admin=1')), (e: { status?: number }) => e.status === 404);
 		assert.equal(ankuenfte.filter((a) => a.pfad.startsWith('/api/trips/')).length, 0);
 	});
 
@@ -158,8 +159,11 @@ describe('AC-2: Seiten-Loader kodieren die Kennung', () => {
 			pathToFileURL(path.join(FRONTEND, 'src/routes/compare/[id]/+page.server.ts')).href
 		);
 		ankuenfte.length = 0;
-		await load(ereignis('v#1'));
-		assert.ok(ankuenfte.some((a) => a.pfad === '/api/compare/presets/v%231'));
+		await load(ereignis('vergleich 1'));
+		assert.ok(ankuenfte.some((a) => a.pfad === '/api/compare/presets/vergleich%201'));
+		ankuenfte.length = 0;
+		await assert.rejects(load(ereignis('v#1')), (e: { status?: number }) => e.status === 404);
+		assert.equal(ankuenfte.filter((a) => a.pfad.startsWith('/api/compare/presets/')).length, 0);
 		ankuenfte.length = 0;
 		await assert.rejects(load(ereignis('..')), (e: { status?: number }) => e.status === 404);
 		assert.equal(ankuenfte.filter((a) => a.pfad.startsWith('/api/compare/presets/')).length, 0);
@@ -171,10 +175,10 @@ describe('AC-2: Seiten-Loader kodieren die Kennung', () => {
 		);
 		ankuenfte.length = 0;
 		await load({
-			url: new URL('http://localhost/trips/new?from=' + encodeURIComponent('t1?x=1')),
+			url: new URL('http://localhost/trips/new?from=' + encodeURIComponent('t 1')),
 			cookies: keks({ gz_session: 'sitzung-a' })
 		});
-		assert.ok(ankuenfte.some((a) => a.pfad === '/api/trips/t1%3Fx=1'));
+		assert.ok(ankuenfte.some((a) => a.pfad === '/api/trips/t%201'));
 		ankuenfte.length = 0;
 		await load({
 			url: new URL('http://localhost/trips/new?from=' + encodeURIComponent('../auth/profile')),
