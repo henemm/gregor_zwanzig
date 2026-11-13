@@ -23,7 +23,7 @@ Ein neuer projektlokaler `PreToolUse:Bash`-Hook (`prod_send_gate.py`) verhindert
 ## Source
 
 - **File:** `.claude/hooks/prod_send_gate.py` (NEU) — PreToolUse:Bash-Hook, stdin-JSON `{"tool_input":{"command":...}}`, Exit 0 = erlaubt, Exit 2 = blockiert
-- **Identifier:** `def main()`, `def _is_send_endpoint_path(command)`, `def _targets_prod(command)`, `def _is_provably_get(command)`, `def _is_smtp_connection(command)`, `def _has_valid_override(workflow_name)`
+- **Identifier:** `def main()`, `def _is_send_endpoint_path(command)`, `def _targets_prod(command)`, `def _is_provably_get(command)`, `def _is_smtp_connection(command)`, `def _has_valid_override(session_id)` (seit #2125)
 
 ## Estimated Scope
 
@@ -36,7 +36,8 @@ Ein neuer projektlokaler `PreToolUse:Bash`-Hook (`prod_send_gate.py`) verhindert
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `hook_utils.py` (Projekt-Shim → Plugin) | intern | `get_tool_input()` fuer stdin/JSON-Parsing, `block()`/`allow()` fuer Exit-Handling — identisches Muster wie `renderer_mail_gate.py` |
-| `.claude/user_override_token.json` | Datei | Override-Token-Speicher (v2-Format: `{"version":2,"tokens":{"<workflow>":{"created":ISO,"granted_by":...}}}`), erzeugt ausschliesslich durch den Plugin-Hook `phase_listener.py` wenn der User woertlich "override" tippt |
+| `<Haupt-Repo>/.claude/prod_send_release.json` | Datei | Prod-Versand-Freigabe (seit #2125, Spec `gate_2125_prod_send_release.md`): `{"version":1,"releases":{"<session_id>":{"created":ISO-8601 UTC mit Zeitzone}}}`, erzeugt ausschliesslich durch den projekt-lokalen UserPromptSubmit-Hook `prod_send_release.py`, wenn der PO allein `prod-versand freigeben` tippt. Das Plugin-Token `user_override_token.json` liest dieses Gate nicht mehr |
+| `hook_utils.py` (projekt-eigener Teil) | intern | `main_repo_root()` / `prod_send_release_path()` / `update_prod_send_releases()` — gemeinsame Haupt-Repo-Wurzel (Worktree → Haupt-Repo) und gesperrtes, atomares Lesen-Aendern-Schreiben fuer Schreiber und Leser |
 | `.claude/hooks/renderer_mail_gate.py` | Vorbild | Referenz-Implementierung fuer einen projektlokalen PreToolUse:Bash-Hook (stdin-JSON, Exit-Konventionen, `sys.path.insert` fuer `hook_utils`) |
 | Plugin `core/hooks/bash_gate.py` | Vorbild | Obfuskations-Fallback-Muster: bei `sh -c`/`eval` im Kommando faellt die Pruefung auf einen Roh-String-Scan ueber den Gesamtstring zurueck (`_has_real_redirect`/`_is_sensitive` als Vorlage) |
 | `.claude/settings.json` | Config | Registrierung als zusaetzlicher Eintrag unter `hooks.PreToolUse` mit `matcher: "Bash"`, analog zum bestehenden `renderer_mail_gate.py`-Eintrag |
@@ -112,14 +113,14 @@ Analog `bash_gate.py`: enthaelt das Kommando `sh -c`/`eval` (Regex `\b(?:ba|z|da
 
 ### Override-Mechanik
 
-Der Hook liest `.claude/user_override_token.json` mit einem eigenen, kleinen Reader (kein Import aus dem Plugin) — Format ist stabil dokumentiert (v2, `tokens.<workflow_name>.created` als ISO-8601, TTL 1h wie im Plugin-`override_token.py`). Ablauf bei einem sonst blockierten Kommando:
+Seit #2125 (Spec `gate_2125_prod_send_release.md`) hat das Gate einen **eigenen** Freigabe-Weg; das allgemeine Plugin-`override` (`user_override_token.json`, Workflow-Umgebungsvariablen) oeffnet es nicht mehr. Ablauf:
 
-1. Aktiven Workflow-Namen ermitteln (`GZ_ACTIVE_WORKFLOW` bzw. `OPENSPEC_ACTIVE_WORKFLOW`, identisch zu bestehenden Hooks).
-2. Token-Datei lesen, Eintrag fuer den aktiven Workflow suchen, Alter gegen TTL 1h pruefen.
-3. Gueltiges, nicht abgelaufenes Token vorhanden → Kommando einmalig durchlassen (Exit 0) UND den Token-Eintrag fuer diesen Workflow aus der Datei entfernen (atomarer Write wie in `renderer_mail_gate.py`/`workflow.py` — `tempfile.mkstemp` + `os.rename`).
-4. Kein gueltiges Token → blockieren mit Exit 2, Meldung verweist auf Issue #1148 und den Weg ("User tippt woertlich 'override'").
+1. Der PO tippt allein die Phrase `prod-versand freigeben` (Gross-/Kleinschreibung und umgebende Leerzeichen egal, keine Zusatzwoerter; Harness-Turns, die mit `<` beginnen, zaehlen nie). Der UserPromptSubmit-Hook `prod_send_release.py` schreibt einen Eintrag unter der `session_id` der tippenden Sitzung in `<Haupt-Repo>/.claude/prod_send_release.json` (Haupt-Repo auch aus einem Worktree) und bestaetigt sichtbar per `systemMessage`.
+2. Bei einem sonst blockierten Kommando liest das Gate nur den Eintrag der eigenen `session_id` (aus dem Hook-Input). Gueltig = zeitzonenbehafteter Zeitstempel, Alter <= 1 h; naive Zeitstempel, fehlende `session_id`, Symlink-Datei (`O_NOFOLLOW`) oder Lesefehler → ungueltig (fail-closed).
+3. Gueltige Freigabe → Kommando einmalig durchlassen (Exit 0) UND den Eintrag unter Dateisperre atomar entfernen (`tempfile.mkstemp` + `os.rename`, Rechte 0600).
+4. Keine gueltige Freigabe → blockieren mit Exit 2, Meldung verweist auf Issue #1148 und die Phrase `prod-versand freigeben`.
 
-Der Verbrauch ist an einen tatsaechlich abgewendeten Block-Treffer gekoppelt, nicht an die blosse Existenz des Tokens — ein Token, das nie gebraucht wird, bleibt bis TTL-Ablauf gueltig und kann fuer andere (nicht-blockierte) Kommandos in derselben Session verwendet werden, ohne verbraucht zu werden.
+Der Verbrauch ist an einen tatsaechlich abgewendeten Block-Treffer gekoppelt, nicht an die blosse Existenz der Freigabe — eine Freigabe, die nie gebraucht wird, bleibt bis TTL-Ablauf gueltig und wird von nicht-blockierten Kommandos derselben Sitzung nicht verbraucht. Andere Sitzungen koennen sie weder nutzen noch verbrauchen.
 
 ### Registrierung in `.claude/settings.json`
 
@@ -144,7 +145,7 @@ Da `PreToolUse`/`Bash` bereits ein Array-Element fuer `renderer_mail_gate.py` en
 
 - **Input:** stdin-JSON `{"tool_input":{"command":"<bash-kommando>"}}` bei jedem Bash-Tool-Aufruf jeder Claude-Session in diesem Repo (inkl. Worktrees, da `.claude/settings.json` im Hauptrepo liegt und fuer Worktrees gilt).
 - **Output:** Exit 0 (stdout leer, Kommando laeuft) oder Exit 2 (stderr-Meldung mit Issue-#1148-Verweis, Kommando wird nicht ausgefuehrt).
-- **Side effects:** Bei erfolgreichem Override-Verbrauch wird `.claude/user_override_token.json` atomar umgeschrieben (Token-Eintrag fuer den aktiven Workflow entfernt). Kein anderer Zustand wird veraendert.
+- **Side effects:** Bei erfolgreichem Freigabe-Verbrauch wird `<Haupt-Repo>/.claude/prod_send_release.json` atomar umgeschrieben (Eintrag der eigenen `session_id` entfernt, #2125). Kein anderer Zustand wird veraendert; `user_override_token.json` wird weder gelesen noch geschrieben.
 
 ## Acceptance Criteria
 
@@ -154,8 +155,8 @@ Da `PreToolUse`/`Bash` bereits ein Array-Element fuer `renderer_mail_gate.py` en
 - **AC-2:** Given ein inhaltlich identisches POST-Send-Kommando aber gegen `localhost:8001` bzw. `127.0.0.1:8001` (Staging-Python-Port) / When der Hook prueft / Then laesst er das Kommando mit Exit 0 durch, weil Staging kein Blockziel ist.
   - Test: gleicher Aufbau wie AC-1 mit Port 8001 statt 8000, Exit-Code 0 erwarten.
 
-- **AC-3:** Given ein zuvor durch `phase_listener` erzeugtes gueltiges Override-Token fuer den aktiven Workflow in `.claude/user_override_token.json` / When ein sonst blockiertes Prod-Send-Kommando ausgefuehrt wird / Then laesst der Hook den Aufruf einmalig durch (Exit 0) und entfernt danach den Token-Eintrag, sodass ein zweiter identischer Aufruf wieder blockiert wird.
-  - Test: Token-Datei mit gueltigem Eintrag vorbereiten, Hook zweimal mit identischem Prod-Send-Kommando aufrufen, ersten Exit-Code 0 und zweiten Exit-Code 2 pruefen sowie die Token-Datei danach auf fehlenden Eintrag kontrollieren.
+- **AC-3:** Given eine zuvor durch den Release-Hook `prod_send_release.py` (PO tippt allein `prod-versand freigeben`) erzeugte gueltige Prod-Versand-Freigabe fuer die eigene `session_id` in `.claude/prod_send_release.json` (seit #2125, vorher Plugin-Token) / When dieselbe Sitzung ein sonst blockiertes Prod-Send-Kommando ausfuehrt / Then laesst der Hook den Aufruf einmalig durch (Exit 0) und entfernt danach den Eintrag, sodass ein zweiter identischer Aufruf wieder blockiert wird.
+  - Test: Release-Hook mit der Phrase und einer `session_id` aufrufen, Gate zweimal mit derselben `session_id` und identischem Prod-Send-Kommando aufrufen, ersten Exit-Code 0 und zweiten Exit-Code 2 pruefen sowie die Freigabe-Datei danach auf fehlenden Eintrag kontrollieren.
 
 - **AC-4:** Given ein reines GET-Kommando gegen einen Health-/Status-Endpoint auf Prod (`localhost:8000`, `:8090` oder `gregor20.henemm.com`) ohne POST-Flags oder Body / When der Hook prueft / Then laesst er das Kommando durch (Exit 0), weil GET-Requests nicht als Send-Trigger gelten.
   - Test: `curl gregor20.henemm.com/api/health` (ohne `-X POST`/`-d`) an den Hook geben, Exit-Code 0 erwarten.
@@ -179,7 +180,7 @@ Da `PreToolUse`/`Bash` bereits ein Array-Element fuer `renderer_mail_gate.py` en
 
 - Variablen-Obfuskation (`P=8000; curl :$P/api/scheduler/trips/1/send`) ist durch den Roh-String-Scan-Fallback nicht vollstaendig fangbar, weil weder der Port noch der Host als literaler String im Kommando auftaucht — dokumentierte Restluecke gemaess Kontext-Analyse zu Issue #1148, konsistent mit der bekannten Grenze von `bash_gate.py`. **Abgrenzung (Adversary-Fix-Runde 2):** die `${IFS}`-Obfuskation von Trennzeichen (nicht von Host/Port selbst) ist seit F007/F008 explizit abgedeckt — nur die Obfuskation von Host/Port/Pfad SELBST (z.B. durch Variablen-Substitution) bleibt eine Restluecke.
 - Der Hook ist ausschliesslich an `PreToolUse:Bash` registriert und deckt keine anderen Tool-Typen ab; ein hypothetisches Nicht-Bash-Werkzeug mit direktem HTTP-Zugriff wuerde nicht geprueft (in diesem Repo derzeit nicht existent).
-- Das Override-Token wird pro tatsaechlich abgewendetem Block-Treffer verbraucht, nicht pro Zeiteinheit — bei mehreren unabhaengigen Prod-Send-Versuchen in derselben Session muss der User pro Versuch erneut "override" tippen.
+- Die Prod-Versand-Freigabe wird pro tatsaechlich abgewendetem Block-Treffer verbraucht, nicht pro Zeiteinheit — bei mehreren unabhaengigen Prod-Send-Versuchen in derselben Sitzung muss der PO pro Versuch erneut `prod-versand freigeben` tippen (#2125).
 - Die dritte Blockbedingung ("nicht beweisbar GET") pruefft eine feste Indikator-Liste; ein noch nicht bekanntes HTTP-Tool mit abweichender POST-Syntax koennte faelschlich als GET durchgelassen werden, bis die Liste erweitert wird.
 - **Brace-Expansion (F011, Adversary-Fix-Runde 3):** Bash-Brace-Expansion (z.B. `-X{,}POST`, expandiert real zu `-XPOST`) wird NICHT erkannt und bleibt eine bewusst nicht gefixte Luecke. Anders als F010 (Zeilenfortsetzung — eine gewoehnliche, nicht-adversariale Formatierungstechnik) erfordert dieses Muster bewusste Umgehungsabsicht: niemand schreibt `-X{,}POST` versehentlich oder aus Formatierungsgruenden. Das faellt ausserhalb des Bedrohungsmodells dieses Gates (versehentlicher/gewohnheitsmaessiger Prod-Send aus einer Claude-Session), das explizit keine gezielte Sicherheitsforschungs-Obfuskation abdecken soll — analog zur bereits dokumentierten Variablen-Obfuskations-Restluecke oben. Kein Code-Fix, kein Test.
 
@@ -194,7 +195,7 @@ Tests in `tests/tdd/test_issue_1148_prod_send_gate.py` (stdin-JSON rein, Exit-Co
 
 - `test_prod_python_port_post_send_blocked` (AC-1)
 - `test_staging_python_port_post_send_allowed` (AC-2)
-- `test_valid_override_token_allows_once_then_consumed` (AC-3)
+- `test_prod_send_release_allows_once_then_consumed` (AC-3, seit #2125; weitere Faelle in `tests/tdd/test_prod_send_release.py`)
 - `test_get_health_against_prod_allowed` (AC-4)
 - `test_smtp_direct_connection_blocked` (AC-5)
 - `test_smtp_grep_reference_allowed` (AC-6)
@@ -218,3 +219,4 @@ Tests in `tests/tdd/test_issue_1148_prod_send_gate.py` (stdin-JSON rein, Exit-Co
 - 2026-07-09: Adversary-Fix-Runde 2 — F007-F009. Neue Funktion `_normalize_ifs()` ersetzt alle `${IFS}`-Obfuskationsvarianten durch echte Leerzeichen VOR jedem weiteren Scan (F008 — mehrere `\s`-verankerte Indikator-Regexe waren dadurch komplett umgehbar, obwohl Host/Port/Pfad literal sichtbar blieben); `_sanitize_freetext()` faellt zusaetzlich bei Shell-Metazeichen (`;`/`&`/`|`/Newline) auf den Roh-Scan zurueck, da `shlex.split()` diese nicht kennt und ein an einen Freitext-Wert angehaengtes, IFS-obfuskiertes Folgekommando sonst als ein einziges Freitext-Token verschluckt wurde (F007); `-F`/`--form` ist aus der generischen POST-Indikator-Liste entfernt und in `_has_form_post_indicator()` ausgelagert, die nur bei fuehrendem Kommando-Token `curl`/`wget` greift (F009 — verhinderte False Positives bei `grep -F`/`awk -F`/`tail -F`/`strings | grep -F`). ACs unveraendert. Known Limitations praezisiert: `${IFS}`-Trennzeichen-Obfuskation ist jetzt abgedeckt, Obfuskation von Host/Port SELBST bleibt Restluecke.
 - 2026-07-09: Adversary-Fix-Runde 3 — F010/F012 gefixt, F011 als Known Limitation. Neue Funktion `_normalize_line_continuation()` ersetzt Backslash-Newline-Zeilenfortsetzungen durch echte Leerzeichen VOR `_normalize_ifs()` (F010 — Standard-Bash-Formatierungstechnik fuer lange Kommandos umging mehrere `\s`-verankerte Indikatoren wie `-X\s*POST`, obwohl Bash das Kommando real zusammenhaengend ausfuehrt); `_leading_token()` ueberspringt jetzt Wrapper-Praefixe (`sudo`/`env`/`command`/`nice`/`nohup`/`time`/`stdbuf`/`timeout`/`doas`) und Env-Var-Zuweisungs-Token (`VAR=wert`) und wendet `Path(...).name` an, um Absolutpfade auf den reinen Toolnamen abzubilden (F012 — alltaegliche Praefixe liessen `curl -F`/`wget -F` faelschlich als GET durchgehen, weil das exakte Token-Match `{"curl","wget"}` nicht mehr griff). Brace-Expansion (`-X{,}POST`, F011) bleibt bewusst ungefixt und ist als Known Limitation dokumentiert — erfordert Umgehungsabsicht, ausserhalb des Bedrohungsmodells "versehentlicher/gewohnheitsmaessiger Prod-Send". ACs unveraendert.
 - 2026-07-09: F013 — Zeilenfortsetzung wird ganz entfernt (Leerstring statt Leerzeichen), fängt Umbruch mitten im Keyword.
+- 2026-11-12: #2125 — Override-Mechanik auf eigenen Freigabe-Weg umgestellt (Phrase `prod-versand freigeben`, Datei `prod_send_release.json` im Haupt-Repo, Bindung an `session_id`, einmalig, 1 h). Plugin-`override` oeffnet das Gate nicht mehr. AC-3, Dependencies, Side effects, Known Limitations nachgezogen; Details in `gate_2125_prod_send_release.md`. Blockregel unveraendert.

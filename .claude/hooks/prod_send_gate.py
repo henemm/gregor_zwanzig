@@ -21,21 +21,21 @@ kompletten rohen Kommando-String arbeiten (kein Tokenizing), wird ein
 in `sh -c "..."`/`eval "..."` verstecktes Kommando automatisch mit
 erfasst.
 
-Override: `.claude/user_override_token.json` (v2-Format), TTL 1h,
-Verbrauch pro abgewendetem Block-Treffer — siehe
-docs/specs/modules/gate_1148_prod_send_deny.md.
+Freigabe (#2125): eigener Weg nur fuer den Prod-Versand. Der PO tippt allein
+`prod-versand freigeben`; der UserPromptSubmit-Hook `prod_send_release.py`
+schreibt einen Eintrag je `session_id` in
+`<Haupt-Repo>/.claude/prod_send_release.json` (TTL 1h). Das Gate verbraucht
+ihn pro abgewendetem Block-Treffer. Das allgemeine Plugin-`override` oeffnet
+dieses Gate nicht. Siehe docs/specs/modules/gate_1148_prod_send_deny.md und
+docs/specs/modules/gate_2125_prod_send_release.md.
 
 Exit-Codes: 0 = erlaubt, 2 = blockiert.
 """
 from __future__ import annotations
 
-import json
-import os
 import re
 import shlex
-import subprocess
 import sys
-import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -286,76 +286,47 @@ def _sanitize_freetext(command: str) -> str:
     return " ".join(sanitized)
 
 
-def _project_root() -> Path:
-    root = os.environ.get("CLAUDE_PROJECT_DIR", "").strip()
-    if root:
-        return Path(root)
-    try:
-        out = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, check=True,
-        ).stdout.strip()
-        if out:
-            return Path(out)
-    except Exception:
-        pass
-    return Path.cwd()
-
-
-def _active_workflow_name() -> str:
-    return (
-        os.environ.get("GZ_ACTIVE_WORKFLOW", "").strip()
-        or os.environ.get("OPENSPEC_ACTIVE_WORKFLOW", "").strip()
-    )
-
-
-def _consume_token(token_path: Path, data: dict, workflow_name: str) -> None:
-    tokens = data.get("tokens", {})
-    tokens.pop(workflow_name, None)
-    data["tokens"] = tokens
-    fd, tmp_name = tempfile.mkstemp(
-        dir=str(token_path.parent), prefix=".user_override_token_", suffix=".tmp"
-    )
-    try:
-        with os.fdopen(fd, "w") as fh:
-            json.dump(data, fh)
-        os.rename(tmp_name, token_path)
-    except Exception:
-        try:
-            os.unlink(tmp_name)
-        except OSError:
-            pass
-
-
-def _has_valid_override(workflow_name: str) -> bool:
-    """Prueft ein gueltiges, nicht abgelaufenes Token fuer workflow_name.
-
-    Seiteneffekt bei Gueltigkeit: der Token-Eintrag wird sofort verbraucht
-    (atomar aus der Datei entfernt) — der Aufruf ist damit einmalig.
-    """
-    if not workflow_name:
-        return False
-    token_path = _project_root() / ".claude" / "user_override_token.json"
-    if not token_path.exists():
-        return False
-    try:
-        data = json.loads(token_path.read_text())
-    except (OSError, json.JSONDecodeError):
-        return False
-    tokens = data.get("tokens", {}) if isinstance(data, dict) else {}
-    entry = tokens.get(workflow_name)
+def _release_is_valid(entry: object) -> bool:
+    """Eintrag gilt nur mit zeitzonenbehaftetem `created` und Alter <= TTL.
+    Naive Zeitstempel sind ungueltig (#2125 AC-10)."""
     if not isinstance(entry, dict):
         return False
     try:
         created = datetime.fromisoformat(entry.get("created", ""))
-        if created.tzinfo is None:
-            created = created.replace(tzinfo=timezone.utc)
     except (ValueError, TypeError):
         return False
-    if datetime.now(timezone.utc) - created > _TOKEN_TTL:
+    if created.tzinfo is None or created.utcoffset() is None:
         return False
-    _consume_token(token_path, data, workflow_name)
-    return True
+    age = datetime.now(timezone.utc) - created
+    return timedelta(0) <= age <= _TOKEN_TTL
+
+
+def _has_valid_override(session_id: object) -> bool:
+    """Prueft die Prod-Versand-Freigabe der eigenen Sitzung (#2125).
+
+    Liest nur `<Haupt-Repo>/.claude/prod_send_release.json` (nie das
+    Plugin-Token `user_override_token.json`). Bei Gueltigkeit wird der
+    Eintrag unter Dateisperre atomar entfernt — einmaliger Durchlass.
+    Fail-closed: fehlende session_id, Symlink, Lesefehler -> False.
+    """
+    if not isinstance(session_id, str) or not session_id.strip():
+        return False
+
+    def _consume(releases: dict):
+        if not _release_is_valid(releases.get(session_id)):
+            return False, False
+        releases.pop(session_id, None)
+        return True, True
+
+    try:
+        return bool(hook_utils.update_prod_send_releases(_consume, create=False))
+    except Exception:
+        return False
+
+
+def _session_id() -> object:
+    payload = getattr(hook_utils, "_STDIN_PAYLOAD", None)
+    return payload.get("session_id") if isinstance(payload, dict) else None
 
 
 def _block(reason: str) -> None:
@@ -365,7 +336,8 @@ def _block(reason: str) -> None:
     print(reason, file=sys.stderr)
     print(
         "Falls dieser Send-Trigger absichtlich gegen Prod laufen soll: "
-        "tippe woertlich 'override' im Chat, um ein Einmal-Token zu erzeugen.",
+        "der PO tippt allein die Phrase 'prod-versand freigeben' im Chat "
+        "(gilt fuer genau einen Aufruf in dieser Sitzung, 1 Stunde; #2125).",
         file=sys.stderr,
     )
     print("=" * 70, file=sys.stderr)
@@ -390,7 +362,7 @@ def main() -> None:
     if not (is_smtp or is_send):
         sys.exit(0)
 
-    if _has_valid_override(_active_workflow_name()):
+    if _has_valid_override(_session_id()):
         sys.exit(0)
 
     if is_smtp:
