@@ -558,6 +558,9 @@ jobs:
     needs: [test, lint, go-test, frontend-test, svelte-check, e2e]
     runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # #2961: Deploy-Geheimnisse liegen im Environment `production`, das nur
+    # Laeufe auf `main` lesen duerfen (Deployment-Branch-Regel).
+    environment: production
     # #2047 S2b: zwei Merges liefern nie gleichzeitig aus; ein laufender
     # Deploy wird nie abgebrochen (der naechste reiht sich ein).
     concurrency:

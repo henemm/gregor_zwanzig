@@ -343,24 +343,25 @@ Schritte (nie per `${{ }}` in den Shell-Text), und der SSH-Zugang wird einmal im
 „SSH-Zugang vorbereiten" unter `$RUNNER_TEMP` (umask 077) angelegt und am Ende gelöscht.
 Ist das Secret `DEPLOY_KNOWN_HOSTS` gesetzt, prüft SSH den Host-Schlüssel
 (`StrictHostKeyChecking yes`); fehlt es, läuft der Deploy wie bisher ohne Prüfung weiter und
-der Lauf zeigt eine `::warning::`-Zeile. Drei Schritte liegen beim Repo-Eigentümer
-(GitHub-Einstellungen bzw. Server) und sind **noch offen**:
+der Lauf zeigt eine `::warning::`-Zeile.
 
-1. **Environment `production`** anlegen (Settings → Environments) mit der Regel
-   „Deployment branches: nur `main`". Die Secrets `DEPLOY_SSH_KEY`, `DEPLOY_USER`,
-   `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`, `STAGING_BASIC_AUTH`, `HENEMM_DEPLOY_BOT_TOKEN`,
-   `HENEMM_DEPLOY_CHAT_ID` von den Repository-Secrets dorthin verschieben. **Erst danach**
-   im Job `deploy` die Zeile `environment: production` ergänzen; vorher würde der Job ohne
-   Secrets laufen und scheitern. Damit kann ein Workflow auf einem anderen Branch die
-   Schlüssel nicht mehr lesen.
-2. **SSH-Schlüssel begrenzen:** in `authorized_keys` des Deploy-Kontos den CI-Schlüssel mit
-   `command="…",restrict` auf ein Wrapper-Skript beschränken, das nur die drei Aufrufe der CI
-   zulässt (Prod-Gate, `deploy-gregor-prod.sh`, `prod_selftest.py`; Auswahl über
-   `SSH_ORIGINAL_COMMAND`, alles andere ablehnen).
-3. **`DEPLOY_KNOWN_HOSTS` anlegen:** die Host-Schlüssel-Zeile(n) des Servers für genau den
-   Namen bzw. die Adresse aus `DEPLOY_HOST` (z. B. aus `ssh-keyscan`, Fingerabdruck auf dem
-   Server selbst mit `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` abgleichen). Danach
-   verschwindet die Warnung im Deploy-Lauf.
+**Umgesetzt am 2026-11-13** (Nacharbeit #2961):
+
+1. **Environment `production`** mit Deployment-Branch-Regel „nur `main`"; der Job `deploy`
+   trägt `environment: production`. Dort liegen `DEPLOY_SSH_KEY`, `DEPLOY_USER`,
+   `DEPLOY_HOST` (Server-IP), `DEPLOY_KNOWN_HOSTS`, `STAGING_BASIC_AUTH`. Die gleichnamigen
+   Repository-Secrets sind gelöscht, ein Workflow auf einem anderen Branch kommt nicht mehr
+   an sie heran. `STAGING_BASIC_AUTH` = `GZ_STAGING_VALIDATOR_USER:…PASS` aus
+   `/etc/henemm/secrets.env`; nach einer Rotation dort auch dieses Secret neu setzen
+   (`gh secret set STAGING_BASIC_AUTH --env production < datei`).
+   Bewusst als Repository-Secret geblieben: `HENEMM_DEPLOY_BOT_TOKEN`/`HENEMM_DEPLOY_CHAT_ID`
+   (nur Telegram-Meldung, Wert liegt nicht auf dem Server, Verschieben bräuchte ihn).
+2. **SSH-Schlüssel neu und begrenzt:** neuer Schlüssel `ci-deploy-gz-2026-11`, in
+   `~hem/.ssh/authorized_keys` mit `command="…/ci-ssh-dispatch.sh",restrict` (henemm-infra#282);
+   der alte Schlüssel ist entfernt.
+3. **`DEPLOY_KNOWN_HOSTS`:** `ssh-keyscan` der Server-IP, Fingerabdrücke gegen
+   `/etc/ssh/ssh_host_*_key.pub` abgeglichen. Ändert sich der Host-Schlüssel des Servers,
+   scheitert der Deploy an der Prüfung, dann dieses Secret neu setzen.
 
 **Geheimnis-Suche:** Der Job `lint` prüft den ausgecheckten Stand mit gitleaks in fester
 Version (`.gitleaks.toml`, eigene Regel für Hex-Passwörter). Ein Platzhalter-Geheimnis in
