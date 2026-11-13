@@ -56,6 +56,21 @@ ANKER: dict[str, tuple[str, str]] = {
         "Unbekannte Metrik '{metric}' in changes", "Unknown metric '{metric}' in changes"),
     "api.fehler.alarm_body_ungueltig": (
         "Ungültiger Alarm-Körper: {grund}", "Invalid alert body: {grund}"),
+    # Issue #2219: Eingangspruefung der Alarm-Vorschau.
+    "api.fehler.schwere_unbekannt": (
+        "Unbekannte Schwere '{severity}' in changes, erlaubt sind: {erlaubt}",
+        "Unknown severity '{severity}' in changes, allowed values: {erlaubt}"),
+    "api.fehler.zeitstempel_ohne_zone": (
+        "Zeitstempel '{timestamp}' in nowcast_frames ist kein ISO-Zeitpunkt mit Zeitzone",
+        "Timestamp '{timestamp}' in nowcast_frames is not an ISO timestamp with time zone"),
+    "api.fehler.onset_tagesbezug_unvollstaendig": (
+        "Tagesversatz ohne Wochentagskürzel: {feld} fehlt",
+        "Day offset without weekday abbreviation: {feld} is missing"),
+    "api.fehler.onset_shift_null": (
+        "Beginn-Verschiebung von '{metric}' beträgt {sekunden} s und liegt unter der "
+        "kleinsten Meldeschwelle von {grenze} s",
+        "Onset shift of '{metric}' is {sekunden} s, below the smallest reporting "
+        "threshold of {grenze} s"),
     "api.fehler.vergleich_nicht_gefunden": (
         "Orts-Vergleich '{preset_id}' nicht gefunden für Nutzer '{user_id}'",
         "Location comparison '{preset_id}' not found for user '{user_id}'"),

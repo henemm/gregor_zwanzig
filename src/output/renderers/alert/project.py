@@ -75,6 +75,23 @@ def event_end_display(
     return local_fmt(end_dt, tz), offset, ongoing, weekday
 
 
+def onset_display(
+    now_utc: datetime, onset_minutes: int, tz,
+) -> tuple[str, int, str | None]:
+    """Anzeigefassung des Beginns (Issue #2219, B2-72 = #2085):
+    `("HH:MM", Versatz, Wochentagskuerzel)`.
+
+    Dieselbe Regel wie `event_end_display`: der Versatz entscheidet, das
+    Kuerzel steht nur bei Versatz != 0 und stammt aus der ORTSZEIT `tz`.
+    Bislang nur vom Replay-Zweig der Vorschau genutzt; die Versandstellen
+    leiten den Beginn weiter inline ab (Vereinheitlichung = Folge-Ticket).
+    """
+    onset_dt = now_utc + timedelta(minutes=onset_minutes)
+    offset = day_offset(now_utc, onset_dt, tz)
+    weekday = _de_weekday_short(local_dt(onset_dt, tz)) if offset else None
+    return local_fmt(onset_dt, tz)[-5:], offset, weekday
+
+
 def source_reach_display(now_utc: datetime, nowcast, tz) -> tuple[str | None, int]:
     """Anzeigefassung der Reichweite der Quelle (Issue #2051 S3):
     `("HH:MM", Versatz)` oder `(None, 0)`.

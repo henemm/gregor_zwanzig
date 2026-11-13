@@ -7,7 +7,7 @@ directly.
 from __future__ import annotations
 
 from datetime import date as date_type
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, time, timezone
 from typing import Any, Optional
 
 from app.models import (
@@ -28,6 +28,7 @@ from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.project import (
     event_end_display,  # Issue #2051 S1
+    onset_display,  # Issue #2219 (B2-72)
     location_sharpness_display, source_reach_display,  # Issue #2051 S3
     to_alert_message,
 )
@@ -45,12 +46,14 @@ from output.renderers.sms_trip import (
 from output.tokens.builder import build_token_line
 from output.tokens.dto import DailyForecast, HourlyValue, MetricSpec, NormalizedForecast
 from output.tokens.render import render_line_with_survivors
+from services.fehler_code import fehler_mit_code  # Issue #2219
 from services.rain_extent import RainZone  # Issue #2051 S2b
 from utils.timezone import local_fmt, tz_for_coords
 
 
-def _alert_tz_for_trip(trip_obj: Trip):
-    """Best-effort timezone for alert rendering from trip coordinates."""
+def _first_trip_coords(trip_obj: Trip) -> "tuple[float, float] | None":
+    """Koordinaten des ersten Wegpunkts mit Lage -- dieselbe Quelle fuer die
+    Buendel-Zone (`_alert_tz_for_trip`) und die Platzhalter-Segmente."""
     stages = getattr(trip_obj, "stages", None) or []
     for stage in stages:
         waypoints = getattr(stage, "waypoints", None) or []
@@ -58,12 +61,39 @@ def _alert_tz_for_trip(trip_obj: Trip):
             lat = getattr(wp, "lat", None)
             lon = getattr(wp, "lon", None)
             if lat is not None and lon is not None:
-                return tz_for_coords(float(lat), float(lon))
-    return timezone.utc
+                return float(lat), float(lon)
+    return None
 
 
-def _stub_segment(seg_time: Any) -> SegmentWeatherData:
-    """Minimal renderer stub. Pattern from tests/unit/test_issue_131_alert_klarheit.py."""
+def _alert_tz_for_trip(trip_obj: Trip):
+    """Best-effort timezone for alert rendering from trip coordinates."""
+    coords = _first_trip_coords(trip_obj)
+    return tz_for_coords(*coords) if coords else timezone.utc
+
+
+SCHWERE_ERLAUBT = tuple(s.value for s in ChangeSeverity)
+
+
+def validate_change_severity(severity: Any) -> None:
+    """Issue #2219 (C5-52): EINE Severity-Pruefung fuer Trip- und
+    Compare-Zweig der Alarm-Vorschau. Erlaubt sind genau die Werte von
+    `ChangeSeverity` (keine zweite Liste); sonst `ValueError` mit Code
+    `schwere_unbekannt` (der Router lokalisiert ueber `.code`)."""
+    if severity not in SCHWERE_ERLAUBT:
+        raise fehler_mit_code(
+            ValueError, "schwere_unbekannt",
+            severity=severity, erlaubt=", ".join(SCHWERE_ERLAUBT),
+        )
+
+
+def _stub_segment(seg_time: Any, coords: "tuple[float, float] | None" = None) -> SegmentWeatherData:
+    """Minimal renderer stub. Pattern from tests/unit/test_issue_131_alert_klarheit.py.
+
+    Issue #2219 (C5-18): die Platzhalter tragen die Lage des Trips statt 0/0.
+    `tz_for_coords(0, 0)` liefert `Etc/GMT` (nicht "UTC"), das
+    `resolve_location_tz` als aufgeloest wertet -- der Beginn stand dann in
+    UTC statt in der Trip-Zone."""
+    lat, lon = coords or (0.0, 0.0)
     today = datetime.now(timezone.utc).date()
     start_h, start_m = (int(p) for p in seg_time.start.split(":"))
     end_h, end_m = (int(p) for p in seg_time.end.split(":"))
@@ -71,8 +101,8 @@ def _stub_segment(seg_time: Any) -> SegmentWeatherData:
     end_dt = datetime.combine(today, time(end_h, end_m), tzinfo=timezone.utc)
     segment = TripSegment(
         segment_id=seg_time.segment_id,
-        start_point=GPXPoint(lat=0.0, lon=0.0, elevation_m=0),
-        end_point=GPXPoint(lat=0.0, lon=0.0, elevation_m=0),
+        start_point=GPXPoint(lat=lat, lon=lon, elevation_m=0),
+        end_point=GPXPoint(lat=lat, lon=lon, elevation_m=0),
         start_time=start_dt,
         end_time=end_dt,
         duration_hours=max(0.0, (end_dt - start_dt).total_seconds() / 3600.0),
@@ -262,7 +292,9 @@ def _deviation_preview_message(
     ampel = resolve_ampel(trip_obj)
     if not fresh:
         return to_alert_message(
-            changes, [_stub_segment(st) for st in segment_times], trip_obj.name,
+            changes,
+            [_stub_segment(st, _first_trip_coords(trip_obj)) for st in segment_times],
+            trip_obj.name,
             tz=tz, stand_at=stand_at, now_utc=now_utc, ampel=ampel,
         )
     return to_alert_message(
@@ -361,7 +393,11 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
         }
 
     alert_tz = _alert_tz_for_trip(trip_obj)
-    onset_time = now + timedelta(minutes=result.onset_minutes or 0)
+    # Issue #2219 (B2-72 = #2085): Beginn mit Tagesbezug ueber die geteilte
+    # Anzeigefassung -- dieselbe Regel wie das Ende darunter.
+    _onset_hhmm, _onset_offset, _onset_weekday = onset_display(
+        now, result.onset_minutes or 0, alert_tz,
+    )
     _end_time, _end_offset, _end_ongoing, _end_weekday = event_end_display(
         now, result, alert_tz,
     )
@@ -380,7 +416,9 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
         # andere -- die Vorschau sagt damit "laeuft bereits", wo der Versand
         # es sagt.
         already_running=result.already_running,
-        onset_time=local_fmt(onset_time, alert_tz)[-5:],  # "HH:MM"-Anteil
+        onset_time=_onset_hhmm,
+        onset_day_offset=_onset_offset,
+        onset_weekday=_onset_weekday,
         km_from=body_nf.km_from, km_to=body_nf.km_to,
         is_convective=result.is_convective,
         intensity_label=result.intensity_label,

@@ -32,6 +32,7 @@ from services.validator_render_service import (
     render_alert_preview,
     render_compare_email_preview,
     render_sms_fidelity_preview,
+    validate_change_severity,
 )
 
 router = APIRouter()
@@ -357,8 +358,14 @@ def alert_preview(
 
     if body.official:
         _validate_official_segment_ids(trip_obj, body.official, user_id)
+    if body.nowcast_frames:
+        _validate_frame_timestamps(body.nowcast_frames, user_id)
+    if body.onset:
+        _validate_onset_day_reference(body.onset, user_id)
     if body.changes:
         _validate_change_metrics(body.changes, user_id)
+        _validate_change_severity(body.changes, user_id)
+        _validate_onset_shift(body.changes, user_id)
         _validate_change_segment_ids(trip_obj, body.changes, user_id)
         if not body.segment_times:
             body.segment_times = _synthesize_segment_times(trip_obj, body.changes, user_id)
@@ -452,6 +459,60 @@ def _validate_change_metrics(changes: "list[ChangePayload]", user_id: str) -> No
     for c in changes:
         if c.metric not in known:
             raise api_fehler(422, "metrik_unbekannt", user_id, metric=c.metric)
+
+
+def _validate_change_severity(changes: "list[ChangePayload]", user_id: str) -> None:
+    """Issue #2219 (C5-52): Schwere gegen ``ChangeSeverity`` -- dieselbe
+    Pruefung wie im Compare-Zweig, statt spaeter als ValueError -> HTTP 500."""
+    for c in changes:
+        try:
+            validate_change_severity(c.severity)
+        except ValueError as e:
+            raise api_fehler_aus(e, 422, user_id)
+
+
+def _validate_frame_timestamps(nf: "NowcastFramesPayload", user_id: str) -> None:
+    """Issue #2219 (C5-28): Replay-Zeitstempel muessen ISO mit Zone sein --
+    sonst rechnet der Replay naiv gegen aware und endet in HTTP 500."""
+    for f in nf.frames:
+        try:
+            ts = datetime.fromisoformat(f.timestamp)
+        except ValueError:
+            ts = None
+        if ts is None or ts.tzinfo is None:
+            raise api_fehler(422, "zeitstempel_ohne_zone", user_id, timestamp=f.timestamp)
+
+
+def _validate_onset_day_reference(onset: "OnsetPayload", user_id: str) -> None:
+    """Issue #2219 (C5-46): ein Tagesversatz ohne Wochentagskuerzel wuerde
+    der Renderer still verschlucken -- der Versand erzeugt das nie."""
+    for offset, weekday, feld in (
+        (onset.onset_day_offset, onset.onset_weekday, "onset_weekday"),
+        (onset.event_end_day_offset, onset.event_end_weekday, "event_end_weekday"),
+    ):
+        if offset != 0 and not weekday:
+            raise api_fehler(422, "onset_tagesbezug_unvollstaendig", user_id, feld=feld)
+
+
+def _validate_onset_shift(changes: "list[ChangePayload]", user_id: str) -> None:
+    """Issue #2219 (C5-19): eine Beginn-Verschiebung von 0 oder unter der
+    kleinsten Schwelle ihrer Richtung kann der Versand bei keiner Stufe
+    melden. Grenze aus ``ONSET_SHIFT_BOUNDS`` -- derselben Tabelle, die
+    ``weather_change_detection._onset_change`` liest (keine zweite Konstante)."""
+    from output.renderers.alert.project import _is_onset_change
+    from services.alert_preset import ONSET_SHIFT_BOUNDS
+
+    for c in changes:
+        if not _is_onset_change(c):
+            continue
+        shift = c.new_value - c.old_value
+        richtung = 1 if shift > 0 else 0  # (frueher_h, spaeter_h)
+        grenze_s = min(b[richtung] for b in ONSET_SHIFT_BOUNDS.values()) * 3600
+        if c.delta == 0 or abs(shift) < grenze_s:
+            raise api_fehler(
+                422, "onset_shift_null", user_id,
+                metric=c.metric, sekunden=int(abs(shift)), grenze=grenze_s,
+            )
 
 
 def _validate_change_segment_ids(
