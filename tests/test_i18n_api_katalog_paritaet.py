@@ -90,6 +90,9 @@ ANKER: dict[str, tuple[str, str]] = {
     "api.fehler.gpx_ungueltig": (
         "Die GPX-Datei konnte nicht gelesen werden: Sie ist leer, beschädigt oder enthält keinen verwertbaren Track (mindestens 10 Punkte).",
         "The GPX file could not be read: it is empty, damaged or contains no usable track (at least 10 points)."),
+    "api.fehler.wetterdienst_fehler": (
+        "Der Wetterdienst ist gerade nicht erreichbar. Bitte versuche es später erneut.",
+        "The weather service is currently unavailable. Please try again later."),
     "api.fehler.unbekannt": (
         "Die Anfrage konnte nicht verarbeitet werden.",
         "The request could not be processed."),

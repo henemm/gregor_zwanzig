@@ -118,10 +118,10 @@ bewusst keine Anleitung zu den behobenen Schwächen.
 **AC-4:** Given der Mail-Posteingang / When eine automatisch erzeugte Mail (Auto-Submitted ungleich `no`, Precedence bulk/junk/auto_reply/list, X-Autoreply) oder eine Mail von einer System-Adresse (Absender-, Eingangs-, Postfachadresse) eintrifft / Then wird sie ohne Antwort als gelesen markiert; eine Mail mit `X-Auto-Response-Suppress` wird als Befehl ausgeführt und bei Erfolg beantwortet, bekommt aber keine Fehlerantwort; jede ausgehende Mail trägt `Auto-Submitted: auto-generated`; Fehlerantworten per Mail gehen je Nutzer höchstens fünfmal pro Stunde raus, Erfolgsantworten ungedrosselt.
 - Test: `tests/tdd/test_mail_schleifenschutz.py`, `tests/tdd/test_bug_inbound_email_loop.py`
 
-**AC-5:** Given eine Ausnahme ohne Fehlercode, ein fehlgeschlagener Kanaltest oder eine unlesbare GPX-Datei / When der Core dem Client antwortet / Then enthält die Antwort einen Katalogtext in der Sprache des Nutzers ohne Pfade, Hostnamen oder Konfigurationsnamen, und die Details stehen im Log.
-- Test: `tests/tdd/test_fehlertexte_ohne_interna.py`, `tests/tdd/test_api_fehler_nutzersprache.py`
+**AC-5:** Given eine Ausnahme ohne Fehlercode, ein fehlgeschlagener Kanaltest, eine unlesbare GPX-Datei, ein Wetterdienst-Fehler am Forecast-Endpunkt, ein sonstiger Fehler beim Handversand eines Vergleichs oder ein gescheiterter Ortsabruf im Vergleich bzw. Abschnittsabruf im Trip / When der Core dem Client antwortet oder die Mail bzw. Telegram-Nachricht baut / Then steht dort ein Katalogtext in der Sprache des Nutzers ohne Pfade, Hostnamen oder Konfigurationsnamen, und die Details stehen im Log.
+- Test: `tests/tdd/test_fehlertexte_ohne_interna.py`, `tests/tdd/test_api_fehler_nutzersprache.py`, `tests/tdd/test_api_fehlertexte_forecast_handversand.py`
 
-**AC-6:** Given ein Nutzer lädt eine GPX-Datei hoch / When sie größer als 10 MB ist bzw. seine Ablage schon 200 Dateien oder 200 MB umfasst / Then antwortet der Core mit 413 bzw. 409 und Katalogtext und speichert nichts; eine gleichnamige Datei wird ersetzt (nicht dupliziert), aber nur, wenn die neue lesbar ist; die Grenzen gelten je Nutzer.
+**AC-6:** Given ein Nutzer lädt eine GPX-Datei hoch / When sie größer als 10 MB ist bzw. seine Ablage schon 200 Dateien oder 200 MB umfasst / Then antwortet der Core mit 413 bzw. 409 und Katalogtext und speichert nichts; eine gleichnamige Datei wird ersetzt (nicht dupliziert), aber nur, wenn die neue lesbar ist; die Grenzen gelten je Nutzer und zählen jede reguläre Datei der Ablage (jede Schreibweise der Endung, auch Zwischendateien); verwaiste Zwischendateien räumt der nächste Upload auf; Dateinamen über 200 Bytes werden unter Erhalt der Endung gekürzt.
 - Test: `tests/tdd/test_gpx_upload_grenzen.py`
 
 **AC-7:** Given ein Ort mit Bergfex-Kurzname, ein Settings-Objekt mit Geheimnissen bzw. ein Nutzer ohne lesbares Profil / When Schneedaten abgerufen, die Settings protokolliert bzw. die Nutzer-Settings gebildet werden / Then werden Kurznamen außerhalb `[a-z0-9-]+` abgelehnt und Weiterleitungen nicht verfolgt, erscheint kein Geheimnis im Klartext und gibt es keinen Mail-Empfänger (kein Rückfall auf die globale Adresse).
@@ -130,10 +130,16 @@ bewusst keine Anleitung zu den behobenen Schwächen.
 **AC-8:** Given ein Telegram-Chat ohne zugeordnetes Konto / When er mehrfach schreibt bzw. die Sende-Drossel für ihn voll ist / Then erhält er höchstens einen Registrierungshinweis pro Stunde, die Merktabelle bleibt beschränkt, und der Webhook-Worker wartet nie in der Drossel.
 - Test: `tests/tdd/test_telegram_unbekannte_chats.py`
 
-**AC-9:** Given die gesperrten Python-Abhängigkeiten in `uv.lock` / When sie mit `pip-audit` gegen die bekannten Schwachstellen geprüft werden / Then meldet die Prüfung keine bekannte Lücke.
-- Test: `uv export --no-dev --format requirements-txt --no-hashes` + `uvx pip-audit -r … --no-deps --disable-pip` (Lauf im Bericht zu #2961)
+**AC-11:** Given ein Hinweis vor dem Trip-Briefing (z. B. Nachlieferung mit Etappenname) / When er der ersten Telegram-Blase (HTML-Modus) vorangestellt wird / Then erscheint er dort als Text (escaped).
+- Test: `tests/tdd/test_mail_html_nutzertext_escaping.py`
 
-**AC-10:** Given ungelesene Mails im Posteingang / When der Abruf läuft / Then lädt er zuerst nur Kopfzeilen und Größe, den Rumpf nur für autorisierte Absender, höchstens 50 Mails je Lauf, überspringt Mails über 2 MB (als gelesen markiert) und protokolliert weder volle Adressen noch volle Befehlstexte.
+**AC-12:** Given eine Schreibsperre `<id>.json.lock`, die zwischen Öffnen und Sperren entfernt oder ersetzt wird / When der Python-Core die Sperre nimmt / Then hält er danach die Datei, die unter dem Pfad liegt (sonst erneuter Versuch innerhalb der Frist, danach `LockTimeout`).
+- Test: `tests/unit/test_file_lock_pfad_identitaet.py`
+
+**AC-9:** Given die gesperrten Python-Abhängigkeiten in `uv.lock` / When sie mit `pip-audit` gegen die bekannten Schwachstellen geprüft werden / Then meldet die Prüfung keine bekannte Lücke.
+- Test: `uv export --format requirements-txt --no-hashes` (mit und ohne `--no-dev`) + `uvx pip-audit -r … --no-deps --disable-pip` (Lauf im Bericht zu #2961)
+
+**AC-10:** Given ungelesene Mails im Posteingang / When der Abruf läuft / Then lädt er zuerst nur Kopfzeilen und Größe, den Rumpf nur für autorisierte Absender, höchstens 50 Mails je Lauf, überspringt Mails über 2 MB oder ohne Größenangabe des Servers (als gelesen markiert) und protokolliert weder volle Adressen noch volle Befehlstexte.
 - Test: `tests/tdd/test_mail_schleifenschutz.py`, `tests/tdd/test_logs_ohne_klartext_nutzerdaten.py`
 
 ## Known Limitations

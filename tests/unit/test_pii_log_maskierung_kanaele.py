@@ -208,7 +208,7 @@ class _ImapPostfach:
         self.flags: list[tuple] = []
 
     def fetch(self, uid, teile):
-        return "OK", [(uid, self._roh)]
+        return "OK", [(b"%s (RFC822.SIZE %d)" % (uid, len(self._roh)), self._roh)]
 
     def store(self, uid, modus, flag):
         self.flags.append((uid, modus, flag))

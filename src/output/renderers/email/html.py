@@ -1178,7 +1178,9 @@ def render_html(
                 icon = "⚡ " if fc.get("level") and fc["level"] != ThunderLevel.NONE else ""
                 # Issue #2205: Hagel-Zusatz steht IN `fc['text']` (Zeitplaner),
                 # wortgleich zur Klartext-Fassung -- kein Suffix mehr hier.
-                items.append(f"<li>{fc['date']}: {icon}{fc['text']}</li>")
+                # #2961: Text-Felder escapen (Verteidigung in der Tiefe).
+                items.append(f"<li>{_html.escape(str(fc['date']))}: {icon}"
+                             f"{_html.escape(str(fc['text']))}</li>")
         if items:
             thunder_html = f"""
             <div class="section">

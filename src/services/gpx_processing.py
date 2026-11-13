@@ -29,6 +29,8 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
+import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
@@ -51,15 +53,49 @@ MAX_GPX_FILES_PER_USER = 200
 MAX_GPX_BYTES_PER_USER = 200 * 1024 * 1024
 
 
+# Zwischendateien laufender Uploads (kurzer Zufallsname, s. process_gpx_upload)
+# und die Frist, nach der eine liegengebliebene als verwaist gilt.
+_TMP_PREFIX = ".upload-"
+_TMP_SUFFIX = ".tmp"
+_TMP_MAX_ALTER_SEKUNDEN = 600
+# Dateinamen werden auf hoechstens so viele Bytes (UTF-8) gekuerzt; die
+# Endung bleibt erhalten (Dateisysteme erlauben 255 Bytes je Name).
+MAX_GPX_NAME_BYTES = 200
+
+
 class GpxSpeicherVoll(ValueError):
     """Die GPX-Ablage des Nutzers ist voll (Anzahl oder Gesamtgroesse)."""
+
+
+def _kuerze_dateiname(name: str) -> str:
+    """Kuerzt den Stamm, bis der Name in ``MAX_GPX_NAME_BYTES`` passt."""
+    if len(name.encode("utf-8")) <= MAX_GPX_NAME_BYTES:
+        return name
+    stamm, endung = name[:-4], name[-4:]
+    budget = MAX_GPX_NAME_BYTES - len(endung.encode("utf-8"))
+    kurz = stamm.encode("utf-8")[:budget].decode("utf-8", errors="ignore")
+    return kurz + endung
+
+
+def _raeume_zwischendateien_auf(upload_dir: Path) -> None:
+    """Entfernt verwaiste Zwischendateien frueherer, abgebrochener Uploads."""
+    grenze = time.time() - _TMP_MAX_ALTER_SEKUNDEN
+    for p in upload_dir.iterdir():
+        if p.name.startswith(_TMP_PREFIX) and p.name.endswith(_TMP_SUFFIX):
+            try:
+                if p.is_file() and p.stat().st_mtime < grenze:
+                    p.unlink()
+            except OSError as e:
+                logger.warning("Verwaiste GPX-Zwischendatei nicht entfernbar: %s", e)  # i18n-log
 
 
 def _check_upload_quota(upload_dir: Path, target: Path, new_size: int) -> None:
     """Wirft ``GpxSpeicherVoll``, wenn die neue Datei die Grenzen sprengt.
 
-    Eine gleichnamige Datei wird ersetzt und zaehlt daher nicht mit."""
-    others = [p for p in upload_dir.glob("*.gpx") if p.is_file() and p.name != target.name]
+    Gezaehlt werden ALLE regulaeren Dateien der Ablage (jede Schreibweise der
+    Endung, auch Zwischendateien); eine gleichnamige Datei wird ersetzt und
+    zaehlt daher nicht mit."""
+    others = [p for p in upload_dir.iterdir() if p.is_file() and p.name != target.name]
     total = sum(p.stat().st_size for p in others) + new_size
     if len(others) + 1 > MAX_GPX_FILES_PER_USER or total > MAX_GPX_BYTES_PER_USER:
         raise fehler_mit_code(
@@ -93,13 +129,14 @@ def process_gpx_upload(
         raise fehler_mit_code(ValueError, "gpx_nur_gpx", filename=filename)
 
     upload_dir.mkdir(parents=True, exist_ok=True)
+    _raeume_zwischendateien_auf(upload_dir)
     # Only the bare name — a crafted filename must not escape upload_dir (#1352).
-    saved_path = upload_dir / Path(filename).name
+    saved_path = upload_dir / _kuerze_dateiname(Path(filename).name)
     _check_upload_quota(upload_dir, saved_path, len(content))
 
-    # Issue #2961: erst unter Zwischennamen ablegen und pruefen; nur eine
+    # Issue #2961: erst unter kurzem Zufallsnamen ablegen und pruefen; nur eine
     # lesbare Datei ersetzt eine gleichnamige (die alte bleibt sonst erhalten).
-    tmp_path = upload_dir / f".{saved_path.name}.upload"
+    tmp_path = upload_dir / f"{_TMP_PREFIX}{secrets.token_hex(8)}{_TMP_SUFFIX}"
     tmp_path.write_bytes(content)
     try:
         track = parse_gpx(tmp_path)
