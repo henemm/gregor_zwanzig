@@ -9,6 +9,7 @@
   `docs/specs/modules/google_login_adress_verknuepfung.md` (C); schreibt
   [ADR-0066](0066-login-erfordert-bestaetigte-email-adresse.md) fort und löst die Aussage
   „kein Account-Linking in v1" aus `docs/specs/modules/google_oauth_login.md` ab.
+- **Ergänzt durch:** [ADR-0115](0115-kontoaenderungen-re-auth-hinweis-mails-unbestaetigte-konten.md) (ergänzt: halten nur unbestätigte Anmeldungen eine Adresse, ersetzt eine neue Registrierung sie; Login-Kennung erst nach Bestätigung)
 
 ## Kontext
 

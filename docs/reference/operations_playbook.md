@@ -568,6 +568,37 @@ sudo systemctl start gregor-python gregor-api gregor-frontend
 dem letzten Backup entstanden ist, und die einzige Grundlage für die Frage, was überhaupt
 kaputtging.
 
+### Ablage entfernter unbestätigter Anmeldungen (#2961, ADR-0115)
+
+Neben `users/` liegt in jeder Datenwurzel (`/var/lib/gregor`, `/var/lib/gregor-staging`) das
+Verzeichnis **`.entfernt-unbestaetigt/`**. Dorthin verschiebt die Go-API (per Rename, Rechte
+bleiben) den Kontoordner einer unbestätigten Anmeldung, wenn eine neue Registrierung dieselbe
+Adresse übernimmt oder der Reaper sie räumt (Token seit mehr als 24 h abgelaufen). Behandelt
+werden nur Ordner ohne Nutzinhalte (Positivliste: `user.json`, `sessions.json`,
+`email_verification.json`, `password_reset.json`, leere `locations/`, `gpx/`,
+`weather_snapshots/`); jeder andere Ordner bleibt stehen, das Journal zeigt dann
+`reaper: WARNUNG unbestaetigte Anmeldung <kennung gekürzt>*** hat Nutzinhalte — bleibt stehen`.
+
+- **Name:** `<kennung>-<UTC-Zeitstempel>`, z. B. `u-1a2b3c4d-20261113T020000Z`.
+- **Aufbewahrung:** 30 Tage, danach entfernt der Reaper den Eintrag endgültig. Die Ablage liegt
+  in der Datenwurzel und wird damit vom täglichen Backup oben mitgesichert.
+- **Unsichtbar:** kein Loader (Go-Nutzerliste, Adress-Eindeutigkeit, Scheduler, Python-Core)
+  liest außerhalb von `users/`.
+
+**Zurückholen** (als `claude-gregor`, Dienst darf laufen; nur wenn unter der Kennung kein neues
+Konto existiert):
+
+```bash
+ls /var/lib/gregor/.entfernt-unbestaetigt/
+test ! -e /var/lib/gregor/users/<kennung> && \
+  mv /var/lib/gregor/.entfernt-unbestaetigt/<kennung>-<zeitstempel> /var/lib/gregor/users/<kennung>
+```
+
+Das Konto ist danach unverändert wieder da (unbestätigt). Bestätigt der Inhaber seine Adresse
+nicht, räumt der Reaper es nach Ablauf erneut; ggf. vorher per Resend einen neuen Link schicken.
+Hält inzwischen ein neues Konto dieselbe Adresse, entsteht ein Bestandsduplikat — dann den Ordner
+in der Ablage lassen und den Fall einzeln klären.
+
 ### Restore-Test
 
 `sudo bash /home/hem/henemm-infra/scripts/restore-test-gregor.sh` — läuft sonntags automatisch

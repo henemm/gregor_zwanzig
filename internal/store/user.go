@@ -78,11 +78,65 @@ func (s *Store) LoadUser(id string) (*model.User, error) {
 	return &user, nil
 }
 
+// sicherheitsSchluessel sind die Felder der user.json, die ein veralteter
+// Schreiber nie zuruecksetzen darf (Issue #2961, GA6, ADR-0115). SaveUser
+// uebernimmt sie bei einer vorhandenen Datei unveraendert von der Platte;
+// geschrieben werden sie nur ueber UpdateUser oder einen Merge-Setter, die
+// beide unter der Nutzersperre frisch laden.
+var sicherheitsSchluessel = []string{
+	"password_hash", "passkey_credentials", "oauth_provider", "oauth_sub",
+	"disabled", "tier", "email_verified_at",
+}
+
+// SaveUser schreibt das Nutzerobjekt per Read-Modify-Write mit Merge. Bei einer
+// vorhandenen user.json bleiben die Sicherheitsfelder (sicherheitsSchluessel)
+// auf dem Plattenstand — Aenderungen daran laufen ueber UpdateUser oder die
+// Merge-Setter. Eine Neuanlage (keine Datei) schreibt alle Felder.
 // gz-store-scope-exempt: die Kennung steckt im uebergebenen Nutzer-Objekt, nicht in s.UserID
 func (s *Store) SaveUser(user model.User) error {
 	if !ValidUserID(user.ID) {
 		return ErrInvalidUserID
 	}
+	unlock := lockUserJSON(user.ID)
+	defer unlock()
+	return s.saveUserLocked(user, true)
+}
+
+// UpdateUser laedt das Konto unter der Nutzersperre frisch, wendet mutate an
+// und schreibt ALLE Felder zurueck (unbekannte Schluessel bleiben erhalten).
+// Einziger Weg fuer Aenderungen an Sicherheitsfeldern neben den
+// Merge-Settern. Ein fehlendes Konto ist ein Fehler; liefert mutate einen
+// Fehler, wird nichts geschrieben. Rueckgabe: der geschriebene Stand.
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
+func (s *Store) UpdateUser(id string, mutate func(u *model.User) error) (*model.User, error) {
+	if !ValidUserID(id) {
+		return nil, ErrInvalidUserID
+	}
+	unlock := lockUserJSON(id)
+	defer unlock()
+	u, err := s.LoadUser(id)
+	if err != nil {
+		return nil, err
+	}
+	if u == nil {
+		return nil, ErrUserNotFound
+	}
+	if err := mutate(u); err != nil {
+		return nil, err
+	}
+	u.ID = id
+	if err := s.saveUserLocked(*u, false); err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+// ErrUserNotFound: UpdateUser auf ein Konto ohne user.json.
+var ErrUserNotFound = errors.New("user not found")
+
+// saveUserLocked: Aufrufer haelt lockUserJSON(user.ID). keepSecurity haelt die
+// Sicherheitsfelder einer vorhandenen Datei auf dem Plattenstand.
+func (s *Store) saveUserLocked(user model.User, keepSecurity bool) error {
 	dir := s.UserDir(user.ID)
 	if err := fsmode.MkdirAll(dir); err != nil {
 		return err
@@ -112,7 +166,15 @@ func (s *Store) SaveUser(user model.User) error {
 	if err := json.Unmarshal(data, &modelMap); err != nil {
 		return err
 	}
+	if keepSecurity {
+		for _, key := range sicherheitsSchluessel {
+			delete(modelMap, key)
+		}
+	}
 	for _, key := range userJSONKeys() {
+		if keepSecurity && istSicherheitsSchluessel(key) {
+			continue
+		}
 		delete(raw, key)
 	}
 	for k, v := range modelMap {
@@ -123,6 +185,15 @@ func (s *Store) SaveUser(user model.User) error {
 		return err
 	}
 	return writeFileLogged(path, merged)
+}
+
+func istSicherheitsSchluessel(key string) bool {
+	for _, k := range sicherheitsSchluessel {
+		if k == key {
+			return true
+		}
+	}
+	return false
 }
 
 // userJSONKeys liefert die JSON-Schlüssel aller Top-Level-Felder von
@@ -153,24 +224,9 @@ func userJSONKeys() []string {
 // model.User wuerde sie verwerfen). Issue #2423 (Staging-Seed).
 // gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
 func (s *Store) SetUserTier(id, tier string) error {
-	if !ValidUserID(id) {
-		return ErrInvalidUserID
-	}
-	path := filepath.Join(s.UserDir(id), "user.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	var m map[string]json.RawMessage
-	if err := json.Unmarshal(data, &m); err != nil {
-		return err
-	}
-	m["tier"], _ = json.Marshal(tier)
-	out, err := json.MarshalIndent(m, "", "  ")
-	if err != nil {
-		return err
-	}
-	return writeFileLogged(path, out)
+	return s.mergeUserJSON(id, func(m map[string]json.RawMessage) {
+		m["tier"], _ = json.Marshal(tier)
+	})
 }
 
 // mergeUserJSON liest user.json als Roh-Map, wendet mutate an und schreibt
@@ -179,6 +235,8 @@ func (s *Store) mergeUserJSON(id string, mutate func(m map[string]json.RawMessag
 	if !ValidUserID(id) {
 		return ErrInvalidUserID
 	}
+	unlock := lockUserJSON(id)
+	defer unlock()
 	path := filepath.Join(s.UserDir(id), "user.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -498,6 +556,8 @@ func (s *Store) DeleteUser(id string) error {
 	if !ValidUserID(id) {
 		return ErrInvalidUserID
 	}
+	unlock := lockUserJSON(id)
+	defer unlock()
 	dir := s.UserDir(id)
 	return os.RemoveAll(dir)
 }

@@ -114,12 +114,10 @@ func auMitPasswort(t *testing.T, s *store.Store, id string) {
 		t.Fatalf("bcrypt: %v", err)
 	}
 	jetzt := time.Now().UTC()
-	if err := s.SaveUser(model.User{
+	kontoVollSchreiben(t, s, model.User{
 		ID: id, Email: id + "@example.org", PasswordHash: string(hash),
 		EmailVerifiedAt: &jetzt, CreatedAt: time.Now(),
-	}); err != nil {
-		t.Fatalf("SaveUser %s: %v", id, err)
-	}
+	})
 }
 
 func auLogin(t *testing.T, r http.Handler, id, passwort string) *httptest.ResponseRecorder {

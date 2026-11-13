@@ -234,5 +234,15 @@ export const F4_ANKER: [schluessel: string, de: string, en: string][] = [
 	['nav.nochmal_speichern', 'Nochmal speichern', 'Save again'],
 	['nav.konflikt', 'Konflikt beim Speichern', 'Conflict while saving'],
 	['nav.speicherfehler', 'Fehler beim Speichern', 'Error while saving'],
-	['nav.speicherfehler_mit', 'Fehler beim Speichern: <fehler>', 'Error while saving: <fehler>'],
+	['nav.speicherfehler_mit', 'Fehler beim Speichern: <fehler>', 'Error while saving: <fehler>'],	// #2961 (ADR-0115): Nachweis-Dialog vor Kontoaenderungen, Passkey-Hinweis beim Abmelden.
+	['konto.nachweis.titel', 'Änderung bestätigen', 'Confirm change'],
+	['konto.nachweis.frage_mit_passwort', 'Zum Schutz deines Kontos bestätige diese Änderung mit deinem Passwort oder einem Code per E-Mail an deine bisherige Adresse. Danach kannst du 10 Minuten lang weitere Änderungen vornehmen.', 'To protect your account, confirm this change with your password or a code sent by email to your current address. After that you can make further changes for 10 minutes.'],
+	['konto.nachweis.frage_ohne_passwort', 'Zum Schutz deines Kontos bestätige diese Änderung mit einem Code per E-Mail an deine bisherige Adresse. Danach kannst du 10 Minuten lang weitere Änderungen vornehmen.', 'To protect your account, confirm this change with a code sent by email to your current address. After that you can make further changes for 10 minutes.'],
+	['konto.nachweis.code', 'Bestätigungscode', 'Confirmation code'],
+	['konto.nachweis.bestaetigen', 'Bestätigen', 'Confirm'],
+	['konto.nachweis.fehlt', 'Bitte Passwort oder Code eingeben.', 'Please enter your password or the code.'],
+	['konto.nachweis.fehlgeschlagen', 'Bestätigung fehlgeschlagen', 'Confirmation failed'],
+	['konto.anmeldungen.passkeys_bleiben.one', 'Hinweis: Dein Passkey bleibt gültig und meldet dich weiterhin an.', 'Note: your passkey stays valid and keeps signing you in.'],
+	['konto.anmeldungen.passkeys_bleiben.other', 'Hinweis: Deine <count> Passkeys bleiben gültig und melden dich weiterhin an.', 'Note: your <count> passkeys stay valid and keep signing you in.'],
+	['konto.anmeldungen.passkeys_verwalten', 'Passkeys verwalten', 'Manage passkeys'],
 ];

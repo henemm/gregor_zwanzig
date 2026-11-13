@@ -547,6 +547,19 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.hinweis.freezing_level',
 	'wetter.hinweis.snowfall_limit',
 	'wetter.hinweis.sunshine',
+	// #2961 (ADR-0115): Nachweis-Dialog, Passkey-Hinweis beim Abmelden, Reset-Auswahl.
+	'konto.nachweis.titel',
+	'konto.nachweis.frage_mit_passwort',
+	'konto.nachweis.frage_ohne_passwort',
+	'konto.nachweis.code',
+	'konto.nachweis.bestaetigen',
+	'konto.nachweis.fehlt',
+	'konto.nachweis.fehlgeschlagen',
+	'konto.anmeldungen.passkeys_bleiben.one',
+	'konto.anmeldungen.passkeys_bleiben.other',
+	'konto.anmeldungen.passkeys_verwalten',
+	'auth.reset.andere_zugangswege',
+	'auth.reset.andere_zugangswege_hinweis',
 ];
 
 test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {

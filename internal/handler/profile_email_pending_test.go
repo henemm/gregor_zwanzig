@@ -533,9 +533,12 @@ func TestAC4_MailToLeerenBeiGleicherEmailWirktSofort(t *testing.T) {
 
 // --- AC-6 ---------------------------------------------------------------------
 
-// AC-6: bestaetigtes Konto, mail_to=a wirksam; email (inaktives Feld) aendern
-// -> sofort gespeichert, kein Pending, kein Reset, kein Token, keine Mail.
-func TestAC6_AenderungDesInaktivenFeldsWirktSofortOhneBestaetigung(t *testing.T) {
+// AC-6 — geaendert durch Issue #2961 (GA9, ADR-0115): bestaetigtes Konto,
+// mail_to=a wirksam; eine neue Login-Kennung (email, inaktives Feld) wird NICHT
+// mehr sofort geschrieben, sondern wartet auf den Bestaetigungslink an die neue
+// Adresse c. mail_to und Bestaetigungsstand bleiben unveraendert; die alten
+// Adressen a und b bekommen keinen Bestaetigungslink.
+func TestAC6_NeueLoginKennungWartetAufBestaetigung(t *testing.T) {
 	s := newTestStore(t)
 	cfg := ausstehendCfg()
 	versand := ausstehendBeobachteVersand(t)
@@ -551,21 +554,26 @@ func TestAC6_AenderungDesInaktivenFeldsWirktSofortOhneBestaetigung(t *testing.T)
 		t.Fatalf("AC-6: erwartet 200, bekommen %d: %s", w.Code, w.Body.String())
 	}
 	nachher := ausstehendKontoMap(t, s, uid)
-	if got := ausstehendStr(nachher, "email"); got != c {
-		t.Errorf("AC-6: email muss sofort %q sein, ist %q", c, got)
+	if got := ausstehendStr(nachher, "email"); got != b {
+		t.Errorf("AC-6/GA9: email muss bis zur Bestaetigung %q bleiben, ist %q", b, got)
 	}
 	if got := ausstehendStr(nachher, "mail_to"); got != a {
 		t.Errorf("AC-6: mail_to muss %q bleiben, ist %q", a, got)
+	}
+	if ausstehendStr(nachher, "pending_contact_address") != c || ausstehendStr(nachher, "pending_contact_field") != "email" {
+		t.Errorf("AC-6/GA9: neue Kennung muss ausstehen: %v / %v",
+			nachher["pending_contact_address"], nachher["pending_contact_field"])
 	}
 	if !reflect.DeepEqual(vorher["email_verified_at"], nachher["email_verified_at"]) {
 		t.Errorf("AC-6: email_verified_at muss unveraendert bleiben — vorher %v, nachher %v",
 			vorher["email_verified_at"], nachher["email_verified_at"])
 	}
-	ausstehendKeinePendingFelder(t, "AC-6", nachher)
-	if _, da := ausstehendTokenMap(t, s, uid); da {
-		t.Errorf("AC-6: es darf kein Bestaetigungs-Token entstehen (kein Versandversuch)")
+	_, andere := ausstehendWarteAufMail(t, versand, c)
+	for _, m := range andere {
+		if m.to == a || m.to == b {
+			t.Errorf("AC-6: an die alte Adresse %q darf kein Bestaetigungslink gehen", m.to)
+		}
 	}
-	ausstehendKeinVersandAn(t, s, cfg, versand, "AC-6", a, b, c)
 }
 
 // --- AC-7 ---------------------------------------------------------------------

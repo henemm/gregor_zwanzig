@@ -8,4 +8,4 @@ Open this link to complete the confirmation (valid for 24 hours):
 
 https://example.invalid/verify-email?user=golden-de&token=tok123
 
-If you did not request this, ignore this email.
+If you did not sign up for Gregor 20 yourself and did not enter this address yourself, ignore this email and do not open the link.
