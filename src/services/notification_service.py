@@ -2550,7 +2550,8 @@ class NotificationService:
             return True
         error_lines = "\n".join(
             "  - " + t("versand.scheduler.abschnitt", self._lang, id=abschnitt_id(e, self._lang))
-            + f": {e.error_message}"
+            # #2961: Provider-Ausnahmetext nur im Log, nach aussen Katalogtext.
+            + ": " + t("vergleich.ort.abruf_fehlgeschlagen", self._lang)
             for e in request.failed_segments
             if e.segment is not None
         )

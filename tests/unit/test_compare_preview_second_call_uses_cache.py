@@ -525,8 +525,9 @@ def test_ac6_failed_or_empty_fetch_is_not_cached_and_good_one_is(install_provide
     assert provider.call_count == 2
     kaputt, gut = erster.locations
     if mode == "error":
-        assert isinstance(kaputt.error, str) and "anbieter-stoerung-2234" in kaputt.error, (
-            f"Fehlerform muss wie bisher result['error'] (Text) sein, tatsaechlich {kaputt.error!r}"
+        # #2961: Fehlerform bleibt Text; statt des Ausnahmetexts der Katalogtext.
+        assert kaputt.error == "Wetterabruf fehlgeschlagen", (
+            f"Fehlerform muss result['error'] (Text) sein, tatsaechlich {kaputt.error!r}"
         )
     else:
         assert not kaputt.hourly_data, "Leere Reihe darf keine Stundenwerte erzeugen"

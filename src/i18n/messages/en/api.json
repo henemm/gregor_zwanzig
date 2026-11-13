@@ -25,6 +25,7 @@
   "api.fehler.gpx_speicher_voll": "Your GPX storage is full (at most {max_dateien} files and {max_mb} MB). Upload a file with the same name to replace it.",
   "api.fehler.gpx_ungueltig": "The GPX file could not be read: it is empty, damaged or contains no usable track (at least 10 points).",
   "api.fehler.unbekannt": "The request could not be processed.",
+  "api.fehler.wetterdienst_fehler": "The weather service is currently unavailable. Please try again later.",
   "api.skala.wind.schwach": "weak",
   "api.skala.wind.maessig": "moderate",
   "api.skala.wind.stark": "strong",
