@@ -46,6 +46,8 @@ Etappe 3: Refuge d'Ortu di u Piobbu nach Refuge de Carrozzu — Evening — Cold
 422 invalid_preset Location comparison cannot be sent: keine Orte
 ----- fehler.send_failed -----
 500 send_failed Delivery failed — internal error, please try again later
+----- fehler.kontingent_erschoepft -----
+429 kontingent_erschoepft No briefing sent — your daily request quota is used up. It resets at midnight (UTC); scheduled briefings and alerts continue.
 ----- briefing.betreff -----
 [GR20] Etappe 3 — Morning
 ----- briefing.header -----

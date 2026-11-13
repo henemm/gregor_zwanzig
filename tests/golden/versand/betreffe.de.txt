@@ -46,6 +46,8 @@ Etappe 3: Refuge d'Ortu di u Piobbu nach Refuge de Carrozzu — Abend — Kälte
 422 invalid_preset Ortsvergleich nicht versendbar: keine Orte
 ----- fehler.send_failed -----
 500 send_failed Versand fehlgeschlagen — interner Fehler, bitte später erneut versuchen
+----- fehler.kontingent_erschoepft -----
+429 kontingent_erschoepft Kein Briefing versendet — dein Tageskontingent für Abrufe ist aufgebraucht. Ab Mitternacht (UTC) geht es wieder; automatische Briefings und Alarme laufen weiter.
 ----- briefing.betreff -----
 [GR20] Etappe 3 — Morgen
 ----- briefing.header -----
