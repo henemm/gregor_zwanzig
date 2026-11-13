@@ -30,16 +30,22 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
-// Gestalt des Codes (Issue #2323): fester Praefix "XX" + 3 Buchstaben + 3
-// Ziffern, jeweils ohne die verwechselbaren I/L/O/0/1. Der Code wird per
-// Satellit abgetippt — eine Verwechslung kostet einen Rateversuch und eine
-// bezahlte SMS. Der feste Praefix macht ihn im Befehlstext eindeutig von einem
-// Steuerbefehl unterscheidbar (Python-Pendant:
-// src/services/inbound_sms_reader.py::_LINK_CODE_PATTERN).
+// Gestalt des Codes (Issue #2323, verlaengert durch ADR-0116 / Issue #2961):
+// fester Praefix "XX" + 5 Buchstaben + 3 Ziffern, jeweils ohne die
+// verwechselbaren I/L/O/0/1. Schluesselraum 23^5 * 8^3 = 3.295.407.616
+// (~3,3 Mrd.); vorher 3 Buchstaben (23^3 * 8^3 = 6.229.504). Bestandscodes im
+// alten Format bleiben gueltig — verglichen wird nur der bcrypt-Hash, das
+// Format spielt dafuer keine Rolle. Der Code laeuft nicht ab und ist mehrfach
+// verwendbar: unterwegs ist er der einzige Weg zur Neuverknuepfung ohne
+// Web-Zugang (ADR-0116). Er wird per Satellit abgetippt — eine Verwechslung
+// kostet einen Rateversuch und eine bezahlte SMS. Der feste Praefix macht ihn
+// im Befehlstext eindeutig von einem Steuerbefehl unterscheidbar
+// (Python-Pendant: src/services/inbound_sms_reader.py::_LINK_CODE_PATTERN,
+// erkennt beide Laengen).
 const premiumSmsLinkCodePrefix = "XX"
 const premiumSmsLinkCodeLetterAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ"
 const premiumSmsLinkCodeDigitAlphabet = "23456789"
-const premiumSmsLinkCodeLetterCount = 3
+const premiumSmsLinkCodeLetterCount = 5
 const premiumSmsLinkCodeDigitCount = 3
 
 // generatePremiumSmsLinkCode zieht Buchstaben- und Ziffernblock getrennt aus

@@ -90,10 +90,18 @@ DRYRUN_ENV_VAR = "GZ_PREMIUM_SMS_POLL_DRYRUN"
 
 _DEDUP_POINTER_NAME = "premium_sms_inbound.json"
 
-# Issue #2323: Gestalt des Verknuepfungs-Codes -- fester Praefix "XX" + 3
+# Seven.io liefert hoechstens so viele Journal-Eintraege je Abruf; ein Blaettern
+# ist im bisher genutzten Vertrag nicht belegt (Issue #2961 Welle 2).
+JOURNAL_LIMIT = 100
+
+# Issue #2323: Gestalt des Verknuepfungs-Codes -- fester Praefix "XX" +
 # Buchstaben (ohne I/L/O) + 3 Ziffern (ohne 0/1), Gross-/Kleinschreibung egal.
+# Seit ADR-0116 (Issue #2961) erzeugt Go 5 Buchstaben; Bestandscodes mit 3
+# Buchstaben bleiben gueltig, deshalb erkennt der Eingang beide Laengen.
 # Go-Pendant: internal/handler/premium_sms_link_code.go::generatePremiumSmsLinkCode.
-_LINK_CODE_PATTERN = re.compile(r"^XX[A-HJKMNP-Z]{3}[2-9]{3}$", re.IGNORECASE)
+_LINK_CODE_PATTERN = re.compile(
+    r"^XX(?:[A-HJKMNP-Z]{5}|[A-HJKMNP-Z]{3})[2-9]{3}$", re.IGNORECASE,
+)
 
 
 def split_link_code(text: str) -> tuple[str, str]:
@@ -259,6 +267,7 @@ class InboundSmsReader:
                 parsed.append((msg_id, m))
 
         new_messages = sorted(parsed, key=lambda pair: pair[0])
+        _warne_bei_moeglicher_luecke(len(messages), len(parsed), last_seen_id)
 
         learned = 0
         failed = 0
@@ -481,7 +490,7 @@ class InboundSmsReader:
             response = httpx.get(
                 JOURNAL_URL,
                 headers={"X-Api-Key": api_key},
-                params={"limit": 100},
+                params={"limit": JOURNAL_LIMIT},
                 timeout=10,
             )
             if response.status_code != 200:
@@ -523,6 +532,22 @@ class InboundSmsReader:
                 os.remove(tmp_path)
             except OSError:
                 pass
+
+
+def _warne_bei_moeglicher_luecke(gesamt: int, neu: int, last_seen_id: int) -> None:
+    """Issue #2961 Welle 2: kommt eine volle Journal-Seite zurueck, deren
+    Eintraege ALLE neuer sind als der Lesezeiger, liegen zwischen Zeiger und
+    aeltestem gelieferten Eintrag womoeglich weitere Nachrichten, die dieser
+    Abruf nicht sieht. Nur sichtbar machen, Verhalten unveraendert. Eine volle
+    Seite mit Ueberlappung (Normalfall, das Journal liefert immer die
+    neuesten Eintraege) warnt nicht -- sonst stuende die Zeile alle 5 Minuten
+    im Log."""
+    if gesamt >= JOURNAL_LIMIT and neu == gesamt and last_seen_id > 0:
+        logger.warning(
+            "journal/inbound: volle Seite (%d Eintraege) ohne Ueberlappung mit "  # i18n-log
+            "dem Lesezeiger %d -- Abruf moeglicherweise abgeschnitten, aeltere "
+            "Nachrichten koennten fehlen.", gesamt, last_seen_id,
+        )
 
 
 def _coerce_message_id(raw) -> int | None:
