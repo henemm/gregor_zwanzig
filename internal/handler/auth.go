@@ -1431,9 +1431,13 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			oldEffective := store.EffectiveContactAddress(user)
 			newEffective := store.EffectiveContactAddress(&model.User{Email: newEmail, MailTo: newMailTo})
 			verificationAddress = newEffective
+			// Issue #2961 (GA9, ADR-0115): eine neue Login-Kennung eines
+			// bestaetigten Kontos wird erst mit dem Bestaetigungslink an die
+			// neue Adresse wirksam — auch wenn mail_to gleich bleibt.
+			emailNeedsProof := user.EmailVerifiedAt != nil && emailChanged
 
 			switch {
-			case newEffective == oldEffective:
+			case newEffective == oldEffective && !emailNeedsProof:
 				user.Email, user.MailTo = newEmail, newMailTo
 			case user.EmailVerifiedAt == nil || newEffective == "":
 				// Unbestaetigt: wie bisher direkt. Beide Felder leer: es gibt
@@ -1441,24 +1445,29 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				user.Email, user.MailTo = newEmail, newMailTo
 				user.PendingContactAddress, user.PendingContactField = "", ""
 				sendVerification = user.EmailVerifiedAt == nil
-			default:
-				if mailToFieldChanged {
-					user.PendingContactField = "mail_to"
-					// Ein gleichzeitig geaendertes email wird sofort geschrieben,
-					// solange es das inaktive Feld ist. Ist es heute die
-					// wirksame Adresse (mail_to leer), bliebe sie sonst
-					// unbestaetigt wirksam — dann wird es nicht uebernommen.
-					if emailFieldChanged {
-						if store.NormalizeEmailAddress(user.MailTo) != "" {
-							user.Email = newEmail
-						} else {
-							log.Printf("profile update: email change for %s not applied while mail_to change is pending", userId)
-						}
-					}
-				} else {
-					user.PendingContactField = "email"
-				}
+			case mailToFieldChanged && newEffective != oldEffective:
+				user.PendingContactField = "mail_to"
 				user.PendingContactAddress = newEffective
+				// Ein gleichzeitig GELEERTES email wird sofort geschrieben,
+				// solange es das inaktive Feld ist. Eine neue Kennung braucht
+				// einen eigenen Nachweis (GA9) und wird hier nicht uebernommen
+				// — es gibt nur eine ausstehende Aenderung je Konto.
+				if emailFieldChanged {
+					if !emailChanged && store.NormalizeEmailAddress(user.MailTo) != "" {
+						user.Email = newEmail
+					} else {
+						log.Printf("profile update: email change for %s not applied while mail_to change is pending", userId)
+					}
+				}
+				sendVerification = true
+			default:
+				// Neue Login-Kennung (GA9): die Zustelladresse bleibt wirksam
+				// (ein mitgeschicktes mail_to aendert sie hier nicht), die neue
+				// Kennung wartet auf den Link an genau diese Adresse.
+				user.MailTo = newMailTo
+				user.PendingContactField = "email"
+				user.PendingContactAddress = newEmail
+				verificationAddress = newEmail
 				sendVerification = true
 			}
 		} else {
