@@ -268,9 +268,7 @@ func TestAdminUsers_AC2_ListHasDTOFields_AndLeaksNoSecrets(t *testing.T) {
 			u.RequestedTier = "premium"
 			u.RequestedAt = &antrag
 		}
-		if err := s.SaveUser(u); err != nil {
-			t.Fatalf("SaveUser %s: %v", id, err)
-		}
+		kontoVollSchreiben(t, s, u)
 	}
 
 	liste, roh := auListe(t, r, secret, "alice")
@@ -349,12 +347,10 @@ func TestAdminUsers_AC3_SetTier_ClearsRequest_KeepsUnknownField_OtherUserUntouch
 	r, s, secret, ziel := adminTestRouter(t, "ops")
 
 	antrag := time.Date(2026, 9, 20, 8, 0, 0, 0, time.UTC)
-	if err := s.SaveUser(model.User{
+	kontoVollSchreiben(t, s, model.User{
 		ID: "alice", Email: "alice@example.org", Tier: "free",
 		RequestedTier: "premium", RequestedAt: &antrag, CreatedAt: time.Now(),
-	}); err != nil {
-		t.Fatalf("SaveUser alice: %v", err)
-	}
+	})
 	// Unbekanntes Zusatzfeld ROH einfuegen (typisiertes Modell kennt es nicht).
 	felder := auRohFelder(t, s, "alice")
 	zusatz := json.RawMessage(`{"herkunft":"altbestand","n":7}`)

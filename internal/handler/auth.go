@@ -205,17 +205,20 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
+		// Issue #2961 (GA2a, ADR-0115): halten nur leere unbestaetigte
+		// Anmeldungen die Adresse, ersetzt diese Registrierung sie — geplant
+		// wird hier, verdraengt erst unmittelbar vor der Kontoanlage.
+		var verdraengen []*model.User
 		if taken {
-			// Issue #2961 (GA2a, ADR-0115): halten nur unbestaetigte
-			// Anmeldungen die Adresse, ersetzt diese Registrierung sie
-			// vollstaendig. "Adresse vergeben" gilt nur fuer alle anderen.
-			ersetzt, rerr := replaceUnconfirmedHolders(s, normalizedEmail)
+			var ok bool
+			var rerr error
+			verdraengen, ok, rerr = planUnconfirmedReplacement(s, normalizedEmail, time.Now())
 			if rerr != nil {
 				log.Printf("register: replacing unconfirmed holders failed: %v", rerr)
 				WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 				return
 			}
-			if !ersetzt { // Restrisiko wie oben (auth_haertung_go_2163.md, ADR-0003, #2147 B1)
+			if !ok { // Restrisiko wie oben (auth_haertung_go_2163.md, ADR-0003, #2147 B1)
 				WriteError(w, r, http.StatusConflict, "email_taken", nil)
 				return
 			}
@@ -274,9 +277,27 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			}
 		}
 		model.MarkOnboardingPending(&user)
+		// Issue #2961 (GA2a): alle Pruefungen bestanden — jetzt verdraengen;
+		// scheitert die Anlage danach, kommen die Verdraengten zurueck.
+		zurueck := func() {}
+		if len(verdraengen) > 0 {
+			z, verr := verdraengeUnbestaetigte(s, verdraengen, time.Now())
+			if verr != nil {
+				rollbackInvite()
+				if istVerdraengenAbgelehnt(verr) {
+					WriteError(w, r, http.StatusConflict, "email_taken", nil)
+					return
+				}
+				log.Printf("register: replacing unconfirmed holders failed: %v", verr)
+				WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
+				return
+			}
+			zurueck = z
+		}
 		// Issue #2961: exklusive Anlage — ein vorhandener (auch verwaister)
 		// Kontoordner oder eine gleichzeitige Anlage derselben Kennung ergibt 409.
-		if err := s.CreateUser(user); err != nil {
+		if err := createUserFn(s, user); err != nil {
+			zurueck()
 			rollbackInvite()
 			if errors.Is(err, store.ErrUserIDTaken) {
 				WriteError(w, r, http.StatusConflict, "user_already_exists", nil)
@@ -286,6 +307,10 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			return
 		}
 
+		if len(verdraengen) > 0 {
+			merkeErsetzung(normalizedEmail, time.Now())
+			log.Printf("register: %d unbestaetigte Anmeldung(en) fuer die Adresse ersetzt (in die Ablage verschoben)", len(verdraengen))
+		}
 		s.ProvisionUserDirs(userID)
 
 		// Issue #1226: nach erfolgreicher Persistenz denselben #1219-Verifikations-
@@ -303,6 +328,10 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		json.NewEncoder(w).Encode(map[string]string{"id": userID})
 	}
 }
+
+// createUserFn ist die Kontoanlage der Registrierung — Test-Naht, um eine
+// nach dem Verdraengen scheiternde Anlage nachzustellen (Issue #2961).
+var createUserFn = func(s *store.Store, u model.User) error { return s.CreateUser(u) }
 
 // isPrivilegedUserID: die Kennung steht in GZ_ADMIN_USER_IDS oder
 // GZ_QUOTA_EXEMPT_USER_IDS (Vergleich ohne Gross-/Kleinschreibung).
@@ -929,10 +958,14 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			}
 			if taken {
 				// Zwischenzeitlich an ein anderes Konto vergeben (AC-8/AC-9):
-				// nichts uebernehmen, ausstehende Aenderung + Token verwerfen.
-				user.PendingContactAddress = ""
-				user.PendingContactField = ""
-				if err := s.SaveUser(*user); err != nil {
+				// nichts uebernehmen, ausstehende Aenderung + Token verwerfen —
+				// frisch geladen (Issue #2961 F-C), nur wenn sie noch dieselbe ist.
+				if _, err := s.UpdateUser(req.User, func(u *model.User) error {
+					if store.NormalizeEmailAddress(u.PendingContactAddress) == pending {
+						u.PendingContactAddress, u.PendingContactField = "", ""
+					}
+					return nil
+				}); err != nil {
 					WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 					return
 				}
@@ -940,32 +973,43 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 				WriteError(w, r, http.StatusConflict, "address_taken", nil)
 				return
 			}
-			switch user.PendingContactField {
-			case "mail_to":
-				if pending == store.NormalizeEmailAddress(user.Email) {
-					user.MailTo = "" // "mail_to leeren"-Sonderfall (B2 §1/AC-4)
-				} else {
-					user.MailTo = pending
-				}
-			case "email":
-				user.Email = pending
-			default:
+			if user.PendingContactField != "mail_to" && user.PendingContactField != "email" {
 				WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 				return
 			}
-			user.PendingContactAddress = ""
-			user.PendingContactField = ""
 		}
 
-		// Issue #2961 (GA6): Bestaetigung (Sicherheitsfeld) und die daraus
-		// folgenden Adressfelder frisch geladen schreiben.
+		// Issue #2961 (GA6, F-C): Bestaetigung und Adressfelder werden auf dem
+		// unter der Nutzersperre FRISCH geladenen Stand angewandt; hat er sich
+		// seit der Pruefung oben veraendert, gilt der Link als ueberholt.
+		feld := user.PendingContactField
 		now := time.Now().UTC()
 		bestaetigt, err := s.UpdateUser(req.User, func(u *model.User) error {
-			u.Email, u.MailTo = user.Email, user.MailTo
-			u.PendingContactAddress, u.PendingContactField = user.PendingContactAddress, user.PendingContactField
+			if store.NormalizeEmailAddress(u.PendingContactAddress) != pending || (pending != "" && u.PendingContactField != feld) {
+				return errLinkUeberholt
+			}
+			switch {
+			case pending == "":
+				if address != "" && address != store.EffectiveContactAddress(u) {
+					return errLinkUeberholt
+				}
+			case feld == "mail_to":
+				if pending == store.NormalizeEmailAddress(u.Email) {
+					u.MailTo = "" // "mail_to leeren"-Sonderfall (B2 §1/AC-4)
+				} else {
+					u.MailTo = pending
+				}
+			default: // "email"
+				u.Email = pending
+			}
+			u.PendingContactAddress, u.PendingContactField = "", ""
 			u.EmailVerifiedAt = &now
 			return nil
 		})
+		if errors.Is(err, errLinkUeberholt) {
+			WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
+			return
+		}
 		if err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
@@ -978,6 +1022,10 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 		w.Write([]byte(`{"status":"ok"}`))
 	}
 }
+
+// errLinkUeberholt: der Kontostand hat sich seit der Pruefung des
+// Bestaetigungslinks veraendert (neuerer Wechsel) — der Link wirkt nicht.
+var errLinkUeberholt = errors.New("verification link superseded")
 
 // LogoutHandler meldet GENAU DIESES Geraet ab: der Eintrag der Anmelde-Kennung
 // verlaesst die Gaesteliste des Nutzers. Weil das dateibasiert geschieht, wirkt
@@ -1428,7 +1476,14 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		// 3. Konto bestaetigt, neue wirksame Adresse -> email/mail_to bleiben
 		//    auf den alten Werten, die Aenderung wartet als Pending-Feld auf
 		//    den Bestaetigungslink (VerifyEmailHandler).
+		// Issue #2961 (F-C): Adressstand, auf dem die Entscheidung unten beruht
+		// (Vorbedingung des Schreibens).
+		adressStand := model.User{Email: user.Email, MailTo: user.MailTo,
+			PendingContactAddress: user.PendingContactAddress, PendingContactField: user.PendingContactField}
 		sendVerification := false
+		// Issue #2961 (F-F): Art der Hinweis-Mail, wenn hier ein Wechsel
+		// angefordert wird (leer: keiner).
+		angefordertArt := ""
 		// Issue #2404: die Adresse, an die die Bestaetigungsmail ginge — in
 		// beiden Zweigen, die sendVerification setzen, ist das die neue
 		// wirksame Adresse (Pending-Zweig schreibt sie nach
@@ -1463,6 +1518,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				sendVerification = user.EmailVerifiedAt == nil
 			case mailToFieldChanged && newEffective != oldEffective:
 				user.PendingContactField = "mail_to"
+				angefordertArt = hinweisAdresseAngefordert
 				user.PendingContactAddress = newEffective
 				// Ein gleichzeitig GELEERTES email wird sofort geschrieben,
 				// solange es das inaktive Feld ist. Eine neue Kennung braucht
@@ -1482,6 +1538,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				// Kennung wartet auf den Link an genau diese Adresse.
 				user.MailTo = newMailTo
 				user.PendingContactField = "email"
+				angefordertArt = hinweisKennungAngefordert
 				user.PendingContactAddress = newEmail
 				verificationAddress = newEmail
 				sendVerification = true
@@ -1507,8 +1564,9 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		// Nummer: beim Leeren ("Nummer entfernen") ist PendingSmsTo haeufig
 		// selbst leer — eine unbedingte Gleichheitspruefung wuerde genau die
 		// Aufraeum-Aenderung aus AC-9 verschlucken.
-		if update.SmsTo != nil && newSmsTo != user.SmsTo &&
-			(newSmsTo == "" || newSmsTo != user.PendingSmsTo) {
+		smsGeaendert := update.SmsTo != nil && newSmsTo != user.SmsTo &&
+			(newSmsTo == "" || newSmsTo != user.PendingSmsTo)
+		if smsGeaendert {
 			switch {
 			case newSmsTo == "":
 				// AC-9: vollstaendig aufraeumen — keine ueberlebende
@@ -1583,9 +1641,44 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			return
 		}
 
-		if err := s.SaveUser(*user); err != nil {
+		// Issue #2961 (F-C): nur die Felder, die dieser PUT aendert, werden auf
+		// den unter der Nutzersperre FRISCH geladenen Stand geschrieben — ein
+		// veralteter Stand dreht Adresse, Kennung oder ausstehende Aenderung
+		// nie zurueck. Hat sich der Adressstand seit dem Laden veraendert
+		// (z. B. gleichzeitig eingeloester Bestaetigungslink), wird nichts
+		// geschrieben (412).
+		adressAenderung := emailFieldChanged || mailToFieldChanged
+		gespeichert, err := s.UpdateUser(userId, func(u *model.User) error {
+			if adressAenderung {
+				if u.Email != adressStand.Email || u.MailTo != adressStand.MailTo ||
+					u.PendingContactAddress != adressStand.PendingContactAddress ||
+					u.PendingContactField != adressStand.PendingContactField {
+					return errProfilVeraltet
+				}
+				u.Email, u.MailTo = user.Email, user.MailTo
+				u.PendingContactAddress, u.PendingContactField = user.PendingContactAddress, user.PendingContactField
+			}
+			uebernehmeProfilFelder(u, user, profilFelderGesendet{
+				displayName: update.DisplayName != nil, sms: smsGeaendert,
+				telegram:      update.TelegramChatID != nil && *update.TelegramChatID == "",
+				passkeyPrompt: update.PasskeyPromptDismissed != nil, language: update.Language != nil,
+				onboarding: update.OnboardingDismissed != nil, checklist: update.ChecklistDismissed != nil,
+			})
+			return nil
+		})
+		if errors.Is(err, errProfilVeraltet) {
+			WriteError(w, r, http.StatusPreconditionFailed, "precondition_failed", nil)
+			return
+		}
+		if err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
+		}
+		user = gespeichert
+		if angefordertArt != "" {
+			// Hinweis an die bisherige bestaetigte Adresse schon beim Anstossen.
+			notifyAccountChange(user, confirmedNoticeAddress(user), angefordertArt,
+				i18n.Args{"adresse": user.PendingContactAddress}, nil)
 		}
 
 		if deleteSmsVerification {
@@ -1605,6 +1698,42 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(toProfileResponse(user))
+	}
+}
+
+// errProfilVeraltet: der Adressstand hat sich zwischen Laden und Schreiben
+// des Profil-PUT veraendert.
+var errProfilVeraltet = errors.New("profile address state changed concurrently")
+
+// profilFelderGesendet: welche Nicht-Adress-Felder ein Profil-PUT aendert.
+type profilFelderGesendet struct {
+	displayName, sms, telegram, passkeyPrompt, language, onboarding, checklist bool
+}
+
+// uebernehmeProfilFelder kopiert genau die gesendeten Felder von neu nach u
+// (Issue #2961 F-C: Delta statt Ganzobjekt).
+func uebernehmeProfilFelder(u, neu *model.User, g profilFelderGesendet) {
+	if g.displayName {
+		u.DisplayName = neu.DisplayName
+	}
+	if g.sms {
+		u.SmsTo, u.PendingSmsTo = neu.SmsTo, neu.PendingSmsTo
+		u.SmsVerifiedNumber, u.SmsVerifiedAt = neu.SmsVerifiedNumber, neu.SmsVerifiedAt
+	}
+	if g.telegram {
+		u.TelegramChatID = ""
+	}
+	if g.passkeyPrompt {
+		u.PasskeyPromptDismissed = neu.PasskeyPromptDismissed
+	}
+	if g.language {
+		u.Language = neu.Language
+	}
+	if g.onboarding {
+		u.OnboardingDismissed = neu.OnboardingDismissed
+	}
+	if g.checklist {
+		u.ChecklistDismissed = neu.ChecklistDismissed
 	}
 }
 

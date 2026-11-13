@@ -72,3 +72,33 @@ func TestKontoordnerLeer_Positivliste(t *testing.T) {
 		t.Error("Konto muss aus users/ verschwunden sein")
 	}
 }
+
+// F-A: unter der Sperre wird erneut geprueft, ob das Konto noch eine
+// unbestaetigte Anmeldung ist — ein inzwischen bestaetigtes (oder mit
+// ausstehender Adressaenderung) wird nie verschoben.
+func TestQuarantineUser_InzwischenBestaetigtWirdNichtVerschoben(t *testing.T) {
+	s := &Store{DataDir: t.TempDir()}
+	for _, id := range []string{"best", "pend"} {
+		if err := s.SaveUser(model.User{ID: id, Email: id + "@beispiel.de", CreatedAt: time.Now()}); err != nil {
+			t.Fatal(err)
+		}
+		if err := s.SaveVerificationToken(id, model.EmailVerificationToken{TokenHash: "x", ExpiresAt: time.Now()}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	jetzt := time.Now().UTC()
+	if _, err := s.UpdateUser("best", func(u *model.User) error { u.EmailVerifiedAt = &jetzt; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.UpdateUser("pend", func(u *model.User) error { u.PendingContactAddress = "neu@beispiel.de"; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"best", "pend"} {
+		if _, err := s.QuarantineUser(id, time.Now()); !errors.Is(err, ErrNotUnconfirmedSignup) {
+			t.Errorf("%s: erwartet ErrNotUnconfirmedSignup, bekommen %v", id, err)
+		}
+		if !s.UserExists(id) {
+			t.Errorf("%s muss in users/ bleiben", id)
+		}
+	}
+}

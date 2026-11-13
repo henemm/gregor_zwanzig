@@ -29,6 +29,9 @@ const (
 	hinweisPasskeyWeg = "passkey_weg"
 	hinweisPasswort   = "passwort"
 	hinweisReset      = "reset"
+	// Issue #2961 (F-F): Wechsel angefordert (noch nicht wirksam).
+	hinweisAdresseAngefordert = "adresse_angefordert"
+	hinweisKennungAngefordert = "kennung_angefordert"
 )
 
 // accountNoticeLimiter: hoechstens 5 Hinweis-Mails je Nutzer und Stunde.

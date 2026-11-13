@@ -90,6 +90,10 @@ var sicherheitsSchluessel = []string{
 	// ClearPremiumSmsReply (bzw. UpdateUser) — ein veraltetes SaveUser darf
 	// eine entfernte oder gewanderte Nummer nicht zurueckschreiben.
 	"premium_sms_reply_to", "premium_sms_reply_at",
+	// Issue #2961 (F-C): Adresse, Login-Kennung und ausstehende Aenderung nur
+	// ueber UpdateUser — ein veraltetes SaveUser dreht einen bestaetigten
+	// Wechsel oder ein verworfenes Pending nie zurueck.
+	"email", "mail_to", "pending_contact_address", "pending_contact_field",
 }
 
 // SaveUser schreibt das Nutzerobjekt per Read-Modify-Write mit Merge. Bei einer

@@ -18,6 +18,7 @@ package handler
 import (
 	"errors"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/henemm/gregor-api/internal/model"
@@ -49,29 +50,86 @@ func maskiereKennung(id string) string {
 	return id[:4] + "***"
 }
 
-// replaceUnconfirmedHolders verschiebt alle Konten, die address halten, in die
-// Ablage, wenn ALLE davon leere unbestaetigte Anmeldungen sind, und meldet
-// true. Sonst bleibt alles unveraendert (false). Der Aufrufer haelt
-// LockEmailAddress(address).
-func replaceUnconfirmedHolders(s *store.Store, address string) (bool, error) {
-	holders, all, err := s.ReplaceableAddressHolders(address)
-	if err != nil || !all {
-		return false, err
-	}
-	for _, u := range holders {
-		if err := quarantineUnconfirmed(s, u, time.Now()); err != nil {
-			if errors.Is(err, store.ErrAccountDirNotPristine) {
-				return false, nil
-			}
-			return false, err
+// ersetzungsAbstand: eine Adresse, deren unbestaetigte Anmeldung ersetzt
+// wurde, kann fruehestens danach erneut ersetzt werden (Bremse je Zieladresse,
+// sonst koennten sich zwei Registrierungen beliebig oft gegenseitig verdraengen).
+const ersetzungsAbstand = time.Hour
+
+var ersetzungen = struct {
+	sync.Mutex
+	letzte map[string]time.Time
+}{letzte: map[string]time.Time{}}
+
+func ersetzenErlaubt(address string, now time.Time) bool {
+	ersetzungen.Lock()
+	defer ersetzungen.Unlock()
+	for a, t := range ersetzungen.letzte { // klein halten
+		if now.Sub(t) >= ersetzungsAbstand {
+			delete(ersetzungen.letzte, a)
 		}
 	}
-	log.Printf("register: %d unbestaetigte Anmeldung(en) fuer die Adresse ersetzt (in die Ablage verschoben)", len(holders))
-	return true, nil
+	t, ok := ersetzungen.letzte[address]
+	return !ok || now.Sub(t) >= ersetzungsAbstand
+}
+
+func merkeErsetzung(address string, now time.Time) {
+	ersetzungen.Lock()
+	defer ersetzungen.Unlock()
+	ersetzungen.letzte[address] = now
+}
+
+// planUnconfirmedReplacement prueft OHNE etwas zu aendern, ob eine
+// Registrierung die Halter von address verdraengen darf: alle Halter sind
+// leere unbestaetigte Anmeldungen und die Bremse je Zieladresse laesst es zu.
+// Der Aufrufer haelt LockEmailAddress(address).
+func planUnconfirmedReplacement(s *store.Store, address string, now time.Time) ([]*model.User, bool, error) {
+	holders, all, err := s.ReplaceableAddressHolders(address)
+	if err != nil || !all {
+		return nil, false, err
+	}
+	if !ersetzenErlaubt(address, now) {
+		return nil, false, nil
+	}
+	return holders, true, nil
+}
+
+// verdraengeUnbestaetigte verschiebt die geplanten Halter in die Ablage —
+// erst unmittelbar vor der Kontoanlage, nachdem alle Pruefungen bestanden
+// sind. Die Rueckgabe holt sie zurueck, falls die Anlage danach scheitert.
+// Scheitert ein Verschieben, sind die bereits verschobenen schon zurueck.
+func verdraengeUnbestaetigte(s *store.Store, holders []*model.User, now time.Time) (zurueck func(), err error) {
+	type verschoben struct{ id, ziel string }
+	var erledigt []verschoben
+	zurueck = func() {
+		for _, v := range erledigt {
+			if rerr := s.RestoreFromAblage(v.id, v.ziel); rerr != nil {
+				log.Printf("register: verdraengte Anmeldung %s nicht zurueckgeholt: %v", maskiereKennung(v.id), rerr)
+			}
+		}
+	}
+	for _, u := range holders {
+		ziel, qerr := s.QuarantineUser(u.ID, now)
+		if qerr != nil {
+			zurueck()
+			return nil, qerr
+		}
+		removeLoginOTPs(u.Email, u.MailTo, u.PendingContactAddress)
+		deleteCodeStore.Delete(u.ID)
+		reauthCodeStore.Delete(u.ID)
+		erledigt = append(erledigt, verschoben{u.ID, ziel})
+	}
+	return zurueck, nil
+}
+
+// istVerdraengenAbgelehnt: das Verschieben scheiterte, weil sich ein Halter
+// inzwischen veraendert hat — fachlich „Adresse vergeben“, kein Serverfehler.
+func istVerdraengenAbgelehnt(err error) bool {
+	return errors.Is(err, store.ErrAccountDirNotPristine) || errors.Is(err, store.ErrNotUnconfirmedSignup)
 }
 
 // addressFreeForSignup: Adresse frei oder nur von leeren unbestaetigten
-// Anmeldungen gehalten (Vorpruefung ohne Aenderung, Passkey-Registrierung 1).
+// Anmeldungen gehalten, die ersetzt werden duerfen (Vorpruefung ohne
+// Aenderung, Passkey-Registrierung Schritt 1).
 func addressFreeForSignup(s *store.Store, address string) (bool, error) {
 	taken, err := s.IsAddressTakenByOtherAccount(address, "")
 	if err != nil {
@@ -80,8 +138,8 @@ func addressFreeForSignup(s *store.Store, address string) (bool, error) {
 	if !taken {
 		return true, nil
 	}
-	_, all, err := s.ReplaceableAddressHolders(address)
-	return all && err == nil, err
+	_, ok, err := planUnconfirmedReplacement(s, store.NormalizeEmailAddress(address), time.Now())
+	return ok && err == nil, err
 }
 
 // reapUnconfirmedAccounts verschiebt leere unbestaetigte Anmeldungen, deren
@@ -111,6 +169,11 @@ func reapUnconfirmedAccounts(s *store.Store, now time.Time) int {
 	return verschoben
 }
 
+// reaperVorZweiterPruefung ist eine Test-Naht (im Betrieb nil): feuert unter
+// der Adress-Sperre vor der zweiten Pruefung, um eine Zwischenzeit-Aenderung
+// (z. B. Bestaetigung) einzuspielen.
+var reaperVorZweiterPruefung func(id string)
+
 func reapOneUnconfirmed(s *store.Store, id string, now time.Time) bool {
 	reif := func() (*model.User, bool) {
 		u, err := s.LoadUser(id)
@@ -130,6 +193,9 @@ func reapOneUnconfirmed(s *store.Store, id string, now time.Time) bool {
 	if addr := store.EffectiveContactAddress(u); addr != "" {
 		unlock := store.LockEmailAddress(addr)
 		defer unlock()
+	}
+	if reaperVorZweiterPruefung != nil {
+		reaperVorZweiterPruefung(id)
 	}
 	if u, ok = reif(); !ok {
 		return false

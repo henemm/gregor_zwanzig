@@ -4166,7 +4166,12 @@ auch wenn `mail_to` gleich bleibt; bis dahin blockiert sie keine fremde Registri
 **Hinweis-Mails.** Passwort geändert/zurückgesetzt, Passkey hinzugefügt/entfernt und Google
 verknüpft melden sich an die aktuelle bestätigte Adresse; ein wirksam gewordener Adress- bzw.
 Kennungswechsel (Einlösen des Bestätigungslinks) an die **alte** bestätigte Adresse.
+Zusätzlich meldet sich schon das **Anstoßen** eines Adress- bzw. Kennungswechsels (es entsteht
+eine ausstehende Änderung) an die bisherige bestätigte Adresse.
 Höchstens 5 je Nutzer und Stunde, fail-soft (ein Mailfehler bricht die Änderung nicht ab).
+Hat sich der Adressstand zwischen Laden und Schreiben eines Profil-PUT verändert (z. B.
+gleichzeitig eingelöster Bestätigungslink), antwortet der PUT `412 precondition_failed` und
+schreibt nichts.
 
 **Passwort-Reset** (`POST /api/auth/reset-password`): optionales Feld `remove_other_access`
 (Vorgabe `true`, auch wenn es fehlt). `true` entfernt zusätzlich alle Passkeys und die
@@ -4181,7 +4186,9 @@ wird nach `<Datenwurzel>/.entfernt-unbestaetigt/` verschoben, nicht gelöscht. `
 gilt weiter, wenn ein anderes Konto oder eine Anmeldung mit Nutzinhalten die Adresse hält. Der
 Store-Reaper verschiebt leere unbestätigte Anmeldungen höchstens stündlich in die Ablage, wenn ihr
 Bestätigungstoken seit mehr als 24 Stunden abgelaufen ist, und entfernt Ablage-Einträge nach 30
-Tagen (Playbook, Betriebs-Backup).
+Tagen (Playbook, Betriebs-Backup). Verdrängt wird erst unmittelbar vor der Kontoanlage (scheitert
+sie, kommt die Anmeldung zurück); je Adresse höchstens eine Ersetzung pro Stunde, darüber
+`409 email_taken`.
 
 #### GET /api/auth/export
 

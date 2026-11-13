@@ -81,6 +81,29 @@ func (s *Store) IsAccountDirPristine(id string) (bool, error) {
 	return true, nil
 }
 
+// ErrNotUnconfirmedSignup: das Konto ist (inzwischen) keine unbestaetigte Anmeldung.
+var ErrNotUnconfirmedSignup = errors.New("account is not an unconfirmed signup")
+
+// RestoreFromAblage schiebt einen von QuarantineUser verschobenen Ordner
+// (ziel) unter seiner Kennung nach users/ zurueck — nur, wenn dort kein Konto
+// dieser Kennung (mehr) liegt. Fuer eine Registrierung, die nach dem
+// Verdraengen scheitert.
+// gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
+func (s *Store) RestoreFromAblage(id, ziel string) error {
+	if !ValidUserID(id) {
+		return ErrInvalidUserID
+	}
+	if filepath.Dir(ziel) != s.AblagePfad() || !strings.HasPrefix(filepath.Base(ziel), id+"-") {
+		return fmt.Errorf("not an ablage entry of %s", id)
+	}
+	unlock := lockUserJSON(id)
+	defer unlock()
+	if _, err := os.Lstat(s.UserDir(id)); err == nil {
+		return fmt.Errorf("restore target exists: %w", fs.ErrExist)
+	}
+	return os.Rename(ziel, s.UserDir(id))
+}
+
 // AblagePfad liefert das Ablage-Verzeichnis der Datenwurzel.
 // gz-store-scope-exempt: Pfad der Datenwurzel, nutzerunabhaengig
 func (s *Store) AblagePfad() string { return filepath.Join(s.DataDir, AblageVerzeichnis) }
@@ -95,6 +118,19 @@ func (s *Store) QuarantineUser(id string, now time.Time) (string, error) {
 	}
 	unlock := lockUserJSON(id)
 	defer unlock()
+	// Unter der Sperre erneut: noch immer eine unbestaetigte Anmeldung? (Ein
+	// inzwischen bestaetigtes Konto wird nie verschoben.)
+	u, err := s.LoadUser(id)
+	if err != nil {
+		return "", err
+	}
+	tok, err := s.LoadVerificationToken(id)
+	if err != nil {
+		return "", err
+	}
+	if !IsUnconfirmedSignup(u, tok) {
+		return "", ErrNotUnconfirmedSignup
+	}
 	leer, err := s.IsAccountDirPristine(id)
 	if err != nil {
 		return "", err
