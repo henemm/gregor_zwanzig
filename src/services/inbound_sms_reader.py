@@ -61,6 +61,7 @@ from i18n import resolve_user_lang, t
 from utils.timezone import SEVEN_IO_JOURNAL_TZ, to_utc
 from services.file_lock import share_state_file
 from services.notification_service import NotificationService
+from services.premium_sms_aenderungshinweis import melde_aenderung
 from services.trip_command_processor import (
     CommandResult,
     InboundMessage,
@@ -466,10 +467,13 @@ class InboundSmsReader:
         # `heute`/`morgen` haben das Briefing selbst schon per Premium-SMS
         # verschickt -- eine zweite, kostenpflichtige Satelliten-SMS daneben
         # waere die Bestaetigung des Briefings (AC-10).
+        service = NotificationService(user_settings, user_id=user_id)
         if not result.suppress_email_reply:
-            NotificationService(
-                user_settings, user_id=user_id,
-            ).send_command_reply_premium_sms(result, user_settings)
+            service.send_command_reply_premium_sms(result, user_settings)
+        # ADR-0116 (Issue #2961 Welle 2): eine per Premium-SMS ausgefuehrte
+        # Aenderung wird zusaetzlich auf den anderen Kanaelen mitgeteilt
+        # (statt PIN je Nachricht). Fail-soft, lesende Befehle loesen nichts aus.
+        melde_aenderung(service, result, befehl=befehl, zeitpunkt=now_utc, lang=lang)
 
     @staticmethod
     def _nimm_fix_auf(user_id: str, position, observed_at: datetime, sender: str) -> None:

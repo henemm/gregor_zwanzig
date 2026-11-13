@@ -146,7 +146,8 @@ def _nutzer(uid: str, tier: str = "premium") -> str:
         "telegram_chat_id": numerische_chat_id(uid),
         # #1412 S4b: SMS-Nummer bestaetigt, Premium-Rueckadresse frisch gelernt.
         "sms_to": _ENV["GZ_SMS_TO"], "sms_verified_number": _ENV["GZ_SMS_TO"],
-        "premium_sms_reply_to": "4915799912345",
+        # ADR-0116: Rueckadresse je Nutzer eindeutig.
+        "premium_sms_reply_to": "49157" + str(int(uuid.uuid5(uuid.NAMESPACE_OID, uid)))[:8],
         "premium_sms_reply_at": datetime.now(timezone.utc).isoformat(),
     }))
     return uid

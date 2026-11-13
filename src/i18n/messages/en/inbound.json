@@ -188,5 +188,11 @@
   "inbound.telegram.verbunden.text": "✓ You are now connected to Gregor. Send 'help' for the available commands.",
   "inbound.telegram.konflikt.betreff": "Cannot connect",
   "inbound.telegram.konflikt.text": "This chat is already linked to another Gregor account. First remove the link in the account area of the other account, then send /start again.",
-  "inbound.telegram.laden": "⏳ Loading weather..."
+  "inbound.telegram.laden": "⏳ Loading weather...",
+  "inbound.aenderung.betreff": "Change via Premium SMS: {befehl}",
+  "inbound.aenderung.text": "A change was made via the Premium SMS channel (Garmin inReach) on {zeit}.\n\nCommand: {befehl}\nAffects: {ziel}\nResult: {ergebnis}\n\nTo undo: {rueckweg}\n\nNot you? Disconnect Premium SMS in your account settings and renew the link code.",
+  "inbound.aenderung.ohne_ziel": "your account",
+  "inbound.aenderung.rueckweg_weiter": "Send RESUME (via Premium SMS, Telegram or email).",
+  "inbound.aenderung.rueckweg_pause": "Send PAUSE or STOP (via Premium SMS, Telegram or email).",
+  "inbound.aenderung.rueckweg_editor": "Correct the stages in the trip editor on the website."
 }

@@ -276,6 +276,43 @@ def release_reservation(user_id: str, kind: str, now: datetime, purpose: str = "
         os.close(fd)
 
 
+def reserve_daily_slot(user_id: str, key: str, cap: int, now: datetime) -> bool:
+    """Allgemeiner Tageszaehler in derselben Datei (ADR-0116, z. B. die
+    Aenderungs-Mitteilungen): ``True`` und +1, solange ``key`` unter ``cap``
+    liegt, sonst ``False`` ohne Aenderung. Gleiche Sperre und dasselbe
+    Fail-Open wie ``check_and_reserve`` (Sperr-/Schreibfehler => zugelassen).
+    Freigabe ueber ``release_reservation(user_id, key, now)``."""
+    path = _path(user_id)
+    lock_path = str(path) + _LOCK_SUFFIX
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = open_lock_file(lock_path)
+    except OSError as e:
+        logger.warning("Tageszaehler %s: Sperrdatei nicht erreichbar (%s) -- fail-open", key, e)
+        return True
+    try:
+        if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
+            logger.warning("Tageszaehler %s: Sperre nicht erhalten -- fail-open", key)
+            return True
+        try:
+            data = _tagesstand(_load(path), _today(now))
+            current = _zaehlerwert(data, key)
+            if current >= cap:
+                return False
+            data[key] = current + 1
+            data.setdefault("sms", 0)
+            data.setdefault("premium_sms", 0)
+            try:
+                _write(path, data)
+            except OSError as e:
+                logger.warning("Tageszaehler %s: Schreiben fehlgeschlagen (%s) -- fail-open", key, e)
+            return True
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
+
+
 def seed_daily_usage(user_id: str, sms: int | None, premium_sms: int | None, now: datetime) -> dict:
     """Staging-Testwerkzeug (Issue #2423): setzt den heutigen Tageszaehler.
 

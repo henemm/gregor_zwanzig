@@ -2359,6 +2359,33 @@ class NotificationService:
             )
             logger.error(f"Failed to send premium-sms confirmation: {e}")
 
+    def send_premium_sms_change_notice(self, subject: str, body: str) -> list[str]:
+        """ADR-0116 (Issue #2961 Welle 2): Mitteilung ueber eine per
+        Premium-SMS ausgefuehrte Aenderung auf den ANDEREN Kanaelen des
+        Nutzers -- E-Mail nur an eine bestaetigte Adresse, Telegram nur an den
+        verbundenen Profil-Chat. Fail-soft je Kanal; Rueckgabe: zugestellte
+        Kanaele."""
+        from output.channels.recipient import _load_profile
+
+        user_id = self._require_user()
+        profil = _load_profile(user_id)
+        zugestellt: list[str] = []
+        if profil.get("email_verified_at") and (profil.get("mail_to") or profil.get("email")):
+            try:
+                EmailOutput(self._settings).send(
+                    subject=subject, body=body, html=False, lang=self._lang,
+                )
+                zugestellt.append("email")
+            except Exception as e:  # noqa: BLE001 -- fail-soft
+                logger.warning(f"Change notice email failed for {user_id}: {e}")
+        if profil.get("telegram_chat_id"):
+            try:
+                self._telegram_output().send(subject=subject, body=body)
+                zugestellt.append("telegram")
+            except Exception as e:  # noqa: BLE001 -- fail-soft
+                logger.warning(f"Change notice telegram failed for {user_id}: {e}")
+        return zugestellt
+
     def send_command_reply_telegram(
         self,
         result: CommandResult,
