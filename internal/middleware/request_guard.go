@@ -7,6 +7,8 @@ package middleware
 // nicht aus dem Browser und tragen eigene Nachweise.
 
 import (
+	"bytes"
+	"io"
 	"mime"
 	"net/http"
 	"strings"
@@ -87,13 +89,43 @@ func OriginGuard(p OriginPolicy) func(http.Handler) http.Handler {
 	}
 }
 
-// hasBody: die Anfrage traegt (wahrscheinlich) einen Rumpf.
+// hasBody: die Anfrage traegt einen Rumpf. Bei unbekannter Laenge
+// (ContentLength −1, mit oder ohne Transfer-Encoding) wird ein Byte
+// probegelesen und zurueckgelegt — eine Anfrage darf nicht als "ohne Rumpf"
+// an der JSON-Pflicht vorbeikommen.
 func hasBody(r *http.Request) bool {
 	if r.Body == nil || r.Body == http.NoBody {
 		return false
 	}
-	return r.ContentLength > 0 || (r.ContentLength < 0 && len(r.TransferEncoding) > 0)
+	if r.ContentLength > 0 {
+		return true
+	}
+	if r.ContentLength == 0 {
+		return false
+	}
+	var b [1]byte
+	n, err := io.ReadFull(r.Body, b[:])
+	if n == 0 {
+		if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
+			// Lesefehler: als Rumpf behandeln (fail-closed), Fehler bleibt
+			// fuer den Handler erhalten.
+			r.Body = readCloser{Reader: errReader{err}, Closer: r.Body}
+			return true
+		}
+		return false
+	}
+	r.Body = readCloser{Reader: io.MultiReader(bytes.NewReader(b[:n]), r.Body), Closer: r.Body}
+	return true
 }
+
+type readCloser struct {
+	io.Reader
+	io.Closer
+}
+
+type errReader struct{ err error }
+
+func (e errReader) Read([]byte) (int, error) { return 0, e.err }
 
 // RequireJSONBody verlangt fuer schreibende API-Anfragen mit Rumpf den
 // Content-Type application/json; die in multipartPaths genannten Pfade
