@@ -217,21 +217,23 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/auth/logout-all` | POST |
 | `/api/auth/magic-link` | POST |
 | `/api/auth/magic-link/verify` | POST |
-| `/api/auth/passkey/credentials/{id}` | DELETE |
+| `/api/auth/passkey/credentials/{id}` | DELETE — nur mit frischem Nachweis (403 `reauth_required`, #2961, ADR-0115) |
 | `/api/auth/passkey/discoverable/begin` | POST |
 | `/api/auth/passkey/discoverable/finish` | POST |
 | `/api/auth/passkey/login/begin` | POST |
 | `/api/auth/passkey/login/finish` | POST |
-| `/api/auth/passkey/register/begin` | POST |
-| `/api/auth/passkey/register/finish` | POST |
+| `/api/auth/passkey/register/begin` | POST — nur mit frischem Nachweis (403 `reauth_required`, #2961) |
+| `/api/auth/passkey/register/finish` | POST — nur mit frischem Nachweis (403 `reauth_required`, #2961) |
 | `/api/auth/passkey/register/public/begin` | POST |
 | `/api/auth/passkey/register/public/finish` | POST |
 | `/api/auth/password` | PUT |
 | `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"XXABC234"}`; GET meldet nur `{"exists":true\|false}`, nie den Code oder dessen Hash. Code-Format seit Issue #2323: `XX`+3+3, s.u.) |
-| `/api/auth/profile` | GET, PUT (`language` seit #2646, s. „Nutzerprofil und Sprache“) |
+| `/api/auth/profile` | GET, PUT (`language` seit #2646, s. „Nutzerprofil und Sprache“; Änderung von `email`/`mail_to` nur mit frischem Nachweis, 403 `reauth_required`, #2961) |
+| `/api/auth/reauth` | POST — frischer Nachweis (Passwort oder Code) für 10 Minuten je Sitzung (#2961, ADR-0115) |
+| `/api/auth/reauth/code` | POST — Nachweis-Code an die bisherige wirksame Adresse (#2961) |
 | `/api/auth/invite/check` | POST — öffentlich, rate-limited 30/h/IP, Token im Body; Vorab-Check einer Einladung (#2519) |
 | `/api/auth/register` | POST (optional `language` seit #2646) |
-| `/api/auth/reset-password` | POST |
+| `/api/auth/reset-password` | POST (optional `remove_other_access`, Vorgabe `true`, #2961) |
 | `/api/auth/sms-daily-usage` | GET (Issue #2412, Sammel-Issue #2153 S4b — liefert das tägliche SMS-/Premium-SMS-Tageskontingent zur Anzeige auf /account; Fail-Soft 204 bei nicht erreichbarem Python-Core) |
 | `/api/auth/sms/resend` | POST (Issue #2406 — stellt den Bestätigungscode für die ausstehende Nummer erneut zu; Mengenbremse 3/h je Nutzer, sonst 429 mit `Retry-After`) |
 | `/api/auth/sms/staging-code` | POST (nur `GZ_ENV=staging`, sonst nicht registriert → 404; liefert den Klartext-Code der angemeldeten Sitzung, ignoriert den Body) |
@@ -4080,6 +4082,60 @@ einmalig, max. 3 Fehlversuche. Eine neue Anforderung ersetzt den alten Code.
 | 502 | `{"error":"mail_failed"}` | SMTP nicht konfiguriert oder Versand gescheitert — kein Code gespeichert |
 
 Das Frontend behandelt beide 429-Codes gleich.
+
+#### Nachweis vor Kontoänderungen (Issue #2961, ADR-0115)
+
+Verallgemeinert den Nachweis der Kontolöschung. Ohne frischen Nachweis antworten mit
+`403 {"code":"reauth_required"}` (Katalogtext DE/EN):
+
+- `PUT /api/auth/profile`, wenn `email` oder `mail_to` gesendet wird und sich normalisiert
+  (Trim + Kleinschreibung) vom gespeicherten Wert unterscheidet (auch Leeren). Andere Felder
+  und ein unveränderter `mail_to`-Wert brauchen keinen Nachweis.
+- `POST /api/auth/passkey/register/begin`, `POST /api/auth/passkey/register/finish`,
+  `DELETE /api/auth/passkey/credentials/{id}`.
+
+Ein Nachweis gilt **10 Minuten für genau die Sitzung** (Nutzer + Anmelde-Kennung), in der er
+erbracht wurde; mehrere Änderungen direkt hintereinander brauchen keinen zweiten. Eine **frisch
+ausgestellte Sitzung** (Anmeldung, Passwortwechsel) trägt ihn bereits. Der Nachweis lebt im
+Prozess (Neustart verlangt ihn erneut).
+
+**POST /api/auth/reauth** — Request `{"password": "…"}` ODER `{"code": "123456"}`. Antwort
+`200 {"status":"ok","valid_until":"<RFC3339>"}`.
+
+| Status | Body | Wann |
+|--------|------|------|
+| 400 | `{"code":"reauth_required"}` | weder `password` noch `code` |
+| 401 | `{"code":"unauthorized"}` | nicht angemeldet |
+| 403 | `{"code":"wrong_password"}` | falsches Passwort / Passwort bei passwortlosem Konto |
+| 403 | `{"code":"invalid_code"}` | Code falsch, abgelaufen (15 min), verbraucht oder nach 3 Fehlversuchen gesperrt |
+| 429 | `{"code":"rate_limit_exceeded"}` | mehr als 30 Aufrufe je IP in 15 min; oder 5 falsche Passwörter je Nutzer in 15 min (`Retry-After: 900`) |
+
+**POST /api/auth/reauth/code** — wie `POST /api/auth/account/delete-code` (gleiche Antworten,
+gleiche Bremsen), aber eigener Code-Store und eigene Mail: der Code bestätigt eine Änderung,
+löscht nichts. Ein Lösch-Code ist kein Nachweis-Code und umgekehrt. Empfänger ist die bisherige
+wirksame Adresse (`mail_to`, sonst `email`; nie `pending_contact_address`).
+
+**Login-Kennung (`email`, GA9).** Bei einem bestätigten Konto wird eine neue `email` immer zur
+ausstehenden Änderung (`pending_contact_field: "email"`, Bestätigungslink an die neue Adresse),
+auch wenn `mail_to` gleich bleibt; bis dahin blockiert sie keine fremde Registrierung. Ändern
+`email` und `mail_to` zugleich, wartet nur `mail_to`; die neue `email` wird nicht übernommen.
+
+**Hinweis-Mails.** Passwort geändert/zurückgesetzt, Passkey hinzugefügt/entfernt und Google
+verknüpft melden sich an die aktuelle bestätigte Adresse; ein wirksam gewordener Adress- bzw.
+Kennungswechsel (Einlösen des Bestätigungslinks) an die **alte** bestätigte Adresse.
+Höchstens 5 je Nutzer und Stunde, fail-soft (ein Mailfehler bricht die Änderung nicht ab).
+
+**Passwort-Reset** (`POST /api/auth/reset-password`): optionales Feld `remove_other_access`
+(Vorgabe `true`, auch wenn es fehlt). `true` entfernt zusätzlich alle Passkeys und die
+Google-Verknüpfung (`oauth_provider`/`oauth_sub`); bei einem unbestätigten Konto geschieht das
+immer. Sitzungen werden in jedem Fall geleert. Antwort unverändert `{"status":"ok"}`.
+
+**Registrierung über eine unbestätigte Anmeldung** (`POST /api/auth/register`,
+`POST /api/auth/passkey/register/public/*`): halten ausschließlich unbestätigte Anmeldungen
+(kein Testkonto, keine bestätigte Adresse, angelegt ab 2026-09-12, mit Bestätigungstoken) die
+Adresse, ersetzt die neue Registrierung diese Konten vollständig (201). `409 email_taken` gilt nur
+noch, wenn ein anderes Konto die Adresse hält. Der Store-Reaper löscht unbestätigte Anmeldungen
+höchstens stündlich, wenn ihr Bestätigungstoken seit mehr als 24 Stunden abgelaufen ist.
 
 #### GET /api/auth/export
 
