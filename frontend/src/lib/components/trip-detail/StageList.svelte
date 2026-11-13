@@ -62,8 +62,8 @@
 <div data-testid="trip-stage-list" class="trip-stage-list">
 	{#if kontingentHinweis}
 		<p data-testid="trip-stage-weather-quota-hint" class="hint" role="status">{kontingentHinweis}</p>
-	{/if}
-	{#if !trip.stages || trip.stages.length === 0}
+	{/if}<!-- kein Leerraum vor dem naechsten Block: das deutsche SSR-Bild der Liste bleibt byte-gleich
+	-->{#if !trip.stages || trip.stages.length === 0}
 		<p data-testid="trip-stage-empty" class="empty">{$t('trip.hub.keine_etappen')}</p>
 	{:else}
 		{#each trip.stages as stage, index (stage.id || `idx-${index}`)}
