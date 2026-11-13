@@ -22,6 +22,7 @@ import pytest
 from i18n import t
 from services.pending_briefings import dispatch_error_hint, slot_uhrzeit
 from tests.tdd import _handversand_fixtures as hv
+# ruff: noqa: F811  (aus = geteilte Fixture als Testparameter)
 from tests.tdd.test_compare_briefing_nachholen import (  # noqa: F401  (aus = Fixture)
     D, _ablage_schreiben, _lauf, _nutzer, _pid, _utc, _vergleich, _vergleich_vermerke,
     _vermerk, aus,

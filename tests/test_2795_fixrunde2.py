@@ -31,6 +31,7 @@ from i18n import t
 from services.briefing_slots import BriefingSlotStore, compare_slot_store
 from tests.helpers import scheduler_sprache_fixture as fx
 from tests.helpers.versand_fixture import rig_starten
+# ruff: noqa: F811  (aus = geteilte Fixture als Testparameter)
 from tests.tdd.test_compare_briefing_nachholen import (  # noqa: F401  (aus = Fixture)
     D, _ablage_schreiben, _lauf, _nutzer, _pid, _utc, _vergleich, _vergleich_vermerke,
     _vermerk, aus,
