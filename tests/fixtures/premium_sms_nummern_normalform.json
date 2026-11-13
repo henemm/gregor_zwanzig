@@ -1,0 +1,18 @@
+{
+  "_zweck": "Gemeinsame Wahrheitstabelle (Issue #2961, ADR-0116): Schreibweisen derselben Premium-SMS-Absendernummer. Gelesen von internal/model/premium_sms_nummer_test.go und tests/tdd/test_premium_sms_nummer_normalform.py. Jede Gruppe ist EINE Nummer; Nummern verschiedener Gruppen sind verschieden.",
+  "gruppen": [
+    {
+      "normalform": "4917000000071",
+      "schreibweisen": ["+4917000000071", "4917000000071", "004917000000071", "+49 170 0000 0071", "+49-170-00000071", "+49 (170) 00000071", " 0049 170 00000071 "]
+    },
+    {
+      "normalform": "41790002405",
+      "schreibweisen": ["+41790002405", "41790002405", "0041790002405", "+41 79 000 24 05"]
+    },
+    {
+      "normalform": "4917000000072",
+      "schreibweisen": ["+4917000000072", "0049 1700 000 0072"]
+    }
+  ],
+  "leer": ["", "   ", "+", "00", "-"]
+}

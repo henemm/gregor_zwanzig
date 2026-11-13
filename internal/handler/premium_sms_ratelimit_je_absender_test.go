@@ -82,3 +82,69 @@ func TestPremiumSmsRatebremse_Grenzwerte(t *testing.T) {
 		t.Errorf("Absender-Stufe: erwartet 3, ist %d", DefaultPremiumSmsLinkCodeSenderBudget)
 	}
 }
+
+// F004 (ADR-0116): alle Schreibweisen derselben Nummer sind EIN Absender —
+// fuer die gespeicherte Zuordnung und fuer die Absender-Bremse.
+func TestPremiumSmsSchreibweisenSindEinAbsender(t *testing.T) {
+	s := learnTestStore(t)
+	frisch := time.Now().UTC().Add(-time.Hour)
+	mustSaveUser(t, s, model.User{
+		ID: "premium-anna", Tier: "premium",
+		PremiumSmsReplyTo: "+4917000000091", PremiumSmsReplyAt: &frisch,
+	})
+	mustSaveUser(t, s, model.User{ID: "premium-bert", Tier: "premium"})
+	mustSaveLinkCode(t, s, "premium-bert", linkCodeBert)
+	rl := NewPremiumSmsRateLimiter(DefaultPremiumSmsLinkCodeBudget)
+	h := PostPremiumSmsLearnHandler(s, rl)
+	lerne := func(from, code string) *httptest.ResponseRecorder {
+		rr := httptest.NewRecorder()
+		body := map[string]any{"from": from}
+		if code != "" {
+			body["code"] = code
+		}
+		h(rr, newLearnRequest("127.0.0.1:54321", body))
+		return rr
+	}
+
+	// Gespeicherte Zuordnung greift auch in anderer Schreibweise, ohne Code.
+	if rr := lerne("004917000000091", ""); rr.Code != http.StatusOK {
+		t.Fatalf("andere Schreibweise der gespeicherten Nummer: erwartet 200, bekam %d: %s", rr.Code, rr.Body.String())
+	}
+
+	// Drei Fehlversuche in drei Schreibweisen: danach ist der Absender gesperrt.
+	for _, from := range []string{"+4917000000092", "4917000000092", "0049 170 000 000 92"} {
+		if rr := lerne(from, linkCodeWrong); rr.Code != http.StatusConflict {
+			t.Fatalf("%q: erwartet 409, bekam %d", from, rr.Code)
+		}
+	}
+	if rr := lerne("+49-170-00000092", linkCodeBert); rr.Code != http.StatusTooManyRequests {
+		t.Fatalf("vierte Schreibweise desselben Absenders: erwartet 429, bekam %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+// F003: Konten ausserhalb des Premium-Tarifs sind beim Lernen keine
+// Kandidaten — weder ueber den Code noch ueber eine gespeicherte Nummer.
+func TestLearnNichtPremiumKontenSindKeineKandidaten(t *testing.T) {
+	s := learnTestStore(t)
+	frisch := time.Now().UTC().Add(-time.Hour)
+	mustSaveUser(t, s, model.User{ID: "standard-anna", Tier: "standard"})
+	mustSaveUser(t, s, model.User{
+		ID: "free-bert", Tier: "free",
+		PremiumSmsReplyTo: "4917000000093", PremiumSmsReplyAt: &frisch,
+	})
+	mustSaveLinkCode(t, s, "standard-anna", linkCodeAnna)
+	h := PostPremiumSmsLearnHandler(s, NewPremiumSmsRateLimiter(DefaultPremiumSmsLinkCodeBudget))
+	for _, body := range []map[string]any{
+		{"from": "4917000000094", "code": linkCodeAnna},
+		{"from": "4917000000093"},
+	} {
+		rr := httptest.NewRecorder()
+		h(rr, newLearnRequest("127.0.0.1:54321", body))
+		if rr.Code == http.StatusOK {
+			t.Fatalf("Nicht-Premium-Konto zugeordnet (%v): %s", body, rr.Body.String())
+		}
+	}
+	if got := mustLoadUser(t, s, "standard-anna").PremiumSmsReplyTo; got != "" {
+		t.Errorf("standard-anna darf nichts lernen, hat %q", got)
+	}
+}
