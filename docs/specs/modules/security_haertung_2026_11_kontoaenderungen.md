@@ -74,7 +74,10 @@ Schreiber setzen Sicherheitswerte nicht zurück. Architektur-Entscheidung: ADR-0
    bei Wahl oder unbestätigtem Konto Passkeys und `oauth_provider`/`oauth_sub`; Hinweis-Mail mit
    Liste des Entfernten. Reset-Seite: Kästchen (Vorgabe an) plus Marke, damit die Action ein
    abgewähltes Kästchen von einem fehlenden Feld unterscheidet.
-4. **Unbestätigte Anmeldungen (GA2).** `store.IsUnconfirmedSignup` (kein Testkonto, unbestätigt,
+4. **Unbestätigte Anmeldungen (GA2).** Behandelt wird nur ein Kontoordner ohne Nutzinhalte
+   (`IsAccountDirPristine`, Positivliste siehe AC-15); er wird nie gelöscht, sondern per Rename in
+   die Ablage `<Datenwurzel>/.entfernt-unbestaetigt/` verschoben (`QuarantineUser`) und vom
+   Reaper erst nach 30 Tagen entfernt (`PurgeAblage`). `store.IsUnconfirmedSignup` (kein Testkonto, unbestätigt,
    keine ausstehende Änderung, angelegt ab 2026-09-12, Bestätigungstoken vorhanden).
    `ReplaceableAddressHolders` liefert die Halter einer Adresse und ob alle ersetzbar sind;
    Registrierung (Passwort, öffentlicher Passkey im Finish unter Adress-Sperre) löscht sie dann über
@@ -128,11 +131,17 @@ Schreiber setzen Sicherheitswerte nicht zurück. Architektur-Entscheidung: ADR-0
 **AC-8:** Given ein Konto mit Passkeys und Google-Verknüpfung / When das Passwort per Reset-Link zurückgesetzt wird und die Auswahl „Alle anderen Zugangswege entfernen“ aktiv ist (Vorgabe, auch wenn das Feld fehlt) / Then sind Passkeys und Google-Verknüpfung entfernt, alle Sitzungen beendet, ein anderes Konto unberührt, und die Hinweis-Mail nennt das Entfernte; bei abgewählter Auswahl bleiben sie bei einem bestätigten Konto, bei einem unbestätigten Konto werden sie trotzdem entfernt.
   - Test: `internal/handler/password_reset_zugangswege_test.go`, Frontend `reset-password/__tests__/andere_zugangswege.test.ts`
 
-**AC-9:** Given eine Adresse, die nur eine unbestätigte Anmeldung hält / When jemand sich mit dieser Adresse registriert / Then entsteht ein neues Konto mit neuen Zugangsdaten und neuem Bestätigungstoken, das alte Konto ist samt Ordner, Passkeys und Daten entfernt, und unbeteiligte Konten bleiben; hält ein bestätigtes Konto oder ein Bestandskonto von vor der Bestätigungspflicht bzw. ohne Token die Adresse, bleibt es bei 409.
+**AC-9:** Given eine Adresse, die nur eine unbestätigte Anmeldung mit leerem Kontoordner hält / When jemand sich mit dieser Adresse registriert / Then entsteht ein neues Konto mit neuen Zugangsdaten und neuem Bestätigungstoken, der alte Kontoordner (samt Zugangsdaten und Passkeys) ist aus `users/` in die Ablage verschoben (nicht gelöscht), und unbeteiligte Konten bleiben; hält ein bestätigtes Konto, ein Bestandskonto von vor der Bestätigungspflicht, ein Konto ohne Token oder eine unbestätigte Anmeldung mit Nutzinhalten die Adresse, bleibt es bei 409 und der Ordner unangetastet.
   - Test: `internal/handler/unbestaetigte_konten_test.go` (`TestRegistrierung_*`), angepasst `address_uniqueness_write_paths_test.go` (AC-6, AC-13a/b: genau ein Halter)
 
-**AC-10:** Given unbestätigte Anmeldungen mit seit mehr bzw. weniger als 24 Stunden abgelaufenem Token, ein Bestandskonto von vor der Bestätigungspflicht, ein Testkonto, ein bestätigtes Konto und ein Konto ohne Token / When der Reaper läuft / Then löscht er genau die Anmeldungen mit seit mehr als 24 Stunden abgelaufenem Token samt Ordner.
-  - Test: `TestReaper_LoeschtNurAbgelaufeneUnbestaetigteAnmeldungen`
+**AC-10:** Given unbestätigte Anmeldungen mit seit mehr bzw. weniger als 24 Stunden abgelaufenem Token, eine reife Anmeldung mit Nutzinhalten, ein Bestandskonto von vor der Bestätigungspflicht, ein Testkonto, ein bestätigtes Konto und ein Konto ohne Token / When der Reaper läuft / Then verschiebt er genau die leeren Anmeldungen mit seit mehr als 24 Stunden abgelaufenem Token in die Ablage; die Anmeldung mit Nutzinhalten bleibt mit Warn-Logzeile (maskierte Kennung) stehen.
+  - Test: `TestReaper_LoeschtNurAbgelaufeneUnbestaetigteAnmeldungen`, `TestUnbestaetigt_NichtLeererOrdnerBleibtUnangetastet`
+
+**AC-15:** Given ein Kontoordner / When geprüft wird, ob er leer ist / Then gilt er nur als leer, wenn er ausschließlich `user.json`, `sessions.json`, `email_verification.json`, `password_reset.json` und die leeren Standardverzeichnisse `locations/`, `gpx/`, `weather_snapshots/` enthält; jede andere Datei, jeder andere oder nicht leere Ordner und jeder Verweis heißt „nicht leer“, und ein nicht leerer Ordner wird nie verschoben.
+  - Test: `internal/store/user_ablage_test.go`
+
+**AC-16:** Given ein in die Ablage `<Datenwurzel>/.entfernt-unbestaetigt/<kennung>-<UTC-Zeitstempel>/` verschobenes Konto / When Nutzerliste und Adress-Eindeutigkeit abgefragt werden, der Ordner zurückgeschoben wird bzw. der Reaper vor und nach 30 Tagen läuft / Then sieht kein Leser die Ablage, das zurückgeschobene Konto ist mit allen Feldern wieder da, und die Ablage wird erst nach 30 Tagen endgültig entfernt.
+  - Test: `TestAblage_DreissigTageZurueckholbarUndUnsichtbar`
 
 **AC-11:** Given eine Bestätigungsmail / When sie in Deutsch oder Englisch gebaut wird / Then sagt sie, dass sie zu ignorieren ist, wer sich nicht selbst registriert und die Adresse nicht selbst eingetragen hat.
   - Test: `TestBestaetigungsmail_NenntFremdausgeloesteRegistrierung`, Goldens `internal/mail/testdata/golden/verify.*`
@@ -168,3 +177,4 @@ Schreiber setzen Sicherheitswerte nicht zurück. Architektur-Entscheidung: ADR-0
 ## Changelog
 
 - 2026-11-13: Erstfassung und Umsetzung (Issue #2961, Welle 2).
+- 2026-11-13: Nachbesserung „Bestandsdaten bleiben erhalten“: nur leere Kontoordner, Ablage statt Löschen, 30 Tage zurückholbar (AC-9, AC-10 geändert; AC-15, AC-16 neu).

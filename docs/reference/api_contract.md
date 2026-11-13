@@ -4132,10 +4132,13 @@ immer. Sitzungen werden in jedem Fall geleert. Antwort unverändert `{"status":"
 
 **Registrierung über eine unbestätigte Anmeldung** (`POST /api/auth/register`,
 `POST /api/auth/passkey/register/public/*`): halten ausschließlich unbestätigte Anmeldungen
-(kein Testkonto, keine bestätigte Adresse, angelegt ab 2026-09-12, mit Bestätigungstoken) die
-Adresse, ersetzt die neue Registrierung diese Konten vollständig (201). `409 email_taken` gilt nur
-noch, wenn ein anderes Konto die Adresse hält. Der Store-Reaper löscht unbestätigte Anmeldungen
-höchstens stündlich, wenn ihr Bestätigungstoken seit mehr als 24 Stunden abgelaufen ist.
+(kein Testkonto, keine bestätigte Adresse, angelegt ab 2026-09-12, mit Bestätigungstoken) **mit
+leerem Kontoordner** die Adresse, ersetzt die neue Registrierung diese Konten (201); ihr Ordner
+wird nach `<Datenwurzel>/.entfernt-unbestaetigt/` verschoben, nicht gelöscht. `409 email_taken`
+gilt weiter, wenn ein anderes Konto oder eine Anmeldung mit Nutzinhalten die Adresse hält. Der
+Store-Reaper verschiebt leere unbestätigte Anmeldungen höchstens stündlich in die Ablage, wenn ihr
+Bestätigungstoken seit mehr als 24 Stunden abgelaufen ist, und entfernt Ablage-Einträge nach 30
+Tagen (Playbook, Betriebs-Backup).
 
 #### GET /api/auth/export
 

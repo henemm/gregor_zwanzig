@@ -60,14 +60,21 @@ Das Sicherheits-Review 2026-11 fand im Bereich Kontoverwaltung vier zusammenhän
 5. **Unbestätigte Anmeldungen (ergänzt ADR-0067 und ADR-0066).** Als unbestätigte Anmeldung
    gilt ein Konto ohne bestätigte Adresse, kein Testkonto, ohne ausstehende Adressänderung,
    angelegt ab Einführung der Bestätigungspflicht (2026-09-12) und mit Bestätigungstoken. Im
-   Zweifel nicht.
+   Zweifel nicht. Behandelt wird sie zudem nur, wenn ihr Kontoordner **keine Nutzinhalte** hat
+   (Positivliste: `user.json`, `sessions.json`, `email_verification.json`,
+   `password_reset.json`, leere `locations/`, `gpx/`, `weather_snapshots/`; alles andere heißt
+   „nicht leer“). Bestandsdaten bleiben erhalten (#102): ein solcher Ordner wird **nie gelöscht**,
+   sondern per Rename nach `<Datenwurzel>/.entfernt-unbestaetigt/<kennung>-<UTC-Zeitstempel>/`
+   verschoben (außerhalb von `users/`, kein Loader sieht ihn) und erst nach 30 Tagen vom Reaper
+   endgültig entfernt; Zurückholen = Ordner zurückschieben (Playbook, Betriebs-Backup).
    - Eine Registrierung (Passwort oder öffentlicher Passkey) für eine Adresse, die nur solche
-     Konten halten, **ersetzt** sie vollständig (Konto samt Zugangsdaten, Passkeys und Daten
-     entfernt; neues Konto mit neuem Bestätigungstoken). „Adresse vergeben“ gilt nur noch,
-     wenn ein anderes Konto die Adresse hält. Damit gilt die Eindeutigkeit aus ADR-0067
-     unverändert: auch danach hält genau ein Konto die Adresse.
-   - Der vorhandene Store-Reaper löscht höchstens stündlich unbestätigte Anmeldungen, deren
-     Token seit mehr als 24 Stunden abgelaufen ist, samt Kontoordner. Bestandskonten von vor
+     Konten halten, **ersetzt** sie (Kontoordner samt Zugangsdaten und Passkeys in die Ablage
+     verschoben; neues Konto mit neuem Bestätigungstoken). „Adresse vergeben“ gilt weiter, wenn
+     ein anderes Konto oder eine Anmeldung mit Nutzinhalten die Adresse hält. Damit gilt die
+     Eindeutigkeit aus ADR-0067 unverändert: auch danach hält genau ein Konto die Adresse.
+   - Der vorhandene Store-Reaper verschiebt höchstens stündlich unbestätigte Anmeldungen, deren
+     Token seit mehr als 24 Stunden abgelaufen ist, in die Ablage; eine Anmeldung mit
+     Nutzinhalten bleibt mit Warn-Logzeile (maskierte Kennung) stehen. Bestandskonten von vor
      der Bestätigungspflicht (Nachtrag #2304), Testkonten und Konten ohne Token bleiben.
    - Die Bestätigungsmail sagt ausdrücklich, dass sie zu ignorieren ist, wer sich nicht selbst
      registriert hat.
