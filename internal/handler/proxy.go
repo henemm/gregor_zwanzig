@@ -249,6 +249,11 @@ func StagesWeatherProxyHandler(pythonURL string) http.HandlerFunc {
 			ct = "application/json"
 		}
 		w.Header().Set("Content-Type", ct)
+		// ADR-0117 (#2961): 429 bei erschoepftem Abruf-Kontingent nennt die
+		// Wartezeit bis zum Tageswechsel des Zaehlers.
+		if ra := resp.Header.Get("Retry-After"); ra != "" {
+			w.Header().Set("Retry-After", ra)
+		}
 		w.WriteHeader(resp.StatusCode)
 		io.Copy(w, resp.Body)
 	}

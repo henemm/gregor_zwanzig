@@ -468,7 +468,7 @@ def test_messung_einheiten_je_vergleich_und_etappenwetter(client, anbieter):
     from app.loader import load_trip, save_trip
 
     vorlage = REPO / "tests/fixtures/data_root/users/default/trips/gr221-mallorca.json"
-    trip = load_trip(vorlage)
+    trip = load_trip(vorlage, user_id=a)
     save_trip(trip, user_id=a)
     etappen_anbieter = ZaehlAnbieter()
     resp = _etappenwetter(client, a, trip.id, etappen_anbieter)

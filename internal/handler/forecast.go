@@ -40,7 +40,9 @@ type budgetUrteil struct {
 func reserviereForecastBudget(coreURL, userID string) (budgetUrteil, error) {
 	frage := url.Values{}
 	frage.Set("user_id", userID)
-	frage.Set("priority", "polling")
+	// ADR-0117 (#2961): /api/forecast ist ein interaktiver Ausloeser und
+	// bucht auf das interaktive Kontingent des Nutzers.
+	frage.Set("priority", "user_interactive")
 	ziel := strings.TrimSuffix(coreURL, "/") + forecastReservePfad + "?" + frage.Encode()
 
 	client := &http.Client{Timeout: forecastReserveTimeout}

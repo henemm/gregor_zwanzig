@@ -57,5 +57,6 @@
   "fach.fehler.limit_exceeded_schluessel": "The settings contain too many or invalid entries.",
   "fach.fehler.limit_exceeded_etappen": "A trip can have at most {max} stages.",
   "fach.fehler.limit_exceeded_wegpunkte": "A stage can have at most {max} waypoints.",
+  "fach.fehler.limit_exceeded_orte_vergleich": "A comparison can contain at most {max} locations in your plan.",
   "fach.fehler.entity_too_large": "The data is too large to be saved."
 }
