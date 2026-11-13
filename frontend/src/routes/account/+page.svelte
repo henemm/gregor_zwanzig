@@ -4,7 +4,8 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Btn } from '$lib/components/atoms';
 	import { api, downloadUserDataExport, langlaeufer } from '$lib/api.js';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, replaceState } from '$app/navigation';
+	import { passkeyEinrichtenAngefordert } from '$lib/passkeyAngebot.js';
 	import { onMount } from 'svelte';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
@@ -499,6 +500,16 @@
 	onMount(() => {
 		imBrowser = true;
 		passkeySupported = isWebAuthnSupported();
+		// Issue #2961: aus dem Passkey-Angebot hierher geschickt, weil ein
+		// frischer Nachweis fehlte — Merkmal entfernen, zur Passkey-Karte,
+		// Nachweis-Dialog oeffnen und danach den Anlegen-Dialog.
+		const adresse = new URL(window.location.href);
+		if (passkeyEinrichtenAngefordert(adresse.searchParams)) {
+			adresse.searchParams.delete('passkey');
+			replaceState(adresse.pathname + adresse.search + adresse.hash, {});
+			document.querySelector('[data-testid="passkeys-card"]')?.scrollIntoView({ block: 'start' });
+			verlangeNachweis(() => (showPasskeyDialog = true));
+		}
 	});
 
 	function getProvider(lat: number, lon: number): string {
