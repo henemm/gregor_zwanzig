@@ -2488,7 +2488,9 @@ class NotificationService:
         if report.email_html:
             report.email_html = self._inject_html_hint(report.email_html, hint)
         if report.telegram_bubbles:
-            report.telegram_bubbles[0] = f"{hint}\n\n{report.telegram_bubbles[0]}"
+            # #2961: die Blasen gehen mit parse_mode HTML raus -- der Hinweis
+            # (kann den Etappennamen enthalten) ist Text.
+            report.telegram_bubbles[0] = f"{_html_escape(hint)}\n\n{report.telegram_bubbles[0]}"
 
     @staticmethod
     def _inject_html_hint(html: str, hint: str) -> str:

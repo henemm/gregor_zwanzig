@@ -104,3 +104,55 @@ def test_ortsvergleich_mail_zeigt_orts_und_abo_namen_als_text():
                                preset_name=f"Abo {NAME}", warnings=[f"Hinweis {NAME}"])
     assert "<img" not in html
     assert ESC in html
+
+
+def test_telegram_hinweiszeile_escaped_etappennamen():
+    """F002: die Hinweiszeile geht mit parse_mode HTML an Telegram."""
+    from types import SimpleNamespace
+
+    from services.notification_service import NotificationService
+
+    report = SimpleNamespace(email_plain=None, email_html=None,
+                             telegram_bubbles=["<b>Briefing</b>"])
+    dienst = NotificationService.__new__(NotificationService)
+    dienst._prepend_hint(report, 'Nachlieferung fuer <a href="https://x.example">Etappe</a> & mehr')
+    blase = report.telegram_bubbles[0]
+    assert "<a href" not in blase
+    assert "&lt;a href=&quot;https://x.example&quot;&gt;Etappe&lt;/a&gt; &amp; mehr" in blase
+    assert blase.endswith("<b>Briefing</b>"), "der Rest der Blase bleibt Markup"
+
+
+def test_gewittervorschau_im_briefing_escaped():
+    from app.models import ThunderLevel
+
+    html, _ = _briefing_mit(thunder_forecast={
+        "+1": {"date": "<i>Mo</i>", "text": NAME, "level": ThunderLevel.MED},
+    })
+    assert "<img" not in html and "<i>Mo</i>" not in html
+    assert ESC in html
+
+
+def test_ausblick_wochentag_escaped():
+    from app.ampel import resolve_ampel
+    from output.renderers.email.outlook import render_outlook_table
+    from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
+
+    html = render_outlook_table([{"weekday": "<i>Mo</i>"}], ampel=resolve_ampel(PRESET_ALLGEMEIN))
+    assert "<i>Mo</i>" not in html
+    assert "&lt;i&gt;Mo&lt;/i&gt;" in html
+
+
+def _briefing_mit(**kw):
+    from src.output.renderers.email import render_email
+    from src.output.renderers.email.helpers import dp_to_row
+    from src.output.tokens.dto import TokenLine
+
+    dp = _make_dp()
+    dc = _make_dc(raw=False)
+    row = dp_to_row(dp, dc, tz=ZoneInfo("Europe/Berlin"))
+    tl = TokenLine(trip_name="Tour", report_type="evening", stage_name="Etappe 1: A")
+    return render_email(
+        tl, segments=[_make_seg_data(dp=dp)], seg_tables=[[row]], display_config=dc,
+        tz=ZoneInfo("Europe/Berlin"), friendly_keys=set(), email_format="full",
+        stage_name="Etappe 1: A", **kw,
+    )

@@ -178,7 +178,7 @@ def render_outlook_table(
                 _otd(_acc_dot(stage.get("confidence_pct"))) if show_acc else ""
             )
             body += (
-                '<tr>' + _otd(stage.get("weekday", NO_VALUE))
+                '<tr>' + _otd(_html.escape(str(stage.get("weekday", NO_VALUE))))
                 + "".join(
                     _otd(_html.escape(text),
                          bg=cell_bg[i] if i < len(cell_bg) else "")
@@ -279,7 +279,7 @@ def render_outlook_table(
 
         outlook_rows += (
             '<tr>'
-            + _otd(weekday, bg=tag_bg)
+            + _otd(_html.escape(str(weekday)), bg=tag_bg)
             + _otd(n_str, bg=n_bg)
             + _otd(d_str, bg=d_bg)
             + _otd(r_str, bg=r_bg)
