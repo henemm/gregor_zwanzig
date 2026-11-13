@@ -2,9 +2,11 @@ package handler
 
 // Fehlversuchsbremse je Schluessel (Issue #2961, ADR-0113). Ein Versuch wird
 // VOR dem Vergleich gezaehlt (Reserve), damit gleichzeitige Anfragen den
-// Zaehler nicht ueberholen koennen. Wer max Versuche im Fenster verbraucht
-// hat, ist fuer lockFor gesperrt. Ein erfolgreicher Versuch setzt den
-// Schluessel zurueck (Success).
+// Zaehler nicht ueberholen koennen. Gezaehlt wird im GLEITENDEN Fenster:
+// hoechstens max Versuche in jedem Intervall der Laenge window (kein
+// Ruecksetzen an einem festen Fensterrand). Der max-te Versuch loest eine
+// Sperre von lockFor aus. Ein erfolgreicher Versuch setzt den Schluessel
+// zurueck (Success).
 
 import (
 	"sync"
@@ -12,8 +14,7 @@ import (
 )
 
 type attemptEntry struct {
-	count       int
-	windowStart time.Time
+	attempts    []time.Time // Zeitpunkte der Versuche im Fenster, aufsteigend
 	lockedUntil time.Time
 }
 
@@ -31,6 +32,15 @@ func newAttemptGuard(max int, window, lockFor time.Duration) *attemptGuard {
 		entries: map[string]*attemptEntry{}, now: time.Now}
 }
 
+// pruneLocked entfernt Versuche, die aelter als das Fenster sind.
+func (g *attemptGuard) pruneLocked(e *attemptEntry, now time.Time) {
+	i := 0
+	for i < len(e.attempts) && now.Sub(e.attempts[i]) >= g.window {
+		i++
+	}
+	e.attempts = e.attempts[i:]
+}
+
 // Reserve zaehlt einen Versuch fuer key und meldet, ob er stattfinden darf.
 // false heisst: gesperrt oder Kontingent erschoepft — der Aufrufer vergleicht
 // dann NICHT.
@@ -39,15 +49,16 @@ func (g *attemptGuard) Reserve(key string) bool {
 	defer g.mu.Unlock()
 	now := g.now()
 	e := g.entries[key]
-	if e == nil || (now.Sub(e.windowStart) >= g.window && !now.Before(e.lockedUntil)) {
-		e = &attemptEntry{windowStart: now}
+	if e == nil {
+		e = &attemptEntry{}
 		g.entries[key] = e
 	}
-	if now.Before(e.lockedUntil) || e.count >= g.max {
+	g.pruneLocked(e, now)
+	if now.Before(e.lockedUntil) || len(e.attempts) >= g.max {
 		return false
 	}
-	e.count++
-	if e.count >= g.max {
+	e.attempts = append(e.attempts, now)
+	if len(e.attempts) >= g.max {
 		// Der max-te Versuch laeuft noch; alles danach ist gesperrt.
 		e.lockedUntil = now.Add(g.lockFor)
 	}
@@ -61,13 +72,14 @@ func (g *attemptGuard) Success(key string) {
 	delete(g.entries, key)
 }
 
-// gc entfernt Eintraege, deren Fenster und Sperre abgelaufen sind.
+// gc entfernt Eintraege ohne Versuche im Fenster und ohne laufende Sperre.
 func (g *attemptGuard) gc() {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	now := g.now()
 	for k, e := range g.entries {
-		if now.Sub(e.windowStart) >= g.window && !now.Before(e.lockedUntil) {
+		g.pruneLocked(e, now)
+		if len(e.attempts) == 0 && !now.Before(e.lockedUntil) {
 			delete(g.entries, k)
 		}
 	}
@@ -90,7 +102,7 @@ func (g *attemptGuard) count(key string) int {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	if e := g.entries[key]; e != nil {
-		return e.count
+		return len(e.attempts)
 	}
 	return 0
 }
