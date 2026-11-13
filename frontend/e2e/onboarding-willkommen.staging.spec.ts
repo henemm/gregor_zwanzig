@@ -43,12 +43,14 @@ import {
 	request as apiRequest
 } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
+import { ausUmgebung, wegwerfPasswort } from './stagingZugang';
 
 const BASE = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
-const NGINX_USER = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
-const NGINX_PASS = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
-const APP_USER = ausUmgebung('GZ_AUTH_USER', 'E2E_USER');
-const APP_PASS = ausUmgebung('GZ_AUTH_PASS', 'E2E_PASS');
+// #2961: Zugangsdaten erst bei der Ausfuehrung lesen, nie beim Sammeln der Datei.
+const NGINX_USER = (): string => ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const NGINX_PASS = (): string => ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
+const APP_USER = (): string => ausUmgebung('GZ_AUTH_USER', 'E2E_USER');
+const APP_PASS = (): string => ausUmgebung('GZ_AUTH_PASS', 'E2E_PASS');
 const GAST_PASSWORT = wegwerfPasswort();
 
 // ---------------------------------------------------------------------------
@@ -59,7 +61,7 @@ async function neuerBrowserKontext(browser: Browser): Promise<BrowserContext> {
 	return browser.newContext({
 		baseURL: BASE,
 		ignoreHTTPSErrors: true,
-		httpCredentials: { username: NGINX_USER, password: NGINX_PASS }
+		httpCredentials: { username: NGINX_USER(), password: NGINX_PASS() }
 	});
 }
 
@@ -133,7 +135,6 @@ if ids:
 imap.logout()
 print(json.dumps(treffer))
 `;
-import { ausUmgebung, wegwerfPasswort } from './stagingZugang';
 
 function mailsAn(adresse: string): { subject: string; to: string }[] {
 	for (const pflicht of ['GZ_TEST_IMAP_USER', 'GZ_TEST_IMAP_PASS']) {
@@ -176,9 +177,9 @@ test.describe.serial('Onboarding S2: Willkommen, Startklar-Checkliste, echte Tes
 		admin = await apiRequest.newContext({
 			baseURL: BASE,
 			ignoreHTTPSErrors: true,
-			httpCredentials: { username: NGINX_USER, password: NGINX_PASS }
+			httpCredentials: { username: NGINX_USER(), password: NGINX_PASS() }
 		});
-		const adminLogin = await admin.post('/api/auth/login', { data: { username: APP_USER, password: APP_PASS } });
+		const adminLogin = await admin.post('/api/auth/login', { data: { username: APP_USER(), password: APP_PASS() } });
 		expect(adminLogin.ok(), `Admin-Login HTTP ${adminLogin.status()}`).toBeTruthy();
 
 		const suffix = randomBytes(4).toString('hex');
@@ -344,7 +345,7 @@ test.describe.serial('Onboarding S2: Willkommen, Startklar-Checkliste, echte Tes
 	test('AC-2: Bestandskonto (GZ_AUTH_USER, vor S2 angelegt) sieht weder Willkommen noch Checkliste', async ({ browser }) => {
 		adminKontext = await neuerBrowserKontext(browser);
 		const login = await adminKontext.request.post('/api/auth/login', {
-			data: { username: APP_USER, password: APP_PASS }
+			data: { username: APP_USER(), password: APP_PASS() }
 		});
 		expect(login.ok(), `Admin-Login HTTP ${login.status()}`).toBeTruthy();
 		const profil = (await (await adminKontext.request.get('/api/auth/profile')).json()) as Record<string, unknown>;

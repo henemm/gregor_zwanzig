@@ -2,11 +2,14 @@
 //
 // Spec: docs/specs/modules/security_haertung_2026_11_frontend.md (AC-13)
 //
-//   cd frontend && npm test -- e2e/stagingZugang.test.ts
+// Liegt unter src/ (wie e2e_prod_url_guard.test.ts), damit Playwright die
+// node:test-Datei beim Sammeln von e2e/ nicht mitlaedt.
+//
+//   cd frontend && npm test -- src/lib/__tests__/staging_zugang_aus_umgebung.test.ts
 
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { ausUmgebung, wegwerfPasswort } from './stagingZugang.ts';
+import { ausUmgebung, wegwerfPasswort } from '../../../e2e/stagingZugang.ts';
 
 const NAMEN = ['GZ_TEST_2961_A', 'GZ_TEST_2961_B'];
 

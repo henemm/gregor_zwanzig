@@ -132,7 +132,7 @@ der Umgebung.
   - Test: `frontend/src/routes/login/__tests__/abmelde_merkmal_nur_ohne_sitzung.test.ts`, `frontend/e2e/pwa-offline-sperre-und-mandant.spec.ts` („#2961 AC-12"); Bestand AC-11/AC-15 der PWA-Specs.
 
 - **AC-13:** Given ein Playwright-Lauf gegen Staging ohne gesetzte Zugangsdaten-Variablen / When die Konfiguration oder ein Setup die Zugangsdaten braucht / Then bricht der Lauf mit einer Meldung ab, die die Variablen und ihre Quelle nennt; im Quelltext steht kein Staging-Passwort.
-  - Test: `frontend/e2e/stagingZugang.test.ts`; Lauf `npx playwright test --config playwright.staging.config.ts --list` ohne Variablen bricht ab.
+  - Test: `frontend/src/lib/__tests__/staging_zugang_aus_umgebung.test.ts`; Laden/Sammeln der Specs liest keine Zugangsdaten (`npx playwright test --list` ohne Variablen grün); Lauf `npx playwright test --config playwright.staging.config.ts --list` ohne Variablen bricht ab.
 
 ## Known Limitations
 
