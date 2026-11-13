@@ -54,13 +54,29 @@ func TestUserForecastUsage_InteraktiverAnteilJeNutzer(t *testing.T) {
 			`{"date":"`+vbHeute()+`","calls":{"openmeteo":`+strconv.Itoa(werte[0])+
 				`},"interactive":{"openmeteo":`+strconv.Itoa(werte[1])+`}}`)
 	}
-	if g, i := userForecastUsage(dir, "alice"); g != 120 || i != 100 {
+	if g, i, _ := userForecastUsage(dir, "alice"); g != 120 || i != 100 {
 		t.Errorf("alice = (%d, %d), erwartet (120, 100)", g, i)
 	}
-	if g, i := userForecastUsage(dir, "bob"); g != 30 || i != 0 {
+	if g, i, _ := userForecastUsage(dir, "bob"); g != 30 || i != 0 {
 		t.Errorf("bob = (%d, %d), erwartet (30, 0)", g, i)
 	}
-	if g, i := userForecastUsage(dir, "../alice"); g != 0 || i != 0 {
+	if g, i, _ := userForecastUsage(dir, "../alice"); g != 0 || i != 0 {
 		t.Errorf("Pfad-Traversal muss 0 liefern, bekam (%d, %d)", g, i)
+	}
+}
+
+// ADR-0117 Nachtrag: user_manual (Handversand, Antwort-Befehle) getrennt.
+func TestForecastBudgetStatus_ManuellGetrenntAusgewiesen(t *testing.T) {
+	dir := t.TempDir()
+	vbSchreibe(t, filepath.Join(dir, "diagnostics", "forecast_budget.json"),
+		`{"date":"`+vbHeute()+`","calls":{"openmeteo":8100},"manual_calls":{"openmeteo":3000}}`)
+	m, _ := vbToJSONMap(t, newForecastBudgetHealthTestScheduler(t, dir).ForecastBudgetHealth())
+	if m["manual_calls_today"] != float64(3000) || m["manual_budget"] != float64(8100) || m["manual_throttled"] != true {
+		t.Errorf("manuell: calls=%v budget=%v throttled=%v", m["manual_calls_today"], m["manual_budget"], m["manual_throttled"])
+	}
+	vbSchreibe(t, filepath.Join(dir, "users", "carla", "diagnostics", "forecast_budget.json"),
+		`{"date":"`+vbHeute()+`","calls":{"openmeteo":40},"interactive":{"openmeteo":10},"manual":{"openmeteo":25}}`)
+	if g, i, mn := userForecastUsage(dir, "carla"); g != 40 || i != 10 || mn != 25 {
+		t.Errorf("carla = (%d, %d, %d), erwartet (40, 10, 25)", g, i, mn)
 	}
 }
