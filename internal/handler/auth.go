@@ -205,9 +205,20 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
-		if taken { // Restrisiko wie oben (auth_haertung_go_2163.md, ADR-0003, #2147 B1)
-			WriteError(w, r, http.StatusConflict, "email_taken", nil)
-			return
+		if taken {
+			// Issue #2961 (GA2a, ADR-0115): halten nur unbestaetigte
+			// Anmeldungen die Adresse, ersetzt diese Registrierung sie
+			// vollstaendig. "Adresse vergeben" gilt nur fuer alle anderen.
+			ersetzt, rerr := replaceUnconfirmedHolders(s, normalizedEmail)
+			if rerr != nil {
+				log.Printf("register: replacing unconfirmed holders failed: %v", rerr)
+				WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
+				return
+			}
+			if !ersetzt { // Restrisiko wie oben (auth_haertung_go_2163.md, ADR-0003, #2147 B1)
+				WriteError(w, r, http.StatusConflict, "email_taken", nil)
+				return
+			}
 		}
 
 		userID := req.Username
@@ -551,6 +562,7 @@ func deleteAccountCascade(s *store.Store, ts *TelegramTokenStore, user *model.Us
 	}
 	removeLoginOTPs(user.Email, user.MailTo, user.PendingContactAddress)
 	deleteCodeStore.Delete(user.ID)
+	reauthCodeStore.Delete(user.ID)
 	return s.DeleteUser(user.ID)
 }
 

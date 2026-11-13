@@ -94,7 +94,7 @@ func buildServer(cfg *config.Config) (*http.Server, func(), error) {
 	inviteStore := store.NewInviteStore(cfg.DataDir) // Issue #2519
 	// Issue #2160 AC-15: Reaper fuer Login-OTPs, Lösch-Codes und
 	// Telegram-Tokens — bewusst hier, nicht in den Konstruktoren.
-	stops = append(stops, handler.StartStoreReaper(telegramTokenStore, time.Minute))
+	stops = append(stops, handler.StartStoreReaper(telegramTokenStore, s, time.Minute))
 	// Issue #2154 Scheibe A: eine Bremse fuer den ganzen Prozess — der
 	// Lernaufruf kommt immer von localhost, ein Zaehler je IP/Nummer/Konto
 	// waere wirkungslos bzw. missbrauchbar (Spec D5).

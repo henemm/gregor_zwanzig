@@ -509,13 +509,15 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 		// Issue #2147 Scheibe B1 (AC-5): Belegt-Pruefung vor dem Ablegen im
 		// ChallengeStore — kein Lock hier, die endgueltige Pruefung passiert
 		// unter Lock im Finish-Schritt (AC-6).
-		taken, err := s.IsAddressTakenByOtherAccount(req.Email, "")
+		// Issue #2961 (GA2a): nur von unbestaetigten Anmeldungen gehaltene
+		// Adressen gelten als frei; ersetzt wird erst im Finish unter Lock.
+		free, err := addressFreeForSignup(s, req.Email)
 		if err != nil {
 			log.Printf("passkey register public begin: address uniqueness check failed: %v", err)
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
-		if taken {
+		if !free {
 			// Bewusstes Restrisiko (Enumeration): auth_haertung_go_2163.md, ADR-0003, #2147 B1
 			WriteError(w, r, http.StatusConflict, "email_taken", nil)
 			return
@@ -596,6 +598,12 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 		defer unlock()
 
 		taken, err := s.IsAddressTakenByOtherAccount(normalizedEmail, "")
+		if err == nil && taken {
+			// Issue #2961 (GA2a): unbestaetigte Anmeldungen werden ersetzt.
+			var ersetzt bool
+			ersetzt, err = replaceUnconfirmedHolders(s, normalizedEmail)
+			taken = !ersetzt
+		}
 		if err != nil {
 			log.Printf("passkey register public finish: address uniqueness check failed: %v", err)
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)

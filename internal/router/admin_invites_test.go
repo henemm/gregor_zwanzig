@@ -286,9 +286,20 @@ func TestWiderrufeneEinladung_Register400_ListeZeigtWiderrufen_BenutzteNichtWide
 
 // AC-6
 func TestEinladungBleibtOffen_WennRegistrierungAnEmailTakenScheitert(t *testing.T) {
-	r, _, secret, _ := adminTestRouter(t, "alice")
-	if w := ivRegistrieren(t, r, "belegt", "belegt@example.org", ""); w.Code != http.StatusCreated {
-		t.Fatalf("Vorbereitung: %d", w.Code)
+	r, s, secret, _ := adminTestRouter(t, "alice")
+	vw := ivRegistrieren(t, r, "belegt", "belegt@example.org", "")
+	if vw.Code != http.StatusCreated {
+		t.Fatalf("Vorbereitung: %d", vw.Code)
+	}
+	// Issue #2961 (GA2a, ADR-0115): nur ein BESTAETIGTES Konto haelt die
+	// Adresse fest; eine unbestaetigte Anmeldung wuerde ersetzt.
+	var belegt struct {
+		ID string `json:"id"`
+	}
+	_ = json.Unmarshal(vw.Body.Bytes(), &belegt)
+	jetzt := time.Now().UTC()
+	if _, err := s.UpdateUser(belegt.ID, func(u *model.User) error { u.EmailVerifiedAt = &jetzt; return nil }); err != nil {
+		t.Fatalf("Vorbereitung bestaetigen: %v", err)
 	}
 	_, token := ivErstellen(t, r, secret, "premium", "")
 	w := ivRegistrieren(t, r, "versuch", "belegt@example.org", token)

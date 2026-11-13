@@ -104,17 +104,20 @@ func gcDeleteCodeStore(now time.Time) {
 }
 
 // StartStoreReaper startet den Ticker, der die In-Memory-/Datei-Stores mit
-// Ablaufzeit raeumt (Login-OTPs, Lösch-Codes, Telegram-Tokens). Wird aus
-// cmd/server/main.go gestartet, nicht aus Konstruktoren (Issue #2160 AC-15).
-// Die zurueckgegebene stop-Funktion beendet den Ticker und wartet, bis die
-// Goroutine fertig ist; mehrfacher Aufruf ist harmlos.
-func StartStoreReaper(ts *TelegramTokenStore, interval time.Duration) (stop func()) {
+// Ablaufzeit raeumt (Login-OTPs, Lösch-/Nachweis-Codes, Nachweise,
+// Telegram-Tokens) und — hoechstens stuendlich — unbestaetigte Anmeldungen
+// mit seit 24 Stunden abgelaufenem Token loescht (Issue #2961, s ungleich
+// nil). Wird aus cmd/server/main.go gestartet, nicht aus Konstruktoren (Issue
+// #2160 AC-15). Die zurueckgegebene stop-Funktion beendet den Ticker und
+// wartet, bis die Goroutine fertig ist; mehrfacher Aufruf ist harmlos.
+func StartStoreReaper(ts *TelegramTokenStore, s *store.Store, interval time.Duration) (stop func()) {
 	quit := make(chan struct{})
 	finished := make(chan struct{})
 	go func() {
 		defer close(finished)
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
+		var letzteKontoRunde time.Time
 		for {
 			select {
 			case <-quit:
@@ -124,6 +127,10 @@ func StartStoreReaper(ts *TelegramTokenStore, interval time.Duration) (stop func
 				gcDeleteCodeStore(now)
 				if ts != nil {
 					ts.gc(now)
+				}
+				if s != nil && now.Sub(letzteKontoRunde) >= time.Hour {
+					letzteKontoRunde = now
+					reapUnconfirmedAccounts(s, now)
 				}
 			}
 		}

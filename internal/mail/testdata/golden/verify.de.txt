@@ -8,4 +8,4 @@ Oeffne diesen Link, um die Bestaetigung abzuschliessen (gueltig 24 Stunden):
 
 https://example.invalid/verify-email?user=golden-de&token=tok123
 
-Falls du das nicht angefordert hast, ignoriere diese E-Mail.
+Falls du dich nicht selbst bei Gregor 20 registriert und diese Adresse nicht selbst eingetragen hast, ignoriere diese E-Mail und öffne den Link nicht.
