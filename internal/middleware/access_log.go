@@ -14,30 +14,38 @@ import (
 
 const redacted = "***"
 
-// secretPathPrefixes: das Segment direkt nach dem Praefix ist ein Geheimnis.
-var secretPathPrefixes = []string{"/api/webhooks/sms/", "/api/webhooks/mail/"}
+// secretPathKinds: unter /api/webhooks/<art>/ ist das folgende Segment ein
+// Geheimnis.
+var secretPathKinds = map[string]bool{"sms": true, "mail": true}
 
-// secretQueryKeys: Query-Parameter, deren Wert nie ins Log gehoert.
-var secretQueryKeys = map[string]bool{"code": true, "state": true, "token": true}
+// secretQueryKeys: Query-Parameter, deren Wert nie ins Log gehoert
+// (Vergleich ohne Gross-/Kleinschreibung).
+var secretQueryKeys = map[string]bool{
+	"code": true, "state": true, "token": true, "id_token": true,
+	"access_token": true, "invite": true, "secret": true, "password": true,
+}
 
-// RedactURI maskiert Geheimnisse in einem RequestURI (Pfad + Query).
-func RedactURI(uri string) string {
-	path, query, hasQuery := strings.Cut(uri, "?")
-	for _, p := range secretPathPrefixes {
-		if strings.HasPrefix(path, p) && len(path) > len(p) {
-			rest := path[len(p):]
-			_, tail, hasTail := strings.Cut(rest, "/")
-			path = p + redacted
-			if hasTail {
-				path += "/" + tail
-			}
-			break
+// redactPath maskiert Pfadgeheimnisse. Leere Segmente (z. B. "//api/…")
+// werden fuer die Erkennung uebergangen, damit Schreibvarianten des Pfads
+// nicht am Maskieren vorbeikommen.
+func redactPath(escapedPath string) string {
+	raw := strings.Split(escapedPath, "/")
+	segs := make([]string, 0, len(raw))
+	for _, sgm := range raw {
+		if sgm != "" {
+			segs = append(segs, sgm)
 		}
 	}
-	if !hasQuery {
-		return path
+	if len(segs) >= 4 && segs[0] == "api" && segs[1] == "webhooks" && secretPathKinds[segs[2]] {
+		segs[3] = redacted
+		return "/" + strings.Join(segs, "/")
 	}
-	parts := strings.Split(query, "&")
+	return escapedPath
+}
+
+// redactQuery maskiert die Werte geheimer Query-Parameter.
+func redactQuery(rawQuery string) string {
+	parts := strings.Split(rawQuery, "&")
 	for i, part := range parts {
 		k, _, hasVal := strings.Cut(part, "=")
 		key, err := url.QueryUnescape(k)
@@ -48,7 +56,19 @@ func RedactURI(uri string) string {
 			parts[i] = k + "=" + redacted
 		}
 	}
-	return path + "?" + strings.Join(parts, "&")
+	return strings.Join(parts, "&")
+}
+
+// RedactRequestTarget liefert Pfad und Query der Anfrage maskiert. Grundlage
+// ist die geparste URL (nicht der rohe RequestURI): so werden auch die
+// absolute Form ("http://h/api/…") und Pfade mit doppeltem Schraegstrich
+// erfasst.
+func RedactRequestTarget(u *url.URL) string {
+	out := redactPath(u.EscapedPath())
+	if u.RawQuery != "" {
+		out += "?" + redactQuery(u.RawQuery)
+	}
+	return out
 }
 
 // AccessLog ersetzt chimw.Logger: dieselben Zeilen ueber chimw.DefaultLogger,
@@ -60,7 +80,7 @@ func AccessLog() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			clone := *r
-			clone.RequestURI = RedactURI(r.RequestURI)
+			clone.RequestURI = RedactRequestTarget(r.URL)
 			logger(http.HandlerFunc(func(lw http.ResponseWriter, lr *http.Request) {
 				next.ServeHTTP(lw, r.WithContext(lr.Context()))
 			})).ServeHTTP(w, &clone)
