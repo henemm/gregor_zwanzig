@@ -7,7 +7,7 @@ directly.
 from __future__ import annotations
 
 from datetime import date as date_type
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, time, timezone
 from typing import Any, Optional
 
 from app.models import (
