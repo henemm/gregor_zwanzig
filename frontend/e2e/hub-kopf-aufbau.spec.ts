@@ -89,9 +89,9 @@ function kopfIds(kind: HubKind): string[] {
 	return [`${kopf}-name-edit-toggle`, `${kopf}-region-edit-toggle`, ...PROFIL_WERTE[kind].map((v) => `${kopf}-profil-option-${v}`)];
 }
 
-/** Vergleich-Unterzeile „Wandern · 2 Orte“ (Profil-Label + Orte-Anzahl, compare-eigen). */
+/** Vergleich-Meta-Zeile seit #2913 c2 (AC-4): „2 Orte · Vergleichstabelle[ · Briefing HH:MM]“ (vorher „Wandern · 2 Orte“). */
 function vergleichUnterzeile(page: Page) {
-	return page.getByText(/Wandern\s*·\s*2 Orte/).filter({ visible: true }).first();
+	return page.getByText(/2 Orte\s*·\s*Vergleichstabelle|Wandern\s*·\s*2 Orte/).filter({ visible: true }).first();
 }
 
 /** Region-Text in der Region-Zeile (Elternelement des Stifts), für beide kinds. */
