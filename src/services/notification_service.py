@@ -2359,18 +2359,29 @@ class NotificationService:
             )
             logger.error(f"Failed to send premium-sms confirmation: {e}")
 
+    def premium_sms_change_notice_ziele(self) -> list[str]:
+        """Kanaele, auf denen eine Aenderungs-Mitteilung zustellbar waere:
+        E-Mail nur mit bestaetigter Adresse, Telegram nur mit Profil-Chat."""
+        from output.channels.recipient import _load_profile
+
+        profil = _load_profile(self._require_user())
+        ziele: list[str] = []
+        if profil.get("email_verified_at") and (profil.get("mail_to") or profil.get("email")):
+            ziele.append("email")
+        if profil.get("telegram_chat_id"):
+            ziele.append("telegram")
+        return ziele
+
     def send_premium_sms_change_notice(self, subject: str, body: str) -> list[str]:
         """ADR-0116 (Issue #2961 Welle 2): Mitteilung ueber eine per
         Premium-SMS ausgefuehrte Aenderung auf den ANDEREN Kanaelen des
         Nutzers -- E-Mail nur an eine bestaetigte Adresse, Telegram nur an den
         verbundenen Profil-Chat. Fail-soft je Kanal; Rueckgabe: zugestellte
         Kanaele."""
-        from output.channels.recipient import _load_profile
-
         user_id = self._require_user()
-        profil = _load_profile(user_id)
+        ziele = self.premium_sms_change_notice_ziele()
         zugestellt: list[str] = []
-        if profil.get("email_verified_at") and (profil.get("mail_to") or profil.get("email")):
+        if "email" in ziele:
             try:
                 EmailOutput(self._settings).send(
                     subject=subject, body=body, html=False, lang=self._lang,
@@ -2378,7 +2389,7 @@ class NotificationService:
                 zugestellt.append("email")
             except Exception as e:  # noqa: BLE001 -- fail-soft
                 logger.warning(f"Change notice email failed for {user_id}: {e}")
-        if profil.get("telegram_chat_id"):
+        if "telegram" in ziele:
             try:
                 self._telegram_output().send(subject=subject, body=body)
                 zugestellt.append("telegram")

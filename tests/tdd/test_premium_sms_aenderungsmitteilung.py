@@ -141,3 +141,92 @@ def test_jeder_befehl_ist_als_aendernd_oder_lesend_eingestuft(schluessel):
     aendernd = schluessel in hinweis.ZUSTANDSAENDERNDE_BEFEHLE
     lesend = schluessel in hinweis.LESENDE_BEFEHLE
     assert aendernd != lesend, schluessel
+
+
+# ---------------------------------------------------------------------------
+# Gegenpruefung F003
+# ---------------------------------------------------------------------------
+
+
+def _startdatum_text() -> str:
+    from datetime import timedelta
+
+    return f"startdatum {(datetime.now(timezone.utc).date() + timedelta(days=10)).isoformat()}"
+
+
+@pytest.mark.parametrize("text, schluessel", [
+    ("pause 2d", "pause"), ("stop", "abbruch"), ("weiter", "weiter"),
+    ("ruhetag", "ruhetag"), ("skip", "skip"), (None, "startdatum"),
+])
+def test_jeder_aendernde_befehl_meldet_ueber_den_echten_weg(monkeypatch, mitschrift, text, schluessel):
+    """Jeder als aendernd eingestufte Befehl loest durch den echten Eingang
+    eine Mitteilung aus -- nicht nur laut Einstufungs-Waechter."""
+    assert schluessel in hinweis.ZUSTANDSAENDERNDE_BEFEHLE
+    anna = _kennung("anna")
+    _nutzer(anna, rueckadresse=RUECKADRESSE_A, telegram=False)
+    _trip_anlegen(anna, name="Hochtour Anna")
+
+    _befehl(monkeypatch, NUMMER_A, anna, text or _startdatum_text())
+
+    assert mitschrift.empfaenger("email") == [f"{anna}@example.invalid"], mitschrift
+
+
+def test_fehlgeschlagener_aendernder_befehl_meldet_nichts(monkeypatch, mitschrift):
+    """"pause" ohne Dauer ist ein fehlgeschlagener aendernder Befehl: nur die
+    Premium-SMS-Antwort, keine Mitteilung."""
+    anna = _kennung("anna")
+    _nutzer(anna, rueckadresse=RUECKADRESSE_A)
+    _trip_anlegen(anna, name="Hochtour Anna")
+
+    _befehl(monkeypatch, NUMMER_A, anna, "pause")
+
+    assert mitschrift.kanaele == ["premium_sms"], mitschrift
+
+
+def test_ohne_zustellbaren_kanal_wird_kein_mitteilungs_zaehler_verbraucht(monkeypatch, mitschrift):
+    anna = _kennung("anna")
+    _nutzer(anna, rueckadresse=RUECKADRESSE_A, bestaetigt=False, telegram=False)
+    _trip_anlegen(anna, name="Hochtour Anna")
+
+    _befehl(monkeypatch, NUMMER_A, anna, "pause 2d")
+
+    assert mitschrift.kanaele == ["premium_sms"], mitschrift
+    pfad = get_data_dir(anna) / "sms_daily_count.json"
+    stand = json.loads(pfad.read_text()) if pfad.exists() else {}
+    assert hinweis.ZAEHLER_SCHLUESSEL not in stand, stand
+
+
+def test_fehler_beim_mitteilungsversand_bricht_die_verarbeitung_nicht_ab(monkeypatch, mitschrift, caplog):
+    """Fail-soft am Wirkort: wirft der Versand der Mitteilung, laeuft die
+    Befehlsverarbeitung ohne Fehlermeldung des Readers weiter."""
+    import logging
+
+    from services.notification_service import NotificationService
+
+    def _wirft(self, subject, body):
+        raise RuntimeError("Mitteilungsversand kaputt")
+
+    monkeypatch.setattr(NotificationService, "send_premium_sms_change_notice", _wirft)
+    anna = _kennung("anna")
+    _nutzer(anna, rueckadresse=RUECKADRESSE_A)
+    _trip_anlegen(anna, name="Hochtour Anna")
+
+    with caplog.at_level(logging.WARNING):
+        _befehl(monkeypatch, NUMMER_A, anna, "pause 2d")
+
+    assert mitschrift.empfaenger("premium_sms") == [RUECKADRESSE_A]
+    assert not any("Kommandoverarbeitung fehlgeschlagen" in r.getMessage() for r in caplog.records), caplog.text
+
+
+@pytest.mark.parametrize("lang, ergebnis_label", [("de", "Ergebnis:"), ("en", "Result:")])
+def test_mitteilungstext_nennt_das_ergebnis(lang, ergebnis_label):
+    from services.trip_command_processor import CommandResult
+
+    result = CommandResult(
+        success=True, command="skip", confirmation_subject="x",
+        confirmation_body="Etappe 2 uebersprungen", trip_name="Hochtour",
+    )
+    betreff, text = hinweis.texte(result, "skip", datetime(2026, 11, 13, 8, 30, tzinfo=timezone.utc), lang)
+    assert "skip" in betreff
+    assert f"{ergebnis_label} Etappe 2 uebersprungen" in text
+    assert "Hochtour" in text and "2026-11-13 08:30 UTC" in text
