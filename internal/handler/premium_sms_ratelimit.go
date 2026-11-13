@@ -28,7 +28,8 @@ package handler
 // Fehlversuchen je Stunde braucht vollstaendiges Durchprobieren rund 12.500
 // Jahre. Bestandscodes im alten Format ("XX" + 3 Buchstaben + 3 Ziffern,
 // 23^3 * 8^3 = 6.229.504) bleiben gueltig; fuer sie sind es rund 24 Jahre
-// (im Mittel die Haelfte) — deshalb empfiehlt die Konto-Seite das Erneuern.
+// (im Mittel die Haelfte) — fuer sie gilt die Empfehlung, den Code zu
+// erneuern (ADR-0116).
 // Jeder Versuch ist ausserdem eine echte, bezahlte Satelliten-SMS und wird
 // erst beim naechsten Poll geprueft.
 
