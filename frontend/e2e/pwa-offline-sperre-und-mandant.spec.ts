@@ -664,6 +664,58 @@ test('#2961 AC-8: meldet sich B an, faellt As Speicherbereich schon beim Aufruf 
 });
 
 // ===========================================================================
+// Issue #2961 (Haertungs-Spec AC-8): jede der drei Worker-Regeln raeumt fuer
+// sich. Die allgemeine Navigation belegt der Fall oben (Startseite); hier die
+// Positivliste mit einer Nicht-200-Antwort und ein same-origin-GET ohne
+// Navigation. B hat dabei selbst nichts abgelegt.
+// ===========================================================================
+
+/** A legt eine Ansicht ab, dann wechselt die Sitzung (nur das Cookie) zu B. */
+async function aAblegenDannB(page: Page): Promise<string[]> {
+	await activateServiceWorker(page);
+	const tripA = await tripAblegen(page);
+	const speicherA = await cacheNamenMitEintrag(page, `/trips/${tripA}`);
+	expect(speicherA.length, 'As Ansicht liegt gar nicht im Speicher').toBeGreaterThan(0);
+	await zweiterNutzerAnmelden(page);
+	expect(
+		await cacheNames(page),
+		'Aufbau misslungen: As Bereich ist schon vor Bs erstem Abruf fort'
+	).toEqual(expect.arrayContaining(speicherA));
+	return speicherA;
+}
+
+test('#2961 AC-8: Positivlisten-Adresse mit 404-Antwort an B raeumt As Speicherbereich', async ({
+	page
+}) => {
+	test.setTimeout(120_000);
+	const speicherA = await aAblegenDannB(page);
+
+	const antwort = await page.goto(`/trips/e2e-gz-gibt-es-nicht-${Date.now()}`);
+	expect(antwort?.status(), 'Aufbau: die Ansicht sollte nicht existieren').toBe(404);
+
+	await expect
+		.poll(() => cacheNames(page), { timeout: 15_000 })
+		.not.toEqual(expect.arrayContaining(speicherA));
+});
+
+test('#2961 AC-8: ein same-origin-Datenabruf ohne Navigation raeumt As Speicherbereich', async ({
+	page
+}) => {
+	test.setTimeout(120_000);
+	const speicherA = await aAblegenDannB(page);
+	const adresseVorher = page.url();
+
+	// Daten-Abruf der Trip-Liste (nicht auf der Positivliste, keine Navigation).
+	const status = await page.evaluate(async () => (await fetch('/trips/__data.json')).status);
+	expect(status).toBe(200);
+	expect(page.url(), 'Aufbau: es darf keine Navigation stattfinden').toBe(adresseVorher);
+
+	await expect
+		.poll(() => cacheNames(page), { timeout: 15_000 })
+		.not.toEqual(expect.arrayContaining(speicherA));
+});
+
+// ===========================================================================
 // Issue #2961 (Haertungs-Spec AC-12): ein Verweis auf /login?abgemeldet=1
 // leert den Speicher eines weiterhin angemeldeten Nutzers nicht
 // ===========================================================================
