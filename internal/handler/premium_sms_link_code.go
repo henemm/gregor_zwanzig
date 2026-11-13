@@ -111,6 +111,35 @@ func PostPremiumSmsLinkCodeHandler(s *store.Store, bcryptCost int) http.HandlerF
 	}
 }
 
+// DeletePremiumSmsReplyHandler — DELETE /api/auth/premium-sms-reply (Issue
+// #2961 Welle 2, ADR-0116): "Verbindung trennen". Loescht Rueckadresse und
+// Zeitstempel des angemeldeten Kontos; der Verknuepfungs-Code bleibt, bis er
+// erneuert wird (unterwegs der einzige Weg zur Neuverknuepfung). Kennung nur
+// aus dem Auth-Kontext, nie "default". 204 ohne Rumpf.
+func DeletePremiumSmsReplyHandler(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID := middleware.UserIDFromContext(r.Context())
+		if userID == "" {
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
+			return
+		}
+		user, err := s.LoadUser(userID)
+		if err != nil {
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
+			return
+		}
+		if user == nil {
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
+			return
+		}
+		if err := s.ClearPremiumSmsReply(userID); err != nil {
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 // GetPremiumSmsLinkCodeHandler meldet nur, OB ein Code vorliegt.
 func GetPremiumSmsLinkCodeHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

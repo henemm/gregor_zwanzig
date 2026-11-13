@@ -193,6 +193,8 @@ func New(deps Deps) chi.Router {
 	// ueber die globale AuthMiddleware, bewusst NICHT in der Public-Allowlist.
 	r.Post("/api/auth/premium-sms-link-code", handler.PostPremiumSmsLinkCodeHandler(deps.Store, bcrypt.DefaultCost))
 	r.Get("/api/auth/premium-sms-link-code", handler.GetPremiumSmsLinkCodeHandler(deps.Store))
+	// Issue #2961 Welle 2 (ADR-0116): Premium-SMS-Verbindung trennen.
+	r.Delete("/api/auth/premium-sms-reply", handler.DeletePremiumSmsReplyHandler(deps.Store))
 	// Issue #637: Telegram Inbound Webhook (public, secret-header-protected).
 	// Issue #1814: registrierte URL ist die statische Route /inbound (kein Secret
 	// im Pfad); Auth-Traeger ist allein der Header X-Telegram-Bot-Api-Secret-Token.
