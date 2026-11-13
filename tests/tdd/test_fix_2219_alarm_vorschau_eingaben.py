@@ -132,6 +132,15 @@ class TestAC1SchwereUnbekanntTrip:
         )
         _assert_422_lokalisiert({"de": resp}, "schwere_unbekannt")
 
+    @pytest.mark.parametrize("severity", ["Major", "MAJOR"])
+    def test_severity_pruefung_ist_strikt_bei_gross_klein(self, client, nutzer, severity):
+        """AC-1 (Adversary F001): die Pruefung ist strikt -- abweichende
+        Gross-/Kleinschreibung eines erlaubten Werts ergibt 422."""
+        body = {"changes": [{**GUST_CHANGE, "severity": severity}],
+                "segment_times": SEGMENT_TIMES}
+        antworten = {lang: _post_trip(client, uid, body) for lang, uid in nutzer.items()}
+        _assert_422_lokalisiert(antworten, "schwere_unbekannt")
+
     @pytest.mark.parametrize("severity", ERLAUBTE_SCHWEREN)
     def test_gueltige_schweren_bleiben_200(self, client, nutzer, severity):
         """AC-11: die Pruefung darf keinen gueltigen Wert abweisen."""
@@ -331,9 +340,9 @@ def _seed_berlin_trip(user_id: str, trip_id: str) -> None:
 
 class TestAC10StubSegmenteInTripZone:
     def test_beginn_verschiebung_in_berliner_ortszeit(self, client, nutzer):
-        """AC-10 (C5-18, Regression, kein Codefix): die Stub-Segmente tragen
-        0/0-Koordinaten; `_tz_for_location` muss trotzdem auf die Trip-Zone
-        zurueckfallen. Erwartung aus den Epochen hergeleitet, nicht aus der
+        """AC-10 (C5-18): war reproduzierbar und ist im Vorschau-Pfad behoben --
+        die Stub-Segmente tragen die Koordinaten des ersten Wegpunkts statt
+        0/0, damit `_tz_for_location` die Trip-Zone ergibt. Erwartung aus den Epochen hergeleitet, nicht aus der
         Implementierung abgeschrieben."""
         uid = nutzer["de"]
         _seed_berlin_trip(uid, "trip-berlin")

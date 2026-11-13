@@ -112,9 +112,12 @@ def _deviation(
     from services.compare_alert import CompareAlertService
     from utils.timezone import local_fmt, tz_for_coords
 
+    from services.validator_render_service import validate_change_severity
+
     location_ids = list(preset.get("location_ids") or [])
     by_loc: dict[str, list] = {}
     for c in changes:
+        validate_change_severity(c["severity"])  # Issue #2219 (C5-52)
         by_loc.setdefault(c["location_id"], []).append(WeatherChange(
             metric=c["metric"], old_value=c["old_value"], new_value=c["new_value"],
             delta=c["delta"], threshold=c["threshold"],

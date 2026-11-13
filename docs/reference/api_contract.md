@@ -4860,6 +4860,19 @@ Leerbefund statt Exception/HTTP 500.
 - `404` — Trip nicht gefunden für `user_id`
 - `422` — Body enthält nicht genau einen der vier Payload-Typen, oder eine `segment_id` in
   `changes` existiert nicht im Trip
+- `422` Eingangsprüfung (Issue #2219), Antwort `{"detail": "<Text in Kontosprache>", "code": …}`
+  wie `metrik_unbekannt`:
+  - `schwere_unbekannt` — `changes[].severity` ist keiner der Werte von `ChangeSeverity`
+    (`minor`, `moderate`, `major`; der Text nennt sie). Gilt ebenso für
+    `POST /api/briefings/{id}/alert-preview?kind=vergleich` (dort Text mit Rahmen
+    „Ungültiger Alarm-Körper: …", `code` = `schwere_unbekannt`).
+  - `zeitstempel_ohne_zone` — ein `nowcast_frames.frames[].timestamp` ist kein ISO-Zeitpunkt
+    oder trägt keine Zeitzone (`Z` und `+00:00` sind gültig).
+  - `onset_tagesbezug_unvollstaendig` — `onset.onset_day_offset` bzw.
+    `onset.event_end_day_offset` ≠ 0 ohne `onset_weekday` bzw. `event_end_weekday`.
+  - `onset_shift_null` — eine Beginn-Verschiebung (`thunder_onset_utc`,
+    `precip_heavy_onset_utc`) ist 0 oder kleiner als die kleinste Schwelle ihrer Richtung aus
+    `alert_preset.ONSET_SHIFT_BOUNDS` (früher/später, über alle Stufen).
 
 **Notes:**
 - Zustandslos wie `compare-email-preview`/`sms-fidelity-preview` — kein Versand, keine
