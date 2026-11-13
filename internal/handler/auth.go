@@ -856,6 +856,16 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		pending := store.NormalizeEmailAddress(user.PendingContactAddress)
+		// Issue #2961 (ADR-0115): Hinweis an die ALTE bestaetigte Adresse,
+		// wenn hier eine ausstehende Aenderung wirksam wird.
+		var hinweisAn, hinweisArt string
+		if user.EmailVerifiedAt != nil && pending != "" {
+			hinweisAn = store.EffectiveContactAddress(user)
+			hinweisArt = hinweisAdresse
+			if user.PendingContactField == "email" {
+				hinweisArt = hinweisKennung
+			}
+		}
 		switch {
 		case address == "" && pending != "":
 			// Alt-Token (ohne Adresse) gegen ein Konto mit ausstehender
@@ -915,16 +925,20 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 		// Issue #2961 (GA6): Bestaetigung (Sicherheitsfeld) und die daraus
 		// folgenden Adressfelder frisch geladen schreiben.
 		now := time.Now().UTC()
-		if _, err := s.UpdateUser(req.User, func(u *model.User) error {
+		bestaetigt, err := s.UpdateUser(req.User, func(u *model.User) error {
 			u.Email, u.MailTo = user.Email, user.MailTo
 			u.PendingContactAddress, u.PendingContactField = user.PendingContactAddress, user.PendingContactField
 			u.EmailVerifiedAt = &now
 			return nil
-		}); err != nil {
+		})
+		if err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		s.DeleteVerificationToken(req.User)
+		if hinweisAn != "" {
+			notifyAccountChange(bestaetigt, hinweisAn, hinweisArt, i18n.Args{"adresse": pending}, nil)
+		}
 
 		w.Write([]byte(`{"status":"ok"}`))
 	}
@@ -1853,13 +1867,16 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost st
 			return
 		}
 
-		if _, err := s.UpdateUser(userId, func(u *model.User) error {
+		geaendert, err := s.UpdateUser(userId, func(u *model.User) error {
 			u.PasswordHash = string(newHash)
 			return nil
-		}); err != nil {
+		})
+		if err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
+		// Issue #2961 (ADR-0115): Hinweis an die bestaetigte Adresse.
+		notifyAccountChange(geaendert, confirmedNoticeAddress(geaendert), hinweisPasswort, nil, nil)
 
 		// Issue #2129 AC-8: Der Passwortwechsel meldet auf allen ANDEREN
 		// Geraeten ab. Bislang hatte er ueberhaupt keine Session-Wirkung — es

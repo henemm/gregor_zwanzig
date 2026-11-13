@@ -63,5 +63,24 @@
   "mail.reauth.html.z2": "Dein Best&auml;tigungscode f&uuml;r {betont}:",
   "mail.reauth.html.z3": "Mit diesem Code best&auml;tigst du {betont}. Der Code ist 15 Minuten g&uuml;ltig.",
   "mail.reauth.html.betont": "eine &Auml;nderung an deinem Konto",
-  "mail.reauth.html.z4": "Falls du keine &Auml;nderung angefordert hast, gib den Code nicht weiter und &auml;ndere dein Passwort."
+  "mail.reauth.html.z4": "Falls du keine &Auml;nderung angefordert hast, gib den Code nicht weiter und &auml;ndere dein Passwort.",
+
+  "mail.hinweis.gruss": "Hallo,",
+  "mail.hinweis.warnung": "Warst du das nicht? Dann setze sofort ein neues Passwort über {link} und melde dich bitte umgehend bei uns.",
+  "mail.hinweis.adresse.betreff": "Gregor 20 — Die Adresse deines Kontos wurde geändert",
+  "mail.hinweis.adresse.text": "Die E-Mail-Adresse deines Gregor-20-Kontos wurde soeben geändert auf {adresse}. Mitteilungen und Codes gehen ab jetzt an diese Adresse und nicht mehr hierher.",
+  "mail.hinweis.kennung.betreff": "Gregor 20 — Die Anmelde-Adresse deines Kontos wurde geändert",
+  "mail.hinweis.kennung.text": "Die Adresse, mit der du dich bei Gregor 20 anmeldest, wurde soeben geändert auf {adresse}.",
+  "mail.hinweis.passkey_neu.betreff": "Gregor 20 — Neuer Passkey an deinem Konto",
+  "mail.hinweis.passkey_neu.text": "An deinem Gregor-20-Konto wurde soeben ein neuer Passkey hinzugefügt. Mit ihm kann man sich ohne Passwort anmelden.",
+  "mail.hinweis.passkey_weg.betreff": "Gregor 20 — Passkey entfernt",
+  "mail.hinweis.passkey_weg.text": "Von deinem Gregor-20-Konto wurde soeben ein Passkey entfernt.",
+  "mail.hinweis.passwort.betreff": "Gregor 20 — Dein Passwort wurde geändert",
+  "mail.hinweis.passwort.text": "Das Passwort deines Gregor-20-Kontos wurde soeben geändert. Alle anderen Geräte wurden abgemeldet.",
+  "mail.hinweis.reset.betreff": "Gregor 20 — Dein Passwort wurde zurückgesetzt",
+  "mail.hinweis.reset.text": "Das Passwort deines Gregor-20-Kontos wurde soeben über den Link aus der E-Mail zurückgesetzt. Alle Geräte wurden abgemeldet.",
+  "mail.hinweis.reset.entfernt": "Außerdem wurden diese Zugangswege entfernt: {liste}.",
+  "mail.hinweis.reset.passkeys": "Passkeys ({anzahl})",
+  "mail.hinweis.reset.google": "Google-Anmeldung",
+  "mail.hinweis.reset.bleiben": "Deine Passkeys und eine verknüpfte Google-Anmeldung bestehen weiter."
 }

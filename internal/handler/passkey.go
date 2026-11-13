@@ -143,13 +143,16 @@ func PasskeyRegisterFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Cha
 		}
 		// Issue #2961 (GA6): Passkeys sind ein Sicherheitsfeld — frisch laden
 		// und anhaengen (UpdateUser), nie den vorher geladenen Stand schreiben.
-		if _, err := s.UpdateUser(userID, func(u *model.User) error {
+		mitPasskey, err := s.UpdateUser(userID, func(u *model.User) error {
 			u.PasskeyCredentials = append(u.PasskeyCredentials, newCred)
 			return nil
-		}); err != nil {
+		})
+		if err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
+		// Issue #2961 (ADR-0115): Hinweis an die bestaetigte Adresse.
+		notifyAccountChange(mitPasskey, confirmedNoticeAddress(mitPasskey), hinweisPasskeyNeu, nil, nil)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
@@ -391,7 +394,7 @@ func PasskeyDeleteCredentialHandler(s *store.Store) http.HandlerFunc {
 		// Issue #2961 (GA6): frisch laden und filtern (UpdateUser); die
 		// Aussperr-Pruefung laeuft auf demselben frischen Stand.
 		removed := false
-		_, err = s.UpdateUser(userID, func(u *model.User) error {
+		ohnePasskey, err := s.UpdateUser(userID, func(u *model.User) error {
 			// Lock-out protection: refuse to delete the last passkey of a
 			// password-less user (defensive — V1 always has a PasswordHash).
 			if u.PasswordHash == "" && len(u.PasskeyCredentials) <= 1 {
@@ -415,7 +418,10 @@ func PasskeyDeleteCredentialHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
-		_ = removed
+		if removed {
+			// Issue #2961 (ADR-0115): Hinweis an die bestaetigte Adresse.
+			notifyAccountChange(ohnePasskey, confirmedNoticeAddress(ohnePasskey), hinweisPasskeyWeg, nil, nil)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})

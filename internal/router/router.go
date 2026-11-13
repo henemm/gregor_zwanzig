@@ -45,6 +45,11 @@ const (
 // It does not start the scheduler or the HTTP server.
 func New(deps Deps) chi.Router {
 	r := chi.NewRouter()
+	// Issue #2961 (ADR-0115): Mail-Konfiguration der Konto-Hinweis-Mails fuer
+	// Handler ohne eigene Config (Passkey, Passwort, Bestaetigung).
+	if deps.Config != nil {
+		handler.SetAccountNoticeConfig(*deps.Config)
+	}
 	// Issue #2961: Zugriffslog ohne Pfad-/Query-Geheimnisse (statt chimw.Logger).
 	r.Use(authmw.AccessLog())
 	// Issue #2961 (ADR-0113): globale Schutzschicht fuer schreibende

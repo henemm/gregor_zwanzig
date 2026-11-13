@@ -63,5 +63,24 @@
   "mail.reauth.html.z2": "Your confirmation code for {betont}:",
   "mail.reauth.html.z3": "This code confirms {betont}. The code is valid for 15 minutes.",
   "mail.reauth.html.betont": "a change to your account",
-  "mail.reauth.html.z4": "If you did not request a change, do not share the code and change your password."
+  "mail.reauth.html.z4": "If you did not request a change, do not share the code and change your password.",
+
+  "mail.hinweis.gruss": "Hello,",
+  "mail.hinweis.warnung": "Wasn't you? Then set a new password right away at {link} and please contact us immediately.",
+  "mail.hinweis.adresse.betreff": "Gregor 20 — Your account address was changed",
+  "mail.hinweis.adresse.text": "The email address of your Gregor 20 account was just changed to {adresse}. Notifications and codes now go to that address and no longer to this one.",
+  "mail.hinweis.kennung.betreff": "Gregor 20 — Your sign-in address was changed",
+  "mail.hinweis.kennung.text": "The address you use to sign in to Gregor 20 was just changed to {adresse}.",
+  "mail.hinweis.passkey_neu.betreff": "Gregor 20 — New passkey on your account",
+  "mail.hinweis.passkey_neu.text": "A new passkey was just added to your Gregor 20 account. It can be used to sign in without a password.",
+  "mail.hinweis.passkey_weg.betreff": "Gregor 20 — Passkey removed",
+  "mail.hinweis.passkey_weg.text": "A passkey was just removed from your Gregor 20 account.",
+  "mail.hinweis.passwort.betreff": "Gregor 20 — Your password was changed",
+  "mail.hinweis.passwort.text": "The password of your Gregor 20 account was just changed. All other devices were signed out.",
+  "mail.hinweis.reset.betreff": "Gregor 20 — Your password was reset",
+  "mail.hinweis.reset.text": "The password of your Gregor 20 account was just reset using the link from the email. All devices were signed out.",
+  "mail.hinweis.reset.entfernt": "These sign-in methods were also removed: {liste}.",
+  "mail.hinweis.reset.passkeys": "passkeys ({anzahl})",
+  "mail.hinweis.reset.google": "Google sign-in",
+  "mail.hinweis.reset.bleiben": "Your passkeys and a linked Google sign-in remain in place."
 }
