@@ -770,6 +770,15 @@ test('AC-12: nach As Abmeldung sieht der angemeldete B ohne Netz keinen Inhalt v
 	await sidebar.locator('button').last().click();
 	await sidebar.locator('form[action="/logout"] button[type="submit"]').click();
 	await page.waitForURL(/\/login/);
+	// Das Raeumen der Anmeldeseite (Speicher leeren, Worker abmelden) laeuft
+	// nach dem Laden asynchron. Erst wenn es fertig ist, ist A wirklich
+	// abgemeldet — sonst meldet es den Worker ab, den B gleich darauf
+	// registriert, und die Offline-Navigation unten scheitert am Netz statt an
+	// der Mandantentrennung (#2961: in der Datei-Reihenfolge reproduzierbar,
+	// weil B dort per Sitzungs-Cookie ohne Umweg ueber die Anmeldeseite kommt).
+	await expect
+		.poll(() => storageAndRegistrationCount(page), { timeout: 20_000 })
+		.toEqual({ caches: 0, registrations: 0 });
 
 	await zweiterNutzerAnmelden(page);
 	await activateServiceWorker(page);
