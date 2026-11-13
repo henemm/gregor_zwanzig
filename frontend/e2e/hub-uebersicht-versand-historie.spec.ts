@@ -38,6 +38,7 @@ import {
 	type HubKind,
 	type SeededHub
 } from './helpers';
+import { wegwerfPasswort } from './stagingZugang';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -68,7 +69,7 @@ test.beforeAll(async ({ browser }) => {
 
 	// Nutzer B ausdrücklich OHNE storageState (sonst erbte er den Admin-Cookie).
 	ctxB = await browser.newContext({ storageState: undefined });
-	await registriereBestaetigtenZweitnutzer(ctxA.request, ctxB.request, `e2e2682${Date.now()}`, 'test1234');
+	await registriereBestaetigtenZweitnutzer(ctxA.request, ctxB.request, `e2e2682${Date.now()}`, wegwerfPasswort());
 	tripB = await seedHub(ctxB.request, 'route');
 });
 

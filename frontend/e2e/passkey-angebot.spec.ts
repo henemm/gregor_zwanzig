@@ -75,13 +75,14 @@
 import { test, expect } from '@playwright/test';
 import type { APIRequestContext, BrowserContext, CDPSession, Page } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard.ts';
+import { wegwerfPasswort } from './stagingZugang';
 
 const HANDY = { width: 375, height: 812 };
 const BANNER = 'passkey-angebot';
 const EINRICHTEN = 'Jetzt einrichten';
 const NICHT_JETZT = 'Nicht jetzt';
 const LABEL = 'E2E-GZ-2248-Angebot';
-const PASSWORT = 'test1234';
+const PASSWORT = wegwerfPasswort();
 
 /** CDP-Antwort von WebAuthn.addVirtualAuthenticator. */
 type VirtuellerAuthenticator = { authenticatorId: string };

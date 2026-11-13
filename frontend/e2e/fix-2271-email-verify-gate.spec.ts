@@ -21,8 +21,9 @@
 //   npx playwright test e2e/fix-2271-email-verify-gate.spec.ts --config playwright.config.ts
 
 import { test, expect, type Browser, type Page } from '@playwright/test';
+import { wegwerfPasswort } from './stagingZugang';
 
-const PASSWORT = 'test1234';
+const PASSWORT = wegwerfPasswort();
 
 /** Legt ein frisches, unbestätigtes Wegwerfkonto an und liefert die Kennung. */
 async function registriereWegwerfkonto(page: Page, marke: string): Promise<string> {

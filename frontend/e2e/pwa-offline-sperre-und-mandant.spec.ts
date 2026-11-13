@@ -21,6 +21,7 @@ import {
 	expect,
 	request as apiSitzung,
 	type BrowserContext,
+	type Cookie,
 	type Page
 } from '@playwright/test';
 import * as fs from 'node:fs';
@@ -34,6 +35,7 @@ import {
 	storageAndRegistrationCount
 } from './pwaHelpers.ts';
 import { createTestComparePreset, createTestLocation, createTestTrip } from './helpers.ts';
+import { wegwerfPasswort } from './stagingZugang.ts';
 
 test.use({ serviceWorkers: 'allow' });
 
@@ -84,23 +86,25 @@ async function wiederAnmelden(page: Page): Promise<void> {
 }
 
 /**
- * Beschafft den ZWEITEN Nutzer und meldet ihn im SELBEN Kontext an.
+ * Der ZWEITE Nutzer (B), nicht der Stamm-Testnutzer; genau darauf kommt es hier an.
  *
- * Fester Name statt Zeitstempel: `/api/auth/register` laesst nur 5 Anlagen je
- * Stunde und IP zu (internal/router/router.go:41). Ein neuer Name je Lauf
- * verbraucht dieses Budget, und der Nachweis scheiterte dann an der
- * Anlage-Bremse statt an seiner Zusicherung — ein rotes Ergebnis, das ueber
- * die Mandantentrennung nichts aussagt. Wiederverwendet wird ein Nutzer, der
- * NICHT der Stamm-Testnutzer ist; genau darauf kommt es hier an.
+ * Issue #2961: B wird je Lauf (Worker) frisch angelegt — mit zufaelligem
+ * Passwort, nichts davon im Quelltext — und GENAU EINMAL angemeldet; jeder
+ * weitere Nutzerwechsel setzt nur sein Sitzungs-Cookie (`bSitzung`). So
+ * verbraucht die Datei je Lauf eine Anlage (`/api/auth/register`, 5 je Stunde
+ * und IP, internal/router/router.go) und eine Anmeldung (30 je Stunde und IP),
+ * und B sammelt ueber Laeufe hinweg keine Trips an (Tarifgrenze).
  */
-const NUTZER_B = { username: 'e2e2131nutzerb', password: 'test1234' };
+const NUTZER_B = { username: `e2e2131b${Date.now().toString(36)}`, password: wegwerfPasswort() };
 /**
  * Issue #2194 (ADR-0105): ohne is_test_user ignoriert `/api/auth/register` das
- * Feld `username` und vergibt eine opake Konto-ID (`u-<8hex>`). Der feste Name
- * ist deshalb nur noch der Stamm der E-Mail-Adresse; diese Adresse ist pro
- * Konto eindeutig und ueber Laeufe hinweg der stabile Anmeldename von B.
+ * Feld `username` und vergibt eine opake Konto-ID (`u-<8hex>`). Der Name ist
+ * deshalb nur der Stamm der E-Mail-Adresse; diese Adresse ist Bs Anmeldename.
  */
 const NUTZER_B_EMAIL = `${NUTZER_B.username}@example.com`;
+
+/** Bs Sitzung nach der ersten Anmeldung (je Worker), samt Konto-ID. */
+let bSitzung: { cookies: Cookie[]; kontoId: string } | null = null;
 
 /**
  * Bestaetigt Bs E-Mail-Adresse ueber den staging-only Testweg (Issue #2271).
@@ -160,6 +164,12 @@ async function bestaetigeZweitnutzer(page: Page, kontoId: string): Promise<void>
  * Rueckgabe: Bs echte, vom Server vergebene Konto-ID (aus der Login-Antwort).
  */
 async function zweiterNutzerAnmelden(page: Page): Promise<string> {
+	// Issue #2961: Sitzung wiederverwenden statt erneut anzumelden.
+	if (bSitzung) {
+		await page.context().addCookies(bSitzung.cookies);
+		const profil = await page.request.get('/api/auth/profile');
+		if (profil.ok()) return bSitzung.kontoId;
+	}
 	const reg = await page.request.post('/api/auth/register', {
 		data: { ...NUTZER_B, email: NUTZER_B_EMAIL }
 	});
@@ -197,8 +207,25 @@ async function zweiterNutzerAnmelden(page: Page): Promise<string> {
 		typeof kontoId === 'string' && kontoId !== '',
 		'Anmeldung B lieferte keine Konto-ID'
 	).toBeTruthy();
+	bSitzung = {
+		cookies: (await page.context().cookies()).filter((c) => c.name === 'gz_session'),
+		kontoId: kontoId as string
+	};
 	return kontoId as string;
 }
+
+/**
+ * Bs Trips dieses Falls. Der globale Aufraeumer laeuft mit der Admin-Sitzung
+ * und erreicht sie nicht; geloescht wird deshalb nach jedem Fall in dessen
+ * Kontext, in dem B zu diesem Zeitpunkt angemeldet ist.
+ */
+const bTrips: string[] = [];
+
+test.afterEach(async ({ page }) => {
+	for (const id of bTrips.splice(0)) {
+		await page.request.delete(`/api/trips/${id}`).catch(() => {});
+	}
+});
 
 /** Zeichnet jede schreibende Anfrage des Kontexts auf (auch die des Workers). */
 function schreibversucheMitschneiden(context: BrowserContext): string[] {
@@ -582,6 +609,7 @@ test('AC-14: meldet sich B ohne As Abmeldung an, faellt As Speicherbereich beim 
 
 	// Bs erster Online-Abruf einer Trip-Ansicht.
 	const tripB = await tripAblegen(page);
+	bTrips.push(tripB);
 	expect(
 		await cacheNamenMitEintrag(page, `/trips/${tripB}`),
 		'Bs eigene Ansicht wurde nicht abgelegt'
@@ -694,6 +722,7 @@ test('AC-12: nach As Abmeldung sieht der angemeldete B ohne Netz keinen Inhalt v
 	await zweiterNutzerAnmelden(page);
 	await activateServiceWorker(page);
 	const tripB = await tripAblegen(page);
+	bTrips.push(tripB);
 
 	await context.setOffline(true);
 	try {

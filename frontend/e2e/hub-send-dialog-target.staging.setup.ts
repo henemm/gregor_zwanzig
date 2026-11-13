@@ -2,7 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { assertNotProdBaseURL } from './prodUrlGuard';
-import { ausUmgebung } from './stagingZugang';
+import { ausUmgebung, wegwerfPasswort } from './stagingZugang';
 // Staging-Validierung Issue #2347 S2 (vormals #1471) — geteilter Sende-Dialog nennt
 // das tatsaechliche Ziel, fuer Trip UND Ortsvergleich (hub-send-dialog-target.staging.spec.ts).
 // Umbenannt aus dem früheren Compare-only-Setup (#1471). Pfad unveraendert.
@@ -40,7 +40,7 @@ setup('authenticate via API (staging) — hub_send_dialog_target', async ({ play
 
 		const suffix = `${Date.now()}`;
 		const username = `e2egzsd${suffix}`;
-		const kennwort = `Sd-${suffix}-x!`;
+		const kennwort = wegwerfPasswort();
 		const reg = await gast.post('/api/auth/register', {
 			data: { username, password: kennwort, email: `gregor-test+sd${suffix}@henemm.com` }
 		});
