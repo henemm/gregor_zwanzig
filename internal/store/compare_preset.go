@@ -267,6 +267,9 @@ func (s *Store) SaveComparePreset(p model.ComparePreset) error {
 	if err != nil {
 		return err
 	}
+	if err := pruefeEntityGroesse(data); err != nil {
+		return err
+	}
 	return writeFileLogged(filepath.Join(dir, p.ID+".json"), data)
 }
 

@@ -200,7 +200,7 @@ func TestRegistrierungIgnoriertTestkontoAlsHalter_AC3(t *testing.T) {
 // Vorrang (#1517), nicht email_taken.
 func TestRegistrierungKennungskonfliktHatVorrangVorAdresskonflikt_AC4(t *testing.T) {
 	s := newTestStore(t)
-	cfg := config.Config{}
+	cfg := config.Config{Env: "staging"} // #2961: Testkonten nur Staging/Fixture/Admin
 	const bestehendeKennung = "u-ac4-bestehend"
 	const halterID = "u-ac4-halter"
 	const adresse = "adresse-ac4@beispiel.de"

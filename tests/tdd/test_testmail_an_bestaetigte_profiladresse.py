@@ -119,7 +119,7 @@ def smtp(monkeypatch) -> _SmtpMitschrift:
         def __exit__(self, *exc):
             return False
 
-        def starttls(self):
+        def starttls(self, context=None):
             pass
 
         def login(self, user, password):

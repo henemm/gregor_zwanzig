@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"regexp"
+	"unicode/utf8"
 )
 
 // Pfad-Traversal-Sperre fuer Nutzer-Kennungen (Issue #2140, Scheibe 1).
@@ -46,12 +47,44 @@ func ValidUserID(id string) bool {
 // ValidEntityIDRe ist die KANONISCHE Go-Quelle; der Python-Kern haelt mit
 // app.loader.VALID_ENTITY_ID_RE dagegen (Paritaetstest
 // tests/unit/test_entity_id_pattern_parity.py).
-var ValidEntityIDRe = regexp.MustCompile(`^[^./\\\x00][^/\\\x00]*$`)
+//
+// Issue #2961 (ADR-0114): zusaetzlich gesperrt sind ASCII-Steuerzeichen
+// (\x00-\x1f, \x7f) sowie "?", "#" und "%" — Zeichen, die in einer an den
+// Python-Core weitergereichten URL Query, Fragment oder Kodierung beginnen.
+// Kein ID-Erzeuger im Bestand (Frontend-Slugs, toKebab, randomUUID-Kuerzel,
+// GPX-Slug) bildet sie; Leerzeichen bleiben aus Bestandsschutz zulaessig,
+// weil Altdaten mit Leerzeichen nicht ausgeschlossen werden koennen und das
+// Weiterreichen jedes Segment ohnehin kodiert. Die Python-Seite
+// (app.loader.VALID_ENTITY_ID_RE) ist gleichlautend.
+//
+// Fix-Runde #2961 (F8): ebenfalls gesperrt sind C1-Steuerzeichen
+// (U+0080-U+009F) und die Zeilen-/Absatztrenner U+2028/U+2029;
+// ValidEntityID lehnt zusaetzlich ungueltiges UTF-8 ab. Python zieht
+// gleichlautend nach (geteilte Wahrheitstabelle).
+var ValidEntityIDRe = regexp.MustCompile(`^[^./\\\x00-\x1f\x7f-\x{9f}\x{2028}\x{2029}?#%][^/\\\x00-\x1f\x7f-\x{9f}\x{2028}\x{2029}?#%]*$`)
 
 // ErrInvalidEntityID meldet eine Entitaets-Kennung, die kein einzelnes,
 // sicheres Pfadsegment ist — analog ErrInvalidUserID bewusst ein eigener
 // Fehler und kein stilles "nicht gefunden".
 var ErrInvalidEntityID = errors.New("invalid entity id")
+
+// MaxEntityFileBytes begrenzt eine gespeicherte Trip-, Orts- oder
+// Ortsvergleichs-Datei (Issue #2961). Gemessener Bestand (Fixtures, data/):
+// groesster Trip 34 KB, groesster Ortsvergleich 16 KB — die Grenze liegt
+// rund das Sechzigfache darueber. Bestandsdateien bleiben lesbar; nur ein
+// Schreibvorgang, der sie ueber die Grenze braechte, wird abgelehnt.
+const MaxEntityFileBytes = 2 << 20
+
+// ErrEntityTooLarge: die zu schreibende Datei waere groesser als
+// MaxEntityFileBytes; es wurde nichts geschrieben.
+var ErrEntityTooLarge = errors.New("entity too large")
+
+func pruefeEntityGroesse(data []byte) error {
+	if len(data) > MaxEntityFileBytes {
+		return ErrEntityTooLarge
+	}
+	return nil
+}
 
 // ErrNotFound meldet, dass unter der Kennung im Bestand des Nutzers nichts
 // zu loeschen war (Issue #2815): der Handler antwortet dann 404 not_found.
@@ -59,7 +92,7 @@ var ErrNotFound = errors.New("not found")
 
 // ValidEntityID prueft, ob eine Entitaets-Kennung ein sicheres Pfadsegment ist.
 func ValidEntityID(id string) bool {
-	return ValidEntityIDRe.MatchString(id)
+	return utf8.ValidString(id) && ValidEntityIDRe.MatchString(id)
 }
 
 // requireUser verweigert jeden nutzerbezogenen Dateizugriff, solange der

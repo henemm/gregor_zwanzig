@@ -92,10 +92,10 @@ def _parse_file(file_path: Path) -> gpxpy.gpx.GPX:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
     except (OSError, IOError) as e:
-        raise GPXParseError(f"Datei nicht lesbar: {file_path} ({e})")
+        raise GPXParseError(f"Datei nicht lesbar: {file_path.name} ({type(e).__name__})")
 
     if not content.strip():
-        raise GPXParseError(f"Datei ist leer: {file_path}")
+        raise GPXParseError(f"Datei ist leer: {file_path.name}")
 
     try:
         return gpxpy.parse(content)

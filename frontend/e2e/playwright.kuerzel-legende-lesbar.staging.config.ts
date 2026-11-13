@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 // E2E-Config Issue #1888 (E6 Scheibe B, AC-6/AC-7): die Kuerzel-Legende bleibt
 // zwischen 320 und 899 px vollstaendig lesbar und haelt WCAG AA.
 // Kein lokaler webServer — geprueft wird die auf Staging deployte App selbst.
@@ -9,8 +10,8 @@ import { fileURLToPath } from 'node:url';
 // Liegt bewusst UNTER frontend/e2e/ (nicht frontend/ root); `testDir: '.'`
 // loest relativ zu dieser Datei auf.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

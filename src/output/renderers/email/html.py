@@ -358,11 +358,11 @@ def _render_footer(
     _zeitplan = t("mail.fusszeile.zeitplan", lang)
     if trip_url:
         _overview = (
-            f'<a href="{trip_url}" style="font-family:{FONT_DATA};color:#c45a2a;'
+            f'<a href="{_html.escape(trip_url)}" style="font-family:{FONT_DATA};color:#c45a2a;'
             f'text-decoration:none;">{_oeffnen}</a>'
         )
         _schedule = (
-            f'<a href="{trip_url}/edit" style="font-family:{FONT_DATA};color:#9a978d;'
+            f'<a href="{_html.escape(trip_url)}/edit" style="font-family:{FONT_DATA};color:#9a978d;'
             f'text-decoration:none;">{_zeitplan}</a>'
         )
     else:
@@ -948,7 +948,7 @@ def render_html(
         + profile_eyebrow_html
         + _eyebrow(t("mail.kopf.eyebrow", lang, art=_rt_upper))
         + f'<h1 style="font-size:22px;font-weight:600;letter-spacing:-0.015em;'
-        f'margin:4px 0 0 0;color:#1d1c1a;">{_route_title}</h1>'
+        f'margin:4px 0 0 0;color:#1d1c1a;">{_html.escape(_route_title)}</h1>'
         + f'<div style="font-family:{FONT_DATA};font-size:13px;color:#6b6962;margin-top:4px;">'
         f'{_date_str}</div>'
         + '</td>'
@@ -972,7 +972,7 @@ def render_html(
         'border-bottom:none;">'
         + _eyebrow("GREGOR ZWANZIG")
         + (f'<div style="font-size:14px;font-weight:600;margin-top:4px;color:#1d1c1a;">'
-           f'{trip_name}</div>')
+           f'{_html.escape(trip_name or "")}</div>')
         + _stage_counter_html
         + '</td>'
     )
@@ -1178,7 +1178,9 @@ def render_html(
                 icon = "⚡ " if fc.get("level") and fc["level"] != ThunderLevel.NONE else ""
                 # Issue #2205: Hagel-Zusatz steht IN `fc['text']` (Zeitplaner),
                 # wortgleich zur Klartext-Fassung -- kein Suffix mehr hier.
-                items.append(f"<li>{fc['date']}: {icon}{fc['text']}</li>")
+                # #2961: Text-Felder escapen (Verteidigung in der Tiefe).
+                items.append(f"<li>{_html.escape(str(fc['date']))}: {icon}"
+                             f"{_html.escape(str(fc['text']))}</li>")
         if items:
             thunder_html = f"""
             <div class="section">

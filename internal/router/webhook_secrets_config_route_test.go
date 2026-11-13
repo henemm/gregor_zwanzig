@@ -54,12 +54,12 @@ const cfgWebhookPublicHost = "https://test.example.com"
 func koederEnv(t *testing.T) {
 	t.Helper()
 	for k, v := range map[string]string{
-		"TELEGRAM_WEBHOOK_SECRET":      "tg-koeder",
+		"TELEGRAM_WEBHOOK_SECRET":      "tg-koeder-0123456789abcdef0123456789",
 		"TELEGRAM_BOT_USERNAME":        "koeder_bot",
-		"SEVEN_WEBHOOK_PATH_SECRET":    "sms-pfad-koeder",
+		"SEVEN_WEBHOOK_PATH_SECRET":    "sms-pfad-koeder-0123456789abcdef0123456",
 		"SEVEN_WEBHOOK_SIGNING_KEY":    "sms-key-koeder",
-		"STALWART_WEBHOOK_PATH_SECRET": "mail-pfad-koeder",
-		"STALWART_WEBHOOK_SECRET":      "mail-bearer-koeder",
+		"STALWART_WEBHOOK_PATH_SECRET": "mail-pfad-koeder-0123456789abcdef012345",
+		"STALWART_WEBHOOK_SECRET":      "mail-bearer-koeder-0123456789abcdef0123",
 	} {
 		t.Setenv(k, v)
 		t.Setenv("GZ_"+k, v)
@@ -168,7 +168,7 @@ func waitAtLeast(c *atomic.Int32, n int32) bool {
 // --- AC-17: Telegram -------------------------------------------------------
 
 func TestTelegramWebhook_SecretAusConfig_Falsch403_Richtig200_Leer503_AC17(t *testing.T) {
-	const richtig = "tg-richtig-2163"
+	const richtig = "tg-richtig-2163-0123456789abcdef01234"
 	body := `{"update_id":7,"message":{"chat":{"id":1001},"text":"status"}}`
 
 	t.Run("richtig -> 200 und Weiterreichung mit Config-Secret", func(t *testing.T) {
@@ -185,7 +185,7 @@ func TestTelegramWebhook_SecretAusConfig_Falsch403_Richtig200_Leer503_AC17(t *te
 
 	t.Run("Koeder aus Umgebung und falsch -> 403", func(t *testing.T) {
 		r, core, _ := cfgWebhookRouter(t, func(c *config.Config) { c.TelegramWebhookSecret = richtig })
-		for _, h := range []string{"tg-koeder", "falsch", ""} {
+		for _, h := range []string{"tg-koeder-0123456789abcdef0123456789", "falsch", ""} {
 			w := tgPost(r, "/api/webhooks/telegram/inbound", body, h)
 			if w.Code != http.StatusForbidden {
 				t.Errorf("AC-17: Header %q: erwartet 403, bekommen %d", h, w.Code)
@@ -198,7 +198,7 @@ func TestTelegramWebhook_SecretAusConfig_Falsch403_Richtig200_Leer503_AC17(t *te
 
 	t.Run("leeres Config-Feld -> 503 trotz Koeder in Umgebung", func(t *testing.T) {
 		r, _, _ := cfgWebhookRouter(t, func(c *config.Config) {})
-		for _, h := range []string{"tg-koeder", richtig} {
+		for _, h := range []string{"tg-koeder-0123456789abcdef0123456789", richtig} {
 			w := tgPost(r, "/api/webhooks/telegram/inbound", body, h)
 			if w.Code != http.StatusServiceUnavailable {
 				t.Errorf("AC-17: leeres Config-Secret, Header %q: erwartet 503 (fail-closed), bekommen %d", h, w.Code)
@@ -262,7 +262,7 @@ func sevenSignedPost(r http.Handler, pfadSecret, signierKey, signierPfadSecret s
 }
 
 func TestSevenWebhook_SecretsAusConfig_Falsch403_Richtig200_Leer503_AC18(t *testing.T) {
-	const pfad, key = "sms-pfad-richtig", "sms-key-richtig"
+	const pfad, key = "sms-pfad-richtig-0123456789abcdef012345", "sms-key-richtig"
 	setBeide := func(c *config.Config) { c.SevenWebhookPathSecret = pfad; c.SevenWebhookSigningKey = key }
 
 	t.Run("richtig -> 200 und Kick", func(t *testing.T) {
@@ -279,7 +279,7 @@ func TestSevenWebhook_SecretsAusConfig_Falsch403_Richtig200_Leer503_AC18(t *test
 	t.Run("falsch -> 403", func(t *testing.T) {
 		r, _, _ := cfgWebhookRouter(t, setBeide)
 		faelle := []struct{ name, pfad, key, signPfad string }{
-			{"Koeder-Pfad + Koeder-Signatur aus Umgebung", "sms-pfad-koeder", "sms-key-koeder", "sms-pfad-koeder"},
+			{"Koeder-Pfad + Koeder-Signatur aus Umgebung", "sms-pfad-koeder-0123456789abcdef0123456", "sms-key-koeder", "sms-pfad-koeder-0123456789abcdef0123456"},
 			{"richtiger Pfad, Signatur mit Koeder-Key", pfad, "sms-key-koeder", pfad},
 			{"falscher Pfad, richtige Signatur", "falsch", key, "falsch"},
 		}
@@ -301,7 +301,7 @@ func TestSevenWebhook_SecretsAusConfig_Falsch403_Richtig200_Leer503_AC18(t *test
 		}
 		for _, f := range faelle {
 			r, _, _ := cfgWebhookRouter(t, f.set)
-			for _, p := range []string{"sms-pfad-koeder", pfad} {
+			for _, p := range []string{"sms-pfad-koeder-0123456789abcdef0123456", pfad} {
 				if w := sevenSignedPost(r, p, "sms-key-koeder", p); w.Code != http.StatusServiceUnavailable {
 					t.Errorf("AC-18 seven: %s, Pfad %q: erwartet 503 (fail-closed), bekommen %d", f.name, p, w.Code)
 				}
@@ -324,7 +324,7 @@ func stalwartPost(r http.Handler, pfadSecret, bearer string) *httptest.ResponseR
 }
 
 func TestStalwartWebhook_SecretsAusConfig_Falsch403_Richtig200_Leer503_AC18(t *testing.T) {
-	const pfad, bearer = "mail-pfad-richtig", "mail-bearer-richtig"
+	const pfad, bearer = "mail-pfad-richtig-0123456789abcdef01234", "mail-bearer-richtig-0123456789abcdef012"
 	setBeide := func(c *config.Config) { c.StalwartWebhookPathSecret = pfad; c.StalwartWebhookSecret = bearer }
 
 	t.Run("richtig -> 200 und Kick", func(t *testing.T) {
@@ -341,8 +341,8 @@ func TestStalwartWebhook_SecretsAusConfig_Falsch403_Richtig200_Leer503_AC18(t *t
 	t.Run("falsch -> 403", func(t *testing.T) {
 		r, _, _ := cfgWebhookRouter(t, setBeide)
 		faelle := []struct{ name, pfad, bearer string }{
-			{"Koeder-Pfad + Koeder-Bearer aus Umgebung", "mail-pfad-koeder", "mail-bearer-koeder"},
-			{"richtiger Pfad, Koeder-Bearer", pfad, "mail-bearer-koeder"},
+			{"Koeder-Pfad + Koeder-Bearer aus Umgebung", "mail-pfad-koeder-0123456789abcdef012345", "mail-bearer-koeder-0123456789abcdef0123"},
+			{"richtiger Pfad, Koeder-Bearer", pfad, "mail-bearer-koeder-0123456789abcdef0123"},
 			{"falscher Pfad, richtiger Bearer", "falsch", bearer},
 			{"richtiger Pfad, ohne Bearer", pfad, ""},
 		}
@@ -364,7 +364,7 @@ func TestStalwartWebhook_SecretsAusConfig_Falsch403_Richtig200_Leer503_AC18(t *t
 		}
 		for _, f := range faelle {
 			r, _, _ := cfgWebhookRouter(t, f.set)
-			if w := stalwartPost(r, "mail-pfad-koeder", "mail-bearer-koeder"); w.Code != http.StatusServiceUnavailable {
+			if w := stalwartPost(r, "mail-pfad-koeder-0123456789abcdef012345", "mail-bearer-koeder-0123456789abcdef0123"); w.Code != http.StatusServiceUnavailable {
 				t.Errorf("AC-18 Stalwart: %s: erwartet 503 (fail-closed), bekommen %d", f.name, w.Code)
 			}
 		}

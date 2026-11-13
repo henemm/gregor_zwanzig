@@ -82,7 +82,11 @@ def maskiere_wochentage(text: str) -> str:
 
 def _settings(user_id: str):
     from app.config import Settings
+    from tests.helpers.nutzerprofil import lege_profil_an
 
+    # #2961: Empfaenger (Mail, Telegram) kommen nur noch aus dem Profil.
+    lege_profil_an(user_id, mail_to=_MAIL_FIELDS["mail_to"],
+                   telegram_chat_id=_MAIL_FIELDS["telegram_chat_id"])
     settings = Settings(**_MAIL_FIELDS).with_user_profile(user_id)
     assert settings.can_send_email() is True, "Vorbedingung: E-Mail sendefaehig."
     assert settings.can_send_telegram() is True, (

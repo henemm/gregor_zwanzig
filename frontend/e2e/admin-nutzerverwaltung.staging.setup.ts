@@ -3,6 +3,7 @@ import { assertNotProdBaseURL } from './prodUrlGuard';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 // Staging-Auth fuer Issue #2155 S4: ZWEI Anmeldezustaende (Zwei-Nutzer-Test).
 //  - Admin: Konto `gz-staging-admin`, Zugangsdaten aus GZ_STAGING_ADMIN_USER/_PASS
 //    oder .claude/staging_admin.env (gitignoriert, nie im Klartext im Repo).
@@ -33,13 +34,13 @@ setup('Anmeldung Admin und Nicht-Admin (staging) — admin_ui_s4', async ({ play
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
 	assertNotProdBaseURL(base);
 	const httpCredentials = {
-		username: process.env.GZ_VALIDATOR_USER ?? 'admin',
-		password: process.env.GZ_VALIDATOR_PASS ?? 'test1234'
+		username: ausUmgebung('GZ_VALIDATOR_USER'),
+		password: ausUmgebung('GZ_VALIDATOR_PASS')
 	};
 	const admin = adminCredentials();
 	const normal = {
-		user: process.env.GZ_AUTH_USER ?? process.env.E2E_USER ?? 'admin',
-		pass: process.env.GZ_AUTH_PASS ?? process.env.E2E_PASS ?? 'test1234'
+		user: ausUmgebung('GZ_AUTH_USER', 'E2E_USER'),
+		pass: ausUmgebung('GZ_AUTH_PASS', 'E2E_PASS')
 	};
 
 	for (const [k, konto, datei, rolle] of [

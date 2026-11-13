@@ -79,6 +79,9 @@ def _capture_send_kwargs(tmp_path) -> dict:
     from services.scheduler_dispatch_service import send_one_compare_preset
 
     user_id = f"test1124-{uuid.uuid4().hex[:8]}"
+    # #2961: Empfaenger kommt nur noch aus dem Nutzerprofil.
+    from tests.helpers.nutzerprofil import lege_profil_an
+    lege_profil_an(user_id)
     # mail_to explizit setzen (#1452: der Dispatch liest AUSSCHLIESSLICH die
     # Konto-Settings; `preset.empfaenger` ist inert) und _env_file=None, damit
     # der Test nicht vom Zufallsinhalt einer lokalen .env abhaengt (#1477).

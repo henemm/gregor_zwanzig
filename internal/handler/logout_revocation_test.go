@@ -136,6 +136,7 @@ func (e *authEnv) login(t *testing.T, id, password string) string {
 func (e *authEnv) loginNoFatal(id, password string) (string, error) {
 	req := httptest.NewRequest("POST", "/api/auth/login",
 		strings.NewReader(fmt.Sprintf(`{"username":%q,"password":%q}`, id, password)))
+	req.Header.Set("Content-Type", "application/json") // #2961: JSON-Pflicht
 	w := httptest.NewRecorder()
 	e.router.ServeHTTP(w, req)
 	if w.Code != 200 {

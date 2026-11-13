@@ -35,6 +35,7 @@ import {
 	cleanupTracked,
 	registriereBestaetigtenZweitnutzer
 } from './helpers.js';
+import { wegwerfPasswort } from './stagingZugang';
 
 type Kind = 'trip' | 'vergleich';
 const VIEWPORTS = {
@@ -278,7 +279,7 @@ test.describe('AC-10: Sende-Dialog nennt nur das Ziel des angemeldeten Nutzers',
 		const kontext = await browser.newContext();
 		const gast = kontext.request;
 		try {
-			await registriereBestaetigtenZweitnutzer(page.request, gast, username, 'Test1234!x');
+			await registriereBestaetigtenZweitnutzer(page.request, gast, username, wegwerfPasswort());
 			// B legt seinen eigenen Trip an und oeffnet "Senden" im Hub
 			const res = await gast.post('/api/trips', {
 				data: {
@@ -322,7 +323,7 @@ test.describe('AC-3: Sende-Dialog sperrt Bestaetigen, wenn kein Kanal liefern ka
 		const gast = kontext.request;
 		const tripId = `e2e-gz-trip-${username}`;
 		try {
-			await registriereBestaetigtenZweitnutzer(page.request, gast, username, 'Test1234!x');
+			await registriereBestaetigtenZweitnutzer(page.request, gast, username, wegwerfPasswort());
 			const leer = await gast.put('/api/auth/profile', { data: { mail_to: '' } });
 			expect(leer.ok(), `mail_to leeren: ${leer.status()}`).toBeTruthy();
 			const profil = await (await gast.get('/api/auth/profile')).json();

@@ -11,6 +11,7 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { HUB_KINDS, registriereBestaetigtenZweitnutzer, type HubKind } from './helpers';
 import { DESKTOP, WT, oeffneWetter, seedWetter, setzeStunde, stand, stundeAnzeige, stundeEingabe, type Json } from './s3a2794-teil3.helpers';
+import { wegwerfPasswort } from './stagingZugang';
 
 const LISTE = { route: '/api/trips', vergleich: '/api/compare/presets' } as const;
 const warnung = (s: Json) => ({ bericht: s.official_alerts_enabled, alarm: s.official_warnings?.enabled });
@@ -86,7 +87,7 @@ for (const kind of HUB_KINDS) {
 			serviceWorkers: 'block',
 			httpCredentials: test.info().project.use.httpCredentials
 		});
-		const kennwort = 'Test1234!x';
+		const kennwort = wegwerfPasswort();
 		let hubB: Awaited<ReturnType<typeof seedWetter>> | undefined;
 		try {
 			await registriereBestaetigtenZweitnutzer(page.request, gast.request, `e2e2913c${kind}${Date.now()}`, kennwort);

@@ -1,9 +1,10 @@
 import { defineConfig } from '@playwright/test';
+import { ausUmgebung } from './e2e/stagingZugang';
 // Staging-Verifikation Issue #1745 Scheibe A (Premium-SMS als vierter
 // Alarm-Kanal). Muster: playwright.1273-s4c.staging.config.ts (nginx-Basic-Auth =
 // GZ_VALIDATOR_*, App-Login = GZ_AUTH_* via API + storageState).
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: 'e2e',

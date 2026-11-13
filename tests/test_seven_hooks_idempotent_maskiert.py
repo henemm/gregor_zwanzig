@@ -235,3 +235,28 @@ def test_ac2_set_ohne_pflichtwert_bricht_ohne_anlage_ab(double, fehlt):
     assert erg.returncode != 0
     assert fehlt in erg.stderr
     assert not _posts(double)
+
+
+@pytest.mark.parametrize("args", [("list",), ("set",), ("delete", "4750")])
+def test_api_schluessel_und_pfad_secret_nie_in_curl_argumenten(double, tmp_path, args):
+    """#2961: curl bekommt Schluessel und Ziel-URL per stdin-Konfiguration (-K -),
+    nie als Prozessargument (sichtbar in `ps`). Ein Wrapper vor dem echten curl
+    zeichnet nur die Argumente auf; der Request geht weiter an das Double."""
+    echtes_curl = shutil.which("curl")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    log = tmp_path / "argv.log"
+    wrapper = bin_dir / "curl"
+    wrapper.write_text(f'#!/bin/bash\nprintf "%s\\n" "$@" >> "{log}"\nexec "{echtes_curl}" "$@"\n')
+    wrapper.chmod(0o755)
+    env = {"PATH": f"{bin_dir}:/usr/bin:/bin", "HOME": "/nonexistent",
+           "GZ_SEVEN_API_KEY": API_KEY, "SEVEN_API_BASE": double["base"],
+           "GZ_PUBLIC_HOST": PROD, "SEVEN_WEBHOOK_PATH_SECRET": PFAD_SECRET,
+           "SEVEN_SERVICE_NUMBER": SERVICENUMMER}
+    erg = subprocess.run(["bash", str(_SKRIPT), *args], env=env, capture_output=True,
+                         text=True, timeout=30)
+    assert erg.returncode == 0, erg.stderr
+    argv = log.read_text()
+    assert "-K" in argv.splitlines()
+    assert API_KEY not in argv and PFAD_SECRET not in argv, argv
+    assert double["requests"] and all(r["api_key"] == API_KEY for r in double["requests"])

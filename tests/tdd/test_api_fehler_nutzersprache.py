@@ -235,12 +235,13 @@ def test_validator_trip_nicht_gefunden_in_kontosprache(client, nutzer):
 # --------------------------------------------------------------------- AC-8
 
 
-def test_fehler_ohne_code_behaelt_text(client, nutzer):
+def test_fehler_ohne_code_meldet_katalogtext(client, nutzer):
+    """#2961 (loest AC-8 ab): ein Ausnahmetext ohne Code kann Interna tragen und
+    geht nur ins Log; der Client bekommt den Katalogtext in seiner Sprache."""
     antwort = client.get("/api/preview/.versteckt/sms", params={"user_id": nutzer["en"]})
     assert antwort.status_code == 422
     daten = antwort.json()
-    assert isinstance(daten["detail"], str)
-    assert daten == {"detail": "invalid trip_id: '.versteckt'", "code": "unbekannt"}
+    assert daten == {"detail": "The request could not be processed.", "code": "unbekannt"}
 
 
 def test_gpx_nur_gpx_in_kontosprache(client, nutzer):
@@ -301,10 +302,10 @@ def test_ohne_nutzer_deutsch_auch_wenn_default_englisch_ist(default_nutzer_en):
     assert (fehler.detail, fehler.code) == (deutsch, "vergleich_ohne_orte")
 
 
-def test_compare_email_preview_ohne_nutzer_behaelt_text(client, default_nutzer_en):
+def test_compare_email_preview_ohne_nutzer_deutscher_katalogtext(client, default_nutzer_en):
     antwort = client.post("/api/_validator/compare-email-preview", json={
         "profile": "gibt-es-nicht", "time_window": [9, 16], "target_date": "2026-05-31"})
     assert antwort.status_code == 422, antwort.text[:300]
     daten = antwort.json()
     assert daten["code"] == "unbekannt"
-    assert isinstance(daten["detail"], str) and "gibt-es-nicht" in daten["detail"]
+    assert daten["detail"] == "Die Anfrage konnte nicht verarbeitet werden."

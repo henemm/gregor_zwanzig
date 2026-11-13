@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, List, Optional, cast
 
 from app.user import ComparisonResult, LocationResult
-from services.comparison_engine import COMPARE_FORECAST_HOURS
+from services.comparison_engine import COMPARE_FORECAST_HOURS, _abruf_fehlertext
 
 if TYPE_CHECKING:
     from datetime import date
@@ -160,7 +160,9 @@ def run_comparison_parallel(
     # Fehlermeldung an SEINER Position, die uebrigen behalten ihre Daten.
     for idx, exc in fehler:
         fetched[idx] = LocationResult(
-            location=locations[idx], error=str(exc) or type(exc).__name__,
+            # #2961: Ausnahmetext nur ins Log, nach aussen der Ersatztext.
+            location=locations[idx],
+            error=_abruf_fehlertext(str(exc) or type(exc).__name__, user_id),
         )
 
     # ``fetched`` ist danach luecklos besetzt: jeder Index traegt entweder das

@@ -2,6 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { assertNotProdBaseURL } from './prodUrlGuard';
+import { ausUmgebung, wegwerfPasswort } from './stagingZugang';
 // Staging-Validierung Issue #2347 S2 (vormals #1471) — geteilter Sende-Dialog nennt
 // das tatsaechliche Ziel, fuer Trip UND Ortsvergleich (hub-send-dialog-target.staging.spec.ts).
 // Umbenannt aus dem früheren Compare-only-Setup (#1471). Pfad unveraendert.
@@ -20,10 +21,10 @@ export const WEGWERF_DATEI = authFile.replace(/\.json$/, '.wegwerf.json');
 setup('authenticate via API (staging) — hub_send_dialog_target', async ({ playwright }) => {
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
 	assertNotProdBaseURL(base);
-	const nginxUser = process.env.GZ_VALIDATOR_USER ?? 'admin';
-	const nginxPass = process.env.GZ_VALIDATOR_PASS ?? 'test1234';
-	const appUser = process.env.GZ_AUTH_USER ?? process.env.E2E_USER ?? 'admin';
-	const appPass = process.env.GZ_AUTH_PASS ?? process.env.E2E_PASS ?? 'test1234';
+	const nginxUser = ausUmgebung('GZ_VALIDATOR_USER');
+	const nginxPass = ausUmgebung('GZ_VALIDATOR_PASS');
+	const appUser = ausUmgebung('GZ_AUTH_USER', 'E2E_USER');
+	const appPass = ausUmgebung('GZ_AUTH_PASS', 'E2E_PASS');
 	const neu = () =>
 		playwright.request.newContext({
 			baseURL: base,
@@ -39,7 +40,7 @@ setup('authenticate via API (staging) — hub_send_dialog_target', async ({ play
 
 		const suffix = `${Date.now()}`;
 		const username = `e2egzsd${suffix}`;
-		const kennwort = `Sd-${suffix}-x!`;
+		const kennwort = wegwerfPasswort();
 		const reg = await gast.post('/api/auth/register', {
 			data: { username, password: kennwort, email: `gregor-test+sd${suffix}@henemm.com` }
 		});

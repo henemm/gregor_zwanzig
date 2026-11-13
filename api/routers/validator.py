@@ -55,7 +55,7 @@ def _load_trip_raw(user_id: str, trip_id: str) -> Optional[dict]:
     # store.ValidEntityID auf der Go-Seite. Behandelt wie "nicht vorhanden"
     # (None -> 404 am Endpunkt), damit der Aufrufer eine Ausbruchs-Kennung
     # nicht von einem existierenden Briefing unterscheiden kann.
-    if not VALID_ENTITY_ID_RE.match(trip_id):
+    if not VALID_ENTITY_ID_RE.fullmatch(trip_id):
         return None
     path = get_briefings_dir(user_id) / f"{trip_id}.json"
     if not path.exists():

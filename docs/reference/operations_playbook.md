@@ -168,6 +168,16 @@ bereits gesetzte Umgebungsvariable > Staging-`.env` (nur bei Staging-Ziel) >
 `.claude/validator.env`/lokale `.env`. Dieselbe Quelle nennen die Playwright-Staging-Specs
 (`frontend/e2e/issue-1093-compare-layout-crash.spec.ts:21-22`).
 
+**Playwright gegen Staging (#2961, seit 2026-11-12):** Specs, Setups und Configs mit Ziel Staging
+lesen Zugangsdaten nur noch über `ausUmgebung()` aus `frontend/e2e/stagingZugang.ts` — es gibt
+**keinen** Rückfallwert mehr. Fehlt eine Variable, bricht der Lauf mit ihrem Namen ab. Benötigt
+werden je nach Spec: `GZ_VALIDATOR_USER`/`GZ_VALIDATOR_PASS` (nginx-Schranke, Alternative
+`E2E_USER`/`E2E_PASS`), `GZ_AUTH_USER`/`GZ_AUTH_PASS` (App-Anmeldung), sowie für die fest
+angelegten Staging-Testkonten `GZ_E2E_BUNDLE_I_PASS`, `GZ_E2E_675_PASS`, `GZ_E2E_774_PASS` und
+`GZ_MOBILE_AUDIT_PASS`. Wegwerf-Konten, die ein Test selbst anlegt und löscht, bekommen ein
+zufälliges Passwort. Der isolierte CI-Stack (`frontend/e2e/ci-stack.sh`) arbeitet unverändert mit
+festen Testwerten.
+
 ### Blockade lesen: die Meldung sagt, wo das Problem liegt
 
 Vier unterscheidbare Ausgänge. **„Anmeldung abgelehnt" ist etwas anderes als
@@ -288,6 +298,17 @@ Fehlt die Variable, beendet sich die Go-API beim Start (Fail-Fast), und der Pyth
 weist ohne gesetztes Geheimnis jede Anfrage außer `/health` mit `503` ab. Siehe
 `docs/adr/0062-python-core-authentifiziert-gegenueber-go.md`.
 
+**Seit #2961** nimmt der Python-Core nur Anfragen mit erwartetem Host-Header an
+(`localhost`, `127.0.0.1`, `::1`, in Tests `testserver`), sonst `400`. Trägt
+`GZ_PYTHON_CORE_URL` einen anderen Hostnamen, muss er in `GZ_CORE_ALLOWED_HOSTS`
+(kommagetrennt) stehen.
+
+**Seit #2961** prüfen Postausgang (STARTTLS) und Posteingang (IMAPS) das
+Zertifikat samt Hostnamen. Ausnahme ohne Schalter: Steht als `GZ_SMTP_HOST`/
+`GZ_IMAP_HOST` wörtlich `localhost` oder eine Loopback-IP, wird nicht geprüft
+(Info-Logzeile „Mail-TLS zu Loopback-Ziel …"). Jeder andere Name braucht ein
+gültiges, passendes Zertifikat — sonst scheitern Versand bzw. Befehlseingang.
+
 **Seit #2159** gilt dasselbe Geheimnis auch für die internen Go-Endpunkte
 (`/api/internal/premium-sms-learn`, `/api/internal/telegram-connect`): Der Python-Core
 sendet es als `X-GZ-Core-Auth`; ohne Geheimnis auf Go-Seite antworten sie `503`, bei
@@ -313,6 +334,37 @@ alle 3 Services restarten → Smoke-Test`. Ohne diesen vollen Lauf entsteht Code
 `check-gregor20.sh` als BetterStack-Alert meldet (siehe Issue #113). Das Script ist
 **parallel-session-sicher**: es blockiert nicht mehr bei „dirty" Arbeitsbaum und serialisiert
 gleichzeitige Deploys über `flock`. Schritt 4 darf daher aus jeder Session jederzeit laufen.
+
+### Deploy-Geheimnisse an main binden (#2961)
+
+Stand im Repo: `ci.yml` gibt dem `GITHUB_TOKEN` nur Leserechte (`permissions: contents: read`),
+alle Actions sind auf Commit-SHAs gepinnt, die Deploy-Geheimnisse gehen per `env:` in die
+Schritte (nie per `${{ }}` in den Shell-Text), und der SSH-Zugang wird einmal im Schritt
+„SSH-Zugang vorbereiten" unter `$RUNNER_TEMP` (umask 077) angelegt und am Ende gelöscht.
+Ist das Secret `DEPLOY_KNOWN_HOSTS` gesetzt, prüft SSH den Host-Schlüssel
+(`StrictHostKeyChecking yes`); fehlt es, läuft der Deploy wie bisher ohne Prüfung weiter und
+der Lauf zeigt eine `::warning::`-Zeile. Drei Schritte liegen beim Repo-Eigentümer
+(GitHub-Einstellungen bzw. Server) und sind **noch offen**:
+
+1. **Environment `production`** anlegen (Settings → Environments) mit der Regel
+   „Deployment branches: nur `main`". Die Secrets `DEPLOY_SSH_KEY`, `DEPLOY_USER`,
+   `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`, `STAGING_BASIC_AUTH`, `HENEMM_DEPLOY_BOT_TOKEN`,
+   `HENEMM_DEPLOY_CHAT_ID` von den Repository-Secrets dorthin verschieben. **Erst danach**
+   im Job `deploy` die Zeile `environment: production` ergänzen; vorher würde der Job ohne
+   Secrets laufen und scheitern. Damit kann ein Workflow auf einem anderen Branch die
+   Schlüssel nicht mehr lesen.
+2. **SSH-Schlüssel begrenzen:** in `authorized_keys` des Deploy-Kontos den CI-Schlüssel mit
+   `command="…",restrict` auf ein Wrapper-Skript beschränken, das nur die drei Aufrufe der CI
+   zulässt (Prod-Gate, `deploy-gregor-prod.sh`, `prod_selftest.py`; Auswahl über
+   `SSH_ORIGINAL_COMMAND`, alles andere ablehnen).
+3. **`DEPLOY_KNOWN_HOSTS` anlegen:** die Host-Schlüssel-Zeile(n) des Servers für genau den
+   Namen bzw. die Adresse aus `DEPLOY_HOST` (z. B. aus `ssh-keyscan`, Fingerabdruck auf dem
+   Server selbst mit `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` abgleichen). Danach
+   verschwindet die Warnung im Deploy-Lauf.
+
+**Geheimnis-Suche:** Der Job `lint` prüft den ausgecheckten Stand mit gitleaks in fester
+Version (`.gitleaks.toml`, eigene Regel für Hex-Passwörter). Ein Platzhalter-Geheimnis in
+einem neuen Test braucht einen eigenen, pfad- und wertgenauen Ausnahme-Eintrag dort.
 
 ### Was zählt als „Staging-validiert"?
 
@@ -591,7 +643,19 @@ Python per `flock` teilen. Sie ist **keine Nutzerdatei**: Listen filtern nur `*.
 und `scripts/cleanup_1708c_dead_trips.py` überspringen `*.lock`. Beim Sichten von
 `briefings/` also nicht als Datenrest werten. (Der ADR trifft keine Aussage zum Löschen von
 Hand — nicht ohne Not anfassen; `flock` gilt nur auf lokalem Dateisystem.) Dauert eine
-Sperre über ~5 s, antwortet die API mit 503 + `Retry-After`.
+Sperre über ~5 s, antwortet die API mit 503 + `Retry-After`. Seit #2961 räumt Go beim
+Freigeben eine Sperrdatei ab, neben der keine `<id>.json` steht (unbekannte Kennung, Löschung),
+mit denselben Schutzregeln wie #2237 (nur wenn der `flock` sofort frei ist); eine Sperrdatei
+ohne `.json` ist danach nur noch ein Rest aus Python-Zugriffen oder älteren Ständen.
+
+## Mengenbremsen je Nutzer (#2961, ADR-0114)
+
+Testnachricht, Sofort-Versand, Ortsauflösung, GPX-Upload, Wettervergleich, Etappenwetter und
+Vorschauen sind je Nutzer gebremst (429 mit `Retry-After`, Grenzen in `api_contract.md`
+Abschnitt 0.6). Admins und `GZ_QUOTA_EXEMPT_USER_IDS` sind ausgenommen, im Fixture-Modus (CI-Stack)
+sind die Bremsen aus, auf Staging (`GZ_ENV=staging`) gelten die zehnfachen Grenzen — E2E-Läufe und
+Validator-Werkzeuge brauchen dort keinen Ausnahme-Eintrag. Der Zustand liegt im Arbeitsspeicher;
+ein Neustart setzt ihn zurück.
 
 ## Beschädigte `briefing_slots.json` / `briefing_log.json` (#2231)
 

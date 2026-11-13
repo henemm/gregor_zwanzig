@@ -40,6 +40,7 @@ import {
 	cleanupTracked,
 	registriereBestaetigtenZweitnutzer
 } from './helpers';
+import { wegwerfPasswort } from './stagingZugang';
 
 const KIND = 'premium_sms';
 
@@ -345,7 +346,7 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 			// Issue #2271: registrieren → Token ueber AS angemeldete Sitzung holen →
 			// bestaetigen → erst dann anmelden. Ohne die Bestaetigung dazwischen
 			// antwortet der Login mit 403 (das Gate sitzt in issueSession).
-			await registriereBestaetigtenZweitnutzer(pageA.request, pageB.request, userB, 'Test1234!x');
+			await registriereBestaetigtenZweitnutzer(pageA.request, pageB.request, userB, wegwerfPasswort());
 
 			// B sieht As Trip nicht.
 			const getBOnA = await pageB.request.get(`/api/trips/${tripAId}`);

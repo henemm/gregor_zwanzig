@@ -86,6 +86,7 @@ func TestRouter_LoginUndPasswortwechsel_CookieSecureAusPublicHost(t *testing.T) 
 
 		req := httptest.NewRequest(http.MethodPost, "/api/auth/login",
 			strings.NewReader(`{"username":"alice","password":"geheim123"}`))
+		req.Header.Set("Content-Type", "application/json") // #2961: JSON-Pflicht
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 		if w.Code != 200 {
@@ -99,6 +100,7 @@ func TestRouter_LoginUndPasswortwechsel_CookieSecureAusPublicHost(t *testing.T) 
 		req = httptest.NewRequest(http.MethodPut, "/api/auth/password",
 			strings.NewReader(`{"old_password":"geheim123","new_password":"neuespw456"}`))
 		req.AddCookie(&http.Cookie{Name: "gz_session", Value: login.Value})
+		req.Header.Set("Content-Type", "application/json")
 		w = httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 		if w.Code != 200 {
@@ -158,6 +160,13 @@ func challengeFrom(t *testing.T, w *httptest.ResponseRecorder) string {
 	return br.PublicKey.Challenge
 }
 
+// jsonAnfrage2961: POST mit JSON-Rumpf und Content-Type (seit #2961 Pflicht).
+func jsonAnfrage2961(pfad string, rumpf []byte) *http.Request {
+	req := httptest.NewRequest("POST", pfad, bytes.NewReader(rumpf))
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
 // #2159 AC-9: die zwei Passkey-Abschluss-Routen reichen den PublicHost durch.
 func TestRouter_PasskeyAbschluss_CookieSecureAusPublicHost(t *testing.T) {
 	f := secureRouterWithUser(t, "https://gregor.example.invalid")
@@ -165,11 +174,10 @@ func TestRouter_PasskeyAbschluss_CookieSecureAusPublicHost(t *testing.T) {
 
 	// login/finish (mit Kennungseingabe)
 	bw := httptest.NewRecorder()
-	f.r.ServeHTTP(bw, httptest.NewRequest("POST", "/api/auth/passkey/login/begin",
-		bytes.NewReader([]byte(`{"username":"alice"}`))))
+	f.r.ServeHTTP(bw, jsonAnfrage2961("/api/auth/passkey/login/begin", []byte(`{"username":"alice"}`)))
 	fw := httptest.NewRecorder()
-	f.r.ServeHTTP(fw, httptest.NewRequest("POST", "/api/auth/passkey/login/finish",
-		bytes.NewReader(auth.MakeAssertionResponse(t, challengeFrom(t, bw), 1))))
+	f.r.ServeHTTP(fw, jsonAnfrage2961("/api/auth/passkey/login/finish",
+		auth.MakeAssertionResponse(t, challengeFrom(t, bw), 1)))
 	if fw.Code != 200 {
 		t.Fatalf("login/finish: %d: %s", fw.Code, fw.Body.String())
 	}

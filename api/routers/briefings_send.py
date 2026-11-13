@@ -16,7 +16,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
 from app.loader import InvalidUserIdError
-from i18n import resolve_user_lang
+from i18n import resolve_user_lang, t
 from services.scheduler_dispatch_service import send_compare_preset
 from services.send_outcomes import SEND_OUTCOMES, InvalidPresetError, error_body
 
@@ -72,7 +72,10 @@ def _send_vergleich(entity_id: str, user_id: str):
         # Issue #2672: der Grund in der Sprache des Nutzers (Katalogschluessel).
         return _error("invalid_preset", user_id, reason=e.reason_text(resolve_user_lang(user_id)))
     except ValueError as e:
-        return _error("invalid_preset", user_id, reason=str(e))
+        # #2961: Ausnahmetext nur ins Log, nach aussen Katalogtext.
+        logger.warning("Handversand Vergleich %s: %s", entity_id, e)  # i18n-log
+        return _error("invalid_preset", user_id,
+                      reason=t("api.fehler.unbekannt", resolve_user_lang(user_id)))
     outcome = result.get("status")
     if outcome in SEND_OUTCOMES:
         return _error(outcome, user_id)

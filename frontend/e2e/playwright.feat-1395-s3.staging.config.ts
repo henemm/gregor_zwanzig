@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 
 // Staging-Nachpruefung Issue #1395 Scheibe S3 — „Das Frontend fuehrt den
 // Aenderungsstempel". Umschaltpunkt: ab hier traegt jeder Schreibvorgang aus
@@ -19,8 +20,8 @@ import { fileURLToPath } from 'node:url';
 //   npx playwright test --config=e2e/playwright.feat-1395-s3.staging.config.ts
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const nginxUser = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const nginxPass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const nginxUser = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const nginxPass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

@@ -157,7 +157,7 @@ class KanalRig:
             def __exit__(self, *exc) -> bool:
                 return False
 
-            def starttls(self) -> None:
+            def starttls(self, context=None) -> None:
                 pass
 
             def login(self, user, password) -> None:

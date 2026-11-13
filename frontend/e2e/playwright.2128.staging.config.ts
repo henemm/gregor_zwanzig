@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 // E2E-Config fuer Issue #2128 (PWA: installierbar, ohne Netz startfaehig,
 // Update erst auf Antippen) gegen STAGING. Kein lokaler webServer — geprueft
 // wird der wirklich ausgelieferte Stand.
@@ -26,8 +27,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Zwei Anmeldeschichten: nginx-Basic-Auth (Validator-Creds) davor, App-Login
 // (gz_session-Cookie, GZ_AUTH_*) dahinter -- siehe pwa-2128.staging.setup.ts.
-const nginxUser = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const nginxPass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const nginxUser = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const nginxPass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

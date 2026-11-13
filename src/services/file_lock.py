@@ -107,25 +107,56 @@ def lock_path_for(target: Path) -> Path:
     return target.with_name(target.name + ".lock")
 
 
+#: Testnaht (#2961, F7): wird zwischen ``open`` und ``flock`` mit dem
+#: Sperrpfad aufgerufen, damit Tests das Aufraeum-Rennen nachstellen koennen.
+_testnaht_nach_open: Optional[Callable[[Path], None]] = None
+
+
+def _haelt_datei_unter_pfad(fd: int, lock_file: Path) -> bool:
+    """``True``, wenn ``fd`` noch dieselbe Datei ist, die unter dem Pfad liegt."""
+    try:
+        pfad = os.stat(lock_file)
+    except FileNotFoundError:
+        return False
+    offen = os.fstat(fd)
+    return (offen.st_ino, offen.st_dev) == (pfad.st_ino, pfad.st_dev)
+
+
 @contextmanager
 def exclusive_lock(target: Path, timeout_s: Optional[float] = None) -> Iterator[None]:
     """flock(LOCK_EX) auf ``<target>.lock``; ``LockTimeout`` bei Fristablauf.
 
     ``timeout_s=None`` -> ``BRIEFING_LOCK_TIMEOUT_SECONDS`` (zur Aufrufzeit gelesen).
+
+    Issue #2961 (F7, ADR-0083-Nachtrag): Go entfernt Sperrdateien verwaister
+    Kennungen nach der Freigabe. Nach dem flock wird daher geprueft, ob der
+    Pfad noch auf die gesperrte Datei zeigt; sonst neuer Versuch innerhalb
+    derselben Frist.
     """
     lock_file = lock_path_for(Path(target))
     lock_file.parent.mkdir(parents=True, exist_ok=True)
-    fd = open_lock_file(lock_file)
-    try:
-        if not acquire_exclusive(
-            fd, BRIEFING_LOCK_TIMEOUT_SECONDS if timeout_s is None else timeout_s):
-            raise LockTimeout(f"Sperre auf {lock_file} nicht erhalten")
+    frist = BRIEFING_LOCK_TIMEOUT_SECONDS if timeout_s is None else timeout_s
+    deadline = time.monotonic() + frist
+    while True:
+        fd = open_lock_file(lock_file)
         try:
-            yield
+            if _testnaht_nach_open is not None:
+                _testnaht_nach_open(lock_file)
+            rest = max(0.0, deadline - time.monotonic())
+            if not acquire_exclusive(fd, rest):
+                raise LockTimeout(f"Sperre auf {lock_file} nicht erhalten")
+            if not _haelt_datei_unter_pfad(fd, lock_file):
+                fcntl.flock(fd, fcntl.LOCK_UN)
+                if time.monotonic() >= deadline:
+                    raise LockTimeout(f"Sperre auf {lock_file} nicht erhalten")
+                continue
+            try:
+                yield
+            finally:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+            return
         finally:
-            fcntl.flock(fd, fcntl.LOCK_UN)
-    finally:
-        os.close(fd)
+            os.close(fd)
 
 
 def atomic_write_json(path: Path, data: Any) -> None:

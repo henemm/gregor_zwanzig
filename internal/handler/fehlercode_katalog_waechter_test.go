@@ -46,6 +46,8 @@ type codeFund struct {
 // allen moeglichen Werten. Neue dynamische Variante => hier ergaenzen.
 var dynamischeVarianten = map[string][]string{
 	"quota_exceeded": {string(quotaTrips), string(quotaComparePresets), string(quotaLocations)},
+	// Issue #2961: Mengenbremsen je Nutzer (nutzer_mengenbremse.go).
+	"rate_limit_exceeded": {"aufloesen", "testnachricht", "versand", "abruf", "parallel", "gpx"},
 }
 
 // paketVars: paketweite var X = i18n.Args{...} fuer die Variantenaufloesung.

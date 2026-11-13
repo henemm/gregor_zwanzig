@@ -5,6 +5,7 @@
 - **Bezug:** GitHub-Issue #2521 Scheibe S2, Spec `docs/specs/modules/onboarding_willkommen_checkliste.md`;
   löst die #198-Regel „Testmail nie über Resend" (`docs/specs/_archive/bugfix/bug_198_notify_test_resend.md:20-22`)
   **für echte Nutzer** ab; Bezug ADR-0087 (Empfängerschutz), ADR-0066 (E-Mail-Bestätigung)
+- **Ergänzt durch:** [ADR-0114](0114-ausgehende-abrufe-nutzerbestimmter-ziele-nur-ueber-abgeschotteten-client.md) (ergänzt: Obergrenze je Nutzer für Testnachrichten)
 
 ## Kontext
 

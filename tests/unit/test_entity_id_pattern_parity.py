@@ -61,6 +61,8 @@ def test_python_muster_folgt_der_geteilten_wahrheitstabelle():
     invalid, valid = _lade_falltabelle()
 
     for entity_id in invalid:
+        # .match wie im Produktivcode (nicht fullmatch): sonst bliebe ein
+        # abschliessendes "\n" unentdeckt (Fix-Runde #2961).
         assert not VALID_ENTITY_ID_RE.match(entity_id), (
             f"VALID_ENTITY_ID_RE akzeptiert unsicheres Segment {entity_id!r} — "
             "die Go-Seite lehnt es laut geteilter Wahrheitstabelle ab."
@@ -92,3 +94,11 @@ def test_wahrheitstabelle_deckt_die_spec_regel_vollstaendig_ab():
     assert any(
         any(ord(c) > 127 for c in x) for x in valid
     ), "Positivkontrolle Unicode-Buchstaben hat keinen Fall"
+    # Fix-Runde #2961 (F8): C1-Steuerzeichen und Zeilen-/Absatztrenner.
+    assert any(
+        any(0x80 <= ord(c) <= 0x9F for c in x) for x in invalid
+    ), "Regelteil 'kein C1-Steuerzeichen' hat keinen Fall"
+    assert any("\u2028" in x for x in invalid) and any(
+        "\u2029" in x for x in invalid
+    ), "Regelteil 'kein U+2028/U+2029' hat keinen Fall"
+    assert any(x.endswith("\n") for x in invalid), "Regelteil 'kein abschliessendes \\n' hat keinen Fall"

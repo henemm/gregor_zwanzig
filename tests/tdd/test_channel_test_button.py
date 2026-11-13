@@ -127,7 +127,7 @@ def test_notify_test_email_mit_default_kennung_sendet_nichts(monkeypatch):
         def __exit__(self, *exc):
             return False
 
-        def starttls(self):
+        def starttls(self, context=None):
             pass
 
         def login(self, user, password):

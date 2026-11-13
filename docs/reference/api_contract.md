@@ -172,7 +172,14 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 - Umgestellt sind in G1 die Pfade über `bailIf` (`/api/briefings*`, Teile von `/api/compare/presets/{id}*`), in G2 Auth/Konto.
 - **Seit G3 (#2677)** tragen auch Trip-, Ortsvergleich-, Orts-, Gruppen-, Metrik-Preset-, Wetter-Konfig-, Forecast-, Versand-, Vorschau- und Proxy-Fehler sowie `AuthMiddleware` (401 `unauthorized`, 503 `service_unavailable`), `RequireAdmin` (403 `forbidden`) und `IPRateLimiter` (429 `rate_limit_exceeded`) dieses Objekt. Die in den Tabellen dieses Dokuments notierten Kurzformen `{"error":"<code>"}` meinen ab dann das volle Objekt mit diesem `code`; Status, Codes und Zusatzfelder sind unverändert. Fachtexte liegen unter `fach.fehler.*`, Resolver-Meldungen unter `fach.resolver.*`; deutsche Texte sind wortgleich zum Stand vor G3. Umbenannt: `upstream unreachable` → `upstream_unreachable`. Klartext-Antworten (`http.Error`) der Nutzer-Handler (Briefing-Historie, Wegpunkt-Bestätigung, Telegram-Link/-Status, Premium-SMS-Kopplungscode) sind jetzt JSON mit `unauthorized`/`internal_error`/`store_error`/`not_found`/`bad_request`/`service_unavailable`. Maschinen-Endpunkte (`/api/internal/`, `/api/webhooks/`, Status-Token, Staging) bleiben unverändert.
 - Antworten des Python-Cores werden unverändert durchgereicht.
-- **Stabile `code`-Werte (Ist-Stand 2026-11-02):** Die Liste stammt aus den literalen Codes der Aufrufe von `WriteError`, `WriteErrorWith` und `bailIf` in `internal/` (Grep, ohne Tests) plus `forbidden` aus `internal/middleware/admin.go`. Sie ist nicht erschöpfend: Codes aus Variablen oder aus Klartext-Antworten (`http.Error`) fehlen. Stand: 61 Codes. `account_disabled` · `address_taken` · `already_current_tier` · `attestation_invalid` · `bad_request` · `begin_failed` · `budget_exceeded` · `busy` · `cannot_disable_self` · `cannot_remove_last_passkey_without_password` · `challenge_expired_or_missing` · `conflict` · `core_unavailable` · `email_not_verified` · `email_taken` · `forbidden` · `google_oauth_not_configured` · `id_conflict` · `internal_error` · `invalid_body` · `invalid_code` · `invalid_credential_id` · `invalid_credentials` · `invalid_display_name` · `invalid_email` · `invalid_language` · `invalid_or_expired_code` · `invalid_params` · `invalid_request` · `invalid_sms_number` · `invalid_tier` · `invalid_token` · `invite_invalid` · `invite_used` · `kind_required` · `location_in_use` · `mail_failed` · `max_attempts_exceeded` · `missing_credential_id` · `name_exists` · `name_required` · `not_found` · `note_too_long` · `nothing_to_set` · `precondition_failed` · `provider_error` · `proxy_error` · `quota_exceeded` · `rate_limit_exceeded` · `reauth_required` · `service_unavailable` · `store_error` · `token_expired` · `unauthorized` · `upstream_unreachable` · `user_already_exists` · `user_mismatch` · `validation_error` · `validation_failed` · `webauthn_begin_failed` · `wrong_password`
+- **Globale Schutzschicht für schreibende Anfragen (Issue #2961, ADR-0113):** Für `POST`/`PUT`/`PATCH`/`DELETE` unter `/api/` gilt vor der Anmeldeprüfung (ausgenommen `/api/webhooks/`, `/api/internal/`, `/api/_internal/`, `/api/scheduler/status`, `/api/auth/google/callback`):
+  - `403 origin_forbidden` — der Header `Origin` ist gesetzt, aber nicht der eigene Ursprung (abgeleitet aus `GZ_PUBLIC_HOST`, plus `GZ_WEBAUTHN_RP_ORIGINS`; im Staging, im Fixture-Modus und bei lokalem `GZ_PUBLIC_HOST` zusätzlich `localhost`/Loopback mit beliebigem Port), oder `Sec-Fetch-Site` ist gesetzt und weder `same-origin` noch `none`. Fehlen beide Header (Server-zu-Server, Skripte), wird durchgelassen.
+  - `415 unsupported_media_type` — die Anfrage trägt einen Rumpf, aber nicht `Content-Type: application/json`; `POST /api/gpx/parse` nimmt stattdessen `multipart/form-data`.
+  - `413 payload_too_large` — angekündigter Rumpf über 1 MB (`/api/gpx/parse`: 10 MB); gilt für alle `/api/`-Pfade außer `/api/webhooks/`.
+  - `429 rate_limit_exceeded` (mit `Retry-After`) — zusätzlich zu den IP-Bremsen gibt es seit #2961 Bremsen je Nutzer bzw. Adresse: `PUT /api/auth/password` (5 Fehlversuche/15 min je Nutzer), `POST /api/auth/tier-change-request` (3/Tag je Nutzer), `GET /api/auth/telegram-link` (10/h je Nutzer), `POST /api/auth/sms/verify` (10/10 min je Nutzer). Der IP-Limiter fasst IPv6-Absender je /64-Netz zusammen. Fehlversuchsbremsen (Code-Anmeldung je Adresse, Passwortwechsel je Nutzer) zählen im gleitenden 15-Minuten-Fenster.
+  - `POST /api/webhooks/telegram/inbound` liest höchstens 1 MB Rumpf; darüber `413` (Klartext), keine Weitergabe an den Python-Kern.
+  - Maschinen-Geheimnisse (`GZ_STATUS_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `SEVEN_WEBHOOK_PATH_SECRET`, `STALWART_WEBHOOK_PATH_SECRET`, `STALWART_WEBHOOK_SECRET`): gesetzt, aber kürzer als 32 Zeichen → nur Warnzeile `WARN [config] …` beim Start, der Endpunkt arbeitet unverändert mit dem Wert; ungesetzt bleibt er wie bisher geschlossen (503 bzw. 401).
+- **Stabile `code`-Werte (Ist-Stand 2026-11-02):** Die Liste stammt aus den literalen Codes der Aufrufe von `WriteError`, `WriteErrorWith` und `bailIf` in `internal/` (Grep, ohne Tests) plus `forbidden` aus `internal/middleware/admin.go`. Sie ist nicht erschöpfend: Codes aus Variablen oder aus Klartext-Antworten (`http.Error`) fehlen. Stand: 64 Codes (drei aus der Schutzschicht in `internal/middleware/request_guard.go`, #2961). `account_disabled` · `address_taken` · `already_current_tier` · `attestation_invalid` · `bad_request` · `begin_failed` · `budget_exceeded` · `busy` · `cannot_disable_self` · `cannot_remove_last_passkey_without_password` · `challenge_expired_or_missing` · `conflict` · `core_unavailable` · `email_not_verified` · `email_taken` · `forbidden` · `google_oauth_not_configured` · `id_conflict` · `internal_error` · `invalid_body` · `invalid_code` · `invalid_credential_id` · `invalid_credentials` · `invalid_display_name` · `invalid_email` · `invalid_language` · `invalid_or_expired_code` · `invalid_params` · `invalid_request` · `invalid_sms_number` · `invalid_tier` · `invalid_token` · `invite_invalid` · `invite_used` · `kind_required` · `location_in_use` · `mail_failed` · `max_attempts_exceeded` · `missing_credential_id` · `name_exists` · `name_required` · `not_found` · `note_too_long` · `nothing_to_set` · `origin_forbidden` (#2961) · `payload_too_large` (#2961) · `precondition_failed` · `provider_error` · `proxy_error` · `quota_exceeded` · `rate_limit_exceeded` · `reauth_required` · `service_unavailable` · `store_error` · `token_expired` · `unauthorized` · `unsupported_media_type` (#2961) · `upstream_unreachable` · `user_already_exists` · `user_mismatch` · `validation_error` · `validation_failed` · `webauthn_begin_failed` · `wrong_password`
 - **Ungültige `user_id` im Python-Core (#2163, 2026-11-01):** Nutzerpfade entstehen nur mit geprüfter Kennung (`src/app/loader.py`: `is_valid_user_id` mit `fullmatch`, `user_dir`, `InvalidUserIdError`; `"alice\n"` wird abgelehnt). Ein zentraler FastAPI-Handler antwortet 404 `{"error":"not_found"}` ohne Kennung im Text. Ausnahme: `api/routers/gpx.py` behält 400 `invalid_user_id`. Fail-soft-Leser/-Schreiber (Scheduler, Alert-Erfassung, Budget) kehren bei ungültiger Kennung still zurück. Spec: `docs/specs/modules/auth_haertung_python_2163.md`.
 
 ---
@@ -300,6 +307,36 @@ Admin-Trigger `radar-alert-checks`, `compare-alert-checks`, `compare-radar-alert
 `compare-official-alert-checks` (letzterer seit #2286 wieder entfernt — der amtliche Teil
 läuft in `compare-alert-checks` mit). Die frühere Angabe „80 Pfade/100 Registrierungen" war
 bereits vor #2218 veraltet.)
+
+### 0.6) Härtung der Go-Schnittstellen (Issue #2961, ADR-0114, seit 2026-11-12)
+
+Spec: `docs/specs/modules/security_haertung_2026_11_go_schnittstellen.md`. Alle Fehler im
+Fehlerobjekt `code`/`message` (Abschnitt 0); Texte unter `fach.fehler.*` (DE/EN).
+
+**Mengenbremsen je Nutzer** (gleitendes Fenster, `429 rate_limit_exceeded` mit Header
+`Retry-After` in Sekunden; Admins und `GZ_QUOTA_EXEMPT_USER_IDS` ausgenommen, im Fixture-Modus
+nicht aktiv; bei `GZ_ENV=staging` gelten die zehnfachen Werte, auch für die Gleichzeitigkeit):
+
+| Route | Grenze | Text-Variante |
+|---|---|---|
+| `POST /api/locations/resolve` | 30 je Minute | `rate_limit_exceeded_aufloesen` |
+| `POST /api/notify/test` | 10 je Stunde | `rate_limit_exceeded_testnachricht` |
+| `POST /api/briefings/{id}/send`, `POST /api/trips/{id}/send`, `POST /api/compare/presets/{id}/send` | zusammen 20 je Stunde | `rate_limit_exceeded_versand` |
+| `GET /api/compare`, `GET /api/trips/{id}/stages/weather`, Vorschau (`GET /api/preview/{trip_id}/sms`, `POST /api/trips/{id}/alert-preview`, `POST /api/briefings/{id}/alert-preview`) | je 60 je Minute (Vergleich, Etappenwetter und die drei Vorschau-Routen zusammen je ein Fenster) | `rate_limit_exceeded_abruf` |
+| dieselben fünf Routen | gemeinsam höchstens 4 gleichzeitig | `rate_limit_exceeded_parallel` (`Retry-After: 1`) |
+| `POST /api/gpx/parse` | 30 je Stunde | `rate_limit_exceeded_gpx` |
+
+**Weitere Status-/Fehlercodes:**
+
+| Route | Status | `code` | Fall |
+|---|---|---|---|
+| `POST /api/gpx/parse` | 413 | `payload_too_large` (Text `…_gpx`) | Rumpf größer als 10 MB; der Core wird nicht erreicht |
+| `POST /api/locations/resolve` | 422 | `resolve_failed` (`fach.resolver.maps_aufloesen`) | Kartenlink nicht https, Host nicht auf der Erlaubnisliste oder Weiterleitung auf einen fremden Host — es findet kein Abruf statt |
+| alle Routen mit Pfad-Kennung, die an den Core weiterreichen (Versand, Vorschau, Etappenwetter, `/_internal/trip/{id}/loaded`) | 400 | `validation_error` | Kennung ungültig (Pfadtrenner, Steuerzeichen, `?`, `#`, `%`) — gilt jetzt auch auf den Alt-Routen |
+| `PUT /api/trips/{id}`, `POST /api/trips`, `PUT /api/trips/{id}/weather-config`, `PUT /api/locations/{id}/weather-config`, `POST/PUT /api/locations[/{id}]`, `POST/PUT /api/compare/presets[/{id}]`, `PUT /api/briefings/{id}` | 400 | `limit_exceeded` (Texte `…_schluessel`, `…_etappen`, `…_wegpunkte`) | neuer Config-Schlüssel nicht `^[a-z0-9_.-]{1,64}$`, mehr als 200 Schlüssel je Map, mehr als 100 Etappen je Trip oder 500 Wegpunkte je Etappe |
+| dieselben Schreibrouten | 413 | `entity_too_large` | gespeicherte Datei wäre größer als 2 MB; nichts wird geschrieben, Bestandsdateien bleiben lesbar |
+| `GET /api/forecast` | 502 | `provider_error` | Text nur noch aus dem Katalog; Anbieter-Einzelheiten nur im Log |
+| `POST /api/auth/verify-email/staging-token` (nur Staging) | 404 | `{"error":"unknown user"}` | Zielkonto unbekannt ODER weder eigenes Konto, Testkonto noch frisch registriert (≤ 1 h) und unbestätigt (beide Fälle identisch); eine gültige Sitzung genügt als Aufrufer |
 
 ---
 
@@ -887,7 +924,15 @@ Leitet GPX-Upload vom SvelteKit-Frontend via Go-Proxy an Python FastAPI weiter. 
 | Status | Body | Szenario |
 |--------|------|----------|
 | 400 | `{"error":"invalid_gpx","detail":"..."}` | Kein `file`-Field oder GPX nicht parsebar |
+| 400 | `{"detail":"<Katalogtext>","code":"gpx_ungueltig"}` | Python: Datei leer, kaputt oder ohne verwertbaren Track (#2961; ohne Pfad/Interna) |
+| 409 | `{"detail":"<Katalogtext>","code":"gpx_speicher_voll"}` | Python: GPX-Ablage des Nutzers voll — höchstens 200 Dateien und 200 MB je Nutzer; eine gleichnamige Datei wird ersetzt und zählt nicht doppelt (#2961) |
+| 413 | `{"detail":"<Katalogtext>","code":"gpx_zu_gross"}` | Python: Datei größer als 10 MB (#2961) |
 | 503 | `{"error":"core_unavailable"}` | Python-Backend nicht erreichbar oder Timeout (>30s) |
+| 413 | `payload_too_large` (Fehlerobjekt) | Rumpf größer als 10 MB (Issue #2961); der Core wird nicht erreicht |
+| 429 | `rate_limit_exceeded` + `Retry-After` | mehr als 30 Uploads je Stunde und Nutzer (Issue #2961) |
+
+Gespeichert wird die Datei unter `data/users/<user_id>/gpx/<dateiname>`; ein Upload mit
+gleichem Namen ersetzt die vorhandene Datei erst, wenn die neue lesbar ist (#2961).
 
 #### Source Files
 
@@ -3268,7 +3313,8 @@ die Registrierung mit Einladungscode (ADR-0084) eingelöst, ist die generierte I
 **Validation:**
 - `username` (nur bei `is_test_user=true` ausgewertet): 3–50 characters, alphanumeric + underscore
 - `password`: ≥8 characters
-- `is_test_user` (optional, Issue #2152/ADR-0072): `true` markiert das Konto dauerhaft als Testkonto (`user.json` → `is_test_user`). Der Testkonto-Status wird ausschliesslich aus diesem Feld gelesen (plus der festen Fixture-ID `tg-live-e2e`) — die frühere Namens-Heuristik (`test`/`tdd` im Usernamen) ist entfallen. Fehlt das Feld, ist das Konto ein normales Nutzerkonto.
+- `is_test_user` (optional, Issue #2152/ADR-0072): `true` markiert das Konto dauerhaft als Testkonto (`user.json` → `is_test_user`). Der Testkonto-Status wird ausschliesslich aus diesem Feld gelesen (plus der festen Fixture-ID `tg-live-e2e`) — die frühere Namens-Heuristik (`test`/`tdd` im Usernamen) ist entfallen. Fehlt das Feld, ist das Konto ein normales Nutzerkonto. **Seit #2961 (ADR-0113)** nur angenommen bei `GZ_ENV=staging`, im Fixture-Modus (`GZ_TEST_FIXTURE_DIR`) oder mit gültiger Admin-Sitzung (Cookie eines Kontos aus `GZ_ADMIN_USER_IDS`); sonst `400 validation_failed`. Reservierte Kennungen (`default`, `admin`, `root`, `system`) sind nie registrierbar (`400 validation_failed`). Kennungen aus `GZ_ADMIN_USER_IDS`/`GZ_QUOTA_EXEMPT_USER_IDS` (ohne Groß-/Kleinschreibung) belegt eine Testkonto-Registrierung auch im Staging/Fixture-Modus nur mit gültiger Admin-Sitzung, sonst `400 validation_failed`.
+- **Kennung belegt (#2961):** ein vorhandener Kontoordner gilt als belegt, auch ohne `user.json`; die Anlage ist exklusiv (gleichzeitige Registrierungen derselben Kennung: genau eine `201`, sonst `409 user_already_exists`).
 - `email`: required (Issue #1226), minimal format check (`strings.Contains(email, "@")` — no `net/mail` parsing); **uniqueness IS enforced** (Issue #2147 Scheibe B1) — normalisiert (`TrimSpace`+`ToLower`) darf `email`/`mail_to` keinem anderen, echten (Nicht-Test-)Konto bereits gehören, geprüft unter einer prozessweiten Sperre je Adresse (`store.LockEmailAddress`)
 
 **Check order (Issue #1517):** format checks (username length/regex, password length) → existence check (`s.UserExists`) → email presence/format → **address-uniqueness check** (Issue #2147 Scheibe B1). The existence check runs **before** the email checks, so a request for an already-registered username returns 409 regardless of whether `email` is set — previously a missing `email` on an existing username produced a misleading 400 `validation failed`.
@@ -3341,9 +3387,11 @@ bleibt `{username, token, new_password}` mit der Konto-ID aus dem Link.
 
 #### POST /api/auth/magic-link
 
-Fordert einen 6-stelligen Anmeldecode (15 Min gültig) für `{"email": "..."}` an. Antwort **immer**
+Fordert einen 8-stelligen Anmeldecode (15 Min gültig; bis #2961 6-stellig) für `{"email": "..."}` an. Antwort **immer**
 `200 {"status":"ok"}` (keine Konto-Enumeration); `400 {"code":"invalid_request"}` nur bei leerem
-Body/leerer Adresse. **Legt kein Konto an** (seit #2147). Der Code geht über den
+Body/leerer Adresse. **Seit #2961 (ADR-0113):** höchstens 5 Code-Mails je Adresse und Stunde
+(darüber dieselbe Antwort ohne Versand); ein noch gültiger Code (nicht abgelaufen, Vergleiche übrig)
+wird erneut zugestellt statt ersetzt, sein Ablauf bleibt. **Legt kein Konto an** (seit #2147). Der Code geht über den
 Bestätigungsmail-Weg (Resend-Sonderpfad ohne Empfänger-Allowlist), weil er wie die
 Bestätigungsmail ein Adressnachweis ist. Adressen werden per `TrimSpace + ToLower` normalisiert.
 
@@ -3366,8 +3414,8 @@ genau einmal (auch bei gleichzeitigen Anfragen). Erst hier wird die Adresse X ei
 | Status | Body | Scenario |
 |--------|------|----------|
 | 400 | `{"code":"invalid_request"}` | JSON malformed, Adresse oder Code leer |
-| 400 | `{"error":"invalid_or_expired_code"}` | Kein/abgelaufener/falscher/verbrauchter Code **oder** Adresse nicht eindeutig zuordenbar |
-| 400 | `{"error":"max_attempts_exceeded"}` | 3 Fehlversuche |
+| 400 | `{"error":"invalid_or_expired_code"}` | Kein/abgelaufener/falscher/verbrauchter Code **oder** Adresse nicht eindeutig zuordenbar **oder** Adresse gesperrt (#2961: 5 Fehlversuche je Adresse in 15 Min, auch über Neuanforderungen hinweg → 15 Min Sperre, auch für den richtigen Code) |
+| 400 | `{"error":"max_attempts_exceeded"}` | 3 Vergleiche mit diesem Code verbraucht (neuen Code anfordern) |
 | 500 | `{"code":"internal_error"}` | Konten nicht lesbar / Anlage oder Bestätigung fehlgeschlagen |
 
 ### B) Passkey Authentication (WebAuthn/FIDO2)

@@ -132,6 +132,9 @@ def hooks_kopie(tmp_path, monkeypatch):
     subprocess.run(["git", "init", "-q", str(kopie)], check=True)
     monkeypatch.setenv("GZ_TEST_IMAP_USER", "gregor-test")
     monkeypatch.setenv("GZ_TEST_IMAP_PASS", "kein-echtes-passwort")
+    # #2961: der Validator nimmt nur Mails des konfigurierten Dienst-Absenders;
+    # die Golden-Fixtures tragen diesen Absender.
+    monkeypatch.setenv("GZ_MAIL_FROM", "gregor_zwanzig@henemm.com")
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "test-2681-verdrahtung")
     return kopie
 

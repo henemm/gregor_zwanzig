@@ -118,6 +118,9 @@ def dispatch_env(tmp_path, monkeypatch):
     monkeypatch.setattr(orch_mod.CompareDispatchStrategy, "inter_mail_delay", 0.0)
 
     user_id = f"tdd-e1-{uuid.uuid4().hex[:8]}"
+    # #2961: Empfaenger kommt nur noch aus dem Nutzerprofil.
+    from tests.helpers.nutzerprofil import lege_profil_an
+    lege_profil_an(user_id)
     return data_root, user_id
 
 
@@ -208,7 +211,7 @@ def _install_smtp_sink(monkeypatch):
         def __exit__(self, *exc):
             return False
 
-        def starttls(self):
+        def starttls(self, context=None):
             return None
 
         def login(self, user, password):

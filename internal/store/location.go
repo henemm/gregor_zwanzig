@@ -107,6 +107,9 @@ func (s *Store) SaveLocation(loc model.Location) error {
 	if err != nil {
 		return err
 	}
+	if err := pruefeEntityGroesse(data); err != nil {
+		return err
+	}
 
 	return writeFileLogged(filepath.Join(dir, loc.ID+".json"), data)
 }

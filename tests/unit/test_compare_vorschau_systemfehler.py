@@ -180,7 +180,8 @@ def test_ein_ort_von_dreien_scheitert_liefert_weiter_ein_ergebnis(
     ] and zeilen.index("Innsbruck") < zeilen.index("Bozen") < zeilen.index("Muenchen"), (
         f"Alle drei Orte muessen in konfigurierter Reihenfolge erscheinen:\n{telegram}"
     )
-    assert AUSFALL in _blockzeile(telegram, "Bozen"), (
+    # #2961: der Ausnahmetext bleibt im Log, am Ort steht der Katalogtext.
+    assert "Wetterabruf fehlgeschlagen" in _blockzeile(telegram, "Bozen"), (
         f"Der gescheiterte Ort braucht seine Fehlermeldung an seiner Position:\n{telegram}"
     )
     for name in ("Innsbruck", "Muenchen"):

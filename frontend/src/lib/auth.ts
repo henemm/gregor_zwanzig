@@ -1,4 +1,4 @@
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 /**
  * Lebensdauer des Anmelde-Cookies in Sekunden (Issue #2129). Muss mit
@@ -36,5 +36,16 @@ export function verifySession(cookie: string, secret: string): { userId: string 
 		.digest('hex');
 	// Kein Ablauf: die Gästeliste des Go-Dienstes trägt die Gültigkeit,
 	// nicht der Zeitstempel.
-	return sig === expected ? { userId } : null;
+	return signaturGleich(sig, expected) ? { userId } : null;
+}
+
+/**
+ * Issue #2961 (FE4): Vergleich in konstanter Zeit. Ungleiche Länge ist sofort
+ * ungleich — `timingSafeEqual` verlangt gleich lange Puffer.
+ */
+export function signaturGleich(gegeben: string, erwartet: string): boolean {
+	const a = Buffer.from(gegeben, 'utf8');
+	const b = Buffer.from(erwartet, 'utf8');
+	if (a.length !== b.length) return false;
+	return timingSafeEqual(a, b);
 }

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"golang.org/x/crypto/bcrypt"
 
@@ -35,15 +34,39 @@ type Deps struct {
 	GitCommit             string
 }
 
+// Issue #2961: Rumpfgrenzen der globalen Schutzschicht.
+const (
+	maxAPIBodyBytes   int64 = 1 << 20
+	maxGPXUploadBytes int64 = 10 << 20
+	gpxUploadPath           = "/api/gpx/parse"
+)
+
 // New builds the chi router with all application routes.
 // It does not start the scheduler or the HTTP server.
 func New(deps Deps) chi.Router {
 	r := chi.NewRouter()
-	r.Use(chimw.Logger)
+	// Issue #2961: Zugriffslog ohne Pfad-/Query-Geheimnisse (statt chimw.Logger).
+	r.Use(authmw.AccessLog())
+	// Issue #2961 (ADR-0113): globale Schutzschicht fuer schreibende
+	// Anfragen VOR der Anmeldepruefung — Rumpfgroesse (1 MB, GPX-Upload
+	// 10 MB), Herkunft (Origin/Sec-Fetch-Site), JSON-Pflicht fuer Rumpfe.
+	r.Use(authmw.LimitBody(maxAPIBodyBytes, map[string]int64{gpxUploadPath: maxGPXUploadBytes}))
+	r.Use(authmw.OriginGuard(authmw.NewOriginPolicy(deps.Config)))
+	r.Use(authmw.RequireJSONBody(gpxUploadPath))
 	r.Use(authmw.AuthMiddleware(deps.Config.SessionSecret, deps.Store))
 	// Issue #2675 (ADR-0104): Sprache einmal je Anfrage in den Kontext —
 	// Nutzer aus dem Auth-Kontext > Cookie gz_lang > Accept-Language > de.
 	r.Use(authmw.Lang(deps.Store))
+
+	// Issue #2961: gesetzte, aber zu kurze Maschinen-Geheimnisse erzeugen
+	// eine Warnzeile; der Endpunkt bleibt mit dem Wert in Betrieb (kein
+	// stilles Schliessen beim Deploy). Der Seven-Signierschluessel kommt aus dem
+	// seven.io-Dashboard (Format nicht in unserer Hand) und ist ausgenommen.
+	statusToken := config.EffectiveMachineSecret("GZ_STATUS_TOKEN", deps.Config.StatusToken)
+	telegramSecret := config.EffectiveMachineSecret("TELEGRAM_WEBHOOK_SECRET", deps.Config.TelegramWebhookSecret)
+	sevenPathSecret := config.EffectiveMachineSecret("SEVEN_WEBHOOK_PATH_SECRET", deps.Config.SevenWebhookPathSecret)
+	stalwartPathSecret := config.EffectiveMachineSecret("STALWART_WEBHOOK_PATH_SECRET", deps.Config.StalwartWebhookPathSecret)
+	stalwartSecret := config.EffectiveMachineSecret("STALWART_WEBHOOK_SECRET", deps.Config.StalwartWebhookSecret)
 
 	// Issue #2155 S1 (ADR-0078): Admin-Menge einmal aus GZ_ADMIN_USER_IDS.
 	admins := config.ParseAdminUserIDs(deps.Config.AdminUserIDs)
@@ -174,14 +197,14 @@ func New(deps Deps) chi.Router {
 	// Issue #1814: registrierte URL ist die statische Route /inbound (kein Secret
 	// im Pfad); Auth-Traeger ist allein der Header X-Telegram-Bot-Api-Secret-Token.
 	// Die fruehere Route mit Secret im Pfad ist entfernt (#1814 Scheibe 2).
-	telegramWebhook := handler.TelegramWebhookHandler(deps.Config.PythonCoreURL, deps.Config.TelegramWebhookSecret)
+	telegramWebhook := handler.TelegramWebhookHandler(deps.Config.PythonCoreURL, telegramSecret)
 	r.Post("/api/webhooks/telegram/inbound", telegramWebhook)
 	// Issue #2439: Push-Eingang fuer Befehle (SMS seven.io, Mail Stalwart) --
 	// oeffentlich, secret-/signaturgeschuetzt, weckt nur den Poll-Job (ADR-0088).
 	r.Post("/api/webhooks/sms/{secret}", handler.InboundSMSWebhook(deps.Scheduler, deps.Config.PublicHost,
-		deps.Config.SevenWebhookPathSecret, deps.Config.SevenWebhookSigningKey, time.Now))
+		sevenPathSecret, deps.Config.SevenWebhookSigningKey, time.Now))
 	r.Post("/api/webhooks/mail/{secret}", handler.InboundMailWebhook(deps.Scheduler,
-		deps.Config.StalwartWebhookPathSecret, deps.Config.StalwartWebhookSecret))
+		stalwartPathSecret, stalwartSecret))
 	r.Get("/api/auth/google/init", handler.GoogleOAuthInitHandler(deps.Config))
 	r.Get("/api/auth/google/callback", handler.GoogleOAuthCallbackHandler(deps.Config, deps.Store))
 	magicLinkLimiter := authmw.NewIPRateLimiter(5, 15*time.Minute)
@@ -241,7 +264,11 @@ func New(deps Deps) chi.Router {
 	r.Get("/api/forecast", handler.ForecastHandler(deps.WeatherProvider, deps.Config.PythonCoreURL))
 	r.Get("/api/locations", handler.LocationsHandler(deps.Store))
 	r.Get("/api/locations/{id}", handler.LocationHandler(deps.Store))
-	r.Post("/api/locations/resolve", handler.ResolveLocationHandler())
+	// Issue #2961 (ADR-0114): Mengenbremsen je Nutzer fuer interaktive
+	// Ausloeser; Admins/GZ_QUOTA_EXEMPT_USER_IDS ausgenommen, im Fixture-Modus
+	// (CI-Stack) nicht eingehaengt, auf Staging zehnfache Grenzen.
+	bremsen := handler.NeueNutzerBremsen(deps.Config.TestFixtureDir != "", deps.Config.Env == "staging")
+	r.Post("/api/locations/resolve", bremsen.Aufloesen(handler.ResolveLocationHandler()))
 	r.Post("/api/locations", handler.CreateLocationHandler(deps.Store))
 	r.Put("/api/locations/{id}", handler.UpdateLocationHandler(deps.Store))
 	r.Patch("/api/locations/{id}", handler.PatchLocationHandler(deps.Store))
@@ -257,7 +284,7 @@ func New(deps Deps) chi.Router {
 	r.Patch("/api/trips/{id}/state", handler.UpdateTripStateHandler(deps.Store))
 	r.Patch("/api/trips/{id}/waypoints/{waypointId}/confirm", handler.ConfirmWaypointHandler(deps.Store))
 	r.Delete("/api/trips/{id}", handler.DeleteTripHandler(deps.Store))
-	r.Get("/api/trips/{id}/stages/weather", handler.StagesWeatherProxyHandler(deps.Config.PythonCoreURL))
+	r.Get("/api/trips/{id}/stages/weather", bremsen.Etappenwetter(handler.StagesWeatherProxyHandler(deps.Config.PythonCoreURL)))
 	// Issue #1969: naechstes Briefing je Trip/Ortsvergleich (Python-Ableitung).
 	r.Get("/api/next-briefings", handler.NextBriefingsProxyHandler(deps.Config.PythonCoreURL))
 	r.Get("/api/trips/{id}/briefing-history", handler.TripBriefingHistoryHandler(deps.Store))
@@ -265,9 +292,9 @@ func New(deps Deps) chi.Router {
 	r.Put("/api/trips/{id}/weather-config", handler.PutTripWeatherConfigHandler(deps.Store))
 	r.Get("/api/locations/{id}/weather-config", handler.GetLocationWeatherConfigHandler(deps.Store))
 	r.Put("/api/locations/{id}/weather-config", handler.PutLocationWeatherConfigHandler(deps.Store))
-	r.Post("/api/gpx/parse", handler.GpxProxyHandler(deps.Config.PythonCoreURL))
-	r.Post("/api/notify/test", handler.NotifyTestHandler(deps.Store, deps.Config.PythonCoreURL))
-	r.Get("/api/compare", handler.CompareProxyHandler(deps.Config.PythonCoreURL))
+	r.Post(gpxUploadPath, bremsen.Gpx(handler.GpxProxyHandler(deps.Config.PythonCoreURL)))
+	r.Post("/api/notify/test", bremsen.Testnachricht(handler.NotifyTestHandler(deps.Store, deps.Config.PythonCoreURL)))
+	r.Get("/api/compare", bremsen.Vergleich(handler.CompareProxyHandler(deps.Config.PythonCoreURL)))
 	// Issue #1350 Teil 1: read-only Compare-Metrik-Katalog (statisch, kein user_id-Bezug).
 	r.Get("/api/compare/metrics", handler.ProxyHandler(deps.Config.PythonCoreURL, "/api/compare/metrics"))
 	r.Get("/api/_internal/trip/{id}/loaded", handler.LoadedTripProxyHandler(deps.Config.PythonCoreURL))
@@ -277,12 +304,12 @@ func New(deps Deps) chi.Router {
 	r.Get("/api/_validator/metrics-for-channel", handler.MetricsForChannelProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/_validator/compare-email-preview", handler.CompareEmailPreviewProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/_validator/sms-fidelity-preview", handler.SmsFidelityPreviewProxyHandler(deps.Config.PythonCoreURL))
-	r.Post("/api/trips/{id}/send", handler.SendTripReportProxyHandler(deps.Config.PythonCoreURL))
-	r.Post("/api/trips/{id}/alert-preview", handler.AlertPreviewProxyHandler(deps.Config.PythonCoreURL))
+	r.Post("/api/trips/{id}/send", bremsen.Versand(handler.SendTripReportProxyHandler(deps.Config.PythonCoreURL)))
+	r.Post("/api/trips/{id}/alert-preview", bremsen.Vorschau(handler.AlertPreviewProxyHandler(deps.Config.PythonCoreURL)))
 	// Issue #140 / #189: SMS-Kurzform-Vorschau. Issue #1743: email/telegram und
 	// POST /api/preview/compare/{id} entfallen mit der Briefing-Vorschau; /sms
 	// bleibt, weil Staging-Specs damit die zugestellte SMS-Kurzform messen.
-	r.Get("/api/preview/{trip_id}/sms", handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "sms"))
+	r.Get("/api/preview/{trip_id}/sms", bremsen.Vorschau(handler.PreviewProxyHandler(deps.Config.PythonCoreURL, "sms")))
 	// Epic #138 Issue #177: User-MetricPresets (+ #342 PATCH Read-Modify-Write)
 	r.Get("/api/metric-presets", handler.ListMetricPresetsHandler(deps.Store))
 	r.Post("/api/metric-presets", handler.CreateMetricPresetHandler(deps.Store))
@@ -295,7 +322,7 @@ func New(deps Deps) chi.Router {
 	r.Put("/api/compare/presets/{id}", handler.UpdateComparePresetHandler(deps.Store))
 	r.Patch("/api/compare/presets/{id}/state", handler.UpdateComparePresetStateHandler(deps.Store)) // Issue #611
 	r.Delete("/api/compare/presets/{id}", handler.DeleteComparePresetHandler(deps.Store))
-	r.Post("/api/compare/presets/{id}/send", handler.SendComparePresetHandler(deps.Config.PythonCoreURL))
+	r.Post("/api/compare/presets/{id}/send", bremsen.Versand(handler.SendComparePresetHandler(deps.Config.PythonCoreURL)))
 	// Issue #1250 Scheibe 6: kind-diskriminierte API-Konsolidierung — Dispatcher
 	// ueber die bestehenden Trip-/ComparePreset-Stores (kein briefings/-Store).
 	r.Get("/api/briefings", handler.ListBriefingsHandler(deps.Store))
@@ -306,9 +333,9 @@ func New(deps Deps) chi.Router {
 	// Issue #2283: kind-neutrale Alarm-Vorschau (Alt-Route oben als Delegate).
 	// Die kind-neutrale Briefing-Vorschau ist mit #1743 entfallen.
 	r.Get("/api/briefings/{id}/briefing-history", handler.BriefingHistoryHandler(deps.Store))
-	r.Post("/api/briefings/{id}/alert-preview", handler.BriefingAlertPreviewHandler(deps.Config.PythonCoreURL))
+	r.Post("/api/briefings/{id}/alert-preview", bremsen.Vorschau(handler.BriefingAlertPreviewHandler(deps.Config.PythonCoreURL)))
 	// Issue #2280: kind-neutraler Handversand (Alt-Routen oben sind Delegates).
-	r.Post("/api/briefings/{id}/send", handler.BriefingSendHandler(deps.Config.PythonCoreURL))
+	r.Post("/api/briefings/{id}/send", bremsen.Versand(handler.BriefingSendHandler(deps.Config.PythonCoreURL)))
 	// Issue #393: Cockpit-Kacheln — Versandstatus + Alarm-Historie (read-only Logs)
 	r.Get("/api/cockpit/status", handler.CockpitStatusHandler(deps.Store))
 	// Issue #396: Archiv-Statistiken — Briefings + Alarme pro Tour (Gesamtzahl, kein Zeitfilter)
@@ -319,7 +346,7 @@ func New(deps Deps) chi.Router {
 	// X-GZ-Status-Token); die Route bleibt auf der Public-Allowlist, der
 	// Schutz haengt ausschliesslich an der Route. Nutzer-Sicht: /status/me
 	// (Session-Pflicht ueber die AuthMiddleware, nur eigener Laufzustand).
-	statusGuard := authmw.RequireStatusToken(deps.Config.StatusToken)
+	statusGuard := authmw.RequireStatusToken(statusToken)
 	r.With(statusGuard).Get("/api/scheduler/status", handler.SchedulerStatusHandler(deps.Scheduler))
 	r.Get("/api/scheduler/status/me", handler.SchedulerStatusMeHandler(deps.Scheduler))
 

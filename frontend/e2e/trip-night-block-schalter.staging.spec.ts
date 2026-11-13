@@ -8,6 +8,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import { createTestComparePreset, createTestLocation, createTestTrip } from './helpers';
+import { wegwerfPasswort } from './stagingZugang';
 
 const SCHALTER = 'wm-night-block-toggle';
 
@@ -108,8 +109,9 @@ test.describe('Nacht-Stundentabelle-Schalter (#1721, Staging)', () => {
 		const { registriereBestaetigtenZweitnutzer } = await import('./helpers');
 		const gast = await playwright.request.newContext({ baseURL: page.url().split('/trips')[0] });
 		const name = `e2e-1721-${Date.now()}`;
-		await registriereBestaetigtenZweitnutzer(request, gast, name, 'Test-Passwort-1721!');
-		await gast.post('/api/auth/login', { data: { username: name, password: 'Test-Passwort-1721!' } });
+		const kennwort = wegwerfPasswort();
+		await registriereBestaetigtenZweitnutzer(request, gast, name, kennwort);
+		await gast.post('/api/auth/login', { data: { username: name, password: kennwort } });
 		const idB = `e2e-gz-trip-1721-b-${Date.now()}`;
 		const anlegen = await gast.post('/api/trips', { data: { id: idB, name: 'E2E-1721-b', stages: [] } });
 		expect(anlegen.ok()).toBeTruthy();

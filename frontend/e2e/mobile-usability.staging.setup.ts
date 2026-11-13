@@ -4,7 +4,7 @@
 
 import { test as setup, expect } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
-import { resolveE2EUser } from './testUser.ts';
+import { ausUmgebung } from './stagingZugang';
 
 const authFile = 'playwright/.auth/staging-mobile-usability.json';
 
@@ -13,14 +13,13 @@ setup('authenticate via API (staging)', async ({ playwright }) => {
 	assertNotProdBaseURL(base);
 	// nginx-Basic-Auth (Validator-Creds) kommt über httpCredentials in der
 	// Config on top; der Login-Body braucht das stabile App-Konto.
-	const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-	const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+	const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+	const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 	// App-Konto: mobile-audit (realer Testdaten-Bestand, vgl. Setup in
-	// docs/Workspaces). GZ_MOBILE_AUDIT_* erlaubt ein abweichendes Passwort,
-	// Default ist das bewusst feste Testpasswort des Staging-Nutzers.
-	const fallback = resolveE2EUser();
+	// docs/Workspaces). Das Passwort kommt aus GZ_MOBILE_AUDIT_PASS (#2961:
+	// kein Passwort im Quelltext).
 	const authUser = process.env.GZ_MOBILE_AUDIT_USER ?? 'mobile-audit';
-	const authPass = process.env.GZ_MOBILE_AUDIT_PASS ?? (fallback.pass === 'test1234' ? 'MobileAudit2026!' : fallback.pass);
+	const authPass = ausUmgebung('GZ_MOBILE_AUDIT_PASS');
 	const ctx = await playwright.request.newContext({
 		baseURL: base,
 		ignoreHTTPSErrors: true,

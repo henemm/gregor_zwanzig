@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { ausUmgebung } from './e2e/stagingZugang';
 // Staging-Verifikation Epic #1273 Slice S4c — E2E-Migration Compare-Hub/Wizard.
 // Deckt die migrierten Dateien ab, die keine eigene committete Staging-Config
 // haben. Zwei Layer: nginx-Basic-Auth = GZ_VALIDATOR_* (httpCredentials),
@@ -14,8 +15,8 @@ import { defineConfig } from '@playwright/test';
 // und daher hier NICHT gelistet. Ebenso seit #2347 S4 compare-alarm-config
 // (→ hub-versand-aufbau VA-2, hub-alarme-wertprops AW-4) und
 // compare-legacy-fields-survive-save (→ hub-kopf-bearbeiten KB-11): gelöscht.
-const user = process.env.GZ_VALIDATOR_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS');
 
 export default defineConfig({
 	testDir: 'e2e',

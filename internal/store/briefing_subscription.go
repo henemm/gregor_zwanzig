@@ -29,9 +29,16 @@ func (s *Store) BriefingsDir() string {
 
 // LoadBriefing loads a single briefings/<id>.json file. Returns nil, nil if
 // the file does not exist (mirrors LoadTrip).
+//
+// Issue #2961: die Kennung wird wie in LoadTrip vor dem Pfadbau geprueft —
+// die Methode hat heute nur Test-Aufrufer, darf aber nie aus dem
+// Nutzerverzeichnis ausbrechen, falls sie wieder genutzt wird.
 func (s *Store) LoadBriefing(id string) (*model.BriefingSubscription, error) {
 	if err := s.requireUser(); err != nil {
 		return nil, err
+	}
+	if !ValidEntityID(id) {
+		return nil, ErrInvalidEntityID
 	}
 	path := filepath.Join(s.briefingsDir(), id+".json")
 
@@ -57,6 +64,9 @@ func (s *Store) LoadBriefing(id string) (*model.BriefingSubscription, error) {
 func (s *Store) SaveBriefing(b *model.BriefingSubscription) error {
 	if err := s.requireUser(); err != nil {
 		return err
+	}
+	if b == nil || !ValidEntityID(b.ID) {
+		return ErrInvalidEntityID
 	}
 	dir := s.briefingsDir()
 	if err := fsmode.MkdirAll(dir); err != nil {

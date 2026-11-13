@@ -2,6 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 // Staging-Auth für issue_1080 (compare/new: Ort per URL hinzufügen bleibt unsichtbar).
 // Analog issue-1059.staging.setup.ts (aktuelleres Vorbild als issue-953: getrennte
 // Credential-Paare). Staging steht hinter nginx-Basic-Auth (Validator-Creds) UND einem
@@ -19,10 +20,10 @@ setup('authenticate via API (staging) — issue_1080', async ({ playwright }) =>
 	assertNotProdBaseURL(base);
 	// nginx-Basic-Auth (Validator-Creds) und App-Login (GZ_AUTH_*) sind unterschiedliche
 	// Credential-Paare — siehe docs/reference/operations_playbook.md.
-	const nginxUser = process.env.GZ_VALIDATOR_USER ?? 'admin';
-	const nginxPass = process.env.GZ_VALIDATOR_PASS ?? 'test1234';
-	const appUser = process.env.GZ_AUTH_USER ?? process.env.E2E_USER ?? 'admin';
-	const appPass = process.env.GZ_AUTH_PASS ?? process.env.E2E_PASS ?? 'test1234';
+	const nginxUser = ausUmgebung('GZ_VALIDATOR_USER');
+	const nginxPass = ausUmgebung('GZ_VALIDATOR_PASS');
+	const appUser = ausUmgebung('GZ_AUTH_USER', 'E2E_USER');
+	const appPass = ausUmgebung('GZ_AUTH_PASS', 'E2E_PASS');
 
 	const ctx = await playwright.request.newContext({
 		baseURL: base,

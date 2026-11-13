@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 // E2E-Config Issue #1719 Scheibe 3, AC-1/AC-2 (Live-Vorschau "So kommt es
 // an" ist ersatzlos entfernt) gegen Staging. Kein lokaler webServer. Staging
 // steht hinter nginx-Basic-Auth (Validator-Creds) + App-Login (GZ_AUTH_*).
@@ -10,8 +11,8 @@ import { fileURLToPath } from 'node:url';
 // Edit-Gate blockt Code-Dateien außerhalb der always_allowed_dirs (u.a.
 // "e2e/", s. openspec.yaml). testDir '.' löst relativ zu dieser Datei auf.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

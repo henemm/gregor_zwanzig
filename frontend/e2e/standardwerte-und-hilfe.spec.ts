@@ -30,6 +30,7 @@ import {
 	registerForCleanup,
 	registriereBestaetigtenZweitnutzer
 } from './helpers';
+import { wegwerfPasswort } from './stagingZugang';
 
 const DESKTOP = { width: 1280, height: 900 };
 const MOBILE = { width: 375, height: 812 };
@@ -137,7 +138,7 @@ test.describe('Teil A: Trip /trips/new', () => {
 		const ctxB = await browser.newContext({ storageState: { cookies: [], origins: [] } });
 		try {
 			const userB = 'e2estdb' + s;
-			await registriereBestaetigtenZweitnutzer(page.request, ctxB.request, userB, 'E2e-Passwort-' + s);
+			await registriereBestaetigtenZweitnutzer(page.request, ctxB.request, userB, wegwerfPasswort());
 			const fremd = await ctxB.request.get(`/api/trips/${id}`);
 			expect(fremd.ok(), 'Nutzer B darf den Trip von A nicht lesen').toBeFalsy();
 			const listeB = (await (await ctxB.request.get('/api/trips')).json()) as Array<{ id: string }>;
@@ -222,7 +223,7 @@ test.describe('Teil A: Ortsvergleich /compare/new', () => {
 		const ctxB = await browser.newContext({ storageState: { cookies: [], origins: [] } });
 		try {
 			const userB = 'e2estdvb' + s;
-			await registriereBestaetigtenZweitnutzer(page.request, ctxB.request, userB, 'E2e-Passwort-' + s);
+			await registriereBestaetigtenZweitnutzer(page.request, ctxB.request, userB, wegwerfPasswort());
 			expect((await ctxB.request.get(`/api/compare/presets/${id}`)).ok()).toBeFalsy();
 			const listeB = (await (await ctxB.request.get('/api/compare/presets')).json()) as Array<{ id: string }>;
 			expect(listeB.some((p) => p.id === id)).toBeFalsy();
@@ -260,7 +261,7 @@ test.describe('Teil B: /hilfe', () => {
 		const s = Date.now();
 		const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
 		try {
-			await registriereBestaetigtenZweitnutzer(page.request, ctx.request, 'e2ehilfe' + s, 'E2e-Passwort-' + s);
+			await registriereBestaetigtenZweitnutzer(page.request, ctx.request, 'e2ehilfe' + s, wegwerfPasswort());
 			const neu = await ctx.newPage();
 			await neu.goto('/');
 			const checkliste = neu.getByTestId('startklar-checkliste');

@@ -1,12 +1,13 @@
 import { defineConfig } from '@playwright/test';
+import { ausUmgebung } from './e2e/stagingZugang';
 // Issue #2681 (i18n A2) — Staging-Lauf der F12-Spec e2e/sprachwechsel.spec.ts (AC-8).
 // nginx-Basic-Auth = GZ_VALIDATOR_*, App-Login (Helfer-Konto GZ_AUTH_*, holt das
 // staging-token fuer die beiden Wegwerf-Konten) ueber das bestehende Setup-Projekt
 // issue-661 — Muster playwright.staging.config.ts. Kontingent: die Spec registriert
 // genau ZWEI Konten (5 je IP und Stunde).
 //   cd frontend && npx playwright test --config playwright.sprachwechsel.staging.config.ts
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: 'e2e',

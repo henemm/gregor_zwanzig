@@ -20,6 +20,7 @@ def test_fehlertext_englisch_fuer_en_konto_deutsch_fuer_de_konto():
     assert _abruf_fehlertext(None, "abruf-ohne") == "Wetterabruf fehlgeschlagen"
 
 
-def test_meldung_der_quelle_bleibt_unveraendert():
+def test_meldung_der_quelle_wird_durch_katalogtext_ersetzt():
+    """#2961: die Meldung der Quelle (kann Interna tragen) geht nur ins Log."""
     nutzer_anlegen("abruf-en2", "en")
-    assert _abruf_fehlertext("budget_throttled", "abruf-en2") == "budget_throttled"
+    assert _abruf_fehlertext("budget_throttled", "abruf-en2") == "Weather fetch failed"

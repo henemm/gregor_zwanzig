@@ -7,13 +7,19 @@ Rueckfall auf ``"default"``.
 """
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from i18n import resolve_user_lang, t
 
-#: Code fuer Ausnahmen ohne eigenen Code; der Text bleibt ``str(exc)``.
+#: Code fuer Ausnahmen ohne eigenen Code. Issue #2961: deren Text kann
+#: Interna (Pfade, Hostnamen) tragen -- nach aussen geht nur der Katalogtext
+#: ``api.fehler.unbekannt``, der Ausnahmetext landet im Log.
 UNBEKANNT = "unbekannt"
+
+logger = logging.getLogger(__name__)
 
 
 class ApiFehler(HTTPException):
@@ -34,19 +40,18 @@ def api_fehler(status: int, code: str, nutzer: str | None, **params: object) -> 
 
 
 def meldung_aus(exc: Exception, nutzer: str | None) -> str:
-    """Lokalisierter Text einer ``fehler_mit_code``-Ausnahme, sonst ``str(exc)``."""
+    """Lokalisierter Text einer ``fehler_mit_code``-Ausnahme, sonst Katalogtext."""
     code = getattr(exc, "code", None)
     if not isinstance(code, str):
-        return str(exc)
+        logger.warning("Fehler ohne Code an Client gemeldet (%s): %s", type(exc).__name__, exc)
+        return t(f"api.fehler.{UNBEKANNT}", _lang(nutzer))
     return t(f"api.fehler.{code}", _lang(nutzer), **getattr(exc, "params", {}))
 
 
 def api_fehler_aus(exc: Exception, status: int, nutzer: str | None) -> ApiFehler:
-    """ApiFehler aus einer Dienst-Ausnahme; ohne ``.code`` bleibt der Text unveraendert."""
+    """ApiFehler aus einer Dienst-Ausnahme; ohne ``.code`` mit Katalogtext."""
     code = getattr(exc, "code", None)
-    if not isinstance(code, str):
-        return ApiFehler(status, str(exc), UNBEKANNT)
-    return ApiFehler(status, meldung_aus(exc, nutzer), code)
+    return ApiFehler(status, meldung_aus(exc, nutzer), code if isinstance(code, str) else UNBEKANNT)
 
 
 def register_fehler_handler(app: FastAPI) -> None:

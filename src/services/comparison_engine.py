@@ -99,9 +99,12 @@ def _fetch_compare_series(
 
 
 def _abruf_fehlertext(meldung: Optional[str], user_id: Optional[str]) -> str:
-    """Meldung der Quelle, sonst der Ersatztext in der Kontosprache (#2751)."""
+    """Ersatztext in der Kontosprache (#2751).
+
+    Issue #2961: die Meldung der Quelle (Ausnahmetext, kann Hosts/URLs tragen)
+    landet nur im Log -- der Text geht in Mail, Telegram und API-Antwort."""
     if meldung:
-        return meldung
+        logger.warning("Ortsabruf fehlgeschlagen: %s", meldung)  # i18n-log
     return t("vergleich.ort.abruf_fehlgeschlagen", resolve_user_lang(user_id or ""))
 
 
@@ -466,7 +469,7 @@ class ComparisonEngine:
                 )
                 results.append(LocationResult(
                     location=loc,
-                    error=str(e),
+                    error=_abruf_fehlertext(str(e), user_id),
                 ))
 
         # Issue #1359 Scheibe 2: keine Score-Sortierung mehr — `results` entsteht
@@ -648,7 +651,7 @@ def fetch_forecast_for_location(
         result["score"] = calculate_score(result, profile=getattr(loc, 'activity_profile', None) if 'loc' in dir() else None)
 
     except Exception as e:
-        result["error"] = str(e)
+        result["error"] = _abruf_fehlertext(str(e) or type(e).__name__, user_id)
         result["score"] = 0
 
     return result

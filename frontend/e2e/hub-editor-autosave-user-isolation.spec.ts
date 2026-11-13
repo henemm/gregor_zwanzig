@@ -33,6 +33,7 @@ import {
 	type HubKind,
 	type SeededHub
 } from './helpers';
+import { wegwerfPasswort } from './stagingZugang';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -55,7 +56,7 @@ test.beforeAll(async ({ browser }) => {
 	ctxB = await browser.newContext({ storageState: undefined });
 	const userB = `e2e2347s3a${Date.now()}`;
 	// Issue #2271: das Token holt die Sitzung von A, nicht der Gast.
-	await registriereBestaetigtenZweitnutzer(ctxA.request, ctxB.request, userB, 'test1234');
+	await registriereBestaetigtenZweitnutzer(ctxA.request, ctxB.request, userB, wegwerfPasswort());
 
 	// B hat die Seed-Orte des Admins nicht — eigener Ort mit Bs Sitzung.
 	ortB = (await createTestLocation(ctxB.request, { name: `E2E-GZ-2347-S3a-B-${Date.now()}`, lat: 48.6, lon: 12.6 })).id;

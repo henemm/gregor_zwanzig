@@ -11,6 +11,33 @@ import {
 	setKnownEtagIfUnchanged
 } from './etagRegistry.ts';
 import { tr } from './i18n/index.ts';
+import { datenspeicherLoeschen } from './pwa/datenspeicher.ts';
+
+/** Hoechstens so lange wartet die 401-Umleitung auf das Raeumen (#2961). */
+const RAEUM_FRIST_MS = 2_000;
+
+/**
+ * Issue #2961: ein echtes 401 der Go-API heisst, die Sitzung ist fort (Ablauf,
+ * Widerruf, Abmelden auf einem anderen Geraet). Die offline vorgehaltenen
+ * Ansichten dieses Nutzers fallen dann sofort — die Programmdateien und der
+ * Worker bleiben (Offline-Faehigkeit der App, Spec PWA AC-12). Ein Netzfehler
+ * kommt hier nie an: er ist kein Beleg fuer eine beendete Sitzung.
+ */
+async function inhaltsspeicherRaeumen(): Promise<void> {
+	const speicher = (globalThis as { caches?: CacheStorage }).caches;
+	if (!speicher) return;
+	let frist: ReturnType<typeof setTimeout> | undefined;
+	try {
+		await Promise.race([
+			datenspeicherLoeschen(speicher).catch(() => {}),
+			new Promise<void>((fertig) => {
+				frist = setTimeout(fertig, RAEUM_FRIST_MS);
+			})
+		]);
+	} finally {
+		if (frist !== undefined) clearTimeout(frist);
+	}
+}
 
 /**
  * Issue #1395 S3: Header feldweise zusammenfuehren. `extra` wurde bisher per
@@ -179,6 +206,7 @@ async function send<T>(
 		// Issue #1006 — Sitzung abgelaufen (24h-TTL): zentral behandeln statt die
 		// rohe {"error":"unauthorized"}-Meldung an Aufrufer durchzureichen.
 		if (res.status === 401 && typeof window !== 'undefined') {
+			await inhaltsspeicherRaeumen();
 			const redirectTarget = window.location.pathname + window.location.search;
 			window.location.href = `/login?expired=1&redirect=${encodeURIComponent(redirectTarget)}`;
 			// Issue #2128: der Status gehoert an den Fehler. Ein Aufrufer muss

@@ -19,6 +19,7 @@
   "versand.test.betreff": "Gregor 20 — Testmeldung",
   "versand.test.text": "Dein Kanal funktioniert!",
   "versand.test.kanal_unbekannt": "Unbekannter Kanal: {kanal}",
+  "versand.test.fehlgeschlagen": "Die Testnachricht konnte nicht gesendet werden. Bitte versuche es später erneut.",
   "versand.test.mail_gesperrt": "Die Testmail wurde nicht gesendet: Für dein Konto ist keine bestätigte E-Mail-Adresse hinterlegt. Bitte bestätige zuerst deine Adresse im Profil.",
   "versand.ergebnis.kind_required": "Briefing-Art fehlt oder ist ungültig (erlaubt: route, vergleich)",
   "versand.ergebnis.not_found": "Briefing {entity_id} nicht gefunden",

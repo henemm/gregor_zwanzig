@@ -80,7 +80,9 @@ _MAIL_FIELDS: dict = {
 
 def _settings(user_id: str):
     from app.config import Settings
+    from tests.helpers.nutzerprofil import lege_profil_an
 
+    lege_profil_an(user_id)  # #2961: Empfaenger nur noch aus dem Profil
     settings = Settings(**_MAIL_FIELDS).with_user_profile(user_id)
     assert settings.can_send_email() is True, (
         "Vorbedingung: der E-Mail-Kanal muss sendefaehig konfiguriert sein."

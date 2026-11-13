@@ -20,6 +20,8 @@
 import { test, expect } from '@playwright/test';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { ausUmgebung } from './stagingZugang';
+import { resolveE2EUser } from './testUser.ts';
 
 const OUT_ROOT = 'test-results/mobile-usability';
 
@@ -178,8 +180,12 @@ async function resolveDetailRoutes(
 	// GZ_AUDIT_BASE erlaubt einen lokalen Lauf gegen den Preview-Server
 	// (http://localhost:4173) — guards (prodUrlGuard) greifen unverändert.
 	const base = process.env.GZ_AUDIT_BASE ?? 'https://staging.gregor20.henemm.com';
-	const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-	const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+	// #2961: gegen Staging nur aus der Umgebung (kein Rueckfallwert im Quelltext);
+	// lokal gegen den Vorschau-Server gilt der Testnutzer des CI-Stacks.
+	const lokal = /^http:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(base);
+	const { user, pass } = lokal
+		? resolveE2EUser()
+		: { user: ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER'), pass: ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS') };
 	let trip: string | null = null;
 	let compare: string | null = null;
 	try {

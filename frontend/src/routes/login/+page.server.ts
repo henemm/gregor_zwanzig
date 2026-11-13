@@ -5,11 +5,18 @@ import { mitAngebotMarker } from '$lib/passkeyAngebot.js';
 import { SESSION_MAX_AGE_SECONDS } from '$lib/auth.js';
 import type { Actions, PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
+import { cookieSicher } from '$lib/server/cookieSicherheit.js';
+import { sitzungBesteht } from '$lib/server/sitzungBesteht.js';
+import { ABMELDE_MERKMAL } from '$lib/pwa/geraetespeicher';
 
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url, cookies }) => {
+	// Issue #2961: das Abmelde-Merkmal in der Adresse raeumt den Offline-Speicher
+	// nur, wenn keine gueltige Sitzung mehr besteht — gefragt wird nur dann.
+	const mitMerkmal = url.searchParams.get(ABMELDE_MERKMAL) === '1';
 	return {
 		googleEnabled: !!env.GZ_GOOGLE_CLIENT_ID,
+		sitzungAktiv: mitMerkmal ? await sitzungBesteht(cookies) : false,
 	};
 };
 
@@ -60,7 +67,7 @@ export const actions = {
 					path: '/',
 					httpOnly: true,
 					sameSite: 'lax',
-					secure: env.NODE_ENV === 'production',
+					secure: cookieSicher(env.NODE_ENV, url),
 					maxAge: SESSION_MAX_AGE_SECONDS,
 				});
 			}
@@ -71,7 +78,7 @@ export const actions = {
 					path: '/',
 					maxAge: 31536000,
 					sameSite: 'lax',
-					secure: env.NODE_ENV === 'production',
+					secure: cookieSicher(env.NODE_ENV, url),
 					httpOnly: false,
 				});
 			}
