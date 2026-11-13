@@ -211,9 +211,7 @@ func TestRegisterMitEinladung_SetztLevel_OhneAntrag_LoginErstNachBestaetigung(t 
 	}
 	jetzt := time.Now().UTC()
 	u.EmailVerifiedAt = &jetzt
-	if err := s.SaveUser(*u); err != nil {
-		t.Fatal(err)
-	}
+	kontoVollSchreiben(t, s, *u)
 	if w := auLogin(t, r, erna, "geheim-2519-pw"); w.Code != http.StatusOK {
 		t.Errorf("Login nach Bestaetigung: erwartet 200, bekommen %d: %s", w.Code, w.Body.String())
 	}

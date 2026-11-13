@@ -769,8 +769,11 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			return
 		}
 
-		user.PasswordHash = string(newHash)
-		if err := s.SaveUser(*user); err != nil {
+		// Issue #2961 (GA6): Passwort-Hash nur frisch geladen schreiben.
+		if _, err := s.UpdateUser(req.Username, func(u *model.User) error {
+			u.PasswordHash = string(newHash)
+			return nil
+		}); err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
@@ -909,9 +912,15 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			user.PendingContactField = ""
 		}
 
+		// Issue #2961 (GA6): Bestaetigung (Sicherheitsfeld) und die daraus
+		// folgenden Adressfelder frisch geladen schreiben.
 		now := time.Now().UTC()
-		user.EmailVerifiedAt = &now
-		if err := s.SaveUser(*user); err != nil {
+		if _, err := s.UpdateUser(req.User, func(u *model.User) error {
+			u.Email, u.MailTo = user.Email, user.MailTo
+			u.PendingContactAddress, u.PendingContactField = user.PendingContactAddress, user.PendingContactField
+			u.EmailVerifiedAt = &now
+			return nil
+		}); err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
@@ -1617,26 +1626,32 @@ func selfHealEmailVerification(s *store.Store, userId, provenAddress string) {
 	if proven == "" {
 		return
 	}
-	user, err := s.LoadUser(userId) // RMW: vollständiges Objekt laden
-	if err != nil || user == nil {
+	if u, err := s.LoadUser(userId); err != nil || u == nil {
 		return
 	}
-	if user.EmailVerifiedAt != nil {
-		return
-	}
-	contact := user.MailTo
-	if contact == "" {
-		contact = user.Email
-	}
-	if !strings.EqualFold(strings.TrimSpace(contact), proven) {
-		return
-	}
-	now := time.Now().UTC()
-	user.EmailVerifiedAt = &now
-	if err := s.SaveUser(*user); err != nil {
+	// Issue #2961 (GA6): frisch geladen unter der Nutzersperre (UpdateUser).
+	_, err := s.UpdateUser(userId, func(user *model.User) error {
+		if user.EmailVerifiedAt != nil {
+			return errNichtsZuTun
+		}
+		contact := user.MailTo
+		if contact == "" {
+			contact = user.Email
+		}
+		if !strings.EqualFold(strings.TrimSpace(contact), proven) {
+			return errNichtsZuTun
+		}
+		now := time.Now().UTC()
+		user.EmailVerifiedAt = &now
+		return nil
+	})
+	if err != nil && !errors.Is(err, errNichtsZuTun) {
 		log.Printf("email verification self-heal: SaveUser failed for %s: %v", userId, err)
 	}
 }
+
+// errNichtsZuTun bricht ein UpdateUser ohne Schreiben ab (kein Fehlerfall).
+var errNichtsZuTun = errors.New("nothing to do")
 
 // ResendVerificationHandler verschickt die Bestätigungsmail erneut (Issue
 // #2304, AC-7/AC-8). Nutzlast ist die Kennung, nicht die Adresse — analog
@@ -1838,8 +1853,10 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost st
 			return
 		}
 
-		user.PasswordHash = string(newHash)
-		if err := s.SaveUser(*user); err != nil {
+		if _, err := s.UpdateUser(userId, func(u *model.User) error {
+			u.PasswordHash = string(newHash)
+			return nil
+		}); err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}

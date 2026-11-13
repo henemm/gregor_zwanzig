@@ -44,14 +44,13 @@ func TestMagicLinkUebernahmePruefteErneutBeiZugangsdatenZwischenzeit_AC12(t *tes
 		if userID != uid {
 			return
 		}
-		u, err := s.LoadUser(userID)
-		if err != nil || u == nil {
-			t.Fatalf("AC-12: Zwischenzeit-Laden fehlgeschlagen: %v", err)
-		}
-		u.PasskeyCredentials = []model.WebAuthnCredential{{
-			ID: []byte{1, 2, 3}, PublicKey: []byte{4, 5, 6}, AttestationType: "none",
-		}}
-		if err := s.SaveUser(*u); err != nil {
+		// Issue #2961 (GA6): Passkeys schreibt nur UpdateUser.
+		if _, err := s.UpdateUser(userID, func(u *model.User) error {
+			u.PasskeyCredentials = []model.WebAuthnCredential{{
+				ID: []byte{1, 2, 3}, PublicKey: []byte{4, 5, 6}, AttestationType: "none",
+			}}
+			return nil
+		}); err != nil {
 			t.Fatalf("AC-12: Zwischenzeit-Speichern fehlgeschlagen: %v", err)
 		}
 	}

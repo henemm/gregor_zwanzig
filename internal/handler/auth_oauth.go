@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -282,9 +283,21 @@ func linkGoogleAccount(w http.ResponseWriter, r *http.Request, s *store.Store, c
 		log.Printf("oauth google: linking refused — account already carries another Google identity")
 		return googleOAuthFail(w, r, "oauth_link_failed")
 	}
-	user.OAuthProvider = "google"
-	user.OAuthSub = sub
-	if err := s.SaveUser(*user); err != nil {
+	// Issue #2961 (GA6): frisch geladen unter der Nutzersperre setzen und die
+	// Vorbedingungen auf genau diesem Stand erneut pruefen.
+	user, err = s.UpdateUser(ownerID, func(u *model.User) error {
+		if u.EmailVerifiedAt == nil || store.EffectiveContactAddress(u) != address || u.OAuthSub != "" {
+			return errTakeoverChanged
+		}
+		u.OAuthProvider = "google"
+		u.OAuthSub = sub
+		return nil
+	})
+	if errors.Is(err, errTakeoverChanged) {
+		log.Printf("oauth google: linking refused — account changed since assignment")
+		return googleOAuthFail(w, r, "oauth_link_failed")
+	}
+	if err != nil {
 		log.Printf("oauth google: linking failed — account not saved")
 		return googleOAuthFail(w, r, "oauth_failed")
 	}
@@ -317,11 +330,21 @@ func takeOverGoogleAccount(w http.ResponseWriter, r *http.Request, s *store.Stor
 		log.Printf("oauth google: takeover refused — account changed since assignment")
 		return googleOAuthFail(w, r, "oauth_link_failed")
 	}
-	now := time.Now().UTC()
-	user.EmailVerifiedAt = &now
-	user.OAuthProvider = "google"
-	user.OAuthSub = sub
-	if err = s.SaveUser(*user); err == nil {
+	_, err = s.UpdateUser(ownerID, func(u *model.User) error {
+		if u.EmailVerifiedAt != nil || store.HasLoginCredentials(u) || store.EffectiveContactAddress(u) != address {
+			return errTakeoverChanged
+		}
+		now := time.Now().UTC()
+		u.EmailVerifiedAt = &now
+		u.OAuthProvider = "google"
+		u.OAuthSub = sub
+		return nil
+	})
+	if errors.Is(err, errTakeoverChanged) {
+		log.Printf("oauth google: takeover refused — account changed since assignment")
+		return googleOAuthFail(w, r, "oauth_link_failed")
+	}
+	if err == nil {
 		err = s.ClearSessions(ownerID)
 	}
 	if err != nil {

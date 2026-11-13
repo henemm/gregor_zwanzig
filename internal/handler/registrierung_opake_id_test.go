@@ -26,6 +26,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
@@ -109,9 +110,8 @@ func TestRegistrierungTestkontoBehaeltFesteID_AC11_2194(t *testing.T) {
 
 	// Bestaetigung wie nach dem Verify-Link (Gate ADR-0066), dann ID-Login.
 	jetzt := time.Now().UTC()
-	u.EmailVerifiedAt = &jetzt
-	if err := s.SaveUser(*u); err != nil {
-		t.Fatalf("SaveUser: %v", err)
+	if _, err := s.UpdateUser(id, func(f *model.User) error { f.EmailVerifiedAt = &jetzt; return nil }); err != nil {
+		t.Fatalf("UpdateUser: %v", err)
 	}
 	lw := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/login",
