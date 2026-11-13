@@ -717,6 +717,9 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			Username    string `json:"username"`
 			Token       string `json:"token"`
 			NewPassword string `json:"new_password"`
+			// Issue #2961 (ADR-0115): alle anderen Zugangswege (Passkeys,
+			// Google-Verknuepfung) entfernen. Fehlt das Feld, gilt ja.
+			RemoveOtherAccess *bool `json:"remove_other_access"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
@@ -770,10 +773,23 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 		}
 
 		// Issue #2961 (GA6): Passwort-Hash nur frisch geladen schreiben.
-		if _, err := s.UpdateUser(req.Username, func(u *model.User) error {
+		// GA2/GA3: auf Wunsch (Vorgabe ja) und bei einem unbestaetigten Konto
+		// immer zusaetzlich Passkeys und Google-Verknuepfung entfernen.
+		entfernen := req.RemoveOtherAccess == nil || *req.RemoveOtherAccess
+		var entferntePasskeys int
+		var googleEntfernt, andereBleiben bool
+		geaendert, err := s.UpdateUser(req.Username, func(u *model.User) error {
 			u.PasswordHash = string(newHash)
+			if entfernen || u.EmailVerifiedAt == nil {
+				entferntePasskeys, googleEntfernt = len(u.PasskeyCredentials), u.OAuthSub != ""
+				u.PasskeyCredentials = nil
+				u.OAuthProvider, u.OAuthSub = "", ""
+			} else {
+				andereBleiben = len(u.PasskeyCredentials) > 0 || u.OAuthSub != ""
+			}
 			return nil
-		}); err != nil {
+		})
+		if err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
@@ -786,6 +802,9 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 		}
 
 		s.DeleteResetToken(req.Username)
+
+		notifyAccountChange(geaendert, confirmedNoticeAddress(geaendert), hinweisReset, nil,
+			resetRemovedLines(i18n.Parse(geaendert.Language), entferntePasskeys, googleEntfernt, andereBleiben))
 
 		w.Write([]byte(`{"status":"ok"}`))
 	}
