@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/henemm/gregor-api/internal/middleware"
 )
 
@@ -77,7 +75,10 @@ func forwardPreview(w http.ResponseWriter, r *http.Request, method, path string,
 //	docs/specs/modules/issue_189_preview_tab_integration.md (Frontend).
 func PreviewProxyHandler(pythonURL, channel string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tripID := chi.URLParam(r, "trip_id")
+		tripID, ok := coreKennung(w, r, "trip_id", nil)
+		if !ok {
+			return
+		}
 		forwardPreview(w, r, http.MethodGet, pythonURL+"/api/preview/"+tripID+"/"+channel, previewProxyTimeout)
 	}
 }

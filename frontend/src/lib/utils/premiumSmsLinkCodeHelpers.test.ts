@@ -25,6 +25,9 @@ import {
 	resolveDialogAction,
 	deriveLinkCodeExists,
 	errorMessageFrom,
+	shouldShowDisconnect,
+	resolveDisconnectClick,
+	deriveLinkCodeLegacy,
 } from './premiumSmsLinkCodeHelpers.ts';
 
 // =========================================================================
@@ -151,5 +154,43 @@ describe('AC-9: errorMessageFrom — verständliche Meldung statt Rohtext/Abstur
 
 	test('unbekannte Fehlerform → fester Fallback-Text, kein Absturz', () => {
 		assert.equal(errorMessageFrom({}, 'Code-Vorgang fehlgeschlagen'), 'Code-Vorgang fehlgeschlagen');
+	});
+});
+
+// =========================================================================
+// Issue #2961 Welle 2 (ADR-0116): "Verbindung trennen"
+// =========================================================================
+
+describe('shouldShowDisconnect — nur mit gelernter Rückadresse', () => {
+	test('fresh und stale → true (es gibt etwas zu trennen)', () => {
+		assert.equal(shouldShowDisconnect('fresh'), true);
+		assert.equal(shouldShowDisconnect('stale'), true);
+	});
+
+	test('none und fehlend → false', () => {
+		assert.equal(shouldShowDisconnect('none'), false);
+		assert.equal(shouldShowDisconnect(undefined), false);
+	});
+});
+
+describe('deriveLinkCodeLegacy — Hinweis nur bei gemeldetem alten Format', () => {
+	test('exists + legacy_format → true', () => {
+		assert.equal(deriveLinkCodeLegacy({ exists: true, legacy_format: true }), true);
+	});
+	test('neues Format, kein Code, fehlende Antwort → false', () => {
+		assert.equal(deriveLinkCodeLegacy({ exists: true, legacy_format: false }), false);
+		assert.equal(deriveLinkCodeLegacy({ exists: false, legacy_format: true }), false);
+		assert.equal(deriveLinkCodeLegacy({ exists: true }), false);
+		assert.equal(deriveLinkCodeLegacy(null), false);
+	});
+});
+
+describe('resolveDisconnectClick — erst bestätigen, nie doppelt', () => {
+	test('nicht beschäftigt → Rückfrage', () => {
+		assert.equal(resolveDisconnectClick(false), 'confirm-dialog');
+	});
+
+	test('beschäftigt → nichts', () => {
+		assert.equal(resolveDisconnectClick(true), 'noop');
 	});
 });

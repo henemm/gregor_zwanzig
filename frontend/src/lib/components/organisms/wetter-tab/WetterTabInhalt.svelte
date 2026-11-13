@@ -223,12 +223,12 @@
 	</header>
 
 	{#if phase === 'laedt'}
-		<div class="wt-karte wt-laden" data-testid="wetter-tab-laden" aria-busy="true">
+		<div class="wt-karte wt-laden" data-testid="wetter-tab-laden" aria-busy="true" data-abschnitt="laden">
 			<span aria-hidden="true">{$t('wetter.kopf.laden')}</span>
 			<Skelett label={$t('wetter.kopf.laden')} />
 		</div>
 	{:else if phase === 'fehler'}
-		<div class="wt-karte wt-fehler" role="alert" data-testid="wetter-tab-fehler">
+		<div class="wt-karte wt-fehler" role="alert" data-testid="wetter-tab-fehler" data-abschnitt="warnung">
 			<p>{$t('wetter.kopf.fehler')}</p>
 			<Btn variant="accent" size="tap" data-testid="wetter-tab-erneut-laden" onclick={() => void laden()}>{$t('wetter.kopf.erneut_laden')}</Btn>
 		</div>

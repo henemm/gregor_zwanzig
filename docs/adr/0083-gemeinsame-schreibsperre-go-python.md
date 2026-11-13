@@ -54,3 +54,13 @@ Lost Updates — eine von zwei gleichzeitigen Änderungen ging still verloren.
   nicht nutzt, wird nicht geschützt.
 - **Folgepflichten:** Neue Schreiber auf `briefings/` müssen dieselbe Sperrdatei nehmen und
   atomar schreiben; die Lock-Reihenfolge ist einzuhalten.
+
+## Nachtrag 2026-11-13 (Issue #2961)
+
+Go räumt seit #2961 die Sperrdatei einer Kennung ohne `<id>.json` nach der Freigabe auf.
+Damit kann ein Schreiber eine Sperrdatei öffnen, die vor seinem `flock` entfernt oder
+ersetzt wird, und hielte dann eine verwaiste Datei. Beide Seiten prüfen daher nach dem
+`flock`, ob der Pfad noch auf die gesperrte Datei zeigt (Python: `os.fstat` gegen
+`os.stat`, `st_ino`/`st_dev`), und versuchen es sonst innerhalb derselben Frist erneut.
+Pfad (`<id>.json.lock`), `flock(LOCK_EX|LOCK_NB)` mit Poll und Haltedauer bleiben
+unverändert.

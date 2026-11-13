@@ -34,7 +34,7 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
-const s2Token = "s2-status-token-7f3a9c"
+const s2Token = "s2-status-token-7f3a9c-0123456789abcdef"
 
 // s2Optionen steuert den Aufbau des echten Routers fuer die S2-Tests.
 type s2Optionen struct {

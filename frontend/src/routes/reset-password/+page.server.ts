@@ -17,6 +17,10 @@ export const actions = {
 		const username = data.get('username')?.toString() ?? '';
 		const token = data.get('token')?.toString() ?? '';
 		const newPassword = data.get('new_password')?.toString() ?? '';
+		// Issue #2961 (ADR-0115): andere Zugangswege (Passkeys, Google) entfernen —
+		// Vorgabe ja; nein nur, wenn die Auswahl mitkam und abgewaehlt ist.
+		const removeOtherAccess =
+			data.get('andere_zugangswege_gewaehlt') === null || data.get('remove_other_access') !== null;
 
 		if (!username || !token || !newPassword) {
 			return fail(400, { error: trFor(locals.lang, 'auth.reset.fehler_pflichtfelder'), username, token });
@@ -30,7 +34,7 @@ export const actions = {
 		const resp = await fetch(`${API()}/api/auth/reset-password`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
-			body: JSON.stringify({ username, token, new_password: newPassword }),
+			body: JSON.stringify({ username, token, new_password: newPassword, remove_other_access: removeOtherAccess }),
 		});
 
 		if (!resp.ok) {

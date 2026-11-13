@@ -24,6 +24,7 @@
 import { test, expect } from '@playwright/test';
 import type { CDPSession } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard.ts';
+import { bestaetigeKontoaenderung } from './helpers.ts';
 
 const REGISTER_BEGIN = '/api/auth/passkey/register/begin';
 const REGISTER_FINISH = '/api/auth/passkey/register/finish';
@@ -71,6 +72,9 @@ test.describe('Passkey-Regression (#2130)', () => {
 		authenticatorId = antwort.authenticatorId;
 
 		await page.goto('/');
+		// Issue #2961 (ADR-0115): Passkey hinzufuegen/entfernen nur mit frischem
+		// Nachweis dieser Sitzung (10 Minuten).
+		await bestaetigeKontoaenderung(page.request);
 	});
 
 	test.afterEach(async ({ page, context }) => {

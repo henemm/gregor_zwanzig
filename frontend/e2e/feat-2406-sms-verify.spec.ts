@@ -21,8 +21,9 @@
 // fix-2271-email-verify-gate.spec.ts)
 
 import { test, expect, type Browser, type Page } from '@playwright/test';
+import { wegwerfPasswort } from './stagingZugang';
 
-const PASSWORT = 'test1234';
+const PASSWORT = wegwerfPasswort();
 const NUMMER = '+491511000406';
 const NEUE_NUMMER = '+491512000406';
 

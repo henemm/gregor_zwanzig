@@ -192,9 +192,9 @@ def test_ac1b_html_exception_during_fetch_shows_state_text_and_logs_warning(capl
     assert loc_result.error is not None, (
         "Vorbedingung: die Exception muss zu einem Fehler-Ergebnis werden"
     )
-    assert "Netzwerkfehler" in loc_result.error, (
-        f"Vorbedingung: der Exception-Text traegt den Fehler, war: "
-        f"{loc_result.error!r}"
+    # #2961: der Exception-Text geht nur ins Log, das Ergebnis traegt den Katalogtext.
+    assert loc_result.error == "Wetterabruf fehlgeschlagen", (
+        f"Vorbedingung: Fehler-Ergebnis mit Katalogtext, war: {loc_result.error!r}"
     )
 
     html = render_compare_html(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)

@@ -59,6 +59,9 @@ def env(tmp_path, monkeypatch):
 
 
 def _setup_user(data_root, user_id: str, preset_ids: list[str]) -> None:
+    from tests.helpers.nutzerprofil import lege_profil_an
+
+    lege_profil_an(user_id)  # #2961: Empfaenger nur noch aus dem Profil
     _write_location(data_root, user_id, "loc-ibk", "Innsbruck")
     _write_presets(data_root, user_id, [_preset(pid, ["loc-ibk"]) for pid in preset_ids])
 

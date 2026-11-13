@@ -34,7 +34,7 @@ HOOK = ROOT / ".claude" / "hooks" / "broad_test_run_gate.py"
 HOOKS_DIR = ROOT / ".claude" / "hooks"
 
 sys.path.insert(0, str(HOOKS_DIR))
-gate = pytest.importorskip("broad_test_run_gate")
+gate = pytest.importorskip("broad_test_run_gate", exc_type=ImportError)
 
 WORKFLOW = "fix-2227-testlauf-gate-probe"
 

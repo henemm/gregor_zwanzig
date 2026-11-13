@@ -71,7 +71,7 @@ class PreviewService:
         # Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Pfadbau, spiegelt
         # store.ValidEntityID auf der Go-Seite (Paritaets-Test
         # tests/unit/test_entity_id_pattern_parity.py).
-        if not VALID_ENTITY_ID_RE.match(trip_id):
+        if not VALID_ENTITY_ID_RE.fullmatch(trip_id):
             raise ValueError(f"invalid trip_id: {trip_id!r}")
         trips_dir = get_briefings_dir(user_id)
         path = trips_dir / f"{trip_id}.json"

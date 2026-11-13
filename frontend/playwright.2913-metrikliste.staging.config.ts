@@ -1,11 +1,12 @@
 import { defineConfig } from '@playwright/test';
+import { ausUmgebung } from './e2e/stagingZugang';
 // Issue #2913, Fix „Metrik-Liste nach Mockup“: Abnahme-Lauf (AC-1 bis AC-13) gegen
 // https://staging.gregor20.henemm.com — nur /e2e-verify, nie gegen Produktion, nicht in der CI-Positivliste.
 // Staging steht hinter nginx-Basic-Auth (Validator-Creds), Login über das Setup-Projekt von #1895.
 // Analog playwright.2794-s3a3.staging.config.ts.
 //   cd frontend && npx playwright test --config playwright.2913-metrikliste.staging.config.ts
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: 'e2e',

@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 // E2E-Config Issue #2422 Scheibe S2a (AC-10/AC-11/AC-17: B9-/K8-Fix,
 // Editor-Anzeige = gespeicherter Stand bei Kaskadenquelle 'global') gegen
 // Staging. Vorbild: playwright.metrik-abwahl-schreibt-alle-kanaele-durch.staging.config.ts.
@@ -12,8 +13,8 @@ import { fileURLToPath } from 'node:url';
 // `*.staging.spec.ts`" (docs/specs/modules/fix_2422_s2a_editor_gleich_gespeichert.md,
 // Abschnitt "File (E2E)"). Lauf erfolgt über `/e2e-verify` nach dem Merge.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

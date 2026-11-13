@@ -211,9 +211,7 @@ func TestRegisterMitEinladung_SetztLevel_OhneAntrag_LoginErstNachBestaetigung(t 
 	}
 	jetzt := time.Now().UTC()
 	u.EmailVerifiedAt = &jetzt
-	if err := s.SaveUser(*u); err != nil {
-		t.Fatal(err)
-	}
+	kontoVollSchreiben(t, s, *u)
 	if w := auLogin(t, r, erna, "geheim-2519-pw"); w.Code != http.StatusOK {
 		t.Errorf("Login nach Bestaetigung: erwartet 200, bekommen %d: %s", w.Code, w.Body.String())
 	}
@@ -288,9 +286,20 @@ func TestWiderrufeneEinladung_Register400_ListeZeigtWiderrufen_BenutzteNichtWide
 
 // AC-6
 func TestEinladungBleibtOffen_WennRegistrierungAnEmailTakenScheitert(t *testing.T) {
-	r, _, secret, _ := adminTestRouter(t, "alice")
-	if w := ivRegistrieren(t, r, "belegt", "belegt@example.org", ""); w.Code != http.StatusCreated {
-		t.Fatalf("Vorbereitung: %d", w.Code)
+	r, s, secret, _ := adminTestRouter(t, "alice")
+	vw := ivRegistrieren(t, r, "belegt", "belegt@example.org", "")
+	if vw.Code != http.StatusCreated {
+		t.Fatalf("Vorbereitung: %d", vw.Code)
+	}
+	// Issue #2961 (GA2a, ADR-0115): nur ein BESTAETIGTES Konto haelt die
+	// Adresse fest; eine unbestaetigte Anmeldung wuerde ersetzt.
+	var belegt struct {
+		ID string `json:"id"`
+	}
+	_ = json.Unmarshal(vw.Body.Bytes(), &belegt)
+	jetzt := time.Now().UTC()
+	if _, err := s.UpdateUser(belegt.ID, func(u *model.User) error { u.EmailVerifiedAt = &jetzt; return nil }); err != nil {
+		t.Fatalf("Vorbereitung bestaetigen: %v", err)
 	}
 	_, token := ivErstellen(t, r, secret, "premium", "")
 	w := ivRegistrieren(t, r, "versuch", "belegt@example.org", token)
@@ -407,11 +416,13 @@ func TestEinladungBleibtOffen_WennBenutzernameVergebenIst(t *testing.T) {
 	r, _, secret, _ := adminTestRouter(t, "alice")
 	_, tok := ivErstellen(t, r, secret, "premium", "")
 	// Issue #2194: eine feste Kennung (und damit der Kennungskonflikt) gibt
-	// es nur noch bei der Testkonto-Registrierung.
+	// es nur noch bei der Testkonto-Registrierung — seit #2961 ausserhalb von
+	// Staging/Fixture-Modus nur mit Admin-Sitzung.
 	b, _ := json.Marshal(map[string]any{"username": "bob", "password": "geheim-2519-pw",
 		"email": "bob-neu@example.org", "invite": tok, "is_test_user": true})
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(sessionCookieFor("alice", secret))
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusConflict {

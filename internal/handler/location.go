@@ -78,6 +78,10 @@ func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, 400, "validation_error", i18n.Args{"detail": err.Error()})
 			return
 		}
+		// Issue #2961: Wachstumsgrenze der freien display_config.
+		if configMergesVerletzt(w, r, [2]map[string]interface{}{nil, loc.DisplayConfig}) {
+			return
+		}
 
 		// Issue #1082: bestehende Location unter derselben (Auto-)ID nicht
 		// still überschreiben. Existenzprüfung ist user-scoped (s bereits
@@ -103,7 +107,7 @@ func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		if err := s.SaveLocation(loc); err != nil {
-			WriteError(w, r, 500, "store_error", nil)
+			writeSaveError(w, r, err)
 			return
 		}
 
@@ -145,9 +149,13 @@ func UpdateLocationHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, 400, "validation_error", i18n.Args{"detail": err.Error()})
 			return
 		}
+		// Issue #2961: Wachstumsgrenze; Bestandsschluessel bleiben zulaessig.
+		if configMergesVerletzt(w, r, [2]map[string]interface{}{existing.DisplayConfig, loc.DisplayConfig}) {
+			return
+		}
 
 		if err := s.SaveLocation(loc); err != nil {
-			WriteError(w, r, 500, "store_error", nil)
+			writeSaveError(w, r, err)
 			return
 		}
 

@@ -49,6 +49,7 @@
 import { test, expect } from '@playwright/test';
 import type { BrowserContext, CDPSession, Page } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard.ts';
+import { bestaetigeKontoaenderung } from './helpers.ts';
 
 const MOBILE = { width: 375, height: 812 };
 const DESKTOP = { width: 1280, height: 800 };
@@ -298,6 +299,8 @@ test.describe('Passkey-Login-Anordnung (#2247)', () => {
 		 */
 		async function legePasskeyAn(page: Page, label: string): Promise<void> {
 			await page.goto('/account');
+			// Issue #2961 (ADR-0115): Passkey hinzufuegen nur mit frischem Nachweis.
+			await bestaetigeKontoaenderung(page.request);
 			const karte = page.getByTestId('passkeys-card');
 			await karte.getByRole('button', { name: 'Passkey hinzufügen' }).click();
 			await page.getByTestId('passkey-label-input').fill(label);
@@ -329,10 +332,12 @@ test.describe('Passkey-Login-Anordnung (#2247)', () => {
 			const profil = await page.request.get('/api/auth/profile');
 			if (profil.status() !== 200) return;
 			const passkeys = ((await profil.json()).passkeys ?? []) as { id: string; label?: string }[];
-			for (const pk of passkeys.filter((p) => p.label === label)) {
-				await page.request
-					.delete(`/api/auth/passkey/credentials/${encodeURIComponent(pk.id)}`)
-					.catch(() => undefined);
+			const weg = passkeys.filter((p) => p.label === label);
+			// Issue #2961 (ADR-0115): Passkey entfernen nur mit frischem Nachweis.
+			if (weg.length > 0) await bestaetigeKontoaenderung(page.request);
+			for (const pk of weg) {
+				const geloescht = await page.request.delete(`/api/auth/passkey/credentials/${encodeURIComponent(pk.id)}`);
+				expect(geloescht.status(), `Passkey entfernen: ${geloescht.status()}`).toBe(200);
 			}
 		}
 
@@ -383,6 +388,8 @@ test.describe('Passkey-Login-Anordnung (#2247)', () => {
 			// Ausgangslage: Standard-storageState ist bereits angemeldet -- Passkey
 			// ueber die Konto-Karte anlegen (Scheibe 1, #2246).
 			await page.goto('/account');
+			// Issue #2961 (ADR-0115): Passkey hinzufuegen nur mit frischem Nachweis.
+			await bestaetigeKontoaenderung(page.request);
 			const karte = page.getByTestId('passkeys-card');
 			await karte.getByRole('button', { name: 'Passkey hinzufügen' }).click();
 			await page.getByTestId('passkey-label-input').fill(LABEL);
@@ -407,10 +414,10 @@ test.describe('Passkey-Login-Anordnung (#2247)', () => {
 
 			// Aufraeumen: den in diesem Test angelegten Passkey wieder entfernen.
 			const passkeys = ((await profil.json()).passkeys ?? []) as { id: string; label?: string }[];
+			// Die frische Passkey-Anmeldung traegt selbst den Nachweis (ADR-0115).
 			for (const pk of passkeys.filter((p) => p.label === LABEL)) {
-				await page.request
-					.delete(`/api/auth/passkey/credentials/${encodeURIComponent(pk.id)}`)
-					.catch(() => undefined);
+				const geloescht = await page.request.delete(`/api/auth/passkey/credentials/${encodeURIComponent(pk.id)}`);
+				expect(geloescht.status(), `Passkey entfernen: ${geloescht.status()}`).toBe(200);
 			}
 		});
 

@@ -26,6 +26,17 @@ API="${SEVEN_API_BASE:-https://gateway.seven.io/api}"
 EVENT="sms_mo"
 MASKE='s#(/api/webhooks/sms/)[^/"[:space:]]+#\1****#g'
 
+# #2961: Geheimnisse (Bot-Token in der URL, Secrets, API-Schluessel) gehen nie als
+# Prozessargument an curl (sichtbar in `ps`), sondern als curl-Konfiguration ueber
+# stdin (`-K -`). cfg schreibt eine Konfigurationszeile mit Escaping; printf ist ein
+# bash-Builtin und erzeugt keinen eigenen Prozess.
+cfg() {
+	local v=$2
+	v=${v//\\/\\\\}
+	v=${v//\"/\\\"}
+	printf '%s = "%s"\n' "$1" "$v"
+}
+
 usage() {
 	grep '^#' "$0" | sed 's/^# \{0,1\}//'
 	exit "${1:-0}"
@@ -44,7 +55,7 @@ maskiert() {
 }
 
 hooks_holen() {
-	curl -fsS -H "X-Api-Key: ${GZ_SEVEN_API_KEY}" "${API}/hooks"
+	cfg header "X-Api-Key: ${GZ_SEVEN_API_KEY}" | curl -fsS -K - "${API}/hooks"
 }
 
 cmd="${1:-}"
@@ -66,12 +77,13 @@ case "$cmd" in
 			echo "Hook bereits vorhanden — übersprungen, ID ${vorhanden}: ${anzeige}"
 			exit 0
 		fi
-		antwort="$(curl -fsS -X POST "${API}/hooks" \
-			-H "X-Api-Key: ${GZ_SEVEN_API_KEY}" \
-			--data-urlencode "target_url=${url}" \
-			--data-urlencode "event_type=${EVENT}" \
-			--data-urlencode "event_filter=${SEVEN_SERVICE_NUMBER#+}" \
-			--data-urlencode "request_method=POST")"
+		antwort="$({
+			cfg header "X-Api-Key: ${GZ_SEVEN_API_KEY}"
+			cfg data-urlencode "target_url=${url}"
+			cfg data-urlencode "event_type=${EVENT}"
+			cfg data-urlencode "event_filter=${SEVEN_SERVICE_NUMBER#+}"
+			cfg data-urlencode "request_method=POST"
+		} | curl -fsS -X POST -K - "${API}/hooks")"
 		neue_id="$(printf '%s' "$antwort" | jq -r '.id // empty')"
 		echo "Hook angelegt, ID ${neue_id:-?}: ${anzeige}"
 		;;
@@ -82,8 +94,7 @@ case "$cmd" in
 			echo "FEHLER: delete braucht die Hook-ID." >&2
 			usage 1
 		fi
-		curl -fsS -G -X DELETE "${API}/hooks" \
-			-H "X-Api-Key: ${GZ_SEVEN_API_KEY}" \
+		cfg header "X-Api-Key: ${GZ_SEVEN_API_KEY}" | curl -fsS -G -X DELETE -K - "${API}/hooks" \
 			--data-urlencode "id=${id}" >/dev/null
 		echo "Hook ${id} entfernt."
 		;;

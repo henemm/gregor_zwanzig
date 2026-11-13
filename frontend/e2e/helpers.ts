@@ -1,6 +1,7 @@
 import { test as base, expect, type APIRequestContext, type APIResponse, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import * as path from 'node:path';
 import { resolveE2EUser } from './testUser.ts';
+import { wegwerfPasswort } from './stagingZugang';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Issue #1771 Scheibe 1: geteilte, zustandsbasierte Ziehgeste für
@@ -190,6 +191,22 @@ export async function login(page: Page) {
 }
 
 /**
+ * Issue #2961 (ADR-0115): Adresswechsel und Passkey hinzufuegen/entfernen
+ * verlangen einen frischen Nachweis, der 10 Minuten fuer genau die Sitzung gilt
+ * (eine frische Anmeldung zaehlt selbst als Nachweis). Specs, die mit einer
+ * gespeicherten Sitzung solche Aenderungen ausloesen, erbringen ihn hier mit
+ * dem Passwort — ueber `page.request`, damit es dieselbe Sitzung ist wie die
+ * der Seite.
+ */
+export async function bestaetigeKontoaenderung(request: APIRequestContext, passwort?: string): Promise<void> {
+	const pass = passwort ?? resolveE2EUser().pass;
+	const res = await request.post('/api/auth/reauth', { data: { password: pass } });
+	if (!res.ok()) {
+		throw new Error(`Nachweis vor Kontoaenderung fehlgeschlagen: ${res.status()} ${await res.text()}`);
+	}
+}
+
+/**
  * Legt einen zweiten, sofort anmeldbaren Nutzer an (Issue #2271).
  *
  * Seit der Scharfschaltung des Login-Gates stellt `issueSession` nur noch fuer
@@ -307,7 +324,7 @@ export const testMitZustellbaremZiel = base.extend<object, { zustellbareSitzung:
 			const adminCtx = await browser.newContext({ ...neu, storageState: workerInfo.project.use.storageState });
 			const gastCtx = await browser.newContext(neu);
 			const username = `e2ezustellbar${Date.now()}w${workerInfo.workerIndex}`;
-			const kennwort = 'Test1234!x';
+			const kennwort = wegwerfPasswort();
 			try {
 				await registriereBestaetigtenZweitnutzer(adminCtx.request, gastCtx.request, username, kennwort);
 			} finally {

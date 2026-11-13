@@ -687,17 +687,20 @@
 	});
 </script>
 
-<div class="compare-tabs" data-testid="compare-detail-tab-list">
+<div class="compare-tabs" data-testid="compare-detail-tab-list" data-seite="hub">
 	<!-- Tab-Leiste — geteilter MTabBar-Baustein (Mobile Usability Paket 2,
 	     Spec mobile_tab_leisten_mtabbar, Iteration 2). Ersetzt das handgebaute
 	     compare-tabs-bar-Markup + das 1:1-kopierte Mobil-CSS (AP-006-Drift).
-	     Test-IDs bleiben. -->
-	<MTabBar
-		items={compareBarItems}
-		active={activeTab}
-		onChange={(v) => void handleValueChange(v)}
-		ariaLabel={$t('vergleich.hub.tabs_aria')}
-	/>
+	     Test-IDs bleiben.
+	     #2913: Wrapper ohne Klasse/Style = unsichtbarer Haken für den Elementlisten-Abgleich. -->
+	<div data-abschnitt="reiterleiste">
+		<MTabBar
+			items={compareBarItems}
+			active={activeTab}
+			onChange={(v) => void handleValueChange(v)}
+			ariaLabel={$t('vergleich.hub.tabs_aria')}
+		/>
+	</div>
 
 	<!-- Tab-Inhalte — Issue #2880: kein eigener Rand mehr (vorher 28/40/80 nach #582 plus
 	     `.tab-panel` 24 px = doppelte Einrückung). Übersicht und Orte stehen in der geteilten

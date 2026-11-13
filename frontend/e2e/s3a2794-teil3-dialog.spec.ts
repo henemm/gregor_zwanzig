@@ -14,6 +14,7 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
 import { HUB_KINDS, registriereBestaetigtenZweitnutzer, type HubKind } from './helpers';
 import { DESKTOP, WT, oeffneWetter, seedWetter, type Json } from './s3a2794-teil3.helpers';
+import { wegwerfPasswort } from './stagingZugang';
 
 const STANDARD_TEXT: Record<HubKind, string> = { route: 'Als Standard für neue Trips', vergleich: 'Als Standard für neue Orte' };
 const ANDERE: Record<HubKind, HubKind> = { route: 'vergleich', vergleich: 'route' };
@@ -94,7 +95,7 @@ for (const kind of HUB_KINDS) {
 			const neu = { baseURL: test.info().project.use.baseURL, storageState: undefined, serviceWorkers: 'block' as const };
 			const gast = await browser.newContext(neu);
 			try {
-				const kennwort = 'Test1234!x';
+				const kennwort = wegwerfPasswort();
 				await registriereBestaetigtenZweitnutzer(page.request, gast.request, `e2eteil3dialog${Date.now()}`, kennwort);
 				expect((await presets(gast.request)).map((p) => p.name), 'Mandantentrennung: fremde Vorlage sichtbar').not.toContain(name);
 				await gast.request.post('/api/auth/account/delete', { data: { password: kennwort } }).catch(() => {});

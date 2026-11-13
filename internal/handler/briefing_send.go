@@ -50,6 +50,6 @@ func BriefingSendHandler(pythonURL string) http.HandlerFunc {
 		if rt := r.URL.Query().Get("report_type"); kind == briefingKindRoute && rt != "" {
 			q.Set("report_type", rt)
 		}
-		forwardSend(w, r, pythonURL+"/api/briefings/"+id+"/send", q.Encode())
+		forwardSend(w, r, pythonURL+"/api/briefings/"+url.PathEscape(id)+"/send", q.Encode())
 	}
 }

@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 from app.origin_guard import running_origin
 from output.channels.base import ChannelBlockedError, OutputConfigError, OutputError
+from utils.mail_tls import tls_kontext_fuer
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -379,6 +380,9 @@ def build_mime_message(
         if compare_hourly_enabled is not None:
             msg["X-GZ-Compare-Hourly-Enabled"] = "true" if compare_hourly_enabled else "false"
     msg["X-GZ-Lang"] = "en" if lang == "en" else "de"
+    # Issue #2961 (RFC 3834): jede Mail des Dienstes ist automatisch erzeugt;
+    # Abwesenheitsnotizen und Autoresponder antworten darauf nicht.
+    msg["Auto-Submitted"] = "auto-generated"
     msg["Message-ID"] = message_id or new_message_id()
     return msg
 
@@ -539,7 +543,9 @@ class EmailOutput:
             host, port, timeout=_phase_timeout_or_raise(deadline_at)
         ) as server:
             server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
-            server.starttls()
+            # #2961: Zertifikat und Hostname pruefen (smtplib prueft ohne
+            # Kontext nicht); ausgenommen nur Loopback-Ziele (utils.mail_tls).
+            server.starttls(context=tls_kontext_fuer(host))
             server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
             server.login(user, password)
             if len(recipients) == 1:

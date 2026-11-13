@@ -44,6 +44,7 @@ fehlgeschlagen" heissen.
 """
 from __future__ import annotations
 
+import hashlib
 import inspect
 import json
 import sys
@@ -155,7 +156,9 @@ def _nutzer_anlegen(user_id: str, *, mail: str, chat_id: str,
         # `with_user_profile` den SMS-Versand fail-closed (AC-1).
         "sms_verified_number": "+490000000001",
         "sms_verified_at": "2026-01-01T00:00:00Z",
-        "premium_sms_reply_to": "+490000000002",
+        # ADR-0116: Rueckadresse je Nutzer eindeutig (aus der Kennung abgeleitet).
+        "premium_sms_reply_to": "+4900" + str(
+            int(hashlib.sha256(user_id.encode()).hexdigest(), 16) % 10**8).zfill(8),
         "premium_sms_reply_at": datetime.now(timezone.utc).isoformat(),
     }))
 

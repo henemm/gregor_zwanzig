@@ -157,7 +157,7 @@ class KanalRig:
             def __exit__(self, *exc) -> bool:
                 return False
 
-            def starttls(self) -> None:
+            def starttls(self, context=None) -> None:
                 pass
 
             def login(self, user, password) -> None:
@@ -284,10 +284,21 @@ def premium_profil_schreiben(user_id: str, *, reply_at: datetime) -> None:
         "id": user_id, "tier": "premium",
         "mail_to": _MAIL_TO, "sms_to": _SMS_TO, "sms_verified_number": _SMS_TO,
         "telegram_chat_id": _TELEGRAM_CHAT,
-        "premium_sms_reply_to": _PREMIUM_TO,
+        "premium_sms_reply_to": premium_rueckadresse(user_id),
         "premium_sms_reply_at": reply_at.isoformat().replace("+00:00", "Z"),
     })
     pfad.write_text(json.dumps(profil))
+
+
+def premium_rueckadresse(user_id: str) -> str:
+    """ADR-0116: die gelernte Rueckadresse gehoert hoechstens einem Konto.
+    Jeder Testnutzer bekommt deshalb eine eigene, aus der Kennung abgeleitete
+    Nummer -- sonst sperrt der Versand die doppelt belegte Nummer, sobald
+    zwei Nutzer in derselben Testwurzel liegen."""
+    import hashlib
+
+    ziffern = int(hashlib.sha256(user_id.encode()).hexdigest(), 16) % 10**7
+    return f"+4179{ziffern:07d}"
 
 
 def wiederholungs_eintraege(user_id: str) -> dict[str, dict]:

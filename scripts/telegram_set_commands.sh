@@ -22,6 +22,17 @@ set -euo pipefail
 API="https://api.telegram.org"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# #2961: Geheimnisse (Bot-Token in der URL, Secrets, API-Schluessel) gehen nie als
+# Prozessargument an curl (sichtbar in `ps`), sondern als curl-Konfiguration ueber
+# stdin (`-K -`). cfg schreibt eine Konfigurationszeile mit Escaping; printf ist ein
+# bash-Builtin und erzeugt keinen eigenen Prozess.
+cfg() {
+	local v=$2
+	v=${v//\\/\\\\}
+	v=${v//\"/\\\"}
+	printf '%s = "%s"\n' "$1" "$v"
+}
+
 usage() {
 	grep '^#' "$0" | sed 's/^# \{0,1\}//'
 	exit "${1:-0}"
@@ -47,20 +58,20 @@ case "$cmd" in
 	set)
 		require TELEGRAM_BOT_TOKEN
 		echo "Registriere Bot-Menü (setMyCommands) aus BOT_COMMANDS…"
-		curl -fsS -X POST "${API}/bot${TELEGRAM_BOT_TOKEN}/setMyCommands" \
+		cfg url "${API}/bot${TELEGRAM_BOT_TOKEN}/setMyCommands" | curl -fsS -X POST -K - \
 			-H "Content-Type: application/json" \
 			--data-binary "{\"commands\": $(commands_json)}" | sed 's/.*/→ &/'
 		echo
 		;;
 	info)
 		require TELEGRAM_BOT_TOKEN
-		curl -fsS "${API}/bot${TELEGRAM_BOT_TOKEN}/getMyCommands" | sed 's/.*/→ &/'
+		cfg url "${API}/bot${TELEGRAM_BOT_TOKEN}/getMyCommands" | curl -fsS -K - | sed 's/.*/→ &/'
 		echo
 		;;
 	delete)
 		require TELEGRAM_BOT_TOKEN
 		echo "Entferne Bot-Menü (deleteMyCommands)…"
-		curl -fsS -X POST "${API}/bot${TELEGRAM_BOT_TOKEN}/deleteMyCommands" | sed 's/.*/→ &/'
+		cfg url "${API}/bot${TELEGRAM_BOT_TOKEN}/deleteMyCommands" | curl -fsS -X POST -K - | sed 's/.*/→ &/'
 		echo
 		;;
 	-h|--help|help)

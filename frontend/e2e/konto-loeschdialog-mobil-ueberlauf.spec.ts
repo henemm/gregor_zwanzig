@@ -1,5 +1,6 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { registriereBestaetigtenZweitnutzer } from './helpers';
+import { wegwerfPasswort } from './stagingZugang';
 
 /**
  * Konto-Löschdialog auf schmalem Bildschirm (Issue #2160, Fix-Loop).
@@ -101,7 +102,7 @@ test.describe('Konto-Löschdialog auf 390 px', () => {
 		// Adresse `<name>@example.com` = 62 Zeichen. Kürzere Adressen lassen den
 		// Umbruch-Schutz am Knopf (`overflow-wrap:anywhere`) unbewacht.
 		const username = ('e2eloeschdialogmobil' + Date.now() + 'x'.repeat(30)).slice(0, 50);
-		const password = 'Test1234!x';
+		const password = wegwerfPasswort();
 		const adresse = `${username}@example.com`;
 		expect(adresse.length).toBeGreaterThanOrEqual(60);
 

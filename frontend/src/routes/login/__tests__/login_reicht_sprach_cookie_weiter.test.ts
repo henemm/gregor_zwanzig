@@ -37,7 +37,7 @@ const { actions } = await import(
 
 type Gesetzt = { name: string; wert: string; opts: Record<string, unknown> };
 
-async function meldeAn(antwortCookies: string[]): Promise<Gesetzt[]> {
+async function meldeAn(antwortCookies: string[], adresse = 'http://localhost/login'): Promise<Gesetzt[]> {
 	setCookies = antwortCookies;
 	const body = new FormData();
 	body.set('username', 'wanderer');
@@ -48,7 +48,7 @@ async function meldeAn(antwortCookies: string[]): Promise<Gesetzt[]> {
 		cookies: {
 			set: (name: string, wert: string, opts: Record<string, unknown>) => gesetzt.push({ name, wert, opts })
 		},
-		url: new URL('http://localhost/login')
+		url: new URL(adresse)
 	};
 	try {
 		await actions.login(ereignis as never);
@@ -93,6 +93,21 @@ describe('AC-6: Login reicht gz_lang weiter', () => {
 			}
 		});
 	}
+
+	// Issue #2961 (AC-6 der Haertungs-Spec): ueber HTTPS traegt auch ausserhalb
+	// von NODE_ENV=production jedes Anmelde-Cookie das Secure-Flag.
+	test('HTTPS ohne NODE_ENV=production: gz_session und gz_lang sind secure', async () => {
+		const vorher = process.env.NODE_ENV;
+		process.env.NODE_ENV = 'development';
+		try {
+			const c = await meldeAn([SESSION, 'gz_lang=en; Path=/'], 'https://gregor.invalid/login');
+			assert.equal(c.find((x) => x.name === 'gz_session')?.opts.secure, true);
+			assert.equal(c.find((x) => x.name === 'gz_lang')?.opts.secure, true);
+		} finally {
+			if (vorher === undefined) delete process.env.NODE_ENV;
+			else process.env.NODE_ENV = vorher;
+		}
+	});
 
 	test('ohne gz_lang in der Antwort: kein Sprach-Cookie', async () => {
 		const c = await meldeAn([SESSION]);

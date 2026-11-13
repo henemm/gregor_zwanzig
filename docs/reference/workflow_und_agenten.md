@@ -44,6 +44,8 @@ Ablauf am Ende jeder Scheibe: **Scheibe → Staging-Abgleich → Prüf-Agent**.
 2. **Staging-Abgleich:** `npm run elementliste:abgleich -- --scope <reiter[/zustand]>` (im Ordner
    `frontend`, nach dem Push gegen Staging) mit der Teilmenge der Scheibe; Bericht JSON + Markdown.
    Abschluss der Scheibe erst mit `--strict` grün für ihre Teilmenge (DE, danach `--sprache en`).
+   Ganze Seite: `--abnahme` (Exit ≠ 0, solange `abweichend`/`nicht_pruefbar`/`zusaetzlich` ohne Besitzer in
+   `docs/context/einstellungen_neu/elementliste_besitzer.json`); Details in `gates_und_ratschen.md`.
    Vor dem Abgleich läuft der Generator-Spec (`npx playwright test --config
    playwright.elementliste.mockup.config.ts`), falls Mockup oder Katalog geändert wurden.
 3. **Prüf-Agent `mockup-bildpruefer`:** bekommt nur Mockup-Bild, Staging-Bild (gleicher Viewport, gleicher

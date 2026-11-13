@@ -46,5 +46,17 @@
   "fach.resolver.utm_konvertierung": "UTM conversion returned invalid coordinates.",
   "fach.resolver.utm_northing": "Northing could not be parsed.",
   "fach.resolver.utm_unbekannt": "UTM format not recognized.",
-  "fach.resolver.utm_zone": "UTM zone outside [1,60]."
+  "fach.resolver.utm_zone": "UTM zone outside [1,60].",
+  "fach.fehler.rate_limit_exceeded_aufloesen": "Too many location lookups in a short time. Please wait a moment and try again.",
+  "fach.fehler.rate_limit_exceeded_testnachricht": "You have already sent many test messages in the last hour. Please wait a while before sending the next one.",
+  "fach.fehler.rate_limit_exceeded_versand": "You have already sent many briefings right away in the last hour. Please wait a while before sending the next one.",
+  "fach.fehler.rate_limit_exceeded_abruf": "Too many weather requests in a short time. Please wait a moment and try again.",
+  "fach.fehler.rate_limit_exceeded_parallel": "Several requests are already running at the same time. Please wait until they have finished.",
+  "fach.fehler.rate_limit_exceeded_gpx": "You have already uploaded many GPX files in the last hour. Please wait a while.",
+  "fach.fehler.payload_too_large_gpx": "The GPX file is too large (at most 10 MB).",
+  "fach.fehler.limit_exceeded_schluessel": "The settings contain too many or invalid entries.",
+  "fach.fehler.limit_exceeded_etappen": "A trip can have at most {max} stages.",
+  "fach.fehler.limit_exceeded_wegpunkte": "A stage can have at most {max} waypoints.",
+  "fach.fehler.limit_exceeded_orte_vergleich": "A comparison can contain at most {max} locations in your plan.",
+  "fach.fehler.entity_too_large": "The data is too large to be saved."
 }

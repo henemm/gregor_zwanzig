@@ -6,7 +6,7 @@
   `docs/specs/modules/forecast_budget_je_nutzer.md`, ergänzt ADR-0029 (Open-Meteo als
   Standard-Provider) und ADR-0003 (Mandantentrennung), Präzedenz ADR-0070 (Wartebudget je
   Nutzeraufruf)
-- **Ergänzt durch:** [ADR-0076](0076-go-dockt-ueber-internen-endpunkt-an-das-kontingent-gate-an.md) (ergänzt), [ADR-0079](0079-betriebsstatus-per-maschinen-token.md) (ergänzt Punkt 5)
+- **Ergänzt durch:** [ADR-0076](0076-go-dockt-ueber-internen-endpunkt-an-das-kontingent-gate-an.md) (ergänzt), [ADR-0079](0079-betriebsstatus-per-maschinen-token.md) (ergänzt Punkt 5), [ADR-0117](0117-interaktive-abrufe-eigenes-kontingent-am-fairen-anteil.md) (ergänzt: eigenes interaktives Kontingent, globale Reserve)
 
 ## Kontext
 

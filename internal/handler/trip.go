@@ -158,6 +158,11 @@ func writeSaveError(w http.ResponseWriter, r *http.Request, err error) {
 		WriteError(w, r, http.StatusConflict, "id_conflict", nil)
 		return
 	}
+	// Issue #2961: Datei waere groesser als store.MaxEntityFileBytes.
+	if errors.Is(err, store.ErrEntityTooLarge) {
+		WriteError(w, r, http.StatusRequestEntityTooLarge, "entity_too_large", nil)
+		return
+	}
 	WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 }
 
@@ -197,6 +202,16 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		}
 		// Issue #2792 S1a: ungueltige Profil-Ampel nie speichern.
 		if bailIf(w, r, displayConfigAmpelUngueltig(trip.DisplayConfig), 400, "ampel_ungueltig") {
+			return
+		}
+		// Issue #2961: Wachstumsgrenzen auch bei der Anlage.
+		if etappenGrenzeVerletzt(w, r, trip.Stages) || configMergesVerletzt(w, r,
+			[2]map[string]interface{}{nil, trip.Aggregation},
+			[2]map[string]interface{}{nil, trip.WeatherConfig},
+			[2]map[string]interface{}{nil, trip.DisplayConfig},
+			[2]map[string]interface{}{nil, trip.AlertMetricChannels},
+			[2]map[string]interface{}{nil, trip.ReportConfig},
+		) {
 			return
 		}
 
@@ -364,6 +379,19 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
+		// Issue #2961: Wachstumsgrenzen vor jedem Merge (wachstumsgrenzen.go).
+		if configMergesVerletzt(w, r,
+			[2]map[string]interface{}{existing.Aggregation, derefMap(req.Aggregation)},
+			[2]map[string]interface{}{existing.WeatherConfig, derefMap(req.WeatherConfig)},
+			[2]map[string]interface{}{existing.DisplayConfig, derefMap(req.DisplayConfig)},
+			[2]map[string]interface{}{existing.AlertMetricChannels, derefMap(req.AlertMetricChannels)},
+			[2]map[string]interface{}{existing.ReportConfig, derefMap(req.ReportConfig)},
+		) {
+			return
+		}
+		if req.Stages != nil && etappenGrenzeVerletzt(w, r, *req.Stages) {
+			return
+		}
 
 		if req.Name != nil {
 			existing.Name = *req.Name
@@ -491,7 +519,7 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		if err := s.SaveTrip(existing); err != nil {
-			WriteError(w, r, 500, "store_error", nil)
+			writeSaveError(w, r, err)
 			return
 		}
 

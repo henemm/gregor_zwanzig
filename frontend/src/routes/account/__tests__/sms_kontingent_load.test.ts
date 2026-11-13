@@ -18,7 +18,7 @@ const { load } = (await import('../+page.server.ts')) as any;
 
 const NUTZUNG = {
 	sms: { used: 3, limit: 10, reserve: 2 },
-	premium_sms: { used: 0, limit: 0, reserve: 3, reply_overshoot: 3 }
+	premium_sms: { used: 0, limit: 0, reserve: 3 }
 };
 
 let antwort: 'ok' | 'no-content' | 'non-ok' | 'network-error' = 'ok';

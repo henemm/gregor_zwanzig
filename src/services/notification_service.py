@@ -8,6 +8,7 @@ der Scheduler (und später Alert-/Inbound-Pfade) von formatters/output/outputs.
 from __future__ import annotations
 
 import inspect
+from html import escape as _html_escape
 import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
@@ -392,12 +393,12 @@ def build_service_error_email_html(
         '<div class="container">'
         f'<h2 class="heading">{t("versand.servicefehler.titel", lang)}</h2>'
         '<div class="meta">'
-        f'<strong>Trip:</strong> {trip_name}<br>'
+        f'<strong>Trip:</strong> {_html_escape(trip_name)}<br>'
         f'<strong>Report:</strong> {report_type.title()}<br>'
         f'<strong>Problem:</strong> {t("versand.servicefehler.problem", lang)}'
         '</div>'
         f'<p><strong>{t("versand.servicefehler.segmente", lang)}</strong></p>'
-        f'<div class="error-block">{error_lines}</div>'
+        f'<div class="error-block">{_html_escape(error_lines)}</div>'
         '<p style="font-size:13px; color:#5c5a52;">'
         f'{t("versand.servicefehler.grund", lang)}'
         '</p>'
@@ -682,10 +683,13 @@ class NotificationService:
         return TelegramOutput(self._settings, recipient=recipient)
 
     @staticmethod
-    def _telegram_reply(settings: Settings, chat_id) -> TelegramOutput:
+    def _telegram_reply(settings: Settings, chat_id, *, wait_for_slot: bool = True) -> TelegramOutput:
         """Issue #1412 S4a (R7): Antwort geht an die uebergebene ``chat_id``
         -- nur zulaessig als Absender des laufenden Webhook-Updates."""
-        return TelegramOutput(settings, recipient=TelegramRecipient.inbound_reply(chat_id))
+        output = TelegramOutput(settings, recipient=TelegramRecipient.inbound_reply(chat_id))
+        if not wait_for_slot:
+            output.wait_for_slot = False  # #2961
+        return output
 
     def _sms_output(self) -> SMSOutput:
         """Issue #1412 S4b: SMS an die bestaetigte Profilnummer (frisch aus
@@ -2333,8 +2337,9 @@ class NotificationService:
     ) -> None:
         """Sendet eine Command-Bestätigung per Premium-SMS (Issue #2184).
 
-        Issue #2412 S4a: `purpose="reply"` -- Garmin-Antworten duerfen die
-        Reply-Reserve ueber dem Premium-SMS-Grundlimit ausschoepfen. Kein
+        Issue #2412 S4a / ADR-0116: `purpose="reply"` -- Garmin-Antworten
+        zaehlen in ein eigenes Tageskontingent und verbrauchen nie das
+        Alarm-Kontingent des Kanals. Kein
         `NotificationResult` an dieser Stelle (`-> None`); eine Sperre bleibt
         nur ueber die Aufzeichner-/Transport-Beobachtung sichtbar (Spec).
         """
@@ -2349,8 +2354,48 @@ class NotificationService:
             )
             logger.info(f"Premium-SMS confirmation sent: {result.confirmation_subject}")
         except Exception as e:
-            sms_daily_limit.release_reservation(self._require_user(), "premium_sms", now)
+            sms_daily_limit.release_reservation(
+                self._require_user(), "premium_sms", now, purpose="reply",
+            )
             logger.error(f"Failed to send premium-sms confirmation: {e}")
+
+    def premium_sms_change_notice_ziele(self) -> list[str]:
+        """Kanaele, auf denen eine Aenderungs-Mitteilung zustellbar waere:
+        E-Mail nur mit bestaetigter Adresse, Telegram nur mit Profil-Chat."""
+        from output.channels.recipient import _load_profile
+
+        profil = _load_profile(self._require_user())
+        ziele: list[str] = []
+        if profil.get("email_verified_at") and (profil.get("mail_to") or profil.get("email")):
+            ziele.append("email")
+        if profil.get("telegram_chat_id"):
+            ziele.append("telegram")
+        return ziele
+
+    def send_premium_sms_change_notice(self, subject: str, body: str) -> list[str]:
+        """ADR-0116 (Issue #2961 Welle 2): Mitteilung ueber eine per
+        Premium-SMS ausgefuehrte Aenderung auf den ANDEREN Kanaelen des
+        Nutzers -- E-Mail nur an eine bestaetigte Adresse, Telegram nur an den
+        verbundenen Profil-Chat. Fail-soft je Kanal; Rueckgabe: zugestellte
+        Kanaele."""
+        user_id = self._require_user()
+        ziele = self.premium_sms_change_notice_ziele()
+        zugestellt: list[str] = []
+        if "email" in ziele:
+            try:
+                EmailOutput(self._settings).send(
+                    subject=subject, body=body, html=False, lang=self._lang,
+                )
+                zugestellt.append("email")
+            except Exception as e:  # noqa: BLE001 -- fail-soft
+                logger.warning(f"Change notice email failed for {user_id}: {e}")
+        if "telegram" in ziele:
+            try:
+                self._telegram_output().send(subject=subject, body=body)
+                zugestellt.append("telegram")
+            except Exception as e:  # noqa: BLE001 -- fail-soft
+                logger.warning(f"Change notice telegram failed for {user_id}: {e}")
+        return zugestellt
 
     def send_command_reply_telegram(
         self,
@@ -2379,13 +2424,17 @@ class NotificationService:
         body: str,
         settings: Settings,
         reply_markup: dict | None = None,
+        wait_for_slot: bool = True,
     ) -> int | None:
-        """Sendet eine einfache Telegram-Nachricht (z.B. Fehlerhinweis)."""
+        """Sendet eine einfache Telegram-Nachricht (z.B. Fehlerhinweis).
+
+        ``wait_for_slot=False`` (#2961): ist die Sende-Drossel fuer den Chat
+        voll, wird die Nachricht verworfen statt gewartet."""
         try:
             kwargs = {"subject": subject, "body": body}
             if reply_markup is not None:
                 kwargs["reply_markup"] = reply_markup
-            return self._telegram_reply(settings, chat_id).send(**kwargs)
+            return self._telegram_reply(settings, chat_id, wait_for_slot=wait_for_slot).send(**kwargs)
         except Exception as e:
             logger.error(f"Telegram message failed for {mask_number(chat_id)}: {e}")
             return None
@@ -2480,13 +2529,17 @@ class NotificationService:
         if report.email_html:
             report.email_html = self._inject_html_hint(report.email_html, hint)
         if report.telegram_bubbles:
-            report.telegram_bubbles[0] = f"{hint}\n\n{report.telegram_bubbles[0]}"
+            # #2961: die Blasen gehen mit parse_mode HTML raus -- der Hinweis
+            # (kann den Etappennamen enthalten) ist Text.
+            report.telegram_bubbles[0] = f"{_html_escape(hint)}\n\n{report.telegram_bubbles[0]}"
 
     @staticmethod
     def _inject_html_hint(html: str, hint: str) -> str:
+        # #2961: der Hinweis ist Text (kann Etappennamen enthalten).
+        hint_html = _html_escape(hint)
         if "<body>" in html:
-            return html.replace("<body>", f"<body><p>{hint}</p>", 1)
-        return f"<p>{hint}</p>{html}"
+            return html.replace("<body>", f"<body><p>{hint_html}</p>", 1)
+        return f"<p>{hint_html}</p>{html}"
 
     @staticmethod
     def _target_date_from_report(report, request: TripReportRequest):
@@ -2538,7 +2591,8 @@ class NotificationService:
             return True
         error_lines = "\n".join(
             "  - " + t("versand.scheduler.abschnitt", self._lang, id=abschnitt_id(e, self._lang))
-            + f": {e.error_message}"
+            # #2961: Provider-Ausnahmetext nur im Log, nach aussen Katalogtext.
+            + ": " + t("vergleich.ort.abruf_fehlgeschlagen", self._lang)
             for e in request.failed_segments
             if e.segment is not None
         )

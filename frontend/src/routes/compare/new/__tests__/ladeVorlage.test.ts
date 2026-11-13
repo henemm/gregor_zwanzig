@@ -132,9 +132,20 @@ test('AC-8 leeres from: kein Vorlagen-Request, vorlage null', async () => {
 	assert.equal(presetAufrufe().length, 0);
 });
 
-test('from mit "/" und "?" wird als EIN Pfadsegment kodiert', async () => {
-	await aufruf(`?from=${encodeURIComponent('a/../b?x=1')}`);
+// Issue #2961 (F002): dasselbe Kennungsmuster wie Go (kennungImPfad). Eine
+// gueltige Kennung wird als EIN Pfadsegment kodiert; Punkt-Segmente, Trenner,
+// Abfrage- und Ankerzeichen sind ungueltig => kein Vorlagen-Request, vorlage null.
+test('gueltige Kennung mit Leerzeichen/Umlaut wird als EIN Pfadsegment kodiert', async () => {
+	await aufruf(`?from=${encodeURIComponent('Vergleich Sóller')}`);
 	const p = presetAufrufe();
 	assert.equal(p.length, 1);
-	assert.equal(p[0].url, `${PRESETS}a%2F..%2Fb%3Fx%3D1`);
+	assert.equal(p[0].url, `${PRESETS}Vergleich%20S%C3%B3ller`);
 });
+
+for (const ungueltig of ['.', '..', 'a/../b?x=1', 'a/b', 'a?x=1', 'a#b', 'a%2Fb']) {
+	test(`ungueltiges from ${JSON.stringify(ungueltig)}: kein Vorlagen-Request, vorlage null`, async () => {
+		const daten = await aufruf(`?from=${encodeURIComponent(ungueltig)}`);
+		assert.strictEqual(daten.vorlage, null);
+		assert.equal(presetAufrufe().length, 0);
+	});
+}

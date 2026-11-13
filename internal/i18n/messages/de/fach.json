@@ -46,5 +46,17 @@
   "fach.resolver.utm_konvertierung": "UTM-Konvertierung lieferte ungültige Koordinaten.",
   "fach.resolver.utm_northing": "Northing nicht parsebar.",
   "fach.resolver.utm_unbekannt": "UTM-Format nicht erkannt.",
-  "fach.resolver.utm_zone": "UTM-Zone ausserhalb [1,60]."
+  "fach.resolver.utm_zone": "UTM-Zone ausserhalb [1,60].",
+  "fach.fehler.rate_limit_exceeded_aufloesen": "Zu viele Ortsabfragen in kurzer Zeit. Bitte warte einen Moment und versuche es dann erneut.",
+  "fach.fehler.rate_limit_exceeded_testnachricht": "Du hast in der letzten Stunde schon viele Testnachrichten geschickt. Bitte warte eine Weile, bevor du die nächste schickst.",
+  "fach.fehler.rate_limit_exceeded_versand": "Du hast in der letzten Stunde schon viele Briefings sofort verschickt. Bitte warte eine Weile, bevor du das nächste schickst.",
+  "fach.fehler.rate_limit_exceeded_abruf": "Zu viele Wetterabfragen in kurzer Zeit. Bitte warte einen Moment und versuche es dann erneut.",
+  "fach.fehler.rate_limit_exceeded_parallel": "Es laufen gerade schon mehrere Abfragen gleichzeitig. Bitte warte, bis sie fertig sind.",
+  "fach.fehler.rate_limit_exceeded_gpx": "Du hast in der letzten Stunde schon viele GPX-Dateien hochgeladen. Bitte warte eine Weile.",
+  "fach.fehler.payload_too_large_gpx": "Die GPX-Datei ist zu groß (höchstens 10 MB).",
+  "fach.fehler.limit_exceeded_schluessel": "Die Einstellungen enthalten zu viele oder ungültige Einträge.",
+  "fach.fehler.limit_exceeded_etappen": "Ein Trip kann höchstens {max} Etappen haben.",
+  "fach.fehler.limit_exceeded_wegpunkte": "Eine Etappe kann höchstens {max} Wegpunkte haben.",
+  "fach.fehler.limit_exceeded_orte_vergleich": "Ein Vergleich kann in deinem Tarif höchstens {max} Orte enthalten.",
+  "fach.fehler.entity_too_large": "Die Daten sind zu umfangreich, um gespeichert zu werden."
 }

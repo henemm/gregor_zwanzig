@@ -66,7 +66,11 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(orch_mod.CompareDispatchStrategy, "inter_mail_delay", 0.0)
     monkeypatch.setattr(sds_mod, "_write_compare_alert_snapshots", lambda *a, **k: None)
     # `tdd-`-Praefix: Settings leitet den Test-Nutzer auf den Stalwart-Test-Host.
-    return data_root, f"tdd-2286-ac4-{uuid.uuid4().hex[:8]}"
+    user_id = f"tdd-2286-ac4-{uuid.uuid4().hex[:8]}"
+    # #2961: Empfaenger kommt nur noch aus dem Nutzerprofil.
+    from tests.helpers.nutzerprofil import lege_profil_an
+    lege_profil_an(user_id, mail_to="dummy@example.invalid")
+    return data_root, user_id
 
 
 def _settings_mail_only() -> Settings:

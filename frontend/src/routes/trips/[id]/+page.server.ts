@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
 import { loadProfile } from '$lib/server/profileLoader.js';
+import { kennungImPfad } from '$lib/server/apiPfad.js';
 import { trFor } from '$lib/i18n/index.js';
 
 
@@ -10,6 +11,13 @@ export const load: PageServerLoad = async ({ params, cookies, locals }) => {
 	const headers: Record<string, string> = {};
 	if (session) headers['Cookie'] = `gz_session=${session}`;
 
+	// #2961: die Kennung aus der Adresse geht geprueft und kodiert in den Pfad
+	// zur Go-API — eine ungueltige Kennung gibt es nicht (404).
+	const kennung = kennungImPfad(params.id);
+	if (kennung === null) {
+		throw error(404, trFor(locals.lang, 'trip.hub.nicht_gefunden', { id: params.id }));
+	}
+
 	// Feature #1435 Etappe E3a: der Wetter-Metriken-Katalog wird PARALLEL zum
 	// Trip geladen, fail-soft (`.catch(() => null)`). Ein Katalog-Ausfall darf
 	// die Seite nicht zum Kippen bringen — nur der neue Übersichts-Block
@@ -17,7 +25,7 @@ export const load: PageServerLoad = async ({ params, cookies, locals }) => {
 	// Fetches werden vor dem `return` awaitet, damit kein Ladefenster
 	// entsteht (Fehlerklasse #1320, AC-5).
 	const [res, metricsCatalog, profile] = await Promise.all([
-		fetch(`${API()}/api/trips/${params.id}`, { headers }),
+		fetch(`${API()}/api/trips/${kennung}`, { headers }),
 		fetch(`${API()}/api/metrics`, { headers })
 			.then((r) => (r.ok ? r.json() : null))
 			.catch(() => null),

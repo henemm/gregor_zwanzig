@@ -40,7 +40,9 @@ type budgetUrteil struct {
 func reserviereForecastBudget(coreURL, userID string) (budgetUrteil, error) {
 	frage := url.Values{}
 	frage.Set("user_id", userID)
-	frage.Set("priority", "polling")
+	// ADR-0117 (#2961): /api/forecast ist ein interaktiver Ausloeser und
+	// bucht auf das interaktive Kontingent des Nutzers.
+	frage.Set("priority", "user_interactive")
 	ziel := strings.TrimSuffix(coreURL, "/") + forecastReservePfad + "?" + frage.Encode()
 
 	client := &http.Client{Timeout: forecastReserveTimeout}
@@ -132,7 +134,10 @@ func ForecastHandler(p provider.WeatherProvider, coreURL string) http.HandlerFun
 
 		ts, err := p.FetchForecast(lat, lon, hours)
 		if err != nil {
-			WriteError(w, r, http.StatusBadGateway, "provider_error", i18n.Args{"detail": err.Error()})
+			// Issue #2961: der rohe Anbieter-Fehler (URL, Upstream-Text) geht
+			// nur ins Log; nach aussen der Katalogtext fach.fehler.provider_error.
+			log.Printf("[forecast] provider-Fehler fuer %s: %v", userID, err)
+			WriteError(w, r, http.StatusBadGateway, "provider_error", nil)
 			return
 		}
 

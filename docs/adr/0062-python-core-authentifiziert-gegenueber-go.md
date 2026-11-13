@@ -8,6 +8,7 @@
   (Nutzer-Auth am Go-Rand) um die Dienst-zu-Dienst-Ebene;
   Spec `docs/specs/bugfix/core_shared_secret_auth.md`,
   Kontext `docs/context/fix-2142-core-auth-shared-secret.md`
+- **Ergänzt durch:** [ADR-0114](0114-ausgehende-abrufe-nutzerbestimmter-ziele-nur-ueber-abgeschotteten-client.md) (ergänzt: nutzerbestimmte Ziele nur über abgeschotteten Client ohne Dienstgeheimnis)
 
 ## Kontext
 

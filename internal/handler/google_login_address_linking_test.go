@@ -691,12 +691,11 @@ func TestGoogleLink_AC6_UebernahmeRecheckVerweigertGeaendertesKonto(t *testing.T
 					return
 				}
 				aufgerufen = true
-				u, err := s.LoadUser(userID)
-				if err != nil || u == nil {
-					t.Fatalf("AC-6/recheck: Zwischenzeit-Laden fehlgeschlagen: %v", err)
-				}
-				f.aendern(t, u)
-				if err := s.SaveUser(*u); err != nil {
+				// Issue #2961 (GA6): Sicherheitsfelder schreibt nur UpdateUser.
+				if _, err := s.UpdateUser(userID, func(u *model.User) error {
+					f.aendern(t, u)
+					return nil
+				}); err != nil {
 					t.Fatalf("AC-6/recheck: Zwischenzeit-Speichern fehlgeschlagen: %v", err)
 				}
 			}

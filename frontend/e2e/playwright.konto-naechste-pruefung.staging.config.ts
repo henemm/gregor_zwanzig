@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 // E2E-Config Issue #1727 S5e (AC-4, AC-7): die Konto-Seite beschriftet den
 // Scheduler-Tick als "Nächste Prüfung" und zeigt ihn in der Zone des Browsers.
 // Kein lokaler webServer — geprueft wird die auf Staging deployte App selbst.
@@ -14,8 +15,8 @@ import { fileURLToPath } from 'node:url';
 // (`browser.newContext({ timezoneId })`) — beide Zonen gehoeren in denselben
 // Testlauf, damit der Vergleich beider Anzeigen eine einzige Zusicherung ist.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

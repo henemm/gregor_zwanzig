@@ -21,6 +21,7 @@ import {
 	expect,
 	request as apiSitzung,
 	type BrowserContext,
+	type Cookie,
 	type Page
 } from '@playwright/test';
 import * as fs from 'node:fs';
@@ -34,6 +35,7 @@ import {
 	storageAndRegistrationCount
 } from './pwaHelpers.ts';
 import { createTestComparePreset, createTestLocation, createTestTrip } from './helpers.ts';
+import { wegwerfPasswort } from './stagingZugang.ts';
 
 test.use({ serviceWorkers: 'allow' });
 
@@ -84,23 +86,25 @@ async function wiederAnmelden(page: Page): Promise<void> {
 }
 
 /**
- * Beschafft den ZWEITEN Nutzer und meldet ihn im SELBEN Kontext an.
+ * Der ZWEITE Nutzer (B), nicht der Stamm-Testnutzer; genau darauf kommt es hier an.
  *
- * Fester Name statt Zeitstempel: `/api/auth/register` laesst nur 5 Anlagen je
- * Stunde und IP zu (internal/router/router.go:41). Ein neuer Name je Lauf
- * verbraucht dieses Budget, und der Nachweis scheiterte dann an der
- * Anlage-Bremse statt an seiner Zusicherung — ein rotes Ergebnis, das ueber
- * die Mandantentrennung nichts aussagt. Wiederverwendet wird ein Nutzer, der
- * NICHT der Stamm-Testnutzer ist; genau darauf kommt es hier an.
+ * Issue #2961: B wird je Lauf (Worker) frisch angelegt — mit zufaelligem
+ * Passwort, nichts davon im Quelltext — und GENAU EINMAL angemeldet; jeder
+ * weitere Nutzerwechsel setzt nur sein Sitzungs-Cookie (`bSitzung`). So
+ * verbraucht die Datei je Lauf eine Anlage (`/api/auth/register`, 5 je Stunde
+ * und IP, internal/router/router.go) und eine Anmeldung (30 je Stunde und IP),
+ * und B sammelt ueber Laeufe hinweg keine Trips an (Tarifgrenze).
  */
-const NUTZER_B = { username: 'e2e2131nutzerb', password: 'test1234' };
+const NUTZER_B = { username: `e2e2131b${Date.now().toString(36)}`, password: wegwerfPasswort() };
 /**
  * Issue #2194 (ADR-0105): ohne is_test_user ignoriert `/api/auth/register` das
- * Feld `username` und vergibt eine opake Konto-ID (`u-<8hex>`). Der feste Name
- * ist deshalb nur noch der Stamm der E-Mail-Adresse; diese Adresse ist pro
- * Konto eindeutig und ueber Laeufe hinweg der stabile Anmeldename von B.
+ * Feld `username` und vergibt eine opake Konto-ID (`u-<8hex>`). Der Name ist
+ * deshalb nur der Stamm der E-Mail-Adresse; diese Adresse ist Bs Anmeldename.
  */
 const NUTZER_B_EMAIL = `${NUTZER_B.username}@example.com`;
+
+/** Bs Sitzung nach der ersten Anmeldung (je Worker), samt Konto-ID. */
+let bSitzung: { cookies: Cookie[]; kontoId: string } | null = null;
 
 /**
  * Bestaetigt Bs E-Mail-Adresse ueber den staging-only Testweg (Issue #2271).
@@ -160,6 +164,12 @@ async function bestaetigeZweitnutzer(page: Page, kontoId: string): Promise<void>
  * Rueckgabe: Bs echte, vom Server vergebene Konto-ID (aus der Login-Antwort).
  */
 async function zweiterNutzerAnmelden(page: Page): Promise<string> {
+	// Issue #2961: Sitzung wiederverwenden statt erneut anzumelden.
+	if (bSitzung) {
+		await page.context().addCookies(bSitzung.cookies);
+		const profil = await page.request.get('/api/auth/profile');
+		if (profil.ok()) return bSitzung.kontoId;
+	}
 	const reg = await page.request.post('/api/auth/register', {
 		data: { ...NUTZER_B, email: NUTZER_B_EMAIL }
 	});
@@ -197,8 +207,25 @@ async function zweiterNutzerAnmelden(page: Page): Promise<string> {
 		typeof kontoId === 'string' && kontoId !== '',
 		'Anmeldung B lieferte keine Konto-ID'
 	).toBeTruthy();
+	bSitzung = {
+		cookies: (await page.context().cookies()).filter((c) => c.name === 'gz_session'),
+		kontoId: kontoId as string
+	};
 	return kontoId as string;
 }
+
+/**
+ * Bs Trips dieses Falls. Der globale Aufraeumer laeuft mit der Admin-Sitzung
+ * und erreicht sie nicht; geloescht wird deshalb nach jedem Fall in dessen
+ * Kontext, in dem B zu diesem Zeitpunkt angemeldet ist.
+ */
+const bTrips: string[] = [];
+
+test.afterEach(async ({ page }) => {
+	for (const id of bTrips.splice(0)) {
+		await page.request.delete(`/api/trips/${id}`).catch(() => {});
+	}
+});
 
 /** Zeichnet jede schreibende Anfrage des Kontexts auf (auch die des Workers). */
 function schreibversucheMitschneiden(context: BrowserContext): string[] {
@@ -582,6 +609,7 @@ test('AC-14: meldet sich B ohne As Abmeldung an, faellt As Speicherbereich beim 
 
 	// Bs erster Online-Abruf einer Trip-Ansicht.
 	const tripB = await tripAblegen(page);
+	bTrips.push(tripB);
 	expect(
 		await cacheNamenMitEintrag(page, `/trips/${tripB}`),
 		'Bs eigene Ansicht wurde nicht abgelegt'
@@ -599,6 +627,119 @@ test('AC-14: meldet sich B ohne As Abmeldung an, faellt As Speicherbereich beim 
 		(await readCacheEntries(page)).map((e) => new URL(e.url).pathname),
 		'As Ansicht ist weiterhin abgelegt'
 	).not.toContain(`/trips/${tripA}`);
+});
+
+// ===========================================================================
+// Issue #2961 (Haertungs-Spec AC-8): schon die erste Seite NACH dem Wechsel
+// raeumt — auch wenn sie selbst nie abgelegt wird (ADR-0063 §4)
+// ===========================================================================
+
+test('#2961 AC-8: meldet sich B an, faellt As Speicherbereich schon beim Aufruf der Startseite', async ({
+	page
+}) => {
+	test.setTimeout(120_000);
+
+	await activateServiceWorker(page);
+	const tripA = await tripAblegen(page);
+	const speicherA = await cacheNamenMitEintrag(page, `/trips/${tripA}`);
+	expect(speicherA.length, 'As Ansicht liegt gar nicht im Speicher').toBeGreaterThan(0);
+
+	await zweiterNutzerAnmelden(page);
+	expect(
+		await cacheNames(page),
+		'Aufbau misslungen: As Bereich ist schon vor Bs erstem Seitenaufruf fort'
+	).toEqual(expect.arrayContaining(speicherA));
+
+	// Die Startseite steht NIE auf der Ablage-Positivliste (Alarm-Historie).
+	await page.goto('/');
+	await page.waitForLoadState('networkidle');
+
+	await expect
+		.poll(() => cacheNames(page), { timeout: 15_000 })
+		.not.toEqual(expect.arrayContaining(speicherA));
+	expect(
+		(await readCacheEntries(page)).map((e) => new URL(e.url).pathname),
+		'As Ansicht ist nach Bs erstem Seitenaufruf weiterhin abgelegt'
+	).not.toContain(`/trips/${tripA}`);
+});
+
+// ===========================================================================
+// Issue #2961 (Haertungs-Spec AC-8): jede der drei Worker-Regeln raeumt fuer
+// sich. Die allgemeine Navigation belegt der Fall oben (Startseite); hier die
+// Positivliste mit einer Nicht-200-Antwort und ein same-origin-GET ohne
+// Navigation. B hat dabei selbst nichts abgelegt.
+// ===========================================================================
+
+/** A legt eine Ansicht ab, dann wechselt die Sitzung (nur das Cookie) zu B. */
+async function aAblegenDannB(page: Page): Promise<string[]> {
+	await activateServiceWorker(page);
+	const tripA = await tripAblegen(page);
+	const speicherA = await cacheNamenMitEintrag(page, `/trips/${tripA}`);
+	expect(speicherA.length, 'As Ansicht liegt gar nicht im Speicher').toBeGreaterThan(0);
+	await zweiterNutzerAnmelden(page);
+	expect(
+		await cacheNames(page),
+		'Aufbau misslungen: As Bereich ist schon vor Bs erstem Abruf fort'
+	).toEqual(expect.arrayContaining(speicherA));
+	return speicherA;
+}
+
+test('#2961 AC-8: Positivlisten-Adresse mit 404-Antwort an B raeumt As Speicherbereich', async ({
+	page
+}) => {
+	test.setTimeout(120_000);
+	const speicherA = await aAblegenDannB(page);
+
+	const antwort = await page.goto(`/trips/e2e-gz-gibt-es-nicht-${Date.now()}`);
+	expect(antwort?.status(), 'Aufbau: die Ansicht sollte nicht existieren').toBe(404);
+
+	await expect
+		.poll(() => cacheNames(page), { timeout: 15_000 })
+		.not.toEqual(expect.arrayContaining(speicherA));
+});
+
+test('#2961 AC-8: ein same-origin-Datenabruf ohne Navigation raeumt As Speicherbereich', async ({
+	page
+}) => {
+	test.setTimeout(120_000);
+	const speicherA = await aAblegenDannB(page);
+	const adresseVorher = page.url();
+
+	// Daten-Abruf der Trip-Liste (nicht auf der Positivliste, keine Navigation).
+	const status = await page.evaluate(async () => (await fetch('/trips/__data.json')).status);
+	expect(status).toBe(200);
+	expect(page.url(), 'Aufbau: es darf keine Navigation stattfinden').toBe(adresseVorher);
+
+	await expect
+		.poll(() => cacheNames(page), { timeout: 15_000 })
+		.not.toEqual(expect.arrayContaining(speicherA));
+});
+
+// ===========================================================================
+// Issue #2961 (Haertungs-Spec AC-12): ein Verweis auf /login?abgemeldet=1
+// leert den Speicher eines weiterhin angemeldeten Nutzers nicht
+// ===========================================================================
+
+test('#2961 AC-12: /login?abgemeldet=1 bei bestehender Sitzung laesst den Speicher stehen', async ({
+	page
+}) => {
+	test.setTimeout(120_000);
+
+	await activateServiceWorker(page);
+	const tripId = await tripAblegen(page);
+	const vorher = await cacheNames(page);
+
+	await page.goto('/login?abgemeldet=1');
+	await page.waitForLoadState('networkidle');
+	// Ein Ausbleiben laesst sich nicht erwarten, nur abwarten: das Raeumen der
+	// Anmeldeseite laeuft sofort nach dem Laden los und braucht ~1,5 s Ruhezeit.
+	await page.waitForTimeout(4_000);
+
+	expect(
+		await cacheNamenMitEintrag(page, `/trips/${tripId}`),
+		'ein Verweis mit Abmelde-Merkmal hat den Offline-Speicher eines angemeldeten Nutzers geleert'
+	).not.toEqual([]);
+	expect(await cacheNames(page)).toEqual(expect.arrayContaining(vorher));
 });
 
 // ===========================================================================
@@ -629,10 +770,20 @@ test('AC-12: nach As Abmeldung sieht der angemeldete B ohne Netz keinen Inhalt v
 	await sidebar.locator('button').last().click();
 	await sidebar.locator('form[action="/logout"] button[type="submit"]').click();
 	await page.waitForURL(/\/login/);
+	// Das Raeumen der Anmeldeseite (Speicher leeren, Worker abmelden) laeuft
+	// nach dem Laden asynchron. Erst wenn es fertig ist, ist A wirklich
+	// abgemeldet — sonst meldet es den Worker ab, den B gleich darauf
+	// registriert, und die Offline-Navigation unten scheitert am Netz statt an
+	// der Mandantentrennung (#2961: in der Datei-Reihenfolge reproduzierbar,
+	// weil B dort per Sitzungs-Cookie ohne Umweg ueber die Anmeldeseite kommt).
+	await expect
+		.poll(() => storageAndRegistrationCount(page), { timeout: 20_000 })
+		.toEqual({ caches: 0, registrations: 0 });
 
 	await zweiterNutzerAnmelden(page);
 	await activateServiceWorker(page);
 	const tripB = await tripAblegen(page);
+	bTrips.push(tripB);
 
 	await context.setOffline(true);
 	try {

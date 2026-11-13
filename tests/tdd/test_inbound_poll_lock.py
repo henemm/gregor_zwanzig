@@ -282,7 +282,8 @@ class _FakeImapPostfach:
         return "OK", [b" ".join(self._mails)]
 
     def fetch(self, uid, _spec):
-        return "OK", [(b"1 (RFC822)", self._mails[uid])]
+        roh = self._mails[uid]
+        return "OK", [(b"1 (RFC822.SIZE %d RFC822)" % len(roh), roh)]
 
     def store(self, uid, _flags, _value):
         self.gesehen.append(uid)

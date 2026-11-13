@@ -44,9 +44,13 @@ VALIDATOR_PASS="${GZ_VALIDATOR_PASS:-}"
 COOKIE=""
 
 if [ -n "$VALIDATOR_PASS" ]; then
-    LOGIN_RESPONSE=$(curl -s -i -X POST "$VALIDATION_URL/api/auth/login" \
+    # #2961: Passwort per stdin (JSON aus der Umgebung gebaut), nie als curl-Argument.
+    LOGIN_RESPONSE=$(GZ_U="$VALIDATOR_USER" GZ_P="$VALIDATOR_PASS" python3 -c '
+import json, os, sys
+sys.stdout.write(json.dumps({"username": os.environ["GZ_U"], "password": os.environ["GZ_P"]}))
+' | curl -s -i -X POST "$VALIDATION_URL/api/auth/login" \
         -H "Content-Type: application/json" \
-        -d "{\"username\":\"$VALIDATOR_USER\",\"password\":\"$VALIDATOR_PASS\"}" || true)
+        --data-binary @- || true)
     COOKIE=$(echo "$LOGIN_RESPONSE" | grep -i "^set-cookie:" | grep -oE "gz_session=[^;]+" | head -1 || true)
     LOGIN_HTTP=$(echo "$LOGIN_RESPONSE" | head -1 | grep -oE '[0-9]{3}' | head -1 || true)
     if [ -z "$COOKIE" ]; then
@@ -61,10 +65,20 @@ fi
 
 AUTH_BLOCK=""
 if [ -n "$COOKIE" ]; then
+    # #2961: Das Sitzungscookie steht NICHT im Prompt (Prozessargument von
+    # `claude --print`, Protokolle), sondern in einer 0600-Datei in einem eigenen
+    # mktemp-Verzeichnis; der Prompt nennt nur den Pfad. Ohne Dry-Run wird das
+    # Verzeichnis nach der Validator-Session geloescht.
+    COOKIE_DIR=$(mktemp -d)
+    if [ "${GZ_VALIDATOR_DRY_RUN:-0}" != "1" ]; then
+        trap 'rm -rf "$COOKIE_DIR"' EXIT
+    fi
+    COOKIE_FILE="$COOKIE_DIR/cookie-header"
+    (umask 077; printf 'Cookie: %s\n' "$COOKIE" > "$COOKIE_FILE")
     AUTH_BLOCK="
 
-Auth-Cookie fuer /api/*-Routen: ${COOKIE}
-Verwende fuer eingeloggte API-Calls: curl -H \"Cookie: ${COOKIE}\" ...
+Auth-Cookie fuer /api/*-Routen: als Header-Zeile in der Datei ${COOKIE_FILE} (nur fuer dich lesbar; Wert nie ausgeben)
+Verwende fuer eingeloggte API-Calls: curl -H @${COOKIE_FILE} ...
 Public-Routen (/, /api/health, /api/auth/login) brauchen kein Cookie. /api/scheduler/status braucht seit #2155 S2 einen Maschinen-Token (X-GZ-Status-Token), keine Sitzung ersetzt ihn — fuer Validator-Zwecke nicht ohne Token pruefbar."
 fi
 

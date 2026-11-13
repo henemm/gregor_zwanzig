@@ -76,7 +76,7 @@ describe('AC-13: Bericht enthält jedes Element mit Status; nichts wird still ü
 		const e4 = b.eintraege.find((e: { id: string }) => e.id === 'e4');
 		assert.equal(e4!.status, 'nicht_pruefbar', 'Element ohne Ergebnis darf nicht fehlen oder als gefunden gelten');
 		assert.ok(e4!.grund && e4!.grund.length > 0, 'nicht_pruefbar braucht einen Grund');
-		assert.deepEqual(b.zaehler, { gefunden: 1, abweichend: 1, nicht_pruefbar: 2, freigegeben: 0 });
+		assert.deepEqual(b.zaehler, { gefunden: 1, abweichend: 1, nicht_pruefbar: 2, freigegeben: 0, zusaetzlich: 0 });
 	});
 
 	test('nicht_pruefbar ohne Grund wird abgelehnt', () => {
@@ -123,12 +123,13 @@ describe('AC-14: --strict und --scope', () => {
 		assert.throws(() => filtereScope(ELEMENTE, 'gibtsnicht'));
 	});
 	test('Optionen aus Argumenten oder Umgebung', () => {
-		assert.deepEqual(leseOptionen(['--strict', '--scope', 'wetter/normal'], {}), { strict: true, scope: 'wetter/normal' });
+		assert.deepEqual(leseOptionen(['--strict', '--scope', 'wetter/normal'], {}), { strict: true, scope: 'wetter/normal', abnahme: false });
 		assert.deepEqual(leseOptionen([], { ELEMENTLISTE_STRICT: '1', ELEMENTLISTE_SCOPE: 'zustellung' }), {
 			strict: true,
-			scope: 'zustellung'
+			scope: 'zustellung',
+			abnahme: false
 		});
-		assert.deepEqual(leseOptionen([], {}), { strict: false, scope: null });
+		assert.deepEqual(leseOptionen([], {}), { strict: false, scope: null, abnahme: false });
 	});
 });
 

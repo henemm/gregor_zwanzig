@@ -17,14 +17,19 @@
 	import { setContext, untrack } from 'svelte';
 	import { AKTIVE_SPEICHERUNG, erzeugeSpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
 	// Issue #2131 — Offline-Ansicht mit Stand-Kennzeichnung.
-	import { afterNavigate } from '$app/navigation';
+	import { afterNavigate, goto } from '$app/navigation';
 	import { initOfflineStand, standAnwenden } from '$lib/pwa/offlineStand';
 	import { applyDarkMode } from '$lib/darkMode';
 	import OfflineSperre from '$lib/components/shared/OfflineSperre.svelte';
 	// Issue #2268 — app-weiter Footer mit „Impressum" und „Datenschutz".
 	import AppFooter from '$lib/components/shared/AppFooter.svelte';
 	// Issue #2248 — einmaliges, geraeteuebergreifend abweisbares Passkey-Angebot.
-	import { ANGEBOT_MARKER, passkeyAngebotFaellig } from '$lib/passkeyAngebot.js';
+	import {
+		ANGEBOT_MARKER,
+		KONTO_PASSKEY_EINRICHTEN,
+		angebotFehlerFolge,
+		passkeyAngebotFaellig
+	} from '$lib/passkeyAngebot.js';
 	import { isWebAuthnSupported, registerPasskey } from '$lib/passkey';
 	import { api } from '$lib/api.js';
 	// Issue #2647 (i18n S2) — Oberflaechensprache aus data.lang.
@@ -81,13 +86,25 @@
 	// hasPasskey-Wert sagt in diesem Moment noch "kein Passkey".
 	let passkeyAngebotSichtbar = $state(false);
 
+	let passkeyAngebotFehler = $state<string | null>(null);
+
 	async function passkeyAngebotEinrichten() {
+		passkeyAngebotFehler = null;
 		try {
 			await registerPasskey('Dieses Gerät');
 			passkeyAngebotSichtbar = false;
-		} catch {
-			// Abgebrochene oder gescheiterte Zeremonie: das Angebot bleibt stehen,
-			// der Nutzer kann es erneut versuchen oder abweisen.
+		} catch (e: unknown) {
+			// Issue #2961 (ADR-0115): ohne frischen Nachweis weiter zur
+			// Passkey-Karte der Konto-Seite (Nachweis-Dialog oeffnet von selbst).
+			// Sonst bleibt das Angebot stehen und sagt, was schiefging.
+			const folge = angebotFehlerFolge(e);
+			if (folge === 'nachweis') {
+				passkeyAngebotSichtbar = false;
+				await goto(KONTO_PASSKEY_EINRICHTEN);
+				return;
+			}
+			passkeyAngebotFehler =
+				folge === 'abgebrochen' ? $t('konto.passkey.abgebrochen') : $t('konto.passkey.anlegen_fehler');
 		}
 	}
 
@@ -356,6 +373,9 @@
 		<div>
 			{$t('bausteine.hinweis.passkey')}
 		</div>
+		{#if passkeyAngebotFehler}
+			<div data-testid="passkey-angebot-fehler" role="alert">{passkeyAngebotFehler}</div>
+		{/if}
 		<div style="display: flex; align-items: center; gap: 16px; justify-content: flex-end;">
 			<button
 				type="button"

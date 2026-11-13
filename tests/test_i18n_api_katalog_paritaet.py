@@ -81,6 +81,31 @@ ANKER: dict[str, tuple[str, str]] = {
     "api.fehler.gpx_nur_gpx": (
         "Nur .gpx Dateien erlaubt, nicht '{filename}'",
         "Only .gpx files are allowed, not '{filename}'"),
+    "api.fehler.gpx_zu_gross": (
+        "Die GPX-Datei ist zu groß (höchstens {max_mb} MB).",
+        "The GPX file is too large (at most {max_mb} MB)."),
+    "api.fehler.gpx_speicher_voll": (
+        "Dein GPX-Speicher ist voll (höchstens {max_dateien} Dateien und {max_mb} MB). Lade eine Datei mit gleichem Namen hoch, um sie zu ersetzen.",
+        "Your GPX storage is full (at most {max_dateien} files and {max_mb} MB). Upload a file with the same name to replace it."),
+    "api.fehler.gpx_ungueltig": (
+        "Die GPX-Datei konnte nicht gelesen werden: Sie ist leer, beschädigt oder enthält keinen verwertbaren Track (mindestens 10 Punkte).",
+        "The GPX file could not be read: it is empty, damaged or contains no usable track (at least 10 points)."),
+    "api.fehler.wetterdienst_fehler": (
+        "Der Wetterdienst ist gerade nicht erreichbar. Bitte versuche es später erneut.",
+        "The weather service is currently unavailable. Please try again later."),
+    "api.fehler.unbekannt": (
+        "Die Anfrage konnte nicht verarbeitet werden.",
+        "The request could not be processed."),
+    # Issue #2961 (ADR-0117): interaktives Abruf-Kontingent und Eingabegrenzen.
+    "api.fehler.abruf_kontingent_erschoepft": (
+        "Dein Kontingent für Wetterabfragen ist für heute aufgebraucht, und für diese Anfrage liegen keine zwischengespeicherten Daten vor. Ab Mitternacht (UTC) geht es wieder. Geplante Briefings und Alarme laufen unverändert weiter.",
+        "Your weather request quota for today is used up, and no cached data is available for this request. It resets at midnight (UTC). Scheduled briefings and alerts continue as usual."),
+    "api.fehler.etappenwetter_teilweise": (
+        "Für einige Etappen gibt es heute keine Wetterdaten mehr, weil dein Kontingent für Wetterabfragen aufgebraucht ist. Ab Mitternacht (UTC) geht es wieder.",
+        "Some stages have no weather data today because your weather request quota is used up. It resets at midnight (UTC)."),
+    "api.fehler.vergleich_parameter_ungueltig": (
+        "Ungültige Angabe für {parameter}: erlaubt ist {erlaubt}.",
+        "Invalid value for {parameter}: allowed is {erlaubt}."),
     "api.skala.wind.schwach": ("schwach", "weak"),
     "api.skala.wind.maessig": ("mäßig", "moderate"),
     "api.skala.wind.stark": ("stark", "strong"),

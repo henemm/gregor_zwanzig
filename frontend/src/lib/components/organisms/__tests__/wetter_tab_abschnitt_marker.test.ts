@@ -70,8 +70,10 @@ describe('Abschnitts-Marker des Wetter-Reiters (Elementlisten-Abgleich)', () => 
 	// doc-compliance-test: Metrik-Karte nur nach dem Laden sichtbar, im Server-Render nicht erreichbar.
 	test('WetterTabInhalt: die Metrik-Karte (AlarmAbKopf, Gruppen, NichtImBriefing) trägt data-abschnitt="metriken"', () => {
 		const a = parse(readFileSync(datei('WetterTabInhalt'), 'utf8'), { modern: true }) as unknown as Knoten;
-		const markiert = alle(a.fragment, (n) => n.type === 'RegularElement' && (n.attributes as Knoten[]).some((x) => x.name === 'data-abschnitt'));
-		assert.equal(markiert.length, 1, 'genau ein Element mit data-abschnitt im Organismus');
+		// feat_2913_abgleich_ganzseite AC-13: wt-laden/wt-fehler tragen zusätzlich `laden`/`warnung`;
+		// `metriken` steht weiterhin an genau einem Element.
+		const markiert = alle(a.fragment, (n) => n.type === 'RegularElement' && statischerWert(n, 'data-abschnitt') === 'metriken');
+		assert.equal(markiert.length, 1, 'genau ein Element mit data-abschnitt="metriken" im Organismus');
 		const el = markiert[0];
 		assert.equal(statischerWert(el, 'data-abschnitt'), 'metriken');
 		const kinder = (el.fragment?.nodes ?? []) as Knoten[];

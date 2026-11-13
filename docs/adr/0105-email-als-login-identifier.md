@@ -3,7 +3,7 @@
 - **Status:** Akzeptiert (Spec-Freigabe 2026-11-02)
 - **Datum:** 2026-11-02
 - **Bezug:** Issue #2194, Epic #2138 (Multi-User-Readiness), Spec `docs/specs/modules/email_login_identifier.md`; ergänzt ADR-0066 (Verify-Gate), ADR-0067 (Adress-Eindeutigkeit), ADR-0072, ADR-0078 (Admin-ID-Liste), ADR-0084 (Einladungen)
-- **Ergänzt durch:** —
+- **Ergänzt durch:** [ADR-0113](0113-anmelde-haertung-adress-limits-testkonto-herkunftspruefung.md) (Punkt 9: Bremsen zusätzlich je Zieladresse, Einmal-Code 8 Ziffern), [ADR-0115](0115-kontoaenderungen-re-auth-hinweis-mails-unbestaetigte-konten.md) (neue Login-Kennung erst nach Bestätigung der neuen Adresse)
 
 ## Kontext
 

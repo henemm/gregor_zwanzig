@@ -1,0 +1,119 @@
+# Geheimnis-Suche im Arbeitsstand (#2961), ausgefuehrt im CI-Job `lint`
+# (`gitleaks dir`, feste Version). Grundlage sind die Standardregeln von
+# gitleaks; dazu kommt eine eigene Regel fuer Passwoerter im Stil der frueher
+# eingecheckten Staging-Pruefkonten.
+#
+# Ausnahmen sind bewusst eng: jede gilt nur fuer EINE Regel, nur fuer die
+# genannten Dateien und (wo die Werte bekannt sind) nur fuer genau diese
+# Platzhalterwerte (condition = "AND"). Eine neue Testdatei mit einem
+# Platzhalter-Geheimnis braucht einen eigenen, ebenso engen Eintrag hier,
+# nie eine Pauschal-Ausnahme fuer ganze Verzeichnisse.
+
+title = "gregor_zwanzig gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "gz-hex-passwort"
+description = "Passwort-Zuweisung mit 24-32 Hex-Zeichen (Stil der Staging-Pruefkonten)"
+regex = '''(?i)[\w.-]*(?:pass|pwd)[\w.-]*["']?\s*(?:[:=,]|\?\?)\s*["']?([0-9a-f]{24,32})\b'''
+secretGroup = 1
+keywords = ["pass", "pwd"]
+
+# --- Oeffentliche Kennungen, keine Geheimnisse ---------------------------------
+
+[[allowlists]]
+description = "AAGUIDs sind oeffentliche Authenticator-Kennungen (UUID), Issue #468"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(^|/)internal/handler/aaguid(_test)?\.go$''']
+regexes = ['''^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$''']
+
+[[allowlists]]
+description = "i18n-Schluessel der Aktivitaetsliste, kein Geheimnis"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(^|/)frontend/src/lib/components/trip-new/TripNewEditor\.svelte$''']
+regexes = ['''^trip\.aktivitaet\.[a-z0-9_]+$''']
+
+# --- Platzhalterwerte in Tests und Testdaten ----------------------------------
+
+[[allowlists]]
+description = "Go-Handler-/Router-Tests: erfundene Sitzungs-Geheimnisse und Testpasswoerter"
+targetRules = ["generic-api-key"]
+paths = [
+  '''(^|/)internal/handler/address_uniqueness_write_paths_test\.go$''',
+  '''(^|/)internal/handler/auth_test\.go$''',
+  '''(^|/)internal/handler/auth_timing_test\.go$''',
+  '''(^|/)internal/handler/auth_traversal_test\.go$''',
+  '''(^|/)internal/handler/data_export_test\.go$''',
+  '''(^|/)internal/handler/google_login_address_linking_test\.go$''',
+  '''(^|/)internal/handler/konto_nachweis_hilfe_test\.go$''',
+  '''(^|/)internal/handler/login_email_log_ohne_adresse_test\.go$''',
+  '''(^|/)internal/handler/onboarding_account_creation_test\.go$''',
+  '''(^|/)internal/handler/passkey_public_test\.go$''',
+  '''(^|/)internal/handler/passkey_test\.go$''',
+  '''(^|/)internal/handler/register_mail_to_fallback_test\.go$''',
+  '''(^|/)internal/handler/session_issuance_test\.go$''',
+  '''(^|/)internal/handler/verify_resend_test\.go$''',
+  '''(^|/)internal/router/admin_invites_test\.go$''',
+  '''(^|/)internal/router/telegram_webhook_inbound_route_test\.go$''',
+  '''(^|/)internal/router/webhook_secrets_config_route_test\.go$''',
+]
+
+[[allowlists]]
+description = "Seven-Testdaten: ausdruecklich nicht-produktiver Signierschluessel"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(^|/)internal/handler/testdata/seven_sms_mo\.json$''']
+regexes = ['''^test-signing-key-nicht-produktiv-2439$''']
+
+[[allowlists]]
+description = "E2E-Spec: Platzhalter-Token in einer URL"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''(^|/)frontend/e2e/hand-cursor-auth\.spec\.ts$''']
+regexes = ['''^e2e-hand-cursor''']
+
+[[allowlists]]
+description = "Ungueltiger Telegram-Platzhalter-Token"
+targetRules = ["telegram-bot-api-token"]
+condition = "AND"
+paths = ['''(^|/)tests/tdd/test_issue_1001_telegram_bubbles\.py$''']
+regexes = ['''AAInvalidTokenX+''']
+
+[[allowlists]]
+description = "Python-Tests: sprechende Platzhalter (FALSCH, SENTINEL, PLATZHALTER, geheim-Marker)"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = [
+  '''(^|/)tests/tdd/test_frontend_browser_gate_staging\.py$''',
+  '''(^|/)tests/tdd/test_channel_metric_matrix\.py$''',
+  '''(^|/)tests/tdd/test_telegram_set_webhook_url\.py$''',
+  '''(^|/)tests/tdd/test_staging_mail_pruefweg\.py$''',
+  '''(^|/)tests/tdd/test_sms_recipient_contract\.py$''',
+  '''(^|/)tests/test_seven_hooks_idempotent_maskiert\.py$''',
+  '''(^|/)tests/tdd/test_staging_messlauf\.py$''',
+  '''(^|/)tests/unit/test_alert_input_capture_retention\.py$''',
+  '''(^|/)tests/unit/test_warn_egress_capture_no_secrets\.py$''',
+  '''(^|/)tests/unit/test_warn_egress_capture_id_passthrough\.py$''',
+  '''(^|/)tests/tdd/test_staging_befehl_pruefweg\.py$''',
+  '''(^|/)docs/artifacts/feat-1412-s4b-empfaengervertrag-sms/test-red-output\.txt$''',
+]
+regexes = [
+  '''^definitiv-falsch-1558$''',
+  '''^temp_avg_c_ac_s2_3_synthetisch$''',
+  '''^UNIQUE-TG-SECRET-1814-xyz$''',
+  '''^KERN-GEHEIMNIS-xq7731$''',
+  '''^FALSCH-GEHEIM-k93x$''',
+  '''^seven-prod-key-s4b$''',
+  '''^SENTINEL-APIKEY-7f3a91$''',
+  '''^SENTINELPFAD0c4e2b9d71$''',
+  '''^tg-geheim-7f3a9c$''',
+  '''^kern-geheim-41b2$''',
+  '''^nowcast_ac18_korreliert$''',
+  '''^AT-1948-no-secret$''',
+  '''^AT-1944-passthrough$''',
+  '''^KERN-SECRET-PLATZHALTER-5b7d$''',
+]

@@ -18,8 +18,11 @@ KEINE MOCKS. Echter Browser (Playwright) gegen Staging.
 Ausführung:
     uv run pytest tests/tdd/test_issue_846_alert_preset_e2e.py -v
 """
+import atexit
 import json
 import os
+import shutil
+import tempfile
 import time
 import uuid
 
@@ -36,10 +39,21 @@ pytestmark = pytest.mark.staging
 BASE = "https://staging.gregor20.henemm.com"
 
 # Bekannter, auf Staging verifizierter Test-Nutzer (mandantenisoliert).
+# Zugangsdaten nie im Repo (#2961): Passwort nur aus der Umgebung.
 USER = os.environ.get("GZ_TEST_USER", "tdd-702-1781109629")
-PASS = os.environ.get("GZ_TEST_PASS", "720c7e56751c8133e771e7bc903fc122")
+PASS = os.environ.get("GZ_TEST_PASS", "")
+if not PASS:
+    pytest.skip(
+        "GZ_TEST_PASS fehlt -- Live-Staging-Test laeuft nur mit Zugangsdaten "
+        "aus der Umgebung",
+        allow_module_level=True,
+    )
 
-STATE_FILE = "/tmp/tdd-846-storage-state.json"
+# Sitzungsdaten nur in einem eigenen, nur fuer den Nutzer lesbaren Verzeichnis
+# dieses Laufs (#2961: kein fester, vorhersagbarer /tmp-Pfad); beim Ende geloescht.
+_STATE_DIR = tempfile.mkdtemp(prefix="gz-tdd-846-")
+atexit.register(shutil.rmtree, _STATE_DIR, True)
+STATE_FILE = os.path.join(_STATE_DIR, "storage-state.json")
 
 
 # ---------------------------------------------------------------------------

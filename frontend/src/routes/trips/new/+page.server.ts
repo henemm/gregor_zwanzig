@@ -1,6 +1,7 @@
 import type { PageServerLoad } from './$types.js';
 import type { Trip } from '$lib/types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
+import { kennungImPfad } from '$lib/server/apiPfad.js';
 
 
 // Issue #412 — Trip-Wizard Step 4 Kanal-Karte: Profil (mail_to/signal_phone/
@@ -19,7 +20,9 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 	}).catch(() => null);
 	const profile = profileRes?.ok ? await profileRes.json() : null;
 
-	const fromId = url.searchParams.get('from');
+	// #2961: `?from=` ist eine Nutzereingabe — nur eine gueltige Kennung wird
+	// (kodiert) abgefragt, sonst gibt es schlicht keine Vorlage.
+	const fromId = kennungImPfad(url.searchParams.get('from'));
 	let templateTrip: Trip | null = null;
 	if (fromId) {
 		const tripRes = await fetch(`${API()}/api/trips/${fromId}`, {

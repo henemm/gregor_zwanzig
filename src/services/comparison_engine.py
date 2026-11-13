@@ -39,6 +39,11 @@ logger = logging.getLogger("comparison_engine")
 # Drift zwischen den Pfaden (Fehlerklasse #1297).
 COMPARE_FORECAST_HOURS = 96
 
+# ADR-0117: Fehlermarke des Segment-Wegs bei abgelehnter Buchung und der
+# stabile Code, mit dem Vergleich und API die Ursache je Ort ausweisen.
+KONTINGENT_GEDROSSELT = "budget_throttled"
+KONTINGENT_CODE = "abruf_kontingent_erschoepft"
+
 
 def compare_fetch_window(
     now: datetime, hours: int = COMPARE_FORECAST_HOURS,
@@ -65,7 +70,9 @@ def _fetch_compare_series(
     Cache-get -> Single-Flight -> Budget-Gate -> Fetch -> put, wie Trip- und
     Compare-Alarm-Pfad (Muster ``compare_location_weather_source.py``).
 
-    Liefert ``(timeseries, None)`` oder ``(None, fehlertext)``. Die
+    Liefert ``(timeseries, None, None)`` oder ``(None, fehlertext, code)``;
+    ``code`` ist ``abruf_kontingent_erschoepft``, wenn das interaktive
+    Kontingent den Abruf abgelehnt hat (ADR-0117), sonst ``None``. Die
     ``segment_id`` ist nutzerneutral (Koordinate statt Orts-Kennung)."""
     from app.models import GPXPoint, TripSegment
     from providers.base import get_provider
@@ -87,21 +94,29 @@ def _fetch_compare_series(
             segment,
             enrich_ensemble=True,
             enrich_snow=True,
-            priority="user_briefing",  # Vorschau/Versand nie gedrosselt
+            # Versand nie gedrosselt; im interaktiven Kontext (Sofortvergleich,
+            # ADR-0117) bucht der Segment-Weg stattdessen user_interactive.
+            priority="user_briefing",
             user_id=user_id,  # Budget-Buchung beim ausloesenden Nutzer
         )
     finally:
         if hasattr(provider, "close"):
             provider.close()
+    if weather.has_error and weather.error_message == KONTINGENT_GEDROSSELT:
+        lang = resolve_user_lang(user_id or "")
+        return None, t("vergleich.ort.abruf_kontingent_erschoepft", lang), KONTINGENT_CODE
     if weather.has_error:
-        return None, _abruf_fehlertext(weather.error_message, user_id)
-    return weather.timeseries, None
+        return None, _abruf_fehlertext(weather.error_message, user_id), None
+    return weather.timeseries, None, None
 
 
 def _abruf_fehlertext(meldung: Optional[str], user_id: Optional[str]) -> str:
-    """Meldung der Quelle, sonst der Ersatztext in der Kontosprache (#2751)."""
+    """Ersatztext in der Kontosprache (#2751).
+
+    Issue #2961: die Meldung der Quelle (Ausnahmetext, kann Hosts/URLs tragen)
+    landet nur im Log -- der Text geht in Mail, Telegram und API-Antwort."""
     if meldung:
-        return meldung
+        logger.warning("Ortsabruf fehlgeschlagen: %s", meldung)  # i18n-log
     return t("vergleich.ort.abruf_fehlgeschlagen", resolve_user_lang(user_id or ""))
 
 
@@ -228,6 +243,7 @@ class ComparisonEngine:
                     results.append(LocationResult(
                         location=loc,
                         error=raw_result["error"],
+                        error_code=raw_result.get("error_code"),
                     ))
                     continue
 
@@ -466,7 +482,7 @@ class ComparisonEngine:
                 )
                 results.append(LocationResult(
                     location=loc,
-                    error=str(e),
+                    error=_abruf_fehlertext(str(e), user_id),
                 ))
 
         # Issue #1359 Scheibe 2: keine Score-Sortierung mehr — `results` entsteht
@@ -501,9 +517,10 @@ def fetch_forecast_for_location(
     }
 
     try:
-        forecast, fetch_error = _fetch_compare_series(loc, hours, user_id)
+        forecast, fetch_error, fehler_code = _fetch_compare_series(loc, hours, user_id)
         if fetch_error is not None:
             result["error"] = fetch_error
+            result["error_code"] = fehler_code
             result["score"] = 0
             return result
         # Issue #1563: Herkunft je Ort (Vertretungshinweis im Ortsvergleich).
@@ -648,7 +665,7 @@ def fetch_forecast_for_location(
         result["score"] = calculate_score(result, profile=getattr(loc, 'activity_profile', None) if 'loc' in dir() else None)
 
     except Exception as e:
-        result["error"] = str(e)
+        result["error"] = _abruf_fehlertext(str(e) or type(e).__name__, user_id)
         result["score"] = 0
 
     return result

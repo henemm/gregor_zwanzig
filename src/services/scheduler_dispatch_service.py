@@ -599,7 +599,7 @@ def save_compare_preset_status(
     # #2163 S2: Nutzerkennung ebenso, VOR der Entitaets-ID (fail-soft).
     if not is_valid_user_id(user_id):
         return None
-    if not VALID_ENTITY_ID_RE.match(preset_id):
+    if not VALID_ENTITY_ID_RE.fullmatch(preset_id):
         return None  # Guard: kein Wert (Test: test_entity_id_path_guard)
 
     path = user_dir(data_root, user_id) / "briefings" / f"{preset_id}.json"
@@ -636,7 +636,7 @@ def save_compare_preset_pause(
     # save_compare_preset_status (stilles return statt neuem Fehlerausgang).
     if not is_valid_user_id(user_id):
         return None  # #2163 S2
-    if not VALID_ENTITY_ID_RE.match(preset_id):
+    if not VALID_ENTITY_ID_RE.fullmatch(preset_id):
         return None  # Guard: kein Wert (Test: test_entity_id_path_guard)
 
     path = user_dir(data_root, user_id) / "briefings" / f"{preset_id}.json"
@@ -676,7 +676,7 @@ def resume_compare_preset(
         data_root = str(get_data_root())
     if not is_valid_user_id(user_id):
         return "not_found"  # #2163 S2, fail-soft wie die Entitaets-ID
-    if not VALID_ENTITY_ID_RE.match(preset_id):
+    if not VALID_ENTITY_ID_RE.fullmatch(preset_id):
         return "not_found"
 
     path = user_dir(data_root, user_id) / "briefings" / f"{preset_id}.json"
@@ -944,6 +944,12 @@ def send_one_compare_preset(
         if not weather_failure_as_outcome:
             raise
         raise SendOutcomeError("no_weather") from exc
+    # Issue #2961 (ADR-0117 Nachtrag): Handversand/Befehl am erschoepften
+    # Tageskontingent -- vor jeder Zustellung abbrechen, kein Teil-Briefing.
+    # Ohne manuellen Kontext (Zeitplan) immer False.
+    from services.forecast_budget import manuell_abgelehnt
+    if manuell_abgelehnt():
+        raise SendOutcomeError("kontingent_erschoepft")
     # Issue #2280 (AC-6) / Fix #2286 (AC-4): kein einziger Ort mit
     # Wetterdaten ⇒ no_weather -- im Handversand UND im Cron (ADR-0018:
     # Fallback nicht kaschieren; sonst zaehlt eine Provider-Stoerung als

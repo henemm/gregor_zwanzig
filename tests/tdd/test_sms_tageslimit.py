@@ -210,7 +210,9 @@ def _nutzer_anlegen(uid: str, tier: str) -> None:
         # (frisch gelernte Rueckadresse).
         "sms_to": _TRANSPORT_ENV["GZ_SMS_TO"],
         "sms_verified_number": _TRANSPORT_ENV["GZ_SMS_TO"],
-        "premium_sms_reply_to": "4915799912345",
+        # ADR-0116: Rueckadresse je Nutzer eindeutig (sonst sperrt der
+        # Empfaengervertrag den Versand an eine doppelt belegte Nummer).
+        "premium_sms_reply_to": "49157" + str(int(uuid.uuid5(uuid.NAMESPACE_OID, uid)))[:8],
         "premium_sms_reply_at": datetime.now(timezone.utc).isoformat(),
     }))
 
@@ -505,12 +507,15 @@ def test_ac3_sms_und_premium_sms_fuehren_getrennte_kontingente(mitschrift):
 # ---------------------------------------------------------------------------
 
 
-def test_ac4_garmin_antwort_darf_die_reply_reserve_ausschoepfen(mitschrift):
-    """AC-4. GIVEN Premium-Nutzer mit premium_sms=15 (Alarm-Cap erreicht,
-    Reply-Cap 18) / WHEN vier echte ``send_command_reply_premium_sms``-Aufrufe
-    nacheinander erfolgen / THEN gehen die Antworten 16, 17 und 18 noch raus,
-    die 19. (4. Aufruf) wird gesperrt — Assert ausschliesslich ueber die
-    Aufzeichner-Trefferzahl (3, nicht 4).
+def test_ac4_garmin_antwort_verbraucht_nie_das_alarm_kontingent(mitschrift):
+    """AC-4, abgeloest durch ADR-0116 (Issue #2961 Welle 2): bis dahin teilten
+    Antworten und Alarme EINEN Zaehler (Antwort-Grenze 18, Alarm-Grenze 15).
+    Jetzt zaehlen Antworten in ein eigenes Tageskontingent.
+
+    GIVEN Premium-Nutzer mit ausgeschoepftem Alarm-Kontingent (premium_sms=15)
+    / WHEN vier echte ``send_command_reply_premium_sms``-Aufrufe erfolgen /
+    THEN gehen alle vier Antworten raus, der Alarm-Zaehler bleibt 15 und der
+    Antwort-Zaehler steht auf 4.
     """
     uid = _kennung("ac4")
     _nutzer_anlegen(uid, "premium")
@@ -524,12 +529,82 @@ def test_ac4_garmin_antwort_darf_die_reply_reserve_ausschoepfen(mitschrift):
     for _ in range(4):
         svc.send_command_reply_premium_sms(ergebnis, _settings())
 
-    assert mitschrift.anzahl("premium_sms") == 3, (
-        f"AC-4: bei premium_sms=15 (Alarm-Cap) duerfen nur 3 der 4 "
-        f"Garmin-Antworten die Reply-Reserve (Cap 18) ausschoepfen und "
-        f"tatsaechlich versendet werden, aufgezeichnet wurden "
-        f"{mitschrift.anzahl('premium_sms')}"
+    assert mitschrift.anzahl("premium_sms") == 4, (
+        f"AC-4: ein erschoepftes Alarm-Kontingent darf Antworten nicht sperren, "
+        f"aufgezeichnet: {mitschrift.anzahl('premium_sms')}"
     )
+    stand = _zaehler_lesen(uid)
+    assert stand.get("premium_sms") == 15, f"AC-4: Alarm-Zaehler unveraendert erwartet: {stand}"
+    assert stand.get("premium_sms_reply") == 4, f"AC-4: Antwort-Zaehler 4 erwartet: {stand}"
+
+
+def test_ac4b_erschoepftes_antwort_kontingent_sperrt_keine_alarme(mitschrift):
+    """ADR-0116: GIVEN ein ausgeschoepftes Antwort-Kontingent
+    (premium_sms_reply=15, Grenze 15) und ein leeres Alarm-Kontingent / WHEN
+    eine weitere Antwort und danach ein amtlicher Alarm per Premium-SMS
+    ausgeloest werden / THEN ist die Antwort gesperrt, der Alarm geht raus."""
+    uid = _kennung("ac4b")
+    _nutzer_anlegen(uid, "premium")
+    pfad = _zaehler_pfad(uid)
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    pfad.write_text(json.dumps({
+        "date": _heute_utc(), "sms": 0, "premium_sms": 0, "premium_sms_reply": 15,
+    }))
+    svc = NotificationService(settings=_settings(), user_id=uid)
+    svc.send_command_reply_premium_sms(CommandResult(
+        success=True, command="status",
+        confirmation_subject="Status", confirmation_body="OK",
+    ), _settings())
+    assert mitschrift.anzahl("premium_sms") == 0, "Antwort-Kontingent erschoepft: keine Antwort"
+
+    ergebnis = svc.send_official_alert(
+        trip=_official_trip(f"trip-{uid}"), notices=[(_official_alert(), ["1"])],
+        effective_channels={"premium_sms"},
+    )
+    assert mitschrift.anzahl("premium_sms") == 1, "der Alarm muss trotz erschoepfter Antworten rausgehen"
+    assert "premium_sms" not in ergebnis.blocked_channels
+    stand = _zaehler_lesen(uid)
+    assert stand.get("premium_sms") == 1 and stand.get("premium_sms_reply") == 15, stand
+
+
+def test_ac4c_bestehende_zaehlerdatei_ohne_antwortfeld_bleibt_lesbar(mitschrift):
+    """ADR-0116, Migration durch tolerantes Lesen: eine Zaehlerdatei im alten
+    Format (nur ``sms``/``premium_sms``) wird weitergefuehrt; der bisherige
+    Stand bleibt erhalten, das Antwortfeld beginnt bei 0."""
+    uid = _kennung("ac4c")
+    _nutzer_anlegen(uid, "premium")
+    _zaehler_schreiben(uid, sms=2, premium_sms=7)
+    NotificationService(settings=_settings(), user_id=uid).send_command_reply_premium_sms(
+        CommandResult(success=True, command="status",
+                      confirmation_subject="Status", confirmation_body="OK"),
+        _settings(),
+    )
+    assert mitschrift.anzahl("premium_sms") == 1
+    assert _zaehler_lesen(uid) == {
+        "date": _heute_utc(), "sms": 2, "premium_sms": 7, "premium_sms_reply": 1,
+    }
+
+
+def test_ac4d_fehlversand_einer_antwort_bucht_den_antwort_zaehler_zurueck(mitschrift):
+    """ADR-0116 (Gegenpruefung F003): schlaegt der Transport einer Antwort fehl,
+    wird der ANTWORT-Zaehler zurueckgebucht -- der Alarm-Zaehler bleibt."""
+    uid = _kennung("ac4d")
+    _nutzer_anlegen(uid, "premium")
+    pfad = _zaehler_pfad(uid)
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    pfad.write_text(json.dumps({
+        "date": _heute_utc(), "sms": 0, "premium_sms": 4, "premium_sms_reply": 2,
+    }))
+    mitschrift.fehler["premium_sms"] = RuntimeError("Transport kaputt")
+    NotificationService(settings=_settings(), user_id=uid).send_command_reply_premium_sms(
+        CommandResult(success=True, command="status",
+                      confirmation_subject="Status", confirmation_body="OK"),
+        _settings(),
+    )
+    assert "premium_sms" not in mitschrift.fehler, "Vorbedingung: Transport wurde versucht"
+    stand = _zaehler_lesen(uid)
+    assert stand.get("premium_sms_reply") == 2, f"Antwort-Zaehler nicht zurueckgebucht: {stand}"
+    assert stand.get("premium_sms") == 4, f"Alarm-Zaehler veraendert: {stand}"
 
 
 # ---------------------------------------------------------------------------

@@ -13,6 +13,7 @@
 import { test, expect } from '@playwright/test';
 import { HUB_KINDS, registriereBestaetigtenZweitnutzer } from './helpers';
 import { DESKTOP, WT, oeffneWetter, seedWetter, stand, warteAufSpeichern, type Json } from './s3a2794-teil3.helpers';
+import { wegwerfPasswort } from './stagingZugang';
 
 const LISTE = { route: '/api/trips', vergleich: '/api/compare/presets' } as const;
 
@@ -29,7 +30,7 @@ for (const kind of HUB_KINDS) {
 			serviceWorkers: 'block',
 			httpCredentials: test.info().project.use.httpCredentials
 		});
-		const kennwort = 'Test1234!x';
+		const kennwort = wegwerfPasswort();
 		let hubB: Awaited<ReturnType<typeof seedWetter>> | undefined;
 		try {
 			await registriereBestaetigtenZweitnutzer(page.request, gast.request, `e2eteil3mandant${kind}${Date.now()}`, kennwort);

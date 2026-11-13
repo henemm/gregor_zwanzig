@@ -25,6 +25,17 @@ set -euo pipefail
 
 API="https://api.telegram.org"
 
+# #2961: Geheimnisse (Bot-Token in der URL, Secrets, API-Schluessel) gehen nie als
+# Prozessargument an curl (sichtbar in `ps`), sondern als curl-Konfiguration ueber
+# stdin (`-K -`). cfg schreibt eine Konfigurationszeile mit Escaping; printf ist ein
+# bash-Builtin und erzeugt keinen eigenen Prozess.
+cfg() {
+	local v=$2
+	v=${v//\\/\\\\}
+	v=${v//\"/\\\"}
+	printf '%s = "%s"\n' "$1" "$v"
+}
+
 usage() {
 	grep '^#' "$0" | sed 's/^# \{0,1\}//'
 	exit "${1:-0}"
@@ -85,10 +96,12 @@ case "$cmd" in
 		# X-Telegram-Bot-Api-Secret-Token).
 		url="${GZ_PUBLIC_BASE_URL%/}/api/webhooks/telegram/inbound"
 		echo "Registriere Webhook → ${url}"
-		resp="$(curl -fsS -X POST "${API}/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
-			--data-urlencode "url=${url}" \
-			--data-urlencode "secret_token=${TELEGRAM_WEBHOOK_SECRET}" \
-			--data-urlencode "drop_pending_updates=false")"
+		resp="$({
+			cfg url "${API}/bot${TELEGRAM_BOT_TOKEN}/setWebhook"
+			cfg data-urlencode "url=${url}"
+			cfg data-urlencode "secret_token=${TELEGRAM_WEBHOOK_SECRET}"
+			cfg data-urlencode "drop_pending_updates=false"
+		} | curl -fsS -X POST -K -)"
 		ok="$(printf '%s' "$resp" | json_ok)"
 		echo "→ setWebhook ok: ${ok}"
 		[ "$ok" = "ja" ] || exit 1
@@ -96,15 +109,17 @@ case "$cmd" in
 	delete)
 		require TELEGRAM_BOT_TOKEN
 		echo "Entferne Webhook (Rollback → Polling möglich)…"
-		curl -fsS -X POST "${API}/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook" \
-			--data-urlencode "drop_pending_updates=false" | sed 's/.*/→ &/'
+		{
+			cfg url "${API}/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook"
+			cfg data-urlencode "drop_pending_updates=false"
+		} | curl -fsS -X POST -K - | sed 's/.*/→ &/'
 		echo
 		;;
 	info)
 		require TELEGRAM_BOT_TOKEN
 		# Issue #1814: getWebhookInfo NIE roh ausgeben (die URL kann bei
 		# Alt-Registrierungen das Secret enthalten) — nur ja/nein-Auswertung.
-		curl -fsS "${API}/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo" | info_auswertung
+		cfg url "${API}/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo" | curl -fsS -K - | info_auswertung
 		;;
 	-h|--help|help)
 		usage 0

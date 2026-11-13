@@ -1,4 +1,5 @@
 """Forecast endpoint — returns NormalizedTimeseries as JSON."""
+import logging
 from dataclasses import asdict
 from datetime import datetime, timezone
 from enum import Enum
@@ -6,7 +7,10 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
+from i18n import t
+
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _serialize(obj):
@@ -61,9 +65,11 @@ def get_forecast(
     try:
         ts = service.get_forecast(location, hours_ahead=hours)
     except Exception as e:
+        # #2961: Ausnahmetext (Hosts, Pfade) nur ins Log, nach aussen Katalogtext.
+        logger.warning("Forecast-Abruf fehlgeschlagen (%s): %s", type(e).__name__, e)  # i18n-log
         raise HTTPException(status_code=502, detail={
             "error": "provider_error",
-            "detail": str(e),
+            "detail": t("api.fehler.wetterdienst_fehler", "de"),
         })
 
     raw = asdict(ts)

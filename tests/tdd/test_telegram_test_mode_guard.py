@@ -298,7 +298,7 @@ def _install_smtp_sink(monkeypatch):
         def __exit__(self, *exc):
             return False
 
-        def starttls(self):
+        def starttls(self, context=None):
             return None
 
         def login(self, user, password):
@@ -389,6 +389,9 @@ class TestGuardBlockVisibleInCompareFailedTally:
         monkeypatch.delenv("GZ_TELEGRAM_TEST_CHAT_ID", raising=False)
 
         user_id = f"tdd-e2lock-{uuid.uuid4().hex[:8]}"  # Test-User → is_test_mode
+        # #2961: Empfaenger kommt nur noch aus dem Nutzerprofil.
+        from tests.helpers.nutzerprofil import lege_profil_an
+        lege_profil_an(user_id, telegram_chat_id=PROD_CHAT_ID)
         loc_dir = data_root / "users" / user_id / "locations"
         loc_dir.mkdir(parents=True, exist_ok=True)
         (loc_dir / "loc-ibk.json").write_text(

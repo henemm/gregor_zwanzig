@@ -3,6 +3,8 @@
 	import type { Stage } from '$lib/types';
 	import type * as LeafletNS from 'leaflet';
 	import { locale, tr } from '$lib/i18n';
+	// #2961: Wegpunktnamen gehen als Text-Knoten in die Sprechblase, nie als HTML.
+	import { popupKnoten } from '$lib/utils/kartenPopup';
 
 	interface Props {
 		stage: Stage;
@@ -59,7 +61,7 @@
 				waypoints.forEach((w, i) => {
 					const marker = L.marker([w.lat, w.lon])
 						.addTo(map!)
-						.bindPopup(`${i + 1}. ${w.name ?? ''}`);
+						.bindPopup(popupKnoten(document, i + 1, w.name));
 					marker.on('click', makeMarkerClickHandler(w.id));
 				});
 				map.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] });
@@ -67,7 +69,7 @@
 				const w = waypoints[0];
 				const marker = L.marker([w.lat, w.lon])
 					.addTo(map)
-					.bindPopup(`1. ${w.name ?? ''}`);
+					.bindPopup(popupKnoten(document, 1, w.name));
 				marker.on('click', makeMarkerClickHandler(w.id));
 				map.setView([w.lat, w.lon], 12);
 			} else {

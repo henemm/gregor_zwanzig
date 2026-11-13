@@ -13,8 +13,11 @@ RED-Erwartung:
 Ausführung:
     uv run pytest tests/tdd/test_bundle_d_785_yesterday_toggle.py -v
 """
+import atexit
 import json
 import os
+import shutil
+import tempfile
 
 import httpx
 import pytest
@@ -33,7 +36,11 @@ USER = "tdd-785-ac"
 PASS = "tdd785testpass"
 TRIP_ID_OFF = "tdd-785-trip1"     # show_yesterday_comparison = false
 TRIP_ID_LEGACY = "tdd-785-legacy"  # kein Feld im report_config (Altdaten)
-STATE_FILE = "/tmp/tdd-785-storage-state.json"
+# Sitzungsdaten nur in einem eigenen, nur fuer den Nutzer lesbaren Verzeichnis
+# dieses Laufs (#2961: kein fester, vorhersagbarer /tmp-Pfad); beim Ende geloescht.
+_STATE_DIR = tempfile.mkdtemp(prefix="gz-tdd-785-")
+atexit.register(shutil.rmtree, _STATE_DIR, True)
+STATE_FILE = os.path.join(_STATE_DIR, "storage-state.json")
 
 
 # ---------------------------------------------------------------------------

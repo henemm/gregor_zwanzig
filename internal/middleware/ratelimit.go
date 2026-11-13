@@ -20,7 +20,13 @@ type IPRateLimiter struct {
 	rate     rate.Limit
 	burst    int
 	window   time.Duration
+	// Issue #2961: Obergrenze der Tabelle; darueber werden zuerst abgelaufene
+	// Eintraege entfernt, notfalls ein beliebiger (Speicher bleibt begrenzt).
+	maxEntries int
 }
+
+// defaultMaxLimiterEntries begrenzt die Tabelle je Limiter-Instanz.
+const defaultMaxLimiterEntries = 50_000
 
 type ipEntry struct {
 	limiter  *rate.Limiter
@@ -37,6 +43,8 @@ func NewIPRateLimiter(burst int, window time.Duration) *IPRateLimiter {
 		rate:     rate.Every(window / time.Duration(burst)),
 		burst:    burst,
 		window:   window,
+
+		maxEntries: defaultMaxLimiterEntries,
 	}
 	go rl.cleanupLoop()
 	return rl
@@ -47,13 +55,35 @@ func NewIPRateLimiter(burst int, window time.Duration) *IPRateLimiter {
 func (rl *IPRateLimiter) get(ip string) *rate.Limiter {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
+	now := time.Now()
 	e, ok := rl.limiters[ip]
 	if !ok {
+		if rl.maxEntries > 0 && len(rl.limiters) >= rl.maxEntries {
+			rl.evictLocked(now)
+		}
 		e = &ipEntry{limiter: rate.NewLimiter(rl.rate, rl.burst)}
 		rl.limiters[ip] = e
 	}
-	e.lastSeen = time.Now()
+	e.lastSeen = now
 	return e.limiter
+}
+
+// evictLocked schafft Platz fuer einen neuen Eintrag (Issue #2961): erst alle
+// abgelaufenen Eintraege, reicht das nicht, ein beliebiger. Der Aufrufer
+// haelt rl.mu.
+func (rl *IPRateLimiter) evictLocked(now time.Time) {
+	cutoff := now.Add(-rl.window)
+	for k, e := range rl.limiters {
+		if e.lastSeen.Before(cutoff) {
+			delete(rl.limiters, k)
+		}
+	}
+	for k := range rl.limiters {
+		if len(rl.limiters) < rl.maxEntries {
+			return
+		}
+		delete(rl.limiters, k)
+	}
 }
 
 // cleanupLoop runs every 10 minutes and removes limiter entries that have not
@@ -78,8 +108,7 @@ func (rl *IPRateLimiter) cleanupLoop() {
 // object rate_limit_exceeded in the request language (Issue #2677).
 func (rl *IPRateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip := clientIP(r)
-		lim := rl.get(ip)
+		lim := rl.get(limiterKey(clientIP(r)))
 		if !lim.Allow() {
 			retry := int(rl.window.Seconds() / float64(rl.burst))
 			if retry < 1 {
@@ -91,6 +120,17 @@ func (rl *IPRateLimiter) Middleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// limiterKey fasst IPv6-Adressen auf ihr /64-Netz zusammen (Issue #2961): ein
+// Anschluss verfuegt ueber ein ganzes /64, einzelne Adressen daraus duerfen das
+// Kontingent nicht vervielfachen. IPv4 (auch IPv4-in-IPv6) bleibt je Adresse.
+func limiterKey(ip string) string {
+	parsed := net.ParseIP(ip)
+	if parsed == nil || parsed.To4() != nil {
+		return ip
+	}
+	return parsed.Mask(net.CIDRMask(64, 128)).String() + "/64"
 }
 
 // clientIP returns the canonical client IP. Prefers the `X-Real-IP` header

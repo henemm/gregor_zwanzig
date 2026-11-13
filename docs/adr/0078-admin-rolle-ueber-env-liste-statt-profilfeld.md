@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert
 - **Datum:** 2026-09-28
 - **Bezug:** GitHub-Issue #2155 (Scheibe S1, Epic #2138), Spec `docs/specs/modules/admin_rolle_s1.md`
+- **Ergänzt durch:** [ADR-0113](0113-anmelde-haertung-adress-limits-testkonto-herkunftspruefung.md) (Startwarnung für Admin-Kennungen ohne Konto)
 
 ## Kontext
 

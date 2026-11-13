@@ -269,6 +269,9 @@ func TestForecastBudgetConstantsMatchPython(t *testing.T) {
 		{regexp.MustCompile(`DAILY_BUDGET\s*=\s*(\d+)`), "DAILY_BUDGET", "9000"},
 		{regexp.MustCompile(`POLLING_THRESHOLD\s*=\s*([\d.]+)`), "POLLING_THRESHOLD", "0.80"},
 		{regexp.MustCompile(`BRIEFING_ONLY_THRESHOLD\s*=\s*([\d.]+)`), "BRIEFING_ONLY_THRESHOLD", "0.95"},
+		// ADR-0117 (#2961): interaktive Obergrenze, gespiegelt fuer den Status.
+		{regexp.MustCompile(`INTERACTIVE_THRESHOLD\s*=\s*([\d.]+)`), "INTERACTIVE_THRESHOLD", "0.70"},
+		{regexp.MustCompile(`MANUAL_THRESHOLD\s*=\s*([\d.]+)`), "MANUAL_THRESHOLD", "0.90"},
 	}
 	for _, c := range checks {
 		m := c.re.FindStringSubmatch(text)

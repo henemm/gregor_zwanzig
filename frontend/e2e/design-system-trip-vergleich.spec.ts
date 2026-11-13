@@ -62,6 +62,7 @@
 // Sprachwechsel über PUT /api/auth/profile, im finally zurück auf de (Muster kontrast-trip-vergleich).
 
 import { test, expect, request as pwRequest, type APIRequestContext, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import { wegwerfPasswort } from './stagingZugang';
 
 type Sitzung = Awaited<ReturnType<BrowserContext['storageState']>>;
 import {
@@ -160,7 +161,7 @@ test.describe('DS-5: Anlege-Aktion überall Btn primary (Ink)', () => {
 /** Frisches, bestätigtes Konto unter eigener X-Real-IP; liefert seinen Anmeldezustand. */
 async function leeresKonto(admin: APIRequestContext, baseURL: string, ip: string): Promise<{ zustand: Sitzung; aufraeumen: () => Promise<void> }> {
 	const name = `e2egzleer${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
-	const passwort = 'Test1234!x';
+	const passwort = wegwerfPasswort();
 	const gast = await pwRequest.newContext({ baseURL, storageState: { cookies: [], origins: [] }, extraHTTPHeaders: { 'X-Real-IP': ip } });
 	const reg = await gast.post('/api/auth/register', { data: { username: name, password: passwort, email: `${name}@example.com` } });
 	expect([200, 201], `Registrierung: ${reg.status()} ${await reg.text()}`).toContain(reg.status());

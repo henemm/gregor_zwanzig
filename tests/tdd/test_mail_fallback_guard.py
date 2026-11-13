@@ -104,7 +104,7 @@ class _FakeSMTPConnection:
     def __exit__(self, *exc) -> bool:
         return False
 
-    def starttls(self) -> None:
+    def starttls(self, context=None) -> None:
         return None
 
     def login(self, user, password) -> None:

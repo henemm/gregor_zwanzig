@@ -64,16 +64,16 @@ func TestReaper_TelegramTokens_EntferntAbgelaufeneBehaeltGueltige(t *testing.T) 
 	gueltig := mustIssueToken(t, ts, "anna")
 	abgelaufen := mustIssueToken(t, ts, "bertram")
 	ts.mu.Lock()
-	pt := ts.tokens[abgelaufen]
+	pt := ts.tokens[telegramTokenKey(abgelaufen)]
 	pt.ExpiresAt = time.Now().Add(-time.Minute)
-	ts.tokens[abgelaufen] = pt
+	ts.tokens[telegramTokenKey(abgelaufen)] = pt
 	ts.mu.Unlock()
 
 	ts.gc(time.Now())
 
 	ts.mu.Lock()
-	_, hatAbgelaufen := ts.tokens[abgelaufen]
-	_, hatGueltig := ts.tokens[gueltig]
+	_, hatAbgelaufen := ts.tokens[telegramTokenKey(abgelaufen)]
+	_, hatGueltig := ts.tokens[telegramTokenKey(gueltig)]
 	ts.mu.Unlock()
 	if hatAbgelaufen {
 		t.Error("abgelaufener Token muss nach gc entfernt sein")
@@ -106,18 +106,18 @@ func TestStoreReaper_RaeumtAlleDreiStoresUndEndetMitStop(t *testing.T) {
 	tokBleibt := mustIssueToken(t, ts, "anna")
 	tokWeg := mustIssueToken(t, ts, "bertram")
 	ts.mu.Lock()
-	pt := ts.tokens[tokWeg]
+	pt := ts.tokens[telegramTokenKey(tokWeg)]
 	pt.ExpiresAt = now.Add(-time.Minute)
-	ts.tokens[tokWeg] = pt
+	ts.tokens[telegramTokenKey(tokWeg)] = pt
 	ts.mu.Unlock()
 
-	stop := StartStoreReaper(ts, 10*time.Millisecond)
+	stop := StartStoreReaper(ts, nil, 10*time.Millisecond)
 	t.Cleanup(stop)
 
 	tokenDa := func(tok string) bool {
 		ts.mu.Lock()
 		defer ts.mu.Unlock()
-		_, ok := ts.tokens[tok]
+		_, ok := ts.tokens[telegramTokenKey(tok)]
 		return ok
 	}
 	allesWeg := func() bool {

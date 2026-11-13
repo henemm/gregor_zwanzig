@@ -41,6 +41,14 @@ func testRegisterCfg() config.Config {
 	}
 }
 
+// testRegisterCfgStaging: Testkonten (is_test_user, feste Kennung) gibt es
+// seit #2961 nur im Staging, im Fixture-Modus oder fuer eine Admin-Sitzung.
+func testRegisterCfgStaging() config.Config {
+	cfg := testRegisterCfg()
+	cfg.Env = "staging"
+	return cfg
+}
+
 // TDD RED: Tests for auth handlers — must FAIL until implemented.
 
 func TestRegisterHandlerSuccess(t *testing.T) {
@@ -104,7 +112,7 @@ func TestRegisterHandlerDuplicateUser(t *testing.T) {
 	os.MkdirAll(dir, 0755)
 	os.WriteFile(filepath.Join(dir, "user.json"), []byte(`{"id":"alice"}`), 0644)
 
-	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
+	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfgStaging())
 
 	// WHEN: Registering same username (Issue #2194: feste ID nur als Testkonto)
 	body := `{"username":"alice","password":"geheim123","email":"alice@beispiel.de","is_test_user":true}`
@@ -129,7 +137,7 @@ func TestRegisterHandler_ExistingUserWithoutEmail_Returns409_AC1(t *testing.T) {
 	os.MkdirAll(dir, 0755)
 	os.WriteFile(filepath.Join(dir, "user.json"), []byte(`{"id":"alice"}`), 0644)
 
-	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
+	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfgStaging())
 
 	// WHEN: Registering same username WITHOUT email (wie
 	// scripts/setup-validator-user.sh es tut — Testkonto, Issue #2194)
@@ -208,7 +216,7 @@ func TestRegisterHandler_ExistingUserInvalidUsernameFormat_Returns400NotEnumerat
 			os.MkdirAll(dir, 0755)
 			os.WriteFile(filepath.Join(dir, "user.json"), []byte(`{"id":"`+tc.username+`"}`), 0644)
 
-			h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
+			h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfgStaging())
 
 			// Issue #2194: der Name wird nur fuer Testkonten ausgewertet.
 			body := `{"username":"` + tc.username + `","password":"geheim123","email":"user@beispiel.de","is_test_user":true}`
@@ -231,7 +239,7 @@ func TestRegisterHandler_ExistingUserInvalidUsernameFormat_Returns400NotEnumerat
 
 func TestRegisterHandlerShortUsername(t *testing.T) {
 	s := newTestStore(t)
-	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
+	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfgStaging())
 
 	// Issue #2194: der Name wird nur fuer Testkonten ausgewertet.
 	body := `{"username":"ab","password":"geheim123","email":"ab@beispiel.de","is_test_user":true}`
@@ -606,7 +614,7 @@ func registerAndObserve(t *testing.T, body string) (map[string]any, bool) {
 	}
 	defer func() { sendVerificationMailFn = origSend }()
 
-	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
+	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfgStaging())
 	req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(body))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)

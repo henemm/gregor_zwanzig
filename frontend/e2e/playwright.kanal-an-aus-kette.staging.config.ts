@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { ausUmgebung } from './stagingZugang';
 // E2E-Config Issue #2422 Scheibe S3 (AC-26: "Abend aktiv" abgehakt => auf
 // Staging kommt kein Abend-Briefing an) gegen Staging.
 //
@@ -10,8 +11,8 @@ import { defineConfig } from '@playwright/test';
 // eigenen, frischen Wegwerf-Nutzer (genau ein Trip) und meldet ihn selbst an --
 // ein vorhandenes Konto (admin, Validator-Nutzer) haette weitere Trips, und der
 // ausgeloeste Sammellauf waere dann ein echter Mehr-Trip-Versand.
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

@@ -155,3 +155,27 @@ keinen erreichbaren Server.
 - Bearbeitungs- und Speichern-Elemente auf `/trips/[id]` und `/compare/[id]` müssen bei jeder
   Erweiterung an das Sperr-Inventar (`offlineGate.ts`/`OfflineSperre.svelte`) angeschlossen
   werden — eine neue Schreibfläche ohne Anschluss würde offline scheinbar bedienbar bleiben.
+
+## Nachtrag 2026-11-12 (Issue #2961, Sicherheits-Härtung): §4 hergestellt, drei Ergänzungen
+
+Die Entscheidung bleibt; dieser Nachtrag hält fest, was sich an ihrer Umsetzung ändert. Spec:
+`docs/specs/modules/security_haertung_2026_11_frontend.md` (AC-8 bis AC-12).
+
+1. **§4 „bei jeder Antwort" ist jetzt wörtlich umgesetzt.** Bis hierher räumte der Worker fremde
+   Buckets nur beim *Ablegen* einer Positivlisten-Antwort. Ein Nutzerwechsel, nach dem B nur
+   Seiten außerhalb der Positivliste öffnete (Startseite, Listen), ließ As Bucket stehen. Jetzt
+   prüft der Worker **jede** same-origin-Antwort mit Mandantenkennung — Seitenaufruf,
+   `__data.json`, auch Antworten, die er selbst nicht ablegt — und löscht fremde `gz-daten-*`.
+2. **Gelesen wird nur aus dem Bucket des zuletzt angemeldeten Mandanten.** Wegen (1) ist das der
+   einzige verbliebene; liegen ausnahmsweise mehrere, liefert der Worker aus keinem (fail-closed),
+   bis die nächste angemeldete Antwort aufräumt. Vorher suchte `ausDatenspeicher` in allen
+   Buckets.
+3. **Höchstalter 30 Tage.** Jede abgelegte Antwort trägt ihren Ablagezeitpunkt; Älteres wird beim
+   Aktivieren des Workers und bei jedem Zugriff entfernt (zusätzlich zur Obergrenze aus §6).
+4. **Ein echtes 401 der Go-API räumt die Inhaltsspeicher.** `lib/api.ts` löscht vor der
+   Umleitung auf die Anmeldung alle `gz-daten-*`; Programm-Speicher und Worker bleiben (die
+   Anmeldeseite räumt sie weiterhin nur nach echtem Abmelden, Spec #2128 AC-12). Ein Netzfehler
+   räumt nichts. Zusätzlich räumt `/login?abgemeldet=1` nur noch, wenn die Go-API keine gültige
+   Sitzung mehr bestätigt — ein fremder Verweis leert den Speicher eines Angemeldeten nicht.
+
+Die Regeln liegen gebündelt in `frontend/src/lib/pwa/datenspeicher.ts`.

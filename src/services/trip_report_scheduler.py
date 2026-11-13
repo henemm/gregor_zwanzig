@@ -1685,6 +1685,12 @@ class TripReportSchedulerService:
         # 3. Fetch weather for each segment
         uhr.wechsel("zieltag")
         segment_weather = self._fetch_weather(weather_segments)
+        # Issue #2961 (ADR-0117 Nachtrag): Handversand/Befehl am erschoepften
+        # Tageskontingent -- kein Teil-Briefing, auch kein Ausfall-Hinweis.
+        # Ohne manuellen Kontext (Zeitplan-Versand) immer False.
+        from services.forecast_budget import manuell_abgelehnt
+        if manuell_abgelehnt():
+            return "kontingent_erschoepft"
         uhr.wechsel("warnungen")
 
         # Issue #1087: amtliche Warnungen pro eindeutigem Segment-Startpunkt,
@@ -1834,6 +1840,10 @@ class TripReportSchedulerService:
             trip, segments, datetime.now(timezone.utc), target_date,
         )
 
+        # Issue #2961: Nacht/Trend/Gewitter-Vorschau koennen die Schaetzung
+        # ueberschritten haben -- auch dann keine unvollstaendige Zustellung.
+        if manuell_abgelehnt():
+            return "kontingent_erschoepft"
         # 8. NotificationService: render + send (Issue #1022).
         # Der Scheduler liefert nur noch ein DTO; Renderer-/Transport-Imports
         # bleiben im NotificationService.

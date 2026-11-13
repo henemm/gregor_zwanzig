@@ -18,9 +18,10 @@ import { mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createTestComparePreset, createTestLocation, createTestTrip, HUB_KINDS, HUB_SEL, openHub, type HubKind } from './helpers.ts';
 import { assertNotProdBaseURL } from './prodUrlGuard.ts';
+import { wegwerfPasswort } from './stagingZugang';
 
 type Lang = 'de' | 'en';
-const PASSWORT = 'test1234';
+const PASSWORT = wegwerfPasswort();
 const LAUF = Date.now().toString(36);
 const NAME: Record<Lang, string> = { de: `e2e-gz-sprache-de-${LAUF}`, en: `e2e-gz-sprache-en-${LAUF}` };
 const IP: Record<Lang, string> = { de: '10.26.61.1', en: '10.26.61.2' };

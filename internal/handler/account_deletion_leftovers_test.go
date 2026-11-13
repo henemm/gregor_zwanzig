@@ -172,11 +172,11 @@ func TestKontoLoeschen_ZweiNutzer_TokenDateiOhneGeloeschtenNutzer(t *testing.T) 
 		t.Errorf("telegram_tokens.json (Platte) enthaelt noch %d Token(s) des geloeschten Nutzers", n)
 	}
 	for _, tok := range []string{annaTok1, annaTok2} {
-		if _, ok := onDisk[tok]; ok {
+		if _, ok := onDisk[telegramTokenKey(tok)]; ok {
 			t.Errorf("Token %s des geloeschten Nutzers steht noch auf der Platte", tok)
 		}
 	}
-	if pt, ok := onDisk[bertramTok]; !ok || pt.UserID != "bertram" {
+	if pt, ok := onDisk[telegramTokenKey(bertramTok)]; !ok || pt.UserID != "bertram" {
 		t.Errorf("Token des anderen Nutzers muss unveraendert auf der Platte stehen, ist %+v (vorhanden=%v)", pt, ok)
 	}
 	if nutzerOrdnerVorhanden(s, "anna") {
@@ -227,7 +227,7 @@ func TestKontoLoeschen_FalschesPasswort_LaesstTokensOTPsUndCodeUnberuehrt(t *tes
 	if !bytes.Equal(vorher, dateiBytes(t, filepath.Join(s.DataDir, "telegram_tokens.json"))) {
 		t.Error("telegram_tokens.json (Platte) wurde bei falschem Passwort veraendert")
 	}
-	if pt, ok := tokensVonPlatte(t, s.DataDir)[tok]; !ok || pt.UserID != "anna" {
+	if pt, ok := tokensVonPlatte(t, s.DataDir)[telegramTokenKey(tok)]; !ok || pt.UserID != "anna" {
 		t.Error("Token des Nutzers muss auf der Platte bleiben")
 	}
 	for addr, want := range map[string]*otpEntry{
@@ -518,10 +518,15 @@ func TestKontoLoeschen_ZweiFehlversucheDannRichtigerCodeLoescht(t *testing.T) {
 func TestKontoLoeschen_LoginOTPsAllerAdressenNachLoeschungNichtMehrEinloesbar(t *testing.T) {
 	t.Cleanup(ResetOTPStoreForTest)
 	s := newTestStore(t)
-	u := passwortKonto(t, s, "anna", "Anna@Beispiel.de")
-	u.MailTo = "Anna-Mail@Beispiel.de"
-	u.PendingContactAddress = "Anna-Neu@Beispiel.de"
-	mustSaveUser(t, s, u)
+	passwortKonto(t, s, "anna", "Anna@Beispiel.de")
+	// Issue #2961 (F-C): Adressfelder eines bestehenden Kontos nur ueber UpdateUser.
+	if _, err := s.UpdateUser("anna", func(u *model.User) error {
+		u.MailTo = "Anna-Mail@Beispiel.de"
+		u.PendingContactAddress = "Anna-Neu@Beispiel.de"
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
 	passwortKonto(t, s, "bertram", "bertram@beispiel.de")
 
 	exp := time.Now().Add(10 * time.Minute)
@@ -701,7 +706,7 @@ func TestTelegramTokenStore_SaveSchreibtAtomarOhneTempRest(t *testing.T) {
 	tok := mustIssueToken(t, ts, "anna")
 
 	m := tokensVonPlatte(t, dir) // gueltiges JSON = keine halbe Datei
-	if pt, ok := m[tok]; !ok || pt.UserID != "anna" {
+	if pt, ok := m[telegramTokenKey(tok)]; !ok || pt.UserID != "anna" {
 		t.Fatalf("Token nicht auf der Platte: %+v", m)
 	}
 	entries, _ := os.ReadDir(dir)
@@ -730,13 +735,13 @@ func TestTelegramTokenStore_RemoveByUserEntferntNurDenEigenenUndPersistiert(t *t
 		t.Fatalf("RemoveByUser: %v", err)
 	}
 	m := tokensVonPlatte(t, dir)
-	if _, ok := m[a1]; ok {
+	if _, ok := m[telegramTokenKey(a1)]; ok {
 		t.Error("anna-Token 1 noch auf Platte")
 	}
-	if _, ok := m[a2]; ok {
+	if _, ok := m[telegramTokenKey(a2)]; ok {
 		t.Error("anna-Token 2 noch auf Platte")
 	}
-	if pt, ok := m[b]; !ok || pt.UserID != "bertram" {
+	if pt, ok := m[telegramTokenKey(b)]; !ok || pt.UserID != "bertram" {
 		t.Error("bertram-Token muss bleiben")
 	}
 	// Ein Nutzer ohne Tokens ist kein Fehler.

@@ -86,10 +86,15 @@ function merkerGiltNoch(): boolean {
  * haengen bleibt er dabei nicht -- nach Ablauf des Fensters raeumt ihn dieser
  * Zweig weg.
  */
-export function abmeldungLiegtVor(url: URL): boolean {
+export function abmeldungLiegtVor(url: URL, sitzungAktiv = false): boolean {
 	const ausMerker = merkerGiltNoch();
 	if (!ausMerker) vergissAbmeldung();
-	return url.searchParams.get(ABMELDE_MERKMAL) === '1' || ausMerker;
+	// Issue #2961: das Merkmal in der Adresse kann auch ein fremder Verweis
+	// tragen. Es zaehlt deshalb nur, wenn der Server keine gueltige Sitzung mehr
+	// sieht (`sitzungAktiv` aus der load-Funktion der Anmeldeseite). Der Merker
+	// im Sitzungsspeicher dieses Tabs entsteht nur durch eigenes Abmelden.
+	const ausAdresse = url.searchParams.get(ABMELDE_MERKMAL) === '1' && !sitzungAktiv;
+	return ausAdresse || ausMerker;
 }
 
 // ---------------------------------------------------------------------------

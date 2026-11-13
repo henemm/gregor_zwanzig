@@ -32,6 +32,7 @@ import {
 	type HubKind
 } from './helpers';
 import { DESKTOP, MOBIL, WT, type Json } from './s3a2794-teil3.helpers';
+import { wegwerfPasswort } from './stagingZugang';
 
 /** Metrik, deren Grenzen Nutzer A aendert (Bestandteil jeder Systemvorlage, vgl. s3a2794-teil3-mandanten). */
 const METRIK = 'gust';
@@ -196,7 +197,7 @@ for (const kind of HUB_KINDS) {
 			serviceWorkers: 'block',
 			httpCredentials: test.info().project.use.httpCredentials
 		});
-		const kennwort = `E2e-Passwort-${Date.now()}`;
+		const kennwort = wegwerfPasswort();
 		try {
 			// meldet B im Gast-Kontext an (Sitzung gilt fuer gast.request UND die Seiten des Kontexts).
 			await registriereBestaetigtenZweitnutzer(page.request, gast.request, `e2e4amandant${kind}${Date.now()}`, kennwort);

@@ -19,6 +19,7 @@ Spec: docs/specs/modules/fix_1765_b1_compare_vorschau_parallel.md
 """
 from __future__ import annotations
 
+import contextvars
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
@@ -26,7 +27,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, List, Optional, cast
 
 from app.user import ComparisonResult, LocationResult
-from services.comparison_engine import COMPARE_FORECAST_HOURS
+from services.comparison_engine import COMPARE_FORECAST_HOURS, _abruf_fehlertext
 
 if TYPE_CHECKING:
     from datetime import date
@@ -123,8 +124,12 @@ def run_comparison_parallel(
         with ThreadPoolExecutor(
             max_workers=min(len(locations), MAX_PARALLEL_LOCATIONS)
         ) as executor:
+            # ADR-0117: copy_context je Ort, damit die Markierung einer
+            # interaktiven Anfrage (forecast_budget.interaktiver_abruf) die
+            # Arbeiter erreicht; ohne Markierung bleibt alles wie bisher.
             future_to_idx = {
                 executor.submit(
+                    contextvars.copy_context().run,
                     _run_one_location,
                     loc,
                     time_window=time_window,
@@ -160,7 +165,9 @@ def run_comparison_parallel(
     # Fehlermeldung an SEINER Position, die uebrigen behalten ihre Daten.
     for idx, exc in fehler:
         fetched[idx] = LocationResult(
-            location=locations[idx], error=str(exc) or type(exc).__name__,
+            # #2961: Ausnahmetext nur ins Log, nach aussen der Ersatztext.
+            location=locations[idx],
+            error=_abruf_fehlertext(str(exc) or type(exc).__name__, user_id),
         )
 
     # ``fetched`` ist danach luecklos besetzt: jeder Index traegt entweder das

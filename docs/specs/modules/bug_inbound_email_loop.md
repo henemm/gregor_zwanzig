@@ -33,3 +33,5 @@ Der `InboundEmailReader` verarbeitete ausgehende System-E-Mails als eingehende N
 **AC-3:** Given der Inbound Reader empfängt eine E-Mail von einer unbekannten Adresse (weder `mail_to` noch `inbound_address`) / When `_authorize()` aufgerufen wird / Then gibt die Methode `False` zurück.
 
 **AC-4:** Given `inbound_address` ist konfiguriert und eine E-Mail kommt von dieser Adresse / When `_authorize()` aufgerufen wird / Then gibt die Methode `True` zurück (bestehende Funktion, keine Regression).
+
+> **Abgelöst (#2961, 2026-11-12):** AC-4 gilt nicht mehr. `inbound_address` ist die Eingangsadresse des Systems (Reply-To jeder ausgehenden Mail); Mails von dort werden abgelehnt. Siehe `docs/specs/modules/security_haertung_2026_11_python_core.md`, AC-4.

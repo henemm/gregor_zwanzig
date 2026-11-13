@@ -426,14 +426,22 @@ class Settings(BaseSettings):
         # liest dieser Read-Pfad am isolierten Test-User vorbei.
         # Issue #1412 S4b: ohne lesbares Profil keine SMS-Nummer -- sonst bliebe
         # die globale GZ_SMS_TO-Betreibernummer stehen (Cross-Tenant).
+        # Issue #2961: ebenso kein Mail-Empfaenger und (ausser im Testmodus)
+        # kein Telegram-Chat -- sonst bliebe die globale Betreiber-Adresse
+        # (GZ_MAIL_TO) bzw. der globale Chat als Ziel stehen.
+        ohne_profil = {"sms_to": None, "mail_to": None, "email_verified_at": None}
+        if not force_test:
+            ohne_profil["telegram_chat_id"] = None
         profile_path = get_data_dir(user_id) / "user.json"
         if not profile_path.exists():
-            return base.model_copy(update={"sms_to": None})
+            return base.model_copy(update=ohne_profil)
 
         try:
             profile = json.loads(profile_path.read_text())
         except (json.JSONDecodeError, OSError):
-            return base.model_copy(update={"sms_to": None})
+            return base.model_copy(update=ohne_profil)
+        if not isinstance(profile, dict):
+            return base.model_copy(update=ohne_profil)
 
         # Issue #2144: immer explizit setzen (auch auf None), statt nur bei
         # vorhandenem Profilwert zu ueberschreiben -- sonst bleibt bei einem
@@ -491,6 +499,8 @@ class Settings(BaseSettings):
     _SENSITIVE_FIELDS = {
         "smtp_pass", "imap_pass", "test_smtp_pass", "test_imap_pass",
         "seven_api_key", "telegram_bot_token",
+        # Issue #2961: auch die Test-/Sandbox-Zugaenge sind Geheimnisse.
+        "seven_sandbox_key", "telegram_test_bot_token",
         # Issue #2142: repr(settings) landet in Logzeilen — das gemeinsame
         # Geheimnis darf dort nie im Klartext auftauchen.
         "core_shared_secret",
@@ -507,6 +517,11 @@ class Settings(BaseSettings):
             else:
                 fields.append(f"{name}={value!r}")
         return f"Settings({', '.join(fields)})"
+
+    def __repr_args__(self):
+        """Issue #2961: auch ``str(settings)`` (pydantic) maskiert Geheimnisse."""
+        for name, value in super().__repr_args__():
+            yield name, ("***" if name in self._SENSITIVE_FIELDS and value else value)
 
 
 def resolve_public_host(settings: Settings) -> Optional[str]:
