@@ -118,7 +118,7 @@ def stages_weather(
         raise kontingent_erschoepft(user_id)
     return {
         "results": results,
-        "hinweis": t("api.fehler.etappenwetter_teilweise", resolve_user_lang(user_id)),
+        "hinweis": t("api.fehler.etappenwetter_teilweise", resolve_user_lang(user_id)),  # i18n-fest: JSON-Feldname des API-Vertrags
         "gedrosselt": gedrosselt,
     }
 
