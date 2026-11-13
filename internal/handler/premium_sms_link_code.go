@@ -6,8 +6,8 @@ package handler
 //	POST /api/auth/premium-sms-link-code -> erzeugt/erneuert den Code und gibt
 //	     ihn GENAU EINMAL im Klartext zurueck. Erneuern ersetzt die Datei und
 //	     entwertet damit den alten Code.
-//	GET  /api/auth/premium-sms-link-code -> {"exists": true|false}, niemals der
-//	     Code und niemals der Hash.
+//	GET  /api/auth/premium-sms-link-code -> {"exists": true|false,
+//	     "legacy_format": true|false}, niemals der Code und niemals der Hash.
 //
 // Beide anmeldepflichtig ueber die globale AuthMiddleware; die Kennung kommt
 // aus dem Auth-Kontext, NIE aus s.UserID (Vorgabe-Kennung "default" waere ein
@@ -99,8 +99,9 @@ func PostPremiumSmsLinkCodeHandler(s *store.Store, bcryptCost int) http.HandlerF
 			return
 		}
 		if err := s.SaveLinkCode(userID, model.PremiumSmsLinkCode{
-			CodeHash:  string(hash),
-			CreatedAt: time.Now().UTC(),
+			CodeHash:   string(hash),
+			CreatedAt:  time.Now().UTC(),
+			CodeFormat: model.PremiumSmsLinkCodeFormatLang,
 		}); err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
@@ -154,6 +155,11 @@ func GetPremiumSmsLinkCodeHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]bool{"exists": stored != nil})
+		// legacy_format (ADR-0116): Hinweis zum Erneuern alter, kuerzerer
+		// Codes — nur ein Merkmal, nie Code oder Hash.
+		json.NewEncoder(w).Encode(map[string]bool{
+			"exists":        stored != nil,
+			"legacy_format": stored != nil && stored.LegacyFormat(),
+		})
 	}
 }

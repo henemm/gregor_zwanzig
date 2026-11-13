@@ -365,6 +365,36 @@ func TestLinkCodeKeySpaceAtLeastOneBillion(t *testing.T) {
 	}
 }
 
+// ADR-0116 (Gegenpruefung, Oberflaeche b): GET meldet, ob der gespeicherte
+// Code noch im alten, kuerzeren Format ist — ohne Code oder Hash
+// preiszugeben. Bestandsdateien (ohne Formatvermerk) gelten als alt, ein neu
+// erzeugter Code nicht; zwei Konten werden getrennt beantwortet.
+func TestLinkCodeStatusMeldetAltesFormat(t *testing.T) {
+	s := learnTestStore(t)
+	mustSaveUser(t, s, model.User{ID: "premium-anna", Tier: "premium"})
+	mustSaveUser(t, s, model.User{ID: "premium-bert", Tier: "premium"})
+	mustSaveLinkCode(t, s, "premium-anna", "XXABC234") // Bestandsdatei ohne Vermerk
+	createLinkCode(t, s, "premium-bert")
+
+	status := func(id string) map[string]any {
+		rr := httptest.NewRecorder()
+		GetPremiumSmsLinkCodeHandler(s)(rr, newLinkCodeRequest(http.MethodGet, id))
+		if rr.Code != http.StatusOK {
+			t.Fatalf("%s: erwartet 200, bekam %d", id, rr.Code)
+		}
+		if strings.Contains(rr.Body.String(), "code_hash") || strings.Contains(rr.Body.String(), "XXABC234") {
+			t.Fatalf("%s: Status verraet Code oder Hash: %s", id, rr.Body.String())
+		}
+		return linkCodeBody(t, rr)
+	}
+	if got := status("premium-anna")["legacy_format"]; got != true {
+		t.Errorf("anna (Bestandscode): legacy_format=true erwartet, bekam %v", got)
+	}
+	if got := status("premium-bert")["legacy_format"]; got != false {
+		t.Errorf("bert (neuer Code): legacy_format=false erwartet, bekam %v", got)
+	}
+}
+
 // ADR-0116: ein Bestandscode im alten, kuerzeren Format bleibt gueltig — es
 // gibt keinen Zwangstausch. Gemessen am echten Lern-Handler.
 func TestLearnAcceptsLegacyShortLinkCode(t *testing.T) {
