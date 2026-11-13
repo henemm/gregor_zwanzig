@@ -46,16 +46,48 @@ async function verletzungen(page: Page, konsole: string[]): Promise<string[]> {
 	return [...ereignisse, ...konsole];
 }
 
+/** Erwartete Richtlinie je Direktive (ausser script-src, das Nonce/Hash traegt). */
+const SOLL_OHNE_SKRIPT: Record<string, string[]> = {
+	'default-src': ["'self'"],
+	'style-src': ["'self'", "'unsafe-inline'"],
+	'img-src': ["'self'", 'blob:', 'data:', 'https://*.tile.opentopomap.org'],
+	'connect-src': ["'self'"],
+	'font-src': ["'self'", 'data:'],
+	'worker-src': ["'self'"],
+	'manifest-src': ["'self'"],
+	'frame-src': ["'self'"],
+	'frame-ancestors': ["'none'"],
+	'base-uri': ["'self'"],
+	'form-action': ["'self'"],
+	'object-src': ["'none'"]
+};
+
+/** Zerlegt eine CSP in Direktive -> sortierte Quellenliste. */
+function richtlinieZerlegen(csp: string): Record<string, string[]> {
+	const aus: Record<string, string[]> = {};
+	for (const teil of csp.split(';')) {
+		const [name, ...quellen] = teil.trim().split(/\s+/);
+		if (!name) continue;
+		aus[name.toLowerCase()] = quellen.sort();
+	}
+	return aus;
+}
+
 async function richtlinieAktiv(page: Page, pfad: string): Promise<void> {
 	const antwort = await page.goto(pfad);
 	expect(antwort, `${pfad}: keine Antwort`).not.toBeNull();
 	const csp = antwort!.headers()['content-security-policy'] ?? '';
-	expect(csp, `${pfad}: Seitenantwort ohne Content-Security-Policy`).toContain("default-src 'self'");
-	expect(csp).toContain("object-src 'none'");
-	expect(csp).toContain("frame-ancestors 'none'");
-	expect(csp, `${pfad}: script-src erlaubt Inline-Skripte pauschal`).not.toMatch(
-		/script-src[^;]*'unsafe-(inline|eval)'/
-	);
+	expect(csp, `${pfad}: Seitenantwort ohne Content-Security-Policy`).not.toBe('');
+	// F008: jede Direktive exakt — ein Zusatz (z. B. `https:` in default-src)
+	// oder eine fehlende/zusaetzliche Direktive macht den Test rot.
+	const ist = richtlinieZerlegen(csp);
+	const { 'script-src': skript, ...rest } = ist;
+	expect(rest, `${pfad}: Richtlinie weicht ab`).toEqual(SOLL_OHNE_SKRIPT);
+	expect(skript?.filter((q) => !/^'(sha256-[A-Za-z0-9+/=]+|nonce-[A-Za-z0-9+/=]+)'$/.test(q)), `${pfad}: script-src`).toEqual([
+		"'self'"
+	]);
+	expect(skript?.filter((q) => q.startsWith("'sha256-")).length, `${pfad}: Hash des Kopf-Skripts`).toBe(1);
+	expect(skript?.filter((q) => q.startsWith("'nonce-")).length ?? 0).toBeLessThanOrEqual(1);
 	expect(antwort!.headers()['x-content-type-options']).toBe('nosniff');
 	expect(antwort!.headers()['x-frame-options']).toBe('DENY');
 	await page.waitForLoadState('networkidle');

@@ -1,6 +1,7 @@
 import { test as base, expect, type APIRequestContext, type APIResponse, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import * as path from 'node:path';
 import { resolveE2EUser } from './testUser.ts';
+import { wegwerfPasswort } from './stagingZugang';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Issue #1771 Scheibe 1: geteilte, zustandsbasierte Ziehgeste für
@@ -307,7 +308,7 @@ export const testMitZustellbaremZiel = base.extend<object, { zustellbareSitzung:
 			const adminCtx = await browser.newContext({ ...neu, storageState: workerInfo.project.use.storageState });
 			const gastCtx = await browser.newContext(neu);
 			const username = `e2ezustellbar${Date.now()}w${workerInfo.workerIndex}`;
-			const kennwort = 'Test1234!x';
+			const kennwort = wegwerfPasswort();
 			try {
 				await registriereBestaetigtenZweitnutzer(adminCtx.request, gastCtx.request, username, kennwort);
 			} finally {

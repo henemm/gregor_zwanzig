@@ -267,7 +267,7 @@ def test_ac7_positivliste_eintraege_und_alle_existieren():
 def test_ac7_ratschen_unveraendert():
     text = CI_YML.read_text("utf-8")
     assert re.search(r"^\s*E2E_MIN_SPECS: 82\b", text, re.M)
-    assert re.search(r"^\s*E2E_MIN_EXECUTED_HAUPT: 716\b", text, re.M)
+    assert re.search(r"^\s*E2E_MIN_EXECUTED_HAUPT: 717\b", text, re.M)  # 716 + 1 (#2961 F003)
 
 
 def test_ac7_positivlisten_kopf_nennt_geloeschte_specs_nicht_mehr():

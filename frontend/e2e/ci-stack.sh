@@ -16,7 +16,11 @@
 # ci.yml: dieses Skript ist bereits die alleinige Quelle fuer den
 # Auth-/Umgebungs-Zustand des isolierten Stacks (GZ_AUTH_PASS, GZ_ENV) --
 # ein zweiter Stellhebel in ci.yml wuerde denselben Zustand doppelt pflegen.
-# Aufruf: ci-stack.sh start|stop
+# Aufruf: ci-stack.sh start|stop|restart-go
+# restart-go (#2961): startet NUR den Go-Server neu -- frische In-Memory-
+# Ratenbremsen (u. a. 30 Anmeldungen/Stunde je IP), Daten und Sitzungen
+# bleiben (dateibasiert unter GZ_DATA_DIR). Der Zugriffslog wird angehaengt,
+# nicht ueberschrieben. Begruendung und Messung: ci.yml, Drittlauf bug-703.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -60,6 +64,14 @@ start_stack() {
 			> "$STATE_DIR/python-core.log" 2>&1 &
 		echo $! > "$STATE_DIR/python-core.pid"
 	)
+	: > "$STATE_DIR/go-server.log"
+	start_go
+	wait_for_health "$PY_HEALTH_URL" "Python-Core"
+	wait_for_health "$GO_HEALTH_URL" "Go-Server"
+}
+
+# Go-Server im Hintergrund starten; Log wird angehaengt (Zaehlung ueber Neustarts).
+start_go() {
 	GZ_PORT="$GO_PORT" GZ_PYTHON_CORE_URL="http://localhost:${PY_PORT}" \
 		GZ_DATA_DIR="$DATA_ROOT" GZ_CACHE_DIR="$DATA_ROOT/cache" \
 		GZ_TEST_FIXTURE_DIR="$REPO_ROOT/fixtures/openmeteo" \
@@ -68,11 +80,29 @@ start_stack() {
 		GZ_ADMIN_USER_IDS=admin \
 		GZ_PUBLIC_HOST="http://localhost:4173" \
 		GZ_WEBAUTHN_RP_ORIGINS="http://localhost:4173,http://localhost:5173" \
-		"$GO_BIN" > "$STATE_DIR/go-server.log" 2>&1 &
+		"$GO_BIN" >> "$STATE_DIR/go-server.log" 2>&1 &
 	echo $! > "$STATE_DIR/go-server.pid"
+}
 
-	wait_for_health "$PY_HEALTH_URL" "Python-Core"
-	wait_for_health "$GO_HEALTH_URL" "Go-Server"
+# Nur den Go-Server neu starten: alten Prozess beenden, auf freien Port warten,
+# neu starten, auf Health warten.
+restart_go() {
+	local pidfile="$STATE_DIR/go-server.pid" waited=0
+	if [ -f "$pidfile" ]; then
+		local pid
+		pid="$(cat "$pidfile")"
+		if kill -0 "$pid" 2>/dev/null; then
+			kill "$pid" 2>/dev/null || true
+			while kill -0 "$pid" 2>/dev/null; do
+				sleep 1
+				waited=$((waited + 1))
+				[ "$waited" -lt "$HEALTH_TIMEOUT_SEC" ] || { echo "FEHLER: Go-Server beendet sich nicht." >&2; return 1; }
+			done
+		fi
+		rm -f "$pidfile"
+	fi
+	start_go
+	wait_for_health "$GO_HEALTH_URL" "Go-Server (neu gestartet)"
 }
 
 stop_stack() {
@@ -87,5 +117,6 @@ stop_stack() {
 case "${1:-}" in
 	start) start_stack ;;
 	stop) stop_stack ;;
-	*) echo "Nutzung: $0 {start|stop}" >&2; exit 2 ;;
+	restart-go) restart_go ;;
+	*) echo "Nutzung: $0 {start|stop|restart-go}" >&2; exit 2 ;;
 esac

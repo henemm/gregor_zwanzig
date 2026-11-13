@@ -35,6 +35,7 @@ import {
 	createTestTrip,
 	registriereBestaetigtenZweitnutzer
 } from './helpers';
+import { wegwerfPasswort } from './stagingZugang';
 
 const HANDY = { width: 390, height: 844 };
 
@@ -322,7 +323,7 @@ test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
 	}) => {
 		// Zweitnutzer ohne Trips ⇒ Startseite im Vergleich-Modus (routes/+page.svelte:64-66).
 		const username = `e2ehubreiter${Date.now()}`;
-		const password = 'Test1234!x';
+		const password = wegwerfPasswort();
 		const ctx = await browser.newContext({
 			storageState: undefined,
 			viewport: { width: 1280, height: 900 },

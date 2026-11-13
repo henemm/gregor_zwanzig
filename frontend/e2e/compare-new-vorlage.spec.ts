@@ -13,6 +13,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import { createTestLocation, registriereBestaetigtenZweitnutzer } from './helpers';
+import { wegwerfPasswort } from './stagingZugang';
 
 const HEADER_NAME = '[data-testid="compare-editor-name"]';
 const HEADER_NAME_MOBILE = '[data-testid="compare-editor-name-mobile"]';
@@ -112,7 +113,7 @@ test.describe('S2c — /compare/new?from=<id>', () => {
 		const ctxB = await browser.newContext();
 		const pageB = await ctxB.newPage();
 		try {
-			await registriereBestaetigtenZweitnutzer(pageA.request, pageB.request, 'e2e2277b' + suffix, 'test1234');
+			await registriereBestaetigtenZweitnutzer(pageA.request, pageB.request, 'e2e2277b' + suffix, wegwerfPasswort());
 			for (const fremd of [idA, 'gibt-es-nicht-' + suffix]) {
 				await pageB.goto(`/compare/new?from=${fremd}`);
 				await expect(pageB.locator(HEADER_NAME)).toBeVisible({ timeout: 15_000 });

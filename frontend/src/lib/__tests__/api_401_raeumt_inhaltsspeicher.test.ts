@@ -62,6 +62,49 @@ describe('AC-11: Inhaltsspeicher bei beendeter Sitzung', () => {
 		assert.ok(windowStandIn.location.href.startsWith('/login?expired=1'));
 	});
 
+	test('401 mit verweigertem Geraetespeicher (wirft): die Umleitung erfolgt trotzdem', async () => {
+		(globalThis as { caches?: unknown }).caches = {
+			keys: async () => {
+				throw new Error('SecurityError: Speicher verweigert');
+			},
+			open: async () => {
+				throw new Error('SecurityError');
+			},
+			delete: async () => {
+				throw new Error('SecurityError');
+			}
+		};
+		const zurueck = netzLiefert(async () => new Response('{"error":"unauthorized"}', { status: 401 }));
+		try {
+			await assert.rejects(
+				() => api.get('/api/trips'),
+				(e: { status?: number }) => e.status === 401
+			);
+		} finally {
+			zurueck();
+		}
+		assert.ok(windowStandIn.location.href.startsWith('/login?expired=1'));
+	});
+
+	test('401 mit haengendem Geraetespeicher: die Umleitung erfolgt innerhalb der Frist', async () => {
+		const nie = new Promise<never>(() => {});
+		(globalThis as { caches?: unknown }).caches = {
+			keys: () => nie,
+			open: () => nie,
+			delete: () => nie
+		};
+		const zurueck = netzLiefert(async () => new Response('{"error":"unauthorized"}', { status: 401 }));
+		const start = Date.now();
+		try {
+			await assert.rejects(() => api.get('/api/trips'));
+		} finally {
+			zurueck();
+		}
+		const dauer = Date.now() - start;
+		assert.ok(windowStandIn.location.href.startsWith('/login?expired=1'));
+		assert.ok(dauer < 3_000, `Umleitung erst nach ${dauer} ms`);
+	});
+
 	test('Netzfehler (offline): nichts wird geraeumt', async () => {
 		const zurueck = netzLiefert(async () => {
 			throw new TypeError('Failed to fetch');

@@ -76,6 +76,29 @@ describe('AC-12: die Anmeldeseite stellt fest, ob noch eine Sitzung besteht', ()
 		assert.equal(await sitzungAktiv('http://localhost/login?abgemeldet=1', 'u.s.1.sig'), true);
 	});
 
+	// Issue #2961 (F006): ist die Go-API nicht erreichbar (Netzfehler), steht nicht
+	// fest, dass die Sitzung fort ist — dann wird NICHT geraeumt.
+	test('Go-API nicht erreichbar: gilt als aktiv, die Anmeldeseite raeumt nicht', async () => {
+		const zu = createServer();
+		await new Promise<void>((fertig) => zu.listen(0, '127.0.0.1', fertig));
+		const totePort = (zu.address() as AddressInfo).port;
+		await new Promise<void>((fertig) => zu.close(() => fertig()));
+		const vorher = process.env.GZ_API_BASE;
+		process.env.GZ_API_BASE = `http://127.0.0.1:${totePort}`;
+		try {
+			const aktiv = await sitzungAktiv('http://localhost/login?abgemeldet=1', 'u.s.1.sig');
+			assert.equal(aktiv, true);
+			installiereSitzungsspeicher();
+			try {
+				assert.equal(abmeldungLiegtVor(new URL('http://localhost/login?abgemeldet=1'), aktiv), false);
+			} finally {
+				entferneSitzungsspeicher();
+			}
+		} finally {
+			process.env.GZ_API_BASE = vorher;
+		}
+	});
+
 	test('ohne Merkmal wird die Go-API gar nicht gefragt', async () => {
 		profilStatus = 200;
 		await sitzungAktiv('http://localhost/login', 'u.s.1.sig');
