@@ -55,8 +55,9 @@ sichere Soll-Verhalten der Go-Schnittstellen fest (Grundsatzentscheidungen in AD
 ## Implementation Details
 
 1. **Kartenlinks (GC1).** Google-Zweig: Eingabe mit `url.Parse`, nur `https`, Host exakt aus
-   `maps.app.goo.gl`, `goo.gl`, `www.google.com`, `maps.google.com`, `google.com` oder
-   `^(www\.|maps\.)?google\.(com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$`; keine Nutzer-Info.
+   `maps.app.goo.gl`, `goo.gl` oder einer festen Liste von Google-Domains (`googleLaenderDomains`:
+   google.com, Alpenraum, übriges Europa, ca/com.au/co.nz/co.jp/com.br/com.mx, jeweils auch mit
+   `www.`/`maps.`); kein offenes Muster. Kein Port außer 443, keine Nutzer-Info.
    Sonst `resolve_failed`/`fach.resolver.maps_aufloesen` ohne Abruf. Abruf über
    `newLinkClient`: eigener `http.Transport` (kein Proxy, keine Keep-Alives, 64 KB Kopfgrenze),
    `net.Dialer.Control` prüft die verbundene IP (`isPublicUnicastIP`), `CheckRedirect` prüft jeden
@@ -66,7 +67,8 @@ sichere Soll-Verhalten der Go-Schnittstellen fest (Grundsatzentscheidungen in AD
    `internal/resolver/export_test.go`.
 2. **Kennungen (GC2).** `coreKennung` (Prüfung `ValidEntityID` → 400, dann `url.PathEscape`) auf
    allen Alt-Routen; kind-neutrale Routen escapen zusätzlich. `ValidEntityIDRe` sperrt
-   `\x00-\x1f`, `\x7f`, `?`, `#`, `%` (Leerzeichen bleiben erlaubt).
+   `\x00-\x1f`, `\x7f`, C1 (U+0080–U+009F), U+2028/U+2029, `?`, `#`, `%` und ungültiges
+   UTF-8 (Leerzeichen bleiben erlaubt). Python `VALID_ENTITY_ID_RE` gleichlautend (Ende `\Z`).
 3. **Sperrdateien (GC3).** `LockBriefing`/`LockBriefingErr` hängen an die Freigabe
    `RemoveBriefingLockFile`, wenn keine `<id>.json` existiert.
 4. **Wachstum (GC4).** Neue Config-Schlüssel `^[a-z0-9_.-]{1,64}$`, ≤ 200 je Map (vor dem Merge
@@ -106,9 +108,11 @@ sichere Soll-Verhalten der Go-Schnittstellen fest (Grundsatzentscheidungen in AD
   und eine Kette wird nach höchstens fünf Weiterleitungen abgebrochen.
   - Test: `TestLinkAbruf_RedirectAufFremdenHostWirdNichtVerfolgt`, `…HoechstensFuenfWeiterleitungen`
 - **AC-3:** Given ein erlaubter Hostname löst auf eine interne Adresse auf (Loopback, privat,
-  Link-Local, CGNAT, Multicast, IPv4-mapped) / When die Ortsauflösung ihn abrufen will / Then
+  Link-Local, CGNAT, Multicast, IPv4-mapped, IPv4-kompatibel, Teredo, Site-Local) / When die
+  Ortsauflösung ihn abrufen will / Then
   kommt keine Verbindung zustande.
-  - Test: `TestLinkAbruf_InterneAdresseWirdNichtVerbunden`, `…ErlaubnislisteUndAdresssperre`
+  - Test: `TestLinkAbruf_InterneAdresseWirdNichtVerbunden`, `…ErlaubnislisteUndAdresssperre`,
+    `…EingebetteteIPv4Gesperrt`
 - **AC-4:** Given das Dienstgeheimnis für den Python-Core ist installiert / When die
   Ortsauflösung eine Adresse abruft (auch die des Cores, mit im Test geöffneten Sperren) / Then
   trägt die Anfrage den Header `X-GZ-Core-Auth` nicht; ohne Testöffnung findet gar kein Abruf
@@ -126,8 +130,10 @@ sichere Soll-Verhalten der Go-Schnittstellen fest (Grundsatzentscheidungen in AD
   ein kodiertes Pfadsegment an, mit genau einer `user_id` — der des angemeldeten Nutzers.
   - Test: `TestKennung_WirdKodiertWeitergereicht`
 - **AC-8:** Given Bestandskennungen (Slugs mit Umlauten, `cp-`-Kennungen, kurze Zufallskennungen)
-  / When sie geprüft werden / Then bleiben sie gültig; `?`, `#`, `%` und Steuerzeichen nicht.
-  - Test: `internal/store/entity_id_upstream_zeichen_test.go`
+  / When sie geprüft werden / Then bleiben sie gültig; `?`, `#`, `%`, Steuerzeichen (auch C1),
+  U+2028/U+2029 und ungültiges UTF-8 nicht — in Go und Python gleichlautend.
+  - Test: `internal/store/entity_id_upstream_zeichen_test.go`, `entity_id_utf8_test.go`,
+    `tests/unit/test_entity_id_pattern_parity.py` (geteilte Wahrheitstabelle)
 - **AC-9:** Given ein Nutzer / When er 25 erfundene Kennungen über Lesen, Schreiben, Status,
   Wetter-Konfiguration und Löschen von Trips, Ortsvergleichen und Briefings anfragt / Then bleibt
   im Nutzerverzeichnis keine einzige Sperrdatei zurück, und ein echter Trip bleibt danach les- und
@@ -193,6 +199,11 @@ sichere Soll-Verhalten der Go-Schnittstellen fest (Grundsatzentscheidungen in AD
   Grenzen, auch für die Gleichzeitigkeit), erst der 201. wird gebremst; in Produktion wird schon
   der 21. mit 429 abgewiesen.
   - Test: `TestMengenbremse_StagingZehnfacheGrenzen`
+- **AC-25:** Given ein Kartenlink / When sein Host nicht auf der festen Liste der
+  Google-Domains steht (z. B. `google.xx`, `google.com.xx`), er einen anderen Port als 443 nennt
+  oder Nutzer-Info trägt / Then wird er ohne Abruf abgelehnt; alle gelisteten Domains (auch mit
+  `www.`/`maps.`) sind erlaubt, und auf Staging fragt der Abruf den Egress-Wächter.
+  - Test: `internal/resolver/link_abruf_haertung_ergaenzung_test.go`
 
 ## Known Limitations
 
@@ -205,8 +216,8 @@ sichere Soll-Verhalten der Go-Schnittstellen fest (Grundsatzentscheidungen in AD
 - **Staging-Testkonten sind selbst erklärbar.** `is_test_user` lässt sich bei der Registrierung
   setzen (ADR-0072); wer ein eigenes Testkonto anlegt, bekommt dafür ein Token — das betrifft nur
   sein eigenes Konto. Fremde, bestätigte Konten bleiben gesperrt und unsichtbar.
-- **Kennungsmuster Python.** `app.loader.VALID_ENTITY_ID_RE` ist nicht nachgezogen; die geteilte
-  Wahrheitstabelle enthält die neuen Fälle bewusst nicht.
+- **Neue Google-Länderdomain** (z. B. ein weiteres Zielland) braucht einen Eintrag in
+  `googleLaenderDomains`; bis dahin ist ein solcher Link „nicht auflösbar".
 - **Mengenbremsen im Arbeitsspeicher**, je Prozess; ein Neustart setzt sie zurück.
 - **Staging hat zehnfache Grenzen**, damit E2E-Läufe und Validator-Werkzeuge ohne
   Ausnahme-Eintrag nicht gebremst werden; die Staging-Werte sind damit kein Messwert für die
