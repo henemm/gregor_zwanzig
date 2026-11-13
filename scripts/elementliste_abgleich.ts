@@ -2,7 +2,8 @@
 // Playwright reicht eigene Flags nicht an Tests durch; dieser Starter nimmt sie entgegen, übersetzt sie
 // in die Umgebung der Spec und reicht den Exit-Code von Playwright durch.
 //
-//   cd frontend && npm run elementliste:abgleich -- [--strict] [--scope <reiter[/zustand]>] [--sprache en]
+//   cd frontend && npm run elementliste:abgleich -- [--strict] [--abnahme] [--scope <reiter[/zustand]>] [--sprache en]
+// --abnahme (feat_2913_abgleich_ganzseite): Exit ≠ 0, solange eine Abweichung keinen Besitzer hat.
 //
 // Login: GZ_AUTH_USER/GZ_AUTH_PASS aus der Umgebung; fehlen sie, werden NUR diese beiden Werte aus
 // ELEMENTLISTE_ENV_DATEI (Vorgabe: Staging-Checkout /home/hem/gregor_zwanzig_staging/.env) gelesen.
