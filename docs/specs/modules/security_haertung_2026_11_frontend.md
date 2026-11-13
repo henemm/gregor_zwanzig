@@ -2,9 +2,9 @@
 entity_id: security_haertung_2026_11_frontend
 type: module
 created: 2026-11-12
-updated: 2026-11-12
+updated: 2026-11-13
 status: approved
-version: "1.0"
+version: "1.1"
 tags: [security, frontend, pwa, csp, issue-2961]
 ---
 
@@ -96,16 +96,16 @@ der Umgebung.
 ## Acceptance Criteria
 
 - **AC-1:** Given ein Wegpunkt, dessen Name HTML-Auszeichnung enthält (z. B. aus einer GPX-Datei) / When der Nutzer auf der Karte den Marker öffnet / Then zeigt die Sprechblase den Namen wörtlich als Text, und es entsteht kein Element und keine Skriptausführung aus dem Namen.
-  - Test: `frontend/e2e/karte-wegpunktname-als-text.spec.ts` (echtes Leaflet), Logiktest `frontend/src/lib/utils/kartenPopup.test.ts`.
+  - Test: `frontend/e2e/karte-wegpunktname-als-text.spec.ts` (echtes Leaflet; Etappe mit mehreren Wegpunkten UND mit genau einem Wegpunkt — beide Zweige in `MapCanvas.svelte`), Logiktest `frontend/src/lib/utils/kartenPopup.test.ts`.
 
-- **AC-2:** Given eine Trip- oder Vergleichs-Adresse bzw. `?from=` mit einer Kennung, die Abfrage-, Anker- oder Pfadzeichen enthält / When der Frontend-Server die Go-API fragt / Then steht die Kennung kodiert als genau ein Pfadsegment im Pfad, und eine Kennung außerhalb des Zulassungsmusters führt ohne Anfrage zu 404 bzw. zu keiner Vorlage.
-  - Test: `frontend/src/lib/server/__tests__/apiPfad.test.ts`, `frontend/src/routes/api/[...path]/__tests__/durchreicher_pfad_und_kopfzeilen.test.ts` (echter lokaler HTTP-Server).
+- **AC-2:** Given eine Trip- oder Vergleichs-Adresse, `?from=` beim Anlegen von Trip oder Vergleich oder eine Bearbeiten-Umleitung mit einer Kennung / When der Frontend-Server die Go-API fragt bzw. umleitet / Then entspricht das Zulassungsmuster exakt der Go-Quelle (`pathsafe.go`: kein führender Punkt, keine Trenner, Steuerzeichen, U+2028/U+2029, `?`, `#`, `%`), eine gültige Kennung steht kodiert als genau ein Pfadsegment im Pfad, eine ungültige führt ohne Anfrage zu 404 bzw. zu keiner Vorlage, und Umleitungen übernehmen Kennung und Reiter kodiert.
+  - Test: `frontend/src/lib/server/__tests__/apiPfad.test.ts` (inkl. der geteilten Wahrheitstabelle `tests/fixtures/entity_id_pattern_parity/faelle.json`), `frontend/src/routes/api/[...path]/__tests__/durchreicher_pfad_und_kopfzeilen.test.ts` (echter lokaler HTTP-Server), `frontend/src/routes/compare/new/__tests__/ladeVorlage.test.ts`, `frontend/src/routes/bearbeiten_umleitung_kodiert.test.ts`.
 
 - **AC-3:** Given eine Browser-Anfrage an `/api/…` / When ein Pfadsegment leer, `.`/`..`, nicht dekodierbar ist oder kodiert einen Trenner enthält / Then antwortet der Durchreicher 400 und die Go-API erhält nichts; bei gültigem Pfad erhält sie nur die Kopfzeilen der Positivliste und als Cookie nur die Sitzung.
   - Test: wie AC-2 (Durchreicher gegen echten HTTP-Server).
 
 - **AC-4:** Given eine beliebige Antwort des Frontend-Servers / When der Browser sie lädt / Then trägt sie die Sicherheits-Kopfzeilen, jede Seitenantwort trägt die Content-Security-Policy, und auf Anmeldung, Startseite, Trip-Liste, Konto, Trip-Detail mit Karte, Vergleich und Alarm-Vorschau meldet der Browser keine Verletzung.
-  - Test: `frontend/src/hooks.server.sicherheitskopfzeilen.test.ts`, `frontend/e2e/sicherheitsrichtlinie-ohne-verletzung.spec.ts` (mit Positivkontrolle).
+  - Test: `frontend/src/hooks.server.sicherheitskopfzeilen.test.ts`, `frontend/e2e/sicherheitsrichtlinie-ohne-verletzung.spec.ts` (mit Positivkontrolle; jede Direktive wird exakt verglichen, ein Zusatz wie `https:` macht den Test rot).
 
 - **AC-5:** Given ein Anmelde-Merkmal mit falscher, verkürzter oder verlängerter Signatur / When der Frontend-Server es prüft / Then gilt es als ungültig, der Vergleich läuft in konstanter Zeit und wirft bei ungleicher Länge keine Ausnahme.
   - Test: `frontend/src/lib/auth_signaturvergleich.test.ts`.
@@ -116,23 +116,23 @@ der Umgebung.
 - **AC-7:** Given ein Besucher ohne Sitzung / When er `/email-preview-dev` aufruft / Then leitet der Server auf die Anmeldung um, ohne die Seite aufzulösen.
   - Test: `frontend/src/hooks.server.entwickler_vorschau_nicht_oeffentlich.test.ts`.
 
-- **AC-8:** Given Nutzer A hat Ansichten offline abgelegt und Nutzer B meldet sich auf demselben Gerät an / When B die erste Seite öffnet, auch eine, die selbst nie abgelegt wird (Startseite) / Then ist As Inhaltsspeicher gelöscht.
-  - Test: `frontend/e2e/pwa-offline-sperre-und-mandant.spec.ts` („#2961 AC-8"), Logiktest `frontend/src/lib/pwa/__tests__/datenspeicher_mandant_und_hoechstalter.test.ts`.
+- **AC-8:** Given Nutzer A hat Ansichten offline abgelegt und Nutzer B meldet sich auf demselben Gerät an / When Bs erste Antwort mit Mandantenkennung über eine der drei Worker-Regeln kommt — Seitenaufruf außerhalb der Positivliste (Startseite), Positivlisten-Adresse mit Nicht-200-Antwort (404) oder same-origin-Datenabruf ohne Navigation / Then ist As Inhaltsspeicher gelöscht, jeweils unabhängig von den anderen Regeln.
+  - Test: `frontend/e2e/pwa-offline-sperre-und-mandant.spec.ts` (drei Fälle „#2961 AC-8"), Logiktest `frontend/src/lib/pwa/__tests__/datenspeicher_mandant_und_hoechstalter.test.ts`.
 
 - **AC-9:** Given auf dem Gerät liegen ausnahmsweise Inhaltsspeicher zweier Nutzer / When die App ohne Netz eine Ansicht oder die Offline-Übersicht ausliefert / Then liefert sie aus keinem der beiden; sonst nur aus dem Speicher des zuletzt angemeldeten Nutzers.
   - Test: Logiktest wie AC-8.
 
-- **AC-10:** Given eine offline vorgehaltene Ansicht, deren Ablage mehr als 30 Tage zurückliegt / When der Worker aktiviert wird oder die Ansicht bzw. die Offline-Übersicht abgerufen wird / Then wird sie entfernt und nicht mehr ausgeliefert; jüngere bleiben.
-  - Test: Logiktest wie AC-8.
+- **AC-10:** Given eine offline vorgehaltene Ansicht, deren Ablage mehr als 30 Tage zurückliegt oder deren Ablagezeitpunkt mehr als 5 Minuten in der Zukunft liegt / When der Worker aktiviert wird oder die Ansicht bzw. die Offline-Übersicht abgerufen wird / Then wird sie entfernt, nicht mehr ausgeliefert und in der Übersicht nicht gelistet; jüngere bleiben.
+  - Test: Logiktest wie AC-8 (u. a. ein Fall, der nur die Übersicht abfragt).
 
-- **AC-11:** Given ein angemeldeter Nutzer mit Offline-Inhalten / When die Go-API eine Anfrage mit 401 beantwortet / Then sind die Inhaltsspeicher gelöscht, bevor auf die Anmeldung umgeleitet wird, Programmdateien und Worker bleiben; ein Netzfehler oder ein 503 löscht nichts.
+- **AC-11:** Given ein angemeldeter Nutzer mit Offline-Inhalten / When die Go-API eine Anfrage mit 401 beantwortet / Then sind die Inhaltsspeicher gelöscht, bevor auf die Anmeldung umgeleitet wird, Programmdateien und Worker bleiben; verweigert oder blockiert der Browser den Gerätespeicher, erfolgt die Umleitung trotzdem innerhalb von 2 Sekunden; ein Netzfehler oder ein 503 löscht nichts.
   - Test: `frontend/src/lib/__tests__/api_401_raeumt_inhaltsspeicher.test.ts`.
 
-- **AC-12:** Given ein Nutzer mit gültiger Sitzung und Offline-Inhalten / When er einem Verweis auf `/login?abgemeldet=1` folgt / Then bleibt sein Offline-Speicher erhalten; nach echtem Abmelden (Sitzung beendet oder eigener Abmelde-Merker des Tabs) wird wie bisher geräumt.
+- **AC-12:** Given ein Nutzer mit gültiger Sitzung und Offline-Inhalten / When er einem Verweis auf `/login?abgemeldet=1` folgt — auch wenn die Go-API dabei nicht erreichbar ist / Then bleibt sein Offline-Speicher erhalten; nach echtem Abmelden (Sitzung beendet oder eigener Abmelde-Merker des Tabs) wird wie bisher geräumt.
   - Test: `frontend/src/routes/login/__tests__/abmelde_merkmal_nur_ohne_sitzung.test.ts`, `frontend/e2e/pwa-offline-sperre-und-mandant.spec.ts` („#2961 AC-12"); Bestand AC-11/AC-15 der PWA-Specs.
 
-- **AC-13:** Given ein Playwright-Lauf gegen Staging ohne gesetzte Zugangsdaten-Variablen / When die Konfiguration oder ein Setup die Zugangsdaten braucht / Then bricht der Lauf mit einer Meldung ab, die die Variablen und ihre Quelle nennt; im Quelltext steht kein Staging-Passwort.
-  - Test: `frontend/src/lib/__tests__/staging_zugang_aus_umgebung.test.ts`; Laden/Sammeln der Specs liest keine Zugangsdaten (`npx playwright test --list` ohne Variablen grün); Lauf `npx playwright test --config playwright.staging.config.ts --list` ohne Variablen bricht ab.
+- **AC-13:** Given ein Playwright-Lauf gegen Staging ohne gesetzte Zugangsdaten-Variablen / When die Konfiguration oder ein Setup die Zugangsdaten braucht / Then bricht der Lauf mit einer Meldung ab, die die Variablen und ihre Quelle nennt; im Quelltext steht kein Staging-Passwort, und Konten, die ein Test selbst anlegt, bekommen ein zufälliges Passwort (einzige Ausnahme: der feste Admin-Testwert des isolierten CI-Stacks).
+  - Test: `frontend/src/lib/__tests__/staging_zugang_aus_umgebung.test.ts`; Wächter `frontend/src/lib/__tests__/e2e_keine_festen_passwoerter.test.ts` (enge Positivliste); Laden/Sammeln der Specs liest keine Zugangsdaten (`npx playwright test --list` ohne Variablen grün); Lauf `npx playwright test --config playwright.staging.config.ts --list` ohne Variablen bricht ab.
 
 ## Known Limitations
 
@@ -153,6 +153,10 @@ der Umgebung.
   Staging-Konten sind öffentlich bekannt; die Konten sind zu löschen oder ihre Passwörter neu zu
   setzen und als Umgebungsvariable zu hinterlegen.
 
+- **CI-Lauf bug-703:** der Drittlauf hängt am In-Memory-Anmeldezähler des Go-Dienstes; die CI
+  startet den Go-Dienst davor neu (`ci-stack.sh restart-go`) und nutzt eine feste IPv4-Adresse,
+  damit der Nachweis nicht von den Vorläufen oder der Namensauflösung abhängt.
+
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** ADR-0063 (Nachtrag 2026-11-12)
@@ -163,3 +167,7 @@ der Umgebung.
 ## Changelog
 
 - 2026-11-12: Spec angelegt (Issue #2961, PO-Auftrag Sicherheits-Härtung).
+- 2026-11-13: Fix-Runde nach Gegenprüfung — Kennungsmuster gleich Go (auch Vergleichs-Vorlage),
+  Zukunftsdatum, Räumen bei blockiertem Speicher, je Worker-Regel ein Nachweis, exakter
+  CSP-Vergleich, keine festen Passwörter selbst angelegter Testkonten (AC-1, AC-2, AC-4, AC-8,
+  AC-10 bis AC-13 nachgezogen).
