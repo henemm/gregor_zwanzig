@@ -88,3 +88,39 @@ def test_hoechstens_200_mb_gesamt_je_nutzer():
         assert not (d / "noch-eine.gpx").exists()
     finally:
         os.remove(gross)
+
+
+def test_grenze_zaehlt_jede_schreibweise_der_endung():
+    """F001: Dateien mit ``.GPX``/``.Gpx`` zaehlen genauso -- getrennt je Nutzer."""
+    d = _ablage("gpx-grenze-c")
+    for i in range(199):
+        (d / f"alt-{i:03d}.{('GPX', 'Gpx', 'gpx')[i % 3]}").write_bytes(_GPX)
+    assert _post("gpx-grenze-c", "nummer-200.GPX", _GPX).status_code == 200
+    resp = _post("gpx-grenze-c", "nummer-201.Gpx", _GPX)
+    assert resp.status_code == 409, resp.text
+    assert not (d / "nummer-201.Gpx").exists()
+    assert _post("gpx-grenze-d", "erste.GPX", _GPX).status_code == 200
+
+
+def test_liegengebliebene_zwischendateien_zaehlen_und_werden_aufgeraeumt():
+    d = _ablage("gpx-grenze-e")
+    alt = d / ".upload-deadbeef.tmp"
+    alt.write_bytes(b"x" * 1000)
+    os.utime(alt, (0, 0))  # sehr alt
+    assert _post("gpx-grenze-e", "tour.gpx", _GPX).status_code == 200
+    assert not alt.exists()
+    assert sorted(p.name for p in d.iterdir()) == ["tour.gpx"]
+
+
+def test_sehr_langer_dateiname_wird_gekuerzt_statt_500():
+    """F004: bisher wurden Namen bis 255 Bytes gespeichert; jetzt gekuerzt auf
+    hoechstens 200 Bytes, Endung bleibt."""
+    d = _ablage("gpx-grenze-f")
+    name = "ä" * 120 + ".gpx"  # 244 Bytes UTF-8
+    resp = _post("gpx-grenze-f", name, _GPX)
+    assert resp.status_code == 200, resp.text
+    namen = [p.name for p in d.iterdir()]
+    assert len(namen) == 1 and namen[0].endswith(".gpx")
+    assert len(namen[0].encode()) <= 200
+    lang = "x" * 251 + ".gpx"  # 255 Bytes
+    assert _post("gpx-grenze-f", lang, _GPX).status_code == 200
