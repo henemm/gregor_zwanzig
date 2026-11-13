@@ -46,6 +46,16 @@ export function resolveDisconnectClick(busy: boolean): 'confirm-dialog' | 'noop'
 	return busy ? 'noop' : 'confirm-dialog';
 }
 
+/**
+ * ADR-0116 (#2961): Hinweis zum Erneuern nur, wenn der Server ausdrücklich
+ * einen vorhandenen Code im alten, kürzeren Format meldet.
+ */
+export function deriveLinkCodeLegacy(
+	resp: { exists?: boolean; legacy_format?: boolean } | null | undefined
+): boolean {
+	return resp?.exists === true && resp?.legacy_format === true;
+}
+
 /** Fail-closed: alles ausser explizit {exists:false} gilt als vorhanden (AC-10). */
 export function deriveLinkCodeExists(resp: { exists?: boolean } | null | undefined): boolean {
 	if (resp && resp.exists === false) return false;

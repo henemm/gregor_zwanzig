@@ -248,3 +248,24 @@ describe('Verbindung trennen', () => {
 		assert.ok(html.includes('Verknüpfungscode bleibt gültig'), 'Die Rückfrage muss sagen, dass der Code bleibt.');
 	});
 });
+
+// =========================================================================
+// ADR-0116 (#2961 Gegenprüfung): Hinweis bei Code im alten, kürzeren Format
+// =========================================================================
+
+describe('Hinweis altes Code-Format', () => {
+	test('legacyFormat + vorhandener Code → Hinweis zum Erneuern', () => {
+		const html = renderMit({ exists: true, legacyFormat: true });
+		assert.ok(html.includes('data-testid="premium-sms-link-legacy"'), 'Hinweis fehlt.');
+		assert.ok(html.includes('älteres, kürzeres Format'), 'Hinweistext fehlt.');
+	});
+
+	test('neues Format oder frisch erzeugter Code → kein Hinweis', () => {
+		assert.ok(!renderMit({ exists: true, legacyFormat: false }).includes('premium-sms-link-legacy'));
+		assert.ok(
+			!renderMit({ exists: true, legacyFormat: true, codeValue: 'XXABCDE234' }).includes(
+				'premium-sms-link-legacy'
+			)
+		);
+	});
+});

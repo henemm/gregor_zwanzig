@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
-import { deriveLinkCodeExists } from '$lib/utils/premiumSmsLinkCodeHelpers';
+import { deriveLinkCodeExists, deriveLinkCodeLegacy } from '$lib/utils/premiumSmsLinkCodeHelpers';
 
 
 /** Fallback templates when /api/templates is not available (yet). */
@@ -41,6 +41,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	const templates = Array.isArray(apiTemplates) ? apiTemplates : FALLBACK_TEMPLATES;
 	const metricPresets = Array.isArray(presets) ? presets : [];
 	const premiumSmsLinkCodeExists = deriveLinkCodeExists(linkCodeResult);
+	const premiumSmsLinkCodeLegacy = deriveLinkCodeLegacy(linkCodeResult);
 
-	return { profile, scheduler, health, templates, trips, comparePresets, locations, metricPresets, premiumSmsLinkCodeExists, smsDailyUsage };
+	return { profile, scheduler, health, templates, trips, comparePresets, locations, metricPresets, premiumSmsLinkCodeExists, premiumSmsLinkCodeLegacy, smsDailyUsage };
 };

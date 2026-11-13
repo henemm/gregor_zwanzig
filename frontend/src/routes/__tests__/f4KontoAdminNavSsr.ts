@@ -105,7 +105,7 @@ export function kontoDaten(over: Record<string, unknown> = {}): Record<string, u
 		premiumSmsLinkCodeExists: true,
 		smsDailyUsage: {
 			sms: { used: 3, limit: 10, reserve: 2 },
-			premium_sms: { used: 6, limit: 4, reserve: 1 }
+			premium_sms: { used: 4, limit: 4, reserve: 1, reply_used: 2, reply_limit: 4 }
 		},
 		...over
 	};

@@ -93,7 +93,7 @@ describe('#2412 S4b — SMS-Kontingent-Block auf der Kontoseite', () => {
 		const text = blockText(
 			renderAccount({
 				sms: { used: 3, limit: 10, reserve: 2 },
-				premium_sms: { used: 0, limit: 0, reserve: 3, reply_overshoot: 3 }
+				premium_sms: { used: 0, limit: 0, reserve: 3 }
 			})
 		);
 		assert.ok(text, 'AC-1: Block data-testid="sms-daily-usage" fehlt.');
@@ -109,7 +109,7 @@ describe('#2412 S4b — SMS-Kontingent-Block auf der Kontoseite', () => {
 		const text = blockText(
 			renderAccount({
 				sms: { used: 4, limit: 10, reserve: 2 },
-				premium_sms: { used: 5, limit: 15, reserve: 3, reply_overshoot: 3 }
+				premium_sms: { used: 5, limit: 15, reserve: 3 }
 			})
 		);
 		assert.ok(text, 'AC-2: Block fehlt.');
@@ -122,25 +122,36 @@ describe('#2412 S4b — SMS-Kontingent-Block auf der Kontoseite', () => {
 		);
 	});
 
-	test('AC-3: Antwort-Überhang → exakt "15 von 15 (+2 Antworten)"', () => {
+	test('AC-3 (ADR-0116): eigenes Antwort-Kontingent als eigene Zeile', () => {
 		const text = blockText(
 			renderAccount({
 				sms: { used: 0, limit: 0, reserve: 2 },
-				premium_sms: { used: 17, limit: 15, reserve: 3, reply_overshoot: 3 }
+				premium_sms: { used: 5, limit: 15, reserve: 3, reply_used: 2, reply_limit: 15 }
 			})
 		);
 		assert.ok(text, 'AC-3: Block fehlt.');
+		assert.ok(text.includes('5 von 15'), `AC-3: Premium-SMS-Zähler fehlt, Block: ${text}`);
 		assert.ok(
-			text.includes('15 von 15 (+2 Antworten)'),
-			`AC-3: "15 von 15 (+2 Antworten)" fehlt, Block: ${text}`
+			text.includes('Premium-SMS-Antworten auf Befehle') && text.includes('2 von 15'),
+			`AC-3: Antwort-Zeile "2 von 15" fehlt, Block: ${text}`
 		);
-		assert.ok(!text.includes('17 von 15'), `AC-3: roher Überlauf "17 von 15" sichtbar: ${text}`);
+		assert.ok(!text.includes('Antworten)'), `AC-3: alter Überhang-Zusatz sichtbar: ${text}`);
+	});
+
+	test('AC-3: ohne Antwort-Kontingent (reply_limit fehlt/0) keine Antwort-Zeile', () => {
+		const text = blockText(
+			renderAccount({
+				sms: { used: 0, limit: 0, reserve: 2 },
+				premium_sms: { used: 5, limit: 15, reserve: 3 }
+			})
+		);
+		assert.ok(text && !text.includes('Antworten auf Befehle'), `Block: ${text}`);
 	});
 
 	test('AC-7: beide Limits 0 → Block fehlt komplett', () => {
 		const html = renderAccount({
 			sms: { used: 0, limit: 0, reserve: 2 },
-			premium_sms: { used: 0, limit: 0, reserve: 3, reply_overshoot: 3 }
+			premium_sms: { used: 0, limit: 0, reserve: 3 }
 		});
 		assert.equal(blockText(html), null, 'AC-7: bei Limit 0/0 darf der Block nicht erscheinen.');
 	});
