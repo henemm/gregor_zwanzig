@@ -102,6 +102,8 @@ func sendAccountNotice(cfg config.Config, u *model.User, to string, msg mail.Mai
 		log.Printf("account notice %s: SMTP nicht konfiguriert — nicht versendet", art)
 		return
 	}
+	// Transport hier (synchron) festhalten, nicht erst in der Goroutine lesen.
+	sendVerificationMail := sendVerificationMailFn
 	go func() {
 		done := make(chan error, 1)
 		if isTestUser {
@@ -113,7 +115,7 @@ func sendAccountNotice(cfg config.Config, u *model.User, to string, msg mail.Mai
 		} else {
 			mailCfg := mail.MailConfig{Host: cfg.SMTPHost, Port: cfg.SMTPPort,
 				User: cfg.SMTPUser, Pass: cfg.SMTPPass, From: cfg.SMTPFrom}
-			go func() { done <- sendVerificationMailFn(mailCfg, to, msg) }()
+			go func() { done <- sendVerificationMail(mailCfg, to, msg) }()
 		}
 		select {
 		case err := <-done:
