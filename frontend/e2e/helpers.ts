@@ -1257,7 +1257,7 @@ export async function anlegenPflicht(page: Page, kind: HubKind, opts: AnlegenPfl
 	if (mobil) {
 		await page.getByTestId('compare-step2-mobile-library-btn').click();
 		for (const ort of orte) await page.getByTestId(`compare-step2-mobile-lib-check-${ort.id}`).click();
-		await page.locator('button[aria-label="Schliessen"]:visible').click();
+		await page.locator('[data-testid="sheet-close"]:visible').click();
 		return;
 	}
 	const bibliothek = page.locator('[data-testid="compare-step2-library"]:visible').first();
