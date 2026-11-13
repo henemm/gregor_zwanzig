@@ -20,6 +20,7 @@ SPEC: docs/specs/modules/alarm_pruefstrecke.md
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -86,7 +87,8 @@ def _write_premium_profile(uid: str, at: datetime) -> None:
     d.mkdir(parents=True, exist_ok=True)
     profile = {
         "id": uid, "tier": "premium",
-        "premium_sms_reply_to": "+41791234567",
+        # ADR-0116: Rueckadresse je Nutzer eindeutig (aus der Kennung abgeleitet).
+        "premium_sms_reply_to": "+4179" + str(int(hashlib.sha256(uid.encode()).hexdigest(), 16) % 10**7).zfill(7),
         "premium_sms_reply_at": (at - timedelta(minutes=5)).isoformat().replace("+00:00", "Z"),
         **_ALL_CHANNELS_RECIPIENTS,
     }

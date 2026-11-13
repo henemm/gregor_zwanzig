@@ -145,6 +145,17 @@ def golden_trip(name: str):
 # ---------------------------------------------------------------------------
 
 
+def premium_rueckadresse(uid: str) -> str:
+    """Gelernte Premium-SMS-Rueckadresse des Fixture-Profils -- je Nutzer
+    eindeutig und aus der Kennung abgeleitet: seit ADR-0116 gehoert eine
+    Rueckadresse hoechstens einem Konto, eine fuer alle Profile gleiche Nummer
+    wuerde den Versand sperren."""
+    import hashlib
+
+    ziffern = int(hashlib.sha256(uid.encode()).hexdigest(), 16) % 10**8
+    return f"+4900{ziffern:08d}"
+
+
 def frisches_profil(*, tier: str = "premium") -> str:
     """Echtes ``user.json`` auf der isolierten Datenwurzel -- KEIN
     "tdd"/"test" in der Kennung (Herkunftssperre, #2406/origin_guard.py:29-34),
@@ -160,7 +171,7 @@ def frisches_profil(*, tier: str = "premium") -> str:
         "mail_to": f"{uid}@example.invalid", "telegram_chat_id": f"chat-{uid}",
         "sms_to": "+490000000009", "sms_verified_number": "+490000000009",
         "sms_verified_at": "2026-01-01T00:00:00Z",
-        "premium_sms_reply_to": "+490000000008",
+        "premium_sms_reply_to": premium_rueckadresse(uid),
         # 5 Minuten zurueck: Tests frieren die Uhr oft auf die volle Minute
         # (Sekunden abgeschnitten) -- ein sekundengenaues "jetzt" laege dann
         # in der Zukunft und wird vom Produkt zu Recht abgewiesen (#2231).

@@ -75,11 +75,11 @@ def profil_rueckadresse(
         werte["premium_sms_reply_at"] = zeitstempel(datetime.now(timezone.utc) - gelernt_vor)
     werte.update(felder)
     if nummer:
-        _rueckadresse_bei_anderen_entfernen(user_id, nummer)
+        rueckadresse_bei_anderen_entfernen(user_id, nummer)
     _profil_rmw(user_id, werte)
 
 
-def _rueckadresse_bei_anderen_entfernen(user_id: str, nummer: str) -> None:
+def rueckadresse_bei_anderen_entfernen(user_id: str, nummer: str) -> None:
     """ADR-0116: eine Rueckadresse gehoert hoechstens einem Konto. Der Helfer
     bildet ab, was der Go-Lernpfad beim Zuordnen tut -- dieselbe Nummer
     verschwindet bei allen anderen Profilen der Testdatenwurzel."""
