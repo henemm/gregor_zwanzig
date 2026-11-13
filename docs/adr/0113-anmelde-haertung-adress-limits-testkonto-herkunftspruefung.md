@@ -22,7 +22,8 @@ Schwächen, die einzeln klein, zusammen aber relevant sind:
 ## Entscheidung
 
 1. **Einmal-Code (ergänzt ADR-0105 Punkt 9).** Zusätzlich zur IP-Bremse gelten Bremsen je
-   Zieladresse: höchstens 5 Fehlversuche in 15 Minuten, danach ist die Code-Anmeldung dieser
+   Zieladresse: höchstens 5 Fehlversuche in jedem 15-Minuten-Intervall (gleitendes Fenster,
+   kein Rücksetzen an einem festen Zeitrand), danach ist die Code-Anmeldung dieser
    Adresse 15 Minuten gesperrt (neutrale Antwort, auch für den richtigen Code); der Zähler
    überlebt eine Neuanforderung und wird vor dem Vergleich erhöht. Höchstens 5 Code-Mails je
    Adresse und Stunde, darüber neutrale Erfolgsantwort ohne Versand. Ein noch gültiger Code
@@ -33,7 +34,9 @@ Schwächen, die einzeln klein, zusammen aber relevant sind:
    Kennung) wird bei der Registrierung nur angenommen, wenn `GZ_ENV=staging`, der
    Fixture-Modus aktiv ist (`GZ_TEST_FIXTURE_DIR`) oder der Aufrufer eine gültige
    Admin-Sitzung hat; sonst `400 validation_failed`. Reservierte Kennungen (`default`,
-   `admin`, `root`, `system`) sind nie registrierbar. Ein vorhandener Kontoordner gilt als
+   `admin`, `root`, `system`) sind nie registrierbar; Kennungen aus `GZ_ADMIN_USER_IDS` und
+   `GZ_QUOTA_EXEMPT_USER_IDS` (beide ohne Groß-/Kleinschreibung verglichen) belegt eine
+   Registrierung auch im Staging/Fixture-Modus nur mit gültiger Admin-Sitzung. Ein vorhandener Kontoordner gilt als
    belegt, auch ohne `user.json`; die Anlage ist exklusiv. Beim Start wird jede Kennung aus
    `GZ_ADMIN_USER_IDS`/`GZ_QUOTA_EXEMPT_USER_IDS` ohne Konto als Warnung geloggt (ergänzt
    ADR-0078).
@@ -46,7 +49,11 @@ Schwächen, die einzeln klein, zusammen aber relevant sind:
    Rümpfe müssen `application/json` sein (`415`), ausgenommen der GPX-Upload (multipart).
    Rümpfe sind auf 1 MB begrenzt (GPX-Upload 10 MB, `413`). Ausgenommen sind Webhooks,
    interne Pfade, der Maschinen-Status und der OAuth-Rückruf.
-4. **Maschinen-Geheimnisse.** `GZ_STATUS_TOKEN` und die selbst gewählten Webhook-Secrets
+4. **Zugriffslog und Webhook-Rümpfe.** Das Zugriffslog maskiert Pfadgeheimnisse der Webhooks
+   und geheime Query-Werte (`code`, `state`, `token`, `id_token`, `access_token`, `invite`,
+   `secret`, `password`), abgeleitet aus der geparsten URL. Der Telegram-Eingang liest
+   höchstens 1 MB Rumpf.
+5. **Maschinen-Geheimnisse.** `GZ_STATUS_TOKEN` und die selbst gewählten Webhook-Secrets
    sollen mindestens 32 Zeichen haben; ein kürzerer gesetzter Wert erzeugt beim Start eine
    Warnzeile, der Endpunkt bleibt mit diesem Wert in Betrieb. Der Seven-Signierschlüssel
    (vom Anbieter vergeben) ist ausgenommen.

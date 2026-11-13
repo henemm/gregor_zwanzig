@@ -18,12 +18,16 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"crypto/subtle"
+	"errors"
 	"io"
 	"log"
 	"net/http"
 	"sync/atomic"
 	"time"
 )
+
+// telegramWebhookMaxBody begrenzt den gelesenen Rumpf (Issue #2961).
+const telegramWebhookMaxBody = 1 << 20
 
 // rejectedWebhookRequests zählt mit falschem/fehlendem Secret abgewiesene
 // Requests (Prozess-Counter) — Grundlage für Anomalie-/Angriffs-Alerts.
@@ -52,8 +56,15 @@ func TelegramWebhookHandler(pythonCoreURL, secret string) http.HandlerFunc {
 			return
 		}
 
-		body, err := io.ReadAll(r.Body)
+		// Issue #2961: Rumpf hoechstens 1 MB (wie der SMS-Eingang); ein
+		// groesserer wird abgewiesen und nicht weitergereicht.
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, telegramWebhookMaxBody))
 		if err != nil {
+			var mbe *http.MaxBytesError
+			if errors.As(err, &mbe) {
+				http.Error(w, "payload too large", http.StatusRequestEntityTooLarge)
+				return
+			}
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
