@@ -205,17 +205,20 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
+		// Issue #2961 (GA2a, ADR-0115): halten nur leere unbestaetigte
+		// Anmeldungen die Adresse, ersetzt diese Registrierung sie — geplant
+		// wird hier, verdraengt erst unmittelbar vor der Kontoanlage.
+		var verdraengen []*model.User
 		if taken {
-			// Issue #2961 (GA2a, ADR-0115): halten nur unbestaetigte
-			// Anmeldungen die Adresse, ersetzt diese Registrierung sie
-			// vollstaendig. "Adresse vergeben" gilt nur fuer alle anderen.
-			ersetzt, rerr := replaceUnconfirmedHolders(s, normalizedEmail)
+			var ok bool
+			var rerr error
+			verdraengen, ok, rerr = planUnconfirmedReplacement(s, normalizedEmail, time.Now())
 			if rerr != nil {
 				log.Printf("register: replacing unconfirmed holders failed: %v", rerr)
 				WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 				return
 			}
-			if !ersetzt { // Restrisiko wie oben (auth_haertung_go_2163.md, ADR-0003, #2147 B1)
+			if !ok { // Restrisiko wie oben (auth_haertung_go_2163.md, ADR-0003, #2147 B1)
 				WriteError(w, r, http.StatusConflict, "email_taken", nil)
 				return
 			}
@@ -274,9 +277,27 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			}
 		}
 		model.MarkOnboardingPending(&user)
+		// Issue #2961 (GA2a): alle Pruefungen bestanden — jetzt verdraengen;
+		// scheitert die Anlage danach, kommen die Verdraengten zurueck.
+		zurueck := func() {}
+		if len(verdraengen) > 0 {
+			z, verr := verdraengeUnbestaetigte(s, verdraengen, time.Now())
+			if verr != nil {
+				rollbackInvite()
+				if istVerdraengenAbgelehnt(verr) {
+					WriteError(w, r, http.StatusConflict, "email_taken", nil)
+					return
+				}
+				log.Printf("register: replacing unconfirmed holders failed: %v", verr)
+				WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
+				return
+			}
+			zurueck = z
+		}
 		// Issue #2961: exklusive Anlage — ein vorhandener (auch verwaister)
 		// Kontoordner oder eine gleichzeitige Anlage derselben Kennung ergibt 409.
-		if err := s.CreateUser(user); err != nil {
+		if err := createUserFn(s, user); err != nil {
+			zurueck()
 			rollbackInvite()
 			if errors.Is(err, store.ErrUserIDTaken) {
 				WriteError(w, r, http.StatusConflict, "user_already_exists", nil)
@@ -286,6 +307,10 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			return
 		}
 
+		if len(verdraengen) > 0 {
+			merkeErsetzung(normalizedEmail, time.Now())
+			log.Printf("register: %d unbestaetigte Anmeldung(en) fuer die Adresse ersetzt (in die Ablage verschoben)", len(verdraengen))
+		}
 		s.ProvisionUserDirs(userID)
 
 		// Issue #1226: nach erfolgreicher Persistenz denselben #1219-Verifikations-
@@ -303,6 +328,10 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		json.NewEncoder(w).Encode(map[string]string{"id": userID})
 	}
 }
+
+// createUserFn ist die Kontoanlage der Registrierung — Test-Naht, um eine
+// nach dem Verdraengen scheiternde Anlage nachzustellen (Issue #2961).
+var createUserFn = func(s *store.Store, u model.User) error { return s.CreateUser(u) }
 
 // isPrivilegedUserID: die Kennung steht in GZ_ADMIN_USER_IDS oder
 // GZ_QUOTA_EXEMPT_USER_IDS (Vergleich ohne Gross-/Kleinschreibung).

@@ -598,11 +598,13 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 		defer unlock()
 
 		taken, err := s.IsAddressTakenByOtherAccount(normalizedEmail, "")
+		// Issue #2961 (GA2a): leere unbestaetigte Anmeldungen werden ersetzt —
+		// geplant hier, verdraengt erst nach gueltiger Attestierung.
+		var verdraengen []*model.User
 		if err == nil && taken {
-			// Issue #2961 (GA2a): unbestaetigte Anmeldungen werden ersetzt.
-			var ersetzt bool
-			ersetzt, err = replaceUnconfirmedHolders(s, normalizedEmail)
-			taken = !ersetzt
+			var ok bool
+			verdraengen, ok, err = planUnconfirmedReplacement(s, normalizedEmail, time.Now())
+			taken = !ok
 		}
 		if err != nil {
 			log.Printf("passkey register public finish: address uniqueness check failed: %v", err)
@@ -639,9 +641,27 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 			}},
 		}
 		model.MarkOnboardingPending(&newUser)
-		if err := s.SaveUser(newUser); err != nil {
+		zurueck := func() {}
+		if len(verdraengen) > 0 {
+			z, verr := verdraengeUnbestaetigte(s, verdraengen, time.Now())
+			if verr != nil {
+				if istVerdraengenAbgelehnt(verr) {
+					WriteError(w, r, http.StatusConflict, "email_taken", nil)
+					return
+				}
+				log.Printf("passkey register public finish: replacing unconfirmed holders failed: %v", verr)
+				WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
+				return
+			}
+			zurueck = z
+		}
+		if err := s.CreateUser(newUser); err != nil {
+			zurueck()
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
+		}
+		if len(verdraengen) > 0 {
+			merkeErsetzung(normalizedEmail, time.Now())
 		}
 		s.ProvisionUserDirs(entry.UserID)
 
