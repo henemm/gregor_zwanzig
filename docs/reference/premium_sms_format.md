@@ -39,7 +39,7 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 | Empfänger | `sms_to`, nur wenn bewiesen (`sms_verified_number`, #2406); `SmsRecipient.for_user` liest frisch aus `user.json`, nie `GZ_SMS_TO` (#1412 S4b) | **ausschließlich die gelernte Rückadresse** `premium_sms_reply_to` (`PremiumSmsRecipient.for_user`, #1412 S4b); `sms_to` wird nie gelesen |
 | Fehlt das Ziel | Kanal gilt als nicht konfiguriert | **fail-closed mit Grund** (`ChannelBlockedError` → `blocked_channels`): `premium_sms_no_reply_address`, `premium_sms_reply_address_stale` (älter 30 Tage oder Zeitstempel in der Zukunft) |
 | Tarif | `standard` + `premium` | **nur `premium`** (eigenes Gate `premium_sms_allowed`) |
-| Tageskontingent | Zähler `sms` | eigener Zähler `premium_sms`; Befehlsantworten dürfen eine Reply-Reserve über dem Grundlimit nutzen (`purpose="reply"`, #2412) |
+| Tageskontingent | Zähler `sms` | eigener Zähler `premium_sms` (Briefings + Alarme); Befehlsantworten zählen in den eigenen Zähler `premium_sms_reply` (15/Tag bei Premium) und verbrauchen nie das Alarm-Kontingent (`purpose="reply"`, ADR-0116; vorher Reply-Reserve +3 auf demselben Zähler, #2412) |
 | Befehlseingang | **keiner** (s. `sms_format.md` „Befehlseingang“) | **ja**, s. §4 |
 | Transport | `SevenIoChannelBase.send` (gemeinsam, inkl. Sandbox-/Herkunftssperren) | dieselbe Basis |
 
@@ -67,10 +67,28 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
   `POST /api/scheduler/inbound-sms` → `InboundSmsReader._poll_journal`.
 - **Filter:** nur Journal-Einträge mit `to == SERVICE_NUMBER` (#2323); alles andere wird
   übersprungen.
-- **Zuordnung:** Python meldet die Absendernummer (+ optional Verknüpfungs-Code `XX`+3 Buchstaben+3
-  Ziffern am Textanfang) an `POST /api/internal/premium-sms-learn`. Go löst auf **Premium-Konten**
-  auf: genau ein frischer Treffer auf gespeicherte `premium_sms_reply_to` → dieser Nutzer; sonst nur
-  mit gültigem Code; nie Fallback auf `default`. Bei Erfolg wird die Rückadresse gelernt.
+- **Zuordnung (ADR-0116):** Python meldet die Absendernummer (+ optional Verknüpfungs-Code am
+  Textanfang: neu `XX`+5 Buchstaben+3 Ziffern, Bestandscodes `XX`+3 Buchstaben+3 Ziffern bleiben
+  gültig; ohne I/L/O/0/1, Groß-/Kleinschreibung egal) an `POST /api/internal/premium-sms-learn`. Go
+  löst auf **Premium-Konten** auf: ein **gültiger Code gewinnt immer**, auch gegen einen frischen
+  Treffer eines anderen Kontos (Garmin vergibt Nummern aus einem Pool neu); sonst genau ein frischer
+  Treffer auf gespeicherte `premium_sms_reply_to` → dieser Nutzer (ein Vertipper im Code kippt die
+  eigene Zuordnung nicht); nie Fallback auf `default`. Bei Erfolg wird die Rückadresse gelernt und
+  bei **allen anderen Konten entfernt** (eine Nummer gehört höchstens einem Konto). Ausgehend sendet
+  `PremiumSmsRecipient.for_user` nur, wenn die Nummer genau einem Konto gehört (sonst
+  `premium_sms_no_reply_address`).
+- **Code:** mehrfach verwendbar, ohne Ablauf (unterwegs der einzige Weg zur Neuverknüpfung);
+  „Code erneuern" im Konto entwertet den alten. Bremse gegen Durchprobieren: 3 Fehlversuche je
+  Absendernummer und 30 insgesamt je gleitender Stunde.
+- **Verbindung trennen:** `DELETE /api/auth/premium-sms-reply` (Konto-Karte) löscht Rückadresse und
+  Zeitstempel; der Code bleibt bis zum Erneuern.
+- **Mitteilung bei Änderungen (ADR-0116):** ein per Premium-SMS ausgeführter zustandsändernder
+  Befehl (`pause`, `stop`, `weiter`, `ruhetag`, `startdatum`, `skip`) löst zusätzlich eine kurze
+  Mitteilung per E-Mail (nur bestätigte Adresse) und Telegram (falls verbunden) aus: was, wann, über
+  welchen Kanal, wie zurücknehmen. Höchstens 10 je Nutzer und Tag, fail-soft; lesende Befehle lösen
+  nichts aus (`src/services/premium_sms_aenderungshinweis.py`).
+- **Journal-Abruf:** `limit=100` je Abruf. Ist die Seite voll und überlappt nicht mit dem
+  Lesezeiger, steht eine Warnung „möglicherweise abgeschnitten" im Log (Verhalten unverändert).
 - **Befehl:** Text vor `inreachlink.com` (ohne Code) → `TripCommandProcessor`
   (`channel="premium_sms"`); ohne Namen wird das Ziel (Trip/Vergleich) aufgelöst, mehrdeutig →
   Hinweisantwort. Antwort per Premium-SMS an die gelernte Rückadresse.

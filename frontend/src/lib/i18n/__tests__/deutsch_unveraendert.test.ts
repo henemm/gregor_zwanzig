@@ -233,6 +233,11 @@ const NEU_IN_F12 = F12_ANKER.map(([k]) => k);
 /** #2764 (F13) AUSDRUCK_OFFEN: Name-Rueckfall der Karte (wertebereiche.symbolzeile.* stehen in F5_ANKER). */
 const NEU_IN_F13 = ['bausteine.karte.ohne_namen'];
 const NEU_IN_FOLGEPAKETEN = [
+	// #2961 Welle 2 (ADR-0116) Premium-SMS-Verbindung trennen
+	'konto.kopplung.verbunden',
+	'konto.kopplung.trennen',
+	'konto.kopplung.trennen_frage',
+	'konto.kopplung.trennen_fehlgeschlagen',
 	// #2648 (S3) Sprachumschalter und Konto-Sprache
 	'konto.sprache.titel',
 	'konto.sprache.option_de',
@@ -542,6 +547,19 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.hinweis.freezing_level',
 	'wetter.hinweis.snowfall_limit',
 	'wetter.hinweis.sunshine',
+	// #2961 (ADR-0115): Nachweis-Dialog, Passkey-Hinweis beim Abmelden, Reset-Auswahl.
+	'konto.nachweis.titel',
+	'konto.nachweis.frage_mit_passwort',
+	'konto.nachweis.frage_ohne_passwort',
+	'konto.nachweis.code',
+	'konto.nachweis.bestaetigen',
+	'konto.nachweis.fehlt',
+	'konto.nachweis.fehlgeschlagen',
+	'konto.anmeldungen.passkeys_bleiben.one',
+	'konto.anmeldungen.passkeys_bleiben.other',
+	'konto.anmeldungen.passkeys_verwalten',
+	'auth.reset.andere_zugangswege',
+	'auth.reset.andere_zugangswege_hinweis',
 ];
 
 test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {

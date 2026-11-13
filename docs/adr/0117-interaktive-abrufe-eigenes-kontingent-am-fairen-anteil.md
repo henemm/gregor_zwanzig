@@ -1,0 +1,89 @@
+# ADR-0117: Interaktive Abrufe bekommen ein eigenes Kontingent am fairen Anteil und lassen eine Reserve für Briefings und Alarme frei
+
+- **Status:** Akzeptiert
+- **Datum:** 2026-11-13
+- **Bezug:** GitHub-Issue #2961 (Sicherheits-Härtung nach Review 2026-11, Welle 2), Spec
+  `docs/specs/modules/security_haertung_2026_11_abruf_kontingent_interaktiv.md`; **ergänzt
+  [ADR-0075](0075-forecast-budget-fairness-je-nutzer.md)** (Tagestopf und fairer Anteil) und
+  **[ADR-0076](0076-go-dockt-ueber-internen-endpunkt-an-das-kontingent-gate-an.md)** (Go dockt am
+  Gate an); verwandt [ADR-0114](0114-ausgehende-abrufe-nutzerbestimmter-ziele-nur-ueber-abgeschotteten-client.md)
+  (Mengenbremsen je Nutzer in Go), [ADR-0018](0018-provider-fallback-ohne-kaschieren.md) (nichts
+  still weglassen), [ADR-0058](0058-wegpunkt-hoehe-an-provider-api.md) (Höhe an den Anbieter)
+
+## Kontext
+
+Das Open-Meteo-Tageskontingent ist ein globaler Topf (`DAILY_BUDGET = 9000`, ADR-0075). Die
+Priorität `user_briefing` wird nie gedrosselt — gedacht für den Zeitplan-Versand. Dieselbe
+Priorität hing aber auch an Wegen, die ein angemeldeter Nutzer beliebig oft auslösen kann:
+Sofortvergleich, Etappenwetter, Vorschauen. Ein einzelnes Konto konnte so mit vielen Aufrufen und
+wechselnden Orten das Kontingent aller aufbrauchen; danach wären Alarm-Prüfungen für alle
+gesperrt. Die Mengenbremsen aus ADR-0114 begrenzen die Geschwindigkeit, nicht den Tagesverbrauch.
+
+## Entscheidung
+
+1. **Eigene Priorität `user_interactive`.** Alles, was ein Nutzer von Hand und beliebig oft
+   auslöst, bucht interaktiv: Sofortvergleich (`GET /api/compare`), Etappenwetter, SMS-Vorschau,
+   Alarm-Vorschau (Trip und Ortsvergleich) und die Go-Vorhersage `GET /api/forecast`. Die
+   Markierung geschieht einmal je Anfrage an der Route (`forecast_budget.interaktiver_abruf()`,
+   ein Kontext, der in Arbeiter-Threads per `contextvars.copy_context()` weiterreist); der
+   Segment-Weg bucht innerhalb dieses Kontexts jede Priorität als `user_interactive`.
+   `user_briefing` bleibt ausschließlich Zeitplan-Versand **und Handversand** vorbehalten
+   (Handversand ist durch die Go-Bremse auf 20 je Stunde begrenzt und soll nie am Kontingent
+   scheitern).
+2. **Interaktives Tageskontingent je Nutzer** = fairer Anteil an der interaktiven Obergrenze
+   (`6300 / N`, N = heute aktive Nutzer wie in ADR-0075), **mindestens der Sockel 1500 Einheiten**.
+   Der Sockel deckt normale Nutzung (30 Vergleiche à 10 Orte plus 50 Etappenwetter-Abrufe einer
+   Tour mit bis zu 24 Abschnitten, alles ohne Cache-Treffer) ohne Drosselung ab; Herleitung in der
+   Spec. Der interaktive Verbrauch wird global (`interactive_calls`) und je Nutzer
+   (`interactive`) getrennt geführt und zählt **nicht** in die Fairness von `alert_check` und
+   `polling` — Alarme desselben Nutzers bleiben unberührt.
+3. **Globale Reserve.** `reserve("user_interactive")` bucht nur, solange der gesamte
+   Tageszähler plus die neuen Einheiten höchstens **70 %** der Tagesmenge erreicht
+   (`INTERACTIVE_THRESHOLD`). Begründung aus den vorhandenen Schwellen: Polling wird ab 80 %
+   (Stufe 1) gedrosselt, Alarm-Prüfungen ab 95 %. Endet interaktiv bei 70 %, kann interaktiver
+   Verbrauch allein keine dieser Schwellen auslösen; zwischen 70 % und 80 % bleiben 900 Einheiten
+   Puffer, bis 95 % 2250 Einheiten, die nur Briefings, Alarme und Polling verbrauchen. Die Regel
+   „Zeitplan-Briefings nie gedrosselt" bleibt unverändert.
+4. **Erschöpft heißt: Cache ja, Neuabruf nein, und es wird gesagt.** Cache-Treffer buchen nichts
+   und werden weiter geliefert. Ein nicht gecachter Ort im Vergleich trägt den übersetzten Hinweis
+   `vergleich.ort.abruf_kontingent_erschoepft` und `error_code`; liefert keine Einheit der Anfrage
+   Daten, antwortet die Route mit **429** `abruf_kontingent_erschoepft` und `Retry-After` bis zum
+   UTC-Tageswechsel. Eine Etappe mit abgelehntem Abschnitt wird nicht aus Teildaten bewertet,
+   sondern als `null` geliefert und in `gedrosselt` samt Hinweis benannt (ADR-0018).
+5. **Eingaben begrenzt.** Sofortvergleich: `forecast_hours` 1–96 (der größte Horizont, den das
+   Produkt selbst nutzt, `COMPARE_FORECAST_HOURS`), Stundenfenster 0–23, Datum im ISO-Format,
+   sonst 422 mit Katalogtext; Anzahl der Orte höchstens die Orte-Quote des Tarifs (Go, Admins und
+   Ausnahmen frei, 422 `limit_exceeded`).
+6. **Cache-Schlüssel bleibt genau.** Der Schlüssel rundet Koordinaten auf vier Nachkommastellen
+   (rund 11 m) und enthält die Höhe; eine Verschiebung um wenige Meter erzwingt damit einen neuen
+   Abruf. Der Schlüssel wird **nicht** auf das Modellraster gerundet: der Anbieter rechnet mit der
+   übergebenen Höhe und Lage (ADR-0058), eine Rundung änderte die Vorhersage. Auch „je Rasterzelle
+   nur einmal buchen" ist verworfen — echte Abrufe blieben dann ungebucht und der Kontoschutz
+   würde schwächer. Stattdessen kostet jede Verschiebung eine Einheit **des eigenen** interaktiven
+   Kontingents; die Menge ist damit je Nutzer und insgesamt begrenzt.
+7. **Sichtbarkeit.** `/api/scheduler/status` nennt `interactive_calls_today`,
+   `interactive_budget` und `interactive_throttled`, `GET /api/admin/users` je Nutzer
+   `open_meteo_interactive_calls_today`. Stellt ein Nutzer mehr als die Hälfte des interaktiven
+   Tagesverbrauchs (ab einem Gesamtverbrauch in Höhe des Sockels), schreibt das Gate einmal je Tag
+   und Nutzer eine Warnzeile mit maskierter Kennung.
+
+## Verworfene Alternativen
+
+- **Interaktiv als `polling` buchen.** Polling ist an den Alarm-Fairness-Anteil gebunden; ein
+  Vielnutzer hätte damit seine eigenen Alarme ausgebremst, und vor 80 % gäbe es keine Grenze.
+- **Fester Sockel ohne fairen Anteil.** Bei wenigen Nutzern bliebe Kontingent ungenutzt, das
+  niemand sonst braucht.
+- **Interaktiv mit eigenem Topf neben dem globalen.** Hätte die Tagesmenge gegenüber dem Anbieter
+  vergrößert (gleicher Einwand wie ADR-0075 Punkt 1).
+- **Handversand interaktiv buchen.** Widerspricht dem Produktgrundsatz, dass ein von Hand
+  ausgelöstes Briefing ankommt; die Menge begrenzt bereits die Go-Bremse.
+
+## Konsequenzen
+
+- Bei vielen gleichzeitig aktiven Vielnutzern (mehr als vier mit voll genutztem Sockel) erreicht
+  der interaktive Gesamtverbrauch die 70-%-Grenze; dann bekommen alle nur noch Cache-Daten, während
+  Briefings und Alarme weiterlaufen. Das ist gewollt; die Diagnose steht im Betriebsstatus.
+- Antwortbefehle über die Kanäle (Telegram, SMS, Premium-SMS) bleiben bewusst bei ihrer bisherigen
+  Priorität: sie sind der Weg unterwegs und dürfen nicht an einem Bürotag-Kontingent scheitern.
+- Die nutzerfreie Radar-Anreicherung im Anbieter (ADR-0075 Punkt 4) bucht weiterhin
+  unattributiert und wird vom interaktiven Kontext nicht erfasst.

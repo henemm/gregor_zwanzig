@@ -91,6 +91,7 @@ func TestSmsCodeKontingentIstGetrenntVomMailKontingent(t *testing.T) {
 		const uid = "smsvollmail"
 		e.konto(t, uid, "standard", nil)
 		c := e.cookie(t, uid)
+		e.nachweis(t, uid, c) // Issue #2961: Adresswechsel nur mit frischem Nachweis
 
 		for i, n := range []string{"+491516000001", "+491516000002", "+491516000003"} {
 			if w := e.profilPut(t, c, fmt.Sprintf(`{"sms_to":%q}`, n)); w.Code != http.StatusOK {
@@ -113,6 +114,7 @@ func TestSmsCodeKontingentIstGetrenntVomMailKontingent(t *testing.T) {
 		const uid = "mailvollsms"
 		e.konto(t, uid, "standard", nil)
 		c := e.cookie(t, uid)
+		e.nachweis(t, uid, c) // Issue #2961: Adresswechsel nur mit frischem Nachweis
 
 		// 10 Mail-Wechsel schoepfen den Nutzer-Bucket des Mail-Limiters (10/h) aus.
 		for i := 1; i <= 10; i++ {

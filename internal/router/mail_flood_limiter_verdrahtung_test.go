@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/handler"
@@ -88,9 +89,14 @@ func TestMailFloodLimiterIstZwischenProfilUndResendGeteilt(t *testing.T) {
 	const adresseX = "flutwire-x@beispiel.de"
 	const adresseY = "flutwire-y@beispiel.de"
 	bestaetigt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	hash, err := bcrypt.GenerateFromPassword([]byte(routerPasswort), bcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("bcrypt: %v", err)
+	}
 	if err := s.SaveUser(model.User{
 		ID: uid, Email: "flutwire-email@beispiel.de", MailTo: "flutwire-alt@beispiel.de",
 		DisplayName: "Konto flutwire", EmailVerifiedAt: &bestaetigt, CreatedAt: time.Now(),
+		PasswordHash: string(hash),
 	}); err != nil {
 		t.Fatalf("SaveUser: %v", err)
 	}
@@ -98,6 +104,12 @@ func TestMailFloodLimiterIstZwischenProfilUndResendGeteilt(t *testing.T) {
 		t.Fatalf("AddSession: %v", err)
 	}
 	cookie := sessionCookieFor(uid, secret)
+	// Issue #2961 (ADR-0115): ein Adresswechsel verlangt einen frischen
+	// Nachweis dieser Sitzung; er gilt 10 Minuten fuer alle Versuche unten.
+	if w := doBriefingRequest(t, r, http.MethodPost, "/api/auth/reauth",
+		[]byte(`{"password":"`+routerPasswort+`"}`), cookie); w.Code != http.StatusOK {
+		t.Fatalf("Nachweis: erwartet 200, bekommen %d: %s", w.Code, w.Body.String())
+	}
 
 	profilAufX := func(nr int) int {
 		t.Helper()

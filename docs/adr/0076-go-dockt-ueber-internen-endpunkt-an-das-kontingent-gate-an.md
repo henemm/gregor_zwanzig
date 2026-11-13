@@ -6,7 +6,7 @@
   `docs/specs/modules/forecast_go_pfad_kontingent.md`, **ergänzt ADR-0075** (Forecast-Budget-
   Fairness je Nutzer), löst die Spannung in ADR-0015 (Dual-Stack-Zuständigkeit) auf, trägt auf
   ADR-0062 (`X-GZ-Core-Auth`) und ADR-0003 (Mandantentrennung)
-- **Ergänzt durch:** [ADR-0083](0083-gemeinsame-schreibsperre-go-python.md) (ergänzt)
+- **Ergänzt durch:** [ADR-0083](0083-gemeinsame-schreibsperre-go-python.md) (ergänzt), [ADR-0117](0117-interaktive-abrufe-eigenes-kontingent-am-fairen-anteil.md) (ergänzt: `/api/forecast` bucht `user_interactive`)
 
 ## Kontext
 

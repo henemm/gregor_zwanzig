@@ -89,6 +89,10 @@ def _erlaube_premium_sms(uid: str) -> None:
     pfad = get_data_dir(uid) / "user.json"
     profil = json.loads(pfad.read_text())
     profil.setdefault("premium_sms_reply_to", "+490000000008")
+    # ADR-0116: Rueckadresse hoechstens bei einem Konto (wie beim Lernen).
+    from tests.helpers.sms_empfaenger import rueckadresse_bei_anderen_entfernen
+
+    rueckadresse_bei_anderen_entfernen(uid, profil["premium_sms_reply_to"])
     # Relativ zur gestellten Uhr der Prüfstrecke (`freeze_time(_AT)`), nicht zur
     # echten Wanduhr: ein Zeitstempel nach `_AT` liegt aus Sicht des Versands in
     # der Zukunft und wird seit #2231 fail-closed gesperrt.

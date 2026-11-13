@@ -292,6 +292,16 @@ func TestPasskeyPublicFinishWeistZwischenzeitlichBelegteAdresseAb_AC6(t *testing
 	if regW.Code != http.StatusCreated {
 		t.Fatalf("AC-6: die Zwischenzeit-Registrierung muss gelingen, bekommen %d: %s", regW.Code, regW.Body.String())
 	}
+	// Issue #2961 (GA2a, ADR-0115): eine nur unbestaetigte Anmeldung wuerde
+	// vom Finish ersetzt; "belegt" heisst hier: das andere Konto hat seine
+	// Adresse inzwischen bestaetigt.
+	bestaetigt := time.Now().UTC()
+	if _, err := s.UpdateUser(registrierID2194(t, regW, "AC-6"), func(u *model.User) error {
+		u.EmailVerifiedAt = &bestaetigt
+		return nil
+	}); err != nil {
+		t.Fatalf("AC-6: Zwischenzeit-Konto bestaetigen: %v", err)
+	}
 
 	auth := passkeytest.NewAuthenticator(t, rpID, origin)
 	finishBody := auth.MakeAttestationResponse(t, beginResp.PublicKey.Challenge)
@@ -515,9 +525,12 @@ func TestRegistrierungRaceAufFreieAdresseErgibtGenauEinenHalter_AC13(t *testing.
 		if wB.Code == http.StatusCreated {
 			erfolge++
 		}
+		// Issue #2961 (GA2a, ADR-0115): die zweite Registrierung ersetzt eine
+		// noch unbestaetigte erste — beide duerfen gelingen. Die Zusicherung
+		// bleibt: es gibt danach genau EINEN Halter der Adresse.
 		halter := schreibpfadAdresseHalterAnzahl(t, s, adresse)
-		if erfolge != 1 || halter != 1 {
-			t.Fatalf("AC-13a (Runde %d/%d): erwartet 1 Erfolg + 1 Adress-Halter, bekommen Erfolge=%d Halter=%d "+
+		if erfolge < 1 || halter != 1 {
+			t.Fatalf("AC-13a (Runde %d/%d): erwartet mindestens 1 Erfolg + genau 1 Adress-Halter, bekommen Erfolge=%d Halter=%d "+
 				"(A=%d %q / B=%d %q)", i+1, runden, erfolge, halter, wA.Code, wA.Body.String(), wB.Code, wB.Body.String())
 		}
 	}
@@ -566,9 +579,12 @@ func TestRegistrierungGegenProfilUpdateRaceErgibtGenauEinenHalter_AC13(t *testin
 		if profW.Code == http.StatusOK {
 			erfolge++
 		}
+		// Issue #2961 (GA2a, ADR-0115): haelt das (unbestaetigte) Bestandskonto
+		// die Adresse bereits, ersetzt die Registrierung es — beide Wege
+		// koennen dann gelingen. Zugesichert bleibt genau EIN Halter.
 		halter := schreibpfadAdresseHalterAnzahl(t, s, adresse)
-		if erfolge != 1 || halter != 1 {
-			t.Fatalf("AC-13b (Runde %d/%d): erwartet 1 Erfolg + 1 Adress-Halter, bekommen Erfolge=%d Halter=%d "+
+		if erfolge < 1 || halter != 1 {
+			t.Fatalf("AC-13b (Runde %d/%d): erwartet mindestens 1 Erfolg + genau 1 Adress-Halter, bekommen Erfolge=%d Halter=%d "+
 				"(Register=%d %q / Profil=%d %q)", i+1, runden, erfolge, halter,
 				regW.Code, regW.Body.String(), profW.Code, profW.Body.String())
 		}

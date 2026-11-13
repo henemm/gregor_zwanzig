@@ -8,6 +8,7 @@ package handler
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -33,13 +34,18 @@ func TestPremiumSmsRatebremse_GleitendesStundenfenster(t *testing.T) {
 	rl.jetzt = func() time.Time { return uhr }
 	h := PostPremiumSmsLearnHandler(s, rl)
 
-	falsch := func() int {
+	// Seit ADR-0116 haelt die Bremse je Absender eine einzelne Nummer schon
+	// nach drei Fehlversuchen an; das globale Fenster wird deshalb mit
+	// wechselnden Absendernummern gefuellt (so, wie ein verteilter Versuch
+	// aussaehe).
+	falsch := func(i int) int {
 		rr := httptest.NewRecorder()
-		h(rr, newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromCoded, "code": "XXZZZ999"}))
+		from := fmt.Sprintf("49170000%05d", 100+i)
+		h(rr, newLearnRequest("127.0.0.1:54321", map[string]any{"from": from, "code": "XXZZZZZ999"}))
 		return rr.Code
 	}
 	for i := 0; i < DefaultPremiumSmsLinkCodeBudget; i++ {
-		falsch()
+		falsch(i)
 		uhr = uhr.Add(time.Minute)
 	}
 	if got := rl.FailedAttempts(); got != DefaultPremiumSmsLinkCodeBudget {

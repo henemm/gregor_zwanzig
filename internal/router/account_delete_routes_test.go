@@ -31,9 +31,7 @@ func nutzerMitPasswort(t *testing.T, s *store.Store, id string) {
 	if err != nil {
 		t.Fatalf("bcrypt: %v", err)
 	}
-	if err := s.SaveUser(model.User{ID: id, Email: id + "@beispiel.de", PasswordHash: string(hash), CreatedAt: time.Now()}); err != nil {
-		t.Fatalf("SaveUser %s: %v", id, err)
-	}
+	kontoVollSchreiben(t, s, model.User{ID: id, Email: id + "@beispiel.de", PasswordHash: string(hash), CreatedAt: time.Now()})
 	if err := s.AddSession(id, sessionIDFor(id)); err != nil {
 		t.Fatalf("AddSession %s: %v", id, err)
 	}

@@ -105,7 +105,8 @@ def test_get_daily_usage_liefert_fail_open_bei_korrupter_zaehlerdatei():
 
 def test_get_daily_usage_liefert_dict_schema_je_kanal():
     """Grundwerte-Schema: `sms`/`premium_sms` mit `used`/`limit`/`reserve`,
-    `premium_sms` zusaetzlich `reply_overshoot`."""
+    `premium_sms` zusaetzlich das eigene Antwort-Kontingent `reply_used`/
+    `reply_limit` (ADR-0116, loest `reply_overshoot` ab)."""
     from services import sms_daily_limit
 
     uid = _kennung("schema")
@@ -119,7 +120,27 @@ def test_get_daily_usage_liefert_dict_schema_je_kanal():
     assert ergebnis["premium_sms"]["used"] == 1
     assert ergebnis["premium_sms"]["limit"] == 15
     assert ergebnis["premium_sms"]["reserve"] == 3
-    assert ergebnis["premium_sms"]["reply_overshoot"] == 3
+    assert ergebnis["premium_sms"]["reply_used"] == 0
+    assert ergebnis["premium_sms"]["reply_limit"] == 15
+    assert "reply_overshoot" not in ergebnis["premium_sms"]
+
+
+def test_get_daily_usage_zeigt_antwort_zaehler_getrennt():
+    """ADR-0116: der Antwort-Zaehler steht getrennt neben dem Alarm-Zaehler;
+    zwei Nutzer sehen je ihren eigenen Stand."""
+    from services import sms_daily_limit
+
+    uid_a, uid_b = _kennung("reply-a"), _kennung("reply-b")
+    for uid, antworten in ((uid_a, 4), (uid_b, 1)):
+        _nutzer_anlegen(uid, "premium")
+        pfad = _zaehler_pfad(uid)
+        pfad.parent.mkdir(parents=True, exist_ok=True)
+        pfad.write_text(json.dumps({"date": _heute_utc(), "sms": 0,
+                                    "premium_sms": 2, "premium_sms_reply": antworten}))
+    a = sms_daily_limit.get_daily_usage(uid_a, datetime.now(timezone.utc))["premium_sms"]
+    b = sms_daily_limit.get_daily_usage(uid_b, datetime.now(timezone.utc))["premium_sms"]
+    assert (a["used"], a["reply_used"]) == (2, 4)
+    assert (b["used"], b["reply_used"]) == (2, 1)
 
 
 # ---------------------------------------------------------------------------
@@ -163,7 +184,9 @@ def test_endpoint_liefert_standard_nutzer_kontingent(client):
 
 
 def test_endpoint_liefert_premium_nutzer_reply_overshoot(client):
-    """AC-3: Premium-Nutzer mit Reply-Overshoot (17 verbraucht, Grundlimit 15)."""
+    """AC-3: Premium-Nutzer mit Zaehlerstand ueber dem Grundlimit (17 von 15,
+    Bestandsdaten aus der Zeit vor ADR-0116, als Antworten mitzaehlten) --
+    der Stand wird unkommentiert durchgereicht."""
     uid = _kennung("ac3")
     _nutzer_anlegen(uid, "premium")
     _zaehler_schreiben(uid, sms=0, premium_sms=17)

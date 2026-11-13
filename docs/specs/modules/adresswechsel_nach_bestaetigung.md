@@ -314,6 +314,11 @@ einzigen Aufrufern trennen.
   von `email_verified_at`, und keine Bestätigungsmail wird verschickt.
   - Test: Handler-Test; `email` sofort im gespeicherten Zustand, `email_verified_at` unverändert,
     kein Mail-Versand-Aufruf (Test-Naht zählt Aufrufe).
+  - **Geändert durch Issue #2961 (ADR-0115, GA9):** eine neue Login-Kennung (`email`) eines
+    bestätigten Kontos wartet jetzt immer auf den Bestätigungslink an die neue Adresse, auch wenn
+    `mail_to` gesetzt bleibt (Spec `security_haertung_2026_11_kontoaenderungen.md` AC-12;
+    Test `TestAC6_NeueLoginKennungWartetAufBestaetigung`). Leeren des inaktiven Felds wirkt
+    weiterhin sofort.
 
 - **AC-7:** Given ein unbestätigtes Konto (z. B. frisch registriert, Bestätigungsmail noch nicht
   eingelöst) / When der Nutzer im Profil seine Adresse ändert / Then wirkt die Änderung wie bisher

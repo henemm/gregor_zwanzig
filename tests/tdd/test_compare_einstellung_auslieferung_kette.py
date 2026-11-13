@@ -52,6 +52,7 @@ from tests.helpers.einstellung_auslieferung_orakel import (
     compare_vorbedingung_pruefen,
 )
 from tests.helpers.transport_mitschrift import Kanalmitschrift, aufzeichner_installieren
+from tests.tdd._einstellung_auslieferung_fixtures import premium_rueckadresse
 from tests.tdd._compare_kette_fixtures import (
     ORTSNAMEN,
     alle_orte,
@@ -302,7 +303,7 @@ def test_premium_sms_text_ist_der_sms_text_und_ein_premium_eintrag_wirkt_nicht(m
     for lauf in (*l_ohne, *l_mit):
         compare_vorbedingung_pruefen(lauf.snap, ("sms", "premium_sms"))
         assert _text(lauf.snap, "premium_sms") == _text(lauf.snap, "sms")
-        assert lauf.snap.empfaenger("premium_sms") == ["+490000000008"]
+        assert lauf.snap.empfaenger("premium_sms") == [premium_rueckadresse(lauf.uid)]
     for a, b in zip(l_ohne, l_mit):
         assert _text(a.snap, "sms") == _text(b.snap, "sms")
         assert _text(a.snap, "premium_sms") == _text(b.snap, "premium_sms")

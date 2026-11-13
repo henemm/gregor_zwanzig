@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -140,12 +141,18 @@ func PasskeyRegisterFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Cha
 			CreatedAt:       time.Now().UTC(),
 			Label:           labelEnvelope.Label,
 		}
-		user.PasskeyCredentials = append(user.PasskeyCredentials, newCred)
-
-		if err := s.SaveUser(*user); err != nil {
+		// Issue #2961 (GA6): Passkeys sind ein Sicherheitsfeld — frisch laden
+		// und anhaengen (UpdateUser), nie den vorher geladenen Stand schreiben.
+		mitPasskey, err := s.UpdateUser(userID, func(u *model.User) error {
+			u.PasskeyCredentials = append(u.PasskeyCredentials, newCred)
+			return nil
+		})
+		if err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
+		// Issue #2961 (ADR-0115): Hinweis an die bestaetigte Adresse.
+		notifyAccountChange(mitPasskey, confirmedNoticeAddress(mitPasskey), hinweisPasskeyNeu, nil, nil)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
@@ -247,18 +254,7 @@ func PasskeyLoginFinishHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challe
 			return
 		}
 
-		// Update SignCount + LastUsedAt on the matching persisted credential.
-		now := time.Now().UTC()
-		for i, pc := range user.PasskeyCredentials {
-			if bytes.Equal(pc.ID, credential.ID) {
-				user.PasskeyCredentials[i].Authenticator.SignCount = credential.Authenticator.SignCount
-				user.PasskeyCredentials[i].Authenticator.CloneWarning = credential.Authenticator.CloneWarning
-				user.PasskeyCredentials[i].LastUsedAt = now
-				break
-			}
-		}
-		if err := s.SaveUser(*user); err != nil {
-			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
+		if !recordPasskeyUse(w, r, s, entry.UserID, credential) {
 			return
 		}
 
@@ -347,22 +343,10 @@ func PasskeyLoginDiscoverableFinishHandler(s *store.Store, wa *webauthn.WebAuthn
 			return
 		}
 
-		// Update SignCount + LastUsedAt on the matching persisted credential.
-		now := time.Now().UTC()
-		for i, pc := range mu.PasskeyCredentials {
-			if bytes.Equal(pc.ID, credential.ID) {
-				mu.PasskeyCredentials[i].Authenticator.SignCount = credential.Authenticator.SignCount
-				mu.PasskeyCredentials[i].Authenticator.CloneWarning = credential.Authenticator.CloneWarning
-				mu.PasskeyCredentials[i].LastUsedAt = now
-				break
-			}
-		}
-		if err := s.SaveUser(*mu); err != nil {
-			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
+		userID := mu.WebAuthnName()
+		if !recordPasskeyUse(w, r, s, userID, credential) {
 			return
 		}
-
-		userID := mu.WebAuthnName()
 		if !issueSession(w, r, s, userID, secret, publicHost) {
 			return
 		}
@@ -407,30 +391,77 @@ func PasskeyDeleteCredentialHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		// Lock-out protection: refuse to delete the last passkey of a
-		// password-less user (defensive — V1 always has a PasswordHash).
-		if user.PasswordHash == "" && len(user.PasskeyCredentials) <= 1 {
+		// Issue #2961 (GA6): frisch laden und filtern (UpdateUser); die
+		// Aussperr-Pruefung laeuft auf demselben frischen Stand.
+		removed := false
+		ohnePasskey, err := s.UpdateUser(userID, func(u *model.User) error {
+			// Lock-out protection: refuse to delete the last passkey of a
+			// password-less user (defensive — V1 always has a PasswordHash).
+			if u.PasswordHash == "" && len(u.PasskeyCredentials) <= 1 {
+				return errLastPasskey
+			}
+			filtered := make([]model.WebAuthnCredential, 0, len(u.PasskeyCredentials))
+			for _, pc := range u.PasskeyCredentials {
+				if !bytes.Equal(pc.ID, credID) {
+					filtered = append(filtered, pc)
+				}
+			}
+			removed = len(filtered) != len(u.PasskeyCredentials)
+			u.PasskeyCredentials = filtered
+			return nil
+		})
+		if errors.Is(err, errLastPasskey) {
 			WriteError(w, r, http.StatusBadRequest, "cannot_remove_last_passkey_without_password", nil)
 			return
 		}
-
-		filtered := user.PasskeyCredentials[:0]
-		for _, pc := range user.PasskeyCredentials {
-			if !bytes.Equal(pc.ID, credID) {
-				filtered = append(filtered, pc)
-			}
-		}
-		user.PasskeyCredentials = filtered
-
-		if err := s.SaveUser(*user); err != nil {
+		if err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
+		}
+		if removed {
+			// Issue #2961 (ADR-0115): Hinweis an die bestaetigte Adresse.
+			notifyAccountChange(ohnePasskey, confirmedNoticeAddress(ohnePasskey), hinweisPasskeyWeg, nil, nil)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
 	}
 }
+
+// errLastPasskey: der letzte Passkey eines Kontos ohne Passwort bleibt.
+var errLastPasskey = errors.New("cannot remove last passkey without password")
+
+// recordPasskeyUse schreibt SignCount, CloneWarning und LastUsedAt des
+// benutzten Passkeys (Issue #2961, GA6: frisch geladen ueber UpdateUser). Ist
+// der Passkey inzwischen entfernt (z. B. durch einen Passwort-Reset), wird er
+// nie wieder angelegt und die Anmeldung scheitert. Liefert false, wenn bereits
+// geantwortet wurde.
+func recordPasskeyUse(w http.ResponseWriter, r *http.Request, s *store.Store, userID string, credential *webauthn.Credential) bool {
+	now := time.Now().UTC()
+	_, err := s.UpdateUser(userID, func(u *model.User) error {
+		for i, pc := range u.PasskeyCredentials {
+			if bytes.Equal(pc.ID, credential.ID) {
+				u.PasskeyCredentials[i].Authenticator.SignCount = credential.Authenticator.SignCount
+				u.PasskeyCredentials[i].Authenticator.CloneWarning = credential.Authenticator.CloneWarning
+				u.PasskeyCredentials[i].LastUsedAt = now
+				return nil
+			}
+		}
+		return errPasskeyGone
+	})
+	if errors.Is(err, errPasskeyGone) {
+		WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
+		return false
+	}
+	if err != nil {
+		WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
+		return false
+	}
+	return true
+}
+
+// errPasskeyGone: der benutzte Passkey steht nicht mehr am Konto.
+var errPasskeyGone = errors.New("passkey no longer registered")
 
 // transportsToStrings converts the library's typed transports to the plain
 // strings we persist in user.json (kept stable across library upgrades).
@@ -478,13 +509,15 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 		// Issue #2147 Scheibe B1 (AC-5): Belegt-Pruefung vor dem Ablegen im
 		// ChallengeStore — kein Lock hier, die endgueltige Pruefung passiert
 		// unter Lock im Finish-Schritt (AC-6).
-		taken, err := s.IsAddressTakenByOtherAccount(req.Email, "")
+		// Issue #2961 (GA2a): nur von unbestaetigten Anmeldungen gehaltene
+		// Adressen gelten als frei; ersetzt wird erst im Finish unter Lock.
+		free, err := addressFreeForSignup(s, req.Email)
 		if err != nil {
 			log.Printf("passkey register public begin: address uniqueness check failed: %v", err)
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
-		if taken {
+		if !free {
 			// Bewusstes Restrisiko (Enumeration): auth_haertung_go_2163.md, ADR-0003, #2147 B1
 			WriteError(w, r, http.StatusConflict, "email_taken", nil)
 			return
@@ -565,6 +598,12 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 		defer unlock()
 
 		taken, err := s.IsAddressTakenByOtherAccount(normalizedEmail, "")
+		if err == nil && taken {
+			// Issue #2961 (GA2a): unbestaetigte Anmeldungen werden ersetzt.
+			var ersetzt bool
+			ersetzt, err = replaceUnconfirmedHolders(s, normalizedEmail)
+			taken = !ersetzt
+		}
 		if err != nil {
 			log.Printf("passkey register public finish: address uniqueness check failed: %v", err)
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)

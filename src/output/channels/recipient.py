@@ -192,7 +192,45 @@ class PremiumSmsRecipient:
         number = _profile_text(profile, "premium_sms_reply_to")
         try:
             check_reply_address(number, _parse_learned_timestamp(profile.get("premium_sms_reply_at")))
+            _check_reply_address_unique(user_id, number)
         except ChannelBlockedError as e:
             logger.warning("Premium-SMS fuer Nutzer %s blockiert (%s)", user_id, e.reason_code)
             raise
         return cls(number, RecipientPurpose.user_profile, user_id, _FABRIK)
+
+
+def _premium_key(number: str) -> str:
+    """Vergleichsform einer Rueckadresse: Go speichert die Absendernummer roh
+    (ohne ``+``), aeltere Profile tragen sie teils mit ``+``."""
+    return number.strip().lstrip("+")
+
+
+def _check_reply_address_unique(user_id: str, number: str) -> None:
+    """ADR-0116 (Issue #2961 Welle 2): Garmin vergibt Rueckadressen aus einem
+    rotierenden Pool neu. Gesendet wird nur, wenn die Nummer GENAU diesem
+    einen Konto gehoert -- traegt ein anderes Konto (Bestandsdaten vor der
+    Eindeutigkeit beim Lernen) dieselbe Nummer, ginge die Nachricht womoeglich
+    an das Geraet eines Fremden. Block ohne Fallback, wie die uebrigen
+    Empfaengerpruefungen.
+
+    Der Sperrgrund ist bewusst ``premium_sms_no_reply_address``: fuer den
+    Nutzer ist es dieselbe Lage (keine verwendbare Rueckadresse, eine Nachricht
+    mit Verknuepfungscode stellt sie wieder her) und der Grund ist in allen
+    Hinweis-Mails bereits beschriftet."""
+    from app.loader import list_all_user_ids
+    from output.channels.premium_sms import BLOCK_REASON_NO_REPLY_ADDRESS
+
+    key = _premium_key(number)
+    for other in list_all_user_ids():
+        if other == user_id:
+            continue
+        if _premium_key(_profile_text(_load_profile(other), "premium_sms_reply_to")) == key:
+            logger.warning(
+                "Premium-SMS fuer Nutzer %s: Rueckadresse auch bei Konto %s "  # i18n-log
+                "eingetragen -- nicht eindeutig, kein Versand (ADR-0116)", user_id, other,
+            )
+            raise ChannelBlockedError(
+                "premium_sms",
+                "Rueckadresse ist mehreren Konten zugeordnet.",  # i18n-log
+                reason_code=BLOCK_REASON_NO_REPLY_ADDRESS,
+            )

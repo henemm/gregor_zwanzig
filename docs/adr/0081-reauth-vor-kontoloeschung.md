@@ -6,6 +6,7 @@
   `docs/specs/modules/account_deletion.md` v2.0, Analyse
   `docs/context/fix-2160-account-loeschung-reste.md`; baut auf ADR-0060 (Sitzungs-Allowlist),
   ADR-0066 (bestätigte Adresse) und ADR-0067 (Adress-Eindeutigkeit)
+- **Ergänzt durch:** [ADR-0115](0115-kontoaenderungen-re-auth-hinweis-mails-unbestaetigte-konten.md) (verallgemeinert: derselbe Nachweis vor Adress- und Passkey-Änderungen, 10 Minuten je Sitzung)
 
 ## Kontext
 

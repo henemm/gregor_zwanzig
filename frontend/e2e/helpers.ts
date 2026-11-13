@@ -191,6 +191,22 @@ export async function login(page: Page) {
 }
 
 /**
+ * Issue #2961 (ADR-0115): Adresswechsel und Passkey hinzufuegen/entfernen
+ * verlangen einen frischen Nachweis, der 10 Minuten fuer genau die Sitzung gilt
+ * (eine frische Anmeldung zaehlt selbst als Nachweis). Specs, die mit einer
+ * gespeicherten Sitzung solche Aenderungen ausloesen, erbringen ihn hier mit
+ * dem Passwort — ueber `page.request`, damit es dieselbe Sitzung ist wie die
+ * der Seite.
+ */
+export async function bestaetigeKontoaenderung(request: APIRequestContext, passwort?: string): Promise<void> {
+	const pass = passwort ?? resolveE2EUser().pass;
+	const res = await request.post('/api/auth/reauth', { data: { password: pass } });
+	if (!res.ok()) {
+		throw new Error(`Nachweis vor Kontoaenderung fehlgeschlagen: ${res.status()} ${await res.text()}`);
+	}
+}
+
+/**
  * Legt einen zweiten, sofort anmeldbaren Nutzer an (Issue #2271).
  *
  * Seit der Scharfschaltung des Login-Gates stellt `issueSession` nur noch fuer

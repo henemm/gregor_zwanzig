@@ -318,11 +318,12 @@ func TestForecastHandler_AbgelehnteReservierung429_ErlaubteReservierung200(t *te
 //       Kennung, nicht eine vom Client mitgeschickte
 // =============================================================================
 
-func TestForecastHandler_ReserveTraegtEchteUserIDUndPollingPriority(t *testing.T) {
+func TestForecastHandler_ReserveTraegtEchteUserIDUndInteraktivePriority(t *testing.T) {
 	// GIVEN: ein angemeldeter Nutzer A, der in der Query eine FREMDE user_id
 	//        mitschickt (Spoofing-Versuch, Muster appendUserID)
 	// WHEN: der Handler beim Core reserviert
-	// THEN: am Core kommen genau user_id=<A> und priority=polling an
+	// THEN: am Core kommen genau user_id=<A> und priority=user_interactive an
+	//       (seit ADR-0117 eigenes interaktives Kontingent statt polling)
 	//
 	// allow() laesst unbekannte Prioritaeten IMMER durch (forecast_budget.py:133-134,
 	// fail-open). Ein Test, der nur die Stub-Antwort befolgt, bliebe bei einem
@@ -352,8 +353,8 @@ func TestForecastHandler_ReserveTraegtEchteUserIDUndPollingPriority(t *testing.T
 		t.Errorf("AC-4: user_id darf genau einmal auf der Leitung stehen, bekam %v",
 			query["user_id"])
 	}
-	if got := query.Get("priority"); got != "polling" {
-		t.Errorf("AC-4: erwartet priority='polling', bekam %q — jede andere oder "+
+	if got := query.Get("priority"); got != "user_interactive" {
+		t.Errorf("AC-4: erwartet priority='user_interactive', bekam %q — jede andere oder "+
 			"unbekannte Prioritaet wird von allow() fail-open nie gedrosselt",
 			got)
 	}

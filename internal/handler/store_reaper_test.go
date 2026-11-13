@@ -111,7 +111,7 @@ func TestStoreReaper_RaeumtAlleDreiStoresUndEndetMitStop(t *testing.T) {
 	ts.tokens[telegramTokenKey(tokWeg)] = pt
 	ts.mu.Unlock()
 
-	stop := StartStoreReaper(ts, 10*time.Millisecond)
+	stop := StartStoreReaper(ts, nil, 10*time.Millisecond)
 	t.Cleanup(stop)
 
 	tokenDa := func(tok string) bool {

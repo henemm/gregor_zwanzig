@@ -760,6 +760,10 @@ def test_premium_sms_and_sms_are_independently_switchable(stub) -> None:
         before_premium = len(stub.to(LEARNED_REPLY_TO))
 
         _dispatch(user_id, stub, send_sms=send_sms, send_premium_sms=send_premium_sms)
+        # ADR-0116: eine Rueckadresse gehoert hoechstens einem Konto -- vor dem
+        # naechsten Kombinationsnutzer gibt dieser Nutzer sie wieder ab (wie es
+        # der Go-Lernpfad beim Neuzuordnen tut).
+        _write_profile(user_id, tier="premium")
 
         got_sms = len(stub.to(CONFIG_SMS_TO)) - before_sms
         got_premium = len(stub.to(LEARNED_REPLY_TO)) - before_premium

@@ -20,9 +20,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query
 
-from api.fehler import api_fehler, api_fehler_aus
+from api.fehler import api_fehler, api_fehler_aus, kontingent_erschoepft
 
 from app.config import Settings
+from services.forecast_budget import interaktiver_abruf
 from services.preview_service import PreviewService, VALID_REPORT_TYPES
 
 router = APIRouter()
@@ -44,9 +45,15 @@ def preview_sms(
         raise api_fehler(422, "typ_ungueltig", user_id, type=type)
     service = _build_service(user_id)
     try:
-        subject, token_line = service.render_sms_preview(
-            trip_id, user_id=user_id, report_type=type, target_date=date, demo=demo,
-        )
+        # Issue #2961 (ADR-0117): eine Vorschau ist ein interaktiver Ausloeser.
+        # Lehnt das Kontingent einen Abruf ab, gibt es keine still
+        # unvollstaendige Vorschau, sondern 429 mit Katalogtext.
+        with interaktiver_abruf() as kontingent:
+            subject, token_line = service.render_sms_preview(
+                trip_id, user_id=user_id, report_type=type, target_date=date, demo=demo,
+            )
+        if kontingent.gedrosselt:
+            raise kontingent_erschoepft(user_id)
         return {
             "subject": subject,
             "token_line": token_line,
