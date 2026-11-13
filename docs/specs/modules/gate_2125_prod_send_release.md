@@ -122,14 +122,14 @@ Neuer Eintrag unter `hooks.UserPromptSubmit` in `.claude/settings.json`: `python
 
 ## Definition of Done
 
-- AC-1 bis AC-11 sind durch die Subprozess-Tests in `tests/tdd/test_prod_send_release.py` nachgewiesen und gruen; der umgestellte Override-Test in `tests/tdd/test_issue_1148_prod_send_gate.py` ist gruen.
+- AC-1 bis AC-11 sind durch die Subprozess-Tests in `tests/tdd/test_issue_2125_prod_send_release.py` nachgewiesen und gruen; der umgestellte Override-Test in `tests/tdd/test_issue_1148_prod_send_gate.py` ist gruen.
 - Die Mutations-Gegenprobe des `implementation-validator` findet keine unbewachte Verfaelschung (insbesondere: Wurzel-Aufloesung, `session_id`-Vergleich, Einmal-Verbrauch, TTL, Symlink-Abwehr, Ignorieren von `user_override_token.json`).
 - Hook in `.claude/settings.json` registriert, Freigabe-Datei in `.gitignore`, Spec #1148 und `docs/reference/gates_und_ratschen.md` beschreiben den neuen Weg.
 - Nach Auslieferung: In einer echten Sitzung bestaetigt die getippte Phrase sichtbar, und ein Gate-Probelauf mit einem nur als Text uebergebenen Prod-Send-Kommando wird einmal durchgelassen und danach wieder blockiert (kein echter Versand).
 
 ## Test Plan
 
-Neue Datei `tests/tdd/test_prod_send_release.py`. Alle Tests laufen als **Subprozess** (`python3 .claude/hooks/prod_send_release.py` bzw. `prod_send_gate.py`, stdin-JSON rein, Exit-Code/stdout/stderr raus) mit isoliertem `CLAUDE_PROJECT_DIR` bzw. einem Fake-Worktree auf `tmp_path` (Haupt-Repo mit `.git/worktrees/<n>`, Worktree mit `.git`-Datei `gitdir: ...`). Keine Mocks, kein `patch()`, nie ein echter Prod-Versand: Die Prod-Send-Kommandos werden nur als Text an das Gate gegeben, das nichts ausfuehrt. Zuordnung: AC-1 Worktree-Lage, AC-2 Einmaligkeit, AC-3 fremde Sitzung, AC-4 Ablauf (beide Seiten der Grenze), AC-5 Plugin-Token oeffnet nicht, AC-6 beiläufiger Text/Harness-Turn, AC-7 sichtbare Rueckmeldung, AC-8 Symlink, AC-9 Block-Text, AC-10 Zeitstempel, AC-11 fehlende `session_id`.
+Neue Datei `tests/tdd/test_issue_2125_prod_send_release.py`. Alle Tests laufen als **Subprozess** (`python3 .claude/hooks/prod_send_release.py` bzw. `prod_send_gate.py`, stdin-JSON rein, Exit-Code/stdout/stderr raus) mit isoliertem `CLAUDE_PROJECT_DIR` bzw. einem Fake-Worktree auf `tmp_path` (Haupt-Repo mit `.git/worktrees/<n>`, Worktree mit `.git`-Datei `gitdir: ...`). Keine Mocks, kein `patch()`, nie ein echter Prod-Versand: Die Prod-Send-Kommandos werden nur als Text an das Gate gegeben, das nichts ausfuehrt. Zuordnung: AC-1 Worktree-Lage, AC-2 Einmaligkeit, AC-3 fremde Sitzung, AC-4 Ablauf (beide Seiten der Grenze), AC-5 Plugin-Token oeffnet nicht, AC-6 beiläufiger Text/Harness-Turn, AC-7 sichtbare Rueckmeldung, AC-8 Symlink, AC-9 Block-Text, AC-10 Zeitstempel, AC-11 fehlende `session_id`.
 
 Der bestehende Override-Test in `tests/tdd/test_issue_1148_prod_send_gate.py` (AC-3 dort) wird auf den neuen Weg umgestellt (Freigabe per Release-Hook statt Plugin-Token, `session_id` statt Workflow-Env).
 
@@ -142,7 +142,7 @@ Der bestehende Override-Test in `tests/tdd/test_issue_1148_prod_send_gate.py` (A
 | `.claude/hooks/prod_send_gate.py` | MODIFY | Override-Leser auf neue Datei/`session_id`, alter Workflow-Reader entfaellt, Block-Text |
 | `.claude/settings.json` | MODIFY | Hook-Registrierung UserPromptSubmit |
 | `.gitignore` | MODIFY | `.claude/prod_send_release.json` ignorieren |
-| `tests/tdd/test_prod_send_release.py` | CREATE | Subprozess-Tests zu AC-1 bis AC-11 |
+| `tests/tdd/test_issue_2125_prod_send_release.py` | CREATE | Subprozess-Tests zu AC-1 bis AC-11 |
 | `tests/tdd/test_issue_1148_prod_send_gate.py` | MODIFY | Override-Test auf neuen Weg |
 | `docs/specs/modules/gate_1148_prod_send_deny.md` | MODIFY | Abschnitt "Override-Mechanik", AC-3, Side effects, Dependencies nachziehen (verweist auf diese Spec) |
 | `docs/reference/gates_und_ratschen.md` | MODIFY | Gate-Tabelle (Zeile zum Prod-Send-Gate): neuer Freigabe-Weg statt `override` |
