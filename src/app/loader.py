@@ -1321,7 +1321,12 @@ VALID_USER_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 # Issue #2961 (Paritaet zu Go store.ValidEntityIDRe): zusaetzlich gesperrt
 # sind Steuerzeichen (\x00-\x1f, \x7f) sowie "?", "#", "%" -- sie haetten in
 # URL-Pfaden oder Dateinamen eine Sonderbedeutung. Leerzeichen bleiben erlaubt.
-VALID_ENTITY_ID_RE = re.compile(r"^[^./\\\x00-\x1f\x7f?#%][^/\\\x00-\x1f\x7f?#%]*$")
+# Fix-Runde #2961 (F8): zusaetzlich C1-Steuerzeichen (U+0080-U+009F) und
+# U+2028/U+2029; Ende mit \Z statt $ -- "$" liesse ein abschliessendes "\n"
+# bei .match() durch.
+VALID_ENTITY_ID_RE = re.compile(
+    r"^[^./\\\x00-\x1f\x7f-\x9f\u2028\u2029?#%][^/\\\x00-\x1f\x7f-\x9f\u2028\u2029?#%]*\Z"
+)
 
 
 class InvalidUserIdError(ValueError):

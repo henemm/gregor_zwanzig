@@ -6,6 +6,7 @@ import (
 	"net/netip"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Nur im Testbinary vorhanden (Issue #2961): die Abschottung des Link-Abrufs
@@ -35,6 +36,10 @@ func ErlaubeHTTPSchema(t *testing.T) {
 	orig := linkSchemes
 	t.Cleanup(func() { linkSchemes = orig })
 	linkSchemes = map[string]bool{"https": true, "http": true}
+	origPort := linkPortErlaubt
+	t.Cleanup(func() { linkPortErlaubt = origPort })
+	// httptest-Server lauschen auf beliebigen Ports.
+	linkPortErlaubt = func(string) bool { return true }
 }
 
 // ErlaubeLoopbackVerbindung laesst Verbindungen zu 127.0.0.1/::1 zu.
@@ -64,4 +69,26 @@ func OhneNachschlagDienste(t *testing.T) {
 	origE, origN := elevationLookupURL, nominatimSearchURL
 	t.Cleanup(func() { elevationLookupURL, nominatimSearchURL = origE, origN })
 	elevationLookupURL, nominatimSearchURL = srv.URL+"/hoehe", srv.URL+"/suche"
+}
+
+// PruefeLinkURL macht die Link-Pruefung (Schema, Nutzer-Info, Host, Port)
+// direkt pruefbar.
+func PruefeLinkURL(raw string) error {
+	_, err := parseLinkURL(raw)
+	return err
+}
+
+// GoogleLaenderDomains liefert die feste Liste der Laender-Domains.
+func GoogleLaenderDomains() []string { return append([]string(nil), googleLaenderDomains...) }
+
+// LinkClientOhneUmgebungsProxy belegt, dass der abgeschottete Client keinen
+// Proxy aus der Umgebung nutzt (Transport.Proxy == nil).
+func LinkClientOhneUmgebungsProxy() bool {
+	c := newLinkClient(time.Second)
+	et, ok := c.Transport.(egressTransport)
+	if !ok {
+		return false
+	}
+	tr, ok := et.next.(*http.Transport)
+	return ok && tr.Proxy == nil
 }

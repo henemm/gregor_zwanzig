@@ -35,11 +35,12 @@ und verlassen sich darauf, dass `coreauth` das Geheimnis anhängt (ADR-0062 Rege
 
 1. **Nutzerbestimmte Ziele nur über Erlaubnisliste und abgeschotteten Client.** Jede Stelle, die
    eine vom Nutzer (mit)bestimmte URL abruft, prüft sie vorab streng (URL-Parser, nur `https`,
-   Host exakt gegen eine Erlaubnisliste) und prüft jede Weiterleitung gegen dieselbe Liste
+   kein Port außer 443, keine Nutzer-Info, Host exakt gegen eine feste Erlaubnisliste — für
+   Google eine dokumentierte Liste der Länderdomains, kein offenes Muster) und prüft jede Weiterleitung gegen dieselbe Liste
    (höchstens fünf). Der Abruf läuft über einen eigenen Client mit **eigenem Transport**: ohne
    Dienstgeheimnis, ohne Umgebungs-Proxy, mit einer Adresssperre im Dial-Control-Hook, die an der
    tatsächlich aufgelösten IP Loopback-, private, Link-Local-, CGNAT-, Multicast- und reservierte
-   Netze (IPv4, IPv6, IPv4-mapped) ablehnt, und mit begrenzten Antwortköpfen. Der Staging-
+   Netze (IPv4, IPv6, IPv4-mapped, IPv4-kompatibel, Teredo, Site-Local) ablehnt, und mit begrenzten Antwortköpfen. Der Staging-
    Egress-Wächter wird von diesem Client je Anfrage selbst gefragt
    (`egress.HTTPAllowed`). Heute betrifft das genau den Google-Maps-Zweig des Resolvers
    (`internal/resolver/safefetch.go`); feste Anbieter-Hosts (Open-Meteo, Komoot-API, Nominatim,
@@ -55,9 +56,9 @@ und verlassen sich darauf, dass `coreauth` das Geheimnis anhängt (ADR-0062 Rege
 3. **Kennungen werden beim Weiterreichen an den Core immer kodiert.** Jede Pfad-Kennung wird vor
    dem Weiterreichen mit `store.ValidEntityID` geprüft (400, auch auf den Alt-Routen) und als
    Pfadsegment mit `url.PathEscape` eingesetzt; Query-Werte entstehen über `url.Values`. Das
-   Kennungsmuster sperrt zusätzlich ASCII-Steuerzeichen sowie `?`, `#` und `%`. Leerzeichen
-   bleiben aus Bestandsschutz zulässig; die Python-Seite (`VALID_ENTITY_ID_RE`) ist noch nicht
-   verschärft — Go ist strenger, nie lockerer.
+   Kennungsmuster sperrt zusätzlich Steuerzeichen (ASCII und C1), U+2028/U+2029, `?`, `#`, `%`
+   und ungültiges UTF-8. Leerzeichen bleiben aus Bestandsschutz zulässig. Go und Python
+   (`VALID_ENTITY_ID_RE`) sind gleichlautend und laufen gegen dieselbe Wahrheitstabelle.
 4. **Mengenbremsen je Nutzer für interaktive Auslöser in Go.** Gleitendes Zeitfenster je Nutzer,
    429 im bestehenden Fehlerformat mit `Retry-After` und Katalogtext DE/EN: Testnachricht 10/h,
    Handversand (alle drei Routen gemeinsam) 20/h, Ortsauflösung 30/min, GPX-Upload 30/h,
@@ -92,5 +93,6 @@ und verlassen sich darauf, dass `coreauth` das Geheimnis anhängt (ADR-0062 Rege
 - **Folgepflichten:** Jede neue Stelle, die eine nutzerbestimmte URL abruft, nutzt den
   abgeschotteten Client (oder einen gleichwertigen mit eigenem Transport). Jede neue Proxy-Route
   mit Pfad-Kennung nutzt `coreKennung` (Prüfung + Kodierung). Neue interaktive Auslöser mit
-  Zustellung oder teurem Abruf bekommen eine Bremse in `NutzerBremsen`. Die Python-Seite des
-  Kennungsmusters ist nachzuziehen (eigener Auftrag).
+  Zustellung oder teurem Abruf bekommen eine Bremse in `NutzerBremsen`. Jede Änderung des
+  Kennungsmusters erfolgt in Go und Python gleichzeitig, mit Fall in der geteilten
+  Wahrheitstabelle.

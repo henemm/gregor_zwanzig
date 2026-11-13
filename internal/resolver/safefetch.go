@@ -29,7 +29,6 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
-	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -57,10 +56,34 @@ var googleLinkHosts = map[string]bool{
 	"google.com":      true,
 }
 
-// reGoogleCountryHost deckt die Laender-Domains von Google Maps ab
-// (google.de, www.google.co.uk, maps.google.com.au), aber keine beliebigen
-// Unterdomains oder Namen wie google.evil.example.
-var reGoogleCountryHost = regexp.MustCompile(`^(www\.|maps\.)?google\.(com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$`)
+// googleLaenderDomains: feste, ueberschaubare Liste der Google-Domains, unter
+// denen geteilte Kartenlinks der Zielgruppe vorkommen (Alpen- und
+// Europa-Laender sowie die grossen englischsprachigen Laender). Bewusst
+// KEIN offenes Muster wie google.<zwei Buchstaben>: nicht jede solche Domain
+// gehoert Google. Erlaubt ist jeweils der Name selbst sowie www. und maps.
+// davor. Eine fehlende Domain ergaenzt man hier (Issue #2961, ADR-0114).
+var googleLaenderDomains = []string{
+	"google.com",
+	// Alpenraum und Nachbarn
+	"google.de", "google.at", "google.ch", "google.li", "google.it", "google.fr", "google.si",
+	// uebriges Europa
+	"google.es", "google.pt", "google.nl", "google.be", "google.lu", "google.ie", "google.co.uk",
+	"google.dk", "google.se", "google.no", "google.fi", "google.is", "google.pl", "google.cz",
+	"google.sk", "google.hu", "google.hr", "google.ro", "google.bg", "google.gr", "google.ee",
+	"google.lv", "google.lt",
+	// weitere grosse Laender
+	"google.ca", "google.com.au", "google.co.nz", "google.co.jp", "google.com.br", "google.com.mx",
+}
+
+var googleLaenderHosts = func() map[string]bool {
+	m := map[string]bool{}
+	for _, d := range googleLaenderDomains {
+		for _, vor := range []string{"", "www.", "maps."} {
+			m[vor+d] = true
+		}
+	}
+	return m
+}()
 
 // komootLinkHosts: Hosts, die als Komoot-Link akzeptiert werden. Abgerufen
 // wird dort nie die Eingabe selbst, nur die feste Komoot-API.
@@ -75,12 +98,13 @@ var komootLinkHosts = map[string]bool{
 var (
 	linkHostAllowed = isGoogleLinkHost
 	linkSchemes     = map[string]bool{"https": true}
+	linkPortErlaubt = func(port string) bool { return port == "" || port == "443" }
 	dialIPAllowed   = isPublicUnicastIP
 )
 
 func isGoogleLinkHost(host string) bool {
 	host = strings.ToLower(host)
-	return googleLinkHosts[host] || reGoogleCountryHost.MatchString(host)
+	return googleLinkHosts[host] || googleLaenderHosts[host]
 }
 
 func isKomootLinkHost(host string) bool {
@@ -107,11 +131,19 @@ func checkLinkURL(u *url.URL) error {
 	if !linkHostAllowed(u.Hostname()) {
 		return fmt.Errorf("%w: host", errZielGesperrt)
 	}
+	// Nur der Standard-Port: ein Kartenlink auf einen anderen Port ist kein
+	// geteilter Kartenlink.
+	if !linkPortErlaubt(u.Port()) {
+		return fmt.Errorf("%w: port", errZielGesperrt)
+	}
 	return nil
 }
 
 // Netze, die zusaetzlich zu den netip-Praedikaten gesperrt sind.
 var blockedPrefixes = []netip.Prefix{
+	netip.MustParsePrefix("::/96"),          // IPv4-kompatibel (veraltet, bettet IPv4 ein)
+	netip.MustParsePrefix("2001::/32"),      // Teredo (bettet IPv4 ein)
+	netip.MustParsePrefix("fec0::/10"),      // Site-Local (veraltet)
 	netip.MustParsePrefix("0.0.0.0/8"),      // "dieses Netz"
 	netip.MustParsePrefix("100.64.0.0/10"),  // CGNAT
 	netip.MustParsePrefix("192.0.0.0/24"),   // IETF-Protokollzuweisungen
