@@ -233,6 +233,11 @@ const NEU_IN_F12 = F12_ANKER.map(([k]) => k);
 /** #2764 (F13) AUSDRUCK_OFFEN: Name-Rueckfall der Karte (wertebereiche.symbolzeile.* stehen in F5_ANKER). */
 const NEU_IN_F13 = ['bausteine.karte.ohne_namen'];
 const NEU_IN_FOLGEPAKETEN = [
+	// #2961 Welle 2 (ADR-0116) Premium-SMS-Verbindung trennen
+	'konto.kopplung.verbunden',
+	'konto.kopplung.trennen',
+	'konto.kopplung.trennen_frage',
+	'konto.kopplung.trennen_fehlgeschlagen',
 	// #2648 (S3) Sprachumschalter und Konto-Sprache
 	'konto.sprache.titel',
 	'konto.sprache.option_de',

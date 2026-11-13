@@ -212,3 +212,39 @@ describe('AC-11: busy deaktiviert den sichtbaren Button', () => {
 		);
 	});
 });
+
+// =========================================================================
+// Issue #2961 Welle 2 (ADR-0116): "Verbindung trennen" mit Rückfrage
+// =========================================================================
+
+function renderMit(extra: Record<string, unknown>): string {
+	return render(PremiumSmsLinkCard, { props: { ...defaults(), ...extra } }).body;
+}
+
+describe('Verbindung trennen', () => {
+	test('gelernte Rückadresse (fresh) → Trennen-Knopf sichtbar, noch keine Rückfrage', () => {
+		const html = renderMit({ replyState: 'fresh', onDisconnect: async () => {} });
+		assert.ok(html.includes('data-testid="premium-sms-disconnect"'), 'Trennen-Knopf fehlt.');
+		assert.ok(
+			!html.includes('data-testid="premium-sms-disconnect-confirm"'),
+			'Die Rückfrage darf erst nach dem Klick erscheinen.'
+		);
+	});
+
+	test('veraltete Rückadresse (stale) → Trennen-Knopf sichtbar', () => {
+		const html = renderMit({ replyState: 'stale', onDisconnect: async () => {} });
+		assert.ok(html.includes('data-testid="premium-sms-disconnect"'));
+	});
+
+	test('keine Rückadresse (none/fehlend) → kein Trennen-Knopf', () => {
+		assert.ok(!renderMit({ replyState: 'none' }).includes('data-testid="premium-sms-disconnect"'));
+		assert.ok(!renderMit({}).includes('data-testid="premium-sms-disconnect"'));
+	});
+
+	test('Rückfrage offen → Bestätigen und Abbrechen mit Erklärung', () => {
+		const html = renderMit({ replyState: 'fresh', disconnectConfirm: true, onDisconnect: async () => {} });
+		assert.ok(html.includes('data-testid="premium-sms-disconnect-confirm"'), 'Bestätigen fehlt.');
+		assert.ok(html.includes('data-testid="premium-sms-disconnect-cancel"'), 'Abbrechen fehlt.');
+		assert.ok(html.includes('Verknüpfungscode bleibt gültig'), 'Die Rückfrage muss sagen, dass der Code bleibt.');
+	});
+});

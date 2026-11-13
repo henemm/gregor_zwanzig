@@ -54,6 +54,11 @@ export const F4_ANKER: [schluessel: string, de: string, en: string][] = [
 	['konto.kopplung.erneuern_frage', 'Ein bestehender Verknüpfungscode wird beim Erneuern ungültig. Fortfahren?', 'Renewing makes the existing link code invalid. Continue?'],
 	['konto.kopplung.bestaetigen', 'Bestätigen', 'Confirm'],
 	['konto.kopplung.fehlgeschlagen', 'Code-Vorgang fehlgeschlagen', 'Code request failed'],
+	// #2961 Welle 2 (ADR-0116): Premium-SMS-Verbindung trennen.
+	['konto.kopplung.verbunden', 'Ein Garmin-Gerät ist über seine Rückadresse mit diesem Konto verbunden.', 'A Garmin device is connected to this account via its reply address.'],
+	['konto.kopplung.trennen', 'Verbindung trennen', 'Disconnect'],
+	['konto.kopplung.trennen_frage', 'Die Rückadresse wird gelöscht; bis zur nächsten Nachricht mit Verknüpfungscode gehen keine Premium-SMS mehr an das Gerät. Der Verknüpfungscode bleibt gültig, bis du ihn erneuerst. Fortfahren?', 'The reply address will be deleted; no Premium SMS will reach the device until its next message with the link code. The link code stays valid until you renew it. Continue?'],
+	['konto.kopplung.trennen_fehlgeschlagen', 'Trennen fehlgeschlagen', 'Disconnect failed'],
 	['konto.passkey.titel', 'Passkeys', 'Passkeys'],
 	['konto.passkey.leer', 'Du hast noch keinen Passkey. Mit einem Passkey meldest du dich per Face ID, Touch ID, Windows Hello oder Sicherheitsschlüssel an — ohne Passwort.', 'You have no passkey yet. With a passkey you sign in with Face ID, Touch ID, Windows Hello or a security key, without a password.'],
 	['konto.passkey.angelegt_am', 'Angelegt am <datum>', 'Created on <datum>'],
