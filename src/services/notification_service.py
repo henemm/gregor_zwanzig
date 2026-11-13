@@ -2337,8 +2337,9 @@ class NotificationService:
     ) -> None:
         """Sendet eine Command-Bestätigung per Premium-SMS (Issue #2184).
 
-        Issue #2412 S4a: `purpose="reply"` -- Garmin-Antworten duerfen die
-        Reply-Reserve ueber dem Premium-SMS-Grundlimit ausschoepfen. Kein
+        Issue #2412 S4a / ADR-0116: `purpose="reply"` -- Garmin-Antworten
+        zaehlen in ein eigenes Tageskontingent und verbrauchen nie das
+        Alarm-Kontingent des Kanals. Kein
         `NotificationResult` an dieser Stelle (`-> None`); eine Sperre bleibt
         nur ueber die Aufzeichner-/Transport-Beobachtung sichtbar (Spec).
         """
@@ -2353,7 +2354,9 @@ class NotificationService:
             )
             logger.info(f"Premium-SMS confirmation sent: {result.confirmation_subject}")
         except Exception as e:
-            sms_daily_limit.release_reservation(self._require_user(), "premium_sms", now)
+            sms_daily_limit.release_reservation(
+                self._require_user(), "premium_sms", now, purpose="reply",
+            )
             logger.error(f"Failed to send premium-sms confirmation: {e}")
 
     def send_command_reply_telegram(
