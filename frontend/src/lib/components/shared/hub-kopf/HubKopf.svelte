@@ -96,13 +96,14 @@
 				<span class="kind">{crumb}</span>
 			</div>
 			<div class="hub-actions">
+				<!-- #2913 c2: Reihenfolge wie im Mockup (mockup-hub-fassung3.html Z. 233–237): erst Kebab, dann „Test schicken ▾“. -->
+				<SubscriptionKebab data-testid="subscription-kebab" {actions} {onSelect} {mobil} {onSheetOpen} />
 				{#if sendMode === 'setup'}
 					<Btn variant="primary" size="sm" onclick={() => onSetup?.()}>{sendLabel}</Btn>
 				{:else}
 					<!-- „Senden" öffnet nur den Sende-Dialog der Seite (#2278 AC-12). -->
 					<Btn variant="primary" size="sm" data-testid="subscription-hub-send" onclick={() => onSend?.()} disabled={sendDisabled}>{sendLabel}</Btn>
 				{/if}
-				<SubscriptionKebab data-testid="subscription-kebab" {actions} {onSelect} {mobil} {onSheetOpen} />
 				{#if meldungen}{@render meldungen()}{/if}
 			</div>
 		</div>

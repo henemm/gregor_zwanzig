@@ -146,6 +146,8 @@ async function pruefDaten(api: APIRequestContext, ids: Record<string, string | n
 			data: {
 				id,
 				name: 'E2E-GZ #2913 Elementlisten-Abgleich',
+				// #2913 c2: Region wie im Mockup, damit die Eyebrow „Trip · Mallorca“ prüfbar ist (nicht nur „Trip“).
+				region: 'Mallorca',
 				stages: [
 					{
 						id: `${id}-stage-1`,
@@ -170,7 +172,19 @@ async function pruefDaten(api: APIRequestContext, ids: Record<string, string | n
 			const ortId = String((await ort.json()).id);
 			aufraeumen.push(() => api.delete(`/api/locations/${ortId}`));
 			const v = await api.post('/api/compare/presets', {
-				data: { name: 'E2E-GZ #2913 Orte-Abgleich', location_ids: [ortId], schedule: 'daily', profil: 'wandern', empfaenger: ['urlauber@example.com'] }
+				// #2913 c2: Region und Morgen-Briefing 07:00, damit Eyebrow („Orte · {region}“) und Meta-Zeile prüfbar sind.
+				// Region bewusst nicht „Münsterland“: das ist im Mockup der Name des Vergleichs (Brotkrumen, Titel); die
+				// Region steht live zusätzlich unter dem Titel und würde sonst als Name gefunden (falsche Reihenfolge).
+				data: {
+					name: 'E2E-GZ #2913 Orte-Abgleich',
+					location_ids: [ortId],
+					schedule: 'daily',
+					profil: 'wandern',
+					empfaenger: ['urlauber@example.com'],
+					morning_enabled: true,
+					morning_time: '07:00:00',
+					display_config: { region: 'Westfalen' }
+				}
 			});
 			if (v.ok()) {
 				const vid = String((await v.json()).id);

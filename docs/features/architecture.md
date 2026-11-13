@@ -1225,7 +1225,7 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
   in der Titelzeile (keine eigene Statuszeile). Kebab mobil vertikal (`SubscriptionKebab`).
   **Scheibe c2 (#2913, 2026-11-13, Spec `docs/specs/modules/feat_2913_c2_seitenkopf.md`):** Kopf nach
   Mockup Fassung 3. Der Sende-Knopf heißt „Test schicken ▾“ (Beschriftung per Prop `sendLabel`; das
-  Menü kommt mit #2797). Eyebrow „Trip · Region" bzw. „Orte · Region" und Meta-Zeile („Datum · N Etappen ·
+  Menü kommt mit #2797). In der Leiste steht das Kebab „Weitere Aktionen“ links vom Knopf (Reihenfolge nach Mockup). Eyebrow „Trip · Region" bzw. „Orte · Region" und Meta-Zeile („Datum · N Etappen ·
   km · ↑m" bzw. „N Orte · Vergleichstabelle · Briefing HH:MM") sind reiner Text (Props `eyebrowText`,
   `metaTeile`). Im Entwurf steht neben der Status-Pill „Aktivieren" als Link (`aktivierenHref`: Trip
   zum Reiter Etappen, Vergleich zu Zustellung#versand). Reiter-Zähler „Etappen (N)" / „Orte (N)" über

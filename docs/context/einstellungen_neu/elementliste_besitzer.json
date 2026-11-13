@@ -990,6 +990,556 @@
 			"muster": "{text}",
 			"grund": "Reiter Orte wird in Scheibe e neu gebaut; zusätzliche Live-Texte bleiben im Bericht sichtbar",
 			"verweis": "#2913-e"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.kopf.aa178223ac",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Trips / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Trips“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.kopf.ac0cbd7964",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Trips in Brotkrumen und Titel; live der Name des Prüf-Trips (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.kopf.15736ec25a",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Trips in Brotkrumen und Titel; live der Name des Prüf-Trips (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.kopf.13d5f81e5a",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Trip ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.kopf.6bd845aa45",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Datum, Etappenzahl mit Einzahl/Mehrzahl, km, Höhenmeter) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.reiterleiste.e8f72e1252",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Zähler im Reiter Etappen ist eine Zahl ohne Katalogtext (EN-Lücke strukturell, sprachneutral); DE prüft das Muster {zahl}; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage.b6b8686222",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name der gewählten Vorlage folgt dem Prüf-Datensatz (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage.df0c0ec4ee",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Text „▾ unverändert“ ist ein Knoten; live sind Auswahlpfeil „▾“ und Stand „unverändert“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.laedt.-.kopf.3cd3444b0d",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Trips / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Trips“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.laedt.-.kopf.8d380d0b89",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Trips in Brotkrumen und Titel; live der Name des Prüf-Trips (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.laedt.-.kopf.f390b2e094",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Trips in Brotkrumen und Titel; live der Name des Prüf-Trips (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.laedt.-.kopf.a864de237e",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Trip ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.laedt.-.kopf.c8bba9d371",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Datum, Etappenzahl mit Einzahl/Mehrzahl, km, Höhenmeter) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.laedt.-.reiterleiste.54baef5c02",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Zähler im Reiter Etappen ist eine Zahl ohne Katalogtext (EN-Lücke strukturell, sprachneutral); DE prüft das Muster {zahl}; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.fehler.-.kopf.d4d6c0ca4d",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Trips / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Trips“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.fehler.-.kopf.f505b75c7b",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Trips in Brotkrumen und Titel; live der Name des Prüf-Trips (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.fehler.-.kopf.0e86286caa",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Trips in Brotkrumen und Titel; live der Name des Prüf-Trips (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.fehler.-.kopf.b363d7d60a",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Trip ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.fehler.-.kopf.f2a19b02e0",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Datum, Etappenzahl mit Einzahl/Mehrzahl, km, Höhenmeter) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.fehler.-.reiterleiste.5f61d6b0e7",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Zähler im Reiter Etappen ist eine Zahl ohne Katalogtext (EN-Lücke strukturell, sprachneutral); DE prüft das Muster {zahl}; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.kopf.bfca5341dd",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Trips / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Trips“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.kopf.479809d591",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Trips in Brotkrumen und Titel; live der Name des Prüf-Trips (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.kopf.2347bed0b8",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Trips in Brotkrumen und Titel; live der Name des Prüf-Trips (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.kopf.378627256d",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Trip ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.kopf.8fecfee0e5",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Datum, Etappenzahl mit Einzahl/Mehrzahl, km, Höhenmeter) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.reiterleiste.d20bd38160",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Zähler im Reiter Etappen ist eine Zahl ohne Katalogtext (EN-Lücke strukturell, sprachneutral); DE prüft das Muster {zahl}; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage.cf48186abc",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name der gewählten Vorlage folgt dem Prüf-Datensatz (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage.12ebbbb75e",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Text „▾ unverändert“ ist ein Knoten; live sind Auswahlpfeil „▾“ und Stand „unverändert“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.kopf.cf67d35b49",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Orte / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Orte“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.kopf.e073244c40",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Vergleichs in Brotkrumen und Titel; live der Name des Prüf-Vergleichs (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.kopf.e443d8d8bd",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Vergleichs in Brotkrumen und Titel; live der Name des Prüf-Vergleichs (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.kopf.a7b33b9a93",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.kopf.696e8f34bc",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: „Aktivieren“ erscheint nur im Entwurf; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.kopf.03aa5094b7",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.reiterleiste.0b604bc6be",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Zähler im Reiter Orte ist eine Zahl ohne Katalogtext (EN-Lücke strukturell, sprachneutral); DE prüft das Muster {zahl}; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage.3fada7f944",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name der gewählten Vorlage folgt dem Prüf-Datensatz (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage.0db8518e85",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Text „▾ unverändert“ ist ein Knoten; live sind Auswahlpfeil „▾“ und Stand „unverändert“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.laedt.-.kopf.eb43f72416",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Orte / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Orte“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.laedt.-.kopf.72c9e6cf76",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Vergleichs in Brotkrumen und Titel; live der Name des Prüf-Vergleichs (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.laedt.-.kopf.3fcc60a0e6",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Vergleichs in Brotkrumen und Titel; live der Name des Prüf-Vergleichs (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.laedt.-.kopf.649494b243",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.laedt.-.kopf.85460241a3",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: „Aktivieren“ erscheint nur im Entwurf; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.laedt.-.kopf.edce0846c8",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.laedt.-.reiterleiste.13ac048eff",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Zähler im Reiter Orte ist eine Zahl ohne Katalogtext (EN-Lücke strukturell, sprachneutral); DE prüft das Muster {zahl}; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.fehler.-.kopf.bb678a85ba",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Orte / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Orte“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.fehler.-.kopf.a191fc26da",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Vergleichs in Brotkrumen und Titel; live der Name des Prüf-Vergleichs (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.fehler.-.kopf.3ad0644fdd",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Vergleichs in Brotkrumen und Titel; live der Name des Prüf-Vergleichs (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.fehler.-.kopf.10f27c820f",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.fehler.-.kopf.1c305978a5",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: „Aktivieren“ erscheint nur im Entwurf; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.fehler.-.kopf.56ab95407b",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.fehler.-.reiterleiste.e7c659b5f6",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Zähler im Reiter Orte ist eine Zahl ohne Katalogtext (EN-Lücke strukturell, sprachneutral); DE prüft das Muster {zahl}; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.kopf.f353d25f5a",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Orte / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Orte“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.kopf.d991a3f8d2",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Vergleichs in Brotkrumen und Titel; live der Name des Prüf-Vergleichs (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.kopf.a04f868b79",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name des Vergleichs in Brotkrumen und Titel; live der Name des Prüf-Vergleichs (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.kopf.9f9b041132",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.kopf.8faaba4255",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: „Aktivieren“ erscheint nur im Entwurf; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.kopf.c9784644bc",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.reiterleiste.dcef62555d",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Zähler im Reiter Orte ist eine Zahl ohne Katalogtext (EN-Lücke strukturell, sprachneutral); DE prüft das Muster {zahl}; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage.e62995e381",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Name der gewählten Vorlage folgt dem Prüf-Datensatz (Konto-Text); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage.838528f726",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Text „▾ unverändert“ ist ein Knoten; live sind Auswahlpfeil „▾“ und Stand „unverändert“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Trips",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Elternteil-Link der Brotkrumen, im Mockup Teil des Textknotens „Trips /“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "/",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Trenner der Brotkrumen, im Mockup Teil des Textknotens „Trips /“ bzw. „Orte /“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "/",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Trenner der Brotkrumen, im Mockup Teil des Textknotens „Trips /“ bzw. „Orte /“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Aktiv",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill des Prüf-Datensatzes (aktiv); Mockup zeigt „fertig“ bzw. „Entwurf“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Aktiv",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill des Prüf-Datensatzes (aktiv); Mockup zeigt „fertig“ bzw. „Entwurf“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Active",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill des Prüf-Datensatzes (aktiv); Mockup zeigt „fertig“ bzw. „Entwurf“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Active",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill des Prüf-Datensatzes (aktiv); Mockup zeigt „fertig“ bzw. „Entwurf“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{datum} · {etappen} · {km} km · ↑{hm} m",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile des Prüf-Trips (Datum, Etappenzahl, km, Höhenmeter); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"muster": "{orte} · Vergleichstabelle · Morgen-Briefing {zeit}",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile des Prüf-Vergleichs (Anzahl Orte, Briefing-Zeit); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"muster": "{orte} · Comparison table · Morning briefing {zeit}",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile des Prüf-Vergleichs (Anzahl Orte, Briefing-Zeit); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Mallorca",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Region des Prüf-Trips, inline bearbeitbar unter dem Titel (feat_1273_s2); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Westfalen",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Region des Prüf-Vergleichs, inline bearbeitbar unter dem Titel (feat_1273_s2); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Gespeichert",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Speicher-Anzeige des Hub-Kopfs (#2284 S2) nach dem Anlegen des Prüf-Datensatzes; im Mockup ein kurzzeitiger Hinweis ohne festen Text; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Gespeichert",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Speicher-Anzeige des Hub-Kopfs (#2284 S2) nach dem Anlegen des Prüf-Datensatzes; im Mockup ein kurzzeitiger Hinweis ohne festen Text; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Saved",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Speicher-Anzeige des Hub-Kopfs (#2284 S2) nach dem Anlegen des Prüf-Datensatzes; im Mockup ein kurzzeitiger Hinweis ohne festen Text; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Saved",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Speicher-Anzeige des Hub-Kopfs (#2284 S2) nach dem Anlegen des Prüf-Datensatzes; im Mockup ein kurzzeitiger Hinweis ohne festen Text; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "1",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Zähler im Reiter (1 Etappe bzw. 1 Ort im Prüf-Datensatz); in EN ohne Listeneintrag, weil der Zähler keinen Katalogtext hat; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "1",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Zähler im Reiter (1 Etappe bzw. 1 Ort im Prüf-Datensatz); in EN ohne Listeneintrag, weil der Zähler keinen Katalogtext hat; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "▾",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Auswahlpfeil der Vorlage-Karte, im Mockup Teil des Textknotens „▾ unverändert“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "▾",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Auswahlpfeil der Vorlage-Karte, im Mockup Teil des Textknotens „▾ unverändert“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "unverändert",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Stand der Vorlage-Karte, im Mockup Teil des Textknotens „▾ unverändert“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "unverändert",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Stand der Vorlage-Karte, im Mockup Teil des Textknotens „▾ unverändert“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "unchanged",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Stand der Vorlage-Karte, im Mockup Teil des Textknotens „▾ unverändert“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "unchanged",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Stand der Vorlage-Karte, im Mockup Teil des Textknotens „▾ unverändert“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "−",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Knopftext „−“ der Metrik-Zeile; im Mockup derselbe Knopf (mockup-hub-fassung3.html Z. 433), die Elementliste führt nur seine Beschriftung für Screenreader; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "−",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Knopftext „−“ der Metrik-Zeile; im Mockup derselbe Knopf (mockup-hub-fassung3.html Z. 433), die Elementliste führt nur seine Beschriftung für Screenreader; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"verweis": "#2913"
 		}
 	],
 	"ausnahmen": [
