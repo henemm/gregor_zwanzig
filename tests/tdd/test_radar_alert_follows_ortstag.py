@@ -1067,7 +1067,7 @@ def test_aktives_vortagsziel_schlaegt_die_bald_startende_folgeetappe():
         )
         frame_source, _ = _radar_lauf(fresh_uid("s3ac2"), trip)
 
-    assert frame_source.calls == pytest.approx([ziel_gestern]), (
+    assert frame_source.calls == [pytest.approx(ziel_gestern)], (
         f"S3 AC-2: abgefragt wurde {frame_source.calls!r}, erwartet war das noch "
         f"aktive GESTRIGE Ziel-Segment {ziel_gestern!r}. RED: abgefragt wird der "
         f"Start der Folgeetappe {start_folgeetappe!r} — sie beginnt in 30 min, "
@@ -1151,7 +1151,7 @@ def test_ein_etappen_trip_bleibt_nach_mitternacht_im_zielfenster_ueberwacht():
         fs_innen, _ = _radar_lauf(
             fresh_uid("s3ac4-innen"), _nacht_trip(f"trip-s3ac4-i-{uuid.uuid4().hex[:8]}", tag),
         )
-    assert fs_innen.calls == pytest.approx([ZIEL_GESTERN]), (
+    assert fs_innen.calls == [pytest.approx(ZIEL_GESTERN)], (
         f"S3 AC-4: um 03:00 UTC laeuft das Ziel-Segment der Etappe vom {tag} "
         f"(02:00-20:00 UTC) — erwartet war genau ein Abruf an {ZIEL_GESTERN!r}, "
         f"war {fs_innen.calls!r}. RED: der heutige Kalendertag traegt keine "
@@ -1190,7 +1190,7 @@ def test_rueckgriff_endet_beim_unmittelbaren_vortag():
             _nacht_trip(f"trip-s3ac5-v-{uuid.uuid4().hex[:8]}", date_type(2026, 8, 9)),
         )
 
-    assert fs_gestern.calls == pytest.approx([ZIEL_GESTERN]), (
+    assert fs_gestern.calls == [pytest.approx(ZIEL_GESTERN)], (
         "S3 AC-5 (Grenze innen): die Etappe von GESTERN hat ein noch laufendes "
         f"Ziel-Segment — erwartet war ein Abruf dort, war {fs_gestern.calls!r}. "
         "RED: der Vortags-Rueckgriff existiert noch nicht."
