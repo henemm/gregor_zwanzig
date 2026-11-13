@@ -83,13 +83,12 @@ func TestMagicLinkUebernahmePruefteErneutBeiAdressWechselZwischenzeit_AC12(t *te
 		if userID != uid {
 			return
 		}
-		u, err := s.LoadUser(userID)
-		if err != nil || u == nil {
-			t.Fatalf("AC-12: Zwischenzeit-Laden fehlgeschlagen: %v", err)
-		}
-		u.MailTo = andereAdresse
-		u.Email = andereAdresse
-		if err := s.SaveUser(*u); err != nil {
+		// Issue #2961 (F-C): Adressfelder nur ueber UpdateUser.
+		if _, err := s.UpdateUser(userID, func(u *model.User) error {
+			u.MailTo = andereAdresse
+			u.Email = andereAdresse
+			return nil
+		}); err != nil {
 			t.Fatalf("AC-12: Zwischenzeit-Speichern fehlgeschlagen: %v", err)
 		}
 	}

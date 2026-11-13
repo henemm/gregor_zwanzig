@@ -518,10 +518,15 @@ func TestKontoLoeschen_ZweiFehlversucheDannRichtigerCodeLoescht(t *testing.T) {
 func TestKontoLoeschen_LoginOTPsAllerAdressenNachLoeschungNichtMehrEinloesbar(t *testing.T) {
 	t.Cleanup(ResetOTPStoreForTest)
 	s := newTestStore(t)
-	u := passwortKonto(t, s, "anna", "Anna@Beispiel.de")
-	u.MailTo = "Anna-Mail@Beispiel.de"
-	u.PendingContactAddress = "Anna-Neu@Beispiel.de"
-	mustSaveUser(t, s, u)
+	passwortKonto(t, s, "anna", "Anna@Beispiel.de")
+	// Issue #2961 (F-C): Adressfelder eines bestehenden Kontos nur ueber UpdateUser.
+	if _, err := s.UpdateUser("anna", func(u *model.User) error {
+		u.MailTo = "Anna-Mail@Beispiel.de"
+		u.PendingContactAddress = "Anna-Neu@Beispiel.de"
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
 	passwortKonto(t, s, "bertram", "bertram@beispiel.de")
 
 	exp := time.Now().Add(10 * time.Minute)
