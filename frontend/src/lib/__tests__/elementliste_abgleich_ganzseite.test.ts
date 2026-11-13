@@ -630,3 +630,50 @@ describe('AC-13: unsichtbare Marker an den geteilten Komponenten (doc-compliance
 		assert.match(q, /<div class="wt-karte wt-fehler"[^>]*data-abschnitt="warnung"/);
 	});
 });
+
+// ---------------------------------------------------------------- Fix-Loop 4 (Staging-Befund: zusaetzlich = 0)
+// Ein Eintrag mit `muster: "{zahl}"` wurde zu `^.+?$` und erklärte in der Gegenrichtung JEDEN Live-Text.
+// In der Gegenrichtung erklärt `{zahl}` nur Zahl-Text; die echte elementliste.json wird geladen (kein Mock).
+describe('Fix-Loop 4: {zahl}-Muster erklärt in der Gegenrichtung nur Zahl-Text (AC-1, AC-3, AC-11, AC-12)', () => {
+	const ECHT: ListenElement[] = JSON.parse(readFileSync(join(KONTEXT, 'elementliste.json'), 'utf8')).elemente;
+	const SEITEN = [
+		{ ctx: 'trip', reiter: 'wetter' },
+		{ ctx: 'trip', reiter: 'etappen' },
+		{ ctx: 'orte', reiter: 'wetter' }
+	];
+	for (const sprache of ['de', 'en'] as const) {
+		for (const { ctx, reiter } of SEITEN) {
+			test(`${sprache} ${ctx}/${reiter}: Text ohne Ziffern ist zusaetzlich`, () => {
+				const zus = L.findeZusaetzliche({ ctx, reiter, texte: ['Profil: Alpen-Trekking'] }, ECHT, [], [], sprache);
+				assert.deepEqual(texte(zus), ['Profil: Alpen-Trekking']);
+			});
+			test(`${sprache} ${ctx}/${reiter}: erfundener Text mit Ziffern ist zusaetzlich`, () => {
+				const zus = L.findeZusaetzliche({ ctx, reiter, texte: ['Völlig erfunden 123'] }, ECHT, [], [], sprache);
+				assert.deepEqual(texte(zus), ['Völlig erfunden 123']);
+			});
+		}
+	}
+	for (const { ctx, reiter } of SEITEN.filter((s) => s.reiter === 'wetter')) {
+		test(`de ${ctx}/${reiter}: reiner Zahl-Text („4“, „-10“) bleibt erklärt`, () => {
+			assert.deepEqual(L.findeZusaetzliche({ ctx, reiter, texte: ['4', '-10'] }, ECHT, [], [], 'de'), []);
+		});
+	}
+	test('Fixture: Eintrag muster "{zahl}" erklärt „12“, „-3“, „4,5“, aber nicht „abc“', () => {
+		const liste = [el('trip.zustellung.zahl', { text_de: '7', muster: '{zahl}' })];
+		const zus = L.findeZusaetzliche({ ctx: 'trip', reiter: 'zustellung', texte: ['12', 'abc', '-3', '4,5'] }, liste, [], [], 'de');
+		assert.deepEqual(texte(zus), ['abc']);
+	});
+	test('Fixture EN: text_en "{zahl}" erklärt „12“, aber nicht „abc“', () => {
+		const liste = [el('trip.zustellung.zahl', { text_de: '7', muster: '{zahl}', text_en: '{zahl}', luecke: false })];
+		const zus = L.findeZusaetzliche({ ctx: 'trip', reiter: 'zustellung', texte: ['12', 'abc'] }, liste, [], [], 'en');
+		assert.deepEqual(texte(zus), ['abc']);
+	});
+	test('Fixture: andere Platzhalter bleiben beliebig ({zeit} erklärt „Versand um morgen früh“)', () => {
+		const zus = L.findeZusaetzliche({ ctx: 'trip', reiter: 'zustellung', texte: ['Versand um morgen früh'] }, LISTE, [], [], 'de');
+		assert.deepEqual(zus, []);
+	});
+	test('Hinrichtung unverändert: erwartung() für muster "{zahl}" passt weiter auf jeden Wert', () => {
+		const re: RegExp = L.erwartung(el('x', { text_de: '7', muster: '{zahl}' }), 'de');
+		assert.ok(re.test('abc'));
+	});
+});

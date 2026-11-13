@@ -403,6 +403,28 @@ export function erwartung(e: ListenElement, sprache: Sprache): RegExp | null {
 	return new RegExp('^' + esc(normalisiere(e.text_de)) + '$');
 }
 
+/** Zahl-Text, den `{zahl}` in der Gegenrichtung erklärt (Vorzeichen, Dezimal-, Tausender-, Uhrzeit-Trenner). */
+const ZAHL_TEXT = '[-−+]?\\d+(?:[.,:]\\d+)*';
+
+/** Wie `musterAlsRegExp`, aber `{zahl}` passt nur auf Zahl-Text; andere Platzhalter bleiben beliebig. */
+function gegenMuster(muster: string): RegExp {
+	const teile = normalisiere(muster).split(/(\{[^}]+\})/);
+	const quelle = teile.map((t, i) => (i % 2 === 0 ? esc(t) : t === '{zahl}' ? ZAHL_TEXT : '.+?')).join('');
+	return new RegExp('^' + quelle + '$');
+}
+
+/**
+ * Erwartung der Gegenrichtung (#2913 Fix-Loop 4): wie `erwartung`, nur erklärt `{zahl}` keinen beliebigen
+ * Text (sonst wird ein Eintrag `muster: "{zahl}"` zu `^.+?$` und erklärt jeden Live-Text). Die Hinrichtung
+ * nutzt weiter `erwartung`.
+ */
+function erwartungGegenrichtung(e: ListenElement, sprache: Sprache): RegExp | null {
+	const vorlage = sprache === 'en' ? e.text_en : e.muster;
+	if (sprache === 'en' && (e.luecke || !vorlage)) return null;
+	if (vorlage && HAT_PLATZHALTER.test(vorlage)) return gegenMuster(vorlage);
+	return erwartung(e, sprache);
+}
+
 /** Freigegebene Abweichung: Elemente eines Abschnitts (per Katalogschlüssel), die laut Spec fehlen dürfen. */
 export type Freigabe = { ctx: string; reiter: string; abschnitt: string; i18n_keys: string[]; grund: string; spec: string };
 
@@ -534,7 +556,7 @@ export function findeZusaetzliche(
 	const { ctx, reiter } = befund;
 	const regeln = liste
 		.filter((e) => e.ctx === ctx && e.zustand === 'normal' && (e.reiter === reiter || REITERUEBERGREIFEND.has(e.abschnitt)))
-		.map((e) => erwartung(e, sprache))
+		.map((e) => erwartungGegenrichtung(e, sprache))
 		.filter((re): re is RegExp => re !== null);
 	const konto = new Set(kontoTexte.map(normalisiere));
 	const out = new Map<string, ZusaetzlichEintrag>();
