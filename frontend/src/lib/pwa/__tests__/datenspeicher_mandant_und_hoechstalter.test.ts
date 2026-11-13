@@ -132,6 +132,27 @@ describe('AC-10: nichts Vorgehaltenes ist aelter als 30 Tage', () => {
 		assert.equal(istAbgelaufen(null, JETZT), true);
 	});
 
+	test('Ablagezeitpunkt in der Zukunft: bis 5 Minuten gilt er, darueber hinaus als abgelaufen', () => {
+		assert.equal(istAbgelaufen(iso(-5 * 60 * 1000), JETZT), false);
+		assert.equal(istAbgelaufen(iso(-5 * 60 * 1000 - 1), JETZT), true);
+		assert.equal(istAbgelaufen(iso(-400 * TAG), JETZT), true);
+	});
+
+	test('nur die Uebersicht: abgelaufene und zu weit in der Zukunft datierte Ansichten werden nicht gelistet', async () => {
+		const speicher = new GeraetespeicherDoppel();
+		await ablegen(speicher, 'mandant-a', '/trips/alt', iso(31 * TAG));
+		await ablegen(speicher, 'mandant-a', '/trips/zukunft', iso(-TAG));
+		await ablegen(speicher, 'mandant-a', '/compare/neu', iso(3 * TAG));
+
+		const gelistet = await vorgehalteneAnsichten(speicher, JETZT);
+
+		assert.deepEqual(gelistet.map((e) => e.pfad), ['/compare/neu']);
+		assert.deepEqual(
+			speicher.cache(DATEN_PRAEFIX + 'mandant-a')?.pfade(),
+			[INDEX_SCHLUESSEL, '/compare/neu', '/compare/neu/__data.json'].sort()
+		);
+	});
+
 	test('beim Zugriff: eine 31 Tage alte Ansicht wird nicht geliefert und entfernt', async () => {
 		const speicher = new GeraetespeicherDoppel();
 		await ablegen(speicher, 'mandant-a', '/trips/alt', iso(31 * TAG));

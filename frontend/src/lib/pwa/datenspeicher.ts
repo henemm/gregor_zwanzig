@@ -73,11 +73,19 @@ export async function aktuellerDatenspeicher(speicher: Speicher): Promise<Cache 
 	return speicher.open(namen[0]);
 }
 
-/** Ist ein Ablagezeitpunkt aelter als das Hoechstalter (oder unlesbar)? */
+/**
+ * Erlaubte Abweichung in die Zukunft (Uhrkorrektur des Geraets). Ein
+ * Ablagezeitpunkt weiter in der Zukunft ist unplausibel und gilt als
+ * abgelaufen — sonst hielte er eine Ansicht beliebig lange frisch.
+ */
+export const ZUKUNFT_TOLERANZ_MS = 5 * 60 * 1000;
+
+/** Ist ein Ablagezeitpunkt aelter als das Hoechstalter, unplausibel neu oder unlesbar? */
 export function istAbgelaufen(stand: string | null | undefined, jetzt: number): boolean {
 	if (!stand) return true;
 	const zeit = Date.parse(stand);
 	if (!Number.isFinite(zeit)) return true;
+	if (zeit - jetzt > ZUKUNFT_TOLERANZ_MS) return true;
 	return jetzt - zeit > HOECHSTALTER_MS;
 }
 
