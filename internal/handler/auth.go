@@ -124,12 +124,20 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			// Issue #2961 (ADR-0113): der Schalter (und damit die frei
 			// waehlbare Kennung) gilt nur im Staging, im Fixture-Modus oder
 			// fuer eine Admin-Sitzung — sonst Ablehnung statt stillem Ignorieren.
-			if !testAccountCreationAllowed(r, s, cfg) {
+			admin := hasAdminSession(r, s, cfg)
+			if !admin && cfg.Env != "staging" && cfg.TestFixtureDir == "" {
 				log.Printf("register: is_test_user rejected outside staging/fixture without admin session")
 				WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
 				return
 			}
 			if store.IsReservedUserID(req.Username) {
+				WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
+				return
+			}
+			// Privilegierte Kennungen (Admin-/Ausnahmeliste) belegt nur eine
+			// Admin-Sitzung, auch im Staging/Fixture-Modus.
+			if !admin && isPrivilegedUserID(req.Username, cfg) {
+				log.Printf("register: privileged id rejected without admin session")
 				WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
 				return
 			}
@@ -285,14 +293,25 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 	}
 }
 
-// testAccountCreationAllowed: Testkonten (is_test_user, frei waehlbare
-// Kennung) nur im Staging, im Fixture-Modus oder mit gueltiger Admin-Sitzung
-// (Issue #2961, ADR-0113). Die Registrierung ist ein oeffentlicher Pfad, die
-// Sitzung wird deshalb hier selbst geprueft.
-func testAccountCreationAllowed(r *http.Request, s *store.Store, cfg config.Config) bool {
-	if cfg.Env == "staging" || cfg.TestFixtureDir != "" {
-		return true
+// isPrivilegedUserID: die Kennung steht in GZ_ADMIN_USER_IDS oder
+// GZ_QUOTA_EXEMPT_USER_IDS (Vergleich ohne Gross-/Kleinschreibung).
+func isPrivilegedUserID(id string, cfg config.Config) bool {
+	for _, raw := range []string{cfg.AdminUserIDs, cfg.QuotaExemptUserIDs} {
+		for p := range config.ParseAdminUserIDs(raw) {
+			if strings.EqualFold(p, id) {
+				return true
+			}
+		}
 	}
+	return false
+}
+
+// hasAdminSession: gueltige, nicht widerrufene Sitzung eines Kontos aus
+// GZ_ADMIN_USER_IDS (Issue #2961, ADR-0113). Die Registrierung ist ein
+// oeffentlicher Pfad, die Sitzung wird deshalb hier selbst geprueft.
+// Testkonten (is_test_user, frei waehlbare Kennung) gibt es nur im Staging,
+// im Fixture-Modus oder mit einer solchen Sitzung.
+func hasAdminSession(r *http.Request, s *store.Store, cfg config.Config) bool {
 	cookie, err := r.Cookie("gz_session")
 	if err != nil {
 		return false
