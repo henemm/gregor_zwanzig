@@ -5,6 +5,11 @@
 // TDD RED: Diese Tests MÜSSEN FEHLSCHLAGEN, weil TripTabs.svelte noch
 // kein overflow-x: auto / white-space: nowrap / Pill-Styling auf Mobile hat.
 //
+// #2980 (Fix-Loop Bildabgleich c2, ADR-0118, PO-Entscheidung 13.11.2026): die Handy-Reiter sind
+// KEINE Pillen mehr, sondern Text-Reiter mit 2-px-Unterstrich --g-accent wie am Desktop. AC-3/AC-3b
+// sind bewusst auf dieses Soll gezogen (vormals Pill-Fläche --g-accent-deep, weiße Schrift);
+// wischbar (AC-1) und 44 px (AC-2b) bleiben.
+//
 // TestID-Inventar (bereits vorhanden):
 //   trip-detail-tab-list          — Tabs.List Container
 //   trip-detail-tab-{value}       — Tabs.Trigger für jeden Tab
@@ -114,13 +119,13 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		expect(height, `"Etappen"-Tab ist ${height}px hoch (Umbruch?)`).toBeLessThanOrEqual(50);
 	});
 
-	// ─── AC-3: Aktiver Tab als Pill dargestellt ──────────────────────────────
-	test('AC-3: Aktiver Tab hat auf Mobile Pill-Hintergrund (--g-accent-deep)', async ({ page }) => {
+	// ─── AC-3 (neu #2980 AC-17): Aktiver Tab als Text-Reiter mit Unterstrich ─
+	test('AC-3 (#2980 AC-17): Aktiver Tab hat auf Mobile KEINE Pill-Fläche, sondern 2px-Unterstrich --g-accent', async ({ page }) => {
 		/**
 		 * GIVEN: Viewport ist 375×667 px (Mobile)
 		 * WHEN:  Trip-Detail-Seite geladen, "Übersicht" ist aktiv
-		 * THEN:  Aktiver Tab-Trigger hat background-color: rgb(140, 62, 26) (#8c3e1a) —
-		 *        seit #2879 --g-accent-deep (Papier auf --g-accent nur 3,94:1, WCAG-AA verfehlt)
+		 * THEN:  Hintergrund transparent (keine Pill), border-bottom 2px solid rgb(196, 90, 42)
+		 *        (--g-accent #c45a2a), kein Rahmen oben — wie am Desktop (ADR-0118)
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
@@ -128,29 +133,29 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		const activeTab = page.getByTestId('trip-detail-tab-uebersicht');
 		await expect(activeTab).toHaveAttribute('data-state', 'active');
 
-		const bgColor = await activeTab.evaluate((el) => getComputedStyle(el).backgroundColor);
-		// --g-accent-deep: #8c3e1a = rgb(140, 62, 26)
-		expect(bgColor, `Aktiver Tab hat Hintergrund "${bgColor}" statt rgb(140, 62, 26)`).toMatch(
-			/rgb\(140,\s*62,\s*26\)/
-		);
+		const s = await activeTab.evaluate((el) => {
+			const c = getComputedStyle(el);
+			return { bg: c.backgroundColor, bb: c.borderBottomColor, bbw: c.borderBottomWidth, btw: c.borderTopWidth };
+		});
+		expect(s.bg, `Aktiver Tab hat Pill-Hintergrund "${s.bg}"`).toMatch(/rgba\(0,\s*0,\s*0,\s*0\)|transparent/);
+		expect(s.bb, `Unterstrich "${s.bb}" statt --g-accent`).toMatch(/rgb\(196,\s*90,\s*42\)/);
+		expect(s.bbw).toBe('2px');
+		expect(s.btw, 'Pillen-Rahmen oben').toBe('0px');
 	});
 
-	test('AC-3b: Aktiver Tab hat auf Mobile hellen Text (--g-on-accent)', async ({ page }) => {
+	test('AC-3b (#2980 AC-17): Aktiver Tab hat auf Mobile Schrift --g-ink, 600', async ({ page }) => {
 		/**
 		 * GIVEN: Viewport ist 375×667 px (Mobile), aktiver Tab = "Übersicht"
-		 * WHEN:  Pill-Hintergrund gesetzt
-		 * THEN:  Text-Farbe ist --g-on-accent (hell: #ffffff = rgb(255, 255, 255)),
-		 *        die Schriftrolle auf Akzentflächen seit #2400 (Weiß auf --g-accent-deep 7,45:1)
+		 * THEN:  Text-Farbe --g-ink (Hellmodus #1a1a18 = rgb(26, 26, 24)), Gewicht 600 —
+		 *        keine helle Schrift auf Akzentfläche mehr (ADR-0118)
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
 		const activeTab = page.getByTestId('trip-detail-tab-uebersicht');
-		const color = await activeTab.evaluate((el) => getComputedStyle(el).color);
-		// --g-on-accent (Hellmodus): #ffffff = rgb(255, 255, 255)
-		expect(color, `Aktiver Tab hat Textfarbe "${color}" statt --g-on-accent (weiß)`).toMatch(
-			/rgb\(255,\s*255,\s*255\)/
-		);
+		const s = await activeTab.evaluate((el) => ({ color: getComputedStyle(el).color, weight: getComputedStyle(el).fontWeight }));
+		expect(s.color, `Aktiver Tab hat Textfarbe "${s.color}" statt --g-ink`).toMatch(/rgb\(26,\s*26,\s*24\)/);
+		expect(s.weight).toBe('600');
 	});
 
 	test('AC-3c: Inaktiver Tab hat auf Mobile KEINEN Pill-Hintergrund', async ({ page }) => {

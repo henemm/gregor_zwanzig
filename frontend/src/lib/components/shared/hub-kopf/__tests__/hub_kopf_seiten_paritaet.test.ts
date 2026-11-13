@@ -8,7 +8,8 @@
 // frontend/e2e/hub-kopf-paritaet-compare-trip.spec.ts).
 //
 // Pflicht-Mutationen (Spec Test Plan), hier gefangen:
-//   (a) Trip-Senden wieder `variant="accent"`        → „AC-1 … data-variant primary" rot
+//   (a) Trip-Senden wieder `variant="primary"` (Ink) → „AC-1 … data-variant accent" rot
+//       (#2980 / ADR-0118: „Test schicken ▾“ ist Akzent-Hauptaktion, löst ADR-0110 „Hauptaktion Ink“ für diesen Knopf ab)
 //   (c) Status wieder in eigener Zeile unter dem Kopf → „AC-6 … Titelzeile" rot
 // (b) Reiter-Zähler accent: mobile/__tests__/mtabbar_zaehler_neutral.test.ts + E2E HT-8.
 //
@@ -55,8 +56,8 @@ const ELTERN: Record<Art, { schluessel: string; href: string }> = {
 	// #2913 c2 (Mockup): Elternteil „Orte" statt „Orts-Vergleiche".
 	vergleich: { schluessel: 'aktionen.kopf.eltern_orte', href: '/compare' }
 };
-/** Kind des Breadcrumbs: Trip = Kürzel ?? Name, Vergleich = Name. */
-const KIND: Record<Art, string> = { route: 'GR20', vergleich: 'Skitouren Tirol' };
+/** Kind des Breadcrumbs: voller Name bei beiden Arten (#2980 AC-24, Mockup Z. 229–240: kein Kürzel mehr). */
+const KIND: Record<Art, string> = { route: 'GR20 Nord 2026', vergleich: 'Skitouren Tirol' };
 /** Text des Kind-Krümels: das einzige Kind-Element des Breadcrumbs, das weder Link noch Trenner „/" ist. */
 const kindKruemel = (krumen: Knoten): string => {
 	const k = krumen.kinder.filter((n) => n.tag !== 'a' && text(n) !== '/');
@@ -92,10 +93,10 @@ for (const art of ARTEN) {
 			assert.equal(marke?.attrs['data-kind'], art);
 		});
 
-		test(`AC-1 (${art}): „Senden" ist genau einmal da, steht IN der Leiste und ist Btn primary (Ink) — Mutation (a)`, () => {
+		test(`AC-1 (${art}): „Senden" ist genau einmal da, steht IN der Leiste und ist Btn accent (#2980 AC-16, ADR-0118) — Mutation (a)`, () => {
 			const w = seite(art);
 			const senden = einzig(w, 'subscription-hub-send');
-			assert.equal(senden.attrs['data-variant'], 'primary', `„Senden" hat variant „${senden.attrs['data-variant']}" — erwartet primary (schwarz)`);
+			assert.equal(senden.attrs['data-variant'], 'accent', `„Senden" hat variant „${senden.attrs['data-variant']}" — erwartet accent (Fläche --g-accent-deep, #2980 AC-16)`);
 			assert.ok(!liegtIn(senden, titelzeile(w).eltern!), '„Senden" steht neben der Überschrift (im Titelblock)');
 			assert.ok(liegtIn(senden, einzig(w, 'hub-kopf-leiste')), '„Senden" steht nicht in der Leiste ganz oben');
 		});
@@ -106,7 +107,7 @@ for (const art of ARTEN) {
 			assert.equal(links.length, 1, `genau ein Link im Breadcrumb erwartet, gefunden ${links.length}`);
 			assert.equal(links[0].attrs.href, ELTERN[art].href);
 			assert.equal(text(links[0]), trFor('de', ELTERN[art].schluessel as never), 'Elternteil-Text nicht aus dem Katalog (bzw. im Markup umgeschrieben)');
-			// Adversary F003: Kind EXAKT (nicht includes — „GR20 Nord 2026" enthielte „GR20").
+			// Adversary F003: Kind EXAKT; #2980 AC-24: voller Name, nie das Kürzel „GR20".
 			assert.equal(kindKruemel(krumen), KIND[art]);
 			assert.ok(!text(links[0]).includes(KIND[art]), 'Kind ist Teil des Links');
 		});
@@ -139,12 +140,16 @@ for (const art of ARTEN) {
 			assert.ok(!k.includes('desktop:text-[30px]'), 'h1 trägt noch die 30-px-Klasse');
 		});
 
-		test(`AC-2 (${art}): mobiler Zurück-Link steht in der Leiste und führt zur Liste`, () => {
+		// #2980 AC-24 (Mockup Z. 229–240, ADR-0118): kein Zurück-Pfeil mehr — der Elternteil des
+		// Breadcrumbs ist der einzige Weg zur Liste (bleibt Link, auch am Handy).
+		test(`AC-2 (${art}, neu #2980 AC-24): kein Zurück-Link in der Leiste; der Elternteil führt zur Liste`, () => {
 			const w = seite(art);
 			const zurueck = alle(einzig(w, 'hub-kopf-leiste'), (n) => n.attrs['data-testid'] === 'back-link');
-			assert.equal(zurueck.length, 1, `Zurück-Links in der Leiste: ${zurueck.length}`);
-			assert.equal(zurueck[0].attrs.href, ELTERN[art].href);
-			assert.equal(mitTestid(w, 'back-link').length, 1, 'zweiter Zurück-Link außerhalb der Leiste');
+			assert.equal(zurueck.length, 0, `Zurück-Links in der Leiste: ${zurueck.length} (Zurück-Pfeil entfällt)`);
+			assert.equal(mitTestid(w, 'back-link').length, 0, 'Zurück-Link außerhalb der Leiste');
+			const eltern = alle(einzig(w, 'hub-kopf-breadcrumb'), (n) => n.tag === 'a');
+			assert.equal(eltern.length, 1);
+			assert.equal(eltern[0].attrs.href, ELTERN[art].href);
 		});
 
 		test(`AC-7 (${art}): der Kebab steht in der Leiste, genau einmal, Symbol vertikal`, () => {
@@ -264,9 +269,9 @@ describe('#2837 S1 AC-13 — Breadcrumb und Kopftexte folgen der Nutzersprache (
 				const link = alle(einzig(w, 'hub-kopf-breadcrumb'), (n) => n.tag === 'a')[0];
 				assert.ok(link, `${lang}: kein Eltern-Link`);
 				assert.equal(text(link), trFor(lang, ELTERN[art].schluessel as never), `${lang}: Elternteil`);
-				const zurueck = alle(einzig(w, 'hub-kopf-leiste'), (n) => n.attrs['data-testid'] === 'back-link')[0];
-				assert.equal(zurueck?.attrs['aria-label'], trFor(lang, 'aktionen.zurueck_uebersicht'), `${lang}: Zurück-Aria`);
-				assert.equal(einzig(w, 'subscription-hub-send').attrs['data-variant'], 'primary', `${lang}: Senden-Variante`);
+				// #2980 AC-24: kein Zurück-Link mehr in der Leiste.
+				assert.equal(alle(einzig(w, 'hub-kopf-leiste'), (n) => n.attrs['data-testid'] === 'back-link').length, 0, `${lang}: Zurück-Link in der Leiste`);
+				assert.equal(einzig(w, 'subscription-hub-send').attrs['data-variant'], 'accent', `${lang}: Senden-Variante (#2980 AC-16)`);
 			}
 			const enText = text(en);
 			for (const alt of ['Location comparison · Hub', 'LOCATION COMPARISONS', 'Orts-Vergleich · Hub', 'ORTS-VERGLEICHE'])
@@ -343,14 +348,15 @@ describe('#2837 S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Sta
 	};
 	for (const lang of ['de', 'en'] as const) {
 		for (const p of PAARE) {
-			test(`AC-1/AC-8/AC-11 (${lang}, ${p.zustand}): gleicher Text, gleiche Attribute (Pill, Tone, umrandet, data-status), kein Inline-Stil`, () => {
+			test(`AC-1/AC-8/AC-11 (${lang}, ${p.zustand}): gleicher Text, gleiche Attribute (Pill, Tone, gefüllt ohne Rahmen #2980, data-status), kein Inline-Stil`, () => {
 				locale.set(lang);
 				const a = schild(seite('route', p.trip()), 'route');
 				const b = schild(seite('vergleich', p.vergleich()), 'vergleich');
 				assert.equal(a.attrs['data-status'], p.zustand, `Trip: data-status „${a.attrs['data-status']}" (AC-8)`);
 				assert.equal(b.attrs['data-status'], p.zustand, `Vergleich: data-status „${b.attrs['data-status']}"`);
 				assert.equal(b.attrs['data-slot'], 'pill', 'Vergleich: Schild ist nicht das Pill-Atom (eigener Baustein?)');
-				assert.ok('data-outlined' in b.attrs, 'Vergleich: Schild nicht umrandet (gefüllt?) — AC-5');
+				// #2980 AC-21: Pill gefüllt ohne Rahmen (vormals umrandet, S1b AC-5).
+				assert.ok(!('data-outlined' in b.attrs), 'Vergleich: Schild noch umrandet (data-outlined) — #2980 AC-21 gefüllt');
 				assert.equal(text(a), trFor(lang, `trip.status.${p.zustand}`), `Trip-Text nicht aus trip.status.${p.zustand}`);
 				assert.equal(text(b), text(a), `Vergleich zeigt „${text(b)}", Trip „${text(a)}"`);
 				assert.deepEqual(Object.entries(b.attrs).sort(), Object.entries(a.attrs).sort(), 'Schild-Markup verschieden');
