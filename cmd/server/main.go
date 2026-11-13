@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sort"
@@ -60,6 +61,31 @@ func main() {
 	// cmd/server/main_test.go (AC-4).
 	installGuards(cfg)
 
+	srv, cleanup, err := buildServer(cfg)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	defer cleanup()
+
+	log.Printf("Go API listening on %s:%s, proxying to %s", cfg.Host, cfg.Port, cfg.PythonCoreURL)
+	if err := srv.ListenAndServe(); err != nil {
+		log.Printf("http server stopped: %v", err)
+	}
+}
+
+// buildServer baut alles zwischen Konfiguration und Lauschen auf: Store,
+// Seed-Konto, Startwarnungen, Provider, WebAuthn, Scheduler, Router und den
+// http.Server mit Zeitgrenzen (Issue #2961: eigene Funktion, damit ein Test
+// belegt, dass der Start genau diese Teile benutzt). cleanup beendet Reaper
+// und Scheduler.
+func buildServer(cfg *config.Config) (*http.Server, func(), error) {
+	var stops []func()
+	cleanup := func() {
+		for i := len(stops) - 1; i >= 0; i-- {
+			stops[i]()
+		}
+	}
+
 	s := store.New(cfg.DataDir, cfg.UserID)
 	// Issue #2147 Scheibe C (AC-16/AC-17): Bestandsduplikate von E-Mail-Adressen
 	// nur messen, nur Zahlen ins Log; fail-soft, der Start laeuft immer weiter.
@@ -68,8 +94,7 @@ func main() {
 	inviteStore := store.NewInviteStore(cfg.DataDir) // Issue #2519
 	// Issue #2160 AC-15: Reaper fuer Login-OTPs, Lösch-Codes und
 	// Telegram-Tokens — bewusst hier, nicht in den Konstruktoren.
-	stopReaper := handler.StartStoreReaper(telegramTokenStore, time.Minute)
-	defer stopReaper()
+	stops = append(stops, handler.StartStoreReaper(telegramTokenStore, time.Minute))
 	// Issue #2154 Scheibe A: eine Bremse fuer den ganzen Prozess — der
 	// Lernaufruf kommt immer von localhost, ein Zaehler je IP/Nummer/Konto
 	// waere wirkungslos bzw. missbrauchbar (Spec D5).
@@ -101,20 +126,22 @@ func main() {
 	// die Tests gruen, waehrend der laufende Server weiter "localhost" sendet.
 	webAuthn, err := config.NewWebAuthn(cfg)
 	if err != nil {
-		log.Fatalf("webauthn init: %v", err)
+		cleanup()
+		return nil, nil, fmt.Errorf("webauthn init: %w", err)
 	}
 	challengeStore := handler.NewChallengeStore()
 
 	sched, err := scheduler.New(cfg, s)
 	if err != nil {
-		log.Fatalf("scheduler error: %v", err)
+		cleanup()
+		return nil, nil, fmt.Errorf("scheduler error: %w", err)
 	}
 	if scheduler.SchedulerEnabled(cfg) {
 		sched.Start()
 	} else {
 		log.Printf("[scheduler] disabled for env=%s (staging quota gate, Issue #1329)", cfg.Env)
 	}
-	defer sched.Stop()
+	stops = append(stops, sched.Stop)
 
 	r := router.New(router.Deps{
 		Config:             cfg,
@@ -131,10 +158,7 @@ func main() {
 		GitCommit: gitCommit,
 	})
 
-	log.Printf("Go API listening on %s:%s, proxying to %s", cfg.Host, cfg.Port, cfg.PythonCoreURL)
-	if err := newHTTPServer(cfg.Host+":"+cfg.Port, r).ListenAndServe(); err != nil {
-		log.Printf("http server stopped: %v", err)
-	}
+	return newHTTPServer(cfg.Host+":"+cfg.Port, r), cleanup, nil
 }
 
 // Issue #2961: Server-Zeitgrenzen gegen langsame bzw. haengende Verbindungen.
