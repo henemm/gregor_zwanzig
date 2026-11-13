@@ -690,24 +690,30 @@ ein Neustart setzt ihn zurück.
 
 ## Abruf-Kontingent: Verbrauch und Drosselung diagnostizieren (#2961, ADR-0117)
 
-Das Open-Meteo-Tageskontingent (9000 Einheiten, UTC-Tag) teilt sich in zwei Klassen: Zeitplan-
-Versand, Handversand und Alarm-Prüfungen (ADR-0075) sowie **interaktive** Abrufe (Sofortvergleich,
-Etappenwetter, Vorschauen, `/api/forecast`). Interaktiv endet global bei 70 % (6300) und je Nutzer
-bei `max(6300 / aktive Nutzer, 1500)`.
+Das Open-Meteo-Tageskontingent (9000 Einheiten, UTC-Tag) teilt sich in drei Klassen:
+Zeitplan-Versand und Alarm-Prüfungen (ADR-0075), **interaktive** Abrufe (Sofortvergleich,
+Etappenwetter, Vorschauen, `/api/forecast`; global bis 70 % = 6300, je Nutzer 1500) und
+**manuelle** (Handversand und Antwort-Befehle aller Kanäle, `user_manual`; global bis 90 % = 8100,
+je Nutzer 1500). Ein manueller Versand bucht seine Obergrenze vorab und bekommt den Rest
+zurück; passt sie nicht mehr, wird nichts abgerufen und nichts zugestellt (Web 429
+`kontingent_erschoepft`, Befehl: kurze Kontingent-Antwort).
 
 1. **Gesamtbild:** `GET /api/scheduler/status` (Maschinen-Token) → `forecast_budget`:
    `calls_today`, `interactive_calls_today`, `interactive_budget`, `interactive_throttled`,
-   `max_user_calls`, `users_over_fair_share`. `interactive_throttled: true` heißt: niemand bekommt
+   `manual_calls_today`, `manual_budget`, `manual_throttled`, `max_user_calls`,
+   `users_over_fair_share`. `manual_throttled: true` heißt: heute keine Handversände und
+   Antwort-Befehle mit neuem Abruf mehr; Zeitplan-Briefings und Alarme laufen weiter. `interactive_throttled: true` heißt: niemand bekommt
    heute mehr neue interaktive Abrufe, nur Cache-Daten; Briefings und Alarme laufen weiter.
 2. **Wer verbraucht:** Admin-Oberfläche bzw. `GET /api/admin/users` →
-   `open_meteo_calls_today` und `open_meteo_interactive_calls_today` je Konto. Im Python-Log
+   `open_meteo_calls_today`, `open_meteo_interactive_calls_today` und
+   `open_meteo_manual_calls_today` je Konto. Im Python-Log
    (`journalctl -u gregor-python`) steht einmal je Tag und Konto
    `Nutzer <xy***hash> stellt n von m interaktiven Abrufen heute (mehr als 50 %)`; die maskierte
    Kennung ist zwei Zeichen plus die ersten acht Stellen von SHA-256 der Kennung (zum Abgleich
    lokal nachrechnen, nie die Kennung ins Ticket schreiben).
 3. **Rohdaten:** `data/diagnostics/forecast_budget.json` (`calls`, `interactive_calls`,
-   `active_users`) und `data/users/<id>/diagnostics/forecast_budget.json` (`calls`,
-   `interactive`, `interactive_warned`). Nur lesen; der Zähler gehört allein dem Python-Core
+   `manual_calls`, `active_users`) und `data/users/<id>/diagnostics/forecast_budget.json`
+   (`calls`, `interactive`, `manual`, `interactive_warned`). Nur lesen; der Zähler gehört allein dem Python-Core
    (ADR-0076).
 4. **Nutzer meldet „Kontingent aufgebraucht":** das ist die 429/der Hinweis aus ADR-0117. Er löst
    sich um Mitternacht UTC. Eine Ausnahme für einzelne Konten gibt es bewusst nicht; wird die

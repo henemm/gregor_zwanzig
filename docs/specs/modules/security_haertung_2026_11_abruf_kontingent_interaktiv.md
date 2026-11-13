@@ -4,7 +4,7 @@ type: module
 created: 2026-11-13
 updated: 2026-11-13
 status: approved
-version: "1.0"
+version: "1.1"
 tags: [security, forecast-budget, open-meteo, rate-limit, python-core, go-api, issue-2961]
 ---
 
@@ -36,6 +36,12 @@ und Alarme frei und begrenzt die Eingaben.
   (neu), `internal/handler/proxy.go` (`Retry-After` beim Etappenwetter),
   `internal/handler/admin_users.go`, `internal/scheduler/forecast_budget_health.go`,
   `internal/router/router.go` (nur `/api/compare`), Katalog `internal/i18n/messages/{de,en}/fach.json`.
+- **Nachtrag (Fix-Runde):** `src/services/manuelles_kontingent.py` (neu, Obergrenzen),
+  `api/routers/briefings_send.py`, `src/services/trip_command_processor.py` (nur Buchungs-
+  priorität und Ablehnungsantwort), `src/services/trip_report_scheduler.py` und
+  `scheduler_dispatch_service.py` (Abbruch vor Zustellung), `src/services/send_outcomes.py`,
+  `src/services/radar_service.py` (Zurechnung), `internal/handler/nutzer_mengenbremse.go`
+  (Vorhersage-Bremse).
 - **Frontend:** `frontend/src/lib/components/trip-detail/StageList.svelte` (Hinweis),
   `frontend/src/lib/types.ts`.
 - **Mandantentrennung:** jede Buchung trägt die `user_id` aus dem Auth-Kontext; Tests mit zwei
@@ -60,15 +66,23 @@ und Alarme frei und begrenzt die Eingaben.
 ## Implementation Details
 
 ```
-Prioritaeten: user_briefing (nie gedrosselt) | alert_check (95 %) | polling (80 %)
-              | user_interactive (neu)
+Prioritaeten: user_briefing (nur Zeitplan, nie gedrosselt) | alert_check (95 %)
+              | polling (80 %) | user_interactive (neu) | user_manual (neu, Nachtrag)
 
 reserve("user_interactive", n):
   global:   calls + n <= 0.70 * 9000 = 6300            sonst abgelehnt
-  je Nutzer: interaktiv_heute + n <= max(6300 // N, 1500)  sonst abgelehnt
+  je Nutzer: interaktiv_heute + n <= 1500 (fest, Nachtrag)  sonst abgelehnt
   gebucht:  calls, interactive_calls (global); calls, interactive (Nutzer)
   Ablehnung bucht nichts und wird im interaktiven Kontext vermerkt.
-Fairness alert_check/polling (Stufe 1): Nutzerverbrauch OHNE interaktiven Anteil.
+reserve("user_manual", n):
+  global:   calls + n <= 0.90 * 9000 = 8100;  je Nutzer: manuell_heute + n <= 1500
+  im Kontext manueller_abruf(uid, schaetzung): erster Abruf bucht die ganze
+  Schaetzung; passt sie nicht -> Versand abgelehnt, kein weiterer Abruf, keine
+  Zustellung; Rest nach dem Versand erstattet.
+Fairness alert_check/polling (Stufe 1): Nutzerverbrauch OHNE interaktiven und
+manuellen Anteil.
+Anreicherung (Radar/Gewitter) im markierten Kontext: Nutzer + Prioritaet des
+Kontexts; Ablehnung = "ohne Anreicherung" (throttled).
 
 Route -> with interaktiver_abruf(): ...  (ContextVar; copy_context in Arbeiter)
 Segment-Weg: priority = "user_interactive" im Kontext, sonst unveraendert.
@@ -81,8 +95,8 @@ Segment-Weg: priority = "user_interactive" im Kontext, sonst unveraendert.
 | Vergleich mit 10 Orten | 10 (eine je Ort; Cache-Treffer 0) |
 | Etappenwetter Referenz-Tour GR221 im Repo (4 Etappen, 16 Wegpunkte) | 16 (eine je Abschnitt; je Wegpunkt ein Abschnitt) |
 | Go `/api/forecast` | 2 (Konstante im Core, ADR-0076) |
-| Handversand Trip (nicht interaktiv) | Abschnitte der Etappe + 1 (Nacht) + Abschnitte der bis zu 3 Folgeetappen (Trend); typisch 4 + 1 + 12 = 17, theoretisch höchstens 500 + 1 + 3 × 500 bei der Wegpunktgrenze 500 |
-| Handversand Ortsvergleich (nicht interaktiv) | Zahl der Orte, höchstens die Orte-Quote (10/50/200) |
+| Handversand/Befehl Trip (`user_manual`) | Abschnitte der Etappe + 1 (Nacht) + bis zu 3 Folgeetappen (Trend); typisch 4 + 1 + 12 = 17 ⇒ 1500 / 17 ≈ 88 Versände bzw. Antworten je Tag. Vorab gebuchte Obergrenze: vier größte Etappen + 1 + (größte Etappe + 1) Anreicherung = 22 bei vier Abschnitten je Etappe, mindestens 7 |
+| Handversand/Befehl Ortsvergleich (`user_manual`) | eine Einheit je Ort; Obergrenze 2 je Ort (mit Anreicherung), mindestens 7 |
 
 **Sockel:** 30 Vergleiche × 10 + 50 Etappenwetter × 16 = 1100 Einheiten für die Referenz-Tour;
 1500 deckt 50 Etappenwetter-Abrufe einer Tour mit bis zu 24 Abschnitten (z. B. 6 Etappen à 4) plus
@@ -103,8 +117,8 @@ Alarm-Schwelle (95 %) 2250 Einheiten, die interaktiv nie verbraucht werden.
 
 - **AC-1:** Given Nutzer A hat sein interaktives Tageskontingent aufgebraucht und Nutzer B nicht / When beide interaktiv buchen und A zusätzlich Zeitplan-Briefing, Alarm-Prüfung und Polling bucht / Then wird nur As interaktive Buchung abgelehnt, alle übrigen Buchungen gelingen.
   - Test: `test_ac1_interaktiv_erschoepft_trifft_nur_a_und_nie_briefing_alarm`
-- **AC-2:** Given viele aktive Nutzer, sodass der faire Anteil unter 1500 fällt / When ein Nutzer bis zum Sockel bucht / Then gelingt die Buchung bis genau 1500 Einheiten und danach nicht mehr; bei zwei Nutzern ist das Limit 3150.
-  - Test: `test_ac2_sockel_gilt_wenn_fairer_anteil_kleiner_ist`, `test_ac2_fairer_anteil_ueber_dem_sockel_bei_wenigen_nutzern`
+- **AC-2:** Given ein Nutzer hat 1499 interaktive Einheiten gebucht, auch als einziger aktiver Nutzer des Tages / When er zweimal bucht / Then gelingt die erste Buchung und die zweite nicht (feste Grenze 1500, Nachtrag); ohne Kennung wird nie interaktiv gebucht; `reserve()` mit `units <= 0` wirft `ValueError` und bucht nichts.
+  - Test: `test_ac2_sockel_gilt_wenn_fairer_anteil_kleiner_ist`, `test_ac2_erster_nutzer_des_tages_bekommt_nicht_den_ganzen_topf`, `test_ac2_ohne_kennung_nie_interaktiv`, `test_kleinteil_reserve_lehnt_nicht_positive_einheiten_ab`
 - **AC-3:** Given der Tageszähler steht eine Einheit unter 70 % / When interaktiv zwei bzw. eine Einheit gebucht werden und danach Briefing und Alarm-Prüfung buchen / Then werden zwei Einheiten abgelehnt, eine angenommen, danach nichts Interaktives mehr, Briefing und Alarm gelingen; ein Nutzer, der nur interaktiv über seinem fairen Anteil liegt, behält bei 81 % sein Polling.
   - Test: `test_ac3_interaktiv_nie_ueber_die_globale_grenze`, `test_ac3_interaktiver_verbrauch_zaehlt_nicht_gegen_alarm_fairness`
 - **AC-4:** Given A ist erschöpft, ein Ort liegt im Cache, ein anderer nicht / When A den Sofortvergleich über die API aufruft / Then liefert der gecachte Ort Daten, der andere `error_code` `abruf_kontingent_erschoepft` mit übersetztem Text, ohne Anbieter-Abruf; nur der ungecachte Ort ergibt 429 mit `Retry-After`; B bekommt Daten; der Versandweg für A bleibt ungedrosselt; ein normaler Vergleich bucht interaktiv.
@@ -118,16 +132,31 @@ Alarm-Schwelle (95 %) 2250 Einheiten, die interaktiv nie verbraucht werden.
 - **AC-8:** Given ein Nutzer stellt mehr als die Hälfte des interaktiven Tagesverbrauchs / When er erneut interaktiv bucht / Then steht genau eine Warnzeile mit maskierter Kennung im Log; Snapshot, Betriebsstatus und Admin-Liste weisen den interaktiven Verbrauch getrennt aus; der interne Reserve-Endpunkt kennt `user_interactive`.
   - Test: `test_ac8_*`, `TestForecastBudgetStatus_Interaktiv*`, `TestUserForecastUsage_InteraktiverAnteilJeNutzer`, `TestForecastHandler_ReserveTraegtEchteUserIDUndInteraktivePriority`
 - **AC-9:** Given A ist erschöpft / When A die SMS-Vorschau abruft / Then antwortet die API mit 429 statt einer still unvollständigen Vorschau.
-  - Test: `test_ac9_sms_vorschau_erschoepft_429`
+  - Test: `test_ac9_sms_vorschau_erschoepft_429`, `test_ac9_alarm_vorschau_erschoepft_429`, `test_f4_vergleich_alarm_vorschau_bucht_interaktiv`
+- **AC-10:** Given Nutzer A hat sein manuelles Tageskontingent (1500) aufgebraucht, Nutzer B nicht / When A und B einen Handversand oder Befehl buchen und A zusätzlich Zeitplan-Briefing, Alarm-Prüfung, Polling und interaktiv bucht / Then wird nur As manuelle Buchung abgelehnt.
+  - Test: `test_manuell_erschoepft_trifft_nur_a_briefing_und_alarm_bleiben`, `test_zeitplan_versand_von_a_bleibt_ungedrosselt`
+- **AC-11:** Given der Tageszähler steht eine Einheit unter 90 % / When manuell zwei bzw. eine Einheit gebucht werden / Then werden zwei abgelehnt, eine angenommen, der Zähler überschreitet 90 % nie, Alarm-Prüfung und Briefing gelingen weiter.
+  - Test: `test_manuell_global_nie_ueber_90_prozent_alarme_bleiben_offen`
+- **AC-12:** Given ein Versand mit Obergrenze 10 Einheiten / When er zwei Abrufe macht / Then sind am Ende genau zwei Einheiten gebucht (Vorab-Buchung, Erstattung des Rests); Given der Rest des Nutzers ist kleiner als die Obergrenze / When der Versand den ersten Abruf versucht / Then wird nichts gebucht und jeder weitere Abruf abgelehnt.
+  - Test: `test_manuell_vorab_buchung_und_erstattung`, `test_manuell_zu_grosser_versand_wird_vor_dem_ersten_abruf_abgelehnt`
+- **AC-13:** Given A ist erschöpft bzw. sein Rest reicht für den Ortsvergleich nicht / When A per Web von Hand einen Trip oder Ortsvergleich versendet / Then antwortet die API mit 429 `kontingent_erschoepft`, Katalogtext und `Retry-After`, ohne Anbieter-Abruf und ohne jede Zustellung (auch kein Ausfall-Hinweis); B versendet normal und bucht `user_manual`, der ungenutzte Rest wird erstattet.
+  - Test: `test_handversand_trip_a_erschoepft_429_b_versendet`, `test_handversand_vergleich_zu_gross_vor_dem_ersten_abruf_abgelehnt`
+- **AC-14:** Given A ist erschöpft / When A einen Antwort-Befehl über Telegram, E-Mail, SMS oder Premium-SMS schickt / Then antwortet der Dienst kurz „Tageskontingent für Abrufe erschöpft, automatische Briefings und Alarme laufen weiter" (Kurzform-Kanäle englisch, höchstens 160 Zeichen) ohne Anbieter-Abruf; B bekommt die normale Antwort und bucht `user_manual`.
+  - Test: `test_befehl_a_erschoepft_kurze_antwort_b_arbeitet`
+- **AC-15:** Given ein Radar-/Gewitter-Abruf / When er außerhalb bzw. innerhalb einer markierten Anfrage läuft / Then bucht er außerhalb nutzerfrei, innerhalb beim auslösenden Nutzer; bei erschöpftem Kontingent entfällt nur die Anreicherung (`throttled`), ohne die Anfrage ungültig zu machen.
+  - Test: `test_anreicherung_wird_im_kontext_dem_nutzer_zugerechnet`
+- **AC-16:** Given ein Abschnitt einer Etappe liegt im Cache, der andere wird abgelehnt / When das Etappenwetter abgerufen wird / Then wird die Etappe nicht aus dem einen Abschnitt bewertet (429, da keine Etappe lieferbar). `GET /api/forecast` ist je Nutzer auf 60 je Minute gebremst; die Orte-Grenze des Vergleichs ist im echten Router verdrahtet; der Betriebsstatus weist `user_manual` getrennt aus.
+  - Test: `test_f5_etappe_mit_gedrosseltem_abschnitt_wird_nicht_aus_teildaten_bewertet`, `TestAbrufKontingent_*`, `TestForecastBudgetStatus_ManuellGetrenntAusgewiesen`
 
 ## Known Limitations
 
-- Antwortbefehle über Telegram, SMS und Premium-SMS bleiben bei ihrer bisherigen Priorität
-  (unterwegs-Weg, ADR-0117 Konsequenzen).
-- Die nutzerfreie Radar-Anreicherung im Anbieter bucht weiter unattributiert `user_briefing`.
-- Der Handversand einer Tour mit extrem vielen Wegpunkten kann theoretisch rund 2000 Einheiten je
-  Versand buchen; die Go-Bremse (20 je Stunde) und der 10-Minuten-Cache begrenzen das, ein eigenes
-  Tageslimit für den Handversand gibt es bewusst nicht.
+- Eine Tour, deren Obergrenze über 1500 liegt (Etappen mit Hunderten Wegpunkten), lässt sich
+  nicht mehr von Hand versenden; der Zeitplan-Versand bleibt davon unberührt.
+- Die Obergrenze ist eine Schätzung: übersteigt ein Versand sie doch, wird nachgebucht; scheitert
+  das, bricht der Versand vor der Zustellung ab (kein Teil-Briefing), die bis dahin gebuchten
+  Einheiten bleiben gebucht.
+- Mehrere abgestimmte Konten können den interaktiven (ab 5 Konten) bzw. manuellen Topf (ab 6)
+  füllen; Briefings und Alarme bleiben unberührt (ADR-0117 Nachtrag Punkt 2).
 - Die Nutzer-Grenze wird unter der globalen Sperre gegen einen nicht gesperrten Lesestand des
   Nutzer-Topfs geprüft; parallele Anfragen desselben Nutzers können seinen Anteil um höchstens die
   Parallelität (wenige Einheiten) überschreiten. Die globale Grenze ist strikt.
@@ -142,3 +171,5 @@ Alarm-Schwelle (95 %) 2250 Einheiten, die interaktiv nie verbraucht werden.
 ## Changelog
 
 - 2026-11-13: v1.0 — erste Fassung (Issue #2961, Welle 2).
+- 2026-11-13: v1.1 — Fix-Runde nach Gegenprüfung: `user_manual`, feste Grenze je Nutzer,
+  Anreicherung zugerechnet, Vorhersage-Bremse, AC-10 bis AC-16.
