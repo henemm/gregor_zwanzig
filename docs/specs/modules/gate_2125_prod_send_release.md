@@ -171,3 +171,4 @@ Der bestehende Override-Test in `tests/tdd/test_issue_1148_prod_send_gate.py` (A
 
 - 2026-11-12: Pflicht-Sektionen Scope, Definition of Done, Test Plan ergaenzt (CI-Spec-Gate).
 - 2026-11-12: Initial spec erstellt — Issue #2125 (Bezug #1148, #2227). Nachzuziehen: Spec #1148 (Override-Mechanik, AC-3) und `docs/reference/gates_und_ratschen.md`.
+- 2026-11-13: Validierung — die Testdatei heißt tatsächlich `tests/tdd/test_prod_send_release.py`; der freigegebene Text nennt noch den Planungsnamen (bewusst nicht geändert, Freigabe-Bindung).
