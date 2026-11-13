@@ -19,6 +19,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { dirname, join, relative } from 'node:path';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { svelteAst, tsAst, aufrufe, aufgerufener, letztesStringArgument, type Knoten } from './s3a2794Ast.ts';
@@ -35,7 +36,12 @@ const STELLEN: Array<[string, string, string, number]> = [
 	['shared/wetter-tab/wetterTabSpeicherung.ts', 'saveController.schedule', 'wetter-ampel', 2],
 	['trip-detail/BriefingScheduleTab.svelte', 'saveController.schedule', 'versand', 1],
 	['shared/versandVergleichSpeicherung.ts', 'saveController.schedule', 'versand', 1],
-	['shared/AlarmeTab.svelte', 'baueTripSpeicherung', 'alarme', 1]
+	['shared/AlarmeTab.svelte', 'baueTripSpeicherung', 'alarme', 1],
+	// #2795 S3b Teilschritt 1b (AC-33): der neue Reiter Zustellung hat EINEN Speicherer mit zwei
+	// Nutzlast-Teilen — Owner bleiben 'versand' und 'alarme' (nicht 'zustellung'). TDD RED bis
+	// shared/zustellung-tab/zustellungSpeicherung.ts existiert.
+	['shared/zustellung-tab/zustellungSpeicherung.ts', 'saveController.schedule', 'versand', 1],
+	['shared/zustellung-tab/zustellungSpeicherung.ts', 'saveController.schedule', 'alarme', 1]
 	// #2794 S3a Teil-PR 4a (AC-31): der Owner 'wertebereiche' stand nur im CorridorEditor/
 	// CorridorEditorMobile (entfernt); die Grenzen speichert der Reiter Wetter ('wetter-ampel').
 ];
@@ -53,6 +59,7 @@ describe('AC-2.T1 (Regressionswächter): Speicher-Owner-Strings stehen unveränd
 	for (const [rel, callee, owner, min] of STELLEN) {
 		test(`s3a2794_t1_owner_${owner}_in_${rel.replace(/[^a-zA-Z0-9]+/g, '_')}`, () => {
 			const datei = join(KOMP, rel);
+			assert.ok(existsSync(datei), `TDD RED: ${rel} fehlt`);
 			const { liste, quelle } = aufrufeIn(datei);
 			const treffer = liste.filter((a) => aufgerufener(a, quelle).endsWith(callee) && letztesStringArgument(a) === owner);
 			const vorhanden = liste
@@ -70,6 +77,7 @@ describe('AC-2.T1 (Regressionswächter): Speicher-Owner-Strings stehen unveränd
 	test('s3a2794_t1_kein_owner_auf_neue_reiterkennung_umbenannt', () => {
 		// Gegenprobe: kein Speicher-Aufruf traegt die NEUEN Reiter-Kennungen als Owner.
 		for (const [rel, callee] of STELLEN) {
+			if (!existsSync(join(KOMP, rel))) continue; // fehlende Datei meldet der Einzeltest oben
 			const { liste, quelle } = aufrufeIn(join(KOMP, rel));
 			for (const a of liste) {
 				if (!aufgerufener(a, quelle).endsWith(callee)) continue;
