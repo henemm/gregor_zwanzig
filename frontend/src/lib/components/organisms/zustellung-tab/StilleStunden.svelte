@@ -14,7 +14,15 @@
 	}
 	let { stand, onaendern }: Props = $props();
 
-	// Minutenfeld: Wert erst beim Verlassen uebernehmen (ganze Zahl >= 0), Zwischenstaende nie.
+	// Minutenfeld: jede gueltige Eingabe (ganze Zahl >= 0) geht sofort als neuer Stand an den
+	// Speicherer (entprellt, ueberlebt so ein Neuladen ohne Verlassen des Felds, #2316/#2317 wie
+	// das fruehere Cooldown-Feld); ungueltige Zwischenstaende (leer, Komma) werden nie gemeldet.
+	function cooldownEingabe(e: Event): void {
+		const roh = (e.currentTarget as HTMLInputElement).value.trim();
+		const n = Number(roh);
+		if (roh !== '' && Number.isInteger(n) && n >= 0 && n !== stand.cooldown) onaendern({ ...stand, cooldown: n });
+	}
+	// Beim Verlassen: ungueltige Eingabe auf den gespeicherten Wert zuruecksetzen.
 	function cooldownUebernehmen(e: Event): void {
 		const roh = (e.currentTarget as HTMLInputElement).value.trim();
 		const n = Number(roh);
@@ -56,6 +64,7 @@
 					value={stand.cooldown}
 					aria-label={$t('zustellung.anpassen.minuten')}
 					data-testid="zustellung-cooldown"
+					oninput={cooldownEingabe}
 					onchange={cooldownUebernehmen}
 				/>
 			</span>

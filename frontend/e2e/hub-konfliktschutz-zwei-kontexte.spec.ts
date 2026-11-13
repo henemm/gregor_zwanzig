@@ -30,7 +30,8 @@
 // Aufräumen im finally, Zweit-Kontexte im afterEach.
 
 import { test, expect, type Browser, type BrowserContext, type Page, type Request } from '@playwright/test';
-import { E2E_TEST_PREFIX, HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, waehleOption, type HubKind } from './helpers';
+import { E2E_TEST_PREFIX, HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, tippeUhrzeit, type HubKind } from './helpers';
+import { cooldownFeld } from './s3b2795-zustellung.helpers';
 
 type Stand = Record<string, unknown>;
 
@@ -108,14 +109,42 @@ const dc = (s: Stand) => (s.display_config as Stand | undefined) ?? {};
 // #2793 S2b (Spec §6): die Alarm-Empfindlichkeit ist nur lesbar -- bearbeitbare
 // Alarm-Einstellung fuer beide kinds ist die Sperrzeit (`alert_cooldown_minutes`,
 // Seed 60 Minuten). Die Funktionsnamen bleiben, damit die Tabelle unten gleich bleibt.
-const sperrzeitFeld = (p: Page) => p.locator('[data-testid="alert-cooldown-input"]:visible');
+// #2795 S3b Teilschritt 1b (feat_2795_s3b_teil1_zustellung.md): der Alarm-Baustein ist im Reiter
+// Zustellung abgelöst — Sperrzeit unter „Anpassen“ (AC-26), Alarm-Geste der Schalter „Stille
+// Stunden“ (AC-24), Uhrzeit im Uhrzeitfeld der Briefing-Zeiten (AC-4). Radar und Amtliche Warnungen
+// wohnen im Reiter Wetter (AC-31, Fall „Wetter-Metriken“ unten).
+const zustellung = (p: Page) => p.locator('[data-testid="zustellung-tab"]:visible').first();
+const sperrzeitFeld = (p: Page) => zustellung(p).locator('[data-testid="zustellung-cooldown"]');
+const stilleSchalter = (p: Page) => zustellung(p).locator('[data-testid="zustellung-stille-schalter"]');
+const morgenZeit = (p: Page) => zustellung(p).locator('[data-testid="zustellung-morgen-zeit"]');
 async function stufeBereit(p: Page): Promise<void> {
-	await expect(p.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
-	await expect(sperrzeitFeld(p), 'Vorbedingung: Ausgangs-Sperrzeit 60').toHaveValue('60', { timeout: 10_000 });
+	await expect(zustellung(p)).toBeVisible({ timeout: 10_000 });
+	await expect(await cooldownFeld(zustellung(p)), 'Vorbedingung: Ausgangs-Sperrzeit 60').toHaveValue('60', { timeout: 10_000 });
+}
+/** Fall „Alarme“ (beide kinds): Stille Stunden einschalten (Seed: aus). */
+const ALARME_FALL = {
+	bereit: async (p: Page) => {
+		await expect(stilleSchalter(p), 'Vorbedingung: Stille Stunden aus').toHaveAttribute('aria-checked', 'false', { timeout: 10_000 });
+	},
+	aendern: async (p: Page) => {
+		await stilleSchalter(p).click();
+		await expect(stilleSchalter(p)).toHaveAttribute('aria-checked', 'true');
+	},
+	pruefe: (s: Stand) =>
+		expect(Boolean(s.alert_quiet_from) && Boolean(s.alert_quiet_to), 'Alarme-Änderung von B fehlt auf dem Server').toBe(true)
+};
+/** Fall „Versand“ (beide kinds): Morgen-Uhrzeit 08:00 eintippen. */
+async function versandBereit(p: Page): Promise<void> {
+	await expect(morgenZeit(p)).toBeVisible({ timeout: 10_000 });
+}
+async function versandAendern(p: Page): Promise<void> {
+	await tippeUhrzeit(p, morgenZeit(p), '08:00');
+	await p.keyboard.press('Tab');
 }
 async function stufeAendern(p: Page): Promise<void> {
 	await sperrzeitFeld(p).fill('30');
 	await expect(sperrzeitFeld(p)).toHaveValue('30');
+	await sperrzeitFeld(p).blur(); // das Minutenfeld übernimmt beim Verlassen (change)
 }
 function stufePruefe(s: Stand): void {
 	expect(s.alert_cooldown_minutes, 'Sperrzeit-Änderung von B fehlt auf dem Server').toBe(30);
@@ -130,14 +159,7 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 			reiter: 'Alarme',
 			tab: 'zustellung',
 			seed: { official_warnings: { enabled: true } },
-			bereit: async (p) => {
-				await expect(p.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
-			},
-			aendern: async (p) => {
-				await p.locator('[data-testid="alerts-tab-official-alert-triggers-toggle"] input[type="checkbox"]').first().click();
-			},
-			pruefe: (s) =>
-				expect((s.official_warnings as { enabled?: boolean } | undefined)?.enabled, 'Alarme-Änderung von B fehlt auf dem Server').toBe(false)
+			...ALARME_FALL
 		},
 		{
 			// #2792 S1c-3: der Reiter Wertebereiche ist nur lesbar (schreibt nichts,
@@ -164,14 +186,8 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 			tab: 'zustellung',
 			hash: 'versand',
 			seed: {},
-			bereit: async (p) => {
-				await expect(p.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible')).toBeVisible({
-					timeout: 10_000
-				});
-			},
-			aendern: async (p) => {
-				await waehleOption(p, p.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible'), '08:00');
-			},
+			bereit: versandBereit,
+			aendern: versandAendern,
 			// Trip führt die Uhrzeit in report_config.
 			pruefe: (s) => expect(String(rc(s).morning_time), 'Versand-Änderung von B fehlt auf dem Server').toMatch(/^08:00/)
 		},
@@ -216,15 +232,7 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 			reiter: 'Alarme',
 			tab: 'zustellung',
 			seed: { radar_alert_enabled: false, display_config: { active_metrics: ['wind_max_kmh'] } },
-			bereit: async (p) => {
-				await expect(p.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
-			},
-			aendern: async (p) => {
-				const radar = p.locator('[data-testid="alarme-radar-toggle"] input[type="checkbox"]').first();
-				await radar.click();
-				await expect(radar).toBeChecked();
-			},
-			pruefe: (s) => expect(s.radar_alert_enabled, 'Alarme-Änderung von B fehlt auf dem Server').toBe(true)
+			...ALARME_FALL
 		},
 		{
 			// #2792 S1c-3: wie im Trip — Alarm-Empfindlichkeit statt des gesperrten
@@ -249,14 +257,8 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 			tab: 'zustellung',
 			hash: 'versand',
 			seed: {},
-			bereit: async (p) => {
-				await expect(p.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible')).toBeVisible({
-					timeout: 10_000
-				});
-			},
-			aendern: async (p) => {
-				await waehleOption(p, p.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible'), '08:00');
-			},
+			bereit: versandBereit,
+			aendern: versandAendern,
 			// Vergleich führt die Uhrzeit als Flachfeld.
 			pruefe: (s) => expect(s.morning_time, 'Versand-Änderung von B fehlt auf dem Server').toBe('08:00:00')
 		},
@@ -440,16 +442,12 @@ for (const kind of HUB_KINDS) {
 				// #2347 S3d (Alt compare-radar-toggle „preserved on unrelated save"): auch die ANZEIGE
 				// nach Neuladen trägt Name und umgelegten Auslöser (Server-Stand allein genügt nicht).
 				await openHub(page, kind, hub.id, { tab: fall.tab });
-				await fall.bereit(page);
-				const schalter =
-					kind === 'route'
-						? page.locator('[data-testid="alerts-tab-official-alert-triggers-toggle"] input[type="checkbox"]').first()
-						: page.locator('[data-testid="alarme-radar-toggle"] input[type="checkbox"]').first();
-				// Trip: Seed an ⇒ umgelegt aus · Vergleich: Seed aus ⇒ umgelegt an
+				await expect(stilleSchalter(page)).toBeVisible({ timeout: 10_000 });
+				// Seed aus ⇒ umgelegt an (Stille Stunden, beide kinds).
 				await expect(
-					schalter,
+					stilleSchalter(page),
 					'KS-2 FAIL: nach Umbenennen + Neuladen zeigt der Auslöser den Vorgabewert statt des gespeicherten Standes'
-				).toBeChecked({ checked: kind === 'vergleich' });
+				).toHaveAttribute('aria-checked', 'true');
 			} finally {
 				await hub.aufraeumen();
 			}

@@ -21,6 +21,7 @@
 
 import { test, expect, type Page, type Request } from '@playwright/test';
 import { HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, type HubKind, type SeededHub } from './helpers';
+import { cooldownFeld } from './s3b2795-zustellung.helpers';
 
 const DESKTOP = { width: 1280, height: 900 };
 const MOBIL = { width: 375, height: 812 };
@@ -309,7 +310,8 @@ for (const kind of HUB_KINDS) {
 			await expect(panel).toBeVisible({ timeout: 10_000 });
 			// #2793 S2b (Spec §6): die Empfindlichkeit ist nur lesbar -- bearbeitbare
 			// Alarm-Einstellung ist die Sperrzeit (`alert_cooldown_minutes`).
-			const sperrzeit = panel.locator('[data-testid="alert-cooldown-input"]:visible');
+			// #2795 S3b 1b: die Sperrzeit steht im Reiter Zustellung unter „Anpassen“ (AC-26).
+			const sperrzeit = await cooldownFeld(panel.locator('[data-testid="zustellung-tab"]'));
 			await expect(sperrzeit).toBeVisible({ timeout: 10_000 });
 			await sperrzeit.fill('45');
 			await expect(sperrzeit).toHaveValue('45');

@@ -12,7 +12,7 @@
 // Ausführung: cd frontend && npx playwright test issue-616-trip-one-surface
 
 import { test, expect } from '@playwright/test';
-import { login, waehleOption } from './helpers.js';
+import { login, tippeUhrzeit } from './helpers.js';
 
 const TRIP_ID = 'e2e-cockpit-test';
 const TRIP_NAME = 'E2E Cockpit Test Trip';
@@ -129,11 +129,11 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		 */
 		// Issue #1743 / #2794 S3a: Versand-Abschnitt im Reiter Zustellung.
 		await page.goto(`${DETAIL_URL}?tab=zustellung#versand`);
-		const morning = page.getByTestId('versand-abschnitt').getByTestId('report-morning-time');
+		// #2795 S3b 1b: Uhrzeitfeld der Briefing-Zeiten im Reiter Zustellung (frei eintippbar, AC-4).
+		const morning = page.getByTestId('zustellung-tab').getByTestId('zustellung-morgen-zeit');
 		await expect(morning).toBeVisible({ timeout: 8000 });
-		// Issue #1379: Stunden-Auswahlliste — Minuten sind nicht mehr waehlbar
-		// (der Server kappte sie seit #1280 ohnehin auf die volle Stunde).
-		await waehleOption(page, morning, '05:00');
+		await tippeUhrzeit(page, morning, '05:00');
+		await page.keyboard.press('Tab');
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
 			timeout: 5000
 		});

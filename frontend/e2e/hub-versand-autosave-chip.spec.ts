@@ -17,7 +17,10 @@
 // Anmeldung über den storageState aus global.setup.ts (Admin-Sitzung).
 
 import { test, expect, type Page, type Request } from '@playwright/test';
-import { HUB_KINDS, hubApiPath, openHub, seedHub, waehleOption, type HubKind } from './helpers';
+import { HUB_KINDS, hubApiPath, openHub, seedHub, tippeUhrzeit, type HubKind } from './helpers';
+// #2795 S3b Teilschritt 1b (feat_2795_s3b_teil1_zustellung.md AC-4): die Uhrzeit steht im Uhrzeitfeld
+// der Briefing-Zeiten-Karte des Reiters Zustellung (frei eintippbar, Übernahme beim Verlassen).
+import { angezeigteZeit } from './s3b2795-zustellung.helpers';
 
 // Selektor-/Feldpfad-Unterschiede je kind — bewusst im Spec, nicht im Helfer.
 const HUB_SEL: Record<HubKind, { morningTime: (stand: Record<string, unknown>) => unknown }> = {
@@ -40,7 +43,7 @@ function zaehlePuts(page: Page, pfad: string): { puts: Request[]; beantwortet: R
 }
 
 const morgenUhrzeit = (page: Page) =>
-	page.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible');
+	page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-morgen-zeit"]');
 
 for (const kind of HUB_KINDS) {
 	test(`AC-1 (${kind}): Versand-Uhrzeit 06:00 → 08:00 ⇒ genau ein PUT, Chip „Gespeichert HH:MM", Stand 08:00, überlebt Neuladen`, async ({
@@ -53,13 +56,14 @@ for (const kind of HUB_KINDS) {
 			const { puts, beantwortet } = zaehlePuts(page, pfad);
 
 			await openHub(page, kind, hub.id, { tab: 'zustellung', hash: 'versand' });
-			await expect(page.locator('[data-testid="versand-abschnitt"]:visible')).toBeVisible({ timeout: 10_000 });
+			await expect(page.locator('[data-testid="zustellung-tab"]:visible')).toBeVisible({ timeout: 10_000 });
 			const uhrzeit = morgenUhrzeit(page);
 			await expect(uhrzeit).toBeVisible({ timeout: 10_000 });
-			await expect(uhrzeit, 'Vorbedingung: geseedet mit 06:00').toHaveText('06:00');
+			expect(await angezeigteZeit(uhrzeit), 'Vorbedingung: geseedet mit 06:00').toBe('06:00');
 			expect(puts.length, 'Vorbedingung: das Öffnen des Abschnitts speichert nichts').toBe(0);
 
-			await waehleOption(page, uhrzeit, '08:00');
+			await tippeUhrzeit(page, uhrzeit, '08:00');
+			await page.keyboard.press('Tab');
 
 			await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 			const chip = page.locator('[data-testid="save-indicator"]');
@@ -92,7 +96,7 @@ for (const kind of HUB_KINDS) {
 
 			await page.reload();
 			await expect(uhrzeit).toBeVisible({ timeout: 10_000 });
-			await expect(uhrzeit, 'Wert überlebt das Neuladen').toHaveText('08:00');
+			await expect.poll(() => angezeigteZeit(uhrzeit), { timeout: 10_000, message: 'Wert überlebt das Neuladen' }).toBe('08:00');
 			expect(puts.length, 'das Neuladen löst keinen weiteren PUT aus').toBe(1);
 		} finally {
 			await hub.aufraeumen();

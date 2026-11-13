@@ -124,6 +124,9 @@ test.describe('Issue #1117: Amtliche Warnungen im Inhalt-Tab', () => {
 		}
 	});
 
+	// #2795 S3b 1b (feat_2795_s3b_teil1_zustellung.md AC-31): der Alarm-Baustein ist im Reiter
+	// Zustellung abgelöst — dort steht KEIN amtliche-Warnungen-Schalter mehr (weder Inhalt noch
+	// Auslöser); die einzige Bedienstelle ist der Schalter im Reiter Wetter (jede Funktion genau einmal).
 	test('D2: Alarme-Tab hat keinen amtliche-Warnungen-Inhalt-Schalter mehr, nur den Auslöser', async ({
 		page,
 		request
@@ -134,12 +137,18 @@ test.describe('Issue #1117: Amtliche Warnungen im Inhalt-Tab', () => {
 			await page.goto(`/trips/${id}`);
 			// #2794 S3a: die Alarme stehen im Reiter Zustellung.
 			await page.locator('[data-testid="trip-detail-tab-zustellung"]:visible').first().click();
-			await page.locator('[data-testid="trip-detail-panel-zustellung"]').waitFor({ state: 'visible' });
+			const zustellung = page.locator('[data-testid="trip-detail-panel-zustellung"]');
+			await zustellung.waitFor({ state: 'visible' });
+			await expect(zustellung.locator('[data-testid="zustellung-kanal-tabelle"]')).toBeVisible({ timeout: 15_000 });
 
 			await expect(page.locator('[data-testid="alerts-tab-official-alerts-toggle"]')).toHaveCount(0);
-			await expect(
-				page.locator('[data-testid="alerts-tab-official-alert-triggers-toggle"]:visible').first()
-			).toBeVisible();
+			await expect(zustellung.locator('[data-testid="alerts-tab-official-alert-triggers-toggle"]')).toHaveCount(0);
+			await expect(zustellung.locator('[data-testid="wetter-warnungen-schalter"]')).toHaveCount(0);
+
+			// Der Auslöser steht genau einmal: im Reiter Wetter.
+			await page.locator('[data-testid="trip-detail-tab-wetter"]:visible').first().click();
+			await expect(page.locator(`${SCHALTER}:visible`)).toHaveCount(1, { timeout: 15_000 });
+			await expect(page.locator('[data-testid="wetter-warnungen-schalter"]')).toHaveCount(1);
 		} finally {
 			await deleteTrip(request, id);
 		}

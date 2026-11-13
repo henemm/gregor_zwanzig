@@ -17,6 +17,11 @@
 // zieht die betroffenen Selektoren/Klickpfade entsprechend um — der
 // Kanal-/Zeitplan-Teil (AC-2/AC-3/AC-7) bleibt unangetastet im Versand-Panel.
 //
+// #2795 S3b Teilschritt 1b (feat_2795_s3b_teil1_zustellung.md): Versand-Abschnitt und Alarm-Baustein
+// sind durch den neu gebauten Reiter „Zustellung“ abgelöst (Briefing-Zeiten, Laufzeit, Kanal-Tabelle,
+// Stille Stunden mit „Anpassen“/Cooldown, Übergangsblock mit Beispiel-Alarm). Die Zusicherungen
+// dieser Datei laufen an den neuen Trägern; Amtliche Warnungen stehen nur im Reiter Wetter (AC-31).
+//
 // Echter Klick-Pfad: Trip öffnen → auf den Tab-Trigger „Versand"/„Alarme"
 // klicken (kein direktes goto mit ?tab=…), da nur so die tatsächliche
 // UI-Interaktion (Tab-Wechsel-Mechanik in TripTabs.svelte) verifiziert wird.
@@ -84,7 +89,7 @@ async function clickVersandTab(page: Page): Promise<void> {
 }
 
 function versandPanel(page: Page) {
-	return page.getByTestId('trip-detail-panel-zustellung').getByTestId('versand-abschnitt');
+	return page.getByTestId('trip-detail-panel-zustellung').getByTestId('zustellung-tab');
 }
 
 // #2794 S3a: die Wertebereiche stehen im Reiter „Wetter".
@@ -118,11 +123,14 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await openTripOverview(page, tripId('main'));
 		await clickAlarmeTab(page);
 
-		const panel = page.getByTestId('trip-detail-panel-zustellung').getByTestId('alarme-tab');
+		const panel = versandPanel(page);
 		await expect(panel).toBeVisible();
-		await expect(panel.getByTestId('alert-cooldown-card')).toBeVisible();
-		await expect(panel.getByTestId('alert-quiet-hours-card')).toBeVisible();
-		await expect(panel.getByTestId('alert-preview-card')).toBeVisible();
+		// Stille Stunden (AC-24) mit „Anpassen“ → Cooldown (AC-26), Beispiel-Alarm im Übergangsblock (AC-30).
+		await expect(panel.locator('[data-abschnitt="stille-stunden"]')).toBeVisible();
+		await expect(panel.getByTestId('zustellung-stille-schalter')).toBeVisible();
+		await panel.getByTestId('zustellung-anpassen').locator('summary').click();
+		await expect(panel.getByTestId('zustellung-cooldown')).toBeVisible();
+		await expect(panel.getByTestId('zustellung-uebergang').getByTestId('alert-preview-card')).toBeVisible();
 	});
 
 	test('AC-14: „Etappen öffnen" bleibt im Versand-Panel sichtbar', async ({ page }) => {
@@ -141,9 +149,10 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await clickVersandTab(page);
 
 		const panel = versandPanel(page);
-		await expect(panel.getByTestId('channel-email').locator(':visible').first()).toBeVisible();
-		await expect(panel.getByTestId('morning-master-switch').locator(':visible').first()).toBeVisible();
-		await expect(panel.getByTestId('report-morning-time')).toBeVisible();
+		await expect(panel.getByTestId('zustellung-kanal-email')).toBeVisible();
+		await expect(panel.getByTestId('zustellung-kanal-email-briefing')).toBeVisible();
+		await expect(panel.getByTestId('zustellung-morgen-schalter')).toBeVisible();
+		await expect(panel.getByTestId('zustellung-morgen-zeit')).toBeVisible();
 	});
 
 	// AC-6: Alerts-Panel (Wertebereiche) enthält die Zustell-Controls NICHT mehr.
@@ -155,11 +164,13 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		const panel = page.getByTestId('trip-detail-panel-wetter');
 		await expect(panel).toBeVisible();
 		await expect(panel.getByTestId('alert-cooldown-card')).toHaveCount(0);
+		await expect(panel.getByTestId('zustellung-cooldown')).toHaveCount(0);
 		await expect(panel.getByTestId('alert-preview-card')).toHaveCount(0);
 	});
 
-	// Issue #1258 AC-14: Versand-Panel enthält die Zustell-Controls NICHT
-	// mehr (nach dem Umzug in den Alarme-Tab).
+	// Issue #1258 AC-14, seit #2795 S3b 1b (AC-31): der Reiter Zustellung trägt keine
+	// amtlichen Warnungen und keine „Alarm ab“-Stufen je Metrik (die stehen nur im Reiter Wetter)
+	// und den Cooldown genau einmal.
 	test('AC-14: Versand-Panel enthält Cooldown/amtliche-Warnungen-Toggle NICHT mehr', async ({ page }) => {
 		await login(page);
 		await openTripOverview(page, tripId('main'));
@@ -167,7 +178,11 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 
 		const panel = versandPanel(page);
 		await expect(panel.getByTestId('alert-cooldown-card')).toHaveCount(0);
+		await expect(panel.getByTestId('zustellung-cooldown')).toHaveCount(1);
 		await expect(panel.getByTestId('alerts-tab-official-alerts-toggle')).toHaveCount(0);
+		await expect(panel.getByTestId('alerts-tab-official-alert-triggers-toggle')).toHaveCount(0);
+		await expect(panel.getByTestId('wetter-warnungen-schalter')).toHaveCount(0);
+		await expect(panel.locator('[data-testid^="wetter-alarm-ab-"], [data-testid="alert-metric-level-table"]')).toHaveCount(0);
 	});
 
 	// AC-5: Etappen öffnen wechselt tatsächlich in den Etappen-Tab.

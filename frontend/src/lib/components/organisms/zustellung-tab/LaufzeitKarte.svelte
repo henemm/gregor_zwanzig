@@ -49,15 +49,15 @@
 		</div>
 		<div class="zt-bedienung">
 			{#if art === 'etappen'}
-				<Btn variant="ghost" size="sm" data-testid="zustellung-etappen-oeffnen" onclick={() => onJump?.('etappen')}>
+				<Btn variant="ghost" size="tap" data-testid="zustellung-etappen-oeffnen" onclick={() => onJump?.('etappen')}>
 					{$t('zustellung.laufzeit.etappen_oeffnen')}
 				</Btn>
 			{:else}
 				<div class="zt-segment" role="group" aria-label={$t('zustellung.laufzeit.titel')}>
-					<Btn variant={wahl === 'offen' ? 'primary' : 'ghost'} size="sm" aria-pressed={wahl === 'offen'} data-testid="zustellung-laufzeit-offen" onclick={() => waehle('offen')}>
+					<Btn variant={wahl === 'offen' ? 'primary' : 'ghost'} size="tap" aria-pressed={wahl === 'offen'} data-testid="zustellung-laufzeit-offen" onclick={() => waehle('offen')}>
 						{$t('zustellung.laufzeit.offen')}
 					</Btn>
-					<Btn variant={wahl === 'datum' ? 'primary' : 'ghost'} size="sm" aria-pressed={wahl === 'datum'} data-testid="zustellung-laufzeit-bis-datum" onclick={() => waehle('datum')}>
+					<Btn variant={wahl === 'datum' ? 'primary' : 'ghost'} size="tap" aria-pressed={wahl === 'datum'} data-testid="zustellung-laufzeit-bis-datum" onclick={() => waehle('datum')}>
 						{$t('zustellung.laufzeit.bis_datum')}
 					</Btn>
 				</div>

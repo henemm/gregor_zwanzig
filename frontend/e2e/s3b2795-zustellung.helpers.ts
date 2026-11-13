@@ -197,6 +197,27 @@ export async function schalte(schalter: Locator, an: boolean): Promise<void> {
 	await expect(schalter).toHaveAttribute('aria-checked', an ? 'true' : 'false');
 }
 
+/** Klappt „Anpassen“ (natives <details>) auf, falls zu, und liefert das Cooldown-Minutenfeld. */
+export async function cooldownFeld(reiter: Locator): Promise<Locator> {
+	const auf = reiter.getByTestId(ZT.anpassen);
+	if (!(await auf.evaluate((d) => (d as HTMLDetailsElement).open))) await auf.locator('summary').click();
+	const feld = auf.getByTestId(ZT.cooldown);
+	await expect(feld).toBeVisible();
+	return feld;
+}
+
+/** Schalter „Amtliche Warnungen“ bzw. „Radar-Alarm“ — seit #2794 S3a nur im Reiter Wetter (AC-31). */
+export const warnungenSchalter = (page: Page): Locator =>
+	page.locator('[data-testid="wetter-tab"]:visible [data-testid="wetter-warnungen-schalter"]').first();
+export const radarSchalter = (page: Page): Locator =>
+	page.locator('[data-testid="wetter-tab"]:visible [data-testid="wetter-radar-schalter"]').first();
+
+/** Oeffnet den Hub im Reiter Wetter und wartet auf den Schalter „Amtliche Warnungen“. */
+export async function oeffneWetterWarnungen(page: Page, kind: HubKind, id: string): Promise<void> {
+	await openHub(page, kind, id, { tab: 'wetter' });
+	await expect(warnungenSchalter(page)).toBeVisible({ timeout: 15_000 });
+}
+
 /** Angezeigte Uhrzeit eines UhrzeitFelds als „HH:MM“ (Segmente ohne Leerraum). */
 export async function angezeigteZeit(feld: Locator): Promise<string> {
 	const t = (await feld.locator('[data-slot="uhrzeit-feld-eingabe"]').innerText()).replace(/\s+/g, '');
