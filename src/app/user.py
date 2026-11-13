@@ -153,6 +153,9 @@ class LocationResult:
     uv_index_max: Optional[float] = None
     pop_max_pct: Optional[int] = None
     hourly_data: List["ForecastDataPoint"] = field(default_factory=list)
+    # Issue #2961 (ADR-0117): stabiler Code zum ``error``-Text, z. B.
+    # ``abruf_kontingent_erschoepft``; transient, Default None.
+    error_code: Optional[str] = None
     # Epic #1301 B4 — Mehrtages-Slice (bis zu 3 Kalendertage) fuer den
     # Ausblick je Ort. Transient (kein Persistenz-Feld, kein Datenschema-
     # Risiko), additiv, Default leer. `hourly_data` bleibt das Ein-Tages-

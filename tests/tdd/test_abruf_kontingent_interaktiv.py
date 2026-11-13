@@ -318,7 +318,38 @@ def test_ac5_etappenwetter_a_erschoepft_429_b_arbeitet(client):
     assert resp_b.status_code == 200, resp_b.text
     assert resp_b.json()["results"]["s1"] is not None
     assert "hinweis" not in resp_b.json()
-    assert _snap(b)["user_interactive_calls_today"] == 1
+    # Eine Einheit je Abschnitt (zwei Wegpunkte ergeben zwei Abschnitte).
+    assert _snap(b)["user_interactive_calls_today"] == len(fake.abrufe) == 2
+
+
+def test_ac5_etappenwetter_teilweise_aus_cache_mit_hinweis(client):
+    """Eine Etappe kommt aus dem Cache, die andere waere ein neuer Abruf: die
+    erste bleibt sichtbar, die zweite wird benannt statt still leer gelassen."""
+    from app.loader import save_trip
+    from app.trip import Stage, Trip, Waypoint
+
+    a, b = _uid("ac5t-a"), _uid("ac5t-b")
+    fake = ZaehlAnbieter()
+
+    def etappe(sid, lat):
+        return Stage(id=sid, name=sid, date=utc_tag(), waypoints=[
+            Waypoint(id="w1", name="w1", lat=lat, lon=11.0, elevation_m=900),
+            Waypoint(id="w2", name="w2", lat=lat + 0.05, lon=11.05, elevation_m=1100),
+        ])
+
+    save_trip(Trip(id="warm", name="warm", stages=[etappe("s1", 45.5)]), user_id=b)
+    assert _etappenwetter(client, b, "warm", fake).status_code == 200
+    save_trip(Trip(id="mix", name="mix", stages=[etappe("s1", 45.5), etappe("s2", 45.9)]),
+              user_id=a)
+    _erschoepfe(a, b)
+
+    resp = _etappenwetter(client, a, "mix", fake)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["results"]["s1"] is not None
+    assert body["results"]["s2"] is None
+    assert body["gedrosselt"] == ["s2"]
+    assert "Kontingent" in body["hinweis"]
 
 
 # --- AC-6: Eingabegrenzen ----------------------------------------------------
@@ -439,8 +470,11 @@ def test_messung_einheiten_je_vergleich_und_etappenwetter(client, anbieter):
     vorlage = REPO / "tests/fixtures/data_root/users/default/trips/gr221-mallorca.json"
     trip = load_trip(vorlage)
     save_trip(trip, user_id=a)
-    abschnitte = sum(max(len(s.waypoints) - 1, 0) for s in trip.stages if s.date)
-    resp = _etappenwetter(client, a, trip.id, ZaehlAnbieter())
+    etappen_anbieter = ZaehlAnbieter()
+    resp = _etappenwetter(client, a, trip.id, etappen_anbieter)
     assert resp.status_code == 200
-    assert abschnitte == 12
-    assert _snap(a)["user_interactive_calls_today"] == 10 + abschnitte
+    # Referenz-Tour GR221 im Repo: 4 Etappen, 16 Wegpunkte -> 16 Abschnitte
+    # (je Wegpunkt ein Abschnitt), je Abschnitt ein Abruf und eine Einheit.
+    assert len(trip.stages) == 4
+    assert len(etappen_anbieter.abrufe) == 16
+    assert _snap(a)["user_interactive_calls_today"] == 10 + 16

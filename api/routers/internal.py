@@ -13,15 +13,16 @@ Moduls liegen hinter ``X-GZ-Core-Auth`` (ADR-0062, Middleware in
 ``api/main.py``).
 """
 import logging
-import math
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from api.fehler import kontingent_erschoepft
 from app.config import Settings
+from i18n import resolve_user_lang, t
 from output.channels.base import ChannelBlockedError, OutputConfigError, OutputError
 from output.channels.recipient import SmsRecipient
 from output.channels.sms import SMSOutput
@@ -41,8 +42,10 @@ from app.loader import load_all_trips
 from providers.base import get_provider
 # Bare-Import wie oben (#1308): der Monkeypatch auf die Klassenkonstante
 # DAILY_BUDGET trifft nur dann dieselbe Klasse, die dieser Endpunkt benutzt.
-from services.forecast_budget import ForecastBudgetGate
-from services.stage_weather import compute_stage_weather
+from services.forecast_budget import (
+    ForecastBudgetGate, interaktiver_abruf, sekunden_bis_utc_mitternacht,
+)
+from services.stage_weather import compute_stage_weather_mit_status
 from services import sms_daily_limit
 
 router = APIRouter()
@@ -96,14 +99,28 @@ def stages_weather(
         return JSONResponse(status_code=404, content={"error": "not_found"})
 
     try:
-        results = compute_stage_weather(trip, provider, user_id=user_id)
+        # Issue #2961 (ADR-0117): Etappenwetter ist ein interaktiver Ausloeser.
+        with interaktiver_abruf():
+            results, gedrosselt = compute_stage_weather_mit_status(
+                trip, provider, user_id=user_id,
+            )
     except Exception:
         # F001 (Adversary, Issue #1212): Last-Resort-Guard -- falls trotz der
         # Pro-Stage-Guards in compute_stage_weather doch etwas Unerwartetes
         # ausserhalb der Stage-Schleife bricht, darf der Request nicht mit
         # einem ungefangenen 500 crashen (AC-5).
         return JSONResponse(status_code=500, content={"error": "store_error"})
-    return {"results": results}
+    if not gedrosselt:
+        return {"results": results}
+    # Kontingent erschoepft: was aus dem Cache kam, bleibt; die uebrigen
+    # Etappen werden benannt statt still leer gelassen (ADR-0018).
+    if all(v is None for v in results.values()):
+        raise kontingent_erschoepft(user_id)
+    return {
+        "results": results,
+        "hinweis": t("api.fehler.etappenwetter_teilweise", resolve_user_lang(user_id)),
+        "gedrosselt": gedrosselt,
+    }
 
 
 # --- Kontingent-Reservierung fuer den Go-Forecast-Pfad (Issue #2391) --------
@@ -125,11 +142,7 @@ def _sekunden_bis_utc_mitternacht(jetzt: datetime | None = None) -> int:
     Luege gegenueber dem Aufrufer, jeder laengere unnoetig. Aufgerundet und auf
     mindestens 1 geklemmt, damit ein Aufruf knapp vor der Grenze nie 0 nennt.
     """
-    jetzt = jetzt or datetime.now(timezone.utc)
-    naechste = (jetzt + timedelta(days=1)).replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
-    return max(1, int(math.ceil((naechste - jetzt).total_seconds())))
+    return sekunden_bis_utc_mitternacht(jetzt)
 
 
 @router.post("/api/_internal/forecast-budget/reserve")

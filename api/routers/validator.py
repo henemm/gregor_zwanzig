@@ -19,7 +19,8 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from api.fehler import api_fehler, api_fehler_aus, meldung_aus
+from api.fehler import api_fehler, api_fehler_aus, kontingent_erschoepft, meldung_aus
+from services.forecast_budget import interaktiver_abruf
 from pydantic import BaseModel, Field, ValidationError
 
 from app.loader import VALID_ENTITY_ID_RE, _parse_trip, get_briefings_dir
@@ -363,7 +364,12 @@ def alert_preview(
             body.segment_times = _synthesize_segment_times(trip_obj, body.changes, user_id)
 
     # Issue #1737: echte user_id -> Stundenreihen der Vorschau nutzergebunden.
-    return render_alert_preview(trip_obj, body, user_id=user_id)
+    # Issue #2961 (ADR-0117): interaktiver Ausloeser, eigenes Kontingent.
+    with interaktiver_abruf() as kontingent:
+        antwort = render_alert_preview(trip_obj, body, user_id=user_id)
+    if kontingent.gedrosselt:
+        raise kontingent_erschoepft(user_id)
+    return antwort
 
 
 @router.post("/api/briefings/{entity_id}/alert-preview")
@@ -391,7 +397,11 @@ def briefing_alert_preview(
     from services.compare_alert_preview_service import render_compare_alert_preview
 
     try:
-        return render_compare_alert_preview(entity_id, user_id=user_id, body=body)
+        with interaktiver_abruf() as kontingent:  # ADR-0117
+            antwort = render_compare_alert_preview(entity_id, user_id=user_id, body=body)
+        if kontingent.gedrosselt:
+            raise kontingent_erschoepft(user_id)
+        return antwort
     except LookupError as e:
         raise api_fehler_aus(e, 404, user_id)
     except (KeyError, TypeError, ValueError) as e:
