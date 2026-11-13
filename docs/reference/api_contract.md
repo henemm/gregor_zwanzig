@@ -227,7 +227,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/auth/passkey/register/public/begin` | POST |
 | `/api/auth/passkey/register/public/finish` | POST |
 | `/api/auth/password` | PUT |
-| `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"XXABC234"}`; GET meldet nur `{"exists":true\|false}`, nie den Code oder dessen Hash. Code-Format seit Issue #2323: `XX`+3+3, s.u.) |
+| `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"XXABC234"}`; GET meldet nur `{"exists":true\|false,"legacy_format":true\|false}` (`legacy_format`: gespeicherter Code im alten, kürzeren Format, ADR-0116), nie den Code oder dessen Hash. Code-Format seit Issue #2323: `XX`+3+3, s.u.) |
 | `/api/auth/premium-sms-reply` | DELETE (Issue #2961 Welle 2, ADR-0116 — „Verbindung trennen": löscht `premium_sms_reply_to`/`premium_sms_reply_at` des angemeldeten Kontos, Kennung nur aus dem Auth-Kontext; der Verknüpfungs-Code bleibt. 204 ohne Rumpf, 401 ohne Sitzung, 404 Konto fehlt) |
 | `/api/auth/profile` | GET, PUT (`language` seit #2646, s. „Nutzerprofil und Sprache“; Änderung von `email`/`mail_to` nur mit frischem Nachweis, 403 `reauth_required`, #2961) |
 | `/api/auth/reauth` | POST — frischer Nachweis (Passwort oder Code) für 10 Minuten je Sitzung (#2961, ADR-0115) |

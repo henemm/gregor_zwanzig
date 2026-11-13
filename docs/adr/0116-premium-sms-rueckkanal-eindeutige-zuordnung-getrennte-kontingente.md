@@ -86,9 +86,28 @@ Das Sicherheits-Review 2026-11 fand:
   bleiben unabhängig vom Rückkanal-Verkehr zustellbar.
 - **Negativ / Preis:** Kosten je Nutzer und Tag können bis zu 15 Antworten über dem bisherigen
   Deckel liegen. Bestandscodes sind bei der angehobenen globalen Bremse schwächer geschützt als
-  neue (Empfehlung: erneuern). Das Ziehen der Nummer bei anderen Konten durchsucht alle Konten
-  (Anzahl klein). Die Kontoanzeige des Tageskontingents zeigt Antworten (`reply_used`/
-  `reply_limit`) erst, wenn die Oberfläche sie aufnimmt.
+  neue (die Konto-Karte empfiehlt das Erneuern). Das Ziehen der Nummer bei anderen Konten durchsucht alle Konten
+  (Anzahl klein). Die Kontoanzeige zeigt Antworten (`reply_used`/`reply_limit`) als eigene Zeile.
+- **Restrisiko Budget-Erschöpfung:** Wer mit wechselnden Absendernummern falsche Codes
+  schickt, kann das globale Budget (30 Fehlversuche je Stunde) leeren. Für den Rest dieser
+  Stunde sind dann **Neuverknüpfungen** per Code blockiert (429); bestehende frische
+  Zuordnungen arbeiten weiter, weil sie ohne Code-Vergleich entscheiden. Den Angreifer kostet
+  das 30 bezahlte Satelliten-Nachrichten je Stunde (bzw. Nachrichten mit wechselnder
+  Absenderkennung); die Zähler liegen im Arbeitsspeicher und beginnen nach einem Neustart
+  wieder bei null.
+- **Positions-Fix ohne Mitteilung:** Eine Nachricht mit Koordinaten schreibt einen
+  Positions-Fix (ADR-0102) ohne Mitteilung auf den anderen Kanälen. Die Wirkung ist begrenzt:
+  nur ein Punkt höchstens 100 m neben der Heute-Etappe eines Trips wird übernommen.
+- **Nachtrag Gegenprüfung (2026-11-13):** Lernen und Trennen laufen unter einer gemeinsamen
+  Sperre (vor der Nutzersperre), damit zwei gleichzeitige Lernvorgänge die Nummer nie bei zwei
+  Konten hinterlassen. `SaveUser` übernimmt `premium_sms_reply_to`/`_at` vom Plattenstand, so
+  dass ein veralteter Schreiber keine entfernte Nummer zurückschreibt. Nummern werden in einer
+  Normalform verglichen (nur Ziffern, ohne führendes `+`/`00`; Go
+  `model.NormalizePremiumSmsNumber`, Python `normalize_premium_number`, gemeinsame Tabelle
+  `tests/fixtures/premium_sms_nummern_normalform.json`), auch als Schlüssel der
+  Absender-Bremse; gespeichert wird weiter die gelieferte Form. Der Code-Status meldet
+  `legacy_format`, die Konto-Karte empfiehlt dann das Erneuern; die Kontoanzeige zeigt das
+  Antwort-Kontingent als eigene Zeile.
 - **Folgepflichten:** Wer die Befehlsliste erweitert, stuft den Befehl in
   `src/services/premium_sms_aenderungshinweis.py` ein (Wächter-Test). Code-Format in Go
   (`premium_sms_link_code.go`) und Python (`inbound_sms_reader.py::_LINK_CODE_PATTERN`) gemeinsam
