@@ -53,6 +53,13 @@ Ablauf am Ende jeder Scheibe: **Scheibe → Staging-Abgleich → Prüf-Agent**.
    die Elementliste um die Optik und ersetzt sie nicht. Befunde der zweiten Runde, die offen bleiben, gehen
    als Issue an die nächste Scheibe.
 
+**Staging-Ganzseitenbild (Schritt 3, #2953):** Alle Bildabgleich-Specs nehmen die Ganzseite über den gemeinsamen
+Helfer `frontend/e2e/ganzseitenaufnahme.ts` auf, keine lokalen Kopien. Er hebt die Scroll-Begrenzung der
+Seite auf (`main` und `h-screen`) und setzt zusätzlich `min-width: 0`. Ohne diese Zeile wächst `<main>` als
+Flex-Element auf seine Inhaltsbreite (bei 390 px rund 530 px statt 390 px). Der Helfer prüft deshalb die
+Breite des PNG gegen den Viewport und lässt zu breite Aufnahmen fehlschlagen; Selbsttest:
+`frontend/e2e/ganzseitenaufnahme-selbsttest.spec.ts`.
+
 ## Product Owner Pattern
 
 Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implementierung geht an den Developer Agent (Opus, Worktree-Isolation). >10 Min ohne grüne Tests → `TaskStop` + Neustart mit präziserem Briefing; max 2 Versuche, danach Eskalation.
