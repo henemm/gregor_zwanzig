@@ -13,6 +13,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test';
 import { mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ganzseite } from './ganzseitenaufnahme';
 import { HUB_KINDS, type HubKind } from './helpers';
 import { DESKTOP, MOBIL, WT, aktiveDerVorlage, oeffneWetter, seedWetter, vorlagen } from './s3a2794-teil3.helpers';
 
@@ -36,35 +37,11 @@ function bildOrdner(): string {
 	return d;
 }
 
-/** PNG-Höhe aus dem IHDR-Kopf (Bytes 20–23). */
-const pngHoehe = (b: Buffer): number => b.readUInt32BE(20);
-
-/** Ganzseitenaufnahme trotz `.h-screen`/`main.overflow-auto`: nur zur Aufnahmezeit aufheben, danach zurück. */
-async function ganzseite(page: Page, datei: string): Promise<number> {
-	await page.evaluate(() => {
-		const ziele = [document.documentElement, document.body, ...Array.from(document.querySelectorAll<HTMLElement>('.h-screen, main'))];
-		for (const el of ziele) {
-			el.dataset.gzAufnahme = el.getAttribute('style') ?? '';
-			el.style.setProperty('height', 'auto', 'important');
-			el.style.setProperty('max-height', 'none', 'important');
-			el.style.setProperty('overflow', 'visible', 'important');
-		}
-	});
-	try {
-		const bild = await page.screenshot({ path: datei, fullPage: true });
-		const h = pngHoehe(bild);
-		expect(h, `AC-12: ${path.basename(datei)} nicht höher als der Viewport`).toBeGreaterThan(page.viewportSize()!.height);
-		return h;
-	} finally {
-		await page.evaluate(() => {
-			for (const el of Array.from(document.querySelectorAll<HTMLElement>('[data-gz-aufnahme]'))) {
-				const alt = el.dataset.gzAufnahme ?? '';
-				if (alt) el.setAttribute('style', alt);
-				else el.removeAttribute('style');
-				delete el.dataset.gzAufnahme;
-			}
-		});
-	}
+/** Ganzseitenaufnahme (gemeinsamer Helfer, #2953) plus AC-12: die Aufnahme ist höher als der Viewport. */
+async function ganzseiteHoch(page: Page, datei: string): Promise<number> {
+	const { hoehe } = await ganzseite(page, datei);
+	expect(hoehe, `AC-12: ${path.basename(datei)} nicht höher als der Viewport`).toBeGreaterThan(page.viewportSize()!.height);
+	return hoehe;
 }
 
 type Zeile = {
@@ -422,7 +399,7 @@ test('AC-12: Ganzseitenaufnahmen Mockup und Staging (1280/1024/390, Trip + Orte,
 			await m.goto(MOCKUP);
 			for (const ctx of ['trip', 'orte'] as const) {
 				await m.evaluate((c) => document.querySelector<HTMLElement>(`[data-ctx="${c}"]`)?.click(), ctx);
-				await ganzseite(m, path.join(ordner, `mockup-${ctx}-de-${breite}.png`));
+				await ganzseiteHoch(m, path.join(ordner, `mockup-${ctx}-de-${breite}.png`));
 			}
 		} finally {
 			await m.close();
@@ -435,7 +412,7 @@ test('AC-12: Ganzseitenaufnahmen Mockup und Staging (1280/1024/390, Trip + Orte,
 				const hub = await seed(page, kind);
 				try {
 					await oeffneWetter(page, kind, hub.id);
-					await ganzseite(page, path.join(ordner, `staging-${kind === 'route' ? 'trip' : 'orte'}-${sprache}-${breite}.png`));
+					await ganzseiteHoch(page, path.join(ordner, `staging-${kind === 'route' ? 'trip' : 'orte'}-${sprache}-${breite}.png`));
 				} finally {
 					await hub.aufraeumen();
 				}

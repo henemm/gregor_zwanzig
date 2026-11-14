@@ -24,6 +24,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ganzseite } from './ganzseitenaufnahme';
 import { HUB_KINDS, HUB_KOPF_SEL, type HubKind } from './helpers';
 import { DESKTOP, MOBIL, WT, oeffneWetter, seedWetter } from './s3a2794-teil3.helpers';
 
@@ -63,31 +64,6 @@ function bildOrdner(): string {
 	const d = process.env.BILD_DIR ?? ARTEFAKTE;
 	mkdirSync(d, { recursive: true });
 	return d;
-}
-
-/** Ganzseitenaufnahme trotz `.h-screen`/`main.overflow-auto` (Muster fix2913-metrikliste-mockup.staging.spec.ts). */
-async function ganzseite(page: Page, datei: string): Promise<void> {
-	await page.evaluate(() => {
-		const ziele = [document.documentElement, document.body, ...Array.from(document.querySelectorAll<HTMLElement>('.h-screen, main'))];
-		for (const el of ziele) {
-			el.dataset.gzAufnahme = el.getAttribute('style') ?? '';
-			el.style.setProperty('height', 'auto', 'important');
-			el.style.setProperty('max-height', 'none', 'important');
-			el.style.setProperty('overflow', 'visible', 'important');
-		}
-	});
-	try {
-		await page.screenshot({ path: datei, fullPage: true });
-	} finally {
-		await page.evaluate(() => {
-			for (const el of Array.from(document.querySelectorAll<HTMLElement>('[data-gz-aufnahme]'))) {
-				const alt = el.dataset.gzAufnahme ?? '';
-				if (alt) el.setAttribute('style', alt);
-				else el.removeAttribute('style');
-				delete el.dataset.gzAufnahme;
-			}
-		});
-	}
 }
 
 const sichtbar = (page: Page | Locator, id: string): Locator => page.locator(`[data-testid="${id}"]:visible`).first();
