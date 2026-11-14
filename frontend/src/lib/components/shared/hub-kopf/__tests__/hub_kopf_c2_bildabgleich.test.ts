@@ -487,6 +487,101 @@ for (const art of ARTEN) {
 	}
 }
 
+// ═══ #3003 AC-32/AC-33: Vorlagen-Wähler mittig, Polster 12 px, Höhe nach Bedienart ═══════
+// VERTRAG (#3003, Spec-Nachtrag „Rest Bildabgleich Runde 2“, Mockup .picker: padding 8px 12px,
+// align-items:center): `wetter-vorlage-picker` hat align-items center (nicht baseline) und
+// seitliches Polster 12 px (Token, z. B. --g-s-3) in JEDER Bedienart. Die 44-px-Mindesthöhe
+// (--g-tap-min) gilt NUR unter @media (pointer: coarse); bei Mausbedienung (pointer: fine) hat der
+// Wähler keine Mindesthöhe ≥ 44 px (Mockup-Höhe ca. 38 px ergibt sich aus Polster + Zeilenhöhe).
+// Die Bildschirmbreite entscheidet NICHT: geprüft werden alle vier Kreuzungen Breite × Bedienart.
+// Btn.svelte und die app.css-Regel [data-size="tap"] bleiben unverändert (andere Konsumenten).
+
+const BEDIENARTEN: Array<[string, Kontext]> = [
+	['Maus 1280', { ...DESKTOP, zeiger: 'fine' }],
+	['Maus 390', { ...HANDY, zeiger: 'fine' }],
+	['Finger 390', { ...HANDY, zeiger: 'coarse' }],
+	['Finger 1280', { ...DESKTOP, zeiger: 'coarse' }]
+];
+function mindesthoehe(k: Knoten, ctx: Kontext): number {
+	const v = s(k, 'min-height', ctx);
+	const n = laenge(v);
+	return Number.isFinite(n) ? n : 0;
+}
+for (const art of ARTEN) {
+	for (const [bedienart, ctx] of BEDIENARTEN) {
+		test(`#3003 AC-32 (${art}, ${bedienart}): Wähler-Inhalt mittig (align-items center), seitliches Polster 12 px`, () => {
+			for (const [lang, abw] of [['de', 0], ['en', 2]] as const) {
+				const picker = einzig(karte(art, lang, abw), 'wetter-vorlage-picker');
+				gleich(picker, 'align-items', ctx, 'center', `AC-32 Vorlagen-Wähler (${lang})`);
+				laengeGleich(picker, 'padding-left', ctx, 12, `AC-32 Vorlagen-Wähler links (${lang})`);
+				laengeGleich(picker, 'padding-right', ctx, 12, `AC-32 Vorlagen-Wähler rechts (${lang})`);
+			}
+		});
+		const finger = ctx.zeiger === 'coarse';
+		test(`#3003 AC-32 (${art}, ${bedienart}): Wähler-Höhe nach Bedienart — ${finger ? 'Finger: min-height = --g-tap-min (44 px)' : 'Maus: keine 44-px-Mindesthöhe (Mockup ca. 38 px)'}`, () => {
+			const picker = einzig(karte(art, 'de', 0), 'wetter-vorlage-picker');
+			const mh = mindesthoehe(picker, ctx);
+			if (finger) {
+				assert.equal(mh, laenge(tok('--g-tap-min', ctx)), `AC-32 Finger: min-height ${mh}px statt --g-tap-min — Kaskade: ${herkunft(Q, picker, 'min-height', ctx)}`);
+				assert.match(herkunft(Q, picker, 'min-height', ctx), /pointer\s*:\s*coarse/, 'AC-32 Finger: die 44-px-Regel muss unter @media (pointer: coarse) stehen (Bedienart, nicht Breite)');
+			} else {
+				assert.ok(mh < 44, `AC-32 Maus: min-height ${mh}px — bei Mausbedienung keine 44-px-Mindesthöhe (Mockup ca. 38 px) — Kaskade: ${herkunft(Q, picker, 'min-height', ctx)}`);
+				const h = laenge(s(picker, 'height', ctx));
+				assert.ok(!(h >= 44), `AC-32 Maus: feste Höhe ${h}px ≥ 44`);
+			}
+		});
+	}
+}
+test('#3003 AC-33: Gap Eyebrow ↔ Wähler bleibt 6 px (Mockup), Luft entsteht aus der Mittig-Ausrichtung', () => {
+	for (const art of ARTEN) {
+		const k = karte(art, 'de', 0);
+		const picker = einzig(k, 'wetter-vorlage-picker');
+		let wrap: Knoten | null | undefined = picker.eltern;
+		while (wrap && !(wrap.attrs.class ?? '').includes('wt-picker-wrap')) wrap = wrap.eltern;
+		assert.ok(wrap, 'AC-33: Rahmen um Eyebrow und Wähler (.wt-picker-wrap) nicht gefunden');
+		const ctx: Kontext = { ...HANDY, zeiger: 'coarse' };
+		const gap = s(wrap!, 'row-gap', ctx) ?? s(wrap!, 'gap', ctx);
+		assert.equal(laenge(gap), 6, `AC-33 (${art}): Gap Eyebrow/Wähler „${gap}“ statt 6 px`);
+	}
+});
+
+// ═══ #3003 AC-34: Handy-Reiterleiste füllt die volle Breite ═══════════════════════════════
+// VERTRAG (#3003): unter @media (max-width: 899px) hat jeder Reiter `flex: 1 0 auto`
+// (wachsen ja, schrumpfen nein — Überbreite scrollt weiter im Band #1231), Inhalt zentriert
+// (justify-content center), Schrift --g-text-sm (13 px), Polster seitlich mindestens --g-size-10px.
+// Desktop-Reiterleiste bleibt unverändert (wächst NICHT).
+
+for (const art of ARTEN) {
+	test(`#3003 AC-34 (${art}, Handy 390): Reiter wachsen auf volle Leistenbreite (flex 1 0 auto), Inhalt zentriert, 13 px, Polster 10 px`, () => {
+		for (const lang of SPRACHEN) {
+			const w = seite(art, HANDY, lang);
+			const wurzel = einzigeLeiste(w);
+			for (const t of alle(wurzel, (n) => n.attrs.role === 'tab')) {
+				const was = `AC-34 Reiter ${t.attrs['data-value']} (${lang})`;
+				gleich(t, 'flex-grow', HANDY, '1', was);
+				gleich(t, 'flex-shrink', HANDY, '0', was);
+				gleich(t, 'flex-basis', HANDY, 'auto', was);
+				gleich(t, 'justify-content', HANDY, 'center', was);
+				laengeGleich(t, 'font-size', HANDY, 13, was);
+				laengeGleich(t, 'padding-left', HANDY, 10, was);
+				laengeGleich(t, 'padding-right', HANDY, 10, was);
+			}
+		}
+	});
+	test(`#3003 AC-34 (${art}, Desktop 1280): Desktop-Reiter wachsen nicht (Leiste unverändert)`, () => {
+		const wurzel = einzigeLeiste(seite(art, DESKTOP));
+		for (const t of alle(wurzel, (n) => n.attrs.role === 'tab')) {
+			const g = s(t, 'flex-grow', DESKTOP);
+			assert.ok(g === undefined || g === '0', `AC-34 Desktop: Reiter ${t.attrs['data-value']} flex-grow „${g}“ — Desktop-Leiste muss unverändert bleiben`);
+		}
+	});
+}
+function einzigeLeiste(w: Knoten): Knoten {
+	const wurzel = alle(w, (n) => n.attrs.role === 'tablist' && (n.attrs.class ?? '').includes('mtabbar'));
+	assert.equal(wurzel.length, 1, `MTabBar-Wurzel ${wurzel.length}×`);
+	return wurzel[0];
+}
+
 // ═══ AC-28: Abschnittskopf Wetter ══════════════════════════════════════════════════════
 
 const WetterTabInhalt = (await import(pathToFileURL(path.join(KOMP, 'organisms', 'wetter-tab', 'WetterTabInhalt.svelte')).href)).default;

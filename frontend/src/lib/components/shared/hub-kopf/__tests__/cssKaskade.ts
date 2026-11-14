@@ -25,6 +25,9 @@ export interface Kontext {
 	/** Viewport-Breite in px (Handy 390, Desktop 1280). */
 	breite: number;
 	theme: Theme;
+	/** Primäre Eingabeart (`pointer`-Media-Feature, #3003). Fehlt sie, gilt die alte Näherung:
+	 *  unter 900 px Finger (`coarse`), ab 900 px Maus (`fine`). */
+	zeiger?: 'fine' | 'coarse';
 }
 export const HANDY: Kontext = { breite: 390, theme: 'hell' };
 export const DESKTOP: Kontext = { breite: 1280, theme: 'hell' };
@@ -337,8 +340,9 @@ function mediaPasst(q: string, ctx: Kontext): boolean {
 				let m: RegExpExecArray | null;
 				if ((m = /\(\s*max-width\s*:\s*([\d.]+)px\s*\)/.exec(b))) return ctx.breite <= Number(m[1]);
 				if ((m = /\(\s*min-width\s*:\s*([\d.]+)px\s*\)/.exec(b))) return ctx.breite >= Number(m[1]);
-				if (/\(\s*pointer\s*:\s*coarse\s*\)/.test(b)) return ctx.breite < 900;
-				if (/\(\s*pointer\s*:\s*fine\s*\)/.test(b) || /\(\s*hover\s*:\s*hover\s*\)/.test(b)) return ctx.breite >= 900;
+				const zeiger = ctx.zeiger ?? (ctx.breite < 900 ? 'coarse' : 'fine');
+				if (/\(\s*pointer\s*:\s*coarse\s*\)/.test(b)) return zeiger === 'coarse';
+				if (/\(\s*pointer\s*:\s*fine\s*\)/.test(b) || /\(\s*hover\s*:\s*hover\s*\)/.test(b)) return zeiger === 'fine';
 				if ((m = /\(\s*prefers-color-scheme\s*:\s*(dark|light)\s*\)/.exec(b))) return (m[1] === 'dark') === (ctx.theme === 'dunkel');
 				return false;
 			})
@@ -421,6 +425,19 @@ function longhands(p: string, v: string): Array<[string, string]> {
 		return [['overflow-x', x], ['overflow-y', y]];
 	}
 	if (p === 'word-wrap') return [['overflow-wrap', v]];
+	if (p === 'flex') {
+		// #3003: `flex` in grow/shrink/basis zerlegen (CSS Flexbox §7.2).
+		const t = v.trim();
+		if (t === 'none') return [['flex-grow', '0'], ['flex-shrink', '0'], ['flex-basis', 'auto']];
+		if (t === 'auto') return [['flex-grow', '1'], ['flex-shrink', '1'], ['flex-basis', 'auto']];
+		if (t === 'initial') return [['flex-grow', '0'], ['flex-shrink', '1'], ['flex-basis', 'auto']];
+		const w = woerter(t);
+		const zahl = (x: string | undefined) => x !== undefined && /^[\d.]+$/.test(x);
+		const grow = zahl(w[0]) ? w[0] : '1';
+		const shrink = zahl(w[0]) && zahl(w[1]) ? w[1] : '1';
+		const basis = w.find((x, i) => !(i === 0 && zahl(x)) && !(i === 1 && zahl(w[0]) && zahl(x))) ?? (zahl(w[0]) ? '0%' : 'auto');
+		return [['flex-grow', grow], ['flex-shrink', shrink], ['flex-basis', basis]];
+	}
 	return [[p, v]];
 }
 

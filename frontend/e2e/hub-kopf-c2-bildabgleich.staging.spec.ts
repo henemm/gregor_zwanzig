@@ -1,6 +1,7 @@
 // Abnahme — Issue #2980, Fix-Loop Bildabgleich Runde 1 der Scheibe c2 (#2913): Seitenkopf, Reiter,
 // Vorlage-Karte und Abschnittskopf Wetter nach Mockup (Trip + Orts-Vergleich).
 // Spec: docs/specs/modules/feat_2913_c2_seitenkopf.md — AC-16 bis AC-18, AC-20, AC-21, AC-23 bis AC-28
+// und Nachtrag #3003 AC-32 bis AC-34 (gemessene Geometrie, Bedienart Maus/Finger)
 // (berechnete Stile im echten Browser) und AC-30 (Aufnahmen für den `mockup-bildpruefer`, Runde 2).
 // Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html.
 //
@@ -262,6 +263,117 @@ for (const kind of HUB_KINDS) {
 		}
 	}
 }
+
+// ── #3003 AC-32 … AC-34: gemessene Geometrie (Vorlagen-Wähler, Handy-Reiterleiste) ─────
+// Spec-Nachtrag „Rest Bildabgleich Runde 2 (#3003)“. Bedienart statt Breite (PO 14.11.2026):
+// Maus = Desktop-Kontext ohne Touch (pointer: fine), Finger = Kontext mit hasTouch/isMobile
+// (pointer: coarse). Gemessen im echten Browser gegen Staging, Trip und Orte, DE und EN.
+
+type Geo = { hoehe: number; oben: number; unten: number; links: number; rechts: number; textOben: number };
+/** Rahmen und Inhaltsbox (Vorlagenname + „▾ …“) des Wählers; oben/unten = Abstand Inhalt ↔ Rahmenkante. */
+const wahlGeo = (picker: Locator): Promise<Geo> =>
+	picker.evaluate((el) => {
+		const r = el.getBoundingClientRect();
+		const c = getComputedStyle(el);
+		const kinder = Array.from(el.children) as HTMLElement[];
+		const boxen = kinder.map((k) => {
+			const rg = document.createRange();
+			rg.selectNodeContents(k);
+			return rg.getBoundingClientRect();
+		}).filter((b) => b.height > 0);
+		const top = Math.min(...boxen.map((b) => b.top));
+		const bottom = Math.max(...boxen.map((b) => b.bottom));
+		return {
+			hoehe: r.height,
+			oben: top - r.top,
+			unten: r.bottom - bottom,
+			links: parseFloat(c.paddingLeft),
+			rechts: parseFloat(c.paddingRight),
+			textOben: top
+		};
+	});
+
+async function pruefeWaehler(page: Page, kind: HubKind, lang: Lang, finger: boolean): Promise<void> {
+	await sprache(page, lang);
+	const hub = await seed(page, kind);
+	try {
+		const reiter = await oeffneWetter(page, kind, hub.id);
+		const zeiger = await page.evaluate(() => (matchMedia('(pointer: coarse)').matches ? 'coarse' : 'fine'));
+		expect(zeiger, 'Messaufbau: Bedienart des Kontexts').toBe(finger ? 'coarse' : 'fine');
+		const picker = sichtbar(reiter, WT.picker);
+		const g = await wahlGeo(picker);
+		const wo = `${kind} ${lang} ${finger ? 'Finger' : 'Maus'}`;
+		if (finger) expect(g.hoehe, `AC-32 ${wo}: Tippfläche ≥ 44 px`).toBeGreaterThanOrEqual(44);
+		else expect(Math.abs(g.hoehe - 38), `AC-32 ${wo}: Höhe ${g.hoehe}px statt Mockup 38 ±2 px`).toBeLessThanOrEqual(2);
+		expect(Math.abs(g.oben - g.unten), `AC-32 ${wo}: Inhalt nicht mittig (oben ${g.oben.toFixed(1)} / unten ${g.unten.toFixed(1)} px)`).toBeLessThanOrEqual(2);
+		expect([g.links, g.rechts], `AC-32 ${wo}: seitliches Polster 12 px`).toEqual([12, 12]);
+		if (finger) {
+			// AC-33: Unterkante Eyebrow bis Oberkante Wähler-Text ≥ 12 px, Gap Eyebrow ↔ Wähler bleibt 6 px.
+			const eyebrow = reiter.locator('[data-abschnitt="vorlage"] .wt-eyebrow:visible').first();
+			const eb = await eyebrow.evaluate((el) => el.getBoundingClientRect().bottom);
+			const pickerOben = await picker.evaluate((el) => el.getBoundingClientRect().top);
+			expect(Math.abs(pickerOben - eb - 6), `AC-33 ${wo}: Gap Eyebrow ↔ Wähler ${(pickerOben - eb).toFixed(1)} px statt 6`).toBeLessThanOrEqual(1);
+			expect(g.textOben - eb, `AC-33 ${wo}: Luft Eyebrow ↔ Wähler-Text`).toBeGreaterThanOrEqual(12);
+		}
+	} finally {
+		await hub.aufraeumen();
+	}
+}
+
+test.describe('#3003 Maus 1280×900', () => {
+	test.use({ viewport: DESKTOP, hasTouch: false, isMobile: false });
+	for (const kind of HUB_KINDS)
+		for (const lang of SPRACHEN)
+			test(`#3003 AC-32 ${kind} ${lang}: Wähler 38 ±2 px hoch, mittig, Polster 12 px`, async ({ page }) => {
+				await pruefeWaehler(page, kind, lang, false);
+			});
+});
+
+test.describe('#3003 Finger 390×844', () => {
+	test.use({ viewport: MOBIL, hasTouch: true, isMobile: true });
+	for (const kind of HUB_KINDS)
+		for (const lang of SPRACHEN) {
+			test(`#3003 AC-32/AC-33 ${kind} ${lang}: Wähler ≥ 44 px, mittig, Luft Eyebrow ↔ Text ≥ 12 px`, async ({ page }) => {
+				await pruefeWaehler(page, kind, lang, true);
+			});
+			test(`#3003 AC-34 ${kind} ${lang}: Handy-Reiter füllen die volle Leistenbreite`, async ({ page }) => {
+				await sprache(page, lang);
+				const hub = await seed(page, kind);
+				try {
+					await oeffneWetter(page, kind, hub.id);
+					const band = page.locator('[role="tablist"].mtabbar:visible').first();
+					const m = await band.evaluate((el) => {
+						const r = el.getBoundingClientRect();
+						const tabs = Array.from(el.querySelectorAll('[role="tab"]')) as HTMLElement[];
+						const letzter = tabs[tabs.length - 1].getBoundingClientRect();
+						return { leisteRechts: r.right, letzterRechts: letzter.right, scroll: el.scrollWidth - el.clientWidth, font: getComputedStyle(tabs[0]).fontSize };
+					});
+					expect(m.scroll, `AC-34 ${kind} ${lang}: Band läuft bei 390 px nicht über`).toBeLessThanOrEqual(0);
+					expect(Math.abs(m.leisteRechts - m.letzterRechts), `AC-34 ${kind} ${lang}: letzter Reiter endet ${(m.leisteRechts - m.letzterRechts).toFixed(1)} px vor dem Leistenende`).toBeLessThanOrEqual(2);
+					expect(m.font, `AC-34 ${kind} ${lang}: Schrift 13 px`).toBe('13px');
+				} finally {
+					await hub.aufraeumen();
+				}
+			});
+		}
+});
+
+test.describe('#3003 Finger 360×780', () => {
+	test.use({ viewport: { width: 360, height: 780 }, hasTouch: true, isMobile: true });
+	for (const kind of HUB_KINDS)
+		test(`#3003 AC-34 ${kind} de: vier DE-Reiter laufen bei 360 px nicht über (#2794 B2)`, async ({ page }) => {
+			await sprache(page, 'de');
+			const hub = await seed(page, kind);
+			try {
+				await oeffneWetter(page, kind, hub.id);
+				const band = page.locator('[role="tablist"].mtabbar:visible').first();
+				const ueber = await band.evaluate((el) => el.scrollWidth - el.clientWidth);
+				expect(ueber, `AC-34 ${kind}: Überlauf bei 360 px`).toBeLessThanOrEqual(0);
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+});
 
 // ── AC-19: keine Kennzahlenzeile am Handy (Trip) ─────────────────────────────
 
