@@ -111,5 +111,6 @@
 	"bausteine.datum.kalender_oeffnen": "Kalender öffnen",
 	"bausteine.datum.voriger_monat": "Voriger Monat",
 	"bausteine.datum.naechster_monat": "Nächster Monat",
+	"bausteine.datum.ungueltig": "Dieses Datum gibt es nicht.",
 	"bausteine.skelett.laedt": "Wird geladen …"
 }

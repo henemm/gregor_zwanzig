@@ -1,0 +1,339 @@
+TAP version 13
+# Subtest: pruefeTipp — gültige Daten kommen unverändert an
+    # Subtest: 31032027 → 2027-03-31
+    ok 1 - 31032027 → 2027-03-31
+      ---
+      duration_ms: 1.899265
+      type: 'test'
+      ...
+    # Subtest: 29022028 → 2028-02-29
+    ok 2 - 29022028 → 2028-02-29
+      ---
+      duration_ms: 0.19537
+      type: 'test'
+      ...
+    # Subtest: 31122026 → 2026-12-31
+    ok 3 - 31122026 → 2026-12-31
+      ---
+      duration_ms: 0.073909
+      type: 'test'
+      ...
+    # Subtest: 01012027 → 2027-01-01
+    ok 4 - 01012027 → 2027-01-01
+      ---
+      duration_ms: 0.05936
+      type: 'test'
+      ...
+    # Subtest: 30042027 → 2027-04-30
+    ok 5 - 30042027 → 2027-04-30
+      ---
+      duration_ms: 0.16379
+      type: 'test'
+      ...
+    # Subtest: 31052027 → 2027-05-31
+    ok 6 - 31052027 → 2027-05-31
+      ---
+      duration_ms: 0.12126
+      type: 'test'
+      ...
+    # Subtest: 29022000 → 2000-02-29
+    ok 7 - 29022000 → 2000-02-29
+      ---
+      duration_ms: 0.064101
+      type: 'test'
+      ...
+    # Subtest: Reihenfolge Monat zuerst wird beachtet (03312027 → 2027-03-31)
+    ok 8 - Reihenfolge Monat zuerst wird beachtet (03312027 → 2027-03-31)
+      ---
+      duration_ms: 0.153731
+      type: 'test'
+      ...
+    1..8
+ok 1 - pruefeTipp — gültige Daten kommen unverändert an
+  ---
+  duration_ms: 3.777419
+  type: 'suite'
+  ...
+# Subtest: pruefeTipp — Daten, die es nicht gibt, sind ungültig (nie geklemmt)
+    # Subtest: 31042027 ungültig (April hat 30 Tage)
+    ok 1 - 31042027 ungültig (April hat 30 Tage)
+      ---
+      duration_ms: 0.32876
+      type: 'test'
+      ...
+    # Subtest: 29022027 ungültig (2027 ist kein Schaltjahr)
+    ok 2 - 29022027 ungültig (2027 ist kein Schaltjahr)
+      ---
+      duration_ms: 0.191379
+      type: 'test'
+      ...
+    # Subtest: 30022028 ungültig (Februar hat auch im Schaltjahr nur 29 Tage)
+    ok 3 - 30022028 ungültig (Februar hat auch im Schaltjahr nur 29 Tage)
+      ---
+      duration_ms: 0.11498
+      type: 'test'
+      ...
+    # Subtest: 00012027 ungültig (Tag 0)
+    ok 4 - 00012027 ungültig (Tag 0)
+      ---
+      duration_ms: 0.05671
+      type: 'test'
+      ...
+    # Subtest: 32012027 ungültig (Tag 32)
+    ok 5 - 32012027 ungültig (Tag 32)
+      ---
+      duration_ms: 0.040941
+      type: 'test'
+      ...
+    # Subtest: 15132027 ungültig (Monat 13)
+    ok 6 - 15132027 ungültig (Monat 13)
+      ---
+      duration_ms: 0.036799
+      type: 'test'
+      ...
+    # Subtest: 15002027 ungültig (Monat 0)
+    ok 7 - 15002027 ungültig (Monat 0)
+      ---
+      duration_ms: 0.05912
+      type: 'test'
+      ...
+    # Subtest: 29022100 ungültig (2100 ist kein Schaltjahr (durch 100, nicht durch 400 teilbar))
+    ok 8 - 29022100 ungültig (2100 ist kein Schaltjahr (durch 100, nicht durch 400 teilbar))
+      ---
+      duration_ms: 0.040589
+      type: 'test'
+      ...
+    # Subtest: 31062027 ungültig (Juni hat 30 Tage)
+    ok 9 - 31062027 ungültig (Juni hat 30 Tage)
+      ---
+      duration_ms: 0.08677
+      type: 'test'
+      ...
+    # Subtest: 31092027 ungültig (September hat 30 Tage)
+    ok 10 - 31092027 ungültig (September hat 30 Tage)
+      ---
+      duration_ms: 0.05173
+      type: 'test'
+      ...
+    # Subtest: 31112026 ungültig (November hat 30 Tage)
+    ok 11 - 31112026 ungültig (November hat 30 Tage)
+      ---
+      duration_ms: 0.05087
+      type: 'test'
+      ...
+    # Subtest: 01010000 ungültig (Jahr 0000 (nur vierstellige Jahre ab 1000))
+    ok 12 - 01010000 ungültig (Jahr 0000 (nur vierstellige Jahre ab 1000))
+      ---
+      duration_ms: 0.04446
+      type: 'test'
+      ...
+    # Subtest: 01010999 ungültig (Jahr 0999 (nur vierstellige Jahre ab 1000))
+    ok 13 - 01010999 ungültig (Jahr 0999 (nur vierstellige Jahre ab 1000))
+      ---
+      duration_ms: 0.043621
+      type: 'test'
+      ...
+    # Subtest: Monat zuerst: 04312027 ist ungültig (31. April)
+    ok 14 - Monat zuerst: 04312027 ist ungültig (31. April)
+      ---
+      duration_ms: 0.128951
+      type: 'test'
+      ...
+    1..14
+ok 2 - pruefeTipp — Daten, die es nicht gibt, sind ungültig (nie geklemmt)
+  ---
+  duration_ms: 1.719454
+  type: 'suite'
+  ...
+# Subtest: DatumTipp — segmentübergreifender Ziffernstrom
+    # Subtest: erst die 8. Ziffer liefert das Ergebnis, davor null; laeuft ab der ersten Ziffer
+    ok 1 - erst die 8. Ziffer liefert das Ergebnis, davor null; laeuft ab der ersten Ziffer
+      ---
+      duration_ms: 3.189517
+      type: 'test'
+      ...
+    # Subtest: Standard-Reihenfolge ohne Angabe ist Tag-Monat-Jahr
+    ok 2 - Standard-Reihenfolge ohne Angabe ist Tag-Monat-Jahr
+      ---
+      duration_ms: 0.17632
+      type: 'test'
+      ...
+    # Subtest: ungültiges Datum über den Strom → { ok: false }
+    ok 3 - ungültiges Datum über den Strom → { ok: false }
+      ---
+      duration_ms: 0.12505
+      type: 'test'
+      ...
+    # Subtest: nach dem Ergebnis beginnt der Strom neu (nächstes Datum direkt dahinter)
+    ok 4 - nach dem Ergebnis beginnt der Strom neu (nächstes Datum direkt dahinter)
+      ---
+      duration_ms: 0.09418
+      type: 'test'
+      ...
+    # Subtest: halber Strom + „Backspace" → Strom beginnt neu
+    ok 5 - halber Strom + „Backspace" → Strom beginnt neu
+      ---
+      duration_ms: 0.0894
+      type: 'test'
+      ...
+    # Subtest: halber Strom + „Delete" → Strom beginnt neu
+    ok 6 - halber Strom + „Delete" → Strom beginnt neu
+      ---
+      duration_ms: 0.07537
+      type: 'test'
+      ...
+    # Subtest: halber Strom + „ArrowLeft" → Strom beginnt neu
+    ok 7 - halber Strom + „ArrowLeft" → Strom beginnt neu
+      ---
+      duration_ms: 0.04999
+      type: 'test'
+      ...
+    # Subtest: halber Strom + „ArrowRight" → Strom beginnt neu
+    ok 8 - halber Strom + „ArrowRight" → Strom beginnt neu
+      ---
+      duration_ms: 0.041929
+      type: 'test'
+      ...
+    # Subtest: halber Strom + „ArrowUp" → Strom beginnt neu
+    ok 9 - halber Strom + „ArrowUp" → Strom beginnt neu
+      ---
+      duration_ms: 0.04203
+      type: 'test'
+      ...
+    # Subtest: halber Strom + „ArrowDown" → Strom beginnt neu
+    ok 10 - halber Strom + „ArrowDown" → Strom beginnt neu
+      ---
+      duration_ms: 0.036309
+      type: 'test'
+      ...
+    # Subtest: halber Strom + „Tab" → Strom beginnt neu
+    ok 11 - halber Strom + „Tab" → Strom beginnt neu
+      ---
+      duration_ms: 0.036581
+      type: 'test'
+      ...
+    # Subtest: halber Strom + „." → Strom beginnt neu
+    ok 12 - halber Strom + „." → Strom beginnt neu
+      ---
+      duration_ms: 0.038601
+      type: 'test'
+      ...
+    # Subtest: halber Strom + „/" → Strom beginnt neu
+    ok 13 - halber Strom + „/" → Strom beginnt neu
+      ---
+      duration_ms: 0.166289
+      type: 'test'
+      ...
+    # Subtest: halber Strom + „a" → Strom beginnt neu
+    ok 14 - halber Strom + „a" → Strom beginnt neu
+      ---
+      duration_ms: 0.161099
+      type: 'test'
+      ...
+    # Subtest: halber Strom + „ " → Strom beginnt neu
+    ok 15 - halber Strom + „ " → Strom beginnt neu
+      ---
+      duration_ms: 0.07775
+      type: 'test'
+      ...
+    # Subtest: Fokuswechsel/Klick (zuruecksetzen) → Strom beginnt neu
+    ok 16 - Fokuswechsel/Klick (zuruecksetzen) → Strom beginnt neu
+      ---
+      duration_ms: 0.149021
+      type: 'test'
+      ...
+    1..16
+ok 3 - DatumTipp — segmentübergreifender Ziffernstrom
+  ---
+  duration_ms: 4.897831
+  type: 'suite'
+  ...
+# Subtest: SegmentFeldMeldung
+    # Subtest: fertiges Segment bzw. Kalender-Wahl wird sofort gemeldet
+    ok 1 - fertiges Segment bzw. Kalender-Wahl wird sofort gemeldet
+      ---
+      duration_ms: 1.020712
+      type: 'test'
+      ...
+    # Subtest: unfertiges Segment (Tag „2") bleibt zurück — auch nach einer Pause; das fertige ersetzt es
+    ok 2 - unfertiges Segment (Tag „2") bleibt zurück — auch nach einer Pause; das fertige ersetzt es
+      ---
+      duration_ms: 400.446337
+      type: 'test'
+      ...
+    # Subtest: Feld verlassen meldet den offenen Wert (z. B. geleert = "")
+    ok 3 - Feld verlassen meldet den offenen Wert (z. B. geleert = "")
+      ---
+      duration_ms: 0.545451
+      type: 'test'
+      ...
+    # Subtest: gleicher Wert wie gespeichert: verworfenes Offenes geht beim Verlassen nicht mehr hinaus
+    ok 4 - gleicher Wert wie gespeichert: verworfenes Offenes geht beim Verlassen nicht mehr hinaus
+      ---
+      duration_ms: 0.305871
+      type: 'test'
+      ...
+    1..4
+ok 4 - SegmentFeldMeldung
+  ---
+  duration_ms: 403.400133
+  type: 'suite'
+  ...
+# Subtest: SegmentFeldMeldung.verlassen — Leeren aus zweistelliger Stunde (\#2947)
+    # Subtest: AC-3: 15:00 → Rücktaste (01:00 offen) → Rücktaste (Stunde leer) → verlassen ⇒ gemeldet nur "", nie "01:00"
+    ok 1 - AC-3: 15:00 → Rücktaste (01:00 offen) → Rücktaste (Stunde leer) → verlassen ⇒ gemeldet nur "", nie "01:00"
+      ---
+      duration_ms: 1.143383
+      type: 'test'
+      ...
+    # Subtest: geleert ohne leerMelden: Zwischenwert wird verworfen, nichts gemeldet
+    ok 2 - geleert ohne leerMelden: Zwischenwert wird verworfen, nichts gemeldet
+      ---
+      duration_ms: 0.121141
+      type: 'test'
+      ...
+    # Subtest: AC-4: Leeren aus 07:30 ohne Zwischenwert (DS-2) meldet weiterhin genau einmal ""
+    ok 3 - AC-4: Leeren aus 07:30 ohne Zwischenwert (DS-2) meldet weiterhin genau einmal ""
+      ---
+      duration_ms: 0.130371
+      type: 'test'
+      ...
+    # Subtest: schon leer gespeichert: geleert verlassen meldet nichts
+    ok 4 - schon leer gespeichert: geleert verlassen meldet nichts
+      ---
+      duration_ms: 0.15419
+      type: 'test'
+      ...
+    # Subtest: AC-4: vollständig verlassen meldet den offenen Wert wie bisher (Teil-Eingabe „1" ⇒ 01:00 beim Verlassen)
+    ok 5 - AC-4: vollständig verlassen meldet den offenen Wert wie bisher (Teil-Eingabe „1" ⇒ 01:00 beim Verlassen)
+      ---
+      duration_ms: 0.11539
+      type: 'test'
+      ...
+    # Subtest: AC-4: fertig getippte Uhrzeit wurde sofort gemeldet, Verlassen meldet nichts doppelt
+    ok 6 - AC-4: fertig getippte Uhrzeit wurde sofort gemeldet, Verlassen meldet nichts doppelt
+      ---
+      duration_ms: 0.920322
+      type: 'test'
+      ...
+    # Subtest: unberührtes, leeres Feld verlassen (z. B. Kalender öffnen) meldet nichts und gilt nicht als geleert
+    ok 7 - unberührtes, leeres Feld verlassen (z. B. Kalender öffnen) meldet nichts und gilt nicht als geleert
+      ---
+      duration_ms: 0.176941
+      type: 'test'
+      ...
+    1..7
+ok 5 - SegmentFeldMeldung.verlassen — Leeren aus zweistelliger Stunde (\#2947)
+  ---
+  duration_ms: 3.560887
+  type: 'suite'
+  ...
+1..5
+# tests 49
+# suites 5
+# pass 49
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 579.181304

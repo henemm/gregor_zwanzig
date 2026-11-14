@@ -63,7 +63,9 @@ describe('pruefeTipp — Daten, die es nicht gibt, sind ungültig (nie geklemmt)
 		['29022100', '2100 ist kein Schaltjahr (durch 100, nicht durch 400 teilbar)'],
 		['31062027', 'Juni hat 30 Tage'],
 		['31092027', 'September hat 30 Tage'],
-		['31112026', 'November hat 30 Tage']
+		['31112026', 'November hat 30 Tage'],
+		['01010000', 'Jahr 0000 (nur vierstellige Jahre ab 1000)'],
+		['01010999', 'Jahr 0999 (nur vierstellige Jahre ab 1000)']
 	] as const) {
 		test(`${ziffern} ungültig (${grund})`, () => {
 			assert.deepEqual(pruefeTipp(ziffern, TMJ), { ok: false });

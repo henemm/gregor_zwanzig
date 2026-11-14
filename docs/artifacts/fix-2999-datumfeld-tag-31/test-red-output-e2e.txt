@@ -1,0 +1,369 @@
+
+Running 14 tests using 1 worker
+
+[1/14] [setup] › e2e/fix-1895-modus-rueckbau.staging.setup.ts:11:1 › authenticate via API (staging) — 1895_modus_rueckbau
+[2/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:70:3 › AC-1/2/3/11 (November (30 Tage)): leeres Feld, 31.03.2027 getippt → steht unverändert im Feld und wird so gespeichert
+  1) [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:70:3 › AC-1/2/3/11 (November (30 Tage)): leeres Feld, 31.03.2027 getippt → steht unverändert im Feld und wird so gespeichert 
+
+    Error: Anzeige nach dem Tippen
+
+    expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-testid="compare-detail-panel-zustellung"]:visible').first().getByTestId('zustellung-tab').locator('[data-abschnitt="laufzeit"]').getByTestId('zustellung-laufzeit-datum').locator('[data-slot="datum-feld-eingabe"], [data-slot="uhrzeit-feld-eingabe"]')
+    Expected: "31.03.2027"
+    Received: "01.03.2027"
+    Timeout:  5000ms
+
+    Call log:
+      - Anzeige nach dem Tippen with timeout 5000ms
+      - waiting for locator('[data-testid="compare-detail-panel-zustellung"]:visible').first().getByTestId('zustellung-tab').locator('[data-abschnitt="laufzeit"]').getByTestId('zustellung-laufzeit-datum').locator('[data-slot="datum-feld-eingabe"], [data-slot="uhrzeit-feld-eingabe"]')
+        9 × locator resolved to <div role="group" id="bits-c26" aria-label="Enddatum" aria-disabled="false" data-date-field-input="" data-slot="datum-feld-eingabe">…</div>
+          - unexpected value "01.03.2027"
+
+
+      76 | 				await tippeDatum(page, feld, iso);
+      77 | 				// Noch im Feld: kein Segment verrutscht, die Anzeige ist genau das Getippte.
+    > 78 | 				await expect(feldEingabe(feld), 'Anzeige nach dem Tippen').toHaveText(anzeige(iso));
+         | 				                                                           ^
+      79 | 				await expect(feld.locator('[data-segment="day"]')).toHaveText(iso.slice(8, 10));
+      80 | 				await expect(feld.locator('[data-segment="month"]')).toHaveText(iso.slice(5, 7));
+      81 | 				await expect(feld.locator('[data-segment="year"]')).toHaveText(iso.slice(0, 4));
+        at /home/hem/gregor_zwanzig/.claude/worktrees/concurrent-tinkering-clover/frontend/e2e/s2999-datumfeld-tag-31.spec.ts:78:64
+
+    Error Context: test-results/s2999-datumfeld-tag-31-AC--21b20-eld-und-wird-so-gespeichert-tests/error-context.md
+
+
+[3/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:70:3 › AC-1/2/3/11 (November (30 Tage)): leeres Feld, 29.02.2028 getippt → steht unverändert im Feld und wird so gespeichert
+  2) [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:70:3 › AC-1/2/3/11 (November (30 Tage)): leeres Feld, 29.02.2028 getippt → steht unverändert im Feld und wird so gespeichert 
+
+    Error: Anzeige nach dem Tippen
+
+    expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-testid="compare-detail-panel-zustellung"]:visible').first().getByTestId('zustellung-tab').locator('[data-abschnitt="laufzeit"]').getByTestId('zustellung-laufzeit-datum').locator('[data-slot="datum-feld-eingabe"], [data-slot="uhrzeit-feld-eingabe"]')
+    Expected: "29.02.2028"
+    Received: "28.02.2028"
+    Timeout:  5000ms
+
+    Call log:
+      - Anzeige nach dem Tippen with timeout 5000ms
+      - waiting for locator('[data-testid="compare-detail-panel-zustellung"]:visible').first().getByTestId('zustellung-tab').locator('[data-abschnitt="laufzeit"]').getByTestId('zustellung-laufzeit-datum').locator('[data-slot="datum-feld-eingabe"], [data-slot="uhrzeit-feld-eingabe"]')
+        9 × locator resolved to <div role="group" id="bits-c26" aria-label="Enddatum" aria-disabled="false" data-date-field-input="" data-slot="datum-feld-eingabe">…</div>
+          - unexpected value "28.02.2028"
+
+
+      76 | 				await tippeDatum(page, feld, iso);
+      77 | 				// Noch im Feld: kein Segment verrutscht, die Anzeige ist genau das Getippte.
+    > 78 | 				await expect(feldEingabe(feld), 'Anzeige nach dem Tippen').toHaveText(anzeige(iso));
+         | 				                                                           ^
+      79 | 				await expect(feld.locator('[data-segment="day"]')).toHaveText(iso.slice(8, 10));
+      80 | 				await expect(feld.locator('[data-segment="month"]')).toHaveText(iso.slice(5, 7));
+      81 | 				await expect(feld.locator('[data-segment="year"]')).toHaveText(iso.slice(0, 4));
+        at /home/hem/gregor_zwanzig/.claude/worktrees/concurrent-tinkering-clover/frontend/e2e/s2999-datumfeld-tag-31.spec.ts:78:64
+
+    Error Context: test-results/s2999-datumfeld-tag-31-AC--aeb22-eld-und-wird-so-gespeichert-tests/error-context.md
+
+
+[4/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:70:3 › AC-1/2/3/11 (Februar (28 Tage)): leeres Feld, 31.03.2027 getippt → steht unverändert im Feld und wird so gespeichert
+  3) [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:70:3 › AC-1/2/3/11 (Februar (28 Tage)): leeres Feld, 31.03.2027 getippt → steht unverändert im Feld und wird so gespeichert 
+
+    Error: Anzeige nach dem Tippen
+
+    expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-testid="compare-detail-panel-zustellung"]:visible').first().getByTestId('zustellung-tab').locator('[data-abschnitt="laufzeit"]').getByTestId('zustellung-laufzeit-datum').locator('[data-slot="datum-feld-eingabe"], [data-slot="uhrzeit-feld-eingabe"]')
+    Expected: "31.03.2027"
+    Received: "03.10.3202"
+    Timeout:  5000ms
+
+    Call log:
+      - Anzeige nach dem Tippen with timeout 5000ms
+      - waiting for locator('[data-testid="compare-detail-panel-zustellung"]:visible').first().getByTestId('zustellung-tab').locator('[data-abschnitt="laufzeit"]').getByTestId('zustellung-laufzeit-datum').locator('[data-slot="datum-feld-eingabe"], [data-slot="uhrzeit-feld-eingabe"]')
+        9 × locator resolved to <div role="group" id="bits-c26" aria-label="Enddatum" aria-disabled="false" data-date-field-input="" data-slot="datum-feld-eingabe">…</div>
+          - unexpected value "03.10.3202"
+
+
+      76 | 				await tippeDatum(page, feld, iso);
+      77 | 				// Noch im Feld: kein Segment verrutscht, die Anzeige ist genau das Getippte.
+    > 78 | 				await expect(feldEingabe(feld), 'Anzeige nach dem Tippen').toHaveText(anzeige(iso));
+         | 				                                                           ^
+      79 | 				await expect(feld.locator('[data-segment="day"]')).toHaveText(iso.slice(8, 10));
+      80 | 				await expect(feld.locator('[data-segment="month"]')).toHaveText(iso.slice(5, 7));
+      81 | 				await expect(feld.locator('[data-segment="year"]')).toHaveText(iso.slice(0, 4));
+        at /home/hem/gregor_zwanzig/.claude/worktrees/concurrent-tinkering-clover/frontend/e2e/s2999-datumfeld-tag-31.spec.ts:78:64
+
+    Error Context: test-results/s2999-datumfeld-tag-31-AC--29276-eld-und-wird-so-gespeichert-tests/error-context.md
+
+
+[5/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:70:3 › AC-1/2/3/11 (Februar (28 Tage)): leeres Feld, 29.02.2028 getippt → steht unverändert im Feld und wird so gespeichert
+  4) [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:70:3 › AC-1/2/3/11 (Februar (28 Tage)): leeres Feld, 29.02.2028 getippt → steht unverändert im Feld und wird so gespeichert 
+
+    Error: Anzeige nach dem Tippen
+
+    expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-testid="compare-detail-panel-zustellung"]:visible').first().getByTestId('zustellung-tab').locator('[data-abschnitt="laufzeit"]').getByTestId('zustellung-laufzeit-datum').locator('[data-slot="datum-feld-eingabe"], [data-slot="uhrzeit-feld-eingabe"]')
+    Expected: "29.02.2028"
+    Received: "09.02.2028"
+    Timeout:  5000ms
+
+    Call log:
+      - Anzeige nach dem Tippen with timeout 5000ms
+      - waiting for locator('[data-testid="compare-detail-panel-zustellung"]:visible').first().getByTestId('zustellung-tab').locator('[data-abschnitt="laufzeit"]').getByTestId('zustellung-laufzeit-datum').locator('[data-slot="datum-feld-eingabe"], [data-slot="uhrzeit-feld-eingabe"]')
+        9 × locator resolved to <div role="group" id="bits-c26" aria-label="Enddatum" aria-disabled="false" data-date-field-input="" data-slot="datum-feld-eingabe">…</div>
+          - unexpected value "09.02.2028"
+
+
+      76 | 				await tippeDatum(page, feld, iso);
+      77 | 				// Noch im Feld: kein Segment verrutscht, die Anzeige ist genau das Getippte.
+    > 78 | 				await expect(feldEingabe(feld), 'Anzeige nach dem Tippen').toHaveText(anzeige(iso));
+         | 				                                                           ^
+      79 | 				await expect(feld.locator('[data-segment="day"]')).toHaveText(iso.slice(8, 10));
+      80 | 				await expect(feld.locator('[data-segment="month"]')).toHaveText(iso.slice(5, 7));
+      81 | 				await expect(feld.locator('[data-segment="year"]')).toHaveText(iso.slice(0, 4));
+        at /home/hem/gregor_zwanzig/.claude/worktrees/concurrent-tinkering-clover/frontend/e2e/s2999-datumfeld-tag-31.spec.ts:78:64
+
+    Error Context: test-results/s2999-datumfeld-tag-31-AC--bb912-eld-und-wird-so-gespeichert-tests/error-context.md
+
+
+[6/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:101:3 › AC-4/5/8 (November (30 Tage)): 31.04.2027 → Meldung, nichts gespeichert, Feld leer; danach 30.04.2027 → Meldung weg, gespeichert
+  5) [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:101:3 › AC-4/5/8 (November (30 Tage)): 31.04.2027 → Meldung, nichts gespeichert, Feld leer; danach 30.04.2027 → Meldung weg, gespeichert 
+
+    Error: Meldung „Dieses Datum gibt es nicht."
+
+    expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alert').filter({ hasText: 'Dieses Datum gibt es nicht.' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Meldung „Dieses Datum gibt es nicht." with timeout 5000ms
+      - waiting for getByRole('alert').filter({ hasText: 'Dieses Datum gibt es nicht.' })
+
+
+      111 |
+      112 | 				const meldung = datumMeldung(page);
+    > 113 | 				await expect(meldung, `Meldung „${MELDUNG_DE}"`).toBeVisible();
+          | 				                                                 ^
+      114 | 				await expect(meldung).toHaveText(MELDUNG_DE);
+      115 | 				// Direkt unter dem Feld.
+      116 | 				const fb = (await feld.boundingBox())!;
+        at /home/hem/gregor_zwanzig/.claude/worktrees/concurrent-tinkering-clover/frontend/e2e/s2999-datumfeld-tag-31.spec.ts:113:54
+
+    Error Context: test-results/s2999-datumfeld-tag-31-AC--cabd5-7-→-Meldung-weg-gespeichert-tests/error-context.md
+
+
+[7/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:101:3 › AC-4/5/8 (November (30 Tage)): 29.02.2027 → Meldung, nichts gespeichert, Feld leer; danach 01.03.2027 → Meldung weg, gespeichert
+  6) [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:101:3 › AC-4/5/8 (November (30 Tage)): 29.02.2027 → Meldung, nichts gespeichert, Feld leer; danach 01.03.2027 → Meldung weg, gespeichert 
+
+    Error: Meldung „Dieses Datum gibt es nicht."
+
+    expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alert').filter({ hasText: 'Dieses Datum gibt es nicht.' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Meldung „Dieses Datum gibt es nicht." with timeout 5000ms
+      - waiting for getByRole('alert').filter({ hasText: 'Dieses Datum gibt es nicht.' })
+
+
+      111 |
+      112 | 				const meldung = datumMeldung(page);
+    > 113 | 				await expect(meldung, `Meldung „${MELDUNG_DE}"`).toBeVisible();
+          | 				                                                 ^
+      114 | 				await expect(meldung).toHaveText(MELDUNG_DE);
+      115 | 				// Direkt unter dem Feld.
+      116 | 				const fb = (await feld.boundingBox())!;
+        at /home/hem/gregor_zwanzig/.claude/worktrees/concurrent-tinkering-clover/frontend/e2e/s2999-datumfeld-tag-31.spec.ts:113:54
+
+    Error Context: test-results/s2999-datumfeld-tag-31-AC--44d17-7-→-Meldung-weg-gespeichert-tests/error-context.md
+
+
+[8/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:101:3 › AC-4/5/8 (Februar (28 Tage)): 31.04.2027 → Meldung, nichts gespeichert, Feld leer; danach 30.04.2027 → Meldung weg, gespeichert
+  7) [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:101:3 › AC-4/5/8 (Februar (28 Tage)): 31.04.2027 → Meldung, nichts gespeichert, Feld leer; danach 30.04.2027 → Meldung weg, gespeichert 
+
+    Error: Meldung „Dieses Datum gibt es nicht."
+
+    expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alert').filter({ hasText: 'Dieses Datum gibt es nicht.' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Meldung „Dieses Datum gibt es nicht." with timeout 5000ms
+      - waiting for getByRole('alert').filter({ hasText: 'Dieses Datum gibt es nicht.' })
+
+
+      111 |
+      112 | 				const meldung = datumMeldung(page);
+    > 113 | 				await expect(meldung, `Meldung „${MELDUNG_DE}"`).toBeVisible();
+          | 				                                                 ^
+      114 | 				await expect(meldung).toHaveText(MELDUNG_DE);
+      115 | 				// Direkt unter dem Feld.
+      116 | 				const fb = (await feld.boundingBox())!;
+        at /home/hem/gregor_zwanzig/.claude/worktrees/concurrent-tinkering-clover/frontend/e2e/s2999-datumfeld-tag-31.spec.ts:113:54
+
+    Error Context: test-results/s2999-datumfeld-tag-31-AC--ef9ab-7-→-Meldung-weg-gespeichert-tests/error-context.md
+
+
+[9/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:101:3 › AC-4/5/8 (Februar (28 Tage)): 29.02.2027 → Meldung, nichts gespeichert, Feld leer; danach 01.03.2027 → Meldung weg, gespeichert
+  8) [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:101:3 › AC-4/5/8 (Februar (28 Tage)): 29.02.2027 → Meldung, nichts gespeichert, Feld leer; danach 01.03.2027 → Meldung weg, gespeichert 
+
+    Error: Meldung „Dieses Datum gibt es nicht."
+
+    expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alert').filter({ hasText: 'Dieses Datum gibt es nicht.' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Meldung „Dieses Datum gibt es nicht." with timeout 5000ms
+      - waiting for getByRole('alert').filter({ hasText: 'Dieses Datum gibt es nicht.' })
+
+
+      111 |
+      112 | 				const meldung = datumMeldung(page);
+    > 113 | 				await expect(meldung, `Meldung „${MELDUNG_DE}"`).toBeVisible();
+          | 				                                                 ^
+      114 | 				await expect(meldung).toHaveText(MELDUNG_DE);
+      115 | 				// Direkt unter dem Feld.
+      116 | 				const fb = (await feld.boundingBox())!;
+        at /home/hem/gregor_zwanzig/.claude/worktrees/concurrent-tinkering-clover/frontend/e2e/s2999-datumfeld-tag-31.spec.ts:113:54
+
+    Error Context: test-results/s2999-datumfeld-tag-31-AC--013a5-7-→-Meldung-weg-gespeichert-tests/error-context.md
+
+
+[10/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:141:1 › AC-6: Trip anlegen, ungültiges Startdatum → nur „Dieses Datum gibt es nicht.", nicht zusätzlich „Startdatum fehlt"
+  9) [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:141:1 › AC-6: Trip anlegen, ungültiges Startdatum → nur „Dieses Datum gibt es nicht.", nicht zusätzlich „Startdatum fehlt" 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alert').filter({ hasText: 'Dieses Datum gibt es nicht.' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('alert').filter({ hasText: 'Dieses Datum gibt es nicht.' })
+
+
+      151 | 	await feld.locator('[data-segment="day"]').click();
+      152 | 	await page.keyboard.type('31042027');
+    > 153 | 	await expect(datumMeldung(page)).toBeVisible();
+          | 	                                 ^
+      154 | 	await expect(fehlt, 'keine Doppelmeldung, solange die Datumsmeldung steht').toBeHidden();
+      155 | 	await verlasseFeld(page);
+      156 | 	await expect(datumMeldung(page)).toBeVisible();
+        at /home/hem/gregor_zwanzig/.claude/worktrees/concurrent-tinkering-clover/frontend/e2e/s2999-datumfeld-tag-31.spec.ts:153:35
+
+    Error Context: test-results/s2999-datumfeld-tag-31-AC--58c46-sätzlich-„Startdatum-fehlt--tests/error-context.md
+
+
+[11/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:163:1 › AC-7: Etappe 15.04.2027, 31052027 darübergetippt → genau ein Speichervorgang mit 31.05.2027
+  10) [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:163:1 › AC-7: Etappe 15.04.2027, 31052027 darübergetippt → genau ein Speichervorgang mit 31.05.2027 
+
+    Error: Anzeige nach dem Tippen
+
+    expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('[data-testid="stage-date-field"]:visible').first().locator('[data-slot="datum-feld-eingabe"], [data-slot="uhrzeit-feld-eingabe"]')
+    Expected: "31.05.2027"
+    Received: "01.05.2027"
+    Timeout:  5000ms
+
+    Call log:
+      - Anzeige nach dem Tippen with timeout 5000ms
+      - waiting for locator('[data-testid="stage-date-field"]:visible').first().locator('[data-slot="datum-feld-eingabe"], [data-slot="uhrzeit-feld-eingabe"]')
+        9 × locator resolved to <div id="bits-c2" role="group" aria-label="Datum" aria-disabled="false" data-date-field-input="" data-slot="datum-feld-eingabe">…</div>
+          - unexpected value "01.05.2027"
+
+
+      175 | 		const puts = sammlePuts(page, hubApiPath('route', hub.id));
+      176 | 		await tippeDatum(page, feld, '2027-05-31');
+    > 177 | 		await expect(feldEingabe(feld), 'Anzeige nach dem Tippen').toHaveText('31.05.2027');
+          | 		                                                           ^
+      178 | 		await verlasseFeld(page);
+      179 | 		await expect
+      180 | 			.poll(async () => ((await stand(page.request, 'route', hub.id)).stages as { date: string }[])[0]?.date, { message: 'gespeichertes Etappen-Datum', timeout: 15_000 })
+        at /home/hem/gregor_zwanzig/.claude/worktrees/concurrent-tinkering-clover/frontend/e2e/s2999-datumfeld-tag-31.spec.ts:177:62
+
+    Error Context: test-results/s2999-datumfeld-tag-31-AC--36879-ichervorgang-mit-31-05-2027-tests/error-context.md
+
+
+[12/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:192:1 › AC-9: Sprache EN, 31042027 → „This date does not exist.", role=alert, per aria-describedby am Feld
+  11) [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:192:1 › AC-9: Sprache EN, 31042027 → „This date does not exist.", role=alert, per aria-describedby am Feld 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alert').filter({ hasText: 'This date does not exist.' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('alert').filter({ hasText: 'This date does not exist.' })
+
+
+      201 | 		await page.keyboard.type('31042027');
+      202 | 		const meldung = datumMeldung(page, MELDUNG_EN);
+    > 203 | 		await expect(meldung).toBeVisible();
+          | 		                      ^
+      204 | 		await expect(meldung).toHaveText(MELDUNG_EN);
+      205 | 		await expect(page.getByText(MELDUNG_DE)).toHaveCount(0);
+      206 | 		const id = await meldung.getAttribute('id');
+        at /home/hem/gregor_zwanzig/.claude/worktrees/concurrent-tinkering-clover/frontend/e2e/s2999-datumfeld-tag-31.spec.ts:203:25
+
+    Error Context: test-results/s2999-datumfeld-tag-31-AC--10e58-er-aria-describedby-am-Feld-tests/error-context.md
+
+
+[13/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:217:1 › AC-10: Kalenderklick übernimmt den Tag; Backspace leert das Segment ohne Speichern bis das Datum vollständig ist
+  12) [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:217:1 › AC-10: Kalenderklick übernimmt den Tag; Backspace leert das Segment ohne Speichern bis das Datum vollständig ist 
+
+    Error: vervollständigtes Datum gespeichert
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "2026-11-25"
+    Received: "2026-11-02"
+
+    Call Log:
+    - Timeout 15000ms exceeded while waiting on the predicate
+
+      236 | 		await page.keyboard.type('25');
+      237 | 		await verlasseFeld(page);
+    > 238 | 		await expect.poll(async () => (await stand(page.request, 'vergleich', hub.id)).end_date, { message: 'vervollständigtes Datum gespeichert', timeout: 15_000 }).toBe('2026-11-25');
+          | 		^
+      239 | 		expect(enddaten(puts)).toEqual(['2026-11-20', '2026-11-25']);
+      240 | 	} finally {
+      241 | 		await hub.aufraeumen();
+        at /home/hem/gregor_zwanzig/.claude/worktrees/concurrent-tinkering-clover/frontend/e2e/s2999-datumfeld-tag-31.spec.ts:238:3
+
+    Error Context: test-results/s2999-datumfeld-tag-31-AC--83aaf-s-das-Datum-vollständig-ist-tests/error-context.md
+
+
+[14/14] [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:247:1 › AC-12: Uhrzeit 08:15 im Morgen-Briefing tippen → gespeichert, keine Datumsmeldung
+  12 failed
+    [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:70:3 › AC-1/2/3/11 (November (30 Tage)): leeres Feld, 31.03.2027 getippt → steht unverändert im Feld und wird so gespeichert 
+    [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:70:3 › AC-1/2/3/11 (November (30 Tage)): leeres Feld, 29.02.2028 getippt → steht unverändert im Feld und wird so gespeichert 
+    [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:70:3 › AC-1/2/3/11 (Februar (28 Tage)): leeres Feld, 31.03.2027 getippt → steht unverändert im Feld und wird so gespeichert 
+    [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:70:3 › AC-1/2/3/11 (Februar (28 Tage)): leeres Feld, 29.02.2028 getippt → steht unverändert im Feld und wird so gespeichert 
+    [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:101:3 › AC-4/5/8 (November (30 Tage)): 31.04.2027 → Meldung, nichts gespeichert, Feld leer; danach 30.04.2027 → Meldung weg, gespeichert 
+    [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:101:3 › AC-4/5/8 (November (30 Tage)): 29.02.2027 → Meldung, nichts gespeichert, Feld leer; danach 01.03.2027 → Meldung weg, gespeichert 
+    [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:101:3 › AC-4/5/8 (Februar (28 Tage)): 31.04.2027 → Meldung, nichts gespeichert, Feld leer; danach 30.04.2027 → Meldung weg, gespeichert 
+    [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:101:3 › AC-4/5/8 (Februar (28 Tage)): 29.02.2027 → Meldung, nichts gespeichert, Feld leer; danach 01.03.2027 → Meldung weg, gespeichert 
+    [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:141:1 › AC-6: Trip anlegen, ungültiges Startdatum → nur „Dieses Datum gibt es nicht.", nicht zusätzlich „Startdatum fehlt" 
+    [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:163:1 › AC-7: Etappe 15.04.2027, 31052027 darübergetippt → genau ein Speichervorgang mit 31.05.2027 
+    [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:192:1 › AC-9: Sprache EN, 31042027 → „This date does not exist.", role=alert, per aria-describedby am Feld 
+    [tests] › e2e/s2999-datumfeld-tag-31.spec.ts:217:1 › AC-10: Kalenderklick übernimmt den Tag; Backspace leert das Segment ohne Speichern bis das Datum vollständig ist 
+  2 passed (1.6m)

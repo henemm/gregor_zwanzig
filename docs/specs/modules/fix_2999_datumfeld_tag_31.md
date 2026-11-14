@@ -147,6 +147,7 @@ Loesung V2 (Tech-Lead-Entscheidung): ein eigenes Tipp-Protokoll im Baustein.
 - Kalenderklick bleibt bits-ui-Verhalten.
 - bits-ui-Upgrade 2.17 auf 2.21 ist bewusst getrennt (eigenes Issue), damit ein Upgrade-Regress vom Fix unterscheidbar bleibt.
 - Die Tipp-Logik nimmt an, dass Tag zuerst steht (de und en-GB heute); sie liest die Reihenfolge aus dem DOM.
+- bits-ui 2.17.3 leert bei der zweiten Rücktaste im Tag-Segment alle Segmente (bisheriges Verhalten, unverändert, `date-field.svelte.js` ca. Z. 203). Ist das Datum beim Verlassen unvollständig, bleibt der gespeicherte Wert erhalten und das Feld zeigt ihn.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -156,3 +157,4 @@ Loesung V2 (Tech-Lead-Entscheidung): ein eigenes Tipp-Protokoll im Baustein.
 ## Changelog
 
 - 2026-11-14: Initial spec created
+- 2026-11-14: Known Limitations ergänzt (bits-ui leert bei der zweiten Rücktaste alle Segmente; unvollständig verlassen ⇒ gespeicherter Wert bleibt), ACs unverändert
