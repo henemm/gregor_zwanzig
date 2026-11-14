@@ -113,7 +113,7 @@ Die Regeln gelten unverändert; ADR-0111 (Audit 2026-11-09) setzt sie auf den Tr
 | Lat/Lon-Eingabe | **Verboten** im UI. Wegpunkte werden ausschließlich visuell auf Karte oder durch Algorithmus-Vorschlag gesetzt. |
 | Native HTML Controls | **Verboten** (`<input type="checkbox">`, `<select>`, `<input type="date">`). Stattdessen die Brand-Bausteine aus dem Katalog. |
 | Mobile-Input-Bodysize | Mindestens 16 px (verhindert iOS Auto-Zoom). |
-| Touch-Targets | Mindestens 44 × 44 px. |
+| Touch-Targets | Mindestens 44 × 44 px bei Fingerbedienung (`@media (pointer: coarse)`). Bei Mausbedienung darf der Vorlagen-Wähler im Wetter-Reiter die Mockup-Höhe (ca. 38 px) haben (PO 14.11.2026, #3003). |
 | Numerische Felder | Mono-Schrift, `tabular-nums`. |
 | Datums-Format | `DD. MMM YYYY` für Display, ISO für Daten. |
 

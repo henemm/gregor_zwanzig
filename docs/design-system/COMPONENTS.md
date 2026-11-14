@@ -174,7 +174,7 @@ Komplexe Zusammenbauten aus Atoms und Molecules, kanonisch im Barrel `$lib/compo
 | Komponente | Was sie tut |
 |---|---|
 | `<WetterTabInhalt>` | Reiter „Wetter“: lädt Daten, hält den Zustand, speichert; setzt die übrigen acht zusammen. Ladeanzeige aus `Skelett`, „Erneut laden“ als `Btn`. Die Seite dazu ist `shared/WetterTab.svelte` (dünne Durchreichung, `SEITEN_SCOPE`, Regel a; #2913 Teil 2). |
-| `<VorlageKarte>` | Vorlagen-Auswahl und „als Vorlage speichern“; alle Knöpfe `Btn` (`size="tap"`). |
+| `<VorlageKarte>` | Vorlagen-Auswahl und „als Vorlage speichern“; alle Knöpfe `Btn` (`size="tap"`). Der Vorlagen-Wähler ist mit Maus ca. 38 px hoch (Mockup), mit Finger mindestens 44 px (`pointer: coarse`, #3003). |
 | `<AlarmAbKopf>` | „Alarm ab“ für alle Metriken als `Einstellungszeile` (Segmente Nie/Gelb/Orange/Rot mit Farbpunkt). |
 | `<MetrikZeile>` | Eine Metrik: Name, Ampel-Leiste, Erklärsatz, Alarm-ab (`Segmented` mit Farbpunkt), Entfernen und Grenzen bearbeiten (`Btn`). |
 | `<AmpelLeiste>` | Farbband der Ampelstufen einer Metrik aus `--g-ampel-*`; je Segment `role="img"` mit Farbnamen, feste Reihenfolge und Trennfuge (ohne Farbe erkennbar). |
@@ -240,6 +240,7 @@ Neue Komponente braucht:
 
 | Version | Datum | Anmerkung |
 |---|---|---|
+| v1.8 | 2026-11-14 | `VorlageKarte`: Vorlagen-Wähler mittig, Höhe nach Bedienart (Maus ca. 38 px, Finger ≥ 44 px); `MTabBar` Handy-Reiter füllen die Breite (#3003, Spec `feat_2913_c2_seitenkopf`) |
 | v1.7 | 2026-10-05 | `StageCardM` Editier-Modus ergänzt (#2496: inline-Datums-/Zeitfelder via `onDateChange`/`onStartTimeChange`, statisch ohne; Spec `mobile_stage_datum_zeit_edit`) |
 | v1.6 | 2026-10-03 | `MapControl`, `ProfileSheetEmbedded`, `EditorProfileSVG` entfernt — keine Aufrufer mehr seit PO-Entscheid F5 (Karte/Höhenprofil entfallen auf Mobile, Spec `mobile_stages_tab_listen_only`) |
 | v1.5 | 2026-09-26 | `MTabBar` ergänzt (Mobile Usability Paket 2, geteilter Tab-Band mit scrollIntoView + A11y; Spec `mobile_tab_leisten_mtabbar`) |

@@ -320,6 +320,7 @@ Grundlage: drei Rest-Abweichungen aus dem `mockup-bildpruefer` Runde 2 nach #298
 - Knopf-Fläche „Test schicken ▾“ ist bewusst `--g-accent-deep` statt Mockup-`--g-accent` (WCAG-AA); der Bildprüfer meldet das als Farbabweichung, sie ist dokumentiert und dem PO offen genannt.
 - Der Bildprüfer-Fix-Loop ist nach Runde 2 beendet; verbleibende Abweichungen gehen als eigene Issues weiter, nicht in eine dritte Runde.
 - Die Höhe des Vorlagen-Wählers folgt der Bedienart (Maus ca. 38 px wie im Mockup, Finger mindestens 44 px; PO-Entscheidung 14.11.2026, #3003). Geräte, die beide Eingabearten melden (zum Beispiel Touch-Laptop), werden vom Browser nach der primären Eingabeart eingeordnet; die Messung auf Staging deckt die beiden Reinfälle (Maus 1280×900, Touch 390×844) ab.
+- Wächter AC-40 (`s3a2794-teil3-design.spec.ts`, #3003): Kompakte Segmente (`[data-variant="kompakt"]`, #2913) sind sichtbar kleiner als 44 px und vergrößern ihre Trefferfläche per unsichtbarem `::before` (app.css), genau wie Elemente mit `data-tap="true"`. Der Wächter prüft sie deshalb mit derselben Trefferpunkt-Messung (44×44-Quadrat, Mitte und vier Ecken) statt mit dem sichtbaren Rahmenmaß. Das ist keine Lockerung: die wirksame Tippfläche muss weiterhin ≥ 44 px sein; nur der Messweg folgt der Bauweise.
 
 ## Architektur-Entscheidung (ADR)
 

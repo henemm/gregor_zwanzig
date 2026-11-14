@@ -144,7 +144,7 @@ Reine Maße, **Light = Dark** (kein Wert im Dark-Block). Regel: Ein Maß im 4px-
 
 | Token | Wert | Verwendung |
 |---|---|---|
-| `--g-tap-min` | 44 px | Mindest-Touch-Ziel (min-height/min-width von Knöpfen, Tap-Spalte; unsichtbare Trefferfläche des `Switch` mit `tap`, Höhe des `Aufklapper`-Kopfs — #2913 Scheibe (c)) |
+| `--g-tap-min` | 44 px | Mindest-Touch-Ziel bei Fingerbedienung (min-height/min-width von Knöpfen, Tap-Spalte; unsichtbare Trefferfläche des `Switch` mit `tap`, Höhe des `Aufklapper`-Kopfs — #2913 Scheibe (c)). Bei Mausbedienung gilt die Mockup-Höhe des Vorlagen-Wählers (#3003) |
 | `--g-size-2px` | 2 px | kleinste Abstände, Fokusring-Versatz |
 | `--g-size-3px` | 3 px | Ampel-Unterkante am Input (#2913 Teil 2) |
 | `--g-size-10-5px` | 10.5 px | Grenzzahlen der Ampel-Leiste (#2913 Fix Metrik-Liste) |
