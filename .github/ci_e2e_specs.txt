@@ -705,3 +705,13 @@ e2e/mobile-ux-audit-selbsttest.spec.ts
 # die ausgelieferte Content-Security-Policy erzeugt auf den Kernseiten keine Verletzung.
 e2e/karte-wegpunktname-als-text.spec.ts
 e2e/sicherheitsrichtlinie-ohne-verletzung.spec.ts
+# Aufnahme 2026-11-14 (#2953, in RED aufgenommen):
+# ganzseitenaufnahme-selbsttest.spec.ts -- der gemeinsame Ganzseiten-Aufnahme-Helfer
+# (e2e/ganzseitenaufnahme.ts) auf per page.setContent gebauten Seiten im echten Rahmen-Aufbau
+# (div.flex.h-screen > main.overflow-auto): Gegenprobe Aufbau (alter Helfer 552 px), Aufnahme
+# mit wischbarer Leiste genau 390 px, wirklich zu breite Aufnahme schlaegt fehl, Stile danach
+# exakt zurueck. Ohne Anmeldung (leerer storageState). Fallzahl: 4 (+ global.setup).
+#   Filter A: kein waitForTimeout/skip/fixme/__dirname/Hauptrepo-Pfad, kein .staging.spec.
+#   Filter B: 3x gruen im Zielverbund misst der CI-Hauptlauf des PR.
+#   Filter C: Aufnahmen nur nach test.info().outputPath (test-results, nicht versioniert).
+e2e/ganzseitenaufnahme-selbsttest.spec.ts
