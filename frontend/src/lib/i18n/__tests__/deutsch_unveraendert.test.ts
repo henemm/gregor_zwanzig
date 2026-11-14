@@ -232,6 +232,8 @@ const NEU_IN_F12 = F12_ANKER.map(([k]) => k);
 /** #2764 (F13) AUSDRUCK_OFFEN: Name-Rueckfall der Karte (wertebereiche.symbolzeile.* stehen in F5_ANKER). */
 const NEU_IN_F13 = ['bausteine.karte.ohne_namen'];
 const NEU_IN_FOLGEPAKETEN = [
+	// #2999 Datumsfeld: Meldung bei einem Datum, das es nicht gibt
+	'bausteine.datum.ungueltig',
 	// #2961 Welle 2 (ADR-0116) Premium-SMS-Verbindung trennen
 	'konto.kopplung.verbunden',
 	'konto.kopplung.trennen',
