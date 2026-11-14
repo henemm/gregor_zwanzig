@@ -36,6 +36,12 @@
 // ergänzt die clientseitige Profil-Lesung per page.route um eine Test-Chat-ID und
 // prüft am Ende, dass das echte Profil unverändert ist. Kein Profil wird verändert.
 //
+// #2795 S3b Teilschritt 1b (feat_2795_s3b_teil1_zustellung.md): der alte Versand-Abschnitt ist durch
+// den Reiter „Zustellung“ abgelöst. Uhrzeit = Uhrzeitfeld der Briefing-Zeiten-Karte (Anker
+// `#versand`, AC-4), Telegram = Briefing-Schalter der Kanal-Tabelle (AC-14/AC-15: bedienbar nur
+// verbunden, deshalb bleibt die Profil-Ergänzung von VI-1), die Aktivierungs-Karte des Vergleichs
+// steht im Übergangsblock (AC-30). Die Zusicherungen bleiben unverändert.
+//
 // Wartebedingungen nur expect.poll / toHaveAttribute / waitForResponse.
 // Läuft im isolierten CI-Stack (frontend/e2e/ci-stack.sh). Aufräumen im finally.
 
@@ -48,9 +54,10 @@ import {
 	openHub,
 	seedHub,
 	testMitZustellbaremZiel,
-	waehleOption,
+	tippeUhrzeit,
 	type HubKind
 } from './helpers';
+import { angezeigteZeit } from './s3b2795-zustellung.helpers';
 
 type Stand = Record<string, unknown>;
 const rc = (s: Stand) => (s.report_config as Stand | undefined) ?? {};
@@ -69,7 +76,7 @@ const VI_SEL: Record<
 	}
 > = {
 	route: {
-		telegram: 'channel-telegram',
+		telegram: 'zustellung-kanal-telegram-briefing',
 		telegramWert: (s) => rc(s).send_telegram,
 		morgen: (s) => rc(s).morning_time,
 		statusMethode: 'PATCH',
@@ -78,7 +85,7 @@ const VI_SEL: Record<
 		istPausiert: (s) => Boolean(s.paused_at)
 	},
 	vergleich: {
-		telegram: 'compare-step5-channel-telegram',
+		telegram: 'zustellung-kanal-telegram-briefing',
 		telegramWert: (s) => s.send_telegram,
 		morgen: (s) => s.morning_time,
 		statusMethode: 'PUT',
@@ -127,8 +134,19 @@ async function stand(page: Page, kind: HubKind, id: string): Promise<Stand> {
 }
 
 const anzeige = (page: Page) => page.locator('[data-testid="save-indicator"]');
-const abschnitt = (page: Page) => page.locator('[data-testid="versand-abschnitt"]:visible');
-const morgenUhrzeit = (page: Page) => abschnitt(page).locator('[data-testid="report-morning-time"]:visible');
+const abschnitt = (page: Page) => page.locator('[data-testid="zustellung-tab"]:visible');
+const morgenUhrzeit = (page: Page) => abschnitt(page).locator('[data-testid="zustellung-morgen-zeit"]:visible');
+
+/** Neue Morgen-Uhrzeit eintippen und das Feld verlassen (Übernahme wie im Nutzerfluss). */
+async function setzeMorgen(page: Page, hhmm: string): Promise<void> {
+	await tippeUhrzeit(page, morgenUhrzeit(page), hhmm);
+	await page.keyboard.press('Tab');
+}
+
+/** Das Uhrzeitfeld zeigt `hhmm` (Segmente ohne Leerraum). */
+async function zeigtMorgen(page: Page, hhmm: string, message?: string): Promise<void> {
+	await expect.poll(() => angezeigteZeit(morgenUhrzeit(page)), { timeout: 10_000, message }).toBe(hhmm);
+}
 const karte = (page: Page) => page.locator('[data-testid="compare-hub-activation-card"]:visible');
 const cta = (page: Page) => page.locator('[data-testid="compare-hub-activation-cta"]:visible');
 // #2837 S1b: das geteilte StatusSchild trägt bei beiden Arten Testid und `data-status`.
@@ -202,17 +220,17 @@ for (const kind of HUB_KINDS) {
 			});
 
 			await oeffneVersand(page, kind, hub.id);
-			const schalter = abschnitt(page).locator(`[data-testid="${vi.telegram}"] input[type="checkbox"]`);
+			const schalter = abschnitt(page).locator(`[data-testid="${vi.telegram}"]`);
 			await expect(schalter).toBeVisible({ timeout: 10_000 });
 			// Kernaussage AC-35: der Schalter ist NICHT hart auf disabled verdrahtet.
-			await expect(schalter).toBeEnabled({ timeout: 10_000 });
-			await expect(schalter).not.toBeChecked();
+			await expect(schalter).not.toHaveAttribute('aria-disabled', 'true', { timeout: 10_000 });
+			await expect(schalter).toHaveAttribute('aria-checked', 'false');
 
 			const put = page.waitForResponse(
 				(r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === hubApiPath(kind, hub.id)
 			);
 			await schalter.click();
-			await expect(schalter).toBeChecked({ timeout: 5_000 });
+			await expect(schalter).toHaveAttribute('aria-checked', 'true', { timeout: 5_000 });
 			const antwort = await put;
 			expect(antwort.ok(), `PUT nach Kanal-Schalter HTTP ${antwort.status()}`).toBeTruthy();
 			expect(vi.telegramWert(antwort.request().postDataJSON() as Stand), 'der PUT trägt den gesetzten Kanal').toBe(true);
@@ -220,7 +238,7 @@ for (const kind of HUB_KINDS) {
 			expect(vi.telegramWert(await stand(page, kind, hub.id)), 'Server-Stand trägt den Kanal').toBe(true);
 
 			await oeffneVersand(page, kind, hub.id);
-			await expect(abschnitt(page).locator(`[data-testid="${vi.telegram}"] input[type="checkbox"]`)).toBeChecked({
+			await expect(abschnitt(page).locator(`[data-testid="${vi.telegram}"]`)).toHaveAttribute('aria-checked', 'true', {
 				timeout: 10_000
 			});
 		} finally {
@@ -256,7 +274,7 @@ for (const kind of HUB_KINDS) {
 				const put = page.waitForResponse(
 					(r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === hubApiPath(kind, hub.id)
 				);
-				await waehleOption(page, morgenUhrzeit(page), '09:00');
+				await setzeMorgen(page, '09:00');
 				const antwort = await put;
 				expect(antwort.ok(), `PUT nach Uhrzeit-Änderung HTTP ${antwort.status()}`).toBeTruthy();
 				expect(String(vi.morgen(antwort.request().postDataJSON() as Stand)).slice(0, 5)).toBe('09:00');
@@ -266,7 +284,7 @@ for (const kind of HUB_KINDS) {
 				expect(page.url()).not.toMatch(/\/edit/);
 
 				await oeffneVersand(page, kind, hub.id);
-				await expect(morgenUhrzeit(page)).toHaveText('09:00', { timeout: 10_000 });
+				await zeigtMorgen(page, '09:00');
 			} finally {
 				await hub.aufraeumen();
 			}
@@ -323,7 +341,7 @@ for (const kind of HUB_KINDS) {
 					await expect(karte(page)).toContainText('Aktiv');
 					await expect(cta(page)).toHaveText('Pausieren');
 					await expect(karte(page)).toContainText('bis du pausierst');
-					await expect(karte(page).locator('input[type="date"], [data-testid^="compare-versand-enddate"]')).toHaveCount(0);
+					await expect(karte(page).locator('input[type="date"], [data-testid^="compare-versand-enddate"], [data-testid^="zustellung-laufzeit"]')).toHaveCount(0);
 					await expect(statusPille(page)).toHaveAttribute('data-status', 'active', { timeout: 10_000 });
 
 					const vorher = page.url();
@@ -358,7 +376,7 @@ for (const kind of HUB_KINDS) {
 					await oeffneVersand(page, kind, hub.id);
 					await expect(cta(page)).toHaveText('Pausieren');
 
-					await waehleOption(page, morgenUhrzeit(page), '10:00');
+					await setzeMorgen(page, '10:00');
 					await cta(page).click();
 
 					await expect(cta(page)).toHaveText('Aktivieren', { timeout: 10_000 });
@@ -367,7 +385,7 @@ for (const kind of HUB_KINDS) {
 					pruefeFeldVorStatus(fertig, kind, /^10:00/);
 
 					await oeffneVersand(page, kind, hub.id);
-					await expect(morgenUhrzeit(page)).toHaveText('10:00', { timeout: 10_000 });
+					await zeigtMorgen(page, '10:00');
 					await expect(cta(page)).toHaveText('Aktivieren', { timeout: 10_000 });
 					const s = await stand(page, kind, hub.id);
 					expect(String(vi.morgen(s))).toMatch(/^10:00/);
@@ -387,7 +405,7 @@ for (const kind of HUB_KINDS) {
 				const { fertig } = protokolliereSchreiber(page, hubApiPath(kind, hub.id));
 				await oeffneVersand(page, kind, hub.id);
 
-				await waehleOption(page, morgenUhrzeit(page), '10:00');
+				await setzeMorgen(page, '10:00');
 				await kebabWaehle(page, 'Pausieren');
 
 				await expect.poll(() => fertig.length, { timeout: 10_000 }).toBe(2);
@@ -395,7 +413,7 @@ for (const kind of HUB_KINDS) {
 				pruefeFeldVorStatus(fertig, kind, /^10:00/);
 
 				await oeffneVersand(page, kind, hub.id);
-				await expect(morgenUhrzeit(page), 'die Uhrzeit überlebt Pausieren und Neuladen').toHaveText('10:00', { timeout: 10_000 });
+				await zeigtMorgen(page, '10:00', 'die Uhrzeit überlebt Pausieren und Neuladen');
 				await kebabZeigt(page, 'Fortsetzen', 'nach dem Neuladen ist der Hub pausiert');
 				const s = await stand(page, kind, hub.id);
 				expect(String(vi.morgen(s))).toMatch(/^10:00/);
@@ -419,7 +437,7 @@ for (const kind of HUB_KINDS) {
 
 				// Feld-Änderung, PUT abwarten (eigener Commit-Pfad).
 				const feldPut = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad);
-				await waehleOption(page, morgenUhrzeit(page), '11:00');
+				await setzeMorgen(page, '11:00');
 				const feldAntwort = await feldPut;
 				expect(feldAntwort.ok(), `PUT nach Uhrzeit-Änderung HTTP ${feldAntwort.status()}`).toBeTruthy();
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
@@ -443,7 +461,7 @@ for (const kind of HUB_KINDS) {
 				await test.info().attach('vi6-status-rumpf', { body: JSON.stringify(statusRumpf), contentType: 'application/json' });
 
 				await oeffneVersand(page, kind, hub.id);
-				await expect(morgenUhrzeit(page)).toHaveText('11:00', { timeout: 10_000 });
+				await zeigtMorgen(page, '11:00');
 				await kebabZeigt(page, 'Fortsetzen', 'nach dem Neuladen ist der Hub pausiert');
 				const s = await stand(page, kind, hub.id);
 				expect(String(vi.morgen(s)), 'das Pausieren hat die gespeicherte Uhrzeit überschrieben').toMatch(/^11:00/);

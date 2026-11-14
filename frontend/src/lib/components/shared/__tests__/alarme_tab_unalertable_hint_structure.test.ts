@@ -33,8 +33,9 @@ const ALARME_TAB = join(here, '..', 'AlarmeTab.svelte');
 // Alle Flaechen, die den Alarme-Reiter im Vergleichs-Kontext einbetten, mit der
 // Zahl der dortigen Einbettungen (Adversary-Befund F001 aus E1a-2: die zweite
 // Einbettung in CompareNewEditor wurde uebersehen).
+// #2795 S3b Teilschritt 1b: der Vergleichs-Hub bettet keinen AlarmeTab mehr ein (neuer Reiter
+// Zustellung, „Kanaele je Wettergroesse“ entfaellt, Spec §2) — es bleibt die Anlege-Seite.
 const COMPARE_MOUNTS: Array<[string, string, number]> = [
-	['Vergleichs-Hub', join(here, '..', '..', 'compare', 'CompareTabs.svelte'), 1],
 	['/compare/new (Desktop + mobil)', join(here, '..', '..', 'compare-new', 'CompareNewEditor.svelte'), 2]
 ];
 
@@ -389,7 +390,7 @@ describe('#1435 E1b AC-8: alle drei Vergleichs-Flaechen zeigen denselben Satz', 
 			}
 			gesamt += instanzen.length;
 		}
-		assert.equal(gesamt, 3);
+		assert.equal(gesamt, 2); // #2795 S3b 1b: ohne Hub-Mount
 		assert.ok(
 			identifiers(derivedInit('unalertableSelectedMetricNames')).has('catalog'),
 			'Der Satz haengt nicht an der durchgereichten `catalog`-Prop — dann kann er an einer ' +

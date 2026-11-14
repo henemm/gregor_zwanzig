@@ -216,7 +216,7 @@
 					<!-- Issue #2794 S3a Teil-PR 3: genau ein Speicherer im Reiter (AC-38). -->
 					<WetterTab context="route" {trip} {onTripUpdate} {saveController} />
 				{:else if tab.value === 'zustellung' && trip}
-					<ZustellungTab context="route" {trip} {onTripUpdate} {saveController} onJump={handleValueChange} {versandSprung} {metricsCatalog} />
+					<ZustellungTab context="route" {trip} {onTripUpdate} {saveController} onJump={handleValueChange} {versandSprung} />
 				{:else}
 					<p class="p-4 text-sm">{PLACEHOLDERS[tab.value] ? $t(PLACEHOLDERS[tab.value]) : ''}</p>
 				{/if}

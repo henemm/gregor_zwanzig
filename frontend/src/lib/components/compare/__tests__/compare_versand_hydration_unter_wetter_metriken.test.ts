@@ -83,20 +83,22 @@ async function hubOeffnen(tab: string): Promise<{ u: Knoten; ast: Knoten; quelle
 	);
 }
 
-/** Der lokale Feldsatz des Hubs: das Objekt, das der Hub an `versandPropsAus(…)` uebergibt. */
+/** Der lokale Feldsatz des Hubs: das Objekt, das der Hub an `wetterMetrikenPropsAus(…)` uebergibt.
+ *  #2795 S3b Teilschritt 1b: der Hub ruft versandPropsAus nicht mehr (der neue Reiter Zustellung
+ *  liest das Preset selbst); derselbe Feldsatz haengt weiter am Panel-Buendel im Markup. */
 function hubFeldsatz(ast: Knoten, u: Knoten): Knoten {
 	let name: string | null = null;
 	(function lauf(n: unknown): void {
 		if (name || n === null || typeof n !== 'object') return;
 		if (Array.isArray(n)) return n.forEach(lauf);
 		const k = n as Knoten;
-		if (k.type === 'CallExpression' && k.callee?.name === 'versandPropsAus' && k.arguments?.[0]?.type === 'Identifier') {
+		if (k.type === 'CallExpression' && k.callee?.name === 'wetterMetrikenPropsAus' && k.arguments?.[0]?.type === 'Identifier') {
 			name = k.arguments[0].name;
 			return;
 		}
 		for (const key of Object.keys(k)) if (key !== 'parent' && key !== 'loc') lauf(k[key]);
 	})(ast.fragment);
-	assert.ok(name, 'Messaufbau: kein versandPropsAus(<Bezeichner>) im Hub-Markup');
+	assert.ok(name, 'Messaufbau: kein wetterMetrikenPropsAus(<Bezeichner>) im Hub-Markup');
 	const f = u[name!];
 	assert.ok(
 		f && typeof f === 'object',

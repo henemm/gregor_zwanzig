@@ -72,6 +72,12 @@ const COMPONENTS = join(SHARED, '..');
 const TAB = join(SHARED, 'AlarmeTab.svelte');
 const HUB = join(COMPONENTS, 'compare', 'CompareTabs.svelte');
 const ANLEGE = join(COMPONENTS, 'compare-new', 'CompareNewEditor.svelte');
+// #2795 S3b Teilschritt 1b: der Vergleichs-Hub bettet keinen AlarmeTab mehr ein (der neue Reiter
+// Zustellung speichert Alarme ueber EINEN eigenen Speicherer). Die Buendel-Messungen, die bisher am
+// Hub-Mount (Mount B) ansetzten, setzen am ersten Mount der Anlege-Seite an: dasselbe
+// `{...alarmePropsAus(wiz)}`-Buendel, derselbe Organismus. Der Selbst-Speicher-Zweig wird wie bisher
+// ueber gesaetes preset/saveController/api am Organismus gemessen.
+const BUENDEL_MOUNT = ANLEGE;
 const TRIP = join(COMPONENTS, 'trip-detail', 'AlarmeScheduleTab.svelte');
 const TRIPNEW = join(COMPONENTS, 'trip-new', 'TripNewEditor.svelte');
 // __tests__ -> shared -> components -> lib -> src -> frontend -> repo
@@ -414,9 +420,12 @@ describe('AC-3: alle drei Vergleichs-Mounts speisen dasselbe Buendel ein', () =>
 	}
 
 	const mounts: [string, string, number][] = [
-		['Hub /compare/[id] (Mount B)', HUB, 1],
 		['Anlege-Seite /compare/new, Desktop + Mobil (Mounts C und D)', ANLEGE, 2]
 	];
+
+	test('#2795 S3b 1b: Hub /compare/[id] bettet keinen AlarmeTab mehr ein (kein zweiter Speicherweg)', () => {
+		assert.strictEqual(einbettungen(HUB).treffer.length, 0, 'der Hub bettet noch einen AlarmeTab ein');
+	});
 
 	for (const [was, datei, anzahl] of mounts) {
 		test(`${was}: ruft \`alarmePropsAus(wiz)\` IM Markup-Ausdruck auf und reicht kein \`wiz\` mehr durch`, () => {
@@ -571,12 +580,12 @@ describe('AC-3: alle drei Vergleichs-Mounts speisen dasselbe Buendel ein', () =>
 	test('die gewaehlten Metriken erreichen die Empfindlichkeits-Tabelle ueber das Buendel', async () => {
 		// Name-agnostisch: WELCHES Feld das Buendel fuer die gewaehlten Metriken
 		// fuehrt, entscheidet /50 — gemessen wird die WIRKUNG am Organismus.
-		const { quelle: q0, treffer } = einbettungen(HUB);
+		const { quelle: q0, treffer } = einbettungen(BUENDEL_MOUNT);
 		const s = streuung(treffer[0], q0);
 		assert.ok(s, 'AC-3 FAIL: der Hub-Mount streut kein `alarmePropsAus(...)` — siehe oben.');
 
 		const wiz = wizStand();
-		const { u } = await umgebungFuer(HUB, {
+		const { u } = await umgebungFuer(BUENDEL_MOUNT, {
 			[s!.zustand]: wiz,
 			untrack: (fn: () => unknown) => fn(),
 			alarmeCatalog: katalog()
@@ -693,7 +702,7 @@ describe('AC-4 Wirkort-Guard: der Selbst-Speicher-Effekt schweigt ohne Vergleich
 		// Zusaetzlich faengt sie stillen Datenverlust: der Speicherweg liest 13
 		// Felder. Verliert der Weg von `wiz` ueber das Buendel zum Speicherweg
 		// eines davon, faellt es beim naechsten Alarm-PUT aus der Nutzlast.
-		const { quelle: q0, treffer } = einbettungen(HUB);
+		const { quelle: q0, treffer } = einbettungen(BUENDEL_MOUNT);
 		const s = streuung(treffer[0], q0);
 		assert.ok(s, 'AC-4 FAIL: der Hub-Mount streut kein Prop-Buendel (siehe AC-3).');
 
@@ -713,7 +722,7 @@ describe('AC-4 Wirkort-Guard: der Selbst-Speicher-Effekt schweigt ohne Vergleich
 			// Issue #1895 S3b1: Kanäle je Wettergröße laufen mit durch den Speicherweg.
 			alertMetricChannels: { gust: { email: false, telegram: true, sms: false, premium_sms: false } }
 		};
-		const { u: uHub } = await umgebungFuer(HUB, {
+		const { u: uHub } = await umgebungFuer(BUENDEL_MOUNT, {
 			[s!.zustand]: wiz,
 			untrack: (fn: () => unknown) => fn(),
 			alarmeCatalog: katalog()
@@ -783,7 +792,6 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 			dateien,
 			[
 				'src/lib/components/compare-new/CompareNewEditor.svelte',
-				'src/lib/components/compare/CompareTabs.svelte',
 				'src/lib/components/trip-detail/AlarmeScheduleTab.svelte',
 				'src/lib/components/trip-new/TripNewEditor.svelte'
 			].sort(),
@@ -793,7 +801,6 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 		);
 
 		for (const [datei, mitTrip] of [
-			[HUB, false],
 			[ANLEGE, false],
 			[TRIP, true],
 			[TRIPNEW, true]
@@ -1035,10 +1042,10 @@ describe('F001/F003 Frische-Garantie: die Bruecke liest JEDES Feld bei JEDEM Zug
 	let buendelCache: Knoten | null = null;
 	async function hubBuendel(): Promise<Knoten> {
 		if (buendelCache) return buendelCache;
-		const { quelle: q0, treffer } = einbettungen(HUB);
+		const { quelle: q0, treffer } = einbettungen(BUENDEL_MOUNT);
 		const s = streuung(treffer[0], q0);
 		assert.ok(s, 'F001 FAIL: der Hub-Mount streut kein Prop-Buendel (siehe AC-3).');
-		const { u: uHub } = await umgebungFuer(HUB, {
+		const { u: uHub } = await umgebungFuer(BUENDEL_MOUNT, {
 			[s!.zustand]: alarmAusgangsstand(),
 			untrack: (fn: () => unknown) => fn(),
 			alarmeCatalog: katalog()

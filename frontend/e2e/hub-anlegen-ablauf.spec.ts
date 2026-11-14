@@ -454,11 +454,26 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 					).toBeUndefined();
 				}
 
+				// #2795 S3b 1b (AC-15/AC-17): die Kanal-Tabelle des Hubs zeigt die Dringlichkeit nur für einen
+				// VERBUNDENEN Kanal mit eingeschaltetem Alarm. Der Env-Admin hat kein Telegram; wie in
+				// hub-versand-inline-bearbeiten VI-1 wird NUR die Profil-Lesung im Browser um eine Test-Chat-ID
+				// ergänzt (kein Profil wird verändert). Ist der Telegram-Alarm aus, schaltet der Fall ihn ein —
+				// die angezeigte Stufe muss die beim Anlegen gewählte sein, nicht die Vorgabe „gering“.
+				await page.route('**/api/auth/profile', async (route) => {
+					if (route.request().method() !== 'GET') return route.continue();
+					const echt = await route.fetch();
+					const profil = (await echt.json()) as Record<string, unknown>;
+					await route.fulfill({ response: echt, json: { ...profil, telegram_chat_id: 'e2e-an6-test-chat' } });
+				});
 				await openHub(page, kind, id, { tab: 'zustellung' });
+				const tgAlarm = page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-kanal-telegram-alarm"]');
+				await expect(tgAlarm, 'AN-6: Telegram-Alarm in der Kanal-Tabelle fehlt').toBeVisible({ timeout: 15_000 });
+				if ((await tgAlarm.getAttribute('aria-checked')) !== 'true') await tgAlarm.click();
 				await expect(
-					page.locator('[data-testid="alert-channel-threshold-telegram-HIGH"]:visible').first(),
+					page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-kanal-telegram-dringlichkeit-HIGH"]'),
 					'AN-6: Reiter Zustellung zeigt die gewählte Stufe nicht'
-				).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 });
+				).toHaveAttribute('aria-checked', 'true', { timeout: 15_000 });
+				await page.unroute('**/api/auth/profile');
 			} finally {
 				await aufraeumen(page.request, kind, name, post.ids);
 			}

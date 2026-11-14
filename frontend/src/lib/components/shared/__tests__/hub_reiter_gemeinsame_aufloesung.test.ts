@@ -445,9 +445,11 @@ describe('#2727 AC-15: CompareTabs — verzoegerte Alarm-Hydration fuellt den Re
 		);
 		const { alarmePropsAus } = await import('../../compare/alarmePropsAus.ts');
 		const { versandPropsAus } = await import('../../compare/versandPropsAus.ts');
-		const feldsatz = hubFeldsatzAus(ast, u, 'alarmePropsAus');
+		// #2795 S3b 1b: der Hub ruft alarmePropsAus nicht mehr (der neue Reiter liest das Preset);
+		// derselbe Feldsatz steht weiter am Panel-Buendel wetterMetrikenPropsAus(…) im Markup.
+		const feldsatz = hubFeldsatzAus(ast, u, 'wetterMetrikenPropsAus');
 		for (const e of effekteVon(ast, quelle, u, 'initialTab')) e();
-		// #2794 S3a: der Alt-Link ?tab=alarme oeffnet den Reiter Zustellung (dort steht der AlarmeTab).
+		// #2794 S3a: der Alt-Link ?tab=alarme oeffnet den Reiter Zustellung (dort stehen die Alarme).
 		assert.equal(u.activeTab, 'zustellung', 'Vorbedingung: Deep-Link oeffnet den Reiter mit dem Alarm-Baustein');
 		assert.equal(alarmePropsAus(feldsatz).cooldownMinutes, undefined, 'vor der Hydration: Standard „nicht gesetzt"');
 		versandPropsAus(feldsatz).onSendSmsChange(true);

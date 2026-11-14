@@ -137,3 +137,19 @@ Testdateien (neu): `internal/store/slot_quarter_hour_2795_test.go`, `internal/ha
 - Go-Preset: typisierter Unmarshal verwirft `send_email` → Feld ins Modell.
 
 **Überholte Bestandstests (anpassen/entfernen in 1a):** `internal/store/slot_hour_normalization_test.go`, `internal/handler/compare_preset_slot_hour_normalization_test.go`, `internal/handler/trip_report_config_slot_hour_normalization_test.go` (Kappen auf Stunde); `internal/scheduler/radar_cron_offset_test.go` (Feuer-Minute 0 → 15); Python #1895: `tests/tdd/test_alert_metric_channel_reader.py`, `test_alert_metric_channel_keys.py`, `test_alarm_abweichung_kette.py`, `test_compare_alarm_einstellung_auslieferung_kette.py`, vermutlich `test_alert_metric_channel_migration.py`. Helfer aus `tests/tdd/test_briefing_slot_idempotenz.py` bleiben in Gebrauch.
+
+## Teilschritt 1b: RED-Übergabe an den Developer (2026-11-13)
+
+Tests (147 node-Tests, 128 rot / 19 grün, Beleg `docs/artifacts/feature-2795-s3b-teil1b-zustellung/test-red-output.txt`):
+`shared/zustellung-tab/__tests__/{zustellungModell,zustellungSpeicherung}.test.ts` + Prüfstand `zustellungTabDaten.ts`, `shared/__tests__/s3b2795_zustellung_{katalog,struktur}.test.ts`, ergänzt: `s3a2794_speicher_owner_waechter.test.ts` (Owner `versand`/`alarme` in `zustellungSpeicherung.ts`), `i18n/__tests__/{paritaet_de_en,glossar_konformitaet_de_en}.test.ts` (19 Bereiche inkl. `zustellung`). E2E: `frontend/e2e/s3b2795-zustellung-*.spec.ts`, testid-Vertrag im Objekt `ZT` in `s3b2795-zustellung.helpers.ts`.
+
+Festgelegte Schnittstellen stehen in den Dateiköpfen der Tests (`zustellungModell.ts`: `KANAELE`, `kanalStatus`, `standAusTrip`/`standAusPreset`, `zaehler`, `tabellenKopf`, `warnboxen`, `dringlichkeitVon`, `dringlichkeitZelle`, `zeitFehler`, `briefingUnterzeilen`, `laufzeitTrip`, `laufzeitOrte`; `zustellungSpeicherung.ts`: `zustellungNutzlast`, `erstelleZustellungSpeicherung`).
+
+Hinweise für /50-implement:
+- `playwright.2795-s3b1b.staging.config.ts` fehlt noch (Phase-5-Hook blockt); Muster `playwright.2794-s3a3.staging.config.ts`, `testMatch: /s3b2795-zustellung-[a-z-]+\.spec\.ts/`, `workers: 1`.
+- AC-36 zur Laufzeit: `WeatherMetricsTab` im Übergangsblock lädt das Profil in `load()` selbst → Profil von außen hineinreichen (E2E zählt echte Anfragen).
+- `WetterMetrikenVersandPanel` im Übergangsblock: `<section id="versand">` abschaltbar machen; genau ein `id="versand"` an der Briefing-Zeiten-Karte.
+- Pausieren/Aktivieren-Karte des Vergleichs (`hubActivationCard`) hängt heute in dieser Section; Tech-Lead-Festlegung: sie wandert in den Übergangsblock (kein Bedienelement geht verloren, AC-30), bis eine spätere Scheibe ihren Platz regelt.
+- Elementlisten-Zustand „luecken“ zeigt für Telegram nur „gesperrt“; Spec AC-15 verlangt „gesperrt: {Grund}“ → beim Abgleich als Abweichung freigeben.
+- Alt-Tests auf `alarmeBereich`/AlarmeTab im Reiter (z. B. `s3a2794_hub_zustellung_verdrahtung`) in 1b anpassen, soweit sie durch den Neubau rot werden.
+- AC-19/20 (Premium-SMS-Rückadresse) nur in der Kern-Schicht belegt; auf Staging nicht seedbar.

@@ -107,9 +107,10 @@ const MS_SEL: Record<
 			report_config: new Set(['day_window_start_hour', 'day_window_end_hour'])
 		},
 		alarm: (page) =>
-			page.locator('[data-testid="alerts-tab-official-alert-triggers-toggle"] input[type="checkbox"]').first(),
-		alarmWert: (s) => (s.official_warnings as { enabled?: boolean } | undefined)?.enabled,
-		alarmNeu: false,
+			page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-stille-schalter"]').first(),
+		// #2795 S3b 1b: Alarm-Geste im Reiter Zustellung ist der Schalter „Stille Stunden“ (role=switch).
+		alarmWert: (s) => Boolean(s.alert_quiet_from) && Boolean(s.alert_quiet_to),
+		alarmNeu: true,
 		konfliktLaedtNeu: false
 	},
 	vergleich: {
@@ -145,8 +146,9 @@ const MS_SEL: Record<
 		obenEigen: new Set(['display_config', 'updated_at', 'etag']),
 		dcEigen: new Set(['active_metrics', 'ampel']),
 		teilEigen: {},
-		alarm: (page) => page.locator('[data-testid="alarme-radar-toggle"] input[type="checkbox"]').first(),
-		alarmWert: (s) => s.radar_alert_enabled,
+		alarm: (page) => page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-stille-schalter"]').first(),
+		// #2795 S3b 1b: Alarm-Geste im Reiter Zustellung ist der Schalter „Stille Stunden“ (role=switch).
+		alarmWert: (s) => Boolean(s.alert_quiet_from) && Boolean(s.alert_quiet_to),
 		alarmNeu: true,
 		konfliktLaedtNeu: true
 	}
@@ -316,7 +318,7 @@ for (const kind of HUB_KINDS) {
 				// sofort, innerhalb des Entprell-Fensters, den Reiter wechseln
 				// #2794 S3a: die Alarme stehen im Reiter Zustellung.
 				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).click();
-				await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
+				await expect(page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-stille-schalter"]').first()).toBeVisible({ timeout: 10_000 });
 				expect(beantwortet.length, 'die Wetter-Metriken-Änderung war beim Reiterwechsel noch nicht gesendet').toBeGreaterThanOrEqual(1);
 
 				await ms.alarm(page).click();

@@ -16,6 +16,13 @@
 //   AC-5 + inline F001 + vergleich AC-3            → VS-7 (vergleich, strengste Fassung)
 //   versand-tab-vergleich AC-3b                    → VS-8 (vergleich)
 //
+// #2795 S3b Teilschritt 1b (feat_2795_s3b_teil1_zustellung.md): der alte Versand-Abschnitt ist durch
+// den Reiter „Zustellung“ abgelöst (Briefing-Zeiten-Karte mit Anker `#versand`, Laufzeit-Karte,
+// Kanal-Tabelle, Stille Stunden). Dieselben Zusicherungen laufen an den neuen Bedienelementen:
+// Uhrzeitfeld `zustellung-morgen-zeit` (frei eintippbar, AC-4), Abend-Schalter, Laufzeit-Segment
+// der Orte (AC-10), Trip-Laufzeit aus den Etappen (AC-9). Alarm-Auslöser ist für beide kinds der
+// Schalter „Stille Stunden“ (Alarm-Teil des EINEN Speicherers, AC-33).
+//
 // Speicherweg je kind: der Trip schreibt `{report_config: …}` per PUT auf
 // `/api/trips/{id}` (BriefingScheduleTab → baueTripSpeicherung), der Vergleich
 // schreibt die Versandfelder per PUT auf `/api/compare/presets/{id}`
@@ -38,9 +45,10 @@ import {
 	openHub,
 	seedHub,
 	tippeDatum,
-	waehleOption,
+	tippeUhrzeit,
 	type HubKind
 } from './helpers';
+import { angezeigteZeit } from './s3b2795-zustellung.helpers';
 
 type Stand = Record<string, unknown>;
 const rc = (s: Stand) => (s.report_config as Stand | undefined) ?? {};
@@ -74,11 +82,6 @@ const VS_SEL: Record<
 		/** Versandfeld im gespeicherten Stand bzw. im Versand-Rumpf. */
 		morgen: (s: Stand) => unknown;
 		abendAn: (s: Stand) => unknown;
-		/** Alarm-Auslöser im Reiter „Alarme" (Auslöser-Tabelle hub-alarme-speichert-selbst). */
-		alarmSeed: Record<string, unknown>;
-		alarm: (page: Page) => Locator;
-		alarmWert: (s: Stand) => unknown;
-		alarmNeu: boolean;
 		/** Status-Rumpf beim Pausieren (sortierte Schlüssel) und Pausiert-Prüfung. */
 		statusMethode: 'PATCH' | 'PUT';
 		statusSchluessel: string[];
@@ -89,11 +92,6 @@ const VS_SEL: Record<
 	route: {
 		morgen: (s) => rc(s).morning_time,
 		abendAn: (s) => rc(s).evening_enabled,
-		alarmSeed: { official_warnings: { enabled: true } },
-		alarm: (page) =>
-			page.locator('[data-testid="alerts-tab-official-alert-triggers-toggle"] input[type="checkbox"]').first(),
-		alarmWert: (s) => (s.official_warnings as { enabled?: boolean } | undefined)?.enabled,
-		alarmNeu: false,
 		statusMethode: 'PATCH',
 		statusSchluessel: ['paused'],
 		statusPausiert: (r) => r.paused === true,
@@ -102,10 +100,6 @@ const VS_SEL: Record<
 	vergleich: {
 		morgen: (s) => s.morning_time,
 		abendAn: (s) => s.evening_enabled,
-		alarmSeed: { radar_alert_enabled: false },
-		alarm: (page) => page.locator('[data-testid="alarme-radar-toggle"] input[type="checkbox"]').first(),
-		alarmWert: (s) => s.radar_alert_enabled,
-		alarmNeu: true,
 		statusMethode: 'PUT',
 		statusSchluessel: ['previous_schedule', 'schedule'],
 		statusPausiert: (r) => r.schedule === 'manual',
@@ -171,8 +165,17 @@ async function stand(page: Page, kind: HubKind, id: string): Promise<Stand> {
 }
 
 const anzeige = (page: Page) => page.locator('[data-testid="save-indicator"]');
-const abschnitt = (page: Page) => page.locator('[data-testid="versand-abschnitt"]:visible');
-const morgenUhrzeit = (page: Page) => abschnitt(page).locator('[data-testid="report-morning-time"]:visible');
+const abschnitt = (page: Page) => page.locator('[data-testid="zustellung-tab"]:visible');
+const morgenUhrzeit = (page: Page) => abschnitt(page).locator('[data-testid="zustellung-morgen-zeit"]:visible');
+/** Alarm-Auslöser für beide kinds: Schalter „Stille Stunden“ (Seed: aus). */
+const alarm = (page: Page) => abschnitt(page).locator('[data-testid="zustellung-stille-schalter"]');
+const alarmAn = (s: Stand) => Boolean(s.alert_quiet_from) && Boolean(s.alert_quiet_to);
+
+/** Neue Morgen-Uhrzeit eintippen und das Feld verlassen (Übernahme wie im Nutzerfluss). */
+async function setzeMorgen(page: Page, hhmm: string): Promise<void> {
+	await tippeUhrzeit(page, morgenUhrzeit(page), hhmm);
+	await page.keyboard.press('Tab');
+}
 
 async function oeffneVersand(page: Page, kind: HubKind, id: string): Promise<void> {
 	await openHub(page, kind, id, { tab: 'zustellung', hash: 'versand' });
@@ -201,7 +204,7 @@ for (const kind of HUB_KINDS) {
 		test(`VS-1 (${kind}): Uhrzeit ändern, sofort Reiter wechseln, dann Alarm ändern → BEIDE Änderungen gespeichert`, async ({
 			page
 		}) => {
-			const hub = await seedHub(page.request, kind, { extra: vs.alarmSeed });
+			const hub = await seedHub(page.request, kind);
 			try {
 				const { puts, beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
 				// #2347 S3b Adversary F001: Seiten-Uhr steuerbar machen. Läuft die Uhr
@@ -213,7 +216,7 @@ for (const kind of HUB_KINDS) {
 				await oeffneVersand(page, kind, hub.id);
 				await page.clock.pauseAt(Date.now() + 5_000);
 
-				await waehleOption(page, morgenUhrzeit(page), '09:00');
+				await setzeMorgen(page, '09:00');
 				// #2794 S3a: Versand und Alarme teilen den Reiter Zustellung — der Reiterwechsel
 				// (Flush) führt deshalb erst in den Reiter Wetter, danach zurück zu den Alarmen.
 				await page.locator(`[data-testid="${sel.reiter}-wetter"]:visible`).click();
@@ -226,25 +229,23 @@ for (const kind of HUB_KINDS) {
 					.toBeGreaterThanOrEqual(1);
 				expect(puts.length, 'genau EIN Speicher-Aufruf durch den Flush, kein zweiter vom Timer').toBe(1);
 				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).click();
-				await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 10_000 });
+				await expect(alarm(page)).toBeVisible({ timeout: 10_000 });
 				expect(puts.length, 'die Rückkehr in den Reiter Zustellung speichert nichts').toBe(1);
 				await page.clock.resume();
 				expect(String(vs.morgen(beantwortet[0].postDataJSON() as Stand)), 'der erste PUT trägt die Versand-Änderung').toMatch(
 					/^09:00/
 				);
 
-				await expect(vs.alarm(page), 'Vorbedingung: Alarm-Auslöser steht auf dem Gegenwert').toBeChecked({
-					checked: !vs.alarmNeu
-				});
-				await vs.alarm(page).click();
-				await expect(vs.alarm(page)).toBeChecked({ checked: vs.alarmNeu });
+				await expect(alarm(page), 'Vorbedingung: Stille Stunden stehen aus').toHaveAttribute('aria-checked', 'false');
+				await alarm(page).click();
+				await expect(alarm(page)).toHaveAttribute('aria-checked', 'true');
 
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(2);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
 				const s = await stand(page, kind, hub.id);
 				expect(String(vs.morgen(s)), 'die Versand-Änderung ging beim Reiterwechsel verloren').toMatch(/^09:00/);
-				expect(vs.alarmWert(s)).toBe(vs.alarmNeu);
+				expect(alarmAn(s), 'die Alarm-Änderung ist gespeichert').toBe(true);
 			} finally {
 				await hub.aufraeumen();
 			}
@@ -263,7 +264,7 @@ for (const kind of HUB_KINDS) {
 				await oeffneVersand(page, kind, hub.id);
 
 				// GIVEN: eigene erste Änderung gespeichert
-				await waehleOption(page, morgenUhrzeit(page), '08:00');
+				await setzeMorgen(page, '08:00');
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(1);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
@@ -274,13 +275,13 @@ for (const kind of HUB_KINDS) {
 				expect(fremd.status(), 'fremder Schreibvorgang ohne If-Match wird angenommen').toBe(200);
 
 				// WHEN: zweite Versand-Änderung auf dem jetzt veralteten Stand
-				await waehleOption(page, morgenUhrzeit(page), '09:00');
+				await setzeMorgen(page, '09:00');
 
 				// THEN: echter 412 → „Nochmal speichern", keine Rücknahme in der Oberfläche
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'conflict', { timeout: 10_000 });
 				expect(puts.length, 'Vorbedingung: der zweite PUT wurde gesendet').toBe(2);
 				expect((await puts[1].response())?.status(), 'der Server muss den veralteten Stand ablehnen').toBe(412);
-				await expect(morgenUhrzeit(page), 'bei 412 darf die Oberfläche nicht zurückspringen').toHaveText('09:00');
+				expect(await angezeigteZeit(morgenUhrzeit(page)), 'bei 412 darf die Oberfläche nicht zurückspringen').toBe('09:00');
 				const nochmal = anzeige(page).getByRole('button', { name: 'Nochmal speichern' });
 				await expect(nochmal).toBeVisible();
 
@@ -290,7 +291,7 @@ for (const kind of HUB_KINDS) {
 				await expect(anzeige(page)).toContainText('Gespeichert');
 				await expect.poll(() => puts.length, { timeout: 10_000, message: 'der Wiederholungs-PUT wurde gesendet' }).toBe(3);
 				expect((await puts[2].response())?.status(), 'der Wiederholungs-PUT muss durchgehen').toBe(200);
-				await expect(morgenUhrzeit(page)).toHaveText('09:00');
+				expect(await angezeigteZeit(morgenUhrzeit(page))).toBe('09:00');
 
 				const s = await stand(page, kind, hub.id);
 				expect(String(vs.morgen(s)), 'der Wiederholungs-PUT muss die Änderung tragen').toMatch(/^09:00/);
@@ -313,7 +314,7 @@ for (const kind of HUB_KINDS) {
 
 				// Kein Warten zwischen den beiden Aktionen — die Änderung steht noch im
 				// Entprell-Fenster, wenn der Status-Schreibvorgang losgeht.
-				await waehleOption(page, morgenUhrzeit(page), '10:00');
+				await setzeMorgen(page, '10:00');
 				await kebabWaehle(page, 'Pausieren');
 
 				await expect.poll(() => fertig.length, { timeout: 10_000 }).toBe(2);
@@ -354,7 +355,7 @@ for (const kind of HUB_KINDS) {
 					const cta = page.locator('[data-testid="compare-hub-activation-cta"]:visible');
 					await expect(cta).toHaveText('Pausieren');
 
-					await waehleOption(page, morgenUhrzeit(page), '10:00');
+					await setzeMorgen(page, '10:00');
 					await cta.click();
 
 					await expect(cta).toHaveText('Aktivieren', { timeout: 10_000 });
@@ -421,7 +422,7 @@ for (const kind of HUB_KINDS) {
 				const { beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
 				await oeffneVersand(page, kind, hub.id);
 
-				await waehleOption(page, morgenUhrzeit(page), '08:00');
+				await setzeMorgen(page, '08:00');
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
@@ -475,7 +476,7 @@ for (const kind of HUB_KINDS) {
 				}
 
 				await oeffneVersand(page, kind, hub.id);
-				await expect(morgenUhrzeit(page), 'die Uhrzeit überlebt das Neuladen').toHaveText('08:00');
+				expect(await angezeigteZeit(morgenUhrzeit(page)), 'die Uhrzeit überlebt das Neuladen').toBe('08:00');
 			} finally {
 				await hub.aufraeumen();
 			}
@@ -494,15 +495,15 @@ for (const kind of HUB_KINDS) {
 				expect(puts.length, 'Vorbedingung: das Öffnen des Abschnitts speichert nichts').toBe(0);
 
 				// Aktion 1: Morgen-Uhrzeit
-				await waehleOption(page, morgenUhrzeit(page), '05:00');
+				await setzeMorgen(page, '05:00');
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(1);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
 				// Aktion 2: Abend-Slot einschalten (Seed: aus)
-				const abend = abschnitt(page).locator('[data-testid="evening-master-switch"] input[type="checkbox"]');
-				await expect(abend, 'Vorbedingung: Abend-Slot ist aus').not.toBeChecked();
+				const abend = abschnitt(page).locator('[data-testid="zustellung-abend-schalter"]');
+				await expect(abend, 'Vorbedingung: Abend-Slot ist aus').toHaveAttribute('aria-checked', 'false');
 				await abend.click();
-				await expect(abend).toBeChecked();
+				await expect(abend).toHaveAttribute('aria-checked', 'true');
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(2);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
@@ -517,11 +518,11 @@ for (const kind of HUB_KINDS) {
 		});
 
 		// VS-6 — nur route: die Laufzeit des Trips ist schreibgeschützt und ergibt
-		// sich aus den Etappen (VTLaufzeitRoute.svelte); das Datenmodell des
+		// sich aus den Etappen (Laufzeit-Karte des Reiters Zustellung, AC-9); das Datenmodell des
 		// Vergleichs hat stattdessen ein eigenes, editierbares Enddatum (VS-7/VS-8).
 		// Spec „Kind-Kontraste", Zeile Laufzeit / Enddatum.
 		if (kind === 'route') {
-			test(`VS-6 (${kind}): Laufzeit schreibgeschützt „endet <letztes Etappendatum>", „Etappen öffnen →" wechselt in die Etappen, kein PUT`, async ({
+			test(`VS-6 (${kind}): Laufzeit schreibgeschützt aus den Etappendaten, „Etappen öffnen →" wechselt in die Etappen, kein PUT`, async ({
 				page
 			}) => {
 				const hub = await seedHub(page.request, kind);
@@ -530,14 +531,16 @@ for (const kind of HUB_KINDS) {
 					const { puts } = zaehlePuts(page, pfad);
 					await oeffneVersand(page, kind, hub.id);
 
-					const laufzeit = abschnitt(page).locator('[data-testid="briefings-laufzeit"]');
+					const laufzeit = abschnitt(page).locator('[data-testid="zustellung-laufzeit"]');
 					await expect(laufzeit).toBeVisible();
-					// Seed-Etappe `s1` am 2027-08-01 (helpers.seedHub) ⇒ deutsches Datum.
-					await expect(laufzeit).toContainText('Läuft mit der Trip · endet 01.08.2027');
-					await expect(laufzeit.locator('input')).toHaveCount(0);
+					// Seed-Etappe `s1` am 2027-08-01 (helpers.seedHub) ⇒ deutsches Datum (AC-9).
+					await expect(laufzeit.locator('[data-testid="zustellung-laufzeit-satz"]')).toHaveText(
+						'01.08.2027. Die Briefings enden nach der letzten Etappe. Die Daten pflegst du in den Etappen.'
+					);
+					await expect(laufzeit.locator('input, [data-slot="datum-feld-eingabe"]')).toHaveCount(0);
 					await bleibtBei(() => puts.length, 0, 1_500, 'das Öffnen des Versand-Abschnitts speichert nichts');
 
-					await laufzeit.getByRole('button', { name: 'Etappen öffnen →' }).click();
+					await laufzeit.locator('[data-testid="zustellung-etappen-oeffnen"]').click();
 					await expect(page.locator(`[data-testid="${sel.panel}-etappen"]`)).toBeVisible({ timeout: 10_000 });
 					await expect(page).toHaveURL(sel.hubUrl(hub.id));
 					await bleibtBei(() => puts.length, 0, 1_500, '„Etappen öffnen →" darf keinen PUT auslösen');
@@ -547,8 +550,8 @@ for (const kind of HUB_KINDS) {
 			});
 		}
 
-		// VS-7 / VS-8 — nur vergleich: editierbares Enddatum (`VTLaufzeitVergleich`,
-		// Sentinel end_date=""). Der Trip hat kein eigenes Enddatum-Feld (VS-6).
+		// VS-7 / VS-8 — nur vergleich: editierbares Enddatum (Laufzeit-Karte, Segment
+		// „Bis auf Weiteres · Bis Datum“, AC-10; Sentinel end_date=""). Der Trip hat kein eigenes Enddatum-Feld (VS-6).
 		// Spec „Kind-Kontraste", Zeile Laufzeit / Enddatum.
 		if (kind === 'vergleich') {
 			// VS-7 (Alt AC-5 + inline F001 + versand-tab-vergleich AC-3, strengste
@@ -562,11 +565,11 @@ for (const kind of HUB_KINDS) {
 				try {
 					const { puts, beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
 					await oeffneVersand(page, kind, hub.id);
-					const bisDatum = abschnitt(page).locator('[data-testid="compare-versand-enddate-date"]');
-					await expect(bisDatum, 'Vorbedingung: „Bis Datum" ist gewählt').toHaveAttribute('aria-selected', 'true');
-					await expect(feldEingabe(abschnitt(page).locator('[data-testid="compare-versand-enddate-input"]'))).toHaveText(datumAnzeige(enddatum));
+					const bisDatum = abschnitt(page).locator('[data-testid="zustellung-laufzeit-bis-datum"]');
+					await expect(bisDatum, 'Vorbedingung: „Bis Datum" ist gewählt').toHaveAttribute('aria-pressed', 'true');
+					await expect(feldEingabe(abschnitt(page).locator('[data-testid="zustellung-laufzeit-datum"]'))).toHaveText(datumAnzeige(enddatum));
 
-					await abschnitt(page).locator('[data-testid="compare-versand-enddate-open"]').click();
+					await abschnitt(page).locator('[data-testid="zustellung-laufzeit-offen"]').click();
 
 					await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 					await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
@@ -576,12 +579,13 @@ for (const kind of HUB_KINDS) {
 					expect((await stand(page, kind, hub.id)).end_date, 'der reine Klick muss das Enddatum löschen').toBeUndefined();
 
 					await oeffneVersand(page, kind, hub.id);
-					await expect(abschnitt(page).locator('[data-testid="compare-versand-enddate-open"]')).toHaveAttribute(
-						'aria-selected',
+					await expect(abschnitt(page).locator('[data-testid="zustellung-laufzeit-offen"]')).toHaveAttribute(
+						'aria-pressed',
 						'true',
 						{ timeout: 10_000 }
 					);
-					await expect(abschnitt(page).locator('.vt-laufzeit-hint')).toContainText('ohne Enddatum');
+					await expect(abschnitt(page).locator('[data-testid="zustellung-laufzeit-satz"]')).toHaveText('Das Briefing läuft, bis du es pausierst.');
+					await expect(abschnitt(page).locator('[data-testid="zustellung-laufzeit-datum"]')).toHaveCount(0);
 				} finally {
 					await hub.aufraeumen();
 				}
@@ -594,25 +598,26 @@ for (const kind of HUB_KINDS) {
 				try {
 					const { beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
 					await oeffneVersand(page, kind, hub.id);
-					await expect(abschnitt(page).locator('[data-testid="compare-versand-enddate-open"]')).toHaveAttribute(
-						'aria-selected',
+					await expect(abschnitt(page).locator('[data-testid="zustellung-laufzeit-offen"]')).toHaveAttribute(
+						'aria-pressed',
 						'true'
 					);
 
-					await abschnitt(page).locator('[data-testid="compare-versand-enddate-date"]').click();
-					await tippeDatum(page, abschnitt(page).locator('[data-testid="compare-versand-enddate-input"]'), ziel);
+					await abschnitt(page).locator('[data-testid="zustellung-laufzeit-bis-datum"]').click();
+					await tippeDatum(page, abschnitt(page).locator('[data-testid="zustellung-laufzeit-datum"]'), ziel);
+					await page.keyboard.press('Tab');
 
 					await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 					await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 					expect((await stand(page, kind, hub.id)).end_date).toBe(ziel);
 
 					await oeffneVersand(page, kind, hub.id);
-					await expect(abschnitt(page).locator('[data-testid="compare-versand-enddate-date"]')).toHaveAttribute(
-						'aria-selected',
+					await expect(abschnitt(page).locator('[data-testid="zustellung-laufzeit-bis-datum"]')).toHaveAttribute(
+						'aria-pressed',
 						'true',
 						{ timeout: 10_000 }
 					);
-					await expect(feldEingabe(abschnitt(page).locator('[data-testid="compare-versand-enddate-input"]'))).toHaveText(datumAnzeige(ziel));
+					await expect(feldEingabe(abschnitt(page).locator('[data-testid="zustellung-laufzeit-datum"]'))).toHaveText(datumAnzeige(ziel));
 				} finally {
 					await hub.aufraeumen();
 				}

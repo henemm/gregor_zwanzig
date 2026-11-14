@@ -1068,9 +1068,10 @@ test('DS-4 Aktivität Standard (1280 px): „Wandern (Standard)" zurückwählen 
 
 // ─── DS-3 (AC-3) ────────────────────────────────────────────────────────────
 
-/** Zustellung im Hub/Anlegen: Versand-Abschnitt, Mail-Inhalt-Karte, Speicher-Chip. */
+/** Zustellung im Hub/Anlegen: Reiter Zustellung (Hub, #2795 S3b 1b), Versand-Abschnitt (Anlegen),
+ *  Mail-Inhalt-Karte, Speicher-Chip. */
 const ZUSTELLUNG =
-	'[data-testid="versand-abschnitt"], [data-testid="report-mail-content"], [data-testid="save-indicator"]';
+	'[data-testid="zustellung-tab"], [data-testid="versand-abschnitt"], [data-testid="report-mail-content"], [data-testid="save-indicator"]';
 
 /** Native Datums-/Uhrzeit-/Radio-Felder (im DOM), sichtbare native <select>, ✓/⊘ im sichtbaren Text. */
 async function pruefeSeite(page: Page, seite: string, fehler: string[], bereich: string | null = null): Promise<void> {
@@ -1127,9 +1128,9 @@ for (const breite of BREITEN) {
 						await expect(page.getByTestId('save-indicator')).toBeVisible();
 						await pruefeSeite(page, `${kind}-Hub ${tab}`, fehler);
 					}
-					// #2794 S3a: Versand und Mail-Inhalt stehen im Hub-Reiter „Zustellung".
+					// #2794 S3a / #2795 S3b 1b: der neu gebaute Hub-Reiter „Zustellung" (Mail-Inhalt im Übergangsblock).
 					await openHub(page, kind, hubs[kind].id, { tab: 'zustellung' });
-					await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeVisible({ timeout: 15_000 });
+					await expect(page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-kanal-tabelle"]').first()).toBeVisible({ timeout: 15_000 });
 					await pruefeSeite(page, `${kind}-Hub Zustellung`, fehler, ZUSTELLUNG);
 				}
 				for (const kind of HUB_KINDS) {
@@ -1276,7 +1277,7 @@ async function pruefeUeberlauf(page: Page, seite: string, fehler: string[]): Pro
 	if (zuviel > 0) fehler.push(`${seite}: läuft waagerecht ${zuviel} px über`);
 }
 
-test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, Standardwerte, ⓘ, Schnellwahl, Wetter-Knöpfe — kein waagerechtes Überlaufen', async ({
+test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, Standardwerte, ⓘ, Zustellungs-Schalter, Wetter-Knöpfe — kein waagerechtes Überlaufen', async ({
 	page
 }) => {
 	test.setTimeout(120_000);
@@ -1293,18 +1294,27 @@ test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, 
 			await messeTippflaechen(zurueck, `${kind}-Hub Zurück`, 1, fehler);
 			await pruefeUeberlauf(page, `${kind}-Hub Übersicht`, fehler);
 
+			// #2795 S3b 1b: die Schnellwahl-Knöpfe entfallen (V11); gemessen werden die Schalter des neuen
+			// Reiters Zustellung (Morgen, Abend, Kanal-Tabelle, Stille Stunden) und die Dringlichkeits-Knöpfe.
 			await openHub(page, kind, id, { tab: 'zustellung' });
-			const chips = page.locator(
-				'[data-testid^="report-morning-quickpick-"]:visible, [data-testid^="report-evening-quickpick-"]:visible'
+			const zustellung = page.locator('[data-testid="zustellung-tab"]:visible');
+			await expect(zustellung.getByTestId('zustellung-kanal-tabelle')).toBeVisible({ timeout: 15_000 });
+			const schalter = zustellung.locator(
+				'[data-testid="zustellung-morgen-schalter"], [data-testid="zustellung-abend-schalter"], [data-testid="zustellung-stille-schalter"], [data-testid^="zustellung-kanal-"][role="switch"]'
 			);
-			await expect(chips.first()).toBeVisible({ timeout: 15_000 });
-			await messeTippflaechen(chips, `${kind}-Hub Schnellwahl`, 4, fehler);
+			await expect(schalter.first()).toBeVisible({ timeout: 15_000 });
+			await messeTippflaechen(schalter, `${kind}-Hub Zustellungs-Schalter`, 7, fehler);
 			await pruefeUeberlauf(page, `${kind}-Hub Zustellung`, fehler);
 
-			// ⓘ (Begriffserklärung) im Reiter Zustellung.
-			const ii = page.locator('[data-testid^="begriff-erklaerung-"]:visible');
-			await expect(ii.first()).toBeVisible({ timeout: 15_000 });
-			await messeTippflaechen(ii, `${kind}-Hub ⓘ`, 1, fehler);
+			// ⓘ (Begriffserklärung): der neu gebaute Reiter Zustellung (#2795 S3b 1b, Mockup Fassung 3) führt
+			// keine ⓘ mehr — die Erklärung steht als Unterzeile („derselben Metrik“) unter „Anpassen“.
+			// Gemessen werden deshalb die Knöpfe des Reiters: „Anpassen“ und die Laufzeit-Knöpfe.
+			await expect(zustellung.locator('[data-testid^="begriff-erklaerung-"]')).toHaveCount(0);
+			const knoepfe = zustellung.locator(
+				'[data-testid="zustellung-anpassen"] > summary, [data-testid="zustellung-etappen-oeffnen"], [data-testid="zustellung-laufzeit-offen"], [data-testid="zustellung-laufzeit-bis-datum"]'
+			);
+			await expect(knoepfe.first()).toBeVisible({ timeout: 15_000 });
+			await messeTippflaechen(knoepfe, `${kind}-Hub Zustellungs-Knöpfe`, 2, fehler);
 
 			// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4, AC-15): der Reiter Wetter ist der
 			// WetterTab ohne ⓘ-Wertebereiche (CorridorEditor entfällt dort); gemessen werden seine

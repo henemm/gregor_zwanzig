@@ -390,7 +390,11 @@ for (const kind of HUB_KINDS) {
 			await reiter(page, kind, 'zustellung').first().click();
 			const zustellung = page.locator(`[data-testid="${HUB_SEL[kind].panel}-zustellung"]:visible`).first();
 			await expect(zustellung).toBeVisible({ timeout: 10_000 });
-			await expect(zustellung.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 10_000 });
+			// #2795 S3b 1b: der neu gebaute Reiter Zustellung trägt die Alarm-Zustellung (Kanal-Tabelle mit
+			// Alarm-Spalte, Stille Stunden) statt des früheren Alarm-Bausteins.
+			await expect(zustellung.locator('[data-testid="zustellung-tab"]:visible').first()).toBeVisible({ timeout: 10_000 });
+			await expect(zustellung.locator('[data-testid="zustellung-kanal-tabelle"]:visible')).toBeVisible({ timeout: 10_000 });
+			await expect(zustellung.locator('[data-abschnitt="stille-stunden"]:visible')).toBeVisible();
 		} finally {
 			await hub.aufraeumen();
 		}

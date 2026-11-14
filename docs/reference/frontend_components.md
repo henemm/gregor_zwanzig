@@ -672,10 +672,16 @@ einen `POST /api/trips` in den neuen Trip. Gleiches `createMode`-Muster nutzen
 dort bereits `WeatherMetricsTab` und `AlarmeTab` (S1, #2426). Details:
 `docs/specs/modules/fix_2277_s2a_wertebereiche_trip_anlegen.md`.
 
-Reiter „Zustellung" (Teil-PR 2): `shared/zustellung-tab/ZustellungTab.svelte` bindet
-`shared/WetterMetrikenVersandPanel.svelte` (mit `bereich="zustellung"`) und
-`trip-detail/AlarmeScheduleTab.svelte` ein; „Wetter" rendert `WeatherMetricsTab` mit
-`bereich="wetter"`. `bereich` ist nur ein Darstellungsfilter, kein neuer Speicherweg.
+Reiter „Zustellung" (S3b Teilschritt 1b, #2795, 2026-11-13, neu gebaut): `shared/zustellung-tab/ZustellungTab.svelte`
+(ein Code, `context="route"|"vergleich"`) setzt die Organismen in `organisms/zustellung-tab/` zusammen:
+`ZustellungKopf`, `BriefingZeiten` (Viertelstunden-Raster), `LaufzeitKarte`, `KanalTabelle` (E-Mail/Telegram/SMS/Premium-SMS
+mit Briefing-/Alarm-Schalter und Dringlichkeit je Kanal), `KanalStil`, `StilleStunden` (inkl. Mindestabstand) und
+`UebergangBlock` (Altbausteine bis zu den Folge-Teilschritten). Logik: `zustellungModell.ts`, `zustellungSpeicherung.ts`
+(ein Speicherer, Owner `versand`/`alarme`, Profil nur einmal geladen), `kanalStilSpeicherung.ts`. Der Block
+„Kanäle je Wettergröße" entfällt; Texte über den Katalog `zustellung` (de/en). Das frühere Einbinden von
+`WetterMetrikenVersandPanel` (`bereich="zustellung"`) und `AlarmeScheduleTab` ist im Reiter ersetzt. Spec:
+`docs/specs/modules/feat_2795_s3b_teil1_zustellung.md`. „Wetter" rendert `WeatherMetricsTab` mit
+`bereich="wetter"`; `bereich` ist nur ein Darstellungsfilter, kein neuer Speicherweg.
 
 Reiter „Wetter" (Teil-PR 3, #2794, 2026-11-10): `shared/wetter-tab/*` + `WetterTab.svelte`
 (ein Code, `context="route"|"vergleich"`) mit Vorlage-Karte, Ampel-Zeilen je Metrik,
