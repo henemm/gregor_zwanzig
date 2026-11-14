@@ -36,6 +36,7 @@ import {
 	starteAuslieferung,
 	type Auslieferung
 } from './pwaHelpers.ts';
+import { cooldownFeld } from './s3b2795-zustellung.helpers.ts';
 
 test.use({ serviceWorkers: 'allow' });
 
@@ -400,9 +401,13 @@ const TRIP_ALARM_SEED = {
 	alert_cooldown_minutes: Number(START_STUFE)
 };
 
-/** Stufen-Knopf der Boeen-Zeile in der Alarm-Empfindlichkeits-Tabelle. */
-function stufenKnopf(page: Page, _stufe: string) {
-	return page.locator('[data-testid="alert-cooldown-input"]:visible');
+/**
+ * Sperrzeit-Feld (Cooldown-Minuten) im Reiter Zustellung. Seit #2795 S3b 1b liegt es im
+ * Aufklapper „Anpassen“ (standardmaessig zu, auch nach jedem Neuladen) — vor jedem Zugriff
+ * aufklappen.
+ */
+async function stufenKnopf(page: Page, _stufe: string) {
+	return cooldownFeld(page.locator('[data-testid="zustellung-tab"]:visible').first());
 }
 
 /** Server-Stand der Boeen-Stufe (am Browser vorbei, eigene API-Anfrage). */
@@ -446,10 +451,10 @@ test('AC-10: Aenderung auf /trips/[id], sofort „Aktualisieren" → nach dem Ne
 		const alteFassung = await fassungsKennung(page);
 
 		await expect(
-			stufenKnopf(page, START_STUFE),
+			await stufenKnopf(page, START_STUFE),
 			`Vorbedingung: die angelegte Boeen-Stufe ${START_STUFE} ist ausgewaehlt`
 		).toHaveValue(START_STUFE, { timeout: 10_000 });
-		await stufenKnopf(page, ZIEL_STUFE).fill(ZIEL_STUFE);
+		await (await stufenKnopf(page, ZIEL_STUFE)).fill(ZIEL_STUFE);
 		await aktualisieren(page).click();
 
 		await expect.poll(() => fassungsKennung(page).catch(() => alteFassung), { timeout: 30_000 }).not.toBe(
@@ -580,7 +585,7 @@ test('#2317 AC-6: ausstehende Eingabe + „Aktualisieren" → PUT regulaer abges
 		const alteFassung = await fassungsKennung(page);
 
 		await expect(
-			stufenKnopf(page, START_STUFE),
+			await stufenKnopf(page, START_STUFE),
 			`Vorbedingung: die angelegte Boeen-Stufe ${START_STUFE} ist ausgewaehlt`
 		).toHaveValue(START_STUFE, { timeout: 10_000 });
 		// Marke: nur was AB der Eingabe protokolliert wird, zaehlt (ein etwaiges
@@ -588,7 +593,7 @@ test('#2317 AC-6: ausstehende Eingabe + „Aktualisieren" → PUT regulaer abges
 		const marke = (await protokoll()).length;
 
 		// Eingabe liegt im 700-ms-Fenster — und sofort „Aktualisieren".
-		await stufenKnopf(page, ZIEL_STUFE).fill(ZIEL_STUFE);
+		await (await stufenKnopf(page, ZIEL_STUFE)).fill(ZIEL_STUFE);
 		await aktualisieren(page).click();
 
 		await expect.poll(() => fassungsKennung(page).catch(() => alteFassung), { timeout: 30_000 }).not.toBe(
@@ -625,7 +630,7 @@ test('#2317 AC-6: ausstehende Eingabe + „Aktualisieren" → PUT regulaer abges
 		).toBe(false);
 
 		await expect(
-			stufenKnopf(page, ZIEL_STUFE),
+			await stufenKnopf(page, ZIEL_STUFE),
 			`#2317 AC-6: nach dem Fassungswechsel muss die gewaehlte Stufe (${ZIEL_STUFE}) sichtbar sein`
 		).toHaveValue(ZIEL_STUFE, { timeout: 10_000 });
 		expect(await windGustStufe(page, tripId), '#2317 AC-6: Server-Stand').toBe(ZIEL_STUFE);

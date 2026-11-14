@@ -35,6 +35,7 @@ import {
 	storageAndRegistrationCount
 } from './pwaHelpers.ts';
 import { createTestComparePreset, createTestLocation, createTestTrip } from './helpers.ts';
+import { cooldownFeld } from './s3b2795-zustellung.helpers.ts';
 import { wegwerfPasswort } from './stagingZugang.ts';
 
 test.use({ serviceWorkers: 'allow' });
@@ -357,7 +358,10 @@ async function alarmReiterOeffnen(page: Page): Promise<void> {
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible({ timeout: 15_000 });
 	await page.getByTestId('trip-detail-tab-zustellung').first().click();
 	await expect(page.getByTestId('trip-detail-panel-zustellung')).toBeVisible();
-	await expect(page.locator('[data-testid="alert-cooldown-input"]').first()).toBeVisible();
+	// #2795 S3b 1b: das Sperrzeit-Feld liegt im Aufklapper „Anpassen“ (zu nach jedem Laden).
+	// Aufklappen schreibt nichts und bleibt ohne Netz moeglich (<summary> ist keine Schaltflaeche);
+	// erst dann ist das Feld sichtbar und seine Sperre am Element messbar.
+	await cooldownFeld(page.locator('[data-testid="zustellung-tab"]:visible').first());
 }
 
 /**
@@ -370,7 +374,7 @@ const HUB_SCHREIBENDE_KNOEPFE = ['subscription-hub-send', 'subscription-kebab'];
 // #2793 S2b (Spec §6): Empfindlichkeits-Knoepfe und Schnellwahl entfallen (nur
 // lesbar) -- bearbeitbares Alarm-Element ist das Sperrzeit-Feld.
 const SPERR_PROBEN = [
-	'[data-testid="alert-cooldown-input"]',
+	'[data-testid="zustellung-cooldown"]',
 	'[data-testid="subscription-hub-send"]' // Issue #2278: Primaerknopf "Senden" ersetzt test-briefing-menu-toggle
 ];
 
