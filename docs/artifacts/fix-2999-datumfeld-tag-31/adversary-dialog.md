@@ -48,6 +48,16 @@ Mutationen wiederhergestellt: diff gegen Sicherungskopie identisch fuer datumTip
 - F005 strukturell: Browser-Zusicherungen werden in /e2e-verify auf Staging bewiesen (Hard Gate vor Prod-Deploy).
 **Implementierer:** Nachbesserungen wie beschrieben.
 
+Einzelzeilen je geprueftem File (Runde 3):
+Code reference: frontend/src/lib/components/molecules/datumTipp.ts:39
+Code reference: frontend/src/lib/components/molecules/DatumFeld.svelte:119
+Code reference: frontend/src/lib/components/trip-new/TripNewEditor.svelte:700
+Code reference: frontend/src/lib/i18n/messages/de/bausteine.json:114
+Code reference: frontend/src/lib/i18n/messages/en/bausteine.json:114
+Code reference: frontend/e2e/s2999-datumfeld-tag-31.spec.ts:70
+Code reference: frontend/playwright.2999-datumfeld.staging.config.ts:14
+Code reference: frontend/src/lib/components/molecules/__tests__/datum_tipp.test.ts:67
+
 ## Herkunft der Vorbedingungen
 
 kein Sprachprofil konfiguriert (`precondition_origins.default_lang`)
@@ -74,3 +84,26 @@ Unit 49/49 gruen, 16/16 Mutationen an datumTipp.ts gefangen, F001/F002/F003/F004
 - blob:e61c4449ae076e2b7f41e0f683ae4d35eb8d288a  frontend/src/lib/components/molecules/datumTipp.ts
 - blob:e50104be46874d648bb8b244e16baeff8ea7140e  frontend/src/lib/components/trip-new/TripNewEditor.svelte
 - blob:79574aec4a4c9dab3638bcde039cf815ce65d0e7  frontend/src/lib/i18n/messages/de/bausteine.json
+
+## Geprüfte Dateien
+
+- sha256:8287ac7849be2b88a94d9574476c846a8a5edf9af685ca2cccb922b89f1aa4d8  frontend/e2e/s2999-datumfeld-tag-31.spec.ts
+- sha256:2f3abfd281364691f5860b2b12c6628feba324b84ec3ffac0f055ed0bab9b898  frontend/playwright.2999-datumfeld.staging.config.ts
+- sha256:f49dd64e2cb68596f788c295a13b673d4f25ecb3e1b3872f822e036829bd23af  frontend/src/lib/components/molecules/DatumFeld.svelte
+- sha256:76c7b4fe7bb0dd987760c69dcb15b8faa471acba1969049329bce68c32c654c9  frontend/src/lib/components/molecules/__tests__/datum_tipp.test.ts
+- sha256:8e23a68fc95d2fbef2b50532d14e606a5ee54abc4969cee2e9286d8de21b2372  frontend/src/lib/components/molecules/datumTipp.ts
+- sha256:94af5c4b785420ae17441fae0967a9240834081cb2ac88ce3793c1d83fd94837  frontend/src/lib/components/trip-new/TripNewEditor.svelte
+- sha256:6e27519ec3d23cf94cc7393830ed3f4f646457ccbed86719197de0f8d4c76c65  frontend/src/lib/i18n/messages/de/bausteine.json
+- sha256:8e124f1c281eb6e74bc584e6bc86481221afd32c923a64572b110a012b73fec5  frontend/src/lib/i18n/messages/en/bausteine.json
+
+## Prüfbasis
+
+- base: f360ae8b475aeec1c568558f604a6a0558638a45
+- blob:a72aa0bcdbec0af347ea017c69640753eb3b2ad9  frontend/e2e/s2999-datumfeld-tag-31.spec.ts
+- blob:352a7111b7fbcc89849cb7b96d5762f12d20e30b  frontend/playwright.2999-datumfeld.staging.config.ts
+- blob:ef15b56e9bdd1a7cead94be9b5f1d5cc4fe59c90  frontend/src/lib/components/molecules/DatumFeld.svelte
+- blob:995e5922e677f2a6e5791f9caf1084f41c784df1  frontend/src/lib/components/molecules/__tests__/datum_tipp.test.ts
+- blob:e61c4449ae076e2b7f41e0f683ae4d35eb8d288a  frontend/src/lib/components/molecules/datumTipp.ts
+- blob:e50104be46874d648bb8b244e16baeff8ea7140e  frontend/src/lib/components/trip-new/TripNewEditor.svelte
+- blob:79574aec4a4c9dab3638bcde039cf815ce65d0e7  frontend/src/lib/i18n/messages/de/bausteine.json
+- blob:d86111c6e40ae229b6379e4df7ffc9b3ad555052  frontend/src/lib/i18n/messages/en/bausteine.json
