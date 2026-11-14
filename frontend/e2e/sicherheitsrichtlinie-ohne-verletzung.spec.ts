@@ -174,7 +174,11 @@ test.describe('AC-4: keine Verletzung der Richtlinie', () => {
 						id: `${tripId}-s1`,
 						name: 'Etappe 1',
 						date: new Date().toISOString().slice(0, 10),
-						waypoints: [{ id: `${tripId}-wp1`, name: 'Start', lat: 47.27, lon: 11.4, elevation_m: 600 }]
+						// Issue #2069 (AC-8): die Vorschau braucht eine Etappe mit >= 2 Wegpunkten.
+						waypoints: [
+							{ id: `${tripId}-wp1`, name: 'Start', lat: 47.27, lon: 11.4, elevation_m: 600 },
+							{ id: `${tripId}-wp2`, name: 'Ziel', lat: 47.28, lon: 11.42, elevation_m: 900 }
+						]
 					}
 				],
 				display_config: { metrics: [{ metric_id: 'gust', enabled: true }] },

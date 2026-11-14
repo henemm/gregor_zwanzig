@@ -48,7 +48,7 @@ from output.tokens.dto import DailyForecast, HourlyValue, MetricSpec, Normalized
 from output.tokens.render import render_line_with_survivors
 from services.fehler_code import fehler_mit_code  # Issue #2219
 from services.rain_extent import RainZone  # Issue #2051 S2b
-from utils.timezone import local_fmt, tz_for_coords
+from utils.timezone import local_fmt, to_utc, tz_for_coords
 
 
 def _first_trip_coords(trip_obj: Trip) -> "tuple[float, float] | None":
@@ -113,7 +113,7 @@ def _with_payload_times(segment: TripSegment, seg_time: Any) -> TripSegment:
         return segment
     sh, sm = (int(p) for p in seg_time.start.split(":"))
     eh, em = (int(p) for p in seg_time.end.split(":"))
-    start = segment.start_time.astimezone(timezone.utc).replace(hour=sh, minute=sm)
+    start = to_utc(segment.start_time).replace(hour=sh, minute=sm)
     end = start.replace(hour=eh, minute=em)
     if end <= start:
         end += timedelta(days=1)
@@ -158,7 +158,7 @@ def _reference_now(trip_obj: Trip, bezugstag: "date_type | None", now_utc: datet
     local_now = trip_local_now(trip_obj, now_utc)
     if bezugstag is None or bezugstag == local_now.date():
         return now_utc
-    return datetime.combine(bezugstag, local_now.timetz()).astimezone(timezone.utc)
+    return to_utc(datetime.combine(bezugstag, local_now.timetz()))
 
 
 def render_alert_preview(

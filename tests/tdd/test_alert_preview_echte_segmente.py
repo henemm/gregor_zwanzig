@@ -407,8 +407,12 @@ def _trip_obj(etappen: list[tuple[int, int]], *, lat: float = LAT, lon: float = 
                      arrival_override=f"{8 + 2 * k:02d}:00")
             for k in range(anzahl)
         ]
+        # start_time = Ankunft des ersten Wegpunkts: verhaltensneutral (jeder
+        # Wegpunkt traegt arrival_override, der Vorrang hat), macht die
+        # Haertung aber fuer die Wanduhr-Ratsche sichtbar (#1709, AC-2 d).
         stages.append(Stage(id=f"T{i + 1}", name=f"Etappe {i + 1}",
-                            date=heute + timedelta(days=versatz), waypoints=wps))
+                            date=heute + timedelta(days=versatz), waypoints=wps,
+                            start_time=time(8, 0)))
     return Trip(id="trip-fl1", name="FL1-Trip", stages=stages), heute
 
 
