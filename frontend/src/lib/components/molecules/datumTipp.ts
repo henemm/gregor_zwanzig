@@ -44,16 +44,33 @@ export function pruefeTipp(ziffern: string, reihenfolge: Segment[] = STANDARD): 
  * Segmentübergreifender Ziffernstrom je Fokus. Jede Nicht-Ziffer (Rücktaste, Pfeil, Tab,
  * Trennzeichen) setzt ihn zurück, ebenso `zuruecksetzen()` (Fokuswechsel, Klick).
  */
+/**
+ * #2999 F005: Endet ein Strom ungültig, darf kein Zwischenstand dieses Stroms gespeichert bleiben
+ * (AC-5). Ein stimmiger Zwischenstand (z. B. 31.05. nach „31" bei Basis 15.05.) geht nach DS-2
+ * hinaus; weicht der Modellwert jetzt vom Wert zu Strombeginn ab, wird dieser zurückgemeldet.
+ * Rückgabe: der zurückzumeldende Wert oder null (nichts ging hinaus, Strombeginn unbekannt).
+ */
+export function ruecknahmeNachUngueltig(wertVorStrom: string | null, aktuellerWert: string): string | null {
+	if (wertVorStrom === null || wertVorStrom === aktuellerWert) return null;
+	return wertVorStrom;
+}
+
 export class DatumTipp {
 	#ziffern = '';
 	#reihenfolge: Segment[] = STANDARD;
+	#wertVorStrom: string | null = null;
 
-	/** null solange unvollständig; mit der 8. Ziffer das Ergebnis (danach beginnt der Strom neu). */
-	taste(key: string, reihenfolge: Segment[] = STANDARD): TippErgebnis | null {
+	/**
+	 * null solange unvollständig; mit der 8. Ziffer das Ergebnis (danach beginnt der Strom neu).
+	 * `modellwert`: der Wert des Felds (`YYYY-MM-DD` oder ''); die Ziffer, die einen Strom beginnt,
+	 * merkt ihn als `wertVorStrom` (#2999 F005).
+	 */
+	taste(key: string, reihenfolge: Segment[] = STANDARD, modellwert?: string): TippErgebnis | null {
 		if (!/^\d$/.test(key)) {
 			this.#ziffern = '';
 			return null;
 		}
+		if (this.#ziffern === '') this.#wertVorStrom = modellwert ?? null;
 		this.#reihenfolge = reihenfolge;
 		this.#ziffern += key;
 		if (this.#ziffern.length < ZIFFERN) return null;
@@ -64,6 +81,11 @@ export class DatumTipp {
 
 	get laeuft(): boolean {
 		return this.#ziffern.length > 0;
+	}
+
+	/** Modellwert zu Beginn des laufenden bzw. zuletzt beendeten Stroms (null: nicht übergeben). */
+	get wertVorStrom(): string | null {
+		return this.#wertVorStrom;
 	}
 
 	/**

@@ -13,7 +13,7 @@
 	import { tick, untrack } from 'svelte';
 	import { DatePicker } from 'bits-ui';
 	import { SegmentFeldMeldung, TippZaehler } from './segmentFeldMeldung.ts';
-	import { DatumTipp, type Segment } from './datumTipp.ts';
+	import { DatumTipp, ruecknahmeNachUngueltig, type Segment } from './datumTipp.ts';
 	import { parseDate, type DateValue } from '@internationalized/date';
 	import { t, locale } from '$lib/i18n';
 
@@ -140,7 +140,8 @@
 		}
 		if (!tipp.laeuft && /^\d$/.test(e.key) && (ziel !== segmente[0] || (angefangen && !ziel.hasAttribute('data-placeholder')))) return;
 		const reihenfolge = segmente.map((el) => el.getAttribute('data-segment') as Segment);
-		const ergebnis = tipp.taste(e.key, reihenfolge);
+		// Die Strom-beginnende Ziffer merkt sich den Modellwert (Rücknahme bei ungültigem Ende, F005).
+		const ergebnis = tipp.taste(e.key, reihenfolge, value);
 		if (!ergebnis) return;
 		// Die 8. Ziffer legt die Absicht fest: bits-ui bekommt sie nicht mehr, Zurückgehaltenes verfällt.
 		e.preventDefault();
@@ -152,6 +153,9 @@
 			if (ergebnis.iso !== value) onchange?.(ergebnis.iso);
 		} else {
 			ungueltig = true;
+			// AC-5: ein stimmiger Zwischenstand dieses Stroms (DS-2) ging schon hinaus — zurücknehmen.
+			const ruecknahme = ruecknahmeNachUngueltig(tipp.wertVorStrom, value);
+			if (ruecknahme !== null) onchange?.(ruecknahme);
 		}
 		void neuAufbauen(ergebnis.ok ? 'letztes' : 'erstes');
 	}

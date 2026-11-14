@@ -230,6 +230,37 @@ for (const basis of ['2027-04-15', '2027-02-15'] as const) {
 	});
 }
 
+// F005 (AC-5): Basis mit 31-Tage-Monat — nach „31" geht der stimmige Zwischenstand 31.05.2027
+// hinaus (DS-2). Endet der Strom ungültig (31.06.), muss am Ende wieder 15.05.2027 gespeichert sein.
+test('AC-5 langsam: Etappe 15.05.2027, 31062027 Ziffer für Ziffer → Meldung, gespeichert bleibt 15.05.2027', async ({ page }) => {
+	test.setTimeout(60_000);
+	await page.setViewportSize(DESKTOP);
+	await page.clock.setFixedTime(new Date(UHREN[0].zeit));
+	const hub = await seedHub(page.request, 'route', {
+		extra: {
+			stages: [{ id: 's1', name: 'Tag 1', date: '2027-05-15', waypoints: [{ id: 'a', name: 'a', lat: 42.0, lon: 9.0, elevation_m: 800 }, { id: 'b', name: 'b', lat: 42.04, lon: 9.0, elevation_m: 1200 }] }]
+		}
+	});
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		const feld = page.locator('[data-testid="stage-date-field"]:visible').first();
+		await expect(feldEingabe(feld)).toHaveText('15.05.2027', { timeout: 15_000 });
+		await feld.locator('[data-segment="day"]').click();
+		await page.keyboard.type('31062027', { delay: 1_000 });
+		await expect(datumMeldung(page), `Meldung „${MELDUNG_DE}"`).toBeVisible();
+		await expect(feldEingabe(feld), 'Feld zeigt wieder den gespeicherten Wert').toHaveText('15.05.2027');
+		await verlasseFeld(page);
+		// Stabilitätsfenster: nach der Entprellung steht der Ausgangswert gespeichert, nicht 31.05.
+		const ende = Date.now() + 2_000;
+		await expect
+			.poll(async () => (Date.now() < ende ? 'warte' : ((await stand(page.request, 'route', hub.id)).stages as { date: string }[])[0]?.date), { message: 'gespeichertes Etappen-Datum', timeout: 15_000, intervals: [300] })
+			.toBe('2027-05-15');
+		await expect(feldEingabe(feld)).toHaveText('15.05.2027');
+	} finally {
+		await hub.aufraeumen();
+	}
+});
+
 // ─── AC-9: Englisch — Meldung aus dem Katalog, Screenreader-Verknüpfung ─────────────────
 
 test('AC-9: Sprache EN, 31042027 → „This date does not exist.", role=alert, per aria-describedby am Feld', async ({ page }) => {

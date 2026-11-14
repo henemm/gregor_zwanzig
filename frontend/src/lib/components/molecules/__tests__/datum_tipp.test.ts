@@ -19,7 +19,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { DatumTipp, pruefeTipp, type Segment } from '../datumTipp.ts';
+import { DatumTipp, pruefeTipp, ruecknahmeNachUngueltig, type Segment } from '../datumTipp.ts';
 
 const TMJ: Segment[] = ['day', 'month', 'year'];
 const MTJ: Segment[] = ['month', 'day', 'year'];
@@ -171,5 +171,68 @@ describe('DatumTipp.widerspricht — geklemmter Zwischenstand vs. stimmiges fert
 		tippe(tipp, '0431', MTJ);
 		assert.equal(tipp.widerspricht('2027-04-30'), true);
 		assert.equal(tipp.widerspricht('2027-04-31'), false);
+	});
+});
+
+// F005 (AC-5): ein stimmiger Zwischenstand geht nach DS-2 hinaus (z. B. 31.05.2027 nach „31" bei
+// Basis 15.05.2027). Endet der Strom ungültig, wird der Wert zu Strombeginn zurückgemeldet.
+describe('Rücknahme nach ungültigem Strom-Ende (F005, AC-5)', () => {
+	/**
+	 * Spielt den Baustein nach: jede Taste bekommt den aktuellen Modellwert; nach Ziffer
+	 * `zwischenNach` übernimmt das Modell `zwischenstand` (der Zwischenstand ging hinaus).
+	 * Liefert Ergebnis der 8. Ziffer und die Rücknahme-Entscheidung wie in DatumFeld.svelte.
+	 */
+	function spiele(start: string, ziffern: string, zwischenstand?: string, zwischenNach = 2) {
+		const tipp = new DatumTipp();
+		let modell = start;
+		let ergebnis: ReturnType<DatumTipp['taste']> = null;
+		for (const [i, z] of [...ziffern].entries()) {
+			ergebnis = tipp.taste(z, TMJ, modell);
+			if (zwischenstand !== undefined && i + 1 === zwischenNach) modell = zwischenstand;
+		}
+		return { ergebnis, wertVorStrom: tipp.wertVorStrom, ruecknahme: ruecknahmeNachUngueltig(tipp.wertVorStrom, modell) };
+	}
+
+	test('Zwischenstand gesendet, 31062027 ungültig → Rücknahme auf 15.05.2027', () => {
+		const r = spiele('2027-05-15', '31062027', '2027-05-31');
+		assert.deepEqual(r.ergebnis, { ok: false });
+		assert.equal(r.wertVorStrom, '2027-05-15', 'erste Ziffer merkt den Modellwert, nicht den Zwischenstand');
+		assert.equal(r.ruecknahme, '2027-05-15');
+	});
+
+	test('Anlegen: leeres Feld, Zwischenstand gesendet → Rücknahme auf leer', () => {
+		const r = spiele('', '31062027', '2027-05-31');
+		assert.deepEqual(r.ergebnis, { ok: false });
+		assert.equal(r.ruecknahme, '');
+	});
+
+	test('kein Zwischenstand gesendet → keine Rücknahme', () => {
+		const r = spiele('2027-04-15', '31042027');
+		assert.deepEqual(r.ergebnis, { ok: false });
+		assert.equal(r.ruecknahme, null);
+	});
+
+	test('gültiges Ende → Wert zu Strombeginn bleibt gemerkt, der Baustein meldet das Ergebnis selbst', () => {
+		const r = spiele('2027-05-15', '31072027', '2027-05-31');
+		assert.deepEqual(r.ergebnis, { ok: true, iso: '2027-07-31' });
+		// DatumFeld ruft ruecknahmeNachUngueltig nur im ungültigen Zweig.
+		assert.equal(r.wertVorStrom, '2027-05-15');
+	});
+
+	test('neuer Strom nach Rücksetzen merkt den dann aktuellen Modellwert', () => {
+		const tipp = new DatumTipp();
+		tipp.taste('3', TMJ, '2027-05-15');
+		tipp.zuruecksetzen();
+		tipp.taste('0', TMJ, '2027-06-01');
+		assert.equal(tipp.wertVorStrom, '2027-06-01');
+		tipp.taste('1', TMJ, '2027-09-09');
+		assert.equal(tipp.wertVorStrom, '2027-06-01', 'Folgeziffern überschreiben den Startwert nicht');
+	});
+
+	test('ruecknahmeNachUngueltig: gleicher Wert oder unbekannter Start → null', () => {
+		assert.equal(ruecknahmeNachUngueltig('2027-05-15', '2027-05-15'), null);
+		assert.equal(ruecknahmeNachUngueltig(null, '2027-05-31'), null);
+		assert.equal(ruecknahmeNachUngueltig('', ''), null);
+		assert.equal(ruecknahmeNachUngueltig('2027-05-15', '2027-05-31'), '2027-05-15');
 	});
 });
