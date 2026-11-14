@@ -4561,7 +4561,8 @@ Körper unverändert durch, Zeitlimit 30 s (`forwardPreview`). Proxy-Ziel: Pytho
   Versand (`to_multi_point_alert_message`, `to_multi_location_onset_alert_message`,
   Bausteine von `send_multi_location_official_alert`, ADR-0011). Keine Seiteneffekte
   (kein SMS-Kontingent, kein Versand). Ort nicht im Vergleich/Body ungültig → 422,
-  fremder Vergleich → 404.
+  fremder Vergleich → 404. Ungültige `severity` → 422 `schwere_unbekannt` (Issue #2219, gleiche
+  Prüfung wie im Trip-Zweig; erlaubt `minor`, `moderate`, `major`).
 
 ### GET /api/preview/{trip_id}/sms
 
@@ -4862,6 +4863,19 @@ Leerbefund statt Exception/HTTP 500.
 - `404` — Trip nicht gefunden für `user_id`
 - `422` — Body enthält nicht genau einen der vier Payload-Typen, oder eine `segment_id` in
   `changes` existiert nicht im Trip
+- `422` Eingangsprüfung (Issue #2219), Antwort `{"detail": "<Text in Kontosprache>", "code": …}`
+  wie `metrik_unbekannt`:
+  - `schwere_unbekannt` — `changes[].severity` ist keiner der Werte von `ChangeSeverity`
+    (`minor`, `moderate`, `major`; der Text nennt sie). Gilt ebenso für
+    `POST /api/briefings/{id}/alert-preview?kind=vergleich` (dort Text mit Rahmen
+    „Ungültiger Alarm-Körper: …", `code` = `schwere_unbekannt`).
+  - `zeitstempel_ohne_zone` — ein `nowcast_frames.frames[].timestamp` ist kein ISO-Zeitpunkt
+    oder trägt keine Zeitzone (`Z` und `+00:00` sind gültig).
+  - `onset_tagesbezug_unvollstaendig` — `onset.onset_day_offset` bzw.
+    `onset.event_end_day_offset` ≠ 0 ohne `onset_weekday` bzw. `event_end_weekday`.
+  - `onset_shift_null` — eine Beginn-Verschiebung (`thunder_onset_utc`,
+    `precip_heavy_onset_utc`) ist 0 oder kleiner als die kleinste Schwelle ihrer Richtung aus
+    `alert_preset.ONSET_SHIFT_BOUNDS` (früher/später, über alle Stufen).
 
 **Notes:**
 - Zustandslos wie `compare-email-preview`/`sms-fidelity-preview` — kein Versand, keine
@@ -5196,6 +5210,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 
 ## Changelog
 
+- 2026-11-13: Issue #2219 — Alarm-Vorschau (`POST /api/trips/{id}/alert-preview`, `POST /api/briefings/{id}/alert-preview`, beide Zweige) prüft Eingaben vor dem Rendern und antwortet mit lokalisiertem `422` statt `500`: `schwere_unbekannt`, `zeitstempel_ohne_zone`, `onset_tagesbezug_unvollstaendig`, `onset_shift_null` (Section 22.5). Der Replay-Zweig zeigt den Beginn mit Tagesbezug (z. B. `R0.8@Sa0:23 >@Sa0:38`). Stub-Segmente nutzen die Koordinaten des ersten Trip-Orts (Ortszeit statt UTC). Versandpfad unverändert; keine Response-Felder neu. Spec: `docs/specs/modules/fix_2219_alarm_vorschau_haerten.md`.
 - 2026-11-09: Issue #2794 S3a Teil-PR 1 (Backend) — `MetricPreset.kind` (`route`|`vergleich`, Default `route`), `is_default` exklusiv je Art, Name eindeutig je Art und Systemvorlagen-Namen gesperrt (409 `name_exists`, auch PATCH), `horizons` entfällt (Migration `scripts/migrate_2794_preset_horizons.py`); `POST /api/trips` / `POST /api/compare/presets` ohne `display_config` übernehmen die Standardvorlage der Art (§15.5); `GET /api/metrics` mit `group`, `alertable`, `is_precursor`, `allowed_sides`, `display_only` (§15); Python `app.ampel.deviation_count` (Abweichungszähler, Fixtures `tests/fixtures/ampel_deviation_cases.json`).
 - 2026-11-10: Issue #2794 Teil 3 — Alarmquelle Profil-Ampel (`ampel_alarmquelle_aktiv`, `alarmfaehige_felder()`): Alarm auch ohne Empfindlichkeitsstufen, wenn eine aktive Metrik `alarm_ab` ≠ `never` hat; keine DTO-Änderung.
 - 2026-11-06: Issue #2792 S1c-4b — Ampel als einzige Bewertung (ADR-0106): `sms_threshold` und `corridors[].mark` ohne Wirkung (Werte bleiben gespeichert); §11 „Profil-Ampel“ beschreibt die Umschaltung; SMS/Premium-SMS/Telegram-Hervorhebung nach Ampel (s. `sms_format.md` v2.38).
