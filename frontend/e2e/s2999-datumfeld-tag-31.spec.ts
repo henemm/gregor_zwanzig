@@ -194,6 +194,42 @@ test('AC-7: Etappe 15.04.2027, 31052027 darübergetippt → genau ein Speichervo
 	}
 });
 
+// AC-7 langsam: Ziffer für Ziffer mit Pause länger als die Speicher-Entprellung (700 ms). Schnell
+// getippt verwirft die 8. Ziffer jeden zurückgehaltenen Stand, langsam zeigt sich, ob ein von
+// bits-ui geklemmter/verrutschter Zwischenstand (01.04., 03.02., 03.10. …) hinausgeht.
+for (const basis of ['2027-04-15', '2027-02-15'] as const) {
+	test(`AC-7 langsam: Etappe ${anzeige(basis)}, 31052027 Ziffer für Ziffer → genau ein Speichervorgang mit 31.05.2027`, async ({ page }) => {
+		test.setTimeout(60_000);
+		await page.setViewportSize(DESKTOP);
+		await page.clock.setFixedTime(new Date(UHREN[0].zeit));
+		const hub = await seedHub(page.request, 'route', {
+			extra: {
+				stages: [{ id: 's1', name: 'Tag 1', date: basis, waypoints: [{ id: 'a', name: 'a', lat: 42.0, lon: 9.0, elevation_m: 800 }, { id: 'b', name: 'b', lat: 42.04, lon: 9.0, elevation_m: 1200 }] }]
+			}
+		});
+		try {
+			await openHub(page, 'route', hub.id, { tab: 'etappen' });
+			const feld = page.locator('[data-testid="stage-date-field"]:visible').first();
+			await expect(feldEingabe(feld)).toHaveText(anzeige(basis), { timeout: 15_000 });
+			const puts = sammlePuts(page, hubApiPath('route', hub.id));
+			await feld.locator('[data-segment="day"]').click();
+			await page.keyboard.type('31052027', { delay: 1_000 });
+			await expect(feldEingabe(feld), 'Anzeige nach dem Tippen').toHaveText('31.05.2027');
+			await expect
+				.poll(async () => ((await stand(page.request, 'route', hub.id)).stages as { date: string }[])[0]?.date, { message: 'gespeichertes Etappen-Datum', timeout: 15_000 })
+				.toBe('2027-05-31');
+			await verlasseFeld(page);
+			// Stabilitätsfenster nach dem Verlassen: kein nachgeschobener Zwischenstand.
+			const ende = Date.now() + 2_000;
+			await expect.poll(() => (Date.now() < ende ? 'warte' : puts.length), { timeout: 5_000, intervals: [200] }).toBe(1);
+			const daten = puts.map((r) => ((r.postDataJSON() ?? {}).stages as { date?: string }[] | undefined)?.[0]?.date ?? null);
+			expect(daten, 'kein Zwischenstand gespeichert, genau ein PUT mit 31.05.2027').toEqual(['2027-05-31']);
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
+}
+
 // ─── AC-9: Englisch — Meldung aus dem Katalog, Screenreader-Verknüpfung ─────────────────
 
 test('AC-9: Sprache EN, 31042027 → „This date does not exist.", role=alert, per aria-describedby am Feld', async ({ page }) => {

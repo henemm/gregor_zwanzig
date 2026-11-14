@@ -114,29 +114,107 @@ Finding:
   Conflict: Moegliche Doppelmeldung im mobilen Anlegen.
   Remediation: `bind:ungueltig` auch am mobilen Feld und dessen Ausblendzweig, oder Staging-Spec mit Mobile-Viewport.
 
+### Runde 3
+**Implementierer:** Fix-Loop nach CI-Rot (3 DS-2-Tests in `design-system-trip-vergleich.spec.ts`): `DatumTipp.widerspricht`, `geaendert()` nutzt `tipp.widerspricht(iso) || zaehler.unfertig(feld)`, `taste()` startet bei angefangenem Tag-Segment keinen neuen Strom, +6 Unit-Tests, +2 Playwright-Tests „AC-7 langsam".
+**Adversary:** Tests (benannte Dateien, Ausgabe `docs/artifacts/fix-2999-datumfeld-tag-31/adversary-test-output.txt`): 712 pass, 0 fail (datum_tipp, segment_feld_meldung, uhrzeit_feld_leeren, bausteine_waechter, bausteine_waechter_wirkort, deutsch_unveraendert, reaktivitaet_waechter, keine_hartkodierten_nutzertexte, trip_hub_sprache, versand_tab_sprache). Kein lokaler E2E-Stack (Ports 8197/8107 nicht belegt): Playwright-Spec und DS-2 sind **in CI/Staging zu belegen**, nicht von mir ausgefuehrt. `s2999-datumfeld-tag-31.spec.ts` laeuft nur ueber `playwright.2999-datumfeld.staging.config.ts` (nicht im CI-e2e); DS-2 laeuft im CI-e2e.
+
+Analyse (Code gelesen, nicht im Browser reproduziert):
+- (a) AC-7 (Etappe 15.04., 31052027, Verzoegerung 1 s): Ziffer „3" -> bits-ui meldet 03.04., `widerspricht` wahr (Tag „03" beginnt nicht mit „3"), zurueckgehalten; „31" -> geklemmt 30.04., Widerspruch; Monat „05" -> Tag 30 widerspricht noch immer; 8. Ziffer wird vor bits-ui abgefangen, `folge` verwirft den Rest, ein `onchange(2027-05-31)`. Februar-Basis: „3" schliesst bei bits-ui den Tag als 03 ab (Fokus springt zum Monat), Widerspruch greift ueber Position in der Ziffernfolge. OK.
+- (b) DS-2: Tag „15" bei Basis 08.: gemeldet 15.08. widerspricht nicht, `unfertig` falsch (Segment voll) -> geht ohne Verlassen hinaus. Wiederhergestellt (Unit-Test `kein Widerspruch (DS-2 Rueckkehr)`; E2E nur CI).
+- (c) Edge Cases: MTJ (`#reihenfolge` je Taste gemerkt, Test + Mutation T5/T6 rot); angefangenes Segment (`startsWith`, T3 rot); Rücktaste: Nicht-Ziffer setzt Strom zurueck, naechste Ziffer startet ihn nur bei `data-placeholder` oder fertigem Segment nicht (siehe Mutation S4/S5); Strg+V/Pfeile/Tab setzen Strom zurueck (DatumFeld.svelte:131-135, datumTipp.ts:53); Jahr-Segment: `widerspricht` vergleicht auch Jahrziffern, nur erreichbar nach 4 Ziffern Tag/Monat, daher folgenlos; Februar/Schaltjahr: ueber `pruefeTipp` unveraendert.
+- (d) Luecke: Hat die Basis einen 31-Tage-Monat (z. B. 15.05.2027) und wird 31.07. langsam getippt, meldet bits-ui nach „31" 31.05.2027; `widerspricht` ist wahr nur bei getippten, abweichenden Segmenten, der noch nicht getippte Monat zaehlt als vereinbar, `unfertig` ist falsch -> **PUT 31.05.2027 als Zwischenstand**, danach PUT 31.07.2027. Ebenso 20.xx bei jeder Basis. Bei ungueltigem Ziel (31062027 auf Basis 15.05.) bleibt 31.05.2027 gespeichert, obwohl die Meldung „Dieses Datum gibt es nicht." erscheint. Das ist der Kompromiss DS-2 (stimmige Tagesaenderung speichert sofort) gegen AC-7 (kein Zwischenstand); die AC-7-Spec (Basis 15.04./15.02.) deckt nur Monate mit weniger als 31 Tagen ab.
+
+Mutations-Gegenprobe (String-Ersetzung, Sicherung im Scratchpad, danach `cmp` je Datei identisch zur Sicherung und `git diff` der Quelldateien identisch zum Ausgangsstand; Zielsuite 10 Dateien, 712 Tests):
+- datumTipp.ts: T1 `startsWith`-Treffer -> return false: 4 rot. T2 `getippt` -> immer true: 4 rot. T3 `startsWith` -> `===`: 2 rot. T5 Reihenfolge nicht gemerkt: 2 rot. T6 immer Standardreihenfolge: 2 rot. T7 `pos` nicht erhoeht: 4 rot. T8 Tag/Jahr vertauscht: 4 rot. **T4 UEBERLEBT** (`if (!getippt) return false` -> `continue`, 0 rot): aequivalent solange der Strom lueckenlos ist, kein Nutzer erreicht den Unterschied.
+- DatumFeld.svelte (Verdrahtung, die die CI-Roete behebt): **alle UEBERLEBEN, 0 rot**: S1 `tipp.laeuft` statt `widerspricht` (die alte, kaputte Regel); S2 `widerspricht` entfernt; S3 `unfertig` entfernt; S4 `angefangen`-Bedingung in `taste()` entfernt; S5 Ausnahme `data-placeholder` entfernt; S6 `angefangen` nach `zaehler.taste` berechnet; S7 `folge`-Pruefung im `tick` entfernt. Diese Zusicherungen werden ausschliesslich von Playwright bewacht: S1 von den DS-2-Tests (CI-e2e); S2, S4-S7 und der Rest von AC-7/AC-10 nur durch die Staging-Spec (`/e2e-verify`), nicht durch die CI.
+
+Confirmation:
+  AC: AC-7
+  Code reference: frontend/src/lib/components/molecules/datumTipp.ts:69
+  Evidence: `widerspricht` haelt jeden Wert zurueck, der den fertig getippten Segmenten widerspricht; Unit-Tests belegen 30.04./03.01./30.05. (Mutationen T1-T3, T7, T8 rot). Gesamtverhalten im Browser nicht von mir ausgefuehrt.
+  Status: CONFIRMED (Logik), E2E ausstehend
+
+Confirmation:
+  AC: AC-1 / AC-2 / AC-3 / AC-4 / AC-5 / AC-6 / AC-8 / AC-9 / AC-10 / AC-11 / AC-12
+  Code reference: frontend/src/lib/components/molecules/DatumFeld.svelte:126
+  Evidence: Strom, 8.-Ziffer-Abfangen, Meldung und Folgenummer unveraendert gegenueber Runde 2; `taste()` aendert nur die Strombeginn-Bedingung (:141), `geaendert()` nur die Zurueckhalte-Regel (:104). Node-Suite 712 gruen; Browserbeleg ausstehend.
+  Status: CONFIRMED
+
+Confirmation:
+  AC: Testdateien (geaenderte Dateien)
+  Code reference: frontend/src/lib/components/molecules/__tests__/datum_tipp.test.ts:133
+  Evidence: 6 neue Tests pruefen Widerspruch, Nicht-Widerspruch, leeren Strom, angefangenes Segment und MTJ; die Mutationen T1-T3, T5-T8 werden gefangen.
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-7 langsam (E2E)
+  Code reference: frontend/e2e/s2999-datumfeld-tag-31.spec.ts:197
+  Evidence: Ziffer-fuer-Ziffer-Test mit 1 s Pause und Stabilitaetsfenster, zwei Basen (04., 02.); belegt nur Monate mit weniger als 31 Tagen. Nicht ausgefuehrt.
+  Status: CONFIRMED (Lesart), Ausfuehrung ausstehend
+
+Confirmation:
+  AC: AC-11 (Staging-Lauf)
+  Code reference: frontend/playwright.2999-datumfeld.staging.config.ts:19
+  Evidence: Config unveraendert, testMatch auf die 2999-Spec.
+  Status: CONFIRMED
+
+Finding:
+  ID: F005
+  Severity: MEDIUM
+  Category: spec_violation
+  Code reference: frontend/src/lib/components/molecules/DatumFeld.svelte:104
+  Description: `zurueck = tipp.widerspricht(iso) || zaehler.unfertig(feld)` haelt nur Werte zurueck, die einem getippten Segment widersprechen. Basis mit 31-Tage-Monat (15.05.2027), Ziel 31.07.2027 oder 31.06.2027, langsam getippt: nach „31" meldet bits-ui 31.05.2027, der noch nicht getippte Monat gilt als vereinbar, der Wert geht hinaus (PUT 31.05.2027).
+  Spec requirement: AC-7 — kein Zwischenstand gespeichert, genau ein Speichervorgang; AC-5 — bei ungueltigem Datum nichts gespeichert
+  Conflict: Zwei Speichervorgaenge (31.05. dann 31.07.) bzw. bei ungueltigem Ziel bleibt 31.05.2027 gespeichert, obwohl „Dieses Datum gibt es nicht." erscheint. Nach der Spec-Formulierung (Basis 15.04.) nicht verletzt; DS-2 verlangt dieses Hinausgehen. Im Browser nicht reproduziert.
+  Remediation: Entscheidung dokumentieren (DS-2 hat Vorrang) oder Zusatz-AC/E2E-Basis 15.05. (31-Tage-Monat) aufnehmen; alternativ nur zuruckhalten, solange ein Segment des Stroms noch aussteht und der Wert aus einem Strom ab erstem Segment stammt (widerspricht DS-2).
+
+Finding:
+  ID: F006
+  Severity: MEDIUM
+  Category: anti_pattern
+  Code reference: frontend/src/lib/components/molecules/DatumFeld.svelte:141
+  Description: Die gesamte neue Verdrahtung (`widerspricht` im Melde-Weg, `angefangen`-Bedingung) hat keinen Node-Test: 7 von 7 Mutationen an DatumFeld.svelte ueberleben die Kernsuite. Die AC-7-langsam-Tests laufen nur in der Staging-Config, nicht im CI-e2e; im CI haengt der Schutz allein an den DS-2-Tests.
+  Spec requirement: AC-7 / AC-10 — Zusicherung muss dort geprueft sein, wo sie wirkt
+  Conflict: Ein Rueckfall auf die alte Regel (S1) faellt zwar in CI-DS-2 auf, die Entfernung von `widerspricht` (S2) oder der `angefangen`-Bedingung (S4-S6) nur im `/e2e-verify` gegen Staging.
+  Remediation: `/e2e-verify` gegen Staging als Pflicht vor Prod; optional die AC-7-langsam-Spec in die CI-Auswahl aufnehmen oder die Entscheidungsfunktion aus `geaendert()` in eine reine Funktion in datumTipp.ts ziehen und per Node testen.
+
+Finding:
+  ID: F007
+  Severity: LOW
+  Category: edge_case
+  Code reference: frontend/src/lib/components/molecules/datumTipp.ts:80
+  Description: `if (!getippt) return false;` -> `continue` ueberlebt (0 rot); aequivalent bei lueckenlosem Strom.
+  Spec requirement: AC-7
+  Conflict: Keine Nutzerwirkung.
+  Remediation: Keine.
+
 ## Herkunft der Vorbedingungen
 
 kein Sprachprofil konfiguriert (`precondition_origins.default_lang`)
 
-Vorbedingungen (Systemuhr Nov./Feb., Sprache en/de, leeres bzw. gefuelltes Feld) stammen aus der Spec und der Staging-Spec (`page.clock.setFixedTime`, Profil-PUT); nichts davon lief lokal.
+Vorbedingungen (Systemuhr, Sprache, Basisdatum der Etappe) stammen aus der Spec und der Staging-Spec; nichts davon lief lokal, E2E in CI/Staging zu belegen.
 
 ## Verdict
 
-VERDICT: VERIFIED
+VERDICT: AMBIGUOUS
 
-Begruendung: Alle 12 ACs sind durch Code (datumTipp.ts:27-41, DatumFeld.svelte:121-152 und :256) und die Spec-Pruefungen nachvollziehbar belegt; 595 Node-Tests gruen, die drei Regressionen der Validierung sind behoben. Absolut positionierte Meldung: Geometrie- und Selektorpruefung der Staging-e2e bleiben gueltig, id eindeutig, kein overflow:hidden-Elternelement im Weg. Mutationen an datumTipp.ts werden gefangen (eine folgenlose Ausnahme F002); die Verdrahtung in DatumFeld.svelte ist nur durch die Staging-e2e bewacht (F001, MEDIUM, `/e2e-verify` ist Pflicht-Gate). Keine Findings ab HIGH. Die Staging-e2e wurde nicht ausgefuehrt.
+Begruendung: Alle Node-Tests gruen (712), Logik von `widerspricht` ist per Mutation bewacht, die CI-Ursache (Zurueckhalten jedes Werts bis zur 8. Ziffer) ist im Code behoben. Offen: F005 (MEDIUM) zeigt, dass bei 31-Tage-Basismonaten ein stimmiger Zwischenstand gespeichert wird (DS-2 gegen AC-7); das ist eine Spec-Auslegungsfrage, keine Code-Panne. F006: die Verdrahtung ist nur durch Playwright bewacht, `/e2e-verify` gegen Staging ist Pflicht. Keine Findings ab HIGH. Quelldateien nach den Mutationen identisch zum Ausgangsstand.
 
 ## Geprüfte Dateien
 
+- sha256:87374c880ada829b88a2a3765e7c1d3eed14df503823f8074df85075b98210a3  frontend/e2e/s2999-datumfeld-tag-31.spec.ts
 - sha256:2f3abfd281364691f5860b2b12c6628feba324b84ec3ffac0f055ed0bab9b898  frontend/playwright.2999-datumfeld.staging.config.ts
-- sha256:ef6750ba051da2542f23fbda4979f914967f973beb283a47275aba7f56699a03  frontend/src/lib/components/molecules/DatumFeld.svelte
-- sha256:8e23a68fc95d2fbef2b50532d14e606a5ee54abc4969cee2e9286d8de21b2372  frontend/src/lib/components/molecules/datumTipp.ts
+- sha256:2bf4c970f9651728cf038f85dbc3ed92c82a3f82c38b63c4544b8cfd0851db88  frontend/src/lib/components/molecules/DatumFeld.svelte
+- sha256:c056a1f8d5931e6701ab9a096de8280a9f0dba29897fb98b6f9d7a97ea4deb3e  frontend/src/lib/components/molecules/__tests__/datum_tipp.test.ts
+- sha256:e335d5188765882cbeeafa40bd6d195eaac6d54161fafe3babbd8bc930a221eb  frontend/src/lib/components/molecules/datumTipp.ts
 - sha256:94af5c4b785420ae17441fae0967a9240834081cb2ac88ce3793c1d83fd94837  frontend/src/lib/components/trip-new/TripNewEditor.svelte
 
 ## Prüfbasis
 
-- base: f360ae8b475aeec1c568558f604a6a0558638a45
+- base: 53b92080f4b3bb85fe6d4f7c958d33cc847e430a
+- blob:7c253c683a49c1c80c368154233719359c34026b  frontend/e2e/s2999-datumfeld-tag-31.spec.ts
 - blob:352a7111b7fbcc89849cb7b96d5762f12d20e30b  frontend/playwright.2999-datumfeld.staging.config.ts
-- blob:a4a2749f9a1a3a1b3bd25e37de2ff7fa0920bf5f  frontend/src/lib/components/molecules/DatumFeld.svelte
-- blob:e61c4449ae076e2b7f41e0f683ae4d35eb8d288a  frontend/src/lib/components/molecules/datumTipp.ts
+- blob:a1b627b60cbc1526e34b51c1cadc110252a322df  frontend/src/lib/components/molecules/DatumFeld.svelte
+- blob:75093f6818e9e3c27f621b671ab53194caf66811  frontend/src/lib/components/molecules/__tests__/datum_tipp.test.ts
+- blob:ba8401c20227fbd2b1235582fc7a4597d90fe538  frontend/src/lib/components/molecules/datumTipp.ts
 - blob:e50104be46874d648bb8b244e16baeff8ea7140e  frontend/src/lib/components/trip-new/TripNewEditor.svelte

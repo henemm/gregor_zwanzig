@@ -128,3 +128,48 @@ describe('DatumTipp — segmentübergreifender Ziffernstrom', () => {
 		assert.deepEqual(tippe(tipp, '122026'), { ok: true, iso: '2026-12-12' });
 	});
 });
+
+// Fix-Loop CI (DS-2 aus rework_2881): nur ein Wert, der den fertig getippten Segmenten des Stroms
+// widerspricht, ist ein verfälschter Zwischenstand; ein stimmiger geht wie bisher hinaus.
+describe('DatumTipp.widerspricht — geklemmter Zwischenstand vs. stimmiges fertiges Segment', () => {
+	test('Tag „31" getippt, bits-ui meldet 30.04. bzw. 03.01. → Widerspruch (AC-7)', () => {
+		const tipp = new DatumTipp();
+		tippe(tipp, '31');
+		assert.equal(tipp.widerspricht('2027-04-30'), true);
+		assert.equal(tipp.widerspricht('2027-01-03'), true);
+	});
+
+	test('Tag „31", Monat „05" getippt, bits-ui meldet 30.05. → Widerspruch', () => {
+		const tipp = new DatumTipp();
+		tippe(tipp, '3105');
+		assert.equal(tipp.widerspricht('2027-05-30'), true);
+		assert.equal(tipp.widerspricht('2027-05-31'), false);
+	});
+
+	test('Tag „15" getippt, bits-ui meldet 15.08. → kein Widerspruch (DS-2 Rückkehr)', () => {
+		const tipp = new DatumTipp();
+		tippe(tipp, '15');
+		assert.equal(tipp.widerspricht('2027-08-15'), false);
+	});
+
+	test('leerer Strom → kein Widerspruch', () => {
+		assert.equal(new DatumTipp().widerspricht('2027-08-01'), false);
+	});
+
+	test('angefangenes Segment: Wert muss mit den getippten Ziffern beginnen', () => {
+		const tipp = new DatumTipp();
+		tippe(tipp, '3');
+		assert.equal(tipp.widerspricht('2027-02-03'), true, '„3" im Februar als Tag 03 abgeschlossen');
+		assert.equal(tipp.widerspricht('2027-04-30'), false, 'Tag 3x ist mit „3" vereinbar');
+		tippe(tipp, '11');
+		assert.equal(tipp.widerspricht('2027-10-31'), false, 'Monat „1" noch angefangen');
+		assert.equal(tipp.widerspricht('2027-01-31'), true, 'Monat 01 widerspricht dem angefangenen „1"');
+	});
+
+	test('Reihenfolge Monat-Tag-Jahr: Monat „04", Tag „31" → 30.04. widerspricht', () => {
+		const tipp = new DatumTipp();
+		tippe(tipp, '0431', MTJ);
+		assert.equal(tipp.widerspricht('2027-04-30'), true);
+		assert.equal(tipp.widerspricht('2027-04-31'), false);
+	});
+});

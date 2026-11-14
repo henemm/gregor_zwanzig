@@ -95,11 +95,13 @@
 		// Erst nach dem Neuzeichnen melden: bits-ui räumt seine Tipp-Zwischenstände in einem Effekt
 		// weg; ein synchron gemeldeter Wert liesse sie bei einem folgenden Etappenwechsel stehen.
 		// #2999: solange ein Ziffernstrom läuft, bleibt der (evtl. von bits-ui geklemmte) Wert
-		// zurück; die 8. Ziffer verwirft ihn (`folge`), Verlassen meldet ihn.
+		// zurück, wenn er dem Strom widerspricht; die 8. Ziffer verwirft ihn (`folge`).
 		const nr = folge;
 		void tick().then(() => {
 			if (nr !== folge) return;
-			const zurueck = tipp.laeuft || zaehler.unfertig(feld);
+			// Nur ein Wert, der den fertig getippten Segmenten des Stroms widerspricht (geklemmt/
+			// verrutscht), bleibt zurück; ein stimmiger geht wie bisher hinaus (DS-2).
+			const zurueck = tipp.widerspricht(iso) || zaehler.unfertig(feld);
 			if (!zurueck) ungueltig = false;
 			meldung.aendern(iso, zurueck);
 		});
@@ -120,6 +122,9 @@
 
 	function taste(e: KeyboardEvent): void {
 		beruehrt = true;
+		// Vor dem Zählen: ist das Segment schon angefangen (Rücktaste „20" → „2")? Dann ergänzt die
+		// nächste Ziffer bei bits-ui das Segment und ist kein Strombeginn.
+		const angefangen = zaehler.unfertig(feld);
 		zaehler.taste(e);
 		if (MODIFIKATOREN.has(e.key)) return;
 		// Tastenkürzel (Strg+V, Strg+A …) sind keine getippten Ziffern: Strom neu, bits-ui waltet.
@@ -133,7 +138,7 @@
 			tipp.zuruecksetzen();
 			return;
 		}
-		if (!tipp.laeuft && /^\d$/.test(e.key) && ziel !== segmente[0]) return;
+		if (!tipp.laeuft && /^\d$/.test(e.key) && (ziel !== segmente[0] || (angefangen && !ziel.hasAttribute('data-placeholder')))) return;
 		const reihenfolge = segmente.map((el) => el.getAttribute('data-segment') as Segment);
 		const ergebnis = tipp.taste(e.key, reihenfolge);
 		if (!ergebnis) return;

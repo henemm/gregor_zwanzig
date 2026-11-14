@@ -46,6 +46,7 @@ export function pruefeTipp(ziffern: string, reihenfolge: Segment[] = STANDARD): 
  */
 export class DatumTipp {
 	#ziffern = '';
+	#reihenfolge: Segment[] = STANDARD;
 
 	/** null solange unvollständig; mit der 8. Ziffer das Ergebnis (danach beginnt der Strom neu). */
 	taste(key: string, reihenfolge: Segment[] = STANDARD): TippErgebnis | null {
@@ -53,6 +54,7 @@ export class DatumTipp {
 			this.#ziffern = '';
 			return null;
 		}
+		this.#reihenfolge = reihenfolge;
 		this.#ziffern += key;
 		if (this.#ziffern.length < ZIFFERN) return null;
 		const ergebnis = pruefeTipp(this.#ziffern, reihenfolge);
@@ -62,6 +64,25 @@ export class DatumTipp {
 
 	get laeuft(): boolean {
 		return this.#ziffern.length > 0;
+	}
+
+	/**
+	 * Weicht ein gemeldeter Wert (`YYYY-MM-DD`) von den bisher getippten Ziffern des Stroms ab
+	 * (bits-ui hat geklemmt oder ist verrutscht, z. B. Tag 31 → 30, oder „3" im Februar sofort
+	 * als Tag 03 abgeschlossen)? Ein angefangenes Segment muss mit seinen Ziffern beginnen.
+	 * Nur dann ist er ein verfälschter Zwischenstand; stimmt er, gilt die bisherige Regel (DS-2).
+	 */
+	widerspricht(iso: string): boolean {
+		const [jahr, monat, tag] = iso.split('-');
+		const gemeldet: Record<Segment, string> = { day: tag ?? '', month: monat ?? '', year: jahr ?? '' };
+		let pos = 0;
+		for (const seg of this.#reihenfolge) {
+			const getippt = this.#ziffern.slice(pos, pos + LAENGE[seg]);
+			if (!getippt) return false;
+			if (!gemeldet[seg].startsWith(getippt)) return true;
+			pos += LAENGE[seg];
+		}
+		return false;
 	}
 
 	zuruecksetzen(): void {
