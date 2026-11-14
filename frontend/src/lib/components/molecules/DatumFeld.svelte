@@ -1,3 +1,7 @@
+<script lang="ts" module>
+	let meldungZaehler = 0;
+</script>
+
 <script lang="ts">
 	// Issue #2881 Lieferung B (R2, ADR-0111): Datumsfeld als Design-System-Baustein statt
 	// <input type="date"> — bits-ui DatePicker: Segmente Tag/Monat/Jahr, Kalender im Popover,
@@ -38,7 +42,10 @@
 	}
 
 	let { value = '', onchange, testid, ariaLabel, required = false, disabled = false, groesse = 'normal', leerMelden = false, ungueltig = $bindable(false) }: Props = $props();
-	const meldungId = $props.id();
+	// #2999: eigener Zähler statt $props.id() — der teilt den Zähler mit bits-ui und würde alle
+	// bits-Kennungen im (serverseitig gerenderten) Markup verschieben. Die Meldung gibt es nur im
+	// Browser (ungueltig entsteht erst beim Tippen), daher keine Abgleichsfrage beim Hydrieren.
+	const meldungId = `datum-feld-meldung-${++meldungZaehler}`;
 
 	const intlLocale = $derived($locale === 'en' ? 'en-GB' : 'de-DE');
 
@@ -185,7 +192,6 @@
 	}
 </script>
 
-<div class="datum-huelle" data-groesse={groesse}>
 <div class="datum-feld" data-slot="datum-feld" data-groesse={groesse} data-testid={testid} bind:this={feld} onfocusout={verlassen} onkeydowncapture={taste} onfocusincapture={fokusRein} onpointerdowncapture={() => tipp.zuruecksetzen()}>
 	{#key aufbau}
 	<DatePicker.Root
@@ -247,34 +253,30 @@
 			</DatePicker.Content>
 		</DatePicker.Portal>
 	</DatePicker.Root>
-	{/key}
-</div>
-{#if ungueltig}
-	<div class="datum-meldung" data-slot="datum-feld-meldung" id={meldungId} role="alert">{$t('bausteine.datum.ungueltig')}</div>
-{/if}
+	{/key}{#if ungueltig}<div class="datum-meldung" data-slot="datum-feld-meldung" id={meldungId} role="alert">{$t('bausteine.datum.ungueltig')}</div>{/if}
 </div>
 
 <style>
-	/* #2999: Hülle stellt die Meldung direkt unter das Feld (auch in Zeilen-Layouts wie der Etappe). */
-	.datum-huelle {
-		display: inline-flex;
-		flex-direction: column;
-		min-width: 0;
-	}
-	.datum-huelle[data-groesse='normal'],
-	.datum-huelle[data-groesse='gross'] {
-		display: flex;
-		width: 100%;
-	}
-	.datum-meldung {
-		margin-top: 4px;
-		font-size: 12px;
-		line-height: 1.4;
-		color: var(--g-danger-fg);
-	}
 	.datum-feld {
 		display: inline-flex;
 		min-width: 0;
+		/* #2999: Bezugsrahmen für die Meldung darunter. */
+		position: relative;
+	}
+	/* #2999: Meldung direkt unter dem Feld, ohne Zusatzhülle und ohne Zeilen-Layouts (Etappe)
+	   zu verschieben — sie liegt über dem Folgeinhalt, solange sie steht. */
+	.datum-meldung {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		z-index: 1;
+		margin-top: var(--g-s-1);
+		padding: 0 var(--g-s-1);
+		background: var(--g-card);
+		font-size: var(--g-text-xs);
+		line-height: 1.4;
+		white-space: nowrap;
+		color: var(--g-danger-fg);
 	}
 	.datum-feld[data-groesse='normal'],
 	.datum-feld[data-groesse='gross'] {

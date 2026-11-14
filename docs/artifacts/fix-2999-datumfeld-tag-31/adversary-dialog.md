@@ -1,6 +1,6 @@
 # Adversary Dialog — fix-2999-datumfeld-tag-31
 Spec: docs/specs/modules/fix_2999_datumfeld_tag_31.md
-Datum: 2026-11-14 09:39
+Datum: 2026-11-14 10:10
 
 ## Checkliste
 - [x] **Input:** Nutzer tippt acht Ziffern TTMMJJJJ in das Datumsfeld.
@@ -22,88 +22,121 @@ Datum: 2026-11-14 09:39
 ## Dialog
 
 ### Runde 1
-**Adversary:** Unit 47/47 gruen (adversary-test-output.txt). Code gelesen und Randfaelle sondiert.
-Code reference: frontend/src/lib/components/molecules/datumTipp.ts:21 (Monatslaenge/Schaltjahr), frontend/src/lib/components/molecules/datumTipp.ts:39 (Gueltigkeit, nie klemmen), frontend/src/lib/components/molecules/datumTipp.ts:51 (Ziffernstrom).
-Code reference: frontend/src/lib/components/molecules/DatumFeld.svelte:114 (taste, Strom vor bits-ui), frontend/src/lib/components/molecules/DatumFeld.svelte:95 (Zurueckhalten), frontend/src/lib/components/molecules/DatumFeld.svelte:72 (bautNeu), frontend/src/lib/components/molecules/DatumFeld.svelte:135 (nur gueltig melden), frontend/src/lib/components/molecules/DatumFeld.svelte:248 (role=alert).
-Code reference: frontend/src/lib/components/trip-new/TripNewEditor.svelte:128 (datumUngueltig), frontend/src/lib/components/trip-new/TripNewEditor.svelte:700 (bind:ungueltig), frontend/src/lib/components/trip-new/TripNewEditor.svelte:729 (Startdatum fehlt entfaellt).
-Code reference: frontend/src/lib/i18n/messages/de/bausteine.json:114, frontend/src/lib/i18n/messages/en/bausteine.json:114 (Katalog DE/EN).
-Code reference: frontend/e2e/s2999-datumfeld-tag-31.spec.ts:70 (AC-1/2/3/11), frontend/e2e/s2999-datumfeld-tag-31.spec.ts:141 (AC-6), frontend/e2e/s2999-datumfeld-tag-31.spec.ts:224 (AC-10), frontend/playwright.2999-datumfeld.staging.config.ts:14 (Staging-Config).
-Mutations-Gegenprobe datumTipp.ts (16 Verfaelschungen, Sicherungskopie im Scratchpad, danach diff identisch): 15 gefangen (Feb immer 28/29, Jahrhundertregel, 400er-Regel, 30-Tage-Monate, Tag>31 statt Monatslaenge, Monat 13, Tag 0, Strom-Reset bei Nicht-Ziffer, Reset nach 8. Ziffer, ISO-Reihenfolge, feste Segmentreihenfolge, laeuft=false, zuruecksetzen no-op, 7 statt 8 Ziffern). 1 ueberlebt: `jahr < 1000` entfernen (F001).
-Svelte-Mutationen sind nur per E2E fangbar (kein Unit-Test deckt DatumFeld.svelte); ich konnte E2E nicht gegen Staging laufen lassen. Gedanklich zugeordnet: bautNeu-Guard entfernen -> AC-1/2/3 (Feb); tipp.laeuft aus `zurueck` entfernen -> AC-7 (PUT-Liste); ungueltig-Zweig ruft onchange -> AC-4/5 (nichts gespeichert); bind:ungueltig entfernen -> AC-6; aria-describedby entfernen -> AC-9; neuAufbauen-Fokus -> AC-1 (Fokus bleibt). Erst auf Staging bewiesen.
-Spec-Test-Kritik AC-10-Anpassung: die Backspace-Pruefung ist ehrlich genug (Segment leer, keine Meldung, kein neuer PUT, Anzeige=Speicher nach Verlassen), aber sie belegt "wie bisher" nur durch Behauptung, nicht durch Lauf gegen den Altstand. Die Spec sagt "Backspace leert das Segment"; bits-ui leert beim 2. Rueckschritt alle Segmente. Vertretbar, als F003 vermerkt.
-**Implementierer:** keine Gegenrede in dieser Runde (Prueflauf ohne Rueckkanal).
+**Adversary:**
+Testlauf (benannte Dateien, volle Ausgabe in `docs/artifacts/fix-2999-datumfeld-tag-31/adversary-test-output.txt`): 595 pass, 0 fail (bausteine_waechter, deutsch_unveraendert, versand_tab_sprache, trip_hub_sprache, datum_tipp, segment_feld_meldung, uhrzeit_feld_leeren). Die drei Regressionen der Validierung sind behoben: keine Huelle um DatumFeld mehr, eigener Zaehler im module-Script statt der props-id, Schluessel `bausteine.datum.ungueltig` in NEU_IN_FOLGEPAKETEN.
+
+Confirmation:
+  AC: AC-1 / AC-2 / AC-3
+  Code reference: frontend/src/lib/components/molecules/datumTipp.ts:27
+  Evidence: `pruefeTipp` prueft die 8 Ziffern gegen `tageImMonat` (Schaltjahr inkl. :19-24) und klemmt nie; der Tipp-Strom in `DatumFeld.svelte:136-151` faengt die 8. Ziffer per preventDefault vor bits-ui ab, die Monatslaenge des Bezugsmonats spielt keine Rolle mehr. Mutation `tag > 31` -> 10 Tests rot.
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-4 / AC-5
+  Code reference: frontend/src/lib/components/molecules/datumTipp.ts:39
+  Evidence: ungueltiges Datum liefert `{ ok: false }`; `DatumFeld.svelte:149` setzt `ungueltig = true`, `onchange` wird nicht gerufen (:145-147), `neuAufbauen('erstes')` zeigt das Feld leer.
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-6
+  Code reference: frontend/src/lib/components/trip-new/TripNewEditor.svelte:700
+  Evidence: `bind:ungueltig={datumUngueltig}` am Desktop-Feld; Zeile 729 `{:else if !startDate && !datumUngueltig}` blendet "Startdatum fehlt" aus. Das mobile Feld (TripNewEditor.svelte:1042) ist nicht gebunden, siehe F004.
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-7 / AC-8 / AC-10
+  Code reference: frontend/src/lib/components/molecules/DatumFeld.svelte:99
+  Evidence: Zurueckhalten waehrend des Ziffernstroms (`tipp.laeuft`), Folgenummer `folge` verwirft Altmeldungen; `ungueltig = false` bei gueltigem Datum (:103, :146). Backspace setzt den Strom zurueck (datumTipp.ts:52-55).
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-9
+  Code reference: frontend/src/lib/components/molecules/DatumFeld.svelte:256
+  Evidence: Meldung mit `id={meldungId}` und `role="alert"`, Text aus dem Katalog; `aria-describedby` an Eingabe (:209) und an jedem Segment (:212). Die id ist je Instanz eindeutig (`++meldungZaehler`, :48); die Meldung liegt im selben Element wie die Segmente, auch bei mehreren Feldern (Etappenliste, mobile Karten) keine Doppel-id. Die Geometriepruefung der e2e (`s2999-datumfeld-tag-31.spec.ts:116-119`) misst gegen `[data-testid]` = `.datum-feld`; die absolut positionierte Meldung vergroessert dessen Box nicht, `top:100%` plus margin liegt >= Unterkante: Pruefung bleibt gueltig. Der AC-9-Selektor (Spec :215) trifft die Segmente innerhalb des Felds: gueltig.
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-11 / AC-12
+  Code reference: frontend/playwright.2999-datumfeld.staging.config.ts:19
+  Evidence: Staging-Config (workers 1, Basic-Auth, Setup-Login) fuer die Spec; Uhr eingefroren (Spec :17-20), daher monatsunabhaengig. UhrzeitFeld unveraendert, uhrzeit_feld_leeren.test gruen.
+  Status: CONFIRMED
+
+SSR/Hydration: `meldungId` wird nur gerendert, wenn `ungueltig` wahr ist; das entsteht erst durch Tippen im Browser, im SSR-Markup fehlt das Attribut. Server-Zaehler (waechst pro Anfrage) und Client-Zaehler (beginnt bei 1) gleichen daher nie ein gerendertes Attribut ab: kein Mismatch, keine Kollision (je Prozess strikt monoton). Anders als die props-id verschiebt der Zaehler keine bits-Kennungen (Golden-Markup gruen).
+
+Abschneiden: Die Meldung ist `position:absolute; white-space:nowrap` (ca. 160 px) und ragt im kompakten Feld (ca. 110 px) nach rechts heraus. Geprueft: StageDateField `.stage-date`/`.box` (kein overflow), `.stage-header-fields` (inline-flex, kein overflow), LaufzeitKarte `.zt-karte` (kein overflow), TripNewEditor `main` (`overflow-x: clip`, nur horizontal am Seitenrand, Z. 632), StageCardM (overflow:hidden nur auf `.title`/`.meta`, nicht auf dem Datumsbereich). `.editor-card` (EditStagesPanelNew.svelte:992, overflow:hidden) enthaelt kein DatumFeld. Kein Abschneiden festgestellt. Die Meldung ueberdeckt (z-index 1, Kartenhintergrund) das Startzeit-Feld neben dem Etappen-Datum (`.stage-header-fields`, EditStagesPanelNew.svelte:944) bzw. die Zeile darunter in StageCardM, solange sie steht (LOW, bewusst laut Kommentar DatumFeld.svelte:266-267).
+
+Mutations-Gegenprobe datumTipp.ts (Zielsuite plus Waechter, 121 Tests): `tag > 31` -> 10 rot; Schaltjahrregel `j % 4 === 0` -> 1 rot; `monat > 13` -> 1 rot; `jahr < 0` -> 2 rot; Schwelle 7 statt 8 Ziffern -> 16 rot; Monatslaenge immer 31 -> 7 rot; Nicht-Ziffer setzt Strom nicht zurueck -> 11 rot; ISO-Zusammenbau vertauscht -> 21 rot. UEBERLEBT: `pruefeTipp(this.#ziffern, reihenfolge)` ohne `reihenfolge` (0 rot).
+
+Mutations-Gegenprobe DatumFeld.svelte (String-Ersetzung, danach `cmp` identisch zur Sicherungskopie): ALLE 10 ueberleben die Node-Suite (0 rot): Ziel-Segment-Pruefung `ziel !== segmente[0]` entfernt; `ungueltig = true` -> false; `role="alert"` -> `role="status"`; feste statt eindeutige Meldungs-id; `preventDefault/stopPropagation` entfernt; `onchange` bei gueltigem Datum entfernt; `folge`-Pruefung entfernt; `top:100%` -> `top:0`; `zurueck = false`; `bautNeu`-Sperre entfernt. Die Komponente hat keinen Node-Test; der Schutz liegt ausschliesslich in `frontend/e2e/s2999-datumfeld-tag-31.spec.ts` (nur Staging, Config `playwright.2999-datumfeld.staging.config.ts`). Nach Code-Lesen der Spec decken AC-1..AC-9 die meisten ab (`top:0` die Geometriepruefung :118-119), die Ausnahmen stehen in den Findings.
+
+Finding:
+  ID: F001
+  Severity: MEDIUM
+  Category: anti_pattern
+  Code reference: frontend/src/lib/components/molecules/DatumFeld.svelte:121
+  Description: Die gesamte Tipp-/Melde-Verdrahtung der Komponente (taste, geaendert, neuAufbauen, verlassen, Meldung/aria) ist nur durch die Staging-e2e bewacht; in der Node-Kernsuite bleiben alle 10 Mutationen ohne roten Test. Die Kernlogik in datumTipp.ts ist dagegen gut bewacht.
+  Spec requirement: AC-1..AC-9 — Verhalten muss nachweisbar sein
+  Conflict: Ein Regress in der Verdrahtung (Meldung nie angezeigt, falsche role, onchange fehlt) faellt erst im Staging-Lauf auf, nicht in der CI-Kernschicht.
+  Remediation: `/e2e-verify` gegen Staging ist Pflicht-Gate und muss laufen; optional ein Quelltext-Test (`# doc-compliance-test`) fuer role="alert" und aria-describedby.
+
+Finding:
+  ID: F002
+  Severity: LOW
+  Category: edge_case
+  Code reference: frontend/src/lib/components/molecules/datumTipp.ts:58
+  Description: Die Uebergabe von `reihenfolge` an `pruefeTipp` ist durch keinen Test bewacht (0 rot). Fuer de/en-GB ist die Reihenfolge Tag-Monat-Jahr, daher heute folgenlos; ein kuenftiges Format wuerde still falsch pruefen.
+  Spec requirement: AC-1 — Datum unveraendert uebernehmen
+  Conflict: Bewacht nichts, was ein Nutzer heute erreicht.
+  Remediation: Testfall `DatumTipp.taste` mit Reihenfolge month/day/year in datum_tipp.test.ts.
+
+Finding:
+  ID: F003
+  Severity: LOW
+  Category: edge_case
+  Code reference: frontend/src/lib/components/molecules/DatumFeld.svelte:48
+  Description: Eindeutigkeit der Meldungs-id bei mehreren Feldern wird nirgends getestet (feste id ueberlebt; die e2e nutzt nur ein Feld). Die Implementierung ist korrekt (Zaehler), die Zusicherung ungeschuetzt.
+  Spec requirement: AC-9 — mit dem Feld verknuepft
+  Conflict: Doppel-id machte aria-describedby mehrdeutig, ohne dass ein Test rot wird.
+  Remediation: e2e-Zusatz mit zwei Feldern (Etappenliste) auf Eindeutigkeit der id.
 
 ### Runde 2
-**Adversary:** Vertiefung. Randfaelle: (a) Strg/Alt/Meta+Ziffer zaehlt im Strom mit (frontend/src/lib/components/molecules/DatumFeld.svelte:116-126, keine ctrlKey-Pruefung) -> F002. (b) Mobiles Startdatum-Feld ohne bind:ungueltig (frontend/src/lib/components/trip-new/TripNewEditor.svelte:1042): Meldung erscheint, Knopftext bleibt "Datum waehlen" (frontend/src/lib/components/trip-new/TripNewEditor.svelte:1267) - kein "Startdatum fehlt"-Text, AC-6 nennt nur diesen; F004 (LOW, AMBIGUOUS-nah). (c) Wird mit weniger als 8 Ziffern verlassen (Etappe, Tag+Monat getippt), meldet verlassen() den von bits-ui geklemmten Stand (frontend/src/lib/components/molecules/DatumFeld.svelte:167); ausserhalb der Spec-Absicht (8. Ziffer). (d) Meldung bleibt nach Verlassen stehen (frontend/src/lib/components/molecules/DatumFeld.svelte:166 nur bei offen); von AC-6-Test so erwartet, daher gewollt. (e) Gueltig-Pfad: onchange synchron, neuAufbauen wartet tick; Race mit asynchronem Eltern-Wert nicht auszuschliessen, E2E AC-7 deckt reale Eltern ab (Staging). (f) svelte-check: 0 Fehler in DatumFeld/datumTipp/TripNewEditor (83 Altfehler anderswo). (g) Regressionen: Verwender StageDateField, VTLaufzeitVergleich, LaufzeitKarte, TripNewEditor erben; neue Huelle `datum-huelle` aendert Layout (inline-flex bei kompakt) - nur visuell auf Staging pruefbar.
-Mutationen wiederhergestellt: diff gegen Sicherungskopie identisch fuer datumTipp.ts und DatumFeld.svelte.
-**Implementierer:** keine Gegenrede in dieser Runde.
+**Implementierer:** Developer-Fix (Huelle entfernt, Meldung per if-Block im `.datum-feld`, Zaehler im module-Script) liegt vor; keine Rueckfrage zu F001-F003.
+**Adversary:** Zweite Pruefung gezielt gegen die Fix-Aenderungen. (1) Sichtbarkeit/aria wie in Runde 1 bestaetigt; `getByRole('alert')` findet das absolut positionierte Element (sichtbar, Groesse > 0). (2) SSR: kein gerendertes Attribut haengt am Zaehler, kein Mismatch. (3) Bindung: `bind:ungueltig` nur am Desktop-Feld des Anlegens (TripNewEditor.svelte:700); das mobile Feld (:1042) zeigt die Datumsmeldung, haelt die Pflichtmeldung aber nicht aktiv zurueck; in der Staging-Spec nur mit DESKTOP-Viewport belegt (F004).
+Edge Cases: 8. Ziffer bei Fokus im Monats-/Jahr-Segment startet keinen Strom (bewusst, DatumFeld.svelte:136); Strg+V setzt den Strom zurueck (:126-129); Fokuswechsel in den Kalender gilt nicht als Verlassen (:176).
 
-### Runde 3
-**Adversary:** Nachbesserung geprueft. Unit 49/49 gruen (adversary-test-output.txt neu).
-- F001 behoben: Code reference frontend/src/lib/components/molecules/__tests__/datum_tipp.test.ts:67 (01010000, 01010999). Mutation `jahr < 1000` entfernen in frontend/src/lib/components/molecules/datumTipp.ts:39 wird jetzt gefangen (Test "Daten, die es nicht gibt, sind ungueltig"); Sicherungskopie-diff identisch. Alle 16 Mutationen jetzt gefangen.
-- F002 behoben im Code: frontend/src/lib/components/molecules/DatumFeld.svelte:119 (ctrl/alt/meta -> Strom zurueck, return, bits-ui unberuehrt). Kein eigener Test; Svelte-Pfad, nur E2E-Regression (Tippen in s2999-Spec frontend/e2e/s2999-datumfeld-tag-31.spec.ts:70 ueberlebt es nicht stoeren). Bewertung: Randfall LOW, Absicherung ohne eigenen Test akzeptabel, Browser-Nachweis in /e2e-verify.
-- F004 akzeptiert: frontend/src/lib/components/trip-new/TripNewEditor.svelte:1267 ist die Beschriftung des gesperrten Weiter-Knopfs (trip.anlegen.datum_waehlen), keine Fehlermeldung; AC-6 meint die Pflichtmeldung "Startdatum fehlt" (TripNewEditor.svelte:729, Desktop, gebunden in :700). Kein Widerspruch.
-- F003: Spec Known Limitations und Changelog ergaenzt (ACs unveraendert), Spec-Datei docs/specs/modules/fix_2999_datumfeld_tag_31.md:144-160. Akzeptiert.
-- Katalog frontend/src/lib/i18n/messages/de/bausteine.json:114 und en/bausteine.json:114 unveraendert gueltig; Staging-Config frontend/playwright.2999-datumfeld.staging.config.ts:14 unveraendert.
-- F005 strukturell: Browser-Zusicherungen werden in /e2e-verify auf Staging bewiesen (Hard Gate vor Prod-Deploy).
-**Implementierer:** Nachbesserungen wie beschrieben.
-
-Einzelzeilen je geprueftem File (Runde 3):
-Code reference: frontend/src/lib/components/molecules/datumTipp.ts:39
-Code reference: frontend/src/lib/components/molecules/DatumFeld.svelte:119
-Code reference: frontend/src/lib/components/trip-new/TripNewEditor.svelte:700
-Code reference: frontend/src/lib/i18n/messages/de/bausteine.json:114
-Code reference: frontend/src/lib/i18n/messages/en/bausteine.json:114
-Code reference: frontend/e2e/s2999-datumfeld-tag-31.spec.ts:70
-Code reference: frontend/playwright.2999-datumfeld.staging.config.ts:14
-Code reference: frontend/src/lib/components/molecules/__tests__/datum_tipp.test.ts:67
+Finding:
+  ID: F004
+  Severity: LOW
+  Category: edge_case
+  Code reference: frontend/src/lib/components/trip-new/TripNewEditor.svelte:1042
+  Description: Das mobile Startdatumfeld (`groesse="gross"`) bindet `ungueltig` nicht; ob dort "Startdatum fehlt" zusaetzlich erscheint, ist per e2e nicht belegt (AC-6 nur Desktop). Nicht reproduziert.
+  Spec requirement: AC-6 — keine Doppelmeldung
+  Conflict: Moegliche Doppelmeldung im mobilen Anlegen.
+  Remediation: `bind:ungueltig` auch am mobilen Feld und dessen Ausblendzweig, oder Staging-Spec mit Mobile-Viewport.
 
 ## Herkunft der Vorbedingungen
 
 kein Sprachprofil konfiguriert (`precondition_origins.default_lang`)
 
+Vorbedingungen (Systemuhr Nov./Feb., Sprache en/de, leeres bzw. gefuelltes Feld) stammen aus der Spec und der Staging-Spec (`page.clock.setFixedTime`, Profil-PUT); nichts davon lief lokal.
+
 ## Verdict
 
 VERDICT: VERIFIED
 
-Unit 49/49 gruen, 16/16 Mutationen an datumTipp.ts gefangen, F001/F002/F003/F004 erledigt oder akzeptiert. Offen ist nur die strukturelle E2E-Abhaengigkeit (F005, MEDIUM): Der Browser-Nachweis fuer DatumFeld.svelte erfolgt in /e2e-verify auf Staging (Hard Gate vor Prod-Deploy), nicht durch diesen Adversary-Lauf.
+Begruendung: Alle 12 ACs sind durch Code (datumTipp.ts:27-41, DatumFeld.svelte:121-152 und :256) und die Spec-Pruefungen nachvollziehbar belegt; 595 Node-Tests gruen, die drei Regressionen der Validierung sind behoben. Absolut positionierte Meldung: Geometrie- und Selektorpruefung der Staging-e2e bleiben gueltig, id eindeutig, kein overflow:hidden-Elternelement im Weg. Mutationen an datumTipp.ts werden gefangen (eine folgenlose Ausnahme F002); die Verdrahtung in DatumFeld.svelte ist nur durch die Staging-e2e bewacht (F001, MEDIUM, `/e2e-verify` ist Pflicht-Gate). Keine Findings ab HIGH. Die Staging-e2e wurde nicht ausgefuehrt.
 
 ## Geprüfte Dateien
 
-- sha256:8287ac7849be2b88a94d9574476c846a8a5edf9af685ca2cccb922b89f1aa4d8  frontend/e2e/s2999-datumfeld-tag-31.spec.ts
-- sha256:f49dd64e2cb68596f788c295a13b673d4f25ecb3e1b3872f822e036829bd23af  frontend/src/lib/components/molecules/DatumFeld.svelte
-- sha256:8e23a68fc95d2fbef2b50532d14e606a5ee54abc4969cee2e9286d8de21b2372  frontend/src/lib/components/molecules/datumTipp.ts
-- sha256:94af5c4b785420ae17441fae0967a9240834081cb2ac88ce3793c1d83fd94837  frontend/src/lib/components/trip-new/TripNewEditor.svelte
-- sha256:6e27519ec3d23cf94cc7393830ed3f4f646457ccbed86719197de0f8d4c76c65  frontend/src/lib/i18n/messages/de/bausteine.json
-
-## Prüfbasis
-
-- base: f360ae8b475aeec1c568558f604a6a0558638a45
-- blob:a72aa0bcdbec0af347ea017c69640753eb3b2ad9  frontend/e2e/s2999-datumfeld-tag-31.spec.ts
-- blob:ef15b56e9bdd1a7cead94be9b5f1d5cc4fe59c90  frontend/src/lib/components/molecules/DatumFeld.svelte
-- blob:e61c4449ae076e2b7f41e0f683ae4d35eb8d288a  frontend/src/lib/components/molecules/datumTipp.ts
-- blob:e50104be46874d648bb8b244e16baeff8ea7140e  frontend/src/lib/components/trip-new/TripNewEditor.svelte
-- blob:79574aec4a4c9dab3638bcde039cf815ce65d0e7  frontend/src/lib/i18n/messages/de/bausteine.json
-
-## Geprüfte Dateien
-
-- sha256:8287ac7849be2b88a94d9574476c846a8a5edf9af685ca2cccb922b89f1aa4d8  frontend/e2e/s2999-datumfeld-tag-31.spec.ts
 - sha256:2f3abfd281364691f5860b2b12c6628feba324b84ec3ffac0f055ed0bab9b898  frontend/playwright.2999-datumfeld.staging.config.ts
-- sha256:f49dd64e2cb68596f788c295a13b673d4f25ecb3e1b3872f822e036829bd23af  frontend/src/lib/components/molecules/DatumFeld.svelte
-- sha256:76c7b4fe7bb0dd987760c69dcb15b8faa471acba1969049329bce68c32c654c9  frontend/src/lib/components/molecules/__tests__/datum_tipp.test.ts
+- sha256:ef6750ba051da2542f23fbda4979f914967f973beb283a47275aba7f56699a03  frontend/src/lib/components/molecules/DatumFeld.svelte
 - sha256:8e23a68fc95d2fbef2b50532d14e606a5ee54abc4969cee2e9286d8de21b2372  frontend/src/lib/components/molecules/datumTipp.ts
 - sha256:94af5c4b785420ae17441fae0967a9240834081cb2ac88ce3793c1d83fd94837  frontend/src/lib/components/trip-new/TripNewEditor.svelte
-- sha256:6e27519ec3d23cf94cc7393830ed3f4f646457ccbed86719197de0f8d4c76c65  frontend/src/lib/i18n/messages/de/bausteine.json
-- sha256:8e124f1c281eb6e74bc584e6bc86481221afd32c923a64572b110a012b73fec5  frontend/src/lib/i18n/messages/en/bausteine.json
 
 ## Prüfbasis
 
 - base: f360ae8b475aeec1c568558f604a6a0558638a45
-- blob:a72aa0bcdbec0af347ea017c69640753eb3b2ad9  frontend/e2e/s2999-datumfeld-tag-31.spec.ts
 - blob:352a7111b7fbcc89849cb7b96d5762f12d20e30b  frontend/playwright.2999-datumfeld.staging.config.ts
-- blob:ef15b56e9bdd1a7cead94be9b5f1d5cc4fe59c90  frontend/src/lib/components/molecules/DatumFeld.svelte
-- blob:995e5922e677f2a6e5791f9caf1084f41c784df1  frontend/src/lib/components/molecules/__tests__/datum_tipp.test.ts
+- blob:a4a2749f9a1a3a1b3bd25e37de2ff7fa0920bf5f  frontend/src/lib/components/molecules/DatumFeld.svelte
 - blob:e61c4449ae076e2b7f41e0f683ae4d35eb8d288a  frontend/src/lib/components/molecules/datumTipp.ts
 - blob:e50104be46874d648bb8b244e16baeff8ea7140e  frontend/src/lib/components/trip-new/TripNewEditor.svelte
-- blob:79574aec4a4c9dab3638bcde039cf815ce65d0e7  frontend/src/lib/i18n/messages/de/bausteine.json
-- blob:d86111c6e40ae229b6379e4df7ffc9b3ad555052  frontend/src/lib/i18n/messages/en/bausteine.json

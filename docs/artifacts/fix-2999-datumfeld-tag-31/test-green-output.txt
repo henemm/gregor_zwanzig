@@ -1,339 +1,3777 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/__tests__/bausteine_waechter.test.ts src/lib/i18n/__tests__/deutsch_unveraendert.test.ts src/lib/components/shared/versand-tab/__tests__/versand_tab_sprache.test.ts src/lib/components/trip-detail/__tests__/trip_hub_sprache.test.ts src/lib/components/molecules/__tests__/datum_tipp.test.ts src/lib/components/molecules/__tests__/segment_feld_meldung.test.ts src/lib/components/molecules/__tests__/uhrzeit_feld_leeren.test.ts
+
 TAP version 13
+# Subtest: AC-1: Regel (a) — kein <style>, kein style=, keine Tailwind-Utilities in Seiten-Dateien
+    # Subtest: saubere Seite ist grün
+    ok 1 - saubere Seite ist grün
+      ---
+      duration_ms: 49.912583
+      type: 'test'
+      ...
+    # Subtest: rot: <style>-Block — nennt Datei und Regel (a)
+    ok 2 - rot: <style>-Block — nennt Datei und Regel (a)
+      ---
+      duration_ms: 8.733534
+      type: 'test'
+      ...
+    # Subtest: rot: <style lang="postcss"> — nennt Datei und Regel (a)
+    ok 3 - rot: <style lang="postcss"> — nennt Datei und Regel (a)
+      ---
+      duration_ms: 1.626197
+      type: 'test'
+      ...
+    # Subtest: rot: style=-Attribut — nennt Datei und Regel (a)
+    ok 4 - rot: style=-Attribut — nennt Datei und Regel (a)
+      ---
+      duration_ms: 4.203963
+      type: 'test'
+      ...
+    # Subtest: rot: style={…}-Ausdruck — nennt Datei und Regel (a)
+    ok 5 - rot: style={…}-Ausdruck — nennt Datei und Regel (a)
+      ---
+      duration_ms: 4.768122
+      type: 'test'
+      ...
+    # Subtest: rot: style:-Direktive — nennt Datei und Regel (a)
+    ok 6 - rot: style:-Direktive — nennt Datei und Regel (a)
+      ---
+      duration_ms: 7.605296
+      type: 'test'
+      ...
+    # Subtest: rot: Tailwind-Utilities statisch — nennt Datei und Regel (a)
+    ok 7 - rot: Tailwind-Utilities statisch — nennt Datei und Regel (a)
+      ---
+      duration_ms: 1.595207
+      type: 'test'
+      ...
+    # Subtest: rot: Tailwind-Utility im Ausdruck — nennt Datei und Regel (a)
+    ok 8 - rot: Tailwind-Utility im Ausdruck — nennt Datei und Regel (a)
+      ---
+      duration_ms: 4.058963
+      type: 'test'
+      ...
+    # Subtest: rot: Tailwind per class:-Direktive — nennt Datei und Regel (a)
+    ok 9 - rot: Tailwind per class:-Direktive — nennt Datei und Regel (a)
+      ---
+      duration_ms: 3.587883
+      type: 'test'
+      ...
+    # Subtest: rot: Tailwind-Utility auf Baustein-Komponente — nennt Datei und Regel (a)
+    ok 10 - rot: Tailwind-Utility auf Baustein-Komponente — nennt Datei und Regel (a)
+      ---
+      duration_ms: 3.989763
+      type: 'test'
+      ...
+    # Subtest: eigene, nicht-utility Klassennamen bleiben erlaubt
+    ok 11 - eigene, nicht-utility Klassennamen bleiben erlaubt
+      ---
+      duration_ms: 0.687718
+      type: 'test'
+      ...
+    1..11
+ok 1 - AC-1: Regel (a) — kein <style>, kein style=, keine Tailwind-Utilities in Seiten-Dateien
+  ---
+  duration_ms: 92.640917
+  type: 'suite'
+  ...
+# Subtest: AC-2: Regel (a) — keine rohen Formular-/Tabellen-Elemente, Importe nur aus Baustein-Ordnern
+    # Subtest: rot: rohes <button>
+    ok 1 - rot: rohes <button>
+      ---
+      duration_ms: 0.82589
+      type: 'test'
+      ...
+    # Subtest: rot: rohes <input>
+    ok 2 - rot: rohes <input>
+      ---
+      duration_ms: 0.707399
+      type: 'test'
+      ...
+    # Subtest: rot: rohes <select>
+    ok 3 - rot: rohes <select>
+      ---
+      duration_ms: 5.70283
+      type: 'test'
+      ...
+    # Subtest: rot: rohes <textarea>
+    ok 4 - rot: rohes <textarea>
+      ---
+      duration_ms: 0.761888
+      type: 'test'
+      ...
+    # Subtest: rot: rohes <table>
+    ok 5 - rot: rohes <table>
+      ---
+      duration_ms: 10.067873
+      type: 'test'
+      ...
+    # Subtest: grün: dieselbe Seite mit Baustein-Komponenten statt rohen Elementen
+    ok 6 - grün: dieselbe Seite mit Baustein-Komponenten statt rohen Elementen
+      ---
+      duration_ms: 5.920299
+      type: 'test'
+      ...
+    # Subtest: Komponente <Btn> ist kein rohes Element, <button> mit Attributen schon
+    ok 7 - Komponente <Btn> ist kein rohes Element, <button> mit Attributen schon
+      ---
+      duration_ms: 0.710459
+      type: 'test'
+      ...
+    # Subtest: rot: Fremd-Import import Foo from '$lib/components/shared/Foo.svelte';
+    ok 8 - rot: Fremd-Import import Foo from '$lib/components/shared/Foo.svelte';
+      ---
+      duration_ms: 0.595158
+      type: 'test'
+      ...
+    # Subtest: rot: Fremd-Import import { Button } from '$lib/components/ui/button';
+    ok 9 - rot: Fremd-Import import { Button } from '$lib/components/ui/button';
+      ---
+      duration_ms: 0.534388
+      type: 'test'
+      ...
+    # Subtest: rot: Fremd-Import import Bar from './Bar.svelte';
+    ok 10 - rot: Fremd-Import import Bar from './Bar.svelte';
+      ---
+      duration_ms: 0.559579
+      type: 'test'
+      ...
+    # Subtest: rot: Fremd-Import import Baz from '../../trip-detail/Baz.svelte';
+    ok 11 - rot: Fremd-Import import Baz from '../../trip-detail/Baz.svelte';
+      ---
+      duration_ms: 6.690159
+      type: 'test'
+      ...
+    # Subtest: rot: Fremd-Import import Qux from '$lib/components/trip-detail/waypoints/ProfileEditor.svelte';
+    ok 12 - rot: Fremd-Import import Qux from '$lib/components/trip-detail/waypoints/ProfileEditor.svelte';
+      ---
+      duration_ms: 0.58182
+      type: 'test'
+      ...
+    # Subtest: grün: Nicht-Komponenten-Importe ($lib/i18n, $lib/api, Stores) sind erlaubt
+    ok 13 - grün: Nicht-Komponenten-Importe ($lib/i18n, $lib/api, Stores) sind erlaubt
+      ---
+      duration_ms: 0.605719
+      type: 'test'
+      ...
+    # Subtest: grün: Import aus organisms und index-Bündel der Baustein-Ordner
+    ok 14 - grün: Import aus organisms und index-Bündel der Baustein-Ordner
+      ---
+      duration_ms: 0.572369
+      type: 'test'
+      ...
+    1..14
+ok 2 - AC-2: Regel (a) — keine rohen Formular-/Tabellen-Elemente, Importe nur aus Baustein-Ordnern
+  ---
+  duration_ms: 35.207238
+  type: 'suite'
+  ...
+# Subtest: AC-3: Regel (b) — neue Baustein-Dateien nur über var(--g-*)-Tokens (Start bei 0)
+    # Subtest: rot: padding: 12px;
+    ok 1 - rot: padding: 12px;
+      ---
+      duration_ms: 7.144146
+      type: 'test'
+      ...
+    # Subtest: rot: gap: 0.5rem;
+    ok 2 - rot: gap: 0.5rem;
+      ---
+      duration_ms: 0.57525
+      type: 'test'
+      ...
+    # Subtest: rot: font-size: 14px;
+    ok 3 - rot: font-size: 14px;
+      ---
+      duration_ms: 0.219989
+      type: 'test'
+      ...
+    # Subtest: rot: font-size: 0.875rem;
+    ok 4 - rot: font-size: 0.875rem;
+      ---
+      duration_ms: 0.237319
+      type: 'test'
+      ...
+    # Subtest: rot: font-family: 'Inter', sans-serif;
+    ok 5 - rot: font-family: 'Inter', sans-serif;
+      ---
+      duration_ms: 3.256025
+      type: 'test'
+      ...
+    # Subtest: rot: color: \#333;
+    ok 6 - rot: color: \#333;
+      ---
+      duration_ms: 0.35752
+      type: 'test'
+      ...
+    # Subtest: rot: background: \#ffffff;
+    ok 7 - rot: background: \#ffffff;
+      ---
+      duration_ms: 0.277391
+      type: 'test'
+      ...
+    # Subtest: rot: border-radius: 6px;
+    ok 8 - rot: border-radius: 6px;
+      ---
+      duration_ms: 0.31462
+      type: 'test'
+      ...
+    # Subtest: rot: box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    ok 9 - rot: box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      ---
+      duration_ms: 0.25649
+      type: 'test'
+      ...
+    # Subtest: rot: margin: 2px 0;
+    ok 10 - rot: margin: 2px 0;
+      ---
+      duration_ms: 0.18214
+      type: 'test'
+      ...
+    # Subtest: rot: color: var(--g-ink, \#222);
+    ok 11 - rot: color: var(--g-ink, \#222);
+      ---
+      duration_ms: 0.15803
+      type: 'test'
+      ...
+    # Subtest: grün: margin: 0;
+    ok 12 - grün: margin: 0;
+      ---
+      duration_ms: 0.19919
+      type: 'test'
+      ...
+    # Subtest: grün: border: 1px solid var(--g-rule);
+    ok 13 - grün: border: 1px solid var(--g-rule);
+      ---
+      duration_ms: 0.31937
+      type: 'test'
+      ...
+    # Subtest: grün: width: 100%;
+    ok 14 - grün: width: 100%;
+      ---
+      duration_ms: 0.13926
+      type: 'test'
+      ...
+    # Subtest: grün: grid-template-columns: 1fr 2fr auto;
+    ok 15 - grün: grid-template-columns: 1fr 2fr auto;
+      ---
+      duration_ms: 0.13457
+      type: 'test'
+      ...
+    # Subtest: grün: height: auto;
+    ok 16 - grün: height: auto;
+      ---
+      duration_ms: 0.19075
+      type: 'test'
+      ...
+    # Subtest: grün: padding: var(--g-s-2) var(--g-s-4);
+    ok 17 - grün: padding: var(--g-s-2) var(--g-s-4);
+      ---
+      duration_ms: 3.126485
+      type: 'test'
+      ...
+    # Subtest: grün: gap: calc(var(--g-s-2) * 2);
+    ok 18 - grün: gap: calc(var(--g-s-2) * 2);
+      ---
+      duration_ms: 0.208769
+      type: 'test'
+      ...
+    # Subtest: grün: max-width: min(100%, calc(var(--g-s-20) * 10));
+    ok 19 - grün: max-width: min(100%, calc(var(--g-s-20) * 10));
+      ---
+      duration_ms: 0.20057
+      type: 'test'
+      ...
+    # Subtest: grün: color: var(--g-ink);
+    ok 20 - grün: color: var(--g-ink);
+      ---
+      duration_ms: 0.222571
+      type: 'test'
+      ...
+    # Subtest: grün: font-family: var(--g-font-ui);
+    ok 21 - grün: font-family: var(--g-font-ui);
+      ---
+      duration_ms: 0.18366
+      type: 'test'
+      ...
+    # Subtest: grün: font-size: var(--g-text-sm);
+    ok 22 - grün: font-size: var(--g-text-sm);
+      ---
+      duration_ms: 0.136839
+      type: 'test'
+      ...
+    # Subtest: grün: border-radius: var(--g-r-2);
+    ok 23 - grün: border-radius: var(--g-r-2);
+      ---
+      duration_ms: 1.723066
+      type: 'test'
+      ...
+    # Subtest: grün: box-shadow: var(--g-shadow-1);
+    ok 24 - grün: box-shadow: var(--g-shadow-1);
+      ---
+      duration_ms: 0.17816
+      type: 'test'
+      ...
+    # Subtest: neue Baustein-Datei mit Verstoß und ohne AUSNAHMEN-Eintrag macht den Lauf rot
+    ok 25 - neue Baustein-Datei mit Verstoß und ohne AUSNAHMEN-Eintrag macht den Lauf rot
+      ---
+      duration_ms: 0.316229
+      type: 'test'
+      ...
+    1..25
+ok 3 - AC-3: Regel (b) — neue Baustein-Dateien nur über var(--g-*)-Tokens (Start bei 0)
+  ---
+  duration_ms: 20.763133
+  type: 'suite'
+  ...
+# Subtest: AC-4: Ratsche AUSNAHMEN darf nur sinken
+    # Subtest: rot: Ist-Stand höher als der Eintrag
+    ok 1 - rot: Ist-Stand höher als der Eintrag
+      ---
+      duration_ms: 0.138291
+      type: 'test'
+      ...
+    # Subtest: rot: neue Datei mit Verstößen, die nicht in AUSNAHMEN steht
+    ok 2 - rot: neue Datei mit Verstößen, die nicht in AUSNAHMEN steht
+      ---
+      duration_ms: 0.090999
+      type: 'test'
+      ...
+    # Subtest: grün: Ist-Stand gleich
+    ok 3 - grün: Ist-Stand gleich
+      ---
+      duration_ms: 0.065369
+      type: 'test'
+      ...
+    # Subtest: grün: Ist-Stand niedriger (bereinigt) — keine Anhebung verlangt
+    ok 4 - grün: Ist-Stand niedriger (bereinigt) — keine Anhebung verlangt
+      ---
+      duration_ms: 26.345764
+      type: 'test'
+      ...
+    # Subtest: echte AUSNAHMEN: jeder Eintrag hat einen Grund und n > 0
+    ok 5 - echte AUSNAHMEN: jeder Eintrag hat einen Grund und n > 0
+      ---
+      duration_ms: 0.317359
+      type: 'test'
+      ...
+    1..5
+ok 4 - AC-4: Ratsche AUSNAHMEN darf nur sinken
+  ---
+  duration_ms: 34.41494
+  type: 'suite'
+  ...
+# Subtest: AC-5: Neue-Datei-Regel — jede Seiten-/Komponenten-Datei außerhalb der Baustein-Ordner ist erfasst
+    # Subtest: rot: nicht eingetragene Datei; grün, sobald in SEITEN_SCOPE
+    ok 1 - rot: nicht eingetragene Datei; grün, sobald in SEITEN_SCOPE
+      ---
+      duration_ms: 0.385369
+      type: 'test'
+      ...
+    # Subtest: Bestandsliste darf nur sinken: über der Obergrenze oder mit verwaisten Einträgen rot
+    ok 2 - Bestandsliste darf nur sinken: über der Obergrenze oder mit verwaisten Einträgen rot
+      ---
+      duration_ms: 0.15715
+      type: 'test'
+      ...
+    # Subtest: Fixture-Baum: eingetragene Datei wird nach Regel (a) geprüft, nicht eingetragene ist rot
+    ok 3 - Fixture-Baum: eingetragene Datei wird nach Regel (a) geprüft, nicht eingetragene ist rot
+      ---
+      duration_ms: 9.995052
+      type: 'test'
+      ...
+    1..3
+ok 5 - AC-5: Neue-Datei-Regel — jede Seiten-/Komponenten-Datei außerhalb der Baustein-Ordner ist erfasst
+  ---
+  duration_ms: 10.659722
+  type: 'suite'
+  ...
+# Subtest: AC-6: audit:exempt nur mit Begründung
+    # Subtest: grün: Verstoß mit audit:exempt und Begründung (Vorzeile)
+    ok 1 - grün: Verstoß mit audit:exempt und Begründung (Vorzeile)
+      ---
+      duration_ms: 1.111367
+      type: 'test'
+      ...
+    # Subtest: grün: Begründung in derselben Zeile
+    ok 2 - grün: Begründung in derselben Zeile
+      ---
+      duration_ms: 11.496349
+      type: 'test'
+      ...
+    # Subtest: rot: audit:exempt ohne Begründung
+    ok 3 - rot: audit:exempt ohne Begründung
+      ---
+      duration_ms: 0.714149
+      type: 'test'
+      ...
+    # Subtest: audit:exempt wirkt nur auf die eigene bzw. folgende Zeile, nicht auf die ganze Datei
+    ok 4 - audit:exempt wirkt nur auf die eigene bzw. folgende Zeile, nicht auf die ganze Datei
+      ---
+      duration_ms: 0.550339
+      type: 'test'
+      ...
+    # Subtest: Baustein-Datei: Token-Verstoß mit begründetem audit:exempt zählt nicht
+    ok 5 - Baustein-Datei: Token-Verstoß mit begründetem audit:exempt zählt nicht
+      ---
+      duration_ms: 0.23846
+      type: 'test'
+      ...
+    1..5
+ok 6 - AC-6: audit:exempt nur mit Begründung
+  ---
+  duration_ms: 14.269215
+  type: 'suite'
+  ...
+# Subtest: AC-7: echter Quellbaum ist grün, ohne Bestand zu ändern
+    # Subtest: waechterLauf(src, KONFIG) liefert keine Fehler
+    ok 1 - waechterLauf(src, KONFIG) liefert keine Fehler
+      ---
+      duration_ms: 570.641309
+      type: 'test'
+      ...
+    # Subtest: KONFIG.SEITEN_SCOPE startet ohne Bestandsdateien (Bestand und Scope überschneiden sich nicht)
+    ok 2 - KONFIG.SEITEN_SCOPE startet ohne Bestandsdateien (Bestand und Scope überschneiden sich nicht)
+      ---
+      duration_ms: 0.122551
+      type: 'test'
+      ...
+    # Subtest: Bestand ist nicht leer erfasst und Obergrenze = Länge (Ist-Stand)
+    ok 3 - Bestand ist nicht leer erfasst und Obergrenze = Länge (Ist-Stand)
+      ---
+      duration_ms: 0.065399
+      type: 'test'
+      ...
+    # Subtest: Baustein-Ordner mit Verstößen sind in AUSNAHMEN erfasst (Ratsche startet beim Ist-Stand)
+    ok 4 - Baustein-Ordner mit Verstößen sind in AUSNAHMEN erfasst (Ratsche startet beim Ist-Stand)
+      ---
+      duration_ms: 0.123839
+      type: 'test'
+      ...
+    1..4
+ok 7 - AC-7: echter Quellbaum ist grün, ohne Bestand zu ändern
+  ---
+  duration_ms: 571.090287
+  type: 'suite'
+  ...
 # Subtest: pruefeTipp — gültige Daten kommen unverändert an
     # Subtest: 31032027 → 2027-03-31
     ok 1 - 31032027 → 2027-03-31
       ---
-      duration_ms: 1.899265
+      duration_ms: 5.401531
       type: 'test'
       ...
     # Subtest: 29022028 → 2028-02-29
     ok 2 - 29022028 → 2028-02-29
       ---
-      duration_ms: 0.19537
+      duration_ms: 0.1557
       type: 'test'
       ...
     # Subtest: 31122026 → 2026-12-31
     ok 3 - 31122026 → 2026-12-31
       ---
-      duration_ms: 0.073909
+      duration_ms: 0.07214
       type: 'test'
       ...
     # Subtest: 01012027 → 2027-01-01
     ok 4 - 01012027 → 2027-01-01
       ---
-      duration_ms: 0.05936
+      duration_ms: 0.057539
       type: 'test'
       ...
     # Subtest: 30042027 → 2027-04-30
     ok 5 - 30042027 → 2027-04-30
       ---
-      duration_ms: 0.16379
+      duration_ms: 0.131119
       type: 'test'
       ...
     # Subtest: 31052027 → 2027-05-31
     ok 6 - 31052027 → 2027-05-31
       ---
-      duration_ms: 0.12126
+      duration_ms: 0.107019
       type: 'test'
       ...
     # Subtest: 29022000 → 2000-02-29
     ok 7 - 29022000 → 2000-02-29
       ---
-      duration_ms: 0.064101
+      duration_ms: 0.06074
       type: 'test'
       ...
     # Subtest: Reihenfolge Monat zuerst wird beachtet (03312027 → 2027-03-31)
     ok 8 - Reihenfolge Monat zuerst wird beachtet (03312027 → 2027-03-31)
       ---
-      duration_ms: 0.153731
+      duration_ms: 0.131869
       type: 'test'
       ...
     1..8
-ok 1 - pruefeTipp — gültige Daten kommen unverändert an
+ok 8 - pruefeTipp — gültige Daten kommen unverändert an
   ---
-  duration_ms: 3.777419
+  duration_ms: 10.168682
   type: 'suite'
   ...
 # Subtest: pruefeTipp — Daten, die es nicht gibt, sind ungültig (nie geklemmt)
     # Subtest: 31042027 ungültig (April hat 30 Tage)
     ok 1 - 31042027 ungültig (April hat 30 Tage)
       ---
-      duration_ms: 0.32876
+      duration_ms: 0.797769
       type: 'test'
       ...
     # Subtest: 29022027 ungültig (2027 ist kein Schaltjahr)
     ok 2 - 29022027 ungültig (2027 ist kein Schaltjahr)
       ---
-      duration_ms: 0.191379
+      duration_ms: 0.17934
       type: 'test'
       ...
     # Subtest: 30022028 ungültig (Februar hat auch im Schaltjahr nur 29 Tage)
     ok 3 - 30022028 ungültig (Februar hat auch im Schaltjahr nur 29 Tage)
       ---
-      duration_ms: 0.11498
+      duration_ms: 0.0841
       type: 'test'
       ...
     # Subtest: 00012027 ungültig (Tag 0)
     ok 4 - 00012027 ungültig (Tag 0)
       ---
-      duration_ms: 0.05671
+      duration_ms: 0.043971
       type: 'test'
       ...
     # Subtest: 32012027 ungültig (Tag 32)
     ok 5 - 32012027 ungültig (Tag 32)
       ---
-      duration_ms: 0.040941
+      duration_ms: 0.10214
       type: 'test'
       ...
     # Subtest: 15132027 ungültig (Monat 13)
     ok 6 - 15132027 ungültig (Monat 13)
       ---
-      duration_ms: 0.036799
+      duration_ms: 0.05503
       type: 'test'
       ...
     # Subtest: 15002027 ungültig (Monat 0)
     ok 7 - 15002027 ungültig (Monat 0)
       ---
-      duration_ms: 0.05912
+      duration_ms: 0.04009
       type: 'test'
       ...
     # Subtest: 29022100 ungültig (2100 ist kein Schaltjahr (durch 100, nicht durch 400 teilbar))
     ok 8 - 29022100 ungültig (2100 ist kein Schaltjahr (durch 100, nicht durch 400 teilbar))
       ---
-      duration_ms: 0.040589
+      duration_ms: 0.03391
       type: 'test'
       ...
     # Subtest: 31062027 ungültig (Juni hat 30 Tage)
     ok 9 - 31062027 ungültig (Juni hat 30 Tage)
       ---
-      duration_ms: 0.08677
+      duration_ms: 0.03505
       type: 'test'
       ...
     # Subtest: 31092027 ungültig (September hat 30 Tage)
     ok 10 - 31092027 ungültig (September hat 30 Tage)
       ---
-      duration_ms: 0.05173
+      duration_ms: 0.036881
       type: 'test'
       ...
     # Subtest: 31112026 ungültig (November hat 30 Tage)
     ok 11 - 31112026 ungültig (November hat 30 Tage)
       ---
-      duration_ms: 0.05087
+      duration_ms: 0.039449
       type: 'test'
       ...
     # Subtest: 01010000 ungültig (Jahr 0000 (nur vierstellige Jahre ab 1000))
     ok 12 - 01010000 ungültig (Jahr 0000 (nur vierstellige Jahre ab 1000))
       ---
-      duration_ms: 0.04446
+      duration_ms: 0.043549
       type: 'test'
       ...
     # Subtest: 01010999 ungültig (Jahr 0999 (nur vierstellige Jahre ab 1000))
     ok 13 - 01010999 ungültig (Jahr 0999 (nur vierstellige Jahre ab 1000))
       ---
-      duration_ms: 0.043621
+      duration_ms: 0.041061
       type: 'test'
       ...
     # Subtest: Monat zuerst: 04312027 ist ungültig (31. April)
     ok 14 - Monat zuerst: 04312027 ist ungültig (31. April)
       ---
-      duration_ms: 0.128951
+      duration_ms: 0.082
       type: 'test'
       ...
     1..14
-ok 2 - pruefeTipp — Daten, die es nicht gibt, sind ungültig (nie geklemmt)
+ok 9 - pruefeTipp — Daten, die es nicht gibt, sind ungültig (nie geklemmt)
   ---
-  duration_ms: 1.719454
+  duration_ms: 1.919737
   type: 'suite'
   ...
 # Subtest: DatumTipp — segmentübergreifender Ziffernstrom
     # Subtest: erst die 8. Ziffer liefert das Ergebnis, davor null; laeuft ab der ersten Ziffer
     ok 1 - erst die 8. Ziffer liefert das Ergebnis, davor null; laeuft ab der ersten Ziffer
       ---
-      duration_ms: 3.189517
+      duration_ms: 1.903447
       type: 'test'
       ...
     # Subtest: Standard-Reihenfolge ohne Angabe ist Tag-Monat-Jahr
     ok 2 - Standard-Reihenfolge ohne Angabe ist Tag-Monat-Jahr
       ---
-      duration_ms: 0.17632
+      duration_ms: 0.147379
       type: 'test'
       ...
     # Subtest: ungültiges Datum über den Strom → { ok: false }
     ok 3 - ungültiges Datum über den Strom → { ok: false }
       ---
-      duration_ms: 0.12505
+      duration_ms: 0.12654
       type: 'test'
       ...
     # Subtest: nach dem Ergebnis beginnt der Strom neu (nächstes Datum direkt dahinter)
     ok 4 - nach dem Ergebnis beginnt der Strom neu (nächstes Datum direkt dahinter)
       ---
-      duration_ms: 0.09418
+      duration_ms: 0.10002
       type: 'test'
       ...
     # Subtest: halber Strom + „Backspace" → Strom beginnt neu
     ok 5 - halber Strom + „Backspace" → Strom beginnt neu
       ---
-      duration_ms: 0.0894
+      duration_ms: 0.098221
       type: 'test'
       ...
     # Subtest: halber Strom + „Delete" → Strom beginnt neu
     ok 6 - halber Strom + „Delete" → Strom beginnt neu
       ---
-      duration_ms: 0.07537
+      duration_ms: 0.047369
       type: 'test'
       ...
     # Subtest: halber Strom + „ArrowLeft" → Strom beginnt neu
     ok 7 - halber Strom + „ArrowLeft" → Strom beginnt neu
       ---
-      duration_ms: 0.04999
+      duration_ms: 0.03765
       type: 'test'
       ...
     # Subtest: halber Strom + „ArrowRight" → Strom beginnt neu
     ok 8 - halber Strom + „ArrowRight" → Strom beginnt neu
       ---
-      duration_ms: 0.041929
+      duration_ms: 0.036321
       type: 'test'
       ...
     # Subtest: halber Strom + „ArrowUp" → Strom beginnt neu
     ok 9 - halber Strom + „ArrowUp" → Strom beginnt neu
       ---
-      duration_ms: 0.04203
+      duration_ms: 0.039349
       type: 'test'
       ...
     # Subtest: halber Strom + „ArrowDown" → Strom beginnt neu
     ok 10 - halber Strom + „ArrowDown" → Strom beginnt neu
       ---
-      duration_ms: 0.036309
+      duration_ms: 0.04177
       type: 'test'
       ...
     # Subtest: halber Strom + „Tab" → Strom beginnt neu
     ok 11 - halber Strom + „Tab" → Strom beginnt neu
       ---
-      duration_ms: 0.036581
+      duration_ms: 0.03551
       type: 'test'
       ...
     # Subtest: halber Strom + „." → Strom beginnt neu
     ok 12 - halber Strom + „." → Strom beginnt neu
       ---
-      duration_ms: 0.038601
+      duration_ms: 0.03487
       type: 'test'
       ...
     # Subtest: halber Strom + „/" → Strom beginnt neu
     ok 13 - halber Strom + „/" → Strom beginnt neu
       ---
-      duration_ms: 0.166289
+      duration_ms: 0.095349
       type: 'test'
       ...
     # Subtest: halber Strom + „a" → Strom beginnt neu
     ok 14 - halber Strom + „a" → Strom beginnt neu
       ---
-      duration_ms: 0.161099
+      duration_ms: 0.11504
       type: 'test'
       ...
     # Subtest: halber Strom + „ " → Strom beginnt neu
     ok 15 - halber Strom + „ " → Strom beginnt neu
       ---
-      duration_ms: 0.07775
+      duration_ms: 0.04245
       type: 'test'
       ...
     # Subtest: Fokuswechsel/Klick (zuruecksetzen) → Strom beginnt neu
     ok 16 - Fokuswechsel/Klick (zuruecksetzen) → Strom beginnt neu
       ---
-      duration_ms: 0.149021
+      duration_ms: 0.10976
       type: 'test'
       ...
     1..16
-ok 3 - DatumTipp — segmentübergreifender Ziffernstrom
+ok 10 - DatumTipp — segmentübergreifender Ziffernstrom
   ---
-  duration_ms: 4.897831
+  duration_ms: 3.287903
   type: 'suite'
   ...
 # Subtest: SegmentFeldMeldung
     # Subtest: fertiges Segment bzw. Kalender-Wahl wird sofort gemeldet
     ok 1 - fertiges Segment bzw. Kalender-Wahl wird sofort gemeldet
       ---
-      duration_ms: 1.020712
+      duration_ms: 3.222554
       type: 'test'
       ...
     # Subtest: unfertiges Segment (Tag „2") bleibt zurück — auch nach einer Pause; das fertige ersetzt es
     ok 2 - unfertiges Segment (Tag „2") bleibt zurück — auch nach einer Pause; das fertige ersetzt es
       ---
-      duration_ms: 400.446337
+      duration_ms: 401.580963
       type: 'test'
       ...
     # Subtest: Feld verlassen meldet den offenen Wert (z. B. geleert = "")
     ok 3 - Feld verlassen meldet den offenen Wert (z. B. geleert = "")
       ---
-      duration_ms: 0.545451
+      duration_ms: 0.272279
       type: 'test'
       ...
     # Subtest: gleicher Wert wie gespeichert: verworfenes Offenes geht beim Verlassen nicht mehr hinaus
     ok 4 - gleicher Wert wie gespeichert: verworfenes Offenes geht beim Verlassen nicht mehr hinaus
       ---
-      duration_ms: 0.305871
+      duration_ms: 0.113509
       type: 'test'
       ...
     1..4
-ok 4 - SegmentFeldMeldung
+ok 11 - SegmentFeldMeldung
   ---
-  duration_ms: 403.400133
+  duration_ms: 406.520285
   type: 'suite'
   ...
 # Subtest: SegmentFeldMeldung.verlassen — Leeren aus zweistelliger Stunde (\#2947)
     # Subtest: AC-3: 15:00 → Rücktaste (01:00 offen) → Rücktaste (Stunde leer) → verlassen ⇒ gemeldet nur "", nie "01:00"
     ok 1 - AC-3: 15:00 → Rücktaste (01:00 offen) → Rücktaste (Stunde leer) → verlassen ⇒ gemeldet nur "", nie "01:00"
       ---
-      duration_ms: 1.143383
+      duration_ms: 1.210597
       type: 'test'
       ...
     # Subtest: geleert ohne leerMelden: Zwischenwert wird verworfen, nichts gemeldet
     ok 2 - geleert ohne leerMelden: Zwischenwert wird verworfen, nichts gemeldet
       ---
-      duration_ms: 0.121141
+      duration_ms: 0.120371
       type: 'test'
       ...
     # Subtest: AC-4: Leeren aus 07:30 ohne Zwischenwert (DS-2) meldet weiterhin genau einmal ""
     ok 3 - AC-4: Leeren aus 07:30 ohne Zwischenwert (DS-2) meldet weiterhin genau einmal ""
       ---
-      duration_ms: 0.130371
+      duration_ms: 0.116661
       type: 'test'
       ...
     # Subtest: schon leer gespeichert: geleert verlassen meldet nichts
     ok 4 - schon leer gespeichert: geleert verlassen meldet nichts
       ---
-      duration_ms: 0.15419
+      duration_ms: 0.152479
       type: 'test'
       ...
     # Subtest: AC-4: vollständig verlassen meldet den offenen Wert wie bisher (Teil-Eingabe „1" ⇒ 01:00 beim Verlassen)
     ok 5 - AC-4: vollständig verlassen meldet den offenen Wert wie bisher (Teil-Eingabe „1" ⇒ 01:00 beim Verlassen)
       ---
-      duration_ms: 0.11539
+      duration_ms: 0.12283
       type: 'test'
       ...
     # Subtest: AC-4: fertig getippte Uhrzeit wurde sofort gemeldet, Verlassen meldet nichts doppelt
     ok 6 - AC-4: fertig getippte Uhrzeit wurde sofort gemeldet, Verlassen meldet nichts doppelt
       ---
-      duration_ms: 0.920322
+      duration_ms: 1.116698
       type: 'test'
       ...
     # Subtest: unberührtes, leeres Feld verlassen (z. B. Kalender öffnen) meldet nichts und gilt nicht als geleert
     ok 7 - unberührtes, leeres Feld verlassen (z. B. Kalender öffnen) meldet nichts und gilt nicht als geleert
       ---
-      duration_ms: 0.176941
+      duration_ms: 0.18618
       type: 'test'
       ...
     1..7
-ok 5 - SegmentFeldMeldung.verlassen — Leeren aus zweistelliger Stunde (\#2947)
+ok 12 - SegmentFeldMeldung.verlassen — Leeren aus zweistelliger Stunde (\#2947)
   ---
-  duration_ms: 3.560887
+  duration_ms: 3.938873
   type: 'suite'
   ...
-1..5
-# tests 49
-# suites 5
-# pass 49
+# (node:158948) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+    # Subtest: alles_gekoppelt_route.de.html
+    ok 1 - alles_gekoppelt_route.de.html
+      ---
+      duration_ms: 33.446583
+      type: 'test'
+      ...
+    # Subtest: alles_gekoppelt_vergleich.de.html
+    ok 2 - alles_gekoppelt_vergleich.de.html
+      ---
+      duration_ms: 11.62328
+      type: 'test'
+      ...
+    # Subtest: premium_verfallen_route.de.html
+    ok 3 - premium_verfallen_route.de.html
+      ---
+      duration_ms: 6.641558
+      type: 'test'
+      ...
+    # Subtest: premium_verfallen_vergleich.de.html
+    ok 4 - premium_verfallen_vergleich.de.html
+      ---
+      duration_ms: 11.67216
+      type: 'test'
+      ...
+    # Subtest: nur_email_route.de.html
+    ok 5 - nur_email_route.de.html
+      ---
+      duration_ms: 4.987091
+      type: 'test'
+      ...
+    # Subtest: nur_email_vergleich.de.html
+    ok 6 - nur_email_vergleich.de.html
+      ---
+      duration_ms: 16.592583
+      type: 'test'
+      ...
+    # Subtest: bausteine.de.html
+    ok 7 - bausteine.de.html
+      ---
+      duration_ms: 43.841164
+      type: 'test'
+      ...
+    # Subtest: funktionen.de.txt: Funktionsergebnisse unveraendert (byte-gleich, ohne Normalisierung)
+    ok 8 - funktionen.de.txt: Funktionsergebnisse unveraendert (byte-gleich, ohne Normalisierung)
+      ---
+      duration_ms: 0.983837
+      type: 'test'
+      ...
+    # Subtest: Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine
+    ok 9 - Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine
+      ---
+      duration_ms: 3.406014
+      type: 'test'
+      ...
+    1..9
+ok 13 - AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+  ---
+  duration_ms: 134.254748
+  type: 'suite'
+  ...
+# Subtest: AC-1: Versand-Reiter englisch in Trip und Ortsvergleich, Kanalnamen unveraendert
+    # Subtest: route: erst de, dann ohne Neuladen en
+    ok 1 - route: erst de, dann ohne Neuladen en
+      ---
+      duration_ms: 6.603939
+      type: 'test'
+      ...
+    # Subtest: vergleich: erst de, dann ohne Neuladen en
+    ok 2 - vergleich: erst de, dann ohne Neuladen en
+      ---
+      duration_ms: 4.274723
+      type: 'test'
+      ...
+    # Subtest: Trip: Einleitung, Unterzeilen, Trend, Laufzeit und Kurzstil-Schalter englisch
+    ok 3 - Trip: Einleitung, Unterzeilen, Trend, Laufzeit und Kurzstil-Schalter englisch
+      ---
+      duration_ms: 1.946527
+      type: 'test'
+      ...
+    # Subtest: Ortsvergleich: Einleitung, Zeitplan-Hinweis mit Hervorhebung, Laufzeit englisch
+    ok 4 - Ortsvergleich: Einleitung, Zeitplan-Hinweis mit Hervorhebung, Laufzeit englisch
+      ---
+      duration_ms: 1.629127
+      type: 'test'
+      ...
+    # Subtest: Sonderzustaende: kein Kanal, fehlende Adresse, Platzhalter, Kurzstil inaktiv
+    ok 5 - Sonderzustaende: kein Kanal, fehlende Adresse, Platzhalter, Kurzstil inaktiv
+      ---
+      duration_ms: 6.822108
+      type: 'test'
+      ...
+    1..5
+ok 14 - AC-1: Versand-Reiter englisch in Trip und Ortsvergleich, Kanalnamen unveraendert
+  ---
+  duration_ms: 21.554783
+  type: 'suite'
+  ...
+# Subtest: AC-2: Premium-SMS-Zustand je Sprache, disabled/tone sprachunabhaengig
+    # Subtest: none
+    ok 1 - none
+      ---
+      duration_ms: 0.22101
+      type: 'test'
+      ...
+    # Subtest: fresh
+    ok 2 - fresh
+      ---
+      duration_ms: 0.10398
+      type: 'test'
+      ...
+    # Subtest: stale
+    ok 3 - stale
+      ---
+      duration_ms: 0.0781
+      type: 'test'
+      ...
+    # Subtest: ohne Tarif
+    ok 4 - ohne Tarif
+      ---
+      duration_ms: 0.06889
+      type: 'test'
+      ...
+    # Subtest: Meldedatum: de TT.MM.JJJJ, en „Thu 30 Oct" ohne Jahr (Annahme A2)
+    ok 5 - Meldedatum: de TT.MM.JJJJ, en „Thu 30 Oct" ohne Jahr (Annahme A2)
+      ---
+      duration_ms: 0.15904
+      type: 'test'
+      ...
+    1..5
+ok 15 - AC-2: Premium-SMS-Zustand je Sprache, disabled/tone sprachunabhaengig
+  ---
+  duration_ms: 0.787008
+  type: 'suite'
+  ...
+# Subtest: AC-3: formatNextBriefing in beiden Sprachen
+    # Subtest: pausiert_bis (route)
+    ok 1 - pausiert_bis (route)
+      ---
+      duration_ms: 0.263769
+      type: 'test'
+      ...
+    # Subtest: pausiert (route)
+    ok 2 - pausiert (route)
+      ---
+      duration_ms: 0.0944
+      type: 'test'
+      ...
+    # Subtest: manuell (route)
+    ok 3 - manuell (route)
+      ---
+      duration_ms: 0.636139
+      type: 'test'
+      ...
+    # Subtest: beendet (route)
+    ok 4 - beendet (route)
+      ---
+      duration_ms: 0.10409
+      type: 'test'
+      ...
+    # Subtest: beendet (vergleich)
+    ok 5 - beendet (vergleich)
+      ---
+      duration_ms: 0.11146
+      type: 'test'
+      ...
+    # Subtest: abgeschaltet (route)
+    ok 6 - abgeschaltet (route)
+      ---
+      duration_ms: 0.612848
+      type: 'test'
+      ...
+    # Subtest: kein_termin (vergleich)
+    ok 7 - kein_termin (vergleich)
+      ---
+      duration_ms: 11.738008
+      type: 'test'
+      ...
+    # Subtest: termin (route)
+    ok 8 - termin (route)
+      ---
+      duration_ms: 0.176489
+      type: 'test'
+      ...
+    # Subtest: termin (vergleich)
+    ok 9 - termin (vergleich)
+      ---
+      duration_ms: 0.113631
+      type: 'test'
+      ...
+    # Subtest: uebersprungen (route)
+    ok 10 - uebersprungen (route)
+      ---
+      duration_ms: 0.129649
+      type: 'test'
+      ...
+    # Subtest: uebersprungen (vergleich)
+    ok 11 - uebersprungen (vergleich)
+      ---
+      duration_ms: 0.129319
+      type: 'test'
+      ...
+    # Subtest: ueberfaellig (vergleich)
+    ok 12 - ueberfaellig (vergleich)
+      ---
+      duration_ms: 0.126949
+      type: 'test'
+      ...
+    # Subtest: kaputt (route)
+    ok 13 - kaputt (route)
+      ---
+      duration_ms: 0.12352
+      type: 'test'
+      ...
+    # Subtest: nicht_geladen (route)
+    ok 14 - nicht_geladen (route)
+      ---
+      duration_ms: 0.08948
+      type: 'test'
+      ...
+    # Subtest: alle sieben Wochentage je Sprache (zonenfrei aus local_date)
+    ok 15 - alle sieben Wochentage je Sprache (zonenfrei aus local_date)
+      ---
+      duration_ms: 0.3138
+      type: 'test'
+      ...
+    1..15
+ok 16 - AC-3: formatNextBriefing in beiden Sprachen
+  ---
+  duration_ms: 15.136443
+  type: 'suite'
+  ...
+# Subtest: \#2869 AC-1/AC-2/AC-3/AC-11: Versand-Reiter zeigt Wochentag + Datum + Uhrzeit + Kürzel
+    # Subtest: AC-1: Trip (route), de → „Nächstes Briefing So 01.08. 06:00 (CEST)"
+    ok 1 - AC-1: Trip (route), de → „Nächstes Briefing So 01.08. 06:00 (CEST)"
+      ---
+      duration_ms: 10.264592
+      type: 'test'
+      ...
+    # Subtest: AC-2: Ortsvergleich (vergleich), de → „Nächstes Briefing So 08.11. 06:00 (CET)"
+    ok 2 - AC-2: Ortsvergleich (vergleich), de → „Nächstes Briefing So 08.11. 06:00 (CET)"
+      ---
+      duration_ms: 2.171636
+      type: 'test'
+      ...
+    # Subtest: AC-2: route und vergleich zeigen bei identischem Backend-Wert denselben Text
+    ok 3 - AC-2: route und vergleich zeigen bei identischem Backend-Wert denselben Text
+      ---
+      duration_ms: 0.621309
+      type: 'test'
+      ...
+    # Subtest: AC-3: en (erst de, dann ohne Neuladen en) → „Sun 1 Aug 06:00 (CEST)" / „Sun 8 Nov 06:00 (CET)"
+    ok 4 - AC-3: en (erst de, dann ohne Neuladen en) → „Sun 1 Aug 06:00 (CEST)" / „Sun 8 Nov 06:00 (CET)"
+      ---
+      duration_ms: 0.318059
+      type: 'test'
+      ...
+    # Subtest: AC-11: Prüfstand-Termin Mi 28.10.2026 (+01:00) → „Mi 28.10. 07:00 (CET)", nie (CEST) — route
+    ok 5 - AC-11: Prüfstand-Termin Mi 28.10.2026 (+01:00) → „Mi 28.10. 07:00 (CET)", nie (CEST) — route
+      ---
+      duration_ms: 0.23436
+      type: 'test'
+      ...
+    # Subtest: AC-11: Prüfstand-Termin Mi 28.10.2026 (+01:00) → „Mi 28.10. 07:00 (CET)", nie (CEST) — vergleich
+    ok 6 - AC-11: Prüfstand-Termin Mi 28.10.2026 (+01:00) → „Mi 28.10. 07:00 (CET)", nie (CEST) — vergleich
+      ---
+      duration_ms: 0.16118
+      type: 'test'
+      ...
+    1..6
+ok 17 - \#2869 AC-1/AC-2/AC-3/AC-11: Versand-Reiter zeigt Wochentag + Datum + Uhrzeit + Kürzel
+  ---
+  duration_ms: 14.011425
+  type: 'suite'
+  ...
+# Subtest: AC-4: zwei Nutzer, zwei Sprachen, eigene Kanaele, gleiche report_config
+    # Subtest: A englisch mit Telegram, B deutsch nur E-Mail; keine fremden Kanaele; Nutzlast gleich
+    ok 1 - A englisch mit Telegram, B deutsch nur E-Mail; keine fremden Kanaele; Nutzlast gleich
+      ---
+      duration_ms: 55.262865
+      type: 'test'
+      ...
+    # Subtest: Sende-Ziel-Saetze der Sperrfaelle in beiden Sprachen
+    ok 2 - Sende-Ziel-Saetze der Sperrfaelle in beiden Sprachen
+      ---
+      duration_ms: 0.30081
+      type: 'test'
+      ...
+    1..2
+ok 18 - AC-4: zwei Nutzer, zwei Sprachen, eigene Kanaele, gleiche report_config
+  ---
+  duration_ms: 55.672844
+  type: 'suite'
+  ...
+# Subtest: Anker: jeder F6-Katalogwert ist als festes de/en-Literal verankert
+    # Subtest: versand.kanaele.titel
+    ok 1 - versand.kanaele.titel
+      ---
+      duration_ms: 0.616209
+      type: 'test'
+      ...
+    # Subtest: versand.kanal.email_fehlt
+    ok 2 - versand.kanal.email_fehlt
+      ---
+      duration_ms: 0.135059
+      type: 'test'
+      ...
+    # Subtest: versand.kanal.telegram_fehlt
+    ok 3 - versand.kanal.telegram_fehlt
+      ---
+      duration_ms: 0.08435
+      type: 'test'
+      ...
+    # Subtest: versand.kanal.nummer_fehlt
+    ok 4 - versand.kanal.nummer_fehlt
+      ---
+      duration_ms: 0.109749
+      type: 'test'
+      ...
+    # Subtest: versand.kanal.im_account_einrichten
+    ok 5 - versand.kanal.im_account_einrichten
+      ---
+      duration_ms: 0.0634
+      type: 'test'
+      ...
+    # Subtest: versand.kanal.nummer_unbestaetigt
+    ok 6 - versand.kanal.nummer_unbestaetigt
+      ---
+      duration_ms: 0.061839
+      type: 'test'
+      ...
+    # Subtest: versand.kanal.code_eingeben
+    ok 7 - versand.kanal.code_eingeben
+      ---
+      duration_ms: 0.07942
+      type: 'test'
+      ...
+    # Subtest: versand.kanal.sms_ab_standard
+    ok 8 - versand.kanal.sms_ab_standard
+      ---
+      duration_ms: 0.08608
+      type: 'test'
+      ...
+    # Subtest: versand.kanal.bald_verfuegbar
+    ok 9 - versand.kanal.bald_verfuegbar
+      ---
+      duration_ms: 0.05845
+      type: 'test'
+      ...
+    # Subtest: versand.status.nicht_verbunden
+    ok 10 - versand.status.nicht_verbunden
+      ---
+      duration_ms: 0.06672
+      type: 'test'
+      ...
+    # Subtest: versand.status.bestaetigt
+    ok 11 - versand.status.bestaetigt
+      ---
+      duration_ms: 0.16761
+      type: 'test'
+      ...
+    # Subtest: versand.status.nicht_bestaetigt
+    ok 12 - versand.status.nicht_bestaetigt
+      ---
+      duration_ms: 0.10049
+      type: 'test'
+      ...
+    # Subtest: versand.status.verbunden
+    ok 13 - versand.status.verbunden
+      ---
+      duration_ms: 0.06004
+      type: 'test'
+      ...
+    # Subtest: versand.status.hinterlegt
+    ok 14 - versand.status.hinterlegt
+      ---
+      duration_ms: 0.054349
+      type: 'test'
+      ...
+    # Subtest: versand.status.eingetragen_unbestaetigt
+    ok 15 - versand.status.eingetragen_unbestaetigt
+      ---
+      duration_ms: 0.06024
+      type: 'test'
+      ...
+    # Subtest: versand.premium_sms.nicht_verfuegbar
+    ok 16 - versand.premium_sms.nicht_verfuegbar
+      ---
+      duration_ms: 0.049631
+      type: 'test'
+      ...
+    # Subtest: versand.premium_sms.hinweis.nicht_verfuegbar
+    ok 17 - versand.premium_sms.hinweis.nicht_verfuegbar
+      ---
+      duration_ms: 0.068469
+      type: 'test'
+      ...
+    # Subtest: versand.premium_sms.gelernt
+    ok 18 - versand.premium_sms.gelernt
+      ---
+      duration_ms: 0.0547
+      type: 'test'
+      ...
+    # Subtest: versand.premium_sms.hinweis.gelernt
+    ok 19 - versand.premium_sms.hinweis.gelernt
+      ---
+      duration_ms: 0.10363
+      type: 'test'
+      ...
+    # Subtest: versand.premium_sms.verfallen
+    ok 20 - versand.premium_sms.verfallen
+      ---
+      duration_ms: 0.090749
+      type: 'test'
+      ...
+    # Subtest: versand.premium_sms.hinweis.verfallen
+    ok 21 - versand.premium_sms.hinweis.verfallen
+      ---
+      duration_ms: 0.11365
+      type: 'test'
+      ...
+    # Subtest: versand.premium_sms.hinweis.nie_gemeldet
+    ok 22 - versand.premium_sms.hinweis.nie_gemeldet
+      ---
+      duration_ms: 0.051419
+      type: 'test'
+      ...
+    # Subtest: versand.premium_sms.zuletzt_gemeldet
+    ok 23 - versand.premium_sms.zuletzt_gemeldet
+      ---
+      duration_ms: 0.077321
+      type: 'test'
+      ...
+    # Subtest: versand.briefing.lead.route
+    ok 24 - versand.briefing.lead.route
+      ---
+      duration_ms: 0.058989
+      type: 'test'
+      ...
+    # Subtest: versand.briefing.lead.vergleich
+    ok 25 - versand.briefing.lead.vergleich
+      ---
+      duration_ms: 0.05247
+      type: 'test'
+      ...
+    # Subtest: versand.briefing.sub.email
+    ok 26 - versand.briefing.sub.email
+      ---
+      duration_ms: 0.049581
+      type: 'test'
+      ...
+    # Subtest: versand.briefing.sub.telegram
+    ok 27 - versand.briefing.sub.telegram
+      ---
+      duration_ms: 0.05288
+      type: 'test'
+      ...
+    # Subtest: versand.briefing.sub.telegram_kurzform
+    ok 28 - versand.briefing.sub.telegram_kurzform
+      ---
+      duration_ms: 0.04744
+      type: 'test'
+      ...
+    # Subtest: versand.briefing.sub.sms
+    ok 29 - versand.briefing.sub.sms
+      ---
+      duration_ms: 0.054459
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.titel
+    ok 30 - versand.zeitplan.titel
+      ---
+      duration_ms: 0.04603
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.kein_kanal
+    ok 31 - versand.zeitplan.kein_kanal
+      ---
+      duration_ms: 0.04631
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.kein_kanal_text
+    ok 32 - versand.zeitplan.kein_kanal_text
+      ---
+      duration_ms: 0.0615
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.vergleich_intro
+    ok 33 - versand.zeitplan.vergleich_intro
+      ---
+      duration_ms: 0.06194
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.morgen
+    ok 34 - versand.zeitplan.morgen
+      ---
+      duration_ms: 0.04902
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.morgen_sub
+    ok 35 - versand.zeitplan.morgen_sub
+      ---
+      duration_ms: 0.101521
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.abend
+    ok 36 - versand.zeitplan.abend
+      ---
+      duration_ms: 0.09446
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.abend_sub
+    ok 37 - versand.zeitplan.abend_sub
+      ---
+      duration_ms: 0.05384
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.aktiv
+    ok 38 - versand.zeitplan.aktiv
+      ---
+      duration_ms: 0.04662
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.uhrzeit
+    ok 39 - versand.zeitplan.uhrzeit
+      ---
+      duration_ms: 0.04775
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.morgens
+    ok 40 - versand.zeitplan.morgens
+      ---
+      duration_ms: 0.05594
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.abends
+    ok 41 - versand.zeitplan.abends
+      ---
+      duration_ms: 0.05459
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.trend
+    ok 42 - versand.zeitplan.trend
+      ---
+      duration_ms: 0.046461
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.trend_sub
+    ok 43 - versand.zeitplan.trend_sub
+      ---
+      duration_ms: 0.04417
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.im_morgen
+    ok 44 - versand.zeitplan.im_morgen
+      ---
+      duration_ms: 0.113468
+      type: 'test'
+      ...
+    # Subtest: versand.zeitplan.im_abend
+    ok 45 - versand.zeitplan.im_abend
+      ---
+      duration_ms: 0.04829
+      type: 'test'
+      ...
+    # Subtest: versand.laufzeit.titel
+    ok 46 - versand.laufzeit.titel
+      ---
+      duration_ms: 0.060991
+      type: 'test'
+      ...
+    # Subtest: versand.laufzeit.route
+    ok 47 - versand.laufzeit.route
+      ---
+      duration_ms: 0.05377
+      type: 'test'
+      ...
+    # Subtest: versand.laufzeit.route_sub
+    ok 48 - versand.laufzeit.route_sub
+      ---
+      duration_ms: 0.045709
+      type: 'test'
+      ...
+    # Subtest: versand.laufzeit.etappen_oeffnen
+    ok 49 - versand.laufzeit.etappen_oeffnen
+      ---
+      duration_ms: 0.063859
+      type: 'test'
+      ...
+    # Subtest: versand.laufzeit.offen
+    ok 50 - versand.laufzeit.offen
+      ---
+      duration_ms: 0.050339
+      type: 'test'
+      ...
+    # Subtest: versand.laufzeit.bis_datum
+    ok 51 - versand.laufzeit.bis_datum
+      ---
+      duration_ms: 0.045821
+      type: 'test'
+      ...
+    # Subtest: versand.laufzeit.ohne_ende
+    ok 52 - versand.laufzeit.ohne_ende
+      ---
+      duration_ms: 0.094789
+      type: 'test'
+      ...
+    # Subtest: versand.naechstes.titel
+    ok 53 - versand.naechstes.titel
+      ---
+      duration_ms: 0.04762
+      type: 'test'
+      ...
+    # Subtest: versand.naechstes.pausiert
+    ok 54 - versand.naechstes.pausiert
+      ---
+      duration_ms: 0.045621
+      type: 'test'
+      ...
+    # Subtest: versand.naechstes.pausiert_bis
+    ok 55 - versand.naechstes.pausiert_bis
+      ---
+      duration_ms: 0.05677
+      type: 'test'
+      ...
+    # Subtest: versand.naechstes.beendet.route
+    ok 56 - versand.naechstes.beendet.route
+      ---
+      duration_ms: 0.046379
+      type: 'test'
+      ...
+    # Subtest: versand.naechstes.beendet.vergleich
+    ok 57 - versand.naechstes.beendet.vergleich
+      ---
+      duration_ms: 0.048071
+      type: 'test'
+      ...
+    # Subtest: versand.naechstes.grund.manual
+    ok 58 - versand.naechstes.grund.manual
+      ---
+      duration_ms: 0.047341
+      type: 'test'
+      ...
+    # Subtest: versand.naechstes.grund.disabled
+    ok 59 - versand.naechstes.grund.disabled
+      ---
+      duration_ms: 0.046229
+      type: 'test'
+      ...
+    # Subtest: versand.naechstes.grund.none
+    ok 60 - versand.naechstes.grund.none
+      ---
+      duration_ms: 0.043661
+      type: 'test'
+      ...
+    # Subtest: versand.naechstes.uebersprungen
+    ok 61 - versand.naechstes.uebersprungen
+      ---
+      duration_ms: 0.063121
+      type: 'test'
+      ...
+    # Subtest: versand.naechstes.nachgeholt
+    ok 62 - versand.naechstes.nachgeholt
+      ---
+      duration_ms: 0.06588
+      type: 'test'
+      ...
+    # Subtest: versand.wochentag.0
+    ok 63 - versand.wochentag.0
+      ---
+      duration_ms: 0.056401
+      type: 'test'
+      ...
+    # Subtest: versand.wochentag.1
+    ok 64 - versand.wochentag.1
+      ---
+      duration_ms: 0.06447
+      type: 'test'
+      ...
+    # Subtest: versand.wochentag.2
+    ok 65 - versand.wochentag.2
+      ---
+      duration_ms: 0.05849
+      type: 'test'
+      ...
+    # Subtest: versand.wochentag.3
+    ok 66 - versand.wochentag.3
+      ---
+      duration_ms: 0.048419
+      type: 'test'
+      ...
+    # Subtest: versand.wochentag.4
+    ok 67 - versand.wochentag.4
+      ---
+      duration_ms: 0.04452
+      type: 'test'
+      ...
+    # Subtest: versand.wochentag.5
+    ok 68 - versand.wochentag.5
+      ---
+      duration_ms: 0.054091
+      type: 'test'
+      ...
+    # Subtest: versand.wochentag.6
+    ok 69 - versand.wochentag.6
+      ---
+      duration_ms: 7.628877
+      type: 'test'
+      ...
+    # Subtest: versand.ziel.unbekannt
+    ok 70 - versand.ziel.unbekannt
+      ---
+      duration_ms: 0.11329
+      type: 'test'
+      ...
+    # Subtest: versand.ziel.keine_adresse
+    ok 71 - versand.ziel.keine_adresse
+      ---
+      duration_ms: 0.067081
+      type: 'test'
+      ...
+    # Subtest: versand.ziel.unbestaetigt
+    ok 72 - versand.ziel.unbestaetigt
+      ---
+      duration_ms: 0.08678
+      type: 'test'
+      ...
+    # Subtest: versand.ziel.geht_an
+    ok 73 - versand.ziel.geht_an
+      ---
+      duration_ms: 0.06234
+      type: 'test'
+      ...
+    # Subtest: telegram_kurzstil.checkbox
+    ok 74 - telegram_kurzstil.checkbox
+      ---
+      duration_ms: 0.061229
+      type: 'test'
+      ...
+    # Subtest: telegram_kurzstil.hinweis_aktiv
+    ok 75 - telegram_kurzstil.hinweis_aktiv
+      ---
+      duration_ms: 0.04873
+      type: 'test'
+      ...
+    # Subtest: telegram_kurzstil.hinweis_inaktiv
+    ok 76 - telegram_kurzstil.hinweis_inaktiv
+      ---
+      duration_ms: 0.050631
+      type: 'test'
+      ...
+    # Subtest: statischer Gegencheck: Anker-Tabelle == Schluessel von versand.json + telegram_kurzstil.* (de und en)
+    ok 77 - statischer Gegencheck: Anker-Tabelle == Schluessel von versand.json + telegram_kurzstil.* (de und en)
+      ---
+      duration_ms: 1.810567
+      type: 'test'
+      ...
+    1..77
+ok 19 - Anker: jeder F6-Katalogwert ist als festes de/en-Literal verankert
+  ---
+  duration_ms: 15.948912
+  type: 'suite'
+  ...
+# (node:158987) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+    # Subtest: kopf_status.de.html
+    ok 1 - kopf_status.de.html
+      ---
+      duration_ms: 30.252659
+      type: 'test'
+      ...
+    # Subtest: uebersicht.de.html
+    ok 2 - uebersicht.de.html
+      ---
+      duration_ms: 15.507424
+      type: 'test'
+      ...
+    # Subtest: etappen.de.html
+    ok 3 - etappen.de.html
+      ---
+      duration_ms: 3.678833
+      type: 'test'
+      ...
+    # Subtest: layout_bausteine.de.html
+    ok 4 - layout_bausteine.de.html
+      ---
+      duration_ms: 24.969487
+      type: 'test'
+      ...
+    # Subtest: wegpunkte.de.html
+    ok 5 - wegpunkte.de.html
+      ---
+      duration_ms: 25.006917
+      type: 'test'
+      ...
+    # Subtest: edit_felder.de.html
+    ok 6 - edit_felder.de.html
+      ---
+      duration_ms: 22.649851
+      type: 'test'
+      ...
+    # Subtest: historie.de.html
+    ok 7 - historie.de.html
+      ---
+      duration_ms: 2.228847
+      type: 'test'
+      ...
+    # Subtest: etappen_editor_desktop.de.html
+    ok 8 - etappen_editor_desktop.de.html
+      ---
+      duration_ms: 10.221023
+      type: 'test'
+      ...
+    # Subtest: etappen_editor_kaskade.de.html
+    ok 9 - etappen_editor_kaskade.de.html
+      ---
+      duration_ms: 16.337462
+      type: 'test'
+      ...
+    # Subtest: etappen_editor_mobil.de.html
+    ok 10 - etappen_editor_mobil.de.html
+      ---
+      duration_ms: 16.360773
+      type: 'test'
+      ...
+    # Subtest: hub_seite.de.html
+    ok 11 - hub_seite.de.html
+      ---
+      duration_ms: 43.459806
+      type: 'test'
+      ...
+    # Subtest: hub_reiter.de.html
+    ok 12 - hub_reiter.de.html
+      ---
+      duration_ms: 2.353747
+      type: 'test'
+      ...
+    # Subtest: anlegen_route.de.html
+    ok 13 - anlegen_route.de.html
+      ---
+      duration_ms: 94.213878
+      type: 'test'
+      ...
+    # Subtest: anlegen_etappen.de.html
+    ok 14 - anlegen_etappen.de.html
+      ---
+      duration_ms: 39.080184
+      type: 'test'
+      ...
+    # Subtest: anlegen_weiter.de.html
+    ok 15 - anlegen_weiter.de.html
+      ---
+      duration_ms: 27.774972
+      type: 'test'
+      ...
+    # Subtest: funktionen.de.txt: Aktionsliste, Reiter, Anlege-Kette, Etappen-Datum unveraendert (byte-gleich)
+    ok 16 - funktionen.de.txt: Aktionsliste, Reiter, Anlege-Kette, Etappen-Datum unveraendert (byte-gleich)
+      ---
+      duration_ms: 0.815739
+      type: 'test'
+      ...
+    # Subtest: Messaufbau: Golden enthaelt die deutschen Texte der Bausteine
+    ok 17 - Messaufbau: Golden enthaelt die deutschen Texte der Bausteine
+      ---
+      duration_ms: 5.131851
+      type: 'test'
+      ...
+    1..17
+ok 20 - AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+  ---
+  duration_ms: 381.529428
+  type: 'suite'
+  ...
+# Subtest: AC-1: Trip-Hub englisch, Namen unveraendert
+    # Subtest: Reiterleiste und Seite: Reiter, Aktionen, Kopf, Erfolg/Fehler englisch (erst de, dann ohne Neuladen en)
+    ok 1 - Reiterleiste und Seite: Reiter, Aktionen, Kopf, Erfolg/Fehler englisch (erst de, dann ohne Neuladen en)
+      ---
+      duration_ms: 15.388754
+      type: 'test'
+      ...
+    # Subtest: Kopf: ohne Kennzahlenzeile (\#2980), Zahlenformat en-GB, Aktivitaeten englisch
+    ok 2 - Kopf: ohne Kennzahlenzeile (\#2980), Zahlenformat en-GB, Aktivitaeten englisch
+      ---
+      duration_ms: 6.155421
+      type: 'test'
+      ...
+    # Subtest: Etappen: Datum `Wed 1 Jul` (de unveraendert `01.07.`), Kennzahlen und Risiko englisch, Etappen-Namen gleich
+    ok 3 - Etappen: Datum `Wed 1 Jul` (de unveraendert `01.07.`), Kennzahlen und Risiko englisch, Etappen-Namen gleich
+      ---
+      duration_ms: 2.448285
+      type: 'test'
+      ...
+    # Subtest: Uebersicht: Karten, Spruenge, Plural der unbekannten Groessen exakt
+    ok 4 - Uebersicht: Karten, Spruenge, Plural der unbekannten Groessen exakt
+      ---
+      duration_ms: 3.706973
+      type: 'test'
+      ...
+    # Subtest: Wegpunkt-Editor-Bausteine englisch (Streifen, Karten, Pausentag, Profil)
+    ok 5 - Wegpunkt-Editor-Bausteine englisch (Streifen, Karten, Pausentag, Profil)
+      ---
+      duration_ms: 5.503731
+      type: 'test'
+      ...
+    # Subtest: Geteilte Bausteine: Versand-Historie (Morgen/Abend, von Hand, Leer/Laden/Fehler) und Vorschau-Rahmen
+    ok 6 - Geteilte Bausteine: Versand-Historie (Morgen/Abend, von Hand, Leer/Laden/Fehler) und Vorschau-Rahmen
+      ---
+      duration_ms: 13.114199
+      type: 'test'
+      ...
+    # Subtest: Fehler ohne Server-Text: Flag/Schluessel wird beim Rendern aufgeloest (nicht eingefroren)
+    ok 7 - Fehler ohne Server-Text: Flag/Schluessel wird beim Rendern aufgeloest (nicht eingefroren)
+      ---
+      duration_ms: 19.016288
+      type: 'test'
+      ...
+    # Subtest: Aktionsfehler der Seite: 5xx/4xx ohne Detail/Netz → Schluessel, 4xx mit Detail → Server-Text (echte Funktion)
+    ok 8 - Aktionsfehler der Seite: 5xx/4xx ohne Detail/Netz → Schluessel, 4xx mit Detail → Server-Text (echte Funktion)
+      ---
+      duration_ms: 431.755044
+      type: 'test'
+      ...
+    1..8
+ok 21 - AC-1: Trip-Hub englisch, Namen unveraendert
+  ---
+  duration_ms: 497.541553
+  type: 'suite'
+  ...
+# Subtest: AC-2: Aktionsliste Trip == Ortsvergleich, Texte aus aktionen.*
+    # Subtest: en: jede Aktion traegt trFor(en, aktionen.*), Trip und Vergleich gleich, IDs und danger unveraendert
+    ok 1 - en: jede Aktion traegt trFor(en, aktionen.*), Trip und Vergleich gleich, IDs und danger unveraendert
+      ---
+      duration_ms: 0.861639
+      type: 'test'
+      ...
+    # Subtest: Reiter und Anlege-Kette englisch, Kennungen unveraendert; Sperr-Hinweise englisch
+    ok 2 - Reiter und Anlege-Kette englisch, Kennungen unveraendert; Sperr-Hinweise englisch
+      ---
+      duration_ms: 0.25438
+      type: 'test'
+      ...
+    1..2
+ok 22 - AC-2: Aktionsliste Trip == Ortsvergleich, Texte aus aktionen.*
+  ---
+  duration_ms: 1.227038
+  type: 'suite'
+  ...
+# Subtest: AC-4: Metrik-Namen ueber metricLabel, col_label unveraendert
+    # Subtest: Ausgabe-Layout-Bausteine und Tabellen-Vorschau: label_en bzw. deutsch ohne label_en
+    ok 1 - Ausgabe-Layout-Bausteine und Tabellen-Vorschau: label_en bzw. deutsch ohne label_en
+      ---
+      duration_ms: 5.189922
+      type: 'test'
+      ...
+    # Subtest: Uebersicht: Namensliste englisch, col_label der Fixture steht nirgends verfaelscht
+    ok 2 - Uebersicht: Namensliste englisch, col_label der Fixture steht nirgends verfaelscht
+      ---
+      duration_ms: 2.377156
+      type: 'test'
+      ...
+    1..2
+ok 23 - AC-4: Metrik-Namen ueber metricLabel, col_label unveraendert
+  ---
+  duration_ms: 7.644567
+  type: 'suite'
+  ...
+# Subtest: AC-7: Trip-Status je Sprache
+    # Subtest: de unveraendert, en Draft/Planned/Active/Paused/Finished/Archived
+    ok 1 - de unveraendert, en Draft/Planned/Active/Paused/Finished/Archived
+      ---
+      duration_ms: 4.536202
+      type: 'test'
+      ...
+    1..1
+ok 24 - AC-7: Trip-Status je Sprache
+  ---
+  duration_ms: 4.609142
+  type: 'suite'
+  ...
+# Subtest: AC-5: zwei Nutzer, zwei Sprachen, eigener Trip, sprachunabhaengige Nutzlast
+    # Subtest: A englisch, B deutsch; jeder nur eigener Trip (fremder 404 in eigener Sprache); Nutzlast ohne Anzeigetexte
+    ok 1 - A englisch, B deutsch; jeder nur eigener Trip (fremder 404 in eigener Sprache); Nutzlast ohne Anzeigetexte
+      ---
+      duration_ms: 22.029574
+      type: 'test'
+      ...
+    1..1
+ok 25 - AC-5: zwei Nutzer, zwei Sprachen, eigener Trip, sprachunabhaengige Nutzlast
+  ---
+  duration_ms: 22.099082
+  type: 'suite'
+  ...
+# Subtest: AC-5 (Adversary F002): Trip-Loader-Fehler (nicht 404) in der Sprache des Nutzers
+    # Subtest: Status 500: A (en) „Error loading the trip", B (de) „Fehler beim Laden des Trips"
+    ok 1 - Status 500: A (en) „Error loading the trip", B (de) „Fehler beim Laden des Trips"
+      ---
+      duration_ms: 0.756489
+      type: 'test'
+      ...
+    1..1
+ok 26 - AC-5 (Adversary F002): Trip-Loader-Fehler (nicht 404) in der Sprache des Nutzers
+  ---
+  duration_ms: 0.813719
+  type: 'suite'
+  ...
+# Subtest: Anker: jeder F9-Katalogwert ist als festes de/en-Literal verankert
+    # Subtest: aktionen.pause
+    ok 1 - aktionen.pause
+      ---
+      duration_ms: 1.616288
+      type: 'test'
+      ...
+    # Subtest: aktionen.resume
+    ok 2 - aktionen.resume
+      ---
+      duration_ms: 0.07928
+      type: 'test'
+      ...
+    # Subtest: aktionen.alarms
+    ok 3 - aktionen.alarms
+      ---
+      duration_ms: 0.05246
+      type: 'test'
+      ...
+    # Subtest: aktionen.weather
+    ok 4 - aktionen.weather
+      ---
+      duration_ms: 0.044231
+      type: 'test'
+      ...
+    # Subtest: aktionen.edit
+    ok 5 - aktionen.edit
+      ---
+      duration_ms: 0.088631
+      type: 'test'
+      ...
+    # Subtest: aktionen.archive
+    ok 6 - aktionen.archive
+      ---
+      duration_ms: 0.05073
+      type: 'test'
+      ...
+    # Subtest: aktionen.unarchive
+    ok 7 - aktionen.unarchive
+      ---
+      duration_ms: 0.040519
+      type: 'test'
+      ...
+    # Subtest: aktionen.delete
+    ok 8 - aktionen.delete
+      ---
+      duration_ms: 0.04821
+      type: 'test'
+      ...
+    # Subtest: aktionen.continue_setup
+    ok 9 - aktionen.continue_setup
+      ---
+      duration_ms: 0.0437
+      type: 'test'
+      ...
+    # Subtest: aktionen.speichern
+    ok 10 - aktionen.speichern
+      ---
+      duration_ms: 0.066649
+      type: 'test'
+      ...
+    # Subtest: aktionen.speichern_fehlgeschlagen
+    ok 11 - aktionen.speichern_fehlgeschlagen
+      ---
+      duration_ms: 0.04147
+      type: 'test'
+      ...
+    # Subtest: aktionen.umbenennen
+    ok 12 - aktionen.umbenennen
+      ---
+      duration_ms: 0.05801
+      type: 'test'
+      ...
+    # Subtest: aktionen.wird_gesendet
+    ok 13 - aktionen.wird_gesendet
+      ---
+      duration_ms: 0.078941
+      type: 'test'
+      ...
+    # Subtest: aktionen.reiter.uebersicht
+    ok 14 - aktionen.reiter.uebersicht
+      ---
+      duration_ms: 0.041589
+      type: 'test'
+      ...
+    # Subtest: aktionen.reiter.etappen
+    ok 15 - aktionen.reiter.etappen
+      ---
+      duration_ms: 0.039491
+      type: 'test'
+      ...
+    # Subtest: aktionen.reiter.orte
+    ok 16 - aktionen.reiter.orte
+      ---
+      duration_ms: 0.043369
+      type: 'test'
+      ...
+    # Subtest: aktionen.reiter.wetter
+    ok 17 - aktionen.reiter.wetter
+      ---
+      duration_ms: 0.039471
+      type: 'test'
+      ...
+    # Subtest: aktionen.reiter.zustellung
+    ok 18 - aktionen.reiter.zustellung
+      ---
+      duration_ms: 0.041051
+      type: 'test'
+      ...
+    # Subtest: aktionen.sperre.oeffnen
+    ok 19 - aktionen.sperre.oeffnen
+      ---
+      duration_ms: 0.08408
+      type: 'test'
+      ...
+    # Subtest: aktionen.kopf.ok
+    ok 20 - aktionen.kopf.ok
+      ---
+      duration_ms: 0.03911
+      type: 'test'
+      ...
+    # Subtest: aktionen.kopf.name_bearbeiten
+    ok 21 - aktionen.kopf.name_bearbeiten
+      ---
+      duration_ms: 0.041239
+      type: 'test'
+      ...
+    # Subtest: aktionen.kopf.region_bearbeiten
+    ok 22 - aktionen.kopf.region_bearbeiten
+      ---
+      duration_ms: 0.039791
+      type: 'test'
+      ...
+    # Subtest: aktionen.kopf.aktivitaet_waehlen
+    ok 23 - aktionen.kopf.aktivitaet_waehlen
+      ---
+      duration_ms: 0.038849
+      type: 'test'
+      ...
+    # Subtest: aktionen.kopf.test_schicken
+    ok 24 - aktionen.kopf.test_schicken
+      ---
+      duration_ms: 0.037759
+      type: 'test'
+      ...
+    # Subtest: aktionen.kopf.eltern_orte
+    ok 25 - aktionen.kopf.eltern_orte
+      ---
+      duration_ms: 0.048231
+      type: 'test'
+      ...
+    # Subtest: aktionen.kopf.eyebrow_trip
+    ok 26 - aktionen.kopf.eyebrow_trip
+      ---
+      duration_ms: 0.053481
+      type: 'test'
+      ...
+    # Subtest: aktionen.kopf.eyebrow_orte
+    ok 27 - aktionen.kopf.eyebrow_orte
+      ---
+      duration_ms: 0.04287
+      type: 'test'
+      ...
+    # Subtest: aktionen.kopf.vergleichstabelle
+    ok 28 - aktionen.kopf.vergleichstabelle
+      ---
+      duration_ms: 0.043611
+      type: 'test'
+      ...
+    # Subtest: aktionen.kopf.morgen_briefing
+    ok 29 - aktionen.kopf.morgen_briefing
+      ---
+      duration_ms: 0.1072
+      type: 'test'
+      ...
+    # Subtest: aktionen.kopf.abend_briefing
+    ok 30 - aktionen.kopf.abend_briefing
+      ---
+      duration_ms: 0.06435
+      type: 'test'
+      ...
+    # Subtest: aktionen.historie.titel
+    ok 31 - aktionen.historie.titel
+      ---
+      duration_ms: 0.043439
+      type: 'test'
+      ...
+    # Subtest: aktionen.historie.laedt
+    ok 32 - aktionen.historie.laedt
+      ---
+      duration_ms: 0.039501
+      type: 'test'
+      ...
+    # Subtest: aktionen.historie.fehler
+    ok 33 - aktionen.historie.fehler
+      ---
+      duration_ms: 0.04022
+      type: 'test'
+      ...
+    # Subtest: aktionen.historie.leer
+    ok 34 - aktionen.historie.leer
+      ---
+      duration_ms: 0.039
+      type: 'test'
+      ...
+    # Subtest: aktionen.historie.morgen
+    ok 35 - aktionen.historie.morgen
+      ---
+      duration_ms: 0.04051
+      type: 'test'
+      ...
+    # Subtest: aktionen.historie.abend
+    ok 36 - aktionen.historie.abend
+      ---
+      duration_ms: 0.043859
+      type: 'test'
+      ...
+    # Subtest: aktionen.historie.von_hand
+    ok 37 - aktionen.historie.von_hand
+      ---
+      duration_ms: 0.03866
+      type: 'test'
+      ...
+    # Subtest: aktionen.fehler.server
+    ok 38 - aktionen.fehler.server
+      ---
+      duration_ms: 0.03907
+      type: 'test'
+      ...
+    # Subtest: aktionen.fehler.allgemein
+    ok 39 - aktionen.fehler.allgemein
+      ---
+      duration_ms: 0.04165
+      type: 'test'
+      ...
+    # Subtest: aktionen.fehler.verbindung
+    ok 40 - aktionen.fehler.verbindung
+      ---
+      duration_ms: 0.03974
+      type: 'test'
+      ...
+    # Subtest: aktionen.fehler.senden
+    ok 41 - aktionen.fehler.senden
+      ---
+      duration_ms: 0.035511
+      type: 'test'
+      ...
+    # Subtest: vergleich.anlegen.reiter
+    ok 42 - vergleich.anlegen.reiter
+      ---
+      duration_ms: 0.051429
+      type: 'test'
+      ...
+    # Subtest: vergleich.anlegen.sperre_orte
+    ok 43 - vergleich.anlegen.sperre_orte
+      ---
+      duration_ms: 0.038831
+      type: 'test'
+      ...
+    # Subtest: vergleich.anlegen.sperre_wetter
+    ok 44 - vergleich.anlegen.sperre_wetter
+      ---
+      duration_ms: 0.037149
+      type: 'test'
+      ...
+    # Subtest: trip.status.draft
+    ok 45 - trip.status.draft
+      ---
+      duration_ms: 0.040919
+      type: 'test'
+      ...
+    # Subtest: trip.status.planned
+    ok 46 - trip.status.planned
+      ---
+      duration_ms: 0.041881
+      type: 'test'
+      ...
+    # Subtest: trip.status.active
+    ok 47 - trip.status.active
+      ---
+      duration_ms: 0.056479
+      type: 'test'
+      ...
+    # Subtest: trip.status.paused
+    ok 48 - trip.status.paused
+      ---
+      duration_ms: 0.037768
+      type: 'test'
+      ...
+    # Subtest: trip.status.finished
+    ok 49 - trip.status.finished
+      ---
+      duration_ms: 0.03591
+      type: 'test'
+      ...
+    # Subtest: trip.status.archived
+    ok 50 - trip.status.archived
+      ---
+      duration_ms: 0.03569
+      type: 'test'
+      ...
+    # Subtest: trip.aktivitaet.trekking
+    ok 51 - trip.aktivitaet.trekking
+      ---
+      duration_ms: 0.03623
+      type: 'test'
+      ...
+    # Subtest: trip.aktivitaet.skitour
+    ok 52 - trip.aktivitaet.skitour
+      ---
+      duration_ms: 0.037761
+      type: 'test'
+      ...
+    # Subtest: trip.aktivitaet.hochtour
+    ok 53 - trip.aktivitaet.hochtour
+      ---
+      duration_ms: 0.03683
+      type: 'test'
+      ...
+    # Subtest: trip.aktivitaet.klettersteig
+    ok 54 - trip.aktivitaet.klettersteig
+      ---
+      duration_ms: 0.041559
+      type: 'test'
+      ...
+    # Subtest: trip.aktivitaet.mtb
+    ok 55 - trip.aktivitaet.mtb
+      ---
+      duration_ms: 0.041239
+      type: 'test'
+      ...
+    # Subtest: trip.aktivitaet.fahrrad_15
+    ok 56 - trip.aktivitaet.fahrrad_15
+      ---
+      duration_ms: 0.03768
+      type: 'test'
+      ...
+    # Subtest: trip.aktivitaet.fahrrad_20
+    ok 57 - trip.aktivitaet.fahrrad_20
+      ---
+      duration_ms: 0.0355
+      type: 'test'
+      ...
+    # Subtest: trip.aktivitaet.fahrrad_25
+    ok 58 - trip.aktivitaet.fahrrad_25
+      ---
+      duration_ms: 0.03794
+      type: 'test'
+      ...
+    # Subtest: trip.aktivitaet.standard
+    ok 59 - trip.aktivitaet.standard
+      ---
+      duration_ms: 0.03523
+      type: 'test'
+      ...
+    # Subtest: trip.aktivitaet.alpen_trekking
+    ok 60 - trip.aktivitaet.alpen_trekking
+      ---
+      duration_ms: 0.036569
+      type: 'test'
+      ...
+    # Subtest: trip.aktivitaet.wandern
+    ok 61 - trip.aktivitaet.wandern
+      ---
+      duration_ms: 0.03745
+      type: 'test'
+      ...
+    # Subtest: trip.aktivitaet.skitouren
+    ok 62 - trip.aktivitaet.skitouren
+      ---
+      duration_ms: 0.03674
+      type: 'test'
+      ...
+    # Subtest: trip.hub.briefing_gesendet
+    ok 63 - trip.hub.briefing_gesendet
+      ---
+      duration_ms: 0.03902
+      type: 'test'
+      ...
+    # Subtest: trip.hub.loeschen_titel
+    ok 64 - trip.hub.loeschen_titel
+      ---
+      duration_ms: 0.04457
+      type: 'test'
+      ...
+    # Subtest: trip.hub.loeschen_text
+    ok 65 - trip.hub.loeschen_text
+      ---
+      duration_ms: 0.057601
+      type: 'test'
+      ...
+    # Subtest: trip.hub.reaktivieren_titel
+    ok 66 - trip.hub.reaktivieren_titel
+      ---
+      duration_ms: 0.04092
+      type: 'test'
+      ...
+    # Subtest: trip.hub.archivieren_titel
+    ok 67 - trip.hub.archivieren_titel
+      ---
+      duration_ms: 0.043831
+      type: 'test'
+      ...
+    # Subtest: trip.hub.reaktivieren_text
+    ok 68 - trip.hub.reaktivieren_text
+      ---
+      duration_ms: 0.037131
+      type: 'test'
+      ...
+    # Subtest: trip.hub.archivieren_text
+    ok 69 - trip.hub.archivieren_text
+      ---
+      duration_ms: 0.03473
+      type: 'test'
+      ...
+    # Subtest: trip.hub.nicht_gefunden
+    ok 70 - trip.hub.nicht_gefunden
+      ---
+      duration_ms: 0.044529
+      type: 'test'
+      ...
+    # Subtest: trip.hub.laden_fehler
+    ok 71 - trip.hub.laden_fehler
+      ---
+      duration_ms: 0.03697
+      type: 'test'
+      ...
+    # Subtest: trip.hub.keine_etappen
+    ok 72 - trip.hub.keine_etappen
+      ---
+      duration_ms: 0.03688
+      type: 'test'
+      ...
+    # Subtest: trip.hub.tabs_aria
+    ok 73 - trip.hub.tabs_aria
+      ---
+      duration_ms: 0.03582
+      type: 'test'
+      ...
+    # Subtest: trip.hub.platzhalter_uebersicht
+    ok 74 - trip.hub.platzhalter_uebersicht
+      ---
+      duration_ms: 0.03384
+      type: 'test'
+      ...
+    # Subtest: trip.hub.platzhalter_etappen
+    ok 75 - trip.hub.platzhalter_etappen
+      ---
+      duration_ms: 0.03975
+      type: 'test'
+      ...
+    # Subtest: trip.etappen
+    ok 76 - trip.etappen
+      ---
+      duration_ms: 0.03691
+      type: 'test'
+      ...
+    # Subtest: trip.uebersicht.reihenfolge_profil
+    ok 77 - trip.uebersicht.reihenfolge_profil
+      ---
+      duration_ms: 0.03448
+      type: 'test'
+      ...
+    # Subtest: trip.uebersicht.im_editor
+    ok 78 - trip.uebersicht.im_editor
+      ---
+      duration_ms: 0.03772
+      type: 'test'
+      ...
+    # Subtest: trip.uebersicht.metriken_fehler
+    ok 79 - trip.uebersicht.metriken_fehler
+      ---
+      duration_ms: 0.03548
+      type: 'test'
+      ...
+    # Subtest: trip.uebersicht.metriken_altbestand
+    ok 80 - trip.uebersicht.metriken_altbestand
+      ---
+      duration_ms: 0.035849
+      type: 'test'
+      ...
+    # Subtest: trip.uebersicht.metriken_leer
+    ok 81 - trip.uebersicht.metriken_leer
+      ---
+      duration_ms: 0.037641
+      type: 'test'
+      ...
+    # Subtest: trip.uebersicht.unbekannt.one
+    ok 82 - trip.uebersicht.unbekannt.one
+      ---
+      duration_ms: 0.061229
+      type: 'test'
+      ...
+    # Subtest: trip.uebersicht.unbekannt.other
+    ok 83 - trip.uebersicht.unbekannt.other
+      ---
+      duration_ms: 0.04164
+      type: 'test'
+      ...
+    # Subtest: trip.uebersicht.metriken_bearbeiten
+    ok 84 - trip.uebersicht.metriken_bearbeiten
+      ---
+      duration_ms: 0.03665
+      type: 'test'
+      ...
+    # Subtest: trip.uebersicht.briefings_laufen
+    ok 85 - trip.uebersicht.briefings_laufen
+      ---
+      duration_ms: 0.03628
+      type: 'test'
+      ...
+    # Subtest: trip.uebersicht.zeitplan_bearbeiten
+    ok 86 - trip.uebersicht.zeitplan_bearbeiten
+      ---
+      duration_ms: 0.034991
+      type: 'test'
+      ...
+    # Subtest: trip.uebersicht.alert_trigger
+    ok 87 - trip.uebersicht.alert_trigger
+      ---
+      duration_ms: 0.054951
+      type: 'test'
+      ...
+    # Subtest: trip.briefing.morgen
+    ok 88 - trip.briefing.morgen
+      ---
+      duration_ms: 0.03717
+      type: 'test'
+      ...
+    # Subtest: trip.briefing.abend
+    ok 89 - trip.briefing.abend
+      ---
+      duration_ms: 0.03496
+      type: 'test'
+      ...
+    # Subtest: trip.profil.aria
+    ok 90 - trip.profil.aria
+      ---
+      duration_ms: 0.032371
+      type: 'test'
+      ...
+    # Subtest: trip.profil.etappe_waehlen
+    ok 91 - trip.profil.etappe_waehlen
+      ---
+      duration_ms: 0.038149
+      type: 'test'
+      ...
+    # Subtest: trip.etappe.distanz
+    ok 92 - trip.etappe.distanz
+      ---
+      duration_ms: 0.03712
+      type: 'test'
+      ...
+    # Subtest: trip.etappe.aufstieg
+    ok 93 - trip.etappe.aufstieg
+      ---
+      duration_ms: 0.034639
+      type: 'test'
+      ...
+    # Subtest: trip.etappe.abstieg
+    ok 94 - trip.etappe.abstieg
+      ---
+      duration_ms: 0.03491
+      type: 'test'
+      ...
+    # Subtest: trip.etappe.max_hoehe
+    ok 95 - trip.etappe.max_hoehe
+      ---
+      duration_ms: 0.034179
+      type: 'test'
+      ...
+    # Subtest: trip.etappe.segmente
+    ok 96 - trip.etappe.segmente
+      ---
+      duration_ms: 0.034201
+      type: 'test'
+      ...
+    # Subtest: trip.etappe.hm
+    ok 97 - trip.etappe.hm
+      ---
+      duration_ms: 0.04325
+      type: 'test'
+      ...
+    # Subtest: trip.etappe.wind
+    ok 98 - trip.etappe.wind
+      ---
+      duration_ms: 0.03606
+      type: 'test'
+      ...
+    # Subtest: trip.etappe.pause_ort
+    ok 99 - trip.etappe.pause_ort
+      ---
+      duration_ms: 0.04534
+      type: 'test'
+      ...
+    # Subtest: trip.risiko.gering
+    ok 100 - trip.risiko.gering
+      ---
+      duration_ms: 0.035399
+      type: 'test'
+      ...
+    # Subtest: trip.risiko.mittel
+    ok 101 - trip.risiko.mittel
+      ---
+      duration_ms: 0.034411
+      type: 'test'
+      ...
+    # Subtest: trip.risiko.hoch
+    ok 102 - trip.risiko.hoch
+      ---
+      duration_ms: 0.036801
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkte
+    ok 103 - trip.wegpunkte
+      ---
+      duration_ms: 0.0502
+      type: 'test'
+      ...
+    # Subtest: trip.keine_wegpunkte
+    ok 104 - trip.keine_wegpunkte
+      ---
+      duration_ms: 0.03675
+      type: 'test'
+      ...
+    # Subtest: trip.speichert
+    ok 105 - trip.speichert
+      ---
+      duration_ms: 0.035519
+      type: 'test'
+      ...
+    # Subtest: trip.speichern_laeuft
+    ok 106 - trip.speichern_laeuft
+      ---
+      duration_ms: 0.032631
+      type: 'test'
+      ...
+    # Subtest: trip.fehler_speichern
+    ok 107 - trip.fehler_speichern
+      ---
+      duration_ms: 0.03295
+      type: 'test'
+      ...
+    # Subtest: trip.gespeichert_punkt
+    ok 108 - trip.gespeichert_punkt
+      ---
+      duration_ms: 0.05066
+      type: 'test'
+      ...
+    # Subtest: trip.zeitplan_speichern
+    ok 109 - trip.zeitplan_speichern
+      ---
+      duration_ms: 0.03676
+      type: 'test'
+      ...
+    # Subtest: trip.neuer_name
+    ok 110 - trip.neuer_name
+      ---
+      duration_ms: 0.03379
+      type: 'test'
+      ...
+    # Subtest: trip.layout.leer
+    ok 111 - trip.layout.leer
+      ---
+      duration_ms: 0.03793
+      type: 'test'
+      ...
+    # Subtest: trip.layout.telegram_vor
+    ok 112 - trip.layout.telegram_vor
+      ---
+      duration_ms: 0.03867
+      type: 'test'
+      ...
+    # Subtest: trip.layout.telegram_nach
+    ok 113 - trip.layout.telegram_nach
+      ---
+      duration_ms: 0.046429
+      type: 'test'
+      ...
+    # Subtest: trip.layout.reihenfolge_aria
+    ok 114 - trip.layout.reihenfolge_aria
+      ---
+      duration_ms: 0.040331
+      type: 'test'
+      ...
+    # Subtest: trip.layout.nicht_im_briefing
+    ok 115 - trip.layout.nicht_im_briefing
+      ---
+      duration_ms: 0.034871
+      type: 'test'
+      ...
+    # Subtest: trip.layout.weitere_metriken.one
+    ok 116 - trip.layout.weitere_metriken.one
+      ---
+      duration_ms: 0.037919
+      type: 'test'
+      ...
+    # Subtest: trip.layout.weitere_metriken.other
+    ok 117 - trip.layout.weitere_metriken.other
+      ---
+      duration_ms: 0.040041
+      type: 'test'
+      ...
+    # Subtest: trip.layout.nicht_ausgegeben
+    ok 118 - trip.layout.nicht_ausgegeben
+      ---
+      duration_ms: 0.033469
+      type: 'test'
+      ...
+    # Subtest: trip.layout.einklappen
+    ok 119 - trip.layout.einklappen
+      ---
+      duration_ms: 0.035161
+      type: 'test'
+      ...
+    # Subtest: trip.layout.aufklappen
+    ok 120 - trip.layout.aufklappen
+      ---
+      duration_ms: 0.03816
+      type: 'test'
+      ...
+    # Subtest: trip.layout.plus_spalte
+    ok 121 - trip.layout.plus_spalte
+      ---
+      duration_ms: 0.035749
+      type: 'test'
+      ...
+    # Subtest: trip.layout.plus_detail
+    ok 122 - trip.layout.plus_detail
+      ---
+      duration_ms: 0.03431
+      type: 'test'
+      ...
+    # Subtest: trip.layout.kuerzel
+    ok 123 - trip.layout.kuerzel
+      ---
+      duration_ms: 0.034379
+      type: 'test'
+      ...
+    # Subtest: trip.layout.roh_oder_einfach
+    ok 124 - trip.layout.roh_oder_einfach
+      ---
+      duration_ms: 0.03631
+      type: 'test'
+      ...
+    # Subtest: trip.layout.nur_rohwert
+    ok 125 - trip.layout.nur_rohwert
+      ---
+      duration_ms: 0.03646
+      type: 'test'
+      ...
+    # Subtest: trip.layout.zu_detail
+    ok 126 - trip.layout.zu_detail
+      ---
+      duration_ms: 0.032531
+      type: 'test'
+      ...
+    # Subtest: trip.layout.zu_spalte
+    ok 127 - trip.layout.zu_spalte
+      ---
+      duration_ms: 0.060351
+      type: 'test'
+      ...
+    # Subtest: trip.layout.limit
+    ok 128 - trip.layout.limit
+      ---
+      duration_ms: 0.05457
+      type: 'test'
+      ...
+    # Subtest: trip.layout.kanal_max_spalten
+    ok 129 - trip.layout.kanal_max_spalten
+      ---
+      duration_ms: 0.04862
+      type: 'test'
+      ...
+    # Subtest: trip.layout.preset_metriken.one
+    ok 130 - trip.layout.preset_metriken.one
+      ---
+      duration_ms: 0.041459
+      type: 'test'
+      ...
+    # Subtest: trip.layout.preset_metriken.other
+    ok 131 - trip.layout.preset_metriken.other
+      ---
+      duration_ms: 0.03513
+      type: 'test'
+      ...
+    # Subtest: trip.layout.standard
+    ok 132 - trip.layout.standard
+      ---
+      duration_ms: 0.03601
+      type: 'test'
+      ...
+    # Subtest: trip.vorschau.titel
+    ok 133 - trip.vorschau.titel
+      ---
+      duration_ms: 0.033431
+      type: 'test'
+      ...
+    # Subtest: trip.vorschau.hinweis
+    ok 134 - trip.vorschau.hinweis
+      ---
+      duration_ms: 4.592331
+      type: 'test'
+      ...
+    # Subtest: trip.vorschau.heute
+    ok 135 - trip.vorschau.heute
+      ---
+      duration_ms: 0.058769
+      type: 'test'
+      ...
+    # Subtest: trip.vorschau.morgen
+    ok 136 - trip.vorschau.morgen
+      ---
+      duration_ms: 2.112326
+      type: 'test'
+      ...
+    # Subtest: trip.vorschau.uebermorgen
+    ok 137 - trip.vorschau.uebermorgen
+      ---
+      duration_ms: 0.05873
+      type: 'test'
+      ...
+    # Subtest: trip.vorschau.metriken.one
+    ok 138 - trip.vorschau.metriken.one
+      ---
+      duration_ms: 0.06245
+      type: 'test'
+      ...
+    # Subtest: trip.vorschau.metriken.other
+    ok 139 - trip.vorschau.metriken.other
+      ---
+      duration_ms: 0.05055
+      type: 'test'
+      ...
+    # Subtest: trip.vorschau.keine
+    ok 140 - trip.vorschau.keine
+      ---
+      duration_ms: 0.047111
+      type: 'test'
+      ...
+    # Subtest: trip.vorschau.zeit
+    ok 141 - trip.vorschau.zeit
+      ---
+      duration_ms: 0.03962
+      type: 'test'
+      ...
+    # Subtest: trip.vorschau.einfach
+    ok 142 - trip.vorschau.einfach
+      ---
+      duration_ms: 0.0344
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.alle_spalten
+    ok 143 - trip.kanaele.alle_spalten
+      ---
+      duration_ms: 0.03641
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.max_spalten
+    ok 144 - trip.kanaele.max_spalten
+      ---
+      duration_ms: 0.045479
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.kein_raster
+    ok 145 - trip.kanaele.kein_raster
+      ---
+      duration_ms: 0.041191
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.aktivieren
+    ok 146 - trip.kanaele.aktivieren
+      ---
+      duration_ms: 0.04166
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.nicht_konfiguriert
+    ok 147 - trip.kanaele.nicht_konfiguriert
+      ---
+      duration_ms: 0.039129
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.einrichten
+    ok 148 - trip.kanaele.einrichten
+      ---
+      duration_ms: 0.05169
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.tages_max
+    ok 149 - trip.kanaele.tages_max
+      ---
+      duration_ms: 0.041641
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.passen_nicht.one
+    ok 150 - trip.kanaele.passen_nicht.one
+      ---
+      duration_ms: 0.040899
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.passen_nicht.other
+    ok 151 - trip.kanaele.passen_nicht.other
+      ---
+      duration_ms: 0.03973
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.fuss_vor
+    ok 152 - trip.kanaele.fuss_vor
+      ---
+      duration_ms: 0.08753
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.fuss_zeitplan
+    ok 153 - trip.kanaele.fuss_zeitplan
+      ---
+      duration_ms: 0.03802
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.fuss_mitte
+    ok 154 - trip.kanaele.fuss_mitte
+      ---
+      duration_ms: 0.06691
+      type: 'test'
+      ...
+    # Subtest: trip.kanaele.fuss_alerts
+    ok 155 - trip.kanaele.fuss_alerts
+      ---
+      duration_ms: 0.041219
+      type: 'test'
+      ...
+    # Subtest: trip.about.eyebrow
+    ok 156 - trip.about.eyebrow
+      ---
+      duration_ms: 0.03445
+      type: 'test'
+      ...
+    # Subtest: trip.about.titel
+    ok 157 - trip.about.titel
+      ---
+      duration_ms: 0.035591
+      type: 'test'
+      ...
+    # Subtest: trip.about.intro_vor
+    ok 158 - trip.about.intro_vor
+      ---
+      duration_ms: 0.035849
+      type: 'test'
+      ...
+    # Subtest: trip.about.intro_stark
+    ok 159 - trip.about.intro_stark
+      ---
+      duration_ms: 0.03169
+      type: 'test'
+      ...
+    # Subtest: trip.about.intro_nach
+    ok 160 - trip.about.intro_nach
+      ---
+      duration_ms: 0.043759
+      type: 'test'
+      ...
+    # Subtest: trip.about.spalte
+    ok 161 - trip.about.spalte
+      ---
+      duration_ms: 0.048089
+      type: 'test'
+      ...
+    # Subtest: trip.about.spalte_text
+    ok 162 - trip.about.spalte_text
+      ---
+      duration_ms: 0.034191
+      type: 'test'
+      ...
+    # Subtest: trip.about.detail
+    ok 163 - trip.about.detail
+      ---
+      duration_ms: 0.03374
+      type: 'test'
+      ...
+    # Subtest: trip.about.detail_text
+    ok 164 - trip.about.detail_text
+      ---
+      duration_ms: 0.03418
+      type: 'test'
+      ...
+    # Subtest: trip.about.aus_text
+    ok 165 - trip.about.aus_text
+      ---
+      duration_ms: 0.03337
+      type: 'test'
+      ...
+    # Subtest: trip.about.constraints
+    ok 166 - trip.about.constraints
+      ---
+      duration_ms: 0.036639
+      type: 'test'
+      ...
+    # Subtest: trip.about.kanal
+    ok 167 - trip.about.kanal
+      ---
+      duration_ms: 0.04861
+      type: 'test'
+      ...
+    # Subtest: trip.about.max_spalten
+    ok 168 - trip.about.max_spalten
+      ---
+      duration_ms: 0.042289
+      type: 'test'
+      ...
+    # Subtest: trip.about.verhalten
+    ok 169 - trip.about.verhalten
+      ---
+      duration_ms: 0.047209
+      type: 'test'
+      ...
+    # Subtest: trip.about.email
+    ok 170 - trip.about.email
+      ---
+      duration_ms: 0.03535
+      type: 'test'
+      ...
+    # Subtest: trip.about.telegram
+    ok 171 - trip.about.telegram
+      ---
+      duration_ms: 0.05153
+      type: 'test'
+      ...
+    # Subtest: trip.about.sms
+    ok 172 - trip.about.sms
+      ---
+      duration_ms: 0.037359
+      type: 'test'
+      ...
+    # Subtest: trip.about.hinweis
+    ok 173 - trip.about.hinweis
+      ---
+      duration_ms: 0.03488
+      type: 'test'
+      ...
+    # Subtest: trip.about.verstanden
+    ok 174 - trip.about.verstanden
+      ---
+      duration_ms: 0.03247
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.plus_pause
+    ok 175 - trip.wegpunkt.plus_pause
+      ---
+      duration_ms: 0.03197
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.strip_eyebrow
+    ok 176 - trip.wegpunkt.strip_eyebrow
+      ---
+      duration_ms: 0.03106
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.strip_zaehler.one
+    ok 177 - trip.wegpunkt.strip_zaehler.one
+      ---
+      duration_ms: 0.054019
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.strip_zaehler.other
+    ok 178 - trip.wegpunkt.strip_zaehler.other
+      ---
+      duration_ms: 0.039091
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.etappen_sortieren
+    ok 179 - trip.wegpunkt.etappen_sortieren
+      ---
+      duration_ms: 0.032999
+      type: 'test'
+      ...
+    # Subtest: trip.plus_etappe
+    ok 180 - trip.plus_etappe
+      ---
+      duration_ms: 0.053359
+      type: 'test'
+      ...
+    # Subtest: trip.etappe_entfernen
+    ok 181 - trip.etappe_entfernen
+      ---
+      duration_ms: 0.04224
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.typ.start
+    ok 182 - trip.wegpunkt.typ.start
+      ---
+      duration_ms: 0.043932
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.typ.end
+    ok 183 - trip.wegpunkt.typ.end
+      ---
+      duration_ms: 0.033128
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.typ.summit
+    ok 184 - trip.wegpunkt.typ.summit
+      ---
+      duration_ms: 0.034661
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.typ.pass
+    ok 185 - trip.wegpunkt.typ.pass
+      ---
+      duration_ms: 0.031939
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.typ.valley
+    ok 186 - trip.wegpunkt.typ.valley
+      ---
+      duration_ms: 0.043151
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.typ.hut
+    ok 187 - trip.wegpunkt.typ.hut
+      ---
+      duration_ms: 0.03515
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.typ.andere
+    ok 188 - trip.wegpunkt.typ.andere
+      ---
+      duration_ms: 0.033239
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.umbenennen
+    ok 189 - trip.wegpunkt.umbenennen
+      ---
+      duration_ms: 0.0312
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.verschieben_aria
+    ok 190 - trip.wegpunkt.verschieben_aria
+      ---
+      duration_ms: 0.034919
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.verschieben
+    ok 191 - trip.wegpunkt.verschieben
+      ---
+      duration_ms: 0.031171
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.entfernen
+    ok 192 - trip.wegpunkt.entfernen
+      ---
+      duration_ms: 3.144644
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.profil_aria.one
+    ok 193 - trip.wegpunkt.profil_aria.one
+      ---
+      duration_ms: 0.06151
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.profil_aria.other
+    ok 194 - trip.wegpunkt.profil_aria.other
+      ---
+      duration_ms: 0.04672
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.standort
+    ok 195 - trip.wegpunkt.standort
+      ---
+      duration_ms: 0.044361
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.weiter_nach
+    ok 196 - trip.wegpunkt.weiter_nach
+      ---
+      duration_ms: 0.041239
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.kein_standort
+    ok 197 - trip.wegpunkt.kein_standort
+      ---
+      duration_ms: 0.037049
+      type: 'test'
+      ...
+    # Subtest: trip.wegpunkt.karte_attribution
+    ok 198 - trip.wegpunkt.karte_attribution
+      ---
+      duration_ms: 0.04673
+      type: 'test'
+      ...
+    # Subtest: trip.datum
+    ok 199 - trip.datum
+      ---
+      duration_ms: 0.05352
+      type: 'test'
+      ...
+    # Subtest: trip.trip_start
+    ok 200 - trip.trip_start
+      ---
+      duration_ms: 0.037089
+      type: 'test'
+      ...
+    # Subtest: trip.startzeit
+    ok 201 - trip.startzeit
+      ---
+      duration_ms: 0.0367
+      type: 'test'
+      ...
+    # Subtest: trip.startdatum
+    ok 202 - trip.startdatum
+      ---
+      duration_ms: 0.032061
+      type: 'test'
+      ...
+    # Subtest: trip.wetter.eigene_auswahl
+    ok 203 - trip.wetter.eigene_auswahl
+      ---
+      duration_ms: 0.044639
+      type: 'test'
+      ...
+    # Subtest: trip.wetter.profil
+    ok 204 - trip.wetter.profil
+      ---
+      duration_ms: 0.038021
+      type: 'test'
+      ...
+    # Subtest: trip.wetter.zaehler
+    ok 205 - trip.wetter.zaehler
+      ---
+      duration_ms: 0.05644
+      type: 'test'
+      ...
+    # Subtest: trip.wetter.bearbeiten
+    ok 206 - trip.wetter.bearbeiten
+      ---
+      duration_ms: 0.03765
+      type: 'test'
+      ...
+    # Subtest: trip.wetter.nur_lesen
+    ok 207 - trip.wetter.nur_lesen
+      ---
+      duration_ms: 0.03521
+      type: 'test'
+      ...
+    # Subtest: trip.wetter.hinweis
+    ok 208 - trip.wetter.hinweis
+      ---
+      duration_ms: 0.0558
+      type: 'test'
+      ...
+    # Subtest: trip.route.startdatum_waehlen
+    ok 209 - trip.route.startdatum_waehlen
+      ---
+      duration_ms: 0.038599
+      type: 'test'
+      ...
+    # Subtest: trip.route.lade_dateien
+    ok 210 - trip.route.lade_dateien
+      ---
+      duration_ms: 0.055101
+      type: 'test'
+      ...
+    # Subtest: trip.route.fehler
+    ok 211 - trip.route.fehler
+      ---
+      duration_ms: 0.03771
+      type: 'test'
+      ...
+    # Subtest: trip.route.anlegen.one
+    ok 212 - trip.route.anlegen.one
+      ---
+      duration_ms: 0.03817
+      type: 'test'
+      ...
+    # Subtest: trip.route.anlegen.other
+    ok 213 - trip.route.anlegen.other
+      ---
+      duration_ms: 0.039941
+      type: 'test'
+      ...
+    # Subtest: trip.route.trip_name
+    ok 214 - trip.route.trip_name
+      ---
+      duration_ms: 0.033869
+      type: 'test'
+      ...
+    # Subtest: trip.route.name_platzhalter
+    ok 215 - trip.route.name_platzhalter
+      ---
+      duration_ms: 0.034231
+      type: 'test'
+      ...
+    # Subtest: trip.route.ziehen
+    ok 216 - trip.route.ziehen
+      ---
+      duration_ms: 0.03696
+      type: 'test'
+      ...
+    # Subtest: trip.route.klicken
+    ok 217 - trip.route.klicken
+      ---
+      duration_ms: 0.036339
+      type: 'test'
+      ...
+    # Subtest: trip.route.dateien_anzahl
+    ok 218 - trip.route.dateien_anzahl
+      ---
+      duration_ms: 0.04224
+      type: 'test'
+      ...
+    # Subtest: trip.route.geladen
+    ok 219 - trip.route.geladen
+      ---
+      duration_ms: 0.0375
+      type: 'test'
+      ...
+    # Subtest: trip.route.oder
+    ok 220 - trip.route.oder
+      ---
+      duration_ms: 0.032431
+      type: 'test'
+      ...
+    # Subtest: trip.route.manuell
+    ok 221 - trip.route.manuell
+      ---
+      duration_ms: 0.03251
+      type: 'test'
+      ...
+    # Subtest: trip.kaskade.liegt_am
+    ok 222 - trip.kaskade.liegt_am
+      ---
+      duration_ms: 0.042439
+      type: 'test'
+      ...
+    # Subtest: trip.kaskade.frage.one
+    ok 223 - trip.kaskade.frage.one
+      ---
+      duration_ms: 0.050061
+      type: 'test'
+      ...
+    # Subtest: trip.kaskade.frage.other
+    ok 224 - trip.kaskade.frage.other
+      ---
+      duration_ms: 0.039179
+      type: 'test'
+      ...
+    # Subtest: trip.kaskade.wird_angepasst
+    ok 225 - trip.kaskade.wird_angepasst
+      ---
+      duration_ms: 0.033449
+      type: 'test'
+      ...
+    # Subtest: trip.kaskade.anschliessen
+    ok 226 - trip.kaskade.anschliessen
+      ---
+      duration_ms: 0.03613
+      type: 'test'
+      ...
+    # Subtest: trip.kaskade.nur_diese
+    ok 227 - trip.kaskade.nur_diese
+      ---
+      duration_ms: 0.03246
+      type: 'test'
+      ...
+    # Subtest: trip.kaskade.erledigt
+    ok 228 - trip.kaskade.erledigt
+      ---
+      duration_ms: 0.0525
+      type: 'test'
+      ...
+    # Subtest: trip.kaskade.erledigt_text.one
+    ok 229 - trip.kaskade.erledigt_text.one
+      ---
+      duration_ms: 0.04312
+      type: 'test'
+      ...
+    # Subtest: trip.kaskade.erledigt_text.other
+    ok 230 - trip.kaskade.erledigt_text.other
+      ---
+      duration_ms: 0.037269
+      type: 'test'
+      ...
+    # Subtest: trip.kaskade.schliessen
+    ok 231 - trip.kaskade.schliessen
+      ---
+      duration_ms: 0.033061
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.desktop_stark
+    ok 232 - trip.etappen_editor.desktop_stark
+      ---
+      duration_ms: 0.07296
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.desktop_text
+    ok 233 - trip.etappen_editor.desktop_text
+      ---
+      duration_ms: 0.03868
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.liste.one
+    ok 234 - trip.etappen_editor.liste.one
+      ---
+      duration_ms: 0.040309
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.liste.other
+    ok 235 - trip.etappen_editor.liste.other
+      ---
+      duration_ms: 0.039501
+      type: 'test'
+      ...
+    # Subtest: trip.etappe
+    ok 236 - trip.etappe
+      ---
+      duration_ms: 0.037109
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.reihenfolge_aria
+    ok 237 - trip.etappen_editor.reihenfolge_aria
+      ---
+      duration_ms: 0.034631
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.eyebrow
+    ok 238 - trip.etappen_editor.eyebrow
+      ---
+      duration_ms: 0.04014
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.umbenennen
+    ok 239 - trip.etappen_editor.umbenennen
+      ---
+      duration_ms: 0.03344
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.wetterscheiden_vor
+    ok 240 - trip.etappen_editor.wetterscheiden_vor
+      ---
+      duration_ms: 0.03482
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.wetterscheiden
+    ok 241 - trip.etappen_editor.wetterscheiden
+      ---
+      duration_ms: 0.042709
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.wetterscheiden_nach.one
+    ok 242 - trip.etappen_editor.wetterscheiden_nach.one
+      ---
+      duration_ms: 0.040011
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.wetterscheiden_nach.other
+    ok 243 - trip.etappen_editor.wetterscheiden_nach.other
+      ---
+      duration_ms: 0.040101
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.karte
+    ok 244 - trip.etappen_editor.karte
+      ---
+      duration_ms: 0.037359
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.topo
+    ok 245 - trip.etappen_editor.topo
+      ---
+      duration_ms: 0.037431
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.einfuegen_hinweis
+    ok 246 - trip.etappen_editor.einfuegen_hinweis
+      ---
+      duration_ms: 0.05732
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.hinweis_schliessen
+    ok 247 - trip.etappen_editor.hinweis_schliessen
+      ---
+      duration_ms: 0.03951
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.profil
+    ok 248 - trip.etappen_editor.profil
+      ---
+      duration_ms: 0.03397
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.insgesamt
+    ok 249 - trip.etappen_editor.insgesamt
+      ---
+      duration_ms: 0.08551
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.auf_route
+    ok 250 - trip.etappen_editor.auf_route
+      ---
+      duration_ms: 0.038681
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.speichern
+    ok 251 - trip.etappen_editor.speichern
+      ---
+      duration_ms: 0.032129
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.gespeichert
+    ok 252 - trip.etappen_editor.gespeichert
+      ---
+      duration_ms: 0.0337
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.zeitueberschreitung
+    ok 253 - trip.etappen_editor.zeitueberschreitung
+      ---
+      duration_ms: 0.035819
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.etappenname_prompt
+    ok 254 - trip.etappen_editor.etappenname_prompt
+      ---
+      duration_ms: 0.03366
+      type: 'test'
+      ...
+    # Subtest: trip.etappe_loeschen
+    ok 255 - trip.etappe_loeschen
+      ---
+      duration_ms: 0.034589
+      type: 'test'
+      ...
+    # Subtest: trip.etappen_editor.loeschen_frage
+    ok 256 - trip.etappen_editor.loeschen_frage
+      ---
+      duration_ms: 0.0409
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.reiter_route
+    ok 257 - trip.anlegen.reiter_route
+      ---
+      duration_ms: 0.03347
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.reiter_etappen
+    ok 258 - trip.anlegen.reiter_etappen
+      ---
+      duration_ms: 0.03632
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.reiter_wegpunkte
+    ok 259 - trip.anlegen.reiter_wegpunkte
+      ---
+      duration_ms: 0.03392
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.sperre_etappen
+    ok 260 - trip.anlegen.sperre_etappen
+      ---
+      duration_ms: 0.032259
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.sperre_gpx
+    ok 261 - trip.anlegen.sperre_gpx
+      ---
+      duration_ms: 0.04302
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.schritt_gesperrt
+    ok 262 - trip.anlegen.schritt_gesperrt
+      ---
+      duration_ms: 0.034889
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.gesperrt
+    ok 263 - trip.anlegen.gesperrt
+      ---
+      duration_ms: 0.065099
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.neuer_trip
+    ok 264 - trip.anlegen.neuer_trip
+      ---
+      duration_ms: 0.041001
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.kein_name
+    ok 265 - trip.anlegen.kein_name
+      ---
+      duration_ms: 0.03594
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.nichts_eingerichtet
+    ok 266 - trip.anlegen.nichts_eingerichtet
+      ---
+      duration_ms: 0.038009
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.abschnitte
+    ok 267 - trip.anlegen.abschnitte
+      ---
+      duration_ms: 0.05029
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.abschnitte_kurz
+    ok 268 - trip.anlegen.abschnitte_kurz
+      ---
+      duration_ms: 0.036621
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.optional
+    ok 269 - trip.anlegen.optional
+      ---
+      duration_ms: 0.034309
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.opt
+    ok 270 - trip.anlegen.opt
+      ---
+      duration_ms: 0.034681
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.grunddaten
+    ok 271 - trip.anlegen.grunddaten
+      ---
+      duration_ms: 0.03522
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.trip_name
+    ok 272 - trip.anlegen.trip_name
+      ---
+      duration_ms: 0.03084
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.name_beispiel
+    ok 273 - trip.anlegen.name_beispiel
+      ---
+      duration_ms: 0.034311
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.region
+    ok 274 - trip.anlegen.region
+      ---
+      duration_ms: 0.03312
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.optional_max
+    ok 275 - trip.anlegen.optional_max
+      ---
+      duration_ms: 0.03685
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.region_beispiel
+    ok 276 - trip.anlegen.region_beispiel
+      ---
+      duration_ms: 0.034169
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.start_hinweis
+    ok 277 - trip.anlegen.start_hinweis
+      ---
+      duration_ms: 0.03904
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.start_hinweis_kurz
+    ok 278 - trip.anlegen.start_hinweis_kurz
+      ---
+      duration_ms: 0.036149
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.aktivitaetstyp
+    ok 279 - trip.anlegen.aktivitaetstyp
+      ---
+      duration_ms: 0.034191
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.gpx_hinweis
+    ok 280 - trip.anlegen.gpx_hinweis
+      ---
+      duration_ms: 0.03312
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.name_fehlt
+    ok 281 - trip.anlegen.name_fehlt
+      ---
+      duration_ms: 0.033661
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.datum_fehlt
+    ok 282 - trip.anlegen.datum_fehlt
+      ---
+      duration_ms: 0.046221
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.etappen_anlegen
+    ok 283 - trip.anlegen.etappen_anlegen
+      ---
+      duration_ms: 0.032799
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.etappen_titel
+    ok 284 - trip.anlegen.etappen_titel
+      ---
+      duration_ms: 0.0347
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.gpx_geladen
+    ok 285 - trip.anlegen.gpx_geladen
+      ---
+      duration_ms: 0.04171
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.start
+    ok 286 - trip.anlegen.start
+      ---
+      duration_ms: 0.03725
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.etappenname
+    ok 287 - trip.anlegen.etappenname
+      ---
+      duration_ms: 0.049891
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.gpx_datei
+    ok 288 - trip.anlegen.gpx_datei
+      ---
+      duration_ms: 0.03398
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.etappe_benennen
+    ok 289 - trip.anlegen.etappe_benennen
+      ---
+      duration_ms: 0.040011
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.gpx_entfernen
+    ok 290 - trip.anlegen.gpx_entfernen
+      ---
+      duration_ms: 0.03429
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.gpx_hochladen
+    ok 291 - trip.anlegen.gpx_hochladen
+      ---
+      duration_ms: 0.0352
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.etappe_hinzufuegen
+    ok 292 - trip.anlegen.etappe_hinzufuegen
+      ---
+      duration_ms: 0.033241
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.ohne_gpx.one
+    ok 293 - trip.anlegen.ohne_gpx.one
+      ---
+      duration_ms: 0.03854
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.ohne_gpx.other
+    ok 294 - trip.anlegen.ohne_gpx.other
+      ---
+      duration_ms: 0.036751
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.alle_gpx
+    ok 295 - trip.anlegen.alle_gpx
+      ---
+      duration_ms: 0.03286
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.noch_gpx
+    ok 296 - trip.anlegen.noch_gpx
+      ---
+      duration_ms: 0.03979
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.alle_gpx_kurz
+    ok 297 - trip.anlegen.alle_gpx_kurz
+      ---
+      duration_ms: 0.035801
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.wetter_direkt
+    ok 298 - trip.anlegen.wetter_direkt
+      ---
+      duration_ms: 0.033609
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.wegpunkte_pruefen
+    ok 299 - trip.anlegen.wegpunkte_pruefen
+      ---
+      duration_ms: 0.03483
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.wegpunkte_berechnet
+    ok 300 - trip.anlegen.wegpunkte_berechnet
+      ---
+      duration_ms: 0.030939
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.wegpunkte_text
+    ok 301 - trip.anlegen.wegpunkte_text
+      ---
+      duration_ms: 0.033211
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.ueberspringen_pfeil
+    ok 302 - trip.anlegen.ueberspringen_pfeil
+      ---
+      duration_ms: 0.030349
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.ueberspringen
+    ok 303 - trip.anlegen.ueberspringen
+      ---
+      duration_ms: 0.043121
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.wegpunkte_uebernehmen
+    ok 304 - trip.anlegen.wegpunkte_uebernehmen
+      ---
+      duration_ms: 0.036811
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.zustellung_einrichten
+    ok 305 - trip.anlegen.zustellung_einrichten
+      ---
+      duration_ms: 0.045719
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.alarme_zum_speichern
+    ok 306 - trip.anlegen.alarme_zum_speichern
+      ---
+      duration_ms: 0.03183
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.speichere
+    ok 307 - trip.anlegen.speichere
+      ---
+      duration_ms: 0.03353
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.gespeichert
+    ok 308 - trip.anlegen.gespeichert
+      ---
+      duration_ms: 0.050479
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.speichern
+    ok 309 - trip.anlegen.speichern
+      ---
+      duration_ms: 0.03617
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.etappen_anzahl.one
+    ok 310 - trip.anlegen.etappen_anzahl.one
+      ---
+      duration_ms: 0.05494
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.etappen_anzahl.other
+    ok 311 - trip.anlegen.etappen_anzahl.other
+      ---
+      duration_ms: 0.03724
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.uebernehmen
+    ok 312 - trip.anlegen.uebernehmen
+      ---
+      duration_ms: 0.05544
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.etappe_beispiel
+    ok 313 - trip.anlegen.etappe_beispiel
+      ---
+      duration_ms: 0.040451
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.wegpunkte_auto
+    ok 314 - trip.anlegen.wegpunkte_auto
+      ---
+      duration_ms: 0.03669
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.name_eingeben
+    ok 315 - trip.anlegen.name_eingeben
+      ---
+      duration_ms: 0.03157
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.datum_waehlen
+    ok 316 - trip.anlegen.datum_waehlen
+      ---
+      duration_ms: 0.032259
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.direkt_wetter
+    ok 317 - trip.anlegen.direkt_wetter
+      ---
+      duration_ms: 0.030531
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.etappe_hinzufuegen_kurz
+    ok 318 - trip.anlegen.etappe_hinzufuegen_kurz
+      ---
+      duration_ms: 0.03075
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.gpx_noetig
+    ok 319 - trip.anlegen.gpx_noetig
+      ---
+      duration_ms: 0.03753
+      type: 'test'
+      ...
+    # Subtest: trip.anlegen.loeschen_frage
+    ok 320 - trip.anlegen.loeschen_frage
+      ---
+      duration_ms: 0.0313
+      type: 'test'
+      ...
+    # Subtest: statischer Gegencheck: Anker == Schluessel von trip.json; aktionen.json = Bestand (S2/F3) + F9-Anker; vergleich.anlegen.* verankert
+    ok 321 - statischer Gegencheck: Anker == Schluessel von trip.json; aktionen.json = Bestand (S2/F3) + F9-Anker; vergleich.anlegen.* verankert
+      ---
+      duration_ms: 1.387578
+      type: 'test'
+      ...
+    # Subtest: ein Text steht in aktionen.* nie unter zwei Schluesseln (de)
+    ok 322 - ein Text steht in aktionen.* nie unter zwei Schluesseln (de)
+      ---
+      duration_ms: 0.223259
+      type: 'test'
+      ...
+    # Subtest: Plural exakt: unbekannte Groessen, weitere Metriken, Kaskade
+    ok 323 - Plural exakt: unbekannte Groessen, weitere Metriken, Kaskade
+      ---
+      duration_ms: 0.09951
+      type: 'test'
+      ...
+    1..323
+ok 27 - Anker: jeder F9-Katalogwert ist als festes de/en-Literal verankert
+  ---
+  duration_ms: 29.76029
+  type: 'suite'
+  ...
+# Subtest: AC-5: das Golden enthaelt die 112 Bestandsschluessel
+ok 28 - AC-5: das Golden enthaelt die 112 Bestandsschluessel
+  ---
+  duration_ms: 0.700839
+  type: 'test'
+  ...
+# Subtest: AC-5: jeder bewusst geaenderte Schluessel ist ein Bestandsschluessel mit anderem Wert
+ok 29 - AC-5: jeder bewusst geaenderte Schluessel ist ein Bestandsschluessel mit anderem Wert
+  ---
+  duration_ms: 0.1793
+  type: 'test'
+  ...
+# Subtest: AC-5: jeder Bestandsschluessel ist mit byte-gleichem Wert in der de-Karte
+ok 30 - AC-5: jeder Bestandsschluessel ist mit byte-gleichem Wert in der de-Karte
+  ---
+  duration_ms: 0.589519
+  type: 'test'
+  ...
+# Subtest: AC-5: die de-Karte enthaelt ausser dem Bestand nur die neuen Schluessel dieses und der Folgepakete
+ok 31 - AC-5: die de-Karte enthaelt ausser dem Bestand nur die neuen Schluessel dieses und der Folgepakete
+  ---
+  duration_ms: 1.418918
+  type: 'test'
+  ...
+# Subtest: AC-5: trFor(de) und tr() mit Standard-Locale liefern die Bestandstexte unveraendert
+ok 32 - AC-5: trFor(de) und tr() mit Standard-Locale liefern die Bestandstexte unveraendert
+  ---
+  duration_ms: 0.570869
+  type: 'test'
+  ...
+1..32
+# tests 595
+# suites 27
+# pass 595
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 579.181304
+# duration_ms 11672.775179
