@@ -158,3 +158,4 @@ Loesung V2 (Tech-Lead-Entscheidung): ein eigenes Tipp-Protokoll im Baustein.
 
 - 2026-11-14: Initial spec created
 - 2026-11-14: Known Limitations ergänzt (bits-ui leert bei der zweiten Rücktaste alle Segmente; unvollständig verlassen ⇒ gespeicherter Wert bleibt), ACs unverändert
+- 2026-11-14: Nachtrag Umsetzung (Freigabe-Teil unverändert): `TripNewEditor.svelte` für AC-6 angepasst (+4/-2: Zustand `datumUngueltig`, `bind:ungueltig` am `DatumFeld`, blendet „Startdatum fehlt" aus). Zusätzlich Staging-Config `frontend/playwright.2999-datumfeld.staging.config.ts` für die Playwright-Prüfung gegen Staging. Doku-Nachzug: `docs/reference/design_system.md` (Eingabefelder).
