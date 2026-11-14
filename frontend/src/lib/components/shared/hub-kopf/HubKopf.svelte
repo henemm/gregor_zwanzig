@@ -161,10 +161,19 @@
 		   (kein overflow:hidden mehr, daher beschneidet nichts die 44-px-Trefferfläche des Links). */
 		min-width: 0;
 		overflow-wrap: anywhere;
+		/* #2601 Runde 2 (AC-10): Raum für die 44-px-Trefferfläche des .g-link-tap-Links (±13 px)
+		   im Bereich selbst, sonst ragt sie über den Bereich hinaus (scrollHeight > clientHeight).
+		   Der negative Block-Rand hebt das Polster für das Layout wieder auf (Zeilenhöhe unverändert). */
+		padding-block: 13px;
+		margin-block: -13px;
 	}
 	.breadcrumb-link {
 		color: inherit;
 		text-decoration: none;
+		/* #2980 AC-10/AC-24: bricht der Name um, liegt seine zweite Zeile im unteren Polster der
+		   Link-Trefferfläche — der Link liegt darüber, damit die volle Trefferhöhe antippbar bleibt. */
+		position: relative;
+		z-index: 1;
 	}
 	.breadcrumb-link:hover {
 		text-decoration: underline;
@@ -179,6 +188,10 @@
 		overflow-wrap: anywhere;
 	}
 	.hub-actions {
+		/* #2980 HP-3: Lage der Aktionen unabhängig von der Zeilenzahl der Brotkrumen — bricht ein
+		   langer Name um, bleibt „Senden"/„Setup abschließen" oben statt mittig tiefer zu rutschen.
+		   Einzeilig sind die Aktionen das höchste Element der Leiste, oben = mittig (unverändert). */
+		align-self: flex-start;
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;

@@ -127,7 +127,10 @@ for (const kind of HUB_KINDS) {
 				expect(s.x + s.width / 2, 'HP-1: „Senden" steht nicht rechts').toBeGreaterThan(w / 2);
 				// #2980 AC-24: kein Zurück-Pfeil mehr, auch am Handy — der Breadcrumb steht in derselben Zeile.
 				await expect(leiste(page).locator('[data-testid="back-link"]'), 'HP-1: Zurück-Pfeil in der Leiste (entfällt, #2980 AC-24)').toHaveCount(0);
-				const p = await box(page.getByTestId(HUB_KOPF_SEL.breadcrumb), 'Breadcrumb');
+				// Gemessen gegen die ERSTE Pfadzeile (Elternlink), nicht gegen die Kasten-Mitte: seit #2980
+				// AC-24 bricht ein langer Name um, und HP-3 verlangt eine Aktionslage unabhängig von der
+				// Zeilenzahl (Aktionen oben am Kopfband) — die Kasten-Mitte wandert bei Umbruch nach unten.
+				const p = await box(page.getByTestId(HUB_KOPF_SEL.breadcrumb).locator('a').first(), 'Breadcrumb-Elternlink (erste Zeile)');
 				expect(Math.abs(mitteY(p) - mitteY(s)), 'HP-1: „Senden" steht nicht in derselben Zeile wie der Breadcrumb').toBeLessThanOrEqual(8);
 				const t = await box(titel(page), 'Überschrift');
 				expect(s.y + s.height, 'HP-1: „Senden" steht nicht über dem Titel').toBeLessThanOrEqual(t.y + 1);

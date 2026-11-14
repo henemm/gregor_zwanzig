@@ -92,10 +92,12 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		// Klick → PATCH
 		await hubAktion(page, 'pause');
 
-		// Nach Response: Badge zeigt 'Pausiert' (data-tone=warning)
+		// Nach Response: Badge zeigt 'Pausiert'. Seit #2980 AC-21 ist jeder Zustand außer „aktiv"
+		// neutral (data-tone=default); der Zustand selbst steht in data-status.
 		const badge = page.getByTestId('trip-detail-status-badge');
 		await expect(badge).toContainText('Pausiert');
-		await expect(badge).toHaveAttribute('data-tone', 'warning');
+		await expect(badge).toHaveAttribute('data-status', 'paused');
+		await expect(badge).toHaveAttribute('data-tone', 'default');
 
 		// Menue-Eintrag wechselt auf 'Fortsetzen'
 		await menueHat(page, { pause: false, resume: true });
