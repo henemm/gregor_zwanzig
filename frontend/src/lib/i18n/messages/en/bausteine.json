@@ -111,5 +111,6 @@
 	"bausteine.datum.kalender_oeffnen": "Open calendar",
 	"bausteine.datum.voriger_monat": "Previous month",
 	"bausteine.datum.naechster_monat": "Next month",
+	"bausteine.datum.ungueltig": "This date does not exist.",
 	"bausteine.skelett.laedt": "Loading …"
 }

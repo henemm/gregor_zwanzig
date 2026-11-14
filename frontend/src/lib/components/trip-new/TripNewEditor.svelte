@@ -124,6 +124,8 @@
 	let name = $state(seed.name ?? '');
 	let region = $state('');
 	let startDate = $state(seed.startDate ?? '');
+	// #2999 AC-6: steht „Dieses Datum gibt es nicht.", entfällt „Startdatum fehlt" (keine Doppelmeldung).
+	let datumUngueltig = $state(false);
 
 	interface StageLocal { id: number; name: string; gpx: { file: string; km: number; asc: number } | null; waypoints: Waypoint[] }
 	let stages = $state<StageLocal[]>(
@@ -695,7 +697,7 @@
 					</Field>
 
 					<Field label={$t('trip.startdatum')} pflicht>
-						<DatumFeld value={startDate} onchange={makeDateHandler()} required leerMelden testid="trip-new-date-input-desktop" ariaLabel={$t('trip.startdatum')} />
+						<DatumFeld value={startDate} onchange={makeDateHandler()} bind:ungueltig={datumUngueltig} required leerMelden testid="trip-new-date-input-desktop" ariaLabel={$t('trip.startdatum')} />
 						{#if startDate}
 							<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 6px;">
 								{$t('trip.anlegen.start_hinweis', { datum: stageDate(startDate, 0, $locale)?.replace(/\.$/, '') ?? '' })}
@@ -724,7 +726,7 @@
 					<div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--g-rule); display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
 						{#if !name.trim()}
 							<span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--g-ink-3);"><Dot tone="neutral" size="xs" style="background: var(--g-ink-4);" />{$t('trip.anlegen.name_fehlt')}</span>
-						{:else if !startDate}
+						{:else if !startDate && !datumUngueltig}
 							<span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--g-ink-3);"><Dot tone="neutral" size="xs" style="background: var(--g-ink-4);" />{$t('trip.anlegen.datum_fehlt')}</span>
 						{/if}
 						<!-- #2837 S2 (AC-11): Weiter = Btn accent, gesperrt allein über disabled -->

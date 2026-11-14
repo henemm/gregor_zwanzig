@@ -144,9 +144,16 @@ test('AC-6: Trip anlegen, ungültiges Startdatum → nur „Dieses Datum gibt es
 	await page.goto(ANLEGE_SEL.route.url);
 	const feld = page.getByTestId('trip-new-date-input-desktop');
 	await expect(feld).toBeVisible({ timeout: 15_000 });
-	await ANLEGE_SEL.route.name(page).fill(`E2E-GZ-2999-${Date.now()}`);
 	const fehlt = page.getByText('Startdatum fehlt', { exact: true });
-	await expect(fehlt, 'Vorbedingung: Pflichthinweis bei leerem Datum').toBeVisible();
+	// Ladezeit: Ein Füllen vor der Hydration geht verloren (der Editor zeigt dann weiter
+	// „Trip-Name fehlt"). Erst wenn die Seite den Namen übernommen hat, erscheint der
+	// Datums-Hinweis — so lange erneut füllen, ohne feste Wartezeit.
+	const name = `E2E-GZ-2999-${Date.now()}`;
+	await expect(async () => {
+		await ANLEGE_SEL.route.name(page).fill(name);
+		await expect(ANLEGE_SEL.route.name(page)).toHaveValue(name);
+		await expect(fehlt, 'Vorbedingung: Pflichthinweis bei leerem Datum').toBeVisible({ timeout: 2_000 });
+	}).toPass({ timeout: 20_000 });
 
 	await feld.locator('[data-segment="day"]').click();
 	await page.keyboard.type('31042027');
@@ -233,11 +240,16 @@ test('AC-10: Kalenderklick übernimmt den Tag; Backspace leert das Segment ohne 
 		await expect(feld.locator('[data-segment="day"]'), 'Backspace leert das Tag-Segment').toHaveAttribute('aria-valuetext', 'Empty');
 		await expect(datumMeldung(page)).toHaveCount(0);
 		expect(enddaten(puts), 'Backspace speichert nichts Neues').toEqual(['2026-11-20']);
+		// Bisheriges bits-ui-Verhalten (2.17.3, date-field.svelte.js ~Z. 203): wird der Wert leer,
+		// leert bits-ui ALLE Segmente. Nach „25" steht also „25.mm.jjjj" — kein vollständiges Datum.
+		// Erwartung daher: kein Zwischenstand (z. B. 2026-11-02) geht hinaus, gespeichert bleibt
+		// 2026-11-20, und die Anzeige nach dem Verlassen stimmt mit dem Gespeicherten überein.
 		await page.keyboard.type('25');
+		expect(enddaten(puts), 'kein Zwischenstand während des Tippens gespeichert').toEqual(['2026-11-20']);
 		await verlasseFeld(page);
-		await expect.poll(async () => (await stand(page.request, 'vergleich', hub.id)).end_date, { message: 'vervollständigtes Datum gespeichert', timeout: 15_000 }).toBe('2026-11-25');
-		expect(enddaten(puts)).toEqual(['2026-11-20', '2026-11-25']);
-	} finally {
+		await expect(feldEingabe(feld), 'Anzeige nach dem Verlassen = gespeicherter Wert').toHaveText('20.11.2026');
+		await expect.poll(async () => (await stand(page.request, 'vergleich', hub.id)).end_date, { message: 'gespeichert bleibt 2026-11-20', timeout: 15_000 }).toBe('2026-11-20');
+		expect(enddaten(puts), 'kein PUT mit 2026-11-02 oder anderem Zwischenstand').toEqual(['2026-11-20']);	} finally {
 		await hub.aufraeumen();
 	}
 });

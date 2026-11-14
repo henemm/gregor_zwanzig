@@ -9,6 +9,7 @@
 	import { tick, untrack } from 'svelte';
 	import { DatePicker } from 'bits-ui';
 	import { SegmentFeldMeldung, TippZaehler } from './segmentFeldMeldung.ts';
+	import { DatumTipp, type Segment } from './datumTipp.ts';
 	import { parseDate, type DateValue } from '@internationalized/date';
 	import { t, locale } from '$lib/i18n';
 
@@ -29,9 +30,15 @@
 		 * Wert zurück (Etappe: kein Datenverlust, kein stiller Altwert hinter einer leeren Anzeige).
 		 */
 		leerMelden?: boolean;
+		/**
+		 * #2999: true, solange „Dieses Datum gibt es nicht." steht (bindbar) — Anlegen blendet
+		 * damit „Startdatum fehlt" aus (keine Doppelmeldung).
+		 */
+		ungueltig?: boolean;
 	}
 
-	let { value = '', onchange, testid, ariaLabel, required = false, disabled = false, groesse = 'normal', leerMelden = false }: Props = $props();
+	let { value = '', onchange, testid, ariaLabel, required = false, disabled = false, groesse = 'normal', leerMelden = false, ungueltig = $bindable(false) }: Props = $props();
+	const meldungId = $props.id();
 
 	const intlLocale = $derived($locale === 'en' ? 'en-GB' : 'de-DE');
 
@@ -61,10 +68,15 @@
 	let beruehrt = false;
 
 	function geaendert(neu: DateValue | undefined): void {
+		// #2999: bits-ui meldet beim Neuaufbau nach der 8. Ziffer noch seinen (geklemmten) Stand.
+		if (bautNeu) return;
 		if (!neu || neu.year < 1000) {
 			vollstaendig = false;
 			// Leer erst beim Verlassen melden (siehe verlassen) — nie als Zwischenstand.
 			if (leerMelden && value !== '') meldung.aendern('', true);
+			// #2999 AC-10: ein zurückgehaltener Zwischenstand (Rücktaste „20" → „2") steht nicht mehr
+			// im Feld und darf beim Verlassen nicht hinausgehen.
+			else meldung.verwerfen();
 			return;
 		}
 		vollstaendig = true;
@@ -75,13 +87,88 @@
 		}
 		// Erst nach dem Neuzeichnen melden: bits-ui räumt seine Tipp-Zwischenstände in einem Effekt
 		// weg; ein synchron gemeldeter Wert liesse sie bei einem folgenden Etappenwechsel stehen.
-		void tick().then(() => meldung.aendern(iso, zaehler.unfertig(feld)));
+		// #2999: solange ein Ziffernstrom läuft, bleibt der (evtl. von bits-ui geklemmte) Wert
+		// zurück; die 8. Ziffer verwirft ihn (`folge`), Verlassen meldet ihn.
+		const nr = folge;
+		void tick().then(() => {
+			if (nr !== folge) return;
+			const zurueck = tipp.laeuft || zaehler.unfertig(feld);
+			if (!zurueck) ungueltig = false;
+			meldung.aendern(iso, zurueck);
+		});
+	}
+
+	// #2999 Tipp-Protokoll (datumTipp.ts): eigener Ziffernstrom vor bits-ui. Er beginnt nur im
+	// ersten Segment (wer allein das Jahr ändert, tippt kein ganzes Datum).
+	const tipp = new DatumTipp();
+	let folge = 0;
+	let bautNeu = false;
+	const DATUM_TEILE = new Set(['day', 'month', 'year']);
+	const MODIFIKATOREN = new Set(['Shift', 'Control', 'Alt', 'AltGraph', 'Meta', 'CapsLock']);
+
+	function datumSegmente(): HTMLElement[] {
+		if (!feld) return [];
+		return Array.from(feld.querySelectorAll<HTMLElement>('[data-segment]')).filter((el) => DATUM_TEILE.has(el.getAttribute('data-segment') ?? ''));
+	}
+
+	function taste(e: KeyboardEvent): void {
+		beruehrt = true;
+		zaehler.taste(e);
+		if (MODIFIKATOREN.has(e.key)) return;
+		// Tastenkürzel (Strg+V, Strg+A …) sind keine getippten Ziffern: Strom neu, bits-ui waltet.
+		if (e.ctrlKey || e.altKey || e.metaKey) {
+			tipp.zuruecksetzen();
+			return;
+		}
+		const segmente = datumSegmente();
+		const ziel = e.target as HTMLElement | null;
+		if (!ziel || !segmente.includes(ziel)) {
+			tipp.zuruecksetzen();
+			return;
+		}
+		if (!tipp.laeuft && /^\d$/.test(e.key) && ziel !== segmente[0]) return;
+		const reihenfolge = segmente.map((el) => el.getAttribute('data-segment') as Segment);
+		const ergebnis = tipp.taste(e.key, reihenfolge);
+		if (!ergebnis) return;
+		// Die 8. Ziffer legt die Absicht fest: bits-ui bekommt sie nicht mehr, Zurückgehaltenes verfällt.
+		e.preventDefault();
+		e.stopPropagation();
+		folge += 1;
+		meldung.verwerfen();
+		if (ergebnis.ok) {
+			ungueltig = false;
+			if (ergebnis.iso !== value) onchange?.(ergebnis.iso);
+		} else {
+			ungueltig = true;
+		}
+		void neuAufbauen(ergebnis.ok ? 'letztes' : 'erstes');
+	}
+
+	/** Feld zeigt den Modellwert (nach gültiger Eingabe den gemeldeten), Fokus bleibt im Feld. */
+	async function neuAufbauen(fokus: 'erstes' | 'letztes'): Promise<void> {
+		bautNeu = true;
+		await tick();
+		vollstaendig = !!datum;
+		beruehrt = false;
+		aufbau += 1;
+		await tick();
+		const segmente = datumSegmente();
+		segmente[fokus === 'erstes' ? 0 : segmente.length - 1]?.focus();
+		bautNeu = false;
+	}
+
+	function fokusRein(e: FocusEvent): void {
+		zaehler.fokus(e);
+		// Fokus von außen ins Feld: neuer Strom (bits-ui springt beim Tippen selbst weiter).
+		if (!feld?.contains(e.relatedTarget as Node | null)) tipp.zuruecksetzen();
 	}
 
 	function verlassen(e: FocusEvent): void {
 		const ziel = e.relatedTarget as Element | null;
 		// In das Feld selbst oder in den eigenen Kalender (Portal) ist kein Verlassen.
-		if (feld?.contains(ziel) || ziel?.closest?.('[data-slot="datum-feld-kalender"]')) return;
+		if (bautNeu || feld?.contains(ziel) || ziel?.closest?.('[data-slot="datum-feld-kalender"]')) return;
+		tipp.zuruecksetzen();
+		if (meldung.offen) ungueltig = false;
 		meldung.abschliessen();
 		// Geleert oder Jahr angefangen (bits-ui meldet dann keinen bzw. einen Jahr-<1000-Wert, also
 		// `vollstaendig = false`). Nur was der Nutzer angefasst hat, wird zurückgesetzt (sonst
@@ -98,7 +185,8 @@
 	}
 </script>
 
-<div class="datum-feld" data-slot="datum-feld" data-groesse={groesse} data-testid={testid} bind:this={feld} onfocusout={verlassen} onkeydowncapture={(e) => { beruehrt = true; zaehler.taste(e); }} onfocusincapture={zaehler.fokus}>
+<div class="datum-huelle" data-groesse={groesse}>
+<div class="datum-feld" data-slot="datum-feld" data-groesse={groesse} data-testid={testid} bind:this={feld} onfocusout={verlassen} onkeydowncapture={taste} onfocusincapture={fokusRein} onpointerdowncapture={() => tipp.zuruecksetzen()}>
 	{#key aufbau}
 	<DatePicker.Root
 		value={datum}
@@ -112,10 +200,10 @@
 		{disabled}
 	>
 		<div class="rahmen">
-			<DatePicker.Input data-slot="datum-feld-eingabe" aria-label={ariaLabel}>
+			<DatePicker.Input data-slot="datum-feld-eingabe" aria-label={ariaLabel} aria-describedby={ungueltig ? meldungId : undefined}>
 				{#snippet children({ segments })}
 					{#each segments as { part, value: teil }, i (i)}
-						<DatePicker.Segment {part}>{teil}</DatePicker.Segment>
+						<DatePicker.Segment {part} aria-describedby={ungueltig ? meldungId : undefined}>{teil}</DatePicker.Segment>
 					{/each}
 				{/snippet}
 			</DatePicker.Input>
@@ -161,8 +249,29 @@
 	</DatePicker.Root>
 	{/key}
 </div>
+{#if ungueltig}
+	<div class="datum-meldung" data-slot="datum-feld-meldung" id={meldungId} role="alert">{$t('bausteine.datum.ungueltig')}</div>
+{/if}
+</div>
 
 <style>
+	/* #2999: Hülle stellt die Meldung direkt unter das Feld (auch in Zeilen-Layouts wie der Etappe). */
+	.datum-huelle {
+		display: inline-flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+	.datum-huelle[data-groesse='normal'],
+	.datum-huelle[data-groesse='gross'] {
+		display: flex;
+		width: 100%;
+	}
+	.datum-meldung {
+		margin-top: 4px;
+		font-size: 12px;
+		line-height: 1.4;
+		color: var(--g-danger-fg);
+	}
 	.datum-feld {
 		display: inline-flex;
 		min-width: 0;
