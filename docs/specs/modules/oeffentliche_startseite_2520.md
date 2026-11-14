@@ -122,6 +122,7 @@ Wer nicht eingeloggt ist, soll vor der Registrierung verstehen, was Gregor Zwanz
 - Nur Deutsch; der Katalog ist für spätere Sprachen vorbereitet, eine Sprachumschaltung gibt es nicht.
 - Keine Live-Daten, keine Marketing-Tracking- oder Analytics-Skripte.
 - Screenshots sind statisch und veralten bei Renderer-Änderungen; sie werden nicht automatisch neu erzeugt.
+- Nachtrag (#2777): Bilder je Sprache: de unter `/landing/`, en unter `/landing/en/` (eigene englische Bilder; Alarm und Telegram reproduzierbar über `scripts/landing_screenshots.py`, Spec `startseite_en_bilder_2777.md`).
 - Kein Link von `/login` und `/register` zurück zur Startseite (Out of Scope).
 - SMS / Satelliten-Messenger / Premium-SMS mit Rückkanal werden nur als „in Arbeit bzw. auf Anfrage" erwähnt, nicht beworben (PO 2026-10-07).
 
@@ -133,3 +134,4 @@ Kein neues ADR nötig. Die Entscheidung berührt „Auth" nur durch eine einzige
 
 - 2026-10-07: Initial spec created (Issue #2520)
 - 2026-10-07: PO-Review: AC-1 hyperlokale Vorhersage (Trip-Zeitraum/Ortsvergleich), AC-6 SMS/Satellit „in Arbeit bzw. auf Anfrage", AC-10 Atomic-Design-Bausteine
+- 2026-11-14: Nachtrag Bilder je Sprache, de `/landing/`, en `/landing/en/` (Issue #2777)

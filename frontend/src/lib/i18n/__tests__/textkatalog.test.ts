@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { tr } from '../index.ts';
+import { tr, trFor } from '../index.ts';
 import { de } from '../messages/de/index.ts';
 import { ARIA_WORT, BEGRIFFE, INFO_TEXTE, TIP_TEXTE } from '../../components/shared/__tests__/infoboxTexte.ts';
 
@@ -67,6 +67,41 @@ test('AC-7: jede referenzierte Bilddatei existiert, Alt-Texte nicht leer, >= 3 B
 		const alt = katalog[k.replace(/\.src$/, '.alt')];
 		assert.ok(alt && alt.trim().length > 10, `Alt-Text zu ${k} fehlt`);
 		assert.doesNotMatch(alt, /sms/i);
+	}
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue #2777 — eigene englische Beispielbilder (Spec startseite_en_bilder_2777.md)
+// Gelesen wird ueber trFor(lang, …) — derselbe Weg, den $t() auf der Seite nimmt.
+// Gegenprobe: en-Pfad zurueck auf /landing/*.png ODER en-Datei geloescht ⇒ rot.
+// ─────────────────────────────────────────────────────────────────────────────
+const BILDER = ['mail', 'telegram', 'alarm'] as const;
+const DATEI = { mail: 'briefing-mail.png', telegram: 'briefing-telegram.png', alarm: 'alarm.png' } as const;
+
+test('#2777 AC-1: en-Katalog verweist auf die Bilder unter /landing/en/', () => {
+	for (const n of BILDER) {
+		assert.equal(trFor('en', `start.${n}.src` as never), `/landing/en/${DATEI[n]}`, `start.${n}.src (en)`);
+	}
+});
+
+test('#2777 AC-2: de-Katalog verweist unveraendert auf /landing/*.png', () => {
+	for (const n of BILDER) {
+		assert.equal(trFor('de', `start.${n}.src` as never), `/landing/${DATEI[n]}`, `start.${n}.src (de)`);
+	}
+});
+
+test('#2777 AC-3: je Bild en-Pfad ≠ de-Pfad, beide Dateien existieren, < 200 KB, Alt-Text je Sprache', () => {
+	for (const n of BILDER) {
+		const pfad = { de: trFor('de', `start.${n}.src` as never), en: trFor('en', `start.${n}.src` as never) };
+		assert.notEqual(pfad.en, pfad.de, `start.${n}.src: en zeigt auf dasselbe (deutsche) Bild wie de`);
+		for (const lang of ['de', 'en'] as const) {
+			const datei = join(frontend, 'static', pfad[lang].replace(/^\//, ''));
+			assert.ok(existsSync(datei), `${pfad[lang]} (${lang}) fehlt`);
+			assert.ok(readFileSync(datei).length < 200 * 1024, `${pfad[lang]} (${lang}) zu gross`);
+			const alt = trFor(lang, `start.${n}.alt` as never);
+			assert.ok(alt && alt.trim().length > 10, `Alt-Text start.${n}.alt (${lang}) fehlt`);
+		}
+		assert.notEqual(trFor('en', `start.${n}.alt` as never), trFor('de', `start.${n}.alt` as never), `start.${n}.alt nicht uebersetzt`);
 	}
 });
 
