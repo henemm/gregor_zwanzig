@@ -119,7 +119,9 @@ describe('#2375 AC-10: erfolgreiche PUT-Antwort wird Basis fuer die naechste Nut
 	// #1743: der Versand-Inhalt haengt im geteilten Baustein; der Hub reicht onCompareUpdate dort ein.
 	// #2794 S3a Teil-PR 3: im Hub haengt der Baustein im Reiter Zustellung (Huelle ZustellungTab),
 	// der Reiter Wetter ist der WetterTab mit eigenem onCompareUpdate — beide Einbettungen geprueft.
-	for (const komponente of ['AlarmeTab', 'ZustellungTab', 'WetterTab']) {
+	// #2795 S3b Teilschritt 1b: der Hub bettet keinen AlarmeTab mehr ein — Alarme speichert der neue
+	// Reiter Zustellung, dessen onCompareUpdate hier mitgeprueft wird.
+	for (const komponente of ['ZustellungTab', 'WetterTab']) {
 		test(`${komponente}-Einbettung: onCompareUpdate uebernimmt die Serverantwort als Basis`, async () => {
 			const { u, wizardState, ast, quelle } = await hub(serverstand());
 			const einbettungen = findeKomponenten(ast, komponente);

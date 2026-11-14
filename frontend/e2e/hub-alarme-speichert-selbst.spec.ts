@@ -10,12 +10,12 @@
 //   Pausieren-Flush     → AS-3 (je kind)
 //   #2375 Roundtrip     → AS-4 (je kind)
 //
-// Auslöser je kind (Spec AS, „Auslöser je kind"): der Vergleich schaltet wie die
-// Alt-Spec den Radar-Alarm (`radar_alert_enabled`, nur im Vergleichs-Preset,
-// alarmeTabSections.ts:11); der Trip hat keinen Radar-Alarm und schaltet
-// stattdessen den Auslöser „Amtliche Warnungen" (`official_warnings.enabled`) im
-// SELBEN geteilten AlarmeTab. Die Chip-/PUT-/Flush-Zusicherungen sind gemeinsam.
-//
+// #2795 S3b Teilschritt 1b (feat_2795_s3b_teil1_zustellung.md): der Alarm-Baustein ist im Reiter
+// Zustellung abgelöst (Radar und Amtliche Warnungen wohnen nur noch im Reiter Wetter, AC-31). Auslöser
+// ist jetzt für BEIDE kinds dieselbe Alarm-Geste des neuen Reiters: der Schalter „Stille Stunden“
+// (Alarm-Teil des EINEN Speicherers, Owner `alarme`, AC-24/AC-33). Die Chip-/PUT-/Flush-Zusicherungen
+// bleiben unverändert; zusätzlich darf der Alarm-Rumpf `display_config` nie tragen (AC-32).
+
 // Pausieren je kind: der Ortsvergleich pausiert per PUT `{schedule,
 // previous_schedule}`, der Trip per PATCH `/api/trips/{id}/state` `{paused}`
 // (subscriptionExec.ts setPaused). Beide Wege werden in EINEM geordneten
@@ -31,17 +31,17 @@ import { HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, type HubKind } from '
 
 type Stand = Record<string, unknown>;
 
-/** kind-Tabelle: Alarm-Auslöser, Fremdfelder des Alarm-Rumpfs, Status-Weg. */
+/** Auslöser für beide kinds: Schalter „Stille Stunden“ im Reiter Zustellung (Seed: aus). */
+const stilleSchalter = (page: Page): Locator =>
+	page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-stille-schalter"]').first();
+const stilleAn = (s: Stand): boolean => Boolean(s.alert_quiet_from) && Boolean(s.alert_quiet_to);
+
+/** kind-Tabelle: Fremdfelder des Alarm-Rumpfs, Status-Weg. */
 const AS_SEL: Record<
 	HubKind,
 	{
 		seed: Record<string, unknown>;
-		schalter: (page: Page) => Locator;
-		/** Wert des Auslösers im gespeicherten Stand bzw. im PUT-Rumpf. */
-		wert: (s: Stand) => unknown;
-		/** Zielwert nach EINEM Klick (Seed steht auf dem Gegenwert). */
-		neu: boolean;
-		/** Felder, die ein Alarm-Rumpf NIE tragen darf (#2375 Teilfeld-Nutzlast). */
+		/** Felder, die ein Alarm-Rumpf NIE tragen darf (#2375 Teilfeld-Nutzlast, AC-32). */
 		fremd: string[];
 		/** Schlüssel des Status-Rumpfs beim Pausieren (sortiert). */
 		statusSchluessel: string[];
@@ -54,21 +54,14 @@ const AS_SEL: Record<
 			official_warnings: { enabled: true },
 			alert_channels: { email: true, telegram: false, sms: false, premium_sms: false }
 		},
-		schalter: (page) =>
-			page.locator('[data-testid="alerts-tab-official-alert-triggers-toggle"] input[type="checkbox"]').first(),
-		wert: (s) => (s.official_warnings as { enabled?: boolean } | undefined)?.enabled,
-		neu: false,
-		fremd: ['name', 'stages', 'report_config', 'official_alerts_enabled', 'corridors', 'paused'],
+		fremd: ['name', 'stages', 'report_config', 'display_config', 'official_warnings', 'official_alerts_enabled', 'corridors', 'paused'],
 		statusSchluessel: ['paused'],
 		statusPausiert: (r) => r.paused === true,
 		istPausiert: (s) => Boolean(s.paused_at)
 	},
 	vergleich: {
 		seed: { radar_alert_enabled: false, display_config: { active_metrics: ['wind_max_kmh'] } },
-		schalter: (page) => page.locator('[data-testid="alarme-radar-toggle"] input[type="checkbox"]').first(),
-		wert: (s) => s.radar_alert_enabled,
-		neu: true,
-		fremd: ['name', 'location_ids', 'schedule', 'send_telegram', 'official_alerts_enabled'],
+		fremd: ['name', 'location_ids', 'schedule', 'send_telegram', 'display_config', 'radar_alert_enabled', 'official_alerts_enabled'],
 		statusSchluessel: ['previous_schedule', 'schedule'],
 		statusPausiert: (r) => r.schedule === 'manual',
 		istPausiert: (s) => s.schedule === 'manual'
@@ -116,8 +109,8 @@ async function stand(page: Page, kind: HubKind, id: string): Promise<Stand> {
 const anzeige = (page: Page) => page.locator('[data-testid="save-indicator"]');
 
 async function oeffneAlarme(page: Page, kind: HubKind, id: string): Promise<void> {
-	await openHub(page, kind, id, { tab: 'zustellung' }); // #2794 S3a: Alarme im Reiter Zustellung
-	await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
+	await openHub(page, kind, id, { tab: 'zustellung' }); // #2795 S3b: Alarm-Einstellungen im Reiter Zustellung
+	await expect(stilleSchalter(page)).toBeVisible({ timeout: 15_000 });
 }
 
 for (const kind of HUB_KINDS) {
@@ -133,18 +126,18 @@ for (const kind of HUB_KINDS) {
 			const { puts, beantwortet } = zaehlePuts(page, pfad);
 			await oeffneAlarme(page, kind, hub.id);
 			expect(puts.length, 'Vorbedingung: das Öffnen des Reiters speichert nichts').toBe(0);
-			await expect(as.schalter(page), 'Vorbedingung: Auslöser steht auf dem Gegenwert').toBeChecked({ checked: !as.neu });
+			await expect(stilleSchalter(page), 'Vorbedingung: Stille Stunden stehen aus').toHaveAttribute('aria-checked', 'false');
 
-			await as.schalter(page).click();
-			await expect(as.schalter(page)).toBeChecked({ checked: as.neu });
+			await stilleSchalter(page).click();
+			await expect(stilleSchalter(page)).toHaveAttribute('aria-checked', 'true');
 
 			await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 			await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 			await expect(anzeige(page)).toContainText('Gespeichert');
 
 			expect(puts.length, 'genau EIN PUT für eine Alarm-Änderung').toBe(1);
-			expect(as.wert(puts[0].postDataJSON() as Stand)).toBe(as.neu);
-			expect(as.wert(await stand(page, kind, hub.id))).toBe(as.neu);
+			expect(stilleAn(puts[0].postDataJSON() as Stand)).toBe(true);
+			expect(stilleAn(await stand(page, kind, hub.id))).toBe(true);
 		} finally {
 			await hub.aufraeumen();
 		}
@@ -162,8 +155,8 @@ for (const kind of HUB_KINDS) {
 			const { puts, beantwortet } = zaehlePuts(page, pfad);
 			await oeffneAlarme(page, kind, hub.id);
 
-			await as.schalter(page).click();
-			await expect(as.schalter(page)).toBeChecked({ checked: as.neu });
+			await stilleSchalter(page).click();
+			await expect(stilleSchalter(page)).toHaveAttribute('aria-checked', 'true');
 			await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 			await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 			const rumpf = puts[0].postDataJSON() as Stand;
@@ -172,8 +165,8 @@ for (const kind of HUB_KINDS) {
 			}
 
 			await oeffneAlarme(page, kind, hub.id);
-			await expect(as.schalter(page)).toBeChecked({ checked: as.neu, timeout: 10_000 });
-			expect(as.wert(await stand(page, kind, hub.id))).toBe(as.neu);
+			await expect(stilleSchalter(page)).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
+			expect(stilleAn(await stand(page, kind, hub.id))).toBe(true);
 		} finally {
 			await hub.aufraeumen();
 		}
@@ -191,7 +184,7 @@ for (const kind of HUB_KINDS) {
 			const { puts, beantwortet } = zaehlePuts(page, pfad);
 			await oeffneAlarme(page, kind, hub.id);
 
-			await as.schalter(page).click();
+			await stilleSchalter(page).click();
 			// sofort, innerhalb des Entprell-Fensters (700 ms), den Reiter wechseln
 			// #2794 S3a: aus dem Reiter Zustellung (Alarme) in den Reiter Wetter.
 			await page.locator(`[data-testid="${sel.reiter}-wetter"]:visible`).click();
@@ -199,11 +192,11 @@ for (const kind of HUB_KINDS) {
 
 			// Der Wechsel wird erst freigegeben, NACHDEM der Alarm-PUT beantwortet ist.
 			expect(beantwortet.length, 'Alarm-PUT war beim Reiterwechsel noch nicht gesendet').toBeGreaterThanOrEqual(1);
-			expect(as.wert(beantwortet[0].postDataJSON() as Stand)).toBe(as.neu);
+			expect(stilleAn(beantwortet[0].postDataJSON() as Stand)).toBe(true);
 
 			await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 			expect(puts.length).toBe(1);
-			expect(as.wert(await stand(page, kind, hub.id))).toBe(as.neu);
+			expect(stilleAn(await stand(page, kind, hub.id))).toBe(true);
 		} finally {
 			await hub.aufraeumen();
 		}
@@ -221,7 +214,7 @@ for (const kind of HUB_KINDS) {
 			const { alle, fertig } = protokolliereSchreiber(page, pfad);
 			await oeffneAlarme(page, kind, hub.id);
 
-			await as.schalter(page).click();
+			await stilleSchalter(page).click();
 			// sofort (innerhalb der Entprellung) über den Kopf-Kebab pausieren
 			await page.getByRole('button', { name: 'Weitere Aktionen' }).first().click();
 			const pausieren = page.getByRole('menuitem', { name: 'Pausieren' });
@@ -233,7 +226,7 @@ for (const kind of HUB_KINDS) {
 
 			const [erster, zweiter] = alle.map((r) => r.postDataJSON() as Stand);
 			expect(alle[0].method(), 'erster Schreibvorgang ist der Alarm-PUT').toBe('PUT');
-			expect(as.wert(erster), 'erster Schreibvorgang muss die Alarm-Änderung sein').toBe(as.neu);
+			expect(stilleAn(erster), 'erster Schreibvorgang muss die Alarm-Änderung sein').toBe(true);
 			// #2375: der Alarm-Rumpf trägt den Status gar nicht (Teilfeld-Nutzlast)
 			for (const k of as.statusSchluessel) {
 				expect(Object.keys(erster), 'erster Schreibvorgang darf noch nicht pausieren').not.toContain(k);
@@ -245,7 +238,7 @@ for (const kind of HUB_KINDS) {
 			);
 
 			const s = await stand(page, kind, hub.id);
-			expect(as.wert(s)).toBe(as.neu);
+			expect(stilleAn(s)).toBe(true);
 			expect(as.istPausiert(s), 'Server: pausiert').toBe(true);
 			expect(alle.length).toBe(2);
 		} finally {

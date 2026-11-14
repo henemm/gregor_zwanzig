@@ -31,6 +31,7 @@ import {
 	tippeDatum,
 	type HubKind
 } from './helpers';
+import { cooldownFeld } from './s3b2795-zustellung.helpers';
 
 const DESKTOP = { width: 1280, height: 900 };
 const VERZOEGERUNG_MS = 800;
@@ -236,7 +237,8 @@ for (const kind of HUB_KINDS) {
 			// #2794 S3a: die Alarme stehen im Reiter Zustellung.
 			await openHub(page, kind, hub.id, { tab: 'zustellung' });
 			await expect(page.locator(`[data-testid="${sel.panel}-zustellung"]:visible`)).toBeVisible({ timeout: 10_000 });
-			const feld = page.locator('[data-testid="alert-cooldown-input"]:visible').first();
+			// #2795 S3b 1b: das Cooldown-Feld steht im Reiter Zustellung unter „Anpassen“ (AC-26).
+			const feld = await cooldownFeld(page.locator('[data-testid="zustellung-tab"]:visible').first());
 			await expect(feld).toBeVisible({ timeout: 10_000 });
 			await expect(feld, 'Vorbedingung: das Cooldown-Feld ist bearbeitbar').toBeEnabled();
 			await expect(chip(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });

@@ -31,6 +31,11 @@
 // Trip-Karte „Briefings laufen" bleibt Trip-Hauptfläche und wird weiter geprüft.
 // testids je Art: Tabelle UE unten (Vergleich compare-*, Trip hub-uebersicht-*).
 //
+// #2795 S3b Teilschritt 1b (feat_2795_s3b_teil1_zustellung.md): der alte Versand-Abschnitt ist durch
+// den Reiter „Zustellung“ abgelöst. Sprungziel von „Bearbeiten →“ ist die Briefing-Zeiten-Karte mit
+// Anker `#versand` (AC-39); VB-3 prüft die Texte des neuen Reiters (AC-1/AC-2), VB-9 schaltet die
+// Slots über die Schalter der beiden Karten.
+//
 // Seed: beide Slots aktiv, Morgen 07:00, Abend 18:00 — Erwartungen aus dem Seed.
 // Läuft im isolierten CI-Stack (frontend/e2e/ci-stack.sh). Aufräumen im finally.
 
@@ -84,6 +89,8 @@ const ABEND = /^18:00( \(.+\))?$/;
 const basis = (kind: HubKind, id: string) => (kind === 'route' ? `/trips/${id}` : `/compare/${id}`);
 const panel = (page: Page, kind: HubKind, tab: string) =>
 	page.locator(`[data-testid="${HUB_SEL[kind].panel}-${tab}"]:visible`).first();
+/** Sprungziel `#versand`: die Briefing-Zeiten-Karte des Reiters Zustellung (AC-39). */
+const versandAnker = (page: Page) => page.locator('[data-testid="zustellung-tab"]:visible #versand').first();
 
 /** Trip-Karte „Briefings laufen" (innerstes Element, das Eyebrow und „Zeitplan bearbeiten →" enthält). */
 function tripKarte(page: Page): Locator {
@@ -176,7 +183,7 @@ for (const kind of HUB_KINDS) {
 		});
 
 		// VB-3 (Alt AC-4, umformuliert) — fängt: Überschrift zurück auf Rhythmus-Sprache.
-		test(`VB-3 (${kind}): Versand-Abschnitt zeigt „Briefing-Zeitplan" mit Morgen-/Abend-Briefing, keine Rhythmus-Sprache`, async ({
+		test(`VB-3 (${kind}): Reiter Zustellung zeigt Kopf und Morgen-/Abend-Briefing, keine Rhythmus-Sprache`, async ({
 			page
 		}) => {
 			await page.setViewportSize(DESKTOP);
@@ -184,13 +191,16 @@ for (const kind of HUB_KINDS) {
 			try {
 				await openHub(page, kind, hub.id);
 				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).first().click(); // #2794 S3a
-				const abschnitt = page.locator('[data-testid="versand-abschnitt"]:visible').first();
+				const abschnitt = page.locator('[data-testid="zustellung-tab"]:visible').first();
 				await expect(abschnitt).toBeVisible({ timeout: 10_000 });
-				// Ist-Texte der geteilten Bausteine (VTBriefingChannels / VTSchedulePlan).
-				await expect(abschnitt).toContainText('Geplantes Briefing · Kanäle');
-				await expect(abschnitt).toContainText('Briefing-Zeitplan');
-				await expect(abschnitt).toContainText('Morgen-Briefing');
-				await expect(abschnitt).toContainText('Abend-Briefing');
+				// Ist-Texte des Reiters Zustellung (AC-1, AC-2, AC-13).
+				await expect(abschnitt.getByTestId('zustellung-titel')).toHaveText('Zustellung');
+				await expect(abschnitt.getByTestId('zustellung-erklaer')).toHaveText(
+					'Wann die Briefings kommen und auf welchem Weg Briefings und Alarme dich erreichen.'
+				);
+				await expect(abschnitt.getByTestId('zustellung-morgen-karte')).toContainText('Morgen-Briefing');
+				await expect(abschnitt.getByTestId('zustellung-abend-karte')).toContainText('Abend-Briefing');
+				await expect(abschnitt.getByTestId('zustellung-kanaele-kopf')).toContainText('Briefings über');
 				await expect(abschnitt).not.toContainText('Rhythmus & Vorausschau');
 				await expect(abschnitt).not.toContainText('Zeitfenster');
 				// Stundenbereich nur im vergleich-Zweig: nur der Vergleichs-Seed trägt
@@ -239,7 +249,8 @@ for (const kind of HUB_KINDS) {
 
 				// #2794 S3a: Versand-Abschnitt im Reiter Zustellung.
 				await expect(panel(page, kind, 'zustellung')).toBeVisible({ timeout: 10_000 });
-				await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeInViewport({ timeout: 10_000 });
+				await expect(versandAnker(page)).toHaveAttribute('data-abschnitt', 'briefing-zeiten', { timeout: 10_000 });
+				await expect(versandAnker(page)).toBeInViewport({ timeout: 10_000 });
 				await expect(page).toHaveURL(sel.hubUrl(hub.id));
 				expect(page.url()).not.toMatch(/\/edit/);
 			} finally {
@@ -261,7 +272,7 @@ for (const kind of HUB_KINDS) {
 					await expect(panel(page, kind, 'uebersicht')).toBeVisible({ timeout: 10_000 });
 					await page.locator('[data-testid="hub-overview"]:visible').getByRole('button', { name: 'Zeitplan bearbeiten →' }).click();
 					await expect(panel(page, kind, 'zustellung')).toBeVisible({ timeout: 10_000 });
-					await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeInViewport({ timeout: 10_000 });
+					await expect(versandAnker(page)).toBeInViewport({ timeout: 10_000 });
 					await expect(page).toHaveURL(sel.hubUrl(hub.id));
 				} finally {
 					await hub.aufraeumen();
@@ -339,12 +350,12 @@ for (const kind of HUB_KINDS) {
 
 				// Beide Slots im Versand-Abschnitt abschalten (echte Geste, Autosave).
 				await openHub(page, kind, hub.id, { tab: 'zustellung', hash: 'versand' });
-				const abschnitt = page.locator('[data-testid="versand-abschnitt"]:visible');
-				for (const slot of ['morning', 'evening']) {
-					const schalter = abschnitt.locator(`[data-testid="${slot}-master-switch"] input[type="checkbox"]`);
-					await expect(schalter, `Vorbedingung: ${slot}-Slot an`).toBeChecked({ timeout: 10_000 });
+				const abschnitt = page.locator('[data-testid="zustellung-tab"]:visible');
+				for (const slot of ['morgen', 'abend']) {
+					const schalter = abschnitt.locator(`[data-testid="zustellung-${slot}-schalter"]`);
+					await expect(schalter, `Vorbedingung: ${slot}-Slot an`).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
 					await schalter.click();
-					await expect(schalter).not.toBeChecked();
+					await expect(schalter).toHaveAttribute('aria-checked', 'false');
 				}
 				await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 				await expect

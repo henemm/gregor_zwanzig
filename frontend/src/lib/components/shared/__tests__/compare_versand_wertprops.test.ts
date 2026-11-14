@@ -511,12 +511,20 @@ function wizStand(): Knoten {
 	};
 }
 
+// #2795 S3b Teilschritt 1b: Mount B (Hub) entfaellt — der neue Reiter Zustellung speichert Briefing
+// und Alarme ueber EINEN eigenen Speicherer (zustellungSpeicherung.ts) und bettet keinen VersandTab
+// mehr ein. Die Anlege-Seite (Mounts C/D) bleibt auf VersandTab (Spec §Scope), ihre Zusicherung bleibt.
 const MOUNTS: [string, string, number][] = [
-	['Hub /compare/[id] (Mount B)', HUB, 1],
 	['Anlege-Seite /compare/new, Desktop + Mobil (Mounts C und D)', ANLEGE, 2]
 ];
 
-describe('AC-3: alle drei Vergleichs-Mounts speisen dasselbe Buendel ein', () => {
+describe('#2795 S3b 1b: der Vergleichs-Hub bettet keinen VersandTab mehr ein', () => {
+	test('Hub /compare/[id]: 0 VersandTab-Einbettungen (kein zweiter Speicherweg neben dem Reiter)', () => {
+		assert.strictEqual(einbettungen(HUB).treffer.length, 0, 'der Hub bettet noch einen VersandTab ein');
+	});
+});
+
+describe('AC-3: die Vergleichs-Mounts der Anlege-Seite speisen dasselbe Buendel ein', () => {
 	for (const [was, datei, anzahl] of MOUNTS) {
 		test(`${was}: ruft \`versandPropsAus(<zustand>)\` IM Markup-Ausdruck auf und reicht kein \`wiz\` mehr durch`, () => {
 			const { quelle, treffer } = einbettungen(datei);

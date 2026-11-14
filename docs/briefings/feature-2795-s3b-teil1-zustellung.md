@@ -1,6 +1,6 @@
 ---
 spec_file: docs/specs/modules/feat_2795_s3b_teil1_zustellung.md
-spec_sha256: dc53352166b0f22a9f22b2a48293f2f2861cbaeda86c64c52694a542212c5b27
+spec_sha256: 078bd6ee2c2eeb9175381bda078c81d05cd5557519c1b5182445af0c87cf291a
 spec_frozen_sha256: c88ba33a5d389946d973a644099ebc9bce5b8a55ea3b2d2cdf88f0074d69ad8d
 ---
 

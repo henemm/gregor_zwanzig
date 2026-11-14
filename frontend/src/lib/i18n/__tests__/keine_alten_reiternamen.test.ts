@@ -40,7 +40,8 @@ function katalog(lang: Sprache): Record<string, string> {
 const POSITIVLISTE: Record<string, string> = {
 	'aktionen.alarms': 'Funktionsname im Listen-Menü „Alarme", Ziel Reiter Zustellung (AC-48)',
 	'hilfe.alarme.titel': 'Überschrift des Hilfe-Abschnitts über die Funktion Alarme, kein Reiter',
-	'trip.kanaele.fuss_alerts': 'Spaltenkopf „Alerts" der Kanal-Tabelle (Funktion), kein Reiter'
+	'trip.kanaele.fuss_alerts': 'Spaltenkopf „Alerts" der Kanal-Tabelle (Funktion), kein Reiter',
+	'zustellung.spalte.alarme': 'Spaltenkopf „Alarme"/„Alerts" der Kanal-Tabelle im Reiter Zustellung (Funktion, #2795 AC-14), kein Reiter'
 };
 
 const ALT: Record<Sprache, string[]> = {

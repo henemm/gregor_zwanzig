@@ -25,7 +25,7 @@ import {
 	openHub,
 	seedHub,
 	tippeDatum,
-	waehleOption,
+	tippeUhrzeit,
 	type HubKind,
 	type SeededHub
 } from './helpers';
@@ -217,9 +217,11 @@ for (const kind of HUB_KINDS) {
 
 				// Entprellt speichernde Geste, danach SOFORT weg — OHNE auf einen PUT zu warten.
 				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).first().click(); // #2794 S3a: Versand im Reiter Zustellung
-				const zeit = page.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible');
+				// #2795 S3b 1b: Uhrzeitfeld der Briefing-Zeiten im Reiter Zustellung (AC-4), Übernahme beim Verlassen.
+				const zeit = page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-morgen-zeit"]');
 				await expect(zeit).toBeVisible({ timeout: 10_000 });
-				await waehleOption(page, zeit, '05:00');
+				await tippeUhrzeit(page, zeit, '05:00');
+				await page.keyboard.press('Tab');
 				await page.goto(sel.liste.url);
 
 				await expect
@@ -320,9 +322,11 @@ for (const kind of HUB_KINDS) {
 				await bleibtBei(() => nurObjekt(schreiber, pfad).length, 1, 1_000, 'GG-5 FAIL: die Punkte-Geste muss genau EINEN PUT auslösen');
 
 				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).first().click(); // #2794 S3a: Versand im Reiter Zustellung
-				const zeit = page.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible');
+				// #2795 S3b 1b: Uhrzeitfeld der Briefing-Zeiten im Reiter Zustellung (AC-4), Übernahme beim Verlassen.
+				const zeit = page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-morgen-zeit"]');
 				await expect(zeit).toBeVisible({ timeout: 10_000 });
-				await waehleOption(page, zeit, '05:00');
+				await tippeUhrzeit(page, zeit, '05:00');
+				await page.keyboard.press('Tab');
 				await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
 				await bleibtBei(() => nurObjekt(schreiber, pfad).length, 2, 1_500, 'GG-5 FAIL: insgesamt genau ZWEI PUTs (kein Doppel-Feuer, keine verlorene Aktion)');

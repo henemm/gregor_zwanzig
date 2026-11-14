@@ -83,6 +83,7 @@ const METRICS_TAB = join(here, '..', '..', 'shared', 'WeatherMetricsTab.svelte')
 
 const PANEL = join(here, '..', '..', 'shared', 'WetterMetrikenVersandPanel.svelte');
 const ZUSTELLUNG_TAB = join(here, '..', '..', 'shared', 'zustellung-tab', 'ZustellungTab.svelte');
+const UEBERGANG_BLOCK = join(here, '..', '..', 'organisms', 'zustellung-tab', 'UebergangBlock.svelte');
 function ast(file: string): unknown {
 	return parse(readFileSync(file, 'utf-8'), { modern: true });
 }
@@ -305,10 +306,12 @@ describe('Stundenverlauf-Steuerung: neue Heimat + Speicherweg', () => {
 			1,
 			'Das Panel mountet den geteilten Baustein ZustellungTab (context="vergleich")'
 		);
+		// #2795 S3b Teilschritt 1b: der Baustein steht im Uebergangsblock des neuen Reiters.
+		assert.equal(findComponents(ast(ZUSTELLUNG_TAB), 'UebergangBlock').length, 1, 'ZustellungTab mountet genau einen Uebergangsblock');
 		assert.equal(
-			findComponents(ast(ZUSTELLUNG_TAB), 'WetterMetrikenVersandPanel').length,
+			findComponents(ast(UEBERGANG_BLOCK), 'WetterMetrikenVersandPanel').length,
 			1,
-			'ZustellungTab mountet genau einen geteilten WetterMetrikenVersandPanel'
+			'der Uebergangsblock mountet genau einen geteilten WetterMetrikenVersandPanel'
 		);
 		assert.equal(
 			findComponents(ast(PANEL), 'WeatherMetricsTab').length,

@@ -32,7 +32,11 @@ import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 import { neuerFeldsatz } from './compareFeldsatzPruefstand.ts';
 import type { Knoten } from './svelteInstanzPruefstand.ts';
 
-const HUB = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'compare', 'CompareTabs.svelte');
+// #2795 S3b Teilschritt 1b: im Hub ersetzt der neue Reiter Zustellung (EIN Speicherer fuer
+// Briefing und Alarme, Stand direkt aus dem Preset) beide Adapter. Einziger verbliebener Ort, an dem
+// versandPropsAus und alarmePropsAus nebeneinander gemountet werden, ist das Anlegen
+// (CompareNewEditor) — dort gilt dieselbe Zusicherung „ein Feldsatz fuer beide“.
+const HUB = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'compare-new', 'CompareNewEditor.svelte');
 
 describe('AC-14: Cooldown/Ruhezeit — Versand und Alarme zeigen denselben Wert', () => {
 	test('Ausgangslage: beide Reiter zeigen den Standard „nicht gesetzt"', () => {
@@ -77,7 +81,7 @@ describe('AC-14: Cooldown/Ruhezeit — Versand und Alarme zeigen denselben Wert'
 });
 
 describe('AC-14 (Wirkort Hub): Versand- und Alarme-Adapter bekommen DENSELBEN Feldsatz', () => {
-	test('CompareTabs übergibt versandPropsAus(…) und alarmePropsAus(…) denselben Bezeichner', () => {
+	test('CompareNewEditor übergibt versandPropsAus(…) und alarmePropsAus(…) denselben Bezeichner', () => {
 		const quelle = readFileSync(HUB, 'utf-8');
 		const ast: Knoten = parse(quelle, { modern: true });
 		const argumente: Record<string, Set<string>> = { versandPropsAus: new Set(), alarmePropsAus: new Set() };

@@ -175,12 +175,13 @@ test('AC-8: Datumssegmente im Vergleichs-Editor (Zustellung → Laufzeit „Bis 
 			const wo = `${p.name}/${lang}`;
 			await openHub(page, 'vergleich', id, { tab: 'zustellung' });
 			await spracheAktiv(page, lang, `${wo} Vergleich Zustellung`);
-			await page.locator('[data-testid="compare-versand-enddate-date"]:visible').first().click();
-			const feld = page.getByTestId('compare-versand-enddate-input');
+			// #2795 S3b 1b: Laufzeit-Karte des Reiters Zustellung (Segment „Bis Datum“, AC-10).
+			await page.locator('[data-testid="zustellung-laufzeit-bis-datum"]:visible').first().click();
+			const feld = page.locator('[data-testid="zustellung-laufzeit-datum"]:visible').first();
 			await feld.locator('[data-segment="day"]').first().waitFor({ state: 'visible', timeout: 15_000 });
 			const m = await segmentMasse(feld);
 			expect(m.length, `${wo}: sichtbare Datumssegmente im Vergleichs-Editor`).toBe(2);
-			verstoesse.push(...zuKlein(m, `${wo} Vergleich compare-versand-enddate-input`));
+			verstoesse.push(...zuKlein(m, `${wo} Vergleich zustellung-laufzeit-datum`));
 		}
 	}
 	expect(verstoesse, `Segmente unter ${MIN_SEGMENT}×${MIN_SEGMENT} px:\n${verstoesse.join('\n')}`).toEqual([]);
@@ -461,8 +462,9 @@ test('AC-14: „+ Neuer Trip", „+ Neuer Vergleich", „Im Editor öffnen →",
 		merke(await hoehe(editor, `${wo} Im Editor öffnen`), `${wo} „Im Editor öffnen →"`);
 
 		await openHub(page, 'route', tripId, { tab: 'zustellung' });
-		const laufzeit = page.locator('[data-testid="briefings-laufzeit"]:visible').first().getByRole('button');
-		merke(await hoehe(laufzeit, `${wo} briefings-laufzeit`), `${wo} briefings-laufzeit-Knopf`);
+		// #2795 S3b 1b: Laufzeit-Karte des Reiters Zustellung, Knopf „Etappen öffnen →“ (AC-9).
+		const laufzeit = page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-etappen-oeffnen"]').first();
+		merke(await hoehe(laufzeit, `${wo} zustellung-etappen-oeffnen`), `${wo} Laufzeit-Knopf`);
 
 		await openHub(page, 'vergleich', cmpId, { tab: 'orte' });
 		merke(await hoehe(page.locator('[data-testid="hub-orte-add"]:visible').first(), `${wo} hub-orte-add`), `${wo} hub-orte-add`);

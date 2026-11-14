@@ -52,17 +52,19 @@ const WS_SEL: Record<
 	}
 > = {
 	route: {
-		alarm: (page) => page.locator('[data-testid="alerts-tab-official-alert-triggers-toggle"] input[type="checkbox"]').first(),
-		alarmWert: (s) => (s.official_warnings as { enabled?: boolean } | undefined)?.enabled,
-		alarmNeu: false,
+		alarm: (page) => page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-stille-schalter"]').first(),
+		// #2795 S3b 1b: Alarm-Geste im Reiter Zustellung ist der Schalter „Stille Stunden“ (role=switch).
+		alarmWert: (s) => Boolean(s.alert_quiet_from) && Boolean(s.alert_quiet_to),
+		alarmNeu: true,
 		statusSchluessel: ['paused'],
 		statusPausiert: (r) => r.paused === true,
 		istPausiert: (s) => Boolean(s.paused_at),
 		konfliktLaedtNeu: false
 	},
 	vergleich: {
-		alarm: (page) => page.locator('[data-testid="alarme-radar-toggle"] input[type="checkbox"]').first(),
-		alarmWert: (s) => s.radar_alert_enabled,
+		alarm: (page) => page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-stille-schalter"]').first(),
+		// #2795 S3b 1b: Alarm-Geste im Reiter Zustellung ist der Schalter „Stille Stunden“ (role=switch).
+		alarmWert: (s) => Boolean(s.alert_quiet_from) && Boolean(s.alert_quiet_to),
 		alarmNeu: true,
 		statusSchluessel: ['previous_schedule', 'schedule'],
 		statusPausiert: (r) => r.schedule === 'manual',
@@ -165,7 +167,7 @@ for (const kind of HUB_KINDS) {
 
 				// sofort (innerhalb des Entprell-Fensters) den Reiter wechseln
 				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).click();
-				await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
+				await expect(page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-stille-schalter"]').first()).toBeVisible({ timeout: 10_000 });
 				await ws.alarm(page).click();
 				await expect(ws.alarm(page)).toBeChecked({ checked: ws.alarmNeu });
 

@@ -60,6 +60,9 @@ const DATEI = {
 	tripNeu: join(KOMP, 'trip-new', 'TripNewEditor.svelte'),
 	vergleichNeu: join(KOMP, 'compare-new', 'CompareNewEditor.svelte'),
 	zustellung: join(KOMP, 'shared', 'zustellung-tab', 'ZustellungTab.svelte'),
+	// #2795 S3b Teilschritt 1b: der WMT-Traeger des Reiters steht im Uebergangsblock.
+	uebergang: join(KOMP, 'organisms', 'zustellung-tab', 'UebergangBlock.svelte'),
+	briefingZeiten: join(KOMP, 'organisms', 'zustellung-tab', 'BriefingZeiten.svelte'),
 	panel: join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte'),
 	wmt: join(KOMP, 'shared', 'WeatherMetricsTab.svelte')
 };
@@ -153,34 +156,44 @@ describe('§3: shared/zustellung-tab/ZustellungTab.svelte — Übergangsreiter',
 		assert.ok(propNamen(ast).includes('context'), `ZustellungTab: keine Prop context (Props: ${propNamen(ast).join(', ')})`);
 	});
 
+	// #2795 S3b 1b: ZustellungTab bettet den Uebergangsblock genau einmal ein, der traegt das Panel.
 	test('s3a2794_zustellung_genau_ein_wmt_traeger_mit_bereich_zustellung', () => {
 		assert.ok(existiert(DATEI.zustellung), 'ZustellungTab.svelte fehlt');
-		const { e, quelle } = traeger(DATEI.zustellung);
+		const z = traeger(DATEI.zustellung);
+		assert.deepEqual(z.e.map((x) => beschreibe(x, z.quelle)), [], 'ZustellungTab bettet zusaetzlich direkt einen WMT-Traeger ein');
+		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['UebergangBlock']).length, 1, 'ZustellungTab: Uebergangsblock nicht genau einmal');
+		const { e, quelle } = traeger(DATEI.uebergang);
 		assert.ok(e.length >= 1, 'ZustellungTab zeigt keine Zustellungs-Blöcke der Metrik-Oberfläche');
 		paarweiseExklusiv(e, quelle, 'ZustellungTab');
 		for (const x of e) assert.equal(bereichLiteral(x, quelle), 'zustellung', `${beschreibe(x, quelle)}: bereich ≠ 'zustellung'`);
 	});
 
+	// #2795 S3b 1b: Sprungziel #versand ist die Karte der Briefing-Zeiten (AC-40, „genau ein
+	// id=versand“ im Reitbaum prueft s3b2795_zustellung_struktur); das Panel im Uebergangsblock
+	// laeuft OHNE seinen Versand-Abschnitt (mitVersandAbschnitt={false}).
 	test('s3a2794_zustellung_enthaelt_section_versand', () => {
 		assert.ok(existiert(DATEI.zustellung), 'ZustellungTab.svelte fehlt');
 		const { ast, quelle } = svelteAst(DATEI.zustellung);
-		const eigen = elementeMitId(ast, quelle, 'section', 'versand').length;
-		const panelMitZustellung = einbettungenMitWeichen(ast, quelle, ['WetterMetrikenVersandPanel']).some(
-			(x) => attribut(x.knoten, quelle, 'bereich')?.literal === 'zustellung'
-		);
-		const { ast: pAst, quelle: pQ } = svelteAst(DATEI.panel);
-		const panelSection = elementeMitId(pAst, pQ, 'section', 'versand').length > 0;
+		assert.equal(einbettungenMitWeichen(ast, quelle, ['BriefingZeiten']).length, 1, 'Zustellung: BriefingZeiten nicht genau einmal');
+		const b = svelteAst(DATEI.briefingZeiten);
+		assert.equal(elementeMitId(b.ast, b.quelle, 'div', 'versand').length, 1, 'Zustellung: kein Sprungziel id="versand" an den Briefing-Zeiten');
+		const u = svelteAst(DATEI.uebergang);
+		const panel = einbettungenMitWeichen(u.ast, u.quelle, ['WetterMetrikenVersandPanel']);
 		assert.ok(
-			eigen > 0 || (panelMitZustellung && panelSection),
-			'Zustellung: kein <section id="versand"> (Sprungziel #versand) — weder im Baustein noch über das Panel mit bereich=zustellung'
+			panel.length === 1 && attribut(panel[0].knoten, u.quelle, 'mitVersandAbschnitt')?.ausdruck === 'false',
+			'Zustellung: das Panel im Uebergangsblock bringt seinen Versand-Abschnitt mit (zweites #versand)'
 		);
 	});
 
+	// #2795 S3b 1b (Spec §4, AC-27/AC-33): die Alarm-Zustellung ist Teil des Reiters (Kanal-Tabelle,
+	// Stille Stunden, Mindestabstand) — der alte Alarm-Baustein ist im Reiter verboten.
 	test('s3a2794_zustellung_enthaelt_alarmetab_vollstaendig', () => {
 		assert.ok(existiert(DATEI.zustellung), 'ZustellungTab.svelte fehlt');
 		const { ast, quelle } = svelteAst(DATEI.zustellung);
-		const a = einbettungenMitWeichen(ast, quelle, ['AlarmeTab', 'AlarmeScheduleTab']);
-		assert.ok(a.length >= 1, 'ZustellungTab bettet weder AlarmeTab noch die Hülle AlarmeScheduleTab ein');
+		assert.equal(einbettungenMitWeichen(ast, quelle, ['AlarmeTab', 'AlarmeScheduleTab']).length, 0, 'ZustellungTab bettet noch den alten Alarm-Baustein ein');
+		for (const name of ['KanalTabelle', 'StilleStunden']) {
+			assert.equal(einbettungenMitWeichen(ast, quelle, [name]).length, 1, `ZustellungTab: ${name} nicht genau einmal`);
+		}
 	});
 });
 

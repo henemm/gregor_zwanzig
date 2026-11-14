@@ -25,10 +25,10 @@ const here = dirname(fileURLToPath(import.meta.url));
 const ALARME_TAB = join(here, '..', 'AlarmeTab.svelte');
 const OLD_MAPPING = join(here, '..', 'alarme-tab', 'compareMetricMapping.ts');
 // Alle Flaechen, die den Alarme-Reiter im Vergleichs-Kontext einbetten.
-const COMPARE_MOUNTS = [
-	join(here, '..', '..', 'compare', 'CompareTabs.svelte'),
-	join(here, '..', '..', 'compare-new', 'CompareNewEditor.svelte')
-];
+// #2795 S3b Teilschritt 1b: der Vergleichs-Hub bettet keinen AlarmeTab mehr ein (neuer Reiter
+// Zustellung mit eigener Kanal-Tabelle, „Kanaele je Wettergroesse“ entfaellt, Spec §2); es bleibt
+// die Anlege-Seite (bleibt bis Teilschritt 1c auf AlarmeTab).
+const COMPARE_MOUNTS = [join(here, '..', '..', 'compare-new', 'CompareNewEditor.svelte')];
 
 function parseFile(path: string): any {
 	return parse(readFileSync(path, 'utf-8'), { modern: true });

@@ -20,6 +20,7 @@ import { F9_ANKER } from '../../components/trip-detail/__tests__/f9KatalogAnker.
 import { F7_ANKER } from '../../components/alerts-tab/__tests__/f7KatalogAnker.ts';
 import { F10_ANKER } from '../../components/compare/__tests__/f10KatalogAnker.ts';
 import { F12_ANKER } from '../../components/__tests__/f12KatalogAnker.ts';
+import ZUSTELLUNG_DE from '../messages/de/zustellung.json' with { type: 'json' };
 
 const GOLDEN = JSON.parse(
 	readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'de_katalog_vor_i18n.json'), 'utf-8')
@@ -559,6 +560,9 @@ const NEU_IN_FOLGEPAKETEN = [
 	'konto.anmeldungen.passkeys_verwalten',
 	'auth.reset.andere_zugangswege',
 	'auth.reset.andere_zugangswege_hinweis',
+	// #2795 S3b Teilschritt 1b: neuer Bereich zustellung.json (Reiter Zustellung) — vollstaendig neu,
+	// kein Bestandsschluessel; die Pflichttexte prueft s3b2795_zustellung_katalog.test.ts.
+	...Object.keys(ZUSTELLUNG_DE)
 ];
 
 test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {

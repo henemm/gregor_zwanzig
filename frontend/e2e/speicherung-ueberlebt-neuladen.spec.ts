@@ -79,7 +79,7 @@
 //     --project=tests --reporter=list
 
 import { test, expect, type Page } from '@playwright/test';
-import { E2E_TEST_PREFIX, cleanupTracked, createTestLocation, registerForCleanup } from './helpers';
+import { E2E_TEST_PREFIX, cleanupTracked, createTestLocation, registerForCleanup, testMitZustellbaremZiel } from './helpers';
 import { setzeStunde, stundeEingabe } from './s3a2794-teil3.helpers';
 
 test.afterEach(async ({ request }) => {
@@ -140,7 +140,18 @@ const VERGLEICH_ALARM_DC = {
 };
 
 /** Stufen-Knopf der Böen-Zeile in der Alarm-Empfindlichkeits-Tabelle. */
-const stufenKnopf = (page: Page, _stufe: string) => page.locator('[data-testid="alert-cooldown-input"]:visible');
+// #2795 S3b Teilschritt 1b (feat_2795_s3b_teil1_zustellung.md AC-26): die Sperrzeit steht im Reiter
+// Zustellung unter „Anpassen“ (natives <details>, nach jedem Laden zugeklappt).
+const stufenKnopf = (page: Page, _stufe: string) =>
+	page.locator('[data-testid="zustellung-tab"]:visible [data-testid="zustellung-cooldown"]');
+
+/** Wartet auf den Reiter Zustellung und klappt „Anpassen“ auf (dort steht die Sperrzeit). */
+async function anpassenAuf(page: Page): Promise<void> {
+	const tab = page.locator('[data-testid="zustellung-tab"]:visible').first();
+	await expect(tab).toBeVisible({ timeout: 15_000 });
+	const auf = tab.getByTestId('zustellung-anpassen');
+	if (!(await auf.evaluate((d) => (d as HTMLDetailsElement).open))) await auf.locator('summary').click();
+}
 
 async function windGustStufe(page: Page, pfad: string): Promise<string | null> {
 	const r = await page.request.get(pfad);
@@ -176,7 +187,7 @@ async function legeVergleichAn(page: Page, kennung: string): Promise<string> {
 async function oeffneAlarmStufen(page: Page, url: string): Promise<void> {
 	await page.goto(url);
 	await page.waitForLoadState('networkidle');
-	await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
+	await anpassenAuf(page);
 	await expect(stufenKnopf(page, START_STUFE), `Vorbedingung: die angelegte Böen-Stufe ${START_STUFE} ist ausgewählt`).toHaveValue(START_STUFE,
 		{ timeout: 10_000 }
 	);
@@ -294,7 +305,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 		halt.aktiv = false;
 
 		// #2317 AC-1: nicht nur gespeichert, sondern nach dem Neuladen angezeigt.
-		await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
+		await anpassenAuf(page);
 		await expect(stufenKnopf(page, ziel)).toBeVisible({ timeout: 10_000 });
 		await expect(
 			stufenKnopf(page, ziel),
@@ -330,7 +341,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 		halt.aktiv = false;
 
 		// #2317 AC-5: gespeichert reicht nicht — die neu geladene Seite muss die Stufe zeigen.
-		await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
+		await anpassenAuf(page);
 		await expect(stufenKnopf(page, ziel)).toBeVisible({ timeout: 10_000 });
 		await expect(
 			stufenKnopf(page, ziel),
@@ -413,7 +424,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		await page.reload();
 		halt.aktiv = false;
 
-		await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
+		await anpassenAuf(page);
 		await expect(stufenKnopf(page, ziel)).toBeVisible({ timeout: 10_000 });
 		await expect(
 			stufenKnopf(page, ziel),
@@ -430,48 +441,48 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		expect(dialogs, '#2317 AC-16: beim Neuladen darf keine Verlassen-Rückfrage erscheinen').toEqual([]);
 	});
 
-	// AC-3 — Reiter Alarme (AlarmeTab.svelte, route): die Dringlichkeits-Schwelle
-	// eines Alarm-Kanals. Bewusst Telegram, NICHT premium_sms (tarifgesperrt,
-	// feat-1745-a-alarm-premium-sms.spec.ts) — sonst hinge der Fall an einer
-	// Konto-Voraussetzung statt am Produkt.
-	test('AC-3 (/trips/[id], Alarme): Kanal-Schwelle ändern und sofort neu laden → gespeichert und angezeigt', async ({
+	// AC-3 — Reiter Zustellung, Kanal-Tabelle (#2795 S3b 1b, AC-17): die Dringlichkeit eines
+	// Alarm-Kanals. Bedienbar ist sie nur bei VERBUNDENEM Kanal mit eingeschaltetem Alarm (AC-15);
+	// deshalb läuft der Fall als bestätigter Zweitnutzer mit E-Mail-Adresse (testMitZustellbaremZiel)
+	// und schaltet die E-Mail-Zeile — Premium-SMS/Telegram/SMS hängen an Konto-Voraussetzungen.
+	testMitZustellbaremZiel('AC-3 (/trips/[id], Alarme): Kanal-Schwelle ändern und sofort neu laden → gespeichert und angezeigt', async ({
 		page
 	}) => {
+		await page.setViewportSize({ width: 1280, height: 900 });
 		// Schwellen explizit angelegt (model.Trip trägt alert_channel_thresholds), damit
 		// die Ausgangslage feststeht statt vom Anzeige-Default abzuhängen.
 		const tripId = await legeTripAn(page, 'ac3-alarme', {
+			alert_channels: { email: true, telegram: false, sms: false, premium_sms: false },
 			alert_channel_thresholds: { email: 'LOW', telegram: 'LOW', sms: 'LOW', premium_sms: 'LOW' }
 		});
 		const ziel = 'HIGH';
+		const stufe = (w: string) => page.getByTestId('zustellung-tab').getByTestId(`zustellung-kanal-email-dringlichkeit-${w}`);
 
 		await page.goto(`/trips/${tripId}?tab=zustellung`);
 		await page.waitForLoadState('networkidle');
 		await expect(page.getByTestId('trip-detail-panel-zustellung')).toBeVisible({ timeout: 15_000 });
-		await expect(page.getByTestId('alert-channel-threshold-telegram')).toBeVisible({ timeout: 10_000 });
-		await expect(
-			page.getByTestId('alert-channel-threshold-telegram-LOW'),
-			'Vorbedingung: die angelegte Telegram-Schwelle LOW ist ausgewählt'
-		).toHaveAttribute('aria-pressed', 'true');
+		await expect(page.getByTestId('zustellung-kanal-email-dringlichkeit')).toBeVisible({ timeout: 10_000 });
+		await expect(stufe('LOW'), 'Vorbedingung: die angelegte E-Mail-Schwelle LOW ist ausgewählt').toHaveAttribute('aria-checked', 'true');
 
 		const dialogs = collectLeaveDialogs(page);
 
 		const halt = await haltePutBisNeuemDokument(page, `/api/trips/${tripId}`);
-		await page.getByTestId(`alert-channel-threshold-telegram-${ziel}`).click();
+		await stufe(ziel).click();
 		await page.reload();
 		halt.aktiv = false;
 
 		await expect(page.getByTestId('trip-detail-panel-zustellung')).toBeVisible({ timeout: 15_000 });
-		const zielKnopf = page.getByTestId(`alert-channel-threshold-telegram-${ziel}`);
+		const zielKnopf = stufe(ziel);
 		await expect(zielKnopf).toBeVisible({ timeout: 10_000 });
 		await expect(
 			zielKnopf,
-			`#2317 AC-3: nach dem Neuladen muss binnen 3 s die geänderte Telegram-Schwelle (${ziel}) ausgewählt sein`
-		).toHaveAttribute('aria-pressed', 'true', { timeout: 3_000 });
+			`#2317 AC-3: nach dem Neuladen muss binnen 3 s die geänderte E-Mail-Schwelle (${ziel}) ausgewählt sein`
+		).toHaveAttribute('aria-checked', 'true', { timeout: 3_000 });
 		await pruefeGehalten(halt, '#2317 AC-3');
 
 		await expect
-			.poll(async () => (await tripStand(page, tripId)).alert_channel_thresholds?.telegram ?? null, {
-				message: '#2317 AC-3: die vor dem Neuladen geänderte Telegram-Schwelle muss gespeichert sein',
+			.poll(async () => (await tripStand(page, tripId)).alert_channel_thresholds?.email ?? null, {
+				message: '#2317 AC-3: die vor dem Neuladen geänderte E-Mail-Schwelle muss gespeichert sein',
 				timeout: 8_000
 			})
 			.toBe(ziel);
@@ -587,7 +598,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		await page.reload();
 		halt.aktiv = false;
 
-		await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
+		await anpassenAuf(page);
 		await expect(stufenKnopf(page, '30')).toBeVisible({ timeout: 10_000 });
 		await expect(
 			stufenKnopf(page, '30'),

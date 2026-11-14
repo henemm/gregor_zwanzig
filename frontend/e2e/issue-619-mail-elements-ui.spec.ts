@@ -128,11 +128,14 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 		try {
 			await openReportsSection(page, id);
 
-			const abschnitt = page.getByTestId('versand-abschnitt');
-			await expect(abschnitt.locator('[data-testid="morning-master-switch"]')).toHaveCount(1);
-			await expect(abschnitt.locator('[data-testid="evening-master-switch"]')).toHaveCount(1);
-			await expect(page.locator('[data-testid="morning-master-switch"]')).toHaveCount(1);
-			await expect(page.locator('[data-testid="evening-master-switch"]')).toHaveCount(1);
+			// #2795 S3b 1b: Zeitplan = Briefing-Zeiten-Karten des Reiters Zustellung (Anker #versand, AC-2).
+			const abschnitt = page.locator('#versand');
+			await expect(abschnitt).toHaveAttribute('data-abschnitt', 'briefing-zeiten', { timeout: 15_000 });
+			await expect(abschnitt.locator('[data-testid="zustellung-morgen-schalter"]')).toHaveCount(1);
+			await expect(abschnitt.locator('[data-testid="zustellung-abend-schalter"]')).toHaveCount(1);
+			await expect(page.locator('[data-testid="zustellung-morgen-schalter"]')).toHaveCount(1);
+			await expect(page.locator('[data-testid="zustellung-abend-schalter"]')).toHaveCount(1);
+			await expect(page.locator('[data-testid="morning-master-switch"], [data-testid="evening-master-switch"]')).toHaveCount(0);
 		} finally {
 			await deleteTrip(request, id);
 		}
@@ -149,11 +152,13 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 		await createTrip(request, id);
 		try {
 			await page.goto(`/trips/${id}?tab=zustellung#versand`);
-			const abschnitt = page.getByTestId('versand-abschnitt');
-			// Kanal-Checkbox ist im Versand-Abschnitt unconditional gerendert (Ready-Marker,
-			// da die Live-Route immer per Auto-Save läuft — kein Save-Button vorhanden).
-			await abschnitt.locator('[data-testid="channel-email"]').waitFor({ state: 'visible' });
+			// #2795 S3b 1b: der Anker #versand liegt auf den Briefing-Zeiten des Reiters Zustellung; die
+			// Mail-Inhalt-Karte steht genau einmal (im Übergangsblock, AC-30), nicht bei den Zeiten.
+			const abschnitt = page.locator('#versand');
+			await page.getByTestId('zustellung-kanal-tabelle').waitFor({ state: 'visible' });
+			await expect(abschnitt).toHaveAttribute('data-abschnitt', 'briefing-zeiten');
 			await expect(abschnitt.locator('[data-testid="report-mail-content"]')).toHaveCount(0);
+			await expect(page.getByTestId('zustellung-uebergang').locator('[data-testid="report-mail-content"]')).toHaveCount(1);
 			await expect(page.locator('[data-testid="report-mail-content"]')).toHaveCount(1);
 		} finally {
 			await deleteTrip(request, id);

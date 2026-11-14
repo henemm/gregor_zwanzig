@@ -33,13 +33,13 @@
 	// eingebetteter CorridorEditor im Idealwerte-Tab.
 	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
 	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
-	// Issue #1258 Scheibe 5 (AC-19): geteilter Alarme-Organism (seit #2794 im Reiter Zustellung).
-	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
-	// Issue #2794 S3a: Uebergangsreiter Zustellung (Versand + AlarmeTab + Zustellungs-Bloecke).
+	// Issue #2795 S3b Teilschritt 1b: Reiter Zustellung (Neubau nach Mockup Fassung 3).
 	import ZustellungTab from '$lib/components/shared/zustellung-tab/ZustellungTab.svelte';
-	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle drei Vergleichs-Mounts.
-	import { alarmePropsAus } from './alarmePropsAus.ts';
-	import { versandPropsAus } from './versandPropsAus.ts';
+	// Beispiel-Alarm im Uebergangsblock: Regeln aus der Metrik-Auswahl (wie bisher im AlarmeTab).
+	import { vergleichAlarmRegeln } from '$lib/components/alerts-tab/alertPreviewHelpers';
+	import { deriveActiveAlertMetricsFromCatalog } from '../shared/alarme-tab/activeAlertMetricsFromCatalog.ts';
+	import { materializeActiveMetricKeys } from '../shared/weather-metrics-tab/compareMetricOrder.ts';
+	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle Vergleichs-Mounts.
 	import { wetterMetrikenPropsAus } from './wetterMetrikenPropsAus.ts';
 	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
 	// vergleich-Kontext) — seit #1743 ueber WetterMetrikenVersandPanel eingebettet.
@@ -470,6 +470,14 @@
 	// blockierend nachgeladen; ohne Register bleiben die deutschen Namen der Vergleichs-Antwort.
 	let alarmeRegister = $state<Record<string, MetricLabelFields>>({});
 	const alarmeCatalogMitNamen = $derived(mitRegisterNamen(alarmeCatalog, alarmeRegister));
+	// #2795 S3b Teilschritt 1b: Beispiel-Alarm des Reiters Zustellung (Uebergangsblock) — dieselbe
+	// Ableitung wie bisher im AlarmeTab (aktive Alarm-Metriken aus Auswahl + Katalog, Stufen).
+	const beispielAlarmRegeln = $derived(
+		vergleichAlarmRegeln(
+			deriveActiveAlertMetricsFromCatalog(materializeActiveMetricKeys(wizardState.activeMetricKeys ?? null), alarmeCatalogMitNamen),
+			(wizardState.metricAlertLevels as Record<string, string> | undefined) ?? {}
+		)
+	);
 
 	async function hydrateAlarmeTab(): Promise<void> {
 		void loadMetricRegister().then((r) => (alarmeRegister = r), () => {});
@@ -832,13 +840,14 @@
 				     Issue #2794 S3a §3: Uebergangsreiter Zustellung (bereich "zustellung" +
 				     Versand-Abschnitt + AlarmeTab); mountet zusaetzlich erst nach der
 				     Alarm-Hydration (alarmeHydrated, wie bisher der Alarme-Reiter). -->
+				<!-- Issue #2795 S3b Teilschritt 1b: der neue Reiter speichert Briefing und Alarme ueber
+				     EINEN Speicherer; die Aktivierungs-Karte und der Beispiel-Alarm stehen bis auf
+				     Weiteres in seinem Uebergangsblock (kein AlarmeTab/VersandTab mehr im Reiter). -->
 				<ZustellungTab
 					context="vergleich"
 					{...wetterMetrikenPropsAus(wizardState)}
-					versand={versandPropsAus(wizardState)}
-					vergleichTelegramStyle={wizardState.telegramStyle ?? 'rich'}
 					activation={hubActivationCard}
-					alarmeBereich={hubAlarme}
+					beispielAlarmRegeln={beispielAlarmRegeln}
 					preset={currentPreset}
 					{saveController}
 					enqueueHubWrite={reiheHubSchreibvorgangEin}
@@ -860,24 +869,6 @@
 	<!-- Issue #1743: das eigene Versand-Panel entfaellt — der Versand-Abschnitt steht
 	     seit #2794 S3a im Reiter Zustellung (ZustellungTab oben), ebenso der
 	     Alarm-Baustein (vorher eigener Reiter Alarme), der als Snippet hineinrendert. -->
-
-	{#snippet hubAlarme()}
-		{#if alarmeHydrated}
-			<!-- Issue #2276 S2: der Reiter speichert selbst (saveController,
-			     Hub-Queue, Basis-Rueckmeldung) — kein Wrapper mehr. -->
-			<AlarmeTab
-				context="vergleich"
-				{...alarmePropsAus(wizardState)}
-				catalog={alarmeCatalogMitNamen}
-				preset={currentPreset}
-				{saveController}
-				enqueueHubWrite={(fn) => hubPutQueue.enqueue(fn)}
-				onCompareUpdate={(updated) => {
-					currentPreset = updated;
-				}}
-			/>
-		{/if}
-	{/snippet}
 
 	{#snippet hubActivationCard()}
 		{@const banner = (void $locale, hubActivationBanner(status))}
