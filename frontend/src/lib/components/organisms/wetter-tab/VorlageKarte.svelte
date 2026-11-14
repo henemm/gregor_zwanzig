@@ -152,12 +152,23 @@
 		align-self: flex-start;
 	}
 	/* #2980 AC-26 (Mockup .picker): Rahmen --g-rule (Btn ghost), Grund --g-paper, Name 15 px/600. */
+	/* #3003 AC-32 (Mockup .picker: padding 8px 12px, align-items center): Inhalt mittig,
+	   seitlich 12 px. Höhe nach Bedienart, nicht nach Breite: bei Maus keine 44-px-Mindesthöhe
+	   (Mockup ca. 38 px aus Polster + Zeilenhöhe), Finger-Regel unten unter pointer: coarse. */
 	.wt-picker :global([data-slot='btn']) {
-		align-items: baseline;
+		align-items: center;
+		padding: var(--g-s-2) var(--g-s-3);
+		min-height: 0;
 		gap: var(--g-size-10px);
 		background: var(--g-paper);
 		font-size: var(--g-text-md);
 		font-weight: 600;
+	}
+	/* #3003 AC-32 / K-5 (#2284): Fingerbedienung behält die 44-px-Tippfläche. */
+	@media (pointer: coarse) {
+		.wt-picker :global([data-slot='btn']) {
+			min-height: var(--g-tap-min);
+		}
 	}
 	.wt-picker :global([data-slot='btn']:hover) {
 		background: var(--g-surface-2);

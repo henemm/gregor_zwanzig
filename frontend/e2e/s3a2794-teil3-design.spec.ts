@@ -7,6 +7,11 @@
 //   - derselbe Panel-Rahmen in beiden Kontexten (Rand, Radius, Hintergrund, Innenabstand).
 // Fresh-Eyes-Abgleich der Screenshots gegen Mockup Fassung 3: Screenshots je Kontext/Viewport als Anhang.
 //
+// #3003 (PO 14.11.2026): AC-40 / K-5 präzisiert auf Fingerbedienung. Der Mobil-Durchlauf läuft mit
+// Touch-Emulation (hasTouch/isMobile ⇒ pointer: coarse) und prüft ALLE Ziele auf ≥ 44 px. Im
+// Maus-Durchlauf (pointer: fine) darf allein der Vorlagen-Wähler der Mockup-Höhe (ca. 38 px) folgen;
+// alle anderen Ziele bleiben ≥ 44 px. Die Ausnahme hängt an der gemessenen Bedienart, nicht an der Breite.
+//
 //   cd frontend && npx playwright test --config playwright.2794-s3a3.staging.config.ts s3a2794-teil3-design
 
 import { test, expect, type Locator, type Page } from '@playwright/test';
@@ -16,13 +21,16 @@ import { DESKTOP, MOBIL, WT, oeffneWetter, seedWetter } from './s3a2794-teil3.he
 const NATIV = 'select, input[type="checkbox"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"], input[type="week"]';
 const ZIELE = 'button, [role="radio"], [role="switch"], [role="tab"], a[href]';
 
-// Elemente mit `data-tap="true"` (Atom Switch mit `tap`) bleiben sichtbar 36×20 und vergrößern die
+// Elemente mit `data-tap="true"` (Atom Switch mit `tap`) und kompakte Segmente (#2913) bleiben sichtbar 36×20 und vergrößern die
 // Trefferfläche über ein unsichtbares `::before` (≥ --g-tap-min = 44 px). Für sie zählt, WO der Tap
 // wirkt: das 44×44-Quadrat um die Mitte des Elements muss an Mitte und vier Ecken (1 px eingerückt)
 // per elementFromPoint das Element selbst oder einen Nachfahren treffen. Alle anderen: bbox ≥ 44×44.
 async function zuKleineZiele(wurzel: Locator): Promise<string[]> {
 	return wurzel.locator(ZIELE).evaluateAll((els) => {
 		const MIN = 44;
+		// #3003: bei Mausbedienung folgt nur der Vorlagen-Wähler der Mockup-Höhe.
+		const maus = !matchMedia('(pointer: coarse)').matches;
+		const mausAusnahme = new Set(['wetter-vorlage-picker']);
 		const name = (e: HTMLElement) => `${e.getAttribute('data-testid') ?? e.tagName}`;
 		const textVon = (e: HTMLElement) => (e.textContent ?? '').trim().slice(0, 30);
 		const fehler: string[] = [];
@@ -31,7 +39,11 @@ async function zuKleineZiele(wurzel: Locator): Promise<string[]> {
 			const st = getComputedStyle(e);
 			let r = e.getBoundingClientRect();
 			if (!(r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none')) continue;
-			if (e.getAttribute('data-tap') !== 'true') {
+			if (maus && mausAusnahme.has(e.getAttribute('data-testid') ?? '')) continue;
+			// #3003: kompakte Segmente (#2913 Metrik-Liste, app.css [data-variant="kompakt"]) vergrößern die
+			// Trefferfläche wie data-tap per ::before auf ≥ --g-tap-min — dort zählt ebenfalls, WO der Tap wirkt.
+			const unsichtbarVergroessert = e.getAttribute('data-tap') === 'true' || e.matches('[data-slot="segmented"][data-variant="kompakt"] [data-slot="segmented-item"]');
+			if (!unsichtbarVergroessert) {
 				if (r.width < MIN || r.height < MIN) fehler.push(`${name(e)}: ${Math.round(r.width)}×${Math.round(r.height)} „${textVon(e)}“`);
 				continue;
 			}
@@ -86,9 +98,12 @@ async function pruefeReiter(page: Page, kind: HubKind, id: string, wo: string): 
 	return reiter;
 }
 
-for (const [name, viewport] of [['desktop', DESKTOP], ['mobil', MOBIL]] as const) {
+for (const [name, viewport, finger] of [['desktop', DESKTOP, false], ['mobil', MOBIL, true]] as const) {
+	test.describe(`AC-40 ${name} (${finger ? 'Finger' : 'Maus'})`, () => {
+	test.use({ viewport, hasTouch: finger, isMobile: finger });
 	test(`AC-40 (${name}): beide Kontexte ohne native Controls, Kontrast, Touch-Ziele, gleicher Panel-Rahmen`, async ({ page }) => {
-		await page.setViewportSize(viewport);
+		const zeiger = await page.evaluate(() => (matchMedia('(pointer: coarse)').matches ? 'coarse' : 'fine'));
+		expect(zeiger, `#3003 Messaufbau ${name}: Bedienart`).toBe(finger ? 'coarse' : 'fine');
 		const hubs = { route: await seedWetter(page.request, 'route'), vergleich: await seedWetter(page.request, 'vergleich') };
 		try {
 			const rahmenJe: Record<string, Record<string, string>> = {};
@@ -109,5 +124,6 @@ for (const [name, viewport] of [['desktop', DESKTOP], ['mobil', MOBIL]] as const
 			await hubs.route.aufraeumen();
 			await hubs.vergleich.aufraeumen();
 		}
+	});
 	});
 }

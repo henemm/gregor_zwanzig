@@ -270,7 +270,8 @@ Untertitel-Block: Eyebrow oben, Title 22 px / `font-weight: 600` / `letter-spaci
   `--g-ink`, aktiv 600 mit 2-px-Unterstrich `--g-accent`, Zähler Mono 10 px neutral
   (`--g-paper-deep`/`--g-ink-3`, Radius 3 px). **Am Handy dieselbe Optik** (ADR-0118, überholt die Pill-Leiste aus
   ADR-0109/0111): Text-Reiter, inaktiv `--g-ink-3` 500, aktiv `--g-ink` 600 mit Unterstrich `--g-accent`, Grundlinie
-  `--g-rule`, wischbar, Tippfläche 44 px. Beim **Anlegen**
+  `--g-rule`, wischbar, Tippfläche 44 px. Die Reiter füllen am Handy die volle Leistenbreite (`flex: 1 0 auto`, #3003);
+  nur bei langen Beschriftungen wischt das Band. Beim **Anlegen**
   `shared/anlege-rahmen/AnlegeReiter.svelte` (Unterstrich auf allen Breiten, Zustände erledigt/gesperrt).
   Eine dritte, handgebaute Leiste ist nicht zulässig. Trip und Vergleich tragen jeweils dieselbe Leiste.
 - **Listen:** Trip-Liste und Vergleichsliste sind Tabellen (`ListTable`), am Handy Karten-Zeilen; AP-003
@@ -290,6 +291,9 @@ Untertitel-Block: Eyebrow oben, Title 22 px / `font-weight: 600` / `letter-spaci
   `aria-disabled` und Punkt `--g-ink-4` (Speicher-Chip, Anlege-Reiter, Anlege-Hinweise, Startklar-Liste).
 - **Tippflächen am Handy (< 900 px) mindestens 44 × 44:** Zurück-Link, „Mit Standardwerten speichern",
   Schnellwahl-Chips der Zustellung, ⓘ (unsichtbar vergrößert, negative Ränder halten die Zeile).
+  Die 44-px-Regel gilt für **Fingerbedienung** (`@media (pointer: coarse)`). Bei Mausbedienung darf der Vorlagen-Wähler
+  im Wetter-Reiter die Mockup-Höhe von ca. 38 px haben (PO-Entscheidung 14.11.2026, #3003; Präzisierung von AC-40 in
+  `docs/specs/modules/feat_2794_s3a_teil3_wetter.md`). Alle anderen Ziele bleiben bei mindestens 44 px.
 - **Mobil-Mindestgrößen (#2601):** Datums-/Uhrzeitsegmente (`DatumFeld`/`UhrzeitFeld`) ≥ 24 × 24 px auf Touch bzw. ≤ 899 px; Knopfboden 36 px zentral in `app.css`; Mindestschrift mobil 11 px. Einzige dokumentierte Ausnahme: Höhenprofil-Etappenwahl mit `data-tap-equivalent` (WCAG 2.5.8 „equivalent", gleichwertige Bedienung im Etappen-Tab). Mobil-Audit: Laufanleitung in `docs/specs/modules/mobile_ux_audit_2601.md`.
 - Maßstab sind diese Regeln, das Mockup Fassung 3 und die Playwright-Paritäts-/Kontrasttests
   (`hub-tab-bar`, `kontrast-trip-vergleich`, `design-system-trip-vergleich`); die Soll-Bilder unter

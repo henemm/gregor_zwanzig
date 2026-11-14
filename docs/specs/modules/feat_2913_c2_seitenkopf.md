@@ -2,14 +2,16 @@
 entity_id: feat_2913_c2_seitenkopf
 type: feature
 created: 2026-11-13
-updated: 2026-11-13
+updated: 2026-11-14
 status: draft
-version: "1.1"
+version: "1.2"
 workflow: feature-2913-c2-seitenkopf
 fix_loop_workflow: feature-2980-c2-bildabgleich-r1
-issue: 2913
 fix_loop_issue: 2980
-tags: [einstellungen-neu, seitenkopf, hub, reiterleiste, vorlage-karte, abgleich, epic-2791, issue-2913, issue-2980, bildabgleich]
+fix_loop2_workflow: feature-3003-c2-kopf-rest
+fix_loop2_issue: 3003
+issue: 2913
+tags: [einstellungen-neu, seitenkopf, hub, reiterleiste, vorlage-karte, abgleich, epic-2791, issue-2913, issue-2980, issue-3003, bildabgleich]
 ---
 
 # Scheibe c2: Seitenkopf des Editor-Hubs (Trip + Orts-Vergleich) nach Mockup
@@ -24,6 +26,8 @@ Der Hub-Kopf von Trip und Orts-Vergleich (Brotkrumen, Eyebrow, Titel mit Status-
 
 Fix-Loop Runde 1 (#2980): Der `mockup-bildpruefer` fand nach der ersten Umsetzung acht optische Abweichungen (Knopf-Farbe, Handy-Reiter, Kennzahlenzeile, Meta-Schrift, Status-Pill, Kopfband/Brotkrumen, Vorlage-Karte, Abschnittskopf Wetter). Der Abschnitt „Fix-Loop Bildabgleich Runde 1 (#2980)“ weiter unten (AC-16 ff.) behebt sie und legt zwei PO-Entscheidungen vom 13.11.2026 fest (Handy-Reiter wie Mockup, Kennzahlenzeile am Handy entfällt).
 
+Nachtrag #3003 (Rest aus Bildabgleich Runde 2): Drei Rest-Abweichungen bleiben nach #2980: der Vorlagen-Wähler im Wetter-Reiter hat den Inhalt oben am Rahmen statt mittig, der Abstand zwischen „Vorlage“ und Wähler-Text ist am Handy zu klein, und die Reiterleiste am Handy ist linksbündig und enger als im Mockup, statt die volle Breite zu füllen. Der Nachtrag „Rest Bildabgleich Runde 2 (#3003)“ (AC-32 ff.) behebt sie. PO-Entscheidung vom 14.11.2026: Die Höhe des Vorlagen-Wählers richtet sich nach der Bedienart (Maus: Mockup-Höhe ca. 38 px, Finger: mindestens 44 px), nicht nach der Bildschirmbreite.
+
 ## Source
 
 - **File:** `frontend/src/lib/components/shared/hub-kopf/HubKopf.svelte`
@@ -31,8 +35,8 @@ Fix-Loop Runde 1 (#2980): Der `mockup-bildpruefer` fand nach der ersten Umsetzun
 - **Schicht:** ausschließlich Frontend (`frontend/src/...`) plus Doku-Daten des Abgleichs (`docs/context/einstellungen_neu/`). Kein Go-API-, kein Python-Core-Code, keine Schema-Änderung.
 
 > **Querschnitts-Prüfpunkte:**
-> - **Trip/Orte-Teilung (ADR-0097):** Alle Änderungen liegen in den geteilten Bausteinen (`HubKopf`, `SubscriptionHeader`, `VorlageKarte`) oder in den bestehenden Paaren `TripTabs`/`CompareTabs` und `TripHeader`/Compare-Seite, jeweils mit gleicher Logik und `context="route"|"vergleich"`. Kein neuer Baustein mit einseitigem Pendant.
-> - **Mandantentrennung:** Es werden keine Nutzerdaten bewegt und kein Endpoint geändert (nur Darstellung). Zwei-Nutzer-Test entfällt; die Isolation bleibt unberührt und wird im E2E-Lauf mit dem vorhandenen Staging-Konto lediglich nicht verletzt. Das gilt auch für den Fix-Loop #2980: reine Optik (CSS und Markup), keine Daten, kein Endpoint.
+> - **Trip/Orte-Teilung (ADR-0097):** Alle Änderungen liegen in den geteilten Bausteinen (`HubKopf`, `SubscriptionHeader`, `VorlageKarte`) oder in den bestehenden Paaren `TripTabs`/`CompareTabs` und `TripHeader`/Compare-Seite, jeweils mit gleicher Logik und `context="route"|"vergleich"`. Kein neuer Baustein mit einseitigem Pendant. Der Nachtrag #3003 ändert nur `VorlageKarte` und `MTabBar`, beide geteilt.
+> - **Mandantentrennung:** Es werden keine Nutzerdaten bewegt und kein Endpoint geändert (nur Darstellung). Zwei-Nutzer-Test entfällt; die Isolation bleibt unberührt und wird im E2E-Lauf mit dem vorhandenen Staging-Konto lediglich nicht verletzt. Das gilt auch für den Fix-Loop #2980 und den Nachtrag #3003: reine Optik (CSS und Markup), keine Daten, kein Endpoint.
 > - **Kanäle:** Kein Briefing- oder Alarm-Inhalt ändert sich; E-Mail, Telegram, SMS und Premium-SMS sind nicht betroffen (Mail-Kopf-Satz bleibt bei #2796).
 
 ## Scope
@@ -47,6 +51,7 @@ Fix-Loop Runde 1 (#2980): Der `mockup-bildpruefer` fand nach der ersten Umsetzun
 6. **Abgleich-Daten:** c2-Besitzer-Einträge entfernen; Einträge zu Profil-Wegfall, Tempo-Karte (`abschnitt=tempo`) und Mail-Kopf-Satz auf `#2796` umhängen (Grund „Scheibe S4, Datenmodell+Migration“); sichtbare Bearbeiten-Texte von Name/Region als Ausnahme mit Verweis auf diese Spec.
 7. Neue Nutzertexte DE und EN im Katalog (ADR-0104); EN aus `elementliste.json`.
 8. **Fix-Loop Bildabgleich Runde 1 (#2980):** acht optische Korrekturen (Akzent-Knopf, Handy-Reiter als Text-Reiter mit Unterstrich, Wegfall der Kennzahlenzeile am Handy, Meta-Zeile Mono, gefüllte Status-Pill, Kopfband/Brotkrumen/Kebab, Vorlage-Karte, Abschnittskopf Wetter), ADR-0118 und Bildprüfer Runde 2 (AC-16 bis AC-31).
+9. **Nachtrag Rest Bildabgleich Runde 2 (#3003):** Vorlagen-Wähler mittig ausgerichtet, seitliches Polster 12 px, Höhe nach Bedienart (Maus ca. 38 px wie Mockup, Finger mindestens 44 px), dadurch mehr Luft zwischen Eyebrow „Vorlage“ und Wähler-Text, Reiterleiste am Handy füllt die volle Breite; Präzisierung der Regel K-5 / AC-40 auf Fingerbedienung (AC-32 bis AC-35).
 
 ### Nicht-Ziele (ausdrücklich)
 
@@ -56,6 +61,7 @@ Fix-Loop Runde 1 (#2980): Der `mockup-bildpruefer` fand nach der ersten Umsetzun
 - „Test schicken“-Menü (Morgen-/Abend-Briefing): #2797; die 8 dortigen Besitzer-Einträge bleiben.
 - Keine Datenmodell- oder Schema-Änderung (`activity`, `profil` unverändert, Read-Modify-Write unberührt).
 - Aus #2980 „Andere Besitzer“ (bleiben bei ihren Issues, nicht Teil des Fix-Loops): Mail-Kopf/Profil/Tempo-Karte (#2796), „Test schicken“-Menü (#2797), Kennzahlen-/Metrik-Themen (#2954), App-Rahmen (Navigation, Seitenrahmen außerhalb des Hubs), Variante V16 des Mockups, EN-Wortlaut des Vorlagennamens (Folge-Issue, Lücke in `elementliste.json`).
+- Aus #3003 außerhalb des Umfangs (andere Besitzer, bleiben bei ihren Issues): Punkte zu #2796, #2981 und #2954, der App-Rahmen sowie die bekannte, bewusste Kontrast-Abweichung am Knopf „Test schicken“ (`--g-accent-deep`, siehe AC-16). Das Btn-Atom (`Btn.svelte`) bleibt unverändert; die Desktop-Reiterleiste bleibt unverändert. Alle anderen Touch-Ziele im Wetter-Reiter bleiben bei ≥ 44 px unverändert; nur der Vorlagen-Wähler folgt bei Mausbedienung der Mockup-Höhe.
 
 ### Affected Files
 
@@ -66,10 +72,10 @@ Fix-Loop Runde 1 (#2980): Der `mockup-bildpruefer` fand nach der ersten Umsetzun
 | `frontend/src/lib/components/shared/status-schild/StatusSchild.svelte` | MODIFY | Fix-Loop: Pill gefüllt ohne Rahmen, aktiv = good, sonst neutral |
 | `frontend/src/lib/components/trip-detail/TripHeader.svelte` | MODIFY | Eyebrow „Trip · Region“, Meta-Zeile, Pill-Zustände; Fix-Loop: Kennzahlenzeile `mobile-metrics` entfernen, Brotkrumen-Name = voller Tripname |
 | `frontend/src/routes/compare/[id]/+page.svelte` | MODIFY | Eyebrow „Orte · Region“, Meta „N Orte · Vergleichstabelle · Briefing HH:MM“; Fix-Loop: nur prüfen (läuft über HubKopf/StatusSchild) |
-| `frontend/src/lib/components/mobile/MTabBar.svelte` | MODIFY | Fix-Loop: Handy-Pillen entfernen, Text-Reiter mit Unterstrich, wischbar, 44 px Tippfläche |
+| `frontend/src/lib/components/mobile/MTabBar.svelte` | MODIFY | Fix-Loop: Handy-Pillen entfernen, Text-Reiter mit Unterstrich, wischbar, 44 px Tippfläche; #3003: Handy-Reiter `flex: 1 0 auto`, Inhalt zentriert (volle Leistenbreite) |
 | `frontend/src/lib/components/trip-detail/TripTabs.svelte` | MODIFY | Zähler-Badge Etappen (N) über `MTabBar.badge` |
 | `frontend/src/lib/components/compare/CompareTabs.svelte` | MODIFY | Zähler-Badge Orte (N) über `MTabBar.badge` |
-| `frontend/src/lib/components/organisms/wetter-tab/VorlageKarte.svelte` | MODIFY | Texte/Gruppen nach Mockup, ohne Mail-Kopf-Satz; Fix-Loop: Wähler-Optik, „▾ unverändert“ Mono, Speichern-Knopf mittig |
+| `frontend/src/lib/components/organisms/wetter-tab/VorlageKarte.svelte` | MODIFY | Texte/Gruppen nach Mockup, ohne Mail-Kopf-Satz; Fix-Loop: Wähler-Optik, „▾ unverändert“ Mono, Speichern-Knopf mittig; #3003: Wähler `align-items: center` statt `baseline`, seitliches Polster 12 px, Höhe nach Bedienart (Basis wie Mockup ca. 38 px, unter `@media (pointer: coarse)` `min-height: var(--g-tap-min)`) |
 | `frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte` | MODIFY | Fix-Loop: Abschnittskopf Wetter (68ch, 13 px, Trennlinie) |
 | `docs/adr/0118-handy-reiter-unterstrich-und-akzent-aktion.md` | CREATE | Fix-Loop: neues ADR (Dateiname endgültig im Developer-Schritt, Nummer 0118 fest) |
 | `docs/adr/0109-*.md`, `0110-*.md`, `0111-*.md`, `docs/adr/README.md` | MODIFY | Fix-Loop: Status „Teilweise abgelöst durch ADR-0118“ in Datei und Index, konsistent nach `tests/test_adr_index_drift.py` |
@@ -83,30 +89,35 @@ Fix-Loop Runde 1 (#2980): Der `mockup-bildpruefer` fand nach der ersten Umsetzun
 | `frontend/src/lib/components/trip-detail/TripHeader.mobile-metrics.test.ts` | DELETE | Fix-Loop: Kennzahlenzeile #416 entfällt (PO-Entscheidung 13.11.2026), ersatzlos gedeckt durch AC-19 |
 | `frontend/src/lib/components/shared/hub-kopf/__tests__/hub_kopf_c2_mockup.test.ts` | CREATE (c2) / MODIFY (Fix-Loop) | Unit-Tests (node --test), in c2 angelegt; Fix-Loop: um AC-16 bis AC-28 erweitern |
 | `frontend/e2e/hub-kopf-c2-mockup.staging.spec.ts` | CREATE (c2) / MODIFY (Fix-Loop) | E2E-Prüfung gegen Staging (Playwright), in c2 angelegt; Fix-Loop: mitziehen |
-| `frontend/e2e/hub-kopf-c2-bildabgleich.staging.spec.ts` | CREATE | Fix-Loop: Aufnahmen für Bildprüfer Runde 2 (Mockup per file:// und Staging, 1280×900 und 390×844, Trip/Orte, DE/EN, Reiter Wetter), Vorbild `fix2913-metrikliste-mockup.staging.spec.ts` |
+| `frontend/e2e/hub-kopf-c2-bildabgleich.staging.spec.ts` | CREATE (#2980) / MODIFY (#3003) | Fix-Loop: Aufnahmen für Bildprüfer Runde 2 (Mockup per file:// und Staging, 1280×900 und 390×844, Trip/Orte, DE/EN, Reiter Wetter), Vorbild `fix2913-metrikliste-mockup.staging.spec.ts`; #3003: gemessene Geometrie (Wähler mittig; Höhe 38±2 px bei Maus 1280×900, ≥ 44 px bei Touch-Emulation 390×844; Reiter füllen Leiste; kein Überlauf bei 360 px) |
+| `frontend/src/lib/components/shared/hub-kopf/__tests__/hub_kopf_c2_bildabgleich.test.ts` | MODIFY | #3003: Kern-Zusicherungen (node --test, keine Mocks) zu Wähler-Ausrichtung, Höhe nach Bedienart und Handy-Reiter-Verteilung |
+| `frontend/e2e/s3a2794-teil3-design.spec.ts` | MODIFY | #3003: Wächter für AC-40 (Funktion `zuKleineZiele`) an die Bedienart anpassen: 44-px-Messung läuft in einem Kontext mit Fingerbedienung (Playwright `hasTouch`/`isMobile`, damit `pointer: coarse` gilt); im Mausdurchlauf folgt der Vorlagen-Wähler der Mockup-Höhe, alle anderen Ziele bleiben ≥ 44 px |
+| `docs/specs/modules/feat_2794_s3a_teil3_wetter.md` | MODIFY | #3003: nur ein kurzer Vermerk „AC-40 präzisiert durch #3003 (Bedienart)“ mit Datum 2026-11-14, sonst keine Änderung |
 
 ## Estimated Scope
 
-- **LoC:** ca. +350 / −150 (Basis c2); Fix-Loop #2980 zusätzlich ca. +250 / −120
-- **Files:** ca. 10 Quelle + 10 Tests (Basis); Fix-Loop zusätzlich ca. 6 Komponenten, 4 ADR/Spec-Dateien, ca. 10 Tests
-- **Effort:** medium (Risiko niedrig bis mittel: geteilter Kopf, viele Tests binden an Kopf-Texte und alte Optik)
+- **LoC:** ca. +350 / −150 (Basis c2); Fix-Loop #2980 zusätzlich ca. +250 / −120; Nachtrag #3003 zusätzlich ca. +80 / −10 (davon ca. 60 Tests)
+- **Files:** ca. 10 Quelle + 10 Tests (Basis); Fix-Loop zusätzlich ca. 6 Komponenten, 4 ADR/Spec-Dateien, ca. 10 Tests; #3003: 2 Komponenten, 3 Testdateien, 2 Specs (diese und der Vermerk in `feat_2794_s3a_teil3_wetter.md`)
+- **Effort:** medium (Risiko niedrig bis mittel: geteilter Kopf, viele Tests binden an Kopf-Texte und alte Optik); #3003 für sich: Risiko niedrig, nur Frontend
 
 ## Dependencies
 
 | Entity | Type | Purpose |
 |--------|------|---------|
 | `MTabBar` (`badge`), `StatusSchild`/`Pill`, `Eyebrow`, `Btn`, `SubscriptionKebab` | Design-System-Bausteine (ADR-0112) | einzige zulässige Bausteine; Wächter `bausteine_waechter*.test.ts` |
-| `docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html` | Soll | Z. 228–245, 310–326, 358–365, 454–465, 508–512; Fix-Loop zusätzlich Z. 34–71, 90–92, 442 |
+| `docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html` | Soll | Z. 228–245, 310–326, 358–365, 454–465, 508–512; Fix-Loop zusätzlich Z. 34–71, 90–92, 442; #3003: `.picker` (padding 8px 12px, align-items:center), `.tab` (13 px/500), `.tabs-in` (width 100 %) |
 | `docs/context/einstellungen_neu/elementliste.json` | Soll-Texte | EN-Texte (Lücken: #2968) |
 | `docs/context/einstellungen_neu/elementliste_besitzer.json` | Daten | Besitzer-Einträge |
 | `feat_2913_abgleich_ganzseite.md` | Spec | Besitzer-Mechanik, `--abnahme`, Marker `data-seite="hub"` |
-| `rework_2837_s1_hub_kopf.md`, `rework_2845_hub_reiterleiste.md`, `feat_1273_s2_compare_hub_name_region_profil.md`, `mobile_tab_leisten_mtabbar.md`, `_archive/modules/issue_416_mobile_trip_kennzahlen.md` | Specs | Vorgänger; Name/Region-Bearbeiten am Hub bleibt; MTabBar-Optik und #416-Kennzahlen werden durch #2980 teilweise bzw. ganz abgelöst |
+| `rework_2837_s1_hub_kopf.md`, `rework_2845_hub_reiterleiste.md`, `feat_1273_s2_compare_hub_name_region_profil.md`, `mobile_tab_leisten_mtabbar.md`, `_archive/modules/issue_416_mobile_trip_kennzahlen.md` | Specs | Vorgänger; Name/Region-Bearbeiten am Hub bleibt; MTabBar-Optik und #416-Kennzahlen werden durch #2980 teilweise bzw. ganz abgelöst; #3003 respektiert dort die 44-px-Tippfläche (#2284) und das Scroll-Band (#1231) |
+| `feat_2794_s3a_teil3_wetter.md` (AC-40), `feat_2913_s3_bausteine.md` (K-5, `Btn size="tap"`) | Specs | Quelle der Regel K-5 / AC-40; wird durch #3003 auf Fingerbedienung präzisiert (Vermerk in der Spec, kein ADR) |
 | ADR-0109, ADR-0110, ADR-0111 | ADR | werden durch ADR-0118 teilweise abgelöst (Handy-Pillen, Hauptaktion Ink) |
 | `.claude/agents/mockup-bildpruefer.md` | Agent | Bildabgleich, nur Mockup-Bild, Staging-Bild und Elementlisten-Auszug, maximal 2 Runden |
-| Design-Tokens `app.css` (`--g-accent`, `--g-accent-deep`, `--g-paper`, `--g-paper-deep`, `--g-ink`, `--g-ink-2`, `--g-ink-3`, `--g-rule`, `--g-rule-soft`, `--g-good`, `--g-font-mono`) | Tokens | nur Tokens statt Rohwerte (Wächter) |
+| Design-Tokens `app.css` (`--g-accent`, `--g-accent-deep`, `--g-paper`, `--g-paper-deep`, `--g-ink`, `--g-ink-2`, `--g-ink-3`, `--g-rule`, `--g-rule-soft`, `--g-good`, `--g-font-mono`, `--g-text-sm`, `--g-size-10px`, `--g-tap-min`) | Tokens | nur Tokens statt Rohwerte (Wächter) |
 | Issue #2796 (S4, ADR-0108) | Abhängigkeit | übernimmt Profil, Tempo, Mail-Kopf-Satz |
 | Issue #2797 | Abhängigkeit | übernimmt „Test schicken“-Menü |
 | i18n-Katalog (ADR-0104) | Katalog | neue Nutzertexte nur dort |
+| `s3a2794_mtabbar_leiste_soll.test.ts`, `s3a2794-teil3-design.spec.ts` | Wächter-Tests | bleiben grün: vier DE-Reiter passen bei 360 px (#2794 B2), Tippflächen ≥ 44 px im Wetter-Reiter bei Fingerbedienung (AC-40, K-5, präzisiert durch #3003; der zweite Wächter wird angepasst, siehe Affected Files) |
 
 ## Implementation Details
 
@@ -126,6 +137,13 @@ Umbau der bestehenden geteilten Bausteine, keine Neubauten, Reihenfolge: Kopf, R
    - `MTabBar`: Handy-Media-Query ohne Pillen, gleiche Optik wie Desktop; Band wischbar (Scroll-Snap/Fade bleiben), Tippfläche ≥44 px (#2284).
    - `WetterTabInhalt`: lokaler Kopf `.wt-kopf` bekommt Mockup-Maße; kein `SectionH`, daher keine Seiteneffekte.
    - Reihenfolge: ADR-0118 und ACs, Tests rot, CSS/Markup, Staging, Bildaufnahmen, `mockup-bildpruefer` Runde 2 (letzte Runde), Soll/Ist-Bild an den PO.
+8. **Nachtrag #3003 (Rest Runde 2):** reine CSS-Änderungen in zwei geteilten Bausteinen, Btn-Atom bleibt unverändert.
+   - Ursache Wähler: `Btn size="tap"` hat `padding: 0 14px; min-height: 44px`, und `VorlageKarte` überschreibt per `.wt-picker :global([data-slot='btn'])` auf `align-items: baseline`; dadurch sitzt der Text direkt unter dem oberen Rahmen. Fix: `align-items: center` und seitliches Polster 12 px (wie Mockup `.picker`).
+   - Höhe nach Bedienart (PO-Entscheidung Henning, 2026-11-14, nach visueller Erklärung): Das Mockup misst für den Wähler ca. 38 px (`.picker`: padding 8px 12px, align-items:center). Die Höhe richtet sich nach der Bedienart, nicht nach der Bildschirmbreite: Bei Mausbedienung (`@media (pointer: fine)`, Laptop/Desktop) folgt der Wähler der Mockup-Höhe ca. 38 px (Toleranz ±2 px); bei Fingerbedienung (`@media (pointer: coarse)`, Handy, Tablet, Touch-Laptop) hat er mindestens 44 px Tippfläche (`min-height: var(--g-tap-min)`, K-5, #2284). In beiden Fällen steht der Inhalt vertikal mittig (oben ≈ unten ±2 px) bei seitlichem Polster 12 px. Begründung: Die Bildschirmbreite sagt nichts über die Bedienart (ein Tablet quer ist breit, wird aber mit dem Finger bedient); die Abfrage der Bedienart (`pointer`) ist etablierte Praxis für Tippflächen. Damit ist die 44-px-Höhe keine bewusste Abweichung vom Mockup mehr: Bei Maus ist die Mockup-Höhe erfüllt, bei Finger gilt 44 px.
+   - Folge für K-5 / AC-40 (#2794): Die Regel wird präzisiert auf „Touch-Ziele ≥ 44 px bei Fingerbedienung“. Der Wächter `frontend/e2e/s3a2794-teil3-design.spec.ts` (Funktion `zuKleineZiele`) prüft bisher alle Ziele im Wetter-Reiter auf ≥ 44 px, auch im Desktop-Durchlauf. Er wird so angepasst, dass die 44-px-Messung in einem Kontext mit Fingerbedienung läuft (Playwright `hasTouch`/`isMobile`, dort gilt `pointer: coarse`); im Mausdurchlauf darf der Vorlagen-Wähler der Mockup-Höhe folgen. Alle anderen Ziele bleiben unverändert bei ≥ 44 px. In `feat_2794_s3a_teil3_wetter.md` kommt ausschließlich der Vermerk „AC-40 präzisiert durch #3003 (Bedienart)“ mit Datum 2026-11-14 hinzu; AC-40 selbst wird dort nicht umgeschrieben.
+   - ADR-Prüfung: K-5 steht in keinem ADR. Fundstellen sind nur die Specs `feat_2913_s3_bausteine.md` (Zeile „K-5 Touch-Ziele“, `Btn size="tap"`) und `feat_2794_s3a_teil3_wetter.md` (AC-40); ADR-0118 nennt die 44-px-Tippfläche nur für die Handy-Reiter (#2284), das bleibt unberührt (Reiter sind Touch-Ziele, `MTabBar` ändert seine Höhe nicht). Deshalb reicht der Spec-Vermerk, ein neues oder ablösendes ADR ist nicht nötig.
+   - Ursache Eyebrow-Abstand: Der Gap von 6 px (`.wt-picker-wrap`) entspricht bereits dem Mockup; sichtbar waren nur 6 px + Rahmen bis zum oben klebenden Text (ca. 7 px), im Mockup 6 + 1 + 8 = 15 px. Die Mittig-Ausrichtung behebt den Abstand mit; kein eigener Eingriff am Gap. Rechenprobe bei Fingerbedienung (44 px Höhe, Text ca. 20 px Zeilenhöhe): ca. 12 px Luft über dem Text plus 6 px Gap, zusammen ca. 18 px und damit über den geforderten 12 px (AC-33). Die Messung bei 390×844 läuft in Touch-Emulation.
+   - Ursache Reiter: `MTabBar` setzt mobil (<900 px) `flex-shrink: 0` mit Polster `--g-s-2 --g-size-10px` und Schrift `--g-text-sm` (13 px); vier Reiter ergeben ca. 330 px, linksbündig, Lücke rechts. Fix: `flex: 1 0 auto` plus zentrierter Inhalt, sodass die Reiter bei Platz auf die volle Leistenbreite wachsen. Schrift bleibt 13 px (Mockup-Token identisch), Mindestpolster 10 px (16 px Polster würde bei 360 px überlaufen und #2794 B2 verletzen). Bei Überbreite (EN, 360 px, viele Reiter) greift weiter das bestehende Scroll-Band mit Fade und Scroll-Snap. Wirkt in Trip und Vergleich gleich (geteilte Komponente).
 
 ## Expected Behavior
 
@@ -163,9 +181,20 @@ Reine Optik: Komponenten-Tests mit `node --test` (gerenderte Struktur, Klassen/A
 - [ ] E2E (Playwright, Staging) `hub-kopf-c2-bildabgleich.staging.spec.ts`: acht Zustände aufnehmen und berechnete Stile prüfen (AC-30); danach `mockup-bildpruefer` Runde 2.
 - [ ] Wächter `bausteine_waechter*.test.ts` grün (Tokens, `68ch` relativ zulässig).
 
+### Nachtrag #3003 (Rest Bildabgleich Runde 2)
+
+Reine Optik, keine Mocks: Kern-Test mit `node --test`, gemessene Geometrie im Browser gegen Staging.
+
+- [ ] Kern (node --test) `hub_kopf_c2_bildabgleich.test.ts`: GIVEN `VorlageKarte` WHEN Wähler-Stilregeln aufgelöst THEN `align-items: center` (nicht `baseline`) und seitliches Polster 12 px (AC-32); GIVEN `VorlageKarte` WHEN die Regeln unter `@media (pointer: coarse)` aufgelöst THEN `min-height: var(--g-tap-min)` für den Wähler, und ohne diese Regel (Maus) keine 44-px-Mindesthöhe (AC-32); GIVEN `MTabBar` WHEN Handy-Regel aufgelöst THEN Reiter `flex: 1 0 auto`, Inhalt zentriert, Schrift `--g-text-sm`, Mindestpolster `--g-size-10px` (AC-34).
+- [ ] E2E (Staging) `hub-kopf-c2-bildabgleich.staging.spec.ts`, Maus: GIVEN Wetter-Reiter in Trip und Orten, DE und EN, 1280×900 mit Maus (`pointer: fine`) WHEN Wähler gemessen THEN Höhe 38 ±2 px und Abstand Rahmen-oben bis Text ≈ Text bis Rahmen-unten (±2 px) (AC-32).
+- [ ] E2E (Staging) gleiche Datei, Finger: GIVEN Wetter-Reiter in Trip und Orten, DE und EN, 390×844 mit Touch-Emulation (`hasTouch`/`isMobile`, `pointer: coarse`) WHEN Wähler gemessen THEN Höhe ≥ 44 px und Abstand oben ≈ unten (±2 px) (AC-32); Unterkante Eyebrow bis Oberkante Wähler-Text ≥ 12 px bei gleichem Gap von 6 px (AC-33).
+- [ ] E2E (Staging) gleiche Datei: GIVEN Handy 390 px, Trip und Orte, DE und EN WHEN Reiterleiste gemessen THEN rechte Kante letzter Reiter ≈ rechtes Leistenende (±2 px); GIVEN 360 px DE THEN kein Überlauf der vier Reiter (AC-34).
+- [ ] Bestehende Wächter grün: `s3a2794_mtabbar_leiste_soll.test.ts` (B2, 360 px), `s3a2794-teil3-design.spec.ts` (AC-40, Tippflächen ≥ 44 px, nach Anpassung an die Bedienart in einem Kontext mit Fingerbedienung gemessen), `bausteine_waechter*.test.ts`.
+- [ ] Abnahme: acht Staging-Aufnahmen, `mockup-bildpruefer`, Soll/Ist-Bild an den PO (AC-35).
+
 ## Definition of Done
 
-Fertig ist Scheibe c2, wenn Kopfleiste (Brotkrumen, Kebab, „Test schicken ▾“), Kopf (Eyebrow, Titel mit Status-Pill, Meta-Zeile), Reiterleiste mit Zähler und Vorlage-Karte von Trip-Hub und Orts-Vergleich-Hub ausschließlich aus Design-System-Bausteinen bestehen (Wächter grün), auf Staging in DE und EN der Elementliste des Mockups entsprechen, keine Besitzer-Einträge `#2913-c2` mehr existieren (Profil/Tempo/Mail-Kopf-Satz sichtbar auf #2796 umgehängt, Menü bei #2797), `npm run elementliste:abgleich -- --abnahme` für DE und EN mit Exit 0 endet, Name/Region für zwei verschiedene Nutzer nach Neuladen erhalten bleiben, der `mockup-bildpruefer` nach höchstens zwei Runden keine offene Abweichung meldet und Henning ein Soll/Ist-Bild des Kopfs bekommen hat (AC-1 bis AC-31).
+Fertig ist Scheibe c2, wenn Kopfleiste (Brotkrumen, Kebab, „Test schicken ▾“), Kopf (Eyebrow, Titel mit Status-Pill, Meta-Zeile), Reiterleiste mit Zähler und Vorlage-Karte von Trip-Hub und Orts-Vergleich-Hub ausschließlich aus Design-System-Bausteinen bestehen (Wächter grün), auf Staging in DE und EN der Elementliste des Mockups entsprechen, keine Besitzer-Einträge `#2913-c2` mehr existieren (Profil/Tempo/Mail-Kopf-Satz sichtbar auf #2796 umgehängt, Menü bei #2797), `npm run elementliste:abgleich -- --abnahme` für DE und EN mit Exit 0 endet, Name/Region für zwei verschiedene Nutzer nach Neuladen erhalten bleiben, der `mockup-bildpruefer` nach höchstens zwei Runden keine offene Abweichung meldet und Henning ein Soll/Ist-Bild des Kopfs bekommen hat (AC-1 bis AC-31). Der Nachtrag #3003 ist fertig, wenn zusätzlich AC-32 bis AC-35 auf Staging gemessen erfüllt sind (Vorlagen-Wähler bei Maus ca. 38 px wie im Mockup, bei Fingerbedienung mindestens 44 px, jeweils mittig), der Wächter `s3a2794-teil3-design.spec.ts` an die Bedienart angepasst und grün ist und Henning das Soll/Ist-Bild bekommen hat.
 
 ## Acceptance Criteria
 
@@ -266,6 +295,22 @@ Grundlage: acht Abweichungen des `mockup-bildpruefer` (Runde 1) und zwei PO-Ents
 - **AC-31:** Given zwei verschiedene Nutzer mit eigenen Trips und Vergleichen / When beide den Hub mit der neuen Optik öffnen / Then sehen beide dieselbe Optik, und jeder sieht nur die eigenen Namen und Zähler; der Fix-Loop ändert reine Darstellung (CSS und Markup), keinen Endpoint und keine gespeicherten Daten.
   - Test: bestehender E2E-Lauf mit zwei Staging-Nutzern aus AC-14 bleibt grün; Datenstand vor/nach unverändert (Zwei-Nutzer-Test für neue Optik nicht nötig, da keine Daten bewegt werden).
 
+### Nachtrag Rest Bildabgleich Runde 2 (#3003)
+
+Grundlage: drei Rest-Abweichungen aus dem `mockup-bildpruefer` Runde 2 nach #2980 (Vorlagen-Wähler, Abstand Eyebrow zu Wähler, Reiterleiste am Handy) und die PO-Entscheidung vom 14.11.2026 zur Höhe des Wählers nach Bedienart. AC-1 bis AC-31 gelten unverändert weiter; keine davon wird geändert. Alle ACs gelten für Trip und Orts-Vergleich gleichermaßen (geteilte Bausteine `VorlageKarte` und `MTabBar`, ADR-0097), in DE und EN. Außerhalb des Umfangs bleiben Punkte anderer Besitzer aus Issue #3003 (#2796, #2981, #2954, App-Rahmen, die bewusste Kontrast-Abweichung am Knopf „Test schicken“).
+
+- **AC-32:** Given der Reiter Wetter im Hub eines Trips oder Orts-Vergleichs (DE und EN) / When der Vorlagen-Wähler mit Vorlagenname und „▾ unverändert“ betrachtet wird / Then steht dieser Inhalt in beiden Bedienarten vertikal mittig im Knopf (Abstand zum oberen Rand und zum unteren Rand unterscheiden sich um höchstens 2 px) bei seitlichem Polster von 12 px wie im Mockup, und die Höhe richtet sich nach der Bedienart: bei Mausbedienung (`pointer: fine`, zum Beispiel 1280×900) beträgt sie wie im Mockup ca. 38 px (±2 px), bei Fingerbedienung (`pointer: coarse`, zum Beispiel Handy 390×844 mit Touch) mindestens 44 px Tippfläche (K-5, #2284); die Bildschirmbreite entscheidet darüber nicht.
+  - Test: E2E (Staging) misst Wähler-Rahmen und Textbox im Browser in Trip und Orten, DE und EN: bei 1280×900 mit Maus Höhe 38 ±2 px, bei 390×844 mit Touch-Emulation (`hasTouch`/`isMobile`) Höhe ≥ 44 px, jeweils Abstand oben ≈ unten (±2 px) und Polster 12 px; Kern-Test auf `align-items: center` und auf eine Regel unter `pointer: coarse` mit `min-height` aus `--g-tap-min`; der angepasste Wächter `s3a2794-teil3-design.spec.ts` bleibt grün.
+
+- **AC-33:** Given der Reiter Wetter im Hub am Handy (390×844 mit Touch-Emulation, Trip und Orts-Vergleich, DE und EN) / When der Abstand zwischen der Überschrift „Vorlage“ bzw. „Template“ und dem Wähler-Text betrachtet wird / Then liegt zwischen der Unterkante der Überschrift und der Oberkante des Wähler-Textes mindestens 12 px freier Raum, der durch die Mittig-Ausrichtung aus AC-32 entsteht (gerechnet ca. 18 px: 6 px Gap, 1 px Rahmen und ca. 11 px Luft im Knopf über dem Text), während der Gap zwischen Überschrift und Wähler wie im Mockup 6 px bleibt.
+  - Test: E2E (Staging) bei 390×844 in Touch-Emulation misst Unterkante der Eyebrow bis Oberkante der Wähler-Textbox (≥ 12 px) und den unveränderten Gap von 6 px, in Trip und Orten, DE und EN.
+
+- **AC-34:** Given ein Handy-Viewport unter 900 px, Trip-Hub oder Orts-Vergleichs-Hub (geteilte Reiterleiste `MTabBar`), DE und EN / When die Reiterleiste bei 390 px betrachtet wird / Then wachsen die Reiter auf die volle Leistenbreite (Inhalt zentriert), die rechte Kante des letzten Reiters liegt auf dem rechten Leistenende (±2 px), die Schrift bleibt 13 px und das Mindestpolster 10 px; bei Überbreite (zum Beispiel 360 px mit langen oder vielen Reitern) bleibt das bestehende seitliche Scroll-Band mit Fade unverändert, die vier DE-Reiter laufen bei 360 px nicht über (#2794 B2), und Unterstrich, Zähler und Trennlinie der Reiter sowie die Desktop-Reiterleiste sehen unverändert aus.
+  - Test: E2E (Staging) misst bei 390 px die rechte Kante des letzten Reiters gegen das Leistenende in Trip und Orten, DE und EN, und bei 360 px DE `scrollWidth` gegen `clientWidth` der vier Reiter; Kern-Test auf `flex: 1 0 auto`, Schrift `--g-text-sm` und Polster `--g-size-10px`; Wächter `s3a2794_mtabbar_leiste_soll.test.ts` bleibt grün.
+
+- **AC-35:** Given Staging mit dem Stand dieses Nachtrags / When die acht Zustände Reiter Wetter, Trip und Orte, DE und EN, 1280×900 (Maus) und 390×844 (Touch-Emulation) aufgenommen und vom `mockup-bildpruefer` gegen das Mockup verglichen werden / Then meldet der Prüfer für Wähler-Lage, Wähler-Höhe (bei Maus Mockup-Höhe, bei Finger 44 px Tippfläche), Abstand Eyebrow zu Wähler und Reiter-Verteilung keine offene c2-Abweichung, nicht-c2-Punkte sind ihren Besitzern zugeordnet (#2796, #2981, #2954, App-Rahmen, Kontrast „Test schicken“), und Henning erhält ein Soll/Ist-Bild, in dem Wähler-Höhe und Mittig-Ausrichtung als erfüllt gezeigt sind.
+  - Test: Playwright-Aufnahmen der acht Zustände auf Staging (Desktop mit Maus, Handy mit Touch-Emulation), Prüfer-Verdikt als Artefakt, Soll/Ist-Bild an den PO; Zwei-Nutzer-Test nicht nötig, weil reine Darstellung ohne Datenbewegung (wie AC-31).
+
 ## Known Limitations
 
 - Mockup ist nur Deutsch; EN-Lücken in `elementliste.json` sind #2968 zugeordnet, fehlende EN-Texte werden im Katalog sinnvoll ergänzt und dort vermerkt.
@@ -274,13 +319,16 @@ Grundlage: acht Abweichungen des `mockup-bildpruefer` (Runde 1) und zwei PO-Ents
 - Abnahme ist nur gegen Staging prüfbar (nicht lokal, nicht Prod).
 - Knopf-Fläche „Test schicken ▾“ ist bewusst `--g-accent-deep` statt Mockup-`--g-accent` (WCAG-AA); der Bildprüfer meldet das als Farbabweichung, sie ist dokumentiert und dem PO offen genannt.
 - Der Bildprüfer-Fix-Loop ist nach Runde 2 beendet; verbleibende Abweichungen gehen als eigene Issues weiter, nicht in eine dritte Runde.
+- Die Höhe des Vorlagen-Wählers folgt der Bedienart (Maus ca. 38 px wie im Mockup, Finger mindestens 44 px; PO-Entscheidung 14.11.2026, #3003). Geräte, die beide Eingabearten melden (zum Beispiel Touch-Laptop), werden vom Browser nach der primären Eingabeart eingeordnet; die Messung auf Staging deckt die beiden Reinfälle (Maus 1280×900, Touch 390×844) ab.
+- Wächter AC-40 (`s3a2794-teil3-design.spec.ts`, #3003): Kompakte Segmente (`[data-variant="kompakt"]`, #2913) sind sichtbar kleiner als 44 px und vergrößern ihre Trefferfläche per unsichtbarem `::before` (app.css), genau wie Elemente mit `data-tap="true"`. Der Wächter prüft sie deshalb mit derselben Trefferpunkt-Messung (44×44-Quadrat, Mitte und vier Ecken) statt mit dem sichtbaren Rahmenmaß. Das ist keine Lockerung: die wirksame Tippfläche muss weiterhin ≥ 44 px sein; nur der Messweg folgt der Bauweise.
 
 ## Architektur-Entscheidung (ADR)
 
-- **ADR-Nr.:** Basis c2: keine neue; berührt ADR-0097 (Teilung Trip/Vergleich), ADR-0104 (Zweisprachigkeit), ADR-0108 (Profil → Vorlage, bleibt #2796), ADR-0112 (Design-System-Bausteine). **Fix-Loop #2980: neues ADR-0118** (Handy-Reiter Unterstrich, Akzent-Hauptaktion „Test schicken ▾“, Kennzahlenzeile #416 entfällt); ADR-0109, ADR-0110 und ADR-0111 werden dadurch teilweise abgelöst (Teil Handy-Pillen bzw. „Hauptaktion Ink“ für diesen Knopf) und tragen den Vermerk „Teilweise abgelöst durch ADR-0118“, Index nach `tests/test_adr_index_drift.py` konsistent.
+- **ADR-Nr.:** Basis c2: keine neue; berührt ADR-0097 (Teilung Trip/Vergleich), ADR-0104 (Zweisprachigkeit), ADR-0108 (Profil → Vorlage, bleibt #2796), ADR-0112 (Design-System-Bausteine). **Fix-Loop #2980: neues ADR-0118** (Handy-Reiter Unterstrich, Akzent-Hauptaktion „Test schicken ▾“, Kennzahlenzeile #416 entfällt); ADR-0109, ADR-0110 und ADR-0111 werden dadurch teilweise abgelöst (Teil Handy-Pillen bzw. „Hauptaktion Ink“ für diesen Knopf) und tragen den Vermerk „Teilweise abgelöst durch ADR-0118“, Index nach `tests/test_adr_index_drift.py` konsistent. **Nachtrag #3003:** kein neues ADR; reine Feinabstimmung innerhalb von ADR-0118. Die Regel K-5 / AC-40 (Touch-Ziele ≥ 44 px, #2284) steht in keinem ADR (Prüfung per Suche in `docs/adr` nach „44“, „Touch-Ziel“, „tap“, „K-5“: einziger Treffer ist die 44-px-Tippfläche der Handy-Reiter in ADR-0118, die unberührt bleibt), sondern nur in den Specs `feat_2913_s3_bausteine.md` und `feat_2794_s3a_teil3_wetter.md`. Die Präzisierung auf Fingerbedienung wird deshalb als Vermerk „AC-40 präzisiert durch #3003 (Bedienart)“ in `feat_2794_s3a_teil3_wetter.md` festgehalten; ein ablösendes ADR ist nicht nötig.
 - **Rationale:** Basis c2 ist eine reine Darstellungsanpassung innerhalb bestehender Entscheidungen. Der Zuschnitt (Profil/Tempo/Mail-Kopf bei #2796) folgt dem freigegebenen Scheibenplan `docs/context/einstellungen_neu.md` §10; eine „nur Oberfläche über `activity`“-Variante wurde verworfen, weil sie #2796 halb vorwegnähme und Bestandsdaten gefährdete. Der Fix-Loop weicht bewusst von ADR-0109/0110/0111 ab, weil der PO am 13.11.2026 die Mockup-Optik für Handy-Reiter bestätigt hat; Entscheidungen werden nie still rückgängig gemacht, daher das neue ADR.
 
 ## Changelog
 
 - 2026-11-13: Initial spec created (Scheibe c2, Arbeitsplan #2913)
 - 2026-11-13: Erweitert um Fix-Loop Bildabgleich Runde 1 (#2980): AC-16 bis AC-31 (Akzent-Knopf, Handy-Reiter Unterstrich, Kennzahlenzeile entfällt, Meta Mono, gefüllte Status-Pill, Kopfband/Brotkrumen/Kebab, Vorlage-Karte, Abschnittskopf Wetter, ADR-0118, Bildprüfer Runde 2, Zwei-Nutzer-Begründung); Nicht-Ziele „Andere Besitzer“ übernommen; AC-1 bis AC-15 unverändert, keine überholt. Status bleibt Entwurf, Freigabe der neuen ACs steht aus.
+- 2026-11-14: Nachtrag Rest Bildabgleich Runde 2 (#3003): AC-32 bis AC-35 (Vorlagen-Wähler mittig, Höhe nach Bedienart: Maus ca. 38 px wie Mockup, Finger mindestens 44 px, PO-Entscheidung Henning; Abstand Eyebrow zu Wähler am Handy, Handy-Reiterleiste füllt volle Breite, Abnahme mit Soll/Ist-Bild); Präzisierung von K-5 / AC-40 auf Fingerbedienung mit Anpassung des Wächters `s3a2794-teil3-design.spec.ts` und Vermerk in `feat_2794_s3a_teil3_wetter.md`; AC-1 bis AC-31 unverändert. Status bleibt Entwurf, Freigabe der neuen ACs steht aus.

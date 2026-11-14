@@ -178,11 +178,16 @@
 		   (Scroll-Snap) und die 44-px-Tippfläche (#2284). */
 		.mtabbar :global([data-slot='segmented-item']) {
 			white-space: nowrap;
+			/* #3003 AC-34: Reiter wachsen auf die volle Leistenbreite (Inhalt zentriert),
+			   schrumpfen aber nicht — Überbreite scrollt weiter im Band mit Fade (#1231). */
+			flex-grow: 1;
 			flex-shrink: 0;
+			flex-basis: auto;
 			scroll-snap-align: start;
 			min-height: 44px;
 			display: inline-flex;
 			align-items: center;
+			justify-content: center;
 			gap: 6px;
 			/* #2794 B2 (AC-4): seitlich 10 statt 12 px — vier DE-Reiter passen bei 360 px. */
 			padding: var(--g-s-2) var(--g-size-10px);
