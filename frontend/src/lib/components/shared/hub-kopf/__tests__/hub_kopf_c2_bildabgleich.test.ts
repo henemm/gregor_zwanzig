@@ -515,6 +515,9 @@ for (const art of ARTEN) {
 				gleich(picker, 'align-items', ctx, 'center', `AC-32 Vorlagen-Wähler (${lang})`);
 				laengeGleich(picker, 'padding-left', ctx, 12, `AC-32 Vorlagen-Wähler links (${lang})`);
 				laengeGleich(picker, 'padding-right', ctx, 12, `AC-32 Vorlagen-Wähler rechts (${lang})`);
+				// F001: vertikal 8 px (--g-s-2, Mockup padding 8px 12px) — sonst Maus-Höhe ca. 46 statt 38 px.
+				laengeGleich(picker, 'padding-top', ctx, 8, `AC-32 Vorlagen-Wähler oben (${lang})`);
+				laengeGleich(picker, 'padding-bottom', ctx, 8, `AC-32 Vorlagen-Wähler unten (${lang})`);
 			}
 		});
 		const finger = ctx.zeiger === 'coarse';
