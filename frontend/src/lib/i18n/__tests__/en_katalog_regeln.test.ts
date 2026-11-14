@@ -37,6 +37,15 @@ function verstoesse(key: string, wert: string): string[] {
 	return v;
 }
 
+/**
+ * Bildpfade sind kein uebersetzter Text: en == de. Einzige Ausnahme (#2777):
+ * Startseiten-Bilder, en zeigt auf /landing/en/<gleiche Datei>.
+ */
+function bildpfadErlaubt(en: string, de: string): boolean {
+	if (en === de) return true;
+	return de.startsWith('/landing/') && en === de.replace('/landing/', '/landing/en/');
+}
+
 after(() => locale.set('de'));
 
 describe('Gegenprobe: die Regeln erkennen schlechte Texte', () => {
@@ -85,10 +94,17 @@ describe('AC-8: englische Texte', () => {
 		assert.equal(enText('standardwerte.knopf'), 'Save as defaults');
 		assert.equal(enText('onboarding.willkommen.neuer_trip'), '+ New trip');
 	});
-	test('Bildpfade bleiben unuebersetzt', () => {
+	test('Bildpfade: gleich wie de, ausser Startseiten-Bilder unter /landing/en/ (#2777)', () => {
 		const pfade = keys.filter((x) => x.endsWith('.src'));
 		assert.ok(pfade.length > 0, 'Messaufbau: keine Bildpfade');
-		for (const k of pfade) assert.equal(enText(k), trFor('de', k), k);
+		for (const k of pfade) assert.ok(bildpfadErlaubt(enText(k), trFor('de', k)), k);
+	});
+	test('Gegenprobe: bildpfadErlaubt lehnt falsche Pfade ab', () => {
+		assert.equal(bildpfadErlaubt('/landing/en/anders.png', '/landing/briefing-mail.png'), false);
+		assert.equal(bildpfadErlaubt('/images/mail-en.png', '/images/mail.png'), false);
+		assert.equal(bildpfadErlaubt('/images/en/mail.png', '/images/mail.png'), false);
+		assert.equal(bildpfadErlaubt('/landing/briefing-mail.png', '/landing/briefing-mail.png'), true);
+		assert.equal(bildpfadErlaubt('/landing/en/briefing-mail.png', '/landing/briefing-mail.png'), true);
 	});
 	test('Befehlswoerter: en zeigt die englischen Protokoll-Woerter (#2651), Argumentform bleibt', () => {
 		// #2651 (F2): die Hilfe zeigt je Sprache das Wort, das der Bot versteht
