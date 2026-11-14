@@ -4,7 +4,7 @@
 	//
 	// #2837 S1 (ADR-0110): Hülle um den geteilten HubKopf (Leiste + Titelblock, wie beim
 	// Ortsvergleich). Trip-eigen bleiben nur Datum (eyebrow), Kürzel (namePrefix), Status mit
-	// „Tag x von y" (status-Snippet in der Titelzeile), km/Hm und die Mobil-Kacheln.
+	// „Tag x von y" (status-Snippet in der Titelzeile) und km/Hm (Mobil-Kacheln entfallen, #2980 AC-19).
 	// Senden/Kebab/Meldungen reicht die Seite durch; der Kopf ruft keine API.
 	import type { Snippet } from 'svelte';
 	import StatusSchild from '$lib/components/shared/status-schild/StatusSchild.svelte';
@@ -12,9 +12,7 @@
 	import { api } from '$lib/api.js';
 	import { formatDateRange } from '$lib/utils/tripHero';
 	import { computeTripStats } from '$lib/utils/tripStats';
-	import { deriveTripStatus, todayStageIndex } from '$lib/utils/tripStatus';
-	import { getReportSchedule } from '$lib/utils/rightColumn';
-	import Stat from '$lib/components/molecules/Stat.svelte';
+	import { deriveTripStatus } from '$lib/utils/tripStatus';
 	import { ACTIVITY_TYPE_OPTIONS, type Trip } from '$lib/types';
 	import { baueTripSpeicherung, speichereKopfFeld } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -96,63 +94,15 @@
 	// deshalb führt der Link in den Reiter Etappen (Muster „Setup abschließen" des Vergleichs).
 	const AKTIVIEREN_ZIEL = '?tab=etappen';
 
-	// Issue #416 — Mobile Kennzahlen-Kacheln (sichtbar nur ≤ 899px).
-	// Spec: docs/specs/modules/issue_416_mobile_trip_kennzahlen.md
-	const etappeValue = $derived((() => {
-		const total = trip.stages?.length ?? 0;
-		if (total === 0) return '—';
-		const s = deriveTripStatus(trip, now);
-		if (s === 'active') {
-			const idx = todayStageIndex(trip, now);
-			return idx >= 0 ? `${idx + 1}/${total}` : `—/${total}`;
-		}
-		if (s === 'archived' || s === 'finished') return `${total}/${total}`;
-		return `—/${total}`;
-	})());
-
-	const briefingValue = $derived((() => {
-		const sched = getReportSchedule(trip);
-		if (!sched.enabled) return '—';
-		if (sched.morning_enabled && sched.morning) return sched.morning.slice(0, 5);
-		if (sched.evening_enabled && sched.evening) return sched.evening.slice(0, 5);
-		return '—';
-	})());
-
-	const startLabel = $derived((() => {
-		const s = deriveTripStatus(trip, now);
-		if (s === 'planned') return $t('trip.kopf.start_in');
-		if (s === 'active') return $t('trip.kopf.tag_label');
-		return $t('trip.kopf.status');
-	})());
-
-	const startValue = $derived((() => {
-		const s = deriveTripStatus(trip, now);
-		if (s === 'planned') {
-			const dates = (trip.stages ?? [])
-				.map((st) => st.date)
-				.filter((d): d is string => !!d)
-				.sort();
-			if (!dates.length) return '—';
-			const firstDay = new Date(dates[0] + 'T00:00:00');
-			const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-			const diff = Math.ceil((firstDay.getTime() - today.getTime()) / 86_400_000);
-			return diff > 0 ? $t('trip.kopf.tage_bis', { tage: diff }) : '—';
-		}
-		if (s === 'active') {
-			const idx = todayStageIndex(trip, now);
-			return idx >= 0 ? $t('trip.kopf.tag', { tag: idx + 1 }) : '—';
-		}
-		return '—';
-	})());
-
-
+	// #2980 AC-19 (PO-Entscheidung 13.11.2026, ADR-0118): die Handy-Kennzahlenzeile
+	// „Etappe · Briefing · Start in" (#416) entfällt ersatzlos; die Meta-Zeile bleibt.
 </script>
 
 <header class="trip-header">
 	<HubKopf
 		context="route"
 		parent={{ label: $t('listen.trips.titel'), href: '/trips' }}
-		crumb={trip.shortcode ?? trip.name}
+		crumb={trip.name}
 		sendLabel={sendLabel ?? $t('aktionen.kopf.test_schicken')}
 		{onSend}
 		{sendDisabled}
@@ -183,20 +133,6 @@
 		{#snippet status()}
 			<StatusSchild status={tripStatus} testid="trip-detail-status-badge" />
 		{/snippet}
-		<!-- Whitelist (Entscheidung 8): Mobil-Kacheln im Titelblock, über der Unterkante des HubKopf. -->
-		{#snippet unten()}
-			<div class="mobile-metrics" data-testid="trip-header-mobile-metrics">
-				<div data-testid="metric-etappe">
-					<Stat label={$t('trip.kopf.etappe')} value={etappeValue} size="sm" mono />
-				</div>
-				<div data-testid="metric-briefing">
-					<Stat label={$t('trip.kopf.briefing')} value={briefingValue} size="sm" mono />
-				</div>
-				<div data-testid="metric-start">
-					<Stat label={startLabel} value={startValue} size="sm" mono />
-				</div>
-			</div>
-		{/snippet}
 	</HubKopf>
 </header>
 
@@ -206,15 +142,5 @@
 	.h1-shortcode {
 		font-family: var(--g-font-mono, ui-monospace, monospace);
 		color: var(--g-accent-deep); /* #2879: Accent als Text = accent-deep (20 px ist kein großer Text, 6,77:1) */
-	}
-	.mobile-metrics {
-		display: none;
-	}
-	@media (max-width: 899px) {
-		.mobile-metrics {
-			display: flex;
-			gap: var(--g-s-3);
-			padding-top: var(--g-s-2);
-		}
 	}
 </style>

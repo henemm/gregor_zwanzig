@@ -71,14 +71,14 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		const badge = page.getByTestId('trip-detail-status-badge');
 		await expect(badge).toBeVisible();
 		await expect(badge).toContainText(/Aktiv|Geplant/); // 'Aktiv' wenn heute innerhalb, sonst 'Geplant'
-		// Pill-Tone laut shared/status-schild/StatusSchild.svelte TONE_MAP (#2837 S1b,
-		// vormals TripStatusBadge): active -> 'accent', planned -> 'info'. 'accent' ist
-		// gewollt und eigens in app.css gestylt (Regel
-		// [data-slot="pill"][data-outlined][data-tone="accent"], bewacht von
-		// StatusSchild.atomic.test.ts AC-4) — die frühere
-		// Erwartung 'success' stammt aus der Zeit vor diesem Mapping.
+		// Pill-Tone laut shared/status-schild/StatusSchild.svelte TONE_MAP — seit #2980 AC-21
+		// (ADR-0118, Mockup .pill.good/.pill.neutral): active -> 'good', planned -> 'neutral'. Das
+		// Pill-Atom bildet good/neutral auf data-tone success/default ab; die Mockup-Farben setzt
+		// app.css über data-schild="status". Gefüllt ohne Rahmen, also ohne data-outlined.
 		const tone = await badge.getAttribute('data-tone');
-		expect(['accent', 'info']).toContain(tone);
+		expect(['success', 'default']).toContain(tone);
+		await expect(badge).not.toHaveAttribute('data-outlined', /.*/);
+		await expect(badge).toHaveAttribute('data-schild', 'status');
 	});
 
 	test('AC-13: Klick auf "Pausieren" → PATCH + Badge wechselt zu "Pausiert" ohne Reload', async ({
@@ -92,10 +92,12 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		// Klick → PATCH
 		await hubAktion(page, 'pause');
 
-		// Nach Response: Badge zeigt 'Pausiert' (data-tone=warning)
+		// Nach Response: Badge zeigt 'Pausiert'. Seit #2980 AC-21 ist jeder Zustand außer „aktiv"
+		// neutral (data-tone=default); der Zustand selbst steht in data-status.
 		const badge = page.getByTestId('trip-detail-status-badge');
 		await expect(badge).toContainText('Pausiert');
-		await expect(badge).toHaveAttribute('data-tone', 'warning');
+		await expect(badge).toHaveAttribute('data-status', 'paused');
+		await expect(badge).toHaveAttribute('data-tone', 'default');
 
 		// Menue-Eintrag wechselt auf 'Fortsetzen'
 		await menueHat(page, { pause: false, resume: true });

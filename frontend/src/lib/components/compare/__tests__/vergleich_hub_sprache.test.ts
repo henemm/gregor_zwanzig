@@ -129,7 +129,9 @@ describe('AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im 
 		const s = sichtbar(e);
 		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', 'Locations · Tirol', 'Comparison table · Morning briefing 07:00', 'End date passed', 'Finish setup', 'Send test ▾', 'Sending…', 'Status change failed. Please try again.', '3 locations', 'Winter sports', '27 Oct 2026', 'No delivery yet', 'Active', 'Paused'])
 			hat(s, t);
-		for (const t of ['aria-label="More actions"', 'aria-label="Back to overview"']) hat(e, t);
+		// #2980 AC-24 (ADR-0118): der Zurück-Pfeil („Back to overview") entfällt.
+		hat(e, 'aria-label="More actions"');
+		hatNicht(e, 'aria-label="Back to overview"');
 		// #2794 Fix-Loop B4: Karte „Wetter" ohne die alten Begriffe (SSR ohne Vorlagen ⇒ „—").
 		for (const t of ['target range', 'highlighted, no score']) hatNicht(s, t);
 		for (const t of ['Idealbereich', 'Markierung, kein Score']) hatNicht(sichtbar(de), t);

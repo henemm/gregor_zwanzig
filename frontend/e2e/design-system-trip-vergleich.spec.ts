@@ -340,10 +340,11 @@ test('DS-8: Hub-Reiterleiste am Computer ohne Kasten, Grundlinie --g-rule, 13 px
 		});
 		expect(m.inaktiv.length, `${kind}: inaktive Reiter`).toBe(3);
 		for (const r of m.inaktiv) {
+			// #2980 AC-17 (ADR-0118, Mockup .tab): inaktiver Reiter --g-ink-3 statt --g-ink.
 			expect(r, `${kind}: inaktiver Reiter`).toMatchObject({
 				fontSize: '13px',
 				fontWeight: '500',
-				color: TOKEN_RGB.ink,
+				color: TOKEN_RGB.ink3,
 				borderTopWidth: '0px',
 				borderLeftWidth: '0px',
 				borderRightWidth: '0px'
@@ -1277,7 +1278,7 @@ async function pruefeUeberlauf(page: Page, seite: string, fehler: string[]): Pro
 	if (zuviel > 0) fehler.push(`${seite}: läuft waagerecht ${zuviel} px über`);
 }
 
-test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, Standardwerte, ⓘ, Zustellungs-Schalter, Wetter-Knöpfe — kein waagerechtes Überlaufen', async ({
+test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Kopfleiste (Hub) bzw. Zurück (Anlegen), Standardwerte, ⓘ, Zustellungs-Schalter, Wetter-Knöpfe — kein waagerechtes Überlaufen', async ({
 	page
 }) => {
 	test.setTimeout(120_000);
@@ -1289,9 +1290,12 @@ test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, 
 		for (const kind of HUB_KINDS) {
 			const id = hubs[kind].id;
 			await openHub(page, kind, id, { tab: 'uebersicht' });
-			const zurueck = page.locator('[data-testid="back-link"]:visible');
-			await expect(zurueck.first()).toBeVisible({ timeout: 15_000 });
-			await messeTippflaechen(zurueck, `${kind}-Hub Zurück`, 1, fehler);
+			// #2980 AC-24 (ADR-0118): der Hub hat am Handy keinen Zurück-Pfeil mehr; gemessen werden
+			// stattdessen die Tippflächen der Kopfleiste (Kebab und „Test schicken ▾").
+			await expect(page.locator('[data-testid="hub-kopf-leiste"] [data-testid="back-link"]'), `${kind}-Hub: Zurück-Pfeil (entfällt)`).toHaveCount(0);
+			const kopfKnoepfe = page.locator('[data-testid="hub-kopf-leiste"] :is([data-testid="subscription-kebab"], [data-testid="subscription-hub-send"]):visible');
+			await expect(kopfKnoepfe.first()).toBeVisible({ timeout: 15_000 });
+			await messeTippflaechen(kopfKnoepfe, `${kind}-Hub Kopfleiste`, 2, fehler);
 			await pruefeUeberlauf(page, `${kind}-Hub Übersicht`, fehler);
 
 			// #2795 S3b 1b: die Schnellwahl-Knöpfe entfallen (V11); gemessen werden die Schalter des neuen

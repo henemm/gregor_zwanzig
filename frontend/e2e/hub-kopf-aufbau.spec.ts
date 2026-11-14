@@ -464,15 +464,18 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 
-	test(`KA-11 (${kind}): Mobil — Zurück-Pfeil führt zur Liste`, async ({ page }) => {
+	// #2980 AC-24 (ADR-0118, Mockup Z. 229–240): kein Zurück-Pfeil mehr am Handy — der Rückweg
+	// ist der Elternteil der Brotkrumen, der auch am Handy ein Link bleibt.
+	test(`KA-11 (${kind}): Mobil — kein Zurück-Pfeil, Brotkrumen-Elternteil führt zur Liste (#2980 AC-24)`, async ({ page }) => {
 		await page.setViewportSize(MOBIL);
 		const hub = await seedKopf(page, kind);
 		try {
 			await openHub(page, kind, hub.id);
-			const zurueck = page.locator('[aria-label^="Zurück"]:visible').first();
-			await expect(zurueck, 'KA-11: mobiler Zurück-Pfeil fehlt').toBeVisible({ timeout: 10_000 });
-			await zurueck.click();
-			await expect.poll(() => new URL(page.url()).pathname, { message: 'KA-11: Zurück-Pfeil führt nicht zur Liste' }).toBe(
+			const kruemel = KRUEMEL[kind](page).filter({ visible: true }).first();
+			await expect(kruemel, 'KA-11: Brotkrumen-Elternteil am Handy fehlt').toBeVisible({ timeout: 10_000 });
+			await expect(page.locator('[data-testid="hub-kopf-leiste"] [aria-label^="Zurück"]:visible'), 'KA-11: Zurück-Pfeil ist noch da').toHaveCount(0);
+			await kruemel.click();
+			await expect.poll(() => new URL(page.url()).pathname, { message: 'KA-11: Brotkrumen-Elternteil führt nicht zur Liste' }).toBe(
 				HUB_SEL[kind].liste.url
 			);
 		} finally {

@@ -15,6 +15,12 @@
 // aufgegangen. Zusicherungen unverändert; die gerenderte Fassung samt Kontrast steht in
 // __tests__/status_schild.test.ts.
 //
+// #2980 (Fix-Loop Bildabgleich c2, Spec feat_2913_c2_seitenkopf.md AC-21, ADR-0118, Mockup
+// Z. 41–43/326): das Schild ist jetzt GEFÜLLT ohne Rahmen, aktiv = good, alles andere neutral.
+// AC-1/AC-2/AC-3 unten sind bewusst auf dieses Soll gezogen (vormals accent/umrandet/info/warning);
+// die gerenderte Fassung samt Kaskade und Kontrast hell/dunkel steht in __tests__/status_schild.test.ts.
+// AC-4 (app.css-Regel für umrandete accent-Pills) bleibt: andere Konsumenten nutzen sie weiter.
+//
 // Ausfuehrung:
 //   cd frontend && node --experimental-strip-types --test \
 //     src/lib/components/shared/status-schild/StatusSchild.atomic.test.ts
@@ -38,12 +44,12 @@ try {
 }
 const cssSource = readFileSync(CSS, 'utf8');
 
-// AC-1: active-Status muss auf 'accent' gemappt sein, nicht auf 'success'
-test('AC-1: TONE_MAP mappt active auf accent (nicht success)', () => {
-	const hasAccentForActive = /active\s*:\s*['"]accent['"]/.test(badgeSource);
+// AC-1 (#2980 AC-21): active-Status ist der good-Ton (Mockup .pill.good), nicht mehr accent
+test('AC-1 (#2980): TONE_MAP mappt active auf good (nicht accent)', () => {
+	const hasGoodForActive = /active\s*:\s*['"]good['"]/.test(badgeSource);
 	assert.ok(
-		hasAccentForActive,
-		'StatusSchild.svelte: active-Status soll tone "accent" haben, nicht "success"'
+		hasGoodForActive,
+		'StatusSchild.svelte: active-Status soll tone "good" haben (#2980 AC-21, Mockup Z. 326), nicht "accent"'
 	);
 });
 
@@ -55,30 +61,22 @@ test('AC-1: TONE_MAP enthält keinen success-Wert mehr für active', () => {
 	);
 });
 
-// AC-2: <Pill> muss data-outlined Attribut haben
-test('AC-2: <Pill> hat data-outlined Attribut', () => {
+// AC-2 (#2980 AC-21): <Pill> ist gefüllt — KEIN data-outlined mehr
+test('AC-2 (#2980): <Pill> ohne data-outlined (gefüllt ohne Rahmen)', () => {
 	const hasDataOutlined = /\<Pill[^>]*data-outlined/.test(badgeSource);
 	assert.ok(
-		hasDataOutlined,
-		'StatusSchild.svelte: <Pill> muss data-outlined Attribut enthalten'
+		!hasDataOutlined,
+		'StatusSchild.svelte: <Pill> trägt noch data-outlined — #2980 AC-21 verlangt die gefüllte Pill'
 	);
 });
 
-// AC-3: Tone-Zuordnungen für planned/paused/archived unverändert
-test('AC-3: planned bleibt auf info gemappt', () => {
-	const hasInfoForPlanned = /planned\s*:\s*['"]info['"]/.test(badgeSource);
-	assert.ok(hasInfoForPlanned, 'StatusSchild.svelte: planned muss tone "info" haben');
-});
-
-test('AC-3: paused bleibt auf warning gemappt', () => {
-	const hasWarningForPaused = /paused\s*:\s*['"]warning['"]/.test(badgeSource);
-	assert.ok(hasWarningForPaused, 'StatusSchild.svelte: paused muss tone "warning" haben');
-});
-
-test('AC-3: archived bleibt auf default gemappt', () => {
-	const hasDefaultForArchived = /archived\s*:\s*['"]default['"]/.test(badgeSource);
-	assert.ok(hasDefaultForArchived, 'StatusSchild.svelte: archived muss tone "default" haben');
-});
+// AC-3 (#2980 AC-21): alle Zustände außer active sind neutral
+for (const zustand of ['draft', 'planned', 'paused', 'finished', 'archived']) {
+	test(`AC-3 (#2980): ${zustand} ist auf neutral gemappt`, () => {
+		const neutral = new RegExp(`${zustand}\\s*:\\s*['"]neutral['"]`).test(badgeSource);
+		assert.ok(neutral, `StatusSchild.svelte: ${zustand} muss tone "neutral" haben (#2980 AC-21, Mockup Z. 326)`);
+	});
+}
 
 // AC-4: app.css muss neue outlined-Rule für accent-Tone enthalten
 test('AC-4: app.css enthält [data-outlined][data-tone="accent"] Rule', () => {

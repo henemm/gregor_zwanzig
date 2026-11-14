@@ -10,6 +10,10 @@
 // testids/Texte laut Vertrag im Kopf von
 // src/lib/components/shared/hub-kopf/__tests__/hub_kopf_c2_mockup.test.ts
 // (hub-kopf-eyebrow, hub-kopf-meta, hub-kopf-aktivieren, subscription-hub-send „Test schicken ▾“).
+//
+// #2980 (Fix-Loop Bildabgleich, ADR-0118) mitgezogen: Knopf ist Btn accent; der Brotkrumen-Elternteil
+// ist auch am Handy der (einzige) Link zur Liste — kein Zurück-Pfeil mehr. Die Optik-Messungen
+// (berechnete Stile, Aufnahmen) stehen in hub-kopf-c2-bildabgleich.staging.spec.ts.
 
 import { test, expect, type Page, type Locator } from '@playwright/test';
 import {
@@ -108,16 +112,19 @@ for (const kind of HUB_KINDS) {
 				await expect(leiste).toBeVisible();
 				const knopf = sichtbar(leiste, 'subscription-hub-send');
 				await expect(knopf, 'AC-1: Knopf „Test schicken ▾“').toHaveText(SOLL.knopf[lang]);
+				await expect(knopf, '#2980 AC-16: Knopf ist Btn accent').toHaveAttribute('data-variant', 'accent');
 				const kebab = sichtbar(leiste, 'subscription-kebab');
 				await expect(kebab).toBeVisible();
 				const kebabLabel = await kebab.evaluate((el) => el.getAttribute('aria-label') ?? el.querySelector('[aria-label]')?.getAttribute('aria-label') ?? '');
 				expect(kebabLabel, 'Kebab „Weitere Aktionen“').toBe(SOLL.kebab[lang]);
-				if (vp === 'desktop') {
+				// #2980 AC-24: Brotkrumen auf beiden Breiten, Elternteil ist der einzige Link der Leiste.
+				{
 					const krumen = sichtbar(page, HUB_KOPF_SEL.breadcrumb);
 					const link = krumen.locator('a');
 					await expect(link).toHaveCount(1);
 					await expect(link).toHaveText(SOLL.eltern[kind][lang]);
 					await expect(link).toHaveAttribute('href', kind === 'route' ? '/trips' : '/compare');
+					await expect(leiste.locator('a:visible'), '#2980 AC-24: kein Zurück-Pfeil in der Leiste').toHaveCount(1);
 				}
 
 				// AC-3/AC-4/AC-5: Kopf

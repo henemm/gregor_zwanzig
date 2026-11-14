@@ -2,7 +2,7 @@
 // Trip (`context="route"`) und Ortsvergleich (`context="vergleich"`).
 // Spec: docs/specs/modules/rework_2837_s1_hub_kopf.md
 //   Entscheidungen 1 (ein Markup, context nur Textwahl/Datenmarke), 2 (Senden
-//   Btn primary in der Leiste), 3 (Vergleich-Entwurf: „Setup abschließen" auf dem
+//   Btn in der Leiste; seit #2980 / ADR-0118 Variante accent statt primary; kein Zurück-Pfeil mehr), 3 (Vergleich-Entwurf: „Setup abschließen" auf dem
 //   Platz von Senden), 4 (Breadcrumb Elternteil Link, Kind kein Link), 5 (Status als
 //   Badge in der Titelzeile), 6 (Kebab vertikal), 10 (testids).
 //   AC-1, AC-3, AC-4, AC-6, AC-7, AC-9, AC-11, AC-13 (Baustein-Anteil).
@@ -146,24 +146,27 @@ for (const context of ['route', 'vergleich'] as const) {
 			assert.ok(!/(?<![A-Za-zÄÖÜäöü])Hub(?![A-Za-zÄÖÜäöü])/.test(t), `„Hub" steht in der Leiste: „${t}"`);
 		});
 
-		test(`AC-2 (${context}): mobiler Zurück-Link in der Leiste, Ziel = Liste, Aria-Text aus dem Katalog`, async () => {
+		// #2980 AC-24 (ADR-0118, Mockup Z. 229–240): kein Zurück-Pfeil mehr, auch nicht am Handy —
+		// der Elternteil des Breadcrumbs ist der einzige Link zur Liste.
+		test(`AC-2 (${context}, neu #2980 AC-24): kein Zurück-Link in der Leiste, einziger Link = Elternteil`, async () => {
 			const p = props(context);
 			const { wurzel } = await render_(p);
 			const leiste = einzig(wurzel, 'hub-kopf-leiste');
 			const zurueck = alle(leiste, (n) => n.attrs['data-testid'] === 'back-link');
-			assert.equal(zurueck.length, 1, `genau ein Zurück-Link in der Leiste erwartet, gefunden ${zurueck.length}`);
-			assert.equal(zurueck[0].attrs.href, (p.parent as { href: string }).href);
-			assert.equal(zurueck[0].attrs['aria-label'], trFor('de', 'aktionen.zurueck_uebersicht'));
+			assert.equal(zurueck.length, 0, `Zurück-Link in der Leiste: ${zurueck.length}× (entfällt)`);
+			const links = alle(leiste, (n) => n.tag === 'a');
+			assert.equal(links.length, 1, `Links in der Leiste: ${links.length} (erwartet nur den Elternteil)`);
+			assert.equal(links[0].attrs.href, (p.parent as { href: string }).href);
 		});
 
-		test(`AC-1 (${context}): Senden ist Btn primary in der Leiste (testid subscription-hub-send), Text = sendLabel`, async () => {
+		test(`AC-1 (${context}): Senden ist Btn accent in der Leiste (testid subscription-hub-send, #2980 AC-16), Text = sendLabel`, async () => {
 			const { wurzel } = await render_(props(context));
 			const leiste = einzig(wurzel, 'hub-kopf-leiste');
 			const senden = einzig(wurzel, 'subscription-hub-send');
 			assert.ok(liegtIn(senden, leiste), 'Senden steht nicht in der Leiste');
 			assert.equal(senden.tag, 'button');
 			assert.equal(senden.attrs['data-slot'], 'btn', 'Senden ist kein Btn');
-			assert.equal(senden.attrs['data-variant'], 'primary', `Senden hat variant „${senden.attrs['data-variant']}" (erwartet primary = Ink)`);
+			assert.equal(senden.attrs['data-variant'], 'accent', `Senden hat variant „${senden.attrs['data-variant']}" (erwartet accent, Fläche --g-accent-deep — #2980 AC-16, ADR-0118)`);
 			assert.equal(text(senden), trFor('de', 'aktionen.senden'));
 			assert.ok(!('disabled' in senden.attrs), 'Senden ist ohne sendDisabled gesperrt');
 		});
@@ -289,16 +292,14 @@ describe('#2837 S1 Entscheidung 1 / F006 — keine Optik nach Art', () => {
 
 describe('#2837 S1 AC-13 — Texte des Bausteins aus dem Katalog (de und en)', () => {
 	for (const context of ['route', 'vergleich'] as const) {
-		test(`${context}: Aria-Texte von Zurück und Kebab folgen der Nutzersprache`, async () => {
+		test(`${context}: Aria-Text des Kebab folgt der Nutzersprache; kein Zurück-Link (#2980 AC-24)`, async () => {
 			locale.set('de');
 			const de = await render_(props(context, {}, 'de'));
 			locale.set('en');
 			const en = await render_(props(context, {}, 'en'));
 			for (const [lang, r] of [['de', de], ['en', en]] as const) {
 				const leiste = einzig(r.wurzel, 'hub-kopf-leiste');
-				const zurueck = alle(leiste, (n) => n.attrs['data-testid'] === 'back-link')[0];
-				assert.ok(zurueck, `${lang}: kein Zurück-Link`);
-				assert.equal(zurueck.attrs['aria-label'], trFor(lang, 'aktionen.zurueck_uebersicht'), `${lang}: Zurück-Aria`);
+				assert.equal(alle(leiste, (n) => n.attrs['data-testid'] === 'back-link').length, 0, `${lang}: Zurück-Link in der Leiste`);
 				assert.equal(einzig(r.wurzel, 'subscription-kebab').attrs['aria-label'], trFor(lang, 'aktionen.weitere'), `${lang}: Kebab-Aria`);
 			}
 			assert.equal(text(alle(einzig(en.wurzel, 'hub-kopf-breadcrumb'), (n) => n.tag === 'a')[0]), trFor('en', context === 'route' ? 'listen.trips.titel' : 'listen.vergleiche.titel'));

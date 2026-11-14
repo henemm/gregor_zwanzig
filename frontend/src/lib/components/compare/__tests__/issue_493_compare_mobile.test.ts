@@ -174,11 +174,14 @@ describe('AC-4: /compare/[id]/+page.svelte hat mobilen Render-Pfad', () => {
 	// statt ArrowLeft-Icon in einer nachgebauten TopBar.
 	// Umgehängt durch #2837 S1: der <BackLink> steht im HubKopf und zielt auf das Elternteil, das die
 	// Seite mit href '/compare' übergibt (gerendert: hub_kopf_seiten_paritaet AC-2 „führt zur Liste").
-	test('/compare/[id]: <BackLink> für Back-Navigation (HubKopf, Ziel /compare)', () => {
+	// #2980 AC-24 (ADR-0118, Mockup Z. 229–240): der Zurück-Pfeil entfällt auch am Handy; der Weg zur
+	// Liste ist allein der Elternteil-Link des Breadcrumbs (gerendert: hub_kopf_seiten_paritaet AC-2).
+	test('/compare/[id]: Rückweg über den Elternteil-Link des Breadcrumbs (HubKopf, Ziel /compare), kein BackLink', () => {
 		assert.ok(existsSync(DETAIL_PAGE), '/compare/[id]/+page.svelte fehlt');
 		const src = readFileSync(DETAIL_PAGE, 'utf-8');
 		const hubKopf = readFileSync(HUB_KOPF, 'utf-8');
-		assert.match(hubKopf, /<BackLink href=\{parent\.href\}/, 'HubKopf hat keinen <BackLink> auf das Elternteil');
+		assert.match(hubKopf, /<a href=\{parent\.href\} class="breadcrumb-link/, 'HubKopf hat keinen Elternteil-Link im Breadcrumb');
+		assert.ok(!/<BackLink\b/.test(hubKopf), 'HubKopf trägt noch einen <BackLink> (Zurück-Pfeil entfällt, #2980 AC-24)');
 		assert.match(src, /<HubKopf[\s\S]*?parent=\{\{[^}]*href: '\/compare' \}\}/, 'die Seite gibt dem HubKopf nicht /compare als Elternteil');
 		assert.ok(!/ArrowLeft/.test(src) && !/ArrowLeft/.test(hubKopf), 'der Hub-Kopf nutzt noch das ArrowLeft-Icon der abgeschafften TopBar');
 	});

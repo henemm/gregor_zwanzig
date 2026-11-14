@@ -26,7 +26,7 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['aktionen.speichern_fehlgeschlagen', 'Speichern fehlgeschlagen', 'Saving failed'],
 	['aktionen.umbenennen', 'Umbenennen', 'Rename'],
 	['aktionen.wird_gesendet', 'Wird gesendet…', 'Sending…'],
-	['aktionen.zurueck_uebersicht', 'Zurück zur Übersicht', 'Back to overview'],
+	// aktionen.zurueck_uebersicht entfällt mit dem Zurück-Pfeil (#2980 AC-24, ADR-0118).
 	['aktionen.reiter.uebersicht', 'Übersicht', 'Overview'],
 	// #2794 Fix-Loop B1: kurzes Reiter-Label ersetzt aktionen.reiter.etappen_wegpunkte (Bereichsköpfe: #2913).
 	['aktionen.reiter.etappen', 'Etappen', 'Stages'],
@@ -72,13 +72,7 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.status.paused', 'Pausiert', 'Paused'],
 	['trip.status.finished', 'Fertig', 'Finished'],
 	['trip.status.archived', 'Archiviert', 'Archived'],
-	['trip.kopf.etappe', 'ETAPPE', 'STAGE'],
-	['trip.kopf.briefing', 'BRIEFING', 'BRIEFING'],
-	['trip.kopf.start_in', 'START IN', 'STARTS IN'],
-	['trip.kopf.tag_label', 'TAG', 'DAY'],
-	['trip.kopf.status', 'STATUS', 'STATUS'],
-	['trip.kopf.tage_bis', '<tage> Tg', '<tage> d'],
-	['trip.kopf.tag', 'Tag <tag>', 'Day <tag>'],
+	// trip.kopf.* (Handy-Kennzahlenzeile #416) entfällt mit #2980 AC-19 (ADR-0118) samt Katalogschlüsseln.
 	['trip.aktivitaet.trekking', 'Trekking', 'Trekking'],
 	['trip.aktivitaet.skitour', 'Skitour', 'Ski touring'],
 	['trip.aktivitaet.hochtour', 'Hochtour', 'Mountaineering'],

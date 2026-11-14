@@ -693,6 +693,14 @@
   [data-slot="pill"][data-tone="bad"]      { background: rgba(168,50,50,0.10);         color: var(--g-bad); }
   /* #371: ghost-Tone (Sandbox atoms.jsx::Pill) — transparent mit Rule-Border */
   [data-slot="pill"][data-tone="ghost"]    { background: transparent;                  color: var(--g-ink-3); border: 1px solid var(--g-rule); }
+  /* #2980 AC-21/AC-22 (ADR-0118, Mockup .pill.good/.pill.neutral): Status-Schild (StatusSchild,
+     data-schild="status") gefüllt ohne Rahmen. good = --g-good auf hellgrün, neutral = --g-ink-3
+     auf --g-paper-deep (Kontrast hell 4,7:1, dunkel 5,9:1). Pill bildet good/neutral auf
+     success/default ab; die Regeln greifen nur am Schild, andere Pills bleiben unverändert.
+     Die Dunkel-Regel schlägt den #2400-Dunkel-Satz für gefüllte success-Pills (Schrift --g-paper). */
+  [data-slot="pill"][data-schild="status"][data-tone="success"] { background: rgba(61,107,58,0.10); color: var(--g-good); }
+  [data-slot="pill"][data-schild="status"][data-tone="default"] { background: var(--g-paper-deep); color: var(--g-ink-3); }
+  :root[data-theme="dark"] [data-slot="pill"][data-schild="status"]:not([data-outlined])[data-tone="success"] { color: var(--g-good); }
 
   /* === Issue #284: Pill outlined-Variante === */
   [data-slot="pill"][data-outlined] {

@@ -223,8 +223,7 @@ describe('#2284 S2 AC-10/AC-4 — TripHeader mountet den Baustein: alles genau e
 		...TRIP_KOPF_IDS,
 		// #2913 c2: Eyebrow und Meta-Zeile des Mockups (vormals trip-detail-meta) aus dem HubKopf.
 		'hub-kopf-eyebrow',
-		'hub-kopf-meta',
-		'trip-header-mobile-metrics'
+		'hub-kopf-meta'
 	];
 	for (const id of HUELLE_IDS) {
 		test(`${id} kommt im Trip-Kopf genau einmal vor`, async () => {
@@ -232,6 +231,13 @@ describe('#2284 S2 AC-10/AC-4 — TripHeader mountet den Baustein: alles genau e
 			assert.equal(n, 1, `${id}: ${n}× im gerenderten TripHeader (erwartet genau 1)`);
 		});
 	}
+
+	// #2980 AC-19 (PO-Entscheidung 13.11.2026, ADR-0118): die Handy-Kennzahlenzeile
+	// „Etappe · Briefing · Start in“ (#416) entfällt ersatzlos — vormals „genau einmal“.
+	test('trip-header-mobile-metrics kommt im Trip-Kopf nicht mehr vor (#2980 AC-19)', async () => {
+		const n = zaehle(await tripHeaderHtml(TRIP), 'trip-header-mobile-metrics');
+		assert.equal(n, 0, `trip-header-mobile-metrics: ${n}× im gerenderten TripHeader (Kennzahlenzeile entfällt)`);
+	});
 
 	test('genau ein <header class="trip-header"> (Anker der Ratschen-Specs 336/616)', async () => {
 		const body = await tripHeaderHtml(TRIP);

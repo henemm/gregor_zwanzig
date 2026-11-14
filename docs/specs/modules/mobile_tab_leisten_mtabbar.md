@@ -83,7 +83,7 @@ unverändert.
 |--------|------|---------|
 | `<Segmented>` (`frontend/src/lib/components/atoms/Segmented.svelte`) | component | Basis-Atom (Options/selected/onselect, `data-slot`-Test-IDs) — MTabBar kapselt es, baut es nicht nach |
 | `compareTabsResolve.ts` (`COMPARE_TABS`) | constant | Compare-Tab-Definition + Deep-Link-Resolve — unverändert, wird nur an MTabBar durchgereicht |
-| `mobile_usability_tabs_soll.html` | mockup | Verbindliche Optik (Band, Fade, Pill, Badge-Stil) |
+| `mobile_usability_tabs_soll.html` | mockup | Optik für Band, Fade, Badge-Stil (die Pill-Form ist seit 2026-11-13 überholt, ADR-0118: Text-Reiter mit Unterstrich) |
 | `mobile_stages_tab_listen_only` (Spec) | spec | Gleicher Screen, unabhängiger Change — koordinieren, nicht mischen |
 
 ## Implementation Details
@@ -97,6 +97,8 @@ props: items: Array<{value, label, badge?}>, active, onChange, variant: "underli
   overflow-x:auto, scrollbar-width:none, scroll-snap-type:x proximity,
   scroll-padding-inline:12px, Fade-Maske 16px (#1231, unverändert)
   Trigger: min-height:44px, padding var(--g-s-2) var(--g-s-3), Pill-Radius
+  (Pill-Radius/Pill-Optik ÜBERHOLT durch #2980 / ADR-0118: Text-Reiter mit
+  2px-Unterstrich --g-accent, Grundlinie --g-rule, wie am Desktop)
 - Positionierung: $effect auf `active` ->
   activeItem.scrollIntoView({ inline:"start", block:"nearest" })
   (beim Mount + bei jedem Wechsel; smooth beim User-Wechsel)
@@ -106,6 +108,7 @@ props: items: Array<{value, label, badge?}>, active, onChange, variant: "underli
 
 [Badge-Stil (Vorschlag aus Design-Doc, offener Punkt #585)]
 inaktiv: --g-paper-deep / --g-ink-3, mono --g-text-xs; aktiv: transluzent auf Accent-Pill
+(aktiv-Teil überholt: Zähler überall neutral, ADR-0110/#2879; Pill-Reiter entfallen, ADR-0118)
 ```
 
 - **TripTabs:** behält TABS-Definition, Badges, `handleValueChange` (Flush-Guard,
@@ -127,6 +130,14 @@ inaktiv: --g-paper-deep / --g-ink-3, mono --g-text-xs; aktiv: transluzent auf Ac
   Scroll-Position des Bands beim Wechsel.
 
 ## Acceptance Criteria
+
+> **Überholt (#2980, ADR-0118, PO-Entscheidung 13.11.2026):** Die Handy-Optik als Pill-Leiste
+> (Pill-Radius, gefüllter aktiver Reiter, Badge „transluzent auf Accent-Pill“, Mockup
+> `mobile_usability_tabs_soll.html` für die Pill-Form) gilt nicht mehr. Am Handy sind die Reiter
+> Text-Reiter wie am Desktop: inaktiv `--g-ink-3`/500, aktiv `--g-ink`/600 mit 2px-Unterstrich
+> `--g-accent`, Grundlinie `--g-rule`. Soll: `docs/specs/modules/feat_2913_c2_seitenkopf.md`
+> AC-17/AC-18. Das Band-Verhalten (AC-1, AC-2, AC-4, AC-5, AC-7: Scroll, Fade, 44 px,
+> Positionierung) und die A11y (AC-3) gelten unverändert weiter.
 
 - **AC-1:** *(Beispiel `?tab=vorschau` abgelöst durch #1743: der Reiter entfällt, die Kennung löst auf `uebersicht` auf; die Band-Prüfung gilt sinngemäß für einen bestehenden Reiter)* Given ein Deep-Link `?tab=alarme` (Trip) bzw. `?tab=vorschau`
   (Compare) auf 390px / When die Seite geladen wird (keine User-Geste) /
@@ -202,6 +213,8 @@ inaktiv: --g-paper-deep / --g-ink-3, mono --g-text-xs; aktiv: transluzent auf Ac
 
 ## Changelog
 
+- 2026-11-13: Handy-Pill-Optik überholt durch #2980 / ADR-0118 (Text-Reiter mit Unterstrich auf
+  allen Breiten); Band-Verhalten und A11y-ACs gelten weiter. Soll: `feat_2913_c2_seitenkopf.md` AC-17/AC-18.
 - 2026-11-09: Iteration 2 (`size="sm"`) zurückgenommen durch #2845: `MTabBar` hat keinen
   `size`-Prop mehr, Trip und Vergleich tragen dieselbe Desktop-Optik (bisherige Trip-Optik).
   Spec: `docs/specs/modules/rework_2845_hub_reiterleiste.md`.

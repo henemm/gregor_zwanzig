@@ -18,13 +18,19 @@
 // RED HEUTE: `shared/status-schild/StatusSchild.svelte` existiert nicht (Import in `lade()`,
 // jeder Test scheitert einzeln); app.css färbt umrandet-warning mit --g-warning (2,77 : 1).
 //
+// #2980 Fix-Loop Bildabgleich (Spec feat_2913_c2_seitenkopf.md AC-21/AC-22, ADR-0118, Mockup
+// Z. 41–43 und 326): das Schild ist jetzt GEFÜLLT ohne Rahmen — aktiv = good (--g-good auf
+// hellgrün), alle anderen Zustände neutral (--g-ink-3 auf --g-paper-deep). Die Zusicherungen
+// „umrandet, Tone accent/info/warning/default“ (#389, S1b) sind damit bewusst abgelöst; gemessen
+// wird die Kaskade (hub-kopf/__tests__/cssKaskade.ts: app.css + kompiliertes Komponenten-CSS) am
+// gerenderten Schild, unabhängig davon, über welchen Tone/welche Regel die Umsetzung den Ton erreicht.
+//
 // Pfadregel #1409: Prüfling relativ zu DIESER Datei.
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
 //     --experimental-test-module-mocks --test src/lib/components/shared/status-schild/__tests__/status_schild.test.ts
 
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
@@ -49,14 +55,14 @@ afterEach(() => locale.set('de'));
 type Zustand = 'draft' | 'planned' | 'active' | 'paused' | 'finished' | 'archived';
 const ZUSTAENDE: Zustand[] = ['draft', 'planned', 'active', 'paused', 'finished', 'archived'];
 
-/** Spec „Implementation Details": Zustand ⇒ Tone und erwartete Textfarbe (Hex). */
-const ERWARTET: Record<Zustand, { tone: string; farbe: string }> = {
-	draft: { tone: 'default', farbe: '#5c5a52' },
-	planned: { tone: 'info', farbe: '#2c5a8c' },
-	active: { tone: 'accent', farbe: '#8c3e1a' },
-	paused: { tone: 'warning', farbe: '#8a6210' },
-	finished: { tone: 'default', farbe: '#5c5a52' },
-	archived: { tone: 'default', farbe: '#5c5a52' }
+/** #2980 AC-21 (Mockup Z. 326): aktiv = good, alles andere neutral. */
+const TON: Record<Zustand, 'good' | 'neutral'> = {
+	draft: 'neutral',
+	planned: 'neutral',
+	active: 'good',
+	paused: 'neutral',
+	finished: 'neutral',
+	archived: 'neutral'
 };
 
 async function schild(status: Zustand, extra: Record<string, unknown> = {}): Promise<Knoten> {
@@ -71,11 +77,10 @@ async function schild(status: Zustand, extra: Record<string, unknown> = {}): Pro
 describe('#2837 S1b StatusSchild — Baustein (AC-2, AC-8, AC-11)', () => {
 	for (const lang of ['de', 'en'] as const) {
 		for (const z of ZUSTAENDE) {
-			test(`AC-2/AC-11 (${lang}, ${z}): Pill umrandet, Tone „${ERWARTET[z].tone}", data-status, Text aus trip.status.${z}`, async () => {
+			test(`AC-2/AC-11 (${lang}, ${z}): Pill gefüllt (ohne data-outlined, #2980 AC-21), data-status, Text aus trip.status.${z}`, async () => {
 				locale.set(lang);
 				const p = await schild(z);
-				assert.equal(p.attrs['data-tone'], ERWARTET[z].tone, `Tone für ${z}`);
-				assert.ok('data-outlined' in p.attrs, `${z}: Schild nicht umrandet (data-outlined fehlt) — gefüllt?`);
+				assert.ok(!('data-outlined' in p.attrs), `${z}: Schild noch umrandet (data-outlined) — #2980 AC-21: gefüllt ohne Rahmen`);
 				assert.equal(p.attrs['data-status'], z, `${z}: data-status fehlt oder falsch`);
 				assert.equal(text(p), trFor(lang, `trip.status.${z}`), `${z} (${lang}): Text nicht aus dem Katalog trip.status.*`);
 				assert.ok(!('style' in p.attrs), `${z}: Inline-Stil am Schild (Altlast #488 — Farbe gehört dem Pill-Atom)`);
@@ -83,10 +88,9 @@ describe('#2837 S1b StatusSchild — Baustein (AC-2, AC-8, AC-11)', () => {
 		}
 	}
 
-	test('#389 übernommen: aktiv ist accent, nie success (Regressionswächter)', async () => {
+	test('#389 abgelöst durch #2980 AC-21: aktiv ist kein Accent-Schild mehr (good-Ton, Farbe siehe Kaskade unten)', async () => {
 		const p = await schild('active');
-		assert.notEqual(p.attrs['data-tone'], 'success');
-		assert.equal(p.attrs['data-tone'], 'accent');
+		assert.notEqual(p.attrs['data-tone'], 'accent', 'aktiv trägt noch Tone accent (Mockup: good)');
 	});
 
 	test('AC-8: Prop testid landet als data-testid am Schild', async () => {
@@ -102,75 +106,45 @@ describe('#2837 S1b StatusSchild — Baustein (AC-2, AC-8, AC-11)', () => {
 	});
 });
 
-// ── Kaskade aus app.css für die Attribute des gerenderten Schilds ─────────────────────────────
+// ── Kaskade (cssKaskade.ts) für das gerenderte Schild, Hell und Dunkel (#2980 AC-21/AC-22) ─────
+// doc-compliance-test (liest CSS-Quellen als Daten; Verhalten = Kaskade am gerenderten Markup)
 
-const CSS = readFileSync(path.join(FRONTEND, 'src/app.css'), 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '');
+const K = await import('../../hub-kopf/__tests__/cssKaskade.ts');
+const Q = await K.ladeQuellen(FRONTEND);
+const GOOD_RGB = [61, 107, 58];
 
-/** Letzte Definition jedes --g-Tokens in :root (Hex-Werte). Gemessen wird der Hellmodus:
- *  der Dark-Block `:root[data-theme="dark"]` (#2400) zählt hier nicht mit. */
-const HELL_CSS = CSS.replace(/:root\[data-theme=(["'])dark\1\]\s*\{[^{}]*\}/g, '');
-const TOKENS: Record<string, string> = {};
-for (const m of HELL_CSS.matchAll(/(--g-[a-z0-9-]+)\s*:\s*([^;]+);/g)) TOKENS[m[1]] = m[2].trim();
-
-type Regel = { attrs: Array<[string, string | null]>; spez: number; nr: number; decl: Record<string, string> };
-const REGELN: Regel[] = [];
-{
-	let nr = 0;
-	for (const m of CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-		const decl: Record<string, string> = {};
-		for (const d of m[2].split(';')) {
-			const i = d.indexOf(':');
-			if (i > 0) decl[d.slice(0, i).trim()] = d.slice(i + 1).trim();
+describe('#2980 StatusSchild — gefüllt ohne Rahmen, Ton nach Mockup, Kontrast (AC-21, AC-22)', () => {
+	for (const theme of ['hell', 'dunkel'] as const) {
+		for (const z of ZUSTAENDE) {
+			test(`AC-21/AC-22 (${theme}, ${z}): ${TON[z]} — Mono 11 px uppercase, kein Rahmen, Kontrast ≥ 4,5`, async () => {
+				const ctx = { ...K.DESKTOP, theme };
+				const p = await schild(z);
+				const st = (prop: string) => K.stil(Q, p, prop, ctx);
+				const her = (prop: string) => K.herkunft(Q, p, prop, ctx);
+				for (const seite of ['top', 'right', 'bottom', 'left']) {
+					const stil = st(`border-${seite}-style`) ?? 'none';
+					const breite = st(`border-${seite}-width`);
+					assert.ok(stil === 'none' || breite === '0' || breite === '0px', `${z}: Rahmen ${seite} ${breite} ${stil} — ${her(`border-${seite}-style`)}`);
+				}
+				assert.equal(st('font-family'), K.token(Q, '--g-font-mono', theme), `${z}: Schrift nicht Mono — ${her('font-family')}`);
+				assert.equal(st('font-size'), '11px', `${z}: Schriftgröße — ${her('font-size')}`);
+				assert.equal(st('text-transform'), 'uppercase', `${z}: Großschreibung nicht per CSS — ${her('text-transform')}`);
+				const vg = st('color');
+				const hg = st('background-color') ?? 'transparent';
+				if (TON[z] === 'good') {
+					assert.equal(vg, K.token(Q, '--g-good', theme), `${z}: Schrift ${vg} statt --g-good — ${her('color')}`);
+					const f = K.farbe(hg);
+					assert.ok(f && f[0] === GOOD_RGB[0] && f[1] === GOOD_RGB[1] && f[2] === GOOD_RGB[2] && f[3] > 0 && f[3] <= 0.2, `${z}: Grund ${hg} statt hellgrün — ${her('background-color')}`);
+				} else {
+					const erlaubt = theme === 'hell' ? [K.token(Q, '--g-ink-3', theme)] : [K.token(Q, '--g-ink-3', theme), K.token(Q, '--g-ink-2', theme)];
+					assert.ok(erlaubt.includes(vg!), `${z}: Schrift ${vg} statt --g-ink-3 — ${her('color')}`);
+					assert.equal(hg, K.token(Q, '--g-paper-deep', theme), `${z}: Grund ${hg} statt --g-paper-deep — ${her('background-color')}`);
+				}
+				const papier = K.farbe(K.token(Q, '--g-paper', theme))!;
+				const grund = K.ueber(K.farbe(hg)!, papier);
+				const k = K.kontrast(K.ueber(K.farbe(vg)!, grund), grund);
+				assert.ok(k >= 4.5, `${z} (${theme}): Kontrast ${k.toFixed(2)} : 1 < 4,5 (WCAG-AA)`);
+			});
 		}
-		for (const sel of m[1].split(',').map((s) => s.trim())) {
-			// nur reine Attribut-Verbindungen an der Pill (z. B. [data-slot="pill"][data-outlined][data-tone="warning"])
-			if (!/^(\[[^\]]+\])+$/.test(sel) || !sel.includes('[data-slot="pill"]')) continue;
-			const attrs = [...sel.matchAll(/\[([a-z-]+)(?:="([^"]*)")?\]/g)].map((a) => [a[1], a[2] ?? null] as [string, string | null]);
-			REGELN.push({ attrs, spez: attrs.length, nr: nr++, decl });
-		}
-	}
-}
-
-/** Gewinnender Wert einer Eigenschaft für ein Element (Spezifität, dann Reihenfolge). */
-function wert(el: Knoten, eigenschaft: string): string | undefined {
-	const passend = REGELN.filter(
-		(r) => eigenschaft in r.decl && r.attrs.every(([a, v]) => a in el.attrs && (v === null || el.attrs[a] === v))
-	).sort((a, b) => a.spez - b.spez || a.nr - b.nr);
-	return passend.at(-1)?.decl[eigenschaft];
-}
-const aufloesen = (v: string | undefined): string | undefined => {
-	let x = v;
-	for (let i = 0; i < 5 && x && /var\(/.test(x); i++) x = x.replace(/var\((--[a-z0-9-]+)\)/g, (_, t) => TOKENS[t] ?? `var(${t})`);
-	return x?.toLowerCase();
-};
-function kontrast(a: string, b: string): number {
-	const lum = (hex: string) => {
-		const h = hex.replace('#', '');
-		const [r, g, bl] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((s) => (s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4));
-		return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
-	};
-	const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m);
-	return (x + 0.05) / (y + 0.05);
-}
-
-describe('#2837 S1b StatusSchild — Farbe aus der echten app.css-Kaskade (AC-2, AC-4, AC-5)', () => {
-	test('Messaufbau: Papier- und Karten-Token sind Hex-Farben', () => {
-		assert.match(TOKENS['--g-paper'] ?? '', /^#[0-9a-f]{6}$/i);
-		assert.match(TOKENS['--g-card'] ?? '', /^#[0-9a-f]{6}$/i);
-		assert.ok(REGELN.length > 5, 'Messaufbau: keine Pill-Regeln in app.css gefunden');
-	});
-
-	for (const z of ZUSTAENDE) {
-		test(`AC-2/AC-4/AC-5 (${z}): Schrift ${ERWARTET[z].farbe}, Grund transparent, Rand currentColor, Kontrast ≥ 4,5 auf Papier und Karte`, async () => {
-			const p = await schild(z);
-			const farbe = aufloesen(wert(p, 'color'));
-			assert.equal(farbe, ERWARTET[z].farbe, `${z}: Schriftfarbe ${farbe} (erwartet ${ERWARTET[z].farbe}) — Mutation „Pausiert wieder --g-warning"?`);
-			assert.equal(aufloesen(wert(p, 'background')), 'transparent', `${z}: Schild ist gefüllt statt umrandet`);
-			assert.match(wert(p, 'border') ?? '', /currentcolor/i, `${z}: Rand nicht in Schriftfarbe`);
-			for (const grund of ['--g-paper', '--g-card']) {
-				const k = kontrast(farbe!, TOKENS[grund]);
-				assert.ok(k >= 4.5, `${z}: Kontrast ${k.toFixed(2)} : 1 auf ${grund} < 4,5 (WCAG-AA)`);
-			}
-		});
 	}
 });

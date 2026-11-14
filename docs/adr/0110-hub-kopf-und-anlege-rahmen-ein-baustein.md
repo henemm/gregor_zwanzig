@@ -1,6 +1,6 @@
 # ADR-0110: Hub-Kopf und Anlege-Rahmen sind bei Trip und Ortsvergleich ein Baustein; Hauptaktion in Ink, Accent für Weiter und Aktiv-Zustand
 
-- **Status:** Akzeptiert
+- **Status:** Teilweise abgelöst durch ADR-0118 (Punkt 2 für „Test schicken ▾“: Akzent-Fläche `--g-accent-deep` statt Ink; Punkt 3: kein Zurück-Pfeil, voller Name statt Kürzel; Punkt 6: Mobil-Kennzahl-Kacheln entfallen; Issue #2980) — sonst Akzeptiert
 - **Datum:** 2026-11-06
 - **Bezug:** Issue #2837 (Scheibe S1 Hub-Kopf, Scheibe S2 Anlege-Rahmen), Epic #2345 (DoD-2 Oberfläche); Spec `docs/specs/modules/rework_2837_s1_hub_kopf.md`; schreibt ADR-0097 (Trip und Ortsvergleich teilen ihren Code) fort; Leitprinzip „Hoher Kontrast = Lesbarkeit“ (`docs/reference/design_system.md`).
 - **Ergänzt durch:** ADR-0111 (Design-Vorgaben bereinigt, Issue #2881)

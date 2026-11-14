@@ -58,7 +58,7 @@ ist auf Trip- und Vergleichsseiten durch diese Tokens ersetzt (#2881).
 | `--g-ink-muted` | `#5c5a52` | Sekundärtext, Body |
 | `--g-ink-faint` | `#9c9a90` | Tertiär, Labels, Placeholder, Borders |
 
-**Hauptaktion = Ink (`Btn primary`, `--g-ink`)** — z. B. „Test schicken ▾“ im Hub-Kopf (#2913 c2, 2026-11-13; vorher „Senden“), „Trip speichern“/„Briefing aktivieren“ unten rechts im Fuß des geteilten Anlege-Rahmens (`shared/anlege-rahmen/AnlegeRahmen.svelte`, „Abbrechen“ als `Btn ghost` unten links, „Weiter“ als `Btn accent`). Ink auf Papier etwa 15:1 (Leitprinzip oben, ADR-0110, #2837). Die Fläche von `Btn accent` ist seit #2879 `--g-accent-deep` (siehe Accent).
+**Hauptaktion = Ink (`Btn primary`, `--g-ink`)** — z. B. „Trip speichern“/„Briefing aktivieren“ unten rechts im Fuß des geteilten Anlege-Rahmens (`shared/anlege-rahmen/AnlegeRahmen.svelte`, „Abbrechen“ als `Btn ghost` unten links, „Weiter“ als `Btn accent`). Ink auf Papier etwa 15:1 (Leitprinzip oben, ADR-0110, #2837). Die Fläche von `Btn accent` ist seit #2879 `--g-accent-deep` (siehe Accent). Ausnahme seit 2026-11-13 (ADR-0118): „Test schicken ▾“ im Hub-Kopf (Trip und Ortsvergleich) ist Akzent-Hauptaktion (`Btn accent`).
 
 **Design-Vision (nicht implementiert):** vierte Stufe (`--g-ink-4`) für Hint/Placeholder
 — `--g-ink-faint` deckt beide ab.
@@ -71,7 +71,7 @@ ist auf Trip- und Vergleichsseiten durch diese Tokens ersetzt (#2881).
 | Token | Hex | Verwendung |
 |---|---|---|
 | `--g-accent` | `#c45a2a` | Akzent für „Weiter“ und Aktiv-Zustände (ADR-0110). Direkt nur ohne Text: Unterstrich des aktiven Reiters, Fortschritts-Segmente, Rahmen, Punkte, Logo-Blitz (Nicht-Text-Schwelle 3:1; auf Papier 3,94:1). Unter oder als Text immer `--g-accent-deep` |
-| `--g-accent-deep` | `#8c3e1a` | Accent **unter oder als Text**: Fläche von `Btn accent`/`MBtn accent` („Weiter“), aktiver Handy-Reiter, Accent-Text (Kürzel, Rangnummern, Kennzahl „Aktiv“), Text auf `--g-accent-tint` |
+| `--g-accent-deep` | `#8c3e1a` | Accent **unter oder als Text**: Fläche von `Btn accent`/`MBtn accent` („Weiter“, „Test schicken ▾“ im Hub-Kopf, ADR-0118), Accent-Text (Kürzel, Rangnummern, Kennzahl „Aktiv“), Text auf `--g-accent-tint` |
 | `--g-accent-tint` | `rgba(196,90,42,0.08)` | subtiler Fond hinter Accent-Text |
 
 **Regel (#2879, ADR-0110-Nachtrag): Accent unter Text = `--g-accent-deep`.** Weiß bzw. Papier auf `--g-accent` erreicht nur 4,34:1 bzw. 3,94:1 und verfehlt WCAG-AA (4,5:1 für Text unter 24 px bzw. 18,66 px fett); auf `--g-accent-deep` sind es 7,45:1 bzw. 6,77:1. Hover dunkler: 85 % `--g-accent-deep` mit Schwarz. Dasselbe gilt sinngemäß für Warnfarbe als Text (`--g-warn-deep` statt `--g-warn`). `--g-ink-4` bleibt Platzhaltern und gesperrten Elementen vorbehalten; jeder Lesetext nutzt mindestens `--g-ink-3`. Prüftest: `frontend/e2e/kontrast-trip-vergleich.spec.ts`.
@@ -225,6 +225,7 @@ verwendet einfache, leicht erhöhte Schatten.
 ### Button (`Btn`) — implementiert in `frontend/src/lib/components/ui/btn/Btn.svelte`
 - **Variants:** `primary` (default), `accent`, `outline`, `ghost`, `secondary`, `destructive`, `link`
 - **`destructive`-Fläche (#1831):** per `color-mix(in oklab, var(--g-danger) 10%/18%, transparent)` aus dem Token gemischt (kein Literal `rgba(179,58,42,…)`); im Dunkelmodus dadurch aus `#ee7a7a` getönt. `@property --color-destructive` initial-value `rgb(168, 50, 50)`.
+- **Akzent-Knopf (`variant="accent"`, ADR-0118):** Fläche `--g-accent-deep`, Schrift `--g-on-accent` (Regel in `app.css`, Abschnitt #2879). Das Mockup-Orange `--g-accent` wird als Fläche nicht verwendet (WCAG-AA). Einsatz: „Test schicken ▾“ im Hub-Kopf (Trip und Ortsvergleich), „Weiter“.
 - **Sizes:** `xs`, `sm`, `md` (default), `lg`, `icon`, `icon-xs`, `icon-sm`, `icon-lg`
 - **Tag-Switch:** Render als `<a>` wenn `href` gesetzt, sonst `<button>`
 - **Disabled-State:** ARIA-konform (`aria-disabled="true"`; bei Links zusätzlich `role="link"`, `tabindex={-1}`)
@@ -238,6 +239,7 @@ Ist hat 7 (inkl. `outline`/`secondary`/`destructive`/`link` aus Tailwind-CVA-Erw
 ### Pill / Badge
 - Padding `3px 9px`, `border-radius: var(--g-r-pill)`, `font-size: 11px`, `font-family: mono`, `letter-spacing: 0.04em`, `text-transform: uppercase`, `font-weight: 500`, `line-height: 1.4`, `gap: 6px`
 - **Tones:** `neutral` (Ink-Tint), `accent` (`--g-accent-tint` BG, `--g-accent-deep` FG), `good`, `warn`, `bad`, `ghost` (transparent, Rule-Rahmen)
+- **Status-Pill (`shared/status-schild/StatusSchild.svelte`, ADR-0118):** gefüllt, ohne Rahmen. Aktiver Status (`active`) `good` (Text `--g-good` auf `rgba(61,107,58,.1)`), alle übrigen Stände (Entwurf, geplant, pausiert, fertig, archiviert) `neutral` (`--g-paper-deep` mit `--g-ink-3`). Gilt im Trip- und Vergleichs-Kopf.
 
 ### Card
 - `background: var(--g-card)` · `border: 1px solid var(--g-rule)` · `border-radius: var(--g-r-3)` · `box-shadow: var(--g-shadow-1)` · Default-Padding `20 px`
@@ -266,7 +268,9 @@ Untertitel-Block: Eyebrow oben, Title 22 px / `font-weight: 600` / `letter-spaci
 - **Genau zwei Reiterleisten.** Im **Hub** `mobile/MTabBar.svelte`: am Computer kein Kasten (die globale
   Regel `[data-slot="segmented"]` wird zurückgesetzt), eine Grundlinie 1 px `--g-rule`, Reiter 13 px/500
   `--g-ink`, aktiv 600 mit 2-px-Unterstrich `--g-accent`, Zähler Mono 10 px neutral
-  (`--g-paper-deep`/`--g-ink-3`, Radius 3 px); am Handy Pillen (aktiv `--g-accent-deep`). Beim **Anlegen**
+  (`--g-paper-deep`/`--g-ink-3`, Radius 3 px). **Am Handy dieselbe Optik** (ADR-0118, überholt die Pill-Leiste aus
+  ADR-0109/0111): Text-Reiter, inaktiv `--g-ink-3` 500, aktiv `--g-ink` 600 mit Unterstrich `--g-accent`, Grundlinie
+  `--g-rule`, wischbar, Tippfläche 44 px. Beim **Anlegen**
   `shared/anlege-rahmen/AnlegeReiter.svelte` (Unterstrich auf allen Breiten, Zustände erledigt/gesperrt).
   Eine dritte, handgebaute Leiste ist nicht zulässig. Trip und Vergleich tragen jeweils dieselbe Leiste.
 - **Listen:** Trip-Liste und Vergleichsliste sind Tabellen (`ListTable`), am Handy Karten-Zeilen; AP-003

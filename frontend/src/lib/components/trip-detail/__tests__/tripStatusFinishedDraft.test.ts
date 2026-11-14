@@ -4,7 +4,7 @@
 // Spec: docs/specs/modules/fix_1271_status_zeitformat.md (AC-3, AC-5, AC-6)
 //
 // Test-Pattern: Source-Inspection (wie TripStatusBadge.atomic.test.ts /
-// TripHeader.mobile-metrics.test.ts im selben Verzeichnis) — .svelte-Dateien
+// vormals TripHeader.mobile-metrics.test.ts, entfernt mit #2980 AC-19) — .svelte-Dateien
 // werden hier nicht kompiliert/gerendert, daher Prüfung auf Markup-/Map-
 // Struktur im rohen Quelltext statt Ausführung.
 //
@@ -74,9 +74,13 @@ test('AC-5/#1271: LABEL_MAP enthält ein deutsches Label für draft', () => {
 // Anzeige für vergangene-aber-nicht-archivierte Trips bestehen.
 // ---------------------------------------------------------------------------
 
-test('AC-6/#1271: etappeValue-Bedingung berücksichtigt finished neben archived', () => {
+// #2980 AC-19 (PO-Entscheidung 13.11.2026, ADR-0118): die Kennzahlenzeile samt Kachel „ETAPPE“
+// entfällt ersatzlos. Solange es eine Etappen-Kachel gibt, gilt AC-6 weiter; ohne Kachel ist die
+// Zusicherung gegenstandslos — der Wegfall selbst ist gerendert bewacht in
+// shared/hub-kopf/__tests__/hub_kopf_c2_bildabgleich.test.ts („AC-19 …“).
+test('AC-6/#1271: etappeValue-Bedingung berücksichtigt finished neben archived (entfällt mit der Kachel, #2980 AC-19)', () => {
 	const etappeBlockMatch = headerSource.match(/etappeValue[\s\S]{0,400}/);
-	assert.ok(etappeBlockMatch, 'TripHeader.svelte: etappeValue-Block nicht gefunden.');
+	if (!etappeBlockMatch) return;
 	const block = etappeBlockMatch![0];
 	assert.ok(
 		block.includes("'finished'") || block.includes('"finished"'),
