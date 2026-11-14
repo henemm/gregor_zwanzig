@@ -281,7 +281,10 @@ Untertitel-Block: Eyebrow oben, Title 22 px / `font-weight: 600` / `letter-spaci
   `.tnum` = tabellarische Ziffern ohne Schriftwechsel.
 - **Eingabefelder (Lieferung B):** keine nativen Datums-, Uhrzeit-, Auswahl- oder Radio-Felder auf Trip-
   und Vergleichsseiten. Datum `molecules/DatumFeld.svelte` (bits-ui DatePicker, Segmente Tag/Monat/Jahr,
-  Kalender im Popover, Wochenbeginn Montag; de `19.11.2026`, en Tag zuerst `19/11/2026`), Uhrzeit
+  Kalender im Popover, Wochenbeginn Montag; de `19.11.2026`, en Tag zuerst `19/11/2026`; getippte acht
+  Ziffern werden per eigenem Tipp-Protokoll `molecules/datumTipp.ts` unverändert übernommen, ein nicht
+  existierendes Datum wie 31.04. meldet „Dieses Datum gibt es nicht.“ (`role="alert"`, nichts gespeichert;
+  Spec `docs/specs/modules/fix_2999_datumfeld_tag_31.md`, #2999)), Uhrzeit
   `molecules/UhrzeitFeld.svelte` (bits-ui TimeField, immer 24 h); Werte nach außen weiter `YYYY-MM-DD`
   bzw. `HH:MM`. Auswahl `ui/select/Select.svelte` (bits-ui Select, Rolle listbox, `options: {value,label}[]`,
   `onValueChange`). Zwei bis drei feste Möglichkeiten (Mail-Format, Berichtsart im Sende-Dialog):
