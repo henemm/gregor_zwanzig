@@ -52,6 +52,10 @@ ANKER: dict[str, tuple[str, str]] = {
     "api.fehler.segment_unbekannt": (
         "Unbekannte segment_id '{segment_id}' im Trip",
         "Unknown segment_id '{segment_id}' in the trip"),
+    # Issue #2069 (AC-5): Trip ohne auswertbare Etappe, Payload nennt segment_id.
+    "api.fehler.trip_ohne_segmente": (
+        "Der Trip hat noch keine Etappe mit Wegpunkten, segment_id '{segment_id}' ist nicht auflösbar",
+        "The trip has no stage with waypoints yet, segment_id '{segment_id}' cannot be resolved"),
     "api.fehler.metrik_unbekannt": (
         "Unbekannte Metrik '{metric}' in changes", "Unknown metric '{metric}' in changes"),
     "api.fehler.alarm_body_ungueltig": (

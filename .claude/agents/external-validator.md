@@ -49,30 +49,26 @@ AMBIGUOUS gehst — sie machen interne Logik prüfbar:
   (z.B. `format_metric_value("m", 12240.0) == "12.240 m"`).
 - `POST /api/trips/{id}/alert-preview` mit JSON-Body
   `{"changes":[…WeatherChange…], "segment_times":[{"segment_id":"…","start":"HH:MM","end":"HH:MM"}]}`
-  → `{"subject":"…","email_html":"…","email_plain":"…","telegram":"…","sms":"…"}` — rendert den
-  Alarm-Text über die Produktions-Renderer, **ohne Versand**. Nützlich für ACs über
-  Alarm-**Textinhalt** und Change-Zeilen-Formatierung.
+  → `{"subject":"…","email_html":"…","email_plain":"…","telegram":"…","sms":"…","bezugstag":"YYYY-MM-DD"|null,"stundenreihe":bool}`
+  — rendert den Alarm-Text über die Produktions-Renderer, **ohne Versand**. Seit Issue **#2069**
+  rendert der `changes`- und der `official`-Zweig die **echten Segmente des Bezugstags** (Distanz,
+  Höhenmeter, Koordinaten, gemessene km-Spanne wie im Versand). Bezugstag = heute, wenn der Trip
+  heute eine Etappe hat, sonst die nächste kommende, sonst die letzte Etappe; er steht in
+  `bezugstag` (bei `onset` `null`). Damit ist der Endpoint auch für segmentbezogene ACs nutzbar.
 
-  🔴 **NICHT nutzbar für segmentbezogene ACs** (gemessene km-Spanne, Distanz, Höhenmeter,
-  Koordinaten): Der `changes`-Zweig rendert **Stub-Segmente** — `GPXPoint(lat=0.0, lon=0.0)`,
-  `distance_km=0.0`, unvermessen — statt der echten Trip-Segmente; vom Trip werden nur Name und
-  Zeitzone benutzt (`src/services/validator_render_service.py:56,147`, Issue **#2069**). Ein
-  solches Merkmal fehlt in der Antwort **immer**, unabhängig davon, ob die Implementierung stimmt.
-  Wer daraus auf einen Fehler schließt, schreibt ein falsches BROKEN (passiert bei #2036).
-  Gegenprobe für segmentbezogene Merkmale: die SMS-Vorschau
-  `GET /api/preview/{id}/sms` bekommt die echten Segmente (die Telegram-/E-Mail-Vorschau-Routen
-  sind seit #1743 entfernt).
+  **`stundenreihe`:** `true` nur, wenn über den Anker-Pfad (#1737) eine echte Stundenreihe vorlag.
+  Bei `false` sind Stundenzeilen grundsätzlich nicht beobachtbar — deren Fehlen ist dann **kein**
+  Befund.
 
   **Wertebereiche** (falscher Wert → HTTP 500 ohne Stacktrace, sieht aus wie ein defekter
   Endpoint): `severity` nur `minor|moderate|major`, `direction` nur `increase|decrease`.
   Unbekannte **Metrik**-Namen werden dagegen sauber mit 422 abgewiesen.
 
-  **Aufbau-Selbstkontrolle, PFLICHT vor der ersten Messung:** Der Trip braucht eine Etappe auf
-  dem **heutigen** Datum, sonst ist die Menge der echten Segment-IDs leer und **jede** erfundene
-  `segment_id` wird still akzeptiert (`"99"` → `"Seg 99"`). Schick zuerst bewusst
-  `"segment_id":"zzz-unbekannt"`: Kommt **kein** `422`, ist der Aufbau ungültig — dann NICHT
-  weitermessen. `segment_id` ist die schlichte Segmentnummer (`"1"`, `"2"`, `"Ziel"`), keine
-  technische Kennung.
+  **Fehlercodes der Segmentprüfung:** Eine `segment_id`, die es am Bezugstag nicht gibt, liefert
+  immer `422` `segment_unbekannt` (auch bei einem nicht heute laufenden Trip). Hat der Trip keine
+  Etappe mit mindestens 2 Wegpunkten und der Payload nennt eine `segment_id`, kommt `422`
+  `trip_ohne_segmente`. `segment_id` ist die schlichte Segmentnummer je Tag (`"1"`, `"2"`, …),
+  keine technische Kennung.
 - `GET /api/_validator/detector-thresholds?trip=<id>`
   → `{"config_source":"<from_alert_rules|from_display_config|from_trip_config|defaults>", "effective_detector":"<…>", "thresholds":{…}}`
   — zeigt, welchen Detector-Pfad der `WeatherChangeDetectionService` für diesen

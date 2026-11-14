@@ -11,6 +11,7 @@
   "api.fehler.typ_ungueltig": "Invalid type '{type}'",
   "api.fehler.body_genau_einer": "Body must contain exactly one of 'onset', 'changes', 'official' or 'nowcast_frames'",
   "api.fehler.segment_unbekannt": "Unknown segment_id '{segment_id}' in the trip",
+  "api.fehler.trip_ohne_segmente": "The trip has no stage with waypoints yet, segment_id '{segment_id}' cannot be resolved",
   "api.fehler.metrik_unbekannt": "Unknown metric '{metric}' in changes",
   "api.fehler.alarm_body_ungueltig": "Invalid alert body: {grund}",
   "api.fehler.schwere_unbekannt": "Unknown severity '{severity}' in changes, allowed values: {erlaubt}",

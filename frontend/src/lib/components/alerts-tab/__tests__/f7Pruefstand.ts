@@ -79,11 +79,20 @@ export const REGELN = [
 export const TRIP_METRIKEN = ['wind_gust', 'temperature_min', 'cape', 'thunder_onset'];
 export const TRIP_STUFEN = { wind_gust: 'standard', temperature_min: 'sensibel', cape: 'entspannt', thunder_onset: 'off' };
 
+/** Issue #2069 (AC-8): eine Etappe mit 2 Wegpunkten — ohne sie zeigt die
+ * Beispiel-Warnung den Hinweis „keine Etappen" statt des Vorschau-Knopfs. */
+export const ETAPPEN = [
+	{ id: 'T1', name: 'Etappe 1', date: '2026-07-01', waypoints: [
+		{ id: 'G1', name: 'Calenzana', lat: 42.5, lon: 8.85, elevation_m: 275 },
+		{ id: 'G2', name: 'Ortu di u Piobbu', lat: 42.45, lon: 8.9, elevation_m: 1520 }
+	] }
+];
+
 export function trip(id = 'golden-de-gr20') {
 	return {
 		id,
 		name: 'GR20',
-		stages: [],
+		stages: ETAPPEN,
 		alert_rules: REGELN,
 		display_config: {},
 		report_config: { send_email: true, send_telegram: true, send_sms: false },
@@ -174,7 +183,7 @@ export function zustaendeRendern(): string {
 		html(AlertChannelPicker, { channels: { telegram: true, sms: true, email: false, premium_sms: false }, onToggle: nix, targets: { telegram: '987654321' }, dense: true }),
 		html(AlertPreviewCard, { kind: 'route', id: '', alertRules: regel }),
 		html(AlertPreviewCard, { kind: 'vergleich', id: 'v1', alertRules: regel, locationIds: [] }),
-		html(AlertPreviewCard, { kind: 'route', id: 't1', alertRules: aus }),
+		html(AlertPreviewCard, { kind: 'route', id: 't1', alertRules: aus, stages: ETAPPEN }),
 		html(AlertPreviewCard, { kind: 'route', id: 't1', alertRules: [] }),
 		html(AlertQuietHoursCard, {})
 	].join('\n');
@@ -183,7 +192,7 @@ export function zustaendeRendern(): string {
 function vorschauRendern(zustand: Record<string, unknown>): string {
 	g.__F7_VORSCHAU = { subject: '', emailHtml: '', telegram: '', sms: '', loading: false, error: null, ...zustand };
 	try {
-		return html(VorschauZustand, { kind: 'route', id: 't1', alertRules: REGELN });
+		return html(VorschauZustand, { kind: 'route', id: 't1', alertRules: REGELN, stages: ETAPPEN });
 	} finally {
 		delete g.__F7_VORSCHAU;
 	}

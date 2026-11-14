@@ -183,7 +183,12 @@ const REGELN = [
 const ALARM_TRIP = {
 	id: 'trip-2283',
 	name: 'KHW 403',
-	stages: [{ id: 'S1', name: 'Etappe 1', waypoints: [] }],
+	// Issue #2069 (AC-8): Etappe mit 2 Wegpunkten — ohne sie zeigt die Karte den
+	// Hinweis „keine Etappen" statt des Lade-Knopfs.
+	stages: [{ id: 'S1', name: 'Etappe 1', waypoints: [
+		{ id: 'G1', name: 'Start', lat: 47.0, lon: 11.0, elevation_m: 1000 },
+		{ id: 'G2', name: 'Ziel', lat: 47.1, lon: 11.1, elevation_m: 1400 }
+	] }],
 	alert_rules: REGELN,
 	display_config: {},
 	report_config: { send_email: true }

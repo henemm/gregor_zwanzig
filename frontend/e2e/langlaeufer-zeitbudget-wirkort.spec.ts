@@ -112,7 +112,11 @@ test.describe('#2361 Langlaeufer-Budgets wirken an der Aufrufstelle', () => {
 						id: `${tripId}-s1`,
 						name: 'Etappe 1',
 						date: '2026-08-01',
-						waypoints: [{ id: `${tripId}-wp1`, name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 500 }]
+						// Issue #2069 (AC-8): die Vorschau braucht eine Etappe mit >= 2 Wegpunkten.
+						waypoints: [
+							{ id: `${tripId}-wp1`, name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 500 },
+							{ id: `${tripId}-wp2`, name: 'Ziel', lat: 42.11, lon: 9.02, elevation_m: 800 }
+						]
 					}
 				],
 				// Alarm-Regeln leitet der Server aus den aktiven Wetter-Metriken ab

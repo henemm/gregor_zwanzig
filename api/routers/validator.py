@@ -356,8 +356,10 @@ def alert_preview(
     if sum(provided) != 1:
         raise api_fehler(422, "body_genau_einer", user_id)
 
+    # Issue #2069: EIN Bezugstag fuer ID-Pruefung, Zeitsynthese und Rendering.
+    bezugstag = _preview_bezugstag(trip_obj) if (body.changes or body.official) else None
     if body.official:
-        _validate_official_segment_ids(trip_obj, body.official, user_id)
+        _validate_official_segment_ids(trip_obj, body.official, user_id, bezugstag)
     if body.nowcast_frames:
         _validate_frame_timestamps(body.nowcast_frames, user_id)
     if body.onset:
@@ -366,14 +368,18 @@ def alert_preview(
         _validate_change_metrics(body.changes, user_id)
         _validate_change_severity(body.changes, user_id)
         _validate_onset_shift(body.changes, user_id)
-        _validate_change_segment_ids(trip_obj, body.changes, user_id)
+        _validate_change_segment_ids(trip_obj, body.changes, user_id, bezugstag)
         if not body.segment_times:
-            body.segment_times = _synthesize_segment_times(trip_obj, body.changes, user_id)
+            body.segment_times = _synthesize_segment_times(
+                trip_obj, body.changes, user_id, bezugstag=bezugstag,
+            )
 
     # Issue #1737: echte user_id -> Stundenreihen der Vorschau nutzergebunden.
     # Issue #2961 (ADR-0117): interaktiver Ausloeser, eigenes Kontingent.
     with interaktiver_abruf(user_id) as kontingent:
-        antwort = render_alert_preview(trip_obj, body, user_id=user_id)
+        antwort = render_alert_preview(
+            trip_obj, body, user_id=user_id, bezugstag=bezugstag,
+        )
     if kontingent.gedrosselt:
         raise kontingent_erschoepft(user_id)
     return antwort
@@ -418,31 +424,41 @@ def briefing_alert_preview(
         raise fehler
 
 
-def _real_segment_ids_for_today(trip_obj: Trip) -> set[str]:
-    """Echte Segment-IDs des Trips fuer HEUTE (dieselbe Quelle wie AC-3:
-    ``convert_trip_to_segments``). Leer, wenn der Trip fuer heute keine
-    echten Segmente hat (Stub-/Test-Trip) -- die Aufrufer behandeln das
-    dann als No-Op (fix-1948-s2-preview-eingaben: sonst brechen die
-    bestehenden S2-Tests, die durchgaengig ``stages: []``-Trips nutzen)."""
-    from services.trip_day import trip_local_today
+def _preview_bezugstag(trip_obj: Trip):
+    """Issue #2069: Bezugstag der Vorschau (heute, sonst naechste, sonst
+    letzte Etappe) -- einzige Quelle: ``preview_reference_date``."""
+    from services.trip_day import preview_reference_date
+
+    return preview_reference_date(trip_obj, datetime.now(timezone.utc))
+
+
+def _real_segments(trip_obj: Trip, bezugstag) -> dict:
+    """Echte Segmente des Bezugstags je Kennung (dieselbe Quelle wie der
+    Versand: ``convert_trip_to_segments``). Leer ohne Bezugstag."""
     from services.trip_segments import convert_trip_to_segments
 
-    today = trip_local_today(trip_obj, datetime.now(timezone.utc))
-    return {str(s.segment_id) for s in convert_trip_to_segments(trip_obj, today)}
+    if bezugstag is None:
+        return {}
+    return {str(s.segment_id): s for s in convert_trip_to_segments(trip_obj, bezugstag)}
 
 
-def _reject_unknown_segment_id(real_ids: set[str], segment_id: str, user_id: str) -> None:
-    if real_ids and segment_id not in real_ids:
+def _reject_unknown_segment_id(real_ids, segment_id: str, user_id: str | None) -> None:
+    """Issue #2069: kein stiller No-Op mehr -- ein Trip ohne auswertbare
+    Segmente ergibt ``trip_ohne_segmente``, eine erfundene Kennung
+    ``segment_unbekannt``."""
+    if not real_ids:
+        raise api_fehler(422, "trip_ohne_segmente", user_id, segment_id=segment_id)
+    if segment_id not in real_ids:
         raise api_fehler(422, "segment_unbekannt", user_id, segment_id=segment_id)
 
 
 def _validate_official_segment_ids(
-    trip_obj: Trip, payloads: "list[OfficialAlertPayload]", user_id: str,
+    trip_obj: Trip, payloads: "list[OfficialAlertPayload]", user_id: str, bezugstag,
 ) -> None:
     """fix-1948-s2-preview-eingaben (Bug B Teil 1): ``official[].segment_ids``
-    gegen die echten Trip-Segmente pruefen -- unbekannte ID (bei einem Trip
-    MIT echten Segmenten) -> 422 mit der ID. Leere Liste bleibt erlaubt."""
-    real_ids = _real_segment_ids_for_today(trip_obj)
+    gegen die echten Segmente des Bezugstags pruefen (Issue #2069) --
+    unbekannte ID -> 422 mit der ID. Leere Liste bleibt erlaubt."""
+    real_ids = set(_real_segments(trip_obj, bezugstag))
     for p in payloads:
         for sid in p.segment_ids:
             _reject_unknown_segment_id(real_ids, sid, user_id)
@@ -516,36 +532,33 @@ def _validate_onset_shift(changes: "list[ChangePayload]", user_id: str) -> None:
 
 
 def _validate_change_segment_ids(
-    trip_obj: Trip, changes: "list[ChangePayload]", user_id: str,
+    trip_obj: Trip, changes: "list[ChangePayload]", user_id: str, bezugstag,
 ) -> None:
     """fix-1948-s2-preview-eingaben: dieselbe Pruefung wie bei ``official``,
     aber fuer ``changes[].segment_id`` -- schliesst die Luecke, dass bei
     EXPLIZIT mitgeliefertem ``segment_times`` (kein Aufruf von
     ``_synthesize_segment_times``, dessen AC-3-Pruefung sonst greift) eine
     unbekannte ``segment_id`` bislang ungeprueft blieb."""
-    real_ids = _real_segment_ids_for_today(trip_obj)
+    real_ids = set(_real_segments(trip_obj, bezugstag))
     for c in changes:
         _reject_unknown_segment_id(real_ids, c.segment_id, user_id)
 
 
 def _synthesize_segment_times(
     trip_obj: Trip, changes: "list[ChangePayload]", user_id: str | None = None,
+    *, bezugstag=None,
 ) -> "list[SegmentTimePayload]":
     """Issue #1948 Scheibe S2 (AC-2/AC-3): Segment-Zeiten der in ``changes``
     genannten ``segment_id``s aus dem bereits geladenen Trip synthetisieren
-    — dieselbe Produktions-Segmentierung wie der Versandpfad."""
-    from services.trip_day import trip_local_today
-    from services.trip_segments import convert_trip_to_segments
-
-    today = trip_local_today(trip_obj, datetime.now(timezone.utc))
-    real_segments = {
-        str(s.segment_id): s for s in convert_trip_to_segments(trip_obj, today)
-    }
+    — dieselbe Produktions-Segmentierung wie der Versandpfad, am
+    Bezugstag der Vorschau (Issue #2069) statt nur heute."""
+    if bezugstag is None:
+        bezugstag = _preview_bezugstag(trip_obj)
+    real_segments = _real_segments(trip_obj, bezugstag)
     synthesized: list[SegmentTimePayload] = []
     for c in changes:
-        seg = real_segments.get(c.segment_id)
-        if seg is None:
-            raise api_fehler(422, "segment_unbekannt", user_id, segment_id=c.segment_id)
+        _reject_unknown_segment_id(real_segments, c.segment_id, user_id)
+        seg = real_segments[c.segment_id]
         synthesized.append(SegmentTimePayload(
             segment_id=c.segment_id,
             start=seg.start_time.strftime("%H:%M"),

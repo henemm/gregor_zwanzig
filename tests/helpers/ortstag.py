@@ -25,6 +25,21 @@ def ortstag(lat: float, lon: float, *, now_utc: datetime | None = None) -> date:
     return jetzt.astimezone(tz_for_coords(lat, lon)).date()
 
 
+def etappe_am_ortstag(lat: float, lon: float, *, stage_id: str = "T1") -> dict:
+    """Trip-Etappe (JSON-Form) am Ortstag mit zwei Wegpunkten = genau ein
+    echtes Segment ``"1"`` (Issue #2069: die Alarm-Vorschau akzeptiert nur
+    Segment-Kennungen, die der Trip am Bezugstag wirklich hat)."""
+    return {
+        "id": stage_id, "name": "Etappe 1", "date": ortstag(lat, lon).isoformat(),
+        "waypoints": [
+            {"id": "G1", "name": "Start", "lat": lat, "lon": lon,
+             "elevation_m": 1000, "arrival_override": "08:00"},
+            {"id": "G2", "name": "Ziel", "lat": lat + 0.05, "lon": lon + 0.05,
+             "elevation_m": 1400, "arrival_override": "10:00"},
+        ],
+    }
+
+
 def utc_tag(*, now_utc: datetime | None = None) -> date:
     """Der UTC-Kalendertag, gemessen an now_utc (Default: jetzt).
 

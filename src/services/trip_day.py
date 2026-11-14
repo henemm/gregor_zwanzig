@@ -94,3 +94,26 @@ def trip_local_today(trip: "Trip", now_utc: datetime) -> date:
     #1697, nur ohne eigene Aufloesung.
     """
     return trip_local_now(trip, now_utc).date()
+
+
+def preview_reference_date(trip: "Trip", now_utc: datetime) -> "date | None":
+    """Bezugstag der Alarm-Vorschau (Issue #2069): heute (Ortstag), wenn der
+    Trip heute eine Etappe hat; sonst die naechste kommende Etappe; sonst die
+    letzte. ``None`` ohne jede auswertbare Etappe.
+
+    Auswertbar ist eine Etappe mit mindestens 2 Wegpunkten (= mindestens ein
+    Segment) -- dieselbe Regel wie der Hinweis in ``AlertPreviewCard``. Eine
+    Etappe mit nur einem Wegpunkt wird bei der Wahl uebersprungen.
+
+    EINE Quelle fuer ID-Pruefung, Zeitsynthese und Rendering der Vorschau --
+    keine zweite "heute"-Ermittlung daneben."""
+    dates = sorted(
+        s.date for s in trip.stages
+        if getattr(s, "date", None) and len(getattr(s, "waypoints", None) or ()) >= 2
+    )
+    if not dates:
+        return None
+    today = trip_local_today(trip, now_utc)
+    if today in dates:
+        return today
+    return next((d for d in dates if d > today), dates[-1])

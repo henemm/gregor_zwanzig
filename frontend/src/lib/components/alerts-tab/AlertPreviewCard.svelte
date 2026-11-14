@@ -34,6 +34,12 @@
 	// Leere alert_rules = keine alert-fähigen Metriken aktiv → ehrlicher Hinweis.
 	const hasNoAlertableMetrics = $derived(alertRules.length === 0);
 
+	// Issue #2069 (AC-8): ohne Etappe mit mind. 2 Wegpunkten gibt es keine echten
+	// Segmente — Hinweis statt 422-Fehlertext, kein Abruf.
+	const hasNoStageSegments = $derived(
+		kind === 'route' && !stages.some((s) => (s.waypoints?.length ?? 0) >= 2)
+	);
+
 	async function loadPreview() {
 		loading = true;
 		error = null;
@@ -80,6 +86,11 @@
 		     (das Backend antwortete sonst 422), analog zum „0 Orte"-Hinweis der Vorschau. -->
 		<p class="empty" data-testid="alert-preview-no-locations">
 			{#each textTeile($t('alarme.vorschau.keine_orte')) as teil}{#if teil.platzhalter === 'reiter'}<strong>{$t('alarme.vorschau.reiter_orte')}</strong>{:else}{teil.text}{/if}{/each}
+		</p>
+	{:else if hasNoStageSegments}
+		<!-- Issue #2069 (AC-8): Pendant zu `alert-preview-no-locations` im Trip. -->
+		<p class="empty" data-testid="alert-preview-no-stages">
+			{$t('alarme.vorschau.keine_etappen')}
 		</p>
 	{:else if enabledRules.length === 0}
 		<p class="empty" data-testid="alert-preview-empty">
