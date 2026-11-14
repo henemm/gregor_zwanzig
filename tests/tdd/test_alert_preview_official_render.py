@@ -30,6 +30,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+
+from tests.helpers.ortstag import etappe_am_ortstag, ortstag
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -55,8 +57,10 @@ def stub_trip():
     trip_id = "trip-ac4"
     trip_dir = Path("data/users") / user_id / "briefings"
     trip_dir.mkdir(parents=True, exist_ok=True)
+    # Issue #2069 (AC-10): Trip MIT Etappe am Ortstag -- `segment_ids: ["1"]`
+    # muss ein echtes Segment treffen, sonst 422 `trip_ohne_segmente`.
     (trip_dir / f"{trip_id}.json").write_text(json.dumps({
-        "id": trip_id, "name": "AC-4 Trip", "stages": [],
+        "id": trip_id, "name": "AC-4 Trip", "stages": [etappe_am_ortstag(47.0, 11.0)],
     }))
     yield user_id, trip_id
     shutil.rmtree(Path("data/users") / user_id, ignore_errors=True)
@@ -140,8 +144,14 @@ class TestAC5_FidelityWithDirectRenderPath:
             source=OFFICIAL_PAYLOAD["source"], hazard=OFFICIAL_PAYLOAD["hazard"],
             level=OFFICIAL_PAYLOAD["level"], label=OFFICIAL_PAYLOAD["label"],
         )
+        # Issue #2069 (AC-3): gemessene km-Spanne der Bezugstag-Segmente wie
+        # im Versand -- dieselbe Quelle wie der Endpoint.
+        from services.trip_segments import convert_trip_to_segments, measured_segment_km
+
         dto_notices = build_official_alert_notices(
             trip_obj, [(alert, OFFICIAL_PAYLOAD["segment_ids"])],
+            segment_km=measured_segment_km(
+                convert_trip_to_segments(trip_obj, ortstag(47.0, 11.0))),
         )
         source_label = _official_source_label_for(dto_notices)
         source_url = _official_source_url_for(dto_notices)

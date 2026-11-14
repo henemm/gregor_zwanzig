@@ -82,6 +82,7 @@
 	"alarme.vorschau.nach_speichern": "Die Vorschau mit echten Daten ist nach dem Speichern verfügbar.",
 	"alarme.vorschau.keine_orte": "Noch keine Orte konfiguriert — im Reiter {reiter} Kandidaten hinzufügen.",
 	"alarme.vorschau.reiter_orte": "Orte",
+	"alarme.vorschau.keine_etappen": "Trip hat noch keine Etappen mit Wegpunkten.",
 	"alarme.vorschau.regel_aktivieren": "Aktiviere mindestens eine Alert-Regel, um die Vorschau zu laden.",
 	"alarme.vorschau.laden": "Vorschau laden",
 	"alarme.vorschau.lade": "Lade…",

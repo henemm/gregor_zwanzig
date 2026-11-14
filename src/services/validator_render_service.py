@@ -6,14 +6,14 @@ directly.
 """
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date as date_type
-from datetime import datetime, time, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from app.models import (
     ChangeSeverity,
     ForecastMeta,
-    GPXPoint,
     NormalizedTimeseries,
     Provider,
     SegmentWeatherData,
@@ -86,43 +86,79 @@ def validate_change_severity(severity: Any) -> None:
         )
 
 
-def _stub_segment(seg_time: Any, coords: "tuple[float, float] | None" = None) -> SegmentWeatherData:
-    """Minimal renderer stub. Pattern from tests/unit/test_issue_131_alert_klarheit.py.
-
-    Issue #2219 (C5-18): die Platzhalter tragen die Lage des Trips statt 0/0.
-    `tz_for_coords(0, 0)` liefert `Etc/GMT` (nicht "UTC"), das
-    `resolve_location_tz` als aufgeloest wertet -- der Beginn stand dann in
-    UTC statt in der Trip-Zone."""
-    lat, lon = coords or (0.0, 0.0)
-    today = datetime.now(timezone.utc).date()
-    start_h, start_m = (int(p) for p in seg_time.start.split(":"))
-    end_h, end_m = (int(p) for p in seg_time.end.split(":"))
-    start_dt = datetime.combine(today, time(start_h, start_m), tzinfo=timezone.utc)
-    end_dt = datetime.combine(today, time(end_h, end_m), tzinfo=timezone.utc)
-    segment = TripSegment(
-        segment_id=seg_time.segment_id,
-        start_point=GPXPoint(lat=lat, lon=lon, elevation_m=0),
-        end_point=GPXPoint(lat=lat, lon=lon, elevation_m=0),
-        start_time=start_dt,
-        end_time=end_dt,
-        duration_hours=max(0.0, (end_dt - start_dt).total_seconds() / 3600.0),
-        distance_km=0.0,
-        ascent_m=0.0,
-        descent_m=0.0,
-    )
+def _preview_segment(segment: TripSegment) -> SegmentWeatherData:
+    """Issue #2069: echtes ``TripSegment`` des Bezugstags als Render-Eintrag
+    ohne Stundenreihe (Distanz, Hoehenmeter, Koordinaten, km-Spanne echt)."""
+    now = datetime.now(timezone.utc)
     return SegmentWeatherData(
         segment=segment,
         timeseries=NormalizedTimeseries(
             meta=ForecastMeta(
-                provider=Provider.OPENMETEO, model="validator-stub",
-                run=datetime.now(timezone.utc), grid_res_km=1.0, interp="stub",
+                provider=Provider.OPENMETEO, model="validator-preview",
+                run=now, grid_res_km=1.0, interp="none",
             ),
             data=[],
         ),
         aggregated=SegmentWeatherSummary(),
-        fetched_at=datetime.now(timezone.utc),
+        fetched_at=now,
         provider="openmeteo",
     )
+
+
+def _with_payload_times(segment: TripSegment, seg_time: Any) -> TripSegment:
+    """``segment_times`` ueberschreiben NUR Start und Ende (HH:MM in UTC wie
+    die Synthese ``_synthesize_segment_times``); das Datum bleibt das des
+    echten Segments am Bezugstag."""
+    if seg_time is None:
+        return segment
+    sh, sm = (int(p) for p in seg_time.start.split(":"))
+    eh, em = (int(p) for p in seg_time.end.split(":"))
+    start = segment.start_time.astimezone(timezone.utc).replace(hour=sh, minute=sm)
+    end = start.replace(hour=eh, minute=em)
+    if end <= start:
+        end += timedelta(days=1)
+    return replace(
+        segment, start_time=start, end_time=end,
+        duration_hours=(end - start).total_seconds() / 3600.0,
+    )
+
+
+def _bezugstag_segments(
+    trip_obj: Trip, bezugstag: "date_type | None", changes: list, segment_times: list,
+) -> list[SegmentWeatherData]:
+    """Issue #2069: echte Segmente des Bezugstags, beschraenkt auf die im
+    Payload genannten Kennungen -- ersetzt die frueheren Platzhalter."""
+    from services.trip_segments import convert_trip_to_segments
+
+    if bezugstag is None:
+        return []
+    times = {str(st.segment_id): st for st in segment_times}
+    wanted = set(times) | {str(c.segment_id) for c in changes}
+    return [
+        _preview_segment(_with_payload_times(seg, times.get(str(seg.segment_id))))
+        for seg in convert_trip_to_segments(trip_obj, bezugstag)
+        if str(seg.segment_id) in wanted
+    ]
+
+
+def _bezugstag_segment_km(trip_obj: Trip, bezugstag: "date_type | None") -> dict:
+    from services.trip_segments import convert_trip_to_segments, measured_segment_km
+
+    if bezugstag is None:
+        return {}
+    return measured_segment_km(convert_trip_to_segments(trip_obj, bezugstag))
+
+
+def _reference_now(trip_obj: Trip, bezugstag: "date_type | None", now_utc: datetime) -> datetime:
+    """Issue #2069 (AC-6): Referenzzeit des Renderers = derselbe Uhrzeitpunkt
+    AM Bezugstag (Ortszeit des Trips) -- der Text lautet wie ein Versand an
+    diesem Tag, nie "morgen"/"in 3 Tagen" relativ zum realen Heute."""
+    from services.trip_day import trip_local_now
+
+    local_now = trip_local_now(trip_obj, now_utc)
+    if bezugstag is None or bezugstag == local_now.date():
+        return now_utc
+    return datetime.combine(bezugstag, local_now.timetz()).astimezone(timezone.utc)
 
 
 def render_alert_preview(
@@ -130,6 +166,7 @@ def render_alert_preview(
     body: Any,
     *,
     user_id: Optional[str] = None,
+    bezugstag: "date_type | None" = None,
 ) -> dict:
     """Render alert preview across all channels.
 
@@ -142,9 +179,14 @@ def render_alert_preview(
     Kennung des Auth-Kontexts. Nur mit ihr beschafft der ``changes``-Zweig
     Anker und frische Reihe serverseitig (wie der Versand) und zeigt
     Stundenzeilen; ``None`` = keine Stundenreihen (nie ``"default"``).
+
+    Issue #2069: ``bezugstag`` (Router, ``preview_reference_date``) waehlt
+    die echten Segmente fuer ``changes``/``official``; die Antwort traegt
+    additiv ``bezugstag`` (ISO oder ``None``) und ``stundenreihe`` (bool).
     """
     if getattr(body, "official", None):
-        return _render_official_preview(trip_obj, body.official)
+        out =_render_official_preview(trip_obj, body.official, bezugstag)
+        return {**out, **_bezug_fields(bezugstag, False)}
     if getattr(body, "nowcast_frames", None) is not None:
         return _render_nowcast_replay(trip_obj, body.nowcast_frames)
 
@@ -253,9 +295,13 @@ def render_alert_preview(
             )
             for c in body.changes
         ]
+        series = _preview_series(trip_obj, user_id, now_utc)
+        if bezugstag is None:
+            bezugstag = _preview_reference_date(trip_obj, now_utc)
         msg = _deviation_preview_message(
             trip_obj, changes, body.segment_times, user_id=user_id,
             tz=alert_tz, stand_at=stand_at, now_utc=now_utc,
+            bezugstag=bezugstag, series=series,
         )
 
     subject = render_subject(msg)
@@ -268,34 +314,64 @@ def render_alert_preview(
         "email_plain": email_plain,
         "telegram": telegram,
         "sms": sms,
+        **_bezug_fields(None if has_onset else bezugstag, not has_onset and bool(series[1])),
     }
+
+
+def _bezug_fields(bezugstag: "date_type | None", stundenreihe: bool) -> dict:
+    """Issue #2069 (AC-7): additive Antwortfelder der Alarm-Vorschau."""
+    return {
+        "bezugstag": bezugstag.isoformat() if bezugstag else None,
+        "stundenreihe": stundenreihe,
+    }
+
+
+def _preview_reference_date(trip_obj: Trip, now_utc: datetime) -> "date_type | None":
+    from services.trip_day import preview_reference_date
+
+    return preview_reference_date(trip_obj, now_utc)
+
+
+def _preview_series(trip_obj: Trip, user_id: Optional[str], now_utc: datetime) -> tuple:
+    """Issue #1737: (Anker, frische Reihe) des Nutzers -- ``(None, None)``
+    ohne echte Nutzerkennung (nie ``"default"``)."""
+    from services.alert_preview_hours import trip_preview_series
+
+    if not user_id:
+        return None, None
+    return trip_preview_series(trip_obj, user_id=user_id, now_utc=now_utc)
 
 
 def _deviation_preview_message(
     trip_obj: Trip, changes: list, segment_times: list, *,
     user_id: Optional[str], tz, stand_at: str, now_utc: datetime,
+    bezugstag: "date_type | None" = None, series: "tuple | None" = None,
 ) -> AlertMessage:
     """Issue #1737: Abweichungs-Vorschau. Liegen Anker und frische Reihe des
     Nutzers vor, laeuft die Projektion wie in ``send_deviation_alert`` (echte
     Segmente, Anker, Anzeigemodus des Trips) -- die Stundenzeilen entstehen
     nur aus diesen Reihen, die Ereignisse aus den synthetischen ``changes``.
-    Sonst die Platzhalter-Segmente wie bisher (ohne Stundenzeilen)."""
-    from services.alert_preview_hours import trip_preview_series
+
+    Issue #2069: sonst die ECHTEN Segmente des Bezugstags (ohne
+    Stundenzeilen), Referenzzeit des Renderers = Bezugstag (AC-6)."""
     from services.notification_service import (
         _alert_format_modes, _alert_indicator_keys,
     )
 
-    anchor, fresh = (None, None)
-    if user_id:
-        anchor, fresh = trip_preview_series(trip_obj, user_id=user_id, now_utc=now_utc)
+    anchor, fresh = series if series is not None else _preview_series(
+        trip_obj, user_id, now_utc,
+    )
     # Issue #2792 S1c-4b: Einstieg Alarm-Pfad, Ampel des Trips.
     ampel = resolve_ampel(trip_obj)
     if not fresh:
+        if bezugstag is None:
+            bezugstag = _preview_reference_date(trip_obj, now_utc)
         return to_alert_message(
             changes,
-            [_stub_segment(st, _first_trip_coords(trip_obj)) for st in segment_times],
+            _bezugstag_segments(trip_obj, bezugstag, changes, segment_times),
             trip_obj.name,
-            tz=tz, stand_at=stand_at, now_utc=now_utc, ampel=ampel,
+            tz=tz, stand_at=stand_at, ampel=ampel,
+            now_utc=_reference_now(trip_obj, bezugstag, now_utc),
         )
     return to_alert_message(
         changes, fresh, trip_obj.name, tz=tz, stand_at=stand_at, now_utc=now_utc,
@@ -310,7 +386,9 @@ def _parse_official_dt(value: "str | None") -> "datetime | None":
     return None if value is None else datetime.fromisoformat(value)
 
 
-def _render_official_preview(trip_obj: Trip, payloads: list) -> dict:
+def _render_official_preview(
+    trip_obj: Trip, payloads: list, bezugstag: "date_type | None" = None,
+) -> dict:
     """Issue #1948 Scheibe S2 (Zweig b): Render-Sequenz aus
     ``notification_service.send_official_alert`` (Z. 846-882) gespiegelt --
     der zustandslose Preview braucht weder Versandkanaele noch
@@ -340,7 +418,11 @@ def _render_official_preview(trip_obj: Trip, payloads: list) -> dict:
         )
         for p in payloads
     ]
-    dto_notices = build_official_alert_notices(trip_obj, tagged)
+    # Issue #2069 (AC-3): gemessene km-Spanne der Bezugstag-Segmente, wie
+    # der Versand (`trip_alert.py`: `measured_segment_km(segments)`).
+    dto_notices = build_official_alert_notices(
+        trip_obj, tagged, segment_km=_bezugstag_segment_km(trip_obj, bezugstag),
+    )
     source_label = _official_source_label_for(dto_notices)
     source_url = _official_source_url_for(dto_notices)
     stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)

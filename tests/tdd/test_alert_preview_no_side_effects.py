@@ -27,6 +27,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
+
+from tests.helpers.ortstag import etappe_am_ortstag
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -51,8 +53,10 @@ def client():
 def _write_stub_trip(user_id: str, trip_id: str, name: str) -> None:
     trip_dir = Path("data/users") / user_id / "briefings"
     trip_dir.mkdir(parents=True, exist_ok=True)
+    # Issue #2069 (AC-10): Trip MIT Etappe am Ortstag -- `segment_ids: ["1"]`
+    # muss ein echtes Segment treffen, sonst 422 `trip_ohne_segmente`.
     (trip_dir / f"{trip_id}.json").write_text(json.dumps({
-        "id": trip_id, "name": name, "stages": [],
+        "id": trip_id, "name": name, "stages": [etappe_am_ortstag(47.0, 11.0)],
     }))
 
 

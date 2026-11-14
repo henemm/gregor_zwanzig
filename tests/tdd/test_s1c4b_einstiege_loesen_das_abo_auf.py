@@ -413,8 +413,11 @@ def _trip_alarm(vorlage: str):
     tid = f"trip-s1c4b-{vorlage}"
     return Trip(
         id=tid, name="Ampel-Trip", official_warnings=None, corridors=[],
+        # Issue #2069: zwei Wegpunkte = ein echtes Segment "1" -- die
+        # Abweichungs-Vorschau rendert echte Segmente statt Platzhaltern.
         stages=[Stage(id="T1", name="Tag 1", date=date(2026, 5, 1), waypoints=[
-            Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)])],
+            Waypoint(id="G1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0),
+            Waypoint(id="G2", name="Ziel", lat=47.05, lon=11.05, elevation_m=1400.0)])],
         display_config=UnifiedWeatherDisplayConfig(
             trip_id=tid, preset_name=vorlage,
             metrics=[MetricConfig(metric_id="gust", enabled=True)],

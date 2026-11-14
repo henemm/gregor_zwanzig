@@ -69,7 +69,7 @@ Die Alarm-Vorschau (`POST /api/trips/{id}/alert-preview`, dieselbe Logik hinter 
 
 ## Implementation Details
 
-**1. Bezugstag (eine Quelle).** `preview_reference_date(trip, now)` liefert: heute (Ortstag, `trip_local_today`), wenn der Trip heute eine Etappe hat; sonst das Datum der nächsten kommenden Etappe; sonst das Datum der letzten Etappe; `None`, wenn der Trip keine Etappe hat. ID-Prüfung, `segment_times`-Synthese und Rendering rufen ausschließlich diese Funktion auf, es gibt keine zweite „heute"-Ermittlung mehr.
+**1. Bezugstag (eine Quelle).** `preview_reference_date(trip, now)` liefert: heute (Ortstag, `trip_local_today`), wenn der Trip heute eine Etappe hat; sonst das Datum der nächsten kommenden Etappe; sonst das Datum der letzten Etappe; `None`, wenn der Trip keine Etappe hat. ID-Prüfung, `segment_times`-Synthese und Rendering rufen ausschließlich diese Funktion auf, es gibt keine zweite „heute"-Ermittlung mehr. Als Etappe zählt dabei nur eine auswertbare Etappe, also eine mit mindestens 2 Wegpunkten (dieselbe Regel wie der Hinweis in `AlertPreviewCard`); eine Etappe mit nur einem Wegpunkt wird bei der Wahl des Bezugstags übersprungen, hat der Trip keine auswertbare Etappe, ist das Ergebnis `None`.
 
 **2. `changes`-Rückfall.** Gibt es keinen Anker bzw. keine Stundenreihe (Anker-Pfad #1737 bleibt unverändert und hat Vorrang), rendert `_deviation_preview_message` die echten `TripSegment`s aus `convert_trip_to_segments(trip, bezugstag)`, beschränkt auf die im Payload genannten `segment_id`s. `segment_times` aus dem Payload überschreiben nur Start und Ende; das Datum ist der Bezugstag in der Trip-Zone (nicht UTC-heute). Distanz, Höhenmeter, Koordinaten, `distance_measured` und km-Spanne bleiben die echten Werte. `_stub_segment` entfällt für diesen Pfad.
 
@@ -162,3 +162,4 @@ Datei `tests/tdd/test_alert_preview_echte_segmente.py`, echter Endpoint mit echt
 ## Changelog
 
 - 2026-11-13: Initial spec created (Issue #2069)
+- 2026-11-14: Fix-Loop 1 (Adversary F005): Bezugstag berücksichtigt nur auswertbare Etappen (mindestens 2 Wegpunkte), Implementation Details 1 ergänzt.

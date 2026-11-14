@@ -45,7 +45,7 @@ und nicht für Frontend/Endbenutzer.
 | `src.services.trip_alert.TripAlertService._select_change_detector` | aufgerufen | Kanonische Detector-Auswahllogik für Endpoint #3 (alert_rules > display_config > report_config > defaults). |
 | `src.services.weather_change_detection.WeatherChangeDetectionService` | konsumiert | Endpoint #3 liest `_thresholds`-Dict des gewählten Detectors. |
 | `src.app.loader._parse_trip` + `get_briefings_dir` | aufgerufen | User-scoped Trip-Lookup für Endpoint #2 + #3 via Helper `_load_trip_for_validator` (Begründung siehe Implementation Details; seit ADR-0023 / #1250 S7a `briefings/<id>.json`, nicht mehr `trips/`). |
-| `src.app.models.WeatherChange, SegmentWeatherData, SegmentWeatherSummary, TripSegment, NormalizedTimeseries, ForecastMeta, Provider` | konsumiert | DTOs für Stub-Konstruktion im Body von Endpoint #2. |
+| `src.app.models.WeatherChange, SegmentWeatherData, SegmentWeatherSummary, TripSegment, NormalizedTimeseries, ForecastMeta, Provider` | konsumiert | DTOs für Stub-Konstruktion im Body von Endpoint #2. **Seit #2069 abgelöst:** der `changes`-Zweig rendert die echten `TripSegment`s des Bezugstags (`convert_trip_to_segments`), kein Stub mehr (s. `alert_preview_echte_segmente.md`). |
 | `internal/middleware/auth.go::AuthMiddleware` | genutzt | Globale `gz_session`-Cookie-Auth — `_validator/`- und `alert-preview`-Pfade NICHT auf die Whitelist. |
 | `internal/handler/proxy.go::appendUserID` | genutzt | Anti-Spoofing-Pattern (Bug #199) — Go-Proxy injiziert authentifizierten `user_id` als Query-Param. |
 | `external_validator_auth` (Spec) | konsumiert | Validator-Launcher injiziert Cookie in `claude --print`-Prompt. |
@@ -89,6 +89,17 @@ Lösung im Router:
   und was tut der Production-Detector tatsächlich (`thresholds`).
 
 ### `api/routers/validator.py` — NEU
+
+> **Stand Issue #2069 (2026-11-14):** Der folgende Code ist der historische
+> Entwurf von #221. Heute rendert Endpoint #2 über
+> `services.validator_render_service.render_alert_preview` mit den **echten**
+> Segmenten des Bezugstags (heute, sonst nächste, sonst letzte Etappe;
+> `services.trip_day.preview_reference_date`) statt `_stub_segment`; unbekannte
+> `segment_id` ⇒ 422 `segment_unbekannt`, Trip ohne Etappe mit Wegpunkten ⇒ 422
+> `trip_ohne_segmente`. Die Rückgabeform ist nicht mehr `{"html","plain"}`,
+> sondern `{subject, email_html, email_plain, telegram, sms, bezugstag,
+> stundenreihe}` (SSOT: `docs/reference/api_contract.md` Section 22.5).
+> Spec: `docs/specs/modules/alert_preview_echte_segmente.md`.
 
 Drei Endpoints in einem Router. Stub-Konstruktion für Endpoint #2 als
 Modul-privater Helper, damit der Test-Pattern aus
@@ -246,6 +257,8 @@ async def alert_preview(
         changes=changes,
     )
     return {"html": report.email_html, "plain": report.email_plain}
+    # Historisch. Heute (#2069): {subject, email_html, email_plain, telegram,
+    # sms, bezugstag, stundenreihe} -- s. api_contract.md Section 22.5.
 ```
 
 ### `api/main.py` — Router einbinden
@@ -335,6 +348,9 @@ r.Post("/api/trips/{id}/alert-preview",       handler.AlertPreviewProxyHandler(c
 
 ## Known Limitations
 
+- **Seit #2069 überholt:** Endpoint #2 rendert die echten Segmente des
+  Bezugstags; ohne Anker bleibt die Stundenreihe leer (`stundenreihe: false`).
+  Historischer Text:
 - **Stub-Segmente in Endpoint #2 simulieren nur die Alert-Section** der Mail.
   Stündliche Wetter-Tabellen, Night-Block, Multi-Day-Trend etc. sind in der
   Preview leer/leer-skelettiert. Das ist akzeptabel, weil das Ziel die

@@ -113,6 +113,8 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.vorschau.nach_speichern', 'Die Vorschau mit echten Daten ist nach dem Speichern verfügbar.', 'The preview with real data is available after saving.'],
 	['alarme.vorschau.keine_orte', 'Noch keine Orte konfiguriert — im Reiter <reiter> Kandidaten hinzufügen.', 'No locations configured yet — add candidates in the <reiter> tab.'],
 	['alarme.vorschau.reiter_orte', 'Orte', 'Locations'],
+	// Issue #2069 (AC-8): Hinweis bei Trip ohne Etappe mit Wegpunkten (neu, kein Bestandstext).
+	['alarme.vorschau.keine_etappen', 'Trip hat noch keine Etappen mit Wegpunkten.', 'The trip has no stages with waypoints yet.'],
 	['alarme.vorschau.regel_aktivieren', 'Aktiviere mindestens eine Alert-Regel, um die Vorschau zu laden.', 'Activate at least one alert rule to load the preview.'],
 	['alarme.vorschau.laden', 'Vorschau laden', 'Load preview'],
 	['alarme.vorschau.lade', 'Lade…', 'Loading…'],

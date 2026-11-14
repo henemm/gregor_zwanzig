@@ -4849,9 +4849,27 @@ S1-Eingangsprotokoll (`src/services/alert_input_capture.py`, siehe
   "email_html": "...",
   "email_plain": "...",
   "telegram": "...",
-  "sms": "..."
+  "sms": "...",
+  "bezugstag": "2026-11-19",
+  "stundenreihe": false
 }
 ```
+
+- `bezugstag` (additiv seit #2069): ISO-Datum des Tages, dessen **echte** Segmente die Vorschau
+  nutzt — heute (Ortstag des Trips), wenn der Trip heute eine Etappe hat; sonst die nächste
+  kommende Etappe; sonst (Trip vorbei) die letzte. Gezählt werden nur Etappen mit mindestens
+  zwei Wegpunkten. `null` bei `onset` (der Payload ist das
+  synthetische Ereignis selbst). Eine Quelle: `services.trip_day.preview_reference_date`.
+- `stundenreihe` (additiv seit #2069): `true`, wenn im Zweig `changes` eine echte Stundenreihe
+  über den Anker-Pfad (#1737) vorlag; sonst `false` (`onset`, `official`, kein Anker). Damit
+  unterscheiden Validatoren „nicht beobachtbar" von „fehlt".
+- `changes` ohne Stundenreihe rendert die echten `TripSegment`s des Bezugstags
+  (`convert_trip_to_segments`, Distanz/Höhenmeter/Koordinaten/`distance_measured`/km-Spanne
+  echt, beschränkt auf die genannten `segment_id`s); `segment_times` überschreiben nur Start
+  und Ende (HH:MM in UTC wie die Synthese). Tagesbezug im Text wie bei einem Versand **am**
+  Bezugstag (Referenzzeit des Renderers = Bezugstag), nie „morgen" relativ zum realen Heute.
+- `official` übergibt `segment_km = measured_segment_km(<Segmente des Bezugstags>)` an
+  `build_official_alert_notices` wie der Versand (`trip_alert.py`).
 
 **Response 200 (`nowcast_frames`, additiv):** wie oben, plus `"onset_detected": bool`. Leitet
 der eingespeiste Frame-Mitschnitt über dieselbe `_derive_result`-Ableitung wie der Live-Radar-
@@ -4861,8 +4879,13 @@ Leerbefund statt Exception/HTTP 500.
 
 **Error Responses:**
 - `404` — Trip nicht gefunden für `user_id`
-- `422` — Body enthält nicht genau einen der vier Payload-Typen, oder eine `segment_id` in
-  `changes` existiert nicht im Trip
+- `422` — Body enthält nicht genau einen der vier Payload-Typen
+- `422` `segment_unbekannt` — eine `segment_id` in `changes` oder `official[].segment_ids`
+  existiert am Bezugstag nicht (auch bei einem nicht heute laufenden Trip; seit #2069 kein
+  stilles Akzeptieren mehr)
+- `422` `trip_ohne_segmente` (neu seit #2069) — der Trip hat keine Etappe mit mindestens zwei
+  Wegpunkten, der Payload nennt aber eine `segment_id` (`changes`, oder `official` mit nicht
+  leerer `segment_ids`); `official` mit `segment_ids: []` bleibt `200`. Text in Kontosprache.
 - `422` Eingangsprüfung (Issue #2219), Antwort `{"detail": "<Text in Kontosprache>", "code": …}`
   wie `metrik_unbekannt`:
   - `schwere_unbekannt` — `changes[].severity` ist keiner der Werte von `ChangeSeverity`
@@ -5210,6 +5233,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 
 ## Changelog
 
+- 2026-11-14: Issue #2069 — Alarm-Vorschau (`POST /api/trips/{id}/alert-preview`, `POST /api/briefings/{id}/alert-preview?kind=route`) rendert `changes` und `official` mit den echten Segmenten des Bezugstags (heute, sonst nächste, sonst letzte Etappe) statt Platzhaltern; `official` mit gemessener km-Spanne wie der Versand. Antwort additiv `bezugstag` (ISO oder `null`) und `stundenreihe` (bool). Unbekannte `segment_id` ⇒ `422 segment_unbekannt` auch bei nicht heute laufendem Trip; Trip ohne Etappe mit Wegpunkten ⇒ neuer Code `422 trip_ohne_segmente`. Section 22.5. Spec: `docs/specs/modules/alert_preview_echte_segmente.md`.
 - 2026-11-13: Issue #2219 — Alarm-Vorschau (`POST /api/trips/{id}/alert-preview`, `POST /api/briefings/{id}/alert-preview`, beide Zweige) prüft Eingaben vor dem Rendern und antwortet mit lokalisiertem `422` statt `500`: `schwere_unbekannt`, `zeitstempel_ohne_zone`, `onset_tagesbezug_unvollstaendig`, `onset_shift_null` (Section 22.5). Der Replay-Zweig zeigt den Beginn mit Tagesbezug (z. B. `R0.8@Sa0:23 >@Sa0:38`). Stub-Segmente nutzen die Koordinaten des ersten Trip-Orts (Ortszeit statt UTC). Versandpfad unverändert; keine Response-Felder neu. Spec: `docs/specs/modules/fix_2219_alarm_vorschau_haerten.md`.
 - 2026-11-09: Issue #2794 S3a Teil-PR 1 (Backend) — `MetricPreset.kind` (`route`|`vergleich`, Default `route`), `is_default` exklusiv je Art, Name eindeutig je Art und Systemvorlagen-Namen gesperrt (409 `name_exists`, auch PATCH), `horizons` entfällt (Migration `scripts/migrate_2794_preset_horizons.py`); `POST /api/trips` / `POST /api/compare/presets` ohne `display_config` übernehmen die Standardvorlage der Art (§15.5); `GET /api/metrics` mit `group`, `alertable`, `is_precursor`, `allowed_sides`, `display_only` (§15); Python `app.ampel.deviation_count` (Abweichungszähler, Fixtures `tests/fixtures/ampel_deviation_cases.json`).
 - 2026-11-10: Issue #2794 Teil 3 — Alarmquelle Profil-Ampel (`ampel_alarmquelle_aktiv`, `alarmfaehige_felder()`): Alarm auch ohne Empfindlichkeitsstufen, wenn eine aktive Metrik `alarm_ab` ≠ `never` hat; keine DTO-Änderung.
