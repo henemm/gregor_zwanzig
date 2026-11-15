@@ -88,8 +88,29 @@
 	// Katalogantwort, nicht aus einer Frontend-Liste (#1406 B, AC-10) — damit
 	// Renderer (HOURLY_DEFAULT_METRIC_IDS) und Bedienflaeche nachweisbar
 	// dieselbe Vorgabe haben.
+	// #3047 O2 (AC-13): die Katalogantwort sagt nur OB eine Groesse zur Vorgabe
+	// gehoert (`hourlyDefault`), nicht in welcher FOLGE. Die Mail nimmt die
+	// Folge des Backend-Tupels `HOURLY_DEFAULT_METRIC_IDS`
+	// (src/output/renderers/compare_hourly_metric_ids.py) -- die Katalog-
+	// Gruppenfolge wich davon ab. Diese Liste spiegelt nur die Reihenfolge;
+	// Mitgliedschaft entscheidet weiter der Katalog. Abgleich: tests/fixtures/
+	// einstellung_gleich_mail/editor_standard.json (orte_stundenverlauf), geprueft
+	// von editor_standard_gleich_mail.test.ts und
+	// tests/tdd/test_einstellung_gleich_mail_editor_standard.py.
+	const HOURLY_DEFAULT_FOLGE = [
+		'temperature', 'wind_chill', 'wind', 'gust', 'precipitation',
+		'uv_index', 'thunder', 'rain_probability', 'visibility'
+	];
+	const folgeRang = (id: string) => {
+		const i = HOURLY_DEFAULT_FOLGE.indexOf(id);
+		return i < 0 ? HOURLY_DEFAULT_FOLGE.length : i;
+	};
 	const defaultHourlyKeys = $derived(
-		hourlyGroups.filter((g) => g.hourly_default).map((g) => g.metric_id)
+		hourlyGroups
+			.filter((g) => g.hourly_default)
+			.map((g) => g.metric_id)
+			// stabil: unbekannte Vorgabe-Groessen behalten ihre Katalogfolge am Ende
+			.sort((a, b) => folgeRang(a) - folgeRang(b))
 	);
 	const mergeOnlyHourlyKeys = $derived(
 		hourlyGroups

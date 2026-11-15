@@ -94,3 +94,29 @@ not ok 2 - \#3047 AC-16 Vorlage anwenden (Frontend-Seite)
 # tests 18
 # pass 18
 # fail 0
+
+=== F2 T3 (AC-10): neue Metrik in bereits bearbeiteten Listen -- RED vor der Behebung ===
+cd frontend && npm test -- src/lib/components/shared/weather-metrics-tab/__tests__/neue_metrik_in_allen_listen.test.ts
+(gegen unveraendertes toggleGlobalMetric; appendNewMetricsToOutlook existierte noch nicht)
+    not ok 1 - Einwahl haengt die Metrik in jeder bearbeiteten Kanal-Liste hinten an, Folge bleibt
+        E-Mail-Liste: neue Metrik fehlt oder Folge veraendert
+        + actual - expected
+        -   'uv_index'
+    not ok 2 - Einwahl eines Elters nimmt die abgeleiteten Kinder in die bearbeitete Liste mit
+        + actual - expected
+        -   'wind_chill',
+        -   'wind_chill_night'
+    not ok 3 - Einwahl haengt die Metrik an eine gespeicherte Ausblick-Liste hinten an
+        appendNewMetricsToOutlook fehlt: Ausblick-Liste bekommt die neue Metrik nicht
+      expected: 'function'
+      actual: 'undefined'
+not ok 1 - \#3047 AC-10 neue Metrik in allen bereits bearbeiteten Listen
+# pass 0
+# fail 3
+Vierter Fall (Wirkort WeatherMetricsTab.svelte::onToggleMetric, echter Funktionsquelltext)
+kam mit der Behebung hinzu. Gegenprobe: Ausblick-Zeile in onToggleMetric neutralisiert ->
+"not ok 4", wiederhergestellt -> gruen.
+
+=== F2 T3 / T4 nach der Behebung ===
+neue_metrik_in_allen_listen.test.ts: # tests 4 / # pass 4 / # fail 0
+editor_standard_gleich_mail.test.ts (T4 rotErwartet -> test): # tests 18 / # pass 18 / # fail 0

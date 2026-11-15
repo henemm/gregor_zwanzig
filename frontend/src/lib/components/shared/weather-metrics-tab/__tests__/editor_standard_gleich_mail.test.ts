@@ -212,15 +212,15 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 		test(`frontend_seite_orte_vergleichstabelle_gespeichert ${z.id}`, () =>
 			pruefe(frontendOrteVergleichstabelle, 'orte_vergleichstabelle', z));
 
-	// #3047 RED O2
-	rotErwartet('frontend_seite_orte_stundenverlauf_standard', '#3047 RED O2', () =>
+	// #3047 O2 behoben (F4)
+	test('frontend_seite_orte_stundenverlauf_standard', () =>
 		pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', zustand('orte_stundenverlauf', 'nie_eingestellt')));
 	for (const z of gespeicherte('orte_stundenverlauf'))
 		test(`frontend_seite_orte_stundenverlauf_gespeichert ${z.id}`, () =>
 			pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', z));
 
-	// #3047 RED O4
-	rotErwartet('frontend_seite_orte_ausblick_standard', '#3047 RED O4', () =>
+	// #3047 O4 behoben (F4)
+	test('frontend_seite_orte_ausblick_standard', () =>
 		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'nie_eingestellt')));
 	test('frontend_seite_orte_ausblick_standard_mit_grundauswahl', () =>
 		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'nie_eingestellt_mit_grundauswahl')));
@@ -230,8 +230,8 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 
 // ── AC-16: Vorlage anwenden behaelt die Vorlagen-Folge (Befund T4) ─────────────
 describe('#3047 AC-16 Vorlage anwenden (Frontend-Seite)', () => {
-	// #3047 RED T4
-	rotErwartet('frontend_seite_trip_vorlage_reihenfolge', '#3047 RED T4', () => {
+	// #3047 T4 behoben (F2): applyPreset uebernimmt die Vorlagen-Folge
+	test('frontend_seite_trip_vorlage_reihenfolge', () => {
 		const vorlage = DATEN.listen.trip_vorlage;
 		const ed = tripEditor(zustand('trip_tabellen', 'nie_eingestellt').eingabe);
 		const zustandTab: Record<string, unknown> = {

@@ -317,7 +317,6 @@ def test_orte_klartext_ausblick_fehlt_scheitert(tmp_path, orte_mail):
     assert "SOLL: Ausblick fehlt im Klartext-Teil" in aus, aus
 
 
-@pytest.mark.xfail(strict=True, reason="#3047 RED O3")
 def test_orte_altbestand_ausblick_klartext_wie_html(monkeypatch, tmp_path):
     """AC-21: Altbestand ohne ``active_metrics``/``outlook_metrics`` -- der
     Klartext-Ausblick zeigt dieselben Spalten wie das HTML (heute 4 statt 7)."""

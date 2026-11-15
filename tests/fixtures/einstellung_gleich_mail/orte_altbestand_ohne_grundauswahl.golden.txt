@@ -98,9 +98,9 @@ Kronplatz (CET)
    15:00  Temp 10°  Feels 3°  Wind 25  Gust 37  Rain 0.8  UV 2  Thdr –  Rain% 70%  Visib 10.5
    16:00  Temp 10°  Feels 3°  Wind 26  Gust 38  Rain ·  UV 3  Thdr –  Rain% 15%  Visib 10.0
 3-Tages-Ausblick
-Fr  Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
-Sa  Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
-So  Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
+Fr  Temp 6/11°C   Rain 1.6mm Rain% 70%  Wind S28   Gust 40  Thdr ⚡–
+Sa  Temp 6/11°C   Rain 1.6mm Rain% 70%  Wind S28   Gust 40  Thdr ⚡–
+So  Temp 6/11°C   Rain 1.6mm Rain% 70%  Wind S28   Gust 40  Thdr ⚡–
 
 Sulden (CET)
    08:00  Temp 7°  Feels 4°  Wind 18  Gust 35  Rain ·  UV 4  Thdr –  Rain% 15%  Visib 14.0
@@ -113,9 +113,9 @@ Sulden (CET)
    15:00  Temp 10°  Feels 4°  Wind 25  Gust 42  Rain 1.8  UV 2  Thdr leicht · CAPE, Blitzdichte · Hagel: ja  Rain% 70%  Visib 10.5
    16:00  Temp 11°  Feels 4°  Wind 26  Gust 43  Rain ·  UV 3  Thdr –  Rain% 15%  Visib 10.0
 3-Tages-Ausblick
-Fr  Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡mittel@13 · CAPE, Blitzdichte · Hagel: ja
-Sa  Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡mittel@13 · CAPE, Blitzdichte · Hagel: ja
-So  Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡mittel@13 · CAPE, Blitzdichte · Hagel: ja
+Fr  Temp 7/12°C   Rain 3.6mm Rain% 70%  Wind SW28  Gust 45  Thdr ⚡mittel@13 · CAPE, Blitzdichte · Hagel: ja
+Sa  Temp 7/12°C   Rain 3.6mm Rain% 70%  Wind SW28  Gust 45  Thdr ⚡mittel@13 · CAPE, Blitzdichte · Hagel: ja
+So  Temp 7/12°C   Rain 3.6mm Rain% 70%  Wind SW28  Gust 45  Thdr ⚡mittel@13 · CAPE, Blitzdichte · Hagel: ja
 
 Ahrntal (CET)
    08:00  Temp 8°  Feels 5°  Wind 18  Gust 40  Rain ·  UV 4  Thdr –  Rain% 15%  Visib 14.0
@@ -128,9 +128,9 @@ Ahrntal (CET)
    15:00  Temp 12°  Feels 5°  Wind 25  Gust 47  Rain 2.8  UV 2  Thdr –  Rain% 70%  Visib 10.5
    16:00  Temp 12°  Feels 5°  Wind 26  Gust 48  Rain ·  UV 3  Thdr –  Rain% 15%  Visib 10.0
 3-Tages-Ausblick
-Fr  Temp 8/13°C   Rain 5.6mm Wind SW28  Thdr ⚡–
-Sa  Temp 8/13°C   Rain 5.6mm Wind SW28  Thdr ⚡–
-So  Temp 8/13°C   Rain 5.6mm Wind SW28  Thdr ⚡–
+Fr  Temp 8/13°C   Rain 5.6mm Rain% 70%  Wind SW28  Gust 50  Thdr ⚡–
+Sa  Temp 8/13°C   Rain 5.6mm Rain% 70%  Wind SW28  Gust 50  Thdr ⚡–
+So  Temp 8/13°C   Rain 5.6mm Rain% 70%  Wind SW28  Gust 50  Thdr ⚡–
 
 Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · Rain% % · Visib km
 Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · UV = UV-Index · Thdr = Gewitter · Rain% = Regenwahrscheinlichkeit · Visib = Sichtweite

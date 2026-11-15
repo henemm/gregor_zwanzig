@@ -287,7 +287,7 @@
    "test": "frontend_seite_orte_stundenverlauf_standard",
    "ac": "AC-13, AC-6",
    "befund": "O2",
-   "status": "rot_erwartet",
+   "status": "gruen",
    "seite": "frontend",
    "zustand": "nie_eingestellt",
    "verweis": "frontend/src/lib/components/compare/CompareHourlyLayoutControls.svelte:90-92 (Katalog-Gruppenfolge statt HOURLY_DEFAULT_METRIC_IDS)"
@@ -366,7 +366,7 @@
    "test": "frontend_seite_orte_ausblick_standard",
    "ac": "AC-13, AC-21",
    "befund": "O4",
-   "status": "rot_erwartet",
+   "status": "gruen",
    "seite": "frontend",
    "zustand": "nie_eingestellt",
    "verweis": "frontend/src/lib/components/shared/OutlookLayoutControls.svelte:171-176 mit WeatherMetricsTab.svelte:1619 (grundauswahl = COMPARE_METRIC_KEYS)"
@@ -458,7 +458,7 @@
    "test": "frontend_seite_trip_vorlage_reihenfolge",
    "ac": "AC-16",
    "befund": "T4",
-   "status": "rot_erwartet",
+   "status": "gruen",
    "seite": "frontend",
    "zustand": "vorlage",
    "verweis": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte:732 -> metricsEditor.ts:272-289 (autoAssign sortiert nach METRIC_PRIORITY)"

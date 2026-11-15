@@ -1217,7 +1217,7 @@
       "test": "test_ac21_altbestand_ausblick_klartext_gleich_html",
       "ac": "AC-21",
       "befund": "O3",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "O-AB-H-NUTZER",
@@ -1528,7 +1528,7 @@
       "test": "test_ac21_altbestand_ausblick_klartext_gleich_html",
       "ac": "AC-21",
       "befund": "O3",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "O-AB-K-NUTZER",
@@ -1540,6 +1540,29 @@
       "ac": "AC-12",
       "befund": "",
       "status": "gruen"
+    },
+    {
+      "id": "O-VT-H-WARN",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst_html",
+      "ac": "AC-5",
+      "befund": "WV6",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-K-WARN",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst_klartext",
+      "ac": "AC-5",
+      "befund": "WV6",
+      "status": "rot_erwartet",
+      "verweis": "src/output/renderers/comparison.py:310-313 (Klartext-Warnzeilen nach der Metrik-Schleife statt zuerst; Konzept einstellungen_neu.md §5 Punkt 8 WV6)"
     }
   ]
 }
