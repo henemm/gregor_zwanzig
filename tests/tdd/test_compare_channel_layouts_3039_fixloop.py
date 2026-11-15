@@ -39,10 +39,21 @@ from tests.tdd.test_compare_channel_layouts_3039 import (
     _voll,
     _zwei,
 )
+import pytest
+
 from tests.tdd.test_compare_einstellung_auslieferung_kette import (  # noqa: F401 (Fixture)
     _text,
-    mit,
 )
+# Fixture ``mit`` unter Alias einbinden (siehe test_compare_channel_layouts_3039).
+from tests.tdd.test_compare_einstellung_auslieferung_kette import (  # noqa: F401 (Fixture)
+    mit as _fixture_mit,
+)
+
+
+@pytest.fixture
+def mit(_fixture_mit):  # noqa: F811 (Fixture-Parameter, Alias-Import oben)
+    """Kanalmitschrift der Auslieferungskette (Fixture aus test_compare_einstellung_auslieferung_kette)."""
+    return _fixture_mit
 
 _AGG = {"temperature": "max", "wind": "max", "gust": "max", "cloud_total": "avg",
         "sunshine": "sum", "rain_probability": "max", "thunder": "max"}

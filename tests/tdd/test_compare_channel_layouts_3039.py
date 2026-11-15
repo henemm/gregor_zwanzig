@@ -40,17 +40,24 @@ from tests.tdd._compare_kette_fixtures import (
     ORTSNAMEN,
     TARGET_DATE,
     fixture_dict,
-    nutzer_anlegen,
-    orte_anlegen,
-    preset_ablegen,
 )
 from tests.tdd.test_compare_einstellung_auslieferung_kette import (  # noqa: F401 (Fixture)
     ALLE_MIT_TEXT,
     Lauf,
     _lauf,
     _text,
-    mit,
 )
+# Fixture ``mit`` unter Alias einbinden: pytest registriert sie unter ihrem
+# eigenen Namen, ruff sieht keine Neudefinition (F811) in den Testsignaturen.
+from tests.tdd.test_compare_einstellung_auslieferung_kette import (  # noqa: F401 (Fixture)
+    mit as _fixture_mit,
+)
+
+
+@pytest.fixture
+def mit(_fixture_mit):  # noqa: F811 (Fixture-Parameter, Alias-Import oben)
+    """Kanalmitschrift der Auslieferungskette (Fixture aus test_compare_einstellung_auslieferung_kette)."""
+    return _fixture_mit
 from tests.tdd.test_compare_sms_gsm7_charset import assert_gsm7_clean
 
 #: Grundauswahl der Vorlage ``kanal_reihenfolge`` (Katalog-Kennungen, Reihenfolge).
