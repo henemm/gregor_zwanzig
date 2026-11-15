@@ -411,6 +411,43 @@ def test_ac13_vorschau_und_versand_zeigen_dieselben_zeilen_und_formate(mit):
         assert _AMPEL_PUNKT in _html_zeile(versand_html, "Böen")
 
 
+#: Label-Zelle einer Uebersichtszeile der Vergleichs-Mail (erste Spalte, links).
+_HTML_UEBERSICHT_LABEL = re.compile(
+    r'<td style="text-align:left;padding:8px 5px;[^"]*font-weight:500;font-size:12px;'
+    r'[^"]*">([^<]*)</td>')
+
+
+def _html_uebersicht_labels(html: str) -> list[str]:
+    """Geordnete Zeilenlabels der Mail-Uebersicht (Label-Zellen der Kennzahl-Zeilen)."""
+    return _HTML_UEBERSICHT_LABEL.findall(html)
+
+
+def test_ac13_mail_vorschau_zeilenauswahl_und_reihenfolge_wie_versand(mit):
+    """AC-13 fuer die Mail: Vorschau und Versand zeigen dieselben Uebersichts-
+    zeilen in derselben Reihenfolge, und zwar die der email-Kanal-Liste (Wind
+    aus, Reihenfolge abweichend von der Grundauswahl) -- nicht die Grundauswahl."""
+    from services.compare_preview_service import ComparePreviewService
+
+    layouts = {
+        "email": _voll(["cloud_total", "gust", "temperature", "wind", "sunshine"],
+                       wind={"an": False, "einfach": False}),
+        "telegram": _voll(GRUNDAUSWAHL),
+        "sms": _voll(GRUNDAUSWAHL),
+    }
+    soll = ["Bewölkung", "Böen", "Temperatur", "Sonnenstunden"]
+    for lauf in _zwei(mit, _vorlage(layouts)):
+        vorschau = ComparePreviewService().render_all_channels(
+            lauf.roh["id"], user_id=lauf.uid, target_date=TARGET_DATE,
+        )
+        versand = _html_uebersicht_labels(lauf.snap.sendungen("email")[-1]["body"])
+        vorschau_labels = _html_uebersicht_labels(vorschau["email_html"])
+        assert vorschau_labels == versand, (
+            f"Mail-Vorschau {vorschau_labels} weicht vom Versand {versand} ab")
+        kennzahlen = [x for x in versand if x in (*soll, "Wind")]
+        assert kennzahlen == soll, f"Versand-Mail: erwartet {soll}, war {versand}"
+        assert "Wind" not in vorschau_labels, vorschau_labels
+
+
 # ---------------------------------------------------------------------------
 # AC-14 -- neue Grundauswahl-Groesse ohne Kanal-Eintrag erscheint am Ende
 # ---------------------------------------------------------------------------

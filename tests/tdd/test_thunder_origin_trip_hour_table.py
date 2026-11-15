@@ -384,11 +384,64 @@ def test_ac11_sms_bleibt_ohne_herkunft():
         f"Herkunft zeigen, sonst beweist die SMS-Abwesenheit nichts: {zeile!r}")
 
 
-def test_ac12_compare_importiert_fmt_val_nicht():
-    """AC-12 (Compare strukturell unberuehrt): Given fmt_val() wird um den
-    Seitenkanal '_thunder_signals' erweitert, Then bleibt der gesamte
-    Compare-Pfad unberuehrt, weil er fmt_val() gar nicht aufruft
-    (Grep-basierte Struktur-Assertion, kein Verhaltens-Mock)."""
+#: Der Seitenkanal-Schluessel aus D3 als String-Literal (``row["_thunder_signals"]``)
+#: bzw. das Trip-Stufenfeld ``hourly_thunder_signals``. ``loc_thunder_signals``
+#: (Compare-eigene Herkunft der Uebersicht, #1680 S1) ist KEIN Treffer.
+_SEITENKANAL = re.compile(r"""["']_thunder_signals["']|\bhourly_thunder_signals\b""")
+
+
+def _compare_gewitter_zelle(einfach: bool) -> str:
+    """Gewitter-Zelle der HTML-Uebersicht eines echten Ortsvergleichs (Ort mit
+    CAPE-getragener Stufe ueber die ECHTE Fusion), Roh oder Einfach ueber
+    ``metric_formats`` -- die Form, in der ``channel_layouts["email"]`` beim
+    Renderer ankommt (#3039)."""
+    import html as _html_mod
+
+    from app.user import ComparisonResult, LocationResult, SavedLocation
+    from output.renderers.comparison import render_compare_email
+    from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
+
+    punkte = [ForecastDataPoint(
+        ts=datetime(2026, 8, 6, 14, 0, tzinfo=timezone.utc), t2m_c=20.0,
+        cape_jkg=3000.0, convective_inhibition_jkg=5.0,
+    )]
+    _reihe(punkte)
+    ort = LocationResult(
+        location=SavedLocation(id="alpenort", name="Alpenort", lat=_LAT,
+                               lon=_LON, elevation_m=1000),
+        score=50, hourly_data=punkte,
+    )
+    ergebnis = ComparisonResult(
+        locations=[ort], time_window=(12, 20), target_date=date(2026, 8, 6),
+        created_at=datetime(2026, 8, 5, 18, 0),
+    )
+    html, _ = render_compare_email(
+        ergebnis, enabled_metrics=["thunder_max"], hourly_enabled=False,
+        preset=PRESET_ALLGEMEIN, metric_formats={"thunder_max": einfach},
+    )
+    rest = html.split(">Gewitter</td>", 1)[1].split("</tr>", 1)[0]
+    zellen = re.findall(r"<td[^>]*>(.*?)</td>", rest, re.S)
+    assert len(zellen) == 1, zellen
+    return _html_mod.unescape(zellen[0])
+
+
+def test_ac12_compare_ist_vom_seitenkanal_unberuehrt():
+    """AC-12 (Compare unberuehrt vom Seitenkanal ``_thunder_signals``).
+
+    Urspruenglich als Grep "compare_html.py importiert fmt_val nicht"
+    formuliert. Issue #3039 (ADR-0119, freigegebene Spec) verlangt fuer die
+    Einfach-Darstellung der Vergleichs-Uebersicht ausdruecklich die
+    Wiederverwendung von ``fmt_val`` -- die eigentliche Zusicherung ist daher
+    jetzt dort geprueft, wo sie wirkt:
+
+    (a) Struktur: weder ``comparison.py`` noch ``compare_html.py`` fuellen den
+        Seitenkanal ``row["_thunder_signals"]`` oder lesen
+        ``hourly_thunder_signals``; ``comparison.py`` nutzt ``fmt_val`` weiter
+        nicht.
+    (b) Verhalten: die Einfach-Zelle (Ampelpunkt aus ``fmt_val``) eines Ortes
+        mit CAPE-getragenem Gewitter nennt keine Zutat -- Gegenprobe: die
+        Roh-Zelle desselben Ortes nennt sie (Herkunft der Uebersicht, #1680 S1).
+    """
     import output.renderers.comparison as comparison_mod
     import output.renderers.email.compare_html as compare_html_mod
 
@@ -397,9 +450,20 @@ def test_ac12_compare_importiert_fmt_val_nicht():
     assert "fmt_val" not in quelle_comparison, (
         "comparison.py darf fmt_val() NICHT importieren -- sonst waere die "
         "Compare-Stundentabelle vom neuen Seitenkanal betroffen")
-    assert "fmt_val" not in quelle_compare_html, (
-        "compare_html.py darf fmt_val() NICHT importieren -- sonst waere die "
-        "Compare-HTML-Stundentabelle vom neuen Seitenkanal betroffen")
+    for name, quelle in (("comparison.py", quelle_comparison),
+                         ("compare_html.py", quelle_compare_html)):
+        assert not _SEITENKANAL.search(quelle), (
+            f"{name} darf den Trip-Seitenkanal '_thunder_signals' bzw. "
+            f"'hourly_thunder_signals' nicht nutzen")
+
+    roh = _compare_gewitter_zelle(einfach=False)
+    assert "CAPE" in roh, f"Gegenprobe: die Roh-Zelle nennt die Zutat: {roh!r}"
+
+    einfach = _compare_gewitter_zelle(einfach=True)
+    assert "border-radius:50%" in einfach, (
+        f"Einfach muss der Ampelpunkt aus fmt_val sein: {einfach!r}")
+    assert not any(z in einfach for z in ALLE_ZUTATEN), (
+        f"Die Einfach-Zelle darf keinen Herkunfts-Zusatz tragen: {einfach!r}")
 
 
 def test_ac13_alt_schnappschuss_zeigt_stufe_ohne_herkunft():

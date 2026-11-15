@@ -331,11 +331,11 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     channel_raw = display_config.get("channel_active_metrics")
     # Issue #3039: Kaskade je Kanal -- `channel_layouts[kanal]` vor
     # `channel_active_metrics[kanal]` vor Grundauswahl (ADR-0119).
-    # ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS sendet den SMS-Text.
     channel_rows = {
         ch: resolve_channel_layout_rows(
             global_metrics, display_config.get("channel_layouts"), ch,
         )
+        # ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS sendet den SMS-Text.
         for ch in ("email", "telegram", "sms")
     }
 
