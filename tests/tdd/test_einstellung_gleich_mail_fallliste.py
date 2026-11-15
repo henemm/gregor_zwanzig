@@ -131,11 +131,24 @@ def _python_testnamen(datei: Path) -> set[str]:
     return namen
 
 
+#: Testaufrufe im Frontend: Vitest (``it``/``test``/``it.fails``) und
+#: ``node --test`` mit dem Helfer ``rotErwartet`` (#3047 Paket D).
+_VITEST_AUFRUF = r"\b(?:it|test|it\.fails|rotErwartet)\s*\(\s*"
+#: Template-Literal-Titel: der feste Text vor dem ersten ``${`` (z. B.
+#: ``test(`Grundname ${z.id}`)`` -> ``Grundname``).
+_VITEST_TEMPLATE_PRAEFIX = re.compile(_VITEST_AUFRUF + r"`([^`$]*)\$\{")
+
+
 def _vitest_titel_gefunden(titel: str, dateien: list[Path]) -> bool:
-    muster = re.compile(
-        r"\b(?:it|test|it\.fails)\s*\(\s*(['\"`])" + re.escape(titel) + r"\1"
-    )
-    return any(muster.search(d.read_text(encoding="utf-8")) for d in dateien)
+    muster = re.compile(_VITEST_AUFRUF + r"(['\"`])" + re.escape(titel) + r"\1")
+    for d in dateien:
+        quelle = d.read_text(encoding="utf-8")
+        if muster.search(quelle):
+            return True
+        praefixe = {p.strip() for p in _VITEST_TEMPLATE_PRAEFIX.findall(quelle)}
+        if titel.strip() and titel.strip() in praefixe:
+            return True
+    return False
 
 
 def _ist_vitest_fall(fall: dict) -> bool:
@@ -378,6 +391,10 @@ _SYN_VITEST = """
 import { it, test } from 'vitest';
 it('editor behaelt reihenfolge', () => {});
 it.fails("editor kennt noch nicht", () => {});
+rotErwartet('editor rot bis zur behebung', () => {});
+for (const z of zustaende) {
+  test(`editor standard je zustand ${z.id}`, () => {});
+}
 """
 
 
@@ -490,6 +507,28 @@ def test_selbsttest_unbekannte_testfunktion_wird_gemeldet(tmp_path):
     assert any("test_gibt_es_nicht" in f for f in fehler)
     assert any("test_nicht_da" in f for f in fehler)
     assert any("editor tippfehler" in f for f in fehler)
+
+
+def test_selbsttest_frontend_rot_erwartet_und_template_titel(tmp_path):
+    """``rotErwartet(`` zaehlt als Testaufruf (node --test-Helfer), ein
+    Template-Literal-Titel wird ueber seinen festen Text vor ``${`` gefunden;
+    ein Teil dieses Textes oder ein Nicht-Testaufruf zaehlt nicht."""
+    daten = _syn_daten()
+    editor = daten["fallliste_editor.json"]["faelle"]
+    editor[0]["test"] = "editor rot bis zur behebung"
+    editor[1]["test"] = "editor_standard_gleich_mail.test.ts::editor standard je zustand"
+    verzeichnis = _schreibe(tmp_path, daten)
+    assert pruefe_testverweise(lade_falllisten(verzeichnis), tmp_path) == []
+
+    editor[0]["test"] = "editor standard je"            # nur ein Teil des Praefixes
+    editor[1]["test"] = "editor_standard_gleich_mail.test.ts::nur beschreibung"
+    vt = tmp_path / "frontend" / "src" / "lib" / "x" / "__tests__"
+    verzeichnis = _schreibe(tmp_path, daten)
+    datei = vt / "editor_standard_gleich_mail.test.ts"
+    datei.write_text(_SYN_VITEST + "describe(`nur beschreibung ${x}`, () => {});\n",
+                     encoding="utf-8")
+    fehler = pruefe_testverweise(lade_falllisten(verzeichnis), tmp_path)
+    assert len(fehler) == 2, fehler
 
 
 def test_selbsttest_paarluecke_und_ausschluss(tmp_path):

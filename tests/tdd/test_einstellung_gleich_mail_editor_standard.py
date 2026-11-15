@@ -157,8 +157,9 @@ def test_python_seite_trip_tabellen_standard():
 
 
 @pytest.mark.xfail(strict=True, reason="#3047 RED N1: Trip ohne gespeicherte metrics -> "
-                   "Stundentabelle ohne Wertspalten (resolve_metric_col_order liefert []), "
-                   "DEFAULT_TRIP_METRIC_IDS wirkt nur auf die Kennzahl-Kacheln")
+                   "Stundentabelle ohne Wertspalten (in der echten Mail belegt, "
+                   "test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics); "
+                   "Behebung betrifft alle Kanaele (Telegram AC-S4-13 #1199), offen")
 def test_python_seite_trip_tabellen_altbestand():
     _pruefe(python_trip_tabellen, "trip_tabellen",
             _zustand("trip_tabellen", "altbestand_ohne_metrics"))
@@ -171,8 +172,6 @@ def test_python_seite_trip_tabellen_gespeichert(zustand):
 
 # ── Trip-Ausblick ──────────────────────────────────────────────────────────────
 
-@pytest.mark.xfail(strict=True, reason="#3047 RED T1: resolve_trip_outlook_metrics nimmt die "
-                   "Array-/Katalogfolge von dc.metrics statt der eingestellten order")
 def test_python_seite_trip_ausblick_standard():
     _pruefe(python_trip_ausblick, "trip_ausblick", _zustand("trip_ausblick", "nie_eingestellt"))
 

@@ -588,6 +588,94 @@ def test_ac11_altbestand_golden(monkeypatch, fall):
         f"{fall['id']}: Mail weicht vom Golden {pfad.name} ab")
 
 
+def _amtliche_gewitterwarnung():
+    from datetime import datetime, timezone
+
+    from services.official_alerts.models import OfficialAlert
+
+    return OfficialAlert(
+        source="meteofrance_vigilance", hazard="thunderstorm", level=3,
+        label="Gewitter", region_label="Pruefregion 3047",
+        valid_from=datetime(2026, 7, 20, 6, 0, tzinfo=timezone.utc),
+        valid_to=datetime(2026, 7, 20, 20, 0, tzinfo=timezone.utc),
+    )
+
+
+def _wv6_positionen(html, text, fmt: str) -> tuple[int, int, int]:
+    """(Warnung, Metriken-Ueberblick, erste Stundentabelle) als Position im
+    gelesenen Mail-Teil; -1 = nicht gefunden."""
+    import re
+
+    from i18n import t
+
+    if fmt == "html":
+        body = html[html.find("<body"):]
+        tabelle = re.search(r'<table[^>]*data-table="resp"', body)
+        return (body.find('class="wb'), body.find(t("mail.pille.ueberschrift", "de")),
+                tabelle.start() if tabelle else -1)
+    zeilen = text.splitlines()
+
+    def _zeile(praefix: str) -> int:
+        return next((i for i, z in enumerate(zeilen) if z.startswith(praefix)), -1)
+
+    return (_zeile(f"━━ {t('mail.warnungen.ueberschrift', 'de')}"),
+            _zeile(f"━━ {t('mail.pille.ueberschrift', 'de')}"), _zeile("━━ Segment"))
+
+
+@pytest.mark.parametrize("fall", _faelle("test_wv6_amtliche_warnung_zuerst"))
+def test_wv6_amtliche_warnung_zuerst(monkeypatch, fall):
+    """WV6 (Konzept ``einstellungen_neu.md``): amtliche Warnungen stehen in der
+    E-Mail immer zuerst, fest und nicht verschiebbar -- vor jedem Metrik-
+    Inhalt (Metriken-Ueberblick und Stundentabelle), unabhaengig von der
+    gespeicherten Metrik-Folge (hier Boeen, Temperatur, Niederschlag, Wind)."""
+    data = trip_json(["gust", "temperature", "precipitation", "wind"])
+    html, text, _ = _senden(monkeypatch, data, fall["format"],
+                            official_alerts=[_amtliche_gewitterwarnung()])
+    warnung, ueberblick, tabelle = _wv6_positionen(html, text, fall["format"])
+    assert warnung >= 0, f"{fall['id']}: amtliche Warnung fehlt in der Mail"
+    assert tabelle > warnung, (
+        f"{fall['id']}: Warnung (Pos. {warnung}) nicht vor der ersten "
+        f"Stundentabelle (Pos. {tabelle})")
+    if _variante(fall) == "vor_ueberblick":
+        assert ueberblick > warnung, (
+            f"{fall['id']}: Warnung (Pos. {warnung}) steht hinter dem "
+            f"Metriken-Ueberblick (Pos. {ueberblick})")
+
+
+#: Register-Standardfolge (``trip_default_rank``) als STUNDENSPALTEN, von Hand
+#: aus ``editor_standard.json`` (Liste ``trip_tabellen``, Zustand
+#: ``altbestand_ohne_metrics``) uebernommen; Tagestief/-hoch sind
+#: Nachtfenster-/Tageswerte ohne Stundenspalte (#1484) und fehlen hier.
+_REGISTER_STANDARD_STUNDENSPALTEN = [
+    "temperature", "wind", "gust", "precipitation", "thunder", "freezing_level",
+    "visibility",
+]
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n1_altbestand_ohne_metrics"))
+def test_n1_altbestand_ohne_metrics(monkeypatch, fall):
+    """N1 (#3047, AC-13/AC-11): ein Trip-Altbestand, dessen ``display_config``
+    gar kein ``metrics`` traegt (Fall A, ``trip_metric_ids.py``), bekommt in
+    der zugestellten Mail Stunden- und Nachttabelle MIT Wertspalten in der
+    Register-Standardfolge -- dieselbe Folge, die der Editor anzeigt -- statt
+    einer Tabelle, die nur noch die Zeitspalte traegt."""
+    data = trip_json(["temperature"])
+    del data["display_config"]["metrics"]
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    art = "etappe" if fall["liste"] == "trip_stundentabelle" else "nacht"
+    tabellen = _stundentabellen(html, text, fall["format"], art)
+    assert tabellen, f"{fall['id']}: Tabelle fehlt"
+    for t in tabellen:
+        assert t.spalten == _REGISTER_STANDARD_STUNDENSPALTEN, (
+            f"{fall['id']}: Spalten {t.spalten} != Register-Standard "
+            f"{_REGISTER_STANDARD_STUNDENSPALTEN}")
+        # Spalten ohne Werte waeren dieselbe leere Tabelle mit anderem Kopf:
+        # Temperatur und Wind tragen in jeder Wetterzeile eine Zahl.
+        formen = t.formen()
+        assert formen["temperature"] and formen["wind"], (
+            f"{fall['id']}: Wertspalten ohne Werte {formen}")
+
+
 # ---------------------------------------------------------------------------
 # AC-12 -- zwei Nutzer
 # ---------------------------------------------------------------------------
