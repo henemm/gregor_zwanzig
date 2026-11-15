@@ -1072,7 +1072,7 @@
       "test": "test_ac10_stundenverlauf_nimmt_nur_aus_grundauswahl",
       "ac": "AC-10",
       "befund": "O5",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "O-SV-H-ALT",
@@ -1383,7 +1383,7 @@
       "test": "test_ac10_stundenverlauf_nimmt_nur_aus_grundauswahl",
       "ac": "AC-10",
       "befund": "O5",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "O-SV-K-ALT",
@@ -1561,8 +1561,21 @@
       "test": "test_wv6_amtliche_warnung_zuerst_klartext",
       "ac": "AC-5",
       "befund": "WV6",
-      "status": "rot_erwartet",
+      "status": "gruen",
       "verweis": "src/output/renderers/comparison.py:310-313 (Klartext-Warnzeilen nach der Metrik-Schleife statt zuerst; Konzept einstellungen_neu.md §5 Punkt 8 WV6)"
+    },
+    {
+      "id": "O-VT-H-NEU-IN-LISTEN",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "neue_metrik_in_allen_listen_orte.test.ts::Einwahl haengt die Metrik an jede gespeicherte Kanal-Liste hinten an, Folge bleibt",
+      "ac": "AC-10",
+      "befund": "T3",
+      "status": "gruen",
+      "seite": "frontend",
+      "verweis": "#3047 T3 Orte (WeatherMetricsTab.svelte::toggleCompareMetric uebertrug bei channel_active_metrics nur Abwahlen; behoben ueber compareChannelMetricLayouts.ts::compareToggleFolgen, auch outlook_metrics/hourly_metrics)"
     }
   ]
 }

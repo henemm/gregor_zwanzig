@@ -199,7 +199,8 @@ def render_comparison_text(
     ``show_fallback_notice`` (Issue #1563): Vertretungshinweis je Ort unter
     der Uebersicht, nur Briefing; Default ``False``.
 
-    Kein Score/🏆 mehr. Je Ort: Uebersichtswerte + amtliche Warnungen (via
+    Kein Score/🏆 mehr. Je Ort: amtliche Warnungen zuerst (#3047 WV6), dann
+    Uebersichtswerte (Warnungen via
     ``render_official_alerts_plain()``, kein Copy-Paste, ADR-0011). Danach
     kompakte Stundentabellen fuer ALLE Orte (kein Rang-Praefix, keine
     Top-N-Beschraenkung mehr).
@@ -283,6 +284,12 @@ def render_comparison_text(
             lines.append("")
             continue
 
+        # Amtliche Warnungen, eine Zeile pro Warnung (Epic #1073 Punkt 6,
+        # gemeinsamer Renderer statt Copy-Paste). Issue #3047 (Konzept WV6):
+        # wie im HTML-Teil ZUERST, vor den Metrik-Zeilen in Nutzerfolge.
+        for line in render_official_alerts_plain([(loc.name, loc_result.official_alerts)], lang=lang):
+            lines.append(f"   ⚠️ {line}")
+
         # Issue #1359: EINE geordnete Schleife statt fester if-Kette. Die
         # Werte kommen weiterhin aus DERSELBEN Quelle wie die HTML-Matrix
         # (`_metric_value` -> Engine-Feld bzw. live aus hourly_data), damit
@@ -306,11 +313,6 @@ def render_comparison_text(
                 if value is not None else "-"
             )
             lines.append(f"   {row['label']}: {cell}")
-
-        # Amtliche Warnungen, eine Zeile pro Warnung (Epic #1073 Punkt 6,
-        # gemeinsamer Renderer statt Copy-Paste).
-        for line in render_official_alerts_plain([(loc.name, loc_result.official_alerts)], lang=lang):
-            lines.append(f"   ⚠️ {line}")
 
         lines.append("")
 

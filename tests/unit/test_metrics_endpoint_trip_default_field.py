@@ -49,6 +49,23 @@ def test_exactly_the_target_metrics_are_marked_trip_default_enabled(client: Test
     )
 
 
+def test_trip_default_rank_orders_the_target_metrics_like_the_mail(client: TestClient):
+    """#3047 N2: die Antwort traegt den Rang selbst, damit der Editor einen
+    Trip ohne gespeicherte ``metrics`` in derselben Folge zeigt wie die Mail
+    (``DEFAULT_TRIP_METRIC_IDS``). Ohne Rang ``null``."""
+    from output.renderers.trip_metric_ids import DEFAULT_TRIP_METRIC_IDS
+
+    metrics = _all_metrics(client.get("/api/metrics").json())
+    rangiert = sorted(
+        (m for m in metrics if m["trip_default_rank"] is not None),
+        key=lambda m: m["trip_default_rank"],
+    )
+    assert [m["id"] for m in rangiert] == list(DEFAULT_TRIP_METRIC_IDS)
+    assert all(
+        (m["trip_default_rank"] is not None) == m["trip_default_enabled"] for m in metrics
+    )
+
+
 def test_trip_default_enabled_is_independent_of_default_enabled(client: TestClient):
     payload = client.get("/api/metrics").json()
     metrics = {m["id"]: m for m in _all_metrics(payload)}

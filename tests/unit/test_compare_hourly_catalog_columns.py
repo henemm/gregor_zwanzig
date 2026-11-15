@@ -461,3 +461,31 @@ def test_plaintext_hour_row_carries_the_same_columns_as_html():
     assert [label for label, _ in _plain_hour_cells(plain)] == html_columns, (
         "Klartext und HTML zeigen unterschiedliche Stundenspalten"
     )
+
+
+def _grund(*keys: str) -> list[str]:
+    return resolve_enabled_metrics(list(keys))
+
+
+@pytest.mark.parametrize(
+    ("gespeichert", "grund", "soll"),
+    [
+        # Schnitt, gespeicherte Folge bleibt (Boeen abgewaehlt)
+        (["gust", "temperature", "wind"], ("wind_max_kmh", "temp_max_c"), ["temperature", "wind"]),
+        # Totalschnitt -> Vorgabemenge geschnitten, in deren Folge
+        (["gust"], ("wind_max_kmh", "temp_max_c"), ["temperature", "wind"]),
+        # Totalschnitt, auch Vorgabemenge leer -> stuendliche Grundauswahl
+        (["gust"], ("cloud_avg_pct",), ["cloud_total"]),
+        # ausdruecklich leer bleibt leer, nie eingestellt bleibt None
+        ([], ("wind_max_kmh",), []),
+        (None, ("wind_max_kmh",), None),
+        # keine Grundauswahl (Altbestand) -> kein Schnitt
+        (["gust", "wind"], None, ["gust", "wind"]),
+    ],
+)
+def test_stundenverlauf_nimmt_nur_aus_grundauswahl(gespeichert, grund, soll):
+    """#3047 O5 / AC-10: Schnitt mit der Grundauswahl samt dokumentiertem
+    Rueckfall (``resolve_hourly_metrics``-Docstring)."""
+    erwartet = None if soll is None else [get_metric(m).dp_field for m in soll]
+    basis = None if grund is None else _grund(*grund)
+    assert resolve_hourly_metrics(gespeichert, basis) == erwartet

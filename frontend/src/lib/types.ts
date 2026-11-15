@@ -206,6 +206,11 @@ export interface MetricEntry {
 	 *  unvollstaendig, ohne dass sich an ihrem getesteten Verhalten etwas
 	 *  aendert (CI-Regression svelte-check 36->94, #1554 Fix-Loop). */
 	trip_default_enabled?: boolean;
+	/** Issue #3047 N2: Rang im Trip-Anlege-Standard (`trip_default_rank` des
+	 *  Registers, 1 = zuerst; `null` = nicht im Standard). Der Editor ordnet
+	 *  einen Trip ohne gespeicherte `metrics` danach -- dieselbe Folge wie die
+	 *  Mail (`DEFAULT_TRIP_METRIC_IDS`). Optional wie `trip_default_enabled`. */
+	trip_default_rank?: number | null;
 	has_friendly_format: boolean;
 	/** Issue #2422 S6 (B2): hat die Größe in SMS/Premium-SMS/Telegram-Kurzform
 	 *  zwei Formen (Roh/Einfach)? Quelle: Backend-Konstante

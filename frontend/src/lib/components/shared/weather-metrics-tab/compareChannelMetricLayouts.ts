@@ -22,6 +22,7 @@ import {
 	type CompareSelectionEntry,
 	type StoredActiveMetric
 } from './compareMetricSelection.ts';
+import { appendNewMetricsToOutlook } from './channelMetricLayouts.ts';
 
 /** Die drei Metrik-Kanaele des Compare-Briefings. Premium-SMS ist seit #2275
  *  auch Versandkanal des Vergleichs-Briefings, traegt aber den SMS-Inhalt und
@@ -96,4 +97,69 @@ export function mergeAllCompareChannelActiveMetricsForSave(
  */
 export function startCompareChannelOverride(globalKeys: readonly string[]): string[] {
 	return [...globalKeys];
+}
+
+/** Die gespeicherten Listen des Vergleichs, die eine globale Umschaltung
+ *  beruehrt (`null`/`undefined` = nie eingestellt, folgt der Grundauswahl). */
+export interface CompareGespeicherteListen {
+	channelActive: CompareChannelActiveMetrics | null | undefined;
+	outlookKeys: string[] | null | undefined;
+	hourlyKeys: string[] | null | undefined;
+}
+
+/**
+ * #3047 T3 Orte (AC-10, Konzept einstellungen_neu.md §5 Punkt 6/8): Folgen der
+ * globalen Umschaltung von `metric` (Auswahl-Schluessel) fuer die bereits
+ * gespeicherten Listen -- Compare-Seite von `toggleGlobalMetric`/
+ * `appendNewMetricsToOutlook` (channelMetricLayouts.ts, Trip).
+ *  - ABWAHL (`wasOn`): wie seit #1703 S8 (ADR-0050 Regel 3) sofort aus jeder
+ *    gespeicherten Kanal-Liste; Ausblick/Stundenverlauf schneidet der Versand.
+ *  - EINWAHL: hinten an jede gespeicherte Kanal-Liste, an `outlook_metrics`
+ *    (Kennung, ueber die geteilte Trip-Funktion) und an `hourly_metrics`
+ *    (Kennung, nur wenn stuendlich waehlbar; ein Alt-Kurzschluessel derselben
+ *    Groesse zaehlt als vorhanden). Bestehende Folge und Abwahlen bleiben.
+ * Unveraenderte Listen behalten ihre Referenz (Aufrufer erkennt „nichts zu tun").
+ */
+export function compareToggleFolgen(
+	metric: string,
+	wasOn: boolean,
+	listen: CompareGespeicherteListen,
+	catalog: CompareSelectionEntry[]
+): CompareGespeicherteListen {
+	const channelActive = kanalFolgen(listen.channelActive, metric, wasOn);
+	if (wasOn) return { ...listen, channelActive };
+	return {
+		channelActive,
+		outlookKeys: listen.outlookKeys == null ? listen.outlookKeys : appendNewMetricsToOutlook(listen.outlookKeys, [metric], catalog),
+		hourlyKeys: stundenFolge(listen.hourlyKeys, metric, catalog)
+	};
+}
+
+function kanalFolgen(
+	channelActive: CompareChannelActiveMetrics | null | undefined,
+	metric: string,
+	wasOn: boolean
+): CompareChannelActiveMetrics | null | undefined {
+	if (!channelActive) return channelActive;
+	const next = { ...channelActive };
+	let changed = false;
+	for (const ch of COMPARE_CHANNEL_IDS) {
+		const override = next[ch];
+		if (override == null || override.includes(metric) !== wasOn) continue;
+		next[ch] = wasOn ? override.filter((id) => id !== metric) : [...override, metric];
+		changed = true;
+	}
+	return changed ? next : channelActive;
+}
+
+function stundenFolge(
+	hourlyKeys: string[] | null | undefined,
+	metric: string,
+	catalog: CompareSelectionEntry[]
+): string[] | null | undefined {
+	if (hourlyKeys == null) return hourlyKeys;
+	const eintrag = catalog.find((e) => e.metric === metric);
+	if (!eintrag?.metric_id || eintrag.hourlySelectable === false) return hourlyKeys;
+	const vorhanden = new Set([eintrag.metric_id, ...(eintrag.hourly_legacy_keys ?? [])]);
+	return hourlyKeys.some((k) => vorhanden.has(k)) ? hourlyKeys : [...hourlyKeys, eintrag.metric_id];
 }

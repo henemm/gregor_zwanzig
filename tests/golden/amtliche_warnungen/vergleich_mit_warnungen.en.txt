@@ -5,6 +5,8 @@ Created: 29 Oct 2026 05:00 (CET)
 
 --------------------------------------------------
 Innsbruck
+   ⚠️ Official warning: Moderate thunderstorm warning (Thu 29 Oct · 10:00–19:00)
+   ⚠️ Official warning: Heat (Thu 29 Oct · all day)
    Temperature Maximum: 11°C
    Wind: 26 km/h
    Precipitation: 2.4 mm
@@ -30,8 +32,6 @@ Innsbruck
    Air pressure: 1012 hPa
    Precipitation type: Rain
    Snow line: 2100 m
-   ⚠️ Official warning: Moderate thunderstorm warning (Thu 29 Oct · 10:00–19:00)
-   ⚠️ Official warning: Heat (Thu 29 Oct · all day)
 
 Lienz
    Temperature Maximum: 12°C
@@ -61,6 +61,7 @@ Lienz
    Snow line: 2150 m
 
 Kufstein
+   ⚠️ Official warning: Wildfire risk
    Temperature Maximum: 13°C
    Wind: 26 km/h
    Precipitation: 8.4 mm
@@ -86,7 +87,6 @@ Kufstein
    Air pressure: 1014 hPa
    Precipitation type: Mixed precipitation
    Snow line: 2200 m
-   ⚠️ Official warning: Wildfire risk
 
 Brenner
    Error: Zeitueberschreitung beim Abruf
