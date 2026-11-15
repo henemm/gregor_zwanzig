@@ -39,8 +39,6 @@ import sys
 import tokenize
 from pathlib import Path
 
-import pytest
-
 REPO = Path(__file__).resolve().parents[1]
 ALLOWLIST = REPO / "tests" / "fixtures" / "i18n_python_allowlist.json"
 _SERVICE_WOERTER = ("report", "alert", "notification", "command", "inbound",
