@@ -232,14 +232,24 @@ describe('buildComparePresetSavePayload — Alarm-Trigger + Kanäle (#1216)', ()
 	});
 });
 
-// ─── Issue #1351 F002: channel_layouts ist Compare-Ballast, faellt IMMER weg ──
-describe('buildComparePresetSavePayload — channel_layouts-Entfernung (#1351 AC-6)', () => {
-	test('Alt-Preset mit channel_layouts + unbekanntem Zusatzfeld: channel_layouts faellt weg, Zusatzfeld bleibt (Read-Modify-Write)', () => {
+// ─── Issue #3039 AC-11 (löst #1351 AC-6 ab, ADR-0119): channel_layouts ist
+// wieder Nutzerstand (Karte „Inhalt je Kanal“, #3031) und muss jedes Speichern
+// aus einem ANDEREN Reiter unverändert überstehen (Read-Modify-Write). ──
+describe('buildComparePresetSavePayload — channel_layouts bleibt erhalten (#3039 AC-11)', () => {
+	test('Speichern aus einem anderen Reiter: channel_layouts und Zusatzfeld bleiben unverändert erhalten', () => {
+		const channelLayouts = {
+			email: [
+				{ metric_id: 'gust', enabled: true, use_friendly_format: true },
+				{ metric_id: 'temperature', enabled: true }
+			],
+			telegram: [{ metric_id: 'gust', enabled: false, use_friendly_format: false }],
+			sms: [{ metric_id: 'cloud_total', enabled: true, use_friendly_format: true }]
+		};
 		const original: ComparePreset = {
 			...makePreset(),
 			display_config: {
 				region: 'Salzburger Land',
-				channel_layouts: { email: ['temp_min_c'], sms: ['temp_min_c'] },
+				channel_layouts: structuredClone(channelLayouts),
 				future_unknown_field: 'muss erhalten bleiben'
 			}
 		};
@@ -252,9 +262,10 @@ describe('buildComparePresetSavePayload — channel_layouts-Entfernung (#1351 AC
 		});
 
 		const dc = body.display_config as Record<string, unknown>;
-		assert.ok(
-			!Object.prototype.hasOwnProperty.call(dc, 'channel_layouts'),
-			'channel_layouts muss nach dem Speichern entfernt sein'
+		assert.deepEqual(
+			dc.channel_layouts,
+			channelLayouts,
+			'channel_layouts muss das Speichern aus einem anderen Reiter unverändert überstehen'
 		);
 		assert.equal(dc.future_unknown_field, 'muss erhalten bleiben');
 		assert.equal(dc.region, 'Salzburger Land');
