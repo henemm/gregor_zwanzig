@@ -129,6 +129,9 @@ def get_metrics():
             "alert_label": m.alert_label,
             "alert_label_en": m.alert_label_en,
             "unit": m.display_unit if m.display_unit else m.unit,
+            # Issue #2946: Einheit der Ampel-Grenzwerte (Speicher-Einheit),
+            # z. B. Sichtweite "m", waehrend `unit` die Anzeige-Einheit "km" ist.
+            "threshold_unit": m.unit,
             "category": m.category,
             "default_enabled": m.default_enabled,
             # Issue #1552: eigene Trip-Anlege-Vorbelegung, unabhaengig von

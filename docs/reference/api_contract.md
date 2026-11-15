@@ -273,7 +273,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/locations/{id}/weather-config` | GET, PUT |
 | `/api/metric-presets` | GET, POST |
 | `/api/metric-presets/{id}` | DELETE, PATCH |
-| `/api/metrics` | GET | (Issue #2662: je Größe zusätzlich `label_de`, `label_en`, `alert_label`, `alert_label_en`; je Auswertung `label_en`; `label` bleibt deutsch) |
+| `/api/metrics` | GET | (Issue #2662: je Größe zusätzlich `label_de`, `label_en`, `alert_label`, `alert_label_en`; je Auswertung `label_en`; `label` bleibt deutsch. Issue #2946: je Größe `threshold_unit` = Einheit der Ampel-Grenzwerte, z. B. Sichtweite `m`) |
 | `/api/next-briefings` | GET (Issue #1969 — „Nächstes Briefing“: der echte nächste Versandtermin je Trip und Ortsvergleich des angemeldeten Nutzers; rein lesend. Optionale Query `trip_id` (nur dieser Trip, Ortsvergleiche entfallen) bzw. `preset_id` (nur dieser Ortsvergleich, Trips entfallen). Der Nutzer kommt ausschließlich aus dem Auth-Kontext: der Go-Proxy `NextBriefingsProxyHandler` setzt `user_id` und überschreibt einen mitgesendeten Wert. Intern: Python `GET /api/_internal/next-briefings?user_id=…[&trip_id=…][&preset_id=…]`. Antwort `{"trips": {<trip_id>: NextBriefing}, "compare": {<preset_id>: NextBriefing}}`; ein Objekt, dessen Ableitung scheitert oder das dem Nutzer nicht gehört, fehlt in der Antwort. `NextBriefing`: `at` (ISO-8601 mit Ortszeit-Offset, `null` wenn kein Termin), `local_date` (`YYYY-MM-DD`), `local_time` (`HH:00`), `tz` (Zonenname, z. B. `Europe/Paris`), `tz_abbr` (Kürzel, z. B. `CEST`), `slot` (`morning`\|`evening`), `overdue` (nur wenn wahr: Termin ist fällig, aber noch nicht versendet), `skipped` (nur bei `skip_next`: `{local_date, local_time, slot}` des entfallenden Termins; `at` zeigt dann den übernächsten), `reason` (nur wenn `at` = `null`: `paused`\|`disabled`\|`ended`\|`manual`\|`none`), `paused_until` (optional bei `paused`, `YYYY-MM-DD`). Nicht zutreffende Felder fehlen. Spec `docs/specs/modules/feat_1969_naechstes_briefing.md`) |
 | `/api/notify/test` | POST |
 | `/api/preview/{trip_id}/sms` | GET | — Trip-Vorschau SMS-Kurzform; Proxy-Logik `forwardPreview`, Section 20 (email/telegram/compare entfallen, #1743)
@@ -2298,6 +2298,7 @@ der Code nie gesendet hat.
 | metrics[].alert_label | string | **Neu #2662.** Deutsche Alarm-Kurzform (`MetricDefinition.alert_label`), `""` wenn keine eigene (Rückfall auf den vollen Namen) |
 | metrics[].alert_label_en | string | **Neu #2662.** Englische Alarm-Kurzform (≤ 12 Zeichen, ADR-0042), `""` wenn keine eigene. Protokoll-Token (`sms_code`, `col_label`) bleiben unübersetzt |
 | metrics[].unit | string | Unit of measurement (`display_unit`, sonst `unit`) |
+| metrics[].threshold_unit | string | **Neu #2946.** Einheit der Ampel-Grenzwerte = Katalog-Speichereinheit (`MetricDefinition.unit`), z. B. Sichtweite `m` bei `unit` `km`. Ohne `display_unit` identisch mit `unit`. Wetter-Reiter nutzt es für Grünzeile, Untertitel, Erklärsatz |
 | metrics[].category | string | Katalog-Kategorie, identisch mit dem umgebenden Schluessel |
 | metrics[].default_enabled | bool | Vorbelegung fuer Orte/Abonnements (`build_default_display_config()`); fuer neue Trips gilt `trip_default_enabled` |
 | metrics[].has_friendly_format | bool | Ob die Groesse eine Klartext-/Symbol-Darstellung kennt (`use_friendly_format`) |
