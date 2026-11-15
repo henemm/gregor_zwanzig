@@ -22,7 +22,7 @@ function parseStageDate(dateStr: string): Date {
 	return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
 
-function sortedStageDates(trip: Trip): string[] {
+function sortedStageDates(trip: Pick<Trip, 'stages'>): string[] {
 	return (trip.stages ?? [])
 		.map((s) => s.date)
 		.filter((d): d is string => !!d)
@@ -30,7 +30,7 @@ function sortedStageDates(trip: Trip): string[] {
 		.sort();
 }
 
-export function formatDateRange(trip: Trip): string {
+export function formatDateRange(trip: Pick<Trip, 'stages'>): string {
 	const dates = sortedStageDates(trip);
 	if (dates.length === 0) return '';
 

@@ -73,9 +73,11 @@
 		border-radius: var(--g-r-3);
 		background: var(--g-card);
 	}
+	/* Mockup `.lrow` (Z. 140): Zeitfeld und Schalter stehen auch am Handy rechts neben Titel und
+	   Unterzeile (der Text bricht um, die Bedienung nicht). */
 	.zt-zeile {
 		display: flex;
-		flex-wrap: wrap;
+		flex-wrap: nowrap;
 		align-items: center;
 		justify-content: space-between;
 		gap: var(--g-size-10px) var(--g-s-4);
@@ -83,6 +85,8 @@
 	}
 	.zt-text {
 		display: flex;
+		flex: 1 1 auto;
+		min-width: 0;
 		flex-direction: column;
 		gap: var(--g-size-2px);
 	}
@@ -92,6 +96,7 @@
 	}
 	.zt-bedienung {
 		display: flex;
+		flex: 0 0 auto;
 		align-items: center;
 		gap: var(--g-s-3);
 	}

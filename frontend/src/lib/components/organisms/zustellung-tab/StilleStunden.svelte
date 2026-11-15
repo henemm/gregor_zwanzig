@@ -110,4 +110,25 @@
 		display: inline-block;
 		width: var(--g-size-72px);
 	}
+	/* Mockup `.input` (Z. 85), wie die Zeitfelder (molecules/UhrzeitFeld): beige Flaeche, feiner Rand,
+	   kleiner Radius, Mono mit Tabellenziffern. */
+	.zt-minuten :global([data-slot='input']) {
+		min-height: 40px;
+		padding: 0 var(--g-s-3);
+		border: 1px solid var(--g-rule);
+		border-radius: var(--g-r-2);
+		background: var(--g-paper);
+		color: var(--g-ink);
+		font-family: var(--g-font-mono);
+		font-feature-settings: 'tnum', 'zero';
+		font-size: var(--g-size-14px);
+	}
+	.zt-minuten :global([data-slot='input']:focus-visible) {
+		border-color: var(--g-ink);
+	}
+	@media (max-width: 899px), (pointer: coarse) {
+		.zt-minuten :global([data-slot='input']) {
+			font-size: 16px;
+		}
+	}
 </style>

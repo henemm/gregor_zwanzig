@@ -83,7 +83,7 @@
 								<td>
 									<b>{name}</b>
 									<div class="zt-status" data-testid="zustellung-kanal-{k}-status">
-										<Dot tone={TON[st.ton]} size={7} />
+										<Dot tone={TON[st.ton]} size={8} />
 										<span>{st.statusText}{st.ziel ? ` · ${st.ziel}` : ''}</span>
 									</div>
 									{#if st.grund}
@@ -105,7 +105,7 @@
 										onchange={(an) => setzeBriefing(k, an)}
 									/>
 								</td>
-								<td>
+								<td data-spalte={$t('zustellung.spalte.alarme')}>
 									{#if st.alarmGesperrt}
 										<span class="zt-gesperrt" data-testid="zustellung-kanal-{k}-alarm-gesperrt">{st.alarmSperre}</span>
 									{:else}
@@ -118,11 +118,11 @@
 										/>
 									{/if}
 								</td>
-								<td data-testid="zustellung-kanal-{k}-dringlichkeit">
+								<td data-testid="zustellung-kanal-{k}-dringlichkeit" data-spalte={$t('zustellung.spalte.dringlichkeit')}>
 									{#if zelle && zelle.art === 'segment'}
 										<Segmented
+											variant="kompakt"
 											rolle="radio"
-											size="sm"
 											ariaLabel={$t('zustellung.kanal.dringlichkeit_aria', { kanal: name })}
 											items={zelle.optionen.map((o) => ({ id: o.wert, label: o.text, testid: `zustellung-kanal-${k}-dringlichkeit-${o.wert}` }))}
 											value={zelle.wert}
@@ -185,20 +185,40 @@
 	.zt-tabelle {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: var(--g-size-13px);
+		font-size: var(--g-size-14px);
 	}
+	/* Mockup `.kt th` (Z. 149): Mono 10px, Grossbuchstaben per CSS, Zeichenabstand, gedaempft. */
 	.zt-tabelle th {
 		text-align: left;
+		font-family: var(--g-font-mono);
+		font-size: var(--g-size-10px);
+		letter-spacing: var(--g-size-0-1em);
+		text-transform: uppercase;
 		font-weight: 500;
-		font-size: var(--g-size-12-5px);
-		color: var(--g-ink-2);
-		padding: var(--g-s-2) var(--g-s-5);
-		border-top: 1px solid var(--g-rule-soft);
+		color: var(--g-ink-3);
+		padding: var(--g-s-3) var(--g-s-5) var(--g-s-2);
 	}
+	/* Mockup `.kt td` (Z. 150). Die Kanal-Spalte nimmt den Rest der Breite, die Spalten Briefing,
+	   Alarme und Dringlichkeit stehen so breit wie ihr Kopf direkt nebeneinander (Bild Mockup). */
 	.zt-tabelle td {
-		vertical-align: top;
+		vertical-align: middle;
 		padding: var(--g-s-3) var(--g-s-5);
 		border-top: 1px solid var(--g-rule-soft);
+	}
+	.zt-tabelle :is(th, td):first-child {
+		width: 100%;
+	}
+	.zt-tabelle th:not(:first-child) {
+		white-space: nowrap;
+	}
+	/* Dringlichkeits-Segment bleibt einzeilig (die Spalte ist so schmal wie moeglich). */
+	.zt-tabelle td :global([data-slot='segmented']) {
+		flex-wrap: nowrap;
+	}
+	.zt-tabelle td b {
+		display: block;
+		font-size: var(--g-size-14px);
+		font-weight: 600;
 	}
 	.zt-status,
 	.zt-hinweis {
@@ -210,6 +230,14 @@
 		font-size: var(--g-size-12-5px);
 		color: var(--g-ink-2);
 	}
+	/* Punkt bleibt neben dem Statustext (nicht auf eigener Zeile). */
+	.zt-status {
+		flex-wrap: nowrap;
+	}
+	.zt-status span {
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
 	.zt-hinweis {
 		color: var(--g-danger-fg);
 	}
@@ -217,6 +245,64 @@
 	.zt-strich {
 		font-size: var(--g-size-12-5px);
 		color: var(--g-ink-2);
+	}
+	/* Gesperrt-Satz: eigene Mindestbreite statt fast wortweisem Umbruch in schmaler Spalte. */
+	.zt-gesperrt {
+		display: block;
+		min-width: var(--g-size-160px);
+	}
+	/* Handy/Tablet: je Kanal zwei Zeilen — oben Kanal | Briefing (wie Mockup-Handyfassung), darunter
+	   Alarme | Dringlichkeit, damit beide ohne waagerechtes Wischen erreichbar bleiben. */
+	@media (max-width: 899px) {
+		.zt-tabelle,
+		.zt-tabelle thead,
+		.zt-tabelle tbody {
+			display: block;
+		}
+		.zt-tabelle tr {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			gap: var(--g-s-2) var(--g-s-4);
+			align-items: center;
+			padding: var(--g-s-3) var(--g-s-5);
+			border-top: 1px solid var(--g-rule-soft);
+		}
+		.zt-tabelle thead tr {
+			border-top: 0;
+			padding-bottom: var(--g-s-2);
+			gap: var(--g-s-1) var(--g-s-4);
+		}
+		.zt-tabelle th,
+		.zt-tabelle td {
+			display: block;
+			width: auto;
+			padding: 0;
+			border-top: 0;
+		}
+		.zt-tabelle :is(th, td):first-child {
+			width: auto;
+		}
+		.zt-tabelle :is(th, td):nth-child(even) {
+			justify-self: end;
+			text-align: right;
+		}
+		.zt-tabelle th:nth-child(4) {
+			white-space: normal;
+			max-width: var(--g-size-160px);
+		}
+		.zt-tabelle td[data-spalte]::before {
+			content: attr(data-spalte);
+			display: block;
+			margin-bottom: var(--g-s-1);
+			font-family: var(--g-font-mono);
+			font-size: var(--g-size-10px);
+			letter-spacing: var(--g-size-0-1em);
+			text-transform: uppercase;
+			color: var(--g-ink-3);
+		}
+		.zt-gesperrt {
+			min-width: 0;
+		}
 	}
 	.zt-legende {
 		margin: 0;
