@@ -20,13 +20,11 @@ sinken: mehr Funde als die Baseline = rot; weniger Funde, ohne dass die
 Baseline mitsinkt (bzw. der Eintrag bei 0 gestrichen wird) = ebenfalls rot,
 damit die Zahl nie wieder wachsen kann.
 
-Startstand/Restbefund (Prüfdatum 2027-01-28, Regel-Budget): AC-6 (Allowlist
-leer) ist mit P11 NICHT erreicht -- dokumentierte Teilauslieferung. #2751 hat
-alles ausserhalb des Renderer-Gates abgebaut (``BOT_COMMANDS`` traegt
-``# i18n-fest`` nach P7 #2669); uebrig sind nur Dateien unter
-``src/output/renderers/{alert,email}/`` und ``trip_report.py``
-(Renderer-Commit-Gate, brauchen den Validator gegen echte Staging-Mail).
-``test_allowlist_ist_leer`` ist bis dahin ``xfail(strict=True)``.
+Endstand (#2783, P13): Allowlist leer. #2751 hat alles ausserhalb des
+Renderer-Gates abgebaut, #2783 die Restdateien unter
+``src/output/renderers/{alert,email}/`` und ``trip_report.py`` (Marker bzw.
+Rueckbau des toten Highlights-Pfads). ``test_allowlist_ist_leer`` laeuft ohne
+``xfail``; jeder neue Fund ist sofort rot.
 
 Startstand/Messen: ``python tests/test_i18n_keine_hartkodierten_nutzertexte_python.py
 --startstand`` schreibt die Allowlist; ``--messen`` gibt nur auf stdout aus.
@@ -176,13 +174,8 @@ def test_allowlist_hat_keine_toten_eintraege():
                       f"schrumpft nur): {tote}")
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "AC-6 Endstand noch nicht erreicht: Restbefunde nur unter dem Renderer-Gate "
-    "(alert/*, email/html.py, email/thunder_branch.py, trip_report.py; #2751); "
-    "Rueckmeldung im Epic #2644. strict: sobald die Allowlist leer ist, wird "
-    "dieser Test rot und die Markierung muss weg."))
 def test_allowlist_ist_leer():
-    """Endstand Teil 2 (AC-6): alle Pakete P2-P10 haben migriert."""
+    """Endstand (AC-6 #2674, AC-1 #2783): Allowlist leer, kein Fund verdeckt."""
     assert _allowlist() == {}
 
 

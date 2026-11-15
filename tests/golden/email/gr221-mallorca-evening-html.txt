@@ -19,7 +19,6 @@
         th:last-child { border-right: none; }
         td { padding: 6px; text-align: center; border-bottom: 1px solid #9c9a90; border-right: 1px solid #9c9a90; }
         td:last-child { border-right: none; }
-        /* fix-911-visual-table AC-1: Stundentabelle-Linien durchgängig #f0ece1 (Design EmailDataTable) */
         table[data-table="resp"] td { border-bottom-color: #f0ece1; border-right-color: #f0ece1; }
         table[data-table="resp"] th { border-bottom-color: #e6e1d3; border-right-color: #f0ece1; }
         .metric-value, td.metric, code { font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; }

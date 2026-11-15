@@ -1,9 +1,1 @@
-{
-  "src/output/renderers/alert/hours.py": 1,
-  "src/output/renderers/alert/model.py": 1,
-  "src/output/renderers/alert/official_alerts.py": 3,
-  "src/output/renderers/alert/project.py": 8,
-  "src/output/renderers/email/html.py": 1,
-  "src/output/renderers/email/thunder_branch.py": 1,
-  "src/output/renderers/trip_report.py": 2
-}
+{}

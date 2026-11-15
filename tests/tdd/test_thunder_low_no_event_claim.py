@@ -147,46 +147,10 @@ def test_build_thunder_forecast_no_gewitter_word_for_pure_cape_low():
     )
 
 
-# ------- 4. trip_report.TripReportFormatter._compute_highlights -------------
-
-def test_compute_highlights_no_gewitter_word_for_low():
-    from output.renderers.trip_report import TripReportFormatter
-
-    seg = TripSegment(
-        segment_id=1,
-        start_point=GPXPoint(lat=47.10, lon=11.30, elevation_m=500.0),
-        end_point=GPXPoint(lat=47.11, lon=11.31, elevation_m=600.0),
-        start_time=datetime(2026, 7, 3, 10, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 7, 3, 16, 0, tzinfo=timezone.utc),
-        duration_hours=6.0, distance_km=5.0, ascent_m=100.0, descent_m=0.0,
-    )
-    dp = ForecastDataPoint(
-        ts=datetime(2026, 7, 3, 14, 0, tzinfo=timezone.utc),
-        thunder_level=ThunderLevel.LOW, thunder_level_signals=["cape"],
-    )
-    ts = NormalizedTimeseries(
-        meta=ForecastMeta(provider=Provider.OPENMETEO, model="test",
-                           run=datetime(2026, 7, 3, 0, 0, tzinfo=timezone.utc),
-                           grid_res_km=1.0),
-        data=[dp],
-    )
-    seg_data = SegmentWeatherData(
-        segment=seg, timeseries=ts,
-        aggregated=SegmentWeatherSummary(thunder_level_max=ThunderLevel.LOW),
-        fetched_at=dp.ts, provider="openmeteo",
-    )
-
-    highlights = TripReportFormatter()._compute_highlights([seg_data], [], [])
-
-    thunder_highlights = [h for h in highlights if "⚡" in h]
-    assert thunder_highlights, (
-        f"Testaufbau fehlerhaft -- keine Gewitter-Highlight-Zeile gefunden: "
-        f"{highlights!r}"
-    )
-    assert not any("Gewitter" in h for h in thunder_highlights), (
-        f"_compute_highlights() enthaelt bei reiner CAPE-Herkunft noch "
-        f"'Gewitter': {thunder_highlights!r}"
-    )
+# ------- 4. (entfernt, #2783) ---------------------------------------------
+# Der fruehere Test rief `TripReportFormatter._compute_highlights()`. Die Methode
+# war seit #790 tot und ist mit #2783 entfernt; die Zusicherung bewachen Test 5/5b
+# am Wirkpfad `_pill_for_metric()`.
 
 
 # ------- 5. email/helpers._pill_for_metric (Klartext-Highlight-Pille) -------
@@ -210,9 +174,9 @@ def test_pill_for_metric_thunder_no_gewitter_word_for_low():
 
 # ------- 5b. email/helpers._pill_for_metric — CAPE-Wert AN der Aussage ------
 #
-# AC-2 am ECHTEN Wirkpfad: `_compute_highlights()` (Test 4) ist seit #790 tot
-# (ihr Rueckgabewert landet in `render_email(**_ignored)`), die real
-# versendete Highlight-Zeile baut `_pill_for_metric()`. Ein gruenes
+# AC-2 am ECHTEN Wirkpfad: der fruehere `_compute_highlights()`-Pfad war seit
+# #790 tot und ist mit #2783 entfernt; die real versendete Highlight-Zeile
+# baut `_pill_for_metric()`. Ein gruenes
 # `thunder_low_statement(cape_jkg=...)` allein beweist deshalb nicht, dass der
 # Zahlenwert je eine ausgelieferte Mail erreicht.
 
