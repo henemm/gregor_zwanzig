@@ -103,9 +103,9 @@ Innsbruck (CET)
    15:00  Temp 10°  Feels 3°  Humid 75  Dew 1  Wind 25  Gust 37  Rain 0.8  Rain% 70%  Thdr –  SnowL 2100  PType Rain  Cloud 75  CldLow 25  CldMid 35  CldHi 20  Visib 10.5  UV 2  Press 1012  0°Line 2400  SnowH –  NewSn –
    16:00  Temp 10°  Feels 3°  Humid 76  Dew 1  Wind 26  Gust 38  Rain ·  Rain% 15%  Thdr –  SnowL 2100  PType –  Cloud 78  CldLow 26  CldMid 36  CldHi 21  Visib 10.0  UV 3  Press 1012  0°Line 2400  SnowH –  NewSn –
 3-day outlook
-Fri Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
-Sat Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
-Sun Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
+Fri Temp 6/11°C   Rain 1.6mm Rain% 70%  Wind S28   Gust 40  Thdr ⚡–
+Sat Temp 6/11°C   Rain 1.6mm Rain% 70%  Wind S28   Gust 40  Thdr ⚡–
+Sun Temp 6/11°C   Rain 1.6mm Rain% 70%  Wind S28   Gust 40  Thdr ⚡–
 
 Lienz (CET)
    08:00  Temp 7°  Feels 4°  Humid 68  Dew 2  Wind 18  Gust 35  Rain ·  Rain% 15%  Thdr –  SnowL 2150  PType –  Cloud 54  CldLow 18  CldMid 28  CldHi 13  Visib 14.0  UV 4  Press 1013  0°Line 2450  SnowH –  NewSn –
@@ -118,9 +118,9 @@ Lienz (CET)
    15:00  Temp 10°  Feels 4°  Humid 75  Dew 2  Wind 25  Gust 42  Rain 1.8  Rain% 70%  Thdr light · CAPE, Lightning density · Hail: yes  SnowL 2150  PType Rain  Cloud 75  CldLow 25  CldMid 35  CldHi 20  Visib 10.5  UV 2  Press 1013  0°Line 2450  SnowH –  NewSn –
    16:00  Temp 11°  Feels 4°  Humid 76  Dew 2  Wind 26  Gust 43  Rain ·  Rain% 15%  Thdr –  SnowL 2150  PType –  Cloud 78  CldLow 26  CldMid 36  CldHi 21  Visib 10.0  UV 3  Press 1013  0°Line 2450  SnowH –  NewSn –
 3-day outlook
-Fri Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
-Sat Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
-Sun Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
+Fri Temp 7/12°C   Rain 3.6mm Rain% 70%  Wind SW28  Gust 45  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
+Sat Temp 7/12°C   Rain 3.6mm Rain% 70%  Wind SW28  Gust 45  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
+Sun Temp 7/12°C   Rain 3.6mm Rain% 70%  Wind SW28  Gust 45  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
 
 Kufstein (CET)
    08:00  Temp 8°  Feels 5°  Humid 68  Dew 3  Wind 18  Gust 40  Rain ·  Rain% 15%  Thdr –  SnowL 2200  PType –  Cloud 54  CldLow 18  CldMid 28  CldHi 13  Visib 14.0  UV 4  Press 1014  0°Line 2500  SnowH –  NewSn –

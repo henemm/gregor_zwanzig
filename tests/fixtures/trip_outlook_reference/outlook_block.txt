@@ -1,5 +1,5 @@
 Nächste Etappen
-Mo  Obstanserseehütte          Temp 9/21°C   Rain 2.5mm Wind 25    Thdr ⚡mittel@10
+Mo  Obstanserseehütte          Temp 9/21°C   Rain 2.5mm Rain% 55%  Wind 25    Gust 44  Thdr ⚡mittel@10
     ↳ Hütte geschlossen
-Di  Filmoor-Standschützenhütte Temp 11/19°C  Rain –     Wind 31    Thdr ⚡–
-Mi  Sillianer Hütte            Temp 6/24°C   Rain 7.1mm Wind 18    Thdr ⚡hoch@10
+Di  Filmoor-Standschützenhütte Temp 11/19°C  Rain –     Rain% 15%  Wind 31    Gust 52  Thdr ⚡–
+Mi  Sillianer Hütte            Temp 6/24°C   Rain 7.1mm Rain% 80%  Wind 18    Gust 33  Thdr ⚡hoch@10
