@@ -1010,6 +1010,8 @@ def send_one_compare_preset(
         outlook_metric_formats=opts.outlook_metric_formats,
         # Issue #1405 S3: unmappbare Auswahl sichtbar, nicht nur im Log.
         unresolved_count=opts.unresolved_by_channel.get("email", 0),
+        # Issue #3039: Roh/Einfach je Zeile (derselbe Resolver wie die Vorschau).
+        metric_formats=opts.metric_formats("email"),
         lang=lang,
         # Issue #1563: Briefing zeigt den Vertretungshinweis je Ort.
         show_fallback_notice=True,
@@ -1065,6 +1067,7 @@ def send_one_compare_preset(
         _sms_text = render_compare_sms(
             result, enabled_metrics=opts.enabled_metrics_by_channel["sms"],
             unresolved_count=opts.unresolved_by_channel.get("sms", 0),
+            metric_formats=opts.metric_formats("sms"),
         )
         if effective_compare_telegram_style(preset) == "kurzform":
             _telegram_text = _sms_text
@@ -1074,6 +1077,7 @@ def send_one_compare_preset(
                 enabled_metrics=opts.enabled_metrics_by_channel["telegram"],
                 preset_name=name,
                 unresolved_count=opts.unresolved_by_channel.get("telegram", 0),
+                metric_formats=opts.metric_formats("telegram"),
                 lang=lang,
                 show_fallback_notice=True,
             )

@@ -69,7 +69,7 @@ Reihenfolge, stilles Verwerfen) folgt unmittelbar als S1b.
 | E2E-Specs mit Layout-Reiter-Bezug | MODIFY | Navigations-Schritte anpassen: `frontend/e2e/layout-tab-vergleich.spec.ts`, `issue-1093-compare-layout-crash.spec.ts`, `compare-editor-slice3.spec.ts`, `compare-editor-slice4.spec.ts:102-107` (klickt `compare-editor-tab-layout`), `compare-editor-fidelity-s8d.spec.ts`, `compare-hub-fidelity-s8c.spec.ts`, `compare-flow-navigation.spec.ts`, `compare-hub-briefing-times.spec.ts`, `versand-tab-vergleich.spec.ts`, `save-status-indicator-honesty.spec.ts` |
 | weitere `'layout'`/`COMPARE_TABS`-Treffer | CHECK | `compare-new/__tests__/compareNewLogic.test.ts`, `compare/__tests__/compare_hub_fidelity.test.ts`, `compare/__tests__/wetterMetrikenTabRegistration.test.ts`, `compare/__tests__/issue_491_compare_detail.test.ts`, `compare/__tests__/step2_orte_library_grouping.test.ts` |
 | `internal/handler/compare_preset_top_n_test.go` | MODIFY | Go-seitiger Test auf das alte `top_n`-Feld, an den Rückbau anpassen oder löschen |
-| `scripts/migrate_1360_drop_compare_top_n.py` | CREATE | einmalige, wiederholbare Bereinigung: entfernt `top_n` aus gespeicherten Vergleichen, mit Sicherung. `channel_layouts` ist NICHT Teil dieser Migration — dafür existiert bereits `scripts/migrate_1351_drop_compare_channel_layouts.py` (Commit `08d3fb91`, #1351 Scheibe 3), das Vorbild für den Aufbau dieses Skripts |
+| `scripts/migrate_1360_drop_compare_top_n.py` | CREATE | einmalige, wiederholbare Bereinigung: entfernt `top_n` aus gespeicherten Vergleichen, mit Sicherung. `channel_layouts` ist NICHT Teil dieser Migration — dafür existiert bereits `scripts/migrate_1351_drop_compare_channel_layouts.py` (Commit `08d3fb91`, #1351 Scheibe 3), das Vorbild für den Aufbau dieses Skripts (Migration seit #3039 entfernt, siehe ADR-0119) |
 
 ## Implementation Details
 
@@ -113,10 +113,10 @@ Reihenfolge, stilles Verwerfen) folgt unmittelbar als S1b.
    Skript unter `scripts/`, wiederholbar (zweiter Lauf ändert nichts), mit
    Sicherung vorher, als Deploy-Schritt je Umgebung (Staging zuerst).
    Betroffen: `top_n` allein.
-   `channel_layouts` ist bereits mit #1351 (Commit `08d3fb91`, 2026-07-24)
-   bereinigt — `scripts/migrate_1351_drop_compare_channel_layouts.py` und
-   `tests/test_compare_channel_layouts_migration.py` existieren und laufen
-   bereits gegen den echten Datenbestand. Diese Scheibe fasst
+   `channel_layouts` ist mit #1351 (Commit `08d3fb91`, 2026-07-24) bereinigt
+   worden. Die Migration `scripts/migrate_1351_drop_compare_channel_layouts.py`
+   und ihr Test `tests/test_compare_channel_layouts_migration.py` sind seit
+   #3039 entfernt (siehe ADR-0119) und dürfen nie wieder laufen. Diese Scheibe fasst
    `channel_layouts` nicht erneut an.
    NICHT betroffen: `hour_from`/`hour_to` — die werden in S1b bedienbar und
    müssen erhalten bleiben.
@@ -134,7 +134,7 @@ Reihenfolge, stilles Verwerfen) folgt unmittelbar als S1b.
    genau der Datenverlust aus BUG-DATALOSS-GR221 / #102. Deshalb: Speichern
    bleibt Read-Modify-Write mit Merge, und Wegräumen ist ein eigener,
    nachvollziehbarer Schritt. Das neue Skript folgt strukturell
-   `migrate_1351_drop_compare_channel_layouts.py`: Dry-Run-Default, `--execute`,
+   `migrate_1351_drop_compare_channel_layouts.py` (seit #3039 entfernt, siehe ADR-0119): Dry-Run-Default, `--execute`,
    `--root`-Parameter, tar.gz-Backup vor jedem Schreiblauf, zweiphasig
    Plan->Apply, Idempotenz, und rührt ausschließlich Presets mit `kind=vergleich`
    an — Trip-Presets (`kind=route`) bleiben unangetastet.
@@ -296,8 +296,9 @@ Das ist eine Auflage für die Implementierung, keine Akzeptanzkriterium.
     prüfen, dass der Schlüssel fehlt und Name, Orte, Metrik-Auswahl, Korridore,
     Empfänger und Zeitplan bitgleich sind. Zweiter Lauf auf demselben Bestand
     ändert nichts mehr (wiederholbar). `channel_layouts` ist NICHT Gegenstand
-    dieses Tests — dafür existiert bereits die grüne Suite
-    `tests/test_compare_channel_layouts_migration.py` (#1351).
+    dieses Tests — dafür existierte die Suite
+    `tests/test_compare_channel_layouts_migration.py` (#1351), die seit #3039
+    entfernt ist (siehe ADR-0119).
 
 ## Known Limitations
 
@@ -312,8 +313,10 @@ Das ist eine Auflage für die Implementierung, keine Akzeptanzkriterium.
   **nicht** mitbereinigt: Epic #1230 sieht das Feld für künftige Trip-Alarme vor.
   Ob diese Absicht nach der Umstellung auf Abweichungs-Alarme (#813) noch gilt,
   ist in S6 zu entscheiden — erst danach darf es aus den Daten.
-- `channel_layouts` ist bereits mit #1351 aus der Persistenz entfernt (Commit
-  `08d3fb91`, 2026-07-24) — diese Scheibe bereinigt ausschließlich `top_n`.
+- `channel_layouts` ist mit #1351 (Commit `08d3fb91`, 2026-07-24) aus dem
+  Speicherweg des Vergleichs entfernt worden; seit #3039 (ADR-0119) wird das
+  Feld am Vergleich wieder gelesen und beim Speichern erhalten. Diese Scheibe
+  bereinigt ausschließlich `top_n`.
 - Bestehende Tests, die `top_n_details` als Bestandsverhalten prüfen
   (`tests/tdd/test_compare_render_options_resolver.py:66-99,229`,
   `internal/handler/compare_preset_top_n_test.go`), prüfen nach dem Rückbau
@@ -341,6 +344,7 @@ Das ist eine Auflage für die Implementierung, keine Akzeptanzkriterium.
   Punkte 7-9 ergänzt (CompareInhaltSection-Entscheidung, Anlege-Seite 6 Reiter
   + Lock-Kette, AC-4 gilt auch mobil), HourFrom/HourTo-Datenverlustfalle
   (#1268 F003) als Umzugs-Auflage dokumentiert
+- 2026-11-15: Verweise auf die entfernte Migration `migrate_1351_drop_compare_channel_layouts.py` und ihren Test als „seit #3039 entfernt" markiert (ADR-0119 hebt die Entfernung von `channel_layouts` am Vergleich auf). Historischer Text unverändert.
 - 2026-07-25 (nach Auslieferung): Restpunkt **F002** nachgetragen — der
   Rückbau war im Frontend unvollständig, der Anlege-Pfad schrieb `top_n`
   weiter. Dateiliste um `compareWizardState.svelte.ts` und

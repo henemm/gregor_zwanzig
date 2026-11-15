@@ -136,15 +136,13 @@ export function buildComparePresetSavePayload(
 ): { url: string; body: ComparePreset } {
 	const url = '/api/compare/presets/' + original.id;
 
-	// Issue #1351 Teil 2 (AC-6): channel_layouts ist Compare-Ballast (seit
-	// #1287/#1291 vom Editor nicht mehr bedient) — Read-Modify-Write-Merge
-	// bleibt fuer ALLE anderen Felder aus original.display_config erhalten,
-	// nur dieser eine Key faellt beim Speichern universell weg (auch bei
-	// noch nicht migrierten Alt-Presets).
-	const { channel_layouts: _droppedChannelLayouts, ...restDisplayConfig } =
+	// Issue #3039 (ADR-0119, loest #1351 AC-6 ab): channel_layouts ist wieder
+	// Nutzerstand (Karte „Inhalt je Kanal“) und bleibt wie alle anderen Felder
+	// beim Speichern aus einem anderen Reiter erhalten (Read-Modify-Write).
+	const baseDisplayConfig: Record<string, unknown> =
 		(original.display_config as Record<string, unknown>) ?? {};
 	const displayConfig: Record<string, unknown> = {
-		...restDisplayConfig,
+		...baseDisplayConfig,
 		region: edits.region
 	};
 
@@ -171,7 +169,7 @@ export function buildComparePresetSavePayload(
 		// mitgesendeter Kanal ginge lautlos verloren (M4), eine geleerte Auswahl
 		// als weggelassener Schluessel bliebe wirkungslos (M5, analog #1191/#1299).
 		displayConfig.channel_active_metrics = mergeAllCompareChannelActiveMetricsForSave(
-			restDisplayConfig.channel_active_metrics as
+			baseDisplayConfig.channel_active_metrics as
 				| Record<string, StoredActiveMetric[]>
 				| undefined,
 			edits.channelActiveMetricKeys
