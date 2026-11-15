@@ -1,5 +1,8 @@
 // feat_880 — Autospeicher-Indikator: Timestamp + fixes Overlay.
 // Spec: docs/specs/modules/feat_880_autosave_overlay.md (Issue #947).
+// #2954 (ADR-0120): „fixes Overlay, nie unsichtbar" ist für den Hub abgelöst — der Hinweis
+// steht als Inline-Text in der Kopfleiste vor dem Kebab, „Gespeichert" verschwindet nach 5 s
+// (AC-1/AC-3/AC-5/AC-7 entsprechend umgestellt; Fehler bleibt dauerhaft, AC-4).
 // Charakterisierungstests gegen den LIVE-Code auf Staging (kein Mock; die Route-
 // Injektion in AC-4 ist reine Fehler-Injektion, kein Verhaltens-Mock).
 // Ausführen: cd frontend && npx playwright test e2e/feat-880-autosave-overlay.spec.ts \
@@ -81,11 +84,21 @@ test.describe('feat_880 — Trip-Editor Autospeicher-Overlay', () => {
 		await page.request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 	});
 
-	// AC-1: Overlay ist position:fixed; kein inline-Indikator in der Header-Statuszeile.
-	test('AC-1: Overlay ist fixed, kein zweiter inline-Indikator', async ({ page }) => {
+	// AC-1 — abgelöst durch #2954 (ADR-0120): kein festes Overlay mehr, sondern Inline-Text in
+	// der Kopfleiste vor dem Drei-Punkte-Menü. Beim Öffnen ohne Speichern ist die Region leer
+	// (im DOM, aber ohne Text) — daher toBeAttached statt toBeVisible.
+	test('AC-1: Hinweis steht in der Kopfleiste vor dem Kebab, kein zweiter Indikator', async ({ page }) => {
 		await openStagesEditor(page);
-		await expect(saveIndicator(page)).toBeVisible();
-		expect(await overlayStyle(page, 'position')).toBe('fixed');
+		await expect(saveIndicator(page)).toBeAttached();
+		expect(await overlayStyle(page, 'position')).not.toBe('fixed');
+		expect(
+			await saveIndicator(page).evaluate((el) => {
+				const leiste = el.closest('[data-testid="hub-kopf-leiste"]');
+				const kebab = leiste?.querySelector('[data-testid="subscription-kebab"]');
+				return !!kebab && !!(el.compareDocumentPosition(kebab) & Node.DOCUMENT_POSITION_FOLLOWING);
+			}),
+			'#2954: Hinweis muss in der Kopfleiste VOR dem Drei-Punkte-Menü stehen'
+		).toBe(true);
 		// Genau ein Indikator im DOM — kein zusätzlicher inline in der Statuszeile.
 		await expect(saveIndicator(page)).toHaveCount(1);
 	});
@@ -102,25 +115,24 @@ test.describe('feat_880 — Trip-Editor Autospeicher-Overlay', () => {
 		await expect(saveIndicator(page)).toContainText(/Gespeichert/i);
 	});
 
-	// AC-3: idle-Overlay tritt nach >3s zurueck, bleibt aber sichtbar/erreichbar.
-	// #2400 (Staging-Messlauf 2): nicht mehr per opacity 0.5 (Text fiel unter 4,5:1) —
-	// die Toenung faellt weg, die Schrift wird neutral, die Deckkraft bleibt 1. Den
-	// Kontrast rechnet src/lib/__tests__/speicheranzeige_ruhe_kontrast.test.ts nach.
-	test('AC-3: idle-Overlay tritt nach 3s zurueck, Text bleibt voll deckend (nie display:none)', async ({
+	// AC-3 — abgelöst durch #2954 (ADR-0120): statt Abdimmen nach 3 s verschwindet der Text
+	// „Gespeichert" 5 s nach dem Speichern; die Region bleibt als aria-live-Region im DOM
+	// (nie display:none). Kontrast: src/lib/__tests__/speicheranzeige_ruhe_kontrast.test.ts.
+	test('AC-3: „Gespeichert" verschwindet 5 s nach dem Speichern, Region bleibt im DOM', async ({
 		page
 	}) => {
 		await openStagesEditor(page);
 		await changeStageDate(page, '2026-08-21');
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-		const farbeVorher = await overlayStyle(page, 'color');
-
-		// Fade-Animation startet 3s nach Erreichen von idle → warten, dann messen.
-		await page.waitForTimeout(3_300);
-		expect(parseFloat(await overlayStyle(page, 'opacity'))).toBe(1);
+		await expect(saveIndicator(page)).toContainText(/Gespeichert/i);
 		expect(await overlayStyle(page, 'background-color')).toBe('rgba(0, 0, 0, 0)');
-		expect(await overlayStyle(page, 'color')).not.toBe(farbeVorher);
+
+		// Ausblende-Timer: 5 s nach dem Speichern → warten, dann messen.
+		await page.waitForTimeout(5_800);
+		await expect(saveIndicator(page)).toHaveText('');
+		await expect(saveIndicator(page)).toBeAttached();
+		await expect(saveIndicator(page)).toHaveAttribute('aria-live', 'polite');
 		expect(await overlayStyle(page, 'display')).not.toBe('none');
-		expect(await overlayStyle(page, 'visibility')).not.toBe('hidden');
 	});
 
 	// AC-4: PUT scheitert → data-state="error"; bleibt dauerhaft opacity:1 (kein Dimming).
@@ -136,10 +148,12 @@ test.describe('feat_880 — Trip-Editor Autospeicher-Overlay', () => {
 		await changeStageDate(page, '2026-08-22');
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'error', { timeout: 10_000 });
 
-		// Auch nach Ablauf des Idle-Fade-Fensters kein Dimming.
-		await page.waitForTimeout(3_300);
+		// Auch nach Ablauf des 5-s-Ausblendefensters (#2954) bleibt der Fehler sichtbar.
+		await page.waitForTimeout(5_800);
 		const opacity = parseFloat(await overlayStyle(page, 'opacity'));
 		expect(opacity).toBe(1);
+		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'error');
+		await expect(saveIndicator(page)).toBeVisible();
 	});
 
 	// AC-5: Mobile-Viewport — Overlay sitzt ≥ 64px über dem Viewport-Unterrand,
@@ -147,6 +161,9 @@ test.describe('feat_880 — Trip-Editor Autospeicher-Overlay', () => {
 	test('AC-5: Mobile — Overlay über der BottomNav, Nav klickbar', async ({ page }) => {
 		await page.setViewportSize({ width: 390, height: 844 });
 		await openStagesEditor(page);
+		// #2954: beim Öffnen ist die Region leer — erst nach einem Speichern steht Text da.
+		await changeStageDate(page, '2026-08-24');
+		await expect(saveIndicator(page)).toContainText(/Gespeichert/i, { timeout: 10_000 });
 		await expect(saveIndicator(page)).toBeVisible();
 
 		const box = await saveIndicator(page).boundingBox();
@@ -203,13 +220,18 @@ test.describe('feat_880 — Compare-Editor & Cross-Tab-Isolation', () => {
 		return (await resP.json()).id;
 	}
 
-	// AC-7: Compare-Editor rendert genau EIN Overlay (kein zweiter inline-Indikator).
-	test('AC-7: Compare-Editor hat genau ein save-indicator', async ({ page }) => {
+	// AC-7: Compare-Editor rendert genau EINEN Hinweis — seit #2954 (ADR-0120) in der
+	// Kopfleiste vor dem Drei-Punkte-Menü statt als festes Overlay.
+	test('AC-7: Compare-Editor hat genau ein save-indicator, in der Kopfleiste', async ({ page }) => {
 		const presetId = await createPreset(page);
 		await page.goto(`/compare/${presetId}`);
 		await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible();
 		await expect(saveIndicator(page)).toHaveCount(1);
-		expect(await overlayStyle(page, 'position')).toBe('fixed');
+		expect(await overlayStyle(page, 'position')).not.toBe('fixed');
+		expect(
+			await saveIndicator(page).evaluate((el) => !!el.closest('[data-testid="hub-kopf-leiste"]')),
+			'#2954: Hinweis muss in der Kopfleiste stehen'
+		).toBe(true);
 	});
 
 	// AC-6: Trip-Editor und Compare-Editor in getrennten Kontexten. Speichern im

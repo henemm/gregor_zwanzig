@@ -183,4 +183,5 @@ Der `saveController`-Prop wird via Context oder Prop-Drilling weitergereicht.
 
 ## Changelog
 
+- 2026-11-15: Für den Trip- und Ortsvergleich-Hub abgelöst durch ADR-0120 (#2954): kein festes Overlay unten rechts mehr, Speicherhinweis als Text in der Kopfleiste; „nie unsichtbar" ersetzt durch `aria-live`-Region, Erfolg verschwindet nach 5 s, Fehler/Konflikt bleiben dauerhaft (AC-4 gilt weiter). Spec `fix_2954_speicherhinweis_kopfleiste.md`.
 - 2026-06-24: Initial spec created

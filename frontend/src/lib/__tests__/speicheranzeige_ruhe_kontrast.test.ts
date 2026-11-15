@@ -1,12 +1,13 @@
-// Issue #2400 (Staging-Messlauf 2, 2026-11-10): Die Speicheranzeige „Gespeichert" trat nach 3 s
-// per opacity 0.5 zurueck (Issue #880) — dunkel 2,9:1 (rgb(67,110,63) auf rgb(22,28,21)), hell
-// ebenfalls < 4,5:1. Leitprinzip „Hoher Kontrast = Lesbarkeit" (design_system.md) hat Vorrang:
-// Der Ruhezustand tritt weiter zurueck, aber jeder sichtbare Text bleibt >= 4,5:1.
+// Issue #2954 (ADR-0120): Der Speicherhinweis ist kein festes Overlay unten rechts mehr, sondern
+// schlichter Inline-Text in der Kopfleiste (HubKopf .hub-actions, vor dem Drei-Punkte-Menü):
+// kein Hintergrund, 12,5 px, Erfolg in --g-good, Fehler/Konflikt in --g-danger-fg. „Gespeichert"
+// verschwindet per JS-Timer 5 s nach dem Speichern — die frühere Abblend-Animation gz-save-fade
+// (#880/#2400) entfällt. Spec: docs/specs/modules/fix_2954_speicherhinweis_kopfleiste.md, AC-9.
 //
-// Gerechnet wird mit den Werten, die SaveIndicator.svelte TATSAECHLICH setzt (Zustandsregel +
-// Endbild der Keyframes gz-save-fade inkl. opacity), aufgeloest gegen app.css (heller :root
-// bzw. Dark-Block). Der Indikator ist ein fixes Overlay: Grund ist die Seite (--g-paper) oder
-// eine Karte darunter (--g-surface-1/-2) — alle drei werden geprueft.
+// Stilvertrag + Kontrast: Gerechnet wird mit den Werten, die SaveIndicator.svelte TATSAECHLICH
+// setzt (Zustandsregeln), aufgeloest gegen app.css (heller :root bzw. Dark-Block). Grund ist der
+// Kopfgrund — die Kopfleiste ist transparent, darunter liegt die Seite (--g-paper). Leitprinzip
+// „Hoher Kontrast = Lesbarkeit" (design_system.md): jeder Zustandstext >= 4,5:1, hell und dunkel.
 //
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
 //     --experimental-test-module-mocks --test src/lib/__tests__/speicheranzeige_ruhe_kontrast.test.ts
@@ -22,7 +23,8 @@ const CSS = ohneKommentare(readFileSync(join(FRONTEND_SRC, 'app.css'), 'utf-8'))
 const KOMP = ohneKommentare(readFileSync(join(FRONTEND_SRC, 'lib/components/ui/SaveIndicator.svelte'), 'utf-8'));
 const STIL = KOMP.slice(KOMP.indexOf('<style>'), KOMP.indexOf('</style>'));
 const MIN = 4.5;
-const GRUENDE = ['--g-paper', '--g-surface-1', '--g-surface-2'];
+/** Kopfgrund: .hub-kopf-leiste ist transparent, darunter die Seite. */
+const KOPFGRUND = '--g-paper';
 
 type Modus = 'hell' | 'dunkel';
 type Rgba = [number, number, number, number];
@@ -46,7 +48,7 @@ const decl = (block: string, name: string) =>
 function farbe(wert: string, modus: Modus, tiefe = 0): Rgba {
 	assert.ok(tiefe < 8, `var()-Kette zu tief: ${wert}`);
 	const w = wert.trim().toLowerCase();
-	if (w === 'transparent') return [0, 0, 0, 0];
+	if (w === 'transparent' || w === 'none') return [0, 0, 0, 0];
 	const v = w.match(/^var\((--[a-z0-9-]+)\)$/);
 	if (v) {
 		const roh = (modus === 'dunkel' ? decl(DUNKEL, v[1]) : null) ?? decl(HELL, v[1]);
@@ -75,59 +77,89 @@ function kontrast(a: Rgba, b: Rgba): number {
 	return (h + 0.05) / (d + 0.05);
 }
 
-type Bild = { color: string; background: string; opacity: number };
+type Bild = { color: string; background: string | null; opacity: number };
 const regel = (sel: RegExp) => blockAb(STIL, sel);
+const BASIS_SEL = /\.save-indicator\s*\{/;
+const ZUSTAENDE: Record<string, RegExp> = {
+	idle: /\.save-indicator--idle\s*\{/,
+	dirty: /\.save-indicator--dirty\s*\{/,
+	saving: /\.save-indicator--saving\s*\{/,
+	error: /\.save-indicator--error\s*\{/,
+	conflict: /\.save-indicator\[data-state='conflict'\]\s*\{/
+};
 const zustand = (sel: RegExp): Bild => {
 	const r = regel(sel);
-	return { color: decl(r, 'color')!, background: decl(r, 'background') ?? 'transparent', opacity: +(decl(r, 'opacity') ?? 1) };
-};
-const IDLE = zustand(/\.save-indicator--idle\s*\{/);
-/** Endbild nach gz-save-fade (animation-fill-mode forwards): Keyframe-Werte ueberschreiben. */
-function ruheEndbild(): Bild {
-	assert.match(regel(/\.save-indicator--idle\s*\{/), /animation\s*:\s*gz-save-fade\b[^;]*forwards/);
-	const ende = blockAb(blockAb(STIL, /@keyframes\s+gz-save-fade\s*\{/), /(?:to|100%)\s*\{/);
-	assert.doesNotMatch(ende, /display\s*:\s*none|visibility\s*:\s*hidden/, '#880: nie display:none/visibility:hidden');
+	const color = decl(r, 'color');
+	assert.ok(color, `Zustandsregel ${sel} setzt keine Schriftfarbe`);
 	return {
-		color: decl(ende, 'color') ?? IDLE.color,
-		background: decl(ende, 'background') ?? IDLE.background,
-		opacity: +(decl(ende, 'opacity') ?? IDLE.opacity)
+		color: color!,
+		background: decl(r, 'background') ?? decl(r, 'background-color'),
+		opacity: +(decl(r, 'opacity') ?? 1)
 	};
-}
+};
+/** Kein Hintergrund: Deklaration fehlt, oder sie ist transparent/none. */
+const ohneHintergrund = (wert: string | null) => wert === null || /^(transparent|none)$/i.test(wert.trim());
 
-/** Kontrast der Schrift gegen die eigene Flaeche, beides mit Element-Deckkraft ueber dem Grund. */
-function bildKontrast(b: Bild, grund: string, modus: Modus): number {
-	const g = farbe(`var(${grund})`, modus);
-	const flaeche = ueber(ueber(farbe(b.background, modus), g), g, b.opacity);
+/** Kontrast der Schrift (mit Element-Deckkraft) direkt auf dem Kopfgrund. */
+function textKontrast(b: Bild, modus: Modus): number {
+	const g = farbe(`var(${KOPFGRUND})`, modus);
 	const schrift = farbe(b.color, modus);
 	assert.equal(schrift[3], 1, 'Schrift nicht deckend');
-	return kontrast(ueber(schrift, g, b.opacity), flaeche);
+	return kontrast(ueber(schrift, g, b.opacity), g);
 }
 
-describe('#2400/#880: Speicheranzeige — Ruhezustand tritt zurueck, Text bleibt >= 4,5:1', () => {
-	const zustaende: Record<string, () => Bild> = {
-		'idle (Endbild nach 3 s)': ruheEndbild,
-		'idle (frisch gespeichert)': () => IDLE,
-		dirty: () => zustand(/\.save-indicator--dirty\s*\{/),
-		saving: () => zustand(/\.save-indicator--saving\s*\{/),
-		error: () => zustand(/\.save-indicator--error\s*\{/),
-		conflict: () => zustand(/\.save-indicator\[data-state='conflict'\]\s*\{/)
-	};
-	for (const [name, bild] of Object.entries(zustaende)) {
+describe('#2954 Stilvertrag: Inline-Text in der Kopfleiste statt festes Overlay', () => {
+	test('Basisregel .save-indicator: kein position: fixed (kein Overlay mehr)', () => {
+		assert.doesNotMatch(regel(BASIS_SEL), /position\s*:\s*fixed/, 'der Hinweis ist noch ein festes Overlay (position: fixed)');
+		assert.doesNotMatch(STIL, /position\s*:\s*fixed/, 'irgendeine Regel setzt noch position: fixed');
+	});
+
+	test('Basisregel .save-indicator: Schriftgröße 12,5 px', () => {
+		assert.equal(decl(regel(BASIS_SEL), 'font-size'), '12.5px');
+	});
+
+	test('Basisregel .save-indicator: kein Hintergrund', () => {
+		const basis = regel(BASIS_SEL);
+		assert.ok(ohneHintergrund(decl(basis, 'background')), `Basis-Hintergrund: ${decl(basis, 'background')}`);
+		assert.ok(ohneHintergrund(decl(basis, 'background-color')), `Basis-Hintergrund: ${decl(basis, 'background-color')}`);
+	});
+
+	for (const [name, sel] of Object.entries(ZUSTAENDE)) {
+		test(`${name}: kein Hintergrund (transparent/none)`, () => {
+			const b = zustand(sel);
+			assert.ok(ohneHintergrund(b.background), `${name} hat Hintergrund ${b.background}`);
+		});
+	}
+
+	test('Erfolg (idle) in var(--g-good)', () => {
+		assert.equal(zustand(ZUSTAENDE.idle).color, 'var(--g-good)');
+	});
+
+	test('Fehler (error) und Konflikt (conflict) in var(--g-danger-fg)', () => {
+		assert.equal(zustand(ZUSTAENDE.error).color, 'var(--g-danger-fg)');
+		assert.equal(zustand(ZUSTAENDE.conflict).color, 'var(--g-danger-fg)');
+	});
+
+	test('keine Abblend-Animation gz-save-fade mehr (Ausblenden per 5-s-Timer)', () => {
+		assert.doesNotMatch(STIL, /gz-save-fade/, 'gz-save-fade (Keyframes oder animation) ist noch vorhanden');
+	});
+});
+
+describe('#2954 AC-9: Zustandsfarben gegen den Kopfgrund >= 4,5:1, hell und dunkel', () => {
+	for (const [name, sel] of Object.entries(ZUSTAENDE)) {
 		for (const modus of ['hell', 'dunkel'] as Modus[]) {
 			test(`${name} — ${modus}`, () => {
-				for (const grund of GRUENDE) {
-					const k = bildKontrast(bild(), grund, modus);
-					assert.ok(k >= MIN, `${name}/${modus} auf ${grund}: ${k.toFixed(2)}:1 < ${MIN}:1`);
-				}
+				const k = textKontrast(zustand(sel), modus);
+				assert.ok(k >= MIN, `${name}/${modus} auf ${KOPFGRUND}: ${k.toFixed(2)}:1 < ${MIN}:1`);
 			});
 		}
 	}
-	test('Ruhezustand tritt sichtbar zurueck (Toenung weg oder Schrift wechselt)', () => {
-		const ende = ruheEndbild();
+	test('Token-Gegenprobe: --g-good und --g-danger-fg selbst >= 4,5:1 auf --g-paper', () => {
 		for (const modus of ['hell', 'dunkel'] as Modus[]) {
-			const flaecheWeg = farbe(ende.background, modus)[3] < farbe(IDLE.background, modus)[3];
-			const schriftAnders = farbe(ende.color, modus).join() !== farbe(IDLE.color, modus).join();
-			assert.ok(flaecheWeg || schriftAnders || ende.opacity < IDLE.opacity, `${modus}: Endbild = Startbild`);
+			for (const t of ['--g-good', '--g-danger-fg']) {
+				const k = kontrast(farbe(`var(${t})`, modus), farbe(`var(${KOPFGRUND})`, modus));
+				assert.ok(k >= MIN, `${t}/${modus}: ${k.toFixed(2)}:1 < ${MIN}:1`);
+			}
 		}
 	});
 });

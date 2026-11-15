@@ -1126,7 +1126,8 @@ for (const breite of BREITEN) {
 						await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-${tab}"]:visible`).first()).toBeVisible({
 							timeout: 15_000
 						});
-						await expect(page.getByTestId('save-indicator')).toBeVisible();
+						// #2954: beim Öffnen ohne Speichern ist die Hinweis-Region leer (im DOM, ohne Text).
+						await expect(page.getByTestId('save-indicator')).toBeAttached();
 						await pruefeSeite(page, `${kind}-Hub ${tab}`, fehler);
 					}
 					// #2794 S3a / #2795 S3b 1b: der neu gebaute Hub-Reiter „Zustellung" (Mail-Inhalt im Übergangsblock).
