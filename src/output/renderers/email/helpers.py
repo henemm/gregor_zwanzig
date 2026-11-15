@@ -1558,12 +1558,17 @@ def format_temp_span(min_v: float, max_v: float, *, decimals: int) -> str:
     Rundung) faellt auf den Einzelwert zusammen.
     """
     lo, hi = f"{min_v:.{decimals}f}", f"{max_v:.{decimals}f}"
+    # #3015 AC-6: gerundete Null ohne Vorzeichen ("-0" -> "0"), damit
+    # -0,2/0,2 zum Einzelwert "0°C" zusammenfaellt statt "-0–0°C".
+    lo, hi = (v[1:] if v.startswith("-") and not v.strip("-0.") else v
+              for v in (lo, hi))
     if lo == hi:
         return f"{lo}°C"
-    # #2210 C2-79: bei negativem ANGEZEIGTEM Wert "bis" statt Gedankenstrich,
-    # sonst laufen "–" und "-" zusammen ("-12–-4°C"). "-0" zaehlt nicht.
+    # #3015 (loest #2210 C2-79 "bis" ab, PO 2026-11-15): bei negativem
+    # ANGEZEIGTEM Wert Gedankenstrich mit je einem Leerzeichen, sprachneutral,
+    # damit "–" und "-" nicht zusammenlaufen ("-12 – -4°C"). "-0" zaehlt nicht.
     if any(v.startswith("-") and v.strip("-0.") for v in (lo, hi)):
-        return f"{lo} bis {hi}°C"
+        return f"{lo} – {hi}°C"
     return f"{lo}–{hi}°C"
 
 

@@ -338,10 +338,12 @@ class CompactSummaryFormatter:
             t_min = night_min_c if night_min_c is not None else _hike_min
         if t_min is None and t_max is None:
             return None
-        if t_min is not None and t_max is not None:
-            return f"{int(round(t_min))}–{int(round(t_max))}°C"
-        val = t_min if t_min is not None else t_max
-        return f"{int(round(val))}°C"
+        # Issue #3015: dieselbe geteilte Spannen-Formel wie Kachel und
+        # gefuehlter Teil (#1410, kein Nachbau); gerundete Ganzzahlen, damit
+        # kein "-0" entsteht und gleiche Werte zum Einzelwert zusammenfallen.
+        lo = t_min if t_min is not None else t_max
+        hi = t_max if t_max is not None else t_min
+        return format_temp_span(int(round(lo)), int(round(hi)), decimals=0)
 
     @staticmethod
     def _format_felt_temperature(
