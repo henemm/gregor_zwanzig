@@ -237,10 +237,7 @@ def render_outlook_table(
         wind_kmh = stage.get("wind_kmh")
         pr_pct = stage.get("rain_probability_pct")
         conf_pct = stage.get("confidence_pct")
-        # Gust aus hourly_gust wenn vorhanden
-        hourly_gust = stage.get("hourly_gust") or ()
-        gust_kmh = max((float(g.value) if hasattr(g, "value") else float(g)
-                        for g in hourly_gust if g is not None), default=None)
+        gust_kmh = _gust_kmh(stage)
         # F002: Gew = Stufe + Uhrzeit (kein Fake-%), Hintergrund nach Level.
         # #1848 A3: der Zellenbau (Tag/Nacht-Split #1653, Onset-Uhrzeit,
         # Herkunft #1680 S5a, Hagel-Zusatz #1475) steht jetzt in
@@ -252,9 +249,9 @@ def render_outlook_table(
         n_str = f"{temp_min:.0f}°" if temp_min is not None else NO_VALUE
         d_str = f"{temp_max:.0f}°" if temp_max is not None else NO_VALUE
         r_str = f"{precip_mm:.1f}" if precip_mm is not None else NO_VALUE
-        pr_str = f"{int(pr_pct)}%" if pr_pct is not None else NO_VALUE
+        pr_str = _pr_text(stage)
         wind_str = f"{wind_kmh:.0f}" if wind_kmh is not None else NO_VALUE
-        gust_str = f"{gust_kmh:.0f}" if gust_kmh is not None else NO_VALUE
+        gust_str = _gust_text(stage)
 
         tag_bg = ""
         # Issue #2792 S1c-4b (AC-4/AC-19 b): Temperatur beidseitig nach der
@@ -301,6 +298,25 @@ def render_outlook_table(
     )
 
     return outlook_table
+
+
+def _gust_kmh(stage: dict) -> Optional[float]:
+    """Boeen-Spitze des Tages aus ``hourly_gust`` (fester Zweig, HTML und
+    Klartext aus DERSELBEN Quelle, #3047 O3)."""
+    hourly_gust = stage.get("hourly_gust") or ()
+    return max((float(g.value) if hasattr(g, "value") else float(g)
+                for g in hourly_gust if g is not None), default=None)
+
+
+def _gust_text(stage: dict) -> str:
+    gust_kmh = _gust_kmh(stage)
+    return f"{gust_kmh:.0f}" if gust_kmh is not None else NO_VALUE
+
+
+def _pr_text(stage: dict) -> str:
+    """Regenwahrscheinlichkeit des festen Zweigs (HTML und Klartext, #3047 O3)."""
+    pr_pct = stage.get("rain_probability_pct")
+    return f"{int(pr_pct)}%" if pr_pct is not None else NO_VALUE
 
 
 # ---------------------------------------------------------------------------
@@ -394,12 +410,18 @@ def render_outlook_plain(
         # Mail. Die Temperatur-Spanne bleibt OHNE Auswertungs-Suffix: der
         # Klartext fuehrt Tief/Hoch bereits als EIN Token zusammen (kein
         # AC-7-Kollisionsfall, den gibt es nur bei zwei getrennten Spalten).
+        # #3047 O3 (AC-21): dieselben Spalten in derselben Folge wie der feste
+        # HTML-Zweig derselben Mail (`render_outlook_table`, sieben Spalten:
+        # Temp Tief/Hoch, Rain, Rain%, Wind, Gust, Thdr) -- bisher fehlten
+        # Regenwahrscheinlichkeit und Boeen im Klartext.
         name_field = f"{name:<26} " if show_name else ""
         line = (
             f"{weekday:<3} {name_field}"
             f"{get_metric('temperature').col_label} {tok['temp_str']:<8} "
             f"{get_metric('precipitation').col_label} {precip_str:<5} "
+            f"{get_metric('rain_probability').col_label} {_pr_text(stage):<4} "
             f"{get_metric('wind').col_label} {tok['wind_str']:<5} "
+            f"{get_metric('gust').col_label} {_gust_text(stage):<3} "
             f"{get_metric('thunder').col_label} {thunder_word}"
         )
         lines.append(line)

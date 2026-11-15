@@ -122,10 +122,12 @@ def _ergebnis_je_ort() -> dict:
 
 
 @contextlib.contextmanager
-def wetter_naht() -> Iterator[None]:
+def wetter_naht(warnungen: Optional[dict] = None) -> Iterator[None]:
     """``ComparisonEngine`` durch eine echte Subklasse ersetzen (je Ort ein
     Lauf, Werte aus ``build_result``) und den Delta-Anker-Schreiber (Netz)
-    neutralisieren; danach alles zuruecksetzen."""
+    neutralisieren; danach alles zuruecksetzen. ``warnungen`` ({Orts-Kennung:
+    [OfficialAlert]}) belegt ``official_alerts`` einzelner Orte (#3047 WV6)."""
+    warnungen = warnungen or {}
     import services.comparison_engine as ce_mod
     import services.scheduler_dispatch_service as sds_mod
     from app.user import ComparisonResult
@@ -145,7 +147,8 @@ def wetter_naht() -> Iterator[None]:
                 vorlage = je_ort[loc.id]
                 ausblick = vorlage.outlook_hourly_data or _ausblick_fuer(ORTE[loc.id][3])
                 ergebnisse.append(dataclasses.replace(
-                    vorlage, location=loc, outlook_hourly_data=ausblick))
+                    vorlage, location=loc, outlook_hourly_data=ausblick,
+                    official_alerts=list(warnungen.get(loc.id, vorlage.official_alerts))))
             return ComparisonResult(
                 locations=ergebnisse, time_window=kwargs.get("time_window", (9, 16)),
                 target_date=kwargs.get("target_date", ZIELTAG),
@@ -194,7 +197,8 @@ class OrteMail:
 
 
 def sende_orte_mail(preset_json: dict, *, uid: Optional[str] = None,
-                    language: Optional[str] = None) -> OrteMail:
+                    language: Optional[str] = None,
+                    warnungen: Optional[dict] = None) -> OrteMail:
     """Preset roh ablegen, ueber den echten Loader lesen, ueber
     ``send_one_compare_preset`` mit ``mail_sink(plain_body=...)`` versenden."""
     from freezegun import freeze_time
@@ -212,7 +216,7 @@ def sende_orte_mail(preset_json: dict, *, uid: Optional[str] = None,
     def sink(*, subject: str, body: str, plain_body: str) -> None:
         gesendet.append({"subject": subject, "html": body, "plain": plain_body})
 
-    with transport_umgebung(), wetter_naht(), freeze_time(JETZT_UTC):
+    with transport_umgebung(), wetter_naht(warnungen), freeze_time(JETZT_UTC):
         from app.loader import load_all_locations
 
         settings = Settings().with_user_profile(uid)

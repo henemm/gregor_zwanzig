@@ -22,17 +22,19 @@ Die paarweisen Faelle (Spec §3) tragen ``werte``; die Tests unten bauen aus
 genau diesen Werten das rohe Preset (eine Quelle, kein Abschreiben).
 
 RED (``xfail(strict=True)``, Status ``rot_erwartet``):
-* O3 / AC-21: Altbestand ohne ``active_metrics``/``outlook_metrics`` --
-  Ausblick HTML 7 Spalten, Klartext 4 (``src/output/renderers/email/
-  outlook.py:395-402`` fester Klartext-Zweig).
 * O5 / AC-10: der Stundenverlauf nimmt eine aus der Grundauswahl
   abgewaehlte Metrik weiter auf (``resolve_hourly_metrics`` ohne Schnitt,
   ``src/services/report_config_resolver.py:291``).
+* WV6: im Klartext steht die amtliche Warnung hinter statt vor den
+  Metrik-Zeilen (``src/output/renderers/comparison.py:310-313``).
+
+Behoben (F4): O3 / AC-21 -- der feste Klartext-Ausblick zeigt dieselben
+sieben Spalten wie das HTML (``src/output/renderers/email/outlook.py``).
 
 Golden (AC-11): ``orte_altbestand*.golden.{html,txt}`` frieren den Ist-Stand
-byte-genau ein (feste Kennung, feste Uhr, feste Wetterdaten). AC-21 wird die
-Golden ``orte_altbestand_ohne_grundauswahl.golden.txt`` mit der Behebung von
-O3 EINZELN aendern (Freigabe je Datei, nie pauschal neu einfrieren).
+byte-genau ein (feste Kennung, feste Uhr, feste Wetterdaten). Die Golden
+``orte_altbestand_ohne_grundauswahl.golden.txt`` traegt seit F4 EINZELN die
+AC-21-Korrektur (nur die Ausblick-Zeilen, nie pauschal neu eingefroren).
 Bewusstes Neuschreiben: ``EINSTELLUNG_GLEICH_MAIL_GOLDEN_SCHREIBEN=1``.
 """
 from __future__ import annotations
@@ -467,7 +469,6 @@ def test_ac11_altbestand_golden(name):
     assert mail.plain == _golden(name, "txt").read_text(encoding="utf-8"), f"Klartext {name} weicht vom Golden ab"
 
 
-@pytest.mark.xfail(strict=True, reason="#3047 RED O3: Altbestand-Ausblick Klartext 4 Spalten, HTML 7")
 def test_ac21_altbestand_ausblick_klartext_gleich_html():
     """AC-21 (Befund O3): Altbestand ohne ``active_metrics`` und ohne
     ``outlook_metrics`` -> der Ausblick zeigt im Klartext dieselben Spalten in
@@ -480,6 +481,59 @@ def test_ac21_altbestand_ausblick_klartext_gleich_html():
     for ort in html:
         assert kennungen(plain[ort]) == kennungen(html[ort]), (
             f"{ort}: Klartext {[k for k, _ in plain[ort]]} != HTML {[k for k, _ in html[ort]]}")
+
+
+# ---------------------------------------------------------------------------
+# WV6 Amtliche Warnungen zuerst (Konzept einstellungen_neu.md §5 Punkt 8)
+# ---------------------------------------------------------------------------
+
+
+def _hitzewarnung():
+    from tests.helpers.amtliche_warnungen_fixture import hitze
+
+    return hitze()
+
+
+def _wv6_mail():
+    """Vergleich mit gespeicherter Folge Wind, Temperatur, Niederschlag;
+    Kronplatz hat eine aktive amtliche Warnung (Hitze)."""
+    roh = preset_dict("ac5_vergleichstabelle")
+    assert roh.get("official_alerts_enabled", True) is True
+    mail = sende_orte_mail(roh, warnungen={"loc-kronplatz": [_hitzewarnung()]})
+    assert soll_vergleichstabelle(mail.roh) == ["wind", "temperature", "precipitation"]
+    return mail
+
+
+def test_wv6_amtliche_warnung_zuerst_html():
+    """Konzept WV6 (einstellungen_neu.md §5 Punkt 8): in der E-Mail steht die
+    Zeile "Amtliche Warnungen" immer ZUERST in der Vergleichstabelle,
+    unabhaengig von der gespeicherten Metrik-Folge."""
+    from tests.helpers.einstellung_gleich_mail_orte import _tabellen
+
+    mail = _wv6_mail()
+    tabelle = next(z for _p, z in _tabellen(mail.html) if z and z[0] and z[0][0] == "Metrik")
+    assert tabelle[1][0] == "Amtliche Warnungen", [z[0] for z in tabelle[1:]]
+    assert "Hitze" in " ".join(tabelle[1][1:]), tabelle[1]
+    assert html_vergleichstabelle(mail.html)[1] == ["wind", "temperature", "precipitation"]
+
+
+@pytest.mark.xfail(strict=True, reason="#3047 RED WV6: Klartext-Warnzeile steht hinter den Metrik-Zeilen")
+def test_wv6_amtliche_warnung_zuerst_klartext():
+    """Konzept WV6, Klartext derselben Mail: im Ortsblock steht die Warnung als
+    ERSTE Zeile vor den Metrik-Zeilen. Ist: ``render_comparison_text`` haengt
+    die Warnzeilen erst NACH der Metrik-Schleife an
+    (``src/output/renderers/comparison.py:310-313``)."""
+    from tests.helpers.einstellung_gleich_mail_orte import _abschnitte
+
+    mail = _wv6_mail()
+    uebersicht, _ = _abschnitte(mail.plain)
+    block = []
+    for z in uebersicht[uebersicht.index("Kronplatz") + 1:]:
+        if not z.strip():
+            break
+        block.append(z)
+    assert klartext_vergleichstabelle(mail.plain)[1]["Kronplatz"] == ["wind", "temperature", "precipitation"]
+    assert block and "⚠️" in block[0] and "Hitze" in block[0], block
 
 
 # ---------------------------------------------------------------------------

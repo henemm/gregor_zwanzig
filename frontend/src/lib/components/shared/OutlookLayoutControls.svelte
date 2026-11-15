@@ -30,6 +30,7 @@
 		toggleCompareMetricKey
 	} from './weather-metrics-tab/compareMetricOrder.ts';
 	import { splitChannelMetricsForDisplay } from './weather-metrics-tab/channelMetricLayouts.ts';
+	import { COMPARE_METRIC_KEYS } from './wetter-tab/corridorEditorState.ts';
 	import { outlookFriendlyCapable } from './weather-metrics-tab/outlookFriendlyCapability.ts';
 	import { locale, t } from '$lib/i18n';
 	// Issue #2659 (i18n F10): voller Name aus dem Register (label_en, sonst deutsch).
@@ -146,7 +147,7 @@
 	// sie erscheinen weder in der aktiven Liste noch in der „Aus"-Gruppe
 	// (AC-5, Spec „Known Limitations").
 	const grundauswahlKennungen = $derived.by(() => {
-		if (grundauswahl === null) return null;
+		if (grundauswahl === null || istNieEingestellteOrteGrundauswahl(grundauswahl)) return null;
 		const kennungJeSchluessel: Record<string, string> = {};
 		for (const group of groupCompareCatalog(catalog)) {
 			for (const option of group.options) kennungJeSchluessel[option.key] = group.metric_id;
@@ -168,10 +169,28 @@
 	// abgewaehlt": die Auswahl IST die Grundauswahl. Ohne bekannte
 	// Grundauswahl (Altbestand/Katalog nicht geladen) bleibt es beim Verhalten
 	// vor A3 (ADR-0050 D4: kein Maximum -> nicht schneiden).
+	//
+	// #3047 O4 (AC-13/AC-21): `grundauswahl === null` bzw. die unveraendert
+	// materialisierte Vorgabe COMPARE_METRIC_KEYS heisst beim Ortsvergleich
+	// „active_metrics nie eingestellt" (Altbestand; die Hydration verliert das
+	// `null`). Die Mail zeigt dann ohne
+	// `outlook_metrics` die festen Spalten (DEFAULT_OUTLOOK_METRIC_KEYS =
+	// `_erbe_grundauswahl` ohne Maximum, compare_outlook_metric_ids.py) -- der
+	// Editor zeigt genau diese aktiv statt des ganzen Katalogs. Da es kein
+	// Maximum gibt, bleiben alle uebrigen Katalog-Groessen in der „Aus"-Gruppe
+	// zurueckholbar (die Mail schneidet in diesem Fall nicht).
+	function istNieEingestellteOrteGrundauswahl(keys: string[]): boolean {
+		// Die Vergleichs-Hydration materialisiert fehlendes `active_metrics` zu
+		// genau COMPARE_METRIC_KEYS (hydrateWeatherMetricsFromPreset); der Trip
+		// reicht Kennungen, die nie so aussehen.
+		return keys.length === COMPARE_METRIC_KEYS.length && keys.every((k, i) => k === COMPARE_METRIC_KEYS[i]);
+	}
 	const ausblickSpalten = $derived.by(() => {
 		const grund = grundauswahlKennungen;
 		if (grund === null || grund.length === 0) {
-			return { active: materializeOutlookMetricKeys(metricKeys), off: [] as string[] };
+			const active = materializeOutlookMetricKeys(metricKeys);
+			const off = Object.keys(outlookMetricById).filter((id) => !active.includes(id));
+			return { active, off };
 		}
 		return splitChannelMetricsForDisplay(grund, metricKeys ?? grund);
 	});
