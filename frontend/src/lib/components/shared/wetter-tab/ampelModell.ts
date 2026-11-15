@@ -27,6 +27,8 @@ export type MetrikEigenschaften = {
 	allowed_sides: string | null;
 	display_only: boolean;
 	unit: string;
+	/** Einheit der Ampel-Grenzwerte (#2946), z. B. Sichtweite "m" bei Anzeige-Einheit "km". Fehlt sie, gilt `unit`. */
+	threshold_unit?: string;
 	label_de?: string;
 	label_en?: string;
 };
@@ -76,6 +78,7 @@ export function eigenschaftenAusKatalog(apiMetrics: Record<string, Record<string
 				allowed_sides: (k.allowed_sides ?? null) as string | null,
 				display_only: k.display_only as boolean,
 				unit: k.unit as string,
+				threshold_unit: (k.threshold_unit ?? k.unit) as string,
 				label_de: k.label_de as string | undefined,
 				label_en: k.label_en as string | undefined
 			};
@@ -247,9 +250,14 @@ function grenzeAb(seite: AmpelSeite | null | undefined, ab: Farbe): number | nul
 	return null;
 }
 
+/** Einheit, in der die Ampel-Grenzwerte stehen (#2946); Rueckfall auf `unit` bei aelterer Antwort. */
+function grenzEinheit(eig: MetrikEigenschaften | undefined): string {
+	return eig?.threshold_unit || eig?.unit || '';
+}
+
 /** „grün: a bis b {Einheit}“ / „grün: ab …“ / „grün: bis …“ / „immer grün“ (AC-15). */
 export function gruenZeile(eintrag: AmpelMetrik, eig: MetrikEigenschaften | undefined): KatalogModell<'von_bis' | 'ab' | 'bis' | 'immer'> {
-	const einheit = eig?.unit ?? '';
+	const einheit = grenzEinheit(eig);
 	const unten = grenzeAb(eintrag?.lower, 'yellow');
 	const oben = grenzeAb(eintrag?.upper, 'yellow');
 	if (unten !== null && oben !== null) return { art: 'von_bis', schluessel: 'wetter.gruen.von_bis', werte: { von: unten, bis: oben, einheit } };
@@ -286,7 +294,7 @@ export function hinweisSchluessel(id: string, eig: MetrikEigenschaften | undefin
 /** Untertitel unter dem Metrik-Namen: `[Einheit, Hinweis]` mit „ · “ verbunden, ohne leere Teile. */
 export function untertitel(id: string, eig: MetrikEigenschaften | undefined, uebersetze: (schluessel: string) => string): string {
 	const k = hinweisSchluessel(id, eig);
-	return [eig?.unit ?? '', k ? uebersetze(k) : ''].filter(Boolean).join(' · ');
+	return [grenzEinheit(eig), k ? uebersetze(k) : ''].filter(Boolean).join(' · ');
 }
 
 export type ErklaerArt = 'normal' | 'gewitter' | 'gewitter_nie' | 'nie' | 'vorbote' | 'anzeige' | 'ohne_grenze';
@@ -310,7 +318,7 @@ export function erklaersatz(id: string, eintrag: AmpelMetrik, eig: MetrikEigensc
 	const stufe = eintrag?.alarm_ab;
 	if (!eig?.alertable || !stufe || stufe === 'never') return { art: 'nie', schluessel: 'wetter.erklaer.nie', werte: {} };
 	if (id === GEWITTER) return gewitterSatz(stufe, thunder);
-	const einheit = eig.unit ?? '';
+	const einheit = grenzEinheit(eig);
 	const oben = grenzeAb(eintrag.upper, stufe);
 	const unten = grenzeAb(eintrag.lower, stufe);
 	if (oben !== null && unten !== null) return { art: 'normal', schluessel: 'wetter.erklaer.normal_beidseitig', werte: { oben, unten, einheit, stufe } };

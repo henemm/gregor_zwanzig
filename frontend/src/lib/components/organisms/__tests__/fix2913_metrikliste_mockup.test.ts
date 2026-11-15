@@ -147,8 +147,8 @@ describe('AC-5: Untertitel `Einheit · Hinweis` aus dem Katalog DE/EN', () => {
 		['gust', 'km/h · Spitze'],
 		['precipitation', 'mm · Summe'],
 		['rain_probability', '% · Vorbote, kein Alarm'],
-		// Einheit aus /api/metrics (km); km→m ist Nicht-Ziel dieser Scheibe (AC-13, #2946).
-		['visibility', 'km · Minimum'],
+		// Grenzwert-Einheit aus threshold_unit (m), Mockup Z. 289 (#2946).
+		['visibility', 'm · Minimum'],
 		['freezing_level', 'm · m über höchster Stelle'],
 		['thunder', 'Stufe'],
 		['uv_index', 'Maximum']
@@ -182,7 +182,7 @@ describe('AC-5: Untertitel `Einheit · Hinweis` aus dem Katalog DE/EN', () => {
 		assert.ok(ohne, 'keine Metrik ohne Hinweis gefunden (oder HINWEIS_IDS fehlt)');
 		assert.equal(M.hinweisSchluessel(ohne.id, ohne), null);
 		assert.equal(M.untertitel(ohne.id, ohne, uebersetzer(DE)), ohne.unit);
-		assert.equal(M.untertitel('frei', { ...ohne, id: 'frei', unit: '' }, uebersetzer(DE)), '');
+		assert.equal(M.untertitel('frei', { ...ohne, id: 'frei', unit: '', threshold_unit: '' }, uebersetzer(DE)), '');
 	});
 
 	test('EN: Untertitel aus dem EN-Katalog, gleiche Einheit, anderer Text als DE', () => {

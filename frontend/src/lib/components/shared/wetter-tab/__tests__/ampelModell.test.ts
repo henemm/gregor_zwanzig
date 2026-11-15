@@ -526,4 +526,22 @@ describe('#2946: Sichtweite-Zeile nennt die Einheit der Grenzwerte (m), nicht di
 		assert.equal(z.werte.einheit, 'km', 'AC-7: ohne threshold_unit gilt unit (Rueckfall)');
 		assert.equal(m.untertitel('temperature', eig.temperature, () => 'x'), '°C · x', 'AC-7: keine leere Einheit');
 	});
+
+	test('ac7_eigenschaften_ohne_threshold_unit_direkt_einheit_ist_unit', async () => {
+		// Direkt an gruenZeile/untertitel/erklaersatz, OHNE den Rueckfall in eigenschaftenAusKatalog:
+		// die Rueckfall-Stufe in der Grenz-Einheit selbst muss greifen (Adversary F001).
+		const { m, eig } = await umgebung();
+		const ohne = structuredClone(eig.temperature) as Json;
+		delete ohne.threshold_unit;
+		assert.equal(ohne.unit, '°C', 'Messaufbau: temperature hat unit °C');
+		assert.equal(ohne.alertable, true, 'Messaufbau: temperature ist alarmfaehig');
+		assert.ok(!('threshold_unit' in ohne), 'Messaufbau: threshold_unit fehlt');
+
+		const z = m.gruenZeile({ lower: { yellow: 0 }, upper: { yellow: 30 } }, ohne);
+		assert.equal(z.werte.einheit, '°C', 'AC-7: Gruenzeile ohne threshold_unit nennt unit');
+		assert.equal(m.untertitel('temperature', ohne, () => 'x'), '°C · x', 'AC-7: Untertitel ohne threshold_unit nennt unit');
+		const s = m.erklaersatz('temperature', { enabled: true, alarm_ab: 'red', upper: { yellow: 30, orange: 33, red: 36 } }, ohne);
+		assert.equal(s.art, 'normal');
+		assert.equal(s.werte.einheit, '°C', 'AC-7: Erklaersatz ohne threshold_unit nennt unit');
+	});
 });
