@@ -79,6 +79,8 @@ Schicht: ausschließlich Python-Core (`src/output/renderers/`), kein Frontend, k
 
 **Kanäle:** Keine Änderung an Inhalt oder Form in E-Mail, Telegram, SMS oder Premium-SMS; betroffen ist nur die E-Mail-HTML um eine unsichtbare Kommentarzeile.
 
+**Nachzug zu AC-4 (Fixtures und Anker):** Zusätzlich zu den Goldens sind die beiden Briefing-Fixtures `tests/fixtures/mail/briefing_full_{de,en}.eml` bereinigt. Ihr HTML-Teil ist base64-kodiert; dekodiert fehlt darin nur die CSS-Kommentarzeile, der Rest ist byte-gleich. Der SHA256-Anker in `tests/tdd/test_trip_renderer_characterization.py` ist auf den neuen Stand gesetzt. Im Zuge des Rückbaus entfällt der Import `ThunderLevel` in `trip_report.py`, weil er nur der toten Methode diente.
+
 ## Test Plan
 
 ### Automated Tests (TDD RED)
@@ -123,3 +125,4 @@ Schicht: ausschließlich Python-Core (`src/output/renderers/`), kein Frontend, k
 ## Changelog
 
 - 2026-11-15: Erstfassung (#2783, löst #3016 mit); zusätzlich `docs/reference/i18n_konventionen.md` Z. 107 auf „leer" nachziehen
+- 2026-11-15: Umsetzung. Python-Ratsche leer (Allowlist `{}`, `xfail` entfernt); Restfunde mit Markern; toter Highlights-Pfad entfernt; CSS-Kommentar aus Mail-Template (Goldens, `.eml`-Fixtures und SHA256-Anker nachgezogen, AC-4); `docs/reference/gates_und_ratschen.md` und `docs/features/epic-i18n-de-en.md` auf „leer" nachgezogen
