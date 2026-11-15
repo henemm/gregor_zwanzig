@@ -4,7 +4,7 @@ type: reference
 version: "1.1"
 status: active
 created: 2026-10-21
-updated: 2026-11-06
+updated: 2026-11-15
 tags: [telegram, channel, renderer, inbound, reference]
 ---
 
@@ -86,6 +86,8 @@ Telegram hat zwei Stile. Die Sprache folgt dem Stil und dem Befehlswort (ADR-010
 und Antworten stehen in der **Kontosprache** (`resolve_user_lang`). Ein englisches Befehlswort (z. B.
 `TODAY`, `RESTDAY`) ergibt eine englische Antwort, auch bei deutschem Konto (`telegram_englisch`,
 `src/services/trip_command_processor.py`).
+
+**Stufenwörter (#2784):** Gewitter-Stufe (z. B. „leicht" / „light"), Wind- und Regen-Adjektive folgen der Kontosprache in Fußzeile, Kurzübersicht, Segment-Tabellen des Briefings und in den Stundenzeilen des Änderungs-Alarms. Bewusst deutsch bleibt der Gewitterteil der Ausblick-Zeile (Entscheidung #2665). Kürzel (`TH`, `VS`, `FZ`) bleiben in jeder Sprache unverändert.
 
 **Kurzstil** (`telegram_style == "kurzform"`): die Kurzform bleibt in jeder Sprache unverändert, Kürzel
 und Befehlswörter eingeschlossen. Die Antwort ist englisch wie bisher; der Konto-Wert ändert nichts an

@@ -38,7 +38,8 @@ from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, collect_hiking_window_points,
     hiking_field_min_max_ts, night_temp_min_c, night_wind_chill_min_c,
 )
-from output.metric_format import NO_VALUE, THUNDER_LABEL_DE
+from app.thunder_scale import thunder_label
+from output.metric_format import NO_VALUE
 from output.renderers.compare_outlook_metric_ids import outlook_columns
 from output.renderers.email.helpers import fmt_val, format_trend_tokens
 from output.renderers.email.thunder_branch import (
@@ -83,12 +84,15 @@ def _compact_label(metric_id: str) -> str:
         return metric_id[:2].upper()
 
 
-def _cell(metric_id: str, row: dict, friendly_keys: set[str], *, ampel: dict) -> str:
+def _cell(
+    metric_id: str, row: dict, friendly_keys: set[str], *, ampel: dict, lang: Lang = "de",
+) -> str:
     """Formatiere den Wert einer Metrik aus einem Tabellen-Row-Dict."""
     key = _col_key(metric_id)
     if key is None:
         return NO_VALUE
-    return fmt_val(key, row.get(key), friendly_keys=friendly_keys, row=row, ampel=ampel)
+    return fmt_val(
+        key, row.get(key), friendly_keys=friendly_keys, row=row, lang=lang, ampel=ampel)
 
 
 def _wrap(text: str, width: int) -> list[str]:
@@ -117,7 +121,7 @@ def _wrap(text: str, width: int) -> list[str]:
 
 def _narrow_table(
     table_columns: list[str], rows: list[dict], friendly_keys: set[str],
-    width: int, *, ampel: dict,
+    width: int, *, ampel: dict, lang: Lang = "de",
 ) -> list[str]:
     """Schmale Monospace-Tabelle: Zeit + gekappte Metrik-Spalten.
 
@@ -129,7 +133,7 @@ def _narrow_table(
     for r in rows:
         cells = [str(r.get("time", ""))]
         for mid in table_columns:
-            cells.append(_cell(mid, r, friendly_keys, ampel=ampel))
+            cells.append(_cell(mid, r, friendly_keys, ampel=ampel, lang=lang))
         matrix.append(cells)
 
     widths = [len(h) for h in headers]
@@ -265,7 +269,7 @@ def _tg_day_footer(
 
     # Gewitter
     # Issue #1474 (F002/F003, Adversary-Nachbesserung): geteilte Quelle
-    # THUNDER_LABEL_DE (metric_format.py) statt einer vierten eigenen
+    # thunder_label (Sprache ``lang``, #2784) statt einer vierten eigenen
     # Wortliste -- vorher stand hier "MED"/"HIGH" (Englisch), waehrend
     # outlook.py und helpers.py bereits "mittel"/"hoch" (Deutsch) zeigten:
     # derselbe Sprachwechsel in derselben Nachricht, je nach Ausgabeteil.
@@ -276,9 +280,9 @@ def _tg_day_footer(
         if max_thunder_sev == 0:
             # Issue #1331: Ziel-Datenluecke darf keine positive Entwarnung
             # "kein" vortaeuschen -- Unsicherheitsmarker statt Fehl-Entwarnung.
-            thunder_word = "?" if has_gap else THUNDER_LABEL_DE[ThunderLevel.NONE]
+            thunder_word = "?" if has_gap else thunder_label(ThunderLevel.NONE, lang=lang)
         else:
-            thunder_word = THUNDER_LABEL_DE[_SEV_TO_THUNDER_LEVEL[max_thunder_sev]]
+            thunder_word = thunder_label(_SEV_TO_THUNDER_LEVEL[max_thunder_sev], lang=lang)
         # Issue #2176: ⚡ ist hier das Ereignis-Symbol unmittelbar vor dem
         # Stufenwort. Bei "leicht" traegt die Fusszeile stattdessen die
         # Luftmassen-Beschriftung -- kanaltypisch kurz, ohne CAPE-Wert und
@@ -460,7 +464,7 @@ def _overview_line(
     has_gap: bool = False,
     day_thunder_sev: Optional[int] = None,
     day_thunder_hail_note: Optional[str] = None,
-    ampel: dict,
+    ampel: dict, lang: Lang = "de",
 ) -> str:
     """Eine Kurzübersicht-Zeile ``{Kürzel} {Min}-{Max}@{Peak-Stunde}`` (oder
     Einzelwert/kategorisch).
@@ -527,8 +531,8 @@ def _overview_line(
 
     try:
         if hiking is not None:
-            lo = fmt_val(key, hiking[0], friendly_keys=fkeys, ampel=ampel)
-            hi = fmt_val(key, hiking[1], friendly_keys=fkeys, ampel=ampel)
+            lo = fmt_val(key, hiking[0], friendly_keys=fkeys, lang=lang, ampel=ampel)
+            hi = fmt_val(key, hiking[1], friendly_keys=fkeys, lang=lang, ampel=ampel)
             lo_num, hi_num = float(hiking[0]), float(hiking[1])
             peak_hour = hiking[2]
             min_hour = hiking[3] if len(hiking) > 3 else ""
@@ -536,8 +540,8 @@ def _overview_line(
             nums = [float(h[key]) for h in hits]
             lo_row = hits[nums.index(min(nums))]
             hi_row = hits[nums.index(max(nums))]
-            lo = _cell(metric_id, lo_row, fkeys, ampel=ampel)
-            hi = _cell(metric_id, hi_row, fkeys, ampel=ampel)
+            lo = _cell(metric_id, lo_row, fkeys, ampel=ampel, lang=lang)
+            hi = _cell(metric_id, hi_row, fkeys, ampel=ampel, lang=lang)
             lo_num, hi_num = min(nums), max(nums)
             peak_hour = hi_row.get("time", "")
             min_hour = lo_row.get("time", "")
@@ -567,15 +571,14 @@ def _overview_line(
         if metric_id == "thunder":
             if day_thunder_sev is not None:
                 # #1498: identische Quelle UND identisches Wort wie die
-                # Fusszeile (THUNDER_LABEL_DE ueber die kanonische Ordnung,
+                # Fusszeile (thunder_label ueber die kanonische Ordnung,
                 # #1474) — die Bubble traegt genau EINE Gewitter-Aussage.
                 if day_thunder_sev == 0:
                     value = ("?" if has_gap
-                             else THUNDER_LABEL_DE[ThunderLevel.NONE])
+                             else thunder_label(ThunderLevel.NONE, lang=lang))
                 else:
-                    value = THUNDER_LABEL_DE[
-                        _SEV_TO_THUNDER_LEVEL[day_thunder_sev]
-                    ]
+                    value = thunder_label(
+                        _SEV_TO_THUNDER_LEVEL[day_thunder_sev], lang=lang)
                     # Issue #2205 (AC-15/16): Hagel aus derselben
                     # Tagesfenster-Quelle wie die Fusszeile.
                     if day_thunder_hail_note:
@@ -591,9 +594,9 @@ def _overview_line(
                 if _thunder_severity(worst_row.get(key)) == 0 and has_gap:
                     value = "?"
                 else:
-                    value = _cell(metric_id, worst_row, fkeys, ampel=ampel)
+                    value = _cell(metric_id, worst_row, fkeys, ampel=ampel, lang=lang)
         else:
-            value = _cell(metric_id, hits[-1], fkeys, ampel=ampel)
+            value = _cell(metric_id, hits[-1], fkeys, ampel=ampel, lang=lang)
     return f"{label} {value}"
 
 
@@ -869,7 +872,7 @@ def render_telegram_bubbles(
             has_gap=has_gap,
             day_thunder_sev=_day_thunder_sev,
             day_thunder_hail_note=_day_thunder_hail_note,
-            ampel=ampel,
+            ampel=ampel, lang=lang,
         )), _TG_PROSE_WIDTH))
     # Issue #1331/#1334 F008: has_gap kommt als expliziter Parameter vom
     # echten Versandpfad (notification_service.compute_has_gap() aus
@@ -920,7 +923,7 @@ def render_telegram_bubbles(
         text_lines = _wrap(_esc(_segment_mini_header(seg_data, lang=lang)), _TG_PROSE_WIDTH)
         if layout.table_columns and rows:
             table_lines = _narrow_table(
-                layout.table_columns, rows, fkeys, _TG_TABLE_WIDTH, ampel=ampel)
+                layout.table_columns, rows, fkeys, _TG_TABLE_WIDTH, ampel=ampel, lang=lang)
             escaped_table = "\n".join(_esc(ln) for ln in table_lines)
             text_lines = text_lines + ["<pre>", escaped_table, "</pre>"]
         bubbles.append(TelegramBubble(text="\n".join(text_lines)))
