@@ -240,15 +240,13 @@ describe('AC-3: Umleitung des alten Layout-Deep-Links', () => {
 // ── AC-2-Fundament: neue Heimat samt Speicherweg ────────────────────────────
 
 describe('Stundenverlauf-Steuerung: neue Heimat + Speicherweg', () => {
-	// #2794 S3a: der Abschnitt „Reihenfolge" heisst jetzt `layout_kanal` (Layout je Kanal).
-	test("der Abschnitt 'stundenverlauf' liegt im Vergleich zwischen Layout je Kanal und Amtlichen Warnungen", () => {
+	// #2794 S3a: der Abschnitt „Reihenfolge" hiess `layout_kanal` (Layout je Kanal).
+	// #3031 (AC-11): `layout_kanal` ist in den Reiter Wetter umgezogen (KanalInhaltKarte) und kein
+	// Abschnitt der Metrik-Oberflaeche mehr; der Stundenverlauf bleibt vor den Amtlichen Warnungen.
+	test("der Abschnitt 'stundenverlauf' liegt im Vergleich vor den Amtlichen Warnungen, Layout je Kanal ist umgezogen", () => {
 		const sections = weatherMetricsTabSections('vergleich');
 		assert.ok(sections.includes('stundenverlauf'), `Abschnitt fehlt: ${sections.join(', ')}`);
-		assert.ok(sections.includes('layout_kanal'), `Abschnitt layout_kanal fehlt: ${sections.join(', ')}`);
-		assert.ok(
-			sections.indexOf('layout_kanal') < sections.indexOf('stundenverlauf'),
-			'erst welche Tageswerte und in welcher Folge, dann der Stundenverlauf'
-		);
+		assert.ok(!sections.includes('layout_kanal'), `#3031 AC-11: layout_kanal steht noch in der Metrik-Oberflaeche: ${sections.join(', ')}`);
 		assert.ok(
 			sections.indexOf('stundenverlauf') < sections.indexOf('official_alerts'),
 			"'stundenverlauf' muss VOR 'official_alerts' liegen (Spec § Implementation Details 2)"

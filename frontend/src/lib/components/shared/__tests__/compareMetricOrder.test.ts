@@ -13,12 +13,14 @@ import { COMPARE_METRIC_KEYS } from '../wetter-tab/corridorEditorState.ts';
 import type { ComparePreset } from '../../../types.ts';
 
 describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
-	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md §3): der Abschnitt heisst jetzt 'layout_kanal'.
-	test('AC-1: vergleich zeigt den geteilten Reihenfolge-Abschnitt (layout_kanal)', () => {
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md §3): der Abschnitt hiess 'layout_kanal'.
+	// #3031 (AC-11): die Reihenfolge je Kanal bedient jetzt die Karte „Inhalt je Kanal und Fläche“ im
+	// Reiter Wetter (Trip und Vergleich derselbe Code); die Metrik-Oberflaeche fuehrt den Abschnitt nicht mehr.
+	test('#3031 AC-11: vergleich fuehrt den Abschnitt layout_kanal nicht mehr (Karte im Reiter Wetter)', () => {
 		const sections = weatherMetricsTabSections('vergleich');
 		assert.ok(
-			sections.includes('layout_kanal'),
-			`AC-1 FAIL: "layout_kanal" fehlt im vergleich-Kontext — Ist: ${JSON.stringify(sections)}`
+			!sections.includes('layout_kanal'),
+			`#3031 AC-11: "layout_kanal" steht noch im vergleich-Kontext — Ist: ${JSON.stringify(sections)}`
 		);
 	});
 
@@ -36,7 +38,7 @@ describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
 		const sections = weatherMetricsTabSections('route');
 		assert.deepEqual(sections, [
 			'grundauswahl',
-			'layout_kanal', // #2794 S3a: vormals 'reihenfolge'
+			// #3031 (AC-11): 'layout_kanal' (vormals 'reihenfolge') ist in den Reiter Wetter umgezogen.
 			'sms_schwellen',
 			// Issue #1728 Scheibe 2 (2026-08-15): 'auswertungen' ist ENTFERNT,
 			// nicht mehr Teil der Liste — der Bedienabschnitt "05 — Auswertungen"

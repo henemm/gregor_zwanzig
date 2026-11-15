@@ -239,7 +239,7 @@ describe('AC-30: Uebergangsblock am Ende — Inhalt je Kanal (ohne alten Versand
 
 	test('s3b2795_uebergang_enthaelt_inhalt_je_kanal_und_beispiel_alarm', () => {
 		const { knoten } = uebergang();
-		assert.ok(enthaelt(knoten, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']), 'Uebergangsblock ohne WetterMetrikenVersandPanel/WeatherMetricsTab (Telegram-Kurzstil, Layout je Kanal, Ausblick, Nachtblock, Report-Config, SMS-Schwellen)');
+		assert.ok(enthaelt(knoten, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']), 'Uebergangsblock ohne WetterMetrikenVersandPanel/WeatherMetricsTab (Telegram-Kurzstil, Ausblick, Nachtblock, Report-Config, SMS-Schwellen)');
 		assert.ok(enthaelt(knoten, ['AlertPreviewCard']), 'Uebergangsblock ohne Beispiel-Alarm (AlertPreviewCard)');
 	});
 
@@ -247,6 +247,18 @@ describe('AC-30: Uebergangsblock am Ende — Inhalt je Kanal (ohne alten Versand
 		const { knoten, quelle } = uebergang();
 		for (const k of alle(knoten, (n) => n.type === 'Component' && ['WetterMetrikenVersandPanel', 'WeatherMetricsTab'].includes(n.name))) {
 			assert.equal(attribut(k, quelle, 'bereich')?.literal, 'zustellung', `${k.name} im Uebergangsblock ohne bereich="zustellung"`);
+		}
+	});
+
+	// #3031 (Inhalt je Kanal A1, AC-11 / Test 10): „Layout je Kanal“ ist aus dem Uebergangsblock entfernt —
+	// die Bedienung steht ausschliesslich im Reiter Wetter (KanalInhaltKarte). Gemessen an der Abschnittsliste,
+	// die der Baustein mit bereich="zustellung" rendert (weatherMetricsTabSections, reine Funktion).
+	test('f3031_uebergang_ohne_layout_je_kanal', async () => {
+		const { weatherMetricsTabSections } = await import('../weather-metrics-tab/weatherMetricsTabSections.ts');
+		for (const ctx of ['route', 'vergleich'] as const) {
+			const s = weatherMetricsTabSections(ctx, 'zustellung');
+			assert.ok(!s.includes('layout_kanal'), `#3031 AC-11 (${ctx}): Uebergangsblock zeigt weiter „Layout je Kanal“: ${s.join(', ')}`);
+			assert.ok(s.includes('ausblick'), `${ctx}: Messaufbau — der Uebergangsblock muss den Rest (Ausblick) weiter zeigen`);
 		}
 	});
 
