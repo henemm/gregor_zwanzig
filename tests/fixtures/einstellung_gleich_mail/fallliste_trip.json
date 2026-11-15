@@ -1037,7 +1037,7 @@
       "test": "test_paarweise_ausblick",
       "ac": "AC-4",
       "befund": "T1",
-      "status": "rot_erwartet",
+      "status": "gruen",
       "werte": {
         "auswahl_muster": "nie_eingestellt",
         "reihenfolge": "umkehrung",
@@ -1071,7 +1071,7 @@
       "test": "test_paarweise_ausblick",
       "ac": "AC-4",
       "befund": "T1",
-      "status": "rot_erwartet",
+      "status": "gruen",
       "werte": {
         "auswahl_muster": "nie_eingestellt",
         "reihenfolge": "gemischt",
@@ -1277,7 +1277,7 @@
       "test": "test_ac4_ausblick_nie_eingestellt",
       "ac": "AC-4",
       "befund": "T1",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "trip-ac4--bewusst_leer--html",
@@ -1321,7 +1321,7 @@
       "test": "test_ac4_ausblick_nie_eingestellt",
       "ac": "AC-4",
       "befund": "T1",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "trip-ac4--bewusst_leer--klartext",
@@ -1365,7 +1365,7 @@
       "test": "test_ac4_ausblick_nie_eingestellt",
       "ac": "AC-4",
       "befund": "T1",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "trip-ac4--bewusst_leer--kompakt",
@@ -1658,7 +1658,7 @@
       "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
       "ac": "AC-10",
       "befund": "T3",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "trip-ac10--abgewaehlt_nirgends-stunden--klartext",
@@ -1691,7 +1691,7 @@
       "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
       "ac": "AC-10",
       "befund": "T3",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "trip-ac10--abgewaehlt_nirgends-nacht--html",
@@ -1724,7 +1724,7 @@
       "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
       "ac": "AC-10",
       "befund": "T3",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "trip-ac10--abgewaehlt_nirgends-nacht--klartext",
@@ -1757,7 +1757,7 @@
       "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
       "ac": "AC-10",
       "befund": "T3",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "trip-ac10--abgewaehlt_nirgends-ausblick--html",
@@ -1945,6 +1945,94 @@
       "test": "test_ac17_klartext_festtexte_in_nutzersprache",
       "ac": "AC-17",
       "befund": "T5",
+      "status": "rot_erwartet"
+    },
+    {
+      "id": "trip-n1--altbestand_ohne_metrics-stunden--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ohne_metrics",
+      "ac": "AC-13, AC-11",
+      "befund": "N1",
+      "status": "rot_erwartet"
+    },
+    {
+      "id": "trip-n1--altbestand_ohne_metrics-stunden--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ohne_metrics",
+      "ac": "AC-13, AC-11",
+      "befund": "N1",
+      "status": "rot_erwartet"
+    },
+    {
+      "id": "trip-n1--altbestand_ohne_metrics-nacht--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ohne_metrics",
+      "ac": "AC-13, AC-11",
+      "befund": "N1",
+      "status": "rot_erwartet"
+    },
+    {
+      "id": "trip-n1--altbestand_ohne_metrics-nacht--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ohne_metrics",
+      "ac": "AC-13, AC-11",
+      "befund": "N1",
+      "status": "rot_erwartet"
+    },
+    {
+      "id": "trip-wv6--vor_tabelle--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst",
+      "ac": "AC-2, Konzept WV6",
+      "befund": "WV6",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-wv6--vor_tabelle--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst",
+      "ac": "AC-2, Konzept WV6",
+      "befund": "WV6",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-wv6--vor_ueberblick--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst",
+      "ac": "AC-2, Konzept WV6",
+      "befund": "WV6",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-wv6--vor_ueberblick--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst",
+      "ac": "AC-2, Konzept WV6",
+      "befund": "WV6",
       "status": "rot_erwartet"
     }
   ]

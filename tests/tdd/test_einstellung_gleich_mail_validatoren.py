@@ -256,7 +256,6 @@ def test_trip_kompakt_ausblick_folge(monkeypatch, tmp_path):
     assert "SOLL: Ausblick (Kompakt)" in aus and "steht 'Temp' statt 'Wind'" in aus, aus
 
 
-@pytest.mark.xfail(strict=True, reason="#3047 RED T1")
 def test_trip_ausblick_nie_eingestellt_folgt_trip_reihenfolge(monkeypatch, tmp_path):
     """AC-4: ohne ``outlook_metrics`` die ganze Grundauswahl in der eingestellten
     Trip-Reihenfolge (Boeen, Temp, Niederschlag, Wind), nicht in Katalogfolge."""

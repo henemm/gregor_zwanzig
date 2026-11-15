@@ -40,7 +40,7 @@
    "status": "rot_erwartet",
    "seite": "python",
    "zustand": "altbestand_ohne_metrics",
-   "verweis": "src/output/renderers/email/helpers.py:305-318 + trip_report.py:682 (leere metrics -> keine Wertspalten; DEFAULT_TRIP_METRIC_IDS nur fuer Kacheln, html.py:1278)"
+   "verweis": "#3047 N1: echte Mail belegt (test_n1_altbestand_ohne_metrics); Zeilenwerte aus trip_report._dp_to_row ueber dc.metrics, Spalten helpers.py:305-318 -- Behebung nur in get_metrics_for_channel moeglich und aendert Telegram/Kurzfassung (test_channel_metric_matrix AC-S4-6/7/13, #1199)"
   },
   {
    "id": "D-trip_tabellen-altbestand_ohne_metrics-frontend",
@@ -117,7 +117,7 @@
    "test": "test_python_seite_trip_ausblick_standard",
    "ac": "AC-13, AC-4",
    "befund": "T1",
-   "status": "rot_erwartet",
+   "status": "gruen",
    "seite": "python",
    "zustand": "nie_eingestellt",
    "verweis": "src/output/renderers/compare_outlook_metric_ids.py:220-222 (Array-/Katalogfolge von dc.metrics statt order)"

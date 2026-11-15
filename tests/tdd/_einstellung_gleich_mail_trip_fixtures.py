@@ -160,6 +160,7 @@ def render_trip_mit_ausblick(
     uid: Optional[str] = None, language: Optional[str] = None,
     mit_ausblick: bool = True, day_comparison=None,
     mitschrift: Optional[Kanalmitschrift] = None,
+    official_alerts: Optional[list] = None,
 ) -> tuple[Kanalmitschrift, object, str]:
     """Wie ``render_trip_dict``, zusaetzlich mit drei Ausblick-Tageszeilen
     (``multi_day_trend``) und mit der ECHTEN ``user_id`` des Profils im Loader
@@ -168,7 +169,9 @@ def render_trip_mit_ausblick(
     ``day_comparison``: optionaler Vortag-Vergleich (echtes
     ``DayComparison``-Datenobjekt) fuer die Vortag-Zeile (AC-9).
     ``mitschrift``: eine bereits installierte Mitschrift weiterverwenden
-    (AC-12: zwei Nutzer, EIN Aufzeichner -- Kreuzpruefung der Empfaenger)."""
+    (AC-12: zwei Nutzer, EIN Aufzeichner -- Kreuzpruefung der Empfaenger).
+    ``official_alerts``: echte ``OfficialAlert``-Objekte am Etappen-Segment,
+    wie der Abruf sie dort ablegt (WV6: amtliche Warnungen zuerst)."""
     for k, v in TRANSPORT_ENV.items():
         monkeypatch.setenv(k, v)
     if mitschrift is None:
@@ -180,8 +183,11 @@ def render_trip_mit_ausblick(
     assert trip is not None, "Trip-JSON liess sich nicht laden"
     rc = trip.report_config
     trend = ausblick_zeilen(trip, report_type, lang=language or "de") if mit_ausblick else None
+    seg = segment()
+    if official_alerts:
+        seg.official_alerts = list(official_alerts)
     request = TripReportRequest(
-        trip=trip, report_type=report_type, segment_weather=[segment()],
+        trip=trip, report_type=report_type, segment_weather=[seg],
         trip_tz=TZ, night_weather=night_weather(), stage_name=STAGE_NAME,
         stage_stats={"distance_km": 12.0, "ascent_m": 900.0, "descent_m": 100.0,
                      "max_elevation_m": 1400},
