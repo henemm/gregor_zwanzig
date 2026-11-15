@@ -147,10 +147,10 @@ def _resolve_metric_id(field: str, direction: str) -> str:
     """
     candidates = [m for m in _METRICS if field in m.summary_fields.values()]
     if not candidates:
-        raise KeyError(f"Unbekanntes summary_field für Alert-Projektion: {field!r}")
+        raise KeyError(f"Unbekanntes summary_field für Alert-Projektion: {field!r}")  # i18n-log
     if len(candidates) == 1:
         return candidates[0].id
-    want = "unter" if direction == "decrease" else "über"
+    want = "unter" if direction == "decrease" else "über"  # i18n-fest: cmp-Protokollwert, nie übersetzen
     for m in candidates:
         if m.cmp == want:
             return m.id
@@ -196,7 +196,7 @@ def _find_segment(segments, segment_id: str):
         segments[0] if segments else None,
     )
     if match is None:
-        raise KeyError(f"Kein Segment für segment_id={segment_id!r}")
+        raise KeyError(f"Kein Segment für segment_id={segment_id!r}")  # i18n-log
     return match
 
 
@@ -359,7 +359,7 @@ def _hour_fields(metric_id, ch, fresh_ts, anchor_ts, tz, window=None, *, ampel) 
             value_from=ch.old_value, tz=tz, window=window, ampel=ampel,
         )
     except Exception:
-        logger.warning("Stundenzeilen fuer %s nicht bestimmbar", metric_id, exc_info=True)
+        logger.warning("Stundenzeilen fuer %s nicht bestimmbar", metric_id, exc_info=True)  # i18n-log
         return {}
 
 
@@ -439,7 +439,7 @@ def to_alert_message(
         metric_id = _metric_id_of(ch)
         cmp = get_cmp(metric_id)
         if not cmp:
-            raise ValueError(f"Leeres cmp für metric_id={metric_id!r}")
+            raise ValueError(f"Leeres cmp für metric_id={metric_id!r}")  # i18n-log
         ev_tz = _tz_for_location(match.start_point, tz)
         occ_offset, occ_past, occ_weekday = _when_fields(
             ch.occurred_at, now_utc, ev_tz,
@@ -521,7 +521,7 @@ def to_multi_point_alert_message(
             metric_id = _metric_id_of(ch)
             cmp = get_cmp(metric_id)
             if not cmp:
-                raise ValueError(f"Leeres cmp für metric_id={metric_id!r}")
+                raise ValueError(f"Leeres cmp für metric_id={metric_id!r}")  # i18n-log
             events.append(AlertEvent(
                 metric_id=metric_id, value_from=ch.old_value, value_to=ch.new_value,
                 threshold=ch.threshold, cmp=cmp,
@@ -612,7 +612,7 @@ def to_multi_location_onset_alert_message(
     """
     if not groups:
         raise ValueError(
-            "to_multi_location_onset_alert_message benötigt mindestens einen Ort"
+            "to_multi_location_onset_alert_message benötigt mindestens einen Ort"  # i18n-log
         )
     normalized = [
         (g[0], g[1], g[2]) if len(g) == 3 else (g[0], None, g[1]) for g in groups
@@ -628,7 +628,7 @@ def to_multi_location_onset_alert_message(
     ]
     if not valid_groups:
         raise ValueError(
-            "to_multi_location_onset_alert_message benötigt mindestens einen Ort "
+            "to_multi_location_onset_alert_message benötigt mindestens einen Ort "  # i18n-log
             "mit gesetztem onset_minutes"
         )
     multi = len(valid_groups) > 1

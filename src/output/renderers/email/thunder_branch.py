@@ -28,7 +28,7 @@ from typing import Optional
 
 
 _THUNDER_TOKEN_RE = re.compile(
-    r"^([a-zA-Zäöü]+)@(\d+)(?:\(([a-zA-Zäöü]+)@(\d+)\))?"
+    r"^([a-zA-Zäöü]+)@(\d+)(?:\(([a-zA-Zäöü]+)@(\d+)\))?"  # i18n-fest: Regex-Zeichenklasse, kein Nutzertext
 )
 
 
