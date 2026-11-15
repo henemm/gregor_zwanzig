@@ -392,7 +392,11 @@ async function ziehe(page: Page, quelle: Locator, ziel: Locator): Promise<void> 
 // Tests
 // ═══════════════════════════════════════════════════════════════════════════
 
-test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite', () => {
+// #3031 (AC-11): die Reihenfolge-Zeilen mit Kuerzel-Marken (Abschnitt layout_kanal) sind aus dem Reiter
+// Zustellung entfernt; die Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter zeigt das Kuerzel im Namen
+// („Temperatur (Temp | T)“). Kuerzel-Legende und Schnittlinie der Karte folgen mit #3032 (A2) — dann
+// wird dieser Block auf die Karte umgestellt; bis dahin ruht er.
+test.describe.fixme('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterbreite', () => {
 	test.afterAll(async ({ request }) => {
 		await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 		for (const id of aufgeraeumt.presets) {

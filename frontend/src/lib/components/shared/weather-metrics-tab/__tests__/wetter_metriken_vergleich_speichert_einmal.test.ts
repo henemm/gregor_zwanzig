@@ -77,10 +77,11 @@ function aufbau(preset = makePreset(PRESET_ID)) {
 describe('AC-1: eine Wetter-Metriken-Änderung speichert im Takt des Controllers — genau EIN PUT', () => {
 	// #2794 S3a Teil 3 (F006): Metrikauswahl, Amtliche Warnungen, Tagesfenster gehoeren dem Reiter
 	// Wetter — gemessen wird mit den Feldern dieses Speicherers (Kanal-Auswahl, Stundenverlauf, Ausblick).
-	test('Kanal-Auswahl → schedule, Flush → genau EIN PUT mit der neuen Auswahl, „Gespeichert"', async () => {
-		const { ws, ctl, speicherung, rueckmeldungen } = aufbau();
+	// #3031: Ausblick-Auswahl statt Kanal-Auswahl (die gehoert der Karte im Reiter Wetter).
+	test('Ausblick-Auswahl → schedule, Flush → genau EIN PUT mit der neuen Auswahl, „Gespeichert"', async () => {
+		const { ctl, speicherung, bedienung, rueckmeldungen } = aufbau();
 
-		ws.channelActiveMetricKeys = { email: ['gust_max_kmh'], telegram: null, sms: null };
+		bedienung.outlookSelect(['gust_max_kmh']);
 		speicherung.aenderungMelden();
 
 		assert.equal(ctl.hasPending, true, 'die Änderung muss im Speicher-Takt des Controllers liegen (schedule)');
@@ -93,10 +94,8 @@ describe('AC-1: eine Wetter-Metriken-Änderung speichert im Takt des Controllers
 		assert.equal(puts()[0].path, PRESET_PFAD, 'der PUT muss auf die Ortsvergleich-Ressource gehen');
 		assert.equal(puts()[0].status, 200);
 		const body = server.storedBody(PRESET_ID);
-		assert.ok(
-			JSON.stringify(dc(body).channel_active_metrics).includes('gust_max_kmh'),
-			'die neu aktivierte Kanal-Metrik muss im Rumpf stehen'
-		);
+		assert.deepEqual(dc(body).outlook_metrics, ['gust_max_kmh'], 'die neue Ausblick-Auswahl muss im Rumpf stehen');
+		assert.ok(!('channel_active_metrics' in dc(body)), '#3031: Kanal-Auswahl gehoert der Karte im Reiter Wetter');
 		assert.equal(ctl.state, 'idle', 'Endzustand „Gespeichert"');
 		assert.ok(ctl.savedAt instanceof Date, 'savedAt muss nach echtem Erfolg gestempelt sein');
 		assert.equal(rueckmeldungen.length, 1, 'onCompareUpdate genau einmal mit der Server-Antwort');

@@ -38,7 +38,7 @@ import { fixture, live } from './wetterTabDaten.ts';
 import { aktivId, formatAusKatalog, goMergeDisplayConfig, kanalInhalt, pythonKanalStand, type OrakelZeile } from './kanalInhaltPruefstand.ts';
 import { vorlagenAusTemplates } from '../ampelModell.ts';
 import { mitMetrik, ohneMetrik, standAusAbo, type AboSicht, type WetterStand } from '../wetterZustand.ts';
-import { SPEICHERER, tripNutzlast, type SpeicherOptionen } from '../wetterTabSpeicherung.ts';
+import { SPEICHERER, tripNutzlast, vergleichNutzlast, type SpeicherOptionen } from '../wetterTabSpeicherung.ts';
 
 type Zeile = { id: string; enabled: boolean; format: 'roh' | 'einfach' };
 type Listen = Record<'email' | 'telegram' | 'sms', Zeile[]>;
@@ -191,6 +191,22 @@ describe('Test 13 (Trip, AC-2): Telegram umsortiert, gespeichert, neu geladen �
 	});
 });
 
+describe('F003c (Trip): Bestandseintrag mit bucket „secondary" — Umsortieren wirkt trotzdem im Renderer', () => {
+	test('Böen eingeschaltet als secondary gespeichert, in der Karte nach vorn gezogen ⇒ Python liefert Böen zuerst', async () => {
+		const { m, abo, stand, nachMerge } = await tripAufbau();
+		const cl = structuredClone((abo.display_config as Dc).channel_layouts) as Record<string, Record<string, unknown>[]>;
+		const gust = cl.email.find((e) => e.metric_id === 'gust')!;
+		Object.assign(gust, { bucket: 'secondary', order: 0, enabled: true });
+		const bestand = { ...abo, display_config: { ...(abo.display_config as Dc), channel_layouts: cl } } as AboSicht;
+		const listen: Listen = m.listenAusAbo('route', bestand, stand.auswahl, fmt);
+		assert.equal(an(listen.email).at(-1), 'gust', 'Messaufbau: secondary steht hinter allen primary-Zeilen');
+		const neu = m.mitReihenfolge(listen, 'email', ['gust', ...listen.email.map((z) => z.id).filter((i) => i !== 'gust')]);
+		const wc = tripNutzlast({ client: null as never, stand: () => ({ ...stand, kanaele: neu }) as WetterStand, vorlagen: () => vorlagen, abo: () => bestand, kanalFormatFuer: fmt }).weatherConfig;
+		const orakel = pythonKanalStand(goMergeDisplayConfig(bestand.display_config, wc));
+		assert.equal(orakel.email[0]?.[0], 'gust', 'Renderer liefert Böen nicht zuerst — bucket des Bestands übersteuert die Kartenreihenfolge');
+	});
+});
+
 // ═══════════════════════════════ Vergleich ══════════════════════════════════
 
 const ID = 'cp-3031';
@@ -294,6 +310,21 @@ describe('Test 3/4/13 (Vergleich): EIN PUT in der Hub-Schlange mit vollem Stand,
 		const dc = (puts()[0].anfrage as Dc).display_config as Dc;
 		const cam = dc.channel_active_metrics as Record<string, unknown[]>;
 		for (const k of LK) assert.deepEqual(cam?.[k]?.map(aktivId), an(neu[k]), `channel_active_metrics.${k}`);
+		// #3031 F001: bisheriges Speicherformat {metric_id, aggregation} — der Python-Leser loest nackte
+		// Kennungen zu [] auf (tests/tdd/test_kanal_inhalt_3031_vergleich_cam_wirkung.py).
+		for (const k of LK) {
+			assert.deepEqual(cam[k], an(neu[k]).map((metric_id) => ({ metric_id, aggregation: 'max' })), `channel_active_metrics.${k}: nicht im Format {metric_id, aggregation}`);
+		}
+	});
+
+	test('F001: der echte Speicherer erzeugt genau die Fixture-Nutzlast, die der Python-Leser prueft', () => {
+		const fx = fixture('kanal_inhalt_3031/vergleich_kanal_nutzlast.json');
+		const abo = { id: ID, display_config: fx.abo_display_config } as AboSicht;
+		const stand = { ...standAusAbo('vergleich', abo, vorlagen), kanaele: fx.kanallisten } as WetterStand;
+		const nutzlast = vergleichNutzlast({ client: api, stand: () => stand, vorlagen: () => vorlagen, abo: () => abo, kanalFormatFuer: fmt });
+		const dc = nutzlast.display_config as Dc;
+		assert.deepEqual(dc.active_metrics, fx.nutzlast_display_config.active_metrics);
+		assert.deepEqual(dc.channel_active_metrics, fx.nutzlast_display_config.channel_active_metrics);
 	});
 
 	test('Test 4: 412 ⇒ neu laden, fremder Kanal-Stand bleibt auf dem Server, Controller meldet Konflikt', async () => {

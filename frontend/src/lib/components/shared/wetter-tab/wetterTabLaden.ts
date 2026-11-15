@@ -25,7 +25,18 @@ export type WetterDaten = {
 	vorlagen: VorlagenAmpeln;
 	liste: VorlageEintrag[];
 	eigene: EigeneVorlage[];
+	/** #3031: Katalog-Eintraege je Kennung (col_label, sms_code, format_modes …) fuer die Kanallisten. */
+	katalog: Record<string, Record<string, unknown>>;
 };
+
+/** Katalog `/api/metrics` (Gruppen) flach nach Kennung. */
+export function katalogNachKennung(apiMetrics: Record<string, Record<string, unknown>[]>): Record<string, Record<string, unknown>> {
+	const aus: Record<string, Record<string, unknown>> = {};
+	for (const liste of Object.values(apiMetrics ?? {})) {
+		for (const k of Array.isArray(liste) ? liste : []) if (typeof k?.id === 'string') aus[k.id] = k;
+	}
+	return aus;
+}
 
 type TemplateAntwort = { id: string; label?: string; ampel?: Ampel | null };
 
@@ -69,6 +80,7 @@ export async function ladeWetterDaten(client: LeseClient, kind: Kontext): Promis
 		eig: eigenschaftenAusKatalog(katalog),
 		vorlagen,
 		liste: vorlagenListe(templates, vorlagen),
-		eigene: eigeneVorlagen(presets, kind, vorlagen)
+		eigene: eigeneVorlagen(presets, kind, vorlagen),
+		katalog: katalogNachKennung(katalog)
 	};
 }

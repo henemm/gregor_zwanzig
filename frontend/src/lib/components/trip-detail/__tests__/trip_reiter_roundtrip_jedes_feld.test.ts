@@ -163,14 +163,18 @@ describe('Wetter-Metriken (AC-13, AC-17)', () => {
 		assert.equal(aktiv.length, 0, 'die Leerauswahl muss ankommen (der Server-Merge loescht nie von selbst)');
 	});
 
-	test('Kanal-Layout Telegram: eigener Eintrag, Bestand der anderen Kanaele bleibt', async () => {
+	// #3031: die Kanallisten bedient und speichert allein die Karte „Inhalt je Kanal und Fläche“ im
+	// Reiter Wetter. Dieser Reiter (Uebergangsblock) haelt nur eine beim Laden eingefrorene Kopie —
+	// sein Speichern darf den Server-Stand von channel_layouts nicht anfassen.
+	test('Kanal-Layout: Speichern dieses Reiters laesst channel_layouts auf dem Server unveraendert', async () => {
 		const { a, w } = await mitReiter();
+		const vorher = structuredClone(dc().channel_layouts);
 		const cb = w.inst.u.channelBuckets as Record<string, unknown>;
 		w.inst.u.channelBuckets = { ...cb, telegram: { buckets: { primary: ['wind'], secondary: [], off: [] }, friendlyMap: {} } };
 		w.metrikenSpeichern();
 		await P.fertig(a.ctl);
 		const cl = dc().channel_layouts as Record<string, Array<{ metric_id: string }>>;
-		assert.deepEqual(cl.telegram.map((m) => m.metric_id), ['wind']);
+		assert.deepEqual(cl, vorher, '#3031: der alte Reiter ueberschreibt die Kanallisten der Karte');
 		assert.ok(cl.email?.some((m) => m.metric_id === 'temperature'), 'der Bestand des E-Mail-Layouts muss erhalten bleiben');
 	});
 

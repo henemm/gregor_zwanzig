@@ -76,7 +76,8 @@ export const WETTER_REPORT_KEYS = [
 /** §2.2 — `display_config`-Schluessel des Reiters Wetter-Metriken. */
 export const WETTER_DISPLAY_KEYS = [
 	'metrics',
-	'channel_layouts',
+	// #3031: `channel_layouts` schreibt allein die Karte im Reiter Wetter (kein zweiter Bediener,
+	// sonst ueberschreibt eine eingefrorene Kopie dieses Reiters den Stand der Karte).
 	'preset_name',
 	'telegram_kurzform',
 	'outlook_metrics',

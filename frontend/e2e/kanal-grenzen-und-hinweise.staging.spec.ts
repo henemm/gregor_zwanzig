@@ -112,7 +112,10 @@ async function openMetricsTab(page: Page) {
 	return tab;
 }
 
-test.describe('Issue #1719 S3: echte Platzgrenzen im Trip-Editor', () => {
+// #3031 (AC-11): die Kanal-Reiter mit Kapplinie und Aus-Gruppe (Abschnitt layout_kanal) sind aus dem
+// Reiter Zustellung entfernt. Die Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter fuehrt „Aus“ als
+// Zustand der Zeile; Schnittlinie und Budget folgen mit #3032 (A2) — dann wird umgestellt, bis dahin ruht es.
+test.describe.fixme('Issue #1719 S3: echte Platzgrenzen im Trip-Editor', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize({ width: 1440, height: 900 });
 	});
@@ -208,7 +211,8 @@ test.describe('Issue #1719 S3: echte Platzgrenzen im Trip-Editor', () => {
 const ABWAHL_HINWEIS =
 	'Ein Kanal zeigt höchstens, was in der Grundauswahl gewählt ist. Was dort fehlt, erscheint in keinem Kanal.';
 
-test.describe('Issue #2438: Abwahl-Hinweis im Trip-Editor', () => {
+// #3031: die Gruppe „Aus in diesem Kanal“ gibt es in der Karte nicht mehr (Aus ist ein Zustand der Zeile).
+test.describe.fixme('Issue #2438: Abwahl-Hinweis im Trip-Editor', () => {
 	test.beforeAll(async ({ request }) => {
 		await createTrip(request);
 	});

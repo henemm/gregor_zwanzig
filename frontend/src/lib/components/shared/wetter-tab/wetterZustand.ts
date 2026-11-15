@@ -11,6 +11,7 @@ import { vorlageIdFuer } from '../../alerts-tab/alarmAbAnzeige.ts';
 import { amtlicheWarnungenAn, type WarnFelder } from './amtlicheWarnungen.ts';
 import { abweichungsMenge } from './ampelSchreiben.ts';
 import { klon } from './klon.ts';
+import type { KanalListen } from '../../organisms/wetter-tab/kanalInhalt.ts';
 import {
 	alarmAbFuerAlle,
 	auswahlLesen,
@@ -35,6 +36,8 @@ export type WetterStand = {
 	warnungenAn: boolean;
 	radarAn: boolean;
 	tagesfenster: Tagesfenster;
+	/** #3031: Stand der Karte „Inhalt je Kanal und Fläche“; fehlt ⇒ Karte nicht geladen. */
+	kanaele?: KanalListen;
 };
 
 /** Abo (Trip oder Vergleichs-Preset) in der Sicht des Reiters — locker typisiert. */

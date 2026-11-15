@@ -90,7 +90,7 @@ const INVENTAR: Record<HubKind, Array<[punkt: string, testid: string]>> = {
 		['8 Mehrtages-Trend', 'report-morning-trend'],
 		['9 Laufzeit', 'briefings-laufzeit'],
 		['11 Mail-Inhalt', 'report-mail-content'],
-		['12 Layout je Kanal', 'layout-tab'],
+		// #3031: „12 Layout je Kanal“ ist als Karte „Inhalt je Kanal und Fläche“ in den Reiter Wetter umgezogen.
 		['13 3-Tages-Ausblick', 'weather-metrics-ausblick'],
 		['14 Nacht-Block', 'wm-night-block-toggle'],
 		['16 Beispiel-Warnung', 'alert-preview-card']
@@ -106,7 +106,7 @@ const INVENTAR: Record<HubKind, Array<[punkt: string, testid: string]>> = {
 		['7 Abend mit Uhrzeit', 'report-evening-time'],
 		['9 Laufzeit', 'briefings-laufzeit-vergleich'],
 		['10 Aktivieren', 'compare-hub-activation-card'],
-		['12 Layout je Kanal', 'layout-tab'],
+		// #3031: „12 Layout je Kanal“ ist als Karte „Inhalt je Kanal und Fläche“ in den Reiter Wetter umgezogen.
 		['13 3-Tages-Ausblick', 'weather-metrics-ausblick'],
 		['15 Stundenverlauf', 'weather-metrics-stundenverlauf'],
 		['16 Beispiel-Warnung', 'alert-preview-card']
@@ -202,6 +202,8 @@ for (const kind of HUB_KINDS) {
 					}
 				}
 				expect(fehlend, `AC-7 FAIL: Inventar-Elemente fehlen im Reiter Zustellung (${kind})`).toEqual([]);
+				// #3031 (AC-11): „Layout je Kanal“ steht nicht mehr im Reiter Zustellung.
+				await expect(zustellung(page, kind).locator('[data-testid="layout-tab"]'), '#3031 AC-11: Layout je Kanal noch im Reiter Zustellung').toHaveCount(0);
 
 				// gespeicherte Werte — je Element so, wie der Nutzer es sieht
 				await expect(im(page, kind, 'alert-cooldown-input'), 'Cooldown').toHaveValue('90');

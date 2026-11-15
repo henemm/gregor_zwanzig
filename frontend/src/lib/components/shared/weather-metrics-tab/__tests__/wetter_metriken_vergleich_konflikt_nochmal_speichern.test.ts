@@ -64,24 +64,21 @@ describe('AC-7: Speicherkonflikt beim Wetter-Metriken-Speichern → „Nochmal s
 		await server.handler(PRESET_PFAD, { method: 'PUT', body: JSON.stringify({ name: 'fremd' }) });
 		const { ws, ctl, speicherung, bedienung } = aufbau();
 
-		// #2794 F006: Kanal-Auswahl statt Metrikauswahl (die gehoert dem Reiter Wetter).
-		ws.channelActiveMetricKeys = { email: ['wind_max_kmh'], telegram: null, sms: null };
+		// #2794 F006: Zustellungs-Geste statt Metrikauswahl (die gehoert dem Reiter Wetter).
+		// #3031: Ausblick-Auswahl statt Kanal-Auswahl (die gehoert der Karte im Reiter Wetter).
+		bedienung.outlookSelect(['wind_max_kmh']);
 		speicherung.aenderungMelden();
 		await ctl.flush();
 
 		assert.equal(puts().at(-1)?.status, 412, 'Vorbedingung: der Server muss den veralteten Stand ablehnen');
 		assert.equal(ctl.state, 'conflict', 'ein 412 muss „Nochmal speichern" auslösen, nicht einen generischen Fehler');
-		assert.deepEqual(
-			(ws.channelActiveMetricKeys as Record<string, unknown>).email,
-			['wind_max_kmh'],
-			'bei 412 darf NICHT zurückgerollt werden — die Änderung bleibt sichtbar'
-		);
+		assert.deepEqual(ws.outlookMetricKeys, ['wind_max_kmh'], 'bei 412 darf NICHT zurückgerollt werden — die Änderung bleibt sichtbar');
 
 		await ctl.retryConflict();
 
 		const letzter = puts().at(-1)!;
 		assert.equal(letzter.status, 200, 'der Wiederholungs-PUT muss durchgehen');
-		assert.ok(JSON.stringify(dc(server.storedBody(PRESET_ID)).channel_active_metrics).includes('wind_max_kmh'));
+		assert.deepEqual(dc(server.storedBody(PRESET_ID)).outlook_metrics, ['wind_max_kmh']);
 		assert.equal(ctl.state, 'idle', 'Endzustand „Gespeichert"');
 		assert.ok(ctl.savedAt instanceof Date);
 	});

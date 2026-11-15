@@ -10,6 +10,8 @@
 	// Der Reiter liest das Abo nur beim ersten Laden (Seitenneuaufbau nach Konflikt-Retry, #2317).
 	// #2913 Teil 2 (K-1, K-6): Organismus mit Zustand, Laden und Speichern; die Seite ist
 	// shared/WetterTab.svelte. Ladeanzeige aus dem Atom Skelett, „Erneut laden“ als Btn.
+	// #3031: Karte „Inhalt je Kanal und Fläche“ (KanalInhaltKarte) zwischen Warnungen/Radar und
+	// Anpassen; ihr Stand ist `stand.kanaele`, gespeichert ueber denselben einen Speicherer.
 	import { onMount } from 'svelte';
 	import { Btn, Skelett } from '$lib/components/atoms';
 	import { api } from '$lib/api';
@@ -24,7 +26,10 @@
 	import MetrikZeile from './MetrikZeile.svelte';
 	import NichtImBriefing from './NichtImBriefing.svelte';
 	import WarnungenRadarKarte from './WarnungenRadarKarte.svelte';
+	import KanalInhaltKarte from './KanalInhaltKarte.svelte';
 	import AnpassenKarte from './AnpassenKarte.svelte';
+	import type { Format, KatalogEintrag } from './kanalInhalt.ts';
+	import { kanalFormatAusKatalog, kanalListenFuerAnzeige, karteSichtbar, signaturVon, standMitKanaelen, zuMelden } from './kanalInhaltReiter.ts';
 	import { alarmZaehler, altSchluesselAusKatalog, briefingAngebot, eigeneVorlageAmpel, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
 	import type { AlarmAb, AltSchluessel, Farbe, Kontext } from '../../shared/wetter-tab/ampelModell.ts';
 	import { ladeWetterDaten, type WetterDaten } from '../../shared/wetter-tab/wetterTabLaden.ts';
@@ -86,11 +91,14 @@
 			neuGeladen,
 			anlegen: onAnlegeStand,
 			aggregationFuer: (id) => aggregation(id),
-			altSchluessel
+			altSchluessel,
+			kanalFormatFuer
 		};
 	}
 	const melden = () => (createMode ? anlegeSpeicherer(optionen(), context) : SPEICHERER[context](optionen())).melden();
-	const signatur = (s: Z.WetterStand) => JSON.stringify([Z.mengeVon(s, daten!.vorlagen), s.auswahl, s.warnungenAn, s.radarAn, s.tagesfenster]);
+	const signatur = (s: Z.WetterStand) => signaturVon(s, daten!.vorlagen);
+	// #3031: Darstellung einer neu in die Kanallisten aufgenommenen Metrik (Katalog-Default).
+	const kanalFormatFuer = (id: string): Format => kanalFormatAusKatalog(daten?.katalog)(id);
 
 	async function laden(): Promise<void> {
 		phase = 'laedt';
@@ -101,7 +109,7 @@
 			katalogIds = new Set(katalog.flatMap((e) => (e.metric_id ? [e.metric_id] : [])));
 			daten = d;
 			if (!stand) {
-				stand = Z.standAusAbo(context, abo(), d.vorlagen, altSchluessel);
+				stand = standMitKanaelen(context, Z.standAusAbo(context, abo(), d.vorlagen, altSchluessel), abo(), kanalFormatFuer);
 				gemeldet = signatur(stand);
 				if (createMode) melden();
 			}
@@ -117,14 +125,14 @@
 	/** Jede Aenderung: neuer Stand; nur wenn sich Gespeichertes aendert, meldet der Speicherer. */
 	function aendern(neu: Z.WetterStand): void {
 		stand = neu;
-		const sig = signatur(neu);
-		if (sig === gemeldet) return;
+		const sig = zuMelden(gemeldet, neu, daten!.vorlagen);
+		if (sig === null) return;
 		gemeldet = sig;
 		melden();
 	}
 	function neuGeladen(frisch: Z.AboSicht): void {
 		if (!daten) return;
-		stand = Z.standAusAbo(context, frisch, daten.vorlagen, altSchluessel);
+		stand = standMitKanaelen(context, Z.standAusAbo(context, frisch, daten.vorlagen, altSchluessel), frisch, kanalFormatFuer);
 		gemeldet = signatur(stand);
 		offen = null;
 		entwurf = null;
@@ -206,6 +214,12 @@
 			: []
 	);
 	const aboAmpel = $derived(stand && daten ? verschmelzen(vorlagen[stand.vorlageId], Z.mengeVon(stand, vorlagen)) : {});
+	const kanaele = $derived(anzeige && daten ? kanalListenFuerAnzeige(context, anzeige, abo(), kanalFormatFuer) : null);
+	const kanalMetriken = $derived(
+		anzeige && daten
+			? Object.fromEntries(anzeige.auswahl.map((id) => [id, { ...(daten!.katalog[id] ?? {}), label: name(id) } as KatalogEintrag]))
+			: {}
+	);
 	const vorlageLabel = $derived(daten?.liste.find((v) => v.id === stand?.vorlageId)?.label ?? stand?.vorlageId ?? '');
 
 	/** Weicht die Zeile in Grenzen (bzw. Gewitterfarben) von der Vorlage ab? */
@@ -282,6 +296,11 @@
 			onWarnungen={(an) => aendern({ ...stand!, warnungenAn: an })}
 			onRadar={(an) => aendern({ ...stand!, radarAn: an })}
 		/>
+		<!-- #3031: die Anlege-Seiten uebernehmen (noch) keine Kanallisten aus der Anlege-Nutzlast —
+		     beim Anlegen keine Karte, deren Eingaben verloren gingen; nach dem Anlegen im Hub. -->
+		{#if karteSichtbar(createMode, kanaele)}
+			<KanalInhaltKarte {context} listen={kanaele!} metriken={kanalMetriken} onAendern={(neu) => aendern({ ...stand!, kanaele: neu })} />
+		{/if}
 		<AnpassenKarte
 			tagesfenster={stand.tagesfenster}
 			onStart={(h) => aendern({ ...stand!, tagesfenster: { ...stand!.tagesfenster, start: h } })}

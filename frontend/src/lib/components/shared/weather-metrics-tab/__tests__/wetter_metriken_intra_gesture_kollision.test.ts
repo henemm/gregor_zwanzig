@@ -71,13 +71,15 @@ describe('AC-2: eine Geste löst historisch BEIDE Wrapper aus — beide Domänen
 	// #2794 S3a Teil 3 (F006): Metrikauswahl, Amtliche Warnungen und Tagesfenster gehoeren dem
 	// Reiter Wetter; die Kollision wird mit den verbleibenden Feldern dieses Speicherers gemessen
 	// (Kanal-Auswahl = Wetter-Metriken-Domaene, Stundenverlauf/Ausblick = Layout-Domaene).
-	test('Kanal-Auswahl UND Stundenverlauf-Drag im selben Tick → EIN PUT, Body trägt BEIDE Änderungen', async () => {
-		const { ws, ctl, speicherung, bedienung } = aufbau();
+	// #3031: die Kanal-Auswahl (`channel_active_metrics`) schreibt dieser Speicherer nicht mehr — sie
+	// gehoert der Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter. Die Kollision wird deshalb
+	// zwischen Stundenverlauf und Ausblick gemessen; der Rumpf traegt kein Kanal-Feld.
+	test('Ausblick-Auswahl UND Stundenverlauf-Drag im selben Tick → EIN PUT, Body trägt BEIDE Änderungen', async () => {
+		const { ctl, speicherung, bedienung } = aufbau();
 
-		// Simuliert den Wrapper-Bubble: der innere (Wetter-Metriken-)Wrapper
-		// meldet zuerst, der äußere (Layout-)Wrapper unmittelbar danach —
-		// beide OHNE dazwischenliegenden Tab-Wechsel oder await.
-		ws.channelActiveMetricKeys = { email: ['wind_max_kmh'], telegram: null, sms: null };
+		// Simuliert den Wrapper-Bubble: der innere Wrapper meldet zuerst, der äußere
+		// unmittelbar danach — beide OHNE dazwischenliegenden Tab-Wechsel oder await.
+		bedienung.outlookSelect(['wind_max_kmh']);
 		speicherung.aenderungMelden();
 		bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh', 'gust_max_kmh']);
 		speicherung.aenderungMelden();
@@ -86,40 +88,35 @@ describe('AC-2: eine Geste löst historisch BEIDE Wrapper aus — beide Domänen
 
 		assert.equal(puts().length, 1, 'eine Geste im gemeinsamen Wrapper darf nur EINEN PUT auslösen');
 		const body = server.storedBody(PRESET_ID);
-		assert.ok(
-			JSON.stringify(dc(body).channel_active_metrics).includes('wind_max_kmh'),
-			'die Kanal-Änderung darf vom nachfolgenden Layout-Bubble NICHT überschrieben werden'
-		);
+		assert.deepEqual(dc(body).outlook_metrics, ['wind_max_kmh'], 'die Ausblick-Änderung darf vom nachfolgenden Bubble NICHT überschrieben werden');
 		assert.deepEqual(
 			dc(body).hourly_metrics,
 			['temp_max_c', 'wind_max_kmh', 'gust_max_kmh'],
 			'die Stundenverlauf-Änderung muss im selben PUT stehen'
 		);
+		assert.ok(!('channel_active_metrics' in dc(body)), '#3031: Kanal-Auswahl gehoert der Karte im Reiter Wetter');
 	});
 
-	test('umgekehrte Reihenfolge (Ausblick zuerst, dann Kanal-Auswahl) → EIN PUT, Body trägt BEIDE Änderungen', async () => {
-		const { ws, ctl, speicherung, bedienung } = aufbau();
+	test('umgekehrte Reihenfolge (Stundenverlauf zuerst, dann Ausblick) → EIN PUT, Body trägt BEIDE Änderungen', async () => {
+		const { ctl, speicherung, bedienung } = aufbau();
 
-		bedienung.outlookSelect(['wind_max_kmh']);
+		bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh']);
 		speicherung.aenderungMelden();
-		ws.channelActiveMetricKeys = { email: null, telegram: ['temp_max_c'], sms: null };
+		bedienung.outlookSelect(['wind_max_kmh']);
 		speicherung.aenderungMelden();
 
 		await ctl.flush();
 
 		assert.equal(puts().length, 1);
 		const body = server.storedBody(PRESET_ID) as Record<string, unknown>;
-		assert.deepEqual(dc(body).outlook_metrics, ['wind_max_kmh'], 'die zuerst gemeldete Ausblick-Änderung ging verloren');
-		assert.ok(
-			JSON.stringify(dc(body).channel_active_metrics).includes('temp_max_c'),
-			'die zuletzt gemeldete Kanal-Änderung muss ebenfalls im selben PUT stehen'
-		);
+		assert.deepEqual(dc(body).hourly_metrics, ['temp_max_c', 'wind_max_kmh'], 'die zuerst gemeldete Stundenverlauf-Änderung ging verloren');
+		assert.deepEqual(dc(body).outlook_metrics, ['wind_max_kmh'], 'die zuletzt gemeldete Ausblick-Änderung muss ebenfalls im selben PUT stehen');
 	});
 
 	test('drei Änderungen über beide Domänen verteilt, alle vor dem ersten Flush → EIN PUT trägt alle drei', async () => {
-		const { ws, ctl, speicherung, bedienung } = aufbau();
+		const { ctl, speicherung, bedienung } = aufbau();
 
-		ws.channelActiveMetricKeys = { email: ['wind_max_kmh'], telegram: null, sms: null };
+		bedienung.outlookSelect(['wind_max_kmh', 'temp_max_c']);
 		speicherung.aenderungMelden();
 		bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh']);
 		speicherung.aenderungMelden();
@@ -130,7 +127,7 @@ describe('AC-2: eine Geste löst historisch BEIDE Wrapper aus — beide Domänen
 
 		assert.equal(puts().length, 1, 'drei Meldungen derselben Geste — trotzdem nur ein PUT');
 		const body = server.storedBody(PRESET_ID) as Record<string, unknown>;
-		assert.ok(JSON.stringify(dc(body).channel_active_metrics).includes('wind_max_kmh'));
+		assert.deepEqual(dc(body).outlook_metrics, ['wind_max_kmh', 'temp_max_c']);
 		assert.deepEqual(dc(body).hourly_metrics, ['temp_max_c', 'wind_max_kmh']);
 		assert.equal((dc(body).outlook_metric_formats as Record<string, boolean>).temp_max_c, false);
 	});

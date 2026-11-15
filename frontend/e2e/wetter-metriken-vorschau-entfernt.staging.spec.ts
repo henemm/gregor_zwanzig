@@ -103,7 +103,9 @@ async function openMetricsTab(page: Page) {
 	return tab;
 }
 
-test.describe('Issue #1719 S3 Block A: Live-Vorschau ist ersatzlos weg', () => {
+// #3031 (AC-11): der Kanal-Waehler mit Reihenfolge-Liste (Abschnitt layout_kanal) ist aus dem Reiter
+// Zustellung entfernt — die Bedienung prueft layout-tab-route.spec.ts an der Karte im Reiter Wetter.
+test.describe.fixme('Issue #1719 S3 Block A: Live-Vorschau ist ersatzlos weg', () => {
 	test.afterAll(async ({ request }) => {
 		await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 	});

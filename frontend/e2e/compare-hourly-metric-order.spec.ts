@@ -44,6 +44,8 @@
 // (Übersichts-Reihenfolge #1359 UND Stundenverlauf-Reihenfolge hier) — deshalb
 // überall auf den Container `weather-metrics-stundenverlauf` scopen, NICHT
 // pauschal `:visible` (beide Blöcke sind gleichzeitig sichtbar).
+// #3031: die Übersichts-Reihenfolge (layout_kanal) ist aus dem Reiter Zustellung in den Reiter
+// Wetter umgezogen (Karte „Inhalt je Kanal und Fläche“); das Scoping bleibt als Absicherung.
 
 import { test, expect, type Locator, type Page, type Request } from '@playwright/test';
 // `dragDndZoneItem` ist seit #1771 S1 geteilt (war hier lokal kopiert) und

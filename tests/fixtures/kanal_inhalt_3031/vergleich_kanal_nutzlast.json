@@ -1,0 +1,67 @@
+{
+	"zweck": "#3031 F001: Vergleichs-Nutzlast des Reiter-Wetter-Speicherers (wetterTabSpeicherung.vergleichNutzlast) fuer einen festen Abo- und Kartenstand. Der TS-Test kanal_inhalt_3031_speicherung.test.ts verlangt, dass der ECHTE Speicherer genau 'nutzlast_display_config' erzeugt; tests/tdd/test_kanal_inhalt_3031_vergleich_cam_wirkung.py schickt dieselbe Nutzlast durch den echten Python-Leser.",
+	"abo_display_config": {
+		"ampel": { "template": "allgemein" },
+		"active_metrics": [
+			{ "metric_id": "temperature", "aggregation": "max" },
+			{ "metric_id": "temperature", "aggregation": "min" },
+			{ "metric_id": "wind", "aggregation": "max" },
+			{ "metric_id": "gust", "aggregation": "max" },
+			{ "metric_id": "precipitation", "aggregation": "sum" }
+		],
+		"channel_active_metrics": {
+			"sms": [
+				{ "metric_id": "temperature", "aggregation": "max" },
+				{ "metric_id": "gust", "aggregation": "max" }
+			]
+		}
+	},
+	"kanallisten": {
+		"email": [
+			{ "id": "gust", "enabled": true, "format": "einfach" },
+			{ "id": "temperature", "enabled": true, "format": "roh" },
+			{ "id": "wind", "enabled": false, "format": "roh" },
+			{ "id": "precipitation", "enabled": true, "format": "roh" }
+		],
+		"telegram": [
+			{ "id": "temperature", "enabled": true, "format": "roh" },
+			{ "id": "wind", "enabled": true, "format": "roh" },
+			{ "id": "gust", "enabled": true, "format": "roh" },
+			{ "id": "precipitation", "enabled": true, "format": "roh" }
+		],
+		"sms": [
+			{ "id": "precipitation", "enabled": true, "format": "roh" },
+			{ "id": "temperature", "enabled": true, "format": "roh" },
+			{ "id": "gust", "enabled": false, "format": "roh" },
+			{ "id": "wind", "enabled": false, "format": "roh" }
+		]
+	},
+	"nutzlast_display_config": {
+		"active_metrics": [
+			{ "metric_id": "temperature", "aggregation": "max" },
+			{ "metric_id": "temperature", "aggregation": "min" },
+			{ "metric_id": "wind", "aggregation": "max" },
+			{ "metric_id": "gust", "aggregation": "max" },
+			{ "metric_id": "precipitation", "aggregation": "sum" }
+		],
+		"channel_active_metrics": {
+			"email": [
+				{ "metric_id": "gust", "aggregation": "max" },
+				{ "metric_id": "temperature", "aggregation": "max" },
+				{ "metric_id": "temperature", "aggregation": "min" },
+				{ "metric_id": "precipitation", "aggregation": "sum" }
+			],
+			"telegram": [
+				{ "metric_id": "temperature", "aggregation": "max" },
+				{ "metric_id": "temperature", "aggregation": "min" },
+				{ "metric_id": "wind", "aggregation": "max" },
+				{ "metric_id": "gust", "aggregation": "max" },
+				{ "metric_id": "precipitation", "aggregation": "sum" }
+			],
+			"sms": [
+				{ "metric_id": "precipitation", "aggregation": "sum" },
+				{ "metric_id": "temperature", "aggregation": "max" }
+			]
+		}
+	}
+}

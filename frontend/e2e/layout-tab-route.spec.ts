@@ -109,7 +109,10 @@ async function openMetricsTab(page: Page, id: string, reiter: 'wetter' | 'zustel
 	return tab;
 }
 
-test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
+// #3031 (AC-11): der LayoutTab (Abschnitt layout_kanal) ist aus dem Reiter Zustellung entfernt; die
+// Kanallisten bedient die Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter (Tests unten, #1575-Block).
+// Schnittlinie/Overflow-Hinweis der Karte folgen mit #3032 (A2) — bis dahin ruht dieser Block.
+test.describe.fixme('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 	test.beforeEach(async ({ page }) => {
 		await login(page);
 		await page.setViewportSize({ width: 1440, height: 900 });
@@ -365,17 +368,44 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 // AC-6-Garantie oben (reiner Kanal-WECHSEL bleibt clean) um ihre zweite
 // Haelfte — ein Kanal-EDIT macht dirty und schreibt NUR den aktiven Kanal.
 // Spec: docs/specs/modules/fix_1575_channel_metric_selection.md § AC-2/AC-3
+// #3031 (Spec feat_3031_inhalt_je_kanal_listen.md, AC-2/AC-3/AC-7/AC-11): die Kanallisten bedient
+// jetzt die Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter; „Aus“ ist ein Zustand (die Zeile
+// bleibt an ihrer Position, enabled:false). Die Vorbelegung fuehrt deshalb volle Listen.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CHANNEL_TRIP_ID = 'e2e-1575-channel-metrics';
 
 const PRE_EMAIL_LAYOUT = [
 	{ metric_id: 'temperature', enabled: true, use_friendly_format: true, bucket: 'primary', order: 0 },
-	{ metric_id: 'wind', enabled: true, use_friendly_format: true, bucket: 'primary', order: 1 }
+	{ metric_id: 'wind', enabled: true, use_friendly_format: true, bucket: 'primary', order: 1 },
+	{ metric_id: 'precipitation', enabled: false, use_friendly_format: true, bucket: 'primary', order: 2 }
 ];
 const PRE_TELEGRAM_LAYOUT = [
-	{ metric_id: 'precipitation', enabled: true, use_friendly_format: true, bucket: 'primary', order: 0 }
+	{ metric_id: 'precipitation', enabled: true, use_friendly_format: true, bucket: 'primary', order: 0 },
+	{ metric_id: 'temperature', enabled: false, use_friendly_format: true, bucket: 'primary', order: 1 },
+	{ metric_id: 'wind', enabled: false, use_friendly_format: true, bucket: 'primary', order: 2 }
 ];
+
+/** Reiter Wetter mit der Karte „Inhalt je Kanal und Fläche“ (#3031). */
+async function openKanalInhalt(page: Page, id: string) {
+	await page.goto(`/trips/${id}?tab=wetter`);
+	await page.waitForLoadState('networkidle');
+	const btn = page.getByTestId('trip-detail-tab-wetter');
+	await expect(btn).toBeVisible({ timeout: 10_000 });
+	await btn.click();
+	const karte = page.getByTestId('kanal-inhalt-karte');
+	await expect(karte).toBeVisible({ timeout: 15_000 });
+	return karte;
+}
+
+const zeilenIds = (karte: import('@playwright/test').Locator) =>
+	karte
+		.getByTestId('kanal-inhalt-liste')
+		.locator('[data-testid^="kanal-inhalt-zeile-"]')
+		.evaluateAll((els) => els.map((el) => (el.getAttribute('data-testid') ?? '').replace('kanal-inhalt-zeile-', '')));
+
+const angeschaltet = (liste: Array<{ metric_id: string; enabled: boolean }> | undefined) =>
+	(liste ?? []).filter((m) => m.enabled).map((m) => m.metric_id);
 
 test.describe('Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (context="route")', () => {
 	test.beforeEach(async ({ page }) => {
@@ -406,64 +436,73 @@ test.describe('Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (context="rout
 		await request.delete(`/api/trips/${CHANNEL_TRIP_ID}`).catch(() => {});
 	});
 
-	test('AC-2/AC-3: SMS-Edit wirkt nur auf SMS und laesst email/telegram unveraendert', async ({
+	test('AC-2/AC-3 (#3031 Karte): SMS-Edit wirkt nur auf SMS und laesst email/telegram unveraendert', async ({
 		page,
 		request
 	}) => {
-		const tab = await openMetricsTab(page, CHANNEL_TRIP_ID);
+		// #3031: Bedienung in der Karte „Inhalt je Kanal und Fläche“ (Reiter Wetter).
+		const karte = await openKanalInhalt(page, CHANNEL_TRIP_ID);
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle');
 
-		// SMS-Reiter startet ohne eigenen Eintrag → globale Auswahl (3 Metriken).
-		await tab.getByTestId('channel-tab-sms').click();
-		const rows = tab.locator('[data-testid="wm2-reihenfolge-row"]');
-		await expect(rows).toHaveCount(3);
+		// SMS startet ohne eigenen Eintrag → Wetter-Auswahl, alle eingeschaltet.
+		await karte.getByTestId('kanal-inhalt-segment-sms').click();
+		await expect(karte.getByTestId('kanal-inhalt-liste')).toHaveAttribute('data-kanal', 'sms');
+		expect(await zeilenIds(karte)).toEqual(['temperature', 'wind', 'precipitation']);
 
-		// Copy-on-write: der erste Edit legt den SMS-Eintrag als Kopie an (AC-2).
-		await tab
-			.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]')
-			.getByRole('button', { name: 'Aus' })
-			.click();
-		await expect(rows).toHaveCount(2);
-		// Issue #1719 S3 (ADR-0050 Regel 4, umgedreht): "wind" verschwindet aus
-		// der aktiven Liste, ist aber NICHT gelöscht — es steht in der
-		// "Aus in diesem Kanal"-Gruppe.
-		await expect(
-			tab.getByTestId('wm2-aus-gruppe').locator('[data-testid="wm2-aus-row"][data-metric-id="wind"]')
-		).toBeVisible();
+		// AC-3: Schalter aus — die Zeile bleibt an ihrer Position, nur ausgeschaltet.
+		await karte.getByTestId('kanal-inhalt-schalter-wind').click();
+		await expect(karte.getByTestId('kanal-inhalt-zeile-wind')).toHaveAttribute('data-enabled', 'false');
+		expect(await zeilenIds(karte)).toEqual(['temperature', 'wind', 'precipitation']);
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
 			timeout: 10_000
 		});
 
-		// AC-3: die gespeicherten Layouts der anderen Kanaele ueberleben den Save.
+		// AC-7: die gespeicherten Listen der anderen Kanaele ueberleben den Save.
 		const trip = await (await request.get(`/api/trips/${CHANNEL_TRIP_ID}`)).json();
 		const layouts = trip.display_config?.channel_layouts ?? {};
-		expect(
-			layouts.email?.filter((m: { enabled: boolean }) => m.enabled).map((m: { metric_id: string }) => m.metric_id)
-		).toEqual(['temperature', 'wind']);
-		expect(
-			layouts.telegram?.filter((m: { enabled: boolean }) => m.enabled).map((m: { metric_id: string }) => m.metric_id)
-		).toEqual(['precipitation']);
-		expect(
-			layouts.sms?.filter((m: { enabled: boolean }) => m.enabled).map((m: { metric_id: string }) => m.metric_id)
-		).not.toContain('wind');
+		expect(angeschaltet(layouts.email)).toEqual(['temperature', 'wind']);
+		expect(angeschaltet(layouts.telegram)).toEqual(['precipitation']);
+		expect(angeschaltet(layouts.sms)).toEqual(['temperature', 'precipitation']);
+		expect(layouts.sms?.map((m: { metric_id: string }) => m.metric_id)).toEqual(['temperature', 'wind', 'precipitation']);
 
-		// AC-4/AC-5-Vorstufe: nach dem Reload zeigt jeder Reiter seinen Stand.
+		// Nach dem Neuladen zeigt jeder Kanal seinen Stand.
 		await page.reload();
+		const neu = await openKanalInhalt(page, CHANNEL_TRIP_ID);
+		await neu.getByTestId('kanal-inhalt-segment-email').click();
+		await expect(neu.getByTestId('kanal-inhalt-zeile-precipitation')).toHaveAttribute('data-enabled', 'false');
+		await neu.getByTestId('kanal-inhalt-segment-sms').click();
+		await expect(neu.getByTestId('kanal-inhalt-zeile-wind'), '"wind" bleibt nach dem Neuladen als Aus-Zeile stehen').toHaveAttribute(
+			'data-enabled',
+			'false'
+		);
+	});
+
+	test('#3031 AC-2: Umsortieren in Telegram per Griff wirkt nur dort und ueberlebt das Neuladen', async ({ page, request }) => {
+		const karte = await openKanalInhalt(page, CHANNEL_TRIP_ID);
+		const emailVorher = angeschaltet((await (await request.get(`/api/trips/${CHANNEL_TRIP_ID}`)).json()).display_config?.channel_layouts?.email);
+		await karte.getByTestId('kanal-inhalt-segment-telegram').click();
+		const vorher = await zeilenIds(karte);
+		const quelle = karte.getByTestId(`kanal-inhalt-zeile-${vorher.at(-1)}`);
+		const ziel = karte.getByTestId(`kanal-inhalt-zeile-${vorher[0]}`);
+		await dragDndZoneItem(page, quelle, ziel);
+		await expect.poll(() => zeilenIds(karte)).not.toEqual(vorher);
+		const nachher = await zeilenIds(karte);
+		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+
+		await page.reload();
+		const neu = await openKanalInhalt(page, CHANNEL_TRIP_ID);
+		await neu.getByTestId('kanal-inhalt-segment-telegram').click();
+		expect(await zeilenIds(neu)).toEqual(nachher);
+		const emailNachher = angeschaltet((await (await request.get(`/api/trips/${CHANNEL_TRIP_ID}`)).json()).display_config?.channel_layouts?.email);
+		expect(emailNachher, 'E-Mail-Liste durch Telegram-Umsortierung veraendert').toEqual(emailVorher);
+	});
+
+	test('#3031 AC-11: der Reiter Zustellung zeigt „Layout je Kanal“ nicht mehr', async ({ page }) => {
+		await page.goto(`/trips/${CHANNEL_TRIP_ID}?tab=zustellung`);
+		await page.waitForLoadState('networkidle');
 		await page.getByTestId('trip-detail-tab-zustellung').click();
-		const reloaded = page.getByTestId('weather-metrics-tab');
-		await reloaded.getByTestId('channel-tab-email').click();
-		await expect(reloaded.locator('[data-testid="wm2-reihenfolge-row"]')).toHaveCount(2);
-		await reloaded.getByTestId('channel-tab-sms').click();
-		await expect(reloaded.locator('[data-testid="wm2-reihenfolge-row"]')).toHaveCount(2);
-		await expect(
-			reloaded.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]'),
-			'"wind" darf nach dem Reload nicht mehr in der AKTIVEN Liste stehen'
-		).toHaveCount(0);
-		// Issue #1719 S3 (ADR-0050 Regel 4, umgedreht): "wind" bleibt auch nach
-		// dem Reload sichtbar — persistiert in der Aus-Gruppe, nicht gelöscht.
-		await expect(
-			reloaded.getByTestId('wm2-aus-gruppe').locator('[data-testid="wm2-aus-row"][data-metric-id="wind"]'),
-			'"wind" muss nach dem Reload weiterhin in der Aus-Gruppe stehen (ADR-0050 Regel 4)'
-		).toBeVisible();
+		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible({ timeout: 10_000 });
+		await expect(page.getByTestId('layout-tab')).toHaveCount(0);
+		await expect(page.getByTestId('channel-tab-telegram')).toHaveCount(0);
 	});
 });

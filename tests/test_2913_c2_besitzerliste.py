@@ -115,7 +115,9 @@ def test_ac12_acht_menue_eintraege_bleiben_bei_2797(daten):
 def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # #2795 (Scheibe d, Reiter Zustellung) hat am 15.11. die 12 Sammel-Einträge #2913-d durch Element-
     # und Text-Besitzer ersetzt (#2795 Übergangsblock/a11y, #2967 Kontodaten, #2968 EN-Lücke, #3022 Orte-Ladezustand).
-    soll = {"#2967": 167, "#2966": 35, "#2913-d": 0, "#2913-e": 6, "#2795": 316, "#2797": 8, "#2968": 170, "#3022": 59}
+    # #3031 (15.11.): die zwei Abschnitt-Besitzer „kanal-inhalt“ (trip/orte, „noch nicht gebaut“) sind entfernt —
+    # die Karte ist gebaut, der Abschnitt laeuft im echten Abgleich (316 → 314).
+    soll = {"#2967": 167, "#2966": 35, "#2913-d": 0, "#2913-e": 6, "#2795": 314, "#2797": 8, "#2968": 170, "#3022": 59}
     ist = _verweise(daten)
     assert {k: ist.get(k, 0) for k in soll} == soll
 

@@ -15,7 +15,10 @@ import {
 	einSchalten, klickUndSpeichere, oeffneUebersicht, waehleKanal, zuGrundauswahl, zuKanalKarte
 } from './compare-uebersicht-kanal.helpers';
 
-test.describe('#1703 S8: Kanal-Reiter der Vergleichs-Uebersicht — Bedienung und Kappungs-Aussage', () => {
+// #3031 (AC-11): die Kanal-Reiter des Vergleichs (Abschnitt layout_kanal) sind aus dem Reiter Zustellung
+// entfernt; Trip und Vergleich nutzen dieselbe Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter
+// (derselbe Code, Bedienung geprueft in layout-tab-route.spec.ts). Kappungs-Aussage folgt mit #3032 (A2).
+test.describe.fixme('#1703 S8: Kanal-Reiter der Vergleichs-Uebersicht — Bedienung und Kappungs-Aussage', () => {
 	test.afterAll(async ({ request }) => await cleanupTracked(request));
 
 	test('AC-S8-12/AC-S8-13: drei Kanal-Reiter, Umschalten wirkt, SMS nennt 153 an Reiter UND Hinweis, Telegram kappt nach der siebten Zeile', async ({

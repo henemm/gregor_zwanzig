@@ -150,11 +150,11 @@ for (const kind of HUB_KINDS) {
 			).toEqual(expect.arrayContaining(['email', 'telegram', 'sms']));
 
 			const puts = zaehlePuts(page, hubApiPath(kind, hub.id));
-			// #2794 S3a: der Abschnitt Layout/Kanal steht im Reiter Zustellung.
-			await openHub(page, kind, hub.id, { tab: 'zustellung' });
+			// #3031: die Kanallisten bedient die Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter.
+			await openHub(page, kind, hub.id, { tab: 'wetter' });
 			await expect(
-				page.locator('[data-testid="layout-tab"]:visible').first(),
-				'SC-1b: der geteilte LayoutTab (Kanal-Umschalter) im Reiter Zustellung fehlt'
+				page.locator('[data-testid="kanal-inhalt-karte"]:visible').first(),
+				'SC-1b: die Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter fehlt'
 			).toBeVisible({ timeout: 15_000 });
 			await expect(chip(page)).toBeVisible({ timeout: 10_000 });
 

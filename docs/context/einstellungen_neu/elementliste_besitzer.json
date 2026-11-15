@@ -2103,14 +2103,6 @@
 			"art": "abschnitt",
 			"ctx": "trip",
 			"reiter": "wetter",
-			"abschnitt": "kanal-inhalt",
-			"grund": "Kanal-Segmente „Inhalt je Kanal und Fläche“ sind noch nicht gebaut, daher nicht bedienbar. Ursachen: Kanal-Segment nicht bedienbar",
-			"verweis": "#2795"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
 			"abschnitt": "kebab-bestaetigung-archivieren",
 			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
 			"verweis": "#2797"
@@ -2290,14 +2282,6 @@
 			"abschnitt": "grenzen-wind",
 			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
 			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "kanal-inhalt",
-			"grund": "Kanal-Segmente „Inhalt je Kanal und Fläche“ sind noch nicht gebaut, daher nicht bedienbar. Ursachen: Kanal-Segment nicht bedienbar",
-			"verweis": "#2795"
 		},
 		{
 			"art": "abschnitt",

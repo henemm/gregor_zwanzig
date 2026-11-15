@@ -97,7 +97,8 @@ describe('AC-1/AC-8: WeatherMetricsTab existiert unter shared/ (Verschiebung aus
 		() => {
 			const code = readFileSync(SHARED_FILE, 'utf-8');
 			// #2794 S3a: 'reihenfolge' heisst jetzt 'layout_kanal'.
-			for (const section of ['layout_kanal', 'sms_schwellen', 'report_config']) {
+			// #3031 (AC-11): 'layout_kanal' ist kein Abschnitt der Metrik-Oberflaeche mehr (Karte im Reiter Wetter).
+			for (const section of ['sms_schwellen', 'report_config']) {
 				assert.match(
 					code,
 					new RegExp(`sections\\.includes\\(\\s*['"]${section}['"]\\s*\\)`),
@@ -143,9 +144,11 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 		}
 		const sections = mod.weatherMetricsTabSections('route');
 		assert.ok(sections.includes('grundauswahl'), 'AC-1 FAIL: "grundauswahl" fehlt im route-Kontext');
-		for (const s of ['layout_kanal', 'sms_schwellen', 'report_config']) {
+		for (const s of ['sms_schwellen', 'report_config']) {
 			assert.ok(sections.includes(s), `AC-6 FAIL: route-only Section "${s}" fehlt (Regressionsschutz)`);
 		}
+		// #3031 (AC-11): Layout je Kanal ist in den Reiter Wetter umgezogen (KanalInhaltKarte).
+		assert.ok(!sections.includes('layout_kanal'), '#3031 AC-11: layout_kanal steht noch in der Metrik-Oberflaeche (route)');
 	});
 
 	test(
@@ -188,7 +191,8 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 				sections,
 				[
 					'grundauswahl',
-					'layout_kanal', // #2794 S3a: vormals 'reihenfolge'
+					// #3031 (AC-11): 'layout_kanal' (vormals 'reihenfolge', #1359) ist in den Reiter Wetter
+					// umgezogen (KanalInhaltKarte) — die Mail-Wirkung der Reihenfolge bleibt, der Bediener wechselt.
 					'stundenverlauf',
 					'ausblick',
 					'official_alerts'

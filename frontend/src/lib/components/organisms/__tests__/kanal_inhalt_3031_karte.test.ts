@@ -208,6 +208,23 @@ describe('Test 5 (AC-6): Premium-SMS zeigt die SMS-Liste schreibgeschuetzt mit H
 		assert.equal(tag(h, 'kanal-inhalt-premium-hinweis'), null);
 		assert.doesNotMatch(tag(h, 'kanal-inhalt-schalter-temperature') ?? '', /aria-disabled="true"/);
 	});
+
+	test('F102: Premium-Griffe nicht fokussierbar (tabindex -1, aria-disabled), keine Sortier-Zone; SMS-Gegenprobe mit Zone und fokussierbarem Griff', async () => {
+		const premium = element(await html('premium_sms'), 'kanal-inhalt-liste') ?? '';
+		const griffe = [...premium.matchAll(/<[a-z]+\b[^>]*data-testid="drag-handle"[^>]*>/g)].map((m) => m[0]);
+		assert.equal(griffe.length, LISTEN().sms.length, 'Vakuum-Schutz: ein Griff je Zeile erwartet');
+		for (const g of griffe) {
+			assert.match(g, /aria-disabled="true"/, `Griff bedienbar: ${g}`);
+			assert.match(g, /tabindex="-1"/, `Griff per Tastatur erreichbar: ${g}`);
+		}
+		assert.doesNotMatch(premium, /sortable-zone|sortable-item/, 'Premium-SMS rendert eine Sortier-Zone (SortableList)');
+		const sms = element(await html('sms'), 'kanal-inhalt-liste') ?? '';
+		assert.match(sms, /class="sortable-zone/, 'Gegenprobe: SMS ohne Sortier-Zone');
+		for (const g of [...sms.matchAll(/<[a-z]+\b[^>]*data-testid="drag-handle"[^>]*>/g)].map((m) => m[0])) {
+			assert.match(g, /tabindex="0"/, `SMS-Griff nicht fokussierbar: ${g}`);
+			assert.doesNotMatch(g, /aria-disabled/, `SMS-Griff gesperrt: ${g}`);
+		}
+	});
 });
 
 // ─── AC-12 / Test 12: DE/EN aus wetter.json ──────────────────────────────────

@@ -118,9 +118,11 @@ describe('AC-13: Wetter-Metriken — /weather-config nur Wetter-Metriken-Schlues
 		const w = rumpf(0);
 		const unerlaubt = P.sortiert(w).filter((k) => !(P.DISPLAY_WETTER_METRIKEN as readonly string[]).includes(k));
 		assert.deepEqual(unerlaubt, [], `/weather-config traegt Fremdschluessel: ${JSON.stringify(unerlaubt)} (heute: Spread der ganzen display_config)`);
-		for (const k of ['metrics', 'channel_layouts']) {
+		for (const k of ['metrics']) {
 			assert.ok(k in w, `/weather-config muss den Eigen-Schluessel ${k} senden`);
 		}
+		// #3031: channel_layouts schreibt allein die Karte im Reiter Wetter (kein zweiter Bediener).
+		assert.ok(!('channel_layouts' in w), '#3031: der alte Reiter sendet channel_layouts (eingefrorene Kopie)');
 		assert.ok(!('metric_alert_levels' in w), 'metric_alert_levels gehoert dem Reiter Alarme');
 		assert.ok('show_night_block' in w, '#1721: /weather-config muss den Eigen-Schluessel show_night_block senden (gespeicherter Wert im Seed)');
 		keineFremdschluessel({ display_config: w }, 'Wetter-Metriken /weather-config', ['show_night_block']);

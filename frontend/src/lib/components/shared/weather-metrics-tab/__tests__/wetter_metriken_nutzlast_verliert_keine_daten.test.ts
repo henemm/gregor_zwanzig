@@ -72,7 +72,6 @@ function reicherVergleich(): ComparePreset {
 
 const WETTER_METRIKEN_FELDER_DC = new Set([
 	'active_metrics',
-	'channel_active_metrics',
 	'hourly_metrics',
 	'outlook_metrics',
 	'outlook_metric_formats'
@@ -117,7 +116,9 @@ function assertNurEigenfelderGesendet(body: unknown): void {
 describe('AC-12 (Kern, seit #2375 Teilfeld): baueWetterMetrikenNutzlast — nur die eigenen Felder im Rumpf', () => {
 	// #2794 S3a Teil 3 (F006, AC-38): Metrikauswahl, Amtliche Warnungen und Tagesfenster gehoeren
 	// dem Reiter Wetter — sie stehen auch dann nicht im Rumpf, wenn sie sich in der Kopie aendern.
-	test('Kanal-Auswahl geändert → der Rumpf trägt nur Eigenfelder, die Kanal-Auswahl ist neu', () => {
+	// #3031: die Kanal-Auswahl gehoert der Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter —
+	// auch eine in der Kopie geaenderte Kanal-Auswahl steht nicht im Rumpf (kein zweiter Bediener).
+	test('Kanal-Auswahl in der Kopie geändert → der Rumpf trägt nur Eigenfelder, keine Kanal-Auswahl', () => {
 		const preset = reicherVergleich();
 		const ws = hydrierterWs(preset);
 		ws.channelActiveMetricKeys = { email: ['wind_max_kmh'], telegram: null, sms: null };
@@ -126,7 +127,7 @@ describe('AC-12 (Kern, seit #2375 Teilfeld): baueWetterMetrikenNutzlast — nur 
 
 		assert.equal(url, `/api/compare/presets/${PRESET_ID}`);
 		assertNurEigenfelderGesendet(body);
-		assert.ok(JSON.stringify(dc(body).channel_active_metrics).includes('wind_max_kmh'));
+		assert.ok(!('channel_active_metrics' in dc(body)), '#3031: Kanal-Auswahl im Rumpf des Zustellungs-Speicherers');
 	});
 
 	test('Tagesfenster und Metrikauswahl in der Kopie geändert → weder sie noch Wertebereiche/Alarme/Versand stehen im Rumpf', () => {

@@ -232,6 +232,12 @@ const NEU_IN_F12 = F12_ANKER.map(([k]) => k);
 /** #2764 (F13) AUSDRUCK_OFFEN: Name-Rueckfall der Karte (wertebereiche.symbolzeile.* stehen in F5_ANKER). */
 const NEU_IN_F13 = ['bausteine.karte.ohne_namen'];
 const NEU_IN_FOLGEPAKETEN = [
+	// #3031 Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter
+	...[
+		'titel', 'untertitel', 'segment_aria', 'kopf_metrik', 'kopf_metrik_hinweis', 'kopf_darstellung', 'kopf_darstellung_hinweis',
+		'kopf_kanal', 'kopf_kanal_hinweis', 'roh', 'einfach', 'liste_aria', 'griff_aria', 'schalter_aria', 'warnungen',
+		'warnungen_oben', 'warnungen_unten', 'premium_folgt_sms'
+	].map((k) => `wetter.kanal_inhalt.${k}`),
 	// #2999 Datumsfeld: Meldung bei einem Datum, das es nicht gibt
 	'bausteine.datum.ungueltig',
 	// #2961 Welle 2 (ADR-0116) Premium-SMS-Verbindung trennen

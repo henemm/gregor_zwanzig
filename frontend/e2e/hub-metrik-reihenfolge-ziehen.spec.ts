@@ -1,6 +1,8 @@
 // E2E — Issue #2347 S3d (Epic #2345, Etappe P6): Metrik-Reihenfolge per Ziehen im Hub —
 // EINE Zusicherung für BEIDE Hubs (Trip und Ortsvergleich) per Schleife über HUB_KINDS.
-// Die Reihenfolge-Karte ist in beiden Kontexten DERSELBE Baustein (WeatherV2Reihenfolge,
+// #3031: seit „Inhalt je Kanal A1“ ist das die Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter
+// (organisms/wetter-tab/KanalInhaltKarte.svelte, Trip und Vergleich derselbe Code).
+// Vorher: die Reihenfolge-Karte ist in beiden Kontexten DERSELBE Baustein (WeatherV2Reihenfolge,
 // WeatherMetricsTab.svelte); nur Zeilen-Kennungen und Zielfeld sind je kind verschieden.
 //
 // Spec: docs/specs/modules/feat_2347_s3d_paritaets_e2e.md § AC-8 (RO-1, RO-2)
@@ -48,20 +50,21 @@ const RO_SEL: Record<
 		// Zielfeld Trip (in /50 gemessen, Entscheidung 8): die Kanal-Karte schreibt über
 		// PUT …/weather-config nach `display_config.channel_layouts.email` (aktive Einträge, `order`).
 		serverNachZug: ['gust', 'wind', 'precipitation'],
-		panel: 'weather-metrics-tab',
-		karte: 'weather-metrics-kanal-reihenfolge'
+		// #3031 (AC-11): die Kanallisten bedient die Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter.
+		panel: 'wetter-tab',
+		karte: 'kanal-inhalt-karte'
 	},
 	vergleich: {
 		seed: { display_config: { active_metrics: ['temp_max_c', 'wind_max_kmh', 'sunny_hours_h'] } },
-		start: ['temp_max_c', 'wind_max_kmh', 'sunny_hours_h'],
-		nachZug: ['sunny_hours_h', 'temp_max_c', 'wind_max_kmh'],
-		// Zielfeld Vergleich (in /50 gemessen, Entscheidung 8): die Kanal-Karte (E-Mail) schreibt
-		// `display_config.channel_active_metrics.email` im Register-Format {metric_id, aggregation}
-		// (#1373); `active_metrics` behält die Ausgangsreihenfolge. Kennungen hier fest:
-		// sunny_hours_h = sunshine/sum, temp_max_c = temperature/max, wind_max_kmh = wind/max.
-		serverNachZug: ['sunshine:sum', 'temperature:max', 'wind:max'],
-		panel: 'weather-metrics-tab-vergleich',
-		karte: 'weather-metrics-vergleich-reihenfolge'
+		// #3031: die Karte zeigt die Groessen-Kennungen der Wetter-Auswahl (Altformat uebersetzt:
+		// temp_max_c = temperature, wind_max_kmh = wind, sunny_hours_h = sunshine).
+		start: ['temperature', 'wind', 'sunshine'],
+		nachZug: ['sunshine', 'temperature', 'wind'],
+		// #3031: Trip und Vergleich schreiben dieselbe Struktur `display_config.channel_layouts.email`
+		// (eingeschaltete Eintraege in Listenreihenfolge); `channel_active_metrics` laeuft als Uebergang mit.
+		serverNachZug: ['sunshine', 'temperature', 'wind'],
+		panel: 'wetter-tab',
+		karte: 'kanal-inhalt-karte'
 	}
 };
 
@@ -72,31 +75,29 @@ async function stand(page: Page, kind: HubKind, id: string): Promise<Stand> {
 }
 
 /** Reihenfolge der E-Mail-Kanal-Auswahl im gespeicherten Stand (Zielfeld je kind, siehe RO_SEL). */
-function gespeicherteReihenfolge(kind: HubKind, s: Stand): string[] {
+// #3031: beide kinds schreiben `channel_layouts.email` (eine Struktur, ein Adapter-Modell).
+function gespeicherteReihenfolge(_kind: HubKind, s: Stand): string[] {
 	const dc = (s.display_config as Stand | undefined) ?? {};
-	if (kind === 'route') {
-		const layouts = (dc.channel_layouts as Record<string, unknown> | undefined) ?? {};
-		const email = (layouts.email as Array<{ metric_id: string; enabled?: boolean; order?: number }> | undefined) ?? [];
-		return email
-			.filter((m) => m.enabled === true)
-			.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-			.map((m) => m.metric_id);
-	}
-	const kanal = (dc.channel_active_metrics as Record<string, unknown> | undefined) ?? {};
-	const email = (kanal.email as Array<string | { metric_id: string; aggregation?: string }> | undefined) ?? [];
-	return email.map((m) => (typeof m === 'string' ? m : `${m.metric_id}:${m.aggregation}`));
+	const layouts = (dc.channel_layouts as Record<string, unknown> | undefined) ?? {};
+	const email = (layouts.email as Array<{ metric_id: string; enabled?: boolean; order?: number }> | undefined) ?? [];
+	return email
+		.filter((m) => m.enabled !== false)
+		.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+		.map((m) => m.metric_id);
 }
 
-const zeilen = (karte: Locator) => karte.locator('[data-testid="wm2-reihenfolge-row"]');
-const zeilenIds = (karte: Locator) => zeilen(karte).evaluateAll((els) => els.map((el) => el.getAttribute('data-metric-id')));
+const zeilen = (karte: Locator) => karte.getByTestId('kanal-inhalt-liste').locator('[data-testid^="kanal-inhalt-zeile-"]');
+const zeilenIds = (karte: Locator) =>
+	zeilen(karte).evaluateAll((els) => els.map((el) => (el.getAttribute('data-testid') ?? '').replace('kanal-inhalt-zeile-', '')));
+const zeile = (karte: Locator, id: string) => karte.getByTestId(`kanal-inhalt-zeile-${id}`);
 
 async function oeffneKarte(page: Page, kind: HubKind, id: string): Promise<Locator> {
-	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Abschnitt Layout/Kanal im Reiter Zustellung.
-	await openHub(page, kind, id, { tab: 'zustellung' });
+	// #3031 (AC-11): die Karte „Inhalt je Kanal und Fläche“ steht im Reiter Wetter (Segment E-Mail vorgewaehlt).
+	await openHub(page, kind, id, { tab: 'wetter' });
 	const panel = page.locator(`[data-testid="${RO_SEL[kind].panel}"]:visible`);
 	await expect(panel).toBeVisible({ timeout: 10_000 });
 	const karte = panel.locator(`[data-testid="${RO_SEL[kind].karte}"]`);
-	await expect(karte, 'Die Reihenfolge-Karte muss im Reiter Zustellung stehen').toBeVisible({ timeout: 10_000 });
+	await expect(karte, 'Die Karte „Inhalt je Kanal und Fläche“ muss im Reiter Wetter stehen').toBeVisible({ timeout: 15_000 });
 	return karte;
 }
 
@@ -127,11 +128,7 @@ for (const kind of HUB_KINDS) {
 					(r) => r.request().method() === 'PUT' && new URL(r.url()).pathname.startsWith(pfad),
 					{ timeout: 15_000 }
 				);
-				await dragDndZoneItem(
-					page,
-					karte.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${ro.start[2]}"]`),
-					karte.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${ro.start[0]}"]`)
-				);
+				await dragDndZoneItem(page, zeile(karte, ro.start[2]), zeile(karte, ro.start[0]));
 				await expect
 					.poll(() => zeilenIds(karte), { message: 'RO-1 FAIL: die gezogene Zeile steht nicht an der neuen Position', timeout: 5_000 })
 					.toEqual(ro.nachZug);
@@ -168,7 +165,7 @@ for (const kind of HUB_KINDS) {
 		// RO-2 — Alt compare-metric-order AC-6. „Amtliche Warnungen" ist KEINE ziehbare Zeile
 		// (beide kinds). Der erklärende Hinweis ist Compare-eigen: im Trip sind Amtliche Warnungen
 		// ein eigener Abschnitt `official_alerts` (Spec „Kind-Kontraste").
-		test(`RO-2 (${kind}): „Amtliche Warnungen" ist keine ziehbare Zeile${kind === 'vergleich' ? ', der Hinweis erklärt es' : ''}`, async ({
+		test(`RO-2 (${kind}): „Amtliche Warnungen" ist keine ziehbare Zeile, die feste Zeile erklärt es`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: ro.seed });
@@ -181,13 +178,14 @@ for (const kind of HUB_KINDS) {
 					'RO-2 FAIL: „Amtliche Warnungen" darf keine ziehbare Zeile der Reihenfolge-Karte sein'
 				).toEqual([]);
 
-				if (kind === 'vergleich') {
-					// Compare-eigen (Kind-Kontraste): nur der Vergleich trägt den Hinweis.
-					const hinweis = page.getByTestId('weather-metrics-vergleich-warn-hint');
-					await expect(hinweis).toBeVisible({ timeout: 10_000 });
-					await expect(hinweis).toContainText(/Amtliche Warnungen/);
-					await expect(hinweis).toContainText(/erste/i);
-				}
+				// #3031 (AC-5): „Amtliche Warnungen“ ist in beiden kinds eine feste Zeile der Karte —
+				// ohne Griff, ausserhalb der Sortierzone, bei E-Mail ganz oben mit Erklaerung.
+				const warnungen = karte.getByTestId('kanal-inhalt-warnungen');
+				await expect(warnungen).toBeVisible({ timeout: 10_000 });
+				await expect(warnungen).toContainText(/Amtliche Warnungen/);
+				await expect(warnungen).toContainText(/zuerst/i);
+				await expect(warnungen.getByTestId('drag-handle')).toHaveCount(0);
+				await expect(karte.locator('.sortable-zone [data-testid="kanal-inhalt-warnungen"]')).toHaveCount(0);
 				// Der Hub ist offen (Kontrolle gegen leeren Treffer durch falsche Seite).
 				await expect(page.getByTestId(sel.reiterListe)).toBeVisible();
 			} finally {

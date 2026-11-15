@@ -808,17 +808,14 @@ test('AN-12 (vergleich): Stundenverlauf-Schalter da, keine Layout-Attrappe, Temp
 	// der Roundtrip tragen keine `channel_layouts`-Attrappe (AN-6, Zweig vergleich).
 	// `has` wird relativ zur Hülle aufgelöst — das innere Locator-Stück darf daher
 	// kein `.cm-desktop`-Präfix tragen (der Vorfahr liegt AUSSERHALB der Hülle).
-	const reihenfolgeKarte = page.locator('[data-testid="weather-metrics-vergleich-reihenfolge"]');
-	const layoutHuelle = page.locator('.cm-desktop [data-testid="layout-tab"]').filter({ has: reihenfolgeKarte });
-	await expect(layoutHuelle, 'AN-12: der Kanal-Umschalter hängt nicht an der Reihenfolge-Karte').toHaveCount(1);
-	await expect(
-		layoutHuelle.locator('[data-testid="channel-tab-email"]'),
-		'AN-12: Kanal-Umschalter fehlt im Abschnitt Reihenfolge'
-	).toHaveCount(1);
+	// #3031 (AC-11): der Abschnitt „Layout je Kanal“ (LayoutTab mit Kanal-Umschalter) ist aus dem Schritt
+	// Zustellung entfernt — die Kanallisten bedient die Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter
+	// des angelegten Abos. Im Schritt Zustellung steht deshalb KEIN Kanal-Umschalter mehr.
+	await expect(page.locator('.cm-desktop [data-testid="layout-tab"]'), '#3031: Layout je Kanal noch im Schritt Zustellung').toHaveCount(0);
 	await expect(
 		page.locator('.cm-desktop [data-testid="channel-tab-email"]'),
-		'AN-12: Kanal-Umschalter außerhalb des Abschnitts Reihenfolge (Attrappe/eigener Kanal-Reiter)'
-	).toHaveCount(1);
+		'#3031: Kanal-Umschalter im Schritt Zustellung (zweiter Bediener der Kanallisten)'
+	).toHaveCount(0);
 	await expect(page.locator('[data-testid="compare-editor-tab-layout"]'), 'AN-12: eigener Anlege-Schritt „Layout"').toHaveCount(0);
 	await expect(page.locator('[data-testid="compare-editor-tab-versand"]'), 'AN-12: eigener Anlege-Schritt „Versand"').toHaveCount(0);
 	await expect(page.locator('[data-testid="compare-step4-layout-preview"]')).toHaveCount(0);

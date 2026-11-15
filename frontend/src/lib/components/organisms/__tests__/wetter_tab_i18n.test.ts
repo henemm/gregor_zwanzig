@@ -53,7 +53,13 @@ const NEU_FREIGEGEBEN = new Set([
 	'wetter.untertitel.nur_anzeige',
 	// #2913 Runde 2 (Befund 1): Beschriftung der grünen Gewitter-Zone (Mockup „keins · mittel · hoch“).
 	'wetter.gewitter.keins',
-	...['temperature', 'temperature_night', 'wind', 'gust', 'precipitation', 'thunder', 'visibility', 'cloud_low', 'uv_index', 'freezing_level', 'snowfall_limit', 'sunshine'].map((id) => `wetter.hinweis.${id}`)
+	...['temperature', 'temperature_night', 'wind', 'gust', 'precipitation', 'thunder', 'visibility', 'cloud_low', 'uv_index', 'freezing_level', 'snowfall_limit', 'sunshine'].map((id) => `wetter.hinweis.${id}`),
+	// #3031 (Spec feat_3031_inhalt_je_kanal_listen.md, AC-12): Karte „Inhalt je Kanal und Fläche“.
+	...[
+		'titel', 'untertitel', 'segment_aria', 'kopf_metrik', 'kopf_metrik_hinweis', 'kopf_darstellung', 'kopf_darstellung_hinweis',
+		'kopf_kanal', 'kopf_kanal_hinweis', 'roh', 'einfach', 'liste_aria', 'griff_aria', 'schalter_aria', 'warnungen',
+		'warnungen_oben', 'warnungen_unten', 'premium_folgt_sms'
+	].map((k) => `wetter.kanal_inhalt.${k}`)
 ]);
 // #2913 Scheibe (c) Fix-Loop 2 (Bildprüfer Runde 1, Befund 1): Label wie im Mockup mit Doppelpunkt. Bewusst geändert,
 // mit genau dem erwarteten neuen Wert — jede andere Änderung bleibt rot.

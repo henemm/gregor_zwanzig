@@ -26,7 +26,7 @@
 //         Eintrag = { metric_id, enabled, use_friendly_format, ...Bestandsfelder des Eintrags };
 //         KEIN format_mode (eine Wahrheit je Zeile), Reihenfolge = Listenreihenfolge, d. h.
 //         `order` fehlt oder ist der Listenindex.
-//     channelActiveMetricsAusListen(listen): Record<ListenKanal, string[]>  // nur eingeschaltete, geordnet
+//     channelActiveMetricsFuerVergleich(listen, aktiv, bestand, idVon)  // {metric_id, aggregation}, geordnet (F001)
 //     zeilenFuerKanal(listen, kanal): KanalZeile[]   // premium_sms ⇒ die SMS-Liste (ADR-0049, bis S9)
 //     istSchreibgeschuetzt(kanal): boolean           // nur premium_sms
 //     warnungsPosition(kanal): 'oben' | 'unten'      // E-Mail/Telegram oben, SMS/Premium-SMS unten
@@ -253,12 +253,16 @@ describe('Adapter schreiben: channel_layouts in der Form {metric_id, enabled, us
 		assert.deepEqual(l, listen());
 	});
 
-	test('channelActiveMetricsAusListen: nur eingeschaltete Kennungen in Listenreihenfolge', async () => {
+	test('channelActiveMetricsFuerVergleich (#3031 F001): eingeschaltete Zeilen in Listenreihenfolge als {metric_id, aggregation}, Kanal-Bestand bleibt', async () => {
 		const m = await kanalInhalt();
-		assert.deepEqual(m.channelActiveMetricsAusListen(listen()), {
-			email: ['temperature', 'gust'],
-			telegram: ['gust', 'temperature'],
-			sms: ['temperature']
+		const tmax = { metric_id: 'temperature', aggregation: 'max' };
+		const tmin = { metric_id: 'temperature', aggregation: 'min' };
+		const g = { metric_id: 'gust', aggregation: 'max' };
+		const id = (e: any) => (typeof e === 'string' ? e : e.metric_id);
+		assert.deepEqual(m.channelActiveMetricsFuerVergleich(listen(), [tmax, tmin, g], { sms: [tmin, { metric_id: 'temperature', aggregation: 'avg' }] }, id), {
+			email: [tmax, tmin, g],
+			telegram: [g, tmax, tmin],
+			sms: [tmin]
 		});
 	});
 });

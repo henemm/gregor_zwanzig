@@ -63,7 +63,7 @@ const COMPARE_ONLY_SECTIONS = ['stundenverlauf'] as const;
 const SHARED_TRAILING_SECTIONS = ['ausblick', 'official_alerts'] as const;
 
 export function weatherMetricsTabSections(context: WeatherMetricsContext, bereich: WeatherMetricsBereich = 'alles'): string[] {
-	const sections: string[] = ['grundauswahl', 'layout_kanal'];
+	const sections: string[] = ['grundauswahl']; // #3031 (AC-11): 'layout_kanal' zog als KanalInhaltKarte in den Reiter Wetter
 	if (context === 'route') sections.push(...ROUTE_ONLY_SECTIONS);
 	if (context === 'vergleich') sections.push(...COMPARE_ONLY_SECTIONS);
 	sections.push(...SHARED_TRAILING_SECTIONS);
@@ -80,4 +80,4 @@ export type WeatherMetricsBereich = 'wetter' | 'zustellung' | 'alles';
 
 // Issue #2794 S3a (Teil-PR 3, Spec §6 e): die SMS-Schwellen (#624) sind Kanal-Inhalt und
 // wandern in den Bereich Zustellung — der Reiter Wetter mountet keine Metrik-Oberflaeche mehr.
-const ZUSTELLUNGS_SECTIONS: readonly string[] = ['layout_kanal', 'stundenverlauf', 'ausblick', 'report_config', 'nachtblock', 'sms_schwellen'];
+const ZUSTELLUNGS_SECTIONS: readonly string[] = ['stundenverlauf', 'ausblick', 'report_config', 'nachtblock', 'sms_schwellen'];

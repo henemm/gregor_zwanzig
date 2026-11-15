@@ -276,10 +276,10 @@ export const EIGENFELDER = {
 	},
 	// #2794 S3a Teil 3 (F006, AC-38): Auswahl, Amtliche Warnungen und Tagesfenster gehoeren
 	// dem Reiter Wetter (WetterTab), nicht mehr dem Zustellungs-Speicherer von WeatherMetricsTab.
+	// #3031: `channel_active_metrics` schreibt allein die Karte im Reiter Wetter (wetterTabSpeicherung.ts).
 	wetterMetriken: {
 		top: ['display_config', 'hourly_enabled', 'outlook_enabled'],
 		display: [
-			'channel_active_metrics',
 			'hourly_metrics',
 			'outlook_metric_formats',
 			'outlook_metrics'

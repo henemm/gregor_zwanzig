@@ -175,8 +175,8 @@ describe('AC-1: Metrik-Namen aus dem Register, Kurzform und Kuerzel unveraendert
 		const ganz = deDannEn(() => routeRendern({ catalog: katalog, activeChannel: 'telegram', pendingPreset: 'wandern', showSavePresetDialog: true }));
 		const enRoute = paketText(ganz.en);
 		for (const s of ['Temperature', 'Feels-like temperature', 'Wind gusts', 'Snow line', 'Thunderstorm', 'Cloud cover', 'Humidity']) hat(enRoute, s);
-		for (const s of ['Mail Temp', 'Mail Gust', 'Kurzform TF']) hat(paketText(ganz.de), s);
-		for (const s of ['Email Temp', 'Email Gust', 'Compact TF']) hat(enRoute, s);
+		// #3031: die Reihenfolge-Zeilen mit „Mail Temp / Kurzform T“ (Abschnitt layout_kanal) rendert der Reiter
+		// nicht mehr (Karte im Reiter Wetter); die Marken prueft oben bausteineRendern() am Baustein selbst.
 		assert.deepEqual(deutscheReste(enRoute), []);
 	});
 
@@ -186,13 +186,15 @@ describe('AC-1: Metrik-Namen aus dem Register, Kurzform und Kuerzel unveraendert
 		for (const s of [
 			'Unsaved changes', 'Discard', 'Save', '01 — Profile', 'Custom', 'Changed —', 'save as custom profile', '02 — Basic selection',
 			'Which metrics go into the briefing?', '9 active', 'Temperature', 'Atmosphere', 'Winter / snow',
-			'Activated metrics appear in section 3, where you set their order and display.', 'Order', '· 9 metrics',
-			'left → right in the email table', 'Raw', 'Simple', 'Off', 'Off in this channel',
+			'Activated metrics appear in section 3, where you set their order and display.',
+			// #3031: 'Order', '· 9 metrics', 'left → right in the email table', 'Raw', 'Simple', 'Off', 'Off in this channel'
+			// gehoerten zum Abschnitt layout_kanal (jetzt Karte im Reiter Wetter, eigene DE/EN-Tests).
 			'04 — Thresholds', 'Apply to SMS tokens, Telegram compact style and the email outlook/trend block', 'Gusts (km/h)',
 			'Precipitation (mm)', 'Snow line (m)', 'Sensitive Standard Robust', 'Thunderstorm TH Light Moderate High',
 			'Official warnings in the report', 'everything after it is an official warning', 'L = yellow', 'TH:H = red thunderstorm warning',
 			// #2794 S3a Teil-PR 3 (AC-42): Dialog-Texte aus `wetter.dialog.*` (ohne Zeithorizonte/Zusammenfassung).
-			'These are the codes for these values in SMS and Telegram compact style:', 'Save as your own template',
+			// #3031: Kuerzel-Legende 'These are the codes …' gehoerte zum Abschnitt layout_kanal.
+			'Save as your own template',
 			'Name', 'Description', 'Saved are the metric selection, traffic-light limits and alert levels.',
 			'Default for new trips', 'Cancel', 'Apply preset',
 			'You have unsaved changes. The preset overwrites the current selection.', 'Overwrite'
@@ -205,8 +207,9 @@ describe('AC-1: Metrik-Namen aus dem Register, Kurzform und Kuerzel unveraendert
 		const alle = [...attr(eigen, 'title'), ...attr(eigen, 'aria-label'), ...attr(eigen, 'placeholder')]
 			.filter((a) => !a.startsWith('Zum Sortieren ziehen'))
 			.join(' | ');
-		for (const s of ['Short form in the email hourly table', 'Codes in SMS, Premium SMS and Telegram', 'Remove from briefing', 'Close', 'Metrics, order'])
-			hat(alle, s);
+		// #3031: 'Short form in the email hourly table', 'Codes in SMS, Premium SMS and Telegram', 'Remove from briefing'
+		// und 'Metrics, order' waren Attribute des Abschnitts layout_kanal (jetzt Karte im Reiter Wetter).
+		for (const s of ['Close']) hat(alle, s);
 		assert.deepEqual(deutscheReste(alle), []);
 		const baustein = deDannEn(() => bausteineRendern()).en;
 		hat(attr(baustein, 'title').join(' | '), 'Add back to briefing');
@@ -270,16 +273,16 @@ describe('AC-4: Trip und Ortsvergleich englisch mit demselben Baustein', () => {
 		hat(deT, 'Temperatur Maximum');
 		for (const s of [
 			'Metric selection', 'Only selected metrics appear in the comparison email.',
-			'Official warnings always come first regardless of this order and are therefore not part of the sortable list.',
-			'Temperature Maximum', 'Temperature Minimum', 'Wind gusts', 'Sunshine hours', 'Total', 'Thunderstorm',
-			'Order', 'Off in this channel', 'Official warnings in the report'
+			// #3031: Reihenfolge-Hinweis, 'Order' und 'Off in this channel' gehoerten zum Abschnitt layout_kanal
+			// (jetzt Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter, eigene DE/EN-Tests).
+			// #3031: 'Temperature Minimum' stand nur in den Reihenfolge-Zeilen (Abschnitt layout_kanal).
+			'Temperature Maximum', 'Wind gusts', 'Sunshine hours', 'Total', 'Thunderstorm',
+			'Official warnings in the report'
 		])
 			hat(enT, s);
 		assert.deepEqual(deutscheReste(enT), []);
-		// Reihenfolge-Zeilen und Legende: Auswertung als eigenes Element, je Kennung uebersetzt
-		const reihe = sichtbar(en.slice(en.indexOf('data-testid="weather-metrics-vergleich-reihenfolge"')));
-		hat(reihe, 'Sunshine hours Total Email Sun');
-		hat(sichtbar(de.slice(de.indexOf('data-testid="weather-metrics-vergleich-reihenfolge"'))), 'Sonnenstunden Summe Mail Sun');
+		// #3031: die Reihenfolge-Zeilen (weather-metrics-vergleich-reihenfolge) rendert der Reiter nicht mehr.
+		assert.ok(!en.includes('data-testid="weather-metrics-vergleich-reihenfolge"'), '#3031: Reihenfolge-Abschnitt noch im Reiter');
 	});
 
 	test('vergleich ohne label_en im Register (A2): deutscher Name, nie leer', () => {
@@ -296,9 +299,10 @@ describe('AC-4: Trip und Ortsvergleich englisch mit demselben Baustein', () => {
 		const vergleich = vergleichRendern({ catalog: katalogMitRegister() });
 		const r = paketText(route);
 		const v = paketText(vergleich);
-		for (const s of ['Order', 'Off in this channel', 'Official warnings in the report', 'everything after it is an official warning'])
+		// #3031: 'Order'/'Off in this channel' (wm2-reihenfolge, wm2-aus-gruppe) gehoerten zum Abschnitt layout_kanal.
+		for (const s of ['Official warnings in the report', 'everything after it is an official warning'])
 			for (const t of [r, v]) hat(t, s);
-		for (const id of ['wm2-reihenfolge', 'report-show-official-alerts', 'wm2-aus-gruppe'])
+		for (const id of ['report-show-official-alerts'])
 			for (const h of [route, vergleich]) assert.ok(h.includes(`data-testid="${id}"`), `${id} fehlt`);
 		hat(v, 'comparison email');
 		hatNicht(r, 'comparison email');
@@ -365,11 +369,12 @@ describe('AC-3: zwei Nutzer, zwei Sprachen, eigene Auswahl, gleiche gespeicherte
 		const b = await sitzungFuer('B');
 		assert.equal(a.lang, 'en');
 		assert.equal(b.lang, 'de');
-		hat(a.text, '1 Temperature °C');
+		// #3031: die nummerierten Reihenfolge-Zeilen („1 Temperature °C“, „Order“) gehoerten zum Abschnitt
+		// layout_kanal (jetzt Karte im Reiter Wetter); die Namen stehen weiter in der Grundauswahl.
+		hat(a.text, 'Temperature');
 		hat(a.text, 'Wind gusts');
-		hat(a.text, 'Order');
-		hat(b.text, '1 Temperatur °C');
-		hat(b.text, 'Reihenfolge');
+		hat(b.text, 'Temperatur');
+		hat(b.text, 'Böen');
 		assert.deepEqual(deutscheReste(a.text), []);
 		assert.equal(puts.length, 4, JSON.stringify(puts.map((p) => p.pfad)));
 		const von = (s: string) => puts.filter((p) => p.sitzung === s);
@@ -411,7 +416,6 @@ describe('Anker: jeder F5-Katalogwert ist als festes de/en-Literal verankert', (
 		assert.equal(n('en', 2), '· 2 metrics');
 		assert.equal(n('de', 1), '· 1 Metriken');
 		assert.equal(n('de', 9), '· 9 Metriken');
-		locale.set('en');
-		hat(sichtbar(routeRendern({ catalog: katalogMitRegister(), buckets: { primary: ['temperature'], secondary: [], off: [] } })), 'Order · 1 metric ');
+		// #3031: der Reihenfolge-Abschnitt (Zaehler „Order · 1 metric“) rendert im Reiter nicht mehr.
 	});
 });

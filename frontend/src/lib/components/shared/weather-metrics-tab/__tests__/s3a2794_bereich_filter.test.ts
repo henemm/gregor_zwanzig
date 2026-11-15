@@ -29,14 +29,18 @@ const abschnitte = (ctx: Ctx, bereich?: Bereich): string[] =>
 // Teil-PR 3 (Spec §6 e): `sms_schwellen` (#624) wandert vom Bereich wetter in den Bereich
 // zustellung — der Reiter Wetter traegt keine Metrik-Oberflaeche mehr, die Schwellen bleiben
 // erreichbar (Vereinigung = alles, disjunkt; beide Zusicherungen unten unveraendert).
+// #3031 (Inhalt je Kanal A1, AC-11): `layout_kanal` zieht als Karte „Inhalt je Kanal und Fläche“ in den
+// Reiter Wetter (organisms/wetter-tab/KanalInhaltKarte.svelte) und ist KEIN Abschnitt der Metrik-Oberflaeche
+// mehr — weder im Uebergangsblock (zustellung) noch im Reiter Wetter (der keine Metrik-Oberflaeche mountet).
+// Damit gilt weiter: disjunkt und Vereinigung = alles (das Bedienelement verschwindet nicht, es zieht um).
 const SOLL: Record<Ctx, Record<'wetter' | 'zustellung', string[]>> = {
 	route: {
 		wetter: ['grundauswahl', 'official_alerts'],
-		zustellung: ['layout_kanal', 'ausblick', 'report_config', 'nachtblock', 'sms_schwellen']
+		zustellung: ['ausblick', 'report_config', 'nachtblock', 'sms_schwellen']
 	},
 	vergleich: {
 		wetter: ['grundauswahl', 'official_alerts'],
-		zustellung: ['layout_kanal', 'stundenverlauf', 'ausblick']
+		zustellung: ['stundenverlauf', 'ausblick']
 	}
 };
 
@@ -67,6 +71,12 @@ for (const ctx of ['route', 'vergleich'] as Ctx[]) {
 				'wetter ∪ zustellung ≠ alles (ein Element wäre in keinem Reiter sichtbar)'
 			);
 			assert.deepEqual(sortiert(alles), sortiert([...SOLL[ctx].wetter, ...SOLL[ctx].zustellung]));
+		});
+
+		test(`f3031_bereich_${ctx}_kein_layout_kanal_in_irgendeinem_bereich`, () => {
+			for (const b of ['wetter', 'zustellung', 'alles'] as Bereich[]) {
+				assert.ok(!abschnitte(ctx, b).includes('layout_kanal'), `#3031 AC-11: layout_kanal steht noch im Bereich ${b}`);
+			}
 		});
 
 		test(`s3a2794_bereich_${ctx}_ohne_bereich_wie_alles`, () => {

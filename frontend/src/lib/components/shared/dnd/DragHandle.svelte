@@ -15,10 +15,13 @@
 		label?: string;
 		/** Kantenlänge des Punkt-Icons in px. */
 		size?: number;
+		/** #3031: schreibgeschuetzte Liste (Premium-SMS) — Griff sichtbar, nicht bedienbar. */
+		disabled?: boolean;
 	}
 	let {
 		label = 'Zum Sortieren ziehen — oder mit Leertaste greifen und mit den Pfeiltasten verschieben',
 		size = 16,
+		disabled = false,
 	}: Props = $props();
 </script>
 
@@ -26,8 +29,9 @@
 	class="drag-handle"
 	data-testid="drag-handle"
 	role="button"
-	tabindex="0"
+	tabindex={disabled ? -1 : 0}
 	aria-label={label}
+	aria-disabled={disabled || undefined}
 >
 	<svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 		<circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
@@ -55,6 +59,10 @@
 	}
 	.drag-handle:active {
 		cursor: grabbing;
+	}
+	.drag-handle[aria-disabled='true'] {
+		cursor: not-allowed;
+		opacity: 0.4;
 	}
 	.drag-handle:focus-visible {
 		outline: 2px solid var(--g-accent);

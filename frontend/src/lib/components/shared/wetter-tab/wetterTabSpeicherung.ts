@@ -17,9 +17,18 @@
 import type { SaveFn, SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
 import { baueWetterMetrikenSpeicherung, mitKonfliktSchluessel } from '../tripSpeicherung.ts';
 import { tripSpeicherPayload, vergleichSpeicherPayload } from './ampelSchreiben.ts';
-import type { AltSchluessel, VorlagenAmpeln } from './ampelModell.ts';
+import { vergleichsMetrikId, type AltSchluessel, type VorlagenAmpeln } from './ampelModell.ts';
 import type { WarnFelder } from './amtlicheWarnungen.ts';
 import type { AboSicht, WetterStand } from './wetterZustand.ts';
+import {
+	LISTEN_KANAELE,
+	channelActiveMetricsFuerVergleich,
+	channelLayoutsAusListen,
+	normalisiereZeilen,
+	type AktivEintrag,
+	type Format,
+	type KanalListen
+} from '../../organisms/wetter-tab/kanalInhalt.ts';
 
 /** Besitzer des Speicher-Platzes im Controller (nie die Reiterkennung `wetter`, s. Owner-Waechter). */
 export const WETTER_OWNER = 'wetter-ampel';
@@ -48,12 +57,39 @@ export type SpeicherOptionen = {
 	aggregationFuer?: (id: string) => string;
 	/** Vergleich: Altformat-Schluessel von `active_metrics` -> Groesse (Fix-Loop 3, C2). */
 	altSchluessel?: AltSchluessel;
+	/** #3031: Darstellung einer neu in die Kanallisten aufgenommenen Metrik (Katalog). */
+	kanalFormatFuer?: (id: string) => Format;
 };
 
 export type Speicherer = { melden(): void };
 
+/**
+ * #3031: voller `channel_layouts`-Stand aus dem Stand der Karte, normalisiert gegen die
+ * AKTUELLE Wetter-Auswahl (neue Metrik an ans Ende, abgewaehlte faellt weg). Bestandsfelder
+ * der Eintraege kommen aus dem lebenden Abo (Read-Modify-Write). Ohne geladene Karte: null.
+ */
+function kanalListenFuerSpeichern(o: SpeicherOptionen): KanalListen | null {
+	const s = o.stand();
+	if (!s.kanaele) return null;
+	const f = o.kanalFormatFuer ?? (() => 'roh' as Format);
+	const aus = {} as KanalListen;
+	for (const k of LISTEN_KANAELE) aus[k] = normalisiereZeilen(s.kanaele[k], s.auswahl, f);
+	return aus;
+}
+
+function bestandsLayouts(o: SpeicherOptionen): Record<string, unknown> | null {
+	return ((o.abo().display_config ?? {}) as Record<string, unknown>).channel_layouts as Record<string, unknown> | null;
+}
+
 /** Trip-Nutzlast aus Stand und lebendem Abo (zwei disjunkte Teile). */
 export function tripNutzlast(o: SpeicherOptionen) {
+	const basis = tripBasisNutzlast(o);
+	const listen = kanalListenFuerSpeichern(o);
+	if (!listen) return basis;
+	return { ...basis, weatherConfig: { ...basis.weatherConfig, channel_layouts: channelLayoutsAusListen(listen, bestandsLayouts(o)) } };
+}
+
+function tripBasisNutzlast(o: SpeicherOptionen) {
 	const s = o.stand();
 	const abo = o.abo();
 	const v = o.vorlagen();
@@ -86,7 +122,17 @@ export function vergleichNutzlast(o: SpeicherOptionen) {
 		tagesfenster: s.tagesfenster
 	});
 	const { ampel, active_metrics } = voll.display_config;
-	return { ...voll, display_config: { ampel, active_metrics } };
+	const listen = kanalListenFuerSpeichern(o);
+	if (!listen) return { ...voll, display_config: { ampel, active_metrics } };
+	return {
+		...voll,
+		display_config: {
+			ampel,
+			active_metrics,
+			channel_layouts: channelLayoutsAusListen(listen, bestandsLayouts(o)),
+			channel_active_metrics: channelActiveMetricsFuerVergleich(listen, (active_metrics ?? []) as AktivEintrag[], (abo.display_config as Record<string, unknown> | undefined)?.channel_active_metrics, (e) => vergleichsMetrikId(e, o.altSchluessel))
+		}
+	};
 }
 
 function tripSpeicherer(o: SpeicherOptionen): Speicherer {

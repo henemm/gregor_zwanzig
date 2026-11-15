@@ -347,8 +347,8 @@ export function wetterMetrikenSnapshotAus(zustand: WetterMetrikenZustand): Wette
 // `official_warnings`, `radar_alert_enabled`, `day_window_*`) schreibt allein der
 // WetterTab-Speicherer; hier stehen sie weder im Rumpf noch im Aenderungs-Vergleich.
 const WETTER_TOP = ['hourly_enabled', 'outlook_enabled'] as const;
+// #3031: `channel_active_metrics`/`channel_layouts` schreibt allein die Karte im Reiter Wetter (wetterTabSpeicherung.ts).
 const WETTER_DISPLAY = [
-	'channel_active_metrics',
 	'hourly_metrics',
 	'outlook_metrics',
 	'outlook_metric_formats'

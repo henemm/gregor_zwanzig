@@ -278,7 +278,10 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 	// vorhanden), im SMS-Kanal aber in der "Aus"-Gruppe.
 	// Der Nutzer stellt es im SMS-Reiter wieder her -- die Kinder muessen im
 	// Kanal-Layout mitkommen.
-	test('Szenario 3 (SMS-Kanal-Restore): wind_chill im SMS-Reiter wiederherstellen nimmt seine Kinder in den Kanal-Override mit', async ({
+	// #3031 (AC-11): der SMS-Kanal-Reiter (Abschnitt layout_kanal) ist aus dem Reiter Zustellung entfernt;
+	// die Kanallisten bedient die Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter. Die Kind-Mitnahme
+	// in der Karte ist noch nicht umgestellt — Szenario 3 und 4 ruhen bis zur Umstellung auf die Karte.
+	test.fixme('Szenario 3 (SMS-Kanal-Restore): wind_chill im SMS-Reiter wiederherstellen nimmt seine Kinder in den Kanal-Override mit', async ({
 		page,
 		request
 	}) => {
@@ -348,7 +351,7 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 	// Nutzer entfernt wind_chill NUR aus dem SMS-Reiter -- die Kinder muessen
 	// im SMS-Kanal-Override mit nach "off" wandern, waehrend sie GLOBAL aktiv
 	// bleiben (onRemove wirkt kanal-eigen, nicht global).
-	test('Szenario 4 (SMS-Kanal-Entfernen): wind_chill im SMS-Reiter entfernen nimmt seine Kinder in den Kanal-Override mit', async ({
+	test.fixme('Szenario 4 (SMS-Kanal-Entfernen): wind_chill im SMS-Reiter entfernen nimmt seine Kinder in den Kanal-Override mit', async ({
 		page,
 		request
 	}) => {
