@@ -197,7 +197,7 @@ describe('AC-15: „gruen: …“-Zeile', () => {
 	const FAELLE: Array<[string, string, (v: Json) => Json, string, Record<string, unknown>]> = [
 		['beidseitig', 'temperature', (v) => v.wandern.metrics.temperature, 'von_bis', { von: 0, bis: 26, einheit: '°C' }],
 		['nur_oben', 'gust', (v) => v.wandern.metrics.gust, 'bis', { bis: 40, einheit: 'km/h' }],
-		['nur_unten', 'visibility', (v) => v.wandern.metrics.visibility, 'ab', { ab: 2000, einheit: 'km' }],
+		// nur_unten (visibility aus der Vorlage): Erwartung korrigiert auf 'm', siehe Block #2946 unten
 		['keine_grenze', 'humidity', (v) => v.wandern.metrics.humidity, 'immer', {}],
 		['mildeste_gesetzte_grenze', 'gust', () => ({ upper: { yellow: null, orange: 50, red: null } }), 'bis', { bis: 50, einheit: 'km/h' }]
 	];
@@ -452,4 +452,78 @@ describe('AC-12: Zuruecksetzen auf die Vorlage ergibt 0 Abweichungen', () => {
 			assert.equal(m.zaehleAbweichungen({ ...r.ampel, template: id }, vorlagen), 0);
 		});
 	}
+});
+
+// ── #2946: Sichtweite-Einheit (Grenzwerte in Meter, Anzeige-Einheit km nur fuer Layout) ──
+// Spec: docs/specs/modules/fix_2946_sichtweite_einheit.md — AC-1, AC-3, AC-5, AC-6, AC-7
+// Eingabe ist die echte Python-Antwort von /api/metrics (live()), keine handgeschriebene Eigenschaft.
+
+describe('#2946: Sichtweite-Zeile nennt die Einheit der Grenzwerte (m), nicht die Anzeige-Einheit (km)', () => {
+	const nachId = (): Record<string, Json> => {
+		const aus: Record<string, Json> = {};
+		for (const liste of Object.values(live().metrics) as Json[][]) for (const k of liste) aus[k.id] = k;
+		return aus;
+	};
+
+	test('ac6_api_visibility_unit_km_threshold_unit_m', () => {
+		const v = nachId().visibility;
+		assert.equal(v.unit, 'km', 'AC-4: Anzeige-Einheit fuer Layout/Mail bleibt km');
+		assert.equal(v.threshold_unit, 'm', 'AC-6: /api/metrics liefert threshold_unit=m fuer visibility');
+	});
+
+	test('ac15_gruen_nur_unten_visibility_aus_vorlage_ab_2000_m', async () => {
+		const { m, vorlagen, eig } = await umgebung();
+		const z = m.gruenZeile(vorlagen.wandern.metrics.visibility, eig.visibility);
+		assert.equal(z.art, 'ab');
+		assert.deepEqual(z.werte, { ab: 2000, einheit: 'm' }, 'vorher festgeschrieben als km (Fehler #2946)');
+		pruefeKatalogModell(z, 'gruenZeile nur_unten');
+	});
+
+	test('ac1_gruenzeile_visibility_ab_1000_m', async () => {
+		const { m, eig } = await umgebung();
+		const z = m.gruenZeile({ lower: { yellow: 1000, orange: 500, red: 300 } }, eig.visibility);
+		assert.equal(z.art, 'ab');
+		assert.deepEqual(z.werte, { ab: 1000, einheit: 'm' }, 'AC-1: „gruen: ab 1000 m“, nicht km');
+	});
+
+	test('ac1_ac3_untertitel_visibility_m_minimum_in_de_und_en', async () => {
+		const { m, eig } = await umgebung();
+		const de = m.untertitel('visibility', eig.visibility, () => 'Minimum');
+		const en = m.untertitel('visibility', eig.visibility, () => 'minimum');
+		assert.equal(de, 'm · Minimum', `AC-1: Untertitel DE „${de}“`);
+		assert.equal(en, 'm · minimum', `AC-3: Untertitel EN „${en}“ (Einheiten-Token sprachneutral)`);
+		assert.ok(!de.includes('km') && !en.includes('km'));
+	});
+
+	test('ac1_erklaersatz_visibility_unter_300_m', async () => {
+		const { m, eig } = await umgebung();
+		const s = m.erklaersatz('visibility', { enabled: true, alarm_ab: 'red', lower: { yellow: 1000, orange: 500, red: 300 } }, eig.visibility);
+		assert.equal(s.art, 'normal');
+		assert.equal(s.werte.unten, 300);
+		assert.equal(s.werte.einheit, 'm', 'AC-1: Erklaersatz „unter 300 m“, nicht km');
+	});
+
+	test('ac5_metriken_ohne_display_unit_unveraendert', async () => {
+		const { m, eig } = await umgebung();
+		const katalog = nachId();
+		let geprueft = 0;
+		for (const [id, k] of Object.entries(katalog)) {
+			if (id === 'visibility') continue;
+			assert.equal(k.threshold_unit, k.unit, `AC-5/AC-6: ${id} threshold_unit == unit`);
+			const z = m.gruenZeile({ lower: { yellow: 1 } }, eig[id]);
+			assert.equal(z.werte.einheit, k.unit, `AC-5: ${id} Gruenzeile-Einheit unveraendert`);
+			geprueft++;
+		}
+		assert.ok(geprueft >= 10, 'Messaufbau: zu wenige Metriken im Katalog');
+	});
+
+	test('ac7_aeltere_antwort_ohne_threshold_unit_faellt_auf_unit_zurueck', async () => {
+		const { m } = await umgebung();
+		const alt = structuredClone(live().metrics) as Record<string, Json[]>;
+		for (const liste of Object.values(alt)) for (const k of liste) delete k.threshold_unit;
+		const eig = m.eigenschaftenAusKatalog(alt);
+		const z = m.gruenZeile({ lower: { yellow: 1000 } }, eig.visibility);
+		assert.equal(z.werte.einheit, 'km', 'AC-7: ohne threshold_unit gilt unit (Rueckfall)');
+		assert.equal(m.untertitel('temperature', eig.temperature, () => 'x'), '°C · x', 'AC-7: keine leere Einheit');
+	});
 });
