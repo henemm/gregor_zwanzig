@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 
 from app.metric_catalog import get_metric
+from i18n import Lang
 from output.renderers.email.helpers import _AMPEL_CAPABLE_METRIC_IDS
 from utils.timezone import _as_utc, local_fmt
 
@@ -151,7 +152,7 @@ def affected_hours(
 
 def format_cell(
     metric_id: str, value, mode: str, *, html: bool, indicators: frozenset = frozenset(),
-    ampel: dict,
+    ampel: dict, lang: Lang = "de",
 ) -> str:
     """Zelle genau wie das Briefing (`fmt_val`): ROH = Wort/Zahl, sonst (HTML)
     CSS-Punkt aus derselben Quelle."""
@@ -166,9 +167,9 @@ def format_cell(
         return fmt_val(
             key, value, format_modes={key: mode},
             indicator_keys=({key} if mode != "raw" or col in indicators else set()),
-            html=True, ampel=ampel,
+            html=True, lang=lang, ampel=ampel,
         )
-    return fmt_val(key, value, format_modes={key: mode}, ampel=ampel)
+    return fmt_val(key, value, format_modes={key: mode}, lang=lang, ampel=ampel)
 
 
 def mode_for(metric_id: str, modes: dict | None) -> str:
@@ -178,16 +179,17 @@ def mode_for(metric_id: str, modes: dict | None) -> str:
 
 def row_parts(
     e, row: AlertHourRow, modes: dict | None, *, html: bool,
-    indicators: frozenset = frozenset(), ampel: dict,
+    indicators: frozenset = frozenset(), ampel: dict, lang: Lang = "de",
 ) -> list[str]:
     """`[alt, neu]` bzw. `[neu]` (ohne Anker) als Zellen (HTML: Markup)."""
     mode = mode_for(e.metric_id, modes)
     parts = [format_cell(
         e.metric_id, row.value_to, mode, html=html, indicators=indicators, ampel=ampel,
+        lang=lang,
     )]
     if row.value_from is not None:
         parts.insert(0, format_cell(
             e.metric_id, row.value_from, mode, html=html, indicators=indicators,
-            ampel=ampel,
+            ampel=ampel, lang=lang,
         ))
     return parts

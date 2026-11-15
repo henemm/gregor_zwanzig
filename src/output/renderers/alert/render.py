@@ -1534,7 +1534,7 @@ def _hour_lines(
     """Issue #1737: Stundenzeilen `HH:MM | alt → neu` (Klartext/Telegram) plus
     Hinweiszeile bei Kappung. Leer ohne Stundenreihe (Ausgabe unveraendert)."""
     lines = [
-        f"{r.time} | " + " → ".join(row_parts(e, r, modes, html=False, ampel=ampel))
+        f"{r.time} | " + " → ".join(row_parts(e, r, modes, html=False, ampel=ampel, lang=lang))
         for r in e.hours
     ]
     if lines and e.hours_capped and e.hours_range:
@@ -1555,7 +1555,8 @@ def _hours_html(
     for r in e.hours:
         cell = " → ".join(
             p if p.startswith("<span") else _esc(p)
-            for p in row_parts(e, r, modes, html=True, indicators=indicators, ampel=ampel)
+            for p in row_parts(
+                e, r, modes, html=True, indicators=indicators, ampel=ampel, lang=lang)
         )
         trs.append(f"<tr><td style=\"{td}\">{_esc(r.time)}</td><td style=\"{td}\">{cell}</td></tr>")
     if e.hours_capped and e.hours_range:

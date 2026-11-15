@@ -11,12 +11,19 @@ die Ausblick-Gewitterzelle bleibt nach #2665 bewusst deutsch.
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from datetime import date
 
+import pytest
+
 from app.ampel import resolve_ampel
+from app.models import ThunderLevel
 from output.renderers.alert.model import AlertEvent, AlertHourRow, AlertMessage
 from output.renderers.alert.render import render_email, render_sms, render_telegram
-from tests.helpers.telegram_briefing_fixture import _trend, build_texts
+from output.renderers.narrow import _overview_line, _tg_day_footer
+from tests.helpers.telegram_briefing_fixture import (
+    TZ, _rows, _segment, _trend, build_texts,
+)
 
 _DE_STUFE = re.compile(r"\b(kein|leicht|mittel|hoch|mäßig|stark|sehr stark|schwach)\b")
 
@@ -72,6 +79,47 @@ def test_ac4_briefing_de_behaelt_deutsche_stufenwoerter():
         ziel = _tabellen(texts)[1]
         assert next(z for z in ziel.splitlines() if z.startswith("13 ")).split()[5] == "leicht"
         assert next(z for z in ziel.splitlines() if z.startswith("16 ")).split()[5] == "kein"
+
+
+def _segment_ohne_gewitter():
+    """Fixture-Segment, dessen ganzer Tag Gewitterstufe NONE traegt."""
+    seg = _segment(1, (0.0, 8.4), (7, 12), [])
+    daten = [replace(p, thunder_level=ThunderLevel.NONE) for p in seg.timeseries.data]
+    return replace(seg, timeseries=replace(seg.timeseries, data=daten))
+
+
+@pytest.mark.parametrize("lang, wort", [("en", "none"), ("de", "kein")])
+def test_ac1_ac4_fusszeile_ohne_gewitter_folgt_der_sprache(lang, wort):
+    """AC-1/AC-4: Entwarnungszweig der Fusszeile (Stufe NONE) in ``lang``;
+    eine Datenluecke zeigt sprachunabhaengig ``?`` (#1331)."""
+    seg = _segment_ohne_gewitter()
+    assert _tg_day_footer([seg], ["thunder"], tz=TZ, lang=lang) == f"⚡ {wort}"
+    assert _tg_day_footer([seg], ["thunder"], tz=TZ, has_gap=True, lang=lang) == "⚡ ?"
+
+
+@pytest.mark.parametrize("lang, wort", [("en", "none"), ("de", "kein")])
+def test_ac1_ac4_kurzuebersicht_ohne_gewitter_folgt_der_sprache(lang, wort):
+    """AC-1/AC-4: Kurzuebersicht mit Tagesfenster-Stufe 0 in ``lang``;
+    Datenluecke ``?``."""
+    ampel = resolve_ampel(None)
+    rows = [_rows(range(7, 13))]
+    assert _overview_line(
+        "thunder", rows, set(), day_thunder_sev=0, ampel=ampel, lang=lang,
+    ) == f"TH {wort}"
+    assert _overview_line(
+        "thunder", rows, set(), day_thunder_sev=0, has_gap=True, ampel=ampel, lang=lang,
+    ) == "TH ?"
+
+
+@pytest.mark.parametrize("lang, wort", [("en", "medium"), ("de", "mittel")])
+def test_ac1_ac4_kurzuebersicht_rueckfall_ohne_tagesfenster_folgt_der_sprache(lang, wort):
+    """AC-1/AC-4: Rueckfallpfad ohne ``day_thunder_sev`` (schlimmste Zeile
+    der Gehzeit-Reihen) zeigt das Stufenwort in ``lang``."""
+    rows = _rows(range(7, 13))
+    rows[2]["thunder"] = "MED"
+    assert _overview_line(
+        "thunder", [rows], set(), ampel=resolve_ampel(None), lang=lang,
+    ) == f"TH {wort}"
 
 
 def test_ac5_ausblick_gewitterzelle_bleibt_deutsch():

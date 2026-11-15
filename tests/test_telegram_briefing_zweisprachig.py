@@ -15,6 +15,8 @@ from pathlib import Path
 import pytest
 
 from app import loader
+from app.models import ThunderLevel
+from app.thunder_scale import THUNDER_LABEL_DE, THUNDER_LABEL_EN, thunder_label
 from i18n import resolve_user_lang, t, tn
 from output.renderers.narrow import _outlook_lines, render_telegram_incomplete_hint
 from services.trip_command_processor import ACTIONS_BUBBLE_BUTTONS
@@ -53,11 +55,13 @@ def test_ac1_englische_ueberschriften_fusszeile_vortag_und_praefix():
     # Prosa-Zeilen werden bei 56 Zeichen am Wort umbrochen (_TG_PROSE_WIDTH)
     ueber = _bubble(texts, t("telegram.kopf.zusammenfassung", "en")).replace("\n", " ")
     fuss = " · ".join([
-        t("telegram.fuss.luftmasse", "en", wort="leicht"),
+        # #2784: Gewitter-Stufenwort folgt der Sprache (vorher "leicht").
+        t("telegram.fuss.luftmasse", "en",
+          wort=thunder_label(ThunderLevel.LOW, lang="en")),
         t("telegram.fuss.sicht", "en", wort=t("telegram.fuss.sicht_gut", "en")),
         t("telegram.fuss.nullgradgrenze", "en", hoehe=2800),
     ])
-    assert fuss == "Air mass leicht · Visibility good · Freezing level 2800 m"
+    assert fuss == "Air mass light · Visibility good · Freezing level 2800 m"
     assert fuss in ueber
     vortag = t("telegram.vortag.zeile", "en", liste=", ".join([
         f"{t('telegram.vortag.label_boeen', 'en')} +12.0km/h",
@@ -100,11 +104,35 @@ def test_ac3_kuerzel_zahlen_und_tabellen_identisch_zu_deutsch():
     ue_en = _bubble(en, "Summary").split("\n")
     # Metrik-Zeilen {Kuerzel} {Min}-{Max}@{Stunde} bis zur Leerzeile
     ende = ue_de.index("")
-    assert ue_de[1:ende] == ue_en[1:ende]
+    # #2784: Stufenwoerter folgen der Sprache; Kuerzel und Zahlen bleiben
+    # Token fuer Token identisch (Stufenwort -> Platzhalter, Spaltenbreite egal).
+    assert _ohne_stufe(ue_de[1:ende], "de") == _ohne_stufe(ue_en[1:ende], "en")
     assert any(re.fullmatch(r"\S+ [\d.]+-[\d.]+@\d\d", z) for z in ue_en[1:ende])
+    assert "TH leicht" in ue_de[1:ende] and "TH light" in ue_en[1:ende]
+    tabellen = 0
     for b_de, b_en in zip(de, en):
         if "<pre>" in b_de:
-            assert b_de.split("<pre>", 1)[1] == b_en.split("<pre>", 1)[1]
+            tabellen += 1
+            tab_de = b_de.split("<pre>", 1)[1].split("\n")
+            tab_en = b_en.split("<pre>", 1)[1].split("\n")
+            assert _ohne_stufe(tab_de, "de") == _ohne_stufe(tab_en, "en")
+            assert _stufen(tab_de, "de") and _stufen(tab_en, "en")
+            assert not _stufen(tab_de, "en") and not _stufen(tab_en, "de")
+    assert tabellen == 2
+
+
+def _stufen(zeilen: list[str], lang: str) -> list[str]:
+    """Alle Gewitter-Stufenwoerter der Sprache ``lang`` in ``zeilen``."""
+    tabelle = THUNDER_LABEL_EN if lang == "en" else THUNDER_LABEL_DE
+    woerter = set(tabelle.values())
+    return [w for z in zeilen for w in z.split() if w in woerter]
+
+
+def _ohne_stufe(zeilen: list[str], lang: str) -> list[list[str]]:
+    """Zeilen als Token-Listen, Stufenwoerter von ``lang`` durch ``<S>`` ersetzt."""
+    tabelle = THUNDER_LABEL_EN if lang == "en" else THUNDER_LABEL_DE
+    woerter = set(tabelle.values())
+    return [["<S>" if w in woerter else w for w in z.split()] for z in zeilen]
 
 
 def test_ac3_ac12_aktionen_buttons_unveraendert():
