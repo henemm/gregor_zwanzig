@@ -63,7 +63,7 @@
 		// Bug #2454 Fix-Loop 1 (Finding F001): globales Toggle inkl. Kind-
 		// Mitnahme UND Kanal-Durchschreibung als EINE geteilte, exportierte
 		// Funktion (Test-Nachbau ruft dieselbe Funktion, kein zweiter Nachbau).
-		toggleGlobalMetric,
+		toggleGlobalMetric, appendNewMetricsToOutlook,
 		type ChannelOverride,
 	} from './weather-metrics-tab/channelMetricLayouts.ts';
 	// Fix #2422 S2a Fix-Loop 1 (Adversary-Funde F003/F004): Bestand-Auswahl
@@ -729,8 +729,8 @@
 		const activeIds = userP
 			? userP.metrics.filter((m) => m.enabled).map((m) => m.metric_id)
 			: (tmpl ? tmpl.metrics : []);
-		let newBuckets = autoAssign(activeIds, catalog);
-		newBuckets = { primary: bucketsToColumns(newBuckets), secondary: [], off: newBuckets.off };
+		// #3047 AC-16: Vorlagen-Folge bleibt (kein Umsortieren nach METRIC_PRIORITY), autoAssign liefert nur `off`.
+		const newBuckets = { primary: [...new Set(activeIds)], secondary: [], off: autoAssign(activeIds, catalog).off };
 		const newFriendly = { ...friendlyMap };
 		if (userP) {
 			for (const m of userP.metrics) {
@@ -788,14 +788,14 @@
 	// Umschalten inkl. Kind-Mitnahme UND der Durchschreibung in Kanal-Overrides
 	// (Issue #1719 S3, ADR-0050 Regel 3) lebt jetzt als EINE reine, exportierte
 	// Funktion `toggleGlobalMetric()` in channelMetricLayouts.ts — dieselbe
-	// Funktion, die der Test-Nachbau aufruft. `wasOn`/EINWAHL bleibt weiterhin
-	// bewusst ohne Durchschreibung (Grundsatz "keine Bevormundung", Abschnitt 4).
+	// Funktion, die der Test-Nachbau aufruft. #3047 T3 (AC-10): die EINWAHL
+	// haengt die Metrik hinten an jede bereits bearbeitete Liste (Konzept §5/6+8).
 	function onToggleMetric(id: string, wasOn: boolean) {
 		userTouched = true;
 		const result = toggleGlobalMetric(buckets, channelBuckets, id, wasOn);
-		if (result.buckets !== buckets) {
-			applyDiff(result.buckets.primary, friendlyMap, selectedTemplate);
-		}
+		if (result.buckets !== buckets) applyDiff(result.buckets.primary, friendlyMap, selectedTemplate);
+		// #3047 T3 (AC-10): eine eingewaehlte Metrik steht auch hinten in der gespeicherten Ausblick-Liste.
+		outlookMetricKeysRoute = appendNewMetricsToOutlook(outlookMetricKeysRoute, result.buckets.primary.filter((m) => !buckets.primary.includes(m)), compareCatalog);
 		buckets = result.buckets;
 		channelBuckets = result.channelBuckets;
 		if (selectedTemplate) selectedTemplate = '';

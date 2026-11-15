@@ -458,7 +458,7 @@
    "test": "frontend_seite_trip_vorlage_reihenfolge",
    "ac": "AC-16",
    "befund": "T4",
-   "status": "rot_erwartet",
+   "status": "gruen",
    "seite": "frontend",
    "zustand": "vorlage",
    "verweis": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte:732 -> metricsEditor.ts:272-289 (autoAssign sortiert nach METRIC_PRIORITY)"

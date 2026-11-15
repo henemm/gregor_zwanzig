@@ -1864,10 +1864,11 @@
       "kontext": "trip",
       "format": "html",
       "pruefung": "grundauswahl",
-      "test": "test_ac10_neue_metrik_hinten_angehaengt",
+      "test": "neue_metrik_in_allen_listen.test.ts::Einwahl haengt die Metrik in jeder bearbeiteten Kanal-Liste hinten an, Folge bleibt",
       "ac": "AC-10",
       "befund": "T3",
-      "status": "offen_feature",
+      "status": "gruen",
+      "seite": "frontend",
       "verweis": "#3047 T3 (frontend channelMetricLayouts.ts:97-124 toggleGlobalMetric schreibt eine global eingeschaltete Metrik nicht in bestehende Kanal-Overrides; im rohen JSON fehlt sie, ADR-0050 + #2422-Orakel werten Fehlen als Abwahl -> Nachweis nur am Speicherpfad/Vitest)"
     },
     {
