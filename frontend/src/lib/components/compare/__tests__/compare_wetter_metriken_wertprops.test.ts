@@ -119,7 +119,6 @@ const UNVERAENDERTE_PROPS = [
 	'createMode',
 	'onChannelsChange',
 	'onWeatherMetricsChange',
-	'onDayWindowChange',
 	'onTripUpdate',
 	'saveController',
 	'preset',
@@ -288,7 +287,6 @@ function saatVergleich(zusatz: Knoten = {}): Knoten {
 		createMode: false,
 		onChannelsChange: undefined,
 		onWeatherMetricsChange: undefined,
-		onDayWindowChange: undefined,
 		onTripUpdate: undefined,
 		saveController: null,
 		preset: null,
@@ -651,6 +649,36 @@ describe('AC-3 Wirkort-Guard: der Selbst-Speicher-Effekt wirkt nur an Flaeche B 
 			'AC-3 FAIL: ein Schreiben auf die Bruecke (Rollback) erreicht `onHourlyEnabledChange` nicht.'
 		);
 	});
+
+	// #2931 (Adversary F002): nach dem Rueckbau von DayWindowCard gibt es im Tab keine
+	// Tagesfenster-Bedienung mehr — die Tagesfenster-Werte laufen nur noch ueber die
+	// Bruecke. Ein Rollback-Schreiben muss deshalb weiterhin den Rueckruf des Feldes
+	// erreichen, sonst bliebe der Elternzustand nach einem gescheiterten Speichern falsch.
+	const tagesfensterRueckschreiben: [string, string, number][] = [
+		['dayWindowStartHour', 'onDayWindowStartHourChange', 6],
+		['dayWindowEndHour', 'onDayWindowEndHourChange', 20]
+	];
+	for (const [feld, rueckrufName, wert] of tagesfensterRueckschreiben) {
+		test(`Flaeche B: Rueckschreiben von \`${feld}\` auf die Bruecke erreicht \`${rueckrufName}\``, async () => {
+			const gesetzt: unknown[][] = [];
+			const { optionen } = await effektAufbauen({
+				preset: PRESET,
+				saveController: controller(),
+				[feld]: wert === 6 ? 9 : 17,
+				[rueckrufName]: (v: unknown) => gesetzt.push([rueckrufName, v])
+			});
+			assert.strictEqual(optionen.length, 1, 'AC-3 FAIL: siehe Positivfall — keine Fabrik-Optionen.');
+			const zustand = optionen[0].zustand;
+			assert.ok(zustand, 'AC-3/AC-7 FAIL: die Fabrik bekommt keinen `zustand`.');
+			zustand[feld] = wert;
+			assert.deepStrictEqual(
+				gesetzt,
+				[[rueckrufName, wert]],
+				`AC-3 FAIL: ein Schreiben von \`${feld}\` auf die Bruecke (Rollback) erreicht ` +
+					`\`${rueckrufName}\` nicht.`
+			);
+		});
+	}
 
 	const negativ: [string, Knoten][] = [
 		['Flaeche C/D (Anlegen: vergleich + Wertprops, OHNE preset/saveController)', {}],

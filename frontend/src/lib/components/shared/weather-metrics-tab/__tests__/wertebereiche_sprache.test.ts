@@ -150,7 +150,7 @@ describe('AC-5: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 		const alle = Object.keys(FAELLE).map((f) => sichtbar(readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8'))).join(' ');
 		for (const s of [
 			'01 — Profil', '02 — Grundauswahl', '04 — Schwellwerte', 'Böen (km/h)', 'Sensibel', 'Leicht Mittel Hoch', 'Lädt…', 'Schwellen nicht ladbar',
-			'Aus in diesem Kanal', 'Tagesfenster', 'Geht über Mitternacht — endet am Folgetag.', 'Preset anwenden', 'Überschreiben',
+			'Aus in diesem Kanal', 'Preset anwenden', 'Überschreiben',
 			// #2794 S3a Teil-PR 3 (AC-42): Dialog auf die Ampel umgestellt (Titel + Hinweis statt Zusammenfassung).
 			'Als eigene Vorlage speichern', 'Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen.', 'Lade Metriken…', 'Wiederholen', 'Nur angewählte Metriken erscheinen in der Vergleichs-Mail.',
 			'Amtliche Warnungen im Bericht', 'rote Gewitterwarnung', 'Gespeichert', 'Ungespeicherte Änderungen', 'Winter / Schnee', 'Eigene',
@@ -187,7 +187,7 @@ describe('AC-1: Metrik-Namen aus dem Register, Kurzform und Kuerzel unveraendert
 			'Unsaved changes', 'Discard', 'Save', '01 — Profile', 'Custom', 'Changed —', 'save as custom profile', '02 — Basic selection',
 			'Which metrics go into the briefing?', '9 active', 'Temperature', 'Atmosphere', 'Winter / snow',
 			'Activated metrics appear in section 3, where you set their order and display.', 'Order', '· 9 metrics',
-			'left → right in the email table', 'Raw', 'Simple', 'Off', 'Off in this channel', 'Day window', 'From', 'To',
+			'left → right in the email table', 'Raw', 'Simple', 'Off', 'Off in this channel',
 			'04 — Thresholds', 'Apply to SMS tokens, Telegram compact style and the email outlook/trend block', 'Gusts (km/h)',
 			'Precipitation (mm)', 'Snow line (m)', 'Sensitive Standard Robust', 'Thunderstorm TH Light Moderate High',
 			'Official warnings in the report', 'everything after it is an official warning', 'L = yellow', 'TH:H = red thunderstorm warning',
@@ -211,7 +211,7 @@ describe('AC-1: Metrik-Namen aus dem Register, Kurzform und Kuerzel unveraendert
 		const baustein = deDannEn(() => bausteineRendern()).en;
 		hat(attr(baustein, 'title').join(' | '), 'Add back to briefing');
 		const bt = sichtbar(baustein);
-		for (const s of ['Day window', 'Crosses midnight — ends the next day.', 'Custom', 'Off in this channel', 'On', 'Save as your own template', 'Default for new trips', 'Telegram'])
+		for (const s of ['Custom', 'Off in this channel', 'On', 'Save as your own template', 'Default for new trips', 'Telegram'])
 			hat(bt, s);
 		assert.deepEqual(deutscheReste(bt), []);
 	});
@@ -272,7 +272,7 @@ describe('AC-4: Trip und Ortsvergleich englisch mit demselben Baustein', () => {
 			'Metric selection', 'Only selected metrics appear in the comparison email.',
 			'Official warnings always come first regardless of this order and are therefore not part of the sortable list.',
 			'Temperature Maximum', 'Temperature Minimum', 'Wind gusts', 'Sunshine hours', 'Total', 'Thunderstorm',
-			'Order', 'Off in this channel', 'Day window', 'Official warnings in the report'
+			'Order', 'Off in this channel', 'Official warnings in the report'
 		])
 			hat(enT, s);
 		assert.deepEqual(deutscheReste(enT), []);
@@ -296,9 +296,9 @@ describe('AC-4: Trip und Ortsvergleich englisch mit demselben Baustein', () => {
 		const vergleich = vergleichRendern({ catalog: katalogMitRegister() });
 		const r = paketText(route);
 		const v = paketText(vergleich);
-		for (const s of ['Order', 'Off in this channel', 'Day window', 'From', 'Official warnings in the report', 'everything after it is an official warning'])
+		for (const s of ['Order', 'Off in this channel', 'Official warnings in the report', 'everything after it is an official warning'])
 			for (const t of [r, v]) hat(t, s);
-		for (const id of ['wm2-reihenfolge', 'day-window-control', 'report-show-official-alerts', 'wm2-aus-gruppe'])
+		for (const id of ['wm2-reihenfolge', 'report-show-official-alerts', 'wm2-aus-gruppe'])
 			for (const h of [route, vergleich]) assert.ok(h.includes(`data-testid="${id}"`), `${id} fehlt`);
 		hat(v, 'comparison email');
 		hatNicht(r, 'comparison email');

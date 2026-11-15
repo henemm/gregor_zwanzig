@@ -109,15 +109,15 @@ Diese Scheibe:
 | `AlarmeTab.svelte:604` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
 | `VersandTab.svelte:370` | Markup-Baum Trip (`VTLaufzeitRoute`, Mehrtages-Trend, Premium-SMS) |
 | `VersandTab.svelte:406` | Markup-Baum Vergleich (`VTLaufzeitVergleich`, kein Mehrtages-Trend, eigener Premium-SMS-Schalter seit #2293 S2) — zwei komplette, unterschiedliche Komponenten-Bäume |
-| `WeatherMetricsTab.svelte:1467` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
-| `WeatherMetricsTab.svelte:2056` | Schalter „Nacht-Stundentabelle in der Mail zeigen“ nur im Trip (#1721): die Nacht-Stundentabelle gibt es nur in der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre, Spec `fix_1721_nachtausgabe.md`) |
+| `WeatherMetricsTab.svelte:1447` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
+| `WeatherMetricsTab.svelte:1967` | Schalter „Nacht-Stundentabelle in der Mail zeigen“ nur im Trip (#1721): die Nacht-Stundentabelle gibt es nur in der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre, Spec `fix_1721_nachtausgabe.md`) |
 | `versand-tab/vtBriefingChannelsText.ts:22` | SMS-Zeichenbudget: Trip 160 / Vergleich 153 (unterschiedliches Layout) |
 | `versand-tab/vtBriefingChannelsText.ts:29` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
 | `versand-tab/VTSchedulePlan.svelte:57` | `isRoute`-Ableitung — Mehrtages-Trend-Karte existiert nur im Trip |
 | `alarme-tab/alarmeTabSections.ts:27` | Radar-Abschnitt nur im Vergleich |
 | `wetter-tab/corridorEditorState.ts:331` | Markieren-Schalter bei Tages-Summen nur im Trip gesperrt |
-| `weather-metrics-tab/weatherMetricsTabSections.ts:72` | SMS-Schwellen/Report-Config nur im Trip |
-| `weather-metrics-tab/weatherMetricsTabSections.ts:73` | Stundenverlauf-Abschnitt nur im Vergleich |
+| `weather-metrics-tab/weatherMetricsTabSections.ts:67` | SMS-Schwellen/Report-Config nur im Trip |
+| `weather-metrics-tab/weatherMetricsTabSections.ts:68` | Stundenverlauf-Abschnitt nur im Vergleich |
 
 ### DARSTELLUNG (3 — nur Beschriftung/Sichtbarkeit, kein Datenweg-Unterschied)
 
@@ -135,10 +135,10 @@ Diese Scheibe:
 | `wetter-tab/wertebereicheVergleichSpeicherung.ts:209` | dito für Wertebereiche | dito |
 | `weather-metrics-tab/weatherMetricsCompareSave.ts:556` | dito für Wetter-Metriken (#2794 Teil 3 F006: um 5 Zeilen verschoben, Weiche unverändert) | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
 | `VersandTab.svelte:360` | Wirkort-Guard des Selbst-Speicher-Effekts — läuft nur im Vergleich | Effekt existiert nur für den Compare-Speicherweg; Trip speichert über einen anderen Mechanismus außerhalb dieser Datei |
-| `WeatherMetricsTab.svelte:594` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
-| `WeatherMetricsTab.svelte:609` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
-| `WeatherMetricsTab.svelte:638` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
-| `WeatherMetricsTab.svelte:651` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
+| `WeatherMetricsTab.svelte:587` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
+| `WeatherMetricsTab.svelte:602` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
+| `WeatherMetricsTab.svelte:631` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
+| `WeatherMetricsTab.svelte:644` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
 | `WetterMetrikenVersandPanel.svelte:66` | #1743: Versand-Inhalt nach Herkunft — Trip-Hub über `BriefingScheduleTab`, Vergleich und Trip-Anlegen über den EINEN `VersandTab` | ersetzt die Direkt-Mounts in TripTabs/CompareTabs/Anlege-Seiten |
 
 **Summe:** 14 FACHLICH + 3 DARSTELLUNG + 9 HERKUNFT = **26**, deckungsgleich
@@ -148,6 +148,12 @@ Abgleich der `context ===`-Zweige gegen die Soll-Liste bestanden, kein Zweig ent
 Corridor-Editor auf 14 / 3 / 9 = 26).
 
 ## Changelog
+
+- 2026-11-15: #2931 (Rückbau DayWindowCard/Tagesfenster-Abschnitt) — alle sechs
+  `WeatherMetricsTab.svelte`-Einträge nur verschoben (594→587, 609→602, 638→631, 651→644,
+  1467→1447, 2056→1967) und `weatherMetricsTabSections.ts` 72→67, 73→68 (Kommentarblock zum
+  entfallenen Abschnitt `tagesfenster` gelöscht); Bedingungstext unverändert, kein Eintrag
+  entfällt, Summe bleibt 26 (Ratsche nachgezogen).
 
 - 2026-11-12: #2794 S3a Teil-PR 4a (AC-31) — `CorridorEditor.svelte` und
   `CorridorEditorMobile.svelte` sind gelöscht; ihre 22 Einträge entfallen als ENTFERNTE

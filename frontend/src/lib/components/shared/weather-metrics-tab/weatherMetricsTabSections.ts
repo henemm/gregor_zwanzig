@@ -62,13 +62,8 @@ const COMPARE_ONLY_SECTIONS = ['stundenverlauf'] as const;
 // Stundenverlauf-Steuerung; das nachzuruesten ist nicht Teil der Scheibe).
 const SHARED_TRAILING_SECTIONS = ['ausblick', 'official_alerts'] as const;
 
-// Issue #1361/#1372 S1b: 'tagesfenster' ist NICHT kontext-exklusiv — beide
-// Seiten teilen sich ab jetzt EIN Tagesfenster (dieselbe Bedienfläche, gleiche
-// Position). Beim Trip zieht die Steuerung damit aus dem Versand-Reiter hierher
-// (PO-Entscheidung: "Welche Stunden bewertet werden, ist eine Inhalts- und
-// keine Versandfrage").
 export function weatherMetricsTabSections(context: WeatherMetricsContext, bereich: WeatherMetricsBereich = 'alles'): string[] {
-	const sections: string[] = ['grundauswahl', 'layout_kanal', 'tagesfenster'];
+	const sections: string[] = ['grundauswahl', 'layout_kanal'];
 	if (context === 'route') sections.push(...ROUTE_ONLY_SECTIONS);
 	if (context === 'vergleich') sections.push(...COMPARE_ONLY_SECTIONS);
 	sections.push(...SHARED_TRAILING_SECTIONS);

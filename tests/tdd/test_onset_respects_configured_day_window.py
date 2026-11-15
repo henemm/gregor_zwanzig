@@ -21,7 +21,7 @@ ausgeschlossen statt an jeder Aufrufstelle per Disziplin (bewacht in
 test_onset_anchor_fresh_window_symmetry.py).
 
 Folge fuer jeden Trip mit abweichendem Fenster — und das ist ein echtes
-Bedienelement (`shared/weather-metrics-tab/DayWindowCard.svelte`,
+Bedienelement (`organisms/wetter-tab/AnpassenKarte.svelte`,
 `internal/handler/trip.go:316`):
 
 * WEITERES Fenster (3-21): das Briefing nennt einen Beginn um 03:00, die

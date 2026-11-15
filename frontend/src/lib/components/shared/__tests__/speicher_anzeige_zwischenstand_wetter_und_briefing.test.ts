@@ -71,7 +71,6 @@ function saatWetter(a: Aufrufe): Knoten {
 		createMode: false,
 		onChannelsChange: undefined,
 		onWeatherMetricsChange: undefined,
-		onDayWindowChange: undefined,
 		onTripUpdate: undefined,
 		...Object.fromEntries(WERTPROPS.map((n) => [n, undefined])),
 		preset: undefined,

@@ -593,7 +593,6 @@ const BESTAND: string[] = [
 	'lib/components/shared/versand-tab/VTNextBriefing.svelte',
 	'lib/components/shared/versand-tab/VTSchedulePlan.svelte',
 	'lib/components/shared/weather-metrics-tab/AggregationMetricRow.svelte',
-	'lib/components/shared/weather-metrics-tab/DayWindowCard.svelte',
 	'lib/components/shared/weather-metrics-tab/MultiSymbolMetricRow.svelte',
 	'lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte',
 	'lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte',
@@ -715,7 +714,7 @@ const BESTAND: string[] = [
 /** Obergrenze des Bestands (feste Zahl, nicht die Länge): neue Dateien gehen in SEITEN_SCOPE. */
 // #2794 S3a Teil-PR 4a: 204 → 199 (CorridorEditor, CorridorEditorMobile, MetricCheckbox,
 // MetricGroup, HorizonChip entfernt).
-const BESTAND_OBERGRENZE = 199;
+const BESTAND_OBERGRENZE = 198;
 
 /** Token-Verstöße je Baustein-Datei (Ist-Stand 2026-11-10, ADR-0112). Darf nur sinken. */
 const AUSNAHMEN: Ausnahmen = {
