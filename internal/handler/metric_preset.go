@@ -101,10 +101,19 @@ func displayConfigAusVorlage(p *model.MetricPreset, mitMetriken bool) map[string
 	dc := map[string]interface{}{}
 	if mitMetriken {
 		metrics := make([]interface{}, 0, len(p.Metrics))
+		order := 0
 		for _, m := range p.Metrics {
-			metrics = append(metrics, map[string]interface{}{
+			e := map[string]interface{}{
 				"metric_id": m.MetricID, "enabled": m.Enabled, "use_friendly_format": m.UseFriendlyFormat,
-			})
+			}
+			// Issue #3047 (AC-16): aktive Eintraege tragen die Vorlagen-Folge
+			// als order/bucket (Schema wie der Editor-Speicherweg); ohne die
+			// Felder ordnen Editor und Python-Loader nach Prioritaet um.
+			if m.Enabled {
+				e["order"], e["bucket"] = order, "primary"
+				order++
+			}
+			metrics = append(metrics, e)
 		}
 		dc["metrics"] = metrics
 	}

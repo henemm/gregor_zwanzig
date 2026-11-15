@@ -321,7 +321,6 @@ def test_ac6_stundenverlauf_nie_eingestellt_standard():
         pruefe_stundenverlauf(mail, fmt)
 
 
-@pytest.mark.xfail(strict=True, reason="#3047 RED O5: Stundenverlauf schneidet nicht mit der Grundauswahl")
 def test_ac10_stundenverlauf_nimmt_nur_aus_grundauswahl():
     """AC-10 / Konzept §5.8 ("Jede Liste nimmt nur aus den Metriken oben"):
     Boeen stehen gespeichert im Stundenverlauf, sind aber aus der Grundauswahl
@@ -517,7 +516,6 @@ def test_wv6_amtliche_warnung_zuerst_html():
     assert html_vergleichstabelle(mail.html)[1] == ["wind", "temperature", "precipitation"]
 
 
-@pytest.mark.xfail(strict=True, reason="#3047 RED WV6: Klartext-Warnzeile steht hinter den Metrik-Zeilen")
 def test_wv6_amtliche_warnung_zuerst_klartext():
     """Konzept WV6, Klartext derselben Mail: im Ortsblock steht die Warnung als
     ERSTE Zeile vor den Metrik-Zeilen. Ist: ``render_comparison_text`` haengt

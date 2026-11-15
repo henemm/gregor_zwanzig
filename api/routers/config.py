@@ -137,6 +137,10 @@ def get_metrics():
             # Issue #1552: eigene Trip-Anlege-Vorbelegung, unabhaengig von
             # default_enabled (das Orte/Abonnements weiter versorgt).
             "trip_default_enabled": m.trip_default_rank is not None,
+            # Issue #3047 N2: der Rang selbst (1 = zuerst, `null` = nicht im
+            # Standard) -- der Editor ordnet einen Trip ohne `metrics` danach,
+            # dieselbe Folge wie `DEFAULT_TRIP_METRIC_IDS` der Mail.
+            "trip_default_rank": m.trip_default_rank,
             "has_friendly_format": m.has_friendly_format,
             # Issue #2422 S6 (B2): hat die Groesse in SMS/Premium-SMS/Telegram-
             # Kurzform zwei Formen (Roh/Einfach)? Dieselbe Quelle wie der

@@ -503,7 +503,9 @@ def klartext_vergleichstabelle(plain: str, orte=ORTSNAMEN) -> tuple[list[str], d
             zeilen[z] = []
             continue
         m = re.match(r"^   ([^:]+): ", z)
-        if aktuell is not None and m:
+        # Warnzeilen (WV6, "   ⚠️ ...") sind keine Metrik-Zeilen -- dieselbe
+        # Regel wie email_spec_validator.py (Zeilen-Parser der Uebersicht).
+        if aktuell is not None and m and "⚠️" not in z:
             zeilen[aktuell].append(_id_aus(m.group(1), "label_de"))
     return folge, zeilen
 

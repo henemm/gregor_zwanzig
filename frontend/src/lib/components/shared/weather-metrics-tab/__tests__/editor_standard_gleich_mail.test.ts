@@ -123,8 +123,8 @@ const nix = () => {};
 const rendern = (k: unknown, props: Record<string, unknown>) => render(k as never, { props } as never).body;
 
 // ── Trip: Ladepfad wie initFromTrip() ──────────────────────────────────────────
-const TRIP_METRIC_BY_ID: Record<string, { trip_default_enabled?: boolean }> = Object.fromEntries(
-	Object.values(TRIP_KATALOG).flat().map((m) => [m.id, m as { trip_default_enabled?: boolean }])
+const TRIP_METRIC_BY_ID: Record<string, { trip_default_enabled?: boolean; trip_default_rank?: number | null }> = Object.fromEntries(
+	Object.values(TRIP_KATALOG).flat().map((m) => [m.id, m as { trip_default_enabled?: boolean; trip_default_rank?: number | null }])
 );
 function tripEditor(eingabe: Zustand['eingabe']) {
 	const dc = eingabe.display_config as Record<string, any>;
@@ -195,8 +195,8 @@ function pruefe(seite: (e: Zustand['eingabe']) => string[], liste: string, z: Zu
 describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 	test('frontend_seite_trip_tabellen_standard', () =>
 		pruefe(frontendTripTabellen, 'trip_tabellen', zustand('trip_tabellen', 'nie_eingestellt')));
-	// #3047 RED N2
-	rotErwartet('frontend_seite_trip_tabellen_altbestand', '#3047 RED N2', () =>
+	// #3047 N2 behoben (F5)
+	test('frontend_seite_trip_tabellen_altbestand', () =>
 		pruefe(frontendTripTabellen, 'trip_tabellen', zustand('trip_tabellen', 'altbestand_ohne_metrics')));
 	for (const z of gespeicherte('trip_tabellen'))
 		test(`frontend_seite_trip_tabellen_gespeichert ${z.id}`, () => pruefe(frontendTripTabellen, 'trip_tabellen', z));

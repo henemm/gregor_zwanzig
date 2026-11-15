@@ -5,127 +5,156 @@
    "temperature": [
     {
      "id": "temperature",
-     "trip_default_enabled": true
+     "trip_default_enabled": true,
+     "trip_default_rank": 1
     },
     {
      "id": "temperature_night",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "temperature_day_low",
-     "trip_default_enabled": true
+     "trip_default_enabled": true,
+     "trip_default_rank": 8
     },
     {
      "id": "temperature_day_high",
-     "trip_default_enabled": true
+     "trip_default_enabled": true,
+     "trip_default_rank": 9
     },
     {
      "id": "wind_chill",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "wind_chill_night",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "wind_chill_day_low",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "wind_chill_day_high",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "humidity",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "dewpoint",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     }
    ],
    "wind": [
     {
      "id": "wind",
-     "trip_default_enabled": true
+     "trip_default_enabled": true,
+     "trip_default_rank": 2
     },
     {
      "id": "gust",
-     "trip_default_enabled": true
+     "trip_default_enabled": true,
+     "trip_default_rank": 3
     },
     {
      "id": "wind_direction",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     }
    ],
    "precipitation": [
     {
      "id": "precipitation",
-     "trip_default_enabled": true
+     "trip_default_enabled": true,
+     "trip_default_rank": 4
     },
     {
      "id": "rain_probability",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "thunder",
-     "trip_default_enabled": true
+     "trip_default_enabled": true,
+     "trip_default_rank": 5
     },
     {
      "id": "snowfall_limit",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "precip_type",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     }
    ],
    "atmosphere": [
     {
      "id": "cloud_total",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "cloud_low",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "cloud_mid",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "cloud_high",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "visibility",
-     "trip_default_enabled": true
+     "trip_default_enabled": true,
+     "trip_default_rank": 7
     },
     {
      "id": "sunshine",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "uv_index",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "pressure",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     }
    ],
    "winter": [
     {
      "id": "freezing_level",
-     "trip_default_enabled": true
+     "trip_default_enabled": true,
+     "trip_default_rank": 6
     },
     {
      "id": "snow_depth",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     },
     {
      "id": "fresh_snow",
-     "trip_default_enabled": false
+     "trip_default_enabled": false,
+     "trip_default_rank": null
     }
    ]
   },

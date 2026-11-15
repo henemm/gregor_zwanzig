@@ -5,6 +5,8 @@ Erstellt: 29.10.2026 05:00 (CET)
 
 --------------------------------------------------
 Innsbruck
+   ⚠️ Amtliche Warnung: Mäßige Gewitterwarnung (Do 29.10. · 10:00–19:00)
+   ⚠️ Amtliche Warnung: Extreme Hitze (Do 29.10. · ganztägig)
    Temperatur Maximum: 11°C
    Wind: 26 km/h
    Niederschlag: 2.4 mm
@@ -30,8 +32,6 @@ Innsbruck
    Luftdruck: 1012 hPa
    Niederschlagsart: Regen
    Schneefallgrenze: 2100 m
-   ⚠️ Amtliche Warnung: Mäßige Gewitterwarnung (Do 29.10. · 10:00–19:00)
-   ⚠️ Amtliche Warnung: Extreme Hitze (Do 29.10. · ganztägig)
 
 Lienz
    Temperatur Maximum: 12°C
@@ -61,6 +61,7 @@ Lienz
    Schneefallgrenze: 2150 m
 
 Kufstein
+   ⚠️ Amtliche Warnung: Waldbrand-Gefahr — Stufe 3
    Temperatur Maximum: 13°C
    Wind: 26 km/h
    Niederschlag: 8.4 mm
@@ -86,7 +87,6 @@ Kufstein
    Luftdruck: 1014 hPa
    Niederschlagsart: Mischniederschlag
    Schneefallgrenze: 2200 m
-   ⚠️ Amtliche Warnung: Waldbrand-Gefahr — Stufe 3
 
 Brenner
    Fehler: Zeitueberschreitung beim Abruf
