@@ -1386,6 +1386,50 @@
       "status": "gruen"
     },
     {
+      "id": "O-SV-H-TOTALSCHNITT-VORGABE",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_stundenverlauf_totalschnitt_rueckfall",
+      "ac": "AC-10",
+      "befund": "O5 (F7/F002 Rueckfall Vorgabemenge)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-TOTALSCHNITT-VORGABE",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_stundenverlauf_totalschnitt_rueckfall",
+      "ac": "AC-10",
+      "befund": "O5 (F7/F002 Rueckfall Vorgabemenge)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-TOTALSCHNITT-WAEHLBAR",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_stundenverlauf_totalschnitt_rueckfall",
+      "ac": "AC-10",
+      "befund": "O5 (F7/F002 Rueckfall waehlbare Groessen)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-TOTALSCHNITT-WAEHLBAR",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_stundenverlauf_totalschnitt_rueckfall",
+      "ac": "AC-10",
+      "befund": "O5 (F7/F002 Rueckfall waehlbare Groessen)",
+      "status": "gruen"
+    },
+    {
       "id": "O-SV-K-ALT",
       "liste": "orte_stundenverlauf",
       "kontext": "orte",
@@ -1539,6 +1583,50 @@
       "test": "test_ac12_zwei_nutzer",
       "ac": "AC-12",
       "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-SPRACHE-EN",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "sprache",
+      "test": "test_orte_koepfe_in_nutzersprache_en",
+      "ac": "AC-6, ADR-0104",
+      "befund": "F7/F003 Mutations-Gegenprobe #3047",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-SPRACHE-EN",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "sprache",
+      "test": "test_orte_koepfe_in_nutzersprache_en",
+      "ac": "AC-6, ADR-0104",
+      "befund": "F7/F003 Mutations-Gegenprobe #3047",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-H-SPRACHE-EN",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "sprache",
+      "test": "test_orte_koepfe_in_nutzersprache_en",
+      "ac": "AC-7, ADR-0104",
+      "befund": "F7/F003 Mutations-Gegenprobe #3047",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-SPRACHE-EN",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "sprache",
+      "test": "test_orte_koepfe_in_nutzersprache_en",
+      "ac": "AC-7, ADR-0104",
+      "befund": "F7/F003 Mutations-Gegenprobe #3047",
       "status": "gruen"
     },
     {

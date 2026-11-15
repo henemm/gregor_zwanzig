@@ -38,7 +38,7 @@ from tests.helpers.einstellung_gleich_mail_trip import (
 )
 from tests.helpers.transport_mitschrift import aufzeichner_installieren
 from tests.tdd._einstellung_gleich_mail_trip_fixtures import (
-    AUSBLICK_TAGE, BASIS_KATALOG, eml_aus_mitschrift, mail_sendung, mail_teile,
+    AUSBLICK_TAGE, BASIS_KATALOG, STAGE_NAME, eml_aus_mitschrift, mail_sendung, mail_teile,
     metrik_eintraege, render_trip_mit_ausblick, trip_json,
 )
 
@@ -601,9 +601,10 @@ def _amtliche_gewitterwarnung():
     )
 
 
-def _wv6_positionen(html, text, fmt: str) -> tuple[int, int, int]:
-    """(Warnung, Metriken-Ueberblick, erste Stundentabelle) als Position im
-    gelesenen Mail-Teil; -1 = nicht gefunden."""
+def _wv6_positionen(html, text, fmt: str) -> dict[str, int]:
+    """Position von Warnung, Kopf-Einzeiler (Tageslage), Metriken-Ueberblick
+    und erster Stundentabelle im gelesenen Mail-Teil; -1 = nicht gefunden.
+    Im Klartext zusaetzlich ``kopf_ende`` = erste Leerzeile (Ende des Kopfs)."""
     import re
 
     from i18n import t
@@ -611,31 +612,48 @@ def _wv6_positionen(html, text, fmt: str) -> tuple[int, int, int]:
     if fmt == "html":
         body = html[html.find("<body"):]
         tabelle = re.search(r'<table[^>]*data-table="resp"', body)
-        return (body.find('class="wb'), body.find(t("mail.pille.ueberschrift", "de")),
-                tabelle.start() if tabelle else -1)
+        return {"warnung": body.find('class="wb'),
+                "einzeiler": body.find(t("mail.tageslage.eyebrow", "de")),
+                "ueberblick": body.find(t("mail.pille.ueberschrift", "de")),
+                "tabelle": tabelle.start() if tabelle else -1}
     zeilen = text.splitlines()
 
     def _zeile(praefix: str) -> int:
         return next((i for i, z in enumerate(zeilen) if z.startswith(praefix)), -1)
 
-    return (_zeile(f"━━ {t('mail.warnungen.ueberschrift', 'de')}"),
-            _zeile(f"━━ {t('mail.pille.ueberschrift', 'de')}"), _zeile("━━ Segment"))
+    return {"warnung": _zeile(f"━━ {t('mail.warnungen.ueberschrift', 'de')}"),
+            # Der Kopf-Einzeiler (``compact_summary``) beginnt mit dem Etappennamen.
+            "einzeiler": _zeile(f"{STAGE_NAME}: "),
+            "ueberblick": _zeile(f"━━ {t('mail.pille.ueberschrift', 'de')}"),
+            "tabelle": _zeile("━━ Segment"),
+            "kopf_ende": zeilen.index("") if "" in zeilen else -1}
 
 
 @pytest.mark.parametrize("fall", _faelle("test_wv6_amtliche_warnung_zuerst"))
 def test_wv6_amtliche_warnung_zuerst(monkeypatch, fall):
     """WV6 (Konzept ``einstellungen_neu.md``): amtliche Warnungen stehen in der
-    E-Mail immer zuerst, fest und nicht verschiebbar -- vor jedem Metrik-
-    Inhalt (Metriken-Ueberblick und Stundentabelle), unabhaengig von der
-    gespeicherten Metrik-Folge (hier Boeen, Temperatur, Niederschlag, Wind)."""
+    E-Mail immer zuerst, fest und nicht verschiebbar -- direkt nach dem Kopf,
+    vor jedem Inhalt (Kopf-Einzeiler/Tageslage, Metriken-Ueberblick und
+    Stundentabelle), unabhaengig von der gespeicherten Metrik-Folge (hier
+    Boeen, Temperatur, Niederschlag, Wind)."""
     data = trip_json(["gust", "temperature", "precipitation", "wind"])
     html, text, _ = _senden(monkeypatch, data, fall["format"],
                             official_alerts=[_amtliche_gewitterwarnung()])
-    warnung, ueberblick, tabelle = _wv6_positionen(html, text, fall["format"])
+    pos = _wv6_positionen(html, text, fall["format"])
+    warnung, ueberblick = pos["warnung"], pos["ueberblick"]
     assert warnung >= 0, f"{fall['id']}: amtliche Warnung fehlt in der Mail"
-    assert tabelle > warnung, (
+    assert pos["tabelle"] > warnung, (
         f"{fall['id']}: Warnung (Pos. {warnung}) nicht vor der ersten "
-        f"Stundentabelle (Pos. {tabelle})")
+        f"Stundentabelle (Pos. {pos['tabelle']})")
+    if _variante(fall) == "direkt_nach_kopf":
+        assert pos["einzeiler"] >= 0, f"{fall['id']}: Kopf-Einzeiler fehlt in der Mail"
+        assert pos["einzeiler"] > warnung, (
+            f"{fall['id']}: Warnung (Pos. {warnung}) steht hinter dem "
+            f"Kopf-Einzeiler (Pos. {pos['einzeiler']})")
+        if fall["format"] == "klartext":
+            assert warnung == pos["kopf_ende"] + 1, (
+                f"{fall['id']}: Warnung (Zeile {warnung}) folgt nicht direkt "
+                f"auf den Kopf (Leerzeile {pos['kopf_ende']})")
     if _variante(fall) == "vor_ueberblick":
         assert ueberblick > warnung, (
             f"{fall['id']}: Warnung (Pos. {warnung}) steht hinter dem "

@@ -54,6 +54,7 @@ from tests.helpers.einstellung_gleich_mail_orte import (
     html_vergleichstabelle,
     ist_zahl,
     katalogfolge,
+    katalogtext,
     kennungen,
     klartext_ausblick,
     klartext_stundenverlauf,
@@ -114,9 +115,10 @@ def pruefe_vergleichstabelle(mail, fmt: str) -> None:
         assert zeilen[ort] == soll, f"Klartext {ort}: Zeilen {zeilen[ort]}, eingestellt {soll}"
 
 
-def pruefe_stundenverlauf(mail, fmt: str) -> None:
+def pruefe_stundenverlauf(mail, fmt: str, lang: str = "de") -> None:
     soll = soll_stundenverlauf(mail.roh, _standard_stunden())
-    ist = html_stundenverlauf(mail.html) if fmt == "html" else klartext_stundenverlauf(mail.plain)
+    ist = (html_stundenverlauf(mail.html, lang) if fmt == "html"
+           else klartext_stundenverlauf(mail.plain, lang))
     if soll is None:
         assert ist == {}, f"{fmt}: Stundenverlauf muss entfallen, gefunden {ist}"
         return
@@ -125,12 +127,14 @@ def pruefe_stundenverlauf(mail, fmt: str) -> None:
         assert koepfe == soll, f"{fmt} {ort}: Spalten {koepfe}, eingestellt {soll}"
 
 
-def pruefe_ausblick(mail, fmt: str, *, darstellung: bool = True) -> None:
+def pruefe_ausblick(mail, fmt: str, *, darstellung: bool = True, lang: str = "de") -> None:
     soll = soll_ausblick(mail.roh)
-    ist = html_ausblick(mail.html) if fmt == "html" else klartext_ausblick(mail.plain)
+    ist = (html_ausblick(mail.html, lang) if fmt == "html"
+           else klartext_ausblick(mail.plain, lang))
     if soll is None:
         assert ist == {}, f"{fmt}: Ausblick muss entfallen, gefunden {list(ist)}"
-        assert "3-Tages-Ausblick" not in mail.plain.splitlines() or fmt == "html"
+        titel = katalogtext("vergleich.ausblick.titel", lang)
+        assert titel not in mail.plain.splitlines() or fmt == "html"
         return
     assert list(ist) == _orte(mail.roh), f"{fmt}: Orte im Ausblick {list(ist)}"
     einfach = soll_einfach(mail.roh)
@@ -332,6 +336,45 @@ def test_ac10_stundenverlauf_nimmt_nur_aus_grundauswahl():
     assert "gust" in mail.roh["display_config"]["hourly_metrics"]
     for fmt in ("html", "klartext"):
         pruefe_stundenverlauf(mail, fmt)
+
+
+@pytest.mark.parametrize("variante,grund,stunden,erwartet", [
+    # Rueckfall 1: Vorgabemenge geschnitten mit der Grundauswahl, Folge der
+    # Vorgabemenge (Temperatur vor Wind vor Niederschlag).
+    ("vorgabemenge", ["wind", "temperature", "precipitation"], ["gust", "uv_index"],
+     ["Temp", "Wind", "Rain"]),
+    # Rueckfall 2: Grundauswahl ohne jede Groesse der Vorgabemenge -> die
+    # stuendlich waehlbaren Groessen der Grundauswahl in deren Folge.
+    ("waehlbare_groessen", ["humidity", "cloud_total"], ["temperature", "gust"],
+     ["Humid", "Cloud"]),
+], ids=["vorgabemenge", "waehlbare_groessen"])
+def test_ac10_stundenverlauf_totalschnitt_rueckfall(variante, grund, stunden, erwartet):
+    """AC-10 / #3047 O5: liegt die gespeicherte Stundenliste vollstaendig
+    ausserhalb der Grundauswahl, verschwindet der Block nicht still, sondern
+    zeigt den dokumentierten Rueckfall -- in HTML und Klartext (F7/F002)."""
+    p = preset_dict("ac10_grundauswahl")
+    dc = p["display_config"]
+    dc["active_metrics"] = [{"metric_id": m, "aggregation": AGG.get(m, "avg")} for m in grund]
+    dc.pop("channel_active_metrics")
+    dc["hourly_metrics"] = list(stunden)
+    mail = sende_orte_mail(p)
+    assert not set(stunden) & set(grundauswahl(mail.roh)), "Vorbedingung: Totalschnitt"
+    assert soll_stundenverlauf(mail.roh, _standard_stunden()) == erwartet, variante
+    for fmt in ("html", "klartext"):
+        pruefe_stundenverlauf(mail, fmt)
+
+
+@pytest.mark.parametrize("fmt", ["html", "klartext"])
+def test_orte_koepfe_in_nutzersprache_en(fmt):
+    """ADR-0104 / #3047 F7 (F003): ein englischer Nutzer bekommt Stundenverlauf
+    und Ausblick mit englischen Festtexten -- HTML-Kopfzellen ("Time", "Day")
+    und Klartext-Ueberschriften ("HOURLY VIEW", "3-day outlook") laut Katalog
+    ``src/i18n/messages/en/``; Spalten und Folge wie eingestellt."""
+    mail = sende_orte_mail(preset_dict("ac6_stundenverlauf"), language="en")
+    assert soll_stundenverlauf(mail.roh, _standard_stunden()), "Vorbedingung: Stundenverlauf an"
+    assert soll_ausblick(mail.roh), "Vorbedingung: Ausblick an"
+    pruefe_stundenverlauf(mail, fmt, "en")
+    pruefe_ausblick(mail, fmt, lang="en")
 
 
 # ---------------------------------------------------------------------------

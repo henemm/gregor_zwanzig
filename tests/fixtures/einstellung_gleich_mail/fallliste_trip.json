@@ -2041,6 +2041,28 @@
       "status": "gruen"
     },
     {
+      "id": "trip-wv6--direkt_nach_kopf--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst",
+      "ac": "AC-2, Konzept WV6",
+      "befund": "WV6 (F001 Mutations-Gegenprobe)",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-wv6--direkt_nach_kopf--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst",
+      "ac": "AC-2, Konzept WV6",
+      "befund": "WV6 (F001 Mutations-Gegenprobe)",
+      "status": "gruen"
+    },
+    {
       "id": "trip-ac17--html_kopf_de_en--html",
       "liste": "trip_stundentabelle",
       "kontext": "trip",

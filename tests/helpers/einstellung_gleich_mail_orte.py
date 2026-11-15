@@ -333,16 +333,34 @@ def soll_stundenverlauf(roh: dict, standard: tuple[str, ...]) -> Optional[list[s
     """Spaltenkoepfe des Stundenverlaufs (ohne "Zeit"); ``None`` = Block fehlt.
     ``standard`` = Standardliste fuer "nie eingestellt" (der Abgleich mit dem
     Editor-Standard ist Paket D / AC-13). Spec AC-10/Konzept §5.8: eine Liste
-    nimmt nur aus der Grundauswahl."""
+    nimmt nur aus der Grundauswahl.
+
+    Totalschnitt (#3047 O5, dokumentierter Rueckfall, F7/F002): liegt eine
+    nicht leere gespeicherte Liste vollstaendig ausserhalb der Grundauswahl,
+    gilt ``standard`` geschnitten mit der Grundauswahl (Folge von
+    ``standard``); ist auch das leer, die stuendlich waehlbaren Groessen der
+    Grundauswahl (Register ohne die ausgenommenen) in Grundauswahl-Folge."""
     if roh.get("hourly_enabled", True) is False:
         return None
     gespeichert = _ids((roh.get("display_config") or {}).get("hourly_metrics"))
     liste = list(standard) if gespeichert is None else gespeichert
     basis = grundauswahl(roh)
     if gespeichert is not None and basis is not None:
+        waehlbar = _stuendlich_waehlbar()
         liste = [m for m in liste if m in basis]
+        if not liste and any(m in waehlbar for m in gespeichert):
+            liste = ([m for m in standard if m in basis]
+                     or [m for m in basis if m in waehlbar])
     liste = [m for m in liste if m != "wind_direction"]  # reines Merge-Signal, keine Spalte
     return [kopf_von(m) for m in liste] or None
+
+
+def _stuendlich_waehlbar() -> set[str]:
+    """Register-Kennungen ohne die vom Stundenverlauf ausgenommenen (AC-11,
+    benannte Register-Menge, keine Aufloesung)."""
+    from output.renderers.compare_hourly_metric_ids import HOURLY_EXCLUDED_METRIC_IDS
+
+    return {m.id for m in _katalog()} - HOURLY_EXCLUDED_METRIC_IDS
 
 
 def soll_ausblick(roh: dict) -> Optional[list[str]]:
@@ -367,6 +385,23 @@ def soll_einfach(roh: dict) -> dict[str, bool]:
     """Gespeicherte Roh/Einfach-Zuordnung des Ausblicks (True = Einfach)."""
     f = (roh.get("display_config") or {}).get("outlook_metric_formats")
     return {k: v for k, v in f.items() if isinstance(v, bool)} if isinstance(f, dict) else {}
+
+
+# ---------------------------------------------------------------------------
+# Festtexte je Sprache -- direkt aus den Katalogdateien, nicht ueber ``t()``
+# ---------------------------------------------------------------------------
+
+_I18N_DIR = Path(__file__).resolve().parents[2] / "src" / "i18n" / "messages"
+
+
+def katalogtext(schluessel: str, lang: str = "de") -> str:
+    """Text zu ``schluessel`` aus ``src/i18n/messages/<lang>/*.json`` (#3047 F7/F003:
+    die Parser lesen Kopfzellen und Ueberschriften in der Nutzersprache)."""
+    for pfad in sorted((_I18N_DIR / lang).glob("*.json")):
+        texte = json.loads(pfad.read_text(encoding="utf-8"))
+        if schluessel in texte:
+            return texte[schluessel]
+    raise KeyError(f"{schluessel} fehlt im Katalog {lang}")
 
 
 # ---------------------------------------------------------------------------
@@ -425,15 +460,17 @@ def _tabellen_je_ort(html: str, erste_zelle: str) -> dict[str, list[list[str]]]:
     return aus
 
 
-def html_stundenverlauf(html: str) -> dict[str, list[str]]:
-    """{Ort: Spaltenkoepfe ohne "Zeit"} in Mail-Folge der Orte."""
-    return {o: z[0][1:] for o, z in _tabellen_je_ort(html, "Zeit").items()}
+def html_stundenverlauf(html: str, lang: str = "de") -> dict[str, list[str]]:
+    """{Ort: Spaltenkoepfe ohne "Zeit"/"Time"} in Mail-Folge der Orte."""
+    zeit = katalogtext("vergleich.stunden.zeit", lang)
+    return {o: z[0][1:] for o, z in _tabellen_je_ort(html, zeit).items()}
 
 
-def html_ausblick(html: str) -> dict[str, list[tuple[str, str]]]:
+def html_ausblick(html: str, lang: str = "de") -> dict[str, list[tuple[str, str]]]:
     """{Ort: [(Spaltenkopf, Zelle der ersten Tageszeile)]} in Mail-Folge."""
     aus = {}
-    for ort, zeilen in _tabellen_je_ort(html, "Tag").items():
+    tag = katalogtext("mail.ausblick.spalte_tag", lang)
+    for ort, zeilen in _tabellen_je_ort(html, tag).items():
         kopf = zeilen[0][1:]
         erste = zeilen[1][1:] if len(zeilen) > 1 else [""] * len(kopf)
         aus[ort] = list(zip(kopf, erste))
@@ -469,12 +506,13 @@ def _zelltoken(zeile: str) -> list[tuple[str, str]]:
 _ABSCHNITT_RE = re.compile(r"^([^:\s][^:]*?) \([A-Z]{2,5}\)$")  # ohne Doppelpunkt: nicht "Erstellt: ..."
 
 
-def _abschnitte(plain: str) -> tuple[list[str], dict[str, list[str]]]:
+def _abschnitte(plain: str, lang: str = "de") -> tuple[list[str], dict[str, list[str]]]:
     """Klartext -> (Uebersichtsteil, {Ort: Zeilen des Abschnitts "<Ort> (ZONE)"});
     ein Abschnitt endet an der Leerzeile."""
     zeilen = plain.splitlines()
+    titel = katalogtext("vergleich.stunden.klartext_titel", lang)
     start = next((i for i, z in enumerate(zeilen)
-                  if _ABSCHNITT_RE.match(z) or z == "STUNDENVERLAUF"), len(zeilen))
+                  if _ABSCHNITT_RE.match(z) or z == titel), len(zeilen))
     abschnitte: dict[str, list[str]] = {}
     aktuell = None
     for z in zeilen[start:]:
@@ -510,11 +548,12 @@ def klartext_vergleichstabelle(plain: str, orte=ORTSNAMEN) -> tuple[list[str], d
     return folge, zeilen
 
 
-def klartext_stundenverlauf(plain: str) -> dict[str, list[str]]:
-    """{Ort: Spaltenkoepfe der ersten Stundenzeile} (nur Orte mit Stundenzeilen)."""
-    if "STUNDENVERLAUF" not in plain.splitlines():
+def klartext_stundenverlauf(plain: str, lang: str = "de") -> dict[str, list[str]]:
+    """{Ort: Spaltenkoepfe der ersten Stundenzeile} (nur Orte mit Stundenzeilen);
+    ohne Blocktitel ("STUNDENVERLAUF"/"HOURLY VIEW") in ``lang`` -> leer."""
+    if katalogtext("vergleich.stunden.klartext_titel", lang) not in plain.splitlines():
         return {}
-    _, abschnitte = _abschnitte(plain)
+    _, abschnitte = _abschnitte(plain, lang)
     aus = {}
     for ort, zeilen in abschnitte.items():
         stunden = [z for z in zeilen if re.match(r"^\s+\d\d:\d\d\s", z)]
@@ -523,15 +562,18 @@ def klartext_stundenverlauf(plain: str) -> dict[str, list[str]]:
     return aus
 
 
-def klartext_ausblick(plain: str) -> dict[str, list[tuple[str, str]]]:
-    """{Ort: [(Spaltenkopf, Wert)] der ersten Tageszeile nach '3-Tages-Ausblick'}."""
-    _, abschnitte = _abschnitte(plain)
+def klartext_ausblick(plain: str, lang: str = "de") -> dict[str, list[tuple[str, str]]]:
+    """{Ort: [(Spaltenkopf, Wert)] der ersten Tageszeile nach der Ausblick-
+    Ueberschrift in ``lang`` ("3-Tages-Ausblick"/"3-day outlook")}."""
+    _, abschnitte = _abschnitte(plain, lang)
+    titel = katalogtext("vergleich.ausblick.titel", lang)
     aus = {}
     for ort, zeilen in abschnitte.items():
-        if "3-Tages-Ausblick" not in zeilen:
+        if titel not in zeilen:
             continue
-        rest = zeilen[zeilen.index("3-Tages-Ausblick") + 1:]
-        tag = next((z for z in rest if re.match(r"^\S{2}\s", z)), None)
+        rest = zeilen[zeilen.index(titel) + 1:]
+        # Wochentag-Kuerzel: "Mo" (de) bzw. "Fri" (en)
+        tag = next((z for z in rest if re.match(r"^\S{2,3}\s", z)), None)
         if tag is not None:
             aus[ort] = _zelltoken(tag.split(None, 1)[1])
     return aus
