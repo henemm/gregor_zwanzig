@@ -737,6 +737,24 @@ def test_ac17_klartext_festtexte_in_nutzersprache(monkeypatch, fall):
     assert zeit_de != zeit_en, f"Zeitspalte in DE und EN gleich: {zeit_de!r}"
 
 
+@pytest.mark.parametrize("fall", _faelle("test_ac17_html_tabellenkopf_in_nutzersprache"))
+def test_ac17_html_tabellenkopf_in_nutzersprache(monkeypatch, fall):
+    """AC-17/T5 (HTML): die Struktur-Koepfe der Etappentabelle (Zeit vorn,
+    Risiko hinten) folgen der Nutzersprache -- Deutsch „Zeit"/„Risiko",
+    Englisch „Time"/„Risk"; die Spaltenkuerzel dazwischen bleiben gleich."""
+    data = trip_json(["wind", "temperature"])
+    koepfe = {}
+    for sprache in ("de", "en"):
+        html, _text, _ = _senden(monkeypatch, data, "html", language=sprache)
+        tab = html_tabellen(html)["etappe"][0]
+        assert tab.spalten == ["wind", "temperature"], f"{fall['id']} {sprache}: {tab.spalten}"
+        koepfe[sprache] = tab.labels
+    de, en = koepfe["de"], koepfe["en"]
+    assert (de[0], de[-1]) == ("Zeit", "Risiko"), f"deutscher Tabellenkopf: {de!r}"
+    assert (en[0], en[-1]) == ("Time", "Risk"), f"englischer Tabellenkopf: {en!r}"
+    assert de[1:-1] == en[1:-1], "Spaltenkuerzel duerfen nicht uebersetzt werden"
+
+
 # ---------------------------------------------------------------------------
 # Angebot fuer Paket C (Validatoren per --eml)
 # ---------------------------------------------------------------------------

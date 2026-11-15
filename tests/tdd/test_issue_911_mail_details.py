@@ -427,8 +427,9 @@ class TestAC5RiskColumnHeader:
         last_th_raw = th_matches[-1]
         last_th_text = re.sub(r"<[^>]+>", "", last_th_raw).strip()
 
-        assert "Risk" in last_th_text, (
-            f"Letzte Spalten-Überschrift muss 'Risk' sein, "
+        # #3047 AC-17: Kopf in Nutzersprache (Default de: "Risiko").
+        assert "Risiko" in last_th_text, (
+            f"Letzte Spalten-Überschrift muss 'Risiko' sein, "
             f"ist aber: '{last_th_text}' (aktuell '·' / &middot;)"
         )
         assert "·" not in last_th_text and "&middot;" not in last_th_raw, (

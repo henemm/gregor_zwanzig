@@ -44,7 +44,7 @@ _SELECTABLE: frozenset[str] = frozenset(m.id for m in _METRICS if m.selectable)
 #: Strukturspalten ohne Metrik (Zeitspalte in beiden Sprachen, Risiko-Punkt,
 #: Tag des Ausblicks, Verlaesslichkeits-Wort). Alles andere MUSS eine Metrik
 #: sein, sonst scheitert der Parser laut.
-STRUKTUR_LABELS = frozenset({"Time", "Zeit", "Zt", "Hr", "Risk", "Tag", "Day", "ACC"})
+STRUKTUR_LABELS = frozenset({"Time", "Zeit", "Zt", "Hr", "Risk", "Risiko", "Tag", "Day", "ACC"})
 
 #: Issue #814: Groessen mit HTML-Ampelpunkt statt eigener Einfach-Form. Ihr
 #: Klartext zeigt bei Einfach die Zahl -- gewollte Ausnahme (Fallliste

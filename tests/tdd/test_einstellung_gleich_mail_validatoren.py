@@ -220,7 +220,7 @@ def test_trip_spalten_vertauscht_scheitert_mit_name(tmp_path, trip_mail):
 
 def test_trip_spalte_fehlt_im_klartext_scheitert(tmp_path, trip_mail):
     eml, konfig = trip_mail
-    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^( {2}Time.*?) Rain(?= )", r"\1", p))
+    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^( {2}Zeit.*?) Rain(?= )", r"\1", p))
     code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
     assert code == 1, aus
     assert "SOLL: Etappen-Stundentabelle (Klartext)" in aus and "Spalte fehlt: 'Rain'" in aus, aus
@@ -228,7 +228,7 @@ def test_trip_spalte_fehlt_im_klartext_scheitert(tmp_path, trip_mail):
 
 def test_trip_spalte_zu_viel_scheitert(tmp_path, trip_mail):
     eml, konfig = trip_mail
-    falsch = _aendere(eml, html=lambda h: re.sub(r"(<th[^>]*>Risk</th>)", r"<th>UV</th>\1", h))
+    falsch = _aendere(eml, html=lambda h: re.sub(r"(<th[^>]*>Risiko</th>)", r"<th>UV</th>\1", h))
     code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
     assert code == 1, aus
     assert "Spalte zu viel: 'UV'" in aus, aus

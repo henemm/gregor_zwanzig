@@ -43,7 +43,7 @@ from output.renderers.trip_report import TripReportFormatter
 TZ = ZoneInfo("Europe/Berlin")
 
 # Spalten, die der HTML-Renderer unabhaengig von der Metrik-Auswahl setzt.
-_FRAME_COLUMNS_HTML = {"Time", "Risk"}
+_FRAME_COLUMNS_HTML = {"Zeit", "Risiko"}  # #3047 AC-17: Kopf in Nutzersprache (de)
 
 
 def _segment() -> SegmentWeatherData:
@@ -120,9 +120,9 @@ def _mail_columns_plain(config) -> list[str]:
     )
     for line in report.email_plain.splitlines():
         stripped = line.strip()
-        if stripped.startswith("Time"):
+        if stripped.startswith("Zeit"):  # #3047 AC-17 (de)
             cells = re.split(r"\s{2,}", stripped)
-            return [c for c in cells if c != "Time"]
+            return [c for c in cells if c != "Zeit"]
     raise AssertionError("keine Plain-Text-Kopfzeile gefunden")
 
 
@@ -253,9 +253,9 @@ def _header_lines(text: str) -> list[list[str]]:
     lines = []
     for line in text.splitlines():
         stripped = line.strip()
-        if stripped.startswith("Time"):
+        if stripped.startswith("Zeit"):  # #3047 AC-17 (de)
             cells = re.split(r"\s{2,}", stripped)
-            lines.append([c for c in cells if c != "Time"])
+            lines.append([c for c in cells if c != "Zeit"])
     return lines
 
 

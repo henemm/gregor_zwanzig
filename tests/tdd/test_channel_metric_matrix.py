@@ -491,7 +491,7 @@ def _mail_table(
 
 
 def _row_by_time(headers: list[str], rows: list[list[str]], time_label: str) -> dict[str, str]:
-    time_idx = headers.index("Time")
+    time_idx = headers.index("Zeit")  # #3047 AC-17: Kopf in Nutzersprache (de)
     for row in rows:
         if row[time_idx] == time_label:
             return dict(zip(headers, row))
@@ -640,7 +640,7 @@ def test_ac5_temperature_cold_mail_column_via_remaining_fallback():
     dc = build_default_display_config()
 
     headers, _ = _mail_table(dc)
-    metric_cols = [h for h in headers if h not in {"Time", "Risk"}]
+    metric_cols = [h for h in headers if h not in {"Zeit", "Risiko"}]  # #3047 AC-17
     assert "Temp" in metric_cols
     assert "TmpMin" not in metric_cols, (
         f"AC-5 (#2209): 'TmpMin' darf nicht mehr in der Kopfzeile stehen: {headers}"
@@ -1549,7 +1549,7 @@ def test_kaskade_s2_ac6_email_stays_within_own_selection_at_horizon_none_stage()
         re.sub(r"<[^>]+>", "", th).strip()
         for th in re.findall(r"<th[^>]*>.*?</th>", head.group(1), re.S)
     ]
-    metric_cols = [h for h in headers if h not in {"Time", "Risk"}]
+    metric_cols = [h for h in headers if h not in {"Zeit", "Risiko"}]  # #3047 AC-17
     assert metric_cols == [get_metric("wind_chill").col_label], (
         f"S2 AC-6: Kopfzeile der horizon=None-Etappe enthaelt mehr als die E-Mail-Auswahl "
         f"(Telegram-exklusive Metrik 'humidity' darf hier NICHT auftauchen): {headers}"

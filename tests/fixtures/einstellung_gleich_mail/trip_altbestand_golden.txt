@@ -1,5 +1,5 @@
 ◯ WETTER-BRIEFING
-Altbestand 3047 - Evening Report
+Altbestand 3047 - Abend-Briefing
 E1
 20.07.2026
 12.0 km | ↑900m | ↓100m | max. 1400m
@@ -16,7 +16,7 @@ E1: 15–15°C, ⛅, starker Regen, mäßiger Wind 20 km/h, Böen bis 45 km/h ab
   70% bewölkt · Max 08:00
 
 ━━ Segment 1: km 0.0–12.0 | 08:00–12:00 | ↑500m → 1400m ━━
-  Time   Temp   Wind   Gust   WDir   Rain   Rain%   Thdr     Cloud 
+  Zeit   Temp   Wind   Gust   WDir   Rain   Rain%   Thdr     Cloud 
   -----  -----  -----  -----  -----  -----  ------  -------  ------
   08     15.0   20     45     250°   2.0    60      mittel   ⛅     
   09     15.0   20     45     250°   2.0    60      mittel   ⛅     
@@ -26,18 +26,18 @@ E1: 15–15°C, ⛅, starker Regen, mäßiger Wind 20 km/h, Böen bis 45 km/h ab
 
 ━━ Nacht am Ziel (1400m) ━━
 Ankunft 12:00 → Morgen 06:00
-  Time   Temp   Wind   Gust   WDir   Rain   Rain%   Thdr     Cloud 
+  Zeit   Temp   Wind   Gust   WDir   Rain   Rain%   Thdr     Cloud 
   -----  -----  -----  -----  -----  -----  ------  -------  ------
-  12     15.0   20     45     W      4.0    60      mittel   ⛅     
-  14     15.0   20     45     W      4.0    60      mittel   ⛅     
-  16     15.0   20     45     W      4.0    60      mittel   ⛅     
-  18     15.0   20     45     W      4.0    60      mittel   ⛅     
-  20     15.0   20     45     W      4.0    60      mittel   ⛅     
-  22     15.0   20     45     W      4.0    60      mittel   ⛅     
-  00     15.0   20     45     W      4.0    60      mittel   ⛅     
-  02     15.0   20     45     W      4.0    60      mittel   ⛅     
-  04     15.0   20     45     W      4.0    60      mittel   ⛅     
-  06     15.0   20     45     W      2.0    60      mittel   ⛅     
+  12     15.0   20     45     250°   4.0    60      mittel   ⛅     
+  14     15.0   20     45     250°   4.0    60      mittel   ⛅     
+  16     15.0   20     45     250°   4.0    60      mittel   ⛅     
+  18     15.0   20     45     250°   4.0    60      mittel   ⛅     
+  20     15.0   20     45     250°   4.0    60      mittel   ⛅     
+  22     15.0   20     45     250°   4.0    60      mittel   ⛅     
+  00     15.0   20     45     250°   4.0    60      mittel   ⛅     
+  02     15.0   20     45     250°   4.0    60      mittel   ⛅     
+  04     15.0   20     45     250°   4.0    60      mittel   ⛅     
+  06     15.0   20     45     250°   2.0    60      mittel   ⛅     
   * Temperatur/Nullgradgrenze: Minimum im 2h-Block
 
 

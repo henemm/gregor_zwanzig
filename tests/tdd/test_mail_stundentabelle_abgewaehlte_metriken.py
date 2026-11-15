@@ -40,8 +40,9 @@ def test_ac9_ganze_mail_ohne_stundengeruest():
         tz=ZoneInfo("Europe/Berlin"), friendly_keys=set(),
     )
     assert "KHW 403" in html
-    assert ">Time</th>" not in html
-    assert ">Risk</th>" not in html
+    # #3047 AC-17: Kopf in Nutzersprache (Default de: Zeit/Risiko).
+    assert ">Zeit</th>" not in html and ">Time</th>" not in html
+    assert ">Risiko</th>" not in html and ">Risk</th>" not in html
 
 
 def test_ac10_sichtbare_metrik_behaelt_geruest():
@@ -49,6 +50,6 @@ def test_ac10_sichtbare_metrik_behaelt_geruest():
 
     rows = [_FULL_ROW.copy() for _ in range(3)]
     out = _render_html_table(rows, friendly_keys=set(), allowed_col_keys={"wind"}, ampel=resolve_ampel(None))
-    assert "Time" in out and "Risk" in out
+    assert "Zeit" in out and "Risiko" in out  # #3047 AC-17 (Default de)
     assert "<thead>" in _render_html_table(rows, friendly_keys=set(), ampel=resolve_ampel(None))
     assert "<thead>" in _render_html_table([], friendly_keys=set(), allowed_col_keys=set(), ampel=resolve_ampel(None))
