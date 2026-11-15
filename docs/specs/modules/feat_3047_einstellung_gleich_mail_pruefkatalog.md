@@ -3,7 +3,7 @@ entity_id: feat_3047_einstellung_gleich_mail_pruefkatalog
 type: feature
 created: 2026-11-15
 updated: 2026-11-15
-status: draft
+status: approved
 version: "1.0"
 issue: 3047
 workflow: feat-3047-einstellung-gleich-mail
@@ -14,7 +14,7 @@ tags: [einstellungen, mail, pruefkatalog, reihenfolge, roh-einfach, validator, e
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO-Freigabe 2026-11-15)
 
 ## Purpose
 
