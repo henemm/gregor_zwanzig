@@ -334,6 +334,23 @@ export function zeilenGruppen(auswahl: string[], eig: Record<string, MetrikEigen
 	return folge.filter((g) => je.has(g)).map((g) => ({ gruppe: g, metriken: je.get(g)! }));
 }
 
+/** Angebot „Nicht im Briefing" je Kontext als Daten (#2944): Trip bietet jede zentrale Metrik an,
+ *  Vergleich nur Metriken des Vergleichs-Katalogs (Gehzeit/Nacht sind trip-exklusiv, #1848 C).
+ *  Tabelle statt Kontext-Weiche (Ratsche context_herkunft_zweige_eingefroren). */
+const ANGEBOTS_FILTER: Record<Kontext, (id: string, katalogIds: Set<string>) => boolean> = {
+	route: () => true,
+	vergleich: (id, katalogIds) => katalogIds.has(id)
+};
+
+/** Angebotene Metriken in Gruppenfolge des zentralen Katalogs, ohne die Auswahl; die Auswahl
+ *  selbst bleibt unangetastet (AC-4). */
+export function briefingAngebot(context: Kontext, eig: Record<string, MetrikEigenschaften>, auswahl: string[], katalogIds: Set<string>): string[] {
+	const zugelassen = ANGEBOTS_FILTER[context];
+	return zeilenGruppen(Object.keys(eig), eig)
+		.flatMap((g) => g.metriken)
+		.filter((id) => zugelassen(id, katalogIds) && !auswahl.includes(id));
+}
+
 /** Aktive Metriken einer aufgeloesten Ampel (`enabled === true`), in Ampel-Reihenfolge. */
 export function aktiveMetriken(aufgeloest: Ampel): string[] {
 	return Object.entries(aufgeloest?.metrics ?? {}).filter(([, e]) => e?.enabled === true).map(([id]) => id);
