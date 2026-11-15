@@ -216,7 +216,11 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # einzige Unterschiede zum Vorher-Digest (8eeb5add…) sind „Evening Report" ->
 # „Abend-Briefing" (Klartext-Kopf), „Time" -> „Zeit" (Klartext + 2x HTML) und
 # „Risk" -> „Risiko" (2x HTML); alle uebrigen Zeichen unveraendert.
-_EXPECTED_SHA256 = "9741e32cf2921495eeec6c6e35e244c4ea3c8974f396a84bf399510bd1514083"
+# #3047 F6 (Nebenbefund F1) -- BEWUSST NEU GEMESSEN: einziger Unterschied zum
+# Vorher-Digest (9741e32c…) ist die Brand-Zeile „Evening-Briefing" ->
+# „Abend-Briefing" (HTML); NACHGEMESSEN: mit Katalogwert „Evening" ergibt der
+# Output exakt den alten Digest.
+_EXPECTED_SHA256 = "ba0f7521e9a15decfb99b9a43088a2cdae2018bf46e55c2bb02c61399868db40"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

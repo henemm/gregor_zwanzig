@@ -318,6 +318,14 @@ def _render_email_stat(
     )
 
 
+
+def _briefing_typ(report_type: str, lang: Lang) -> str:
+    """Briefing-Art („Abend“/„Evening“) in Nutzersprache (#3047 AC-17)."""
+    if report_type in ("morning", "evening", "alert"):
+        # i18n-dynamic: mail.kopf.typ_
+        return t(f"mail.kopf.typ_{report_type}", lang)
+    return report_type.title()
+
 def _render_footer(
     *,
     segments: list,
@@ -344,7 +352,7 @@ def _render_footer(
         f'letter-spacing:0.06em;">GREGOR ZWANZIG</span>'
         f'<span style="font-family:{FONT_DATA};font-size:11px;color:#5a5750;margin:0 8px;">&middot;</span>'
         f'<span style="font-family:{FONT_DATA};font-size:11px;color:#9a978d;">'
-        f'{t("mail.kopf.briefing", lang, typ=report_type.title())}</span>'
+        f'{t("mail.kopf.briefing", lang, typ=_briefing_typ(report_type, lang))}</span>'
         f'</div>'
         f'<div class="desktop-only" style="text-align:right;">'
         f'<span style="font-family:{FONT_DATA};font-size:11px;color:#9a978d;">'

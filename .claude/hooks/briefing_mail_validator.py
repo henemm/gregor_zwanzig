@@ -630,8 +630,13 @@ def _check_compact_blocks(text: str, lang: str = "de") -> list[str]:
     legitim weg (Issue #733 F001-Fix).
     """
     errors: list[str] = []
-    if not (" - " in text and "Report" in text):
-        errors.append("COMPACT: Kopf-Zeile (Trip - ... Report) fehlt")
+    # #3047 AC-17: Kopfzeile in Nutzersprache („<Trip> - Abend-Briefing" /
+    # „<Trip> - Evening Report"), Soll aus dem Katalog statt fest „Report".
+    kopf_muster = [_ml().muster(f"mail.kopf.bericht_{art}", lang)
+                   for art in ("morning", "evening", "alert", "allgemein")]
+    if not any(re.search(m, text) for m in kopf_muster):
+        kopf = _ml().erwartet("mail.kopf.bericht_evening", lang, name="Trip")
+        errors.append(f"COMPACT: Kopf-Zeile ({kopf}) fehlt")
     pille = "== " + _ml().erwartet("mail.pille.ueberschrift", lang).replace("Ü", "Ue") + " =="
     if pille not in text:
         errors.append(f"COMPACT: Block '{pille}' fehlt")
@@ -643,8 +648,9 @@ def _check_compact_blocks(text: str, lang: str = "de") -> list[str]:
 # --------------------------------------------------------------------------- #
 # Issue #3047 (Spec §6): Soll aus der gespeicherten Konfiguration (--konfig)
 # --------------------------------------------------------------------------- #
-_ZEIT_KOPF_RE = re.compile(r"^ {2}Time(?: +(.*?))?\s*$", re.MULTILINE)
-_REPORT_RE = re.compile(r" - (Morning|Evening) Report")
+_ZEIT_KOPF_RE = re.compile(r"^ {2}(?:Time|Zeit)(?: +(.*?))?\s*$", re.MULTILINE)
+_REPORT_RE = re.compile(r" - (Morning|Evening|Morgen|Abend)(?: Report|-Briefing)")
+_REPORT_ART = {"morning": "morning", "evening": "evening", "morgen": "morning", "abend": "evening"}
 _FOLD = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"})
 
 
@@ -684,8 +690,9 @@ def _soll_html_koepfe(html: str, lang: str) -> tuple[list, list, list]:
     etappe, nacht, ausblick = [], [], []
     for block in _table_blocks(html):
         th = _th_tokens(block)
-        if th and th[0] == "Time":
-            (nacht if block in nacht_bloecke else etappe).append(th[1:-1] if th[-1] == "Risk" else th[1:])
+        if th and th[0] in ("Time", "Zeit"):
+            (nacht if block in nacht_bloecke else etappe).append(
+                th[1:-1] if th[-1] in ("Risk", "Risiko") else th[1:])
         elif th and th[0] == tag:
             ausblick.append(th[1:-1] if th[-1] == "ACC" else th[1:])
     return etappe, nacht, ausblick
@@ -750,7 +757,7 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
              if p.get_content_type() in ("text/html", "text/plain")}
     html, plain = teile.get("text/html", ""), teile.get("text/plain", "")
     report = _REPORT_RE.search(plain or html or _decode_subject(msg["Subject"]))
-    s = soll["je_report"][report.group(1).lower() if report else "evening"]
+    s = soll["je_report"][_REPORT_ART[report.group(1).lower()] if report else "evening"]
     fehler = []
     if msg["X-GZ-Format"] != s["email_format"]:
         fehler.append(f"SOLL: Format '{msg['X-GZ-Format']}' statt '{s['email_format']}' (email_format)")
