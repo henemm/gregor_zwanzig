@@ -19,7 +19,7 @@ tags: [i18n, epic-2644, issue-2784, python, telegram, alert, bug]
 
 ## Purpose
 
-Nutzer mit Sprache Englisch sehen im Telegram-Briefing (Stil `rich`) und in den Alarm-Stundenzeilen (Mail Klartext und HTML, Telegram-Alarm) noch deutsche Stufenwörter („leicht", „kein", Wind-/Regen-Adjektive im Modus „Einfach"). Die Formatierer (`fmt_val`, `thunder_label`, `format_wind_strength`, `format_precip_intensity`) sind bereits sprachfähig; die Aufrufer reichen `lang` nicht durch. Der Fix reicht `lang` durch (Muster #2750). Deutsch bleibt byte-gleich, Protokoll-Token (`TH`, `VS`, `FZ`, `Zt`, `sms_code`, `compact_label`) bleiben unberührt.
+Nutzer mit Sprache Englisch sehen im Telegram-Briefing (Stil `rich`) und in den Alarm-Stundenzeilen (Mail Klartext und HTML, Telegram-Alarm) noch deutsche Stufenwörter („leicht", „kein", Wind-/Regen-Adjektive im Modus „Einfach"). Die Formatierer (`fmt_val`, `thunder_label`, `format_wind_strength`, `format_precip_intensity`) sind bereits sprachfähig; die Aufrufer reichen `lang` nicht durch. Der Fix reicht `lang` durch (Muster #2750). Deutsch bleibt byte-gleich, Protokoll-Token (`TH`, `VS`, `FZ`, `Zt`, `sms_code`, `compact_label`) bleiben unberührt. *Richtigstellung (#3014):* „Zt“ war hier fälschlich als sprachneutrales Protokoll-Kürzel geführt; es ist Nutzertext und folgt seit #3014 der Kontosprache (Englisch „Hr“), siehe `docs/specs/modules/i18n_zt_kopf_sprache_3014.md`.
 
 ## Source
 
@@ -125,3 +125,4 @@ Echter Renderer, kein Mock-Theater.
 
 - 2026-11-15: Initial spec created (Issue #2784)
 - 2026-11-15: Pflicht-Sektion Definition of Done ergänzt (CI-Spec-Gate)
+- 2026-11-15: Richtigstellung: "Zt" ist kein Protokoll-Kürzel, folgt der Kontosprache (Issue #3014)

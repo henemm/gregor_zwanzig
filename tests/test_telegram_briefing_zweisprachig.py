@@ -115,6 +115,11 @@ def test_ac3_kuerzel_zahlen_und_tabellen_identisch_zu_deutsch():
             tabellen += 1
             tab_de = b_de.split("<pre>", 1)[1].split("\n")
             tab_en = b_en.split("<pre>", 1)[1].split("\n")
+            # #3014: der Zeitspalten-Kopf ist Nutzertext ("Zt"/"Hr"), kein Kuerzel.
+            kopf_de, kopf_en = tab_de[1].split()[0], tab_en[1].split()[0]
+            assert (kopf_de, kopf_en) == ("Zt", "Hr")
+            tab_de[1] = tab_de[1].replace("Zt", "<Z>", 1)
+            tab_en[1] = tab_en[1].replace("Hr", "<Z>", 1)
             assert _ohne_stufe(tab_de, "de") == _ohne_stufe(tab_en, "en")
             assert _stufen(tab_de, "de") and _stufen(tab_en, "en")
             assert not _stufen(tab_de, "en") and not _stufen(tab_en, "de")

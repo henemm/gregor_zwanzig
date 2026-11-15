@@ -128,7 +128,7 @@ def _narrow_table(
     Spaltenbreiten werden an den breitesten Zellinhalt angepasst; zu breite
     Zeilen werden anschliessend hart umgebrochen (width-Constraint).
     """
-    headers = ["Zt"] + [_compact_label(m) for m in table_columns]
+    headers = [t("telegram.tabelle.zeit", lang)] + [_compact_label(m) for m in table_columns]
     matrix: list[list[str]] = []
     for r in rows:
         cells = [str(r.get("time", ""))]

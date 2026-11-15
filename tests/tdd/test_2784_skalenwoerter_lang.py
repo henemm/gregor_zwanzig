@@ -5,7 +5,7 @@ SPEC: docs/specs/modules/i18n_skalenwoerter_lang_2784.md
 
 Echte Renderer (``render_telegram_bubbles`` ueber die Golden-Fixture,
 ``render_email``/``render_telegram`` des Alarms), netzfrei, kein Mock.
-Protokoll-Kuerzel (TH, VS, FZ, Zt) bleiben, Deutsch bleibt byte-gleich,
+Protokoll-Kuerzel (TH, VS, FZ) bleiben (Zeitspalten-Kopf folgt der Sprache, #3014), Deutsch bleibt byte-gleich,
 die Ausblick-Gewitterzelle bleibt nach #2665 bewusst deutsch.
 """
 from __future__ import annotations
@@ -59,8 +59,8 @@ def test_ac1_briefing_en_segmenttabellen_ohne_deutsches_stufenwort():
     """AC-1: Segment-Tabellen zeigen ``none``/``light`` statt ``kein``/``leicht``,
     Kopfzeile mit Protokoll-Kuerzeln unveraendert."""
     for tab in _tabellen(build_texts(lang="en")):
-        kopf = next(z for z in tab.splitlines() if z.startswith("Zt "))
-        assert kopf.split() == ["Zt", "T", "W", "G", "R", "TH", "VS", "FZ"]
+        kopf = next(z for z in tab.splitlines() if z.startswith("Hr "))
+        assert kopf.split() == ["Hr", "T", "W", "G", "R", "TH", "VS", "FZ"]
         assert not _DE_STUFE.search(tab), f"deutsches Stufenwort in en-Tabelle:\n{tab}"
     ziel = _tabellen(build_texts(lang="en"))[1]
     zeile_13 = next(z for z in ziel.splitlines() if z.startswith("13 "))
