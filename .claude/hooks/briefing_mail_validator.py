@@ -641,10 +641,136 @@ def _check_compact_blocks(text: str, lang: str = "de") -> list[str]:
 
 
 # --------------------------------------------------------------------------- #
+# Issue #3047 (Spec §6): Soll aus der gespeicherten Konfiguration (--konfig)
+# --------------------------------------------------------------------------- #
+_ZEIT_KOPF_RE = re.compile(r"^ {2}Time(?: +(.*?))?\s*$", re.MULTILINE)
+_REPORT_RE = re.compile(r" - (Morning|Evening) Report")
+_FOLD = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"})
+
+
+def _soll_modul():
+    """``_soll_aus_konfiguration`` lazy (Modul bleibt ohne ``src`` ladbar)."""
+    import _soll_aus_konfiguration
+
+    return _soll_aus_konfiguration
+
+
+def _kuerzel_in_zeile(zeile: str, universum) -> list[str]:
+    """Spaltenkuerzel ``<Kuerzel> <Wert>`` einer Klartextzeile in Textfolge."""
+    treffer = [(m.start(), k) for k in universum
+               for m in re.finditer(r"(?<!\S)" + re.escape(k) + r" (?=\S)", zeile)]
+    return [k for _pos, k in sorted(treffer)]
+
+
+def _block_zeilen(text: str, ueberschrift: str) -> list[str]:
+    """Zeilen unter einer Ueberschrift bis zur naechsten Leerzeile."""
+    zeilen = text.splitlines()
+    for i, zeile in enumerate(zeilen):
+        if zeile.strip() == ueberschrift:
+            block = []
+            for folge in zeilen[i + 1:]:
+                if not folge.strip():
+                    break
+                if not folge.startswith(" "):
+                    block.append(folge)
+            return block
+    return []
+
+
+def _soll_html_koepfe(html: str, lang: str) -> tuple[list, list, list]:
+    """(Etappen-, Nacht-, Ausblick-Spaltenkoepfe) des HTML-Teils."""
+    nacht_bloecke = _night_table_blocks(html, lang)
+    tag = _ml().erwartet("mail.ausblick.spalte_tag", lang)
+    etappe, nacht, ausblick = [], [], []
+    for block in _table_blocks(html):
+        th = _th_tokens(block)
+        if th and th[0] == "Time":
+            (nacht if block in nacht_bloecke else etappe).append(th[1:-1] if th[-1] == "Risk" else th[1:])
+        elif th and th[0] == tag:
+            ausblick.append(th[1:-1] if th[-1] == "ACC" else th[1:])
+    return etappe, nacht, ausblick
+
+
+def _soll_klartext_koepfe(plain: str, lang: str) -> tuple[list, list, list]:
+    """(Etappen-, Nacht-, Ausblick-Spalten) des Klartext-Teils."""
+    nacht_pos = plain.find(_ml().marker("mail.nacht.am_ziel", lang))
+    etappe, nacht = [], []
+    for m in _ZEIT_KOPF_RE.finditer(plain):
+        spalten = (m.group(1) or "").split()
+        (nacht if 0 <= nacht_pos < m.start() else etappe).append(spalten)
+    universum = _soll_modul().ALLE_KUERZEL
+    zeilen = _block_zeilen(plain, _ml().erwartet("mail.ausblick.naechste_etappen", lang))
+    return etappe, nacht, [_kuerzel_in_zeile(z, universum) for z in zeilen]
+
+
+def _soll_vergleich(was: str, koepfe: list, soll: list | None) -> list[str]:
+    if soll is None:
+        return []
+    meldungen = []
+    for i, ist in enumerate(koepfe):
+        diff = _soll_modul().abweichung(ist, soll)
+        if diff:
+            meldungen.append(f"SOLL: {was} {i + 1}: {diff}")
+    return meldungen
+
+
+def _soll_tabellen(teil: str, etappe: list, nacht: list, ausblick: list, s: dict) -> list[str]:
+    fehler = _soll_vergleich(f"Etappen-Stundentabelle ({teil})", etappe, s["stunden"])
+    if nacht and not s["nacht"]:
+        fehler.append(f"SOLL: Nachttabelle ({teil}) erscheint, obwohl show_night_block aus ist")
+    fehler += _soll_vergleich(f"Nachttabelle ({teil})", nacht, s["stunden"])
+    if ausblick and not s["ausblick_an"]:
+        fehler.append(f"SOLL: Ausblick ({teil}) erscheint, obwohl er laut Konfiguration aus ist")
+    elif s["ausblick"] is not None:
+        fehler += _soll_vergleich(f"Ausblick ({teil}) Zeile", ausblick, s["ausblick"][
+            "html" if teil == "HTML" else "klartext"])
+    return fehler
+
+
+def _soll_kompakt(text: str, s: dict, lang: str) -> list[str]:
+    """Kompaktformat: Reihenfolge der Ausblick-Tokens je Tageszeile."""
+    ueberschrift = _ml().erwartet("mail.ausblick.naechste_etappen", lang).translate(_FOLD)
+    zeilen = [_kuerzel_in_zeile(z, _soll_modul().ALLE_KUERZEL) for z in _block_zeilen(text, ueberschrift)]
+    if zeilen and not s["ausblick_an"]:
+        return ["SOLL: Ausblick (Kompakt) erscheint, obwohl er laut Konfiguration aus ist"]
+    if s["ausblick"] is None or s["ausblick"]["fest"]:
+        return []
+    return _soll_vergleich("Ausblick (Kompakt) Zeile", zeilen, s["ausblick"]["klartext"])
+
+
+def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
+    """Issue #3047 AC-19: Auswahl und Reihenfolge der Mail gegen das Soll aus der
+    gespeicherten Trip-Konfiguration (``_soll_aus_konfiguration``). Prueft die
+    Spaltenfolge jeder Etappen-Stundentabelle, der Nachttabelle und des
+    Ausblicks im HTML- UND im Klartext-Teil, im Kompaktformat die Folge der
+    Ausblick-Tokens. Jede Meldung nennt die abweichende Spalte."""
+    if soll.get("kontext") != "trip":
+        return ["SOLL: --konfig ist keine Trip-Konfiguration (Orte: email_spec_validator.py)"]
+    teile = {p.get_content_type(): _part_text(p) for p in msg.walk()
+             if p.get_content_type() in ("text/html", "text/plain")}
+    html, plain = teile.get("text/html", ""), teile.get("text/plain", "")
+    report = _REPORT_RE.search(plain or html or _decode_subject(msg["Subject"]))
+    s = soll["je_report"][report.group(1).lower() if report else "evening"]
+    fehler = []
+    if msg["X-GZ-Format"] != s["email_format"]:
+        fehler.append(f"SOLL: Format '{msg['X-GZ-Format']}' statt '{s['email_format']}' (email_format)")
+    if msg["X-GZ-Format"] == "compact":
+        return fehler + _soll_kompakt(plain, s, lang)
+    koepfe_html = _soll_html_koepfe(html, lang)
+    koepfe_plain = _soll_klartext_koepfe(plain, lang)
+    for name, h, p in zip(("Etappen-Stundentabelle", "Nachttabelle", "Ausblick"), koepfe_html, koepfe_plain):
+        if bool(h) != bool(p):
+            fehler.append(f"SOLL: {name} fehlt im {'Klartext' if h else 'HTML'}-Teil")
+    fehler += _soll_tabellen("HTML", *koepfe_html, s)
+    return fehler + _soll_tabellen("Klartext", *koepfe_plain, s)
+
+
+# --------------------------------------------------------------------------- #
 # Oeffentliche API
 # --------------------------------------------------------------------------- #
 def validate_message(
     msg: Message, max_bytes: int = _MAX_BYTES_DEFAULT, warnungen: list | None = None,
+    soll: dict | None = None,
 ) -> tuple[bool, list[str]]:
     """Faellt das Urteil ueber ein geparstes email.message.Message-Objekt.
 
@@ -690,6 +816,9 @@ def validate_message(
     widerspruch = _ml().widerspruch(text, lang, _LANG_MARKER_KEYS)
     if widerspruch:
         return False, [widerspruch, *errors]
+    if soll is not None:  # Issue #3047: nur mit --konfig, sonst unveraendert
+        abweichungen = pruefe_soll(msg, soll, lang)
+        return ok and not abweichungen, errors + abweichungen
     return ok, errors
 
 
@@ -821,13 +950,14 @@ def run_validation(
     warnungen: list | None = None,
     lang: str = "de",
     to_contains: str | None = None,
+    soll: dict | None = None,
 ) -> tuple[bool, list[str]]:
-    """Holt die (gefilterte) Mail und validiert sie."""
+    """Holt die (gefilterte) Mail und validiert sie (``soll``: #3047 --konfig)."""
     msg = fetch_latest_message(
         mail_type=mail_type, subject_contains=subject_contains, max_scan=max_scan,
         lang=lang, to_contains=to_contains,
     )
-    return validate_message(msg, max_bytes, warnungen=warnungen)
+    return validate_message(msg, max_bytes, warnungen=warnungen, soll=soll)
 
 
 def _write_validation_log(success: bool, errors: list, warnings: list | None = None) -> None:
@@ -889,6 +1019,9 @@ def main() -> None:
                         help="Wie viele neueste Mails maximal scannen (default: 50)")
     parser.add_argument("--eml", metavar="PFAD", default=None,
                         help="Mail aus dieser .eml-Datei pruefen statt per IMAP (#2663)")
+    parser.add_argument("--konfig", metavar="PFAD", default=None,
+                        help="Gespeichertes Trip-JSON des Nutzers: Auswahl und Reihenfolge "
+                             "der Spalten muessen ihm entsprechen (#3047)")
     _e2e_paths.sprach_argumente(parser)
     args = parser.parse_args()
 
@@ -899,9 +1032,11 @@ def main() -> None:
 
     warnungen: list = []
     try:
+        # #3047: Soll aus der gespeicherten Konfiguration; ohne --konfig None.
+        soll = _soll_modul().lade_soll(args.konfig, args.lang or "de") if args.konfig else None
         if args.eml:  # #2663: Mail aus Datei statt IMAP
             msg = email.message_from_bytes(Path(args.eml).read_bytes())
-            success, errors = validate_message(msg, args.max_bytes, warnungen=warnungen)
+            success, errors = validate_message(msg, args.max_bytes, warnungen=warnungen, soll=soll)
             auswahl = _e2e_paths.eml_auswahl_fehler(msg, args.lang, args.to_contains)
             success, errors = success and not auswahl, auswahl + errors
         else:
@@ -913,6 +1048,7 @@ def main() -> None:
                 warnungen=warnungen,
                 lang=args.lang or "de",
                 to_contains=args.to_contains,
+                soll=soll,
             )
     except Exception as e:  # IMAP / technischer Fehler
         print(f"⚠️  TECHNISCHER FEHLER: Mail konnte nicht geladen werden: {e}")
