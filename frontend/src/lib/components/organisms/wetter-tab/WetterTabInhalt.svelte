@@ -25,7 +25,7 @@
 	import NichtImBriefing from './NichtImBriefing.svelte';
 	import WarnungenRadarKarte from './WarnungenRadarKarte.svelte';
 	import AnpassenKarte from './AnpassenKarte.svelte';
-	import { alarmZaehler, altSchluesselAusKatalog, eigeneVorlageAmpel, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
+	import { alarmZaehler, altSchluesselAusKatalog, briefingAngebot, eigeneVorlageAmpel, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
 	import type { AlarmAb, AltSchluessel, Farbe, Kontext } from '../../shared/wetter-tab/ampelModell.ts';
 	import { ladeWetterDaten, type WetterDaten } from '../../shared/wetter-tab/wetterTabLaden.ts';
 	import { SPEICHERER, anlegeSpeicherer, type SpeicherOptionen } from '../../shared/wetter-tab/wetterTabSpeicherung.ts';
@@ -65,6 +65,7 @@
 	let hinzu = $state<string | null>(null);
 	let aggregation: (id: string) => string = () => 'max';
 	let altSchluessel: AltSchluessel = {};
+	let katalogIds = $state<Set<string>>(new Set());
 	let gemeldet = '';
 
 	const abo = (): Z.AboSicht => (trip ?? preset ?? {}) as Z.AboSicht;
@@ -97,6 +98,7 @@
 			const [d, katalog] = await Promise.all([ladeWetterDaten(api, context), VERGLEICHS_KATALOG[context]()]);
 			aggregation = (id) => katalog.find((e) => e.metric_id === id)?.aggregation ?? 'max';
 			altSchluessel = altSchluesselAusKatalog(katalog);
+			katalogIds = new Set(katalog.flatMap((e) => (e.metric_id ? [e.metric_id] : [])));
 			daten = d;
 			if (!stand) {
 				stand = Z.standAusAbo(context, abo(), d.vorlagen, altSchluessel);
@@ -200,7 +202,7 @@
 	const zaehler = $derived(anzeige && daten ? alarmZaehler(anzeige.ampel, anzeige.auswahl, daten.eig) : null);
 	const nichtIm = $derived(
 		anzeige && daten
-			? zeilenGruppen(Object.keys(daten.eig), daten.eig).flatMap((g) => g.metriken).filter((id) => !anzeige.auswahl.includes(id)).map((id) => ({ id, name: name(id) }))
+			? briefingAngebot(context, daten.eig, anzeige.auswahl, katalogIds).map((id) => ({ id, name: name(id) }))
 			: []
 	);
 	const aboAmpel = $derived(stand && daten ? verschmelzen(vorlagen[stand.vorlageId], Z.mengeVon(stand, vorlagen)) : {});

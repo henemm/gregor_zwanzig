@@ -689,6 +689,12 @@ Reiter „Wetter" (Teil-PR 3, #2794, 2026-11-10): `shared/wetter-tab/*` + `Wette
 den Bereich `zustellung`. `SavePresetDialog` speichert Vorlagen mit `ampel`/`kind`, ohne
 Zeithorizonte/Zusammenfassung. Texte über den i18n-Katalog `wetter` (de/en). Spec:
 `docs/specs/modules/feat_2794_s3a_teil3_wetter.md`.
+Angebot „Nicht im Briefing” (Fix #2944, 2026-11-15): Die Ableitung `briefingAngebot` in
+`shared/wetter-tab/ampelModell.ts` filtert das Angebot je Kontext über die Tabelle `ANGEBOTS_FILTER`.
+Im Ort-/Vergleichs-Kontext (`vergleich`) werden nur Metriken des Vergleichs-Katalogs angeboten, also
+keine trip-exklusiven Gehzeit- und Nacht-Größen. Im Trip-Kontext (`route`) bleibt es bei allen zentralen
+Metriken. Die bestehende Auswahl wird nie verändert, nur das Angebot. Spec:
+`docs/specs/modules/fix_2944_orts_nicht_im_briefing.md`.
 
 ---
 
