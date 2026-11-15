@@ -31,6 +31,12 @@ RED (``xfail(strict=True)``, Status ``rot_erwartet``):
 Behoben (F4): O3 / AC-21 -- der feste Klartext-Ausblick zeigt dieselben
 sieben Spalten wie das HTML (``src/output/renderers/email/outlook.py``).
 
+F8 (#3039 auf main): Roh/Einfach der Vergleichstabelle aus
+``channel_layouts.email`` ist kein ``offen_feature`` mehr (W11-Faelle gruen,
+paarweise mit Darstellung). Offen (``rot_erwartet``): Totalschnitt einer nicht
+leeren ``channel_active_metrics.email``-Liste -> leere Tabelle statt Rueckfall
+(AC-10, ``resolve_channel_enabled_metrics``).
+
 Golden (AC-11): ``orte_altbestand*.golden.{html,txt}`` frieren den Ist-Stand
 byte-genau ein (feste Kennung, feste Uhr, feste Wetterdaten). Die Golden
 ``orte_altbestand_ohne_grundauswahl.golden.txt`` traegt seit F4 EINZELN die
@@ -52,6 +58,7 @@ from tests.helpers.einstellung_gleich_mail_orte import (
     html_ausblick,
     html_stundenverlauf,
     html_vergleichstabelle,
+    html_vergleichszellen,
     ist_zahl,
     katalogfolge,
     katalogtext,
@@ -59,14 +66,17 @@ from tests.helpers.einstellung_gleich_mail_orte import (
     klartext_ausblick,
     klartext_stundenverlauf,
     klartext_vergleichstabelle,
+    klartext_vergleichswerte,
     kopf_von,
     preset_dict,
     sende_orte_mail,
     soll_ausblick,
     soll_einfach,
     soll_stundenverlauf,
+    soll_vergleichsformen,
     soll_vergleichstabelle,
 )
+from tests.helpers.einstellung_gleich_mail_trip import zellform
 
 FALLLISTE = FIXTURE_DIR / "fallliste_orte.json"
 NAME_JE_ID = {lid: v[0] for lid, v in ORTE.items()}
@@ -108,11 +118,27 @@ def pruefe_vergleichstabelle(mail, fmt: str) -> None:
         ist_orte, ist = html_vergleichstabelle(mail.html)
         assert ist_orte == orte, f"HTML Orte-Spalten {ist_orte}, eingestellt {orte}"
         assert ist == soll, f"HTML Zeilen {ist}, eingestellt {soll} (Nutzer {mail.uid})"
-        return
-    folge, zeilen = klartext_vergleichstabelle(mail.plain)
-    assert folge == orte, f"Klartext Orts-Bloecke {folge}, eingestellt {orte}"
-    for ort in orte:
-        assert zeilen[ort] == soll, f"Klartext {ort}: Zeilen {zeilen[ort]}, eingestellt {soll}"
+    else:
+        folge, zeilen = klartext_vergleichstabelle(mail.plain)
+        assert folge == orte, f"Klartext Orts-Bloecke {folge}, eingestellt {orte}"
+        for ort in orte:
+            assert zeilen[ort] == soll, f"Klartext {ort}: Zeilen {zeilen[ort]}, eingestellt {soll}"
+    pruefe_vergleichsformen(mail, fmt)
+
+
+def pruefe_vergleichsformen(mail, fmt: str) -> None:
+    """#3039 / Konzept W11: Roh-Zeile zeigt eine Zahl, Einfach-Zeile Ampelpunkt,
+    Wort oder Symbol (ohne Ziffer) -- in jeder Ortsspalte bzw. jedem Ortsblock."""
+    soll = soll_vergleichsformen(mail.roh)
+    if fmt == "html":
+        zellen = html_vergleichszellen(mail.html)
+        ist = {mid: [zellform(text, frag) for text, frag in zellen[mid]] for mid in soll}
+    else:
+        werte = klartext_vergleichswerte(mail.plain)
+        ist = {mid: [zellform(werte[ort][mid]) for ort in _orte(mail.roh)] for mid in soll}
+    for mid, formen in ist.items():
+        assert formen == [soll[mid]] * len(formen), (
+            f"{fmt}: Zeile {mid} steht auf {soll[mid]}, Zellen {formen} (Nutzer {mail.uid})")
 
 
 def pruefe_stundenverlauf(mail, fmt: str, lang: str = "de") -> None:
@@ -185,6 +211,35 @@ def _formate(ids, darstellung: str) -> dict[str, bool]:
     return gemischt
 
 
+#: Register-Groessen mit mehr als einer Darstellung (``format_modes``) aus
+#: POOL -- von Hand gesetztes Orakel fuer die Vergleichstabelle (#3039).
+VERGLEICH_EINFACH_FAEHIG = ("wind", "gust", "precipitation")
+
+
+def _layout(folge, darstellung: str) -> list[dict]:
+    """``channel_layouts.email`` (#3039) in der Fall-Folge. Einfach: jede Zeile
+    ``true`` (auch die ohne Einfachform -> bleibt Zahl, #3039 AC-8). Gemischt:
+    die einfach-faehigen Zeilen abwechselnd ``true`` / ohne Angabe (= Roh,
+    #3039 AC-7), die uebrigen ausdruecklich ``false``. POOL-Groessen ausserhalb
+    der Folge stehen als ``enabled: false`` (sonst kaemen sie als "neu" hinten)."""
+    faehig = [m for m in folge if m in VERGLEICH_EINFACH_FAEHIG]
+    eintraege = []
+    for m in folge:
+        e = {"metric_id": m, "enabled": True}
+        if darstellung == "einfach":
+            e["use_friendly_format"] = True
+        elif m in faehig:
+            if faehig.index(m) % 2 == 0:
+                e["use_friendly_format"] = True
+        else:
+            e["use_friendly_format"] = False
+        eintraege.append(e)
+    if darstellung == "gemischt":
+        assert len(faehig) >= 2, "gemischt braucht Roh UND Einfach"
+    return eintraege + [{"metric_id": m, "enabled": False, "use_friendly_format": True}
+                        for m in POOL if m not in folge]
+
+
 def preset_aus_werten(liste: str, werte: dict) -> dict:
     """Rohes Preset aus ``orte_basis.json`` plus den Dimensionswerten eines Falls."""
     p = preset_dict("basis")
@@ -196,6 +251,8 @@ def preset_aus_werten(liste: str, werte: dict) -> dict:
     if muster == "nie_eingestellt":
         if liste != "orte_stundenverlauf":
             dc["active_metrics"] = _am(folge)  # Grundauswahl in der Fall-Folge, Liste ohne Eintrag
+    elif liste == "orte_vergleichstabelle" and werte["darstellung"] != "roh":
+        dc["channel_layouts"] = {"email": _layout(folge, werte["darstellung"])}
     elif liste == "orte_vergleichstabelle":
         dc["channel_active_metrics"] = {"email": [] if muster == "bewusst_leer" else _am(folge)}
     else:
@@ -270,6 +327,77 @@ def test_ac5_ortsreihenfolge_vertauscht(location_ids):
         pruefe_ausblick(mail, fmt)
     assert list(html_ausblick(mail.html)) == erwartet
     assert list(klartext_ausblick(mail.plain)) == erwartet
+
+
+def _faelle(testname: str) -> list:
+    """Faelle der Fallliste zu ``testname``; ``rot_erwartet`` -> ``xfail(strict)``."""
+    faelle = json.loads(FALLLISTE.read_text(encoding="utf-8"))["faelle"]
+    return [pytest.param(f, id=f["id"], marks=[pytest.mark.xfail(
+                strict=True, reason=f"#3047 RED {f['befund']}")] if f["status"] == "rot_erwartet" else [])
+            for f in faelle if f["test"] == testname]
+
+
+@pytest.mark.parametrize("fall", _faelle("test_w11_vergleichstabelle_roh_einfach"))
+def test_w11_vergleichstabelle_roh_einfach(fall):
+    """Konzept W11 / #3039 (AC-1, AC-7, AC-8): ``channel_layouts.email`` legt
+    Folge, Aus und Roh/Einfach der Vergleichstabelle fest und hat Vorrang vor
+    ``channel_active_metrics``. Gemischt, ungleich Katalogfolge: Niederschlag
+    Einfach (Ampelpunkt/Wort), Bewoelkung Einfach (Symbol), Wind ohne Angabe
+    (= Roh), Boeen ausdruecklich Roh, Temperatur Einfach ohne Einfachform
+    (bleibt Zahl); Regenwahrscheinlichkeit ``enabled: false`` fehlt."""
+    p = preset_dict("basis")
+    dc = p["display_config"]
+    dc["active_metrics"] += [{"metric_id": "cloud_total", "aggregation": "avg"}]
+    dc["channel_active_metrics"] = {"email": _am(["temperature", "wind"])}  # tritt zurueck
+    dc["channel_layouts"] = {"email": [
+        {"metric_id": "precipitation", "enabled": True, "use_friendly_format": True},
+        {"metric_id": "cloud_total", "enabled": True, "use_friendly_format": True},
+        {"metric_id": "wind", "enabled": True},
+        {"metric_id": "gust", "enabled": True, "use_friendly_format": False},
+        {"metric_id": "temperature", "enabled": True, "use_friendly_format": True},
+        {"metric_id": "rain_probability", "enabled": False, "use_friendly_format": False},
+    ]}
+    mail = sende_orte_mail(p)
+    soll = soll_vergleichstabelle(mail.roh)
+    assert soll == ["precipitation", "cloud_total", "wind", "gust", "temperature"] != katalogfolge(soll)
+    # Hand-Orakel (Register: Wind/Boeen/Niederschlag/Bewoelkung mit Einfachform).
+    assert soll_vergleichsformen(mail.roh) == {
+        "precipitation": "einfach", "cloud_total": "einfach", "wind": "zahl",
+        "gust": "zahl", "temperature": "zahl"}
+    pruefe_vergleichstabelle(mail, fall["format"])
+    if fall["format"] == "html":
+        zellen = html_vergleichszellen(mail.html)
+        assert "rain_probability" not in zellen
+        assert all("border-radius:50%" in frag for _t, frag in zellen["precipitation"]), zellen["precipitation"]
+        assert all(t == "⛅" for t, _f in zellen["cloud_total"]), zellen["cloud_total"]
+    else:
+        for ort, werte in klartext_vergleichswerte(mail.plain).items():
+            assert "rain_probability" not in werte, ort
+            assert werte["precipitation"] in ("leicht", "mäßig", "stark"), werte
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac10_vergleichstabelle_totalschnitt"))
+def test_ac10_vergleichstabelle_totalschnitt(fall):
+    """#3047 AC-10 (an #3039 uebergeben): Grundauswahl Wind, Temperatur; die
+    gespeicherte E-Mail-Liste ist NICHT leer, liegt aber ganz ausserhalb
+    (Boeen, Regenwahrscheinlichkeit) -> dokumentierter Rueckfall auf die volle
+    Grundauswahl statt einer Tabelle ohne Metrik-Zeile.
+    Variante ``channel_layouts``: Wind/Temperatur ohne Eintrag folgen hinten
+    (#3039 AC-14). Variante ``channel_active_metrics``: Ist leer, weil
+    ``resolve_channel_enabled_metrics`` ohne Rueckfall schneidet."""
+    p = preset_dict("basis")
+    dc = p["display_config"]
+    dc["active_metrics"] = _am(["wind", "temperature"])
+    if fall["variante"] == "channel_layouts":
+        dc["channel_layouts"] = {"email": [
+            {"metric_id": m, "enabled": True, "use_friendly_format": False}
+            for m in ("gust", "rain_probability")]}
+    else:
+        dc["channel_active_metrics"] = {"email": _am(["gust", "rain_probability"])}
+    mail = sende_orte_mail(p)
+    assert not {"gust", "rain_probability"} & set(grundauswahl(mail.roh)), "Vorbedingung: Totalschnitt"
+    assert soll_vergleichstabelle(mail.roh) == ["wind", "temperature"]
+    pruefe_vergleichstabelle(mail, fall["format"])
 
 
 def test_vergleichstabelle_bewusst_leer_ohne_rueckfall():

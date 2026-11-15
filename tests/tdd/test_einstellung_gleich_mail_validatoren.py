@@ -317,6 +317,29 @@ def test_orte_klartext_ausblick_fehlt_scheitert(tmp_path, orte_mail):
     assert "SOLL: Ausblick fehlt im Klartext-Teil" in aus, aus
 
 
+def test_orte_channel_layouts_vor_channel_active_metrics(monkeypatch, tmp_path):
+    """#3039 / F8: das Orte-Soll der Vergleichstabelle liest
+    ``channel_layouts.email`` (Folge Niederschlag, Wind, Temperatur; Boeen
+    ``enabled: false``) VOR ``channel_active_metrics.email`` (Wind, Temperatur,
+    Niederschlag). Die so gebaute Mail ist gruen; die Mail des Presets ohne
+    ``channel_layouts`` scheitert gegen diese Konfiguration mit Zeilenname."""
+    preset = _orte_preset()
+    preset["display_config"]["channel_layouts"] = {"email": [
+        {"metric_id": "precipitation", "enabled": True},
+        {"metric_id": "gust", "enabled": False},
+        {"metric_id": "wind", "enabled": True, "use_friendly_format": False},
+        {"metric_id": "temperature", "enabled": True},
+    ]}
+    konfig = _orte_konfig(tmp_path, preset, "layout")
+    code, aus = _lauf(tmp_path, ORTE, _orte_eml(monkeypatch, preset), "--konfig", konfig)
+    assert code == 0, aus
+    code, aus = _lauf(tmp_path, ORTE, _orte_eml(monkeypatch, _orte_preset()), "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: Vergleichstabelle Zeilen (HTML)" in aus, aus
+    assert "SOLL: Vergleichstabelle Zeilen (Klartext)" in aus, aus
+    assert "steht 'Wind' statt 'Niederschlag'" in aus, aus
+
+
 def test_orte_altbestand_ausblick_klartext_wie_html(monkeypatch, tmp_path):
     """AC-21: Altbestand ohne ``active_metrics``/``outlook_metrics`` -- der
     Klartext-Ausblick zeigt dieselben Spalten wie das HTML (heute 4 statt 7)."""

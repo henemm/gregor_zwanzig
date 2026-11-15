@@ -22,7 +22,8 @@ Die Regeln sind das dokumentierte Produktverhalten:
   Rueckfall auf die volle Grundauswahl (#1848 A3). Ohne Grundauswahl
   (``metrics``/``active_metrics`` fehlt) die sieben festen Spalten, im HTML
   wie im Klartext (AC-21).
-* Orte: Vergleichstabelle = ``channel_active_metrics.email`` geschnitten mit
+* Orte: Vergleichstabelle = ``channel_layouts.email`` (Folge, ``enabled``,
+  #3039) vor ``channel_active_metrics.email``, je geschnitten mit
   ``active_metrics`` (#1703 S8), Stundenverlauf = ``hourly_metrics``,
   Ortsfolge = ``location_ids`` (#1359).
 
@@ -208,8 +209,29 @@ def _uebersicht_labels(paare: list[tuple[str, str]], lang: str) -> list[str]:
             for b, (_m, a) in zip(basis, paare)]
 
 
+def _orte_layout(eintraege: list, grund: list[tuple[str, str]] | None) -> list[tuple[str, str]]:
+    """``channel_layouts.email`` (#3039, ADR-0119): Listenfolge, ``enabled: false``
+    fehlt; eine Kennung traegt alle ihre Zeilen der Compare-Katalogtabelle, nur
+    die der Grundauswahl; Zeilen der Grundauswahl ohne jeden Eintrag (auch
+    keinen ausgeschalteten) folgen hinten (#3039 AC-14)."""
+    erfasst: set[tuple[str, str]] = set()
+    paare: list[tuple[str, str]] = []
+    for e in eintraege:
+        if not isinstance(e, dict) or not _waehlbar(e.get("metric_id")):
+            continue
+        zeilen = [(k["metric_id"], k["aggregation"]) for k in COMPARE_METRIC_CATALOG
+                  if k["metric_id"] == e["metric_id"]]
+        erfasst.update(zeilen)
+        if e.get("enabled") is not False:
+            paare += [p for p in zeilen if (grund is None or p in grund) and p not in paare]
+    return paare + [p for p in grund or [] if p not in erfasst and p not in paare]
+
+
 def _orte_uebersicht(dc: dict) -> list[tuple[str, str]] | None:
     grund = _uebersicht_paare(dc.get("active_metrics"))
+    layouts = dc.get("channel_layouts")
+    if isinstance(layouts, dict) and isinstance(layouts.get("email"), list):
+        return _orte_layout(layouts["email"], grund)
     kanal = dc.get("channel_active_metrics")
     if not isinstance(kanal, dict) or "email" not in kanal:
         return grund

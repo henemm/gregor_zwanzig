@@ -314,19 +314,61 @@ def grundauswahl(roh: dict) -> Optional[list[str]]:
     return _ids((roh.get("display_config") or {}).get("active_metrics"))
 
 
+def _email_layout(roh: dict) -> Optional[list[dict]]:
+    """Gespeicherte E-Mail-Liste aus ``channel_layouts`` (#3039, ADR-0119)
+    oder ``None`` (keine solche Liste -> Rueckfallstufe)."""
+    layouts = (roh.get("display_config") or {}).get("channel_layouts")
+    eintraege = layouts.get("email") if isinstance(layouts, dict) else None
+    if not isinstance(eintraege, list):
+        return None
+    return [e for e in eintraege if isinstance(e, dict) and isinstance(e.get("metric_id"), str)]
+
+
+def _layout_zeilen(eintraege: list[dict], basis: Optional[list[str]]) -> list[str]:
+    """``channel_layouts.email`` -> Zeilen: Listenfolge, ``enabled: false``
+    fehlt, nur aus der Grundauswahl (ADR-0050); Groessen der Grundauswahl
+    ohne jeden Eintrag (auch keinen ausgeschalteten) folgen hinten (#3039 AC-14)."""
+    erfasst = {e["metric_id"] for e in eintraege}
+    zeilen = [e["metric_id"] for e in eintraege if e.get("enabled") is not False
+              and (basis is None or e["metric_id"] in basis)]
+    zeilen += [m for m in basis or [] if m not in erfasst]
+    return list(dict.fromkeys(zeilen))
+
+
 def soll_vergleichstabelle(roh: dict) -> Optional[list[str]]:
-    """Zeilen der Vergleichstabelle: E-Mail-Liste geschnitten mit der
-    Grundauswahl, ohne Eintrag die Grundauswahl; ``None`` = weder Maximum noch
-    Eintrag (Standardsatz des Produkts, nur "nicht leer" pruefbar)."""
+    """Zeilen der Vergleichstabelle. Kaskade (#3039): ``channel_layouts.email``
+    vor ``channel_active_metrics.email`` vor Grundauswahl; Kanal-Liste
+    geschnitten mit der Grundauswahl. ``None`` = weder Maximum noch Eintrag
+    (Standardsatz des Produkts, nur "nicht leer" pruefbar).
+
+    Totalschnitt (#3047 AC-10): bleibt von einer NICHT leeren
+    ``channel_active_metrics``-Liste nach dem Schnitt nichts uebrig, gilt die
+    volle Grundauswahl (kein verschwindender Block); eine bewusst leere Liste
+    bleibt leer."""
     dc = roh.get("display_config") or {}
     basis = grundauswahl(roh)
+    layout = _email_layout(roh)
+    if layout is not None:
+        return _layout_zeilen(layout, basis)
     cam = dc.get("channel_active_metrics")
     if not isinstance(cam, dict) or "email" not in cam:
         return basis
     eintrag = _ids(cam["email"]) or []
     if basis is None:
         return eintrag
-    return [m for m in eintrag if m in basis]
+    return [m for m in eintrag if m in basis] or (list(basis) if eintrag else [])
+
+
+def soll_vergleichsformen(roh: dict) -> dict[str, str]:
+    """Erwartete Zellform je Zeile der Vergleichstabelle (#3039): ``einfach``
+    nur, wenn der E-Mail-Eintrag ``use_friendly_format: true`` traegt UND das
+    Register mehr als eine Darstellung kennt; sonst (Eintrag ohne Angabe,
+    Rueckfallstufe, Bestand) ``zahl``."""
+    zeilen = soll_vergleichstabelle(roh) or []
+    einfach = {e["metric_id"] for e in _email_layout(roh) or []
+               if e.get("use_friendly_format") is True}
+    mehrform = {m.id for m in _katalog() if len(m.format_modes) > 1}
+    return {m: "einfach" if m in einfach and m in mehrform else "zahl" for m in zeilen}
 
 
 def soll_stundenverlauf(roh: dict, standard: tuple[str, ...]) -> Optional[list[str]]:
@@ -428,14 +470,34 @@ def _tabellen(html: str) -> list[tuple[int, list[list[str]]]]:
 def html_vergleichstabelle(html: str) -> tuple[list[str], list[str]]:
     """(Orts-Spalten in Folge, Zeilen-Kennungen in Folge) der Uebersicht; die
     feste Zeile "Amtliche Warnungen" ist keine Metrik und bleibt aussen vor.
-    Gelesen wird nur die Zeilenbeschriftung, nie die Zellform (Roh/Einfach der
-    Vergleichstabelle aendert #3039)."""
+    Gelesen wird nur die Zeilenbeschriftung; die Zellform (Roh/Einfach, #3039)
+    liest ``html_vergleichszellen``."""
     for _pos, zeilen in _tabellen(html):
         if zeilen and zeilen[0] and zeilen[0][0] == "Metrik":
             orte = [re.sub(r"^#\d+\s*", "", z) for z in zeilen[0][1:]]
             ids = [_id_aus(z[0], "label_de") for z in zeilen[1:]
                    if z and z[0] != "Amtliche Warnungen"]
             return orte, ids
+    raise AssertionError("Vergleichstabelle (Kopf 'Metrik') nicht im HTML gefunden")
+
+
+def html_vergleichszellen(html: str) -> dict[str, list[tuple[str, str]]]:
+    """{Kennung: [(Text, rohes Zell-HTML) je Ort]} der Uebersicht -- das rohe
+    Fragment traegt den Ampelpunkt (``border-radius:50%``), den der Text nicht
+    zeigt (Roh/Einfach, #3039)."""
+    for m in _TABLE_RE.finditer(html):
+        trs = re.findall(r"<tr[^>]*>(.*?)</tr>", m.group(1), re.DOTALL)
+        koepfe = [re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", tr, re.DOTALL) for tr in trs]
+        if not (koepfe and koepfe[0] and re.sub(r"<[^>]+>", "", koepfe[0][0]).strip() == "Metrik"):
+            continue
+        aus: dict[str, list[tuple[str, str]]] = {}
+        for zellen in koepfe[1:]:
+            label = html_mod.unescape(re.sub(r"<[^>]+>", "", zellen[0])).strip()
+            if label == "Amtliche Warnungen":
+                continue
+            aus[_id_aus(label, "label_de")] = [
+                (html_mod.unescape(re.sub(r"<[^>]+>", "", z)).strip(), z) for z in zellen[1:]]
+        return aus
     raise AssertionError("Vergleichstabelle (Kopf 'Metrik') nicht im HTML gefunden")
 
 
@@ -546,6 +608,22 @@ def klartext_vergleichstabelle(plain: str, orte=ORTSNAMEN) -> tuple[list[str], d
         if aktuell is not None and m and "⚠️" not in z:
             zeilen[aktuell].append(_id_aus(m.group(1), "label_de"))
     return folge, zeilen
+
+
+def klartext_vergleichswerte(plain: str, orte=ORTSNAMEN) -> dict[str, dict[str, str]]:
+    """{Ort: {Kennung: Wert}} der Klartext-Uebersicht (ohne Warnzeilen)."""
+    uebersicht, _ = _abschnitte(plain)
+    aus: dict[str, dict[str, str]] = {}
+    aktuell = None
+    for z in uebersicht:
+        if z in orte:
+            aktuell = z
+            aus[z] = {}
+            continue
+        m = re.match(r"^   ([^:]+): (.*)$", z)
+        if aktuell is not None and m and "⚠️" not in z:
+            aus[aktuell][_id_aus(m.group(1), "label_de")] = m.group(2).strip()
+    return aus
 
 
 def klartext_stundenverlauf(plain: str, lang: str = "de") -> dict[str, list[str]]:

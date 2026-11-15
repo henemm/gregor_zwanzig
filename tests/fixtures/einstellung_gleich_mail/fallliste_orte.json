@@ -54,20 +54,6 @@
         "darstellung",
         "gemischt",
         "auswahl_muster",
-        "teilmenge"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "gemischt",
-        "auswahl_muster",
-        "alles"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "gemischt",
-        "auswahl_muster",
         "bewusst_leer"
       ],
       [
@@ -76,55 +62,6 @@
         "gemischt",
         "auswahl_muster",
         "nie_eingestellt"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "gemischt",
-        "reihenfolge",
-        "katalog"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "gemischt",
-        "reihenfolge",
-        "umkehrung"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "gemischt",
-        "reihenfolge",
-        "gemischt"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "gemischt",
-        "format",
-        "html"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "gemischt",
-        "format",
-        "klartext"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "einfach",
-        "auswahl_muster",
-        "teilmenge"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "einfach",
-        "auswahl_muster",
-        "alles"
       ],
       [
         "orte_vergleichstabelle",
@@ -139,41 +76,6 @@
         "einfach",
         "auswahl_muster",
         "nie_eingestellt"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "einfach",
-        "reihenfolge",
-        "katalog"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "einfach",
-        "reihenfolge",
-        "umkehrung"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "einfach",
-        "reihenfolge",
-        "gemischt"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "einfach",
-        "format",
-        "html"
-      ],
-      [
-        "orte_vergleichstabelle",
-        "darstellung",
-        "einfach",
-        "format",
-        "klartext"
       ],
       [
         "orte_stundenverlauf",
@@ -372,7 +274,7 @@
         "einfach"
       ]
     ],
-    "hinweis": "Fachlich unmoegliche Paare: (1) Vergleichstabelle und Stundenverlauf kennen heute keine Darstellung je Zeile (Konzept W11, offen_feature), deshalb nur 'roh'; (2) eine bewusst leere Auswahl hat weder Reihenfolge noch Darstellung; (3) der nie eingestellte Stundenverlauf hat die feste Standardfolge (AC-13), keine waehlbare Reihenfolge. Reihenfolge 'katalog' = Folge des zentralen Registers, 'gemischt' ungleich Katalog und Umkehrung. Teilnehmende Faelle tragen 'werte'; der Test baut daraus das rohe Preset."
+    "hinweis": "Fachlich unmoegliche Paare: (1) der Stundenverlauf kennt heute keine Darstellung je Zeile (Konzept W11, offen_feature, #3047 Phase 3), deshalb nur 'roh'; die Vergleichstabelle traegt Roh/Einfach seit #3039 ueber channel_layouts.email, eine nie eingestellte Vergleichstabelle hat keine Darstellung (Bestand = Roh, #3039 Regel 3); (2) eine bewusst leere Auswahl hat weder Reihenfolge noch Darstellung; (3) der nie eingestellte Stundenverlauf hat die feste Standardfolge (AC-13), keine waehlbare Reihenfolge. Reihenfolge 'katalog' = Folge des zentralen Registers, 'gemischt' ungleich Katalog und Umkehrung. Teilnehmende Faelle tragen 'werte'; der Test baut daraus das rohe Preset (Darstellung roh: channel_active_metrics, sonst channel_layouts.email)."
   },
   "faelle": [
     {
@@ -559,6 +461,108 @@
         "auswahl_muster": "nie_eingestellt",
         "reihenfolge": "umkehrung",
         "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-VT-P12",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "katalog",
+        "darstellung": "gemischt",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-VT-P13",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-VT-P14",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-VT-P15",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "katalog",
+        "darstellung": "einfach",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-VT-P16",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "umkehrung",
+        "darstellung": "einfach",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-VT-P17",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "gemischt",
+        "darstellung": "einfach",
         "format": "html"
       }
     },
@@ -1002,11 +1006,11 @@
       "kontext": "orte",
       "format": "html",
       "pruefung": "darstellung",
-      "test": "test_w11_darstellung_je_zeile",
+      "test": "test_w11_vergleichstabelle_roh_einfach",
       "ac": "AC-8",
       "befund": "",
-      "status": "offen_feature",
-      "verweis": "Konzept W11 / #3039 (Roh/Einfach Vergleichstabelle) bzw. #3047 Phase 3 (Stundenverlauf)"
+      "status": "gruen",
+      "verweis": "Konzept W11 / #3039 (channel_layouts.email, ADR-0119)"
     },
     {
       "id": "O-SV-H-AUSWAHL",
@@ -1106,7 +1110,7 @@
       "ac": "AC-8",
       "befund": "",
       "status": "offen_feature",
-      "verweis": "Konzept W11 / #3039 (Roh/Einfach Vergleichstabelle) bzw. #3047 Phase 3 (Stundenverlauf)"
+      "verweis": "Konzept W11 / #3047 Phase 3 (Stundenverlauf; #3039 baut Roh/Einfach nur fuer Vergleichstabelle, Telegram, SMS)"
     },
     {
       "id": "O-AB-H-AUSWAHL",
@@ -1286,6 +1290,54 @@
       "status": "gruen"
     },
     {
+      "id": "O-VT-H-TOTALSCHNITT-LAYOUT",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_vergleichstabelle_totalschnitt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen",
+      "variante": "channel_layouts"
+    },
+    {
+      "id": "O-VT-K-TOTALSCHNITT-LAYOUT",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_vergleichstabelle_totalschnitt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen",
+      "variante": "channel_layouts"
+    },
+    {
+      "id": "O-VT-H-TOTALSCHNITT-CAM",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_vergleichstabelle_totalschnitt",
+      "ac": "AC-10",
+      "befund": "F8: Totalschnitt einer nicht leeren channel_active_metrics.email-Liste -> leere Vergleichstabelle statt Rueckfall auf die Grundauswahl (resolve_channel_enabled_metrics, src/output/renderers/compare_metric_ids.py, #3039 Regel 6 laesst diese Stufe unveraendert)",
+      "status": "rot_erwartet",
+      "variante": "channel_active_metrics"
+    },
+    {
+      "id": "O-VT-K-TOTALSCHNITT-CAM",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_vergleichstabelle_totalschnitt",
+      "ac": "AC-10",
+      "befund": "F8: Totalschnitt einer nicht leeren channel_active_metrics.email-Liste -> leere Vergleichstabelle statt Rueckfall auf die Grundauswahl (resolve_channel_enabled_metrics, src/output/renderers/compare_metric_ids.py, #3039 Regel 6 laesst diese Stufe unveraendert)",
+      "status": "rot_erwartet",
+      "variante": "channel_active_metrics"
+    },
+    {
       "id": "O-VT-K-ALT",
       "liste": "orte_vergleichstabelle",
       "kontext": "orte",
@@ -1313,11 +1365,11 @@
       "kontext": "orte",
       "format": "klartext",
       "pruefung": "darstellung",
-      "test": "test_w11_darstellung_je_zeile",
+      "test": "test_w11_vergleichstabelle_roh_einfach",
       "ac": "AC-8",
       "befund": "",
-      "status": "offen_feature",
-      "verweis": "Konzept W11 / #3039 (Roh/Einfach Vergleichstabelle) bzw. #3047 Phase 3 (Stundenverlauf)"
+      "status": "gruen",
+      "verweis": "Konzept W11 / #3039 (channel_layouts.email, ADR-0119)"
     },
     {
       "id": "O-SV-K-AUSWAHL",
@@ -1461,7 +1513,7 @@
       "ac": "AC-8",
       "befund": "",
       "status": "offen_feature",
-      "verweis": "Konzept W11 / #3039 (Roh/Einfach Vergleichstabelle) bzw. #3047 Phase 3 (Stundenverlauf)"
+      "verweis": "Konzept W11 / #3047 Phase 3 (Stundenverlauf; #3039 baut Roh/Einfach nur fuer Vergleichstabelle, Telegram, SMS)"
     },
     {
       "id": "O-AB-K-AUSWAHL",

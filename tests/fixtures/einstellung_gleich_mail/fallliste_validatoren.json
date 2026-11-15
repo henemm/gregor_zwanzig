@@ -18,6 +18,8 @@
     {"id": "VO-06", "liste": "validator_orte", "kontext": "orte", "format": "klartext", "pruefung": "auswahl", "test": "test_orte_vergleichszeile_fehlt_scheitert", "ac": "AC-19", "befund": "", "status": "gruen"},
     {"id": "VO-07", "liste": "validator_orte", "kontext": "orte", "format": "klartext", "pruefung": "ein_aus", "test": "test_orte_klartext_ausblick_fehlt_scheitert", "ac": "AC-19", "befund": "", "status": "gruen"},
     {"id": "VO-08", "liste": "validator_orte", "kontext": "orte", "format": "klartext", "pruefung": "altbestand", "test": "test_orte_altbestand_ausblick_klartext_wie_html", "ac": "AC-21, AC-19", "befund": "O3", "status": "gruen", "verweis": "#3047 O3"},
-    {"id": "VO-09", "liste": "validator_orte", "kontext": "orte", "format": "html", "pruefung": "altbestand", "test": "test_orte_zwei_gueltige_folgen_ohne_konfig_beide_gruen_mit_konfig_nur_passende", "ac": "AC-11, AC-20", "befund": "", "status": "gruen"}
+    {"id": "VO-09", "liste": "validator_orte", "kontext": "orte", "format": "html", "pruefung": "altbestand", "test": "test_orte_zwei_gueltige_folgen_ohne_konfig_beide_gruen_mit_konfig_nur_passende", "ac": "AC-11, AC-20", "befund": "", "status": "gruen"},
+    {"id": "VO-10", "liste": "validator_orte", "kontext": "orte", "format": "html", "pruefung": "reihenfolge", "test": "test_orte_channel_layouts_vor_channel_active_metrics", "ac": "AC-19", "befund": "F8", "status": "gruen", "verweis": "#3039 channel_layouts.email"},
+    {"id": "VO-11", "liste": "validator_orte", "kontext": "orte", "format": "klartext", "pruefung": "ein_aus", "test": "test_orte_channel_layouts_vor_channel_active_metrics", "ac": "AC-19", "befund": "F8", "status": "gruen", "verweis": "#3039 channel_layouts.email"}
   ]
 }
