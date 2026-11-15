@@ -656,7 +656,8 @@ test('DS-2 Etappenwechsel (1280 px): Datum/Zeit in Etappe 2 tippen, sofort zu Et
 		await page.keyboard.type('3');
 		await waehleEtappe(page, 0);
 		await expect(feldEingabe(datumFeld(page)), 'Etappe 1 nach Wechsel mitten im Segment').toHaveText('01.08.2027');
-		await page.getByTestId('save-indicator').waitFor();
+		// #2954: die Hinweis-Region ist im Ruhezustand leer (unsichtbar), aber immer im DOM.
+		await page.getByTestId('save-indicator').waitFor({ state: 'attached' });
 		await expect
 			.poll(async () => (await etappen(page, hub.id))[0]?.date, { message: 'Etappe 1 darf nichts abbekommen', timeout: 5_000 })
 			.toBe('2027-08-01');
