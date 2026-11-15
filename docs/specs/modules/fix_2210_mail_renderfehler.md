@@ -26,6 +26,7 @@ Renderfehler in den Mails. Drei davon sind für den Empfänger sichtbar, einer i
 2. **C2-79 — negative Temperaturspanne:** `format_temp_span` baut `lo–hi°C`. Bei negativen Werten
    entsteht `-12–-4°C`: Gedankenstrich und Minuszeichen laufen zusammen, die Spanne ist schwer
    lesbar und missverständlich.
+   > **Abgelöst:** C2-79-Schreibweise 'bis' abgelöst durch #3015: '-12 – -4°C', PO-Entscheidung 2026-11-15.
 3. **C3-35 — toter Code:** `_render_mobile_hour_list` hat keinen einzigen Aufrufer (Grep über
    `src/` und `tests/` findet nur die Definition). Mehrere Specs nennen sie bereits „toter Code".
    Die Funktion enthält eine eigene, nie ausgelieferte Gewitter-Darstellung und lädt zu
@@ -107,6 +108,7 @@ Fundstellen am Stand `origin/main` 906731153 geprüft:
     (helpers.py:1558) und Kurzzusammenfassung (compact_summary.py:380); kein Eingriff dort.
     Begründung des Trennworts: "bis" ist die bestehende deutsche Konvention für Bereiche mit
     Vorzeichen; der Gedankenstrich bleibt für Plusgrade, damit dort nichts im Golden wandert.
+    ABGELÖST: C2-79-Schreibweise 'bis' abgelöst durch #3015: '-12 – -4°C', PO-Entscheidung 2026-11-15.
 
 (3) C3-35  html.py: _render_mobile_hour_list vollständig löschen (Definition Z.311 bis Funktionsende),
     danach ungenutzte Hilfs-Imports/-Konstanten entfernen, die ausschließlich von ihr benutzt wurden
@@ -148,13 +150,16 @@ Fundstellen am Stand `origin/main` 906731153 geprüft:
 - **AC-3:** Given eine Etappe mit Tiefsttemperatur -12 °C und Höchsttemperatur -4 °C / When die
   Temperatur-Kachel der Trip-Mail gerendert wird / Then steht dort „-12 bis -4°C" und an keiner
   Stelle die Folge „-12–-4".
+  - **Abgelöst:** C2-79-Schreibweise 'bis' abgelöst durch #3015: '-12 – -4°C', PO-Entscheidung 2026-11-15.
 - **AC-4:** Given eine Etappe mit Tiefsttemperatur -3 °C und Höchsttemperatur 5 °C (Vorzeichenwechsel)
   / When die Temperatur-Kachel gerendert wird / Then steht dort „-3 bis 5°C".
+  - **Abgelöst:** C2-79-Schreibweise 'bis' abgelöst durch #3015: '-12 – -4°C', PO-Entscheidung 2026-11-15 (hier „-3 – 5°C").
 - **AC-5:** Given eine Etappe mit Tiefsttemperatur 8 °C und Höchsttemperatur 14 °C (keine negativen
   Werte) / When die Temperatur-Kachel gerendert wird / Then steht dort unverändert „8–14°C".
 - **AC-6:** Given eine Kurzzusammenfassung der Mail mit gefühlter Temperatur von -12 bis -4 °C /
   When der Fließtext der Kurzzusammenfassung erzeugt wird / Then enthält er „-12 bis -4°C" (die
   geteilte Spannenformel wirkt auch dort) und nicht „-12–-4°C".
+  - **Abgelöst:** C2-79-Schreibweise 'bis' abgelöst durch #3015: '-12 – -4°C', PO-Entscheidung 2026-11-15.
 - **AC-7:** Given der Quelltext des E-Mail-Renderers nach dem Rückbau / When das Modul
   `src/output/renderers/email/html.py` geladen und nach dem Namen `_render_mobile_hour_list` gefragt
   wird / Then existiert das Symbol nicht mehr, und der Import des Moduls sowie das Rendern einer

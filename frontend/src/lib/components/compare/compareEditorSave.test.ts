@@ -232,14 +232,24 @@ describe('buildComparePresetSavePayload — Alarm-Trigger + Kanäle (#1216)', ()
 	});
 });
 
-// ─── Issue #1351 F002: channel_layouts ist Compare-Ballast, faellt IMMER weg ──
-describe('buildComparePresetSavePayload — channel_layouts-Entfernung (#1351 AC-6)', () => {
-	test('Alt-Preset mit channel_layouts + unbekanntem Zusatzfeld: channel_layouts faellt weg, Zusatzfeld bleibt (Read-Modify-Write)', () => {
+// ─── Issue #3039 AC-11 (löst #1351 AC-6 ab, ADR-0119): channel_layouts ist
+// wieder Nutzerstand (Karte „Inhalt je Kanal“, #3031) und muss jedes Speichern
+// aus einem ANDEREN Reiter unverändert überstehen (Read-Modify-Write). ──
+describe('buildComparePresetSavePayload — channel_layouts bleibt erhalten (#3039 AC-11)', () => {
+	test('Speichern aus einem anderen Reiter: channel_layouts und Zusatzfeld bleiben unverändert erhalten', () => {
+		const channelLayouts = {
+			email: [
+				{ metric_id: 'gust', enabled: true, use_friendly_format: true },
+				{ metric_id: 'temperature', enabled: true }
+			],
+			telegram: [{ metric_id: 'gust', enabled: false, use_friendly_format: false }],
+			sms: [{ metric_id: 'cloud_total', enabled: true, use_friendly_format: true }]
+		};
 		const original: ComparePreset = {
 			...makePreset(),
 			display_config: {
 				region: 'Salzburger Land',
-				channel_layouts: { email: ['temp_min_c'], sms: ['temp_min_c'] },
+				channel_layouts: structuredClone(channelLayouts),
 				future_unknown_field: 'muss erhalten bleiben'
 			}
 		};
@@ -252,9 +262,10 @@ describe('buildComparePresetSavePayload — channel_layouts-Entfernung (#1351 AC
 		});
 
 		const dc = body.display_config as Record<string, unknown>;
-		assert.ok(
-			!Object.prototype.hasOwnProperty.call(dc, 'channel_layouts'),
-			'channel_layouts muss nach dem Speichern entfernt sein'
+		assert.deepEqual(
+			dc.channel_layouts,
+			channelLayouts,
+			'channel_layouts muss das Speichern aus einem anderen Reiter unverändert überstehen'
 		);
 		assert.equal(dc.future_unknown_field, 'muss erhalten bleiben');
 		assert.equal(dc.region, 'Salzburger Land');
@@ -374,5 +385,48 @@ describe('buildNewComparePresetPayload — Kanal-Auswahl der Uebersicht (#1703 S
 			false,
 			'Ein nie editierter Kanal darf keinen Eintrag bekommen — er folgt der Grundauswahl'
 		);
+	});
+});
+
+// ─── Issue #3039 Fix-Loop 3 (F007): Teil-Edit EINES Kanals erhaelt die anderen
+// gespeicherten Kanal-Auswahlen UND channel_layouts (Read-Modify-Write). ──
+describe('buildComparePresetSavePayload — Teil-Edit eines Kanals (#3039 F007)', () => {
+	test('nur telegram editiert: email und sms bleiben unveraendert, channel_layouts bleibt', () => {
+		const stored = {
+			email: [{ metric_id: 'temperature', aggregation: 'max' }],
+			telegram: [{ metric_id: 'wind', aggregation: 'max' }],
+			sms: [{ metric_id: 'gust', aggregation: 'max' }]
+		};
+		const channelLayouts = {
+			email: [{ metric_id: 'gust', enabled: true, use_friendly_format: true }]
+		};
+		const original: ComparePreset = {
+			...makePreset(),
+			display_config: {
+				region: 'Salzburger Land',
+				channel_active_metrics: structuredClone(stored),
+				channel_layouts: structuredClone(channelLayouts)
+			}
+		};
+
+		const { body } = buildComparePresetSavePayload(original, {
+			name: original.name,
+			activityProfile: 'wintersport',
+			pickedIds: original.location_ids,
+			region: 'Salzburger Land',
+			idealRanges: {},
+			// Grundauswahl mit derselben Kennung: ihr Speicherformat ist die
+			// Soll-Form des Telegram-Edits (dieselbe Uebersetzung im Speicherweg).
+			activeMetricKeys: ['cloud_avg_pct'],
+			channelActiveMetricKeys: { email: null, telegram: ['cloud_avg_pct'], sms: null }
+		});
+
+		const dc = body.display_config as Record<string, unknown>;
+		const cam = dc.channel_active_metrics as Record<string, unknown>;
+		assert.deepEqual(cam.email, stored.email, 'email muss unveraendert bleiben');
+		assert.deepEqual(cam.sms, stored.sms, 'sms muss unveraendert bleiben');
+		assert.deepEqual(cam.telegram, dc.active_metrics, 'telegram traegt den neuen Wert');
+		assert.notDeepEqual(cam.telegram, stored.telegram);
+		assert.deepEqual(dc.channel_layouts, channelLayouts, 'channel_layouts muss erhalten bleiben');
 	});
 });

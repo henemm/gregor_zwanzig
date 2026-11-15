@@ -1,7 +1,10 @@
 # ADR-0053: Der Ortsvergleich bekommt kanal-eigene Metrikauswahl für die Übersichtstabelle zurück (löst ADR-Bezug aus #1287/#1291/#1351 ab)
 
 - **Status:** Teilweise abgelöst durch [ADR-0059](0059-compare-ausblick-erbt-grundauswahl.md)
-  (Punkt 1: Ausblick — bindet den Ausblick beider Flächen an die Grundauswahl).
+  (Punkt 1: Ausblick — bindet den Ausblick beider Flächen an die Grundauswahl)
+  und durch [ADR-0119](0119-vergleich-channel-layouts.md) (Kontext-Zeile
+  „#1351 Teil 2“: die Entfernung von `channel_layouts` samt Migration ist
+  aufgehoben, `channel_layouts` hat Vorrang vor `channel_active_metrics`).
   Für die Übersichtstabelle (Punkte 2–4 dieses ADR) und den Stundenverlauf
   (Punkt 1, Teil „Stundenverlauf") gilt dieses ADR unverändert.
 - **Datum:** 2026-08-13

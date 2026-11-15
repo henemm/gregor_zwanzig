@@ -757,9 +757,46 @@ def _fmt_metric(value, decimals, unit: str) -> str:
     return f"{text}{unit}" if unit in ("°C", "%") else f"{text} {unit}"
 
 
+# Issue #3039: Groessen mit Einfachform, deren Einfach-Zelle im HTML der
+# Ampelpunkt aus `fmt_val` ist (wie im Trip, `indicator_keys`).
+_FRIENDLY_AMPEL_METRIC_IDS = frozenset({"wind", "gust", "precipitation"})
+
+
+def _friendly_overview_html(
+    m: dict, value, loc: LocationResult, summary, lang: Lang, *, ampel: dict,
+) -> str | None:
+    """Einfach-Zelle einer Uebersichtszeile der HTML-Mail (Issue #3039) oder
+    ``None`` (= Roh). Wiederverwendung wie im Trip: Ampelpunkt fuer Wind/Boeen/
+    Niederschlag und Gewitter ueber ``fmt_val``; Wort/Symbol der uebrigen
+    Groessen ueber dieselbe Kette wie der Ausblick (``_friendly_outlook_text``)."""
+    from output.renderers.compare_outlook_metric_ids import _friendly_outlook_text
+    from output.renderers.email.helpers import fmt_val
+
+    catalog_id = m.get("metric_id")
+    if catalog_id is None:
+        return None
+    if catalog_id in _FRIENDLY_AMPEL_METRIC_IDS:
+        col_key = get_metric(catalog_id).col_key
+        return fmt_val(
+            col_key, value, html=True, format_modes={col_key: "raw"},
+            indicator_keys={col_key}, lang=lang, ampel=ampel,
+        )
+    if catalog_id == "thunder":
+        return fmt_val(
+            "thunder", value, html=True, format_modes={"thunder": "symbol"},
+            row={"_hail_flag": loc_hail_flag(loc, summary)}, lang=lang, ampel=ampel,
+        )
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return _friendly_outlook_text(catalog_id, number, lang)
+
+
 def _render_overview_row(
     m: dict, locations: list[LocationResult],
     summaries: dict | None = None, lang: Lang = "de",
+    *, einfach_fn=None,
 ) -> str:
     summaries = summaries or {}
     label_cell = (
@@ -789,7 +826,15 @@ def _render_overview_row(
             bg, fg = tone_css(_COMPARE_TO_LEVEL[sev_level])
             weight = "700"
         fmt_fn = m.get("fmt")
-        if fmt_fn is _fmt_thunder:
+        einfach = (
+            einfach_fn(m, value, loc, summaries.get(id(loc)), lang)
+            if einfach_fn is not None and value is not None else None
+        )
+        if einfach is not None:
+            # Issue #3039: Einfach aus `channel_layouts["email"]`; die
+            # Zelltoenung (`sev`) oben bleibt unveraendert.
+            text = einfach
+        elif fmt_fn is _fmt_thunder:
             # Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 1): die
             # Gewitter-Zeile bekommt zusaetzlich das Hagel-Kennzeichen DIESES
             # Ortes durchgereicht — alle anderen Zeilen bleiben unveraendert.
@@ -888,6 +933,7 @@ def _render_overview_table(
     lang: Lang = "de",
     *,
     ampel: dict,
+    metric_formats: dict[str, bool] | None = None,
 ) -> str:
     header_cells = [
         f'<th style="text-align:left;padding:9px 5px;font-size:10px;'
@@ -915,7 +961,15 @@ def _render_overview_table(
             for loc in locations if loc.error is None and loc.hourly_data
         }
     rows = "".join(
-        _render_overview_row(m, locations, summaries, lang) for m in visible
+        _render_overview_row(
+            m, locations, summaries, lang,
+            # Issue #3039: Einfach-Zelle an DIESE Ampel gebunden (Muster `_mit_ampel`).
+            einfach_fn=(
+                partial(_friendly_overview_html, ampel=ampel)
+                if (metric_formats or {}).get(m["key"]) else None
+            ),
+        )
+        for m in visible
     )
     table = (
         f'<table cellspacing="0" cellpadding="0" style="width:100%;min-width:760px;'
@@ -1718,8 +1772,13 @@ def render_compare_html(
     unresolved_count: int = 0,
     lang: Lang = "de",
     show_fallback_notice: bool = False,
+    metric_formats: dict[str, bool] | None = None,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
+
+    ``metric_formats`` (Issue #3039): ``{renderer_id: einfach}`` aus
+    ``channel_layouts["email"]``; Einfach zeigt Ampelpunkt/Wort/Symbol wie
+    der Trip, die Zelltoenung bleibt. ``None`` = heutiger Festzustand.
 
     Issue #2792 S1c-4b: ``preset`` ist Pflicht ohne Default; die Farben
     folgen der Ampel des Presets (``resolve_ampel(preset)``), die Kopfzelle
@@ -1824,7 +1883,7 @@ def render_compare_html(
     overview_html = (
         f'<div style="padding:6px 24px 0;">'
         f'{_render_section_head(*overview_head)}'
-        f'{_render_overview_table(locations, enabled_metrics, unresolved_count, lang, ampel=ampel)}</div>'
+        f'{_render_overview_table(locations, enabled_metrics, unresolved_count, lang, ampel=ampel, metric_formats=metric_formats)}</div>'
     )
     # Issue #1563: leer ohne Vertretung -> faellt durch den `if part`-Filter.
     fallback_html = (

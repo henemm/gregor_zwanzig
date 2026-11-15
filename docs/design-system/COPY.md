@@ -88,7 +88,7 @@
 | Größe | Einheit | Format | Beispiel |
 |---|---|---|---|
 | Temperatur | °C | Ganzzahl ohne Nachkomma | `12 °C` (mit non-breaking-space) |
-| Temperaturspanne | °C | `min–max` | `5–12 °C` |
+| Temperaturspanne | °C | `min–max`; bei Minusgraden `min – max` mit Leerzeichen, sprachneutral, nie „bis“/„to“ (#3015) | `5–12 °C`, `-3 – 0 °C` |
 | Niederschlag | mm | eine Nachkomma | `9.6 mm` |
 | Windgeschwindigkeit | km/h | Ganzzahl | `22 km/h` |
 | Böen | km/h | Ganzzahl | `44 km/h` |

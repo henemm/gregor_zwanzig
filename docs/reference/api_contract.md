@@ -2685,6 +2685,10 @@ Manages persisted Compare-Preset configurations for automatic, multi-location co
 
 **`display_config.ampel`** (#2792 S1a): Profil-Ampel des Vergleichs, gleiche Struktur wie beim Trip (§11 „Profil-Ampel“); fehlt `ampel.template`, bestimmt `profil` die Vorlage.
 
+**`display_config.channel_active_metrics`** (#1703 S8, ADR-0053): `{email|telegram|sms: [...]}` je Kanal eine Auswahl der Übersichtszeilen im Speicherformat von `active_metrics` (Kennung-Auswertung-Paar oder Altform-Zeichenkette); Listenposition = Reihenfolge. Geschnitten mit der Grundauswahl `active_metrics` (ADR-0050); fehlender Kanal-Schlüssel = Grundauswahl, leere Liste = leer. Kein Format.
+
+**`display_config.channel_layouts`** (#3039, ADR-0119): `{email|telegram|sms: [{"metric_id": "<Kennung>", "enabled": bool, "use_friendly_format": bool}]}`; Listenposition = Reihenfolge, Kennungen aus dem Metrik-Katalog (eine Kennung erzeugt alle ihre Vergleichszeilen, z. B. `temperature` → Höchst- und Tiefstwert). Kaskade je Kanal: `channel_layouts[kanal]` → `channel_active_metrics[kanal]` → Grundauswahl. Regeln: `enabled:false` blendet nur in diesem Kanal aus; Schnitt mit der Grundauswahl (fehlt `active_metrics`, kein Schnitt); Werte der Grundauswahl ohne Eintrag erscheinen eingeschaltet am Ende; fehlt `use_friendly_format`, gilt Roh; Einfach wirkt nur bei Metriken mit mehr als einem `format_mode`, in der SMS nur für Wolken (GSM-7-Stufe). Premium-SMS sendet den SMS-Text. Ohne `channel_layouts` ist die Ausgabe unverändert (Festzustand). Go speichert das Feld unvalidiert und ersetzt es beim Merge als Ganzes; `compareEditorSave.ts` erhält es beim Speichern (die Entfernung aus #1351 ist aufgehoben).
+
 ### ComparePreset DTO
 
 ```go
@@ -5767,12 +5771,15 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
   `display_config`, statt ihn wie bisher über den `...original`-Spread
   round-zu-trippen. Einmalige Migration
   `scripts/migrate_1351_drop_compare_channel_layouts.py` (idempotent,
-  Backup vor Schreiben, nur `kind=vergleich`) räumt Bestandsdaten. **Der
+  Backup vor Schreiben, nur `kind=vergleich`) räumt Bestandsdaten (Skript seit #3039 entfernt, siehe ADR-0119; nicht mehr ausführen). **Der
   Trip-Pfad ist unverändert** — dort bleibt `channel_layouts` eine echte,
   gelesene Funktion. Macht die „round-trippt unverändert weiter"-Aussage
   zu `channel_layouts` im #1299/#1291/#1287-Eintrag vom 2026-07-18 (unten)
   für den Compare-Pfad obsolet — die dortige `top_n`-Aussage bleibt
   unverändert gültig. Siehe `docs/specs/modules/rework_1351_compare_catalog.md`.
+  **Überholt seit 2026-11-15 (#3039, ADR-0119):** `channel_layouts` ist am
+  Vergleich wieder ein gelesenes Feld (§16); das Speichern erhält es, die
+  Migration ist gelöscht.
 - 2026-07-24: Issue #1350 Teil 3 (SSoT-Abschluss) — `GET /api/compare/metrics`
   trägt pro Eintrag zusätzlich `alarmCapable: bool` (D1 Hybrid). Der
   Schwellen-Editor des Ortsvergleichs (`corridorEditorState.ts`) bezieht seine
@@ -5820,6 +5827,9 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
   **Überholt seit 2026-07-24 (#1351, s.o.) für `channel_layouts`:** das
   Feld round-trippt im Compare-Pfad nicht mehr, sondern wird beim Speichern
   aktiv entfernt. Die `top_n`-Aussage hier bleibt unverändert gültig.
+  **Überholt seit 2026-11-15 (#3039, ADR-0119) für `channel_layouts`:** das Feld
+  wird am Vergleich wieder gelesen und beim Speichern erhalten; die Migration
+  ist entfernt.
 - 2026-07-16: Issue #1278 + #1285 (eine Arbeit, gemeinsame Datenbasis) —
   Vergleichs-Mail bekommt je Ort einen Kurz-Zusammenfassungssatz (geteilter
   Trip-Baustein, kein Compare-eigener Formatierungscode) und fünf bisher

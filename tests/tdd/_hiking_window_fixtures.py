@@ -365,8 +365,9 @@ CONSTELLATIONS_BY_NAME = {c.name: c for c in CONSTELLATIONS}
 
 _PILL_HEADER = "━━ Metriken-Überblick ━━"
 _SPAN_UNIT = "°C"
-# En-Dash der Spannen-Formatierung; bei negativem Wert " bis " (#2210 C2-79).
-_DASH = "(?:–| bis )"
+# En-Dash der Spannen-Formatierung; bei negativem Wert " – " mit Leerzeichen
+# (#3015, loest das "bis" aus #2210 C2-79 ab).
+_DASH = "(?:–| – )"
 
 # Kachelzeile gemessen: "13–17°C · Max 12:00" (0 Nachkommastellen).
 _MAIL_TEMP_PILL = re.compile(

@@ -351,6 +351,9 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     (_R + "compare_outlook_metric_ids.py", "_FRIENDLY_CLOUD_IDS", "element"),
     (_R + "email/compare_html.py", "_HOUR_FMT_OVERRIDES", "schluessel"),
     (_R + "email/compare_html.py", "_HOUR_SEV_OVERRIDES", "schluessel"),
+    # Issue #3039: Groessen, deren Einfach-Zelle im Ortsvergleich-HTML der
+    # Ampelpunkt aus ``fmt_val`` ist (Teilmenge, wie ``indicator_keys`` im Trip).
+    (_R + "email/compare_html.py", "_FRIENDLY_AMPEL_METRIC_IDS", "element"),
     (_R + "email/helpers.py", "NO_HOURLY_COLUMN_METRIC_IDS", "element"),
     # #2136: die sechs festen Ausblick-Groessen (Pfad 1, keine Auswahl).
     (_R + "email/helpers.py", "OUTLOOK_FIXED_METRIC_IDS", "element"),

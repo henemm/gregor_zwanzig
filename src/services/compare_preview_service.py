@@ -75,6 +75,8 @@ class ComparePreviewService:
             preset_name=ctx["name"],
             # Issue #1405 S3: dieselbe Zahl wie im Versand (Vorschau luegt nicht).
             unresolved_count=ctx["opts"].unresolved_by_channel.get("telegram", 0),
+            # Issue #3039: dasselbe Format je Zeile wie der Versand.
+            metric_formats=ctx["opts"].metric_formats("telegram"),
             lang=lang,
             # Issue #1563: Briefing-Vorschau = Versand (kein Alarm-Pfad, R6).
             show_fallback_notice=True,
@@ -83,6 +85,7 @@ class ComparePreviewService:
             ctx["result"],
             enabled_metrics=ctx["opts"].enabled_metrics_by_channel["sms"],
             unresolved_count=ctx["opts"].unresolved_by_channel.get("sms", 0),
+            metric_formats=ctx["opts"].metric_formats("sms"),
         )
         return {
             "subject": build_compare_preset_subject(ctx["name"], ctx["target_date"], lang=lang),
@@ -176,6 +179,7 @@ class ComparePreviewService:
             # die Roh/Einfach-Zuordnung muss beide Wege gehen.
             outlook_metric_formats=opts.outlook_metric_formats,
             unresolved_count=opts.unresolved_by_channel.get("email", 0),
+            metric_formats=opts.metric_formats("email"),
             lang=lang,
             show_fallback_notice=True,
         )

@@ -191,9 +191,12 @@ def render_comparison_text(
     lang: Lang = "de",
     show_fallback_notice: bool = False,
     preset: dict,
+    metric_formats: dict[str, bool] | None = None,
 ) -> str:
     """
     Render ComparisonResult als Klartext (v2, Issue #1110). ``lang``: #2666.
+    ``metric_formats`` (Issue #3039): Roh/Einfach je Uebersichtszeile aus
+    ``channel_layouts["email"]``; ``None`` = heutiger Festzustand.
     ``preset`` (Issue #2792 S1c-4a/4b): rohes Vergleichs-Preset, Pflicht ohne
     Default; seine Ampel bewertet die Ausblick-Zeilen.
     ``show_fallback_notice`` (Issue #1563): Vertretungshinweis je Ort unter
@@ -309,7 +312,11 @@ def render_comparison_text(
             cell = (
                 # Issue #1680 S1: der Klartext-Teil der Mail zeigt die
                 # Herkunft der Gewitterstufe genau wie der HTML-Teil.
-                _fmt_overview_cell(fmt, value, loc_result, include_origin=True, lang=lang)
+                _fmt_overview_cell(
+                    fmt, value, loc_result, include_origin=True, lang=lang,
+                    metric_id=metric_id,
+                    friendly=bool((metric_formats or {}).get(metric_id)),
+                )
                 if value is not None else "-"
             )
             lines.append(f"   {row['label']}: {cell}")
@@ -514,6 +521,7 @@ def render_compare_email(
     unresolved_count: int = 0,
     lang: Lang = "de",
     show_fallback_notice: bool = False,
+    metric_formats: dict[str, bool] | None = None,
 ) -> tuple[str, str]:
     """Render both HTML and plain-text parts for a compare email (v2, #1110).
 
@@ -557,6 +565,8 @@ def render_compare_email(
         lang=lang,
         # Issue #1563: Vertretungshinweis in BEIDE Fassungen (nur Briefing).
         show_fallback_notice=show_fallback_notice,
+        # Issue #3039: Roh/Einfach je Zeile aus `channel_layouts["email"]`.
+        metric_formats=metric_formats,
     )
     text_body = render_comparison_text(
         result, profile=profile, enabled_metrics=enabled_metrics,
@@ -582,6 +592,8 @@ def render_compare_email(
         lang=lang,
         show_fallback_notice=show_fallback_notice,
         preset=preset,
+        # Issue #3039: der Klartext zieht dieselbe Zeilenliste samt Format.
+        metric_formats=metric_formats,
     )
     return html_body, text_body
 
@@ -618,9 +630,37 @@ _CHANNEL_METRICS: tuple[tuple[str, str], ...] = (
 _PLAIN_ROWS_BY_ID = {row[0]: row for row in _PLAIN_ROWS}
 
 
+def _friendly_overview_text(
+    metric_id: str, value, *, sms: bool, lang: Lang = "de",
+) -> str | None:
+    """Einfachform einer Uebersichtszeile (Issue #3039) oder ``None`` (= Roh).
+
+    Wiederverwendung statt Parallel-Logik: Text-Kanaele (Telegram, Klartext
+    der Mail) nutzen dieselbe Wort-/Symbol-Kette wie der Ausblick
+    (``_friendly_outlook_text``: Tageswerte, Wind-/Boeen-Wort, Wolkensymbol,
+    Himmelsrichtung). Die SMS kennt eine Einfachform nur fuer
+    ``SMS_FORMAT_MODE_METRIC_IDS`` (Wolken als GSM-7-Stufe wie die Trip-SMS),
+    sonst bleibt sie Roh. Ohne eigene Einfachform bleibt die Zahl."""
+    from app.metric_catalog import SMS_FORMAT_MODE_METRIC_IDS
+    from output.renderers.compare_outlook_metric_ids import _friendly_outlook_text
+    from output.tokens.metrics import cloud_stufe
+
+    catalog_id = _CV2_BY_KEY.get(metric_id, {}).get("metric_id")
+    if catalog_id is None or isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if sms:
+        return cloud_stufe(number) if catalog_id in SMS_FORMAT_MODE_METRIC_IDS else None
+    return _friendly_outlook_text(catalog_id, number, lang)
+
+
 def _fmt_overview_cell(
     fmt, value, loc_result: LocationResult, *, include_origin: bool = False,
-    lang: Lang = "de",
+    lang: Lang = "de", metric_id: str | None = None, friendly: bool = False,
+    sms: bool = False,
 ) -> str:
     """Issue #1475 Nachbesserung (Punkt 5b, Aufrufstellen 3/5/6): DIE EINE
     Stelle, an der die Ortsvergleich-Kanaele Klartext, SMS und Telegram ihren
@@ -637,7 +677,15 @@ def _fmt_overview_cell(
     diesen Schalter leckte der Zusatz automatisch in die SMS, wuerde dort vom
     GSM-7-Filter zu "-" entstellt und verdraengte ueber den "+N"-Mechanismus
     hintere Metriken.
+
+    Issue #3039: ``friendly`` (Einfach aus ``channel_layouts``) schaltet fuer
+    ``metric_id`` die Einfachform zu; ``sms`` beschraenkt sie auf die
+    GSM-7-sicheren SMS-Formen. Default ``False`` = heutiger Festzustand.
     """
+    if friendly and metric_id is not None:
+        einfach = _friendly_overview_text(metric_id, value, sms=sms, lang=lang)
+        if einfach is not None:
+            return einfach
     if fmt is _fmt_thunder:
         signale = loc_thunder_signals(loc_result) if include_origin else None
         return fmt_word_cell(fmt, value, lang, loc_hail_flag(loc_result), signale)
@@ -700,7 +748,9 @@ def _sms_gsm7_safe(text: str) -> str:
     return text
 
 
-def _sms_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
+def _sms_metric_cell(
+    loc_result: LocationResult, metric_id: str, friendly: bool = False,
+) -> str | None:
     """"Kuerzel Wert"-Zelle fuer ``metric_id`` (Issue #1362 Scheibe S5b, Spec
     Implementation Details Punkt 3). Wert+Formatierung kommen aus derselben
     Quelle wie der Klartext-Teil (``_PLAIN_ROWS``/``_metric_value``),
@@ -740,11 +790,15 @@ def _sms_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
     # ``+N``-Mechanismus wuerde die vom Zusatz verdraengten hinteren Metriken
     # nur noch zaehlen statt zeigen. Gilt ueber denselben Renderer auch fuer
     # Premium-SMS, sobald der Ortsvergleich ihn bedient.
-    return f"{code} {_sms_gsm7_safe(_fmt_overview_cell(fmt, value, loc_result))}"
+    zelle = _fmt_overview_cell(
+        fmt, value, loc_result, metric_id=metric_id, friendly=friendly, sms=True,
+    )
+    return f"{code} {_sms_gsm7_safe(zelle)}"
 
 
 def _plain_metric_cell(
     loc_result: LocationResult, metric_id: str, lang: Lang = "de",
+    friendly: bool = False,
 ) -> str | None:
     """"Label Wert"-Zelle fuer ``metric_id``, aus derselben Quelle wie der
     Klartext-Teil derselben Mail (``_PLAIN_ROWS``/``_metric_value``, Issue
@@ -757,7 +811,10 @@ def _plain_metric_cell(
     value = _metric_value(loc_result, metric_id)
     if value is None:
         return None
-    zelle = _fmt_overview_cell(fmt, value, loc_result, include_origin=True, lang=lang)
+    zelle = _fmt_overview_cell(
+        fmt, value, loc_result, include_origin=True, lang=lang,
+        metric_id=metric_id, friendly=friendly,
+    )
     return f"{t(label_key, lang)} {zelle}"
 
 
@@ -795,8 +852,12 @@ def render_compare_telegram(
     unresolved_count: int = 0,
     lang: Lang = "de",
     show_fallback_notice: bool = False,
+    metric_formats: dict[str, bool] | None = None,
 ) -> str:
     """Rendert einen Orts-Vergleich als Telegram-Nachricht (Issue #1270).
+
+    ``metric_formats`` (Issue #3039): ``{renderer_id: einfach}`` aus
+    ``channel_layouts``; ``None`` = heutiger Festzustand (Roh).
 
     ``show_fallback_notice`` (Issue #1563): Vertretungshinweis je Ort als
     Abschluss unter den Ortsbloecken (nur Briefing-Langform; Default ``False``).
@@ -890,7 +951,12 @@ def render_compare_telegram(
         # Slot-Kappung pruefen (Adversary-Korrektur), nicht erst beim
         # Zellenbau. `cell_values` haelt jede Zelle nur einmal vor (keine
         # doppelte `_metric_value`/`_daily_summary`-Berechnung).
-        cell_values = {mid: _plain_metric_cell(loc_result, mid, lang) for mid in dedup_ids}
+        cell_values = {
+            mid: _plain_metric_cell(
+                loc_result, mid, lang, friendly=bool((metric_formats or {}).get(mid)),
+            )
+            for mid in dedup_ids
+        }
         available_ids = [mid for mid in dedup_ids if cell_values[mid] is not None]
         no_data_count = len(dedup_ids) - len(available_ids) + unresolved_count
         layout = _channel_layout_for_metrics("telegram", available_ids)
@@ -1003,7 +1069,7 @@ def _official_alert_sms_marker(
 
 def _sms_location_part(
     loc_result, enabled_metrics: list[str] | None, budget: "int | None",
-    unresolved_count: int = 0,
+    unresolved_count: int = 0, metric_formats: dict[str, bool] | None = None,
 ) -> str:
     """Flache SMS-Darstellung EINES Ortes.
 
@@ -1066,7 +1132,10 @@ def _sms_location_part(
         else [mid for mid, _ in _CHANNEL_METRICS]
     ))
     cells = [
-        c for c in (_sms_metric_cell(loc_result, mid) for mid in dedup_ids)
+        c for c in (
+            _sms_metric_cell(loc_result, mid, bool((metric_formats or {}).get(mid)))
+            for mid in dedup_ids
+        )
         if c is not None
     ]
     # Issue #1405 S3 (sms_format.md §5b): fehlende Werte + unmappbare
@@ -1097,8 +1166,13 @@ def render_compare_sms(
     *,
     enabled_metrics: list[str] | None = None,
     unresolved_count: int = 0,
+    metric_formats: dict[str, bool] | None = None,
 ) -> str:
     """Rendert einen Orts-Vergleich als flache SMS (Issue #1270).
+
+    ``metric_formats`` (Issue #3039): ``{renderer_id: einfach}`` aus
+    ``channel_layouts``; Einfach wirkt nur fuer die GSM-7-sicheren Formen
+    (``SMS_FORMAT_MODE_METRIC_IDS``). ``None`` = heutiger Festzustand.
 
     Issue #1405 S3: ``unresolved_count`` (unmappbare gewaehlte Eintraege)
     erhoeht den Zaehler ``?N`` jedes Ortsteils (sms_format.md §5b).
@@ -1151,7 +1225,9 @@ def render_compare_sms(
         if max_chars is not None else None
     )
     parts = [
-        _sms_location_part(loc, enabled_metrics, location_budget, unresolved_count)
+        _sms_location_part(
+            loc, enabled_metrics, location_budget, unresolved_count, metric_formats,
+        )
         for loc in locations
     ]
     if not parts:
