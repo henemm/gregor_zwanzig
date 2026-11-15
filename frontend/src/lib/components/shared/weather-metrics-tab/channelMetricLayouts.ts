@@ -91,6 +91,11 @@ export function startChannelOverride(
  * Overrides, die `id` aktiv fuehren (Issue #1719 S3 / ADR-0050 Regel 3) — die
  * Kind-Mitnahme greift dort identisch, sonst blieben Kind-Zeilen im Kanal-
  * Override aktiv stehen, waehrend der Elter global gerade abgewaehlt wurde.
+ * #3047 T3 (AC-10, Konzept einstellungen_neu.md §5 Punkt 6/8): bei einer
+ * EINWAHL (`wasOn=false`) landen `id` und seine mitgenommenen Kinder in JEDER
+ * bereits bearbeiteten Kanal-Liste hinten, eingeschaltet; die bestehende Folge
+ * und kanal-lokale Abwahlen anderer Metriken bleiben. Nie bearbeitete Kanaele
+ * (`null`) folgen ohnehin der Grundauswahl und bekommen keinen Eintrag.
  * DIESELBE Funktion wird von `WeatherMetricsTab.svelte::onToggleMetric()` UND
  * vom Test-Nachbau aufgerufen (kein zweiter Nachbau der Verdrahtung, F001).
  * Referenz-Identitaet: `from === to` (No-Op) liefert exakt `buckets`/
@@ -107,7 +112,7 @@ export function toggleGlobalMetric(
 	if (from === to) return { buckets, channelBuckets };
 
 	const newBuckets = moveWithDerivedChildren(buckets, id, from, to);
-	if (!wasOn) return { buckets: newBuckets, channelBuckets };
+	if (!wasOn) return { buckets: newBuckets, channelBuckets: appendToChannelOverrides(buckets, newBuckets, channelBuckets) };
 
 	const newChannelBuckets = { ...channelBuckets };
 	// ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
@@ -120,6 +125,57 @@ export function toggleGlobalMetric(
 		};
 	}
 	return { buckets: newBuckets, channelBuckets: newChannelBuckets };
+}
+
+/** #3047 T3: die durch eine Einwahl neu in die Grundauswahl gekommenen IDs
+ *  (Elter samt Kindern, in ihrer Folge) hinten an jede bearbeitete Kanal-Liste. */
+function appendToChannelOverrides(
+	before: Buckets,
+	after: Buckets,
+	channelBuckets: Record<ChannelId, ChannelOverride | null>
+): Record<ChannelId, ChannelOverride | null> {
+	const neu = after.primary.filter((m) => !before.primary.includes(m));
+	if (neu.length === 0) return channelBuckets;
+	const next = { ...channelBuckets };
+	// ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
+	for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) {
+		const override = next[ch];
+		if (override === null || override === undefined) continue;
+		const fehlend = neu.filter((m) => !override.buckets.primary.includes(m));
+		if (fehlend.length === 0) continue;
+		next[ch] = {
+			buckets: {
+				primary: [...override.buckets.primary, ...fehlend],
+				secondary: override.buckets.secondary.filter((m) => !fehlend.includes(m)),
+				off: override.buckets.off.filter((m) => !fehlend.includes(m))
+			},
+			friendlyMap: override.friendlyMap
+		};
+	}
+	return next;
+}
+
+/**
+ * #3047 T3 (AC-10): haengt die durch eine Einwahl neu in die Grundauswahl
+ * gekommenen Metriken (`ids`, Trip-Katalog-IDs) hinten an eine GESPEICHERTE
+ * Ausblick-Liste (`outlook_metrics`, Kennungen) an. Uebersetzung ID -> Kennung
+ * ueber denselben Vergleichs-Katalog wie OutlookLayoutControls.svelte; eine ID
+ * ohne Ausblick-Zeile (kein Tageswert, z. B. Kind-Kennungen) faellt heraus.
+ * `null` (nie eingestellt) folgt ohnehin der Grundauswahl und bleibt `null`.
+ */
+export function appendNewMetricsToOutlook(
+	outlookKeys: string[] | null,
+	ids: readonly string[],
+	catalog: ReadonlyArray<{ metric: string; metric_id?: string }>
+): string[] | null {
+	if (outlookKeys === null) return null;
+	const kennungen = new Set(catalog.map((e) => e.metric_id ?? e.metric));
+	const next = [...outlookKeys];
+	for (const id of ids) {
+		const kennung = catalog.find((e) => e.metric === id)?.metric_id ?? id;
+		if (kennungen.has(kennung) && !next.includes(kennung)) next.push(kennung);
+	}
+	return next.length === outlookKeys.length ? outlookKeys : next;
 }
 
 /**
