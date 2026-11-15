@@ -1,0 +1,1299 @@
+{
+ "_hinweis": "#3047 Paket D (AC-13, AC-16, AC-21 Editor-Seite). Eingaben: 'kataloge' sind aufgezeichnete API-Antworten (gekuerzt auf die gelesenen Felder), 'zustaende[].eingabe' von Hand gesetzte gespeicherte Konfigurationen im Persistenzformat. 'erwartet' ist je Zustand von Hand gesetzt (Konzept docs/context/einstellungen_neu.md §5 Punkt 6/8, Spec feat_3047 §5/§7), NICHT aus Python- oder Frontend-Code erzeugt. Gelesen von tests/tdd/test_einstellung_gleich_mail_editor_standard.py (Python-Seite) und frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts (Frontend-Seite).",
+ "kataloge": {
+  "trip_api_metrics": {
+   "temperature": [
+    {
+     "id": "temperature",
+     "trip_default_enabled": true
+    },
+    {
+     "id": "temperature_night",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "temperature_day_low",
+     "trip_default_enabled": true
+    },
+    {
+     "id": "temperature_day_high",
+     "trip_default_enabled": true
+    },
+    {
+     "id": "wind_chill",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "wind_chill_night",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "wind_chill_day_low",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "wind_chill_day_high",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "humidity",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "dewpoint",
+     "trip_default_enabled": false
+    }
+   ],
+   "wind": [
+    {
+     "id": "wind",
+     "trip_default_enabled": true
+    },
+    {
+     "id": "gust",
+     "trip_default_enabled": true
+    },
+    {
+     "id": "wind_direction",
+     "trip_default_enabled": false
+    }
+   ],
+   "precipitation": [
+    {
+     "id": "precipitation",
+     "trip_default_enabled": true
+    },
+    {
+     "id": "rain_probability",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "thunder",
+     "trip_default_enabled": true
+    },
+    {
+     "id": "snowfall_limit",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "precip_type",
+     "trip_default_enabled": false
+    }
+   ],
+   "atmosphere": [
+    {
+     "id": "cloud_total",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "cloud_low",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "cloud_mid",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "cloud_high",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "visibility",
+     "trip_default_enabled": true
+    },
+    {
+     "id": "sunshine",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "uv_index",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "pressure",
+     "trip_default_enabled": false
+    }
+   ],
+   "winter": [
+    {
+     "id": "freezing_level",
+     "trip_default_enabled": true
+    },
+    {
+     "id": "snow_depth",
+     "trip_default_enabled": false
+    },
+    {
+     "id": "fresh_snow",
+     "trip_default_enabled": false
+    }
+   ]
+  },
+  "orte_api_compare_metrics": {
+   "metrics": [
+    {
+     "key": "snow_depth_cm",
+     "metric_id": "snow_depth",
+     "aggregation": "max",
+     "aggregation_label": "Maximum",
+     "label": "Schneehöhe",
+     "col_label": "SnowH",
+     "sms_code": "SD",
+     "kuerzel_metric_id": "snow_depth",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    },
+    {
+     "key": "snow_new_sum_cm",
+     "metric_id": "fresh_snow",
+     "aggregation": "sum",
+     "aggregation_label": "Summe",
+     "label": "Neuschnee",
+     "col_label": "NewSn",
+     "sms_code": "NS",
+     "kuerzel_metric_id": "fresh_snow",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    },
+    {
+     "key": "sunny_hours_h",
+     "metric_id": "sunshine",
+     "aggregation": "sum",
+     "aggregation_label": "Summe",
+     "label": "Sonnenstunden",
+     "col_label": "Sun",
+     "sms_code": "SU",
+     "kuerzel_metric_id": "sunshine",
+     "hourlySelectable": false,
+     "hourlyNotSelectableReason": "Stuendlich nur als Einstrahlung (W/m²) verfuegbar, nicht als Sonnenstunden — die Bewölkung und der UV-Index beantworten dieselbe Frage stundengenau.",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    },
+    {
+     "key": "wind_max_kmh",
+     "metric_id": "wind",
+     "aggregation": "max",
+     "aggregation_label": "Maximum",
+     "label": "Wind",
+     "col_label": "Wind",
+     "sms_code": "W",
+     "kuerzel_metric_id": "wind",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": true,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": [
+      "wind_kmh"
+     ]
+    },
+    {
+     "key": "cloud_avg_pct",
+     "metric_id": "cloud_total",
+     "aggregation": "avg",
+     "aggregation_label": "Mittel",
+     "label": "Bewölkung",
+     "col_label": "Cloud",
+     "sms_code": "CT",
+     "kuerzel_metric_id": "cloud_total",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    },
+    {
+     "key": "visibility_min_m",
+     "metric_id": "visibility",
+     "aggregation": "min",
+     "aggregation_label": "Minimum",
+     "label": "Sichtweite",
+     "col_label": "Visib",
+     "sms_code": "VS",
+     "kuerzel_metric_id": "visibility",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": true,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": [
+      "visibility_m"
+     ]
+    },
+    {
+     "key": "precip_sum_mm",
+     "metric_id": "precipitation",
+     "aggregation": "sum",
+     "aggregation_label": "Summe",
+     "label": "Niederschlag",
+     "col_label": "Rain",
+     "sms_code": "R",
+     "kuerzel_metric_id": "precipitation",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": true,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": [
+      "precip_mm"
+     ]
+    },
+    {
+     "key": "uv_index_max",
+     "metric_id": "uv_index",
+     "aggregation": "max",
+     "aggregation_label": "Maximum",
+     "label": "UV-Index",
+     "col_label": "UV",
+     "sms_code": "UV",
+     "kuerzel_metric_id": "uv_index",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": true,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": [
+      "uv_index"
+     ]
+    },
+    {
+     "key": "temp_max_c",
+     "metric_id": "temperature",
+     "aggregation": "max",
+     "aggregation_label": "Maximum",
+     "label": "Temperatur",
+     "col_label": "Temp",
+     "sms_code": "D",
+     "kuerzel_metric_id": "temperature_day_high",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": true,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": [
+      "temp_c"
+     ]
+    },
+    {
+     "key": "thunder_level_max",
+     "metric_id": "thunder",
+     "aggregation": "max",
+     "aggregation_label": "Maximum",
+     "label": "Gewitter",
+     "col_label": "Thdr",
+     "sms_code": "TH",
+     "kuerzel_metric_id": "thunder",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": true,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": [
+      "thunder_level"
+     ]
+    },
+    {
+     "key": "temp_min_c",
+     "metric_id": "temperature",
+     "aggregation": "min",
+     "aggregation_label": "Minimum",
+     "label": "Temperatur",
+     "col_label": "Temp",
+     "sms_code": "L",
+     "kuerzel_metric_id": "temperature_day_low",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": true,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": [
+      "temp_c"
+     ]
+    },
+    {
+     "key": "gust_max_kmh",
+     "metric_id": "gust",
+     "aggregation": "max",
+     "aggregation_label": "Maximum",
+     "label": "Böen",
+     "col_label": "Gust",
+     "sms_code": "G",
+     "kuerzel_metric_id": "gust",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": true,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": [
+      "gust_kmh"
+     ]
+    },
+    {
+     "key": "freezing_level_m",
+     "metric_id": "freezing_level",
+     "aggregation": "min",
+     "aggregation_label": "Minimum",
+     "label": "Nullgradgrenze",
+     "col_label": "0°Line",
+     "sms_code": "FZ",
+     "kuerzel_metric_id": "freezing_level",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    },
+    {
+     "key": "pop_max_pct",
+     "metric_id": "rain_probability",
+     "aggregation": "max",
+     "aggregation_label": "Maximum",
+     "label": "Regenwahrscheinlichkeit",
+     "col_label": "Rain%",
+     "sms_code": "PR",
+     "kuerzel_metric_id": "rain_probability",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": true,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": [
+      "pop_pct"
+     ]
+    },
+    {
+     "key": "wind_direction_deg",
+     "metric_id": "wind_direction",
+     "aggregation": "avg",
+     "aggregation_label": "Mittel",
+     "label": "Windrichtung",
+     "col_label": "WDir",
+     "sms_code": "WD",
+     "kuerzel_metric_id": "wind_direction",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": true,
+     "hourly_legacy_keys": [
+      "wind_dir_deg"
+     ]
+    },
+    {
+     "key": "wind_chill_min_c",
+     "metric_id": "wind_chill",
+     "aggregation": "min",
+     "aggregation_label": "Minimum",
+     "label": "Gefühlte Temperatur",
+     "col_label": "Feels",
+     "sms_code": "FL",
+     "kuerzel_metric_id": "wind_chill_day_low",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": true,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": [
+      "wind_chill_c"
+     ]
+    },
+    {
+     "key": "wind_chill_max_c",
+     "metric_id": "wind_chill",
+     "aggregation": "max",
+     "aggregation_label": "Maximum",
+     "label": "Gefühlte Temperatur",
+     "col_label": "Feels",
+     "sms_code": "FD",
+     "kuerzel_metric_id": "wind_chill_day_high",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": true,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": [
+      "wind_chill_c"
+     ]
+    },
+    {
+     "key": "humidity_avg_pct",
+     "metric_id": "humidity",
+     "aggregation": "avg",
+     "aggregation_label": "Mittel",
+     "label": "Luftfeuchtigkeit",
+     "col_label": "Humid",
+     "sms_code": "HU",
+     "kuerzel_metric_id": "humidity",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    },
+    {
+     "key": "dewpoint_avg_c",
+     "metric_id": "dewpoint",
+     "aggregation": "avg",
+     "aggregation_label": "Mittel",
+     "label": "Taupunkt",
+     "col_label": "Dew",
+     "sms_code": "DP",
+     "kuerzel_metric_id": "dewpoint",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    },
+    {
+     "key": "snowfall_limit_m",
+     "metric_id": "snowfall_limit",
+     "aggregation": "min",
+     "aggregation_label": "Minimum",
+     "label": "Schneefallgrenze",
+     "col_label": "SnowL",
+     "sms_code": "SL",
+     "kuerzel_metric_id": "snowfall_limit",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    },
+    {
+     "key": "precip_type_dominant",
+     "metric_id": "precip_type",
+     "aggregation": "max",
+     "aggregation_label": "Maximum",
+     "label": "Niederschlagsart",
+     "col_label": "PType",
+     "sms_code": "PT",
+     "kuerzel_metric_id": "precip_type",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    },
+    {
+     "key": "cloud_low_avg_pct",
+     "metric_id": "cloud_low",
+     "aggregation": "avg",
+     "aggregation_label": "Mittel",
+     "label": "Tiefe Wolken",
+     "col_label": "CldLow",
+     "sms_code": "CL",
+     "kuerzel_metric_id": "cloud_low",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    },
+    {
+     "key": "cloud_mid_avg_pct",
+     "metric_id": "cloud_mid",
+     "aggregation": "avg",
+     "aggregation_label": "Mittel",
+     "label": "Mittelhohe Wolken",
+     "col_label": "CldMid",
+     "sms_code": "CM",
+     "kuerzel_metric_id": "cloud_mid",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    },
+    {
+     "key": "cloud_high_avg_pct",
+     "metric_id": "cloud_high",
+     "aggregation": "avg",
+     "aggregation_label": "Mittel",
+     "label": "Hohe Wolken",
+     "col_label": "CldHi",
+     "sms_code": "CH",
+     "kuerzel_metric_id": "cloud_high",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    },
+    {
+     "key": "pressure_avg_hpa",
+     "metric_id": "pressure",
+     "aggregation": "avg",
+     "aggregation_label": "Mittel",
+     "label": "Luftdruck",
+     "col_label": "Press",
+     "sms_code": "HP",
+     "kuerzel_metric_id": "pressure",
+     "hourlySelectable": true,
+     "hourlyNotSelectableReason": "",
+     "hourlyDefault": false,
+     "hourlyMergeOnly": false,
+     "hourly_legacy_keys": []
+    }
+   ]
+  }
+ },
+ "listen": {
+  "trip_tabellen": {
+   "kontext": "trip",
+   "flaeche": "E-Mail-Liste = Spalten der Stundentabelle je Etappe",
+   "vokabular": "Kennungen (metric_id)",
+   "begruendung": "Nie eingestellte E-Mail-Liste = die Grundauswahl in ihrer eingestellten Folge (`order`, nicht Array-/Katalogfolge; Konzept §5 Punkt 8: jede Liste nimmt aus den Metriken oben). Abgeleitete Groessen (temperature_night/_day_low/_day_high) stehen direkt hinter ihrer Elterngroesse (Fix #1947, loader._append_derived_metrics und metricsEditor.deriveMissingChildMetrics). Altbestand ohne `metrics`: Soll ist der Trip-Anlege-Standard des Registers in Rangfolge `trip_default_rank` (#1552, eine Quelle fuer Register und Frontend-Vorbelegung) -- dieselbe Folge wie DEFAULT_TRIP_METRIC_IDS, die Mail-Seite. Eine Kanal-Liste nimmt nur aus der Grundauswahl (ADR-0050).",
+   "zustaende": [
+    {
+     "id": "nie_eingestellt",
+     "beschreibung": "Grundauswahl mit order wind,gust,temperature,..., keine channel_layouts.email",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": true,
+         "order": 2,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "wind",
+         "enabled": true,
+         "order": 0,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "gust",
+         "enabled": true,
+         "order": 1,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "precipitation",
+         "enabled": true,
+         "order": 3,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "rain_probability",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "thunder",
+         "enabled": true,
+         "order": 4,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "visibility",
+         "enabled": true,
+         "order": 6,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "uv_index",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "freezing_level",
+         "enabled": true,
+         "order": 5,
+         "bucket": "primary"
+        }
+       ]
+      }
+     },
+     "erwartet": [
+      "wind",
+      "gust",
+      "temperature",
+      "temperature_night",
+      "temperature_day_low",
+      "temperature_day_high",
+      "precipitation",
+      "thunder",
+      "freezing_level",
+      "visibility"
+     ]
+    },
+    {
+     "id": "altbestand_ohne_metrics",
+     "beschreibung": "display_config ohne metrics (Altbestand Fall A)",
+     "eingabe": {
+      "display_config": {}
+     },
+     "erwartet": [
+      "temperature",
+      "wind",
+      "gust",
+      "precipitation",
+      "thunder",
+      "freezing_level",
+      "visibility",
+      "temperature_day_low",
+      "temperature_day_high"
+     ]
+    },
+    {
+     "id": "gespeichert_folge",
+     "beschreibung": "E-Mail-Liste Niederschlag, Wind, Temperatur",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": true,
+         "order": 2,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "wind",
+         "enabled": true,
+         "order": 0,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "gust",
+         "enabled": true,
+         "order": 1,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "precipitation",
+         "enabled": true,
+         "order": 3,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "rain_probability",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "thunder",
+         "enabled": true,
+         "order": 4,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "visibility",
+         "enabled": true,
+         "order": 6,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "uv_index",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "freezing_level",
+         "enabled": true,
+         "order": 5,
+         "bucket": "primary"
+        }
+       ],
+       "channel_layouts": {
+        "email": [
+         {
+          "metric_id": "precipitation",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 0
+         },
+         {
+          "metric_id": "wind",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 1
+         },
+         {
+          "metric_id": "temperature",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 2
+         }
+        ]
+       }
+      }
+     },
+     "erwartet": [
+      "precipitation",
+      "wind",
+      "temperature",
+      "temperature_night",
+      "temperature_day_low",
+      "temperature_day_high"
+     ]
+    },
+    {
+     "id": "gespeichert_ausserhalb_grundauswahl",
+     "beschreibung": "E-Mail-Liste UV (nicht in Grundauswahl), Gewitter, Boeen",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": true,
+         "order": 2,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "wind",
+         "enabled": true,
+         "order": 0,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "gust",
+         "enabled": true,
+         "order": 1,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "precipitation",
+         "enabled": true,
+         "order": 3,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "rain_probability",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "thunder",
+         "enabled": true,
+         "order": 4,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "visibility",
+         "enabled": true,
+         "order": 6,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "uv_index",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "freezing_level",
+         "enabled": true,
+         "order": 5,
+         "bucket": "primary"
+        }
+       ],
+       "channel_layouts": {
+        "email": [
+         {
+          "metric_id": "uv_index",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 0
+         },
+         {
+          "metric_id": "thunder",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 1
+         },
+         {
+          "metric_id": "gust",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 2
+         }
+        ]
+       }
+      }
+     },
+     "erwartet": [
+      "thunder",
+      "gust"
+     ]
+    }
+   ]
+  },
+  "trip_ausblick": {
+   "kontext": "trip",
+   "flaeche": "3-Tages-Ausblick (outlook_metrics)",
+   "vokabular": "Kennungen (metric_id), nur Groessen mit Tagesauswertung",
+   "begruendung": "AC-4: nie eingestellter Ausblick = die ganze Grundauswahl in der eingestellten Reihenfolge der Trip-Metriken (nach `order`, nicht Katalogfolge), genau so, wie der Reiter die Ausblick-Liste zeigt. Abgeleitete Groessen ohne Tagesauswertung entfallen. Gespeicherte Auswahl: ihre Folge, geschnitten auf die Grundauswahl (ADR-0050).",
+   "zustaende": [
+    {
+     "id": "nie_eingestellt",
+     "beschreibung": "Grundauswahl mit order, outlook_metrics fehlt",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": true,
+         "order": 2,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "wind",
+         "enabled": true,
+         "order": 0,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "gust",
+         "enabled": true,
+         "order": 1,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "precipitation",
+         "enabled": true,
+         "order": 3,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "rain_probability",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "thunder",
+         "enabled": true,
+         "order": 4,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "visibility",
+         "enabled": true,
+         "order": 6,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "uv_index",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "freezing_level",
+         "enabled": true,
+         "order": 5,
+         "bucket": "primary"
+        }
+       ]
+      }
+     },
+     "erwartet": [
+      "wind",
+      "gust",
+      "temperature",
+      "precipitation",
+      "thunder",
+      "freezing_level",
+      "visibility"
+     ]
+    },
+    {
+     "id": "gespeichert_folge",
+     "beschreibung": "Ausblick Wind, Temperatur, Niederschlag (AC-4)",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": true,
+         "order": 2,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "wind",
+         "enabled": true,
+         "order": 0,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "gust",
+         "enabled": true,
+         "order": 1,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "precipitation",
+         "enabled": true,
+         "order": 3,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "rain_probability",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "thunder",
+         "enabled": true,
+         "order": 4,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "visibility",
+         "enabled": true,
+         "order": 6,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "uv_index",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "freezing_level",
+         "enabled": true,
+         "order": 5,
+         "bucket": "primary"
+        }
+       ],
+       "outlook_metrics": [
+        "wind",
+        "temperature",
+        "precipitation"
+       ]
+      }
+     },
+     "erwartet": [
+      "wind",
+      "temperature",
+      "precipitation"
+     ]
+    },
+    {
+     "id": "gespeichert_ausserhalb_grundauswahl",
+     "beschreibung": "Ausblick UV (nicht in Grundauswahl), Boeen, Temperatur",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": true,
+         "order": 2,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "wind",
+         "enabled": true,
+         "order": 0,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "gust",
+         "enabled": true,
+         "order": 1,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "precipitation",
+         "enabled": true,
+         "order": 3,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "rain_probability",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "thunder",
+         "enabled": true,
+         "order": 4,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "visibility",
+         "enabled": true,
+         "order": 6,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "uv_index",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "freezing_level",
+         "enabled": true,
+         "order": 5,
+         "bucket": "primary"
+        }
+       ],
+       "outlook_metrics": [
+        "uv_index",
+        "gust",
+        "temperature"
+       ]
+      }
+     },
+     "erwartet": [
+      "gust",
+      "temperature"
+     ]
+    }
+   ]
+  },
+  "orte_vergleichstabelle": {
+   "kontext": "orte",
+   "flaeche": "Vergleichstabelle, E-Mail-Liste (Zeilen je Metrik)",
+   "vokabular": "Katalog-Schluessel (GET /api/compare/metrics `key`)",
+   "begruendung": "Nie eingestellt (active_metrics und channel_active_metrics fehlen): alle Zeilen in der Standardfolge des Vergleichs. Das Konzept legt die Folge nicht fest; Soll ist die Mail-Seite (CV2_METRICS-Deklarationsfolge, comparison._ordered_rows bei None), weil Nutzer das ausgelieferte Verhalten kennen. Die Warn-Zeile ist fest und nicht Teil der Liste. Gespeichert: Folge der Kanal-Liste, geschnitten auf die Grundauswahl (ADR-0050).",
+   "zustaende": [
+    {
+     "id": "nie_eingestellt",
+     "beschreibung": "Altbestand ohne active_metrics",
+     "eingabe": {
+      "display_config": {}
+     },
+     "erwartet": [
+      "temp_max_c",
+      "wind_max_kmh",
+      "precip_sum_mm",
+      "pop_max_pct",
+      "thunder_level_max",
+      "sunny_hours_h",
+      "cloud_avg_pct",
+      "uv_index_max",
+      "visibility_min_m",
+      "snow_depth_cm",
+      "snow_new_sum_cm",
+      "temp_min_c",
+      "gust_max_kmh",
+      "freezing_level_m",
+      "wind_direction_deg",
+      "wind_chill_min_c",
+      "wind_chill_max_c",
+      "cloud_low_avg_pct",
+      "cloud_mid_avg_pct",
+      "cloud_high_avg_pct",
+      "humidity_avg_pct",
+      "dewpoint_avg_c",
+      "pressure_avg_hpa",
+      "precip_type_dominant",
+      "snowfall_limit_m"
+     ]
+    },
+    {
+     "id": "gespeichert_folge",
+     "beschreibung": "Grundauswahl Wind, Temp max, Temp min, Niederschlag, Boeen; E-Mail-Liste nie eingestellt",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        "wind_max_kmh",
+        "temp_max_c",
+        "temp_min_c",
+        "precip_sum_mm",
+        "gust_max_kmh"
+       ]
+      }
+     },
+     "erwartet": [
+      "wind_max_kmh",
+      "temp_max_c",
+      "temp_min_c",
+      "precip_sum_mm",
+      "gust_max_kmh"
+     ]
+    },
+    {
+     "id": "gespeichert_kanal_liste",
+     "beschreibung": "E-Mail-Liste Boeen, UV (nicht in Grundauswahl), Wind",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        "wind_max_kmh",
+        "temp_max_c",
+        "temp_min_c",
+        "precip_sum_mm",
+        "gust_max_kmh"
+       ],
+       "channel_active_metrics": {
+        "email": [
+         "gust_max_kmh",
+         "uv_index_max",
+         "wind_max_kmh"
+        ]
+       }
+      }
+     },
+     "erwartet": [
+      "gust_max_kmh",
+      "wind_max_kmh"
+     ]
+    }
+   ]
+  },
+  "orte_stundenverlauf": {
+   "kontext": "orte",
+   "flaeche": "Stundenverlauf je Ort (hourly_metrics)",
+   "vokabular": "Kennungen (metric_id)",
+   "begruendung": "O2: das Konzept nennt die Standardfolge des Stundenverlaufs nicht. Soll ist die Mail-Seite, das Backend-Tupel HOURLY_DEFAULT_METRIC_IDS (compare_hourly_metric_ids.py:111, 'exakt die neun Spalten von vor #1406 B, in genau ihrer Reihenfolge'), weil das ausgelieferte Verhalten ist, was Nutzer kennen. Der Editor muss bei nie eingestellter Liste genau diese Folge zeigen. Gespeichert: die gespeicherte Folge.",
+   "zustaende": [
+    {
+     "id": "nie_eingestellt",
+     "beschreibung": "hourly_metrics fehlt",
+     "eingabe": {
+      "display_config": {}
+     },
+     "erwartet": [
+      "temperature",
+      "wind_chill",
+      "wind",
+      "gust",
+      "precipitation",
+      "uv_index",
+      "thunder",
+      "rain_probability",
+      "visibility"
+     ]
+    },
+    {
+     "id": "gespeichert_folge",
+     "beschreibung": "Boeen, Temperatur, Niederschlag (AC-6)",
+     "eingabe": {
+      "display_config": {
+       "hourly_metrics": [
+        "gust",
+        "temperature",
+        "precipitation"
+       ]
+      }
+     },
+     "erwartet": [
+      "gust",
+      "temperature",
+      "precipitation"
+     ]
+    },
+    {
+     "id": "gespeichert_umgekehrt",
+     "beschreibung": "Sicht, Wind, UV",
+     "eingabe": {
+      "display_config": {
+       "hourly_metrics": [
+        "visibility",
+        "wind",
+        "uv_index"
+       ]
+      }
+     },
+     "erwartet": [
+      "visibility",
+      "wind",
+      "uv_index"
+     ]
+    }
+   ]
+  },
+  "orte_ausblick": {
+   "kontext": "orte",
+   "flaeche": "3-Tages-Ausblick je Ort (outlook_metrics)",
+   "vokabular": "Kennungen (metric_id); Temperatur Tief/Hoch ist eine Groesse",
+   "begruendung": "O4/AC-21: Altbestand ohne active_metrics und ohne outlook_metrics -- die Mail gibt die festen Ausblick-Spalten aus (Temperatur Tief/Hoch, Niederschlag, Regenwahrscheinlichkeit, Wind, Boeen, Gewitter; email/outlook.py _pfad1_labels). Das Konzept laesst die Folge offen; Soll ist die Mail-Seite, der Editor muss genau diese Spalten als aktiv zeigen. Mit Grundauswahl und nie eingestelltem Ausblick: die ganze Grundauswahl in ihrer Folge (wie Trip, AC-4). Gespeichert: gespeicherte Folge, geschnitten auf die Grundauswahl.",
+   "zustaende": [
+    {
+     "id": "nie_eingestellt",
+     "beschreibung": "Altbestand: active_metrics und outlook_metrics fehlen",
+     "eingabe": {
+      "display_config": {}
+     },
+     "erwartet": [
+      "temperature",
+      "precipitation",
+      "rain_probability",
+      "wind",
+      "gust",
+      "thunder"
+     ]
+    },
+    {
+     "id": "nie_eingestellt_mit_grundauswahl",
+     "beschreibung": "Grundauswahl Wind, Temp max/min, Niederschlag, Boeen; outlook_metrics fehlt",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        "wind_max_kmh",
+        "temp_max_c",
+        "temp_min_c",
+        "precip_sum_mm",
+        "gust_max_kmh"
+       ]
+      }
+     },
+     "erwartet": [
+      "wind",
+      "temperature",
+      "precipitation",
+      "gust"
+     ]
+    },
+    {
+     "id": "gespeichert_folge",
+     "beschreibung": "Ausblick Niederschlag, Wind, Temperatur (AC-7), ohne active_metrics",
+     "eingabe": {
+      "display_config": {
+       "outlook_metrics": [
+        "precipitation",
+        "wind",
+        "temperature"
+       ]
+      }
+     },
+     "erwartet": [
+      "precipitation",
+      "wind",
+      "temperature"
+     ]
+    },
+    {
+     "id": "gespeichert_ausserhalb_grundauswahl",
+     "beschreibung": "Ausblick Boeen, UV (nicht in Grundauswahl), Temperatur",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        "temp_max_c",
+        "temp_min_c",
+        "wind_max_kmh",
+        "gust_max_kmh"
+       ],
+       "outlook_metrics": [
+        "gust",
+        "uv_index",
+        "temperature"
+       ]
+      }
+     },
+     "erwartet": [
+      "gust",
+      "temperature"
+     ]
+    }
+   ]
+  },
+  "trip_vorlage": {
+   "kontext": "trip",
+   "flaeche": "Vorlage anwenden -> gespeicherte Metrik-Folge (display_config.metrics nach order)",
+   "vokabular": "Kennungen (metric_id)",
+   "begruendung": "AC-16: eine angewendete Vorlage behaelt ihre Folge; die interne Prioritaet (METRIC_PRIORITY) darf nicht umsortieren. Die Vorlagen-Folge ist ungleich der Prioritaetsfolge (Temperatur 95, Wind 90, Boeen 88, Niederschlag 78).",
+   "vorlage": {
+    "id": "pruef_vorlage",
+    "label": "Pruefvorlage",
+    "metrics": [
+     "gust",
+     "temperature",
+     "precipitation",
+     "wind"
+    ]
+   },
+   "erwartet": [
+    "gust",
+    "temperature",
+    "precipitation",
+    "wind"
+   ]
+  }
+ }
+}
