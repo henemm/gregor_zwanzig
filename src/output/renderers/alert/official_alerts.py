@@ -150,15 +150,15 @@ _SOURCE_LABELS: dict[str, str] = {
     # Issue #1441: Lawinen-Lagebericht je Tabellenzeile (avalanche_report.py,
     # `AVALANCHE_REGION_TABLE`); Namensnennung ist Lizenzpflicht (CC BY 4.0).
     "avalanche_report:at-07": "Lawinenwarndienst Tirol, avalanche.report",
-    "avalanche_report:it-32-bz": "Lawinenwarndienst Südtirol, avalanche.report",
+    "avalanche_report:it-32-bz": "Lawinenwarndienst Südtirol, avalanche.report",  # i18n-fest: Behördenname, Eigenname und Lizenz-Namensnennung
     "avalanche_report:it-32-tn": "Lawinenwarndienst Trentino, avalanche.report",
-    "avalanche_report:at-02": "Lawinenwarndienst Kärnten, avalanche.report",
+    "avalanche_report:at-02": "Lawinenwarndienst Kärnten, avalanche.report",  # i18n-fest: Behördenname, Eigenname und Lizenz-Namensnennung
     # Issue #1441 S2: Registry-Namen (Melde-Gedaechtnis `source`) -- eine reine
     # Entwarnungs-Mail nennt die Quelle ueber diesen Namen.
     "meteoalarm_feed": "MeteoAlarm",
     # Issue #1441 S3 (Antrag #7): SLF -- Registry-Name UND jede Region
     # `slf_bulletin:CH-xxxx` (Aufloesung ueber den Praefix, `_PREFIX_LABELS`).
-    "slf_bulletin": "WSL-Institut für Schnee- und Lawinenforschung SLF",
+    "slf_bulletin": "WSL-Institut für Schnee- und Lawinenforschung SLF",  # i18n-fest: Behördenname, Eigenname und Lizenz-Namensnennung
 }
 # Issue #2668: Quellen mit beschreibendem Zusatz stehen im Katalog (in ``lang``);
 # Behoerdennamen oben bleiben in jeder Sprache.

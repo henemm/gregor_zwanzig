@@ -372,7 +372,7 @@ def severity(e: AlertEvent) -> float:
         scale = max(abs(e.value_to), abs(e.value_from), 1.0)
         dist = (e.threshold - e.value_to) if e.cmp == "unter" else (e.value_to - e.threshold)
         return dist / scale
-    if e.cmp == "über":
+    if e.cmp == "über":  # i18n-fest: cmp-Protokollwert, nie übersetzen
         return (e.value_to - e.threshold) / e.threshold
     return (e.threshold - e.value_to) / e.threshold
 

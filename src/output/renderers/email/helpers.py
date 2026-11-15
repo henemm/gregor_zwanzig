@@ -2,7 +2,7 @@
 
 SPEC: docs/specs/modules/output_channel_renderers.md §A1+§A5+§A6.
 
-These helpers must NOT import RiskEngine, _compute_highlights,
+These helpers must NOT import RiskEngine,
 _determine_risk, _generate_compact_summary or any other domain function
 (spec §A5). They format already-derived values into HTML/Plain fragments.
 

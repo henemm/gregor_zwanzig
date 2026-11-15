@@ -89,7 +89,7 @@ def _affected_range(metric_id, series, old, threshold, value_from, level_metric,
             hours.append((t, old[t], series[t]))
         if ohne_anker:
             logger.warning(
-                "Stundenzeilen %s: %d Stunde(n) der frischen Reihe ohne Anker-"
+                "Stundenzeilen %s: %d Stunde(n) der frischen Reihe ohne Anker-"  # i18n-log
                 "Gegenstueck (erste %s) -- erscheinen nicht als alt -> neu (vgl. #1737)",
                 metric_id, len(ohne_anker), ohne_anker[0],
             )

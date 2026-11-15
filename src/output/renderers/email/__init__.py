@@ -3,7 +3,7 @@
 SPEC: docs/specs/modules/output_channel_renderers.md §A1+§A5+§A6 + 'render_email() Signatur'.
 
 Pure function: identical inputs -> bit-identical (html, plain) outputs.
-Domain logic (RiskEngine, _compute_highlights) stays in trip_report.py
+Domain logic (RiskEngine, compact summary) stays in trip_report.py
 adapter; the renderer receives already-derived values via keyword args.
 """
 from __future__ import annotations
@@ -76,7 +76,7 @@ def render_email(
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
 
-    Domain values (highlights, compact_summary) are computed by the caller
+    Domain values (compact_summary) are computed by the caller
     (TripReportFormatter adapter, spec §A1+§A5). Renderer-only state from
     the former formatter (tz, friendly_keys, exposed_sections) is passed as
     explicit kwargs (spec §A6).

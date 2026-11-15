@@ -1543,6 +1543,10 @@ def render_html(
 
     # Issue #2664: Deutsch bleibt byte-gleich (Golden), nur Englisch traegt lang.
     _html_tag = '<html lang="en">' if lang == "en" else "<html>"
+    # fix-911-visual-table AC-1: Stundentabelle-Linien durchgängig #f0ece1
+    # (Design EmailDataTable) -- die beiden table[data-table="resp"]-Regeln im
+    # Template. Bewusst Python-Kommentar statt CSS-Kommentar, damit interne
+    # Verweise nicht in der Kunden-Mail landen (#2783).
     html = f"""<!DOCTYPE html>
 {_html_tag}
 <head>
@@ -1564,7 +1568,6 @@ def render_html(
         th:last-child {{ border-right: none; }}
         td {{ padding: 6px; text-align: center; border-bottom: 1px solid {G_INK_FAINT}; border-right: 1px solid {G_INK_FAINT}; }}
         td:last-child {{ border-right: none; }}
-        /* fix-911-visual-table AC-1: Stundentabelle-Linien durchgängig #f0ece1 (Design EmailDataTable) */
         table[data-table="resp"] td {{ border-bottom-color: #f0ece1; border-right-color: #f0ece1; }}
         table[data-table="resp"] th {{ border-bottom-color: #e6e1d3; border-right-color: #f0ece1; }}
         .metric-value, td.metric, code {{ font-family: {FONT_DATA}; }}

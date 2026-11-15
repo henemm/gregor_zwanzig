@@ -8,7 +8,7 @@ Generates HTML + plain-text via the channel renderer (β3 Adapter).
 
 DEPRECATION (β3, render-pipeline-consolidation): This class is now a thin
 Adapter that delegates RENDER to src.output.renderers.email.render_email().
-Domain logic (highlights, compact_summary, RiskEngine, subject building)
+Domain logic (compact_summary, RiskEngine, subject building)
 stays here. β6 will remove this Adapter when all callers move to the
 renderer directly. SPEC: docs/specs/modules/output_channel_renderers.md §A8.
 """
@@ -36,7 +36,6 @@ from app.models import (
     RiskType,
     SegmentWeatherData,
     StabilityResult,
-    ThunderLevel,
     TripReport,
     TripReportConfig,
     UnifiedWeatherDisplayConfig,
@@ -183,9 +182,6 @@ class TripReportFormatter:
                 arrival_date=arrival_date,
             )
 
-        # Highlights
-        highlights = self._compute_highlights(segments, seg_tables, night_rows)
-
         # Multi-day trend (respects config — scheduler already filters by report_type)
         effective_trend = multi_day_trend if multi_day_trend else None
 
@@ -199,7 +195,7 @@ class TripReportFormatter:
             )
 
         # β3 Adapter (§A2/§A6): RENDER an pure renderer delegieren.
-        # Domain-Werte (highlights, compact_summary) sind oben berechnet; tz,
+        # Domain-Werte (compact_summary) sind oben berechnet; tz,
         # exposed_sections, friendly_keys werden als explizite kwargs übergeben.
         token_line = TokenLine(
             stage_name=stage_name or trip_name,
@@ -243,7 +239,6 @@ class TripReportFormatter:
             changes=changes,
             stage_name=stage_name,
             stage_stats=stage_stats,
-            highlights=highlights,
             compact_summary=compact_summary,
             tz=self._tz,
             exposed_sections=exposed_sections,
@@ -752,139 +747,6 @@ class TripReportFormatter:
             return ""
         parts = [f"{', '.join(labels)} {unit}" for unit, labels in groups.items()]
         return "Einheiten: " + " · ".join(parts)
-
-    # ------------------------------------------------------------------
-    # Highlights / Summary
-    # ------------------------------------------------------------------
-
-    def _compute_highlights(
-        self,
-        segments: list[SegmentWeatherData],
-        seg_tables: list[list[dict]],
-        night_rows: list[dict],
-    ) -> list[str]:
-        """Compute highlight lines (text, no HTML).
-
-        Gusts/wind: scanned from FULL timeseries (24h) with timestamp.
-        Values outside segment window are annotated with "nachts".
-        Precip/POP/CAPE: from segment-only aggregated values.
-        """
-        from output.metric_format import thunder_low_statement_sentence
-
-        highlights = []
-
-        # Thunder (segment hours only)
-        for seg_data in segments:
-            if seg_data.has_error or seg_data.timeseries is None:
-                continue
-            sh = seg_data.segment.start_time.hour
-            eh = display_end_time(seg_data.segment).hour
-            for dp in seg_data.timeseries.data:
-                if sh <= dp.ts.hour <= eh and dp.thunder_level and dp.thunder_level != ThunderLevel.NONE:
-                    elev = int(seg_data.segment.start_point.elevation_m or 0)
-                    # Issue #2176: LOW ist keine Ereignisbehauptung mehr,
-                    # sondern die Luftmassen-Aussage MIT ihrem CAPE-Wert
-                    # (Spec AC-2: der Zahlenwert steht AN der Aussage, nicht
-                    # nur in der ohnehin vorher bestehenden Stundentabellen-
-                    # Spalte; die 1000-J/kg-Highlight-Schwelle weiter unten
-                    # bedient einen anderen Zweck und bleibt unveraendert).
-                    # ⚡ bleibt hier Metrik-Kennzeichner der Zeile, steht aber
-                    # nicht mehr vor einer Ereignisaussage.
-                    if dp.thunder_level == ThunderLevel.LOW:
-                        _kopf = thunder_low_statement_sentence(
-                            "lang",
-                            getattr(dp, "thunder_level_signals", None),
-                            getattr(dp, "cape_jkg", None),
-                        )
-                    else:
-                        _kopf = "Gewitter möglich"
-                    highlights.append(
-                        f"⚡ {_kopf} ab {local_fmt(dp.ts, self._tz)} "
-                        f"({'am Ziel' if seg_data.segment.segment_id == 'Ziel' else f'Segment {seg_data.segment.segment_id}'}, >{elev}m)"
-                    )
-                    break
-
-        # Max gusts (full timeseries with timestamp, catalog threshold)
-        gust_ht = get_metric("gust").highlight_threshold or 60.0
-        max_gust_val = 0.0
-        max_gust_ts = None
-        max_gust_in_seg = True
-        for seg_data in segments:
-            if seg_data.has_error or seg_data.timeseries is None:
-                continue
-            sh = seg_data.segment.start_time.hour
-            eh = display_end_time(seg_data.segment).hour
-            for dp in seg_data.timeseries.data:
-                if dp.gust_kmh is not None and dp.gust_kmh > max_gust_val:
-                    max_gust_val = dp.gust_kmh
-                    max_gust_ts = dp.ts
-                    max_gust_in_seg = sh <= dp.ts.hour <= eh
-        if max_gust_val > gust_ht and max_gust_ts:
-            time_label = local_fmt(max_gust_ts, self._tz)
-            if not max_gust_in_seg:
-                time_label += ", nachts"
-            highlights.append(f"💨 Böen bis {max_gust_val:.0f} km/h ({time_label})")
-
-        # Total precipitation (segment-window only, from aggregated)
-        total_precip = sum(
-            s.aggregated.precip_sum_mm for s in segments
-            if s.aggregated.precip_sum_mm is not None
-        )
-        if total_precip > 0:
-            highlights.append(f"🌧 Regen gesamt: {total_precip:.1f} mm")
-
-        # Night min temp
-        if night_rows:
-            temps = [r["temp"] for r in night_rows if r.get("temp") is not None]
-            if temps:
-                min_t = min(temps)
-                min_row = next(r for r in night_rows if r.get("temp") == min_t)
-                highlights.append(f"🌡 Tiefste Nachttemperatur: {min_t:.1f} °C ({min_row['time']})")
-
-        # Max wind (full timeseries with timestamp, catalog threshold)
-        wind_ht = get_metric("wind").highlight_threshold or 50.0
-        max_wind_val = 0.0
-        max_wind_ts = None
-        max_wind_in_seg = True
-        for seg_data in segments:
-            if seg_data.has_error or seg_data.timeseries is None:
-                continue
-            sh = seg_data.segment.start_time.hour
-            eh = display_end_time(seg_data.segment).hour
-            for dp in seg_data.timeseries.data:
-                if dp.wind10m_kmh is not None and dp.wind10m_kmh > max_wind_val:
-                    max_wind_val = dp.wind10m_kmh
-                    max_wind_ts = dp.ts
-                    max_wind_in_seg = sh <= dp.ts.hour <= eh
-        if max_wind_val > wind_ht and max_wind_ts:
-            time_label = local_fmt(max_wind_ts, self._tz)
-            if not max_wind_in_seg:
-                time_label += ", nachts"
-            highlights.append(f"💨 Wind bis {max_wind_val:.0f} km/h ({time_label})")
-
-        # High precipitation probability (segment-only)
-        max_pop = 0
-        max_pop_info = ""
-        for seg_data in segments:
-            if seg_data.aggregated.pop_max_pct and seg_data.aggregated.pop_max_pct > max_pop:
-                max_pop = seg_data.aggregated.pop_max_pct
-                max_pop_info = "am Ziel" if seg_data.segment.segment_id == "Ziel" else f"Segment {seg_data.segment.segment_id}"
-        pop_ht = get_metric("rain_probability").highlight_threshold or 80.0
-        if max_pop >= pop_ht:
-            highlights.append(f"🌧 Regenwahrscheinlichkeit {max_pop}% ({max_pop_info})")
-
-        # High CAPE (segment-only)
-        max_cape = 0.0
-        max_cape_info = ""
-        for seg_data in segments:
-            if seg_data.aggregated.cape_max_jkg and seg_data.aggregated.cape_max_jkg > max_cape:
-                max_cape = seg_data.aggregated.cape_max_jkg
-                max_cape_info = "am Ziel" if seg_data.segment.segment_id == "Ziel" else f"Segment {seg_data.segment.segment_id}"
-        cape_ht = get_metric("cape").highlight_threshold or 1000.0
-        if max_cape >= cape_ht:
-            highlights.append(f"⚡ Hohe Gewitterenergie: CAPE {max_cape:.0f} J/kg ({max_cape_info})")
-
-        return highlights
 
     # ------------------------------------------------------------------
     # Subject

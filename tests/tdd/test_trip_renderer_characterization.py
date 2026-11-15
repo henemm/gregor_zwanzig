@@ -211,7 +211,8 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # Pillen-Texten nach der Ampel „allgemein" („Wind >30", „Böen >30",
 # „Regen-W. >30%" statt >10/>20/>20), gemessen per Render-Diff HEAD vs.
 # Arbeitsstand; Farben und alle uebrigen Zeichen sind unveraendert.
-_EXPECTED_SHA256 = "7b878bc8492c232018b0a75c732d4ca290042c948fd9030679186d8eeb3c43ae"
+# #2783: CSS-Kommentarzeile aus Mail entfernt, sonst byte-gleich (alter Anker 7b878bc8…)
+_EXPECTED_SHA256 = "8eeb5add6e145f0171f50d291b1e1e094bd054b066d4d39e900f2ab08e35da54"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",
