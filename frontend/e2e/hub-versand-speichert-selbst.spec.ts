@@ -535,7 +535,7 @@ for (const kind of HUB_KINDS) {
 					await expect(laufzeit).toBeVisible();
 					// Seed-Etappe `s1` am 2027-08-01 (helpers.seedHub) ⇒ deutsches Datum (AC-9).
 					await expect(laufzeit.locator('[data-testid="zustellung-laufzeit-satz"]')).toHaveText(
-						'01.08.2027. Die Briefings enden nach der letzten Etappe. Die Daten pflegst du in den Etappen.'
+						'1. August 2027. Die Briefings enden nach der letzten Etappe. Die Daten pflegst du in den Etappen.'
 					);
 					await expect(laufzeit.locator('input, [data-slot="datum-feld-eingabe"]')).toHaveCount(0);
 					await bleibtBei(() => puts.length, 0, 1_500, 'das Öffnen des Versand-Abschnitts speichert nichts');

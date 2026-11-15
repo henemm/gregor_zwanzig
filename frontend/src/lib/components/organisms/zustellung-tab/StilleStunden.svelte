@@ -113,7 +113,7 @@
 	/* Mockup `.input` (Z. 85), wie die Zeitfelder (molecules/UhrzeitFeld): beige Flaeche, feiner Rand,
 	   kleiner Radius, Mono mit Tabellenziffern. */
 	.zt-minuten :global([data-slot='input']) {
-		min-height: 40px;
+		min-height: var(--g-s-10);
 		padding: 0 var(--g-s-3);
 		border: 1px solid var(--g-rule);
 		border-radius: var(--g-r-2);
@@ -128,7 +128,7 @@
 	}
 	@media (max-width: 899px), (pointer: coarse) {
 		.zt-minuten :global([data-slot='input']) {
-			font-size: 16px;
+			font-size: var(--g-s-4);
 		}
 	}
 </style>
