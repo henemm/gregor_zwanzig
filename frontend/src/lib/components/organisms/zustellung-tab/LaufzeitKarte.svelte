@@ -53,13 +53,15 @@
 					{$t('zustellung.laufzeit.etappen_oeffnen')}
 				</Btn>
 			{:else}
-				<div class="zt-segment" role="group" aria-label={$t('zustellung.laufzeit.titel')}>
-					<Btn variant={wahl === 'offen' ? 'primary' : 'ghost'} size="tap" aria-pressed={wahl === 'offen'} data-testid="zustellung-laufzeit-offen" onclick={() => waehle('offen')}>
-						{$t('zustellung.laufzeit.offen')}
-					</Btn>
-					<Btn variant={wahl === 'datum' ? 'primary' : 'ghost'} size="tap" aria-pressed={wahl === 'datum'} data-testid="zustellung-laufzeit-bis-datum" onclick={() => waehle('datum')}>
-						{$t('zustellung.laufzeit.bis_datum')}
-					</Btn>
+				<!-- Mockup `.seg` (Z. 76–78): Optik von Segmented variant="kompakt" (app.css) als Umschalter
+				     mit aria-pressed (E2E prueft aria-pressed); Trefferflaeche >= 44px per ::before. -->
+				<div class="zt-segment" data-slot="segmented" data-variant="kompakt" role="group" aria-label={$t('zustellung.laufzeit.titel')}>
+					<button type="button" data-slot="segmented-item" data-active={wahl === 'offen' ? 'true' : 'false'} aria-pressed={wahl === 'offen'} data-testid="zustellung-laufzeit-offen" onclick={() => waehle('offen')}
+						>{$t('zustellung.laufzeit.offen')}</button
+					>
+					<button type="button" data-slot="segmented-item" data-active={wahl === 'datum' ? 'true' : 'false'} aria-pressed={wahl === 'datum'} data-testid="zustellung-laufzeit-bis-datum" onclick={() => waehle('datum')}
+						>{$t('zustellung.laufzeit.bis_datum')}</button
+					>
 				</div>
 				{#if wahl === 'datum'}
 					<div class="zt-datum">
@@ -105,10 +107,6 @@
 		flex-wrap: wrap;
 		align-items: center;
 		gap: var(--g-s-3);
-	}
-	.zt-segment {
-		display: inline-flex;
-		gap: var(--g-s-1);
 	}
 	.zt-datum {
 		width: var(--g-size-160px);

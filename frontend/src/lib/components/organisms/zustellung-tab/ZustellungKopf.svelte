@@ -10,6 +10,11 @@
 </div>
 
 <style>
+	/* Mockup `.sectionh` (Z. 69–71): duenne Trennlinie unter dem Einleitungssatz. */
+	.zt-kopf {
+		padding-bottom: var(--g-s-3);
+		border-bottom: 1px solid var(--g-rule-soft);
+	}
 	.zt-kopf h2 {
 		margin: 0 0 var(--g-s-1);
 		font-size: var(--g-size-22px);

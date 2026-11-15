@@ -2,44 +2,1990 @@
 	"zweck": "Besitzer und Ausnahmen für den Ganzseiten-Abgleich der Elementliste (frontend/e2e/elementliste_abgleich_logik.ts: leseBesitzer, wendeBesitzerAn, leseAusnahmen, findeZusaetzliche; Spec docs/specs/modules/feat_2913_abgleich_ganzseite.md). 'besitzer': jede Abweichung (abweichend, nicht_pruefbar, zusaetzlich) braucht einen Verantwortlichen, sonst ist der Lauf mit --abnahme rot. Ziel-Art 'element' (id), 'abschnitt' (ctx, reiter, abschnitt) oder 'zusaetzlich' (text oder muster, optional ctx/reiter); Pflicht sind 'grund' und 'verweis' (#2913-c2, #2913-d, #2913-e oder #NNNN). 'ausnahmen': Live-Texte, die bewusst nicht in der Elementliste stehen (z. B. Kontodaten ohne Muster), je mit 'text' oder 'muster', 'grund' und 'spec'. Eine Freigabe aus elementliste_freigaben.json zählt bereits als Besitzer.",
 	"besitzer": [
 		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "zustellung",
-			"abschnitt": "abschnittskopf",
-			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, EN-Lücke: #2968",
-			"verweis": "#2913-d"
+			"art": "element",
+			"id": "trip.zustellung.normal.-.briefing-zeiten.fe812ea57c",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
 		},
 		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "zustellung",
-			"abschnitt": "briefing-zeiten",
-			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, Reihenfolge, EN-Lücke: #2968",
-			"verweis": "#2913-d"
+			"art": "element",
+			"id": "trip.zustellung.normal.-.briefing-zeiten.6d7416f662",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
 		},
 		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "zustellung",
-			"abschnitt": "kanaele",
-			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Text nicht sichtbar, Abschnitt-Haken fehlt, Reihenfolge, EN-Lücke: #2968",
-			"verweis": "#2913-d"
+			"art": "element",
+			"id": "trip.zustellung.normal.-.laufzeit.f3f7cb608e",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
 		},
 		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "zustellung",
-			"abschnitt": "laufzeit",
-			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, EN-Lücke: #2968",
-			"verweis": "#2913-d"
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.b9774726ec",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
 		},
 		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "zustellung",
-			"abschnitt": "stille-stunden",
-			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, Reihenfolge, EN-Lücke: #2968",
-			"verweis": "#2913-d"
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.f72bd03de9",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.2ef6fce469",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.83093238bf",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.8633e84559",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.6b36cc94c3",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.fcfc1aeefb",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.62eaa87d31",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.2b7a2c0a55",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.8336dc3834",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.1294d48eea",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.3d872840bf",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.e4f137cbdf",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.cc9d36e8f4",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.b420bea203",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.43b34daccd",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.03733ec0a6",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.stille-stunden.44e4d2a466",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.stille-stunden.0810d8ab9e",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.briefing-zeiten.83ef98acff",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.briefing-zeiten.76c35674bb",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.laufzeit.5dd79af1de",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.42c76d5279",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.7a49476562",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.aa5b7ef86b",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.d4754cdde0",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.e950600683",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.947e83f2d3",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.d885ec5ab2",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.e1d5001092",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.c061ed6835",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.869568abfc",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.0ac7a44426",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.4c47b27c60",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.74fe60575c",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.d8e665eb4e",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.d28e8739ad",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.905291c947",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.54b0edf5ed",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.stille-stunden.1c5fc3efbe",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.stille-stunden.686208250e",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.briefing-zeiten.68f922afd4",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.briefing-zeiten.4c1750c12e",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.laufzeit.3a0f948380",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.6d73d070fe",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.2f81bccdfd",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.0310a54a53",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.a3bbfea071",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.9a012a8d07",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.1cab000455",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.83a9a0b141",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.6f9c0d8fb4",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.4d69cbaec2",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.d4a906d8e0",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.ae61572781",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.25643fd21b",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.8dbb89d301",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.be7130e0ed",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.2616fcf0cc",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.5aefb23dfb",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.49912c7006",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.stille-stunden.9df43c250b",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.stille-stunden.fb3c3c2006",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.briefing-zeiten.5a8ef3b3a2",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.briefing-zeiten.507d675276",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.laufzeit.8d994865f6",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.5f76db1eb1",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.cc6ff9b965",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.230491dce3",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.bc74105dda",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.848a60df31",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.stille-stunden.a9424ed34b",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.stille-stunden.6ac8e7ccc3",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.briefing-zeiten.771c842bab",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.briefing-zeiten.4fce26a639",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.1b53c08b7a",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.4be85a90a9",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.b906821a1a",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.b02f73eaf9",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.9af225deca",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.485cb36c59",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.ebf671972c",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.f61394f4f3",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.46c24636cf",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.bd81750f8a",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.73b6f4426e",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.62a2c368ce",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.b3e496eae6",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.b76151c414",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.f85ad806e4",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.4e38ca9bc4",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.63745225af",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.stille-stunden.c59d70c661",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.stille-stunden.c10e9c4483",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.abschnittskopf.5e0cb73ca4",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.abschnittskopf.761366fa43",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.briefing-zeiten.752f360ac8",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.briefing-zeiten.d8a5e18b1c",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.briefing-zeiten.84ea43d19c",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.briefing-zeiten.c9e2665028",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.briefing-zeiten.cd1b55ffec",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.briefing-zeiten.801149c7c4",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.briefing-zeiten.b169a32cfd",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.briefing-zeiten.5e6d5f37f2",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.laufzeit.d1cb420d76",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.laufzeit.232b93245b",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.laufzeit.aeaddba57d",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.laufzeit.cf43e79b87",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.4ecc562d54",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.43ef7d5993",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.b1384a32d2",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.a5ed3f6484",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.fa2c0a4c54",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.42f51df750",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.25844b9683",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.0b4d56f4bc",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.9875fb1edf",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.484001747b",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.8fe1f9b61a",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.0a18890bb0",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.cc4ebea8fd",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.bff86e4a2e",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.b6ed9ecae6",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.9138754b51",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.6d1d9cb4ed",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.ee9ac142b5",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.79e4ca0567",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.508ad22f37",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.866d7293ac",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.d5fd556d29",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.612258a1e6",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.0c8b4a1405",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.08d9cc7fcd",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.52616cd58e",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.9821264b41",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.3e5501c94e",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.3daf8f959a",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.986c065ccf",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.fad7942612",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.b9f6bb13fc",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.8593574c63",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.551d1842ee",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.kanaele.d0aa2caf6e",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.stille-stunden.0417ba83ed",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.stille-stunden.0b229266f0",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.stille-stunden.c7e410e9f4",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.stille-stunden.4c896d9b72",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.stille-stunden.a7c607e6a9",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.stille-stunden.76d90fd782",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.stille-stunden.de66ccbb96",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.stille-stunden.09205d48dd",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.stille-stunden.355955e360",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.laedt.-.stille-stunden.0dd3e39148",
+			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.briefing-zeiten.71477941a1",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.briefing-zeiten.e430a8693a",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.4412ebbcdb",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.13a2ebbc86",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.66e7e075f6",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.22eed7c6e6",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.864f9c47b0",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.7c6de1572e",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.7bc54ca5db",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.5f756b948a",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.b9cebe6300",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.6cc859c89a",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.3c32568b07",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.38d4d9e311",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.51b13bb3d6",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.3379a03b9e",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.9cfbb4df6c",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.366f7edae9",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.485e1fcdda",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.stille-stunden.5bb6488a9b",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.stille-stunden.0700d4bc5c",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.briefing-zeiten.4b085ef60d",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.briefing-zeiten.e65fc73f7d",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.a9e436d3e5",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.52b1cdb91b",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.11d07ab5db",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.262a0f67c0",
+			"grund": "Datenabhängig: das Staging-Prüfkonto hat nur E-Mail verbunden, Telegram/SMS/Premium-SMS sind daher gesperrt („gesperrt: {Grund}“, Spec Teil B Nr. 4) und die Dringlichkeits-Segmente erscheinen nur bei verbundenem Kanal",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.11600a0e2f",
+			"grund": "Mockup-Beispieldaten (Kontodaten des Mockups: Adressen, Nummern, inReach-Stand, Kanalzähler, Laufzeit-Daten); das Staging-Prüfkonto hat andere Daten, live steht der echte Wert",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.stille-stunden.e49d21056f",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.stille-stunden.74d4e35128",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.abschnittskopf.4472458afb",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.briefing-zeiten.254b3320e5",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.briefing-zeiten.2a817e4aa3",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.0a3624db34",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.836712cea8",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.755701587b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.71e34788e1",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.2aaa170334",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.7077ba8ba9",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.686bf26748",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.6b90906239",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.7202040104",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.aaa02bd645",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.cfda07275b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.kanaele.819b8ef7de",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.stille-stunden.bef0ff6e74",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.stille-stunden.591117a34d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.normal.-.stille-stunden.05235ef5be",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.abschnittskopf.e84168469c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.briefing-zeiten.355bafb755",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.briefing-zeiten.adfdacc188",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.3333108366",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.955022df16",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.ec8e432d31",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.c6ed773242",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.40f632a501",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.d7660151c3",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.e7f7d1fbf0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.68db9cc9ec",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.fc7cfc383d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.eb9eec0c22",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.41d14589da",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.kanaele.59b5a1e937",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.stille-stunden.41d65311d6",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.stille-stunden.ea4c3552fc",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.laedt.-.stille-stunden.74083318c8",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.abschnittskopf.d118b49940",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.briefing-zeiten.5cb7062fa8",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.briefing-zeiten.8f62c663f0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.8074e809ee",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.c200af4f47",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.8dd3a2f85d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.51b805710e",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.3ab5d92cd7",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.aeccaad7df",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.38b594f5ac",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.5598627430",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.b372548cd2",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.3f59301443",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.6a6c1e3460",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.kanaele.8c96339093",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.stille-stunden.a229fb6939",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.stille-stunden.36dfc25f13",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.fehler.-.stille-stunden.37899d9221",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.abschnittskopf.110bdf241f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.briefing-zeiten.0b49f43b70",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.briefing-zeiten.1b93260fb5",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.19b4cb26e7",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.a214de7e41",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.1ee3011f38",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.eb3e1da2e0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.6059ec2067",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.eccf5534da",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.2ba8d3b20c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.ecf6669703",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.ebff82c749",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.f175053d41",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.a8c81cc9a0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.506a584790",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.6730272e28",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.546f62d78f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.1ccd25736a",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.fa61e870c2",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.7c94df4428",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.1e688e91e1",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.5cadee038c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.kanaele.99a967cfa4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.stille-stunden.c8d64c9fbe",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.stille-stunden.2f0014461f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.zustellung.luecken.-.stille-stunden.cfeaa46e94",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.abschnittskopf.7c037eafcc",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.briefing-zeiten.cba7907a48",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.briefing-zeiten.7eb518b46f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.laufzeit.9a573b42e6",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.a94a834046",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.ccbef68a08",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.5b85223ee7",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.8e78dfc8a4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.ad8bcee346",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.016c37b8a1",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.519af8e34a",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.58218ead01",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.9a75b3a008",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.8b5e768371",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.49d0a58be6",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.kanaele.315f22a70f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.stille-stunden.b6cea537b0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.stille-stunden.0c653ca7ca",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.normal.-.stille-stunden.e1dd642c79",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.abschnittskopf.24b36eca5b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.briefing-zeiten.b49aed815a",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.briefing-zeiten.2440df2b4a",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.laufzeit.d1196d968d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.5aa4119a94",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.b59e49d1db",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.daa3b5fb42",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.52c59ab7fe",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.f8c5fe0d8f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.bbf4fab019",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.6fcd9efa44",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.f83c4898a2",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.61b4a3abb4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.4ba5244691",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.2f36d26195",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.kanaele.1d1d2937e0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.stille-stunden.ffdfdad9ff",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.stille-stunden.17425a28d7",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.fehler.-.stille-stunden.1267e81613",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.abschnittskopf.923bb4d327",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.briefing-zeiten.37fd360b11",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.briefing-zeiten.3f138a926f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.laufzeit.922abd97b6",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.ed84d4da17",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.17481528cb",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.292ebd7144",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.06be371961",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.968ce49252",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.0eac716197",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.5bcfa1e89c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.da1ecc4499",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.f9cb892939",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.a64203e4b5",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.835659f7c4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.a6bdfef880",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.5547c68fba",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.59e0600a28",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.85996c5212",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.74a97ee8e6",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.7d6c6503b8",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.7d60fa1d29",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.25902f9b94",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.kanaele.a75f412ae1",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.stille-stunden.c4a8805bed",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.stille-stunden.fba1c459b8",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.zustellung.luecken.-.stille-stunden.72bb5041a7",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
+			"verweis": "#2968"
 		},
 		{
 			"art": "abschnitt",
@@ -272,46 +2218,6 @@
 			"abschnitt": "tempo",
 			"grund": "Tempo-Karte im Reiter Etappen (Fortbewegung, Tempo flach, Aufstieg, Gehzeit je Etappe) braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108), aus c2 umgehängt. Ursachen: Text nicht sichtbar, Abschnitt-Haken fehlt, EN-Lücke: #2968",
 			"verweis": "#2796"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "zustellung",
-			"abschnitt": "abschnittskopf",
-			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, EN-Lücke: #2968",
-			"verweis": "#2913-d"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "zustellung",
-			"abschnitt": "briefing-zeiten",
-			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, Reihenfolge, EN-Lücke: #2968",
-			"verweis": "#2913-d"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "zustellung",
-			"abschnitt": "kanaele",
-			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Text nicht sichtbar, Abschnitt-Haken fehlt, Reihenfolge, EN-Lücke: #2968",
-			"verweis": "#2913-d"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "zustellung",
-			"abschnitt": "laufzeit",
-			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, EN-Lücke: #2968",
-			"verweis": "#2913-d"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "zustellung",
-			"abschnitt": "stille-stunden",
-			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, Reihenfolge, EN-Lücke: #2968",
-			"verweis": "#2913-d"
 		},
 		{
 			"art": "abschnitt",
@@ -961,19 +2867,2327 @@
 		},
 		{
 			"art": "zusaetzlich",
-			"ctx": "trip",
 			"reiter": "zustellung",
-			"muster": "{text}",
-			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795); zusätzliche Live-Texte bleiben im Bericht sichtbar",
-			"verweis": "#2913-d"
+			"muster": "bestätigt · {adresse}",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
 		},
 		{
 			"art": "zusaetzlich",
-			"ctx": "orte",
 			"reiter": "zustellung",
-			"muster": "{text}",
-			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795); zusätzliche Live-Texte bleiben im Bericht sichtbar",
-			"verweis": "#2913-d"
+			"muster": "confirmed · {adresse}",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"muster": "Briefings über {n} · Alarme über {m}",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"muster": "Briefings via {n} · Alerts via {m}",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"muster": "gesperrt: {grund}",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"muster": "locked: {grund}",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"muster": "{datum}. Die Briefings enden nach der letzten Etappe. Die Daten pflegst du in den Etappen.",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"muster": "{datum}. The briefings end after the last stage. You maintain the dates in the stages.",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "nicht verbunden",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "not connected",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Im Konto verbinden →",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Connect in your account →",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Im Konto prüfen →",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Check in your account →",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Telegram-Chat fehlt.",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Telegram chat missing.",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "SMS ab Level Standard",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "SMS from the Standard level",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Premium-SMS ab Level Premium verfügbar",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Premium SMS is available from the Premium level",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "–",
+			"grund": "Kontodaten des Prüf-Kontos (nur E-Mail verbunden, Level ohne SMS/Premium-SMS, eintägiger Trip): Mockup zeigt Beispieldaten (alle Kanäle verbunden, Laufzeit über mehrere Tage); live derselbe Baustein mit Kontowerten",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Uhrzeit Morgen-Briefing",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig (WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Uhrzeit Abend-Briefing",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig (WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Stille Stunden von",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig (WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Stille Stunden bis",
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig (WCAG 2.4.6). Bleibt so.",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "A channel without a connection is locked until you set it up in your account.",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Alert from urgency",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Alerts via Email",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Briefing",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Briefing via Email",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Briefing via Premium SMS",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Briefing via SMS",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Briefing via Telegram",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Minimum interval between two alerts",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Premium SMS",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Quiet hours from",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Quiet hours to",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "SMS",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "SMS is cheap and therefore already gets alerts from \"moderate\". Premium SMS goes via satellite and only reports at \"high\".",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Telegram",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "The briefing runs until you pause it.",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Time of the evening briefing",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Time of the morning briefing",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "When the briefings arrive and how briefings and alerts reach you.",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "for the stage of the day",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "for today",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "for tomorrow",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "for tomorrow's stage",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "no alerts, they come with the next morning briefing",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "of the same metric",
+			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
+			"verweis": "#2968"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "04 — Schwellwerte",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "04 — Thresholds",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "0°Line",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "3-Tages-Ausblick",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "3-Tages-Vorschau",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "3-day outlook",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "3-day preview",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "A channel shows at most what is selected in the base selection. Anything missing there appears in no channel.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Affects only the hourly table. The night low and the night thunderstorm note stay if you selected them.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Air pressure",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Air pressure (Average)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Air pressure (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Appears only in the email.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Apply to SMS tokens, Telegram compact style and the email outlook/trend block",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Aus",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Aus in diesem Kanal",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Ausblick",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Ausführlich (HTML)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Average",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Being rebuilt – your values have been carried over.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Beispiel-Warnung",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Betrifft nur die Stundentabelle. Nacht-Tiefstwert und Gewitter-Hinweis für die Nacht bleiben, wenn du sie gewählt hast.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Bewölkung",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Bewölkung (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Böen",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Böen (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Böen (km/h)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "CH",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "CL",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "CM",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "CT",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Channel · selection & cutoff",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "CldHi",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "CldLow",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "CldMid",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Cloud",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Cloud cover",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Cloud cover (Average)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Cloud cover (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Compact",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Compact (plain text)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Comparison with yesterday",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "D",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "DP",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "DayMax",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "DayMin",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Daytime high (walking hours)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Daytime low (walking hours)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Detailed (HTML)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Dew",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Dew point",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Dew point (Average)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Dew point (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Diese Einstellungen ziehen in einem späteren Schritt um und wirken bis dahin wie bisher.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Distance, ascent/descent and maximum altitude of the stage as a number grid.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Distanz, Auf-/Abstieg und maximale Höhe der Etappe als Zahlenraster.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "E-Mail-Inhalt",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Ein Kanal zeigt höchstens, was in der Grundauswahl gewählt ist. Was dort fehlt, erscheint in keinem Kanal.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Einfach",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Email",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Email content",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Email shows everything · no limit",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Email zeigt alles · keine Begrenzung",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Erscheint nur in der E-Mail.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Erst aktiv, wenn Telegram als Kanal an ist.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Etappen-Kennzahlen",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Example warning",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "FD",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "FL",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "FZ",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Feels",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Feels-like temperature",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Feels-like temperature (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Feels-like temperature (Minimum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Format",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Freezing level",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Freezing level (Minimum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Fresh snow",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Fresh snow (Summe)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Fresh snow (Total)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "G",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Gefühlte Temperatur",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Gefühlte Temperatur (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Gefühlte Temperatur (Minimum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Gelten für SMS-Token, Telegram-Kurzform und den E-Mail-Ausblick/Trend-Block",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Gewitter",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Gewitter (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Großwetterlage-Kopf, nächste Etappen und Vorhersage-Sicherheit am Mail-Ende.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Gust",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Gusts (km/h)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "HP",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "HU",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Here for now: content per channel and example alert",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "High",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "High clouds",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "High clouds (Average)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "High clouds (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Hoch",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Hohe Wolken",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Hohe Wolken (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Hourly view",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Humid",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Humidity",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Humidity (Average)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Humidity (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Kanal · Auswahl & Kappung",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Keine alert-fähigen Wetter-Metriken aktiv. Aktiviere zuerst Wetter-Metriken (z.B. Windböen, Temperatur) im Tab .",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Kompakt (Nur-Text)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Kurzform",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "L",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Leicht",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Light",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Load preview",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Low clouds",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Low clouds (Average)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Low clouds (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Luftdruck",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Luftdruck (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Luftfeuchtigkeit",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Luftfeuchtigkeit (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Läuft automatisch — unbegrenzt, bis du pausierst. Das Briefing geht zu den konfigurierten Zeiten in die Kanäle.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Mail",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Maximum",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Mehrtages-Trend",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Mid-level clouds",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Mid-level clouds (Average)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Mid-level clouds (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Minimum",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Mittel",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Mittelhohe Wolken",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Mittelhohe Wolken (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Moderate",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Multi-day trend",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "NS24+",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Nacht-Stundentabelle in der Mail zeigen",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Neuschnee",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Neuschnee (Summe)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "NewSn",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Niederschlag",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Niederschlag (Summe)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Niederschlag (mm)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Niederschlagsart",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Niederschlagsart (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "No alert-capable weather metrics active. First activate weather metrics (e.g. wind gusts, temperature) in the tab.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Nullgradgrenze",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Nullgradgrenze (Minimum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Off",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Off in this channel",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Official warnings always come first regardless of this order and are therefore not part of the sortable list.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Only active when Telegram is switched on as a channel.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Order",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Outlook",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "PR",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "PT",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "PType",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Pause",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Pausieren",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Precipitation",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Precipitation (Summe)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Precipitation (Total)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Precipitation (mm)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Precipitation type",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Precipitation type (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Press",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "R",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Rain",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Rain probability",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Rain probability (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Rain%",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Raw",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Regenwahrscheinlichkeit",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Regenwahrscheinlichkeit (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Reihenfolge",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Robust",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Roh",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Runs automatically — with no end date until you pause it. The briefing goes out to the channels at the configured times.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "SD",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "SL",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "SU",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Schneefallgrenze",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Schneefallgrenze (Minimum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Schneehöhe",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Schneehöhe (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Sensibel",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Sensitive",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Show the night hourly table in the email",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Sichtweite",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Sichtweite (Minimum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Simple",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Snow depth",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Snow depth (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Snow line",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Snow line (Minimum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "SnowH",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "SnowL",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "So heißen diese Größen in SMS und Telegram-Kurzform:",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Sonnenstunden",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Sonnenstunden (Summe)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Sonntags · 3–7-Tage-Ausblick (optional)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Stage figures",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Standard",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Stuendlich nur als Einstrahlung (W/m²) verfuegbar, nicht als Sonnenstunden — die Bewölkung und der UV-Index beantworten dieselbe Frage stundengenau.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Stundenverlauf",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Summe",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Sun",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Sundays · 3–7-day outlook (optional)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Sunshine hours",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Sunshine hours (Summe)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Sunshine hours (Total)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "TH",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "TH TH+",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "TH+",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Tages-Höchsttemperatur (Gehzeit)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Tages-Tiefsttemperatur (Gehzeit)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Taupunkt",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Taupunkt (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Telegram im SMS-Kurzstil",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Telegram in SMS compact style",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Temp",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Temperatur",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Temperatur (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Temperatur (Minimum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Temperature",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Temperature (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Temperature (Minimum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Thdr",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "These are the codes for these values in SMS and Telegram compact style:",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "These settings will move in a later step and keep working as before until then.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Thunderstorm",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Thunderstorm (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Tiefe Wolken",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Tiefe Wolken (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Today's weather compared with yesterday as a short line in the briefing.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Total",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "UV",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "UV index",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "UV index (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "UV-Index",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "UV-Index (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "VS",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Vergleich des heutigen Wetters mit dem Vortag als Kurzzeile im Briefing.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Visib",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Visibility",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Visibility (Minimum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Vorschau laden",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Vortag-Vergleich",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "W",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "WD",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "WDir",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Weather pattern header, next stages and forecast confidence at the end of the email.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Wind",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Wind (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Wind (km/h)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Wind direction",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Wind direction (Average)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Wind direction (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Wind gusts",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Wind gusts (Maximum)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Windrichtung",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Windrichtung (Mittel)",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "Wird gerade umgebaut – deine Werte sind übernommen.",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "im Abend-Briefing",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "im Morgen-Briefing",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "in the evening briefing",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "in the morning briefing",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "km",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "km/h",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "left → right in the email table",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "links → rechts in der Email-Tabelle",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "m",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "mm",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "on",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "°C",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "· 25 Metriken",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "· 25 metrics",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "· 9 Metriken",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "· 9 metrics",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "−18",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "−2",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "zustellung",
+			"text": "∞",
+			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
+			"verweis": "#2795"
 		},
 		{
 			"art": "zusaetzlich",

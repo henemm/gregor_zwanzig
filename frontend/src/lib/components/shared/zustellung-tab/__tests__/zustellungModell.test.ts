@@ -471,12 +471,14 @@ describe('AC-2/AC-3: Unterzeilen der Briefing-Karten je Kontext', () => {
 describe('AC-9/AC-10: Laufzeit', () => {
 	test('ac9_trip_satz_mit_daten_der_etappen', async () => {
 		const m = await zustellungModell();
-		const satz: string = m.laufzeitTrip(tripVoll());
-		assert.match(satz, /\. Die Briefings enden nach der letzten Etappe\. Die Daten pflegst du in den Etappen\.$/);
-		const daten = satz.split('. Die Briefings')[0];
-		assert.match(daten, /23/, `Daten nennen den ersten Etappentag: „${daten}“`);
-		assert.match(daten, /26/, `Daten nennen den letzten Etappentag: „${daten}“`);
-		assert.match(daten, /2026/);
+		const st = (...d: string[]) => ({ stages: d.map((date) => ({ date })) }) as never;
+		const rest = ' Die Briefings enden nach der letzten Etappe. Die Daten pflegst du in den Etappen.';
+		assert.equal(m.laufzeitTrip(tripVoll()), '23.–26. Februar 2026.' + rest);
+		assert.equal(m.laufzeitTrip(st('2026-02-27', '2026-03-02')), '27. Februar – 2. März 2026.' + rest);
+		assert.equal(m.laufzeitTrip(st('2026-12-30', '2027-01-02')), '30. Dezember 2026 – 2. Januar 2027.' + rest);
+		assert.equal(m.laufzeitTrip(st('2026-02-23')), '23. Februar 2026.' + rest);
+		locale.set('en');
+		assert.equal(m.laufzeitTrip(tripVoll()), '23–26 February 2026. The briefings end after the last stage. You maintain the dates in the stages.');
 	});
 
 	test('ac10_orte_ohne_enddatum_bis_auf_weiteres', async () => {

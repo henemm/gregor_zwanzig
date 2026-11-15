@@ -16,6 +16,7 @@ import { derivePremiumSmsAlarmGate } from '../alarme-tab/premiumSmsAlarmGate.ts'
 import { reconstructTripAlertChannels } from '../alarme-tab/tripChannelReconstruction.ts';
 import { CHANNEL_THRESHOLD_KEYS } from '../alarme-tab/alertChannelState.ts';
 import { reportSlotAktiv } from '../../../utils/reportSlotAktiv.ts';
+import { formatDateRange } from '../../../utils/tripHero.ts';
 
 export type KanalId = 'email' | 'telegram' | 'sms' | 'premium_sms';
 export const KANAELE: readonly KanalId[] = ['email', 'telegram', 'sms', 'premium_sms'];
@@ -331,16 +332,10 @@ export function briefingUnterzeilen(context: Kontext): { morgen: string; abend: 
 
 /** Trip: „{Daten}. Die Briefings enden nach der letzten Etappe. …“ aus den Etappendaten (AC-9). */
 export function laufzeitTrip(trip: Pick<Trip, 'stages'>): string {
-	const daten = (trip.stages ?? [])
-		.map((s) => (s.date ?? '').slice(0, 10))
-		.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
-		.sort();
-	const lang = get(locale);
-	const alsDatum = (iso: string) => fmtDateNumeric(new Date(`${iso}T12:00:00Z`), lang);
-	let text: string;
-	if (daten.length === 0) text = tr('zustellung.laufzeit.ohne_daten');
-	else if (daten[0] === daten[daten.length - 1]) text = alsDatum(daten[0]);
-	else text = `${alsDatum(daten[0])} – ${alsDatum(daten[daten.length - 1])}`;
+	// #2795 Bildvergleich Runde 1: kompakter Bereich mit Monatsname wie die Datumszeile im Hub-Kopf
+	// („23.–26. Februar 2026“, eintaegig ein Datum) — derselbe Formatierer (tripHero), sprachabhaengig.
+	const stages = (trip.stages ?? []).filter((s) => /^\d{4}-\d{2}-\d{2}/.test(s.date ?? ''));
+	const text = stages.length === 0 ? tr('zustellung.laufzeit.ohne_daten') : formatDateRange({ stages });
 	return tr('zustellung.laufzeit.trip', { daten: text });
 }
 
