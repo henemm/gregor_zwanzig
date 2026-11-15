@@ -1,0 +1,96 @@
+#3047 Paket D (Editor-Standard = Mail-Standard) - RED-Artefakt, 2026-11-15T20:46Z
+Basis-Commit: df90e49a3
+
+=== Python-Seite, Marker aufgehoben: uv run pytest tests/tdd/test_einstellung_gleich_mail_editor_standard.py -q --runxfail --tb=line ===
+.F..F............                                                        [100%]
+=================================== FAILURES ===================================
+E   AssertionError: Python-Seite trip_tabellen/altbestand_ohne_metrics: Mail liefert [], editor_standard.json erwartet ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility', 'temperature_day_low', 'temperature_day_high']
+    assert [] == ['temperature...g_level', ...]
+      
+      Right contains 9 more items, first extra item: 'temperature'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ad3b02b29cc1cfd4e/tests/tdd/test_einstellung_gleich_mail_editor_standard.py:147: AssertionError: Python-Seite trip_tabellen/altbestand_ohne_metrics: Mail liefert [], editor_standard.json erwartet ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility', 'temperature_day_low', 'temperature_day_high']
+E   AssertionError: Python-Seite trip_ausblick/nie_eingestellt: Mail liefert ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'visibility', 'freezing_level'], editor_standard.json erwartet ['wind', 'gust', 'temperature', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+    assert ['temperature...ibility', ...] == ['wind', 'gus...g_level', ...]
+      
+      At index 0 diff: 'temperature' != 'wind'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ad3b02b29cc1cfd4e/tests/tdd/test_einstellung_gleich_mail_editor_standard.py:147: AssertionError: Python-Seite trip_ausblick/nie_eingestellt: Mail liefert ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'visibility', 'freezing_level'], editor_standard.json erwartet ['wind', 'gust', 'temperature', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+=========================== short test summary info ============================
+FAILED tests/tdd/test_einstellung_gleich_mail_editor_standard.py::test_python_seite_trip_tabellen_altbestand
+FAILED tests/tdd/test_einstellung_gleich_mail_editor_standard.py::test_python_seite_trip_ausblick_standard
+
+=== Python-Seite normal (xfail strict, Kern-Schicht gruen) ===
+.x..x............                                                        [100%]
+=========================== short test summary info ============================
+XFAIL tests/tdd/test_einstellung_gleich_mail_editor_standard.py::test_python_seite_trip_tabellen_altbestand - #3047 RED N1: Trip ohne gespeicherte metrics -> Stundentabelle ohne Wertspalten (resolve_metric_col_order liefert []), DEFAULT_TRIP_METRIC_IDS wirkt nur auf die Kennzahl-Kacheln
+XFAIL tests/tdd/test_einstellung_gleich_mail_editor_standard.py::test_python_seite_trip_ausblick_standard - #3047 RED T1: resolve_trip_outlook_metrics nimmt die Array-/Katalogfolge von dc.metrics statt der eingestellten order
+
+=== Frontend-Seite, Marker aufgehoben: GZ_RUNXFAIL=1 npm test -- .../editor_standard_gleich_mail.test.ts ===
+    ok 1 - frontend_seite_trip_tabellen_standard
+    not ok 2 - frontend_seite_trip_tabellen_altbestand [\#3047 RED N2]
+        + actual - expected
+        +   'visibility',
+        -   'visibility',
+    ok 3 - frontend_seite_trip_tabellen_gespeichert gespeichert_folge
+    ok 4 - frontend_seite_trip_tabellen_gespeichert gespeichert_ausserhalb_grundauswahl
+    ok 5 - frontend_seite_trip_ausblick_standard
+    ok 6 - frontend_seite_trip_ausblick_gespeichert gespeichert_folge
+    ok 7 - frontend_seite_trip_ausblick_gespeichert gespeichert_ausserhalb_grundauswahl
+    ok 8 - frontend_seite_orte_vergleichstabelle_standard
+    ok 9 - frontend_seite_orte_vergleichstabelle_gespeichert gespeichert_folge
+    ok 10 - frontend_seite_orte_vergleichstabelle_gespeichert gespeichert_kanal_liste
+    not ok 11 - frontend_seite_orte_stundenverlauf_standard [\#3047 RED O2]
+        + actual - expected
+        -   'temperature',
+        -   'wind_chill',
+        +   'visibility',
+        -   'gust',
+        +   'temperature',
+        +   'gust',
+        +   'wind_chill'
+        -   'visibility'
+    ok 12 - frontend_seite_orte_stundenverlauf_gespeichert gespeichert_folge
+    ok 13 - frontend_seite_orte_stundenverlauf_gespeichert gespeichert_umgekehrt
+    not ok 14 - frontend_seite_orte_ausblick_standard [\#3047 RED O4]
+        + actual - expected
+        +   'wind',
+        +   'thunder',
+        +   'sunshine',
+        +   'cloud_total',
+        +   'uv_index',
+        +   'visibility',
+        +   'snow_depth',
+        +   'fresh_snow',
+        -   'wind',
+        +   'freezing_level',
+        +   'wind_direction',
+        +   'wind_chill',
+        +   'cloud_low',
+        +   'cloud_mid',
+        +   'cloud_high',
+        +   'humidity',
+        +   'dewpoint',
+        +   'pressure',
+        +   'precip_type',
+        +   'snowfall_limit'
+        -   'thunder'
+    ok 15 - frontend_seite_orte_ausblick_standard_mit_grundauswahl
+    ok 16 - frontend_seite_orte_ausblick_gespeichert gespeichert_folge
+    ok 17 - frontend_seite_orte_ausblick_gespeichert gespeichert_ausserhalb_grundauswahl
+not ok 1 - \#3047 Editor-Standard = Mail-Standard (Frontend-Seite)
+    not ok 1 - frontend_seite_trip_vorlage_reihenfolge [\#3047 RED T4]
+        + actual - expected
+        +   'temperature',
+        +   'wind',
+        -   'temperature',
+        -   'wind'
+not ok 2 - \#3047 AC-16 Vorlage anwenden (Frontend-Seite)
+# tests 18
+# pass 14
+# fail 4
+
+=== Frontend-Seite normal (rotErwartet strict, Kern-Schicht gruen) ===
+# tests 18
+# pass 18
+# fail 0
