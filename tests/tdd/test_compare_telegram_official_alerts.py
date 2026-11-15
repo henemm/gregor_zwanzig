@@ -132,3 +132,29 @@ def test_only_location_at_or_above_threshold_shows_narrative_warn_block_no_sms_s
         f"Eine Warnung UNTER der Startschwelle (Stufe {threshold - 1}) darf "
         f"weiterhin keinen Warn-Block zeigen: {text!r} (Block: {block_d!r})"
     )
+
+
+# ---------------------------------------------------------------------------
+# #3047 Konzept WV6 / ADR-0095 Kanal-Paritaet: bei E-Mail UND Telegram steht
+# die amtliche Warnung ZUERST (vor den Metrik-Werten), bei SMS/Premium-SMS
+# am Ende. Die Vergleichs-Mail hat das (F5); das Telegram desselben
+# Vergleichs muss dieselbe Reihenfolge zeigen.
+# ---------------------------------------------------------------------------
+def test_wv6_warnung_steht_im_ortsblock_vor_den_werten():
+    ort_a = _loc_result(
+        "Aachen", alerts=[_alert("thunderstorm", 4, label="Unwetter Gewitter")],
+    )
+    ort_c = _loc_result("Chur")
+
+    text = render_compare_telegram(_result([ort_a, ort_c]))
+
+    zeilen = _location_block(text, "Aachen").split("\n")
+    warn = next(i for i, z in enumerate(zeilen) if "Warnstufe" in z)
+    werte = next(i for i, z in enumerate(zeilen) if "18" in z and "Warnstufe" not in z)
+    assert warn == 1 and warn < werte, (
+        f"WV6: im Telegram-Ortsblock muss die Warnung direkt unter dem Ortsnamen "
+        f"und vor den Werten stehen (wie in der Vergleichs-Mail): {zeilen!r}"
+    )
+    # Ort ohne Warnung: Werte stehen unveraendert direkt unter dem Namen.
+    chur = _location_block(text, "Chur").split("\n")
+    assert "18" in chur[1] and "Warnstufe" not in "\n".join(chur), chur

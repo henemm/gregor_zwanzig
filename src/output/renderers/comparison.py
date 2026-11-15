@@ -849,27 +849,9 @@ def render_compare_telegram(
             block.append("   " + t("vergleich.ort.fehler", lang, fehler=loc_result.error))
             blocks.append(block)
             continue
-        # Werte sind ortsabhaengig -- Verfuegbarkeit VOR der Prioritaets-/
-        # Slot-Kappung pruefen (Adversary-Korrektur), nicht erst beim
-        # Zellenbau. `cell_values` haelt jede Zelle nur einmal vor (keine
-        # doppelte `_metric_value`/`_daily_summary`-Berechnung).
-        cell_values = {mid: _plain_metric_cell(loc_result, mid, lang) for mid in dedup_ids}
-        available_ids = [mid for mid in dedup_ids if cell_values[mid] is not None]
-        no_data_count = len(dedup_ids) - len(available_ids) + unresolved_count
-        layout = _channel_layout_for_metrics("telegram", available_ids)
-        cells = [cell_values[mid] for mid in layout.table_columns]
-        block.append("   " + (" · ".join(cells) if cells
-                                 else t("vergleich.telegram.keine_werte", lang)))
-        # Zwei getrennt zaehlbare Ausfaelle (Invariante: sichtbare Zellen +
-        # Platzmangel-Zaehler + Ohne-Daten-Zaehler == Anzahl gewaehlter
-        # Groessen). Je eigene Zeile INNERHALB dieses Ortsblocks, weil beide
-        # Zahlen ortsabhaengig sind.
-        if layout.demoted_count > 0:
-            block.append("   " + telegram_metric_notice(
-                layout.demoted_count, context="vergleich", lang=lang,
-            ))
-        if no_data_count > 0:
-            block.append("   " + _telegram_no_data_notice(no_data_count, lang))
+        # Issue #3047 (Konzept WV6, ADR-0095): wie in der Vergleichs-Mail steht
+        # die amtliche Warnung ZUERST im Ortsblock, vor den Werten (SMS/
+        # Premium-SMS: am Ende, dort unveraendert).
         # Issue #1332 (PO-Korrektur 2026-07-23): Sicherheits-Filter + geteilte,
         # kontext-agnostische Bausteine (`build_official_alert_notices`/
         # `render_official_alert_telegram`, `trip=None` fuer den einzelnen
@@ -904,6 +886,27 @@ def render_compare_telegram(
                 tz=location_tz(loc_result.location), lang=lang,
             )
             block.append(f"   {warn_text}")
+        # Werte sind ortsabhaengig -- Verfuegbarkeit VOR der Prioritaets-/
+        # Slot-Kappung pruefen (Adversary-Korrektur), nicht erst beim
+        # Zellenbau. `cell_values` haelt jede Zelle nur einmal vor (keine
+        # doppelte `_metric_value`/`_daily_summary`-Berechnung).
+        cell_values = {mid: _plain_metric_cell(loc_result, mid, lang) for mid in dedup_ids}
+        available_ids = [mid for mid in dedup_ids if cell_values[mid] is not None]
+        no_data_count = len(dedup_ids) - len(available_ids) + unresolved_count
+        layout = _channel_layout_for_metrics("telegram", available_ids)
+        cells = [cell_values[mid] for mid in layout.table_columns]
+        block.append("   " + (" · ".join(cells) if cells
+                                 else t("vergleich.telegram.keine_werte", lang)))
+        # Zwei getrennt zaehlbare Ausfaelle (Invariante: sichtbare Zellen +
+        # Platzmangel-Zaehler + Ohne-Daten-Zaehler == Anzahl gewaehlter
+        # Groessen). Je eigene Zeile INNERHALB dieses Ortsblocks, weil beide
+        # Zahlen ortsabhaengig sind.
+        if layout.demoted_count > 0:
+            block.append("   " + telegram_metric_notice(
+                layout.demoted_count, context="vergleich", lang=lang,
+            ))
+        if no_data_count > 0:
+            block.append("   " + _telegram_no_data_notice(no_data_count, lang))
         blocks.append(block)
 
     max_chars = limits["max_chars"]
