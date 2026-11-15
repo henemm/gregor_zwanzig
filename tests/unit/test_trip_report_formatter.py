@@ -195,7 +195,7 @@ class TestMetricsFiltering:
         report = formatter.format_email(segments, "Trip", "morning", display_config=config)
 
         html = report.email_html
-        assert re.search(r"<th[^>]*>Time</th>", html), (
+        assert re.search(r"<th[^>]*>Zeit</th>", html), (  # #3047 AC-17 (de)
             "HTML must contain a Time column header <th> (with or without inline style, "
             "see #911 Outlook-Kompatibilität)"
         )

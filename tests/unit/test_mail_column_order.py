@@ -30,7 +30,7 @@ from output.renderers.channel_layout import render_for_channel
 from output.renderers.trip_report import TripReportFormatter
 
 # Spalten, die der Renderer unabhaengig von der Metrik-Auswahl setzt.
-_FRAME_COLUMNS = {"Time", "Risk"}
+_FRAME_COLUMNS = {"Zeit", "Risiko"}  # #3047 AC-17: Kopf in Nutzersprache (de)
 
 
 def _segment() -> SegmentWeatherData:

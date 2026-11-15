@@ -1,5 +1,5 @@
 ◯ WETTER-BRIEFING
-GR20 - Morning Report
+GR20 - Morgen-Briefing
 GR20 E1
 11.07.2026
 
@@ -16,7 +16,7 @@ GR20 E1: 17–18°C, gef. 11–12°C, ⛅, starker Regen max 8:00, mäßiger Win
   Sonne 2.5h
 
 ━━ Segment 1: km 0.0–0.0 | 08:00–12:00 | ↑400m → 1200m ━━
-  Time   Temp   Feels   Wind   Gust   Rain   Thdr     SnowL   Cloud   Sun 
+  Zeit   Temp   Feels   Wind   Gust   Rain   Thdr     SnowL   Cloud   Sun 
   -----  -----  ------  -----  -----  -----  -------  ------  ------  ----
   08     16.8   11.2    15     70     18.5   mittel   –       ⛅       –   
   09     17.1   11.4    16     37     0.0    mittel   –       ⛅       –   

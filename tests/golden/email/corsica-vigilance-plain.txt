@@ -1,7 +1,10 @@
 ◯ WETTER-BRIEFING
-Korsika Trail - Update Report
+Korsika Trail - Update-Briefing
 Corsica E5
 11.07.2026
+
+━━ Amtliche Warnungen ━━
+  ⚠️ Amtliche Warnung: Extreme Hitze (Sa 11.07. · 12:00–20:00)
 
 Corsica E5: 18–20°C, gef. 12–13°C, ⛅, mäßiger Regen max 12:00, mäßiger Wind 20 km/h, Böen bis 85 km/h ab 12:00, ⚡ möglich 4:00–18:00
 
@@ -15,11 +18,8 @@ Corsica E5: 18–20°C, gef. 12–13°C, ⛅, mäßiger Regen max 12:00, mäßig
   50% bewölkt · Max 12:00
   Sonne 3.0h
 
-━━ Amtliche Warnungen ━━
-  ⚠️ Amtliche Warnung: Extreme Hitze (Sa 11.07. · 12:00–20:00)
-
 ━━ Segment 1: km 0.0–0.0 | 12:00–17:00 | ↑400m → 1200m ━━
-  Time   Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 
+  Zeit   Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 
   -----  -----  ------  -----  -----  -----  -----  ------  ------  ----
   12     18.0   12.0    17     85     8.0    hoch   –       ⛅       –   
   13     18.3   12.2    18     41     0.0    hoch   –       ⛅       –   

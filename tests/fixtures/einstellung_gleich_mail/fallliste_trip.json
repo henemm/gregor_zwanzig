@@ -486,7 +486,7 @@
       "test": "test_paarweise_nachttabelle",
       "ac": "AC-8",
       "befund": "T2",
-      "status": "rot_erwartet",
+      "status": "gruen",
       "werte": {
         "auswahl_muster": "teilmenge",
         "reihenfolge": "umkehrung",
@@ -626,7 +626,7 @@
       "test": "test_paarweise_nachttabelle",
       "ac": "AC-8",
       "befund": "T2",
-      "status": "rot_erwartet",
+      "status": "gruen",
       "werte": {
         "auswahl_muster": "alles",
         "reihenfolge": "gemischt",
@@ -1255,7 +1255,7 @@
       "test": "test_ac15_nacht_darstellung_wie_etappe",
       "ac": "AC-15",
       "befund": "T2",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "trip-ac4--wind_temp_regen--html",
@@ -1946,7 +1946,7 @@
       "test": "test_ac17_klartext_festtexte_in_nutzersprache",
       "ac": "AC-17",
       "befund": "T5",
-      "status": "rot_erwartet"
+      "status": "gruen"
     },
     {
       "id": "trip-n1--altbestand_ohne_metrics-stunden--html",
@@ -2034,7 +2034,18 @@
       "test": "test_wv6_amtliche_warnung_zuerst",
       "ac": "AC-2, Konzept WV6",
       "befund": "WV6",
-      "status": "rot_erwartet"
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac17--html_kopf_de_en--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ac17_html_tabellenkopf_in_nutzersprache",
+      "ac": "AC-17",
+      "befund": "T5",
+      "status": "gruen"
     }
   ]
 }

@@ -3,6 +3,9 @@ Korsika Trail - Update Report
 Corsica E5
 11.07.2026
 
+━━ Official warnings ━━
+  ⚠️ Official warning: Heat (Sat 11 Jul · 12:00–20:00)
+
 Corsica E5: 18–20°C, feels 12–13°C, ⛅, moderate rain max 12:00, moderate wind 20 km/h, gusts up to 85 km/h from 12:00, ⚡ possible 4:00–18:00
 
 ━━ Metrics overview ━━
@@ -14,9 +17,6 @@ Corsica E5: 18–20°C, feels 12–13°C, ⛅, moderate rain max 12:00, moderate
   Thunderstorm high from 04:00 · strongest 04:00
   50% cloud cover · Max 12:00
   Sun 3.0h
-
-━━ Official warnings ━━
-  ⚠️ Official warning: Heat (Sat 11 Jul · 12:00–20:00)
 
 ━━ Segment 1: km 0.0–0.0 | 12:00–17:00 | ↑400m → 1200m ━━
   Time   Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 

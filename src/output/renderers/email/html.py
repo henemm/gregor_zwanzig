@@ -520,7 +520,7 @@ def _render_html_table(
     if not rows:
         # Empty rows: render a minimal table skeleton so callers can still
         # detect a <table> in the body (β3 test_renderers_email expectation).
-        return '<table data-table="resp" style="width:100%;border-collapse:collapse;"><thead><tr><th>Time</th></tr></thead><tbody></tbody></table>'
+        return f'<table data-table="resp" style="width:100%;border-collapse:collapse;"><thead><tr><th>{t("mail.tabelle.zeit", lang)}</th></tr></thead><tbody></tbody></table>'
     cols = visible_cols(rows)
     if allowed_col_keys is not None:
         cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
@@ -547,9 +547,12 @@ def _render_html_table(
         f'padding:8px 4px;text-align:center;font-family:{FONT_DATA};'
         f'font-size:11px;font-weight:600;color:#3a3835;white-space:nowrap;"'
     )
-    ths = f'<th {_hcell_style}>Time</th>'
+    # Issue #3047 AC-17: Struktur-Koepfe Zeit/Risiko in Nutzersprache; die
+    # Metrik-Kuerzel (col_label) bleiben Protokoll-Token. ``data-label="Time"``
+    # der Datenzellen ist ein Maschinen-Attribut (Validator) und bleibt.
+    ths = f'<th {_hcell_style}>{t("mail.tabelle.zeit", lang)}</th>'
     ths += "".join(f'<th {_hcell_style}>{label}</th>' for _, label in cols)
-    ths += f'<th {_hcell_style} style="background:#fff;border-bottom:1px solid #e6e1d3;padding:8px 4px;text-align:center;font-family:{FONT_DATA};font-size:11px;font-weight:600;color:#3a3835;width:32px;">Risk</th>'
+    ths += f'<th {_hcell_style} style="background:#fff;border-bottom:1px solid #e6e1d3;padding:8px 4px;text-align:center;font-family:{FONT_DATA};font-size:11px;font-weight:600;color:#3a3835;width:32px;">{t("mail.tabelle.risiko", lang)}</th>'
     thead = f'<thead><tr>{ths}</tr></thead>'
 
     # Data rows with highlighting

@@ -55,7 +55,9 @@ def test_matrix_bleibt_in_beiden_sprachen_gruen(roh, profil, auswahl, lang):
     html = render_reich(lang, dc=_dc(roh=roh, auswahl=auswahl), profile=profil).email_html
 
     # Vertrag der Matrix (#811): Stundentabelle mit festen Kuerzeln.
-    assert '<th style="background:#fff;' in html and ">Time</th>" in html
+    # #3047 AC-17: der Zeitspalten-Kopf folgt der Nutzersprache.
+    zeit_kopf = "Time" if lang == "en" else "Zeit"
+    assert '<th style="background:#fff;' in html and f">{zeit_kopf}</th>" in html
     assert ">Temp</th>" in html and ">Gust</th>" in html and ">Thdr</th>" in html
     zellen = _gewitter_zellen(html)
     assert zellen, "keine Gewitter-Zelle"
