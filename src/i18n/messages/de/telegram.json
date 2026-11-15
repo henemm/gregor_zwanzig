@@ -16,5 +16,6 @@
   "telegram.hinweis.unvollstaendig.other": "⚠️ Briefing unvollständig — {count} Teile des Briefings sind nicht angekommen. Bitte fordere das Briefing gleich noch einmal an.",
   "telegram.segment.ziel": "Ziel",
   "telegram.segment.keine_daten": "Seg {id}: keine Daten",
-  "telegram.warnung.praefix": "Amtliche Warnung"
+  "telegram.warnung.praefix": "Amtliche Warnung",
+  "telegram.tabelle.zeit": "Zt"
 }

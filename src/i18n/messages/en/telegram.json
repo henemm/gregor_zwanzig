@@ -16,5 +16,6 @@
   "telegram.hinweis.unvollstaendig.other": "⚠️ Briefing incomplete — {count} parts of the briefing did not arrive. Please request the briefing again shortly.",
   "telegram.segment.ziel": "Finish",
   "telegram.segment.keine_daten": "Seg {id}: no data",
-  "telegram.warnung.praefix": "Official warning"
+  "telegram.warnung.praefix": "Official warning",
+  "telegram.tabelle.zeit": "Hr"
 }

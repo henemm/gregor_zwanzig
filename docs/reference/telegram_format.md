@@ -87,7 +87,7 @@ und Antworten stehen in der **Kontosprache** (`resolve_user_lang`). Ein englisch
 `TODAY`, `RESTDAY`) ergibt eine englische Antwort, auch bei deutschem Konto (`telegram_englisch`,
 `src/services/trip_command_processor.py`).
 
-**Stufenwörter (#2784):** Gewitter-Stufe (z. B. „leicht" / „light"), Wind- und Regen-Adjektive folgen der Kontosprache in Fußzeile, Kurzübersicht, Segment-Tabellen des Briefings und in den Stundenzeilen des Änderungs-Alarms. Bewusst deutsch bleibt der Gewitterteil der Ausblick-Zeile (Entscheidung #2665). Kürzel (`TH`, `VS`, `FZ`) bleiben in jeder Sprache unverändert.
+**Stufenwörter (#2784):** Gewitter-Stufe (z. B. „leicht" / „light"), Wind- und Regen-Adjektive folgen der Kontosprache in Fußzeile, Kurzübersicht, Segment-Tabellen des Briefings und in den Stundenzeilen des Änderungs-Alarms. Bewusst deutsch bleibt der Gewitterteil der Ausblick-Zeile (Entscheidung #2665). Kürzel (`TH`, `VS`, `FZ`) bleiben in jeder Sprache unverändert. Der Kopf der Zeitspalte in der Segment-Tabelle ist dagegen kein Kürzel, sondern Nutzertext und folgt der Kontosprache über den Katalogschlüssel `telegram.tabelle.zeit` (Deutsch „Zt“, Englisch „Hr“; zweistellig wegen der 32-Zeichen-Tabellenbreite, #3014).
 
 **Kurzstil** (`telegram_style == "kurzform"`): die Kurzform bleibt in jeder Sprache unverändert, Kürzel
 und Befehlswörter eingeschlossen. Die Antwort ist englisch wie bisher; der Konto-Wert ändert nichts an
