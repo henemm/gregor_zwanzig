@@ -1,0 +1,48 @@
+# Issue #3047 Paket C -- RED-Artefakt (Validatoren mit --konfig), 2026-11-15
+# Lauf: uv run pytest tests/tdd/test_einstellung_gleich_mail_validatoren.py --runxfail --tb=short \
+#         -k "nie_eingestellt or altbestand_ausblick"
+# Erwartet rot (im Normallauf xfail strict, Fallliste status rot_erwartet):
+#   T1  Trip-Ausblick ohne outlook_metrics in Katalogfolge statt eingestellter Trip-Reihenfolge (AC-4)
+#   O3  Orte-Altbestand ohne active_metrics/outlook_metrics: Ausblick Klartext 4 statt 7 Spalten (AC-21)
+# Beide Laeufe scheitern genau an der Befund-Stelle, alle uebrigen Pruefungen der Mail bestehen.
+
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+__________ test_trip_ausblick_nie_eingestellt_folgt_trip_reihenfolge ___________
+tests/tdd/test_einstellung_gleich_mail_validatoren.py:266: in test_trip_ausblick_nie_eingestellt_folgt_trip_reihenfolge
+    assert code == 0, aus
+E   AssertionError: ======================================================================
+E     BRIEFING-MAIL-VALIDATOR (full + compact) — #733
+E     ======================================================================
+E
+E     ❌ SPEC-VERLETZUNGEN GEFUNDEN:
+E
+E       • SOLL: Ausblick (HTML) Zeile 1: Reihenfolge: an Position 1 steht 'Temp' statt 'Gust' (ist ['Temp', 'Wind', 'Gust', 'Rain'], soll ['Gust', 'Temp', 'Rain', 'Wind'])
+E       • SOLL: Ausblick (Klartext) Zeile 1: Reihenfolge: an Position 1 steht 'Temp' statt 'Gust' (ist ['Temp', 'Wind', 'Gust', 'Rain'], soll ['Gust', 'Temp', 'Rain', 'Wind'])
+E       • SOLL: Ausblick (Klartext) Zeile 2: Reihenfolge: an Position 1 steht 'Temp' statt 'Gust' (ist ['Temp', 'Wind', 'Gust', 'Rain'], soll ['Gust', 'Temp', 'Rain', 'Wind'])
+E       • SOLL: Ausblick (Klartext) Zeile 3: Reihenfolge: an Position 1 steht 'Temp' statt 'Gust' (ist ['Temp', 'Wind', 'Gust', 'Rain'], soll ['Gust', 'Temp', 'Rain', 'Wind'])
+E   assert 1 == 0
+_______________ test_orte_altbestand_ausblick_klartext_wie_html ________________
+tests/tdd/test_einstellung_gleich_mail_validatoren.py:328: in test_orte_altbestand_ausblick_klartext_wie_html
+    assert code == 0, aus
+E   AssertionError: ======================================================================
+E     E-MAIL SPEC v4.0 COMPLIANCE VALIDATOR
+E     ======================================================================
+E
+E     ❌ SPEC-VERLETZUNGEN GEFUNDEN:
+E
+E       • SOLL: Ausblick (Klartext) Zeile 1: Spalte fehlt: 'Rain%', 'Gust' (ist ['Temp', 'Rain', 'Wind', 'Thdr'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 2: Spalte fehlt: 'Rain%', 'Gust' (ist ['Temp', 'Rain', 'Wind', 'Thdr'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 3: Spalte fehlt: 'Rain%', 'Gust' (ist ['Temp', 'Rain', 'Wind', 'Thdr'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 4: Spalte fehlt: 'Rain%', 'Gust' (ist ['Temp', 'Rain', 'Wind', 'Thdr'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 5: Spalte fehlt: 'Rain%', 'Gust' (ist ['Temp', 'Rain', 'Wind', 'Thdr'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 6: Spalte fehlt: 'Rain%', 'Gust' (ist ['Temp', 'Rain', 'Wind', 'Thdr'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E
+E     ======================================================================
+E     ⛔ DU DARFST NICHT 'E2E TEST BESTANDEN' SAGEN!
+E        Behebe zuerst alle Fehler und führe den Validator erneut aus.
+E     ======================================================================
+E   assert 1 == 0
+=========================== short test summary info ============================
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_ausblick_nie_eingestellt_folgt_trip_reihenfolge
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_altbestand_ausblick_klartext_wie_html
