@@ -1,0 +1,108 @@
+# RED-Artefakt Paket A (Pruefkatalog Trip), Issue #3047, 2026-11-15
+# Lauf: uv run pytest tests/tdd/test_einstellung_gleich_mail_trip.py -q --runxfail --tb=line -rf
+# Ohne --runxfail sind diese 13 Faelle xfail(strict) laut fallliste_trip.json (Status rot_erwartet).
+# Befunde: T1 Ausblick nie eingestellt in Array-/Katalogfolge; T2 Nachttabelle Klartext ohne format_modes;
+# T3 (AC-10) leerer Schnitt E-Mail-Liste ohne Rueckfall auf Grundauswahl; T5 Klartext 'Time'/'... Report' fest englisch.
+
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+........................F.......F.......................F.F............. [ 53%]
+F...FFF.........................................FFFF.........F.          [100%]
+=================================== FAILURES ===================================
+E   AssertionError: trip-paar-nacht-02-darstellung--teilmenge-umkehrung-gemischt--klartext (nacht, klartext): Darstellung (Ist, Soll) weicht ab: {'wind_direction': ('einfach', 'zahl')}
+    assert not {'wind_direction': ('einfach', 'zahl')}
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:163: AssertionError: trip-paar-nacht-02-darstellung--teilmenge-umkehrung-gemischt--klartext (nacht, klartext): Darstellung (Ist, Soll) weicht ab: {'wind_direction': ('einfach', 'zahl')}
+E   AssertionError: trip-paar-nacht-06-darstellung--alles-gemischt-roh--klartext (nacht, klartext): Darstellung (Ist, Soll) weicht ab: {'wind_direction': ('einfach', 'zahl')}
+    assert not {'wind_direction': ('einfach', 'zahl')}
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:163: AssertionError: trip-paar-nacht-06-darstellung--alles-gemischt-roh--klartext (nacht, klartext): Darstellung (Ist, Soll) weicht ab: {'wind_direction': ('einfach', 'zahl')}
+E   AssertionError: trip-paar-ausblick-08-reihenfolge--nie_eingestellt-umkehrung-roh--kompakt (ausblick, kompakt): Spaltenfolge ['temperature', 'wind', 'gust', 'wind_direction', 'precipitation', 'cloud_total', 'uv_index'] != Soll ['uv_index', 'cloud_total', 'precipitation', 'wind_direction', 'gust', 'wind', 'temperature']
+    assert ['temperature...d_total', ...] == ['uv_index', ..., 'wind', ...]
+      
+      At index 0 diff: 'temperature' != 'uv_index'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:228: AssertionError: trip-paar-ausblick-08-reihenfolge--nie_eingestellt-umkehrung-roh--kompakt (ausblick, kompakt): Spaltenfolge ['temperature', 'wind', 'gust', 'wind_direction', 'precipitation', 'cloud_total', 'uv_index'] != Soll ['uv_index', 'cloud_total', 'precipitation', 'wind_direction', 'gust', 'wind', 'temperature']
+E   AssertionError: trip-paar-ausblick-09-reihenfolge--nie_eingestellt-gemischt-gemischt--html (ausblick, html): Spaltenfolge ['temperature', 'wind', 'gust', 'wind_direction', 'precipitation', 'cloud_total', 'uv_index'] != Soll ['gust', 'temperature', 'precipitation', 'wind', 'cloud_total', 'uv_index', 'wind_direction']
+    assert ['temperature...d_total', ...] == ['gust', 'tem...v_index', ...]
+      
+      At index 0 diff: 'temperature' != 'gust'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:228: AssertionError: trip-paar-ausblick-09-reihenfolge--nie_eingestellt-gemischt-gemischt--html (ausblick, html): Spaltenfolge ['temperature', 'wind', 'gust', 'wind_direction', 'precipitation', 'cloud_total', 'uv_index'] != Soll ['gust', 'temperature', 'precipitation', 'wind', 'cloud_total', 'uv_index', 'wind_direction']
+E   AssertionError: trip-ac15--nacht_wie_etappe--klartext Nacht gegen Etappe: Darstellung (Ist, Soll) weicht ab: {'wind_direction': ('einfach', 'zahl')}
+    assert not {'wind_direction': ('einfach', 'zahl')}
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:163: AssertionError: trip-ac15--nacht_wie_etappe--klartext Nacht gegen Etappe: Darstellung (Ist, Soll) weicht ab: {'wind_direction': ('einfach', 'zahl')}
+E   AssertionError: trip-ac4--nie_eingestellt--html: Ausblick ['temperature', 'wind', 'gust', 'precipitation', 'thunder'] != eingestellte Folge ['gust', 'temperature', 'thunder', 'precipitation', 'wind'] (Katalogfolge waere ['temperature', 'wind', 'gust', 'precipitation', 'thunder'])
+    assert ['temperature...n', 'thunder'] == ['gust', 'tem...tion', 'wind']
+      
+      At index 0 diff: 'temperature' != 'gust'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:316: AssertionError: trip-ac4--nie_eingestellt--html: Ausblick ['temperature', 'wind', 'gust', 'precipitation', 'thunder'] != eingestellte Folge ['gust', 'temperature', 'thunder', 'precipitation', 'wind'] (Katalogfolge waere ['temperature', 'wind', 'gust', 'precipitation', 'thunder'])
+E   AssertionError: trip-ac4--nie_eingestellt--klartext: Ausblick ['temperature', 'wind', 'gust', 'precipitation', 'thunder'] != eingestellte Folge ['gust', 'temperature', 'thunder', 'precipitation', 'wind'] (Katalogfolge waere ['temperature', 'wind', 'gust', 'precipitation', 'thunder'])
+    assert ['temperature...n', 'thunder'] == ['gust', 'tem...tion', 'wind']
+      
+      At index 0 diff: 'temperature' != 'gust'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:316: AssertionError: trip-ac4--nie_eingestellt--klartext: Ausblick ['temperature', 'wind', 'gust', 'precipitation', 'thunder'] != eingestellte Folge ['gust', 'temperature', 'thunder', 'precipitation', 'wind'] (Katalogfolge waere ['temperature', 'wind', 'gust', 'precipitation', 'thunder'])
+E   AssertionError: trip-ac4--nie_eingestellt--kompakt: Ausblick ['temperature', 'wind', 'gust', 'precipitation', 'thunder'] != eingestellte Folge ['gust', 'temperature', 'thunder', 'precipitation', 'wind'] (Katalogfolge waere ['temperature', 'wind', 'gust', 'precipitation', 'thunder'])
+    assert ['temperature...n', 'thunder'] == ['gust', 'tem...tion', 'wind']
+      
+      At index 0 diff: 'temperature' != 'gust'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:316: AssertionError: trip-ac4--nie_eingestellt--kompakt: Ausblick ['temperature', 'wind', 'gust', 'precipitation', 'thunder'] != eingestellte Folge ['gust', 'temperature', 'thunder', 'precipitation', 'wind'] (Katalogfolge waere ['temperature', 'wind', 'gust', 'precipitation', 'thunder'])
+E   AssertionError: trip-ac10--leerer_schnitt-stunden--html: [] != Grundauswahl ['temperature', 'wind', 'gust']
+    assert [] == ['temperature...wind', 'gust']
+      
+      Right contains 3 more items, first extra item: 'temperature'
+      Use -v to get more diff
+------------------------------ Captured log call -------------------------------
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:548: AssertionError: trip-ac10--leerer_schnitt-stunden--html: [] != Grundauswahl ['temperature', 'wind', 'gust']
+E   AssertionError: trip-ac10--leerer_schnitt-stunden--klartext: Liste fehlt
+    assert []
+------------------------------ Captured log call -------------------------------
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:546: AssertionError: trip-ac10--leerer_schnitt-stunden--klartext: Liste fehlt
+E   AssertionError: trip-ac10--leerer_schnitt-nacht--html: [] != Grundauswahl ['temperature', 'wind', 'gust']
+    assert [] == ['temperature...wind', 'gust']
+      
+      Right contains 3 more items, first extra item: 'temperature'
+      Use -v to get more diff
+------------------------------ Captured log call -------------------------------
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:548: AssertionError: trip-ac10--leerer_schnitt-nacht--html: [] != Grundauswahl ['temperature', 'wind', 'gust']
+E   AssertionError: trip-ac10--leerer_schnitt-nacht--klartext: Liste fehlt
+    assert []
+------------------------------ Captured log call -------------------------------
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+WARNING  output.renderers.compare_outlook_metric_ids:compare_outlook_metric_ids.py:189 Ausblick: keine Groesse aus ['uv_index'] liegt in der Trip-Grundauswahl (['temperature', 'wind', 'gust']) — Rueckfall auf die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist NICHT bewusst geleert)
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:546: AssertionError: trip-ac10--leerer_schnitt-nacht--klartext: Liste fehlt
+E   AssertionError: deutsche Kopfzeile fest englisch: 'Pruefkatalog 3047 - Evening Report'
+    assert 'Report' not in 'Pruefkatalo...ening Report'
+      
+      'Report' is contained here:
+        Pruefkatalog 3047 - Evening Report
+      ?                             ++++++
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a71fb62ec0befb632/tests/tdd/test_einstellung_gleich_mail_trip.py:647: AssertionError: deutsche Kopfzeile fest englisch: 'Pruefkatalog 3047 - Evening Report'
+=========================== short test summary info ============================
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_paarweise_nachttabelle[trip-paar-nacht-02-darstellung--teilmenge-umkehrung-gemischt--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_paarweise_nachttabelle[trip-paar-nacht-06-darstellung--alles-gemischt-roh--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_paarweise_ausblick[trip-paar-ausblick-08-reihenfolge--nie_eingestellt-umkehrung-roh--kompakt]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_paarweise_ausblick[trip-paar-ausblick-09-reihenfolge--nie_eingestellt-gemischt-gemischt--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac15_nacht_darstellung_wie_etappe[trip-ac15--nacht_wie_etappe--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac4_ausblick_nie_eingestellt[trip-ac4--nie_eingestellt--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac4_ausblick_nie_eingestellt[trip-ac4--nie_eingestellt--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac4_ausblick_nie_eingestellt[trip-ac4--nie_eingestellt--kompakt]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac10_leerer_schnitt_rueckfall_grundauswahl[trip-ac10--leerer_schnitt-stunden--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac10_leerer_schnitt_rueckfall_grundauswahl[trip-ac10--leerer_schnitt-stunden--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac10_leerer_schnitt_rueckfall_grundauswahl[trip-ac10--leerer_schnitt-nacht--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac10_leerer_schnitt_rueckfall_grundauswahl[trip-ac10--leerer_schnitt-nacht--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac17_klartext_festtexte_in_nutzersprache[trip-ac17--klartext_de_en--klartext]

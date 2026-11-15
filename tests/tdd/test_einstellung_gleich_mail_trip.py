@@ -1,0 +1,671 @@
+"""Pruefkatalog Trip -- Issue #3047 Phase 1, Arbeitspaket A („Einstellung = Mail").
+
+SPEC: docs/specs/modules/feat_3047_einstellung_gleich_mail_pruefkatalog.md
+(AC-2, AC-3, AC-4, AC-8 Trip, AC-9, AC-10 Trip, AC-11 Trip, AC-12 Trip,
+AC-15, AC-17).
+
+Jeder Fall nimmt ein rohes Trip-JSON im Persistenzformat (Array in
+Katalogfolge, eingestellte Position allein in ``order``), schickt es durch den
+echten Loader, die Kaskade, den Renderer und den Versandweg
+(``NotificationService.send_trip_report``) und liest die Mail aus der
+Transport-Mitschrift -- HTML-Teil, Klartext-Teil bzw. Kompakttext. Das Soll
+stammt aus dem rohen JSON und dem statischen Register
+(``tests/helpers/einstellung_gleich_mail_trip.py``), nie aus ``resolve_*``.
+Kein ``Mock()``/``patch()``/``MagicMock``; einzige Naht ist der Transport.
+
+Die Faelle stehen in ``tests/fixtures/einstellung_gleich_mail/fallliste_trip.json``
+(Status ``gruen``/``rot_erwartet``/``ausnahme``/``offen_feature``). Ein Fall
+``rot_erwartet`` laeuft hier als ``xfail(strict=True)`` -- der RED-Nachweis
+aus Nutzersicht steht in ``docs/artifacts/feat-3047/red_paket_a_trip.txt``
+(Lauf mit ``--runxfail``). Die Behebungspakete setzen den Status auf
+``gruen``; damit faellt das ``xfail`` automatisch weg.
+"""
+from __future__ import annotations
+
+import copy
+import json
+import os
+from pathlib import Path
+
+import pytest
+from freezegun import freeze_time
+
+from services.day_comparison import DayComparison
+from tests.helpers.einstellung_gleich_mail_trip import (
+    html_ausblick, html_tabellen, html_text, klartext_ausblick,
+    klartext_tabellen, soll_ausblick, soll_ausblickformen, soll_grundauswahl,
+    soll_stundenformen, soll_stundenspalten,
+)
+from tests.helpers.transport_mitschrift import aufzeichner_installieren
+from tests.tdd._einstellung_gleich_mail_trip_fixtures import (
+    AUSBLICK_TAGE, BASIS_KATALOG, eml_aus_mitschrift, mail_sendung, mail_teile,
+    metrik_eintraege, render_trip_mit_ausblick, trip_json,
+)
+
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "einstellung_gleich_mail"
+_FALLLISTE = json.loads((FIXTURES / "fallliste_trip.json").read_text(encoding="utf-8"))
+
+
+def _faelle(testname: str) -> list:
+    """Die Faelle der Fallliste fuer ``testname``; ``rot_erwartet`` -> xfail."""
+    params = []
+    for f in _FALLLISTE["faelle"]:
+        if f["test"] != testname or f["status"] == "offen_feature":
+            continue
+        marks = []
+        if f["status"] == "rot_erwartet":
+            marks.append(pytest.mark.xfail(strict=True, reason=f"#3047 RED {f['befund']}"))
+        params.append(pytest.param(f, id=f["id"], marks=marks))
+    assert params, f"Fallliste ohne Faelle fuer {testname}"
+    return params
+
+
+def _variante(fall: dict) -> str:
+    """ID-Schema ``trip-<thema>--<variante>--<format>``."""
+    return fall["id"].split("--")[1]
+
+
+# ---------------------------------------------------------------------------
+# Muster der Dimensionen (Spec §3)
+# ---------------------------------------------------------------------------
+
+KATALOG = list(BASIS_KATALOG)
+MUSTER = {
+    "katalog": KATALOG,
+    "umkehrung": KATALOG[::-1],
+    # AC-2: Boeen vor Temperatur vor Niederschlag vor Wind.
+    "gemischt": ["gust", "temperature", "precipitation", "wind", "cloud_total",
+                 "uv_index", "wind_direction"],
+}
+#: Grundauswahl-Folge fuer Faelle mit eigener Liste: weder Katalog noch eines
+#: der Listenmuster -- so beweist jede Listenfolge, dass sie selbst wirkt.
+GLOBAL_ANDERS = ["precipitation", "uv_index", "wind", "temperature", "cloud_total",
+                 "gust", "wind_direction"]
+OHNE_BEI_TEILMENGE = ("wind", "uv_index")
+EINFACH = {"roh": set(), "gemischt": {"cloud_total", "gust", "uv_index"},
+           "einfach": set(KATALOG)}
+
+for _name, _folge in MUSTER.items():
+    assert sorted(_folge) == sorted(KATALOG), _name
+    assert _name == "katalog" or _folge != KATALOG, f"Muster {_name} gleicht der Katalogfolge"
+assert GLOBAL_ANDERS not in MUSTER.values()
+
+
+def _formate(einfach: set[str]) -> dict[str, bool]:
+    return {m: m in einfach for m in KATALOG}
+
+
+def paarfall_json(liste: str, werte: dict) -> dict:
+    """Rohes Trip-JSON zu einem Paarfall (Werte der vier Dimensionen)."""
+    a, r, d = werte["auswahl_muster"], werte["reihenfolge"], werte["darstellung"]
+    einfach, folge = EINFACH[d], MUSTER[r]
+    if a == "nie_eingestellt":
+        data = trip_json(folge, einfach=einfach, outlook_metric_formats=_formate(einfach))
+    else:
+        if a == "bewusst_leer":
+            listenfolge: list[str] = []
+        elif a == "alles":
+            listenfolge = list(folge)
+        else:
+            listenfolge = [m for m in folge if m not in OHNE_BEI_TEILMENGE]
+        if liste == "trip_ausblick":
+            data = trip_json(GLOBAL_ANDERS, einfach=einfach, outlook_metrics=listenfolge,
+                             outlook_metric_formats=_formate(einfach))
+        else:
+            layout = metrik_eintraege(listenfolge, einfach=einfach) if listenfolge else []
+            data = trip_json(GLOBAL_ANDERS, einfach=einfach, email_layout=layout)
+    if werte["format"] == "kompakt":
+        data["report_config"]["email_format"] = "compact"
+    return data
+
+
+# ---------------------------------------------------------------------------
+# Senden + Lesen
+# ---------------------------------------------------------------------------
+
+
+def _senden(monkeypatch, data: dict, fmt: str, **kw) -> tuple:
+    """(HTML oder None, Klartext/Kompakttext, Mitschrift) einer Mail."""
+    data = copy.deepcopy(data)
+    if fmt == "kompakt":
+        data["report_config"]["email_format"] = "compact"
+    mitschrift, _trip, _uid = render_trip_mit_ausblick(monkeypatch, data, **kw)
+    html, text = mail_teile(mitschrift)
+    if fmt == "kompakt":
+        assert html is None and mail_sendung(mitschrift)["mail_format"] == "compact", (
+            "Kompaktformat muss eine reine Klartext-Mail ohne HTML-Teil sein")
+    else:
+        assert html, "Vollformat ohne HTML-Teil"
+    return html, text, mitschrift
+
+
+def _stundentabellen(html, text, fmt: str, art: str):
+    return html_tabellen(html)[art] if fmt == "html" else klartext_tabellen(text)[art]
+
+
+def _ausblick(html, text, fmt: str):
+    return html_ausblick(html) if fmt == "html" else klartext_ausblick(text, AUSBLICK_TAGE)
+
+
+def _pruefe_spalten(tabellen, soll: list[str], wo: str) -> None:
+    if not soll:
+        assert all(t.spalten == [] for t in tabellen), (
+            f"{wo}: bewusst leere Auswahl, aber Spalten {[t.spalten for t in tabellen]}")
+        return
+    assert tabellen, f"{wo}: Tabelle fehlt, Soll {soll}"
+    for t in tabellen:
+        assert t.spalten == soll, f"{wo}: Spaltenfolge {t.spalten} != Soll {soll}"
+
+
+def _pruefe_formen(ist: dict, soll: dict, wo: str) -> None:
+    abweichung = {m: (ist.get(m), f) for m, f in soll.items()
+                  if f is not None and ist.get(m) != f}
+    assert not abweichung, f"{wo}: Darstellung (Ist, Soll) weicht ab: {abweichung}"
+
+
+def _pruefe_kompakt_ohne_tabellen(text: str, wo: str) -> None:
+    tabs = klartext_tabellen(text)
+    assert tabs == {"etappe": [], "nacht": []}, f"{wo}: Kompaktformat mit Stundentabelle"
+
+
+# ---------------------------------------------------------------------------
+# Paarweise Faelle (Spec §3) -- je Liste
+# ---------------------------------------------------------------------------
+
+
+def _paar_tabelle(monkeypatch, fall: dict, art: str) -> None:
+    data = paarfall_json(fall["liste"], fall["werte"])
+    fmt = fall["format"]
+    html, text, _ = _senden(monkeypatch, data, fmt)
+    wo = f"{fall['id']} ({art}, {fmt})"
+    if fmt == "kompakt":
+        _pruefe_kompakt_ohne_tabellen(text, wo)
+        return
+    tabellen = _stundentabellen(html, text, fmt, art)
+    soll = soll_stundenspalten(data)
+    if fall["pruefung"] != "darstellung":
+        _pruefe_spalten(tabellen, soll, wo)
+        return
+    # Darstellung: nur Menge + Form je Spalte -- die Folge prueft der
+    # Schwesterfall derselben Zeile (eine Aussage je Fall).
+    teil = "html" if fmt == "html" else "klartext"
+    assert tabellen, f"{wo}: Tabelle fehlt"
+    for t in tabellen:
+        assert set(t.spalten) == set(soll), f"{wo}: Auswahl {t.spalten} != {soll}"
+        _pruefe_formen(t.formen(), soll_stundenformen(data, teil), wo)
+
+
+@pytest.mark.parametrize("fall", _faelle("test_paarweise_stundentabelle"))
+def test_paarweise_stundentabelle(monkeypatch, fall):
+    """Etappen-Stundentabelle: Auswahl, Reihenfolge exakt, Roh/Einfach je
+    Spalte -- paarweise ueber Auswahl-Muster, Reihenfolge, Darstellung, Format."""
+    _paar_tabelle(monkeypatch, fall, "etappe")
+
+
+@pytest.mark.parametrize("fall", _faelle("test_paarweise_nachttabelle"))
+def test_paarweise_nachttabelle(monkeypatch, fall):
+    """Nacht-Stundentabelle am Ziel: dieselbe E-Mail-Liste wie die Etappe."""
+    _paar_tabelle(monkeypatch, fall, "nacht")
+
+
+@pytest.mark.parametrize("fall", _faelle("test_paarweise_ausblick"))
+def test_paarweise_ausblick(monkeypatch, fall):
+    """3-Tages-Ausblick in HTML, Klartext und Kompaktformat."""
+    data = paarfall_json(fall["liste"], fall["werte"])
+    fmt = fall["format"]
+    html, text, _ = _senden(monkeypatch, data, fmt)
+    wo = f"{fall['id']} (ausblick, {fmt})"
+    tab = _ausblick(html, text, fmt)
+    soll = soll_ausblick(data)
+    if soll is None:
+        assert tab is None, f"{wo}: bewusst leer, Ausblick erscheint trotzdem: {tab.spalten}"
+        return
+    assert tab is not None, f"{wo}: Ausblick fehlt, Soll {soll}"
+    if fall["pruefung"] == "darstellung":
+        assert set(tab.spalten) == set(soll), f"{wo}: Auswahl {tab.spalten} != {soll}"
+        _pruefe_formen(tab.formen(), soll_ausblickformen(data, soll), wo)
+        return
+    assert tab.spalten == soll, f"{wo}: Spaltenfolge {tab.spalten} != Soll {soll}"
+
+
+# ---------------------------------------------------------------------------
+# AC-2 / AC-3 / AC-15 -- Stunden- und Nachttabelle
+# ---------------------------------------------------------------------------
+
+_AC2 = {
+    "boeen_temp_regen_wind": ["gust", "temperature", "precipitation", "wind"],
+    "umkehrung": KATALOG[::-1],
+    "teilmenge_zwei_ab": [m for m in MUSTER["gemischt"] if m not in ("uv_index", "cloud_total")],
+}
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac2_stundentabelle_folge"))
+def test_ac2_stundentabelle_folge(monkeypatch, fall):
+    """AC-2: gespeicherte E-Mail-Folge (ungleich Katalog) steht genau so in
+    der Etappentabelle, jede Spalte einmal, keine nicht angehakte."""
+    folge = _AC2[_variante(fall)]
+    data = trip_json(GLOBAL_ANDERS, email_layout=metrik_eintraege(folge))
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    soll = soll_stundenspalten(data)
+    assert soll == folge, f"Orakel-Vorbedingung: {soll} != {folge}"
+    tabellen = _stundentabellen(html, text, fall["format"], "etappe")
+    _pruefe_spalten(tabellen, folge, fall["id"])
+    for t in tabellen:
+        assert len(set(t.spalten)) == len(t.spalten), f"Spalte doppelt: {t.spalten}"
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac3_nachttabelle_folge"))
+def test_ac3_nachttabelle_folge(monkeypatch, fall):
+    """AC-3: Nachttabelle zeigt genau Wind, Temperatur, Boeen in dieser Folge."""
+    folge = ["wind", "temperature", "gust"]
+    data = trip_json(GLOBAL_ANDERS, email_layout=metrik_eintraege(folge))
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    _pruefe_spalten(_stundentabellen(html, text, fall["format"], "nacht"), folge, fall["id"])
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac15_nacht_darstellung_wie_etappe"))
+def test_ac15_nacht_darstellung_wie_etappe(monkeypatch, fall):
+    """AC-3/AC-15: jede Spalte der Nachttabelle zeigt dieselbe Roh/Einfach-
+    Form wie in der Etappentabelle derselben Mail und wie eingestellt
+    (Windrichtung und Bewoelkung auf Roh, Boeen-Ampel auf Einfach)."""
+    folge = ["wind_direction", "temperature", "cloud_total", "uv_index"]
+    data = trip_json(folge, einfach={"uv_index"})
+    fmt = fall["format"]
+    html, text, _ = _senden(monkeypatch, data, fmt)
+    etappe = _stundentabellen(html, text, fmt, "etappe")
+    nacht = _stundentabellen(html, text, fmt, "nacht")
+    assert etappe and nacht, "Vorbedingung: Etappen- und Nachttabelle vorhanden"
+    teil = "html" if fmt == "html" else "klartext"
+    soll = soll_stundenformen(data, teil)
+    _pruefe_formen(etappe[0].formen(), soll, f"{fall['id']} Etappe")
+    _pruefe_formen(nacht[0].formen(), etappe[0].formen(), f"{fall['id']} Nacht gegen Etappe")
+
+
+# ---------------------------------------------------------------------------
+# AC-4 -- Ausblick
+# ---------------------------------------------------------------------------
+
+_AC4_GRUND = ["gust", "temperature", "thunder", "precipitation", "wind"]
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac4_ausblick_gespeicherte_folge"))
+def test_ac4_ausblick_gespeicherte_folge(monkeypatch, fall):
+    """AC-4: gespeicherter Ausblick Wind, Temperatur, Niederschlag; Boeen und
+    Gewitter stehen nur in der Grundauswahl und erscheinen nicht."""
+    folge = ["wind", "temperature", "precipitation"]
+    data = trip_json(_AC4_GRUND, outlook_metrics=folge)
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _ausblick(html, text, fall["format"])
+    assert tab is not None and tab.spalten == folge, (
+        f"{fall['id']}: Ausblick {tab and tab.spalten} != {folge}")
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac4_ausblick_nie_eingestellt"))
+def test_ac4_ausblick_nie_eingestellt(monkeypatch, fall):
+    """AC-4/T1: nie eingestellter Ausblick zeigt die ganze Grundauswahl in der
+    EINGESTELLTEN Folge der Trip-Metriken (wie der Reiter), nicht in
+    Katalog-/Array-Folge."""
+    data = trip_json(_AC4_GRUND)
+    soll = soll_grundauswahl(data)
+    assert soll == _AC4_GRUND, f"Orakel-Vorbedingung: {soll}"
+    katalog = [m["metric_id"] for m in data["display_config"]["metrics"] if m["enabled"]]
+    assert katalog != soll, "Vorbedingung: Katalogfolge muss von der eingestellten abweichen"
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _ausblick(html, text, fall["format"])
+    assert tab is not None, f"{fall['id']}: Ausblick fehlt"
+    assert tab.spalten == soll, (
+        f"{fall['id']}: Ausblick {tab.spalten} != eingestellte Folge {soll} "
+        f"(Katalogfolge waere {katalog})")
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac4_ausblick_bewusst_leer"))
+def test_ac4_ausblick_bewusst_leer(monkeypatch, fall):
+    """AC-4: bewusst leere Ausblick-Auswahl laesst den Block entfallen."""
+    data = trip_json(_AC4_GRUND, outlook_metrics=[])
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _ausblick(html, text, fall["format"])
+    assert tab is None, f"{fall['id']}: Ausblick trotz leerer Auswahl: {tab.spalten}"
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ausblick_ausgeschaltet"))
+def test_ausblick_ausgeschaltet(monkeypatch, fall):
+    """Spec §2 Punkt 5: ``show_outlook`` aus -> kein Ausblick, obwohl
+    Tageszeilen vorliegen; Gegenprobe mit ``show_outlook`` an."""
+    data = trip_json(_AC4_GRUND, outlook_metrics=["wind"])
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    assert _ausblick(html, text, fall["format"]) is not None, "Gegenprobe: Ausblick an"
+    data["report_config"]["show_outlook"] = False
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _ausblick(html, text, fall["format"])
+    if fall["status"] == "ausnahme":
+        # #722: render_compact ignoriert die Baustein-Schalter (compact.py,
+        # Docstring) -- gewollte, in der Fallliste benannte Abweichung.
+        assert tab is not None and tab.spalten == ["wind"], tab
+        return
+    assert tab is None, f"{fall['id']}: Ausblick trotz show_outlook=false: {tab.spalten}"
+
+
+# ---------------------------------------------------------------------------
+# AC-8 -- Roh/Einfach
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac8_stunden_roh_einfach"))
+def test_ac8_stunden_roh_einfach(monkeypatch, fall):
+    """AC-8: Windrichtung Roh -> Zahl, Bewoelkung Einfach -> Symbol (ohne
+    Wind, damit #435 nicht greift)."""
+    folge = ["wind_direction", "cloud_total", "temperature"]
+    data = trip_json(folge, einfach={"cloud_total"})
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _stundentabellen(html, text, fall["format"], "etappe")[0]
+    assert tab.spalten == folge
+    assert tab.formen() == {"wind_direction": "zahl", "cloud_total": "einfach",
+                            "temperature": "zahl"}, tab.zellen[:1]
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac8_einfach_ohne_einfachform_zeigt_zahl"))
+def test_ac8_einfach_ohne_einfachform_zeigt_zahl(monkeypatch, fall):
+    """AC-8: auf Einfach gestellt, aber ohne Einfach-Form (UV, Temperatur) ->
+    weiterhin die Zahl."""
+    folge = ["uv_index", "temperature"]
+    data = trip_json(folge, einfach={"uv_index", "temperature"})
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _stundentabellen(html, text, fall["format"], "etappe")[0]
+    assert tab.formen() == {"uv_index": "zahl", "temperature": "zahl"}, tab.zellen[:1]
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac8_windrichtung_einfach_verschmilzt_mit_wind"))
+def test_ac8_windrichtung_einfach_verschmilzt_mit_wind(monkeypatch, fall):
+    """Ausnahme #435: Windrichtung auf Einfach (Skala) steht als Himmels-
+    richtung in der Wind-Zelle, nicht als eigene Spalte."""
+    data = trip_json(["wind", "wind_direction", "temperature"], einfach={"wind_direction"})
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _stundentabellen(html, text, fall["format"], "etappe")[0]
+    assert tab.spalten == ["wind", "temperature"], tab.spalten
+    assert tab.spalte("wind")[0].split()[-1] in {"N", "NE", "E", "SE", "S", "SW", "W", "NW"}
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac8_ampel_groesse_einfach"))
+def test_ac8_ampel_groesse_einfach(monkeypatch, fall):
+    """#814: Boeen auf Einfach -> HTML Ampelpunkt (Einfach-Form), Klartext
+    die Zahl (gewollte Ausnahme)."""
+    data = trip_json(["gust", "temperature"], einfach={"gust"})
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _stundentabellen(html, text, fall["format"], "etappe")[0]
+    erwartet = "einfach" if fall["format"] == "html" else "zahl"
+    assert tab.formen()["gust"] == erwartet, tab.zellen[:1]
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac8_ausblick_roh_einfach"))
+def test_ac8_ausblick_roh_einfach(monkeypatch, fall):
+    """AC-8: Ausblick -- Windrichtung und Boeen Einfach, Niederschlag und
+    Bewoelkung Roh, je Zelle gegen ``outlook_metric_formats``."""
+    folge = ["wind_direction", "precipitation", "gust", "cloud_total"]
+    fmts = {"wind_direction": True, "gust": True, "precipitation": False, "cloud_total": False}
+    data = trip_json(folge, outlook_metrics=folge, outlook_metric_formats=fmts)
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _ausblick(html, text, fall["format"])
+    assert tab is not None and tab.spalten == folge
+    assert tab.formen() == {"wind_direction": "einfach", "precipitation": "zahl",
+                            "gust": "einfach", "cloud_total": "zahl"}, tab.zellen[:1]
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac8_ausblick_ohne_einfachform"))
+def test_ac8_ausblick_ohne_einfachform(monkeypatch, fall):
+    """Ausnahme #814 AC-5 / Spec §2 Punkt 3: Sicht und Temperatur zeigen trotz
+    Einfach die Zahl (Temperatur als Spanne Tief/Hoch), Gewitter zeigt schon
+    roh das Stufenwort."""
+    folge = ["visibility", "temperature", "thunder"]
+    data = trip_json(folge, outlook_metrics=folge,
+                     outlook_metric_formats={m: True for m in folge})
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _ausblick(html, text, fall["format"])
+    assert tab is not None and tab.spalten == folge
+    formen = tab.formen()
+    assert formen["visibility"] == "zahl" and formen["temperature"] == "zahl", tab.zellen[:1]
+    assert "/" in tab.spalte("temperature")[0], "Temperatur als Spanne Tief/Hoch"
+    assert formen["thunder"] == "einfach", tab.zellen[:1]
+
+
+# ---------------------------------------------------------------------------
+# AC-9 -- Zusatzbloecke
+# ---------------------------------------------------------------------------
+
+_VORTAG = dict(wind_delta_kmh=15.0, gust_delta_kmh=20.0, precip_delta_mm=6.0)
+_SCHALTER = {
+    "nachtblock": ("display_config", "show_night_block"),
+    "etappenkennzahlen": ("report_config", "show_stage_stats"),
+    "vortag": ("report_config", "show_yesterday_comparison"),
+}
+
+
+def _zeilen(text: str) -> list[str]:
+    return [z for z in text.splitlines() if z.strip() and not z.startswith("Generated:")]
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac9_zusatzblock_aus"))
+def test_ac9_zusatzblock_aus(monkeypatch, fall):
+    """AC-9: je ein Schalter aus -> genau dieser Block fehlt in HTML und
+    Klartext, alle uebrigen Klartext-Zeilen bleiben unveraendert."""
+    variante, fmt = _variante(fall), fall["format"]
+    data = trip_json(["wind", "temperature", "precipitation"], outlook_metrics=["wind"])
+    kw = {"day_comparison": DayComparison(**_VORTAG)}
+    html_an, text_an, _ = _senden(monkeypatch, data, fmt, **kw)
+    teil, schluessel = _SCHALTER[variante]
+    data[teil][schluessel] = False
+    html_aus, text_aus, _ = _senden(monkeypatch, data, fmt, **kw)
+    weg = [z for z in _zeilen(text_an) if z not in _zeilen(text_aus)]
+    neu = [z for z in _zeilen(text_aus) if z not in _zeilen(text_an)]
+    assert weg, f"{fall['id']}: Schalter ohne Wirkung im Klartext"
+    assert not neu, f"{fall['id']}: Schalter veraendert andere Zeilen: {neu}"
+    if variante == "nachtblock":
+        assert not klartext_tabellen(text_aus)["nacht"] and klartext_tabellen(text_an)["nacht"]
+        assert not html_tabellen(html_aus)["nacht"] and html_tabellen(html_an)["nacht"]
+        return
+    marke = "12.0 km" if variante == "etappenkennzahlen" else weg[0].split(":")[-1].strip()
+    assert any(marke in z for z in weg), f"{fall['id']}: entfernt wurde {weg}"
+    ziel_an, ziel_aus = ((html_text(html_an), html_text(html_aus)) if fmt == "html"
+                         else (text_an, text_aus))
+    assert marke in ziel_an and marke not in ziel_aus, (
+        f"{fall['id']}: Block {marke!r} an={marke in ziel_an} aus={marke in ziel_aus}")
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac9_email_format_kompakt"))
+def test_ac9_email_format_kompakt(monkeypatch, fall):
+    """AC-9: ``email_format=compact`` -> nur Klartext ohne HTML-Teil, ASCII,
+    Ausblick bleibt, Stundentabellen entfallen."""
+    data = trip_json(["wind", "temperature"], outlook_metrics=["temperature", "wind"])
+    _html, text, _ = _senden(monkeypatch, data, "kompakt")
+    assert text.isascii(), "Kompaktformat muss ASCII sein"
+    _pruefe_kompakt_ohne_tabellen(text, fall["id"])
+    tab = klartext_ausblick(text, AUSBLICK_TAGE)
+    assert tab is not None and tab.spalten == ["temperature", "wind"]
+
+
+# ---------------------------------------------------------------------------
+# AC-10 -- Grundauswahl-Kopplung
+# ---------------------------------------------------------------------------
+
+
+def _listen_spalten(html, text, fall) -> list:
+    """Gelesene Spalten der Liste des Falls (je Tabelle eine Liste)."""
+    fmt, liste = fall["format"], fall["liste"]
+    if liste == "trip_ausblick":
+        tab = _ausblick(html, text, fmt)
+        return [tab.spalten] if tab else []
+    art = "etappe" if liste == "trip_stundentabelle" else "nacht"
+    return [t.spalten for t in _stundentabellen(html, text, fmt, art)]
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac10_abgewaehlt_erscheint_nirgends"))
+def test_ac10_abgewaehlt_erscheint_nirgends(monkeypatch, fall):
+    """AC-10: UV ist in der Grundauswahl abgewaehlt, steht aber gespeichert in
+    der E-Mail-Liste und im Ausblick -> UV erscheint in keiner Liste, die
+    uebrigen in gespeicherter Folge."""
+    liste_folge = ["uv_index", "gust", "temperature", "wind"]
+    layout = metrik_eintraege(liste_folge)
+    data = trip_json(["wind", "gust", "temperature"], email_layout=layout,
+                     outlook_metrics=liste_folge)
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    gelesen = _listen_spalten(html, text, fall)
+    assert gelesen, f"{fall['id']}: Liste fehlt"
+    for spalten in gelesen:
+        assert spalten == ["gust", "temperature", "wind"], f"{fall['id']}: {spalten}"
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac10_neue_metrik_hinten_angehaengt"))
+def test_ac10_neue_metrik_hinten_angehaengt(monkeypatch, fall):
+    """AC-10 (Mail-Seite): UV neu in die Grundauswahl aufgenommen und -- wie
+    der Editor es beim Einschalten ablegt -- hinten an die bearbeitete
+    E-Mail-Liste und den bearbeiteten Ausblick angehaengt -> UV steht in jeder
+    Liste am Ende, die bestehende Folge bleibt. (Dass der Editor eine global
+    eingeschaltete Metrik in eine bestehende Kanal-Liste schreibt, ist Befund
+    T3 und steht als ``offen_feature`` in der Fallliste.)"""
+    bisher = ["gust", "temperature", "wind"]
+    neu = bisher + ["uv_index"]
+    data = trip_json(neu, email_layout=metrik_eintraege(neu), outlook_metrics=neu)
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    gelesen = _listen_spalten(html, text, fall)
+    assert gelesen, f"{fall['id']}: Liste fehlt"
+    for spalten in gelesen:
+        assert spalten == neu, f"{fall['id']}: {spalten} != {neu}"
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac10_leerer_schnitt_rueckfall_grundauswahl"))
+def test_ac10_leerer_schnitt_rueckfall_grundauswahl(monkeypatch, fall):
+    """AC-10: die gespeicherte Liste enthaelt nur Groessen, die in der
+    Grundauswahl abgewaehlt sind -> nach dem Schnitt bliebe nichts; Soll ist
+    der dokumentierte Rueckfall auf die volle Grundauswahl (in Katalogfolge
+    eingestellt, damit Befund T1 diesen Fall nicht beruehrt), kein
+    verschwindender Block."""
+    grund = ["temperature", "wind", "gust"]
+    data = trip_json(grund, email_layout=metrik_eintraege(["uv_index"]),
+                     outlook_metrics=["uv_index"])
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    gelesen = _listen_spalten(html, text, fall)
+    assert gelesen, f"{fall['id']}: Liste fehlt"
+    for spalten in gelesen:
+        assert spalten == grund, f"{fall['id']}: {spalten} != Grundauswahl {grund}"
+
+
+# ---------------------------------------------------------------------------
+# AC-11 -- Altbestand (Golden)
+# ---------------------------------------------------------------------------
+
+_GOLDEN_ZEIT = "2026-07-20 16:00:00"
+_GOLDEN_SCHREIBEN = os.environ.get("EINSTELLUNG_GLEICH_MAIL_GOLDEN_SCHREIBEN") == "1"
+
+
+def _altbestand_mail(monkeypatch) -> tuple[str, str]:
+    data = json.loads((FIXTURES / "trip_altbestand.json").read_text(encoding="utf-8"))
+    for feld in ("outlook_metric_formats", "channel_layouts", "hourly_metrics", "outlook_metrics"):
+        assert feld not in data["display_config"], f"Altbestand darf {feld} nicht tragen"
+    with freeze_time(_GOLDEN_ZEIT):
+        mitschrift, _trip, _uid = render_trip_mit_ausblick(monkeypatch, data)
+    return mail_teile(mitschrift)
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac11_altbestand_golden"))
+def test_ac11_altbestand_golden(monkeypatch, fall):
+    """AC-11: ein Alt-Bestand ohne ``outlook_metric_formats``,
+    ``channel_layouts``, ``hourly_metrics``, ``outlook_metrics`` rendert
+    zeichengleich zum eingefrorenen Golden (Ist-Stand vor den Behebungen).
+
+    Die Behebungen AC-15 (Nachttabelle Klartext mit ``format_modes``) und
+    AC-17 (Klartext-Festtexte „Time"/„… Report" ueber den Katalog) werden den
+    Klartext-Golden ausdruecklich und einzeln aendern -- jede dieser
+    Golden-Aenderungen wird im Behebungspaket benannt freigegeben, nie
+    pauschal neu eingefroren. Der Altbestand traegt durchweg ``order = 0``
+    (stabile Folge = Array-Folge), damit Befund T1 den Golden nicht beruehrt.
+    """
+    html, text = _altbestand_mail(monkeypatch)
+    teil, endung = (html, "html") if fall["format"] == "html" else (text, "txt")
+    pfad = FIXTURES / f"trip_altbestand_golden.{endung}"
+    if _GOLDEN_SCHREIBEN:
+        pfad.write_text(teil, encoding="utf-8")
+        pytest.fail(f"Golden geschrieben: {pfad} -- Lauf ohne Schalter wiederholen")
+    assert teil == pfad.read_text(encoding="utf-8"), (
+        f"{fall['id']}: Mail weicht vom Golden {pfad.name} ab")
+
+
+# ---------------------------------------------------------------------------
+# AC-12 -- zwei Nutzer
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac12_zwei_nutzer_je_eigene_folge"))
+def test_ac12_zwei_nutzer_je_eigene_folge(monkeypatch, fall):
+    """AC-12: zwei frische Profile, je eigene Folge (Wind, Temperatur bzw.
+    Temperatur, Wind) und eigener Empfaenger; EIN Aufzeichner -- jede Mail
+    geht an ihren Nutzer und traegt nur dessen Folge."""
+    mitschrift = aufzeichner_installieren(monkeypatch)
+    folgen = {}
+    for folge in (["wind", "temperature"], ["temperature", "wind"]):
+        data = trip_json(folge, email_layout=metrik_eintraege(folge), outlook_metrics=folge)
+        _m, _trip, uid = render_trip_mit_ausblick(monkeypatch, data, mitschrift=mitschrift)
+        assert uid != "default"
+        folgen[f"{uid}@example.invalid"] = folge
+    sendungen = mitschrift.sendungen("email")
+    assert sorted(s["empfaenger"] for s in sendungen) == sorted(folgen), sendungen
+    for s in sendungen:
+        soll = folgen[s["empfaenger"]]
+        html, text = s["body"], s["plain_text_body"]
+        if fall["liste"] == "trip_ausblick":
+            tab = _ausblick(html, text, fall["format"])
+            gelesen = [tab.spalten] if tab else []
+        else:
+            gelesen = [t.spalten for t in _stundentabellen(html, text, fall["format"], "etappe")]
+        assert gelesen and all(sp == soll for sp in gelesen), (
+            f"{fall['id']}: Mail an {s['empfaenger']} zeigt {gelesen}, Soll {soll}")
+
+
+# ---------------------------------------------------------------------------
+# AC-17 -- Sprache der Klartext-Festtexte
+# ---------------------------------------------------------------------------
+
+
+def _kopf_und_erste_spalte(text: str) -> tuple[str, str]:
+    zeilen = text.splitlines()
+    tab = klartext_tabellen(text)["etappe"][0]
+    return zeilen[1], tab.labels[0]
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac17_klartext_festtexte_in_nutzersprache"))
+def test_ac17_klartext_festtexte_in_nutzersprache(monkeypatch, fall):
+    """AC-17/T5: deutscher Klartext ohne fest englische Woerter in Kopfzeile
+    („… Report") und Zeitspalte („Time"); Deutsch und Englisch unterscheiden
+    sich dort; die Spaltenkuerzel (Protokoll-Token) bleiben gleich."""
+    data = trip_json(["wind", "temperature"])
+    ergebnis = {}
+    for sprache in ("de", "en"):
+        _html, text, _ = _senden(monkeypatch, data, "klartext", language=sprache)
+        ergebnis[sprache] = (_kopf_und_erste_spalte(text), klartext_tabellen(text)["etappe"][0])
+    (kopf_de, zeit_de), tab_de = ergebnis["de"]
+    (kopf_en, zeit_en), tab_en = ergebnis["en"]
+    assert tab_de.spalten == tab_en.spalten == ["wind", "temperature"]
+    assert tab_de.labels[1:] == tab_en.labels[1:], "Spaltenkuerzel duerfen nicht uebersetzt werden"
+    assert "Report" not in kopf_de, f"deutsche Kopfzeile fest englisch: {kopf_de!r}"
+    assert zeit_de != "Time", f"deutsche Zeitspalte fest englisch: {zeit_de!r}"
+    assert zeit_de != zeit_en, f"Zeitspalte in DE und EN gleich: {zeit_de!r}"
+
+
+# ---------------------------------------------------------------------------
+# Angebot fuer Paket C (Validatoren per --eml)
+# ---------------------------------------------------------------------------
+
+
+def test_eml_aus_kette_ist_multipart_mit_beiden_teilen(monkeypatch):
+    """``eml_aus_mitschrift`` liefert eine echte MIME-Mail (HTML + Klartext,
+    Marker-Header) aus derselben Kette -- Vorbedingung fuer Paket C."""
+    import email
+    from email import policy
+
+    data = trip_json(["gust", "temperature"], outlook_metrics=["temperature"])
+    mitschrift, _trip, uid = render_trip_mit_ausblick(monkeypatch, data)
+    msg = email.message_from_bytes(eml_aus_mitschrift(mitschrift), policy=policy.default)
+    assert msg["X-GZ-Mail-Type"] == "trip-briefing" and msg["X-GZ-Format"] == "full"
+    assert msg["To"] == f"{uid}@example.invalid"
+    html = msg.get_body(("html",)).get_content()
+    text = msg.get_body(("plain",)).get_content()
+    assert html_tabellen(html)["etappe"][0].spalten == ["gust", "temperature"]
+    assert klartext_tabellen(text)["etappe"][0].spalten == ["gust", "temperature"]

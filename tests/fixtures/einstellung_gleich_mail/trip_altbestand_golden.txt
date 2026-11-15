@@ -1,0 +1,72 @@
+◯ WETTER-BRIEFING
+Altbestand 3047 - Evening Report
+E1
+20.07.2026
+12.0 km | ↑900m | ↓100m | max. 1400m
+
+E1: 15–15°C, ⛅, starker Regen, mäßiger Wind 20 km/h, Böen bis 45 km/h ab 4:00, ⚡ möglich 4:00–20:00
+
+━━ Metriken-Überblick ━━
+  15°C · Max 08:00
+  Wind max 20 km/h (04:00)
+  Böen >30 km/h ab 04:00 · max 45 (04:00)
+  Regen ab 04:00 · 32 mm
+  Regen-W. >30% ab 04:00 · max 60% (04:00)
+  Gewitter mittel ab 04:00 · stärkste 04:00
+  70% bewölkt · Max 08:00
+
+━━ Segment 1: km 0.0–12.0 | 08:00–12:00 | ↑500m → 1400m ━━
+  Time   Temp   Wind   Gust   WDir   Rain   Rain%   Thdr     Cloud 
+  -----  -----  -----  -----  -----  -----  ------  -------  ------
+  08     15.0   20     45     250°   2.0    60      mittel   ⛅     
+  09     15.0   20     45     250°   2.0    60      mittel   ⛅     
+  10     15.0   20     45     250°   2.0    60      mittel   ⛅     
+  11     15.0   20     45     250°   2.0    60      mittel   ⛅     
+  12     15.0   20     45     250°   2.0    60      mittel   ⛅     
+
+━━ Nacht am Ziel (1400m) ━━
+Ankunft 12:00 → Morgen 06:00
+  Time   Temp   Wind   Gust   WDir   Rain   Rain%   Thdr     Cloud 
+  -----  -----  -----  -----  -----  -----  ------  -------  ------
+  12     15.0   20     45     W      4.0    60      mittel   ⛅     
+  14     15.0   20     45     W      4.0    60      mittel   ⛅     
+  16     15.0   20     45     W      4.0    60      mittel   ⛅     
+  18     15.0   20     45     W      4.0    60      mittel   ⛅     
+  20     15.0   20     45     W      4.0    60      mittel   ⛅     
+  22     15.0   20     45     W      4.0    60      mittel   ⛅     
+  00     15.0   20     45     W      4.0    60      mittel   ⛅     
+  02     15.0   20     45     W      4.0    60      mittel   ⛅     
+  04     15.0   20     45     W      4.0    60      mittel   ⛅     
+  06     15.0   20     45     W      2.0    60      mittel   ⛅     
+  * Temperatur/Nullgradgrenze: Minimum im 2h-Block
+
+
+Nächste Etappen
+Mo  Etappe 1                   Temp 15/15  Wind 20 km/h  Gust 45 km/h  WDir 250 °  Rain 48.0 mm  Rain% 60 %  Thdr ⚡mittel@4  Cloud 70 %  ACC –
+Di  Etappe 2                   Temp 15/15  Wind 20 km/h  Gust 45 km/h  WDir 250 °  Rain 48.0 mm  Rain% 60 %  Thdr ⚡mittel@4  Cloud 70 %  ACC –
+Mi  Etappe 3                   Temp 15/15  Wind 20 km/h  Gust 45 km/h  WDir 250 °  Rain 48.0 mm  Rain% 60 %  Thdr ⚡mittel@4  Cloud 70 %  ACC –
+
+
+── Antwort-Kommandos ──
+  HEUTE                – Wetter der heutigen Etappe
+  MORGEN               – Wetter der morgigen Etappe
+  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)
+  GEWITTER             – Gewittergefahr heutige Etappe
+  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke
+  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)
+  STATUS               – Heute und kommende Etappen
+  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen
+  SKIP                 – Nächstes Briefing überspringen
+  STOP                 – Briefings dauerhaft deaktivieren (auch ABBRUCH)
+  WEITER               – Briefings reaktivieren
+  HILFE                – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
+  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben
+  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)
+
+Einheiten: Temp °C · Wind, Gust km/h · WDir ° · Rain mm · Rain%, Cloud %
+Spalten: Temp = Temperatur · Gust = Böen · WDir = Windrichtung · Rain = Niederschlag · Rain% = Regenwahrscheinlichkeit · Thdr = Gewitter · Cloud = Bewölkung
+------------------------------------------------------------
+Generated: 2026-07-20 16:00 UTC
+Data: openmeteo (test)
+Etappen-Briefing · Vollversion · openmeteo
