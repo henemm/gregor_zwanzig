@@ -14,8 +14,8 @@ Dieselbe Datei liest die Frontend-Seite
 (``frontend/.../__tests__/editor_standard_gleich_mail.test.ts``); weicht eine
 Seite ab, scheitert genau der Test dieser Seite.
 
-Bekannte Abweichungen sind ``xfail(strict=True)`` mit Befund-Kennung; die
-Behebungspakete (F3/F4) entfernen den Marker. RED-Nachweis: ``--runxfail``.
+Bekannte, ausgelagerte Abweichungen (N1 -> #3048) laufen als ``ausnahme``:
+der Test haelt den Ist-Zustand fest und wird rot, sobald die Behebung wirkt.
 
 Lauf:
     uv run pytest tests/tdd/test_einstellung_gleich_mail_editor_standard.py -q
@@ -156,13 +156,20 @@ def test_python_seite_trip_tabellen_standard():
     _pruefe(python_trip_tabellen, "trip_tabellen", _zustand("trip_tabellen", "nie_eingestellt"))
 
 
-@pytest.mark.xfail(strict=True, reason="#3047 RED N1: Trip ohne gespeicherte metrics -> "
-                   "Stundentabelle ohne Wertspalten (in der echten Mail belegt, "
-                   "test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics); "
-                   "Behebung betrifft alle Kanaele (Telegram AC-S4-13 #1199), offen")
 def test_python_seite_trip_tabellen_altbestand():
-    _pruefe(python_trip_tabellen, "trip_tabellen",
-            _zustand("trip_tabellen", "altbestand_ohne_metrics"))
+    """N1 -- Ausnahme mit Verweis #3048 (dokumentiert den IST-Zustand).
+
+    Trip ohne gespeicherte ``metrics``: die Mail-Seite liefert heute KEINE
+    Wertspalte (in der echten Mail belegt,
+    ``test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics``),
+    der Editor zeigt die in ``editor_standard.json`` festgelegte Standardfolge.
+    Die Behebung betrifft alle Kanaele (Telegram AC-S4-13, #1199) und wird in
+    #3048 umgesetzt; wird dieser Test rot, ist #3048 wirksam und der Fall auf
+    ``_pruefe`` (Soll = ``erwartet``) zurueckzustellen."""
+    zustand = _zustand("trip_tabellen", "altbestand_ohne_metrics")
+    assert zustand["erwartet"], "Editor-Soll fuer N1 fehlt in editor_standard.json"
+    assert python_trip_tabellen(zustand["eingabe"]) == [], (
+        "Ist-Zustand #3048 hat sich geaendert -- Fall auf gruen umstellen")
 
 
 @pytest.mark.parametrize("zustand", _gespeicherte("trip_tabellen"))

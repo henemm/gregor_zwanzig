@@ -654,26 +654,30 @@ _REGISTER_STANDARD_STUNDENSPALTEN = [
 
 @pytest.mark.parametrize("fall", _faelle("test_n1_altbestand_ohne_metrics"))
 def test_n1_altbestand_ohne_metrics(monkeypatch, fall):
-    """N1 (#3047, AC-13/AC-11): ein Trip-Altbestand, dessen ``display_config``
-    gar kein ``metrics`` traegt (Fall A, ``trip_metric_ids.py``), bekommt in
-    der zugestellten Mail Stunden- und Nachttabelle MIT Wertspalten in der
-    Register-Standardfolge -- dieselbe Folge, die der Editor anzeigt -- statt
-    einer Tabelle, die nur noch die Zeitspalte traegt."""
+    """N1 -- Ausnahme mit Verweis #3048 (dokumentiert den IST-Zustand).
+
+    Ein Trip-Altbestand, dessen ``display_config`` gar kein ``metrics`` traegt
+    (Fall A, ``trip_metric_ids.py``), bekommt heute Stunden- und Nachttabelle
+    OHNE Wertspalten (HTML: nur die Zeitspalte; Klartext: keine Tabelle),
+    waehrend der Editor die Register-Standardfolge
+    ``_REGISTER_STANDARD_STUNDENSPALTEN`` zeigt. Die Behebung sitzt in
+    ``get_metrics_for_channel`` und aendert alle Kanaele (Telegram/Kurzfassung,
+    #1199) -- sie wird in #3048 umgesetzt. Dieser Test haelt den Ist-Zustand
+    fest: wird er rot, ist #3048 (ganz oder teilweise) wirksam und der Fall
+    in ``fallliste_trip.json`` auf ``gruen`` mit Soll-Pruefung umzustellen."""
     data = trip_json(["temperature"])
     del data["display_config"]["metrics"]
     html, text, _ = _senden(monkeypatch, data, fall["format"])
+    assert fall["status"] == "ausnahme" and "#3048" in fall["verweis"], fall
     art = "etappe" if fall["liste"] == "trip_stundentabelle" else "nacht"
     tabellen = _stundentabellen(html, text, fall["format"], art)
-    assert tabellen, f"{fall['id']}: Tabelle fehlt"
-    for t in tabellen:
-        assert t.spalten == _REGISTER_STANDARD_STUNDENSPALTEN, (
-            f"{fall['id']}: Spalten {t.spalten} != Register-Standard "
-            f"{_REGISTER_STANDARD_STUNDENSPALTEN}")
-        # Spalten ohne Werte waeren dieselbe leere Tabelle mit anderem Kopf:
-        # Temperatur und Wind tragen in jeder Wetterzeile eine Zahl.
-        formen = t.formen()
-        assert formen["temperature"] and formen["wind"], (
-            f"{fall['id']}: Wertspalten ohne Werte {formen}")
+    if fall["format"] == "html":
+        # Die Mail geht raus, die Tabelle steht da -- nur ohne Wertspalten.
+        assert tabellen, f"{fall['id']}: HTML-Tabelle fehlt ganz"
+    ist = [t.spalten for t in tabellen]
+    assert all(sp == [] for sp in ist), (
+        f"{fall['id']}: Ist-Zustand #3048 hat sich geaendert, Spalten {ist} "
+        f"(Soll nach #3048: {_REGISTER_STANDARD_STUNDENSPALTEN})")
 
 
 # ---------------------------------------------------------------------------

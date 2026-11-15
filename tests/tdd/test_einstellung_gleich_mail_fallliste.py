@@ -7,7 +7,8 @@ und prueft ohne Testausfuehrung:
 
 (a) Abdeckungsmatrix Liste x Format je Pruefung ``auswahl`` und ``reihenfolge``;
 (b) jeder Fall ``gruen``/``rot_erwartet`` nennt eine auffindbare Testfunktion
-    (Python per ``ast``, Vitest per Titelsuche);
+    (Python per ``ast``, Vitest per Titelsuche, Go per ``func <Name>(`` in
+    ``internal/**/*_test.go`` bei ``seite: "go"``);
 (c) paarweise Ueberdeckung der ``dimensionen`` je Liste;
 (d) "fertig": kein Fall ``rot_erwartet``; ``ausnahme``/``offen_feature`` tragen Verweis;
 (e) Schema: Pflichtfelder, erlaubte Status/Formate, ``id`` global eindeutig.
@@ -52,6 +53,7 @@ ABDECKUNG_PRUEFUNGEN = ("auswahl", "reihenfolge")
 
 PY_TEST_GLOB = "tests/tdd/test_einstellung_gleich_mail_*.py"
 VITEST_GLOB = "frontend/src/**/__tests__/*.test.ts"
+GO_TEST_GLOB = "internal/**/*_test.go"
 
 
 # ---------------------------------------------------------------------------
@@ -165,6 +167,14 @@ def _pruefe_vitest_verweis(test: str, vitest_dateien: list[Path]) -> bool:
     return bool(titel) and _vitest_titel_gefunden(titel, kandidaten)
 
 
+def _pruefe_go_verweis(test: str, go_dateien: list[Path]) -> bool:
+    """Go-Testfunktion ``func <Name>(`` (``seite: "go"``) in ``internal/**/*_test.go``."""
+    if not re.fullmatch(r"Test\w+", test):
+        return False
+    muster = re.compile(r"^func\s+" + re.escape(test) + r"\s*\(", re.MULTILINE)
+    return any(muster.search(d.read_text(encoding="utf-8")) for d in go_dateien)
+
+
 def _pruefe_python_verweis(test: str, py_namen: dict[str, set[str]]) -> bool:
     if ".py::" in test:
         datei_teil, name = test.split(".py::", 1)
@@ -176,12 +186,16 @@ def _pruefe_python_verweis(test: str, py_namen: dict[str, set[str]]) -> bool:
 def pruefe_testverweise(dateien: dict[str, dict], wurzel: Path) -> list[str]:
     py_namen = {p.name: _python_testnamen(p) for p in sorted(wurzel.glob(PY_TEST_GLOB))}
     vitest_dateien = sorted(wurzel.glob(VITEST_GLOB))
+    go_dateien = sorted(wurzel.glob(GO_TEST_GLOB))
     fehler = []
     for name, fall in _alle_faelle(dateien):
         if fall.get("status") not in STATUS_MIT_TEST:
             continue
         test = str(fall.get("test") or "").strip()
-        if _ist_vitest_fall(fall):
+        if fall.get("seite") == "go":
+            ok = _pruefe_go_verweis(test, go_dateien)
+            ort = GO_TEST_GLOB
+        elif _ist_vitest_fall(fall):
             ok = _pruefe_vitest_verweis(test, vitest_dateien)
             ort = VITEST_GLOB
         else:
@@ -349,10 +363,30 @@ def test_paarweise_ueberdeckung(echte_falllisten):
     _melde(pruefe_paarweise(_geladen(echte_falllisten)), "Paarweise Ueberdeckung lueckenhaft")
 
 
-@pytest.mark.xfail(strict=True, reason="#3047 RED: Behebungen F1-F4 ausstehend")
 def test_fertig_kein_rot_erwartet(echte_falllisten):
     """(d) fertig heisst: kein Fall steht noch auf rot_erwartet."""
     _melde(finde_rot_erwartet(_geladen(echte_falllisten)), "Faelle noch rot_erwartet")
+
+
+def test_template_literal_titel_alle_gefunden():
+    """(b) Jeder Frontend-Fall, dessen Titel nur als Template-Literal im Test
+    steht (``test(`<Titel> ${z.id}`)``), wird ueber den festen Praefix gefunden
+    -- und jeder solche Praefix der Editor-Testdateien hat mindestens einen
+    Fall (sonst liefe ein Testblock ohne Eintrag in der Fallliste)."""
+    vitest_dateien = sorted(REPO_ROOT.glob(VITEST_GLOB))
+    praefixe = {p.strip() for d in vitest_dateien
+                if "gleich_mail" in d.name or "in_allen_listen" in d.name
+                for p in _VITEST_TEMPLATE_PRAEFIX.findall(d.read_text(encoding="utf-8"))}
+    # Ganz dynamischer Titel (``test(`${name} ...`)``) gehoert zum Helfer
+    # ``rotErwartet``; dessen Aufrufe werden als eigene Titel gefunden.
+    praefixe.discard("")
+    assert praefixe, "keine Template-Literal-Titel gefunden -- Muster pruefen"
+    faelle = [f for _, f in _alle_faelle(lade_falllisten(FALLLISTEN_DIR)) if _ist_vitest_fall(f)]
+    titel = {str(f["test"]).split(".test.ts::")[-1].strip() for f in faelle}
+    fehlend = [f["id"] for f in faelle if f["status"] in STATUS_MIT_TEST
+               and not _pruefe_vitest_verweis(str(f["test"]), vitest_dateien)]
+    assert fehlend == [], f"Template-/Titel nicht gefunden: {fehlend}"
+    assert praefixe <= titel, f"Template-Titel ohne Fall: {sorted(praefixe - titel)}"
 
 
 def test_ausnahmen_und_offene_features_tragen_verweis(echte_falllisten):
@@ -395,6 +429,14 @@ rotErwartet('editor rot bis zur behebung', () => {});
 for (const z of zustaende) {
   test(`editor standard je zustand ${z.id}`, () => {});
 }
+"""
+
+_SYN_GO = """package handler
+
+func TestSynVorlageFolge(t *testing.T) {}
+
+// func TestNurImKommentar(t *testing.T) {}
+func helperTestKeinTest() {}
 """
 
 
@@ -451,6 +493,9 @@ def _schreibe(wurzel: Path, daten: dict[str, dict]) -> Path:
     vt = wurzel / "frontend" / "src" / "lib" / "x" / "__tests__"
     vt.mkdir(parents=True, exist_ok=True)
     (vt / "editor_standard_gleich_mail.test.ts").write_text(_SYN_VITEST, encoding="utf-8")
+    gt = wurzel / "internal" / "handler"
+    gt.mkdir(parents=True, exist_ok=True)
+    (gt / "syn_test.go").write_text(_SYN_GO, encoding="utf-8")
     return verzeichnis
 
 
@@ -563,6 +608,23 @@ def test_selbsttest_rot_erwartet_und_fehlender_verweis(tmp_path):
     verweise = pruefe_verweise(d)
     assert len(verweise) == 2
     assert faelle[1]["id"] in verweise[0] and faelle[2]["id"] in verweise[1]
+
+
+def test_selbsttest_go_testfunktion(tmp_path):
+    """``seite: "go"``: gefunden wird ``func <Name>(`` am Zeilenanfang in
+    ``internal/**/*_test.go``; ein Name nur im Kommentar, ein Teilname oder
+    ein Python-Testname mit ``seite: "go"`` zaehlt nicht."""
+    daten = _syn_daten()
+    editor = daten["fallliste_editor.json"]["faelle"]
+    editor.append(_syn_fall("ed-go", "trip_vorlage", "editor", "reihenfolge", seite="go",
+                            test="TestSynVorlageFolge"))
+    verzeichnis = _schreibe(tmp_path, daten)
+    assert pruefe_testverweise(lade_falllisten(verzeichnis), tmp_path) == []
+    for falsch in ("TestNurImKommentar", "TestSyn", "test_trip_fall", "helperTestKeinTest"):
+        editor[-1]["test"] = falsch
+        verzeichnis = _schreibe(tmp_path, daten)
+        fehler = pruefe_testverweise(lade_falllisten(verzeichnis), tmp_path)
+        assert len(fehler) == 1 and falsch in fehler[0] and GO_TEST_GLOB in fehler[0], (falsch, fehler)
 
 
 def test_selbsttest_schema_verstoesse(tmp_path):

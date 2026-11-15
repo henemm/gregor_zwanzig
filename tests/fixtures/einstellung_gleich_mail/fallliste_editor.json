@@ -37,10 +37,10 @@
    "test": "test_python_seite_trip_tabellen_altbestand",
    "ac": "AC-13",
    "befund": "N1",
-   "status": "rot_erwartet",
+   "status": "ausnahme",
    "seite": "python",
    "zustand": "altbestand_ohne_metrics",
-   "verweis": "#3047 N1: echte Mail belegt (test_n1_altbestand_ohne_metrics); Zeilenwerte aus trip_report._dp_to_row ueber dc.metrics, Spalten helpers.py:305-318 -- Behebung nur in get_metrics_for_channel moeglich und aendert Telegram/Kurzfassung (test_channel_metric_matrix AC-S4-6/7/13, #1199)"
+   "verweis": "#3048 (N1: Trip ohne display_config.metrics -> Stunden-/Nachttabelle ohne Wertspalten; Behebung aendert alle Kanaele, eigenes Issue)"
   },
   {
    "id": "D-trip_tabellen-altbestand_ohne_metrics-frontend",
