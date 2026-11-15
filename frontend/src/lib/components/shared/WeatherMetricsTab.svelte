@@ -117,9 +117,6 @@
 	// unveraendert uebernommen aus dem aufgeloesten Layout-Reiter.
 	import CompareHourlyLayoutControls from '$lib/components/compare/CompareHourlyLayoutControls.svelte';
 	import OutlookLayoutControls from '$lib/components/shared/OutlookLayoutControls.svelte';
-	// Issue #1361/#1372 S1b: geteiltes Tagesfenster (Trip UND Vergleich),
-	// zieht beim Trip aus dem Versand-Reiter hierher (VersandTab/VTSchedulePlan).
-	import DayWindowCard from './weather-metrics-tab/DayWindowCard.svelte';
 	// Issue #1350 Teil 2: Vergleich-Auswahlliste kommt jetzt aus GET
 	// /api/compare/metrics statt aus COMPARE_METRIC_DEFS (bleibt fuer
 	// Schwellen-Slider/Winner-Box/Save-Default-Fallback unveraendert, Teil 3).
@@ -179,10 +176,6 @@
 		 *  oben emittieren (analog onChannelsChange), da im Anlege-Modus kein
 		 *  PUT möglich ist. */
 		onWeatherMetricsChange?: (metrics: WeatherConfigMetric[]) => void;
-		/** Issue #1775: Create-Modus — Tagesfenster per Rückkanal nach oben
-		 *  emittieren (analog onChannelsChange/onWeatherMetricsChange), da im
-		 *  Anlege-Modus kein PUT möglich ist. */
-		onDayWindowChange?: (w: { day_window_start_hour: number; day_window_end_hour: number }) => void;
 		/** Issue #694: Trip-State in +page.svelte nach erfolgreichem PUT aktualisieren */
 		onTripUpdate?: (t: Trip) => void;
 		/** Issue #758: SaveStatus controller — wenn gesetzt, entfällt der explizite Speichern-Button. */
@@ -224,7 +217,7 @@
 		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean; /** #2795 S3b 1b (AC-36): Profil von aussen (Reiter Zustellung laedt es EINMAL); `undefined` = selbst laden. */ profil?: { mail_to?: string; telegram_chat_id?: string; sms_to?: string; sms_verified?: boolean; pending_sms_to?: string } | null;
 	}
 	let {
-		context = 'route', bereich = 'alles', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onDayWindowChange,
+		context = 'route', bereich = 'alles', trip, createMode = false, onChannelsChange, onWeatherMetricsChange,
 		onTripUpdate, saveController,
 		activeMetricKeys, channelActiveMetricKeys, officialAlertsEnabled, dayWindowStartHour, dayWindowEndHour,
 		hourlyMetricKeys, hourlyEnabled, outlookMetricKeys, outlookMetricFormats, outlookEnabled,
@@ -720,19 +713,6 @@
 	$effect(() => {
 		if (createMode && onWeatherMetricsChange && catalogLoaded) {
 			onWeatherMetricsChange(buildWeatherMetricsList());
-		}
-	});
-
-	// Issue #1775: Create-Modus — Tagesfenster nach oben propagieren (analog
-	// Kanal-/Wetter-Metrik-Rückkanal oben). Kein catalogLoaded-Gate noetig --
-	// die Tagesfenster-Felder haengen an keinem asynchron geladenen Katalog,
-	// sie sind ab Mount synchron verfuegbar.
-	$effect(() => {
-		if (createMode && onDayWindowChange) {
-			onDayWindowChange({
-				day_window_start_hour: reportConfig.day_window_start_hour ?? 4,
-				day_window_end_hour: reportConfig.day_window_end_hour ?? 19,
-			});
 		}
 	});
 
@@ -1584,26 +1564,6 @@
 			</LayoutTab>
 			{/if}
 		{/if}
-		<!-- Issue #1361/#1372 S1b: geteiltes Tagesfenster — wirkt auf
-		     Stundentabelle UND Vergleichswerte (day_window.resolve_configured_window()).
-		     Bewusst AUSSERHALB des Metrik-Katalog-Fetch-Zweigs (analog
-		     'stundenverlauf'/'official_alerts' unten). -->
-		{#if sections.includes('tagesfenster') && dayWindowStartHour !== undefined}
-			<div data-testid="weather-metrics-tagesfenster">
-				<!-- Issue #2276 S6g: der Guard oben prueft nur `dayWindowStartHour`
-				     (Spec DE-7, das fuer diesen Block einschlaegige Feld) — TS narrowt
-				     daraus nicht auch `dayWindowEndHour`. Beide Wertprops sind ueber
-				     `wetterMetrikenPropsAus` an jedem Vergleichs-Mount IMMER gemeinsam
-				     definiert; der `?? 19`-Fallback unten ist ein reiner TS-Satisfier,
-				     kein zweiter Default-Ursprung (identisch zu wetterMetrikenSnapshotAus). -->
-				<DayWindowCard
-					startHour={dayWindowStartHour}
-					endHour={dayWindowEndHour ?? 19}
-					onStartHour={(v) => onDayWindowStartHourChange?.(v)}
-					onEndHour={(v) => onDayWindowEndHourChange?.(v)}
-				/>
-			</div>
-		{/if}
 		<!-- Issue #1360 (Scheibe S1a von Epic #1372): neue Heimat der
 		     Stundenverlauf-Steuerung — der Reiter "Layout" ist aufgeloest.
 		     Position laut Spec: nach 'reihenfolge', vor 'official_alerts' (erst
@@ -1782,55 +1742,6 @@
 					</Card>
 				{/snippet}
 			</LayoutTab>
-			{/if}
-
-			<!-- Issue #1361/#1372 S1b: Tagesfenster zieht aus dem Versand-Reiter
-			     hierher (VersandTab/VTSchedulePlan) — welche Stunden bewertet
-			     werden, ist eine Inhalts- und keine Versandfrage. Bindet direkt an
-			     reportConfig (derselbe $state, den MailInhaltCard unten
-			     bind:reportConfig nutzt).
-			     Adversary Runde 3 (F001, CRITICAL): DayWindowCard liegt AUSSERHALB
-			     des `report-config-touch-scope`-Containers (der nur MailInhaltCard
-			     umschliesst) -- dessen Capture-Listener sehen diese Aenderung daher
-			     NIE, `userTouched` bliebe `false` und `weatherSaveGate` wuerde JEDEN
-			     Speicherversuch verwerfen, selbst nach der reportConfigDirty-Korrektur.
-			     Deshalb hier wie bei den Schwellwert-Feldern (smsThresholds, s.u.)
-			     `userTouched` UND `scheduleAutoSave()` explizit aus der echten
-			     DOM-Geste heraus setzen, statt sich auf den ambienten $effect zu
-			     verlassen.
-			     Kein !createMode-Gate (anders als 'report_config' unten, Z. 1542):
-			     TripNewEditor.svelte haelt beim Anlegen weiterhin eine EIGENE,
-			     separate reportConfig-Instanz (eigener MailInhaltCard
-			     ausserhalb dieser Komponente) — dieser hier lokale reportConfig-
-			     $state bleibt dort technisch wirkungslos, genau wie beim
-			     'report_config'-Abschnitt. Die Card ist trotzdem im createMode
-			     sichtbar, weil Issue #1775 (analog #622/#1552) einen expliziten
-			     Rueckkanal-$effect ergaenzt hat (`onDayWindowChange`, s. Z. 601 ff.):
-			     der propagiert die Werte aktiv an TripNewEditor.svelte, das sie in
-			     seiner eigenen reportConfig-Instanz mergt (handleDayWindowChange)
-			     und beim Speichern in den Payload uebernimmt. -->
-			{#if sections.includes('tagesfenster')}
-				<div data-testid="weather-metrics-tagesfenster">
-					<!-- Reassign statt In-Place-Mutation: der Auto-Save-Effekt oben
-					     (Z. 635) vergleicht `cur !== _lastReportConfig` — eine reine
-					     Feld-Mutation auf dem bestehenden $state-Objekt aendert die
-					     Referenz nicht und wuerde das Gate NIE ausloesen (stiller
-					     Nicht-Speicher-Bug, analog #1360-Falle). -->
-					<DayWindowCard
-						startHour={reportConfig.day_window_start_hour ?? 4}
-						endHour={reportConfig.day_window_end_hour ?? 19}
-						onStartHour={(v) => {
-							reportConfig = { ...reportConfig, day_window_start_hour: v };
-							userTouched = true;
-							scheduleReportConfigOnlySave();
-						}}
-						onEndHour={(v) => {
-							reportConfig = { ...reportConfig, day_window_end_hour: v };
-							userTouched = true;
-							scheduleReportConfigOnlySave();
-						}}
-					/>
-				</div>
 			{/if}
 
 			<div class="bottom-section">

@@ -2,7 +2,7 @@
 // (wertebereiche.*): Schluessel -> de | en, Platzhalter als <name> eingesetzt.
 // Die deutschen Literale sind gegen den Wortlaut in origin/main (Quelltexte VOR der
 // Umstellung, Commit a0effc47e) abgeglichen: WeatherMetricsTab.svelte,
-// weather-metrics-tab/{DayWindowCard,SavePresetDialog,WeatherV2Grundauswahl,
+// weather-metrics-tab/{SavePresetDialog,WeatherV2Grundauswahl,
 // WeatherV2PresetBar,WeatherV2Reihenfolge}.svelte, trip-detail/metricsEditor.ts
 // (CATEGORY_LABELS), wetter-tab/compareMetricCatalogLoader.ts (Gewitter-Stufen
 // aus `ordinalLabels`, grossgeschrieben) und dem Register (Auswertungen
@@ -63,12 +63,6 @@ export const F5_ANKER: [schluessel: string, de: string, en: string][] = [
 	['wertebereiche.reihenfolge.aufnehmen_titel', 'Wieder ins Briefing aufnehmen', 'Add back to briefing'],
 	['wertebereiche.reihenfolge.ein', 'Ein', 'On'],
 	['wertebereiche.reihenfolge.legende', 'So heißen diese Größen in SMS und Telegram-Kurzform:', 'These are the codes for these values in SMS and Telegram compact style:'],
-	// Tagesfenster (DayWindowCard)
-	['wertebereiche.tagesfenster.titel', 'Tagesfenster', 'Day window'],
-	['wertebereiche.tagesfenster.untertitel', 'Zeitraum für Stundentabelle, Vergleichswerte, SMS/Kurzzusammenfassung', 'Time range for the hourly table, comparison values and SMS/short summary'],
-	['wertebereiche.tagesfenster.von', 'Von', 'From'],
-	['wertebereiche.tagesfenster.bis', 'Bis', 'To'],
-	['wertebereiche.tagesfenster.ueber_mitternacht', 'Geht über Mitternacht — endet am Folgetag.', 'Crosses midnight — ends the next day.'],
 	// #2792 S1c-3 (AC-22): Sperr-Hinweis im SMS-Schwellwert-Block (der Hinweis oben im
 	// Reiter Wertebereiche entfiel mit dem Korridor-Editor, #2794 Teil-PR 4a)
 	['wertebereiche.gesperrt.hinweis_sms', 'Wird gerade umgebaut – deine Werte sind übernommen.', 'Being rebuilt – your values have been carried over.'],

@@ -112,7 +112,7 @@ export function hydrierterWs(preset: ComparePreset): Record<string, unknown> {
 /**
  * Nachbau der Bedienlogik von WeatherMetricsTab.svelte im vergleich-Kontext
  * OHNE Svelte: direkte Feld-Mutation, wie die realen Handler
- * (toggleCompareMetric/onToggleVergleichOfficialAlerts/DayWindowCard-Handler/
+ * (toggleCompareMetric/onToggleVergleichOfficialAlerts/Tagesfenster-Handler/
  * Drag-Ende der Stundenverlauf-/Ausblick-Steuerung) am Ende auch tun. Das
  * Melden an die Speicherung (`aenderungMelden()`) macht der Test selbst —
  * genau das übernimmt nach der Implementierung der reaktive `$effect`.

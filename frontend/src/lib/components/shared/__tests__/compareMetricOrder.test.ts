@@ -32,12 +32,11 @@ describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
 		}
 	});
 
-	test('AC-9: route-Kontext (Regressionsschutz Trip, seit #1361/#1372 S1b mit tagesfenster)', () => {
+	test('AC-9: route-Kontext (Regressionsschutz Trip, tagesfenster seit #2931 entfernt)', () => {
 		const sections = weatherMetricsTabSections('route');
 		assert.deepEqual(sections, [
 			'grundauswahl',
 			'layout_kanal', // #2794 S3a: vormals 'reihenfolge'
-			'tagesfenster',
 			'sms_schwellen',
 			// Issue #1728 Scheibe 2 (2026-08-15): 'auswertungen' ist ENTFERNT,
 			// nicht mehr Teil der Liste — der Bedienabschnitt "05 — Auswertungen"

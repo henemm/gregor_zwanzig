@@ -5,7 +5,7 @@
 // `weatherMetricsTabSections(context, bereich)` mit bereich ∈ {wetter, zustellung, alles};
 // neue Abschnittsnamen `layout_kanal` (Layout je Kanal, heute Gate `reihenfolge`) und
 // `nachtblock` (Nacht-Block, heute ohne Abschnittsnamen, nur route).
-//   wetter     = grundauswahl, tagesfenster, sms_schwellen (route), official_alerts
+//   wetter     = grundauswahl, sms_schwellen (route), official_alerts  (#2931: tagesfenster entfernt)
 //   zustellung = layout_kanal, stundenverlauf (vergleich), ausblick, report_config (route), nachtblock (route)
 // Beide disjunkt, Vereinigung = alles. Ohne zweiten Parameter wie bisher = alles.
 // Folge: das bisherige Gate `reihenfolge` heisst `layout_kanal` (exakte Mengen unten).
@@ -31,11 +31,11 @@ const abschnitte = (ctx: Ctx, bereich?: Bereich): string[] =>
 // erreichbar (Vereinigung = alles, disjunkt; beide Zusicherungen unten unveraendert).
 const SOLL: Record<Ctx, Record<'wetter' | 'zustellung', string[]>> = {
 	route: {
-		wetter: ['grundauswahl', 'tagesfenster', 'official_alerts'],
+		wetter: ['grundauswahl', 'official_alerts'],
 		zustellung: ['layout_kanal', 'ausblick', 'report_config', 'nachtblock', 'sms_schwellen']
 	},
 	vergleich: {
-		wetter: ['grundauswahl', 'tagesfenster', 'official_alerts'],
+		wetter: ['grundauswahl', 'official_alerts'],
 		zustellung: ['layout_kanal', 'stundenverlauf', 'ausblick']
 	}
 };

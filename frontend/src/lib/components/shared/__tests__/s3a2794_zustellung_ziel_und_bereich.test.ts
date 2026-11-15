@@ -137,7 +137,7 @@ describe('AC-1/AC-7 (F008): ZustellungTab zeigt am Panel nur die Zustellungs-Abs
 			const zu = weatherMetricsTabSections(ctx, b!.literal as 'zustellung');
 			const wetter = weatherMetricsTabSections(ctx, 'wetter');
 			assert.ok(zu.length > 0, `F008 (${ctx}): Zustellung ohne Abschnitte`);
-			for (const s of ['grundauswahl', 'tagesfenster']) {
+			for (const s of ['grundauswahl']) {
 				assert.ok(!zu.includes(s), `F008 (${ctx}): Reiter Zustellung zeigt den Wetter-Abschnitt '${s}' (${zu.join(', ')})`);
 			}
 			assert.deepEqual(zu.filter((s) => wetter.includes(s)), [], `F008 (${ctx}): Zustellung und Wetter ueberschneiden sich`);

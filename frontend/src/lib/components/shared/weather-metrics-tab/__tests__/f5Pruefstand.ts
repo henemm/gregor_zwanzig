@@ -88,7 +88,6 @@ const ZUSTAND: [string, string][] = [
 	['let activeChannel = $state<ChannelId>(\'email\');', 'let activeChannel = $state<ChannelId>(globalThis.__F5.activeChannel);']
 ];
 const WeatherMetricsTab = await variante(WMT_DATEI, ZUSTAND);
-const DayWindowCard = await komp(path.join(WMT, 'DayWindowCard.svelte'));
 const WeatherV2PresetBar = await komp(path.join(WMT, 'WeatherV2PresetBar.svelte'));
 const WeatherV2Reihenfolge = await komp(path.join(WMT, 'WeatherV2Reihenfolge.svelte'));
 const SavePresetDialog = await komp(path.join(WMT, 'SavePresetDialog.svelte'));
@@ -189,7 +188,6 @@ export function bausteineRendern(): string {
 	const byId: Record<string, Eintrag> = {};
 	for (const liste of Object.values(katalog)) for (const m of liste) byId[m.id] = m;
 	return [
-		html(DayWindowCard, { startHour: 22, endHour: 2, onStartHour: nix, onEndHour: nix }),
 		html(WeatherV2PresetBar, { selectedTemplate: 'p-golden', dirty: false, templates: TEMPLATES, userPresets: USER_PRESETS, onSelectPreset: nix, onOpenSaveDialog: nix }),
 		// #2794 S3a Teil-PR 3 (AC-42): Dialog auf die Ampel umgestellt (kind + ampel statt Bucket-Karten).
 		html(SavePresetDialog, { open: true, kind: 'route', ampel: { template: 'allgemein' }, onClose: nix, onSaved: nix }),
