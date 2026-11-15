@@ -121,6 +121,7 @@ Techn. Ansatz (Designentscheidungen 1-8 aus der Analyse, unverändert übernomme
 - **`order` beim Schreiben** = Listenindex (oder weglassen), nie alte `order`-Werte mitnehmen, sonst wirkt Umsortieren nicht im Renderer.
 - **Telegram Böen „Einfach"** hat keine eigene Darstellung (zeigt die Zahl); Test 9 prüft Telegram Roh = Zahl, Mail Einfach = Ampelpunkt.
 - Erwartete Schnittstellen (Modul `kanalInhalt.ts`, `kanalInhaltBeispiele.ts`, Karten-Props, `data-testid`-Anker, i18n-Schlüssel `wetter.kanal_inhalt.*`, Speicherer-Option `kanalFormatFuer`) stehen in den Kopfkommentaren der RED-Tests `kanal_inhalt_3031_*.test.ts`.
+- **Zwei angepasste Bestandstests liegen nur im Arbeitsordner** (vom Commit-Gate bis zur Implementierung blockiert): `s3a2794_bereich_filter.test.ts` und `weatherMetricsTabSharing.test.ts` (erwarten kein `layout_kanal` mehr). Mit der Implementierung committen.
 - E2E-Specs der alten Layout-Oberfläche sind beim Umbau anzupassen: `layout-tab-route`, `s3a2794-zustellung-inventar-speicherweg`, `compare-uebersicht-kanal-bedienung.staging`, `compare-hourly-metric-order`, `kurzform-gefuehlte-temperatur-kind-mitnahme`, `kanal-grenzen-und-hinweise.staging`, `kuerzel-marken-sichtbar.staging`, `wetter-metriken-vorschau-entfernt.staging`.
 
 ## Expected Behavior
