@@ -251,15 +251,27 @@
 		display: block;
 		min-width: var(--g-size-160px);
 	}
-	/* Handy/Tablet: je Kanal zwei Zeilen — oben Kanal | Briefing (wie Mockup-Handyfassung), darunter
-	   Alarme | Dringlichkeit, damit beide ohne waagerechtes Wischen erreichbar bleiben. */
+	/* Handy/Tablet: je Kanal oben Kanal (volle Restbreite) | Briefing-Schalter (wie Mockup-
+	   Handyfassung), darunter Alarme und Dringlichkeit je ueber die volle Breite, damit beide ohne
+	   waagerechtes Wischen erreichbar bleiben und Texte an Wortgrenzen umbrechen. Der Tabellenkopf
+	   bleibt fuer Screenreader im DOM, steht aber nicht doppelt zu den Zellbeschriftungen. */
 	@media (max-width: 899px) {
+		.zt-tabelle-huelle {
+			position: relative;
+		}
 		.zt-tabelle,
-		.zt-tabelle thead,
 		.zt-tabelle tbody {
 			display: block;
 		}
-		.zt-tabelle tr {
+		.zt-tabelle thead {
+			position: absolute;
+			width: var(--g-size-2px);
+			height: var(--g-size-2px);
+			overflow: hidden;
+			clip-path: inset(50%);
+			white-space: nowrap;
+		}
+		.zt-tabelle tbody tr {
 			display: grid;
 			grid-template-columns: minmax(0, 1fr) auto;
 			gap: var(--g-s-2) var(--g-s-4);
@@ -267,33 +279,32 @@
 			padding: var(--g-s-3) var(--g-s-5);
 			border-top: 1px solid var(--g-rule-soft);
 		}
-		.zt-tabelle thead tr {
-			border-top: 0;
-			padding-bottom: var(--g-s-2);
-			gap: var(--g-s-1) var(--g-s-4);
-		}
-		.zt-tabelle th,
 		.zt-tabelle td {
 			display: block;
 			width: auto;
+			min-width: 0;
 			padding: 0;
 			border-top: 0;
 		}
-		.zt-tabelle :is(th, td):first-child {
+		.zt-tabelle td:first-child {
 			width: auto;
+			overflow-wrap: anywhere;
 		}
-		.zt-tabelle :is(th, td):nth-child(even) {
+		.zt-tabelle td:nth-child(2) {
 			justify-self: end;
-			text-align: right;
 		}
-		.zt-tabelle th:nth-child(4) {
-			white-space: normal;
-			max-width: var(--g-size-160px);
+		/* Alarme und Dringlichkeit: eigene Zeile ueber die volle Breite, Beschriftung links,
+		   Schalter bzw. Segment rechts; laengere Inhalte (Sperrsatz) brechen darunter um. */
+		.zt-tabelle td[data-spalte] {
+			grid-column: 1 / -1;
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			justify-content: space-between;
+			gap: var(--g-s-1) var(--g-s-3);
 		}
 		.zt-tabelle td[data-spalte]::before {
 			content: attr(data-spalte);
-			display: block;
-			margin-bottom: var(--g-s-1);
 			font-family: var(--g-font-mono);
 			font-size: var(--g-size-10px);
 			letter-spacing: var(--g-size-0-1em);
@@ -301,6 +312,7 @@
 			color: var(--g-ink-3);
 		}
 		.zt-gesperrt {
+			flex: 1 1 100%;
 			min-width: 0;
 		}
 	}
