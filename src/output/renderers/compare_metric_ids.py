@@ -290,3 +290,89 @@ def resolve_channel_enabled_metrics(
         return channel_resolved
     allowed = set(global_metrics)
     return [m for m in channel_resolved if m in allowed]
+
+
+def _renderer_ids_for_kennung(kennung: object) -> list[str]:
+    """Katalog-Kennung -> die Vergleichs-Zeilen (Renderer-IDs), die sie traegt
+    (Issue #3039). Expansion nach dem Muster ``derived_aggregations``: jede
+    Zeile des Vergleichs-Katalogs mit dieser Kennung, in Katalog-Reihenfolge
+    (z. B. ``temperature`` -> Hoechst-, dann Tiefstwert). Zentral nicht
+    waehlbare Groessen (#1585) fallen heraus."""
+    if not isinstance(kennung, str):
+        return []
+    from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
+
+    non_selectable = _non_selectable_keys()
+    return [
+        FRONTEND_TO_RENDERER_METRIC_ID[entry["key"]]
+        for entry in COMPARE_METRIC_CATALOG
+        if entry["metric_id"] == kennung
+        and entry["key"] in FRONTEND_TO_RENDERER_METRIC_ID
+        and entry["key"] not in non_selectable
+    ]
+
+
+def _friendly_effective(kennung: str, entry: dict) -> bool:
+    """Roh/Einfach eines Kanal-Eintrags (Issue #3039, Spec Punkt 4): fehlt
+    ``use_friendly_format``, gilt Roh (Praezedenz ``outlook_metric_formats``,
+    bewusst NICHT der Katalog-Standard). Einfach wirkt nur bei Metriken mit
+    mehr als einem ``format_mode``; sonst wird ``True`` ignoriert."""
+    if entry.get("use_friendly_format") is not True:
+        return False
+    from app.metric_catalog import get_metric
+
+    try:
+        return len(get_metric(kennung).format_modes) > 1
+    except KeyError:
+        return False
+
+
+def resolve_channel_layout_rows(
+    global_metrics: list[str] | None,
+    channel_layouts: object,
+    channel: str,
+) -> list[tuple[str, bool]] | None:
+    """Geordnete Zeilen samt Format EINES Kanals aus
+    ``display_config.channel_layouts`` (Issue #3039, ADR-0119).
+
+    ``None`` = der Kanal hat keine ``channel_layouts``-Liste; der Aufrufer
+    faellt dann auf ``channel_active_metrics`` bzw. die Grundauswahl zurueck
+    (Format = heutiger Festzustand).
+
+    Sonst eine Liste ``(renderer_id, einfach)`` in Listenreihenfolge:
+    * jede Katalog-Kennung wird in ihre Vergleichs-Zeilen expandiert, das
+      Format der Kennung gilt fuer alle abgeleiteten Zeilen;
+    * ``enabled: false`` blendet die Zeilen nur in diesem Kanal aus;
+    * Teilmengen-Regel ADR-0050: geschnitten mit der Grundauswahl
+      (``global_metrics is None`` = kein Schnitt), leer bleibt leer;
+    * Zeilen der Grundauswahl, die KEIN Eintrag der Liste erfasst (auch kein
+      ausgeschalteter), sind neu und folgen eingeschaltet (Roh) am Ende, in
+      der Reihenfolge der Grundauswahl (#3031 AC-8, #3039 AC-14).
+
+    Reine Funktion -- kein I/O, keine Mutation der Eingaben."""
+    if not isinstance(channel_layouts, dict):
+        return None
+    entries = channel_layouts.get(channel)
+    if not isinstance(entries, list):
+        return None
+
+    allowed = None if global_metrics is None else set(global_metrics)
+    covered: set[str] = set()
+    rows: dict[str, bool] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        kennung = entry.get("metric_id")
+        renderer_ids = _renderer_ids_for_kennung(kennung)
+        covered.update(renderer_ids)
+        if entry.get("enabled") is False:
+            continue
+        friendly = _friendly_effective(kennung, entry)
+        for renderer_id in renderer_ids:
+            if allowed is not None and renderer_id not in allowed:
+                continue
+            rows.setdefault(renderer_id, friendly)
+    for renderer_id in global_metrics or []:
+        if renderer_id not in covered and renderer_id not in rows:
+            rows[renderer_id] = False
+    return list(rows.items())

@@ -221,6 +221,21 @@ class CompareRenderOptions:
     # zeigen die Zahl (Hinweiszeile bzw. SMS-Zaehler `?N`), statt sie nur zu
     # loggen. Lesestelle: `.get(kanal, 0)` (fehlender Eintrag = nichts fehlt).
     unresolved_by_channel: dict[str, int] = field(default_factory=dict)
+    # Issue #3039 (ADR-0119): je Kanal die geordneten Zeilen samt Format aus
+    # `display_config.channel_layouts` als `(renderer_id, einfach)`. BEWUSST
+    # ADDITIV: `enabled_metrics_by_channel` traegt dieselbe Reihenfolge ohne
+    # Format. `None` je Kanal = keine `channel_layouts`-Liste -- Auswahl und
+    # Reihenfolge kommen dann aus `channel_active_metrics` bzw. der
+    # Grundauswahl, das Format ist der heutige Festzustand (Bestand).
+    channel_rows_by_channel: dict[str, Optional[list[tuple[str, bool]]]] = field(
+        default_factory=dict
+    )
+
+    def metric_formats(self, channel: str) -> Optional[dict[str, bool]]:
+        """`{renderer_id: einfach}` eines Kanals fuer die Renderer; `None` =
+        Festzustand (kein `channel_layouts` fuer diesen Kanal)."""
+        rows = self.channel_rows_by_channel.get(channel)
+        return None if rows is None else dict(rows)
 
 
 def resolve_compare_time_window(preset: dict) -> tuple[int, int]:
@@ -265,7 +280,8 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         resolve_compare_outlook_formats, resolve_compare_outlook_metrics,
     )
     from output.renderers.compare_metric_ids import (
-        resolve_channel_enabled_metrics, resolve_enabled_metrics_report,
+        resolve_channel_enabled_metrics, resolve_channel_layout_rows,
+        resolve_enabled_metrics_report,
     )
     from output.renderers.email.compare_html import has_visible_hour_columns
 
@@ -313,6 +329,15 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         display_config.get("active_metrics"),
     )
     channel_raw = display_config.get("channel_active_metrics")
+    # Issue #3039: Kaskade je Kanal -- `channel_layouts[kanal]` vor
+    # `channel_active_metrics[kanal]` vor Grundauswahl (ADR-0119).
+    # ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS sendet den SMS-Text.
+    channel_rows = {
+        ch: resolve_channel_layout_rows(
+            global_metrics, display_config.get("channel_layouts"), ch,
+        )
+        for ch in ("email", "telegram", "sms")
+    }
 
     # Issue #1361/#1368 (AC-8): eine bewusst geleerte Ausblick-Auswahl laesst
     # den ganzen Block entfallen -- eine Tagestabelle mit nur der Wochentag-
@@ -345,15 +370,25 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
             display_config.get("outlook_metric_formats"),
         ),
         enabled_metrics_by_channel={
-            ch: resolve_channel_enabled_metrics(global_metrics, channel_raw, ch)
+            ch: (
+                resolve_channel_enabled_metrics(global_metrics, channel_raw, ch)
+                if channel_rows[ch] is None
+                else [renderer_id for renderer_id, _einfach in channel_rows[ch]]
+            )
             # ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
             for ch in ("email", "telegram", "sms")
         },
         unresolved_by_channel={
-            ch: _channel_unresolved_count(global_unresolved, channel_raw, ch)
+            ch: _channel_unresolved_count(
+                global_unresolved,
+                # Issue #3039: mit `channel_layouts` wird `channel_active_metrics`
+                # fuer diesen Kanal nicht gelesen -- dann zaehlt nur die Grundauswahl.
+                channel_raw if channel_rows[ch] is None else None, ch,
+            )
             # ADR-0049: Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
             for ch in ("email", "telegram", "sms")
         },
+        channel_rows_by_channel=channel_rows,
     )
 
 

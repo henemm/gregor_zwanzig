@@ -403,7 +403,11 @@ def test_ac13_vorschau_und_versand_zeigen_dieselben_zeilen_und_formate(mit):
         versand_html = lauf.snap.sendungen("email")[-1]["body"]
         assert _html_zeile(vorschau["email_html"], "Böen") == _html_zeile(versand_html, "Böen")
         # Inhalt, nicht nur Gleichheit: die Kanal-Einstellung hat gewirkt.
-        assert _keys(lauf, "telegram")["Innsbruck"] == ["cloud_avg_pct", "gust_max_kmh", "temp_max_c"]
+        # Spec-Regel 7 (AC-14): Grundauswahl-Werte ohne Kanal-Eintrag (Wind,
+        # Sonne) sind neu und folgen eingeschaltet am Ende, in der Reihenfolge
+        # der Grundauswahl.
+        assert _keys(lauf, "telegram")["Innsbruck"] == [
+            "cloud_avg_pct", "gust_max_kmh", "temp_max_c", "wind_max_kmh", "sunny_hours_h"]
         assert _AMPEL_PUNKT in _html_zeile(versand_html, "Böen")
 
 

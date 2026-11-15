@@ -387,3 +387,46 @@ describe('buildNewComparePresetPayload — Kanal-Auswahl der Uebersicht (#1703 S
 		);
 	});
 });
+
+// ─── Issue #3039 Fix-Loop 3 (F007): Teil-Edit EINES Kanals erhaelt die anderen
+// gespeicherten Kanal-Auswahlen UND channel_layouts (Read-Modify-Write). ──
+describe('buildComparePresetSavePayload — Teil-Edit eines Kanals (#3039 F007)', () => {
+	test('nur telegram editiert: email und sms bleiben unveraendert, channel_layouts bleibt', () => {
+		const stored = {
+			email: [{ metric_id: 'temperature', aggregation: 'max' }],
+			telegram: [{ metric_id: 'wind', aggregation: 'max' }],
+			sms: [{ metric_id: 'gust', aggregation: 'max' }]
+		};
+		const channelLayouts = {
+			email: [{ metric_id: 'gust', enabled: true, use_friendly_format: true }]
+		};
+		const original: ComparePreset = {
+			...makePreset(),
+			display_config: {
+				region: 'Salzburger Land',
+				channel_active_metrics: structuredClone(stored),
+				channel_layouts: structuredClone(channelLayouts)
+			}
+		};
+
+		const { body } = buildComparePresetSavePayload(original, {
+			name: original.name,
+			activityProfile: 'wintersport',
+			pickedIds: original.location_ids,
+			region: 'Salzburger Land',
+			idealRanges: {},
+			// Grundauswahl mit derselben Kennung: ihr Speicherformat ist die
+			// Soll-Form des Telegram-Edits (dieselbe Uebersetzung im Speicherweg).
+			activeMetricKeys: ['cloud_avg_pct'],
+			channelActiveMetricKeys: { email: null, telegram: ['cloud_avg_pct'], sms: null }
+		});
+
+		const dc = body.display_config as Record<string, unknown>;
+		const cam = dc.channel_active_metrics as Record<string, unknown>;
+		assert.deepEqual(cam.email, stored.email, 'email muss unveraendert bleiben');
+		assert.deepEqual(cam.sms, stored.sms, 'sms muss unveraendert bleiben');
+		assert.deepEqual(cam.telegram, dc.active_metrics, 'telegram traegt den neuen Wert');
+		assert.notDeepEqual(cam.telegram, stored.telegram);
+		assert.deepEqual(dc.channel_layouts, channelLayouts, 'channel_layouts muss erhalten bleiben');
+	});
+});
