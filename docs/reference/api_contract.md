@@ -5768,7 +5768,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
   `display_config`, statt ihn wie bisher über den `...original`-Spread
   round-zu-trippen. Einmalige Migration
   `scripts/migrate_1351_drop_compare_channel_layouts.py` (idempotent,
-  Backup vor Schreiben, nur `kind=vergleich`) räumt Bestandsdaten. **Der
+  Backup vor Schreiben, nur `kind=vergleich`) räumt Bestandsdaten (Skript seit #3039 entfernt, siehe ADR-0119; nicht mehr ausführen). **Der
   Trip-Pfad ist unverändert** — dort bleibt `channel_layouts` eine echte,
   gelesene Funktion. Macht die „round-trippt unverändert weiter"-Aussage
   zu `channel_layouts` im #1299/#1291/#1287-Eintrag vom 2026-07-18 (unten)
@@ -5824,6 +5824,9 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
   **Überholt seit 2026-07-24 (#1351, s.o.) für `channel_layouts`:** das
   Feld round-trippt im Compare-Pfad nicht mehr, sondern wird beim Speichern
   aktiv entfernt. Die `top_n`-Aussage hier bleibt unverändert gültig.
+  **Überholt seit 2026-11-15 (#3039, ADR-0119) für `channel_layouts`:** das Feld
+  wird am Vergleich wieder gelesen und beim Speichern erhalten; die Migration
+  ist entfernt.
 - 2026-07-16: Issue #1278 + #1285 (eine Arbeit, gemeinsame Datenbasis) —
   Vergleichs-Mail bekommt je Ort einen Kurz-Zusammenfassungssatz (geteilter
   Trip-Baustein, kein Compare-eigener Formatierungscode) und fünf bisher
