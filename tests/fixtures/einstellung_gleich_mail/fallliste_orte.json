@@ -1321,8 +1321,8 @@
       "pruefung": "grundauswahl",
       "test": "test_ac10_vergleichstabelle_totalschnitt",
       "ac": "AC-10",
-      "befund": "F8: Totalschnitt einer nicht leeren channel_active_metrics.email-Liste -> leere Vergleichstabelle statt Rueckfall auf die Grundauswahl (resolve_channel_enabled_metrics, src/output/renderers/compare_metric_ids.py, #3039 Regel 6 laesst diese Stufe unveraendert)",
-      "status": "rot_erwartet",
+      "befund": "",
+      "status": "gruen",
       "variante": "channel_active_metrics"
     },
     {
@@ -1333,9 +1333,31 @@
       "pruefung": "grundauswahl",
       "test": "test_ac10_vergleichstabelle_totalschnitt",
       "ac": "AC-10",
-      "befund": "F8: Totalschnitt einer nicht leeren channel_active_metrics.email-Liste -> leere Vergleichstabelle statt Rueckfall auf die Grundauswahl (resolve_channel_enabled_metrics, src/output/renderers/compare_metric_ids.py, #3039 Regel 6 laesst diese Stufe unveraendert)",
-      "status": "rot_erwartet",
+      "befund": "",
+      "status": "gruen",
       "variante": "channel_active_metrics"
+    },
+    {
+      "id": "O-VT-H-ALLES-AUS-LAYOUT",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_vergleichstabelle_alles_aus_bleibt_leer",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-K-ALLES-AUS-LAYOUT",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_vergleichstabelle_alles_aus_bleibt_leer",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
     },
     {
       "id": "O-VT-K-ALT",

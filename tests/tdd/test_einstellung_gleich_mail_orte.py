@@ -383,8 +383,8 @@ def test_ac10_vergleichstabelle_totalschnitt(fall):
     (Boeen, Regenwahrscheinlichkeit) -> dokumentierter Rueckfall auf die volle
     Grundauswahl statt einer Tabelle ohne Metrik-Zeile.
     Variante ``channel_layouts``: Wind/Temperatur ohne Eintrag folgen hinten
-    (#3039 AC-14). Variante ``channel_active_metrics``: Ist leer, weil
-    ``resolve_channel_enabled_metrics`` ohne Rueckfall schneidet."""
+    (#3039 AC-14). Variante ``channel_active_metrics``: Rueckfall in
+    ``resolve_channel_enabled_metrics`` (F9)."""
     p = preset_dict("basis")
     dc = p["display_config"]
     dc["active_metrics"] = _am(["wind", "temperature"])
@@ -397,6 +397,25 @@ def test_ac10_vergleichstabelle_totalschnitt(fall):
     mail = sende_orte_mail(p)
     assert not {"gust", "rain_probability"} & set(grundauswahl(mail.roh)), "Vorbedingung: Totalschnitt"
     assert soll_vergleichstabelle(mail.roh) == ["wind", "temperature"]
+    pruefe_vergleichstabelle(mail, fall["format"])
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ac10_vergleichstabelle_alles_aus_bleibt_leer"))
+def test_ac10_vergleichstabelle_alles_aus_bleibt_leer(fall):
+    """Grenze des Rueckfalls (#3039 AC-6): ``channel_layouts.email`` schaltet
+    ALLE Eintraege der Grundauswahl (Wind, Temperatur) ausdruecklich aus, nur
+    Boeen ausserhalb ist an -> "alles aus" ist Nutzerwunsch, keine
+    Metrik-Zeile, KEIN Rueckfall auf die Grundauswahl."""
+    p = preset_dict("basis")
+    dc = p["display_config"]
+    dc["active_metrics"] = _am(["wind", "temperature"])
+    dc["channel_layouts"] = {"email": [
+        {"metric_id": "wind", "enabled": False, "use_friendly_format": False},
+        {"metric_id": "gust", "enabled": True, "use_friendly_format": False},
+        {"metric_id": "temperature", "enabled": False, "use_friendly_format": False},
+    ]}
+    mail = sende_orte_mail(p)
+    assert soll_vergleichstabelle(mail.roh) == []
     pruefe_vergleichstabelle(mail, fall["format"])
 
 

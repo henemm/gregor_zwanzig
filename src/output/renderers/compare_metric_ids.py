@@ -276,6 +276,17 @@ def resolve_channel_enabled_metrics(
     Grundauswahl -- die Listenposition ist die vom Nutzer eingestellte
     Metrik-Reihenfolge (#1335/#1359) und bestimmt Zeilenfolge bzw. SMS-Budget.
 
+    Totalschnitt (#3047 AC-10, wie beim Trip ``_clip_to_global_maximum``):
+    adressiert eine NICHT leere Kanal-Liste keinen einzigen Eintrag der
+    Grundauswahl, bleibt nach dem Schnitt nichts uebrig -> Rueckfall auf die
+    volle Grundauswahl in deren Folge (mit Warnung) statt einer Tabelle ohne
+    Zeilen. Abgrenzung: eine ausdruecklich LEERE Liste bleibt leer
+    (Nutzerwunsch, #1366). Bei ``channel_layouts`` (eigene Funktion
+    ``resolve_channel_layout_rows``) gilt #3039 AC-6: sind alle Eintraege der
+    Grundauswahl ausdruecklich ``enabled: false``, ist das "alles aus" -> leer,
+    kein Rueckfall; adressiert die Layout-Liste keinen Grundauswahl-Eintrag,
+    folgen diese ohnehin hinten (#3039 AC-14).
+
     Reine Funktion -- kein I/O, keine Mutation der Eingaben.
     """
     if not isinstance(channel_active_metrics, dict) or channel not in channel_active_metrics:
@@ -289,7 +300,16 @@ def resolve_channel_enabled_metrics(
     if global_metrics is None:
         return channel_resolved
     allowed = set(global_metrics)
-    return [m for m in channel_resolved if m in allowed]
+    geschnitten = [m for m in channel_resolved if m in allowed]
+    if channel_resolved and not geschnitten:
+        logger.warning(
+            "Kanal-Liste %s (%s) liegt vollstaendig ausserhalb der "  # i18n-log
+            "Grundauswahl %s -- Rueckfall auf die volle Grundauswahl statt "
+            "leerer Tabelle (#3047 AC-10)",
+            channel, channel_resolved, global_metrics,
+        )
+        return list(global_metrics)
+    return geschnitten
 
 
 def _renderer_ids_for_kennung(kennung: object) -> list[str]:

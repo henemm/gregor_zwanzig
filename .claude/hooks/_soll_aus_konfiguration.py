@@ -238,7 +238,10 @@ def _orte_uebersicht(dc: dict) -> list[tuple[str, str]] | None:
     eigen = _uebersicht_paare(kanal.get("email"))
     if eigen is None:
         return grund
-    return eigen if grund is None else [p for p in eigen if p in grund]
+    if grund is None:
+        return eigen
+    # #3047 AC-10: nicht leere Liste ganz ausserhalb -> volle Grundauswahl.
+    return [p for p in eigen if p in grund] or (list(grund) if eigen else [])
 
 
 def _orte_stunden(dc: dict) -> list[str] | None:
