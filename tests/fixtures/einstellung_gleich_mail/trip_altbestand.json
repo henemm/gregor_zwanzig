@@ -1,0 +1,154 @@
+{
+  "id": "altbestand-3047",
+  "name": "Altbestand 3047",
+  "stages": [
+    {
+      "id": "T0",
+      "name": "Etappe 0",
+      "date": "2026-07-19",
+      "waypoints": [
+        {
+          "id": "G0a",
+          "name": "Start",
+          "lat": 47.2692,
+          "lon": 11.4041,
+          "elevation_m": 600
+        },
+        {
+          "id": "G0b",
+          "name": "Ziel",
+          "lat": 47.2892,
+          "lon": 11.4241,
+          "elevation_m": 900
+        }
+      ]
+    },
+    {
+      "id": "T1",
+      "name": "Etappe 1",
+      "date": "2026-07-20",
+      "waypoints": [
+        {
+          "id": "G1a",
+          "name": "Start",
+          "lat": 47.2692,
+          "lon": 11.4041,
+          "elevation_m": 600
+        },
+        {
+          "id": "G1b",
+          "name": "Ziel",
+          "lat": 47.2892,
+          "lon": 11.4241,
+          "elevation_m": 900
+        }
+      ]
+    },
+    {
+      "id": "T2",
+      "name": "Etappe 2",
+      "date": "2026-07-21",
+      "waypoints": [
+        {
+          "id": "G2a",
+          "name": "Start",
+          "lat": 47.2692,
+          "lon": 11.4041,
+          "elevation_m": 600
+        },
+        {
+          "id": "G2b",
+          "name": "Ziel",
+          "lat": 47.2892,
+          "lon": 11.4241,
+          "elevation_m": 900
+        }
+      ]
+    }
+  ],
+  "official_alerts_enabled": false,
+  "display_config": {
+    "trip_id": "altbestand-3047",
+    "metrics": [
+      {
+        "metric_id": "temperature",
+        "enabled": true,
+        "bucket": "primary",
+        "order": 0,
+        "use_friendly_format": false
+      },
+      {
+        "metric_id": "wind_chill",
+        "enabled": false,
+        "bucket": "primary",
+        "order": 0,
+        "use_friendly_format": false
+      },
+      {
+        "metric_id": "wind",
+        "enabled": true,
+        "bucket": "primary",
+        "order": 0,
+        "use_friendly_format": false
+      },
+      {
+        "metric_id": "gust",
+        "enabled": true,
+        "bucket": "primary",
+        "order": 0,
+        "use_friendly_format": false
+      },
+      {
+        "metric_id": "wind_direction",
+        "enabled": true,
+        "bucket": "primary",
+        "order": 0,
+        "use_friendly_format": false
+      },
+      {
+        "metric_id": "precipitation",
+        "enabled": true,
+        "bucket": "primary",
+        "order": 0,
+        "use_friendly_format": false
+      },
+      {
+        "metric_id": "rain_probability",
+        "enabled": true,
+        "bucket": "primary",
+        "order": 0,
+        "use_friendly_format": false
+      },
+      {
+        "metric_id": "thunder",
+        "enabled": true,
+        "bucket": "primary",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "cloud_total",
+        "enabled": true,
+        "bucket": "primary",
+        "order": 0,
+        "use_friendly_format": true
+      },
+      {
+        "metric_id": "uv_index",
+        "enabled": false,
+        "bucket": "primary",
+        "order": 0,
+        "use_friendly_format": false
+      }
+    ]
+  },
+  "report_config": {
+    "trip_id": "altbestand-3047",
+    "enabled": true,
+    "morning_time": "07:00:00",
+    "evening_time": "18:00:00",
+    "send_email": true,
+    "send_sms": false,
+    "send_telegram": false
+  }
+}
