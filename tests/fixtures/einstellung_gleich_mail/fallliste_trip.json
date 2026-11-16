@@ -1391,6 +1391,50 @@
       "verweis": "#722 (render_compact ignoriert alle Baustein-Schalter, compact.py Docstring; Ausblick bleibt bei show_outlook=false)"
     },
     {
+      "id": "trip-bericht-aus--morgen_aus--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_ein_aus_metrik_je_bericht",
+      "ac": "Spec §2 Punkt 5",
+      "befund": "Nachpruefung Punkt 6 (H4)",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-bericht-aus--morgen_aus--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_ein_aus_metrik_je_bericht",
+      "ac": "Spec §2 Punkt 5",
+      "befund": "Nachpruefung Punkt 6 (H4)",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-bericht-aus--abend_aus--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_ein_aus_metrik_je_bericht",
+      "ac": "Spec §2 Punkt 5",
+      "befund": "Nachpruefung Punkt 6 (H4)",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-bericht-aus--abend_aus--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_ein_aus_metrik_je_bericht",
+      "ac": "Spec §2 Punkt 5",
+      "befund": "Nachpruefung Punkt 6 (H4)",
+      "status": "gruen"
+    },
+    {
       "id": "trip-ac8--stunden_roh_einfach--html",
       "liste": "trip_stundentabelle",
       "kontext": "trip",
@@ -2112,6 +2156,30 @@
       "ac": "AC-17",
       "befund": "T5",
       "status": "gruen"
+    },
+    {
+      "id": "trip-p7--global_nachtraeglich-trip_stundentabelle--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_p7_global_nachtraeglich_in_gespeicherter_liste",
+      "ac": "AC-10, Konzept §5 Punkt 6",
+      "befund": "Nachpruefung Punkt 7 (H4)",
+      "status": "offen_feature",
+      "verweis": "#3047 Nachpruefung Punkt 7: gespeicherte Liste kann 'bewusst abgewaehlt' und 'spaeter global eingeschaltet' nicht unterscheiden (Trip channel_layouts: Editor schreibt jede Katalog-Metrik, abwesende als enabled:false; Altbestand Golden C #2422 wertet fehlenden Eintrag als Abwahl; Orte/Ausblick/Stunden: reine ID-Listen) -> Datenmodell-Entscheidung (ADR zu ADR-0050) noetig"
+    },
+    {
+      "id": "trip-p7--global_nachtraeglich-trip_ausblick--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_p7_global_nachtraeglich_in_gespeicherter_liste",
+      "ac": "AC-10, Konzept §5 Punkt 6",
+      "befund": "Nachpruefung Punkt 7 (H4)",
+      "status": "offen_feature",
+      "verweis": "#3047 Nachpruefung Punkt 7: gespeicherte Liste kann 'bewusst abgewaehlt' und 'spaeter global eingeschaltet' nicht unterscheiden (Trip channel_layouts: Editor schreibt jede Katalog-Metrik, abwesende als enabled:false; Altbestand Golden C #2422 wertet fehlenden Eintrag als Abwahl; Orte/Ausblick/Stunden: reine ID-Listen) -> Datenmodell-Entscheidung (ADR zu ADR-0050) noetig"
     }
   ]
 }

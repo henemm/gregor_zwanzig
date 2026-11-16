@@ -232,3 +232,97 @@ def test_python_seite_orte_ausblick_standard_mit_grundauswahl():
 @pytest.mark.parametrize("zustand", _gespeicherte("orte_ausblick"))
 def test_python_seite_orte_ausblick_gespeichert(zustand):
     _pruefe(python_orte_ausblick, "orte_ausblick", zustand)
+
+
+# ── Waechter gegen Katalog-Drift (#3047 H4, Nachpruefung Punkt 8) ──────────────
+#
+# ``editor_standard.json`` traegt unter ``kataloge`` aufgezeichnete Antworten von
+# ``GET /api/metrics`` (Trip) und ``GET /api/compare/metrics`` (Orte), gekuerzt auf
+# die Felder, die Editor-Seite und Python-Seite lesen. Aendert sich das Register
+# (neue Groesse, anderer Rang, anderer Schluessel), rechnen beide Seiten sonst
+# still gegen einen veralteten Katalog. Die Live-Antwort kommt aus der ECHTEN
+# Router-Funktion (ohne Netz, ohne App-Start); verglichen wird je Gruppe die
+# vollstaendige Eintragsfolge, projiziert auf die eingefrorenen Felder.
+
+
+def katalog_drift(name: str, eingefroren: dict[str, list[dict]],
+                  live: dict[str, list[dict]]) -> list[str]:
+    """Abweichungen eines eingefrorenen Katalogs (Gruppe -> Eintraege) von der
+    Live-Antwort, je als lesbare Zeile; leer = kein Drift. Reine Funktion."""
+    fehler: list[str] = []
+    for gruppe in sorted(set(eingefroren) | set(live)):
+        if gruppe not in live:
+            fehler.append(f"{name}: Gruppe {gruppe!r} gibt es in der API nicht mehr")
+            continue
+        if gruppe not in eingefroren:
+            fehler.append(f"{name}: API-Gruppe {gruppe!r} fehlt im eingefrorenen Katalog")
+            continue
+        alt = eingefroren[gruppe]
+        felder = sorted(set().union(*(e.keys() for e in alt))) if alt else ["id"]
+        neu = [{f: e.get(f) for f in felder} for e in live[gruppe]]
+        if neu == alt:
+            continue
+        kennung = "key" if "key" in felder else "id"
+        ids_alt = [e.get(kennung) for e in alt]
+        ids_neu = [e.get(kennung) for e in neu]
+        if ids_alt != ids_neu:
+            fehler.append(f"{name}[{gruppe}]: Eintragsfolge eingefroren {ids_alt} != API {ids_neu}")
+            continue
+        for a, n in zip(alt, neu):
+            diff = {f: (a.get(f), n.get(f)) for f in felder if a.get(f) != n.get(f)}
+            if diff:
+                fehler.append(f"{name}[{gruppe}] {a.get(kennung)}: (eingefroren, API) {diff}")
+    return fehler
+
+
+def _live_trip_katalog() -> dict[str, list[dict]]:
+    from api.routers.config import get_metrics
+
+    return get_metrics()
+
+
+def _live_orte_katalog() -> dict[str, list[dict]]:
+    from api.routers.compare import get_compare_metrics
+
+    return get_compare_metrics(lang=None)
+
+
+_DRIFT_HINWEIS = ("eingefrorene Kataloge in tests/fixtures/einstellung_gleich_mail/"
+                  "editor_standard.json neu aufzeichnen (gleiche Felder) und die "
+                  "erwarteten Standardfolgen beider Seiten pruefen")
+
+
+def test_katalog_drift_trip_api_metrics():
+    """Eingefrorener ``/api/metrics``-Katalog == aktuelle Router-Antwort."""
+    fehler = katalog_drift("trip_api_metrics", DATEN["kataloge"]["trip_api_metrics"],
+                           _live_trip_katalog())
+    assert not fehler, "Katalog-Drift:\n  " + "\n  ".join(fehler) + f"\n-> {_DRIFT_HINWEIS}"
+
+
+def test_katalog_drift_orte_api_compare_metrics():
+    """Eingefrorener ``/api/compare/metrics``-Katalog == aktuelle Router-Antwort."""
+    fehler = katalog_drift("orte_api_compare_metrics",
+                           DATEN["kataloge"]["orte_api_compare_metrics"], _live_orte_katalog())
+    assert not fehler, "Katalog-Drift:\n  " + "\n  ".join(fehler) + f"\n-> {_DRIFT_HINWEIS}"
+
+
+def test_katalog_drift_selbsttest_meldet_klar():
+    """Der Waechter schlaegt bei jeder Drift-Art an und nennt Gruppe, Eintrag und
+    Feld (synthetische Abweichungen auf Kopien der eingefrorenen Daten)."""
+    import copy
+
+    trip = DATEN["kataloge"]["trip_api_metrics"]
+    live = _live_trip_katalog()
+    rang = copy.deepcopy(trip)
+    rang["wind"][1]["trip_default_rank"] = 99
+    assert any("[wind] gust" in z and "trip_default_rank" in z
+               for z in katalog_drift("t", rang, live))
+    weniger = copy.deepcopy(trip)
+    weniger["wind"].pop()
+    assert any("Eintragsfolge" in z for z in katalog_drift("t", weniger, live))
+    ohne_gruppe = copy.deepcopy(trip)
+    del ohne_gruppe["winter"]
+    assert any("'winter' fehlt" in z for z in katalog_drift("t", ohne_gruppe, live))
+    orte = copy.deepcopy(DATEN["kataloge"]["orte_api_compare_metrics"])
+    orte["metrics"][0]["hourlyDefault"] = not orte["metrics"][0]["hourlyDefault"]
+    assert any("hourlyDefault" in z for z in katalog_drift("o", orte, _live_orte_katalog()))

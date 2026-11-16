@@ -526,6 +526,32 @@
    "status": "gruen",
    "seite": "go",
    "verweis": "internal/handler/metric_preset.go displayConfigAusVorlage schrieb display_config.metrics ohne order/bucket (Editor autoAssign und Python-Loader auto_distribute sortierten nach Prioritaet um); Go-Test internal/handler/metric_preset_vorlage_folge_test.go"
+  },
+  {
+   "id": "D-trip_tabellen-katalog_drift-python",
+   "liste": "trip_tabellen",
+   "kontext": "trip",
+   "format": "editor",
+   "pruefung": "standard",
+   "test": "test_katalog_drift_trip_api_metrics",
+   "ac": "AC-13",
+   "befund": "Nachpruefung Punkt 8 (H4)",
+   "status": "gruen",
+   "seite": "python",
+   "zustand": "katalog_drift"
+  },
+  {
+   "id": "D-orte_vergleichstabelle-katalog_drift-python",
+   "liste": "orte_vergleichstabelle",
+   "kontext": "orte",
+   "format": "editor",
+   "pruefung": "standard",
+   "test": "test_katalog_drift_orte_api_compare_metrics",
+   "ac": "AC-13",
+   "befund": "Nachpruefung Punkt 8 (H4)",
+   "status": "gruen",
+   "seite": "python",
+   "zustand": "katalog_drift"
   }
  ]
 }

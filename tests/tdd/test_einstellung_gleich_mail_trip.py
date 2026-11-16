@@ -345,6 +345,38 @@ def test_ausblick_ausgeschaltet(monkeypatch, fall):
     assert tab is None, f"{fall['id']}: Ausblick trotz show_outlook=false: {tab.spalten}"
 
 
+#: Variante -> (abgeschalteter Bericht, Schalter am Metrik-Eintrag).
+_BERICHT_AUS = {"morgen_aus": ("morning", "morning_enabled"),
+                "abend_aus": ("evening", "evening_enabled")}
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ein_aus_metrik_je_bericht"))
+def test_ein_aus_metrik_je_bericht(monkeypatch, fall):
+    """Spec §2 Punkt 5 (#3047 H4, Nachpruefung Punkt 6): Boeen sind am
+    gespeicherten Metrik-Eintrag fuer EINEN Bericht ausgeschaltet
+    (``morning_enabled``/``evening_enabled`` = false). Die Mail dieses
+    Berichts zeigt Boeen in keiner Liste (Etappe, Nacht, Ausblick); die Mail
+    des anderen Berichts ist unberuehrt und zeigt Boeen in gespeicherter Folge."""
+    aus_bericht, schalter = _BERICHT_AUS[_variante(fall)]
+    folge = ["gust", "temperature", "wind"]
+    data = trip_json(folge, outlook_metrics=["gust", "temperature"])
+    for eintrag in data["display_config"]["metrics"]:
+        if eintrag["metric_id"] == "gust":
+            eintrag[schalter] = False
+    fmt = fall["format"]
+    for bericht in ("morning", "evening"):
+        html, text, _ = _senden(monkeypatch, data, fmt, report_type=bericht)
+        aus = bericht == aus_bericht
+        soll = [m for m in folge if not (aus and m == "gust")]
+        wo = f"{fall['id']} ({bericht})"
+        for art in ("etappe", "nacht"):
+            _pruefe_spalten(_stundentabellen(html, text, fmt, art), soll, f"{wo} {art}")
+        tab = _ausblick(html, text, fmt)
+        soll_ausblick_folge = ["temperature"] if aus else ["gust", "temperature"]
+        assert tab is not None and tab.spalten == soll_ausblick_folge, (
+            f"{wo}: Ausblick {tab and tab.spalten} != {soll_ausblick_folge}")
+
+
 # ---------------------------------------------------------------------------
 # AC-8 -- Roh/Einfach
 # ---------------------------------------------------------------------------

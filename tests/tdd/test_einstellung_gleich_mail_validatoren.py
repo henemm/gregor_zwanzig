@@ -411,7 +411,6 @@ def test_orte_stunden_leerer_schnitt_rueckfall(monkeypatch, tmp_path):
     assert code == 1 and "steht 'Wind' statt 'Temp'" in aus, aus
 
 
-@pytest.mark.xfail(strict=True, reason="#3047 wartet auf H1")
 def test_orte_stunden_nie_eingestellt_folgt_grundauswahl(monkeypatch, tmp_path):
     """Punkt 1 (Nachpruefung Punkt 3): nie eingestellter Stundenverlauf mit
     Grundauswahl -> Grundauswahl, soweit stuendlich verfuegbar, in deren Folge."""
