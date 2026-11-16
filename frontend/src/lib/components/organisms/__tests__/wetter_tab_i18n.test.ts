@@ -55,7 +55,9 @@ const NEU_FREIGEGEBEN = new Set([
 	'wetter.gewitter.keins',
 	...['temperature', 'temperature_night', 'wind', 'gust', 'precipitation', 'thunder', 'visibility', 'cloud_low', 'uv_index', 'freezing_level', 'snowfall_limit', 'sunshine'].map((id) => `wetter.hinweis.${id}`),
 	// #2981 Vorlagennamen zweisprachig: Namen der sieben eingebauten Wetter-Vorlagen.
-	...['alpen_trekking', 'wandern', 'skitouren', 'wintersport', 'radtour', 'wassersport', 'allgemein'].map((id) => `wetter.vorlage.name.${id}`)
+	...['alpen_trekking', 'wandern', 'skitouren', 'wintersport', 'radtour', 'wassersport', 'allgemein'].map((id) => `wetter.vorlage.name.${id}`),
+	// #3047 Runde 7 (AC-26, Befund E6): Grund fuer gespeicherte, im Orts-Vergleich nicht ausgebbare Groessen.
+	'wetter.gesperrt.grund'
 ]);
 // #2913 Scheibe (c) Fix-Loop 2 (Bildprüfer Runde 1, Befund 1): Label wie im Mockup mit Doppelpunkt. Bewusst geändert,
 // mit genau dem erwarteten neuen Wert — jede andere Änderung bleibt rot.

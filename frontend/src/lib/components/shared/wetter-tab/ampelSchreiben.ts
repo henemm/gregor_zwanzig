@@ -9,7 +9,8 @@
 // Kein Browser-/SvelteKit-Import, lauffaehig unter node --experimental-strip-types.
 
 import type { Ampel, AmpelMetrik, AmpelSeite } from './ampelModell.ts';
-import { aktiveMetriken, gleicheSeite, tripMetrikEintraege, vergleichsMetrikId, type AltSchluessel } from './ampelModell.ts';
+import { aktiveMetriken, gleicheSeite, mitAbgeleiteten, tripMetrikEintraege, vergleichsKatalogIds, vergleichsMetrikId, type AltSchluessel } from './ampelModell.ts';
+import { DERIVED_METRIC_RULES } from '../../trip-detail/metricsEditor.ts';
 import { klon } from './klon.ts';
 import { amtlicheWarnungenFelder, type WarnFelder } from './amtlicheWarnungen.ts';
 
@@ -58,19 +59,38 @@ type TripMetrik = { metric_id: string; enabled: boolean } & Record<string, unkno
 /** Trip `metrics[]`: bestehende Eintraege in ihrer Reihenfolge (nur `enabled` neu), neue hinten.
  *  Ein im Bestand deaktivierter Eintrag, der jetzt in der Auswahl steht, gilt als neu hinzugefuegt
  *  (AC-19 „hinten angehaengt“, Fix-Loop 6): er wandert in Auswahl-Reihenfolge ans Ende und behaelt
- *  alle uebrigen Felder. */
+ *  alle uebrigen Felder. Die Mail sortiert nach `order` (models._sorted_by_layout): traegt die Liste
+ *  eine Folge (oder ist sie leer), bekommt jeder hinten angehaengte Eintrag `order` hinter dem
+ *  bisherigen Maximum (#3047 B-TM2, Register-Standard E1). Kind-Groessen leitet Python wie gelesen ab
+ *  (`mitAbgeleiteten`); ein Kind ausserhalb der Auswahl mit aktivem Elter steht ausdruecklich aus (E7). */
 function tripMetriken(bestand: unknown, auswahl: string[]): TripMetrik[] {
 	// #3047 E3: Altformat (Zeichenkette, ohne `enabled`) normalisiert, Eintraege ohne `metric_id` entfallen.
-	const alt = tripMetrikEintraege(bestand) as TripMetrik[];
+	const roh = tripMetrikEintraege(bestand) as TripMetrik[];
+	const alt = mitAbgeleiteten(roh) as TripMetrik[];
 	const aktivImBestand = new Set(alt.filter((e) => e.enabled !== false).map((e) => e.metric_id));
 	const wiederAn = (id: string) => auswahl.includes(id) && !aktivImBestand.has(id);
-	const liste = alt.filter((e) => !wiederAn(e.metric_id)).map((e) => ({ ...klon(e), enabled: auswahl.includes(e.metric_id) }));
+	// Abgeleitete Kinder werden nur gewaehlt geschrieben (mit Elter-Folge); abgewaehlt regelt kinderAusdruecklich.
+	const nurAbgeleitet = (e: TripMetrik) => !roh.includes(e) && !auswahl.includes(e.metric_id);
+	const liste: TripMetrik[] = alt.filter((e) => !wiederAn(e.metric_id) && !nurAbgeleitet(e)).map((e) => ({ ...klon(e), enabled: auswahl.includes(e.metric_id) }));
+	const mitFolge = roh.length === 0 || roh.some((e) => typeof e.order === 'number');
+	let naechste = Math.max(-1, ...liste.map((e) => (typeof e.order === 'number' ? e.order : -1))) + 1;
+	const hinten = (e: TripMetrik): TripMetrik => (mitFolge ? { ...e, bucket: 'primary', order: naechste++ } : e);
 	const da = new Set(liste.map((e) => e.metric_id));
 	for (const id of auswahl) {
 		if (da.has(id)) continue;
 		const bisher = alt.filter((e) => e.metric_id === id);
-		if (bisher.length) for (const e of bisher) liste.push({ ...klon(e), enabled: true });
-		else liste.push({ metric_id: id, enabled: true });
+		if (bisher.length) for (const e of bisher) liste.push(hinten({ ...klon(e), enabled: true }));
+		else liste.push(hinten({ metric_id: id, enabled: true }));
+	}
+	return kinderAusdruecklich(liste);
+}
+
+/** Ein Kind ohne eigenen Eintrag, dessen Elter an ist, leitete Python als gewaehlt ab: es steht
+ *  nicht in der Auswahl, also ausdruecklich `enabled: false` (#3047 E7). */
+function kinderAusdruecklich(liste: TripMetrik[]): TripMetrik[] {
+	for (const { child, parent } of DERIVED_METRIC_RULES) {
+		const elterAn = liste.some((e) => e.metric_id === parent && e.enabled);
+		if (elterAn && !liste.some((e) => e.metric_id === child)) liste.push({ metric_id: child, enabled: false });
 	}
 	return liste;
 }
@@ -152,15 +172,27 @@ export type VergleichSpeicherEingabe = {
 	tagesfenster: Tagesfenster;
 };
 
+/** #3047 E1: Grundauswahl nie eingestellt (keine Liste) und unveraendert der Mail-Standard (alle
+ *  Groessen des Vergleichs-Katalogs) — die Liste bleibt ungesetzt, sonst aenderte eine unbeteiligte
+ *  Speicherung Vergleichstabelle (eine Auswertung je Groesse), Stundenverlauf und Ausblick. */
+function nieEingestelltUnveraendert(e: VergleichSpeicherEingabe): boolean {
+	if (Array.isArray(e.displayConfig?.active_metrics)) return false;
+	const standard = vergleichsKatalogIds(e.altSchluessel ?? {});
+	return standard.length > 0 && standard.length === e.auswahl.length && standard.every((id, i) => e.auswahl[i] === id);
+}
+
 /** Orts-Briefing: ein Eintrag in der Hub-Schreibschlange (Read-Modify-Write: ganze `display_config`
  *  mit neuer `ampel` und `active_metrics`, Warn-Felder, Radar, Tagesfenster top-level). */
 export function vergleichSpeicherPayload(e: VergleichSpeicherEingabe) {
 	const warn = amtlicheWarnungenFelder(e.warnungenAn, e.warnFelder);
+	const { active_metrics: _bestand, ...rest } = klon(e.displayConfig ?? {});
 	return {
 		display_config: {
-			...klon(e.displayConfig ?? {}),
+			...rest,
 			ampel: abweichungsMenge(e.vorlage, e.aufgeloest, e.auswahl),
-			active_metrics: vergleichMetriken(e.displayConfig?.active_metrics, e.auswahl, e.aggregationFuer, e.altSchluessel)
+			...(nieEingestelltUnveraendert(e)
+				? {}
+				: { active_metrics: vergleichMetriken(e.displayConfig?.active_metrics, e.auswahl, e.aggregationFuer, e.altSchluessel) })
 		},
 		official_alerts_enabled: warn.official_alerts_enabled,
 		official_warnings: warn.official_warnings,

@@ -39,21 +39,23 @@ export interface ReportZustand {
 	multi_day_trend_evening: boolean;
 }
 
-/** Trend-Standardwerte, wenn der Blob weder Bool-Felder noch Legacy-Array
+/** Trend-Standardwerte, wenn der Blob weder Liste noch Bool-Felder
  *  traegt (VersandTab: beide aus; die frühere Report-Config-Section (#2277 S5 entfernt): Abend an). */
 export interface TrendVorgaben {
 	multi_day_trend_morning?: boolean;
 	multi_day_trend_evening?: boolean;
 }
 
+/** #3047 E2: Python liest NUR `multi_day_trend_reports` (loader.py) — die Liste hat daher Vorrang vor
+ *  den Bool-Feldern; diese gelten nur ohne Liste (Bestand), danach die Vorgabe. */
 function trendAus(
 	c: Record<string, unknown>,
 	slot: 'morning' | 'evening',
 	vorgabe: boolean
 ): boolean {
+	if (Array.isArray(c.multi_day_trend_reports)) return c.multi_day_trend_reports.includes(slot);
 	const wert = c[`multi_day_trend_${slot}`];
 	if (typeof wert === 'boolean') return wert;
-	if (Array.isArray(c.multi_day_trend_reports)) return c.multi_day_trend_reports.includes(slot);
 	return vorgabe;
 }
 

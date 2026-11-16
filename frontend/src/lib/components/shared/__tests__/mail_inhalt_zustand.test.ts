@@ -74,7 +74,9 @@ describe('ladeMailZustand: Restore der gespeicherten Werte', () => {
 		const z = ladeMailZustand({
 			show_outlook: 'nein',
 			show_stage_stats: 0,
-			show_yesterday_comparison: null,
+			// #3047 AC-26 (Spec-Nachtrag Runde 7, Befund E8): `null` ist kein falscher Typ mehr, Python liest
+			// es als None und der Block fehlt (eigener Test unten). Hier ein echter falscher Typ.
+			show_yesterday_comparison: 'ja',
 			show_compact_summary: 'false',
 			show_quick_take_tags: 1,
 			show_stability: {},
@@ -84,6 +86,12 @@ describe('ladeMailZustand: Restore der gespeicherten Werte', () => {
 			daily_summary_metrics: 'temp'
 		});
 		assert.deepEqual(z, DEFAULTS);
+	});
+
+	test('ac26_e8_null_zusatzblock_ist_aus_wie_in_der_mail', () => {
+		const z = ladeMailZustand({ show_stage_stats: null, show_yesterday_comparison: null });
+		assert.equal(z.show_stage_stats, false);
+		assert.equal(z.show_yesterday_comparison, false);
 	});
 
 	test('email_format_nur_full_oder_compact', () => {

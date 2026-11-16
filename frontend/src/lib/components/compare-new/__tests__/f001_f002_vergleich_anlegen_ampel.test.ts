@@ -159,7 +159,8 @@ describe('F001/F002: Vergleich anlegen — die Ampel ueberlebt den Reiterwechsel
 		const wt1 = await wetterTabMontieren(ed);
 		const v = wt1.daten.vorlagen;
 		assert.notEqual(wt1.stand.vorlageId, 'wassersport', 'Messaufbau: Profil-Standard darf nicht schon Wassersport sein');
-		wt1.vorlageSetzen(Z.mitVorlage(wt1.stand, 'wassersport', v));
+		// #3047 E6: wie das Markup (WetterTabInhalt) mit Kontext und Vergleichs-Katalog — nur ausgebbare Groessen.
+		wt1.vorlageSetzen(Z.mitVorlage(wt1.stand, 'wassersport', v, 'vergleich', wt1.altSchluessel));
 		wt1.aendern(Z.mitAlarmAb(wt1.stand, 'gust', 'red'));
 		await ed.fertig();
 		const gemeldet = structuredClone(ed.u.wetterAmpel) as Ampel;

@@ -94,7 +94,9 @@
 			client: api,
 			saveController: panel.saveController,
 			enqueueHubWrite: panel.enqueueHubWrite,
-			onAntwort: uebernimmAntwort
+			onAntwort: uebernimmAntwort,
+			// #3047 E2: geladener Stand — gespeichert werden nur die geaenderten Felder.
+			start: kanalStil
 		});
 	});
 	function aendernKanalStil(neu: KanalStilStand): void {
