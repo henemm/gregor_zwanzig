@@ -602,6 +602,8 @@ def _trip_bewusst_leer() -> dict:
     return daten
 
 
+@pytest.mark.xfail(strict=True, reason="#3047 N7 wartet auf Renderer: bewusst leer laesst heute "
+                   "verwaiste Ueberschriften 'Segment 1'/'Nacht am Ziel' ohne Tabelle stehen")
 def test_trip_bewusst_leer_ausblick_entfaellt_positiv(monkeypatch, tmp_path):
     """Konzept "alle Zeilen abgewaehlt -> Ausblick entfaellt": die Mail eines
     bewusst leeren Trips hat weder Stundentabelle (J3: entfaellt ohne Spalten)
@@ -631,6 +633,205 @@ def test_trip_bewusst_leer_ausblick_erscheint_scheitert(monkeypatch, tmp_path):
     assert code == 1, aus
     assert "Ausblick (HTML) erscheint, obwohl er laut Konfiguration aus ist" in aus, aus
     assert "SOLL: Etappen-Stundentabelle (HTML)" in aus and "Spalte zu viel" in aus, aus
+
+
+# --------------------------------------------------------------------------- #
+# Nachlieferung 3 (dritte Nachpruefung #3047, N1, N2, N4-N7)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("grund_aus", [False, True], ids=["nur_fremd", "grund_ausdruecklich_aus"])
+def test_trip_kanal_liste_totalschnitt_volle_grundauswahl(monkeypatch, tmp_path, grund_aus):
+    """N1 (AC-10, Repro TF): die E-Mail-Liste traegt nur Luftfeuchte (in der
+    Grundauswahl abgewaehlt) als aktive Zeile -- auch wenn sie die Metriken der
+    Grundauswahl ausdruecklich ausschaltet -> die Mail zeigt die volle
+    Grundauswahl (``_clip_to_global_maximum``), das Soll ebenso. Totalschnitt
+    ist nicht "bewusst leer": gegen eine leere E-Mail-Liste ist dieselbe Mail
+    falsch."""
+    daten = _trip_daten(_TRIP_FOLGE)
+    daten["display_config"]["channel_layouts"] = {"email": [
+        {"metric_id": "humidity", "enabled": True, "bucket": "primary", "order": 0}] + (
+        [{"metric_id": m, "enabled": False, "bucket": "primary", "order": i + 1}
+         for i, m in enumerate(_TRIP_FOLGE)] if grund_aus else [])}
+    eml = _trip_eml(monkeypatch, daten)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "tf", daten))
+    assert code == 0, aus
+    leer = copy.deepcopy(daten)
+    leer["display_config"]["channel_layouts"] = {"email": []}
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "tf-leer", leer))
+    assert code == 1 and "SOLL: Etappen-Stundentabelle (HTML) 1: Spalte zu viel" in aus, aus
+
+
+@pytest.mark.parametrize("email_format", ["full", "compact"])
+def test_trip_ausblick_totalschnitt_volle_grundauswahl(monkeypatch, tmp_path, email_format):
+    """N1 (AC-10, Repro TG, Mutation V04): gespeicherter Ausblick nur mit der
+    abgewaehlten Luftfeuchte -> volle Grundauswahl statt verschwindendem Block;
+    gegen den bewusst geleerten Ausblick (``[]``) ist dieselbe Mail falsch."""
+    daten = _trip_daten(_TRIP_FOLGE, ausblick=("humidity",), email_format=email_format)
+    eml = _trip_eml(monkeypatch, daten)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "tg", daten))
+    assert code == 0, aus
+    leer = _trip_daten(_TRIP_FOLGE, ausblick=(), email_format=email_format)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "tg-leer", leer))
+    teil = "Kompakt" if email_format == "compact" else "HTML"
+    assert code == 1 and f"SOLL: Ausblick ({teil}) erscheint" in aus, aus
+
+
+_ORTE_TOTALSCHNITT = {
+    "channel_layouts": ({"email": [{"metric_id": "humidity", "enabled": True}]},
+                        {"email": [{"metric_id": m, "enabled": False}
+                                   for m in ("wind", "temperature", "precipitation", "gust")]},
+                        "SOLL: Vergleichstabelle Zeilen (HTML) Block 1: Spalte zu viel"),
+    "channel_active_metrics": ({"email": ["humidity_avg_pct"]}, {"email": []},
+                               "SOLL: Vergleichstabelle Zeilen (HTML) Block 1: Spalte zu viel"),
+    "outlook_metrics": (["humidity"], [], "SOLL: Ausblick (HTML) erscheint"),
+}
+
+
+@pytest.mark.parametrize("feld", list(_ORTE_TOTALSCHNITT))
+def test_orte_totalschnitt_volle_grundauswahl(monkeypatch, tmp_path, feld):
+    """N1 (AC-10, Repro OF, Mutation V04): Kanal-Liste bzw. Ausblick ganz
+    ausserhalb der Grundauswahl -> volle Grundauswahl in der Mail und im Soll;
+    die bewusst leere Liste (alle aus bzw. ``[]``) verlangt dagegen nichts."""
+    total, leer, meldung = _ORTE_TOTALSCHNITT[feld]
+    preset = _orte_preset()
+    preset["display_config"][feld] = total
+    eml = _orte_eml(monkeypatch, preset)
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, preset, "of"))
+    assert code == 0, aus
+    preset["display_config"][feld] = leer
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, preset, "of-leer"))
+    assert code == 1 and meldung in aus, aus
+
+
+def _orte_bewusst_leer(**schalter) -> dict:
+    """N2: ``active_metrics: []`` = bewusst leere Grundauswahl."""
+    preset = _orte_preset()
+    preset["display_config"]["active_metrics"] = []
+    preset.update(schalter)
+    return preset
+
+
+@pytest.mark.xfail(strict=True, reason="#3047 N2 wartet auf Renderer (Orte-Ausblick entfaellt "
+                   "bei active_metrics: [], D4 aufgehoben)")
+def test_orte_grundauswahl_bewusst_leer_positiv(monkeypatch, tmp_path):
+    """N2: bewusst leere Grundauswahl -> Vergleichstabelle ohne Metrikzeilen,
+    kein Stundenverlauf, kein Ausblick; die Mail besteht mit ``--konfig``."""
+    preset = _orte_bewusst_leer()
+    code, aus = _lauf(tmp_path, ORTE, _orte_eml(monkeypatch, preset),
+                      "--konfig", _orte_konfig(tmp_path, preset, "n2"))
+    assert code == 0, aus
+
+
+@pytest.mark.parametrize("stunden_gespeichert", [True, False], ids=["stunden_gespeichert", "stunden_nie"])
+def test_orte_grundauswahl_bewusst_leer_soll_ohne_bloecke(tmp_path, orte_mail, stunden_gespeichert):
+    """N2 (Soll-Seite): gegen die bewusst leere Grundauswahl ist eine Mail mit
+    Metrikzeilen, Stundenverlauf und Ausblick in allen drei Teilen falsch --
+    auch bei nie eingestelltem Stundenverlauf (kein Rueckfall auf die Vorgabe)."""
+    eml, _konfig_voll = orte_mail
+    leer = _orte_bewusst_leer()
+    if not stunden_gespeichert:
+        del leer["display_config"]["hourly_metrics"]
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, leer, "n2s"))
+    assert code == 1, aus
+    assert "SOLL: Vergleichstabelle Zeilen (HTML) Block 1: Spalte zu viel" in aus, aus
+    assert "SOLL: Stundenverlauf (HTML) erscheint" in aus, aus
+    assert "SOLL: Ausblick (HTML) erscheint" in aus, aus
+
+
+def test_orte_leere_vergleichstabelle_kein_falscher_ort_fehlt(monkeypatch, tmp_path):
+    """N6: leere Vergleichstabelle (bewusst leere Grundauswahl, Ausblick aus) --
+    der Klartext nennt die Orte ohne Zeilen; kein falsches "Ort fehlt". Die
+    Ortsfolge bleibt geprueft: vertauscht scheitert sie."""
+    preset = _orte_bewusst_leer(outlook_enabled=False)
+    eml = _orte_eml(monkeypatch, preset)
+    konfig = _orte_konfig(tmp_path, preset, "n6")
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, aus
+    falsch = _aendere(eml, plain=lambda p: _tausche(p, "Kufstein", "Innsbruck"))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Ortsfolge (Klartext)" in aus, aus
+
+
+def _orte_einfach(fmt: str = "simplified") -> dict:
+    preset = _orte_preset()
+    preset["display_config"]["channel_layouts"] = {"email": [
+        {"metric_id": m, "enabled": True, "format": fmt}
+        for m in ("wind", "temperature", "precipitation", "gust")]}
+    return preset
+
+
+def test_orte_einfach_zeilen_kein_format_fehler(monkeypatch, tmp_path):
+    """N4: Vergleichszeilen auf Einfach zeigen im HTML den Ampelpunkt ohne Text --
+    mit ``--konfig`` kein FORMAT-Fehler. Ohne ``--konfig`` (unbekannt) und gegen
+    eine Roh-Konfiguration bleibt die Zahlform Pflicht."""
+    eml = _orte_eml(monkeypatch, _orte_einfach())
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, _orte_einfach(), "n4"))
+    assert code == 0, aus
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, _orte_einfach("raw"), "n4r"))
+    assert code == 1 and "FORMAT: 'Wind'" in aus, aus
+    code, aus = _lauf(tmp_path, ORTE, eml)
+    assert code == 1 and "FORMAT: 'Wind'" in aus, aus
+
+
+def test_trip_kompakt_bewusst_leer_ohne_ueberblick(monkeypatch, tmp_path):
+    """N5: Kompakt, alle Zeilen abgewaehlt -> kein Metriken-Ueberblick; mit
+    ``--konfig`` kein Fehler, ohne bleibt der Block Pflicht; gegen die bewusst
+    leere Konfiguration ist eine Mail MIT Ueberblick falsch."""
+    leer = _trip_daten({}, ausblick=None, email_format="compact")
+    eml = _trip_eml(monkeypatch, leer)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "n5", leer))
+    assert code == 0, aus
+    code, aus = _lauf(tmp_path, TRIP, eml)
+    assert code == 1 and "Metriken-Ueberblick ==' fehlt" in aus, aus
+    voll = _trip_eml(monkeypatch, _trip_daten(_TRIP_FOLGE, email_format="compact"))
+    code, aus = _lauf(tmp_path, TRIP, voll, "--konfig", _konfig(tmp_path, "n5", leer))
+    assert code == 1 and "erscheint, obwohl die Grundauswahl bewusst leer ist" in aus, aus
+
+
+def test_trip_kompakt_ausblick_roh_einfach(monkeypatch, tmp_path):
+    """N7: Kompakt-Ausblick Roh/Einfach laut ``outlook_metric_formats`` (Wind und
+    Regen Einfach = Wort, Temperatur Roh = Zahl). Wind als Zahl, Temperatur als
+    Wort bzw. die Mail gegen eine Roh-Konfiguration scheitern mit Spaltennamen."""
+    daten = _trip_daten(_TRIP_FOLGE, email_format="compact")
+    daten["display_config"]["outlook_metric_formats"] = {"wind": True, "precipitation": True}
+    eml = _trip_eml(monkeypatch, daten)
+    konfig = _konfig(tmp_path, "n7", daten)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, aus
+    for alt, neu, spalte in ((r"Wind [a-z]+", "Wind 20 km/h", "'Wind'"),
+                             (r"Temp \d+/\d+", "Temp mild", "'Temp'")):
+        falsch = _aendere(eml, plain=lambda p, a=alt, n=neu: re.sub(a, n, p))
+        code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+        assert code == 1 and "SOLL: Darstellung Ausblick (Kompakt)" in aus and spalte in aus, aus
+    roh = _konfig(tmp_path, "n7-roh", _trip_daten(_TRIP_FOLGE, email_format="compact"))
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", roh)
+    assert code == 1 and "SOLL: Darstellung Ausblick (Kompakt)" in aus and "'Wind'" in aus, aus
+
+
+def _ohne_seg_tabellen(html: str) -> str:
+    """Entfernt Desktop- und Handy-Tabelle der ersten Etappe (Ueberschrift bleibt)."""
+    a = html.index(">SEG 1</span>")
+    b = html.index("🌙", a)
+    return html[:a] + re.sub(r'<table data-table="resp".*?</table>', "", html[a:b], flags=re.S) + html[b:]
+
+
+def test_trip_verwaiste_ueberschrift_scheitert(tmp_path, trip_mail):
+    """N7: eine Etappen- bzw. Nacht-Ueberschrift ohne Stundentabelle ist ein
+    Fehler (HTML und Klartext) -- bei bewusst leerer Auswahl muss der ganze
+    Abschnitt entfallen, nicht nur die Tabelle."""
+    from i18n import t
+
+    eml, konfig = trip_mail
+    falsch = _aendere(eml, html=_ohne_seg_tabellen,
+                      plain=lambda p: re.sub(r"(━━ Segment 1:[^\n]*\n)(?: {2}[^\n]*\n)+", r"\1", p))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: verwaiste Ueberschrift (HTML) 'SEG 1'" in aus, aus
+    assert "SOLL: verwaiste Ueberschrift (Klartext) 'Segment 1:" in aus, aus
+    nacht = t("mail.nacht.am_ziel", "de", hoehe=1400)
+    falsch = _aendere(eml, plain=lambda p: re.sub(
+        rf"({re.escape(nacht)} ━━\n[^\n]*\n)(?: {{2}}[^\n]*\n)+", r"\1", p))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1 and f"SOLL: verwaiste Ueberschrift (Klartext) '{nacht}'" in aus, aus
 
 
 # --------------------------------------------------------------------------- #

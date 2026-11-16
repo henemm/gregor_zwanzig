@@ -1041,14 +1041,18 @@ def validate_plausibility(body: str, *, lang: str = "de") -> List[str]:
     return errors
 
 
-def validate_format(body: str, *, lang: str = "de") -> List[str]:
+def validate_format(body: str, *, lang: str = "de", einfach: "list | None" = None) -> List[str]:
     """v2 (Issue #1108): Format-Check der Uebersichtstabellen-Metrikzeilen
     (z. B. 'N°C', 'N km/h') statt der alten englischen Zeilen-Labels
     (Wind/Gusts, Sunny Hours). "–" (NO_VALUE, #1670) bleibt als Fehlwert-Fallback zulaessig.
     Issue #1404: deckte 24 numerische Zeilen ab (vorher 5); Issue #1420:
     deckt 46 ab (Alt+Neu-Uebergangs-Union, s.
     `fix_1420_validator_uebersichtslabels.md`); die 5 nicht-numerischen
-    bleiben ausdruecklich unbewertet."""
+    bleiben ausdruecklich unbewertet.
+
+    Issue #3047 N4: ``einfach`` (nur mit ``--konfig``) nennt die Zeilen, die
+    laut ``channel_layouts.email`` Einfach zeigen (Ampelpunkt/Wort statt
+    Zahl) -- dort ist ein fehlendes Zahlformat kein FORMAT-Fehler."""
     errors = []
     rows = extract_table_rows(body, lang)
     checks = overview_metric_checks(lang)
@@ -1058,7 +1062,7 @@ def validate_format(body: str, *, lang: str = "de") -> List[str]:
             continue
         label = row[0].strip()
         check = checks.get(label)
-        if check is None:
+        if check is None or label in (einfach or ()):
             continue
         pattern, _ = check
         for i, val in enumerate(row[1:]):
@@ -1140,8 +1144,13 @@ def _html_tabellenkoepfe(body: str, erste: str) -> List[List[str]]:
     return koepfe
 
 
-def _klartext_uebersicht(text: str, lang: str) -> List[Tuple[str, List[str]]]:
-    """(Ort, Zeilenbeschriftungen) der Klartext-Uebersicht in Textfolge."""
+def _klartext_uebersicht(text: str, lang: str, bekannte=()) -> List[Tuple[str, List[str]]]:
+    """(Ort, Zeilenbeschriftungen) der Klartext-Uebersicht in Textfolge.
+
+    Issue #3047 N6: bei bewusst leerer Grundauswahl hat die Uebersicht keine
+    Zeilen -- ein Ort steht dann allein vor einer Leerzeile. Als Ort zaehlt
+    eine solche Zeile nur, wenn ``bekannte`` (die Orte der HTML-Tabelle) sie
+    nennt; Ortsfehler-Bloecke tragen ``None`` statt einer Zeilenliste."""
     zeilen = text.splitlines()
     start = next((i + 1 for i, z in enumerate(zeilen) if z.startswith("-" * 50)), len(zeilen))
     ende_titel = {_t("vergleich.stunden.klartext_titel", lang), _t("vergleich.ausblick.titel", lang)}
@@ -1152,11 +1161,14 @@ def _klartext_uebersicht(text: str, lang: str) -> List[Tuple[str, List[str]]]:
         if zeile.strip() in ende_titel or (zeile and not zeile.startswith(" ") and (
                 _STUNDE_RE.match(folge) or folge.strip() in ende_titel)):
             break
-        if zeile and not zeile.startswith(" ") and folge.startswith("   "):
+        if zeile and not zeile.startswith(" ") and (
+                folge.startswith("   ") or (not folge.strip() and zeile.strip() in bekannte)):
             bloecke.append((zeile.strip(), []))
         elif zeile.startswith("   ") and bloecke and ": " in zeile and "⚠️" not in zeile:
             label = zeile.strip().split(": ", 1)[0]
-            if label != fehler:
+            if label == fehler:
+                bloecke[-1] = (bloecke[-1][0], None)
+            elif bloecke[-1][1] is not None:
                 bloecke[-1][1].append(label)
     return bloecke
 
@@ -1227,7 +1239,7 @@ def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
     zeilen = extract_table_rows(body, lang)
     html = ([[r[0] for r in zeilen[1:] if r]] if zeilen else [], extract_locations(body, lang),
             _html_tabellenkoepfe(body, _hour_time_label(lang)), _html_tabellenkoepfe(body, tag))
-    bloecke = _klartext_uebersicht(plain, lang)
+    bloecke = _klartext_uebersicht(plain, lang, set(html[1]))
     stunden, ausblick = _klartext_abschnitte(plain, lang)
     fehler = []
     for name, h, p in (("Stundenverlauf", html[2], stunden), ("Ausblick", html[3], ausblick)):
@@ -1239,8 +1251,8 @@ def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
         sektionen = _ORT_KOPF_RE.findall(body)
         fehler += _soll_orte_folge("HTML-Abschnitte", sektionen, [n for n in soll["orte"] if n in sektionen])
     fehler += _soll_teil("HTML", *html, soll)
-    return fehler + _soll_teil("Klartext", [b[1] for b in bloecke if b[1]], [b[0] for b in bloecke],
-                               stunden, ausblick, soll)
+    return fehler + _soll_teil("Klartext", [b[1] for b in bloecke if b[1] is not None],
+                               [b[0] for b in bloecke], stunden, ausblick, soll)
 
 
 def run_validation(
@@ -1293,6 +1305,7 @@ def validate_message(
         warnungen.extend(hinweise)
 
     body = _extract_html_body(msg)
+    soll = None if konfig is None else _soll_modul().soll_aus_daten(konfig, lang)
     # Fehlender Header (Alt-Mails vor diesem Feature) oder Wert != "false"
     # => True (bisheriges strenges Verhalten bleibt der sichere Default).
     hourly_enabled = msg.get("X-GZ-Compare-Hourly-Enabled") != "false"
@@ -1306,10 +1319,10 @@ def validate_message(
     all_errors.extend(validate_structure(body, hourly_enabled=hourly_enabled, lang=lang))
     all_errors.extend(validate_location_count(body, min_locations, lang=lang))
     all_errors.extend(validate_plausibility(body, lang=lang))
-    all_errors.extend(validate_format(body, lang=lang))
+    all_errors.extend(validate_format(body, lang=lang, einfach=(soll or {}).get("uebersicht_einfach")))
     all_errors.extend(validate_hourly_table(body, lang=lang))
-    if konfig is not None:  # Issue #3047: nur mit --konfig, sonst unveraendert
-        all_errors.extend(pruefe_soll(msg, _soll_modul().soll_aus_daten(konfig, lang), lang))
+    if soll is not None:  # Issue #3047: nur mit --konfig, sonst unveraendert
+        all_errors.extend(pruefe_soll(msg, soll, lang))
 
     return len(all_errors) == 0, all_errors
 

@@ -159,8 +159,8 @@ das Soll ab — nur aus der Datei und dem statischen Register (`col_label`,
   Spalte (#435). Die Meldung nennt Tabelle und Spalte („Darstellung
   Etappen-Stundentabelle (Klartext) 1: Spalte 'Cloud' soll Symbol/Wort
   (Einfach) zeigen, zeigt Zahl (Roh)").
-- **Orte:** Zeilenfolge der Vergleichstabelle (`channel_active_metrics.email`
-  geschnitten mit `active_metrics`), Ortsfolge (`location_ids`), Spalten des
+- **Orte:** Zeilenfolge der Vergleichstabelle (`channel_layouts.email` vor
+  `channel_active_metrics.email`, geschnitten mit `active_metrics`), Ortsfolge (`location_ids`), Spalten des
   Stundenverlaufs je Ort (`hourly_metrics`, `hourly_enabled`), Ausblick-Kopf
   (`outlook_metrics`, `outlook_enabled`).
 
@@ -188,6 +188,26 @@ dokumentierte Folge (Trip-Altbestand ohne `metrics`, Orte-Vergleichstabelle
 ohne `active_metrics`) prüft der Validator nicht; ihre Vorgabe
 sichert der Editor-Standard-Abgleich (AC-13). Ohne `--konfig` ist das Verhalten
 unverändert.
+
+Randfälle (dritte Nachprüfung #3047, N1–N7), alle nur mit `--konfig`:
+
+- **Totalschnitt ≠ bewusst leer (AC-10):** liegt eine nicht leere gespeicherte
+  Liste (Trip-E-Mail-Liste, Orte-Kanal-Liste, Ausblick, Stundenverlauf) ganz
+  außerhalb der Grundauswahl, ist das Soll die volle Grundauswahl. Eine bewusst
+  leere Liste (`[]` bzw. alle Einträge aus) bleibt leer.
+- **Bewusst leere Grundauswahl:** Trip alle `enabled: false` bzw. Orte
+  `active_metrics: []` → keine Metrikspalten/-zeilen, Stundenverlauf und
+  Ausblick entfallen; im Trip-Kompaktformat entfällt auch der
+  „Metriken-Ueberblick" (erscheint er doch: Exit 1). Die Orte-Klartext-Übersicht
+  nennt die Orte dann ohne Zeilen — kein falsches „Ort fehlt".
+- **Verwaiste Überschriften (Trip, Vollformat):** eine Etappen-, Ziel- oder
+  Nacht-Überschrift ohne folgende Stundentabelle ist Exit 1
+  („verwaiste Ueberschrift (HTML) 'SEG 1'"); Fehler-Etappen mit Hinweistext
+  ausgenommen.
+- **Roh/Einfach:** der Trip-Kompakt-Ausblick wird je Spalte wie der Klartext
+  geprüft (`outlook_metric_formats`; „Darstellung Ausblick (Kompakt)"). Orte:
+  Vergleichszeilen, die `channel_layouts.email` auf Einfach stellt
+  (Ampelpunkt/Wort ohne Zahl), sind kein FORMAT-Fehler.
 
 **Auflösung des Verbots aus #1381:** Eine feste Spaltenfolge (`_HOUR_COLUMNS_V2`)
 wird weiterhin **nie** vorausgesetzt — die Folge ist seit #1359 frei

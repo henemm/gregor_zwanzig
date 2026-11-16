@@ -16,6 +16,9 @@ Die Regeln sind das dokumentierte Produktverhalten:
   ``channel_layouts`` > ``metrics``), Kanal-Ebenen gegen die Grundauswahl
   geschnitten (ADR-0050), sortiert nach ``bucket`` dann ``order`` (#1575).
   Altbestand ohne ``bucket``/``order``: Array-Folge (Annahme, nicht Gegenstand).
+  Totalschnitt (nicht leere Kanal-Liste ganz ausserhalb der Grundauswahl) ->
+  volle Grundauswahl (AC-10, wie ``_clip_to_global_maximum``); eine bewusst
+  leere bzw. ganz ausgeschaltete Liste bleibt leer.
 * Trip-Altbestand Fall A (#1394, #3068): ``metrics`` fehlt oder ist ``[]``
   -> Grundauswahl = Register-Standardsatz (``trip_default_rank``, Register-
   Folge, ohne Ableitungen), wie der Loader ihn liest. Bewusst leer (Eintraege
@@ -31,6 +34,9 @@ Die Regeln sind das dokumentierte Produktverhalten:
   #3039) vor ``channel_active_metrics.email``, je geschnitten mit
   ``active_metrics`` (#1703 S8), Stundenverlauf = ``hourly_metrics``
   geschnitten mit der Grundauswahl (``_orte_stunden``, Konzept §5.8),
+  ``active_metrics: []`` = bewusst leer (keine Metrikzeilen, Stundenverlauf
+  und Ausblick entfallen, #3047 N2), Einfach-Zeilen laut
+  ``channel_layouts.email`` (``uebersicht_einfach``, N4),
   Ortsfolge = ``location_ids`` (#1359), Namen aus ``--orte``/Huelle, sonst
   ``orte_unpruefbar`` (nie still uebersprungen).
 * Darstellung Roh/Einfach je Spalte (Trip, ``formen_*``, Spec §2 Punkt 3).
@@ -129,9 +135,13 @@ def _trip_email_liste(dc: dict, report: str) -> list[dict]:
     else:
         return _sortiert([e for e in grund if _an(e, report)])
     ebene = [e for e in ebene if _waehlbar(e.get("metric_id")) and _an(e, report)]
-    if grund:
-        ebene = [e for e in ebene if e["metric_id"] in erlaubt]
-    return _sortiert(ebene)
+    geschnitten = [e for e in ebene if e["metric_id"] in erlaubt] if grund else ebene
+    if ebene and not geschnitten:
+        # #3047 AC-10 (N1): eine nicht leere Liste ganz ausserhalb der
+        # Grundauswahl (Totalschnitt) -> die volle Grundauswahl. Eine bewusst
+        # leere (bzw. ganz ausgeschaltete) Liste bleibt leer.
+        return _sortiert([e for e in grund if _an(e, report)])
+    return _sortiert(geschnitten)
 
 
 def _trip_stundenspalten(liste: list[dict]) -> list[str]:
@@ -158,9 +168,11 @@ def _ausblick(gespeichert: object, grundauswahl: list[str] | None) -> list[str] 
                 kennungen.append(mid)
         if kennungen:
             kennungen = [m for m in kennungen if _ausblickfaehig(m)] or None
-    if kennungen == []:
+    if kennungen == [] or grundauswahl == []:
+        # #3047 N2: bewusst leere Grundauswahl (bzw. keine ausblickfaehige
+        # Groesse darin) -> der Ausblick entfaellt, Trip und Orte gleich.
         return []
-    if not grundauswahl:
+    if grundauswahl is None:
         return kennungen
     if kennungen is None:
         return list(grundauswahl)
@@ -249,6 +261,10 @@ def trip_soll(trip: dict, report: str = "evening") -> dict:
         and report in (trend_reports or []),
         "ausblick": None if ids == [] else _ausblick_spalten(ids, dc.get("outlook_metric_formats")),
         "email_format": rc.get("email_format", "full"),
+        # #3047 N5: Metriken-Ueberblick (Kompakt) nur bei nicht leerer
+        # Grundauswahl (``enabled``, wie ``resolve_trip_active_metrics``).
+        "ueberblick": any(bool(e.get("enabled", True)) for e in _eintraege(dc.get("metrics"))
+                          if _waehlbar(e.get("metric_id"))),
         "zusatz": {k: rc.get(k, True) for k in ("show_stage_stats", "show_yesterday_comparison")},
     }
 
@@ -316,6 +332,29 @@ def _orte_uebersicht(dc: dict) -> list[tuple[str, str]] | None:
     return [p for p in eigen if p in grund] or (list(grund) if eigen else [])
 
 
+def _einfach_eintrag(e: dict) -> bool:
+    """Einfach laut ``channel_layouts``-Eintrag (``format``/``format_mode``
+    vor ``use_friendly_format``); wirkt nur bei mehr als einer Darstellung."""
+    fmt = next((e[k] for k in ("format", "format_mode") if e.get(k) in ("raw", "simplified")), None)
+    einfach = fmt == "simplified" if fmt else e.get("use_friendly_format") is True
+    return einfach and len(_REG[e["metric_id"]].format_modes) > 1
+
+
+def _orte_einfach(dc: dict, paare: list[tuple[str, str]] | None, lang: str) -> list[str]:
+    """#3047 N4: Zeilen der Vergleichstabelle, die laut ``channel_layouts.email``
+    Einfach zeigen (Ampelpunkt/Wort statt Zahl) -- dort ist ein fehlendes
+    Zahlformat kein FORMAT-Fehler."""
+    layouts = dc.get("channel_layouts")
+    if not paare or not isinstance(layouts, dict) or not isinstance(layouts.get("email"), list):
+        return []
+    # erster eingeschaltete Eintrag je Kennung entscheidet (``rows.setdefault``)
+    erste: dict[str, bool] = {}
+    for e in layouts["email"]:
+        if isinstance(e, dict) and _waehlbar(e.get("metric_id")) and e.get("enabled") is not False:
+            erste.setdefault(e["metric_id"], _einfach_eintrag(e))
+    return [label for label, (m, _a) in zip(_uebersicht_labels(paare, lang), paare) if erste.get(m)]
+
+
 def _stuendlich(mid: object) -> bool:
     return _waehlbar(mid) and mid not in HOURLY_EXCLUDED_METRIC_IDS
 
@@ -331,7 +370,10 @@ def _orte_stunden(dc: dict, grund: list[tuple[str, str]] | None) -> list[str]:
                                         if _stuendlich(m)]
     roh = dc.get("hourly_metrics")
     if not isinstance(roh, list):
-        ids = list(HOURLY_DEFAULT_METRIC_IDS) if basis is None else basis
+        # nie eingestellt: Grundauswahl ``[]`` -> leer (#3047 N2); ohne
+        # Grundauswahl bzw. ohne eigene Stundenspalte darin die Vorgabemenge.
+        eigen = [m for m in basis or [] if m not in HOURLY_MERGE_ONLY_METRIC_IDS]
+        ids = [] if grund == [] else (basis if eigen else list(HOURLY_DEFAULT_METRIC_IDS))
     else:
         ids = list(dict.fromkeys(m for m in (FRONTEND_TO_HOURLY_METRIC_ID.get(e, e)
                                              for e in roh if isinstance(e, str)) if _stuendlich(m)))
@@ -348,6 +390,8 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
     grundpaare = _uebersicht_paare(dc.get("active_metrics"))
     grundauswahl = None if grundpaare is None else list(dict.fromkeys(
         m for m, _a in grundpaare if _ausblickfaehig(m)))
+    # #3047 N2: ``active_metrics: []`` = bewusst leere Grundauswahl (wie Trip
+    # alle ``enabled: false``) -> Ausblick und Stundenverlauf entfallen.
     ids = _ausblick(dc.get("outlook_metrics"), grundauswahl)
     stunden = _orte_stunden(dc, grundpaare)
     stunden_an = preset.get("hourly_enabled", True) is not False and stunden != []
@@ -356,6 +400,7 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
         "kontext": "orte",
         "uebersicht": None if paare is None else
         [t("vergleich.zeile.amtliche_warnungen", lang)] + _uebersicht_labels(paare, lang),
+        "uebersicht_einfach": _orte_einfach(dc, paare, lang),
         "stunden_an": stunden_an,
         "stunden": stunden if stunden_an else [],
         "ausblick_an": preset.get("outlook_enabled", True) is not False and ids != [],
