@@ -1594,7 +1594,7 @@
 					catalog={compareCatalog}
 					smsSymbols={metricSymbols}
 					register={metricById}
-					grundauswahl={materializedActiveMetricKeys}
+					grundauswahl={activeMetricKeys ?? null}
 				/>
 			</div>
 		{/if}
@@ -1613,11 +1613,11 @@
 				     (outlook_enabled); der Trip nicht (AC-13). -->
 				<!-- Issue #1848 A3 (AC-2/AC-6): die Ortsvergleich-eigene
 				     Grundauswahl — DIESELBE Quelle wie die Uebersichts-Kopplung
-				     der Kanal-Reiter (`materializedActiveMetricKeys`, :1083). -->
+				     der Kanal-Reiter, unmaterialisiert: `null` = nie eingestellt (#3047 J1). -->
 				<OutlookLayoutControls
 					metricKeys={outlookMetricKeys}
 					catalog={compareCatalog}
-					grundauswahl={materializedActiveMetricKeys}
+					grundauswahl={activeMetricKeys ?? null}
 					onMetricKeys={onCompareOutlookMetricKeys}
 					metricFormats={outlookMetricFormats}
 					onMetricFormats={onCompareOutlookMetricFormats}
@@ -1944,7 +1944,7 @@
 					<OutlookLayoutControls
 						metricKeys={outlookMetricKeysRoute}
 						catalog={compareCatalog}
-						grundauswahl={buckets.primary}
+						grundauswahl={buckets.primary} leereGrundauswahlIstBewusst
 						onMetricKeys={onOutlookMetricKeys}
 						metricFormats={outlookMetricFormatsRoute}
 						onMetricFormats={onOutlookMetricFormats}

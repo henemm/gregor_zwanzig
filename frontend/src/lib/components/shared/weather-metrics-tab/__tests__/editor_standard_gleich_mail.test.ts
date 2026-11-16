@@ -114,6 +114,30 @@ function tabFunktionen(namen: string[], zustand: Record<string, unknown>): Recor
 	return new Function('zustand', `with (zustand) { ${quelle}\n${rueckgabe} }`)(zustand);
 }
 
+// #3047 J1: die festen (Boolean-)Schalter eines Komponenten-Mounts im Markup des
+// Reiters -- z. B. `leereGrundauswahlIstBewusst` am Trip-Ausblick. Gelesen aus dem
+// echten Template (wie die Inline-Funktionen oben), damit der Pruefstand die
+// Komponente genau so parametrisiert wie der Reiter.
+type AstKnoten = { type?: string; name?: string; attributes?: AstAttribut[]; [k: string]: unknown };
+type AstAttribut = { type: string; name: string; value: unknown; start: number; end: number };
+function mountSchalter(komponente: string, kennAttribut: string): Record<string, boolean> {
+	const treffer: AstKnoten[] = [];
+	const besuche = (n: unknown): void => {
+		if (!n || typeof n !== 'object') return;
+		if (Array.isArray(n)) return n.forEach(besuche);
+		const k = n as AstKnoten;
+		if (k.type === 'Component' && k.name === komponente
+			&& k.attributes?.some((a) => TAB_QUELLE.slice(a.start, a.end) === kennAttribut)) treffer.push(k);
+		for (const [schluessel, wert] of Object.entries(k)) if (schluessel !== 'attributes') besuche(wert);
+	};
+	besuche((TAB_AST as unknown as { fragment: unknown }).fragment);
+	assert.equal(treffer.length, 1, `genau ein ${komponente}-Mount mit ${kennAttribut} erwartet`);
+	return Object.fromEntries(
+		treffer[0].attributes!.filter((a) => a.type === 'Attribute' && a.value === true).map((a) => [a.name, true])
+	);
+}
+const TRIP_AUSBLICK_SCHALTER = mountSchalter('OutlookLayoutControls', 'grundauswahl={buckets.primary}');
+
 // ── DOM-Lesen der geteilten Reihenfolge-Liste ──────────────────────────────────
 function aktiveFolge(html: string): string[] {
 	const zeilen = html.match(/<div[^>]*data-testid="wm2-reihenfolge-row"[^>]*>/g) ?? [];
@@ -151,6 +175,7 @@ function frontendTripTabellen(eingabe: Zustand['eingabe']): string[] {
 function frontendTripAusblick(eingabe: Zustand['eingabe']): string[] {
 	const ed = tripEditor(eingabe);
 	return aktiveFolge(rendern(OutlookLayoutControls, {
+		...TRIP_AUSBLICK_SCHALTER,
 		metricKeys: ed.outlookKeys, catalog: ORTE_KATALOG, grundauswahl: ed.buckets.primary,
 		onMetricKeys: nix, showEmailOnlyHint: false
 	}));
@@ -166,7 +191,9 @@ function orteEditor(eingabe: Zustand['eingabe']) {
 	const { compareChannelPrimary } = tabFunktionen(['compareChannelPrimary'], {
 		channelActiveMetricKeys, materializedActiveMetricKeys
 	});
-	return { materializedActiveMetricKeys, layout, kanalListe: compareChannelPrimary as (ch: string) => string[] };
+	// #3047 J1: Stundenverlauf und Ausblick bekommen die UNmaterialisierte Grundauswahl
+	// (`null` = nie eingestellt), wie WeatherMetricsTab.svelte sie durchreicht.
+	return { activeMetricKeys, materializedActiveMetricKeys, layout, kanalListe: compareChannelPrimary as (ch: string) => string[] };
 }
 function frontendOrteVergleichstabelle(eingabe: Zustand['eingabe']): string[] {
 	const ed = orteEditor(eingabe);
@@ -177,15 +204,15 @@ function frontendOrteStundenverlauf(eingabe: Zustand['eingabe']): string[] {
 	const ed = orteEditor(eingabe);
 	return aktiveFolge(rendern(CompareHourlyLayoutControls, {
 		metricKeys: ed.layout.hourlyMetricKeys, onMetricKeys: nix, catalog: ORTE_KATALOG,
-		// #3047 H1: dieselbe Grundauswahl wie der Ausblick-Mount (WeatherMetricsTab.svelte)
-		grundauswahl: ed.materializedActiveMetricKeys
+		// #3047 H1/J1: dieselbe Grundauswahl wie der Ausblick-Mount (WeatherMetricsTab.svelte)
+		grundauswahl: ed.activeMetricKeys
 	}));
 }
 function frontendOrteAusblick(eingabe: Zustand['eingabe']): string[] {
 	const ed = orteEditor(eingabe);
 	return aktiveFolge(rendern(OutlookLayoutControls, {
 		metricKeys: ed.layout.outlookMetricKeys, catalog: ORTE_KATALOG,
-		grundauswahl: ed.materializedActiveMetricKeys, onMetricKeys: nix
+		grundauswahl: ed.activeMetricKeys, onMetricKeys: nix
 	}));
 }
 
@@ -212,6 +239,9 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 		pruefe(frontendTripAusblick, 'trip_ausblick', zustand('trip_ausblick', 'nie_eingestellt')));
 	for (const z of gespeicherte('trip_ausblick'))
 		test(`frontend_seite_trip_ausblick_gespeichert ${z.id}`, () => pruefe(frontendTripAusblick, 'trip_ausblick', z));
+	// #3047 J1 (Konzept §5.8): bewusst leere Grundauswahl -> Ausblick-Liste leer, keine festen Spalten
+	test('frontend_seite_trip_ausblick_bewusst_leer_alle_aus', () =>
+		pruefe(frontendTripAusblick, 'trip_ausblick', zustand('trip_ausblick', 'bewusst_leer_alle_aus')));
 
 	test('frontend_seite_orte_vergleichstabelle_standard', () =>
 		pruefe(frontendOrteVergleichstabelle, 'orte_vergleichstabelle', zustand('orte_vergleichstabelle', 'nie_eingestellt')));
@@ -225,6 +255,9 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 	// #3047 H1 (Konzept §5.8): nie eingestellt mit Grundauswahl
 	test('frontend_seite_orte_stundenverlauf_standard_mit_grundauswahl', () =>
 		pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', zustand('orte_stundenverlauf', 'nie_eingestellt_mit_grundauswahl')));
+	// #3047 J1: gespeicherte Grundauswahl = Vorgabe ist gespeichert (Grundauswahl-Regel wie die Mail)
+	test('frontend_seite_orte_stundenverlauf_grundauswahl_gleich_vorgabe', () =>
+		pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', zustand('orte_stundenverlauf', 'grundauswahl_gleich_vorgabe')));
 	for (const z of gespeicherte('orte_stundenverlauf'))
 		test(`frontend_seite_orte_stundenverlauf_gespeichert ${z.id}`, () =>
 			pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', z));
@@ -234,7 +267,7 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 		const ed = orteEditor(zustand('orte_stundenverlauf', 'gespeichert_ausserhalb_grundauswahl').eingabe);
 		const html = rendern(CompareHourlyLayoutControls, {
 			metricKeys: ed.layout.hourlyMetricKeys, onMetricKeys: nix, catalog: ORTE_KATALOG,
-			grundauswahl: ed.materializedActiveMetricKeys
+			grundauswahl: ed.activeMetricKeys
 		});
 		const grund = /data-testid="compare-layout-hourly-reason-visibility"[^>]*>([^<]*)</.exec(html);
 		assert.equal(grund?.[1], 'gesperrt: nicht in der Grundauswahl oben');
@@ -245,6 +278,9 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'nie_eingestellt')));
 	test('frontend_seite_orte_ausblick_standard_mit_grundauswahl', () =>
 		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'nie_eingestellt_mit_grundauswahl')));
+	// #3047 J1: gespeicherte Grundauswahl = Vorgabe ist gespeichert (Grundauswahl-Regel wie die Mail)
+	test('frontend_seite_orte_ausblick_grundauswahl_gleich_vorgabe', () =>
+		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'grundauswahl_gleich_vorgabe')));
 	for (const z of gespeicherte('orte_ausblick'))
 		test(`frontend_seite_orte_ausblick_gespeichert ${z.id}`, () => pruefe(frontendOrteAusblick, 'orte_ausblick', z));
 });

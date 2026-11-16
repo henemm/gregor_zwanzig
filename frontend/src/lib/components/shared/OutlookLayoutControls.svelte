@@ -30,7 +30,6 @@
 		toggleCompareMetricKey
 	} from './weather-metrics-tab/compareMetricOrder.ts';
 	import { splitChannelMetricsForDisplay } from './weather-metrics-tab/channelMetricLayouts.ts';
-	import { istNieEingestellteOrteGrundauswahl } from './weather-metrics-tab/compareMetricOrder.ts';
 	import { outlookFriendlyCapable } from './weather-metrics-tab/outlookFriendlyCapability.ts';
 	import { locale, t } from '$lib/i18n';
 	// Issue #2659 (i18n F10): voller Name aus dem Register (label_en, sonst deutsch).
@@ -53,6 +52,12 @@
 		 *  normalisiert. `null`/leer = kein Maximum bekannt (D4): Verhalten
 		 *  wie vor A3. */
 		grundauswahl?: string[] | null;
+		/** #3047 J1 (Konzept §5.8 „Waehlst du alle Zeilen ab, entfaellt der
+		 *  Ausblick"): eine LEERE Grundauswahl ist bewusst geleert -> keine
+		 *  Ausblick-Spalte. Nur der Trip setzt das (alle Metriken `enabled:false`).
+		 *  Ohne Angabe (Ortsvergleich) heisst leer weiter „kein Maximum" (D4),
+		 *  wie in der Orts-Mail. */
+		leereGrundauswahlIstBewusst?: boolean;
 		/** Bereits geladene Antwort von GET /api/compare/metrics — dieselbe
 		 *  Liste wie die Uebersichts-Grundauswahl (kein zweiter Abruf). */
 		catalog: CompareSelectionEntry[];
@@ -97,7 +102,7 @@
 	let {
 		metricKeys, catalog, onMetricKeys, onOutlookCommit,
 		title, enabled = true, onEnabledChange,
-		showEmailOnlyHint = true, grundauswahl = null,
+		showEmailOnlyHint = true, grundauswahl = null, leereGrundauswahlIstBewusst = false,
 		metricFormats = null, onMetricFormats, smsSymbols = {}, register = {}
 	}: Props = $props();
 
@@ -147,7 +152,7 @@
 	// sie erscheinen weder in der aktiven Liste noch in der „Aus"-Gruppe
 	// (AC-5, Spec „Known Limitations").
 	const grundauswahlKennungen = $derived.by(() => {
-		if (grundauswahl === null || istNieEingestellteOrteGrundauswahl(grundauswahl)) return null;
+		if (grundauswahl === null) return null;
 		const kennungJeSchluessel: Record<string, string> = {};
 		for (const group of groupCompareCatalog(catalog)) {
 			for (const option of group.options) kennungJeSchluessel[option.key] = group.metric_id;
@@ -170,19 +175,18 @@
 	// Grundauswahl (Altbestand/Katalog nicht geladen) bleibt es beim Verhalten
 	// vor A3 (ADR-0050 D4: kein Maximum -> nicht schneiden).
 	//
-	// #3047 O4 (AC-13/AC-21): `grundauswahl === null` bzw. die unveraendert
-	// materialisierte Vorgabe COMPARE_METRIC_KEYS heisst beim Ortsvergleich
-	// „active_metrics nie eingestellt" (Altbestand; die Hydration verliert das
-	// `null`). Die Mail zeigt dann ohne
+	// #3047 O4 (AC-13/AC-21): `grundauswahl === null` heisst beim Ortsvergleich
+	// „active_metrics nie eingestellt" (Altbestand; seit #3047 J1 bewahrt die
+	// Hydration das `null`, eine gespeicherte Liste gleich der Vorgabe ist
+	// gespeichert und gilt als Grundauswahl). Die Mail zeigt dann ohne
 	// `outlook_metrics` die festen Spalten (DEFAULT_OUTLOOK_METRIC_KEYS =
 	// `_erbe_grundauswahl` ohne Maximum, compare_outlook_metric_ids.py) -- der
 	// Editor zeigt genau diese aktiv statt des ganzen Katalogs. Da es kein
 	// Maximum gibt, bleiben alle uebrigen Katalog-Groessen in der „Aus"-Gruppe
 	// zurueckholbar (die Mail schneidet in diesem Fall nicht).
-	// `istNieEingestellteOrteGrundauswahl` (compareMetricOrder.ts) teilt sich
-	// diese Erkennung mit dem Stundenverlauf (#3047 H1); der Trip reicht
-	// Kennungen, die nie wie COMPARE_METRIC_KEYS aussehen.
+	// Der Stundenverlauf erkennt „nie eingestellt" genauso (#3047 H1/J1).
 	const ausblickSpalten = $derived.by(() => {
+		if (leereGrundauswahlIstBewusst && grundauswahl?.length === 0) return { active: [], off: [] };
 		const grund = grundauswahlKennungen;
 		if (grund === null || grund.length === 0) {
 			const active = materializeOutlookMetricKeys(metricKeys);

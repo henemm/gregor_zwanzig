@@ -221,6 +221,13 @@ def test_python_seite_orte_stundenverlauf_standard_mit_grundauswahl():
             _zustand("orte_stundenverlauf", "nie_eingestellt_mit_grundauswahl"))
 
 
+def test_python_seite_orte_stundenverlauf_grundauswahl_gleich_vorgabe():
+    """#3047 J1: gespeicherte Grundauswahl, die genau der Vorgabe gleicht, ist
+    gespeichert -- Grundauswahl-Regel (stuendliche Groessen in deren Folge)."""
+    _pruefe(python_orte_stundenverlauf, "orte_stundenverlauf",
+            _zustand("orte_stundenverlauf", "grundauswahl_gleich_vorgabe"))
+
+
 @pytest.mark.parametrize("zustand", _gespeicherte("orte_stundenverlauf"))
 def test_python_seite_orte_stundenverlauf_gespeichert(zustand):
     _pruefe(python_orte_stundenverlauf, "orte_stundenverlauf", zustand)
@@ -235,6 +242,12 @@ def test_python_seite_orte_ausblick_standard():
 def test_python_seite_orte_ausblick_standard_mit_grundauswahl():
     _pruefe(python_orte_ausblick, "orte_ausblick",
             _zustand("orte_ausblick", "nie_eingestellt_mit_grundauswahl"))
+
+
+def test_python_seite_orte_ausblick_grundauswahl_gleich_vorgabe():
+    """#3047 J1: gespeicherte Grundauswahl = Vorgabe -> die ganze Grundauswahl."""
+    _pruefe(python_orte_ausblick, "orte_ausblick",
+            _zustand("orte_ausblick", "grundauswahl_gleich_vorgabe"))
 
 
 @pytest.mark.parametrize("zustand", _gespeicherte("orte_ausblick"))

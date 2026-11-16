@@ -1,0 +1,401 @@
+# #3047 J1 RED (Nachlieferung 2), Basis e5926b64e (origin/main), 2026-11-16
+# A (Orte, AC-13): gespeicherte Grundauswahl = Vorgabe (alle Zeilen, Standardfolge) wertet der
+#   Editor als "nie eingestellt" (Stundenverlauf 9, Ausblick 6 Spalten); die Mail nimmt die
+#   Grundauswahl-Regel (21 / 23). Ursache: Hydration macht aus fehlendem active_metrics die volle
+#   Liste, die Erkennung prueft Listen-Gleichheit.
+# C (Trip, AC-13): Grundauswahl bewusst leer (alle enabled:false) -> Editor-Ausblick zeigt die
+#   6 festen Spalten statt leer (Konzept §5.8 "Waehlst du alle Zeilen ab, entfaellt der Ausblick").
+#   Mail-Seite dazu: Paket J3 (hier nicht geaendert).
+#
+# Erwartet rot (Frontend): frontend_seite_trip_ausblick_bewusst_leer_alle_aus,
+#   frontend_seite_orte_stundenverlauf_grundauswahl_gleich_vorgabe,
+#   frontend_seite_orte_ausblick_grundauswahl_gleich_vorgabe
+# Python-Seite (Mail) fuer A bereits gruen: das von Hand gesetzte Soll stimmt mit der Mail.
+
+## Frontend: cd frontend && npm test -- src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts
+
+TAP version 13
+# (node:8916) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#3047 Editor-Standard = Mail-Standard (Frontend-Seite)
+    # Subtest: frontend_seite_trip_tabellen_standard
+    ok 1 - frontend_seite_trip_tabellen_standard
+      ---
+      duration_ms: 3.197977
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_trip_tabellen_altbestand
+    ok 2 - frontend_seite_trip_tabellen_altbestand
+      ---
+      duration_ms: 0.883169
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_trip_tabellen_leere_liste_altbestand
+    ok 3 - frontend_seite_trip_tabellen_leere_liste_altbestand
+      ---
+      duration_ms: 0.719639
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_trip_tabellen_bewusst_leer_alle_aus
+    ok 4 - frontend_seite_trip_tabellen_bewusst_leer_alle_aus
+      ---
+      duration_ms: 0.841968
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_trip_tabellen_gespeichert gespeichert_folge
+    ok 5 - frontend_seite_trip_tabellen_gespeichert gespeichert_folge
+      ---
+      duration_ms: 1.094002
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_trip_tabellen_gespeichert gespeichert_ausserhalb_grundauswahl
+    ok 6 - frontend_seite_trip_tabellen_gespeichert gespeichert_ausserhalb_grundauswahl
+      ---
+      duration_ms: 0.540822
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_trip_ausblick_standard
+    ok 7 - frontend_seite_trip_ausblick_standard
+      ---
+      duration_ms: 5.364633
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_trip_ausblick_gespeichert gespeichert_folge
+    ok 8 - frontend_seite_trip_ausblick_gespeichert gespeichert_folge
+      ---
+      duration_ms: 1.521455
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_trip_ausblick_gespeichert gespeichert_ausserhalb_grundauswahl
+    ok 9 - frontend_seite_trip_ausblick_gespeichert gespeichert_ausserhalb_grundauswahl
+      ---
+      duration_ms: 1.305367
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_trip_ausblick_bewusst_leer_alle_aus
+    not ok 10 - frontend_seite_trip_ausblick_bewusst_leer_alle_aus
+      ---
+      duration_ms: 2.711617
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-aa735968d64fd458a/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:216:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Frontend-Seite trip_ausblick/bewusst_leer_alle_aus: Editor zeigt eine andere Folge als editor_standard.json erwartet
+        + actual - expected
+        
+        + [
+        +   'temperature',
+        +   'precipitation',
+        +   'rain_probability',
+        +   'wind',
+        +   'gust',
+        +   'thunder'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'temperature'
+        1: 'precipitation'
+        2: 'rain_probability'
+        3: 'wind'
+        4: 'gust'
+        5: 'thunder'
+      operator: 'deepStrictEqual'
+      stack: |-
+        pruefe (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-aa735968d64fd458a/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:193:9)
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-aa735968d64fd458a/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:217:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: frontend_seite_orte_vergleichstabelle_standard
+    ok 11 - frontend_seite_orte_vergleichstabelle_standard
+      ---
+      duration_ms: 0.656953
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_vergleichstabelle_gespeichert gespeichert_folge
+    ok 12 - frontend_seite_orte_vergleichstabelle_gespeichert gespeichert_folge
+      ---
+      duration_ms: 0.294103
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_vergleichstabelle_gespeichert gespeichert_kanal_liste
+    ok 13 - frontend_seite_orte_vergleichstabelle_gespeichert gespeichert_kanal_liste
+      ---
+      duration_ms: 0.229029
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_stundenverlauf_standard
+    ok 14 - frontend_seite_orte_stundenverlauf_standard
+      ---
+      duration_ms: 2.539713
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_stundenverlauf_standard_mit_grundauswahl
+    ok 15 - frontend_seite_orte_stundenverlauf_standard_mit_grundauswahl
+      ---
+      duration_ms: 1.06601
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_stundenverlauf_grundauswahl_gleich_vorgabe
+    not ok 16 - frontend_seite_orte_stundenverlauf_grundauswahl_gleich_vorgabe
+      ---
+      duration_ms: 1.5125
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-aa735968d64fd458a/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:232:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Frontend-Seite orte_stundenverlauf/grundauswahl_gleich_vorgabe: Editor zeigt eine andere Folge als editor_standard.json erwartet
+        + actual - expected
+        
+          [
+            'temperature',
+        +   'wind_chill',
+            'wind',
+        +   'gust',
+            'precipitation',
+        +   'uv_index',
+        +   'thunder',
+            'rain_probability',
+        -   'thunder',
+        -   'cloud_total',
+        -   'uv_index',
+            'visibility',
+        -   'snow_depth',
+        -   'fresh_snow',
+        -   'gust',
+        -   'freezing_level',
+        -   'wind_chill',
+        -   'cloud_low',
+        -   'cloud_mid',
+        -   'cloud_high',
+        -   'humidity',
+        -   'dewpoint',
+        -   'pressure',
+        -   'precip_type',
+        -   'snowfall_limit'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'temperature'
+        1: 'wind'
+        2: 'precipitation'
+        3: 'rain_probability'
+        4: 'thunder'
+        5: 'cloud_total'
+        6: 'uv_index'
+        7: 'visibility'
+        8: 'snow_depth'
+        9: 'fresh_snow'
+        10: 'gust'
+        11: 'freezing_level'
+        12: 'wind_chill'
+        13: 'cloud_low'
+        14: 'cloud_mid'
+        15: 'cloud_high'
+        16: 'humidity'
+        17: 'dewpoint'
+        18: 'pressure'
+        19: 'precip_type'
+        20: 'snowfall_limit'
+      actual:
+        0: 'temperature'
+        1: 'wind_chill'
+        2: 'wind'
+        3: 'gust'
+        4: 'precipitation'
+        5: 'uv_index'
+        6: 'thunder'
+        7: 'rain_probability'
+        8: 'visibility'
+      operator: 'deepStrictEqual'
+      stack: |-
+        pruefe (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-aa735968d64fd458a/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:193:9)
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-aa735968d64fd458a/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:233:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: frontend_seite_orte_stundenverlauf_gespeichert gespeichert_folge
+    ok 17 - frontend_seite_orte_stundenverlauf_gespeichert gespeichert_folge
+      ---
+      duration_ms: 0.793776
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_stundenverlauf_gespeichert gespeichert_umgekehrt
+    ok 18 - frontend_seite_orte_stundenverlauf_gespeichert gespeichert_umgekehrt
+      ---
+      duration_ms: 0.835946
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_stundenverlauf_gespeichert gespeichert_ausserhalb_grundauswahl
+    ok 19 - frontend_seite_orte_stundenverlauf_gespeichert gespeichert_ausserhalb_grundauswahl
+      ---
+      duration_ms: 1.045352
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_stundenverlauf_gesperrt_nennt_grund
+    ok 20 - frontend_seite_orte_stundenverlauf_gesperrt_nennt_grund
+      ---
+      duration_ms: 0.902782
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_ausblick_standard
+    ok 21 - frontend_seite_orte_ausblick_standard
+      ---
+      duration_ms: 0.758718
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_ausblick_standard_mit_grundauswahl
+    ok 22 - frontend_seite_orte_ausblick_standard_mit_grundauswahl
+      ---
+      duration_ms: 0.82231
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_ausblick_grundauswahl_gleich_vorgabe
+    not ok 23 - frontend_seite_orte_ausblick_grundauswahl_gleich_vorgabe
+      ---
+      duration_ms: 1.080718
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-aa735968d64fd458a/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:255:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Frontend-Seite orte_ausblick/grundauswahl_gleich_vorgabe: Editor zeigt eine andere Folge als editor_standard.json erwartet
+        + actual - expected
+        
+          [
+            'temperature',
+        -   'wind',
+            'precipitation',
+            'rain_probability',
+        +   'wind',
+        +   'gust',
+            'thunder',
+        -   'sunshine',
+        -   'cloud_total',
+        -   'uv_index',
+        -   'visibility',
+        -   'snow_depth',
+        -   'fresh_snow',
+        -   'gust',
+        -   'freezing_level',
+        -   'wind_direction',
+        -   'wind_chill',
+        -   'cloud_low',
+        -   'cloud_mid',
+        -   'cloud_high',
+        -   'humidity',
+        -   'dewpoint',
+        -   'pressure',
+        -   'precip_type',
+        -   'snowfall_limit'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'temperature'
+        1: 'wind'
+        2: 'precipitation'
+        3: 'rain_probability'
+        4: 'thunder'
+        5: 'sunshine'
+        6: 'cloud_total'
+        7: 'uv_index'
+        8: 'visibility'
+        9: 'snow_depth'
+        10: 'fresh_snow'
+        11: 'gust'
+        12: 'freezing_level'
+        13: 'wind_direction'
+        14: 'wind_chill'
+        15: 'cloud_low'
+        16: 'cloud_mid'
+        17: 'cloud_high'
+        18: 'humidity'
+        19: 'dewpoint'
+        20: 'pressure'
+        21: 'precip_type'
+        22: 'snowfall_limit'
+      actual:
+        0: 'temperature'
+        1: 'precipitation'
+        2: 'rain_probability'
+        3: 'wind'
+        4: 'gust'
+        5: 'thunder'
+      operator: 'deepStrictEqual'
+      stack: |-
+        pruefe (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-aa735968d64fd458a/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:193:9)
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-aa735968d64fd458a/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:256:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: frontend_seite_orte_ausblick_gespeichert gespeichert_folge
+    ok 24 - frontend_seite_orte_ausblick_gespeichert gespeichert_folge
+      ---
+      duration_ms: 0.748228
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_ausblick_gespeichert gespeichert_ausserhalb_grundauswahl
+    ok 25 - frontend_seite_orte_ausblick_gespeichert gespeichert_ausserhalb_grundauswahl
+      ---
+      duration_ms: 0.555034
+      type: 'test'
+      ...
+    1..25
+not ok 1 - \#3047 Editor-Standard = Mail-Standard (Frontend-Seite)
+  ---
+  duration_ms: 33.871045
+  type: 'suite'
+  location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-aa735968d64fd458a/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:197:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3047 AC-16 Vorlage anwenden (Frontend-Seite)
+    # Subtest: frontend_seite_trip_vorlage_reihenfolge
+    ok 1 - frontend_seite_trip_vorlage_reihenfolge
+      ---
+      duration_ms: 3.025284
+      type: 'test'
+      ...
+    1..1
+ok 2 - \#3047 AC-16 Vorlage anwenden (Frontend-Seite)
+  ---
+  duration_ms: 3.12622
+  type: 'suite'
+  ...
+1..2
+# tests 26
+# suites 2
+# pass 23
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1339.393701
+## Python: uv run pytest -k grundauswahl_gleich_vorgabe tests/tdd/test_einstellung_gleich_mail_editor_standard.py tests/tdd/test_einstellung_gleich_mail_orte.py
+PASSED tests/tdd/test_einstellung_gleich_mail_editor_standard.py::test_python_seite_orte_stundenverlauf_grundauswahl_gleich_vorgabe
+PASSED tests/tdd/test_einstellung_gleich_mail_editor_standard.py::test_python_seite_orte_ausblick_grundauswahl_gleich_vorgabe
+PASSED tests/tdd/test_einstellung_gleich_mail_orte.py::test_j1_grundauswahl_gleich_vorgabe_kette
+3 passed, 102 deselected in 1.80s

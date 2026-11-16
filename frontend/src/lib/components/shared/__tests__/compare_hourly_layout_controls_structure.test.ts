@@ -493,9 +493,10 @@ describe('AC-1: der Stundenverlauf wird aus derselben Katalogantwort gespeist', 
 		const [mount] = findComponentsNamed(ast.fragment, 'CompareHourlyLayoutControls');
 		const attr = findAttr(mount, 'grundauswahl');
 		assert.ok(attr, 'H1 FAIL: CompareHourlyLayoutControls bekommt keine `grundauswahl`.');
+		// #3047 J1: unmaterialisiert (`activeMetricKeys`, `null` = nie eingestellt), wie beim Ausblick.
 		assert.ok(
-			attributeReferencesIdentifier(attr, 'materializedActiveMetricKeys'),
-			'H1 FAIL: `grundauswahl` ist nicht dieselbe Quelle wie beim Ausblick (materializedActiveMetricKeys).'
+			attributeReferencesIdentifier(attr, 'activeMetricKeys'),
+			'H1 FAIL: `grundauswahl` ist nicht dieselbe Quelle wie beim Ausblick (activeMetricKeys).'
 		);
 	});
 });
