@@ -237,6 +237,26 @@ Randfälle (vierte Prüfung #3047, F001–F008a), alle nur mit `--konfig`:
   nur z. B. `temperature_night` gewählt → kein Überblick. Kacheln, die mangels
   Werten entfallen, sind aus der Konfiguration nicht ableitbar.
 
+Randfälle (fünfte Prüfung #3047, F1, F2, A3c), alle nur mit `--konfig`:
+
+- **Maskierte Namen im HTML (F1):** der Renderer maskiert Ortsnamen und
+  Beschriftungen („Col d'Izoard" → `d&#x27;Izoard`, „&" → `&amp;`). Beide
+  Validatoren vergleichen Namen, Zeilen- und Spaltenbeschriftungen aus dem HTML
+  als Text (`html.unescape`) gegen das Soll; die korrekte Mail besteht.
+- **Lange Etappennamen im Trip-Klartext-Ausblick (F2):** der Renderer kürzt
+  den Namen nicht (`f"{name:<26} "`); ein längerer Name schiebt die Werte nach
+  rechts und kann Kürzel enthalten („… Lake Of Sun"). Bekannte Namen
+  (`stages[].name` der Konfiguration) werden exakt abgetrennt; sonst gilt die
+  Zeilenstruktur: die erste Spalte ist das letzte Kürzel vor dem ersten
+  Doppel-Leerzeichen hinter dem 26-Zeichen-Feld. Hinweiszeilen („↳") gehören
+  nicht zu den Spalten.
+- **Roh/Einfach im Orte-Ausblick (A3c):** der Orte-Validator prüft die
+  Ausblick-Zellen in HTML und Klartext je Spalte gegen `outlook_metric_formats`
+  — dieselbe Mechanik wie der Trip (`darstellung_meldungen` in
+  `_soll_aus_konfiguration.py`), dieselben Ausnahmen (Visibility, Temperatur
+  ohne Einfach-Form, Gewitter ungeprüft); Meldung „Darstellung Ausblick
+  (Klartext) 1: Spalte 'Rain' soll Symbol/Wort (Einfach) zeigen, zeigt Zahl (Roh)".
+
 **Auflösung des Verbots aus #1381:** Eine feste Spaltenfolge (`_HOUR_COLUMNS_V2`)
 wird weiterhin **nie** vorausgesetzt — die Folge ist seit #1359 frei
 einstellbar, die alte Kanon-Projektion lehnte korrekte Mails ab und blockierte

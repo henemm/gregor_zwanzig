@@ -100,10 +100,11 @@ def _sprache_setzen(uid: str, lang: str) -> None:
 
 
 def _trip_eml(monkeypatch, daten: dict, *, lang: str = "de", tage=("Di", "Mi", "Do"),
-              etappen_namen=None) -> bytes:
+              etappen_namen=None, notiz: str | None = None) -> bytes:
     """Trip-Briefing ueber Loader + ``send_trip_report``; Ausblick aus
     ``build_outlook_row`` mit der geladenen ``display_config``. ``etappen_namen``
-    setzt den Etappennamen je Ausblick-Zeile (wie der Scheduler)."""
+    und ``notiz`` setzen Etappenname bzw. Hinweis ("↳") je Ausblick-Zeile, wie
+    der Scheduler (``row["name"]``/``row["note"]``)."""
     from app.ampel import resolve_ampel
     from app.loader import load_trip
     from output.renderers.email.outlook import build_outlook_row
@@ -124,6 +125,8 @@ def _trip_eml(monkeypatch, daten: dict, *, lang: str = "de", tage=("Di", "Mi", "
               for tag in tage]
     for zeile, name in zip(zeilen, etappen_namen or ()):
         zeile["name"] = name
+    for zeile in zeilen if notiz else ():
+        zeile["note"] = notiz
     rc = trip.report_config
     NotificationService(user_id=uid).send_trip_report(TripReportRequest(
         trip=trip, report_type="evening", segment_weather=[seg], trip_tz=fx.TZ,
@@ -135,9 +138,10 @@ def _trip_eml(monkeypatch, daten: dict, *, lang: str = "de", tage=("Di", "Mi", "
                  lang=lang)
 
 
-def _orte_eml(monkeypatch, preset: dict, *, lang: str = "de") -> bytes:
+def _orte_eml(monkeypatch, preset: dict, *, lang: str = "de", namen: dict | None = None) -> bytes:
     """Orts-Vergleich ueber ``send_one_compare_preset``; Wetter aus
-    ``vergleichs_mail_fixture.build_result`` je Orts-Kennung."""
+    ``vergleichs_mail_fixture.build_result`` je Orts-Kennung. ``namen``
+    (Kennung -> Name) benennt die gespeicherten Orte um."""
     import services.comparison_parallel as cp
     import services.scheduler_dispatch_service as sds
     from app.loader import get_data_root, load_all_locations, save_location
@@ -161,8 +165,9 @@ def _orte_eml(monkeypatch, preset: dict, *, lang: str = "de") -> bytes:
     mit = aufzeichner_installieren(monkeypatch)
     uid = nutzer_anlegen()
     _sprache_setzen(uid, lang)
-    for lr in basis.values():
-        save_location(lr.location, user_id=uid)
+    for kennung, lr in basis.items():
+        save_location(dataclasses.replace(lr.location, name=(namen or {}).get(kennung, lr.location.name)),
+                      user_id=uid)
     preset_ablegen(uid, preset)
     sds.send_one_compare_preset(
         preset_laden(uid, preset["id"]), settings_fuer(uid), uid, str(get_data_root()),
@@ -1093,6 +1098,135 @@ def test_trip_ueberblick_nur_ohne_kachel_entfaellt(monkeypatch, tmp_path, email_
     fehlt = ("COMPACT: Block '== Metriken-Ueberblick ==' fehlt" if email_format == "compact"
              else "SOLL: Metriken-Ueberblick fehlt im Klartext-Teil")
     assert code == 1 and fehlt in aus, aus
+
+
+# --------------------------------------------------------------------------- #
+# Nachlieferung 5 (fuenfte unabhaengige Pruefung #3047, F1, F2, A3c)
+# --------------------------------------------------------------------------- #
+#: Ortsnamen mit Zeichen, die das HTML maskiert (``&#x27;``, ``&amp;``).
+_SONDERNAMEN = {"golden-0": "Col d'Izoard", "golden-1": "Alp Nord & Süd", "golden-2": "Hütte A&B"}
+
+
+def _html_teil(eml: bytes) -> str:
+    return next(t.get_payload(decode=True).decode() for t in email.message_from_bytes(eml).walk()
+                if t.get_content_type() == "text/html")
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_orte_ortsnamen_mit_sonderzeichen_besteht(monkeypatch, tmp_path, lang):
+    """F1: Ortsnamen mit Apostroph und ``&`` stehen im HTML maskiert
+    (``d&#x27;Izoard``, ``&amp;``). Die korrekte Mail besteht mit ``--konfig``
+    (DE und EN); vertauschte Orte scheitern weiter mit dem echten Namen."""
+    preset = _orte_preset()
+    eml = _orte_eml(monkeypatch, preset, lang=lang, namen=_SONDERNAMEN)
+    html = _html_teil(eml)
+    assert "d&#x27;Izoard" in html and "Nord &amp; Süd" in html, "Testaufbau: Namen maskiert"
+    konfig = _konfig(tmp_path, f"f1-{lang}", {"preset": preset, "orte": _SONDERNAMEN})
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, aus
+    falsch = _aendere(eml, html=lambda h: _tausche(h, "Col d&#x27;Izoard", "Alp Nord &amp; Süd"),
+                      plain=lambda p: _tausche(p, "Col d'Izoard", "Alp Nord & Süd"))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Ortsfolge (HTML)" in aus and "SOLL: Ortsfolge (Klartext)" in aus, aus
+    assert "steht 'Alp Nord & Süd' statt 'Col d'Izoard'" in aus, aus
+
+
+#: F2: Etappennamen ueber dem 26-Zeichen-Feld mit Spaltenkuerzeln darin ("Sun"
+#: am Ende, wie der Wochentag), dazu Apostroph und "&" (F1 im Trip-Validator).
+_LANGE_NAMEN = ("Col d'Izoard & Hütte A&B", "Gust Temp Rain Wind Sun Valley Traverse Hut",
+                "Wind Gust Temp Rain Hut Above The Lake Of Sun")
+
+
+@pytest.mark.parametrize("bekannt", [True, False], ids=["namen_in_konfig", "namen_unbekannt"])
+def test_trip_en_ausblick_langer_etappenname_mit_kuerzeln(monkeypatch, tmp_path, bekannt):
+    """F2: der Renderer kuerzt den Etappennamen nicht (``f"{name:<26} "``); ein
+    Name ueber 26 Zeichen, der Kuerzel enthaelt ("... Lake Of Sun"), ist keine
+    Spalte. Die korrekte EN-Mail (Wochentag "Sun", Notizzeilen "↳") besteht --
+    mit den Namen aus ``stages[].name`` der Konfiguration wie ohne sie. Eine
+    echte Vertauschung in der Zeile mit dem langen Namen faellt weiter auf."""
+    daten = _trip_en_daten()
+    if bekannt:
+        for stage, name in zip(daten["stages"], _LANGE_NAMEN):
+            stage["name"] = name
+    eml = _trip_eml(monkeypatch, daten, lang="en", tage=("Fri", "Sat", "Sun"),
+                    etappen_namen=_LANGE_NAMEN, notiz="Thunderstorms from noon · Rain 6 mm")
+    plain = next(t.get_payload(decode=True).decode() for t in email.message_from_bytes(eml).walk()
+                 if t.get_content_type() == "text/plain")
+    assert f"Sun {_LANGE_NAMEN[2]} Wind " in plain and "    ↳ Thunderstorms" in plain, "Testaufbau"
+    konfig = _konfig(tmp_path, f"f2-{bekannt}", daten)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, aus
+    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^(Sun .*?Of Sun )Wind (\S+(?: km/h)?)  Temp (\S+)",
+                                                  r"\1Temp \3  Wind \2", p))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Ausblick (Klartext) Zeile 3" in aus and "steht 'Temp' statt 'Wind'" in aus, aus
+
+
+def test_trip_ausblick_etappenname_aus_konfig_exakt_abgetrennt(monkeypatch, tmp_path):
+    """F2: ein Name mit Doppel-Leerzeichen hinter dem 26-Zeichen-Feld ist nur
+    ueber ``stages[].name`` der Konfiguration eindeutig -- mit ihm besteht die
+    korrekte Mail (die Zeilenstruktur allein saehe "Sun" als Spalte)."""
+    namen = ("Etappe 0", "Etappe 1", "Wind Gust Temp Rain Hut Above  Sun Lake Of Sun")
+    daten = _trip_en_daten()
+    for stage, name in zip(daten["stages"], namen):
+        stage["name"] = name
+    eml = _trip_eml(monkeypatch, daten, lang="en", tage=("Fri", "Sat", "Sun"), etappen_namen=namen)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "f2-exakt", daten))
+    assert code == 0, aus
+
+
+def _orte_ausblick_formate() -> dict:
+    """A3c: Ausblick Niederschlag/Wind/Temperatur/Boeen; Niederschlag und Boeen
+    Einfach, Wind Roh, Temperatur Einfach (ohne Einfach-Form im Ausblick)."""
+    preset = _orte_preset()
+    preset["display_config"]["outlook_metrics"] = ["precipitation", "wind", "temperature", "gust"]
+    preset["display_config"]["outlook_metric_formats"] = {
+        "precipitation": True, "wind": False, "temperature": True, "gust": True}
+    return preset
+
+
+def _ausblick_html_zelle(h: str, lang: str, spalte: str, neu: str) -> str:
+    """Ersetzt den Inhalt aller Zellen der Spalte ``spalte`` in den Ausblick-Tabellen."""
+    from i18n import t
+
+    def _tabelle(m: re.Match) -> str:
+        koepfe = [re.sub(r"<[^>]+>", "", k) for k in re.findall(r"<th[^>]*>(.*?)</th>", m.group(), re.S)]
+        if not koepfe or koepfe[0] != t("mail.ausblick.spalte_tag", lang) or spalte not in koepfe:
+            return m.group()
+        i = koepfe.index(spalte)
+
+        def _zeile(z: re.Match) -> str:
+            zellen = re.split(r"(?=<td)", z.group(1))
+            if len(zellen) > i + 1:
+                zellen[i + 1] = re.sub(r"(<td[^>]*>).*?(</td>)", rf"\g<1>{neu}\2", zellen[i + 1], flags=re.S)
+            return f"<tr>{''.join(zellen)}</tr>"
+        return re.sub(r"<tr>(.*?)</tr>", _zeile, m.group(), flags=re.S)
+    return re.sub(r"<table[^>]*>.*?</table>", _tabelle, h, flags=re.S)
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_orte_ausblick_roh_einfach(monkeypatch, tmp_path, lang):
+    """A3c: der Orte-Validator prueft Roh/Einfach der Ausblick-Zellen wie der
+    Trip-Validator (geteilte Mechanik): die korrekte Mail besteht; Einfach als
+    Zahl ("Rain 2.4 mm") bzw. Roh als Wort ("Wind maessig") scheitert in HTML
+    und Klartext mit Spaltennamen; gegen eine Roh-Konfiguration scheitert sie."""
+    preset = _orte_ausblick_formate()
+    eml = _orte_eml(monkeypatch, preset, lang=lang)
+    konfig = _orte_konfig(tmp_path, preset, f"a3c-{lang}")
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, aus
+    for spalte, html_neu, klartext in (("Rain", "2.4 mm", (r"Rain [^\d\s]\S*(?=  )", "Rain 2.4 mm")),
+                                       ("Wind", "maessig", (r"Wind \d+ km/h", "Wind maessig"))):
+        falsch = _aendere(eml, html=lambda h, s=spalte, n=html_neu: _ausblick_html_zelle(h, lang, s, n),
+                          plain=lambda p, k=klartext: re.sub(rf"(?m)^(\S+ .*?){k[0]}", rf"\g<1>{k[1]}", p))
+        code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+        assert code == 1, aus
+        for teil in ("HTML", "Klartext"):
+            assert f"SOLL: Darstellung Ausblick ({teil})" in aus and f"Spalte '{spalte}'" in aus, aus
+    roh = copy.deepcopy(preset)
+    roh["display_config"]["outlook_metric_formats"] = {}
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, roh, f"a3c-roh-{lang}"))
+    assert code == 1 and "SOLL: Darstellung Ausblick" in aus and "Spalte 'Rain'" in aus, aus
 
 
 # --------------------------------------------------------------------------- #

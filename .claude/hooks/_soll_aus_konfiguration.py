@@ -49,6 +49,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from html import unescape
 from pathlib import Path
 
 _SRC = Path(__file__).resolve().parents[2] / "src"
@@ -93,18 +94,94 @@ ALLE_KUERZEL = tuple(dict.fromkeys(
 _NAMENSFELD = 26
 
 
-def ausblick_kuerzel(zeile: str, mit_name: bool = False) -> list[tuple[int, str]]:
+def _kuerzel_ab(zeile: str, ab: int) -> list[tuple[int, str]]:
+    return sorted((m.start(), k) for k in ALLE_KUERZEL
+                  for m in re.finditer(r"(?<!\S)" + re.escape(k) + r" (?=\S)", zeile)
+                  if m.start() >= ab)
+
+
+def _namensende(zeile: str, ab: int, namen: tuple | list) -> int:
+    """Ende des Etappennamen-Felds ab ``ab`` (Zeilenanfang hinter dem Wochentag).
+
+    Der Renderer kuerzt den Namen nicht (``f"{name:<26} "``, outlook.py): ein
+    Name ueber 26 Zeichen schiebt die Werte nach rechts (#3047 F2). Bekannte
+    Namen (``stages[].name`` der Konfiguration) werden exakt abgetrennt, der
+    laengste passende zuerst. Sonst entscheidet die Zeilenstruktur: die Werte
+    stehen als ``<Kuerzel> <Wert>`` mit ZWEI Leerzeichen dazwischen, der Name
+    endet mit EINEM Leerzeichen -- die erste Spalte ist das letzte Kuerzel vor
+    dem ersten Doppel-Leerzeichen hinter dem Feldende (ein Kuerzel im
+    Namensrest liegt immer davor)."""
+    feld = ab + _NAMENSFELD
+    for name in sorted({n for n in namen if isinstance(n, str) and n}, key=len, reverse=True):
+        if zeile.startswith(name + " ", ab):
+            return max(feld, ab + len(name))
+    doppel = zeile.find("  ", feld)
+    erste = [p for p, _k in _kuerzel_ab(zeile[:len(zeile) if doppel < 0 else doppel], feld)]
+    return erste[-1] if erste else feld
+
+
+def ausblick_kuerzel(zeile: str, mit_name: bool = False, namen: tuple | list = ()) -> list[tuple[int, str]]:
     """(Position, Kuerzel) der Spalten einer Ausblick-Zeile in Textfolge.
 
     #3047 F001: vor den Werten stehen der Wochentag (``f"{weekday:<3} "``, EN
     "Sun" ist kein Spaltenkuerzel "Sun") und im Trip-Klartext das 26 Zeichen
     breite Etappennamen-Feld ("Wind Pass", "Sun Valley"). Beides wird vor der
-    Suche abgetrennt; ein ueberlanger Name ist bis Feldende sicher abgetrennt."""
+    Suche abgetrennt, ein ueberlanger Name ueber ``_namensende`` (F2)."""
     tag = re.match(r"\S+ ", zeile)
-    ab = (tag.end() if tag else 0) + (_NAMENSFELD if mit_name else 0)
-    return sorted((m.start(), k) for k in ALLE_KUERZEL
-                  for m in re.finditer(r"(?<!\S)" + re.escape(k) + r" (?=\S)", zeile)
-                  if m.start() >= ab)
+    ab = tag.end() if tag else 0
+    return _kuerzel_ab(zeile, _namensende(zeile, ab, namen) if mit_name else ab)
+
+
+def ausblick_zellen(zeilen: list[str], mit_name: bool = False, namen: tuple | list = ()) -> list[list]:
+    """Ausblick-Zeilen (Klartext/Kompakt) -> je Zeile [(Kuerzel, Wert), ...]."""
+    ausblick = []
+    for zeile in zeilen:
+        treffer = ausblick_kuerzel(zeile, mit_name, namen)
+        grenzen = [p for p, _k in treffer] + [len(zeile)]
+        ausblick.append([(k, zeile[p + len(k):grenzen[j + 1]].strip().split("  ")[0])
+                         for j, (p, k) in enumerate(treffer)])
+    return ausblick
+
+
+# --------------------------------------------------------------------------- #
+# Darstellung Roh/Einfach je Zelle (Spec §2 Punkt 3) -- Trip und Orte (#3047 A3c)
+# --------------------------------------------------------------------------- #
+_TAG_RE = re.compile(r"<[^>]+>")
+_AMPELPUNKT_RE = re.compile(r"<span[^>]*border-radius:\s*50%", re.IGNORECASE)
+_FORM_NAME = {ZAHL: "Zahl (Roh)", WORT: "Symbol/Wort (Einfach)", AMPEL: "Ampelpunkt (Einfach)"}
+
+
+def zelltext(zelle: str, html: bool) -> str:
+    """Sichtbarer Text einer Zelle; HTML ohne Tags, Entitaeten aufgeloest (#3047 F1)."""
+    return unescape(_TAG_RE.sub("", zelle)).strip() if html else zelle.strip()
+
+
+def zellform(zelle: str, html: bool) -> str | None:
+    """Form einer Zelle: ``ampel`` / ``zahl`` / ``wort``; leer bzw. "–" = None."""
+    if html and _AMPELPUNKT_RE.search(zelle):
+        return AMPEL
+    text = zelltext(zelle, html)
+    if not text or text in ("–", "-", "—"):
+        return None
+    return ZAHL if re.search(r"\d", text) else WORT
+
+
+def darstellung_meldungen(was: str, tabellen: list, formen: dict, teil: str, html: bool) -> list[str]:
+    """``tabellen``: je Tabelle eine Liste Zeilen aus (Spalte, Zelle). Meldet je
+    Tabelle und Spalte die erste Zelle in falscher Form, mit Spaltennamen."""
+    meldungen = []
+    for i, zeilen in enumerate(tabellen):
+        gemeldet: set[str] = set()
+        for spalte, zelle in (paar for zeile in zeilen for paar in zeile):
+            erlaubt = (formen.get(spalte) or {}).get(teil)
+            form = zellform(zelle, html)
+            if erlaubt is None or form is None or form in erlaubt or spalte in gemeldet:
+                continue
+            gemeldet.add(spalte)
+            soll = " oder ".join(_FORM_NAME[f] for f in erlaubt)
+            meldungen.append(f"SOLL: Darstellung {was} ({teil}) {i + 1}: Spalte '{spalte}' soll "
+                             f"{soll} zeigen, zeigt {_FORM_NAME[form]} ('{zelltext(zelle, html)}')")
+    return meldungen
 
 
 def _waehlbar(mid: object) -> bool:
@@ -278,6 +355,9 @@ def trip_soll(trip: dict, report: str = "evening") -> dict:
     trend_reports = rc.get("multi_day_trend_reports", dc.get("multi_day_trend_reports", ["evening"]))
     return {
         "kontext": "trip", "report": report,
+        # #3047 F2: Etappennamen trennen den Klartext-Ausblick exakt ab.
+        "etappen": [s["name"] for s in trip.get("stages") or []
+                    if isinstance(s, dict) and isinstance(s.get("name"), str)],
         "stunden": _trip_stundenspalten(liste),
         "darstellung_stunden": {e["metric_id"]: _modus(e) for e in liste},
         "formen_stunden": _formen_stunden(liste),

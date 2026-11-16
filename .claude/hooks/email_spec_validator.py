@@ -27,6 +27,7 @@ import email
 import re
 import time
 from email.header import decode_header
+from html import unescape
 from pathlib import Path
 from typing import List, Tuple
 
@@ -1135,12 +1136,13 @@ def _kuerzel_in_zeile(zeile: str) -> List[str]:
 
 
 def _html_tabellenkoepfe(body: str, erste: str) -> List[List[str]]:
-    """Kopfzeilen (ohne erste Zelle) aller Tabellen, deren erste Kopfzelle ``erste`` ist."""
+    """Kopfzeilen (ohne erste Zelle) aller Tabellen, deren erste Kopfzelle
+    ``erste`` ist -- als Text (HTML-Entitaeten aufgeloest, #3047 F1)."""
     koepfe = []
     for match in _TABLE_RE.finditer(body):
         rows = _extract_rows_from_table_html(match.group(1))
         if rows and rows[0] and rows[0][0].strip() == erste:
-            koepfe.append(rows[0][1:])
+            koepfe.append([unescape(k) for k in rows[0][1:]])
     return koepfe
 
 
@@ -1173,22 +1175,55 @@ def _klartext_uebersicht(text: str, lang: str, bekannte=()) -> List[Tuple[str, L
     return bloecke
 
 
-def _klartext_abschnitte(text: str, lang: str) -> Tuple[List[List[str]], List[List[str]]]:
-    """(Stundenspalten je Ort, Ausblick-Zeilen) aus dem Klartext-Teil."""
+def _klartext_abschnitte(text: str, lang: str) -> Tuple[List[List[str]], List[List[str]], List[str]]:
+    """(Stundenspalten je Ort, Ausblick-Kuerzel je Zeile, Ausblick-Zeilen) aus dem Klartext-Teil."""
     zeilen = text.splitlines()
     ausblick_titel = _t("vergleich.ausblick.titel", lang)
-    stunden, ausblick, im_ausblick = [], [], False
+    stunden, ausblick, roh, im_ausblick = [], [], [], False
     for i, zeile in enumerate(zeilen):
         if zeile.strip() == ausblick_titel:
             im_ausblick = True
         elif im_ausblick and zeile and not zeile.startswith(" "):
             # #3047 F001: Wochentag ("Sun") vor den Werten ist keine Spalte.
             ausblick.append([k for _p, k in _soll_modul().ausblick_kuerzel(zeile)])
+            roh.append(zeile)
         else:
             im_ausblick = im_ausblick and zeile.startswith(" ")
             if _STUNDE_RE.match(zeile) and not _STUNDE_RE.match(zeilen[i - 1]):
                 stunden.append(_kuerzel_in_zeile(zeile))
-    return stunden, ausblick
+    return stunden, ausblick, roh
+
+
+_TR_RE = re.compile(r"<tr[^>]*>(.*?)</tr>", re.DOTALL)
+_TD_ROH_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.DOTALL)
+
+
+def _html_ausblick_zellen(body: str, tag: str) -> List[list]:
+    """Je Ausblick-Tabelle (erste Kopfzelle ``tag``) die Zeilen als
+    [(Spalte, rohe Zelle), ...] -- roh, damit der Ampelpunkt erkennbar bleibt."""
+    tabellen = []
+    for match in _TABLE_RE.finditer(body):
+        rows = _extract_rows_from_table_html(match.group(1))
+        if not (rows and rows[0] and rows[0][0].strip() == tag):
+            continue
+        koepfe = [unescape(k) for k in rows[0][1:]]
+        tabellen.append([list(zip(koepfe, _TD_ROH_RE.findall(r)[1:]))
+                         for r in _TR_RE.findall(match.group(1)) if _TD_ROH_RE.search(r)])
+    return tabellen
+
+
+def _soll_darstellung_ausblick(body: str, plain_zeilen: List[str], tag: str, soll: dict) -> List[str]:
+    """#3047 A3c: Roh/Einfach je Ausblick-Spalte (``outlook_metric_formats``)
+    im HTML- und im Klartext-Teil -- dieselbe Mechanik wie der Trip-Validator
+    (``_soll_aus_konfiguration.darstellung_meldungen``), dieselben Ausnahmen
+    (Visibility/Temperatur ohne Einfach-Form, Gewitter ungeprueft, Spec AC-8)."""
+    formen = (soll.get("ausblick") or {}).get("formen") or {}
+    if not soll.get("ausblick_an") or not formen:
+        return []
+    m = _soll_modul()
+    return (m.darstellung_meldungen("Ausblick", _html_ausblick_zellen(body, tag), formen, "HTML", True)
+            + m.darstellung_meldungen("Ausblick", [m.ausblick_zellen(plain_zeilen)], formen,
+                                      "Klartext", False))
 
 
 def _klartext_ortsabschnitte(text: str, lang: str, namen) -> List[Tuple[str, bool, bool]]:
@@ -1281,10 +1316,14 @@ def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
                   for p in msg.walk() if p.get_content_type() == "text/plain"), "")
     tag = _t("mail.ausblick.spalte_tag", lang)
     zeilen = extract_table_rows(body, lang)
-    html = ([[r[0] for r in zeilen[1:] if r]] if zeilen else [], extract_locations(body, lang),
+    # #3047 F1: Namen und Beschriftungen aus dem HTML als Text vergleichen --
+    # der Renderer maskiert "Col d'Izoard" zu "d&#x27;Izoard", "&" zu "&amp;";
+    # das Soll (Konfiguration, Klartext) traegt die Zeichen selbst.
+    html = ([[unescape(r[0]) for r in zeilen[1:] if r]] if zeilen else [],
+            [unescape(n) for n in extract_locations(body, lang)],
             _html_tabellenkoepfe(body, _hour_time_label(lang)), _html_tabellenkoepfe(body, tag))
     bloecke = _klartext_uebersicht(plain, lang, set(html[1]))
-    stunden, ausblick = _klartext_abschnitte(plain, lang)
+    stunden, ausblick, ausblick_zeilen = _klartext_abschnitte(plain, lang)
     fehler = []
     for name, h, p in (("Stundenverlauf", html[2], stunden), ("Ausblick", html[3], ausblick)):
         if bool(h) != bool(p):
@@ -1292,9 +1331,10 @@ def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
     if soll.get("orte_unpruefbar"):  # #3047 Punkt 4: nie still ueberspringen
         fehler.append(f"SOLL: Ortsfolge nicht prüfbar: {soll['orte_unpruefbar']}")
     if soll["orte"] is not None:
-        sektionen = _ORT_KOPF_RE.findall(body)
+        sektionen = [unescape(n) for n in _ORT_KOPF_RE.findall(body)]
         fehler += _soll_orte_folge("HTML-Abschnitte", sektionen, [n for n in soll["orte"] if n in sektionen])
     fehler += _soll_teil("HTML", *html, soll)
+    fehler += _soll_darstellung_ausblick(body, ausblick_zeilen, tag, soll)
     fehler += _soll_ortsabschnitte(plain, lang, soll, html[1], {b[0] for b in bloecke if b[1] is None})
     return fehler + _soll_teil("Klartext", [b[1] for b in bloecke if b[1] is not None],
                                [b[0] for b in bloecke], stunden, ausblick, soll)
