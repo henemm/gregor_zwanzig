@@ -44,3 +44,53 @@ FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_m
 FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics[trip-n1--altbestand_ohne_metrics-nacht--html]
 FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics[trip-n1--altbestand_ohne_metrics-nacht--klartext]
 FAILED tests/tdd/test_einstellung_gleich_mail_editor_standard.py::test_python_seite_trip_tabellen_altbestand
+
+
+=== H5 (#3047 Nachlieferung): metrics: [] = Fall A (Altbestand -> Register-Standard), #1394 ===
+Stand: 34feaf724 + H5-Tests, Loader unveraendert. Erwartet rot: eine leere Liste liefert in der Mail []
+statt des Register-Standards, waehrend der Editor fuer [] den Standard zeigt (Frontend-Seite
+frontend_seite_trip_tabellen_leere_liste_altbestand bereits gruen). Bewusst leer (alle enabled:false)
+ist bereits gruen (Fall B unveraendert).
+$ uv run pytest --tb=line -q tests/tdd/test_einstellung_gleich_mail_trip.py tests/tdd/test_einstellung_gleich_mail_editor_standard.py -k "n1 or trip_tabellen"
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+....FFFF......F...                                                       [100%]
+=================================== FAILURES ===================================
+E   AssertionError: trip-n1--leere_liste_altbestand-stunden--html: Spaltenfolge [] != Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+    assert [] == ['temperature...g_level', ...]
+      
+      Right contains 7 more items, first extra item: 'temperature'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a483f3d3b6930e26f/tests/tdd/test_einstellung_gleich_mail_trip.py:157: AssertionError: trip-n1--leere_liste_altbestand-stunden--html: Spaltenfolge [] != Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+E   AssertionError: trip-n1--leere_liste_altbestand-stunden--klartext: Tabelle fehlt, Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+    assert []
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a483f3d3b6930e26f/tests/tdd/test_einstellung_gleich_mail_trip.py:155: AssertionError: trip-n1--leere_liste_altbestand-stunden--klartext: Tabelle fehlt, Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+E   AssertionError: trip-n1--leere_liste_altbestand-nacht--html: Spaltenfolge [] != Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+    assert [] == ['temperature...g_level', ...]
+      
+      Right contains 7 more items, first extra item: 'temperature'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a483f3d3b6930e26f/tests/tdd/test_einstellung_gleich_mail_trip.py:157: AssertionError: trip-n1--leere_liste_altbestand-nacht--html: Spaltenfolge [] != Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+E   AssertionError: trip-n1--leere_liste_altbestand-nacht--klartext: Tabelle fehlt, Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+    assert []
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a483f3d3b6930e26f/tests/tdd/test_einstellung_gleich_mail_trip.py:155: AssertionError: trip-n1--leere_liste_altbestand-nacht--klartext: Tabelle fehlt, Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+E   AssertionError: Python-Seite trip_tabellen/altbestand_leere_liste: Mail liefert [], editor_standard.json erwartet ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility', 'temperature_day_low', 'temperature_day_high']
+    assert [] == ['temperature...g_level', ...]
+      
+      Right contains 9 more items, first extra item: 'temperature'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a483f3d3b6930e26f/tests/tdd/test_einstellung_gleich_mail_editor_standard.py:147: AssertionError: Python-Seite trip_tabellen/altbestand_leere_liste: Mail liefert [], editor_standard.json erwartet ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility', 'temperature_day_low', 'temperature_day_high']
+=========================== short test summary info ============================
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_leere_liste_altbestand_standard[trip-n1--leere_liste_altbestand-stunden--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_leere_liste_altbestand_standard[trip-n1--leere_liste_altbestand-stunden--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_leere_liste_altbestand_standard[trip-n1--leere_liste_altbestand-nacht--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_leere_liste_altbestand_standard[trip-n1--leere_liste_altbestand-nacht--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_editor_standard.py::test_python_seite_trip_tabellen_leere_liste_altbestand
+
+--- H5 GREEN: loader._parse_display_config behandelt fehlenden Schluessel UND `metrics: []` als Fall A ---
+Mutations-Probe (String-Ersetzung, Sicherung im Scratchpad, wiederhergestellt per cp + cmp):
+M1 `register_standard = "metrics" not in data` (alter Stand)     -> gefangen: 4x test_n1_leere_liste_altbestand_standard,
+   test_python_seite_trip_tabellen_leere_liste_altbestand, test_kaskade_s2_ac7_leere_liste_im_loader_ist_altbestand
+M2 alle enabled:false ebenfalls als Fall A                        -> gefangen: 4x test_n1_bewusst_leer_alle_aus,
+   test_python_seite_trip_tabellen_bewusst_leer_alle_aus
+M3 Ableitungen auch fuer den Register-Standard (`if True:`)       -> gefangen: test_python_seite_trip_tabellen_altbestand,
+   ..._leere_liste_altbestand, test_kaskade_s2_ac7_leere_liste_im_loader_ist_altbestand

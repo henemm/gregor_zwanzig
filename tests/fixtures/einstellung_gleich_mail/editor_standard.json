@@ -567,7 +567,7 @@
    "kontext": "trip",
    "flaeche": "E-Mail-Liste = Spalten der Stundentabelle je Etappe",
    "vokabular": "Kennungen (metric_id)",
-   "begruendung": "Nie eingestellte E-Mail-Liste = die Grundauswahl in ihrer eingestellten Folge (`order`, nicht Array-/Katalogfolge; Konzept §5 Punkt 8: jede Liste nimmt aus den Metriken oben). Abgeleitete Groessen (temperature_night/_day_low/_day_high) stehen direkt hinter ihrer Elterngroesse (Fix #1947, loader._append_derived_metrics und metricsEditor.deriveMissingChildMetrics). Altbestand ohne `metrics`: Soll ist der Trip-Anlege-Standard des Registers in Rangfolge `trip_default_rank` (#1552, eine Quelle fuer Register und Frontend-Vorbelegung) -- dieselbe Folge wie DEFAULT_TRIP_METRIC_IDS, die Mail-Seite. Eine Kanal-Liste nimmt nur aus der Grundauswahl (ADR-0050).",
+   "begruendung": "Nie eingestellte E-Mail-Liste = die Grundauswahl in ihrer eingestellten Folge (`order`, nicht Array-/Katalogfolge; Konzept §5 Punkt 8: jede Liste nimmt aus den Metriken oben). Abgeleitete Groessen (temperature_night/_day_low/_day_high) stehen direkt hinter ihrer Elterngroesse (Fix #1947, loader._append_derived_metrics und metricsEditor.deriveMissingChildMetrics). Altbestand ohne `metrics`: Soll ist der Trip-Anlege-Standard des Registers in Rangfolge `trip_default_rank` (#1552, eine Quelle fuer Register und Frontend-Vorbelegung) -- dieselbe Folge wie DEFAULT_TRIP_METRIC_IDS, die Mail-Seite. Eine Kanal-Liste nimmt nur aus der Grundauswahl (ADR-0050). Leere Liste `metrics: []` ist ebenfalls Altbestand (Fall A, #1394) -- gleiche Soll-Folge; bewusst leer heisst: alle Eintraege `enabled:false` (so speichert der Editor eine Leerauswahl) -- Soll leer.",
    "zustaende": [
     {
      "id": "nie_eingestellt",
@@ -660,6 +660,79 @@
       "temperature_day_low",
       "temperature_day_high"
      ]
+    },
+    {
+     "id": "altbestand_leere_liste",
+     "beschreibung": "display_config mit metrics: [] (Altbestand Fall A, #1394: leere Liste = Altbestand, nicht bewusst leer)",
+     "eingabe": {
+      "display_config": {
+       "metrics": []
+      }
+     },
+     "erwartet": [
+      "temperature",
+      "wind",
+      "gust",
+      "precipitation",
+      "thunder",
+      "freezing_level",
+      "visibility",
+      "temperature_day_low",
+      "temperature_day_high"
+     ]
+    },
+    {
+     "id": "bewusst_leer_alle_aus",
+     "beschreibung": "Leerauswahl, wie der Editor sie speichert: alle Eintraege enabled:false ohne bucket (#1394 Fall B)",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "wind",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "gust",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "precipitation",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "thunder",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "freezing_level",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "visibility",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        }
+       ]
+      }
+     },
+     "erwartet": []
     },
     {
      "id": "gespeichert_folge",

@@ -200,6 +200,11 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 	// #3047 N2 behoben (F5)
 	test('frontend_seite_trip_tabellen_altbestand', () =>
 		pruefe(frontendTripTabellen, 'trip_tabellen', zustand('trip_tabellen', 'altbestand_ohne_metrics')));
+	// #3047 H5 (#1394): leere Liste = Altbestand (Fall A); alle enabled:false = bewusst leer (Fall B)
+	test('frontend_seite_trip_tabellen_leere_liste_altbestand', () =>
+		pruefe(frontendTripTabellen, 'trip_tabellen', zustand('trip_tabellen', 'altbestand_leere_liste')));
+	test('frontend_seite_trip_tabellen_bewusst_leer_alle_aus', () =>
+		pruefe(frontendTripTabellen, 'trip_tabellen', zustand('trip_tabellen', 'bewusst_leer_alle_aus')));
 	for (const z of gespeicherte('trip_tabellen'))
 		test(`frontend_seite_trip_tabellen_gespeichert ${z.id}`, () => pruefe(frontendTripTabellen, 'trip_tabellen', z));
 
@@ -223,6 +228,17 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 	for (const z of gespeicherte('orte_stundenverlauf'))
 		test(`frontend_seite_orte_stundenverlauf_gespeichert ${z.id}`, () =>
 			pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', z));
+	// #3047 H1: die Zeile ausserhalb der Grundauswahl ist gesperrt und nennt den Grund
+	// (Katalogtext vergleich.stundenverlauf.nicht_in_grundauswahl, im Hub-Golden nicht erreichbar).
+	test('frontend_seite_orte_stundenverlauf_gesperrt_nennt_grund', () => {
+		const ed = orteEditor(zustand('orte_stundenverlauf', 'gespeichert_ausserhalb_grundauswahl').eingabe);
+		const html = rendern(CompareHourlyLayoutControls, {
+			metricKeys: ed.layout.hourlyMetricKeys, onMetricKeys: nix, catalog: ORTE_KATALOG,
+			grundauswahl: ed.materializedActiveMetricKeys
+		});
+		const grund = /data-testid="compare-layout-hourly-reason-visibility"[^>]*>([^<]*)</.exec(html);
+		assert.equal(grund?.[1], 'gesperrt: nicht in der Grundauswahl oben');
+	});
 
 	// #3047 O4 behoben (F4)
 	test('frontend_seite_orte_ausblick_standard', () =>

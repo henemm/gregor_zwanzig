@@ -710,8 +710,10 @@ def test_n1_altbestand_ohne_metrics(monkeypatch, fall):
     (Fall A), zeigt in Etappen- UND Nachttabelle (HTML und Klartext) genau den
     Register-Standard ``_REGISTER_STANDARD_STUNDENSPALTEN`` in Register-Folge
     -- dieselbe Liste, die der Editor fuer diesen Trip zeigt. Der Rueckfall
-    sitzt am Lese-Pfad (``loader._parse_display_config``); eine ausdruecklich
-    leere Auswahl bleibt leer (``test_n1_ausdruecklich_leer_bleibt_leer``)."""
+    sitzt am Lese-Pfad (``loader._parse_display_config``); ein
+    ``metrics: []`` ist ebenfalls Altbestand
+    (``test_n1_leere_liste_altbestand_standard``); bewusst leer heisst alle
+    Eintraege aus (``test_n1_bewusst_leer_alle_aus``)."""
     data = trip_json(["temperature"])
     del data["display_config"]["metrics"]
     html, text, _ = _senden(monkeypatch, data, fall["format"])
@@ -720,19 +722,51 @@ def test_n1_altbestand_ohne_metrics(monkeypatch, fall):
                     _REGISTER_STANDARD_STUNDENSPALTEN, fall["id"])
 
 
-@pytest.mark.parametrize("fall", _faelle("test_n1_ausdruecklich_leer_bleibt_leer"))
-def test_n1_ausdruecklich_leer_bleibt_leer(monkeypatch, fall):
-    """N1-Gegenstueck (#3047, #1394 "bewusst leer"): ``metrics: []`` ist eine
-    ausdrueckliche Leerauswahl und KEIN Altbestand -- Etappen- und
-    Nachttabelle bleiben ohne Wertspalten, der Standard-Rueckfall greift nicht."""
+#: Eingaben aus ``editor_standard.json`` (dieselbe Datei liest die
+#: Frontend-Seite): so sieht der Editor diese Zustaende -- Mail und Editor
+#: muessen dieselbe Folge zeigen.
+_EDITOR_STANDARD = json.loads((FIXTURES / "editor_standard.json").read_text(encoding="utf-8"))
+
+
+def _editor_zustand(zustand_id: str) -> dict:
+    return next(z for z in _EDITOR_STANDARD["listen"]["trip_tabellen"]["zustaende"]
+                if z["id"] == zustand_id)
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n1_leere_liste_altbestand_standard"))
+def test_n1_leere_liste_altbestand_standard(monkeypatch, fall):
+    """#3047 H5 (#1394 Fall A): ``metrics: []`` ist Altbestand, KEINE bewusste
+    Leerauswahl -- Etappen- und Nachttabelle zeigen wie beim fehlenden
+    Schluessel den Register-Standard, denselben, den der Editor fuer ``[]``
+    zeigt (``editor_standard.json``, Zustand ``altbestand_leere_liste``)."""
     data = trip_json(["temperature"])
-    data["display_config"]["metrics"] = []
+    data["display_config"]["metrics"] = copy.deepcopy(
+        _editor_zustand("altbestand_leere_liste")["eingabe"]["display_config"]["metrics"])
+    assert data["display_config"]["metrics"] == []
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    art = "etappe" if fall["liste"] == "trip_stundentabelle" else "nacht"
+    _pruefe_spalten(_stundentabellen(html, text, fall["format"], art),
+                    _REGISTER_STANDARD_STUNDENSPALTEN, fall["id"])
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n1_bewusst_leer_alle_aus"))
+def test_n1_bewusst_leer_alle_aus(monkeypatch, fall):
+    """#3047 H5 (#1394 Fall B): bewusst leer heisst alle Eintraege
+    ``enabled:false`` (so speichert der Editor eine Leerauswahl) -- Etappen-
+    und Nachttabelle ohne Metrikspalten, kein Standard-Rueckfall; der Editor
+    zeigt fuer dieselbe Eingabe nichts aktiv (``editor_standard.json``,
+    Zustand ``bewusst_leer_alle_aus``, ``erwartet: []``)."""
+    zustand = _editor_zustand("bewusst_leer_alle_aus")
+    assert zustand["erwartet"] == [], "Editor-Soll fuer bewusst leer muss leer sein"
+    data = trip_json(["temperature"])
+    data["display_config"]["metrics"] = copy.deepcopy(
+        zustand["eingabe"]["display_config"]["metrics"])
     html, text, _ = _senden(monkeypatch, data, fall["format"])
     art = "etappe" if fall["liste"] == "trip_stundentabelle" else "nacht"
     tabellen = _stundentabellen(html, text, fall["format"], art)
     if fall["format"] == "html":
         assert tabellen, f"{fall['id']}: HTML-Tabelle fehlt ganz (Vorbedingung)"
-    _pruefe_spalten(tabellen, [], fall["id"])
+    _pruefe_spalten(tabellen, zustand["erwartet"], fall["id"])
 
 
 # ---------------------------------------------------------------------------

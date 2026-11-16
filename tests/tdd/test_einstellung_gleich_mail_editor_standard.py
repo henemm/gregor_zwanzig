@@ -165,10 +165,18 @@ def test_python_seite_trip_tabellen_altbestand():
     _pruefe(python_trip_tabellen, "trip_tabellen", _zustand("trip_tabellen", "altbestand_ohne_metrics"))
 
 
-def test_python_seite_trip_tabellen_ausdruecklich_leer():
-    """N1-Gegenstueck (#3047, #1394): ``metrics: []`` ist bewusst leer und
-    bleibt leer -- kein Rueckfall auf den Standardsatz."""
-    assert python_trip_tabellen({"display_config": {"metrics": []}}) == []
+def test_python_seite_trip_tabellen_leere_liste_altbestand():
+    """#3047 H5 (#1394 Fall A): ``metrics: []`` ist Altbestand, nicht bewusst
+    leer -- die Mail zeigt denselben Register-Standard wie der Editor
+    (``metricsEditor.computeInitialBuckets`` fuer ``[]``)."""
+    _pruefe(python_trip_tabellen, "trip_tabellen", _zustand("trip_tabellen", "altbestand_leere_liste"))
+
+
+def test_python_seite_trip_tabellen_bewusst_leer_alle_aus():
+    """#3047 H5 (#1394 Fall B): bewusst leer heisst alle Eintraege
+    ``enabled:false`` -- so speichert der Editor eine Leerauswahl. Mail-Liste
+    leer, kein Rueckfall auf den Standardsatz."""
+    _pruefe(python_trip_tabellen, "trip_tabellen", _zustand("trip_tabellen", "bewusst_leer_alle_aus"))
 
 
 @pytest.mark.parametrize("zustand", _gespeicherte("trip_tabellen"))

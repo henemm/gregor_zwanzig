@@ -990,9 +990,11 @@ def _parse_display_config(data: Dict[str, Any], owner_id: str = "") -> "UnifiedW
     # zu dict normalisieren; dict-Eintraege bleiben unveraendert.
     # Issue #3047 N1 (#3048): Altbestand ohne Schluessel ``metrics`` zeigt im
     # Editor den Trip-Anlege-Standard des Registers -- die Mail liest hier
-    # dieselbe Liste (in-memory, die Datei bleibt unberuehrt). Ein
-    # ausdrueckliches ``metrics: []`` (#1394 bewusst leer) bleibt leer.
-    register_standard = "metrics" not in data
+    # dieselbe Liste (in-memory, die Datei bleibt unberuehrt).
+    # #3047 H5 (#1394 Fall A): auch ``metrics: []`` ist Altbestand -- der
+    # Editor zeigt dafuer ebenfalls den Standard. Bewusst leer (Fall B) heisst
+    # "Eintraege vorhanden, alle enabled:false" und bleibt unberuehrt.
+    register_standard = not data.get("metrics")
     if register_standard:
         data = {**data, "metrics": _register_standard_metrics()}
     raw_metrics = [_coerce_metric_entry(m) for m in (data.get("metrics") or [])]

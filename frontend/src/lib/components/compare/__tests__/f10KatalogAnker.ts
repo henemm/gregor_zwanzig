@@ -70,6 +70,8 @@ export const F10_ANKER: [schluessel: string, de: string, en: string][] = [
 
 	// ── vergleich.stundenverlauf.* — transponierte Uebersicht (CompareHourlyLayoutControls) ──
 	['vergleich.stundenverlauf.titel', 'Stundenverlauf', 'Hourly view'],
+	// #3047 H1: Zeile ausserhalb der Grundauswahl gesperrt (Konzept §5.8, WV9-Muster)
+	['vergleich.stundenverlauf.nicht_in_grundauswahl', 'gesperrt: nicht in der Grundauswahl oben', 'locked: not in the basic selection above'],
 
 	// ── vergleich.orte.* — Orte-Schritt beim Anlegen (Step2Orte) und Orts-Gruppen ──
 	['vergleich.orte.weitere', 'Weitere', 'Other'],

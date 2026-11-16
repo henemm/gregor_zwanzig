@@ -106,7 +106,11 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 			// #2794 Fix-Loop B4: die Karte „Wetter" zählt erst mit im Browser geladenen Vorlagen;
 			// im SSR-Golden steht „—". Die Zahl prüft shared/__tests__/s3a2794_teil4b_befunde.test.ts.
 			'vergleich.hub.wertebereiche_kurz.one', 'vergleich.hub.wertebereiche_kurz.other',
-			'vergleich.hub.wertebereiche_lang.one', 'vergleich.hub.wertebereiche_lang.other']);
+			'vergleich.hub.wertebereiche_lang.one', 'vergleich.hub.wertebereiche_lang.other',
+			// #3047 H1: gesperrte Stundenverlauf-Zeile erscheint nur im Reiter Wetter (nicht im
+			// Hub-Golden); den Text am Bauteil prueft editor_standard_gleich_mail.test.ts
+			// (frontend_seite_orte_stundenverlauf_gesperrt_nennt_grund).
+			'vergleich.stundenverlauf.nicht_in_grundauswahl']);
 		const fehlt: string[] = [];
 		for (const [k, de] of F10_ANKER) {
 			if (UNERREICHT.has(k)) continue;

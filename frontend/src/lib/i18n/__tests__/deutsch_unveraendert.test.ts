@@ -232,8 +232,8 @@ const NEU_IN_F12 = F12_ANKER.map(([k]) => k);
 /** #2764 (F13) AUSDRUCK_OFFEN: Name-Rueckfall der Karte (wertebereiche.symbolzeile.* stehen in F5_ANKER). */
 const NEU_IN_F13 = ['bausteine.karte.ohne_namen'];
 const NEU_IN_FOLGEPAKETEN = [
-	// #3047 H1: Stundenverlauf-Zeile ausserhalb der Grundauswahl gesperrt (Konzept §5.8, WV9-Muster)
-	'vergleich.stundenverlauf.nicht_in_grundauswahl',
+	// #3047 H1: 'vergleich.stundenverlauf.nicht_in_grundauswahl' steht als fester
+	// Anker in F10_ANKER (vergleich.json = F9 + F10-Anker) und zaehlt ueber NEU_IN_F10.
 	// #2999 Datumsfeld: Meldung bei einem Datum, das es nicht gibt
 	'bausteine.datum.ungueltig',
 	// #2961 Welle 2 (ADR-0116) Premium-SMS-Verbindung trennen
