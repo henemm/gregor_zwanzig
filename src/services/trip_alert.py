@@ -19,6 +19,7 @@ from app.ampel import resolve_ampel
 from i18n import Lang, resolve_user_lang, t
 from app.models import SegmentWeatherData, WeatherChange
 from services import alert_channel_threshold, alert_daily_limit, alert_input_capture, alert_log
+from services.amtliche_warnungen_schalter import amtliche_warnungen_an_trip
 from services import alert_retry_backoff
 from services.alert_briefing_anchor import record_alert_anchor_rejected
 import services.alert_urgency as alert_urgency
@@ -1130,9 +1131,9 @@ class TripAlertService:
         ein leeres `{}` (kein "enabled"-Schluessel) zaehlt ebenfalls NICHT
         als migriert (Fix-Loop F003) -> in beiden Faellen Legacy-Fallback.
         """
-        if isinstance(trip.official_warnings, dict) and "enabled" in trip.official_warnings:
-            return bool(trip.official_warnings.get("enabled", True))
-        return trip.official_alert_triggers_enabled is not False
+        # Issue #3047 E4 (PO 2026-11-16): Briefing ODER Alarm an -> beides an;
+        # die Altfeld-Vorrangregel steht jetzt in der geteilten Lese-Regel.
+        return amtliche_warnungen_an_trip(trip)
 
     def check_all_trips(self) -> AlertCheckRunResult:
         """

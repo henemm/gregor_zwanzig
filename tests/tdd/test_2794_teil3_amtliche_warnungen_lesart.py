@@ -28,6 +28,12 @@ Befund-Dokumentation (kein Verbiegen):
   Speichern (Schreib-Regel, beide Felder gleich) stimmen Anzeige und Alarm
   in jeder Kombination ueberein.
 
+ABGELOEST durch Issue #3047 E4 (PO-Entscheidung 2026-11-16, Spec feat_3047
+„Nachtrag Runde 7"): Briefing ODER Alarm an -> „beides an"; die Alarm-Engine
+liest seither ``official_alerts_enabled`` mit (fehlend = an). Die Tabelle unten
+folgt dieser Regel; Anzeige und Alarm stimmen jetzt in JEDER Kombination
+ueberein (auch vor dem Speichern).
+
 Kein Mock()/patch(); Quelle ueber die Registrierungs-Naht, Versand ueber
 ``mail_sink``, Persistenz unter der pytest-isolierten Datenwurzel (#1133).
 """
@@ -52,28 +58,32 @@ LAT, LON = 46.62, 13.68
 
 
 def oder_regel(official_warnings, official_alerts_enabled, triggers) -> bool:
-    """Referenz der Spec-Lese-Regel (AC-20). „Vorhanden" heisst hier, wie in
-    der Engine: Dict MIT Schluessel ``enabled``."""
+    """Referenz der Lese-Regel (#3047 E4): Briefing (fehlend = an) ODER Alarm
+    (``official_warnings.enabled`` mit Schluessel, sonst Altfeld, fehlend = an)."""
+    briefing = official_alerts_enabled is not False
     if isinstance(official_warnings, dict) and "enabled" in official_warnings:
-        return bool(official_warnings["enabled"]) or official_alerts_enabled is True
-    return triggers is not False
+        return briefing or bool(official_warnings["enabled"])
+    return briefing or triggers is not False
 
 
 # (Name, official_warnings, official_alerts_enabled, official_alert_triggers_enabled,
 #  erwarteter Alarm laut heutiger Engine, stimmt mit ODER-Regel ueberein?)
+# #3047 E4: Mischzustaende (ein Schalter an) gelten als „beides an".
 KOMBINATIONEN = [
     ("ohne_schluessel_default", FEHLT, None, None, True, True),
-    ("ohne_schluessel_trigger_aus", FEHLT, None, False, False, True),
+    ("ohne_schluessel_trigger_aus", FEHLT, None, False, True, True),
     ("ohne_schluessel_bericht_aus_trigger_an", FEHLT, False, True, True, True),
-    ("ohne_schluessel_bericht_an_trigger_aus", FEHLT, True, False, False, True),
+    ("ohne_schluessel_bericht_an_trigger_aus", FEHLT, True, False, True, True),
+    ("ohne_schluessel_beides_aus", FEHLT, False, False, False, True),
     ("gespeichert_an", {"enabled": True}, True, False, True, True),
     ("gespeichert_aus", {"enabled": False}, False, True, False, True),
     ("gespeichert_aus_trigger_default", {"enabled": False}, False, None, False, True),
     # Altfelder laufen auseinander:
     ("bericht_aus_alarm_an", {"enabled": True}, False, False, True, True),
-    ("bericht_an_alarm_aus", {"enabled": False}, True, None, False, False),
+    ("bericht_an_alarm_aus", {"enabled": False}, True, None, True, True),
     # Leeres Dict = nicht migriert -> Rueckfall auf den Trigger-Schalter.
-    ("leeres_dict_trigger_aus", {}, True, False, False, True),
+    ("leeres_dict_trigger_aus", {}, True, False, True, True),
+    ("leeres_dict_beides_aus", {}, False, False, False, True),
     ("leeres_dict_default", {}, None, None, True, True),
 ]
 IDS = [k[0] for k in KOMBINATIONEN]
@@ -102,7 +112,7 @@ def test_trip_alarm_lesart(name, ow, oae, trig, alarm, gleich):
 @pytest.mark.parametrize("name, ow, oae, trig, alarm, gleich", KOMBINATIONEN, ids=IDS)
 def test_oder_regel_gegen_alarm_lesart(name, ow, oae, trig, alarm, gleich):
     """Dokumentiert, wo Anzeige (ODER-Regel) und Alarm uebereinstimmen. Die
-    einzige Abweichung ist „Bericht an, Alarm aus" vor dem Speichern."""
+    Seit #3047 E4 gibt es keine Abweichung mehr (frueher „Bericht an, Alarm aus")."""
     assert (oder_regel(ow, oae, trig) == alarm) is gleich, name
 
 

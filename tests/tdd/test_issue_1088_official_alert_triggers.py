@@ -291,10 +291,10 @@ class TestAC2ToggleDisabled:
         oa_base, backup = _registered_sources_backup()
         oa_base._REGISTERED_SOURCES.clear()
         try:
-            trip = _minimal_trip("trip-ac2", official_alert_triggers_enabled=False)
-            assert trip.official_alerts_enabled is None, (
-                "Slice-3-Briefing-Checkbox darf vom neuen Trigger-Toggle "
-                "strukturell unberührt bleiben"
+            # #3047 E4 (PO 2026-11-16): Briefing ODER Alarm an -> beides an;
+            # „Trigger aus" wirkt nur, wenn auch der Briefing-Schalter aus ist.
+            trip = _minimal_trip(
+                "trip-ac2", official_alert_triggers_enabled=False, official_alerts_enabled=False,
             )
             _save_cached(user_id, trip.id, [_data(1, precip_sum_mm=2.0)])
 

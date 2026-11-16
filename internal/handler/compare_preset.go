@@ -287,7 +287,8 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 				WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 				return
 			}
-			preset.DisplayConfig = displayConfigAusVorlage(std, false)
+			// Issue #3047 E1: Grundauswahl (active_metrics) ausdruecklich mit.
+			preset.DisplayConfig = vergleichDisplayConfigAusVorlage(std)
 		}
 
 		// Issue #2961: Wachstumsgrenzen der freien Maps.

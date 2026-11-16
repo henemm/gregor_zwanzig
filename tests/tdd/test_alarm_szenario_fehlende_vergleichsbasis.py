@@ -179,6 +179,9 @@ def boeen_trip(trip_id: str, tage: list[date]) -> Trip:
                                           morning_time=morgen, evening_time=abend)
     trip.alert_cooldown_minutes = 0
     trip.official_alert_triggers_enabled = False
+    # #3047 E4 (PO 2026-11-16): Briefing ODER Alarm an -> beides an; amtlich
+    # „aus" heisst beide Schalter aus (fehlender Briefing-Schalter = an).
+    trip.official_alerts_enabled = False
     return trip
 
 

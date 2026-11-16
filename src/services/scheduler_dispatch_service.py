@@ -26,6 +26,7 @@ from app.loader import (
     user_dir,
 )
 from services.alert_check_state import report_unit_failure
+from services.amtliche_warnungen_schalter import amtliche_warnungen_an_preset
 from services.file_lock import LockTimeout, locked_json_rmw
 from services.send_lock import release_send_lock, try_acquire_send_lock
 from services.send_outcomes import InvalidPresetError, SendOutcomeError, outcome_from_result
@@ -949,7 +950,8 @@ def send_one_compare_preset(
             target_date=target_date,
             forecast_hours=COMPARE_FORECAST_HOURS,  # Issue #1305: geteilte Konstante statt 48 fest
             profile=profile,
-            official_alerts_enabled=preset.get("official_alerts_enabled", True),  # Issue #1040
+            # Issue #1040; #3047 E4: Briefing ODER Alarm an -> beides an.
+            official_alerts_enabled=amtliche_warnungen_an_preset(preset),
             call_source="vergleich",
             user_id=user_id,  # Issue #2234: Budget beim ausloesenden Nutzer
         )
