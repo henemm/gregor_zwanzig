@@ -699,10 +699,10 @@ def _soll_modul():
     return _soll_aus_konfiguration
 
 
-def _ausblick_kuerzel(zeile: str, mit_name: bool = False) -> list[str]:
+def _ausblick_kuerzel(zeile: str, mit_name: bool = False, namen=()) -> list[str]:
     """Spaltenkuerzel einer Ausblick-Zeile in Textfolge, ohne Wochentag und
-    (Trip-Klartext, ``mit_name``) Etappennamen davor (#3047 F001)."""
-    return [k for _pos, k in _soll_modul().ausblick_kuerzel(zeile, mit_name)]
+    (Trip-Klartext, ``mit_name``) Etappennamen davor (#3047 F001, F2)."""
+    return [k for _pos, k in _soll_modul().ausblick_kuerzel(zeile, mit_name, namen)]
 
 
 def _block_zeilen(text: str, ueberschrift: str) -> list[str]:
@@ -735,7 +735,7 @@ def _soll_html_koepfe(html: str, lang: str) -> tuple[list, list, list]:
     return etappe, nacht, ausblick
 
 
-def _soll_klartext_koepfe(plain: str, lang: str) -> tuple[list, list, list]:
+def _soll_klartext_koepfe(plain: str, lang: str, namen=()) -> tuple[list, list, list]:
     """(Etappen-, Nacht-, Ausblick-Spalten) des Klartext-Teils."""
     nacht_pos = plain.find(_ml().marker("mail.nacht.am_ziel", lang))
     etappe, nacht = [], []
@@ -743,7 +743,7 @@ def _soll_klartext_koepfe(plain: str, lang: str) -> tuple[list, list, list]:
         spalten = (m.group(1) or "").split()
         (nacht if 0 <= nacht_pos < m.start() else etappe).append(spalten)
     zeilen = _block_zeilen(plain, _ml().erwartet("mail.ausblick.naechste_etappen", lang))
-    return etappe, nacht, [_ausblick_kuerzel(z, mit_name=True) for z in zeilen]
+    return etappe, nacht, [_ausblick_kuerzel(z, mit_name=True, namen=namen) for z in zeilen]
 
 
 def _soll_vergleich(was: str, koepfe: list, soll: list | None) -> list[str]:
@@ -803,36 +803,14 @@ def _soll_kompakt(text: str, s: dict, lang: str) -> list[str]:
         "Ausblick", [zellen], s["ausblick"]["formen"], "Klartext", False)]
 
 
-_AMPELPUNKT_RE = re.compile(r"<span[^>]*border-radius:\s*50%", re.IGNORECASE)
-_FORM_NAME = {"zahl": "Zahl (Roh)", "wort": "Symbol/Wort (Einfach)", "ampel": "Ampelpunkt (Einfach)"}
-
-
 def _zellform(zelle: str, html: bool) -> str | None:
-    """Form einer Zelle: ``ampel`` / ``zahl`` / ``wort``; leer bzw. "–" = None."""
-    if html and _AMPELPUNKT_RE.search(zelle):
-        return "ampel"
-    text = _strip_tags(zelle) if html else zelle.strip()
-    if not text or text in ("–", "-", "—"):
-        return None
-    return "zahl" if re.search(r"\d", text) else "wort"
+    """Form einer Zelle (``ampel``/``zahl``/``wort``), geteilt mit dem Orte-Validator (#3047 A3c)."""
+    return _soll_modul().zellform(zelle, html)
 
 
 def _darstellung_meldungen(was: str, tabellen: list, formen: dict, teil: str, html: bool) -> list[str]:
-    """``tabellen``: je Tabelle eine Liste Zeilen aus (Spalte, Zelle). Meldet je
-    Tabelle und Spalte die erste Zelle in falscher Form, mit Spaltennamen."""
-    meldungen = []
-    for i, zeilen in enumerate(tabellen):
-        gemeldet: set[str] = set()
-        for spalte, zelle in (paar for zeile in zeilen for paar in zeile):
-            erlaubt = (formen.get(spalte) or {}).get(teil)
-            form = _zellform(zelle, html)
-            if erlaubt is None or form is None or form in erlaubt or spalte in gemeldet:
-                continue
-            gemeldet.add(spalte)
-            soll = " oder ".join(_FORM_NAME[f] for f in erlaubt)
-            meldungen.append(f"SOLL: Darstellung {was} ({teil}) {i + 1}: Spalte '{spalte}' soll "
-                             f"{soll} zeigen, zeigt {_FORM_NAME[form]} ('{_strip_tags(zelle)}')")
-    return meldungen
+    """Roh/Einfach je Spalte, geteilte Mechanik in ``_soll_aus_konfiguration`` (#3047 A3c)."""
+    return _soll_modul().darstellung_meldungen(was, tabellen, formen, teil, html)
 
 
 def _html_zellen(html: str, lang: str) -> dict[str, list]:
@@ -851,7 +829,7 @@ def _html_zellen(html: str, lang: str) -> dict[str, list]:
     return arten
 
 
-def _klartext_zellen(plain: str, lang: str) -> dict[str, list]:
+def _klartext_zellen(plain: str, lang: str, namen=()) -> dict[str, list]:
     """Wie ``_html_zellen`` fuer den Klartext: Stundentabellen ueber die
     Spaltenpositionen der Kopfzeile, Ausblick ueber die Kuerzel je Zeile."""
     nacht_pos = plain.find(_ml().marker("mail.nacht.am_ziel", lang))
@@ -868,19 +846,14 @@ def _klartext_zellen(plain: str, lang: str) -> dict[str, list]:
             tabelle.append([(k, zeile[p:grenzen[j + 1]]) for j, (p, k) in enumerate(kopf)])
         (arten["Nachttabelle"] if 0 <= nacht_pos < m.start() else arten["Etappen-Stundentabelle"]).append(tabelle)
     arten["Ausblick"].append(_ausblick_zellen(
-        _block_zeilen(plain, _ml().erwartet("mail.ausblick.naechste_etappen", lang)), mit_name=True))
+        _block_zeilen(plain, _ml().erwartet("mail.ausblick.naechste_etappen", lang)), mit_name=True,
+        namen=namen))
     return arten
 
 
-def _ausblick_zellen(zeilen: list[str], mit_name: bool = False) -> list[list]:
+def _ausblick_zellen(zeilen: list[str], mit_name: bool = False, namen=()) -> list[list]:
     """Ausblick-Zeilen (Klartext/Kompakt) -> je Zeile [(Kuerzel, Wert), ...]."""
-    ausblick = []
-    for zeile in zeilen:
-        treffer = _soll_modul().ausblick_kuerzel(zeile, mit_name)
-        grenzen = [p for p, _k in treffer] + [len(zeile)]
-        ausblick.append([(k, zeile[p + len(k):grenzen[j + 1]].strip().split("  ")[0])
-                         for j, (p, k) in enumerate(treffer)])
-    return ausblick
+    return _soll_modul().ausblick_zellen(zeilen, mit_name, namen)
 
 
 def _soll_darstellung(html: str, plain: str, s: dict, lang: str) -> list[str]:
@@ -891,7 +864,7 @@ def _soll_darstellung(html: str, plain: str, s: dict, lang: str) -> list[str]:
               "Nachttabelle": s.get("formen_stunden") or {}, "Ausblick": ausblick}
     fehler = []
     for teil, arten, ist_html in (("HTML", _html_zellen(html, lang), True),
-                                  ("Klartext", _klartext_zellen(plain, lang), False)):
+                                  ("Klartext", _klartext_zellen(plain, lang, s.get("etappen", ())), False)):
         for art, tabellen in arten.items():
             fehler += _darstellung_meldungen(art, tabellen, formen[art], teil, ist_html)
     return fehler
@@ -1026,7 +999,7 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
     if msg["X-GZ-Format"] == "compact":
         return fehler + _soll_kompakt(plain, s, lang)
     koepfe_html = _soll_html_koepfe(html, lang)
-    koepfe_plain = _soll_klartext_koepfe(plain, lang)
+    koepfe_plain = _soll_klartext_koepfe(plain, lang, s.get("etappen", ()))
     for name, h, p in zip(("Etappen-Stundentabelle", "Nachttabelle", "Ausblick"), koepfe_html, koepfe_plain):
         if bool(h) != bool(p):
             fehler.append(f"SOLL: {name} fehlt im {'Klartext' if h else 'HTML'}-Teil")
