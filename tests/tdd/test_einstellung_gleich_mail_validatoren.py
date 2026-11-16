@@ -1050,13 +1050,49 @@ def test_trip_windrichtung_verschmolzen_einfach_ohne_richtung_scheitert(monkeypa
     assert "SOLL: Windrichtung Etappen-Stundentabelle (HTML) 1: Wind-Zelle ohne Kompassrichtung" in aus, aus
 
 
-@pytest.mark.xfail(strict=True, reason="#3047 F004 wartet auf Renderer")
 def test_trip_windrichtung_verschmolzen_einfach_positiv(monkeypatch, tmp_path):
     """F004: Wind Einfach + Windrichtung Einfach -- die HTML-Windzelle zeigt
-    Ampelpunkt UND Kompassrichtung (wie der Klartext "20 W"); die Mail besteht."""
+    Ampelpunkt UND Kompassrichtung (wie der Klartext "20 W"); die Mail besteht.
+    Zeigt das HTML eine andere Richtung als der Klartext, scheitert sie."""
     daten = _trip_windrichtung_daten(wind_einfach=True)
-    code, aus = _lauf(tmp_path, TRIP, _trip_eml(monkeypatch, daten), "--konfig", _konfig(tmp_path, "f004p", daten))
+    eml = _trip_eml(monkeypatch, daten)
+    konfig = _konfig(tmp_path, "f004p", daten)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
     assert code == 0, aus
+    falsch = _aendere(eml, html=lambda h: re.sub(r'(data-label="Wind"><span[^>]*></span>[^<]*?)W<',
+                                                 r"\1O<", h))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Windrichtung Etappen-Stundentabelle 1: HTML ['O'" in aus, aus
+
+
+def _trip_nur_nacht(email_format: str) -> dict:
+    """F008b: nur die Nacht-Tiefsttemperatur gewaehlt -- keine Groesse mit Kachel."""
+    daten = _trip_daten({}, email_format=email_format)
+    daten["display_config"]["metrics"].append({"metric_id": "temperature_night", "enabled": True,
+                                               "bucket": "primary", "order": 0})
+    return daten
+
+
+@pytest.mark.parametrize("email_format", ["full", "compact"])
+def test_trip_ueberblick_nur_ohne_kachel_entfaellt(monkeypatch, tmp_path, email_format):
+    """F008b: nur ``temperature_night`` gewaehlt -> kein Metriken-Ueberblick
+    (keine Kachel, ``_PILL_CATALOG_ORDER``); die Mail besteht mit ``--konfig``.
+    Gegenproben: die Mail MIT Ueberblick gegen diese Konfiguration und die Mail
+    OHNE Ueberblick gegen eine Konfiguration mit Temperatur scheitern."""
+    nacht = _trip_nur_nacht(email_format)
+    eml = _trip_eml(monkeypatch, nacht)
+    konfig_nacht = _konfig(tmp_path, f"f008b-{email_format}", nacht)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig_nacht)
+    assert code == 0, aus
+    voll = _trip_daten(_TRIP_FOLGE, email_format=email_format)
+    code, aus = _lauf(tmp_path, TRIP, _trip_eml(monkeypatch, voll), "--konfig", konfig_nacht)
+    erscheint = ("SOLL: COMPACT: Block '== Metriken-Ueberblick ==' erscheint" if email_format == "compact"
+                 else "SOLL: Metriken-Ueberblick (HTML) erscheint")
+    assert code == 1 and erscheint in aus, aus
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, f"f008b-voll-{email_format}", voll))
+    fehlt = ("COMPACT: Block '== Metriken-Ueberblick ==' fehlt" if email_format == "compact"
+             else "SOLL: Metriken-Ueberblick fehlt im Klartext-Teil")
+    assert code == 1 and fehlt in aus, aus
 
 
 # --------------------------------------------------------------------------- #

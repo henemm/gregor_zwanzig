@@ -677,7 +677,7 @@ def _check_compact_blocks(text: str, lang: str = "de", ueberblick: bool = True) 
         errors.append(f"COMPACT: Block '{pille}' fehlt")
     elif not ueberblick and pille in text:
         errors.append(f"SOLL: COMPACT: Block '{pille}' erscheint, obwohl die Grundauswahl "
-                      "bewusst leer ist")
+                      "bewusst leer ist bzw. keine gewaehlte Groesse eine Kachel traegt")
     if "----" not in text or "Generated:" not in text:
         errors.append("COMPACT: Footer (Trennlinie + Generated:) fehlt")
     return errors
@@ -767,6 +767,21 @@ def _soll_tabellen(teil: str, etappe: list, nacht: list, ausblick: list, s: dict
     elif s["ausblick"] is not None:
         fehler += _soll_vergleich(f"Ausblick ({teil}) Zeile", ausblick, s["ausblick"][
             "html" if teil == "HTML" else "klartext"])
+    return fehler
+
+
+def _soll_ueberblick(html: str, plain: str, s: dict, lang: str) -> list[str]:
+    """#3047 F008b (Vollformat): Metriken-Ueberblick genau dann, wenn eine
+    gewaehlte Groesse eine Kachel traegt -- im HTML (``<p>``-Ueberschrift) und
+    im Klartext (``━━ … ━━``). Kompakt: ``_check_compact_blocks``."""
+    titel = _ml().erwartet("mail.pille.ueberschrift", lang)
+    fehler = []
+    for teil, da in (("HTML", f">{titel}</p>" in html), ("Klartext", f"━━ {titel} ━━" in plain)):
+        if s["ueberblick"] and not da:
+            fehler.append(f"SOLL: Metriken-Ueberblick fehlt im {teil}-Teil")
+        elif da and not s["ueberblick"]:
+            fehler.append(f"SOLL: Metriken-Ueberblick ({teil}) erscheint, obwohl keine gewaehlte "
+                          "Groesse eine Kachel traegt")
     return fehler
 
 
@@ -905,6 +920,31 @@ def _soll_windrichtung(html: str, plain: str, s: dict, lang: str) -> list[str]:
                     fehler.append(f"SOLL: Windrichtung {art} ({teil}) {i + 1}: Wind-Zelle ohne "
                                   f"Kompassrichtung ('{_strip_tags(ohne).strip()}'), obwohl "
                                   "wind_direction mit Wind verschmolzen ist")
+    return fehler + _windrichtung_paritaet(html, plain, wind, lang)
+
+
+def _richtungen(tabelle: list, wind: str, ist_html: bool) -> list[str]:
+    """Kompassrichtung je Wind-Zelle einer Tabelle ("" = keine)."""
+    folge = []
+    for zeile in tabelle:
+        for k, z in zeile:
+            if k == wind:
+                treffer = _KOMPASS_RE.search(_strip_tags(z) if ist_html else z)
+                folge.append(treffer.group() if treffer else "")
+    return folge
+
+
+def _windrichtung_paritaet(html: str, plain: str, wind: str, lang: str) -> list[str]:
+    """#3047 F004: dieselbe Richtung je Stunde im HTML wie im Klartext."""
+    h_arten, p_arten = _html_zellen(html, lang), _klartext_zellen(plain, lang)
+    fehler = []
+    for art in ("Etappen-Stundentabelle", "Nachttabelle"):
+        if len(h_arten[art]) != len(p_arten[art]):
+            continue  # Tabellenzahl prueft der Spaltenabgleich
+        for i, (h, p) in enumerate(zip(h_arten[art], p_arten[art])):
+            rh, rp = _richtungen(h, wind, True), _richtungen(p, wind, False)
+            if rh != rp:
+                fehler.append(f"SOLL: Windrichtung {art} {i + 1}: HTML {rh} ungleich Klartext {rp}")
     return fehler
 
 
@@ -990,6 +1030,7 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
     for name, h, p in zip(("Etappen-Stundentabelle", "Nachttabelle", "Ausblick"), koepfe_html, koepfe_plain):
         if bool(h) != bool(p):
             fehler.append(f"SOLL: {name} fehlt im {'Klartext' if h else 'HTML'}-Teil")
+    fehler += _soll_ueberblick(html, plain, s, lang)
     fehler += _soll_tabellen("HTML", *koepfe_html, s)
     fehler += _soll_tabellen("Klartext", *koepfe_plain, s)
     # #3047 N7: keine Ueberschrift ohne Tabelle ("Segment 1"/"Nacht am Ziel"

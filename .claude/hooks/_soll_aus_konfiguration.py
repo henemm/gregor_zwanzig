@@ -63,7 +63,7 @@ from output.renderers.compare_hourly_metric_ids import (  # noqa: E402
 )
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG  # noqa: E402
 from output.renderers.email.helpers import (  # noqa: E402
-    _AMPEL_CAPABLE_METRIC_IDS, NO_HOURLY_COLUMN_METRIC_IDS,
+    _AMPEL_CAPABLE_METRIC_IDS, _PILL_CATALOG_ORDER, NO_HOURLY_COLUMN_METRIC_IDS,
 )
 
 _REG = {m.id: m for m in _METRICS}
@@ -288,10 +288,14 @@ def trip_soll(trip: dict, report: str = "evening") -> dict:
         and report in (trend_reports or []),
         "ausblick": None if ids == [] else _ausblick_spalten(ids, dc.get("outlook_metric_formats")),
         "email_format": rc.get("email_format", "full"),
-        # #3047 N5: Metriken-Ueberblick (Kompakt) nur bei nicht leerer
-        # Grundauswahl (``enabled``, wie ``resolve_trip_active_metrics``).
-        "ueberblick": any(bool(e.get("enabled", True)) for e in _eintraege(dc.get("metrics"))
-                          if _waehlbar(e.get("metric_id"))),
+        # #3047 N5/F008b: Metriken-Ueberblick nur, wenn eine Groesse der
+        # E-Mail-Liste dieses Berichts eine Kachel traegt. Der Renderer
+        # kollabiert ``dc.metrics`` vor dem Ueberblick auf die E-Mail-Liste
+        # (trip_report.py, ``get_metrics_for_channel``), ``build_metrics_summary_pills``
+        # filtert auf die Weisse Liste ``_PILL_CATALOG_ORDER``; ohne Kachel
+        # entfaellt die Ueberschrift (html.py/plain.py/compact.py: ``if pills``).
+        # Datenabhaengig fehlende Kacheln (keine Werte) sind nicht ableitbar.
+        "ueberblick": any(e["metric_id"] in _PILL_CATALOG_ORDER for e in liste),
         "zusatz": {k: rc.get(k, True) for k in ("show_stage_stats", "show_yesterday_comparison")},
     }
 

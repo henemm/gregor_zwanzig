@@ -229,7 +229,13 @@ Randfälle (vierte Prüfung #3047, F001–F008a), alle nur mit `--konfig`:
   (`order_locations_by_ids`). Ein gesetztes `--min-locations` hat Vorrang.
 - **Verschmolzene Windrichtung (F004):** Windrichtung Einfach neben Wind (keine
   eigene WDir-Spalte) → jede Wind-Zelle der Etappen- und Nachttabelle trägt eine
-  Kompassrichtung, im HTML auch neben dem Ampelpunkt, im Klartext („20 W").
+  Kompassrichtung, im HTML auch neben dem Ampelpunkt, im Klartext („20 W");
+  die Richtung je Stunde ist im HTML dieselbe wie im Klartext.
+- **Metriken-Überblick nur mit Kachel (F008b):** der Überblick (Voll: HTML und
+  Klartext, Kompakt) steht genau dann in der Mail, wenn eine Größe der
+  E-Mail-Liste dieses Berichts eine Kachel trägt (weiße Liste `_PILL_CATALOG_ORDER`);
+  nur z. B. `temperature_night` gewählt → kein Überblick. Kacheln, die mangels
+  Werten entfallen, sind aus der Konfiguration nicht ableitbar.
 
 **Auflösung des Verbots aus #1381:** Eine feste Spaltenfolge (`_HOUR_COLUMNS_V2`)
 wird weiterhin **nie** vorausgesetzt — die Folge ist seit #1359 frei
