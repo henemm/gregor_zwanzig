@@ -2573,6 +2573,188 @@
       "ac": "AC-10",
       "befund": "N1",
       "status": "gruen"
+    },
+    {
+      "id": "trip-f004-wind_richtung_einfach--stunden--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_f004_wind_einfach_mit_richtung_einfach",
+      "ac": "AC-8",
+      "befund": "F004",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-f004-wind_richtung_einfach--stunden--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_f004_wind_einfach_mit_richtung_einfach",
+      "ac": "AC-8",
+      "befund": "F004",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-f004-wind_richtung_einfach--nacht--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_f004_wind_einfach_mit_richtung_einfach",
+      "ac": "AC-8",
+      "befund": "F004",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-f004-wind_richtung_einfach--nacht--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_f004_wind_einfach_mit_richtung_einfach",
+      "ac": "AC-8",
+      "befund": "F004",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-f007-ausblick_zellen_je_bericht--morgen--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_f007_ausblick_zellen_je_bericht",
+      "ac": "AC-10",
+      "befund": "F007",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-f007-ausblick_zellen_je_bericht--morgen--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_f007_ausblick_zellen_je_bericht",
+      "ac": "AC-10",
+      "befund": "F007",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-f007-ausblick_zellen_je_bericht--morgen--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "ein_aus",
+      "test": "test_f007_ausblick_zellen_je_bericht",
+      "ac": "AC-10",
+      "befund": "F007",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-f007-ausblick_zellen_je_bericht--abend--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_f007_ausblick_zellen_je_bericht",
+      "ac": "AC-10",
+      "befund": "F007",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-f007-ausblick_zellen_je_bericht--abend--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_f007_ausblick_zellen_je_bericht",
+      "ac": "AC-10",
+      "befund": "F007",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-f007-ausblick_zellen_je_bericht--abend--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "ein_aus",
+      "test": "test_f007_ausblick_zellen_je_bericht",
+      "ac": "AC-10",
+      "befund": "F007",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-f008b-ueberblick_ohne_inhalt--de--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "zusatzblock",
+      "test": "test_f008b_ueberblick_ohne_inhalt_entfaellt",
+      "ac": "AC-9",
+      "befund": "F008b",
+      "status": "gruen",
+      "sprache": "de"
+    },
+    {
+      "id": "trip-f008b-ueberblick_ohne_inhalt--de--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "zusatzblock",
+      "test": "test_f008b_ueberblick_ohne_inhalt_entfaellt",
+      "ac": "AC-9",
+      "befund": "F008b",
+      "status": "gruen",
+      "sprache": "de"
+    },
+    {
+      "id": "trip-f008b-ueberblick_ohne_inhalt--de--kompakt",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "zusatzblock",
+      "test": "test_f008b_ueberblick_ohne_inhalt_entfaellt",
+      "ac": "AC-9",
+      "befund": "F008b",
+      "status": "gruen",
+      "sprache": "de"
+    },
+    {
+      "id": "trip-f008b-ueberblick_ohne_inhalt--en--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "zusatzblock",
+      "test": "test_f008b_ueberblick_ohne_inhalt_entfaellt",
+      "ac": "AC-9",
+      "befund": "F008b",
+      "status": "gruen",
+      "sprache": "en"
+    },
+    {
+      "id": "trip-f008b-ueberblick_ohne_inhalt--en--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "zusatzblock",
+      "test": "test_f008b_ueberblick_ohne_inhalt_entfaellt",
+      "ac": "AC-9",
+      "befund": "F008b",
+      "status": "gruen",
+      "sprache": "en"
+    },
+    {
+      "id": "trip-f008b-ueberblick_ohne_inhalt--en--kompakt",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "zusatzblock",
+      "test": "test_f008b_ueberblick_ohne_inhalt_entfaellt",
+      "ac": "AC-9",
+      "befund": "F008b",
+      "status": "gruen",
+      "sprache": "en"
     }
   ]
 }

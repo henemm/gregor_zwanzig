@@ -451,6 +451,19 @@ def _data_visible(page) -> bool:
     )
 
 
+def _ausblick_visible(page, tag: str) -> bool:
+    """#3047 F002: True, wenn eine Ausblick-Tabelle (erste Kopfzelle ``tag``,
+    "Tag"/"Day") bei diesem Viewport sichtbar ist -- sie traegt keinen
+    ``data-table``-Marker und zaehlt in ``_data_visible`` nicht mit."""
+    return page.evaluate(
+        "(tag)=>{for(const t of document.querySelectorAll('table')){"
+        "const th=t.querySelector('th');if(!th||th.textContent.trim()!==tag) continue;"
+        "const s=getComputedStyle(t);if(t.offsetHeight>0 && s.display!=='none') return true;}"
+        "return false;}",
+        tag,
+    )
+
+
 def _selector_present_and_visible(page, selector: str) -> tuple[bool, bool]:
     """(existiert, sichtbar) fuer einen Selektor im aktuellen Viewport."""
     res = page.evaluate(
@@ -470,12 +483,15 @@ def _nur_lokal(route) -> None:
         route.abort()
 
 
-def _check_rendered(html: str, daten_erwartet: bool = True) -> list[str]:
+def _check_rendered(html: str, daten_erwartet: bool = True,
+                    ausblick_tag: str | None = None) -> list[str]:
     """AC-1: headless Render bei 390px und 1000px; Daten muessen sichtbar bleiben.
 
     ``daten_erwartet=False`` (#3047 J4, nur per ``--konfig``): laut Soll hat die
-    Mail keine Datentabelle (bewusst leer) -- ein leerer Viewport ist dann kein
-    Fehler; die Dual-Render-Pruefung bleibt.
+    Mail keine Stundentabelle (bewusst leer bzw. leere E-Mail-Liste) -- ein
+    Viewport ohne Stundentabelle ist dann kein Fehler; die Dual-Render-Pruefung
+    bleibt. ``ausblick_tag`` (#3047 F002): laut Soll steht ein Ausblick in der
+    Mail -- seine Tabelle (erste Kopfzelle ``ausblick_tag``) muss sichtbar sein.
 
     Fehlt Playwright/Browser → RenderUnavailable (Exit 2), NICHT Exit 1.
     """
@@ -515,6 +531,8 @@ def _check_rendered(html: str, daten_erwartet: bool = True) -> list[str]:
                         f"FULL: bei {lbl} ist keine Wetterdaten-Tabelle sichtbar "
                         f"(Viewport leer — responsiver Block ohne Gegenstueck?)"
                     )
+                if ausblick_tag and not _ausblick_visible(page, ausblick_tag):
+                    errors.append(f"SOLL: FULL: bei {lbl} ist keine Ausblick-Tabelle sichtbar")
                 exists, visible = _selector_present_and_visible(page, wrong[w])
                 if exists and visible:
                     errors.append(
@@ -536,10 +554,11 @@ def _check_rendered(html: str, daten_erwartet: bool = True) -> list[str]:
 # Format-spezifische Validierung
 # --------------------------------------------------------------------------- #
 def _validate_full(
-    msg: Message, lang: str = "de", erwartet: tuple[bool, bool] = (True, True),
+    msg: Message, lang: str = "de", erwartet: tuple[bool, bool] = (True, False),
 ) -> tuple[bool, list[str]]:
-    """``erwartet`` = (Stundentabelle, irgendeine Datentabelle) laut Soll."""
-    stunden_erwartet, daten_erwartet = erwartet
+    """``erwartet`` = (Stundentabelle, Ausblick) laut Soll (#3047 F002)."""
+    stunden_erwartet, ausblick_erwartet = erwartet
+    ausblick_tag = _ml().erwartet("mail.ausblick.spalte_tag", lang) if ausblick_erwartet else None
     errors: list[str] = []
 
     if not msg.is_multipart() or msg.get_content_type() != "multipart/alternative":
@@ -562,7 +581,8 @@ def _validate_full(
     errors.extend(_check_plausibility(html, lang))
 
     if html:
-        errors.extend(_check_rendered(html, daten_erwartet))  # AC-1 (kann RenderUnavailable werfen)
+        # AC-1 (kann RenderUnavailable werfen)
+        errors.extend(_check_rendered(html, stunden_erwartet, ausblick_tag))
         errors.extend(_check_layer_consistency(html, lang))   # AC-3
         errors.extend(_check_metric_plausibility(html, lang))  # AC-4
 
@@ -657,7 +677,7 @@ def _check_compact_blocks(text: str, lang: str = "de", ueberblick: bool = True) 
         errors.append(f"COMPACT: Block '{pille}' fehlt")
     elif not ueberblick and pille in text:
         errors.append(f"SOLL: COMPACT: Block '{pille}' erscheint, obwohl die Grundauswahl "
-                      "bewusst leer ist")
+                      "bewusst leer ist bzw. keine gewaehlte Groesse eine Kachel traegt")
     if "----" not in text or "Generated:" not in text:
         errors.append("COMPACT: Footer (Trennlinie + Generated:) fehlt")
     return errors
@@ -679,11 +699,10 @@ def _soll_modul():
     return _soll_aus_konfiguration
 
 
-def _kuerzel_in_zeile(zeile: str, universum) -> list[str]:
-    """Spaltenkuerzel ``<Kuerzel> <Wert>`` einer Klartextzeile in Textfolge."""
-    treffer = [(m.start(), k) for k in universum
-               for m in re.finditer(r"(?<!\S)" + re.escape(k) + r" (?=\S)", zeile)]
-    return [k for _pos, k in sorted(treffer)]
+def _ausblick_kuerzel(zeile: str, mit_name: bool = False) -> list[str]:
+    """Spaltenkuerzel einer Ausblick-Zeile in Textfolge, ohne Wochentag und
+    (Trip-Klartext, ``mit_name``) Etappennamen davor (#3047 F001)."""
+    return [k for _pos, k in _soll_modul().ausblick_kuerzel(zeile, mit_name)]
 
 
 def _block_zeilen(text: str, ueberschrift: str) -> list[str]:
@@ -723,9 +742,8 @@ def _soll_klartext_koepfe(plain: str, lang: str) -> tuple[list, list, list]:
     for m in _ZEIT_KOPF_RE.finditer(plain):
         spalten = (m.group(1) or "").split()
         (nacht if 0 <= nacht_pos < m.start() else etappe).append(spalten)
-    universum = _soll_modul().ALLE_KUERZEL
     zeilen = _block_zeilen(plain, _ml().erwartet("mail.ausblick.naechste_etappen", lang))
-    return etappe, nacht, [_kuerzel_in_zeile(z, universum) for z in zeilen]
+    return etappe, nacht, [_ausblick_kuerzel(z, mit_name=True) for z in zeilen]
 
 
 def _soll_vergleich(was: str, koepfe: list, soll: list | None) -> list[str]:
@@ -752,10 +770,25 @@ def _soll_tabellen(teil: str, etappe: list, nacht: list, ausblick: list, s: dict
     return fehler
 
 
+def _soll_ueberblick(html: str, plain: str, s: dict, lang: str) -> list[str]:
+    """#3047 F008b (Vollformat): Metriken-Ueberblick genau dann, wenn eine
+    gewaehlte Groesse eine Kachel traegt -- im HTML (``<p>``-Ueberschrift) und
+    im Klartext (``━━ … ━━``). Kompakt: ``_check_compact_blocks``."""
+    titel = _ml().erwartet("mail.pille.ueberschrift", lang)
+    fehler = []
+    for teil, da in (("HTML", f">{titel}</p>" in html), ("Klartext", f"━━ {titel} ━━" in plain)):
+        if s["ueberblick"] and not da:
+            fehler.append(f"SOLL: Metriken-Ueberblick fehlt im {teil}-Teil")
+        elif da and not s["ueberblick"]:
+            fehler.append(f"SOLL: Metriken-Ueberblick ({teil}) erscheint, obwohl keine gewaehlte "
+                          "Groesse eine Kachel traegt")
+    return fehler
+
+
 def _soll_kompakt(text: str, s: dict, lang: str) -> list[str]:
     """Kompaktformat: Reihenfolge der Ausblick-Tokens je Tageszeile."""
     ueberschrift = _ml().erwartet("mail.ausblick.naechste_etappen", lang).translate(_FOLD)
-    zeilen = [_kuerzel_in_zeile(z, _soll_modul().ALLE_KUERZEL) for z in _block_zeilen(text, ueberschrift)]
+    zeilen = [_ausblick_kuerzel(z) for z in _block_zeilen(text, ueberschrift)]
     if zeilen and not s["ausblick_an"]:
         return ["SOLL: Ausblick (Kompakt) erscheint, obwohl er laut Konfiguration aus ist"]
     if s["ausblick"] is None or s["ausblick"]["fest"]:
@@ -835,17 +868,15 @@ def _klartext_zellen(plain: str, lang: str) -> dict[str, list]:
             tabelle.append([(k, zeile[p:grenzen[j + 1]]) for j, (p, k) in enumerate(kopf)])
         (arten["Nachttabelle"] if 0 <= nacht_pos < m.start() else arten["Etappen-Stundentabelle"]).append(tabelle)
     arten["Ausblick"].append(_ausblick_zellen(
-        _block_zeilen(plain, _ml().erwartet("mail.ausblick.naechste_etappen", lang))))
+        _block_zeilen(plain, _ml().erwartet("mail.ausblick.naechste_etappen", lang)), mit_name=True))
     return arten
 
 
-def _ausblick_zellen(zeilen: list[str]) -> list[list]:
+def _ausblick_zellen(zeilen: list[str], mit_name: bool = False) -> list[list]:
     """Ausblick-Zeilen (Klartext/Kompakt) -> je Zeile [(Kuerzel, Wert), ...]."""
-    universum = _soll_modul().ALLE_KUERZEL
     ausblick = []
     for zeile in zeilen:
-        treffer = sorted((t.start(), k) for k in universum
-                         for t in re.finditer(r"(?<!\S)" + re.escape(k) + r" (?=\S)", zeile))
+        treffer = _soll_modul().ausblick_kuerzel(zeile, mit_name)
         grenzen = [p for p, _k in treffer] + [len(zeile)]
         ausblick.append([(k, zeile[p + len(k):grenzen[j + 1]].strip().split("  ")[0])
                          for j, (p, k) in enumerate(treffer)])
@@ -863,6 +894,57 @@ def _soll_darstellung(html: str, plain: str, s: dict, lang: str) -> list[str]:
                                   ("Klartext", _klartext_zellen(plain, lang), False)):
         for art, tabellen in arten.items():
             fehler += _darstellung_meldungen(art, tabellen, formen[art], teil, ist_html)
+    return fehler
+
+
+#: Kompassrichtungen der Wind-Zelle (``utils.geo.degrees_to_compass``, EN und DE).
+_KOMPASS_RE = re.compile(r"(?<![A-Za-z])(?:N|NE|NO|E|O|SE|SO|S|SW|W|NW)(?![A-Za-z])")
+
+
+def _soll_windrichtung(html: str, plain: str, s: dict, lang: str) -> list[str]:
+    """#3047 F004: Windrichtung angehakt und mit Wind verschmolzen (keine
+    eigene WDir-Spalte) -> jede Wind-Zelle der Etappen- und Nachttabelle traegt
+    eine Kompassrichtung, im HTML (auch neben dem Ampelpunkt) wie im Klartext."""
+    if not s.get("wind_richtung"):
+        return []
+    wind = _soll_modul()._REG["wind"].col_label
+    fehler = []
+    for teil, arten, ist_html in (("HTML", _html_zellen(html, lang), True),
+                                  ("Klartext", _klartext_zellen(plain, lang), False)):
+        for art in ("Etappen-Stundentabelle", "Nachttabelle"):
+            for i, zeilen in enumerate(arten[art]):
+                ohne = next((z for zeile in zeilen for k, z in zeile if k == wind
+                             and _zellform(z, ist_html) is not None
+                             and not _KOMPASS_RE.search(_strip_tags(z) if ist_html else z)), None)
+                if ohne is not None:
+                    fehler.append(f"SOLL: Windrichtung {art} ({teil}) {i + 1}: Wind-Zelle ohne "
+                                  f"Kompassrichtung ('{_strip_tags(ohne).strip()}'), obwohl "
+                                  "wind_direction mit Wind verschmolzen ist")
+    return fehler + _windrichtung_paritaet(html, plain, wind, lang)
+
+
+def _richtungen(tabelle: list, wind: str, ist_html: bool) -> list[str]:
+    """Kompassrichtung je Wind-Zelle einer Tabelle ("" = keine)."""
+    folge = []
+    for zeile in tabelle:
+        for k, z in zeile:
+            if k == wind:
+                treffer = _KOMPASS_RE.search(_strip_tags(z) if ist_html else z)
+                folge.append(treffer.group() if treffer else "")
+    return folge
+
+
+def _windrichtung_paritaet(html: str, plain: str, wind: str, lang: str) -> list[str]:
+    """#3047 F004: dieselbe Richtung je Stunde im HTML wie im Klartext."""
+    h_arten, p_arten = _html_zellen(html, lang), _klartext_zellen(plain, lang)
+    fehler = []
+    for art in ("Etappen-Stundentabelle", "Nachttabelle"):
+        if len(h_arten[art]) != len(p_arten[art]):
+            continue  # Tabellenzahl prueft der Spaltenabgleich
+        for i, (h, p) in enumerate(zip(h_arten[art], p_arten[art])):
+            rh, rp = _richtungen(h, wind, True), _richtungen(p, wind, False)
+            if rh != rp:
+                fehler.append(f"SOLL: Windrichtung {art} {i + 1}: HTML {rh} ungleich Klartext {rp}")
     return fehler
 
 
@@ -915,14 +997,15 @@ def _soll_report(msg: Message, soll: dict) -> dict:
 
 
 def _tabellen_erwartet(msg: Message, soll: dict | None) -> tuple[bool, bool]:
-    """#3047 J4: (Stundentabelle, irgendeine Datentabelle) laut Soll. Ohne
-    ``--konfig`` bleibt alles Pflicht. Bewusst leer (Stunden ``[]``) -> die
-    Stundentabelle entfaellt (J3); ohne Ausblick gibt es gar keine Tabelle."""
+    """#3047 J4/F002: (Stundentabelle, Ausblick) laut Soll. Ohne ``--konfig``
+    bleibt die Stundentabelle Pflicht (sichtbar), der Ausblick ungeprueft.
+    Bewusst leer bzw. leere E-Mail-Liste (Stunden ``[]``) -> die Stundentabelle
+    entfaellt (J3); ein erwarteter Ausblick muss dann selbst sichtbar sein --
+    die Sichtbarkeit der Stundentabellen haengt nie am Ausblick."""
     if soll is None or soll.get("kontext") != "trip":
-        return True, True
+        return True, False
     s = _soll_report(msg, soll)
-    stunden = s["stunden"] != []
-    return stunden, stunden or bool(s["ausblick_an"])
+    return s["stunden"] != [], bool(s["ausblick_an"])
 
 
 def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
@@ -947,12 +1030,13 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
     for name, h, p in zip(("Etappen-Stundentabelle", "Nachttabelle", "Ausblick"), koepfe_html, koepfe_plain):
         if bool(h) != bool(p):
             fehler.append(f"SOLL: {name} fehlt im {'Klartext' if h else 'HTML'}-Teil")
+    fehler += _soll_ueberblick(html, plain, s, lang)
     fehler += _soll_tabellen("HTML", *koepfe_html, s)
     fehler += _soll_tabellen("Klartext", *koepfe_plain, s)
     # #3047 N7: keine Ueberschrift ohne Tabelle ("Segment 1"/"Nacht am Ziel"
     # bei bewusst leerer Auswahl) -- dann muss der ganze Abschnitt entfallen.
     fehler += _verwaist_html(html, lang) + _verwaist_klartext(plain, lang)
-    return fehler + _soll_darstellung(html, plain, s, lang)
+    return fehler + _soll_darstellung(html, plain, s, lang) + _soll_windrichtung(html, plain, s, lang)
 
 
 # --------------------------------------------------------------------------- #

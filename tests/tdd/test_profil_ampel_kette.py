@@ -897,8 +897,9 @@ DIENST_EINSTIEGE = {
     ("radar_alert_service.py", "build_onset_alert_message"): 1,
     ("validator_render_service.py", "_deviation_preview_message"): 1,
     ("validator_render_service.py", "render_alert_preview"): 1,
-    # S1c-4b: der Ausblick wird je stage_trip mit dessen Ampel gebaut.
-    ("trip_report_scheduler.py", "_build_stage_trend"): 1,
+    # S1c-4b: der Ausblick wird je stage_trip mit dessen Ampel gebaut
+    # (#3047 F007: Zeilenbau aus _build_stage_trend in trend_zeile).
+    ("trip_report_scheduler.py", "trend_zeile"): 1,
     # S1c-4b (Spec v1.4 Punkt 7): die Telegram-Drilldowns loesen die Trip-
     # Ampel fuer das Gewitter-Emoji (thunder_color) auf.
     ("trip_command_processor.py", "_handle_drilldown"): 1,

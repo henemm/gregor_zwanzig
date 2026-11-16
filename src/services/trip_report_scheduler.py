@@ -408,6 +408,60 @@ def _trend_note(
     return " · ".join(notes) if notes else None
 
 
+def trend_zeile(
+    stage_trip, agg, seg_weather: list, weekday: str, tz, *,
+    report_type: str, lang: Lang = "de",
+) -> dict:
+    """Eine Ausblick-Zeile, wie ``_build_trend`` sie baut (#3047 F007: aus
+    ``_build_trend`` herausgeloest, ohne Verhaltensaenderung, damit der
+    Pruefkatalog genau diesen Aufruf faehrt statt ihn nachzubauen).
+
+    ``agg``: Tagesaggregat der Etappe; ``seg_weather``: deren Wetterdaten;
+    ``tz``: Zeitzone (Pflicht, der Aufrufer loest sie auf).
+    ``date``/``name``/``note`` setzt der Aufrufer.
+    """
+    # Epic #1301 B4: Zeilenbau in geteilten Baustein extrahiert
+    # (build_outlook_row, Trip/Compare-Teilungs-Invariante).
+    from output.renderers.email.outlook import build_outlook_row
+    # Issue #1653: konfiguriertes Tagesfenster durchreichen, damit die
+    # Gewitter-Zelle des Ausblicks Tag und Nacht am selben Fenster trennt
+    # wie die Gewitter-Vorschau (#1651).
+    from app.day_window import resolve_configured_window
+
+    _flat_points = [
+        dp for sw in seg_weather if sw.timeseries is not None
+        for dp in sw.timeseries.data
+    ]
+    dc = getattr(stage_trip, "display_config", None)
+    _rc = getattr(stage_trip, "report_config", None)
+    _win_start, _win_end = resolve_configured_window(
+        getattr(_rc, "day_window_start_hour", None),
+        getattr(_rc, "day_window_end_hour", None),
+    )
+    return build_outlook_row(
+        agg, _flat_points, weekday, tz,
+        # Issue #2792 S1c-4b (Spec v1.5 Punkt 3): je stage_trip dessen
+        # Ampel; `sms_threshold` wirkt nicht mehr (E1).
+        ampel=resolve_ampel(stage_trip),
+        # #1720 S1: ungekollabierte Konfiguration durchreichen, nicht selbst
+        # aufloesen -- Renderer-Vokabular gehoert in die Ausgabeschicht
+        # (test_scheduler_has_no_output_imports).
+        trip_display_config=dc, report_type=report_type,
+        # Issue #2792 S1c-4a: Trip-Zweig ausdruecklich, auch ohne dc.
+        context="route",
+        day_window_start_hour=_win_start,
+        day_window_end_hour=_win_end,
+        # #1848 A1 (AC-1/AC-2/AC-3): Gehzeit-Fenster statt Etappenaggregat
+        # fuer Temperatur/gefuehlte Temperatur. Die Ableitung passiert
+        # INNERHALB von build_outlook_row -- der Zeitplaner darf dieses
+        # Renderer-Modul nicht selbst importieren
+        # (test_scheduler_has_no_output_imports).
+        segments=seg_weather,
+        # Issue #2750: Ausblick-Zellen (Wortskalen) in Nutzersprache.
+        lang=lang,
+    )
+
+
 def _night_thunder_hours(night_weather, fc_date: date, to_local):
     """``night_weather`` -> ``(Ortszeit-Stunde, ThunderLevel)`` fuer EINEN Tag.
 
@@ -3037,13 +3091,9 @@ class TripReportSchedulerService:
 
                 agg = aggregate_stage(seg_weather)
 
-                # Epic #1301 B4: Zeilenbau in geteilten Baustein extrahiert
-                # (build_outlook_row, Trip/Compare-Teilungs-Invariante).
                 # note bleibt trip-eigen (kein Feld von build_outlook_row),
                 # aus denselben Werten berechnet, die build_outlook_row intern
                 # aus `agg` ableitet.
-                from output.renderers.email.outlook import build_outlook_row
-
                 _thunder_name = (
                     agg.thunder_level_max.name
                     if agg.thunder_level_max is not None else "NONE"
@@ -3054,52 +3104,13 @@ class TripReportSchedulerService:
                     int(agg.wind_max_kmh or 0),
                     lang=self._lang,
                 )
-
                 _tz = tz if tz is not None else ZoneInfo("UTC")
-                _flat_points = [
-                    dp for sw in seg_weather if sw.timeseries is not None
-                    for dp in sw.timeseries.data
-                ]
-
-                dc = getattr(stage_trip, "display_config", None)
-
-                # Issue #1653: konfiguriertes Tagesfenster durchreichen, damit
-                # die Gewitter-Zelle des Ausblicks Tag und Nacht am selben
-                # Fenster trennt wie die Gewitter-Vorschau (#1651).
-                from app.day_window import resolve_configured_window
-
-                _rc = getattr(stage_trip, "report_config", None)
-                _win_start, _win_end = resolve_configured_window(
-                    getattr(_rc, "day_window_start_hour", None),
-                    getattr(_rc, "day_window_end_hour", None),
-                )
-                row = build_outlook_row(
-                    agg, _flat_points, fmt_weekday(stage.date, self._lang), _tz,
-                    # Issue #2792 S1c-4b (Spec v1.5 Punkt 3): je stage_trip
-                    # dessen Ampel; `sms_threshold` wirkt nicht mehr (E1).
-                    ampel=resolve_ampel(stage_trip),
-                    # #1720 S1: ungekollabierte Konfiguration durchreichen,
-                    # nicht selbst aufloesen -- Renderer-Vokabular gehoert in
-                    # die Ausgabeschicht (test_scheduler_has_no_output_imports).
-                    trip_display_config=dc, report_type=report_type,
-                    # Issue #2792 S1c-4a: Trip-Zweig ausdruecklich, auch ohne dc.
-                    context="route",
-                    day_window_start_hour=_win_start,
-                    day_window_end_hour=_win_end,
-                    # #1848 A1 (AC-1/AC-2/AC-3): Gehzeit-Fenster statt
-                    # Etappenaggregat fuer Temperatur/gefuehlte Temperatur --
-                    # derselbe Randbehandlungsfehler (exklusive
-                    # Ankunftsstunde), den #1417 bereits fuer SMS/Telegram/
-                    # Kachelzeile behoben hat. `seg_weather` liegt hier
-                    # bereits vor; die Ableitung (collect_hiking_window_points
-                    # + hiking_field_min_max, output.renderers.day_window)
-                    # passiert INNERHALB von build_outlook_row -- der
-                    # Zeitplaner darf dieses Renderer-Modul nicht selbst
-                    # importieren (test_scheduler_has_no_output_imports).
-                    segments=seg_weather,
-                    # Issue #2750: Ausblick-Zellen (Wortskalen) in
-                    # Nutzersprache.
-                    lang=self._lang,
+                # #3047 F007: Zeilenbau in `trend_zeile` (modulweit, vom
+                # Pruefkatalog direkt gefahren).
+                row = trend_zeile(
+                    stage_trip, agg, seg_weather,
+                    fmt_weekday(stage.date, self._lang), _tz,
+                    report_type=report_type, lang=self._lang,
                 )
                 # Issue #1275: explicit calendar date so the thunder forecast
                 # can reuse this row (matched by date, gap-safe) instead of

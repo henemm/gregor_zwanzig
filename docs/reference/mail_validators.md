@@ -209,6 +209,34 @@ Randfälle (dritte Nachprüfung #3047, N1–N7), alle nur mit `--konfig`:
   Vergleichszeilen, die `channel_layouts.email` auf Einfach stellt
   (Ampelpunkt/Wort ohne Zahl), sind kein FORMAT-Fehler.
 
+Randfälle (vierte Prüfung #3047, F001–F008a), alle nur mit `--konfig`:
+
+- **Zeilenpräfix im Ausblick (F001):** Wochentag (EN „Sun") und im
+  Trip-Klartext das 26 Zeichen breite Etappennamen-Feld („Wind Pass",
+  „Sun Valley") stehen vor den Werten und sind keine Spaltenkürzel; sie werden
+  vor der Kürzelsuche abgetrennt (`ausblick_kuerzel`).
+- **Leere E-Mail-Liste mit Ausblick (F002):** die Sichtbarkeitsprüfung bei
+  390px/1000px hängt nur an den Stundentabellen; erwartet das Soll einen
+  Ausblick, muss dessen Tabelle (Kopfzelle „Tag"/„Day") bei beiden Breiten
+  sichtbar sein.
+- **Ortsabschnitte im Orte-Klartext (F006):** Anzahl und Folge der
+  Ortsabschnitte gegen `location_ids` (Fehler-Orte ausgenommen); je Ort muss
+  der Stundenverlauf bzw. der Ausblick stehen, wenn er laut Konfiguration an
+  ist („Stundenverlauf (Klartext) fehlt bei Ort 'Kufstein'").
+- **Ortszahl aus der Konfiguration (F008a):** ohne ausdrückliches
+  `--min-locations` gilt die Ortszahl der Konfiguration; eine Kennung ohne
+  Ortsdatei (gelöschter Ort) fällt wie im Versand heraus
+  (`order_locations_by_ids`). Ein gesetztes `--min-locations` hat Vorrang.
+- **Verschmolzene Windrichtung (F004):** Windrichtung Einfach neben Wind (keine
+  eigene WDir-Spalte) → jede Wind-Zelle der Etappen- und Nachttabelle trägt eine
+  Kompassrichtung, im HTML auch neben dem Ampelpunkt, im Klartext („20 W");
+  die Richtung je Stunde ist im HTML dieselbe wie im Klartext.
+- **Metriken-Überblick nur mit Kachel (F008b):** der Überblick (Voll: HTML und
+  Klartext, Kompakt) steht genau dann in der Mail, wenn eine Größe der
+  E-Mail-Liste dieses Berichts eine Kachel trägt (weiße Liste `_PILL_CATALOG_ORDER`);
+  nur z. B. `temperature_night` gewählt → kein Überblick. Kacheln, die mangels
+  Werten entfallen, sind aus der Konfiguration nicht ableitbar.
+
 **Auflösung des Verbots aus #1381:** Eine feste Spaltenfolge (`_HOUR_COLUMNS_V2`)
 wird weiterhin **nie** vorausgesetzt — die Folge ist seit #1359 frei
 einstellbar, die alte Kanon-Projektion lehnte korrekte Mails ab und blockierte

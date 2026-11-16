@@ -1182,12 +1182,56 @@ def _klartext_abschnitte(text: str, lang: str) -> Tuple[List[List[str]], List[Li
         if zeile.strip() == ausblick_titel:
             im_ausblick = True
         elif im_ausblick and zeile and not zeile.startswith(" "):
-            ausblick.append(_kuerzel_in_zeile(zeile))
+            # #3047 F001: Wochentag ("Sun") vor den Werten ist keine Spalte.
+            ausblick.append([k for _p, k in _soll_modul().ausblick_kuerzel(zeile)])
         else:
             im_ausblick = im_ausblick and zeile.startswith(" ")
             if _STUNDE_RE.match(zeile) and not _STUNDE_RE.match(zeilen[i - 1]):
                 stunden.append(_kuerzel_in_zeile(zeile))
     return stunden, ausblick
+
+
+def _klartext_ortsabschnitte(text: str, lang: str, namen) -> List[Tuple[str, bool, bool]]:
+    """#3047 F006: (Ort, hat Stundenzeilen, hat Ausblick-Ueberschrift) je
+    Ortsabschnitt des Klartexts in Textfolge. Ein Abschnitt beginnt mit dem
+    Ortsnamen (ggf. mit Zeitzone, ``Innsbruck (CET)``), dem direkt Stunden-
+    zeilen oder die Ausblick-Ueberschrift folgen, und endet an der Leerzeile."""
+    zeilen = text.splitlines()
+    titel = _t("vergleich.ausblick.titel", lang)
+    abschnitte = []
+    for i, zeile in enumerate(zeilen[:-1]):
+        name = next((n for n in namen if zeile == n or (
+            zeile.startswith(f"{n} (") and zeile.endswith(")"))), None)
+        if name is None or not (_STUNDE_RE.match(zeilen[i + 1]) or zeilen[i + 1] == titel):
+            continue
+        block = []
+        for folge in zeilen[i + 1:]:
+            if not folge.strip():
+                break
+            block.append(folge)
+        abschnitte.append((name, any(_STUNDE_RE.match(z) for z in block), titel in block))
+    return abschnitte
+
+
+def _soll_ortsabschnitte(plain: str, lang: str, soll: dict, html_orte, fehlerorte) -> List[str]:
+    """#3047 F006: Anzahl und Ortszuordnung der Klartext-Ortsabschnitte gegen
+    die Ortsfolge der Konfiguration; je Ort Stundenverlauf bzw. Ausblick, wenn
+    laut Konfiguration an (ein einzelner fehlender Block faellt auf)."""
+    if not (soll["stunden_an"] or soll["ausblick_an"]):
+        return []
+    abschnitte = _klartext_ortsabschnitte(plain, lang, soll["orte"] or html_orte)
+    fehler = []
+    if soll["orte"] is not None:
+        erwartet = [n for n in soll["orte"] if n not in fehlerorte]
+        diff = _soll_modul().abweichung([a[0] for a in abschnitte], erwartet)
+        if diff:
+            fehler.append(f"SOLL: Ortsabschnitte (Klartext): {diff}".replace("Spalte", "Ort"))
+    for name, stunden, ausblick in abschnitte:
+        if soll["stunden_an"] and not stunden:
+            fehler.append(f"SOLL: Stundenverlauf (Klartext) fehlt bei Ort '{name}'")
+        if soll["ausblick_an"] and not ausblick:
+            fehler.append(f"SOLL: Ausblick (Klartext) fehlt bei Ort '{name}'")
+    return fehler
 
 
 def _soll_listen(was: str, koepfe: list, soll) -> List[str]:
@@ -1251,6 +1295,7 @@ def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
         sektionen = _ORT_KOPF_RE.findall(body)
         fehler += _soll_orte_folge("HTML-Abschnitte", sektionen, [n for n in soll["orte"] if n in sektionen])
     fehler += _soll_teil("HTML", *html, soll)
+    fehler += _soll_ortsabschnitte(plain, lang, soll, html[1], {b[0] for b in bloecke if b[1] is None})
     return fehler + _soll_teil("Klartext", [b[1] for b in bloecke if b[1] is not None],
                                [b[0] for b in bloecke], stunden, ausblick, soll)
 
@@ -1327,13 +1372,33 @@ def validate_message(
     return len(all_errors) == 0, all_errors
 
 
+def _min_orte(gesetzt: "int | None", konfig: "dict | None") -> int:
+    """#3047 F008a: Mindest-Ortszahl. Ausdruecklich gesetztes ``--min-locations``
+    hat Vorrang; mit ``--konfig`` die Orte der Konfiguration -- eine Kennung
+    ohne Ortsdatei (geloeschter Ort) faellt wie im Versand heraus
+    (``order_locations_by_ids``); ohne aufloesbare Namen hoechstens die Zahl der
+    Kennungen. Sonst der bisherige Standard 3."""
+    if gesetzt is not None:
+        return gesetzt
+    if konfig is None:
+        return 3
+    soll = _soll_modul().soll_aus_daten(konfig)
+    if soll.get("kontext") != "orte":
+        return 3
+    if soll["orte"] is not None:
+        return len(soll["orte"])
+    preset = konfig["preset"] if isinstance(konfig.get("preset"), dict) else konfig
+    return min(3, len([i for i in preset.get("location_ids") or [] if isinstance(i, str)]))
+
+
 def main():
     parser = argparse.ArgumentParser(description="E-Mail Spec v4.0 Validator")
     parser.add_argument(
         "--min-locations",
         type=int,
-        default=3,
-        help="Mindestanzahl erwarteter Locations (default: 3)"
+        default=None,
+        help="Mindestanzahl erwarteter Locations (default: 3; mit --konfig die "
+             "Ortszahl der Konfiguration, #3047 F008a)"
     )
     # Issue #1242: Die Projekt-Konvention (CLAUDE.md, "Mail-Validatoren &
     # Renderer-Gate") verlangt den Aufruf JEDES Mail-Validators mit
@@ -1451,6 +1516,7 @@ def main():
             sys.exit(2)
         preset = konfig["preset"] if isinstance(konfig.get("preset"), dict) else konfig
         konfig = {"preset": preset, "orte": {**(konfig.get("orte") or {}), **namen}}
+    args.min_locations = _min_orte(args.min_locations, konfig)
     if args.eml:
         # Issue #2663: Mail aus Datei statt IMAP (Fixtures ohne Netz pruefbar).
         try:

@@ -412,6 +412,46 @@ def test_ein_metrik_nur_je_bericht_eingeschaltet(monkeypatch, fall):
             f"{wo}: Ausblick {tab and tab.spalten} != {soll_ausblick_folge}")
 
 
+_ANDERER_BERICHT = {"morning": "evening", "evening": "morning"}
+
+
+@pytest.mark.parametrize("fall", _faelle("test_f007_ausblick_zellen_je_bericht"))
+def test_f007_ausblick_zellen_je_bericht(monkeypatch, fall):
+    """#3047 F007 (vierte Pruefung): Boeen sind global AUS, aber fuer EINEN
+    Bericht ein (``enabled: false``, ``<bericht>_enabled: true``);
+    Niederschlag ist global EIN, aber fuer denselben Bericht aus
+    (``<bericht>_enabled: false``). Die Ausblick-Zeilen entstehen ueber den
+    Zeilenbau des Zeitplaners. Der Ausblick dieses Berichts zeigt Boeen und
+    Temperatur, der des anderen Berichts Niederschlag und Temperatur -- und
+    zwar mit den WERTEN der jeweiligen Groesse: jede Zelle gleicht der Zelle
+    derselben Groesse in einer Referenz-Mail ohne Bericht-Schalter (eine
+    Spalte mit fremdem Wert -- Kopf aus dem einen, Zeile aus dem anderen
+    Bericht -- faellt so auf)."""
+    bericht = {"morgen": "morning", "abend": "evening"}[_variante(fall)]
+    folge = ["gust", "precipitation", "temperature"]
+    data = trip_json(folge, outlook_metrics=folge)
+    for eintrag in data["display_config"]["metrics"]:
+        if eintrag["metric_id"] == "gust":
+            eintrag["enabled"] = False
+            eintrag[f"{bericht}_enabled"] = True
+        elif eintrag["metric_id"] == "precipitation":
+            eintrag[f"{bericht}_enabled"] = False
+    fmt = fall["format"]
+    for rt, soll in ((bericht, ["gust", "temperature"]),
+                     (_ANDERER_BERICHT[bericht], ["precipitation", "temperature"])):
+        wo = f"{fall['id']} ({rt})"
+        rh, rtext, _ = _senden(monkeypatch, trip_json(folge, outlook_metrics=folge), fmt,
+                               report_type=rt)
+        ref = _ausblick(rh, rtext, fmt)
+        assert ref is not None and ref.spalten == folge, f"{wo}: Referenz {ref and ref.spalten}"
+        html, text, _ = _senden(monkeypatch, data, fmt, report_type=rt)
+        tab = _ausblick(html, text, fmt)
+        assert tab is not None and tab.spalten == soll, f"{wo}: Ausblick {tab and tab.spalten}"
+        for m in soll:
+            assert tab.spalte(m) == ref.spalte(m), (
+                f"{wo}: Ausblick-Zellen {m} {tab.spalte(m)} != Referenz {ref.spalte(m)}")
+
+
 # ---------------------------------------------------------------------------
 # AC-8 -- Roh/Einfach
 # ---------------------------------------------------------------------------
@@ -450,6 +490,40 @@ def test_ac8_windrichtung_einfach_verschmilzt_mit_wind(monkeypatch, fall):
     tab = _stundentabellen(html, text, fall["format"], "etappe")[0]
     assert tab.spalten == ["wind", "temperature"], tab.spalten
     assert tab.spalte("wind")[0].split()[-1] in {"N", "NE", "E", "SE", "S", "SW", "W", "NW"}
+
+
+_KOMPASS = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"}
+
+
+@pytest.mark.parametrize("fall", _faelle("test_f004_wind_einfach_mit_richtung_einfach"))
+def test_f004_wind_einfach_mit_richtung_einfach(monkeypatch, fall):
+    """#3047 F004 (vierte Pruefung, Kanal-Paritaet): Wind UND Windrichtung auf
+    Einfach. Die Windrichtung verschmilzt in die Wind-Zelle (#435); der
+    Klartext zeigt "20 W", die HTML-Zelle den Ampelpunkt (#814) UND dieselbe
+    Himmelsrichtung -- je Zeile dieselbe Richtung wie der Klartext, in
+    Etappen- und Nachttabelle."""
+    from tests.helpers.einstellung_gleich_mail_trip import zellform
+
+    data = trip_json(["wind", "wind_direction", "temperature"],
+                     einfach={"wind", "wind_direction"})
+    html, text, _ = _senden(monkeypatch, data, "html")
+    art = "nacht" if fall["liste"] == "trip_nachttabelle" else "etappe"
+    klar = klartext_tabellen(text)[art]
+    assert klar and klar[0].spalten == ["wind", "temperature"], klar
+    richtungen = [z.split()[-1] if z.split() else "" for z in klar[0].spalte("wind")]
+    assert richtungen and set(richtungen) <= _KOMPASS, f"Klartext ohne Richtung: {richtungen}"
+    if fall["format"] == "klartext":
+        return
+    tabellen = html_tabellen(html)[art]
+    assert tabellen, f"{fall['id']}: HTML-Tabelle fehlt"
+    for tab in tabellen:
+        assert tab.spalten == ["wind", "temperature"], tab.spalten
+        zellen = tab.spalte("wind")
+        ist = [z.split()[-1] if z.split() else "" for z in zellen]
+        assert ist == richtungen, f"{fall['id']}: HTML-Richtung {ist} != Klartext {richtungen}"
+        j = tab.spalten.index("wind")
+        formen = {zellform(z[j], f[j]) for z, f in zip(tab.zellen, tab.fragmente)}
+        assert formen == {"einfach"}, f"{fall['id']}: Wind-Zelle ohne Ampelpunkt: {tab.zellen[:1]}"
 
 
 @pytest.mark.parametrize("fall", _faelle("test_ac8_ampel_groesse_einfach"))
@@ -890,6 +964,39 @@ def test_n7_bewusst_leer_ohne_leere_ueberschriften(monkeypatch, fall):
     gefunden = [v for v in verboten if v in gelesen]
     assert not gefunden, f"{fall['id']}: leere Ueberschrift(en) ohne Tabelle: {gefunden}"
     assert STAGE_NAME in gelesen, f"{fall['id']}: Vorbedingung Kopf der Mail fehlt"
+
+
+def _ueberblick_kopf(gelesen: str, lang: str) -> bool:
+    """Steht die Ueberschrift des Metriken-Ueberblicks (Katalogtext, Kompakt
+    in ASCII-Umschrift) im gelesenen Mail-Teil?"""
+    kopf = katalogtext("mail.pille.ueberschrift", lang)
+    ascii_kopf = kopf.replace("Ü", "Ue").replace("ü", "ue")
+    return kopf in gelesen or ascii_kopf in gelesen
+
+
+@pytest.mark.parametrize("fall", _faelle("test_f008b_ueberblick_ohne_inhalt_entfaellt"))
+def test_f008b_ueberblick_ohne_inhalt_entfaellt(monkeypatch, fall):
+    """#3047 F008b (vierte Pruefung): gewaehlt ist allein eine Groesse ohne
+    Ueberblick-Kachel (Nacht-Tiefsttemperatur). Der Metriken-Ueberblick hat
+    dann keinen Inhalt -- seine Ueberschrift entfaellt mit, in HTML, Klartext
+    und Kompakt, DE und EN. Gegenprobe: mit Temperatur steht sie da."""
+    lang = fall.get("sprache", "de")
+    fmt = fall["format"]
+
+    def gelesen(folge):
+        data = trip_json(folge)
+        if fmt == "kompakt":
+            data["report_config"]["email_format"] = "compact"
+        mitschrift, _trip, _uid = render_trip_mit_ausblick(monkeypatch, data, language=lang)
+        html, text = mail_teile(mitschrift)
+        return html_text(html) if fmt == "html" else text
+
+    assert _ueberblick_kopf(gelesen(["temperature", "temperature_night"]), lang), (
+        f"{fall['id']}: Vorbedingung -- Ueberblick-Ueberschrift mit Temperatur fehlt")
+    leer = gelesen(["temperature_night"])
+    assert STAGE_NAME in leer, f"{fall['id']}: Vorbedingung Kopf der Mail fehlt"
+    assert not _ueberblick_kopf(leer, lang), (
+        f"{fall['id']}: Ueberblick-Ueberschrift ohne Inhalt")
 
 
 #: Register-Standard im 3-Tages-Ausblick (von Hand): die ausblickfaehigen
