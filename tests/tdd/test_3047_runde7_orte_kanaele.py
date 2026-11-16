@@ -10,11 +10,9 @@ Echter Weg: rohes Preset-JSON im Nutzerordner -> ``load_compare_presets`` ->
 frischen Nutzern. Erwartungen stehen von Hand im Test bzw. kommen aus dem rohen
 JSON, nie aus ``resolve_*``.
 
-Ausnahme B-K7 (3-Tages-Ausblick im Orte-Telegram): der Versandaufruf
-(``scheduler_dispatch_service.py``) reicht die Ausblick-Einstellungen noch nicht
-an ``render_compare_telegram`` -- die Datei liegt ausserhalb dieses Pakets. Der
-Kettentest steht deshalb als ``xfail(strict=True)``; der Renderer-Test darunter
-nimmt die Optionen aus dem ECHTEN Loader und Resolver des gespeicherten JSON.
+B-K7 (3-Tages-Ausblick im Orte-Telegram): seit Paket p2b reicht der
+Versandaufruf (``scheduler_dispatch_service.py``) die Ausblick-Einstellungen an
+``render_compare_telegram``; der Kettentest laeuft ohne ``xfail``.
 """
 from __future__ import annotations
 
@@ -159,7 +157,12 @@ def ortsbloecke(tg: str) -> dict[str, list[str]]:
 
 
 def wertezeilen(block: list[str]) -> list[list[str]]:
-    """Zellen der Werte-Zeilen eines Ortsblocks (Zeilen mit ' · ')."""
+    """Zellen der Werte-Zeilen eines Ortsblocks (Zeilen mit ' · '), nur der
+    Telegram-Liste: der 3-Tages-Ausblick (ab Kopf "Ausblick"/"Outlook", B-K7)
+    gehoert nicht dazu."""
+    for kopf in ("Ausblick", "Outlook"):
+        if kopf in block:
+            block = block[:block.index(kopf)]
     return [z.split(" · ") for z in block if " · " in z]
 
 
@@ -381,12 +384,49 @@ def test_k7_ausblick_im_orte_telegram_renderer(mit, lang):
                 assert not any("Ausblick" in z or "Outlook" in z for z in tg.splitlines()), tg
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "B-K7: scheduler_dispatch_service.py reicht outlook_* noch nicht an "
-    "render_compare_telegram (Datei ausserhalb Paket p2, Verdrahtung gemeldet)"))
-def test_k7_ausblick_im_orte_telegram_kette(mit):
-    for uid, snap in zwei_nutzer(mit, _ausblick_preset()):
-        _pruefe_ausblick(text(snap, "telegram"), "de")
+def _ausblick_faelle() -> tuple:
+    leer = _ausblick_preset()
+    leer["display_config"]["outlook_metrics"] = []
+    return ((_ausblick_preset(), True), (_ausblick_preset(outlook_enabled=False), False),
+            (leer, False))
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_k7_ausblick_im_orte_telegram_kette(mit, lang):
+    """B-K7 (AC-24) ueber den echten Versandweg bis zur Transport-Mitschrift:
+    Ausblick an -> je Ort drei Tage in gespeicherter Folge und Roh/Einfach;
+    Schalter aus bzw. bewusst leere Ausblick-Liste -> kein Ausblick. Zwei Nutzer."""
+    for p, soll in _ausblick_faelle():
+        for uid, snap in zwei_nutzer(mit, p, lang=lang):
+            tg = text(snap, "telegram")
+            if soll:
+                _pruefe_ausblick(tg, lang)
+            else:
+                assert not any(z.strip() in ("Ausblick", "Outlook") for z in tg.splitlines()), tg
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_k7_ausblick_in_orte_telegram_vorschau(mit, lang):
+    """B-K7 (AC-24): die Telegram-Vorschau des Editors zeigt denselben Ausblick
+    wie der Versand (an -> drei Tage je Ort; aus/leere Liste -> keiner). Echter
+    Lade- und Renderweg ``ComparePreviewService``, zwei Nutzer."""
+    from services.compare_preview_service import ComparePreviewService
+
+    for p, soll in _ausblick_faelle():
+        uids = []
+        for _ in range(2):
+            uid = nutzer_anlegen("premium")
+            _sprache(uid, lang)
+            orte_anlegen(uid)
+            preset_ablegen(uid, copy.deepcopy(p))
+            tg = ComparePreviewService().render_all_channels(
+                p["id"], user_id=uid, target_date=TARGET_DATE)["telegram"]
+            if soll:
+                _pruefe_ausblick(tg, lang)
+            else:
+                assert not any(z.strip() in ("Ausblick", "Outlook") for z in tg.splitlines()), tg
+            uids.append(uid)
+        assert uids[0] != uids[1]
 
 
 def test_om1_gegenprobe_ohne_ausfall_kein_hinweis(mit):
@@ -396,3 +436,63 @@ def test_om1_gegenprobe_ohne_ausfall_kein_hinweis(mit):
         plain = snap.sendungen("email")[-1]["plain_text_body"]
         assert "Kette Basis" in plain or "ORTS-VERGLEICH" in plain, "Vorbedingung: Klartext"
         assert "Amtliche Warnungen aktuell nicht abrufbar" not in plain, plain[:600]
+
+
+# ---------------------------------------------------------------------------
+# Nebenbefund p2b: Orte-Telegram mit Warnung -- keine Roh-Tags beim Nutzer
+# ---------------------------------------------------------------------------
+
+#: Ortsnamen mit HTML-Sonderzeichen (Nutzerdaten, muessen wortgetreu ankommen).
+SONDERNAMEN = {"loc-ibk": "Inns<b>ruck & Hall", "loc-bz": "Bozen <Süd> & Co"}
+
+
+def _wie_telegram_anzeigt(sendung: dict) -> str:
+    """Was der Nutzer in Telegram sieht (Bot-API-Regeln): ohne ``parse_mode``
+    der Text wortgetreu; mit ``HTML`` werden Tags zu Formatierung und Entities
+    aufgeloest -- ein rohes ``<``/``&`` ausserhalb von Tag/Entity lehnt die API
+    ab (HTTP 400), hier als Fehler."""
+    import html as _html
+
+    body = sendung["body"]
+    if sendung["parse_mode"] is None:
+        return body
+    assert sendung["parse_mode"] == "HTML", sendung["parse_mode"]
+    ohne_tags = re.sub(r"</?(b|i|u|s|code|pre|a)(\s[^>]*)?>", "", body)
+    assert "<" not in ohne_tags and not re.search(r"&(?!(amp|lt|gt|quot|#\d+);)", ohne_tags), (
+        f"ungueltiges Telegram-HTML (API: 400):\n{body}")
+    return _html.unescape(ohne_tags)
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_orte_telegram_warnung_ohne_rohe_tags(mit, lang):
+    """Ein Ort mit amtlicher Warnung, Ortsnamen mit ``<`` und ``&``: der Nutzer
+    sieht im Orte-Telegram die Warnung und beide Namen wortgetreu, aber nie
+    ein rohes ``<b>``/``</b>`` oder ``&amp;``. Zwei Nutzer, echter Versandweg
+    bis zur Transport-Mitschrift (Text + parse_mode)."""
+    from app.loader import save_location
+    from app.user import SavedLocation
+    from tests.tdd._compare_kette_fixtures import ORTE
+
+    WARN["orte"] = {"loc-bz"}
+    p = preset()
+    nutzer = []
+    for _ in range(2):
+        uid = nutzer_anlegen("premium")
+        _sprache(uid, lang)
+        for lid, (_, lat, lon) in ORTE.items():
+            save_location(SavedLocation(id=lid, name=SONDERNAMEN[lid], lat=lat, lon=lon,
+                                        elevation_m=1000), user_id=uid)
+        preset_ablegen(uid, copy.deepcopy(p))
+        mit.leeren()
+        briefing_senden(uid, p["id"], settings_fuer(uid))
+        assert mit.empfaenger("telegram") == [f"chat-{uid}"]
+        sicht = _wie_telegram_anzeigt(mit.sendungen("telegram")[-1])
+        for name in SONDERNAMEN.values():
+            assert name in sicht.splitlines(), f"Ortsname nicht wortgetreu:\n{sicht}"
+        warnkopf = [z for z in sicht.splitlines() if z.strip().startswith("Bozen <Süd> & Co · ")]
+        assert warnkopf, f"Warnkopf des Ortes fehlt:\n{sicht}"
+        assert "<b>" not in sicht.replace("Inns<b>ruck", ""), f"rohe Tags beim Nutzer:\n{sicht}"
+        assert "</b>" not in sicht, f"rohe Tags beim Nutzer:\n{sicht}"
+        assert "&amp;" not in sicht and "&lt;" not in sicht, f"rohe Entities:\n{sicht}"
+        nutzer.append(uid)
+    assert nutzer[0] != nutzer[1]

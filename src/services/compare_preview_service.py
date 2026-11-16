@@ -80,6 +80,11 @@ class ComparePreviewService:
             lang=lang,
             # Issue #1563: Briefing-Vorschau = Versand (kein Alarm-Pfad, R6).
             show_fallback_notice=True,
+            # Issue #3047 B-K7 (AC-24): Ausblick wie im Versand.
+            outlook_enabled=ctx["opts"].outlook_enabled,
+            outlook_metrics=ctx["opts"].outlook_metrics,
+            outlook_metric_formats=ctx["opts"].outlook_metric_formats,
+            preset=ctx["preset"],
         )
         sms = render_compare_sms(
             ctx["result"],

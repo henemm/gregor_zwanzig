@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.40"
+version: "2.41"
 status: active
 created: 2025-12-27
-updated: 2026-11-09
+updated: 2026-11-16
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -663,6 +663,8 @@ Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, wird so gekürzt (seit v
 3. Amtliche Bausteine zuletzt, nach aufsteigender Priorität: Fire (`Z:`, `MAX`, `M:`), dann Vigilance (`HR:TH:`/`VR:VT:`), dann der amtliche Warn-Block `!` (§3.4c) — einer bleibt immer stehen.
 4. `X?` (Warndaten nicht abrufbar) fällt nie.
 
+**Orts-Überlauf im Ortsvergleich (`render_compare_sms`, seit v2.41, #3047 Runde 7, AC-23):** Passen nicht alle Orte ins Budget, entfallen Orte vom Ende und werden als ` +k Orte` ausgewiesen (ADR-0011). Trüge ein als ` +k Orte` entfallender Ort eine amtliche Warnung, bleibt er mit Marker sichtbar; gekürzt werden zuerst die Zellen aller gezeigten Orte vom Listenende (gleiches Budget je Ort), dann Orte ohne Warnung (AC-23).
+
 Abgelöst: die feste Rangfolge bis v2.39 (`DROP_ORDER`: erweiterte Token → Wintersport → Fire → Peak-Werte → gefühlte Temperatur → `PR` → `L D N` → Last Resort, #1677 AC-6). Die Peak-Werte `(max@h)` werden nicht mehr gesondert gestrichen; sie gehören zu ihrer Zeile.
 
 `{Name}:` plus mindestens **ein** Risk- oder Wert-Token ist Pflicht. Wenn nach allen Truncation-Schritten immer noch >160 Zeichen: ValueError.
@@ -849,6 +851,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.38 | 2026-11-06 | **Profil-Ampel als einzige Bewertung (Issue #2792 S1c-4b, ADR-0106).** Die Hervorhebung `@{h}` (Spitzenwert bei `R`/`PR`/`W`/`G`/`TH:`/`TH+:`) folgt der Ampel des Abos: erste Stunde gelb oder schlechter, beidseitig; Gewitter ab „leicht“. `sms_threshold` und `DEFAULTS` wirken nicht mehr (Werte bleiben gespeichert). Temperatur-Token `L`/`D`/`FL`/`FD` tragen `@{h}` nur ab gelb, Bereichs-Token je Hälfte einzeln (`D-2/9@14`). `HU` erwähnt ab fest 90 %; `VS` ohne Schwellen-Gate über `sms_threshold`. Betrifft §3.2, §3.2a, §4. Gilt identisch für Premium-SMS (gleicher Text) und Telegram-Kurzform. Spec: `docs/specs/modules/feat_2792_s1_profil_ampel.md` §5 (v1.5). |
 | 2.39 | 2026-11-09 | Neuer §3.4i: Radar-Alarm im Ortsvergleich mit mehreren Orten nennt jeden Ort mit Ortsnummer (`1:R@14:05 3:R@14:40`), sortiert nach Beginn, Überlauf ` +k`; Ein-Ort und Trip unverändert (Issue #1767, löst #1948-S4-Entscheid 3b ab). |
 | 2.40 | 2026-11-16 | **Kürzung vom Listenende (#3047 Runde 7, AC-23, PO-Entscheidung 2026-11-16).** Bei Überlänge fällt die SMS-Liste von hinten, ganze Zeilen; amtliche Bausteine (Fire, Vigilance, Warn-Block) zuletzt, `X?` nie. Löst die feste Rangfolge (`DROP_ORDER`, #1677 AC-6) ab. Gilt für Trip-SMS, Premium-SMS (gleicher Text) und Telegram-Kurzform; Alarm-SMS haben eigene Regeln (unverändert). Betrifft §1, §2, §3.4c, §3.4d, §6. |
+| 2.41 | 2026-11-16 | §6: Orts-Überlauf im Ortsvergleich — ein Ort mit amtlicher Warnung fällt nie in ` +k Orte`, er bleibt mit Marker sichtbar; zuerst werden die Zellen aller gezeigten Orte vom Listenende gekürzt (gleiches Budget je Ort), dann entfallen Orte ohne Warnung (#3047 Runde 7, AC-23). |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:
