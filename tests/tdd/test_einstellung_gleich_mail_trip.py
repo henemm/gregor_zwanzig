@@ -714,6 +714,58 @@ def test_n1_totalschnitt_reine_fremdliste(monkeypatch, fall):
 
 
 # ---------------------------------------------------------------------------
+# M21 -- Kanal-Liste je Bericht (``channel_layouts_per_report``, ADR-0050)
+# ---------------------------------------------------------------------------
+
+#: Eigene E-Mail-Liste je Bericht; die Abend-Folge steht gegen die Katalogfolge
+#: (Temperatur vor Niederschlag), Folge allein ueber ``order``.
+_JE_BERICHT = {"morning": ["wind", "gust"], "evening": ["precipitation", "temperature"]}
+#: Globale Kanal-Liste ``channel_layouts.email`` -- bewusst anders als beide
+#: Bericht-Listen und als die Grundauswahl, damit jede Ebene sichtbar wirkt.
+_GLOBAL_EMAIL = ["cloud_total", "uv_index", "temperature"]
+_BERICHT = {"morgen": "morning", "abend": "evening"}
+
+
+def _m21_teile(fall: dict) -> tuple[str, str]:
+    """(Bericht ``morning|evening``, Tabelle ``etappe|nacht``) aus der Variante
+    ``<morgen|abend>_<stunden|nacht>`` bzw. ``totalschnitt_<...>``."""
+    teile = _variante(fall).split("_")
+    return _BERICHT[teile[-2]], "etappe" if teile[-1] == "stunden" else "nacht"
+
+
+@pytest.mark.parametrize("fall", _faelle("test_m21_kanal_liste_je_bericht"))
+def test_m21_kanal_liste_je_bericht(monkeypatch, fall):
+    """#3047 M21 (ADR-0050, Ebene ``per_report`` vor ``channel_layouts``): je
+    Bericht eine eigene E-Mail-Liste (Morgen Wind, Boeen; Abend Niederschlag,
+    Temperatur), die globale ``channel_layouts.email`` ist anders -> die
+    Morgen-Mail zeigt genau die Morgen-Liste, die Abend-Mail genau die
+    Abend-Liste, in Etappen- und Nachttabelle, HTML und Klartext."""
+    report_type, art = _m21_teile(fall)
+    data = trip_json(GLOBAL_ANDERS, email_layout=metrik_eintraege(_GLOBAL_EMAIL))
+    data["display_config"]["channel_layouts_per_report"] = {
+        rt: {"email": metrik_eintraege(folge)} for rt, folge in _JE_BERICHT.items()}
+    html, text, _ = _senden(monkeypatch, data, fall["format"], report_type=report_type)
+    _pruefe_spalten(_stundentabellen(html, text, fall["format"], art),
+                    _JE_BERICHT[report_type], fall["id"])
+
+
+@pytest.mark.parametrize("fall", _faelle("test_m21_totalschnitt_je_bericht"))
+def test_m21_totalschnitt_je_bericht(monkeypatch, fall):
+    """#3047 M21/AC-10: die Bericht-Liste ist nicht leer, nennt aber nur
+    Groessen ausserhalb der Grundauswahl (UV, Bewoelkung) -> Rueckfall auf die
+    volle Grundauswahl in eingestellter Folge, wie bei ``channel_layouts``
+    (N1) -- nicht auf die globale Kanal-Liste und kein leerer Block."""
+    report_type, art = _m21_teile(fall)
+    grund = ["gust", "temperature", "wind"]
+    fremd = ["uv_index", "cloud_total"]
+    data = trip_json(grund, email_layout=metrik_eintraege(["temperature"]))
+    data["display_config"]["channel_layouts_per_report"] = {
+        report_type: {"email": metrik_eintraege(fremd, katalog=tuple(fremd))}}
+    html, text, _ = _senden(monkeypatch, data, fall["format"], report_type=report_type)
+    _pruefe_spalten(_stundentabellen(html, text, fall["format"], art), grund, fall["id"])
+
+
+# ---------------------------------------------------------------------------
 # AC-11 -- Altbestand (Golden)
 # ---------------------------------------------------------------------------
 
