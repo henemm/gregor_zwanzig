@@ -181,17 +181,19 @@ describe('AC-2 [#1848 A3]: beide Mountpunkte (Trip UND Ortsvergleich) reichen ih
 		);
 	});
 
-	test('der Ortsvergleich-Mount referenziert die COMPARE-Grundauswahl (materializedActiveMetricKeys), der Trip-Mount die TRIP-Grundauswahl (buckets.primary)', () => {
+	// #3047 J1: die COMPARE-Grundauswahl geht unmaterialisiert durch (`activeMetricKeys ?? null`),
+	// damit „nie eingestellt" (`null`) von einer gespeicherten Liste gleich der Vorgabe unterscheidbar bleibt.
+	test('der Ortsvergleich-Mount referenziert die COMPARE-Grundauswahl (activeMetricKeys), der Trip-Mount die TRIP-Grundauswahl (buckets.primary)', () => {
 		const ast = parseComponent(WEATHER_METRICS_TAB);
 		const mounts = findComponentsNamed(ast.fragment, 'OutlookLayoutControls');
 		assert.ok(mounts.length >= 1, 'Vorbedingung: kein OutlookLayoutControls-Mount gefunden.');
 
 		const referenziertCompareGrundauswahl = mounts.some((m) =>
-			attributeReferencesIdentifier(findAttr(m, 'grundauswahl'), 'materializedActiveMetricKeys')
+			attributeReferencesIdentifier(findAttr(m, 'grundauswahl'), 'activeMetricKeys')
 		);
 		assert.ok(
 			referenziertCompareGrundauswahl,
-			'AC-2/AC-6 FAIL (RED): kein Mount uebergibt `grundauswahl={materializedActiveMetricKeys}` — die ' +
+			'AC-2/AC-6 FAIL (RED): kein Mount uebergibt `grundauswahl={activeMetricKeys ?? null}` — die ' +
 				'Ortsvergleich-eigene Grundauswahl (dieselbe Quelle wie die Uebersichts-Kopplung, ' +
 				'WeatherMetricsTab.svelte:1083).'
 		);

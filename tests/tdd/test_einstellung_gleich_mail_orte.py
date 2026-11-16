@@ -552,6 +552,35 @@ def test_h1_stundenverlauf_nie_eingestellt_aus_grundauswahl(fmt):
         assert koepfe == ["Wind", "Rain", "Temp", "Gust"], f"{fmt} {ort}: {koepfe}"
 
 
+def test_j1_grundauswahl_gleich_vorgabe_kette():
+    """#3047 J1 (AC-13/AC-10, Konzept §5.8): die Grundauswahl ist gespeichert und
+    gleicht zufaellig der Vorgabe (alle Zeilen, Standardfolge, Speicherformat des
+    Editors); Stundenverlauf und Ausblick sind nie eingestellt. Gespeichert ist
+    gespeichert: die Mail nimmt die Grundauswahl-Regel, in HTML und Klartext --
+    dieselbe Folge, die der Editor laut ``editor_standard.json`` (Zustand
+    ``grundauswahl_gleich_vorgabe``) zeigt. Soll von Hand dort."""
+    daten = json.loads((FIXTURE_DIR / "editor_standard.json").read_text(encoding="utf-8"))
+    zustand = {liste: next(z for z in daten["listen"][liste]["zustaende"]
+                           if z["id"] == "grundauswahl_gleich_vorgabe")
+               for liste in ("orte_stundenverlauf", "orte_ausblick")}
+    p = preset_dict("basis")
+    p["display_config"]["active_metrics"] = zustand["orte_ausblick"]["eingabe"]["display_config"]["active_metrics"]
+    mail = sende_orte_mail(p)
+    dc = mail.roh["display_config"]
+    assert "hourly_metrics" not in dc and "outlook_metrics" not in dc, "Vorbedingung"
+    stunden = [kopf_von(m) for m in zustand["orte_stundenverlauf"]["erwartet"]]
+    ausblick = zustand["orte_ausblick"]["erwartet"]
+    for fmt in ("html", "klartext"):
+        ist_stunden = _stunden_koepfe(mail, fmt)
+        assert list(ist_stunden) == _orte(mail.roh), fmt
+        for ort, koepfe in ist_stunden.items():
+            assert koepfe == stunden, f"{fmt} {ort}: Stundenverlauf {koepfe}"
+        ist_ausblick = (html_ausblick(mail.html) if fmt == "html" else klartext_ausblick(mail.plain))
+        assert list(ist_ausblick) == _orte(mail.roh), fmt
+        for ort, zellen in ist_ausblick.items():
+            assert kennungen(zellen) == ausblick, f"{fmt} {ort}: Ausblick {[k for k, _ in zellen]}"
+
+
 @pytest.mark.parametrize("fmt", ["html", "klartext"])
 def test_orte_koepfe_in_nutzersprache_en(fmt):
     """ADR-0104 / #3047 F7 (F003): ein englischer Nutzer bekommt Stundenverlauf
