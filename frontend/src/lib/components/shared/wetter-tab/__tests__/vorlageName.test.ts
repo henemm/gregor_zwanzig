@@ -22,7 +22,7 @@ const SYSTEMVORLAGEN: Record<string, [string, string]> = {
 	wandern: ['Wandern', 'Hiking'],
 	skitouren: ['Skitouren', 'Ski touring'],
 	wintersport: ['Wintersport', 'Winter sports'],
-	radtour: ['Radtour', 'Cycling tour'],
+	radtour: ['Radtour', 'Cycling'],
 	wassersport: ['Wassersport', 'Water sports'],
 	allgemein: ['Allgemein', 'General'],
 };

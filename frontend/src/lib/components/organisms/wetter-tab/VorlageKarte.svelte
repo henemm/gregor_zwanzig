@@ -6,10 +6,12 @@
 	import type { Ampel, MetricPreset } from '$lib/types';
 	// #2913 Teil 2 (K-6): alle Knöpfe aus dem Atom Btn (Größe tap, Touch-Ziel >= 44px).
 	import { Btn } from '$lib/components/atoms';
-	import { t, tn } from '$lib/i18n';
+	import { locale, t, tn } from '$lib/i18n';
 	import SavePresetDialog from '../../shared/weather-metrics-tab/SavePresetDialog.svelte';
 	import type { Kontext } from '../../shared/wetter-tab/ampelModell.ts';
 	import type { EigeneVorlage, VorlageEintrag } from '../../shared/wetter-tab/wetterTabLaden.ts';
+	// #2981: Systemvorlagen-Namen sprachabhaengig aus dem Katalog (Fallback Server-Label, dann ID).
+	import { vorlageAnzeigename } from '../../shared/wetter-tab/vorlageName.ts';
 
 	interface Props {
 		context: Kontext;
@@ -35,7 +37,11 @@
 	let dialogOffen = $state(false);
 	let gespeichert = $state<string | null>(null);
 
-	const label = $derived(liste.find((v) => v.id === vorlageId)?.label ?? vorlageId);
+	const label = $derived(vorlageAnzeigename($locale, vorlageId, liste.find((v) => v.id === vorlageId)?.label));
+	/** Anzeigename einer Systemvorlage; reaktiv auf den Sprachwechsel ueber `$locale`. */
+	function name(v: VorlageEintrag): string {
+		return vorlageAnzeigename($locale, v.id, v.label);
+	}
 	const status = $derived(abweichungen > 0 ? $tn('wetter.vorlage.abweichungen', abweichungen) : $t('wetter.vorlage.unveraendert'));
 
 	function beschreibung(v: VorlageEintrag): string {
@@ -77,7 +83,7 @@
 				{#if wahl}
 					<div class="wt-frage" role="alertdialog" data-testid="wetter-vorlage-wechsel-dialog">
 						<p>
-							{$t(FRAGE[context], { neu: wahl.name })}
+							{$t(FRAGE[context], { neu: wahl.eigen ? wahl.name : vorlageAnzeigename($locale, wahl.id, wahl.name) })}
 							{#if abweichungen > 0}{$tn('wetter.vorlage.verlust', abweichungen, { alt: label })}{/if}
 							{$t('wetter.vorlage.bleibt')}
 						</p>
@@ -91,7 +97,7 @@
 				{#each liste as v (v.id)}
 					<div class="wt-option">
 						<Btn variant="quiet" size="tap" data-aktiv={v.id === vorlageId ? 'true' : undefined} data-testid="wetter-vorlage-option-{v.id}" onclick={() => waehlen(v.id, v.label, false)}>
-							<span>{v.label}</span>
+							<span>{name(v)}</span>
 							<small data-testid="wetter-vorlage-beschreibung-{v.id}">{beschreibung(v)}</small>
 						</Btn>
 					</div>

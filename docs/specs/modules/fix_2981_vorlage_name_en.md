@@ -95,7 +95,7 @@ Die Tests laufen über `node --test` ohne Mock-Theater: echter Katalog, echte Ma
 ## Acceptance Criteria
 
 - **AC-1:** Given der Nutzer hat die Sprache Englisch und öffnet den Reiter Wetter eines Trips mit der Vorlage „wandern“ / When die Vorlage-Karte angezeigt wird / Then die Kopfzeile zeigt „Hiking“ statt „Wandern“.
-  - Test: Nutzer mit Sprache EN sieht die Vorlagenkarte mit englischem Namen (alle sieben eingebauten Namen englisch: Alpine trekking, Hiking, Ski touring, Winter sports, Cycling tour, Water sports, General).
+  - Test: Nutzer mit Sprache EN sieht die Vorlagenkarte mit englischem Namen (alle sieben eingebauten Namen englisch: Alpine trekking, Hiking, Ski touring, Winter sports, Cycling, Water sports, General).
 
 - **AC-2:** Given der Nutzer hat die Sprache Englisch und öffnet die Vorlagenauswahl / When die Liste der Systemvorlagen erscheint, eine andere Vorlage gewählt wird und die Rückfrage („Use ‘…’?“, ggf. mit Verlust-Hinweis) sowie der Zurücksetzen-Knopf sichtbar werden / Then Auswahlliste, Rückfrage, Verlust-Text und „Reset to …“ nennen überall den englischen Vorlagennamen.
   - Test: Auswahl öffnen, Vorlage wechseln, Rückfrage und Zurücksetzen-Knopf auf englische Namen prüfen.
@@ -135,3 +135,4 @@ Die Tests laufen über `node --test` ohne Mock-Theater: echter Katalog, echte Ma
 ## Changelog
 
 - 2026-11-16: Initial spec created (Bug #2981, Teil von Epic #2913)
+- 2026-11-16: EN-Name radtour „Cycling“ statt „Cycling tour“ (Glossar verbietet „tour“, i18n_glossar.md)
