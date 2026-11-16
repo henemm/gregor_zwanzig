@@ -109,8 +109,8 @@ Diese Scheibe:
 | `AlarmeTab.svelte:604` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
 | `VersandTab.svelte:370` | Markup-Baum Trip (`VTLaufzeitRoute`, Mehrtages-Trend, Premium-SMS) |
 | `VersandTab.svelte:406` | Markup-Baum Vergleich (`VTLaufzeitVergleich`, kein Mehrtages-Trend, eigener Premium-SMS-Schalter seit #2293 S2) — zwei komplette, unterschiedliche Komponenten-Bäume |
-| `WeatherMetricsTab.svelte:1447` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
-| `WeatherMetricsTab.svelte:1968` | Schalter „Nacht-Stundentabelle in der Mail zeigen“ nur im Trip (#1721): die Nacht-Stundentabelle gibt es nur in der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre, Spec `fix_1721_nachtausgabe.md`) |
+| `WeatherMetricsTab.svelte:1459` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
+| `WeatherMetricsTab.svelte:1981` | Schalter „Nacht-Stundentabelle in der Mail zeigen“ nur im Trip (#1721): die Nacht-Stundentabelle gibt es nur in der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre, Spec `fix_1721_nachtausgabe.md`) |
 | `versand-tab/vtBriefingChannelsText.ts:22` | SMS-Zeichenbudget: Trip 160 / Vergleich 153 (unterschiedliches Layout) |
 | `versand-tab/vtBriefingChannelsText.ts:29` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
 | `versand-tab/VTSchedulePlan.svelte:57` | `isRoute`-Ableitung — Mehrtages-Trend-Karte existiert nur im Trip |
@@ -135,10 +135,10 @@ Diese Scheibe:
 | `wetter-tab/wertebereicheVergleichSpeicherung.ts:209` | dito für Wertebereiche | dito |
 | `weather-metrics-tab/weatherMetricsCompareSave.ts:556` | dito für Wetter-Metriken (#2794 Teil 3 F006: um 5 Zeilen verschoben; #3061/#3047 J5: null-Hydrierer zusammengeführt, netto unverschoben; Weiche unverändert) | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
 | `VersandTab.svelte:360` | Wirkort-Guard des Selbst-Speicher-Effekts — läuft nur im Vergleich | Effekt existiert nur für den Compare-Speicherweg; Trip speichert über einen anderen Mechanismus außerhalb dieser Datei |
-| `WeatherMetricsTab.svelte:587` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
-| `WeatherMetricsTab.svelte:602` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
-| `WeatherMetricsTab.svelte:631` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
-| `WeatherMetricsTab.svelte:644` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
+| `WeatherMetricsTab.svelte:592` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
+| `WeatherMetricsTab.svelte:607` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
+| `WeatherMetricsTab.svelte:636` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
+| `WeatherMetricsTab.svelte:649` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
 | `WetterMetrikenVersandPanel.svelte:66` | #1743: Versand-Inhalt nach Herkunft — Trip-Hub über `BriefingScheduleTab`, Vergleich und Trip-Anlegen über den EINEN `VersandTab` | ersetzt die Direkt-Mounts in TripTabs/CompareTabs/Anlege-Seiten |
 
 **Summe:** 14 FACHLICH + 3 DARSTELLUNG + 9 HERKUNFT = **26**, deckungsgleich

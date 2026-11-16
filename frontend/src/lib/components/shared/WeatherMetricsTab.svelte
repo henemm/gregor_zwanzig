@@ -44,6 +44,11 @@
 	// Issue #1232 Scheibe 3b: geteilter Layout-Organism (Scheibe 3a) ersetzt das
 	// bisherige `.v2-layout`-Grid für den Ausgabe-Teil (Reihenfolge).
 	import LayoutTab from '$lib/components/shared/layout-tab/LayoutTab.svelte';
+	// #3047 N2/N3: Hinweis leere Grundauswahl (Trip UND Vergleich, direkt hinter der jeweiligen
+	// Grundauswahl-Liste, ohne Leerraum davor: die de-Goldens bleiben byte-gleich);
+	// Kennzeichnung „nur morgens/abends" (bis #3065).
+	import GrundauswahlLeerHinweis from '$lib/components/molecules/GrundauswahlLeerHinweis.svelte';
+	import { nurEinBerichtJeMetrik } from './weather-metrics-tab/nurEinBericht.ts';
 	import { SMS_COMPARE_CHAR_LIMIT, type ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
 	// Issue #1703 Scheibe 8: kanal-eigene Auswahl der Vergleichs-Uebersicht.
 	// `splitChannelMetricsForDisplay` (Trip-Modul, unten) wird WIEDERVERWENDET —
@@ -63,7 +68,7 @@
 		// Bug #2454 Fix-Loop 1 (Finding F001): globales Toggle inkl. Kind-
 		// Mitnahme UND Kanal-Durchschreibung als EINE geteilte, exportierte
 		// Funktion (Test-Nachbau ruft dieselbe Funktion, kein zweiter Nachbau).
-		toggleGlobalMetric, appendNewMetricsToOutlook,
+		toggleGlobalMetric, appendNewMetricsToOutlook, istTotalschnitt,
 		type ChannelOverride,
 	} from './weather-metrics-tab/channelMetricLayouts.ts';
 	// Fix #2422 S2a Fix-Loop 1 (Adversary-Funde F003/F004): Bestand-Auswahl
@@ -760,7 +765,11 @@
 	function editActiveChannel(
 		mutate: (view: ChannelOverride) => ChannelOverride,
 	) {
-		const base = channelBuckets[activeChannel] ?? startChannelOverride(buckets, friendlyMap);
+		// #3047 N1: beim Totalschnitt zeigt der Reiter die volle Grundauswahl -- bearbeitet wird, was er zeigt.
+		const eigen = channelBuckets[activeChannel];
+		const base = eigen && !istTotalschnitt(buckets.primary, eigen.buckets.primary)
+			? eigen
+			: startChannelOverride(buckets, eigen?.friendlyMap ?? friendlyMap);
 		const prev: WeatherSnapshot = {
 			columns: [...base.buckets.primary],
 			mode: Object.fromEntries(
@@ -1241,8 +1250,11 @@
 	// (Z. 677-691). Ohne bestehenden Override startet der Eintrag als Klon der
 	// globalen Reihenfolge, nicht leer.
 	function editCompareChannel(mutate: (view: string[]) => string[]) {
-		const base = channelActiveMetricKeys?.[compareChannel]
-			?? startCompareChannelOverride(materializedActiveMetricKeys);
+		// #3047 N1: Totalschnitt zeigt die volle Grundauswahl -- bearbeitet wird, was angezeigt ist.
+		const eigen = channelActiveMetricKeys?.[compareChannel];
+		const base = eigen != null && !istTotalschnitt(materializedActiveMetricKeys, eigen)
+			? eigen
+			: startCompareChannelOverride(materializedActiveMetricKeys);
 		const next = { ...channelActiveMetricKeys, [compareChannel]: mutate(base) } as CompareChannelActiveMetrics;
 		// Design-Entscheidung 3: kanal-lokale Edits schreiben nur `channelActiveMetricKeys`,
 		// gehen aber ueber DENSELBEN gekoppelten Rueckruf — mit der unveraenderten
@@ -1512,7 +1524,7 @@
 							</table>
 						{/if}
 					{/each}
-				</div>
+				</div><GrundauswahlLeerHinweis grundauswahl={activeMetricKeys ?? null} />
 			</Card>
 			{/if}
 
@@ -1694,7 +1706,8 @@
 						primaryColumns={buckets.primary}
 						{highlight}
 						onToggle={(id, wasOn) => onToggleMetric(id, wasOn)}
-					/>
+						nurBerichtById={nurEinBerichtJeMetrik(trip?.display_config?.metrics, buckets.primary)}
+					/><GrundauswahlLeerHinweis grundauswahl={buckets.primary} />
 				</Card>
 			</div>
 			{/if}
@@ -1944,7 +1957,7 @@
 					<OutlookLayoutControls
 						metricKeys={outlookMetricKeysRoute}
 						catalog={compareCatalog}
-						grundauswahl={buckets.primary} leereGrundauswahlIstBewusst
+						grundauswahl={buckets.primary}
 						onMetricKeys={onOutlookMetricKeys}
 						metricFormats={outlookMetricFormatsRoute}
 						onMetricFormats={onOutlookMetricFormats}

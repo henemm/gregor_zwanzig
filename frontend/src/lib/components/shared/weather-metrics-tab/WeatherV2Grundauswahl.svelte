@@ -7,6 +7,7 @@
 	import type { Highlight } from '../../trip-detail/metricsEditor.ts';
 	import { t, locale, type MessageKey } from '$lib/i18n';
 	import { metricLabel } from '$lib/i18n/metricLabel';
+	import type { NurBericht } from './nurEinBericht.ts';
 
 	// Issue #2654 (i18n F5): Kategorie-Ueberschriften ueber den Katalog; unbekannte
 	// Kategorie wie bisher (CATEGORY_LABELS bzw. Kennung).
@@ -23,9 +24,16 @@
 		primaryColumns: string[];
 		highlight: Highlight | null;
 		onToggle: (id: string, wasOn: boolean) => void;
+		/** #3047 N3: Altbestand-Metriken, die nur in EINEM Bericht erscheinen
+		 *  (`morning_enabled`/`evening_enabled`) — sichtbar gekennzeichnet bis #3065. */
+		nurBerichtById?: Record<string, NurBericht>;
 	}
 
-	let { catalog, primaryColumns, highlight, onToggle }: Props = $props();
+	let { catalog, primaryColumns, highlight, onToggle, nurBerichtById = {} }: Props = $props();
+	const NUR_BERICHT: Record<NurBericht, MessageKey> = {
+		morgens: 'wertebereiche.grundauswahl.nur_morgens',
+		abends: 'wertebereiche.grundauswahl.nur_abends'
+	};
 
 	const activeSet = $derived(new Set(primaryColumns));
 
@@ -58,7 +66,7 @@
 								title={metricLabel(m, $locale)}
 							>
 								{#if on}<span class="check-mark" aria-hidden="true">✓</span>{/if}
-								{metricLabel(m, $locale)}
+								{metricLabel(m, $locale)}{#if nurBerichtById[m.id]}<span class="nur-bericht" data-testid="wm2-nur-bericht-{m.id}">{$t(NUR_BERICHT[nurBerichtById[m.id]])}</span>{/if}
 							</button>
 						{/each}
 					</div>
@@ -139,6 +147,13 @@
 		background: var(--g-accent-tint);
 		color: var(--g-ink);
 		border-color: var(--g-accent);
+	}
+	.nur-bericht {
+		font-size: 11px;
+		font-weight: 600;
+		padding: 0 4px;
+		border: 1px solid currentColor;
+		border-radius: 3px;
 	}
 	.check-mark {
 		font-size: 11px;

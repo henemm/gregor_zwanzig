@@ -188,16 +188,30 @@ export function appendNewMetricsToOutlook(
  * (Reihenfolge wie in `globalPrimary`). Eine global abgewählte Metrik
  * erscheint damit in KEINER der beiden Listen — ein Kanal kann sie nicht
  * zurückholen, es gibt für sie gar keinen Kanal-Eintrag.
+ *
+ * #3047 N1 (AC-10): liegt eine NICHT leere Liste ganz ausserhalb der
+ * Grundauswahl (Totalschnitt), gilt wie in der Mail die volle Grundauswahl in
+ * deren Folge. Eine leere Liste bleibt leer (bewusst leer, #2422).
  */
 export function splitChannelMetricsForDisplay(
 	globalPrimary: string[],
 	channelPrimary: string[]
 ): { active: string[]; off: string[] } {
+	if (istTotalschnitt(globalPrimary, channelPrimary)) return { active: [...globalPrimary], off: [] };
 	const globalSet = new Set(globalPrimary);
 	const active = channelPrimary.filter((id) => globalSet.has(id));
 	const activeSet = new Set(active);
 	const off = globalPrimary.filter((id) => !activeSet.has(id));
 	return { active, off };
+}
+
+/** #3047 N1 (AC-10): eine gespeicherte, nicht leere Liste adressiert keinen
+ *  Eintrag der Grundauswahl -> Rueckfall auf die volle Grundauswahl. Geteilt
+ *  von Anzeige (`splitChannelMetricsForDisplay`) und Bearbeiten (die Kanal-
+ *  Edits starten dann von der angezeigten Grundauswahl, nicht vom Altstand). */
+export function istTotalschnitt(globalPrimary: readonly string[], channelPrimary: readonly string[]): boolean {
+	return channelPrimary.length > 0 && globalPrimary.length > 0
+		&& !channelPrimary.some((id) => globalPrimary.includes(id));
 }
 
 /**
