@@ -10,8 +10,9 @@
 // Vorbild-Mapper: weather-metrics-tab/compareMetricSelection.ts (Teil 2) —
 // dieser Mapper ist vollstaendiger (CompareMetricDef statt nur {metric,label}).
 
+import { get } from 'svelte/store';
 import { api } from '$lib/api';
-import { trFor, type Lang, type MessageKey } from '../../../i18n/index.ts';
+import { locale, trFor, type Lang, type MessageKey } from '../../../i18n/index.ts';
 import { metricLabel, type MetricLabelFields } from '../../../i18n/metricLabel.ts';
 import { de } from '../../../i18n/messages/de/index.ts';
 import type { CompareMetricCatalogEntry, CompareMetricCatalogResponse } from '$lib/types';
@@ -86,18 +87,26 @@ export function buildCompareMetricDefs(response: CompareMetricCatalogResponse): 
 // nicht das abgeleitete CompareMetricDef[] — damit teilen sich ALLE drei
 // Verbraucher (Schwellen-Editor, Auswahlliste im Wetter-Metriken-Reiter,
 // Hub-Hydration der Metrik-Auswahl) EINE Anfrage pro Seiten-Load.
-let cachedResponse: Promise<CompareMetricCatalogResponse> | null = null;
+//
+// Issue #3021 (Epic #2644, ADR-0104): der Katalog wird in der Nutzersprache
+// geladen (`?lang=`), der Zwischenspeicher ist je Sprache getrennt — ein
+// Sprachwechsel ohne Neuladen holt den Katalog neu, ein Fehler entwertet nur
+// den Eintrag dieser Sprache.
+const cachedResponses = new Map<Lang, Promise<CompareMetricCatalogResponse>>();
 
 function fetchCompareMetricCatalogOnce(): Promise<CompareMetricCatalogResponse> {
-	if (!cachedResponse) {
-		cachedResponse = api
-			.get<CompareMetricCatalogResponse>('/api/compare/metrics')
+	const lang: Lang = get(locale) === 'en' ? 'en' : 'de';
+	let cached = cachedResponses.get(lang);
+	if (!cached) {
+		cached = api
+			.get<CompareMetricCatalogResponse>(`/api/compare/metrics?lang=${lang}`)
 			.catch((e: unknown) => {
-				cachedResponse = null;
+				cachedResponses.delete(lang);
 				throw e;
 			});
+		cachedResponses.set(lang, cached);
 	}
-	return cachedResponse;
+	return cached;
 }
 
 export function loadCompareMetricCatalog(): Promise<CompareMetricDef[]> {
