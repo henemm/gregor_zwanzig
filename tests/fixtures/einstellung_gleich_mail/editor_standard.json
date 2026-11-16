@@ -913,6 +913,96 @@
       "thunder",
       "gust"
      ]
+    },
+    {
+     "id": "gespeichert_totalschnitt",
+     "beschreibung": "#3047 N1 (AC-10): E-Mail-Liste UV, Regenwahrscheinlichkeit -- beide in der Grundauswahl abgewaehlt; nach dem Schnitt bleibt nichts -> Rueckfall auf die volle Grundauswahl in deren Folge (kein leerer Block). Abgrenzung: alle Eintraege enabled:false = bewusst leer.",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": true,
+         "order": 2,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "wind",
+         "enabled": true,
+         "order": 0,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "gust",
+         "enabled": true,
+         "order": 1,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "precipitation",
+         "enabled": true,
+         "order": 3,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "rain_probability",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "thunder",
+         "enabled": true,
+         "order": 4,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "visibility",
+         "enabled": true,
+         "order": 6,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "uv_index",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "freezing_level",
+         "enabled": true,
+         "order": 5,
+         "bucket": "primary"
+        }
+       ],
+       "channel_layouts": {
+        "email": [
+         {
+          "metric_id": "uv_index",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 0
+         },
+         {
+          "metric_id": "rain_probability",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 1
+         }
+        ]
+       }
+      }
+     },
+     "erwartet": [
+      "wind",
+      "gust",
+      "temperature",
+      "temperature_night",
+      "temperature_day_low",
+      "temperature_day_high",
+      "precipitation",
+      "thunder",
+      "freezing_level",
+      "visibility"
+     ]
     }
    ]
   },
@@ -1188,6 +1278,107 @@
       }
      },
      "erwartet": []
+    },
+    {
+     "id": "gespeichert_totalschnitt",
+     "beschreibung": "#3047 N1 (AC-10): Ausblick nur UV -- in der Grundauswahl abgewaehlt; Rueckfall auf die volle Grundauswahl (Ausblick-faehige Groessen, deren Folge).",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": true,
+         "order": 2,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "wind",
+         "enabled": true,
+         "order": 0,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "gust",
+         "enabled": true,
+         "order": 1,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "precipitation",
+         "enabled": true,
+         "order": 3,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "rain_probability",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "thunder",
+         "enabled": true,
+         "order": 4,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "visibility",
+         "enabled": true,
+         "order": 6,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "uv_index",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "freezing_level",
+         "enabled": true,
+         "order": 5,
+         "bucket": "primary"
+        }
+       ],
+       "outlook_metrics": [
+        "uv_index"
+       ]
+      }
+     },
+     "erwartet": [
+      "wind",
+      "gust",
+      "temperature",
+      "precipitation",
+      "thunder",
+      "freezing_level",
+      "visibility"
+     ]
+    },
+    {
+     "id": "grundauswahl_ohne_ausblick",
+     "beschreibung": "#3047 N2 (Info Mail-Seite Punkt 2): Grundauswahl mit Eintraegen, aber keiner ausblickfaehigen Groesse (nur Nacht-Tiefsttemperatur aktiv) -> Ausblick-Liste leer, der Block entfaellt; keine festen Spalten. Soll von Hand.",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "temperature_night",
+         "enabled": true,
+         "order": 0,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "wind",
+         "enabled": false,
+         "order": 0
+        }
+       ]
+      }
+     },
+     "erwartet": []
     }
    ]
   },
@@ -1278,6 +1469,40 @@
       "gust_max_kmh",
       "wind_max_kmh"
      ]
+    },
+    {
+     "id": "gespeichert_kanal_totalschnitt",
+     "beschreibung": "#3047 N1 (AC-10): Grundauswahl Wind, Temp max, Niederschlag; E-Mail-Liste UV, Sicht (beide nicht in der Grundauswahl) -> Rueckfall auf die volle Grundauswahl in deren Folge.",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        "wind_max_kmh",
+        "temp_max_c",
+        "precip_sum_mm"
+       ],
+       "channel_active_metrics": {
+        "email": [
+         "uv_index_max",
+         "visibility_min_m"
+        ]
+       }
+      }
+     },
+     "erwartet": [
+      "wind_max_kmh",
+      "temp_max_c",
+      "precip_sum_mm"
+     ]
+    },
+    {
+     "id": "grundauswahl_bewusst_leer",
+     "beschreibung": "#3047 N2: Grundauswahl bewusst leer (active_metrics: []); wie beim Trip (alle enabled:false) nimmt keine Liste etwas -- Vergleichstabelle ohne Zeilen, Stundenverlauf und Ausblick entfallen (loest D4 'leer = kein Maximum' und J4 ab). Soll von Hand.",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": []
+      }
+     },
+     "erwartet": []
     }
    ]
   },
@@ -1519,6 +1744,38 @@
       "precip_type",
       "snowfall_limit"
      ]
+    },
+    {
+     "id": "gespeichert_totalschnitt",
+     "beschreibung": "#3047 N1 (AC-10): Grundauswahl Wind, Niederschlag, Temperatur; Stundenverlauf Sicht, UV (beide nicht in der Grundauswahl) -> dokumentierter Rueckfall der Mail (compare_hourly_metric_ids._schnitt_mit_grundauswahl): Vorgabemenge geschnitten mit der Grundauswahl, in Vorgabefolge; kein leerer Block. Grundauswahl- und Vorgabefolge sind hier absichtlich verschieden, damit die Seite mit der falschen Folge scheitert.",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        "wind_max_kmh",
+        "precip_sum_mm",
+        "temp_max_c"
+       ],
+       "hourly_metrics": [
+        "visibility",
+        "uv_index"
+       ]
+      }
+     },
+     "erwartet": [
+      "temperature",
+      "wind",
+      "precipitation"
+     ]
+    },
+    {
+     "id": "grundauswahl_bewusst_leer",
+     "beschreibung": "#3047 N2: Grundauswahl bewusst leer (active_metrics: []); wie beim Trip (alle enabled:false) nimmt keine Liste etwas -- Vergleichstabelle ohne Zeilen, Stundenverlauf und Ausblick entfallen (loest D4 'leer = kein Maximum' und J4 ab). Soll von Hand.",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": []
+      }
+     },
+     "erwartet": []
     }
    ]
   },
@@ -1526,7 +1783,7 @@
    "kontext": "orte",
    "flaeche": "3-Tages-Ausblick je Ort (outlook_metrics)",
    "vokabular": "Kennungen (metric_id); Temperatur Tief/Hoch ist eine Groesse",
-   "begruendung": "O4/AC-21: Altbestand ohne active_metrics und ohne outlook_metrics -- die Mail gibt die festen Ausblick-Spalten aus (Temperatur Tief/Hoch, Niederschlag, Regenwahrscheinlichkeit, Wind, Boeen, Gewitter; email/outlook.py _pfad1_labels). Das Konzept laesst die Folge offen; Soll ist die Mail-Seite, der Editor muss genau diese Spalten als aktiv zeigen. Mit Grundauswahl und nie eingestelltem Ausblick: die ganze Grundauswahl in ihrer Folge (wie Trip, AC-4). Gespeichert: gespeicherte Folge, geschnitten auf die Grundauswahl.",
+   "begruendung": "O4/AC-21: Altbestand ohne active_metrics und ohne outlook_metrics -- die Mail gibt die festen Ausblick-Spalten aus (Temperatur Tief/Hoch, Niederschlag, Regenwahrscheinlichkeit, Wind, Boeen, Gewitter; email/outlook.py _pfad1_labels). Das Konzept laesst die Folge offen; Soll ist die Mail-Seite, der Editor muss genau diese Spalten als aktiv zeigen. Mit Grundauswahl und nie eingestelltem Ausblick: die ganze Grundauswahl in ihrer Folge (wie Trip, AC-4). Gespeichert: gespeicherte Folge, geschnitten auf die Grundauswahl. #3047 N2: eine bewusst leere Grundauswahl (active_metrics: []) laesst den Ausblick entfallen (wie beim Trip). #3047 N1: liegt eine gespeicherte Auswahl ganz ausserhalb der Grundauswahl, gilt die volle Grundauswahl (AC-10).",
    "zustaende": [
     {
      "id": "nie_eingestellt",
@@ -1742,20 +1999,13 @@
     },
     {
      "id": "grundauswahl_bewusst_leer",
-     "beschreibung": "#3047 J4: Grundauswahl gespeichert, aber leer (active_metrics: []); outlook_metrics fehlt. Beim Ortsvergleich heisst leer 'kein Maximum' (ADR-0050 D4), nicht 'Ausblick entfaellt' wie beim Trip (#3047 J1/J3): die Mail zeigt die festen Ausblick-Spalten (DEFAULT_OUTLOOK_METRIC_KEYS). Soll von Hand.",
+     "beschreibung": "#3047 N2: Grundauswahl bewusst leer (active_metrics: []); wie beim Trip (alle enabled:false) nimmt keine Liste etwas -- Vergleichstabelle ohne Zeilen, Stundenverlauf und Ausblick entfallen (loest D4 'leer = kein Maximum' und J4 ab). Soll von Hand.",
      "eingabe": {
       "display_config": {
        "active_metrics": []
       }
      },
-     "erwartet": [
-      "temperature",
-      "precipitation",
-      "rain_probability",
-      "wind",
-      "gust",
-      "thunder"
-     ]
+     "erwartet": []
     },
     {
      "id": "gespeichert_vollauswahl_ohne_ausblick",
@@ -1815,6 +2065,29 @@
       "pressure",
       "precip_type",
       "snowfall_limit"
+     ]
+    },
+    {
+     "id": "gespeichert_totalschnitt",
+     "beschreibung": "#3047 N1 (AC-10): Grundauswahl Wind, Temp max/min, Niederschlag; Ausblick UV, Sicht (nicht in der Grundauswahl) -> Rueckfall auf die volle Grundauswahl in deren Folge.",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        "wind_max_kmh",
+        "temp_max_c",
+        "temp_min_c",
+        "precip_sum_mm"
+       ],
+       "outlook_metrics": [
+        "uv_index",
+        "visibility"
+       ]
+      }
+     },
+     "erwartet": [
+      "wind",
+      "temperature",
+      "precipitation"
      ]
     }
    ]

@@ -128,10 +128,12 @@ export function applyHourlyReorder(
  *  - nie eingestellt (`null`): die stuendlich waehlbaren Groessen der
  *    Grundauswahl in deren Folge; ohne eine davon mit eigener Spalte die
  *    Vorgabemenge `defaultKeys`.
- *  - bewusst leer (`[]`) bleibt leer.
+ *  - bewusst leer (`[]`) bleibt leer; ebenso bei bewusst leerer Grundauswahl
+ *    (`grund` leer, #3047 N2): der Stundenverlauf entfaellt.
  *  - gespeichert: Schnitt mit der Grundauswahl in gespeicherter Folge; bleibt
- *    nichts, die Vorgabemenge geschnitten mit der Grundauswahl, sonst die
- *    waehlbaren Groessen der Grundauswahl (Rueckfall #3047 O5).
+ *    nichts (Totalschnitt), die Vorgabemenge geschnitten mit der Grundauswahl
+ *    (Vorgabefolge), sonst die waehlbaren Groessen der Grundauswahl -- exakt
+ *    wie die Mail (`_schnitt_mit_grundauswahl`, #3047 O5/N1).
  * `kennungVon` bildet historische Kurzschluessel (`temp_c`) auf ihre Kennung ab.
  */
 export function hourlyKeysAusGrundauswahl(
@@ -142,12 +144,10 @@ export function hourlyKeysAusGrundauswahl(
 	mergeOnlyKeys: string[] = [],
 	kennungVon: (key: string) => string = (k) => k
 ): string[] {
+	if (grund.length === 0) return [];
 	const inGrund = new Set(grund);
 	const ausGrund = grund.filter((id) => waehlbar.has(id));
-	if (keys === null) {
-		const mitSpalte = orderableHourlyMetricKeys(ausGrund, mergeOnlyKeys);
-		return mitSpalte.length > 0 ? ausGrund : defaultKeys;
-	}
+	if (keys === null) return orderableHourlyMetricKeys(ausGrund, mergeOnlyKeys).length > 0 ? ausGrund : defaultKeys;
 	if (keys.length === 0) return [];
 	const geschnitten = keys.filter((k) => inGrund.has(kennungVon(k)));
 	if (geschnitten.length > 0) return geschnitten;

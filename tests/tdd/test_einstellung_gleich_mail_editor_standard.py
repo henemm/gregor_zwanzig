@@ -133,12 +133,19 @@ def python_orte_vergleichstabelle(eingabe: dict) -> list[str]:
 
 
 def python_orte_stundenverlauf(eingabe: dict) -> list[str]:
+    """Spalten des Stundenverlaufs; schaltet die Aufloesung den Block ab
+    (``hourly_enabled`` False), zeigt die Mail keine Spalte (#3047 N2)."""
     _preset, optionen = _orte_optionen(eingabe)
+    if not optionen.hourly_enabled:
+        return []
     return [z["metric_id"] for z in _visible_hour_metrics(optionen.hourly_metrics, _hour_zeilen())]
 
 
 def python_orte_ausblick(eingabe: dict) -> list[str]:
+    """Spalten des Ausblicks; ``outlook_enabled`` False = Block entfaellt (#3047 N2)."""
     _preset, optionen = _orte_optionen(eingabe)
+    if not optionen.outlook_enabled:
+        return []
     return _ausblick_spalten(optionen.outlook_metrics)
 
 
@@ -197,6 +204,12 @@ def test_python_seite_trip_ausblick_bewusst_leer_alle_aus():
     _pruefe(python_trip_ausblick, "trip_ausblick", _zustand("trip_ausblick", "bewusst_leer_alle_aus"))
 
 
+def test_python_seite_trip_ausblick_grundauswahl_ohne_ausblick():
+    """#3047 N2: Grundauswahl ohne ausblickfaehige Groesse -> der Ausblick
+    entfaellt (keine festen Spalten), dasselbe Soll ``[]`` wie der Editor."""
+    _pruefe(python_trip_ausblick, "trip_ausblick", _zustand("trip_ausblick", "grundauswahl_ohne_ausblick"))
+
+
 @pytest.mark.parametrize("zustand", _gespeicherte("trip_ausblick"))
 def test_python_seite_trip_ausblick_gespeichert(zustand):
     _pruefe(python_trip_ausblick, "trip_ausblick", zustand)
@@ -207,6 +220,13 @@ def test_python_seite_trip_ausblick_gespeichert(zustand):
 def test_python_seite_orte_vergleichstabelle_standard():
     _pruefe(python_orte_vergleichstabelle, "orte_vergleichstabelle",
             _zustand("orte_vergleichstabelle", "nie_eingestellt"))
+
+
+def test_python_seite_orte_vergleichstabelle_grundauswahl_bewusst_leer():
+    """#3047 N2: ``active_metrics: []`` ist bewusst leer (wie Trip, alle aus) --
+    die Vergleichstabelle hat keine Metrik-Zeile."""
+    _pruefe(python_orte_vergleichstabelle, "orte_vergleichstabelle",
+            _zustand("orte_vergleichstabelle", "grundauswahl_bewusst_leer"))
 
 
 @pytest.mark.parametrize("zustand", _gespeicherte("orte_vergleichstabelle"))
@@ -235,6 +255,13 @@ def test_python_seite_orte_stundenverlauf_grundauswahl_gleich_vorgabe():
             _zustand("orte_stundenverlauf", "grundauswahl_gleich_vorgabe"))
 
 
+def test_python_seite_orte_stundenverlauf_grundauswahl_bewusst_leer():
+    """#3047 N2: ``active_metrics: []`` -> der Stundenverlauf entfaellt (keine
+    Spalte), wie beim Trip; nicht die Vorgabemenge."""
+    _pruefe(python_orte_stundenverlauf, "orte_stundenverlauf",
+            _zustand("orte_stundenverlauf", "grundauswahl_bewusst_leer"))
+
+
 @pytest.mark.parametrize("zustand", _gespeicherte("orte_stundenverlauf"))
 def test_python_seite_orte_stundenverlauf_gespeichert(zustand):
     _pruefe(python_orte_stundenverlauf, "orte_stundenverlauf", zustand)
@@ -258,9 +285,8 @@ def test_python_seite_orte_ausblick_grundauswahl_gleich_vorgabe():
 
 
 def test_python_seite_orte_ausblick_grundauswahl_bewusst_leer():
-    """#3047 J4: ``active_metrics: []`` heisst beim Ortsvergleich 'kein
-    Maximum' (D4) -- die Mail zeigt die festen Ausblick-Spalten, der Ausblick
-    entfaellt NICHT (anders als beim Trip)."""
+    """#3047 N2 (loest J4/D4 ab): ``active_metrics: []`` ist beim Ortsvergleich
+    wie beim Trip bewusst leer -- der Ausblick entfaellt, keine festen Spalten."""
     _pruefe(python_orte_ausblick, "orte_ausblick",
             _zustand("orte_ausblick", "grundauswahl_bewusst_leer"))
 

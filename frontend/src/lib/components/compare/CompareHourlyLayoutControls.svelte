@@ -125,14 +125,14 @@
 	);
 
 	// #3047 H1 (Konzept §5.8): Grundauswahl als Kennungen in deren Folge;
-	// `null` = nie eingestellt oder leer (kein Maximum, wie beim Ausblick).
+	// `null` = nie eingestellt (kein Maximum); `[]` = bewusst leer -> der
+	// Stundenverlauf entfaellt (#3047 N2, wie beim Ausblick und beim Trip).
 	const grundKennungen = $derived.by(() => {
 		if (grundauswahl === null) return null;
 		const kennungJeSchluessel: Record<string, string> = {};
 		for (const group of hourlyGroups)
 			for (const option of group.options) kennungJeSchluessel[option.key] = group.metric_id;
-		const ids = [...new Set(grundauswahl.map((k) => kennungJeSchluessel[k] ?? k))];
-		return ids.length > 0 ? ids : null;
+		return [...new Set(grundauswahl.map((k) => kennungJeSchluessel[k] ?? k))];
 	});
 	const kennungJeHourlyKey = $derived(
 		Object.fromEntries(
