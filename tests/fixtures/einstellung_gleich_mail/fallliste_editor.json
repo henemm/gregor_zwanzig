@@ -37,10 +37,9 @@
    "test": "test_python_seite_trip_tabellen_altbestand",
    "ac": "AC-13",
    "befund": "N1",
-   "status": "ausnahme",
+   "status": "gruen",
    "seite": "python",
-   "zustand": "altbestand_ohne_metrics",
-   "verweis": "#3048 (N1: Trip ohne display_config.metrics -> Stunden-/Nachttabelle ohne Wertspalten; Behebung aendert alle Kanaele, eigenes Issue)"
+   "zustand": "altbestand_ohne_metrics"
   },
   {
    "id": "D-trip_tabellen-altbestand_ohne_metrics-frontend",

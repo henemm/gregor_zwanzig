@@ -672,30 +672,35 @@ _REGISTER_STANDARD_STUNDENSPALTEN = [
 
 @pytest.mark.parametrize("fall", _faelle("test_n1_altbestand_ohne_metrics"))
 def test_n1_altbestand_ohne_metrics(monkeypatch, fall):
-    """N1 -- Ausnahme mit Verweis #3048 (dokumentiert den IST-Zustand).
+    """N1 (#3047, frueher Ausnahme #3048) -- behoben.
 
     Ein Trip-Altbestand, dessen ``display_config`` gar kein ``metrics`` traegt
-    (Fall A, ``trip_metric_ids.py``), bekommt heute Stunden- und Nachttabelle
-    OHNE Wertspalten (HTML: nur die Zeitspalte; Klartext: keine Tabelle),
-    waehrend der Editor die Register-Standardfolge
-    ``_REGISTER_STANDARD_STUNDENSPALTEN`` zeigt. Die Behebung sitzt in
-    ``get_metrics_for_channel`` und aendert alle Kanaele (Telegram/Kurzfassung,
-    #1199) -- sie wird in #3048 umgesetzt. Dieser Test haelt den Ist-Zustand
-    fest: wird er rot, ist #3048 (ganz oder teilweise) wirksam und der Fall
-    in ``fallliste_trip.json`` auf ``gruen`` mit Soll-Pruefung umzustellen."""
+    (Fall A), zeigt in Etappen- UND Nachttabelle (HTML und Klartext) genau den
+    Register-Standard ``_REGISTER_STANDARD_STUNDENSPALTEN`` in Register-Folge
+    -- dieselbe Liste, die der Editor fuer diesen Trip zeigt. Der Rueckfall
+    sitzt am Lese-Pfad (``loader._parse_display_config``); eine ausdruecklich
+    leere Auswahl bleibt leer (``test_n1_ausdruecklich_leer_bleibt_leer``)."""
     data = trip_json(["temperature"])
     del data["display_config"]["metrics"]
     html, text, _ = _senden(monkeypatch, data, fall["format"])
-    assert fall["status"] == "ausnahme" and "#3048" in fall["verweis"], fall
+    art = "etappe" if fall["liste"] == "trip_stundentabelle" else "nacht"
+    _pruefe_spalten(_stundentabellen(html, text, fall["format"], art),
+                    _REGISTER_STANDARD_STUNDENSPALTEN, fall["id"])
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n1_ausdruecklich_leer_bleibt_leer"))
+def test_n1_ausdruecklich_leer_bleibt_leer(monkeypatch, fall):
+    """N1-Gegenstueck (#3047, #1394 "bewusst leer"): ``metrics: []`` ist eine
+    ausdrueckliche Leerauswahl und KEIN Altbestand -- Etappen- und
+    Nachttabelle bleiben ohne Wertspalten, der Standard-Rueckfall greift nicht."""
+    data = trip_json(["temperature"])
+    data["display_config"]["metrics"] = []
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
     art = "etappe" if fall["liste"] == "trip_stundentabelle" else "nacht"
     tabellen = _stundentabellen(html, text, fall["format"], art)
     if fall["format"] == "html":
-        # Die Mail geht raus, die Tabelle steht da -- nur ohne Wertspalten.
-        assert tabellen, f"{fall['id']}: HTML-Tabelle fehlt ganz"
-    ist = [t.spalten for t in tabellen]
-    assert all(sp == [] for sp in ist), (
-        f"{fall['id']}: Ist-Zustand #3048 hat sich geaendert, Spalten {ist} "
-        f"(Soll nach #3048: {_REGISTER_STANDARD_STUNDENSPALTEN})")
+        assert tabellen, f"{fall['id']}: HTML-Tabelle fehlt ganz (Vorbedingung)"
+    _pruefe_spalten(tabellen, [], fall["id"])
 
 
 # ---------------------------------------------------------------------------
