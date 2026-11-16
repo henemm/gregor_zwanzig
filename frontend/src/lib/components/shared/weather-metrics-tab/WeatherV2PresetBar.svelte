@@ -3,7 +3,9 @@
 	// 1:1 nach WM2_PresetBar aus screen-trip-edit-v2-weather.jsx.
 	// STANDALONE: nicht abhängig von shared/OutputLayoutEditor oder Geschwistern.
 	import type { MetricPreset } from '$lib/types';
-	import { t } from '$lib/i18n';
+	import { locale, t } from '$lib/i18n';
+	// #2981: Systemvorlagen-Namen sprachabhaengig aus dem Katalog (Fallback Server-Label, dann ID).
+	import { vorlageAnzeigename } from '../wetter-tab/vorlageName.ts';
 
 	interface Template {
 		id: string;
@@ -46,10 +48,10 @@
 				class="preset-pill"
 				class:active
 				onclick={() => onSelectPreset(t.id)}
-				title={t.label}
+				title={vorlageAnzeigename($locale, t.id, t.label)}
 				data-testid="weather-preset-pill-{t.id}"
 			>
-				{t.label}
+				{vorlageAnzeigename($locale, t.id, t.label)}
 			</button>
 		{/each}
 	</div>

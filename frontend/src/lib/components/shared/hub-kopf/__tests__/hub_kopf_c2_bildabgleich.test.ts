@@ -463,7 +463,8 @@ for (const art of ARTEN) {
 				const picker = einzig(k, 'wetter-vorlage-picker');
 				for (const seite of ['top', 'right', 'bottom', 'left']) rahmen(picker, seite, ctx, 1, '--g-rule', 'Vorlagen-Wähler');
 				gleich(picker, 'background-color', ctx, tok('--g-paper', ctx), 'Vorlagen-Wähler');
-				const nameEl = alle(picker, (n) => n.texte.join('').trim() === 'Alpen-Trekking');
+				const sollName = lang === 'de' ? 'Alpen-Trekking' : 'Alpine trekking'; // #2981: Vorlagenname zweisprachig
+				const nameEl = alle(picker, (n) => n.texte.join('').trim() === sollName);
 				assert.equal(nameEl.length, 1, 'Vorlagenname nicht als eigenes Element im Wähler');
 				laengeGleich(nameEl[0], 'font-size', ctx, 15, 'Vorlagenname');
 				gleich(nameEl[0], 'font-weight', ctx, '600', 'Vorlagenname');
