@@ -34,6 +34,7 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime, timezone
 
+from services.amtliche_warnungen_schalter import amtliche_warnungen_an_preset
 from services.fehler_code import fehler_mit_code
 
 logger = logging.getLogger(__name__)
@@ -149,7 +150,7 @@ class ComparePreviewService:
             target_date=resolved_date,
             forecast_hours=COMPARE_FORECAST_HOURS,
             profile=profile,
-            official_alerts_enabled=preset.get("official_alerts_enabled", True),
+            official_alerts_enabled=amtliche_warnungen_an_preset(preset),  # #3047 E4
             call_source="vergleich",
             user_id=user_id,  # Issue #2234: Budget beim ausloesenden Nutzer
         )

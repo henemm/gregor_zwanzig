@@ -379,19 +379,24 @@ def test_radar_alarm_standard_aus_und_kanalmenge_mit_schwelle(mit):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("fall,offiziell,legacy,soll", [
-    ("a", {"enabled": True}, False, True),
-    ("b", {"enabled": False}, True, False),
-    ("c", {}, False, False),
-    ("d", _WEG, _WEG, True),
+# #3047 E4 (PO 2026-11-16): Briefing-Schalter (``official_alerts_enabled``) ODER Alarm-Schalter an
+# -> beides an. Die „aus"-Faelle b/c setzen deshalb auch den Briefing-Schalter aus; Fall e haelt
+# den Mischzustand (Alarm aus, Briefing fehlend = an) als „an" fest.
+@pytest.mark.parametrize("fall,offiziell,legacy,briefing,soll", [
+    ("a", {"enabled": True}, False, _WEG, True),
+    ("b", {"enabled": False}, True, False, False),
+    ("c", {}, False, False, False),
+    ("d", _WEG, _WEG, _WEG, True),
+    ("e", {"enabled": False}, True, _WEG, True),
 ])
-def test_amtliche_warnung_schalter_vorrang_und_kanalmenge(mit, fall, offiziell, legacy, soll):
+def test_amtliche_warnung_schalter_vorrang_und_kanalmenge(mit, fall, offiziell, legacy, briefing, soll):
     """AC-17: aktueller Schalter (``official_warnings.enabled``) hat Vorrang vor dem Legacy-Feld,
     ein leerer Block zaehlt als nicht migriert; ausgeliefert wird an die aus ``alert_channels`` und
     Tarif aufgeloeste Kanalmenge auf allen vier Kanaelen."""
     for tier in ("premium", "standard"):
         n = _nutzer(fixture_dict("alarm_kanaele"), tier, official_warnings=offiziell,
-                    official_alert_triggers_enabled=legacy, **_alle_kanaele())
+                    official_alert_triggers_enabled=legacy, official_alerts_enabled=briefing,
+                    **_alle_kanaele())
         snap, gemeldet, quelle = _lauf(mit, "amtlich", n, "HIGH")
         if soll:
             assert gemeldet == 1, f"Fall {fall}: die Warnung muss ausgeliefert werden"

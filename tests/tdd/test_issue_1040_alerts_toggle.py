@@ -342,6 +342,9 @@ class TestIssue1040AlertsToggleAC3Passthrough:
         user_id = _fresh_user()
         loc = _resolvable_location("loc-1040-a")
         preset = _preset("cp-1040-off", official_alerts_enabled=False, loc_id="loc-1040-a")
+        # #3047 E4 (PO 2026-11-16): Briefing ODER Alarm an -> beides an; „aus"
+        # heisst seither auch Alarm-Schalter aus.
+        preset["official_warnings"] = {"enabled": False}
         preset["_user_id"] = user_id
 
         captured = _capture_official_alerts_enabled(preset, loc, tmp_path)

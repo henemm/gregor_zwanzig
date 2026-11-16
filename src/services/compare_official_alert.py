@@ -36,6 +36,7 @@ from output.renderers.alert.official_alerts import (
     official_alert_state_key,
 )
 from services import alert_channel_threshold, alert_daily_limit, alert_log
+from services.amtliche_warnungen_schalter import amtliche_warnungen_an_preset
 from services import alert_retry_backoff, parallel_fetch
 from services.compare_alert import preset_deadline, run_deadline_from
 from services.throttle_store import ThrottleStore
@@ -188,13 +189,8 @@ class CompareOfficialAlertService:
         # Fix-Loop F003: ein leeres {} (kein "enabled"-Schluessel) zaehlt
         # NICHT als migriert -> ebenfalls Legacy-Fallback statt stillem
         # Default True (analog trip_alert.py).
-        official_warnings_migrated = (
-            isinstance(official_warnings, dict) and "enabled" in official_warnings
-        )
-        if official_warnings_migrated:
-            if not official_warnings.get("enabled", True):
-                return False
-        elif not preset.get("official_alert_triggers_enabled", True):
+        # Issue #3047 E4 (PO 2026-11-16): Briefing ODER Alarm an -> beides an.
+        if not amtliche_warnungen_an_preset(preset):
             return False
         # Issue #1726: Ruhezeit UND Tageszaehler laufen auf der Ortszeit des
         # ERSTEN aufloesbaren Orts (#1378 AC-4, AC-15) — EINE Aufloesung fuer

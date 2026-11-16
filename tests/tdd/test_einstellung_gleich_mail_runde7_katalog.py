@@ -99,7 +99,9 @@ def _trip_roh(*, rc: Optional[dict] = None, official: bool = True) -> dict:
          "morning_time": "07:00:00", "evening_time": "18:00:00"}
     r.update(rc or {})
     return {"id": tid, "name": "Runde7 Zeitplaner", "stages": stages,
-            "official_alerts_enabled": official,
+            # #3047 E4: der Editor-Schalter schreibt Briefing- UND Alarm-Feld
+            # (Briefing ODER Alarm an -> beides an, PO 2026-11-16).
+            "official_alerts_enabled": official, "official_warnings": {"enabled": official},
             "display_config": {"trip_id": tid, "metrics": metrics,
                                "show_night_block": False},
             "report_config": r}
@@ -362,7 +364,7 @@ WARN_ZEILE = {"de": "⚠️ Amtliche Warnung: Extreme Hitze",
 @pytest.mark.parametrize("lang", ["de", "en"])
 @pytest.mark.parametrize("an", [True, False])
 def test_orte_warnschalter_und_wortlaut(monkeypatch, an, lang):
-    roh = _orte_roh(official_alerts_enabled=an)
+    roh = _orte_roh(official_alerts_enabled=an, official_warnings={"enabled": an})
     _u, abrufe, (_s, html, plain) = _orte_versand(roh, monkeypatch, language=lang)
     html_t = _ohne_tags(html)
     if not an:
@@ -381,8 +383,8 @@ def test_orte_warnschalter_und_wortlaut(monkeypatch, an, lang):
 
 
 def test_orte_warnschalter_zwei_nutzer(monkeypatch):
-    u1, a1, m1 = _orte_versand(_orte_roh(official_alerts_enabled=True), monkeypatch)
-    u2, a2, m2 = _orte_versand(_orte_roh(official_alerts_enabled=False), monkeypatch,
+    u1, a1, m1 = _orte_versand(_orte_roh(official_alerts_enabled=True, official_warnings={"enabled": True}), monkeypatch)
+    u2, a2, m2 = _orte_versand(_orte_roh(official_alerts_enabled=False, official_warnings={"enabled": False}), monkeypatch,
                                language="en")
     assert u1 != u2 and "default" not in (u1, u2)
     assert len(a1) == 3 and a2 == []
