@@ -769,6 +769,64 @@ def test_n1_bewusst_leer_alle_aus(monkeypatch, fall):
     _pruefe_spalten(tabellen, zustand["erwartet"], fall["id"])
 
 
+#: Register-Standard im 3-Tages-Ausblick (von Hand): die ausblickfaehigen
+#: Groessen des Standardsatzes in Register-Folge; Tagestief/-hoch haben keine
+#: Ausblick-Spalte (keine Tagesauswertung im Compare-Katalog).
+_REGISTER_STANDARD_AUSBLICK = [
+    "temperature", "wind", "gust", "precipitation", "thunder", "freezing_level",
+    "visibility",
+]
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n1_altbestand_ausblick_standardsatz"))
+def test_n1_altbestand_ausblick_standardsatz(monkeypatch, fall):
+    """#3047 J2 (AC-19/AC-20, #1394 Fall A): Trip-Altbestand ohne ``metrics``
+    bzw. mit ``metrics: []`` und nie eingestelltem Ausblick -- der Ausblick
+    zeigt in HTML, Klartext und Kompakt den Register-Standardsatz, soweit
+    ausblickfaehig, in Register-Folge (Grundauswahl = Standardsatz), nicht die
+    alten sieben festen Spalten."""
+    data = trip_json(["temperature"])
+    if "leere_liste" in fall["id"]:
+        data["display_config"]["metrics"] = []
+    else:
+        del data["display_config"]["metrics"]
+    assert "outlook_metrics" not in data["display_config"], "Vorbedingung: nie eingestellt"
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _ausblick(html, text, fall["format"])
+    assert tab is not None, f"{fall['id']}: Ausblick fehlt"
+    assert tab.spalten == _REGISTER_STANDARD_AUSBLICK, (
+        f"{fall['id']}: Ausblick {tab.spalten} != Register-Standard {_REGISTER_STANDARD_AUSBLICK}")
+
+
+def _p7_faelle() -> list:
+    """Faelle ``offen_feature`` von Punkt 7 -- belegt rot, bis #3065 Phase 2
+    die Abwahl persistiert (dann ``xfail(strict)`` laut)."""
+    return [pytest.param(f, id=f["id"], marks=[pytest.mark.xfail(
+                strict=True, reason="#3065 Phase 2: Abwahl nicht persistiert")])
+            for f in _FALLLISTE["faelle"]
+            if f["test"] == "test_p7_global_nachtraeglich_in_gespeicherter_liste"]
+
+
+@pytest.mark.parametrize("fall", _p7_faelle())
+def test_p7_global_nachtraeglich_in_gespeicherter_liste(monkeypatch, fall):
+    """Konzept §5 Punkt 6 / Nachpruefung Punkt 7: eine Metrik, die NACH dem
+    Speichern einer eigenen Liste global eingeschaltet wird (UV-Index), steht
+    in allen Listen -- hier in der gespeicherten E-Mail-Stundentabelle bzw. im
+    gespeicherten Ausblick, die sie noch gar nicht kennen (kein Eintrag, keine
+    Abwahl)."""
+    alt = ["temperature", "wind", "gust"]
+    if fall["liste"] == "trip_ausblick":
+        data = trip_json(alt + ["uv_index"], outlook_metrics=["wind", "temperature"])
+        tab = _ausblick(*_senden(monkeypatch, data, fall["format"])[:2], fall["format"])
+        spalten = tab.spalten if tab else []
+    else:
+        layout = metrik_eintraege(alt, katalog=tuple(alt))
+        data = trip_json(alt + ["uv_index"], email_layout=layout)
+        html, text, _ = _senden(monkeypatch, data, fall["format"])
+        spalten = _stundentabellen(html, text, fall["format"], "etappe")[0].spalten
+    assert "uv_index" in spalten, f"{fall['id']}: global nachtraeglich aufgenommen, fehlt in {spalten}"
+
+
 # ---------------------------------------------------------------------------
 # AC-12 -- zwei Nutzer
 # ---------------------------------------------------------------------------

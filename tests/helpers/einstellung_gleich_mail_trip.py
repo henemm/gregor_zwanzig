@@ -38,6 +38,9 @@ from tests.helpers.einstellung_auslieferung_orakel import erwartete_kaskade
 
 #: Spaltenbeschriftung -> Kennung (Protokoll-Token, nie uebersetzt).
 LABEL_ZU_ID: dict[str, str] = {m.col_label: m.id for m in _METRICS}
+#: Kompaktformat ist reines ASCII und laesst das Gradzeichen weg
+#: (``compact._ASCII_MAP``: ``0°Line`` -> ``0Line``) -- dieselbe Spalte.
+LABEL_ZU_ID.update({m.col_label.replace("°", ""): m.id for m in _METRICS if "°" in m.col_label})
 _HAT_EINFACH: dict[str, bool] = {m.id: m.has_friendly_format for m in _METRICS}
 _SELECTABLE: frozenset[str] = frozenset(m.id for m in _METRICS if m.selectable)
 
