@@ -28,7 +28,6 @@ from i18n import Lang, t
 from i18n.format import fmt_date_numeric, fmt_weekday
 from output.renderers.channel_layout import (
     CHANNEL_LIMITS, render_for_channel, selection_gap_notice,
-    telegram_metric_notice,
 )
 from output.renderers.fallback_notice import build_compare_fallback_lines
 from output.renderers.compare_metric_catalog import (
@@ -44,6 +43,9 @@ from output.renderers.email.compare_html import (
 )
 from output.renderers.email.outlook_state_hint import (
     OutlookState, render_outlook_state_plain,
+)
+from output.renderers.email.unavailable_hint import (
+    any_official_alerts_unavailable, render_official_alerts_unavailable_plain,
 )
 from output.renderers.email.undelivered_hint import (
     has_undelivered, render_undelivered_plain,
@@ -279,6 +281,11 @@ def render_comparison_text(
     )
     lines.append(t("vergleich.kopf.erstellt_zeile", lang, zeit=erstellt))
     lines.append("")
+    # Issue #3047 B-OM-1 (AC-28): derselbe Hinweis "nicht abrufbar" wie im
+    # HTML-Teil derselben Mail (geteilter Baustein wie Trip-Klartext, #1348).
+    if any_official_alerts_unavailable(locations):
+        lines.append(render_official_alerts_unavailable_plain(lang=lang))
+        lines.append("")
     lines.append("-" * 50)
 
     for loc_result in locations:
@@ -856,8 +863,16 @@ def render_compare_telegram(
     lang: Lang = "de",
     show_fallback_notice: bool = False,
     metric_formats: dict[str, bool] | None = None,
+    outlook_enabled: bool = False,
+    outlook_metrics: list[dict] | None = None,
+    outlook_metric_formats: dict[str, bool] | None = None,
+    preset: dict | None = None,
 ) -> str:
     """Rendert einen Orts-Vergleich als Telegram-Nachricht (Issue #1270).
+
+    ``outlook_*``/``preset`` (Issue #3047 B-K7): 3-Tages-Ausblick je Ort mit
+    denselben Optionen wie ``render_compare_email`` (Ampel aus ``preset``);
+    Default aus = bisheriges Verhalten.
 
     ``metric_formats`` (Issue #3039): ``{renderer_id: einfach}`` aus
     ``channel_layouts``; ``None`` = heutiger Festzustand (Roh).
@@ -906,77 +921,19 @@ def render_compare_telegram(
     # analog render_comparison_text() und compare_html._render_header().
     header.append("")
 
-    blocks: list[list[str]] = []
-    for loc_result in locations:
-        block = [loc_result.location.name]
-        if loc_result.error is not None:
-            block.append("   " + t("vergleich.ort.fehler", lang, fehler=loc_result.error))
-            blocks.append(block)
-            continue
-        # Issue #3047 (Konzept WV6, ADR-0095): wie in der Vergleichs-Mail steht
-        # die amtliche Warnung ZUERST im Ortsblock, vor den Werten (SMS/
-        # Premium-SMS: am Ende, dort unveraendert).
-        # Issue #1332 (PO-Korrektur 2026-07-23): Sicherheits-Filter + geteilte,
-        # kontext-agnostische Bausteine (`build_official_alert_notices`/
-        # `render_official_alert_telegram`, `trip=None` fuer den einzelnen
-        # Ort) -- exakt dasselbe narrative Format wie das Trip-Telegram.
-        # KEIN SMS-Kuerzel-Marker hier: Compare-Telegram soll wie
-        # Trip-Telegram aussehen (ausgeschrieben, kein `!TH:H`); das Kuerzel
-        # bleibt exklusiv im SMS-Pfad (`_sms_location_part`).
-        # Issue #1332 F001 (Adversary HIGH): `trip=None` liefert je Ort ein
-        # `scope_label` von "unbekannt" (kein Trip-Segment bekannt) -- dieser
-        # Render-Pfad baut aber JE ORT einen eigenen Block, dessen
-        # Ortsname bereits als `prefix`/Block-Ueberschrift steht. Ein
-        # Scope-Segment waere hier IMMER redundant oder irrefuehrend, egal ob
-        # "unbekannt" oder (ueber den Compare-Builder) "alle Orte" fuer genau
-        # den einen Block -- daher `show_scope=False` statt eines zweiten
-        # Builder-Aufrufs mit demselben Ergebnis.
-        # Issue #1461 S3b-2b (AC-17): der feste Vergleichswert `MIN_SMS_LEVEL`
-        # (orange) geht in der Startschwelle "gering" auf -- derselbe Wechsel
-        # wie beim Trip-Bericht (S3b-2a, `sms_trip.py::_official_alert_entries`).
-        # Kein Compare-Kanal-Schwellenparameter hier: der Bericht bleibt beim
-        # Startwert, unabhaengig von einer je Kanal eingestellten Alarm-Schwelle
-        # (Spec "Zwei Wirkungsorte" -- Bericht und Alarm-Versand sind getrennt).
-        _min_level = alert_urgency.min_official_level_for_threshold("LOW")
-        filtered = [a for a in loc_result.official_alerts if a.level >= _min_level]
-        if filtered:
-            notices = build_official_alert_notices(None, [(a, []) for a in filtered], lang=lang)
-            sources = list(dict.fromkeys(
-                official_alert_source_label(a.source, lang=lang) for a in filtered
-            ))
-            warn_text = render_official_alert_telegram(
-                notices, prefix=loc_result.location.name,
-                source_label=" · ".join(sources), show_scope=False,
-                tz=location_tz(loc_result.location), lang=lang,
-            )
-            block.append(f"   {warn_text}")
-        # Werte sind ortsabhaengig -- Verfuegbarkeit VOR der Prioritaets-/
-        # Slot-Kappung pruefen (Adversary-Korrektur), nicht erst beim
-        # Zellenbau. `cell_values` haelt jede Zelle nur einmal vor (keine
-        # doppelte `_metric_value`/`_daily_summary`-Berechnung).
-        cell_values = {
-            mid: _plain_metric_cell(
-                loc_result, mid, lang, friendly=bool((metric_formats or {}).get(mid)),
-            )
-            for mid in dedup_ids
-        }
-        available_ids = [mid for mid in dedup_ids if cell_values[mid] is not None]
-        no_data_count = len(dedup_ids) - len(available_ids) + unresolved_count
-        layout = _channel_layout_for_metrics("telegram", available_ids)
-        cells = [cell_values[mid] for mid in layout.table_columns]
-        block.append("   " + (" · ".join(cells) if cells
-                                 else t("vergleich.telegram.keine_werte", lang)))
-        # Zwei getrennt zaehlbare Ausfaelle (Invariante: sichtbare Zellen +
-        # Platzmangel-Zaehler + Ohne-Daten-Zaehler == Anzahl gewaehlter
-        # Groessen). Je eigene Zeile INNERHALB dieses Ortsblocks, weil beide
-        # Zahlen ortsabhaengig sind.
-        if layout.demoted_count > 0:
-            block.append("   " + telegram_metric_notice(
-                layout.demoted_count, context="vergleich", lang=lang,
-            ))
-        if no_data_count > 0:
-            block.append("   " + _telegram_no_data_notice(no_data_count, lang))
-        blocks.append(block)
+    # Issue #3047 B-K7/AC-24: 3-Tages-Ausblick je Ort wie beim Trip-Telegram.
+    # Ampel aus dem Preset (Einstieg wie render_compare_email) -- nie still
+    # "allgemein": ohne Preset kein Ausblick (Profil-Ampel S1c-4b, AC-25).
+    if outlook_enabled and preset is None:
+        raise TypeError("render_compare_telegram: preset ist Pflicht bei outlook_enabled")
+    ampel = resolve_ampel(preset) if outlook_enabled else None
+    outlook = (outlook_enabled, outlook_metrics, outlook_metric_formats, ampel)
+    blocks: list[list[str]] = [
+        _telegram_location_block(
+            loc_result, dedup_ids, lang, metric_formats, unresolved_count, outlook,
+        )
+        for loc_result in locations
+    ]
 
     max_chars = limits["max_chars"]
     # Metrik-Platzmangel-/Ohne-Daten-Hinweise stecken bereits als Zeilen IN
@@ -995,6 +952,118 @@ def render_compare_telegram(
     return _fit_telegram(
         header, blocks, max_chars - len(trailer), lambda n: _telegram_notice(n, lang),
     ) + trailer
+
+
+def _telegram_location_block(
+    loc_result, dedup_ids: list[str], lang: Lang, metric_formats: dict[str, bool] | None,
+    unresolved_count: int, outlook: tuple,
+) -> list[str]:
+    """Ein Ortsblock des Orts-Vergleichs-Telegrams (Name, Warnung, Werte,
+    Ausblick). ``outlook`` = ``(enabled, metrics, formats, ampel)``."""
+    block = [loc_result.location.name]
+    if loc_result.error is not None:
+        block.append("   " + t("vergleich.ort.fehler", lang, fehler=loc_result.error))
+        return block
+    warn_text = _telegram_warn_text(loc_result, lang)
+    if warn_text:
+        block.append(f"   {warn_text}")
+    # Werte sind ortsabhaengig -- Verfuegbarkeit VOR der Prioritaets-/
+    # Slot-Kappung pruefen (Adversary-Korrektur), nicht erst beim
+    # Zellenbau. `cell_values` haelt jede Zelle nur einmal vor (keine
+    # doppelte `_metric_value`/`_daily_summary`-Berechnung).
+    cell_values = {
+        mid: _plain_metric_cell(
+            loc_result, mid, lang, friendly=bool((metric_formats or {}).get(mid)),
+        )
+        for mid in dedup_ids
+    }
+    available_ids = [mid for mid in dedup_ids if cell_values[mid] is not None]
+    no_data_count = len(dedup_ids) - len(available_ids) + unresolved_count
+    layout = _channel_layout_for_metrics("telegram", available_ids)
+    # Issue #3047 B-K5/AC-24 (PO-Entscheidung 2026-11-16): nichts faellt weg.
+    # Die ersten Plaetze (Tabellen-Budget des Layouts) bilden Zeile 1, alle
+    # weiteren Zeilen der Liste folgen in Listenfolge in Zeile 2 desselben
+    # Ortes -- statt eines Kappungshinweises "vollstaendig per E-Mail".
+    erste = list(layout.table_columns)
+    zweite = [mid for mid in available_ids if mid not in erste]
+    block.append("   " + (" · ".join(cell_values[mid] for mid in erste) if erste
+                             else t("vergleich.telegram.keine_werte", lang)))
+    if zweite:
+        block.append("   " + " · ".join(cell_values[mid] for mid in zweite))
+    # Ohne-Daten-Zaehler (Invariante: sichtbare Zellen + Ohne-Daten-Zaehler ==
+    # Anzahl gewaehlter Groessen), eigene Zeile INNERHALB dieses Ortsblocks.
+    if no_data_count > 0:
+        block.append("   " + _telegram_no_data_notice(no_data_count, lang))
+    block.extend(_telegram_outlook_lines(loc_result, outlook, lang))
+    return block
+
+
+def _telegram_warn_text(loc_result, lang: Lang) -> str:
+    """Amtliche Warnung eines Ortes fuer den Telegram-Ortsblock ("" ohne)."""
+    # Issue #3047 (Konzept WV6, ADR-0095): wie in der Vergleichs-Mail steht
+    # die amtliche Warnung ZUERST im Ortsblock, vor den Werten (SMS/
+    # Premium-SMS: am Ende, dort unveraendert).
+    # Issue #1332 (PO-Korrektur 2026-07-23): Sicherheits-Filter + geteilte,
+    # kontext-agnostische Bausteine (`build_official_alert_notices`/
+    # `render_official_alert_telegram`, `trip=None` fuer den einzelnen
+    # Ort) -- exakt dasselbe narrative Format wie das Trip-Telegram.
+    # KEIN SMS-Kuerzel-Marker hier: Compare-Telegram soll wie
+    # Trip-Telegram aussehen (ausgeschrieben, kein `!TH:H`); das Kuerzel
+    # bleibt exklusiv im SMS-Pfad (`_sms_location_part`).
+    # Issue #1332 F001 (Adversary HIGH): `trip=None` liefert je Ort ein
+    # `scope_label` von "unbekannt" (kein Trip-Segment bekannt) -- dieser
+    # Render-Pfad baut aber JE ORT einen eigenen Block, dessen
+    # Ortsname bereits als `prefix`/Block-Ueberschrift steht. Ein
+    # Scope-Segment waere hier IMMER redundant oder irrefuehrend, egal ob
+    # "unbekannt" oder (ueber den Compare-Builder) "alle Orte" fuer genau
+    # den einen Block -- daher `show_scope=False` statt eines zweiten
+    # Builder-Aufrufs mit demselben Ergebnis.
+    # Issue #1461 S3b-2b (AC-17): der feste Vergleichswert `MIN_SMS_LEVEL`
+    # (orange) geht in der Startschwelle "gering" auf -- derselbe Wechsel
+    # wie beim Trip-Bericht (S3b-2a, `sms_trip.py::_official_alert_entries`).
+    # Kein Compare-Kanal-Schwellenparameter hier: der Bericht bleibt beim
+    # Startwert, unabhaengig von einer je Kanal eingestellten Alarm-Schwelle
+    # (Spec "Zwei Wirkungsorte" -- Bericht und Alarm-Versand sind getrennt).
+    _min_level = alert_urgency.min_official_level_for_threshold("LOW")
+    filtered = [a for a in loc_result.official_alerts if a.level >= _min_level]
+    if filtered:
+        notices = build_official_alert_notices(None, [(a, []) for a in filtered], lang=lang)
+        sources = list(dict.fromkeys(
+            official_alert_source_label(a.source, lang=lang) for a in filtered
+        ))
+        warn_text = render_official_alert_telegram(
+            notices, prefix=loc_result.location.name,
+            source_label=" · ".join(sources), show_scope=False,
+            tz=location_tz(loc_result.location), lang=lang,
+        )
+        return warn_text
+    return ""
+
+
+def _telegram_outlook_lines(loc_result, outlook: tuple, lang: Lang) -> list[str]:
+    """Issue #3047 B-K7/AC-24: 3-Tages-Ausblick eines Ortes im Telegram.
+
+    Zeilen aus demselben Zeilenbau wie die Vergleichs-Mail
+    (``_build_location_outlook_rows``: Ausblick-Liste, Folge, Roh/Einfach),
+    Form und Kopf aus dem Trip-Telegram (``narrow._outlook_lines``, EIN Code
+    fuer beide Kontexte). Schalter aus oder bewusst leere Liste -> nichts;
+    eingeschaltet ohne Daten -> benannter Zustand wie in der Mail."""
+    enabled, metrics, formats, ampel = outlook
+    if not enabled or metrics == []:
+        return []
+    rows = (
+        _build_location_outlook_rows(loc_result, metrics, formats, lang, ampel=ampel)
+        if loc_result.outlook_hourly_data else []
+    )
+    if rows:
+        from output.renderers.narrow import _outlook_lines
+
+        lines = _outlook_lines(rows, metrics, lang=lang, ampel=ampel)
+    else:
+        lines = [t("telegram.kopf.ausblick", lang),
+                 render_outlook_state_plain(OutlookState.UNAVAILABLE, lang=lang)]
+    # Kein HTML-Escaping: der Orts-Vergleich geht mit parse_mode=None hinaus.
+    return ["   " + z for z in lines]
 
 
 def _fit_telegram(header: list[str], blocks: list[list[str]], max_chars: int, hinweis) -> str:
@@ -1119,16 +1188,7 @@ def _sms_location_part(
     name = loc_result.location.name
     if loc_result.error is not None:
         return f"{name} n/a"
-    tz = resolve_location_tz(loc_result.location)
-    # Issue #1461 S3b-2b (AC-17): derselbe Wechsel wie im Compare-Telegram
-    # (oben) -- der Vorgabewert von `official_alerts_to_sms_entries()` faellt
-    # sonst auf `MIN_SMS_LEVEL` (orange) zurueck. `min_level` explizit auf die
-    # Startschwelle "gering" gesetzt, keine zweite Zahlenreihe.
-    entries = official_alerts_to_sms_entries(
-        loc_result.official_alerts, tz,
-        min_level=alert_urgency.min_official_level_for_threshold("LOW"),
-    )
-    marker = _official_alert_sms_marker(entries)
+    marker = _location_sms_alert_marker(loc_result)
 
     dedup_ids = list(dict.fromkeys(
         enabled_metrics if enabled_metrics is not None
@@ -1162,6 +1222,50 @@ def _sms_location_part(
         demoted += 1
 
     return _assemble(kept, demoted)
+
+
+def _location_sms_alert_marker(loc_result) -> str:
+    """`!`-Marker der amtlichen Warnungen EINES Ortes ("" ohne Warnung/Fehlerort)."""
+    if loc_result.error is not None:
+        return ""
+    tz = resolve_location_tz(loc_result.location)
+    # Issue #1461 S3b-2b (AC-17): derselbe Wechsel wie im Compare-Telegram
+    # (oben) -- der Vorgabewert von `official_alerts_to_sms_entries()` faellt
+    # sonst auf `MIN_SMS_LEVEL` (orange) zurueck. `min_level` explizit auf die
+    # Startschwelle "gering" gesetzt, keine zweite Zahlenreihe.
+    entries = official_alerts_to_sms_entries(
+        loc_result.official_alerts, tz,
+        min_level=alert_urgency.min_official_level_for_threshold("LOW"),
+    )
+    return _official_alert_sms_marker(entries)
+
+
+def _sms_fit_alerts_last(
+    head: str, locations: list, kept_count: int, part_fn, start_budget: int, max_chars: int,
+) -> str | None:
+    """Issue #3047 B-K3/AC-23 (Konzept WV6, PO-Entscheidung 2026-11-16):
+    amtliche Warnungen fallen beim Kuerzen ZULETZT weg -- auch die eines
+    weiteren Ortes. Haette die Einpass-Schleife einen Ort mit Warnung als
+    ``+k Orte`` verworfen, bleiben stattdessen alle Orte mit Warnung sichtbar;
+    gekuerzt wird von hinten: zuerst die Wetterzellen ALLER gezeigten Orte
+    vom Listenende (gleiches Budget je Ort), dann ganze Orte OHNE Warnung vom
+    Ende. ``None`` = kein weggelassener Ort traegt eine Warnung (bisheriges
+    Verhalten) bzw. selbst die Warnungen allein passen nicht."""
+    gewarnt = {i for i, loc in enumerate(locations) if _location_sms_alert_marker(loc)}
+    if not any(i >= kept_count for i in gewarnt):
+        return None
+    shown = sorted(set(range(kept_count)) | gewarnt)
+    while shown:
+        notice = _sms_location_overflow_notice(len(locations) - len(shown))
+        for budget in range(start_budget, -1, -1):
+            body = f"{head} " + "; ".join(part_fn(locations[i], budget) for i in shown) + notice
+            if len(body) <= max_chars:
+                return body
+        ohne = [i for i in shown if i not in gewarnt]
+        if not ohne:
+            return None
+        shown.remove(ohne[-1])
+    return None
 
 
 def render_compare_sms(
@@ -1251,6 +1355,16 @@ def render_compare_sms(
             break
 
     omitted = len(parts) - len(kept)
+    if omitted:
+        mit_warnung = _sms_fit_alerts_last(
+            head, locations, len(kept),
+            lambda loc, budget: _sms_location_part(
+                loc, enabled_metrics, budget, unresolved_count, metric_formats,
+            ),
+            location_budget, max_chars,
+        )
+        if mit_warnung is not None:
+            return mit_warnung
     if not kept:
         # Degenerationsfall: schon der erste Ort sprengt das Budget. "Ueberschrift
         # + nichts" ist verboten — dann lieber EIN gekuerzter Ort. Gekuerzt wird

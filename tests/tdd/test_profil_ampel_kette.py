@@ -826,6 +826,8 @@ EINSTIEGE = {
     ("renderers/email/compact.py", "render_compact"): 1,
     ("renderers/email/compare_html.py", "render_compare_html"): 1,
     ("renderers/comparison.py", "render_comparison_text"): 1,
+    # Issue #3047 B-K7: Orte-Telegram traegt den 3-Tages-Ausblick (Ampel des Presets).
+    ("renderers/comparison.py", "render_compare_telegram"): 1,
     ("renderers/narrow.py", "render_telegram_bubbles"): 1,
     # S1c-4b (Spec v1.5 Punkt 4): die SMS bekommt die Ampel aus derselben dc
     # wie die Mail; aufgeloest im Formatter, der format_sms ruft.

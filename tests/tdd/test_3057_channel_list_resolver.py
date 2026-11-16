@@ -563,15 +563,16 @@ def test_ac6_nur_katalog_metriken_und_leer_bleibt_leer():
     assert _aktiv(vm.telegram) == []
     assert _aktiv(vm.sms) == []
 
-    # `channel_layouts: []` haengt im Altpfad die Grundauswahl an (#3031 AC-8,
-    # #3039 AC-14) -- die zugestellte Mail bleibt so (AC-2/AC-8); eine
-    # Verhaltensaenderung waere #3058. Der Resolver folgt hier dem Orakel.
+    # #3047 Runde 7 B-K6 loest den frueheren Ist-Stand ab ("channel_layouts: []
+    # haengt die Grundauswahl an"): eine ausdruecklich leere Kanal-Liste bleibt
+    # leer wie beim Trip (Konzept: abwaehlen erlaubt, #2422). Der Resolver folgt
+    # weiter dem Orakel (Altpfad), beide sind jetzt leer.
     preset = {"display_config": {"active_metrics": copy.deepcopy(AKTIV_ORTE),
                                  "channel_layouts": {"telegram": []}}}
     vm = resolve(copy.deepcopy(preset["display_config"]), "compare")
     alt_enabled, _alt_rows = alt_compare_kanaele(preset)
     assert _aktiv(vm.telegram) == alt_enabled["telegram"]
-    assert alt_enabled["telegram"], "Altpfad: channel_layouts [] ist nicht leer"
+    assert alt_enabled["telegram"] == [], "channel_layouts [] bleibt leer (B-K6)"
 
 
 # ---------------------------------------------------------------------------

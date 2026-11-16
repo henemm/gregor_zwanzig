@@ -249,7 +249,9 @@ def test_ac4_telegram_hinweise_englisch():
     from output.renderers.channel_layout import selection_gap_notice, telegram_metric_notice
 
     voll, leer, keine = render_kanaele("en")[:3]
-    assert "   " + telegram_metric_notice(3, context="vergleich", lang="en") in voll.splitlines()
+    # #3047 Runde 7 (PO-Entscheidung 2026-11-16, AC-24) loest den Kappungshinweis
+    # im Orte-Telegram ab: Zeilen ab Platz 8 stehen in einer zweiten Zeile je Ort.
+    assert "   " + telegram_metric_notice(3, context="vergleich", lang="en") not in voll.splitlines()
     assert "   " + selection_gap_notice(1, scope="ort", lang="en") in voll.splitlines()
     assert telegram_metric_notice(3, context="vergleich", lang="en") != telegram_metric_notice(
         3, context="vergleich")
@@ -496,10 +498,11 @@ def test_telegram_hinweise_singular_plural(n):
                                  unresolved_count=n).splitlines()
     wert = "value" if n == 1 else "values"
     assert f"   … +{n} selected weather {wert} without data at this location" in en
-    # 8 Groessen, 7 Plaetze: immer genau eine verdraengt -> Singular
-    assert "   … +1 more weather value per location (Telegram limit) — full version by email" in en
     assert f"   … +{n} gewählte Wettergrößen ohne Wert an diesem Ort" in de
-    assert "   … +1 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail" in de
+    # #3047 Runde 7 (PO-Entscheidung 2026-11-16, AC-24): 8 Groessen, 7 Plaetze in
+    # Zeile 1 -- die achte steht in einer zweiten Zeile, kein Kappungshinweis mehr.
+    for zeilen in (en, de):
+        assert not any("Telegram limit" in z or "Telegram-Limit" in z for z in zeilen), zeilen
 
 
 def test_vortag_unbekannte_kennung_faellt_auf_neutrales_wort():
