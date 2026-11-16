@@ -1310,6 +1310,9 @@ def render_html(
             lang=lang,
             ampel=ampel,
         )
+    else:
+        _pills = []
+    if _pills:
         # AC-7 (#911): Abstände laut Vorlage EmailMetricsSummary
         _chips_html = "".join(pill_html(lbl, tone) for lbl, tone in _pills)
         metrics_summary_html = (
@@ -1321,7 +1324,8 @@ def render_html(
         )
     else:
         # AC-1: bewusste Leerauswahl (Fall B) -> weder Standard-Satz noch
-        # leere Ueberschrift.
+        # leere Ueberschrift. #3047 F008b: ebenso, wenn die gewaehlten
+        # Groessen keine Kachel tragen (z.B. nur Nacht-Tiefsttemperatur).
         metrics_summary_html = ""
 
     # Issue #790/#795/RC4/AC-6: Vortag-Einordnung. Issue #1394 (T1): die

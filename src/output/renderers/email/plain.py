@@ -257,6 +257,11 @@ def render_plain(
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour, lang=lang, ampel=ampel,
         )
+    else:
+        _plain_pills = []
+    # #3047 F008b: ohne Kachel (z.B. nur Nacht-Tiefsttemperatur gewaehlt)
+    # entfaellt auch die Ueberschrift -- wie im HTML und in der Kompaktmail.
+    if _plain_pills:
         lines.append(f"━━ {t('mail.pille.ueberschrift', lang)} ━━")
         for _lbl, _tone in _plain_pills:
             _sym = tone_symbol(_tone)

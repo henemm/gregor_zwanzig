@@ -846,8 +846,11 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         # nicht durch mode (build_format_modes liefert immer 'raw' für diese Metriken).
         if html and _use_ampel:
             metric_id = _AMPEL_KEY_TO_METRIC_ID[key]
-            return _ampel_dot_severity(metric_id, val, ampel=ampel)
-        s = format_value(key, val, style="bare")
+            s = _ampel_dot_severity(metric_id, val, ampel=ampel)
+        else:
+            s = format_value(key, val, style="bare")
+        # #435 / #3047 F004: die verschmolzene Windrichtung gehoert auch an
+        # den Ampelpunkt -- dieselbe Aussage wie der Klartext ("20 W").
         if key == "wind" and row and "_wind_dir_deg" in row:
             compass = degrees_to_compass(row["_wind_dir_deg"])
             if compass:
