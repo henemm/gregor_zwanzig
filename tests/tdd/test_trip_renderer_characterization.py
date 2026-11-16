@@ -220,7 +220,11 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # Vorher-Digest (9741e32c…) ist die Brand-Zeile „Evening-Briefing" ->
 # „Abend-Briefing" (HTML); NACHGEMESSEN: mit Katalogwert „Evening" ergibt der
 # Output exakt den alten Digest.
-_EXPECTED_SHA256 = "ba0f7521e9a15decfb99b9a43088a2cdae2018bf46e55c2bb02c61399868db40"
+# #3047 F004 (vierte Pruefung) -- BEWUSST NEU GEMESSEN: einziger Unterschied
+# zum Vorher-Digest (ba0f7521…) ist die Kompassrichtung „ SW" hinter dem
+# Ampelpunkt der HTML-Windzelle (2x: Etappe, Nacht), wie im Klartext; mit dem
+# alten frueh zurueckkehrenden Ampel-Zweig ergibt der Output exakt den alten Digest.
+_EXPECTED_SHA256 = "67fa6537c427b1a2574ef96b4035673738fdbb7e09e68e6a51c2305db5fac031"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",
