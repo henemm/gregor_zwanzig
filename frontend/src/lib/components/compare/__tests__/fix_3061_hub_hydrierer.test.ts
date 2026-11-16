@@ -260,9 +260,39 @@ describe('#3061 Speichern und Trip bleiben unveraendert', () => {
 		const s: Record<string, unknown> = {};
 		await wetterHydrierer(s, ALTBESTAND());
 		alarmHydrierer(s, ALTBESTAND());
+		const layout = hydrateLayoutFieldsFromPreset(ALTBESTAND(), KATALOG);
+		Object.assign(s, layout);
+		// Baseline wie im Hub: Stand nach BEIDEN Hydrationen.
 		const vorher = wetterMetrikenSnapshotAus(s);
+		// Oeffnen = Ausblick-Block mounten; jeder Schreibversuch des Bausteins landet im Zustand.
+		const schreibversuche: unknown[] = [];
+		const grundauswahl = vergleichGrundauswahl((s.activeMetricKeys as string[] | null | undefined) ?? null);
+		assert.equal(grundauswahl, null, 'Altbestand muss als „nie eingestellt" (null) beim Ausblick ankommen');
+		// `.body` ist Pflicht: svelte/server rendert lazy, erst der Zugriff fuehrt den Baustein aus
+		// (sonst vakuum-gruen, Adversary F003). Restluecke: ein Schreiben aus `$effect` laeuft
+		// unter SSR nie und ist hier nicht beobachtbar.
+		void render(OutlookLayoutControls as never, {
+			props: {
+				metricKeys: layout.outlookMetricKeys,
+				catalog: KATALOG,
+				grundauswahl,
+				onMetricKeys: (k: string[]) => {
+					schreibversuche.push(k);
+					s.outlookMetricKeys = k;
+				}
+			}
+		} as never).body;
+		assert.deepEqual(schreibversuche, [], 'Ausblick-Block schreibt beim reinen Oeffnen eine Auswahl');
+		assert.equal(s.activeMetricKeys, null, 'activeMetricKeys nach dem Oeffnen nicht mehr „nie eingestellt"');
 		const nachher = wetterMetrikenSnapshotAus(s);
 		assert.equal(flushPendingWetterMetrikenSave(ALTBESTAND(), nachher, vorher), null, 'Scheindifferenz nach reinem Oeffnen');
+		// Auch eine spaetere Speicherung (andere Geste) schreibt kein active_metrics.
+		const mitGeste = { ...nachher, outlookEnabled: !nachher.outlookEnabled };
+		const nutzlast = flushPendingWetterMetrikenSave(ALTBESTAND(), mitGeste, vorher);
+		assert.ok(nutzlast, 'Messaufbau: echte Geste muss eine Nutzlast liefern');
+		const dc = (nutzlast!.body.display_config ?? {}) as Record<string, unknown>;
+		assert.equal('active_metrics' in dc, false, `Nutzlast schreibt active_metrics: ${JSON.stringify(dc.active_metrics)}`);
+		assert.equal('outlook_metrics' in dc && dc.outlook_metrics != null, false, `Nutzlast schreibt outlook_metrics: ${JSON.stringify(dc.outlook_metrics)}`);
 	});
 
 	test('AC-5: Trip-Einbettung reicht weiter buckets.primary, nie null als Altbestand-Signal', () => {
