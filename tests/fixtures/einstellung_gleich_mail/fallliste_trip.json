@@ -2191,6 +2191,72 @@
       "status": "gruen"
     },
     {
+      "id": "trip-n1--altbestand_ohne_metrics-ausblick--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ausblick_standardsatz",
+      "ac": "AC-19, AC-20, AC-11, #1394",
+      "befund": "N1",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1--altbestand_ohne_metrics-ausblick--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ausblick_standardsatz",
+      "ac": "AC-19, AC-20, AC-11, #1394",
+      "befund": "N1",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1--altbestand_ohne_metrics-ausblick--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ausblick_standardsatz",
+      "ac": "AC-19, AC-20, AC-11, #1394",
+      "befund": "N1",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1--leere_liste_altbestand-ausblick--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ausblick_standardsatz",
+      "ac": "AC-19, AC-20, AC-11, #1394",
+      "befund": "N1",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1--leere_liste_altbestand-ausblick--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ausblick_standardsatz",
+      "ac": "AC-19, AC-20, AC-11, #1394",
+      "befund": "N1",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1--leere_liste_altbestand-ausblick--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ausblick_standardsatz",
+      "ac": "AC-19, AC-20, AC-11, #1394",
+      "befund": "N1",
+      "status": "gruen"
+    },
+    {
       "id": "trip-wv6--vor_tabelle--html",
       "liste": "trip_stundentabelle",
       "kontext": "trip",
