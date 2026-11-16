@@ -16,7 +16,7 @@ from datetime import timedelta
 import pytest
 from fastapi import HTTPException
 
-from tests.helpers.vorschau_umgebung import env  # noqa: F401  (Fixture)
+from tests.helpers.vorschau_umgebung import env, mittagsuhr  # noqa: F401  (Fixture)
 from tests.tdd.test_alert_hour_rows import (
     TRIP_ID, TRIP_LAT, TRIP_LON, TRIP_STURM, _erwartete_zeilen, _plant, _rows,
     _trip_anker_schreiben, _trip_body, _trip_versand,
@@ -59,7 +59,7 @@ def _body_wie_oberflaeche(segment_id: str) -> dict:
 
 
 def test_vorschau_eines_heute_laufenden_trips_mit_etappe_t01_zeigt_die_stundenzeilen_des_versands(
-    env, monkeypatch, tmp_path,  # noqa: F811
+    mittagsuhr, env, monkeypatch, tmp_path,  # noqa: F811
 ):
     """Etappe ``T01`` laeuft heute, Anker im Speicher des Nutzers, frische Reihe ueber die
     Fixture-Naht. Der Body, den die Oberflaeche jetzt sendet (``segment_id "1"``), liefert eine

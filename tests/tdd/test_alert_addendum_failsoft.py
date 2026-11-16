@@ -35,7 +35,8 @@ from output.renderers.alert.model import AlertMessage
 from services.notification_service import NotificationService
 
 from tests.helpers.nowcast_gate_fixtures import (
-    TRIP_ZONE, clean_uid, fresh_uid, make_trip, quiet_window_elsewhere,
+    TRIP_ZONE, clean_uid, fresh_uid, frozen_active_window, make_trip,
+    quiet_window_elsewhere,
     radar_service, save_trip, settings_email_only, write_user_tier,
 )
 from tests.tdd.test_alert_addendum_sms import _ConvectiveFrameSource
@@ -130,60 +131,64 @@ def test_nachtrag_ohne_meldezeitpunkt_bleibt_zustellbar_und_reisst_den_lauf_nich
 
     uid = fresh_uid("2018-f002")
     nachtrag_trip, normal_trip = "trip-2018-f002-a", "trip-2018-f002-b"
-    clean_uid(uid)
-    try:
-        write_user_tier(uid, "premium")
-        _amtlichen_eintrag_beschaedigen(uid, nachtrag_trip, roh=roh)
-        quiet_from, quiet_to = quiet_window_elsewhere(zone=TRIP_ZONE)
-        for trip_id in (nachtrag_trip, normal_trip):
-            save_trip(
-                make_trip(trip_id, quiet_from=quiet_from, quiet_to=quiet_to), uid,
-            )
-
-        mails: list[tuple[str, str]] = []
-        svc = TripAlertService(
-            settings=settings_email_only(), throttle_hours=0, user_id=uid,
-            radar_service=radar_service(_ConvectiveFrameSource()),
-            mail_sink=lambda subject, body: mails.append((subject, body)),
-        )
-        recorder = _Recorder(settings_email_only(), uid)
-        svc._notification_service = recorder
-
-        sent = svc.check_radar_alerts()
-
-        assert sent == 2, (
-            f"{fall}: beide Trips muessen ihren Alarm bekommen — der Nachtrag "
-            "darf weder ausfallen noch den Lauf der uebrigen Trips abreissen "
-            f"(check_radar_alerts() lieferte {sent})."
-        )
-        markiert = [m for m in recorder.dispatched if m.addendum_reference]
-        assert len(markiert) == 1, (
-            f"{fall}: erwartet GENAU EINE als Nachtrag markierte Meldung, "
-            f"erfasst: {[m.addendum_reference for m in recorder.dispatched]!r}"
-        )
-        assert len(recorder.dispatched) == 2, (
-            f"{fall}: der zweite Trip muss seinen gewoehnlichen Alarm "
-            f"bekommen: {recorder.dispatched!r}"
-        )
-        assert markiert[0].addendum_reference == BEZUG_OHNE_UHRZEIT, (
-            f"{fall}: ohne lesbaren Meldezeitpunkt muss die Uhrzeit ERSATZLOS "
-            "entfallen — kein Platzhalter, kein angehaengtes 'von': "
-            f"{markiert[0].addendum_reference!r}"
-        )
-
-        nachtrags_mails = [b for _s, b in mails if BEZUG_OHNE_UHRZEIT in b]
-        assert len(nachtrags_mails) == 1, (
-            f"{fall}: die Bezugszeile muss in genau EINER zugestellten Mail "
-            f"stehen ({len(mails)} Mails erfasst)."
-        )
-        zeile = _bezugszeile(nachtrags_mails[0])
-        assert zeile == BEZUG_OHNE_UHRZEIT, (
-            f"{fall}: die gerenderte Bezugszeile traegt einen Zusatz, obwohl "
-            f"kein Meldezeitpunkt lesbar war: {zeile!r}"
-        )
-        for muster in PLATZHALTER:
-            assert muster not in zeile, (
-                f"{fall}: Platzhalter {muster!r} in der Bezugszeile: {zeile!r}"
-            )
-    finally:
+    # Gestellte Uhr (#3047): um 23:59 UTC ist der Wanderer laut make_trip()
+    # (Etappe 00:00-23:59) schon im Ziel-Segment, der Registereintrag traegt
+    # aber Segment "1" -- disjunkt, also kein Nachtrag. Mittag statt Wanduhr.
+    with frozen_active_window():
         clean_uid(uid)
+        try:
+            write_user_tier(uid, "premium")
+            _amtlichen_eintrag_beschaedigen(uid, nachtrag_trip, roh=roh)
+            quiet_from, quiet_to = quiet_window_elsewhere(zone=TRIP_ZONE)
+            for trip_id in (nachtrag_trip, normal_trip):
+                save_trip(
+                    make_trip(trip_id, quiet_from=quiet_from, quiet_to=quiet_to), uid,
+                )
+
+            mails: list[tuple[str, str]] = []
+            svc = TripAlertService(
+                settings=settings_email_only(), throttle_hours=0, user_id=uid,
+                radar_service=radar_service(_ConvectiveFrameSource()),
+                mail_sink=lambda subject, body: mails.append((subject, body)),
+            )
+            recorder = _Recorder(settings_email_only(), uid)
+            svc._notification_service = recorder
+
+            sent = svc.check_radar_alerts()
+
+            assert sent == 2, (
+                f"{fall}: beide Trips muessen ihren Alarm bekommen — der Nachtrag "
+                "darf weder ausfallen noch den Lauf der uebrigen Trips abreissen "
+                f"(check_radar_alerts() lieferte {sent})."
+            )
+            markiert = [m for m in recorder.dispatched if m.addendum_reference]
+            assert len(markiert) == 1, (
+                f"{fall}: erwartet GENAU EINE als Nachtrag markierte Meldung, "
+                f"erfasst: {[m.addendum_reference for m in recorder.dispatched]!r}"
+            )
+            assert len(recorder.dispatched) == 2, (
+                f"{fall}: der zweite Trip muss seinen gewoehnlichen Alarm "
+                f"bekommen: {recorder.dispatched!r}"
+            )
+            assert markiert[0].addendum_reference == BEZUG_OHNE_UHRZEIT, (
+                f"{fall}: ohne lesbaren Meldezeitpunkt muss die Uhrzeit ERSATZLOS "
+                "entfallen — kein Platzhalter, kein angehaengtes 'von': "
+                f"{markiert[0].addendum_reference!r}"
+            )
+
+            nachtrags_mails = [b for _s, b in mails if BEZUG_OHNE_UHRZEIT in b]
+            assert len(nachtrags_mails) == 1, (
+                f"{fall}: die Bezugszeile muss in genau EINER zugestellten Mail "
+                f"stehen ({len(mails)} Mails erfasst)."
+            )
+            zeile = _bezugszeile(nachtrags_mails[0])
+            assert zeile == BEZUG_OHNE_UHRZEIT, (
+                f"{fall}: die gerenderte Bezugszeile traegt einen Zusatz, obwohl "
+                f"kein Meldezeitpunkt lesbar war: {zeile!r}"
+            )
+            for muster in PLATZHALTER:
+                assert muster not in zeile, (
+                    f"{fall}: Platzhalter {muster!r} in der Bezugszeile: {zeile!r}"
+                )
+        finally:
+            clean_uid(uid)

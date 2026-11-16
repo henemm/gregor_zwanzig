@@ -8,7 +8,7 @@ Naehte wie AC-11: Anker im nutzergebundenen Speicher, frische Reihe ueber ``GZ_T
 """
 from __future__ import annotations
 
-from tests.helpers.vorschau_umgebung import env  # noqa: F401  (Fixture)
+from tests.helpers.vorschau_umgebung import env, mittagsuhr  # noqa: F401  (Fixture)
 from tests.tdd.test_alert_hour_rows import (
     TRIP_STURM, _cell, _plant, _rows, _trip_anker_schreiben, _trip_body, _trip_versand,
 )
@@ -33,7 +33,7 @@ def _einfach_in_mail_roh_in_telegram(uid: str):
 
 
 def test_vorschau_zeigt_je_kanal_den_anzeigemodus_des_trips_wie_der_versand(
-    env, monkeypatch, tmp_path,  # noqa: F811
+    mittagsuhr, env, monkeypatch, tmp_path,  # noqa: F811
 ):
     from api.routers.validator import AlertPreviewBody, alert_preview
 

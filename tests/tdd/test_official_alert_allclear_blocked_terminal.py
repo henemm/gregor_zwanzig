@@ -14,8 +14,6 @@ an den Ausgangs-Klassen. Kein Mock.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from tests.helpers.transport_mitschrift import aufzeichner_installieren
 from tests.tdd._official_alert_allclear_fixtures import (
     Szenario, basis_jetzt, entwarnungen_gesamt, fehlschlag_installieren,
@@ -38,8 +36,11 @@ def test_rein_gesperrte_entwarnung_gilt_als_erledigt_und_wiederholt_sich_nicht(m
     sz = Szenario("trip", monkeypatch, mit, basis_jetzt(), kanaele=_NUR_SMS)
     with quellen(sz.x):
         lauf_erstwarnung(sz, kanaele=("sms",))
+        # #3047: Kontingent am UTC-Tag des GESPERRTEN Laufs (t0+15 min) setzen,
+        # nicht an der Wanduhr -- ab 23:45 UTC laege der Lauf sonst schon auf
+        # dem Folgetag, der Zaehler stuende dort wieder auf 0, die SMS ginge raus.
         sms_daily_limit.seed_daily_usage(sz.uid, sms=10_000, premium_sms=None,
-                                         now=datetime.now(timezone.utc))
+                                         now=sz.zeit(15))
         sz.x.alerts = [sz.warnung(2)]
         gesperrt = sz.lauf(15)
         nach_sperre = sz.eintrag()

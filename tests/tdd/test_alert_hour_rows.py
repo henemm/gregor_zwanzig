@@ -110,7 +110,7 @@ from app.models import (
     WeatherChange,
 )
 from services.weather_snapshot import _deserialize_timeseries
-from tests.helpers.vorschau_umgebung import env  # noqa: F401  (Fixture)
+from tests.helpers.vorschau_umgebung import env, mittagsuhr  # noqa: F401  (Fixture)
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "alert_hour_rows"
 TZ = ZoneInfo("Europe/Vienna")
@@ -1194,7 +1194,7 @@ def _trip_versand(monkeypatch, uid: str, trip) -> tuple[list[str], list[str]]:
 
 @pytest.mark.parametrize("einstieg", ["briefing", "alert_preview"])
 def test_ac11_trip_vorschau_zeigt_dieselben_stundenzeilen_wie_der_versand(
-    env, monkeypatch, tmp_path, einstieg,  # noqa: F811
+    mittagsuhr, env, monkeypatch, tmp_path, einstieg,  # noqa: F811
 ):
     """AC-11 (Trip): Anker im Speicher des Nutzers (Tages-Snapshot, heute), frische Reihe ueber
     die Fixture-Naht. Body = Oberflaechen-Form OHNE Stundenreihen. Die Vorschau (E-Mail-Klartext
@@ -1220,7 +1220,7 @@ def test_ac11_trip_vorschau_zeigt_dieselben_stundenzeilen_wie_der_versand(
 
 
 def test_ac11_trip_ohne_anker_ist_die_vorschau_wie_ohne_stundenreihe_auch_mit_body_reihen(
-    env, monkeypatch, tmp_path,  # noqa: F811
+    mittagsuhr, env, monkeypatch, tmp_path,  # noqa: F811
 ):
     """AC-11/AC-10 (Trip): ohne Anker im Speicher kann keine alte Reihe entstehen. Die Vorschau
     ist byte-gleich zur Vorschau OHNE ``hourly_*`` im Body -- die Reihen des Altvertrags im Body
@@ -1248,7 +1248,7 @@ def test_ac11_trip_ohne_anker_ist_die_vorschau_wie_ohne_stundenreihe_auch_mit_bo
 
 
 def test_ac11_trip_scheiternder_frischabruf_laesst_die_vorschau_ohne_stundenzeilen_ohne_fehler(
-    env, monkeypatch, tmp_path,  # noqa: F811
+    mittagsuhr, env, monkeypatch, tmp_path,  # noqa: F811
 ):
     """AC-11/AC-10 (Trip): Anker da, aber der Frisch-Abruf scheitert (Fixture-Verzeichnis ohne
     Dateien -> ``ProviderError``) -> keine Stundenzeilen, KEIN Fehler, Antwort vollstaendig.
@@ -1468,7 +1468,7 @@ ANKER_DEFAULT = {18: 25.0, 19: 25.0, 20: 25.0}     # "default": darf NIE sichtba
 
 
 def test_ac14_trip_vorschau_liest_nie_anker_eines_anderen_nutzers_oder_default(
-    env, monkeypatch, tmp_path,  # noqa: F811
+    mittagsuhr, env, monkeypatch, tmp_path,  # noqa: F811
 ):
     """AC-14 (Trip): Nutzer A und B mit gleicher Trip-Kennung; Anker NUR bei B (plus einer unter
     "default"). Vorschau B zeigt B-Zeilen (Anwesenheit). Vorschau A zeigt keine 'alt →'-Zeilen
