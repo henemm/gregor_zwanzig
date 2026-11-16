@@ -971,26 +971,14 @@ class UnifiedWeatherDisplayConfig:
         Issue #1677 DEC-2: die Ebenen-ERKENNUNG teilt sich mit
         ``cascade_source_for_channel()`` den Helfer ``_cascade_source_for_
         channel()`` -- kein zweiter Ableitungsweg fuer dieselbe Frage.
+
+        Issue #3057 (ADR-0121): Adapter -- die Aufloesung liegt im Kanal-Listen-
+        Resolver (``services.channel_list_resolver``); lokaler Import gegen den
+        Zyklus (der Resolver importiert dieses Modul).
         """
-        source = _cascade_source_for_channel(
-            self.per_report_layouts, self.per_channel_layouts, channel, report_type,
-        )
-        if source == "per_report":
-            report_channel_metrics = self.per_report_layouts[report_type][channel]  # type: ignore[index]
-            if len(report_channel_metrics) == 0:
-                return []
-            filtered = _filter_metrics_by_report_type(report_channel_metrics, report_type)
-            return _sorted_by_layout(self._clip_to_global_maximum(filtered, report_type))
+        from services.channel_list_resolver import trip_channel_metrics
 
-        if source == "per_channel":
-            channel_metrics = self.per_channel_layouts[channel]  # type: ignore[index]
-            if len(channel_metrics) == 0:
-                return []
-            filtered = _filter_metrics_by_report_type(channel_metrics, report_type)
-            return _sorted_by_layout(self._clip_to_global_maximum(filtered, report_type))
-
-        # Ebene 3: globaler Fallback -- ist bereits das Maximum, kein Schnitt.
-        return _sorted_by_layout(self.get_metrics_for_report_type(report_type))
+        return trip_channel_metrics(self, channel, report_type)
 
     def _clip_to_global_maximum(
         self, metrics: list[MetricConfig], report_type: str,

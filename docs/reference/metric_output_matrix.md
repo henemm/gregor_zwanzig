@@ -176,7 +176,7 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 
 | Stelle | Datei:Zeile | Anmerkung |
 |---|---|---|
-| Kanal-Kaskade (drei Ebenen) | `src/app/models.py:649` `_cascade_source_for_channel()` (geteilte Bedingungsprüfung, #1677 DEC-2), `:762` `get_metrics_for_channel()`, `:802` `cascade_source_for_channel()` | **ein** Ableitungsweg; `per_report` → `per_channel` → `global`. Ende-zu-Ende gespeichertes Trip-JSON → Transport (nur `per_channel_layouts`, nicht die `per_report`-/`global`-Kaskadenstufe): `tests/tdd/test_einstellung_gleich_auslieferung.py` (#2422 S1) |
+| Kanal-Kaskade (drei Ebenen) | `src/app/models.py:649` `_cascade_source_for_channel()` (geteilte Bedingungsprüfung, #1677 DEC-2), `:762` `get_metrics_for_channel()`, `:802` `cascade_source_for_channel()` | **ein** Ableitungsweg; `per_report` → `per_channel` → `global`. Seit #3057 (ADR-0121) lesen `get_metrics_for_channel()` und `resolve_compare_render_options()` die Kanal-Listen über den reinen Resolver `resolve_channel_lists()` (`src/services/channel_list_resolver.py`); die Auflösung selbst steht dort, die Adapter ändern nur das Lesen. Ende-zu-Ende gespeichertes Trip-JSON → Transport (nur `per_channel_layouts`, nicht die `per_report`-/`global`-Kaskadenstufe): `tests/tdd/test_einstellung_gleich_auslieferung.py` (#2422 S1) |
 | Persistenz | `src/app/loader.py:840` (`channel_layouts` lesen), `:872` (`channel_layouts_per_report`), `:914` | Lesen 1×, Schreiben 2× |
 | API Metrik-Liste | `api/routers/config.py:73` `get_metrics()` — filtert auf `selectable` | Nicht-wählbare Metriken sind für das Frontend unsichtbar |
 | API SMS-Symbole | `api/routers/config.py:31` `get_sms_symbols()`, Hazards `:46`/`:65` | zwei Symbolregister nebeneinander |
