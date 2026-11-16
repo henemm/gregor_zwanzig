@@ -1,9 +1,10 @@
 """Compact plain-text e-mail renderer (Issue #722).
 
 Pure function render_compact(): builds a minimal ASCII-only text body with
-fixed sections: header + metrics overview + outlook + footer.
+fixed sections: header + official alerts + metrics overview + outlook + footer.
 Baustein-toggles (show_highlights, daily_summary, etc.) are intentionally
 ignored — compact always shows only overview + outlook (PO decision).
+#3047 WV6: official alerts stand first, directly after the header.
 
 SPEC: docs/specs/modules/issue_722_email_compact_format.md
 """
@@ -151,7 +152,8 @@ def render_compact(
 ) -> str:
     """Render compact plain-text e-mail body. Pure function.
 
-    Ignores all baustein-toggles; always shows header + metrics + outlook + footer.
+    Ignores all baustein-toggles; always shows header + alerts + metrics +
+    outlook + footer.
     Returns ASCII-only string (str.isascii() == True guaranteed).
     """
     sig = profile_signature(profile, lang=lang)
@@ -189,6 +191,25 @@ def render_compact(
             lines.append(" | ".join(parts))
     lines.append("")
 
+    # #3047 WV6 (AC-25): Warnblock direkt nach dem Kopf, vor jedem
+    # Metrik-Inhalt -- dieselbe Stelle wie im Klartext (plain.py).
+    # Issue #1087: amtliche Warnungen — kurze Textzeile je Eintrag
+    # (Sicherheitsrelevanz, gemeinsamer Renderer, Epic #1073 Punkt 6).
+    _alert_entries = collect_trip_alert_entries(segments)
+    if _alert_entries:
+        lines.append(f"== {t('mail.kompakt.warnungen', lang)} ==")
+        for _line in render_official_alerts_plain(_alert_entries, lang=lang):
+            lines.append(_ascii(f"  ! {_line}"))
+        lines.append("")
+
+    # Issue #1348: Hinweis "amtliche Warnungen nicht abrufbar" — orthogonal zu
+    # echten Warnungen, ASCII-Praefix "!!", nur bei gesetztem Ausfall-Flag.
+    if any_official_alerts_unavailable(segments):
+        lines.append(_ascii(
+            f"  {render_official_alerts_unavailable_plain(ascii_safe=True, lang=lang)}"
+        ))
+        lines.append("")
+
     # --- Metriken-Ueberblick --- Issue #1394 (T2b): gemeinsamer Resolver
     # statt eigener Ersatzliste. Ueberschrift + Pillen-Schleife entfallen,
     # wenn keine Pillen entstehen (AC-3; Fall A gewinnt erstmals den
@@ -217,23 +238,6 @@ def render_compact(
             prefix = _severity_prefix(tone)
             lead = f"{prefix} " if prefix else ""
             lines.append(f"  {lead}{label}")
-        lines.append("")
-
-    # Issue #1087: amtliche Warnungen — kurze Textzeile je Eintrag
-    # (Sicherheitsrelevanz, gemeinsamer Renderer, Epic #1073 Punkt 6).
-    _alert_entries = collect_trip_alert_entries(segments)
-    if _alert_entries:
-        lines.append(f"== {t('mail.kompakt.warnungen', lang)} ==")
-        for _line in render_official_alerts_plain(_alert_entries, lang=lang):
-            lines.append(_ascii(f"  ! {_line}"))
-        lines.append("")
-
-    # Issue #1348: Hinweis "amtliche Warnungen nicht abrufbar" — orthogonal zu
-    # echten Warnungen, ASCII-Praefix "!!", nur bei gesetztem Ausfall-Flag.
-    if any_official_alerts_unavailable(segments):
-        lines.append(_ascii(
-            f"  {render_official_alerts_unavailable_plain(ascii_safe=True, lang=lang)}"
-        ))
         lines.append("")
 
     # --- Ausblick: Grosswetterlage + Naechste Etappen ---
