@@ -255,9 +255,10 @@ def test_leere_auswahl_bleibt_leer_und_faellt_nicht_auf_grundauswahl_zurueck(mit
 
 
 def test_reihenfolge_der_kanal_liste_bestimmt_zellen_und_kappung(mit):
-    """AC-4: Zellen in der Reihenfolge der Kanal-Liste (nicht der Grundauswahl); bei
-    Ueberschreitung der Telegram-Grenze (7 je Ort) entfallen die HINTEREN Groessen und
-    der Hinweis nennt die Zahl der Verdraengten."""
+    """AC-4: Zellen in der Reihenfolge der Kanal-Liste (nicht der Grundauswahl). Bei
+    mehr als 7 Groessen je Ort (#3047 Runde 7, PO-Entscheidung 2026-11-16, AC-24,
+    loest den frueheren Wegfall mit Hinweis ab): alle Groessen in Listenfolge, die
+    ersten sieben in Zeile 1, der Rest in Zeile 2, kein Kappungshinweis."""
     for lauf in _zwei_nutzer(mit, fixture_dict("kanal_reihenfolge")):
         _inhalt_pruefen(lauf)
         assert _ist(lauf.snap, "telegram")["Innsbruck"] == [
@@ -267,11 +268,14 @@ def test_reihenfolge_der_kanal_liste_bestimmt_zellen_und_kappung(mit):
     for lauf in _zwei_nutzer(mit, fixture_dict("kanal_ueberlauf")):
         _inhalt_pruefen(lauf, ("telegram",))
         zellen, verdraengt = compare_telegram_erwartung(compare_erwartete_metriken(lauf.roh, "telegram"))
-        assert len(zellen) == 7 and verdraengt == 3
-        ist, hinweis = compare_parse_telegram(_text(lauf.snap, "telegram"), ORTSNAMEN)
+        assert len(zellen) == 10 and verdraengt == 0
+        tg = _text(lauf.snap, "telegram")
+        ist, hinweis = compare_parse_telegram(tg, ORTSNAMEN)
         for ort in ORTSNAMEN:
-            assert ist[ort] == zellen, f"Telegram/{ort}: die vorderen sieben der Kanal-Liste muessen bleiben"
-        assert hinweis == verdraengt, f"Telegram muss die {verdraengt} verdraengten Groessen ausweisen"
+            assert ist[ort] == zellen, f"Telegram/{ort}: alle Groessen der Kanal-Liste in Listenfolge"
+        assert hinweis is None, "kein Kappungshinweis mehr (AC-24)"
+        zeilen = [z for z in tg.splitlines() if z.startswith("   ") and " · " in z]
+        assert [len(z.split(" · ")) for z in zeilen] == [7, 3] * len(ORTSNAMEN), tg
         compare_vorbedingung_pruefen(lauf.snap, ("email", "sms"))
         assert set(_ist(lauf.snap, "sms").get("Innsbruck", [])), "SMS zeigt die Grundauswahl (kein Kanal-Eintrag)"
 
