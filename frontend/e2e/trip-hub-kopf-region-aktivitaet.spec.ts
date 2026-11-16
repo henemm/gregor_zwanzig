@@ -917,7 +917,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 		{ label: 'Mobil 375', size: MOBILE, mobil: true }
 	]) {
 		for (const hub of ['Trip', 'Vergleich'] as const) {
-			test(`AC-10 (${hub}, ${vp.label}): genau ein save-indicator im DOM, position fixed, unten rechts`, async ({
+			test(`AC-10 (${hub}, ${vp.label}): genau ein save-indicator im DOM, in der Kopfleiste (ADR-0120)`, async ({
 				page
 			}) => {
 				await page.setViewportSize(vp.size);
@@ -943,24 +943,20 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 					// Ohne :visible-Filter — ein zweiter, versteckter Chip zaehlt mit.
 					await expect(page.locator('[data-testid="save-indicator"]')).toHaveCount(1, { timeout: 10_000 });
 					const chip = saveIndicator(page);
-					expect(await chip.evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
-
-					// „Vom Baustein gerendert" beweist der SSR-Kern (AC-16: Chip genau einmal
-					// mit Controller, gar nicht ohne); hier zaehlt die Wirkung im Browser:
-					// ein zweiter Mount (CompareTabs/TripHeader) macht die Zaehlung oben rot.
-					const box = await chip.boundingBox();
-					expect(box, 'Chip muss eine Box haben').toBeTruthy();
-					const { width, height } = vp.size;
-					expect(Math.abs(width - 16 - (box!.x + box!.width)), 'Chip rechts 16px vom Rand').toBeLessThanOrEqual(1);
-					if (vp.mobil) {
-						const nav = await page.getByTestId('bottom-nav').boundingBox();
-						expect(nav, 'mobile Navigation muss sichtbar sein').toBeTruthy();
-						expect(box!.y + box!.height, 'Chip muss ueber der unteren Navigation stehen').toBeLessThanOrEqual(
-							nav!.y + 1
-						);
-					} else {
-						expect(Math.abs(height - 16 - (box!.y + box!.height)), 'Chip unten 16px vom Rand').toBeLessThanOrEqual(1);
-					}
+					// #2954 (ADR-0120): vormals „position fixed, unten rechts" — jetzt Inline-Text in
+					// der Kopfleiste (HubKopf .hub-actions), links vor dem Drei-Punkte-Menü. Beim
+					// Öffnen ohne Speichern ist die Region leer, daher Lage über den DOM statt Box.
+					expect(await chip.evaluate((el) => getComputedStyle(el).position)).not.toBe('fixed');
+					const lage = await chip.evaluate((el) => {
+						const leiste = el.closest('[data-testid="hub-kopf-leiste"]');
+						const kebab = leiste?.querySelector('[data-testid="subscription-kebab"]');
+						return {
+							inLeiste: !!leiste,
+							vorKebab: !!kebab && !!(el.compareDocumentPosition(kebab) & Node.DOCUMENT_POSITION_FOLLOWING)
+						};
+					});
+					expect(lage.inLeiste, 'Chip muss in der Kopfleiste stehen (#2954)').toBe(true);
+					expect(lage.vorKebab, 'Chip muss vor dem Drei-Punkte-Menü stehen (#2954)').toBe(true);
 				} finally {
 					await aufraeumen();
 				}

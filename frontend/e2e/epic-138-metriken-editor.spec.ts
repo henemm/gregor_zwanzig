@@ -111,7 +111,8 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 		// Stattdessen: WeatherMetricsTab mit Auto-Save-Indikator (Header)
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible();
-		await expect(page.getByTestId('save-indicator')).toBeVisible();
+		// #2954: beim Öffnen ohne Speichern ist die Hinweis-Region leer (im DOM, aber ohne Text).
+		await expect(page.getByTestId('save-indicator')).toBeAttached();
 	});
 
 	// AC-2 (Fix #964, ex #536): Grundauswahl-Sektion zeigt Metrik-Toggle-Buttons.

@@ -656,7 +656,8 @@ test('DS-2 Etappenwechsel (1280 px): Datum/Zeit in Etappe 2 tippen, sofort zu Et
 		await page.keyboard.type('3');
 		await waehleEtappe(page, 0);
 		await expect(feldEingabe(datumFeld(page)), 'Etappe 1 nach Wechsel mitten im Segment').toHaveText('01.08.2027');
-		await page.getByTestId('save-indicator').waitFor();
+		// #2954: die Hinweis-Region ist im Ruhezustand leer (unsichtbar), aber immer im DOM.
+		await page.getByTestId('save-indicator').waitFor({ state: 'attached' });
 		await expect
 			.poll(async () => (await etappen(page, hub.id))[0]?.date, { message: 'Etappe 1 darf nichts abbekommen', timeout: 5_000 })
 			.toBe('2027-08-01');
@@ -1126,7 +1127,8 @@ for (const breite of BREITEN) {
 						await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-${tab}"]:visible`).first()).toBeVisible({
 							timeout: 15_000
 						});
-						await expect(page.getByTestId('save-indicator')).toBeVisible();
+						// #2954: beim Öffnen ohne Speichern ist die Hinweis-Region leer (im DOM, ohne Text).
+						await expect(page.getByTestId('save-indicator')).toBeAttached();
 						await pruefeSeite(page, `${kind}-Hub ${tab}`, fehler);
 					}
 					// #2794 S3a / #2795 S3b 1b: der neu gebaute Hub-Reiter „Zustellung" (Mail-Inhalt im Übergangsblock).

@@ -584,6 +584,7 @@ loc_limit_override 500` setzen (kein Teilen der Scheibe, die Änderungen gehöre
 
 ## Changelog
 
+- 2026-11-15: Abgelöst durch ADR-0120 (#2954): AC-10 (Speicher-Chip unter dem Titelblock) — der Speicherhinweis steht jetzt in der Kopfleiste vor Kebab und Hauptknopf (Spec `fix_2954_speicherhinweis_kopfleiste.md`).
 - 2026-11-06: Abgelöst durch ADR-0110 (#2837 S1): Entscheidungen 7 und 8 (Status außerhalb des Bausteins, eigene Statuszeile) — Status als Badge in der Titelzeile des geteilten `HubKopf` (Spec `rework_2837_s1_hub_kopf.md`).
 - 2026-10-03: Initial spec created (Scheibe S2 von #2284, Epic #2345 Etappe P2)
 - 2026-10-03 (v1.1, Fix-Loop nach CI-Rot, PO-Entscheidungen): Entscheidung 14 (Handy-Kompaktknopf) und 15

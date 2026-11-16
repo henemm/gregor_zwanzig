@@ -17,6 +17,7 @@
 	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
 	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
+	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { t } from '$lib/i18n';
 
@@ -97,6 +98,10 @@
 				<span class="kind">{crumb}</span>
 			</div>
 			<div class="hub-actions">
+				<!-- #2954 (ADR-0120): Speicherhinweis als Text links vor Kebab und Hauptknopf (Mockup Fassung 3);
+				     die Gruppe ist rechtsbündig, der Text wächst nach links, Kebab und Knopf bleiben stehen.
+				     Schmale Leiste: eigene Zeile darunter, rechtsbündig; Fehler/Konflikt bis ca. 1100 px (Stil unten, Fix-Loop 3). -->
+				{#if saveController}<SaveIndicator controller={saveController} />{/if}
 				<!-- #2913 c2: Reihenfolge wie im Mockup (mockup-hub-fassung3.html Z. 233–237): erst Kebab, dann „Test schicken ▾“. -->
 				<SubscriptionKebab data-testid="subscription-kebab" {actions} {onSelect} {mobil} {onSheetOpen} />
 				{#if sendMode === 'setup'}
@@ -250,6 +255,60 @@
 		}
 		.hub-kopf-titel {
 			padding: 16px;
+		}
+	}
+
+	/* #2954 Fix-Loop 3 (ADR-0120): Lage des Speicherhinweises nach der Breite der Kopfleiste
+	   (Container, nicht Viewport — am Desktop nimmt die Seitenleiste 244 px weg).
+	   Kurze Zustände („Gespeichert", „Speichere …", „nicht gespeichert") stehen ab 480 px
+	   Inhaltsbreite (Fenster ca. 600 px) inline vor dem Kebab — die Leiste wächst nicht; Fehler und
+	   Konflikt (lang, mit Knopf) bis 1020 px Inhaltsbreite (Leiste ca. 1100 px) in eigener Zeile
+	   UNTER der Aktionszeile, damit sie den Brotkrumenpfad nie quetschen. Gemessen wird die
+	   Inhaltsbreite der Leiste (ohne Polster). */
+	.hub-kopf-leiste {
+		container: hub-leiste / inline-size;
+	}
+	/* Brotkrumen an der ersten Aktionszeile ausrichten statt an der ganzen Leiste: wird die Leiste
+	   durch die Hinweiszeile höher, bleibt der Pfad stehen. Die erste Zeile ist 28 px hoch (Desktop:
+	   Kebab und Btn sm 28 px; Handy: 44-px-Tippfläche minus 2 × 8 px Block-Rand); der Pfad bekommt
+	   diese Höhe plus sein Trefferflächen-Polster (2 × 13 px) als Mindesthöhe und zentriert darin —
+	   einzeilig mittig wie bisher, mehrzeilig (höher als die Zeile) oben wie bisher (#2980 HP-3). */
+	.breadcrumb-path {
+		align-self: flex-start;
+		box-sizing: border-box;
+		min-block-size: calc(28px + 2 * 13px);
+		align-content: center;
+	}
+	/* Desktop mit Touch: Btn sm hat dort 36 px Boden (app.css), die erste Zeile ist 36 px hoch. */
+	@media (min-width: 900px) and (pointer: coarse) {
+		.breadcrumb-path {
+			min-block-size: calc(36px + 2 * 13px);
+		}
+	}
+	/* Eigene Zeile: rechtsbündig unter Kebab und Hauptknopf. `contain: inline-size` nimmt die
+	   Textbreite aus der Breitenberechnung der Aktionsgruppe — Kebab, Hauptknopf und Brotkrumen
+	   behalten Breite und Lage; der Text bricht in der Breite der Aktionen um.
+	   margin-inline-start hebt den Spaltenabstand (gap 8px) vor der eigenen Zeile auf — sonst zählt er
+	   in die Breite der Aktionsgruppe; in Zeile 2 schiebt justify-content:flex-end ihn bündig zurück. */
+	@container hub-leiste (width < 480px) {
+		.hub-actions > :global([data-testid='save-indicator']) {
+			order: 1;
+			flex: 0 0 100%;
+			contain: inline-size;
+			margin-inline-start: -8px;
+			justify-content: flex-end;
+			text-align: end;
+		}
+	}
+	@container hub-leiste (width < 1020px) {
+		.hub-actions > :global([data-testid='save-indicator'][data-state='conflict']),
+		.hub-actions > :global([data-testid='save-indicator'][data-state='error']) {
+			order: 1;
+			flex: 0 0 100%;
+			contain: inline-size;
+			margin-inline-start: -8px;
+			justify-content: flex-end;
+			text-align: end;
 		}
 	}
 </style>
