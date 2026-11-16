@@ -21,8 +21,8 @@ import html as _html
 import re as _re
 from typing import Optional
 
-from app.ampel import resolve_ampel
-from app.metric_catalog import kurzform_kuerzel
+from app.ampel import ampel_seite, resolve_ampel
+from app.metric_catalog import get_metric, kurzform_kuerzel
 from app.models import Corridor, MetricConfig, UnifiedWeatherDisplayConfig
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
@@ -37,7 +37,7 @@ from output.renderers.compare_metric_catalog import (
 )
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from output.renderers.email.compare_html import (
-    CV2_ZEILEN, _build_location_outlook_rows, _hour_zeilen,
+    CV2_ZEILEN, _build_location_outlook_rows, _daily_summary, _hour_zeilen,
     _column_legend_text, _fmt_precip_type, _fmt_thunder,
     _fmt_visibility_overview, _metric_value, _should_merge_wind_dir,
     _units_legend_text, _visible_hour_metrics, derive_row_labels, fmt_word_cell,
@@ -58,6 +58,8 @@ from utils.timezone import (
 )
 from output.renderers.email.outlook import render_outlook_plain
 from output.metric_format import format_value
+# Nicht-abrufbar-Marker der SMS (sms_format.md §3.4d, Issue #3047 B-L2).
+from output.tokens.builder import UNAVAILABLE_SYMBOL as _UNAVAILABLE_SYMBOL
 from output.renderers.alert.official_alerts import (
     _word_boundary_truncate,
     build_official_alert_notices,
@@ -627,17 +629,14 @@ def render_compare_email(
 # eigene Metrik-Liste, insbesondere kein confidence_pct (#710/ADR-0005).
 # ---------------------------------------------------------------------------
 
-# (metric_id, Kurz-Label) in Anzeige-Prioritaet -- eigene Kurz-Auswahl fuer
-# Telegram/SMS (Teilmenge der Uebersichts-Zeilen, NICHT aus CV2_METRICS
-# abgeleitet; ihre Folge stimmt nur mit der CV2-Reihenfolge ueberein, #1356).
-_CHANNEL_METRICS: tuple[tuple[str, str], ...] = (
-    ("temp_max", "Temp"),
-    ("wind_max", "Wind"),
-    ("sunny_hours", "Sonne"),
-    ("cloud_avg", "Wolken"),
-    ("snow_depth_cm", "Schnee"),
-    ("snow_new_cm", "Neuschnee"),
-)
+# Issue #3047 B-L4 (Runde 7, Tech-Lead-Entscheidung "Orte nie eingestellt =
+# was die Mail zeigt", ADR-0095): ohne gespeicherte Auswahl (``None``) zeigen
+# Telegram, SMS und Premium-SMS dieselben Zeilen in derselben Folge wie die
+# Vergleichstabelle der Mail (``_visible_metrics(None)`` = alle CV2-Zeilen).
+# Loest die fruehere feste Sechserliste ``_CHANNEL_METRICS`` ab (#1362 AC-7),
+# in der Regen, Boeen und Gewitter fehlten. Kanal-Grenzen bleiben: SMS kuerzt
+# vom Listenende (AC-23), Telegram ab Platz 8 in Zeile 2 (AC-24).
+_NIE_EINGESTELLT_IDS: tuple[str, ...] = tuple(row[0] for row in _PLAIN_ROWS)
 
 # Issue #1362 (Scheibe S5a): Label+Formatierung fuer ALLE 26 Compare-Groessen
 # ueber dieselbe Tabelle wie der Klartext-Teil (_PLAIN_ROWS) -- ersetzt die
@@ -675,7 +674,7 @@ def _friendly_overview_text(
 def _fmt_overview_cell(
     fmt, value, loc_result: LocationResult, *, include_origin: bool = False,
     lang: Lang = "de", metric_id: str | None = None, friendly: bool = False,
-    sms: bool = False,
+    sms: bool = False, summary=None,
 ) -> str:
     """Issue #1475 Nachbesserung (Punkt 5b, Aufrufstellen 3/5/6): DIE EINE
     Stelle, an der die Ortsvergleich-Kanaele Klartext, SMS und Telegram ihren
@@ -702,8 +701,9 @@ def _fmt_overview_cell(
         if einfach is not None:
             return einfach
     if fmt is _fmt_thunder:
-        signale = loc_thunder_signals(loc_result) if include_origin else None
-        return fmt_word_cell(fmt, value, lang, loc_hail_flag(loc_result), signale)
+        # ``summary`` (Issue #3047 B-L4): das je Ort einmal berechnete Aggregat.
+        signale = loc_thunder_signals(loc_result, summary) if include_origin else None
+        return fmt_word_cell(fmt, value, lang, loc_hail_flag(loc_result, summary), signale)
     return fmt_word_cell(fmt, value, lang)
 
 # Issue #1362 (Scheibe S5b): Compare-Renderer-ID -> zentrale Katalog-Metrik-ID
@@ -765,6 +765,7 @@ def _sms_gsm7_safe(text: str) -> str:
 
 def _sms_metric_cell(
     loc_result: LocationResult, metric_id: str, friendly: bool = False,
+    *, summary=None,
 ) -> str | None:
     """"Kuerzel Wert"-Zelle fuer ``metric_id`` (Issue #1362 Scheibe S5b, Spec
     Implementation Details Punkt 3). Wert+Formatierung kommen aus derselben
@@ -789,7 +790,9 @@ def _sms_metric_cell(
     if row is None:
         return None
     _, _label, fmt = row
-    value = _metric_value(loc_result, metric_id)
+    # ``summary`` (Issue #3047 B-L4): einmal je Ort berechnetes Tages-Aggregat;
+    # ohne es leitet ``_metric_value`` es je Zelle neu ab.
+    value = _metric_value(loc_result, metric_id, summary)
     if value is None:
         return None
     catalog_id = _RENDERER_TO_CATALOG_METRIC_ID.get(metric_id)
@@ -807,30 +810,63 @@ def _sms_metric_cell(
     # Premium-SMS, sobald der Ortsvergleich ihn bedient.
     zelle = _fmt_overview_cell(
         fmt, value, loc_result, metric_id=metric_id, friendly=friendly, sms=True,
+        summary=summary,
     )
     return f"{code} {_sms_gsm7_safe(zelle)}"
 
 
+def _ampel_stunde(loc_result: LocationResult, metric_id: str, value, *, ampel: dict | None) -> str:
+    """Issue #3047 B-L3 (Konzept §5 P8, ADR-0097): ``@h``-Marke einer
+    Ampel-Groesse wie im Trip-Telegram (``narrow._overview_line``): nur wenn
+    der Wert nach den Ampel-Grenzen des Presets gelb oder schlechter ist; die
+    Stunde ist die Spitzen- (obere Grenze) bzw. Tiefststunde (untere Grenze)
+    der Stundenwerte des Ortes in Ortszeit. "" = gruen, keine Ampel-Groesse,
+    keine Ampel (Preset fehlt) oder keine Stundenwerte."""
+    catalog_id = _CV2_BY_KEY.get(metric_id, {}).get("metric_id")
+    # Groessen ohne Ampel-Leser liefern ueber ``ampel_seite`` nie eine Seite.
+    if ampel is None or isinstance(value, bool):
+        return ""
+    try:
+        seite = ampel_seite(ampel, catalog_id, float(value))
+    except (TypeError, ValueError):
+        return ""
+    if seite is None:
+        return ""
+    feld = get_metric(catalog_id).dp_field
+    punkte = [(p.ts, getattr(p, feld, None)) for p in loc_result.hourly_data]
+    punkte = [(ts, float(v)) for ts, v in punkte if v is not None]
+    if not punkte:
+        return ""
+    werte = [v for _, v in punkte]
+    ziel = max(werte) if seite == "oben" else min(werte)
+    ts = punkte[werte.index(ziel)][0]
+    return f"@{local_dt(ts, location_tz(loc_result.location)).hour:02d}"
+
+
 def _plain_metric_cell(
     loc_result: LocationResult, metric_id: str, lang: Lang = "de",
-    friendly: bool = False,
+    friendly: bool = False, *, ampel: dict | None, summary=None,
 ) -> str | None:
     """"Label Wert"-Zelle fuer ``metric_id``, aus derselben Quelle wie der
     Klartext-Teil derselben Mail (``_PLAIN_ROWS``/``_metric_value``, Issue
     #1362 -- keine zweite Werte-/Formatierungsquelle). ``None`` = Wert nicht
-    vorhanden ODER ``metric_id`` unbekannt (Zelle entfaellt)."""
+    vorhanden ODER ``metric_id`` unbekannt (Zelle entfaellt).
+
+    ``ampel`` (Issue #3047 B-L3): bei Einfach traegt eine Ampel-Groesse die
+    ``@h``-Marke des Trip-Telegrams (``_ampel_stunde``)."""
     row = _PLAIN_ROWS_BY_ID.get(metric_id)
     if row is None:
         return None
     _, label_key, fmt = row
-    value = _metric_value(loc_result, metric_id)
+    value = _metric_value(loc_result, metric_id, summary)
     if value is None:
         return None
     zelle = _fmt_overview_cell(
         fmt, value, loc_result, include_origin=True, lang=lang,
-        metric_id=metric_id, friendly=friendly,
+        metric_id=metric_id, friendly=friendly, summary=summary,
     )
-    return f"{t(label_key, lang)} {zelle}"
+    marke = _ampel_stunde(loc_result, metric_id, value, ampel=ampel) if friendly else ""
+    return f"{t(label_key, lang)} {zelle}{marke}"
 
 
 def _channel_layout_for_metrics(channel: str, metric_ids: list[str]):
@@ -909,8 +945,7 @@ def render_compare_telegram(
     # `_channel_layout_for_metrics` herausgefiltert, damit sie keinen der 7
     # Plaetze belegen und keine andere, gueltige Groesse verdraengen kann.
     dedup_ids = list(dict.fromkeys(
-        enabled_metrics if enabled_metrics is not None
-        else [mid for mid, _ in _CHANNEL_METRICS]
+        enabled_metrics if enabled_metrics is not None else _NIE_EINGESTELLT_IDS
     ))
 
     locations = location_render_order(result.locations)
@@ -925,17 +960,24 @@ def render_compare_telegram(
     # Issue #1268: Zeitfenster-Zeile ersatzlos entfernt (Bewertung = ganzer Tag),
     # analog render_comparison_text() und compare_html._render_header().
     header.append("")
+    # Issue #3047 B-L2 (ADR-0095): Warndienst nicht erreichbar -> derselbe
+    # Hinweis wie Trip-Telegram und Vergleichs-Mail (geteilter Baustein, in
+    # Nutzersprache), vor den Ortsbloecken, weil sicherheitsrelevant.
+    if any_official_alerts_unavailable(locations):
+        header.extend([render_official_alerts_unavailable_plain(lang=lang), ""])
 
     # Issue #3047 B-K7/AC-24: 3-Tages-Ausblick je Ort wie beim Trip-Telegram.
     # Ampel aus dem Preset (Einstieg wie render_compare_email) -- nie still
     # "allgemein": ohne Preset kein Ausblick (Profil-Ampel S1c-4b, AC-25).
     if outlook_enabled and preset is None:
         raise TypeError("render_compare_telegram: preset ist Pflicht bei outlook_enabled")
-    ampel = resolve_ampel(preset) if outlook_enabled else None
+    # Issue #3047 B-L3: die Preset-Ampel wirkt auch auf Einfach-Zellen der Liste.
+    ampel = resolve_ampel(preset) if preset is not None else None
     outlook = (outlook_enabled, outlook_metrics, outlook_metric_formats, ampel)
     blocks: list[list[str]] = [
         _telegram_location_block(
             loc_result, dedup_ids, lang, metric_formats, unresolved_count, outlook,
+            zaehle_fehlende=enabled_metrics is not None,
         )
         for loc_result in locations
     ]
@@ -961,10 +1003,15 @@ def render_compare_telegram(
 
 def _telegram_location_block(
     loc_result, dedup_ids: list[str], lang: Lang, metric_formats: dict[str, bool] | None,
-    unresolved_count: int, outlook: tuple,
+    unresolved_count: int, outlook: tuple, *, zaehle_fehlende: bool = True,
 ) -> list[str]:
     """Ein Ortsblock des Orts-Vergleichs-Telegrams (Name, Warnung, Werte,
-    Ausblick). ``outlook`` = ``(enabled, metrics, formats, ampel)``."""
+    Ausblick). ``outlook`` = ``(enabled, metrics, formats, ampel)``.
+
+    ``zaehle_fehlende=False`` (Issue #3047 B-L4, "nie eingestellt"): Zeilen
+    ohne Wert entfallen ohne "ohne Wert"-Hinweis -- der Nutzer hat nichts
+    gewaehlt, und die Mail zeigt dafuer ebenfalls keinen Hinweis
+    (``rowless_count(None) == 0``)."""
     block = [loc_result.location.name]
     if loc_result.error is not None:
         block.append("   " + t("vergleich.ort.fehler", lang, fehler=loc_result.error))
@@ -976,14 +1023,19 @@ def _telegram_location_block(
     # Slot-Kappung pruefen (Adversary-Korrektur), nicht erst beim
     # Zellenbau. `cell_values` haelt jede Zelle nur einmal vor (keine
     # doppelte `_metric_value`/`_daily_summary`-Berechnung).
+    # Issue #3047 B-L4: Tages-Aggregat EINMAL je Ort (nie eingestellt = alle
+    # Zeilen der Mail; je Zelle neu abgeleitet waere das ein Vielfaches).
+    summary = _daily_summary(loc_result) if loc_result.hourly_data else None
     cell_values = {
         mid: _plain_metric_cell(
             loc_result, mid, lang, friendly=bool((metric_formats or {}).get(mid)),
+            ampel=outlook[3], summary=summary,
         )
         for mid in dedup_ids
     }
     available_ids = [mid for mid in dedup_ids if cell_values[mid] is not None]
-    no_data_count = len(dedup_ids) - len(available_ids) + unresolved_count
+    fehlend = len(dedup_ids) - len(available_ids) if zaehle_fehlende else 0
+    no_data_count = fehlend + unresolved_count
     layout = _channel_layout_for_metrics("telegram", available_ids)
     # Issue #3047 B-K5/AC-24 (PO-Entscheidung 2026-11-16): nichts faellt weg.
     # Die ersten Plaetze (Tabellen-Budget des Layouts) bilden Zeile 1, alle
@@ -1201,19 +1253,24 @@ def _sms_location_part(
     marker = _location_sms_alert_marker(loc_result)
 
     dedup_ids = list(dict.fromkeys(
-        enabled_metrics if enabled_metrics is not None
-        else [mid for mid, _ in _CHANNEL_METRICS]
+        enabled_metrics if enabled_metrics is not None else _NIE_EINGESTELLT_IDS
     ))
+    summary = _daily_summary(loc_result) if loc_result.hourly_data else None
     cells = [
         c for c in (
-            _sms_metric_cell(loc_result, mid, bool((metric_formats or {}).get(mid)))
+            _sms_metric_cell(
+                loc_result, mid, bool((metric_formats or {}).get(mid)), summary=summary,
+            )
             for mid in dedup_ids
         )
         if c is not None
     ]
     # Issue #1405 S3 (sms_format.md §5b): fehlende Werte + unmappbare
     # Eintraege als `?N` -- fester Bestandteil wie der Warn-Marker.
-    missing = len(dedup_ids) - len(cells) + unresolved_count
+    # Issue #3047 B-L4: "nie eingestellt" (None) zaehlt fehlende Werte nicht
+    # (nichts gewaehlt; die Mail zeigt dafuer ebenfalls keinen Hinweis).
+    fehlend = len(dedup_ids) - len(cells) if enabled_metrics is not None else 0
+    missing = fehlend + unresolved_count
 
     def _assemble(kept_cells: list[str], demoted: int) -> str:
         text_parts = [name] + kept_cells
@@ -1285,6 +1342,33 @@ def render_compare_sms(
     unresolved_count: int = 0,
     metric_formats: dict[str, bool] | None = None,
 ) -> str:
+    """Orts-Vergleich als flache SMS (Issue #1270), Kern: ``_render_compare_sms_body``.
+
+    Issue #3047 B-L2 (sms_format.md §3.4d): ist an einem Ort ein amtlicher
+    Warndienst ausgefallen, endet die SMS mit dem Marker ``X?``. Er ist fester
+    Bestandteil wie im Trip (faellt nie weg): das Budget des Kerns wird um ihn
+    verkleinert, die Metrik-/Orts-Kuerzung weicht ihm."""
+    max_chars = CHANNEL_LIMITS["sms"]["max_chars"]
+    marker = (
+        f" {_UNAVAILABLE_SYMBOL}"
+        if any_official_alerts_unavailable(result.locations) else ""
+    )
+    if max_chars is not None:
+        max_chars -= len(marker)
+    return _render_compare_sms_body(
+        result, enabled_metrics=enabled_metrics, unresolved_count=unresolved_count,
+        metric_formats=metric_formats, max_chars=max_chars,
+    ) + marker
+
+
+def _render_compare_sms_body(
+    result: ComparisonResult,
+    *,
+    enabled_metrics: list[str] | None,
+    unresolved_count: int,
+    metric_formats: dict[str, bool] | None,
+    max_chars: int | None,
+) -> str:
     """Rendert einen Orts-Vergleich als flache SMS (Issue #1270).
 
     ``metric_formats`` (Issue #3039): ``{renderer_id: einfach}`` aus
@@ -1305,9 +1389,8 @@ def render_compare_sms(
     passt; die restlichen Orte werden als ` +k` AUSGEWIESEN. Ein stiller Abbruch
     waere eine luegende Ausgabe (vgl. #1269) — die SMS behauptete sonst einen
     vollstaendigen Vergleich, den sie nicht zeigt. Endgarantie:
-    ``len <= CHANNEL_LIMITS["sms"]["max_chars"]``.
+    ``len <= max_chars`` (Aufrufer: ``CHANNEL_LIMITS["sms"]`` abzueglich Marker).
     """
-    max_chars = CHANNEL_LIMITS["sms"]["max_chars"]
     locations = location_render_order(result.locations)
     if not locations:
         return "Vergleich: keine Daten"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)

@@ -132,7 +132,11 @@ def test_sms_without_overflow_has_no_marker():
     THEN erscheint KEIN '+k'-Marker (kein Verlust => kein Hinweis)."""
     from output.renderers.comparison import render_compare_sms
 
-    text = render_compare_sms(_result(["Ax", "Bx"]))
+    # Issue #3047 B-L4: ohne Auswahl (None) zeigt die SMS seit Runde 7 alle
+    # Zeilen der Mail-Tabelle und kuerzt vom Listenende -- zwei Orte passen dann
+    # nicht mehr zusammen ins Budget. Die Vorbedingung "alle Orte passen" wird
+    # deshalb mit einer kurzen ausdruecklichen Liste hergestellt.
+    text = render_compare_sms(_result(["Ax", "Bx"]), enabled_metrics=["temp_max", "wind_max"])
 
     assert len(text) <= SMS_LIMIT
     assert "Ax" in text and "Bx" in text
@@ -317,7 +321,10 @@ def test_telegram_kept_lines_are_complete_lines():
     from output.renderers.comparison import render_compare_telegram
 
     names = _telegram_over_limit_names()
-    shown_names = [n for n in names if n in render_compare_telegram(_result(names))]
+    # Einmal rendern statt je Name (Laufzeit; #3047 B-L4 zeigt ohne Auswahl
+    # alle Mail-Zeilen und leitet dafuer das Tages-Aggregat je Ort ab).
+    gerendert = render_compare_telegram(_result(names))
+    shown_names = [n for n in names if n in gerendert]
     reference = render_compare_telegram(_result(shown_names))
     complete_lines = set(reference.splitlines())
 

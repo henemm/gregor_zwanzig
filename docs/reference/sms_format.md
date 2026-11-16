@@ -1,7 +1,7 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.41"
+version: "2.42"
 status: active
 created: 2025-12-27
 updated: 2026-11-16
@@ -248,7 +248,7 @@ Levels für `TH`/`TH+`:
   - Dieselbe Regel gilt für Premium-SMS, den 3-Tages-Ausblick und die Mail-Kachel (`app.ampel.schlimmster_index`).
 - Ist keine Stunde gelb oder schlechter, bleibt es bei der Null-Form (`R-`, `TH:-`, …).
 - Die Ampel-Hervorhebung gilt für `R`, `PR`, `W`, `G`, `UV`, `TH:`/`TH+:` sowie `L`/`D`/`FL`/`FD` (Temperatur, s. unten). Für `HU` gilt die feste Grenze 90 % (§3.2a). Die übrigen Klasse-(a)-Größen haben keinen Ampel-Leser (§3.2a).
-- `render_compare_sms` (Ortsvergleich) hat keinen Hervorhebungsleser und bleibt unverändert.
+- `render_compare_sms` (Ortsvergleich) hat keinen Hervorhebungsleser und bleibt unverändert (Einfach wirkt in der Ortsvergleich-SMS nur auf die Bewölkungsstufe, daher betrifft B-L3 die SMS nicht).
 - `sms_threshold` und die früheren Standardwerte (`DEFAULTS`) wirken **nicht mehr**. Die Werte bleiben gespeichert, werden aber nicht ausgewertet (E1).
 - Die Mail-Erwähnungen nutzen dasselbe Prädikat „gelb oder schlechter“, damit Mail und Kurzkanal bei jedem Wert gleich entscheiden.
 
@@ -649,7 +649,18 @@ unmittelbar nach den Wertzellen, **vor** dem optionalen `!`-Warn-Block, z. B.
 - **Budget:** Der Zähler ist fester Bestandteil der Budgetprüfung (153 Zeichen,
   `CHANNEL_LIMITS["sms"]`) wie der Warn-Marker; die Wertzellen weichen ihm, nie umgekehrt.
 - **Nicht gezählt:** zentral nicht wählbare Größen (`selectable=False`, z. B.
-  `confidence_pct`, #710) und vom Kanal bewusst abgewählte Größen.
+  `confidence_pct`, #710) und vom Kanal bewusst abgewählte Größen. Ohne gespeicherte
+  Auswahl („nie eingestellt“) zählt `?N` keine fehlenden Werte, weil nichts gewählt ist
+  (die Mail zeigt dafür ebenfalls keinen Hinweis); unmappbare Einträge gibt es dann nicht.
+- **„Nie eingestellt“ (seit v2.42, #3047 Runde 7, B-L4):** Ohne gespeicherte Grundauswahl
+  zeigt die Ortsvergleich-SMS dieselben Zeilen in derselben Folge wie die Vergleichstabelle
+  der Mail (Registerfolge: `D W R PR TH SU CT UV VS SD NS L G …`) und kürzt vom Listenende
+  (§6). Die frühere feste Sechserliste (`D W SU CT SD NS`, ohne Regen, Böen, Gewitter)
+  ist abgelöst.
+- **Warndienst nicht erreichbar (seit v2.42, #3047 Runde 7, B-L2):** Ist an mindestens
+  einem Ort eine amtliche Warnquelle ausgefallen, endet die Ortsvergleich-SMS mit ` X?`
+  (§3.4d), z. B. `Vergleich 08.07.: Alpha D 20C W 10 km/h; Beta D 22C W 12 km/h X?`.
+  Der Marker fällt nie weg; Zellen und Orte weichen ihm.
 - GSM-7: `?` und Ziffern sind Basiszeichen.
 
 ---
@@ -851,6 +862,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.38 | 2026-11-06 | **Profil-Ampel als einzige Bewertung (Issue #2792 S1c-4b, ADR-0106).** Die Hervorhebung `@{h}` (Spitzenwert bei `R`/`PR`/`W`/`G`/`TH:`/`TH+:`) folgt der Ampel des Abos: erste Stunde gelb oder schlechter, beidseitig; Gewitter ab „leicht“. `sms_threshold` und `DEFAULTS` wirken nicht mehr (Werte bleiben gespeichert). Temperatur-Token `L`/`D`/`FL`/`FD` tragen `@{h}` nur ab gelb, Bereichs-Token je Hälfte einzeln (`D-2/9@14`). `HU` erwähnt ab fest 90 %; `VS` ohne Schwellen-Gate über `sms_threshold`. Betrifft §3.2, §3.2a, §4. Gilt identisch für Premium-SMS (gleicher Text) und Telegram-Kurzform. Spec: `docs/specs/modules/feat_2792_s1_profil_ampel.md` §5 (v1.5). |
 | 2.39 | 2026-11-09 | Neuer §3.4i: Radar-Alarm im Ortsvergleich mit mehreren Orten nennt jeden Ort mit Ortsnummer (`1:R@14:05 3:R@14:40`), sortiert nach Beginn, Überlauf ` +k`; Ein-Ort und Trip unverändert (Issue #1767, löst #1948-S4-Entscheid 3b ab). |
 | 2.40 | 2026-11-16 | **Kürzung vom Listenende (#3047 Runde 7, AC-23, PO-Entscheidung 2026-11-16).** Bei Überlänge fällt die SMS-Liste von hinten, ganze Zeilen; amtliche Bausteine (Fire, Vigilance, Warn-Block) zuletzt, `X?` nie. Löst die feste Rangfolge (`DROP_ORDER`, #1677 AC-6) ab. Gilt für Trip-SMS, Premium-SMS (gleicher Text) und Telegram-Kurzform; Alarm-SMS haben eigene Regeln (unverändert). Betrifft §1, §2, §3.4c, §3.4d, §6. |
+| 2.42 | 2026-11-16 | §5b: Ortsvergleich „nie eingestellt“ folgt der Mail-Tabelle (Registerfolge statt fester Sechserliste, ohne `?N` für fehlende Werte); Warndienst-Ausfall hängt ` X?` an die Ortsvergleich-SMS (#3047 Runde 7, B-L4, B-L2). |
 | 2.41 | 2026-11-16 | §6: Orts-Überlauf im Ortsvergleich — ein Ort mit amtlicher Warnung fällt nie in ` +k Orte`, er bleibt mit Marker sichtbar; zuerst werden die Zellen aller gezeigten Orte vom Listenende gekürzt (gleiches Budget je Ort), dann entfallen Orte ohne Warnung (#3047 Runde 7, AC-23). |
 
 **Quellen für v2.0:**
