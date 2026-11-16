@@ -259,7 +259,11 @@ def test_ac2_grammatik_minus_vor_zahl_auch_ohne_tf():
 def test_ac2_kuerzung_tf_faellt_als_erstes_der_komfort_angaben():
     """AC-2 (c) / Mutation 4: Beim Kuerzen (160-Zeichen-Budget) faellt ``TF`` als
     ERSTES der Komfort-Zusatzangaben -- VOR ``FN``/``FL``/``FD`` und vor ``PR``.
-    Reihenfolge ``("TF", "FN", "FL", "FD")`` (``tokens/render.py``).
+
+    #3047 Runde 7 (Spec-Nachtrag Runde 7, AC-23, PO-Entscheidung 2026-11-16):
+    die feste Folge ``("TF", "FN", "FL", "FD")`` ist abgeloest, die Liste faellt
+    von hinten. Die Zusicherung bleibt erhalten, weil die SMS-Liste hier die
+    sicherheitsrelevanten Groessen vorn und TF ganz hinten fuehrt (Vorbelegung).
 
     Die Zeile wird so gebaut, dass pro Schritt genau EIN Token zu viel ist
     (Budget = Laenge - 1): erst faellt TF, dann FN, dann FD (der Bereich
@@ -274,7 +278,8 @@ def test_ac2_kuerzung_tf_faellt_als_erstes_der_komfort_angaben():
         "wind_hourly": (HourlyValue(4, 20.0),),
         "gust_hourly": (HourlyValue(4, 45.0),),
     }
-    specs = [MetricSpec(symbol=s, enabled=True) for s in ("TF", "FN", "FL", "FD", "PR", "W", "G")]
+    specs = [MetricSpec(symbol=s, enabled=True, position=i)
+             for i, s in enumerate(("PR", "W", "G", "FD", "FL", "FN", "TF"))]
     voll = _zeile(felder, specs, max_length=10_000)
     toks = _tokens(voll)
     assert "TF-3@6" in toks and "FN-2" in toks, f"Testaufbau: {voll!r}"
@@ -283,17 +288,25 @@ def test_ac2_kuerzung_tf_faellt_als_erstes_der_komfort_angaben():
     def _sym(text: str) -> set[str]:
         return {re.match(r"[A-Z]+", t).group(0) for t in _tokens(text)}
 
-    schritt1 = _zeile(felder, specs, max_length=len(voll) - 1)
-    assert "TF" not in _sym(schritt1), f"AC-2 (c): TF muss ZUERST fallen: {schritt1!r}"
+    def _bis_weg(sym: str) -> str:
+        # Budget schrittweise um ein Zeichen senken, bis ``sym`` gefallen ist.
+        # (Nicht in der Liste stehende Token wie N/D/R fallen davor -- sie
+        # stehen hinter der Liste.)
+        text = voll
+        while sym in _sym(text):
+            text = _zeile(felder, specs, max_length=len(text) - 1)
+        return text
+
+    schritt1 = _bis_weg("TF")
     assert {"FN", "FD", "PR", "W", "G"} <= _sym(schritt1), (
-        f"AC-2 (c): FN/FD/PR/W/G muessen beim ersten Kuerzungsschritt stehen bleiben: {schritt1!r}"
+        f"AC-2 (c): FN/FD/PR/W/G muessen stehen, wenn TF faellt: {schritt1!r}"
     )
-    schritt2 = _zeile(felder, specs, max_length=len(schritt1) - 1)
-    assert "FN" not in _sym(schritt2) and {"FD", "PR", "W", "G"} <= _sym(schritt2), (
+    schritt2 = _bis_weg("FN")
+    assert {"FD", "PR", "W", "G"} <= _sym(schritt2), (
         f"AC-2 (c): nach TF faellt FN: {schritt2!r}"
     )
-    schritt3 = _zeile(felder, specs, max_length=len(schritt2) - 1)
-    assert "FD" not in _sym(schritt3) and {"PR", "W", "G"} <= _sym(schritt3), (
+    schritt3 = _bis_weg("FD")
+    assert {"PR", "W", "G"} <= _sym(schritt3), (
         f"AC-2 (c): danach faellt FD, PR bleibt: {schritt3!r}"
     )
 

@@ -326,25 +326,23 @@ def test_render_max_length_truncates():
 
 def test_render_truncation_priority():
     """
-    sms_format.md §6 truncation order:
-    DBG -> Wintersport -> Fire -> Peak-values -> PR -> D, N.
-
-    Thunderstorm and Vigilance (TH:, HR:) survive longest (Risk-Priority
-    applies only here). Temperature/snow tokens drop first.
-
-    #1435 E3b: Kuerzel SD/NS24+/SL statt SN/SN24+/SFL — die Drop-Reihenfolge
-    (AC-6) bleibt identisch, nur die Namen aendern sich.
+    sms_format.md §6 Kuerzung -- abgeloest durch #3047 Runde 7 (Spec-Nachtrag
+    Runde 7, AC-23, PO-Entscheidung 2026-11-16): bei Ueberlaenge faellt die
+    Liste von HINTEN weg; amtliche Bausteine (Vigilance VR/VT, Brandzonen)
+    fallen zuletzt. Ohne Nutzerliste gilt die Standardfolge (POSITIONAL).
+    Frueher: feste Prioritaet DBG -> Wintersport -> Fire -> Peaks -> PR -> D, N.
     """
     line = _build_default_line()
     rendered = line.render(80)  # very tight budget forces truncation
-    # Critical tokens (TH:, HR:) must survive
-    assert ("TH:" in rendered) or ("HR:" in rendered), (
-        "Risk-Priority truncation removed Thunder/Vigilance — forbidden by §6."
-    )
-    # Wintersport snow tokens drop early — must NOT appear under tight budget
+    assert len(rendered) <= 80
+    # Amtliche Vigilance (VR:/VT:) bleibt stehen.
+    assert "VR:M@14VT:H@17" in rendered, rendered
+    # Listenanfang bleibt, Listenende (Gewitter morgen, Schnee) faellt.
+    assert rendered.startswith("Stage1: N- D12/24 "), rendered
     import re
+    assert "TH+:" not in rendered, rendered
     assert not re.search(r"(?:(?<=\s)|^)SD\d", rendered), (
-        "Wintersport SD token survived tight truncation — wrong §6 priority."
+        "Wintersport SD token (Listenende) survived tight truncation."
     )
 
 

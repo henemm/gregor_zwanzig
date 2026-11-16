@@ -52,6 +52,7 @@ from output.renderers.email import render_email
 from output.renderers.email.helpers import (
     NO_HOURLY_COLUMN_METRIC_IDS,
     _effective_format_mode,
+    build_format_modes,
     build_friendly_keys,
 )
 from output.tokens.dto import MetricSpec, TokenLine
@@ -317,6 +318,9 @@ class TripReportFormatter:
             # #2429 (B3): Telegram zeigt SEINE Roh/Einfach-Wahl, nicht die der
             # (kollabierten) E-Mail.
             friendly_keys=build_friendly_keys(_dc_telegram),
+            # #3047 Runde 7 (#3063 P2): Roh/Einfach je Zeile wie in der Mail
+            # (sonst zeigte die Windrichtung Roh den Kompasswert).
+            format_modes=build_format_modes(_dc_telegram),
             stability_result=stability_result,
             multi_day_trend=effective_trend,
             outlook_state=outlook_state,

@@ -141,6 +141,11 @@ class Token:
     priority: int
     morning_visible: bool = True
     evening_visible: bool = True
+    # #3047 Runde 7 (AC-23): Platz der Zeile in der SMS-Liste des Nutzers
+    # (MetricSpec.position), gesetzt von build_token_line(). Token derselben
+    # Zeile (z.B. N/D, TH:/TH+:) teilen ihn und fallen beim Kuerzen gemeinsam.
+    # Nicht Teil des Vergleichs: reine Kuerzungs-Metadaten.
+    list_position: Optional[int] = field(default=None, compare=False)
 
     def render(self) -> str:
         if self.value.startswith("\x00"):
