@@ -1,5 +1,5 @@
 {
- "_hinweis": "Eingefrorener Altstand (vor #2439 /50): seriell, ohne Vorwaermen. Erzeugt aus tests/fixtures/openmeteo (FixtureProvider), Trip Reykjavik 4 Etappen, send_test_report_outcome('evening'). Normalisiert: Datum/Wochentag/Stempel/UID. Neu eingefroren #2792 S1c-4b (Profil-Ampel): Erwaehnung ab Gelb der Ampel 'allgemein' statt sms_threshold/DEFAULTS (E1, AC-19 e), Temperatur gelb/@h (AC-1). Zuordnung: docs/artifacts/feat-2792-s1c4b-umschalten/golden-diff-zuordnung.md. Nachtrag VS: VS/TF-Tiefstwert nur ab Gelb der Ampel (E1). #3047 AC-17: Tabellenkoepfe Zeit/Risiko und Klartext-Kopf 'Abend-Briefing' in Nutzersprache (gezielte Ersetzung, sonst unveraendert). Merge main (#3015 Temperaturspanne) und #3047 F8: aus gemergtem Code neu erzeugt; dabei HTML-Markenzeile 'Abend-Briefing' (F6, Nutzersprache) nachgezogen.",
+ "_hinweis": "Eingefrorener Altstand (vor #2439 /50): seriell, ohne Vorwaermen. Erzeugt aus tests/fixtures/openmeteo (FixtureProvider), Trip Reykjavik 4 Etappen, send_test_report_outcome('evening'). Normalisiert: Datum/Wochentag/Stempel/UID. Neu eingefroren #2792 S1c-4b (Profil-Ampel): Erwaehnung ab Gelb der Ampel 'allgemein' statt sms_threshold/DEFAULTS (E1, AC-19 e), Temperatur gelb/@h (AC-1). Zuordnung: docs/artifacts/feat-2792-s1c4b-umschalten/golden-diff-zuordnung.md. Nachtrag VS: VS/TF-Tiefstwert nur ab Gelb der Ampel (E1). #3047 AC-17: Tabellenkoepfe Zeit/Risiko und Klartext-Kopf 'Abend-Briefing' in Nutzersprache (gezielte Ersetzung, sonst unveraendert). Merge main (#3015 Temperaturspanne) und #3047 F8: aus gemergtem Code neu erzeugt; dabei HTML-Markenzeile 'Abend-Briefing' (F6, Nutzersprache) nachgezogen. #3047 Runde 7 B-L1: Telegram-Kurzuebersicht im Tagesfenster wie SMS (Etappe 3 'G 30@08' -> 'G 30@04', SMS G30@4; gezielte Ersetzung).",
  "ausgang": "sent",
  "email": [
   {
@@ -30,7 +30,7 @@
   },
   {
    "subject": "[TEST] [Golden Trip] Etappe 3 — Abend",
-   "body": "Kurzübersicht\nT -5.0@08\nTF –\nW 20\nG 30@08\nR 0.3\nCT ⛅\nVS 7.0\nSU ⛅\nSD 45\nNS24+ –\n\nSicht mäßig\n\n… +3 weitere Wettergrößen nur als Tageswert\n(Telegram-Limit)",
+   "body": "Kurzübersicht\nT -5.0@08\nTF –\nW 20\nG 30@04\nR 0.3\nCT ⛅\nVS 7.0\nSU ⛅\nSD 45\nNS24+ –\n\nSicht mäßig\n\n… +3 weitere Wettergrößen nur als Tageswert\n(Telegram-Limit)",
    "plain_text_body": ""
   },
   {

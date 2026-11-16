@@ -1,0 +1,134 @@
+# RED: Stand vor dem Fix (Kurzuebersicht liest Gehzeit-Zeilen), M1 = Altcode
+patch.MonkeyPatch object at 0x7fe9c13cc640>
+lang = 'de'
+
+    @pytest.mark.parametrize("lang", ["de", "en"])
+    def test_b_l1_fenster_10_19_kurzuebersicht_wie_sms(monkeypatch, lang):
+        """Given Tagesfenster 10-19, Boeenspitze 80 um 08 (vor dem Fenster) /
+        When das Briefing ueber den echten Weg verschickt wird / Then nennt die
+        Telegram-Kurzuebersicht fuer Boeen und Regen denselben Spitzenwert und
+        dieselbe Stunde wie die SMS (60@16 nach der Ankunft, 2.0@10) und keine
+        Stunde vor 10."""
+        for uid, mit in _fall(monkeypatch, (10, 19), lang):
+            ov = _kurzuebersicht(mit, lang)
+            sms = mit.sendungen("sms")[0]["body"]
+            # von Hand: im Fenster 10-19 liegt die Boeenspitze bei 60 um 16 Uhr
+            assert _sms(sms, "G") == ("60", 16), sms
+            assert _sms(sms, "R") == ("2.0", 10), sms
+>           assert _tg(ov, "G") == ("60", 16), f"{uid}: {ov}"
+E           AssertionError: einstellung-2aa3c457f2: Kurzübersicht
+E             G 45@09-80@08
+E             R 2.0@08
+E             T 15.0
+E             W 20
+E             UV 5.0@08
+E             TH mittel
+E             
+E             ⚡ mittel
+E           assert ('80', 8) == ('60', 16)
+E             
+E             At index 0 diff: '80' != '60'
+E             Use -v to get more diff
+
+tests/tdd/test_3047_runde7_telegram_tagesfenster.py:157: AssertionError
+______________ test_b_l1_fenster_10_19_kurzuebersicht_wie_sms[en] ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fe9c13cd5b0>
+lang = 'en'
+
+    @pytest.mark.parametrize("lang", ["de", "en"])
+    def test_b_l1_fenster_10_19_kurzuebersicht_wie_sms(monkeypatch, lang):
+        """Given Tagesfenster 10-19, Boeenspitze 80 um 08 (vor dem Fenster) /
+        When das Briefing ueber den echten Weg verschickt wird / Then nennt die
+        Telegram-Kurzuebersicht fuer Boeen und Regen denselben Spitzenwert und
+        dieselbe Stunde wie die SMS (60@16 nach der Ankunft, 2.0@10) und keine
+        Stunde vor 10."""
+        for uid, mit in _fall(monkeypatch, (10, 19), lang):
+            ov = _kurzuebersicht(mit, lang)
+            sms = mit.sendungen("sms")[0]["body"]
+            # von Hand: im Fenster 10-19 liegt die Boeenspitze bei 60 um 16 Uhr
+            assert _sms(sms, "G") == ("60", 16), sms
+            assert _sms(sms, "R") == ("2.0", 10), sms
+>           assert _tg(ov, "G") == ("60", 16), f"{uid}: {ov}"
+E           AssertionError: einstellung-b5e6fc2020: Summary
+E             G 45@09-80@08
+E             R 2.0@08
+E             T 15.0
+E             W 20
+E             UV 5.0@08
+E             TH medium
+E             
+E             ⚡ medium
+E           assert ('80', 8) == ('60', 16)
+E             
+E             At index 0 diff: '80' != '60'
+E             Use -v to get more diff
+
+tests/tdd/test_3047_runde7_telegram_tagesfenster.py:157: AssertionError
+_____________ test_b_l1_fenster_nie_eingestellt_standard_4_19[de] ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fe9c12c6570>
+lang = 'de'
+
+    @pytest.mark.parametrize("lang", ["de", "en"])
+    def test_b_l1_fenster_nie_eingestellt_standard_4_19(monkeypatch, lang):
+        """Given kein Tagesfenster gespeichert (Standard 4-19) / When das Briefing
+        verschickt wird / Then nennt Telegram fuer Regen die Stunde 04 wie die
+        SMS, und die Boeenspitze 80 um 08 (im Fenster) in beiden Kanaelen."""
+        for uid, mit in _fall(monkeypatch, None, lang):
+            ov = _kurzuebersicht(mit, lang)
+            sms = mit.sendungen("sms")[0]["body"]
+            assert _sms(sms, "R") == ("2.0", 4), sms
+            assert _sms(sms, "G") == ("80", 8), sms
+>           assert _tg(ov, "R") == ("2.0", 4), f"{uid}: {ov}"
+E           AssertionError: einstellung-b2667955bb: Kurzübersicht
+E             G 45@09-80@08
+E             R 2.0@08
+E             T 15.0
+E             W 20
+E             UV 5.0@08
+E             TH mittel
+E             
+E             ⚡ mittel
+E           assert ('2.0', 8) == ('2.0', 4)
+E             
+E             At index 1 diff: 8 != 4
+E             Use -v to get more diff
+
+tests/tdd/test_3047_runde7_telegram_tagesfenster.py:176: AssertionError
+_____________ test_b_l1_fenster_nie_eingestellt_standard_4_19[en] ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fe9c11509e0>
+lang = 'en'
+
+    @pytest.mark.parametrize("lang", ["de", "en"])
+    def test_b_l1_fenster_nie_eingestellt_standard_4_19(monkeypatch, lang):
+        """Given kein Tagesfenster gespeichert (Standard 4-19) / When das Briefing
+        verschickt wird / Then nennt Telegram fuer Regen die Stunde 04 wie die
+        SMS, und die Boeenspitze 80 um 08 (im Fenster) in beiden Kanaelen."""
+        for uid, mit in _fall(monkeypatch, None, lang):
+            ov = _kurzuebersicht(mit, lang)
+            sms = mit.sendungen("sms")[0]["body"]
+            assert _sms(sms, "R") == ("2.0", 4), sms
+            assert _sms(sms, "G") == ("80", 8), sms
+>           assert _tg(ov, "R") == ("2.0", 4), f"{uid}: {ov}"
+E           AssertionError: einstellung-1f790f2d19: Summary
+E             G 45@09-80@08
+E             R 2.0@08
+E             T 15.0
+E             W 20
+E             UV 5.0@08
+E             TH medium
+E             
+E             ⚡ medium
+E           assert ('2.0', 8) == ('2.0', 4)
+E             
+E             At index 1 diff: 8 != 4
+E             Use -v to get more diff
+
+tests/tdd/test_3047_runde7_telegram_tagesfenster.py:176: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_3047_runde7_telegram_tagesfenster.py::test_b_l1_fenster_10_19_kurzuebersicht_wie_sms[de]
+FAILED tests/tdd/test_3047_runde7_telegram_tagesfenster.py::test_b_l1_fenster_10_19_kurzuebersicht_wie_sms[en]
+FAILED tests/tdd/test_3047_runde7_telegram_tagesfenster.py::test_b_l1_fenster_nie_eingestellt_standard_4_19[de]
+FAILED tests/tdd/test_3047_runde7_telegram_tagesfenster.py::test_b_l1_fenster_nie_eingestellt_standard_4_19[en]

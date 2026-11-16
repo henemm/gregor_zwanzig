@@ -6,7 +6,10 @@ Die Datei ``telegram_briefing/briefing_normalstil.de.txt`` wurde mit dem Code
 VOR der Sprachumstellung erzeugt und eingecheckt. Deutsch muss byte-gleich
 bleiben -- sowohl ohne ``lang`` (Bestandsaufrufer) als auch mit ``lang="de"``.
 Gewollte Aenderungen danach: das Ausblick-Datum ``Fr 30.10.`` (AC-8) und die
-Briefing-Art im Kopf in Nutzersprache (``Morgen`` statt ``Morning``, #3052).
+Briefing-Art im Kopf in Nutzersprache (``Morgen`` statt ``Morning``, #3052),
+sowie die Kurzuebersicht im Tagesfenster 04-19 statt der Gehzeit-Zeilen
+(``W 14-25``, ``G 24-35@15``; Spec-Nachtrag Runde 7 #3047, B-L1, ADR-0035/0095:
+Werte wie SMS/Mail aus der Zeitreihe, letzte Anzeigestunde des Ziels 15).
 ``*.en.txt`` ist die englische Referenz; Restwoerter aus P4/P6 (Gewitterstufe,
 Warnungs-Rahmen) wandern mit diesen Paketen nach. Echter Renderer, kein Mock.
 """
