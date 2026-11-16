@@ -119,3 +119,38 @@ export function applyHourlyReorder(
 	const mergeOnlyActive = materializedKeys.filter((k) => !orderable.has(k));
 	return [...newOrder, ...mergeOnlyActive];
 }
+
+/**
+ * #3047 H1 (Konzept §5.8 „Jede Liste nimmt nur aus den Metriken oben"):
+ * aktive Stundenverlauf-Liste bei BEKANNTER Grundauswahl (`grund`, Kennungen in
+ * deren Folge). Dieselben Regeln wie die Mail (`resolve_hourly_metrics`,
+ * src/output/renderers/compare_hourly_metric_ids.py):
+ *  - nie eingestellt (`null`): die stuendlich waehlbaren Groessen der
+ *    Grundauswahl in deren Folge; ohne eine davon mit eigener Spalte die
+ *    Vorgabemenge `defaultKeys`.
+ *  - bewusst leer (`[]`) bleibt leer.
+ *  - gespeichert: Schnitt mit der Grundauswahl in gespeicherter Folge; bleibt
+ *    nichts, die Vorgabemenge geschnitten mit der Grundauswahl, sonst die
+ *    waehlbaren Groessen der Grundauswahl (Rueckfall #3047 O5).
+ * `kennungVon` bildet historische Kurzschluessel (`temp_c`) auf ihre Kennung ab.
+ */
+export function hourlyKeysAusGrundauswahl(
+	keys: string[] | null,
+	grund: string[],
+	waehlbar: Set<string>,
+	defaultKeys: string[],
+	mergeOnlyKeys: string[] = [],
+	kennungVon: (key: string) => string = (k) => k
+): string[] {
+	const inGrund = new Set(grund);
+	const ausGrund = grund.filter((id) => waehlbar.has(id));
+	if (keys === null) {
+		const mitSpalte = orderableHourlyMetricKeys(ausGrund, mergeOnlyKeys);
+		return mitSpalte.length > 0 ? ausGrund : defaultKeys;
+	}
+	if (keys.length === 0) return [];
+	const geschnitten = keys.filter((k) => inGrund.has(kennungVon(k)));
+	if (geschnitten.length > 0) return geschnitten;
+	const rueckfall = defaultKeys.filter((id) => inGrund.has(id));
+	return rueckfall.length > 0 ? rueckfall : ausGrund;
+}

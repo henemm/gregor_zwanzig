@@ -207,6 +207,13 @@ def test_python_seite_orte_stundenverlauf_standard():
             _zustand("orte_stundenverlauf", "nie_eingestellt"))
 
 
+def test_python_seite_orte_stundenverlauf_standard_mit_grundauswahl():
+    """#3047 H1 (Konzept §5.8): nie eingestellt mit Grundauswahl -> deren
+    stuendlich verfuegbare Groessen in deren Folge."""
+    _pruefe(python_orte_stundenverlauf, "orte_stundenverlauf",
+            _zustand("orte_stundenverlauf", "nie_eingestellt_mit_grundauswahl"))
+
+
 @pytest.mark.parametrize("zustand", _gespeicherte("orte_stundenverlauf"))
 def test_python_seite_orte_stundenverlauf_gespeichert(zustand):
     _pruefe(python_orte_stundenverlauf, "orte_stundenverlauf", zustand)

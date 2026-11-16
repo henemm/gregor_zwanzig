@@ -41,6 +41,7 @@
 	"vergleich.hub.delete_titel": "Delete comparison permanently?",
 	"vergleich.hub.nicht_gefunden": "Location comparison not found",
 	"vergleich.stundenverlauf.titel": "Hourly view",
+	"vergleich.stundenverlauf.nicht_in_grundauswahl": "locked: not in the basic selection above",
 	"vergleich.orte.weitere": "Other",
 	"vergleich.orte.min_erforderlich": "min. 2 required",
 	"vergleich.orte.passt": "good",

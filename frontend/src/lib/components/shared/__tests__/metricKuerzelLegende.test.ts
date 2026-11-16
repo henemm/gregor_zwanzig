@@ -1108,6 +1108,9 @@ const EINBETTUNGEN = [
 		saat: () => ({
 			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
 			metricKeys: null,
+			// #3047 H1: wie beim Ausblick reicht WeatherMetricsTab.svelte die
+			// Vergleichs-Grundauswahl als Prop `grundauswahl` durch.
+			grundauswahl: gerendertVergleich(),
 			smsSymbols: tripKuerzelById(),
 			$locale: 'de',
 			register: {}

@@ -176,7 +176,9 @@ function frontendOrteVergleichstabelle(eingabe: Zustand['eingabe']): string[] {
 function frontendOrteStundenverlauf(eingabe: Zustand['eingabe']): string[] {
 	const ed = orteEditor(eingabe);
 	return aktiveFolge(rendern(CompareHourlyLayoutControls, {
-		metricKeys: ed.layout.hourlyMetricKeys, onMetricKeys: nix, catalog: ORTE_KATALOG
+		metricKeys: ed.layout.hourlyMetricKeys, onMetricKeys: nix, catalog: ORTE_KATALOG,
+		// #3047 H1: dieselbe Grundauswahl wie der Ausblick-Mount (WeatherMetricsTab.svelte)
+		grundauswahl: ed.materializedActiveMetricKeys
 	}));
 }
 function frontendOrteAusblick(eingabe: Zustand['eingabe']): string[] {
@@ -215,6 +217,9 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 	// #3047 O2 behoben (F4)
 	test('frontend_seite_orte_stundenverlauf_standard', () =>
 		pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', zustand('orte_stundenverlauf', 'nie_eingestellt')));
+	// #3047 H1 (Konzept §5.8): nie eingestellt mit Grundauswahl
+	test('frontend_seite_orte_stundenverlauf_standard_mit_grundauswahl', () =>
+		pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', zustand('orte_stundenverlauf', 'nie_eingestellt_mit_grundauswahl')));
 	for (const z of gespeicherte('orte_stundenverlauf'))
 		test(`frontend_seite_orte_stundenverlauf_gespeichert ${z.id}`, () =>
 			pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', z));

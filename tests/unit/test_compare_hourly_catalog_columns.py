@@ -476,9 +476,15 @@ def _grund(*keys: str) -> list[str]:
         (["gust"], ("wind_max_kmh", "temp_max_c"), ["temperature", "wind"]),
         # Totalschnitt, auch Vorgabemenge leer -> stuendliche Grundauswahl
         (["gust"], ("cloud_avg_pct",), ["cloud_total"]),
-        # ausdruecklich leer bleibt leer, nie eingestellt bleibt None
+        # ausdruecklich leer bleibt leer
         ([], ("wind_max_kmh",), []),
-        (None, ("wind_max_kmh",), None),
+        # #3047 H1 (Konzept §5.8): nie eingestellt nimmt aus der Grundauswahl
+        # (deren Folge) statt der festen Vorgabemenge (vorher: None).
+        (None, ("wind_max_kmh",), ["wind"]),
+        (None, ("cloud_avg_pct", "temp_max_c", "sunny_hours_h"), ["cloud_total", "temperature"]),
+        # ... ohne Groesse mit eigener Stundenspalte bzw. ohne Grundauswahl: None
+        (None, ("sunny_hours_h",), None),
+        (None, None, None),
         # keine Grundauswahl (Altbestand) -> kein Schnitt
         (["gust", "wind"], None, ["gust", "wind"]),
     ],

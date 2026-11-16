@@ -40,10 +40,12 @@
 	import type { MetricEntry } from '../trip-detail/metricsEditor.ts';
 	import {
 		materializeHourlyMetricKeys,
-		applyHourlyMetricToggleFromState,
 		orderableHourlyMetricKeys,
-		applyHourlyReorder
+		applyHourlyReorder,
+		applyHourlyMetricToggle,
+		hourlyKeysAusGrundauswahl
 	} from './compareHourlyMetricDefs.ts';
+	import { istNieEingestellteOrteGrundauswahl } from '../shared/weather-metrics-tab/compareMetricOrder.ts';
 	// Issue #2659 (i18n F10): voller Name aus dem Register (label_en, sonst deutsch), wie im
 	// Wetter-Metriken-Reiter (F5); `col_label`/Kuerzel bleiben unveraendert.
 	// (Regel wie vergleichsMetrikLabel, compareMetricCatalogLoader.ts — ohne dessen Netz-Import.)
@@ -73,10 +75,15 @@
 		onEnabledChange?: (checked: boolean) => void;
 		/** Register (GET /api/metrics, `metricById` des Reiters) fuer den vollen Namen je Sprache. */
 		register?: Record<string, MetricLabelFields>;
+		/** #3047 H1: die Grundauswahl der Uebersicht (Katalog-Schluessel, wie beim
+		 *  Ausblick). Der Stundenverlauf nimmt nur aus ihr (Konzept §5.8).
+		 *  `null` bzw. die unveraenderte Vorgabe COMPARE_METRIC_KEYS = nie
+		 *  eingestellt: kein Maximum, Verhalten wie vorher. */
+		grundauswahl?: string[] | null;
 	}
 	let {
 		metricKeys, onMetricKeys, catalog = [], smsSymbols = {},
-		enabled = true, onEnabledChange, register = {}
+		enabled = true, onEnabledChange, register = {}, grundauswahl = null
 	}: Props = $props();
 	/** Anzeigename einer Groesse in der aktuellen Sprache (reaktiv ueber `$locale`). */
 	const nameVon = (group: CompareAggregationGroup) =>
@@ -118,12 +125,41 @@
 			.flatMap((g) => [g.metric_id, ...g.hourly_legacy_keys])
 	);
 
-	// „Nie eingestellt" (`null`) = Vorgabemenge. Eine bewusst geleerte Auswahl
-	// (`[]`) bleibt leer — Issue #1366 F001: Anzeige UND Umschalt-Handler nutzen
-	// ZWINGEND dieselbe Materialisierung, sonst driften beide auseinander.
-	const materializedHourlyKeys = $derived(
-		materializeHourlyMetricKeys(metricKeys, defaultHourlyKeys)
+	// #3047 H1 (Konzept §5.8): Grundauswahl als Kennungen in deren Folge;
+	// `null` = nie eingestellt oder leer (kein Maximum, wie beim Ausblick).
+	const grundKennungen = $derived.by(() => {
+		if (grundauswahl === null || istNieEingestellteOrteGrundauswahl(grundauswahl)) return null;
+		const kennungJeSchluessel: Record<string, string> = {};
+		for (const group of hourlyGroups)
+			for (const option of group.options) kennungJeSchluessel[option.key] = group.metric_id;
+		const ids = [...new Set(grundauswahl.map((k) => kennungJeSchluessel[k] ?? k))];
+		return ids.length > 0 ? ids : null;
+	});
+	const kennungJeHourlyKey = $derived(
+		Object.fromEntries(
+			hourlyGroups.flatMap((g) => [g.metric_id, ...g.hourly_legacy_keys].map((k) => [k, g.metric_id]))
+		) as Record<string, string>
 	);
+
+	// „Nie eingestellt" (`null`) = Vorgabemenge bzw. (#3047 H1) die stuendlich
+	// waehlbaren Groessen der Grundauswahl; gespeichert = Schnitt mit der
+	// Grundauswahl. Eine bewusst geleerte Auswahl (`[]`) bleibt leer — Issue
+	// #1366 F001: Anzeige UND Umschalt-Handler nutzen ZWINGEND dieselbe
+	// Materialisierung, sonst driften beide auseinander.
+	const materializedHourlyKeys = $derived.by(() => {
+		const grund = grundKennungen;
+		if (grund === null) return materializeHourlyMetricKeys(metricKeys, defaultHourlyKeys);
+		const waehlbar = new Set(hourlyGroups.filter((g) => g.hourly_selectable).map((g) => g.metric_id));
+		return hourlyKeysAusGrundauswahl(
+			metricKeys, grund, waehlbar, defaultHourlyKeys, mergeOnlyHourlyKeys,
+			(k) => kennungJeHourlyKey[k] ?? k
+		);
+	});
+
+	/** #3047 H1: nicht in der Grundauswahl -> gesperrt (Muster WV9). */
+	function ausserhalbGrundauswahl(group: CompareAggregationGroup): boolean {
+		return grundKennungen !== null && !grundKennungen.includes(group.metric_id);
+	}
 
 	/** AC-4 (Bestandsschutz): ein vor #1406 B gespeicherter Kurzschluessel
 	 *  (`temp_c`) gehoert zur Zeile seiner Groesse (`temperature`) — sonst
@@ -138,11 +174,10 @@
 	function makeHourlyMetricHandler(group: CompareAggregationGroup) {
 		return function handleHourlyMetric(): void {
 			onMetricKeys(
-				applyHourlyMetricToggleFromState(
-					metricKeys,
+				applyHourlyMetricToggle(
+					materializedHourlyKeys,
 					group.metric_id,
 					!isHourlyMetricActive(group),
-					defaultHourlyKeys,
 					group.hourly_legacy_keys
 				)
 			);
@@ -250,15 +285,16 @@
 	     fehlend. Zustand und Begruendung kommen aus den Katalogdaten, nicht aus
 	     einer Frontend-Sonderregel. -->
 	{#each groupCompareCatalog(catalog) as group (group.metric_id)}
+		<!-- #3047 H1: ausserhalb der Grundauswahl gesperrt, mit Grund (Muster WV9). -->
 		<label
 			class="hourly-metric-row"
-			class:disabled={!group.hourly_selectable}
+			class:disabled={!group.hourly_selectable || ausserhalbGrundauswahl(group)}
 			data-testid={`compare-layout-hourly-metric-${group.metric_id}`}
 		>
 			<input
 				type="checkbox"
-				checked={isHourlyMetricActive(group)}
-				disabled={!group.hourly_selectable}
+				checked={!ausserhalbGrundauswahl(group) && isHourlyMetricActive(group)}
+				disabled={!group.hourly_selectable || ausserhalbGrundauswahl(group)}
 				onchange={makeHourlyMetricHandler(group)}
 			/>
 			<span>{nameVon(group)}</span>
@@ -267,6 +303,11 @@
 					class="hourly-metric-reason"
 					data-testid={`compare-layout-hourly-reason-${group.metric_id}`}
 				>{group.hourly_not_selectable_reason}</span>
+			{:else if ausserhalbGrundauswahl(group)}
+				<span
+					class="hourly-metric-reason"
+					data-testid={`compare-layout-hourly-reason-${group.metric_id}`}
+				>{$t('vergleich.stundenverlauf.nicht_in_grundauswahl')}</span>
 			{/if}
 		</label>
 	{/each}

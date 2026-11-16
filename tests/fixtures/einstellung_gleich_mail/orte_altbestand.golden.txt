@@ -25,52 +25,52 @@ Ahrntal
 STUNDENVERLAUF
 ---------------
 Kronplatz (CET)
-   08:00  Temp 6°  Feels 3°  Wind 18  Gust 30  Rain ·  UV 4  Thdr –  Rain% 15%  Visib 14.0
-   09:00  Temp 6°  Feels 3°  Wind 19  Gust 31  Rain ·  UV 2  Thdr –  Rain% 15%  Visib 13.5
-   10:00  Temp 7°  Feels 3°  Wind 20  Gust 32  Rain ·  UV 3  Thdr –  Rain% 15%  Visib 13.0
-   11:00  Temp 8°  Feels 3°  Wind 21  Gust 33  Rain ·  UV 4  Thdr –  Rain% 15%  Visib 12.5
-   12:00  Temp 8°  Feels 3°  Wind 22  Gust 34  Rain ·  UV 2  Thdr –  Rain% 15%  Visib 12.0
-   13:00  Temp 8°  Feels 3°  Wind 23  Gust 35  Rain 0.8  UV 3  Thdr –  Rain% 70%  Visib 11.5
-   14:00  Temp 9°  Feels 3°  Wind 24  Gust 36  Rain 0.8  UV 4  Thdr –  Rain% 70%  Visib 11.0
-   15:00  Temp 10°  Feels 3°  Wind 25  Gust 37  Rain 0.8  UV 2  Thdr –  Rain% 70%  Visib 10.5
-   16:00  Temp 10°  Feels 3°  Wind 26  Gust 38  Rain ·  UV 3  Thdr –  Rain% 15%  Visib 10.0
+   08:00  Temp 6°  Wind 18  Rain ·  Gust 30
+   09:00  Temp 6°  Wind 19  Rain ·  Gust 31
+   10:00  Temp 7°  Wind 20  Rain ·  Gust 32
+   11:00  Temp 8°  Wind 21  Rain ·  Gust 33
+   12:00  Temp 8°  Wind 22  Rain ·  Gust 34
+   13:00  Temp 8°  Wind 23  Rain 0.8  Gust 35
+   14:00  Temp 9°  Wind 24  Rain 0.8  Gust 36
+   15:00  Temp 10°  Wind 25  Rain 0.8  Gust 37
+   16:00  Temp 10°  Wind 26  Rain ·  Gust 38
 3-Tages-Ausblick
 Fr  Temp 6/11  Wind 28 km/h  Rain 1.6 mm  Gust 40 km/h
 Sa  Temp 6/11  Wind 28 km/h  Rain 1.6 mm  Gust 40 km/h
 So  Temp 6/11  Wind 28 km/h  Rain 1.6 mm  Gust 40 km/h
 
 Sulden (CET)
-   08:00  Temp 7°  Feels 4°  Wind 18  Gust 35  Rain ·  UV 4  Thdr –  Rain% 15%  Visib 14.0
-   09:00  Temp 8°  Feels 4°  Wind 19  Gust 36  Rain ·  UV 2  Thdr –  Rain% 15%  Visib 13.5
-   10:00  Temp 8°  Feels 4°  Wind 20  Gust 37  Rain ·  UV 3  Thdr –  Rain% 15%  Visib 13.0
-   11:00  Temp 8°  Feels 4°  Wind 21  Gust 38  Rain ·  UV 4  Thdr –  Rain% 15%  Visib 12.5
-   12:00  Temp 9°  Feels 4°  Wind 22  Gust 39  Rain ·  UV 2  Thdr –  Rain% 15%  Visib 12.0
-   13:00  Temp 10°  Feels 4°  Wind 23  Gust 40  Rain 1.8  UV 3  Thdr –  Rain% 70%  Visib 11.5
-   14:00  Temp 10°  Feels 4°  Wind 24  Gust 41  Rain 1.8  UV 4  Thdr mittel · CAPE, Blitzdichte · Hagel: ja  Rain% 70%  Visib 11.0
-   15:00  Temp 10°  Feels 4°  Wind 25  Gust 42  Rain 1.8  UV 2  Thdr leicht · CAPE, Blitzdichte · Hagel: ja  Rain% 70%  Visib 10.5
-   16:00  Temp 11°  Feels 4°  Wind 26  Gust 43  Rain ·  UV 3  Thdr –  Rain% 15%  Visib 10.0
+   08:00  Temp 7°  Wind 18  Rain ·  Gust 35
+   09:00  Temp 8°  Wind 19  Rain ·  Gust 36
+   10:00  Temp 8°  Wind 20  Rain ·  Gust 37
+   11:00  Temp 8°  Wind 21  Rain ·  Gust 38
+   12:00  Temp 9°  Wind 22  Rain ·  Gust 39
+   13:00  Temp 10°  Wind 23  Rain 1.8  Gust 40
+   14:00  Temp 10°  Wind 24  Rain 1.8  Gust 41
+   15:00  Temp 10°  Wind 25  Rain 1.8  Gust 42
+   16:00  Temp 11°  Wind 26  Rain ·  Gust 43
 3-Tages-Ausblick
 Fr  Temp 7/12  Wind 28 km/h  Rain 3.6 mm  Gust 45 km/h
 Sa  Temp 7/12  Wind 28 km/h  Rain 3.6 mm  Gust 45 km/h
 So  Temp 7/12  Wind 28 km/h  Rain 3.6 mm  Gust 45 km/h
 
 Ahrntal (CET)
-   08:00  Temp 8°  Feels 5°  Wind 18  Gust 40  Rain ·  UV 4  Thdr –  Rain% 15%  Visib 14.0
-   09:00  Temp 8°  Feels 5°  Wind 19  Gust 41  Rain ·  UV 2  Thdr –  Rain% 15%  Visib 13.5
-   10:00  Temp 9°  Feels 5°  Wind 20  Gust 42  Rain ·  UV 3  Thdr –  Rain% 15%  Visib 13.0
-   11:00  Temp 10°  Feels 5°  Wind 21  Gust 43  Rain ·  UV 4  Thdr –  Rain% 15%  Visib 12.5
-   12:00  Temp 10°  Feels 5°  Wind 22  Gust 44  Rain ·  UV 2  Thdr –  Rain% 15%  Visib 12.0
-   13:00  Temp 10°  Feels 5°  Wind 23  Gust 45  Rain 2.8  UV 3  Thdr –  Rain% 70%  Visib 11.5
-   14:00  Temp 11°  Feels 5°  Wind 24  Gust 46  Rain 2.8  UV 4  Thdr –  Rain% 70%  Visib 11.0
-   15:00  Temp 12°  Feels 5°  Wind 25  Gust 47  Rain 2.8  UV 2  Thdr –  Rain% 70%  Visib 10.5
-   16:00  Temp 12°  Feels 5°  Wind 26  Gust 48  Rain ·  UV 3  Thdr –  Rain% 15%  Visib 10.0
+   08:00  Temp 8°  Wind 18  Rain ·  Gust 40
+   09:00  Temp 8°  Wind 19  Rain ·  Gust 41
+   10:00  Temp 9°  Wind 20  Rain ·  Gust 42
+   11:00  Temp 10°  Wind 21  Rain ·  Gust 43
+   12:00  Temp 10°  Wind 22  Rain ·  Gust 44
+   13:00  Temp 10°  Wind 23  Rain 2.8  Gust 45
+   14:00  Temp 11°  Wind 24  Rain 2.8  Gust 46
+   15:00  Temp 12°  Wind 25  Rain 2.8  Gust 47
+   16:00  Temp 12°  Wind 26  Rain ·  Gust 48
 3-Tages-Ausblick
 Fr  Temp 8/13  Wind 28 km/h  Rain 5.6 mm  Gust 50 km/h
 Sa  Temp 8/13  Wind 28 km/h  Rain 5.6 mm  Gust 50 km/h
 So  Temp 8/13  Wind 28 km/h  Rain 5.6 mm  Gust 50 km/h
 
-Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · Rain% % · Visib km
-Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · UV = UV-Index · Thdr = Gewitter · Rain% = Regenwahrscheinlichkeit · Visib = Sichtweite
+Einheiten: Temp °C · Wind, Gust km/h · Rain mm
+Spalten: Temp = Temperatur · Rain = Niederschlag · Gust = Böen
 
 ── Antwort-Kommandos ──
   HEUTE                – Vergleich für heute jetzt senden
