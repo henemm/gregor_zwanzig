@@ -23,6 +23,7 @@ import { live } from './wetterTabDaten.ts';
 import { aktiveMetriken, auswahlLesen, eigenschaftenAusKatalog, registerStandard, verschmelzen, vorlagenAusTemplates } from '../ampelModell.ts';
 import { mitMetrik, standAusAbo, type AboSicht } from '../wetterZustand.ts';
 import { tripNutzlast } from '../wetterTabSpeicherung.ts';
+import { DERIVED_METRIC_RULES } from '../../../trip-detail/metricsEditor.ts';
 
 const vorlagen = () => vorlagenAusTemplates(live().templates);
 const EIG = eigenschaftenAusKatalog(live().metrics);
@@ -56,7 +57,11 @@ describe('F007 (#3047 E1): Trip mit metrics: [] zeigt den Mail-Standard, keine l
 	test('Anlege-Kette: ohne Liste gilt die Vorlage', () => {
 		const v = vorlagen();
 		const s = standAusAbo('route', TRIP_LEER, v, {}, { eig: EIG, alsVorlage: true });
-		assert.deepEqual(sortiert(s.auswahl), sortiert(aktiveMetriken(v.wandern)));
+		// #3047 p5c (Tech-Lead-Entscheidung, Ausgabe unveraendert): samt der Kinder, die Python aus den
+		// Eltern der Vorlage ableitet (Mail-Nachweis: p5c_ableitung_hub_orte_ausgabe.test.ts).
+		const vorlage = aktiveMetriken(v.wandern);
+		const kinder = DERIVED_METRIC_RULES.filter((r) => vorlage.includes(r.parent) && !vorlage.includes(r.child)).map((r) => r.child);
+		assert.deepEqual(sortiert(s.auswahl), sortiert([...vorlage, ...kinder]));
 	});
 
 	test('Erstes Speichern mit einer Plus-Metrik schreibt die volle Liste, nicht nur die neue Metrik', () => {

@@ -17,7 +17,8 @@
 	import BriefingHistory from '$lib/components/shared/BriefingHistory.svelte';
 	import { api } from '$lib/api.js';
 	import type { Ampel, ComparePreset, Trip } from '$lib/types';
-	import { vorlagenAusTemplates, type VorlagenAmpeln } from '../wetter-tab/ampelModell.ts';
+	import { altSchluesselAusKatalog, vorlagenAusTemplates, type AltSchluessel, type VorlagenAmpeln } from '../wetter-tab/ampelModell.ts';
+	import { loadCompareSelectionEntries } from '../wetter-tab/compareMetricCatalogLoader.ts';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 	import { deriveStatusFromPreset, type CompareStatus } from '$lib/components/compare/subscriptionHelpers';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -64,11 +65,17 @@
 	// #2794 Fix-Loop B4: Vorlagen wie trip-detail/HubOverview.svelte (Reiter Wetter); die Karte
 	// „Wetter" (nur mit `preset`) zählt damit dieselbe Auswahl. Ladefehler ⇒ null ⇒ „—".
 	let vorlagen = $state<VorlagenAmpeln | null>(null);
+	// #3047 p5c: Vergleichs-Katalog wie der Reiter Wetter — „nie eingestellt" zählt alle Größen der Mail.
+	let altSchluessel = $state<AltSchluessel | null>(null);
 	onMount(() => {
 		if (!preset) return;
 		api.get<{ id: string; ampel?: Ampel | null }[]>('/api/templates').then(
 			(liste) => (vorlagen = vorlagenAusTemplates(liste)),
 			() => (vorlagen = null)
+		);
+		loadCompareSelectionEntries().then(
+			(katalog) => (altSchluessel = altSchluesselAusKatalog(katalog)),
+			() => (altSchluessel = null)
 		);
 	});
 
@@ -80,7 +87,8 @@
 					status ?? deriveStatusFromPreset(preset as ComparePreset),
 					naechstesBriefing.wert,
 					orte ?? [],
-					vorlagen
+					vorlagen,
+					altSchluessel
 				)
 	);
 	const mobileKennzahlen = $derived(modell.kennzahlen.filter((k) => k.mobil));

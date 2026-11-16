@@ -11,6 +11,7 @@
 import type { Ampel, AmpelMetrik, AmpelSeite } from './ampelModell.ts';
 import { aktiveMetriken, gleicheSeite, mitAbgeleiteten, tripMetrikEintraege, vergleichsKatalogIds, vergleichsMetrikId, type AltSchluessel } from './ampelModell.ts';
 import { DERIVED_METRIC_RULES } from '../../trip-detail/metricsEditor.ts';
+import { COMPARE_METRIC_KEYS } from './corridorEditorState.ts';
 import { klon } from './klon.ts';
 import { amtlicheWarnungenFelder, type WarnFelder } from './amtlicheWarnungen.ts';
 
@@ -181,6 +182,18 @@ function nieEingestelltUnveraendert(e: VergleichSpeicherEingabe): boolean {
 	return standard.length > 0 && standard.length === e.auswahl.length && standard.every((id, i) => e.auswahl[i] === id);
 }
 
+/** Bisher ausgegebene Zeilen als Bestand (#3047 p5c): gespeicherte Liste, sonst — nie eingestellt —
+ *  jede Zeile des Vergleichs-Katalogs (inkl. Varianten wie Temperatur-Minimum) in der Zeilenfolge der
+ *  Mail ohne Liste (`COMPARE_METRIC_KEYS` = CV2-Folge). So entfernt eine Abwahl nur die Zeilen dieser
+ *  Groesse, die uebrigen bleiben in ihrer Folge. */
+function bisherigeZeilen(e: VergleichSpeicherEingabe): (VergleichMetrik | string)[] {
+	if (Array.isArray(e.displayConfig?.active_metrics)) return e.displayConfig.active_metrics;
+	const rang = (k: string) => (COMPARE_METRIC_KEYS.includes(k) ? COMPARE_METRIC_KEYS.indexOf(k) : COMPARE_METRIC_KEYS.length);
+	return Object.entries(e.altSchluessel ?? {})
+		.sort(([a], [b]) => rang(a) - rang(b))
+		.map(([, z]) => ({ ...z }));
+}
+
 /** Orts-Briefing: ein Eintrag in der Hub-Schreibschlange (Read-Modify-Write: ganze `display_config`
  *  mit neuer `ampel` und `active_metrics`, Warn-Felder, Radar, Tagesfenster top-level). */
 export function vergleichSpeicherPayload(e: VergleichSpeicherEingabe) {
@@ -192,7 +205,7 @@ export function vergleichSpeicherPayload(e: VergleichSpeicherEingabe) {
 			ampel: abweichungsMenge(e.vorlage, e.aufgeloest, e.auswahl),
 			...(nieEingestelltUnveraendert(e)
 				? {}
-				: { active_metrics: vergleichMetriken(e.displayConfig?.active_metrics, e.auswahl, e.aggregationFuer, e.altSchluessel) })
+				: { active_metrics: vergleichMetriken(bisherigeZeilen(e), e.auswahl, e.aggregationFuer, e.altSchluessel) })
 		},
 		official_alerts_enabled: warn.official_alerts_enabled,
 		official_warnings: warn.official_warnings,

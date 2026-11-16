@@ -421,6 +421,27 @@ export function mitAbgeleiteten(eintraege: TripMetrikEintrag[]): TripMetrikEintr
 	return aus;
 }
 
+/** Python-Ableitung auf einer Auswahl ohne Eintraege (#3047 p5c): jedes fehlende Kind eines gewaehlten
+ *  Elters gilt als gewaehlt (loader `_append_derived_metrics`: Kind uebernimmt `enabled` des Elters)
+ *  und steht direkt hinter seinem Elter (Elter-Folge). Fuer Vorlagen und „+“ — dort gibt es keinen
+ *  Kind-Eintrag, Python leitete das Kind ab; nur ein bewusstes „−“ nimmt es heraus. */
+export function auswahlMitAbgeleiteten(auswahl: string[]): string[] {
+	const aus = [...auswahl];
+	for (const { child, parent } of DERIVED_METRIC_RULES) {
+		if (aus.includes(child) || !aus.includes(parent)) continue;
+		let nach = aus.indexOf(parent) + 1;
+		while (nach < aus.length && DERIVED_METRIC_RULES.some((r) => r.parent === parent && r.child === aus[nach])) nach++;
+		aus.splice(nach, 0, child);
+	}
+	return aus;
+}
+
+/** Ableitung je Kontext als Daten: nur der Trip leitet Kinder ab (der Vergleich gibt sie nicht aus). */
+export const AUSWAHL_ABLEITUNG: Record<Kontext, (auswahl: string[]) => string[]> = {
+	route: auswahlMitAbgeleiteten,
+	vergleich: (auswahl) => auswahl
+};
+
 /** Trip-Register-Standard (#3047 E1): Metriken mit `trip_default_rank` aus `/api/metrics` in
  *  Rangfolge — dieselbe Quelle wie Python `DEFAULT_TRIP_METRIC_IDS`, ohne Ableitung (loader.py N1). */
 export function registerStandard(eig: Record<string, MetrikEigenschaften>): string[] {
@@ -459,7 +480,7 @@ export function auswahlLesen(
 	const liste = AUSWAHL_QUELLE[context](displayConfig, alt);
 	if (liste) return liste;
 	const standard = quellen.alsVorlage ? [] : MAIL_STANDARD[context](quellen.eig ?? {}, alt);
-	return standard.length ? standard : aktiveMetriken(aufgeloest);
+	return standard.length ? standard : AUSWAHL_ABLEITUNG[context](aktiveMetriken(aufgeloest));
 }
 
 /** Mail-Standard „nie eingestellt" je Kontext als Daten (Ratsche context_herkunft_zweige_eingefroren). */

@@ -24,7 +24,8 @@ describe('F-A4 (D6): Vorlagenwechsel und Zuruecksetzen ersetzen die Auswahl', ()
 		const v = vorlagen();
 		const s = standAusAbo('vergleich', { display_config: { ampel: { template: 'allgemein' } } }, v);
 		assert.notDeepEqual(sortiert(aktiveMetriken(v.allgemein)), sortiert(aktiveMetriken(v.wassersport)), 'Messaufbau');
-		const n = mitVorlage(s, 'wassersport', v);
+		// p5c: Kontext ausdruecklich wie standAusAbo (Standard 'route' leitet Trip-Kinder ab).
+		const n = mitVorlage(s, 'wassersport', v, 'vergleich');
 		assert.equal(n.vorlageId, 'wassersport');
 		assert.deepEqual(sortiert(n.auswahl), sortiert(aktiveMetriken(v.wassersport)), 'Vorlagenwechsel ersetzt die Auswahl nicht');
 	});
@@ -35,7 +36,7 @@ describe('F-A4 (D6): Vorlagenwechsel und Zuruecksetzen ersetzen die Auswahl', ()
 		const weg = s0.auswahl[0];
 		const geaendert = mitMetrik(ohneMetrik(s0, weg), 'dewpoint');
 		assert.notDeepEqual(sortiert(geaendert.auswahl), sortiert(s0.auswahl), 'Messaufbau');
-		assert.deepEqual(sortiert(mitVorlage(geaendert, 'wandern', v).auswahl), sortiert(aktiveMetriken(v.wandern)));
+		assert.deepEqual(sortiert(mitVorlage(geaendert, 'wandern', v, 'vergleich').auswahl), sortiert(aktiveMetriken(v.wandern)));
 	});
 });
 
