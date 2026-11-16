@@ -45,6 +45,38 @@ def env(tmp_path, monkeypatch):
     return f"tdd-2283-{uuid.uuid4().hex[:8]}"
 
 
+@pytest.fixture
+def mittagsuhr():
+    """Gestellte Uhr (#3047), heute 12:00 UTC statt Wanduhr.
+
+    Die Trip-Anker der Vorschau-Tests decken HEUTE 00:00-23:59 ab. Ab 23:59 UTC
+    liegt das Segment in der Vergangenheit, der Frisch-Abruf entfaellt zu Recht
+    und der Test wird rot (CI-Lauf 2026-11-15 23:59). Muster:
+    ``frozen_active_window()`` (#2050).
+
+    ``pydantic.v1`` wird VOR dem Einfrieren geladen: FastAPI importiert es beim
+    ersten Router-Aufbau nach, und unter freezegun scheitert dessen
+    ``datetime``-Unterklasse mit einem Metaklassen-Konflikt.
+
+    Gestellt wird NUR die Kalenderuhr: ``time.monotonic``/``perf_counter``
+    bleiben echt. Die Vorschau ruft frisch in einem Hilfsfaden mit
+    monotoner Frist ab (``alert_preview_hours._within``,
+    ``parallel_fetch.fetch_ordered``); freezegun beantwortet ``monotonic()``
+    dort je nach Aufrufstapel mal echt, mal gestellt, und die Frist liefe
+    sofort ab -- ein Messartefakt, kein Produktverhalten."""
+    import time
+
+    import pydantic.v1.types  # noqa: F401
+    from freezegun import api as freezegun_api
+
+    from tests.helpers.nowcast_gate_fixtures import frozen_active_window
+
+    with frozen_active_window() as anker:
+        time.monotonic = freezegun_api.real_monotonic
+        time.perf_counter = freezegun_api.real_perf_counter
+        yield anker
+
+
 def seed_trip(user_id: str, trip_id: str, name: str) -> None:
     trips_dir = get_briefings_dir(user_id)
     trips_dir.mkdir(parents=True, exist_ok=True)

@@ -27,8 +27,6 @@ EXPIRY = date(2026, 12, 8)
 
 # Datei -> Funktionsnamen (spart Wiederholung des Pfads gegenueber Tupeln).
 _KNOWN_BY_FILE = {
-    "tests/tdd/test_alert_addendum_failsoft.py": ["test_nachtrag_ohne_meldezeitpunkt_bleibt_zustellbar_und_reisst_den_lauf_nicht_ab"],
-    "tests/tdd/test_alert_addendum_sms.py": ["test_ac_b1_nachtrag_wird_zugestellt_und_traegt_die_bezugszeile"],
     "tests/tdd/test_alert_suppression_reason.py": ["test_ac4_doppel_alarm_guard_wird_protokolliert_und_deutsch_beschriftet"],
     "tests/tdd/test_nowcast_suppression_logging.py": ["_run_trip", "test_f004_gescheitertes_protokoll_stoppt_den_trip_lauf_nicht"],
     "tests/tdd/test_onset_ende_kanalparitaet.py": ["_text_vom_trip_pfad"],

@@ -41,7 +41,8 @@ from app.loader import save_location
 from tests.helpers.alert_log_fixtures import gust_alert_trip, weather
 from tests.helpers.nowcast_gate_fixtures import (
     LAT, LON, SCOPE_COMPARE_RADAR, SCOPE_TRIP_RADAR, CountingFrameSource,
-    clean_uid, compare_radar_service, entries_for, fresh_uid, location,
+    clean_uid, compare_radar_service, entries_for, fresh_uid, frozen_active_window,
+    location,
     TRIP_ZONE, make_trip, quiet_window_elsewhere, quiet_window_now, radar_preset,
     read_log, record_throttle, save_trip, seed_daily_counter,
     settings_email_only, suppression_reasons, trip_alert_service,
@@ -715,38 +716,42 @@ def test_ac15_trip_nowcast_protokolliert_ereignis_identitaet_unterdrueckung():
     from services.alert_log import REASON_EVENT_DUPLICATE
 
     uid, trip_id = fresh_uid("s4b-ac15"), "trip-1467s4b-ac15"
-    clean_uid(uid)
-    try:
-        write_user_tier(uid, "premium")
-        now = datetime.now(timezone.utc)
-        # Bereits registrierte amtliche Warnung derselben Klasse/desselben
-        # Segments ("1", s. trip_segments.py::segment_id=i+1 fuer die
-        # Einzeletappe von make_trip()) -- der nachfolgende Nowcast gilt als
-        # Duplikat.
-        record_event_identity(
-            user_id=uid, entity_id=trip_id, hazard_class="wet",
-            segment_ids=["1"], severity="HIGH",
-            window_start=now - timedelta(minutes=10),
-            window_end=now + timedelta(hours=4), now=now,
-        )
-        assert _run_trip(uid, trip_id) == 0, (
-            "Voraussetzung: die Ereignis-Identitaet muss den Nowcast unterdruecken"
-        )
-        unterdrueckt = entries_for(uid, trip_id, bucket="not_delivered")
-        passend = [
-            e for e in unterdrueckt
-            if any(
-                item.get("reason") == REASON_EVENT_DUPLICATE
-                for item in e.get("channels_not_sent", [])
-                if isinstance(item, dict)
-            )
-        ]
-        assert len(passend) == 1, (
-            f"Erwartet GENAU EINEN Protokoll-Eintrag mit gate_reason="
-            f"{REASON_EVENT_DUPLICATE!r}, gefunden {len(passend)}: {read_log(uid)!r}"
-        )
-    finally:
+    # Gestellte Uhr (#3047): um 23:59 UTC ist der Wanderer laut make_trip()
+    # (Etappe 00:00-23:59) schon im Ziel-Segment, das Register traegt aber
+    # Segment "1" -- disjunkt, also KEIN Duplikat. Mittag statt Wanduhr.
+    with frozen_active_window():
         clean_uid(uid)
+        try:
+            write_user_tier(uid, "premium")
+            now = datetime.now(timezone.utc)
+            # Bereits registrierte amtliche Warnung derselben Klasse/desselben
+            # Segments ("1", s. trip_segments.py::segment_id=i+1 fuer die
+            # Einzeletappe von make_trip()) -- der nachfolgende Nowcast gilt als
+            # Duplikat.
+            record_event_identity(
+                user_id=uid, entity_id=trip_id, hazard_class="wet",
+                segment_ids=["1"], severity="HIGH",
+                window_start=now - timedelta(minutes=10),
+                window_end=now + timedelta(hours=4), now=now,
+            )
+            assert _run_trip(uid, trip_id) == 0, (
+                "Voraussetzung: die Ereignis-Identitaet muss den Nowcast unterdruecken"
+            )
+            unterdrueckt = entries_for(uid, trip_id, bucket="not_delivered")
+            passend = [
+                e for e in unterdrueckt
+                if any(
+                    item.get("reason") == REASON_EVENT_DUPLICATE
+                    for item in e.get("channels_not_sent", [])
+                    if isinstance(item, dict)
+                )
+            ]
+            assert len(passend) == 1, (
+                f"Erwartet GENAU EINEN Protokoll-Eintrag mit gate_reason="
+                f"{REASON_EVENT_DUPLICATE!r}, gefunden {len(passend)}: {read_log(uid)!r}"
+            )
+        finally:
+            clean_uid(uid)
 
 
 def test_ac16_amtliche_ereignis_identitaet_unterdrueckung_erzeugt_protokoll_eintrag():

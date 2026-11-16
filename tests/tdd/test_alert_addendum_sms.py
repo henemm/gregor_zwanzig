@@ -55,7 +55,7 @@ from tests.helpers.nutzer_tier import nutzer_mit_tier
 from utils.timezone import local_fmt
 
 from tests.helpers.nowcast_gate_fixtures import (
-    TRIP_ZONE, clean_uid, fresh_uid, make_trip,
+    TRIP_ZONE, clean_uid, fresh_uid, frozen_active_window, make_trip,
     quiet_window_elsewhere, radar_service, read_log, save_trip,
     settings_email_only, write_user_tier,
 )
@@ -292,67 +292,71 @@ def test_ac_b1_nachtrag_wird_zugestellt_und_traegt_die_bezugszeile():
     from services.trip_alert import TripAlertService
 
     uid, trip_id = fresh_uid("2018-b1"), "trip-2018-b1"
-    clean_uid(uid)
-    try:
-        write_user_tier(uid, "premium")
-        now = datetime.now(timezone.utc)
-        reported_at = now - timedelta(minutes=25)
-        # Bereits zugestellte AMTLICHE Warnung: nur `window_*`, kein
-        # `point_at` -- daraus leitet das Register die Quelle "official" ab
-        # (Spec A2). Segment "1" ist die Einzeletappe von `make_trip()`.
-        record_event_identity(
-            user_id=uid, entity_id=trip_id, hazard_class="wet",
-            segment_ids=["1"], severity="MODERATE",
-            window_start=now - timedelta(minutes=30),
-            window_end=now + timedelta(hours=3), now=reported_at,
-        )
-        quiet_from, quiet_to = quiet_window_elsewhere(zone=TRIP_ZONE)
-        save_trip(make_trip(trip_id, quiet_from=quiet_from, quiet_to=quiet_to), uid)
-
-        mails: list[tuple[str, str]] = []
-        svc = TripAlertService(
-            settings=settings_email_only(), throttle_hours=0, user_id=uid,
-            radar_service=radar_service(_ConvectiveFrameSource()),
-            mail_sink=lambda subject, body: mails.append((subject, body)),
-        )
-        recorder = _RecordingNotificationService(settings_email_only(), uid)
-        svc._notification_service = recorder
-
-        sent = svc.check_radar_alerts()
-
-        assert sent == 1, (
-            "RED: der Nachtrag muss ZUGESTELLT werden (Variante c) — "
-            f"check_radar_alerts() lieferte {sent}."
-        )
-        assert mails, "RED: es ging keine Nachricht raus."
-        unterdrueckt = [
-            e for e in read_log(uid).get("not_delivered", [])
-            if e.get("entity_id") == trip_id
-            and any(
-                item.get("reason") == REASON_EVENT_DUPLICATE
-                for item in e.get("channels_not_sent", [])
-                if isinstance(item, dict)
-            )
-        ]
-        assert unterdrueckt == [], (
-            "RED: der Nachtrag darf NICHT als Ereignis-Duplikat unterdrueckt "
-            f"protokolliert werden: {unterdrueckt!r}"
-        )
-        assert len(recorder.dispatched) == 1, (
-            f"Erwartet genau EINE versandte AlertMessage: {recorder.dispatched!r}"
-        )
-        alert_msg = recorder.dispatched[0]
-        erwartet = (
-            "Ergänzung zur amtlichen Warnung von "
-            f"{local_fmt(reported_at, TRIP_ZONE)}"
-        )
-        assert getattr(alert_msg, "addendum_reference", None) == erwartet, (
-            "RED: AlertMessage.addendum_reference fehlt oder zitiert die "
-            f"falsche Uhrzeit: {getattr(alert_msg, 'addendum_reference', None)!r} "
-            f"(erwartet {erwartet!r})"
-        )
-    finally:
+    # Gestellte Uhr (#3047): um 23:59 UTC ist der Wanderer laut make_trip()
+    # (Etappe 00:00-23:59) schon im Ziel-Segment, das Register traegt aber
+    # Segment "1" -- disjunkt, also kein Nachtrag. Mittag statt Wanduhr.
+    with frozen_active_window():
         clean_uid(uid)
+        try:
+            write_user_tier(uid, "premium")
+            now = datetime.now(timezone.utc)
+            reported_at = now - timedelta(minutes=25)
+            # Bereits zugestellte AMTLICHE Warnung: nur `window_*`, kein
+            # `point_at` -- daraus leitet das Register die Quelle "official" ab
+            # (Spec A2). Segment "1" ist die Einzeletappe von `make_trip()`.
+            record_event_identity(
+                user_id=uid, entity_id=trip_id, hazard_class="wet",
+                segment_ids=["1"], severity="MODERATE",
+                window_start=now - timedelta(minutes=30),
+                window_end=now + timedelta(hours=3), now=reported_at,
+            )
+            quiet_from, quiet_to = quiet_window_elsewhere(zone=TRIP_ZONE)
+            save_trip(make_trip(trip_id, quiet_from=quiet_from, quiet_to=quiet_to), uid)
+
+            mails: list[tuple[str, str]] = []
+            svc = TripAlertService(
+                settings=settings_email_only(), throttle_hours=0, user_id=uid,
+                radar_service=radar_service(_ConvectiveFrameSource()),
+                mail_sink=lambda subject, body: mails.append((subject, body)),
+            )
+            recorder = _RecordingNotificationService(settings_email_only(), uid)
+            svc._notification_service = recorder
+
+            sent = svc.check_radar_alerts()
+
+            assert sent == 1, (
+                "RED: der Nachtrag muss ZUGESTELLT werden (Variante c) — "
+                f"check_radar_alerts() lieferte {sent}."
+            )
+            assert mails, "RED: es ging keine Nachricht raus."
+            unterdrueckt = [
+                e for e in read_log(uid).get("not_delivered", [])
+                if e.get("entity_id") == trip_id
+                and any(
+                    item.get("reason") == REASON_EVENT_DUPLICATE
+                    for item in e.get("channels_not_sent", [])
+                    if isinstance(item, dict)
+                )
+            ]
+            assert unterdrueckt == [], (
+                "RED: der Nachtrag darf NICHT als Ereignis-Duplikat unterdrueckt "
+                f"protokolliert werden: {unterdrueckt!r}"
+            )
+            assert len(recorder.dispatched) == 1, (
+                f"Erwartet genau EINE versandte AlertMessage: {recorder.dispatched!r}"
+            )
+            alert_msg = recorder.dispatched[0]
+            erwartet = (
+                "Ergänzung zur amtlichen Warnung von "
+                f"{local_fmt(reported_at, TRIP_ZONE)}"
+            )
+            assert getattr(alert_msg, "addendum_reference", None) == erwartet, (
+                "RED: AlertMessage.addendum_reference fehlt oder zitiert die "
+                f"falsche Uhrzeit: {getattr(alert_msg, 'addendum_reference', None)!r} "
+                f"(erwartet {erwartet!r})"
+            )
+        finally:
+            clean_uid(uid)
 
 
 # ===========================================================================

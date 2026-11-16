@@ -31,7 +31,7 @@ from fastapi.testclient import TestClient
 from app.loader import get_briefings_dir, get_data_dir
 
 from tests.helpers.ortstag import ortstag
-from tests.helpers.vorschau_umgebung import env  # noqa: F401  (Fixture)
+from tests.helpers.vorschau_umgebung import env, mittagsuhr  # noqa: F401  (Fixture)
 
 LAT, LON = 47.0, 11.0
 KANAELE = ("subject", "email_plain", "telegram", "sms")
@@ -338,7 +338,7 @@ def test_ac7_antwort_traegt_neue_felder_und_alle_altfelder(client, uid):
     assert daten.get("stundenreihe") is False
 
 
-def test_ac7_mit_anker_und_stundenreihe_ist_stundenreihe_true(env, monkeypatch, tmp_path):  # noqa: F811
+def test_ac7_mit_anker_und_stundenreihe_ist_stundenreihe_true(mittagsuhr, env, monkeypatch, tmp_path):  # noqa: F811
     """Anker-Pfad #1737: mit Anker und frischer Reihe meldet die Antwort
     ``stundenreihe: true`` und den heutigen Bezugstag."""
     from api.routers.validator import AlertPreviewBody, alert_preview
@@ -600,7 +600,7 @@ def test_f007_payload_zeiten_gelten_in_utc_auch_bei_segmentstart_in_ortszone():
 
 # ------------------------------------------- Fix-Loop 2 (Adversary F-A2)
 
-def test_f_a2_ohne_user_id_keine_stundenreihe_auch_wenn_default_daten_haette(env, monkeypatch, tmp_path):  # noqa: F811
+def test_f_a2_ohne_user_id_keine_stundenreihe_auch_wenn_default_daten_haette(mittagsuhr, env, monkeypatch, tmp_path):  # noqa: F811
     """``user_id=None`` liest nie den Speicher von ``"default"``: liegen Anker
     und frische Reihe (isolierter Daten-Root) GENAU unter ``default``, meldet
     die Vorschau ohne Nutzerkennung ``stundenreihe: false``. Gegenprobe im

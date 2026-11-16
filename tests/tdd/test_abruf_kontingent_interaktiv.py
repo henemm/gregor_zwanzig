@@ -31,6 +31,7 @@ from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Pr
 from app.user import SavedLocation
 from services.forecast_budget import PROVIDER, ForecastBudgetGate
 from tests.helpers.ortstag import utc_tag
+from tests.helpers.vorschau_umgebung import mittagsuhr  # noqa: F401  (Fixture)
 
 REPO = Path(__file__).resolve().parents[2]
 INTERAKTIV = "user_interactive"
@@ -513,7 +514,7 @@ def _tagesanker(uid: str, trip) -> None:
     reset_shared_weather_cache_for_tests()
 
 
-def test_ac9_alarm_vorschau_erschoepft_429(client, anbieter):
+def test_ac9_alarm_vorschau_erschoepft_429(mittagsuhr, client, anbieter):  # noqa: F811
     from services.weather_cache import reset_shared_weather_cache_for_tests
 
     a, b = _uid("ac9a-a"), _uid("ac9a-b")
