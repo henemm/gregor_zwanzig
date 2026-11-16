@@ -47,6 +47,7 @@ nicht.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -86,6 +87,24 @@ _ASCII_KUERZEL = {m.col_label.replace("°", ""): m.col_label for m in _METRICS
 ALLE_KUERZEL = tuple(dict.fromkeys(
     [m.col_label for m in _METRICS if m.selectable and m.id not in NO_HOURLY_COLUMN_METRIC_IDS]
     + list(_ASCII_KUERZEL)))
+
+
+#: Breite des Etappennamen-Felds im Trip-Klartext-Ausblick (``f"{name:<26} "``).
+_NAMENSFELD = 26
+
+
+def ausblick_kuerzel(zeile: str, mit_name: bool = False) -> list[tuple[int, str]]:
+    """(Position, Kuerzel) der Spalten einer Ausblick-Zeile in Textfolge.
+
+    #3047 F001: vor den Werten stehen der Wochentag (``f"{weekday:<3} "``, EN
+    "Sun" ist kein Spaltenkuerzel "Sun") und im Trip-Klartext das 26 Zeichen
+    breite Etappennamen-Feld ("Wind Pass", "Sun Valley"). Beides wird vor der
+    Suche abgetrennt; ein ueberlanger Name ist bis Feldende sicher abgetrennt."""
+    tag = re.match(r"\S+ ", zeile)
+    ab = (tag.end() if tag else 0) + (_NAMENSFELD if mit_name else 0)
+    return sorted((m.start(), k) for k in ALLE_KUERZEL
+                  for m in re.finditer(r"(?<!\S)" + re.escape(k) + r" (?=\S)", zeile)
+                  if m.start() >= ab)
 
 
 def _waehlbar(mid: object) -> bool:
@@ -144,10 +163,16 @@ def _trip_email_liste(dc: dict, report: str) -> list[dict]:
     return _sortiert(geschnitten)
 
 
+def _wind_verschmolzen(liste: list[dict]) -> bool:
+    """Windrichtung Einfach neben Wind: keine eigene WDir-Spalte, die Richtung
+    steht in der Wind-Zelle (#435, ``_should_merge_wind_dir``)."""
+    return any(e["metric_id"] == "wind" for e in liste) and any(
+        e["metric_id"] == "wind_direction" and _modus(e) == "scale" for e in liste)
+
+
 def _trip_stundenspalten(liste: list[dict]) -> list[str]:
     ids = [e["metric_id"] for e in liste]
-    merge = "wind" in ids and any(
-        e["metric_id"] == "wind_direction" and _modus(e) == "scale" for e in liste)
+    merge = _wind_verschmolzen(liste)
     spalten: list[str] = []
     for mid in ids:
         if mid in NO_HOURLY_COLUMN_METRIC_IDS or (mid == "wind_direction" and merge):
@@ -256,6 +281,8 @@ def trip_soll(trip: dict, report: str = "evening") -> dict:
         "stunden": _trip_stundenspalten(liste),
         "darstellung_stunden": {e["metric_id"]: _modus(e) for e in liste},
         "formen_stunden": _formen_stunden(liste),
+        # #3047 F004: verschmolzene Windrichtung -> jede Wind-Zelle traegt die Richtung.
+        "wind_richtung": _wind_verschmolzen(liste),
         "nacht": bool(dc.get("show_night_block", True)),
         "ausblick_an": ids != [] and rc.get("show_outlook", True) is not False
         and report in (trend_reports or []),
