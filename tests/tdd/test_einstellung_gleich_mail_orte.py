@@ -552,6 +552,35 @@ def test_h1_stundenverlauf_nie_eingestellt_aus_grundauswahl(fmt):
         assert koepfe == ["Wind", "Rain", "Temp", "Gust"], f"{fmt} {ort}: {koepfe}"
 
 
+def test_j1_grundauswahl_gleich_vorgabe_kette():
+    """#3047 J1 (AC-13/AC-10, Konzept §5.8): die Grundauswahl ist gespeichert und
+    gleicht zufaellig der Vorgabe (alle Zeilen, Standardfolge, Speicherformat des
+    Editors); Stundenverlauf und Ausblick sind nie eingestellt. Gespeichert ist
+    gespeichert: die Mail nimmt die Grundauswahl-Regel, in HTML und Klartext --
+    dieselbe Folge, die der Editor laut ``editor_standard.json`` (Zustand
+    ``grundauswahl_gleich_vorgabe``) zeigt. Soll von Hand dort."""
+    daten = json.loads((FIXTURE_DIR / "editor_standard.json").read_text(encoding="utf-8"))
+    zustand = {liste: next(z for z in daten["listen"][liste]["zustaende"]
+                           if z["id"] == "grundauswahl_gleich_vorgabe")
+               for liste in ("orte_stundenverlauf", "orte_ausblick")}
+    p = preset_dict("basis")
+    p["display_config"]["active_metrics"] = zustand["orte_ausblick"]["eingabe"]["display_config"]["active_metrics"]
+    mail = sende_orte_mail(p)
+    dc = mail.roh["display_config"]
+    assert "hourly_metrics" not in dc and "outlook_metrics" not in dc, "Vorbedingung"
+    stunden = [kopf_von(m) for m in zustand["orte_stundenverlauf"]["erwartet"]]
+    ausblick = zustand["orte_ausblick"]["erwartet"]
+    for fmt in ("html", "klartext"):
+        ist_stunden = _stunden_koepfe(mail, fmt)
+        assert list(ist_stunden) == _orte(mail.roh), fmt
+        for ort, koepfe in ist_stunden.items():
+            assert koepfe == stunden, f"{fmt} {ort}: Stundenverlauf {koepfe}"
+        ist_ausblick = (html_ausblick(mail.html) if fmt == "html" else klartext_ausblick(mail.plain))
+        assert list(ist_ausblick) == _orte(mail.roh), fmt
+        for ort, zellen in ist_ausblick.items():
+            assert kennungen(zellen) == ausblick, f"{fmt} {ort}: Ausblick {[k for k, _ in zellen]}"
+
+
 @pytest.mark.parametrize("fmt", ["html", "klartext"])
 def test_orte_koepfe_in_nutzersprache_en(fmt):
     """ADR-0104 / #3047 F7 (F003): ein englischer Nutzer bekommt Stundenverlauf
@@ -641,6 +670,83 @@ def test_ac10_grundauswahl_vergleichstabelle():
     assert soll_vergleichstabelle(mail.roh) == ["wind", "temperature"]
     for fmt in ("html", "klartext"):
         pruefe_vergleichstabelle(mail, fmt)
+
+
+def _offen(testname: str, grund: str) -> list:
+    """Faelle ``offen_feature`` zu ``testname`` -- rot belegt per
+    ``xfail(strict=True)``, damit die Umsetzung laut wird (#3047 J2)."""
+    faelle = json.loads(FALLLISTE.read_text(encoding="utf-8"))["faelle"]
+    params = [pytest.param(f, id=f["id"], marks=[pytest.mark.xfail(strict=True, reason=grund)])
+              for f in faelle if f["test"] == testname]
+    assert params, f"Fallliste ohne Faelle fuer {testname}"
+    return params
+
+
+@pytest.mark.parametrize("fall", _offen("test_p7_global_nachtraeglich_in_gespeicherter_liste",
+                                        "#3065 Phase 2: Abwahl nicht persistiert"))
+def test_p7_global_nachtraeglich_in_gespeicherter_liste(fall):
+    """Konzept §5 Punkt 6 / Nachpruefung Punkt 7: eine Metrik, die NACH dem
+    Speichern einer eigenen Liste in die Grundauswahl aufgenommen wird
+    (UV-Index), steht in allen Listen -- Vergleichstabelle
+    (``channel_active_metrics.email``), Stundenverlauf (``hourly_metrics``) und
+    Ausblick (``outlook_metrics``), die sie noch nicht kennen."""
+    p = preset_dict("basis")
+    dc = p["display_config"]
+    dc["active_metrics"] += _am(["uv_index"])
+    liste = fall["liste"]
+    if liste == "orte_vergleichstabelle":
+        dc["channel_active_metrics"] = {"email": _am(["temperature", "wind", "gust"])}
+    elif liste == "orte_stundenverlauf":
+        dc["hourly_metrics"] = ["gust", "temperature"]
+    else:
+        dc["outlook_metrics"] = ["wind", "temperature"]
+    mail = sende_orte_mail(p)
+    if liste == "orte_vergleichstabelle":
+        spalten = [html_vergleichstabelle(mail.html)[1]]
+    elif liste == "orte_stundenverlauf":
+        spalten = [kennungen(k) for k in html_stundenverlauf(mail.html).values()]
+    else:
+        spalten = [kennungen(z) for z in html_ausblick(mail.html).values()]
+    assert spalten and all("uv_index" in s for s in spalten), (
+        f"{fall['id']}: global nachtraeglich aufgenommen, fehlt in {spalten}")
+
+
+@pytest.mark.parametrize("fall", _offen("test_w11_darstellung_je_zeile",
+                                        "Konzept W11 / #3047 Phase 3: Stundenverlauf ohne Roh/Einfach"))
+def test_w11_darstellung_je_zeile(fall):
+    """Konzept W11 ("Darstellung Roh oder Einfach je Metrik, in jeder Liste"):
+    Bewoelkung steht in der E-Mail-Liste auf Einfach (Symbol), Temperatur auf
+    Roh -- auch der Stundenverlauf zeigt Bewoelkung als Symbol ohne Ziffer,
+    Temperatur als Zahl. Angenommener Speicherort: die E-Mail-Liste
+    ``channel_layouts.email`` traegt Roh/Einfach je Metrik wie beim Trip; den
+    endgueltigen legt #3047 Phase 3 fest."""
+    from tests.helpers.einstellung_gleich_mail_orte import _abschnitte, _tabellen_je_ort, _zelltoken
+
+    p = preset_dict("basis")
+    dc = p["display_config"]
+    dc["active_metrics"] += [{"metric_id": "cloud_total", "aggregation": "avg"}]
+    dc["hourly_metrics"] = ["cloud_total", "temperature"]
+    dc["channel_layouts"] = {"email": [
+        {"metric_id": m, "enabled": True, "use_friendly_format": m == "cloud_total"}
+        for m in ("cloud_total", "temperature", "wind", "gust", "precipitation", "rain_probability")]}
+    mail = sende_orte_mail(p)
+    werte: dict[str, list[str]] = {"cloud_total": [], "temperature": []}
+    if fall["format"] == "html":
+        for zeilen in _tabellen_je_ort(mail.html, katalogtext("vergleich.stunden.zeit")).values():
+            koepfe = kennungen(zeilen[0][1:])
+            for zeile in zeilen[1:]:
+                for mid, zelle in zip(koepfe, zeile[1:]):
+                    werte.setdefault(mid, []).append(zelle)
+    else:
+        for zeilen in _abschnitte(mail.plain)[1].values():
+            for z in zeilen:
+                if re.match(r"^\s+\d\d:\d\d\s", z):
+                    for kopf, zelle in _zelltoken(z.split(None, 1)[1]):
+                        werte.setdefault(kennungen([kopf])[0], []).append(zelle)
+    assert werte["cloud_total"] and werte["temperature"], f"Vorbedingung: Spalten fehlen {werte}"
+    assert all(ist_zahl(z) for z in werte["temperature"]), werte["temperature"]
+    assert not any(ist_zahl(z) for z in werte["cloud_total"]), (
+        f"{fall['format']}: Bewoelkung auf Einfach, Stundenverlauf zeigt {werte['cloud_total']}")
 
 
 def test_ac8_ausblick_roh_einfach():

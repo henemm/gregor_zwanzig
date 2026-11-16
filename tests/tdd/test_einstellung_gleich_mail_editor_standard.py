@@ -190,6 +190,13 @@ def test_python_seite_trip_ausblick_standard():
     _pruefe(python_trip_ausblick, "trip_ausblick", _zustand("trip_ausblick", "nie_eingestellt"))
 
 
+def test_python_seite_trip_ausblick_bewusst_leer_alle_aus():
+    """#3047 J4 (Konzept §5 Punkt 8): Grundauswahl bewusst leer (alle
+    ``enabled:false``) -> der Ausblick entfaellt; seit J3 liefert die Mail
+    keine Ausblick-Spalte -- dasselbe Soll ``[]`` wie der Editor (J1)."""
+    _pruefe(python_trip_ausblick, "trip_ausblick", _zustand("trip_ausblick", "bewusst_leer_alle_aus"))
+
+
 @pytest.mark.parametrize("zustand", _gespeicherte("trip_ausblick"))
 def test_python_seite_trip_ausblick_gespeichert(zustand):
     _pruefe(python_trip_ausblick, "trip_ausblick", zustand)
@@ -221,6 +228,13 @@ def test_python_seite_orte_stundenverlauf_standard_mit_grundauswahl():
             _zustand("orte_stundenverlauf", "nie_eingestellt_mit_grundauswahl"))
 
 
+def test_python_seite_orte_stundenverlauf_grundauswahl_gleich_vorgabe():
+    """#3047 J1: gespeicherte Grundauswahl, die genau der Vorgabe gleicht, ist
+    gespeichert -- Grundauswahl-Regel (stuendliche Groessen in deren Folge)."""
+    _pruefe(python_orte_stundenverlauf, "orte_stundenverlauf",
+            _zustand("orte_stundenverlauf", "grundauswahl_gleich_vorgabe"))
+
+
 @pytest.mark.parametrize("zustand", _gespeicherte("orte_stundenverlauf"))
 def test_python_seite_orte_stundenverlauf_gespeichert(zustand):
     _pruefe(python_orte_stundenverlauf, "orte_stundenverlauf", zustand)
@@ -235,6 +249,20 @@ def test_python_seite_orte_ausblick_standard():
 def test_python_seite_orte_ausblick_standard_mit_grundauswahl():
     _pruefe(python_orte_ausblick, "orte_ausblick",
             _zustand("orte_ausblick", "nie_eingestellt_mit_grundauswahl"))
+
+
+def test_python_seite_orte_ausblick_grundauswahl_gleich_vorgabe():
+    """#3047 J1: gespeicherte Grundauswahl = Vorgabe -> die ganze Grundauswahl."""
+    _pruefe(python_orte_ausblick, "orte_ausblick",
+            _zustand("orte_ausblick", "grundauswahl_gleich_vorgabe"))
+
+
+def test_python_seite_orte_ausblick_grundauswahl_bewusst_leer():
+    """#3047 J4: ``active_metrics: []`` heisst beim Ortsvergleich 'kein
+    Maximum' (D4) -- die Mail zeigt die festen Ausblick-Spalten, der Ausblick
+    entfaellt NICHT (anders als beim Trip)."""
+    _pruefe(python_orte_ausblick, "orte_ausblick",
+            _zustand("orte_ausblick", "grundauswahl_bewusst_leer"))
 
 
 @pytest.mark.parametrize("zustand", _gespeicherte("orte_ausblick"))

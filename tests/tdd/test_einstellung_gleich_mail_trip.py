@@ -753,7 +753,8 @@ def test_n1_leere_liste_altbestand_standard(monkeypatch, fall):
 def test_n1_bewusst_leer_alle_aus(monkeypatch, fall):
     """#3047 H5 (#1394 Fall B): bewusst leer heisst alle Eintraege
     ``enabled:false`` (so speichert der Editor eine Leerauswahl) -- Etappen-
-    und Nachttabelle ohne Metrikspalten, kein Standard-Rueckfall; der Editor
+    und Nachttabelle entfallen (J3: auch kein Zeit/Risiko-Geruest in HTML
+    oder Klartext), kein Standard-Rueckfall; der Editor
     zeigt fuer dieselbe Eingabe nichts aktiv (``editor_standard.json``,
     Zustand ``bewusst_leer_alle_aus``, ``erwartet: []``)."""
     zustand = _editor_zustand("bewusst_leer_alle_aus")
@@ -764,9 +765,101 @@ def test_n1_bewusst_leer_alle_aus(monkeypatch, fall):
     html, text, _ = _senden(monkeypatch, data, fall["format"])
     art = "etappe" if fall["liste"] == "trip_stundentabelle" else "nacht"
     tabellen = _stundentabellen(html, text, fall["format"], art)
-    if fall["format"] == "html":
-        assert tabellen, f"{fall['id']}: HTML-Tabelle fehlt ganz (Vorbedingung)"
+    # #3047 J3: ohne Metrikspalte entfaellt die Tabelle GANZ -- kein Geruest
+    # aus Zeit/Risiko, in HTML wie im Klartext (Format-Paritaet).
+    assert tabellen == [], (
+        f"{fall['id']}: bewusst leer, aber Stundentabelle mit Koepfen "
+        f"{[t.labels for t in tabellen]}")
     _pruefe_spalten(tabellen, zustand["erwartet"], fall["id"])
+
+
+def _bewusst_leer_json(outlook) -> dict:
+    """Grundauswahl wie der Editor eine Leerauswahl speichert (alle aus)."""
+    zustand = _editor_zustand("bewusst_leer_alle_aus")
+    data = trip_json(["temperature"]) if outlook is None else trip_json(
+        ["temperature"], outlook_metrics=outlook)
+    data["display_config"]["metrics"] = copy.deepcopy(
+        zustand["eingabe"]["display_config"]["metrics"])
+    return data
+
+
+#: Variante -> gespeicherte Ausblick-Auswahl (None = nie eingestellt).
+_J3_AUSBLICK = {"nie_eingestellt": None, "gespeichert": ["wind", "temperature"]}
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n1_bewusst_leer_kein_ausblick"))
+def test_n1_bewusst_leer_kein_ausblick(monkeypatch, fall):
+    """#3047 J3 (AC-4, Konzept §5 Punkt 8): Grundauswahl bewusst leer (alle
+    Eintraege ``enabled:false``) -> die Ausblick-Liste nimmt nur aus den
+    Metriken oben, ist also leer -> der Ausblick entfaellt in HTML, Klartext
+    und Kompakt; kein Rueckfall auf feste Spalten, auch nicht bei einer
+    gespeicherten Ausblick-Auswahl."""
+    data = _bewusst_leer_json(_J3_AUSBLICK[_variante(fall)])
+    assert soll_ausblick(data) is None, "Orakel-Vorbedingung: Ausblick entfaellt"
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _ausblick(html, text, fall["format"])
+    assert tab is None, f"{fall['id']}: Ausblick trotz leerer Grundauswahl: {tab.spalten}"
+    for zeile in text.splitlines():
+        assert not zeile.startswith(AUSBLICK_TAGE), (
+            f"{fall['id']}: Ausblick-Zeile trotz leerer Grundauswahl: {zeile!r}")
+
+
+#: Register-Standard im 3-Tages-Ausblick (von Hand): die ausblickfaehigen
+#: Groessen des Standardsatzes in Register-Folge; Tagestief/-hoch haben keine
+#: Ausblick-Spalte (keine Tagesauswertung im Compare-Katalog).
+_REGISTER_STANDARD_AUSBLICK = [
+    "temperature", "wind", "gust", "precipitation", "thunder", "freezing_level",
+    "visibility",
+]
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n1_altbestand_ausblick_standardsatz"))
+def test_n1_altbestand_ausblick_standardsatz(monkeypatch, fall):
+    """#3047 J2 (AC-19/AC-20, #1394 Fall A): Trip-Altbestand ohne ``metrics``
+    bzw. mit ``metrics: []`` und nie eingestelltem Ausblick -- der Ausblick
+    zeigt in HTML, Klartext und Kompakt den Register-Standardsatz, soweit
+    ausblickfaehig, in Register-Folge (Grundauswahl = Standardsatz), nicht die
+    alten sieben festen Spalten."""
+    data = trip_json(["temperature"])
+    if "leere_liste" in fall["id"]:
+        data["display_config"]["metrics"] = []
+    else:
+        del data["display_config"]["metrics"]
+    assert "outlook_metrics" not in data["display_config"], "Vorbedingung: nie eingestellt"
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _ausblick(html, text, fall["format"])
+    assert tab is not None, f"{fall['id']}: Ausblick fehlt"
+    assert tab.spalten == _REGISTER_STANDARD_AUSBLICK, (
+        f"{fall['id']}: Ausblick {tab.spalten} != Register-Standard {_REGISTER_STANDARD_AUSBLICK}")
+
+
+def _p7_faelle() -> list:
+    """Faelle ``offen_feature`` von Punkt 7 -- belegt rot, bis #3065 Phase 2
+    die Abwahl persistiert (dann ``xfail(strict)`` laut)."""
+    return [pytest.param(f, id=f["id"], marks=[pytest.mark.xfail(
+                strict=True, reason="#3065 Phase 2: Abwahl nicht persistiert")])
+            for f in _FALLLISTE["faelle"]
+            if f["test"] == "test_p7_global_nachtraeglich_in_gespeicherter_liste"]
+
+
+@pytest.mark.parametrize("fall", _p7_faelle())
+def test_p7_global_nachtraeglich_in_gespeicherter_liste(monkeypatch, fall):
+    """Konzept §5 Punkt 6 / Nachpruefung Punkt 7: eine Metrik, die NACH dem
+    Speichern einer eigenen Liste global eingeschaltet wird (UV-Index), steht
+    in allen Listen -- hier in der gespeicherten E-Mail-Stundentabelle bzw. im
+    gespeicherten Ausblick, die sie noch gar nicht kennen (kein Eintrag, keine
+    Abwahl)."""
+    alt = ["temperature", "wind", "gust"]
+    if fall["liste"] == "trip_ausblick":
+        data = trip_json(alt + ["uv_index"], outlook_metrics=["wind", "temperature"])
+        tab = _ausblick(*_senden(monkeypatch, data, fall["format"])[:2], fall["format"])
+        spalten = tab.spalten if tab else []
+    else:
+        layout = metrik_eintraege(alt, katalog=tuple(alt))
+        data = trip_json(alt + ["uv_index"], email_layout=layout)
+        html, text, _ = _senden(monkeypatch, data, fall["format"])
+        spalten = _stundentabellen(html, text, fall["format"], "etappe")[0].spalten
+    assert "uv_index" in spalten, f"{fall['id']}: global nachtraeglich aufgenommen, fehlt in {spalten}"
 
 
 # ---------------------------------------------------------------------------

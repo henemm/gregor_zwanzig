@@ -6,9 +6,9 @@ Liest die vier Teildateien ``tests/fixtures/einstellung_gleich_mail/fallliste_*.
 und prueft ohne Testausfuehrung:
 
 (a) Abdeckungsmatrix Liste x Format je Pruefung ``auswahl`` und ``reihenfolge``;
-(b) jeder Fall ``gruen``/``rot_erwartet`` nennt eine auffindbare Testfunktion
-    (Python per ``ast``, Vitest per Titelsuche, Go per ``func <Name>(`` in
-    ``internal/**/*_test.go`` bei ``seite: "go"``);
+(b) jeder Fall -- auch ``ausnahme`` und ``offen_feature`` (#3047 J2) -- nennt
+    eine auffindbare Testfunktion (Python per ``ast``, Vitest per Titelsuche,
+    Go per ``func <Name>(`` in ``internal/**/*_test.go`` bei ``seite: "go"``);
 (c) paarweise Ueberdeckung der ``dimensionen`` je Liste;
 (d) "fertig": kein Fall ``rot_erwartet``; ``ausnahme``/``offen_feature`` tragen Verweis;
 (e) Schema: Pflichtfelder, erlaubte Status/Formate, ``id`` global eindeutig.
@@ -35,7 +35,10 @@ TEILDATEIEN = ("trip", "orte", "validatoren", "editor")
 PFLICHTFELDER = ("id", "liste", "kontext", "format", "pruefung", "test", "ac", "befund", "status")
 ERLAUBTE_STATUS = frozenset({"gruen", "rot_erwartet", "ausnahme", "offen_feature"})
 ERLAUBTE_FORMATE = frozenset({"html", "klartext", "kompakt", "editor"})
-STATUS_MIT_TEST = frozenset({"gruen", "rot_erwartet"})
+#: #3047 J2: jeder Status nennt einen auffindbaren Test -- ein ``offen_feature``
+#: belegt sich mit ``xfail(strict=True)`` rot, eine ``ausnahme`` mit dem Test,
+#: der die gewollte Abweichung zeigt.
+STATUS_MIT_TEST = ERLAUBTE_STATUS
 STATUS_MIT_VERWEIS = frozenset({"ausnahme", "offen_feature"})
 META_SCHLUESSEL = frozenset({"ausgeschlossen", "hinweis"})
 VERWEIS_MUSTER = re.compile(r"#\d+|ADR-\d+|\bWV?\d+\b")
@@ -354,7 +357,7 @@ def test_abdeckungsmatrix_auswahl_und_reihenfolge(echte_falllisten):
 
 
 def test_testverweise_auffindbar(echte_falllisten):
-    """(b) gruen/rot_erwartet-Faelle nennen eine existierende Testfunktion."""
+    """(b) jeder Fall (auch ausnahme/offen_feature) nennt eine existierende Testfunktion."""
     _melde(pruefe_testverweise(_geladen(echte_falllisten), REPO_ROOT), "Testverweise nicht auffindbar")
 
 
@@ -468,7 +471,7 @@ def _syn_daten() -> dict[str, dict]:
         _syn_fall("ed-2", "trip_vorlage", "editor", "standard",
                   test="editor_standard_gleich_mail.test.ts::editor kennt noch nicht"),
         _syn_fall("ed-3", "trip_vorlage", "editor", "standard", status="offen_feature",
-                  test="", verweis="Konzept W19, Issue #3050"),
+                  verweis="Konzept W19, Issue #3050"),
     ]
     return {
         "fallliste_trip.json": {
@@ -536,7 +539,7 @@ def test_selbsttest_geloeschter_fall_wird_benannt(tmp_path):
 def test_selbsttest_ausnahme_zaehlt_als_abgedeckt(tmp_path):
     daten = _syn_daten()
     fall = daten["fallliste_trip.json"]["faelle"][0]
-    fall.update(status="ausnahme", test="", verweis="#814 AC-5")
+    fall.update(status="ausnahme", verweis="#814 AC-5")
     verzeichnis = _schreibe(tmp_path, daten)
     assert _alle_pruefungen(tmp_path, verzeichnis) == []
 
@@ -552,6 +555,34 @@ def test_selbsttest_unbekannte_testfunktion_wird_gemeldet(tmp_path):
     assert any("test_gibt_es_nicht" in f for f in fehler)
     assert any("test_nicht_da" in f for f in fehler)
     assert any("editor tippfehler" in f for f in fehler)
+
+
+def test_selbsttest_testverweis_auch_bei_ausnahme_und_offen_feature(tmp_path):
+    """#3047 J2: auch ``ausnahme`` und ``offen_feature`` nennen eine
+    auffindbare Testfunktion (Python per AST, Frontend-Titel, Go) -- ein
+    offenes Feature ohne roten Test liefe sonst unbemerkt; ein leerer Verweis
+    zaehlt nicht."""
+    daten = _syn_daten()
+    faelle = daten["fallliste_trip.json"]["faelle"]
+    faelle[0].update(status="ausnahme", verweis="#814", test="test_gibt_es_nicht")
+    faelle[1].update(status="offen_feature", verweis="#3065", test="test_fehlt_auch")
+    faelle[2].update(status="offen_feature", verweis="#3065", test="")
+    daten["fallliste_editor.json"]["faelle"].append(_syn_fall(
+        "ed-go-offen", "trip_vorlage", "editor", "standard", seite="go", status="offen_feature",
+        verweis="#3065", test="TestNurImKommentar"))
+    daten["fallliste_editor.json"]["faelle"].append(_syn_fall(
+        "ed-fe-ausnahme", "trip_vorlage", "editor", "standard", seite="frontend",
+        status="ausnahme", verweis="#814", test="editor tippfehler"))
+    verzeichnis = _schreibe(tmp_path, daten)
+    fehler = pruefe_testverweise(lade_falllisten(verzeichnis), tmp_path)
+    assert len(fehler) == 5, fehler
+    for kennung in (faelle[0]["id"], faelle[1]["id"], faelle[2]["id"], "ed-go-offen", "ed-fe-ausnahme"):
+        assert any(repr(kennung) in f for f in fehler), (kennung, fehler)
+    faelle[0]["test"] = faelle[1]["test"] = faelle[2]["test"] = "test_trip_fall"
+    daten["fallliste_editor.json"]["faelle"][-2]["test"] = "TestSynVorlageFolge"
+    daten["fallliste_editor.json"]["faelle"][-1]["test"] = "editor behaelt reihenfolge"
+    verzeichnis = _schreibe(tmp_path, daten)
+    assert pruefe_testverweise(lade_falllisten(verzeichnis), tmp_path) == []
 
 
 def test_selbsttest_frontend_rot_erwartet_und_template_titel(tmp_path):

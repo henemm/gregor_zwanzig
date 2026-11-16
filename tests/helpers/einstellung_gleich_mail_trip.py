@@ -38,6 +38,9 @@ from tests.helpers.einstellung_auslieferung_orakel import erwartete_kaskade
 
 #: Spaltenbeschriftung -> Kennung (Protokoll-Token, nie uebersetzt).
 LABEL_ZU_ID: dict[str, str] = {m.col_label: m.id for m in _METRICS}
+#: Kompaktformat ist reines ASCII und laesst das Gradzeichen weg
+#: (``compact._ASCII_MAP``: ``0°Line`` -> ``0Line``) -- dieselbe Spalte.
+LABEL_ZU_ID.update({m.col_label.replace("°", ""): m.id for m in _METRICS if "°" in m.col_label})
 _HAT_EINFACH: dict[str, bool] = {m.id: m.has_friendly_format for m in _METRICS}
 _SELECTABLE: frozenset[str] = frozenset(m.id for m in _METRICS if m.selectable)
 
@@ -205,7 +208,10 @@ def html_ausblick(html: str) -> Optional[Tabelle]:
 # Klartext
 # ---------------------------------------------------------------------------
 
-_STRICH_RE = re.compile(r"^\s*-{3,}(?:\s+-{3,})+\s*$")
+#: Trennzeile unter dem Tabellenkopf (eingerueckt). Auch EINE Strichgruppe
+#: zaehlt (#3047 J3): eine Tabelle nur aus der Zeitspalte ist eine Tabelle,
+#: kein Fehlen -- sonst sieht der Pruefer ein Zeit-Geruest als "keine Tabelle".
+_STRICH_RE = re.compile(r"^\s+-{3,}(?:\s+-{3,})*\s*$")
 
 
 def _spannen(strichzeile: str) -> list[tuple[int, int]]:
@@ -346,6 +352,8 @@ def soll_ausblick(trip: dict, report_type: str = "evening") -> Optional[list[str
     """Ausblick-Spalten laut rohem JSON; ``None`` = Block entfaellt.
 
     * ``outlook_metrics == []`` -> entfaellt (bewusst leer).
+    * Grundauswahl bewusst leer (``metrics`` vorhanden, alle aus) ->
+      entfaellt, egal was gespeichert ist (#3047 J3).
     * fehlt/``None`` -> die ganze Grundauswahl in EINGESTELLTER Folge (AC-4).
     * gefuellt -> gespeicherte Folge, geschnitten mit der Grundauswahl
       (ADR-0050); bleibt nichts uebrig -> volle Grundauswahl (AC-10).
@@ -354,6 +362,10 @@ def soll_ausblick(trip: dict, report_type: str = "evening") -> Optional[list[str
     gespeichert = dc.get("outlook_metrics", _FEHLT)
     grund = [m for m in soll_grundauswahl(trip, report_type) if m in AUSBLICK_FAEHIG]
     if gespeichert == []:
+        return None
+    if dc.get("metrics") and not grund:
+        # #3047 J3: Grundauswahl bewusst leer (Eintraege vorhanden, alle aus)
+        # -> die Ausblick-Liste nimmt nur aus den Metriken oben -> entfaellt.
         return None
     if gespeichert is _FEHLT or gespeichert is None:
         return grund

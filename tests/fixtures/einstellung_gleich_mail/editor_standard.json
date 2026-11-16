@@ -1135,6 +1135,59 @@
       "gust",
       "temperature"
      ]
+    },
+    {
+     "id": "bewusst_leer_alle_aus",
+     "beschreibung": "#3047 J1: Grundauswahl bewusst leer (alle Eintraege enabled:false, #1394 Fall B), outlook_metrics fehlt. Konzept §5 Punkt 8: 'jede Liste nimmt nur aus der Grundauswahl' und 'Waehlst du alle Zeilen ab, entfaellt der Ausblick' -> Soll leer, keine festen Spalten.",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "wind",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "gust",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "precipitation",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "thunder",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "freezing_level",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "visibility",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        }
+       ]
+      }
+     },
+     "erwartet": []
     }
    ]
   },
@@ -1333,6 +1386,139 @@
       "temperature",
       "precipitation"
      ]
+    },
+    {
+     "id": "grundauswahl_gleich_vorgabe",
+     "beschreibung": "#3047 J1: Grundauswahl gespeichert, aber gleich der Vorgabe (alle Zeilen der Vergleichstabelle in Standardfolge, Speicherformat Groesse + Auswertung wie der Editor schreibt); hourly_metrics fehlt. Gespeichert ist gespeichert: es gilt die Grundauswahl-Regel (Konzept §5 Punkt 8), nicht die Vorgabe fuer 'nie eingestellt'. Soll: die stuendlich verfuegbaren Groessen der Grundauswahl in deren Folge (ohne Sonnenstunden, Windrichtung).",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        {
+         "metric_id": "temperature",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "wind",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "precipitation",
+         "aggregation": "sum"
+        },
+        {
+         "metric_id": "rain_probability",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "thunder",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "sunshine",
+         "aggregation": "sum"
+        },
+        {
+         "metric_id": "cloud_total",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "uv_index",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "visibility",
+         "aggregation": "min"
+        },
+        {
+         "metric_id": "snow_depth",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "fresh_snow",
+         "aggregation": "sum"
+        },
+        {
+         "metric_id": "temperature",
+         "aggregation": "min"
+        },
+        {
+         "metric_id": "gust",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "freezing_level",
+         "aggregation": "min"
+        },
+        {
+         "metric_id": "wind_direction",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "wind_chill",
+         "aggregation": "min"
+        },
+        {
+         "metric_id": "wind_chill",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "cloud_low",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "cloud_mid",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "cloud_high",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "humidity",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "dewpoint",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "pressure",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "precip_type",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "snowfall_limit",
+         "aggregation": "min"
+        }
+       ]
+      }
+     },
+     "erwartet": [
+      "temperature",
+      "wind",
+      "precipitation",
+      "rain_probability",
+      "thunder",
+      "cloud_total",
+      "uv_index",
+      "visibility",
+      "snow_depth",
+      "fresh_snow",
+      "gust",
+      "freezing_level",
+      "wind_chill",
+      "cloud_low",
+      "cloud_mid",
+      "cloud_high",
+      "humidity",
+      "dewpoint",
+      "pressure",
+      "precip_type",
+      "snowfall_limit"
+     ]
     }
    ]
   },
@@ -1417,6 +1603,158 @@
      "erwartet": [
       "gust",
       "temperature"
+     ]
+    },
+    {
+     "id": "grundauswahl_gleich_vorgabe",
+     "beschreibung": "#3047 J1: Grundauswahl gespeichert, aber gleich der Vorgabe (alle Zeilen der Vergleichstabelle in Standardfolge, Speicherformat Groesse + Auswertung wie der Editor schreibt); outlook_metrics fehlt. Gespeichert ist gespeichert: es gilt die Grundauswahl-Regel (Konzept §5 Punkt 8), nicht die Vorgabe fuer 'nie eingestellt'. Soll: die ganze Grundauswahl in ihrer Folge, Tief/Hoch einer Groesse als ein Eintrag.",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        {
+         "metric_id": "temperature",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "wind",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "precipitation",
+         "aggregation": "sum"
+        },
+        {
+         "metric_id": "rain_probability",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "thunder",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "sunshine",
+         "aggregation": "sum"
+        },
+        {
+         "metric_id": "cloud_total",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "uv_index",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "visibility",
+         "aggregation": "min"
+        },
+        {
+         "metric_id": "snow_depth",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "fresh_snow",
+         "aggregation": "sum"
+        },
+        {
+         "metric_id": "temperature",
+         "aggregation": "min"
+        },
+        {
+         "metric_id": "gust",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "freezing_level",
+         "aggregation": "min"
+        },
+        {
+         "metric_id": "wind_direction",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "wind_chill",
+         "aggregation": "min"
+        },
+        {
+         "metric_id": "wind_chill",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "cloud_low",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "cloud_mid",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "cloud_high",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "humidity",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "dewpoint",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "pressure",
+         "aggregation": "avg"
+        },
+        {
+         "metric_id": "precip_type",
+         "aggregation": "max"
+        },
+        {
+         "metric_id": "snowfall_limit",
+         "aggregation": "min"
+        }
+       ]
+      }
+     },
+     "erwartet": [
+      "temperature",
+      "wind",
+      "precipitation",
+      "rain_probability",
+      "thunder",
+      "sunshine",
+      "cloud_total",
+      "uv_index",
+      "visibility",
+      "snow_depth",
+      "fresh_snow",
+      "gust",
+      "freezing_level",
+      "wind_direction",
+      "wind_chill",
+      "cloud_low",
+      "cloud_mid",
+      "cloud_high",
+      "humidity",
+      "dewpoint",
+      "pressure",
+      "precip_type",
+      "snowfall_limit"
+     ]
+    },
+    {
+     "id": "grundauswahl_bewusst_leer",
+     "beschreibung": "#3047 J4: Grundauswahl gespeichert, aber leer (active_metrics: []); outlook_metrics fehlt. Beim Ortsvergleich heisst leer 'kein Maximum' (ADR-0050 D4), nicht 'Ausblick entfaellt' wie beim Trip (#3047 J1/J3): die Mail zeigt die festen Ausblick-Spalten (DEFAULT_OUTLOOK_METRIC_KEYS). Soll von Hand.",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": []
+      }
+     },
+     "erwartet": [
+      "temperature",
+      "precipitation",
+      "rain_probability",
+      "wind",
+      "gust",
+      "thunder"
      ]
     },
     {

@@ -543,6 +543,97 @@ def test_trip_darstellung_ausblick_roh_statt_einfach_scheitert(tmp_path, darstel
 
 
 # --------------------------------------------------------------------------- #
+# Nachlieferung J2: Fall A (``metrics`` fehlt bzw. ``[]``) und bewusst leer
+# --------------------------------------------------------------------------- #
+def _trip_fall_a(variante: str, email_format: str = "full") -> dict:
+    """Trip-Altbestand Fall A (#1394, #3068): ``metrics`` fehlt bzw. ist ``[]``,
+    Ausblick nie eingestellt -- der Loader liest den Register-Standardsatz."""
+    daten = _trip_daten(_TRIP_FOLGE, ausblick=None, email_format=email_format)
+    if variante == "leer":
+        daten["display_config"]["metrics"] = []
+    else:
+        del daten["display_config"]["metrics"]
+    return daten
+
+
+@pytest.mark.parametrize("variante,email_format", [
+    ("fehlt", "full"), ("leer", "full"), ("fehlt", "compact"), ("leer", "compact")])
+def test_trip_fall_a_register_standard_positiv(monkeypatch, tmp_path, variante, email_format):
+    """AC-19/AC-20: die korrekte Mail eines Fall-A-Trips (Stunden und Ausblick =
+    Register-Standardsatz) besteht mit ``--konfig`` -- statt an den alten
+    sieben festen Ausblick-Spalten zu scheitern."""
+    daten = _trip_fall_a(variante, email_format)
+    code, aus = _lauf(tmp_path, TRIP, _trip_eml(monkeypatch, daten),
+                      "--konfig", _konfig(tmp_path, f"a-{variante}-{email_format}", daten))
+    assert code == 0, aus
+
+
+@pytest.fixture
+def fall_a_mail(monkeypatch, tmp_path):
+    daten = _trip_fall_a("fehlt")
+    return _trip_eml(monkeypatch, daten), _konfig(tmp_path, "fall-a", daten)
+
+
+def test_trip_fall_a_stundenfolge_falsch_scheitert(tmp_path, fall_a_mail):
+    """AC-19: Fall A pruefte die Stundentabelle bisher gar nicht (Soll ``None``);
+    eine vertauschte Spalte faellt jetzt mit Namen auf."""
+    eml, konfig = fall_a_mail
+    falsch = _aendere(eml, html=lambda h: _tausche(h, ">Wind</th>", ">Gust</th>"))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: Etappen-Stundentabelle (HTML)" in aus and "steht 'Gust' statt 'Wind'" in aus, aus
+
+
+def test_trip_fall_a_ausblickfolge_falsch_scheitert(tmp_path, fall_a_mail):
+    """AC-19: Fall A, Ausblick-Spalten im Klartext vertauscht -> Exit 1 mit Namen."""
+    eml, konfig = fall_a_mail
+    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^(.*?)Wind (\S+ km/h)  Gust (\S+ km/h)",
+                                                  r"\1Gust \3  Wind \2", p))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: Ausblick (Klartext)" in aus and "steht 'Gust' statt 'Wind'" in aus, aus
+
+
+def _trip_bewusst_leer() -> dict:
+    """Bewusst leer (#1394 Fall B): Eintraege vorhanden, alle ``enabled: false``."""
+    daten = _trip_daten({}, ausblick=None)
+    assert daten["display_config"]["metrics"] and not any(
+        m["enabled"] for m in daten["display_config"]["metrics"])
+    return daten
+
+
+def test_trip_bewusst_leer_ausblick_entfaellt_positiv(monkeypatch, tmp_path):
+    """Konzept "alle Zeilen abgewaehlt -> Ausblick entfaellt": die Mail eines
+    bewusst leeren Trips hat weder Stundentabelle (J3: entfaellt ohne Spalten)
+    noch Ausblick; der Validator besteht -- "keine Stundentabelle" bzw. "Viewport
+    leer" sind laut Soll kein Fehler (#3047 J4)."""
+    daten = _trip_bewusst_leer()
+    code, aus = _lauf(tmp_path, TRIP, _trip_eml(monkeypatch, daten),
+                      "--konfig", _konfig(tmp_path, "leer", daten))
+    assert code == 0, aus
+
+
+def test_trip_bewusst_leer_ohne_konfig_tabelle_bleibt_pflicht(monkeypatch, tmp_path):
+    """#3047 J4: die Lockerung "keine Tabelle" gilt NUR laut Soll -- ohne
+    ``--konfig`` scheitert dieselbe bewusst leere Mail weiter an der fehlenden
+    Stundentabelle und am leeren Viewport."""
+    code, aus = _lauf(tmp_path, TRIP, _trip_eml(monkeypatch, _trip_bewusst_leer()))
+    assert code == 1, aus
+    assert "keine sequenzielle Stundentabelle" in aus, aus
+    assert "keine Wetterdaten-Tabelle sichtbar" in aus, aus
+
+
+def test_trip_bewusst_leer_ausblick_erscheint_scheitert(monkeypatch, tmp_path):
+    """Bewusst leer: der Validator verlangt KEINEN Ausblick -- die Mail eines
+    Trips mit Ausblick scheitert gegen die bewusst leere Konfiguration."""
+    eml = _trip_eml(monkeypatch, _trip_daten(_TRIP_FOLGE))
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "leer", _trip_bewusst_leer()))
+    assert code == 1, aus
+    assert "Ausblick (HTML) erscheint, obwohl er laut Konfiguration aus ist" in aus, aus
+    assert "SOLL: Etappen-Stundentabelle (HTML)" in aus and "Spalte zu viel" in aus, aus
+
+
+# --------------------------------------------------------------------------- #
 # Fallliste (Paket C)
 # --------------------------------------------------------------------------- #
 def test_fallliste_validatoren_verweist_auf_vorhandene_tests():

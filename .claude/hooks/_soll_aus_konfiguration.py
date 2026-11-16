@@ -16,12 +16,17 @@ Die Regeln sind das dokumentierte Produktverhalten:
   ``channel_layouts`` > ``metrics``), Kanal-Ebenen gegen die Grundauswahl
   geschnitten (ADR-0050), sortiert nach ``bucket`` dann ``order`` (#1575).
   Altbestand ohne ``bucket``/``order``: Array-Folge (Annahme, nicht Gegenstand).
+* Trip-Altbestand Fall A (#1394, #3068): ``metrics`` fehlt oder ist ``[]``
+  -> Grundauswahl = Register-Standardsatz (``trip_default_rank``, Register-
+  Folge, ohne Ableitungen), wie der Loader ihn liest. Bewusst leer (Eintraege
+  vorhanden, alle ``enabled: false``): Stundentabellen ohne Metrikspalten,
+  der Ausblick entfaellt (Konzept "alle Zeilen abgewaehlt").
 * Ausblick: Drei-Werte-Semantik (ADR-0037/0055): ``[]`` = Block aus, nie
   eingestellt = GANZE Grundauswahl in der eingestellten Reihenfolge (AC-4,
   nicht Katalogfolge), sonst Schnitt mit der Grundauswahl, leerer Schnitt =
-  Rueckfall auf die volle Grundauswahl (#1848 A3). Ohne Grundauswahl
-  (``metrics``/``active_metrics`` fehlt) die sieben festen Spalten, im HTML
-  wie im Klartext (AC-21).
+  Rueckfall auf die volle Grundauswahl (#1848 A3). Orte ohne Grundauswahl
+  (``active_metrics`` fehlt) zeigen die sieben festen Spalten, im HTML wie im
+  Klartext (AC-21).
 * Orte: Vergleichstabelle = ``channel_layouts.email`` (Folge, ``enabled``,
   #3039) vor ``channel_active_metrics.email``, je geschnitten mit
   ``active_metrics`` (#1703 S8), Stundenverlauf = ``hourly_metrics``
@@ -30,8 +35,8 @@ Die Regeln sind das dokumentierte Produktverhalten:
   ``orte_unpruefbar`` (nie still uebersprungen).
 * Darstellung Roh/Einfach je Spalte (Trip, ``formen_*``, Spec §2 Punkt 3).
 
-``None`` an einer Liste heisst "keine Aussage" (z. B. Trip-Altbestand ohne
-``metrics``), der Validator prueft sie dann nicht.
+``None`` an einer Liste heisst "keine Aussage", der Validator prueft sie dann
+nicht.
 """
 from __future__ import annotations
 
@@ -57,15 +62,24 @@ from output.renderers.email.helpers import (  # noqa: E402
 _REG = {m.id: m for m in _METRICS}
 _BUCKET_RANG = {"primary": 0, "secondary": 1}
 _REPORTS = ("morning", "evening")
-#: Die sieben festen Ausblick-Spalten (Altbestand), Temperatur als Spanne.
+#: Die sieben festen Ausblick-Spalten (Orte-Altbestand), Temperatur als Spanne.
 _FEST = ("temperature", "precipitation", "rain_probability", "wind", "gust", "thunder")
+#: Trip-Anlege-Standard des Registers (``trip_default_rank``) in Register-Folge
+#: -- Grundauswahl eines Trip-Altbestands Fall A (#1394, #3068).
+_TRIP_STANDARD = tuple(m.id for m in sorted(
+    (m for m in _METRICS if m.trip_default_rank is not None), key=lambda m: m.trip_default_rank))
 #: Roh zeigt bereits ein Wort (Gewitter-Stufe, Niederschlagsart), keine Zahl.
 _ROH_WORT = frozenset({"thunder", "precip_type"})
 #: Zellformen der Darstellung (Spec §2 Punkt 3): Roh = Zahl, Einfach = Symbol/Wort oder Ampelpunkt.
 ZAHL, WORT, AMPEL = "zahl", "wort", "ampel"
 #: Alle waehlbaren Spaltenkuerzel -- erkennt im Klartext auch eine Spalte zu viel.
+#: Das Kompaktformat ist reines ASCII ohne Gradzeichen (``compact._ASCII_MAP``:
+#: ``0°Line`` -> ``0Line``); diese Form ist dieselbe Spalte.
+_ASCII_KUERZEL = {m.col_label.replace("°", ""): m.col_label for m in _METRICS
+                  if m.selectable and "°" in m.col_label}
 ALLE_KUERZEL = tuple(dict.fromkeys(
-    m.col_label for m in _METRICS if m.selectable and m.id not in NO_HOURLY_COLUMN_METRIC_IDS))
+    [m.col_label for m in _METRICS if m.selectable and m.id not in NO_HOURLY_COLUMN_METRIC_IDS]
+    + list(_ASCII_KUERZEL)))
 
 
 def _waehlbar(mid: object) -> bool:
@@ -203,23 +217,33 @@ def _ausblick_spalten(ids: list[str] | None, formate: object) -> dict:
             "formen": _formen_ausblick(ids, einfach)}
 
 
+def _trip_display_config(trip: dict) -> dict:
+    """Rohe ``display_config``; Fall A (``metrics`` fehlt oder ``[]``) traegt
+    den Register-Standardsatz mit ``order``/``bucket`` -- wie der Loader."""
+    dc = (trip.get("display_config") if "display_config" in trip else trip) or {}
+    if dc.get("metrics"):
+        return dc
+    return {**dc, "metrics": [{"metric_id": m, "enabled": True, "bucket": "primary", "order": i}
+                              for i, m in enumerate(_TRIP_STANDARD)]}
+
+
 def trip_soll(trip: dict, report: str = "evening") -> dict:
     """Soll eines Trip-Briefings fuer ``report`` (morning/evening)."""
-    dc = trip.get("display_config") if "display_config" in trip else trip
-    dc = dc or {}
+    dc = _trip_display_config(trip)
     rc = trip.get("report_config") or {}
     liste = _trip_email_liste(dc, report)
     grund = _sortiert([e for e in _eintraege(dc.get("metrics"))
                        if _waehlbar(e.get("metric_id")) and _an(e, report)])
-    grundauswahl = None if not dc.get("metrics") else list(dict.fromkeys(
+    grundauswahl = list(dict.fromkeys(
         e["metric_id"] for e in grund if _ausblickfaehig(e["metric_id"])))
-    ids = _ausblick(dc.get("outlook_metrics"), grundauswahl)
+    # Bewusst leer: alle Zeilen abgewaehlt -> der Ausblick entfaellt.
+    ids = _ausblick(dc.get("outlook_metrics"), grundauswahl) if grundauswahl else []
     trend_reports = rc.get("multi_day_trend_reports", dc.get("multi_day_trend_reports", ["evening"]))
     return {
         "kontext": "trip", "report": report,
-        "stunden": _trip_stundenspalten(liste) if dc.get("metrics") else None,
+        "stunden": _trip_stundenspalten(liste),
         "darstellung_stunden": {e["metric_id"]: _modus(e) for e in liste},
-        "formen_stunden": _formen_stunden(liste) if dc.get("metrics") else {},
+        "formen_stunden": _formen_stunden(liste),
         "nacht": bool(dc.get("show_night_block", True)),
         "ausblick_an": ids != [] and rc.get("show_outlook", True) is not False
         and report in (trend_reports or []),
@@ -396,6 +420,7 @@ def lade_soll(pfad: str | Path, lang: str = "de") -> dict:
 
 def abweichung(ist: list[str], soll: list[str]) -> str | None:
     """Beschreibung der ersten Abweichung mit Spaltennamen (``None`` = gleich)."""
+    ist = [_ASCII_KUERZEL.get(x, x) for x in ist]
     if ist == soll:
         return None
     fehlt = [s for s in soll if s not in ist]

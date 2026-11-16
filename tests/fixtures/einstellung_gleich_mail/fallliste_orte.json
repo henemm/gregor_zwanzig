@@ -1840,6 +1840,50 @@
       "befund": "Nachpruefung Punkt 7 (H4)",
       "status": "offen_feature",
       "verweis": "#3047 Nachpruefung Punkt 7: gespeicherte Liste kann 'bewusst abgewaehlt' und 'spaeter global eingeschaltet' nicht unterscheiden (Trip channel_layouts: Editor schreibt jede Katalog-Metrik, abwesende als enabled:false; Altbestand Golden C #2422 wertet fehlenden Eintrag als Abwahl; Orte/Ausblick/Stunden: reine ID-Listen) -> Datenmodell-Entscheidung (ADR zu ADR-0050) noetig"
+    },
+    {
+      "id": "O-SV-H-J1-GRUNDAUSWAHL-GLEICH-VORGABE",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_j1_grundauswahl_gleich_vorgabe_kette",
+      "ac": "AC-13, AC-10",
+      "befund": "#3047 J1 (gespeicherte Grundauswahl = Vorgabe, Konzept §5.8)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-J1-GRUNDAUSWAHL-GLEICH-VORGABE",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_j1_grundauswahl_gleich_vorgabe_kette",
+      "ac": "AC-13, AC-10",
+      "befund": "#3047 J1 (gespeicherte Grundauswahl = Vorgabe, Konzept §5.8)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-H-J1-GRUNDAUSWAHL-GLEICH-VORGABE",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_j1_grundauswahl_gleich_vorgabe_kette",
+      "ac": "AC-13, AC-10",
+      "befund": "#3047 J1 (gespeicherte Grundauswahl = Vorgabe, Konzept §5.8)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-J1-GRUNDAUSWAHL-GLEICH-VORGABE",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_j1_grundauswahl_gleich_vorgabe_kette",
+      "ac": "AC-13, AC-10",
+      "befund": "#3047 J1 (gespeicherte Grundauswahl = Vorgabe, Konzept §5.8)",
+      "status": "gruen"
     }
   ]
 }

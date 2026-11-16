@@ -225,6 +225,13 @@ def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[str] | No
         [mc.metric_id for mc in dc.get_metrics_for_report_type(report_type)
          if mc.metric_id in allowed]
     )
+    if grundauswahl == []:
+        # #3047 J3 (AC-4): Grundauswahl bewusst leer (Eintraege vorhanden,
+        # alle aus). Die Ausblick-Liste nimmt nur aus den Metriken oben ->
+        # leer -> der Block entfaellt. NICHT ``_erbe_grundauswahl`` (dort
+        # heisst leere Grundauswahl "kein Maximum" -> sieben feste Spalten);
+        # Altbestand ohne ``metrics`` bleibt ``allowed is None``.
+        return []
     return _erbe_grundauswahl(gespeichert, grundauswahl, "Trip-Grundauswahl")
 
 

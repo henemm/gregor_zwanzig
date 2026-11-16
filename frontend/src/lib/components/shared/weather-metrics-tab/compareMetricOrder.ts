@@ -24,17 +24,6 @@ export function materializeActiveMetricKeys(keys: string[] | null): string[] {
 	return keys === null ? COMPARE_METRIC_KEYS : keys;
 }
 
-/**
- * #3047 O4/H1: die Vergleichs-Hydration materialisiert fehlendes
- * `active_metrics` zu genau COMPARE_METRIC_KEYS (das `null` geht verloren).
- * Diese unveraenderte Vorgabe heisst deshalb „Grundauswahl nie eingestellt":
- * Ausblick und Stundenverlauf zeigen dann ihre festen Vorgaben (die Mail
- * schneidet ohne `active_metrics` nicht). EINE Stelle fuer beide Flaechen.
- */
-export function istNieEingestellteOrteGrundauswahl(keys: string[]): boolean {
-	return keys.length === COMPARE_METRIC_KEYS.length && keys.every((k, i) => k === COMPARE_METRIC_KEYS[i]);
-}
-
 // Issue #1361/#1368: die Groessen, die der 3-Tages-Ausblick fest zeigt
 // (email/outlook.py, Kopfzeile Tag/N/D/R/PR/Wind/Böen/Gew). Sie sind die
 // Anzeige-Vorgabe fuer „nie eingestellt" (`null`) — die Bedienflaeche zeigt

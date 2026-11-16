@@ -331,7 +331,7 @@ describe('Vertrag: Hydration liefert Auswahl-Schluessel, Dirty-Guard schreibt nu
 		const preset = makeMigratedPreset();
 		const catalog = loadCatalog();
 
-		const keys = hydrateWeatherMetricsFromPreset(preset, catalog);
+		const keys = hydrateWeatherMetricsFromPreset(preset, catalog)!; // gespeichertes active_metrics -> nie null (#3047 J1)
 		// Grundzustand und laufender Zustand werden aus DEMSELBEN hydrierten
 		// Ergebnis gebildet — so nimmt der Aufrufer sie auf
 		// (CompareTabs.svelte::hydrateWetterMetrikenTab). Der Test sagt nichts
@@ -358,7 +358,7 @@ describe('Vertrag: Hydration liefert Auswahl-Schluessel, Dirty-Guard schreibt nu
 		const preset = makeMigratedPreset();
 		const catalog = loadCatalog();
 
-		const hydrated = hydrateWeatherMetricsFromPreset(preset, catalog);
+		const hydrated = hydrateWeatherMetricsFromPreset(preset, catalog)!;
 		const baseline = snapshot(hydrated);
 		let puts = 0;
 
@@ -452,7 +452,7 @@ describe('Vertrag: Hydration liefert Auswahl-Schluessel, Dirty-Guard schreibt nu
 		// schoen, aber verlustfrei, und Grundzustand und laufender Zustand sind
 		// deckungsgleich, es entsteht also weiterhin kein PUT ohne Aenderung.
 		const preset = makeMigratedPreset();
-		const keys = hydrateWeatherMetricsFromPreset(preset, []);
+		const keys = hydrateWeatherMetricsFromPreset(preset, [])!;
 		const current = snapshot(keys);
 		const baseline = snapshot(keys);
 

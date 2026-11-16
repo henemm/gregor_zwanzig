@@ -45,7 +45,6 @@
 		applyHourlyMetricToggle,
 		hourlyKeysAusGrundauswahl
 	} from './compareHourlyMetricDefs.ts';
-	import { istNieEingestellteOrteGrundauswahl } from '../shared/weather-metrics-tab/compareMetricOrder.ts';
 	// Issue #2659 (i18n F10): voller Name aus dem Register (label_en, sonst deutsch), wie im
 	// Wetter-Metriken-Reiter (F5); `col_label`/Kuerzel bleiben unveraendert.
 	// (Regel wie vergleichsMetrikLabel, compareMetricCatalogLoader.ts — ohne dessen Netz-Import.)
@@ -77,8 +76,8 @@
 		register?: Record<string, MetricLabelFields>;
 		/** #3047 H1: die Grundauswahl der Uebersicht (Katalog-Schluessel, wie beim
 		 *  Ausblick). Der Stundenverlauf nimmt nur aus ihr (Konzept §5.8).
-		 *  `null` bzw. die unveraenderte Vorgabe COMPARE_METRIC_KEYS = nie
-		 *  eingestellt: kein Maximum, Verhalten wie vorher. */
+		 *  `null` = nie eingestellt (#3047 J1: die Hydration bewahrt es; eine
+		 *  gespeicherte Liste gleich der Vorgabe ist gespeichert): kein Maximum. */
 		grundauswahl?: string[] | null;
 	}
 	let {
@@ -128,7 +127,7 @@
 	// #3047 H1 (Konzept §5.8): Grundauswahl als Kennungen in deren Folge;
 	// `null` = nie eingestellt oder leer (kein Maximum, wie beim Ausblick).
 	const grundKennungen = $derived.by(() => {
-		if (grundauswahl === null || istNieEingestellteOrteGrundauswahl(grundauswahl)) return null;
+		if (grundauswahl === null) return null;
 		const kennungJeSchluessel: Record<string, string> = {};
 		for (const group of hourlyGroups)
 			for (const option of group.options) kennungJeSchluessel[option.key] = group.metric_id;

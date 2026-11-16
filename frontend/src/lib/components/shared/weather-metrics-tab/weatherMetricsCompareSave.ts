@@ -24,7 +24,6 @@ import { merkeNutzlast } from '../../../stores/nutzlastStand.ts';
 import type { PutClient } from '../tripSpeicherung.ts';
 import { buildComparePresetSavePayload, waehleEigenfelder } from '../../compare/compareEditorSave.ts';
 import { rehydrateActiveMetrics } from '../../compare/compareEditorLoad.ts';
-import { COMPARE_METRIC_KEYS } from '../wetter-tab/corridorEditorState.ts';
 // Issue #1373 (S2 Scheibe B): Übersetzungsquelle für das Speicherformat der
 // Metrik-Auswahl (Größe + Auswertung) — die geladene Katalogantwort.
 import {
@@ -74,25 +73,9 @@ export function hydrateDayWindowFromPreset(preset: ComparePreset): {
  * hydriert und den Dirty-Check-Grundzustand aufnimmt (sonst Scheindiff und
  * Rücksetzen auf die Rohform, Adversary-Befund F001). Default = der bereits
  * registrierte Katalog, damit bestehende Aufrufer unverändert funktionieren.
+ * #3047 J1/#3061 (AC-13): fehlendes `active_metrics` -> `null` („nie eingestellt"), nie die Vorgabeliste.
  */
 export function hydrateWeatherMetricsFromPreset(
-	preset: ComparePreset,
-	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
-): string[] {
-	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
-	const rehydrated = rehydrateActiveMetrics(displayConfig.active_metrics, catalog);
-	return rehydrated ? rehydrated.activeMetricKeys : [...COMPARE_METRIC_KEYS];
-}
-
-/**
- * Issue #3061: wie `hydrateWeatherMetricsFromPreset`, aber ein fehlendes
- * `active_metrics` bleibt `null` („nie eingestellt", #1191-Vertrag). Nur so
- * bleibt eine BEWUSST gespeicherte Vollauswahl vom Altbestand unterscheidbar
- * (Ausblick: Altbestand = feste Vorgabe-Spalten, Vollauswahl = alle Groessen,
- * wie die Mail). Leser, die eine Liste brauchen, materialisieren selbst
- * (`materializeActiveMetricKeys`).
- */
-export function hydrateWeatherMetricsFromPresetOrNull(
 	preset: ComparePreset,
 	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
 ): string[] | null {

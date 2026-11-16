@@ -25,7 +25,7 @@ import {
 	registeredCompareMetricCatalog,
 	type CompareSelectionEntry
 } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
-import { hydrateWeatherMetricsFromPresetOrNull } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
+import { hydrateWeatherMetricsFromPreset } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 import type { AlarmHydrationTarget } from '../shared/alarmeVergleichSpeicherung.ts';
 import { reconstructCompareAlertChannels } from './alarmePropsAus.ts';
 
@@ -129,7 +129,7 @@ export function hydrateAlarmFieldsFromPreset(
 	// identisch zum Wetter-Metriken-Hydrierer, sonst haengt der Ausblick von der
 	// Reiter-Reihenfolge ab). Die Empfindlichkeits-Tabelle materialisiert selbst
 	// (AlarmeTab / CompareTabs `materializeActiveMetricKeys(... ?? null)`).
-	state.activeMetricKeys = hydrateWeatherMetricsFromPresetOrNull(preset, catalog);
+	state.activeMetricKeys = hydrateWeatherMetricsFromPreset(preset, catalog);
 	// Issue #1260: Kurzstil-Toggle aus display_config.telegram_style hydrieren,
 	// Default "rich" (analog CompareEditor). Ohne diese Zeile bliebe der Toggle
 	// im Hub-Alarme-Tab dauerhaft auf dem Klasse-Default stehen und ein

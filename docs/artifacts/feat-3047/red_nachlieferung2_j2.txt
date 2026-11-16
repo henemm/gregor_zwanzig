@@ -1,0 +1,72 @@
+# #3047 J2 RED -- 2026-11-16T08:19:54Z -- Basis e5926b64e
+## B (AC-19/20): Validator Fall A / bewusst leer (vor dem Fix, --runxfail)
+E       • SOLL: Ausblick (HTML) Zeile 1: Spalte fehlt: 'Temp Minimum', 'Temp Maximum', 'Rain%'; Spalte zu viel: 'Temp', '0°Line', 'Visib' (ist ['Temp', 'Wind', 'Gust', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp Minimum', 'Temp Maximum', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 1: Spalte fehlt: 'Rain%'; Spalte zu viel: '0°Line', 'Visib' (ist ['Temp', 'Wind', 'Gust', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 2: Spalte fehlt: 'Rain%'; Spalte zu viel: '0°Line', 'Visib' (ist ['Temp', 'Wind', 'Gust', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 3: Spalte fehlt: 'Rain%'; Spalte zu viel: '0°Line', 'Visib' (ist ['Temp', 'Wind', 'Gust', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (HTML) Zeile 1: Spalte fehlt: 'Temp Minimum', 'Temp Maximum', 'Rain%'; Spalte zu viel: 'Temp', '0°Line', 'Visib' (ist ['Temp', 'Wind', 'Gust', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp Minimum', 'Temp Maximum', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 1: Spalte fehlt: 'Rain%'; Spalte zu viel: '0°Line', 'Visib' (ist ['Temp', 'Wind', 'Gust', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 2: Spalte fehlt: 'Rain%'; Spalte zu viel: '0°Line', 'Visib' (ist ['Temp', 'Wind', 'Gust', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 3: Spalte fehlt: 'Rain%'; Spalte zu viel: '0°Line', 'Visib' (ist ['Temp', 'Wind', 'Gust', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (HTML) Zeile 1: Spalte fehlt: 'Temp Minimum', 'Temp Maximum', 'Rain%'; Spalte zu viel: 'Temp', '0°Line', 'Visib' (ist ['Temp', 'Gust', 'Wind', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp Minimum', 'Temp Maximum', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 1: Spalte fehlt: 'Rain%'; Spalte zu viel: '0°Line', 'Visib' (ist ['Temp', 'Wind', 'Gust', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 2: Spalte fehlt: 'Rain%'; Spalte zu viel: '0°Line', 'Visib' (ist ['Temp', 'Wind', 'Gust', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 3: Spalte fehlt: 'Rain%'; Spalte zu viel: '0°Line', 'Visib' (ist ['Temp', 'Wind', 'Gust', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E   assert ('SOLL: Etappen-Stundentabelle (HTML)' in '======================================================================\nBRIEFING-MAIL-VALIDATOR (full + compact) — #7...o represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n  "validated_at": datetime.utcnow().isoformat(),\n')
+E       • SOLL: Ausblick (HTML) Zeile 1: Spalte fehlt: 'Temp Minimum', 'Temp Maximum', 'Rain%'; Spalte zu viel: 'Temp', '0°Line', 'Visib' (ist ['Temp', 'Wind', 'Gust', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp Minimum', 'Temp Maximum', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 1: Spalte fehlt: 'Rain%'; Spalte zu viel: '0°Line', 'Visib' (ist ['Temp', 'Gust', 'Wind', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 2: Spalte fehlt: 'Rain%'; Spalte zu viel: '0°Line', 'Visib' (ist ['Temp', 'Gust', 'Wind', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 3: Spalte fehlt: 'Rain%'; Spalte zu viel: '0°Line', 'Visib' (ist ['Temp', 'Gust', 'Wind', 'Rain', 'Thdr', '0°Line', 'Visib'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E   assert ('SOLL: Ausblick (Klartext)' in '======================================================================\nBRIEFING-MAIL-VALIDATOR (full + compact) — #7...o represent datetimes in UTC: datetime.datetime.now(datetime.UTC).\n  "validated_at": datetime.utcnow().isoformat(),\n' and "steht 'Gust' statt 'Wind'" in '========
+E       • SOLL: Etappen-Stundentabelle (HTML) 1: Spalte zu viel: 'Gust', 'Temp', 'Rain', 'Wind' (ist ['Gust', 'Temp', 'Rain', 'Wind'], soll [])
+E       • SOLL: Nachttabelle (HTML) 1: Spalte zu viel: 'Gust', 'Temp', 'Rain', 'Wind' (ist ['Gust', 'Temp', 'Rain', 'Wind'], soll [])
+E       • SOLL: Ausblick (HTML) Zeile 1: Spalte fehlt: 'Temp Minimum', 'Temp Maximum', 'Rain%', 'Gust', 'Thdr'; Spalte zu viel: 'Temp' (ist ['Wind', 'Temp', 'Rain'], soll ['Temp Minimum', 'Temp Maximum', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Etappen-Stundentabelle (Klartext) 1: Spalte zu viel: 'Gust', 'Temp', 'Rain', 'Wind' (ist ['Gust', 'Temp', 'Rain', 'Wind'], soll [])
+E       • SOLL: Nachttabelle (Klartext) 1: Spalte zu viel: 'Gust', 'Temp', 'Rain', 'Wind' (ist ['Gust', 'Temp', 'Rain', 'Wind'], soll [])
+E       • SOLL: Ausblick (Klartext) Zeile 1: Spalte fehlt: 'Rain%', 'Gust', 'Thdr' (ist ['Wind', 'Temp', 'Rain'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 2: Spalte fehlt: 'Rain%', 'Gust', 'Thdr' (ist ['Wind', 'Temp', 'Rain'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+E       • SOLL: Ausblick (Klartext) Zeile 3: Spalte fehlt: 'Rain%', 'Gust', 'Thdr' (ist ['Wind', 'Temp', 'Rain'], soll ['Temp', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr'])
+PASSED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_fall_a_register_standard_positiv[fehlt-compact]
+PASSED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_fall_a_register_standard_positiv[leer-compact]
+PASSED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_bewusst_leer_ausblick_entfaellt_positiv
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_fall_a_register_standard_positiv[fehlt-full]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_fall_a_register_standard_positiv[leer-full]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_fall_a_stundenfolge_falsch_scheitert
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_fall_a_ausblickfolge_falsch_scheitert
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_bewusst_leer_ausblick_erscheint_scheitert
+
+## B Kette: N1-Ausblick (Produkt seit #3068 bereits gruen) und P7 (xfail #3065)
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ausblick_standardsatz[trip-n1--altbestand_ohne_metrics-ausblick--html]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ausblick_standardsatz[trip-n1--altbestand_ohne_metrics-ausblick--klartext]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ausblick_standardsatz[trip-n1--altbestand_ohne_metrics-ausblick--kompakt]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ausblick_standardsatz[trip-n1--leere_liste_altbestand-ausblick--html]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ausblick_standardsatz[trip-n1--leere_liste_altbestand-ausblick--klartext]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ausblick_standardsatz[trip-n1--leere_liste_altbestand-ausblick--kompakt]
+XFAIL tests/tdd/test_einstellung_gleich_mail_trip.py::test_p7_global_nachtraeglich_in_gespeicherter_liste[trip-p7--global_nachtraeglich-trip_stundentabelle--html] - #3065 Phase 2: Abwahl nicht persistiert
+XFAIL tests/tdd/test_einstellung_gleich_mail_trip.py::test_p7_global_nachtraeglich_in_gespeicherter_liste[trip-p7--global_nachtraeglich-trip_ausblick--html] - #3065 Phase 2: Abwahl nicht persistiert
+
+## D (AC-1): Waechter prueft Testverweise von ausnahme/offen_feature nicht (Selbsttest rot)
+E   AssertionError: []
+/home/user/gregor_zwanzig/.claude/worktrees/agent-aa61db351af79cb39/tests/tdd/test_einstellung_gleich_mail_fallliste.py:575: AssertionError: []
+FAILED tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_testverweis_auch_bei_ausnahme_und_offen_feature
+
+## D: echte Fallliste mit erweiterter Pruefung (Probe, vor Anlage der fehlenden Tests;
+##    test_p7_* ist in diesem Stand bereits angelegt, test_w11_darstellung_je_zeile fehlt)
+fallliste_orte.json: Fall 'O-SV-H-DARST' nennt Test 'test_w11_darstellung_je_zeile', nicht gefunden in tests/tdd/test_einstellung_gleich_mail_*.py
+fallliste_orte.json: Fall 'O-SV-K-DARST' nennt Test 'test_w11_darstellung_je_zeile', nicht gefunden in tests/tdd/test_einstellung_gleich_mail_*.py
+## D: Probe auf Basis e5926b64e ohne test_p7 (Stand vor J2) meldete zusaetzlich
+##    5 Faelle trip-p7--*/O-p7--* -> test_p7_global_nachtraeglich_in_gespeicherter_liste nicht gefunden
+
+## Mutations-Probe (String-Ersetzung, Sicherung im Scratchpad, Rueckkopie) nach dem Fix
+M1 Fall A ohne Register-Standard: GEFANGEN (6 rot, fall_a-Tests)
+M2 bewusst leer -> Ausblick bleibt: GEFANGEN (test_trip_bewusst_leer_ausblick_erscheint_scheitert)
+M3 Standard in falscher Folge: GEFANGEN (6 rot)
+M4 Kompakt-ASCII 0Line nicht kanonisiert: GEFANGEN (fall_a compact)
+M5 Fall-A-Stunden ungeprueft (None): GEFANGEN (test_trip_fall_a_stundenfolge_falsch_scheitert)
+M6 Waechter prueft nur gruen/rot_erwartet: GEFANGEN (Selbsttest)
+M7 Waechter laesst leeren Verweis zu: GEFANGEN (Selbsttest)
+
+## GREEN
+Fuenf test_einstellung_gleich_mail_*.py: 320 passed, 8 xfailed (5x P7 #3065, 2x W11 Phase 3, 1x bewusst leer wartet auf J3)
+Fallliste #3047: gruen=332 ausnahme=23 offen_feature=8 rot_erwartet=0
+Alle Validator-Tests (51 Dateien): 731 passed, 4 skipped (vorbestehend), 4 xfailed

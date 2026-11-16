@@ -52,6 +52,12 @@
 		 *  normalisiert. `null`/leer = kein Maximum bekannt (D4): Verhalten
 		 *  wie vor A3. */
 		grundauswahl?: string[] | null;
+		/** #3047 J1 (Konzept §5.8 „Waehlst du alle Zeilen ab, entfaellt der
+		 *  Ausblick"): eine LEERE Grundauswahl ist bewusst geleert -> keine
+		 *  Ausblick-Spalte. Nur der Trip setzt das (alle Metriken `enabled:false`).
+		 *  Ohne Angabe (Ortsvergleich) heisst leer weiter „kein Maximum" (D4),
+		 *  wie in der Orts-Mail. */
+		leereGrundauswahlIstBewusst?: boolean;
 		/** Bereits geladene Antwort von GET /api/compare/metrics — dieselbe
 		 *  Liste wie die Uebersichts-Grundauswahl (kein zweiter Abruf). */
 		catalog: CompareSelectionEntry[];
@@ -96,7 +102,7 @@
 	let {
 		metricKeys, catalog, onMetricKeys, onOutlookCommit,
 		title, enabled = true, onEnabledChange,
-		showEmailOnlyHint = true, grundauswahl = null,
+		showEmailOnlyHint = true, grundauswahl = null, leereGrundauswahlIstBewusst = false,
 		metricFormats = null, onMetricFormats, smsSymbols = {}, register = {}
 	}: Props = $props();
 
@@ -169,17 +175,19 @@
 	// Grundauswahl (Altbestand/Katalog nicht geladen) bleibt es beim Verhalten
 	// vor A3 (ADR-0050 D4: kein Maximum -> nicht schneiden).
 	//
-	// #3047 O4 (AC-13/AC-21), #3061: allein `grundauswahl === null` heisst beim
-	// Ortsvergleich „active_metrics nie eingestellt" (Altbestand; die
-	// Hub-Hydrierer behalten das `null`, WeatherMetricsTab reicht es durch).
+	// #3047 O4 (AC-13/AC-21), #3047 J1/#3061: allein `grundauswahl === null`
+	// heisst beim Ortsvergleich „active_metrics nie eingestellt" (Altbestand;
+	// die Hydration bewahrt das `null`, WeatherMetricsTab reicht es durch).
 	// Die Mail zeigt dann ohne `outlook_metrics` die festen Spalten
 	// (DEFAULT_OUTLOOK_METRIC_KEYS = `_erbe_grundauswahl` ohne Maximum,
 	// compare_outlook_metric_ids.py) -- der Editor zeigt genau diese aktiv statt
 	// des ganzen Katalogs. Da es kein Maximum gibt, bleiben alle uebrigen
 	// Katalog-Groessen in der „Aus"-Gruppe zurueckholbar (die Mail schneidet in
-	// diesem Fall nicht). Eine Liste, auch die volle, gilt als bewusst
-	// gespeichert (#3061: kein Erraten per Listenvergleich).
+	// diesem Fall nicht). Eine gespeicherte Liste, auch die volle oder die
+	// Vorgabe, gilt als bewusst eingestellt (kein Erraten per Listenvergleich).
+	// Der Stundenverlauf erkennt „nie eingestellt" genauso (#3047 H1/J1).
 	const ausblickSpalten = $derived.by(() => {
+		if (leereGrundauswahlIstBewusst && grundauswahl?.length === 0) return { active: [], off: [] };
 		const grund = grundauswahlKennungen;
 		if (grund === null || grund.length === 0) {
 			const active = materializeOutlookMetricKeys(metricKeys);
