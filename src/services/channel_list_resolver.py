@@ -40,12 +40,30 @@ Rows = Optional[tuple[ChannelRow, ...]]
 class MailViewModel:
     """Je Kanal ein Tupel von Zeilen in Anzeigefolge; ``None`` = kein Filter
     (nur Orte ohne Grundauswahl und ohne Kanal-Liste). ``layout_channels``:
-    Orte-Kanaele, deren Zeilen aus ``channel_layouts`` stammen."""
+    Orte-Kanaele, deren Zeilen aus ``channel_layouts`` stammen.
+
+    ``outlook`` (Trip und Orte) und ``hourly`` (nur Orte) tragen Katalog-IDs
+    (#3065, ADR-0121 Nachtrag 2b): ``None`` = Renderer-Vorgabemenge, ``()`` =
+    Block entfaellt. Trip-``hourly`` ist immer ``None``."""
     email: Rows
     telegram: Rows
     sms: Rows
     premium_sms: Rows
     layout_channels: tuple[str, ...] = ()
+    outlook: Rows = None
+    hourly: Rows = None
+
+
+def _area_rows(ids, formats=None) -> Rows:
+    """Katalog-IDs -> Zeilen (None bleibt None, [] wird ()). Ausblick-Format
+    aus ``{id: bool}``: wahr = Einfach, ausdruecklich falsch = Roh."""
+    if ids is None:
+        return None
+    formats = formats or {}
+    return tuple(
+        ChannelRow(mid, True, {True: "simplified", False: "raw"}.get(formats.get(mid)), i)
+        for i, mid in enumerate(ids)
+    )
 
 
 def resolve_channel_lists(display_config, surface: str, report_type: Optional[str] = None) -> MailViewModel:
@@ -134,7 +152,14 @@ def _trip_view(display_config, report_type: str) -> MailViewModel:
     ) != "global"
     if not eigene_premium:
         kanaele["premium_sms"] = kanaele["sms"]
-    return MailViewModel(**kanaele)
+    from output.renderers.compare_outlook_metric_ids import (
+        resolve_trip_outlook_formats, resolve_trip_outlook_metrics,
+    )
+
+    outlook = _area_rows(
+        resolve_trip_outlook_metrics(dc, report_type), resolve_trip_outlook_formats(dc),
+    )
+    return MailViewModel(**kanaele, outlook=outlook)
 
 
 # ---------------------------------------------------------------------------
@@ -207,4 +232,16 @@ def _compare_view(dc: dict) -> MailViewModel:
             kanaele[ch] = None if ids is None else tuple(
                 ChannelRow(rid, True, None, i) for i, rid in enumerate(ids)
             )
-    return MailViewModel(**kanaele, layout_channels=tuple(layout_channels))
+    from output.renderers.compare_hourly_metric_ids import resolve_hourly_metric_ids
+    from output.renderers.compare_outlook_metric_ids import (
+        resolve_compare_outlook_formats, resolve_compare_outlook_metrics,
+    )
+
+    outlook = _area_rows(
+        resolve_compare_outlook_metrics(dc.get("outlook_metrics"), global_metrics),
+        resolve_compare_outlook_formats(dc.get("outlook_metric_formats")),
+    )
+    hourly = _area_rows(resolve_hourly_metric_ids(dc.get("hourly_metrics"), global_metrics))
+    return MailViewModel(
+        **kanaele, layout_channels=tuple(layout_channels), outlook=outlook, hourly=hourly,
+    )
