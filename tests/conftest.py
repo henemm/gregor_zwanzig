@@ -683,6 +683,17 @@ def _reset_thunder_window_cache():
 
 
 @pytest.fixture(autouse=True)
+def _reset_parallel_fetch():
+    """Issue #3081 AC-5: der Parallelabruf (`services.parallel_fetch`) haelt
+    prozessweit Executor und Semaphoren je Provider. Nachlaufende Worker eines
+    frueheren Tests koennten sonst Slots (z. B. `official_alerts`) ueber das
+    Testende hinaus belegen. Nach JEDEM Test zuruecksetzen (lazy neu angelegt)."""
+    yield
+    from services import parallel_fetch
+    parallel_fetch._reset_for_tests()
+
+
+@pytest.fixture(autouse=True)
 def _reset_shared_weather_cache():
     """Issue #1557: der geteilte Wetter-Cache (`services.weather_cache`) ist
     ein Prozess-Singleton mit 600s-TTL, Treffer ueber "Fenster deckt ab".

@@ -151,6 +151,50 @@ def _umgebung(monkeypatch):
     parallel_fetch._reset_for_tests()
 
 
+_SIGNAL_ZEITLIMIT_S = 10.0
+
+
+def _hauptfaden_wartet_signal(monkeypatch) -> threading.Event:
+    """#3081: Signal "Hauptfaden wartet auf die Ergebnisse" (``parallel_fetch.wait``).
+
+    Duenne Naht: setzt das Event und delegiert UNVERAENDERT an das echte
+    ``concurrent.futures.wait`` (Zeitlimit ist beim Aufruf schon berechnet).
+    Nach der Rueckkehr wird es geloescht -- ein frueherer Abruf-Aufruf darf
+    nicht als Signal fuer einen spaeteren gelten."""
+    signal = threading.Event()
+    echtes_wait = parallel_fetch.wait
+
+    def _wait_mit_signal(*args, **kwargs):
+        signal.set()
+        try:
+            return echtes_wait(*args, **kwargs)
+        finally:
+            signal.clear()
+
+    monkeypatch.setattr(parallel_fetch, "wait", _wait_mit_signal)
+    return signal
+
+
+_SIGNAL_AUSGEBLIEBEN = (
+    f"Testaufbau: der Hauptfaden hat nach {_SIGNAL_ZEITLIMIT_S}s nicht auf "
+    "die Ergebnisse gewartet (Signal parallel_fetch.wait blieb aus)"
+)
+
+
+def _sprung_wenn_hauptfaden_wartet(signal: threading.Event, uhr: "_Uhr") -> None:
+    """Im Worker: erst springen, wenn der Hauptfaden sein Warte-Zeitlimit hat.
+    Bleibt das Signal aus, wird das vermerkt (der Worker-Fehler kann in der
+    Abrufkette als Luecke enden) -- ``_assert_signal_kam`` meldet es im Test."""
+    if not signal.wait(timeout=_SIGNAL_ZEITLIMIT_S):
+        signal.ausgeblieben = True
+        raise AssertionError(_SIGNAL_AUSGEBLIEBEN)
+    uhr.sprung(1000.0)
+
+
+def _assert_signal_kam(signal: threading.Event) -> None:
+    assert not getattr(signal, "ausgeblieben", False), _SIGNAL_AUSGEBLIEBEN
+
+
 def _uid(tag: str) -> str:
     return f"tdd-s4-{tag}-{uuid.uuid4().hex[:6]}"
 
@@ -633,15 +677,20 @@ def test_ac4_trip_grenzabbruch_im_worker_bricht_die_einheit_ab(
     Quellenausfall, keine Entwarnung."""
     uid, trip = trip_umgebung("ac4", _PROVENCE)
     soll = _soll_punkte(_PROVENCE, monkeypatch)
+    # #3081: Sprung erst, wenn der Hauptfaden wartet (sonst Wettlauf: Warte-
+    # Zeitlimit 0 und der werfende Worker wird als "timeout" eingesammelt).
+    signal = _hauptfaden_wartet_signal(monkeypatch)
     rand = _Rand(
         soll,
-        bei_anfrage=lambda idx, m: uhr.sprung(1000.0) if (idx == 2 and m) else None,
+        bei_anfrage=lambda idx, m: _sprung_wenn_hauptfaden_wartet(signal, uhr)
+        if (idx == 2 and m) else None,
         verzoegerung=lambda idx, m: 0.1 if idx >= 1 and m else 0.0,
     ).installiere(monkeypatch)
     zonen = _ZonenSpion(monkeypatch)
 
     lauf = _trip_lauf(uid, rand)
 
+    _assert_signal_kam(signal)
     _assert_in_workern(rand, ab_index=1)
     assert lauf.hit_deadline is True, "Die Einheit muss an der Grenze abgebrochen sein"
     assert not zonen.aufrufe, (
@@ -663,17 +712,20 @@ def test_ac5_compare_grenzabbruch_wird_hochgereicht_ohne_ausfallspur(
 ):
     uid = compare_umgebung("ac5a")
     orte = _orte(3, _ORTE_PROVENCE)
+    signal = _hauptfaden_wartet_signal(monkeypatch)  # #3081: statt sleep(0.4)
     rand = _Rand(
         _soll(orte),
         fehler=lambda idx, m: idx == 0 and m is None,  # Ort 0: echter Ausfall
-        bei_anfrage=lambda idx, m: (time.sleep(0.4), uhr.sprung(1000.0))
+        bei_anfrage=lambda idx, m: _sprung_wenn_hauptfaden_wartet(signal, uhr)
         if (idx == 1 and m) else None,
     ).installiere(monkeypatch)
     ausfaelle = _Spion(monkeypatch, alert_log, "append_suppressed_entry")
 
     with pytest.raises(RadarDeadlineExceeded):
         _compare_lauf(uid, orte)
+        _assert_signal_kam(signal)  # #3081: Testaufbau-Meldung vor "DID NOT RAISE"
 
+    _assert_signal_kam(signal)
     _assert_in_workern(rand)
     assert ausfaelle.aufrufe == [], (
         "Bei Grenzabbruch gilt das Preset als nicht erreicht: keine Spur im "
@@ -1009,7 +1061,7 @@ def test_ac9_compare_zwei_nutzer_gleichzeitig_getrennt(
     aufrufer: set = set()
 
     def _lauf(uid, orte):
-        aufrufer.add(threading.get_ident())
+        aufrufer.add(threading.current_thread().name)  # #3081: Name ist eindeutig, Idents werden neu vergeben
         try:
             ergebnisse[uid] = _compare_lauf(uid, orte, preset_id=f"p-{uid}")
         except BaseException as exc:  # noqa: BLE001 -- selbst einsammeln
@@ -1023,7 +1075,7 @@ def test_ac9_compare_zwei_nutzer_gleichzeitig_getrennt(
         f.join()
 
     assert not fehler, f"Thread-Fehler: {fehler!r}"
-    assert not [c for c in rand.hauptabrufe() if c["thread"] in aufrufer], (
+    assert not [c for c in rand.hauptabrufe() if c["thread_name"] in aufrufer], (
         "Vorbedingung: die Abrufe liefen im Aufrufer-Thread -- nicht parallel (fetch_ordered)"
     )
     assert sorted(t[1].id for t in ergebnisse[ua]) == ["a0", "a1", "a2"]
@@ -1128,7 +1180,7 @@ def test_ac9_trip_zwei_nutzer_gleichzeitig_getrennt(monkeypatch, uhr):
         aufrufer: set = set()
 
         def _lauf(uid):
-            aufrufer.add(threading.get_ident())
+            aufrufer.add(threading.current_thread().name)  # #3081: Name ist eindeutig, Idents werden neu vergeben
             try:
                 laeufe[uid] = _trip_dienst(uid).check_radar_alerts_run()
             except BaseException as exc:  # noqa: BLE001
@@ -1150,7 +1202,7 @@ def test_ac9_trip_zwei_nutzer_gleichzeitig_getrennt(monkeypatch, uhr):
             assert ForecastBudgetGate(ua).snapshot()["user_calls_today"] == n_a
             assert ForecastBudgetGate(ub).snapshot()["user_calls_today"] == n_b
             assert ForecastBudgetGate("default").snapshot().get("user_calls_today", 0) == 0
-        assert [c for c in rand.hauptabrufe() if c["thread"] in aufrufer
+        assert [c for c in rand.hauptabrufe() if c["thread_name"] in aufrufer
                 and c["idx"] not in (0, len(soll_a))] == [], (
             "Vorbedingung: die Folgepunkte liefen nicht in Workern (nicht parallel)"
         )
