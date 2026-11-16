@@ -25,7 +25,7 @@ import {
 	registeredCompareMetricCatalog,
 	type CompareSelectionEntry
 } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
-import { hydrateWeatherMetricsFromPreset } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
+import { hydrateWeatherMetricsFromPresetOrNull } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 import type { AlarmHydrationTarget } from '../shared/alarmeVergleichSpeicherung.ts';
 import { reconstructCompareAlertChannels } from './alarmePropsAus.ts';
 
@@ -125,7 +125,11 @@ export function hydrateAlarmFieldsFromPreset(
 	// activeMetricKeys noch keinen Hydrations-Durchlauf vom Wetter-Metriken-/
 	// Idealwerte-Tab gesehen. Ohne diese Zeile zeigt die Empfindlichkeits-
 	// Tabelle faelschlich "keine Metriken", obwohl das Preset aktive Metriken hat.
-	state.activeMetricKeys = hydrateWeatherMetricsFromPreset(preset, catalog);
+	// Issue #3061: fehlendes `active_metrics` bleibt `null` („nie eingestellt",
+	// identisch zum Wetter-Metriken-Hydrierer, sonst haengt der Ausblick von der
+	// Reiter-Reihenfolge ab). Die Empfindlichkeits-Tabelle materialisiert selbst
+	// (AlarmeTab / CompareTabs `materializeActiveMetricKeys(... ?? null)`).
+	state.activeMetricKeys = hydrateWeatherMetricsFromPresetOrNull(preset, catalog);
 	// Issue #1260: Kurzstil-Toggle aus display_config.telegram_style hydrieren,
 	// Default "rich" (analog CompareEditor). Ohne diese Zeile bliebe der Toggle
 	// im Hub-Alarme-Tab dauerhaft auf dem Klasse-Default stehen und ein

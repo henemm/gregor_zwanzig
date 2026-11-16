@@ -85,6 +85,23 @@ export function hydrateWeatherMetricsFromPreset(
 }
 
 /**
+ * Issue #3061: wie `hydrateWeatherMetricsFromPreset`, aber ein fehlendes
+ * `active_metrics` bleibt `null` („nie eingestellt", #1191-Vertrag). Nur so
+ * bleibt eine BEWUSST gespeicherte Vollauswahl vom Altbestand unterscheidbar
+ * (Ausblick: Altbestand = feste Vorgabe-Spalten, Vollauswahl = alle Groessen,
+ * wie die Mail). Leser, die eine Liste brauchen, materialisieren selbst
+ * (`materializeActiveMetricKeys`).
+ */
+export function hydrateWeatherMetricsFromPresetOrNull(
+	preset: ComparePreset,
+	catalog: CompareSelectionEntry[] = registeredCompareMetricCatalog()
+): string[] | null {
+	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
+	const rehydrated = rehydrateActiveMetrics(displayConfig.active_metrics, catalog);
+	return rehydrated ? rehydrated.activeMetricKeys : null;
+}
+
+/**
  * Issue #1703 Scheibe 8: Kanal-Ebene derselben Uebersichtstabelle. Ein Preset
  * OHNE `channel_active_metrics` (jedes heute gespeicherte, AC-S8-15) liefert
  * dreimal `null` — alle Kanaele folgen dann der Grundauswahl, genau wie heute.

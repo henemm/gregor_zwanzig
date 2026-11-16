@@ -24,6 +24,7 @@ import { parse } from 'svelte/compiler';
 
 import type { ComparePreset } from '../../../types.ts';
 import { hydrateAlarmFieldsFromPreset } from '../compareHubHydration.ts';
+import { alarmePropsAus } from '../alarmePropsAus.ts';
 import { toCompareSelectionEntries } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
 import { materializeActiveMetricKeys } from '../../shared/weather-metrics-tab/compareMetricOrder.ts';
 import {
@@ -51,6 +52,7 @@ const FIXTURE = resolve(FRONTEND, '..', 'tests', 'fixtures', 'einstellung_gleich
 register(pathToFileURL(join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(FRONTEND + '/').href);
 const { render } = await import('svelte/server');
 const OutlookLayoutControls = (await import(pathToFileURL(join(SHARED, 'OutlookLayoutControls.svelte')).href)).default;
+const AlarmeTab = (await import(pathToFileURL(join(SHARED, 'AlarmeTab.svelte')).href)).default;
 const { locale } = await import(pathToFileURL(join(FRONTEND, 'src/lib/i18n/index.ts')).href);
 locale.set('de');
 
@@ -183,6 +185,74 @@ describe('#3061 Ausblick im Editor = Mail', () => {
 			}
 		});
 	}
+});
+
+// Adversary F001 (Fix-Loop): der AC-3-Test oben materialisiert selbst. Hier wird die
+// Empfindlichkeits-Tabelle dort gemessen, wo sie WIRKT: am serverseitig gerenderten
+// AlarmeTab (context="vergleich", Prop-Buendel des echten `alarmePropsAus` aus dem vom
+// echten Hub-Hydrierer befuellten Zustand) und am Beispiel-Alarm des Hubs
+// (`beispielAlarmRegeln` aus dem ECHTEN Instanz-Skript von CompareTabs.svelte, gelesen
+// ueber den echten Attribut-Ausdruck der ZustellungTab-Einbettung).
+describe('#3061 AC-3 am Wirkort: Altbestand (activeMetricKeys=null) zeigt Alarm-Metriken', () => {
+	function renderAlarmeTab(wizardState: Record<string, unknown>): string {
+		return render(AlarmeTab as never, {
+			props: {
+				context: 'vergleich',
+				...alarmePropsAus(wizardState as never),
+				catalog: ALARM_KATALOG,
+				profileOverride: { premium_sms_allowed: false }
+			}
+		} as never).body;
+	}
+
+	test('AlarmeTab rendert fuer Altbestand die Tabelle mit Metrik-Zeilen, nicht „keine Metriken"', () => {
+		const s: Record<string, unknown> = {};
+		alarmHydrierer(s, ALTBESTAND());
+		assert.equal(s.activeMetricKeys, null, 'Messaufbau: Altbestand muss null tragen');
+		const html = renderAlarmeTab(s);
+		assert.ok(!html.includes('data-testid="alarme-no-metrics"'), 'Alarme-Reiter meldet „keine Metriken" (#1320)');
+		assert.ok(
+			!html.includes('data-testid="alarme-only-unalertable-hint"'),
+			'Alarme-Reiter meldet nur nicht alarmfaehige Groessen statt der Tabelle (#1320)'
+		);
+		assert.ok(html.includes('data-testid="alert-metric-level-table"'), 'Empfindlichkeits-Tabelle fehlt (#1320)');
+		const zeilen = [...html.matchAll(/data-testid="alert-metric-row-([a-z_]+)"/g)].map((m) => m[1]);
+		assert.deepEqual(zeilen, ['wind_gust'], `Tabellenzeilen ${JSON.stringify(zeilen)} statt der Vorgabemenge`);
+	});
+
+	test('AlarmeTab nennt fuer Altbestand die gewaehlten, nicht alarmfaehigen Groessen (dieselbe Materialisierung)', () => {
+		const s: Record<string, unknown> = {};
+		alarmHydrierer(s, ALTBESTAND());
+		const html = renderAlarmeTab(s);
+		const m = /data-testid="alarme-unalertable-metrics-hint"[^>]*>([\s\S]*?)<\/p>/.exec(html);
+		assert.ok(m, 'Hinweis auf nicht alarmfaehige Groessen der Vorgabemenge fehlt');
+		assert.ok(m![1].includes('Sonnenstunden'), `Hinweis nennt nicht die Vorgabemenge: ${m![1]}`);
+	});
+
+	test('Hub: Beispiel-Alarm (beispielAlarmRegeln an ZustellungTab) hat fuer Altbestand Regeln', async () => {
+		const s: Record<string, unknown> = {};
+		alarmHydrierer(s, ALTBESTAND());
+		assert.equal(s.activeMetricKeys, null, 'Messaufbau: Altbestand muss null tragen');
+		const { ast, quelle, u } = await umgebungFuer(HUB, {
+			preset: ALTBESTAND(),
+			locations: [],
+			wizardState: s,
+			onScheduleChange: undefined,
+			alarmeCatalog: ALARM_KATALOG,
+			alarmeRegister: {}
+		});
+		const einbettungen = findeKomponenten(ast, 'ZustellungTab');
+		assert.equal(einbettungen.length, 1, 'Messaufbau: genau eine ZustellungTab-Einbettung im Hub erwartet');
+		const ausdruck = attributAusdruck(einbettungen[0], quelle, 'beispielAlarmRegeln');
+		assert.ok(ausdruck, 'Messaufbau: beispielAlarmRegeln-Attribut der ZustellungTab-Einbettung fehlt');
+		const regeln = werte(ausdruck!, u) as Array<{ metric: string }> | undefined;
+		assert.ok(Array.isArray(regeln), `Messaufbau: ${ausdruck} nicht herleitbar (${typeof regeln})`);
+		assert.deepEqual(
+			regeln!.map((r) => r.metric),
+			['wind_gust'],
+			'Beispiel-Alarm im Reiter Zustellung hat fuer Altbestand keine Metrik (#1320)'
+		);
+	});
 });
 
 describe('#3061 Speichern und Trip bleiben unveraendert', () => {

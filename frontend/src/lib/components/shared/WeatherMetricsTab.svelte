@@ -1613,11 +1613,15 @@
 				     (outlook_enabled); der Trip nicht (AC-13). -->
 				<!-- Issue #1848 A3 (AC-2/AC-6): die Ortsvergleich-eigene
 				     Grundauswahl — DIESELBE Quelle wie die Uebersichts-Kopplung
-				     der Kanal-Reiter (`materializedActiveMetricKeys`, :1083). -->
+				     der Kanal-Reiter (`materializedActiveMetricKeys`, :1083).
+				     Issue #3061: `activeMetricKeys == null` (nie eingestellt) wird
+				     als `null` durchgereicht, damit der Ausblick die festen
+				     Vorgabe-Spalten zeigt wie die Mail; eine gespeicherte Liste
+				     (auch die volle) gilt als bewusst eingestellt. -->
 				<OutlookLayoutControls
 					metricKeys={outlookMetricKeys}
 					catalog={compareCatalog}
-					grundauswahl={materializedActiveMetricKeys}
+					grundauswahl={activeMetricKeys == null ? null : materializedActiveMetricKeys}
 					onMetricKeys={onCompareOutlookMetricKeys}
 					metricFormats={outlookMetricFormats}
 					onMetricFormats={onCompareOutlookMetricFormats}
