@@ -101,7 +101,9 @@ def _trip_model(display_config) -> UnifiedWeatherDisplayConfig:
     for eintrag in _trip_entries(roh):
         if eintrag.get("format") in _FORMATE:
             eintrag["format_mode"] = eintrag["format"]
-    return _parse_display_config(roh)
+    # #3048: Trip-Pfad -- Altbestand ohne/mit leeren ``metrics`` bekommt den
+    # Register-Standardsatz wie im Trip-Loader.
+    return _parse_display_config(roh, trip_standard_bei_leer=True)
 
 
 def _trip_entries(roh: dict):

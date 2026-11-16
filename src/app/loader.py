@@ -582,7 +582,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         # Issue #1244: "display_config": null (explizites JSON-null) darf
         # nicht crashen -- fail-soft heisst hier: valider Default statt
         # AttributeError in _parse_display_config.
-        display_config = _parse_display_config(data["display_config"] or {}, data.get("id", ""))
+        display_config = _parse_display_config(
+            data["display_config"] or {}, data.get("id", ""), trip_standard_bei_leer=True
+        )
     elif weather_config is not None:
         display_config = _migrate_weather_config(weather_config)
     else:
@@ -981,7 +983,12 @@ def _register_standard_metrics() -> List[Dict[str, Any]]:
     ]
 
 
-def _parse_display_config(data: Dict[str, Any], owner_id: str = "") -> "UnifiedWeatherDisplayConfig":
+def _parse_display_config(
+    data: Dict[str, Any],
+    owner_id: str = "",
+    *,
+    trip_standard_bei_leer: bool = False,
+) -> "UnifiedWeatherDisplayConfig":
     """Parse UnifiedWeatherDisplayConfig from dict."""
     from datetime import datetime as _dt
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
@@ -994,7 +1001,10 @@ def _parse_display_config(data: Dict[str, Any], owner_id: str = "") -> "UnifiedW
     # #3047 H5 (#1394 Fall A): auch ``metrics: []`` ist Altbestand -- der
     # Editor zeigt dafuer ebenfalls den Standard. Bewusst leer (Fall B) heisst
     # "Eintraege vorhanden, alle enabled:false" und bleibt unberuehrt.
-    register_standard = not data.get("metrics")
+    # #3048 AC-4: nur der Trip-Ladepfad setzt ``trip_standard_bei_leer``;
+    # Orte bleiben unberuehrt (sonst schriebe save_location den Trip-Standard
+    # still in den Ort zurueck).
+    register_standard = trip_standard_bei_leer and not data.get("metrics")
     if register_standard:
         data = {**data, "metrics": _register_standard_metrics()}
     raw_metrics = [_coerce_metric_entry(m) for m in (data.get("metrics") or [])]

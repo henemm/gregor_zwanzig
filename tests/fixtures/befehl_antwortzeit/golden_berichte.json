@@ -25,7 +25,7 @@
  "telegram": [
   {
    "subject": "[TEST] [Golden Trip] Etappe 3 — Abend",
-   "body": "Test-Vorschau für Etappe 3 am <DATUM>\n\nGolden Trip\nEvening <DATUM>",
+   "body": "Test-Vorschau für Etappe 3 am <DATUM>\n\nGolden Trip\nAbend <DATUM>",
    "plain_text_body": ""
   },
   {
