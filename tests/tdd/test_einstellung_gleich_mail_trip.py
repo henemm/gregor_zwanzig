@@ -753,7 +753,8 @@ def test_n1_leere_liste_altbestand_standard(monkeypatch, fall):
 def test_n1_bewusst_leer_alle_aus(monkeypatch, fall):
     """#3047 H5 (#1394 Fall B): bewusst leer heisst alle Eintraege
     ``enabled:false`` (so speichert der Editor eine Leerauswahl) -- Etappen-
-    und Nachttabelle ohne Metrikspalten, kein Standard-Rueckfall; der Editor
+    und Nachttabelle entfallen (J3: auch kein Zeit/Risiko-Geruest in HTML
+    oder Klartext), kein Standard-Rueckfall; der Editor
     zeigt fuer dieselbe Eingabe nichts aktiv (``editor_standard.json``,
     Zustand ``bewusst_leer_alle_aus``, ``erwartet: []``)."""
     zustand = _editor_zustand("bewusst_leer_alle_aus")
@@ -764,9 +765,43 @@ def test_n1_bewusst_leer_alle_aus(monkeypatch, fall):
     html, text, _ = _senden(monkeypatch, data, fall["format"])
     art = "etappe" if fall["liste"] == "trip_stundentabelle" else "nacht"
     tabellen = _stundentabellen(html, text, fall["format"], art)
-    if fall["format"] == "html":
-        assert tabellen, f"{fall['id']}: HTML-Tabelle fehlt ganz (Vorbedingung)"
+    # #3047 J3: ohne Metrikspalte entfaellt die Tabelle GANZ -- kein Geruest
+    # aus Zeit/Risiko, in HTML wie im Klartext (Format-Paritaet).
+    assert tabellen == [], (
+        f"{fall['id']}: bewusst leer, aber Stundentabelle mit Koepfen "
+        f"{[t.labels for t in tabellen]}")
     _pruefe_spalten(tabellen, zustand["erwartet"], fall["id"])
+
+
+def _bewusst_leer_json(outlook) -> dict:
+    """Grundauswahl wie der Editor eine Leerauswahl speichert (alle aus)."""
+    zustand = _editor_zustand("bewusst_leer_alle_aus")
+    data = trip_json(["temperature"]) if outlook is None else trip_json(
+        ["temperature"], outlook_metrics=outlook)
+    data["display_config"]["metrics"] = copy.deepcopy(
+        zustand["eingabe"]["display_config"]["metrics"])
+    return data
+
+
+#: Variante -> gespeicherte Ausblick-Auswahl (None = nie eingestellt).
+_J3_AUSBLICK = {"nie_eingestellt": None, "gespeichert": ["wind", "temperature"]}
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n1_bewusst_leer_kein_ausblick"))
+def test_n1_bewusst_leer_kein_ausblick(monkeypatch, fall):
+    """#3047 J3 (AC-4, Konzept §5 Punkt 8): Grundauswahl bewusst leer (alle
+    Eintraege ``enabled:false``) -> die Ausblick-Liste nimmt nur aus den
+    Metriken oben, ist also leer -> der Ausblick entfaellt in HTML, Klartext
+    und Kompakt; kein Rueckfall auf feste Spalten, auch nicht bei einer
+    gespeicherten Ausblick-Auswahl."""
+    data = _bewusst_leer_json(_J3_AUSBLICK[_variante(fall)])
+    assert soll_ausblick(data) is None, "Orakel-Vorbedingung: Ausblick entfaellt"
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    tab = _ausblick(html, text, fall["format"])
+    assert tab is None, f"{fall['id']}: Ausblick trotz leerer Grundauswahl: {tab.spalten}"
+    for zeile in text.splitlines():
+        assert not zeile.startswith(AUSBLICK_TAGE), (
+            f"{fall['id']}: Ausblick-Zeile trotz leerer Grundauswahl: {zeile!r}")
 
 
 # ---------------------------------------------------------------------------

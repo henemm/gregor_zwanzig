@@ -79,8 +79,18 @@ def _altpfad_trip():
     Zweig bleibt fuer Trips OHNE Grundauswahl in Kraft (ADR-0050 D4); dort
     bewachen die beiden Aufzeichnungen unveraendert weiter, dass "Feld fehlt"
     nicht mit "bewusst geleert" verwechselt wird (Mutation 4). Die
-    Referenzdateien werden NICHT nachgezogen."""
-    return trip(outlook_metrics=None, enabled_ids=set())
+    Referenzdateien werden NICHT nachgezogen.
+
+    ⚠️ #3047 J3: eine bewusst LEERE Grundauswahl (alle Eintraege aus) ist
+    kein "kein Maximum" mehr -- dort entfaellt der Ausblick (AC-4, Konzept
+    "jede Liste nimmt nur aus den Metriken oben"). Den festen Zweig erreicht
+    nur noch die fehlende Grundauswahl selbst (``metrics == []`` am
+    Datenobjekt, ADR-0050 D4: ``allowed_metric_ids_for_report_type`` ->
+    ``None``); genau die stellt diese Vorbedingung jetzt her."""
+    t = trip(outlook_metrics=None)
+    t.display_config.metrics = []
+    assert t.display_config.allowed_metric_ids_for_report_type("evening") is None
+    return t
 
 
 # ═════════════ AC-1 — Bestandsschutz gegen die aufgezeichnete Referenz ═══════
