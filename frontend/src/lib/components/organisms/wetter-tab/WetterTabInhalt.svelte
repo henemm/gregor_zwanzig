@@ -170,7 +170,7 @@
 		aendern(Z.ohneMetrik(stand!, id));
 	}
 	function hinzufuegen(id: string): void {
-		aendern(Z.mitMetrik(stand!, id));
+		aendern(Z.mitMetrik(stand!, id, context));
 		hinzu = name(id);
 	}
 	function vorlageSetzen(neu: Z.WetterStand): void {

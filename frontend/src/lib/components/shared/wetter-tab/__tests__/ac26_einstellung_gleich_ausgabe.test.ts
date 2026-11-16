@@ -32,6 +32,7 @@ import { kanalStilNutzlast, kanalStilStart } from '../../zustellung-tab/kanalSti
 import { ladeMailZustand } from '../../mailInhaltZustand.ts';
 import { ladeReportZustand } from '../../versand-tab/reportConfigPayload.ts';
 import { umgebungFuer } from '../../__tests__/svelteInstanzPruefstand.ts';
+import { DERIVED_METRIC_RULES } from '../../../trip-detail/metricsEditor.ts';
 
 type Abo = Record<string, unknown> & { display_config?: Record<string, unknown>; report_config?: Record<string, unknown> };
 
@@ -232,7 +233,11 @@ describe('AC-26 Orte: Einstellungsseite zeigt, was die Ausgabe tut', () => {
 describe('AC-26 Anlege-Kette: Vorlage gilt, im Vergleich nur ausgebbare Groessen (E1, E6)', () => {
 	test('trip_anlegen_zeigt_vorlage', () => {
 		const s = Z.standAusAbo('route', { display_config: { ampel: { template: 'alpen-trekking' } } }, VORLAGEN, {}, { eig: EIG, alsVorlage: true });
-		assert.deepEqual(menge(s.auswahl), menge(aktiveMetriken(VORLAGEN['alpen-trekking'])));
+		// p5c (Tech-Lead-Entscheidung, Ausgabe unveraendert): die Vorlage samt der Kinder, die Python aus
+		// ihren Eltern ableitet (Mail-Nachweis: p5c_ableitung_hub_orte_ausgabe.test.ts).
+		const vorlage = aktiveMetriken(VORLAGEN['alpen-trekking']);
+		const kinder = DERIVED_METRIC_RULES.filter((r) => vorlage.includes(r.parent)).map((r) => r.child);
+		assert.deepEqual(menge(s.auswahl), menge([...vorlage, ...kinder]));
 	});
 	test('vergleich_anlegen_vorlage_ohne_nicht_ausgebbare', () => {
 		const s = Z.standAusAbo('vergleich', { display_config: { ampel: { template: 'alpen-trekking' } } }, VORLAGEN, ALT, { eig: EIG, alsVorlage: true });

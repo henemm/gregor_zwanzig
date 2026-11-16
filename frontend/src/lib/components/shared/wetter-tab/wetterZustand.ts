@@ -14,6 +14,7 @@ import { klon } from './klon.ts';
 import {
 	alarmAbFuerAlle,
 	ausgebbarTeilen,
+	AUSWAHL_ABLEITUNG,
 	auswahlLesen,
 	vergleichsKatalogIds,
 	verschmelzen,
@@ -117,7 +118,7 @@ export function abweichungenVon(s: WetterStand, vorlagen: VorlagenAmpeln): numbe
 export function mitVorlage(s: WetterStand, vorlageId: string, vorlagen: VorlagenAmpeln, context: Kontext = 'route', alt: AltSchluessel = {}): WetterStand {
 	const r = zuruecksetzen(vorlageId, vorlagen);
 	r.ampel.template = vorlageId;
-	return { ...s, vorlageId, ampel: r.ampel, auswahl: nurAusgebbar(context, r.auswahl, alt) };
+	return { ...s, vorlageId, ampel: r.ampel, auswahl: nurAusgebbar(context, AUSWAHL_ABLEITUNG[context](r.auswahl), alt) };
 }
 
 /** Eigene Vorlage uebernehmen: ihre vollstaendige Ampel, Vorlage = ihre Systemvorlage. */
@@ -126,7 +127,7 @@ export function mitEigenerVorlage(s: WetterStand, ampel: Ampel, vorlagen: Vorlag
 	const neu = klon(ampel);
 	neu.template = vorlageId;
 	const auswahl = Object.entries(neu.metrics ?? {}).filter(([, e]) => e?.enabled === true).map(([id]) => id);
-	return { ...s, vorlageId, ampel: neu, auswahl: nurAusgebbar(context, auswahl, alt) };
+	return { ...s, vorlageId, ampel: neu, auswahl: nurAusgebbar(context, AUSWAHL_ABLEITUNG[context](auswahl), alt) };
 }
 
 /** „−": Metrik aus dem Briefing nehmen (AC-19). */
@@ -134,9 +135,12 @@ export function ohneMetrik(s: WetterStand, id: string): WetterStand {
 	return { ...s, auswahl: s.auswahl.filter((x) => x !== id) };
 }
 
-/** „+": Metrik hinten anhaengen (AC-19). */
-export function mitMetrik(s: WetterStand, id: string): WetterStand {
-	return s.auswahl.includes(id) ? s : { ...s, auswahl: [...s.auswahl, id] };
+/** „+": Metrik hinten anhaengen (AC-19); im Trip mit den Kindern, die Python aus ihr ableitet
+ *  (#3047 p5c — vorhandene Auswahl bleibt, auch ein bewusst abgewaehltes Kind eines anderen Elters). */
+export function mitMetrik(s: WetterStand, id: string, context: Kontext = 'route'): WetterStand {
+	if (s.auswahl.includes(id)) return s;
+	const neu = AUSWAHL_ABLEITUNG[context]([id]).filter((x) => x === id || !s.auswahl.includes(x));
+	return { ...s, auswahl: [...s.auswahl, ...neu] };
 }
 
 /** „Alarm ab" einer Zeile. */

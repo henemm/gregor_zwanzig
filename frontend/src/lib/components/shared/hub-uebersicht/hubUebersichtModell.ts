@@ -25,7 +25,14 @@ import {
 // Issue #2659 (i18n F10): Texte je Aufruf aus dem Katalog (aktionen.*/home.*/trip.status.*,
 // vergleich.hub.*); der Baustein liest `$locale` und rechnet beim Sprachwechsel neu.
 import { tr, trn, type MessageKey } from '../../../i18n/index.ts';
-import { alarmZaehler, type MetrikEigenschaften, type VorlagenAmpeln } from '../wetter-tab/ampelModell.ts';
+import {
+	alarmZaehler,
+	ausgebbarTeilen,
+	vergleichsKatalogIds,
+	type AltSchluessel,
+	type MetrikEigenschaften,
+	type VorlagenAmpeln
+} from '../wetter-tab/ampelModell.ts';
 import { standAusAbo, type AboSicht } from '../wetter-tab/wetterZustand.ts';
 
 export type KennzahlId = 'status' | 'naechster-versand' | 'briefings' | 'zuletzt-raus' | 'kanaele';
@@ -137,7 +144,8 @@ function tripAlarmZaehler(
 	eig: Record<string, MetrikEigenschaften> | null | undefined
 ): ReturnType<typeof alarmZaehler> | null {
 	if (!vorlagen || !eig || Object.keys(vorlagen).length === 0) return null;
-	const stand = standAusAbo('route', trip as unknown as AboSicht, vorlagen);
+	// #3047 p5c: mit `eig` wie der Reiter — „nie eingestellt" = Register-Standard der Mail, nicht die Vorlage.
+	const stand = standAusAbo('route', trip as unknown as AboSicht, vorlagen, {}, { eig });
 	return alarmZaehler(stand.ampel, stand.auswahl, eig);
 }
 
@@ -288,10 +296,15 @@ function orteKarte(aufgeloesteOrte: Array<{ rank: number; loc?: { name: string }
 
 /** Karte „Wetter" (#2794 Fix-Loop B4): Zahl der Metriken im Briefing aus `standAusAbo`
  *  (dieselbe Auswahl wie der Reiter Wetter), nicht aus den alten `ideal_ranges`.
- *  Vorlagen nicht geladen (fehlt/null/leer) ⇒ „—" statt einer erfundenen Zahl. Liest nur. */
-function wertebereicheKarte(preset: ComparePreset, vorlagen: VorlagenAmpeln | null | undefined): Karte {
-	const geladen = !!vorlagen && Object.keys(vorlagen).length > 0;
-	const anzahl = geladen ? standAusAbo('vergleich', preset as unknown as AboSicht, vorlagen).auswahl.length : null;
+ *  #3047 p5c: mit dem Vergleichs-Katalog (`alt`) — „nie eingestellt" = alle Groessen des Katalogs wie
+ *  die Mail; gezaehlt werden nur ausgebbare Groessen (Zeilen der Vergleichstabelle).
+ *  Vorlagen oder Katalog nicht geladen (fehlt/null/leer) ⇒ „—" statt einer erfundenen Zahl. Liest nur. */
+function wertebereicheKarte(preset: ComparePreset, vorlagen: VorlagenAmpeln | null | undefined, alt: AltSchluessel | null | undefined): Karte {
+	const katalog = new Set(vergleichsKatalogIds(alt ?? {}));
+	const geladen = !!vorlagen && Object.keys(vorlagen).length > 0 && katalog.size > 0;
+	const anzahl = geladen
+		? ausgebbarTeilen('vergleich', standAusAbo('vergleich', preset as unknown as AboSicht, vorlagen, alt ?? {}).auswahl, katalog).zeilen.length
+		: null;
 	return {
 		eyebrow: tr('aktionen.reiter.wetter'),
 		titel: presetProfileLabel(preset.profil) || String(preset.profil ?? ''),
@@ -306,7 +319,8 @@ export function deriveVergleichKennzahlen(
 	status: CompareStatus,
 	briefing: NextBriefing | null | undefined,
 	aufgeloesteOrte: Array<{ rank: number; loc?: { id: string; name: string } }>,
-	vorlagen?: VorlagenAmpeln | null
+	vorlagen?: VorlagenAmpeln | null,
+	alt?: AltSchluessel | null
 ): HubUebersichtModell {
 	const zeiten = presetBriefingTimesLabel(preset);
 	const naechster = formatNextBriefing(briefing, 'vergleich');
@@ -329,6 +343,6 @@ export function deriveVergleichKennzahlen(
 		rasterTestid: 'compare-detail-monitoring-mobile',
 		stapelTestid: 'compare-detail-summary-mobile',
 		orteKarte: orteKarte(aufgeloesteOrte),
-		wertebereicheKarte: wertebereicheKarte(preset, vorlagen)
+		wertebereicheKarte: wertebereicheKarte(preset, vorlagen, alt)
 	};
 }
