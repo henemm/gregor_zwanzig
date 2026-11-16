@@ -858,13 +858,18 @@ def test_ac11_ortsvergleich_alarm_unveraendert_trotz_trip_kanal_schwellen(monkey
             telegram_sink=lambda text: tg_calls.append(text),
         )
         svc.check_all_compare_presets()
+        # #3081 AC-6: ein Rotlauf nennt die Zaehler des Compare-Dienstes.
+        diag = (
+            f" [last_failed_count={svc.last_failed_count}, "
+            f"last_checked_count={svc.last_checked_count}]"
+        )
 
-        assert len(mail_calls) == 1, f"AC-11: E-Mail (Compare): {mail_calls!r}"
+        assert len(mail_calls) == 1, f"AC-11: E-Mail (Compare): {mail_calls!r}{diag}"
         assert len(tg_calls) == 1, (
             "AC-11: Telegram (Compare) darf von der Trip-Kanal-Schwelle "
-            f"desselben Nutzers NICHT beeinflusst werden: {tg_calls!r}"
+            f"desselben Nutzers NICHT beeinflusst werden: {tg_calls!r}{diag}"
         )
-        assert len(sms_calls) == 1, f"AC-11: SMS (Compare): {sms_calls!r}"
+        assert len(sms_calls) == 1, f"AC-11: SMS (Compare): {sms_calls!r}{diag}"
     finally:
         b._REGISTERED_SOURCES.clear()
         b._REGISTERED_SOURCES.extend(backup)
