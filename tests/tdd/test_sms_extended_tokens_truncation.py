@@ -3,7 +3,8 @@
 Issue #1660 Scheibe B. SPEC: docs/specs/modules/fix_1660b_sms_token_wiring.md
 
 AC -> Test-Mapping:
-  AC-12  test_ac12_new_tokens_drop_before_any_wintersport_token
+  AC-12  test_ac12_ohne_liste_faellt_standardfolge_von_hinten (abgeloest durch
+         #3047 Runde 7 / AC-23: Kuerzung vom Listenende statt fester Folge)
   AC-14  test_ac14_sms_and_telegram_kurzform_share_the_same_rendered_text
 
 AC-14-Hinweis (Prueftiefe): ``services/notification_service.py`` sendet den
@@ -72,7 +73,7 @@ def _baseline_config() -> list[MetricSpec]:
     ]
 
 
-def test_ac12_new_tokens_drop_before_any_wintersport_token():
+def test_ac12_ohne_liste_faellt_standardfolge_von_hinten():
     """AC-12: bei Ueberlaenge (>160 Zeichen) fallen die 14 neuen Token
     VOLLSTAENDIG weg, bevor auch nur ein Wintersport-Token (SD/NS24+/SL/AV)
     entfernt wird. Fix #1887 E6 Scheibe A (PO-Entscheid): 'WC' ist ERSATZLOS
@@ -151,13 +152,20 @@ def test_ac12_new_tokens_drop_before_any_wintersport_token():
         f"-- irgendetwas MUSS entfernt worden sein: {truncated!r}"
     )
 
-    # #1441: 'AV3' entfaellt -- _wintersport() baut kein AV mehr (Lawinenstufe
-    # nur noch als amtlicher Lagebericht im !-Warnblock).
+    # #3047 Runde 7 (Spec-Nachtrag Runde 7, AC-23, PO-Entscheidung
+    # 2026-11-16): die feste Folge "14 neue Token vor Wintersport" (DEC-4)
+    # ist abgeloest. Ohne Nutzerliste (keine ``position``) gilt die
+    # Standardfolge POSITIONAL; sie wird von HINTEN gekuerzt -- die
+    # Wintersport-Token stehen dort am Ende und fallen zuerst. Was bleibt, ist
+    # ein lueckenloser Anfang der ungekuerzten Zeile.
     for wintersport_token in ("SD180", "NS24+25", "SL1800"):
-        assert wintersport_token in truncated, (
-            f"Wintersport-Token {wintersport_token!r} darf bei dieser Ueberlaenge "
-            f"NICHT vor den 14 neuen Token entfernt werden: {truncated!r}"
+        assert wintersport_token not in truncated, (
+            f"Wintersport-Token {wintersport_token!r} steht am Ende der "
+            f"Standardfolge und faellt zuerst: {truncated!r}"
         )
+    assert full_untruncated.startswith(truncated), (
+        f"Kuerzung muss vom Zeilenende her erfolgen: {truncated!r}"
+    )
     # Issue #2792 S1c-4b (E1, AC-19 e): Hervorhebung ab Gelb der Ampel
     # „allgemein" statt DEFAULTS -- R ab 1 mm (1.4@16), Wind 18/28 unter 30
     # („W-"), Böen ab 30 (40@15); frueher R0.2@6 / W18@11 / G25@11.

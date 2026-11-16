@@ -1,0 +1,53 @@
+# #3047 Runde 7, Paket p1_kanaele_trip: RED-Lauf vor dem Fix (Stand 5cbf1d5)
+# uv run pytest tests/tdd/test_3047_r7_kanaele_trip.py -q --tb=line
+# Rot: B-K1 Windrichtung Roh (de/en, Mail-Vergleich), B-K2 Kappungshinweis EN, B-K4 SMS-Kuerzung.
+# test_ac23_sms_umgekehrte_liste_kuerzt_andere_seite ist Gegenprobe (auch vorher gruen);
+# test_ac23_zeile_faellt_als_ganzes kam nach der Mutationsprobe hinzu (M7/M8).
+# Nachtraeglich: Kappungs-Test vergleicht umbruchsicher (Leerzeichen-Join); Rot-Grund unveraendert.
+
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+FF.FF.F.                                                                 [100%]
+=================================== FAILURES ===================================
+E   AssertionError: ['Kurzübersicht', 'WD W', 'R 2.0@08', 'CT 70', 'G 45@08', 'T 15.0', ...]
+    assert 'WD W' == 'WD 250°'
+      
+      - WD 250°
+      + WD W
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a10e0506aecaf8fe5/tests/tdd/test_3047_r7_kanaele_trip.py:135: AssertionError: ['Kurzübersicht', 'WD W', 'R 2.0@08', 'CT 70', 'G 45@08', 'T 15.0', ...]
+E   AssertionError: ['Summary', 'WD W', 'R 2.0@08', 'CT 70', 'G 45@08', 'T 15.0', ...]
+    assert 'WD W' == 'WD 250°'
+      
+      - WD 250°
+      + WD W
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a10e0506aecaf8fe5/tests/tdd/test_3047_r7_kanaele_trip.py:135: AssertionError: ['Summary', 'WD W', 'R 2.0@08', 'CT 70', 'G 45@08', 'T 15.0', ...]
+E   AssertionError: assert 'WD 250°' in ['Kurzübersicht', 'WD W', 'R 2.0@08', 'CT 70', 'G 45@08', 'T 15.0', ...]
+     +  where ['Kurzübersicht', 'WD W', 'R 2.0@08', 'CT 70', 'G 45@08', 'T 15.0', ...] = _kurzuebersicht(Kanalmitschrift({'email': [{'empfaenger': 'einstellung-cc69b6ab54@example.invalid', 'subject': '[Golden C KHW403 (SMS/...lain_text_body': None, 'parse_mode': 'HTML', 'mail_type': None, 'mail_format': None, 'compare_hourly_enabled': None}]}))
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a10e0506aecaf8fe5/tests/tdd/test_3047_r7_kanaele_trip.py:162: AssertionError: assert 'WD 250°' in ['Kurzübersicht', 'WD W', 'R 2.0@08', 'CT 70', 'G 45@08', 'T 15.0', ...]
+E   AssertionError: Summary
+      R 2.0@08
+      G 45@08
+      T 15.0
+      W 20 W
+      TH medium
+      HU 65
+      UV 5.0@08
+      CT ⛅
+      
+      ⚡ medium
+      
+      … +1 weitere Wettergrößen nur als Tageswert
+      (Telegram-Limit)
+    assert ('Telegram limit' in 'Summary\nR 2.0@08\nG 45@08\nT 15.0\nW 20 W\nTH medium\nHU 65\nUV 5.0@08\nCT ⛅\n\n⚡ medium\n\n… +1 weitere Wettergrößen nur als Tageswert\n(Telegram-Limit)')
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a10e0506aecaf8fe5/tests/tdd/test_3047_r7_kanaele_trip.py:182: AssertionError: Summary
+E   AssertionError: HU/DP (Platz 1/2) fielen weg: E1: HP1013 N15 D15/15 W- G45@4 VS- CT:SCT@4 CL:SCT@4 CM:FEW@4 CH:FEW@4 FZ2500@4 UV5@4 WD:W TF-3@6 FN-3 FD13/13 SU16 PT:- R2.0@4 PR60%@4 TH:M@4 TH+:- !TS:M@10
+    assert [2, 3] == [0, 1]
+      
+      At index 0 diff: 2 != 0
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a10e0506aecaf8fe5/tests/tdd/test_3047_r7_kanaele_trip.py:229: AssertionError: HU/DP (Platz 1/2) fielen weg: E1: HP1013 N15 D15/15 W- G45@4 VS- CT:SCT@4 CL:SCT@4 CM:FEW@4 CH:FEW@4 FZ2500@4 UV5@4 WD:W TF-3@6 FN-3 FD13/13 SU16 PT:- R2.0@4 PR60%@4 TH:M@4 TH+:- !TS:M@10
+=========================== short test summary info ============================
+FAILED tests/tdd/test_3047_r7_kanaele_trip.py::test_ac22_telegram_windrichtung_roh_zeigt_grad_wie_mail[de]
+FAILED tests/tdd/test_3047_r7_kanaele_trip.py::test_ac22_telegram_windrichtung_roh_zeigt_grad_wie_mail[en]
+FAILED tests/tdd/test_3047_r7_kanaele_trip.py::test_ac22_telegram_roh_gleich_mail_roh
+FAILED tests/tdd/test_3047_r7_kanaele_trip.py::test_ac22_telegram_kappungshinweis_in_nutzersprache[en-Telegram limit-Wettergr\xf6\xdfen]
+FAILED tests/tdd/test_3047_r7_kanaele_trip.py::test_ac23_sms_kuerzt_vom_listenende_warnung_bleibt

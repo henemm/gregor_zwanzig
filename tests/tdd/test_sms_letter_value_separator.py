@@ -168,26 +168,8 @@ def _line(max_length: int) -> str:
     )
 
 
-# §6-Rangfolge: alles hier faellt STRIKT SPAETER als die 14 erweiterten
-# Metrik-Token (Wintersport, Peak-Bloecke, gefuehltes Trio, PR, gemessenes
-# Trio). Solange 'WD:'/'PT:' in der Zeile stehen, muss deshalb jedes dieser
-# Token noch dastehen.
-#
-# Fix #1887 E6 Scheibe A (PO-Entscheid, docs/specs/modules/
-# fix_1887_e6a_sms_kuerzel_register.md): 'WC10' entfaellt ERSATZLOS ('WC'
-# verdoppelte nachweislich 'FK') und taugt nicht mehr als Wintersport-Anker.
-# ``F.segment()`` setzte bislang weder ``snow_depth_cm`` noch
-# ``avalanche_level``, weshalb 'WC' hier der EINZIGE je gerenderte
-# Wintersport-Token war -- die Fixture ist deshalb um einen echten
-# Wintersport-Wert (``snow_depth_cm=180.0`` in ``_line()`` oben) erweitert,
-# der jetzt als Anker ``SD180`` dient. Bewusst NICHT auf einen strukturellen
-# ``POS_INDEX``-Vergleich ausgewichen -- das verschoebe den Pruefort von der
-# gerenderten Zeile auf die Tabelle.
-# Issue #2792 S1c-4b (E1, AC-19 e): Regen-Hervorhebung ab Gelb der Ampel
-# „allgemein" (1 mm) -- der Regen-Token lautet ``R8.4@11`` statt
-# ``R0.5@5(8.4@11)`` (DEFAULTS 0,2); Rangfolge-Zusicherung unveraendert.
-_OUTRANKS_THE_FOURTEEN = ("SD180", "PR40%@5(95%@11)", "FN7", "FD10/20",
-                          "N9", "D13/27", "R8.4@11")
+# Die fruehere §6-Rangfolge (_OUTRANKS_THE_FOURTEEN) ist mit #3047 Runde 7
+# (AC-23, Kuerzung vom Listenende) entfallen; die Zusicherung steht unten.
 
 
 class TestDropOrderKnowsTheGrammarColon:
@@ -205,20 +187,21 @@ class TestDropOrderKnowsTheGrammarColon:
     """
 
     def test_letter_value_tokens_fall_before_what_outranks_them(self):
+        """#3047 Runde 7 (Spec-Nachtrag Runde 7, AC-23, PO-Entscheidung
+        2026-11-16): die feste Rangfolge (DROP_ORDER) ist abgeloest -- die
+        Kuerzung laesst die Liste von HINTEN fallen und kennt keine
+        Symbol-Literale mehr. Die Zusicherung lautet jetzt: bei jedem Budget
+        ist die gekuerzte Zeile ein lueckenloser Anfang der ungekuerzten,
+        'WD:'/'PT:' fallen also genau an ihrem Platz (nicht spaeter)."""
+        voll = _line(10_000).split(" ")
         offenders: list[tuple[int, str]] = []
         for max_length in range(40, 121):
-            line = _line(max_length)
-            if "WD:" not in line and "PT:" not in line:
-                continue
-            fehlend = [t for t in _OUTRANKS_THE_FOURTEEN if t not in line]
-            if fehlend:
-                offenders.append((max_length, f"{fehlend} fehlen: {line}"))
+            teile = _line(max_length).split(" ")
+            if teile != voll[:len(teile)]:
+                offenders.append((max_length, " ".join(teile)))
 
         assert not offenders, (
-            "'WD:'/'PT:' muessen VOR Wintersport, Peak-Bloecken, gefuehltem "
-            "Trio, PR und gemessenem Trio fallen (sms_format.md §6). Bei "
-            "diesen Budgets standen sie noch, obwohl Hoeherrangiges bereits "
-            "gefallen war:\n"
+            "Die Kuerzung muss vom Zeilenende her erfolgen:\n"
             + "\n".join(f"  max_length={mx}: {why}" for mx, why in offenders[:6])
         )
 

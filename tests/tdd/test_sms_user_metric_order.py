@@ -338,10 +338,14 @@ def test_ac5_position_applies_per_metric_anchor_not_per_symbol():
 # ---------------------------------------------------------------------------
 
 
-def test_ac6_drop_order_ignores_display_position():
-    """Der Taupunkt (DP) an Nutzer-Position 0 faellt bei Ueberlaenge trotzdem
-    VOR den sicherheitsrelevanten Vorhersage-Token weg (fruehe DROP_ORDER-
-    Position, unveraendert) -- Anzeige-Position != Ueberlebensrang.
+def test_ac6_drop_order_follows_display_position():
+    """ABGELOEST durch #3047 Runde 7 (Spec-Nachtrag Runde 7, AC-23,
+    PO-Entscheidung 2026-11-16): bei Ueberlaenge faellt die SMS-Liste von
+    HINTEN weg. Der Taupunkt (DP) an Nutzer-Position 0 bleibt deshalb stehen,
+    die hinteren Listenzeilen (Luftdruck HP, Nullgradgrenze FZ) fallen.
+    Frueher (#1677 AC-6): DP fiel trotz Position 0 nach fester DROP_ORDER.
+
+    Historie (vor der Abloesung):
 
     Issue #1585: Traeger-Groesse von "cape" auf "dewpoint" gewechselt. CAPE ist
     zentral nicht mehr waehlbar und erscheint im SMS-Pfad gar nicht mehr -- die
@@ -393,10 +397,13 @@ def test_ac6_drop_order_ignores_display_position():
     )
     sms_full = report.sms_text
     assert len(sms_full) <= 160
-    assert F.sms_token_value(sms_full, "DP") is None, (
-        f"DP muss bei Ueberlaenge weichen (fruehe DROP_ORDER-Position), "
-        f"unabhaengig von Position 0: {sms_full!r}"
+    assert F.sms_token_value(sms_full, "DP") is not None, (
+        f"DP (Listenplatz 1) muss bei Ueberlaenge stehen bleiben (AC-23): {sms_full!r}"
     )
+    for hinten in ("HP", "FZ"):
+        assert F.sms_token_value(sms_full, hinten) is None, (
+            f"{hinten} (Listenende) muss bei Ueberlaenge zuerst fallen (AC-23): {sms_full!r}"
+        )
     i_g, i_w, i_r = _token_index(sms_full, "G"), _token_index(sms_full, "W"), _token_index(sms_full, "R")
     assert i_g < i_w < i_r, (
         f"Ueberlebende Kern-Token muessen die Nutzer-Reihenfolge G<W<R "
