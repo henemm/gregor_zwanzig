@@ -1233,6 +1233,8 @@ def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
     for name, h, p in (("Stundenverlauf", html[2], stunden), ("Ausblick", html[3], ausblick)):
         if bool(h) != bool(p):
             fehler.append(f"SOLL: {name} fehlt im {'Klartext' if h else 'HTML'}-Teil")
+    if soll.get("orte_unpruefbar"):  # #3047 Punkt 4: nie still ueberspringen
+        fehler.append(f"SOLL: Ortsfolge nicht prüfbar: {soll['orte_unpruefbar']}")
     if soll["orte"] is not None:
         sektionen = _ORT_KOPF_RE.findall(body)
         fehler += _soll_orte_folge("HTML-Abschnitte", sektionen, [n for n in soll["orte"] if n in sektionen])
@@ -1369,6 +1371,15 @@ def main():
         help="Gespeichertes Preset-JSON des Nutzers (oder Huelle {preset, orte}): "
              "Zeilen-, Spalten- und Ortsfolge muessen ihm entsprechen (#3047)",
     )
+    parser.add_argument(
+        "--orte",
+        metavar="PFAD",
+        default=None,
+        help="Ortsnamen zur --konfig: Orts-Verzeichnis des Nutzers "
+             "(data/users/<id>/locations), JSON von /api/locations oder "
+             "{\"<id>\": \"<Name>\"}. Ohne Namen ist die Ortsfolge nicht pruefbar "
+             "und der Lauf scheitert (#3047)",
+    )
     _e2e_paths.sprach_argumente(parser)
     args = parser.parse_args()
 
@@ -1416,6 +1427,17 @@ def main():
         except (OSError, ValueError) as exc:
             print(f"FEHLER: --konfig {args.konfig!r} nicht lesbar: {exc}")
             sys.exit(2)
+    if args.orte:  # #3047 Punkt 4: Ortsnamen zum rohen Preset
+        if konfig is None:
+            print("FEHLER: --orte nur zusammen mit --konfig")
+            sys.exit(2)
+        try:
+            namen = _soll_modul().lade_ortsnamen(args.orte)
+        except (OSError, ValueError) as exc:
+            print(f"FEHLER: --orte {args.orte!r} nicht lesbar: {exc}")
+            sys.exit(2)
+        preset = konfig["preset"] if isinstance(konfig.get("preset"), dict) else konfig
+        konfig = {"preset": preset, "orte": {**(konfig.get("orte") or {}), **namen}}
     if args.eml:
         # Issue #2663: Mail aus Datei statt IMAP (Fixtures ohne Netz pruefbar).
         try:
