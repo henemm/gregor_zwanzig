@@ -2755,6 +2755,138 @@
       "befund": "F008b",
       "status": "gruen",
       "sprache": "en"
+    },
+    {
+      "id": "trip-m21--morgen_stunden--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_m21_kanal_liste_je_bericht",
+      "ac": "AC-2",
+      "befund": "M21",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-m21--morgen_stunden--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_m21_kanal_liste_je_bericht",
+      "ac": "AC-2",
+      "befund": "M21",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-m21--morgen_nacht--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_m21_kanal_liste_je_bericht",
+      "ac": "AC-2",
+      "befund": "M21",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-m21--morgen_nacht--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_m21_kanal_liste_je_bericht",
+      "ac": "AC-2",
+      "befund": "M21",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-m21--abend_stunden--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_m21_kanal_liste_je_bericht",
+      "ac": "AC-2",
+      "befund": "M21",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-m21--abend_stunden--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_m21_kanal_liste_je_bericht",
+      "ac": "AC-2",
+      "befund": "M21",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-m21--abend_nacht--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_m21_kanal_liste_je_bericht",
+      "ac": "AC-2",
+      "befund": "M21",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-m21--abend_nacht--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_m21_kanal_liste_je_bericht",
+      "ac": "AC-2",
+      "befund": "M21",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-m21--totalschnitt_morgen_stunden--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_m21_totalschnitt_je_bericht",
+      "ac": "AC-10",
+      "befund": "M21",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-m21--totalschnitt_morgen_stunden--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_m21_totalschnitt_je_bericht",
+      "ac": "AC-10",
+      "befund": "M21",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-m21--totalschnitt_morgen_nacht--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_m21_totalschnitt_je_bericht",
+      "ac": "AC-10",
+      "befund": "M21",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-m21--totalschnitt_morgen_nacht--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_m21_totalschnitt_je_bericht",
+      "ac": "AC-10",
+      "befund": "M21",
+      "status": "gruen"
     }
   ]
 }

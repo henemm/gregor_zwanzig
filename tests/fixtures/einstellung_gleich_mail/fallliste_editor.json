@@ -82,6 +82,32 @@
    "zustand": "gespeichert_folge"
   },
   {
+   "id": "D-trip_tabellen-gespeichert_folge_array_ungleich_order-python",
+   "liste": "trip_tabellen",
+   "kontext": "trip",
+   "format": "editor",
+   "pruefung": "reihenfolge",
+   "test": "test_python_seite_trip_tabellen_gespeichert",
+   "ac": "AC-13",
+   "befund": "F4",
+   "status": "gruen",
+   "seite": "python",
+   "zustand": "gespeichert_folge_array_ungleich_order"
+  },
+  {
+   "id": "D-trip_tabellen-gespeichert_folge_array_ungleich_order-frontend",
+   "liste": "trip_tabellen",
+   "kontext": "trip",
+   "format": "editor",
+   "pruefung": "reihenfolge",
+   "test": "frontend_seite_trip_tabellen_gespeichert",
+   "ac": "AC-13",
+   "befund": "F4",
+   "status": "gruen",
+   "seite": "frontend",
+   "zustand": "gespeichert_folge_array_ungleich_order"
+  },
+  {
    "id": "D-trip_tabellen-gespeichert_ausserhalb_grundauswahl-python",
    "liste": "trip_tabellen",
    "kontext": "trip",

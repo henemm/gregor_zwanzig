@@ -827,6 +827,98 @@
      ]
     },
     {
+     "id": "gespeichert_folge_array_ungleich_order",
+     "beschreibung": "#3047 F4: E-Mail-Liste Niederschlag, Wind, Temperatur -- gespeichert wie der Editor das Array ablegt (Katalogfolge Temperatur, Wind, Niederschlag), die eingestellte Folge steht allein in `order`. Editor und Mail zeigen die `order`-Folge, nicht die Array-Folge.",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": true,
+         "order": 2,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "wind",
+         "enabled": true,
+         "order": 0,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "gust",
+         "enabled": true,
+         "order": 1,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "precipitation",
+         "enabled": true,
+         "order": 3,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "rain_probability",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "thunder",
+         "enabled": true,
+         "order": 4,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "visibility",
+         "enabled": true,
+         "order": 6,
+         "bucket": "primary"
+        },
+        {
+         "metric_id": "uv_index",
+         "enabled": false,
+         "order": 0
+        },
+        {
+         "metric_id": "freezing_level",
+         "enabled": true,
+         "order": 5,
+         "bucket": "primary"
+        }
+       ],
+       "channel_layouts": {
+        "email": [
+         {
+          "metric_id": "temperature",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 2
+         },
+         {
+          "metric_id": "wind",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 1
+         },
+         {
+          "metric_id": "precipitation",
+          "enabled": true,
+          "bucket": "primary",
+          "order": 0
+         }
+        ]
+       }
+      }
+     },
+     "erwartet": [
+      "precipitation",
+      "wind",
+      "temperature",
+      "temperature_night",
+      "temperature_day_low",
+      "temperature_day_high"
+     ]
+    },
+    {
      "id": "gespeichert_ausserhalb_grundauswahl",
      "beschreibung": "E-Mail-Liste UV (nicht in Grundauswahl), Gewitter, Boeen",
      "eingabe": {
