@@ -142,6 +142,8 @@ Summe Code + Tests: ca. 600 (+/- 15 %); wird die Grenze überschritten, wird der
 - Die Premium-SMS-Liste ist lesbar, aber kein Renderer wertet eine eigene Liste aus (ADR-0121 Nr. 5).
 - Die Punkte 1, 3 bis 5 und 7 der unabhängigen Phase-1-Nachprüfung (Kommentar in #3047 vom 16.11.2026; Orte-Stundenverlauf ohne Schnitt mit der Grundauswahl, Validator-Lücken bei Ortsfolge und Roh/Einfach, Anhängen neuer Grundauswahl-Metriken beim Lesen im Trip) sind nicht Teil dieses Schnitts und werden durch ihn nicht verschärft.
 - Konflikte mit #3048 sind möglich (gleiche Funktion); Abgleich gegen `origin/main` vor dem ersten Code ist Pflicht.
+- Bei Eingabe als Loader-Modell ist nur `format_mode` lesbar, weil der Loader `format` verwirft (Loader bleibt laut Implementation Details Nr. 4 unverändert). Die Mail ist nicht betroffen, weil der Altpfad `format` ebenfalls nicht liest. Die Vereinheitlichung beim Lesen gehört zu #3058.
+- Präzisierung AC-6 für Orte: Eine leere Liste in `channel_active_metrics` bleibt leer. `channel_layouts: []` hängt wie heute die Grundauswahl an (#3031/#3039), weil AC-2 und AC-8 eine unveränderte Mail verlangen; die Verhaltensänderung gehört zu #3058.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -151,3 +153,4 @@ Summe Code + Tests: ca. 600 (+/- 15 %); wird die Grenze überschritten, wird der
 ## Changelog
 
 - 2026-11-16: Initial spec created (Phase 2, Schnitt 2a von #3057/#3047)
+- 2026-11-16: Umfang Code+Tests ca. 940 Zeilen statt 600; der Mehrumfang liegt in Prüffällen und Orakel, der Prüfumfang wurde bewusst nicht gekürzt.

@@ -172,8 +172,8 @@ def _vergleiche_trip(name: str, dc_eingabe, dc_modell, report_type: str, fehler:
             fehler.append(f"{name}/{report_type}/{kanal}: Format {formen} != alt "
                           f"{[alt_trip_format(mc) for mc in alt]}")
         ordnung = [z.order for z in zeilen]
-        if ordnung != sorted(ordnung):
-            fehler.append(f"{name}/{report_type}/{kanal}: order {ordnung} nicht aufsteigend")
+        if ordnung != list(range(len(zeilen))):
+            fehler.append(f"{name}/{report_type}/{kanal}: order {ordnung} != 0..n-1")
 
 
 # ---------------------------------------------------------------------------
@@ -295,6 +295,8 @@ def _vergleiche_orte(name: str, preset: dict, fehler: list) -> None:
             fehler.append(f"{name}/{kanal}: Resolver {_aktiv(zeilen)} != alt {alt_enabled[kanal]}")
         elif zeilen is not None:
             aktiv = [z for z in zeilen if z.enabled]
+            if [z.order for z in zeilen] != list(range(len(zeilen))):
+                fehler.append(f"{name}/{kanal}: order {[z.order for z in zeilen]} != 0..n-1")
             if alt_rows[kanal] is None:
                 if any(z.format is not None for z in aktiv):
                     fehler.append(f"{name}/{kanal}: ohne channel_layouts muss format None sein")
@@ -341,10 +343,12 @@ def test_ac2_orte_phase1_fixtures_gleich_altpfad():
 # AC-3 -- morning_enabled=False wirkt nur im Morgenbriefing
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("ebene", ["global", "kanal", "per_report"])
+@pytest.mark.parametrize("ebene", ["global", "kanal", "per_report", "nur_kanal"])
 def test_ac3_morning_enabled_false_fehlt_nur_morgens(ebene):
     """GIVEN ein Trip, dessen Niederschlag ``morning_enabled=False`` traegt
-    (in der Grundauswahl bzw. zusaetzlich in der Kanal-Liste)
+    (in der Grundauswahl bzw. zusaetzlich in der Kanal-Liste; ``nur_kanal``:
+    NUR in der Kanal-Liste -- sonst verdeckt der Schnitt gegen die
+    Grundauswahl eine Kanal-Zweig-Mutation)
     WHEN Morgen- und Abendbriefing aufgeloest werden
     THEN fehlt Niederschlag nur morgens -- im Resolver UND im Adapter."""
     grund = [
@@ -352,13 +356,15 @@ def test_ac3_morning_enabled_false_fehlt_nur_morgens(ebene):
         {"metric_id": "precipitation", "enabled": True, "order": 1, "morning_enabled": False},
         {"metric_id": "wind", "enabled": True, "order": 2},
     ]
+    if ebene == "nur_kanal":
+        del grund[1]["morning_enabled"]
     roh: dict = {"trip_id": "t-ac3", "metrics": grund}
     kanal_liste = [
         {"metric_id": "wind", "order": 0},
         {"metric_id": "precipitation", "order": 1, "morning_enabled": False},
         {"metric_id": "temperature", "order": 2},
     ]
-    if ebene == "kanal":
+    if ebene in ("kanal", "nur_kanal"):
         roh["channel_layouts"] = {"email": kanal_liste}
     elif ebene == "per_report":
         roh["channel_layouts_per_report"] = {
@@ -377,6 +383,8 @@ def test_ac3_morning_enabled_false_fehlt_nur_morgens(ebene):
     adapter_a = [mc.metric_id for mc in dc.get_metrics_for_channel("email", "evening")]
     assert adapter_m == morgens
     assert adapter_a == abends
+    assert morgens == [mc.metric_id for mc in alt_trip_metrics_for_channel(dc, "email", "morning")]
+    assert abends == [mc.metric_id for mc in alt_trip_metrics_for_channel(dc, "email", "evening")]
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +429,9 @@ def test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung(surface, wert, schr
         vorher = _schluessel(dc)
         vm = resolve(dc, surface, "evening")
         assert _schluessel(dc) == vorher, "Eingabe veraendert"
-        zeilen = [z for z in _zeilen(vm, "email") if z.metric_id in ("wind", "gust")]
+        # Orte-Zeilen tragen Renderer-IDs (wind -> wind_max), Trip-Zeilen Kennungen.
+        ids = ("wind_max", "gust_max") if surface == "compare" else ("wind", "gust")
+        zeilen = [z for z in _zeilen(vm, "email") if z.metric_id in ids]
         assert zeilen and all(z.format == wert for z in zeilen), (schreibweise, zeilen)
         ergebnisse.append(_zeilentupel(zeilen))
     assert all(e == ergebnisse[0] for e in ergebnisse), ergebnisse
@@ -434,8 +444,29 @@ def test_ac4_vorrang_format_vor_format_mode_vor_use_friendly_format():
         {"metric_id": "gust", "format_mode": "raw", "use_friendly_format": True},
     ]}}
     zeilen = {z.metric_id: z.format for z in _zeilen(_resolver()(dc, "compare"), "email")}
-    assert zeilen["wind"] == "raw"
-    assert zeilen["gust"] == "raw"
+    assert zeilen["wind_max"] == "raw"
+    assert zeilen["gust_max"] == "raw"
+
+
+@pytest.mark.parametrize("wert", ["raw", "simplified"])
+def test_ac4_trip_modell_mit_format_mode_gleich_rohform_mit_format(wert):
+    """Der Loader verwirft ``format`` (Known Limitation, #3058): als Modell ist
+    nur ``format_mode`` lesbar. Modell mit ``format_mode`` = Rohform mit
+    ``format`` -- dieselben Zeilen."""
+    def _dc(schluessel: str) -> dict:
+        return {"trip_id": "t-f002", "metrics": copy.deepcopy(GRUND_TRIP),
+                "channel_layouts": {"email": [
+                    {"metric_id": "wind", "order": 0, schluessel: wert},
+                    {"metric_id": "gust", "order": 1, schluessel: wert},
+                ]}}
+
+    resolve = _resolver()
+    modell = _parse_display_config(_dc("format_mode"))
+    aus_modell = _zeilen(resolve(modell, "trip", "evening"), "email")
+    aus_rohform = _zeilen(resolve(_dc("format"), "trip", "evening"), "email")
+    assert aus_modell == aus_rohform
+    assert [(z.metric_id, z.format) for z in aus_modell if z.metric_id in ("wind", "gust")] == [
+        ("wind", wert), ("gust", wert)]
 
 
 def test_ac4_ohne_angabe_gilt_flaechen_standard():
@@ -484,9 +515,13 @@ def test_ac5_premium_sms_eigene_liste_wird_gelesen():
                                                {"metric_id": "temperature", "order": 1}]}}
     dc = _parse_display_config(copy.deepcopy(roh))
     vm = resolve(roh, "trip", "evening")
-    assert _aktiv(_zeilen(vm, "premium_sms")) == [
+    premium = _aktiv(_zeilen(vm, "premium_sms"))
+    assert premium == [
         mc.metric_id for mc in alt_trip_metrics_for_channel(dc, "premium_sms", "evening")
-    ] == ["wind", "temperature"]
+    ]
+    # Eigene Liste wird gelesen; der Loader haengt abgeleitete Temperatur-
+    # Kennungen an (_append_derived_metrics), daher nur der Anfang literal.
+    assert premium[:2] == ["wind", "temperature"], premium
     assert _aktiv(vm.premium_sms) != _aktiv(vm.sms)
 
     preset = {"display_config": {"active_metrics": copy.deepcopy(AKTIV_ORTE), "channel_layouts": {
@@ -517,8 +552,8 @@ def test_ac6_nur_katalog_metriken_und_leer_bleibt_leer():
         assert _aktiv(vm.premium_sms) == []
 
     orte = {"active_metrics": copy.deepcopy(AKTIV_ORTE),
-            "channel_layouts": {"email": [warnung, {"metric_id": "wind"}], "telegram": []},
-            "channel_active_metrics": {"sms": []}}
+            "channel_layouts": {"email": [warnung, {"metric_id": "wind"}]},
+            "channel_active_metrics": {"sms": [], "telegram": []}}
     vm = resolve(orte, "compare")
     renderer_ids = set(FRONTEND_TO_RENDERER_METRIC_ID.values())
     for kanal in ("email", "telegram", "sms", "premium_sms"):
@@ -526,6 +561,16 @@ def test_ac6_nur_katalog_metriken_und_leer_bleibt_leer():
         assert ids <= renderer_ids, (kanal, ids - renderer_ids)
     assert _aktiv(vm.telegram) == []
     assert _aktiv(vm.sms) == []
+
+    # `channel_layouts: []` haengt im Altpfad die Grundauswahl an (#3031 AC-8,
+    # #3039 AC-14) -- die zugestellte Mail bleibt so (AC-2/AC-8); eine
+    # Verhaltensaenderung waere #3058. Der Resolver folgt hier dem Orakel.
+    preset = {"display_config": {"active_metrics": copy.deepcopy(AKTIV_ORTE),
+                                 "channel_layouts": {"telegram": []}}}
+    vm = resolve(copy.deepcopy(preset["display_config"]), "compare")
+    alt_enabled, _alt_rows = alt_compare_kanaele(preset)
+    assert _aktiv(vm.telegram) == alt_enabled["telegram"]
+    assert alt_enabled["telegram"], "Altpfad: channel_layouts [] ist nicht leer"
 
 
 # ---------------------------------------------------------------------------

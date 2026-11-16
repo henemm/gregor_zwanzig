@@ -279,11 +279,9 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     from output.renderers.compare_outlook_metric_ids import (
         resolve_compare_outlook_formats, resolve_compare_outlook_metrics,
     )
-    from output.renderers.compare_metric_ids import (
-        resolve_channel_enabled_metrics, resolve_channel_layout_rows,
-        resolve_enabled_metrics_report,
-    )
+    from output.renderers.compare_metric_ids import resolve_enabled_metrics_report
     from output.renderers.compare_metric_ids import resolve_enabled_metrics
+    from services.channel_list_resolver import resolve_channel_lists
     from output.renderers.email.compare_html import has_visible_hour_columns
 
     preset_id = preset.get("id", "")
@@ -336,9 +334,14 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     channel_raw = display_config.get("channel_active_metrics")
     # Issue #3039: Kaskade je Kanal -- `channel_layouts[kanal]` vor
     # `channel_active_metrics[kanal]` vor Grundauswahl (ADR-0119).
+    # Issue #3057 (ADR-0121): Auswahl, Folge und Format kommen aus dem
+    # Kanal-Listen-Resolver. ADR-0049: nur Metrik-/Layout-Kanaele --
+    # Premium-SMS sendet den SMS-Text.
+    view = resolve_channel_lists(display_config, "compare")
     channel_rows = {
-        ch: resolve_channel_layout_rows(
-            global_metrics, display_config.get("channel_layouts"), ch,
+        ch: (
+            [(z.metric_id, z.format == "simplified") for z in getattr(view, ch) if z.enabled]
+            if ch in view.layout_channels else None
         )
         # ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS sendet den SMS-Text.
         for ch in ("email", "telegram", "sms")
@@ -376,9 +379,8 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         ),
         enabled_metrics_by_channel={
             ch: (
-                resolve_channel_enabled_metrics(global_metrics, channel_raw, ch)
-                if channel_rows[ch] is None
-                else [renderer_id for renderer_id, _einfach in channel_rows[ch]]
+                None if getattr(view, ch) is None
+                else [z.metric_id for z in getattr(view, ch) if z.enabled]
             )
             # ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
             for ch in ("email", "telegram", "sms")

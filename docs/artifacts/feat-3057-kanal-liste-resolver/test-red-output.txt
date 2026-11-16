@@ -1,0 +1,537 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/abstract-singing-trinket
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.14.2, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 20 items
+
+tests/tdd/test_3057_channel_list_resolver.py FFFFFFFFFFFFFFFFFFFF        [100%]
+
+=================================== FAILURES ===================================
+___ test_ac1_trip_resolver_gleich_altpfad_ueber_alle_kombinationen[rohform] ____
+
+eingabe = 'rohform'
+
+    @pytest.mark.parametrize("eingabe", ["rohform", "modell"])
+    def test_ac1_trip_resolver_gleich_altpfad_ueber_alle_kombinationen(eingabe):
+        """GIVEN Trips mit fehlenden, leeren, gefuellten und total geschnittenen
+        Kanal-Listen, mit/ohne per_report und mit/ohne Grundauswahl
+        WHEN der Resolver je Report-Typ aufgeloest wird
+        THEN sind Auswahl, Reihenfolge und Format je Kanal gleich dem Altpfad."""
+        fehler: list[str] = []
+        faelle = list(_trip_kombinationen()) + [("fixture-altbestand", _trip_fixture_dict())]
+        for name, roh in faelle:
+            modell = _parse_display_config(copy.deepcopy(roh))
+            eingabe_dc = copy.deepcopy(roh) if eingabe == "rohform" else modell
+            for report_type in REPORT_TYPEN:
+>               _vergleiche_trip(name, eingabe_dc, modell, report_type, fehler)
+
+tests/tdd/test_3057_channel_list_resolver.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_3057_channel_list_resolver.py:156: in _vergleiche_trip
+    vm = _resolver()(dc_eingabe, "trip", report_type)
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+____ test_ac1_trip_resolver_gleich_altpfad_ueber_alle_kombinationen[modell] ____
+
+eingabe = 'modell'
+
+    @pytest.mark.parametrize("eingabe", ["rohform", "modell"])
+    def test_ac1_trip_resolver_gleich_altpfad_ueber_alle_kombinationen(eingabe):
+        """GIVEN Trips mit fehlenden, leeren, gefuellten und total geschnittenen
+        Kanal-Listen, mit/ohne per_report und mit/ohne Grundauswahl
+        WHEN der Resolver je Report-Typ aufgeloest wird
+        THEN sind Auswahl, Reihenfolge und Format je Kanal gleich dem Altpfad."""
+        fehler: list[str] = []
+        faelle = list(_trip_kombinationen()) + [("fixture-altbestand", _trip_fixture_dict())]
+        for name, roh in faelle:
+            modell = _parse_display_config(copy.deepcopy(roh))
+            eingabe_dc = copy.deepcopy(roh) if eingabe == "rohform" else modell
+            for report_type in REPORT_TYPEN:
+>               _vergleiche_trip(name, eingabe_dc, modell, report_type, fehler)
+
+tests/tdd/test_3057_channel_list_resolver.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_3057_channel_list_resolver.py:156: in _vergleiche_trip
+    vm = _resolver()(dc_eingabe, "trip", report_type)
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+_____ test_ac1_get_metrics_for_channel_gleich_altpfad_und_leer_bleibt_leer _____
+
+    def test_ac1_get_metrics_for_channel_gleich_altpfad_und_leer_bleibt_leer():
+        """GIVEN dieselben Kombinationen
+        WHEN ``get_metrics_for_channel`` (Adapter ueber den Resolver) gerufen wird
+        THEN ist das Ergebnis feldgleich (ganze MetricConfig) zum Altpfad, und
+        eine leere Liste bleibt leer."""
+>       _resolver()  # der Adapter liest aus dem Resolver; ohne ihn kein GREEN
+        ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:204: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+___________ test_ac2_orte_resolver_und_render_options_gleich_altpfad ___________
+
+    def test_ac2_orte_resolver_und_render_options_gleich_altpfad():
+        """GIVEN Orts-Vergleiche mit channel_layouts, nur channel_active_metrics
+        oder keinem von beiden, mit fehlender/leerer/gefuellter Grundauswahl
+        WHEN Resolver und ``resolve_compare_render_options`` aufgeloest werden
+        THEN sind Auswahl, Zeilen und Formate je Kanal gleich dem Altpfad."""
+        fehler: list[str] = []
+        for name, preset in _orte_kombinationen():
+>           _vergleiche_orte(name, preset, fehler)
+
+tests/tdd/test_3057_channel_list_resolver.py:323: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_3057_channel_list_resolver.py:290: in _vergleiche_orte
+    vm = _resolver()(copy.deepcopy(preset.get("display_config") or {}), "compare")
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+_________________ test_ac2_orte_phase1_fixtures_gleich_altpfad _________________
+
+    def test_ac2_orte_phase1_fixtures_gleich_altpfad():
+        """GIVEN alle Orte-Presets des Phase-1-Pruefkatalogs
+        WHEN Resolver und Render-Optionen aufgeloest werden
+        THEN gleich dem Altpfad."""
+        fehler: list[str] = []
+        namen = []
+        for name, preset in _orte_fixtures():
+            namen.append(name)
+>           _vergleiche_orte(name, preset, fehler)
+
+tests/tdd/test_3057_channel_list_resolver.py:335: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/tdd/test_3057_channel_list_resolver.py:290: in _vergleiche_orte
+    vm = _resolver()(copy.deepcopy(preset.get("display_config") or {}), "compare")
+         ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+___________ test_ac3_morning_enabled_false_fehlt_nur_morgens[global] ___________
+
+ebene = 'global'
+
+    @pytest.mark.parametrize("ebene", ["global", "kanal", "per_report"])
+    def test_ac3_morning_enabled_false_fehlt_nur_morgens(ebene):
+        """GIVEN ein Trip, dessen Niederschlag ``morning_enabled=False`` traegt
+        (in der Grundauswahl bzw. zusaetzlich in der Kanal-Liste)
+        WHEN Morgen- und Abendbriefing aufgeloest werden
+        THEN fehlt Niederschlag nur morgens -- im Resolver UND im Adapter."""
+        grund = [
+            {"metric_id": "temperature", "enabled": True, "order": 0},
+            {"metric_id": "precipitation", "enabled": True, "order": 1, "morning_enabled": False},
+            {"metric_id": "wind", "enabled": True, "order": 2},
+        ]
+        roh: dict = {"trip_id": "t-ac3", "metrics": grund}
+        kanal_liste = [
+            {"metric_id": "wind", "order": 0},
+            {"metric_id": "precipitation", "order": 1, "morning_enabled": False},
+            {"metric_id": "temperature", "order": 2},
+        ]
+        if ebene == "kanal":
+            roh["channel_layouts"] = {"email": kanal_liste}
+        elif ebene == "per_report":
+            roh["channel_layouts_per_report"] = {
+                "morning": {"email": kanal_liste}, "evening": {"email": kanal_liste},
+            }
+        dc = _parse_display_config(copy.deepcopy(roh))
+>       resolve = _resolver()
+                  ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:368: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+___________ test_ac3_morning_enabled_false_fehlt_nur_morgens[kanal] ____________
+
+ebene = 'kanal'
+
+    @pytest.mark.parametrize("ebene", ["global", "kanal", "per_report"])
+    def test_ac3_morning_enabled_false_fehlt_nur_morgens(ebene):
+        """GIVEN ein Trip, dessen Niederschlag ``morning_enabled=False`` traegt
+        (in der Grundauswahl bzw. zusaetzlich in der Kanal-Liste)
+        WHEN Morgen- und Abendbriefing aufgeloest werden
+        THEN fehlt Niederschlag nur morgens -- im Resolver UND im Adapter."""
+        grund = [
+            {"metric_id": "temperature", "enabled": True, "order": 0},
+            {"metric_id": "precipitation", "enabled": True, "order": 1, "morning_enabled": False},
+            {"metric_id": "wind", "enabled": True, "order": 2},
+        ]
+        roh: dict = {"trip_id": "t-ac3", "metrics": grund}
+        kanal_liste = [
+            {"metric_id": "wind", "order": 0},
+            {"metric_id": "precipitation", "order": 1, "morning_enabled": False},
+            {"metric_id": "temperature", "order": 2},
+        ]
+        if ebene == "kanal":
+            roh["channel_layouts"] = {"email": kanal_liste}
+        elif ebene == "per_report":
+            roh["channel_layouts_per_report"] = {
+                "morning": {"email": kanal_liste}, "evening": {"email": kanal_liste},
+            }
+        dc = _parse_display_config(copy.deepcopy(roh))
+>       resolve = _resolver()
+                  ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:368: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+_________ test_ac3_morning_enabled_false_fehlt_nur_morgens[per_report] _________
+
+ebene = 'per_report'
+
+    @pytest.mark.parametrize("ebene", ["global", "kanal", "per_report"])
+    def test_ac3_morning_enabled_false_fehlt_nur_morgens(ebene):
+        """GIVEN ein Trip, dessen Niederschlag ``morning_enabled=False`` traegt
+        (in der Grundauswahl bzw. zusaetzlich in der Kanal-Liste)
+        WHEN Morgen- und Abendbriefing aufgeloest werden
+        THEN fehlt Niederschlag nur morgens -- im Resolver UND im Adapter."""
+        grund = [
+            {"metric_id": "temperature", "enabled": True, "order": 0},
+            {"metric_id": "precipitation", "enabled": True, "order": 1, "morning_enabled": False},
+            {"metric_id": "wind", "enabled": True, "order": 2},
+        ]
+        roh: dict = {"trip_id": "t-ac3", "metrics": grund}
+        kanal_liste = [
+            {"metric_id": "wind", "order": 0},
+            {"metric_id": "precipitation", "order": 1, "morning_enabled": False},
+            {"metric_id": "temperature", "order": 2},
+        ]
+        if ebene == "kanal":
+            roh["channel_layouts"] = {"email": kanal_liste}
+        elif ebene == "per_report":
+            roh["channel_layouts_per_report"] = {
+                "morning": {"email": kanal_liste}, "evening": {"email": kanal_liste},
+            }
+        dc = _parse_display_config(copy.deepcopy(roh))
+>       resolve = _resolver()
+                  ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:368: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+_ test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung[compare-simplified-schreibweisen0] _
+
+surface = 'compare', wert = 'simplified'
+schreibweisen = [{'format': 'simplified'}, {'format_mode': 'simplified'}, {'use_friendly_format': True}]
+
+    @pytest.mark.parametrize("surface,wert,schreibweisen", [
+        # Orte: so schreibt die Editor-Karte (#3042) -- use_friendly_format True = Einfach.
+        ("compare", "simplified", [{"format": "simplified"}, {"format_mode": "simplified"},
+                                   {"use_friendly_format": True}]),
+        ("compare", "raw", [{"format": "raw"}, {"format_mode": "raw"},
+                            {"use_friendly_format": False}]),
+        # Trip: use_friendly_format True heisst dort Katalog-Standard (loader), daher Roh.
+        ("trip", "raw", [{"format": "raw"}, {"format_mode": "raw"},
+                         {"use_friendly_format": False}]),
+        ("trip", "simplified", [{"format": "simplified"}, {"format_mode": "simplified"}]),
+    ])
+    def test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung(surface, wert, schreibweisen):
+>       resolve = _resolver()
+                  ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:406: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+_ test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung[compare-raw-schreibweisen1] _
+
+surface = 'compare', wert = 'raw'
+schreibweisen = [{'format': 'raw'}, {'format_mode': 'raw'}, {'use_friendly_format': False}]
+
+    @pytest.mark.parametrize("surface,wert,schreibweisen", [
+        # Orte: so schreibt die Editor-Karte (#3042) -- use_friendly_format True = Einfach.
+        ("compare", "simplified", [{"format": "simplified"}, {"format_mode": "simplified"},
+                                   {"use_friendly_format": True}]),
+        ("compare", "raw", [{"format": "raw"}, {"format_mode": "raw"},
+                            {"use_friendly_format": False}]),
+        # Trip: use_friendly_format True heisst dort Katalog-Standard (loader), daher Roh.
+        ("trip", "raw", [{"format": "raw"}, {"format_mode": "raw"},
+                         {"use_friendly_format": False}]),
+        ("trip", "simplified", [{"format": "simplified"}, {"format_mode": "simplified"}]),
+    ])
+    def test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung(surface, wert, schreibweisen):
+>       resolve = _resolver()
+                  ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:406: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+_ test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung[trip-raw-schreibweisen2] _
+
+surface = 'trip', wert = 'raw'
+schreibweisen = [{'format': 'raw'}, {'format_mode': 'raw'}, {'use_friendly_format': False}]
+
+    @pytest.mark.parametrize("surface,wert,schreibweisen", [
+        # Orte: so schreibt die Editor-Karte (#3042) -- use_friendly_format True = Einfach.
+        ("compare", "simplified", [{"format": "simplified"}, {"format_mode": "simplified"},
+                                   {"use_friendly_format": True}]),
+        ("compare", "raw", [{"format": "raw"}, {"format_mode": "raw"},
+                            {"use_friendly_format": False}]),
+        # Trip: use_friendly_format True heisst dort Katalog-Standard (loader), daher Roh.
+        ("trip", "raw", [{"format": "raw"}, {"format_mode": "raw"},
+                         {"use_friendly_format": False}]),
+        ("trip", "simplified", [{"format": "simplified"}, {"format_mode": "simplified"}]),
+    ])
+    def test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung(surface, wert, schreibweisen):
+>       resolve = _resolver()
+                  ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:406: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+_ test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung[trip-simplified-schreibweisen3] _
+
+surface = 'trip', wert = 'simplified'
+schreibweisen = [{'format': 'simplified'}, {'format_mode': 'simplified'}]
+
+    @pytest.mark.parametrize("surface,wert,schreibweisen", [
+        # Orte: so schreibt die Editor-Karte (#3042) -- use_friendly_format True = Einfach.
+        ("compare", "simplified", [{"format": "simplified"}, {"format_mode": "simplified"},
+                                   {"use_friendly_format": True}]),
+        ("compare", "raw", [{"format": "raw"}, {"format_mode": "raw"},
+                            {"use_friendly_format": False}]),
+        # Trip: use_friendly_format True heisst dort Katalog-Standard (loader), daher Roh.
+        ("trip", "raw", [{"format": "raw"}, {"format_mode": "raw"},
+                         {"use_friendly_format": False}]),
+        ("trip", "simplified", [{"format": "simplified"}, {"format_mode": "simplified"}]),
+    ])
+    def test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung(surface, wert, schreibweisen):
+>       resolve = _resolver()
+                  ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:406: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+_______ test_ac4_vorrang_format_vor_format_mode_vor_use_friendly_format ________
+
+    def test_ac4_vorrang_format_vor_format_mode_vor_use_friendly_format():
+        dc = {"active_metrics": copy.deepcopy(AKTIV_ORTE), "channel_layouts": {"email": [
+            {"metric_id": "wind", "format": "raw", "format_mode": "simplified",
+             "use_friendly_format": True},
+            {"metric_id": "gust", "format_mode": "raw", "use_friendly_format": True},
+        ]}}
+>       zeilen = {z.metric_id: z.format for z in _zeilen(_resolver()(dc, "compare"), "email")}
+                                                         ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:436: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+_________________ test_ac4_ohne_angabe_gilt_flaechen_standard __________________
+
+    def test_ac4_ohne_angabe_gilt_flaechen_standard():
+        """Orte ohne Format bleibt Roh (Adapter liefert einfach=False), Trip ohne
+        Format ist ``None`` = Katalog-Standard."""
+        from services.report_config_resolver import resolve_compare_render_options
+    
+        preset = {"display_config": {"active_metrics": copy.deepcopy(AKTIV_ORTE),
+                                     "channel_layouts": {"email": [{"metric_id": "wind"}]}}}
+>       vm = _resolver()(copy.deepcopy(preset["display_config"]), "compare")
+             ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:448: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+_____________ test_ac5_premium_sms_ohne_eigene_liste_ist_sms_liste _____________
+
+    def test_ac5_premium_sms_ohne_eigene_liste_ist_sms_liste():
+>       resolve = _resolver()
+                  ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:464: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+________________ test_ac5_premium_sms_eigene_liste_wird_gelesen ________________
+
+    def test_ac5_premium_sms_eigene_liste_wird_gelesen():
+>       resolve = _resolver()
+                  ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:480: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+______________ test_ac6_nur_katalog_metriken_und_leer_bleibt_leer ______________
+
+    def test_ac6_nur_katalog_metriken_und_leer_bleibt_leer():
+        from app.metric_catalog import _METRICS_BY_ID
+        from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
+    
+>       resolve = _resolver()
+                  ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:507: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+__________________ test_ac7_alarm_format_modes_gleich_altpfad __________________
+
+    def test_ac7_alarm_format_modes_gleich_altpfad():
+        """GIVEN Trips mit abweichenden Kanal-Listen
+        WHEN der Alarmpfad seine Anzeigemodi je Kanal bildet
+        THEN gleich dem Ergebnis ueber den Altpfad."""
+        from app.metric_catalog import get_metric
+        from output.renderers.email.helpers import _effective_format_mode
+        from services.notification_service import _alert_format_modes
+    
+>       _resolver()
+
+tests/tdd/test_3057_channel_list_resolver.py:543: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+___________ test_ac9_eingabe_unveraendert_und_view_model_eingefroren ___________
+
+    def test_ac9_eingabe_unveraendert_und_view_model_eingefroren():
+>       resolve = _resolver()
+                  ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:568: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+_________________________ test_ac9_kein_datei_zugriff __________________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x778f9381d730>
+tmp_path = PosixPath('/tmp/pytest-of-hem/pytest-16834/test_ac9_kein_datei_zugriff0')
+
+    def test_ac9_kein_datei_zugriff(monkeypatch, tmp_path):
+>       resolve = _resolver()
+                  ^^^^^^^^^^^
+
+tests/tdd/test_3057_channel_list_resolver.py:591: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _resolver():
+>       from services.channel_list_resolver import resolve_channel_lists
+E       ModuleNotFoundError: No module named 'services.channel_list_resolver'
+
+tests/tdd/test_3057_channel_list_resolver.py:59: ModuleNotFoundError
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/abstract-singing-trinket/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:128
+  /home/hem/gregor_zwanzig/.claude/worktrees/abstract-singing-trinket/tests/conftest.py:128: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac1_trip_resolver_gleich_altpfad_ueber_alle_kombinationen[rohform]
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac1_trip_resolver_gleich_altpfad_ueber_alle_kombinationen[modell]
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac1_get_metrics_for_channel_gleich_altpfad_und_leer_bleibt_leer
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac2_orte_resolver_und_render_options_gleich_altpfad
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac2_orte_phase1_fixtures_gleich_altpfad
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac3_morning_enabled_false_fehlt_nur_morgens[global]
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac3_morning_enabled_false_fehlt_nur_morgens[kanal]
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac3_morning_enabled_false_fehlt_nur_morgens[per_report]
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung[compare-simplified-schreibweisen0]
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung[compare-raw-schreibweisen1]
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung[trip-raw-schreibweisen2]
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung[trip-simplified-schreibweisen3]
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac4_vorrang_format_vor_format_mode_vor_use_friendly_format
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac4_ohne_angabe_gilt_flaechen_standard
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac5_premium_sms_ohne_eigene_liste_ist_sms_liste
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac5_premium_sms_eigene_liste_wird_gelesen
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac6_nur_katalog_metriken_und_leer_bleibt_leer
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac7_alarm_format_modes_gleich_altpfad
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac9_eingabe_unveraendert_und_view_model_eingefroren
+FAILED tests/tdd/test_3057_channel_list_resolver.py::test_ac9_kein_datei_zugriff
+======================= 20 failed, 2 warnings in 31.48s ========================
