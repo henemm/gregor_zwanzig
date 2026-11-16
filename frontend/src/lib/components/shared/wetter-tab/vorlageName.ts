@@ -6,7 +6,7 @@
 import { trFor, type Lang, type MessageKey } from '../../../i18n/index.ts';
 
 const VORLAGE_NAMEN: ReadonlyMap<string, MessageKey> = new Map<string, MessageKey>([
-	['alpen-trekking', 'wetter.vorlage.name.alpen-trekking'],
+	['alpen-trekking', 'wetter.vorlage.name.alpen_trekking'],
 	['wandern', 'wetter.vorlage.name.wandern'],
 	['skitouren', 'wetter.vorlage.name.skitouren'],
 	['wintersport', 'wetter.vorlage.name.wintersport'],

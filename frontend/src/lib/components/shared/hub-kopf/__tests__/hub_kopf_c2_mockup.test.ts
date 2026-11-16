@@ -351,7 +351,8 @@ function karte(context: Art, lang: Lang, abweichungen: number, offen = true): Kn
 }
 const VK_SOLL: Record<Lang, { titel: string; gruppen: [string, string]; speichern: string; reset: string; unveraendert: string; zwei: string }> = {
 	de: { titel: 'Vorlage', gruppen: ['Vorlagen', 'Eigene'], speichern: 'Als eigene Vorlage speichern', reset: 'Auf „Alpen-Trekking“ zurücksetzen', unveraendert: 'unverändert', zwei: '2 Abweichungen' },
-	en: { titel: 'Template', gruppen: ['Templates', 'Your own'], speichern: 'Save as your own template', reset: 'Reset to “Alpen-Trekking”', unveraendert: 'unchanged', zwei: '2 deviations' }
+	// #2981: eingebaute Vorlagennamen sind zweisprachig, EN zeigt „Alpine trekking“.
+	en: { titel: 'Template', gruppen: ['Templates', 'Your own'], speichern: 'Save as your own template', reset: 'Reset to “Alpine trekking”', unveraendert: 'unchanged', zwei: '2 deviations' }
 };
 for (const art of ARTEN) {
 	for (const lang of SPRACHEN) {

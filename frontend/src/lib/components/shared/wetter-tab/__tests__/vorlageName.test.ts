@@ -74,9 +74,9 @@ describe('Test 3 / AC-5: unbekannte ID faellt auf das Server-Label zurueck', () 
 
 describe('Test 4: Katalog-Paritaet DE/EN fuer jeden Map-Schluessel', () => {
 	for (const id of Object.keys(SYSTEMVORLAGEN)) {
-		test(`${id}: Schluessel wetter.vorlage.name.${id} in beiden Sprachen, nicht leer`, () => {
+		test(`${id}: Schluessel wetter.vorlage.name.<id> in beiden Sprachen, nicht leer`, () => {
 			const key = vorlageNameKey(id);
-			assert.equal(key, `wetter.vorlage.name.${id}`);
+			assert.equal(key, `wetter.vorlage.name.${id.replaceAll('-', '_')}`); // Schluesselkonvention: kein Bindestrich (s3a2794)
 			const deWert = (de as Record<string, string>)[key!];
 			const enWert = (en as Record<string, string>)[key!];
 			assert.ok(deWert && deWert.trim().length > 0, `DE fehlt/leer: ${key}`);

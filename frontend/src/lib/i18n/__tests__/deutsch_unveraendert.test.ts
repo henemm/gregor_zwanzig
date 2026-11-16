@@ -565,7 +565,7 @@ const NEU_IN_FOLGEPAKETEN = [
 	'auth.reset.andere_zugangswege',
 	'auth.reset.andere_zugangswege_hinweis',
 	// #2981: Namen der sieben eingebauten Wetter-Vorlagen (DE = heutiges Server-Label).
-	'wetter.vorlage.name.alpen-trekking',
+	'wetter.vorlage.name.alpen_trekking',
 	'wetter.vorlage.name.wandern',
 	'wetter.vorlage.name.skitouren',
 	'wetter.vorlage.name.wintersport',
