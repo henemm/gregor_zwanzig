@@ -175,15 +175,16 @@
 	// Grundauswahl (Altbestand/Katalog nicht geladen) bleibt es beim Verhalten
 	// vor A3 (ADR-0050 D4: kein Maximum -> nicht schneiden).
 	//
-	// #3047 O4 (AC-13/AC-21): `grundauswahl === null` heisst beim Ortsvergleich
-	// „active_metrics nie eingestellt" (Altbestand; seit #3047 J1 bewahrt die
-	// Hydration das `null`, eine gespeicherte Liste gleich der Vorgabe ist
-	// gespeichert und gilt als Grundauswahl). Die Mail zeigt dann ohne
-	// `outlook_metrics` die festen Spalten (DEFAULT_OUTLOOK_METRIC_KEYS =
-	// `_erbe_grundauswahl` ohne Maximum, compare_outlook_metric_ids.py) -- der
-	// Editor zeigt genau diese aktiv statt des ganzen Katalogs. Da es kein
-	// Maximum gibt, bleiben alle uebrigen Katalog-Groessen in der „Aus"-Gruppe
-	// zurueckholbar (die Mail schneidet in diesem Fall nicht).
+	// #3047 O4 (AC-13/AC-21), #3047 J1/#3061: allein `grundauswahl === null`
+	// heisst beim Ortsvergleich „active_metrics nie eingestellt" (Altbestand;
+	// die Hydration bewahrt das `null`, WeatherMetricsTab reicht es durch).
+	// Die Mail zeigt dann ohne `outlook_metrics` die festen Spalten
+	// (DEFAULT_OUTLOOK_METRIC_KEYS = `_erbe_grundauswahl` ohne Maximum,
+	// compare_outlook_metric_ids.py) -- der Editor zeigt genau diese aktiv statt
+	// des ganzen Katalogs. Da es kein Maximum gibt, bleiben alle uebrigen
+	// Katalog-Groessen in der „Aus"-Gruppe zurueckholbar (die Mail schneidet in
+	// diesem Fall nicht). Eine gespeicherte Liste, auch die volle oder die
+	// Vorgabe, gilt als bewusst eingestellt (kein Erraten per Listenvergleich).
 	// Der Stundenverlauf erkennt „nie eingestellt" genauso (#3047 H1/J1).
 	const ausblickSpalten = $derived.by(() => {
 		if (leereGrundauswahlIstBewusst && grundauswahl?.length === 0) return { active: [], off: [] };

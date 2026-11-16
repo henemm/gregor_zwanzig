@@ -524,6 +524,9 @@
 		// bleibt die gespeicherte Auswahl unveraendert stehen (verlustfreier
 		// Durchlauf, heutiges Verhalten fuer unbekannte Schluessel).
 		const catalog = await loadCompareSelectionEntries().catch(() => []);
+		// Issue #3061: fehlendes `active_metrics` bleibt `null` („nie
+		// eingestellt") — sonst ist eine gespeicherte Vollauswahl im Ausblick
+		// vom Altbestand nicht zu unterscheiden. Leser materialisieren selbst.
 		wizardState.activeMetricKeys = hydrateWeatherMetricsFromPreset(currentPreset, catalog);
 		// Issue #1703 Scheibe 8: Kanal-Overrides aus DEMSELBEN geladenen Katalog —
 		// ohne sie zeigte jeder Kanal-Reiter nach dem Neuladen wieder die

@@ -1613,7 +1613,7 @@
 				     (outlook_enabled); der Trip nicht (AC-13). -->
 				<!-- Issue #1848 A3 (AC-2/AC-6): die Ortsvergleich-eigene
 				     Grundauswahl — DIESELBE Quelle wie die Uebersichts-Kopplung
-				     der Kanal-Reiter, unmaterialisiert: `null` = nie eingestellt (#3047 J1). -->
+				     der Kanal-Reiter, unmaterialisiert: `null` = nie eingestellt (#3047 J1, #3061). -->
 				<OutlookLayoutControls
 					metricKeys={outlookMetricKeys}
 					catalog={compareCatalog}

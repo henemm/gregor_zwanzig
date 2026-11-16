@@ -73,7 +73,7 @@ export function hydrateDayWindowFromPreset(preset: ComparePreset): {
  * hydriert und den Dirty-Check-Grundzustand aufnimmt (sonst Scheindiff und
  * Rücksetzen auf die Rohform, Adversary-Befund F001). Default = der bereits
  * registrierte Katalog, damit bestehende Aufrufer unverändert funktionieren.
- * #3047 J1 (AC-13): fehlendes `active_metrics` -> `null` („nie eingestellt"), nie die Vorgabeliste.
+ * #3047 J1/#3061 (AC-13): fehlendes `active_metrics` -> `null` („nie eingestellt"), nie die Vorgabeliste.
  */
 export function hydrateWeatherMetricsFromPreset(
 	preset: ComparePreset,

@@ -1649,6 +1649,28 @@
       "status": "gruen"
     },
     {
+      "id": "O-AB-H-VOLL",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_3061_vollauswahl_gespeichert_ausblick_fehlt",
+      "ac": "AC-13 AC-21",
+      "befund": "F4 #3061",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-VOLL",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_3061_vollauswahl_gespeichert_ausblick_fehlt",
+      "ac": "AC-13 AC-21",
+      "befund": "F4 #3061",
+      "status": "gruen"
+    },
+    {
       "id": "O-AB-K-NUTZER",
       "liste": "orte_ausblick",
       "kontext": "orte",
