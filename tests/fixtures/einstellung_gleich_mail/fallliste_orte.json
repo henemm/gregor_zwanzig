@@ -1064,7 +1064,7 @@
       "pruefung": "standard",
       "test": "test_ac6_stundenverlauf_nie_eingestellt_standard",
       "ac": "AC-6 AC-13",
-      "befund": "O2",
+      "befund": "O2; #3047 H1: Standard = stuendliche Groessen der Grundauswahl",
       "status": "gruen"
     },
     {
@@ -1445,7 +1445,7 @@
       "pruefung": "standard",
       "test": "test_ac6_stundenverlauf_nie_eingestellt_standard",
       "ac": "AC-6 AC-13",
-      "befund": "O2",
+      "befund": "O2; #3047 H1: Standard = stuendliche Groessen der Grundauswahl",
       "status": "gruen"
     },
     {
@@ -1682,6 +1682,50 @@
       "status": "gruen"
     },
     {
+      "id": "O-SV-H-H1-AUSSERHALB",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_h1_stundenverlauf_gespeichert_ausserhalb_grundauswahl",
+      "ac": "AC-10, AC-13",
+      "befund": "#3047 H1 (Nachpruefung Punkt 1)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-H1-NIE-GRUND",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "standard",
+      "test": "test_h1_stundenverlauf_nie_eingestellt_aus_grundauswahl",
+      "ac": "AC-6, AC-10, AC-13",
+      "befund": "#3047 H1 (Nachpruefung Punkt 3, Konzept §5.8)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-H1-AUSSERHALB",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_h1_stundenverlauf_gespeichert_ausserhalb_grundauswahl",
+      "ac": "AC-10, AC-13",
+      "befund": "#3047 H1 (Nachpruefung Punkt 1)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-H1-NIE-GRUND",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "standard",
+      "test": "test_h1_stundenverlauf_nie_eingestellt_aus_grundauswahl",
+      "ac": "AC-6, AC-10, AC-13",
+      "befund": "#3047 H1 (Nachpruefung Punkt 3, Konzept §5.8)",
+      "status": "gruen"
+    },
+    {
       "id": "O-AB-H-SPRACHE-EN",
       "liste": "orte_ausblick",
       "kontext": "orte",
@@ -1738,6 +1782,42 @@
       "status": "gruen",
       "seite": "frontend",
       "verweis": "#3047 T3 Orte (WeatherMetricsTab.svelte::toggleCompareMetric uebertrug bei channel_active_metrics nur Abwahlen; behoben ueber compareChannelMetricLayouts.ts::compareToggleFolgen, auch outlook_metrics/hourly_metrics)"
+    },
+    {
+      "id": "O-p7--global_nachtraeglich-orte_vergleichstabelle--html",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_p7_global_nachtraeglich_in_gespeicherter_liste",
+      "ac": "AC-10, Konzept §5 Punkt 6",
+      "befund": "Nachpruefung Punkt 7 (H4)",
+      "status": "offen_feature",
+      "verweis": "#3047 Nachpruefung Punkt 7: gespeicherte Liste kann 'bewusst abgewaehlt' und 'spaeter global eingeschaltet' nicht unterscheiden (Trip channel_layouts: Editor schreibt jede Katalog-Metrik, abwesende als enabled:false; Altbestand Golden C #2422 wertet fehlenden Eintrag als Abwahl; Orte/Ausblick/Stunden: reine ID-Listen) -> Datenmodell-Entscheidung (ADR zu ADR-0050) noetig"
+    },
+    {
+      "id": "O-p7--global_nachtraeglich-orte_stundenverlauf--html",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_p7_global_nachtraeglich_in_gespeicherter_liste",
+      "ac": "AC-10, Konzept §5 Punkt 6",
+      "befund": "Nachpruefung Punkt 7 (H4)",
+      "status": "offen_feature",
+      "verweis": "#3047 Nachpruefung Punkt 7: gespeicherte Liste kann 'bewusst abgewaehlt' und 'spaeter global eingeschaltet' nicht unterscheiden (Trip channel_layouts: Editor schreibt jede Katalog-Metrik, abwesende als enabled:false; Altbestand Golden C #2422 wertet fehlenden Eintrag als Abwahl; Orte/Ausblick/Stunden: reine ID-Listen) -> Datenmodell-Entscheidung (ADR zu ADR-0050) noetig"
+    },
+    {
+      "id": "O-p7--global_nachtraeglich-orte_ausblick--html",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_p7_global_nachtraeglich_in_gespeicherter_liste",
+      "ac": "AC-10, Konzept §5 Punkt 6",
+      "befund": "Nachpruefung Punkt 7 (H4)",
+      "status": "offen_feature",
+      "verweis": "#3047 Nachpruefung Punkt 7: gespeicherte Liste kann 'bewusst abgewaehlt' und 'spaeter global eingeschaltet' nicht unterscheiden (Trip channel_layouts: Editor schreibt jede Katalog-Metrik, abwesende als enabled:false; Altbestand Golden C #2422 wertet fehlenden Eintrag als Abwahl; Orte/Ausblick/Stunden: reine ID-Listen) -> Datenmodell-Entscheidung (ADR zu ADR-0050) noetig"
     }
   ]
 }

@@ -157,19 +157,26 @@ def test_python_seite_trip_tabellen_standard():
 
 
 def test_python_seite_trip_tabellen_altbestand():
-    """N1 -- Ausnahme mit Verweis #3048 (dokumentiert den IST-Zustand).
+    """N1 (#3047, frueher Ausnahme #3048) -- behoben: Trip ohne gespeicherte
+    ``metrics`` liefert auf der Mail-Seite dieselbe Standardfolge wie der
+    Editor (``editor_standard.json``, Register-Rangfolge ``trip_default_rank``);
+    in der echten Mail belegt durch
+    ``test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics``."""
+    _pruefe(python_trip_tabellen, "trip_tabellen", _zustand("trip_tabellen", "altbestand_ohne_metrics"))
 
-    Trip ohne gespeicherte ``metrics``: die Mail-Seite liefert heute KEINE
-    Wertspalte (in der echten Mail belegt,
-    ``test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics``),
-    der Editor zeigt die in ``editor_standard.json`` festgelegte Standardfolge.
-    Die Behebung betrifft alle Kanaele (Telegram AC-S4-13, #1199) und wird in
-    #3048 umgesetzt; wird dieser Test rot, ist #3048 wirksam und der Fall auf
-    ``_pruefe`` (Soll = ``erwartet``) zurueckzustellen."""
-    zustand = _zustand("trip_tabellen", "altbestand_ohne_metrics")
-    assert zustand["erwartet"], "Editor-Soll fuer N1 fehlt in editor_standard.json"
-    assert python_trip_tabellen(zustand["eingabe"]) == [], (
-        "Ist-Zustand #3048 hat sich geaendert -- Fall auf gruen umstellen")
+
+def test_python_seite_trip_tabellen_leere_liste_altbestand():
+    """#3047 H5 (#1394 Fall A): ``metrics: []`` ist Altbestand, nicht bewusst
+    leer -- die Mail zeigt denselben Register-Standard wie der Editor
+    (``metricsEditor.computeInitialBuckets`` fuer ``[]``)."""
+    _pruefe(python_trip_tabellen, "trip_tabellen", _zustand("trip_tabellen", "altbestand_leere_liste"))
+
+
+def test_python_seite_trip_tabellen_bewusst_leer_alle_aus():
+    """#3047 H5 (#1394 Fall B): bewusst leer heisst alle Eintraege
+    ``enabled:false`` -- so speichert der Editor eine Leerauswahl. Mail-Liste
+    leer, kein Rueckfall auf den Standardsatz."""
+    _pruefe(python_trip_tabellen, "trip_tabellen", _zustand("trip_tabellen", "bewusst_leer_alle_aus"))
 
 
 @pytest.mark.parametrize("zustand", _gespeicherte("trip_tabellen"))
@@ -207,6 +214,13 @@ def test_python_seite_orte_stundenverlauf_standard():
             _zustand("orte_stundenverlauf", "nie_eingestellt"))
 
 
+def test_python_seite_orte_stundenverlauf_standard_mit_grundauswahl():
+    """#3047 H1 (Konzept §5.8): nie eingestellt mit Grundauswahl -> deren
+    stuendlich verfuegbare Groessen in deren Folge."""
+    _pruefe(python_orte_stundenverlauf, "orte_stundenverlauf",
+            _zustand("orte_stundenverlauf", "nie_eingestellt_mit_grundauswahl"))
+
+
 @pytest.mark.parametrize("zustand", _gespeicherte("orte_stundenverlauf"))
 def test_python_seite_orte_stundenverlauf_gespeichert(zustand):
     _pruefe(python_orte_stundenverlauf, "orte_stundenverlauf", zustand)
@@ -226,3 +240,97 @@ def test_python_seite_orte_ausblick_standard_mit_grundauswahl():
 @pytest.mark.parametrize("zustand", _gespeicherte("orte_ausblick"))
 def test_python_seite_orte_ausblick_gespeichert(zustand):
     _pruefe(python_orte_ausblick, "orte_ausblick", zustand)
+
+
+# ── Waechter gegen Katalog-Drift (#3047 H4, Nachpruefung Punkt 8) ──────────────
+#
+# ``editor_standard.json`` traegt unter ``kataloge`` aufgezeichnete Antworten von
+# ``GET /api/metrics`` (Trip) und ``GET /api/compare/metrics`` (Orte), gekuerzt auf
+# die Felder, die Editor-Seite und Python-Seite lesen. Aendert sich das Register
+# (neue Groesse, anderer Rang, anderer Schluessel), rechnen beide Seiten sonst
+# still gegen einen veralteten Katalog. Die Live-Antwort kommt aus der ECHTEN
+# Router-Funktion (ohne Netz, ohne App-Start); verglichen wird je Gruppe die
+# vollstaendige Eintragsfolge, projiziert auf die eingefrorenen Felder.
+
+
+def katalog_drift(name: str, eingefroren: dict[str, list[dict]],
+                  live: dict[str, list[dict]]) -> list[str]:
+    """Abweichungen eines eingefrorenen Katalogs (Gruppe -> Eintraege) von der
+    Live-Antwort, je als lesbare Zeile; leer = kein Drift. Reine Funktion."""
+    fehler: list[str] = []
+    for gruppe in sorted(set(eingefroren) | set(live)):
+        if gruppe not in live:
+            fehler.append(f"{name}: Gruppe {gruppe!r} gibt es in der API nicht mehr")
+            continue
+        if gruppe not in eingefroren:
+            fehler.append(f"{name}: API-Gruppe {gruppe!r} fehlt im eingefrorenen Katalog")
+            continue
+        alt = eingefroren[gruppe]
+        felder = sorted(set().union(*(e.keys() for e in alt))) if alt else ["id"]
+        neu = [{f: e.get(f) for f in felder} for e in live[gruppe]]
+        if neu == alt:
+            continue
+        kennung = "key" if "key" in felder else "id"
+        ids_alt = [e.get(kennung) for e in alt]
+        ids_neu = [e.get(kennung) for e in neu]
+        if ids_alt != ids_neu:
+            fehler.append(f"{name}[{gruppe}]: Eintragsfolge eingefroren {ids_alt} != API {ids_neu}")
+            continue
+        for a, n in zip(alt, neu):
+            diff = {f: (a.get(f), n.get(f)) for f in felder if a.get(f) != n.get(f)}
+            if diff:
+                fehler.append(f"{name}[{gruppe}] {a.get(kennung)}: (eingefroren, API) {diff}")
+    return fehler
+
+
+def _live_trip_katalog() -> dict[str, list[dict]]:
+    from api.routers.config import get_metrics
+
+    return get_metrics()
+
+
+def _live_orte_katalog() -> dict[str, list[dict]]:
+    from api.routers.compare import get_compare_metrics
+
+    return get_compare_metrics(lang=None)
+
+
+_DRIFT_HINWEIS = ("eingefrorene Kataloge in tests/fixtures/einstellung_gleich_mail/"
+                  "editor_standard.json neu aufzeichnen (gleiche Felder) und die "
+                  "erwarteten Standardfolgen beider Seiten pruefen")
+
+
+def test_katalog_drift_trip_api_metrics():
+    """Eingefrorener ``/api/metrics``-Katalog == aktuelle Router-Antwort."""
+    fehler = katalog_drift("trip_api_metrics", DATEN["kataloge"]["trip_api_metrics"],
+                           _live_trip_katalog())
+    assert not fehler, "Katalog-Drift:\n  " + "\n  ".join(fehler) + f"\n-> {_DRIFT_HINWEIS}"
+
+
+def test_katalog_drift_orte_api_compare_metrics():
+    """Eingefrorener ``/api/compare/metrics``-Katalog == aktuelle Router-Antwort."""
+    fehler = katalog_drift("orte_api_compare_metrics",
+                           DATEN["kataloge"]["orte_api_compare_metrics"], _live_orte_katalog())
+    assert not fehler, "Katalog-Drift:\n  " + "\n  ".join(fehler) + f"\n-> {_DRIFT_HINWEIS}"
+
+
+def test_katalog_drift_selbsttest_meldet_klar():
+    """Der Waechter schlaegt bei jeder Drift-Art an und nennt Gruppe, Eintrag und
+    Feld (synthetische Abweichungen auf Kopien der eingefrorenen Daten)."""
+    import copy
+
+    trip = DATEN["kataloge"]["trip_api_metrics"]
+    live = _live_trip_katalog()
+    rang = copy.deepcopy(trip)
+    rang["wind"][1]["trip_default_rank"] = 99
+    assert any("[wind] gust" in z and "trip_default_rank" in z
+               for z in katalog_drift("t", rang, live))
+    weniger = copy.deepcopy(trip)
+    weniger["wind"].pop()
+    assert any("Eintragsfolge" in z for z in katalog_drift("t", weniger, live))
+    ohne_gruppe = copy.deepcopy(trip)
+    del ohne_gruppe["winter"]
+    assert any("'winter' fehlt" in z for z in katalog_drift("t", ohne_gruppe, live))
+    orte = copy.deepcopy(DATEN["kataloge"]["orte_api_compare_metrics"])
+    orte["metrics"][0]["hourlyDefault"] = not orte["metrics"][0]["hourlyDefault"]
+    assert any("hourlyDefault" in z for z in katalog_drift("o", orte, _live_orte_katalog()))

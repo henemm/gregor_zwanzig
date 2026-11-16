@@ -1,0 +1,100 @@
+# #3047 H1 RED (vor dem Fix, Basis origin/main 4b5e8749f)
+## Python: uv run pytest -q tests/tdd/test_einstellung_gleich_mail_orte.py tests/tdd/test_einstellung_gleich_mail_editor_standard.py
+E   AssertionError: html Kronplatz: Spalten ['Temp', 'Feels', 'Wind', 'Gust', 'Rain', 'UV', 'Thdr', 'Rain%', 'Visib'], eingestellt ['Temp', 'Wind', 'Gust', 'Rain', 'Rain%']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-aa37b29d01f276e92/tests/tdd/test_einstellung_gleich_mail_orte.py:153: AssertionError: html Kronplatz: Spalten ['Temp', 'Feels', 'Wind', 'Gust', 'Rain', 'UV', 'Thdr', 'Rain%', 'Visib'], eingestellt ['Temp', 'Wind', 'Gust', 'Rain', 'Rain%']
+E   AssertionError: klartext Kronplatz: Spalten ['Temp', 'Feels', 'Wind', 'Gust', 'Rain', 'UV', 'Thdr', 'Rain%', 'Visib'], eingestellt ['Temp', 'Wind', 'Gust', 'Rain', 'Rain%']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-aa37b29d01f276e92/tests/tdd/test_einstellung_gleich_mail_orte.py:153: AssertionError: klartext Kronplatz: Spalten ['Temp', 'Feels', 'Wind', 'Gust', 'Rain', 'UV', 'Thdr', 'Rain%', 'Visib'], eingestellt ['Temp', 'Wind', 'Gust', 'Rain', 'Rain%']
+E   AssertionError: html Kronplatz: Spalten ['Temp', 'Feels', 'Wind', 'Gust', 'Rain', 'UV', 'Thdr', 'Rain%', 'Visib'], eingestellt ['Temp', 'Wind', 'Gust', 'Rain', 'Rain%']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-aa37b29d01f276e92/tests/tdd/test_einstellung_gleich_mail_orte.py:153: AssertionError: html Kronplatz: Spalten ['Temp', 'Feels', 'Wind', 'Gust', 'Rain', 'UV', 'Thdr', 'Rain%', 'Visib'], eingestellt ['Temp', 'Wind', 'Gust', 'Rain', 'Rain%']
+E   AssertionError: html Kronplatz: ['Temp', 'Feels', 'Wind', 'Gust', 'Rain', 'UV', 'Thdr', 'Rain%', 'Visib']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-aa37b29d01f276e92/tests/tdd/test_einstellung_gleich_mail_orte.py:549: AssertionError: html Kronplatz: ['Temp', 'Feels', 'Wind', 'Gust', 'Rain', 'UV', 'Thdr', 'Rain%', 'Visib']
+E   AssertionError: klartext Kronplatz: ['Temp', 'Feels', 'Wind', 'Gust', 'Rain', 'UV', 'Thdr', 'Rain%', 'Visib']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-aa37b29d01f276e92/tests/tdd/test_einstellung_gleich_mail_orte.py:549: AssertionError: klartext Kronplatz: ['Temp', 'Feels', 'Wind', 'Gust', 'Rain', 'UV', 'Thdr', 'Rain%', 'Visib']
+E   AssertionError: Python-Seite orte_stundenverlauf/nie_eingestellt_mit_grundauswahl: Mail liefert ['temperature', 'wind_chill', 'wind', 'gust', 'precipitation', 'uv_index', 'thunder', 'rain_probability', 'visibility'], editor_standard.json erwartet ['wind', 'precipitation', 'temperature', 'gust']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-aa37b29d01f276e92/tests/tdd/test_einstellung_gleich_mail_editor_standard.py:147: AssertionError: Python-Seite orte_stundenverlauf/nie_eingestellt_mit_grundauswahl: Mail liefert ['temperature', 'wind_chill', 'wind', 'gust', 'precipitation', 'uv_index', 'thunder', 'rain_probability', 'visibility'], editor_standard.json erwartet ['wind', 'precipitation', 'temperature', 'gust']
+FAILED tests/tdd/test_einstellung_gleich_mail_orte.py::test_stundenverlauf_paarweise[O-SV-P06]
+FAILED tests/tdd/test_einstellung_gleich_mail_orte.py::test_stundenverlauf_paarweise[O-SV-P10]
+FAILED tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac6_stundenverlauf_nie_eingestellt_standard
+FAILED tests/tdd/test_einstellung_gleich_mail_orte.py::test_h1_stundenverlauf_nie_eingestellt_aus_grundauswahl[html]
+FAILED tests/tdd/test_einstellung_gleich_mail_orte.py::test_h1_stundenverlauf_nie_eingestellt_aus_grundauswahl[klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_editor_standard.py::test_python_seite_orte_stundenverlauf_standard_mit_grundauswahl
+
+## Frontend: npm test -- .../editor_standard_gleich_mail.test.ts
+    ok 11 - frontend_seite_orte_stundenverlauf_standard
+    not ok 12 - frontend_seite_orte_stundenverlauf_standard_mit_grundauswahl
+    ok 13 - frontend_seite_orte_stundenverlauf_gespeichert gespeichert_folge
+    ok 14 - frontend_seite_orte_stundenverlauf_gespeichert gespeichert_umgekehrt
+    not ok 15 - frontend_seite_orte_stundenverlauf_gespeichert gespeichert_ausserhalb_grundauswahl
+# pass 18
+# fail 2
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'wind'
+        1: 'precipitation'
+        2: 'temperature'
+        3: 'gust'
+      actual:
+        0: 'temperature'
+        1: 'wind_chill'
+        2: 'wind'
+        3: 'gust'
+        4: 'precipitation'
+        5: 'uv_index'
+        6: 'thunder'
+        7: 'rain_probability'
+        8: 'visibility'
+      operator: 'deepStrictEqual'
+      stack: |-
+        pruefe (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-aa37b29d01f276e92/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:193:9)
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-aa37b29d01f276e92/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:222:3)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: frontend_seite_orte_stundenverlauf_gespeichert gespeichert_folge
+    ok 13 - frontend_seite_orte_stundenverlauf_gespeichert gespeichert_folge
+      ---
+      duration_ms: 0.865436
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_stundenverlauf_gespeichert gespeichert_umgekehrt
+    ok 14 - frontend_seite_orte_stundenverlauf_gespeichert gespeichert_umgekehrt
+      ---
+      duration_ms: 0.635836
+      type: 'test'
+      ...
+    # Subtest: frontend_seite_orte_stundenverlauf_gespeichert gespeichert_ausserhalb_grundauswahl
+    not ok 15 - frontend_seite_orte_stundenverlauf_gespeichert gespeichert_ausserhalb_grundauswahl
+      ---
+      duration_ms: 0.828477
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-aa37b29d01f276e92/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts:224:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Frontend-Seite orte_stundenverlauf/gespeichert_ausserhalb_grundauswahl: Editor zeigt eine andere Folge als editor_standard.json erwartet
+        + actual - expected
+        
+          [
+        +   'visibility',
+            'gust',
+            'temperature',
+            'precipitation'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'gust'
+        1: 'temperature'
+        2: 'precipitation'
+      actual:
+        0: 'visibility'
+        1: 'gust'
+        2: 'temperature'
+        3: 'precipitation'
+      operator: 'deepStrictEqual'
+      stack: |-

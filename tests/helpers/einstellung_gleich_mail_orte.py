@@ -381,14 +381,21 @@ def soll_stundenverlauf(roh: dict, standard: tuple[str, ...]) -> Optional[list[s
     nicht leere gespeicherte Liste vollstaendig ausserhalb der Grundauswahl,
     gilt ``standard`` geschnitten mit der Grundauswahl (Folge von
     ``standard``); ist auch das leer, die stuendlich waehlbaren Groessen der
-    Grundauswahl (Register ohne die ausgenommenen) in Grundauswahl-Folge."""
+    Grundauswahl (Register ohne die ausgenommenen) in Grundauswahl-Folge.
+
+    Nie eingestellt (#3047 H1, Konzept §5.8): die stuendlich waehlbaren
+    Groessen der Grundauswahl in deren Folge; ``standard`` nur, wenn die
+    Grundauswahl selbst nie eingestellt ist oder keine solche Groesse traegt."""
     if roh.get("hourly_enabled", True) is False:
         return None
     gespeichert = _ids((roh.get("display_config") or {}).get("hourly_metrics"))
-    liste = list(standard) if gespeichert is None else gespeichert
     basis = grundauswahl(roh)
+    waehlbar = _stuendlich_waehlbar()
+    if gespeichert is None:
+        liste = [m for m in basis or [] if m in waehlbar] or list(standard)
+    else:
+        liste = gespeichert
     if gespeichert is not None and basis is not None:
-        waehlbar = _stuendlich_waehlbar()
         liste = [m for m in liste if m in basis]
         if not liste and any(m in waehlbar for m in gespeichert):
             liste = ([m for m in standard if m in basis]

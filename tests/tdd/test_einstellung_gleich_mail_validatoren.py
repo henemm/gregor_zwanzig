@@ -380,6 +380,169 @@ def test_trip_zwei_gueltige_folgen_ohne_konfig_beide_gruen_mit_konfig_nur_passen
 
 
 # --------------------------------------------------------------------------- #
+# Nachlieferung H3 (Nachpruefung #3047 Punkte 1, 4, 5)
+# --------------------------------------------------------------------------- #
+def test_orte_stunden_schnitt_mit_grundauswahl(monkeypatch, tmp_path):
+    """Punkt 1 (Konzept §5.8): gespeicherter Stundenverlauf mit Sicht, die nicht
+    in der Grundauswahl steht -- die Mail zeigt Boeen/Temp/Regen, der Validator
+    besteht; gegen eine Grundauswahl ohne Boeen scheitert dieselbe Mail."""
+    preset = _orte_preset(stunden=("visibility", "gust", "temperature", "precipitation"))
+    eml = _orte_eml(monkeypatch, preset)
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, preset, "s1"))
+    assert code == 0, aus
+    ohne_boeen = copy.deepcopy(preset)
+    ohne_boeen["display_config"]["active_metrics"].remove("gust_max_kmh")
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, ohne_boeen, "s2"))
+    assert code == 1, aus
+    assert "SOLL: Stundenverlauf (HTML)" in aus and "Spalte zu viel: 'Gust'" in aus, aus
+
+
+def test_orte_stunden_leerer_schnitt_rueckfall(monkeypatch, tmp_path):
+    """Punkt 1: gespeicherte Liste ganz ausserhalb der Grundauswahl -> Vorgabe
+    der Stundenspalten geschnitten mit der Grundauswahl (Temp, Wind, Boeen,
+    Regen), nicht die gespeicherten Sicht/UV."""
+    preset = _orte_preset(stunden=("visibility", "uv_index"))
+    eml = _orte_eml(monkeypatch, preset)
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, preset, "s3"))
+    assert code == 0, aus
+    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^(\s+\d{2}:\d{2}  )Temp (\S+)  Wind (\S+)",
+                                                  r"\1Wind \3  Temp \2", p))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", _orte_konfig(tmp_path, preset, "s3"))
+    assert code == 1 and "steht 'Wind' statt 'Temp'" in aus, aus
+
+
+def test_orte_stunden_nie_eingestellt_folgt_grundauswahl(monkeypatch, tmp_path):
+    """Punkt 1 (Nachpruefung Punkt 3): nie eingestellter Stundenverlauf mit
+    Grundauswahl -> Grundauswahl, soweit stuendlich verfuegbar, in deren Folge."""
+    preset = _orte_preset()
+    del preset["display_config"]["hourly_metrics"]
+    code, aus = _lauf(tmp_path, ORTE, _orte_eml(monkeypatch, preset),
+                      "--konfig", _orte_konfig(tmp_path, preset, "s4"))
+    assert code == 0, aus
+
+
+def test_orte_stunden_altbestand_ohne_alles_vorgabe_geprueft(monkeypatch, tmp_path):
+    """Punkt 1: weder Grundauswahl noch Stundenverlauf -> die Vorgabespalten;
+    fehlt eine davon in der Mail, scheitert der Validator (bisher ungeprueft)."""
+    preset = _orte_preset(altbestand=True)
+    preset["display_config"] = {}
+    eml = _orte_eml(monkeypatch, preset)
+    konfig = _orte_konfig(tmp_path, preset, "s5")
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, aus
+    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^(\s+\d{2}:\d{2}  .*?)  UV \S+", r"\1", p))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Stundenverlauf (Klartext)" in aus and "Spalte fehlt: 'UV'" in aus, aus
+
+
+def _orte_verzeichnis(tmp_path: Path) -> Path:
+    """Orts-JSONs wie ``data/users/<id>/locations/<id>.json``."""
+    ordner = tmp_path / "locations"
+    ordner.mkdir(exist_ok=True)
+    for i, (kennung, name) in enumerate(_ORTSNAMEN.items()):
+        (ordner / f"{kennung}.json").write_text(json.dumps(
+            {"id": kennung, "name": name, "lat": 47.0 + i, "lon": 11.0, "elevation_m": 600}),
+            encoding="utf-8")
+    return ordner
+
+
+def test_orte_rohes_preset_ohne_ortsnamen_scheitert_laut(tmp_path, orte_mail):
+    """Punkt 4: rohes Preset ohne Ortsnamen -- die Ortsfolge wird nicht still
+    uebersprungen, der Validator scheitert mit klarer Meldung."""
+    eml, _konfig_huelle = orte_mail
+    roh = _konfig(tmp_path, "roh", _orte_preset())
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", roh)
+    assert code != 0, aus
+    assert "Ortsfolge nicht prüfbar" in aus, aus
+
+
+def test_orte_rohes_preset_mit_orte_aus_nutzerverzeichnis(tmp_path, orte_mail):
+    """Punkt 4: ``--orte`` loest die Namen aus dem Orts-Verzeichnis bzw. der
+    Orts-Liste der API; die richtige Mail besteht, vertauschte Orte nicht."""
+    eml, _konfig_huelle = orte_mail
+    roh = _konfig(tmp_path, "roh", _orte_preset())
+    ordner = _orte_verzeichnis(tmp_path)
+    api_liste = _konfig(tmp_path, "api_orte", [{"id": k, "name": n} for k, n in _ORTSNAMEN.items()])
+    for quelle in (str(ordner), api_liste):
+        code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", roh, "--orte", quelle)
+        assert code == 0, aus
+    tausch = lambda text: _tausche(text, "Kufstein", "Innsbruck")  # noqa: E731
+    code, aus = _lauf(tmp_path, ORTE, _aendere(eml, html=tausch, plain=tausch),
+                      "--konfig", roh, "--orte", str(ordner))
+    assert code == 1 and "SOLL: Ortsfolge (HTML)" in aus, aus
+
+
+def _trip_darstellung_daten() -> dict:
+    """Roh/Einfach gemischt: Boeen Einfach (Ampel), Wolken Einfach (Symbol),
+    Gewitter Einfach, Sonne/Wind/Regen Roh; Ausblick Wind/Regen Einfach,
+    Boeen/Wolken Roh."""
+    daten = _trip_daten(_TRIP_FOLGE, ausblick=("wind", "gust", "temperature", "precipitation",
+                                               "cloud_total", "thunder"))
+    dc = daten["display_config"]
+    for m in dc["metrics"]:
+        m["use_friendly_format"] = m["metric_id"] == "gust"
+    dc["metrics"] += [{"metric_id": m, "enabled": True, "bucket": "primary", "order": 5 + i,
+                       "use_friendly_format": einfach}
+                      for i, (m, einfach) in enumerate((("cloud_total", True), ("sunshine", False),
+                                                        ("thunder", True)))]
+    dc["outlook_metric_formats"] = {"wind": True, "precipitation": True, "gust": False,
+                                    "cloud_total": False}
+    return daten
+
+
+@pytest.fixture
+def darstellung_mail(monkeypatch, tmp_path):
+    daten = _trip_darstellung_daten()
+    return _trip_eml(monkeypatch, daten), _konfig(tmp_path, "darstellung", daten)
+
+
+def test_trip_darstellung_roh_einfach_positiv(tmp_path, darstellung_mail):
+    eml, konfig = darstellung_mail
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, aus
+
+
+def test_trip_darstellung_einfach_als_zahl_klartext_scheitert(tmp_path, darstellung_mail):
+    """Punkt 5: Wolken auf Einfach, der Klartext zeigt die Zahl -> Exit 1 mit Spalte."""
+    eml, konfig = darstellung_mail
+    falsch = _aendere(eml, plain=lambda p: p.replace("⛅  ", "70 "))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: Darstellung Etappen-Stundentabelle (Klartext)" in aus and "'Cloud'" in aus, aus
+
+
+def test_trip_darstellung_ampel_fehlt_html_scheitert(tmp_path, darstellung_mail):
+    """Punkt 5: Boeen auf Einfach, das HTML zeigt die Zahl statt des Ampelpunkts."""
+    eml, konfig = darstellung_mail
+    falsch = _aendere(eml, html=lambda h: re.sub(
+        r'(data-label="Gust">)<span[^>]*></span>', r"\g<1>45", h))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: Darstellung Etappen-Stundentabelle (HTML)" in aus and "'Gust'" in aus, aus
+
+
+def test_trip_darstellung_roh_als_symbol_scheitert(tmp_path, darstellung_mail):
+    """Punkt 5: Sonne auf Roh, der Klartext zeigt ein Symbol statt der Zahl."""
+    eml, konfig = darstellung_mail
+    falsch = _aendere(eml, plain=lambda p: p.replace("1.0 h", "☀    "))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: Darstellung" in aus and "'Sun'" in aus, aus
+
+
+def test_trip_darstellung_ausblick_roh_statt_einfach_scheitert(tmp_path, darstellung_mail):
+    """Punkt 5: Ausblick-Wind auf Einfach, HTML und Klartext zeigen die Zahl."""
+    eml, konfig = darstellung_mail
+    falsch = _aendere(eml, plain=lambda p: re.sub(r"Wind \S+  Gust", "Wind 20 km/h  Gust", p),
+                      html=lambda h: re.sub(r"(<tr>\s*<td[^>]*>(?:Di|Mi|Do)</td>\s*<td[^>]*>)[^<]*",
+                                            r"\g<1>20 km/h", h))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: Darstellung Ausblick (Klartext)" in aus and "'Wind'" in aus, aus
+    assert "SOLL: Darstellung Ausblick (HTML)" in aus, aus
+
+
+# --------------------------------------------------------------------------- #
 # Fallliste (Paket C)
 # --------------------------------------------------------------------------- #
 def test_fallliste_validatoren_verweist_auf_vorhandene_tests():

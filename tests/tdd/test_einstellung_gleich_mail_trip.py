@@ -345,6 +345,38 @@ def test_ausblick_ausgeschaltet(monkeypatch, fall):
     assert tab is None, f"{fall['id']}: Ausblick trotz show_outlook=false: {tab.spalten}"
 
 
+#: Variante -> (abgeschalteter Bericht, Schalter am Metrik-Eintrag).
+_BERICHT_AUS = {"morgen_aus": ("morning", "morning_enabled"),
+                "abend_aus": ("evening", "evening_enabled")}
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ein_aus_metrik_je_bericht"))
+def test_ein_aus_metrik_je_bericht(monkeypatch, fall):
+    """Spec §2 Punkt 5 (#3047 H4, Nachpruefung Punkt 6): Boeen sind am
+    gespeicherten Metrik-Eintrag fuer EINEN Bericht ausgeschaltet
+    (``morning_enabled``/``evening_enabled`` = false). Die Mail dieses
+    Berichts zeigt Boeen in keiner Liste (Etappe, Nacht, Ausblick); die Mail
+    des anderen Berichts ist unberuehrt und zeigt Boeen in gespeicherter Folge."""
+    aus_bericht, schalter = _BERICHT_AUS[_variante(fall)]
+    folge = ["gust", "temperature", "wind"]
+    data = trip_json(folge, outlook_metrics=["gust", "temperature"])
+    for eintrag in data["display_config"]["metrics"]:
+        if eintrag["metric_id"] == "gust":
+            eintrag[schalter] = False
+    fmt = fall["format"]
+    for bericht in ("morning", "evening"):
+        html, text, _ = _senden(monkeypatch, data, fmt, report_type=bericht)
+        aus = bericht == aus_bericht
+        soll = [m for m in folge if not (aus and m == "gust")]
+        wo = f"{fall['id']} ({bericht})"
+        for art in ("etappe", "nacht"):
+            _pruefe_spalten(_stundentabellen(html, text, fmt, art), soll, f"{wo} {art}")
+        tab = _ausblick(html, text, fmt)
+        soll_ausblick_folge = ["temperature"] if aus else ["gust", "temperature"]
+        assert tab is not None and tab.spalten == soll_ausblick_folge, (
+            f"{wo}: Ausblick {tab and tab.spalten} != {soll_ausblick_folge}")
+
+
 # ---------------------------------------------------------------------------
 # AC-8 -- Roh/Einfach
 # ---------------------------------------------------------------------------
@@ -672,30 +704,69 @@ _REGISTER_STANDARD_STUNDENSPALTEN = [
 
 @pytest.mark.parametrize("fall", _faelle("test_n1_altbestand_ohne_metrics"))
 def test_n1_altbestand_ohne_metrics(monkeypatch, fall):
-    """N1 -- Ausnahme mit Verweis #3048 (dokumentiert den IST-Zustand).
+    """N1 (#3047, frueher Ausnahme #3048) -- behoben.
 
     Ein Trip-Altbestand, dessen ``display_config`` gar kein ``metrics`` traegt
-    (Fall A, ``trip_metric_ids.py``), bekommt heute Stunden- und Nachttabelle
-    OHNE Wertspalten (HTML: nur die Zeitspalte; Klartext: keine Tabelle),
-    waehrend der Editor die Register-Standardfolge
-    ``_REGISTER_STANDARD_STUNDENSPALTEN`` zeigt. Die Behebung sitzt in
-    ``get_metrics_for_channel`` und aendert alle Kanaele (Telegram/Kurzfassung,
-    #1199) -- sie wird in #3048 umgesetzt. Dieser Test haelt den Ist-Zustand
-    fest: wird er rot, ist #3048 (ganz oder teilweise) wirksam und der Fall
-    in ``fallliste_trip.json`` auf ``gruen`` mit Soll-Pruefung umzustellen."""
+    (Fall A), zeigt in Etappen- UND Nachttabelle (HTML und Klartext) genau den
+    Register-Standard ``_REGISTER_STANDARD_STUNDENSPALTEN`` in Register-Folge
+    -- dieselbe Liste, die der Editor fuer diesen Trip zeigt. Der Rueckfall
+    sitzt am Lese-Pfad (``loader._parse_display_config``); ein
+    ``metrics: []`` ist ebenfalls Altbestand
+    (``test_n1_leere_liste_altbestand_standard``); bewusst leer heisst alle
+    Eintraege aus (``test_n1_bewusst_leer_alle_aus``)."""
     data = trip_json(["temperature"])
     del data["display_config"]["metrics"]
     html, text, _ = _senden(monkeypatch, data, fall["format"])
-    assert fall["status"] == "ausnahme" and "#3048" in fall["verweis"], fall
+    art = "etappe" if fall["liste"] == "trip_stundentabelle" else "nacht"
+    _pruefe_spalten(_stundentabellen(html, text, fall["format"], art),
+                    _REGISTER_STANDARD_STUNDENSPALTEN, fall["id"])
+
+
+#: Eingaben aus ``editor_standard.json`` (dieselbe Datei liest die
+#: Frontend-Seite): so sieht der Editor diese Zustaende -- Mail und Editor
+#: muessen dieselbe Folge zeigen.
+_EDITOR_STANDARD = json.loads((FIXTURES / "editor_standard.json").read_text(encoding="utf-8"))
+
+
+def _editor_zustand(zustand_id: str) -> dict:
+    return next(z for z in _EDITOR_STANDARD["listen"]["trip_tabellen"]["zustaende"]
+                if z["id"] == zustand_id)
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n1_leere_liste_altbestand_standard"))
+def test_n1_leere_liste_altbestand_standard(monkeypatch, fall):
+    """#3047 H5 (#1394 Fall A): ``metrics: []`` ist Altbestand, KEINE bewusste
+    Leerauswahl -- Etappen- und Nachttabelle zeigen wie beim fehlenden
+    Schluessel den Register-Standard, denselben, den der Editor fuer ``[]``
+    zeigt (``editor_standard.json``, Zustand ``altbestand_leere_liste``)."""
+    data = trip_json(["temperature"])
+    data["display_config"]["metrics"] = copy.deepcopy(
+        _editor_zustand("altbestand_leere_liste")["eingabe"]["display_config"]["metrics"])
+    assert data["display_config"]["metrics"] == []
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    art = "etappe" if fall["liste"] == "trip_stundentabelle" else "nacht"
+    _pruefe_spalten(_stundentabellen(html, text, fall["format"], art),
+                    _REGISTER_STANDARD_STUNDENSPALTEN, fall["id"])
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n1_bewusst_leer_alle_aus"))
+def test_n1_bewusst_leer_alle_aus(monkeypatch, fall):
+    """#3047 H5 (#1394 Fall B): bewusst leer heisst alle Eintraege
+    ``enabled:false`` (so speichert der Editor eine Leerauswahl) -- Etappen-
+    und Nachttabelle ohne Metrikspalten, kein Standard-Rueckfall; der Editor
+    zeigt fuer dieselbe Eingabe nichts aktiv (``editor_standard.json``,
+    Zustand ``bewusst_leer_alle_aus``, ``erwartet: []``)."""
+    zustand = _editor_zustand("bewusst_leer_alle_aus")
+    assert zustand["erwartet"] == [], "Editor-Soll fuer bewusst leer muss leer sein"
+    data = trip_json(["temperature"])
+    data["display_config"]["metrics"] = copy.deepcopy(
+        zustand["eingabe"]["display_config"]["metrics"])
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
     art = "etappe" if fall["liste"] == "trip_stundentabelle" else "nacht"
     tabellen = _stundentabellen(html, text, fall["format"], art)
     if fall["format"] == "html":
-        # Die Mail geht raus, die Tabelle steht da -- nur ohne Wertspalten.
-        assert tabellen, f"{fall['id']}: HTML-Tabelle fehlt ganz"
-    ist = [t.spalten for t in tabellen]
-    assert all(sp == [] for sp in ist), (
-        f"{fall['id']}: Ist-Zustand #3048 hat sich geaendert, Spalten {ist} "
-        f"(Soll nach #3048: {_REGISTER_STANDARD_STUNDENSPALTEN})")
+        assert tabellen, f"{fall['id']}: HTML-Tabelle fehlt ganz (Vorbedingung)"
+    _pruefe_spalten(tabellen, zustand["erwartet"], fall["id"])
 
 
 # ---------------------------------------------------------------------------

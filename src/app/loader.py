@@ -969,6 +969,18 @@ def _ampel_beim_laden(ampel: Any, owner_id: str) -> Optional[dict]:
     return ampel
 
 
+def _register_standard_metrics() -> List[Dict[str, Any]]:
+    """Issue #3047 N1: Trip-Anlege-Standard (``DEFAULT_TRIP_METRIC_IDS``,
+    Register-Rangfolge ``trip_default_rank``) als gespeicherte Metrik-Eintraege
+    mit ``bucket``/``order`` -- dieselbe Folge, die der Editor zeigt."""
+    from output.renderers.trip_metric_ids import DEFAULT_TRIP_METRIC_IDS
+
+    return [
+        {"metric_id": mid, "enabled": True, "bucket": "primary", "order": i}
+        for i, mid in enumerate(DEFAULT_TRIP_METRIC_IDS)
+    ]
+
+
 def _parse_display_config(data: Dict[str, Any], owner_id: str = "") -> "UnifiedWeatherDisplayConfig":
     """Parse UnifiedWeatherDisplayConfig from dict."""
     from datetime import datetime as _dt
@@ -976,6 +988,15 @@ def _parse_display_config(data: Dict[str, Any], owner_id: str = "") -> "UnifiedW
 
     # Issue #1262: Flach-String-Eintraege vor jedem `.get()`/`["metric_id"]`
     # zu dict normalisieren; dict-Eintraege bleiben unveraendert.
+    # Issue #3047 N1 (#3048): Altbestand ohne Schluessel ``metrics`` zeigt im
+    # Editor den Trip-Anlege-Standard des Registers -- die Mail liest hier
+    # dieselbe Liste (in-memory, die Datei bleibt unberuehrt).
+    # #3047 H5 (#1394 Fall A): auch ``metrics: []`` ist Altbestand -- der
+    # Editor zeigt dafuer ebenfalls den Standard. Bewusst leer (Fall B) heisst
+    # "Eintraege vorhanden, alle enabled:false" und bleibt unberuehrt.
+    register_standard = not data.get("metrics")
+    if register_standard:
+        data = {**data, "metrics": _register_standard_metrics()}
     raw_metrics = [_coerce_metric_entry(m) for m in (data.get("metrics") or [])]
     # Issue #360 (F002): bucket/order pro Metrik aufloesen. auto_distribute wird
     # IMMER auf die aktiven Metrik-IDs angewandt, damit auch teil-migrierte
@@ -1020,7 +1041,11 @@ def _parse_display_config(data: Dict[str, Any], owner_id: str = "") -> "UnifiedW
             sms_threshold=mc_data.get("sms_threshold"),
         ))
 
-    _append_derived_metrics(metrics)
+    if not register_standard:
+        # Der Register-Standard fuehrt seine abgeleiteten Groessen selbst
+        # (Tagestief/-hoch) und zeigt im Editor kein Nachttief -- keine
+        # Ableitung, sonst stuende in der Mail mehr als im Editor (#3047 N1).
+        _append_derived_metrics(metrics)
 
     # Issue #429/#1394 (T4): kanal-spezifische Layouts laden (optional,
     # backward-compat). Wenn channel_layouts fehlt → None, damit

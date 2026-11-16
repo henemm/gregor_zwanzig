@@ -567,7 +567,7 @@
    "kontext": "trip",
    "flaeche": "E-Mail-Liste = Spalten der Stundentabelle je Etappe",
    "vokabular": "Kennungen (metric_id)",
-   "begruendung": "Nie eingestellte E-Mail-Liste = die Grundauswahl in ihrer eingestellten Folge (`order`, nicht Array-/Katalogfolge; Konzept §5 Punkt 8: jede Liste nimmt aus den Metriken oben). Abgeleitete Groessen (temperature_night/_day_low/_day_high) stehen direkt hinter ihrer Elterngroesse (Fix #1947, loader._append_derived_metrics und metricsEditor.deriveMissingChildMetrics). Altbestand ohne `metrics`: Soll ist der Trip-Anlege-Standard des Registers in Rangfolge `trip_default_rank` (#1552, eine Quelle fuer Register und Frontend-Vorbelegung) -- dieselbe Folge wie DEFAULT_TRIP_METRIC_IDS, die Mail-Seite. Eine Kanal-Liste nimmt nur aus der Grundauswahl (ADR-0050).",
+   "begruendung": "Nie eingestellte E-Mail-Liste = die Grundauswahl in ihrer eingestellten Folge (`order`, nicht Array-/Katalogfolge; Konzept §5 Punkt 8: jede Liste nimmt aus den Metriken oben). Abgeleitete Groessen (temperature_night/_day_low/_day_high) stehen direkt hinter ihrer Elterngroesse (Fix #1947, loader._append_derived_metrics und metricsEditor.deriveMissingChildMetrics). Altbestand ohne `metrics`: Soll ist der Trip-Anlege-Standard des Registers in Rangfolge `trip_default_rank` (#1552, eine Quelle fuer Register und Frontend-Vorbelegung) -- dieselbe Folge wie DEFAULT_TRIP_METRIC_IDS, die Mail-Seite. Eine Kanal-Liste nimmt nur aus der Grundauswahl (ADR-0050). Leere Liste `metrics: []` ist ebenfalls Altbestand (Fall A, #1394) -- gleiche Soll-Folge; bewusst leer heisst: alle Eintraege `enabled:false` (so speichert der Editor eine Leerauswahl) -- Soll leer.",
    "zustaende": [
     {
      "id": "nie_eingestellt",
@@ -660,6 +660,79 @@
       "temperature_day_low",
       "temperature_day_high"
      ]
+    },
+    {
+     "id": "altbestand_leere_liste",
+     "beschreibung": "display_config mit metrics: [] (Altbestand Fall A, #1394: leere Liste = Altbestand, nicht bewusst leer)",
+     "eingabe": {
+      "display_config": {
+       "metrics": []
+      }
+     },
+     "erwartet": [
+      "temperature",
+      "wind",
+      "gust",
+      "precipitation",
+      "thunder",
+      "freezing_level",
+      "visibility",
+      "temperature_day_low",
+      "temperature_day_high"
+     ]
+    },
+    {
+     "id": "bewusst_leer_alle_aus",
+     "beschreibung": "Leerauswahl, wie der Editor sie speichert: alle Eintraege enabled:false ohne bucket (#1394 Fall B)",
+     "eingabe": {
+      "display_config": {
+       "metrics": [
+        {
+         "metric_id": "temperature",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "wind",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "gust",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "precipitation",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "thunder",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "freezing_level",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        },
+        {
+         "metric_id": "visibility",
+         "enabled": false,
+         "use_friendly_format": true,
+         "order": 0
+        }
+       ]
+      }
+     },
+     "erwartet": []
     },
     {
      "id": "gespeichert_folge",
@@ -1159,11 +1232,11 @@
    "kontext": "orte",
    "flaeche": "Stundenverlauf je Ort (hourly_metrics)",
    "vokabular": "Kennungen (metric_id)",
-   "begruendung": "O2: das Konzept nennt die Standardfolge des Stundenverlaufs nicht. Soll ist die Mail-Seite, das Backend-Tupel HOURLY_DEFAULT_METRIC_IDS (compare_hourly_metric_ids.py:111, 'exakt die neun Spalten von vor #1406 B, in genau ihrer Reihenfolge'), weil das ausgelieferte Verhalten ist, was Nutzer kennen. Der Editor muss bei nie eingestellter Liste genau diese Folge zeigen. Gespeichert: die gespeicherte Folge.",
+   "begruendung": "#3047 H1, Konzept docs/context/einstellungen_neu.md §5 Punkt 8 ('Jede Liste nimmt nur aus den Metriken oben'): der Stundenverlauf nimmt nur aus der Grundauswahl (active_metrics). Nie eingestellt (hourly_metrics fehlt): die stuendlich verfuegbaren Groessen der Grundauswahl in deren Folge; ist die Grundauswahl selbst nie eingestellt (Altbestand), gilt die Vorgabemenge HOURLY_DEFAULT_METRIC_IDS in ihrer Folge (ausgeliefertes Verhalten). Gespeichert: die gespeicherte Folge, geschnitten auf die Grundauswahl. Loest die fruehere O2-Begruendung (feste Standardfolge auch mit Grundauswahl) ab.",
    "zustaende": [
     {
      "id": "nie_eingestellt",
-     "beschreibung": "hourly_metrics fehlt",
+     "beschreibung": "Altbestand: active_metrics und hourly_metrics fehlen",
      "eingabe": {
       "display_config": {}
      },
@@ -1177,6 +1250,26 @@
       "thunder",
       "rain_probability",
       "visibility"
+     ]
+    },
+    {
+     "id": "nie_eingestellt_mit_grundauswahl",
+     "beschreibung": "Grundauswahl Wind, Niederschlag, Temperatur, Boeen (ohne UV/Sicht); hourly_metrics fehlt (Nachpruefung Punkt 3)",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        "wind_max_kmh",
+        "precip_sum_mm",
+        "temp_max_c",
+        "gust_max_kmh"
+       ]
+      }
+     },
+     "erwartet": [
+      "wind",
+      "precipitation",
+      "temperature",
+      "gust"
      ]
     },
     {
@@ -1213,6 +1306,32 @@
       "visibility",
       "wind",
       "uv_index"
+     ]
+    },
+    {
+     "id": "gespeichert_ausserhalb_grundauswahl",
+     "beschreibung": "Stundenverlauf Sicht, Boeen, Temperatur, Niederschlag; Sicht nicht in der Grundauswahl (Nachpruefung Punkt 1)",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        "temp_max_c",
+        "wind_max_kmh",
+        "gust_max_kmh",
+        "precip_sum_mm",
+        "pop_max_pct"
+       ],
+       "hourly_metrics": [
+        "visibility",
+        "gust",
+        "temperature",
+        "precipitation"
+       ]
+      }
+     },
+     "erwartet": [
+      "gust",
+      "temperature",
+      "precipitation"
      ]
     }
    ]

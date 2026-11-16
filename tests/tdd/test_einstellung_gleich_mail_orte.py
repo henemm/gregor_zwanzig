@@ -463,7 +463,10 @@ def test_ac6_stundenverlauf_aus_und_leer(aenderung):
 
 def test_ac6_stundenverlauf_nie_eingestellt_standard():
     """AC-6 / AC-13 (Befund O2): nie eingestellt -> der Block erscheint mit der
-    Backend-Standardliste. Ob diese der Editor-Vorgabe gleicht, prueft Paket D."""
+    Standardliste. Seit #3047 H1 (Konzept §5.8) ist das bei vorhandener
+    Grundauswahl (``basis``) deren stuendliche Groessen in deren Folge, nicht
+    mehr die feste Vorgabemenge (Orakel ``soll_stundenverlauf`` bewusst
+    umgestellt). Ob sie der Editor-Vorgabe gleicht, prueft Paket D."""
     mail = sende_orte_mail(preset_dict("basis"))
     assert "hourly_metrics" not in mail.roh["display_config"]
     soll = soll_stundenverlauf(mail.roh, _standard_stunden())
@@ -509,6 +512,44 @@ def test_ac10_stundenverlauf_totalschnitt_rueckfall(variante, grund, stunden, er
     assert soll_stundenverlauf(mail.roh, _standard_stunden()) == erwartet, variante
     for fmt in ("html", "klartext"):
         pruefe_stundenverlauf(mail, fmt)
+
+
+def _stunden_koepfe(mail, fmt: str) -> dict[str, list[str]]:
+    return (html_stundenverlauf(mail.html) if fmt == "html"
+            else klartext_stundenverlauf(mail.plain))
+
+
+@pytest.mark.parametrize("fmt", ["html", "klartext"])
+def test_h1_stundenverlauf_gespeichert_ausserhalb_grundauswahl(fmt):
+    """#3047 H1 (Nachpruefung Punkt 1, AC-10/AC-13): Sicht steht gespeichert
+    im Stundenverlauf, aber nicht in der Grundauswahl -> die Mail zeigt Boeen,
+    Temp, Niederschlag (Soll von Hand, Konzept §5.8). Der Editor zeigt dieselbe
+    Liste (``editor_standard.json`` Zustand ``gespeichert_ausserhalb_grundauswahl``)."""
+    p = preset_dict("basis")
+    p["display_config"]["hourly_metrics"] = ["visibility", "gust", "temperature", "precipitation"]
+    mail = sende_orte_mail(p)
+    assert "visibility" not in grundauswahl(mail.roh), "Vorbedingung"
+    ist = _stunden_koepfe(mail, fmt)
+    assert list(ist) == _orte(mail.roh)
+    for ort, koepfe in ist.items():
+        assert koepfe == ["Gust", "Temp", "Rain"], f"{fmt} {ort}: {koepfe}"
+
+
+@pytest.mark.parametrize("fmt", ["html", "klartext"])
+def test_h1_stundenverlauf_nie_eingestellt_aus_grundauswahl(fmt):
+    """#3047 H1 (Nachpruefung Punkt 3, AC-6/AC-10/AC-13, Konzept §5.8 "Jede
+    Liste nimmt nur aus den Metriken oben"): Stundenverlauf nie eingestellt,
+    Grundauswahl Wind, Niederschlag, Temperatur, Boeen (ohne UV, Sicht,
+    Gewitter, ...) -> genau diese Spalten in der Folge der Grundauswahl, nicht
+    die feste Vorgabe ``HOURLY_DEFAULT_METRIC_IDS``. Soll von Hand."""
+    p = preset_dict("basis")
+    p["display_config"]["active_metrics"] = _am(("wind", "precipitation", "temperature", "gust"))
+    mail = sende_orte_mail(p)
+    assert "hourly_metrics" not in mail.roh["display_config"], "Vorbedingung"
+    ist = _stunden_koepfe(mail, fmt)
+    assert list(ist) == _orte(mail.roh)
+    for ort, koepfe in ist.items():
+        assert koepfe == ["Wind", "Rain", "Temp", "Gust"], f"{fmt} {ort}: {koepfe}"
 
 
 @pytest.mark.parametrize("fmt", ["html", "klartext"])

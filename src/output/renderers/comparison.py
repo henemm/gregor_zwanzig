@@ -254,8 +254,10 @@ def render_comparison_text(
 
     target_date = result.target_date
     created_at = result.created_at
-    # Zentraler Sortier-Helfer (PO-Update 2026-07-08): alphabetisch, case-
-    # insensitiv, identisch zu render_compare_html() -- keine Doppel-Logik.
+    # Zentraler Orts-Reihenfolge-Helfer (#1359, loest die alphabetische
+    # Sortierung vom 2026-07-08 ab): die vom Nutzer eingestellte Ortsfolge
+    # (`location_ids`) bleibt, identisch zu render_compare_html() -- keine
+    # Doppel-Logik.
     locations = location_render_order(result.locations)
     if not locations:
         return t("vergleich.allgemein.keine_daten", lang)
@@ -604,9 +606,10 @@ def render_compare_email(
 # SPEC: docs/specs/modules/compare_channel_preview_dispatch.md (AC-3)
 # Neutralitaets-Vertrag identisch zu render_comparison_text (#1110): KEIN
 # Score, KEIN Rang, keine Gewinner-Hervorhebung -- Score bleibt ausschliesslich
-# interne Sortiergroesse der ComparisonEngine. Orte erscheinen alphabetisch
-# (gemeinsamer Sortier-Helfer), damit die interne Score-Reihenfolge sich nicht
-# als sichtbares Ranking niederschlaegt.
+# interne Sortiergroesse der ComparisonEngine. Orte erscheinen in der vom
+# Nutzer eingestellten Folge (gemeinsamer Helfer ``location_render_order``,
+# #1359), damit die interne Score-Reihenfolge sich nicht als sichtbares
+# Ranking niederschlaegt.
 # Metrik-Vokabular = die Uebersichts-Metrik-IDs von render_comparison_text
 # (Quelle: resolve_compare_render_options -> resolve_enabled_metrics). Keine
 # eigene Metrik-Liste, insbesondere kein confidence_pct (#710/ADR-0005).

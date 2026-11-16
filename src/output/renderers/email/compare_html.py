@@ -1079,7 +1079,9 @@ def _visible_hour_metrics(
     Spalten von vor der Katalog-Umstellung, in genau ihrer Reihenfolge. Vorher
     hiess ``None`` "alle Spalten"; mit 22 waehlbaren Wert-Spalten waere daraus
     ein ungefragter Sprung fuer jeden Bestands-Vergleich geworden (AC-4: kein
-    automatisches Hinzufuegen der neuen Groessen).
+    automatisches Hinzufuegen der neuen Groessen). Seit #3047 H1 kommt ``None``
+    nur noch bei nie eingestellter Grundauswahl an; mit Grundauswahl liefert
+    ``resolve_hourly_metrics`` deren stuendliche Groessen (Konzept §5.8).
 
     Issue #1335 Scheibe 1 (AC-2): die sichtbaren Spalten folgen der Reihenfolge
     von ``hourly_metrics`` statt der festen ``HOUR_METRICS``-Deklarations-

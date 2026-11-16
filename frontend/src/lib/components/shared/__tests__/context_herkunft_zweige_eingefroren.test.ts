@@ -257,7 +257,9 @@ const EINGEFROREN: readonly string[] = [
 	// #2931 (Rueckbau DayWindowCard/Tagesfenster-Abschnitt): alle sechs WeatherMetricsTab-
 	// Eintraege nach oben verschoben (-7/-7/-7/-7/-20/-89: entfallene Prop onDayWindowChange,
 	// Import und Abschnitts-Markup); keiner entfiel, Bedingungen unveraendert, unten gefesselt.
-	'WeatherMetricsTab.svelte:1967',
+	// #3047 H1: +1 (Prop `grundauswahl` am Stundenverlauf-Mount im Vergleichs-Zweig
+	// oberhalb), Bedingung unveraendert, nachgemessen, unten gefesselt.
+	'WeatherMetricsTab.svelte:1968',
 	// #2655 (F6): beide nur verschoben (Katalog-Import, Satz je Kontext aus
 	// dem Katalog statt Konkatenation); Bedingungen unveraendert, nachgemessen.
 	'versand-tab/vtBriefingChannelsText.ts:22',
@@ -398,7 +400,7 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:1967', // #2792 S1a: +10, #2794 S3a: +4, Text unveraendert
+		eintrag: 'WeatherMetricsTab.svelte:1968', // #2792 S1a: +10, #2794 S3a: +4, #3047 H1: +1, Text unveraendert
 		zeile: "{#if !createMode && context === 'route'}",
 		folgt: 'Issue #1721: Nacht-Stundentabelle der Trip-Mail'
 	}

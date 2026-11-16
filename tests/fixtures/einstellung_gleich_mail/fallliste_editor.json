@@ -37,10 +37,9 @@
    "test": "test_python_seite_trip_tabellen_altbestand",
    "ac": "AC-13",
    "befund": "N1",
-   "status": "ausnahme",
+   "status": "gruen",
    "seite": "python",
-   "zustand": "altbestand_ohne_metrics",
-   "verweis": "#3048 (N1: Trip ohne display_config.metrics -> Stunden-/Nachttabelle ohne Wertspalten; Behebung aendert alle Kanaele, eigenes Issue)"
+   "zustand": "altbestand_ohne_metrics"
   },
   {
    "id": "D-trip_tabellen-altbestand_ohne_metrics-frontend",
@@ -290,7 +289,7 @@
    "status": "gruen",
    "seite": "frontend",
    "zustand": "nie_eingestellt",
-   "verweis": "frontend/src/lib/components/compare/CompareHourlyLayoutControls.svelte:90-92 (Katalog-Gruppenfolge statt HOURLY_DEFAULT_METRIC_IDS)"
+   "verweis": "frontend/src/lib/components/compare/CompareHourlyLayoutControls.svelte (O2 behoben; #3047 H1: Grundauswahl nie eingestellt -> HOURLY_DEFAULT-Folge)"
   },
   {
    "id": "D-orte_stundenverlauf-gespeichert_folge-python",
@@ -343,6 +342,58 @@
    "status": "gruen",
    "seite": "frontend",
    "zustand": "gespeichert_umgekehrt"
+  },
+  {
+   "id": "D-orte_stundenverlauf-nie_eingestellt_mit_grundauswahl-python",
+   "liste": "orte_stundenverlauf",
+   "kontext": "orte",
+   "format": "editor",
+   "pruefung": "standard",
+   "test": "test_python_seite_orte_stundenverlauf_standard_mit_grundauswahl",
+   "ac": "AC-13, AC-10, AC-6",
+   "befund": "#3047 H1",
+   "status": "gruen",
+   "seite": "python",
+   "zustand": "nie_eingestellt_mit_grundauswahl"
+  },
+  {
+   "id": "D-orte_stundenverlauf-nie_eingestellt_mit_grundauswahl-frontend",
+   "liste": "orte_stundenverlauf",
+   "kontext": "orte",
+   "format": "editor",
+   "pruefung": "standard",
+   "test": "frontend_seite_orte_stundenverlauf_standard_mit_grundauswahl",
+   "ac": "AC-13, AC-10, AC-6",
+   "befund": "#3047 H1",
+   "status": "gruen",
+   "seite": "frontend",
+   "zustand": "nie_eingestellt_mit_grundauswahl"
+  },
+  {
+   "id": "D-orte_stundenverlauf-gespeichert_ausserhalb_grundauswahl-python",
+   "liste": "orte_stundenverlauf",
+   "kontext": "orte",
+   "format": "editor",
+   "pruefung": "grundauswahl",
+   "test": "test_python_seite_orte_stundenverlauf_gespeichert",
+   "ac": "AC-13, AC-10, AC-6",
+   "befund": "#3047 H1",
+   "status": "gruen",
+   "seite": "python",
+   "zustand": "gespeichert_ausserhalb_grundauswahl"
+  },
+  {
+   "id": "D-orte_stundenverlauf-gespeichert_ausserhalb_grundauswahl-frontend",
+   "liste": "orte_stundenverlauf",
+   "kontext": "orte",
+   "format": "editor",
+   "pruefung": "grundauswahl",
+   "test": "frontend_seite_orte_stundenverlauf_gespeichert",
+   "ac": "AC-13, AC-10, AC-6",
+   "befund": "#3047 H1",
+   "status": "gruen",
+   "seite": "frontend",
+   "zustand": "gespeichert_ausserhalb_grundauswahl"
   },
   {
    "id": "D-orte_ausblick-nie_eingestellt-python",
@@ -475,6 +526,32 @@
    "status": "gruen",
    "seite": "go",
    "verweis": "internal/handler/metric_preset.go displayConfigAusVorlage schrieb display_config.metrics ohne order/bucket (Editor autoAssign und Python-Loader auto_distribute sortierten nach Prioritaet um); Go-Test internal/handler/metric_preset_vorlage_folge_test.go"
+  },
+  {
+   "id": "D-trip_tabellen-katalog_drift-python",
+   "liste": "trip_tabellen",
+   "kontext": "trip",
+   "format": "editor",
+   "pruefung": "standard",
+   "test": "test_katalog_drift_trip_api_metrics",
+   "ac": "AC-13",
+   "befund": "Nachpruefung Punkt 8 (H4)",
+   "status": "gruen",
+   "seite": "python",
+   "zustand": "katalog_drift"
+  },
+  {
+   "id": "D-orte_vergleichstabelle-katalog_drift-python",
+   "liste": "orte_vergleichstabelle",
+   "kontext": "orte",
+   "format": "editor",
+   "pruefung": "standard",
+   "test": "test_katalog_drift_orte_api_compare_metrics",
+   "ac": "AC-13",
+   "befund": "Nachpruefung Punkt 8 (H4)",
+   "status": "gruen",
+   "seite": "python",
+   "zustand": "katalog_drift"
   }
  ]
 }

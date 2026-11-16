@@ -1565,7 +1565,13 @@ def test_kaskade_s2_ac7_empty_base_selection_does_not_cut_sms_channel():
     Vergleichs-Laenge gegen deren VOLLE, gemischte per_channel_layouts-Liste
     waere strukturell IMMER falsch, weil inaktive Eintraege ohnehin nie
     zurueckkommen, unabhaengig vom Schnitt) bleibt bei LEERER globaler Liste
-    vollstaendig erhalten -- kein Totalausfall."""
+    vollstaendig erhalten -- kein Totalausfall.
+
+    #3047 H5: Der Loader liefert fuer ``metrics: []`` seit H5 den
+    Register-Standard (#1394 Fall A, siehe
+    ``test_kaskade_s2_ac7_leere_liste_im_loader_ist_altbestand``); eine leere
+    globale Liste entsteht nur noch am Modell -- dort wirkt D4 und wird hier
+    geprueft."""
     raw = {
         "trip_id": "x1719s2ac7",
         "metrics": [],
@@ -1575,7 +1581,7 @@ def test_kaskade_s2_ac7_empty_base_selection_does_not_cut_sms_channel():
             {"metric_id": "visibility", "enabled": True},
         ]},
     }
-    dc = _parse_display_config(raw)
+    dc = dataclasses.replace(_parse_display_config(raw), metrics=[])
     assert dc.cascade_source_for_channel("sms", "evening") == "per_channel"
 
     result = dc.get_metrics_for_channel("sms", "evening")
@@ -1584,6 +1590,29 @@ def test_kaskade_s2_ac7_empty_base_selection_does_not_cut_sms_channel():
         f"{len(dc.per_channel_layouts['sms'])} Eintraegen -- D4 fehlt: "
         f"{[mc.metric_id for mc in result]}"
     )
+
+
+def test_kaskade_s2_ac7_leere_liste_im_loader_ist_altbestand():
+    """#3047 H5 (#1394 Fall A): ``metrics: []`` ist Altbestand -- der Loader
+    setzt den Register-Standard als Grundauswahl (wie der Editor), die
+    SMS-Kanal-Ebene nimmt daraus nur, was im Standard steht (ADR-0050):
+    hier ``visibility``; ``uv_index``/``cloud_low`` liegen ausserhalb."""
+    raw = {
+        "trip_id": "x3047h5",
+        "metrics": [],
+        "channel_layouts": {"sms": [
+            {"metric_id": "uv_index", "enabled": True},
+            {"metric_id": "cloud_low", "enabled": True},
+            {"metric_id": "visibility", "enabled": True},
+        ]},
+    }
+    dc = _parse_display_config(raw)
+    assert [m.metric_id for m in dc.metrics if m.enabled] == [
+        "temperature", "wind", "gust", "precipitation", "thunder",
+        "freezing_level", "visibility", "temperature_day_low", "temperature_day_high",
+    ]
+    result = dc.get_metrics_for_channel("sms", "evening")
+    assert [mc.metric_id for mc in result] == ["visibility"]
 
 
 # --- S2 AC-8 (D3): per_report_layouts wird gegen GLOBAL geschnitten, nicht gegen per_channel ---

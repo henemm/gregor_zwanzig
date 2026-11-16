@@ -1594,6 +1594,7 @@
 					catalog={compareCatalog}
 					smsSymbols={metricSymbols}
 					register={metricById}
+					grundauswahl={materializedActiveMetricKeys}
 				/>
 			</div>
 		{/if}

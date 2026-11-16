@@ -24,12 +24,14 @@ Die Regeln sind das dokumentierte Produktverhalten:
   wie im Klartext (AC-21).
 * Orte: Vergleichstabelle = ``channel_layouts.email`` (Folge, ``enabled``,
   #3039) vor ``channel_active_metrics.email``, je geschnitten mit
-  ``active_metrics`` (#1703 S8), Stundenverlauf = ``hourly_metrics``,
-  Ortsfolge = ``location_ids`` (#1359).
+  ``active_metrics`` (#1703 S8), Stundenverlauf = ``hourly_metrics``
+  geschnitten mit der Grundauswahl (``_orte_stunden``, Konzept §5.8),
+  Ortsfolge = ``location_ids`` (#1359), Namen aus ``--orte``/Huelle, sonst
+  ``orte_unpruefbar`` (nie still uebersprungen).
+* Darstellung Roh/Einfach je Spalte (Trip, ``formen_*``, Spec §2 Punkt 3).
 
-``None`` an einer Liste heisst "keine Aussage" (z. B. nie eingestellter
-Stundenverlauf: dessen Vorgabe sichert AC-13), der Validator prueft sie dann
-nicht.
+``None`` an einer Liste heisst "keine Aussage" (z. B. Trip-Altbestand ohne
+``metrics``), der Validator prueft sie dann nicht.
 """
 from __future__ import annotations
 
@@ -41,19 +43,26 @@ _SRC = Path(__file__).resolve().parents[2] / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from app.metric_catalog import _METRICS, aggregation_label  # noqa: E402
+from app.metric_catalog import _METRICS, OUTLOOK_FRIENDLY_CAPABLE, aggregation_label  # noqa: E402
 from i18n import t  # noqa: E402
 from output.renderers.compare_hourly_metric_ids import (  # noqa: E402
-    FRONTEND_TO_HOURLY_METRIC_ID, HOURLY_EXCLUDED_METRIC_IDS, HOURLY_MERGE_ONLY_METRIC_IDS,
+    FRONTEND_TO_HOURLY_METRIC_ID, HOURLY_DEFAULT_METRIC_IDS, HOURLY_EXCLUDED_METRIC_IDS,
+    HOURLY_MERGE_ONLY_METRIC_IDS,
 )
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG  # noqa: E402
-from output.renderers.email.helpers import NO_HOURLY_COLUMN_METRIC_IDS  # noqa: E402
+from output.renderers.email.helpers import (  # noqa: E402
+    _AMPEL_CAPABLE_METRIC_IDS, NO_HOURLY_COLUMN_METRIC_IDS,
+)
 
 _REG = {m.id: m for m in _METRICS}
 _BUCKET_RANG = {"primary": 0, "secondary": 1}
 _REPORTS = ("morning", "evening")
 #: Die sieben festen Ausblick-Spalten (Altbestand), Temperatur als Spanne.
 _FEST = ("temperature", "precipitation", "rain_probability", "wind", "gust", "thunder")
+#: Roh zeigt bereits ein Wort (Gewitter-Stufe, Niederschlagsart), keine Zahl.
+_ROH_WORT = frozenset({"thunder", "precip_type"})
+#: Zellformen der Darstellung (Spec §2 Punkt 3): Roh = Zahl, Einfach = Symbol/Wort oder Ampelpunkt.
+ZAHL, WORT, AMPEL = "zahl", "wort", "ampel"
 #: Alle waehlbaren Spaltenkuerzel -- erkennt im Klartext auch eine Spalte zu viel.
 ALLE_KUERZEL = tuple(dict.fromkeys(
     m.col_label for m in _METRICS if m.selectable and m.id not in NO_HOURLY_COLUMN_METRIC_IDS))
@@ -144,16 +153,54 @@ def _ausblick(gespeichert: object, grundauswahl: list[str] | None) -> list[str] 
     return [m for m in kennungen if m in grundauswahl] or list(grundauswahl)
 
 
+def _formen_stunden(liste: list[dict]) -> dict[str, dict]:
+    """Spalte -> erlaubte Zellformen je Teil (``None`` = nicht pruefbar).
+    Gewollte Ausnahmen (Spec §2 Punkt 3): Ampel-faehige Groessen zeigen
+    Einfach im HTML als Ampelpunkt, im Klartext als Zahl (#814); Gewitter zeigt
+    roh schon das Stufenwort (Klartext in beiden Formen gleich); die
+    verschmolzene Windrichtung hat keine eigene Spalte (#435)."""
+    formen: dict[str, dict] = {}
+    for e in liste:
+        mid = e["metric_id"]
+        if mid == "precip_type" or mid in NO_HOURLY_COLUMN_METRIC_IDS:
+            continue
+        if mid in _AMPEL_CAPABLE_METRIC_IDS:
+            html = (AMPEL,) if e.get("use_friendly_format", True) else (ZAHL,)
+            klartext: tuple | None = (ZAHL,)
+        elif mid == "thunder":
+            html, klartext = ((AMPEL,) if _modus(e) != "raw" else (ZAHL, WORT)), None
+        else:
+            einfach = _modus(e) != "raw"
+            html, klartext = ((WORT, AMPEL), (WORT,)) if einfach else ((ZAHL,), (ZAHL,))
+        formen.setdefault(_REG[mid].col_label, {"HTML": html, "Klartext": klartext})
+    return formen
+
+
+def _formen_ausblick(ids: list[str], einfach: dict) -> dict[str, dict]:
+    """Ausblick: Einfach nur fuer ``OUTLOOK_FRIENDLY_CAPABLE`` (Visibility,
+    Temperatur ohne Einfach-Form, #814 AC-5); Gewitter zeigt roh schon das
+    Stufenwort und wird nicht geprueft."""
+    formen: dict[str, dict] = {}
+    for m in ids:
+        if m in _ROH_WORT:
+            continue
+        an = m in OUTLOOK_FRIENDLY_CAPABLE and einfach.get(m)
+        formen[_REG[m].col_label] = ({"HTML": (WORT, AMPEL), "Klartext": (WORT,)} if an
+                                     else {"HTML": (ZAHL,), "Klartext": (ZAHL,)})
+    return formen
+
+
 def _ausblick_spalten(ids: list[str] | None, formate: object) -> dict:
     if ids is None:
         temp = _REG["temperature"].col_label
         html = [f"{temp} {aggregation_label(a, 'de')}" for a in ("min", "max")]
         return {"fest": True, "html": html + [_REG[m].col_label for m in _FEST[1:]],
-                "klartext": [_REG[m].col_label for m in _FEST], "darstellung": {}}
+                "klartext": [_REG[m].col_label for m in _FEST], "darstellung": {}, "formen": {}}
     labels = [_REG[m].col_label for m in ids]
     einfach = {m: bool(v) for m, v in (formate or {}).items()} if isinstance(formate, dict) else {}
     return {"fest": False, "html": labels, "klartext": labels,
-            "darstellung": {m: "einfach" if einfach.get(m) else "roh" for m in ids}}
+            "darstellung": {m: "einfach" if einfach.get(m) else "roh" for m in ids},
+            "formen": _formen_ausblick(ids, einfach)}
 
 
 def trip_soll(trip: dict, report: str = "evening") -> dict:
@@ -172,6 +219,7 @@ def trip_soll(trip: dict, report: str = "evening") -> dict:
         "kontext": "trip", "report": report,
         "stunden": _trip_stundenspalten(liste) if dc.get("metrics") else None,
         "darstellung_stunden": {e["metric_id"]: _modus(e) for e in liste},
+        "formen_stunden": _formen_stunden(liste) if dc.get("metrics") else {},
         "nacht": bool(dc.get("show_night_block", True)),
         "ausblick_an": ids != [] and rc.get("show_outlook", True) is not False
         and report in (trend_reports or []),
@@ -244,16 +292,28 @@ def _orte_uebersicht(dc: dict) -> list[tuple[str, str]] | None:
     return [p for p in eigen if p in grund] or (list(grund) if eigen else [])
 
 
-def _orte_stunden(dc: dict) -> list[str] | None:
+def _stuendlich(mid: object) -> bool:
+    return _waehlbar(mid) and mid not in HOURLY_EXCLUDED_METRIC_IDS
+
+
+def _orte_stunden(dc: dict, grund: list[tuple[str, str]] | None) -> list[str]:
+    """Stundenverlauf (Konzept §5.8 "Jede Liste nimmt nur aus den Metriken
+    oben"): gespeichert -> Schnitt mit der Grundauswahl in gespeicherter Folge;
+    leerer Schnitt einer nicht leeren Liste -> Vorgabemenge geschnitten mit der
+    Grundauswahl, sonst deren stuendlich waehlbare Groessen. Nie eingestellt ->
+    Grundauswahl, soweit stuendlich verfuegbar, in deren Folge; ohne
+    Grundauswahl die Vorgabemenge."""
+    basis = None if grund is None else [m for m in dict.fromkeys(m for m, _a in grund)
+                                        if _stuendlich(m)]
     roh = dc.get("hourly_metrics")
     if not isinstance(roh, list):
-        return None
-    ids: list[str] = []
-    for e in roh:
-        mid = FRONTEND_TO_HOURLY_METRIC_ID.get(e, e) if isinstance(e, str) else None
-        if (mid in _REG and mid not in HOURLY_EXCLUDED_METRIC_IDS and mid not in ids
-                and _REG[mid].selectable):
-            ids.append(mid)
+        ids = list(HOURLY_DEFAULT_METRIC_IDS) if basis is None else basis
+    else:
+        ids = list(dict.fromkeys(m for m in (FRONTEND_TO_HOURLY_METRIC_ID.get(e, e)
+                                             for e in roh if isinstance(e, str)) if _stuendlich(m)))
+        if basis is not None and ids:
+            ids = ([m for m in ids if m in basis]
+                   or [m for m in HOURLY_DEFAULT_METRIC_IDS if m in basis] or basis)
     return [_REG[m].col_label for m in ids if m not in HOURLY_MERGE_ONLY_METRIC_IDS]
 
 
@@ -265,7 +325,7 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
     grundauswahl = None if grundpaare is None else list(dict.fromkeys(
         m for m, _a in grundpaare if _ausblickfaehig(m)))
     ids = _ausblick(dc.get("outlook_metrics"), grundauswahl)
-    stunden = _orte_stunden(dc)
+    stunden = _orte_stunden(dc, grundpaare)
     stunden_an = preset.get("hourly_enabled", True) is not False and stunden != []
     ids_orte = [i for i in preset.get("location_ids") or [] if isinstance(i, str)]
     return {
@@ -276,21 +336,58 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
         "stunden": stunden if stunden_an else [],
         "ausblick_an": preset.get("outlook_enabled", True) is not False and ids != [],
         "ausblick": None if ids == [] else _ausblick_spalten(ids, dc.get("outlook_metric_formats")),
-        "orte": [ortsnamen[i] for i in ids_orte if i in ortsnamen] if ortsnamen else None,
+        **_ortsfolge(ids_orte, ortsnamen),
     }
+
+
+def _ortsfolge(ids_orte: list[str], ortsnamen: dict | None) -> dict:
+    """Ortsfolge = ``location_ids`` (#1359) als Namen. Ohne aufloesbare Namen
+    wird sie NICHT still uebersprungen (Nachpruefung #3047 Punkt 4), sondern
+    als ``orte_unpruefbar`` gemeldet. Eine Kennung ohne Ort fehlt auch in der
+    Mail (geloeschter Ort, ``order_locations_by_ids``) und faellt heraus."""
+    if not ids_orte:
+        return {"orte": []}
+    if not ortsnamen:
+        return {"orte": None, "orte_unpruefbar": (
+            "das Preset traegt nur Orts-Kennungen, keine Namen -- --orte <Orts-Verzeichnis "
+            "data/users/<id>/locations bzw. JSON von /api/locations> oder Huelle "
+            "{\"preset\": ..., \"orte\": {\"<id>\": \"<Name>\"}} angeben")}
+    namen = [ortsnamen[i] for i in ids_orte if i in ortsnamen]
+    if not namen:
+        return {"orte": None, "orte_unpruefbar": (
+            f"keine der Kennungen {ids_orte} steht in den Ortsnamen ({sorted(ortsnamen)})")}
+    return {"orte": namen}
 
 
 # --------------------------------------------------------------------------- #
 # Einstieg
 # --------------------------------------------------------------------------- #
-def soll_aus_daten(daten: dict, lang: str = "de") -> dict:
+def soll_aus_daten(daten: dict, lang: str = "de", ortsnamen: dict | None = None) -> dict:
     """Erkennt Trip bzw. Orte am Inhalt. Orte duerfen als Huelle
-    ``{"preset": {...}, "orte": {"<id>": "<Name>"}}`` kommen (Ortsfolge)."""
+    ``{"preset": {...}, "orte": {"<id>": "<Name>"}}`` kommen (Ortsfolge) oder
+    als rohes Preset mit ``ortsnamen`` (aus ``lade_ortsnamen``, ``--orte``)."""
     if isinstance(daten.get("preset"), dict):
-        return orte_soll(daten["preset"], lang, daten.get("orte") or None)
+        return orte_soll(daten["preset"], lang, {**(daten.get("orte") or {}), **(ortsnamen or {})})
     if "location_ids" in daten or daten.get("kind") == "vergleich":
-        return orte_soll(daten, lang)
+        return orte_soll(daten, lang, ortsnamen)
     return {"kontext": "trip", "je_report": {r: trip_soll(daten, r) for r in _REPORTS}}
+
+
+def lade_ortsnamen(pfad: str | Path) -> dict[str, str]:
+    """Kennung -> Name aus dem Orts-Verzeichnis des Nutzers
+    (``data/users/<id>/locations/<id>.json``), aus der Orts-Liste der API
+    (``GET /api/locations``: Liste von Objekten mit ``id``/``name``) oder aus
+    einer Zuordnung ``{"<id>": "<Name>"}``."""
+    pfad = Path(pfad)
+    if pfad.is_dir():
+        eintraege = [json.loads(f.read_text(encoding="utf-8")) for f in sorted(pfad.glob("*.json"))]
+    else:
+        daten = json.loads(pfad.read_text(encoding="utf-8"))
+        if isinstance(daten, dict) and all(isinstance(v, str) for v in daten.values()):
+            return dict(daten)
+        eintraege = daten if isinstance(daten, list) else []
+    return {e["id"]: e["name"] for e in eintraege if isinstance(e, dict)
+            and isinstance(e.get("id"), str) and isinstance(e.get("name"), str)}
 
 
 def lade_soll(pfad: str | Path, lang: str = "de") -> dict:

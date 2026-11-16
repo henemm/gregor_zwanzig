@@ -1,0 +1,50 @@
+# #3047 H4 -- RED-Nachweise aus Nutzersicht
+# Mutations-Gegenprobe per String-Ersetzung, Sicherungskopie im Scratchpad,
+# danach zurueckkopiert (git diff der Produktdatei leer). Kein git checkout/stash/reset.
+
+## Punkt 6: morning_enabled=False ignoriert
+Mutation: src/app/models.py _filter_metrics_by_report_type,
+  `elif mc.morning_enabled is False: pass` -> `result.append(mc)`.
+Vor H4 fing kein Test diese Mutation (Nachpruefung Punkt 6). Neuer Katalogfall
+test_ein_aus_metrik_je_bericht (trip-bericht-aus--morgen_aus--html/klartext):
+Boeen am gespeicherten Metrik-Eintrag fuer den Morgen aus -> Morgen-Mail ohne
+Boeen (Etappe, Nacht, Ausblick), Abend-Mail unberuehrt.
+
+E   AssertionError: trip-bericht-aus--morgen_aus--html (morning) etappe: Spaltenfolge ['gust', 'temperature', 'wind'] != Soll ['temperature', 'wind']
+E   AssertionError: trip-bericht-aus--morgen_aus--klartext (morning) etappe: Spaltenfolge ['gust', 'temperature', 'wind'] != Soll ['temperature', 'wind']
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ein_aus_metrik_je_bericht[trip-bericht-aus--morgen_aus--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ein_aus_metrik_je_bericht[trip-bericht-aus--morgen_aus--klartext]
+
+## Punkt 6 analog: evening_enabled=False ignoriert
+Mutation: `elif mc.evening_enabled is False: pass` -> `result.append(mc)`.
+
+E   AssertionError: trip-bericht-aus--abend_aus--html (evening) etappe: Spaltenfolge ['gust', 'temperature', 'wind'] != Soll ['temperature', 'wind']
+E   AssertionError: trip-bericht-aus--abend_aus--klartext (evening) etappe: Spaltenfolge ['gust', 'temperature', 'wind'] != Soll ['temperature', 'wind']
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ein_aus_metrik_je_bericht[trip-bericht-aus--abend_aus--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_ein_aus_metrik_je_bericht[trip-bericht-aus--abend_aus--klartext]
+
+Ohne Mutation: 4 passed.
+
+## Punkt 8: Waechter gegen Katalog-Drift
+Mutation: Register src/app/metric_catalog.py gust trip_default_rank 3 -> 8
+(eingefrorener /api/metrics-Katalog in editor_standard.json unveraendert).
+Vor H4 rechneten Editor- und Python-Seite still gegen den alten Katalog.
+
+E   AssertionError: Katalog-Drift:
+        trip_api_metrics[wind] gust: (eingefroren, API) {'trip_default_rank': (3, 8)}
+      -> eingefrorene Kataloge in tests/fixtures/einstellung_gleich_mail/editor_standard.json neu aufzeichnen (gleiche Felder) und die erwarteten Standardfolgen beider Seiten pruefen
+FAILED tests/tdd/test_einstellung_gleich_mail_editor_standard.py::test_katalog_drift_trip_api_metrics
+
+## Punkt 7: kein RED moeglich (Datenmodell)
+Das gespeicherte Format kann "bewusst abgewaehlt" nicht von "spaeter global
+eingeschaltet" unterscheiden:
+- Trip channel_layouts: der Editor (metricsEditor.ts buildWeatherConfigMetrics)
+  schreibt JEDE Katalog-Metrik, nicht aktive als enabled:false -- auch die, die
+  beim Speichern global aus waren. Ein fehlender Eintrag ist Altbestand, den
+  #2422-Golden C als Abwahl festschreibt (email ohne cloud_low-Eintrag, cloud_low
+  global an, erwartet: nicht in der E-Mail). Eine Leseregel "fehlend -> hinten
+  anhaengen" wie bei Orte channel_layouts (#3039) kippt Golden C.
+- Trip outlook_metrics, Orte channel_active_metrics/outlook_metrics/hourly_metrics:
+  reine ID-Listen, Fehlen = Abwahl.
+Ein Test, der "neu" erwartet, waere gegen Daten geschrieben, die das nicht
+ausdruecken. Als offen_feature in den Falllisten (trip-p7--*, O-p7--*) gefuehrt.

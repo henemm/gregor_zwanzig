@@ -110,7 +110,7 @@ Diese Scheibe:
 | `VersandTab.svelte:370` | Markup-Baum Trip (`VTLaufzeitRoute`, Mehrtages-Trend, Premium-SMS) |
 | `VersandTab.svelte:406` | Markup-Baum Vergleich (`VTLaufzeitVergleich`, kein Mehrtages-Trend, eigener Premium-SMS-Schalter seit #2293 S2) — zwei komplette, unterschiedliche Komponenten-Bäume |
 | `WeatherMetricsTab.svelte:1447` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
-| `WeatherMetricsTab.svelte:1967` | Schalter „Nacht-Stundentabelle in der Mail zeigen“ nur im Trip (#1721): die Nacht-Stundentabelle gibt es nur in der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre, Spec `fix_1721_nachtausgabe.md`) |
+| `WeatherMetricsTab.svelte:1968` | Schalter „Nacht-Stundentabelle in der Mail zeigen“ nur im Trip (#1721): die Nacht-Stundentabelle gibt es nur in der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre, Spec `fix_1721_nachtausgabe.md`) |
 | `versand-tab/vtBriefingChannelsText.ts:22` | SMS-Zeichenbudget: Trip 160 / Vergleich 153 (unterschiedliches Layout) |
 | `versand-tab/vtBriefingChannelsText.ts:29` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
 | `versand-tab/VTSchedulePlan.svelte:57` | `isRoute`-Ableitung — Mehrtages-Trend-Karte existiert nur im Trip |
