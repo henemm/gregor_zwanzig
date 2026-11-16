@@ -257,7 +257,7 @@ test.describe('Issue #1350 Teil 2 AC-1: Compare-Auswahlliste aus GET /api/compar
 		});
 
 		try {
-			await page.route('**/api/compare/metrics', (route) =>
+			await page.route('**/api/compare/metrics*', (route) =>
 				route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
 			);
 
@@ -276,7 +276,7 @@ test.describe('Issue #1350 Teil 2 AC-1: Compare-Auswahlliste aus GET /api/compar
 			// Fehler beheben (Route entfernen) und ueber "Wiederholen" den echten
 			// Endpoint erneut ansprechen — belegt Retry-Erfolg und (in Verbindung
 			// mit F001) dass kein Doppel-Fetch/Auto-Retry-Loop haengt.
-			await page.unroute('**/api/compare/metrics');
+			await page.unroute('**/api/compare/metrics*');
 			await retryBtn.click();
 			await expect(list).toBeVisible({ timeout: 15000 });
 
