@@ -257,7 +257,8 @@ class TestAC6RegressionHeaderPreserved:
         assert bubbles, "render_telegram_bubbles() lieferte keine Bubbles"
         kopf = bubbles[0].text
         assert "KHW Regression 403" in kopf, f"Trip-Name fehlt im Kopf-Bubble: {kopf!r}"
-        assert "Morning" in kopf, f"Report-Typ fehlt im Kopf-Bubble: {kopf!r}"
+        # #3052: Briefing-Art in Nutzersprache (Default de -> "Morgen").
+        assert "Morgen" in kopf, f"Report-Typ fehlt im Kopf-Bubble: {kopf!r}"
         assert "03.07.2026" in kopf, f"Datum fehlt im Kopf-Bubble: {kopf!r}"
 
 

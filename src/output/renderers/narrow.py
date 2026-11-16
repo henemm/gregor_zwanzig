@@ -31,6 +31,7 @@ from utils.timezone import local_fmt, local_hour
 
 from output.renderers.alert.render import _esc
 from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
+from output.renderers.briefing_typ import briefing_typ
 from output.renderers.channel_layout import (
     VISIBILITY_GATE_IDS, render_for_channel, telegram_metric_notice,
 )
@@ -776,7 +777,8 @@ def render_telegram_bubbles(
     if segments:
         # Bug #397: Datums-Header in Ortszeit.
         report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
-    head2 = f"{report_type.title()} {report_date}".strip()
+    # Issue #3052: Briefing-Art in Nutzersprache, dieselbe Quelle wie die Mail.
+    head2 = f"{briefing_typ(report_type, lang)} {report_date}".strip()
     if head2:
         head_lines.extend(_wrap(_esc(head2), _TG_PROSE_WIDTH))
     if stability_result is not None:

@@ -1606,7 +1606,7 @@ def test_kaskade_s2_ac7_leere_liste_im_loader_ist_altbestand():
             {"metric_id": "visibility", "enabled": True},
         ]},
     }
-    dc = _parse_display_config(raw)
+    dc = _parse_display_config(raw, trip_standard_bei_leer=True)
     assert [m.metric_id for m in dc.metrics if m.enabled] == [
         "temperature", "wind", "gust", "precipitation", "thunder",
         "freezing_level", "visibility", "temperature_day_low", "temperature_day_high",
