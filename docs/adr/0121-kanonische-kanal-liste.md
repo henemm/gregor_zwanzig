@@ -31,3 +31,14 @@ Phase 2 soll EINE Auflösung schaffen, ohne die zugestellte Mail zu ändern und 
 
 - **Positiv:** Eine Auflösung für alle vier Kanäle und beide Flächen; #3042 braucht keine Änderung, sein Format ist verlustfrei lesbar; die Mail bleibt in jedem Kanal unverändert; Nachprüfungs-Punkt 6 (Mutation `morning_enabled=False`) wird abgedeckt.
 - **Negativ / Preis:** Bis Phase 3 bestehen Altpfade und Resolver nebeneinander (Differenztest als Klammer). Die zwei Format-Standards (Trip Katalog, Orte Roh) bleiben als `null` sichtbar, bis #3058 sie vereinheitlicht oder bewusst beibehält.
+
+## Nachtrag 2b (2026-11-16, Issue #3065): Ausblick und Stundenverlauf
+
+Der Resolver liefert zusätzlich die in Punkt 1 reservierten Flächen-Listen `outlook` (Trip und Orte) und `hourly` (nur Orte) im selben Zeilenformat. Spec: `docs/specs/modules/feat_3065_ausblick_stundenverlauf_resolver.md`.
+
+1. **Vokabular.** In `outlook` und `hourly` ist `metric_id` die Katalog-ID (`temperature`), so wie sie der Ausblick schon liefert und der Editor später speichert. Die Orte-Kanäle bleiben bei der Renderer-Kennung (`temp_max`). Diese Zwei-Vokabular-Lage ist bewusst; es gibt keine Rückübersetzungstabelle `dp_field` nach Katalog-ID. Vereinheitlichung gehört zu #3058.
+2. **Quellen.** Werte nur aus den bestehenden Altfunktionen: Trip-Ausblick `resolve_trip_outlook_metrics` auf dem ungekollabierten Modell (kein Schnitt mit `channel_layouts.email`), Orte-Ausblick `resolve_compare_outlook_metrics`, beide über `_erbe_grundauswahl` (ADR-0059). Stundenverlauf über die ID-Stufe `resolve_hourly_metric_ids`, aus der `resolve_hourly_metrics` verhaltensgleich `dp_field` bildet. Trip-`hourly` ist immer `None` (keine eigene Trip-Stundenliste).
+3. **Format.** Ausblick: wahr = `simplified`, ausdrücklich falsch = `raw`, kein Eintrag oder nicht ausblick-fähig = `null` (Flächen-Standard Roh), über `resolve_*_outlook_formats`. Stundenverlauf: `format` immer `null` (Roh/Einfach dort = #3058).
+4. **None-Vertrag.** `None` = Renderer-Vorgabemenge (Altbestand ohne Grundauswahl), `()` = Block entfällt (bewusst leer), sonst Zeilen in Anzeigefolge mit `order` ab 0 und `enabled=True`.
+5. **Abschaltflags bewusst draußen.** `hourly_enabled` und `outlook_enabled` stehen auf Preset-Ebene, nicht in `display_config`, und sind nicht Teil des View-Models; der Aufrufer schaltet wie bisher ab.
+6. **Kein Adapter-Umbau.** In dieser Scheibe liest niemand `outlook`/`hourly`; die Mail bleibt in jedem Kanal unverändert.
