@@ -11,8 +11,9 @@ geteilte Tagesfenster inkl. ``night_weather``).
 Erwartung (PO-Vorschlag im Issue): der Gewitter-Zweig der Kurzuebersicht
 liest DIESELBE Quelle wie die Fusszeile — ein nach Ankunft aufziehendes
 Gewitter (#1317-Szenario) wird sichtbar, und die Bubble traegt genau EINE
-Gewitter-Aussage. Alle uebrigen Metriken behalten die Gehzeit als
-Bezugsrahmen (bewusste Scheiben-Entscheidung, dokumentiert in #1498).
+Gewitter-Aussage. (Die damalige Scheibenregel "alle uebrigen Metriken
+behalten die Gehzeit" ist durch den Spec-Nachtrag Runde 7 #3047, B-L1,
+abgeloest: die Kurzuebersicht bewertet alle Groessen im Tagesfenster.)
 
 KEINE Mocks, KEIN Dateiinhalt-Check: reale Model-Objekte, realer
 Renderaufruf (``render_telegram_bubbles``), Nutzersicht auf den Bubble-Text.

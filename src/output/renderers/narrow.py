@@ -231,6 +231,32 @@ def _day_window_hail_note(
     ]))
 
 
+def _day_window_rows(
+    segments: list[SegmentWeatherData],
+    night_weather: Optional["NormalizedTimeseries"],
+    tz: ZoneInfo,
+    dc: UnifiedWeatherDisplayConfig,
+    *,
+    start_hour: int = DAY_WINDOW_START_HOUR,
+    end_hour: int = DAY_WINDOW_END_HOUR,
+) -> list[dict]:
+    """Stundenzeilen der Kurzuebersicht aus dem Tagesfenster (#3047 Runde 7, B-L1).
+
+    DIESELBE Punktmenge wie SMS (``sms_trip``) und Mail-Kachel/-Kurztext
+    (``build_day_window_points`` mit den ueber ``resolve_configured_window``
+    aufgeloesten Grenzen) -- ADR-0035 (ein Fenster fuer Anzeige UND
+    Bewertung), ADR-0095 (gleiche Antwort in jedem Kanal). Loest die
+    Scheibenregel #1498 ("nur Gewitter wechselt aufs Fenster") fuer die
+    Kurzuebersicht ab. Zeilenform wie die Etappentabelle (``dp_to_row``).
+    """
+    from output.renderers.day_window import build_day_window_points
+    from output.renderers.email.helpers import dp_to_row
+
+    return [dp_to_row(dp, dc, tz=tz) for dp in build_day_window_points(
+        segments, night_weather, tz, start_hour=start_hour, end_hour=end_hour,
+    )]
+
+
 def _tg_day_footer(
     segments: list[SegmentWeatherData],
     enabled_metric_ids: set[str] | list[str],
@@ -492,11 +518,13 @@ def _overview_line(
     ``night_weather``) ermittelte Schlimmst-Ordinal — vorher las dieser
     Zweig nur die Gehzeit-Reihen (``seg_tables``) und ein Gewitter nach der
     Ankunft (#1317) machte Kurzuebersicht und Fusszeile derselben Bubble
-    widerspruechlich (``⚡ ?`` gegen ``⚡ leicht``). Bewusste
-    Scheiben-Entscheidung (#1498): NUR Gewitter wechselt auf das
-    Tagesfenster; alle uebrigen Metriken behalten die Gehzeit als
-    Bezugsrahmen. Fehlt ``day_thunder_sev`` (None, z.B. Direktaufrufe ohne
-    Tagesfenster-Kontext), bleibt fail-soft der bisherige Gehzeit-Pfad.
+    widerspruechlich (``⚡ ?`` gegen ``⚡ leicht``). Die fruehere
+    Scheiben-Regel (#1498: nur Gewitter im Tagesfenster, alles andere
+    Gehzeit) ist seit #3047 Runde 7 (B-L1, ADR-0035/ADR-0095) abgeloest:
+    der Aufrufer reicht als ``seg_tables`` die Tagesfenster-Zeilen
+    (``_day_window_rows``) -- Werte und ``@h`` wie SMS und Mail. Fehlt
+    ``day_thunder_sev`` (None, z.B. Direktaufrufe ohne Tagesfenster-
+    Kontext), liest Gewitter fail-soft die uebergebenen Zeilen.
     Andere nicht-numerische Metriken zeigen weiterhin den zuletzt
     beobachteten Wert ohne Uhrzeit.
 
@@ -842,6 +870,13 @@ def render_telegram_bubbles(
         [sd for sd in segments if not sd.has_error], night_weather, tz,
         start_hour=day_window_start_hour, end_hour=day_window_end_hour,
     )
+    # #3047 Runde 7 (B-L1): alle Groessen der Kurzuebersicht im Tagesfenster
+    # wie SMS/Mail. Kein Rueckfall auf die Gehzeit-Reihen: liegt keine
+    # Stunde im Fenster, zeigt auch die SMS fuer diese Groessen nichts.
+    _overview_tables = [_day_window_rows(
+        segments, night_weather, tz, dc,
+        start_hour=day_window_start_hour, end_hour=day_window_end_hour,
+    )]
     overview_lines: list[str] = [t("telegram.kopf.zusammenfassung", lang)]
     # Issue #1484: die Nacht-Untergrenze der T-Zeile folgt der EIGENEN
     # Groesse "temperature_night". Ohne aktive "temperature" bekommt sie
@@ -886,7 +921,7 @@ def render_telegram_bubbles(
         if mid in VISIBILITY_GATE_IDS:
             continue
         overview_lines.extend(_wrap(_esc(_overview_line(
-            mid, seg_tables, fkeys, report_type=report_type,
+            mid, _overview_tables, fkeys, report_type=report_type,
             night_min_c=_night_min_c if _night_selected else None,
             night_wind_chill_min_c=(
                 _night_felt_min_c if _felt_night_selected else None

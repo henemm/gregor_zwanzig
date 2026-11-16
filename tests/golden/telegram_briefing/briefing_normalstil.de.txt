@@ -7,8 +7,8 @@ MeteoAlarm
 ---
 Kurzübersicht
 T 10.5-14.5
-W 17-26
-G 27-36@16
+W 14-25
+G 24-35@15
 R 0.0-0.2
 TH leicht
 VS 15
