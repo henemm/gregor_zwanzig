@@ -235,7 +235,8 @@ def test_ac2_trip_ausblick_gleich_altpfad_je_report_typ(eingabe):
     resolve = _resolver()
     fehler: list[str] = []
     for name, roh in _trip_kombinationen():
-        modell = _parse_display_config(copy.deepcopy(roh))
+        # #3048: Referenz ist der Trip-Ladepfad.
+        modell = _parse_display_config(copy.deepcopy(roh), trip_standard_bei_leer=True)
         for report_type in REPORT_TYPEN:
             alt_ids, _f = alt_trip_ausblick(modell, report_type)
             arg = copy.deepcopy(roh) if eingabe == "rohform" else modell
@@ -254,12 +255,18 @@ def test_ac2_enge_email_liste_schneidet_den_ausblick_nicht(report_type):
     THEN ist der Ausblick laenger als die E-Mail-Liste und gleich dem Altpfad."""
     roh = _trip_dict(GRUND_TRIP, "fehlt", True, "fehlt")
     vm = _resolver()(copy.deepcopy(roh), "trip", report_type)
-    alt_ids, _f = alt_trip_ausblick(_parse_display_config(copy.deepcopy(roh)), report_type)
+    # #3048: Referenz ist der Trip-Ladepfad.
+    alt_ids, _f = alt_trip_ausblick(
+        _parse_display_config(copy.deepcopy(roh), trip_standard_bei_leer=True), report_type,
+    )
     email = [z.metric_id for z in vm.email if z.enabled]
     ausblick = _ids(_liste(vm, "outlook"))
-    assert email == ["temperature"]
+    # Der Loader ergaenzt zu ``temperature`` die Tagesrichtungs-Begleiter
+    # (temperature_night/_day_low/_day_high); eng heisst: keine weitere Groesse.
+    assert email[0] == "temperature" and "wind" not in email, email
     assert ausblick == alt_ids
-    assert len(ausblick) > len(email), f"Ausblick {ausblick} von E-Mail-Liste geschnitten"
+    ausserhalb = [m for m in ausblick if m not in email]
+    assert ausserhalb, f"Ausblick {ausblick} von E-Mail-Liste {email} geschnitten"
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +293,8 @@ def test_ac3_format_trip_ueber_alle_kombinationen():
     resolve = _resolver()
     fehler: list[str] = []
     for name, roh in _trip_kombinationen():
-        modell = _parse_display_config(copy.deepcopy(roh))
+        # #3048: Referenz ist der Trip-Ladepfad.
+        modell = _parse_display_config(copy.deepcopy(roh), trip_standard_bei_leer=True)
         for report_type in REPORT_TYPEN:
             _ids_alt, formate = alt_trip_ausblick(modell, report_type)
             zeilen = _liste(resolve(copy.deepcopy(roh), "trip", report_type), "outlook") or ()
