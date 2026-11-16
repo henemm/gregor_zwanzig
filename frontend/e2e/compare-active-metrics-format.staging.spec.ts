@@ -329,7 +329,7 @@ test.describe('Issue #1373 S2 Scheibe B: umgestellte Metrik-Auswahl im Hub', () 
 
 		// Katalogantwort künstlich verzögern — genau das Fenster, in dem die
 		// Hydration früher zu früh lief.
-		await page.route('**/api/compare/metrics', async (route) => {
+		await page.route('**/api/compare/metrics*', async (route) => {
 			await new Promise((resolve) => setTimeout(resolve, 3_000));
 			await route.continue();
 		});
