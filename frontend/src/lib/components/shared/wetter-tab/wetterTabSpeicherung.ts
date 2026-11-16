@@ -85,8 +85,9 @@ export function vergleichNutzlast(o: SpeicherOptionen) {
 		radarAn: s.radarAn,
 		tagesfenster: s.tagesfenster
 	});
-	const { ampel, active_metrics } = voll.display_config;
-	return { ...voll, display_config: { ampel, active_metrics } };
+	const { ampel, active_metrics } = voll.display_config as { ampel: unknown; active_metrics?: unknown };
+	// #3047 E1: ungesetzte Grundauswahl bleibt ungesetzt (kein Schluessel in der Nutzlast).
+	return { ...voll, display_config: { ampel, ...(active_metrics === undefined ? {} : { active_metrics }) } };
 }
 
 function tripSpeicherer(o: SpeicherOptionen): Speicherer {

@@ -1,0 +1,283 @@
+# #3047 Runde 7, Paket p5a (AC-26, Befunde E1/E2/E5/E6/E7/E8/B-TM2): RED-Lauf vor dem Fix
+# Produktcode = Stand 5cbf1d5 (vor dem Fix); Test frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts
+# Einzige Hilfe: Shim 'ausgebbarTeilen' (neue Funktion) = alte Anzeige (jede Auswahl ist Zeile, nichts gesperrt).
+# Befehl: cd frontend && npm test -- src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts
+
+    not ok 1 - anzeige_gleich_ausgabe_a_nie_eingestellt_ohne_metrics
+    not ok 2 - anzeige_gleich_ausgabe_b_metrics_leer_vorlage_alpen
+    not ok 3 - anzeige_gleich_ausgabe_a_folge_mit_temperatur
+    not ok 4 - anzeige_gleich_ausgabe_b_temperatur_vorn
+    not ok 5 - anzeige_gleich_ausgabe_a_altformat
+    not ok 6 - anzeige_gleich_ausgabe_b_tagesfenster_halb
+    not ok 7 - anzeige_gleich_ausgabe_a_tagesfenster_gleich
+    not ok 8 - anzeige_gleich_ausgabe_b_tagesfenster_mitternacht
+    not ok 9 - anzeige_gleich_ausgabe_a_trend_nie_eingestellt
+    not ok 10 - anzeige_gleich_ausgabe_b_ohne_report_config
+    not ok 11 - anzeige_gleich_ausgabe_a_trend_flags_widersprechen
+    not ok 12 - anzeige_gleich_ausgabe_b_mailinhalt_null
+    not ok 13 - anzeige_gleich_ausgabe_a_bewusst_leer
+not ok 1 - AC-26 Trip: Einstellungsseite zeigt, was die Ausgabe tut
+    not ok 1 - wetter_geste_ausgabe_bleibt_a_nie_eingestellt_ohne_metrics
+    not ok 4 - wetter_geste_ausgabe_bleibt_b_metrics_leer_vorlage_alpen
+    not ok 5 - kurzstil_ausgabe_bleibt_b_metrics_leer_vorlage_alpen
+    not ok 11 - kurzstil_ausgabe_bleibt_b_temperatur_vorn
+    not ok 14 - kurzstil_ausgabe_bleibt_a_altformat
+    not ok 16 - wetter_geste_ausgabe_bleibt_b_tagesfenster_halb
+    not ok 17 - kurzstil_ausgabe_bleibt_b_tagesfenster_halb
+    not ok 19 - wetter_geste_ausgabe_bleibt_a_tagesfenster_gleich
+    not ok 20 - kurzstil_ausgabe_bleibt_a_tagesfenster_gleich
+    not ok 22 - wetter_geste_ausgabe_bleibt_b_tagesfenster_mitternacht
+    not ok 23 - kurzstil_ausgabe_bleibt_b_tagesfenster_mitternacht
+    not ok 25 - wetter_geste_ausgabe_bleibt_a_trend_nie_eingestellt
+    not ok 26 - kurzstil_ausgabe_bleibt_a_trend_nie_eingestellt
+    not ok 29 - kurzstil_ausgabe_bleibt_b_ohne_report_config
+    not ok 31 - wetter_geste_ausgabe_bleibt_a_trend_flags_widersprechen
+    not ok 32 - kurzstil_ausgabe_bleibt_a_trend_flags_widersprechen
+    not ok 34 - wetter_geste_ausgabe_bleibt_b_mailinhalt_null
+    not ok 35 - kurzstil_ausgabe_bleibt_b_mailinhalt_null
+    not ok 38 - kurzstil_ausgabe_bleibt_a_bewusst_leer
+not ok 2 - AC-26 Trip: unbeteiligtes Speichern aendert die Ausgabe nicht
+    not ok 1 - anzeige_gleich_ausgabe_a_nie_eingestellt
+    not ok 2 - wetter_geste_ausgabe_bleibt_a_nie_eingestellt
+    not ok 3 - anzeige_gleich_ausgabe_b_vorlage_alpen_ohne_liste
+    not ok 4 - wetter_geste_ausgabe_bleibt_b_vorlage_alpen_ohne_liste
+    not ok 7 - anzeige_gleich_ausgabe_b_mit_nacht_tief
+    not ok 11 - e6_nicht_ausgebbare_groesse_steht_gesperrt_statt_still
+not ok 3 - AC-26 Orte: Einstellungsseite zeigt, was die Ausgabe tut
+    not ok 2 - vergleich_anlegen_vorlage_ohne_nicht_ausgebbare
+    not ok 3 - vergleich_vorlage_uebernehmen_ohne_nicht_ausgebbare
+not ok 4 - AC-26 Anlege-Kette: Vorlage gilt, im Vergleich nur ausgebbare Groessen (E1, E6)
+    not ok 1 - minus_dann_plus_haengt_hinten_an
+not ok 5 - B-TM2: wieder hinzugefuegte Metrik steht in der Mail hinten (feat_2794 AC-19)
+    not ok 1 - gesperrt_grund_de
+    not ok 2 - gesperrt_grund_en
+not ok 6 - E6: gesperrte Groesse mit Grund in DE und EN
+# tests 69
+# pass 26
+# fail 43
+
+# Auszuege der Abweichungen (actual = Einstellungsseite bzw. Ausgabe nach Speichern, expected = Ausgabe vorher):
+      error: |-
+        + actual - expected
+        +     'cloud_total',
+        -     'freezing_level',
+        +     'rain_probability',
+        +     'sunshine',
+        -     'temperature_day_high',
+        -     'temperature_day_low',
+        -     'visibility',
+      error: |-
+        + actual - expected
+        +     'cloud_low',
+        +     'cloud_total',
+        +     'rain_probability',
+        +     'snowfall_limit',
+        +     'temperature_night',
+        -     'temperature_day_high',
+        -     'temperature_day_low',
+        +     'uv_index',
+        +     'wind_chill'
+        +     false
+        -     true
+      error: |-
+        + actual - expected
+        -     'temperature_day_high',
+        -     'temperature_day_low',
+        -     'temperature_night'
+      error: |-
+        + actual - expected
+        -     'temperature_day_high',
+        -     'temperature_night',
+        +     false
+        -     true
+      error: |-
+        + actual - expected
+        +     false
+        -     true
+      error: |-
+        + actual - expected
+        +     'cloud_total',
+        -     'freezing_level',
+        +     'rain_probability',
+        +     'sunshine',
+        -     'temperature_day_high',
+        -     'temperature_day_low',
+        -     'visibility',
+        +     6,
+        -     4,
+        +     false
+        -     true
+      error: |-
+        + actual - expected
+        +     'cloud_total',
+        -     'freezing_level',
+        +     'rain_probability',
+        +     'sunshine',
+        -     'temperature_day_high',
+        -     'temperature_day_low',
+        -     'visibility',
+        +     8,
+        +     8
+        -     4,
+        -     19
+        +     false
+        -     true
+      error: |-
+        + actual - expected
+        +     'cloud_total',
+        -     'freezing_level',
+        +     'rain_probability',
+        +     'sunshine',
+        -     'temperature_day_high',
+        -     'temperature_day_low',
+        -     'visibility',
+        +     false
+        -     true
+      error: |-
+        + actual - expected
+        +     'cloud_total',
+        -     'freezing_level',
+        +     'rain_probability',
+        +     'sunshine',
+        -     'temperature_day_high',
+        -     'temperature_day_low',
+        -     'visibility',
+        +     false
+        -     true
+      error: |-
+        + actual - expected
+        +     false
+        -     true
+      error: |-
+        + actual - expected
+        +     'cloud_total',
+        -     'freezing_level',
+        +     'rain_probability',
+        +     'sunshine',
+        -     'temperature_day_high',
+        -     'temperature_day_low',
+        -     'visibility',
+        +     true,
+        -     true
+      error: |-
+        + actual - expected
+        +     'cloud_total',
+        -     'freezing_level',
+        +     'rain_probability',
+        +     'sunshine',
+        -     'temperature_day_high',
+        -     'temperature_day_low',
+        -     'visibility',
+        +   etappen_kennzahlen: true,
+        -   etappen_kennzahlen: false,
+        +     false
+        -     true
+        +   vortag: true
+        -   vortag: false
+      error: |-
+        + actual - expected
+        +     false
+        -     true
+  error: '13 subtests failed'
+      error: |-
+        + actual - expected
+        +     'temperature_night',
+        +     'temperature_day_low',
+        +     'temperature_day_high',
+        +     'rain_probability',
+        +     'cloud_total',
+        +     'sunshine'
+        -     'freezing_level',
+        -     'visibility',
+        -     'temperature_day_low',
+        -     'temperature_day_high'
+      error: |-
+        + actual - expected
+        +     'temperature_day_low',
+        +     'temperature_day_high',
+        +     'rain_probability',
+        +     'wind_chill',
+        +     'wind_chill_night',
+        +     'wind_chill_day_low',
+        +     'wind_chill_day_high',
+        +     'cloud_total',
+        +     'visibility',
+        +     'uv_index',
+        +     'snowfall_limit',
+        +     'cloud_low',
+        +     'temperature_night'
+        -     'visibility',
+        -     'temperature_day_low',
+        -     'temperature_day_high'
+      error: |-
+        + actual - expected
+        +   false
+        -   true
+      error: |-
+        + actual - expected
+        +   false
+        -   true
+      error: |-
+        + actual - expected
+        +   false
+        -   true
+      error: |-
+        + actual - expected
+        +     'temperature_night',
+        +     'temperature_day_low',
+        +     'temperature_day_high',
+        +     'rain_probability',
+        +     'cloud_total',
+        +     'sunshine'
+        -     'freezing_level',
+        -     'visibility',
+        -     'temperature_day_low',
+        -     'temperature_day_high'
+        +     6,
+        -     4,
+      error: |-
+        + actual - expected
+        +   false
+        -   true
+      error: |-
+        + actual - expected
+        +     'temperature_night',
+        +     'temperature_day_low',
+        +     'temperature_day_high',
+        +     'rain_probability',
+        +     'cloud_total',
+        +     'sunshine'
+        -     'freezing_level',
+        -     'visibility',
+        -     'temperature_day_low',
+        -     'temperature_day_high'
+      error: |-
+        + actual - expected
+        +   false
+        -   true
+      error: |-
+        + actual - expected
+        +     'temperature_night',
+        +     'temperature_day_low',
+        +     'temperature_day_high',
+        +     'rain_probability',
+        +     'cloud_total',
+        +     'sunshine'
+        -     'freezing_level',
+        -     'visibility',
+        -     'temperature_day_low',
+        -     'temperature_day_high'
+      error: |-
+        + actual - expected
+        +   false
+        -   true
+      error: |-
+        + actual - expected
+        +     'temperature_night',
+        +     'temperature_day_low',
+        +     'temperature_day_high',
+        +     'rain_probability',
+
+# Nachtrag: nach diesem Lauf ergaenzte Tests (liste_vor_flags_*, kurzstil_ueberschreibt_spaeter_gespeicherten_trend_nicht,
+# trip_nie_eingestellt_zeigt_register_standard, orte_nie_eingestellt_zeigt_alle_zeilen_und_gesperrtes) sind ueber die
+# Mutationsprobe rot belegt (M16, M18, M21, M22: Fix-Stelle verfaelscht -> Test rot). Mutationsprobe gesamt: 22/22 gefangen.
