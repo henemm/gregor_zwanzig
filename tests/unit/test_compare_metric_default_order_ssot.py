@@ -213,23 +213,30 @@ def test_ac8_signatur_nicht_ermittelbar_ruft_sink_wie_bisher(monkeypatch, fehler
 
 
 # ---------------------------------------------------------------------------
-# AC-4: Telegram/SMS/Premium-SMS bei enabled_metrics=None unveraendert
+# AC-4 (abgeloest durch #3047 Runde 7, B-L4): Telegram/SMS/Premium-SMS bei
+# enabled_metrics=None folgen der Mail-Tabelle
 # ---------------------------------------------------------------------------
 
-# Eingefroren aus dem Stand VOR #1356: per Gegenprobe mit zur Laufzeit
-# wiederhergestellter alter Klartext-Folge (_PLAIN_ROWS_UNSORTED) gerendert,
-# zeichengleich zur Ausgabe mit neuer Folge (die Kurz-Auswahl kommt aus
-# _CHANNEL_METRICS, nicht aus _PLAIN_ROWS). Premium-SMS sendet denselben Text.
-_FROZEN_SMS_NONE = (
-    "Vergleich 24.07.: Aachen D 20C W 15 km/h SU 5.0h CT 40% SD 1 cm NS 2 cm; "
-    "Bremen D 20C W 15 km/h SU 5.0h CT 40% SD 1 cm NS 2 cm +1 Orte"
-)
+# Bis Runde 7 war hier die SMS eingefroren, die bei None die feste Sechserliste
+# (_CHANNEL_METRICS: D W SU CT SD NS) zeigte. Tech-Lead-Entscheidung im
+# Nachtrag Runde 7 (Spec feat_3047_einstellung_gleich_mail_pruefkatalog.md,
+# "Orte nie eingestellt = was die Mail zeigt", ADR-0095): die SMS zeigt
+# dieselben Zeilen in derselben Folge wie die Mail (CV2-/Registerfolge) und
+# kuerzt vom Listenende (AC-23). Die Kuerzel-Folge ist von Hand notiert.
+_SMS_NONE_KUERZEL_FOLGE = ["D", "W", "R", "PR"]
 
 
-def test_ac4_sms_bei_standard_zeichengleich_zum_stand_vor_1356():
+def test_ac4_sms_bei_standard_folgt_mail_tabelle():
+    import re
+
     from output.renderers.comparison import render_compare_sms
 
-    assert render_compare_sms(_result(), enabled_metrics=None) == _FROZEN_SMS_NONE
+    sms = render_compare_sms(_result(), enabled_metrics=None)
+    assert len(sms) <= 160, len(sms)
+    erster_ort = sms.split(": ", 1)[1].split("; ")[0]
+    kuerzel = re.findall(r"(?<= )([A-Z]{1,2}) (?=[-\w])", erster_ort)
+    assert kuerzel[:4] == _SMS_NONE_KUERZEL_FOLGE, sms
+    assert "SU" not in kuerzel[:4], f"alte Sechserliste: {sms}"
 
 
 # ---------------------------------------------------------------------------

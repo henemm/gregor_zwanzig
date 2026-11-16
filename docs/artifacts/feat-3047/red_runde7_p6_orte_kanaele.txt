@@ -1,0 +1,15 @@
+# RED vor Fix, Paket p6_orte_kanaele (Basis 34528eb)
+E   AssertionError: B-L4: erwartet zwei Wertezeilen (AC-24): [['Temp max 22°C', 'Wind 11 km/h', 'Sonne 6.0h', 'Wolken 35%', 'Schneehöhe 20 cm', 'Neuschnee 3 cm']]
+E   AssertionError: B-L4: erwartet zwei Wertezeilen (AC-24): [['Temp max 22°C', 'Wind 11 km/h', 'Sun 6.0h', 'Clouds 35%', 'Snow depth 20 cm', 'Fresh snow 3 cm']]
+E   AssertionError: B-L4 SMS-Festsatz statt Mail-Folge: Innsbruck D 22C W 11 km/h SU 6.0h CT 35% SD 20 cm NS 3 cm
+E   AssertionError: B-L2 Telegram ohne Hinweis (de): ORTS-VERGLEICH — Kette Basis
+E   AssertionError: B-L2 Telegram ohne Hinweis (en): LOCATION COMPARISON — Kette Basis
+E   AssertionError: B-L2 SMS ohne X?: Vergleich 08.07.: Innsbruck G 19 km/h D 22C W 11 km/h R 3.5 mm CT 35%; Bozen G 23 km/h D 27C W 14 km/h R 3.5 mm CT 48%
+E   AssertionError: B-L3: Ampel-Grenzen ohne Wirkung: Böen mäßig
+FAILED tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail[de]
+FAILED tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail[en]
+FAILED tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_sms_folgt_mail
+FAILED tests/tdd/test_3047_runde7_orte_luecken.py::test_bl2_warnungen_nicht_abrufbar_telegram[de]
+FAILED tests/tdd/test_3047_runde7_orte_luecken.py::test_bl2_warnungen_nicht_abrufbar_telegram[en]
+FAILED tests/tdd/test_3047_runde7_orte_luecken.py::test_bl2_warnungen_nicht_abrufbar_sms
+FAILED tests/tdd/test_3047_runde7_orte_luecken.py::test_bl3_einfach_folgt_ampel_grenzen
