@@ -44,7 +44,7 @@
 	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
 	// vergleich-Kontext) — seit #1743 ueber WetterMetrikenVersandPanel eingebettet.
 	import {
-		hydrateWeatherMetricsFromPreset,
+		hydrateWeatherMetricsFromPresetOrNull,
 		hydrateChannelActiveMetricsFromPreset,
 		hydrateDayWindowFromPreset,
 		hydrateLayoutFieldsFromPreset,
@@ -524,7 +524,10 @@
 		// bleibt die gespeicherte Auswahl unveraendert stehen (verlustfreier
 		// Durchlauf, heutiges Verhalten fuer unbekannte Schluessel).
 		const catalog = await loadCompareSelectionEntries().catch(() => []);
-		wizardState.activeMetricKeys = hydrateWeatherMetricsFromPreset(currentPreset, catalog);
+		// Issue #3061: fehlendes `active_metrics` bleibt `null` („nie
+		// eingestellt") — sonst ist eine gespeicherte Vollauswahl im Ausblick
+		// vom Altbestand nicht zu unterscheiden. Leser materialisieren selbst.
+		wizardState.activeMetricKeys = hydrateWeatherMetricsFromPresetOrNull(currentPreset, catalog);
 		// Issue #1703 Scheibe 8: Kanal-Overrides aus DEMSELBEN geladenen Katalog —
 		// ohne sie zeigte jeder Kanal-Reiter nach dem Neuladen wieder die
 		// Grundauswahl (AC-S8-4/AC-S8-6/AC-S8-11).

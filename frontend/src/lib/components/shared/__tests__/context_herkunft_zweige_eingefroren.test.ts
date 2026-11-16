@@ -258,8 +258,9 @@ const EINGEFROREN: readonly string[] = [
 	// Eintraege nach oben verschoben (-7/-7/-7/-7/-20/-89: entfallene Prop onDayWindowChange,
 	// Import und Abschnitts-Markup); keiner entfiel, Bedingungen unveraendert, unten gefesselt.
 	// #3047 H1: +1 (Prop `grundauswahl` am Stundenverlauf-Mount im Vergleichs-Zweig
-	// oberhalb), Bedingung unveraendert, nachgemessen, unten gefesselt.
-	'WeatherMetricsTab.svelte:1968',
+	// oberhalb), #3061: +4 (null-Grundauswahl der Ausblick-Einbettung oberhalb),
+	// Bedingung unveraendert, nachgemessen, unten gefesselt.
+	'WeatherMetricsTab.svelte:1972',
 	// #2655 (F6): beide nur verschoben (Katalog-Import, Satz je Kontext aus
 	// dem Katalog statt Konkatenation); Bedingungen unveraendert, nachgemessen.
 	'versand-tab/vtBriefingChannelsText.ts:22',
@@ -282,7 +283,8 @@ const EINGEFROREN: readonly string[] = [
 	'weather-metrics-tab/weatherMetricsTabSections.ts:68',
 	// #2794 Teil 3 Fix-Loop F006: dieselbe Weiche (`wetterMetrikenVergleichSpeicherungAktiv`),
 	// nur um 5 Zeilen verschoben (Wetter-Felder aus dem Zustellungs-Speicherer entfernt).
-	'weather-metrics-tab/weatherMetricsCompareSave.ts:556',
+	// #3061: +17 (hydrateWeatherMetricsFromPresetOrNull oberhalb), Text unveraendert.
+	'weather-metrics-tab/weatherMetricsCompareSave.ts:573',
 	// Issue #1743: der geteilte Baustein „Wetter-Metriken + Versand" waehlt den
 	// Versand-Inhalt nach Herkunft — Trip-Hub ueber BriefingScheduleTab (route ohne
 	// createMode), Vergleich und Trip-Anlegen ueber den EINEN VersandTab. Diese Weiche
@@ -400,7 +402,7 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:1968', // #2792 S1a: +10, #2794 S3a: +4, #3047 H1: +1, Text unveraendert
+		eintrag: 'WeatherMetricsTab.svelte:1972', // #2792 S1a: +10, #2794 S3a: +4, #3047 H1: +1, #3061: +4, Text unveraendert
 		zeile: "{#if !createMode && context === 'route'}",
 		folgt: 'Issue #1721: Nacht-Stundentabelle der Trip-Mail'
 	}
