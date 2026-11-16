@@ -17,6 +17,8 @@ SPEC (v2): docs/specs/modules/issue_1110_compare_mail_v2.md
 """
 from __future__ import annotations
 
+import html as _html
+import re as _re
 from typing import Optional
 
 from app.ampel import resolve_ampel
@@ -65,6 +67,9 @@ from output.renderers.alert.official_alerts import (
     render_official_alerts_plain,
 )
 import services.alert_urgency as alert_urgency
+
+#: Formatierungs-Tags der Telegram-HTML-Vorlagen (Issue #3047 p2b).
+_HTML_TAG_RE = _re.compile(r"</?[a-zA-Z][a-zA-Z0-9]*[^<>]*>")
 
 # Issue #1285: die fuenf bisher stillschweigend verworfenen Uebersichts-Zeilen
 # (Renderer-Metrik-ID, Label, Formatierung). Wert-Quelle und Formatierung sind
@@ -1036,7 +1041,12 @@ def _telegram_warn_text(loc_result, lang: Lang) -> str:
             source_label=" · ".join(sources), show_scope=False,
             tz=location_tz(loc_result.location), lang=lang,
         )
-        return warn_text
+        # Issue #3047 p2b: der Orts-Vergleich geht mit parse_mode=None hinaus
+        # (telegram_format.md) -- die HTML-Vorlage des Trips wird hier zu
+        # Klartext (Tags weg, Entities aufgeloest), sonst saehe der Nutzer
+        # "<b>" und "&amp;" woertlich. Nutzerdaten sind in der Vorlage
+        # escaped, ein "<" im Ortsnamen ist also nie ein Tag.
+        return _html.unescape(_HTML_TAG_RE.sub("", warn_text))
     return ""
 
 

@@ -1080,6 +1080,11 @@ def send_one_compare_preset(
                 metric_formats=opts.metric_formats("telegram"),
                 lang=lang,
                 show_fallback_notice=True,
+                # Issue #3047 B-K7 (AC-24): 3-Tages-Ausblick je Ort wie in der Mail.
+                outlook_enabled=opts.outlook_enabled,
+                outlook_metrics=opts.outlook_metrics,
+                outlook_metric_formats=opts.outlook_metric_formats,
+                preset=preset,
             )
         # Issue #2587: Nachhol-Hinweis (nur Nachholversand), geteilter Baustein.
         html_body, text_body, _telegram_text = _apply_catchup_hint(
