@@ -484,6 +484,20 @@ describe('AC-1: der Stundenverlauf wird aus derselben Katalogantwort gespeist', 
 				'und Ausblick speisen.'
 		);
 	});
+
+	test('#3047 H1: WeatherMetricsTab.svelte reicht dem Stundenverlauf die Grundauswahl durch', () => {
+		// Verhalten (Schnitt mit der Grundauswahl) prueft editor_standard_gleich_mail.test.ts
+		// durch Rendern; hier nur die Verdrahtung am einzigen Einbau (Muster des Ausblicks,
+		// outlook_erbt_grundauswahl_structure.test.ts).
+		const ast = parseComponent(OVERVIEW_COMPONENT);
+		const [mount] = findComponentsNamed(ast.fragment, 'CompareHourlyLayoutControls');
+		const attr = findAttr(mount, 'grundauswahl');
+		assert.ok(attr, 'H1 FAIL: CompareHourlyLayoutControls bekommt keine `grundauswahl`.');
+		assert.ok(
+			attributeReferencesIdentifier(attr, 'materializedActiveMetricKeys'),
+			'H1 FAIL: `grundauswahl` ist nicht dieselbe Quelle wie beim Ausblick (materializedActiveMetricKeys).'
+		);
+	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

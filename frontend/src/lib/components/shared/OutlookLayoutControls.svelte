@@ -30,7 +30,7 @@
 		toggleCompareMetricKey
 	} from './weather-metrics-tab/compareMetricOrder.ts';
 	import { splitChannelMetricsForDisplay } from './weather-metrics-tab/channelMetricLayouts.ts';
-	import { COMPARE_METRIC_KEYS } from './wetter-tab/corridorEditorState.ts';
+	import { istNieEingestellteOrteGrundauswahl } from './weather-metrics-tab/compareMetricOrder.ts';
 	import { outlookFriendlyCapable } from './weather-metrics-tab/outlookFriendlyCapability.ts';
 	import { locale, t } from '$lib/i18n';
 	// Issue #2659 (i18n F10): voller Name aus dem Register (label_en, sonst deutsch).
@@ -179,12 +179,9 @@
 	// Editor zeigt genau diese aktiv statt des ganzen Katalogs. Da es kein
 	// Maximum gibt, bleiben alle uebrigen Katalog-Groessen in der „Aus"-Gruppe
 	// zurueckholbar (die Mail schneidet in diesem Fall nicht).
-	function istNieEingestellteOrteGrundauswahl(keys: string[]): boolean {
-		// Die Vergleichs-Hydration materialisiert fehlendes `active_metrics` zu
-		// genau COMPARE_METRIC_KEYS (hydrateWeatherMetricsFromPreset); der Trip
-		// reicht Kennungen, die nie so aussehen.
-		return keys.length === COMPARE_METRIC_KEYS.length && keys.every((k, i) => k === COMPARE_METRIC_KEYS[i]);
-	}
+	// `istNieEingestellteOrteGrundauswahl` (compareMetricOrder.ts) teilt sich
+	// diese Erkennung mit dem Stundenverlauf (#3047 H1); der Trip reicht
+	// Kennungen, die nie wie COMPARE_METRIC_KEYS aussehen.
 	const ausblickSpalten = $derived.by(() => {
 		const grund = grundauswahlKennungen;
 		if (grund === null || grund.length === 0) {

@@ -1159,11 +1159,11 @@
    "kontext": "orte",
    "flaeche": "Stundenverlauf je Ort (hourly_metrics)",
    "vokabular": "Kennungen (metric_id)",
-   "begruendung": "O2: das Konzept nennt die Standardfolge des Stundenverlaufs nicht. Soll ist die Mail-Seite, das Backend-Tupel HOURLY_DEFAULT_METRIC_IDS (compare_hourly_metric_ids.py:111, 'exakt die neun Spalten von vor #1406 B, in genau ihrer Reihenfolge'), weil das ausgelieferte Verhalten ist, was Nutzer kennen. Der Editor muss bei nie eingestellter Liste genau diese Folge zeigen. Gespeichert: die gespeicherte Folge.",
+   "begruendung": "#3047 H1, Konzept docs/context/einstellungen_neu.md §5 Punkt 8 ('Jede Liste nimmt nur aus den Metriken oben'): der Stundenverlauf nimmt nur aus der Grundauswahl (active_metrics). Nie eingestellt (hourly_metrics fehlt): die stuendlich verfuegbaren Groessen der Grundauswahl in deren Folge; ist die Grundauswahl selbst nie eingestellt (Altbestand), gilt die Vorgabemenge HOURLY_DEFAULT_METRIC_IDS in ihrer Folge (ausgeliefertes Verhalten). Gespeichert: die gespeicherte Folge, geschnitten auf die Grundauswahl. Loest die fruehere O2-Begruendung (feste Standardfolge auch mit Grundauswahl) ab.",
    "zustaende": [
     {
      "id": "nie_eingestellt",
-     "beschreibung": "hourly_metrics fehlt",
+     "beschreibung": "Altbestand: active_metrics und hourly_metrics fehlen",
      "eingabe": {
       "display_config": {}
      },
@@ -1177,6 +1177,26 @@
       "thunder",
       "rain_probability",
       "visibility"
+     ]
+    },
+    {
+     "id": "nie_eingestellt_mit_grundauswahl",
+     "beschreibung": "Grundauswahl Wind, Niederschlag, Temperatur, Boeen (ohne UV/Sicht); hourly_metrics fehlt (Nachpruefung Punkt 3)",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        "wind_max_kmh",
+        "precip_sum_mm",
+        "temp_max_c",
+        "gust_max_kmh"
+       ]
+      }
+     },
+     "erwartet": [
+      "wind",
+      "precipitation",
+      "temperature",
+      "gust"
      ]
     },
     {
@@ -1213,6 +1233,32 @@
       "visibility",
       "wind",
       "uv_index"
+     ]
+    },
+    {
+     "id": "gespeichert_ausserhalb_grundauswahl",
+     "beschreibung": "Stundenverlauf Sicht, Boeen, Temperatur, Niederschlag; Sicht nicht in der Grundauswahl (Nachpruefung Punkt 1)",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        "temp_max_c",
+        "wind_max_kmh",
+        "gust_max_kmh",
+        "precip_sum_mm",
+        "pop_max_pct"
+       ],
+       "hourly_metrics": [
+        "visibility",
+        "gust",
+        "temperature",
+        "precipitation"
+       ]
+      }
+     },
+     "erwartet": [
+      "gust",
+      "temperature",
+      "precipitation"
      ]
     }
    ]

@@ -108,6 +108,9 @@ HOURLY_MERGE_ONLY_METRIC_IDS: frozenset[str] = frozenset({"wind_direction"})
 # automatisches Hinzufuegen der neu waehlbaren Groessen). Bewusst eine
 # ausgesprochene Vorgabemenge statt "kein Filter = alles": mit 22 Wert-Spalten
 # waere "alles" ein ungefragter Sprung fuer jeden Bestands-Vergleich.
+# #3047 H1 (Konzept §5.8): gilt nur noch, wenn auch die Grundauswahl nie
+# eingestellt ist -- sonst nimmt der Stundenverlauf aus der Grundauswahl
+# (``_standard_aus_grundauswahl``). Folge = Editor-Vorgabe (editor_standard.json).
 HOURLY_DEFAULT_METRIC_IDS: tuple[str, ...] = (
     "temperature", "wind_chill", "wind", "gust", "precipitation",
     "uv_index", "thunder", "rain_probability", "visibility",
@@ -187,15 +190,22 @@ def resolve_hourly_metrics(
     Grundauswahl der Uebersicht (Renderer-Kennungen, wie bei
     ``resolve_compare_outlook_metrics``). ``None`` = kein Maximum, kein Schnitt.
     Eine gespeicherte Liste wird mit ihr geschnitten, ihre Folge bleibt. Nie
-    eingestellt (``None``) bleibt die Vorgabemenge des Renderers, eine bewusst
+    eingestellt ist im Abschnitt darunter geregelt (#3047 H1), eine bewusst
     leere Liste bleibt leer. Bleibt nach dem Schnitt NICHTS uebrig, gilt der
     dokumentierte Rueckfall: die Vorgabemenge ``HOURLY_DEFAULT_METRIC_IDS``,
     geschnitten mit der Grundauswahl (ihre Folge); ist auch die leer, die
     stuendlich waehlbaren Groessen der Grundauswahl in deren Folge -- der
     Block verschwindet also nicht still.
+
+    Issue #3047 H1 (Konzept §5.8): NIE eingestellt (kein Listenwert) mit
+    bekannter Grundauswahl heisst "nichts abgewaehlt" -- die stuendlich
+    waehlbaren Groessen der Grundauswahl in DEREN Folge, nicht mehr die feste
+    Vorgabemenge. ``None`` (Vorgabemenge des Renderers) bleibt nur, wenn die
+    Grundauswahl selbst nie eingestellt ist (Altbestand) oder keine Groesse
+    mit eigener Stundenspalte traegt.
     """
     if not isinstance(hourly_metrics, list):
-        return None
+        return _standard_aus_grundauswahl(enabled_metrics)
     normalized = normalize_hourly_metrics(hourly_metrics) or []
     unmapped = [
         m for m in hourly_metrics
@@ -211,6 +221,22 @@ def resolve_hourly_metrics(
     if enabled_metrics is not None and normalized:
         normalized = _schnitt_mit_grundauswahl(normalized, enabled_metrics)
     return [get_metric(m).dp_field for m in normalized]
+
+
+def _standard_aus_grundauswahl(enabled_metrics: list[str] | None) -> list[str] | None:
+    """Nie eingestellter Stundenverlauf = Grundauswahl ∩ stuendlich waehlbar,
+    Folge der Grundauswahl (#3047 H1); ``None`` = Vorgabemenge des Renderers."""
+    if enabled_metrics is None:
+        return None
+    from output.renderers.compare_outlook_metric_ids import _kennungen_aus_renderer_ids
+
+    waehlbar = set(hourly_selectable_metric_ids())
+    ids = list(dict.fromkeys(
+        m for m in _kennungen_aus_renderer_ids(enabled_metrics) if m in waehlbar
+    ))
+    if not [m for m in ids if m not in HOURLY_MERGE_ONLY_METRIC_IDS]:
+        return None
+    return [get_metric(m).dp_field for m in ids]
 
 
 def _schnitt_mit_grundauswahl(

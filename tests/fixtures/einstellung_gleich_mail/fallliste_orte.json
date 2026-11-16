@@ -1064,7 +1064,7 @@
       "pruefung": "standard",
       "test": "test_ac6_stundenverlauf_nie_eingestellt_standard",
       "ac": "AC-6 AC-13",
-      "befund": "O2",
+      "befund": "O2; #3047 H1: Standard = stuendliche Groessen der Grundauswahl",
       "status": "gruen"
     },
     {
@@ -1445,7 +1445,7 @@
       "pruefung": "standard",
       "test": "test_ac6_stundenverlauf_nie_eingestellt_standard",
       "ac": "AC-6 AC-13",
-      "befund": "O2",
+      "befund": "O2; #3047 H1: Standard = stuendliche Groessen der Grundauswahl",
       "status": "gruen"
     },
     {
@@ -1679,6 +1679,50 @@
       "test": "test_orte_koepfe_in_nutzersprache_en",
       "ac": "AC-6, ADR-0104",
       "befund": "F7/F003 Mutations-Gegenprobe #3047",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-H1-AUSSERHALB",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_h1_stundenverlauf_gespeichert_ausserhalb_grundauswahl",
+      "ac": "AC-10, AC-13",
+      "befund": "#3047 H1 (Nachpruefung Punkt 1)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-H1-NIE-GRUND",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "standard",
+      "test": "test_h1_stundenverlauf_nie_eingestellt_aus_grundauswahl",
+      "ac": "AC-6, AC-10, AC-13",
+      "befund": "#3047 H1 (Nachpruefung Punkt 3, Konzept §5.8)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-H1-AUSSERHALB",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_h1_stundenverlauf_gespeichert_ausserhalb_grundauswahl",
+      "ac": "AC-10, AC-13",
+      "befund": "#3047 H1 (Nachpruefung Punkt 1)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-H1-NIE-GRUND",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "standard",
+      "test": "test_h1_stundenverlauf_nie_eingestellt_aus_grundauswahl",
+      "ac": "AC-6, AC-10, AC-13",
+      "befund": "#3047 H1 (Nachpruefung Punkt 3, Konzept §5.8)",
       "status": "gruen"
     },
     {
