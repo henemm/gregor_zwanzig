@@ -117,7 +117,9 @@ def trip_json(
     rc.update(report_config or {})
     return {
         "id": trip_id, "name": "Pruefkatalog 3047", "stages": stages,
-        "official_alerts_enabled": False, "display_config": dc, "report_config": rc,
+        # #3047 E4: Briefing ODER Alarm an -> beides an; aus = beide Schalter aus.
+        "official_alerts_enabled": False, "official_warnings": {"enabled": False},
+        "display_config": dc, "report_config": rc,
     }
 
 

@@ -503,9 +503,11 @@ def test_ac6_trigger_toggle_disabled_no_fetch():
     b._REGISTERED_SOURCES.clear()
     try:
         save_location(_location("loc-a", "Hermagor", LAT_A, LON_A), user_id=uid)
-        _write_presets(uid, [_preset(
+        # #3047 E4 (PO 2026-11-16): Briefing ODER Alarm an -> beides an; „aus"
+        # heisst seither beide Schalter aus (Briefing-Feld fehlend = an).
+        _write_presets(uid, [{**_preset(
             "p1", ["loc-a"], ["e@x.invalid"], triggers_enabled=False,
-        )])
+        ), "official_alerts_enabled": False}])
         src = _FakeOfficialAlertSource(LAT_A, LON_A, [_alert()])
         register_official_alert_source(src)
 

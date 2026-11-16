@@ -1,0 +1,146 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+________________ test_orte_telegram_warnung_ohne_rohe_tags[de] _________________
+
+mit = Kanalmitschrift({'email': [{'empfaenger': 'einstellung-1e138453a8@example.invalid', 'subject': 'Wetter-Vergleich: Kett...'plain_text_body': None, 'parse_mode': None, 'mail_type': None, 'mail_format': None, 'compare_hourly_enabled': None}]})
+lang = 'de'
+
+    @pytest.mark.parametrize("lang", ["de", "en"])
+    def test_orte_telegram_warnung_ohne_rohe_tags(mit, lang):
+        """Ein Ort mit amtlicher Warnung, Ortsnamen mit ``<`` und ``&``: der Nutzer
+        sieht im Orte-Telegram die Warnung und beide Namen wortgetreu, aber nie
+        ein rohes ``<b>``/``</b>`` oder ``&amp;``. Zwei Nutzer, echter Versandweg
+        bis zur Transport-Mitschrift (Text + parse_mode)."""
+        from app.loader import save_location
+        from app.user import SavedLocation
+        from tests.tdd._compare_kette_fixtures import ORTE
+    
+        WARN["orte"] = {"loc-bz"}
+        p = preset()
+        nutzer = []
+        for _ in range(2):
+            uid = nutzer_anlegen("premium")
+            _sprache(uid, lang)
+            for lid, (_, lat, lon) in ORTE.items():
+                save_location(SavedLocation(id=lid, name=SONDERNAMEN[lid], lat=lat, lon=lon,
+                                            elevation_m=1000), user_id=uid)
+            preset_ablegen(uid, copy.deepcopy(p))
+            mit.leeren()
+            briefing_senden(uid, p["id"], settings_fuer(uid))
+            assert mit.empfaenger("telegram") == [f"chat-{uid}"]
+            sicht = _wie_telegram_anzeigt(mit.sendungen("telegram")[-1])
+            for name in SONDERNAMEN.values():
+                assert name in sicht.splitlines(), f"Ortsname nicht wortgetreu:\n{sicht}"
+            warnkopf = [z for z in sicht.splitlines() if z.strip().startswith("Bozen <Süd> & Co · ")]
+>           assert warnkopf, f"Warnkopf des Ortes fehlt:\n{sicht}"
+E           AssertionError: Warnkopf des Ortes fehlt:
+E             ORTS-VERGLEICH — Kette Basis
+E             Datum: 08.07.2026
+E             
+E             Inns<b>ruck & Hall
+E                Böen 19 km/h · Temp max 22°C · Windrichtung 250° · Wind 11 km/h · Regen 3.5 mm · Regenwahrscheinlichkeit 40% · Wolken 35%
+E                Sonne 6.0h · Gewitter mittel · UV max 6
+E                Ausblick
+E                Fr  Gust: 40 km/h  Temp: 6/11  WDir: 200 °  Wind: 28
+E                km/h  Rain: 1.6 mm  Rain%: 70 %  Cloud: 69 %  Sun: 2.5 h
+E                Thdr: ⚡–  UV: 4
+E                Sa  Gust: 40 km/h  Temp: 6/11  WDir: 200 °  Wind: 28
+E                km/h  Rain: 1.6 mm  Rain%: 70 %  Cloud: 69 %  Sun: 2.5 h
+E                Thdr: ⚡–  UV: 4
+E                So  Gust: 40 km/h  Temp: 6/11  WDir: 200 °  Wind: 28
+E                km/h  Rain: 1.6 mm  Rain%: 70 %  Cloud: 69 %  Sun: 2.5 h
+E                Thdr: ⚡–  UV: 4
+E             Bozen <Süd> & Co
+E                <b>Bozen &lt;Süd&gt; &amp; Co · Warnstufe ORANGE (2/3)</b>
+E             🟠 Gewitter · Mi 08.07. · 10:00–20:00
+E             MeteoAlarm
+E                Böen 23 km/h · Temp max 27°C · Windrichtung 250° · Wind 14 km/h · Regen 3.5 mm · Regenwahrscheinlichkeit 40% · Wolken 48%
+E                Sonne 8.0h · Gewitter mittel · UV max 6
+E                Ausblick
+E                Fr  Gust: 45 km/h  Temp: 7/12  WDir: 210 °  Wind: 28
+E                km/h  Rain: 3.6 mm  Rain%: 70 %  Cloud: 69 %  Sun: 2.5 h
+E                Thdr: ⚡mittel@13 · CAPE, Blitzdichte  UV: 4
+E                Sa  Gust: 45 km/h  Temp: 7/12  WDir: 210 °  Wind: 28
+E                km/h  Rain: 3.6 mm  Rain%: 70 %  Cloud: 69 %  Sun: 2.5 h
+E                Thdr: ⚡mittel@13 · CAPE, Blitzdichte  UV: 4
+E                So  Gust: 45 km/h  Temp: 7/12  WDir: 210 °  Wind: 28
+E                km/h  Rain: 3.6 mm  Rain%: 70 %  Cloud: 69 %  Sun: 2.5 h
+E                Thdr: ⚡mittel@13 · CAPE, Blitzdichte  UV: 4
+E           assert []
+
+tests/tdd/test_3047_runde7_orte_kanaele.py:469: AssertionError
+________________ test_orte_telegram_warnung_ohne_rohe_tags[en] _________________
+
+mit = Kanalmitschrift({'email': [{'empfaenger': 'einstellung-1de7c17123@example.invalid', 'subject': 'Weather comparison: Ke...'plain_text_body': None, 'parse_mode': None, 'mail_type': None, 'mail_format': None, 'compare_hourly_enabled': None}]})
+lang = 'en'
+
+    @pytest.mark.parametrize("lang", ["de", "en"])
+    def test_orte_telegram_warnung_ohne_rohe_tags(mit, lang):
+        """Ein Ort mit amtlicher Warnung, Ortsnamen mit ``<`` und ``&``: der Nutzer
+        sieht im Orte-Telegram die Warnung und beide Namen wortgetreu, aber nie
+        ein rohes ``<b>``/``</b>`` oder ``&amp;``. Zwei Nutzer, echter Versandweg
+        bis zur Transport-Mitschrift (Text + parse_mode)."""
+        from app.loader import save_location
+        from app.user import SavedLocation
+        from tests.tdd._compare_kette_fixtures import ORTE
+    
+        WARN["orte"] = {"loc-bz"}
+        p = preset()
+        nutzer = []
+        for _ in range(2):
+            uid = nutzer_anlegen("premium")
+            _sprache(uid, lang)
+            for lid, (_, lat, lon) in ORTE.items():
+                save_location(SavedLocation(id=lid, name=SONDERNAMEN[lid], lat=lat, lon=lon,
+                                            elevation_m=1000), user_id=uid)
+            preset_ablegen(uid, copy.deepcopy(p))
+            mit.leeren()
+            briefing_senden(uid, p["id"], settings_fuer(uid))
+            assert mit.empfaenger("telegram") == [f"chat-{uid}"]
+            sicht = _wie_telegram_anzeigt(mit.sendungen("telegram")[-1])
+            for name in SONDERNAMEN.values():
+                assert name in sicht.splitlines(), f"Ortsname nicht wortgetreu:\n{sicht}"
+            warnkopf = [z for z in sicht.splitlines() if z.strip().startswith("Bozen <Süd> & Co · ")]
+>           assert warnkopf, f"Warnkopf des Ortes fehlt:\n{sicht}"
+E           AssertionError: Warnkopf des Ortes fehlt:
+E             LOCATION COMPARISON — Kette Basis
+E             Date: 8 Jul 2026
+E             
+E             Inns<b>ruck & Hall
+E                Gusts 19 km/h · Temp max 22°C · Wind direction 250° · Wind 11 km/h · Rain 3.5 mm · Rain probability 40% · Clouds 35%
+E                Sun 6.0h · Thunderstorm medium · UV max 6
+E                Outlook
+E                Fri  Gust: 40 km/h  Temp: 6/11  WDir: 200 °  Wind: 28
+E                km/h  Rain: 1.6 mm  Rain%: 70 %  Cloud: 69 %  Sun: 2.5 h
+E                Thdr: ⚡–  UV: 4
+E                Sat  Gust: 40 km/h  Temp: 6/11  WDir: 200 °  Wind: 28
+E                km/h  Rain: 1.6 mm  Rain%: 70 %  Cloud: 69 %  Sun: 2.5 h
+E                Thdr: ⚡–  UV: 4
+E                Sun  Gust: 40 km/h  Temp: 6/11  WDir: 200 °  Wind: 28
+E                km/h  Rain: 1.6 mm  Rain%: 70 %  Cloud: 69 %  Sun: 2.5 h
+E                Thdr: ⚡–  UV: 4
+E             Bozen <Süd> & Co
+E                <b>Bozen &lt;Süd&gt; &amp; Co · Warning level ORANGE (2/3)</b>
+E             🟠 Thunderstorm · Wed 8 Jul · 10:00–20:00
+E             MeteoAlarm
+E                Gusts 23 km/h · Temp max 27°C · Wind direction 250° · Wind 14 km/h · Rain 3.5 mm · Rain probability 40% · Clouds 48%
+E                Sun 8.0h · Thunderstorm medium · UV max 6
+E                Outlook
+E                Fri  Gust: 45 km/h  Temp: 7/12  WDir: 210 °  Wind: 28
+E                km/h  Rain: 3.6 mm  Rain%: 70 %  Cloud: 69 %  Sun: 2.5 h
+E                Thdr: ⚡mittel@13 · CAPE, Blitzdichte  UV: 4
+E                Sat  Gust: 45 km/h  Temp: 7/12  WDir: 210 °  Wind: 28
+E                km/h  Rain: 3.6 mm  Rain%: 70 %  Cloud: 69 %  Sun: 2.5 h
+E                Thdr: ⚡mittel@13 · CAPE, Blitzdichte  UV: 4
+E                Sun  Gust: 45 km/h  Temp: 7/12  WDir: 210 °  Wind: 28
+E                km/h  Rain: 3.6 mm  Rain%: 70 %  Cloud: 69 %  Sun: 2.5 h
+E                Thdr: ⚡mittel@13 · CAPE, Blitzdichte  UV: 4
+E           assert []
+
+tests/tdd/test_3047_runde7_orte_kanaele.py:469: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_3047_runde7_orte_kanaele.py::test_orte_telegram_warnung_ohne_rohe_tags[de]
+FAILED tests/tdd/test_3047_runde7_orte_kanaele.py::test_orte_telegram_warnung_ohne_rohe_tags[en]
+
+# Nachtrag: B-K7-Kette war vor p2b als xfail(strict) rot (Versand reichte outlook_* nicht durch); nach p2b ohne xfail gruen.
+# Nach Fix: tests/tdd/test_3047_runde7_orte_kanaele.py komplett gruen (20 Tests); Mutationsprobe 9/9 gefangen.

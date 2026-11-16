@@ -31,7 +31,7 @@ import { register } from 'node:module';
 import { parse } from 'svelte/compiler';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { live } from '../wetter-tab/__tests__/wetterTabDaten.ts';
+import { live, vergleichsKatalogFetch } from '../wetter-tab/__tests__/wetterTabDaten.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const SHARED = resolve(HIER, '..');
@@ -53,10 +53,23 @@ async function vorlagen(): Promise<Json> {
 	return (await ampelModell()).vorlagenAusTemplates(live().templates);
 }
 
-/** Drei verschiedene, in der Vorlage „allgemein" bekannte Metrik-Kennungen. */
+/** #3047 p5c: Vergleichs-Katalog (Altformat-Tabelle) wie HubUebersicht.svelte ihn laedt — die Karte
+ *  zaehlt wie die Mail nur Groessen, die der Vergleich ausgibt; „nie eingestellt" = alle Groessen. */
+async function katalog(): Promise<Json> {
+	const { loadCompareSelectionEntries } = await lade(join(SHARED, 'wetter-tab', 'compareMetricCatalogLoader.ts'));
+	const zurueck = vergleichsKatalogFetch();
+	try {
+		return (await ampelModell()).altSchluesselAusKatalog(await loadCompareSelectionEntries());
+	} finally {
+		zurueck();
+	}
+}
+
+/** Drei verschiedene, in der Vorlage „allgemein" bekannte und im Vergleich ausgebbare Metrik-Kennungen. */
 async function dreiMetriken(): Promise<string[]> {
 	const v = await vorlagen();
-	const ids = Object.keys(v.allgemein?.metrics ?? (Object.values(v)[0] as Json)?.metrics ?? {});
+	const imKatalog = new Set(Object.values(await katalog()).map((e: Json) => e.metric_id));
+	const ids = Object.keys(v.allgemein?.metrics ?? (Object.values(v)[0] as Json)?.metrics ?? {}).filter((id) => imKatalog.has(id));
 	assert.ok(ids.length >= 3, 'Fixtur-Schutz: Vorlage braucht mindestens drei Metriken');
 	return ids.slice(0, 3);
 }
@@ -122,7 +135,7 @@ describe('B4 (AC-8/AC-9/AC-10): Karte „Wetter" zählt die Metriken im Briefing
 		const p = preset({ active_metrics: ids });
 		const soll = (await wetterZustand()).standAusAbo('vergleich', p, v).auswahl.length;
 		assert.equal(soll, 3, 'Fixtur-Schutz: Reiter Wetter zählt drei gewählte Metriken');
-		const k = m.deriveVergleichKennzahlen(p, 'active', null, [], v).wertebereicheKarte;
+		const k = m.deriveVergleichKennzahlen(p, 'active', null, [], v, await katalog()).wertebereicheKarte;
 		assert.equal(k.beschreibungKurz, '3 Metriken im Briefing');
 		assert.match(k.beschreibungLang, /^3 Metriken im Briefing/);
 	});
@@ -131,18 +144,21 @@ describe('B4 (AC-8/AC-9/AC-10): Karte „Wetter" zählt die Metriken im Briefing
 		const m = await modell();
 		const v = await vorlagen();
 		const [eine] = await dreiMetriken();
-		const k = m.deriveVergleichKennzahlen(preset({ active_metrics: [eine] }), 'active', null, [], v).wertebereicheKarte;
+		const k = m.deriveVergleichKennzahlen(preset({ active_metrics: [eine] }), 'active', null, [], v, await katalog()).wertebereicheKarte;
 		assert.equal(k.beschreibungKurz, '1 Metrik im Briefing');
 		assert.match(k.beschreibungLang, /^1 Metrik im Briefing/);
 	});
 
-	test('keine Liste gespeichert ⇒ Zahl der Vorlage, wie der Reiter Wetter', async () => {
+	// Abgeloest durch #3047 E1/p5c (Spec-Nachtrag Runde 7, Tech-Lead-Entscheidung): „nie eingestellt"
+	// zeigt der Reiter wie die Mail mit allen Groessen des Vergleichs-Katalogs, nicht mit der Vorlage.
+	test('keine Liste gespeichert ⇒ Zahl des Mail-Standards, wie der Reiter Wetter', async () => {
 		const m = await modell();
 		const v = await vorlagen();
+		const alt = await katalog();
 		const p = preset({});
-		const n = (await wetterZustand()).standAusAbo('vergleich', p, v).auswahl.length;
-		assert.ok(n > 1, 'Fixtur-Schutz: Vorlage liefert mehrere Metriken');
-		const k = m.deriveVergleichKennzahlen(p, 'active', null, [], v).wertebereicheKarte;
+		const n = (await wetterZustand()).standAusAbo('vergleich', p, v, alt).auswahl.length;
+		assert.ok(n > 1, 'Fixtur-Schutz: Standard liefert mehrere Metriken');
+		const k = m.deriveVergleichKennzahlen(p, 'active', null, [], v, alt).wertebereicheKarte;
 		assert.equal(k.beschreibungKurz, `${n} Metriken im Briefing`);
 	});
 
@@ -151,7 +167,7 @@ describe('B4 (AC-8/AC-9/AC-10): Karte „Wetter" zählt die Metriken im Briefing
 		const v = await vorlagen();
 		const [eine] = await dreiMetriken();
 		const p = preset({ active_metrics: [eine], ideal_ranges: { a: {}, b: {}, c: {}, d: {} } });
-		const k = m.deriveVergleichKennzahlen(p, 'active', null, [], v).wertebereicheKarte;
+		const k = m.deriveVergleichKennzahlen(p, 'active', null, [], v, await katalog()).wertebereicheKarte;
 		assert.equal(k.beschreibungKurz, '1 Metrik im Briefing');
 	});
 

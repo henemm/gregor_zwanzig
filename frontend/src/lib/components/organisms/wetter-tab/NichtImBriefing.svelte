@@ -9,11 +9,13 @@
 
 	interface Props {
 		metriken: { id: string; name: string }[];
+		/** #3047 E6: gespeichert, aber vom Kontext nicht ausgebbar (die Mail laesst sie weg) — mit Grund. */
+		gesperrt?: { id: string; name: string }[];
 		/** Name der zuletzt hinzugefuegten Metrik (Meldung), sonst null. */
 		hinzugefuegt: string | null;
 		onHinzufuegen: (id: string) => void;
 	}
-	let { metriken, hinzugefuegt, onHinzufuegen }: Props = $props();
+	let { metriken, gesperrt = [], hinzugefuegt, onHinzufuegen }: Props = $props();
 
 	const chips = $derived(
 		metriken.map((m) => ({
@@ -27,6 +29,9 @@
 <div class="wt-mehr" data-testid="wetter-nicht-im-briefing">
 	<span class="wt-titel">{$t('wetter.nicht_im_briefing.titel')}</span>
 	<ChipLeiste eintraege={chips} onWahl={onHinzufuegen} imFluss />
+	{#if gesperrt.length}
+		<p class="wt-meldung" data-testid="wetter-gesperrt">{$t('wetter.gesperrt.grund', { metriken: gesperrt.map((m) => m.name).join(', ') })}</p>
+	{/if}
 	{#if hinzugefuegt}
 		<p class="wt-meldung" role="status" data-testid="wetter-hinzugefuegt-meldung">{$t('wetter.nicht_im_briefing.hinzugefuegt', { metrik: hinzugefuegt })}</p>
 	{/if}

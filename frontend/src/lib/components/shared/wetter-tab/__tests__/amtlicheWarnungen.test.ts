@@ -8,6 +8,11 @@
 // weitere Felder von `official_warnings` (z. B. `sources`) bleiben erhalten.
 // Gleiche Felder bei Trip und Orts-Briefing (beide top-level am Abo).
 //
+// ABGELOEST (Issue #3047 E4, PO-Entscheidung 2026-11-16, Spec feat_3047 „Nachtrag Runde 7"):
+// Briefing ODER Alarm an -> „beides an"; ein fehlendes `official_alerts_enabled` zaehlt als
+// Briefing an. Die Soll-Werte unten folgen dieser Regel (Faelle:
+// e4_amtliche_warnungen_mischzustand.test.ts).
+//
 // Festgelegte API (amtlicheWarnungen.ts):
 //   type WarnFelder = { official_alerts_enabled?: boolean|null;
 //                       official_warnings?: { enabled?: boolean; sources?: string[] } | null;
@@ -31,7 +36,7 @@ describe('AC-20: Lese-Regel Amtliche Warnungen (ODER, Fallback Default an)', () 
 	for (const ow of [true, false]) {
 		for (const alt of BOOL3) {
 			for (const trig of BOOL3) {
-				const soll = ow || alt === true;
+				const soll = ow || alt !== false; // #3047 E4: Briefing ODER Alarm
 				test(`ac20_lesen_ow_${ow}_alerts_${alt}_triggers_${trig}_ist_${soll}`, async () => {
 					const w = await amtlicheWarnungen();
 					const abo: Record<string, unknown> = { official_warnings: { enabled: ow, sources: ['meteoalarm'] } };
@@ -52,7 +57,7 @@ describe('AC-20: Lese-Regel Amtliche Warnungen (ODER, Fallback Default an)', () 
 	for (const ow of [undefined, null]) {
 		for (const alt of BOOL3) {
 			for (const trig of BOOL3) {
-				const soll = trig !== false;
+				const soll = alt !== false || trig !== false; // #3047 E4: Briefing ODER Alarm
 				test(`ac20_fallback_ow_${ow}_alerts_${alt}_triggers_${trig}_ist_${soll}`, async () => {
 					const w = await amtlicheWarnungen();
 					const abo: Record<string, unknown> = {};

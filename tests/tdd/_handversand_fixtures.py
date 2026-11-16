@@ -112,8 +112,8 @@ def trip_anlegen(uid: str, trip_id: str, *, email: bool = True, telegram: bool =
                  "elevation_m": 2269},
             ],
         }] if stages else [],
-        # strukturell kein MeteoAlarm-Abruf (netzfrei)
-        "official_alerts_enabled": False,
+        # strukturell kein MeteoAlarm-Abruf (netzfrei); #3047 E4: beide Schalter aus
+        "official_alerts_enabled": False, "official_warnings": {"enabled": False},
         "report_config": {"send_email": email, "send_telegram": telegram, "send_sms": sms},
         "alert_rules": [],
     }))

@@ -240,7 +240,8 @@ def trip_schreiben(
         ))
     daten = {
         "id": trip_id, "name": name, "stages": etappen,
-        "official_alerts_enabled": False,
+        # #3047 E4: netzfrei heisst Briefing- UND Alarm-Schalter aus.
+        "official_alerts_enabled": False, "official_warnings": {"enabled": False},
         "report_config": {
             "trip_id": trip_id, "send_email": True, "send_telegram": True,
             "send_sms": True, "send_premium_sms": True,
@@ -276,7 +277,8 @@ def trip_schreiben_fahrplan(user_id: str, trip_id: str, fahrplan, *, tag: date =
     }
     daten = {
         "id": trip_id, "name": "GPS-Fix-Fahrplan", "stages": [etappe],
-        "official_alerts_enabled": False,
+        # #3047 E4: netzfrei heisst Briefing- UND Alarm-Schalter aus.
+        "official_alerts_enabled": False, "official_warnings": {"enabled": False},
         "report_config": {
             "trip_id": trip_id, "send_email": True, "morning_time": "05:00",
             "evening_time": "21:00",

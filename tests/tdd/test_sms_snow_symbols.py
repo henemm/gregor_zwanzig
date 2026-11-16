@@ -498,36 +498,11 @@ def test_ac6_truncation_drops_snow_tokens_in_unchanged_order():
     )
 
 
-def test_ac6_drop_order_positions_of_snow_symbols_unchanged():
-    """AC-6: die Schnee-Kuerzel behalten ihre RELATIVE Reihenfolge in
-    DROP_ORDER (AV vor SL vor NS24+ vor SD vor Z: vor MAX vor M:) — nur die
-    Namen aendern sich, nicht die Rangfolge untereinander.
-
-    Issue #1660 Scheibe B (DEC-4): 14 neue Symbole werden zwischen 'DBG' und
-    'WC' eingefuegt -- die urspruenglichen ABSOLUTEN Indizes (3/4/5) sind
-    dadurch bewusst verschoben, die RELATIVE Reihenfolge der hier geprueften
-    Bestandssymbole bleibt aber unangetastet.
-
-    Fix #1887 E6 Scheibe A: 'WC' stand hier bislang VOR 'AV', ist aber
-    ERSATZLOS entfallen (PO-Entscheid) und deshalb nicht mehr Teil der
-    geprueften Kette (Abwesenheit deckt bereits
-    test_sms_token_symbol_register_ratchet.py::
-    test_legacy_snow_symbols_are_absent_from_all_tables[WC] ab).
-    """
-    from output.tokens.render import DROP_ORDER
-
-    assert DROP_ORDER[0] == "DBG", (
-        f"AC-6: Kopf der Drop-Reihenfolge veraendert: {DROP_ORDER!r}"
-    )
-    # #1441: 'AV' ist ein Warnblock-Token (Lagebericht) und faellt mit den
-    # amtlichen Warnungen zuletzt -- es steht nicht mehr in DROP_ORDER.
-    assert "AV" not in DROP_ORDER, f"#1441: AV darf nicht frueh fallen: {DROP_ORDER!r}"
-    tail_symbols = ["SL", "NS24+", "SD", "Z:", "MAX", "M:"]
-    tail_indices = [DROP_ORDER.index(sym) for sym in tail_symbols]
-    assert tail_indices == sorted(tail_indices), (
-        "AC-6: die relative Kuerzungs-Reihenfolge der Bestandssymbole hat "
-        f"sich veraendert: {DROP_ORDER!r}"
-    )
+# test_ac6_drop_order_positions_of_snow_symbols_unchanged entfaellt: er pruefte
+# die Tabelle DROP_ORDER, die mit #3047 Runde 7 (Spec-Nachtrag Runde 7, AC-23,
+# PO-Entscheidung 2026-11-16: Kuerzung vom Listenende) abgeloest ist. Die
+# Kuerzungsfolge der Schnee-Kuerzel misst der Verhaltenstest oben an der
+# gerenderten Zeile.
 
 
 # ---------------------------------------------------------------------------

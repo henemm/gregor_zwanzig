@@ -208,6 +208,10 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		if bailIf(w, r, displayConfigAmpelUngueltig(trip.DisplayConfig), 400, "ampel_ungueltig") {
 			return
 		}
+		// Issue #3047 E3: metrics[]-Eintrag ohne metric_id nie speichern.
+		if bailIf(w, r, tripMetrikenUngueltig(trip.DisplayConfig), 400, "invalid_params") {
+			return
+		}
 		// Issue #2961: Wachstumsgrenzen auch bei der Anlage.
 		if etappenGrenzeVerletzt(w, r, trip.Stages) || configMergesVerletzt(w, r,
 			[2]map[string]interface{}{nil, trip.Aggregation},
@@ -419,6 +423,10 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			// Issue #2792 S1a: Ampel pruefen, bevor irgendetwas gemergt wird;
 			// mergeConfigMap ersetzt den Unterbaum "ampel" als Ganzes (Spec §1).
 			if bailIf(w, r, displayConfigAmpelUngueltig(*req.DisplayConfig), 400, "ampel_ungueltig") {
+				return
+			}
+			// Issue #3047 E3: gleiche metrics[]-Pruefung wie /weather-config.
+			if bailIf(w, r, tripMetrikenUngueltig(*req.DisplayConfig), 400, "invalid_params") {
 				return
 			}
 			existing.DisplayConfig = mergeConfigMap(existing.DisplayConfig, *req.DisplayConfig)

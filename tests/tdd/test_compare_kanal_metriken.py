@@ -74,15 +74,16 @@ def _result(locations: list[LocationResult]) -> ComparisonResult:
     )
 
 
-def _location_cells(text: str, name: str) -> list[str]:
+def _location_cells(text: str, name: str, zeile: int = 1) -> list[str]:
     """Zellen ("Label Wert"-Paare) des Ortsblocks `name` im Telegram-Text.
 
-    Blockstruktur (`render_compare_telegram`): Ortsname-Zeile, danach genau
-    eine Zeile "   Zelle1 · Zelle2 · ..." bzw. "   keine Werte"."""
+    Blockstruktur (`render_compare_telegram`): Ortsname-Zeile, danach eine
+    Zeile "   Zelle1 · Zelle2 · ..." bzw. "   keine Werte"; seit #3047 Runde 7
+    (AC-24) ggf. eine zweite Wertezeile mit den Plaetzen ab 8 (``zeile=2``)."""
     lines = text.splitlines()
     for i, line in enumerate(lines):
         if line == name:
-            cell_line = lines[i + 1].strip()
+            cell_line = lines[i + zeile].strip()
             if cell_line == "keine Werte":
                 return []
             return [c.strip() for c in cell_line.split(" · ")]
@@ -149,11 +150,10 @@ def test_metric_overflow_shows_seven_cells_and_notice_naming_the_rest():
         "Prioritaets-Kappung ab, statt die vollen 10 zu priorisieren und erst bei 7 zu "
         "kappen (channel_layout.render_for_channel() wird gar nicht aufgerufen)."
     )
-    assert "+3 weitere Wettergrößen" in text, (
-        f"Telegram-Text enthaelt keinen Hinweis auf die 3 verdraengten Groessen "
-        f"({text!r}) -- ein Ueberlauf darf nicht kommentarlos verschwinden (AC-2, "
-        "analog dem bestehenden Orts-Ueberlauf-Hinweis `_telegram_notice`)."
-    )
+    # #3047 Runde 7 (PO-Entscheidung 2026-11-16, AC-24) loest den Hinweis
+    # "+3 weitere Wettergroessen" ab: die drei uebrigen stehen in Zeile 2.
+    assert "weitere Wettergrößen" not in text, text
+    assert len(_location_cells(text, name, zeile=2)) == 3, text
 
 
 # ---------------------------------------------------------------------------
@@ -193,7 +193,9 @@ def test_metric_without_value_frees_its_slot_and_is_counted_separately():
     text = render_compare_telegram(_result([loc]), enabled_metrics=enabled)
 
     cells = _location_cells(text, name)
-    visible = len(cells)
+    # #3047 Runde 7 (AC-24): Plaetze ab 8 stehen in Zeile 2 statt wegzufallen.
+    zweite = _location_cells(text, name, zeile=2)
+    visible = len(cells) + len(zweite)
     overflow_match = re.search(r"\+(\d+) weitere Wettergrößen", text)
     no_data_match = re.search(r"\+(\d+) gewählte Wettergrößen ohne Wert", text)
     overflow = int(overflow_match.group(1)) if overflow_match else 0
@@ -205,15 +207,12 @@ def test_metric_without_value_frees_its_slot_and_is_counted_separately():
         f"{visible + overflow + no_data}, erwartet {len(enabled)} (Anzahl "
         f"gewaehlter Groessen). Text:\n{text!r}"
     )
-    assert visible == 7, (
-        f"Erwartet 7 sichtbare Zellen (die 8 Groessen MIT Wert werden auf "
-        f"7 Plaetze gekappt), erhalten {visible} ({cells!r}). Wertlose "
-        "Groessen (gust_max/wind_chill_max) duerfen keinen Platz belegen."
+    assert (len(cells), len(zweite)) == (7, 1), (
+        f"Erwartet 7 Zellen in Zeile 1 und die achte Groesse MIT Wert in Zeile 2, "
+        f"erhalten {cells!r} / {zweite!r}. Wertlose Groessen (gust_max/"
+        "wind_chill_max) duerfen keinen Platz belegen."
     )
-    assert overflow == 1, (
-        f"Erwartet genau 1 durch Platzmangel verdraengte Groesse (8 mit Wert "
-        f"- 7 Plaetze), Regex fand {overflow}. Text:\n{text!r}"
-    )
+    assert overflow == 0, f"kein Kappungshinweis mehr (AC-24). Text:\n{text!r}"
     assert no_data == 2, (
         f"Erwartet genau 2 Groessen ohne Wert an diesem Ort (gust_max, "
         f"wind_chill_max), Regex fand {no_data}. Text:\n{text!r}"

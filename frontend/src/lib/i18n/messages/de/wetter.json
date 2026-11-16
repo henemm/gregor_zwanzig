@@ -91,6 +91,7 @@
 	"wetter.nicht_im_briefing.titel": "Nicht im Briefing:",
 	"wetter.nicht_im_briefing.hinzufuegen": "+ {metrik}",
 	"wetter.nicht_im_briefing.hinzugefuegt": "{metrik} ist jetzt im Briefing und steht in allen Listen unter ‚Inhalt je Kanal und Fläche‘. Dort stellst du Roh oder Einfach ein.",
+	"wetter.gesperrt.grund": "Nicht im Orts-Vergleich ausgebbar und daher nicht im Briefing: {metriken}. Der Vergleich kennt diese Größen nicht.",
 	"wetter.warnungen.titel": "Amtliche Warnungen",
 	"wetter.warnungen.beschreibung": "im Briefing und als Alarm, sobald sie dein Gebiet betreffen",
 	"wetter.radar.titel": "Radar-Regen",

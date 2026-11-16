@@ -1,7 +1,7 @@
 ---
 entity_id: telegram_format
 type: reference
-version: "1.2"
+version: "1.4"
 status: active
 created: 2026-10-21
 updated: 2026-11-16
@@ -37,7 +37,7 @@ Der Stil wird je Trip/Vergleich über `report_config.telegram_style` gewählt: `
 | Variante | `rich` | `kurzform` |
 |---|---|---|
 | **Trip-Briefing** | **Multi-Bubble** (ADR-0014): Folge einzelner `sendMessage`-Aufrufe, `parse_mode="HTML"`. Reihenfolge: Kopf → ggf. „amtliche Warnungen nicht abrufbar“ → ggf. Starkregen-Kurzfristhinweis → ggf. amtliche Warnungen → Kurzübersicht (alle konfigurierten Metriken) → je Segment/Ziel eine `<pre>`-Tabelle → optional Ausblick → Aktionen-Bubble mit Inline-Keyboard (nur letzte Bubble trägt `reply_markup`). Scheitern Bubbles, folgt ein Hinweis „unvollständig“ | **eine** Nachricht mit dem SMS-Text (`report.sms_text`), `parse_mode=None`, keine Bubbles/Knöpfe |
-| **Ortsvergleich-Briefing** | **eine** Nachricht aus `render_compare_telegram()` (kein Score/Rang, ≤ 7 Metrikwerte je Ort, ≤ 4096 Zeichen), `parse_mode=None` | SMS-Vergleichstext (`render_compare_sms`), eine Nachricht, `parse_mode=None` (`scheduler_dispatch_service.py:697`) |
+| **Ortsvergleich-Briefing** | **eine** Nachricht aus `render_compare_telegram()` (kein Score/Rang, ≤ 4096 Zeichen), `parse_mode=None`: alle Zeilen der Telegram-Liste je Ort (Plätze 1–7 in Zeile 1, ab Platz 8 in Zeile 2, kein Kappungshinweis), danach je Ort der 3-Tages-Ausblick (Kopf „Ausblick“, Form wie Trip-Telegram; Schalter aus/leere Ausblick-Liste → entfällt). Amtliche Warnung je Ort als Klartext (keine HTML-Tags, Ortsnamen wortgetreu, #3047) | SMS-Vergleichstext (`render_compare_sms`), eine Nachricht, `parse_mode=None` (`scheduler_dispatch_service.py:697`) |
 | **Änderungs-/Radar-Alarm** | eine Nachricht aus `alert/render.py::render_telegram()` (fette Kopfzeile, dieselben Sätze wie die E-Mail, #2020), `parse_mode="HTML"`; Ortsvergleich ggf. je Ort aufgefächert | **eine** gemeinsame Nachricht mit dem SMS-Alarmtext, Vorrang vor dem Fan-out je Ort (#1467 K-6) |
 | **Amtliche Warnung** | reiche Warnvorlage `render_official_alert_telegram` (+ Entwarnung), `parse_mode="HTML"`, ohne Betreffzeile | SMS-Text, `parse_mode=None` |
 | **Befehlsantwort** | Klartext-Bestätigung, optional mit Inline-Keyboard (Zoom-Navigation per `callback_query` + `editMessageText`, #655) | — |
@@ -47,6 +47,10 @@ Der Stil wird je Trip/Vergleich über `report_config.telegram_style` gewählt: `
 - **`rich`:** behält sein eigenes Zeilenformat (Symbol, Leerzeichen, Wert, Temperatur mit Dezimalstelle, zweistellige Stunde), z. B. `T -5.0@08` und `G 30@08` (Fixture `tests/fixtures/befehl_antwortzeit/golden_berichte.json`). Dieselben Hervorhebungsregeln gelten, nur die Schreibweise ist eine andere.
 - Die Alarm-Stundenzeilen (Änderungs-Alarm) nutzen dieselbe Ampel des Abos.
 - Vergleichs-Telegram (`render_compare_telegram`) hat keinen Hervorhebungsleser und bleibt unverändert.
+
+**Roh/Einfach je Zeile im Trip-Briefing (`rich`, #3063 Punkt 2, #3047 Runde 7 AC-22):** Kurzübersicht und Segment-Tabellen formatieren jede Zeile der Telegram-Liste nach ihrer Roh/Einfach-Wahl, mit derselben Regel wie die Mail (`build_format_modes` der Telegram-Liste an `fmt_val`). Beispiel Windrichtung: Roh `WD 250°`, Einfach `WD W` (Einfach und mit Wind gewählt: in der Windzeile `W 20 W`). Bewölkung: Roh `CT 70`, Einfach Wolkensymbol.
+
+**Kappungshinweis (`rich`, Trip, #1741):** Bei mehr als 7 Zeilen zeigt die Tabelle die ersten 7 stündlich, alle Zeilen stehen in der Kurzübersicht; der Hinweis „… +N weitere Wettergrößen nur als Tageswert (Telegram-Limit)" steht in der Kontosprache (`allgemein.telegram_limit.route.*`, en „… +N more weather values as daily value only (Telegram limit)", #3047 Runde 7).
 
 **Radar-Alarm im Ortsvergleich mit mehreren Orten (#1767):** `rich` sendet **eine** Nachricht: Kopf `<b>Regen-Alarm: N Orte</b>` (Katalog `alarm.regen.buendel`), danach je Ort eine Zeile wie in der E-Mail (`Zermatt · Regen in 5 Min: ab 14:05 · leichter Regen`), sortiert nach Beginn, zuletzt `Quelle: …`; kein Namens-Join im Kopf, kein `km 0–0`. `kurzform` sendet den SMS-Alarmtext `1:R@14:05 3:R@14:40` (`sms_format.md` §3.4i). Ein auslösender Ort unverändert.
 
@@ -126,3 +130,9 @@ das Menü ist botweit und bleibt deutsch (P7 #2669, Known Limitations); die Zeil
 | Webhook Go / Python | `internal/handler/telegram_webhook.go:39`, `internal/router/router.go:171`, `api/routers/webhook.py:53` |
 | Inbound-Verarbeitung | `src/services/inbound_telegram_reader.py:159`, `:408`, `:582` |
 | Befehlsantwort | `src/services/notification_service.py:2153` |
+
+## 5. Änderungen
+
+| Version | Datum | Änderung |
+|---|---|---|
+| 1.4 | 2026-11-16 | Ortsvergleich-Briefing (#3047 Runde 7, AC-24): alle Zeilen der Telegram-Liste je Ort (Plätze 1–7 in Zeile 1, ab Platz 8 in Zeile 2, kein Kappungshinweis), danach je Ort der 3-Tages-Ausblick (Kopf „Ausblick“, Form wie Trip-Telegram; Schalter aus/leere Ausblick-Liste → entfällt). Amtliche Warnung im Ortsvergleich als Klartext, weil die Nachricht mit `parse_mode=None` hinausgeht (vorher erschienen `<b>…</b>` und `&amp;` wörtlich). |

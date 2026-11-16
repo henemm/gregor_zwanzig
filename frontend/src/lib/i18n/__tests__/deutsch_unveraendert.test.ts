@@ -572,6 +572,8 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.vorlage.name.radtour',
 	'wetter.vorlage.name.wassersport',
 	'wetter.vorlage.name.allgemein',
+	// #3047 Runde 7 (AC-26, Befund E6): Grund fuer gespeicherte, im Orts-Vergleich nicht ausgebbare Groessen.
+	'wetter.gesperrt.grund',
 	// #2795 S3b Teilschritt 1b: neuer Bereich zustellung.json (Reiter Zustellung) — vollstaendig neu,
 	// kein Bestandsschluessel; die Pflichttexte prueft s3b2795_zustellung_katalog.test.ts.
 	...Object.keys(ZUSTELLUNG_DE)

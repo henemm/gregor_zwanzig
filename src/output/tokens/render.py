@@ -1,29 +1,16 @@
 """Render TokenLine to wire format with HR/TH fusion + §6 truncation."""
 from __future__ import annotations
 
-import re
-from dataclasses import replace
-
 from output.tokens.dto import Token, TokenLine
 
-# §6 removal order (one symbol at a time, repeated until budget met).
-# Issue #1435 E3b: Schnee-Kuerzel folgen dem Wetter-Register (SL/NS24+/SD);
-# die Rangfolge selbst ist unveraendert.
-# Issue #1660 Scheibe B (DEC-4): die 14 neuen Symbole fallen direkt nach
-# 'DBG' -- als erste Fachtoken, noch vor den Wintersport-Groessen.
-DROP_ORDER = [
-    "DBG",
-    # Issue #1824 (B): 'WD:'/'PT:' mit Grammatik-Doppelpunkt -- ohne den
-    # Doppelpunkt hier faenden _drop_first() die Token nie und sie fielen unter
-    # Kuerzungsdruck NIE mehr (stiller Kuerzungs-Regressionsfall).
-    "HU", "DP", "WD:", "CP", "PT:", "CT", "CL", "CM", "CH", "VS", "SU", "UV",
-    "HP", "FZ",
-    # Fix #1887 E6 Scheibe A: 'WC' entfaellt ERSATZLOS (verdoppelte
-    # nachweislich 'FK') -- kein Eintrag mehr.
-    # Issue #1441: 'AV' (Lagebericht) ist ein Warnblock-Token und faellt mit den
-    # amtlichen Warnungen zuletzt -- kein Eintrag hier.
-    "SL", "NS24+", "SD", "Z:", "MAX", "M:",
-]
+# §6 Kuerzung (#3047 Runde 7, AC-23, PO-Entscheidung 2026-11-16): bei
+# Ueberlaenge faellt die SMS-Liste von HINTEN weg -- ganze Zeilen, Trip und
+# Orte gleich. Die fruehere feste Prioritaetsfolge (DROP_ORDER, #1677 AC-6)
+# ist abgeloest; sicherheitsrelevante Groessen stehen ueber die Vorbelegung
+# der Liste vorn. Amtliche Bausteine (Warnblock, Vigilance, Brandzonen)
+# fallen zuletzt, nach Prioritaet; 'X?' (Warndaten nicht abrufbar) nie.
+_LIST_CATEGORIES = ("forecast", "wintersport")
+_LAST_RESORT = ("fire", "vigilance", "official_alert")
 
 
 def _fuse(tokens: list[Token]) -> list[str]:
@@ -56,66 +43,40 @@ def _draw(stage: str, tokens: list[Token]) -> str:
     return f"{stage}: " + " ".join(_fuse(tokens))
 
 
-def _drop_first(tokens: list[Token], symbol: str) -> bool:
-    for i, t in enumerate(tokens):
-        if t.symbol == symbol:
-            del tokens[i]
-            return True
-    return False
-
-
-def _strip_peaks(tokens: list[Token]) -> bool:
-    changed = False
-    for i, t in enumerate(tokens):
-        if t.category == "forecast" and "(" in t.value:
-            tokens[i] = replace(t, value=re.sub(r"\([^)]*\)", "", t.value))
-            changed = True
-    return changed
+def _drop_last_list_row(tokens: list[Token]) -> bool:
+    """Entfernt die hinterste Listenzeile: alle Token mit dem Listenplatz des
+    letzten Listen-Tokens (Token ohne Platz zaehlen je fuer sich)."""
+    idx = [i for i, t in enumerate(tokens) if t.category in _LIST_CATEGORIES]
+    if not idx:
+        return False
+    last = tokens[idx[-1]]
+    if last.list_position is None:
+        del tokens[idx[-1]]
+        return True
+    tokens[:] = [t for t in tokens if not (
+        t.category in _LIST_CATEGORIES and t.list_position == last.list_position)]
+    return True
 
 
 def _truncate(tokens: list[Token], stage: str, mx: int) -> tuple[list[Token], bool]:
     if len(_draw(stage, tokens)) <= mx:
         return tokens, False
     truncated = False
-    for sym in DROP_ORDER:
-        while _drop_first(tokens, sym):
-            truncated = True
-            if len(_draw(stage, tokens)) <= mx:
-                return tokens, True
-    if _strip_peaks(tokens):
+    for t in [t for t in tokens if t.category == "debug"]:
+        tokens.remove(t)
+        truncated = True
+    if len(_draw(stage, tokens)) <= mx:
+        return tokens, truncated
+    while _drop_last_list_row(tokens):
         truncated = True
         if len(_draw(stage, tokens)) <= mx:
             return tokens, True
-    # Issue #1410 §3b: die gefuehlte Temperatur ist eine Komfort-Zusatzangabe
-    # und faellt deshalb noch VOR PR -- die sicherheitsrelevanten
-    # Planungsgroessen (R/PR/W/G/TH) bleiben laenger stehen.
-    # Issue #2422 S6 (B1): 'TF' (Stundenwert) ist das am ehesten redundante
-    # der vier gefuehlten Token und faellt als allererstes.
-    for sym in ("TF", "FN", "FL", "FD"):
-        if _drop_first(tokens, sym):
-            truncated = True
-            if len(_draw(stage, tokens)) <= mx:
-                return tokens, True
-    while _drop_first(tokens, "PR"):
-        truncated = True
-        if len(_draw(stage, tokens)) <= mx:
-            return tokens, True
-    # Innerhalb des gemessenen Trios faellt L zuerst (neuester Wert), dann D,
-    # dann N zuletzt (bestehende Reihenfolge unveraendert).
-    for sym in ("L", "D", "N"):
-        if _drop_first(tokens, sym):
-            truncated = True
-            if len(_draw(stage, tokens)) <= mx:
-                return tokens, True
-    # Last resort: drop forecast/vigilance/official_alert tokens by ascending
-    # priority. Issue #1318: die amtliche Warnung traegt die hoechste Prioritaet
-    # und faellt damit als allerletzte. Entfernt wird das GEWAEHLTE Token
-    # (Identitaet), nicht das erste mit gleichem Symbol — 'TH:' tragen
-    # Vorhersage, Vigilance und Warn-Block gemeinsam.
-    _last_resort = ("forecast", "vigilance", "official_alert")
-    while len([t for t in tokens if t.category in _last_resort]) > 1:
+    # Amtliche Bausteine zuletzt, nach aufsteigender Prioritaet (#1318: der
+    # Warnblock traegt die hoechste). Entfernt wird das GEWAEHLTE Token
+    # (Identitaet); einer bleibt immer stehen.
+    while len([t for t in tokens if t.category in _LAST_RESORT]) > 1:
         cand = sorted(
-            [t for t in tokens if t.category in _last_resort],
+            [t for t in tokens if t.category in _LAST_RESORT],
             key=lambda t: t.priority,
         )[0]
         tokens.remove(cand)

@@ -1,0 +1,86 @@
+# RED-Beleg #3047 Runde 7, Paket p2 (Orte-Kanaele + Orte-Mail)
+# Produktcode auf HEAD (vor dem Fix): comparison.py, compare_metric_ids.py, email/compare_html.py
+# Befehl: uv run pytest -rA --tb=line tests/tdd/test_3047_runde7_orte_kanaele.py tests/tdd/test_3047_runde7_orte_mail.py
+# Erwartet rot: B-K3 (ac23 warnung), B-K5 (ac24), B-K6 (k6 leer), B-K7 (k7 renderer: TypeError),
+# B-OM-1 (om1), B-OM-2 (om2). B-K8 ist eine Testluecke (Kettentest gruen, Mutation M12 rot).
+
+      --------------------------------------------------
+      Kronplatz
+         Temperature: 11°C
+         Wind: 26 km/h
+         Wind gusts: 38 km/h
+         Precipitation: 2.4 mm
+         Rain probability: 70%
+      
+      Sulden
+         Temperature: 12°C
+         Wind: 26 km/h
+         Wind gusts: 39 km/h
+         Precipitation: 5.4 mm
+         Rain probability: 70%
+      
+      Ahrntal
+         Temperature: 13°C
+         Wind: 26 km/h
+         Wind gusts: 40 km/h
+         Precipitation: 8.4 mm
+         Rain probability: 70%
+      
+      HOURLY VIEW
+      ---------------
+      Kronplatz (CET)
+         08:00  Temp 6°  Wind 18  Gust 30  Rain ·  Rain% 15%
+         09:00  Temp 6°  Wind 19  Gust 31  Rain ·  Rain% 15%
+         10:00  Temp 7°  Wind 20  Gust 32  Rain ·  Rain% 15%
+         11:00  Temp 8°  Wind 21  Gust 33  Rain ·  Rain% 15%
+         12:00  Temp 8°  Wind 22  Gust 34  Rain ·  Rain% 15%
+         13:00  Temp 8°  Wind 23  Gust 35  Rain 0.8  Rain% 70%
+         14
+    assert 0 == 1
+     +  where 0 = <built-in method count of str object at 0x2a593cb0>('Official warnings are currently unavailable — please check yourself.')
+     +    where <built-in method count of str object at 0x2a593cb0> = 'LOCATION COMPARISON\n========================\nDate: Thursday, 29 Oct 2026\nCreated: 29 Oct 2026 05:00 (CET)\n\n-----...   – Show what the codes mean\n  REPORT               – Send the comparison to all channels now\n\n---\nGregor Zwanzig'.count
+     +      where 'LOCATION COMPARISON\n========================\nDate: Thursday, 29 Oct 2026\nCreated: 29 Oct 2026 05:00 (CET)\n\n-----...   – Show what the codes mean\n  REPORT               – Send the comparison to all channels now\n\n---\nGregor Zwanzig' = OrteMail(uid='einstellung-3e7b91d3a3', roh={'id': 'om-r7', 'name': 'OM Runde 7', 'kind': 'vergleich', 'location_ids': ...Send the comparison to all channels now\n\n---\nGregor Zwanzig', empfaenger=['einstellung-3e7b91d3a3@example.invalid']).plain
+/home/user/gregor_zwanzig/.claude/worktrees/agent-aa75ee49275c9b5ba/tests/tdd/test_3047_runde7_orte_mail.py:62: AssertionError: B-OM-1 (en): Klartext ohne Hinweis 'nicht abrufbar':
+E   AssertionError: B-OM-2 (de): leere Warnzeile: ['Amtliche Warnungen', 'Temperatur', 'Wind', 'Böen', 'Niederschlag', 'Regenwahrscheinlichkeit']
+    assert 'Amtliche Warnungen' not in ['Amtliche Warnungen', 'Temperatur', 'Wind', 'Böen', 'Niederschlag', 'Regenwahrscheinlichkeit']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-aa75ee49275c9b5ba/tests/tdd/test_3047_runde7_orte_mail.py:77: AssertionError: B-OM-2 (de): leere Warnzeile: ['Amtliche Warnungen', 'Temperatur', 'Wind', 'Böen', 'Niederschlag', 'Regenwahrscheinlichkeit']
+E   AssertionError: B-OM-2 (en): leere Warnzeile: ['Official warnings', 'Temperature', 'Wind', 'Wind gusts', 'Precipitation', 'Rain probability']
+    assert 'Official warnings' not in ['Official warnings', 'Temperature', 'Wind', 'Wind gusts', 'Precipitation', 'Rain probability']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-aa75ee49275c9b5ba/tests/tdd/test_3047_runde7_orte_mail.py:77: AssertionError: B-OM-2 (en): leere Warnzeile: ['Official warnings', 'Temperature', 'Wind', 'Wind gusts', 'Precipitation', 'Rain probability']
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/anyio/pytest_plugin.py:14
+  /home/user/gregor_zwanzig/.claude/worktrees/agent-aa75ee49275c9b5ba/.venv/lib/python3.13/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:128
+  /home/user/gregor_zwanzig/.claude/worktrees/agent-aa75ee49275c9b5ba/tests/conftest.py:128: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+tests/tdd/test_3047_runde7_orte_kanaele.py: 22 warnings
+  /home/user/gregor_zwanzig/.claude/worktrees/agent-aa75ee49275c9b5ba/src/services/scheduler_dispatch_service.py:619: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/tdd/test_3047_runde7_orte_kanaele.py::test_ac23_ohne_warnung_bleibt_kuerzung_wie_bisher
+PASSED tests/tdd/test_3047_runde7_orte_kanaele.py::test_k6_gegenprobe_ohne_liste_volle_grundauswahl
+PASSED tests/tdd/test_3047_runde7_orte_kanaele.py::test_k8_telegram_roh_einfach_je_zeile[True]
+PASSED tests/tdd/test_3047_runde7_orte_kanaele.py::test_k8_telegram_roh_einfach_je_zeile[False]
+PASSED tests/tdd/test_3047_runde7_orte_kanaele.py::test_om1_gegenprobe_ohne_ausfall_kein_hinweis
+XFAIL tests/tdd/test_3047_runde7_orte_kanaele.py::test_k7_ausblick_im_orte_telegram_kette - B-K7: scheduler_dispatch_service.py reicht outlook_* noch nicht an render_compare_telegram (Datei ausserhalb Paket p2, Verdrahtung gemeldet)
+FAILED tests/tdd/test_3047_runde7_orte_kanaele.py::test_ac23_warnung_zweiter_ort_faellt_zuletzt_weg[grund]
+FAILED tests/tdd/test_3047_runde7_orte_kanaele.py::test_ac23_warnung_zweiter_ort_faellt_zuletzt_weg[eigene_sms_liste]
+FAILED tests/tdd/test_3047_runde7_orte_kanaele.py::test_ac24_telegram_zeilen_ab_8_in_zweiter_zeile[de]
+FAILED tests/tdd/test_3047_runde7_orte_kanaele.py::test_ac24_telegram_zeilen_ab_8_in_zweiter_zeile[en]
+FAILED tests/tdd/test_3047_runde7_orte_kanaele.py::test_k6_leere_kanal_liste_bleibt_leer
+FAILED tests/tdd/test_3047_runde7_orte_kanaele.py::test_k7_ausblick_im_orte_telegram_renderer[de]
+FAILED tests/tdd/test_3047_runde7_orte_kanaele.py::test_k7_ausblick_im_orte_telegram_renderer[en]
+FAILED tests/tdd/test_3047_runde7_orte_mail.py::test_om1_klartext_traegt_hinweis_nicht_abrufbar_wie_html[de]
+FAILED tests/tdd/test_3047_runde7_orte_mail.py::test_om1_klartext_traegt_hinweis_nicht_abrufbar_wie_html[en]
+FAILED tests/tdd/test_3047_runde7_orte_mail.py::test_om2_warnungen_aus_keine_leere_warnzeile[de]
+FAILED tests/tdd/test_3047_runde7_orte_mail.py::test_om2_warnungen_aus_keine_leere_warnzeile[en]
+11 failed, 5 passed, 1 xfailed, 24 warnings in 6.41s
