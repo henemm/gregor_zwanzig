@@ -281,6 +281,10 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 	// #3047 J1: gespeicherte Grundauswahl = Vorgabe ist gespeichert (Grundauswahl-Regel wie die Mail)
 	test('frontend_seite_orte_ausblick_grundauswahl_gleich_vorgabe', () =>
 		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'grundauswahl_gleich_vorgabe')));
+	// #3047 J4: leer heisst beim Ortsvergleich „kein Maximum" (D4) -> feste Spalten wie die Mail;
+	// faengt „leer heisst leer auch ohne leereGrundauswahlIstBewusst" (M-J1f)
+	test('frontend_seite_orte_ausblick_grundauswahl_bewusst_leer', () =>
+		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'grundauswahl_bewusst_leer')));
 	for (const z of gespeicherte('orte_ausblick'))
 		test(`frontend_seite_orte_ausblick_gespeichert ${z.id}`, () => pruefe(frontendOrteAusblick, 'orte_ausblick', z));
 });

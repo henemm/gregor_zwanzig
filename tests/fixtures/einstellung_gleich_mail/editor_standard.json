@@ -1739,6 +1739,23 @@
       "precip_type",
       "snowfall_limit"
      ]
+    },
+    {
+     "id": "grundauswahl_bewusst_leer",
+     "beschreibung": "#3047 J4: Grundauswahl gespeichert, aber leer (active_metrics: []); outlook_metrics fehlt. Beim Ortsvergleich heisst leer 'kein Maximum' (ADR-0050 D4), nicht 'Ausblick entfaellt' wie beim Trip (#3047 J1/J3): die Mail zeigt die festen Ausblick-Spalten (DEFAULT_OUTLOOK_METRIC_KEYS). Soll von Hand.",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": []
+      }
+     },
+     "erwartet": [
+      "temperature",
+      "precipitation",
+      "rain_probability",
+      "wind",
+      "gust",
+      "thunder"
+     ]
     }
    ]
   },
