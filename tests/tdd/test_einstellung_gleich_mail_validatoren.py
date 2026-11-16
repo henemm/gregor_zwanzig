@@ -1522,7 +1522,7 @@ def _ohne_warnzeile(h: str) -> str:
 def test_r7_orte_warnzeile_folgt_dem_schalter(tmp_path, orte_mail):
     eml, konfig_an = orte_mail
     preset = _orte_preset()
-    preset["official_alerts_enabled"] = False
+    preset.update(official_alerts_enabled=False, official_warnings={"enabled": False})  # E4: beide aus
     konfig_aus = _orte_konfig(tmp_path, preset, "waus")
     ohne = _aendere(eml, html=_ohne_warnzeile)
     code, aus = _lauf(tmp_path, ORTE, ohne, "--konfig", konfig_aus)
@@ -1533,14 +1533,69 @@ def test_r7_orte_warnzeile_folgt_dem_schalter(tmp_path, orte_mail):
     assert code == 1 and "Spalte fehlt: 'Amtliche Warnungen'" in aus, aus
 
 
-def test_r7_orte_klartext_hinweis_nicht_abrufbar_toleriert(tmp_path, orte_mail):
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_r7_orte_klartext_hinweis_nicht_abrufbar_wie_html(tmp_path, monkeypatch, lang):
+    """AC-28 (nach p2): die echte Mail traegt den Hinweis in beiden Teilen und
+    besteht; fehlt er im Klartext, scheitert sie."""
     from i18n import t
 
-    eml, konfig = orte_mail
-    hinweis = t("mail.hinweis.warnungen_nicht_abrufbar.text", "de")
-    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^(-{50}\n)", rf"\g<1>⚠️ {hinweis}\n\n", p, count=1))
-    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    preset = _orte_preset()
+    eml, konfig = _orte_eml(monkeypatch, preset, lang=lang), _orte_konfig(tmp_path, preset, "hw")
+    hinweis = t("mail.hinweis.warnungen_nicht_abrufbar.text", lang)
+    # Vorbedingung (Hinweis im Klartext der echten Mail) prueft ``_aendere``.
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
     assert code == 0, aus
+    falsch = _aendere(eml, plain=lambda p: re.sub(rf"(?m)^.*{re.escape(hinweis)}\n", "", p))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Hinweis 'Amtliche Warnungen nicht abrufbar' fehlt im Klartext-Teil" in aus, aus
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_r7_orte_warnungen_aus_echte_mail(tmp_path, monkeypatch, lang):
+    """AC-28 / E4 (nach p2): Briefing- und Alarm-Schalter aus -> die echte Mail
+    hat keine Warnzeile; der Validator findet die Vergleichstabelle ueber die
+    Kopfzelle und besteht. Gegen die Konfiguration "an" (Mischzustand: nur der
+    Alarm-Schalter an = beides an) fehlt die Zeile."""
+    from i18n import t
+
+    aus_preset = _orte_preset()
+    aus_preset.update(official_alerts_enabled=False, official_warnings={"enabled": False})
+    eml = _orte_eml(monkeypatch, aus_preset, lang=lang)
+    assert t("vergleich.zeile.amtliche_warnungen", lang).encode() not in eml, "Vorbedingung: keine Warnzeile"
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, aus_preset, "waus"))
+    assert code == 0, aus
+    misch = copy.deepcopy(aus_preset)
+    misch["official_warnings"] = {"enabled": True}
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, misch, "wmisch"))
+    warn = t("vergleich.zeile.amtliche_warnungen", lang)
+    assert code == 1 and f"Spalte fehlt: '{warn}'" in aus, aus
+
+
+def test_r7_orte_ortsabschnitt_fehlt_im_html_scheitert(tmp_path, orte_mail):
+    """B-V7: fehlt der HTML-Abschnittskopf eines erwarteten Orts, meldet die
+    Ortsfolge der Abschnitte ihn (nicht nur die Strukturpruefung)."""
+    eml, konfig = orte_mail
+    falsch = _aendere(eml, html=lambda h: re.sub(
+        r'<div style="padding-bottom:8px;[^"]*"><span[^>]*>ORT</span> <span[^>]*>Lienz</span>.*?</div>', "", h,
+        count=1, flags=re.S))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Ortsfolge (HTML-Abschnitte): Ort fehlt: 'Lienz'" in aus, aus
+
+
+@pytest.mark.parametrize("form", ["zeichenketten", "ohne_enabled"])
+def test_r7_trip_altformat_ohne_order_register_prioritaet(monkeypatch, tmp_path, form):
+    """B-L6 (Tech-Lead-Entscheidung Runde 7): Altformat ohne ``order`` -> die
+    Mail ordnet nach Register-Prioritaet (Loader ``auto_distribute``: Temp,
+    Boeen, Regen), das Soll ebenso; vertauschte Spalten scheitern."""
+    daten = _trip_daten(_TRIP_FOLGE)
+    ids = ["gust", "precipitation", "temperature"]
+    daten["display_config"]["metrics"] = ids if form == "zeichenketten" else [{"metric_id": m} for m in ids]
+    eml, konfig = _trip_eml(monkeypatch, daten), _konfig(tmp_path, "alt", daten)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, aus
+    code, aus = _lauf(tmp_path, TRIP, _aendere(eml, html=lambda h: _tausche(h, ">Gust</th>", ">Rain</th>")),
+                      "--konfig", konfig)
+    assert code == 1 and "SOLL: Etappen-Stundentabelle (HTML)" in aus, aus
 
 
 # ---- B-V8 / H1: Kanal-Liste nach order, Bericht-Flags je Metrik ---- #

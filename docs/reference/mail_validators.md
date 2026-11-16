@@ -288,10 +288,17 @@ Ergänzungen Runde 7 (#3047 AC-27/AC-28), alle nur mit `--konfig`:
   erkannt (Etikett-Span + Name), nicht am Wort „ORT" (#3074); ausgenommen sind
   nur die Katalog-Etiketten Übersicht/Stunden/Ausblick. Bei Stundenverlauf an
   muss jeder erwartete Ort (ohne Ortsfehler) einen Abschnitt haben.
-- **Amtliche Warnungen (AC-28):** die Warnzeile der HTML-Vergleichstabelle gehört
-  nur bei `official_alerts_enabled` ≠ `false` zum Soll; die Übersichtstabelle
-  wird ohne Warnzeile über die Kopfzelle „Metrik" gefunden. Der Klartext-Hinweis
-  „Amtliche Warnungen aktuell nicht abrufbar" ist kein Ort.
+- **Amtliche Warnungen (AC-28, E4):** die Warnzeile der HTML-Vergleichstabelle
+  gehört zum Soll, wenn der Briefing-Schalter (`official_alerts_enabled`) oder
+  der Alarm-Schalter (`official_warnings.enabled`, sonst
+  `official_alert_triggers_enabled`) an ist („beides an"); nur beide aus = keine
+  Zeile. Ohne Warnzeile wird die Übersichtstabelle über die Kopfzelle
+  „Metrik"/„Metric" gefunden. Der Hinweis „Amtliche Warnungen aktuell nicht
+  abrufbar" steht im HTML genau dann, wenn er im Klartext steht.
+- **Trip-Altformat ohne `order` (B-L6):** Einträge ohne `bucket` und `order`
+  (Zeichenkette bzw. Objekt ohne beides) folgen der Register-Priorität wie im
+  Loader (`auto_distribute`, `METRIC_PRIORITY`), nicht der Array-Folge
+  (Tech-Lead-Entscheidung Runde 7).
 
 **Auflösung des Verbots aus #1381:** Eine feste Spaltenfolge (`_HOUR_COLUMNS_V2`)
 wird weiterhin **nie** vorausgesetzt — die Folge ist seit #1359 frei

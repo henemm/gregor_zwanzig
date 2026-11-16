@@ -1197,10 +1197,8 @@ def _klartext_uebersicht(text: str, lang: str, bekannte=(), werte: bool = False)
     eine solche Zeile nur, wenn ``bekannte`` (die Orte der HTML-Tabelle) sie
     nennt; Ortsfehler-Bloecke tragen ``None`` statt einer Zeilenliste.
     ``werte``: Eintraege ``(Beschriftung, Wert)`` statt nur der Beschriftung
-    (Darstellung Roh/Einfach, #3047 B-V3). Der Hinweis "Amtliche Warnungen
-    aktuell nicht abrufbar" (#3047 AC-28) ist kein Ort."""
-    hinweis = _t("mail.hinweis.warnungen_nicht_abrufbar.titel", lang)
-    zeilen = [z for z in text.splitlines() if hinweis not in z]
+    (Darstellung Roh/Einfach, #3047 B-V3)."""
+    zeilen = text.splitlines()
     start = next((i + 1 for i, z in enumerate(zeilen) if z.startswith("-" * 50)), len(zeilen))
     ende_titel = {_t("vergleich.stunden.klartext_titel", lang), _t("vergleich.ausblick.titel", lang)}
     fehler = _t("vergleich.ort.fehler", lang, fehler="").rstrip(" :")
@@ -1396,6 +1394,7 @@ def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
     fehler += _soll_ausblick_zeilen(body, lang, ausblick_je_ort, len(html[1]), soll)
     fehler += _soll_darstellung_uebersicht(body, plain, lang, soll, set(html[1]))
     fehler += _soll_stundenzeilen(stunden_alle, soll)
+    fehler += _soll_hinweis_warnungen(body, plain, lang)
     fehler += _soll_ortsabschnitte(plain, lang, soll, html[1], fehlerorte)
     return fehler + _soll_teil("Klartext", [b[1] for b in bloecke if b[1] is not None],
                                [b[0] for b in bloecke], stunden, ausblick, soll)
@@ -1420,6 +1419,16 @@ def _soll_ausblick_zeilen(body: str, lang: str, je_ort: list, orte: int, soll: d
                 fehler.append(f"SOLL: Ausblick ({teil}) {was} {i + 1}: {len(zeilen)} Tageszeilen, "
                               f"erwartet {erwartet}")
     return fehler
+
+
+def _soll_hinweis_warnungen(body: str, plain: str, lang: str) -> List[str]:
+    """#3047 AC-28: der Hinweis "Amtliche Warnungen aktuell nicht abrufbar"
+    steht im HTML-Teil genau dann, wenn er im Klartext-Teil steht."""
+    html = f">{_t('mail.hinweis.warnungen_nicht_abrufbar.titel', lang)}<" in body
+    text = _t("mail.hinweis.warnungen_nicht_abrufbar.text", lang) in plain
+    if html == text:
+        return []
+    return [f"SOLL: Hinweis 'Amtliche Warnungen nicht abrufbar' fehlt im {'Klartext' if html else 'HTML'}-Teil"]
 
 
 def _uebersicht_html_zellen(body: str, lang: str) -> List[list]:

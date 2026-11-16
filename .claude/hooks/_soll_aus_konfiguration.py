@@ -62,6 +62,7 @@ from output.renderers.compare_hourly_metric_ids import (  # noqa: E402
     FRONTEND_TO_HOURLY_METRIC_ID, HOURLY_DEFAULT_METRIC_IDS, HOURLY_EXCLUDED_METRIC_IDS,
     HOURLY_MERGE_ONLY_METRIC_IDS,
 )
+from output.renderers.channel_layout import _PRIMARY_SLOTS, METRIC_PRIORITY  # noqa: E402
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG  # noqa: E402
 from output.renderers.email.helpers import (  # noqa: E402
     _AMPEL_CAPABLE_METRIC_IDS, _PILL_CATALOG_ORDER, NO_HOURLY_COLUMN_METRIC_IDS,
@@ -331,12 +332,33 @@ def _ausblick_spalten(ids: list[str] | None, formate: object) -> dict:
             "formen": _formen_ausblick(ids, einfach)}
 
 
+def _altformat_folge(metrics: list) -> list[dict]:
+    """#3047 B-L6 (Tech-Lead-Entscheidung Runde 7): Eintraege ohne ``bucket``
+    und ``order`` (Altformat: Zeichenkette bzw. Objekt ohne beides) erhalten
+    die Register-Prioritaet wie im Loader (``auto_distribute``: die aktiven nach
+    ``METRIC_PRIORITY`` absteigend, bei Gleichstand Array-Folge, die ersten
+    fuenf ``primary`` 0..4, der Rest ``secondary``); inaktive ``secondary``/0."""
+    eintraege = _eintraege(metrics)
+    if all("bucket" in e or "order" in e for e in eintraege):
+        return eintraege
+    aktiv = [e["metric_id"] for e in eintraege if isinstance(e.get("metric_id"), str)
+             and e.get("enabled", True)]
+    rang = sorted(enumerate(aktiv), key=lambda p: (-METRIC_PRIORITY.get(p[1], 0), p[0]))
+    platz = {}
+    for i, (_pos, mid) in enumerate(rang):
+        platz.setdefault(mid, ("primary", i) if i < _PRIMARY_SLOTS else ("secondary", i - _PRIMARY_SLOTS))
+    return [e if ("bucket" in e or "order" in e) else
+            {**e, "bucket": platz.get(e.get("metric_id"), ("secondary", 0))[0],
+             "order": platz.get(e.get("metric_id"), ("secondary", 0))[1]} for e in eintraege]
+
+
 def _trip_display_config(trip: dict) -> dict:
     """Rohe ``display_config``; Fall A (``metrics`` fehlt oder ``[]``) traegt
-    den Register-Standardsatz mit ``order``/``bucket`` -- wie der Loader."""
+    den Register-Standardsatz mit ``order``/``bucket`` -- wie der Loader;
+    Altformat ohne ``order`` die Register-Prioritaet (B-L6)."""
     dc = (trip.get("display_config") if "display_config" in trip else trip) or {}
     if dc.get("metrics"):
-        return dc
+        return {**dc, "metrics": _altformat_folge(dc["metrics"])}
     return {**dc, "metrics": [{"metric_id": m, "enabled": True, "bucket": "primary", "order": i}
                               for i, m in enumerate(_TRIP_STANDARD)]}
 
@@ -552,6 +574,20 @@ def ausblick_zeilen_trip(etappen_daten: list[str], maildatum: str | None) -> int
     return min(3, len({d for d in etappen_daten if d > maildatum}))
 
 
+def warnungen_an(preset: dict) -> bool:
+    """#3047 E4 (PO-Entscheidung Runde 7): Briefing-Schalter
+    (``official_alerts_enabled``, nur ``false`` = aus) ODER Alarm-Schalter
+    (``official_warnings.enabled``, sonst Altfeld
+    ``official_alert_triggers_enabled``) an -> "beides an"; nur beide aus = aus."""
+    briefing = preset.get("official_alerts_enabled") is not False
+    alarm_neu = preset.get("official_warnings")
+    if isinstance(alarm_neu, dict) and "enabled" in alarm_neu:
+        alarm = bool(alarm_neu.get("enabled"))
+    else:
+        alarm = preset.get("official_alert_triggers_enabled") is not False
+    return briefing or alarm
+
+
 def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> dict:
     """Soll eines Orts-Vergleichs; ``ortsnamen`` (Kennung -> Name) fuer die Ortsfolge."""
     dc = preset.get("display_config") or {}
@@ -565,9 +601,9 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
     stunden = _orte_stunden(dc, grundpaare)
     stunden_an = preset.get("hourly_enabled", True) is not False and stunden != []
     ids_orte = [i for i in preset.get("location_ids") or [] if isinstance(i, str)]
-    # #3047 AC-28: Warnzeile nur bei eingeschalteten amtlichen Warnungen.
-    warn = [t("vergleich.zeile.amtliche_warnungen", lang)] if preset.get(
-        "official_alerts_enabled", True) is not False else []
+    # #3047 AC-28: Warnzeile nur bei eingeschalteten amtlichen Warnungen
+    # (E4-Regel "beides an", ``warnungen_an``).
+    warn = [t("vergleich.zeile.amtliche_warnungen", lang)] if warnungen_an(preset) else []
     fenster = tagesfenster(preset.get("day_window_start_hour"), preset.get("day_window_end_hour"))
     return {
         "kontext": "orte",

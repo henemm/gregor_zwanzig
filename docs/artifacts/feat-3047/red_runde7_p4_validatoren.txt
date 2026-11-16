@@ -286,3 +286,106 @@ FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_tages
 FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_ortsabschnitte_html_vertauscht_scheitert[uebersetzt-de]
 FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_ortsabschnitte_html_vertauscht_scheitert[uebersetzt-en]
 FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_warnzeile_folgt_dem_schalter
+
+===== Nachtrag nach Merge p2 (E4, AC-28-Paritaet, B-L6), Lauf gegen Hooks-Stand 3efdc6b =====
+.FFFF.FF                                                                 [100%]
+=================================== FAILURES ===================================
+__________ test_r7_orte_klartext_hinweis_nicht_abrufbar_wie_html[de] ___________
+tests/tdd/test_einstellung_gleich_mail_validatoren.py:1550: in test_r7_orte_klartext_hinweis_nicht_abrufbar_wie_html
+    assert code == 1 and "SOLL: Hinweis 'Amtliche Warnungen nicht abrufbar' fehlt im Klartext-Teil" in aus, aus
+E   AssertionError: ======================================================================
+E     E-MAIL SPEC v4.0 COMPLIANCE VALIDATOR
+E     ======================================================================
+E     
+E     ✅ ALLE SPEC-ANFORDERUNGEN ERFÜLLT!
+E     
+E     Du darfst jetzt 'E2E Test bestanden' sagen.
+E     /tmp/pytest-of-root/pytest-553/test_r7_orte_klartext_hinweis_0/repo/.claude/hooks/email_spec_validator.py:101: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+E       "validated_at": datetime.utcnow().isoformat(),
+E     
+E   assert (0 == 1)
+__________ test_r7_orte_klartext_hinweis_nicht_abrufbar_wie_html[en] ___________
+tests/tdd/test_einstellung_gleich_mail_validatoren.py:1550: in test_r7_orte_klartext_hinweis_nicht_abrufbar_wie_html
+    assert code == 1 and "SOLL: Hinweis 'Amtliche Warnungen nicht abrufbar' fehlt im Klartext-Teil" in aus, aus
+E   AssertionError: ======================================================================
+E     E-MAIL SPEC v4.0 COMPLIANCE VALIDATOR
+E     ======================================================================
+E     
+E     ✅ ALLE SPEC-ANFORDERUNGEN ERFÜLLT!
+E     
+E     Du darfst jetzt 'E2E Test bestanden' sagen.
+E     /tmp/pytest-of-root/pytest-553/test_r7_orte_klartext_hinweis_1/repo/.claude/hooks/email_spec_validator.py:101: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+E       "validated_at": datetime.utcnow().isoformat(),
+E     
+E   assert (0 == 1)
+__________________ test_r7_orte_warnungen_aus_echte_mail[de] ___________________
+tests/tdd/test_einstellung_gleich_mail_validatoren.py:1571: in test_r7_orte_warnungen_aus_echte_mail
+    assert code == 1 and f"Spalte fehlt: '{warn}'" in aus, aus
+E   AssertionError: ======================================================================
+E     E-MAIL SPEC v4.0 COMPLIANCE VALIDATOR
+E     ======================================================================
+E     
+E     ✅ ALLE SPEC-ANFORDERUNGEN ERFÜLLT!
+E     
+E     Du darfst jetzt 'E2E Test bestanden' sagen.
+E     /tmp/pytest-of-root/pytest-553/test_r7_orte_warnungen_aus_ech0/repo/.claude/hooks/email_spec_validator.py:101: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+E       "validated_at": datetime.utcnow().isoformat(),
+E     
+E   assert (0 == 1)
+__________________ test_r7_orte_warnungen_aus_echte_mail[en] ___________________
+tests/tdd/test_einstellung_gleich_mail_validatoren.py:1571: in test_r7_orte_warnungen_aus_echte_mail
+    assert code == 1 and f"Spalte fehlt: '{warn}'" in aus, aus
+E   AssertionError: ======================================================================
+E     E-MAIL SPEC v4.0 COMPLIANCE VALIDATOR
+E     ======================================================================
+E     
+E     ✅ ALLE SPEC-ANFORDERUNGEN ERFÜLLT!
+E     
+E     Du darfst jetzt 'E2E Test bestanden' sagen.
+E     /tmp/pytest-of-root/pytest-553/test_r7_orte_warnungen_aus_ech1/repo/.claude/hooks/email_spec_validator.py:101: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+E       "validated_at": datetime.utcnow().isoformat(),
+E     
+E   assert (0 == 1)
+_____ test_r7_trip_altformat_ohne_order_register_prioritaet[zeichenketten] _____
+tests/tdd/test_einstellung_gleich_mail_validatoren.py:1595: in test_r7_trip_altformat_ohne_order_register_prioritaet
+    assert code == 0, aus
+E   AssertionError: ======================================================================
+E     BRIEFING-MAIL-VALIDATOR (full + compact) — #733
+E     ======================================================================
+E     
+E     ❌ SPEC-VERLETZUNGEN GEFUNDEN:
+E     
+E       • SOLL: Etappen-Stundentabelle (HTML) 1: Reihenfolge: an Position 1 steht 'Temp' statt 'Gust' (ist ['Temp', 'Gust', 'Rain'], soll ['Gust', 'Rain', 'Temp'])
+E       • SOLL: Nachttabelle (HTML) 1: Reihenfolge: an Position 1 steht 'Temp' statt 'Gust' (ist ['Temp', 'Gust', 'Rain'], soll ['Gust', 'Rain', 'Temp'])
+E       • SOLL: Etappen-Stundentabelle (Klartext) 1: Reihenfolge: an Position 1 steht 'Temp' statt 'Gust' (ist ['Temp', 'Gust', 'Rain'], soll ['Gust', 'Rain', 'Temp'])
+E       • SOLL: Nachttabelle (Klartext) 1: Reihenfolge: an Position 1 steht 'Temp' statt 'Gust' (ist ['Temp', 'Gust', 'Rain'], soll ['Gust', 'Rain', 'Temp'])
+E     
+E     /tmp/pytest-of-root/pytest-553/test_r7_trip_altformat_ohne_or0/repo/.claude/hooks/briefing_mail_validator.py:1293: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+E       "validated_at": datetime.utcnow().isoformat(),
+E     
+E   assert 1 == 0
+_____ test_r7_trip_altformat_ohne_order_register_prioritaet[ohne_enabled] ______
+tests/tdd/test_einstellung_gleich_mail_validatoren.py:1595: in test_r7_trip_altformat_ohne_order_register_prioritaet
+    assert code == 0, aus
+E   AssertionError: ======================================================================
+E     BRIEFING-MAIL-VALIDATOR (full + compact) — #733
+E     ======================================================================
+E     
+E     ❌ SPEC-VERLETZUNGEN GEFUNDEN:
+E     
+E       • SOLL: Etappen-Stundentabelle (HTML) 1: Reihenfolge: an Position 1 steht 'Temp' statt 'Gust' (ist ['Temp', 'Gust', 'Rain'], soll ['Gust', 'Rain', 'Temp'])
+E       • SOLL: Nachttabelle (HTML) 1: Reihenfolge: an Position 1 steht 'Temp' statt 'Gust' (ist ['Temp', 'Gust', 'Rain'], soll ['Gust', 'Rain', 'Temp'])
+E       • SOLL: Etappen-Stundentabelle (Klartext) 1: Reihenfolge: an Position 1 steht 'Temp' statt 'Gust' (ist ['Temp', 'Gust', 'Rain'], soll ['Gust', 'Rain', 'Temp'])
+E       • SOLL: Nachttabelle (Klartext) 1: Reihenfolge: an Position 1 steht 'Temp' statt 'Gust' (ist ['Temp', 'Gust', 'Rain'], soll ['Gust', 'Rain', 'Temp'])
+E     
+E     /tmp/pytest-of-root/pytest-553/test_r7_trip_altformat_ohne_or1/repo/.claude/hooks/briefing_mail_validator.py:1293: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+E       "validated_at": datetime.utcnow().isoformat(),
+E     
+E   assert 1 == 0
+=========================== short test summary info ============================
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_klartext_hinweis_nicht_abrufbar_wie_html[de]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_klartext_hinweis_nicht_abrufbar_wie_html[en]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_warnungen_aus_echte_mail[de]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_warnungen_aus_echte_mail[en]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_altformat_ohne_order_register_prioritaet[zeichenketten]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_altformat_ohne_order_register_prioritaet[ohne_enabled]
