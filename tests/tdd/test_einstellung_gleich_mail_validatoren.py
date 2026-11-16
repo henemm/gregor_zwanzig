@@ -602,8 +602,6 @@ def _trip_bewusst_leer() -> dict:
     return daten
 
 
-@pytest.mark.xfail(strict=True, reason="#3047 N7 wartet auf Renderer: bewusst leer laesst heute "
-                   "verwaiste Ueberschriften 'Segment 1'/'Nacht am Ziel' ohne Tabelle stehen")
 def test_trip_bewusst_leer_ausblick_entfaellt_positiv(monkeypatch, tmp_path):
     """Konzept "alle Zeilen abgewaehlt -> Ausblick entfaellt": die Mail eines
     bewusst leeren Trips hat weder Stundentabelle (J3: entfaellt ohne Spalten)
@@ -710,8 +708,6 @@ def _orte_bewusst_leer(**schalter) -> dict:
     return preset
 
 
-@pytest.mark.xfail(strict=True, reason="#3047 N2 wartet auf Renderer (Orte-Ausblick entfaellt "
-                   "bei active_metrics: [], D4 aufgehoben)")
 def test_orte_grundauswahl_bewusst_leer_positiv(monkeypatch, tmp_path):
     """N2: bewusst leere Grundauswahl -> Vergleichstabelle ohne Metrikzeilen,
     kein Stundenverlauf, kein Ausblick; die Mail besteht mit ``--konfig``."""
