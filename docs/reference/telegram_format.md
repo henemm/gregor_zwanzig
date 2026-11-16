@@ -1,10 +1,10 @@
 ---
 entity_id: telegram_format
 type: reference
-version: "1.1"
+version: "1.2"
 status: active
 created: 2026-10-21
-updated: 2026-11-15
+updated: 2026-11-16
 tags: [telegram, channel, renderer, inbound, reference]
 ---
 
@@ -87,6 +87,8 @@ und Antworten stehen in der **Kontosprache** (`resolve_user_lang`). Ein englisch
 `TODAY`, `RESTDAY`) ergibt eine englische Antwort, auch bei deutschem Konto (`telegram_englisch`,
 `src/services/trip_command_processor.py`).
 
+**Kopfzeile des Trip-Briefings (#3052):** Die Briefing-Art steht in der Kontosprache, z. B. „Abend 15.07.2026“ (de) bzw. „Evening 15.07.2026“ (en). Sie kommt aus demselben Katalog wie die Mail (`mail.kopf.typ_morning|evening|alert`) über den gemeinsamen Helfer `briefing_typ()` in `src/output/renderers/briefing_typ.py`; Mail und Telegram zeigen damit dieselbe Art. Unbekannte Typen fallen auf die Großschreibung des Typnamens zurück. Das Datum bleibt unverändert.
+
 **Stufenwörter (#2784):** Gewitter-Stufe (z. B. „leicht" / „light"), Wind- und Regen-Adjektive folgen der Kontosprache in Fußzeile, Kurzübersicht, Segment-Tabellen des Briefings und in den Stundenzeilen des Änderungs-Alarms. Bewusst deutsch bleibt der Gewitterteil der Ausblick-Zeile (Entscheidung #2665). Kürzel (`TH`, `VS`, `FZ`) bleiben in jeder Sprache unverändert. Der Kopf der Zeitspalte in der Segment-Tabelle ist dagegen kein Kürzel, sondern Nutzertext und folgt der Kontosprache über den Katalogschlüssel `telegram.tabelle.zeit` (Deutsch „Zt“, Englisch „Hr“; zweistellig wegen der 32-Zeichen-Tabellenbreite, #3014).
 
 **Kurzstil** (`telegram_style == "kurzform"`): die Kurzform bleibt in jeder Sprache unverändert, Kürzel
@@ -114,6 +116,7 @@ das Menü ist botweit und bleibt deutsch (P7 #2669, Known Limitations); die Zeil
 | Versand + 400-Fallback ohne `parse_mode` | `src/output/channels/telegram.py:474`, `:534`, `:560` |
 | Zoom-Navigation | `src/output/channels/telegram.py:637` (`edit_message_text`), `:668` (`answer_callback_query`) |
 | Bubble-Datentyp / Briefing-Renderer | `src/output/renderers/narrow.py:380`, `:659` (`render_telegram_bubbles`) |
+| Kopf Briefing-Art (Nutzersprache) | `src/output/renderers/narrow.py:781`, Helfer `src/output/renderers/briefing_typ.py:10` (`briefing_typ`, mit Mail geteilt) |
 | Hinweis „unvollständig“ | `src/output/renderers/narrow.py:640` |
 | Spalten-/Zeichenbudget | `src/output/renderers/channel_layout.py:48` |
 | Briefing-Versand (kurzform / Bubble-Schleife) | `src/services/notification_service.py:786`, `:804` |
