@@ -36,7 +36,7 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 
-	test(`AC-18 (${kind}): Wassersport, Gewitter Alarm ab Rot -> „Alarm, wenn die Gewitter-Stufe … auf mittel steigt (rot) …“`, async ({ page }) => {
+	test(`AC-18 (${kind}): Wassersport, Gewitter Alarm ab Rot -> „Alarm, wenn die Gewitter-Stufe … auf mittel oder hoch steigt (Rot) …“ (#2955)`, async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		const hub = await seedWetter(page.request, kind, { vorlageId: 'wassersport' });
 		try {
@@ -44,7 +44,7 @@ for (const kind of HUB_KINDS) {
 			const gewitter = reiter.getByTestId(WT.zeile('thunder'));
 			await gewitter.getByTestId(WT.alarmAbStufe('thunder', 'red')).click();
 			await expect(gewitter.getByTestId(WT.erklaersatz('thunder'))).toHaveText(
-				/^Alarm, wenn die Gewitter-Stufe seit dem letzten Briefing auf mittel steigt \(rot\)\. Entwarnung, wenn sie wieder fällt\.$/i
+				/^Alarm, wenn die Gewitter-Stufe seit dem letzten Briefing auf mittel oder hoch steigt \(Rot\)\. Entwarnung, wenn sie wieder fällt\.$/
 			);
 		} finally {
 			await hub.aufraeumen();

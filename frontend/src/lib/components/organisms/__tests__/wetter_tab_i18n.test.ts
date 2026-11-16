@@ -55,14 +55,25 @@ const NEU_FREIGEGEBEN = new Set([
 	'wetter.gewitter.keins',
 	...['temperature', 'temperature_night', 'wind', 'gust', 'precipitation', 'thunder', 'visibility', 'cloud_low', 'uv_index', 'freezing_level', 'snowfall_limit', 'sunshine'].map((id) => `wetter.hinweis.${id}`),
 	// #2981 Vorlagennamen zweisprachig: Namen der sieben eingebauten Wetter-Vorlagen.
-	...['alpen_trekking', 'wandern', 'skitouren', 'wintersport', 'radtour', 'wassersport', 'allgemein'].map((id) => `wetter.vorlage.name.${id}`)
+	...['alpen_trekking', 'wandern', 'skitouren', 'wintersport', 'radtour', 'wassersport', 'allgemein'].map((id) => `wetter.vorlage.name.${id}`),
+	// #2955 (Spec wetter_metrik_inhalte.md AC-2): Gewitter-Satz „mittel oder hoch“, wenn schon „mittel“ die Alarmstufe erreicht.
+	'wetter.gewitter.mittel_ab'
 ]);
 // #2913 Scheibe (c) Fix-Loop 2 (Bildprüfer Runde 1, Befund 1): Label wie im Mockup mit Doppelpunkt. Bewusst geändert,
 // mit genau dem erwarteten neuen Wert — jede andere Änderung bleibt rot.
 // #2913 Scheibe c2 (Spec feat_2913_c2_seitenkopf.md AC-8): Rücksetz-Text mit den Anführungszeichen des Mockups.
+// #2955 (Spec wetter_metrik_inhalte.md AC-5): Kopfzähler „{n} von {m}“, m = alle ausgewählten Metriken (Platzhalter umbenannt).
 const GEAENDERT_FREIGEGEBEN: Record<string, Record<string, string>> = {
-	de: { 'wetter.nicht_im_briefing.titel': 'Nicht im Briefing:', 'wetter.vorlage.zuruecksetzen': 'Auf „{vorlage}“ zurücksetzen' },
-	en: { 'wetter.nicht_im_briefing.titel': 'Not in the briefing:', 'wetter.vorlage.zuruecksetzen': 'Reset to “{vorlage}”' }
+	de: {
+		'wetter.nicht_im_briefing.titel': 'Nicht im Briefing:',
+		'wetter.vorlage.zuruecksetzen': 'Auf „{vorlage}“ zurücksetzen',
+		'wetter.alarm_ab.zaehler': '{ausloesend} von {ausgewaehlt} Metriken lösen einen Alarm aus. {ohne} können keinen auslösen (Vorboten und reine Anzeige).'
+	},
+	en: {
+		'wetter.nicht_im_briefing.titel': 'Not in the briefing:',
+		'wetter.vorlage.zuruecksetzen': 'Reset to “{vorlage}”',
+		'wetter.alarm_ab.zaehler': '{ausloesend} of {ausgewaehlt} metrics trigger an alert. {ohne} cannot trigger one (precursors and display only).'
+	}
 };
 
 describe('AC-21: wetter.json DE/EN — Bestandstexte unverändert gegenüber dem Abzweigpunkt von origin/main', () => {

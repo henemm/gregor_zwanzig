@@ -268,7 +268,7 @@ describe('AC-2: alertMetricLabel je Sprache, unit/comparison unveraendert', () =
 		fresh_snow: ['Neuschnee', 'Fresh snow'],
 		cape: ['Gewitterenergie (CAPE)', 'Thunderstorm energy (CAPE)'],
 		visibility: ['Sichtweite', 'Visibility'],
-		humidity: ['Luftfeuchtigkeit', 'Humidity'],
+		humidity: ['Luftfeuchte', 'Humidity'], // #2955: Mockup-Name
 		freezing_level: ['Nullgradgrenze', 'Freezing level'],
 		thunder_onset: ['Gewitter (Beginn)', 'Thunderstorm (onset)'],
 		precipitation_heavy_onset: ['Starkregen (Beginn)', 'Heavy rain (onset)']

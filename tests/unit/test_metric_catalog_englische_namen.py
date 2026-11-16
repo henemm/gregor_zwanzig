@@ -49,16 +49,16 @@ ENGLISCH = {
 DEUTSCH = {
     "temperature": ("Temperatur", "Temp"),
     "temperature_cold": ("Tiefsttemperatur-Alarm", "Temp"),
-    "temperature_night": ("Nacht-Tiefsttemperatur", "Nacht-Tiefsttemperatur"),
+    "temperature_night": ("Tiefsttemperatur Nacht", "Tiefsttemperatur Nacht"),  # #2955
     "temperature_day_low": ("Tages-Tiefsttemperatur (Gehzeit)", "Tages-Tiefsttemperatur (Gehzeit)"),
     "temperature_day_high": ("Tages-Höchsttemperatur (Gehzeit)", "Tages-Höchsttemperatur (Gehzeit)"),
     "wind_chill": ("Gefühlte Temperatur", "Gefühlte Temperatur"),
-    "wind_chill_night": ("Gefühlte Nacht-Tiefsttemperatur", "Gefühlte Nacht-Tiefsttemperatur"),
+    "wind_chill_night": ("Gefühlte Tiefsttemperatur Nacht", "Gefühlte Tiefsttemperatur Nacht"),  # #2955
     "wind_chill_day_low": ("Gefühlte Tages-Tiefsttemperatur (Gehzeit)",
                            "Gefühlte Tages-Tiefsttemperatur (Gehzeit)"),
     "wind_chill_day_high": ("Gefühlte Tages-Höchsttemperatur (Gehzeit)",
                             "Gefühlte Tages-Höchsttemperatur (Gehzeit)"),
-    "humidity": ("Luftfeuchtigkeit", "Feuchte"),
+    "humidity": ("Luftfeuchte", "Feuchte"),  # #2955
     "dewpoint": ("Taupunkt", "Taupunkt"),
     "wind": ("Wind", "Wind"),
     "gust": ("Böen", "Böen"),

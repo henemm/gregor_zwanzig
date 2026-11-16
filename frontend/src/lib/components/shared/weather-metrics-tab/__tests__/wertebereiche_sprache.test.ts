@@ -235,7 +235,7 @@ describe('AC-1: Metrik-Namen aus dem Register, Kurzform und Kuerzel unveraendert
 	test('fehlendes label_en im Register: der Reiter zeigt in en den deutschen Namen (AC-2 im Render)', () => {
 		const { en } = deDannEn(() => paketText(routeRendern({ catalog: katalogMitRegister(['gust', 'humidity']) })));
 		hat(en, 'Böen');
-		hat(en, 'Luftfeuchtigkeit');
+		hat(en, 'Luftfeuchte'); // #2955: deutscher Katalogname aus der Fixture
 		hat(en, 'Gusts (km/h)');
 		hatNicht(en, 'Wind gusts');
 	});

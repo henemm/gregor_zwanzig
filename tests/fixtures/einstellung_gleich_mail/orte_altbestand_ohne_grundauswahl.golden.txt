@@ -25,7 +25,7 @@ Kronplatz
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Luftfeuchtigkeit: 72%
+   Luftfeuchte: 72%
    Taupunkt: 1°C
    Luftdruck: 1012 hPa
    Niederschlagsart: Regen
@@ -52,7 +52,7 @@ Sulden
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Luftfeuchtigkeit: 72%
+   Luftfeuchte: 72%
    Taupunkt: 2°C
    Luftdruck: 1013 hPa
    Niederschlagsart: Regen
@@ -79,7 +79,7 @@ Ahrntal
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Luftfeuchtigkeit: 72%
+   Luftfeuchte: 72%
    Taupunkt: 3°C
    Luftdruck: 1014 hPa
    Niederschlagsart: Mischniederschlag

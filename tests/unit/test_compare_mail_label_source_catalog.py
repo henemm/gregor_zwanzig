@@ -62,7 +62,7 @@ EXPECTED_OVERVIEW_LABELS = [
     # waehlbar, keine Uebersichtszeile mehr.
     "Schneehöhe", "Neuschnee", "Böen",
     "Nullgradgrenze", "Windrichtung", "Gefühlte Temperatur", "Tiefe Wolken",
-    "Mittelhohe Wolken", "Hohe Wolken", "Luftfeuchtigkeit", "Taupunkt",
+    "Mittelhohe Wolken", "Hohe Wolken", "Luftfeuchte", "Taupunkt",
     "Luftdruck", "Niederschlagsart", "Schneefallgrenze",
 ]
 

@@ -345,7 +345,7 @@ _OUT_OF_RANGE_VALUES: dict[str, str] = {
     "Tiefe Wolken": "150%",                 # Bereich 0..100
     "Mittelhohe Wolken": "150%",            # Bereich 0..100
     "Hohe Wolken": "150%",                  # Bereich 0..100
-    "Luftfeuchtigkeit": "150%",             # Bereich 0..100
+    "Luftfeuchte": "150%",             # Bereich 0..100
     "Taupunkt": "50°C",                     # Bereich -40..35
     "Luftdruck": "1200 hPa",                # Bereich 500..1085
     "Schneefallgrenze": "5500 m",           # Bereich 0..5000

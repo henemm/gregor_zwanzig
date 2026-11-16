@@ -215,7 +215,7 @@ def _plain_row_value(text: str, *keywords: str) -> str | None:
 # Minimum").
 _IS_WIND_DIR = lambda l: l == "windrichtung"  # noqa: E731
 _IS_WIND_CHILL_MIN = lambda l: l == "gefühlte temperatur"  # noqa: E731
-_IS_HUMIDITY = lambda l: l == "luftfeuchtigkeit"  # noqa: E731
+_IS_HUMIDITY = lambda l: l == "luftfeuchte"  # noqa: E731
 _IS_DEWPOINT = lambda l: l == "taupunkt"  # noqa: E731
 _IS_SNOWFALL_LIMIT = lambda l: l == "schneefallgrenze"  # noqa: E731
 _IS_PRECIP_TYPE = lambda l: l == "niederschlagsart"  # noqa: E731
@@ -306,7 +306,7 @@ def test_selected_humidity_metric_appears_in_overview_matrix():
     enabled = resolve_enabled_metrics(["humidity_avg_pct"])
 
     html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
-    row = _assert_row_with_values(html, _IS_HUMIDITY, "Luftfeuchtigkeit")
+    row = _assert_row_with_values(html, _IS_HUMIDITY, "Luftfeuchte")
 
     expected = WeatherMetricsService().compute_basis_metrics(_timeseries(_hourly()), tz=None).humidity_avg_pct
     assert _number(row["cells"][0]) == expected, (
@@ -499,9 +499,9 @@ def test_plaintext_shows_all_ten_new_rows():
     )
     assert _number(cloud_high_line) == CLOUD_HIGH_AVG_PCT
 
-    humidity_line = _plain_row_value(text, "luftfeuchtigkeit")
+    humidity_line = _plain_row_value(text, "luftfeuchte")
     assert humidity_line is not None, (
-        f"Klartext hat keine 'Luftfeuchtigkeit'-Zeile, obwohl "
+        f"Klartext hat keine 'Luftfeuchte'-Zeile, obwohl "
         f"humidity_avg_pct gewaehlt ist:\n{text}"
     )
     assert _number(humidity_line) == basis.humidity_avg_pct

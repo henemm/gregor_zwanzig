@@ -25,7 +25,7 @@ Innsbruck
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Luftfeuchtigkeit: 72%
+   Luftfeuchte: 72%
    Taupunkt: 1°C
    Luftdruck: 1012 hPa
    Niederschlagsart: Regen
@@ -52,7 +52,7 @@ Lienz
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Luftfeuchtigkeit: 72%
+   Luftfeuchte: 72%
    Taupunkt: 2°C
    Luftdruck: 1013 hPa
    Niederschlagsart: Regen
@@ -79,7 +79,7 @@ Kufstein
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Luftfeuchtigkeit: 72%
+   Luftfeuchte: 72%
    Taupunkt: 3°C
    Luftdruck: 1014 hPa
    Niederschlagsart: Mischniederschlag
@@ -136,7 +136,7 @@ Kufstein (CET)
    ⚠️ Vorhersage derzeit nicht abrufbar.
 
 Einheiten: Temp, Feels, Dew °C · Humid, Rain%, Cloud, CldLow, CldMid, CldHi % · Wind, Gust km/h · Rain mm · SnowL, 0°Line m · Visib km · Press hPa · SnowH, NewSn cm
-Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Humid = Luftfeuchtigkeit · Dew = Taupunkt · Gust = Böen · Rain = Niederschlag · Rain% = Regenwahrscheinlichkeit · Thdr = Gewitter · SnowL = Schneefallgrenze · PType = Niederschlagsart · Cloud = Bewölkung · CldLow = Tiefe Wolken · CldMid = Mittelhohe Wolken · CldHi = Hohe Wolken · Visib = Sichtweite · UV = UV-Index · Press = Luftdruck · 0°Line = Nullgradgrenze · SnowH = Schneehöhe · NewSn = Neuschnee
+Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Humid = Luftfeuchte · Dew = Taupunkt · Gust = Böen · Rain = Niederschlag · Rain% = Regenwahrscheinlichkeit · Thdr = Gewitter · SnowL = Schneefallgrenze · PType = Niederschlagsart · Cloud = Bewölkung · CldLow = Tiefe Wolken · CldMid = Mittelhohe Wolken · CldHi = Hohe Wolken · Visib = Sichtweite · UV = UV-Index · Press = Luftdruck · 0°Line = Nullgradgrenze · SnowH = Schneehöhe · NewSn = Neuschnee
 
 ZURÜCKGEHALTEN — so hast du es eingestellt
   28.10. 18:30 · Wind · SMS · Stille Stunden

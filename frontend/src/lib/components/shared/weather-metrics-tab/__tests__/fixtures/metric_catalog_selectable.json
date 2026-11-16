@@ -10,7 +10,7 @@
     },
     {
       "id": "temperature_night",
-      "label": "Nacht-Tiefsttemperatur",
+      "label": "Tiefsttemperatur Nacht",
       "unit": "°C",
       "category": "temperature",
       "default_enabled": true,
@@ -42,7 +42,7 @@
     },
     {
       "id": "wind_chill_night",
-      "label": "Gefühlte Nacht-Tiefsttemperatur",
+      "label": "Gefühlte Tiefsttemperatur Nacht",
       "unit": "°C",
       "category": "temperature",
       "default_enabled": true,
@@ -66,7 +66,7 @@
     },
     {
       "id": "humidity",
-      "label": "Luftfeuchtigkeit",
+      "label": "Luftfeuchte",
       "unit": "%",
       "category": "temperature",
       "default_enabled": false,

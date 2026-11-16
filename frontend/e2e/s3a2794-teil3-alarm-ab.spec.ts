@@ -35,7 +35,7 @@ for (const kind of HUB_KINDS) {
 				await expect(reiter.getByTestId(WT.alarmAbStufe(id, 'red'))).toHaveCount(0);
 			}
 			await expect(reiter.getByTestId(WT.zaehler)).toHaveText(
-				`${faehig.length} von ${faehig.length} Metriken lösen einen Alarm aus. ${ohne.length} können keinen auslösen (Vorboten und reine Anzeige).`
+				`${faehig.length} von ${faehig.length + ohne.length} Metriken lösen einen Alarm aus. ${ohne.length} können keinen auslösen (Vorboten und reine Anzeige).`
 			);
 			expect(await abweichungen(reiter), 'AC-14: jede geaenderte Metrik zaehlt als Abweichung').toBe(geaendert);
 
