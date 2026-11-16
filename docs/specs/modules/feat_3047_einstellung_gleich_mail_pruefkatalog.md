@@ -299,6 +299,30 @@ Nur Skizze, jede Phase bekommt eine eigene Spec, ein ADR zu Phase 2 ist dann nö
 - **AC-21:** Given ein Orts-Vergleich aus dem Altbestand ohne `active_metrics` und ohne `outlook_metrics` / When das Briefing mit Ausblick gesendet wird / Then zeigt der 3-Tages-Ausblick im Klartext dieselben Spalten in derselben Folge wie im HTML derselben Mail, und der Editor zeigt für diese Liste genau diese Spalten als aktiv.
   - Test: Orte-Kette (Paket B) mit Altbestand-Preset, Vergleich HTML-Kopf gegen Klartext-Block; Editor-Seite über AC-13.
 
+## Nachtrag Runde 7 (2026-11-16): Inventar über alle Ausgaben
+
+Die siebte Prüfrunde hat jede im Hub änderbare Einstellung gegen jede Ausgabe (E-Mail HTML/Klartext/Kompakt, Telegram, SMS, Premium-SMS, Einstellungsseite) für Trip und Orte geprüft. Matrix: `docs/artifacts/feat-3047/inventar_matrix.json` (Status je Zelle), Befunde: `docs/artifacts/feat-3047/runde7_befunde.md`. Damit wird die in „Known Limitations“ für Phase 3 vorgesehene Aufnahme von Telegram, SMS und Premium-SMS in den Katalog vorgezogen (Kanal-Parität ADR-0095).
+
+**PO-Entscheidungen 2026-11-16 (per Rückfrage):**
+- **SMS-Kürzung:** Bei Überlänge fällt das Listenende zuerst weg, Trip und Orte gleich; amtliche Warnungen fallen immer zuletzt weg (WV6). Die feste Prioritätskürzung (#1677 AC-6) ist damit abgelöst; sicherheitsrelevante Größen stehen über die Vorbelegung vorn.
+- **Telegram-Schnittlinie:** Nichts fällt weg. Trip bleibt (alle Zeilen in der Kurzübersicht, die ersten 7 zusätzlich stündlich in der Tabelle); der Erklärsatz im Editor wird daran angepasst (#3031/#3033). Orts-Vergleich: Zeilen ab Platz 8 erscheinen in einer zweiten Zeile je Ort statt wegzufallen.
+- **Amtliche Warnungen Altbestand-Mischzustand:** Ist Briefing- oder Alarm-Schalter an, gilt „beides an“ (Briefing und Alarm); Editor zeigt dann „an“.
+
+**Tech-Lead-Entscheidungen (innerhalb Konzept):**
+- Grundauswahl „nie eingestellt“: Einstellungsseite zeigt den Mail-Standard (Trip: Register-Standardsatz; Orte: was die Mail zeigt), nicht die Vorlage; eine unbeteiligte Speicherung ändert die Mail nicht. Neues Orts-Briefing aus Standard-Vorlage speichert die Grundauswahl ausdrücklich.
+- Altformat-Einträge in `metrics[]` (Zeichenkette, ohne `enabled`) gelten als gewählt; Einträge ohne `metric_id` weist die API ab, der Loader verwirft nur den Eintrag.
+
+**Zusätzliche ACs:**
+- **AC-22:** Given eine Trip- oder Orte-Konfiguration mit beliebiger Telegram-, SMS- oder Premium-SMS-Liste (Folge ≠ Katalog, an/aus, Roh/Einfach) in DE oder EN / When das Briefing über den echten Weg bis zum Transport-Ausgang erzeugt wird / Then entsprechen Auswahl, Folge und Roh/Einfach je Zeile der gespeicherten Liste (inkl. Windrichtung Roh, #3063), Nutzertexte stehen in Nutzersprache, Kürzel bleiben unübersetzt.
+- **AC-23:** Given eine SMS oder Premium-SMS über 160 Zeichen / When gekürzt wird / Then fällt die Liste von hinten weg, amtliche Warnungen (auch die eines weiteren Ortes) fallen zuletzt weg, Trip und Orte gleich.
+- **AC-24:** Given ein Orts-Vergleich mit mehr als 7 Telegram-Zeilen / When das Telegram-Briefing erzeugt wird / Then erscheinen alle Zeilen (ab Platz 8 in einer zweiten Zeile je Ort) und der 3-Tages-Ausblick ist enthalten wie beim Trip.
+- **AC-25:** Given die Kompakt-Mail (Trip) / When `show_stage_stats`, `show_outlook` aus bzw. amtliche Warnungen vorhanden / Then fehlen Kennzahlen bzw. Ausblick, und die Warnungen stehen an erster Stelle.
+- **AC-26:** Given eine gespeicherte Konfiguration (nie eingestellt, Altbestand, Altformat, Mischzustand Warnungen, halbes Tagesfenster, `null`-Zusatzblöcke, Trend nie eingestellt) / When die Einstellungsseite sie lädt und eine unbeteiligte Änderung speichert / Then zeigt sie genau, was die Ausgabe tut, und die Ausgabe ändert sich durch das Speichern nicht.
+- **AC-27:** Given die Validatoren mit `--konfig` / When eine Mail eine Ausblick-Zeile, den Ausblick eines Orts, eine Stundenspalte ab der zweiten Zeile, die richtige Roh/Einfach-Form der Vergleichstabelle oder den Aus-Zustand eines Zusatzblocks verfehlt / Then scheitern sie; ein vom Nutzer gesetztes Tagesfenster lehnen sie nicht ab.
+- **AC-28:** Given amtliche Warnungen sind aus bzw. der Warndienst ist nicht erreichbar / When die Orts-Mail erzeugt wird / Then zeigt das HTML keine leere Warnzeile, und der Klartext trägt denselben Hinweis „nicht abrufbar“ wie das HTML.
+
+**Ausgelagert:** eigener Soll-Validator für Telegram/SMS/Premium-SMS (neues Issue), eigene Premium-SMS-Liste (#2801), Kürzel-Legende am Briefing-Ende (#3032), Profil im Mail-Kopf K3b (#2796), Roh/Einfach Stundenverlauf (#3058), Ausblick „Erscheint im“ für Orte (Konzept V12 nur Trip; bleibt Orte: Ausblick in jedem Briefing).
+
 ## Known Limitations
 
 - Der Trip-Ausblick wird im Kern-Test aus der reinen Funktion `build_outlook_row` gespeist, nicht über den Zeitplaner-Abruf (`_build_stage_trend`, braucht Wetter-Netz). Der Abruf selbst wird in `/e2e-verify` auf Staging geprüft.
@@ -315,4 +339,5 @@ Nur Skizze, jede Phase bekommt eine eigene Spec, ein ADR zu Phase 2 ist dann nö
 
 ## Changelog
 
+- 2026-11-16: Nachtrag Runde 7 (AC-22 bis AC-28, PO-Entscheidungen SMS-Kürzung, Telegram-Schnittlinie, Warnungen-Altbestand)
 - 2026-11-15: Initial spec created (Phase 1 von #3047, Prüfkatalog zuerst)
