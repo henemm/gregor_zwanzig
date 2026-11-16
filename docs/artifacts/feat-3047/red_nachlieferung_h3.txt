@@ -1,0 +1,43 @@
+# RED Nachlieferung H3 (#3047, Nachpruefung Punkte 1, 4, 5 -- Validator-Teil)
+# Stand: origin/main 4b5e8749f, Tests neu, Validatoren/Soll-Modul unveraendert.
+# Lauf: uv run pytest -q --tb=line tests/tdd/test_einstellung_gleich_mail_validatoren.py \
+#         -k "stunden_ or rohes_preset or darstellung"
+# Ergebnis: 10 failed, 0 passed (Kern-Zeilen unten).
+#
+# Punkt 1 (Orte-Stundenverlauf ohne Schnitt mit der Grundauswahl):
+#   test_orte_stunden_schnitt_mit_grundauswahl     -> rc=1 "Spalte fehlt: 'Visib'" gegen die korrekte Mail
+#   test_orte_stunden_leerer_schnitt_rueckfall     -> rc=1, Soll ['Visib','UV'] statt Rueckfall
+#   test_orte_stunden_altbestand_ohne_alles_...    -> rc=0 trotz fehlender UV-Spalte (nie eingestellt ungeprueft)
+#   test_orte_stunden_nie_eingestellt_folgt_...    -> xfail(strict, wartet auf H1); hier XPASS, weil der alte
+#                                                     Validator den nie eingestellten Stundenverlauf nicht prueft
+# Punkt 4 (Ortsfolge mit rohem Preset still uebersprungen):
+#   test_orte_rohes_preset_ohne_ortsnamen_scheitert_laut -> rc=0 (still uebersprungen)
+#   test_orte_rohes_preset_mit_orte_aus_nutzerverzeichnis -> rc=2, --orte unbekannt
+# Punkt 5 (darstellung Roh/Einfach im briefing_mail_validator --konfig nicht ausgewertet):
+#   test_trip_darstellung_* (4 Negativfaelle) -> rc=0 trotz falscher Darstellung
+
+        • SOLL: Stundenverlauf (HTML) Ort 1: Spalte fehlt: 'Visib' (ist ['Gust', 'Temp', 'Rain'], soll ['Visib', 'Gust', 'Temp', 'Rain'])
+        • SOLL: Stundenverlauf (Klartext) Ort 1: Spalte fehlt: 'Visib' (ist ['Gust', 'Temp', 'Rain'], soll ['Visib', 'Gust', 'Temp', 'Rain'])
+    assert 1 == 0
+        • SOLL: Stundenverlauf (HTML) Ort 1: Spalte fehlt: 'Visib', 'UV'; Spalte zu viel: 'Temp', 'Wind', 'Gust', 'Rain' (ist ['Temp', 'Wind', 'Gust', 'Rain'], soll ['Visib', 'UV'])
+        • SOLL: Stundenverlauf (Klartext) Ort 1: Spalte fehlt: 'Visib', 'UV'; Spalte zu viel: 'Temp', 'Wind', 'Gust', 'Rain' (ist ['Temp', 'Wind', 'Gust', 'Rain'], soll ['Visib', 'UV'])
+    assert 1 == 0
+[XPASS(strict)] #3047 wartet auf H1
+    assert (0 == 1)
+    assert 0 != 0
+      email_spec_validator.py: error: unrecognized arguments: --orte /tmp/pytest-of-root/pytest-512/test_orte_rohes_preset_mit_ort0/locations
+    assert 2 == 0
+    assert 0 == 1
+    assert 0 == 1
+    assert 0 == 1
+    assert 0 == 1
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_stunden_schnitt_mit_grundauswahl
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_stunden_leerer_schnitt_rueckfall
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_stunden_nie_eingestellt_folgt_grundauswahl
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_stunden_altbestand_ohne_alles_vorgabe_geprueft
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_rohes_preset_ohne_ortsnamen_scheitert_laut
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_rohes_preset_mit_orte_aus_nutzerverzeichnis
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_darstellung_einfach_als_zahl_klartext_scheitert
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_darstellung_ampel_fehlt_html_scheitert
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_darstellung_roh_als_symbol_scheitert
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_darstellung_ausblick_roh_statt_einfach_scheitert

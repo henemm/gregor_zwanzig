@@ -139,8 +139,8 @@ Abschnitt „Sprache").
 `briefing_mail_validator.py` und `email_spec_validator.py` nehmen optional
 `--konfig PFAD`: das **rohe gespeicherte JSON des Test-Nutzers**, wie die Go-API
 es liefert (Trip: das ganze Trip-Objekt mit `display_config`/`report_config`;
-Orte: das Preset, für die Ortsfolge als Hülle `{"preset": {...}, "orte":
-{"<id>": "<Name>"}}`). `.claude/hooks/_soll_aus_konfiguration.py` leitet daraus
+Orte: das Preset, für die Ortsfolge mit `--orte PFAD` oder als Hülle
+`{"preset": {...}, "orte": {"<id>": "<Name>"}}`). `.claude/hooks/_soll_aus_konfiguration.py` leitet daraus
 das Soll ab — nur aus der Datei und dem statischen Register (`col_label`,
 `label`, Compare-Katalogtabelle), **nie** über ein `resolve_*` des Produkts
 (Spiegel-Test-Verbot). `pruefe_soll(msg, soll, lang)` vergleicht dann im
@@ -149,11 +149,33 @@ das Soll ab — nur aus der Datei und dem statischen Register (`col_label`,
 - **Trip:** Spaltenfolge jeder Etappen-Stundentabelle und der Nachttabelle
   (E-Mail-Liste der Kaskade, nach `bucket`/`order`), Kopf des 3-Tages-Ausblicks;
   im Kompaktformat die Folge der Ausblick-Tokens; `show_night_block`,
-  `email_format`, Ausblick an/aus.
+  `email_format`, Ausblick an/aus. Dazu die **Darstellung Roh/Einfach je
+  Spalte** (Stunden-, Nacht-, Ausblick-Tabelle, HTML und Klartext): Roh = Zahl,
+  Einfach = Symbol/Wort oder Ampelpunkt. Gewollte Ausnahmen (Spec §2 Punkt 3):
+  Wind/Böen/Regen/Regen-W. zeigen Einfach im HTML als Ampelpunkt, im Klartext
+  als Zahl (#814); Gewitter zeigt roh schon das Stufenwort (im Klartext und im
+  Ausblick ungeprüft); Visibility/Temperatur haben im Ausblick keine
+  Einfach-Form (immer Zahl); die verschmolzene Windrichtung hat keine eigene
+  Spalte (#435). Die Meldung nennt Tabelle und Spalte („Darstellung
+  Etappen-Stundentabelle (Klartext) 1: Spalte 'Cloud' soll Symbol/Wort
+  (Einfach) zeigen, zeigt Zahl (Roh)").
 - **Orte:** Zeilenfolge der Vergleichstabelle (`channel_active_metrics.email`
   geschnitten mit `active_metrics`), Ortsfolge (`location_ids`), Spalten des
   Stundenverlaufs je Ort (`hourly_metrics`, `hourly_enabled`), Ausblick-Kopf
   (`outlook_metrics`, `outlook_enabled`).
+
+Soll-Regel Orte-Stundenverlauf (Konzept §5.8 „Jede Liste nimmt nur aus den
+Metriken oben"): gespeichert = Schnitt mit der Grundauswahl (`active_metrics`)
+in gespeicherter Folge; bleibt von einer nicht leeren Liste nichts übrig, die
+Vorgabespalten (`HOURLY_DEFAULT_METRIC_IDS`) geschnitten mit der Grundauswahl,
+sonst deren stündlich wählbare Größen; nie eingestellt = Grundauswahl, soweit
+stündlich verfügbar, in deren Folge; ohne Grundauswahl die Vorgabespalten.
+
+**Ortsfolge braucht Namen:** das rohe Preset trägt nur `location_ids`. Die
+Namen kommen aus `--orte PFAD` (Orts-Verzeichnis `data/users/<id>/locations/`,
+die JSON-Antwort von `GET /api/locations` oder `{"<id>": "<Name>"}`) oder aus
+der Hülle. Fehlen sie, scheitert der Lauf mit „SOLL: Ortsfolge nicht prüfbar"
+(Exit 1), statt die Ortsfolge still zu überspringen.
 
 Soll-Regel Ausblick (beide Kontexte): `[]` = Block aus; nie eingestellt = ganze
 Grundauswahl in der eingestellten Reihenfolge; sonst Schnitt mit der
@@ -162,8 +184,8 @@ festen Spalten — im Klartext dieselben wie im HTML. Jede Abweichung ist Exit 1
 mit einer `SOLL:`-Meldung, die die Spalte nennt („Spalte fehlt: 'Rain'",
 „Spalte zu viel: 'UV'", „an Position 1 steht 'Temp' statt 'Gust'"), ebenso ein
 Block, der nur in einem der beiden Teile steht. Nie eingestellte Listen ohne
-dokumentierte Folge (Trip-Altbestand ohne `metrics`, Orte ohne
-`hourly_metrics`/`active_metrics`) prüft der Validator nicht; ihre Vorgabe
+dokumentierte Folge (Trip-Altbestand ohne `metrics`, Orte-Vergleichstabelle
+ohne `active_metrics`) prüft der Validator nicht; ihre Vorgabe
 sichert der Editor-Standard-Abgleich (AC-13). Ohne `--konfig` ist das Verhalten
 unverändert.
 
@@ -181,7 +203,7 @@ Folge. Nachweis ohne Netz: `tests/tdd/test_einstellung_gleich_mail_validatoren.p
 uv run python3 .claude/hooks/briefing_mail_validator.py --mail-type trip-briefing \
     --subject-contains "<Marker>" --to-contains "<Nutzer>" --konfig trip.json
 uv run python3 .claude/hooks/email_spec_validator.py \
-    --subject-contains "<Marker>" --to-contains "<Nutzer>" --konfig preset_huelle.json
+    --subject-contains "<Marker>" --to-contains "<Nutzer>" --konfig preset.json --orte orte.json
 ```
 
 Das Postfach ist geteilt: `--konfig` setzt voraus, dass die geprüfte Mail dem

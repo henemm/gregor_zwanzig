@@ -745,6 +745,96 @@ def _soll_kompakt(text: str, s: dict, lang: str) -> list[str]:
     return _soll_vergleich("Ausblick (Kompakt) Zeile", zeilen, s["ausblick"]["klartext"])
 
 
+_AMPELPUNKT_RE = re.compile(r"<span[^>]*border-radius:\s*50%", re.IGNORECASE)
+_FORM_NAME = {"zahl": "Zahl (Roh)", "wort": "Symbol/Wort (Einfach)", "ampel": "Ampelpunkt (Einfach)"}
+
+
+def _zellform(zelle: str, html: bool) -> str | None:
+    """Form einer Zelle: ``ampel`` / ``zahl`` / ``wort``; leer bzw. "–" = None."""
+    if html and _AMPELPUNKT_RE.search(zelle):
+        return "ampel"
+    text = _strip_tags(zelle) if html else zelle.strip()
+    if not text or text in ("–", "-", "—"):
+        return None
+    return "zahl" if re.search(r"\d", text) else "wort"
+
+
+def _darstellung_meldungen(was: str, tabellen: list, formen: dict, teil: str, html: bool) -> list[str]:
+    """``tabellen``: je Tabelle eine Liste Zeilen aus (Spalte, Zelle). Meldet je
+    Tabelle und Spalte die erste Zelle in falscher Form, mit Spaltennamen."""
+    meldungen = []
+    for i, zeilen in enumerate(tabellen):
+        gemeldet: set[str] = set()
+        for spalte, zelle in (paar for zeile in zeilen for paar in zeile):
+            erlaubt = (formen.get(spalte) or {}).get(teil)
+            form = _zellform(zelle, html)
+            if erlaubt is None or form is None or form in erlaubt or spalte in gemeldet:
+                continue
+            gemeldet.add(spalte)
+            soll = " oder ".join(_FORM_NAME[f] for f in erlaubt)
+            meldungen.append(f"SOLL: Darstellung {was} ({teil}) {i + 1}: Spalte '{spalte}' soll "
+                             f"{soll} zeigen, zeigt {_FORM_NAME[form]} ('{_strip_tags(zelle)}')")
+    return meldungen
+
+
+def _html_zellen(html: str, lang: str) -> dict[str, list]:
+    """Zellen je Tabellenart des HTML-Teils: {art: [[(Spalte, Zelle), ...] je Zeile] je Tabelle}."""
+    nacht_bloecke = _night_table_blocks(html, lang)
+    tag = _ml().erwartet("mail.ausblick.spalte_tag", lang)
+    arten: dict[str, list] = {"Etappen-Stundentabelle": [], "Nachttabelle": [], "Ausblick": []}
+    for block in _table_blocks(html):
+        th = _th_tokens(block)
+        if not th or th[0] not in ("Time", "Zeit", tag):
+            continue
+        art = "Ausblick" if th[0] == tag else (
+            "Nachttabelle" if block in nacht_bloecke else "Etappen-Stundentabelle")
+        zeilen = [list(zip(th[1:], _TD_RE.findall(r)[1:])) for r in _ROW_RE.findall(block)]
+        arten[art].append([z for z in zeilen if z])
+    return arten
+
+
+def _klartext_zellen(plain: str, lang: str) -> dict[str, list]:
+    """Wie ``_html_zellen`` fuer den Klartext: Stundentabellen ueber die
+    Spaltenpositionen der Kopfzeile, Ausblick ueber die Kuerzel je Zeile."""
+    nacht_pos = plain.find(_ml().marker("mail.nacht.am_ziel", lang))
+    arten: dict[str, list] = {"Etappen-Stundentabelle": [], "Nachttabelle": [], "Ausblick": []}
+    zeilen = plain.splitlines()
+    for m in _ZEIT_KOPF_RE.finditer(plain):
+        nr = plain.count("\n", 0, m.start())
+        kopf = [(k.start(), k.group()) for k in re.finditer(r"\S+", zeilen[nr])][1:]
+        tabelle = []
+        for zeile in zeilen[nr + 2:]:
+            if not re.match(r"^ {2}\d{2}\b", zeile):
+                break
+            grenzen = [p for p, _k in kopf] + [len(zeile)]
+            tabelle.append([(k, zeile[p:grenzen[j + 1]]) for j, (p, k) in enumerate(kopf)])
+        (arten["Nachttabelle"] if 0 <= nacht_pos < m.start() else arten["Etappen-Stundentabelle"]).append(tabelle)
+    universum = _soll_modul().ALLE_KUERZEL
+    ausblick = []
+    for zeile in _block_zeilen(plain, _ml().erwartet("mail.ausblick.naechste_etappen", lang)):
+        treffer = sorted((t.start(), k) for k in universum
+                         for t in re.finditer(r"(?<!\S)" + re.escape(k) + r" (?=\S)", zeile))
+        grenzen = [p for p, _k in treffer] + [len(zeile)]
+        ausblick.append([(k, zeile[p + len(k):grenzen[j + 1]].strip().split("  ")[0])
+                         for j, (p, k) in enumerate(treffer)])
+    arten["Ausblick"].append(ausblick)
+    return arten
+
+
+def _soll_darstellung(html: str, plain: str, s: dict, lang: str) -> list[str]:
+    """Nachpruefung #3047 Punkt 5: Roh/Einfach je Spalte (Spec §2 Punkt 3) in
+    Stunden-, Nacht- und Ausblick-Tabelle, im HTML- und im Klartext-Teil."""
+    ausblick = (s.get("ausblick") or {}).get("formen") or {}
+    formen = {"Etappen-Stundentabelle": s.get("formen_stunden") or {},
+              "Nachttabelle": s.get("formen_stunden") or {}, "Ausblick": ausblick}
+    fehler = []
+    for teil, arten, ist_html in (("HTML", _html_zellen(html, lang), True),
+                                  ("Klartext", _klartext_zellen(plain, lang), False)):
+        for art, tabellen in arten.items():
+            fehler += _darstellung_meldungen(art, tabellen, formen[art], teil, ist_html)
+    return fehler
+
+
 def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
     """Issue #3047 AC-19: Auswahl und Reihenfolge der Mail gegen das Soll aus der
     gespeicherten Trip-Konfiguration (``_soll_aus_konfiguration``). Prueft die
@@ -769,7 +859,8 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
         if bool(h) != bool(p):
             fehler.append(f"SOLL: {name} fehlt im {'Klartext' if h else 'HTML'}-Teil")
     fehler += _soll_tabellen("HTML", *koepfe_html, s)
-    return fehler + _soll_tabellen("Klartext", *koepfe_plain, s)
+    fehler += _soll_tabellen("Klartext", *koepfe_plain, s)
+    return fehler + _soll_darstellung(html, plain, s, lang)
 
 
 # --------------------------------------------------------------------------- #
