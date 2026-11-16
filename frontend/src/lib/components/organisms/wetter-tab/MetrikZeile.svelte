@@ -31,11 +31,13 @@
 	const istGewitter = $derived(eig.allowed_sides === 'level');
 	const optionen = $derived(alarmAbOptionen(id, eig));
 
-	/** Katalogtext; Roh-Token (Farbe, Gewitter-Stufe) als Katalogwort einsetzen. */
-	// i18n-dynamic: wetter.farbe.
+	/** Katalogtext; Roh-Token (Alarmstufe, Gewitter-Stufe) als Katalogwort einsetzen.
+	 *  #3012: Stufenwort gross wie die „Alarm ab“-Stufen („(Orange)“); `wetter.farbe.*` bleibt fuer Screenreader. */
+	// i18n-dynamic: alarme.alarm_ab.stufe.
+	// i18n-dynamic: wetter.gewitter.
 	function text(m: KatalogModell): string {
 		const w: Record<string, string | number> = { ...m.werte };
-		if (typeof w.stufe === 'string') w.stufe = $t(`wetter.farbe.${w.stufe}` as 'wetter.farbe.red');
+		if (typeof w.stufe === 'string') w.stufe = $t(`alarme.alarm_ab.stufe.${w.stufe}` as 'alarme.alarm_ab.stufe.red');
 		if (typeof w.gewitter_stufe === 'string') w.gewitter_stufe = $t(`wetter.gewitter.${w.gewitter_stufe}` as 'wetter.gewitter.mittel');
 		return $t(m.schluessel as 'wetter.gruen.immer', w).replace(/\s+/g, ' ').trim();
 	}

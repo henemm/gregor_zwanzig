@@ -191,7 +191,7 @@ _METRICS: list[MetricDefinition] = [
     # Pills, keine Tabellenspalte) und keine Alarm-Deklaration (Kaeltealarm
     # bleibt temperature_cold).
     MetricDefinition(
-        id="temperature_night", label_de="Nacht-Tiefsttemperatur", unit="°C",
+        id="temperature_night", label_de="Tiefsttemperatur Nacht", unit="°C",
         kuerzel_bedeutung_en={"N": "night"}, kuerzel_bedeutung_de={"N": "Nacht"},
         dp_field="t2m_c", category="temperature",
         default_aggregations=("min",),
@@ -268,7 +268,8 @@ _METRICS: list[MetricDefinition] = [
         summary_fields={"min": "wind_chill_min_c", "max": "wind_chill_max_c"},
         # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
         # is_precursor=True verhindert Alerts in from_display_config/from_alert_rules.
-        default_change_threshold=None,
+        # Issue #2955: Katalogflag gesetzt (Reiter Wetter zeigt „Vorbote, kein Alarm“).
+        default_change_threshold=None, is_precursor=True,
         # Issue #1377 Scheibe A (PO-Entscheidung 2026-07-28): dieselben Werte
         # wie "temperature" -- zwei Spalten mit demselben Mass duerfen nicht
         # verschieden faerben. risk_thresholds (Alarme) bleibt unangetastet,
@@ -295,7 +296,7 @@ _METRICS: list[MetricDefinition] = [
     # (PO-Entscheid): "WC" (vormals Wintersport-Tageskennzahl bei
     # "wind_chill") entfaellt ERSATZLOS -- verdoppelte nachweislich "FK".
     MetricDefinition(
-        id="wind_chill_night", label_de="Gefühlte Nacht-Tiefsttemperatur",
+        id="wind_chill_night", label_de="Gefühlte Tiefsttemperatur Nacht",
         kuerzel_bedeutung_en={"FN": "N feels like"}, kuerzel_bedeutung_de={"FN": "N gefühlt"},
         unit="°C", dp_field="wind_chill_c", category="temperature",
         default_aggregations=("min",),
@@ -341,7 +342,7 @@ _METRICS: list[MetricDefinition] = [
         sms_code="FD", sms_multi_symbols=("FD",), decimals=0,
     ),
     MetricDefinition(
-        id="humidity", label_de="Luftfeuchtigkeit", unit="%",
+        id="humidity", label_de="Luftfeuchte", unit="%",
         kuerzel_bedeutung_en={"HU": "humidity"}, kuerzel_bedeutung_de={"HU": "Luftfeuchte"},
         dp_field="humidity_pct", category="temperature",
         default_aggregations=("avg",),
@@ -366,7 +367,8 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"avg": "dewpoint_avg_c"},
         # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
-        default_change_threshold=None,
+        # Issue #2955: Katalogflag gesetzt (Reiter Wetter zeigt „Vorbote, kein Alarm“).
+        default_change_threshold=None, is_precursor=True,
         # Issue #1362 Scheibe S5b: sms_code = bestehender compact_label.
         sms_code="DP",
     ),
@@ -586,7 +588,8 @@ _METRICS: list[MetricDefinition] = [
         friendly_label="\u2600\ufe0f\u26c5\u2601\ufe0f",
         summary_fields={"avg": "cloud_avg_pct"},
         # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
-        default_change_threshold=None,
+        # Issue #2955: Katalogflag gesetzt (Reiter Wetter zeigt „Vorbote, kein Alarm“).
+        default_change_threshold=None, is_precursor=True,
         format_modes=("raw", "symbol"),
         default_format_mode="symbol",
         # Issue #1362 Scheibe S5b: eigener sms_code "CT" (NICHT der eigene
@@ -715,7 +718,8 @@ _METRICS: list[MetricDefinition] = [
         default_enabled=False,
         summary_fields={"avg": "pressure_avg_hpa"},
         # Issue #889 / ADR-0010: Vorboten-Metrik — kein Abweichungs-Alert.
-        default_change_threshold=None,
+        # Issue #2955: Katalogflag gesetzt (Reiter Wetter zeigt „Vorbote, kein Alarm“).
+        default_change_threshold=None, is_precursor=True,
         # Issue #1362 Scheibe S5b: eigener sms_code "HP" (Hektopascal) --
         # der eigene compact_label ist "P", zu dicht an "R"/"PR"
         # (Niederschlag/Regenwahrscheinlichkeit), s. Spec Punkt 3.
@@ -1217,6 +1221,8 @@ WETTER_GRUPPEN: tuple[str, ...] = (
     "temperature", "wind", "precip_thunder", "sky_visibility", "snow_height",
 )
 _REITER_WETTER: dict[str, tuple[str, bool, Optional[str], bool]] = {
+    # Issue #2955: Reihenfolge = Zeilenfolge im Reiter (Mockup Fassung 3), als
+    # ``rang`` an /api/metrics. Mail-/SMS-Spalten folgen weiter ``_METRICS``.
     "temperature": ("temperature", True, "both", False),
     "temperature_night": ("temperature", True, "both", False),
     "temperature_day_low": ("temperature", False, None, True),
@@ -1231,22 +1237,23 @@ _REITER_WETTER: dict[str, tuple[str, bool, Optional[str], bool]] = {
     "gust": ("wind", True, "upper", False),
     "wind_direction": ("wind", False, None, True),
     "precipitation": ("precip_thunder", True, "upper", False),
-    "rain_probability": ("precip_thunder", False, "upper", False),
     "thunder": ("precip_thunder", True, "level", False),
+    "rain_probability": ("precip_thunder", False, "upper", False),
     "precip_type": ("precip_thunder", False, None, True),
+    "visibility": ("sky_visibility", True, "lower", False),
     "cloud_total": ("sky_visibility", False, "upper", False),
     "cloud_low": ("sky_visibility", False, "upper", False),
     "cloud_mid": ("sky_visibility", False, None, True),
     "cloud_high": ("sky_visibility", False, None, True),
-    "visibility": ("sky_visibility", True, "lower", False),
-    "sunshine": ("sky_visibility", False, "lower", False),
     "uv_index": ("sky_visibility", True, "upper", False),
+    "sunshine": ("sky_visibility", False, "lower", False),
     "pressure": ("sky_visibility", False, None, True),
-    "snowfall_limit": ("snow_height", True, "both", False),
     "freezing_level": ("snow_height", True, "both", False),
+    "snowfall_limit": ("snow_height", True, "both", False),
     "fresh_snow": ("snow_height", True, "upper", False),
     "snow_depth": ("snow_height", True, "both", False),
 }
+_REITER_WETTER_RANG: dict[str, int] = {mid: i for i, mid in enumerate(_REITER_WETTER)}
 
 
 def reiter_wetter_eigenschaften(m: MetricDefinition) -> dict:
@@ -1259,6 +1266,8 @@ def reiter_wetter_eigenschaften(m: MetricDefinition) -> dict:
         "is_precursor": m.is_precursor,
         "allowed_sides": sides,
         "display_only": display_only,
+        # Issue #2955: Zeilenfolge im Reiter (Reihenfolge von _REITER_WETTER).
+        "rang": _REITER_WETTER_RANG[m.id],
     }
 
 

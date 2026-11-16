@@ -78,7 +78,7 @@ EXPECTED_OVERVIEW_LABELS = [
     # Issue #1585: "Gewitterenergie (CAPE)" entfallen.
     "Nullgradgrenze", "Windrichtung",
     "Gefühlte Temperatur Minimum", "Gefühlte Temperatur Maximum",
-    "Tiefe Wolken", "Mittelhohe Wolken", "Hohe Wolken", "Luftfeuchtigkeit",
+    "Tiefe Wolken", "Mittelhohe Wolken", "Hohe Wolken", "Luftfeuchte",
     "Taupunkt", "Luftdruck", "Niederschlagsart", "Schneefallgrenze",
 ]
 EXPECTED_OVERVIEW_LABELS_PLAIN = [

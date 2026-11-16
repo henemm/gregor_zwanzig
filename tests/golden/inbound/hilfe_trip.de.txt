@@ -21,14 +21,14 @@ Verfügbare Befehle:
 Wetter-Größen (Kürzel senden → Stundenverlauf):
 
   Temp / T         – Temperatur (°C)
-  Night            – Nacht-Tiefsttemperatur (°C)
+  Night            – Tiefsttemperatur Nacht (°C)
   DayMin / L       – Tages-Tiefsttemperatur (Gehzeit) (°C)
   DayMax           – Tages-Höchsttemperatur (Gehzeit) (°C)
   Feels / TF       – Gefühlte Temperatur (°C)
-  NightF / FN      – Gefühlte Nacht-Tiefsttemperatur (°C)
+  NightF / FN      – Gefühlte Tiefsttemperatur Nacht (°C)
   DayMinF / FL     – Gefühlte Tages-Tiefsttemperatur (Gehzeit) (°C)
   DayMaxF / FD     – Gefühlte Tages-Höchsttemperatur (Gehzeit) (°C)
-  Humid / HU       – Luftfeuchtigkeit (%)
+  Humid / HU       – Luftfeuchte (%)
   Dew / DP         – Taupunkt (°C)
   Wind / W         – Wind (km/h)
   Gust / G         – Böen (km/h)

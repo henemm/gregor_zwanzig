@@ -198,3 +198,29 @@ def test_ac7_zwei_nutzer_erhalten_dieselben_katalogdaten_mit_rang():
     roh = repr(a)
     for fremd in ("nutzer-a-2955", "nutzer-b-2955", "user_id", "'default'"):
         assert fremd not in roh, f"Antwort enthält Nutzerbezug {fremd!r}"
+
+
+# ── AC-4 (Fix-Loop F001): Namenskopien in Kanal-Katalogen an der Wirkstelle ─────────────────
+
+def test_ac4_telegram_vergleichszeile_nennt_luftfeuchte_wie_der_katalog():
+    """Telegram-Vergleich (``vergleich.zeile.humidity_avg``) zeigt den Katalognamen + „ Ø“."""
+    from output.renderers.comparison import render_compare_telegram
+    from tests.helpers.vergleichs_mail_fixture import build_result
+
+    soll = f"{get_metric('humidity').label_de} Ø"
+    text = render_compare_telegram(build_result(), enabled_metrics=["humidity_avg"], lang="de")
+    zeilen = [z.strip() for z in text.splitlines() if z.strip().startswith(soll + " ")]
+    assert zeilen, f"keine Telegram-Zeile beginnt mit „{soll}“:\n{text}"
+    assert "Luftfeuchtigkeit" not in text
+
+
+def test_ac4_ersatzquellen_hinweis_nennt_luftfeuchte_wie_der_katalog():
+    """Mail-Hinweis zur Ersatzquelle (``mail.fallback.metrik.relative_humidity_2m``) nennt den Katalognamen."""
+    from app.models import ForecastMeta, Provider
+    from output.renderers.fallback_notice import build_fallback_lines
+
+    meta = ForecastMeta(provider=Provider.OPENMETEO, model="icon_d2", grid_res_km=2.0,
+                        fallback_model="icon_eu", fallback_metrics=["relative_humidity_2m"],
+                        fallback_reason="metric_gap")
+    zeilen = build_fallback_lines(meta, lang="de")
+    assert any(z.endswith(f"({get_metric('humidity').label_de})") for z in zeilen), zeilen

@@ -263,7 +263,8 @@ describe('AC-15/AC-16/AC-18: Erklaersatz-Modell', () => {
 		const v = vorlagen.wassersport;
 		const s = m.erklaersatz('thunder', { ...v.metrics.thunder, alarm_ab: 'red' }, eig.thunder, v.thunder);
 		assert.equal(s.art, 'gewitter');
-		assert.deepEqual(s.werte, { gewitter_stufe: 'mittel', stufe: 'red' });
+		// #2955 AC-2: greift schon „mittel“, lautet das Token `mittel_ab` („mittel oder hoch“).
+		assert.deepEqual(s.werte, { gewitter_stufe: 'mittel_ab', stufe: 'red' });
 		pruefeKatalogModell(s, 'Erklaersatz Gewitter');
 	});
 
@@ -414,7 +415,8 @@ describe('AC-14: „Alarm ab fuer alle“ wirkt nur auf gewaehlte alarmfaehige M
 		const faehig = auswahl.filter((id) => eig[id].alertable);
 		const z = m.alarmZaehler(a, auswahl, eig);
 		assert.equal(z.art, 'zaehler');
-		assert.deepEqual(z.werte, { ausloesend: faehig.length, alarmfaehig: faehig.length, ohne: auswahl.length - faehig.length });
+		// #2955 AC-5: zweite Zahl = alle ausgewaehlten Metriken.
+		assert.deepEqual(z.werte, { ausloesend: faehig.length, ausgewaehlt: auswahl.length, ohne: auswahl.length - faehig.length });
 		pruefeKatalogModell(z, 'Alarm-Zaehler');
 	});
 
@@ -424,7 +426,7 @@ describe('AC-14: „Alarm ab fuer alle“ wirkt nur auf gewaehlte alarmfaehige M
 		const a = m.alarmAbFuerAlle(m.verschmelzen(vorlagen.wandern, null), auswahl, 'never', eig);
 		const z = m.alarmZaehler(a, auswahl, eig);
 		assert.equal(z.art, 'zaehler');
-		assert.deepEqual(z.werte, { ausloesend: 0, alarmfaehig: 2, ohne: 1 });
+		assert.deepEqual(z.werte, { ausloesend: 0, ausgewaehlt: 3, ohne: 1 }); // #2955 AC-5
 	});
 
 	test('ac14_nur_vorboten_ergibt_keine_alarmfaehige_metrik', async () => {

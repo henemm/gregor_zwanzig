@@ -103,7 +103,7 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.metrik.fresh_snow', 'Neuschnee', 'Fresh snow'],
 	['alarme.metrik.cape', 'Gewitterenergie (CAPE)', 'Thunderstorm energy (CAPE)'],
 	['alarme.metrik.visibility', 'Sichtweite', 'Visibility'],
-	['alarme.metrik.humidity', 'Luftfeuchtigkeit', 'Humidity'],
+	['alarme.metrik.humidity', 'Luftfeuchte', 'Humidity'], // #2955: Mockup-Name
 	['alarme.metrik.freezing_level', 'Nullgradgrenze', 'Freezing level'],
 	['alarme.metrik.thunder_onset', 'Gewitter (Beginn)', 'Thunderstorm (onset)'],
 	['alarme.metrik.precipitation_heavy_onset', 'Starkregen (Beginn)', 'Heavy rain (onset)'],

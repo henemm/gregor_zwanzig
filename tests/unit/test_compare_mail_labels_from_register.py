@@ -108,7 +108,7 @@ EXPECTED_OVERVIEW_LABELS = [
     "Tiefe Wolken",
     "Mittelhohe Wolken",
     "Hohe Wolken",
-    "Luftfeuchtigkeit",
+    "Luftfeuchte",  # #2955: Mockup-Name
     "Taupunkt",
     "Luftdruck",
     "Niederschlagsart",

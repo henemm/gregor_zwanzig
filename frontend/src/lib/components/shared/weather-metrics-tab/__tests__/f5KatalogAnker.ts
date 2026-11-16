@@ -112,11 +112,11 @@ export const F5_ANKER: [schluessel: string, de: string, en: string][] = [
 	['wertebereiche.nachtblock.text', 'Betrifft nur die Stundentabelle. Nacht-Tiefstwert und Gewitter-Hinweis für die Nacht bleiben, wenn du sie gewählt hast.', 'Affects only the hourly table. The night low and the night thunderstorm note stay if you selected them.'],
 	// #2764 (F13): Rueckfall der Mehrfach-Symbol-Zeilen ohne Register-Eintrag; de = Bestand, en = label_en des Registers
 	['wertebereiche.symbolzeile.temperature', 'Temperatur', 'Temperature'],
-	['wertebereiche.symbolzeile.temperature_night', 'Nacht-Tiefsttemperatur', 'Night low'],
+	['wertebereiche.symbolzeile.temperature_night', 'Tiefsttemperatur Nacht', 'Night low'], // #2955: Mockup-Name
 	['wertebereiche.symbolzeile.wind_chill', 'Gefühlte Temperatur', 'Feels-like temperature'],
 	['wertebereiche.symbolzeile.temperature_day_low', 'Tages-Tiefsttemperatur (Gehzeit)', 'Daytime low (walking hours)'],
 	['wertebereiche.symbolzeile.temperature_day_high', 'Tages-Höchsttemperatur (Gehzeit)', 'Daytime high (walking hours)'],
 	['wertebereiche.symbolzeile.wind_chill_day_low', 'Gefühlte Tages-Tiefsttemperatur (Gehzeit)', 'Feels-like daytime low (walking hours)'],
 	['wertebereiche.symbolzeile.wind_chill_day_high', 'Gefühlte Tages-Höchsttemperatur (Gehzeit)', 'Feels-like daytime high (walking hours)'],
-	['wertebereiche.symbolzeile.wind_chill_night', 'Gefühlte Nacht-Tiefsttemperatur', 'Feels-like night low']
+	['wertebereiche.symbolzeile.wind_chill_night', 'Gefühlte Tiefsttemperatur Nacht', 'Feels-like night low'] // #2955: Mockup-Name
 ];

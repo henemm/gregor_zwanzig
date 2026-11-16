@@ -57,13 +57,13 @@ describe('AC-3: SubscriptionCard ohne Namen', () => {
 /** Rueckfall je Kennung: de wortgleich zum Bestand vor #2764, en = label_en des Registers. */
 const ANKER: [id: string, de: string, en: string][] = [
 	['temperature', 'Temperatur', 'Temperature'],
-	['temperature_night', 'Nacht-Tiefsttemperatur', 'Night low'],
+	['temperature_night', 'Tiefsttemperatur Nacht', 'Night low'], // #2955: Mockup-Name
 	['wind_chill', 'Gefühlte Temperatur', 'Feels-like temperature'],
 	['temperature_day_low', 'Tages-Tiefsttemperatur (Gehzeit)', 'Daytime low (walking hours)'],
 	['temperature_day_high', 'Tages-Höchsttemperatur (Gehzeit)', 'Daytime high (walking hours)'],
 	['wind_chill_day_low', 'Gefühlte Tages-Tiefsttemperatur (Gehzeit)', 'Feels-like daytime low (walking hours)'],
 	['wind_chill_day_high', 'Gefühlte Tages-Höchsttemperatur (Gehzeit)', 'Feels-like daytime high (walking hours)'],
-	['wind_chill_night', 'Gefühlte Nacht-Tiefsttemperatur', 'Feels-like night low']
+	['wind_chill_night', 'Gefühlte Tiefsttemperatur Nacht', 'Feels-like night low'] // #2955: Mockup-Name
 ];
 
 describe('AC-4: Mehrfach-Symbol-Zeile ohne Register-Eintrag', () => {

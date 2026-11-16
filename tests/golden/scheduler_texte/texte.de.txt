@@ -134,7 +134,7 @@ Innsbruck
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Luftfeuchtigkeit: -
+   Luftfeuchte: -
    Taupunkt: -
    Luftdruck: -
    Niederschlagsart: -
@@ -161,7 +161,7 @@ Stubai
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Luftfeuchtigkeit: -
+   Luftfeuchte: -
    Taupunkt: -
    Luftdruck: -
    Niederschlagsart: -
@@ -188,7 +188,7 @@ Zillertal
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Luftfeuchtigkeit: -
+   Luftfeuchte: -
    Taupunkt: -
    Luftdruck: -
    Niederschlagsart: -

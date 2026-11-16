@@ -31,6 +31,8 @@ export type MetrikEigenschaften = {
 	threshold_unit?: string;
 	label_de?: string;
 	label_en?: string;
+	/** Zeilenfolge im Reiter (#2955), aus `/api/metrics` (Python `_REITER_WETTER`), keine Frontend-Tabelle. */
+	rang?: number;
 };
 
 /** Katalogschluessel + Platzhalter-Werte (der Text kommt aus `wetter.json`). */
@@ -80,7 +82,8 @@ export function eigenschaftenAusKatalog(apiMetrics: Record<string, Record<string
 				unit: k.unit as string,
 				threshold_unit: (k.threshold_unit ?? k.unit) as string,
 				label_de: k.label_de as string | undefined,
-				label_en: k.label_en as string | undefined
+				label_en: k.label_en as string | undefined,
+				rang: typeof k.rang === 'number' ? k.rang : undefined
 			};
 		}
 	}
@@ -284,10 +287,10 @@ export const HINWEIS_IDS: readonly string[] = [
 	'sunshine'
 ];
 
-/** Katalogschluessel des Hinweises: reine Anzeige vor Vorbote vor Metrik-Hinweis; sonst keiner. */
+/** Katalogschluessel des Hinweises: Vorbote vor reiner Anzeige (#2955, Luftdruck) vor Metrik-Hinweis; sonst keiner. */
 export function hinweisSchluessel(id: string, eig: MetrikEigenschaften | undefined): string | null {
-	if (eig?.display_only) return 'wetter.untertitel.nur_anzeige';
 	if (eig?.is_precursor) return 'wetter.untertitel.vorbote';
+	if (eig?.display_only) return 'wetter.untertitel.nur_anzeige';
 	return HINWEIS_IDS.includes(id) ? `wetter.hinweis.${id}` : null;
 }
 
@@ -299,12 +302,13 @@ export function untertitel(id: string, eig: MetrikEigenschaften | undefined, ueb
 
 export type ErklaerArt = 'normal' | 'gewitter' | 'gewitter_nie' | 'nie' | 'vorbote' | 'anzeige' | 'ohne_grenze';
 
-/** Gewitter: erste Stufe (mittel, hoch), deren Farbe die Alarmstufe erreicht. */
+/** Gewitter: erste Stufe (mittel, hoch), deren Farbe die Alarmstufe erreicht. Greift schon „mittel“,
+ *  lautet das Token `mittel_ab` („mittel oder hoch“, #2955). */
 function gewitterSatz(stufe: Farbe, thunder: Ampel['thunder']): KatalogModell<ErklaerArt> {
 	for (const g of ['mittel', 'hoch'] as const) {
 		const farbe = thunder?.[g];
 		if (farbe && RANG[farbe] >= RANG[stufe]) {
-			return { art: 'gewitter', schluessel: 'wetter.erklaer.gewitter', werte: { gewitter_stufe: g, stufe } };
+			return { art: 'gewitter', schluessel: 'wetter.erklaer.gewitter', werte: { gewitter_stufe: g === 'mittel' ? 'mittel_ab' : g, stufe } };
 		}
 	}
 	return { art: 'gewitter_nie', schluessel: 'wetter.erklaer.gewitter_nie', werte: { stufe } };
@@ -313,8 +317,8 @@ function gewitterSatz(stufe: Farbe, thunder: Ampel['thunder']): KatalogModell<Er
 /** Erklaersatz einer Zeile (AC-15/16/18) als Katalogschluessel + Platzhalter.
  *  `stufe` und `gewitter_stufe` sind Protokoll-Token (Farbe/Stufe), die Oberflaeche setzt das Katalogwort ein. */
 export function erklaersatz(id: string, eintrag: AmpelMetrik, eig: MetrikEigenschaften | undefined, thunder?: Ampel['thunder']): KatalogModell<ErklaerArt> {
-	if (eig?.display_only) return { art: 'anzeige', schluessel: 'wetter.erklaer.anzeige', werte: {} };
 	if (!eig?.alertable && eig?.is_precursor) return { art: 'vorbote', schluessel: 'wetter.erklaer.vorbote', werte: {} };
+	if (eig?.display_only) return { art: 'anzeige', schluessel: 'wetter.erklaer.anzeige', werte: {} };
 	const stufe = eintrag?.alarm_ab;
 	if (!eig?.alertable || !stufe || stufe === 'never') return { art: 'nie', schluessel: 'wetter.erklaer.nie', werte: {} };
 	if (id === GEWITTER) return gewitterSatz(stufe, thunder);
@@ -329,7 +333,8 @@ export function erklaersatz(id: string, eintrag: AmpelMetrik, eig: MetrikEigensc
 
 // ── Gruppen und Auswahl (AC-15, AC-37, AC-39) ────────────────────────────────
 
-/** Zeilen je Gruppe in fester Gruppenfolge, nur belegte; Metriken ohne Katalog-Eintrag fallen weg. */
+/** Zeilen je Gruppe in fester Gruppenfolge, nur belegte; Metriken ohne Katalog-Eintrag fallen weg.
+ *  Je Gruppe stabil nach `rang` aus `/api/metrics` (#2955); gleicher oder fehlender Rang behaelt die Auswahl-Reihenfolge. */
 export function zeilenGruppen(auswahl: string[], eig: Record<string, MetrikEigenschaften>): { gruppe: string; metriken: string[] }[] {
 	const je = new Map<string, string[]>();
 	for (const id of auswahl) {
@@ -339,7 +344,15 @@ export function zeilenGruppen(auswahl: string[], eig: Record<string, MetrikEigen
 		if (!je.get(g)!.includes(id)) je.get(g)!.push(id);
 	}
 	const folge = [...GRUPPEN_FOLGE, ...[...je.keys()].filter((g) => !GRUPPEN_FOLGE.includes(g))];
-	return folge.filter((g) => je.has(g)).map((g) => ({ gruppe: g, metriken: je.get(g)! }));
+	return folge.filter((g) => je.has(g)).map((g) => ({ gruppe: g, metriken: nachRang(je.get(g)!, eig) }));
+}
+
+/** Stabile Sortierung nach `rang`; vergleicht nur, wenn beide einen Rang haben (sonst Auswahl-Reihenfolge). */
+function nachRang(ids: string[], eig: Record<string, MetrikEigenschaften>): string[] {
+	return ids
+		.map((id, i) => ({ id, i, r: eig[id]?.rang }))
+		.sort((a, b) => (typeof a.r === 'number' && typeof b.r === 'number' && a.r !== b.r ? a.r - b.r : a.i - b.i))
+		.map((x) => x.id);
 }
 
 /** Angebot „Nicht im Briefing" je Kontext als Daten (#2944): Trip bietet jede zentrale Metrik an,
@@ -438,7 +451,8 @@ export function alarmAbFuerAlle(ampel: Ampel, auswahl: string[], stufe: AlarmAb,
 	return a;
 }
 
-/** Zaehler-Modell der Kopfzeile: „{ausloesend} von {alarmfaehig} … {ohne} …“ bzw. Hinweis ohne alarmfaehige Metrik. */
+/** Zaehler-Modell der Kopfzeile: „{ausloesend} von {ausgewaehlt} … {ohne} …“ bzw. Hinweis ohne alarmfaehige Metrik.
+ *  `ausgewaehlt` = alle ausgewaehlten Metriken (#2955), `ohne` = nicht alarmfaehige davon. */
 export function alarmZaehler(ampel: Ampel, auswahl: string[], eig: Record<string, MetrikEigenschaften>): KatalogModell<'zaehler' | 'keine_alarmfaehig'> {
 	const faehig = auswahl.filter((id) => eig[id]?.alertable === true);
 	if (faehig.length === 0) return { art: 'keine_alarmfaehig', schluessel: 'wetter.alarm_ab.keine_alarmfaehig', werte: {} };
@@ -449,6 +463,6 @@ export function alarmZaehler(ampel: Ampel, auswahl: string[], eig: Record<string
 	return {
 		art: 'zaehler',
 		schluessel: 'wetter.alarm_ab.zaehler',
-		werte: { ausloesend, alarmfaehig: faehig.length, ohne: auswahl.length - faehig.length }
+		werte: { ausloesend, ausgewaehlt: auswahl.length, ohne: auswahl.length - faehig.length }
 	};
 }

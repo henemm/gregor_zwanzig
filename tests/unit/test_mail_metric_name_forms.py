@@ -90,7 +90,7 @@ EXPECTED_OVERVIEW_LABELS = [
     # waehlbar, keine Uebersichtszeile mehr.
     "Nullgradgrenze", "Windrichtung",
     "Gefühlte Temperatur Minimum", "Gefühlte Temperatur Maximum",
-    "Tiefe Wolken", "Mittelhohe Wolken", "Hohe Wolken", "Luftfeuchtigkeit",
+    "Tiefe Wolken", "Mittelhohe Wolken", "Hohe Wolken", "Luftfeuchte",
     "Taupunkt", "Luftdruck", "Niederschlagsart", "Schneefallgrenze",
 ]
 
@@ -441,7 +441,7 @@ def test_overview_label_follows_the_register_not_a_typed_copy(monkeypatch):
     dieser Test rot.
     """
     original = get_metric("humidity")
-    assert original.label_de == "Luftfeuchtigkeit", (
+    assert original.label_de == "Luftfeuchte", (  # #2955: Mockup-Name
         "Vorbedingung: der Registername der Testgroesse hat sich geaendert -- "
         f"die Gegenprobe unten prueft dann das Falsche ({original.label_de})."
     )
@@ -450,7 +450,7 @@ def test_overview_label_follows_the_register_not_a_typed_copy(monkeypatch):
     enabled = resolve_enabled_metrics(["humidity_avg_pct"])
 
     # Gegenprobe zuerst: unveraendertes Register -> Registername in der Zeile.
-    assert "Luftfeuchtigkeit" in _html_overview_labels(
+    assert "Luftfeuchte" in _html_overview_labels(
         render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     )
 

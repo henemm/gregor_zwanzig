@@ -10,7 +10,7 @@ ALERT_METRIC_LABELS(precipitation_change) → {"label_de":"Niederschlag (Änderu
 ALERT_METRIC_LABELS(fresh_snow) → {"label_de":"Neuschnee","unit":"cm","comparison":">"}
 ALERT_METRIC_LABELS(cape) → {"label_de":"Gewitterenergie (CAPE)","unit":"J/kg","comparison":">"}
 ALERT_METRIC_LABELS(visibility) → {"label_de":"Sichtweite","unit":"m","comparison":"<"}
-ALERT_METRIC_LABELS(humidity) → {"label_de":"Luftfeuchtigkeit","unit":"%","comparison":">"}
+ALERT_METRIC_LABELS(humidity) → {"label_de":"Luftfeuchte","unit":"%","comparison":">"}
 ALERT_METRIC_LABELS(freezing_level) → {"label_de":"Nullgradgrenze","unit":"m","comparison":"<"}
 ALERT_METRIC_LABELS(thunder_onset) → {"label_de":"Gewitter (Beginn)","unit":"h","comparison":"≥"}
 ALERT_METRIC_LABELS(precipitation_heavy_onset) → {"label_de":"Starkregen (Beginn)","unit":"h","comparison":"≥"}
