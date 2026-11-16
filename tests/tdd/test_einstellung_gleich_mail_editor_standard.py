@@ -105,7 +105,7 @@ def python_trip_tabellen(eingabe: dict) -> list[str]:
     """E-Mail-Spaltenfolge der Stundentabelle: Loader -> Kanal-Kaskade
     (``get_metrics_for_channel``, wie ``trip_report.py:140-157``) ->
     ``resolve_metric_col_order`` (geteilt von html.py und plain.py)."""
-    dc = _parse_display_config(eingabe["display_config"])
+    dc = _parse_display_config(eingabe["display_config"], trip_standard_bei_leer=True)
     email = [dataclasses.replace(mc, enabled=True)
              for mc in dc.get_metrics_for_channel("email", "evening")]
     kollabiert = dataclasses.replace(dc, metrics=email)
@@ -114,7 +114,7 @@ def python_trip_tabellen(eingabe: dict) -> list[str]:
 
 
 def python_trip_ausblick(eingabe: dict) -> list[str]:
-    dc = _parse_display_config(eingabe["display_config"])
+    dc = _parse_display_config(eingabe["display_config"], trip_standard_bei_leer=True)
     return _ausblick_spalten(resolve_trip_outlook_metrics(dc, "evening"))
 
 

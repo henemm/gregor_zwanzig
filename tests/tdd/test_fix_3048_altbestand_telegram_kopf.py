@@ -116,6 +116,25 @@ def test_loader_ergaenzt_standardsatz_fuer_zwei_nutzer(variante):
 
 
 @pytest.mark.parametrize("variante", ["fehlt", "leer"])
+def test_loader_standardsatz_traegt_register_reihenfolge_in_order(variante):
+    """AC-1/AC-2 (Gegenprobe F002): die ergaenzten Eintraege tragen die
+    Register-Reihenfolge als aufsteigende ``order`` (0, 1, 2, ...) im
+    Primaerbereich -- so, wie die Editor-Vorbelegung eines neuen Trips sie
+    speichert. Sortiert ein Leser (Editor, Kanal-Layout) nach ``order``, muss
+    genau der Standardsatz in Register-Folge herauskommen; fallen alle auf
+    ``order=0``, ist die Folge nicht mehr festgelegt."""
+    uid = frisches_profil()
+    trip = _trip_aus_datei(_altbestand(variante), uid)
+    standard = [m for m in trip.display_config.metrics if m.metric_id in _STANDARD_SATZ]
+    assert [(m.metric_id, m.bucket, m.order) for m in standard] == [
+        (mid, "primary", i) for i, mid in enumerate(_STANDARD_SATZ)
+    ], f"{variante}: Eintraege {[(m.metric_id, m.bucket, m.order) for m in standard]}"
+    nach_order = sorted(standard, key=lambda m: m.order, reverse=True)
+    assert [m.metric_id for m in nach_order] == list(reversed(_STANDARD_SATZ)), (
+        f"{variante}: Sortierung nach order ergibt nicht die Register-Folge")
+
+
+@pytest.mark.parametrize("variante", ["fehlt", "leer"])
 @pytest.mark.parametrize("fmt", ["html", "klartext"])
 def test_mail_tabellen_zeigen_standardspalten(monkeypatch, variante, fmt):
     """AC-1/AC-2: Etappen- und Nachttabelle derselben Mail zeigen die
@@ -205,6 +224,22 @@ def test_orte_ladepfad_ergaenzt_keinen_standardsatz():
             f"{uid}: Orte-Ladepfad ergaenzt Metriken")
 
 
+@pytest.mark.parametrize("variante", ["fehlt", "leer"])
+def test_kanal_auflösung_trip_altbestand_liefert_standardsatz(variante):
+    """#3048: die geteilte Kanal-Aufloesung (``resolve_channel_lists`` mit
+    Flaeche ``trip``, genutzt von ``report_config_resolver``) liest die rohe
+    Trip-``display_config`` selbst ein und muss fuer Altbestand denselben
+    Standardsatz liefern wie der Trip-Loader -- nicht leer."""
+    from services.channel_list_resolver import resolve_channel_lists
+
+    dc = _altbestand(variante)["display_config"]
+    sicht = resolve_channel_lists(copy.deepcopy(dc), "trip", "evening")
+    for kanal in ("email", "telegram"):
+        ids = [z.metric_id for z in getattr(sicht, kanal)]
+        assert ids == _STANDARD_SATZ, (
+            f"{variante}/{kanal}: Kanal-Aufloesung liefert fuer Trip-Altbestand {ids}")
+
+
 def test_trip_ohne_display_config_bleibt_beim_profil_standard():
     """Gegenprobe: Trip ganz ohne ``display_config`` (Zweig #111) bleibt
     unveraendert beim Profil-Standard und ist nicht leer."""
@@ -262,6 +297,28 @@ def test_telegram_kopf_ohne_lang_ist_deutsch():
 def test_telegram_kopf_englisch(report_type, soll):
     """AC-7: englische Nutzer sehen weiter ``Evening``/``Morning``."""
     assert _kopfzeile(_kopf(report_type, lang="en")) == soll
+
+
+@pytest.mark.parametrize("language, soll", [
+    ("en", "Evening 20.07.2026"),
+    ("de", "Abend 20.07.2026"),
+])
+def test_telegram_kopf_im_versand_folgt_nutzersprache(monkeypatch, language, soll):
+    """AC-6/AC-7 dort, wo der Nutzer es erreicht (Gegenprobe F001): Profil mit
+    ``language`` -> ``NotificationService.send_trip_report`` ->
+    ``TripReportFormatter`` -> ``render_telegram_bubbles`` -> Telegram-
+    Transport. Die erste zugestellte Bubble traegt die Briefing-Art in der
+    Nutzersprache (Etappendatum der Fixture: 20.07.2026)."""
+    data = trip_json(["temperature"], trip_id=f"kopf-versand-{language}",
+                     report_config={"send_telegram": True})
+    mitschrift, _trip, uid = render_trip_mit_ausblick(
+        monkeypatch, data, language=language)
+    sendungen = mitschrift.sendungen("telegram")
+    assert sendungen, f"{language}: keine Telegram-Sendung: {mitschrift!r}"
+    assert {s["empfaenger"] for s in sendungen} == {f"chat-{uid}"}
+    zeilen = sendungen[0]["body"].splitlines()
+    assert zeilen[0] == "Pruefkatalog 3047", zeilen
+    assert zeilen[1] == soll, f"{language}: Telegram-Kopf {zeilen[1]!r}, Soll {soll!r}"
 
 
 @pytest.mark.parametrize("lang", ["de", "en"])

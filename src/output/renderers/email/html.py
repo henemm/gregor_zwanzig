@@ -38,6 +38,7 @@ from output.renderers.day_window import (
 )
 from output.renderers.fallback_notice import build_fallback_lines, select_fallback_meta
 from output.renderers.trip_metric_ids import resolve_trip_active_metrics
+from output.renderers.briefing_typ import briefing_typ
 from output.renderers.email.helpers import (
     _AMPEL_DOT_COLORS,
     _HAIL_RING_COLOR,
@@ -319,12 +320,8 @@ def _render_email_stat(
 
 
 
-def _briefing_typ(report_type: str, lang: Lang) -> str:
-    """Briefing-Art („Abend“/„Evening“) in Nutzersprache (#3047 AC-17)."""
-    if report_type in ("morning", "evening", "alert"):
-        # i18n-dynamic: mail.kopf.typ_
-        return t(f"mail.kopf.typ_{report_type}", lang)
-    return report_type.title()
+# Briefing-Art (#3047 AC-17): geteilte Quelle mit Telegram (#3052).
+_briefing_typ = briefing_typ
 
 def _render_footer(
     *,

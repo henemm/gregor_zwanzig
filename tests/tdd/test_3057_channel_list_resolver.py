@@ -189,7 +189,8 @@ def test_ac1_trip_resolver_gleich_altpfad_ueber_alle_kombinationen(eingabe):
     fehler: list[str] = []
     faelle = list(_trip_kombinationen()) + [("fixture-altbestand", _trip_fixture_dict())]
     for name, roh in faelle:
-        modell = _parse_display_config(copy.deepcopy(roh))
+        # #3048: Referenz ist der Trip-Ladepfad (Altbestand -> Standardsatz).
+        modell = _parse_display_config(copy.deepcopy(roh), trip_standard_bei_leer=True)
         eingabe_dc = copy.deepcopy(roh) if eingabe == "rohform" else modell
         for report_type in REPORT_TYPEN:
             _vergleiche_trip(name, eingabe_dc, modell, report_type, fehler)
