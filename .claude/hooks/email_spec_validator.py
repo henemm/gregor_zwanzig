@@ -809,12 +809,24 @@ def extract_table_rows(body: str, lang: str = "de") -> List[List[str]]:
     "Amtliche Warnungen" (Issue #1108) -- ersetzt die alte
     class="matrix-table"-Erkennung, die im v2-Renderer nicht mehr existiert.
     #2663: die Beschriftung der Zeile in der Sprache ``lang``."""
+    inner = _uebersicht_html(body, lang)
+    return _extract_rows_from_table_html(inner) if inner is not None else []
+
+
+def _uebersicht_html(body: str, lang: str = "de") -> "str | None":
+    """Inneres HTML der Uebersichtstabelle: erste Datenzeile "Amtliche
+    Warnungen" (#1108); ohne Warnzeile (Schalter aus, #3047 AC-28) die Tabelle
+    mit der Kopfzelle "Metrik" (``vergleich.uebersicht.spalte_metrik``)."""
     warn_label = _overview_warn_label(lang)
+    kopf = _t("vergleich.uebersicht.spalte_metrik", lang)
+    ohne_warnzeile = None
     for match in _TABLE_RE.finditer(body):
         rows = _extract_rows_from_table_html(match.group(1))
         if len(rows) >= 2 and rows[1] and rows[1][0].strip() == warn_label:
-            return rows
-    return []
+            return match.group(1)
+        if ohne_warnzeile is None and rows and rows[0] and rows[0][0].strip() == kopf:
+            ohne_warnzeile = match.group(1)
+    return ohne_warnzeile
 
 
 def extract_locations(body: str, lang: str = "de") -> List[str]:
@@ -835,6 +847,28 @@ def extract_locations(body: str, lang: str = "de") -> List[str]:
     return locations
 
 
+#: Abschnittskopf ``<Etikett> <Name>`` (``compare_html._location_heading`` und
+#: ``_render_section_head``): Etikett-Span mit ``letter-spacing:0.1em``.
+_ABSCHNITT_KOPF_RE = re.compile(r'letter-spacing:0\.1em;">([^<]+)</span>\s*<span[^>]*>([^<]*)</span>')
+
+
+def _ortskoepfe(body: str, lang: str = "de") -> list:
+    """#3047 B-V7: Ortsabschnitts-Koepfe sprachunabhaengig -- jeder
+    Abschnittskopf ausser den Abschnitts- (Uebersicht/Stunden) und
+    Ausblick-Etiketten des Katalogs; das Orts-Etikett selbst ("ORT", mit #3074
+    uebersetzt) wird nicht gelesen. Treffer: Gruppe 2 = Name (HTML-maskiert)."""
+    fremd = {_t(k, lang) for k in ("vergleich.abschnitt.uebersicht", "vergleich.abschnitt.stunden",
+                                   "vergleich.ausblick.eyebrow")}
+    return [m for m in _ABSCHNITT_KOPF_RE.finditer(body) if m.group(1).strip() not in fremd]
+
+
+def _ausblick_koepfe(body: str, lang: str = "de") -> list:
+    """Ausblick-Koepfe je Ort (Etikett ``vergleich.ausblick.eyebrow``), auch mit
+    Zustandshinweis statt Tabelle (#1505)."""
+    eyebrow = _t("vergleich.ausblick.eyebrow", lang)
+    return [m for m in _ABSCHNITT_KOPF_RE.finditer(body) if m.group(1).strip() == eyebrow]
+
+
 def _find_location_hour_table(body: str, location_name: str, occurrence: int = 0,
                               lang: str = "de"):
     """Findet die Stundentabelle eines Ortes ueber den vorausgehenden
@@ -843,8 +877,8 @@ def _find_location_hour_table(body: str, location_name: str, occurrence: int = 0
     (Adversary F002) das N-te Vorkommen des Namens statt immer nur das erste.
     Rueckgabe: (Spaltenkoepfe, Datenzeilen) oder None, wenn kein Ort-Kopf
     dieses Vorkommens bzw. keine folgende Tabelle gefunden wird."""
-    marker = re.compile(r'>ORT</span>\s*<span[^>]*>' + re.escape(location_name) + r'</span>')
-    matches = list(marker.finditer(body))
+    koepfe = _ortskoepfe(body, lang)
+    matches = [m for m in koepfe if m.group(2) == location_name]
     if occurrence >= len(matches):
         return None
     match = matches[occurrence]
@@ -853,8 +887,8 @@ def _find_location_hour_table(body: str, location_name: str, occurrence: int = 0
     # Ohne diese Grenze wuerde eine fehlende Tabelle faelschlich die Tabelle
     # des naechsten Ortes einsammeln -- ein fehlendes Vorkommen bliebe unerkannt
     # (Erosion der Stundentabellen-Pflicht).
-    next_ort = re.search(r'>ORT</span>\s*<span[^>]*>', body[match.end():], re.DOTALL)
-    section_end = match.end() + next_ort.start() if next_ort else len(body)
+    next_ort = next((m for m in koepfe if m.start() >= match.end()), None)
+    section_end = next_ort.start() if next_ort else len(body)
     # Issue #1150 (Fix-Runde 2, Adversary F001): Die Stundentabelle ueber ihr
     # STABILES Merkmal identifizieren -- erste Zelle der Kopfzeile == "Zeit"
     # (Renderer-Vertrag _render_hour_table, "Zeit" ist fest verdrahtete erste
@@ -1080,7 +1114,7 @@ def validate_format(body: str, *, lang: str = "de", einfach: "list | None" = Non
 
 
 def validate_hourly_table(body: str, time_start: int = 9, time_end: int = 16, *,
-                          lang: str = "de") -> List[str]:
+                          lang: str = "de", fenster: "tuple | None" = None) -> List[str]:
     """v2 (Issue #1108): Vollstaendigkeits-Check pro Ort (ueber die zugehoerige
     Stundentabelle, _find_location_hour_table) statt globaler String-Presence
     im gesamten Body -- ein fehlender Ort/eine fehlende Stunde ist damit
@@ -1093,7 +1127,11 @@ def validate_hourly_table(body: str, time_start: int = 9, time_end: int = 16, *,
     # weist er eine korrekte Mail zurueck. Die Vollstaendigkeits-Semantik bleibt
     # unveraendert: geprueft wird weiterhin PRO ORT, ob jede erwartete Stunde
     # vorkommt (Issue #1108).
-    expected_hours = [f"{h:02d}" for h in range(time_start, time_end + 1)]
+    # #3047 B-V5: mit --konfig gilt das gespeicherte Tagesfenster -- erwartet
+    # sind die Kernstunden innerhalb des Fensters, eine Stunde ausserhalb ist
+    # ein Fehler (ein gesetztes Fenster wird nie abgelehnt).
+    im = (lambda h: True) if fenster is None else (lambda h: _soll_modul().im_fenster(h, fenster))
+    expected_hours = [f"{h:02d}" for h in range(time_start, time_end + 1) if im(h)]
 
     # Adversary F002: Vorkommens-Index statt immer nur das erste Vorkommen.
     occurrence_counts: dict = {}
@@ -1111,6 +1149,12 @@ def validate_hourly_table(body: str, time_start: int = 9, time_end: int = 16, *,
                 f"STUNDEN-TABELLE: Ort '{name}' (Vorkommen {occurrence + 1}) fehlende "
                 f"Stunden: {', '.join(missing)}"
             )
+        draussen = sorted(h for h in present_hours if h.isdigit() and not im(int(h)))
+        if draussen:
+            errors.append(
+                f"STUNDEN-TABELLE: Ort '{name}' (Vorkommen {occurrence + 1}) Stunden "
+                f"{', '.join(draussen)} ausserhalb des Tagesfensters {fenster[0]}–{fenster[1]}"
+            )
 
     return errors
 
@@ -1118,7 +1162,6 @@ def validate_hourly_table(body: str, time_start: int = 9, time_end: int = 16, *,
 # --------------------------------------------------------------------------- #
 # Issue #3047 (Spec §6, AC-19/AC-20): Soll aus der gespeicherten Konfiguration
 # --------------------------------------------------------------------------- #
-_ORT_KOPF_RE = re.compile(r'>ORT</span>\s*<span[^>]*>([^<]*)</span>')
 _STUNDE_RE = re.compile(r"^\s+\d{2}:\d{2}\s")
 
 
@@ -1146,13 +1189,15 @@ def _html_tabellenkoepfe(body: str, erste: str) -> List[List[str]]:
     return koepfe
 
 
-def _klartext_uebersicht(text: str, lang: str, bekannte=()) -> List[Tuple[str, List[str]]]:
+def _klartext_uebersicht(text: str, lang: str, bekannte=(), werte: bool = False) -> List[Tuple[str, List]]:
     """(Ort, Zeilenbeschriftungen) der Klartext-Uebersicht in Textfolge.
 
     Issue #3047 N6: bei bewusst leerer Grundauswahl hat die Uebersicht keine
     Zeilen -- ein Ort steht dann allein vor einer Leerzeile. Als Ort zaehlt
     eine solche Zeile nur, wenn ``bekannte`` (die Orte der HTML-Tabelle) sie
-    nennt; Ortsfehler-Bloecke tragen ``None`` statt einer Zeilenliste."""
+    nennt; Ortsfehler-Bloecke tragen ``None`` statt einer Zeilenliste.
+    ``werte``: Eintraege ``(Beschriftung, Wert)`` statt nur der Beschriftung
+    (Darstellung Roh/Einfach, #3047 B-V3)."""
     zeilen = text.splitlines()
     start = next((i + 1 for i, z in enumerate(zeilen) if z.startswith("-" * 50)), len(zeilen))
     ende_titel = {_t("vergleich.stunden.klartext_titel", lang), _t("vergleich.ausblick.titel", lang)}
@@ -1171,27 +1216,30 @@ def _klartext_uebersicht(text: str, lang: str, bekannte=()) -> List[Tuple[str, L
             if label == fehler:
                 bloecke[-1] = (bloecke[-1][0], None)
             elif bloecke[-1][1] is not None:
-                bloecke[-1][1].append(label)
+                bloecke[-1][1].append((label, zeile.strip().split(": ", 1)[1]) if werte else label)
     return bloecke
 
 
-def _klartext_abschnitte(text: str, lang: str) -> Tuple[List[List[str]], List[List[str]], List[str]]:
-    """(Stundenspalten je Ort, Ausblick-Kuerzel je Zeile, Ausblick-Zeilen) aus dem Klartext-Teil."""
+def _klartext_abschnitte(text: str, lang: str) -> Tuple[List[List[List[str]]], List[List[str]]]:
+    """(Stundenspalten je Ort und Stundenzeile, Ausblick-Zeilen je Ort) aus dem
+    Klartext-Teil. #3047 B-V4: jede Stundenzeile, nicht nur die erste;
+    B-V1: Ausblick-Zeilen je Ort (ein Zustandshinweis traegt keine Zeile)."""
     zeilen = text.splitlines()
     ausblick_titel = _t("vergleich.ausblick.titel", lang)
-    stunden, ausblick, roh, im_ausblick = [], [], [], False
+    stunden, ausblick, im_ausblick = [], [], False
     for i, zeile in enumerate(zeilen):
         if zeile.strip() == ausblick_titel:
             im_ausblick = True
+            ausblick.append([])
         elif im_ausblick and zeile and not zeile.startswith(" "):
-            # #3047 F001: Wochentag ("Sun") vor den Werten ist keine Spalte.
-            ausblick.append([k for _p, k in _soll_modul().ausblick_kuerzel(zeile)])
-            roh.append(zeile)
+            ausblick[-1].append(zeile)
         else:
             im_ausblick = im_ausblick and zeile.startswith(" ")
-            if _STUNDE_RE.match(zeile) and not _STUNDE_RE.match(zeilen[i - 1]):
-                stunden.append(_kuerzel_in_zeile(zeile))
-    return stunden, ausblick, roh
+            if _STUNDE_RE.match(zeile):
+                if not _STUNDE_RE.match(zeilen[i - 1]):
+                    stunden.append([])
+                stunden[-1].append(_kuerzel_in_zeile(zeile))
+    return stunden, ausblick
 
 
 _TR_RE = re.compile(r"<tr[^>]*>(.*?)</tr>", re.DOTALL)
@@ -1289,7 +1337,7 @@ def _soll_orte_folge(teil: str, ist: List[str], soll) -> List[str]:
 
 def _soll_teil(teil: str, uebersicht, orte, stunden, ausblick, soll: dict) -> List[str]:
     zeilen_soll = soll["uebersicht"]
-    if zeilen_soll is not None and teil != "HTML":
+    if zeilen_soll is not None and teil != "HTML" and soll.get("warnzeile", True):
         zeilen_soll = zeilen_soll[1:]  # Warn-Zeile ist reine HTML-Zeile (#1356)
     fehler = _soll_listen(f"Vergleichstabelle Zeilen ({teil}) Block", uebersicht, zeilen_soll)
     fehler += _soll_orte_folge(teil, orte, soll["orte"])
@@ -1323,21 +1371,108 @@ def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
             [unescape(n) for n in extract_locations(body, lang)],
             _html_tabellenkoepfe(body, _hour_time_label(lang)), _html_tabellenkoepfe(body, tag))
     bloecke = _klartext_uebersicht(plain, lang, set(html[1]))
-    stunden, ausblick, ausblick_zeilen = _klartext_abschnitte(plain, lang)
+    stunden_alle, ausblick_je_ort = _klartext_abschnitte(plain, lang)
+    stunden = [b[0] for b in stunden_alle]
+    ausblick_zeilen = [z for b in ausblick_je_ort for z in b]
+    # #3047 F001: Wochentag ("Sun") vor den Werten ist keine Spalte.
+    ausblick = [[k for _p, k in _soll_modul().ausblick_kuerzel(z)] for z in ausblick_zeilen]
+    fehlerorte = {b[0] for b in bloecke if b[1] is None}
     fehler = []
     for name, h, p in (("Stundenverlauf", html[2], stunden), ("Ausblick", html[3], ausblick)):
         if bool(h) != bool(p):
             fehler.append(f"SOLL: {name} fehlt im {'Klartext' if h else 'HTML'}-Teil")
     if soll.get("orte_unpruefbar"):  # #3047 Punkt 4: nie still ueberspringen
         fehler.append(f"SOLL: Ortsfolge nicht prüfbar: {soll['orte_unpruefbar']}")
-    if soll["orte"] is not None:
-        sektionen = [unescape(n) for n in _ORT_KOPF_RE.findall(body)]
-        fehler += _soll_orte_folge("HTML-Abschnitte", sektionen, [n for n in soll["orte"] if n in sektionen])
+    if soll["orte"] is not None and soll["stunden_an"]:
+        # #3047 B-V7: Ortsabschnitte sprachunabhaengig; ein fehlender Abschnitt
+        # eines erwarteten Orts (ohne Ortsfehler) ist ein Fehler.
+        sektionen = [unescape(m.group(2)) for m in _ortskoepfe(body, lang)]
+        fehler += _soll_orte_folge("HTML-Abschnitte", sektionen,
+                                   [n for n in soll["orte"] if n not in fehlerorte])
     fehler += _soll_teil("HTML", *html, soll)
     fehler += _soll_darstellung_ausblick(body, ausblick_zeilen, tag, soll)
-    fehler += _soll_ortsabschnitte(plain, lang, soll, html[1], {b[0] for b in bloecke if b[1] is None})
+    fehler += _soll_ausblick_zeilen(body, lang, ausblick_je_ort, len(html[1]), soll)
+    fehler += _soll_darstellung_uebersicht(body, plain, lang, soll, set(html[1]))
+    fehler += _soll_stundenzeilen(stunden_alle, soll)
+    fehler += _soll_hinweis_warnungen(body, plain, lang)
+    fehler += _soll_ortsabschnitte(plain, lang, soll, html[1], fehlerorte)
     return fehler + _soll_teil("Klartext", [b[1] for b in bloecke if b[1] is not None],
                                [b[0] for b in bloecke], stunden, ausblick, soll)
+
+
+def _soll_ausblick_zeilen(body: str, lang: str, je_ort: list, orte: int, soll: dict) -> List[str]:
+    """#3047 B-V1: jeder Ort traegt im HTML einen Ausblick-Abschnitt (Tabelle
+    oder Zustandshinweis), jede Ausblick-Tabelle bzw. jeder Klartext-Block mit
+    Zeilen drei Tageszeilen (Fenster ueber Mitternacht: zwei oder drei)."""
+    if not soll.get("ausblick_an"):
+        return []
+    erlaubt = soll.get("ausblick_zeilen") or (3,)
+    erwartet = " oder ".join(str(n) for n in erlaubt)
+    fehler = []
+    abschnitte = len(_ausblick_koepfe(body, lang))
+    if orte and abschnitte != orte:
+        fehler.append(f"SOLL: Ausblick (HTML): {abschnitte} Orts-Abschnitte statt {orte}")
+    tabellen = _html_ausblick_zellen(body, _t("mail.ausblick.spalte_tag", lang))
+    for teil, bloecke, was in (("HTML", tabellen, "Tabelle"), ("Klartext", je_ort, "Ort")):
+        for i, zeilen in enumerate(bloecke):
+            if zeilen and len(zeilen) not in erlaubt:
+                fehler.append(f"SOLL: Ausblick ({teil}) {was} {i + 1}: {len(zeilen)} Tageszeilen, "
+                              f"erwartet {erwartet}")
+    return fehler
+
+
+def _soll_hinweis_warnungen(body: str, plain: str, lang: str) -> List[str]:
+    """#3047 AC-28: der Hinweis "Amtliche Warnungen aktuell nicht abrufbar"
+    steht im HTML-Teil genau dann, wenn er im Klartext-Teil steht."""
+    html = f">{_t('mail.hinweis.warnungen_nicht_abrufbar.titel', lang)}<" in body
+    text = _t("mail.hinweis.warnungen_nicht_abrufbar.text", lang) in plain
+    if html == text:
+        return []
+    return [f"SOLL: Hinweis 'Amtliche Warnungen nicht abrufbar' fehlt im {'Klartext' if html else 'HTML'}-Teil"]
+
+
+def _uebersicht_html_zellen(body: str, lang: str) -> List[list]:
+    """Zeilen der Uebersichtstabelle als [(Beschriftung, rohe Zelle), ...]."""
+    inner = _uebersicht_html(body, lang)
+    if inner is None:
+        return []
+    zeilen = []
+    for r in _TR_RE.findall(inner)[1:]:
+        zellen = re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", r, re.DOTALL)
+        if zellen:
+            label = unescape(re.sub(r"<[^>]+>", "", zellen[0]).strip())
+            zeilen.append([(label, z) for z in zellen[1:]])
+    return zeilen
+
+
+def _soll_darstellung_uebersicht(body: str, plain: str, lang: str, soll: dict, bekannte) -> List[str]:
+    """#3047 B-V3: Roh/Einfach je Zeile der Vergleichstabelle (Konzept W11),
+    im HTML (Ampelpunkt/Wort bzw. Zahl) und im Klartext (``Label: Wert``)."""
+    formen = soll.get("uebersicht_formen") or {}
+    if not formen:
+        return []
+    m = _soll_modul()
+    klartext = [[[paar] for paar in b[1]] for b in _klartext_uebersicht(plain, lang, bekannte, werte=True)
+                if b[1] is not None]
+    return (m.darstellung_meldungen("Vergleichstabelle", [_uebersicht_html_zellen(body, lang)], formen,
+                                    "HTML", True)
+            + m.darstellung_meldungen("Vergleichstabelle", [[z for b in klartext for z in b]], formen,
+                                      "Klartext", False))
+
+
+def _soll_stundenzeilen(stunden_alle: list, soll: dict) -> List[str]:
+    """#3047 B-V4: jede Klartext-Stundenzeile (ab der zweiten; die erste prueft
+    ``_soll_teil``) traegt die Spalten des Solls; erste Abweichung je Ort."""
+    if not soll["stunden_an"] or soll["stunden"] is None:
+        return []
+    fehler = []
+    for i, zeilen in enumerate(stunden_alle):
+        for j, ist in enumerate(zeilen[1:], start=2):
+            diff = _soll_modul().abweichung(ist, soll["stunden"])
+            if diff:
+                fehler.append(f"SOLL: Stundenverlauf (Klartext) Ort {i + 1} Zeile {j}: {diff}")
+                break
+    return fehler
 
 
 def run_validation(
@@ -1405,7 +1540,8 @@ def validate_message(
     all_errors.extend(validate_location_count(body, min_locations, lang=lang))
     all_errors.extend(validate_plausibility(body, lang=lang))
     all_errors.extend(validate_format(body, lang=lang, einfach=(soll or {}).get("uebersicht_einfach")))
-    all_errors.extend(validate_hourly_table(body, lang=lang))
+    fenster = (soll or {}).get("tagesfenster") if (soll or {}).get("kontext") == "orte" else None
+    all_errors.extend(validate_hourly_table(body, lang=lang, fenster=fenster))
     if soll is not None:  # Issue #3047: nur mit --konfig, sonst unveraendert
         all_errors.extend(pruefe_soll(msg, soll, lang))
 

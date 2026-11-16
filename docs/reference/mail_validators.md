@@ -257,6 +257,49 @@ Randfälle (fünfte Prüfung #3047, F1, F2, A3c), alle nur mit `--konfig`:
   ohne Einfach-Form, Gewitter ungeprüft); Meldung „Darstellung Ausblick
   (Klartext) 1: Spalte 'Rain' soll Symbol/Wort (Einfach) zeigen, zeigt Zahl (Roh)".
 
+Ergänzungen Runde 7 (#3047 AC-27/AC-28), alle nur mit `--konfig`:
+
+- **Ausblick-Tageszeilen (B-V1):** Trip: HTML und Klartext tragen gleich viele
+  Zeilen; ist das Mail-Datum (Klartext-Kopf `TT.MM.JJJJ`) ein Etappendatum der
+  Konfiguration, sind es die folgenden Etappen, höchstens drei
+  (`ausblick_zeilen_trip`), auch im Kompaktformat. Eine still ausgefallene
+  Etappe (Teilausfall ohne Zustandshinweis) fällt damit auf. Orte: jeder Ort hat
+  im HTML einen Ausblick-Abschnitt (Tabelle oder Hinweis „nicht abrufbar"),
+  jede Ausblick-Tabelle bzw. jeder Klartext-Block mit Zeilen drei Tageszeilen
+  (Tagesfenster über Mitternacht: zwei oder drei).
+- **Zusatzblöcke (B-V2), nur Vollformat:** `show_stage_stats: false` →
+  keine Kennzahl-Kacheln (HTML) bzw. Zeile `12.3 km | ↑800m` (Klartext);
+  `show_yesterday_comparison: false` → kein Vortag-Vergleich. „An" wird nicht
+  verlangt (datenabhängig). Das Kompaktformat ignoriert die Baustein-Schalter
+  (PO-Entscheidung #722): Kennzahlen und Ausblick trotz Aus sind dort kein Fehler.
+- **Roh/Einfach der Vergleichstabelle (B-V3):** je Zeile laut
+  `channel_layouts.email` — Einfach: HTML Ampelpunkt (Wind, Böen,
+  Niederschlag, Regenwahrscheinlichkeit) bzw. Wort, Klartext Wort; sonst Zahl.
+  Gewitter, Niederschlagsart, Windrichtung ungeprüft. Meldung „Darstellung
+  Vergleichstabelle (Klartext) 1: Spalte 'Wind' …".
+- **Klartext-Stundenverlauf (B-V4):** jede Stundenzeile je Ort, nicht nur die erste.
+- **Tagesfenster (B-V5):** Orte: `day_window_start_hour`/`_end_hour` nach der
+  Regel aus ADR-0035 (beide 0–23, verschieden, sonst 4–19; Start > Ende = über
+  Mitternacht). Erwartet sind die Kernstunden 09–16 innerhalb des Fensters, eine
+  Stunde außerhalb ist ein Fehler — ein gesetztes Fenster wird nicht abgelehnt.
+  Trip: die Mail weist das Fenster nicht aus (Stunden = Etappenzeiten), daher
+  keine Fensterprüfung.
+- **Ortsabschnitte sprachunabhängig (B-V7):** Abschnittsköpfe werden am Aufbau
+  erkannt (Etikett-Span + Name), nicht am Wort „ORT" (#3074); ausgenommen sind
+  nur die Katalog-Etiketten Übersicht/Stunden/Ausblick. Bei Stundenverlauf an
+  muss jeder erwartete Ort (ohne Ortsfehler) einen Abschnitt haben.
+- **Amtliche Warnungen (AC-28, E4):** die Warnzeile der HTML-Vergleichstabelle
+  gehört zum Soll, wenn der Briefing-Schalter (`official_alerts_enabled`) oder
+  der Alarm-Schalter (`official_warnings.enabled`, sonst
+  `official_alert_triggers_enabled`) an ist („beides an"); nur beide aus = keine
+  Zeile. Ohne Warnzeile wird die Übersichtstabelle über die Kopfzelle
+  „Metrik"/„Metric" gefunden. Der Hinweis „Amtliche Warnungen aktuell nicht
+  abrufbar" steht im HTML genau dann, wenn er im Klartext steht.
+- **Trip-Altformat ohne `order` (B-L6):** Einträge ohne `bucket` und `order`
+  (Zeichenkette bzw. Objekt ohne beides) folgen der Register-Priorität wie im
+  Loader (`auto_distribute`, `METRIC_PRIORITY`), nicht der Array-Folge
+  (Tech-Lead-Entscheidung Runde 7).
+
 **Auflösung des Verbots aus #1381:** Eine feste Spaltenfolge (`_HOUR_COLUMNS_V2`)
 wird weiterhin **nie** vorausgesetzt — die Folge ist seit #1359 frei
 einstellbar, die alte Kanon-Projektion lehnte korrekte Mails ab und blockierte
