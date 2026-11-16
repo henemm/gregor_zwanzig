@@ -215,11 +215,18 @@ def test_ac23_warnung_zweiter_ort_faellt_zuletzt_weg(mit, folge):
 
 
 def test_ac23_ohne_warnung_bleibt_kuerzung_wie_bisher(mit):
-    """Gegenprobe: ohne Warnung am weggelassenen Ort bleibt die bisherige
-    Einpassung (erster Ort voll, weitere Orte als ``+k Orte``)."""
+    """Gegenprobe ohne Warnung. #3047 Runde 7 p8 (Tech-Lead-Entscheidung zu
+    AC-23, ADR-0095 -- ein Vergleich braucht mehrere Orte) loest die fruehere
+    Erwartung "erster Ort voll, weitere als ``+k Orte``" ab: auch ohne Warnung
+    werden zuerst die Zellen aller Orte vom Listenende gekuerzt, beide Orte
+    bleiben sichtbar."""
+    soll = [KUERZEL[m] for m, _ in GRUND]
     for uid, snap in zwei_nutzer(mit, preset()):
         sms = text(snap, "sms")
-        assert sms.endswith(" +1 Orte"), sms
+        assert "Orte" not in sms, sms
+        for name in ("Innsbruck", "Bozen"):
+            ist = _kuerzel_folge(_sms_ort(sms, name))
+            assert ist and ist == soll[:len(ist)], (name, ist, sms)
         assert text(snap, "premium_sms") == sms
 
 
