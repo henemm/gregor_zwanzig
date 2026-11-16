@@ -1,0 +1,46 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+..FFFF....F.                                                             [100%]
+=================================== FAILURES ===================================
+E   AssertionError: trip-n1--altbestand_ohne_metrics-stunden--html: Spaltenfolge [] != Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+    assert [] == ['temperature...g_level', ...]
+      
+      Right contains 7 more items, first extra item: 'temperature'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a64cff187c4aa9f65/tests/tdd/test_einstellung_gleich_mail_trip.py:157: AssertionError: trip-n1--altbestand_ohne_metrics-stunden--html: Spaltenfolge [] != Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+E   AssertionError: trip-n1--altbestand_ohne_metrics-stunden--klartext: Tabelle fehlt, Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+    assert []
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a64cff187c4aa9f65/tests/tdd/test_einstellung_gleich_mail_trip.py:155: AssertionError: trip-n1--altbestand_ohne_metrics-stunden--klartext: Tabelle fehlt, Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+E   AssertionError: trip-n1--altbestand_ohne_metrics-nacht--html: Spaltenfolge [] != Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+    assert [] == ['temperature...g_level', ...]
+      
+      Right contains 7 more items, first extra item: 'temperature'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a64cff187c4aa9f65/tests/tdd/test_einstellung_gleich_mail_trip.py:157: AssertionError: trip-n1--altbestand_ohne_metrics-nacht--html: Spaltenfolge [] != Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+E   AssertionError: trip-n1--altbestand_ohne_metrics-nacht--klartext: Tabelle fehlt, Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+    assert []
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a64cff187c4aa9f65/tests/tdd/test_einstellung_gleich_mail_trip.py:155: AssertionError: trip-n1--altbestand_ohne_metrics-nacht--klartext: Tabelle fehlt, Soll ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility']
+E   AssertionError: Python-Seite trip_tabellen/altbestand_ohne_metrics: Mail liefert [], editor_standard.json erwartet ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility', 'temperature_day_low', 'temperature_day_high']
+    assert [] == ['temperature...g_level', ...]
+      
+      Right contains 9 more items, first extra item: 'temperature'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a64cff187c4aa9f65/tests/tdd/test_einstellung_gleich_mail_editor_standard.py:147: AssertionError: Python-Seite trip_tabellen/altbestand_ohne_metrics: Mail liefert [], editor_standard.json erwartet ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'freezing_level', 'visibility', 'temperature_day_low', 'temperature_day_high']
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/anyio/pytest_plugin.py:14
+  /home/user/gregor_zwanzig/.claude/worktrees/agent-a64cff187c4aa9f65/.venv/lib/python3.13/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:128
+  /home/user/gregor_zwanzig/.claude/worktrees/agent-a64cff187c4aa9f65/tests/conftest.py:128: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics[trip-n1--altbestand_ohne_metrics-stunden--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics[trip-n1--altbestand_ohne_metrics-stunden--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics[trip-n1--altbestand_ohne_metrics-nacht--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics[trip-n1--altbestand_ohne_metrics-nacht--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_editor_standard.py::test_python_seite_trip_tabellen_altbestand

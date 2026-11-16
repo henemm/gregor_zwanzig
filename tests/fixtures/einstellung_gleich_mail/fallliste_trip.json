@@ -1957,8 +1957,7 @@
       "test": "test_n1_altbestand_ohne_metrics",
       "ac": "AC-13, AC-11",
       "befund": "N1",
-      "status": "ausnahme",
-      "verweis": "#3048 (N1: Trip ohne display_config.metrics -> Stunden-/Nachttabelle ohne Wertspalten; Behebung aendert alle Kanaele, eigenes Issue)"
+      "status": "gruen"
     },
     {
       "id": "trip-n1--altbestand_ohne_metrics-stunden--klartext",
@@ -1969,8 +1968,7 @@
       "test": "test_n1_altbestand_ohne_metrics",
       "ac": "AC-13, AC-11",
       "befund": "N1",
-      "status": "ausnahme",
-      "verweis": "#3048 (N1: Trip ohne display_config.metrics -> Stunden-/Nachttabelle ohne Wertspalten; Behebung aendert alle Kanaele, eigenes Issue)"
+      "status": "gruen"
     },
     {
       "id": "trip-n1--altbestand_ohne_metrics-nacht--html",
@@ -1981,8 +1979,7 @@
       "test": "test_n1_altbestand_ohne_metrics",
       "ac": "AC-13, AC-11",
       "befund": "N1",
-      "status": "ausnahme",
-      "verweis": "#3048 (N1: Trip ohne display_config.metrics -> Stunden-/Nachttabelle ohne Wertspalten; Behebung aendert alle Kanaele, eigenes Issue)"
+      "status": "gruen"
     },
     {
       "id": "trip-n1--altbestand_ohne_metrics-nacht--klartext",
@@ -1993,8 +1990,51 @@
       "test": "test_n1_altbestand_ohne_metrics",
       "ac": "AC-13, AC-11",
       "befund": "N1",
-      "status": "ausnahme",
-      "verweis": "#3048 (N1: Trip ohne display_config.metrics -> Stunden-/Nachttabelle ohne Wertspalten; Behebung aendert alle Kanaele, eigenes Issue)"
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1--ausdruecklich_leer-stunden--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_n1_ausdruecklich_leer_bleibt_leer",
+      "ac": "AC-13, AC-11, #1394",
+      "befund": "N1",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1--ausdruecklich_leer-stunden--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_n1_ausdruecklich_leer_bleibt_leer",
+      "ac": "AC-13, AC-11, #1394",
+      "befund": "N1",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1--ausdruecklich_leer-nacht--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_n1_ausdruecklich_leer_bleibt_leer",
+      "ac": "AC-13, AC-11, #1394",
+      "befund": "N1",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1--ausdruecklich_leer-nacht--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_n1_ausdruecklich_leer_bleibt_leer",
+      "ac": "AC-13, AC-11, #1394",
+      "befund": "N1",
+      "status": "gruen"
     },
     {
       "id": "trip-wv6--vor_tabelle--html",

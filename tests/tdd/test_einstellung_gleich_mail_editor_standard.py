@@ -157,19 +157,18 @@ def test_python_seite_trip_tabellen_standard():
 
 
 def test_python_seite_trip_tabellen_altbestand():
-    """N1 -- Ausnahme mit Verweis #3048 (dokumentiert den IST-Zustand).
+    """N1 (#3047, frueher Ausnahme #3048) -- behoben: Trip ohne gespeicherte
+    ``metrics`` liefert auf der Mail-Seite dieselbe Standardfolge wie der
+    Editor (``editor_standard.json``, Register-Rangfolge ``trip_default_rank``);
+    in der echten Mail belegt durch
+    ``test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics``."""
+    _pruefe(python_trip_tabellen, "trip_tabellen", _zustand("trip_tabellen", "altbestand_ohne_metrics"))
 
-    Trip ohne gespeicherte ``metrics``: die Mail-Seite liefert heute KEINE
-    Wertspalte (in der echten Mail belegt,
-    ``test_einstellung_gleich_mail_trip.py::test_n1_altbestand_ohne_metrics``),
-    der Editor zeigt die in ``editor_standard.json`` festgelegte Standardfolge.
-    Die Behebung betrifft alle Kanaele (Telegram AC-S4-13, #1199) und wird in
-    #3048 umgesetzt; wird dieser Test rot, ist #3048 wirksam und der Fall auf
-    ``_pruefe`` (Soll = ``erwartet``) zurueckzustellen."""
-    zustand = _zustand("trip_tabellen", "altbestand_ohne_metrics")
-    assert zustand["erwartet"], "Editor-Soll fuer N1 fehlt in editor_standard.json"
-    assert python_trip_tabellen(zustand["eingabe"]) == [], (
-        "Ist-Zustand #3048 hat sich geaendert -- Fall auf gruen umstellen")
+
+def test_python_seite_trip_tabellen_ausdruecklich_leer():
+    """N1-Gegenstueck (#3047, #1394): ``metrics: []`` ist bewusst leer und
+    bleibt leer -- kein Rueckfall auf den Standardsatz."""
+    assert python_trip_tabellen({"display_config": {"metrics": []}}) == []
 
 
 @pytest.mark.parametrize("zustand", _gespeicherte("trip_tabellen"))
