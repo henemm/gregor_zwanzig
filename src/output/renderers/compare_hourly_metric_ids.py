@@ -204,7 +204,19 @@ def resolve_hourly_metrics(
     Grundauswahl selbst nie eingestellt ist (Altbestand) oder keine Groesse
     mit eigener Stundenspalte traegt. Eine bewusst LEERE Grundauswahl (``[]``)
     liefert ``[]`` -- der Block entfaellt (#3047 N2).
+
+    Issue #3065 (ADR-0121 Nachtrag 2b): die Auswahlregel steht in der
+    ID-Stufe ``resolve_hourly_metric_ids``; hier nur noch der ``dp_field``-Schritt.
     """
+    ids = resolve_hourly_metric_ids(hourly_metrics, enabled_metrics)
+    return None if ids is None else [get_metric(m).dp_field for m in ids]
+
+
+def resolve_hourly_metric_ids(
+    hourly_metrics: list[str] | None, enabled_metrics: list[str] | None = None,
+) -> list[str] | None:
+    """ID-Stufe von ``resolve_hourly_metrics`` (#3065): dieselbe Regel, aber
+    Katalog-IDs statt ``dp_field``; ``None`` = Vorgabemenge des Renderers."""
     if not isinstance(hourly_metrics, list):
         return _standard_aus_grundauswahl(enabled_metrics)
     normalized = normalize_hourly_metrics(hourly_metrics) or []
@@ -221,7 +233,7 @@ def resolve_hourly_metrics(
         )
     if enabled_metrics is not None and normalized:
         normalized = _schnitt_mit_grundauswahl(normalized, enabled_metrics)
-    return [get_metric(m).dp_field for m in normalized]
+    return normalized
 
 
 def _standard_aus_grundauswahl(enabled_metrics: list[str] | None) -> list[str] | None:
@@ -243,7 +255,7 @@ def _standard_aus_grundauswahl(enabled_metrics: list[str] | None) -> list[str] |
     ))
     if not [m for m in ids if m not in HOURLY_MERGE_ONLY_METRIC_IDS]:
         return None
-    return [get_metric(m).dp_field for m in ids]
+    return ids
 
 
 def _schnitt_mit_grundauswahl(
@@ -265,6 +277,7 @@ def _schnitt_mit_grundauswahl(
 
 __all__ = [
     "resolve_hourly_metrics",
+    "resolve_hourly_metric_ids",
     "normalize_hourly_metrics",
     "hourly_selectable_metric_ids",
     "FRONTEND_TO_HOURLY_METRIC_ID",
