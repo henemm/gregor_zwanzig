@@ -212,7 +212,15 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # „Regen-W. >30%" statt >10/>20/>20), gemessen per Render-Diff HEAD vs.
 # Arbeitsstand; Farben und alle uebrigen Zeichen sind unveraendert.
 # #2783: CSS-Kommentarzeile aus Mail entfernt, sonst byte-gleich (alter Anker 7b878bc8…)
-_EXPECTED_SHA256 = "8eeb5add6e145f0171f50d291b1e1e094bd054b066d4d39e900f2ab08e35da54"
+# #3047 AC-17 -- BEWUSST NEU GEMESSEN (Render-Diff HEAD vs. Arbeitsstand):
+# einzige Unterschiede zum Vorher-Digest (8eeb5add…) sind „Evening Report" ->
+# „Abend-Briefing" (Klartext-Kopf), „Time" -> „Zeit" (Klartext + 2x HTML) und
+# „Risk" -> „Risiko" (2x HTML); alle uebrigen Zeichen unveraendert.
+# #3047 F6 (Nebenbefund F1) -- BEWUSST NEU GEMESSEN: einziger Unterschied zum
+# Vorher-Digest (9741e32c…) ist die Brand-Zeile „Evening-Briefing" ->
+# „Abend-Briefing" (HTML); NACHGEMESSEN: mit Katalogwert „Evening" ergibt der
+# Output exakt den alten Digest.
+_EXPECTED_SHA256 = "ba0f7521e9a15decfb99b9a43088a2cdae2018bf46e55c2bb02c61399868db40"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

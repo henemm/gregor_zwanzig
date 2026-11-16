@@ -217,8 +217,12 @@ def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[str] | No
     """
     gespeichert = resolve_outlook_metrics(getattr(dc, "outlook_metrics", None))
     allowed = dc.allowed_metric_ids_for_report_type(report_type)
+    # #3047 T1 (AC-4): Reihenfolge = die im Editor eingestellte Position
+    # (bucket, order) -- dieselbe Sortierung wie die Stundentabelle
+    # (``get_metrics_for_report_type`` -> ``_sorted_by_layout``), nicht die
+    # Array-/Katalogfolge von ``dc.metrics``.
     grundauswahl = None if allowed is None else outlook_grundauswahl_ids(
-        [mc.metric_id for mc in getattr(dc, "metrics", None) or ()
+        [mc.metric_id for mc in dc.get_metrics_for_report_type(report_type)
          if mc.metric_id in allowed]
     )
     return _erbe_grundauswahl(gespeichert, grundauswahl, "Trip-Grundauswahl")

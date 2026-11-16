@@ -62,7 +62,10 @@ class TestAC2MinimalAsciiBody:
         assert body.strip(), "Body darf nicht leer sein"
         assert body.isascii(), f"Body muss reines ASCII sein: {body!r}"
         assert "GR20" in body, "Trip-Name muss in der Kopfzeile stehen"
-        assert "Evening" in body, "Report-Typ (Title-Case) muss in der Kopfzeile stehen"
+        # #3047 AC-17: Report-Typ als Katalogtext in Nutzersprache (Default de).
+        assert "GR20 - Abend-Briefing" in body, "Report-Typ muss in der Kopfzeile stehen"
+        body_en = render_compact(**_empty_kwargs(trip_name="GR20", report_type="evening"), lang="en")
+        assert "GR20 - Evening Report" in body_en, body_en
 
 
 # ---------------------------------------------------------------------------

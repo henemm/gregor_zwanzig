@@ -1,0 +1,1743 @@
+{
+  "dimensionen": {
+    "auswahl_muster": [
+      "teilmenge",
+      "alles",
+      "bewusst_leer",
+      "nie_eingestellt"
+    ],
+    "reihenfolge": [
+      "katalog",
+      "umkehrung",
+      "gemischt"
+    ],
+    "darstellung": [
+      "roh",
+      "gemischt",
+      "einfach"
+    ],
+    "format": [
+      "html",
+      "klartext"
+    ],
+    "ausgeschlossen": [
+      [
+        "orte_vergleichstabelle",
+        "auswahl_muster",
+        "bewusst_leer",
+        "reihenfolge",
+        "umkehrung"
+      ],
+      [
+        "orte_vergleichstabelle",
+        "auswahl_muster",
+        "bewusst_leer",
+        "reihenfolge",
+        "gemischt"
+      ],
+      [
+        "orte_vergleichstabelle",
+        "auswahl_muster",
+        "bewusst_leer",
+        "darstellung",
+        "gemischt"
+      ],
+      [
+        "orte_vergleichstabelle",
+        "auswahl_muster",
+        "bewusst_leer",
+        "darstellung",
+        "einfach"
+      ],
+      [
+        "orte_vergleichstabelle",
+        "darstellung",
+        "gemischt",
+        "auswahl_muster",
+        "bewusst_leer"
+      ],
+      [
+        "orte_vergleichstabelle",
+        "darstellung",
+        "gemischt",
+        "auswahl_muster",
+        "nie_eingestellt"
+      ],
+      [
+        "orte_vergleichstabelle",
+        "darstellung",
+        "einfach",
+        "auswahl_muster",
+        "bewusst_leer"
+      ],
+      [
+        "orte_vergleichstabelle",
+        "darstellung",
+        "einfach",
+        "auswahl_muster",
+        "nie_eingestellt"
+      ],
+      [
+        "orte_stundenverlauf",
+        "auswahl_muster",
+        "bewusst_leer",
+        "reihenfolge",
+        "umkehrung"
+      ],
+      [
+        "orte_stundenverlauf",
+        "auswahl_muster",
+        "bewusst_leer",
+        "reihenfolge",
+        "gemischt"
+      ],
+      [
+        "orte_stundenverlauf",
+        "auswahl_muster",
+        "bewusst_leer",
+        "darstellung",
+        "gemischt"
+      ],
+      [
+        "orte_stundenverlauf",
+        "auswahl_muster",
+        "bewusst_leer",
+        "darstellung",
+        "einfach"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "gemischt",
+        "auswahl_muster",
+        "teilmenge"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "gemischt",
+        "auswahl_muster",
+        "alles"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "gemischt",
+        "auswahl_muster",
+        "bewusst_leer"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "gemischt",
+        "auswahl_muster",
+        "nie_eingestellt"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "gemischt",
+        "reihenfolge",
+        "katalog"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "gemischt",
+        "reihenfolge",
+        "umkehrung"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "gemischt",
+        "reihenfolge",
+        "gemischt"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "gemischt",
+        "format",
+        "html"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "gemischt",
+        "format",
+        "klartext"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "einfach",
+        "auswahl_muster",
+        "teilmenge"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "einfach",
+        "auswahl_muster",
+        "alles"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "einfach",
+        "auswahl_muster",
+        "bewusst_leer"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "einfach",
+        "auswahl_muster",
+        "nie_eingestellt"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "einfach",
+        "reihenfolge",
+        "katalog"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "einfach",
+        "reihenfolge",
+        "umkehrung"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "einfach",
+        "reihenfolge",
+        "gemischt"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "einfach",
+        "format",
+        "html"
+      ],
+      [
+        "orte_stundenverlauf",
+        "darstellung",
+        "einfach",
+        "format",
+        "klartext"
+      ],
+      [
+        "orte_stundenverlauf",
+        "auswahl_muster",
+        "nie_eingestellt",
+        "reihenfolge",
+        "umkehrung"
+      ],
+      [
+        "orte_stundenverlauf",
+        "auswahl_muster",
+        "nie_eingestellt",
+        "reihenfolge",
+        "gemischt"
+      ],
+      [
+        "orte_ausblick",
+        "auswahl_muster",
+        "bewusst_leer",
+        "reihenfolge",
+        "umkehrung"
+      ],
+      [
+        "orte_ausblick",
+        "auswahl_muster",
+        "bewusst_leer",
+        "reihenfolge",
+        "gemischt"
+      ],
+      [
+        "orte_ausblick",
+        "auswahl_muster",
+        "bewusst_leer",
+        "darstellung",
+        "gemischt"
+      ],
+      [
+        "orte_ausblick",
+        "auswahl_muster",
+        "bewusst_leer",
+        "darstellung",
+        "einfach"
+      ]
+    ],
+    "hinweis": "Fachlich unmoegliche Paare: (1) der Stundenverlauf kennt heute keine Darstellung je Zeile (Konzept W11, offen_feature, #3047 Phase 3), deshalb nur 'roh'; die Vergleichstabelle traegt Roh/Einfach seit #3039 ueber channel_layouts.email, eine nie eingestellte Vergleichstabelle hat keine Darstellung (Bestand = Roh, #3039 Regel 3); (2) eine bewusst leere Auswahl hat weder Reihenfolge noch Darstellung; (3) der nie eingestellte Stundenverlauf hat die feste Standardfolge (AC-13), keine waehlbare Reihenfolge. Reihenfolge 'katalog' = Folge des zentralen Registers, 'gemischt' ungleich Katalog und Umkehrung. Teilnehmende Faelle tragen 'werte'; der Test baut daraus das rohe Preset (Darstellung roh: channel_active_metrics, sonst channel_layouts.email)."
+  },
+  "faelle": [
+    {
+      "id": "O-VT-P01",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-VT-P02",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-VT-P03",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-VT-P04",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-VT-P05",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-VT-P06",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-VT-P07",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-VT-P08",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-VT-P09",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-VT-P10",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-VT-P11",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-VT-P12",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "katalog",
+        "darstellung": "gemischt",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-VT-P13",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-VT-P14",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-VT-P15",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "katalog",
+        "darstellung": "einfach",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-VT-P16",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "umkehrung",
+        "darstellung": "einfach",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-VT-P17",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_vergleichstabelle_paarweise",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "gemischt",
+        "darstellung": "einfach",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-SV-P01",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-SV-P02",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-SV-P03",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-SV-P04",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-SV-P05",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-SV-P06",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-SV-P07",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-SV-P08",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-SV-P09",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-SV-P10",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_stundenverlauf_paarweise",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-AB-P01",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_ausblick_paarweise",
+      "ac": "AC-7",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-AB-P02",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_ausblick_paarweise",
+      "ac": "AC-7 AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "umkehrung",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-AB-P03",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_ausblick_paarweise",
+      "ac": "AC-7 AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "katalog",
+        "darstellung": "einfach",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-AB-P04",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ausblick_paarweise",
+      "ac": "AC-7 AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "gemischt",
+        "darstellung": "gemischt",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-AB-P05",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ausblick_paarweise",
+      "ac": "AC-7 AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "umkehrung",
+        "darstellung": "einfach",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-AB-P06",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_ausblick_paarweise",
+      "ac": "AC-7",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-AB-P07",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ausblick_paarweise",
+      "ac": "AC-7 AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "einfach",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-AB-P08",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_ausblick_paarweise",
+      "ac": "AC-7",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-AB-P09",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_ausblick_paarweise",
+      "ac": "AC-7",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-AB-P10",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ausblick_paarweise",
+      "ac": "AC-7 AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "gemischt",
+        "format": "html"
+      }
+    },
+    {
+      "id": "O-AB-P11",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_ausblick_paarweise",
+      "ac": "AC-7",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "O-VT-H-AUSWAHL",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_ac5_vergleichstabelle_zeilen_und_orte",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-H-FOLGE",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_ac5_vergleichstabelle_zeilen_und_orte",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-H-ORTE",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "ortsreihenfolge",
+      "test": "test_ac5_ortsreihenfolge_vertauscht",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-H-LEER",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_vergleichstabelle_bewusst_leer_ohne_rueckfall",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-H-GRUND",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_grundauswahl_vergleichstabelle",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-H-ALT",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "altbestand",
+      "test": "test_ac11_altbestand_golden",
+      "ac": "AC-11",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-H-NUTZER",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "zwei_nutzer",
+      "test": "test_ac12_zwei_nutzer",
+      "ac": "AC-12",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-H-DARST",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_w11_vergleichstabelle_roh_einfach",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "verweis": "Konzept W11 / #3039 (channel_layouts.email, ADR-0119)"
+    },
+    {
+      "id": "O-SV-H-AUSWAHL",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_ac6_stundenverlauf_spalten",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-FOLGE",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_ac6_stundenverlauf_spalten",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-ORTE",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "ortsreihenfolge",
+      "test": "test_ac5_ortsreihenfolge_vertauscht",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-AUS",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_ac6_stundenverlauf_aus_und_leer",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-STANDARD",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "standard",
+      "test": "test_ac6_stundenverlauf_nie_eingestellt_standard",
+      "ac": "AC-6 AC-13",
+      "befund": "O2",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-GRUND",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_stundenverlauf_nimmt_nur_aus_grundauswahl",
+      "ac": "AC-10",
+      "befund": "O5",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-ALT",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "altbestand",
+      "test": "test_ac11_altbestand_golden",
+      "ac": "AC-11",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-NUTZER",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "zwei_nutzer",
+      "test": "test_ac12_zwei_nutzer",
+      "ac": "AC-12",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-DARST",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_w11_darstellung_je_zeile",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "offen_feature",
+      "verweis": "Konzept W11 / #3047 Phase 3 (Stundenverlauf; #3039 baut Roh/Einfach nur fuer Vergleichstabelle, Telegram, SMS)"
+    },
+    {
+      "id": "O-AB-H-AUSWAHL",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_ac7_ausblick_folge_mit_temperaturspanne",
+      "ac": "AC-7",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-H-FOLGE",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_ac7_ausblick_folge_mit_temperaturspanne",
+      "ac": "AC-7",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-H-ORTE",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "ortsreihenfolge",
+      "test": "test_ac5_ortsreihenfolge_vertauscht",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-H-AUS",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_ac7_ausblick_aus_und_leer",
+      "ac": "AC-7",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-H-AUSSERHALB",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac7_ausblick_ausserhalb_grundauswahl",
+      "ac": "AC-7 AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-H-GRUND",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_grundauswahl_ausblick",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-H-DARST",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ac8_ausblick_roh_einfach",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-H-OHNE-EINFACH",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ac8_ausblick_ohne_einfach_form_bleibt_zahl",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#814 AC-5 / #2049: Temperatur und Sichtweite haben im Ausblick keine Einfach-Form (OUTLOOK_FRIENDLY_CAPABLE, metric_catalog.py:1141); Zahl bleibt gewollt"
+    },
+    {
+      "id": "O-AB-H-ALT",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "altbestand",
+      "test": "test_ac11_altbestand_golden",
+      "ac": "AC-11",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-H-ALT-O3",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "altbestand",
+      "test": "test_ac21_altbestand_ausblick_klartext_gleich_html",
+      "ac": "AC-21",
+      "befund": "O3",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-H-NUTZER",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "zwei_nutzer",
+      "test": "test_ac12_zwei_nutzer",
+      "ac": "AC-12",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-K-AUSWAHL",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_ac5_vergleichstabelle_zeilen_und_orte",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-K-FOLGE",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_ac5_vergleichstabelle_zeilen_und_orte",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-K-ORTE",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "ortsreihenfolge",
+      "test": "test_ac5_ortsreihenfolge_vertauscht",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-K-LEER",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_vergleichstabelle_bewusst_leer_ohne_rueckfall",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-K-GRUND",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_grundauswahl_vergleichstabelle",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-H-TOTALSCHNITT-LAYOUT",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_vergleichstabelle_totalschnitt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen",
+      "variante": "channel_layouts"
+    },
+    {
+      "id": "O-VT-K-TOTALSCHNITT-LAYOUT",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_vergleichstabelle_totalschnitt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen",
+      "variante": "channel_layouts"
+    },
+    {
+      "id": "O-VT-H-TOTALSCHNITT-CAM",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_vergleichstabelle_totalschnitt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen",
+      "variante": "channel_active_metrics"
+    },
+    {
+      "id": "O-VT-K-TOTALSCHNITT-CAM",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_vergleichstabelle_totalschnitt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen",
+      "variante": "channel_active_metrics"
+    },
+    {
+      "id": "O-VT-H-ALLES-AUS-LAYOUT",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_vergleichstabelle_alles_aus_bleibt_leer",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-K-ALLES-AUS-LAYOUT",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_vergleichstabelle_alles_aus_bleibt_leer",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-K-ALT",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "altbestand",
+      "test": "test_ac11_altbestand_golden",
+      "ac": "AC-11",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-K-NUTZER",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "zwei_nutzer",
+      "test": "test_ac12_zwei_nutzer",
+      "ac": "AC-12",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-K-DARST",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_w11_vergleichstabelle_roh_einfach",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "verweis": "Konzept W11 / #3039 (channel_layouts.email, ADR-0119)"
+    },
+    {
+      "id": "O-SV-K-AUSWAHL",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_ac6_stundenverlauf_spalten",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-FOLGE",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_ac6_stundenverlauf_spalten",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-ORTE",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "ortsreihenfolge",
+      "test": "test_ac5_ortsreihenfolge_vertauscht",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-AUS",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_ac6_stundenverlauf_aus_und_leer",
+      "ac": "AC-6",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-STANDARD",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "standard",
+      "test": "test_ac6_stundenverlauf_nie_eingestellt_standard",
+      "ac": "AC-6 AC-13",
+      "befund": "O2",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-GRUND",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_stundenverlauf_nimmt_nur_aus_grundauswahl",
+      "ac": "AC-10",
+      "befund": "O5",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-TOTALSCHNITT-VORGABE",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_stundenverlauf_totalschnitt_rueckfall",
+      "ac": "AC-10",
+      "befund": "O5 (F7/F002 Rueckfall Vorgabemenge)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-TOTALSCHNITT-VORGABE",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_stundenverlauf_totalschnitt_rueckfall",
+      "ac": "AC-10",
+      "befund": "O5 (F7/F002 Rueckfall Vorgabemenge)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-TOTALSCHNITT-WAEHLBAR",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_stundenverlauf_totalschnitt_rueckfall",
+      "ac": "AC-10",
+      "befund": "O5 (F7/F002 Rueckfall waehlbare Groessen)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-TOTALSCHNITT-WAEHLBAR",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_stundenverlauf_totalschnitt_rueckfall",
+      "ac": "AC-10",
+      "befund": "O5 (F7/F002 Rueckfall waehlbare Groessen)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-ALT",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "altbestand",
+      "test": "test_ac11_altbestand_golden",
+      "ac": "AC-11",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-NUTZER",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "zwei_nutzer",
+      "test": "test_ac12_zwei_nutzer",
+      "ac": "AC-12",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-DARST",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_w11_darstellung_je_zeile",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "offen_feature",
+      "verweis": "Konzept W11 / #3047 Phase 3 (Stundenverlauf; #3039 baut Roh/Einfach nur fuer Vergleichstabelle, Telegram, SMS)"
+    },
+    {
+      "id": "O-AB-K-AUSWAHL",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_ac7_ausblick_folge_mit_temperaturspanne",
+      "ac": "AC-7",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-FOLGE",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_ac7_ausblick_folge_mit_temperaturspanne",
+      "ac": "AC-7",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-ORTE",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "ortsreihenfolge",
+      "test": "test_ac5_ortsreihenfolge_vertauscht",
+      "ac": "AC-5",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-AUS",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_ac7_ausblick_aus_und_leer",
+      "ac": "AC-7",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-AUSSERHALB",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac7_ausblick_ausserhalb_grundauswahl",
+      "ac": "AC-7 AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-GRUND",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_grundauswahl_ausblick",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-DARST",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_ac8_ausblick_roh_einfach",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-OHNE-EINFACH",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_ac8_ausblick_ohne_einfach_form_bleibt_zahl",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#814 AC-5 / #2049: Temperatur und Sichtweite haben im Ausblick keine Einfach-Form (OUTLOOK_FRIENDLY_CAPABLE, metric_catalog.py:1141); Zahl bleibt gewollt"
+    },
+    {
+      "id": "O-AB-K-ALT",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "altbestand",
+      "test": "test_ac11_altbestand_golden",
+      "ac": "AC-11",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-ALT-O3",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "altbestand",
+      "test": "test_ac21_altbestand_ausblick_klartext_gleich_html",
+      "ac": "AC-21",
+      "befund": "O3",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-NUTZER",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "zwei_nutzer",
+      "test": "test_ac12_zwei_nutzer",
+      "ac": "AC-12",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-H-SPRACHE-EN",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "sprache",
+      "test": "test_orte_koepfe_in_nutzersprache_en",
+      "ac": "AC-6, ADR-0104",
+      "befund": "F7/F003 Mutations-Gegenprobe #3047",
+      "status": "gruen"
+    },
+    {
+      "id": "O-SV-K-SPRACHE-EN",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "sprache",
+      "test": "test_orte_koepfe_in_nutzersprache_en",
+      "ac": "AC-6, ADR-0104",
+      "befund": "F7/F003 Mutations-Gegenprobe #3047",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-H-SPRACHE-EN",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "sprache",
+      "test": "test_orte_koepfe_in_nutzersprache_en",
+      "ac": "AC-7, ADR-0104",
+      "befund": "F7/F003 Mutations-Gegenprobe #3047",
+      "status": "gruen"
+    },
+    {
+      "id": "O-AB-K-SPRACHE-EN",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "sprache",
+      "test": "test_orte_koepfe_in_nutzersprache_en",
+      "ac": "AC-7, ADR-0104",
+      "befund": "F7/F003 Mutations-Gegenprobe #3047",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-H-WARN",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst_html",
+      "ac": "AC-5",
+      "befund": "WV6",
+      "status": "gruen"
+    },
+    {
+      "id": "O-VT-K-WARN",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst_klartext",
+      "ac": "AC-5",
+      "befund": "WV6",
+      "status": "gruen",
+      "verweis": "src/output/renderers/comparison.py:310-313 (Klartext-Warnzeilen nach der Metrik-Schleife statt zuerst; Konzept einstellungen_neu.md §5 Punkt 8 WV6)"
+    },
+    {
+      "id": "O-VT-H-NEU-IN-LISTEN",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "neue_metrik_in_allen_listen_orte.test.ts::Einwahl haengt die Metrik an jede gespeicherte Kanal-Liste hinten an, Folge bleibt",
+      "ac": "AC-10",
+      "befund": "T3",
+      "status": "gruen",
+      "seite": "frontend",
+      "verweis": "#3047 T3 Orte (WeatherMetricsTab.svelte::toggleCompareMetric uebertrug bei channel_active_metrics nur Abwahlen; behoben ueber compareChannelMetricLayouts.ts::compareToggleFolgen, auch outlook_metrics/hourly_metrics)"
+    }
+  ]
+}

@@ -23,7 +23,7 @@ import pytest
 
 from app.models import ForecastDataPoint, ForecastMeta, NormalizedTimeseries, Provider
 from services.forecast_budget import PROVIDER, ForecastBudgetGate
-from tests.helpers.ortstag import utc_tag
+from tests.helpers.ortstag import ortstag, utc_tag
 
 REPO = Path(__file__).resolve().parents[2]
 MANUELL = "user_manual"
@@ -251,7 +251,11 @@ def _trip(uid: str, name: str):
     from app.loader import save_trip
     from app.trip import Stage, Trip, Waypoint
 
-    etappe = Stage(id="s1", name="s1", date=utc_tag(), waypoints=[
+    # Ortstag statt UTC-Tag (#2314): der Befehl sucht die Etappe am Ortstag
+    # der Trip-Koordinaten; zwischen 23:00 und 24:00 UTC (MEZ) lag eine
+    # UTC-datierte Etappe dort auf "gestern" -> "Kein Wetter-Snapshot"
+    # (CI-Nachtlauf 2026-11-15 23:54 UTC).
+    etappe = Stage(id="s1", name="s1", date=ortstag(46.3, 11.0), waypoints=[
         Waypoint(id="w1", name="w1", lat=46.3, lon=11.0, elevation_m=900),
         Waypoint(id="w2", name="w2", lat=46.35, lon=11.05, elevation_m=1100),
     ])

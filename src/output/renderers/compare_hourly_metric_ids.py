@@ -164,7 +164,9 @@ def normalize_hourly_metrics(hourly_metrics: list[str] | None) -> list[str] | No
     return out
 
 
-def resolve_hourly_metrics(hourly_metrics: list[str] | None) -> list[str] | None:
+def resolve_hourly_metrics(
+    hourly_metrics: list[str] | None, enabled_metrics: list[str] | None = None,
+) -> list[str] | None:
     """Gespeicherte Stundenauswahl -> Renderer-Feldnamen (``dp_field``).
 
     Rueckgabe ``None`` (= "nie eingestellt", Renderer zeigt seine Vorgabemenge)
@@ -179,6 +181,18 @@ def resolve_hourly_metrics(hourly_metrics: list[str] | None) -> list[str] | None
     -- mit Protokollwarnung statt still (#1361 Befund 3).
 
     Issue #1335 Scheibe 1: reihenfolge-erhaltend und dedupliziert (AC-2).
+
+    Issue #3047 O5 (AC-10, ADR-0050, Konzept §5.8 "Jede Liste nimmt nur aus
+    den Metriken oben"): ``enabled_metrics`` ist die bereits aufgeloeste
+    Grundauswahl der Uebersicht (Renderer-Kennungen, wie bei
+    ``resolve_compare_outlook_metrics``). ``None`` = kein Maximum, kein Schnitt.
+    Eine gespeicherte Liste wird mit ihr geschnitten, ihre Folge bleibt. Nie
+    eingestellt (``None``) bleibt die Vorgabemenge des Renderers, eine bewusst
+    leere Liste bleibt leer. Bleibt nach dem Schnitt NICHTS uebrig, gilt der
+    dokumentierte Rueckfall: die Vorgabemenge ``HOURLY_DEFAULT_METRIC_IDS``,
+    geschnitten mit der Grundauswahl (ihre Folge); ist auch die leer, die
+    stuendlich waehlbaren Groessen der Grundauswahl in deren Folge -- der
+    Block verschwindet also nicht still.
     """
     if not isinstance(hourly_metrics, list):
         return None
@@ -194,7 +208,26 @@ def resolve_hourly_metrics(hourly_metrics: list[str] | None) -> list[str] | None
             "Auswahl wird ignoriert statt angezeigt (vgl. #1361 Befund 3)",
             unmapped,
         )
+    if enabled_metrics is not None and normalized:
+        normalized = _schnitt_mit_grundauswahl(normalized, enabled_metrics)
     return [get_metric(m).dp_field for m in normalized]
+
+
+def _schnitt_mit_grundauswahl(
+    normalized: list[str], enabled_metrics: list[str],
+) -> list[str]:
+    """Schnitt der Stundenauswahl mit der Grundauswahl samt Rueckfall (#3047 O5)."""
+    from output.renderers.compare_outlook_metric_ids import _kennungen_aus_renderer_ids
+
+    basis = _kennungen_aus_renderer_ids(enabled_metrics)
+    geschnitten = [m for m in normalized if m in basis]
+    if geschnitten:
+        return geschnitten
+    rueckfall = [m for m in HOURLY_DEFAULT_METRIC_IDS if m in basis]
+    if rueckfall:
+        return rueckfall
+    waehlbar = set(hourly_selectable_metric_ids())
+    return [m for m in basis if m in waehlbar]
 
 
 __all__ = [

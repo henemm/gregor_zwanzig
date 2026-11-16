@@ -376,14 +376,16 @@ export function moveWithDerivedChildren(
  * Remediation). Drei Zweige wie im Original: (1) mindestens ein Eintrag
  * traegt `bucket`/`order` -> Bucket-Zuordnung direkt aus den Feldern, (2)
  * Eintraege ohne Bucket-Feld (Alt-Bestand) -> `autoAssign` nach Prioritaet,
- * (3) kein Bestand -> Vorbelegung nach `trip_default_enabled` (#1552).
+ * (3) kein Bestand -> Vorbelegung nach `trip_default_enabled` (#1552), in
+ * der Register-Rangfolge `trip_default_rank` (#3047 N2: dieselbe Folge wie
+ * `DEFAULT_TRIP_METRIC_IDS` der Mail); fehlt der Rang, Prioritaet wie bisher.
  * Fehlende Kind-Eintraege werden VOR der Zerlegung ergaenzt (Abschnitt 1).
  */
 export function computeInitialBuckets<
 	T extends { metric_id: string; enabled: boolean; bucket?: string; order?: number },
 >(
 	catalog: MetricCatalog,
-	metricById: Record<string, { trip_default_enabled?: boolean }>,
+	metricById: Record<string, { trip_default_enabled?: boolean; trip_default_rank?: number | null }>,
 	savedMetricsRaw: ReadonlyArray<T> | undefined,
 	allIds: string[],
 ): Buckets {
@@ -414,12 +416,26 @@ export function computeInitialBuckets<
 		b = autoAssign(activeIds, catalog);
 	} else {
 		const activeIds = allIds.filter((id) => metricById[id]?.trip_default_enabled);
-		b = autoAssign(activeIds, catalog);
+		b = nachTripRang(activeIds, metricById, allIds) ?? autoAssign(activeIds, catalog);
 	}
 
 	// Issue #587: kein Detail-Bucket mehr — secondary migriert verlustfrei nach primary.
 	const mergedColumns = bucketsToColumns(b);
 	return { primary: mergedColumns, secondary: [], off: b.off };
+}
+
+/** #3047 N2: Trip-Anlege-Standard in Register-Rangfolge; `null`, wenn ein
+ *  Rang fehlt (aeltere Serverantwort) -- dann gilt die bisherige Prioritaet. */
+function nachTripRang(
+	activeIds: string[],
+	metricById: Record<string, { trip_default_rank?: number | null }>,
+	allIds: string[],
+): Buckets | null {
+	const rang = (id: string) => metricById[id]?.trip_default_rank;
+	if (!activeIds.length || !activeIds.every((id) => typeof rang(id) === 'number')) return null;
+	const primary = [...activeIds].sort((a, c) => (rang(a) as number) - (rang(c) as number));
+	const aktiv = new Set(primary);
+	return { primary, secondary: [], off: allIds.filter((id) => !aktiv.has(id)) };
 }
 
 /**

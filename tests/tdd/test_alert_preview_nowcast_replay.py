@@ -113,7 +113,18 @@ def _dry_frames(now: datetime) -> list[dict]:
     ]
 
 
+# Gestellte Uhr (Muster Issue #2096 unten): der Beginn entsteht aus
+# `datetime.now()` + Minuten; zwischen ~23:30 und 24:00 UTC lief er ueber
+# Mitternacht, das Produkt stellt dann korrekt das Wochentagskuerzel voran
+# (`R1.4@Mo0:14`, Issue #2054) und das `@HH:MM`-Muster griff nicht
+# (CI-Nachtlauf 2026-11-15 23:54 UTC). Geprueft wird hier Menge und
+# Zeitpunkt-statt-Countdown, daher mittags gestellt; der Ueberlauf laeuft in
+# `TestS3_ReichweiteUndGueteImReplay` und den #2054-Faellen.
+_MITTAGS_UHR = "2026-08-22 12:00:00+00:00"
+
+
 class TestAC6_OnsetReplayDetectsOnset:
+    @freeze_time(_MITTAGS_UHR)
     def test_wet_frames_yield_onset_detected_true_with_derived_minutes(
         self, client, stub_trip,
     ):
@@ -177,6 +188,7 @@ class TestAC6_OnsetReplayDetectsOnset:
         )
 
 
+    @freeze_time(_MITTAGS_UHR)
     def test_spaeter_onset_zeigt_die_menge_ab_beginn_nicht_ab_jetzt(
         self, client, stub_trip,
     ):

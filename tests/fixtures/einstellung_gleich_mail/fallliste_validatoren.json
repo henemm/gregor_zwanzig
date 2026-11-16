@@ -1,0 +1,25 @@
+{
+  "dimensionen": {},
+  "faelle": [
+    {"id": "VT-01", "liste": "validator_trip", "kontext": "trip", "format": "html", "pruefung": "reihenfolge", "test": "test_trip_positiv_mail_stimmt_mit_konfig", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VT-02", "liste": "validator_trip", "kontext": "trip", "format": "klartext", "pruefung": "reihenfolge", "test": "test_trip_positiv_mail_stimmt_mit_konfig", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VT-03", "liste": "validator_trip", "kontext": "trip", "format": "html", "pruefung": "reihenfolge", "test": "test_trip_spalten_vertauscht_scheitert_mit_name", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VT-04", "liste": "validator_trip", "kontext": "trip", "format": "klartext", "pruefung": "auswahl", "test": "test_trip_spalte_fehlt_im_klartext_scheitert", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VT-05", "liste": "validator_trip", "kontext": "trip", "format": "html", "pruefung": "auswahl", "test": "test_trip_spalte_zu_viel_scheitert", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VT-06", "liste": "validator_trip", "kontext": "trip", "format": "klartext", "pruefung": "ein_aus", "test": "test_trip_klartext_ausblick_fehlt_scheitert", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VT-07", "liste": "validator_trip", "kontext": "trip", "format": "kompakt", "pruefung": "reihenfolge", "test": "test_trip_kompakt_ausblick_folge", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VT-08", "liste": "validator_trip", "kontext": "trip", "format": "html", "pruefung": "reihenfolge", "test": "test_trip_ausblick_nie_eingestellt_folgt_trip_reihenfolge", "ac": "AC-4, AC-19", "befund": "T1", "status": "gruen", "verweis": "#3047 T1"},
+    {"id": "VT-09", "liste": "validator_trip", "kontext": "trip", "format": "html", "pruefung": "altbestand", "test": "test_trip_zwei_gueltige_folgen_ohne_konfig_beide_gruen_mit_konfig_nur_passende", "ac": "AC-11, AC-20", "befund": "", "status": "gruen"},
+    {"id": "VO-01", "liste": "validator_orte", "kontext": "orte", "format": "html", "pruefung": "reihenfolge", "test": "test_orte_positiv_mail_stimmt_mit_konfig", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VO-02", "liste": "validator_orte", "kontext": "orte", "format": "klartext", "pruefung": "reihenfolge", "test": "test_orte_positiv_mail_stimmt_mit_konfig", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VO-03", "liste": "validator_orte", "kontext": "orte", "format": "html", "pruefung": "ortsreihenfolge", "test": "test_orte_ortsfolge_vertauscht_scheitert", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VO-04", "liste": "validator_orte", "kontext": "orte", "format": "klartext", "pruefung": "ortsreihenfolge", "test": "test_orte_ortsfolge_vertauscht_scheitert", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VO-05", "liste": "validator_orte", "kontext": "orte", "format": "klartext", "pruefung": "reihenfolge", "test": "test_orte_stundenspalten_vertauscht_scheitert", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VO-06", "liste": "validator_orte", "kontext": "orte", "format": "klartext", "pruefung": "auswahl", "test": "test_orte_vergleichszeile_fehlt_scheitert", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VO-07", "liste": "validator_orte", "kontext": "orte", "format": "klartext", "pruefung": "ein_aus", "test": "test_orte_klartext_ausblick_fehlt_scheitert", "ac": "AC-19", "befund": "", "status": "gruen"},
+    {"id": "VO-08", "liste": "validator_orte", "kontext": "orte", "format": "klartext", "pruefung": "altbestand", "test": "test_orte_altbestand_ausblick_klartext_wie_html", "ac": "AC-21, AC-19", "befund": "O3", "status": "gruen", "verweis": "#3047 O3"},
+    {"id": "VO-09", "liste": "validator_orte", "kontext": "orte", "format": "html", "pruefung": "altbestand", "test": "test_orte_zwei_gueltige_folgen_ohne_konfig_beide_gruen_mit_konfig_nur_passende", "ac": "AC-11, AC-20", "befund": "", "status": "gruen"},
+    {"id": "VO-10", "liste": "validator_orte", "kontext": "orte", "format": "html", "pruefung": "reihenfolge", "test": "test_orte_channel_layouts_vor_channel_active_metrics", "ac": "AC-19", "befund": "F8", "status": "gruen", "verweis": "#3039 channel_layouts.email"},
+    {"id": "VO-11", "liste": "validator_orte", "kontext": "orte", "format": "klartext", "pruefung": "ein_aus", "test": "test_orte_channel_layouts_vor_channel_active_metrics", "ac": "AC-19", "befund": "F8", "status": "gruen", "verweis": "#3039 channel_layouts.email"}
+  ]
+}

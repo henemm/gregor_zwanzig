@@ -49,7 +49,7 @@
 	// `splitChannelMetricsForDisplay` (Trip-Modul, unten) wird WIEDERVERWENDET —
 	// sie ist bereits generisch ueber `string[]`, kein Compare-Eigenbau.
 	import {
-		COMPARE_CHANNEL_IDS, startCompareChannelOverride,
+		startCompareChannelOverride, compareToggleFolgen,
 		type CompareChannelActiveMetrics,
 	} from './weather-metrics-tab/compareChannelMetricLayouts.ts';
 	// Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (nur context="route").
@@ -63,7 +63,7 @@
 		// Bug #2454 Fix-Loop 1 (Finding F001): globales Toggle inkl. Kind-
 		// Mitnahme UND Kanal-Durchschreibung als EINE geteilte, exportierte
 		// Funktion (Test-Nachbau ruft dieselbe Funktion, kein zweiter Nachbau).
-		toggleGlobalMetric,
+		toggleGlobalMetric, appendNewMetricsToOutlook,
 		type ChannelOverride,
 	} from './weather-metrics-tab/channelMetricLayouts.ts';
 	// Fix #2422 S2a Fix-Loop 1 (Adversary-Funde F003/F004): Bestand-Auswahl
@@ -729,8 +729,8 @@
 		const activeIds = userP
 			? userP.metrics.filter((m) => m.enabled).map((m) => m.metric_id)
 			: (tmpl ? tmpl.metrics : []);
-		let newBuckets = autoAssign(activeIds, catalog);
-		newBuckets = { primary: bucketsToColumns(newBuckets), secondary: [], off: newBuckets.off };
+		// #3047 AC-16: Vorlagen-Folge bleibt (kein Umsortieren nach METRIC_PRIORITY), autoAssign liefert nur `off`.
+		const newBuckets = { primary: [...new Set(activeIds)], secondary: [], off: autoAssign(activeIds, catalog).off };
 		const newFriendly = { ...friendlyMap };
 		if (userP) {
 			for (const m of userP.metrics) {
@@ -788,14 +788,14 @@
 	// Umschalten inkl. Kind-Mitnahme UND der Durchschreibung in Kanal-Overrides
 	// (Issue #1719 S3, ADR-0050 Regel 3) lebt jetzt als EINE reine, exportierte
 	// Funktion `toggleGlobalMetric()` in channelMetricLayouts.ts — dieselbe
-	// Funktion, die der Test-Nachbau aufruft. `wasOn`/EINWAHL bleibt weiterhin
-	// bewusst ohne Durchschreibung (Grundsatz "keine Bevormundung", Abschnitt 4).
+	// Funktion, die der Test-Nachbau aufruft. #3047 T3 (AC-10): die EINWAHL
+	// haengt die Metrik hinten an jede bereits bearbeitete Liste (Konzept §5/6+8).
 	function onToggleMetric(id: string, wasOn: boolean) {
 		userTouched = true;
 		const result = toggleGlobalMetric(buckets, channelBuckets, id, wasOn);
-		if (result.buckets !== buckets) {
-			applyDiff(result.buckets.primary, friendlyMap, selectedTemplate);
-		}
+		if (result.buckets !== buckets) applyDiff(result.buckets.primary, friendlyMap, selectedTemplate);
+		// #3047 T3 (AC-10): eine eingewaehlte Metrik steht auch hinten in der gespeicherten Ausblick-Liste.
+		outlookMetricKeysRoute = appendNewMetricsToOutlook(outlookMetricKeysRoute, result.buckets.primary.filter((m) => !buckets.primary.includes(m)), compareCatalog);
 		buckets = result.buckets;
 		channelBuckets = result.channelBuckets;
 		if (selectedTemplate) selectedTemplate = '';
@@ -1153,26 +1153,26 @@
 	function toggleCompareMetric(metric: string) {
 		const wasOn = materializedActiveMetricKeys.includes(metric);
 		const nextActive = toggleCompareMetricKeyFromState(activeMetricKeys ?? null, metric);
-		// Issue #1703 S8 (ADR-0050 Regel 3, Trip-Vorbild onToggleMetric Z. 712-730):
+		// Issue #1703 S8 (ADR-0050 Regel 3, Trip-Vorbild onToggleMetric):
 		// eine globale ABWAHL wirkt SOFORT in allen bereits vorhandenen
-		// Kanal-Overrides. Die EINWAHL-Richtung schreibt bewusst NICHT durch
-		// ("keine Bevormundung") — die Zeile taucht im Kanal-Reiter in der
-		// Aus-Gruppe auf, der Nutzer entscheidet dort selbst.
-		// Ohne diese Durchschreibung bliebe die Anzeige zwar korrekt
-		// (splitChannelMetricsForDisplay filtert immer gegen die Grundauswahl),
-		// der GESPEICHERTE Kanal-Eintrag truege die Metrik aber weiter (M3).
-		let nextChannelActive = channelActiveMetricKeys;
-		if (wasOn && channelActiveMetricKeys) {
-			const next = { ...channelActiveMetricKeys };
-			let changed = false;
-			for (const ch of COMPARE_CHANNEL_IDS) {
-				const override = next[ch];
-				if (override === null || !override.includes(metric)) continue;
-				next[ch] = override.filter((id) => id !== metric);
-				changed = true;
-			}
-			if (changed) nextChannelActive = next;
-		}
+		// Kanal-Overrides — sonst truege der GESPEICHERTE Kanal-Eintrag die
+		// Metrik weiter (M3), auch wenn die Anzeige sie schon filtert.
+		// #3047 T3 (AC-10, Konzept §5 Punkt 6/8, loest die fruehere Regel
+		// „Einwahl schreibt nicht durch" ab): eine EINWAHL steht danach in
+		// JEDER bereits gespeicherten Liste hinten — Kanal-Listen,
+		// `outlook_metrics` und `hourly_metrics` (nur stuendlich waehlbar).
+		// Nie eingestellte Listen (`null`) folgen ohnehin der Grundauswahl.
+		// EINE geteilte Funktion (compareChannelMetricLayouts.ts), die auch der
+		// Test aufruft; unveraenderte Listen behalten ihre Referenz.
+		const folgen = compareToggleFolgen(metric, wasOn, {
+			channelActive: channelActiveMetricKeys,
+			outlookKeys: outlookMetricKeys,
+			hourlyKeys: hourlyMetricKeys
+		}, compareCatalog);
+		if (folgen.outlookKeys !== outlookMetricKeys) onOutlookMetricKeysChange?.(folgen.outlookKeys ?? null);
+		if (folgen.hourlyKeys !== hourlyMetricKeys) onHourlyMetricKeysChange?.(folgen.hourlyKeys ?? null);
+		// Grundauswahl + Kanal-Listen weiter in EINEM gekoppelten Rueckruf.
+		const nextChannelActive = folgen.channelActive;
 		onVergleichsMetrikenChange?.(nextActive, nextChannelActive as CompareChannelActiveMetrics);
 	}
 

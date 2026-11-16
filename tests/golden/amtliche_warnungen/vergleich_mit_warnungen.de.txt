@@ -5,6 +5,8 @@ Erstellt: 29.10.2026 05:00 (CET)
 
 --------------------------------------------------
 Innsbruck
+   ⚠️ Amtliche Warnung: Mäßige Gewitterwarnung (Do 29.10. · 10:00–19:00)
+   ⚠️ Amtliche Warnung: Extreme Hitze (Do 29.10. · ganztägig)
    Temperatur Maximum: 11°C
    Wind: 26 km/h
    Niederschlag: 2.4 mm
@@ -30,8 +32,6 @@ Innsbruck
    Luftdruck: 1012 hPa
    Niederschlagsart: Regen
    Schneefallgrenze: 2100 m
-   ⚠️ Amtliche Warnung: Mäßige Gewitterwarnung (Do 29.10. · 10:00–19:00)
-   ⚠️ Amtliche Warnung: Extreme Hitze (Do 29.10. · ganztägig)
 
 Lienz
    Temperatur Maximum: 12°C
@@ -61,6 +61,7 @@ Lienz
    Schneefallgrenze: 2150 m
 
 Kufstein
+   ⚠️ Amtliche Warnung: Waldbrand-Gefahr — Stufe 3
    Temperatur Maximum: 13°C
    Wind: 26 km/h
    Niederschlag: 8.4 mm
@@ -86,7 +87,6 @@ Kufstein
    Luftdruck: 1014 hPa
    Niederschlagsart: Mischniederschlag
    Schneefallgrenze: 2200 m
-   ⚠️ Amtliche Warnung: Waldbrand-Gefahr — Stufe 3
 
 Brenner
    Fehler: Zeitueberschreitung beim Abruf
@@ -106,9 +106,9 @@ Innsbruck (CET)
    15:00  Temp 10°  Feels 3°  Humid 75  Dew 1  Wind 25  Gust 37  Rain 0.8  Rain% 70%  Thdr –  SnowL 2100  PType Regen  Cloud 75  CldLow 25  CldMid 35  CldHi 20  Visib 10.5  UV 2  Press 1012  0°Line 2400  SnowH –  NewSn –
    16:00  Temp 10°  Feels 3°  Humid 76  Dew 1  Wind 26  Gust 38  Rain ·  Rain% 15%  Thdr –  SnowL 2100  PType –  Cloud 78  CldLow 26  CldMid 36  CldHi 21  Visib 10.0  UV 3  Press 1012  0°Line 2400  SnowH –  NewSn –
 3-Tages-Ausblick
-Fr  Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
-Sa  Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
-So  Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
+Fr  Temp 6/11°C   Rain 1.6mm Rain% 70%  Wind S28   Gust 40  Thdr ⚡–
+Sa  Temp 6/11°C   Rain 1.6mm Rain% 70%  Wind S28   Gust 40  Thdr ⚡–
+So  Temp 6/11°C   Rain 1.6mm Rain% 70%  Wind S28   Gust 40  Thdr ⚡–
 
 Lienz (CET)
    08:00  Temp 7°  Feels 4°  Humid 68  Dew 2  Wind 18  Gust 35  Rain ·  Rain% 15%  Thdr –  SnowL 2150  PType –  Cloud 54  CldLow 18  CldMid 28  CldHi 13  Visib 14.0  UV 4  Press 1013  0°Line 2450  SnowH –  NewSn –
@@ -121,9 +121,9 @@ Lienz (CET)
    15:00  Temp 10°  Feels 4°  Humid 75  Dew 2  Wind 25  Gust 42  Rain 1.8  Rain% 70%  Thdr leicht · CAPE, Blitzdichte · Hagel: ja  SnowL 2150  PType Regen  Cloud 75  CldLow 25  CldMid 35  CldHi 20  Visib 10.5  UV 2  Press 1013  0°Line 2450  SnowH –  NewSn –
    16:00  Temp 11°  Feels 4°  Humid 76  Dew 2  Wind 26  Gust 43  Rain ·  Rain% 15%  Thdr –  SnowL 2150  PType –  Cloud 78  CldLow 26  CldMid 36  CldHi 21  Visib 10.0  UV 3  Press 1013  0°Line 2450  SnowH –  NewSn –
 3-Tages-Ausblick
-Fr  Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡mittel@13 · CAPE, Blitzdichte · Hagel: ja
-Sa  Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡mittel@13 · CAPE, Blitzdichte · Hagel: ja
-So  Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡mittel@13 · CAPE, Blitzdichte · Hagel: ja
+Fr  Temp 7/12°C   Rain 3.6mm Rain% 70%  Wind SW28  Gust 45  Thdr ⚡mittel@13 · CAPE, Blitzdichte · Hagel: ja
+Sa  Temp 7/12°C   Rain 3.6mm Rain% 70%  Wind SW28  Gust 45  Thdr ⚡mittel@13 · CAPE, Blitzdichte · Hagel: ja
+So  Temp 7/12°C   Rain 3.6mm Rain% 70%  Wind SW28  Gust 45  Thdr ⚡mittel@13 · CAPE, Blitzdichte · Hagel: ja
 
 Kufstein (CET)
    08:00  Temp 8°  Feels 5°  Humid 68  Dew 3  Wind 18  Gust 40  Rain ·  Rain% 15%  Thdr –  SnowL 2200  PType –  Cloud 54  CldLow 18  CldMid 28  CldHi 13  Visib 14.0  UV 4  Press 1014  0°Line 2500  SnowH –  NewSn –
@@ -163,24 +163,24 @@ ORTS-VERGLEICH — Golden-Vergleich
 Datum: 29.10.2026
 
 Innsbruck
-   Temp max 11°C · Regen 2.4 mm · Gewitter – · Niederschlagsart Regen · Böen 38 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
-   … +3 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail
-   … +1 gewählte Wettergrößen ohne Wert an diesem Ort
    <b>Innsbruck · höchste Stufe ORANGE (2/3)</b>
 🟠 Mäßige Gewitterwarnung · Do 29.10. · 11:00–20:00
 🟡 Extreme Hitze · Do 29.10. · 01:00–23:59
 MeteoAlarm · Météo-France
+   Temp max 11°C · Regen 2.4 mm · Gewitter – · Niederschlagsart Regen · Böen 38 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
+   … +3 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail
+   … +1 gewählte Wettergrößen ohne Wert an diesem Ort
 Lienz
    Temp max 12°C · Regen 5.4 mm · Gewitter mittel · CAPE, Blitzdichte · Hagel: ja · Niederschlagsart Regen · Böen 39 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
    … +3 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail
    … +1 gewählte Wettergrößen ohne Wert an diesem Ort
 Kufstein
-   Temp max 13°C · Regen 8.4 mm · Gewitter – · Niederschlagsart Mischniederschlag · Böen 40 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
-   … +3 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail
-   … +1 gewählte Wettergrößen ohne Wert an diesem Ort
    <b>Kufstein · Warnstufe ORANGE (2/3)</b>
 🟠 Waldbrand-Gefahr
 Météo-France (Waldbrand)
+   Temp max 13°C · Regen 8.4 mm · Gewitter – · Niederschlagsart Mischniederschlag · Böen 40 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
+   … +3 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail
+   … +1 gewählte Wettergrößen ohne Wert an diesem Ort
 Brenner
    Fehler: Zeitueberschreitung beim Abruf
 
@@ -190,18 +190,18 @@ ORTS-VERGLEICH
 Datum: 29.10.2026
 
 Innsbruck
-   keine Werte
    <b>Innsbruck · höchste Stufe ORANGE (2/3)</b>
 🟠 Mäßige Gewitterwarnung · Do 29.10. · 11:00–20:00
 🟡 Extreme Hitze · Do 29.10. · 01:00–23:59
 MeteoAlarm · Météo-France
+   keine Werte
 Lienz
    keine Werte
 Kufstein
-   keine Werte
    <b>Kufstein · Warnstufe ORANGE (2/3)</b>
 🟠 Waldbrand-Gefahr
 Météo-France (Waldbrand)
+   keine Werte
 Brenner
    Fehler: Zeitueberschreitung beim Abruf
 

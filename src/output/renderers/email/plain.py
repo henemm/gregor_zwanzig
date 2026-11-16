@@ -60,6 +60,39 @@ from output.renderers.email.outlook_state_hint import (
 )
 
 
+def _report_heading(trip_name: str, report_type: str, lang: Lang) -> str:
+    """Kopfzeile „<Trip> - <Art>-Bericht" in Nutzersprache (#3047 AC-17)."""
+    if report_type in ("morning", "evening", "alert"):
+        # i18n-dynamic: mail.kopf.bericht_
+        return t(f"mail.kopf.bericht_{report_type}", lang, name=trip_name)
+    return t("mail.kopf.bericht_allgemein", lang, name=trip_name,
+             typ=report_type.title())
+
+
+def _warn_block_lines(segments: list[SegmentWeatherData],
+                      starkregen_hint_text: Optional[str], lang: Lang) -> list[str]:
+    """Warnblock des Klartexts (amtliche Warnungen, Ausfall-Hinweis,
+    Starkregen) -- Inhalt und Reihenfolge wie ``warn_block_html``."""
+    lines: list[str] = []
+    # Issue #1087: amtliche Warnungen, gemeinsamer Renderer (Epic #1073 Punkt 6).
+    _alert_entries = collect_trip_alert_entries(segments)
+    if _alert_entries:
+        lines.append(f"━━ {t('mail.warnungen.ueberschrift', lang)} ━━")
+        for _line in render_official_alerts_plain(_alert_entries, lang=lang):
+            lines.append(f"  ⚠️ {_line}")
+        lines.append("")
+    # Issue #1348: Hinweis "amtliche Warnungen nicht abrufbar" — orthogonal zu
+    # echten Warnungen, nur bei gesetztem Ausfall-Flag (Byte-Gleichheit sonst).
+    if any_official_alerts_unavailable(segments):
+        lines.append(f"  {render_official_alerts_unavailable_plain(lang=lang)}")
+        lines.append("")
+    # Issue #1439: Starkregen-Kurzfristhinweis (planmaessiger Pfad).
+    if starkregen_hint_text:
+        lines.append(f"  {render_starkregen_hint_plain(starkregen_hint_text)}")
+        lines.append("")
+    return lines
+
+
 def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
                        format_modes: Optional[dict[str, str]] = None,
                        col_order: Optional[list[str]] = None,
@@ -75,7 +108,10 @@ def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
         ordered = [(k, col_map[k]) for k in col_order if k in col_map]
         remaining = [(k, label) for k, label in cols if k not in col_order]
         cols = ordered + remaining
-    headers = [("Time", "time")] + [(label, key) for key, label in cols]
+    # Issue #3047 AC-17: Zeitspalten-Kopf in Nutzersprache; die Metrik-
+    # Kuerzel (col_label) sind Protokoll-Token und bleiben unuebersetzt.
+    headers = ([(t("mail.tabelle.zeit", lang), "time")]
+               + [(label, key) for key, label in cols])
     widths = []
     for label, key in headers:
         w = len(label)
@@ -159,7 +195,7 @@ def render_plain(
     # Bug #397: Datums-Header in Ortszeit (passt zu lokalen Segment-Zeiten).
     report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
     lines.append(f"{sig.icon} {sig.eyebrow}")
-    lines.append(f"{trip_name} - {report_type.title()} Report")
+    lines.append(_report_heading(trip_name, report_type, lang))
     if stage_name:
         lines.append(stage_name)
     lines.append(report_date)
@@ -175,6 +211,10 @@ def render_plain(
             parts.append(f"max. {stage_stats['max_elevation_m']}m")
         lines.append(" | ".join(parts))
     lines.append("")
+
+    # #3047 WV6: Warnblock direkt nach dem Kopf, vor jedem Metrik-Inhalt --
+    # dieselbe Stelle wie ``warn_block_html`` im HTML-Teil.
+    lines.extend(_warn_block_lines(segments, starkregen_hint_text, lang))
 
     if compact_summary:
         lines.append(compact_summary)
@@ -247,25 +287,6 @@ def render_plain(
             lines.append(f"  {format_change_line(c, label)}")
         lines.append("")
 
-    # Issue #1087: amtliche Warnungen, gemeinsamer Renderer (Epic #1073 Punkt 6).
-    _alert_entries = collect_trip_alert_entries(segments)
-    if _alert_entries:
-        lines.append(f"━━ {t('mail.warnungen.ueberschrift', lang)} ━━")
-        for _line in render_official_alerts_plain(_alert_entries, lang=lang):
-            lines.append(f"  ⚠️ {_line}")
-        lines.append("")
-
-    # Issue #1348: Hinweis "amtliche Warnungen nicht abrufbar" — orthogonal zu
-    # echten Warnungen, nur bei gesetztem Ausfall-Flag (Byte-Gleichheit sonst).
-    if any_official_alerts_unavailable(segments):
-        lines.append(f"  {render_official_alerts_unavailable_plain(lang=lang)}")
-        lines.append("")
-
-    # Issue #1439: Starkregen-Kurzfristhinweis (planmaessiger Pfad).
-    if starkregen_hint_text:
-        lines.append(f"  {render_starkregen_hint_plain(starkregen_hint_text)}")
-        lines.append("")
-
     for seg_data, rows in zip(segments, seg_tables):
         seg = seg_data.segment
         if seg_data.has_error:
@@ -295,7 +316,10 @@ def render_plain(
         lines.append(f"━━ {t('mail.nacht.am_ziel', lang, hoehe=_hoehe)} ━━")
         lines.append(t("mail.nacht.ankunft", lang,
                        zeit=local_fmt(display_end_time(last_seg), tz)))
+        # Issue #3047 AC-15: dieselben format_modes wie die Etappentabelle
+        # (und wie die HTML-Nachttabelle), sonst kippt Roh/Einfach.
         lines.append(_render_text_table(night_rows, friendly_keys=friendly_keys,
+                                         format_modes=format_modes,
                                          col_order=_col_order, lang=lang, ampel=ampel))
         if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):
             lines.append(f"  {t('mail.nacht.hinweis_minimum', lang)}")

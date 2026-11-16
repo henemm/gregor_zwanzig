@@ -5,6 +5,8 @@ Created: 29 Oct 2026 05:00 (CET)
 
 --------------------------------------------------
 Innsbruck
+   ⚠️ Official warning: Moderate thunderstorm warning (Thu 29 Oct · 10:00–19:00)
+   ⚠️ Official warning: Heat (Thu 29 Oct · all day)
    Temperature Maximum: 11°C
    Wind: 26 km/h
    Precipitation: 2.4 mm
@@ -30,8 +32,6 @@ Innsbruck
    Air pressure: 1012 hPa
    Precipitation type: Rain
    Snow line: 2100 m
-   ⚠️ Official warning: Moderate thunderstorm warning (Thu 29 Oct · 10:00–19:00)
-   ⚠️ Official warning: Heat (Thu 29 Oct · all day)
 
 Lienz
    Temperature Maximum: 12°C
@@ -61,6 +61,7 @@ Lienz
    Snow line: 2150 m
 
 Kufstein
+   ⚠️ Official warning: Wildfire risk
    Temperature Maximum: 13°C
    Wind: 26 km/h
    Precipitation: 8.4 mm
@@ -86,7 +87,6 @@ Kufstein
    Air pressure: 1014 hPa
    Precipitation type: Mixed precipitation
    Snow line: 2200 m
-   ⚠️ Official warning: Wildfire risk
 
 Brenner
    Error: Zeitueberschreitung beim Abruf
@@ -106,9 +106,9 @@ Innsbruck (CET)
    15:00  Temp 10°  Feels 3°  Humid 75  Dew 1  Wind 25  Gust 37  Rain 0.8  Rain% 70%  Thdr –  SnowL 2100  PType Rain  Cloud 75  CldLow 25  CldMid 35  CldHi 20  Visib 10.5  UV 2  Press 1012  0°Line 2400  SnowH –  NewSn –
    16:00  Temp 10°  Feels 3°  Humid 76  Dew 1  Wind 26  Gust 38  Rain ·  Rain% 15%  Thdr –  SnowL 2100  PType –  Cloud 78  CldLow 26  CldMid 36  CldHi 21  Visib 10.0  UV 3  Press 1012  0°Line 2400  SnowH –  NewSn –
 3-day outlook
-Fri Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
-Sat Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
-Sun Temp 6/11°C   Rain 1.6mm Wind S28   Thdr ⚡–
+Fri Temp 6/11°C   Rain 1.6mm Rain% 70%  Wind S28   Gust 40  Thdr ⚡–
+Sat Temp 6/11°C   Rain 1.6mm Rain% 70%  Wind S28   Gust 40  Thdr ⚡–
+Sun Temp 6/11°C   Rain 1.6mm Rain% 70%  Wind S28   Gust 40  Thdr ⚡–
 
 Lienz (CET)
    08:00  Temp 7°  Feels 4°  Humid 68  Dew 2  Wind 18  Gust 35  Rain ·  Rain% 15%  Thdr –  SnowL 2150  PType –  Cloud 54  CldLow 18  CldMid 28  CldHi 13  Visib 14.0  UV 4  Press 1013  0°Line 2450  SnowH –  NewSn –
@@ -121,9 +121,9 @@ Lienz (CET)
    15:00  Temp 10°  Feels 4°  Humid 75  Dew 2  Wind 25  Gust 42  Rain 1.8  Rain% 70%  Thdr light · CAPE, Lightning density · Hail: yes  SnowL 2150  PType Rain  Cloud 75  CldLow 25  CldMid 35  CldHi 20  Visib 10.5  UV 2  Press 1013  0°Line 2450  SnowH –  NewSn –
    16:00  Temp 11°  Feels 4°  Humid 76  Dew 2  Wind 26  Gust 43  Rain ·  Rain% 15%  Thdr –  SnowL 2150  PType –  Cloud 78  CldLow 26  CldMid 36  CldHi 21  Visib 10.0  UV 3  Press 1013  0°Line 2450  SnowH –  NewSn –
 3-day outlook
-Fri Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
-Sat Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
-Sun Temp 7/12°C   Rain 3.6mm Wind SW28  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
+Fri Temp 7/12°C   Rain 3.6mm Rain% 70%  Wind SW28  Gust 45  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
+Sat Temp 7/12°C   Rain 3.6mm Rain% 70%  Wind SW28  Gust 45  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
+Sun Temp 7/12°C   Rain 3.6mm Rain% 70%  Wind SW28  Gust 45  Thdr ⚡medium@13 · CAPE, Lightning density · Hail: yes
 
 Kufstein (CET)
    08:00  Temp 8°  Feels 5°  Humid 68  Dew 3  Wind 18  Gust 40  Rain ·  Rain% 15%  Thdr –  SnowL 2200  PType –  Cloud 54  CldLow 18  CldMid 28  CldHi 13  Visib 14.0  UV 4  Press 1014  0°Line 2500  SnowH –  NewSn –
@@ -163,24 +163,24 @@ LOCATION COMPARISON — Golden-Vergleich
 Date: 29 Oct 2026
 
 Innsbruck
-   Temp max 11°C · Rain 2.4 mm · Thunderstorm – · Precipitation type Rain · Gusts 38 km/h · Rain probability 70% · Wind 26 km/h
-   … +3 more weather values per location (Telegram limit) — full version by email
-   … +1 selected weather value without data at this location
    <b>Innsbruck · highest level ORANGE (2/3)</b>
 🟠 Moderate thunderstorm warning · Thu 29 Oct · 11:00–20:00
 🟡 Heat · Thu 29 Oct · 01:00–23:59
 MeteoAlarm · Météo-France
+   Temp max 11°C · Rain 2.4 mm · Thunderstorm – · Precipitation type Rain · Gusts 38 km/h · Rain probability 70% · Wind 26 km/h
+   … +3 more weather values per location (Telegram limit) — full version by email
+   … +1 selected weather value without data at this location
 Lienz
    Temp max 12°C · Rain 5.4 mm · Thunderstorm medium · CAPE, Lightning density · Hail: yes · Precipitation type Rain · Gusts 39 km/h · Rain probability 70% · Wind 26 km/h
    … +3 more weather values per location (Telegram limit) — full version by email
    … +1 selected weather value without data at this location
 Kufstein
-   Temp max 13°C · Rain 8.4 mm · Thunderstorm – · Precipitation type Mixed precipitation · Gusts 40 km/h · Rain probability 70% · Wind 26 km/h
-   … +3 more weather values per location (Telegram limit) — full version by email
-   … +1 selected weather value without data at this location
    <b>Kufstein · Warning level ORANGE (2/3)</b>
 🟠 Wildfire risk
 Météo-France (wildfire)
+   Temp max 13°C · Rain 8.4 mm · Thunderstorm – · Precipitation type Mixed precipitation · Gusts 40 km/h · Rain probability 70% · Wind 26 km/h
+   … +3 more weather values per location (Telegram limit) — full version by email
+   … +1 selected weather value without data at this location
 Brenner
    Error: Zeitueberschreitung beim Abruf
 
@@ -190,18 +190,18 @@ LOCATION COMPARISON
 Date: 29 Oct 2026
 
 Innsbruck
-   no values
    <b>Innsbruck · highest level ORANGE (2/3)</b>
 🟠 Moderate thunderstorm warning · Thu 29 Oct · 11:00–20:00
 🟡 Heat · Thu 29 Oct · 01:00–23:59
 MeteoAlarm · Météo-France
+   no values
 Lienz
    no values
 Kufstein
-   no values
    <b>Kufstein · Warning level ORANGE (2/3)</b>
 🟠 Wildfire risk
 Météo-France (wildfire)
+   no values
 Brenner
    Error: Zeitueberschreitung beim Abruf
 

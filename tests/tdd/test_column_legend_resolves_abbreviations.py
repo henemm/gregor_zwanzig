@@ -503,7 +503,7 @@ def _header_shorts(rendered_html: str, *, zeitspalte: str, weglassen: set[str]) 
     """Kuerzel aus dem gerenderten Tabellenkopf der Stundentabelle.
 
     Ausgewertet wird die Kopfzeile, die die fest verdrahtete Zeitspalte
-    ('Zeit' im Vergleich, 'Time' im Trip) enthaelt — damit nicht die
+    (in der Nutzersprache, de: "Zeit", seit #3047 auch im Trip) enthaelt — damit nicht die
     Uebersichtsmatrix (Kopf = Ortsnamen) mitgezaehlt wird. Mehrere Ortsbloecke
     liefern dieselbe Kopfzeile mehrfach; die erste genuegt.
     """
@@ -530,7 +530,8 @@ def test_ac8_legend_names_exactly_the_abbreviations_of_the_table_head():
     gerenderten Kopfzeile beider HTML-Ausgaben, als Mengen-GLEICHHEIT."""
     faelle = (
         ("Vergleich HTML", _render_compare(_AC8_COMPARE)[0], "Zeit", {"Zeit"}),
-        ("Trip HTML", _render_trip_html(_AC8_TRIP), "Time", {"Time", "Risk"}),
+        # #3047 AC-17: Trip-Kopf in Nutzersprache (de) wie im Vergleich.
+        ("Trip HTML", _render_trip_html(_AC8_TRIP), "Zeit", {"Zeit", "Risiko"}),
     )
     geprueft = 0
     for pfad, html, zeitspalte, weglassen in faelle:

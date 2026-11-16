@@ -23,8 +23,10 @@ FORMATE = ["briefing_full_de.eml", "briefing_compact_de.eml"]
 
 @pytest.mark.parametrize("fixture", FORMATE)
 def test_ac4_englische_mail_mit_kopf_en_besteht(tmp_path, fixture):
+    # #3047 AC-17: Kopfzeile ist Katalogtext (mail.kopf.bericht_evening).
     eml = als_englisch(lade(fixture), SCHLUESSEL,
-                      {"Metriken-Ueberblick": "Metrics overview"})
+                      {"Metriken-Ueberblick": "Metrics overview",
+                       "Abend-Briefing": "Evening Report"})
     lauf, _ = validator_lauf(tmp_path, VALIDATOR, eml)
     assert lauf.returncode == 0, lauf.stdout + lauf.stderr
 

@@ -1,5 +1,5 @@
 
 Nächste Etappen
-Mo  Etappe A                   Temp 9/21°C   Rain 2.5mm Wind W18   Thdr ⚡mittel@16
+Mo  Etappe A                   Temp 9/21°C   Rain 2.5mm Rain% 55%  Wind W18   Gust 44  Thdr ⚡mittel@16
     ↳ Hütte geschlossen
-Di  Etappe B                   Temp 11/19°C  Rain –     Wind W25   Thdr ⚡mittel@16
+Di  Etappe B                   Temp 11/19°C  Rain –     Rain% 55%  Wind W25   Gust 31  Thdr ⚡mittel@16

@@ -202,7 +202,8 @@ def render_comparison_text(
     ``show_fallback_notice`` (Issue #1563): Vertretungshinweis je Ort unter
     der Uebersicht, nur Briefing; Default ``False``.
 
-    Kein Score/🏆 mehr. Je Ort: Uebersichtswerte + amtliche Warnungen (via
+    Kein Score/🏆 mehr. Je Ort: amtliche Warnungen zuerst (#3047 WV6), dann
+    Uebersichtswerte (Warnungen via
     ``render_official_alerts_plain()``, kein Copy-Paste, ADR-0011). Danach
     kompakte Stundentabellen fuer ALLE Orte (kein Rang-Praefix, keine
     Top-N-Beschraenkung mehr).
@@ -286,6 +287,12 @@ def render_comparison_text(
             lines.append("")
             continue
 
+        # Amtliche Warnungen, eine Zeile pro Warnung (Epic #1073 Punkt 6,
+        # gemeinsamer Renderer statt Copy-Paste). Issue #3047 (Konzept WV6):
+        # wie im HTML-Teil ZUERST, vor den Metrik-Zeilen in Nutzerfolge.
+        for line in render_official_alerts_plain([(loc.name, loc_result.official_alerts)], lang=lang):
+            lines.append(f"   ⚠️ {line}")
+
         # Issue #1359: EINE geordnete Schleife statt fester if-Kette. Die
         # Werte kommen weiterhin aus DERSELBEN Quelle wie die HTML-Matrix
         # (`_metric_value` -> Engine-Feld bzw. live aus hourly_data), damit
@@ -313,11 +320,6 @@ def render_comparison_text(
                 if value is not None else "-"
             )
             lines.append(f"   {row['label']}: {cell}")
-
-        # Amtliche Warnungen, eine Zeile pro Warnung (Epic #1073 Punkt 6,
-        # gemeinsamer Renderer statt Copy-Paste).
-        for line in render_official_alerts_plain([(loc.name, loc_result.official_alerts)], lang=lang):
-            lines.append(f"   ⚠️ {line}")
 
         lines.append("")
 
@@ -908,32 +910,9 @@ def render_compare_telegram(
             block.append("   " + t("vergleich.ort.fehler", lang, fehler=loc_result.error))
             blocks.append(block)
             continue
-        # Werte sind ortsabhaengig -- Verfuegbarkeit VOR der Prioritaets-/
-        # Slot-Kappung pruefen (Adversary-Korrektur), nicht erst beim
-        # Zellenbau. `cell_values` haelt jede Zelle nur einmal vor (keine
-        # doppelte `_metric_value`/`_daily_summary`-Berechnung).
-        cell_values = {
-            mid: _plain_metric_cell(
-                loc_result, mid, lang, friendly=bool((metric_formats or {}).get(mid)),
-            )
-            for mid in dedup_ids
-        }
-        available_ids = [mid for mid in dedup_ids if cell_values[mid] is not None]
-        no_data_count = len(dedup_ids) - len(available_ids) + unresolved_count
-        layout = _channel_layout_for_metrics("telegram", available_ids)
-        cells = [cell_values[mid] for mid in layout.table_columns]
-        block.append("   " + (" · ".join(cells) if cells
-                                 else t("vergleich.telegram.keine_werte", lang)))
-        # Zwei getrennt zaehlbare Ausfaelle (Invariante: sichtbare Zellen +
-        # Platzmangel-Zaehler + Ohne-Daten-Zaehler == Anzahl gewaehlter
-        # Groessen). Je eigene Zeile INNERHALB dieses Ortsblocks, weil beide
-        # Zahlen ortsabhaengig sind.
-        if layout.demoted_count > 0:
-            block.append("   " + telegram_metric_notice(
-                layout.demoted_count, context="vergleich", lang=lang,
-            ))
-        if no_data_count > 0:
-            block.append("   " + _telegram_no_data_notice(no_data_count, lang))
+        # Issue #3047 (Konzept WV6, ADR-0095): wie in der Vergleichs-Mail steht
+        # die amtliche Warnung ZUERST im Ortsblock, vor den Werten (SMS/
+        # Premium-SMS: am Ende, dort unveraendert).
         # Issue #1332 (PO-Korrektur 2026-07-23): Sicherheits-Filter + geteilte,
         # kontext-agnostische Bausteine (`build_official_alert_notices`/
         # `render_official_alert_telegram`, `trip=None` fuer den einzelnen
@@ -968,6 +947,32 @@ def render_compare_telegram(
                 tz=location_tz(loc_result.location), lang=lang,
             )
             block.append(f"   {warn_text}")
+        # Werte sind ortsabhaengig -- Verfuegbarkeit VOR der Prioritaets-/
+        # Slot-Kappung pruefen (Adversary-Korrektur), nicht erst beim
+        # Zellenbau. `cell_values` haelt jede Zelle nur einmal vor (keine
+        # doppelte `_metric_value`/`_daily_summary`-Berechnung).
+        cell_values = {
+            mid: _plain_metric_cell(
+                loc_result, mid, lang, friendly=bool((metric_formats or {}).get(mid)),
+            )
+            for mid in dedup_ids
+        }
+        available_ids = [mid for mid in dedup_ids if cell_values[mid] is not None]
+        no_data_count = len(dedup_ids) - len(available_ids) + unresolved_count
+        layout = _channel_layout_for_metrics("telegram", available_ids)
+        cells = [cell_values[mid] for mid in layout.table_columns]
+        block.append("   " + (" · ".join(cells) if cells
+                                 else t("vergleich.telegram.keine_werte", lang)))
+        # Zwei getrennt zaehlbare Ausfaelle (Invariante: sichtbare Zellen +
+        # Platzmangel-Zaehler + Ohne-Daten-Zaehler == Anzahl gewaehlter
+        # Groessen). Je eigene Zeile INNERHALB dieses Ortsblocks, weil beide
+        # Zahlen ortsabhaengig sind.
+        if layout.demoted_count > 0:
+            block.append("   " + telegram_metric_notice(
+                layout.demoted_count, context="vergleich", lang=lang,
+            ))
+        if no_data_count > 0:
+            block.append("   " + _telegram_no_data_notice(no_data_count, lang))
         blocks.append(block)
 
     max_chars = limits["max_chars"]

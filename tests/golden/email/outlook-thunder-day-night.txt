@@ -2,6 +2,6 @@
 ---
 
 Nächste Etappen
-Mo  Fall A – nur Nacht         Temp 12/24°C  Rain 1.2mm Wind W18   Thdr ⚡–
-Di  Fall B – Tag + Nacht       Temp 12/24°C  Rain 1.2mm Wind W18   Thdr ⚡mittel@14
-Mi  Fall C – Tag stärker       Temp 12/24°C  Rain 1.2mm Wind W18   Thdr ⚡hoch@14
+Mo  Fall A – nur Nacht         Temp 12/24°C  Rain 1.2mm Rain% –    Wind W18   Gust –   Thdr ⚡–
+Di  Fall B – Tag + Nacht       Temp 12/24°C  Rain 1.2mm Rain% –    Wind W18   Gust –   Thdr ⚡mittel@14
+Mi  Fall C – Tag stärker       Temp 12/24°C  Rain 1.2mm Rain% –    Wind W18   Gust –   Thdr ⚡hoch@14

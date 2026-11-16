@@ -1,0 +1,2077 @@
+{
+  "dimensionen": {
+    "auswahl_muster": [
+      "teilmenge",
+      "alles",
+      "bewusst_leer",
+      "nie_eingestellt"
+    ],
+    "reihenfolge": [
+      "katalog",
+      "umkehrung",
+      "gemischt"
+    ],
+    "darstellung": [
+      "roh",
+      "gemischt",
+      "einfach"
+    ],
+    "format": [
+      "html",
+      "klartext",
+      "kompakt"
+    ],
+    "hinweis": "Paarweise Ueberdeckung je Liste: Orthogonales Feld L9(3^4) ueber auswahl_muster (teilmenge, alles, nie_eingestellt) x reihenfolge x darstellung x format, plus je Format ein Fall bewusst_leer. Eine bewusst leere Auswahl zeigt keine Metrik; Reihenfolge und Darstellung sind dann fachlich ohne Wirkung (Paare unter 'ausgeschlossen'). Die werte der bewusst_leer-Faelle tragen trotzdem alle vier Dimensionen (gespeicherte, aber wirkungslose Einstellung der Grundauswahl). Das Kompaktformat hat keine Stunden- und Nachttabelle (#722): die kompakt-Faelle dieser beiden Listen laufen echt und pruefen das Fehlen der Tabelle, Status 'ausnahme' mit Verweis. Muster: katalog = Katalogfolge, umkehrung = umgekehrte Katalogfolge, gemischt = Boeen, Temperatur, Niederschlag, Wind, Bewoelkung, UV, Windrichtung (AC-2); teilmenge = Muster ohne Wind und UV; alles/teilmenge stehen in einer Liste, deren Grundauswahl in einer dritten, abweichenden Folge gespeichert ist.",
+    "ausgeschlossen": [
+      [
+        "auswahl_muster",
+        "bewusst_leer",
+        "reihenfolge",
+        "katalog"
+      ],
+      [
+        "auswahl_muster",
+        "bewusst_leer",
+        "reihenfolge",
+        "umkehrung"
+      ],
+      [
+        "auswahl_muster",
+        "bewusst_leer",
+        "reihenfolge",
+        "gemischt"
+      ],
+      [
+        "auswahl_muster",
+        "bewusst_leer",
+        "darstellung",
+        "roh"
+      ],
+      [
+        "auswahl_muster",
+        "bewusst_leer",
+        "darstellung",
+        "gemischt"
+      ],
+      [
+        "auswahl_muster",
+        "bewusst_leer",
+        "darstellung",
+        "einfach"
+      ]
+    ]
+  },
+  "faelle": [
+    {
+      "id": "trip-paar-stunden-01-auswahl--teilmenge-katalog-roh--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-01-darstellung--teilmenge-katalog-roh--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-02-auswahl--teilmenge-umkehrung-gemischt--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "umkehrung",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-02-darstellung--teilmenge-umkehrung-gemischt--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "umkehrung",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-03-auswahl--teilmenge-gemischt-einfach--kompakt",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "einfach",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-03-darstellung--teilmenge-gemischt-einfach--kompakt",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "einfach",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-04-reihenfolge--alles-katalog-gemischt--kompakt",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "katalog",
+        "darstellung": "gemischt",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-04-darstellung--alles-katalog-gemischt--kompakt",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "katalog",
+        "darstellung": "gemischt",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-05-reihenfolge--alles-umkehrung-einfach--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "einfach",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-05-darstellung--alles-umkehrung-einfach--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "einfach",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-06-reihenfolge--alles-gemischt-roh--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-06-darstellung--alles-gemischt-roh--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-07-reihenfolge--nie_eingestellt-katalog-einfach--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "einfach",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-07-darstellung--nie_eingestellt-katalog-einfach--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "einfach",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-08-reihenfolge--nie_eingestellt-umkehrung-roh--kompakt",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-08-darstellung--nie_eingestellt-umkehrung-roh--kompakt",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-09-reihenfolge--nie_eingestellt-gemischt-gemischt--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "gemischt",
+        "darstellung": "gemischt",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-09-darstellung--nie_eingestellt-gemischt-gemischt--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "gemischt",
+        "darstellung": "gemischt",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-10-auswahl--bewusst_leer-katalog-roh--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-11-auswahl--bewusst_leer-umkehrung-gemischt--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "umkehrung",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-stunden-12-auswahl--bewusst_leer-gemischt-einfach--kompakt",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_stundentabelle",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "gemischt",
+        "darstellung": "einfach",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-01-auswahl--teilmenge-katalog-roh--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-01-darstellung--teilmenge-katalog-roh--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-02-auswahl--teilmenge-umkehrung-gemischt--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "umkehrung",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-02-darstellung--teilmenge-umkehrung-gemischt--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-8",
+      "befund": "T2",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "umkehrung",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-03-auswahl--teilmenge-gemischt-einfach--kompakt",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "einfach",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-03-darstellung--teilmenge-gemischt-einfach--kompakt",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "einfach",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-04-reihenfolge--alles-katalog-gemischt--kompakt",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "katalog",
+        "darstellung": "gemischt",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-04-darstellung--alles-katalog-gemischt--kompakt",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "katalog",
+        "darstellung": "gemischt",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-05-reihenfolge--alles-umkehrung-einfach--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "einfach",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-05-darstellung--alles-umkehrung-einfach--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "einfach",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-06-reihenfolge--alles-gemischt-roh--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-06-darstellung--alles-gemischt-roh--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-8",
+      "befund": "T2",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-07-reihenfolge--nie_eingestellt-katalog-einfach--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "einfach",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-07-darstellung--nie_eingestellt-katalog-einfach--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "einfach",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-08-reihenfolge--nie_eingestellt-umkehrung-roh--kompakt",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-08-darstellung--nie_eingestellt-umkehrung-roh--kompakt",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-09-reihenfolge--nie_eingestellt-gemischt-gemischt--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "gemischt",
+        "darstellung": "gemischt",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-09-darstellung--nie_eingestellt-gemischt-gemischt--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "gemischt",
+        "darstellung": "gemischt",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-10-auswahl--bewusst_leer-katalog-roh--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-11-auswahl--bewusst_leer-umkehrung-gemischt--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "umkehrung",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-nacht-12-auswahl--bewusst_leer-gemischt-einfach--kompakt",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_nachttabelle",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (Kompaktformat ohne Stundentabellen, render_compact zeigt nur Pillen und Ausblick)",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "gemischt",
+        "darstellung": "einfach",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-01-auswahl--teilmenge-katalog-roh--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-01-darstellung--teilmenge-katalog-roh--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-02-auswahl--teilmenge-umkehrung-gemischt--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "umkehrung",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-02-darstellung--teilmenge-umkehrung-gemischt--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "umkehrung",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-03-auswahl--teilmenge-gemischt-einfach--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "einfach",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-03-darstellung--teilmenge-gemischt-einfach--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "teilmenge",
+        "reihenfolge": "gemischt",
+        "darstellung": "einfach",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-04-reihenfolge--alles-katalog-gemischt--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "katalog",
+        "darstellung": "gemischt",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-04-darstellung--alles-katalog-gemischt--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "katalog",
+        "darstellung": "gemischt",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-05-reihenfolge--alles-umkehrung-einfach--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "einfach",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-05-darstellung--alles-umkehrung-einfach--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "umkehrung",
+        "darstellung": "einfach",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-06-reihenfolge--alles-gemischt-roh--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-06-darstellung--alles-gemischt-roh--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "alles",
+        "reihenfolge": "gemischt",
+        "darstellung": "roh",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-07-reihenfolge--nie_eingestellt-katalog-einfach--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "einfach",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-07-darstellung--nie_eingestellt-katalog-einfach--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "katalog",
+        "darstellung": "einfach",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-08-reihenfolge--nie_eingestellt-umkehrung-roh--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-4",
+      "befund": "T1",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-08-darstellung--nie_eingestellt-umkehrung-roh--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "umkehrung",
+        "darstellung": "roh",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-09-reihenfolge--nie_eingestellt-gemischt-gemischt--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-4",
+      "befund": "T1",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "gemischt",
+        "darstellung": "gemischt",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-09-darstellung--nie_eingestellt-gemischt-gemischt--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "nie_eingestellt",
+        "reihenfolge": "gemischt",
+        "darstellung": "gemischt",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-10-auswahl--bewusst_leer-katalog-roh--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "katalog",
+        "darstellung": "roh",
+        "format": "html"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-11-auswahl--bewusst_leer-umkehrung-gemischt--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "umkehrung",
+        "darstellung": "gemischt",
+        "format": "klartext"
+      }
+    },
+    {
+      "id": "trip-paar-ausblick-12-auswahl--bewusst_leer-gemischt-einfach--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "auswahl",
+      "test": "test_paarweise_ausblick",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen",
+      "werte": {
+        "auswahl_muster": "bewusst_leer",
+        "reihenfolge": "gemischt",
+        "darstellung": "einfach",
+        "format": "kompakt"
+      }
+    },
+    {
+      "id": "trip-ac2--boeen_temp_regen_wind--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_ac2_stundentabelle_folge",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac2--boeen_temp_regen_wind--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_ac2_stundentabelle_folge",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac2--umkehrung--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_ac2_stundentabelle_folge",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac2--umkehrung--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_ac2_stundentabelle_folge",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac2--teilmenge_zwei_ab--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "auswahl",
+      "test": "test_ac2_stundentabelle_folge",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac2--teilmenge_zwei_ab--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "auswahl",
+      "test": "test_ac2_stundentabelle_folge",
+      "ac": "AC-2",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac3--wind_temp_boeen--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_ac3_nachttabelle_folge",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac15--nacht_wie_etappe--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ac15_nacht_darstellung_wie_etappe",
+      "ac": "AC-15",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac3--wind_temp_boeen--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_ac3_nachttabelle_folge",
+      "ac": "AC-3",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac15--nacht_wie_etappe--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_ac15_nacht_darstellung_wie_etappe",
+      "ac": "AC-15",
+      "befund": "T2",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac4--wind_temp_regen--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_ac4_ausblick_gespeicherte_folge",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac4--nie_eingestellt--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_ac4_ausblick_nie_eingestellt",
+      "ac": "AC-4",
+      "befund": "T1",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac4--bewusst_leer--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_ac4_ausblick_bewusst_leer",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ausblick-aus--show_outlook--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_ausblick_ausgeschaltet",
+      "ac": "AC-9",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac4--wind_temp_regen--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_ac4_ausblick_gespeicherte_folge",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac4--nie_eingestellt--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_ac4_ausblick_nie_eingestellt",
+      "ac": "AC-4",
+      "befund": "T1",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac4--bewusst_leer--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_ac4_ausblick_bewusst_leer",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ausblick-aus--show_outlook--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_ausblick_ausgeschaltet",
+      "ac": "AC-9",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac4--wind_temp_regen--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_ac4_ausblick_gespeicherte_folge",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac4--nie_eingestellt--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "reihenfolge",
+      "test": "test_ac4_ausblick_nie_eingestellt",
+      "ac": "AC-4",
+      "befund": "T1",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac4--bewusst_leer--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "ein_aus",
+      "test": "test_ac4_ausblick_bewusst_leer",
+      "ac": "AC-4",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ausblick-aus--show_outlook--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "ein_aus",
+      "test": "test_ausblick_ausgeschaltet",
+      "ac": "AC-9",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#722 (render_compact ignoriert alle Baustein-Schalter, compact.py Docstring; Ausblick bleibt bei show_outlook=false)"
+    },
+    {
+      "id": "trip-ac8--stunden_roh_einfach--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ac8_stunden_roh_einfach",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac8--einfach_ohne_einfachform--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ac8_einfach_ohne_einfachform_zeigt_zahl",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac8--windrichtung_verschmolzen--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ac8_windrichtung_einfach_verschmilzt_mit_wind",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#435 (Windrichtung Skala verschmilzt in die Wind-Zelle, should_merge_wind_dir)"
+    },
+    {
+      "id": "trip-ac8--stunden_roh_einfach--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_ac8_stunden_roh_einfach",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac8--einfach_ohne_einfachform--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_ac8_einfach_ohne_einfachform_zeigt_zahl",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac8--windrichtung_verschmolzen--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_ac8_windrichtung_einfach_verschmilzt_mit_wind",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#435 (Windrichtung Skala verschmilzt in die Wind-Zelle, should_merge_wind_dir)"
+    },
+    {
+      "id": "trip-ac8--ampel_html--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ac8_ampel_groesse_einfach",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac8--ampel_klartext_zahl--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_ac8_ampel_groesse_einfach",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#814 (HTML-Ampelpunkt, Klartext zeigt die Zahl; build_format_modes liefert raw)"
+    },
+    {
+      "id": "trip-ac8--ausblick_roh_einfach--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ac8_ausblick_roh_einfach",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac8--ausblick_ohne_einfachform--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ac8_ausblick_ohne_einfachform",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#814 AC-5 (OUTLOOK_FRIENDLY_CAPABLE: Sicht, Temperatur, Gewitter ohne Einfach-Form; Spec §2 Punkt 3)"
+    },
+    {
+      "id": "trip-ac8--ausblick_roh_einfach--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_ac8_ausblick_roh_einfach",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac8--ausblick_ohne_einfachform--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_ac8_ausblick_ohne_einfachform",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#814 AC-5 (OUTLOOK_FRIENDLY_CAPABLE: Sicht, Temperatur, Gewitter ohne Einfach-Form; Spec §2 Punkt 3)"
+    },
+    {
+      "id": "trip-ac8--ausblick_roh_einfach--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "darstellung",
+      "test": "test_ac8_ausblick_roh_einfach",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac8--ausblick_ohne_einfachform--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "darstellung",
+      "test": "test_ac8_ausblick_ohne_einfachform",
+      "ac": "AC-8",
+      "befund": "",
+      "status": "ausnahme",
+      "verweis": "#814 AC-5 (OUTLOOK_FRIENDLY_CAPABLE: Sicht, Temperatur, Gewitter ohne Einfach-Form; Spec §2 Punkt 3)"
+    },
+    {
+      "id": "trip-ac9--nachtblock--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "zusatzblock",
+      "test": "test_ac9_zusatzblock_aus",
+      "ac": "AC-9",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac9--nachtblock--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "zusatzblock",
+      "test": "test_ac9_zusatzblock_aus",
+      "ac": "AC-9",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac9--etappenkennzahlen--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "zusatzblock",
+      "test": "test_ac9_zusatzblock_aus",
+      "ac": "AC-9",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac9--etappenkennzahlen--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "zusatzblock",
+      "test": "test_ac9_zusatzblock_aus",
+      "ac": "AC-9",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac9--vortag--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "zusatzblock",
+      "test": "test_ac9_zusatzblock_aus",
+      "ac": "AC-9",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac9--vortag--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "zusatzblock",
+      "test": "test_ac9_zusatzblock_aus",
+      "ac": "AC-9",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac9--email_format_kompakt--kompakt",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "zusatzblock",
+      "test": "test_ac9_email_format_kompakt",
+      "ac": "AC-9",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--abgewaehlt_nirgends-stunden--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_abgewaehlt_erscheint_nirgends",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--neu_hinten-stunden--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_neue_metrik_hinten_angehaengt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--leerer_schnitt-stunden--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
+      "ac": "AC-10",
+      "befund": "T3",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--abgewaehlt_nirgends-stunden--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_abgewaehlt_erscheint_nirgends",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--neu_hinten-stunden--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_neue_metrik_hinten_angehaengt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--leerer_schnitt-stunden--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
+      "ac": "AC-10",
+      "befund": "T3",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--abgewaehlt_nirgends-nacht--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_abgewaehlt_erscheint_nirgends",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--neu_hinten-nacht--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_neue_metrik_hinten_angehaengt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--leerer_schnitt-nacht--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
+      "ac": "AC-10",
+      "befund": "T3",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--abgewaehlt_nirgends-nacht--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_abgewaehlt_erscheint_nirgends",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--neu_hinten-nacht--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_neue_metrik_hinten_angehaengt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--leerer_schnitt-nacht--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
+      "ac": "AC-10",
+      "befund": "T3",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--abgewaehlt_nirgends-ausblick--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_abgewaehlt_erscheint_nirgends",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--neu_hinten-ausblick--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_neue_metrik_hinten_angehaengt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--leerer_schnitt-ausblick--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--abgewaehlt_nirgends-ausblick--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_abgewaehlt_erscheint_nirgends",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--neu_hinten-ausblick--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_neue_metrik_hinten_angehaengt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--leerer_schnitt-ausblick--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--abgewaehlt_nirgends-ausblick--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_abgewaehlt_erscheint_nirgends",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--neu_hinten-ausblick--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_neue_metrik_hinten_angehaengt",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--leerer_schnitt-ausblick--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "grundauswahl",
+      "test": "test_ac10_leerer_schnitt_rueckfall_grundauswahl",
+      "ac": "AC-10",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac10--neu_in_bearbeitetem_layout--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "grundauswahl",
+      "test": "neue_metrik_in_allen_listen.test.ts::Einwahl haengt die Metrik in jeder bearbeiteten Kanal-Liste hinten an, Folge bleibt",
+      "ac": "AC-10",
+      "befund": "T3",
+      "status": "gruen",
+      "seite": "frontend",
+      "verweis": "#3047 T3 (frontend channelMetricLayouts.ts:97-124 toggleGlobalMetric schreibt eine global eingeschaltete Metrik nicht in bestehende Kanal-Overrides; im rohen JSON fehlt sie, ADR-0050 + #2422-Orakel werten Fehlen als Abwahl -> Nachweis nur am Speicherpfad/Vitest)"
+    },
+    {
+      "id": "trip-ac11--altbestand_golden--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "altbestand",
+      "test": "test_ac11_altbestand_golden",
+      "ac": "AC-11",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac11--altbestand_golden--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "altbestand",
+      "test": "test_ac11_altbestand_golden",
+      "ac": "AC-11",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac12--zwei_nutzer-stunden--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "zwei_nutzer",
+      "test": "test_ac12_zwei_nutzer_je_eigene_folge",
+      "ac": "AC-12",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac12--zwei_nutzer-stunden--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "zwei_nutzer",
+      "test": "test_ac12_zwei_nutzer_je_eigene_folge",
+      "ac": "AC-12",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac12--zwei_nutzer-ausblick--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "zwei_nutzer",
+      "test": "test_ac12_zwei_nutzer_je_eigene_folge",
+      "ac": "AC-12",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac12--zwei_nutzer-ausblick--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "zwei_nutzer",
+      "test": "test_ac12_zwei_nutzer_je_eigene_folge",
+      "ac": "AC-12",
+      "befund": "",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac17--klartext_de_en--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "test_ac17_klartext_festtexte_in_nutzersprache",
+      "ac": "AC-17",
+      "befund": "T5",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1--altbestand_ohne_metrics-stunden--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ohne_metrics",
+      "ac": "AC-13, AC-11",
+      "befund": "N1",
+      "status": "ausnahme",
+      "verweis": "#3048 (N1: Trip ohne display_config.metrics -> Stunden-/Nachttabelle ohne Wertspalten; Behebung aendert alle Kanaele, eigenes Issue)"
+    },
+    {
+      "id": "trip-n1--altbestand_ohne_metrics-stunden--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ohne_metrics",
+      "ac": "AC-13, AC-11",
+      "befund": "N1",
+      "status": "ausnahme",
+      "verweis": "#3048 (N1: Trip ohne display_config.metrics -> Stunden-/Nachttabelle ohne Wertspalten; Behebung aendert alle Kanaele, eigenes Issue)"
+    },
+    {
+      "id": "trip-n1--altbestand_ohne_metrics-nacht--html",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ohne_metrics",
+      "ac": "AC-13, AC-11",
+      "befund": "N1",
+      "status": "ausnahme",
+      "verweis": "#3048 (N1: Trip ohne display_config.metrics -> Stunden-/Nachttabelle ohne Wertspalten; Behebung aendert alle Kanaele, eigenes Issue)"
+    },
+    {
+      "id": "trip-n1--altbestand_ohne_metrics-nacht--klartext",
+      "liste": "trip_nachttabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "altbestand",
+      "test": "test_n1_altbestand_ohne_metrics",
+      "ac": "AC-13, AC-11",
+      "befund": "N1",
+      "status": "ausnahme",
+      "verweis": "#3048 (N1: Trip ohne display_config.metrics -> Stunden-/Nachttabelle ohne Wertspalten; Behebung aendert alle Kanaele, eigenes Issue)"
+    },
+    {
+      "id": "trip-wv6--vor_tabelle--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst",
+      "ac": "AC-2, Konzept WV6",
+      "befund": "WV6",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-wv6--vor_tabelle--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst",
+      "ac": "AC-2, Konzept WV6",
+      "befund": "WV6",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-wv6--vor_ueberblick--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst",
+      "ac": "AC-2, Konzept WV6",
+      "befund": "WV6",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-wv6--vor_ueberblick--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst",
+      "ac": "AC-2, Konzept WV6",
+      "befund": "WV6",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-wv6--direkt_nach_kopf--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst",
+      "ac": "AC-2, Konzept WV6",
+      "befund": "WV6 (F001 Mutations-Gegenprobe)",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-wv6--direkt_nach_kopf--klartext",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "reihenfolge",
+      "test": "test_wv6_amtliche_warnung_zuerst",
+      "ac": "AC-2, Konzept WV6",
+      "befund": "WV6 (F001 Mutations-Gegenprobe)",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-ac17--html_kopf_de_en--html",
+      "liste": "trip_stundentabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "test_ac17_html_tabellenkopf_in_nutzersprache",
+      "ac": "AC-17",
+      "befund": "T5",
+      "status": "gruen"
+    }
+  ]
+}

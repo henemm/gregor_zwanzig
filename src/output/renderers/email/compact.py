@@ -32,6 +32,7 @@ from output.renderers.email.thunder_branch import (
     thunder_cell_compact, thunder_column_index,
 )
 from output.renderers.email.profile_signature import profile_signature
+from output.renderers.email.plain import _report_heading
 from output.renderers.alert.official_alerts import (
     collect_trip_alert_entries, render_official_alerts_plain,
 )
@@ -159,7 +160,7 @@ def render_compact(
     if not segments:
         guard_lines: list[str] = []
         guard_lines.append(f"{sig.eyebrow}")
-        guard_lines.append(f"{trip_name} - {report_type.title()} Report")
+        guard_lines.append(_report_heading(trip_name, report_type, lang))
         if stage_name:
             guard_lines.append(stage_name)
         guard_lines.append("")
@@ -172,7 +173,7 @@ def render_compact(
     # --- Header ---
     report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
     lines.append(f"{sig.eyebrow}")
-    lines.append(f"{trip_name} - {report_type.title()} Report")
+    lines.append(_report_heading(trip_name, report_type, lang))
     if stage_name:
         lines.append(stage_name)
     lines.append(report_date)

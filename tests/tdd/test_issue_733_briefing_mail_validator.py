@@ -49,7 +49,7 @@ _VALID_FULL_HTML = (
 
 _VALID_COMPACT_TEXT = (
     "WANDERWETTER\n"
-    "GR20 - Evening Report\n"
+    "GR20 - Abend-Briefing\n"
     "Etappe 3\n"
     "11.06.2026\n"
     "\n"
@@ -255,7 +255,7 @@ class TestValidatorCompact:
         """
         no_outlook = (
             "WANDERWETTER\n"
-            "GR20 - Morning Report\n"
+            "GR20 - Morgen-Briefing\n"
             "Etappe 3\n"
             "11.06.2026\n"
             "\n"

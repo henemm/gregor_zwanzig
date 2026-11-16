@@ -30,6 +30,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
+from freezegun import freeze_time
 
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.render import (
@@ -46,6 +47,14 @@ _COUNTDOWN_TOKEN_RE = re.compile(r"\b(TH|R)!\d+")
 # Goldstring-Faelle dieser Datei setzen `onset_precip_mm` nicht und bleiben
 # unveraendert zahlenlos — genau die Regressions-Invariante aus AC-11.
 _ZEITPUNKT_TOKEN_MIT_MENGE_RE = re.compile(r"\b(TH|R)(?:\d+\.\d)?@(\d{1,2}):(\d{2})\b")
+# Gestellte Uhr (Muster Issue #2096, `test_alert_preview_nowcast_replay.py`):
+# die Faelle, deren Beginn aus `datetime.now()` + Minuten entsteht, liefen
+# zwischen ~23:30 und 24:00 UTC ueber Mitternacht -- dann stellt das Produkt
+# korrekt das Wochentagskuerzel voran (`R@Mo0:24`, Issue #2054) und das
+# `@HH:MM`-Muster griff nicht (CI-Nachtlauf 2026-11-15 23:54 UTC). Der
+# Tagesueberlauf selbst ist in den #2054-Faellen abgedeckt; hier zaehlt nur
+# Zeitpunkt statt Countdown, daher mittags gestellt.
+_MITTAGS_UHR = "2026-08-22 12:00:00+00:00"
 
 
 def _onset_event(**kw) -> OnsetEvent:
@@ -159,6 +168,7 @@ def test_ac3_segment_kennung_erscheint_als_kopf_der_kurznachricht():
 
 
 @pytest.mark.real_data_root
+@freeze_time(_MITTAGS_UHR)
 def test_ac3_endpunkt_replay_liefert_zeitpunkt_token_ueber_den_echten_einspeiseweg():
     """AC-3 (Endpunkt-Anteil): Given ein Frame-Mitschnitt mit Regen-Onset am
     S2-Einspeiseweg / When `POST /api/trips/{id}/alert-preview` gerendert
@@ -250,6 +260,7 @@ def test_ac4_ohne_segment_kennung_bleibt_der_km_rueckfall():
 # ---------------------------------------------------------------------------
 
 
+@freeze_time(_MITTAGS_UHR)
 def test_ac5_compare_buendel_kopf_nennt_nur_den_ortsnamen():
     """AC-5, FORTGESCHRIEBEN durch Issue #1767 (PO 2026-11-09, loest
     Entscheid 3b ab): Given ein Ortsvergleich-Buendel-Onset mit ZWEI Orten /
@@ -290,6 +301,7 @@ def test_ac5_compare_buendel_kopf_nennt_nur_den_ortsnamen():
 # ---------------------------------------------------------------------------
 
 
+@freeze_time(_MITTAGS_UHR)
 def test_ac6_ein_ort_compare_nennt_den_ortsnamen_aus_trip_short():
     """AC-6: Given ein Ortsvergleich-Onset mit GENAU einem Ort (Invariante:
     `location_label is None`, Ortsname nur in `msg.trip_short`) / When die SMS
@@ -393,6 +405,7 @@ def test_ac8_ziel_segment_bleibt_ohne_piktogramm_und_gsm7_rein():
 # ---------------------------------------------------------------------------
 
 
+@freeze_time(_MITTAGS_UHR)
 def test_ac9_nur_das_compare_ergebnis_traegt_den_ortsnamen():
     """AC-9: Given zwei strukturell identische Onset-Nachrichten — eine
     Trip-Radar-Nachricht (kein Ortsname) und eine Ortsvergleich-Buendel-

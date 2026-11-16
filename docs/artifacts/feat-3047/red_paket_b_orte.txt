@@ -1,0 +1,29 @@
+# RED-Artefakt #3047 Paket B (Pruefkatalog Orte), Lauf mit --runxfail
+# Befehl: uv run pytest tests/tdd/test_einstellung_gleich_mail_orte.py -q --runxfail --tb=short -p no:warnings
+# Erwartet rot: O5 (AC-10 Stundenverlauf ohne Grundauswahl-Schnitt), O3 (AC-21 Altbestand-Ausblick Klartext != HTML)
+
+........................................F..........F..                   [100%]
+=================================== FAILURES ===================================
+_____________ test_ac10_stundenverlauf_nimmt_nur_aus_grundauswahl ______________
+tests/tdd/test_einstellung_gleich_mail_orte.py:333: in test_ac10_stundenverlauf_nimmt_nur_aus_grundauswahl
+    pruefe_stundenverlauf(mail, fmt)
+tests/tdd/test_einstellung_gleich_mail_orte.py:123: in pruefe_stundenverlauf
+    assert koepfe == soll, f"{fmt} {ort}: Spalten {koepfe}, eingestellt {soll}"
+E   AssertionError: html Kronplatz: Spalten ['Gust', 'Wind', 'Temp'], eingestellt ['Wind', 'Temp']
+E   assert ['Gust', 'Wind', 'Temp'] == ['Wind', 'Temp']
+E     
+E     At index 0 diff: 'Gust' != 'Wind'
+E     Left contains one more item: 'Temp'
+E     Use -v to get more diff
+______________ test_ac21_altbestand_ausblick_klartext_gleich_html ______________
+tests/tdd/test_einstellung_gleich_mail_orte.py:481: in test_ac21_altbestand_ausblick_klartext_gleich_html
+    assert kennungen(plain[ort]) == kennungen(html[ort]), (
+E   AssertionError: Kronplatz: Klartext ['Temp', 'Rain', 'Wind', 'Thdr'] != HTML ['Temp Minimum', 'Temp Maximum', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr']
+E   assert ['temperature...d', 'thunder'] == ['temperature...t', 'thunder']
+E     
+E     At index 2 diff: 'wind' != 'rain_probability'
+E     Right contains 2 more items, first extra item: 'gust'
+E     Use -v to get more diff
+=========================== short test summary info ============================
+FAILED tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac10_stundenverlauf_nimmt_nur_aus_grundauswahl
+FAILED tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac21_altbestand_ausblick_klartext_gleich_html

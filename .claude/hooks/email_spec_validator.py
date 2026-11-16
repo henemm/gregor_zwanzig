@@ -18,6 +18,7 @@ Exit codes:
 """
 
 import argparse
+import json
 import math
 import os
 import sys
@@ -943,6 +944,10 @@ def validate_structure(body: str, hourly_enabled: bool = True, *, lang: str = "d
             # treten zwei ausdrueckliche Pruefungen, die benennen, WELCHE Spalte
             # stoert -- sie halten das, was die Projektion bisher nur als
             # Nebeneffekt leistete. NICHT wieder eine Reihenfolge einbauen.
+            # Issue #3047 (AC-20): Reihenfolge nur gegen die gespeicherte
+            # Konfiguration, nie gegen eine feste Folge -- das Soll kommt mit
+            # --konfig aus dem JSON genau dieses Nutzers (pruefe_soll unten);
+            # eine Mail mit der vom Nutzer gewaehlten Folge besteht damit immer.
             unknown_cols = [c for c in header_cols if c not in allowed_cols]
             if unknown_cols:
                 errors.append(
@@ -1105,6 +1110,137 @@ def validate_hourly_table(body: str, time_start: int = 9, time_end: int = 16, *,
     return errors
 
 
+# --------------------------------------------------------------------------- #
+# Issue #3047 (Spec §6, AC-19/AC-20): Soll aus der gespeicherten Konfiguration
+# --------------------------------------------------------------------------- #
+_ORT_KOPF_RE = re.compile(r'>ORT</span>\s*<span[^>]*>([^<]*)</span>')
+_STUNDE_RE = re.compile(r"^\s+\d{2}:\d{2}\s")
+
+
+def _soll_modul():
+    import _soll_aus_konfiguration  # lazy: nur mit --konfig gebraucht
+
+    return _soll_aus_konfiguration
+
+
+def _kuerzel_in_zeile(zeile: str) -> List[str]:
+    """Spaltenkuerzel ``<Kuerzel> <Wert>`` einer Klartextzeile in Textfolge."""
+    treffer = [(m.start(), k) for k in _soll_modul().ALLE_KUERZEL
+               for m in re.finditer(r"(?<!\S)" + re.escape(k) + r" (?=\S)", zeile)]
+    return [k for _pos, k in sorted(treffer)]
+
+
+def _html_tabellenkoepfe(body: str, erste: str) -> List[List[str]]:
+    """Kopfzeilen (ohne erste Zelle) aller Tabellen, deren erste Kopfzelle ``erste`` ist."""
+    koepfe = []
+    for match in _TABLE_RE.finditer(body):
+        rows = _extract_rows_from_table_html(match.group(1))
+        if rows and rows[0] and rows[0][0].strip() == erste:
+            koepfe.append(rows[0][1:])
+    return koepfe
+
+
+def _klartext_uebersicht(text: str, lang: str) -> List[Tuple[str, List[str]]]:
+    """(Ort, Zeilenbeschriftungen) der Klartext-Uebersicht in Textfolge."""
+    zeilen = text.splitlines()
+    start = next((i + 1 for i, z in enumerate(zeilen) if z.startswith("-" * 50)), len(zeilen))
+    ende_titel = {_t("vergleich.stunden.klartext_titel", lang), _t("vergleich.ausblick.titel", lang)}
+    fehler = _t("vergleich.ort.fehler", lang, fehler="").rstrip(" :")
+    bloecke: List[Tuple[str, List[str]]] = []
+    for i in range(start, len(zeilen)):
+        zeile, folge = zeilen[i], zeilen[i + 1] if i + 1 < len(zeilen) else ""
+        if zeile.strip() in ende_titel or (zeile and not zeile.startswith(" ") and (
+                _STUNDE_RE.match(folge) or folge.strip() in ende_titel)):
+            break
+        if zeile and not zeile.startswith(" ") and folge.startswith("   "):
+            bloecke.append((zeile.strip(), []))
+        elif zeile.startswith("   ") and bloecke and ": " in zeile and "⚠️" not in zeile:
+            label = zeile.strip().split(": ", 1)[0]
+            if label != fehler:
+                bloecke[-1][1].append(label)
+    return bloecke
+
+
+def _klartext_abschnitte(text: str, lang: str) -> Tuple[List[List[str]], List[List[str]]]:
+    """(Stundenspalten je Ort, Ausblick-Zeilen) aus dem Klartext-Teil."""
+    zeilen = text.splitlines()
+    ausblick_titel = _t("vergleich.ausblick.titel", lang)
+    stunden, ausblick, im_ausblick = [], [], False
+    for i, zeile in enumerate(zeilen):
+        if zeile.strip() == ausblick_titel:
+            im_ausblick = True
+        elif im_ausblick and zeile and not zeile.startswith(" "):
+            ausblick.append(_kuerzel_in_zeile(zeile))
+        else:
+            im_ausblick = im_ausblick and zeile.startswith(" ")
+            if _STUNDE_RE.match(zeile) and not _STUNDE_RE.match(zeilen[i - 1]):
+                stunden.append(_kuerzel_in_zeile(zeile))
+    return stunden, ausblick
+
+
+def _soll_listen(was: str, koepfe: list, soll) -> List[str]:
+    if soll is None:
+        return []
+    fehler = []
+    for i, ist in enumerate(koepfe):
+        diff = _soll_modul().abweichung(ist, soll)
+        if diff:
+            fehler.append(f"SOLL: {was} {i + 1}: {diff}")
+    return fehler
+
+
+def _soll_orte_folge(teil: str, ist: List[str], soll) -> List[str]:
+    if soll is None:
+        return []
+    diff = _soll_modul().abweichung(ist, soll)
+    return [f"SOLL: Ortsfolge ({teil}): {diff}".replace("Spalte", "Ort")] if diff else []
+
+
+def _soll_teil(teil: str, uebersicht, orte, stunden, ausblick, soll: dict) -> List[str]:
+    zeilen_soll = soll["uebersicht"]
+    if zeilen_soll is not None and teil != "HTML":
+        zeilen_soll = zeilen_soll[1:]  # Warn-Zeile ist reine HTML-Zeile (#1356)
+    fehler = _soll_listen(f"Vergleichstabelle Zeilen ({teil}) Block", uebersicht, zeilen_soll)
+    fehler += _soll_orte_folge(teil, orte, soll["orte"])
+    if stunden and not soll["stunden_an"]:
+        fehler.append(f"SOLL: Stundenverlauf ({teil}) erscheint, obwohl er laut Konfiguration aus ist")
+    fehler += _soll_listen(f"Stundenverlauf ({teil}) Ort", stunden, soll["stunden"])
+    if ausblick and not soll["ausblick_an"]:
+        fehler.append(f"SOLL: Ausblick ({teil}) erscheint, obwohl er laut Konfiguration aus ist")
+    elif soll["ausblick"] is not None:
+        fehler += _soll_listen(f"Ausblick ({teil}) Zeile", ausblick, soll["ausblick"][
+            "html" if teil == "HTML" else "klartext"])
+    return fehler
+
+
+def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
+    """Issue #3047 AC-19/AC-20: Zeilenfolge der Vergleichstabelle, Ortsfolge,
+    Spalten des Stundenverlaufs je Ort und Ausblick-Kopf, im HTML- UND im
+    Klartext-Teil, gegen das Soll aus dem gespeicherten Preset. Reihenfolge nur
+    gegen die gespeicherte Konfiguration, nie gegen eine feste Folge."""
+    if soll.get("kontext") != "orte":
+        return ["SOLL: --konfig ist keine Orts-Vergleich-Konfiguration (Trip: briefing_mail_validator.py)"]
+    body = _extract_html_body(msg)
+    plain = next((p.get_payload(decode=True).decode(p.get_content_charset() or "utf-8")
+                  for p in msg.walk() if p.get_content_type() == "text/plain"), "")
+    tag = _t("mail.ausblick.spalte_tag", lang)
+    zeilen = extract_table_rows(body, lang)
+    html = ([[r[0] for r in zeilen[1:] if r]] if zeilen else [], extract_locations(body, lang),
+            _html_tabellenkoepfe(body, _hour_time_label(lang)), _html_tabellenkoepfe(body, tag))
+    bloecke = _klartext_uebersicht(plain, lang)
+    stunden, ausblick = _klartext_abschnitte(plain, lang)
+    fehler = []
+    for name, h, p in (("Stundenverlauf", html[2], stunden), ("Ausblick", html[3], ausblick)):
+        if bool(h) != bool(p):
+            fehler.append(f"SOLL: {name} fehlt im {'Klartext' if h else 'HTML'}-Teil")
+    if soll["orte"] is not None:
+        sektionen = _ORT_KOPF_RE.findall(body)
+        fehler += _soll_orte_folge("HTML-Abschnitte", sektionen, [n for n in soll["orte"] if n in sektionen])
+    fehler += _soll_teil("HTML", *html, soll)
+    return fehler + _soll_teil("Klartext", [b[1] for b in bloecke if b[1]], [b[0] for b in bloecke],
+                               stunden, ausblick, soll)
+
+
 def run_validation(
     min_locations: int = 3,
     subject_contains: "str | None" = None,
@@ -1113,6 +1249,7 @@ def run_validation(
     warnungen: "list | None" = None,
     lang: str = "de",
     to_contains: "str | None" = None,
+    konfig: "dict | None" = None,
 ) -> Tuple[bool, List[str]]:
     """Run all validations and return (success, errors).
 
@@ -1131,7 +1268,7 @@ def run_validation(
     except Exception as e:
         return False, [f"FEHLER: E-Mail konnte nicht geladen werden: {e}"]
 
-    return validate_message(msg, min_locations=min_locations, warnungen=warnungen)
+    return validate_message(msg, min_locations=min_locations, warnungen=warnungen, konfig=konfig)
 
 
 # Issue #2663: Schluessel, an denen die Sprache des Inhalts erkennbar ist.
@@ -1140,6 +1277,7 @@ _LANG_MARKER_KEYS = ["vergleich.zeile.amtliche_warnungen", "vergleich.stunden.ze
 
 def validate_message(
     msg, min_locations: int = 3, warnungen: "list | None" = None,
+    konfig: "dict | None" = None,
 ) -> Tuple[bool, List[str]]:
     """Alle Pruefungen einer geparsten Compare-Mail in der Sprache ihres Kopfes
     ``X-GZ-Lang`` (Issue #2663). Fehlt der Kopf: Fehler (Pflicht seit A2 #2681)."""
@@ -1168,6 +1306,8 @@ def validate_message(
     all_errors.extend(validate_plausibility(body, lang=lang))
     all_errors.extend(validate_format(body, lang=lang))
     all_errors.extend(validate_hourly_table(body, lang=lang))
+    if konfig is not None:  # Issue #3047: nur mit --konfig, sonst unveraendert
+        all_errors.extend(pruefe_soll(msg, _soll_modul().soll_aus_daten(konfig, lang), lang))
 
     return len(all_errors) == 0, all_errors
 
@@ -1222,6 +1362,13 @@ def main():
         default=None,
         help="Mail aus dieser .eml-Datei pruefen statt per IMAP (#2663)",
     )
+    parser.add_argument(
+        "--konfig",
+        metavar="PFAD",
+        default=None,
+        help="Gespeichertes Preset-JSON des Nutzers (oder Huelle {preset, orte}): "
+             "Zeilen-, Spalten- und Ortsfolge muessen ihm entsprechen (#3047)",
+    )
     _e2e_paths.sprach_argumente(parser)
     args = parser.parse_args()
 
@@ -1262,6 +1409,13 @@ def main():
     print()
 
     warnungen: list = []
+    konfig = None
+    if args.konfig:  # Issue #3047: Soll aus der gespeicherten Konfiguration
+        try:
+            konfig = json.loads(Path(args.konfig).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            print(f"FEHLER: --konfig {args.konfig!r} nicht lesbar: {exc}")
+            sys.exit(2)
     if args.eml:
         # Issue #2663: Mail aus Datei statt IMAP (Fixtures ohne Netz pruefbar).
         try:
@@ -1269,7 +1423,8 @@ def main():
         except OSError as exc:
             print(f"FEHLER: --eml {args.eml!r} nicht lesbar: {exc}")
             sys.exit(2)
-        success, errors = validate_message(msg, args.min_locations, warnungen=warnungen)
+        success, errors = validate_message(msg, args.min_locations, warnungen=warnungen,
+                                           konfig=konfig)
         # #2681: --lang/--to-contains gelten auch fuer die Datei.
         auswahl = _e2e_paths.eml_auswahl_fehler(msg, args.lang, args.to_contains)
         success, errors = success and not auswahl, auswahl + errors
@@ -1282,6 +1437,7 @@ def main():
             warnungen=warnungen,
             lang=args.lang or "de",
             to_contains=args.to_contains,
+            konfig=konfig,
         )
     for hinweis in warnungen:
         print(f"WARNUNG: {hinweis}", file=sys.stderr)

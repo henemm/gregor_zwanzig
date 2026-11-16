@@ -496,7 +496,7 @@ def test_ac20_trip_mail_behaelt_die_spalte_und_zeigt_strich_statt_zu_verschwinde
             display_config=h.display_config(), tz=h.TZ,
             multi_day_trend=h.outlook_rows(), stage_name="E3",
         )
-    kopf = re.search(r"Time\s+Temp.*", report.email_plain).group(0)
+    kopf = re.search(r"Zeit\s+Temp.*", report.email_plain).group(0)  # #3047 AC-17 (de)
     assert "Wind" in kopf, "Spalte Wind darf nicht verschwinden"
     zeile = [z for z in report.email_plain.splitlines() if re.match(r"\s+1[0-6]\s", z)][0]
     assert "–" in zeile, f"fehlender Wert muss als Strich erscheinen: {zeile!r}"

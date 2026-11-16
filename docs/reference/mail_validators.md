@@ -134,6 +134,59 @@ Nachweis „E2E bestanden" bleibt die echt zugestellte Staging-Mail in der Kopfs
 Renderer-Ausgabe ist byte-genau über `tests/golden/` abgesichert (`docs/reference/renderer_email_spec.md`,
 Abschnitt „Sprache").
 
+## Soll aus der gespeicherten Konfiguration — `--konfig PFAD` (seit #3047)
+
+`briefing_mail_validator.py` und `email_spec_validator.py` nehmen optional
+`--konfig PFAD`: das **rohe gespeicherte JSON des Test-Nutzers**, wie die Go-API
+es liefert (Trip: das ganze Trip-Objekt mit `display_config`/`report_config`;
+Orte: das Preset, für die Ortsfolge als Hülle `{"preset": {...}, "orte":
+{"<id>": "<Name>"}}`). `.claude/hooks/_soll_aus_konfiguration.py` leitet daraus
+das Soll ab — nur aus der Datei und dem statischen Register (`col_label`,
+`label`, Compare-Katalogtabelle), **nie** über ein `resolve_*` des Produkts
+(Spiegel-Test-Verbot). `pruefe_soll(msg, soll, lang)` vergleicht dann im
+**HTML- und im Klartext-Teil**:
+
+- **Trip:** Spaltenfolge jeder Etappen-Stundentabelle und der Nachttabelle
+  (E-Mail-Liste der Kaskade, nach `bucket`/`order`), Kopf des 3-Tages-Ausblicks;
+  im Kompaktformat die Folge der Ausblick-Tokens; `show_night_block`,
+  `email_format`, Ausblick an/aus.
+- **Orte:** Zeilenfolge der Vergleichstabelle (`channel_active_metrics.email`
+  geschnitten mit `active_metrics`), Ortsfolge (`location_ids`), Spalten des
+  Stundenverlaufs je Ort (`hourly_metrics`, `hourly_enabled`), Ausblick-Kopf
+  (`outlook_metrics`, `outlook_enabled`).
+
+Soll-Regel Ausblick (beide Kontexte): `[]` = Block aus; nie eingestellt = ganze
+Grundauswahl in der eingestellten Reihenfolge; sonst Schnitt mit der
+Grundauswahl, leerer Schnitt = volle Grundauswahl; ohne Grundauswahl die sieben
+festen Spalten — im Klartext dieselben wie im HTML. Jede Abweichung ist Exit 1
+mit einer `SOLL:`-Meldung, die die Spalte nennt („Spalte fehlt: 'Rain'",
+„Spalte zu viel: 'UV'", „an Position 1 steht 'Temp' statt 'Gust'"), ebenso ein
+Block, der nur in einem der beiden Teile steht. Nie eingestellte Listen ohne
+dokumentierte Folge (Trip-Altbestand ohne `metrics`, Orte ohne
+`hourly_metrics`/`active_metrics`) prüft der Validator nicht; ihre Vorgabe
+sichert der Editor-Standard-Abgleich (AC-13). Ohne `--konfig` ist das Verhalten
+unverändert.
+
+**Auflösung des Verbots aus #1381:** Eine feste Spaltenfolge (`_HOUR_COLUMNS_V2`)
+wird weiterhin **nie** vorausgesetzt — die Folge ist seit #1359 frei
+einstellbar, die alte Kanon-Projektion lehnte korrekte Mails ab und blockierte
+das Renderer-Commit-Gate #811. Neu ist nur, dass das Soll nicht mehr fest ist,
+sondern aus der gespeicherten Konfiguration genau dieses Nutzers stammt: eine
+Mail mit der vom Nutzer gewählten Folge besteht immer, eine abweichende nicht.
+Reihenfolge nur gegen die gespeicherte Konfiguration, nie gegen eine feste
+Folge. Nachweis ohne Netz: `tests/tdd/test_einstellung_gleich_mail_validatoren.py`
+(per `--eml`, Fallliste `tests/fixtures/einstellung_gleich_mail/fallliste_validatoren.json`).
+
+```bash
+uv run python3 .claude/hooks/briefing_mail_validator.py --mail-type trip-briefing \
+    --subject-contains "<Marker>" --to-contains "<Nutzer>" --konfig trip.json
+uv run python3 .claude/hooks/email_spec_validator.py \
+    --subject-contains "<Marker>" --to-contains "<Nutzer>" --konfig preset_huelle.json
+```
+
+Das Postfach ist geteilt: `--konfig` setzt voraus, dass die geprüfte Mail dem
+Nutzer des JSON gehört (Auswahl über `--to-contains`).
+
 ## 1. `email_spec_validator.py` — Orts-Vergleich-Mail (ZWINGEND)
 
 **Geltungsbereich:** prüft **ausschließlich** den **Orts-Vergleich-Mail**-Pfad, seit
@@ -196,8 +249,8 @@ beweisen NICHTS — sie prüfen nicht, ob Daten SINNVOLL sind.
 
 **Bekannte Grenze:** Der Validator prüft nur den statischen
 v2-Struktur-Vertrag (Warn-Zeile + ≥1 numerische Zeile genügt). Ob die im Preset
-tatsächlich aktivierten Metriken korrekt angezeigt werden, ist nicht Teil dieses
-Gates.
+tatsächlich aktivierten Metriken korrekt angezeigt werden, prüft er nur mit
+`--konfig` (Abschnitt „Soll aus der gespeicherten Konfiguration", #3047).
 
 **Bekannte Grenze (Folge-Issue #1150):** Seit Issue #1107 kann die komplette
 Stundenverlauf-Sektion je Compare-Preset abgeschaltet werden

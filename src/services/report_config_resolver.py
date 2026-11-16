@@ -283,6 +283,7 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         resolve_channel_enabled_metrics, resolve_channel_layout_rows,
         resolve_enabled_metrics_report,
     )
+    from output.renderers.compare_metric_ids import resolve_enabled_metrics
     from output.renderers.email.compare_html import has_visible_hour_columns
 
     preset_id = preset.get("id", "")
@@ -304,7 +305,11 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         except (KeyError, TypeError, ValueError, AttributeError):
             logger.warning("Compare-Preset %s: ungueltiger Korridor %r uebersprungen", preset_id, raw)
 
-    resolved_hourly_metrics = resolve_hourly_metrics(display_config.get("hourly_metrics"))
+    # Issue #3047 O5 (AC-10): der Stundenverlauf nimmt nur aus der Grundauswahl.
+    resolved_hourly_metrics = resolve_hourly_metrics(
+        display_config.get("hourly_metrics"),
+        resolve_enabled_metrics(display_config.get("active_metrics")),
+    )
     hourly_enabled = preset.get("hourly_enabled", True)
     if hourly_enabled and not has_visible_hour_columns(resolved_hourly_metrics):
         # Issue #1366/#1361 Befund 3: eine Stundenauswahl ohne jede sichtbare

@@ -6,6 +6,7 @@ See docs/reference/api_contract.md for full specification.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, time, timezone
 from enum import Enum
@@ -17,6 +18,8 @@ from app.config import Location  # noqa: F401
 
 if TYPE_CHECKING:
     from services.official_alerts.models import OfficialAlert
+
+logger = logging.getLogger(__name__)
 
 
 class Provider(str, Enum):
@@ -1007,11 +1010,27 @@ class UnifiedWeatherDisplayConfig:
 
         ``None`` von der gemeinsamen Quelle heisst "kein Maximum definiert"
         (D4) -> nicht schneiden, Eingabe unveraendert zurueck.
+
+        #3047 AC-10: Bleibt von einer NICHT leeren Kanal-Liste nach dem Schnitt
+        nichts uebrig, gilt der dokumentierte Rueckfall auf die volle
+        Grundauswahl (wie ``_erbe_grundauswahl`` im Ausblick) statt einer
+        Tabelle ohne Wertspalten. Eine ausdruecklich LEERE gespeicherte Liste
+        erreicht diese Methode nie (Zweige in ``get_metrics_for_channel``
+        geben vorher ``[]`` zurueck) und bleibt Nutzerwunsch (#2422).
         """
         allowed_ids = self.allowed_metric_ids_for_report_type(report_type)
         if allowed_ids is None:
             return metrics
-        return [mc for mc in metrics if mc.metric_id in allowed_ids]
+        geschnitten = [mc for mc in metrics if mc.metric_id in allowed_ids]
+        if metrics and not geschnitten:
+            logger.warning(
+                "Kanal-Liste %s liegt vollstaendig ausserhalb der Grundauswahl "  # i18n-log
+                "(%s) -- Rueckfall auf die volle Grundauswahl statt leerer "
+                "Tabelle (#3047 AC-10)",
+                [mc.metric_id for mc in metrics], sorted(allowed_ids),
+            )
+            return self.get_metrics_for_report_type(report_type)
+        return geschnitten
 
     def cascade_source_for_channel(self, channel: str, report_type: str) -> CascadeSource:
         """Issue #1677 AC-9: auf welcher Kaskadenebene antwortet
