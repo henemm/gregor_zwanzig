@@ -596,7 +596,10 @@ def _check_plausibility(html: str, lang: str = "de") -> list[str]:
     return errors
 
 
-def _validate_compact(msg: Message, max_bytes: int, lang: str = "de") -> tuple[bool, list[str]]:
+def _validate_compact(
+    msg: Message, max_bytes: int, lang: str = "de", ueberblick: bool = True,
+) -> tuple[bool, list[str]]:
+    """``ueberblick`` = Metriken-Ueberblick laut Soll (#3047 N5)."""
     errors: list[str] = []
 
     if msg.is_multipart() or msg.get_content_type() != "text/plain":
@@ -625,13 +628,17 @@ def _validate_compact(msg: Message, max_bytes: int, lang: str = "de") -> tuple[b
     if _has_hourly_table_plain(text):
         errors.append("COMPACT: enthaelt sequenzielle Stundentabelle (>=2 HH:00-Zeilen) — verboten")
 
-    errors.extend(_check_compact_blocks(text, lang))
+    errors.extend(_check_compact_blocks(text, lang, ueberblick))
 
     return len(errors) == 0, errors
 
 
-def _check_compact_blocks(text: str, lang: str = "de") -> list[str]:
+def _check_compact_blocks(text: str, lang: str = "de", ueberblick: bool = True) -> list[str]:
     """Pflichtbloecke (HART): Kopf, Metriken-Ueberblick, Footer.
+
+    #3047 N5: bei bewusst leerer Grundauswahl (alle ``enabled: false``, nur
+    per ``--konfig`` bekannt) entfaellt der Metriken-Ueberblick -- dann ist
+    sein Erscheinen der Fehler, nicht sein Fehlen.
 
     Ausblick (Wetterlage:/Naechste Etappen) ist OPTIONAL — render_compact()
     laesst ihn bei fehlendem stability_result und leerem multi_day_trend
@@ -646,8 +653,11 @@ def _check_compact_blocks(text: str, lang: str = "de") -> list[str]:
         kopf = _ml().erwartet("mail.kopf.bericht_evening", lang, name="Trip")
         errors.append(f"COMPACT: Kopf-Zeile ({kopf}) fehlt")
     pille = "== " + _ml().erwartet("mail.pille.ueberschrift", lang).replace("Ü", "Ue") + " =="
-    if pille not in text:
+    if ueberblick and pille not in text:
         errors.append(f"COMPACT: Block '{pille}' fehlt")
+    elif not ueberblick and pille in text:
+        errors.append(f"SOLL: COMPACT: Block '{pille}' erscheint, obwohl die Grundauswahl "
+                      "bewusst leer ist")
     if "----" not in text or "Generated:" not in text:
         errors.append("COMPACT: Footer (Trennlinie + Generated:) fehlt")
     return errors
@@ -750,7 +760,14 @@ def _soll_kompakt(text: str, s: dict, lang: str) -> list[str]:
         return ["SOLL: Ausblick (Kompakt) erscheint, obwohl er laut Konfiguration aus ist"]
     if s["ausblick"] is None or s["ausblick"]["fest"]:
         return []
-    return _soll_vergleich("Ausblick (Kompakt) Zeile", zeilen, s["ausblick"]["klartext"])
+    fehler = _soll_vergleich("Ausblick (Kompakt) Zeile", zeilen, s["ausblick"]["klartext"])
+    # #3047 N7: Roh/Einfach je Ausblick-Spalte auch im Kompaktformat (ASCII:
+    # "0Line" ist die Spalte "0°Line"; Einfach = Wort, Roh = Zahl).
+    ascii_ = _soll_modul()._ASCII_KUERZEL
+    zellen = [[(ascii_.get(k, k), wert) for k, wert in z]
+              for z in _ausblick_zellen(_block_zeilen(text, ueberschrift))]
+    return fehler + [m.replace("(Klartext)", "(Kompakt)") for m in _darstellung_meldungen(
+        "Ausblick", [zellen], s["ausblick"]["formen"], "Klartext", False)]
 
 
 _AMPELPUNKT_RE = re.compile(r"<span[^>]*border-radius:\s*50%", re.IGNORECASE)
@@ -817,16 +834,22 @@ def _klartext_zellen(plain: str, lang: str) -> dict[str, list]:
             grenzen = [p for p, _k in kopf] + [len(zeile)]
             tabelle.append([(k, zeile[p:grenzen[j + 1]]) for j, (p, k) in enumerate(kopf)])
         (arten["Nachttabelle"] if 0 <= nacht_pos < m.start() else arten["Etappen-Stundentabelle"]).append(tabelle)
+    arten["Ausblick"].append(_ausblick_zellen(
+        _block_zeilen(plain, _ml().erwartet("mail.ausblick.naechste_etappen", lang))))
+    return arten
+
+
+def _ausblick_zellen(zeilen: list[str]) -> list[list]:
+    """Ausblick-Zeilen (Klartext/Kompakt) -> je Zeile [(Kuerzel, Wert), ...]."""
     universum = _soll_modul().ALLE_KUERZEL
     ausblick = []
-    for zeile in _block_zeilen(plain, _ml().erwartet("mail.ausblick.naechste_etappen", lang)):
+    for zeile in zeilen:
         treffer = sorted((t.start(), k) for k in universum
                          for t in re.finditer(r"(?<!\S)" + re.escape(k) + r" (?=\S)", zeile))
         grenzen = [p for p, _k in treffer] + [len(zeile)]
         ausblick.append([(k, zeile[p + len(k):grenzen[j + 1]].strip().split("  ")[0])
                          for j, (p, k) in enumerate(treffer)])
-    arten["Ausblick"].append(ausblick)
-    return arten
+    return ausblick
 
 
 def _soll_darstellung(html: str, plain: str, s: dict, lang: str) -> list[str]:
@@ -840,6 +863,45 @@ def _soll_darstellung(html: str, plain: str, s: dict, lang: str) -> list[str]:
                                   ("Klartext", _klartext_zellen(plain, lang), False)):
         for art, tabellen in arten.items():
             fehler += _darstellung_meldungen(art, tabellen, formen[art], teil, ist_html)
+    return fehler
+
+
+def _verwaist_klartext(plain: str, lang: str) -> list[str]:
+    """Etappen-/Ziel-/Nacht-Ueberschrift im Klartext ohne Stundentabelle bis
+    zur naechsten Leerzeile (Fehler-Etappen mit Hinweistext ausgenommen)."""
+    nacht = re.escape(_ml().marker("mail.nacht.am_ziel", lang))
+    kopf = re.compile(rf"^━━ (?:Segment \S+:|\U0001f3c1 |{nacht}).*━━$")
+    hinweis = _ml().erwartet("mail.segment.fehler_detail", lang)
+    zeilen, fehler = plain.splitlines(), []
+    for i, zeile in enumerate(zeilen):
+        if not kopf.match(zeile):
+            continue
+        block = []
+        for folge in zeilen[i + 1:]:
+            if not folge.strip():
+                break
+            block.append(folge)
+        if not any(_ZEIT_KOPF_RE.match(z) or hinweis in z for z in block):
+            fehler.append(f"SOLL: verwaiste Ueberschrift (Klartext) '{zeile.strip('━ ')}' "
+                          "ohne Stundentabelle")
+    return fehler
+
+
+def _verwaist_html(html: str, lang: str) -> list[str]:
+    """Wie ``_verwaist_klartext`` fuer den HTML-Teil: zwischen einer Etappen-,
+    Ziel- oder Nacht-Ueberschrift und der naechsten muss eine Tabelle mit
+    Kopfzelle Zeit/Time stehen."""
+    nacht = re.escape(_ml().marker("mail.nacht.am_ziel", lang))
+    ziel = re.escape(_ml().erwartet("mail.ziel.titel", lang))
+    kopf = re.compile(rf">(SEG [^<]+)</span>|>(SEG [^<]*·[^<]*)</div>|>({ziel})</div>|(🌙 {nacht}[^<]*)<")
+    treffer = list(kopf.finditer(html))
+    fehler = []
+    for j, m in enumerate(treffer):
+        ende = treffer[j + 1].start() if j + 1 < len(treffer) else len(html)
+        tabellen = [_th_tokens(b) for b in _table_blocks(html[m.end():ende])]
+        if not any(th and th[0] in ("Time", "Zeit") for th in tabellen):
+            titel = next(g for g in m.groups() if g)
+            fehler.append(f"SOLL: verwaiste Ueberschrift (HTML) '{titel}' ohne Stundentabelle")
     return fehler
 
 
@@ -887,6 +949,9 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
             fehler.append(f"SOLL: {name} fehlt im {'Klartext' if h else 'HTML'}-Teil")
     fehler += _soll_tabellen("HTML", *koepfe_html, s)
     fehler += _soll_tabellen("Klartext", *koepfe_plain, s)
+    # #3047 N7: keine Ueberschrift ohne Tabelle ("Segment 1"/"Nacht am Ziel"
+    # bei bewusst leerer Auswahl) -- dann muss der ganze Abschnitt entfallen.
+    fehler += _verwaist_html(html, lang) + _verwaist_klartext(plain, lang)
     return fehler + _soll_darstellung(html, plain, s, lang)
 
 
@@ -933,7 +998,8 @@ def validate_message(
     if mail_format == "full":
         ok, errors = _validate_full(msg, lang, _tabellen_erwartet(msg, soll))
     elif mail_format == "compact":
-        ok, errors = _validate_compact(msg, max_bytes, lang)
+        ueberblick = soll is None or soll.get("kontext") != "trip" or _soll_report(msg, soll)["ueberblick"]
+        ok, errors = _validate_compact(msg, max_bytes, lang, ueberblick)
     else:
         return False, [f"Unbekanntes Format '{mail_format}' (erwartet full/compact)"]
 

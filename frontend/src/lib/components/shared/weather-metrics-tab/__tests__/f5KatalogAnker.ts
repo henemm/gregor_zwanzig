@@ -39,6 +39,11 @@ export const F5_ANKER: [schluessel: string, de: string, en: string][] = [
 	['wertebereiche.grundauswahl.frage', 'Welche Metriken ins Briefing?', 'Which metrics go into the briefing?'],
 	['wertebereiche.grundauswahl.aktiv', '<anzahl> aktiv', '<anzahl> active'],
 	['wertebereiche.grundauswahl.hinweis', 'Aktivierte Metriken erscheinen in Abschnitt 3, wo du Reihenfolge und Darstellung festlegst.', 'Activated metrics appear in section 3, where you set their order and display.'],
+	// #3047 N2 (Hinweis bewusst leere Grundauswahl) und N3 (Kennzeichnung nur ein Bericht, bis #3065).
+	['wertebereiche.grundauswahl.leer_titel', 'Keine Metrik ausgewählt.', 'No metric selected.'],
+	['wertebereiche.grundauswahl.leer_text', 'Die Listen bleiben leer, Stundenverlauf und Ausblick entfallen in der E-Mail.', 'The lists stay empty; the hourly view and the outlook are left out of the email.'],
+	['wertebereiche.grundauswahl.nur_morgens', 'nur morgens', 'morning only'],
+	['wertebereiche.grundauswahl.nur_abends', 'nur abends', 'evening only'],
 	['wertebereiche.kategorie.temperature', 'Temperatur', 'Temperature'],
 	['wertebereiche.kategorie.wind', 'Wind', 'Wind'],
 	['wertebereiche.kategorie.precipitation', 'Niederschlag', 'Precipitation'],

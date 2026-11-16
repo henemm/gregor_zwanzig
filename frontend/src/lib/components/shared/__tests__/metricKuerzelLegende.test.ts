@@ -1091,8 +1091,6 @@ const EINBETTUNGEN = [
 			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
 			metricKeys: null,
 			grundauswahl: gerendertVergleich(),
-			// #3047 J1: Vergleichs-Mount setzt den Trip-Schalter nicht (Prop-Vorgabe false).
-			leereGrundauswahlIstBewusst: false,
 			smsSymbols: tripKuerzelById(),
 			// #2659 (i18n F10): Namen ueber das Register je Oberflaechensprache.
 			$locale: 'de',

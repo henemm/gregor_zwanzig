@@ -1026,6 +1026,11 @@ def render_html(
                 <p style="margin:4px 0 0 0;color:{G_INK_MUTED};font-size:13px;">{t("mail.segment.fehler_detail", lang)}</p>
             </div>""")
             continue
+        if rows and not visible_cols(rows):
+            # #3047 N7: ohne Metrikspalte (bewusst leere Auswahl) entfaellt der
+            # Segment-Block GANZ -- keine "SEG N"-Ueberschrift ohne Tabelle
+            # (Paritaet zu plain.render_plain).
+            continue
         # Issue #342: Horizont pro Etappe ableiten und erlaubte Spalten berechnen.
         etappe_horizon = derive_horizon(report_date_obj, seg.start_time.date())
         allowed_keys = _allowed_col_keys_for_horizon(dc, etappe_horizon)
@@ -1144,7 +1149,9 @@ def render_html(
     segments_html = "".join(seg_html_parts)
 
     night_html = ""
-    if night_rows:
+    # #3047 N7: ohne Metrikspalte entfaellt der Nachtblock GANZ (Ueberschrift,
+    # Ankunftszeile, Hinweis) -- Paritaet zu plain.render_plain.
+    if night_rows and visible_cols(night_rows):
         last_seg = segments[-1].segment
         night_hint = ""
         if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):

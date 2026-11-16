@@ -298,6 +298,13 @@ def render_plain(
             lines.append(f"  {t('mail.segment.fehler_detail', lang)}")
             lines.append("")
             continue
+        _tabelle = _render_text_table(rows, friendly_keys=friendly_keys,
+                                      format_modes=format_modes,
+                                      col_order=_col_order, lang=lang, ampel=ampel)
+        if rows and not _tabelle:
+            # #3047 N7: ohne Metrikspalte (bewusst leere Auswahl) entfaellt der
+            # Segment-Block GANZ -- keine Ueberschrift ohne Tabelle (wie HTML).
+            continue
         s_elev = int(seg.start_point.elevation_m or 0)
         e_elev = int(seg.end_point.elevation_m or 0)
         if seg.segment_id == "Ziel":
@@ -309,26 +316,24 @@ def render_plain(
                 seg.end_point.distance_from_start_km,
             )
             lines.append(f"━━ Segment {seg.segment_id}: {_km_range} | {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {elev_arrow}{s_elev}m → {e_elev}m ━━")
-        _tabelle = _render_text_table(rows, friendly_keys=friendly_keys,
-                                      format_modes=format_modes,
-                                      col_order=_col_order, lang=lang, ampel=ampel)
-        if _tabelle:
-            lines.append(_tabelle)
+        lines.append(_tabelle)
         lines.append("")
 
-    if night_rows:
+    # Issue #3047 AC-15: dieselben format_modes wie die Etappentabelle
+    # (und wie die HTML-Nachttabelle), sonst kippt Roh/Einfach.
+    # #3047 N7: ohne Metrikspalte entfaellt der Nachtblock GANZ (samt
+    # Ueberschrift und Ankunftszeile), wie im HTML-Teil.
+    _nacht = _render_text_table(night_rows, friendly_keys=friendly_keys,
+                                format_modes=format_modes,
+                                col_order=_col_order, lang=lang,
+                                ampel=ampel) if night_rows else ""
+    if _nacht:
         last_seg = segments[-1].segment
         _hoehe = int(last_seg.end_point.elevation_m or 0)
         lines.append(f"━━ {t('mail.nacht.am_ziel', lang, hoehe=_hoehe)} ━━")
         lines.append(t("mail.nacht.ankunft", lang,
                        zeit=local_fmt(display_end_time(last_seg), tz)))
-        # Issue #3047 AC-15: dieselben format_modes wie die Etappentabelle
-        # (und wie die HTML-Nachttabelle), sonst kippt Roh/Einfach.
-        _nacht = _render_text_table(night_rows, friendly_keys=friendly_keys,
-                                    format_modes=format_modes,
-                                    col_order=_col_order, lang=lang, ampel=ampel)
-        if _nacht:
-            lines.append(_nacht)
+        lines.append(_nacht)
         if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):
             lines.append(f"  {t('mail.nacht.hinweis_minimum', lang)}")
         lines.append("")

@@ -44,6 +44,7 @@ import {
 	hydrateLayoutFieldsFromPreset
 } from '../weatherMetricsCompareSave.ts';
 import { materializeActiveMetricKeys } from '../compareMetricOrder.ts';
+import { startCompareChannelOverride } from '../compareChannelMetricLayouts.ts';
 import { hydrateAlarmFieldsFromPreset } from '../../../compare/compareHubHydration.ts';
 import { attributAusdruck, findeKomponenten, werte } from '../../__tests__/svelteInstanzPruefstand.ts';
 
@@ -59,6 +60,7 @@ const { render } = await import('svelte/server');
 const komp = async (datei: string) => (await import(pathToFileURL(datei).href)).default;
 const OutlookLayoutControls = await komp(path.join(SHARED, 'OutlookLayoutControls.svelte'));
 const CompareHourlyLayoutControls = await komp(path.join(SHARED, '..', 'compare', 'CompareHourlyLayoutControls.svelte'));
+const GrundauswahlLeerHinweis = await komp(path.join(SHARED, '..', 'molecules', 'GrundauswahlLeerHinweis.svelte'));
 const { locale } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/i18n/index.ts')).href);
 locale.set('de');
 
@@ -165,7 +167,7 @@ function tripEditor(eingabe: Zustand['eingabe']) {
 	Object.assign(zustand, { buckets, friendlyMap: {}, channelBuckets });
 	const { channelListSections } = tabFunktionen(['channelView', 'channelListSections'], zustand);
 	return {
-		buckets,
+		buckets, zustand,
 		emailListe: (channelListSections('email') as { active: string[] }).active,
 		outlookKeys: normalizeStoredOutlookMetrics(dc.outlook_metrics, ORTE_KATALOG)
 	};
@@ -263,9 +265,15 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 	// #3047 J1 (Konzept §5.8): bewusst leere Grundauswahl -> Ausblick-Liste leer, keine festen Spalten
 	test('frontend_seite_trip_ausblick_bewusst_leer_alle_aus', () =>
 		pruefe(frontendTripAusblick, 'trip_ausblick', zustand('trip_ausblick', 'bewusst_leer_alle_aus')));
+	// #3047 N2: Grundauswahl ohne ausblickfaehige Groesse -> Ausblick entfaellt (wie die Mail)
+	test('frontend_seite_trip_ausblick_grundauswahl_ohne_ausblick', () =>
+		pruefe(frontendTripAusblick, 'trip_ausblick', zustand('trip_ausblick', 'grundauswahl_ohne_ausblick')));
 
 	test('frontend_seite_orte_vergleichstabelle_standard', () =>
 		pruefe(frontendOrteVergleichstabelle, 'orte_vergleichstabelle', zustand('orte_vergleichstabelle', 'nie_eingestellt')));
+	// #3047 N2: `active_metrics: []` -> keine Zeile in der Vergleichstabelle
+	test('frontend_seite_orte_vergleichstabelle_grundauswahl_bewusst_leer', () =>
+		pruefe(frontendOrteVergleichstabelle, 'orte_vergleichstabelle', zustand('orte_vergleichstabelle', 'grundauswahl_bewusst_leer')));
 	for (const z of gespeicherte('orte_vergleichstabelle'))
 		test(`frontend_seite_orte_vergleichstabelle_gespeichert ${z.id}`, () =>
 			pruefe(frontendOrteVergleichstabelle, 'orte_vergleichstabelle', z));
@@ -279,6 +287,9 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 	// #3047 J1: gespeicherte Grundauswahl = Vorgabe ist gespeichert (Grundauswahl-Regel wie die Mail)
 	test('frontend_seite_orte_stundenverlauf_grundauswahl_gleich_vorgabe', () =>
 		pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', zustand('orte_stundenverlauf', 'grundauswahl_gleich_vorgabe')));
+	// #3047 N2: `active_metrics: []` -> der Stundenverlauf entfaellt (nicht die Vorgabemenge)
+	test('frontend_seite_orte_stundenverlauf_grundauswahl_bewusst_leer', () =>
+		pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', zustand('orte_stundenverlauf', 'grundauswahl_bewusst_leer')));
 	for (const z of gespeicherte('orte_stundenverlauf'))
 		test(`frontend_seite_orte_stundenverlauf_gespeichert ${z.id}`, () =>
 			pruefe(frontendOrteStundenverlauf, 'orte_stundenverlauf', z));
@@ -302,8 +313,7 @@ describe('#3047 Editor-Standard = Mail-Standard (Frontend-Seite)', () => {
 	// #3047 J1: gespeicherte Grundauswahl = Vorgabe ist gespeichert (Grundauswahl-Regel wie die Mail)
 	test('frontend_seite_orte_ausblick_grundauswahl_gleich_vorgabe', () =>
 		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'grundauswahl_gleich_vorgabe')));
-	// #3047 J4: leer heisst beim Ortsvergleich „kein Maximum" (D4) -> feste Spalten wie die Mail;
-	// faengt „leer heisst leer auch ohne leereGrundauswahlIstBewusst" (M-J1f)
+	// #3047 N2 (loest J4/D4 ab): `active_metrics: []` ist bewusst leer -> der Ausblick entfaellt, wie beim Trip
 	test('frontend_seite_orte_ausblick_grundauswahl_bewusst_leer', () =>
 		pruefe(frontendOrteAusblick, 'orte_ausblick', zustand('orte_ausblick', 'grundauswahl_bewusst_leer')));
 	for (const z of gespeicherte('orte_ausblick'))
@@ -332,5 +342,77 @@ describe('#3047 AC-16 Vorlage anwenden (Frontend-Seite)', () => {
 			.sort((a, b) => a.order - b.order)
 			.map((m) => m.metric_id);
 		assert.deepEqual(folge, vorlage.erwartet, 'gespeicherte Folge nach Vorlage anwenden');
+	});
+});
+
+// ── #3047 N1: Totalschnitt -- „Aus" wirkt auf die angezeigte Grundauswahl ──────
+// Zeigt der Reiter beim Totalschnitt die volle Grundauswahl, muss „Aus" darauf
+// wirken (sonst bliebe der Knopf wirkungslos, der Altstand liegt ja ausserhalb).
+describe('#3047 N1 Totalschnitt: Bearbeiten startet von der angezeigten Liste', () => {
+	test('frontend_seite_trip_kanal_totalschnitt_aus_wirkt', () => {
+		const z = zustand('trip_tabellen', 'gespeichert_totalschnitt');
+		const zt = tripEditor(z.eingabe).zustand;
+		Object.assign(zt, {
+			activeChannel: 'email', selectedTemplate: '', userTouched: false,
+			applyDiff: nix, scheduleAutoSave: nix
+		});
+		const f = tabFunktionen(['channelView', 'channelListSections', 'editActiveChannel', 'onRemove'], zt);
+		f.onRemove('gust');
+		assert.deepEqual((f.channelListSections('email') as { active: string[] }).active,
+			z.erwartet.filter((id) => id !== 'gust'));
+	});
+	test('frontend_seite_orte_kanal_totalschnitt_aus_wirkt', () => {
+		const z = zustand('orte_vergleichstabelle', 'gespeichert_kanal_totalschnitt');
+		const ed = orteEditor(z.eingabe);
+		const gemeldet: Record<string, string[] | null> = {};
+		const f = tabFunktionen(['editCompareChannel', 'onCompareRemove'], {
+			channelActiveMetricKeys: hydrateChannelActiveMetricsFromPreset({ id: 'p', ...z.eingabe } as never, ORTE_KATALOG),
+			materializedActiveMetricKeys: ed.materializedActiveMetricKeys, activeMetricKeys: ed.activeMetricKeys,
+			compareChannel: 'email', startCompareChannelOverride,
+			onVergleichsMetrikenChange: (_g: unknown, next: Record<string, string[] | null>) => { Object.assign(gemeldet, next); }
+		});
+		f.onCompareRemove('wind_max_kmh');
+		assert.deepEqual(gemeldet.email,z.erwartet.filter((id) => id !== 'wind_max_kmh'));
+	});
+});
+
+// ── #3047 N2: sichtbarer Hinweis bei bewusst leerer Grundauswahl ───────────────
+// Die Prop kommt aus dem ECHTEN Attribut-Ausdruck der beiden Einbettungen in
+// WeatherMetricsTab.svelte (Trip und Vergleich teilen die Komponente).
+const HINWEIS_EINBETTUNGEN = findeKomponenten(TAB_AST as never, 'GrundauswahlLeerHinweis');
+function hinweisAusdruck(kontext: 'trip' | 'orte'): string {
+	const ausdruecke = HINWEIS_EINBETTUNGEN.map((e) => attributAusdruck(e, TAB_QUELLE, 'grundauswahl') ?? '');
+	assert.equal(ausdruecke.length, 2, 'genau zwei Einbettungen (Trip, Vergleich) erwartet');
+	const treffer = ausdruecke.filter((a) => a.includes('buckets') === (kontext === 'trip'));
+	assert.equal(treffer.length, 1, `Einbettung ${kontext} nicht eindeutig: ${ausdruecke.join(' | ')}`);
+	return treffer[0];
+}
+function hinweisText(kontext: 'trip' | 'orte', liste: string, id: string, sprache = 'de'): string | null {
+	const eingabe = zustand(liste, id).eingabe;
+	const umgebung = kontext === 'trip' ? { buckets: tripEditor(eingabe).buckets } : orteEditor(eingabe);
+	const grundauswahl = werte(stripTypeScriptTypes(hinweisAusdruck(kontext)), umgebung);
+	locale.set(sprache);
+	try {
+		const html = rendern(GrundauswahlLeerHinweis, { grundauswahl });
+		const m = /data-testid="grundauswahl-leer-hinweis"[^>]*>([\s\S]*?)<\/div>/.exec(html);
+		return m ? m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : null;
+	} finally {
+		locale.set('de');
+	}
+}
+const HINWEIS_DE = 'Keine Metrik ausgewählt. Die Listen bleiben leer, Stundenverlauf und Ausblick entfallen in der E-Mail.';
+const HINWEIS_EN = 'No metric selected. The lists stay empty; the hourly view and the outlook are left out of the email.';
+describe('#3047 N2 Hinweis leere Grundauswahl (Frontend-Seite)', () => {
+	test('frontend_seite_hinweis_grundauswahl_leer_trip', () => {
+		assert.equal(hinweisText('trip', 'trip_tabellen', 'bewusst_leer_alle_aus'), HINWEIS_DE);
+		assert.equal(hinweisText('trip', 'trip_tabellen', 'bewusst_leer_alle_aus', 'en'), HINWEIS_EN);
+		assert.equal(hinweisText('trip', 'trip_tabellen', 'nie_eingestellt'), null);
+		assert.equal(hinweisText('trip', 'trip_tabellen', 'altbestand_leere_liste'), null, 'metrics: [] ist Altbestand, nicht leer');
+	});
+	test('frontend_seite_hinweis_grundauswahl_leer_orte', () => {
+		assert.equal(hinweisText('orte', 'orte_ausblick', 'grundauswahl_bewusst_leer'), HINWEIS_DE);
+		assert.equal(hinweisText('orte', 'orte_ausblick', 'grundauswahl_bewusst_leer', 'en'), HINWEIS_EN);
+		assert.equal(hinweisText('orte', 'orte_ausblick', 'nie_eingestellt'), null, 'nie eingestellt ist nicht leer');
+		assert.equal(hinweisText('orte', 'orte_vergleichstabelle', 'gespeichert_folge'), null);
 	});
 });
