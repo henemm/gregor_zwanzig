@@ -41,10 +41,11 @@ import { toCompareSelectionEntries } from '../compareMetricSelection.ts';
 import { normalizeStoredOutlookMetrics } from '../compareMetricSelection.ts';
 import {
 	hydrateChannelActiveMetricsFromPreset,
-	hydrateLayoutFieldsFromPreset,
-	hydrateWeatherMetricsFromPreset
+	hydrateLayoutFieldsFromPreset
 } from '../weatherMetricsCompareSave.ts';
 import { materializeActiveMetricKeys } from '../compareMetricOrder.ts';
+import { hydrateAlarmFieldsFromPreset } from '../../../compare/compareHubHydration.ts';
+import { attributAusdruck, findeKomponenten, werte } from '../../__tests__/svelteInstanzPruefstand.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // __tests__ -> weather-metrics-tab -> shared -> components -> lib -> src -> frontend
@@ -157,16 +158,36 @@ function frontendTripAusblick(eingabe: Zustand['eingabe']): string[] {
 }
 
 // ── Orte: Hydration wie im Vergleichs-Hub ──────────────────────────────────────
+// #3061: Grundauswahl wie im Vergleichs-Hub -- `wizardState.activeMetricKeys`
+// aus dem ECHTEN Hub-Hydrierer (`hydrateAlarmFieldsFromPreset`, compareHubHydration.ts;
+// er und der Wetter-Metriken-Hydrierer in CompareTabs.svelte muessen dasselbe
+// liefern, fix_3061_hub_hydrierer.test.ts), und der Ausblick bekommt die
+// Grundauswahl ueber den ECHTEN Attribut-Ausdruck `grundauswahl={...}` der
+// Vergleichs-Einbettung in WeatherMetricsTab.svelte (erste der zwei Einbettungen,
+// die zweite ist der Trip). Vorher stand hier `hydrateWeatherMetricsFromPreset`,
+// das „nie eingestellt" (`null`) zur vollen Liste materialisiert -- damit war
+// eine BEWUSST gespeicherte Vollauswahl vom Altbestand nicht zu unterscheiden.
+const AUSBLICK_EINBETTUNGEN = findeKomponenten(TAB_AST as never, 'OutlookLayoutControls');
+const ORTE_GRUNDAUSWAHL_AUSDRUCK = attributAusdruck(AUSBLICK_EINBETTUNGEN[0], TAB_QUELLE, 'grundauswahl');
+function hubActiveMetricKeys(preset: unknown): string[] | null {
+	const wizardState: Record<string, unknown> = {};
+	hydrateAlarmFieldsFromPreset(wizardState as never, preset as never, ORTE_KATALOG);
+	return (wizardState.activeMetricKeys as string[] | null | undefined) ?? null;
+}
 function orteEditor(eingabe: Zustand['eingabe']) {
 	const preset = { id: 'pruef-3047', ...eingabe } as never;
-	const activeMetricKeys = hydrateWeatherMetricsFromPreset(preset, ORTE_KATALOG);
+	const activeMetricKeys = hubActiveMetricKeys(preset);
 	const materializedActiveMetricKeys = materializeActiveMetricKeys(activeMetricKeys ?? null);
+	assert.ok(ORTE_GRUNDAUSWAHL_AUSDRUCK, 'Messaufbau: grundauswahl-Attribut der Vergleichs-Einbettung fehlt');
+	const grundauswahl = werte(stripTypeScriptTypes(ORTE_GRUNDAUSWAHL_AUSDRUCK), {
+		activeMetricKeys, materializedActiveMetricKeys
+	}) as string[] | null;
 	const channelActiveMetricKeys = hydrateChannelActiveMetricsFromPreset(preset, ORTE_KATALOG);
 	const layout = hydrateLayoutFieldsFromPreset(preset, ORTE_KATALOG);
 	const { compareChannelPrimary } = tabFunktionen(['compareChannelPrimary'], {
 		channelActiveMetricKeys, materializedActiveMetricKeys
 	});
-	return { materializedActiveMetricKeys, layout, kanalListe: compareChannelPrimary as (ch: string) => string[] };
+	return { materializedActiveMetricKeys, grundauswahl, layout, kanalListe: compareChannelPrimary as (ch: string) => string[] };
 }
 function frontendOrteVergleichstabelle(eingabe: Zustand['eingabe']): string[] {
 	const ed = orteEditor(eingabe);
@@ -185,7 +206,7 @@ function frontendOrteAusblick(eingabe: Zustand['eingabe']): string[] {
 	const ed = orteEditor(eingabe);
 	return aktiveFolge(rendern(OutlookLayoutControls, {
 		metricKeys: ed.layout.outlookMetricKeys, catalog: ORTE_KATALOG,
-		grundauswahl: ed.materializedActiveMetricKeys, onMetricKeys: nix
+		grundauswahl: ed.grundauswahl, onMetricKeys: nix
 	}));
 }
 

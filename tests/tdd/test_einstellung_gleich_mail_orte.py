@@ -713,6 +713,40 @@ def test_ac21_altbestand_ausblick_klartext_gleich_html():
             f"{ort}: Klartext {[k for k, _ in plain[ort]]} != HTML {[k for k, _ in html[ort]]}")
 
 
+def _vollauswahl_ohne_ausblick() -> dict:
+    """#3061 (Befund F4): ``active_metrics`` bewusst gespeichert mit ALLEN
+    Katalog-Groessen, ``outlook_metrics`` fehlt. Diese Kombination war fuer die
+    paarweisen Faelle nicht darstellbar (``nie_eingestellt`` nutzt den kleinen
+    POOL), deshalb blieb der Editor-Fehler unentdeckt."""
+    from output.renderers.compare_metric_catalog import get_compare_metric_catalog
+
+    roh = preset_dict("basis")
+    roh["id"] = "orte-3061-vollauswahl"
+    dc = roh["display_config"]
+    for feld in ("outlook_metrics", "outlook_metric_formats"):
+        dc.pop(feld, None)
+    dc["active_metrics"] = [{"metric_id": e["metric_id"], "aggregation": e["aggregation"]}
+                            for e in get_compare_metric_catalog()]
+    return roh
+
+
+@pytest.mark.parametrize("fmt", ["html", "klartext"])
+def test_3061_vollauswahl_gespeichert_ausblick_fehlt(fmt):
+    """#3061 AC-6 / #3047 AC-13, AC-21: Vollauswahl gespeichert, Ausblick nie
+    eingestellt -> die Mail zeigt ALLE darstellbaren Groessen der Grundauswahl
+    in deren Folge, nicht nur die sieben festen Vorgabe-Spalten des
+    Altbestands. Der Editor muss genau das zeigen (editor_standard.json,
+    Zustand ``gespeichert_vollauswahl_ohne_ausblick``)."""
+    mail = sende_orte_mail(_vollauswahl_ohne_ausblick())
+    assert "outlook_metrics" not in mail.roh["display_config"]
+    pruefe_ausblick(mail, fmt, darstellung=False)
+    ist = (html_ausblick(mail.html) if fmt == "html" else klartext_ausblick(mail.plain))
+    for ort, zellen in ist.items():
+        spalten = kennungen(zellen)
+        assert len(spalten) > 6 and "sunshine" in spalten and "humidity" in spalten, (
+            f"{fmt} {ort}: Vollauswahl zeigt nur {spalten} -- erwartet alle darstellbaren Groessen")
+
+
 # ---------------------------------------------------------------------------
 # WV6 Amtliche Warnungen zuerst (Konzept einstellungen_neu.md §5 Punkt 8)
 # ---------------------------------------------------------------------------

@@ -1418,6 +1418,66 @@
       "gust",
       "temperature"
      ]
+    },
+    {
+     "id": "gespeichert_vollauswahl_ohne_ausblick",
+     "beschreibung": "#3061 (F4): Grundauswahl bewusst gespeichert mit ALLEN Katalog-Groessen in Katalogfolge, outlook_metrics fehlt. Bewusst gespeichert ist nicht 'nie eingestellt': Soll sind alle darstellbaren Groessen der Grundauswahl in deren Folge (Temperatur Tief/Hoch und gefuehlte Temperatur je eine Groesse), nicht die festen Altbestand-Spalten.",
+     "eingabe": {
+      "display_config": {
+       "active_metrics": [
+        "temp_max_c",
+        "wind_max_kmh",
+        "precip_sum_mm",
+        "pop_max_pct",
+        "thunder_level_max",
+        "sunny_hours_h",
+        "cloud_avg_pct",
+        "uv_index_max",
+        "visibility_min_m",
+        "snow_depth_cm",
+        "snow_new_sum_cm",
+        "temp_min_c",
+        "gust_max_kmh",
+        "freezing_level_m",
+        "wind_direction_deg",
+        "wind_chill_min_c",
+        "wind_chill_max_c",
+        "cloud_low_avg_pct",
+        "cloud_mid_avg_pct",
+        "cloud_high_avg_pct",
+        "humidity_avg_pct",
+        "dewpoint_avg_c",
+        "pressure_avg_hpa",
+        "precip_type_dominant",
+        "snowfall_limit_m"
+       ]
+      }
+     },
+     "erwartet": [
+      "temperature",
+      "wind",
+      "precipitation",
+      "rain_probability",
+      "thunder",
+      "sunshine",
+      "cloud_total",
+      "uv_index",
+      "visibility",
+      "snow_depth",
+      "fresh_snow",
+      "gust",
+      "freezing_level",
+      "wind_direction",
+      "wind_chill",
+      "cloud_low",
+      "cloud_mid",
+      "cloud_high",
+      "humidity",
+      "dewpoint",
+      "pressure",
+      "precip_type",
+      "snowfall_limit"
+     ]
     }
    ]
   },
