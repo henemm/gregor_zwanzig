@@ -1201,11 +1201,15 @@ def _official_alert_sms_marker(
     return "!" + " ".join(parts)
 
 
-def _sms_location_part(
-    loc_result, enabled_metrics: list[str] | None, budget: "int | None",
+def _sms_location_variants(
+    loc_result, enabled_metrics: list[str] | None,
     unresolved_count: int = 0, metric_formats: dict[str, bool] | None = None,
-) -> str:
-    """Flache SMS-Darstellung EINES Ortes.
+) -> list[str]:
+    """Flache SMS-Darstellung EINES Ortes -- alle Formen, absteigend nach
+    Zellenzahl (Index d = d Zellen vom Listenende verdraengt).
+
+    #3047 Runde 7 p8: die Zellen werden EINMAL je Ort gebaut; die Auswahl im
+    Budget trifft ``_sms_pick_form`` (vorher ``budget``-Parameter, s. u.).
 
     Orte ohne abrufbare Daten (``error``) werden als ``"<Name> n/a"``
     dargestellt statt weggefiltert: ein weggefilterter Ort waere weder sichtbar
@@ -1249,7 +1253,7 @@ def _sms_location_part(
     """
     name = loc_result.location.name
     if loc_result.error is not None:
-        return f"{name} n/a"
+        return [f"{name} n/a"]
     marker = _location_sms_alert_marker(loc_result)
 
     dedup_ids = list(dict.fromkeys(
@@ -1282,13 +1286,28 @@ def _sms_location_part(
             text_parts.append(marker)
         return " ".join(text_parts)
 
-    kept = list(cells)
-    demoted = 0
-    while kept and budget is not None and len(_assemble(kept, demoted)) > budget:
-        kept.pop()
-        demoted += 1
+    # Formen von "alle Zellen" bis "keine Zelle" (Kuerzung vom Listenende).
+    return [_assemble(cells[:len(cells) - d], d) for d in range(len(cells) + 1)]
 
-    return _assemble(kept, demoted)
+
+def _sms_location_part(
+    loc_result, enabled_metrics: list[str] | None, budget: "int | None",
+    unresolved_count: int = 0, metric_formats: dict[str, bool] | None = None,
+) -> str:
+    """Ortsteil im Budget (s. ``_sms_location_variants``): die zellenreichste
+    Form, die ``budget`` einhaelt, sonst die Form ohne Zelle."""
+    forms = _sms_location_variants(loc_result, enabled_metrics, unresolved_count, metric_formats)
+    return _sms_pick_form(forms, budget, 0)
+
+
+def _sms_pick_form(forms: list[str], budget: "int | None", floor: int) -> str:
+    """Zellenreichste Form mit ``len <= budget``; mindestens ``floor`` Zellen
+    bleiben stehen (Form mit Index ``len(forms)-1-floor`` ist die kuerzeste)."""
+    last = max(len(forms) - 1 - floor, 0)
+    for form in forms[:last]:
+        if budget is None or len(form) <= budget:
+            return form
+    return forms[last]
 
 
 def _location_sms_alert_marker(loc_result) -> str:
@@ -1307,31 +1326,44 @@ def _location_sms_alert_marker(loc_result) -> str:
     return _official_alert_sms_marker(entries)
 
 
-def _sms_fit_alerts_last(
-    head: str, locations: list, kept_count: int, part_fn, start_budget: int, max_chars: int,
+def _sms_fit_locations(
+    head: str, forms: list[list[str]], gewarnt: set[int], max_chars: int,
 ) -> str | None:
-    """Issue #3047 B-K3/AC-23 (Konzept WV6, PO-Entscheidung 2026-11-16):
-    amtliche Warnungen fallen beim Kuerzen ZULETZT weg -- auch die eines
-    weiteren Ortes. Haette die Einpass-Schleife einen Ort mit Warnung als
-    ``+k Orte`` verworfen, bleiben stattdessen alle Orte mit Warnung sichtbar;
-    gekuerzt wird von hinten: zuerst die Wetterzellen ALLER gezeigten Orte
-    vom Listenende (gleiches Budget je Ort), dann ganze Orte OHNE Warnung vom
-    Ende. ``None`` = kein weggelassener Ort traegt eine Warnung (bisheriges
-    Verhalten) bzw. selbst die Warnungen allein passen nicht."""
-    gewarnt = {i for i, loc in enumerate(locations) if _location_sms_alert_marker(loc)}
-    if not any(i >= kept_count for i in gewarnt):
-        return None
-    shown = sorted(set(range(kept_count)) | gewarnt)
+    """Issue #3047 AC-23 (B-K3, Konzept WV6; Tech-Lead-Entscheidung p8,
+    ADR-0095: ein Vergleich braucht mehrere Orte). Einpassung von hinten:
+
+    1. zuerst die Wetterzellen ALLER gezeigten Orte vom Listenende (gleiches
+       Zeichen-Budget je Ort), bis je Ort nur noch die erste Listenzeile bleibt;
+    2. erst dann entfallen ganze Orte vom Ende als `` +k Orte`` -- Orte OHNE
+       amtliche Warnung zuerst (Warnungen fallen zuletzt weg);
+    3. sind nur Orte mit Warnung (oder ein einziger Ort) uebrig, weichen auch
+       ihre ersten Zellen dem ``!``-Marker.
+
+    ``forms[i]`` = Formen des Ortes i (``_sms_location_variants``). ``None`` =
+    nicht einmal ein Ort ohne Zelle passt (Degenerationsfall beim Aufrufer)."""
+    n = len(forms)
+    shown = list(range(n))
     while shown:
-        notice = _sms_location_overflow_notice(len(locations) - len(shown))
-        for budget in range(start_budget, -1, -1):
-            body = f"{head} " + "; ".join(part_fn(locations[i], budget) for i in shown) + notice
-            if len(body) <= max_chars:
-                return body
+        notice = _sms_location_overflow_notice(n - len(shown))
+        floor = 0 if len(shown) == 1 or all(i in gewarnt for i in shown) else 1
+
+        def _body(budget: "int | None") -> str:
+            parts = (_sms_pick_form(forms[i], budget, floor) for i in shown)
+            return f"{head} " + "; ".join(parts) + notice
+
+        if len(_body(-1)) <= max_chars:
+            # Die Laenge waechst monoton mit dem Budget: groesstes passendes suchen.
+            budgets = sorted({len(f) for i in shown for f in forms[i]})
+            lo, hi = 0, len(budgets) - 1
+            while lo < hi:
+                mid = (lo + hi + 1) // 2
+                if len(_body(budgets[mid])) <= max_chars:
+                    lo = mid
+                else:
+                    hi = mid - 1
+            return _body(budgets[lo]) if len(_body(budgets[lo])) <= max_chars else _body(-1)
         ohne = [i for i in shown if i not in gewarnt]
-        if not ohne:
-            return None
-        shown.remove(ohne[-1])
+        shown.remove(ohne[-1] if ohne else shown[-1])
     return None
 
 
@@ -1384,9 +1416,9 @@ def _render_compare_sms_body(
     Konstante in ``channel_layout.py``, Adversary-Fund #1362 S5b Runde 5).
 
     Ueberlauf folgt der Hauskonvention aus ``alert/render.py:507-535``
-    (ADR-0011:42, "SMS-Laengen-Budget mit `+k`-Ueberlauf"): Kopf immer; Orte
-    solange, wie das Ergebnis INKL. des dann noetigen ` +k`-Suffixes ins Budget
-    passt; die restlichen Orte werden als ` +k` AUSGEWIESEN. Ein stiller Abbruch
+    (ADR-0011:42, "SMS-Laengen-Budget mit `+k`-Ueberlauf"): Kopf immer; erst
+    werden die Zellen aller Orte vom Listenende gekuerzt, erst danach entfallen
+    Orte und werden als ` +k Orte` AUSGEWIESEN (``_sms_fit_locations``, #3047 p8). Ein stiller Abbruch
     waere eine luegende Ausgabe (vgl. #1269) — die SMS behauptete sonst einen
     vollstaendigen Vergleich, den sie nicht zeigt. Endgarantie:
     ``len <= max_chars`` (Aufrufer: ``CHANNEL_LIMITS["sms"]`` abzueglich Marker).
@@ -1399,89 +1431,37 @@ def _render_compare_sms_body(
     # Tag). Sie waere dauerhaft "00-23h" — eine Nicht-Information, die 8 von
     # `max_chars` Zeichen belegt, die hier fuer echte Messwerte gebraucht werden.
     head = f"Vergleich {result.target_date.strftime('%d.%m.')}:"
-    # Issue #1362 Scheibe S5b: Budget je Ortsteil, ALS OB dieser Ort der
-    # einzige in der Nachricht waere (Kopf + ein Trennzeichen abgezogen) --
-    # eine konservative, aber sichere obere Schranke: der bestehende
-    # Orts-Ueberlauf (unten) haelt die GESAMTLAENGE unabhaengig davon
-    # <=max_chars, indem er im Zweifel ganze Ortsbloecke weglaesst.
-    #
-    # Adversary-Fund (#1362 S5b, Runde 2): OHNE Reserve konnte ein einzelner,
-    # bereits metrik-gekuerzter Ortsteil das GESAMTBUDGET so knapp ausschoepfen,
-    # dass fuer den nachtraeglich noetigen Orts-Ueberlauf-Hinweis (" +k Orte")
-    # kein Platz mehr blieb -- die Einpass-Schleife unten verwarf den Ortsteil
-    # dann KOMPLETT und fiel auf die harte Wortgrenzen-Kuerzung zurueck, die
-    # (anders als die Metrik-Kuerzung) mitten in einer Kuerzel/Wert-Zelle
-    # schneiden kann (z.B. "...HU... +1 Orte" statt einer ganzen Zelle).
-    # Deshalb wird hier EXAKT der schlimmstmoegliche Orts-Ueberlauf-Hinweis
-    # fuer DIESES Ergebnis reserviert (alle Orte bis auf einen entfallen) --
-    # datenabhaengig statt eines geratenen Fixwerts, und bei nur einem Ort
-    # ohnehin 0 (kein Ueberlauf moeglich).
-    max_possible_omitted_locations = max(len(locations) - 1, 0)
-    location_overflow_reserve = len(
-        _sms_location_overflow_notice(max_possible_omitted_locations)
-    )
-    location_budget = (
-        max(max_chars - len(head) - 1 - location_overflow_reserve, 0)
-        if max_chars is not None else None
-    )
-    parts = [
-        _sms_location_part(
-            loc, enabled_metrics, location_budget, unresolved_count, metric_formats,
-        )
+    forms = [
+        _sms_location_variants(loc, enabled_metrics, unresolved_count, metric_formats)
         for loc in locations
     ]
-    if not parts:
-        return f"{head} keine Werte"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
     if max_chars is None:
-        return f"{head} " + "; ".join(parts)
+        return f"{head} " + "; ".join(f[0] for f in forms)
 
-    # Einpass-Schleife mit mitgerechnetem Marker (1:1 alert/render.py:521-529):
-    # der Marker darf das Budget nicht selbst sprengen.
-    kept: list[str] = []
-    for part in parts:
-        omitted = len(parts) - len(kept) - 1  # weggelassen, wenn wir hier stoppen
-        marker = _sms_location_overflow_notice(omitted)
-        candidate = f"{head} " + "; ".join(kept + [part]) + marker
-        if len(candidate) <= max_chars:
-            kept.append(part)
-        else:
-            break
-
-    omitted = len(parts) - len(kept)
-    if omitted:
-        mit_warnung = _sms_fit_alerts_last(
-            head, locations, len(kept),
-            lambda loc, budget: _sms_location_part(
-                loc, enabled_metrics, budget, unresolved_count, metric_formats,
-            ),
-            location_budget, max_chars,
-        )
-        if mit_warnung is not None:
-            return mit_warnung
-    if not kept:
-        # Degenerationsfall: schon der erste Ort sprengt das Budget. "Ueberschrift
-        # + nichts" ist verboten — dann lieber EIN gekuerzter Ort. Gekuerzt wird
-        # der Ortsblock ALLEIN (nicht Kopf+Block), weil eine Wortgrenzen-Kuerzung
-        # ueber den Kopf hinweg bei einem einzigen ueberlangen Ortsnamen genau auf
-        # der Kopf-Grenze schnitte und wieder "Ueberschrift + nichts" ergaebe.
-        # `_word_boundary_truncate` faellt bei einem Wort > Budget auf den harten
-        # Schnitt zurueck: ein unkenntlicher Ort ist ehrlicher als ein
-        # verschwiegener.
-        marker = _sms_location_overflow_notice(omitted - 1 if omitted > 1 else 0)
-        budget = max_chars - len(head) - 1 - len(marker)
-        fitted = _word_boundary_truncate(parts[0], max(budget, 0))
-        if fitted != parts[0] and not fitted.endswith("..."):
-            # Der Helfer schneidet nur an Wortgrenzen mit "..."; findet er keine
-            # (Ortsname laenger als das Budget), schneidet er hart und stumm. Ein
-            # abgeschnittener Name darf aber nicht wie ein vollstaendiger aussehen.
-            fitted = fitted[: max(len(fitted) - 3, 0)] + "..."
-        body = f"{head} " + fitted + marker
-        return body[:max_chars]
-
-    body = f"{head} " + "; ".join(kept)
-    body += _sms_location_overflow_notice(omitted)
+    gewarnt = {i for i, loc in enumerate(locations) if _location_sms_alert_marker(loc)}
+    body = _sms_fit_locations(head, forms, gewarnt, max_chars)
+    if body is not None:
+        return body
+    # Degenerationsfall: schon der erste Ort ohne Zelle sprengt das Budget.
+    # "Ueberschrift + nichts" ist verboten — dann lieber EIN gekuerzter Ort.
+    # Gekuerzt wird der Ortsblock ALLEIN (nicht Kopf+Block), weil eine
+    # Wortgrenzen-Kuerzung ueber den Kopf hinweg bei einem einzigen ueberlangen
+    # Ortsnamen genau auf der Kopf-Grenze schnitte und wieder "Ueberschrift +
+    # nichts" ergaebe. `_word_boundary_truncate` faellt bei einem Wort > Budget
+    # auf den harten Schnitt zurueck: ein unkenntlicher Ort ist ehrlicher als
+    # ein verschwiegener.
+    first = forms[0][-1]
+    marker = _sms_location_overflow_notice(len(forms) - 1)
+    budget = max_chars - len(head) - 1 - len(marker)
+    fitted = _word_boundary_truncate(first, max(budget, 0))
+    if fitted != first and not fitted.endswith("..."):
+        # Der Helfer schneidet nur an Wortgrenzen mit "..."; findet er keine
+        # (Ortsname laenger als das Budget), schneidet er hart und stumm. Ein
+        # abgeschnittener Name darf aber nicht wie ein vollstaendiger aussehen.
+        fitted = fitted[: max(len(fitted) - 3, 0)] + "..."
+    body = f"{head} " + fitted + marker
     # Garantie len<=limit auch im Degenerationsfall (Kopf allein zu lang).
-    return body if len(body) <= max_chars else body[:max_chars]
+    return body[:max_chars]
 
 
 def _sms_location_overflow_notice(omitted: int) -> str:
