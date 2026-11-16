@@ -9,7 +9,7 @@
 // Kein Browser-/SvelteKit-Import, lauffaehig unter node --experimental-strip-types.
 
 import type { Ampel, AmpelMetrik, AmpelSeite } from './ampelModell.ts';
-import { aktiveMetriken, gleicheSeite, vergleichsMetrikId, type AltSchluessel } from './ampelModell.ts';
+import { aktiveMetriken, gleicheSeite, tripMetrikEintraege, vergleichsMetrikId, type AltSchluessel } from './ampelModell.ts';
 import { klon } from './klon.ts';
 import { amtlicheWarnungenFelder, type WarnFelder } from './amtlicheWarnungen.ts';
 
@@ -59,8 +59,9 @@ type TripMetrik = { metric_id: string; enabled: boolean } & Record<string, unkno
  *  Ein im Bestand deaktivierter Eintrag, der jetzt in der Auswahl steht, gilt als neu hinzugefuegt
  *  (AC-19 „hinten angehaengt“, Fix-Loop 6): er wandert in Auswahl-Reihenfolge ans Ende und behaelt
  *  alle uebrigen Felder. */
-function tripMetriken(bestand: TripMetrik[] | undefined, auswahl: string[]): TripMetrik[] {
-	const alt = Array.isArray(bestand) ? bestand : [];
+function tripMetriken(bestand: unknown, auswahl: string[]): TripMetrik[] {
+	// #3047 E3: Altformat (Zeichenkette, ohne `enabled`) normalisiert, Eintraege ohne `metric_id` entfallen.
+	const alt = tripMetrikEintraege(bestand) as TripMetrik[];
 	const aktivImBestand = new Set(alt.filter((e) => e.enabled !== false).map((e) => e.metric_id));
 	const wiederAn = (id: string) => auswahl.includes(id) && !aktivImBestand.has(id);
 	const liste = alt.filter((e) => !wiederAn(e.metric_id)).map((e) => ({ ...klon(e), enabled: auswahl.includes(e.metric_id) }));

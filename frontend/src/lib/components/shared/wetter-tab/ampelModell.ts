@@ -385,6 +385,23 @@ export function vergleichsMetrikId(eintrag: unknown, alt: AltSchluessel = {}): s
 	return (eintrag as { metric_id: string } | null)?.metric_id as string;
 }
 
+export type TripMetrikEintrag = { metric_id: string; enabled: unknown } & Record<string, unknown>;
+
+/** Trip `metrics[]` normalisiert wie Python `_coerce_metric_entry` (#1262, #3047 E3): Zeichenkette
+ *  -> `{metric_id, enabled: true}`, fehlendes `enabled` = an; ein Eintrag ohne `metric_id`
+ *  (z. B. eine frueher gespreizte Zeichenkette) traegt keine Groesse und entfaellt. */
+export function tripMetrikEintraege(liste: unknown): TripMetrikEintrag[] {
+	const aus: TripMetrikEintrag[] = [];
+	for (const e of Array.isArray(liste) ? liste : []) {
+		if (typeof e === 'string' && e) aus.push({ metric_id: e, enabled: true });
+		else if (e && typeof e === 'object' && typeof (e as { metric_id?: unknown }).metric_id === 'string' && (e as { metric_id: string }).metric_id) {
+			const o = e as Record<string, unknown>;
+			aus.push({ ...o, metric_id: o.metric_id as string, enabled: 'enabled' in o ? o.enabled : true });
+		}
+	}
+	return aus;
+}
+
 /** Auswahl lesen: Trip aus `metrics[]` (enabled), Vergleich aus `active_metrics` (eindeutig, Alt-
  *  und Neuformat pro Element); fehlt die Liste, gilt die aufgeloeste Ampel (AC-39). Trip
  *  `metrics: []` gilt wie in Python (models.py D4: leer = kein Maximum, Standard gilt) als fehlende
@@ -397,7 +414,10 @@ export function auswahlLesen(context: Kontext, displayConfig: AuswahlQuelle | nu
 /** Auswahl-Quelle je Kontext als Daten (Trip `metrics[]` mit `enabled`, Vergleich `active_metrics`);
  *  `null` = Liste fehlt. Tabelle statt Kontext-Weiche (Ratsche context_herkunft_zweige_eingefroren). */
 const AUSWAHL_QUELLE: Record<Kontext, (dc: AuswahlQuelle | null | undefined, alt: AltSchluessel) => string[] | null> = {
-	route: (dc) => (Array.isArray(dc?.metrics) && dc.metrics.length > 0 ? dc.metrics.filter((m) => m?.enabled === true).map((m) => m.metric_id) : null),
+	route: (dc) => {
+		const liste = tripMetrikEintraege(dc?.metrics);
+		return liste.length > 0 ? liste.filter((m) => m.enabled === true).map((m) => m.metric_id) : null;
+	},
 	vergleich: (dc, alt) => (Array.isArray(dc?.active_metrics) ? [...new Set(dc.active_metrics.map((m) => vergleichsMetrikId(m, alt)))] : null)
 };
 
