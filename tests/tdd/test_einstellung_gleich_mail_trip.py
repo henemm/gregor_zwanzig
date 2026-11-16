@@ -31,6 +31,7 @@ import pytest
 from freezegun import freeze_time
 
 from services.day_comparison import DayComparison
+from tests.helpers.einstellung_gleich_mail_orte import katalogtext
 from tests.helpers.einstellung_gleich_mail_trip import (
     html_ausblick, html_tabellen, html_text, klartext_ausblick,
     klartext_tabellen, soll_ausblick, soll_ausblickformen, soll_grundauswahl,
@@ -377,6 +378,40 @@ def test_ein_aus_metrik_je_bericht(monkeypatch, fall):
             f"{wo}: Ausblick {tab and tab.spalten} != {soll_ausblick_folge}")
 
 
+#: Variante -> (eingeschalteter Bericht, Schalter am Metrik-Eintrag).
+_BERICHT_AN = {"morgen_an": ("morning", "morning_enabled"),
+               "abend_an": ("evening", "evening_enabled")}
+
+
+@pytest.mark.parametrize("fall", _faelle("test_ein_metrik_nur_je_bericht_eingeschaltet"))
+def test_ein_metrik_nur_je_bericht_eingeschaltet(monkeypatch, fall):
+    """#3047 N3 (Altbestand ``morning_enabled``/``evening_enabled`` je Metrik,
+    positiver Zweig): Boeen sind global AUS (``enabled: false``), aber fuer
+    EINEN Bericht ausdruecklich eingeschaltet (``morning_enabled`` bzw.
+    ``evening_enabled`` = true). Die Mail dieses Berichts zeigt Boeen an der
+    gespeicherten Position in Etappen-, Nachttabelle und Ausblick; die Mail
+    des anderen Berichts zeigt sie in keiner Liste."""
+    an_bericht, schalter = _BERICHT_AN[_variante(fall)]
+    folge = ["gust", "temperature", "wind"]
+    data = trip_json(folge, outlook_metrics=["gust", "temperature"])
+    for eintrag in data["display_config"]["metrics"]:
+        if eintrag["metric_id"] == "gust":
+            eintrag["enabled"] = False
+            eintrag[schalter] = True
+    fmt = fall["format"]
+    for bericht in ("morning", "evening"):
+        html, text, _ = _senden(monkeypatch, data, fmt, report_type=bericht)
+        an = bericht == an_bericht
+        soll = folge if an else [m for m in folge if m != "gust"]
+        wo = f"{fall['id']} ({bericht})"
+        for art in ("etappe", "nacht"):
+            _pruefe_spalten(_stundentabellen(html, text, fmt, art), soll, f"{wo} {art}")
+        tab = _ausblick(html, text, fmt)
+        soll_ausblick_folge = ["gust", "temperature"] if an else ["temperature"]
+        assert tab is not None and tab.spalten == soll_ausblick_folge, (
+            f"{wo}: Ausblick {tab and tab.spalten} != {soll_ausblick_folge}")
+
+
 # ---------------------------------------------------------------------------
 # AC-8 -- Roh/Einfach
 # ---------------------------------------------------------------------------
@@ -434,12 +469,16 @@ def test_ac8_ausblick_roh_einfach(monkeypatch, fall):
     Bewoelkung Roh, je Zelle gegen ``outlook_metric_formats``."""
     folge = ["wind_direction", "precipitation", "gust", "cloud_total"]
     fmts = {"wind_direction": True, "gust": True, "precipitation": False, "cloud_total": False}
-    data = trip_json(folge, outlook_metrics=folge, outlook_metric_formats=fmts)
-    html, text, _ = _senden(monkeypatch, data, fall["format"])
-    tab = _ausblick(html, text, fall["format"])
-    assert tab is not None and tab.spalten == folge
-    assert tab.formen() == {"wind_direction": "einfach", "precipitation": "zahl",
-                            "gust": "einfach", "cloud_total": "zahl"}, tab.zellen[:1]
+    # #3047 N7: zusaetzlich die Umkehrung (jede Groesse einmal Roh, einmal
+    # Einfach) -- so faengt der Fall auch eine je Groesse fest verdrahtete Form,
+    # insbesondere im Kompakt-Ausblick.
+    for zuordnung in (fmts, {m: not v for m, v in fmts.items()}):
+        data = trip_json(folge, outlook_metrics=folge, outlook_metric_formats=zuordnung)
+        html, text, _ = _senden(monkeypatch, data, fall["format"])
+        tab = _ausblick(html, text, fall["format"])
+        assert tab is not None and tab.spalten == folge
+        soll = {m: "einfach" if zuordnung[m] else "zahl" for m in folge}
+        assert tab.formen() == soll, (zuordnung, tab.zellen[:1])
 
 
 @pytest.mark.parametrize("fall", _faelle("test_ac8_ausblick_ohne_einfachform"))
@@ -576,6 +615,26 @@ def test_ac10_leerer_schnitt_rueckfall_grundauswahl(monkeypatch, fall):
     html, text, _ = _senden(monkeypatch, data, fall["format"])
     gelesen = _listen_spalten(html, text, fall)
     assert gelesen, f"{fall['id']}: Liste fehlt"
+    for spalten in gelesen:
+        assert spalten == grund, f"{fall['id']}: {spalten} != Grundauswahl {grund}"
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n1_totalschnitt_reine_fremdliste"))
+def test_n1_totalschnitt_reine_fremdliste(monkeypatch, fall):
+    """#3047 N1 (AC-10, Totalschnitt != bewusst leer): die gespeicherte
+    E-Mail-Liste bzw. Ausblick-Liste ist NICHT leer, nennt aber ausschliesslich
+    Groessen ausserhalb der Grundauswahl (UV, Bewoelkung) und keinen einzigen
+    Grundauswahl-Eintrag -- auch keinen ausgeschalteten. Soll: die volle
+    Grundauswahl in ihrer eingestellten Folge (nicht Katalogfolge), kein
+    verschwindender Block, in HTML, Klartext und (Ausblick) Kompakt."""
+    grund = ["gust", "temperature", "wind"]
+    fremd = ["uv_index", "cloud_total"]
+    data = trip_json(grund, email_layout=metrik_eintraege(fremd, katalog=tuple(fremd)),
+                     outlook_metrics=list(fremd))
+    assert grund != [m for m in KATALOG if m in grund], "Vorbedingung: Folge != Katalog"
+    html, text, _ = _senden(monkeypatch, data, fall["format"])
+    gelesen = _listen_spalten(html, text, fall)
+    assert gelesen, f"{fall['id']}: Liste fehlt (Totalschnitt darf den Block nicht leeren)"
     for spalten in gelesen:
         assert spalten == grund, f"{fall['id']}: {spalten} != Grundauswahl {grund}"
 
@@ -802,6 +861,35 @@ def test_n1_bewusst_leer_kein_ausblick(monkeypatch, fall):
     for zeile in text.splitlines():
         assert not zeile.startswith(AUSBLICK_TAGE), (
             f"{fall['id']}: Ausblick-Zeile trotz leerer Grundauswahl: {zeile!r}")
+
+
+def _katalog_kopf(schluessel: str, lang: str) -> str:
+    """Fester Teil eines Katalogtexts vor dem ersten Platzhalter (Soll aus den
+    Katalogdateien, nicht ueber ``t()``)."""
+    return katalogtext(schluessel, lang).split("{")[0].strip()
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n7_bewusst_leer_ohne_leere_ueberschriften"))
+def test_n7_bewusst_leer_ohne_leere_ueberschriften(monkeypatch, fall):
+    """#3047 N7 (Konzept §5.8, AC-4/AC-9): Grundauswahl bewusst leer (alle
+    Eintraege ``enabled: false``) im Vollformat -- Etappen- und Nachttabelle
+    entfallen GANZ, samt Ueberschrift: kein "Segment 1"/"SEG 1" und kein
+    "Nacht am Ziel"/"Night at destination" (samt Ankunftszeile) ohne Tabelle
+    darunter, in HTML und Klartext, DE und EN."""
+    lang = fall.get("sprache", "de")
+    data = _bewusst_leer_json(None)
+    fmt = fall["format"]
+    mitschrift, _trip, _uid = render_trip_mit_ausblick(monkeypatch, data, language=lang)
+    html, text = mail_teile(mitschrift)
+    gelesen = html_text(html) if fmt == "html" else text
+    if fall["liste"] == "trip_nachttabelle":
+        verboten = [_katalog_kopf("mail.nacht.am_ziel", lang),
+                    _katalog_kopf("mail.nacht.ankunft", lang)]
+    else:
+        verboten = ["SEG 1" if fmt == "html" else "Segment 1"]
+    gefunden = [v for v in verboten if v in gelesen]
+    assert not gefunden, f"{fall['id']}: leere Ueberschrift(en) ohne Tabelle: {gefunden}"
+    assert STAGE_NAME in gelesen, f"{fall['id']}: Vorbedingung Kopf der Mail fehlt"
 
 
 #: Register-Standard im 3-Tages-Ausblick (von Hand): die ausblickfaehigen

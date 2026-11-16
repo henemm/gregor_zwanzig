@@ -390,6 +390,10 @@ def soll_stundenverlauf(roh: dict, standard: tuple[str, ...]) -> Optional[list[s
         return None
     gespeichert = _ids((roh.get("display_config") or {}).get("hourly_metrics"))
     basis = grundauswahl(roh)
+    if basis == []:
+        # #3047 N2: bewusst leere Grundauswahl -> jede Liste ist leer, der
+        # Block entfaellt (auch nie eingestellt, auch gespeichert).
+        return None
     waehlbar = _stuendlich_waehlbar()
     if gespeichert is None:
         liste = [m for m in basis or [] if m in waehlbar] or list(standard)
@@ -421,7 +425,9 @@ def soll_ausblick(roh: dict) -> Optional[list[str]]:
         return None
     gespeichert = _ids((roh.get("display_config") or {}).get("outlook_metrics"))
     basis = grundauswahl(roh)
-    if gespeichert == []:
+    if gespeichert == [] or basis == []:
+        # #3047 N2: bewusst leere Grundauswahl wie bewusst leere Liste -> kein
+        # Ausblick (frueher ADR-0050 D4 "leer = kein Maximum", aufgehoben).
         return None
     if basis is None:
         return gespeichert

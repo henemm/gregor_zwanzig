@@ -202,7 +202,8 @@ def resolve_hourly_metrics(
     waehlbaren Groessen der Grundauswahl in DEREN Folge, nicht mehr die feste
     Vorgabemenge. ``None`` (Vorgabemenge des Renderers) bleibt nur, wenn die
     Grundauswahl selbst nie eingestellt ist (Altbestand) oder keine Groesse
-    mit eigener Stundenspalte traegt.
+    mit eigener Stundenspalte traegt. Eine bewusst LEERE Grundauswahl (``[]``)
+    liefert ``[]`` -- der Block entfaellt (#3047 N2).
     """
     if not isinstance(hourly_metrics, list):
         return _standard_aus_grundauswahl(enabled_metrics)
@@ -225,9 +226,15 @@ def resolve_hourly_metrics(
 
 def _standard_aus_grundauswahl(enabled_metrics: list[str] | None) -> list[str] | None:
     """Nie eingestellter Stundenverlauf = Grundauswahl ∩ stuendlich waehlbar,
-    Folge der Grundauswahl (#3047 H1); ``None`` = Vorgabemenge des Renderers."""
+    Folge der Grundauswahl (#3047 H1); ``None`` = Vorgabemenge des Renderers.
+
+    #3047 N2 (Konzept §5.8): eine bewusst leere Grundauswahl (``[]``) laesst
+    nichts zum Nehmen uebrig -> ``[]``, der Block entfaellt; KEIN Rueckfall
+    auf die Vorgabemenge (das gilt nur fuer "nie eingestellt" = ``None``)."""
     if enabled_metrics is None:
         return None
+    if enabled_metrics == []:
+        return []
     from output.renderers.compare_outlook_metric_ids import _kennungen_aus_renderer_ids
 
     waehlbar = set(hourly_selectable_metric_ids())

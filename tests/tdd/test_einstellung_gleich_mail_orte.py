@@ -431,6 +431,56 @@ def test_vergleichstabelle_bewusst_leer_ohne_rueckfall():
     assert folge == _orte(mail.roh) and all(z == [] for z in zeilen.values()), zeilen
 
 
+#: #3047 N2: gespeicherte Listen, die bei bewusst leerer Grundauswahl trotzdem
+#: leer bleiben muessen (Konzept §5.8 "Jede Liste nimmt nur aus den Metriken oben").
+_N2_GESPEICHERT = {
+    "hourly_metrics": ["gust", "temperature"],
+    "outlook_metrics": ["wind", "temperature"],
+    "channel_active_metrics": {"email": [{"metric_id": "wind", "aggregation": "max"},
+                                         {"metric_id": "temperature", "aggregation": "max"}]},
+}
+
+
+@pytest.mark.parametrize("fall", _faelle("test_n2_grundauswahl_bewusst_leer"))
+def test_n2_grundauswahl_bewusst_leer(fall):
+    """#3047 N2 (Repro OI/OJ, Konzept §5.8, Trip = Orte): ``active_metrics: []``
+    ist eine BEWUSST leere Grundauswahl -- keine Liste hat Zeilen: die
+    Vergleichstabelle zeigt keine Metrikzeile, Stundenverlauf und Ausblick
+    entfallen ganz, in HTML und Klartext, DE und EN; auch dann, wenn darunter
+    eigene Listen gespeichert sind (Variante ``gespeichert``). Frueher galt im
+    Ausblick "leer = kein Maximum" (ADR-0050 D4) -> sieben feste Spalten, und
+    der nie eingestellte Stundenverlauf fiel auf die feste Vorgabemenge."""
+    p = preset_dict("basis")
+    dc = p["display_config"]
+    dc["active_metrics"] = []
+    if fall["variante"] == "gespeichert":
+        dc.update(json.loads(json.dumps(_N2_GESPEICHERT)))
+    lang, fmt, liste = fall.get("sprache", "de"), fall["format"], fall["liste"]
+    mail = sende_orte_mail(p, language=lang)
+    assert grundauswahl(mail.roh) == [], "Vorbedingung: Grundauswahl bewusst leer"
+    if liste == "orte_vergleichstabelle":
+        assert soll_vergleichstabelle(mail.roh) == []
+        if fmt == "html":
+            assert html_vergleichstabelle(mail.html)[1] == [], fall["id"]
+        else:
+            folge, zeilen = klartext_vergleichstabelle(mail.plain)
+            assert folge == _orte(mail.roh) and all(z == [] for z in zeilen.values()), zeilen
+        return
+    if liste == "orte_stundenverlauf":
+        assert soll_stundenverlauf(mail.roh, _standard_stunden()) is None
+        ist = (html_stundenverlauf(mail.html, lang) if fmt == "html"
+               else klartext_stundenverlauf(mail.plain, lang))
+        titel = katalogtext("vergleich.stunden.klartext_titel", lang)
+    else:
+        assert soll_ausblick(mail.roh) is None
+        ist = (html_ausblick(mail.html, lang) if fmt == "html"
+               else klartext_ausblick(mail.plain, lang))
+        titel = katalogtext("vergleich.ausblick.titel", lang)
+    assert ist == {}, f"{fall['id']}: Block trotz leerer Grundauswahl: {ist}"
+    text = mail.plain if fmt == "klartext" else re.sub(r"<[^>]+>", "\n", mail.html)
+    assert titel not in text, f"{fall['id']}: Ueberschrift {titel!r} ohne Inhalt"
+
+
 # ---------------------------------------------------------------------------
 # AC-6 Stundenverlauf
 # ---------------------------------------------------------------------------

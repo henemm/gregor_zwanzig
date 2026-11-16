@@ -160,9 +160,13 @@ def _erbe_grundauswahl(
 
     * ``gespeichert == []`` -- bewusst geleert, der Block entfaellt ganz
       (AC-11, unveraendert).
-    * ``grundauswahl`` leer/``None`` -- kein Maximum definiert (ADR-0050 D4):
-      kein Schnitt, Altverhalten. ``None`` faellt weiterhin auf die sieben
-      festen Spalten zurueck.
+    * ``grundauswahl is None`` -- kein Maximum definiert (Altbestand ohne
+      Grundauswahl): kein Schnitt, Altverhalten. ``None`` faellt weiterhin auf
+      die sieben festen Spalten zurueck.
+    * ``grundauswahl == []`` -- bewusst leere Grundauswahl: die Liste nimmt
+      nur aus den Metriken oben, ist also leer, der Block entfaellt (#3047 N2,
+      Konzept §5.8; hebt "leer = kein Maximum" (ADR-0050 D4) fuer den Ausblick
+      auf -- Trip und Ortsvergleich gleich).
     * ``gespeichert is None`` -- nie etwas eingestellt heisst "nichts
       abgewaehlt": die GANZE Grundauswahl (AC-3), nicht die frueheren sieben
       festen Spalten.
@@ -177,9 +181,9 @@ def _erbe_grundauswahl(
     volle Grundauswahl zurueck -- sichtbar protokolliert. "Unaufloesbar" und
     "bewusst geleert" duerfen nie denselben Zustand erzeugen.
     """
-    if gespeichert == []:
+    if gespeichert == [] or grundauswahl == []:
         return []
-    if not grundauswahl:
+    if grundauswahl is None:
         return gespeichert
     if gespeichert is None:
         return list(grundauswahl)
@@ -225,13 +229,10 @@ def resolve_trip_outlook_metrics(dc: object, report_type: str) -> list[str] | No
         [mc.metric_id for mc in dc.get_metrics_for_report_type(report_type)
          if mc.metric_id in allowed]
     )
-    if grundauswahl == []:
-        # #3047 J3 (AC-4): Grundauswahl bewusst leer (Eintraege vorhanden,
-        # alle aus). Die Ausblick-Liste nimmt nur aus den Metriken oben ->
-        # leer -> der Block entfaellt. NICHT ``_erbe_grundauswahl`` (dort
-        # heisst leere Grundauswahl "kein Maximum" -> sieben feste Spalten);
-        # Altbestand ohne ``metrics`` bleibt ``allowed is None``.
-        return []
+    # #3047 J3/N2 (AC-4): Grundauswahl bewusst leer (Eintraege vorhanden, alle
+    # aus) -> ``grundauswahl == []`` -> ``_erbe_grundauswahl`` laesst den Block
+    # entfallen, dieselbe Regel wie im Ortsvergleich. Altbestand ohne
+    # ``metrics`` bleibt ``allowed is None``.
     return _erbe_grundauswahl(gespeichert, grundauswahl, "Trip-Grundauswahl")
 
 
