@@ -470,8 +470,12 @@ def _nur_lokal(route) -> None:
         route.abort()
 
 
-def _check_rendered(html: str) -> list[str]:
+def _check_rendered(html: str, daten_erwartet: bool = True) -> list[str]:
     """AC-1: headless Render bei 390px und 1000px; Daten muessen sichtbar bleiben.
+
+    ``daten_erwartet=False`` (#3047 J4, nur per ``--konfig``): laut Soll hat die
+    Mail keine Datentabelle (bewusst leer) -- ein leerer Viewport ist dann kein
+    Fehler; die Dual-Render-Pruefung bleibt.
 
     Fehlt Playwright/Browser → RenderUnavailable (Exit 2), NICHT Exit 1.
     """
@@ -506,7 +510,7 @@ def _check_rendered(html: str) -> list[str]:
                 )
                 page.route("**/*", _nur_lokal)
                 page.goto(url, timeout=10000, wait_until="load")
-                if not _data_visible(page):
+                if daten_erwartet and not _data_visible(page):
                     errors.append(
                         f"FULL: bei {lbl} ist keine Wetterdaten-Tabelle sichtbar "
                         f"(Viewport leer — responsiver Block ohne Gegenstueck?)"
@@ -531,7 +535,11 @@ def _check_rendered(html: str) -> list[str]:
 # --------------------------------------------------------------------------- #
 # Format-spezifische Validierung
 # --------------------------------------------------------------------------- #
-def _validate_full(msg: Message, lang: str = "de") -> tuple[bool, list[str]]:
+def _validate_full(
+    msg: Message, lang: str = "de", erwartet: tuple[bool, bool] = (True, True),
+) -> tuple[bool, list[str]]:
+    """``erwartet`` = (Stundentabelle, irgendeine Datentabelle) laut Soll."""
+    stunden_erwartet, daten_erwartet = erwartet
     errors: list[str] = []
 
     if not msg.is_multipart() or msg.get_content_type() != "multipart/alternative":
@@ -548,13 +556,13 @@ def _validate_full(msg: Message, lang: str = "de") -> tuple[bool, list[str]]:
 
     html = _part_text(html_parts[0]) if html_parts else ""
 
-    if html and not _has_hourly_table(html):
+    if html and stunden_erwartet and not _has_hourly_table(html):
         errors.append("FULL: keine sequenzielle Stundentabelle (>=2 HH:00-Zeilen) im HTML-Part")
 
     errors.extend(_check_plausibility(html, lang))
 
     if html:
-        errors.extend(_check_rendered(html))            # AC-1 (kann RenderUnavailable werfen)
+        errors.extend(_check_rendered(html, daten_erwartet))  # AC-1 (kann RenderUnavailable werfen)
         errors.extend(_check_layer_consistency(html, lang))   # AC-3
         errors.extend(_check_metric_plausibility(html, lang))  # AC-4
 
@@ -835,6 +843,26 @@ def _soll_darstellung(html: str, plain: str, s: dict, lang: str) -> list[str]:
     return fehler
 
 
+def _soll_report(msg: Message, soll: dict) -> dict:
+    """Soll des Reports (Morgen/Abend), den die Mail laut Kopf/Betreff traegt."""
+    teile = {p.get_content_type(): _part_text(p) for p in msg.walk()
+             if p.get_content_type() in ("text/html", "text/plain")}
+    report = _REPORT_RE.search(teile.get("text/plain", "") or teile.get("text/html", "")
+                               or _decode_subject(msg["Subject"]))
+    return soll["je_report"][_REPORT_ART[report.group(1).lower()] if report else "evening"]
+
+
+def _tabellen_erwartet(msg: Message, soll: dict | None) -> tuple[bool, bool]:
+    """#3047 J4: (Stundentabelle, irgendeine Datentabelle) laut Soll. Ohne
+    ``--konfig`` bleibt alles Pflicht. Bewusst leer (Stunden ``[]``) -> die
+    Stundentabelle entfaellt (J3); ohne Ausblick gibt es gar keine Tabelle."""
+    if soll is None or soll.get("kontext") != "trip":
+        return True, True
+    s = _soll_report(msg, soll)
+    stunden = s["stunden"] != []
+    return stunden, stunden or bool(s["ausblick_an"])
+
+
 def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
     """Issue #3047 AC-19: Auswahl und Reihenfolge der Mail gegen das Soll aus der
     gespeicherten Trip-Konfiguration (``_soll_aus_konfiguration``). Prueft die
@@ -846,8 +874,7 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
     teile = {p.get_content_type(): _part_text(p) for p in msg.walk()
              if p.get_content_type() in ("text/html", "text/plain")}
     html, plain = teile.get("text/html", ""), teile.get("text/plain", "")
-    report = _REPORT_RE.search(plain or html or _decode_subject(msg["Subject"]))
-    s = soll["je_report"][_REPORT_ART[report.group(1).lower()] if report else "evening"]
+    s = _soll_report(msg, soll)
     fehler = []
     if msg["X-GZ-Format"] != s["email_format"]:
         fehler.append(f"SOLL: Format '{msg['X-GZ-Format']}' statt '{s['email_format']}' (email_format)")
@@ -904,7 +931,7 @@ def validate_message(
 
     mail_format = msg["X-GZ-Format"]
     if mail_format == "full":
-        ok, errors = _validate_full(msg, lang)
+        ok, errors = _validate_full(msg, lang, _tabellen_erwartet(msg, soll))
     elif mail_format == "compact":
         ok, errors = _validate_compact(msg, max_bytes, lang)
     else:

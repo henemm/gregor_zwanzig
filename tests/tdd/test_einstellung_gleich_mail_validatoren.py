@@ -602,15 +602,25 @@ def _trip_bewusst_leer() -> dict:
     return daten
 
 
-@pytest.mark.xfail(strict=True, reason="#3047 wartet auf J3")
 def test_trip_bewusst_leer_ausblick_entfaellt_positiv(monkeypatch, tmp_path):
     """Konzept "alle Zeilen abgewaehlt -> Ausblick entfaellt": die Mail eines
-    bewusst leeren Trips hat Stundentabellen ohne Metrikspalten und keinen
-    Ausblick; der Validator besteht. Rot, bis J3 den Ausblick weglaesst."""
+    bewusst leeren Trips hat weder Stundentabelle (J3: entfaellt ohne Spalten)
+    noch Ausblick; der Validator besteht -- "keine Stundentabelle" bzw. "Viewport
+    leer" sind laut Soll kein Fehler (#3047 J4)."""
     daten = _trip_bewusst_leer()
     code, aus = _lauf(tmp_path, TRIP, _trip_eml(monkeypatch, daten),
                       "--konfig", _konfig(tmp_path, "leer", daten))
     assert code == 0, aus
+
+
+def test_trip_bewusst_leer_ohne_konfig_tabelle_bleibt_pflicht(monkeypatch, tmp_path):
+    """#3047 J4: die Lockerung "keine Tabelle" gilt NUR laut Soll -- ohne
+    ``--konfig`` scheitert dieselbe bewusst leere Mail weiter an der fehlenden
+    Stundentabelle und am leeren Viewport."""
+    code, aus = _lauf(tmp_path, TRIP, _trip_eml(monkeypatch, _trip_bewusst_leer()))
+    assert code == 1, aus
+    assert "keine sequenzielle Stundentabelle" in aus, aus
+    assert "keine Wetterdaten-Tabelle sichtbar" in aus, aus
 
 
 def test_trip_bewusst_leer_ausblick_erscheint_scheitert(monkeypatch, tmp_path):
