@@ -561,6 +561,35 @@ def test_ac17_vorschau_zeigt_denselben_ausblick_wie_die_zugestellte_mail():
     )
 
 
+def test_f007_ausblick_zellen_folgen_dem_bericht_der_zugestellten_mail():
+    """#3047 F007 (ganze Kette ueber ``_send_trip_report_outcome``): "Böen"
+    ist global aus, aber im Morgenbericht ein; "Niederschlag" ist global ein,
+    aber im Morgenbericht aus. Die zugestellte Morgen-Mail zeigt im Ausblick
+    Böen MIT Böen-Werten (km/h), die Abend-Mail Niederschlag MIT
+    Niederschlags-Werten (mm).
+
+    Bewachte Fehlerklasse: reicht der Zeitplaner den Berichtstyp nicht bis in
+    den Zeilenbau durch (fester Abend-Default), stuenden in der Morgen-Mail
+    die Niederschlagswerte unter der Böen-Ueberschrift -- die Kopfzeile
+    entsteht im Renderer mit dem echten Typ, die Zellen im Zeitplaner."""
+    trip = _trip(outlook_metrics=[NIEDERSCHLAG, BOEEN],
+                 enabled_ids={"precipitation"},
+                 report_overrides={"gust": {"morning_enabled": True},
+                                   "precipitation": {"morning_enabled": False}},
+                 trend_reports=("morning", "evening"))
+    for report_type, label, einheit in (("morning", BOEEN_LABEL, "km/h"),
+                                        ("evening", NIEDERSCHLAG_LABEL, "mm")):
+        html, _ = _zugestellte_teile(trip, report_type=report_type)
+        assert html_outlook_headers(html) == ["Tag", label, _ACC], (
+            f"{report_type}: Kopfzeile {html_outlook_headers(html)!r}"
+        )
+        zeilen = html_outlook_body_rows(html)
+        assert len(zeilen) == 3, f"{report_type}: drei Ausblick-Zeilen erwartet: {zeilen!r}"
+        assert all(z[1].endswith(f" {einheit}") for z in zeilen), (
+            f"{report_type}: Spalte {label} traegt fremde Werte: {[z[1] for z in zeilen]!r}"
+        )
+
+
 def test_bestandstrip_zeigt_die_grundauswahl_in_der_zugestellten_mail():
     """AC-1 (ganze Kette, Bestandsschutz): ohne gesetzte Vorschau-Auswahl
     steht der Ausblick weiterhin in der zugestellten Mail -- mit den Groessen

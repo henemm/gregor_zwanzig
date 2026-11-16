@@ -8,10 +8,9 @@ Kein Test-Modul (fuehrender Unterstrich). Baut auf den Bausteinen von
 ``segment``, ``night_weather``, ``frisches_profil``, ``TRANSPORT_ENV``) und
 VERAENDERT sie nicht. ``render_trip_dict`` kennt keinen 3-Tages-Ausblick
 (``multi_day_trend`` bleibt dort leer); ``render_trip_mit_ausblick`` ergaenzt
-genau das: drei Tageszeilen aus der reinen Produktfunktion
-``build_outlook_row(..., trip_display_config=trip.display_config,
-report_type=..., context="route", ampel=...)`` -- wie der Zeitplaner
-(``trip_report_scheduler.py:3076``), nur ohne Wetter-Netz.
+genau das: drei Tageszeilen aus der Produktfunktion
+``trip_report_scheduler.trend_zeile(...)`` -- dem Zeilenbau, den der
+Zeitplaner (``_build_trend``) je Etappe ruft, nur ohne Wetter-Netz.
 
 Kein ``Mock()``/``patch()``/``MagicMock``. Einzige Naht ist der Transport
 (``tests/helpers/transport_mitschrift.py``). Loader, Kaskade, Renderer und
@@ -131,24 +130,20 @@ def sprache_setzen(uid: str, language: str) -> None:
 
 
 def ausblick_zeilen(trip, report_type: str, *, lang: str = "de") -> list[dict]:
-    """Drei Ausblick-Tageszeilen aus ``build_outlook_row`` -- dieselbe reine
-    Funktion und dieselben Argumente wie der Zeitplaner
-    (``trip_report_scheduler.py:3076``), Wetterpunkte aus ``segment()``, das
-    Tagesaggregat aus der kanonischen Aggregation ``summarize_points`` (die
-    handgebaute ``segment().aggregated`` traegt nicht alle Felder)."""
-    from app.ampel import resolve_ampel
-    from output.renderers.email.outlook import build_outlook_row
+    """Drei Ausblick-Tageszeilen aus dem Zeilenbau des Zeitplaners selbst
+    (``trip_report_scheduler.trend_zeile``, den ``_build_trend`` je Etappe
+    ruft -- #3047 F007: kein Nachbau der Argumente). Wetterpunkte aus
+    ``segment()``, das Tagesaggregat aus der kanonischen Aggregation
+    ``summarize_points`` (die handgebaute ``segment().aggregated`` traegt
+    nicht alle Felder; ``_build_trend`` aggregiert die echten Segmente)."""
+    from services.trip_report_scheduler import trend_zeile
     from services.weather_metrics import summarize_points
 
     zeilen = []
     for i, tag in enumerate(AUSBLICK_TAGE):
         seg = segment(DAY + 1 + i)
         agg = summarize_points(list(seg.timeseries.data))
-        row = build_outlook_row(
-            agg, list(seg.timeseries.data), tag, TZ,
-            ampel=resolve_ampel(trip), trip_display_config=trip.display_config,
-            report_type=report_type, context="route", segments=[seg], lang=lang,
-        )
+        row = trend_zeile(trip, agg, [seg], tag, TZ, report_type=report_type, lang=lang)
         row["date"] = date(2026, 7, DAY + 1 + i)
         row["name"] = f"Etappe {i + 1}"
         zeilen.append(row)
