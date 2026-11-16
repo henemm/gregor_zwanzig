@@ -366,7 +366,15 @@ def trip_soll(trip: dict, report: str = "evening") -> dict:
         "nacht": bool(dc.get("show_night_block", True)),
         "ausblick_an": ids != [] and rc.get("show_outlook", True) is not False
         and report in (trend_reports or []),
+        # PO-Entscheidung #722: das Kompaktformat ignoriert die Baustein-
+        # Schalter (``show_outlook``, ``show_stage_stats``) -- nur die Liste
+        # (``[]`` = bewusst leer) und der Bericht zaehlen (#3047 Runde 7).
+        "ausblick_an_kompakt": ids != [] and report in (trend_reports or []),
         "ausblick": None if ids == [] else _ausblick_spalten(ids, dc.get("outlook_metric_formats")),
+        # #3047 Runde 7 (B-V1): Etappendaten verankern die Zahl der Ausblick-
+        # Zeilen (``ausblick_zeilen_trip``) am Datum der Mail.
+        "etappen_daten": [s["date"] for s in trip.get("stages") or []
+                          if isinstance(s, dict) and isinstance(s.get("date"), str)],
         "email_format": rc.get("email_format", "full"),
         # #3047 N5/F008b: Metriken-Ueberblick nur, wenn eine Groesse der
         # E-Mail-Liste dieses Berichts eine Kachel traegt. Der Renderer
@@ -376,7 +384,9 @@ def trip_soll(trip: dict, report: str = "evening") -> dict:
         # entfaellt die Ueberschrift (html.py/plain.py/compact.py: ``if pills``).
         # Datenabhaengig fehlende Kacheln (keine Werte) sind nicht ableitbar.
         "ueberblick": any(e["metric_id"] in _PILL_CATALOG_ORDER for e in liste),
-        "zusatz": {k: rc.get(k, True) for k in ("show_stage_stats", "show_yesterday_comparison")},
+        # #3047 Runde 7 (B-V2): nur ein ausdrueckliches ``false`` ist "aus";
+        # "an" bleibt weich (Kennzahlen/Vortag sind datenabhaengig).
+        "zusatz": {k: rc.get(k, True) is not False for k in ("show_stage_stats", "show_yesterday_comparison")},
     }
 
 
@@ -494,6 +504,54 @@ def _orte_stunden(dc: dict, grund: list[tuple[str, str]] | None) -> list[str]:
     return [_REG[m].col_label for m in ids if m not in HOURLY_MERGE_ONLY_METRIC_IDS]
 
 
+def _orte_formen(dc: dict, paare: list[tuple[str, str]] | None, lang: str) -> dict[str, dict]:
+    """#3047 Runde 7 (B-V3): erlaubte Zellform je Zeile der Vergleichstabelle.
+    Einfach (``channel_layouts.email``, erster eingeschalteter Eintrag je
+    Kennung, nur bei mehr als einer Darstellung): HTML Ampelpunkt bzw.
+    Wort, Klartext Wort. Sonst Roh = Zahl. Ausnahmen wie im Trip: Gewitter und
+    Niederschlagsart zeigen roh ein Wort, die Windrichtung eine Himmelsrichtung
+    -- ungeprueft."""
+    if not paare:
+        return {}
+    einfach = set(_orte_einfach(dc, paare, lang))
+    formen: dict[str, dict] = {}
+    for label, (m, _a) in zip(_uebersicht_labels(paare, lang), paare):
+        if label in einfach:
+            html = (AMPEL,) if m in _AMPEL_CAPABLE_METRIC_IDS else (WORT, AMPEL)
+            formen[label] = {"HTML": html, "Klartext": (WORT,)}
+        elif m not in _ROH_WORT and m != "wind_direction":
+            formen[label] = {"HTML": (ZAHL,), "Klartext": (ZAHL,)}
+    return formen
+
+
+#: Vorgabe-Tagesfenster (``app.day_window.DAY_WINDOW_START_HOUR/END_HOUR``, ADR-0035).
+_FENSTER_VORGABE = (4, 19)
+
+
+def tagesfenster(start: object, ende: object) -> tuple[int, int]:
+    """#3047 Runde 7 (B-V5): Tagesfenster nach der dokumentierten Regel
+    (ADR-0035): beide Stunden ganzzahlig 0-23 und verschieden, sonst die
+    Vorgabe 4-19; ``start > ende`` = Fenster ueber Mitternacht."""
+    if type(start) is int and type(ende) is int and 0 <= start <= 23 and 0 <= ende <= 23 and start != ende:
+        return start, ende
+    return _FENSTER_VORGABE
+
+
+def im_fenster(stunde: int, fenster: tuple[int, int]) -> bool:
+    start, ende = fenster
+    return start <= stunde <= ende if start <= ende else (stunde >= start or stunde <= ende)
+
+
+def ausblick_zeilen_trip(etappen_daten: list[str], maildatum: str | None) -> int | None:
+    """#3047 Runde 7 (B-V1): Zahl der Ausblick-Zeilen eines Trip-Briefings =
+    folgende Etappen nach der berichteten, hoechstens drei
+    (``get_future_stages``, ``future_stages[:3]``). Verankert nur, wenn das
+    Mail-Datum (ISO) ein Etappendatum der Konfiguration ist, sonst ``None``."""
+    if not maildatum or maildatum not in etappen_daten:
+        return None
+    return min(3, len({d for d in etappen_daten if d > maildatum}))
+
+
 def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> dict:
     """Soll eines Orts-Vergleichs; ``ortsnamen`` (Kennung -> Name) fuer die Ortsfolge."""
     dc = preset.get("display_config") or {}
@@ -507,11 +565,20 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
     stunden = _orte_stunden(dc, grundpaare)
     stunden_an = preset.get("hourly_enabled", True) is not False and stunden != []
     ids_orte = [i for i in preset.get("location_ids") or [] if isinstance(i, str)]
+    # #3047 AC-28: Warnzeile nur bei eingeschalteten amtlichen Warnungen.
+    warn = [t("vergleich.zeile.amtliche_warnungen", lang)] if preset.get(
+        "official_alerts_enabled", True) is not False else []
+    fenster = tagesfenster(preset.get("day_window_start_hour"), preset.get("day_window_end_hour"))
     return {
         "kontext": "orte",
-        "uebersicht": None if paare is None else
-        [t("vergleich.zeile.amtliche_warnungen", lang)] + _uebersicht_labels(paare, lang),
+        "uebersicht": None if paare is None else warn + _uebersicht_labels(paare, lang),
+        "warnzeile": bool(warn),
         "uebersicht_einfach": _orte_einfach(dc, paare, lang),
+        "uebersicht_formen": _orte_formen(dc, paare, lang),
+        "tagesfenster": fenster,
+        # B-V1: drei Folgetage (``comparison_engine``, 96-h-Abruf); ein Fenster
+        # ueber Mitternacht verschiebt den Ausblick um einen Tag -> 2 oder 3.
+        "ausblick_zeilen": (2, 3) if fenster[0] > fenster[1] else (3,),
         "stunden_an": stunden_an,
         "stunden": stunden if stunden_an else [],
         "ausblick_an": preset.get("outlook_enabled", True) is not False and ids != [],

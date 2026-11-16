@@ -789,11 +789,13 @@ def _soll_kompakt(text: str, s: dict, lang: str) -> list[str]:
     """Kompaktformat: Reihenfolge der Ausblick-Tokens je Tageszeile."""
     ueberschrift = _ml().erwartet("mail.ausblick.naechste_etappen", lang).translate(_FOLD)
     zeilen = [_ausblick_kuerzel(z) for z in _block_zeilen(text, ueberschrift)]
-    if zeilen and not s["ausblick_an"]:
+    # PO-Entscheidung #722: Kompakt ignoriert ``show_outlook`` (Runde 7).
+    if zeilen and not s.get("ausblick_an_kompakt", s["ausblick_an"]):
         return ["SOLL: Ausblick (Kompakt) erscheint, obwohl er laut Konfiguration aus ist"]
+    fehler = _soll_zeilenzahl({"Kompakt": len(zeilen)}, s, text)
     if s["ausblick"] is None or s["ausblick"]["fest"]:
-        return []
-    fehler = _soll_vergleich("Ausblick (Kompakt) Zeile", zeilen, s["ausblick"]["klartext"])
+        return fehler
+    fehler += _soll_vergleich("Ausblick (Kompakt) Zeile", zeilen, s["ausblick"]["klartext"])
     # #3047 N7: Roh/Einfach je Ausblick-Spalte auch im Kompaktformat (ASCII:
     # "0Line" ist die Spalte "0°Line"; Einfach = Wort, Roh = Zahl).
     ascii_ = _soll_modul()._ASCII_KUERZEL
@@ -801,6 +803,56 @@ def _soll_kompakt(text: str, s: dict, lang: str) -> list[str]:
               for z in _ausblick_zellen(_block_zeilen(text, ueberschrift))]
     return fehler + [m.replace("(Klartext)", "(Kompakt)") for m in _darstellung_meldungen(
         "Ausblick", [zellen], s["ausblick"]["formen"], "Klartext", False)]
+
+
+_DATUM_RE = re.compile(r"(?m)^(\d{2})\.(\d{2})\.(\d{4})\s*$")
+
+
+def _maildatum(plain: str) -> str | None:
+    """Datum der berichteten Etappe aus dem Klartext-Kopf (``%d.%m.%Y``) als ISO."""
+    m = _DATUM_RE.search(plain)
+    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else None
+
+
+def _soll_zeilenzahl(zahlen: dict, s: dict, plain: str) -> list[str]:
+    """#3047 Runde 7 (B-V1): Ausblick-Tageszeilen je Teil. HTML und Klartext
+    tragen gleich viele; ist das Mail-Datum ein Etappendatum der Konfiguration,
+    sind es die folgenden Etappen, hoechstens drei (``ausblick_zeilen_trip``).
+    0 Zeilen (Zustandshinweis statt Tabelle) prueft der Ein/Aus-Abgleich."""
+    fehler = []
+    werte = [n for n in zahlen.values() if n]
+    if len(werte) == 2 and werte[0] != werte[1]:
+        fehler.append("SOLL: Ausblick Tageszeilen: " + ", ".join(f"{k} {n}" for k, n in zahlen.items()))
+    soll = _soll_modul().ausblick_zeilen_trip(s.get("etappen_daten") or [], _maildatum(plain))
+    for teil, n in zahlen.items():
+        if n and soll is not None and n != soll:
+            fehler.append(f"SOLL: Ausblick ({teil}) hat {n} Tageszeilen, erwartet {soll} "
+                          "(folgende Etappen laut Konfiguration, hoechstens 3)")
+    return fehler
+
+
+def _soll_zusatz(html: str, plain: str, s: dict, lang: str) -> list[str]:
+    """#3047 Runde 7 (B-V2): Zusatzbloecke im Vollformat. Ausdruecklich aus ->
+    Etappen-Kennzahlen (HTML-Kacheln, Klartext ``12.3 km | ↑800m``) bzw.
+    Vortag-Vergleich duerfen nicht erscheinen; "an" ist datenabhaengig und
+    wird nicht verlangt. Kompakt ignoriert die Schalter (#722)."""
+    zusatz = s.get("zusatz") or {}
+    stats = [_ml().erwartet(f"mail.stats.{k}", lang) for k in ("distanz", "aufstieg", "abstieg", "max_hoehe")]
+    vortag_html = _ml().marker("mail.tageslage.vortag", lang, trenner=" {")
+    vortag_text = _ml().marker("vergleich.vortag.zusammenfassung", lang, trenner=":") + ":"
+    funde = {
+        ("show_stage_stats", "HTML"): any(f">{k}</div>" in html for k in stats),
+        ("show_stage_stats", "Klartext"): bool(re.search(r"(?m)^(?:\d+\.\d km|[↑↓]\d+m)(?: \| .*)?$", plain)),
+        ("show_yesterday_comparison", "HTML"): f">{vortag_html} " in html or vortag_text in html,
+        ("show_yesterday_comparison", "Klartext"): any(z.startswith(vortag_text) for z in plain.splitlines()),
+    }
+    fehler = []
+    for (schalter, teil), da in funde.items():
+        if da and zusatz.get(schalter) is False:
+            fehler.append(f"SOLL: Etappen-Kennzahlen ({teil}) erscheinen, obwohl show_stage_stats aus ist"
+                          if schalter == "show_stage_stats" else
+                          f"SOLL: Vortag-Vergleich ({teil}) erscheint, obwohl show_yesterday_comparison aus ist")
+    return fehler
 
 
 def _zellform(zelle: str, html: bool) -> str | None:
@@ -1004,6 +1056,9 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
         if bool(h) != bool(p):
             fehler.append(f"SOLL: {name} fehlt im {'Klartext' if h else 'HTML'}-Teil")
     fehler += _soll_ueberblick(html, plain, s, lang)
+    fehler += _soll_zusatz(html, plain, s, lang)
+    fehler += _soll_zeilenzahl({"HTML": sum(len(t) for t in _html_zellen(html, lang)["Ausblick"]),
+                                "Klartext": len(koepfe_plain[2])}, s, plain)
     fehler += _soll_tabellen("HTML", *koepfe_html, s)
     fehler += _soll_tabellen("Klartext", *koepfe_plain, s)
     # #3047 N7: keine Ueberschrift ohne Tabelle ("Segment 1"/"Nacht am Ziel"
