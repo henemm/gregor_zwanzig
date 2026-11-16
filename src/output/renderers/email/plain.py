@@ -101,6 +101,10 @@ def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
     if not rows:
         return f"  {t('mail.tabelle.keine_daten', lang)}"
     cols = visible_cols(rows)
+    if not cols:
+        # #3047 J3: ohne Metrikspalte entfaellt die Tabelle ganz (kein
+        # Zeit-Geruest) -- Paritaet zu html._render_html_table.
+        return ""
     if col_order:
         # Fix #1575 Scheibe 2: dieselbe ordered+remaining-Merge-Logik wie
         # html.py:664-682 (geteilter col_order aus resolve_metric_col_order).
@@ -305,9 +309,11 @@ def render_plain(
                 seg.end_point.distance_from_start_km,
             )
             lines.append(f"━━ Segment {seg.segment_id}: {_km_range} | {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {elev_arrow}{s_elev}m → {e_elev}m ━━")
-        lines.append(_render_text_table(rows, friendly_keys=friendly_keys,
-                                         format_modes=format_modes,
-                                         col_order=_col_order, lang=lang, ampel=ampel))
+        _tabelle = _render_text_table(rows, friendly_keys=friendly_keys,
+                                      format_modes=format_modes,
+                                      col_order=_col_order, lang=lang, ampel=ampel)
+        if _tabelle:
+            lines.append(_tabelle)
         lines.append("")
 
     if night_rows:
@@ -318,9 +324,11 @@ def render_plain(
                        zeit=local_fmt(display_end_time(last_seg), tz)))
         # Issue #3047 AC-15: dieselben format_modes wie die Etappentabelle
         # (und wie die HTML-Nachttabelle), sonst kippt Roh/Einfach.
-        lines.append(_render_text_table(night_rows, friendly_keys=friendly_keys,
-                                         format_modes=format_modes,
-                                         col_order=_col_order, lang=lang, ampel=ampel))
+        _nacht = _render_text_table(night_rows, friendly_keys=friendly_keys,
+                                    format_modes=format_modes,
+                                    col_order=_col_order, lang=lang, ampel=ampel)
+        if _nacht:
+            lines.append(_nacht)
         if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):
             lines.append(f"  {t('mail.nacht.hinweis_minimum', lang)}")
         lines.append("")

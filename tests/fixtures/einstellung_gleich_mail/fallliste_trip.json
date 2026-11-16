@@ -2125,6 +2125,72 @@
       "status": "gruen"
     },
     {
+      "id": "trip-n1-ausblick--nie_eingestellt--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_n1_bewusst_leer_kein_ausblick",
+      "ac": "AC-4, AC-10, #1394",
+      "befund": "N1/J3",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1-ausblick--nie_eingestellt--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_n1_bewusst_leer_kein_ausblick",
+      "ac": "AC-4, AC-10, #1394",
+      "befund": "N1/J3",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1-ausblick--nie_eingestellt--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "ein_aus",
+      "test": "test_n1_bewusst_leer_kein_ausblick",
+      "ac": "AC-4, AC-10, #1394",
+      "befund": "N1/J3",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1-ausblick--gespeichert--html",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "ein_aus",
+      "test": "test_n1_bewusst_leer_kein_ausblick",
+      "ac": "AC-4, AC-10, #1394",
+      "befund": "N1/J3",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1-ausblick--gespeichert--klartext",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "ein_aus",
+      "test": "test_n1_bewusst_leer_kein_ausblick",
+      "ac": "AC-4, AC-10, #1394",
+      "befund": "N1/J3",
+      "status": "gruen"
+    },
+    {
+      "id": "trip-n1-ausblick--gespeichert--kompakt",
+      "liste": "trip_ausblick",
+      "kontext": "trip",
+      "format": "kompakt",
+      "pruefung": "ein_aus",
+      "test": "test_n1_bewusst_leer_kein_ausblick",
+      "ac": "AC-4, AC-10, #1394",
+      "befund": "N1/J3",
+      "status": "gruen"
+    },
+    {
       "id": "trip-wv6--vor_tabelle--html",
       "liste": "trip_stundentabelle",
       "kontext": "trip",

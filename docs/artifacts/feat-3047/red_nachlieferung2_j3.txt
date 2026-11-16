@@ -1,0 +1,53 @@
+# #3047 Nachlieferung 2, J3 -- RED-Nachweis (vor dem Fix, Basis e5926b64e)
+# Fall: Trip-Grundauswahl bewusst leer (alle metrics enabled:false, so speichert der Editor eine Leerauswahl).
+# Soll: Ausblick entfaellt in HTML/Klartext/Kompakt; Etappen- und Nachttabelle entfallen in HTML und
+#       Klartext (kein Zeit/Risiko-Geruest).
+# Lauf: uv run pytest tests/tdd/test_einstellung_gleich_mail_trip.py -k n1_bewusst
+
+FFFFFFFFFF                                                               [100%]
+=================================== FAILURES ===================================
+E   AssertionError: trip-n1--bewusst_leer_alle_aus-stunden--html: bewusst leer, aber Stundentabelle mit Koepfen [['Zeit', 'Risiko']]
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab7cb8368a464abec/tests/tdd/test_einstellung_gleich_mail_trip.py:770: AssertionError: trip-n1--bewusst_leer_alle_aus-stunden--html: bewusst leer, aber Stundentabelle mit Koepfen [['Zeit', 'Risiko']]
+E   AssertionError: trip-n1--bewusst_leer_alle_aus-stunden--klartext: bewusst leer, aber Stundentabelle mit Koepfen [['Zeit']]
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab7cb8368a464abec/tests/tdd/test_einstellung_gleich_mail_trip.py:770: AssertionError: trip-n1--bewusst_leer_alle_aus-stunden--klartext: bewusst leer, aber Stundentabelle mit Koepfen [['Zeit']]
+E   AssertionError: trip-n1--bewusst_leer_alle_aus-nacht--html: bewusst leer, aber Stundentabelle mit Koepfen [['Zeit', 'Risiko']]
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab7cb8368a464abec/tests/tdd/test_einstellung_gleich_mail_trip.py:770: AssertionError: trip-n1--bewusst_leer_alle_aus-nacht--html: bewusst leer, aber Stundentabelle mit Koepfen [['Zeit', 'Risiko']]
+E   AssertionError: trip-n1--bewusst_leer_alle_aus-nacht--klartext: bewusst leer, aber Stundentabelle mit Koepfen [['Zeit']]
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab7cb8368a464abec/tests/tdd/test_einstellung_gleich_mail_trip.py:770: AssertionError: trip-n1--bewusst_leer_alle_aus-nacht--klartext: bewusst leer, aber Stundentabelle mit Koepfen [['Zeit']]
+E   AssertionError: ausblick: unbekannte Spaltenbeschriftung 'Temp Minimum' in ['Tag', 'Temp Minimum', 'Temp Maximum', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr', 'ACC']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab7cb8368a464abec/tests/helpers/einstellung_gleich_mail_trip.py:147: AssertionError: ausblick: unbekannte Spaltenbeschriftung 'Temp Minimum' in ['Tag', 'Temp Minimum', 'Temp Maximum', 'Rain', 'Rain%', 'Wind', 'Gust', 'Thdr', 'ACC']
+E   AssertionError: trip-n1-ausblick--nie_eingestellt--klartext: Ausblick trotz leerer Grundauswahl: ['temperature', 'precipitation', 'rain_probability', 'wind', 'gust', 'thunder']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab7cb8368a464abec/tests/tdd/test_einstellung_gleich_mail_trip.py:801: AssertionError: trip-n1-ausblick--nie_eingestellt--klartext: Ausblick trotz leerer Grundauswahl: ['temperature', 'precipitation', 'rain_probability', 'wind', 'gust', 'thunder']
+E   AssertionError: trip-n1-ausblick--nie_eingestellt--kompakt: Ausblick trotz leerer Grundauswahl: []
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab7cb8368a464abec/tests/tdd/test_einstellung_gleich_mail_trip.py:801: AssertionError: trip-n1-ausblick--nie_eingestellt--kompakt: Ausblick trotz leerer Grundauswahl: []
+E   AssertionError: trip-n1-ausblick--gespeichert--html: Ausblick trotz leerer Grundauswahl: ['wind', 'temperature']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab7cb8368a464abec/tests/tdd/test_einstellung_gleich_mail_trip.py:801: AssertionError: trip-n1-ausblick--gespeichert--html: Ausblick trotz leerer Grundauswahl: ['wind', 'temperature']
+E   AssertionError: trip-n1-ausblick--gespeichert--klartext: Ausblick trotz leerer Grundauswahl: ['wind', 'temperature']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab7cb8368a464abec/tests/tdd/test_einstellung_gleich_mail_trip.py:801: AssertionError: trip-n1-ausblick--gespeichert--klartext: Ausblick trotz leerer Grundauswahl: ['wind', 'temperature']
+E   AssertionError: trip-n1-ausblick--gespeichert--kompakt: Ausblick trotz leerer Grundauswahl: ['wind', 'temperature']
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab7cb8368a464abec/tests/tdd/test_einstellung_gleich_mail_trip.py:801: AssertionError: trip-n1-ausblick--gespeichert--kompakt: Ausblick trotz leerer Grundauswahl: ['wind', 'temperature']
+.venv/lib/python3.13/site-packages/anyio/pytest_plugin.py:14
+tests/conftest.py:128
+=========================== short test summary info ============================
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_alle_aus[trip-n1--bewusst_leer_alle_aus-stunden--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_alle_aus[trip-n1--bewusst_leer_alle_aus-stunden--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_alle_aus[trip-n1--bewusst_leer_alle_aus-nacht--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_alle_aus[trip-n1--bewusst_leer_alle_aus-nacht--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_kein_ausblick[trip-n1-ausblick--nie_eingestellt--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_kein_ausblick[trip-n1-ausblick--nie_eingestellt--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_kein_ausblick[trip-n1-ausblick--nie_eingestellt--kompakt]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_kein_ausblick[trip-n1-ausblick--gespeichert--html]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_kein_ausblick[trip-n1-ausblick--gespeichert--klartext]
+FAILED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_kein_ausblick[trip-n1-ausblick--gespeichert--kompakt]
+
+# GREEN nach dem Fix (gleicher Lauf):
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_alle_aus[trip-n1--bewusst_leer_alle_aus-stunden--html]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_alle_aus[trip-n1--bewusst_leer_alle_aus-stunden--klartext]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_alle_aus[trip-n1--bewusst_leer_alle_aus-nacht--html]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_alle_aus[trip-n1--bewusst_leer_alle_aus-nacht--klartext]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_kein_ausblick[trip-n1-ausblick--nie_eingestellt--html]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_kein_ausblick[trip-n1-ausblick--nie_eingestellt--klartext]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_kein_ausblick[trip-n1-ausblick--nie_eingestellt--kompakt]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_kein_ausblick[trip-n1-ausblick--gespeichert--html]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_kein_ausblick[trip-n1-ausblick--gespeichert--klartext]
+PASSED tests/tdd/test_einstellung_gleich_mail_trip.py::test_n1_bewusst_leer_kein_ausblick[trip-n1-ausblick--gespeichert--kompakt]

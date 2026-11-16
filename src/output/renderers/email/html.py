@@ -532,10 +532,12 @@ def _render_html_table(
     cols = visible_cols(rows)
     if allowed_col_keys is not None:
         cols = [(k, label) for (k, label) in cols if k in allowed_col_keys]
-        if not cols:
-            # #2210 C3-41: abgewaehlt heisst abgewaehlt (#1405 S3), wie
-            # _render_mobile_compact_rows -- kein leeres Time/Risk-Geruest.
-            return ""
+    if not cols:
+        # #2210 C3-41: abgewaehlt heisst abgewaehlt (#1405 S3), wie
+        # _render_mobile_compact_rows -- kein leeres Time/Risk-Geruest.
+        # #3047 J3: auch ohne Horizont-Filter (Nachttabelle, bewusst leere
+        # Grundauswahl) -- Paritaet zum Klartext (plain._render_text_table).
+        return ""
     # AC-3 (#911): Spalten in konfigurierter Metrik-Reihenfolge (col_order aus dc.metrics).
     # Zeit/Temp-Leitspalten bleiben vorn; col_order definiert nur die Metrik-Spalten-Reihenfolge.
     if col_order:
