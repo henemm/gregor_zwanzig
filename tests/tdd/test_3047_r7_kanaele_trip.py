@@ -216,9 +216,18 @@ def _listenplaetze(sms: str, liste: list[str]) -> list[int]:
     return plaetze
 
 
+def _metrik_und_warnblock(text: str) -> tuple[list[str], str]:
+    """(Kopf + Metrik-Tokens, Warnblock ab dem ersten ``!``-Token bis Textende)."""
+    kopf, _, rest = text.partition(": ")
+    tokens = rest.split()
+    start = next((i for i, t in enumerate(tokens) if t.startswith("!")), len(tokens))
+    return [kopf, *tokens[:start]], " ".join(tokens[start:])
+
+
 def test_ac23_sms_kuerzt_vom_listenende_warnung_bleibt(monkeypatch):
     """SMS ueber 160 Zeichen: die vorderen Zeilen der SMS-Liste bleiben (Feuchte, Taupunkt an
-    Platz 1/2), die hinteren fallen zuerst; die amtliche Warnung bleibt. Premium-SMS = SMS-Text."""
+    Platz 1/2), die hinteren fallen zuerst; die amtliche Warnung bleibt. Premium-SMS folgt dem
+    SMS-Text, Grenze 153 (#3100): passt die SMS, gleicher Text, sonst Kuerzung nach derselben Regel."""
     data = _trip(sms=[_mc(m, i) for i, m in enumerate(_LANGE_LISTE)], extra=_EXTRA)
     data["official_alerts_enabled"] = True
     for _uid, mit in _zwei_nutzer(monkeypatch, data, warn=True):
@@ -232,7 +241,15 @@ def test_ac23_sms_kuerzt_vom_listenende_warnung_bleibt(monkeypatch):
         assert erhalten == list(range(len(erhalten))), f"Luecke in der Liste: {sms}"
         assert len(erhalten) < len(_LANGE_LISTE)
         assert "TH" not in _symbole(sms), f"Gewitter (letzter Platz) faellt zuerst: {sms}"
-        assert mit.sendungen("premium_sms")[0]["body"] == sms
+        premium = mit.sendungen("premium_sms")[0]["body"]
+        assert len(premium) <= 153, premium
+        if len(sms) <= 153:
+            assert premium == sms, (premium, sms)
+        else:
+            p_tok, p_warn = _metrik_und_warnblock(premium)
+            s_tok, s_warn = _metrik_und_warnblock(sms)
+            assert s_warn and p_warn == s_warn and premium.endswith(p_warn), (premium, sms)
+            assert len(p_tok) < len(s_tok) and p_tok == s_tok[:len(p_tok)], (premium, sms)
 
 
 def test_ac23_sms_umgekehrte_liste_kuerzt_andere_seite(monkeypatch):

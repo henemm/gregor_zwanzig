@@ -3657,7 +3657,7 @@
       ],
       "runde": 7,
       "paket": "katalog",
-      "hinweis": "B-K4: Premium-SMS-Text = SMS-Text nach Kuerzung vom Listenende"
+      "hinweis": "B-K4: Premium-SMS-Text = SMS-Text nach Kuerzung vom Listenende; seit #3100: ueber 153 Zeichen kuerzt Premium nach derselben Regel (ADR-0121 Nr. 6), vorher wurde der 160er-Text ungekuerzt gesendet"
     },
     {
       "id": "T-P11-NEU-FELDER",
