@@ -222,19 +222,24 @@
 </script>
 
 <section class="wt" data-testid="wetter-tab" data-context={context}>
-	<header class="wt-kopf">
+	<header class="wt-kopf" data-abschnitt="abschnittskopf">
 		<h2 data-testid="wetter-tab-titel">{$t('wetter.kopf.titel')}</h2>
 		<p data-testid="wetter-tab-erklaer">{$t('wetter.kopf.erklaerung')}</p>
 	</header>
 
 	{#if phase === 'laedt'}
+		<!-- #2966 AC-2: Laden-Text sichtbar und einmal vorgelesen; das Skelett ist nur Optik (aria-hidden). -->
 		<div class="wt-karte wt-laden" data-testid="wetter-tab-laden" aria-busy="true" data-abschnitt="laden">
-			<span aria-hidden="true">{$t('wetter.kopf.laden')}</span>
-			<Skelett label={$t('wetter.kopf.laden')} />
+			<span role="status">{$t('wetter.kopf.laden')}</span>
+			<div aria-hidden="true"><Skelett label={$t('wetter.kopf.laden')} /></div>
 		</div>
 	{:else if phase === 'fehler'}
 		<div class="wt-karte wt-fehler" role="alert" data-testid="wetter-tab-fehler" data-abschnitt="warnung">
-			<p>{$t('wetter.kopf.fehler')}</p>
+			<!-- #2966 AC-3: zwei Absätze, ohne zusätzlichen Kartenabstand dazwischen. -->
+			<div>
+				<p>{$t('wetter.kopf.fehler')}</p>
+				<p>{$t('wetter.kopf.fehler_verbindung')}</p>
+			</div>
 			<Btn variant="accent" size="tap" data-testid="wetter-tab-erneut-laden" onclick={() => void laden()}>{$t('wetter.kopf.erneut_laden')}</Btn>
 		</div>
 	{:else if stand && daten && anzeige && zaehler}

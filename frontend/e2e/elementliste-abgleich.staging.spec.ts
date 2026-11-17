@@ -39,6 +39,11 @@ import {
 	ladeRegeln,
 	ladeKontoTexte,
 	werteLaufAus,
+	bedieneAbschnitt,
+	mitAufraeumen,
+	ordneAbschnitte,
+	wetterPruefMetriken,
+	type BedienOps,
 	type Ergebnis,
 	type ListenElement,
 	type OhneHubEintrag,
@@ -198,6 +203,109 @@ async function pruefDaten(api: APIRequestContext, ids: Record<string, string | n
 	};
 }
 
+/** Liste aus einer API-Antwort (Array oder Objekt mit einem Array-Feld). */
+function alsListe(x: unknown): Record<string, unknown>[] {
+	if (Array.isArray(x)) return x as Record<string, unknown>[];
+	const feld = Object.values((x ?? {}) as Record<string, unknown>).find(Array.isArray);
+	return (feld ?? []) as Record<string, unknown>[];
+}
+
+const WETTER_NAME = 'E2E-GZ #2966 Wetter-Prüfung';
+const WETTER_TRIP_ID = 'e2e-gz-2966-wetter';
+/** Aktive Vorlage des Wetter-Prüf-Datensatzes (auch der Standard, falls es sie nicht gibt). */
+const WETTER_VORLAGE = 'allgemein';
+const KEINE_WETTER_IDS: Record<string, string | null> = { trip: null, orte: null };
+
+/**
+ * #2966 (AC-8): eigener Wetter-Prüf-Datensatz (Trip und Orts-Vergleich) mit allen Metriken im Briefing, damit
+ * jeder Grenzen-Dialog bedienbar ist. Reste eines abgebrochenen Laufs werden vorher entfernt; die
+ * Aufräumschritte landen in `aufraeumen` und laufen im finally des Tests (auch nach einem Fehler).
+ */
+async function wetterPruefDaten(api: APIRequestContext, liste: ListenElement[], aufraeumen: Array<() => Promise<unknown>>): Promise<Record<string, string | null>> {
+	const ids: Record<string, string | null> = { trip: null, orte: null };
+	await api.delete(`/api/trips/${WETTER_TRIP_ID}`).catch(() => {});
+	for (const p of alsListe(await (await api.get('/api/compare/presets')).json().catch(() => []))) {
+		if (p.name === WETTER_NAME) await api.delete(`/api/compare/presets/${encodeURIComponent(String(p.id))}`).catch(() => {});
+	}
+	for (const o of alsListe(await (await api.get('/api/locations')).json().catch(() => []))) {
+		if (o.name === WETTER_NAME) await api.delete(`/api/locations/${encodeURIComponent(String(o.id))}`).catch(() => {});
+	}
+	const trip = await api.post('/api/trips', {
+		data: {
+			id: WETTER_TRIP_ID,
+			name: WETTER_NAME,
+			region: 'Mallorca',
+			stages: [
+				{
+					id: `${WETTER_TRIP_ID}-stage-1`,
+					name: 'Etappe 1',
+					date: new Date().toISOString().slice(0, 10),
+					waypoints: [
+						{ id: `${WETTER_TRIP_ID}-wp-1`, name: 'Start', lat: 39.6, lon: 2.5, elevation_m: 100 },
+						{ id: `${WETTER_TRIP_ID}-wp-2`, name: 'Ziel', lat: 39.7, lon: 2.6, elevation_m: 600 }
+					]
+				}
+			],
+			display_config: { preset_name: WETTER_VORLAGE, metrics: wetterPruefMetriken(liste, 'trip').map((m) => ({ metric_id: m, enabled: true })) }
+		}
+	});
+	if (trip.ok()) {
+		ids.trip = WETTER_TRIP_ID;
+		aufraeumen.push(() => api.delete(`/api/trips/${WETTER_TRIP_ID}`));
+	}
+	const ort = await api.post('/api/locations', { data: { name: WETTER_NAME, lat: 51.96, lon: 7.63 } });
+	if (ort.ok()) {
+		const ortId = String((await ort.json()).id);
+		aufraeumen.push(() => api.delete(`/api/locations/${ortId}`));
+		const v = await api.post('/api/compare/presets', {
+			data: {
+				name: WETTER_NAME,
+				location_ids: [ortId],
+				schedule: 'manual',
+				profil: 'wandern',
+				// Objektform: Katalog-Zeichenketten verwirft der Vergleich (leere Auswahl).
+				display_config: { preset_name: WETTER_VORLAGE, active_metrics: wetterPruefMetriken(liste, 'orte').map((m) => ({ metric_id: m, aggregation: 'max' })) }
+			}
+		});
+		if (v.ok()) {
+			const vid = String((await v.json()).id);
+			ids.orte = vid;
+			aufraeumen.unshift(() => api.delete(`/api/compare/presets/${vid}`));
+		}
+	}
+	return ids;
+}
+
+/** Metriken mit Knopf „Grenzen ändern“ auf der geladenen Seite (= im Briefing, nicht reine Anzeige). */
+async function briefingAufSeite(page: Page): Promise<string[]> {
+	const praefix = 'wetter-grenzen-aendern-';
+	return page.evaluate((p) => Array.from(document.querySelectorAll(`[data-testid^="${p}"]`)).map((el) => (el.getAttribute('data-testid') ?? '').slice(p.length)), praefix);
+}
+
+/**
+ * #2966: Browser-Operationen für `bedieneAbschnitt` (Ablauf und Tripwire liegen in der Logik). Vor einer Taste
+ * wird der Fokus gelöst: SavePresetDialog stoppt Tastenereignisse aus dem Dialog, Escape erreicht sonst das
+ * Fenster nicht, wenn der Fokus nach „Speichern“ im Dialog liegt.
+ */
+function seitenOps(page: Page, neuLaden: () => Promise<void>, anfragen: { method: string; url: string }[]): BedienOps {
+	return {
+		neuLaden,
+		briefing: () => briefingAufSeite(page),
+		klick: async (testid) => {
+			await page.locator(`[data-testid="${testid}"]`).first().click({ timeout: 10_000 });
+			await page.waitForTimeout(400);
+		},
+		taste: async (taste) => {
+			await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+			await page.keyboard.press(taste);
+			await page.waitForTimeout(400);
+		},
+		lesen: (abschnitt) => texteImBereich(page, abschnitt),
+		nachlauf: () => page.waitForTimeout(1500).catch(() => {}),
+		anfragen
+	};
+}
+
 test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / nicht_pruefbar)', async ({ page, baseURL }) => {
 	test.setTimeout(1_800_000);
 	const alle: ListenElement[] = JSON.parse(readFileSync(LISTE, 'utf8')).elemente;
@@ -220,77 +328,122 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 	const profil = await api.get('/api/auth/profile');
 	const vorherSprache = wiederherzustellendeSprache(profil.ok() ? await profil.json() : null);
 	const aufraeumen = await pruefDaten(api, ids);
+	// #2966 (AC-7): jeder Schreib-Befund des Tripwires lässt den Lauf scheitern. Der Listener speist die
+	// Anfragen-Liste für bedieneAbschnitt (gezählt wird ab Bedienbeginn).
+	const schreibBefunde: string[] = [];
+	const bedienAnfragen: { method: string; url: string }[] = [];
+	page.on('request', (r) => bedienAnfragen.push({ method: r.method(), url: r.url() }));
 	let spracheZurueck: Awaited<ReturnType<typeof stelleSpracheWieder>> = { ok: false, meldung: 'Zurückstellen der Profilsprache nicht gelaufen' };
 	try {
 		const gesetzt = await api.put('/api/auth/profile', { data: { language: plan.sprache } });
 		expect(gesetzt.ok(), `Profilsprache ${plan.sprache} setzen: HTTP ${gesetzt.status()}`).toBeTruthy();
 		const konto = await ladeKontoTexte((pfad) => api.get(pfad), ids);
-		for (const { k, el } of plan.kombis) {
-			const id = ids[k.ctx];
-			if (!id) {
-				for (const [i, e] of alleNichtPruefbar(el, `kein ${k.ctx === 'trip' ? 'Trip' : 'Orts-Vergleich'} im Test-Konto und Prüf-Datensatz nicht anlegbar`)) ergebnisse.set(i, e);
-				continue;
-			}
-			const rp = routenPlan(k.zustand);
-			await page.unrouteAll({ behavior: 'ignoreErrors' });
-			if (rp.art === 'nicht_herstellbar') {
-				for (const [i, e] of alleNichtPruefbar(el, rp.grund)) ergebnisse.set(i, e);
-				continue;
-			}
-			if (rp.art === 'haengen') await page.route(rp.muster, () => new Promise<void>(() => {}));
-			if (rp.art === 'fehler') await page.route(rp.muster, (route) => route.fulfill({ status: rp.status, body: '{"error":"elementliste-abgleich"}' }));
-			let umgeschrieben = 0;
-			if (rp.art === 'konto_luecken') {
-				// Nur lesende Konto-Abrufe werden umgeschrieben; Schreib-Requests laufen unverändert durch.
-				await page.route(rp.muster, async (route) => {
-					if (route.request().method() !== rp.methode) return route.continue();
-					const antwort = await route.fetch();
-					const r = rp.ersetze(route.request().url(), await antwort.text());
-					if (r.geaendert) umgeschrieben++;
-					await route.fulfill({ response: antwort, body: r.text });
-				});
-			}
-			const pfad = seitenPfad(k.ctx, id, k.reiter);
-			if (rp.art === 'konto_luecken' && rp.navigation === 'browser') {
-				await navigiereImBrowser(page, pfad);
-			} else {
-				await page.goto(pfad, { waitUntil: 'domcontentloaded' });
-			}
-			await page.waitForTimeout(rp.art === 'haengen' ? 1500 : 3000);
-			const falscheSprache = sprachGrund(plan.sprache, await page.evaluate(() => document.documentElement.getAttribute('lang')));
-			if (falscheSprache) {
-				for (const [i, e] of alleNichtPruefbar(el, falscheSprache)) ergebnisse.set(i, e);
-				continue;
-			}
-			const nichtHergestellt = herstellungsGrund(rp, umgeschrieben);
-			if (nichtHergestellt) {
-				for (const [i, e] of alleNichtPruefbar(el, nichtHergestellt)) ergebnisse.set(i, e);
-				continue;
-			}
-			if (k.segment) {
-				const knopf = page.getByRole('radio', { name: k.segment, exact: true }).or(page.getByRole('tab', { name: k.segment, exact: true }));
-				if ((await knopf.count()) === 0) {
-					for (const [i, e] of alleNichtPruefbar(el, `Kanal-Segment „${k.segment}“ ist auf der Seite nicht bedienbar`)) ergebnisse.set(i, e);
+		const templates = await api.get('/api/templates');
+		const vorlagen = alsListe(templates.ok() ? await templates.json() : []).map((v) => String(v.id));
+		// #2966 (AC-8): Wetter-Prüf-Datensatz (alle Metriken) nur für Bedien-Abschnitte; mitAufraeumen löscht ihn immer.
+		const mitWetter = plan.kombis.some(({ k }) => k.reiter === 'wetter');
+		await mitAufraeumen((auf) => (mitWetter ? wetterPruefDaten(api, alle, auf) : Promise.resolve(KEINE_WETTER_IDS)), async (wetterIds) => {
+			for (const { k, el } of plan.kombis) {
+				const id = ids[k.ctx];
+				if (!id) {
+					for (const [i, e] of alleNichtPruefbar(el, `kein ${k.ctx === 'trip' ? 'Trip' : 'Orts-Vergleich'} im Test-Konto und Prüf-Datensatz nicht anlegbar`)) ergebnisse.set(i, e);
 					continue;
 				}
-				await knopf.first().click();
+				const rp = routenPlan(k.zustand);
+				await page.unrouteAll({ behavior: 'ignoreErrors' });
+				if (rp.art === 'nicht_herstellbar') {
+					for (const [i, e] of alleNichtPruefbar(el, rp.grund)) ergebnisse.set(i, e);
+					continue;
+				}
+				if (rp.art === 'haengen') await page.route(rp.muster, () => new Promise<void>(() => {}));
+				if (rp.art === 'fehler') await page.route(rp.muster, (route) => route.fulfill({ status: rp.status, body: '{"error":"elementliste-abgleich"}' }));
+				let umgeschrieben = 0;
+				if (rp.art === 'konto_luecken') {
+					// Nur lesende Konto-Abrufe werden umgeschrieben; Schreib-Requests laufen unverändert durch.
+					await page.route(rp.muster, async (route) => {
+						if (route.request().method() !== rp.methode) return route.continue();
+						const antwort = await route.fetch();
+						const r = rp.ersetze(route.request().url(), await antwort.text());
+						if (r.geaendert) umgeschrieben++;
+						await route.fulfill({ response: antwort, body: r.text });
+					});
+				}
+				// Seitenaufruf unter dem Routen-Plan der Kombination; #2966: auch der Neuaufruf je Bedien-Abschnitt.
+				const seiteLaden = async (seitenId: string): Promise<void> => {
+					const pfad = seitenPfad(k.ctx, seitenId, k.reiter);
+					if (rp.art === 'konto_luecken' && rp.navigation === 'browser') {
+						await navigiereImBrowser(page, pfad);
+					} else {
+						await page.goto(pfad, { waitUntil: 'domcontentloaded' });
+					}
+					await page.waitForTimeout(rp.art === 'haengen' ? 1500 : 3000);
+				};
+				await seiteLaden(id);
+				const falscheSprache = sprachGrund(plan.sprache, await page.evaluate(() => document.documentElement.getAttribute('lang')));
+				if (falscheSprache) {
+					for (const [i, e] of alleNichtPruefbar(el, falscheSprache)) ergebnisse.set(i, e);
+					continue;
+				}
+				const nichtHergestellt = herstellungsGrund(rp, umgeschrieben);
+				if (nichtHergestellt) {
+					for (const [i, e] of alleNichtPruefbar(el, nichtHergestellt)) ergebnisse.set(i, e);
+					continue;
+				}
+				if (k.segment) {
+					const knopf = page.getByRole('radio', { name: k.segment, exact: true }).or(page.getByRole('tab', { name: k.segment, exact: true }));
+					if ((await knopf.count()) === 0) {
+						for (const [i, e] of alleNichtPruefbar(el, `Kanal-Segment „${k.segment}“ ist auf der Seite nicht bedienbar`)) ergebnisse.set(i, e);
+						continue;
+					}
+					await knopf.first().click();
+				}
+				const abschnitte = new Map<string, ListenElement[]>();
+				for (const e of el) abschnitte.set(e.abschnitt, [...(abschnitte.get(e.abschnitt) ?? []), e]);
+				// #2966: Bedien-Abschnitte erst nach der Gegenrichtung, je mit frischer Seite.
+				const lage = { ctx: k.ctx, vorlagen, aktiveVorlage: WETTER_VORLAGE };
+				const zuBedienen: Array<[string, ListenElement[]]> = [];
+				for (const weg of ordneAbschnitte([...abschnitte.keys()], lage, alle)) {
+					const { abschnitt } = weg;
+					const liste = abschnitte.get(abschnitt)!;
+					if (weg.weg === 'bedienen') {
+						zuBedienen.push([abschnitt, liste]);
+						continue;
+					}
+					const befund = await texteImBereich(page, abschnitt);
+					if (weg.weg === 'nicht_herstellbar' && !befund.marker) {
+						for (const [i, e] of alleNichtPruefbar(liste, weg.grund)) ergebnisse.set(i, e);
+						continue;
+					}
+					for (const [i, e] of bewerteAbschnitt(liste, befund, plan.sprache, abschnitt)) ergebnisse.set(i, e);
+				}
+				// Gegenrichtung: nur Zustand normal, ohne Segment, Desktop-Viewport (Config); erklärt wird gegen die
+				// ganze Liste (kopf/reiterleiste stehen unter Reiter wetter), unabhängig vom Scope.
+				if (istGegenrichtung(k)) {
+					const hub = await texteUnterHub(page);
+					// Fehlt Kopf oder Reiterfläche, ist die Seite nur teilweise gelesen: nie still „kein zusaetzlich“, sondern Befund ohneHub.
+					const gegen = werteGegenrichtungAus({ ctx: k.ctx, reiter: k.reiter, anker: hub.anker, texte: hub.texte }, alle, regeln.ausnahmen, konto, plan.sprache);
+					zusaetzlich.push(...gegen.zusaetzlich);
+					if (gegen.ohneHub) ohneHub.push(gegen.ohneHub);
+				}
+				// #2966 (AC-6, AC-7): Script-Zustände per Bedienplan herstellen — nur öffnen, abbrechen, leer absenden.
+				for (const [abschnitt, liste] of zuBedienen) {
+					const seitenId = k.reiter === 'wetter' ? wetterIds[k.ctx] : id;
+					if (!seitenId) {
+						for (const [i, e] of alleNichtPruefbar(liste, `Wetter-Prüf-Datensatz (${k.ctx}) nicht anlegbar`)) ergebnisse.set(i, e);
+						continue;
+					}
+					const lauf = await bedieneAbschnitt(abschnitt, lage, seitenOps(page, () => seiteLaden(seitenId), bedienAnfragen));
+					if (lauf.art === 'schreibbefund') {
+						schreibBefunde.push(`${k.ctx}/${k.zustand}/${abschnitt}: ${lauf.grund}`);
+						for (const e of liste) ergebnisse.set(e.id, { status: 'abweichend', grund: lauf.grund });
+					} else if (lauf.art === 'nicht_pruefbar') {
+						for (const [i, e] of alleNichtPruefbar(liste, lauf.grund)) ergebnisse.set(i, e);
+					} else {
+						for (const [i, e] of bewerteAbschnitt(liste, lauf.befund, plan.sprache, abschnitt)) ergebnisse.set(i, e);
+					}
+				}
 			}
-			const abschnitte = new Map<string, ListenElement[]>();
-			for (const e of el) abschnitte.set(e.abschnitt, [...(abschnitte.get(e.abschnitt) ?? []), e]);
-			for (const [abschnitt, liste] of abschnitte) {
-				const befund = await texteImBereich(page, abschnitt);
-				for (const [i, e] of bewerteAbschnitt(liste, befund, plan.sprache, abschnitt)) ergebnisse.set(i, e);
-			}
-			// Gegenrichtung: nur Zustand normal, ohne Segment, Desktop-Viewport (Config); erklärt wird gegen die
-			// ganze Liste (kopf/reiterleiste stehen unter Reiter wetter), unabhängig vom Scope.
-			if (istGegenrichtung(k)) {
-				const hub = await texteUnterHub(page);
-				// Fehlt Kopf oder Reiterfläche, ist die Seite nur teilweise gelesen: nie still „kein zusaetzlich“, sondern Befund ohneHub.
-				const gegen = werteGegenrichtungAus({ ctx: k.ctx, reiter: k.reiter, anker: hub.anker, texte: hub.texte }, alle, regeln.ausnahmen, konto, plan.sprache);
-				zusaetzlich.push(...gegen.zusaetzlich);
-				if (gegen.ohneHub) ohneHub.push(gegen.ohneHub);
-			}
-		}
+		});
 	} finally {
 		await page.unrouteAll({ behavior: 'ignoreErrors' });
 		spracheZurueck = await stelleSpracheWieder((daten) => api.put('/api/auth/profile', { data: daten }), vorherSprache);
@@ -303,5 +456,7 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 	console.log(`Elementlisten-Abgleich: ${ende.meldung} → ${pfade.json}, ${pfade.md}`);
 	// F005: ein gescheitertes Zurückstellen der Profilsprache lässt den Lauf scheitern (auch ohne --strict).
 	expect(spracheZurueck.ok, spracheZurueck.ok ? '' : spracheZurueck.meldung).toBe(true);
+	// #2966 (AC-7): eine schreibende Anfrage während der Bedienung ist immer ein Fehlschlag.
+	expect(schreibBefunde, schreibBefunde.join('\n')).toEqual([]);
 	expect(ende.exit, ende.meldung).toBe(0);
 });

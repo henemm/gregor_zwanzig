@@ -1991,118 +1991,6 @@
 			"art": "abschnitt",
 			"ctx": "trip",
 			"reiter": "wetter",
-			"abschnitt": "abschnittskopf",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Abschnitt-Haken fehlt",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-cloud_low",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-freezing_level",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-gust",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-precipitation",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-rain_probability",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-snowfall_limit",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-temperature",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-temperature_night",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-thunder",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-uv_index",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-visibility",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-wind",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-wind_chill",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
 			"abschnitt": "kanal-inhalt",
 			"grund": "Kanal-Segmente „Inhalt je Kanal und Fläche“ sind noch nicht gebaut, daher nicht bedienbar. Ursachen: Kanal-Segment nicht bedienbar",
 			"verweis": "#2795"
@@ -2135,14 +2023,6 @@
 			"art": "abschnitt",
 			"ctx": "trip",
 			"reiter": "wetter",
-			"abschnitt": "laden",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Text nicht sichtbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
 			"abschnitt": "metriken",
 			"grund": "Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke: #2968",
 			"verweis": "#2967"
@@ -2154,46 +2034,6 @@
 			"abschnitt": "test-menue",
 			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
 			"verweis": "#2797"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "vorlage-auswahl",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "vorlage-bestaetigung",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "vorlage-speichern",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "vorlage-speichern-fehler",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"abschnitt": "warnung",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
-			"verweis": "#2966"
 		},
 		{
 			"art": "abschnitt",
@@ -2223,78 +2063,6 @@
 			"art": "abschnitt",
 			"ctx": "orte",
 			"reiter": "wetter",
-			"abschnitt": "abschnittskopf",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-cloud_total",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-gust",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-precipitation",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-rain_probability",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-sunshine",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-temperature",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-thunder",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "grenzen-wind",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
 			"abschnitt": "kanal-inhalt",
 			"grund": "Kanal-Segmente „Inhalt je Kanal und Fläche“ sind noch nicht gebaut, daher nicht bedienbar. Ursachen: Kanal-Segment nicht bedienbar",
 			"verweis": "#2795"
@@ -2327,14 +2095,6 @@
 			"art": "abschnitt",
 			"ctx": "orte",
 			"reiter": "wetter",
-			"abschnitt": "laden",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Text nicht sichtbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
 			"abschnitt": "metriken",
 			"grund": "Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke: #2968",
 			"verweis": "#2967"
@@ -2346,46 +2106,6 @@
 			"abschnitt": "test-menue",
 			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
 			"verweis": "#2797"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "vorlage-auswahl",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "vorlage-bestaetigung",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "vorlage-speichern",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "vorlage-speichern-fehler",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
-			"verweis": "#2966"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "wetter",
-			"abschnitt": "warnung",
-			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
-			"verweis": "#2966"
 		},
 		{
 			"art": "abschnitt",

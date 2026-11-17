@@ -142,7 +142,10 @@ describe('#2966 AC-6: bedienPlan — nie still übergangen', () => {
 		}
 	});
 	test('mit allen Metriken im Briefing ist jeder Wetter-Script-Abschnitt herstellbar (Plan)', () => {
-		const script = [...new Set(WETTER.filter((e) => L.SCRIPT_ABSCHNITT.test(e.abschnitt)).map((e) => `${e.ctx}\u0000${e.abschnitt}`))].map((s) => s.split('\u0000'));
+		// Nur grenzen-* und vorlage-* (Umfang #2966). test-menue und kebab-* gehören #2797 und sind hier
+		// nicht_herstellbar; ohne diesen Filter widerspräche der Test „unbekannter Script-Abschnitt“
+		// (gleicher Aufruf plan('test-menue', lage('trip'))). Erwartet: 29 Paare (Trip 13+4, Orte 8+4).
+		const script = [...new Set(WETTER.filter((e) => L.SCRIPT_ABSCHNITT.test(e.abschnitt) && /^(grenzen-|vorlage-)/.test(e.abschnitt)).map((e) => `${e.ctx}\u0000${e.abschnitt}`))].map((s) => s.split('\u0000'));
 		assert.ok(script.length >= 25, `zu wenige Script-Abschnitte im Reiter Wetter: ${script.length}`);
 		for (const [ctx, a] of script) assert.equal(plan(a, lage(ctx)).art, 'plan', `${ctx}/${a}`);
 	});
@@ -161,6 +164,132 @@ describe('#2966 AC-7: Schreib-Tripwire', () => {
 			assert.match(b!, /\/api\/metric-presets/);
 		});
 	}
+});
+
+type Anfrage = { method: string; url: string };
+type FakeOps = L.BedienOps & { protokoll: string[] };
+/** Einfache Ops, die jeden Aufruf aufzeichnen; `bei` hängt an einen Aufruf eine Anfrage oder einen Fehler. */
+function fakeOps(briefing: string[], bei: Record<string, Anfrage | Error> = {}): FakeOps {
+	const protokoll: string[] = [];
+	const anfragen: Anfrage[] = [];
+	const schritt = async (name: string) => {
+		protokoll.push(name);
+		const x = bei[name];
+		if (x instanceof Error) throw x;
+		if (x) anfragen.push(x);
+	};
+	return {
+		protokoll,
+		anfragen,
+		neuLaden: () => schritt('neuLaden'),
+		briefing: async () => (await schritt('briefing'), briefing),
+		klick: (t) => schritt(`klick:${t}`),
+		taste: (t) => schritt(`taste:${t}`),
+		lesen: async (a) => (await schritt(`lesen:${a}`), { marker: true, texte: [`Text ${a}`] }),
+		nachlauf: () => schritt('nachlauf')
+	};
+}
+const LAGE = { ctx: 'trip', vorlagen: ['allgemein', 'alpin'], aktiveVorlage: 'allgemein' };
+
+describe('#2966 AC-6/AC-7: bedieneAbschnitt — Reload, Planreihenfolge, Schreib-Tripwire', () => {
+	test('Grenzen: erst neu laden, dann Ändern · lesen · Fertig, dann Nachlauf; Ergebnis ist der gelesene Bereich', async () => {
+		const ops = fakeOps(['wind']);
+		const r = await L.bedieneAbschnitt('grenzen-wind', LAGE, ops);
+		assert.deepEqual(ops.protokoll, ['neuLaden', 'briefing', 'klick:wetter-grenzen-aendern-wind', 'lesen:grenzen-wind', 'klick:wetter-grenzen-aendern-wind', 'nachlauf']);
+		assert.deepEqual(r, { art: 'gelesen', befund: { marker: true, texte: ['Text grenzen-wind'] } });
+	});
+	test('Speichern-Fehler: Dialog öffnen, leer absenden, lesen, per Escape schließen', async () => {
+		const ops = fakeOps([]);
+		await L.bedieneAbschnitt('vorlage-speichern-fehler', LAGE, ops);
+		assert.deepEqual(ops.protokoll.slice(2), ['klick:wetter-vorlage-als-eigene', 'klick:save-preset-submit', 'lesen:vorlage-speichern-fehler', 'taste:Escape', 'nachlauf']);
+	});
+	test('Metrik nicht im echten Briefing ⇒ nicht_pruefbar mit Grund, keine Bedienung', async () => {
+		const ops = fakeOps(['gust']);
+		const r = await L.bedieneAbschnitt('grenzen-wind', LAGE, ops);
+		assert.equal(r.art, 'nicht_pruefbar');
+		assert.match((r as { grund: string }).grund, /wind.*nicht im Briefing/);
+		assert.deepEqual(ops.protokoll, ['neuLaden', 'briefing']);
+	});
+	test('schreibende Anfrage während der Bedienung ⇒ Schreibbefund; Anfragen beim Neuladen zählen nicht', async () => {
+		const sauber = fakeOps(['wind'], { neuLaden: { method: 'POST', url: '/api/beim-laden' } });
+		assert.equal((await L.bedieneAbschnitt('grenzen-wind', LAGE, sauber)).art, 'gelesen');
+		const ops = fakeOps(['wind'], { 'klick:wetter-grenzen-aendern-wind': { method: 'PUT', url: '/api/trips/x' } });
+		const r = await L.bedieneAbschnitt('grenzen-wind', LAGE, ops);
+		assert.equal(r.art, 'schreibbefund');
+		assert.match((r as { grund: string }).grund, /PUT \/api\/trips\/x/);
+	});
+	test('verzögerte Speicherung im Nachlauf ⇒ Schreibbefund', async () => {
+		const r = await L.bedieneAbschnitt('vorlage-auswahl', LAGE, fakeOps([], { nachlauf: { method: 'POST', url: '/api/metric-presets' } }));
+		assert.equal(r.art, 'schreibbefund');
+	});
+	test('Fehler in einem Schritt ⇒ nicht_pruefbar mit Grund, Nachlauf läuft trotzdem; Schreibbefund geht vor', async () => {
+		const ops = fakeOps([], { 'klick:wetter-vorlage-picker': new Error('Zeitüberschreitung\nDetails') });
+		const r = await L.bedieneAbschnitt('vorlage-auswahl', LAGE, ops);
+		assert.deepEqual(r, { art: 'nicht_pruefbar', grund: 'Bedienung für „vorlage-auswahl“ fehlgeschlagen: Zeitüberschreitung' });
+		assert.equal(ops.protokoll.at(-1), 'nachlauf');
+		const beides = fakeOps([], { 'klick:wetter-vorlage-als-eigene': { method: 'POST', url: '/api/metric-presets' }, 'klick:save-preset-submit': new Error('weg') });
+		assert.equal((await L.bedieneAbschnitt('vorlage-speichern-fehler', LAGE, beides)).art, 'schreibbefund');
+	});
+});
+
+describe('#2966: ordneAbschnitte — vorab mit allen Metriken des Prüf-Datensatzes', () => {
+	test('Trip/Orte Wetter: jeder grenzen-/vorlage-Abschnitt wird bedient, Kopf gelesen, test-menue nicht herstellbar', () => {
+		for (const ctx of ['trip', 'orte']) {
+			const abschnitte = [...new Set(WETTER.filter((e) => e.ctx === ctx).map((e) => e.abschnitt))];
+			const wege = L.ordneAbschnitte(abschnitte, { ...LAGE, ctx }, LISTE);
+			const weg = (a: string) => wege.find((w) => w.abschnitt === a)!;
+			for (const a of abschnitte.filter((x) => /^(grenzen-|vorlage-)/.test(x))) assert.equal(weg(a).weg, 'bedienen', `${ctx}/${a}`);
+			assert.equal(weg('abschnittskopf').weg, 'lesen');
+			assert.equal(weg('test-menue').weg, 'nicht_herstellbar');
+			assert.ok(abschnitte.filter((x) => x.startsWith('grenzen-')).length >= 8, `${ctx}: zu wenige Grenzen-Abschnitte`);
+		}
+	});
+});
+
+describe('#2966 AC-8: mitAufraeumen — Aufräumen auch nach Fehlern', () => {
+	test('Fehler in der Arbeit: alle Aufräumschritte laufen, der Fehler bleibt', async () => {
+		const gelaufen: string[] = [];
+		await assert.rejects(
+			L.mitAufraeumen(
+				async (auf) => {
+					auf.push(async () => gelaufen.push('trip'));
+					auf.push(async () => {
+						gelaufen.push('vergleich');
+						throw new Error('404');
+					});
+					auf.push(async () => gelaufen.push('ort'));
+					return { trip: 't' };
+				},
+				async () => {
+					throw new Error('Bedienung kaputt');
+				}
+			),
+			/Bedienung kaputt/
+		);
+		assert.deepEqual(gelaufen, ['trip', 'vergleich', 'ort']);
+	});
+	test('Fehler beim Anlegen nach dem ersten Datensatz: der angelegte wird trotzdem gelöscht', async () => {
+		const gelaufen: string[] = [];
+		await assert.rejects(
+			L.mitAufraeumen(
+				async (auf) => {
+					auf.push(async () => gelaufen.push('trip'));
+					throw new Error('Vergleich nicht anlegbar');
+				},
+				async () => 'nie'
+			)
+		);
+		assert.deepEqual(gelaufen, ['trip']);
+	});
+	test('Erfolg: Ergebnis der Arbeit, danach aufgeräumt', async () => {
+		const gelaufen: string[] = [];
+		const r = await L.mitAufraeumen(
+			async (auf) => (auf.push(async () => gelaufen.push('weg')), 7),
+			async (n) => (gelaufen.push(`arbeit ${n}`), 'ok')
+		);
+		assert.equal(r, 'ok');
+		assert.deepEqual(gelaufen, ['arbeit 7', 'weg']);
+	});
 });
 
 describe('#2966 AC-10: Besitzer-Einträge #2966 abgeräumt, Restabweichungen neu zugeordnet', () => {

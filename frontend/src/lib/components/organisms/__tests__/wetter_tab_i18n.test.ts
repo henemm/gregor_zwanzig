@@ -59,7 +59,9 @@ const NEU_FREIGEGEBEN = new Set([
 	// #3047 Runde 7 (AC-26, Befund E6): Grund fuer gespeicherte, im Orts-Vergleich nicht ausgebbare Groessen.
 	'wetter.gesperrt.grund',
 	// #2955 (Spec wetter_metrik_inhalte.md AC-2): Gewitter-Satz „mittel oder hoch“, wenn schon „mittel“ die Alarmstufe erreicht.
-	'wetter.gewitter.mittel_ab'
+	'wetter.gewitter.mittel_ab',
+	// #2966 (Spec feat_2966_abgleich_haken.md AC-3): Warnung als zwei Absätze, Sätze 2 und 3.
+	'wetter.kopf.fehler_verbindung'
 ]);
 // #2913 Scheibe (c) Fix-Loop 2 (Bildprüfer Runde 1, Befund 1): Label wie im Mockup mit Doppelpunkt. Bewusst geändert,
 // mit genau dem erwarteten neuen Wert — jede andere Änderung bleibt rot.
@@ -69,12 +71,15 @@ const GEAENDERT_FREIGEGEBEN: Record<string, Record<string, string>> = {
 	de: {
 		'wetter.nicht_im_briefing.titel': 'Nicht im Briefing:',
 		'wetter.vorlage.zuruecksetzen': 'Auf „{vorlage}“ zurücksetzen',
-		'wetter.alarm_ab.zaehler': '{ausloesend} von {ausgewaehlt} Metriken lösen einen Alarm aus. {ohne} können keinen auslösen (Vorboten und reine Anzeige).'
+		'wetter.alarm_ab.zaehler': '{ausloesend} von {ausgewaehlt} Metriken lösen einen Alarm aus. {ohne} können keinen auslösen (Vorboten und reine Anzeige).',
+		// #2966 AC-3: Satz 1; Sätze 2 und 3 wortgleich in wetter.kopf.fehler_verbindung.
+		'wetter.kopf.fehler': 'Die Metriken konnten nicht geladen werden.'
 	},
 	en: {
 		'wetter.nicht_im_briefing.titel': 'Not in the briefing:',
 		'wetter.vorlage.zuruecksetzen': 'Reset to “{vorlage}”',
-		'wetter.alarm_ab.zaehler': '{ausloesend} of {ausgewaehlt} metrics trigger an alert. {ohne} cannot trigger one (precursors and display only).'
+		'wetter.alarm_ab.zaehler': '{ausloesend} of {ausgewaehlt} metrics trigger an alert. {ohne} cannot trigger one (precursors and display only).',
+		'wetter.kopf.fehler': 'The metrics could not be loaded.'
 	}
 };
 
@@ -95,6 +100,15 @@ describe('AC-21: wetter.json DE/EN — Bestandstexte unverändert gegenüber dem
 			assert.deepEqual(neu.filter((k) => !NEU_FREIGEGEBEN.has(k)), [], `${rel}: nicht freigegebene neue Schlüssel`);
 		});
 	}
+	test('#2966 AC-3: Warnung in zwei Schlüsseln, Wortlaut DE und EN festgeschrieben', () => {
+		const lies = (lang: string) => JSON.parse(readFileSync(path.join(KOMP, '..', 'i18n', 'messages', lang, 'wetter.json'), 'utf8'));
+		const de = lies('de');
+		const en = lies('en');
+		assert.equal(de['wetter.kopf.fehler'], 'Die Metriken konnten nicht geladen werden.');
+		assert.equal(de['wetter.kopf.fehler_verbindung'], 'Die Verbindung zum Server ist abgebrochen. Deine Einstellungen sind gespeichert und gehen nicht verloren.');
+		assert.equal(en['wetter.kopf.fehler'], 'The metrics could not be loaded.');
+		assert.equal(en['wetter.kopf.fehler_verbindung'], 'The connection to the server was lost. Your settings are saved and will not be lost.');
+	});
 	test('DE und EN haben dieselben wetter.*-Schlüssel', () => {
 		const de = Object.keys(JSON.parse(readFileSync(path.join(KOMP, '..', 'i18n', 'messages', 'de', 'wetter.json'), 'utf8'))).sort();
 		const en = Object.keys(JSON.parse(readFileSync(path.join(KOMP, '..', 'i18n', 'messages', 'en', 'wetter.json'), 'utf8'))).sort();

@@ -58,7 +58,8 @@
 	const unter = $derived(untertitel(id, eig, (k) => $t(k as 'wetter.untertitel.vorbote')));
 </script>
 
-<div class="wt-zeile" data-testid="wetter-zeile-{id}">
+<!-- #2966 AC-4: Haken grenzen-<id> nur, solange die Grenzen offen sind („Fertig“ liegt im Bereich). -->
+<div class="wt-zeile" data-testid="wetter-zeile-{id}" data-abschnitt={offen ? `grenzen-${id}` : undefined}>
 	<div class="wt-rm">
 		<Btn variant="ghost" size="tap" data-tap="true" data-testid="wetter-zeile-entfernen-{id}" aria-label={$t('wetter.zeile.entfernen', { metrik: name })} title={$t('wetter.zeile.entfernen', { metrik: name })} onclick={onEntfernen}>−</Btn>
 	</div>

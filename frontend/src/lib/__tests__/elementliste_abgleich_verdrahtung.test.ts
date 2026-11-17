@@ -475,6 +475,21 @@ describe('Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) 
 		}
 	});
 
+	test('#2966: Staging-Spec verdrahtet Bedienung, Tripwire und Aufräumen (doc-compliance-test)', () => {
+		// doc-compliance-test: Restverdrahtung der Live-Spec; Ablauf, Tripwire und Aufräumen prüft
+		// elementliste_abgleich_bedienplan.test.ts an bedieneAbschnitt, ordneAbschnitte und mitAufraeumen.
+		const spec = readFileSync(join(FRONTEND, 'e2e/elementliste-abgleich.staging.spec.ts'), 'utf8');
+		assert.match(spec, /page\.on\('request', \(r\) => bedienAnfragen\.push\(\{ method: r\.method\(\), url: r\.url\(\) \}\)\);/);
+		assert.match(spec, /await mitAufraeumen\(\(auf\) => \(mitWetter \? wetterPruefDaten\(api, alle, auf\) : Promise\.resolve\(KEINE_WETTER_IDS\)\), async \(wetterIds\) => \{/);
+		assert.match(spec, /for \(const weg of ordneAbschnitte\(\[\.\.\.abschnitte\.keys\(\)\], lage, alle\)\) \{/);
+		assert.match(spec, /const lauf = await bedieneAbschnitt\(abschnitt, lage, seitenOps\(page, \(\) => seiteLaden\(seitenId\), bedienAnfragen\)\);/);
+		assert.match(spec, /if \(lauf\.art === 'schreibbefund'\) \{\s*schreibBefunde\.push\(/);
+		assert.match(spec, /expect\(schreibBefunde, schreibBefunde\.join\('\\n'\)\)\.toEqual\(\[\]\);/);
+		// Escape erreicht das Fenster nur ohne Fokus im Dialog (SavePresetDialog stoppt Tastenereignisse).
+		assert.match(spec, /taste: async \(taste\) => \{\s*await page\.evaluate\(\(\) => \(document\.activeElement as HTMLElement \| null\)\?\.blur\(\)\);\s*await page\.keyboard\.press\(taste\);/);
+		for (const umgehung of [/\bbedienPlan\(/, /\bschreibBefund\(/, /page\.off\('request'/]) assert.ok(!umgehung.test(spec), `Spec umgeht die Logik: ${umgehung}`);
+	});
+
 	test('Hub-Anker werden je Selektor gezählt, nicht fest verdrahtet oder vertauscht (doc-compliance-test, F003)', () => {
 		// doc-compliance-test: im Projekt gibt es keinen DOM-Parser (kein jsdom/linkedom/happy-dom), die Zählung
 		// läuft nur im Browser. Geprüft wird darum genau der Quelltext, den page.evaluate in den Browser schickt
