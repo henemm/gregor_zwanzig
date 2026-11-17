@@ -1,12 +1,18 @@
 # ADR-0053: Der Ortsvergleich bekommt kanal-eigene Metrikauswahl für die Übersichtstabelle zurück (löst ADR-Bezug aus #1287/#1291/#1351 ab)
 
 - **Status:** Teilweise abgelöst durch [ADR-0059](0059-compare-ausblick-erbt-grundauswahl.md)
-  (Punkt 1: Ausblick — bindet den Ausblick beider Flächen an die Grundauswahl)
-  und durch [ADR-0119](0119-vergleich-channel-layouts.md) (Kontext-Zeile
+  (Punkt 1: Ausblick — bindet den Ausblick beider Flächen an die Grundauswahl),
+  durch [ADR-0119](0119-vergleich-channel-layouts.md) (Kontext-Zeile
   „#1351 Teil 2“: die Entfernung von `channel_layouts` samt Migration ist
-  aufgehoben, `channel_layouts` hat Vorrang vor `channel_active_metrics`).
-  Für die Übersichtstabelle (Punkte 2–4 dieses ADR) und den Stundenverlauf
-  (Punkt 1, Teil „Stundenverlauf") gilt dieses ADR unverändert.
+  aufgehoben, `channel_layouts` hat Vorrang vor `channel_active_metrics`)
+  und durch [ADR-0124](0124-was-steht-wo-eine-tabelle.md) (Punkt 1, Teil
+  „Stundenverlauf“, samt Folgepflicht: der Stundenverlauf ist keine eigene,
+  ungebundene Liste mehr, er folgt der E-Mail-Auswahl mit Abwahl je Metrik;
+  PO 2026-11-17, Issue #3122).
+  Die kanal-eigene Auswahl für die Übersichtstabelle (Punkte 2–4 dieses ADR)
+  bleibt gültig; ADR-0124 führt sie als Haken je Kanal-Spalte. Datenfelder und
+  `None`/`[]`-Regel (Punkt 4) gelten, bis der Bau zu #3122 Datenmodell und
+  Resolver für Trip und Orte zusammenlegt.
 - **Datum:** 2026-08-13
 - **Bezug:** Issue #1703 Scheibe 8, Spec
   `docs/specs/modules/feat_1703_s8_compare_kanal_tabs.md` (AC-S8-1 bis
@@ -67,6 +73,15 @@ Ausgabeflächen).
 > Grundauswahl (ADR-0050 Regeln 1–4) und schafft die zweite Auswahl ab.
 > **Der Stundenverlauf ist von diesem Nachtrag nicht betroffen** — für ihn
 > gilt dieser Punkt unverändert fort.
+
+> **Nachtrag 2026-11-17 (Issue #3122) — Stundenverlauf abgelöst.**
+> [ADR-0124](0124-was-steht-wo-eine-tabelle.md) Nr. 4: Der Stundenverlauf
+> hat keine eigene, unabhängige Liste mehr. Er folgt der E-Mail-Auswahl (bei
+> Orten die Übersicht); je Metrik lässt sich der Haken wegnehmen. Damit ist
+> Punkt 1 auch für den Stundenverlauf abgelöst, ebenso die Folgepflicht unten.
+> Der Code bindet den Stundenverlauf seit #3047 bereits an die Grundauswahl
+> (`src/output/renderers/compare_hourly_metric_ids.py`). Bis zum Bau zu #3122
+> gilt das heutige Verhalten weiter.
 
 **2. Die Bedingung, die den Rückfall diesmal verhindert: die ganze Kette,
 nicht nur die Oberfläche.** Diese Scheibe liefert Oberfläche, Speicherweg,
@@ -169,3 +184,7 @@ ihres Datenmodells — ADR-0050 selbst trifft dazu keine Aussage.
   Erweiterung der Compare-Kanal-Kaskade übernimmt ADR-0050 Regeln 1–4
   unverändert (Zitat, keine Neuformulierung) und muss die `None`/`[]`-
   Unterscheidung aus Abschnitt „Entscheidung" Punkt 4 respektieren.
+
+  > **Nachtrag 2026-11-17:** Der erste Satz ist überholt. Ausblick (ADR-0059)
+  > und Stundenverlauf (ADR-0124 Nr. 4) sind nicht mehr global; beide folgen
+  > der E-Mail-Auswahl.

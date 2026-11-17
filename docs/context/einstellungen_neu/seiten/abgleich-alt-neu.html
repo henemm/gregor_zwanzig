@@ -73,6 +73,23 @@ th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transfor
 </style>
 
 <div class="wrap">
+<div role="note" data-hinweis="adr-0124" style="margin:0 0 20px 0;padding:14px 16px;border:2px solid #111111;border-left:8px solid #b45309;background:#fff7d6;color:#111111;font:15px/1.5 system-ui,-apple-system,Segoe UI,Arial,sans-serif;border-radius:4px">
+  <strong style="display:block;font-size:16px;margin-bottom:6px">Historische Kopie. Am 2026-11-17 hat ADR-0124 (PO-Entscheidung, Issue #3122) folgende Punkte geändert.</strong>
+  <ul style="margin:0 0 8px 0;padding-left:20px">
+    <li style="margin:2px 0"><strong>W11</strong> Roh/Einfach: je Stelle (E-Mail, Telegram, Stundenverlauf, 3-Tages-Ausblick) und nur bei Metriken mit zwei Formen. Die SMS hat keine Wahl.</li>
+    <li style="margin:2px 0"><strong>W19, WV9</strong> 3-Tages-Ausblick und Stundenverlauf: keine eigenen Listen mehr. Sie sind Spalten der Tabelle „Was steht wo“ und folgen der E-Mail-Auswahl.</li>
+    <li style="margin:2px 0"><strong>V12</strong> Die eine Stelle des 3-Tages-Ausblicks sind die Schalter „Morgen-Briefing“ und „Abend-Briefing“ unter der Tabelle, für Trip und Orte.</li>
+    <li style="margin:2px 0"><strong>W15, W17, W18, W22</strong> E-Mail-Format und Zusatzblöcke stehen unter der Tabelle („Einstellungen je Kanal“, „Ganze Blöcke ein- und ausschalten“), nicht unter „Inhalt je Kanal → E-Mail“.</li>
+    <li style="margin:2px 0"><strong>V2</strong> Die Erklärsätze stehen in der Tabelle „Was steht wo“, nicht in „Inhalt je Kanal“.</li>
+    <li style="margin:2px 0"><strong>A11</strong> Der Schalter „Telegram: Kurzstil“ steht unter „Einstellungen je Kanal“ unter der Tabelle. „Weitere Einstellungen“ gibt es nicht mehr.</li>
+    <li style="margin:2px 0"><strong>N2</strong> Die Premium-SMS folgt vorerst der SMS und hat keine eigene Liste. Ihre eigene Auswahl kommt mit S9 (#2801).</li>
+    <li style="margin:2px 0"><strong>WV6</strong> Amtliche Warnungen sind eine feste Zeile der Tabelle: in E-Mail und Telegram zuerst, in der SMS am Ende.</li>
+    <li style="margin:2px 0"><strong>W21</strong> Kürzel-Legende: offen, die neue Karte zeigt keine.</li>
+    <li style="margin:2px 0"><strong>Inventar W7 bis W10, W16, WV5, WV8, WV10, V6:</strong> Ziel ist die Tabelle „Was steht wo“ statt „Inhalt je Kanal“ bzw. „eigene Liste“. Es gibt eine Reihenfolge für alle Stellen.</li>
+    <li style="margin:2px 0"><strong>Annahme „Inhalt je Kanal hat heute 3 Kanäle“:</strong> Der Lese-Resolver kennt seit #3057 auch <code>premium_sms</code>.</li>
+  </ul>
+  <span>Maßgeblich sind <code>docs/context/einstellungen_neu.md</code> §2.5 und <code>docs/adr/0124-was-steht-wo-eine-tabelle.md</code>. Der Rest dieser Seite ist unverändert der Stand vom 2026-11-03.</span>
+</div>
   <header class="stack">
     <span class="eyebrow">Gregor Zwanzig · Schritt 4 · nichts soll unbewusst wegfallen</span>
     <h1>Abgleich: heutige Reiter gegen das neue Modell</h1>

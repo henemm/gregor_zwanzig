@@ -1,7 +1,11 @@
 # ADR-0037: 3-Tages-Ausblick der Vergleichs-Mail datengetrieben aus dem Metrik-Katalog
 
 - **Status:** Akzeptiert — **Punkt 2 abgelöst durch ADR-0055** (2026-08-14), **Abschnitt
-  „Verworfene Alternativen" Punkt 3 abgelöst durch ADR-0068** (2026-09-15)
+  „Verworfene Alternativen" Punkt 3 abgelöst durch ADR-0068** (2026-09-15), **teilweise
+  abgelöst durch [ADR-0124](0124-was-steht-wo-eine-tabelle.md)** (PO 2026-11-17, Issue
+  #3122: in Punkt 3 die Bedeutung „`[]` lässt den Block entfallen“ und Punkt 6, der Schalter
+  `outlook_enabled`; beides ersetzen die Schalter „Morgen-Briefing“ und „Abend-Briefing“
+  unter der Tabelle „Was steht wo“. Bis zum Bau zu #3122 gilt das heutige Verhalten)
 - **Datum:** 2026-07-27
 - **Bezug:** GitHub-Issue #1361 (Befund 2), #1368, Epic #1372 (Etappe S3 Scheibe A), Dach
   #1374, Spec `docs/specs/modules/issue_1361_1368_ausblick_konfigurierbar.md`

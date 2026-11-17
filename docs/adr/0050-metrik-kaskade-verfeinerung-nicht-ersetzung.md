@@ -1,12 +1,12 @@
 # ADR-0050: Die Metrik-Kaskade ist eine Verfeinerung, nicht eine Ersetzung — die Grundauswahl ist das Maximum
 
-- **Status:** Akzeptiert (PO-Entscheid 2026-08-11, s. Kontext-Dokument Abschnitt 6)
+- **Status:** Teilweise abgelöst durch [ADR-0124](0124-was-steht-wo-eine-tabelle.md) (Regel 5, Teil „Reihenfolge je Kanal“: es gilt eine Reihenfolge für alle Stellen; PO 2026-11-17, Issue #3122) — sonst Akzeptiert (PO-Entscheid 2026-08-11, s. Kontext-Dokument Abschnitt 6)
 - **Datum:** 2026-08-11
 - **Bezug:** Issue #1719 (Scheibe S1), Spec
   `docs/specs/modules/fix_1719_s1_kaskade_pruefstand.md`; ergänzt ADR-0049
   (Kanalliste E-Mail · Telegram · SMS · Premium-SMS) um die Kaskadensemantik
   zwischen Grundauswahl und Kanal-Layout, die ADR-0049 nicht behandelt
-- **Ergänzt durch:** [ADR-0053](0053-compare-kanal-eigene-metrikauswahl-uebersicht.md) (schreibt fort), [ADR-0055](0055-trip-ausblick-waehlbare-spalten.md) (schreibt fort), [ADR-0059](0059-compare-ausblick-erbt-grundauswahl.md) (schreibt fort)
+- **Ergänzt durch:** [ADR-0053](0053-compare-kanal-eigene-metrikauswahl-uebersicht.md) (schreibt fort), [ADR-0055](0055-trip-ausblick-waehlbare-spalten.md) (schreibt fort), [ADR-0059](0059-compare-ausblick-erbt-grundauswahl.md) (schreibt fort), [ADR-0124](0124-was-steht-wo-eine-tabelle.md) (präzisiert Regeln 1 bis 3, PO 2026-11-17: die Grundauswahl gibt es genau einmal, keine andere Stelle kann eine Metrik hinzufügen; das gilt durchgängig, auch für Stundenverlauf und 3-Tages-Ausblick. Zur leeren Grundauswahl siehe Nachtrag 2026-11-17 am Ende)
 
 ## Kontext
 
@@ -149,3 +149,29 @@ absichtlich anders: dort ist `[]` ein leeres Maximum und schneidet den Kanal
 auf leer (#1366), während D4 beim Trip „kein Maximum definiert" bedeutet und
 gar nicht schneidet. Zwei verschiedene Zusagen an zwei Flächen — eine
 Zusammenlegung bräche eine davon.
+
+## Nachtrag 2026-11-17 (Issue #3122, [ADR-0124](0124-was-steht-wo-eine-tabelle.md))
+
+1. **Die Regeln 1 bis 3 gelten durchgängig.** Die Grundauswahl gibt es genau
+   einmal: in den Metrik-Zeilen des Reiters Wetter. Keine andere Stelle kann
+   eine Metrik hinzufügen, auch nicht Stundenverlauf und 3-Tages-Ausblick. Beide
+   folgen der E-Mail-Auswahl und wählen nur ab (ADR-0124 Nr. 1 und Nr. 4).
+2. **Regel 5 ist bei der Reihenfolge abgelöst.** Die Darstellung (Roh/Einfach)
+   bleibt je Stelle einstellbar, bei Metriken mit zwei Formen; die SMS hat keine
+   Wahl (ADR-0124 Nr. 5). Die Reihenfolge wird mit dem Bau zu #3122 eine für
+   alle Stellen (ADR-0124 Nr. 3). Der PO hat diesen Preis angenommen (ADR-0124,
+   Verworfene Alternativen). Bis zum Bau bleibt die Reihenfolge je Kanal.
+3. **Leere Grundauswahl.** Die Regeln dafür sind heute je Fläche und Stelle
+   verschieden. Trip: Ohne jeden Eintrag in der Grundauswahl gilt „kein
+   Maximum“ (D4; `allowed_metric_ids_for_report_type()` liefert `None`). Orte:
+   Ein fehlendes Feld heißt „kein Maximum“, eine leere Liste ist ein leeres
+   Maximum (Abschnitt Umsetzung). Ausblick und Stundenverlauf: Bei bewusst
+   leerer Grundauswahl entfällt der Block (`_erbe_grundauswahl` in
+   `src/output/renderers/compare_outlook_metric_ids.py`,
+   `_standard_aus_grundauswahl` in
+   `src/output/renderers/compare_hourly_metric_ids.py`, beide seit #3047); ohne
+   Grundauswahl und ohne eigene Auswahl (Altbestand) gelten feste
+   Vorgabespalten. ADR-0124 verlangt ein Datenmodell und einen Resolver für
+   Trip und Orte, legt aber nicht ausdrücklich fest, welche Regel dann gilt.
+   Das klärt die Spec zu #3122. Sie darf ADR-0124 Nr. 1 nicht verletzen: Keine
+   Stelle fügt eine Metrik hinzu.

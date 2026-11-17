@@ -1,8 +1,9 @@
 # ADR-0107: „Orte“ statt „Ortsvergleich“ — ein Orts-Briefing gilt ab einem Ort, die Vergleichstabelle ab zwei, ohne Rangfolge
 
-- **Status:** Vorgeschlagen
+- **Status:** Vorgeschlagen — der Name „Orts-Briefing“ in Nr. 2 ist durch [ADR-0124](0124-was-steht-wo-eine-tabelle.md) Nr. 10 abgelöst (PO 2026-11-17, Issue #3122): Der Bereich heißt einheitlich „Orte“, auch bei einem Ort. Nr. 1 und Nr. 3 bis 6 sind unberührt.
 - **Datum:** 2026-11-03
 - **Bezug:** Epic #2791, Scheibe S6 #2798, Kontext `docs/context/einstellungen_neu.md` §2.1, §2.2 (Karte `ein_ort`); berührt `.claude/hooks/email_spec_validator.py` (`min_locations: int = 3`, Zeilen 1096 und 1129; Prüfung Zeile 980), das Compare-Mail-Template, `docs/reference/mail_validators.md` und CLAUDE.md §„Mail-Validatoren“ (≥3 Orte); **bestätigt** ADR-0097 (Code-Teilung Trip/Ortsvergleich) und ADR-0095 (Kanal-Parität)
+- **Ergänzt durch:** [ADR-0124](0124-was-steht-wo-eine-tabelle.md) (Nr. 10: ein Name „Orte“, EN „Locations“; „Vergleich“, „Orts-Vergleich“ und „Orts-Briefing“ entfallen als Name in Oberfläche, Mail, Telegram und SMS; kein Text setzt mehrere Orte voraus; die E-Mail-Tabelle der Orte heißt „Übersicht“)
 
 ## Kontext
 
@@ -12,6 +13,9 @@ Der Ortsvergleich ist heute als Vergleich gebaut: Die Mail ist eine Vergleichsta
 
 1. Das Produkt heißt in Oberfläche, Menü und Mails **„Orte“** (EN „Locations“). Ein Abo hat **1..n Orte**.
 2. **Ein Ort** ergibt ein **Orts-Briefing**: dieselben Metriken, dieselbe Ampel, dieselben Kanäle wie beim Vergleich, aber ohne Vergleichstabelle. Ab **zwei Orten** kommt die Vergleichstabelle dazu.
+
+   > **Nachtrag 2026-11-17 (Issue #3122):** Der Name „Orts-Briefing“ ist durch ADR-0124 Nr. 10 abgelöst. Auch ein einzelner Ort läuft unter „Orte“; kein Text setzt mehrere Orte voraus (nicht „alle Orte“, nicht „1 Orte“). Die E-Mail-Tabelle der Orte heißt „Übersicht“, nicht „Vergleichstabelle“. Der Inhalt von Nr. 2 (ein Ort genügt, gleiche Metriken, Ampel und Kanäle) bleibt.
+
 3. **Kein Ranking**, kein Score, keine Rangfolge der Orte (B7 bleibt entfallen).
 4. Jeder Kanal beantwortet die Frage auch für einen Ort (ADR-0095): E-Mail, Telegram, SMS, Premium-SMS.
 5. Der Mail-Validator des Pfads prüft die Ortszahl gegen die Ortszahl des Abos (≥1), nicht gegen eine feste Untergrenze von 3. Der Ein-Ort-Fall wird ein eigener, validierter Mail-Zustand.
