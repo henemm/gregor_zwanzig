@@ -66,7 +66,7 @@ from app.user import SavedLocation
 from tests.helpers.vorschau_umgebung import env  # noqa: F401  (Fixture)
 from tests.tdd.test_alert_preview_compare_paritaet import (  # noqa: F401
     LOCATIONS, PRESET_ID, _deviation_reference, _free_port,
-    _loc, _onset_dicts, _onset_reference, _seed, _stable, wire,
+    _loc, _official_dicts, _onset_dicts, _onset_reference, _seed, _stable, wire,
 )
 
 _SRC = Path(__file__).resolve().parents[2] / "src" / "services"
@@ -217,6 +217,64 @@ def test_versand_ruft_den_geteilten_baustein(funktion, pflicht, verboten):
     assert not (pflicht - called), f"{funktion} ruft nicht {sorted(pflicht - called)}"
     assert not (called & verboten), f"{funktion} baut selbst: {sorted(called & verboten)}"
     assert not _int_constants(node, 140), f"{funktion} fuehrt noch ein Literal 140"
+
+
+@pytest.mark.parametrize(
+    "funktion",
+    ["_dispatch_compare_official_sms", "_dispatch_compare_official_premium_sms"],
+)
+def test_amtlicher_sms_versand_rendert_nicht_selbst(funktion):
+    """AC-2 (Nachfix /60-validate): GIVEN der amtliche Ortsvergleich-Versand
+    ueber SMS bzw. Premium-SMS WHEN sein Aufrufgraph geprueft wird THEN ruft
+    er keinen amtlichen Renderer selbst, sondern liest ``.sms`` des Baustein-
+    Kopfs -- sonst aendert eine Verfaelschung von ``OfficialHeaderTexts.sms``
+    nur die Vorschau, nicht den Versand (Kanal-Paritaet, ADR-0095)."""
+    node = _func(_tree(_VERSAND), funktion)
+    selbst = _called(node) & _AMTLICH_BAU
+    assert not selbst, f"{funktion} baut selbst: {sorted(selbst)}"
+    liest_sms = [
+        n for n in ast.walk(node)
+        if isinstance(n, ast.Attribute) and n.attr == "sms" and isinstance(n.ctx, ast.Load)
+    ]
+    assert liest_sms, f"{funktion} liest den Baustein-SMS-Text nicht"
+
+
+def test_amtlicher_sms_versand_am_draht_gleich_vorschau(env, wire):  # noqa: F811
+    """AC-2/AC-3 (Nachfix /60-validate): GIVEN eine amtliche Warnung im
+    Ortsvergleich WHEN sie echt versendet wird (SMS am lokalen seven.io-Stub,
+    keine Senke) THEN ist die SMS am Draht byte-gleich mit dem ``sms`` der
+    Alarm-Vorschau (Art amtlich) fuer dieselbe Eingabe."""
+    from services.compare_alert_channels import effective_compare_telegram_style
+    from services.compare_alert_preview_service import render_compare_alert_preview
+    from services.notification_service import NotificationService
+    from services.official_alerts.models import OfficialAlert
+
+    preset = _seed(env)
+    body = {"official": _official_dicts(["loc-ibk", "loc-bz"])}
+    tagged = [
+        (OfficialAlert(
+            source=o["source"], hazard=o["hazard"], level=o["level"], label=o["label"],
+            valid_from=datetime.fromisoformat(o["valid_from"]),
+            valid_to=datetime.fromisoformat(o["valid_to"]),
+            region_label=o["region_label"],
+        ), list(o["location_ids"]))
+        for o in body["official"]
+    ]
+
+    def versand() -> dict:
+        service = NotificationService(wire.settings(env), env)
+        return wire.capture(lambda mail_sink: service.send_multi_location_official_alert(
+            preset["name"], list(LOCATIONS), tagged, {"email", "telegram", "sms"},
+            effective_compare_telegram_style(preset), mail_sink=mail_sink,
+        ))
+
+    got, ref = _stable(
+        versand, lambda: render_compare_alert_preview(PRESET_ID, user_id=env, body=body),
+    )
+    assert ref["sms"], "Versand: keine SMS am Draht"
+    assert got["sms"] == ref["sms"], (
+        f"amtliche SMS: Vorschau {got['sms']!r} != Draht {ref['sms']!r}"
+    )
 
 
 def test_reference_at_bleibt_nur_im_versand():
@@ -616,6 +674,49 @@ def test_gesamtausfall_telegram_endet_mit_fehler(env, monkeypatch):  # noqa: F81
     assert "telegram" not in result.sent_channels
     assert "telegram" in result.failed_channels
     assert result.telegram_fully_sent is False
+
+
+def test_renderfehler_einer_blase_uebrige_blasen_und_hinweis(env, monkeypatch):  # noqa: F811
+    """AC-4 (Nachfix /60-validate): GIVEN die Auffaecherung je Ort, in der das
+    RENDERN der mittleren Blase an echter kaputter Eingabe scheitert (Aenderung
+    ``None``, kein HTTP-Fehler) WHEN der Dispatcher versendet THEN gehen die
+    uebrigen Blasen raus, der Teilzustellungs-Hinweis folgt und
+    ``telegram_fully_sent`` ist False.
+
+    Eingang ist ``_dispatch_alert_message`` (dort liegt die Fehlerhaertung je
+    Blase): ueber den oeffentlichen Weg baut und rendert der Gesamttext
+    dieselben Ereignisse VOR dem Plan -- eine Eingabe, an der nur eine Blase
+    scheitert, ist dort nicht herstellbar."""
+    from app.config import Settings
+    from services.alert_channel_texts import build_deviation_message
+    from services.notification_service import NotificationService
+
+    from tests.helpers.telegram_empfaenger import profil_chat
+
+    stub = _FailingTelegram(lambda n: False)
+    monkeypatch.setattr(tg_module, "TELEGRAM_API_BASE", f"http://127.0.0.1:{stub.port}")
+    profil_chat(env, "99999")
+    settings = Settings().model_copy(update={
+        "telegram_bot_token": "test-token-2986", "telegram_chat_id": "99999",
+        "telegram_test_chat_id": "99999", "telegram_rate_limit_max_per_window": 10_000,
+    })
+    preset = _seed(env)
+    gut = _groups({"changes": _changes(["loc-ibk", "loc-mer"])})
+    kaputt = ("Kaputt", [None], _loc("loc-bz"))
+    msg, tz = build_deviation_message(gut, preset=preset)
+    try:
+        result = NotificationService(settings, env)._dispatch_alert_message(
+            alert_msg=msg, effective_channels={"telegram"}, alert_tz=tz,
+            telegram_groups=[gut[0], kaputt, gut[1]],
+        )
+    finally:
+        stub.stop()
+    texts = stub.ok_texts
+    assert len(texts) == 3, f"zwei Blasen + Hinweis erwartet: {texts!r}"
+    assert "Innsbruck" in texts[0] and "Meran" in texts[1]
+    assert not any("Kaputt" in t for t in texts)
+    assert result.telegram_fully_sent is False
+    assert "telegram" in result.sent_channels
 
 
 # ---------------------------------------------------------------------------

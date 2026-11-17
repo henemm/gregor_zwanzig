@@ -24,7 +24,7 @@ from output.renderers.trip_report import TripReportFormatter
 from output.renderers.alert.model import AlertMessage
 from output.renderers.alert.project import onset_event_from_fields, to_alert_message
 from services.alert_channel_texts import (
-    AlertChannelTexts, build_deviation_message, build_onset_message,
+    AlertChannelTexts, OfficialHeaderTexts, build_deviation_message, build_onset_message,
     official_header_texts, official_telegram_text, plan_telegram, render_channel_texts,
 )
 from output.renderers.email.compact import _ascii as _ascii_hint
@@ -1787,16 +1787,14 @@ class NotificationService:
             )))
         if "sms" in effective_channels and self._settings.can_send_sms():
             versuche.append(("sms", self._dispatch_compare_official_sms(
-                preset_name, dto_notices, alert_tz, sms_sink,
-                blocked_channels, blocked_reason_codes, ac_notices=ac_notices,
+                preset_name, head, sms_sink, blocked_channels, blocked_reason_codes,
             )))
         # Premium-SMS (Garmin inReach, Issue #1701 S2b) — bewusst OHNE
         # can_send_*()-Bereitschaftsfrage (D2), Sperrgrund geht nach
         # `blocked_channels`/`blocked_reason_codes` statt `failed_channels`.
         if "premium_sms" in effective_channels:
             versuche.append(("premium_sms", self._dispatch_compare_official_premium_sms(
-                preset_name, dto_notices, alert_tz, blocked_channels, blocked_reason_codes,
-                ac_notices=ac_notices,
+                preset_name, head, blocked_channels, blocked_reason_codes,
             )))
 
         sent_channels = [c for c, ok in versuche if ok]
@@ -1861,30 +1859,27 @@ class NotificationService:
         return True
 
     def _dispatch_compare_official_sms(
-        self, preset_name: str, dto_notices: list, alert_tz: ZoneInfo,
+        self, preset_name: str, head: OfficialHeaderTexts,
         sms_sink: Optional[object],
         blocked_channels: Optional[dict[str, str]] = None,
         blocked_reason_codes: Optional[dict[str, str]] = None,
-        ac_notices: Optional[list] = None,
     ) -> bool:
         """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief.
 
         Issue #2412 S4a: `False` auch bei Tageslimit-Sperre (kein
         Transportversuch) — `blocked_channels`/`blocked_reason_codes` werden
-        dann befuellt (analog `_dispatch_compare_official_premium_sms`)."""
-        from output.renderers.alert.official_alerts import (
-            render_official_alert_sms_with_allclears,
-        )
+        dann befuellt (analog `_dispatch_compare_official_premium_sms`).
 
+        Issue #2986: der SMS-Text ist `head.sms` aus dem geteilten Baustein
+        (derselbe wie in der Alarm-Vorschau); gerendert wird erst im `try`,
+        damit ein Renderfehler die Reservierung wieder freigibt."""
         _blocked = blocked_channels if blocked_channels is not None else {}
         _codes = blocked_reason_codes if blocked_reason_codes is not None else {}
         now = datetime.now(timezone.utc)
         if not self._sms_gate_reserve("sms", "alert", now, _blocked, _codes):
             return False
         try:
-            sms_text, _ = render_official_alert_sms_with_allclears(
-                dto_notices, ac_notices or [], tz=alert_tz,
-            )
+            sms_text = head.sms
             if sms_sink is not None:
                 sms_sink(sms_text)
             else:
@@ -1896,28 +1891,24 @@ class NotificationService:
         return True
 
     def _dispatch_compare_official_premium_sms(
-        self, preset_name: str, dto_notices: list, alert_tz: ZoneInfo,
+        self, preset_name: str, head: OfficialHeaderTexts,
         blocked_channels: dict[str, str], blocked_reason_codes: dict[str, str],
-        ac_notices: Optional[list] = None,
     ) -> bool:
         """Issue #1701 (S2b, Vorbild `_dispatch_compare_official_sms`):
         `True`, wenn der Transport ohne Fehler durchlief. Eine bewusste
         Sperre (keine/veraltete Rueckadresse ODER Issue #2412 S4a
         Tageslimit) landet zusaetzlich in `blocked_channels`/
-        `blocked_reason_codes` (D5) — kein Transportfehler."""
-        from output.renderers.alert.official_alerts import (
-            render_official_alert_sms_with_allclears,
-        )
+        `blocked_reason_codes` (D5) — kein Transportfehler.
 
+        Issue #2986: Text = `head.sms` aus dem geteilten Baustein (wie SMS
+        und Alarm-Vorschau); gerendert im `try` (Reservierungsfreigabe)."""
         now = datetime.now(timezone.utc)
         if not self._sms_gate_reserve(
             "premium_sms", "alert", now, blocked_channels, blocked_reason_codes,
         ):
             return False
         try:
-            premium_text, _ = render_official_alert_sms_with_allclears(
-                dto_notices, ac_notices or [], tz=alert_tz,
-            )
+            premium_text = head.sms
             self._premium_sms_output().send(subject="", body=premium_text)
         except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
             sms_daily_limit.release_reservation(self._require_user(), "premium_sms", now)
