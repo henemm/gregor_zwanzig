@@ -12,7 +12,13 @@ Konzept-Endfassung (`../../einstellungen_neu.md`), Mockup Fassung 4 (endgültig)
 
 1. **Kanal-Auswahl:** A eine Tabelle (Zeilen = Grundauswahl, Spalten = Kanäle, eine Reihenfolge) oder B eine Liste je Kanal.
 2. **Roh/Einfach** (nur bei A): einmal je Metrik (gilt für E-Mail und Telegram) oder je Metrik und Kanal.
-3. **Stundenverlauf und 3-Tages-Ausblick** im Abschnitt „Teile des Briefings“: fest wie die Übersicht oder wie die Übersicht mit Abwahl.
+3. **Stundenverlauf und 3-Tages-Ausblick:** nur Schalter unter der Tabelle (zeigen genau die E-Mail-Metriken) oder zwei
+   weitere Spalten derselben Tabelle mit Abwahl je Metrik.
+
+**Eine Tabelle für alles (nach PO-Rückfrage 2026-11-17):** In Variante A gibt es keinen zweiten Abschnitt mehr.
+Stundenverlauf und Ausblick sind Spalten der einen Tabelle „Was steht wo“ (Zeile = Metrik, Spalte = Stelle, an der sie
+erscheinen kann). Ein Haken rechts ist nur möglich, wenn die Metrik in der E-Mail steht. Ganze Blöcke schaltet man
+unter der Tabelle. Den Abschnitt „Teile des Briefings“ gibt es nur noch in Variante B.
 
 **Entschieden (PO 2026-11-17, im Chat):** Der Bereich heißt einheitlich **„Orte“**, auch bei einem einzelnen Ort. Die drei
 Namensvorschläge (Orts-Briefing, Ortswetter, Ortsbeobachtung) sind entfallen. Nachgezogen nach PO-Rückfrage: Bei Orten
