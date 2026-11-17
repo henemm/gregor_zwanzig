@@ -307,8 +307,9 @@ Lückenschluss Runde 7 (#3047 B-L5, Paket p4b), alle nur mit `--konfig`:
   Alarm an → beides an", `warnungen_an`). Beide aus → weder Warnblock (HTML
   `.wb`, Klartext `━━ Amtliche Warnungen ━━`, Kompakt `== Warnungen ==`) noch
   Hinweis „nicht abrufbar" (kein Abruf). An → stehen sie, wenn vorhanden, an
-  erster Stelle (WV6/AC-25): Klartext/Kompakt erste Inhaltszeile nach dem Kopf,
-  HTML vor Tageslage, Metriken-Überblick und erster Tabelle. Meldungen
+  erster Stelle (WV6/AC-25): Klartext/Kompakt erste Inhaltszeile nach dem Kopf
+  (davor höchstens der Hinweis „nicht abrufbar"), HTML vor Tageslage,
+  Metriken-Überblick und erster Etappentabelle. Meldungen
   „Amtliche Warnungen (Klartext) erscheinen, obwohl …" bzw. „… stehen nicht an
   erster Stelle".
 - **Trip, Kachelfolge des Metriken-Überblicks:** die Kacheln folgen der Folge
@@ -321,7 +322,7 @@ Lückenschluss Runde 7 (#3047 B-L5, Paket p4b), alle nur mit `--konfig`:
   Metrik überschreiben; gelesen wird nur die statische Vorlagentabelle). Trip:
   je Stunde für Wind, Böen, Regen, Regen-W. — Ampelpunkt (Einfach) gegen den
   Klartext-Wert derselben Stunde, Zahl-Zelle (Roh) gegen ihre Tönung
-  (ungetönt = grün). Orte: Tönung der Zahl-Zellen der Vergleichstabelle
+  (ungetönt = grün), erste Abweichung je Tabelle und Spalte. Orte: Tönung der Zahl-Zellen der Vergleichstabelle
   (Temperatur, Wind, Böen, Niederschlag, Regen-W., UV; Sicht ungeprüft). Eine
   gerundete Zahl darf eine halbe letzte Stelle abweichen.
 - **Trip, Stundenband:** erlaubt sind Stunden vom früheren aus Tagesfensterbeginn

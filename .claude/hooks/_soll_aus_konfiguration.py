@@ -67,6 +67,7 @@ from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG  # no
 from output.renderers.email.helpers import (  # noqa: E402
     _AMPEL_CAPABLE_METRIC_IDS, _PILL_CATALOG_ORDER, NO_HOURLY_COLUMN_METRIC_IDS,
 )
+from app.ampel_templates import AMPEL_TEMPLATES, DEFAULT_TEMPLATE  # noqa: E402
 
 _REG = {m.id: m for m in _METRICS}
 _BUCKET_RANG = {"primary": 0, "secondary": 1}
@@ -409,6 +410,11 @@ def trip_soll(trip: dict, report: str = "evening") -> dict:
         # #3047 Runde 7 (B-V2): nur ein ausdrueckliches ``false`` ist "aus";
         # "an" bleibt weich (Kennzahlen/Vortag sind datenabhaengig).
         "zusatz": {k: rc.get(k, True) is not False for k in ("show_stage_stats", "show_yesterday_comparison")},
+        # #3047 B-L5: Schalter E4, Kachelfolge, Ampel-Grenzen, Stundenband.
+        "warnungen": warnungen_an(trip),
+        "ueberblick_folge": ueberblick_folge(liste),
+        "ampel": ampel_grenzen(dc),
+        "stundenband": stundenband(trip),
     }
 
 
@@ -588,6 +594,129 @@ def warnungen_an(preset: dict) -> bool:
     return briefing or alarm
 
 
+# --------------------------------------------------------------------------- #
+# Lueckenschluss Runde 7 (#3047 B-L5): Ampel-Grenzen, Kacheln, Warnungen
+# --------------------------------------------------------------------------- #
+#: Profil -> Vorlage (``app.ampel._PROFIL_ZU_VORLAGE``, Gross-/Kleinschreibung egal).
+_PROFIL_VORLAGE = {"summer_trekking": "alpen-trekking"}
+_STUFEN = ("green", "yellow", "orange", "red")
+
+
+def ampel_grenzen(dc: dict, profil: object = None) -> dict[str, dict]:
+    """Grenzen je Metrik nach der Rueckfallkette ADR-0106 aus der STATISCHEN
+    Vorlagentabelle: ``ampel.template`` > ``preset_name`` > Profil >
+    "allgemein"; Abo-Grenzen je Metrik ersetzen die Seite (``null`` = offen)."""
+    abo = dc.get("ampel") if isinstance(dc.get("ampel"), dict) else {}
+    kandidaten = (abo.get("template"), dc.get("preset_name"),
+                  _PROFIL_VORLAGE.get(str(profil or "").lower(), str(profil or "").lower()))
+    tid = next((k for k in kandidaten if k in AMPEL_TEMPLATES), DEFAULT_TEMPLATE)
+    grenzen = {m: {"upper": dict(e["upper"]), "lower": dict(e["lower"])}
+               for m, e in AMPEL_TEMPLATES[tid]["metrics"].items()}
+    for mid, e in (abo.get("metrics") or {}).items():
+        ziel = grenzen.setdefault(mid, {"upper": {}, "lower": {}})
+        for seite in ("upper", "lower"):
+            if isinstance(e, dict) and seite in e:
+                ziel[seite] = dict(e[seite] or {})
+    return grenzen
+
+
+def ampel_stufe(grenzen: dict, mid: str, wert: float) -> str | None:
+    """Stufe wie ``severity_from_thresholds``: oben ``>=``, unten ``<``, die
+    schaerfere Seite gewinnt; ohne jede Grenze ``None``."""
+    e = grenzen.get(mid) or {}
+    oben = {k: v for k, v in (e.get("upper") or {}).items() if v is not None}
+    unten = {k: v for k, v in (e.get("lower") or {}).items() if v is not None}
+    if not oben and not unten:
+        return None
+    rang = max([i for i, k in enumerate(_STUFEN) if k in oben and wert >= oben[k]]
+               + [i for i, k in enumerate(_STUFEN) if k in unten and wert < unten[k]] + [0])
+    return _STUFEN[rang]
+
+
+def ampel_erlaubt(grenzen: dict, mid: str, text: str) -> set[str] | None:
+    """Erlaubte Stufen einer gerundet angezeigten Zahl (halbe letzte Stelle)."""
+    zahl = re.search(r"-?\d+(?:\.(\d+))?", text)
+    if not zahl:
+        return None
+    wert, halb = float(zahl.group()), 0.5 * 10 ** -len(zahl.group(1) or "")
+    stufen = {ampel_stufe(grenzen, mid, w) for w in (wert - halb, wert, wert + halb - 1e-9)}
+    return None if None in stufen else stufen
+
+
+_FALT = str.maketrans({"·": "-", "—": "-", "–": "-", "°": ""})
+#: Katalogtexte der Kacheln je Groesse (``helpers._pill_for_metric``).
+_KACHEL_SCHLUESSEL = {
+    "precipitation": ("regen_ab", "regen_unbekannt", "regen_gesamt", "kein_regen"),
+    "rain_probability": ("regenw_ereignis", "regenw_unbekannt", "regenw_max"),
+    "thunder": ("gewitter_stufe", "gewitter_unbekannt", "kein_gewitter"),
+    "visibility": ("sicht_ereignis", "sicht_min"), "humidity": ("feuchte_ereignis", "feuchte_bereich"),
+    "cloud_low": ("tiefe_wolken",), "freezing_level": ("nullgradlinie",),
+    "dewpoint": ("taupunkt",), "sunshine": ("sonne",),
+}
+
+
+def _falten(text: str) -> str:
+    from utils.ascii_fold import fold_ascii
+
+    return fold_ascii(unescape(text).translate(_FALT)).strip()
+
+
+def kachel_metrik(text: str, lang: str) -> str | None:
+    """Groesse einer Kachel am Katalogtext (laengster passender Anfang), in
+    HTML, Klartext und ASCII-Kompakt gleich; unbekannte Form -> ``None``."""
+    text = _falten(text).lstrip("! ")
+    anfaenge = [(_falten(t(f"mail.pille.{k}", lang).split("{")[0]), m)
+                for m, ks in _KACHEL_SCHLUESSEL.items() for k in ks]
+    anfaenge += [(_falten(_REG[m].label(lang)) + " ", m) for m in ("wind", "gust")]
+    anfaenge += [("UV max ", "uv_index"), (_falten(t("mail.pille.gefuehlt", lang)), "wind_chill")]
+    treffer = sorted(((a, m) for a, m in anfaenge if a and text.startswith(a)), key=lambda p: -len(p[0]))
+    if treffer:
+        return treffer[0][1]
+    if _falten(t("mail.pille.bewoelkt", lang).split("}")[1].split("{")[0]) in text:
+        return "cloud_total"
+    return "temperature" if re.search(r"C - Max \d\d:00$", text) else None
+
+
+def ueberblick_folge(liste: list[dict]) -> list[str]:
+    """Kachelfolge = Folge der E-Mail-Liste, nur Groessen mit Kachel (#1703 S7)."""
+    return list(dict.fromkeys(e["metric_id"] for e in liste if e["metric_id"] in _PILL_CATALOG_ORDER))
+
+
+def stundenband(trip: dict) -> tuple[int, int] | None:
+    """Erlaubte Stunden der Etappentabellen: vom frueheren aus Fensterbeginn
+    (ADR-0035) und Etappenstart (Vorgabe 08:00), hoechstens 06, bis zum
+    spaeteren aus Fensterende und 22; Fenster ueber Mitternacht -> keine Grenze."""
+    rc = trip.get("report_config") or {}
+    start, ende = tagesfenster(rc.get("day_window_start_hour"), rc.get("day_window_end_hour"))
+    if start > ende:
+        return None
+    starts = [int(s["start_time"][:2]) for s in trip.get("stages") or [] if isinstance(s, dict)
+              and re.match(r"\d{2}:\d{2}", str(s.get("start_time") or ""))] or [8]
+    return min(start, *starts, 6), max(ende, 22)
+
+
+def orte_standardzeilen() -> list[tuple[str, str]]:
+    """Grundauswahl nie eingestellt: alle Zeilen der Vergleichstabelle in
+    Standardfolge (Struktur ``CV2_ZEILEN``, ohne Warnzeile)."""
+    from output.renderers.email.compare_html import CV2_ZEILEN
+
+    return [(z["metric_id"], z["aggregation"]) for z in CV2_ZEILEN if "metric_id" in z]
+
+
+def zieltag_versatz(preset: dict) -> set[int]:
+    """Zieltag ab Erstellungstag je eingeschaltetem Slot: Morgen 0, Abend +1
+    (``compare_slot_scheduler``; Vorgabe Morgen an, Abend aus; Alt-Preset
+    ohne ``morning_time``: ``schedule == "daily_evening"`` = Abend)."""
+    if preset.get("morning_time") is None:
+        return {1} if preset.get("schedule") == "daily_evening" else {0}
+    return {v for slot, v, vorgabe in (("morning", 0, True), ("evening", 1, False))
+            if bool(preset.get(f"{slot}_enabled", vorgabe))}
+
+
+#: Zeilen der Vergleichstabelle mit Zell-Toenung, die der Validator prueft (Sicht ungeprueft).
+_ORTE_AMPEL = frozenset({"temperature", "wind", "gust", "precipitation", "rain_probability", "uv_index"})
+
+
 def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> dict:
     """Soll eines Orts-Vergleichs; ``ortsnamen`` (Kennung -> Name) fuer die Ortsfolge."""
     dc = preset.get("display_config") or {}
@@ -605,9 +734,18 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
     # (E4-Regel "beides an", ``warnungen_an``).
     warn = [t("vergleich.zeile.amtliche_warnungen", lang)] if warnungen_an(preset) else []
     fenster = tagesfenster(preset.get("day_window_start_hour"), preset.get("day_window_end_hour"))
+    # #3047 B-L5: nie eingestellt (kein ``active_metrics``, keine Kanal-Liste)
+    # -> alle Zeilen der Vergleichstabelle in Standardfolge, wie die Mail.
+    paare = orte_standardzeilen() if paare is None else paare
+    labels = _uebersicht_labels(paare, lang)
     return {
         "kontext": "orte",
-        "uebersicht": None if paare is None else warn + _uebersicht_labels(paare, lang),
+        "uebersicht": warn + labels,
+        "warnungen": warnungen_an(preset),
+        # Zieltag-Versatz je eingeschaltetem Slot (Morgen 0, Abend +1 Tag).
+        "zieltag_versatz": zieltag_versatz(preset),
+        "ampel": ampel_grenzen(dc, preset.get("profil")),
+        "ampel_zeilen": {lab: m for lab, (m, _a) in zip(labels, paare) if m in _ORTE_AMPEL},
         "warnzeile": bool(warn),
         "uebersicht_einfach": _orte_einfach(dc, paare, lang),
         "uebersicht_formen": _orte_formen(dc, paare, lang),
@@ -693,3 +831,29 @@ def abweichung(ist: list[str], soll: list[str]) -> str | None:
         i = next(i for i, (a, b) in enumerate(zip(ist, soll)) if a != b)
         teile.append(f"Reihenfolge: an Position {i + 1} steht '{ist[i]}' statt '{soll[i]}'")
     return f"{'; '.join(teile)} (ist {ist}, soll {soll})"
+
+
+# --------------------------------------------------------------------------- #
+# Ampelfarbe einer HTML-Zelle (#3047 B-L5) -- Trip und Orte
+# --------------------------------------------------------------------------- #
+def ampel_farbe(attrs: str, inhalt: str) -> str:
+    """Ampelstufe einer HTML-Zelle: Ampelpunkt (Fuellfarbe) vor Zell-Toenung;
+    ungetoent = gruen (``_ampel_cell_bg``: gruen bleibt ohne Hintergrund)."""
+    from output.renderers.email.design_tokens import _TONE_CSS
+    from output.renderers.email.helpers import _AMPEL_DOT_COLORS
+
+    punkt = re.search(r"border-radius:\s*50%;\s*background:\s*(#[0-9a-fA-F]{6})", inhalt)
+    if punkt:
+        return next((k for k, (f, _r) in _AMPEL_DOT_COLORS.items() if f.lower() == punkt.group(1).lower()), "?")
+    ton = re.search(r"background:\s*(#[0-9a-fA-F]{6})", attrs)
+    farbe = ton.group(1).lower() if ton else ""
+    return next((k for k, (bg, _fg) in _TONE_CSS.items() if k != "green" and bg.lower() == farbe), "green")
+
+
+def ampel_abweichung(grenzen: dict, mid: str, text: str, ist: str) -> str | None:
+    """``"<ist> statt <soll>"``, wenn die Farbe nicht zur angezeigten Zahl passt."""
+    erlaubt = ampel_erlaubt(grenzen, mid, text)
+    if not erlaubt or ist in erlaubt:
+        return None
+    wert = float(re.search(r"-?\d+(?:\.\d+)?", text).group())
+    return f"{ist} statt {ampel_stufe(grenzen, mid, wert)}"
