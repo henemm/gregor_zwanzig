@@ -17,50 +17,23 @@ from services.weather_metrics import WeatherMetricsService
 from app.models import ForecastDataPoint
 
 
-class TestHighElevationThresholdConstant:
-    """Test HIGH_ELEVATION_THRESHOLD_M constant exists."""
+class TestEffectiveCloudLivesInTheNormalisation:
+    """Issue #3106 / ADR-0122: die Bewoelkungsregel (inkl. Hochlagen-Schwelle)
+    lebt genau einmal in ``app.cloud_cover``; der Service rechnet sie nicht
+    mehr selbst nach (die alte Hochlagen-Formel ``(mittel+hoch)//2`` ist in
+    der neuen Regel aufgegangen, s. tests/unit/test_wirksame_bewoelkung.py)."""
 
-    def test_constant_exists(self):
-        """
-        GIVEN: WeatherMetricsService class
-        WHEN: Accessing HIGH_ELEVATION_THRESHOLD_M attribute
-        THEN: Constant exists and equals 2500
+    def test_service_rechnet_keine_eigene_bewoelkung(self):
+        assert not hasattr(WeatherMetricsService, "calculate_effective_cloud")
+        assert not hasattr(WeatherMetricsService, "HIGH_ELEVATION_THRESHOLD_M")
 
-        Expected: FAIL - AttributeError (constant doesn't exist)
-        """
-        assert hasattr(WeatherMetricsService, 'HIGH_ELEVATION_THRESHOLD_M')
-        assert WeatherMetricsService.HIGH_ELEVATION_THRESHOLD_M == 2500
+    def test_hochlage_wirkt_ueber_die_eine_regel(self):
+        from app.cloud_cover import HOCHLAGE_SCHWELLE_M, wirksame_bewoelkung
 
-
-class TestCalculateEffectiveCloud:
-    """Test calculate_effective_cloud() static method."""
-
-    def test_method_exists(self):
-        """
-        GIVEN: WeatherMetricsService class
-        WHEN: Checking for calculate_effective_cloud method
-        THEN: Method exists and is callable
-
-        Expected: FAIL - AttributeError (method doesn't exist)
-        """
-        assert hasattr(WeatherMetricsService, 'calculate_effective_cloud')
-        assert callable(WeatherMetricsService.calculate_effective_cloud)
-
-    def test_high_elevation_ignores_low_clouds(self):
-        """
-        GIVEN: High elevation location (>=2500m) with cloud data
-        WHEN: Calculating effective cloud cover
-        THEN: Returns average of mid+high clouds, ignoring low clouds
-
-        Expected: FAIL - AttributeError (method doesn't exist)
-        """
-        eff = WeatherMetricsService.calculate_effective_cloud(
-            elevation_m=2600,
-            cloud_total_pct=80,
-            cloud_mid_pct=40,
-            cloud_high_pct=20,
-        )
-        assert eff == 30
+        assert HOCHLAGE_SCHWELLE_M == 2500
+        # Frueher (mittel+hoch)//2 = 30; jetzt mittel voll, Rest der hohen
+        # Wolken halb: 40 + (40 - 40) * 0,5 = 40 (hoch 20 < mittel 40).
+        assert wirksame_bewoelkung(80, 60, 40, 20, 2600) == 40
 
 
 class TestCalculateSunnyHours:
@@ -113,8 +86,8 @@ class TestCalculateSunnyHours:
             cloud_total_pct=25,  # Mostly clear
             dni_wm2=None,
         )
-        # Low elevation + proportional cloud fallback -> positive sunny hours
-        hours = WeatherMetricsService.calculate_sunny_hours([dp1, dp2], elevation_m=1500)
+        # Proportional cloud fallback -> positive sunny hours
+        hours = WeatherMetricsService.calculate_sunny_hours([dp1, dp2])
         assert hours > 1.0, (
             f"#347 AC-4: proportionaler Cloud-Fallback muss > 1.0 h ergeben "
             f"(0.8 + 0.75), war {hours}"

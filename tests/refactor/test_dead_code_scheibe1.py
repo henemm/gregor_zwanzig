@@ -60,7 +60,9 @@ def test_weather_metrics_active_api_intact():
             f"Nur der Legacy-Block darf entfernt werden."
         )
     svc = mod.WeatherMetricsService
-    for name in ["compute_basis_metrics", "compute_extended_metrics", "calculate_effective_cloud"]:
+    # Issue #3106: ``calculate_effective_cloud`` ist bewusst entfallen -- die
+    # Bewoelkungsregel lebt in ``app.cloud_cover`` (ADR-0122).
+    for name in ["compute_basis_metrics", "compute_extended_metrics", "calculate_sunny_hours"]:
         assert hasattr(svc, name), (
             f"WeatherMetricsService.{name} fehlt — Über-Löschung des aktiven Kerns!"
         )

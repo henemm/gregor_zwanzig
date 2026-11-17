@@ -15,6 +15,7 @@ import logging
 from datetime import datetime, time, timedelta, timezone
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
+from app.cloud_cover import HOCHLAGE_SCHWELLE_M
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from i18n import resolve_user_lang, t
 from services.comparison_scoring import calculate_score
@@ -337,44 +338,33 @@ class ComparisonEngine:
                         metrics["wind_chill_min"] = min(wc)
                         metrics["wind_chill_max"] = max(wc)
 
-                    # Clouds - use effective cloud for high elevations
-                    # SPEC: docs/specs/cloud_cover_simplification.md
-                    effective_clouds = []
-                    for dp in filtered_data:
-                        eff = WeatherMetricsService.calculate_effective_cloud(
-                            elevation_m=loc.elevation_m,
-                            cloud_total_pct=dp.cloud_total_pct,
-                            cloud_mid_pct=getattr(dp, 'cloud_mid_pct', None),
-                            cloud_high_pct=getattr(dp, 'cloud_high_pct', None),
-                        )
-                        if eff is not None:
-                            effective_clouds.append(eff)
-                    if effective_clouds:
-                        metrics["cloud_avg"] = int(sum(effective_clouds) / len(effective_clouds))
-
                     # Flag: is location above low clouds? (elevation >= 2500m)
                     metrics["above_low_clouds"] = (
                         loc.elevation_m is not None
-                        and loc.elevation_m >= WeatherMetricsService.HIGH_ELEVATION_THRESHOLD_M
+                        and loc.elevation_m >= HOCHLAGE_SCHWELLE_M
                     )
 
                     # Sonnenstunden: Use WeatherMetricsService (Single Source of Truth)
                     metrics["sunny_hours"] = WeatherMetricsService.calculate_sunny_hours(
-                        filtered_data, loc.elevation_m, settings=settings
+                        filtered_data, settings=settings
                     )
 
-                    # Cloud layers for "Wolkenlage" analysis -- Issue #1392:
-                    # kanonische Tages-Auswertung (summarize_points(), rundet)
-                    # statt eigener Mittelung, damit Compare- und Trip-Pfad
-                    # fuer denselben Stundensatz denselben Wert liefern.
-                    cloud_layers_summary = summarize_points(filtered_data)
-                    if cloud_layers_summary is not None:
-                        if cloud_layers_summary.cloud_low_avg_pct is not None:
-                            metrics["cloud_low_avg"] = cloud_layers_summary.cloud_low_avg_pct
-                        if cloud_layers_summary.cloud_mid_avg_pct is not None:
-                            metrics["cloud_mid_avg"] = cloud_layers_summary.cloud_mid_avg_pct
-                        if cloud_layers_summary.cloud_high_avg_pct is not None:
-                            metrics["cloud_high_avg"] = cloud_layers_summary.cloud_high_avg_pct
+                    # Bewoelkung + Wolkenlage -- Issue #1392: kanonische
+                    # Tages-Auswertung (summarize_points(), rundet) statt eigener
+                    # Mittelung, damit Compare- und Trip-Pfad fuer denselben
+                    # Stundensatz denselben Wert liefern. Issue #3106: die
+                    # Stundenwerte tragen bereits die wirksame Bewoelkung
+                    # (Normalisierung, ADR-0122) -- hier wird nur gemittelt.
+                    tages_summary = summarize_points(filtered_data)
+                    if tages_summary is not None:
+                        if tages_summary.cloud_avg_pct is not None:
+                            metrics["cloud_avg"] = tages_summary.cloud_avg_pct
+                        if tages_summary.cloud_low_avg_pct is not None:
+                            metrics["cloud_low_avg"] = tages_summary.cloud_low_avg_pct
+                        if tages_summary.cloud_mid_avg_pct is not None:
+                            metrics["cloud_mid_avg"] = tages_summary.cloud_mid_avg_pct
+                        if tages_summary.cloud_high_avg_pct is not None:
+                            metrics["cloud_high_avg"] = tages_summary.cloud_high_avg_pct
 
                     # Issue #1285: Tages-Aggregate fuer Regen/Sicht/UV. Regeln
                     # kanonisch aus dem Trip-Pfad (WeatherMetricsService:
@@ -571,13 +561,6 @@ def fetch_forecast_for_location(
                 result["gust_min"] = min(gusts)
                 result["gust_max"] = max(gusts)
 
-            # Clouds
-            clouds = [dp.cloud_total_pct for dp in forecast.data if dp.cloud_total_pct is not None]
-            if clouds:
-                result["cloud_min"] = min(clouds)
-                result["cloud_max"] = max(clouds)
-                result["cloud_avg"] = int(sum(clouds) / len(clouds))
-
             # Cloud layers (from Open-Meteo) -- Issue #1392: kanonische
             # Tages-Auswertung statt eigener Mittelung (s. Kommentar oben in
             # ComparisonEngine.run()).
@@ -659,7 +642,7 @@ def fetch_forecast_for_location(
             # Sunny hours: Use WeatherMetricsService (Single Source of Truth)
             from app.config import Settings
             result["sunny_hours"] = WeatherMetricsService.calculate_sunny_hours(
-                forecast.data, loc.elevation_m, settings=settings or Settings()
+                forecast.data, settings=settings or Settings()
             )
 
         result["score"] = calculate_score(result, profile=getattr(loc, 'activity_profile', None) if 'loc' in dir() else None)

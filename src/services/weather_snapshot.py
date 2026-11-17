@@ -59,6 +59,11 @@ _HOURLY_ENUM_FIELDS: dict[str, type] = {
     "precip_type": PrecipType,
 }
 
+# Issue #3106 (ADR-0122): Stundenfelder, die NIE in einen Schnappschuss
+# gehen. `cloud_total_model_pct` ist reine Transparenz im Speicher; ein
+# zurueckgerollter Stand kennt das Feld nicht und scheiterte sonst beim Laden.
+NICHT_PERSISTIERTE_FELDER: frozenset[str] = frozenset({"cloud_total_model_pct"})
+
 # Issue #1987: erkennt den DATIERTEN Snapshot `{trip_id}_{YYYY-MM-DD}.json` —
 # und nur ihn. Trennt die Aufraeumung von den Nachbardateien desselben Trips
 # (rollierende Alarm-Anker), s. `_prune_dated_snapshots`.
@@ -529,19 +534,19 @@ def _serialize_segment(seg: SegmentWeatherData) -> dict:
         ),
     }
     if seg.timeseries is not None:
-        hourly = []
-        for p in seg.timeseries.data:
-            pt: dict = {"ts": p.ts.isoformat()}
-            for fname, fval in vars(p).items():
-                if fname == "ts" or fval is None:
-                    continue
-                if isinstance(fval, Enum):
-                    pt[fname] = fval.name
-                else:
-                    pt[fname] = fval
-            hourly.append(pt)
-        entry["hourly"] = hourly
+        entry["hourly"] = [_serialize_hourly_point(p) for p in seg.timeseries.data]
     return entry
+
+
+def _serialize_hourly_point(p: ForecastDataPoint) -> dict:
+    """Ein Stundenwert als JSON-Zeile (Trip- und Compare-Schnappschuss teilen
+    sie, ADR-0021). `None` und `NICHT_PERSISTIERTE_FELDER` bleiben weg."""
+    pt: dict = {"ts": p.ts.isoformat()}
+    for fname, fval in vars(p).items():
+        if fname == "ts" or fval is None or fname in NICHT_PERSISTIERTE_FELDER:
+            continue
+        pt[fname] = fval.name if isinstance(fval, Enum) else fval
+    return pt
 
 
 def _deserialize_timeseries(

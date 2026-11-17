@@ -105,14 +105,14 @@ class TestAC4LowElevationNotPenalized:
     def test_low_elevation_with_dni_gives_positive(self):
         """
         GIVEN: dni_wm2=150 bei elevation_m=800 (unter 2500 m)
-        WHEN:  calculate_sunny_hours([dp], elevation_m=800)
+        WHEN:  calculate_sunny_hours([dp]) (Lage unter 2500 m)
         THEN:  Rueckgabe > 0.0
 
         Erwartung RED: alter Code ignoriert DNI komplett, Cloud-Fallback greift
         nur ab 2500 m -> 0.
         """
         dp = _dp(12, dni_wm2=150)
-        hours = WeatherMetricsService.calculate_sunny_hours([dp], elevation_m=800)
+        hours = WeatherMetricsService.calculate_sunny_hours([dp])
         assert hours > 0.0, (
             f"AC-4: Lage unter 2500 m mit dni=150 muss > 0 sein, war {hours}"
         )

@@ -2,13 +2,24 @@
 entity_id: cloud_cover_simplification
 type: feature
 created: 2026-01-12
-updated: 2026-01-12
+updated: 2026-11-17
 status: implemented
 version: "1.0"
 tags: [cloud, weather, simplification, ui]
 ---
 
 # Cloud Cover Simplification
+
+> **Fortgeschrieben durch ADR-0122 (Issue #3106, 2026-11-17).** Die Hochlagen-Regel
+> „ab 2500 m `(mid + high) / 2`" und `calculate_effective_cloud()` sind entfallen.
+> Die Bewölkung wird jetzt einmal je Abruf in der Normalisierung als **wirksame
+> Bewölkung** berechnet (`src/app/cloud_cover.py`, `wirksame_bewoelkung()` /
+> `normalisiere_bewoelkung()`, angewendet am Ausgang von
+> `OpenMeteoProvider.fetch_forecast` und im `FixtureProvider`): tiefe und mittelhohe
+> Wolken voll, hohe Wolken halb, ab `HOCHLAGE_SCHWELLE_M` = 2500 m ohne tiefe Wolken.
+> Übersicht und Stundenwerte zeigen denselben Wert; das Flag `above_low_clouds`
+> bleibt. Spec: `docs/specs/modules/feat_3106_wirksame_bewoelkung.md`. Die Abschnitte
+> unten sind historisch.
 
 ## Approval
 
@@ -36,9 +47,8 @@ This reduces UI complexity while preserving the elevation-aware cloud calculatio
 
 ## Source
 
-- **File:** `src/web/pages/compare.py`
-- **File:** `src/services/weather_metrics.py`
-- **Identifier:** `render_comparison_html()`, `calculate_effective_cloud()`
+- **File (heute):** `src/app/cloud_cover.py` (Regel), `src/services/comparison_engine.py` (`above_low_clouds`)
+- **Historisch:** `src/web/pages/compare.py` (entfernt), `WeatherMetricsService.calculate_effective_cloud()` (entfallen, ADR-0122)
 
 ## Dependencies
 
@@ -183,3 +193,4 @@ Update cloud calculation to use effective cloud.
 ## Changelog
 
 - 2026-01-12: Initial spec created
+- 2026-11-17: Fortgeschrieben durch ADR-0122 (#3106), wirksame Bewölkung in der Normalisierung

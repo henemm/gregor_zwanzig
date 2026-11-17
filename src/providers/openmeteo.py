@@ -36,6 +36,7 @@ from tenacity import (
     before_sleep_log,
 )
 
+from app.cloud_cover import normalisiere_bewoelkung
 from app.models import (
     ForecastDataPoint,
     ForecastMeta,
@@ -1188,15 +1189,15 @@ class OpenMeteoProvider:
                     )
                     ts.meta.fallback_reason = "cross_provider_total_outage"
                     ts.meta.fallback_model = direct_name
-                    self._enrich_snow(ts, location.latitude, location.longitude, enrich_snow)
                     # #1457 S2a: auch im Totalausfall gilt der GEMEINSAME Weg —
                     # die Gewitter-Zustaendigkeit kann eine andere sein als die
                     # fuer die Grundvorhersage (Beispiel Alpen: Schnee von der
                     # einen, Gewitter von der anderen Quelle). `direct_name`
                     # sagt der Anreicherung, wen sie NICHT nochmals fragen
                     # muss — dieser Provider hat seine Reihe selbst angereichert.
-                    self._enrich_thunder(ts, location, bereits_befragt=direct_name)
-                    return ts
+                    return self._abschliessen(
+                        ts, location, enrich_snow, bereits_befragt=direct_name,
+                    )
                 except (ProviderNotImplementedError, ProviderRequestError, ProviderNotFoundError):
                     pass  # Stub noch nicht angebunden ODER Direktprovider
                           # selbst fehlgeschlagen -> Original-Fehler (#1142 AC-4/F001)
@@ -1305,18 +1306,27 @@ class OpenMeteoProvider:
                         except Exception as e:
                             logger.warning("Fallback %s failed: %s", fb_id, e)
 
+        return self._abschliessen(timeseries, location, enrich_snow)
+
+    def _abschliessen(
+        self, timeseries: NormalizedTimeseries, location: "Location",
+        enrich_snow: bool, bereits_befragt: Optional[str] = None,
+    ) -> NormalizedTimeseries:
+        """EIN Ausgang von ``fetch_forecast`` fuer jeden Rueckgabeweg (regulaer,
+        Modell-Rueckfall, Anbieter-Totalausfall)."""
         # Epic #1301 A3: SNOWGRID fill-only enrichment for Alpen-Orte.
         self._enrich_snow(timeseries, location.latitude, location.longitude, enrich_snow)
 
-        # #1457 S2a AC-7: Gewittersignale auf dem REGULAEREN Rueckgabeweg — also
+        # #1457 S2a AC-7: Gewittersignale auf JEDEM Rueckgabeweg — also auch
         # bei funktionierender Hauptquelle, dem Weg jedes echten Briefing-Laufs.
         # BEWUSST ohne eigenen Schalter (#1448-Lehre: ein Schutz, der am
         # Durchreichen eines Parameters haengt, ist keiner) und BEWUSST nicht an
         # `enrich_ensemble` gekoppelt — Alarm-Laeufe schalten das Ensemble ab
         # (Bug #288) und brauchen das Gewittersignal trotzdem.
-        self._enrich_thunder(timeseries, location)
+        self._enrich_thunder(timeseries, location, bereits_befragt=bereits_befragt)
 
-        return timeseries
+        # Issue #3106 / ADR-0122: wirksame Bewoelkung, genau einmal je Abruf.
+        return normalisiere_bewoelkung(timeseries, location.elevation_m)
 
     def _enrich_thunder(
         self, timeseries: "NormalizedTimeseries", location: "Location",

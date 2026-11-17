@@ -79,7 +79,7 @@ class WeatherMetricsService:
         2. Wind: MAX from wind10m_kmh
         3. Gust: MAX from gust_kmh
         4. Precipitation: SUM from precip_1h_mm
-        5. Cloud Cover: AVG from cloud_total_pct
+        5. Cloud Cover: AVG from cloud_total_pct (bereits wirksame Bewölkung, ADR-0122)
         6. Humidity: AVG from humidity_pct
         7. Thunder: MAX from thunder_level (NONE < MED < HIGH)
         8. Visibility: MIN from visibility_m
@@ -173,7 +173,7 @@ class WeatherMetricsService:
 | Wind MAX | wind10m_kmh | MAX | wind_max_kmh | float |
 | Gust MAX | gust_kmh | MAX | gust_max_kmh | float |
 | Precipitation SUM | precip_1h_mm | SUM | precip_sum_mm | float |
-| Cloud Cover AVG | cloud_total_pct | AVG | cloud_avg_pct | int |
+| Cloud Cover AVG | cloud_total_pct (wirksam, ADR-0122) | AVG | cloud_avg_pct | int |
 | Humidity AVG | humidity_pct | AVG | humidity_avg_pct | int |
 | Thunder MAX | thunder_level | MAX | thunder_level_max | ThunderLevel |
 | Visibility MIN | visibility_m | MIN | visibility_min_m | int |
