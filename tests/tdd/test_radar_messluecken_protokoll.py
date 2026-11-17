@@ -132,8 +132,9 @@ class _LueckenRadar(_ZonenRadar):
         return sorted(set(self._luecken) | self._ausnahmen)
 
     def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None, deadline_at=None):
-        i = len(self.aufrufe)
-        self.aufrufe.append((lat, lon))
+        # #3047 p13: Index aus der Koordinate (Basisklasse), nicht aus der
+        # Aufrufreihenfolge — die Folgepunkte laufen parallel.
+        i = self._index(lat, lon)
         if i in self._ausnahmen:
             raise RuntimeError(
                 f"Nowcast-Abruf fuer Zonenpunkt {i} absichtlich fehlgeschlagen"

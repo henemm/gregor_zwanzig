@@ -17,6 +17,7 @@ Muster `test_issue_822_radar_nowcast_segment.py`).
 from __future__ import annotations
 from app.ampel import resolve_ampel
 
+import threading
 import uuid
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -27,6 +28,7 @@ from app.trip import Stage, Trip, Waypoint
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.render import render_email
 from services.radar_service import NowcastResult, RadarNowcastService
+from services.trip_segments import RADAR_ZONE_POINT_SPACING_KM
 from utils.geo import haversine_km
 
 from tests.helpers.arrival_window_fixtures import active_window_offsets, stage_date
@@ -392,7 +394,14 @@ class _ZonenRadar(RadarNowcastService):
     """Echte `RadarNowcastService`-Unterklasse am DI-Seam von
     `TripAlertService` (Muster `_FixedRadar`,
     `test_alert_log_ereignisgroessen.py`) — liefert je Abruf ein ECHTES
-    `NowcastResult`, gesteuert ueber die Reihenfolge der Abrufe.
+    `NowcastResult`, gesteuert ueber den Messpunkt-INDEX.
+
+    Der Index kommt aus der KOORDINATE, nicht aus der Aufrufreihenfolge
+    (#3047 p13): die Folgepunkte laufen parallel (`fetch_ordered`, #1539 S4),
+    ihre Abrufe treffen in beliebiger Reihenfolge ein. Punkt 0 ist der
+    sequenzielle Ausloeseabruf vor allen Folgepunkten; Punkt i liegt
+    `i * RADAR_ZONE_POINT_SPACING_KM` dahinter (gerade Nord-Strecke, km = Entfernung
+    von WP0). `aufrufe` liefert die Koordinaten in Streckenfolge (Index 0..n-1).
 
     Kein Mock: die zurueckgegebenen Objekte sind die Produktiv-Dataclass mit
     ihren echten Feldern; gesteuert wird ausschliesslich, WELCHES Ergebnis ein
@@ -408,15 +417,39 @@ class _ZonenRadar(RadarNowcastService):
         weitere_trockene: tuple[int, ...] = (),
     ) -> None:
         super().__init__()
-        self.aufrufe: list[tuple[float, float]] = []
+        self._sperre = threading.Lock()
+        self._km0: float | None = None
+        self._abrufe: dict[int | None, list[tuple[float, float]]] = {}
         self._trocken_index = trocken_index
         self._trocken_felder = dict(trocken_felder or {})
         self._ausnahme_index = ausnahme_index
         self._weitere_trockene = set(weitere_trockene)
 
+    def _index(self, lat, lon) -> int | None:
+        """Messpunkt-Index aus der Koordinate (thread-sicher). `None`, wenn der
+        Punkt nicht auf dem Raster liegt — `aufrufe` meldet das laut."""
+        km = haversine_km(_ZONEN_LAT0, _ZONEN_LON0, lat, lon)
+        with self._sperre:
+            if self._km0 is None:
+                self._km0 = km
+            schritte = (km - self._km0) / RADAR_ZONE_POINT_SPACING_KM
+            i = round(schritte) if abs(schritte - round(schritte)) < 0.05 else None
+            self._abrufe.setdefault(i, []).append((lat, lon))
+        return i
+
+    @property
+    def aufrufe(self) -> list[tuple[float, float]]:
+        """Abgerufene Koordinaten in Streckenfolge. Laute Testvoraussetzung:
+        jeder Abruf liegt auf genau einem Rasterpunkt 0..n-1."""
+        with self._sperre:
+            abrufe = {k: list(v) for k, v in self._abrufe.items()}
+        assert None not in abrufe and sorted(abrufe) == list(range(len(abrufe))) and all(
+            len(v) == 1 for v in abrufe.values()
+        ), f"Testvoraussetzung: Abrufe nicht eindeutig auf dem Punktraster: {abrufe!r}"
+        return [abrufe[i][0] for i in range(len(abrufe))]
+
     def get_nowcast(self, lat, lon, elevation_m=None, priority="user_briefing", user_id=None, deadline_at=None):
-        i = len(self.aufrufe)
-        self.aufrufe.append((lat, lon))
+        i = self._index(lat, lon)
         if i == self._ausnahme_index:
             raise RuntimeError(
                 f"Nowcast-Abruf fuer Zonenpunkt {i} absichtlich fehlgeschlagen"
