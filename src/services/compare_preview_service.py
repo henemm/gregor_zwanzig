@@ -34,7 +34,9 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime, timezone
 
-from services.amtliche_warnungen_schalter import amtliche_warnungen_an_preset
+import services.compare_briefing_aufbau as aufbau
+# Issue #2983: Re-Export unter dem alten Namen; der Ordnungs-Kern liegt im Baustein.
+from services.compare_briefing_aufbau import order_locations_by_ids
 from services.fehler_code import fehler_mit_code
 
 logger = logging.getLogger(__name__)
@@ -54,144 +56,42 @@ class ComparePreviewService:
         user_id: str,
         target_date: str | date | None = None,
     ) -> dict:
-        """Sammel-Einstieg (ADR-0011): EIN Engine-Lauf JE ORT (seit #1765 B1
-        gleichzeitig statt nacheinander), ALLE Kanaele fertig gerendert in EINER
-        Antwort (AC-7). Seit #1743 Render-Pfad der Paritaetstests; die
-        HTTP-Route ist entfallen.
+        """Sammel-Einstieg (ADR-0011): duenne Huelle um den gemeinsamen
+        Berichtsaufbau des Versands (Issue #2983) -- EIN Wetterlauf je Ort,
+        ALLE Kanaele fertig gerendert in EINER Antwort (AC-7). Seit #1743
+        Render-Pfad der Paritaetstests; die HTTP-Route ist entfallen.
         """
-        from output.renderers.comparison import render_compare_sms, render_compare_telegram
-        from services.scheduler_dispatch_service import build_compare_preset_subject
-
         from i18n import resolve_user_lang
 
-        ctx = self._prepare(preset_id, user_id=user_id, target_date=target_date)
+        preset = self._load_preset(preset_id, user_id=user_id)
+        locations = self._resolve_locations(preset, user_id=user_id)
+        zieltag = _resolve_target_date(target_date, locations, datetime.now(timezone.utc))
         # Issue #2672: die Vorschau spricht die Sprache des Nutzers wie der Versand.
-        lang = resolve_user_lang(user_id)
-        html_body, _text_body = self._render_email(ctx, lang=lang)
-        # Issue #1703 S8: die Vorschau zeigt je Kanal DIESELBE Auswahl wie der
-        # Versand -- kanal-eigene Uebersichts-Liste statt der gemeinsamen.
-        telegram = render_compare_telegram(
-            ctx["result"],
-            enabled_metrics=ctx["opts"].enabled_metrics_by_channel["telegram"],
-            preset_name=ctx["name"],
-            # Issue #1405 S3: dieselbe Zahl wie im Versand (Vorschau luegt nicht).
-            unresolved_count=ctx["opts"].unresolved_by_channel.get("telegram", 0),
-            # Issue #3039: dasselbe Format je Zeile wie der Versand.
-            metric_formats=ctx["opts"].metric_formats("telegram"),
-            lang=lang,
-            # Issue #1563: Briefing-Vorschau = Versand (kein Alarm-Pfad, R6).
-            show_fallback_notice=True,
-            # Issue #3047 B-K7 (AC-24): Ausblick wie im Versand.
-            outlook_enabled=ctx["opts"].outlook_enabled,
-            outlook_metrics=ctx["opts"].outlook_metrics,
-            outlook_metric_formats=ctx["opts"].outlook_metric_formats,
-            preset=ctx["preset"],
-        )
-        sms = render_compare_sms(
-            ctx["result"],
-            enabled_metrics=ctx["opts"].enabled_metrics_by_channel["sms"],
-            unresolved_count=ctx["opts"].unresolved_by_channel.get("sms", 0),
-            metric_formats=ctx["opts"].metric_formats("sms"),
+        bericht = aufbau.compare_briefing_bauen(
+            preset, locations, zieltag, user_id, lang=resolve_user_lang(user_id),
         )
         return {
-            "subject": build_compare_preset_subject(ctx["name"], ctx["target_date"], lang=lang),
-            "email_html": html_body,
-            "telegram": telegram,
-            "sms": sms,
-            "sms_char_count": len(sms),
+            "subject": bericht["subject"],
+            "email_html": bericht["email_html"],
+            "telegram": bericht["telegram"],
+            "sms": bericht["sms"],
+            "sms_char_count": len(bericht["sms"]),
         }
 
     # ------------------------------------------------------------------
     # Interna
     # ------------------------------------------------------------------
 
-    def _prepare(
-        self,
-        preset_id: str,
-        *,
-        user_id: str,
-        target_date: str | date | None,
-    ) -> dict:
-        """Preset + echte Orte laden und die ComparisonEngine EINMAL JE ORT
-        laufen lassen (gleichzeitig, #1765 B1). Alle Kanal-Renderer eines
-        Aufrufs sitzen auf demselben ``ComparisonResult`` (AC-7).
-        """
-        from app.ampel import profile_for_template, template_id_for
-        from services.comparison_engine import COMPARE_FORECAST_HOURS
-        from services.comparison_parallel import run_comparison_parallel
-        from services.report_config_resolver import (
-            resolve_compare_render_options, resolve_compare_time_window,
-        )
-
+    def _prepare(self, preset_id: str, *, user_id: str, target_date: str | date | None) -> dict:
+        """Preset + Orte laden und den Wetterlauf des Bausteins ausfuehren
+        (Test-Einstieg, Issue #2983)."""
         preset = self._load_preset(preset_id, user_id=user_id)
         locations = self._resolve_locations(preset, user_id=user_id)
-        resolved_date = _resolve_target_date(
-            target_date, locations, datetime.now(timezone.utc),
-        )
-        # Issue #2796 S4a: Bewertungsprofil aus der Vorlage (wie der Versand).
-        profile = profile_for_template(template_id_for(preset))
-
-        # Issue #1361/#1372 S1b (AC-2): die Vorschau MUSS mit demselben
-        # Tagesfenster rechnen wie der echte Versand
-        # (scheduler_dispatch_service.py) — sonst zeigt sie etwas anderes, als
-        # der Nutzer bekommt. Die deprecateten Preset-Felder hour_from/hour_to
-        # werden bewusst NICHT gelesen (#1361 Befund 1); day_window_start_hour/
-        # _end_hour ueber dieselbe Quelle wie der Trip-Zweig aufgeloest.
-        # Issue #1305 (ex #1268 AC-11): Vorschau MUSS denselben Horizont anfordern
-        # wie der echte Versand (scheduler_dispatch_service.py). Der geteilte Bezug
-        # auf COMPARE_FORECAST_HOURS ersetzt den bisherigen Kommentar-Appell durch
-        # Struktur — Divergenz ist strukturell ausgeschlossen (#1297).
-        # Issue #1765 Scheibe B1: die Orte werden gleichzeitig statt nacheinander
-        # gerechnet (ein Engine-Lauf JE ORT) -- sonst riss die Vorschau ab drei
-        # Orten die 60-Sekunden-Grenze zwischen Go-API und nginx. Alle uebrigen
-        # Parameter unveraendert; ``comparison_engine.py`` bleibt unangetastet.
-        result = run_comparison_parallel(
-            locations=locations,
-            time_window=resolve_compare_time_window(preset),
-            target_date=resolved_date,
-            forecast_hours=COMPARE_FORECAST_HOURS,
-            profile=profile,
-            official_alerts_enabled=amtliche_warnungen_an_preset(preset),  # #3047 E4
-            call_source="vergleich",
-            user_id=user_id,  # Issue #2234: Budget beim ausloesenden Nutzer
-        )
-        return {
-            "preset": preset,
-            "result": result,
-            "profile": profile,
-            "opts": resolve_compare_render_options(preset),
-            "name": preset.get("name", preset_id),
-            "target_date": resolved_date,
-        }
+        zieltag = _resolve_target_date(target_date, locations, datetime.now(timezone.utc))
+        return aufbau.compare_wetter_laden(preset, locations, zieltag, user_id)
 
     def _render_email(self, ctx: dict, *, lang: str = "de") -> tuple[str, str]:
-        from output.renderers.comparison import render_compare_email
-
-        opts = ctx["opts"]
-        preset = ctx["preset"]
-        return render_compare_email(
-            ctx["result"],
-            profile=ctx["profile"],
-            enabled_metrics=opts.enabled_metrics_by_channel["email"],
-            hourly_metrics=opts.hourly_metrics,
-            # Issue #3097: Vorschau und Versand zeigen dieselbe Stundentabelle.
-            hourly_metric_formats=opts.hourly_metric_formats,
-            hourly_enabled=opts.hourly_enabled,
-            preset_name=ctx["name"],
-            # Issue #1969 (AC-26): das ganze Preset -- der Fuss nennt den echten
-            # naechsten Termin aus der zentralen Ableitung.
-            preset=preset,
-            corridors=opts.corridors,
-            outlook_enabled=opts.outlook_enabled,
-            outlook_metrics=opts.outlook_metrics,
-            # Issue #2049: Vorschau und Versand zeigen denselben Ausblick --
-            # die Roh/Einfach-Zuordnung muss beide Wege gehen.
-            outlook_metric_formats=opts.outlook_metric_formats,
-            unresolved_count=opts.unresolved_by_channel.get("email", 0),
-            metric_formats=opts.metric_formats("email"),
-            lang=lang,
-            show_fallback_notice=True,
-        )
+        return aufbau.compare_email_rendern(ctx, lang=lang)
 
     def _load_preset(self, preset_id: str, *, user_id: str) -> dict:
         """Laedt das Preset AUSSCHLIESSLICH aus dem Verzeichnis dieses Nutzers.
@@ -231,21 +131,6 @@ class ComparePreviewService:
         return locations
 
 
-def order_locations_by_ids(locations: list, location_ids: list[str]) -> list:
-    """Filtert ``locations`` reihenfolge-erhaltend nach ``location_ids``.
-
-    Ordnungs-Kern (dict-by-id aufbauen, dann über ``location_ids`` iterieren) —
-    die Listenposition in ``location_ids`` IST die vom Nutzer konfigurierte
-    Reihenfolge (Issue #1359 Scheibe 2). Geteilt zwischen
-    ``ComparePreviewService._resolve_locations()`` und dem Versandpfad
-    (``scheduler_dispatch_service.send_one_compare_preset``), damit beide Wege
-    die gespeicherte Orts-Reihenfolge bewahren statt über eine andere Sammlung
-    (z. B. den Orte-Cache) zu iterieren.
-    """
-    by_id = {loc.id: loc for loc in locations}
-    return [by_id[loc_id] for loc_id in location_ids if loc_id in by_id]
-
-
 def _resolve_target_date(
     given: str | date | None, locations: list, now_utc: datetime,
 ) -> date:
@@ -254,9 +139,8 @@ def _resolve_target_date(
     seit S5b (``scheduler_dispatch_service.py``), nicht mehr die zonenlose
     Serveruhr. Der ``given``-Zweig bleibt unveraendert."""
     if given is None or given == "":
-        from utils.timezone import first_resolvable_tz, local_dt
-        zone = first_resolvable_tz(locations, context_label="Compare-Vorschau")
-        return local_dt(now_utc, zone).date()
+        # Issue #2983 (AC-9): dieselbe Ermittlung wie der Versand.
+        return aufbau.compare_zieltag_bestimmen(locations, now_utc, context_label="Compare-Vorschau")
     if isinstance(given, date):
         return given
     try:

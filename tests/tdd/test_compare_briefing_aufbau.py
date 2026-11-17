@@ -112,7 +112,8 @@ def _orte_anlegen(uid: str, orte) -> None:
 
 
 def _preset_ablegen(uid: str, preset_id: str, location_ids: list[str], *,
-                    telegram_style: str | None = None, name: str = "Urlaubsorte") -> dict:
+                    telegram_style: str | None = None, name: str = "Urlaubsorte",
+                    extra: dict | None = None) -> dict:
     """Preset ueber den Test-Helfer ins Nutzerverzeichnis schreiben und ueber den
     ECHTEN Loader zurueckholen -- Vorschau und Versand sehen damit dasselbe Dict."""
     from app.loader import compare_preset_to_dict, get_data_dir, load_compare_presets
@@ -132,6 +133,7 @@ def _preset_ablegen(uid: str, preset_id: str, location_ids: list[str], *,
     }
     if telegram_style:
         preset["display_config"] = {"telegram_style": telegram_style}
+    preset.update(extra or {})
     write_compare_briefings(get_data_dir(uid), [preset])
     treffer = [p for p in load_compare_presets(uid) if p.id == preset_id]
     assert len(treffer) == 1, f"Vorbedingung: Preset {preset_id!r} fuer {uid!r} nicht ladbar"
@@ -177,10 +179,24 @@ _WERTE = {
 }
 
 
+def _vertretungs_meta():
+    """Herkunft mit Modell-Vertretung (Muster test_compare_vertretungshinweis_aufrufer)."""
+    from app.models import ForecastMeta, Provider
+
+    return ForecastMeta(
+        provider=Provider.OPENMETEO, model="icon_d2", grid_res_km=2.2,
+        run=datetime(2026, 7, 8, 0, 0, tzinfo=timezone.utc),
+        fallback_model="icon_eu", fallback_metrics=["temperature_2m"],
+        fallback_reason="metric_gap",
+    )
+
+
 class _EngineCalls:
     def __init__(self) -> None:
         self.kwargs_seen: list[dict] = []
         self.alle_fehler = False
+        #: Orts-Kennungen, deren Lauf eine Modell-Vertretung meldet (#1563)
+        self.vertretung_bei: set[str] = set()
         self.lock = threading.Lock()
 
 
@@ -210,6 +226,7 @@ def _engine_naht(monkeypatch, calls: _EngineCalls) -> None:
                     wind_max=11.0, gust_max=19.0, cloud_avg=35, sunny_hours=6,
                     official_alerts=[],
                     hourly_data=[_dp(9, tmin), _dp(12, tmax), _dp(15, tmax - 1)],
+                    forecast_meta=_vertretungs_meta() if loc.id in calls.vertretung_bei else None,
                 ))
             return ComparisonResult(
                 locations=ergebnisse,
@@ -636,3 +653,231 @@ def test_ac9_versand_ohne_tag_nutzt_dieselbe_ermittlung(env, monkeypatch):
     assert len(aufrufe) == 2, f"AC-9: gemeinsame Ermittlung {len(aufrufe)}x statt 2x gerufen"
     assert aufrufe[0] == aufrufe[1], f"AC-9: Vorschau {aufrufe[0]} != Versand {aufrufe[1]}"
     assert vorschau["subject"] == versand["subject"], "AC-9: Betreff (Tag) weicht ab"
+
+
+# ---------------------------------------------------------------------------
+# Adversary-Gegenprobe (F001/F002): Zusicherungen des Bausteins am Wirkort
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("schalter", [False, True])
+def test_f001_amtliche_warnungen_schalter_erreicht_den_wetterlauf(env, schalter):
+    """F001 (M10): Given ein Ortsvergleich mit dem Schalter "Amtliche
+    Warnungen" aus bzw. an / When Vorschau und Versand laufen / Then empfaengt
+    der Wetterlauf je Ort genau diesen Wert (``official_alerts_enabled``) --
+    dort entscheidet die Engine, ob Warnungen ueberhaupt geholt werden
+    (#1040, #3047 E4). Ein fest verdrahtetes ``True`` holte trotz "aus"."""
+    preset = _preset_ablegen(
+        NUTZER_A, "cp-aufbau-warn", ["loc-ibk", "loc-bz"],
+        extra={"official_alerts_enabled": schalter,
+               "official_warnings": {"enabled": schalter}},
+    )
+    from services.amtliche_warnungen_schalter import amtliche_warnungen_an_preset
+
+    assert amtliche_warnungen_an_preset(preset) is schalter, (
+        "Vorbedingung: der gespeicherte Schalter kommt durch den Loader"
+    )
+    _vorschau(NUTZER_A, "cp-aufbau-warn")
+    _versand(NUTZER_A, preset)
+
+    gesehen = [kw.get("official_alerts_enabled") for kw in env["calls"].kwargs_seen]
+    assert len(gesehen) == 4, f"Vorbedingung: je Ort ein Lauf in Vorschau und Versand, {gesehen}"
+    assert gesehen == [schalter] * 4, (
+        f"F001/M10: Wetterlauf bekam official_alerts_enabled={gesehen}, "
+        f"Schalter im Ortsvergleich ist {schalter}"
+    )
+
+
+def _fragezaehler(teil: str) -> int:
+    treffer = re.findall(r"(?:^|\s)\?(\d+)(?=\s|$)", teil)
+    return sum(int(n) for n in treffer)
+
+
+def test_f001_sms_zeigt_unmappbare_auswahl_in_vorschau_und_versand(env):
+    """F001 (M12): Given ein Ortsvergleich, dessen SMS-Auswahl eine Groesse
+    ohne Renderer-Zuordnung traegt (``unresolved_by_channel["sms"] == 1``,
+    #1405 S3) / When Vorschau und Versand laufen / Then zeigt jeder Ortsteil
+    der SMS den Zaehler ``?1`` (sms_format.md §5b) -- in der Vorschau, im
+    Versand und in der Telegram-Kurzform (= SMS-Text), identisch."""
+    from services.report_config_resolver import resolve_compare_render_options
+
+    preset = _preset_ablegen(
+        NUTZER_A, "cp-aufbau-luecke", ["loc-ibk", "loc-bz"], telegram_style="kurzform",
+        extra={"display_config": {
+            "telegram_style": "kurzform",
+            "active_metrics": ["temp_max_c", "wind_max_kmh"],
+            "channel_active_metrics": {"sms": ["temp_max_c", "gibt_es_nicht_2983"]},
+        }},
+    )
+    opts = resolve_compare_render_options(preset)
+    assert opts.unresolved_by_channel.get("sms") == 1, (
+        f"Vorbedingung: SMS-Luecke kommt durch den Loader, {opts.unresolved_by_channel}"
+    )
+    vorschau = _vorschau(NUTZER_A, "cp-aufbau-luecke")
+    versand = _versand(NUTZER_A, preset)
+
+    for quelle, payload in (("Vorschau", vorschau), ("Versand", versand)):
+        for kanal in ("sms", "telegram"):
+            text = payload[kanal]
+            # Wire-Form "Vergleich TT.MM.: <Ort> ...; <Ort> ..." (sms_format.md)
+            teile = [t.strip() for t in text.split(": ", 1)[-1].split(";") if t.strip()]
+            assert [t.split(" ", 1)[0] for t in teile] == ["Innsbruck", "Bozen"], text
+            for teil in teile:
+                assert _fragezaehler(teil) == 1, (
+                    f"F001/M12: {quelle}-{kanal} ohne Luecken-Zaehler ?1 in {teil!r}: {text!r}"
+                )
+    assert vorschau["sms"] == versand["sms"], "F001/M12: Vorschau-SMS != Versand-SMS"
+    assert vorschau["telegram"] == versand["telegram"], "F001/M12: Kurzform weicht ab"
+
+
+def test_f003_mail_und_telegram_langform_zeigen_unmappbare_auswahl(env):
+    """F003 (M16/M17): Given ein Ortsvergleich (Telegram-Langform), dessen
+    E-Mail- und Telegram-Auswahl je eine Groesse ohne Renderer-Zuordnung
+    traegt (``unresolved_by_channel`` je 1, #1405 S3) / When Vorschau und
+    Versand laufen / Then traegt die Mail (HTML und Klartext) genau einmal den
+    tabellenweiten Hinweis "+1 ... ohne Wert in diesem Vergleich" und das
+    Telegram je Ort den Hinweis "+1 ... ohne Wert an diesem Ort" -- in
+    Vorschau und Versand gleich. Ohne die Luecke fehlt der Hinweis (Gegenprobe
+    am Kontroll-Preset)."""
+    import html as _html
+
+    from output.renderers.channel_layout import selection_gap_notice
+    from services.report_config_resolver import resolve_compare_render_options
+
+    luecke_mail = selection_gap_notice(1, scope="vergleich")
+    luecke_ort = selection_gap_notice(1, scope="ort")
+    assert luecke_mail and luecke_ort, "Vorbedingung: Hinweis-Wortlaut nicht leer"
+
+    def _ablegen(preset_id: str, mit_luecke: bool) -> dict:
+        extra_id = ["gibt_es_nicht_2983"] if mit_luecke else []
+        return _preset_ablegen(
+            NUTZER_A, preset_id, ["loc-ibk", "loc-bz"],
+            extra={"display_config": {
+                "active_metrics": ["temp_max_c", "wind_max_kmh"],
+                "channel_active_metrics": {
+                    "email": ["temp_max_c", "wind_max_kmh", *extra_id],
+                    "telegram": ["temp_max_c", "wind_max_kmh", *extra_id],
+                },
+            }},
+        )
+
+    preset = _ablegen("cp-aufbau-luecke-lang", True)
+    kontrolle = _ablegen("cp-aufbau-ohne-luecke-lang", False)
+    opts = resolve_compare_render_options(preset)
+    assert opts.unresolved_by_channel.get("email") == 1, opts.unresolved_by_channel
+    assert opts.unresolved_by_channel.get("telegram") == 1, opts.unresolved_by_channel
+    assert not any(resolve_compare_render_options(kontrolle).unresolved_by_channel.values())
+
+    for quelle, payload, gegen in (
+        ("Vorschau", _vorschau(NUTZER_A, "cp-aufbau-luecke-lang"),
+         _vorschau(NUTZER_A, "cp-aufbau-ohne-luecke-lang")),
+        ("Versand", _versand(NUTZER_A, preset), _versand(NUTZER_A, kontrolle)),
+    ):
+        html_text = _html.unescape(payload["email_html"])
+        assert html_text.count(luecke_mail) == 1, (
+            f"F003/M17: {quelle}-Mail (HTML) ohne Luecken-Hinweis {luecke_mail!r}"
+        )
+        if "email_text" in payload:  # Klartext traegt nur der Versand
+            assert (payload["email_text"] or "").count(luecke_mail) == 1, (
+                f"F003/M17: {quelle}-Mail (Klartext) ohne Luecken-Hinweis {luecke_mail!r}"
+            )
+            assert luecke_mail not in (gegen["email_text"] or ""), quelle
+        telegram = payload["telegram"]
+        assert telegram != payload["sms"], f"Vorbedingung: {quelle}-Telegram ist Langform"
+        assert telegram.count(luecke_ort) == 2, (
+            f"F003/M16: {quelle}-Telegram ohne Luecken-Hinweis je Ort: {telegram!r}"
+        )
+        # Gegenprobe: ohne unmappbare Auswahl kein Hinweis.
+        assert luecke_mail not in _html.unescape(gegen["email_html"]), quelle
+        assert luecke_ort not in gegen["telegram"], quelle
+
+
+def test_f002_versand_zeigt_nicht_zugestellte_meldungen_in_der_mail(env):
+    """F002 (M7): Given ein Ortsvergleich mit einer Meldung, die seit dem
+    letzten Briefing einen Kanal nicht erreicht hat (Protokoll unter der
+    Protokoll-Kennung ``preset_id``, #1461) / When der Versand laeuft / Then
+    traegt die zugestellte Mail den Hinweisblock; die Vorschau (liest keine
+    Vorfaelle) nicht."""
+    from datetime import timedelta
+
+    from app.loader import get_data_dir
+    from output.renderers.email.undelivered_hint import HEADING_FAILED
+    from services.alert_briefing_anchor import record_briefing_sent
+
+    preset_id = "cp-aufbau-undeliv"
+    preset = _preset_ablegen(NUTZER_A, preset_id, ["loc-ibk", "loc-bz"])
+    jetzt = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    eintrag = {
+        "entity_id": preset_id, "entity_type": "compare",
+        "sent_at": (jetzt - timedelta(hours=2)).isoformat(),
+        "changes_count": 1, "severity": "MODERATE",
+        "metrics": [{"metric_id": "thunder", "aggregation": "max"}],
+        "hazards": [], "reason": "forecast_change", "channels_sent": [],
+        "channels_not_sent": [{"channel": "sms", "reason": "delivery_failed"}],
+    }
+    log = get_data_dir(NUTZER_A) / "alert_log.json"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text(json.dumps({"entries": [], "not_delivered": [eintrag]}), encoding="utf-8")
+    record_briefing_sent(user_id=NUTZER_A, entity_id=preset_id, entity_type="compare",
+                         at=jetzt - timedelta(hours=6))
+
+    vorschau = _vorschau(NUTZER_A, preset_id)
+    versand = _versand(NUTZER_A, preset)
+
+    assert HEADING_FAILED not in vorschau["email_html"], "Vorschau liest keine Vorfaelle"
+    assert HEADING_FAILED in versand["email_html"], (
+        "F002/M7: der Versand reicht die nicht zugestellte Meldung nicht an die Mail weiter"
+    )
+
+
+def test_f002_vorschau_spricht_die_sprache_des_nutzers(env):
+    """F002 (M8): Given ein Nutzer mit ``language = "en"`` / When Vorschau und
+    Versand laufen / Then ist der Betreff beider Seiten englisch und gleich
+    (#2672) -- keine fest deutsche Vorschau."""
+    from services.compare_briefing_aufbau import build_compare_preset_subject
+
+    user_json = env["data_root"] / "users" / NUTZER_A / "user.json"
+    user_json.write_text(json.dumps({"tier": "premium", "language": "en"}), encoding="utf-8")
+    preset = _preset_ablegen(NUTZER_A, "cp-aufbau-en", ["loc-ibk", "loc-bz"])
+
+    vorschau = _vorschau(NUTZER_A, "cp-aufbau-en")
+    versand = _versand(NUTZER_A, preset)
+
+    soll_en = build_compare_preset_subject("Urlaubsorte", TARGET_DATE, lang="en")
+    assert soll_en != build_compare_preset_subject("Urlaubsorte", TARGET_DATE, lang="de"), (
+        "Vorbedingung: Betreff unterscheidet sich je Sprache"
+    )
+    assert versand["subject"] == soll_en, "Vorbedingung: Versand spricht Englisch"
+    assert vorschau["subject"] == soll_en, (
+        f"F002/M8: Vorschau-Betreff nicht englisch: {vorschau['subject']!r}"
+    )
+    assert vorschau["email_html"] == versand["email_html"], (
+        "F002/M8: Vorschau-Mail weicht von der englischen Versand-Mail ab"
+    )
+
+
+def test_f002_mail_zeigt_den_vertretungshinweis(env):
+    """F002 (M14): Given ein Ort, dessen Wetterlauf eine Modell-Vertretung
+    meldet (#1563) / When Vorschau und Versand laufen / Then tragen Mail-HTML
+    und Mail-Text beider Seiten die Vertretungszeile dieses Orts."""
+    from output.renderers.fallback_notice import build_compare_fallback_lines
+
+    env["calls"].vertretung_bei = {"loc-bz"}
+    preset = _preset_ablegen(NUTZER_A, "cp-aufbau-vertretung", ["loc-ibk", "loc-bz"])
+    vorschau = _vorschau(NUTZER_A, "cp-aufbau-vertretung")
+    versand = _versand(NUTZER_A, preset)
+
+    from app.user import LocationResult
+
+    bz = next(o for o in _orte(NUTZER_A) if o.id == "loc-bz")
+    zeilen = build_compare_fallback_lines(
+        [LocationResult(location=bz, forecast_meta=_vertretungs_meta())], lang="de",
+    )
+    assert zeilen and zeilen[0].startswith("Bozen"), f"Vorbedingung: Vertretungszeile {zeilen}"
+    import html as _html
+
+    for quelle, payload in (("Vorschau", vorschau), ("Versand", versand)):
+        assert zeilen[0] in _html.unescape(payload["email_html"]), (
+            f"F002/M14: {quelle}-Mail (HTML) ohne Vertretungshinweis"
+        )
+    assert zeilen[0] in versand["email_text"], "F002/M14: Versand-Mail (Text) ohne Vertretungshinweis"
