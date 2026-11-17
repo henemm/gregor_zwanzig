@@ -30,7 +30,7 @@ Im Klartext- und Telegram-Text einer amtlichen Warnung baut die Regionszeile (`R
 > **Querschnitts-Prüfpunkte:**
 > - **Trip/Ortsvergleich-Teilung:** kein Compare-Pendant (Trip-Alarm mit amtlicher Warnung); nichts unter `shared/` betroffen.
 > - **Mandantentrennung:** keine Nutzerdaten werden bewegt; `user_id`-Pfade unverändert.
-> - **Kanäle:** E-Mail (Klartext-Teil) und Telegram-Text ändern sich bei gemessener Spanne. SMS und Premium-SMS bleiben unverändert (eigener Pfad `render_alert_sms`, `sms_scope` aus den Notices). HTML nutzt bereits `scope_label`.
+> - **Kanäle:** E-Mail (Klartext-Teil) und Telegram-Text ändern sich bei gemessener Spanne. SMS und Premium-SMS bleiben unverändert (eigener Pfad `render_alert_sms`, `sms_scope` aus den Notices). HTML: der Orts-Chip der eingebetteten Warnkarte (`affected_chips`) wurde bisher direkt über `format_segment_reference` gebaut und zeigte bei gemessener Spanne weiter „Segment 3" (Adversary-Befund F001, Runde 1); er übernimmt jetzt `scope_label` (AC-9).
 
 ## Estimated Scope
 
@@ -75,7 +75,8 @@ Im Klartext- und Telegram-Text einer amtlichen Warnung baut die Regionszeile (`R
 4. `_dispatch_alert_message` berechnet `_measured_event_km(alert_msg)` einmal und reicht es an HTML-Notices UND Plain-Renderer weiter.
 5. Gruppierung bleibt getrennt (Plain nur `dedupe_official_alerts`, Notices zusätzlich `_bundle_by_hazard_level`); geteilt wird nur die Ortsauflösung je Segmentliste.
 6. Doku-Nachzug (Teil des Scopes): `fix_1744_alarm_format_angleichen.md` Zeile 156 verweist auf veraltete Zeilen (`official_alerts.py:615-662`) und sagt, der Plain-Renderer bleibe unangetastet; auf den heutigen Stand und die geteilte Ortsauflösung (#2984) korrigieren.
-7. Renderer-Commit-Gate: Klartext-Mailinhalt ändert sich bei gemessener Spanne; Modus-Matrix-Test und Mail-Validator müssen vor dem Commit frisch grün sein.
+7. HTML-Orts-Chip (AC-9): in `build_official_alert_notices` wird der Chip bei nicht-leerer Segmentliste aus `scope_label` gebildet (`affected = [scope_label]`) statt erneut über `format_segment_reference`; ohne gemessene Spanne ist `scope_label` identisch zum bisherigen Chip.
+8. Renderer-Commit-Gate: Klartext- und HTML-Mailinhalt ändern sich bei gemessener Spanne; Modus-Matrix-Test und Mail-Validator müssen vor dem Commit frisch grün sein.
 
 ## Expected Behavior
 
@@ -117,7 +118,7 @@ Echte Renderer-Aufrufe, kein `Mock`/`patch`/`MagicMock`.
 - **AC-3:** Given eine amtliche Warnung ohne gemessene Spanne (ein oder mehrere Segmente) / When die Regionszeile gerendert wird / Then ist sie byte-identisch zur heutigen Ausgabe (`Segment 3`, bzw. die bisherige Mehrfach-Segment-Schreibweise).
   - Test: Ausgabe ohne `segment_km` wird gegen den bisherigen Wortlaut verglichen.
 
-- **AC-4:** Given eine Segmentkennung ist nicht numerisch und es liegen keine km-Werte vor / When die Regionszeile gerendert wird / Then wird die Kennung wie heute roh angezeigt (#1965) und es erscheint kein km-Rückfall.
+- **AC-4:** Given eine Segmentkennung ist nicht numerisch und es liegen keine km-Werte vor / When die Regionszeile gerendert wird / Then wird die Kennung wie heute angezeigt (#1965: erhalten, nicht verworfen, in der bisherigen Segment-Sprache, z. B. `Segment Etappe-A`) und es erscheint kein km-Rückfall.
   - Test: Kennung ohne km-Werte rendern; roher Wert im Text, keine „km"-Angabe.
 
 - **AC-5:** Given eine amtliche Warnung mit leerer Segmentliste / When Klartext und Notices gebaut werden / Then enthält die Regionszeile keinen Zusatz „ — …" und die Notice zeigt weiterhin „unbekannt".
@@ -131,6 +132,10 @@ Echte Renderer-Aufrufe, kein `Mock`/`patch`/`MagicMock`.
 
 - **AC-8:** Given SMS und Premium-SMS einer amtlichen Warnung / When der Alarm nach der Änderung versendet wird / Then sind beide Texte byte-identisch zu vorher, und alle genannten Bestandstests laufen ohne Anpassung grün.
   - Test: Bestehende SMS-/Snapshot-Tests (`test_official_alert_output_unchanged.py`, `test_official_alert_sms_ortskopf.py`) und die Regionszeilen-Bestandstests unverändert grün.
+
+- **AC-9:** Given ein Trip-Alarm mit eingebetteter amtlicher Warnung für Segment 3 mit gemessener Spanne 12,3-20,0 km / When `_dispatch_alert_message` die HTML-Mail erzeugt / Then zeigt der Orts-Chip der Warnkarte `km 12-20` (nicht `Segment 3`), also dieselbe Ortsangabe wie Regionszeile und `scope_label`; ohne gemessene Spanne bleibt der Chip byte-identisch (`Segment 3`).
+  - Test: Durchstich über `_dispatch_alert_message` (HTML über das Transport-Double, nicht `mail_sink`), enge Prüfung am `wb-route`-Chip der Warnkarte; Gegenprobe: Notices ohne `segment_km` bzw. Chip über `format_segment_reference` lässt den Test scheitern.
+  - Begründung: Nachzug aus Adversary-Befund F001. Seit #2036 weicht `scope_label` bei gemessener Spanne vom Chip ab; damit gilt auch die Invariante `scope_label == einziger Chip` (#1326a, ADR-0033, `_scope_matches_sole_chip`) nicht mehr. Der Chip über `scope_label` stellt sie wieder her und folgt der freigegebenen Produktentscheidung #2036 (gemessene Spanne verdrängt die Segmentnummer).
 
 ## Out of Scope
 
@@ -149,3 +154,4 @@ Echte Renderer-Aufrufe, kein `Mock`/`patch`/`MagicMock`.
 ## Changelog
 
 - 2026-11-17: Initial spec created (Issue #2984)
+- 2026-11-17: AC-9 (HTML-Orts-Chip über `scope_label`) nach Adversary-Befund F001 ergänzt; AC-4 präzisiert: „roh" = Kennung bleibt erhalten in der bisherigen Segment-Sprache, kein km-Rückfall

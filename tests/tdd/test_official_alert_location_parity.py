@@ -265,10 +265,14 @@ def test_2984_ac3_ohne_spanne_byte_identisch_zur_segmentsprache(lang, segment_id
 
 @pytest.mark.parametrize("lang", ["de", "en"])
 def test_2984_ac4_nicht_numerische_kennung_bleibt_roh_ohne_km_rueckfall(lang):
-    """AC-4: Kennung 'Etappe-A' ohne km-Werte wird roh gezeigt (#1965),
-    keine km-Angabe."""
+    """AC-4: Kennung 'Etappe-A' ohne km-Werte wird roh gezeigt (#1965):
+    roh = Kennung bleibt erhalten, kein km-Rueckfall, Segment-Sprache wie
+    bisher."""
+    from output.renderers.alert.segments import format_segment_reference
+
     line = _region_line(["Etappe-A"], None, lang)
-    assert _region_suffix(line) == "Etappe-A", line
+    assert _region_suffix(line) == format_segment_reference(["Etappe-A"], lang=lang), line
+    assert "Etappe-A" in line, line
     assert "km" not in line, f"km-Rueckfall ohne km-Werte: {line!r}"
 
 
@@ -422,3 +426,105 @@ def test_2984_ac2_dispatch_klartext_und_telegram_zeigen_km_wie_html_kopf(monkeyp
             f"gemessenen Spanne ({lang}):\n{text}"
         )
         assert region_ok in text, f"{kanal}: Regionszeile ohne 'km 12-20' ({lang}):\n{text}"
+
+
+# ---------------------------------------------------------------------------
+# AC-9 (Nachzug Adversary-Befund F001): der Orts-Chip der eingebetteten
+# HTML-Warnkarte (`wb-route` der `wb-item`) zeigt dieselbe Ortsangabe wie
+# `scope_label` -- bei gemessener Spanne 'km 12-20', sonst wie bisher.
+# ---------------------------------------------------------------------------
+import re
+
+_WB_ROUTE_CHIPS = re.compile(
+    r'<div class="wb-item"[^>]*>.*?<span class="wb-route">(?P<chips>.*?)</span></span>',
+    re.S,
+)
+_SEG_CHIP = re.compile(r'<span class="seg"[^>]*>(?P<text>.*?)</span>', re.S)
+
+
+def _dispatch_html_2984(monkeypatch, lang, *, km_measured: bool) -> str:
+    """Durchstich ueber `_dispatch_alert_message` OHNE `mail_sink`: der HTML-
+    Teil kommt ueber das Transport-Double `_Capture2984Email`."""
+    import services.notification_service as ns
+    from app.config import Settings
+    from output.renderers.alert.model import AlertEvent, AlertMessage
+    from tests.helpers.telegram_empfaenger import mit_profil_chat
+
+    _Capture2984Email.sent.clear()
+    _Capture2984Telegram.sent.clear()
+    monkeypatch.setattr(ns, "EmailOutput", _Capture2984Email)
+    monkeypatch.setattr(ns, "TelegramOutput", _Capture2984Telegram)
+
+    settings = Settings(
+        smtp_host="smtp.test.invalid", smtp_user="t@test.invalid",
+        smtp_pass="x", mail_to="to@test.invalid",
+    )
+    svc = ns.NotificationService(
+        settings, mit_profil_chat("tdd-2984", settings), lang=lang,
+    )
+    ev = AlertEvent(
+        metric_id="wind", value_from=20.0, value_to=48.0, threshold=15.0,
+        cmp="über", occurred_at="14:00", km_from=12.31, km_to=20.0,
+        segment_id="3", km_measured=km_measured,
+    )
+    alert_msg = AlertMessage(
+        trip_short=TRIP_NAME, stand_at="09:30", events=(ev,), ampel=resolve_ampel(None),
+    )
+    result = svc._dispatch_alert_message(
+        alert_msg=alert_msg, effective_channels={"email"},
+        official_notices=[(_warnung(), ["3"])], alert_tz=TRIP_TZ,
+    )
+    assert result.sent
+    assert len(_Capture2984Email.sent) == 1, "E-Mail nicht (genau einmal) gesendet"
+    return _Capture2984Email.sent[0]["html"]
+
+
+def _warnkarten_orts_chips(html: str) -> list[str]:
+    """Texte der `seg`-Chips im `wb-route` der (einzigen) Warnkarte."""
+    blocks = _WB_ROUTE_CHIPS.findall(html)
+    assert len(blocks) == 1, f"Erwartete genau eine Warnkarte mit wb-route: {blocks!r}"
+    return [m.group("text") for m in _SEG_CHIP.finditer(blocks[0] + "</span>")]
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_2984_ac9_html_orts_chip_zeigt_km_wie_scope_label(monkeypatch, lang):
+    """AC-9: Given Trip-Alarm mit eingebetteter amtlicher Warnung fuer
+    Segment 3 mit gemessener Spanne 12,31-20,0 km / When
+    `_dispatch_alert_message` die HTML-Mail erzeugt / Then zeigt der
+    Orts-Chip der Warnkarte 'km 12-20', nicht 'Segment 3'."""
+    html = _dispatch_html_2984(monkeypatch, lang, km_measured=True)
+    chips = _warnkarten_orts_chips(html)
+    assert chips == ["km 12-20"], (
+        f"Orts-Chip der HTML-Warnkarte ({lang}) zeigt {chips!r} statt "
+        f"['km 12-20'] (wie scope_label und Regionszeile)"
+    )
+    assert not any("Segment 3" in c for c in chips), chips
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_2984_ac9_html_orts_chip_ohne_spanne_bleibt_segmentsprache(monkeypatch, lang):
+    """AC-9 (Fallback): ohne gemessene Spanne bleibt der Chip byte-identisch
+    zur bisherigen Segment-Sprache."""
+    from output.renderers.alert.segments import format_segment_reference
+
+    html = _dispatch_html_2984(monkeypatch, lang, km_measured=False)
+    chips = _warnkarten_orts_chips(html)
+    assert chips == [format_segment_reference(["3"], lang=lang)], chips
+    assert not any("km" in c for c in chips), chips
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_2984_ac9_builder_chip_gleich_scope_label_bei_gemessener_spanne(lang):
+    """AC-9 (Builder): `build_official_alert_notices` mit gemessenem
+    `segment_km` -> einziger Chip == `scope_label` ('km 12-20')."""
+    from output.renderers.alert.official_alerts import build_official_alert_notices
+
+    notices = build_official_alert_notices(
+        _trip(), [(_warnung(), ["3"])], segment_km=_MEASURED, lang=lang,
+    )
+    assert len(notices) == 1, notices
+    notice = notices[0]
+    assert notice.scope_label == "km 12-20", notice.scope_label
+    assert notice.affected_chips == [notice.scope_label], (
+        f"Chips {notice.affected_chips!r} != [scope_label {notice.scope_label!r}]"
+    )

@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/feat_2984_regionszeile_ortsformatierer.md
-spec_sha256: 623857fe76318545e01c4af8a3e4c7fced650d570b482b5c8d55f00ba83154ae
-spec_frozen_sha256: 0a9c4c5714c78aad43c987a72deaa66b50573fc5958591b7a89895ac6bb91840
+spec_sha256: 8814e59fd7162af1ddcf403137b85ab3abf8ac3a264f5eba148767b2f91b359c
+spec_frozen_sha256: 0dfa098d247d7ed388ffc2ff66b0374f95bab0169bd1a0149b565f9737210943
 ---
 
 # PO-Briefing: feat-2984-regionszeile-ortsformatierer
@@ -12,20 +12,20 @@ spec_frozen_sha256: 0a9c4c5714c78aad43c987a72deaa66b50573fc5958591b7a89895ac6bb9
 
 ## Was gebaut wird
 
-Bei amtlichen Warnungen nennen Kopf und Regionszeile derselben Nachricht künftig dieselbe Ortsangabe, etwa „km 12-20".
+Bei amtlichen Warnungen nennt jede Zeile derselben Nachricht denselben Ort, etwa „km 12-20" statt teils „Segment 3".
 
 ## Definition of Done
 
-In einer echt zugestellten Alarm-Mail mit amtlicher Warnung und gemessener Strecke zeigen Kopf, Regionszeile und Telegram-Text dieselbe Kilometerangabe.
+Ein echt zugestellter Trip-Alarm mit amtlicher Warnung zeigt in Kopf, Ortsangabe und Klartext/Telegram überall dieselbe Angabe; SMS und Fälle ohne Kilometerwert bleiben unverändert.
 
 ## Wie geprüft wird
 
-Automatische Tests vergleichen Regionszeile und Kopf in beiden Sprachen und über den echten Versandweg; SMS bleibt unverändert, Mail-Prüfung auf Staging.
+Automatische Tests vergleichen alle Zeilen für Kilometer, Segment, Sonderkennung, leer, Deutsch und Englisch; nicht geprüft wird die Optik auf echten Geräten.
 
 ## Kritische Anmerkungen
 
-- Sichtbare Änderung: Mit gemessener Strecke steht im Klartext und Telegram künftig „km 12-20" statt „Segment 3" (Entscheidung aus #2036).
-- Entwarnungen bleiben bewusst bei „Segment"; Angleichung wäre ein eigenes Ticket.
+- Zusatz gegenüber der Regionszeile: Der Orts-Chip der HTML-Warnkarte ändert sich ebenfalls (AC-9); folgt der Entscheidung #2036.
+- Ursprungsanfrage nur über den Kontext-Auszug gelesen, Issue-Text selbst war nicht abrufbar.
 
 ## Freigabe-Frage
 
