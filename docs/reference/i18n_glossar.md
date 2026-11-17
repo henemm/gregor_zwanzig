@@ -7,6 +7,12 @@
 > der Klarheit dienen. **Verboten:** „Tour"/*tour* (Produktbegriff ist Trip); im deutschen UI
 > außerdem „Drafts", „Alert-Trigger" und „Alerts justieren" (ADR-0111, #2881: „Entwürfe",
 > „Alarm-Auslöser", „Alarme einstellen").
+>
+> **Bereichsname „Orte“ (ADR-0124 Nr. 10, PO 2026-11-17, Issue #3122):** Für **neue** Texte heißt der
+> Bereich einheitlich „Orte“ / *Locations*, auch bei einem einzelnen Ort. „Vergleich“, „Ortsvergleich“,
+> „Orts-Vergleich“ und „Orts-Briefing“ sind kein Name mehr für neue Texte. Zeilen mit dem Vermerk
+> „bis zum Bau im Bestand“ beschreiben Texte, die heute so ausgeliefert werden; sie werden mit dem
+> Bau zu #3122 umgestellt, nicht vorher (die Katalog-Tests prüfen bis dahin die Bestandsform).
 
 ## Produktbegriffe
 
@@ -14,7 +20,7 @@
 |---|---|---|
 | Trip | trip | Eigenname des Produkts, bleibt |
 | Etappe | stage | nie *leg*, nie *tour* |
-| Ortsvergleich | location comparison | Kurz in Reitern: *comparison* |
+| Ortsvergleich | location comparison | Kurz in Reitern: *comparison*. **Bis zum Bau im Bestand** (#3122): als Name für neue Texte abgelöst durch „Orte“ (ADR-0124 Nr. 10); dasselbe gilt für „Orts-Vergleich“ und „Vergleich“ als Name in Oberfläche, Mail, Telegram und SMS |
 | Briefing | briefing | bleibt |
 | Alarm | alert | Abweichungs-Alarm = *deviation alert*, Regen-/Radar-Alarm = *rain alert (radar)* |
 | Alarm-Auslöser | alert trigger | Zeile der Übersicht; nie „Alert-Trigger" im deutschen UI (#2881) |
@@ -25,7 +31,7 @@
 | Versand | delivery | Abschnitt des Reiters Zustellung (Anker `#versand`), kein Reiter mehr seit #2794 S3a; „Versandkanal" = *delivery channel* |
 | Layout | layout | bleibt |
 | Korridor | corridor | bleibt |
-| Orte | locations | |
+| Orte | locations | Name des Bereichs für neue Texte (ADR-0124 Nr. 10, PO 2026-11-17), auch bei einem einzelnen Ort; als Titel *Locations*. Kein Text setzt mehrere Orte voraus: bei einem Ort nicht „alle Orte“ und nicht „1 Orte“ |
 | Standardwerte | defaults | „Standardwerte speichern" = *Save as defaults* |
 | Verlässlichkeit | confidence | Nur Meta-Hinweis, keine Metrik (#710) |
 | Kürzel | code | SMS-Kürzel = *SMS code*; Protokoll-Token nie übersetzen |
@@ -45,7 +51,7 @@
 | Stand | as of | „Stand 12:30" = *as of 12:30* |
 | Zeitfenster | time window | |
 | Tagesfenster | day window | |
-| Ausblick (3 Tage) | outlook (3-day) | |
+| Ausblick (3 Tage) | outlook (3-day) | **Bis zum Bau im Bestand** (#3122); für neue Texte gilt „3-Tages-Ausblick“ (Abschnitt „Reiter Wetter: Tabelle ‚Was steht wo‘“) |
 | Legende | legend | |
 | Hinweis | note | |
 | Wetterlage | weather pattern | Stabilitäts-Satz „Wetterlage: STABIL" = *Weather pattern: STABLE* (#2665) |
@@ -63,11 +69,11 @@
 | Tarif | plan | „in deinem Tarif“ = *on your plan* (Kontingent-Meldung, #2677) |
 | Schwelle | threshold | |
 | Aktivitätsprofil | activity profile | Werte: *general*, *hiking*, *mountaineering*, … (Register prüfen) |
-| Stundenverlauf | hourly view | Abschnitt im Ortsvergleich; Abschnittskopf „STUNDEN" = *HOURLY* (#2666) |
+| Stundenverlauf | hourly view | Abschnitt im Ortsvergleich; Abschnittskopf „STUNDEN" = *HOURLY* (#2666). Ab #3122 auch Spalte der Tabelle „Was steht wo“ (nur Orte, nur E-Mail; ADR-0124 Nr. 2) |
 | Gehzeit | walking hours | Tageswerte „(Gehzeit)" = *(walking hours)*, wie `label_en` im Metrik-Register (#2751) |
 | Nachtfenster | night window | Nacht-Einzelwert = *single value for the night window* (#2751) |
 | Abo | subscription | „Dieses Abo" = *This subscription*, „Abo bearbeiten" = *Edit subscription* (#2666) |
-| Übersicht | overview | Abschnittskopf „ÜBERSICHT" = *OVERVIEW* (#2666) |
+| Übersicht | overview | Abschnittskopf „ÜBERSICHT" = *OVERVIEW* (#2666). Ab #3122 der Name der E-Mail-Tabelle der Orte (Tageswerte je Ort) und der E-Mail-Spalte bei Orten in „Was steht wo“ (ADR-0124 Nr. 2, 10); „Vergleichstabelle“ bleibt bis zum Bau im Bestand |
 
 ## Wettergrößen (volle Form, ADR-0042 Klasse 2 „voll")
 
@@ -188,18 +194,27 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 
 | Deutsch | Englisch | Hinweis |
 |---|---|---|
-| Wetter (Reiter) | weather | Reiter-Name in Trip und Orts-Briefing (Katalog `wetter.*`); löst Wertebereiche/Alarme als Wetter-Reiter ab (Bereinigung Teil-PR 4) |
+| Wetter (Reiter) | weather | Reiter-Name bei Trip und Orten (Katalog `wetter.*`); löst Wertebereiche/Alarme als Wetter-Reiter ab (Bereinigung Teil-PR 4) |
 | Vorlage | template | Systemvorlage oder eigene Vorlage; „Eigene" = *Your own*, „Als eigene Vorlage speichern" = *Save as your own template* |
 | Ampel | traffic light | Bewertung einer Metrik grün/gelb/orange/rot (ADR-0106); „Ampel-Grenzen" = *traffic-light limits* |
 | Grenzen ändern | change limits | Knopf je Metrik-Zeile; „Fertig" = *Done* |
 | Nicht im Briefing | not in the briefing | Liste der abgewählten Metriken mit „+ {Metrik}" |
 | Abweichung (von der Vorlage) | change (from the template) | „{n} Abweichungen" = *{n} changes*; „unverändert" = *unchanged* |
-| Orts-Briefing | location briefing | Kontext `vergleich` im Reiter Wetter |
+| Orts-Briefing | location briefing | Kontext `vergleich` im Reiter Wetter. **Bis zum Bau im Bestand** (#3122): als Name für neue Texte abgelöst durch „Orte“ (ADR-0124 Nr. 10) |
+
+## Reiter Wetter: Tabelle „Was steht wo“ (ADR-0124, #3122)
+
+Vorgabe für **neue** Texte; die Tabelle ist noch nicht gebaut. Bestandstexte bleiben bis zum Bau unverändert.
+
+| Deutsch | Englisch | Hinweis |
+|---|---|---|
+| Was steht wo | What goes where | Titel der Tabelle im Reiter Wetter; ersetzt die Karte „Inhalt je Kanal und Fläche“ (ADR-0124 Nr. 2). Zeile = Metrik der Grundauswahl, Spalte = Stelle, an der sie erscheinen kann |
+| 3-Tages-Ausblick | 3-day outlook | Ein Name für Block und Spalte, in Oberfläche, Mail und Telegram (ADR-0109 Nr. 4, ADR-0124 Nr. 2, 6); „Mehrtages-Trend“, „3-Tages-Vorschau“ und „Ausblick“ allein nicht für neue Texte |
 
 ## Reiter Zustellung (#2795 S3b)
 
 | Deutsch | Englisch | Hinweis |
 |---|---|---|
-| Zustellung | delivery | Reiter-Name in Trip und Orts-Briefing (Katalog `zustellung.*`): wann die Briefings kommen und über welche Kanäle Briefings und Alarme ankommen |
+| Zustellung | delivery | Reiter-Name bei Trip und Orten (Katalog `zustellung.*`): wann die Briefings kommen und über welche Kanäle Briefings und Alarme ankommen |
 | Stille Stunden | quiet hours | Zeitfenster ohne Alarme (`alert_quiet_from`/`alert_quiet_to`); gestaute Alarme kommen mit dem nächsten Morgen-Briefing |
 | Dringlichkeit | urgency | Stufe je Kanal „gering/mittel/hoch“ = *low/moderate/high*; Datenwerte `LOW`/`MODERATE`/`HIGH` nie übersetzen |

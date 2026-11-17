@@ -1,5 +1,7 @@
 # Context: feature-2913-scheibe-c
 
+> **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Notiz ist Historie eines gebauten Schritts. Wo sie die Karte „Inhalt je Kanal und Fläche“ (eigene Liste je Kanal und Fläche, #3031–#3037, PR #3042, #3060) als künftiges Soll nennt, gilt das nicht mehr: ADR-0124 (PO 2026-11-17) ersetzt die Karte durch **eine** Tabelle „Was steht wo“ im Reiter Wetter. Aktueller Stand: ADR-0124 und `docs/context/einstellungen_neu.md`.
+
 ## Request Summary
 Scheibe (c) aus dem Arbeitsplan von #2913 (Epic #2791): Im Reiter **Wetter** (Trip und Orts-Briefing, ein Code) die Abschnitte **„Nicht im Briefing“, Amtliche Warnungen, Radar-Regen und Anpassen (Tagesfenster)** lückenlos nach Mockup Fassung 3 aus Design-System-Bausteinen bauen (ADR-0112), alte Bausteine in derselben Scheibe löschen, auf Staging in DE/EN nachweisen.
 

@@ -29,6 +29,8 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 | Ad-hoc-Verlauf (Befehl) | Kurzform `sms_format.md` §5a, immer **genau eine** Nachricht (`_KURZFORM_KANAELE = ("premium_sms", "sms")`) |
 | Mehrteilig | nein — jede Sendung ist ein einzelner seven.io-Aufruf |
 
+> **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md) Nr. 8, Issue #3122):** „Unverändert der SMS-Text“ ist vom PO vorerst bestätigt: In der Tabelle „Was steht wo“ (Reiter Wetter) hat die Premium-SMS keine eigene Spalte, sie folgt der Spalte SMS. Eine eigene Auswahl für die Premium-SMS kommt erst mit S9 (#2801). Bis dahin gilt das hier Beschriebene.
+
 **Hervorhebung (#2792 S1c-4b):** Da der Text der SMS entspricht, gilt auch hier die Profil-Ampel des Abos: Spitzenwerte `@{h}` ab gelb oder schlechter (beidseitig), Gewitter ab „leicht“, Temperatur mit Stunde nur ab Gelb. Die Regeln stehen in `sms_format.md` §3.2 und §3.2a; `sms_threshold` wirkt nicht mehr.
 
 ## 2. Unterschiede zur normalen SMS

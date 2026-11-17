@@ -1,5 +1,7 @@
 # Context: feature-2795-s3b-teil1-zustellung
 
+> **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Notiz ist Historie eines gebauten Schritts. Wo sie die Karte „Inhalt je Kanal und Fläche“ (eigene Liste je Kanal und Fläche, #3031–#3037, PR #3042, #3060) als künftiges Soll nennt, gilt das nicht mehr: ADR-0124 (PO 2026-11-17) ersetzt die Karte durch **eine** Tabelle „Was steht wo“ im Reiter Wetter. Aktueller Stand: ADR-0124 und `docs/context/einstellungen_neu.md`. „Teil 2“ in der hier beschriebenen Form entfällt; der Übergangsblock bleibt bis zum Bau zu #3122 und entfällt dann.
+
 Issue #2795 (Epic #2791 „Einstellungen neu“, Scheibe S3b), **Teil 1 = Teil B des Issues: Reiter „Zustellung“ komplett**.
 Teil A („Inhalt je Kanal und Fläche“ im Reiter Wetter, 3-Tages-Ausblick-Vereinheitlichung, Kurzstil-Umzug) folgt als Teil 2 in einem eigenen Workflow.
 

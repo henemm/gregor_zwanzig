@@ -10,6 +10,8 @@ workflow: feat-3047-einstellung-gleich-mail
 tags: [einstellungen, mail, pruefkatalog, reihenfolge, roh-einfach, validator, epic-3047]
 ---
 
+> Teilweise abgelöst durch [ADR-0124](../../adr/0124-was-steht-wo-eine-tabelle.md) (PO 2026-11-17, Issue #3122): Das Sollbild „Inhalt je Kanal und Fläche“ (Purpose, Dependencies, „Phase 5“ / #3060, Verweise auf #3031–#3033) ist durch die Tabelle „Was steht wo“ im Reiter Wetter ersetzt. Der Prüfkatalog, die gebauten Phasen und alle ACs bleiben unverändert gültig; ADR-0124 nennt den Katalog #3047 als Messlatte der Abnahme („Einstellung = Ausgabe“). Listen, Rückfallregeln und Validator-Soll werden mit dem Bau zu #3122 auf das neue Format (je Metrik Stellen-Flaggen, eine Reihenfolge) umgestellt, nicht vorher. Abgelöst ist auch der Satz unter „Ausgelagert“, der Ausblick erscheine bei Orten in jedem Briefing: ADR-0124 Nr. 6 gibt dem 3-Tages-Ausblick „Morgen-Briefing“/„Abend-Briefing“ auch bei Orten.
+
 # Einstellung = Mail: Prüfkatalog zuerst (Phase 1 von #3047)
 
 ## Approval

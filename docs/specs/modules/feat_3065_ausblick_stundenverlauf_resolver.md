@@ -9,6 +9,8 @@ workflow: feat-3065-ausblick-stundenverlauf-resolver
 tags: [epic-3047, phase-2b, resolver, kanal-liste, ausblick, stundenverlauf]
 ---
 
+> **Hinweis (2026-11-17, [ADR-0124](../../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Die Resolver-Listen `outlook` und `hourly` sind gebaut und gelten bis zum Bau zu #3122. Der hier als Abnehmer genannte Editor (#3060) wird so nicht gebaut. Nach ADR-0124 Nr. 4 haben 3-Tages-Ausblick und Stundenverlauf keine eigene, unabhängige Liste mehr: sie folgen der E-Mail-Auswahl mit Abwahl je Metrik (Spalten der Tabelle „Was steht wo“). ACs unverändert.
+
 # Ausblick- und Stundenverlauf-Liste im Kanal-Listen-Resolver (Phase 2b von Epic #3047)
 
 ## Approval

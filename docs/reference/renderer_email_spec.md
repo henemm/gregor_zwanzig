@@ -50,7 +50,7 @@ Siehe CLAUDE.md für Scope-Details und Pflicht-Gate-Dokumentation.
 | 3 | **Stirnlampe** | ENTFÄLLT | (PO-Entscheidung aus Issue #790 — nicht mehr in neuem Cloud-Design) |
 | 4 | **Segmente** (Stundentabellen) | LIVE | Pro Etappensegment: Segment-Header + zwei-stufige Desktop-Tabelle (Gruppen-Row TEMP/WIND/NIEDERSCHLAG + Einheiten-Row) + Mobile-Variante (`EmailHourList` zwei-Zeilen-Format) |
 | 5 | **Wetter am Ziel** (abgesetzte Sektion) | LIVE | Eigene abgesetzte Sektion mit accent-Eyebrow, Zielname, Ankunftszeiten-Range, identische Tabelle wie Segmente |
-| 6 | **Ausblick** (Folge-Etappen) | LIVE | Nächste 4 Tage als kompakte Zeilen-Tabelle; Trip zeigt Wochentag + Code + Name+Note + Temp-Range + (konfigurierbare Metriken) + ACC-Spalte + Risk-Dot; Ortsvergleich ohne ACC-Spalte; Gewitter-Badge falls vorhanden |
+| 6 | **Ausblick** (Folge-Etappen) | LIVE | Bis zu 3 Folge-Etappen (Trip) bzw. die 3 Folgetage je Ort (Ortsvergleich) als kompakte Zeilen-Tabelle (Korrektur 2026-11-17, #3122: hier stand „Nächste 4 Tage“; Beleg `_build_stage_trend()` `future_stages[:3]`, `comparison_engine.py` `_outlook_days … [:3]`, Katalog `mail.ausblick.eyebrow` „Ausblick · nächste 3 Tage“); Trip zeigt Wochentag + Code + Name+Note + Temp-Range + (konfigurierbare Metriken) + ACC-Spalte + Risk-Dot; Ortsvergleich ohne ACC-Spalte; Gewitter-Badge falls vorhanden |
 | 7 | **Antwort-Kommandos** | LIVE | Dedizierte Sektion mit 3-spaltigem Grid der Befehle (HEUTE, MORGEN, JETZT/NOW, GEWITTER, STRECKE [km], RUHETAG [N], STATUS, PAUSE [2d/12h], SKIP, STOP, WEITER, HILFE/HELP) + Hinweistext |
 | 8 | **Footer** (zweigeteilt) | LIVE | Obere Zeile: Brand + Briefing-Typ; untere Zeile: Links (Trip-Übersicht, Zeitplan, Abmelden) |
 
@@ -93,6 +93,9 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
 - **Tabelle:** identischer Stil wie Segment-Tabellen (Desktop + Mobile)
 
 #### Ausblick (Sektion 6)
+
+> **Soll ab #3122 ([ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), PO 2026-11-17):** Der Block heißt überall „3-Tages-Ausblick“. Er bekommt keine eigene, unabhängige Liste mehr: er folgt der E-Mail-Auswahl (Spalte „3-Tages-Ausblick“ der Tabelle „Was steht wo“, je Metrik abwählbar, Roh/Einfach je Stelle; ADR-0124 Nr. 4 und 5) und hat **eine** steuernde Stelle „Morgen-Briefing“/„Abend-Briefing“ für Trip und Orte (Nr. 6). Bis zum Bau gilt das hier Beschriebene (`outlook_metrics`, `outlook_metric_formats`, `show_outlook`, `multi_day_trend_reports`, Orte `outlook_enabled`); Renderer und Validatoren werden nur zusammen geändert.
+
 - **Struktur:** `<table>` mit einer `<tr>` pro Folge-Etappe
 - **Zwei Render-Zweige**, unterschieden am Parameter `metrics` von `render_outlook_table()` /
   `render_outlook_plain()` — **nicht** an der Mail-Art:
@@ -296,6 +299,8 @@ und weichen bei Niederschlag bewusst von den Stunden-Schwellen dieser Tabelle ab
 `docs/specs/modules/fix_2049_ausblick_darstellungsform.md`.
 
 **Orte-Stundenverlauf (seit Issue #3097, ADR-0121 Nachtrag 3b):** Der Stundenverlauf der Orts-Vergleich-Mail hat eine eigene Roh/Einfach-Entscheidung je Zeile: `display_config.hourly_metric_formats` (fehlt = Roh). Unabhängig von `use_friendly_format`, von `channel_layouts.email` (Vergleichstabelle) und von `outlook_metric_formats`. Einfach bei Wind und Böen: Ampelpunkt im HTML, Wortstufe im Klartext (dort kein Farbpunkt); Wolken Symbol; Niederschlag nach der **Stunden**-Skala (trocken/leicht/mäßig/stark), nicht der Tagessummen-Skala. Temperatur und Gewitter haben keinen Umschalter. Details: `docs/reference/api_contract.md` (`hourly_metric_formats`), Spec `docs/specs/modules/feat_3097_orte_stundenverlauf_darstellung.md`.
+
+> **Soll ab #3122 (ADR-0124, PO 2026-11-17):** Der Orte-Stundenverlauf wird eine Spalte der Tabelle „Was steht wo“ und folgt der E-Mail: ein Haken ist dort nur möglich, wenn die Metrik in der E-Mail (Übersicht) steht; vorbelegt wie die E-Mail, je Metrik abwählbar; Metriken ohne Stundenwert sind gesperrt; Roh/Einfach bleibt je Stelle getrennt, aber nur bei Metriken mit zwei Formen (ADR-0124 Nr. 4, 5). Der Block-Schalter „Stundenverlauf an/aus“ steht unter der Tabelle (Nr. 6). Die Unabhängigkeit von `channel_layouts.email`, die dieser Absatz beschreibt, gilt bis zum Bau. Der Bereich heißt dann „Orte“, die E-Mail-Tabelle „Übersicht“ (Nr. 10); die Namen „Orts-Vergleich“ und „Vergleichstabelle“ in diesem Dokument beschreiben den heutigen Stand.
 
 **Single Source of Truth: Metrik-spezifische Anzeige-Regeln**
 

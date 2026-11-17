@@ -1,5 +1,7 @@
 # Context: feat-3039-vergleich-kanal-layouts
 
+> **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Notiz ist Historie eines gebauten Schritts. Wo sie die Karte „Inhalt je Kanal und Fläche“ (eigene Liste je Kanal und Fläche, #3031–#3037, PR #3042, #3060) als künftiges Soll nennt, gilt das nicht mehr: ADR-0124 (PO 2026-11-17) ersetzt die Karte durch **eine** Tabelle „Was steht wo“ im Reiter Wetter. Aktueller Stand: ADR-0124 und `docs/context/einstellungen_neu.md`.
+
 ## Request Summary
 Issue #3039 (Vorlauf zu #3031, Teil von #2795 / Epic #2791): Der Ortsvergleich bekommt `display_config.channel_layouts` wie der Trip (`{email|telegram|sms: [{metric_id, enabled, use_friendly_format}]}`). Resolver und Vergleichs-Renderer (Mail, Telegram, SMS; Premium-SMS folgt der SMS) setzen Reihenfolge, Aus und Roh/Einfach je Kanal um. Bestandsvergleiche ohne `channel_layouts` rendern unverändert (Lesekompatibilität über `channel_active_metrics`, dann Grundauswahl). Teilmengen-Regel ADR-0050 bleibt.
 

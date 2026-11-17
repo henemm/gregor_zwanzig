@@ -1,5 +1,7 @@
 # Context: einstellungen-neu-neustart (#2913, Epic #2791)
 
+> **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Notiz ist Historie eines gebauten Schritts. Wo sie die Karte „Inhalt je Kanal und Fläche“ (eigene Liste je Kanal und Fläche, #3031–#3037, PR #3042, #3060) als künftiges Soll nennt, gilt das nicht mehr: ADR-0124 (PO 2026-11-17) ersetzt die Karte durch **eine** Tabelle „Was steht wo“ im Reiter Wetter. Aktueller Stand: ADR-0124 und `docs/context/einstellungen_neu.md`.
+
 ## Request Summary
 Neustart „Einstellungen neu“ (PO-Entscheidung 2026-11-10): erst ADR-0112 (Oberflächen nur aus Design-System-Bausteinen, fehlende zuerst ins System, kein Styling außerhalb der Tokens, Wächter blockt beim Merge), dann Wächter + automatische Elementliste aus dem Mockup, dann Bausteine, dann die Reiter Wetter und Zustellung als senkrechte Scheiben (a)–(e). Abnahme durch die AI gegen das Mockup (Trip und Orte, DE und EN), Meldung an den PO mit Bild erst bei Abschluss.
 

@@ -11,6 +11,8 @@ issue: 2795
 epic: 2791
 ---
 
+> Teilweise abgelöst durch [ADR-0124](../../adr/0124-was-steht-wo-eine-tabelle.md) (PO 2026-11-17, Issue #3122): Der hier geplante Nachfolger des Übergangsblocks („Teil 2“: Karte „Inhalt je Kanal und Fläche“ im Reiter Wetter, #3031–#3037, PR #3042) gilt nicht mehr. Nachfolger ist die Tabelle „Was steht wo“ im Reiter Wetter; mit ihrem Bau entfallen der Übergangsblock und `WeatherMetricsTab` (ADR-0124, Folgepflichten). Die Teilschritte 1a und 1b sind gebaut (Changelog); ihre Beschreibung und alle ACs bleiben unverändert und gelten bis zum Bau zu #3122. Teilschritt 1c (AC-41, #3036) ist nicht umgesetzt und wird mit dem Bau zu #3122 neu zugeschnitten.
+
 # Einstellungen neu S3b, Teil 1: Reiter „Zustellung“ (#2795, Teil B)
 
 ## Approval
@@ -82,7 +84,7 @@ Grundlagen: Ticket #2795 (Teil B, Abgleich V1–V15, A7–A13, U2, K13, AC-Skizz
 
 ### Out of Scope
 
-- **Teil 2 (eigener Workflow, Teil A des Tickets):** Inhalt je Kanal und Fläche im Reiter Wetter, 3-Tages-Ausblick-Vereinheitlichung, Umzug von Telegram-Kurzstil, Layout je Kanal, Mehrtages-Trend, Nachtblock, Report-Config. Diese Bedienelemente bleiben bis dahin **unverändert** im Reiter sichtbar (Übergangsblock, siehe Abschnitt „Übergangsblock“).
+- **Teil 2 (eigener Workflow, Teil A des Tickets):** Inhalt je Kanal und Fläche im Reiter Wetter, 3-Tages-Ausblick-Vereinheitlichung, Umzug von Telegram-Kurzstil, Layout je Kanal, Mehrtages-Trend, Nachtblock, Report-Config. Diese Bedienelemente bleiben bis dahin **unverändert** im Reiter sichtbar (Übergangsblock, siehe Abschnitt „Übergangsblock“). *Vermerk 2026-11-17: „Teil 2“ in dieser Form ist abgelöst durch ADR-0124 / #3122 (eine Tabelle „Was steht wo“ statt der Karte „Inhalt je Kanal und Fläche“); der Übergangsblock bleibt bis zu diesem Bau.*
 - **S5 (#2797):** „Test schicken“ im Kopf; das Beispiel-Alarm-Element bleibt bis dahin im Übergangsblock.
 - Neue Endpunkte, neue Kanäle, neue Alarmarten.
 - Anlegeseiten `TripNewEditor` / `CompareNewEditor`: bleiben auf `VersandTab`/`AlarmeTab`; kein von ihnen importierter Baustein wird in 1c entfernt.
@@ -149,6 +151,8 @@ Regeln: nur **geänderte** Felder werden gesendet (Diff gegen den zuletzt gelade
 
 ### 5 Übergangsblock (bis Teil 2 und S5)
 
+> **Hinweis (2026-11-17, ADR-0124, Issue #3122):** Der Übergangsblock ist so gebaut und gilt weiter. Sein hier genannter Nachfolger „Teil 2“ (Karte „Inhalt je Kanal und Fläche“) ist abgelöst: Nachfolger ist die Tabelle „Was steht wo“ im Reiter Wetter mit den Schaltern für Blöcke und Kanal-Einstellungen darunter (ADR-0124 Nr. 2, 6, 7). Mit dem Bau zu #3122 entfällt der Übergangsblock samt `WeatherMetricsTab`.
+
 Am Ende des Reiters, klar abgegrenzt (Überschrift über `zustellung.uebergang.*`, `data-abschnitt="uebergang"`): `WetterMetrikenVersandPanel` ohne den alten `<section id="versand">` mit den Abschnitten `layout_kanal`, `stundenverlauf`, `ausblick`, `report_config`, `nachtblock`, `sms_schwellen` (Telegram-Kurzstil, Layout je Kanal, Ausblick/Mehrtages-Trend, Nachtblock, E-Mail-Report-Config, SMS-Schwellen) und das **Beispiel-Alarm-Element** (bis S5). `sms_schwellen` und Empfindlichkeit entfallen laut Konzept mit der Ampel, sind im heutigen Stand aber noch im Reiter vorhanden (`weatherMetricsTabSections.ts`); sie werden deshalb **nicht still entfernt**, sondern bleiben hier bis Teil 2. Kein Bedienelement geht verloren. Der Anker `#versand` (Übersicht U2, „Setup abschließen“ K13, `subscriptionTabs.ts`) zeigt weiter auf den Reiter und scrollt zur Briefing-Zeiten-Karte.
 
 ### 6 Texte und Glossar
@@ -164,7 +168,7 @@ Alle neuen Nutzertexte nur über `frontend/src/lib/i18n/messages/{de,en}/zustell
 | Amtliche Warnungen/Radar, „Alarm ab je Metrik“ | wohnen im Reiter Wetter, im Reiter Zustellung **entfernt** |
 | AlertMetricChannelsBlock („Kanäle je Wettergröße“) | **entfällt** (PO), Auflösung per Migration |
 | Nächstes Briefing V13 | bleibt in der Übersicht |
-| Telegram-Kurzstil, Layout je Kanal, Ausblick, Nachtblock, Report-Config | Teil 2, bis dahin Übergangsblock |
+| Telegram-Kurzstil, Layout je Kanal, Ausblick, Nachtblock, Report-Config | Teil 2, bis dahin Übergangsblock (Vermerk 2026-11-17: Ziel ist jetzt die Tabelle „Was steht wo“ mit ihren Schaltern, ADR-0124 / #3122) |
 | Beispiel-Alarm A14 | S5, bis dahin Übergangsblock |
 
 ## Definition of Done
@@ -313,7 +317,7 @@ Alle neuen Nutzertexte nur über `frontend/src/lib/i18n/messages/{de,en}/zustell
 ## Known Limitations
 
 - Die Anlegeseiten zeigen bis zu einer späteren Scheibe weiter die alte Versand-/Alarm-Oberfläche.
-- Der Übergangsblock ist bewusst unfertig und wird mit Teil 2 (Inhalt je Kanal) und S5 (Test schicken) abgebaut.
+- Der Übergangsblock ist bewusst unfertig und wird mit Teil 2 (Inhalt je Kanal) und S5 (Test schicken) abgebaut. (Vermerk 2026-11-17: „Teil 2“ ist abgelöst durch ADR-0124 / #3122; der Abbau geschieht mit dem Bau der Tabelle „Was steht wo“.)
 - Das Raster ist Viertelstunde; feinere Zeiten sind kein Ziel.
 - Das Migrationsprotokoll (betroffene Abos von `scripts/migrate_2795_alert_metric_channels.py`) erscheint nur auf der Konsole; beim `--execute`-Lauf ist die Ausgabe zu sichern.
 - Bis Teilschritt 1b schreibt die alte Oberfläche weiter `alert_metric_channels`; das Feld hat keine Wirkung mehr.
@@ -330,3 +334,4 @@ Alle neuen Nutzertexte nur über `frontend/src/lib/i18n/messages/{de,en}/zustell
 - 2026-11-12: Initiale Fassung (Entwurf).
 - 2026-11-13: Teilschritt 1a (Backend) umgesetzt. Tatsächlicher Umfang: 21 Produktiv-Dateien, ca. +455/-162 Produktiv-LoC (Schätzung: ca. 12 Dateien). Inhalt: Briefing-Zeiten im Viertelstunden-Raster (00/15/30/45) statt Kappung auf die volle Stunde; unzulässige Minute → HTTP 400 (Trip-POST/PUT, Preset-PUT); Lesen normalisiert nicht mehr auf die Stunde (nicht rasterkonformer Altwert wird beim Lesen auf die vorige Viertelstunde abgerundet, nicht zurückgeschrieben). Cron `briefing_dispatch` alle 15 Minuten (vorher stündlich), Fälligkeit in Minuten, Nachholfenster 3 h, Dedupe je (Abo, Slot, Ortstag). Neues Feld `send_email` für Compare-Presets (Go `*bool` omitempty, Python `bool=True`, fehlend = true). Tech-Lead-Entscheidung: `send_email=false` nimmt nur die E-Mail aus dem Briefing und aus dem GEERBTEN Orts-Alarm-Satz; ein explizit gesetztes `alert_channels.email` bleibt wirksam (Briefing- und Alarm-Spalte der Kanal-Tabelle sind getrennt). `alert_metric_channels` („Kanäle je Wettergröße“) wirkt nicht mehr: Alarmziele ergeben sich nur aus `alert_channels` + `alert_channel_thresholds`, auch alte `alert_rules[].channels` wirken nicht mehr; Go hält das Feld lesetolerant. `trip_alert.py` musste nicht geändert werden (liest `alert_metric_channels` nicht mehr). Migration `scripts/migrate_2795_alert_metric_channels.py` (Read-Modify-Write, Sicherung vorher, idempotent). Nutzertext-Änderung: i18n `versand.json` `"{stunde}:00"` → `"{stunde}"` (Uhrzeit jetzt HH:MM; Golden-Texte zeigen „06:00“ statt „6:00“). Bis 1b schreibt die alte Oberfläche noch `alert_metric_channels`, ohne Wirkung. Neue Tests: Zwei-Nutzer-Test Kanal-Auflösung (`tests/test_2795_alert_metric_channels_ignoriert.py`, Ersatz für das gelöschte ac24), Go-Test Trip-POST 06:50 → 400 (`internal/handler/zustellung_2795_test.go`).
 - 2026-11-13: Teilschritt 1b (Neubau Reiter Zustellung, Frontend) umgesetzt und validiert. Tatsächlicher Umfang: 58 Dateien, +4672/-179 (davon Produktivcode und i18n 19 Dateien +1659/-73, Unit-Tests 26 Dateien +2039/-105, E2E 10 Dateien +949, Doku 3 Dateien); Schätzung war ca. 18 Dateien / +1500/-250 inkl. Tests. Hauptursache der Abweichung: Kanal-Tabelle mit allen Sperrzuständen je Kanal im Modell, Speicherer mit zwei Nutzlast-Teilen und Basisabgleich, eigener E2E-Satz für beide Kontexte. Keine Go-/Python-Änderung. Präzisierungen aus der Validierung: AC-33 gilt für Briefing- und Alarm-Felder; die Felder im Übergangsblock (Telegram-Kurzstil, Wetter-Metriken, Report-Config) behalten bis 1c ihre bisherigen Speicherwege (AC-30 „speichert wie vor der Änderung“). AC-35: Übergangsblock und Premium-SMS-Gate-Texte nutzen weiter `versand.*`/`alarme.*` (Abschnitt i18n: Altschlüssel bleiben). Für 1c notiert: veralteter Kommentar in `UebergangBlock.svelte` zur Aktivierungskarte; svelte-check unverändert unter Baseline (29/83 bei Baseline 34/132). Nachtrag nach Fix-Loop 2 (bestehende E2E auf Reiter Zustellung umgestellt, Cooldown überlebt Neuladen, Tippfläche Laufzeit-Knöpfe): Gesamtumfang 86 Dateien, +5460/-864 (E2E jetzt 33 Dateien +1677/-679). Validierung erneut: Frontend-Suite 9924 bestanden / 0 rot, svelte-check 29 Fehler (Baseline 34). AC-24: stille Stunden werden nur bei eingeschaltetem Schalter gespeichert, Ausschalten löscht beide Felder (bestehende Semantik #2211).
+- 2026-11-17: Vermerk aus #3122 (ADR-0124, PO 2026-11-17; ACs und gebaute Abschnitte unverändert): Der Nachfolger des Übergangsblocks ist nicht mehr „Teil 2“ (Karte „Inhalt je Kanal und Fläche“, #3031–#3037, PR #3042), sondern die Tabelle „Was steht wo“ im Reiter Wetter. Übergangsblock und `WeatherMetricsTab` entfallen mit dem Bau zu #3122; Teilschritt 1c (AC-41, #3036) ist bis dahin nicht umgesetzt.

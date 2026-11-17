@@ -634,6 +634,8 @@ mehrere Premium-SMS.
 
 ## 5b. Ortsvergleich-SMS: Zähler `?N` für fehlende Größen (Issue #1405 S3)
 
+> **Soll ab #3122 ([ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), PO 2026-11-17):** Der Bereich heißt künftig „Orte“, auch bei einem einzelnen Ort (Nr. 10). Der Anfang der SMS (heute `Vergleich TT.MM.:`) wird in der Spec zu #3122 neu festgelegt (ADR-0124, offene Punkte; Vorschlag `Orte 18.11.: …`, bei einem Ort `Tecklenburg 18.11.: …`). Die SMS-Liste wird die Spalte „SMS“ (mit Premium-SMS) der Tabelle „Was steht wo“ mit **einer** Reihenfolge für alle Stellen; die Kürzung vom Listenende (§6) bleibt (Nr. 3). Bis zum Bau gilt das hier Beschriebene; die Beispiele mit `Vergleich …` zeigen den heutigen Stand.
+
 Die Ortsvergleich-SMS (`render_compare_sms`, auch Premium-SMS und Telegram-Kurzform —
 derselbe Text) trägt im **Ortsteil** einen Zähler `?N` (N ≥ 1), **nur wenn** mindestens
 eine gewählte Größe an diesem Ort keinen darstellbaren Wert hat oder ihr Schlüssel
@@ -675,6 +677,8 @@ Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, wird so gekürzt (seit v
 2. **Die SMS-Liste von hinten:** es fällt immer die hinterste Listenzeile, und zwar als Ganzes — alle Token derselben Zeile (z.B. `N D` der Temperatur, `TH: TH+:` des Gewitters, `FN FD TF` der gefühlten Temperatur) fallen gemeinsam. „Liste" ist die SMS-Liste des Nutzers (Folge aus dem Editor, §2 Fix-#1677-Absatz); ohne Nutzerliste gilt die Standardfolge aus §2. Token, die nicht in der Liste stehen (stehen hinter ihr), fallen zuerst. Sicherheitsrelevante Größen bleiben dadurch erhalten, dass die Vorbelegung sie vorn führt. Trip und Ortsvergleich kürzen nach derselben Regel.
 3. Amtliche Bausteine zuletzt, nach aufsteigender Priorität: Fire (`Z:`, `MAX`, `M:`), dann Vigilance (`HR:TH:`/`VR:VT:`), dann der amtliche Warn-Block `!` (§3.4c) — einer bleibt immer stehen.
 4. `X?` (Warndaten nicht abrufbar) fällt nie.
+
+> **Soll ab #3122 (ADR-0124):** Name und SMS-Anfang bei Orten siehe Hinweis in §5b. Die Kürzung vom Listenende bestätigt ADR-0124 Nr. 3; dieser Abschnitt gilt unverändert.
 
 **Orts-Überlauf im Ortsvergleich (`render_compare_sms`, seit v2.43, #3047 Runde 7, AC-23, ADR-0095 — ein Vergleich braucht mehrere Orte):** Ist die SMS zu lang, wird in dieser Folge gekürzt:
 1. die Zellen **aller** gezeigten Orte vom Listenende, mit demselben Zeichen-Budget je Ort (verdrängte Zellen als `+N` im Ortsteil), bis je Ort nur noch die erste Listenzeile steht;

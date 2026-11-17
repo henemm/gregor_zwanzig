@@ -9,6 +9,8 @@ workflow: feat-3039-vergleich-kanal-layouts
 tags: [vergleich, kanaele, channel_layouts, renderer, adr-0050, adr-0095]
 ---
 
+> **Hinweis (2026-11-17, [ADR-0124](../../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Spec ist gebaut (`channel_layouts` der Orte) und gilt bis zum Bau zu #3122. Die Frontend-Karte #3031 (PR #3042), für die sie der Vorlauf war, wird so nicht gebaut. ADR-0124 ersetzt „eigene Liste je Kanal“ durch **eine** Tabelle „Was steht wo“ mit einer Reihenfolge für alle Stellen; das gespeicherte Format wird dann neu geschnitten, Bestandsdaten bleiben per Read-Modify-Write mit Merge erhalten. ACs unverändert.
+
 # Ortsvergleich: Aus und Roh/Einfach je Kanal (channel_layouts)
 
 ## Approval

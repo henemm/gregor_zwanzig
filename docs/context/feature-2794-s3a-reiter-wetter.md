@@ -1,5 +1,7 @@
 # Context: feature-2794-s3a-reiter-wetter (Epic #2791, Scheibe S3a)
 
+> **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Notiz ist Historie eines gebauten Schritts. Wo sie die Karte „Inhalt je Kanal und Fläche“ (eigene Liste je Kanal und Fläche, #3031–#3037, PR #3042, #3060) als künftiges Soll nennt, gilt das nicht mehr: ADR-0124 (PO 2026-11-17) ersetzt die Karte durch **eine** Tabelle „Was steht wo“ im Reiter Wetter. Aktueller Stand: ADR-0124 und `docs/context/einstellungen_neu.md`.
+
 ## Request Summary
 Der Hub von Trip und Orten bekommt nach ADR-0109 die Reiter Übersicht · Etappen/Orte · Wetter · Zustellung. S3a baut den Reiter **Wetter** (Vorlage-Karte, Speichern-Dialog, „Alarm ab für alle“, Metrik-Zeilen mit Ampel-Leiste und „Grenzen ändern“, „Nicht im Briefing“, Amtliche Warnungen & Radar, Anpassen/Tagesfenster) und die Reiterleiste nach Atomic-Design-Soll, entfernt Wertebereiche/Alarme/Layout, leitet alte Links um. Ohne „Inhalt je Kanal und Fläche“ (S3b).
 Quellen: Issue #2794 (Umfang 1–12, Abgleich-Tabelle mit PO-Entscheidungen), `docs/context/einstellungen_neu.md` §4–§8, Mockup `docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html`.

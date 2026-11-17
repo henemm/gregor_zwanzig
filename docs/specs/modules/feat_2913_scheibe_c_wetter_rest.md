@@ -10,6 +10,8 @@ workflow: feature-2913-scheibe-c
 issue: 2913
 ---
 
+> **Hinweis (2026-11-17, [ADR-0124](../../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Spec ist gebaut; ihre ACs bleiben unverändert. Wo sie auf die Karte „Inhalt je Kanal und Fläche“ (S3b #2795, Mockup Fassung 3) als Folgearbeit verweist, gilt das nicht mehr: ADR-0124 ersetzt die Karte durch die Tabelle „Was steht wo“ im Reiter Wetter (Grundauswahl nur in den Metrik-Zeilen, Spalten je Stelle, eine Reihenfolge).
+
 # Einstellungen neu, Reiter Wetter, Scheibe (c): „Nicht im Briefing“, Warnungen, Radar, Anpassen (#2913)
 
 ## Approval

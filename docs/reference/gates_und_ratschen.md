@@ -121,6 +121,8 @@ Möglichst viel Code zwischen Trip und Ortsvergleich teilen; der Compare-Editor 
 - **Default-Fehler:** Eine neue Compare-Komponente, zu der ein Trip-Pendant existiert (oder umgekehrt), ist ein Verstoß — Ausnahme nur mit dokumentierter Begründung in der Spec. Anti-Pattern: #1170.
 - **Prüfung:** Bei jeder Editor-/Detail-Arbeit ist „hätte das ein geteilter Baustein sein müssen?" expliziter Adversary-/Review-Punkt. Die Pendant-Sperre (unten) setzt das für Neuanlagen am Commit durch.
 
+> **Hinweis (2026-11-17, ADR-0124, Issue #3122):** ADR-0124 bestätigt die Teilung (ADR-0097) und wendet sie auf den Reiter Wetter an: die Tabelle „Was steht wo“ ist für Trip und Orte dieselbe Oberfläche, mit einem Datenmodell, einem Speicherweg und einem Resolver. Der Stundenverlauf (nur Orte) wird dort eine Spalte; `WeatherMetricsTab` mit seinen getrennten Trip-/Orte-Zweigen entfällt mit dem Bau (ADR-0124, Folgepflichten). Ob die compare-eigene Steuerung `compare/CompareHourlyLayoutControls.svelte` daneben bestehen bleibt, legt die Spec zu #3122 fest. Der Bereich heißt dann einheitlich „Orte“ (ADR-0124 Nr. 10); „Ortsvergleich“ und „Compare“ in diesem Dokument benennen den heutigen Stand und die Code-Namen. Die Liste „Compare-eigen dürfen NUR sein“ bleibt unverändert.
+
 **Mechanik:**
 
 `pendant_gate.py` blockiert jeden Commit, der eine **neu angelegte** Datei in einem einseitigen

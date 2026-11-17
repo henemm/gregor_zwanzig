@@ -30,6 +30,9 @@ Seit Epic #2791 S3a Teil-PR 2 (2026-11-09) hat die Leiste **vier Reiter** (Trip 
 - **Versand** ist ein Abschnitt im Reiter Zustellung (Anker `#versand`, Baustein
   `shared/zustellung-tab/ZustellungTab.svelte`, `context="route"|"vergleich"`; seit #2795 S3b Teilschritt 1b
   (2026-11-13) neu gebaut, Altbausteine nur noch im Übergangsblock).
+  *Soll ab #3122 (ADR-0124, PO 2026-11-17):* Layout je Kanal, Stundenverlauf, Ausblick und Nachtblock ziehen aus dem
+  Übergangsblock in den Reiter Wetter (Tabelle „Was steht wo“ mit Schaltern darunter); der Übergangsblock entfällt
+  mit diesem Bau. Bis dahin gilt die Zuordnung der Tabelle oben.
   Beim Ortsvergleich steht dort zusätzlich die Aktivierungs-Karte (Pausieren/Aktivieren).
 - **Vorschau** entfällt ersatzlos (samt Endpoint `GET /api/briefings/{id}/preview` und den verwaisten Resten
   `CompareChatBubble`/`CompareChannelSwitch`, PO-Entscheid 2026-10-22). Es bleibt nur die Alarm-Vorschau im Reiter
