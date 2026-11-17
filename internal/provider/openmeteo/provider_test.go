@@ -79,27 +79,37 @@ func TestSelectModel_Tokyo_ReturnsECMWF(t *testing.T) {
 }
 
 // =============================================================================
-// Tests 6-7: FetchForecast — Integration (echte API-Calls)
+// Tests 6-7: FetchForecast — gegen lokalen Fixture-Server (Issue #3106)
+// Die Live-Variante gegen die echte API steht in provider_live_test.go
+// (Build-Tag integration, laeuft nicht im Kern-CI).
 // =============================================================================
 
 func TestFetchForecast_Mallorca48h_ReturnsTimeseries(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test in short mode")
-	}
-	// GIVEN: OpenMeteo Provider mit Default-Config
+	// GIVEN: OpenMeteo Provider, Basis-URLs zeigen auf den Fixture-Server
 	// WHEN: FetchForecast fuer Mallorca (39.7, 3.0), 48h
 	// THEN: Timeseries mit 48 Datenpunkten, Meta ausgefuellt
-	p := NewProvider(ProviderConfig{
-		BaseURL:    "https://api.open-meteo.com",
-		AQURL:      "https://air-quality-api.open-meteo.com",
-		TimeoutSec: 30,
-		Retries:    5,
-		CacheDir:   t.TempDir(),
-	})
-	ts, err := p.FetchForecast(39.7, 3.0, 48)
+	fake := neuerOpenMeteoFixtureServer(t)
+	ts, err := fake.provider(t).FetchForecast(39.7, 3.0, 48)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	pruefeMallorcaZeitreihe(t, ts)
+	fake.pruefeAnfragen(t)
+	if ts.Meta.Model != "meteofrance_arome" {
+		t.Errorf("expected meta.model 'meteofrance_arome', got '%s'", ts.Meta.Model)
+	}
+	if len(ts.Data) != 48 {
+		t.Errorf("expected 48 data points from 48h fixture, got %d", len(ts.Data))
+	}
+	if ts.Data[12].UvIndex == nil {
+		t.Error("expected uv_index from air-quality fixture merged at 12:00")
+	}
+}
+
+// pruefeMallorcaZeitreihe enthaelt die Zusicherungen, die Fixture- und
+// Live-Variante gemeinsam haben.
+func pruefeMallorcaZeitreihe(t *testing.T, ts *model.Timeseries) {
+	t.Helper()
 	if ts == nil {
 		t.Fatal("expected non-nil timeseries")
 	}
@@ -129,26 +139,24 @@ func TestFetchForecast_Mallorca48h_ReturnsTimeseries(t *testing.T) {
 }
 
 func TestFetchForecast_SetsTimezoneCorrectly(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test in short mode")
-	}
-	// GIVEN: OpenMeteo Provider
-	// WHEN: FetchForecast fuer Mallorca (39.7, 3.0)
-	// THEN: Timezone-Feld ist gesetzt (z.B. "Europe/Madrid")
-	p := NewProvider(ProviderConfig{
-		BaseURL:    "https://api.open-meteo.com",
-		AQURL:      "https://air-quality-api.open-meteo.com",
-		TimeoutSec: 30,
-		Retries:    5,
-		CacheDir:   t.TempDir(),
-	})
-	ts, err := p.FetchForecast(39.7, 3.0, 24)
+	// GIVEN: OpenMeteo Provider, Basis-URLs zeigen auf den Fixture-Server
+	// WHEN: FetchForecast fuer Mallorca (39.7, 3.0), 24h
+	// THEN: Timezone-Feld ist gesetzt ("Europe/Madrid"), auf 24h gekuerzt
+	fake := neuerOpenMeteoFixtureServer(t)
+	ts, err := fake.provider(t).FetchForecast(39.7, 3.0, 24)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if ts.Timezone == "" {
 		t.Error("expected timezone to be set, got empty string")
 	}
+	if ts.Timezone != "Europe/Madrid" {
+		t.Errorf("expected timezone 'Europe/Madrid' for Mallorca, got '%s'", ts.Timezone)
+	}
+	if len(ts.Data) != 24 {
+		t.Errorf("expected 48h fixture truncated to 24 points, got %d", len(ts.Data))
+	}
+	fake.pruefeAnfragen(t)
 }
 
 // =============================================================================

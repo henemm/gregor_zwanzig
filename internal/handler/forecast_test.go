@@ -29,6 +29,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -113,6 +114,39 @@ func neuerCoreStub(t *testing.T, abgelehnt ...string) *coreStub {
 
 func (c *coreStub) url() string { return c.server.URL }
 
+// neuerOpenMeteoFixture vertritt die Open-Meteo-API durch einen echten lokalen
+// HTTP-Server mit der aufgezeichneten Mallorca-Antwort des Provider-Pakets
+// (Issue #3106). Forecast (/v1/meteofrance) und UV (/v1/air-quality) bekommen
+// ihren Originalkoerper; jeder andere Pfad ist ein Testfehler.
+func neuerOpenMeteoFixture(t *testing.T) *httptest.Server {
+	t.Helper()
+	lies := func(name string) []byte {
+		data, err := os.ReadFile(filepath.Join("..", "provider", "openmeteo", "testdata", name))
+		if err != nil {
+			t.Fatalf("Fixture %s nicht lesbar: %v", name, err)
+		}
+		return data
+	}
+	koerper := map[string][]byte{
+		"/v1/meteofrance": lies("meteofrance_mallorca_48h.json"),
+		"/v1/air-quality": lies("air_quality_mallorca_48h.json"),
+	}
+	// Diagnose-Zeilen des Providers (GZ_DATA_DIR/diagnostics) ins TempDir.
+	t.Setenv("GZ_DATA_DIR", t.TempDir())
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, ok := koerper[r.URL.Path]
+		if !ok {
+			t.Errorf("unerwartete Open-Meteo-Anfrage: %s", r.URL.String())
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
 func (c *coreStub) aufrufe() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -161,17 +195,17 @@ func dekodiere(t *testing.T, rec *httptest.ResponseRecorder) map[string]interfac
 // =============================================================================
 
 func TestForecastHandler_ValidRequest_Returns200(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test in short mode")
-	}
-	// GIVEN: ForecastHandler mit echtem Provider und erlaubender Reservierung
+	// GIVEN: ForecastHandler mit echtem Provider und erlaubender Reservierung;
+	// Open-Meteo vertritt ein lokaler Server mit aufgezeichneter Antwort
+	// (Issue #3106: kein Netz im Kern-CI, die Live-API lieferte dort 429).
 	// WHEN: GET /api/forecast?lat=39.7&lon=3.0&hours=24 mit Auth-Kontext
 	// THEN: 200 OK mit gueltigem JSON
+	om := neuerOpenMeteoFixture(t)
 	p := openmeteo.NewProvider(openmeteo.ProviderConfig{
-		BaseURL:    "https://api.open-meteo.com",
-		AQURL:      "https://air-quality-api.open-meteo.com",
-		TimeoutSec: 30,
-		Retries:    5,
+		BaseURL:    om.URL,
+		AQURL:      om.URL,
+		TimeoutSec: 5,
+		Retries:    1,
 		CacheDir:   t.TempDir(),
 	})
 	stub := neuerCoreStub(t)
@@ -192,6 +226,9 @@ func TestForecastHandler_ValidRequest_Returns200(t *testing.T) {
 	}
 	if _, ok := result["data"]; !ok {
 		t.Error("expected 'data' key in response")
+	}
+	if daten, _ := result["data"].([]interface{}); len(daten) != 24 {
+		t.Errorf("expected 24 data points for hours=24, got %d", len(daten))
 	}
 	if _, ok := result["timezone"]; !ok {
 		t.Error("expected 'timezone' key in response")
