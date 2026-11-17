@@ -1,0 +1,75 @@
+{
+  "trip": {
+    "id": "neu",
+    "name": "Neu",
+    "stages": [
+      {
+        "id": "etappe",
+        "name": "A",
+        "date": "2026-11-20",
+        "waypoints": []
+      }
+    ],
+    "display_config": {
+      "channels": {
+        "email": true
+      },
+      "metrics": [],
+      "metric_alert_levels": {}
+    },
+    "corridors": [],
+    "official_alerts_enabled": true,
+    "official_warnings": {
+      "enabled": true
+    },
+    "alert_cooldown_minutes": null,
+    "alert_quiet_from": null,
+    "alert_quiet_to": null,
+    "alert_channels": {
+      "email": true,
+      "telegram": true,
+      "sms": false,
+      "premium_sms": false
+    },
+    "alert_channel_thresholds": {
+      "email": "LOW",
+      "telegram": "LOW",
+      "sms": "LOW",
+      "premium_sms": "LOW"
+    }
+  },
+  "vergleich": {
+    "name": "",
+    "location_ids": [],
+    "profil": "wandern",
+    "schedule": "daily",
+    "official_alerts_enabled": true,
+    "radar_alert_enabled": false,
+    "hourly_enabled": true,
+    "outlook_enabled": true,
+    "official_alert_triggers_enabled": true,
+    "send_telegram": false,
+    "send_sms": false,
+    "send_premium_sms": false,
+    "alert_channels": {
+      "telegram": true,
+      "sms": false,
+      "email": true,
+      "premium_sms": false
+    },
+    "official_warnings": {
+      "enabled": true
+    },
+    "morning_enabled": true,
+    "morning_time": "07:00:00",
+    "evening_enabled": false,
+    "evening_time": "18:00:00",
+    "day_window_start_hour": 4,
+    "day_window_end_hour": 19,
+    "empfaenger": [],
+    "corridors": [],
+    "display_config": {
+      "region": ""
+    }
+  }
+}

@@ -8,15 +8,18 @@ Briefing UND als Alarm; beide Felder werden ausdruecklich ``true`` geschrieben.
 Echter Weg: die Anlege-Funktionen des Frontends (``tripNewLogic.ts``
 ``buildCreateTripPayload`` mit dem Start-Alarmzustand, wie ``TripNewEditor``
 ihn sendet; ``compareEditorSave.ts`` ``buildNewComparePresetPayload`` mit dem
-Standard-Feldsatz) laufen per Node; ihr POST-Rumpf geht in ``load_trip`` ->
-Zeitplaner -> Transport-Mitschrift (zwei Nutzer, DE/EN) bzw. in die geteilte
-Lese-Regel, die Briefing und Alarm steuert. Go-Anlage: siehe
+Standard-Feldsatz) bauen den POST-Rumpf. Er liegt als versionierte Fixture
+``tests/fixtures/einstellung_gleich_mail/neuanlage_p11_payload.json`` vor;
+``frontend/src/lib/components/trip-new/__tests__/p11_neuanlage_payload_fixture.test.ts``
+(CI-Job ``frontend-test``) haelt sie byte-gleich zur echten Frontend-Ausgabe.
+So laeuft diese Datei im CI-Job ``test`` ohne Node. Der Rumpf geht in
+``load_trip`` -> Zeitplaner -> Transport-Mitschrift (zwei Nutzer, DE/EN) bzw.
+in die geteilte Lese-Regel, die Briefing und Alarm steuert. Go-Anlage: siehe
 ``internal/handler/neuanlage_amtliche_warnungen_test.go``.
 """
 from __future__ import annotations
 
 import json
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -29,30 +32,15 @@ from tests.tdd.test_einstellung_gleich_mail_runde7_katalog import (
     WARN_TEXT, _trip_roh, _zeitplaner_senden,
 )
 
-FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
-
-_SKRIPT = """
-import * as T from './src/lib/components/trip-new/tripNewLogic.ts';
-import * as C from './src/lib/components/compare/compareEditorSave.ts';
-const alarm = T.initialCreateTripAlarmState();
-const trip = T.buildCreateTripPayload({ name: 'Neu', startDate: '2026-11-20',
-  stages: [{ id: 'a', name: 'A', waypoints: [] }], channels: { email: true }, alarm,
-  officialAlertsEnabled: alarm.officialWarningsEnabled });
-const f = C.compareFeldsatzStandard();
-const vergleich = C.buildNewComparePresetPayload({ ...f, alertChannels: undefined });
-console.log(JSON.stringify({ trip, vergleich }));
-"""
+FIXTURE = (Path(__file__).resolve().parents[1] / "fixtures" / "einstellung_gleich_mail"
+           / "neuanlage_p11_payload.json")
 
 FELDER = ("official_alerts_enabled", "official_warnings", "official_alert_triggers_enabled")
 
 
 @pytest.fixture(scope="module")
 def anlage() -> dict:
-    out = subprocess.run(
-        ["node", "--import", "./test-lib-loader.mjs", "--experimental-strip-types",
-         "--input-type=module", "-e", _SKRIPT],
-        cwd=FRONTEND, capture_output=True, text=True, check=True)
-    return json.loads(out.stdout.strip().splitlines()[-1])
+    return json.loads(FIXTURE.read_text(encoding="utf-8"))
 
 
 @pytest.mark.parametrize("art", ["trip", "vergleich"])
