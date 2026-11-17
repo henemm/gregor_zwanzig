@@ -15,6 +15,7 @@
 	import { onMount } from 'svelte';
 	import { Card, Dot, Eyebrow } from '$lib/components/atoms';
 	import BriefingHistory from '$lib/components/shared/BriefingHistory.svelte';
+	import Bereichskopf from '$lib/components/molecules/Bereichskopf.svelte';
 	import { api } from '$lib/api.js';
 	import type { Ampel, ComparePreset, Trip } from '$lib/types';
 	import { altSchluesselAusKatalog, vorlagenAusTemplates, type AltSchluessel, type VorlagenAmpeln } from '../wetter-tab/ampelModell.ts';
@@ -113,6 +114,8 @@
 </script>
 
 <div style="display: flex; flex-direction: column; gap: 22px">
+	<!-- #3006: Bereichskopf oben, für Trip und Orts-Briefing derselbe (ADR-0097). -->
+	<Bereichskopf titel={$t('aktionen.reiter.uebersicht')} erklaerung={$t('bausteine.hub_uebersicht.kopf_erklaer')} testid="uebersicht" />
 	<!-- Kennzahlen — mobil 4 im 2×2 (Soll: screen-compare-detail-mobile.jsx:79-85), Desktop 5 in einer Leiste. -->
 	{#if isMobileViewport}
 		<div data-testid={modell.rasterTestid} class="hub-mobile-grid">

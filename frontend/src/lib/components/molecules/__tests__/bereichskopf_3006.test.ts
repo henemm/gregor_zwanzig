@@ -133,9 +133,14 @@ const ENTSPERRT: [string, string][] = [
 	['let layoutHydrated = $state(false);', 'let layoutHydrated = $state(true);']
 ];
 
-async function tripReiter(tab: string, lang: Lang, trip: unknown = TRIP): Promise<Knoten> {
+// `ohneTrip`: Zustand „Trip lädt noch“ — TripTabs bekommt `trip` nicht gesetzt (Prop `trip?: Trip`).
+// Bewusst ein Schalter statt eines Default-Parameters, denn ein übergebenes `undefined` würde
+// den Default (`TRIP`) auslösen und den Ladezustand nie rendern (#3006 Adversary F001).
+async function tripReiter(tab: string, lang: Lang, ohneTrip = false): Promise<Knoten> {
 	const T = await lade(TRIP_HUB, [[TRIP_TAB_START, `let activeTab = $state<string>('${tab}');`]]);
-	const b = mitSprache(lang, () => baum(render(T, { props: { initialTab: tab, trip } }).body));
+	const props: Record<string, unknown> = { initialTab: tab };
+	if (!ohneTrip) props.trip = TRIP;
+	const b = mitSprache(lang, () => baum(render(T, { props }).body));
 	const panel = mitTestid(b, `trip-detail-panel-${tab}`);
 	assert.equal(panel.length, 1, `Messaufbau: Trip-Reiter ${tab} nicht aktiv gerendert`);
 	return panel[0];
@@ -231,7 +236,14 @@ describe('#3006 AC-4–AC-13: Kopf je Reiter aus dem Katalog (DE/EN)', () => {
 		});
 		test(`AC-5 (${lang}): Trip-Etappen — geladen und noch ladend`, async () => {
 			pruefeKopf(await tripReiter('etappen', lang), 'etappen', lang, `Trip/Etappen ${lang}`);
-			pruefeKopf(await tripReiter('etappen', lang, undefined), 'etappen', lang, `Trip/Etappen ohne Trip ${lang}`);
+			const mit = await tripReiter('etappen', lang);
+		const ohne = await tripReiter('etappen', lang, true);
+		// Messaufbau: ohne Trip fehlt der Etappen-Inhalt wirklich (das Panel hat weniger direkte Kinder).
+		assert.ok(
+			ohne.kinder.length < mit.kinder.length,
+			`Messaufbau: ohne Trip wird trotzdem Etappen-Inhalt gerendert (${ohne.kinder.length} vs. ${mit.kinder.length} Kinder)`
+		);
+		pruefeKopf(ohne, 'etappen', lang, `Trip/Etappen ohne Trip ${lang}`);
 		});
 		test(`AC-6 (${lang}): Trip-Wetter`, async () => {
 			const t = pruefeKopf(await tripReiter('wetter', lang), 'wetter', lang, `Trip/Wetter ${lang}`);

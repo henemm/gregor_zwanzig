@@ -43,6 +43,8 @@
 	"vergleich.stundenverlauf.titel": "Stundenverlauf",
 	"vergleich.stundenverlauf.nicht_in_grundauswahl": "gesperrt: nicht in der Grundauswahl oben",
 	"vergleich.orte.weitere": "Weitere",
+	"vergleich.hub.kopf.orte_erklaer": "Ein Ort ergibt ein Orts-Briefing. Ab zwei Orten kommt die Vergleichstabelle dazu, ohne Rangfolge.",
+	"vergleich.hub.kopf.ort_hinzufuegen": "+ Ort hinzufügen",
 	"vergleich.orte.min_erforderlich": "min. 2 erforderlich",
 	"vergleich.orte.passt": "passt",
 	"vergleich.orte.viel": "viel — Empfehlung 3–5",

@@ -35,6 +35,7 @@
 	"bausteine.etappe.eta": "ETA {zeit}",
 	"bausteine.etappe.wegpunkt": "Wegpunkt {nr}",
 	"bausteine.vergleich.orte_anzahl": "{anzahl} Orte",
+	"bausteine.hub_uebersicht.kopf_erklaer": "Unverändert: Stand, letzte Briefings, nächster Versand.",
 	"bausteine.setup.fortschritt": "{erledigt} von {gesamt} Schritten",
 	"bausteine.setup.weiter_bei": "Weiter bei:",
 	"bausteine.setup.bereit": "Bereit zum Aktivieren",

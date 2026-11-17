@@ -282,12 +282,14 @@ test.describe('Ortsvergleich: Orte-Karte und Orte-Reiter (compare-eigen)', () =>
 		await expect(page.locator('[data-testid="compare-detail-stat-kanaele"]:visible')).toContainText('Email');
 	});
 
-	test('S8c AC-9: Orte-Reiter zeigt „Verglichene Orte" und den Desktop-Sortier-Hinweis', async ({ page }) => {
+	// #3006: „Verglichene Orte“ ist durch den Bereichskopf „Orte“ (Mockup Fassung 3) ersetzt.
+	test('S8c AC-9: Orte-Reiter zeigt den Bereichskopf „Orte" und den Desktop-Sortier-Hinweis', async ({ page }) => {
 		const hub = await aktiverHub(page, 'vergleich');
 		await openHub(page, 'vergleich', hub.id, { tab: 'orte' });
 		const panel = page.locator('[data-testid="compare-detail-panel-orte"]:visible').first();
 		await expect(panel).toBeVisible({ timeout: 10_000 });
-		await expect(panel.getByText('Verglichene Orte')).toBeVisible();
+		await expect(panel.locator('[data-testid="orte-titel"]')).toHaveText('Orte');
+		await expect(panel.getByText('Verglichene Orte')).toHaveCount(0);
 		await expect(panel.getByText('Reihenfolge = Spalten im Briefing · ziehen zum Sortieren')).toBeVisible();
 	});
 });

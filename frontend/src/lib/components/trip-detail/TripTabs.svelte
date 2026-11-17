@@ -15,6 +15,7 @@
 	import type { Trip, Stage } from '$lib/types';
 	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
+	import Bereichskopf from '$lib/components/molecules/Bereichskopf.svelte';
 	import { subscriptionTabs, resolveTab, bereinigteTabAdresse, versandSprungStart } from '../shared/subscriptionTabs.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { t, locale, type MessageKey } from '$lib/i18n';
@@ -209,6 +210,10 @@
 						</HubUebersicht>
 					</HubReiterflaeche>
 				{:else if tab.value === 'etappen'}
+					<!-- #3006: Bereichskopf vor der Lade-Weiche — steht auch, solange der Trip noch lädt. -->
+					<div class="etappen-kopf">
+						<Bereichskopf titel={$t('trip.hub.kopf.etappen_titel')} erklaerung={$t('trip.hub.kopf.etappen_erklaer')} testid="etappen" />
+					</div>
 					{#if trip}
 						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} />
 					{/if}
@@ -225,3 +230,9 @@
 	{/each}
 </div>
 
+<style>
+	/* #3006: Abstand zwischen Bereichskopf und Etappen-Inhalt. */
+	.etappen-kopf {
+		margin-bottom: var(--g-s-4);
+	}
+</style>

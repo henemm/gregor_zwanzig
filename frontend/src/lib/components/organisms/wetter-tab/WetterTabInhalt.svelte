@@ -12,6 +12,7 @@
 	// shared/WetterTab.svelte. Ladeanzeige aus dem Atom Skelett, „Erneut laden“ als Btn.
 	import { onMount } from 'svelte';
 	import { Btn, Skelett } from '$lib/components/atoms';
+	import Bereichskopf from '$lib/components/molecules/Bereichskopf.svelte';
 	import { api } from '$lib/api';
 	import type { ComparePreset, MetricPreset, Trip } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -222,10 +223,8 @@
 </script>
 
 <section class="wt" data-testid="wetter-tab" data-context={context}>
-	<header class="wt-kopf" data-abschnitt="abschnittskopf">
-		<h2 data-testid="wetter-tab-titel">{$t('wetter.kopf.titel')}</h2>
-		<p data-testid="wetter-tab-erklaer">{$t('wetter.kopf.erklaerung')}</p>
-	</header>
+	<!-- #3006: Bereichskopf aus dem Baustein, vor der Lade-/Fehler-Weiche (genau ein Marker). -->
+	<Bereichskopf titel={$t('wetter.kopf.titel')} erklaerung={$t('wetter.kopf.erklaerung')} testid="wetter-tab" />
 
 	{#if phase === 'laedt'}
 		<!-- #2966 AC-2: Laden-Text sichtbar und einmal vorgelesen; das Skelett ist nur Optik (aria-hidden). -->
@@ -308,24 +307,6 @@
 		/* #2913 Fix Metrik-Liste (AC-3): kein seitliches Innen-Padding zusätzlich zu <main>. */
 		padding: var(--g-size-28px) 0 var(--g-size-60px);
 		color: var(--g-ink);
-	}
-	/* #2980 AC-28 (Mockup .sectionh, Z. 442): Trennlinie --g-rule-soft mit 12 px Abstand darüber. */
-	.wt-kopf {
-		padding-bottom: var(--g-s-3);
-		border-bottom: 1px solid var(--g-rule-soft);
-	}
-	.wt-kopf h2 {
-		margin: 0 0 var(--g-s-1);
-		font-size: var(--g-size-22px);
-		font-weight: 600;
-		color: var(--g-ink);
-	}
-	/* #2980 AC-28: Erklärtext höchstens 68ch, 13 px in --g-ink-3. */
-	.wt-kopf p {
-		margin: 0;
-		max-width: 68ch;
-		font-size: var(--g-text-sm);
-		color: var(--g-ink-3);
 	}
 	.wt-karte {
 		border: 1px solid var(--g-rule);

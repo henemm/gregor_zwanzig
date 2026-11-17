@@ -11,7 +11,8 @@
 	//
 	// Spec: docs/specs/modules/issue_517_compare_hub.md
 
-	import { Dot, Pill, Btn, Card, SectionH } from '$lib/components/atoms';
+	import { Dot, Pill, Btn, Card } from '$lib/components/atoms';
+	import Bereichskopf from '$lib/components/molecules/Bereichskopf.svelte';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	// Issue #2794 S3a Teil-PR 3 (AC-38): Reiter Wetter = genau EIN WetterTab (Ampel).
 	import WetterTab from '$lib/components/shared/WetterTab.svelte';
@@ -733,23 +734,17 @@
 	{#if activeTab === 'orte'}
 		<div data-testid="compare-detail-panel-orte">
 			<HubReiterflaeche testid="compare-detail-orte-reiterflaeche">
-			<!-- Issue #1256 S8c (AC-9): Section-Rahmen ueber SectionH-Atom + Card
-			     um Liste UND Footer (Soll Desktop: jsx:197-216; Soll Mobil: CDM:110).
-			     Fix-Loop 1 (F002): mobil ueber `eyebrow` statt `title` — kompakter
-			     CDM_SectionH-Look (Soll: screen-compare-detail-mobile.jsx:267-274). -->
-			{#if isMobileViewport}
-				<SectionH eyebrow={$t('vergleich.hub.verglichene_orte')}>
-					{#snippet right()}
-						<span class="hub-section-hint">{$t('vergleich.hub.ziehen_sortieren')}</span>
+			<!-- #3006 (Mockup Fassung 3, viewOrte): Bereichskopf „Orte“ mit „+ Ort hinzufügen“ rechts
+			     (gleicher Handler wie zuvor der Knopf unten in der Card). Die frühere SectionH
+			     „Verglichene Orte“ entfällt; der Reihenfolge-Hinweis gehört zur Liste (#3007). -->
+			<div class="hub-orte-kopf">
+				<Bereichskopf titel={$t('aktionen.reiter.orte')} erklaerung={$t('vergleich.hub.kopf.orte_erklaer')} testid="orte">
+					{#snippet aktion()}
+						<Btn variant="ghost" size="sm" data-testid="hub-orte-add" onclick={toggleAddPanel}>{$t('vergleich.hub.kopf.ort_hinzufuegen')}</Btn>
 					{/snippet}
-				</SectionH>
-			{:else}
-				<SectionH title={$t('vergleich.hub.verglichene_orte')}>
-					{#snippet right()}
-						<span class="hub-section-hint">{$t('vergleich.hub.reihenfolge_hinweis')}</span>
-					{/snippet}
-				</SectionH>
-			{/if}
+				</Bereichskopf>
+			</div>
+			<p class="hub-section-hint hub-orte-hinweis">{isMobileViewport ? $t('vergleich.hub.ziehen_sortieren') : $t('vergleich.hub.reihenfolge_hinweis')}</p>
 			<Card padding={0} style="overflow: hidden">
 				{#if resolvedLocations.length === 0}
 					<p class="empty-state" style="padding: 0 16px">{$t('vergleich.hub.keine_orte')}</p>
@@ -780,9 +775,6 @@
 						{/snippet}
 					</SortableList>
 				{/if}
-				<div style="padding: 14px">
-					<Btn variant="ghost" size="sm" data-testid="hub-orte-add" onclick={toggleAddPanel}>{$t('listen.orte.hinzufuegen')}</Btn>
-				</div>
 			</Card>
 			{#if addPanelOpen}
 				<div class="hub-add-panel" data-testid="hub-orte-panel">
@@ -817,6 +809,12 @@
 					enqueueHubWrite={reiheHubSchreibvorgangEin}
 					onCompareUpdate={uebernehmeWetterAntwort}
 				/>
+			{:else}
+				<!-- #3006 (AC-15): während der Hydrations-Sperre steht der Kopf schon; nach dem Laden
+				     bringt ihn der Reiter selbst mit (genau ein Marker). -->
+				<div class="hub-kopf-sperre hub-kopf-sperre-wetter">
+					<Bereichskopf titel={$t('wetter.kopf.titel')} erklaerung={$t('wetter.kopf.erklaerung')} testid="wetter-tab" />
+				</div>
 			{/if}
 		</div>
 	{/if}
@@ -851,6 +849,11 @@
 					onCompareUpdate={uebernehmeHubAntwort}
 					{versandSprung}
 				/>
+			{:else}
+				<!-- #3006 (AC-15): Kopf schon während der Hydrations-Sperre, danach aus dem Reiter. -->
+				<div class="hub-kopf-sperre hub-kopf-sperre-zustellung">
+					<Bereichskopf titel={$t('zustellung.kopf.titel')} erklaerung={$t('zustellung.kopf.erklaer')} testid="zustellung" />
+				</div>
 			{/if}
 		</div>
 	{/if}
@@ -979,6 +982,35 @@
 	}
 	.hub-add-item:hover {
 		background: var(--g-accent-tint);
+	}
+
+	/* #3006 (AC-15): Kopf während der Hydrations-Sperre an derselben Stelle wie im Reiter
+	   (Rand von WetterTabInhalt `.wt` bzw. ZustellungTab `.zustellung-tab`). */
+	.hub-kopf-sperre {
+		box-sizing: border-box;
+		max-width: var(--g-size-1100px);
+	}
+	.hub-kopf-sperre-wetter {
+		padding: var(--g-size-28px) 0 0;
+	}
+	.hub-kopf-sperre-zustellung {
+		padding: var(--g-s-6) var(--g-s-10) 0;
+	}
+	@media (max-width: 899px) {
+		.hub-kopf-sperre-wetter {
+			padding: var(--g-s-4) 0 0;
+		}
+		.hub-kopf-sperre-zustellung {
+			padding: var(--g-s-5) var(--g-s-4) 0;
+		}
+	}
+
+	/* #3006: Abstand Kopf → Hinweis → Liste (vorher margin-bottom der SectionH). */
+	.hub-orte-kopf {
+		margin-bottom: var(--g-s-4);
+	}
+	.hub-orte-hinweis {
+		margin: 0 0 var(--g-s-2);
 	}
 
 	/* Issue #1256 S8c — Layout-/Orte-Tab Section-Hint (AC-1/AC-2/AC-9). */

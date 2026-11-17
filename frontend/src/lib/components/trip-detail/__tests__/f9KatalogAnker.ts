@@ -100,6 +100,9 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.hub.tabs_aria', 'Tour-Detail', 'Trip details'],
 	['trip.hub.platzhalter_uebersicht', 'Inhalt folgt mit Issue #154 (Hero) + #156 (Höhenprofil) + #157 (Stage-Liste)', 'Content follows with issue #154 (hero) + #156 (elevation profile) + #157 (stage list)'],
 	['trip.hub.platzhalter_etappen', 'Inhalt folgt mit Epic #137 (Wegpunkt-Editor)', 'Content follows with epic #137 (waypoint editor)'],
+	// #3006: Bereichskopf des Reiters Etappen (Mockup Fassung 3, Z. 579).
+	['trip.hub.kopf.etappen_titel', 'Etappen & Wegpunkte', 'Stages & waypoints'],
+	['trip.hub.kopf.etappen_erklaer', 'Das Tempo bestimmt die Gehzeiten und damit, welche Stunden je Wegpunkt bewertet werden.', 'Your pace sets the walking times and thus which hours are assessed for each waypoint.'],
 
 	// ── trip.uebersicht.* — Reiter Uebersicht (HubOverview, ReportLine, FullProfile) ──
 	['trip.etappen', 'Etappen', 'Stages'],

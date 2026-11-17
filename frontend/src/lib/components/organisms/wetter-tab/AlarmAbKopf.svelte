@@ -27,7 +27,7 @@
 	const mitSegmenten = $derived(zaehler.art === 'zaehler');
 </script>
 
-<div class="wt-kopf">
+<div class="aa-kopf">
 	<Einstellungszeile
 		titel={$t('wetter.alarm_ab.fuer_alle')}
 		hinweis={$t(zaehler.schluessel as 'wetter.alarm_ab.zaehler', zaehler.werte)}
@@ -43,7 +43,7 @@
 </div>
 
 <style>
-	.wt-kopf {
+	.aa-kopf {
 		background: var(--g-card-alt);
 	}
 	.wt-seg :global([data-slot='segmented-item']) {

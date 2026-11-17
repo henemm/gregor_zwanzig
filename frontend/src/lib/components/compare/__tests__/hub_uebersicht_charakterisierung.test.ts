@@ -47,6 +47,10 @@
 // die Karte „Wetter" zeigt im SSR „—" (Vorlagen laden erst im Browser per onMount; ohne
 // Vorlagen keine erfundene Zahl, AC-10). Die Zahl selbst prueft s3a2794_teil4b_befunde.test.ts.
 //
+// Issue #3006 (Spec feat_3006_bereichskoepfe, AC-8): im Golden gezielt eingefuegt — der Bereichskopf
+// <div class="bereichskopf" data-abschnitt="abschnittskopf"> (Titel „Übersicht“, Erklärsatz) als erstes
+// Kind der Spalte; der übrige Inhalt bleibt unveraendert.
+//
 // MOBIL: `isMobileViewport` setzt CompareTabs erst im Browser per matchMedia
 // (onMount). Im SSR (svelte/server) laeuft kein onMount — gerendert wird nur der
 // Desktop-Zweig. Bewusst KEINE Produktaenderung, um Mobil zu erzwingen. Der

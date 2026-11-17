@@ -283,7 +283,12 @@ describe('ChannelDot kennt Premium-SMS (ADR-0095: vier Kanaele gleichrangig)', (
 
 describe('AC-1/AC-5/AC-8/AC-9: Trip-Uebersicht ueber den geteilten Baustein', () => {
 	test('AC-1: Desktop-Leiste mit fuenf Kennzahlen (Status, Naechster Versand, Briefings, Zuletzt raus, Kanaele)', async () => {
-		const t = reinerText(await uebersichtRoute(trip({})));
+		const html = await uebersichtRoute(trip({}));
+		// #3006: der Bereichskopf oben nennt „Briefings“ im Erklärsatz — gemessen wird die Leiste danach.
+		const kopfSatz = reinerText(elementMitTestid(html, 'uebersicht-erklaer'));
+		const ganz = reinerText(html);
+		assert.ok(kopfSatz.length > 0 && ganz.includes(kopfSatz), 'Bereichskopf der Übersicht fehlt');
+		const t = ganz.slice(ganz.indexOf(kopfSatz) + kopfSatz.length);
 		const reihenfolge = ['Status', 'Nächster Versand', 'Briefings', 'Zuletzt raus', 'Kanäle'].map((l) => t.indexOf(l));
 		assert.ok(reihenfolge.every((i) => i >= 0), `Kennzahl fehlt: ${t}`);
 		assert.deepEqual([...reihenfolge].sort((a, b) => a - b), reihenfolge, `Reihenfolge falsch: ${t}`);
