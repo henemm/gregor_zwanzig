@@ -341,6 +341,7 @@ Die siebte Prüfrunde hat jede im Hub änderbare Einstellung gegen jede Ausgabe 
 
 ## Changelog
 
+- 2026-11-17: Runde 9: Orte-Altbestand ohne Grundauswahl/Ausblick-Liste rendert den Ausblick wie die gleichwertige explizite Vorgabeliste (HTML = Klartext, AC-5/AC-13); Validator-Soll angeglichen
 - 2026-11-17: Runde 8: AC-25 an PO-Entscheidung #722 angeglichen (Kompakt-Ausblick immer an), Befunde F1/F3/T1–T4 der Abnahme Runde 7 behoben
 - 2026-11-16: Nachtrag Runde 7 (AC-22 bis AC-28, PO-Entscheidungen SMS-Kürzung, Telegram-Schnittlinie, Warnungen-Altbestand)
 - 2026-11-15: Initial spec created (Phase 1 von #3047, Prüfkatalog zuerst)

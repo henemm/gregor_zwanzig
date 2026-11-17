@@ -3052,6 +3052,58 @@
       "status": "gruen",
       "zustand": "ungueltig",
       "sprache": "de"
+    },
+    {
+      "id": "O-R9-ALTBESTAND-AUSBLICK-WIE-EXPLIZIT-HTML",
+      "liste": "ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "altbestand",
+      "test": "tests/tdd/test_3047_r9_orte_altbestand_ausblick.py::test_r9_orte_altbestand_ausblick_wie_explizite_liste",
+      "ac": "AC-21",
+      "befund": "ABN8-ALTBESTAND-AUSBLICK",
+      "status": "gruen",
+      "zustand": "nie_eingestellt",
+      "sprache": "de,en"
+    },
+    {
+      "id": "O-R9-ALTBESTAND-AUSBLICK-WIE-EXPLIZIT-KLARTEXT",
+      "liste": "ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "altbestand",
+      "test": "tests/tdd/test_3047_r9_orte_altbestand_ausblick.py::test_r9_orte_altbestand_ausblick_wie_explizite_liste",
+      "ac": "AC-21",
+      "befund": "ABN8-ALTBESTAND-AUSBLICK",
+      "status": "gruen",
+      "zustand": "nie_eingestellt",
+      "sprache": "de,en"
+    },
+    {
+      "id": "O-R9-ALTBESTAND-AUSBLICK-HTML-GLEICH-KLARTEXT",
+      "liste": "ausblick",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "tests/tdd/test_3047_r9_orte_altbestand_ausblick.py::test_r9_orte_altbestand_ausblick_html_gleich_klartext",
+      "ac": "AC-5",
+      "befund": "ABN8-ALTBESTAND-AUSBLICK",
+      "status": "gruen",
+      "zustand": "nie_eingestellt",
+      "sprache": "de,en"
+    },
+    {
+      "id": "O-R9-ALTBESTAND-AUSBLICK-KLARTEXT-GLEICH-HTML",
+      "liste": "ausblick",
+      "kontext": "orte",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "tests/tdd/test_3047_r9_orte_altbestand_ausblick.py::test_r9_orte_altbestand_ausblick_html_gleich_klartext",
+      "ac": "AC-13",
+      "befund": "ABN8-ALTBESTAND-AUSBLICK",
+      "status": "gruen",
+      "zustand": "nie_eingestellt",
+      "sprache": "de,en"
     }
   ]
 }

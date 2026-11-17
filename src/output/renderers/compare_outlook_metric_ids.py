@@ -251,6 +251,14 @@ def resolve_compare_outlook_metrics(
     die Bindung gilt ab dieser Scheibe in BEIDEN Flaechen gleich.
     """
     gespeichert = resolve_outlook_metrics(outlook_metrics)
+    if gespeichert is None and enabled_metrics is None:
+        # #3047 R9 (AC-5/AC-13/AC-21): Orte-Altbestand ohne Grundauswahl und
+        # ohne Ausblick-Liste rendert wie die gleichwertige explizite Liste --
+        # genau die Spalten, die der Editor als aktiv zeigt -- statt ueber den
+        # festen Zweig (HTML Temp Tief/Hoch getrennt, Klartext als Spanne).
+        from output.renderers.email.helpers import OUTLOOK_FIXED_METRIC_IDS
+
+        return list(OUTLOOK_FIXED_METRIC_IDS)
     grundauswahl = None if enabled_metrics is None else outlook_grundauswahl_ids(
         _kennungen_aus_renderer_ids(enabled_metrics)
     )
