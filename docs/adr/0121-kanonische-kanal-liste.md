@@ -60,3 +60,12 @@ Löst Nachtrag 2b Nr. 3 für den Stundenverlauf ein („Roh/Einfach dort = #3058
 2. **Eigener Schalter je Liste (W11).** `channel_layouts.email` (Vergleichstabelle) wirkt nicht auf den Stundenverlauf und umgekehrt. `channel_layouts.hourly` bleibt reserviert (Nr. 7, erst mit #3060 schreibbar; der Go-Merge ersetzt Unterschlüssel). Die spätere Verlagerung dorthin ist verlustfrei möglich.
 3. **Einfachformen.** Wind und Böen im HTML als Ampelpunkt (wie die Vergleichstabelle), im Klartext als Wortstufe; Wolken Symbol, Regenwahrscheinlichkeit und Sonnenschein Wortskala; Niederschlag nach der Stunden-Skala (`format_precip_intensity`), nicht der Tagessummen-Skala des Ausblicks. Temperatur, Gewitter und weitere Größen ohne Einfachform ignorieren einen gesetzten Eintrag und bekommen im Editor keinen Umschalter.
 4. **Verbraucher.** Versand, Editor-Vorschau und Validator-Vorschau reichen dieselben Stundenformate an HTML- und Klartext-Renderer durch (Vorschau = Mail).
+
+## Nachtrag 3c (2026-11-17, Issue #3098): Telegram liest aus dem Resolver
+
+Setzt Nr. 8 (Adapter) für Telegram um, analog Nachtrag 3a für die E-Mail. Spec: `docs/specs/modules/feat_3098_telegram_resolver.md`.
+
+1. **Trip-Telegram.** Menge, Folge und Roh/Einfach je Zeile kommen aus `resolve_channel_lists(dc, "trip", report_type).telegram`, einmal auf dem ungekollabierten Modell. Ein Adapter übersetzt die Zeilen in die Darstellungsform des Renderers. Die Telegram-Kanal-Ebene wird danach nicht erneut kaskadiert.
+2. **Format `null` = Katalog-Standard.** Ein Roh der Grundauswahl wird für eine Telegram-Zeile ohne eigenes Format nicht geerbt (Nr. 1 gilt unverändert).
+3. **Orte-Telegram** liest bereits aus dem Resolver und bleibt unverändert; es bekommt nur Nachweis-Fälle. Der Format-Standard ohne Angabe bleibt Roh (ADR-0119 Nr. 4).
+4. **Keine Ausgabeänderung.** Die zugestellte Telegram-Nachricht bleibt in allen Bestandsfällen gleich (ADR-0095). Keine Entscheidung wird geändert, daher kein neues ADR.

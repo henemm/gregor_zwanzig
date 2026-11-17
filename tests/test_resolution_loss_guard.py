@@ -707,6 +707,15 @@ KNOWN_VIOLATIONS: dict[str, str] = {
         "Adapter helpers.py::email_col_order) — "
         "Spaltenreihenfolge und -sichtbarkeit der ganzen Mail."
     ),
+    # #3098: der Telegram-Zwilling von email_col_order (ADR-0121). Dieselbe
+    # Mechanik (get_metric() -> except KeyError -> continue) auf den
+    # Resolver-Telegram-Zeilen; bewusst gleich behandelt wie A4, damit Mail und
+    # Telegram bei einer unbekannten Metrik-ID (z. B. aus dem Katalog entfernt)
+    # dieselbe Spaltenmenge zeigen (Kanal-Paritaet, ADR-0095).
+    "src/output/renderers/email/helpers.py::telegram_metric_configs::0": (
+        "A4-Zwilling (#1405, #3098) — telegram_metric_configs: Telegram-Spalte "
+        "mit unbekannter Metrik-ID entfaellt wie in der Mail (email_col_order)."
+    ),
     "src/output/renderers/email/helpers.py::dp_to_row::0": (
         "A5 (#1405, vormals :103) — dp_to_row: Stunden-Zeile-Spalte verschwindet."
     ),
