@@ -1,9 +1,3 @@
----
-spec_file: docs/specs/modules/feat_3096_mail_resolver.md
-spec_sha256: 04712b63b29206c4d9694de3e6fe54f10760eecdf8cd1663530346905e913379
-spec_frozen_sha256: 0572ae7a9c755c0cc285c732e278e1f3924f45f1004a16d6e0d94c35c1f806a6
----
-
 # PO-Briefing: feat-3096-mail-resolver
 
 - **Spec:** docs/specs/modules/feat_3096_mail_resolver.md
@@ -20,11 +14,12 @@ Zugestellte Trip- und Orte-Mails auf Staging sind Zeichen für Zeichen gleich wi
 
 ## Wie geprüft wird
 
-Referenz-Mails und Prüfkatalog vergleichen Zeichen für Zeichen, ein Zwei-Nutzer-Test sichert Trennung; Telegram und SMS bleiben unberührt, Darstellung nicht vereinheitlicht.
+Referenz-Mails und Prüfkatalog vergleichen Zeichen für Zeichen, ein Zwei-Nutzer-Test sichert Trennung; Telegram und SMS bleiben unberührt.
 
 ## Kritische Anmerkungen
 
-- Darstellung (Roh oder Katalog) kommt beim Trip weiter aus der alten Quelle, nicht aus der neuen; Vereinheitlichung bewusst ausgeklammert.
+- Update-/Alarm-Mails folgen künftig der E-Mail-Auswahl (von dir entschieden); im Livebetrieb noch nicht sichtbar, da Alarme eigenen Renderer nutzen.
+- Darstellung (Roh oder Katalog) bleibt bewusst uneinheitlich; Vereinheitlichung wäre eigenes Ticket.
 
 ## Freigabe-Frage
 
