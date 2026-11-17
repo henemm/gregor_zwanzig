@@ -23,7 +23,7 @@
 	import { Eyebrow, Btn, Dot, Pill, Card } from '$lib/components/atoms';
 	// Issue #3007: Etappen-Liste im Hub aus dem geteilten Baustein Listenzeile (wie Orte, ADR-0097).
 	import Listenzeile from '$lib/components/molecules/Listenzeile.svelte';
-	import { etappenZeile } from './etappenListe.ts';
+	import { etappenZeile, etappenAufteilung } from './etappenListe.ts';
 	import { computeArrivalTimes, activityToSpeed } from '$lib/utils/naismith';
 	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
 	import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
@@ -34,7 +34,7 @@
 	import { merkeNutzlast } from '$lib/stores/nutzlastStand';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import { onMount, type Snippet } from 'svelte';
+	import { onMount, tick, type Snippet } from 'svelte';
 	// Mobile Usability Paket 1 (Spec mobile_stages_tab_listen_only, Iteration 1):
 	// PO-Entscheid F5 (2026-09-22, Variante B) — Karte + Höhenprofil entfallen
 	// auf Mobile ersatzlos. Der Mobile-Zweig rendert Desktop-Hinweis + Liste.
@@ -560,13 +560,26 @@
 	// #3007 (AC-13): Klick/Enter auf eine Etappenzeile klappt den Editor dieser Etappe auf, erneut zu.
 	let offeneEtappeId = $state<string | null>(null);
 	const offenId = $derived(offeneEtappeId !== null && stages.some((s) => s.id === offeneEtappeId) ? offeneEtappeId : null);
-	function zeileUmschalten(stageId: string): void {
+	const offenIndex = $derived(offenId === null ? -1 : stages.findIndex((s) => s.id === offenId));
+	const zeilenAufteilung = $derived(etappenAufteilung(stages, offenIndex));
+	let listeRahmen = $state<HTMLElement | null>(null);
+	const zeileImDom = (stageId: string): HTMLElement | null =>
+		listeRahmen?.querySelector<HTMLElement>(`[data-listenzeile][data-stage-id="${CSS.escape(stageId)}"]`) ?? null;
+	async function zeileUmschalten(stageId: string): Promise<void> {
+		// Fix-Runde 3 (F001, AC-2): beim Wechsel nach unten wandert die Zeile aus dem Block hinter dem
+		// Editor in den Block davor und wird neu aufgebaut — der Fokus ginge verloren. Hatte sie ihn,
+		// bekommt die neue Zeile ihn zurück; fremder Fokus wird nicht angefasst.
+		const hatteFokus = typeof document !== 'undefined' && zeileImDom(stageId) === document.activeElement;
 		if (offenId === stageId) {
 			offeneEtappeId = null;
-			return;
+		} else {
+			offeneEtappeId = stageId;
+			handleStageActivate(stageId);
 		}
-		offeneEtappeId = stageId;
-		handleStageActivate(stageId);
+		if (!hatteFokus) return;
+		await tick();
+		const zeile = zeileImDom(stageId);
+		if (zeile && document.activeElement !== zeile) zeile.focus({ preventScroll: true });
 	}
 	function handlePauseInsert(afterIndex: number): void {
 		if (cascadeBusy) return; // R5-F001
@@ -988,30 +1001,42 @@
 
 <!-- #3007 (Mockup Fassung 3, viewEtappen): Hub-Listenmodus — Kopf, dann je Etappe eine Listenzeile
      „E{n} · Start → Ziel“, „x km · ↑y m“, „Gehzeit h:mm“; die Zeile klappt den Editor darunter auf. -->
+{#snippet etappenListenzeile(stage: Stage, i: number)}
+	{@const zeile = etappenZeile(stage, i, $locale, $t, activityToSpeed(activityType))}
+	<Listenzeile
+		titel={zeile.titel}
+		zweitzeile={zeile.zweitzeile}
+		meta={zeile.meta}
+		testid="etappen-liste-zeile"
+		data-stage-id={stage.id}
+		onclick={() => zeileUmschalten(stage.id)}
+		offen={offenId === stage.id}
+	/>
+{/snippet}
+
 {#snippet etappenListe()}
 	<HubReiterflaeche testid="etappen-liste-reiterflaeche">
-		{#if kopf}{@render kopf()}{/if}<div class="etappen-liste-rahmen">
+		{#if kopf}{@render kopf()}{/if}<div class="etappen-liste-rahmen" bind:this={listeRahmen}>
 			<Card padding={0} data-abschnitt="liste">
-				{#each stages as stage, i (stage.id)}
-					{@const zeile = etappenZeile(stage, i, $locale, $t, activityToSpeed(activityType))}
-					<Listenzeile
-						titel={zeile.titel}
-						zweitzeile={zeile.zweitzeile}
-						meta={zeile.meta}
-						testid="etappen-liste-zeile"
-						data-stage-id={stage.id}
-						onclick={() => zeileUmschalten(stage.id)}
-						offen={offenId === stage.id}
-					/>
-					{#if offenId === stage.id}
-						<div class="etappen-aufklapp" data-testid="etappen-aufklapp">
-							{@render etappenBand()}
-							{@render etappenEditor(true)}
-						</div>
-					{/if}
+				<!-- Zeilen bis einschließlich der offenen, dann der Editor, dann die übrigen Zeilen. Der Editor
+				     steht AUSSERHALB der Zeilen-Schleifen: wechselt die Etappe (Zeile oder Etappen-Band), wandert
+				     er ohne Neuaufbau mit — wie im Anlegen-Editor bekommen die Felder nur die neue Etappe, ein
+				     angefangenes Segment wird verworfen statt beim Abbau der alten Felder der neuen Etappe
+				     gutgeschrieben (Fix-Runde 2, DS-2 Etappenwechsel). -->
+				{#each zeilenAufteilung.vor as stage, i (stage.id)}
+					{@render etappenListenzeile(stage, i)}
 				{:else}
 					<p class="etappen-liste-leer">{$t('trip.hub.keine_etappen')}</p>
 				{/each}
+				{#if offenIndex >= 0}
+					<div class="etappen-aufklapp" data-testid="etappen-aufklapp">
+						{@render etappenBand()}
+						{@render etappenEditor(true)}
+					</div>
+					{#each zeilenAufteilung.nach as stage, j (stage.id)}
+						{@render etappenListenzeile(stage, offenIndex + 1 + j)}
+					{/each}
+				{/if}
 			</Card>
 			{#if stages.length === 0}<div class="etappen-liste-band">{@render etappenBand()}</div>{/if}
 		</div>

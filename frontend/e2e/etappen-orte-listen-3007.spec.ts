@@ -102,6 +102,67 @@ test.describe('#3007 Etappen-Liste: Zeile klappt den Editor auf', () => {
 			await hub.aufraeumen();
 		}
 	});
+
+	// Fix-Runde 3 (Adversary F001, AC-2/AC-13): Wechsel NACH UNTEN per Tastatur. Die Zeile wandert
+	// dabei aus dem Block hinter dem Editor in den Block davor; der Tastaturfokus muss auf ihr bleiben.
+	test('AC-2/AC-13: Etappe 1 offen, Enter auf Zeile 3 öffnet Etappe 3 und Zeile 3 behält den Fokus', async ({ page, request }) => {
+		const drei = [
+			...ETAPPEN,
+			{ id: 'e3007c', name: 'Tag 3', date: '2027-06-03', waypoints: [wp('w5', 'Ziel C', 39.65, 2.5, 150), wp('w6', 'Ziel D', 39.7, 2.55, 300)] }
+		];
+		const hub = await seedHub(request, 'route', { extra: { stages: drei } });
+		try {
+			await openHub(page, 'route', hub.id, { tab: 'etappen' });
+			const zeilen = page.locator('[data-abschnitt="liste"] [data-testid="etappen-liste-zeile"]');
+			await expect(zeilen).toHaveCount(3);
+			const editor = page.getByTestId('etappen-reiterflaeche');
+			// Fix-Runde 4 (Adversary F001): Titel ALLER Zeilen vollständig, in Reihenfolge, ohne Dublette —
+			// auch die Zeilen hinter dem aufgeklappten Editor tragen ihre eigene Nummer.
+			const titel = zeilen.locator('b');
+			const alleTitelInReihenfolge = () => expect(titel).toHaveText([/^E1 · Start A/, /^E2 · Ziel B/, /^E3 · Ziel C/]);
+			await alleTitelInReihenfolge();
+
+			await zeilen.nth(0).focus();
+			await page.keyboard.press('Enter');
+			await expect(zeilen.nth(0)).toHaveAttribute('aria-expanded', 'true');
+			await expect(editor).toHaveCount(1);
+			await expect(zeilen).toHaveCount(3);
+			await alleTitelInReihenfolge();
+
+			await zeilen.nth(2).focus();
+			await page.keyboard.press('Enter');
+			await expect(zeilen.nth(2)).toHaveAttribute('aria-expanded', 'true');
+			await expect(zeilen.nth(0)).toHaveAttribute('aria-expanded', 'false');
+			await expect(editor).toHaveCount(1);
+			await expect(page.locator('[data-stage-id="e3007c"]')).toBeFocused();
+			await alleTitelInReihenfolge();
+			// Weiter per Tastatur: Enter auf derselben Zeile schließt wieder.
+			await page.keyboard.press('Enter');
+			await expect(zeilen.nth(2)).toHaveAttribute('aria-expanded', 'false');
+			await expect(editor).toHaveCount(0);
+
+			// Mittlere Etappe offen: Zeile 3 steht hinter dem Editor und heißt weiter E3.
+			await zeilen.nth(1).click();
+			await expect(zeilen.nth(1)).toHaveAttribute('aria-expanded', 'true');
+			await expect(editor).toHaveCount(1);
+			await expect(zeilen).toHaveCount(3);
+			await alleTitelInReihenfolge();
+
+			// Fix-Runde 4 (Adversary F002): kam der Wechsel NICHT von der fokussierten Zeile, wird kein
+			// Fokus gezogen. Fokus liegt auf Zeile 1 (bleibt beim Wechsel bestehen), Klick auf Zeile 3 ohne
+			// Fokusübergabe (Klick-Ereignis direkt): Zeile 3 wandert nach oben, der Fokus bleibt auf Zeile 1.
+			await zeilen.nth(0).focus();
+			await expect(page.locator('[data-stage-id="e3007a"]')).toBeFocused();
+			await zeilen.nth(2).dispatchEvent('click');
+			await expect(zeilen.nth(2)).toHaveAttribute('aria-expanded', 'true');
+			await expect(zeilen.nth(1)).toHaveAttribute('aria-expanded', 'false');
+			await expect(page.locator('[data-stage-id="e3007a"]')).toBeFocused();
+			await expect(page.locator('[data-stage-id="e3007c"]')).not.toBeFocused();
+			await alleTitelInReihenfolge();
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
 });
 
 test.describe('#3007 Orte-Liste: entfernen per Textknopf', () => {
@@ -114,7 +175,8 @@ test.describe('#3007 Orte-Liste: entfernen per Textknopf', () => {
 			await expect(liste).toHaveCount(1);
 			const zeilen = liste.locator('[data-testid="hub-orte-row"]');
 			const vorher = await zeilen.count();
-			test.skip(vorher < 2, 'Prüf-Vergleich braucht mindestens zwei Orte');
+			// Prüf-Vergleich braucht mindestens zwei Orte — harte Erwartung statt Skip (Filter A der Positivliste).
+			expect(vorher).toBeGreaterThanOrEqual(2);
 			// Fix-Loop 1 (Adversary M1): den ZWEITEN Ort entfernen — ein Handler, der immer den ersten
 			// (oder einen anderen) entfernt, fällt damit auf. Geprüft über Kennung UND sichtbaren Namen.
 			const ids = await zeilen.evaluateAll((els) => els.map((e) => e.getAttribute('data-loc-id')));

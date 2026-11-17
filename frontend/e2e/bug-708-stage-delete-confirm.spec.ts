@@ -104,6 +104,8 @@ test('AC-3: Löschen bestätigen entfernt die Etappe', async ({ page }) => {
 
 	// Dialog geschlossen
 	await expect(page.getByTestId('confirm-delete-stage')).toHaveCount(0);
+	// #3007: die gelöschte Etappe war die aufgeklappte — die Liste klappt zu; verbleibende aufklappen.
+	await oeffneEtappenEditor(page);
 	// Nur noch eine Karte
 	await expect(page.getByTestId('stage-card-0')).toBeVisible();
 	await expect(page.getByTestId('stage-card-1')).toHaveCount(0);

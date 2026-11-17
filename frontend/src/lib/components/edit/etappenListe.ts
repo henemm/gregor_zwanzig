@@ -61,3 +61,11 @@ export function etappenZeile(stage: Stage, index: number, lang: Lang, t: Katalog
 	const meta = dauer === null ? undefined : t('trip.hub.etappe_gehzeit', { dauer: dauerText(dauer) });
 	return { titel, zweitzeile: kennzahlen(stage, lang, t), meta };
 }
+
+/** Fix-Runde 3 (#3007, Adversary F002): Aufteilung der Listenzeilen um den offenen Editor.
+ *  `vor` = Zeilen bis einschließlich der offenen (ohne offene Zeile: alle), `nach` = alle übrigen
+ *  in Reihenfolge; zusammen genau `stages`, keine Zeile doppelt oder verloren. */
+export function etappenAufteilung<T>(stages: readonly T[], offenIndex: number): { vor: T[]; nach: T[] } {
+	if (offenIndex < 0 || offenIndex >= stages.length) return { vor: [...stages], nach: [] };
+	return { vor: stages.slice(0, offenIndex + 1), nach: stages.slice(offenIndex + 1) };
+}

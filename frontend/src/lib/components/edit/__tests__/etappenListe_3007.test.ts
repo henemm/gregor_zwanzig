@@ -12,7 +12,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { etappenZeile, gehzeitMinuten, dauerText } from '../etappenListe.ts';
+import { etappenZeile, gehzeitMinuten, dauerText, etappenAufteilung } from '../etappenListe.ts';
 import { computeArrivalTimes, activityToSpeed } from '../../../utils/naismith.ts';
 import { computeHeaderStats } from '../../email-preview/headerStats.ts';
 import { trFor } from '../../../i18n/index.ts';
@@ -128,4 +128,27 @@ describe('#3007 F002: Zeileninhalt (AC-10, AC-12)', () => {
 			assert.equal(z.meta, undefined);
 		});
 	}
+});
+
+// Fix-Runde 3 (Adversary F002, AC-13): Zeilen um den offenen Editor. EditStagesPanelNew rendert
+// `vor`, dann den Editor-Block, dann `nach`. Sollwert unabhängig: Reihenfolge der Kennungen.
+describe('#3007 F002: Aufteilung der Etappenzeilen um den offenen Editor (AC-13)', () => {
+	const ids = ['a', 'b', 'c', 'd', 'e'];
+	test('keine Etappe offen: alle Zeilen vor dem (fehlenden) Editor, keine danach', () => {
+		assert.deepEqual(etappenAufteilung(ids, -1), { vor: ids, nach: [] });
+	});
+	for (let offen = 0; offen < ids.length; offen++) {
+		test(`Etappe ${offen + 1} offen: offene Zeile zuletzt vor dem Editor, alle weiteren danach, vollständig und in Reihenfolge`, () => {
+			const { vor, nach } = etappenAufteilung(ids, offen);
+			assert.equal(vor[vor.length - 1], ids[offen]);
+			assert.deepEqual(nach, ids.filter((_, i) => i > offen));
+			assert.deepEqual([...vor, ...nach], ids);
+		});
+	}
+	test('Index außerhalb (Etappe gerade gelöscht): nichts verloren, nichts doppelt', () => {
+		assert.deepEqual(etappenAufteilung(ids, ids.length), { vor: ids, nach: [] });
+	});
+	test('leere Liste', () => {
+		assert.deepEqual(etappenAufteilung([], 0), { vor: [], nach: [] });
+	});
 });

@@ -991,9 +991,12 @@
 	/* Issue #1256 S8c (AC-1/AC-2) — Layout-Tab Limit-Pillen. */
 
 	/* #3007 (Mockup `.lrow`): Trennlinie zwischen den Orte-Zeilen, die erste ohne. Jede Listenzeile steht
-	   allein in ihrem Sortier-Element, daher die Linie am Element. :global, weil `hub-orte-list` als
-	   zoneClass an SortableList durchgereicht wird und dort den Scope-Hash nicht trägt (#1272). */
-	:global(.hub-orte-list > .sortable-item + .sortable-item) {
+	   allein in ihrem Sortier-Element, daher die Linie an der Zeile IM Element — nie am Element selbst:
+	   der leere Ziehplatzhalter von svelte-dnd-action hätte sonst 1 px Höhe, das Angleichen des gezogenen
+	   Klons daran (morphDraggedElementToBeLike) schiebt ihn aus dem Dokument und das Ziehen bricht ohne
+	   neue Reihenfolge ab (Fix-Runde 2, compare-hub-inline-edit AC-14/AC-15). :global, weil `hub-orte-list`
+	   als zoneClass an SortableList durchgereicht wird und dort den Scope-Hash nicht trägt (#1272). */
+	:global(.hub-orte-list > .sortable-item + .sortable-item > [data-slot='einstellungszeile']) {
 		border-top: 1px solid var(--g-rule-soft);
 	}
 </style>
