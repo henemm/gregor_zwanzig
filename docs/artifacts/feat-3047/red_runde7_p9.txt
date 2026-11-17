@@ -1,0 +1,37 @@
+# #3047 Runde 7 p9 -- RED (Stand vor dem Fix), 2026-11-17T00:12:43Z
+## Wanduhr (Schalter GZ_TEST_WALL_CLOCK_UTC)
+== 12:00 rc=0 
+== 22:40 rc=1 test_ac14_briefing_tombstone_nach_absent_since_ergibt_keine_entwarnung test_ac14_briefing_zeigt_warnung_noch_loescht_absent_since_und_verschiebt_beendet 
+== 22:58 rc=1 test_ac13_briefing_mit_gesunder_quelle_informiert_nicht_abrufbar_nicht test_ac14_briefing_tombstone_nach_absent_since_ergibt_keine_entwarnung test_ac14_briefing_zeigt_warnung_noch_loescht_absent_since_und_verschiebt_beendet 
+== 12:00 rc=0 
+== 23:35 rc=1 test_ac5_radar_ein_ort_nennt_den_ort_statt_km[de-[Ort Eins] Regen in 30 Min-<b>Ort Eins \xb7 Regen in 30 Min</b>-Wo & wann: Ort Eins \xb7 ab \\d\\d:\\d\\d] test_ac5_radar_ein_ort_nennt_den_ort_statt_km[en-[Ort Eins] Rain in 30 min-<b>Ort Eins \xb7 Rain in 30 min</b>-Where & when: Ort Eins \xb7 from \\d\\d:\\d\\d] test_ac6_radar_zwei_orte_bleibt_wie_seit_1767[de-[Ort Eins, Ort Zwei] Regen-Alarm: 2 Orte-<b>Regen-Alarm: 2 Orte</b>-Ort Eins \xb7 Regen in 30 Min: ab \\d\\d:\\d\\d \xb7 leichter Regen] test_ac6_radar_zwei_orte_bleibt_wie_seit_1767[en-[Ort Eins, Ort Zwei] Rain alert: 2 locations-<b>Rain alert: 2 locations</b>-Ort Eins \xb7 Rain in 30 min: from \\d\\d:\\d\\d \xb7 light rain] test_ac10_kurznachricht_mit_ortsnummern_bleibt_unveraendert[Radar 1 Ort] test_ac10_kurznachricht_mit_ortsnummern_bleibt_unveraendert[Radar 2 Orte] 
+== 23:50 rc=1 test_ac5_radar_ein_ort_nennt_den_ort_statt_km[de-[Ort Eins] Regen in 30 Min-<b>Ort Eins \xb7 Regen in 30 Min</b>-Wo & wann: Ort Eins \xb7 ab \\d\\d:\\d\\d] test_ac5_radar_ein_ort_nennt_den_ort_statt_km[en-[Ort Eins] Rain in 30 min-<b>Ort Eins \xb7 Rain in 30 min</b>-Where & when: Ort Eins \xb7 from \\d\\d:\\d\\d] test_ac6_radar_zwei_orte_bleibt_wie_seit_1767[de-[Ort Eins, Ort Zwei] Regen-Alarm: 2 Orte-<b>Regen-Alarm: 2 Orte</b>-Ort Eins \xb7 Regen in 30 Min: ab \\d\\d:\\d\\d \xb7 leichter Regen] test_ac6_radar_zwei_orte_bleibt_wie_seit_1767[en-[Ort Eins, Ort Zwei] Rain alert: 2 locations-<b>Rain alert: 2 locations</b>-Ort Eins \xb7 Rain in 30 min: from \\d\\d:\\d\\d \xb7 light rain] test_ac10_kurznachricht_mit_ortsnummern_bleibt_unveraendert[Radar 1 Ort] test_ac10_kurznachricht_mit_ortsnummern_bleibt_unveraendert[Radar 2 Orte] 
+== 03:00 rc=1 test_ac12_von_der_sms_kuerzung_verdraengte_entwarnung_gilt_als_nicht_zugestellt 
+== 12:00 rc=1 test_ac12_von_der_sms_kuerzung_verdraengte_entwarnung_gilt_als_nicht_zugestellt 
+== 22:45 rc=0 
+## Ausblick-Umbruch Telegram (Orte + Trip)
+E               AssertionError: einstellung-2f253b6d8b/Innsbruck: Umbruch mitten im Wert: ['mm  Rain%: 70 %  Cloud: 69 %', 'mm  Rain%: 70 %  Cloud: 69 %', 'mm  Rain%: 70 %  Cloud: 69 %']
+E               AssertionError: einstellung-9502e48f6d/Innsbruck: Umbruch mitten im Wert: ['mm  Rain%: 70 %  Cloud: 69 %', 'mm  Rain%: 70 %  Cloud: 69 %', 'mm  Rain%: 70 %  Cloud: 69 %']
+E           AssertionError: Trip: Umbruch mitten im Wert: ['<WT> <TT.MM.>  Temp: -5/-5  Feels: -/-  Wind: 20 km/h  Gust:', '30 km/h  Rain: 3.6 mm  Cloud: 60 %  Visib: 7000 m  Sun:', '12.0 h  SnowH: 45 cm  NewSn: –']
+FAILED tests/tdd/test_3047_p9_ausblick_umbruch.py::test_p9_orte_telegram_ausblick_bricht_nur_zwischen_werten_um[de]
+FAILED tests/tdd/test_3047_p9_ausblick_umbruch.py::test_p9_orte_telegram_ausblick_bricht_nur_zwischen_werten_um[en]
+FAILED tests/tdd/test_3047_p9_ausblick_umbruch.py::test_p9_trip_telegram_ausblick_bricht_nur_zwischen_werten_um
+
+# GREEN (nach dem Fix), 2026-11-17T00:13:15Z
+== 03:00 rc=0 
+== 12:00 rc=0 
+== 21:45 rc=0 
+== 22:40 rc=0 
+== 22:58 rc=0 
+== 23:35 rc=0 
+== 23:50 rc=0 
+== 23:59 rc=0 
+Ausblick-Umbruch: 4 passed (tests/tdd/test_3047_p9_ausblick_umbruch.py); test_befehl_antwortzeit, test_trip_outlook_dispatch_mail, test_compare_alert_channel_threshold, golden telegram: gruen (Echtzeit)
+
+## Mutationen (String-Ersetzung, Sicherung scratchpad/mut_p9)
+M1 Fixture ohne target_date: rot 22:40/22:58 | M2 Radar ohne feste Uhr: rot 23:50 | M7 ac12 ohne Minute :07: rot 12:00
+M3-M6, M8 (alter Wortumbruch), M9 (Packgrenze), M10 (Rueckfall Ueberbreite), M11 (Ein-Zeilen-Abkuerzung): alle rot
+
+## p9-2 Paritaet Telegram 'R 0.3' / SMS 'R-': kein Fix -- dokumentiert (sms_format.md §2 Grundregel #1415, Zeile R: Erwaehnung ab Gelb der Profil-Ampel #2792 S1c-4b; Ampel allgemein Regen gelb = 1 mm). Telegram zeigt den Tageswert wie die Mail.
+
+## Nebenbefund (nicht wanduhrabhaengig): tests/tdd/test_radar_messluecken_protokoll.py::test_alle_folgepunkte_ausgefallen_ist_der_extremfall rot zu jeder Uhrzeit -- Testdouble _LueckenRadar indiziert nach Aufrufreihenfolge, Abrufe laufen parallel.

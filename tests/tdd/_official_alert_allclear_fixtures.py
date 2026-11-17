@@ -496,11 +496,18 @@ def trip_briefing(sz: Szenario, minuten: float) -> str:
     from tests.tdd.test_alert_state_briefing_reset import _fixture_scheduler_class_1614
 
     assert sz.flaeche == "trip", "Briefing-Helfer nur fuer die Trip-Flaeche"
+    # Zieltag fest auf die Etappe MORGEN (#3047 p9): ohne ihn loest das Produkt
+    # "Abend = Ortstag+1" zur Briefing-Minute auf. Liegt zwischen Trip-Anlage
+    # (echte Jetzt-Minute) und ``t0+minuten`` die ORTS-Mitternacht (Wien,
+    # 22:40-23:00 UTC im Winter), zielte das Briefing auf uebermorgen -> "no_stage"
+    # und die Vorbedingung "Briefing zugestellt" war wanduhrabhaengig rot.
+    zieltag = sz.trip.stages[-1].date
     with freeze_time(sz.zeit(minuten)):
         try:
             return _fixture_scheduler_class_1614()(
                 settings=settings_fuer(sz.uid), user_id=sz.uid,
-            )._send_trip_report_outcome(sz.trip, "evening", on_demand=False)
+            )._send_trip_report_outcome(sz.trip, "evening", on_demand=False,
+                                        target_date=zieltag)
         except RuntimeError as exc:
             # Ein Transportfehler der E-Mail wird vom Versandpfad weitergereicht
             # (Briefing NICHT zugestellt) -- fuer die Tests ein Ergebnis, kein Absturz.

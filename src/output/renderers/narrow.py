@@ -127,6 +127,31 @@ def _wrap(text: str, width: int) -> list[str]:
     return lines
 
 
+def _wrap_cells(cells: list[str], width: int, sep: str = "  ") -> list[str]:
+    """Packt ganze Zellen (Tageskopf, ``{Label}: {Wert}``) mit ``sep`` auf
+    <=``width``-breite Zeilen; umbrochen wird nur ZWISCHEN zwei Zellen (#3047
+    p9: vorher ``Wind: 28`` / ``km/h``). Erst eine einzelne Zelle breiter als
+    ``width`` faellt auf den Wort-Umbruch von :func:`_wrap` zurueck."""
+    ganz = sep.join(cells)
+    if len(ganz) <= width:
+        return [ganz]  # passt: byte-gleich zur frueheren Ein-Zeilen-Form
+    lines: list[str] = []
+    cur = ""
+    for cell in (c for c in cells if c):
+        candidate = cell if not cur else f"{cur}{sep}{cell}"
+        if len(candidate) <= width:
+            cur = candidate
+            continue
+        if cur:
+            lines.append(cur)
+        teile = _wrap(cell, width)
+        lines.extend(teile[:-1])
+        cur = teile[-1]
+    if cur:
+        lines.append(cur)
+    return lines
+
+
 def _narrow_table(
     table_columns: list[str], rows: list[dict], friendly_keys: set[str],
     width: int, *, ampel: dict, lang: Lang = "de",
@@ -694,10 +719,8 @@ def _outlook_lines(
                 texte[gew_index] = thunder_cell_telegram(
                     format_trend_tokens(stage, ampel=ampel), stage,
                 )
-            values = "  ".join(
-                f"{c['label']}: {texte[i]}" for i, c in enumerate(columns)
-            )
-            lines.extend(_wrap(f"{weekday}  {values}", _TG_PROSE_WIDTH))
+            zellen = [f"{c['label']}: {texte[i]}" for i, c in enumerate(columns)]
+            lines.extend(_wrap_cells([weekday, *zellen], _TG_PROSE_WIDTH))
             note = stage.get("note")
             if note:
                 lines.extend(_wrap(f"    ↳ {note}", _TG_PROSE_WIDTH))

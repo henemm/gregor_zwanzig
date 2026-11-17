@@ -108,14 +108,25 @@ def _nowcast():
                          source="Radar (AROME-FR)", is_convective=False)
 
 
+#: Feste Uhr der Radar-Projektion (#3047 p9): sie rechnet "jetzt + 30 Min".
+#: Auf der Wanduhr kippte der Beginn ab 23:30 UTC in den Folgetag und die
+#: Kurzform trug -- produktseitig korrekt (#2054, Tageskuerzel) -- `R@Di0:24`;
+#: die Muster unten erwarten den Normalfall "Beginn heute" und waren damit
+#: zwischen 23:30 und 24:00 UTC rot. Mittag passt zu `stand_at="10:00"`.
+_RADAR_JETZT = datetime(2026, 7, 8, 10, 0, tzinfo=timezone.utc)
+
+
 def _radar(names):
-    """Ortsvergleich-Radar-Alarm über die echte Projektion."""
+    """Ortsvergleich-Radar-Alarm über die echte Projektion (feste Uhr)."""
+    from freezegun import freeze_time
+
     from output.renderers.alert.project import to_multi_location_onset_alert_message
 
-    return to_multi_location_onset_alert_message(
-        [(name, _loc(name), _nowcast()) for name in names],
-        tz=TZ, stand_at="10:00", ampel=resolve_ampel(None),
-    )
+    with freeze_time(_RADAR_JETZT):
+        return to_multi_location_onset_alert_message(
+            [(name, _loc(name), _nowcast()) for name in names],
+            tz=TZ, stand_at="10:00", ampel=resolve_ampel(None),
+        )
 
 
 FAELLE = {
@@ -367,8 +378,8 @@ def test_ac5_radar_ein_ort_nennt_den_ort_statt_km(lang, betreff, kopf, wo):
     `[Ort Eins] Regen in 30 Min`, `<b>Ort Eins · Regen in 30 Min</b>`,
     `Wo & wann: Ort Eins · ab HH:MM`.
 
-    Die Uhrzeit haengt an der Echtzeit (Projektion rechnet "jetzt + 30 Min"),
-    deshalb steht sie als Muster da.
+    Die Projektion rechnet "jetzt + 30 Min" (Uhr fest auf `_RADAR_JETZT`,
+    #3047 p9); die Uhrzeit steht weiterhin als Muster da.
 
     RED heute: `[Ort Eins] km 0–0 · Regen in 30 Min`,
     `<b>Ort Eins · km 0–0 · Regen in 30 Min</b>`, `Wo & wann: km 0–0 · ab …`.

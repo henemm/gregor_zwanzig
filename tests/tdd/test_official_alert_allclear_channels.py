@@ -185,7 +185,14 @@ def test_ac12_von_der_sms_kuerzung_verdraengte_entwarnung_gilt_als_nicht_zugeste
                 "extreme_cold", "wildfire_risk")
     with quellen(sz.x):
         lauf_erstwarnung(sz, kanaele=("sms",))
-        neue = [sz.warnung(3, hazard=h, region=f"Region-{h}") for h in gefahren]
+        # Beginn/Ende fest auf Minute :07 (#3047 p9): mit der echten Jetzt-Minute
+        # :00 kuerzt das Produkt -- korrekt -- auf volle Stunden (`TS:M 12-Mi09`),
+        # dann passten alle acht Warnungen UND die Entwarnung ins Budget und die
+        # Vorbedingung "verdraengt" war wanduhrabhaengig rot. Mit Minuten traegt
+        # jede Warnung `HH:MM-WdHH:MM` und acht fuellen die 140 Zeichen sicher.
+        von, bis = sz.von.replace(minute=7), sz.bis.replace(minute=7)
+        neue = [sz.warnung(3, hazard=h, region=f"Region-{h}", von=von, bis=bis)
+                for h in gefahren]
         sz.x.alerts = [sz.warnung(2)] + neue
         voll = sz.lauf(15)
         nach_kuerzung = sz.eintrag()
