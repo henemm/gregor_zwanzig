@@ -106,6 +106,24 @@ def sms_format_fields(
     return {"format_mode": mode, "use_friendly_format": mode in ("symbol", "scale")}
 
 
+def sms_rows_to_maps(rows) -> tuple[set[str], dict[str, int], dict[str, str]]:
+    """Issue #3099 (ADR-0121): SMS-Zeilen des Resolvers -> Abbildungen fuer die
+    SMS-Specs. ``ids`` = ``enabled``-Zeilen; ``position_by_metric`` = Index in der
+    Resolver-Folge; ``format_by_metric`` nur fuer ``SMS_FORMAT_MODE_METRIC_IDS``
+    ueber ``_resolve_format_mode`` (``format=None`` = Katalog-Standard, nie Roh)."""
+    from app.loader import _resolve_format_mode
+
+    rows = tuple(rows or ())
+    ids = {r.metric_id for r in rows if r.enabled}
+    position_by_metric = {r.metric_id: i for i, r in enumerate(rows)}
+    format_by_metric = {
+        r.metric_id: _resolve_format_mode(
+            {} if r.format is None else {"format_mode": r.format}, r.metric_id)
+        for r in rows if r.metric_id in SMS_FORMAT_MODE_METRIC_IDS
+    }
+    return ids, position_by_metric, format_by_metric
+
+
 # RiskType → SMS risk label (German, ultra-compact). Used by format_alert_sms.
 _SMS_RISK_LABELS: dict[tuple[RiskType, RiskLevel], str] = {
     (RiskType.THUNDERSTORM, RiskLevel.HIGH): "Gewitter",

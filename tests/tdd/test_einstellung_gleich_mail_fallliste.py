@@ -2,7 +2,7 @@
 
 SPEC: docs/specs/modules/feat_3047_einstellung_gleich_mail_pruefkatalog.md (§2, §3, §4, AC-1)
 
-Liest die fuenf Teildateien (seit #3098 auch ``fallliste_telegram.json``) ``tests/fixtures/einstellung_gleich_mail/fallliste_*.json``
+Liest die sechs Teildateien (seit #3098 auch ``fallliste_telegram.json``, seit #3099 ``fallliste_sms.json``) ``tests/fixtures/einstellung_gleich_mail/fallliste_*.json``
 und prueft ohne Testausfuehrung:
 
 (a) Abdeckungsmatrix Liste x Format je Pruefung ``auswahl`` und ``reihenfolge``;
@@ -33,7 +33,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FALLLISTEN_DIR = REPO_ROOT / "tests" / "fixtures" / "einstellung_gleich_mail"
 #: #3098: ``telegram`` = eigene Telegram-Fallliste (Phase 3c von #3047).
-TEILDATEIEN = ("trip", "orte", "validatoren", "editor", "telegram")
+#: #3099: ``sms`` = eigene SMS-Fallliste (Phase 3d von #3047).
+TEILDATEIEN = ("trip", "orte", "validatoren", "editor", "telegram", "sms")
 
 PFLICHTFELDER = ("id", "liste", "kontext", "format", "pruefung", "test", "ac", "befund", "status")
 ERLAUBTE_STATUS = frozenset({"gruen", "rot_erwartet", "ausnahme", "offen_feature"})
@@ -73,6 +74,7 @@ PY_TEST_GLOBS = (
     "tests/tdd/test_3047_*.py",
     "tests/tdd/test_kompakt_mail_schalter*.py",
     "tests/tdd/test_3098_*.py",
+    "tests/tdd/test_3099_*.py",
 )
 VITEST_GLOB = "frontend/src/**/__tests__/*.test.ts"
 GO_TEST_GLOB = "internal/**/*_test.go"
@@ -591,6 +593,7 @@ def _syn_daten() -> dict[str, dict]:
         "fallliste_editor.json": {"faelle": editor},
         "fallliste_telegram.json": {"faelle": [
             _syn_fall("tg-1", "trip_telegram", "telegram", "darstellung")]},
+        "fallliste_sms.json": {"faelle": []},
     }
 
 

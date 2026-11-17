@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.43"
+version: "2.44"
 status: active
 created: 2025-12-27
-updated: 2026-11-16
+updated: 2026-11-17
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -77,7 +77,9 @@ dieser Zweig hat heute aber keinen eingehenden Aufrufer.
 
 ---
 
-## 2. Token-Reihenfolge (fix)
+## 2. Token-Reihenfolge (Standard)
+
+> **#3099 (2026-11-17, v2.44):** Die unten gezeigte Folge ist die **Standardreihenfolge**. Wirksam ist die SMS-Liste des Kanal-Listen-Resolvers (`resolve_channel_lists(...).sms`, ADR-0121): Auswahl, Folge und Roh/Einfach der wählbaren Metriken kommen aus ihr, im Trip wie im Ortsvergleich. **Fix am Ende** stehen nur die System-Blöcke amtlicher Warn-Block, `X?` und `DBG` (sowie Vigilance/Fire wie in der Fix-#1677-Notiz unten); sie sind keine Zeile der Liste, nicht abwählbar und wandern durch Umsortieren nicht.
 
 ```
 {Name}: N L D FN FL FD R PR W G TH: TH+: HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ C VR:VT: !{Warn-Block} Z: M: [SD NS24+ SL] X? DBG
@@ -378,7 +380,7 @@ Quelle des Flags: `src/output/tokens/dto.py` (`NormalizedForecast.official_alert
 
 ### 3.4e Telegram-Kurzform folgt der SMS-Auswahl (Issue #2455)
 
-Die Telegram-Kurzform (`telegram_style="kurzform"`, Schalter „Telegram im SMS-Kurzstil") sendet den `sms_text` und übernimmt damit die SMS-Auswahl (Metriken, Reihenfolge, Layout aus `channel_layouts.sms`, im Ortsvergleich `channel_active_metrics.sms`) 1:1. Das ist **gewolltes Verhalten** (PO-Entscheidung 2026-10-09), kein Defekt: eine abweichende Telegram-Auswahl bleibt bei Kurzform wirkungslos und gilt nur für das ausführliche Telegram (`rich`). Abgesichert durch `tests/tdd/test_telegram_kurzform_ignoriert_telegram_auswahl.py`; in der Oberfläche erklärt der Hinweis am Schalter die Regel. Spec: `docs/specs/modules/telegram_kurzform_sms_auswahl_2455.md`.
+Die Telegram-Kurzform (`telegram_style="kurzform"`, Schalter „Telegram im SMS-Kurzstil") sendet den `sms_text` und übernimmt damit die SMS-Auswahl (Metriken, Reihenfolge, Layout aus `channel_layouts.sms`, im Ortsvergleich `channel_active_metrics.sms`) 1:1; Quelle ist seit #3099 in beiden Kontexten `resolve_channel_lists(...).sms`. Das ist **gewolltes Verhalten** (PO-Entscheidung 2026-10-09), kein Defekt: eine abweichende Telegram-Auswahl bleibt bei Kurzform wirkungslos und gilt nur für das ausführliche Telegram (`rich`). Abgesichert durch `tests/tdd/test_telegram_kurzform_ignoriert_telegram_auswahl.py`; in der Oberfläche erklärt der Hinweis am Schalter die Regel. Spec: `docs/specs/modules/telegram_kurzform_sms_auswahl_2455.md`.
 
 ### 3.4f Zeitspanne am Abweichungs-Alarm-Token (Issue #1737)
 
@@ -873,6 +875,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.39 | 2026-11-09 | Neuer §3.4i: Radar-Alarm im Ortsvergleich mit mehreren Orten nennt jeden Ort mit Ortsnummer (`1:R@14:05 3:R@14:40`), sortiert nach Beginn, Überlauf ` +k`; Ein-Ort und Trip unverändert (Issue #1767, löst #1948-S4-Entscheid 3b ab). |
 | 2.40 | 2026-11-16 | **Kürzung vom Listenende (#3047 Runde 7, AC-23, PO-Entscheidung 2026-11-16).** Bei Überlänge fällt die SMS-Liste von hinten, ganze Zeilen; amtliche Bausteine (Fire, Vigilance, Warn-Block) zuletzt, `X?` nie. Löst die feste Rangfolge (`DROP_ORDER`, #1677 AC-6) ab. Gilt für Trip-SMS, Premium-SMS (gleicher Text) und Telegram-Kurzform; Alarm-SMS haben eigene Regeln (unverändert). Betrifft §1, §2, §3.4c, §3.4d, §6. |
 | 2.42 | 2026-11-16 | §5b: Ortsvergleich „nie eingestellt“ folgt der Mail-Tabelle (Registerfolge statt fester Sechserliste, ohne `?N` für fehlende Werte); Warndienst-Ausfall hängt ` X?` an die Ortsvergleich-SMS (#3047 Runde 7, B-L4, B-L2). |
+| 2.44 | 2026-11-17 | §2/§3.4e: Die Trip-SMS liest Auswahl, Folge und Roh/Einfach aus `resolve_channel_lists(...).sms` (Adapter `sms_rows_to_maps`) statt aus `get_metrics_for_channel("sms", ...)`; §2 heißt jetzt Standardreihenfolge, fix am Ende bleiben nur Warn-Block/`X?`/DBG. Zugestellte SMS unverändert (Golden byte-gleich). Spec: `docs/specs/modules/feat_3099_sms_resolver.md` (#3099). |
 | 2.43 | 2026-11-16 | §5b/§6: Ortsvergleich-SMS kürzt zuerst die Zellen aller Orte (gleiches Budget je Ort, bis zur ersten Listenzeile), erst danach entfallen Orte als ` +k Orte`, ohne Warnung zuerst — auch ohne amtliche Warnung (#3047 Runde 7, AC-23, ADR-0095). |
 | 2.41 | 2026-11-16 | §6: Orts-Überlauf im Ortsvergleich — ein Ort mit amtlicher Warnung fällt nie in ` +k Orte`, er bleibt mit Marker sichtbar; zuerst werden die Zellen aller gezeigten Orte vom Listenende gekürzt (gleiches Budget je Ort), dann entfallen Orte ohne Warnung (#3047 Runde 7, AC-23). |
 

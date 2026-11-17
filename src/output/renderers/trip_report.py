@@ -52,7 +52,6 @@ from output.renderers.compare_outlook_metric_ids import resolve_trip_outlook_met
 from output.renderers.email import render_email
 from output.renderers.email.helpers import (
     NO_HOURLY_COLUMN_METRIC_IDS,
-    _effective_format_mode,
     build_format_modes,
     build_friendly_keys,
     telegram_metric_configs,
@@ -373,31 +372,17 @@ class TripReportFormatter:
         )
 
         from output.renderers.sms_trip import (
-            SMSTripFormatter, SMS_FORMAT_MODE_METRIC_IDS,
+            SMSTripFormatter,
             SMS_MULTI_SYMBOLS_BY_METRIC, SMS_NULLFORM_METRIC_IDS,
-            SMS_SYMBOL_BY_METRIC, build_extended_metric_specs,
+            SMS_SYMBOL_BY_METRIC, build_extended_metric_specs, sms_rows_to_maps,
         )
-        # Issue #1575 Scheibe 3: die MENGE der SMS-Metriken kommt aus der
-        # SMS-eigenen Kaskade (per_report > per_channel > global), der
-        # SCHWELLWERT je Metrik bleibt eine globale Groesse (KL-4) -- die vom
-        # Editor geschriebenen Kanal-Layouts fuehren kein ``sms_threshold``.
-        # Issue #1677: die Kaskade liefert eine bereits sortierte LISTE
-        # (nicht laenger sofort in ein Set kollabiert) -- daraus wird
-        # weiterhin die Menge (sms_metric_ids, fuer die Abwahl-/Schwellwert-
-        # Ableitungen darunter unveraendert) UND zusaetzlich eine
-        # metric_id -> Index-Zuordnung fuer die Nutzer-Position abgeleitet.
-        _sms_metrics_ordered = _dc_uncollapsed.get_metrics_for_channel("sms", report_type)
-        sms_metric_ids = {m.metric_id for m in _sms_metrics_ordered}
-        # Fix #2422 S2a (B9): das fruehere Aktivierungs-Gate (DEC-2 aus
-        # fix_1677_sms_reihenfolge.md) hat position NUR gesetzt, wenn eine
-        # SMS-spezifische Kaskadenebene antwortet -- bei 'global' fiel die
-        # Ausgabe auf die feste POSITIONAL-Sortierung zurueck, obwohl der
-        # Editor die globale Reihenfolge zeigte. PO-Entscheid 2026-09-27:
-        # die Editor-Reihenfolge wirkt IMMER, unabhaengig von der Kaskaden-
-        # quelle -- DEC-2 gilt als abgeloest.
-        _sms_position_by_metric: dict[str, int] = {
-            m.metric_id: i for i, m in enumerate(_sms_metrics_ordered)
-        }
+        # Issue #3099 (ADR-0121): Menge, Nutzer-Position und Roh/Einfach der
+        # SMS kommen aus der SMS-Liste des Resolvers (unkollabierte dc, Muster
+        # #3096/#3098); der Altpfad get_metrics_for_channel("sms") entfaellt.
+        # Die Editor-Reihenfolge wirkt immer (#2422 S2a); Warnblock bleibt hinten.
+        sms_metric_ids, _sms_position_by_metric, _sms_format_by_metric = (
+            sms_rows_to_maps(_channel_view.sms)
+        )
         # Issue #2792 S1c-4b (E1, Spec v1.5 Punkt 4): die frueheren SMS-
         # Schwellwerte aus `MetricConfig.sms_threshold` (#624/#1482) entfallen;
         # die SMS bekommt die Ampel derselben dc wie die Mail (unten).
@@ -435,14 +420,6 @@ class TripReportFormatter:
         # bekamen aktive der 14 Metriken KEINE Spec -> builder.py's
         # `if spec is None and not samples: continue` liess sie bei fehlenden
         # Daten komplett entfallen statt die Null-Form (§9) zu rendern.
-        # Issue #2422 S6 (B2): Roh/Einfach je SMS-Metrik -- aufgeloest ueber
-        # dieselbe Funktion wie die E-Mail (_effective_format_mode), aber aus
-        # der SMS-Kaskade; nur Groessen mit SMS-Einfachform (Katalog-Konstante).
-        _sms_format_by_metric = {
-            m.metric_id: _effective_format_mode(m)
-            for m in _sms_metrics_ordered
-            if m.metric_id in SMS_FORMAT_MODE_METRIC_IDS
-        }
         _disabled_sms_specs += build_extended_metric_specs(
             active_metric_ids, _sms_position_by_metric, _sms_format_by_metric,
         )
