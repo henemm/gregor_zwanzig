@@ -243,6 +243,8 @@ body.marks .tag{display:inline-block}
 .kx .xc{border-left:1px solid var(--g-rule-soft);padding-left:12px;align-self:stretch}
 .kx .sh{display:none}
 .nix{width:28px;display:inline-grid;place-items:center;color:var(--g-ink-4)}
+.nurz{font-size:12px;color:var(--g-ink-3)}
+.kx .xc{gap:6px}
 .kx.kxh{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--g-ink-2);background:var(--g-card-alt);border-top:1px solid var(--g-rule);align-items:start;padding-block:10px}
 .kx.kxh small{display:block;text-transform:none;letter-spacing:0;font-family:var(--f-ui);font-size:11px;color:var(--g-ink-3);margin-top:1px}
 .kx .h{color:var(--g-ink-4);font-family:var(--f-mono);cursor:grab;font-size:12px}
@@ -316,12 +318,13 @@ body.only .vlabel{display:none}
   .kx .h{font-size:10px;letter-spacing:-2px}
   .kx.x1,.kx.nofmt.x1{grid-template-columns:14px minmax(0,1fr) repeat(4,46px);gap:4px 6px}
   .kx.x2{grid-template-columns:14px minmax(0,1fr) repeat(5,40px);gap:4px 4px}
-  .kx.nofmt.x1{grid-template-columns:14px minmax(0,1fr) repeat(3,54px) 40px}
-  .kx.nofmt.x2{grid-template-columns:14px minmax(0,1fr) repeat(3,50px) repeat(2,34px);gap:4px 3px}
+  .kx.nofmt.x1{grid-template-columns:14px minmax(0,1fr) 50px 50px 36px 50px;gap:4px 5px}
+  .kx.nofmt.x2{grid-template-columns:14px minmax(0,1fr) 45px 45px 32px 45px 45px;gap:4px 3px}
+  .kx .nurz{font-size:11.5px}
   .kx .xc{padding-left:0;border-left:0}
   .kx .lg{display:none}
   .kx .sh{display:inline}
-  .kx.x2 .mini{padding:3px 4px;font-size:10px}
+  .kx .mini{padding:3px 4px;font-size:10px}
   .kx .kfmt{grid-column:2/-1;grid-row:2}
   .kx.kxh .kfmt{display:none}
   .kx.kxh{font-size:9.5px;letter-spacing:.02em}
@@ -351,7 +354,7 @@ body.only .vlabel{display:none}
   <div class="fr-rows">
     <div class="fr-row"><span class="fr-l">Ansicht</span><span class="sw" role="group" aria-label="Kontext"><button class="on" data-ctx="trip" type="button">Trip</button><button data-ctx="orte" type="button">Orte · 3 Orte</button><button data-ctx="ort1" type="button">Orte · 1 Ort</button></span></div>
     <div class="fr-row"><span class="fr-l"><i>1</i> Kanal-Auswahl</span><span class="sw" role="group" aria-label="Kanal-Auswahl"><button data-set="varK:A" type="button">A · Eine Tabelle</button><button data-set="varK:B" type="button">B · Liste je Kanal</button></span></div>
-    <div class="fr-row"><span class="fr-l"><i>2</i> Roh / Einfach <small>nur bei A</small></span><span class="sw" role="group" aria-label="Roh oder Einfach"><button data-set="varF:einmal" type="button">einmal je Metrik</button><button data-set="varF:kanal" type="button">je Metrik und Kanal</button></span></div>
+    <div class="fr-row"><span class="fr-l"><i>2</i> Roh / Einfach <small>nur bei A</small></span><span class="sw" role="group" aria-label="Roh oder Einfach"><button data-set="varF:einmal" type="button">einmal je Metrik</button><button data-set="varF:kanal" type="button">je Metrik und Stelle</button></span></div>
     <div class="fr-row"><span class="fr-l"><i>3</i> Stundenverlauf und Ausblick</span><span class="sw" role="group" aria-label="Ausblick und Stundenverlauf"><button data-set="varT:fest" type="button">nur Schalter</button><button data-set="varT:abwahl" type="button">eigene Spalten mit Abwahl</button></span></div>
   </div>
 </div>
@@ -602,7 +605,7 @@ function viewWetter(){
     <div class="lrow"><div class="t"><b>Radar-Regen ${ctx==='trip'?tg('N1'):''}</b><small>Alarm, wenn in der nächsten Stunde Regen auf ${ctx==='trip'?'deine Etappe':EIN()?'deinen Ort':'deine Orte'} zukommt</small></div><div class="r">${sw('radar',s.sw.radar,'Radar-Regen')}</div></div>
   </div>
   </div>
-  <div class="part" data-part="kanal"><span class="vlabel">${V.varK==='A'?'Variante A · Eine Tabelle'+(V.varF==='kanal'?' · Roh/Einfach je Kanal':'')+(V.varT==='abwahl'?' · Stundenverlauf und Ausblick als Spalten':' · Stundenverlauf und Ausblick nur als Schalter'):'Variante B · Liste je Kanal'}</span>${V.varK==='A'?kanalTabelle():kanalListen()}</div>
+  <div class="part" data-part="kanal"><span class="vlabel">${V.varK==='A'?'Variante A · Eine Tabelle'+(V.varF==='kanal'?' · Roh/Einfach je Stelle':' · Roh/Einfach einmal je Metrik')+(V.varT==='abwahl'?' · Stundenverlauf und Ausblick als Spalten':' · Stundenverlauf und Ausblick nur als Schalter'):'Variante B · Liste je Kanal'}</span>${V.varK==='A'?kanalTabelle():kanalListen()}</div>
   ${V.varK==='B'?`<div class="part" data-part="teile"><span class="vlabel">${V.varT==='fest'?'Wie E-Mail, fest':'Wie E-Mail, mit Abwahl'}</span>${teileCard()}</div>`:''}
   <div class="part" data-part="bsp">${beispielPanel()}</div>
   <div class="part" data-part="anpassen">
@@ -646,13 +649,15 @@ const TF={
  thunder:{h:['leicht','leicht','leicht'],tg:'TH leicht',sms:'TH:L@13 TH+:-',a:['kein','kein']},
  cloud_total:{h:['⛅','⛅','☁'],tg:'CT 42-75@15',sms:'CT75@15',a:['40%','80%']},
  sunshine:{h:['–','–','–'],tg:'SU 5',sms:'SU5',a:['6.0','2.5']}};
-const V={varK:'A',varF:'einmal',varT:'abwahl',nameV:'Orte'};
+const V={varK:'A',varF:'kanal',varT:'abwahl',nameV:'Orte'};
 let ONLY=null; const PRE=[];
-function K(){const s=S(); if(!s.kan){s.kan={sel:{'E-Mail':{},'Telegram':{},'SMS':{}},fmt:{},fmtK:{'E-Mail':{},'Telegram':{}},weg:{ausblick:{},stunden:{}}};
+function K(){const s=S(); if(!s.kan){s.kan={sel:{'E-Mail':{},'Telegram':{},'SMS':{}},fmt:{},fmtK:{'E-Mail':{},'Telegram':{},stunden:{},ausblick:{}},weg:{ausblick:{},stunden:{}}};
   PRE.forEach(x=>{if(x[0]==='sel') s.kan.sel[x[1]][x[2]]=false; else s.kan.weg[x[0]][x[1]]=true;});} return s.kan;}
 const onMs=()=>CTX[ctx].metrics.filter(m=>S()[m[0]].on);
 const isSel=(ch,id)=>K().sel[ch][id]!==false;
-const defFmt=id=>['wind','gust','precipitation','rain_probability','thunder','cloud_total','cloud_low'].includes(id)?'Einfach':'Roh';
+// Zweite Darstellungsform laut metric_catalog.py (format_modes); alle anderen Metriken kennen nur die Zahl
+const HASF=['wind','gust','wind_direction','precipitation','thunder','cloud_total','cloud_low','cloud_mid','cloud_high','sunshine'];
+const defFmt=id=>['wind_direction','thunder','cloud_total','cloud_low','cloud_mid','cloud_high','sunshine'].includes(id)?'Einfach':'Roh';
 const fmt1=id=>K().fmt[id]||defFmt(id);
 const fmtK=(ch,id)=>K().fmtK[ch][id]||defFmt(id);
 const mailM=()=>onMs().filter(m=>isSel('E-Mail',m[0]));
@@ -709,22 +714,24 @@ function kanalTabelle(){
   const sub={'E-Mail':mailName(),'Telegram':kurz?'Kurzstil: wie SMS':'Nachricht','SMS':'und Premium-SMS'};
   const kurzn={'E-Mail':'E-Mail','Telegram':ext.length>1?'Telegr.':'Telegram','SMS':'SMS'};
   const XH={stunden:['Stundenverlauf','Std.','nur E-Mail'],ausblick:['3-Tages-Ausblick','Ausbl.','E-Mail und Telegram']};
-  const head=`<div class="kx kxh ${cls}"><span></span><span>Metrik</span>${je?'':`<span class="kfmt">Darstellung<small>gilt für E-Mail und Telegram</small></span>`}${KAN.map(ch=>`<span class="kc"><span class="lg">${ch}</span><span class="sh">${kurzn[ch]}</span><small>${sub[ch]}</small></span>`).join('')}${ext.map(x=>`<span class="kc xc"><span class="lg">${XH[x][0]}</span><span class="sh">${XH[x][1]}</span><small>${XH[x][2]}</small></span>`).join('')}</div>`;
+  const head=`<div class="kx kxh ${cls}"><span></span><span>Metrik</span>${je?'':`<span class="kfmt">Darstellung<small>gilt überall außer in der SMS</small></span>`}${KAN.map(ch=>`<span class="kc"><span class="lg">${ch}</span><span class="sh">${kurzn[ch]}</span><small>${sub[ch]}</small></span>`).join('')}${ext.map(x=>`<span class="kc xc"><span class="lg">${XH[x][0]}</span><span class="sh">${XH[x][1]}</span><small>${XH[x][2]}</small></span>`).join('')}</div>`;
   const fix=s.sw.official?`<div class="kx fix ${cls}"><span></span><span class="kn">Amtliche Warnungen<small>immer dabei: in E-Mail und Telegram zuerst, in der SMS am Ende</small></span>${je?'':'<span class="kfmt"></span>'}${KAN.map(()=>`<span class="kc"><span class="lockck" title="immer dabei">✓</span></span>`).join('')}${ext.map(()=>'<span class="kc xc"></span>').join('')}</div>`:'';
   const rows=ms.map(m=>{const id=m[0];
     const cell=ch=>{const on=isSel(ch,id), dis=ch==='Telegram'&&kurz;
       const note=ch==='SMS'&&on&&sm.cutIds.includes(id)?'<em class="cutn">passt nicht mehr</em>':ch==='Telegram'&&on&&!dis&&tgCut.includes(id)?'<em class="cutn soft">nur Tageswert</em>':'';
-      const f=je&&ch!=='SMS'&&on&&!dis?`<button class="mini" type="button" data-fk="${ch}:${id}" aria-label="Darstellung ${m[1]} in ${ch}: ${fmtK(ch,id)}"><span class="lg">${fmtK(ch,id)}</span><span class="sh">${fmtK(ch,id)==='Roh'?'Roh':'Einf.'}</span></button>`:'';
+      const f=je&&ch!=='SMS'&&on&&!dis&&HASF.includes(id)?`<button class="mini" type="button" data-fk="${ch}:${id}" aria-label="Darstellung ${m[1]} in ${ch}: ${fmtK(ch,id)}"><span class="lg">${fmtK(ch,id)}</span><span class="sh">${fmtK(ch,id)==='Roh'?'Roh':'Einf.'}</span></button>`:'';
       return `<span class="kc ${on?'':'aus'} ${dis?'ruht':''}">${ckBox(ch,m,dis)}${f}<span class="kex">${on&&!dis?esc(exCell(ch,m)):''}</span>${note}</span>`;};
     const xcell=part=>{const an=part==='stunden'?s.sw.std:(s.sw.outM||s.sw.outA), name=part==='stunden'?'Stundenverlauf':'3-Tages-Ausblick';
       if(part==='stunden'&&id==='sunshine') return `<span class="kc xc"><span class="nix">–</span><em class="cutn soft">kein Stundenwert</em></span>`;
       if(!isSel('E-Mail',id)) return `<span class="kc xc"><span class="nix" title="nicht in der E-Mail">–</span></span>`;
-      return `<span class="kc xc ${an?'':'ruht'}"><label class="ck"><input type="checkbox" id="wk-${part}-${id}" data-wk="${part}:${id}" ${K().weg[part][id]?'':'checked'} ${an?'':'disabled'} aria-label="${m[1]} im ${name}"><i></i></label></span>`;};
-    return `<div class="kx ${cls}"><span class="h" aria-hidden="true" title="ziehen zum Umsortieren">⋮⋮</span><span class="kn">${m[1]}</span>${je?'':`<span class="kfmt">${seg('f1:'+id,['Roh','Einfach'],fmt1(id))}</span>`}${KAN.map(cell).join('')}${ext.map(xcell).join('')}</div>`;
+      const xon=!K().weg[part][id];
+      const xf=je&&xon&&an&&HASF.includes(id)?`<button class="mini" type="button" data-fk="${part}:${id}" aria-label="Darstellung ${m[1]} im ${name}: ${fmtK(part,id)}"><span class="lg">${fmtK(part,id)}</span><span class="sh">${fmtK(part,id)==='Roh'?'Roh':'Einf.'}</span></button>`:'';
+      return `<span class="kc xc ${an?'':'ruht'}"><label class="ck"><input type="checkbox" id="wk-${part}-${id}" data-wk="${part}:${id}" ${xon?'checked':''} ${an?'':'disabled'} aria-label="${m[1]} im ${name}"><i></i></label>${xf}</span>`;};
+    return `<div class="kx ${cls}"><span class="h" aria-hidden="true" title="ziehen zum Umsortieren">⋮⋮</span><span class="kn">${m[1]}</span>${je?'':`<span class="kfmt">${HASF.includes(id)?seg('f1:'+id,['Roh','Einfach'],fmt1(id)):'<span class="nurz">nur Zahl</span>'}</span>`}${KAN.map(cell).join('')}${ext.map(xcell).join('')}</div>`;
   }).join('');
   const was=ext.length?`Jede Spalte ist eine Stelle, an der eine Metrik erscheinen kann: die drei Kanäle${O()?', der Stundenverlauf':''} und der 3-Tages-Ausblick. ${O()?'Stundenverlauf und Ausblick':'Der Ausblick'} gibt es nur für Metriken, die auch in der E-Mail stehen.`:`Jede Spalte ist ein Kanal. ${O()?'Stundenverlauf und Ausblick zeigen':'Der Ausblick zeigt'} immer dieselben Metriken wie die E-Mail.`;
   return `<div class="card" data-abschnitt="kanal-inhalt">
-    <div class="lrow" style="border-top:0"><div class="t"><b>Was steht wo</b><small>Eine Tabelle für alles. Jede Zeile ist eine Metrik aus der Auswahl oben. ${was} Ein Haken heißt: erscheint dort. Hier wählst du nur ab. Die Reihenfolge ziehst du einmal, sie gilt überall. Roh zeigt die Zahl, Einfach einen Ampelpunkt, ein Symbol oder ein Wort. Neue Metriken kommen oben über „+“ dazu.</small></div></div>
+    <div class="lrow" style="border-top:0"><div class="t"><b>Was steht wo</b><small>Eine Tabelle für alles. Jede Zeile ist eine Metrik aus der Auswahl oben. ${was} Ein Haken heißt: erscheint dort. Hier wählst du nur ab. Die Reihenfolge ziehst du einmal, sie gilt überall. Roh zeigt die Zahl, Einfach ein Symbol oder ein Wort. ${je?'Wo eine Metrik beide Formen hat, stellst du das je Stelle ein.':'Nicht jede Metrik hat beide Formen.'} Die SMS bleibt bei ihren Kürzeln. Neue Metriken kommen oben über „+“ dazu.</small></div></div>
     ${head}${fix}${rows}
     ${budgetZeile(sm)}
     <div class="sub">Ganze Blöcke ein- und ausschalten</div>
@@ -740,7 +747,7 @@ function kanalListen(){
   const warn=s.sw.official?`<div class="oi fixed"><span class="h" aria-hidden="true"></span><span class="n">Amtliche Warnungen <span class="muted">· immer dabei, ${ch==='SMS'?'steht am Ende':'steht zuerst'}</span></span></div>`:'';
   const rows=ms.map(m=>{const id=m[0], on=isSel(ch,id);
     const note=ch==='SMS'&&on&&sm.cutIds.includes(id)?'passt nicht mehr in 160 Zeichen':ch==='Telegram'&&on&&tgCut.includes(id)?'nur als Tageswert':'';
-    return `<div class="oi kb ${on?'':'off'} ${kurz?'ruht':''}"><span class="h" aria-hidden="true" title="ziehen zum Umsortieren">⋮⋮</span><span class="n">${m[1]}</span><span class="kbx">${ch!=='SMS'?seg('fb:'+ch+':'+id,['Roh','Einfach'],fmtK(ch,id)):''}<span class="exm">${on?esc(exCell(ch,m)):''}</span>${note?`<span class="cutn ${ch==='SMS'?'':'soft'}">${note}</span>`:''}</span>${sw('kb:'+ch+':'+id,on,m[1]+' in '+ch,kurz)}</div>`;}).join('');
+    return `<div class="oi kb ${on?'':'off'} ${kurz?'ruht':''}"><span class="h" aria-hidden="true" title="ziehen zum Umsortieren">⋮⋮</span><span class="n">${m[1]}</span><span class="kbx">${ch!=='SMS'&&HASF.includes(id)?seg('fb:'+ch+':'+id,['Roh','Einfach'],fmtK(ch,id)):''}<span class="exm">${on?esc(exCell(ch,m)):''}</span>${note?`<span class="cutn ${ch==='SMS'?'':'soft'}">${note}</span>`:''}</span>${sw('kb:'+ch+':'+id,on,m[1]+' in '+ch,kurz)}</div>`;}).join('');
   return `<div class="card" data-abschnitt="kanal-inhalt">
     <div class="lrow" style="border-top:0"><div class="t"><b>Inhalt je Kanal</b><small>Je Kanal eine eigene Liste mit eigener Reihenfolge. Jede Liste nimmt nur aus der Auswahl oben: abwählen ja, hinzufügen nein. Neue Metriken kommen oben über „+“ dazu.</small></div>
       <div class="r">${seg('channel',KAN,ch)}</div></div>

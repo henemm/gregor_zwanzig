@@ -11,7 +11,9 @@ Konzept-Endfassung (`../../einstellungen_neu.md`), Mockup Fassung 4 (endgültig)
 ## Die offenen Punkte
 
 1. **Kanal-Auswahl:** A eine Tabelle (Zeilen = Grundauswahl, Spalten = Kanäle, eine Reihenfolge) oder B eine Liste je Kanal.
-2. **Roh/Einfach** (nur bei A): einmal je Metrik (gilt für E-Mail und Telegram) oder je Metrik und Kanal.
+2. **Roh/Einfach** (nur bei A): je Stelle (E-Mail, Telegram, Stundenverlauf, Ausblick; PO-Hinweis 2026-11-17) oder einmal
+   je Metrik. Den Umschalter gibt es nur bei Metriken mit zwei Formen laut `metric_catalog.py` (`format_modes`): Wind,
+   Böen, Niederschlag, Gewitter, Bewölkung (alle Schichten), Sonnenstunden, Windrichtung. Die SMS bleibt bei Kürzeln.
 3. **Stundenverlauf und 3-Tages-Ausblick:** nur Schalter unter der Tabelle (zeigen genau die E-Mail-Metriken) oder zwei
    weitere Spalten derselben Tabelle mit Abwahl je Metrik.
 
