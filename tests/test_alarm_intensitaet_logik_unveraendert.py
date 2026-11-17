@@ -17,7 +17,7 @@ import pytest
 from i18n import t
 from services import radar_service as rs
 from services.alert_urgency import urgency_from_radar
-from services.radar_alert_service import build_onset_alert_message
+from services.radar_alert_service import build_debug_onset_alert_message
 
 STUFEN = [rs.INTENSITY_CONVECTIVE, rs.INTENSITY_CONVECTIVE_NO_HAIL, rs.INTENSITY_HEAVY,
           rs.INTENSITY_MODERATE, rs.INTENSITY_LIGHT]
@@ -26,8 +26,11 @@ STUFEN = [rs.INTENSITY_CONVECTIVE, rs.INTENSITY_CONVECTIVE_NO_HAIL, rs.INTENSITY
 def _nachricht(label: str, lang: str):
     trip = SimpleNamespace(name="GR20", alert_cooldown_minutes=120)
     active = SimpleNamespace(start_point=SimpleNamespace(lat=42.2, lon=9.0), distance_km=8.0)
-    return build_onset_alert_message(trip, active, 25, "06:25", label, "Radar (DWD)",
-                                     is_convective=label in STUFEN[:2], lang=lang)
+    # Issue #2982: die Altform ist entfernt -- das Event entsteht ueber den
+    # EINEN Baustein aus einem echten NowcastResult.
+    nc = rs.NowcastResult(onset_minutes=25, intensity_label=label, source="dwd",
+                          is_convective=label in STUFEN[:2])
+    return build_debug_onset_alert_message(trip, active, nc, "Radar (DWD)", lang=lang)
 
 
 @pytest.mark.parametrize("label", STUFEN)

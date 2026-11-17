@@ -287,13 +287,10 @@ geteilter Anzeigefassung und Verzweigung in allen sechs Formatierern.
   gehört zu Anforderung A-1) und die Sperrzeit-/Überholungslogik von `check_nowcast_gate`
   (Issue #2065, läuft parallel in einer anderen Session — dort ist Anforderung A-3 gemessen
   verletzt, unabhängig vom Laufend-Fall dieser Scheibe).
-- **Beim Implementieren zu klären, nicht vorab entschieden:** ob
-  `radar_alert_service.py::build_onset_alert_message` noch einen produktiven Aufrufer im
-  Alarm-Versandpfad hat. Ein Grep zeigt aktuell nur `scripts/send_gate_test_mails.py` und
-  `api/routers/debug.py` als Aufrufer — beides Debug-/Test-Werkzeuge, kein Treffer in
-  `trip_alert.py`. Trifft das beim Implementieren erneut zu, muss die Funktion die neuen
-  `OnsetEvent`-Felder nicht zwingend selbst befüllen (Default `already_running=False` reicht für
-  Debug-Zwecke); ist doch ein produktiver Aufrufer vorhanden, zieht er mit.
+- **Erledigt (#2982, 2026-11-17):** Die Frage nach einem produktiven Aufrufer von
+  `radar_alert_service.py::build_onset_alert_message` ist entschieden: es gab keinen. Die Altform
+  ist entfernt; der Staging-Debug-Trigger läuft über `build_debug_onset_alert_message`, das über
+  den gemeinsamen Baustein `onset_event_from_nowcast` (`project.py`) baut.
 - **Beim Implementieren zu klären:** ob das Replay-Payload-Schema in
   `validator_render_service.py` die neuen Felder explizit tragen muss oder ob reines
   Durchreichen der `NowcastResult`/`OnsetEvent`-Instanz genügt.
@@ -334,3 +331,4 @@ geteilter Anzeigefassung und Verzweigung in allen sechs Formatierern.
 
 - 2026-08-22: Initial spec created (Scheibe S2b aus #2050, Anforderung B-1, verdichtet aus
   `docs/context/fix-2050-s2b-laufendes-ereignis.md`).
+- 2026-11-17: Offene Frage zur Altform `build_onset_alert_message` beantwortet und Altform entfernt (#2982, Known Limitations aktualisiert).

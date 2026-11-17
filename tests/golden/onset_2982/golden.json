@@ -1,0 +1,262 @@
+{
+ "replay_kuenftig": {
+  "email_html": "<html><body style=\"font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\"><div style=\"display:inline-block;padding:4px 12px;border-radius:12px;background:#c45a2a1f;color:#c45a2a;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;margin-bottom:12px;\">Radar-Nowcast</div><h1 style=\"margin:0 0 12px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\">Regen ab Sa0:05</h1><div style=\"border-bottom:1px solid #d8d5c9;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Wo &amp; wann</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Segment 2 · ab morgen 00:05 · letzter Regen gegen morgen 00:40 · Radar reicht bis morgen 01:00 · Ortsangabe ab 23:30 unscharf</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Intensität</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Mäßiger Regen</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Quelle</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Radar (DWD)</td></tr></table></div><p style=\"color:#5c5a52;margin-top:16px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\">Stand: heute 22:30</p><div style=\"font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;font-size:10px;color:#9a978d;padding:10px 24px 14px;line-height:1.5;\"><div>Regen-/Gewitter-Alarm</div><div style=\"color:#b5b1a6;\">Radar (DWD)</div></div></body></html>",
+  "email_plain": "Regen ab Sa0:05\n\nRadar-Nowcast\n\nWo & wann: Segment 2 · ab morgen 00:05 · letzter Regen gegen morgen 00:40 · Radar reicht bis morgen 01:00 · Ortsangabe ab 23:30 unscharf\nIntensität: Mäßiger Regen\nQuelle: Radar (DWD)\n\nStand: heute 22:30\n\nRegen-/Gewitter-Alarm · Radar (DWD)",
+  "sms": "Seg 2: R2.0@Sa0:05@Sa0:40?",
+  "subject": "[Golden-Trip] Segment 2 · Regen ab Sa0:05 · letzter Regen gegen morgen 00:40 · Radar reicht bis morgen 01:00 · Ortsangabe ab 23:30 unscharf",
+  "telegram": "<b>Golden-Trip · Segment 2 · Regen ab Sa0:05</b>\nmorgen 00:05 · letzter Regen gegen morgen 00:40 · Radar reicht bis morgen 01:00 · Ortsangabe ab 23:30 unscharf · Mäßiger Regen · Radar (DWD)"
+ },
+ "replay_laufend": {
+  "email_html": "<html><body style=\"font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\"><div style=\"display:inline-block;padding:4px 12px;border-radius:12px;background:#c45a2a1f;color:#c45a2a;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;margin-bottom:12px;\">Radar-Nowcast</div><h1 style=\"margin:0 0 12px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\">Regen läuft bereits</h1><div style=\"border-bottom:1px solid #d8d5c9;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Wo &amp; wann</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Segment 2 · läuft bereits · letzter Regen gegen 23:10 · Radar reicht bis 23:30</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Intensität</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Mäßiger Regen</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Quelle</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Radar (DWD)</td></tr></table></div><p style=\"color:#5c5a52;margin-top:16px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\">Stand: heute 22:30</p><div style=\"font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;font-size:10px;color:#9a978d;padding:10px 24px 14px;line-height:1.5;\"><div>Regen-/Gewitter-Alarm</div><div style=\"color:#b5b1a6;\">Radar (DWD)</div></div></body></html>",
+  "email_plain": "Regen läuft bereits\n\nRadar-Nowcast\n\nWo & wann: Segment 2 · läuft bereits · letzter Regen gegen 23:10 · Radar reicht bis 23:30\nIntensität: Mäßiger Regen\nQuelle: Radar (DWD)\n\nStand: heute 22:30\n\nRegen-/Gewitter-Alarm · Radar (DWD)",
+  "sms": "Seg 2: R2.2 now@23:10",
+  "subject": "[Golden-Trip] Segment 2 · Regen läuft bereits · letzter Regen gegen 23:10 · Radar reicht bis 23:30",
+  "telegram": "<b>Golden-Trip · Segment 2 · Regen läuft bereits</b>\nläuft bereits · letzter Regen gegen 23:10 · Radar reicht bis 23:30 · Mäßiger Regen · Radar (DWD)"
+ },
+ "trip_versand_kuenftig": {
+  "email_html": "<html><body style=\"font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\"><div style=\"display:inline-block;padding:4px 12px;border-radius:12px;background:#c45a2a1f;color:#c45a2a;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;margin-bottom:12px;\">Radar-Nowcast</div><h1 style=\"margin:0 0 12px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\">Gewitter in 35 Min</h1><div style=\"border-bottom:1px solid #d8d5c9;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Wo &amp; wann</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">km 12-18 · ab morgen 00:05 · letzter Regen gegen morgen 23:50 · Radar reicht bis morgen 01:30 · Ortsangabe ab 23:30 unscharf · Nass km 12-14</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Intensität</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">mäßiger Regen</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Quelle</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Radar (DWD)</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Briefing</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">nicht im Briefing angekündigt</td></tr></table></div><div style=\"border-left:4px solid #c45a2a;padding:8px 12px;margin-top:12px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.</div><p style=\"color:#5c5a52;margin-top:16px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\">Stand: heute 23:30</p><div style=\"font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;font-size:10px;color:#9a978d;padding:10px 24px 14px;line-height:1.5;\"><div>Regen-/Gewitter-Alarm</div><div style=\"color:#b5b1a6;\">Radar (DWD)</div></div></body></html>",
+  "email_plain": "Gewitter in 35 Min\n\nRadar-Nowcast\n\nWo & wann: km 12-18 · ab morgen 00:05 · letzter Regen gegen morgen 23:50 · Radar reicht bis morgen 01:30 · Ortsangabe ab 23:30 unscharf · Nass km 12-14\nIntensität: mäßiger Regen\nQuelle: Radar (DWD)\nBriefing: nicht im Briefing angekündigt\n\nStand: heute 23:30\nCooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.\n\nRegen-/Gewitter-Alarm · Radar (DWD)",
+  "events": [
+   {
+    "already_running": false,
+    "briefing_context": "nicht im Briefing angekündigt",
+    "convective_checked": true,
+    "event_end_day_offset": 1,
+    "event_end_time": "23:50",
+    "event_end_weekday": "Sa",
+    "event_ongoing_beyond_horizon": false,
+    "gap_km": [],
+    "intensity_label": "mäßiger Regen",
+    "is_convective": true,
+    "km_from": 12.0,
+    "km_measured": true,
+    "km_to": 18.5,
+    "location_label": null,
+    "location_sharpness_limit_day_offset": 0,
+    "location_sharpness_limit_time": "23:30",
+    "onset_day_offset": 1,
+    "onset_minutes": 35,
+    "onset_precip_mm": 3.2,
+    "onset_time": "00:05",
+    "onset_weekday": "Sa",
+    "rain_zones": [
+     {
+      "event_end_minutes": 80,
+      "intensity_label": "",
+      "km_from": 12.0,
+      "km_to": 14.0,
+      "onset_minutes": 35,
+      "source": ""
+     }
+    ],
+    "segment_id": "2",
+    "source_label": "Radar (DWD)",
+    "source_reach_day_offset": 1,
+    "source_reach_time": "01:30",
+    "stage_number": 2
+   }
+  ],
+  "sms": "S2 km 12-18: TH@Sa0:05@Sa23:50? R3.2 km12-14",
+  "subject": "[GM Trip] km 12-18 · Gewitter in 35 Min · letzter Regen gegen morgen 23:50 · Radar reicht bis morgen 01:30 · Ortsangabe ab 23:30 unscharf · Nass km 12-14",
+  "telegram": "<b>GM Trip · km 12-18 · Gewitter in 35 Min</b>\nmorgen 00:05 · letzter Regen gegen morgen 23:50 · Radar reicht bis morgen 01:30 · Ortsangabe ab 23:30 unscharf · Nass km 12-14 · mäßiger Regen · Radar (DWD)"
+ },
+ "trip_versand_laufend": {
+  "email_html": "<html><body style=\"font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\"><div style=\"display:inline-block;padding:4px 12px;border-radius:12px;background:#c45a2a1f;color:#c45a2a;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;margin-bottom:12px;\">Radar-Nowcast</div><h1 style=\"margin:0 0 12px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\">Regen läuft bereits</h1><div style=\"border-bottom:1px solid #d8d5c9;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Wo &amp; wann</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">km 12-18 · läuft bereits · Regen mindestens bis 23:50 · Radar reicht bis morgen 01:30 · Ortsangabe ab 23:30 unscharf · Nass km 12-14 · Ausdehnung unvollständig gemessen · Gewitter ungeprüft</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Intensität</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">mäßiger Regen</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Quelle</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Radar (DWD)</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Briefing</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">nicht im Briefing angekündigt</td></tr></table></div><div style=\"border-left:4px solid #c45a2a;padding:8px 12px;margin-top:12px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.</div><p style=\"color:#5c5a52;margin-top:16px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\">Stand: heute 23:30</p><div style=\"font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;font-size:10px;color:#9a978d;padding:10px 24px 14px;line-height:1.5;\"><div>Regen-/Gewitter-Alarm</div><div style=\"color:#b5b1a6;\">Radar (DWD)</div></div></body></html>",
+  "email_plain": "Regen läuft bereits\n\nRadar-Nowcast\n\nWo & wann: km 12-18 · läuft bereits · Regen mindestens bis 23:50 · Radar reicht bis morgen 01:30 · Ortsangabe ab 23:30 unscharf · Nass km 12-14 · Ausdehnung unvollständig gemessen · Gewitter ungeprüft\nIntensität: mäßiger Regen\nQuelle: Radar (DWD)\nBriefing: nicht im Briefing angekündigt\n\nStand: heute 23:30\nCooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.\n\nRegen-/Gewitter-Alarm · Radar (DWD)",
+  "events": [
+   {
+    "already_running": true,
+    "briefing_context": "nicht im Briefing angekündigt",
+    "convective_checked": false,
+    "event_end_day_offset": 0,
+    "event_end_time": "23:50",
+    "event_end_weekday": null,
+    "event_ongoing_beyond_horizon": true,
+    "gap_km": [
+     15.5
+    ],
+    "intensity_label": "mäßiger Regen",
+    "is_convective": false,
+    "km_from": 12.0,
+    "km_measured": true,
+    "km_to": 18.5,
+    "location_label": null,
+    "location_sharpness_limit_day_offset": 0,
+    "location_sharpness_limit_time": "23:30",
+    "onset_day_offset": 0,
+    "onset_minutes": 0,
+    "onset_precip_mm": 3.2,
+    "onset_time": "22:30",
+    "onset_weekday": null,
+    "rain_zones": [
+     {
+      "event_end_minutes": 80,
+      "intensity_label": "",
+      "km_from": 12.0,
+      "km_to": 14.0,
+      "onset_minutes": 0,
+      "source": ""
+     }
+    ],
+    "segment_id": "2",
+    "source_label": "Radar (DWD)",
+    "source_reach_day_offset": 1,
+    "source_reach_time": "01:30",
+    "stage_number": 2
+   }
+  ],
+  "sms": "S2 km 12-18: R#3.2 now >@23:50? km12-14>",
+  "subject": "[GM Trip] km 12-18 · Regen läuft bereits · Regen mindestens bis 23:50 · Radar reicht bis morgen 01:30 · Ortsangabe ab 23:30 unscharf · Nass km 12-14 · Ausdehnung unvollständig gemessen · Gewitter ungeprüft",
+  "telegram": "<b>GM Trip · km 12-18 · Regen läuft bereits</b>\nläuft bereits · Regen mindestens bis 23:50 · Radar reicht bis morgen 01:30 · Ortsangabe ab 23:30 unscharf · Nass km 12-14 · Ausdehnung unvollständig gemessen · Gewitter ungeprüft · mäßiger Regen · Radar (DWD)"
+ },
+ "vergleich_ein_ort_kuenftig": {
+  "email_html": "<html><body style=\"font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\"><div style=\"display:inline-block;padding:4px 12px;border-radius:12px;background:#c45a2a1f;color:#c45a2a;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;margin-bottom:12px;\">Radar-Nowcast</div><h1 style=\"margin:0 0 12px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\">Regen in 45 Min</h1><div style=\"border-bottom:1px solid #d8d5c9;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Wo &amp; wann</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Hütte Berlin · ab morgen 00:15 · letzter Regen gegen morgen 01:05 · Radar reicht bis morgen 01:30 · Ortsangabe ab morgen 00:30 unscharf</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Intensität</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Mäßiger Regen</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Quelle</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">radar</td></tr></table></div><p style=\"color:#5c5a52;margin-top:16px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\">Stand: heute 23:30</p><div style=\"font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;font-size:10px;color:#9a978d;padding:10px 24px 14px;line-height:1.5;\"><div>Regen-/Gewitter-Alarm</div><div style=\"color:#b5b1a6;\">radar</div></div></body></html>",
+  "email_plain": "Regen in 45 Min\n\nRadar-Nowcast\n\nWo & wann: Hütte Berlin · ab morgen 00:15 · letzter Regen gegen morgen 01:05 · Radar reicht bis morgen 01:30 · Ortsangabe ab morgen 00:30 unscharf\nIntensität: Mäßiger Regen\nQuelle: radar\n\nStand: heute 23:30\n\nRegen-/Gewitter-Alarm · radar",
+  "events": [
+   {
+    "already_running": false,
+    "briefing_context": null,
+    "convective_checked": true,
+    "event_end_day_offset": 1,
+    "event_end_time": "01:05",
+    "event_end_weekday": "Sa",
+    "event_ongoing_beyond_horizon": false,
+    "gap_km": [],
+    "intensity_label": "Mäßiger Regen",
+    "is_convective": false,
+    "km_from": 0.0,
+    "km_measured": false,
+    "km_to": 0.0,
+    "location_label": null,
+    "location_sharpness_limit_day_offset": 1,
+    "location_sharpness_limit_time": "00:30",
+    "onset_day_offset": 1,
+    "onset_minutes": 45,
+    "onset_precip_mm": 2.4,
+    "onset_time": "00:15",
+    "onset_weekday": "Sa",
+    "rain_zones": [],
+    "segment_id": null,
+    "source_label": "radar",
+    "source_reach_day_offset": 1,
+    "source_reach_time": "01:30",
+    "stage_number": null
+   }
+  ],
+  "sms": "Huette Berlin: R2.4@Sa0:15@Sa1:05?",
+  "subject": "[Hütte Berlin] Regen in 45 Min · letzter Regen gegen morgen 01:05 · Radar reicht bis morgen 01:30 · Ortsangabe ab morgen 00:30 unscharf",
+  "telegram": "<b>Hütte Berlin · Regen in 45 Min</b>\nmorgen 00:15 · letzter Regen gegen morgen 01:05 · Radar reicht bis morgen 01:30 · Ortsangabe ab morgen 00:30 unscharf · Mäßiger Regen · radar"
+ },
+ "vergleich_ein_ort_laufend": {
+  "email_html": "<html><body style=\"font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\"><div style=\"display:inline-block;padding:4px 12px;border-radius:12px;background:#c45a2a1f;color:#c45a2a;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;margin-bottom:12px;\">Radar-Nowcast</div><h1 style=\"margin:0 0 12px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\">Regen läuft bereits</h1><div style=\"border-bottom:1px solid #d8d5c9;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Wo &amp; wann</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Lissabon · läuft bereits · letzter Regen gegen 23:00 · Gewitter ungeprüft</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Intensität</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Leichter Regen</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Quelle</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">radar</td></tr></table></div><p style=\"color:#5c5a52;margin-top:16px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\">Stand: heute 22:30</p><div style=\"font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;font-size:10px;color:#9a978d;padding:10px 24px 14px;line-height:1.5;\"><div>Regen-/Gewitter-Alarm</div><div style=\"color:#b5b1a6;\">radar</div></div></body></html>",
+  "email_plain": "Regen läuft bereits\n\nRadar-Nowcast\n\nWo & wann: Lissabon · läuft bereits · letzter Regen gegen 23:00 · Gewitter ungeprüft\nIntensität: Leichter Regen\nQuelle: radar\n\nStand: heute 22:30\n\nRegen-/Gewitter-Alarm · radar",
+  "events": [
+   {
+    "already_running": true,
+    "briefing_context": null,
+    "convective_checked": false,
+    "event_end_day_offset": 0,
+    "event_end_time": "23:00",
+    "event_end_weekday": null,
+    "event_ongoing_beyond_horizon": false,
+    "gap_km": [],
+    "intensity_label": "Leichter Regen",
+    "is_convective": false,
+    "km_from": 0.0,
+    "km_measured": false,
+    "km_to": 0.0,
+    "location_label": null,
+    "location_sharpness_limit_day_offset": 0,
+    "location_sharpness_limit_time": null,
+    "onset_day_offset": 0,
+    "onset_minutes": 0,
+    "onset_precip_mm": 0.8,
+    "onset_time": "22:30",
+    "onset_weekday": null,
+    "rain_zones": [],
+    "segment_id": null,
+    "source_label": "radar",
+    "source_reach_day_offset": 0,
+    "source_reach_time": null,
+    "stage_number": null
+   }
+  ],
+  "sms": "Lissabon: R#0.8 now@23:00",
+  "subject": "[Lissabon] Regen läuft bereits · letzter Regen gegen 23:00 · Gewitter ungeprüft",
+  "telegram": "<b>Lissabon · Regen läuft bereits</b>\nläuft bereits · letzter Regen gegen 23:00 · Gewitter ungeprüft · Leichter Regen · radar"
+ },
+ "vergleich_zwei_orte": {
+  "email_html": "<html><body style=\"font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\"><div style=\"display:inline-block;padding:4px 12px;border-radius:12px;background:#c45a2a1f;color:#c45a2a;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;margin-bottom:12px;\">Radar-Nowcast</div><h1 style=\"margin:0 0 12px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\">Regen-Alarm: 2 Orte</h1><div style=\"border-bottom:1px solid #d8d5c9;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Lissabon · Regen läuft bereits</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">läuft bereits · letzter Regen gegen 23:00 · Gewitter ungeprüft · Leichter Regen</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Hütte Berlin · Regen in 45 Min</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">ab morgen 00:15 · letzter Regen gegen morgen 01:05 · Radar reicht bis morgen 01:30 · Ortsangabe ab morgen 00:30 unscharf · Mäßiger Regen</td></tr></table></div><div style=\"border-left:4px solid #c45a2a;padding:8px 12px;margin-top:12px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.</div><p style=\"color:#5c5a52;margin-top:16px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\">Stand: heute 22:30 · Quelle: radar</p><div style=\"font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;font-size:10px;color:#9a978d;padding:10px 24px 14px;line-height:1.5;\"><div>Regen-/Gewitter-Alarm</div><div style=\"color:#b5b1a6;\">radar</div></div></body></html>",
+  "email_plain": "Regen-Alarm: 2 Orte\n\nRadar-Nowcast\n\nLissabon · Regen läuft bereits: läuft bereits · letzter Regen gegen 23:00 · Gewitter ungeprüft · Leichter Regen\nHütte Berlin · Regen in 45 Min: ab morgen 00:15 · letzter Regen gegen morgen 01:05 · Radar reicht bis morgen 01:30 · Ortsangabe ab morgen 00:30 unscharf · Mäßiger Regen\n\nStand: heute 22:30 · Quelle: radar\nCooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.\n\nRegen-/Gewitter-Alarm · radar",
+  "events": [
+   {
+    "already_running": true,
+    "briefing_context": null,
+    "convective_checked": false,
+    "event_end_day_offset": 0,
+    "event_end_time": "23:00",
+    "event_end_weekday": null,
+    "event_ongoing_beyond_horizon": false,
+    "gap_km": [],
+    "intensity_label": "Leichter Regen",
+    "is_convective": false,
+    "km_from": 0.0,
+    "km_measured": false,
+    "km_to": 0.0,
+    "location_label": "Lissabon",
+    "location_sharpness_limit_day_offset": 0,
+    "location_sharpness_limit_time": null,
+    "onset_day_offset": 0,
+    "onset_minutes": 0,
+    "onset_precip_mm": 0.8,
+    "onset_time": "22:30",
+    "onset_weekday": null,
+    "rain_zones": [],
+    "segment_id": null,
+    "source_label": "radar",
+    "source_reach_day_offset": 0,
+    "source_reach_time": null,
+    "stage_number": null
+   },
+   {
+    "already_running": false,
+    "briefing_context": null,
+    "convective_checked": true,
+    "event_end_day_offset": 1,
+    "event_end_time": "01:05",
+    "event_end_weekday": "Sa",
+    "event_ongoing_beyond_horizon": false,
+    "gap_km": [],
+    "intensity_label": "Mäßiger Regen",
+    "is_convective": false,
+    "km_from": 0.0,
+    "km_measured": false,
+    "km_to": 0.0,
+    "location_label": "Hütte Berlin",
+    "location_sharpness_limit_day_offset": 1,
+    "location_sharpness_limit_time": "00:30",
+    "onset_day_offset": 1,
+    "onset_minutes": 45,
+    "onset_precip_mm": 2.4,
+    "onset_time": "00:15",
+    "onset_weekday": "Sa",
+    "rain_zones": [],
+    "segment_id": null,
+    "source_label": "radar",
+    "source_reach_day_offset": 1,
+    "source_reach_time": "01:30",
+    "stage_number": null
+   }
+  ],
+  "sms": "Lissabon:R#0.8 now@23:00 Huette Berli:R2.4@Sa0:15@Sa1:05?",
+  "subject": "[Lissabon, Hütte Berlin] Regen-Alarm: 2 Orte",
+  "telegram": "<b>Regen-Alarm: 2 Orte</b>\nLissabon · Regen läuft bereits: läuft bereits · letzter Regen gegen 23:00 · Gewitter ungeprüft · Leichter Regen\nHütte Berlin · Regen in 45 Min: ab morgen 00:15 · letzter Regen gegen morgen 01:05 · Radar reicht bis morgen 01:30 · Ortsangabe ab morgen 00:30 unscharf · Mäßiger Regen\nQuelle: radar"
+ },
+ "vorschau_payload": {
+  "email_html": "<html><body style=\"font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\"><div style=\"display:inline-block;padding:4px 12px;border-radius:12px;background:#c45a2a1f;color:#c45a2a;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;margin-bottom:12px;\">Radar-Nowcast</div><h1 style=\"margin:0 0 12px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#1a1a18;\">Gewitter in 40 Min</h1><div style=\"border-bottom:1px solid #d8d5c9;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Wo &amp; wann</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">km 3-10 · ab morgen 00:10 · letzter Regen gegen morgen 01:20 · Radar reicht bis morgen 01:30 · Ortsangabe ab morgen 00:00 unscharf · Nass km 3-5, km 7-10 · Gewitter ungeprüft</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Intensität</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Starker Regen</td></tr></table><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-top:1px solid #d8d5c9;\"><tr><td align=\"left\" style=\"padding:8px 0;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Quelle</td><td align=\"right\" style=\"padding:8px 0;font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;color:#1a1a18;\">Radar (DWD)</td></tr></table></div><div style=\"border-left:4px solid #c45a2a;padding:8px 12px;margin-top:12px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;color:#5c5a52;\">Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.</div><p style=\"color:#5c5a52;margin-top:16px;font-family:'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\">Stand: heute 22:30</p><div style=\"font-family:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;font-size:10px;color:#9a978d;padding:10px 24px 14px;line-height:1.5;\"><div>Regen-/Gewitter-Alarm</div><div style=\"color:#b5b1a6;\">Radar (DWD)</div></div></body></html>",
+  "email_plain": "Gewitter in 40 Min\n\nRadar-Nowcast\n\nWo & wann: km 3-10 · ab morgen 00:10 · letzter Regen gegen morgen 01:20 · Radar reicht bis morgen 01:30 · Ortsangabe ab morgen 00:00 unscharf · Nass km 3-5, km 7-10 · Gewitter ungeprüft\nIntensität: Starker Regen\nQuelle: Radar (DWD)\n\nStand: heute 22:30\nCooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.\n\nRegen-/Gewitter-Alarm · Radar (DWD)",
+  "sms": "km 3-10: TH#@Sa0:10@Sa1:20? R6.5 km3-5,7-10",
+  "subject": "[Golden-Trip] km 3-10 · Gewitter in 40 Min · letzter Regen gegen morgen 01:20 · Radar reicht bis morgen 01:30 · Ortsangabe ab morgen 00:00 unscharf · Nass km 3-5, km 7-10 · Gewitter ungeprüft",
+  "telegram": "<b>Golden-Trip · km 3-10 · Gewitter in 40 Min</b>\nmorgen 00:10 · letzter Regen gegen morgen 01:20 · Radar reicht bis morgen 01:30 · Ortsangabe ab morgen 00:00 unscharf · Nass km 3-5, km 7-10 · Gewitter ungeprüft · Starker Regen · Radar (DWD)"
+ }
+}

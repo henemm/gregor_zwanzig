@@ -896,7 +896,8 @@ DIENST_EINSTIEGE = {
     ("notification_service.py", "send_multi_location_deviation_alert"): 1,
     ("notification_service.py", "send_multi_location_radar_alert"): 1,
     ("notification_service.py", "send_radar_alert"): 1,
-    ("radar_alert_service.py", "build_onset_alert_message"): 1,
+    # Issue #2982: Altform entfernt, der Debug-Ausloeser baut ueber den Baustein.
+    ("radar_alert_service.py", "build_debug_onset_alert_message"): 1,
     ("validator_render_service.py", "_deviation_preview_message"): 1,
     ("validator_render_service.py", "render_alert_preview"): 1,
     # S1c-4b: der Ausblick wird je stage_trip mit dessen Ampel gebaut
@@ -1007,14 +1008,17 @@ def test_kein_einstieg_loest_still_none_auf(wurzel, anzahl):
 ], ids=["skitouren", "ohne_vorlage"])
 def test_radar_alarm_nachricht_traegt_die_ampel_des_trips(display_config, erwartet, andere):
     """S1c-4b (umgekehrt aus ``…traegt_in_s1c1_die_allgemein_ampel``):
-    ``build_onset_alert_message`` (Radar-Alarm, Trip) trägt die Ampel des
+    ``build_debug_onset_alert_message`` (Radar-Alarm, Trip; vormals die
+    Altform ``build_onset_alert_message``, Issue #2982) trägt die Ampel des
     Trips — Skitouren-Trip ⇒ Skitouren, Trip ohne Vorlage ⇒ „allgemein"."""
     from types import SimpleNamespace
 
-    from services.radar_alert_service import build_onset_alert_message
+    from services.radar_alert_service import build_debug_onset_alert_message
+    from services.radar_service import NowcastResult
     trip = SimpleNamespace(name="GR20", alert_cooldown_minutes=120, display_config=display_config)
     active = SimpleNamespace(start_point=SimpleNamespace(lat=42.2, lon=9.0), distance_km=8.0)
-    msg = build_onset_alert_message(trip, active, 25, "06:25", "Leichter Regen", "Radar (DWD)")
+    nc = NowcastResult(onset_minutes=25, intensity_label="Leichter Regen", source="dwd")
+    msg = build_debug_onset_alert_message(trip, active, nc, "Radar (DWD)")
     assert msg.ampel == erwartet
     assert msg.ampel != andere
 

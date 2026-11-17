@@ -25,11 +25,9 @@ from app.ampel import resolve_ampel
 from app.profile import ActivityProfile
 from app.trip import Trip
 from app.user import ComparisonResult, LocationResult, SavedLocation
-from output.renderers.alert.model import AlertMessage, OnsetEvent
+from output.renderers.alert.model import AlertMessage
 from output.renderers.alert.project import (
-    event_end_display,  # Issue #2051 S1
-    onset_display,  # Issue #2219 (B2-72)
-    location_sharpness_display, source_reach_display,  # Issue #2051 S3
+    onset_event_from_fields, onset_event_from_nowcast,  # Issue #2982
     to_alert_message,
 )
 from output.renderers.alert.render import (
@@ -198,66 +196,13 @@ def render_alert_preview(
     has_onset = body.onset is not None
 
     if has_onset:
-        onset_ev = OnsetEvent(
-            onset_minutes=body.onset.onset_minutes,
-            onset_time=body.onset.onset_time,
-            km_from=body.onset.km_from,
-            km_to=body.onset.km_to,
-            is_convective=body.onset.is_convective,
-            intensity_label=body.onset.intensity_label,
-            source_label=body.onset.source_label,
-            # #1948 S5 (AC-15): die Segment-Kennung des Payloads erreicht das
-            # Event -- sonst faellt der Ortskopf auf "km N-M" zurueck.
-            segment_id=getattr(body.onset, "segment_id", None),
-            # Issue #2046: Mengenangabe der Kurznachricht. `getattr`, weil
-            # dieser Zweig sowohl den API-Payload (`OnsetPayload`) als auch
-            # den Replay-SimpleNamespace bedient -- Muster `segment_id` o.
-            onset_precip_mm=getattr(body.onset, "onset_precip_mm", None),
-            # Issue #2054: Tagesbezug des Beginns UND seine Darstellung --
-            # ohne beides zeigt die Vorschau eine andere Schreibweise als der
-            # Versand. `getattr` aus demselben Grund wie oben.
-            onset_day_offset=getattr(body.onset, "onset_day_offset", 0),
-            onset_weekday=getattr(body.onset, "onset_weekday", None),
-            # Issue #2051 S1: Ende-Angabe des Payloads, `getattr` aus
-            # demselben Grund wie oben (API-Payload UND Replay-Namespace).
-            event_end_time=getattr(body.onset, "event_end_time", None),
-            event_end_day_offset=getattr(
-                body.onset, "event_end_day_offset", 0,
-            ),
-            event_end_weekday=getattr(  # Issue #2054
-                body.onset, "event_end_weekday", None,
-            ),
-            # Issue #2051 S1 (Spec v1.1): der R4-Waechter waehlt die
-            # Ende-Textform -- er muss den Renderer auch auf dem Vorschauweg
-            # erreichen, sonst zeigt die Vorschau eine andere Aussage als der
-            # Versand.
-            event_ongoing_beyond_horizon=getattr(
-                body.onset, "event_ongoing_beyond_horizon", False,
-            ),
-            # Issue #2050 S2b: der Laufend-Zustand entscheidet ueber die
-            # BEGINN-Angabe ("laeuft bereits" statt "in N Min") und muss den
-            # Renderer deshalb auch hier erreichen. Der Vorschauweg ist das,
-            # womit beim Ausrollen geprueft wird -- zeigte er eine andere
-            # Aussage als der Versand, pruefte die Verifikation etwas, das so
-            # nie beim Nutzer ankommt, und meldete gruen (AC-14b).
-            already_running=getattr(body.onset, "already_running", False),
-            # Issue #2051 S3: Reichweite/Guete des Payloads, `getattr` aus
-            # demselben Grund wie oben (API-Payload UND Replay-Namespace).
-            source_reach_time=getattr(body.onset, "source_reach_time", None),
-            source_reach_day_offset=getattr(
-                body.onset, "source_reach_day_offset", 0,
-            ),
-            location_sharpness_limit_time=getattr(
-                body.onset, "location_sharpness_limit_time", None,
-            ),
-            location_sharpness_limit_day_offset=getattr(
-                body.onset, "location_sharpness_limit_day_offset", 0,
-            ),
-            # Issue #2051 S2b: Ausdehnung des Payloads. Ohne diese beiden
-            # Felder zeigte die Vorschau in KEINEM Kanal eine Zonenangabe --
-            # genau die Luecke, die die S2a-Lieferung als "nicht gemessen"
-            # gebucht hat (R4).
-            km_measured=getattr(body.onset, "km_measured", False),
+        # Issue #2982: EIN Baustein, generisch ueber alle `OnsetEvent`-Felder
+        # (API-Payload `OnsetPayload` UND Replay-Event). Nur die Regenzonen
+        # brauchen eine Umwandlung: der Payload traegt `RainZonePayload`.
+        # Bekannte Vorschau-Luecken bleiben (der Payload traegt weder
+        # `gap_km` noch `stage_number`).
+        onset_ev = onset_event_from_fields(
+            body.onset,
             rain_zones=tuple(
                 RainZone(
                     km_from=z.km_from, km_to=z.km_to,
@@ -266,19 +211,13 @@ def render_alert_preview(
                 )
                 for z in getattr(body.onset, "rain_zones", [])
             ),
-            # Issue #2050 S4b-2: die ausgefallene Gewitterpruefung. `getattr`
-            # aus demselben Grund wie oben (API-Payload UND Replay-Namespace);
-            # der Default `True` haelt Alt-Clients ohne das Feld stumm.
-            convective_checked=getattr(
-                body.onset, "convective_checked", True,
-            ),
         )
         msg = AlertMessage(
             trip_short=trip_obj.name,
             stand_at=stand_at,
             events=(onset_ev,),
             source=body.onset.source_label,
-            cooldown_display=body.onset.cooldown_display,
+            cooldown_display=getattr(body.onset, "cooldown_display", None),
             ampel=resolve_ampel(trip_obj),  # Issue #2792 S1c-4b: Ampel des Trips
         )
     else:
@@ -475,64 +414,22 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
         }
 
     alert_tz = _alert_tz_for_trip(trip_obj)
-    # Issue #2219 (B2-72 = #2085): Beginn mit Tagesbezug ueber die geteilte
-    # Anzeigefassung -- dieselbe Regel wie das Ende darunter.
-    _onset_hhmm, _onset_offset, _onset_weekday = onset_display(
-        now, result.onset_minutes or 0, alert_tz,
-    )
-    _end_time, _end_offset, _end_ongoing, _end_weekday = event_end_display(
-        now, result, alert_tz,
-    )
-    # Issue #2051 S3: Reichweite und Guete-Grenzzeit aus DEMSELBEN
-    # `_derive_result`-Ergebnis, ueber dieselben geteilten Fassungen wie
-    # der Ende-Wert oben -- der Replay-Weg muss dieselbe Aussage zeigen wie
-    # der Produktivpfad (Muster event_end_display, AC-10).
-    _reach_time, _reach_offset = source_reach_display(now, result, alert_tz)
-    _sharp_time, _sharp_offset = location_sharpness_display(
-        now, result.onset_minutes, getattr(result, "event_end_minutes", None),
-        alert_tz,
-    )
-    onset_ns = SimpleNamespace(
-        onset_minutes=result.onset_minutes or 0,
-        # Issue #2050 S2b: aus DEMSELBEN `_derive_result`-Ergebnis wie alles
-        # andere -- die Vorschau sagt damit "laeuft bereits", wo der Versand
-        # es sagt.
-        already_running=result.already_running,
-        onset_time=_onset_hhmm,
-        onset_day_offset=_onset_offset,
-        onset_weekday=_onset_weekday,
-        km_from=body_nf.km_from, km_to=body_nf.km_to,
-        is_convective=result.is_convective,
+    # Issue #2982: der Replay baut sein Event ueber DENSELBEN Baustein wie
+    # Versand und Ortsvergleich (Beginn, Tagesbezug #2219, Ende, Reichweite,
+    # Guete, Menge, Gewitterpruefung aus DEMSELBEN `_derive_result`-Ergebnis).
+    # Replay-eigene Eingaben: Quellen-Label aus `_SOURCE_LABELS`, km-Spanne und
+    # Segment-Kennung des Mitschnitts.
+    onset_ev = onset_event_from_nowcast(
+        result, now_utc=now, tz=alert_tz,
         intensity_label=result.intensity_label,
         source_label=RadarNowcastService._SOURCE_LABELS.get(
             result.source, result.source,
         ),
-        cooldown_display=None,
+        km_from=body_nf.km_from, km_to=body_nf.km_to,
         segment_id=getattr(body_nf, "segment_id", None),
-        # Issue #2046: aus DEMSELBEN `_derive_result`-Ergebnis wie
-        # onset_minutes/intensity_label -- der Replay-Weg muss dieselbe Zahl
-        # zeigen wie der Produktivpfad (AC-10).
-        onset_precip_mm=result.onset_precip_mm,
-        # Issue #2051 S1: Ende aus DEMSELBEN `_derive_result`-Ergebnis, ueber
-        # die geteilte Anzeigefassung -- samt R4-Waechter, der die Textform
-        # waehlt. Der Replay-Weg zeigt damit exakt dasselbe wie der
-        # Produktivpfad.
-        event_end_time=_end_time,
-        event_end_day_offset=_end_offset,
-        event_end_weekday=_end_weekday,  # Issue #2054
-        event_ongoing_beyond_horizon=_end_ongoing,
-        # Issue #2051 S3: additiv, analog event_end_* oben.
-        source_reach_time=_reach_time,
-        source_reach_day_offset=_reach_offset,
-        location_sharpness_limit_time=_sharp_time,
-        location_sharpness_limit_day_offset=_sharp_offset,
-        # Issue #2050 S4b-2: aus DEMSELBEN Dienst, der auch die Frames
-        # ausgewertet hat -- faellt der INCA-Gewitter-Beiabruf aus, sagt der
-        # Replay-Weg dasselbe wie der Versand (AC-7).
-        convective_checked=result.convective_checked,
     )
     out = render_alert_preview(
-        trip_obj, SimpleNamespace(onset=onset_ns, official=None, nowcast_frames=None),
+        trip_obj, SimpleNamespace(onset=onset_ev, official=None, nowcast_frames=None),
     )
     out["onset_detected"] = True
     return out

@@ -52,6 +52,7 @@ import sys
 import uuid
 from datetime import date, datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -70,7 +71,8 @@ from app.profile import ActivityProfile  # noqa: E402
 from app.trip import Stage, Trip, Waypoint  # noqa: E402
 from app.user import ComparisonResult, LocationResult, SavedLocation  # noqa: E402
 from output.channels.email import EmailOutput  # noqa: E402
-from output.renderers.alert.model import AlertMessage, OnsetEvent  # noqa: E402
+from output.renderers.alert.model import AlertMessage  # noqa: E402
+from output.renderers.alert.project import onset_event_from_fields  # noqa: E402
 from output.renderers.alert.render import render_email as render_alert_email  # noqa: E402
 from output.renderers.alert.render import render_subject as render_alert_subject  # noqa: E402
 from output.renderers.email import render_email  # noqa: E402
@@ -342,13 +344,14 @@ def send_compare_mail(settings: Settings, token: str, lang: str = "de") -> bool:
 # ---------------------------------------------------------------------------
 # (d) Radar-Onset-Alarm (#830 / Herkunfts-Footer #1241) -- ueber den echten
 #     Versandpfad services.radar_alert_service.send_radar_alert_email().
-#     Synthetische OnsetEvent-Fixture analog build_onset_alert_message()
-#     (radar_alert_service.py) bzw. tests/tdd zu Onset-Alerts. Marker-Header
+#     Synthetische OnsetEvent-Fixture ueber den EINEN Baustein
+#     onset_event_from_fields() (project.py, Issue #2982) bzw. tests/tdd zu
+#     Onset-Alerts. Marker-Header
 #     X-GZ-Mail-Type: radar-alert. Erfuellt die Validator-Checks P-1..P-4
 #     (Segment-/km-Label, Onset-Zeit HH:MM, Intensitaet, Cooldown-Hinweis).
 # ---------------------------------------------------------------------------
 def build_radar_alert_message(token: str) -> AlertMessage:
-    onset = OnsetEvent(
+    onset = onset_event_from_fields(SimpleNamespace(
         onset_minutes=25,
         onset_time="14:30",
         km_from=0.0,
@@ -367,7 +370,7 @@ def build_radar_alert_message(token: str) -> AlertMessage:
         # korrekte Mail -- die Luecke ist gefixt und durch
         # tests/tdd/test_radar_alert_validator_location_forms.py abgesichert.
         segment_id="Ziel",
-    )
+    ))
     return AlertMessage(
         trip_short=f"GATE1241 {token}",
         stand_at="13:05",

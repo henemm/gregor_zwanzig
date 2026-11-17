@@ -41,7 +41,7 @@ from services.deviation_alert_engine import DeviationAlertEngine
 from services.notification_service import (
     NotificationResult,
     NotificationService,
-    RadarAlertRequest,
+    radar_request_from_event,
 )
 from output.renderers.alert.segments import normalize_segment_id
 from services.rain_extent import derive_rain_zones  # Issue #2051 S2a
@@ -57,7 +57,7 @@ from services.alert_channels import effective_alert_channels
 from services.trip_day import anchor_tz, trip_local_today
 from services.weather_change_detection import WeatherChangeDetectionService
 from utils.timezone import (
-    day_offset, format_reference_at, local_dt, local_fmt, to_utc, tz_for_coords,
+    format_reference_at, local_fmt, to_utc, tz_for_coords,
 )
 
 if TYPE_CHECKING:
@@ -2721,100 +2721,41 @@ class TripAlertService:
                 # Adjektiv, daher ist [:1].lower() hier immer korrekt.
                 _label = result.intensity_label
                 _label = _label[:1].lower() + _label[1:]
-                # Issue #2009: Uhrzeit und Tagesbezug aus DEMSELBEN Zeitpunkt
-                # (`_onset_dt`, oben berechnet) und
-                # DERSELBEN Zone — eine zweite Herleitung koennte auseinander-
-                # laufen und "00:23" wieder mehrdeutig machen.
-                _onset_time_str = local_fmt(_onset_dt, tz)
-                # Issue #2051 S1: Ende-Uhrzeit, ihr EIGENER Tagesbezug und der
-                # R4-Waechter ueber die geteilte Fassung, die auch das
-                # Ortsvergleich-Buendel benutzt (ADR-0021). Der Waechter reist
-                # ausdruecklich MIT: er waehlt im Renderer die Textform
-                # (Untergrenze vs. bekanntes Ende, Spec v1.1). Lazy importiert wie
-                # die uebrigen Renderer-Bausteine dieses Pfads.
-                from output.renderers.alert.official_alerts import (
-                    _de_weekday_short,  # Issue #2054: EIN Kuerzel-Erzeuger
-                )
-                from output.renderers.alert.project import (
-                    event_end_display, location_sharpness_display, source_reach_display,
-                )
+                # Issue #2982: das Event baut der EINE Baustein (Beginn ueber
+                # `nowcast_onset_at` wie `_onset_dt` oben, Ende/Reichweite/
+                # Guete ueber die geteilten Fassungen, ADR-0021). Trip-eigene
+                # Eingaben: kleines Label, Quellen-Label des Dienstes, Etappen-
+                # km und der Streckenkontext. Lazy importiert wie die uebrigen
+                # Renderer-Bausteine dieses Pfads.
+                from output.renderers.alert.project import onset_event_from_nowcast
 
-                _end_time_str, _end_day_offset, _end_ongoing, _end_weekday = (
-                    event_end_display(now_utc, result, tz)
-                )
-                # Issue #2054: Versatz und Wochentagskuerzel des BEGINNS aus
-                # DEMSELBEN Zeitpunkt und DERSELBEN Zone -- eine zweite Herleitung
-                # koennte auseinanderlaufen (Muster #2009 o.).
-                _onset_day_offset = day_offset(now_utc, _onset_dt, tz)
-                # Issue #2051 S3: Reichweite und Guete-Grenzzeit ueber dieselben
-                # geteilten Fassungen, die auch der Ortsvergleich-Pfad benutzt
-                # (ADR-0021).
-                _reach_time_str, _reach_day_offset = source_reach_display(
-                    now_utc, result, tz,
-                )
-                _sharp_time_str, _sharp_day_offset = location_sharpness_display(
-                    now_utc, result.onset_minutes,
-                    getattr(result, "event_end_minutes", None), tz,
-                )
-                _radar_request = RadarAlertRequest(
-                    onset_minutes=result.onset_minutes,
-                    already_running=result.already_running,  # Issue #2050 S2b
-                    onset_time=_onset_time_str,
-                    onset_day_offset=_onset_day_offset,
-                    onset_weekday=(
-                        _de_weekday_short(local_dt(_onset_dt, tz))
-                        if _onset_day_offset else None
-                    ),
+                _onset_event = onset_event_from_nowcast(
+                    result, now_utc=now_utc, tz=tz,
+                    intensity_label=_label,
+                    source_label=radar_svc.source_label(result.source),
                     km_from=active.start_point.distance_from_start_km,
                     km_to=active.end_point.distance_from_start_km,
-                    # Issue #2036/#2051 S2a: stammen diese km-Zahlen aus echter
-                    # GPX-Wegstrecke? Die Etappe weiss es (`distance_measured`),
-                    # der Onset-Pfad hat sie bis hierher nie gefragt — ohne die
-                    # Antwort bliebe die Ausdehnung unten auf jeder Etappe stumm.
+                    # Issue #2036/#2051 S2a: stammen die km-Zahlen aus echter
+                    # GPX-Wegstrecke? Ohne die Antwort bliebe die Ausdehnung
+                    # auf jeder Etappe stumm.
                     km_measured=getattr(active, "distance_measured", False),
-                    # Issue #2051 S2a: die Nass-Zonen der Reststrecke.
-                    rain_zones=_rain_zones,
-                    # Issue #2050 S4b-2: die Kennzeichnung im Text speist sich aus
-                    # DENSELBEN beiden Groessen, die schon Ausloeseentscheidung
-                    # (S4a) und Alarmprotokoll (S4b) fuehren -- die Messluecken
-                    # ueber `_e1`, also ueber die eine bestehende Ableitung
-                    # `_messluecken_felder`. Eine zweite Herleitung koennte
-                    # auseinanderlaufen und Text und Protokoll verschiedene
-                    # Wahrheiten erzaehlen lassen.
-                    convective_checked=result.convective_checked,
+                    rain_zones=_rain_zones,  # Issue #2051 S2a
+                    # Issue #2050 S4b-2: Messluecken ueber `_e1`, dieselbe
+                    # Ableitung wie Ausloeseentscheidung und Alarmprotokoll.
                     gap_km=tuple(
                         _e1.get("measurement_gaps", {}).get("gap_km", ())
                     ),
-                    # Issue #1744 A1: dieselbe Etappe, die schon die km-Spanne
-                    # liefert — nur zusaetzlich mit ihrer Kennung, damit der
-                    # Nowcast denselben Ort benennt wie die amtliche Warnung.
+                    # Issue #1744 A1: Kennung derselben Etappe wie die km-Spanne.
                     segment_id=normalize_segment_id(active.segment_id),
-                    is_convective=result.is_convective,
-                    intensity_label=_label,
-                    source_label=radar_svc.source_label(result.source),
                     briefing_context=_briefing_context,
-                    # Issue #2122: das Datum, dem das gewaehlte Segment ENTSTAMMT
-                    # (kann der Vortag sein, s. `_resolve_alert_segment`-Docstring)
-                    # -- NICHT `today` (`notification_service.send_radar_alert`
-                    # leitet daraus die Etappen-Nummer ab, AC-6).
-                    segment_date=segment_date,
-                    # Issue #2046: die Menge der Stunde AB DEM BEGINN aus DEMSELBEN
-                    # NowcastResult, das schon onset_minutes/intensity_label
-                    # liefert (analog `is_convective=result.is_convective`) -- rein
-                    # beschreibend, ohne Einfluss auf die Ausloeseregel.
-                    onset_precip_mm=result.onset_precip_mm,
-                    # Issue #2051 S1: Ende desselben Ereignisses -- beschreibend,
-                    # ohne Einfluss auf die Ausloeseregel (wie onset_precip_mm).
-                    event_end_time=_end_time_str,
-                    event_end_day_offset=_end_day_offset,
-                    event_end_weekday=_end_weekday,  # Issue #2054
-                    event_ongoing_beyond_horizon=_end_ongoing,
-                    # Issue #2051 S3: additiv.
-                    source_reach_time=_reach_time_str,
-                    source_reach_day_offset=_reach_day_offset,
-                    location_sharpness_limit_time=_sharp_time_str,
-                    location_sharpness_limit_day_offset=_sharp_day_offset,
-                    tz=tz,
+                )
+                # Issue #2982 (Variante ii-b): Spiegelfelder generisch aus dem
+                # Event. `onset_minutes` bleibt roh (`None` bei laufendem Regen
+                # ohne kuenftigen Beginn, Issue #2050 S2b); `segment_date` ist
+                # das Datum, dem das Segment ENTSTAMMT (Issue #2122).
+                _radar_request = radar_request_from_event(
+                    _onset_event, onset_minutes=result.onset_minutes,
+                    segment_date=segment_date, tz=tz,
                 )
 
                 # Kanal-Schwelle (ADR-0046) auf dem oben einmalig berechneten,

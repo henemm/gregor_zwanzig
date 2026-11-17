@@ -5,14 +5,15 @@ do not depend directly on output.renderers.alert.* or output.channels.email.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from app.ampel import resolve_ampel
 from app.config import Settings
 from i18n import Lang, tn
-from output.renderers.alert.model import AlertMessage, OnsetEvent
+from output.renderers.alert.model import AlertMessage
+from output.renderers.alert.project import onset_event_from_nowcast  # Issue #2982
 from output.renderers.alert.render import render_email, render_subject
-from utils.timezone import day_offset, local_fmt, tz_for_coords
+from utils.timezone import local_fmt, tz_for_coords
 
 
 def _segment_label(active) -> str:
@@ -35,56 +36,33 @@ def _cooldown_display(trip, *, lang: Lang = "de") -> str:
     return cooldown_text(cooldown_min, lang=lang)
 
 
-def build_onset_alert_message(
+def build_debug_onset_alert_message(
     trip,
     active,
-    onset_minutes: int,
-    onset_time: str,
-    intensity_label: str,
+    nowcast,
     source_label: str,
-    is_convective: bool = False,
     *,
     lang: Lang = "de",
 ) -> AlertMessage:
-    """Build a canonical AlertMessage for a radar/onset alert.
+    """Radar-Alarm-Nachricht fuer den Staging-Debug-Ausloeser
+    (`api/routers/debug.py`, Issue #830).
 
-    Args:
-        trip: Trip object (needs .name).
-        active: Active segment (needs .start_point with .lat/.lon).
-        onset_minutes: Minutes until onset.
-        onset_time: Local onset time as 'HH:MM'.
-        intensity_label: Human-readable intensity (e.g. 'Leichter Regen').
-        source_label: Radar source label.
-        is_convective: Whether the precipitation is convective.
-
-    Returns:
-        Canonical AlertMessage ready for render_subject/render_email.
+    Issue #2982: ersetzt die Altform `build_onset_alert_message`, die ein
+    eigenes `OnsetEvent` mit eigener Beginn-Ableitung baute. Das Event kommt
+    jetzt aus dem EINEN Baustein `onset_event_from_nowcast` -- Beginn,
+    Tagesbezug und Wochentagskuerzel wie im Versand. Zeitzone aus dem
+    Segment-Startpunkt, km-Spanne `0..active.distance_km` wie bisher.
     """
-    lat = active.start_point.lat
-    lon = active.start_point.lon
-    alert_tz = tz_for_coords(lat, lon)
+    alert_tz = tz_for_coords(active.start_point.lat, active.start_point.lon)
     now_utc = datetime.now(timezone.utc)
-    stand_at = local_fmt(now_utc, alert_tz)
-
-    onset_ev = OnsetEvent(
-        onset_minutes=onset_minutes,
-        onset_time=onset_time,
-        km_from=0.0,
-        km_to=getattr(active, "distance_km", 0.0),
-        is_convective=is_convective,
-        intensity_label=intensity_label,
-        source_label=source_label,
-        briefing_context=None,
-        # Issue #2009: aus onset_minutes unabhaengig vom aufrufer-formatierten
-        # onset_time neu abgeleitet -- byte-identisch 0 im Normalfall.
-        onset_day_offset=day_offset(
-            now_utc, now_utc + timedelta(minutes=onset_minutes), alert_tz
-        ),
+    onset_ev = onset_event_from_nowcast(
+        nowcast, now_utc=now_utc, tz=alert_tz,
+        intensity_label=nowcast.intensity_label, source_label=source_label,
+        km_from=0.0, km_to=getattr(active, "distance_km", 0.0),
     )
-
     return AlertMessage(
         trip_short=trip.name,
-        stand_at=stand_at,
+        stand_at=local_fmt(now_utc, alert_tz),
         events=(onset_ev,),
         source=source_label,
         cooldown_display=_cooldown_display(trip, lang=lang),
