@@ -139,6 +139,30 @@ test.describe('Issue #1256 Scheibe 6: Hub-Orte-Tab (AC-14/15/31/32)', () => {
 		await expect(panel).toContainText(`E2E S6 Add-Ort-B ${suffix}`, { timeout: 10_000 });
 	});
 
+	// ── #3006 AC-10: „+ Ort hinzufügen“ steht im Bereichskopf und klappt auf UND zu ──
+	test('#3006 AC-10: Knopf im Bereichskopf öffnet und schließt das Hinzufügen-Panel', async ({ page }) => {
+		const suffix = Date.now();
+		const locA = await createLocation(page, `E2E 3006 Kopf-Ort-A ${suffix}`, 47.41, 10.91);
+		await createLocation(page, `E2E 3006 Kopf-Ort-B ${suffix}`, 47.36, 10.86);
+		const id = await createPresetWithLocations(page, `E2E 3006 Kopf ${suffix}`, [locA]);
+
+		await page.goto(`/compare/${id}?tab=orte`);
+		await page.waitForLoadState('networkidle');
+		await page.locator('[data-testid="compare-detail-tab-orte"]:visible').click();
+
+		const kopf = page.locator('[data-testid="compare-detail-panel-orte"] [data-abschnitt="abschnittskopf"]');
+		await expect(kopf).toHaveCount(1, { timeout: 10_000 });
+		const addBtn = kopf.locator('[data-testid="hub-orte-add"]');
+		await expect(addBtn).toBeVisible({ timeout: 10_000 });
+		await expect(page.locator('[data-testid="hub-orte-add"]')).toHaveCount(1);
+
+		const panel = page.locator('[data-testid="hub-orte-panel"]');
+		await addBtn.click();
+		await expect(panel).toBeVisible({ timeout: 10_000 });
+		await addBtn.click();
+		await expect(panel).toHaveCount(0, { timeout: 10_000 });
+	});
+
 	// ── AC-32: Entfernen persistiert per PUT, Zeile verschwindet, Tab bleibt ──
 	test('AC-32: Entfernen-Klick löscht die Zeile und persistiert per PUT ohne Tab-Verlassen', async ({ page }) => {
 		const suffix = Date.now();
