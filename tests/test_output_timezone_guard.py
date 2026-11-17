@@ -562,6 +562,12 @@ KNOWN_VIOLATIONS: dict[str, str] = {
         "(resolve_location_tz() statt eigener tz_for_coords()-Kopie, #1402 "
         "Auflage 2/Task 8)."
     ),
+    "src/services/alert_channel_texts.py::build_onset_message::0": (
+        "DAUERHAFT (#2986) — build_onset_message: derselbe bewusste tz-Override "
+        "wie send_multi_location_radar_alert, der ihn hierher durchreicht; die "
+        "Herleitung (resolve_location_tz(erster Ort), UTC nur als Notnagel) "
+        "wanderte unveraendert in den geteilten Baustein (Vorschau = Versand)."
+    ),
     # --- Aufrufseite abgesichert (PO-Entscheidung #1402): Signatur bleibt
     # bewusst optional -- 250+ Aufrufstellen ueber 65+ Testdateien fuer diese
     # 6 Funktionen (+ der daran gekettelten official_alerts.py-Helfer)
