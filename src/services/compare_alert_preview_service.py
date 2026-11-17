@@ -3,17 +3,14 @@
 Spec: docs/specs/modules/shared_preview_tab.md
 
 Die Vorschau zeigt je Kanal DIESELBE Nachricht, die der Versand fuer dieselbe
-Eingabe erzeugt (ADR-0011: ein Alarm-Renderer). Sie ruft dieselben
-Projektionen und Render-Bausteine wie der Versand auf — keine zweite
-Rendervariante:
+Eingabe erzeugt (ADR-0011: ein Alarm-Renderer). Nachricht, Kanaltexte und
+Telegram-Plan kommen aus dem geteilten Baustein `services.alert_channel_texts`
+(Issue #2986), den auch der Versand aufruft — keine zweite Rendervariante:
 
-- Abweichung: `to_multi_point_alert_message` wie
-  `NotificationService.send_multi_location_deviation_alert` /
-  `_dispatch_alert_message` (SMS mit Ortsnummern, Telegram eine Blase je Ort,
-  Kurzstil = SMS-Text).
-- Radar/Onset: `to_multi_location_onset_alert_message` wie
-  `send_multi_location_radar_alert` (Cooldown-Hinweis des Presets).
-- Amtlich: dieselben Bausteine wie `send_multi_location_official_alert`.
+- Abweichung: `build_deviation_message` (SMS mit Ortsnummern, Telegram eine
+  Blase je Ort, Kurzstil = SMS-Text).
+- Radar/Onset: `build_onset_message` (Cooldown-Hinweis des Presets).
+- Amtlich: `official_header_texts` / `official_telegram_text`.
 
 Bewusst NICHT ueber `NotificationService.send_*` mit Senken: deren SMS-Zweig
 reserviert vor der Senke das SMS-Tageskontingent — eine Vorschau darf nichts
@@ -22,16 +19,14 @@ veraendern. Kein Versand, kein Schreiben.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from app.ampel import resolve_ampel
-from i18n import Lang, resolve_user_lang, t
+from i18n import Lang, resolve_user_lang
 from services.fehler_code import fehler_mit_code
 
 logger = logging.getLogger(__name__)
 
-_SMS_LIMIT = 140  # wie `_dispatch_alert_message` (Alarm-SMS-Limit)
 _BODY_KINDS = ("changes", "onsets", "official")
 
 
@@ -80,13 +75,13 @@ def _ordered(location_ids: list[str], wanted: list[str], all_locations: dict) ->
     return [lid for lid in location_ids if lid in wanted_set]
 
 
-def _channels(msg, *, sms: str, bubbles: list[str], lang: Lang) -> dict:
-    from output.renderers.alert.render import render_email, render_subject
-
-    html, plain = render_email(msg, lang=lang)
+def _channels(texts, plan) -> dict:
+    """Antwort aus Kanaltexten und Telegram-Plan des geteilten Bausteins
+    (#2986, derselbe Plan wie der Versand: Kurzform vor Auffaecherung)."""
+    bubbles = [b.render() for b in plan.bubbles]
     return {
-        "subject": render_subject(msg, lang=lang), "email_html": html, "email_plain": plain,
-        "sms": sms, "telegram_bubbles": bubbles, "telegram": "\n\n".join(bubbles),
+        "subject": texts.subject, "email_html": texts.html, "email_plain": texts.plain,
+        "sms": texts.sms_body, "telegram_bubbles": bubbles, "telegram": "\n\n".join(bubbles),
     }
 
 
@@ -107,10 +102,10 @@ def _deviation(
     preset_id: str, user_id: str, lang: Lang,
 ) -> dict:
     from app.models import ChangeSeverity, WeatherChange
-    from output.renderers.alert.project import to_multi_point_alert_message
-    from output.renderers.alert.render import render_sms, render_telegram
+    from services.alert_channel_texts import (
+        build_deviation_message, plan_telegram, render_channel_texts,
+    )
     from services.compare_alert import CompareAlertService
-    from utils.timezone import local_fmt, tz_for_coords
 
     from services.validator_render_service import validate_change_severity
 
@@ -136,37 +131,25 @@ def _deviation(
     anchors = {
         all_locations[lid].name: inputs[lid][1] for lid in ordered if inputs[lid][1]
     }
-    first = all_locations[ordered[0]]
-    tz = tz_for_coords(first.lat, first.lon)
-    stand_at = local_fmt(datetime.now(timezone.utc), tz)
-    # Issue #2792 S1c-4b: Einstieg Alarm-Vorschau, Ampel des Presets.
-    ampel = resolve_ampel(preset)
-    msg = to_multi_point_alert_message(
-        groups, tz=tz, stand_at=stand_at, anchor_points=anchors, ampel=ampel,
-    )
+    # Issue #2986: derselbe Baustein wie der Versand (Ampel des Presets, tz
+    # aus dem ersten Punkt); `reference_at` setzt nur der Versand.
+    msg, tz = build_deviation_message(groups, preset=preset, anchor_points=anchors)
     positions = CompareAlertService._location_positions(location_ids, all_locations)
-    sms = render_sms(msg, limit=_SMS_LIMIT, location_positions=positions)
-    if style == "kurzform":
-        bubbles = [sms]
-    else:
-        bubbles = [
-            render_telegram(to_multi_point_alert_message(
-                [g], tz=tz, stand_at=stand_at, anchor_points=anchors, ampel=ampel,
-            ), lang=lang)
-            for g in groups
-        ]
-    return _channels(msg, sms=sms, bubbles=bubbles, lang=lang)
+    texts = render_channel_texts(msg, lang=lang, location_positions=positions)
+    return _channels(texts, plan_telegram(
+        msg, texts, style=style, groups=groups, tz=tz, anchor_points=anchors, lang=lang,
+    ))
 
 
 def _onset(
     preset: dict, onsets: list[dict], all_locations: dict, style: str, *, lang: Lang,
 ) -> dict:
-    from output.renderers.alert.project import to_multi_location_onset_alert_message
-    from output.renderers.alert.render import render_sms, render_telegram
+    from services.alert_channel_texts import (
+        build_onset_message, plan_telegram, render_channel_texts,
+    )
     from services.compare_alert import CompareAlertService
     from services.compare_radar_alert import _DEFAULT_COOLDOWN_MINUTES, _format_cooldown_display
     from services.radar_service import NowcastResult
-    from utils.timezone import local_fmt, resolve_location_tz
 
     by_loc = {o["location_id"]: o for o in onsets}
     ordered = _ordered(list(preset.get("location_ids") or []), list(by_loc), all_locations)
@@ -179,35 +162,27 @@ def _onset(
         ))
         for lid in ordered
     ]
-    tz = resolve_location_tz(entities[0][1]) or ZoneInfo("UTC")
-    stand_at = local_fmt(datetime.now(timezone.utc), tz)
     cooldown = preset.get("alert_cooldown_minutes", _DEFAULT_COOLDOWN_MINUTES)
-    msg = to_multi_location_onset_alert_message(
-        entities, tz=tz, stand_at=stand_at,
+    # Issue #2986: derselbe Baustein wie der Versand (tz aus dem ersten Ort).
+    msg, tz = build_onset_message(
+        entities, preset=preset,
         cooldown_display=_format_cooldown_display(cooldown, lang=lang),
-        ampel=resolve_ampel(preset),  # Issue #2792 S1c-4b: Ampel des Presets
     )
     # Issue #1767: dieselben Ortsnummern wie der Versand (Vorschau = Versand).
     positions = CompareAlertService._location_positions(
         list(preset.get("location_ids") or []), all_locations,
     )
-    sms = render_sms(msg, limit=_SMS_LIMIT, location_positions=positions)
-    bubbles = [sms] if style == "kurzform" else [render_telegram(msg, lang=lang)]
-    return _channels(msg, sms=sms, bubbles=bubbles, lang=lang)
+    texts = render_channel_texts(msg, lang=lang, location_positions=positions)
+    return _channels(texts, plan_telegram(msg, texts, style=style, tz=tz, lang=lang))
 
 
 def _official(
     preset: dict, official: list[dict], all_locations: dict, style: str, *, lang: Lang,
 ) -> dict:
-    from output.renderers.alert.official_alerts import (
-        build_compare_official_alert_notices, render_official_alert_sms_with_allclears,
-    )
-    from services.notification_service import (
-        _official_allclear_source_label, _official_mail_bodies, _official_source_url_for,
-        _official_subject, _official_telegram_rich,
-    )
+    from output.renderers.alert.official_alerts import build_compare_official_alert_notices
+    from services.alert_channel_texts import official_header_texts, official_telegram_text
     from services.official_alerts.models import OfficialAlert
-    from utils.timezone import local_fmt, resolve_location_tz
+    from utils.timezone import resolve_location_tz
 
     location_ids = list(preset.get("location_ids") or [])
     wanted = [lid for o in official for lid in o.get("location_ids") or []]
@@ -241,19 +216,13 @@ def _official(
         raise fehler_mit_code(ValueError, "vergleich_keine_warnung")
     tz = resolve_location_tz(locations[0]) or ZoneInfo("UTC")
     name = preset.get("name", "")
-    source_label = _official_allclear_source_label(dto_notices, [], lang=lang)
-    subject = _official_subject(dto_notices, [], prefix=name, tz=tz, lang=lang)
-    html, plain = _official_mail_bodies(
-        dto_notices, [], source_label=source_label,
-        source_url=_official_source_url_for(dto_notices),
-        stand_at=local_fmt(datetime.now(timezone.utc), tz), tz=tz,
-        context_label=t("versand.kontext.ortsvergleich", lang), lang=lang,
-    )
-    sms, _ = render_official_alert_sms_with_allclears(dto_notices, [], tz=tz)
-    telegram = sms if style == "kurzform" else _official_telegram_rich(
-        dto_notices, [], prefix=name, source_label=source_label, tz=tz, lang=lang,
+    # Issue #2986: derselbe amtliche Baustein wie der Versand.
+    head = official_header_texts(dto_notices, [], prefix=name, tz=tz, lang=lang)
+    telegram = official_telegram_text(
+        dto_notices, [], style=style, prefix=name, source_label=head.source_label,
+        tz=tz, lang=lang,
     )
     return {
-        "subject": subject, "email_html": html, "email_plain": plain,
-        "sms": sms, "telegram_bubbles": [telegram], "telegram": telegram,
+        "subject": head.subject, "email_html": head.html, "email_plain": head.plain,
+        "sms": head.sms, "telegram_bubbles": [telegram], "telegram": telegram,
     }

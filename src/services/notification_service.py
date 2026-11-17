@@ -22,14 +22,10 @@ from i18n import Lang, resolve_user_lang, t
 from i18n.format import fmt_date_numeric
 from output.renderers.trip_report import TripReportFormatter
 from output.renderers.alert.model import AlertMessage
-from output.renderers.alert.project import (
-    onset_event_from_fields, to_alert_message, to_multi_point_alert_message,
-)
-from output.renderers.alert.render import (
-    render_email as render_alert_email,
-    render_sms as render_alert_sms,
-    render_subject as render_alert_subject,
-    render_telegram as render_alert_telegram,
+from output.renderers.alert.project import onset_event_from_fields, to_alert_message
+from services.alert_channel_texts import (
+    AlertChannelTexts, OfficialHeaderTexts, build_deviation_message, build_onset_message,
+    official_header_texts, official_telegram_text, plan_telegram, render_channel_texts,
 )
 from output.renderers.email.compact import _ascii as _ascii_hint
 from output.renderers.email.design_tokens import (
@@ -508,6 +504,46 @@ def _measured_event_km(alert_msg) -> dict:
         if seg:
             result[str(seg)] = (e.km_from, e.km_to)
     return result
+
+
+def _embed_official_notices(
+    texts: AlertChannelTexts, alert_msg, official_notices: list, *, alert_tz, lang: Lang,
+) -> AlertChannelTexts:
+    """Issue #1088: amtlicher Zusatzblock in Mail (HTML/Klartext) und Telegram.
+
+    Befund 4b (#1338 Format, AC-6): das HTML nutzt den geteilten
+    `render_warn_block(variant="embedded")` -- dieselbe Bannerform wie
+    `send_official_alert`. `official_notices` sind rohe `(OfficialAlert,
+    segment_ids)`-Tupel (kein `trip`) -- `build_official_alert_notices(None,
+    ...)` baut daraus die DTOs. Issue #2036/#2984: die km-Spannen stammen aus
+    den bereits projizierten Ereignissen, EINMAL berechnet, an Notices UND
+    Klartext-Block. Plain/Telegram tragen den Notice-Text (AC-6 betrifft nur
+    das HTML-Format)."""
+    from dataclasses import replace
+
+    from output.renderers.alert.official_alerts import (
+        build_official_alert_notices, render_official_alert_notice_plain,
+        render_warn_block,
+    )
+
+    embed_segment_km = _measured_event_km(alert_msg)
+    embed_notices = build_official_alert_notices(
+        None, official_notices, segment_km=embed_segment_km, lang=lang,
+    )
+    embedded_html = render_warn_block(
+        embed_notices, variant="embedded",
+        source_label=_official_source_label_for(embed_notices, lang=lang),
+        tz=alert_tz, lang=lang,
+    )
+    extra_text = "\n".join(render_official_alert_notice_plain(
+        official_notices, tz=alert_tz, lang=lang, segment_km=embed_segment_km,
+    ))
+    return replace(
+        texts,
+        html=texts.html.replace("</body></html>", embedded_html + "</body></html>"),
+        plain=texts.plain + "\n\n" + extra_text,
+        telegram_body=texts.telegram_body + "\n\n" + extra_text,
+    )
 
 
 def _official_allclear_source_label(dto_notices: list, ac_notices: list, *,
@@ -1241,19 +1277,13 @@ class NotificationService:
         Issue #2792 S1c-4a: `preset` (rohes Vergleichs-Preset) ist Pflicht
         ohne Default; seit S1c-4b bewertet seine Ampel die Stundenzeilen.
         """
-        from utils.timezone import tz_for_coords
-
-        first_points = entities[0][1]
-        alert_tz = tz_for_coords(first_points[0].lat, first_points[0].lon)
-        stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
         groups = [
             (name, changes, points[0] if points else None)
             for name, points, changes in entities
         ]
-        alert_msg = to_multi_point_alert_message(
-            groups, tz=alert_tz, stand_at=stand_at, reference_at=reference_at,
-            anchor_points=anchor_points,
-            ampel=resolve_ampel(preset),  # Issue #2792 S1c-4b: Ampel des Presets
+        # Issue #2986: EIN Baustein mit der Alarm-Vorschau (tz aus groups[0]).
+        alert_msg, alert_tz = build_deviation_message(
+            groups, preset=preset, reference_at=reference_at, anchor_points=anchor_points,
         )
         target_name = ", ".join(name for name, _points, _changes in entities)
         # Issue #1467 S2 AG3a: NUR dieser Aufrufer (Ortsvergleich-
@@ -1318,9 +1348,6 @@ class NotificationService:
         `SavedLocation.timezone`-Feld VOR den Koordinaten) statt einer
         eigenen `tz_for_coords()`-Direktkopie.
         """
-        from output.renderers.alert.project import to_multi_location_onset_alert_message
-        from utils.timezone import resolve_location_tz
-
         # Befund F002 (#1385): der frühere `if entities else None`-Zweig war tot
         # — der einzige Aufrufer schliesst leere Bündel aus, und der Renderer
         # quittiert sie ohnehin mit `ValueError`. Hier derselbe Fehlertyp,
@@ -1329,17 +1356,14 @@ class NotificationService:
             raise ValueError(
                 "send_multi_location_radar_alert benötigt mindestens einen Ort"  # i18n-log
             )
-        first_loc = entities[0][1]
-        alert_tz = tz or resolve_location_tz(first_loc) or ZoneInfo("UTC")
-        resolved_stand_at = stand_at or local_fmt(datetime.now(timezone.utc), alert_tz)
         # Issue #1385: Die Orts-Objekte werden MITGEREICHT — der Renderer
         # formatiert die Onset-Zeit je Ort in dessen eigener Zeitzone. Vorher
         # wurde `_loc` hier weggeworfen, wodurch alle Orte die Ortszeit des
         # ERSTEN Ortes trugen (Zermatt + Auckland → beide „ab 23:18").
-        alert_msg = to_multi_location_onset_alert_message(
-            list(entities), tz=alert_tz, stand_at=resolved_stand_at,
-            cooldown_display=cooldown_display,
-            ampel=resolve_ampel(preset),  # Issue #2792 S1c-4b: Ampel des Presets
+        # Issue #2986: EIN Baustein mit der Alarm-Vorschau.
+        alert_msg, alert_tz = build_onset_message(
+            entities, preset=preset, cooldown_display=cooldown_display,
+            tz=tz, stand_at=stand_at,
         )
         target_name = ", ".join(name for name, _loc, _nc in entities)
         return self._dispatch_alert_message(
@@ -1737,20 +1761,12 @@ class NotificationService:
             if first_loc is not None
             else ZoneInfo("UTC")
         )
-        source_label = _official_allclear_source_label(dto_notices, ac_notices, lang=lang)
-        source_url = _official_source_url_for(dto_notices)
-        # #1233 Nebenbefund AC-12: Betreff und Body MUESSEN dieselbe tz-aware
-        # Quelle nutzen (sonst Wochentags-Divergenz Betreff vs. Body).
-        subject = _official_subject(
-            dto_notices, ac_notices, prefix=preset_name, tz=alert_tz, lang=lang)
-        stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
-        # Issue #1216 F002 / #1744 A2 (AC-13): derselbe Baustein und derselbe
-        # Klartext-Bau wie im Trip-Pfad.
-        html, plain = _official_mail_bodies(
-            dto_notices, ac_notices, source_label=source_label, source_url=source_url,
-            stand_at=stand_at, tz=alert_tz,
-            context_label=t("versand.kontext.ortsvergleich", lang), lang=lang,
+        # Issue #2986: EIN Baustein mit der Alarm-Vorschau (Quelle, Betreff,
+        # Mail; #1233 AC-12: Betreff und Body mit derselben tz-aware Quelle).
+        head = official_header_texts(
+            dto_notices, ac_notices, prefix=preset_name, tz=alert_tz, lang=lang,
         )
+        source_label, subject, html, plain = head.source_label, head.subject, head.html, head.plain
 
         # Issue #1701 (S2b, D5): analog `_dispatch_alert_message`.
         blocked_channels: dict[str, str] = {}
@@ -1771,16 +1787,14 @@ class NotificationService:
             )))
         if "sms" in effective_channels and self._settings.can_send_sms():
             versuche.append(("sms", self._dispatch_compare_official_sms(
-                preset_name, dto_notices, alert_tz, sms_sink,
-                blocked_channels, blocked_reason_codes, ac_notices=ac_notices,
+                preset_name, head, sms_sink, blocked_channels, blocked_reason_codes,
             )))
         # Premium-SMS (Garmin inReach, Issue #1701 S2b) — bewusst OHNE
         # can_send_*()-Bereitschaftsfrage (D2), Sperrgrund geht nach
         # `blocked_channels`/`blocked_reason_codes` statt `failed_channels`.
         if "premium_sms" in effective_channels:
             versuche.append(("premium_sms", self._dispatch_compare_official_premium_sms(
-                preset_name, dto_notices, alert_tz, blocked_channels, blocked_reason_codes,
-                ac_notices=ac_notices,
+                preset_name, head, blocked_channels, blocked_reason_codes,
             )))
 
         sent_channels = [c for c, ok in versuche if ok]
@@ -1822,28 +1836,13 @@ class NotificationService:
         telegram_style: str = "rich", ac_notices: Optional[list] = None,
     ) -> bool:
         """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief."""
-        from output.renderers.alert.official_alerts import (
-            render_official_alert_sms_with_allclears,
-        )
-
         try:
             # Issue #1260 S4: Kurzstil sendet den amtlichen SMS-Text (Plaintext,
             # parse_mode=None, keine Inline-Knöpfe) statt der reichen Compare-
-            # Warnvorlage. Default "rich" bleibt unverändert.
-            if telegram_style == "kurzform":
-                kurz_body, _ = render_official_alert_sms_with_allclears(
-                    dto_notices, ac_notices or [], tz=alert_tz,
-                )
-                if telegram_sink is not None:
-                    telegram_sink(kurz_body)
-                else:
-                    self._telegram_output().send(
-                        subject=subject, body=kurz_body,
-                        parse_mode=None, suppress_subject_line=True,
-                    )
-                return True
-            telegram_text = _official_telegram_rich(
-                dto_notices, ac_notices or [], prefix=preset_name,
+            # Warnvorlage. Default "rich" bleibt unverändert. Issue #2986:
+            # derselbe Baustein wie die Alarm-Vorschau.
+            telegram_text = official_telegram_text(
+                dto_notices, ac_notices or [], style=telegram_style, prefix=preset_name,
                 source_label=source_label, tz=alert_tz, lang=self._lang,
             )
             if telegram_sink is not None:
@@ -1851,7 +1850,8 @@ class NotificationService:
             else:
                 self._telegram_output().send(
                     subject=subject, body=telegram_text,
-                    parse_mode="HTML", suppress_subject_line=True,
+                    parse_mode=None if telegram_style == "kurzform" else "HTML",
+                    suppress_subject_line=True,
                 )
         except Exception as e:
             logger.error(f"Compare official alert telegram failed for {preset_name}: {e}")
@@ -1859,30 +1859,27 @@ class NotificationService:
         return True
 
     def _dispatch_compare_official_sms(
-        self, preset_name: str, dto_notices: list, alert_tz: ZoneInfo,
+        self, preset_name: str, head: OfficialHeaderTexts,
         sms_sink: Optional[object],
         blocked_channels: Optional[dict[str, str]] = None,
         blocked_reason_codes: Optional[dict[str, str]] = None,
-        ac_notices: Optional[list] = None,
     ) -> bool:
         """Issue #1459: `True`, wenn der Transport ohne Fehler durchlief.
 
         Issue #2412 S4a: `False` auch bei Tageslimit-Sperre (kein
         Transportversuch) — `blocked_channels`/`blocked_reason_codes` werden
-        dann befuellt (analog `_dispatch_compare_official_premium_sms`)."""
-        from output.renderers.alert.official_alerts import (
-            render_official_alert_sms_with_allclears,
-        )
+        dann befuellt (analog `_dispatch_compare_official_premium_sms`).
 
+        Issue #2986: der SMS-Text ist `head.sms` aus dem geteilten Baustein
+        (derselbe wie in der Alarm-Vorschau); gerendert wird erst im `try`,
+        damit ein Renderfehler die Reservierung wieder freigibt."""
         _blocked = blocked_channels if blocked_channels is not None else {}
         _codes = blocked_reason_codes if blocked_reason_codes is not None else {}
         now = datetime.now(timezone.utc)
         if not self._sms_gate_reserve("sms", "alert", now, _blocked, _codes):
             return False
         try:
-            sms_text, _ = render_official_alert_sms_with_allclears(
-                dto_notices, ac_notices or [], tz=alert_tz,
-            )
+            sms_text = head.sms
             if sms_sink is not None:
                 sms_sink(sms_text)
             else:
@@ -1894,28 +1891,24 @@ class NotificationService:
         return True
 
     def _dispatch_compare_official_premium_sms(
-        self, preset_name: str, dto_notices: list, alert_tz: ZoneInfo,
+        self, preset_name: str, head: OfficialHeaderTexts,
         blocked_channels: dict[str, str], blocked_reason_codes: dict[str, str],
-        ac_notices: Optional[list] = None,
     ) -> bool:
         """Issue #1701 (S2b, Vorbild `_dispatch_compare_official_sms`):
         `True`, wenn der Transport ohne Fehler durchlief. Eine bewusste
         Sperre (keine/veraltete Rueckadresse ODER Issue #2412 S4a
         Tageslimit) landet zusaetzlich in `blocked_channels`/
-        `blocked_reason_codes` (D5) — kein Transportfehler."""
-        from output.renderers.alert.official_alerts import (
-            render_official_alert_sms_with_allclears,
-        )
+        `blocked_reason_codes` (D5) — kein Transportfehler.
 
+        Issue #2986: Text = `head.sms` aus dem geteilten Baustein (wie SMS
+        und Alarm-Vorschau); gerendert im `try` (Reservierungsfreigabe)."""
         now = datetime.now(timezone.utc)
         if not self._sms_gate_reserve(
             "premium_sms", "alert", now, blocked_channels, blocked_reason_codes,
         ):
             return False
         try:
-            premium_text, _ = render_official_alert_sms_with_allclears(
-                dto_notices, ac_notices or [], tz=alert_tz,
-            )
+            premium_text = head.sms
             self._premium_sms_output().send(subject="", body=premium_text)
         except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
             sms_daily_limit.release_reservation(self._require_user(), "premium_sms", now)
@@ -2031,65 +2024,19 @@ class NotificationService:
         SMS-Text der drei anderen Alarmwege byte-identisch.
         """
         lang = self._lang
-        subject = render_alert_subject(alert_msg, lang=lang)
-        html, plain = render_alert_email(alert_msg, lang=lang)
-        telegram_body = render_alert_telegram(alert_msg, lang=lang)
+        # Issue #2986: Kanaltexte aus dem geteilten Baustein (auch Vorschau).
         # Issue #2422 S4 (Fix #1088): liegt ein amtlicher Zusatzblock vor,
-        # wird das SMS-Limit VOR dem Rendern um die Hinweislänge reduziert,
-        # damit der angehängte Hinweistext das 140-Zeichen-Limit nicht
-        # sprengt (gleiches Muster wie der `addendum`-Zweig in `render_sms`).
-        sms_limit = 140
-        if official_notices:
-            sms_limit -= len(_AMTL_HINWEIS_SMS_SUFFIX)
-        sms_body = render_alert_sms(
-            alert_msg, limit=sms_limit, location_positions=sms_location_positions,
+        # kuerzt der Hinweis-Suffix das SMS-Limit VOR dem Rendern (gleiches
+        # Muster wie der `addendum`-Zweig in `render_sms`).
+        texts = render_channel_texts(
+            alert_msg, lang=lang, location_positions=sms_location_positions,
+            sms_suffix=_AMTL_HINWEIS_SMS_SUFFIX if official_notices else "",
         )
         if official_notices:
-            sms_body += _AMTL_HINWEIS_SMS_SUFFIX
-
-        if official_notices:
-            from output.renderers.alert.official_alerts import (
-                build_official_alert_notices, render_official_alert_notice_plain,
-                render_warn_block,
+            texts = _embed_official_notices(
+                texts, alert_msg, official_notices, alert_tz=alert_tz, lang=lang,
             )
-
-            # Befund 4b (#1338 Format, AC-6): der eingebettete amtliche
-            # Zusatzblock nutzt den geteilten `render_warn_block(variant=
-            # "embedded")` -- dieselbe Bannerform (.wb, Farb-Tokens, Chips,
-            # Quelle-Zeile) wie `send_official_alert` -- statt HTML-escaped
-            # Plaintext in ein rohes `<p>`. `official_notices` ist hier eine
-            # Liste roher `(OfficialAlert, segment_ids)`-Tupel (kein `trip`
-            # verfuegbar) -- `build_official_alert_notices(None, ...)` baut
-            # daraus die DTOs (ohne Trip faellt die Segment-Gesamtzahl leer
-            # aus, "gesamte Route"-Verdichtung entfaellt ersatzlos, s.
-            # `_trip_total_segment_ids`-Docstring).
-            # Issue #2036: dieselbe Ortssprache wie der Aenderungs-Teil
-            # DERSELBEN Mail -- die km-Spannen stammen aus den bereits
-            # projizierten Ereignissen, nicht aus einer zweiten Quelle.
-            # Issue #2984: EINMAL berechnet, an Notices UND Klartext-Block.
-            embed_segment_km = _measured_event_km(alert_msg)
-            embed_notices = build_official_alert_notices(
-                None, official_notices,
-                segment_km=embed_segment_km, lang=lang,
-            )
-            embed_source = _official_source_label_for(embed_notices, lang=lang)
-            embedded_html = render_warn_block(
-                embed_notices, variant="embedded", source_label=embed_source,
-                tz=alert_tz, lang=lang,
-            )
-            html = html.replace(
-                "</body></html>", embedded_html + "</body></html>",
-            )
-            # Plain/Telegram bleiben beim bestehenden Notice-Text (AC-6 betrifft
-            # nur das HTML-Format, das aus dem Rahmen brach). Issue #2984: die
-            # Regionszeile nennt denselben Ort wie der HTML-Kopf.
-            extra_lines = render_official_alert_notice_plain(
-                official_notices, tz=alert_tz, lang=lang,
-                segment_km=embed_segment_km,
-            )
-            extra_text = "\n".join(extra_lines)
-            plain += "\n\n" + extra_text
-            telegram_body += "\n\n" + extra_text
+        subject, html, plain, sms_body = texts.subject, texts.html, texts.plain, texts.sms_body
 
         # Issue #1405 S1 (ADR-0086): `sent_channels` = zugestellt (append IM
         # try NACH dem Send), `attempted_channels` = betreten (NACH dem try).
@@ -2148,68 +2095,35 @@ class NotificationService:
 
         # Telegram
         if "telegram" in effective_channels and self._settings.can_send_telegram():
+            # Issue #2986: der Plan kommt aus dem geteilten Baustein. Issue
+            # #1467 S2, Korrektur K-6 (PO 2026-08-04): Kurzstil hat VORRANG vor
+            # dem Fan-out je Ort -- EINE gemeinsame Nachricht (SMS-Text, die
+            # Ortsnummern ergeben nur im gemeinsamen Text Sinn).
+            plan = plan_telegram(
+                alert_msg, texts, style=telegram_style, groups=telegram_groups,
+                tz=alert_tz, anchor_points=anchor_points, lang=lang,
+            )
             try:
-                if telegram_style == "kurzform":
-                    # Issue #1467 S2, Korrektur K-6 (PO-Entscheidung
-                    # 2026-08-04): der Kurzstil hat VORRANG vor dem Fan-out je
-                    # Ort. Der Ortsvergleich-Aenderungsalarm setzt seit AG3a
-                    # immer `telegram_groups` — stuende dieser Zweig weiterhin
-                    # hinter dem Fan-out, kaeme der Kurzstil auf diesem Weg
-                    # nie dran. Es geht EINE gemeinsame Nachricht raus: die
-                    # Kurznachricht fuehrt alle Orte als Zahl in EINEM Text,
-                    # je Ort aufgeteilt waeren die Ortsnummern sinnlos. Die
-                    # beiden anderen Kurzstil-Pfade (Trip-Alarm, amtlicher
-                    # Ortsvergleich-Alarm) senden ebenfalls genau eine.
-                    self._telegram_output().send(
-                        subject=subject,
-                        body=sms_body,
-                        parse_mode=None,
-                        suppress_subject_line=True,
-                    )
-                elif telegram_groups:
-                    # Issue #1467 S2 AG3a: EINE Sprechblase je Ort statt
-                    # einer gebuendelten Nachricht (PO E2). `to_multi_point_
-                    # alert_message()` mit GENAU einer Gruppe liefert
-                    # byte-identisch die bereits erprobte Einzel-Ort-Form
-                    # (project.py:193-195). Kein Abbruch der Serie bei einem
-                    # Teilfehler (#1370-Muster) -- jeder Ort bekommt seinen
-                    # eigenen try/except.
-                    #
-                    # Issue #1467 S2 AG3 Haertung (Adversary F002): der
-                    # try/except umschliesst AUCH das Aufbereiten
-                    # (`to_multi_point_alert_message()`/`render_alert_
-                    # telegram()`), nicht nur `.send()`. Diese Fehlerklasse
-                    # -- eine Ausnahme in einer Schleife reisst alle
-                    # UEBRIGEN Einheiten mit -- hat in dieser Scheibe bereits
-                    # zweimal zugeschlagen (#1467 S2 AG2, F001 und F003: ein
-                    # kaputter Ruhezeit-Wert brachte den kompletten
-                    # Alarm-Lauf zum Absturz und schaltete alle weiteren
-                    # Ortsvergleiche still). Ohne dieses Haertung wuerde ein
-                    # Rendering-Fehler bei EINEM Ort die gesamte Serie
-                    # abbrechen: 0 statt N-1 Nachrichten kommen an, kein
-                    # Hinweis geht raus, und `telegram_fully_sent` bleibt
-                    # faelschlich True trotz `failed_channels=['telegram']`.
+                if plan.fan_out:
+                    # Issue #1467 S2 AG3a: EINE Sprechblase je Ort (PO E2).
+                    # Kein Abbruch der Serie bei einem Teilfehler (#1370-
+                    # Muster) -- jeder Ort bekommt seinen eigenen try/except,
+                    # der AUCH das Aufbereiten (`bubble.render()`) umschliesst
+                    # (Adversary F002): sonst risse ein Rendering-Fehler bei
+                    # EINEM Ort die gesamte Serie ab, kein Hinweis ginge raus
+                    # und `telegram_fully_sent` bliebe faelschlich True.
                     failed_count = 0
-                    for group in telegram_groups:
+                    for bubble in plan.bubbles:
                         try:
-                            single_msg = to_multi_point_alert_message(
-                                [group], tz=alert_tz, stand_at=alert_msg.stand_at,
-                                # Issue #1737: der Anker reist je Ort mit.
-                                anchor_points=anchor_points,
-                                format_modes=alert_msg.format_modes,
-                                indicator_keys=alert_msg.indicator_keys,
-                                ampel=alert_msg.ampel,
-                            )
-                            single_body = render_alert_telegram(single_msg, lang=lang)
                             self._telegram_output().send(
                                 subject=subject,
-                                body=single_body,
-                                parse_mode="HTML",
+                                body=bubble.render(),
+                                parse_mode=bubble.parse_mode,
                                 suppress_subject_line=True,
                             )
                         except Exception as e:
                             logger.error(
-                                f"Telegram alert (Ort {group[0]!r}) failed "
+                                f"Telegram alert (Ort {bubble.label!r}) failed "
                                 f"for {target_name}: {e}"
                             )
                             telegram_fully_sent = False
@@ -2224,15 +2138,16 @@ class NotificationService:
                     # = Kanal zugestellt (keine Wiederholung, keine Dubletten);
                     # die Teilzustellung zeigt `telegram_fully_sent`. Scheitern
                     # ALLE Blasen, ist das ein Transportfehler.
-                    if failed_count == len(telegram_groups):
+                    if failed_count == len(plan.bubbles):
                         raise RuntimeError(
                             f"alle {failed_count} Telegram-Sprechblasen gescheitert"
                         )
                 else:
+                    # Kurzform (SMS-Text, parse_mode=None) oder EINE HTML-Blase.
                     self._telegram_output().send(
                         subject=subject,
-                        body=telegram_body,
-                        parse_mode="HTML",
+                        body=plan.bubbles[0].render(),
+                        parse_mode=plan.bubbles[0].parse_mode,
                         suppress_subject_line=True,
                     )
                 sent_channels.append("telegram")
