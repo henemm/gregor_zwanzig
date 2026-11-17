@@ -1,6 +1,6 @@
 # ADR-0120: Speicherhinweis als Text in der Kopfleiste statt festes Overlay
 
-- **Status:** Akzeptiert
+- **Status:** Abgelöst durch ADR-0123
 - **Datum:** 2026-11-15
 - **Bezug:** GitHub-Issue #2954 (Arbeitsplan #2913), Spec `docs/specs/modules/fix_2954_speicherhinweis_kopfleiste.md`, Mockup `docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html` (Fassung 3). **Löst für den Hub ab:** die Entscheidung „fixes Overlay unten rechts, nie unsichtbar" aus #880 (`docs/specs/modules/feat_880_autosave_overlay.md`) und #2284 S2 AC-10 (Speicher-Chip vom `SubscriptionHeader` unter dem Titelblock gerendert, `docs/specs/modules/feat_2284_s2_trip_kopf.md`). Verwandt: [ADR-0110](0110-hub-kopf-und-anlege-rahmen-ein-baustein.md) (geteilter Hub-Kopf), [ADR-0111](0111-design-vorgaben-bereinigt-audit-2026-11.md) (Mockup Fassung 3 als Maßstab), [ADR-0118](0118-handy-reiter-unterstrich-und-akzent-aktion.md) (Kopfleiste).
 

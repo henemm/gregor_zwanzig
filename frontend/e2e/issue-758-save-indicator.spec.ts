@@ -103,14 +103,12 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 		expect(dates['s2']).toBe('2026-08-20');
 	});
 
-	// AC-2: Ruhezustand beim Öffnen (idle, kein Spinner). #2954 (ADR-0120): ohne Speichern steht
-	// KEIN Text („Gespeichert" ohne Speichern wäre unwahr) — die Region ist leer, aber im DOM.
-	// „Gespeichert" erscheint erst nach echtem Speichern (AC-1 oben).
-	test('AC-2: Ruhezustand beim Öffnen — idle, Region leer, im DOM', async ({ page }) => {
+	// AC-2: Ruhezustand zeigt sofort „Gespeichert" (idle, kein Spinner).
+	test('AC-2: Ruhezustand zeigt „Gespeichert"', async ({ page }) => {
 		await openStagesEditor(page);
-		await expect(saveIndicator(page)).toBeAttached();
+		await expect(saveIndicator(page)).toBeVisible();
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle');
-		await expect(saveIndicator(page)).toHaveText('');
+		await expect(saveIndicator(page)).toContainText(/Gespeichert/i);
 	});
 
 	// AC-4: Schlägt der Save fehl, zeigt der Indikator „Fehler beim Speichern" + Hinweis.
@@ -174,8 +172,8 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 		await expect(page.getByTestId('versand-abschnitt')).toBeVisible();
 		// Der alte explizite Speichern-Button darf nicht mehr existieren.
 		await expect(page.getByTestId('briefings-save')).toHaveCount(0);
-		// Indikator ist vorhanden (#2954: beim Öffnen leer, aber im DOM).
-		await expect(saveIndicator(page)).toBeAttached();
+		// Indikator ist vorhanden.
+		await expect(saveIndicator(page)).toBeVisible();
 	});
 });
 
@@ -214,8 +212,8 @@ test.describe('Issue #758 — Ortsvergleich Speicher-Status', () => {
 		await page.goto(`/compare/${presetId}`);
 		await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible();
 
-		// Indikator existiert und ist initial idle (#2954: beim Öffnen leer, aber im DOM).
-		await expect(saveIndicator(page)).toBeAttached();
+		// Indikator existiert und ist initial idle.
+		await expect(saveIndicator(page)).toBeVisible();
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle');
 
 		// Versand-Zeit ändern → Autosave.

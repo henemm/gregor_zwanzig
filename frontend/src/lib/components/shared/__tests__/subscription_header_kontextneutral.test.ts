@@ -353,14 +353,9 @@ describe('#2284 S2 AC-16 — titleTestid, namePrefix, saveController', () => {
 		assert.equal(h1.trim(), 'Dolomiten Süd');
 	});
 
-	// #2954 (ADR-0120): der Speicherhinweis wandert in die Kopfleiste des geteilten HubKopf
-	// (.hub-actions, vor dem Drei-Punkte-Menü). Der Baustein rendert ihn NICHT mehr — auch
-	// mit saveController 0× (vormals „genau einmal"); saveController bleibt für den Speicherweg.
-	// „Genau einmal im Kopf" bewachen hub_kopf_speicherhinweis.test.ts und
-	// subscription_header_einmal_gerendert.test.ts (TripHeader über HubKopf).
-	test('mit saveController: kein save-indicator im Baustein (#2954, Hinweis in der Kopfleiste)', async () => {
+	test('mit saveController: save-indicator genau einmal', async () => {
 		const body = await html(await tripSatz());
-		assert.equal(zaehle(body, 'save-indicator'), 0, 'der Baustein rendert den Speicherhinweis noch selbst (#2954)');
+		assert.equal(zaehle(body, 'save-indicator'), 1, 'der Baustein rendert den Chip nicht genau einmal');
 	});
 
 	test('ohne saveController: kein save-indicator', async () => {
@@ -368,9 +363,9 @@ describe('#2284 S2 AC-16 — titleTestid, namePrefix, saveController', () => {
 		assert.equal(zaehle(await html(tripProps()), 'save-indicator'), 0);
 	});
 
-	test('Vergleich-Satz MIT saveController: ebenfalls kein Hinweis im Baustein (#2954, kein kind-Zweig)', async () => {
+	test('Vergleich-Satz MIT saveController: Chip ebenfalls genau einmal (kein kind-Zweig)', async () => {
 		const body = await html(vergleichProps({ saveController: await controller() }));
-		assert.equal(zaehle(body, 'save-indicator'), 0);
+		assert.equal(zaehle(body, 'save-indicator'), 1);
 	});
 });
 

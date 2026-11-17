@@ -542,6 +542,7 @@ def test_ac11_compare_dispatch_nutzt_dieselbe_token_grammatik_wie_der_trip():
     Then ist der Token-Teil byte-identisch zum Trip-Fall — beide Flaechen rufen
     dieselbe ``render_official_alert_sms``, es entsteht keine zweite
     Renderer-Kopie (Teilungs-Invariante)."""
+    from services.alert_channel_texts import official_header_texts
     from services.notification_service import NotificationService
 
     gewitter = _alert(level=3, von=_heute(15), bis=_heute(21))
@@ -564,9 +565,11 @@ def test_ac11_compare_dispatch_nutzt_dieselbe_token_grammatik_wie_der_trip():
     svc = NotificationService(
         settings=_settings_mit_sms(), user_id="tdd-1948-s5-compare",
     )
-    ok = svc._dispatch_compare_official_sms(
-        "Kärnten Orte", compare_notices, TZ, gefangen.append,
+    # Issue #2986: der Versand bekommt den Kopf aus dem geteilten Baustein.
+    head = official_header_texts(
+        compare_notices, [], prefix="Kärnten Orte", tz=TZ, lang="de",
     )
+    ok = svc._dispatch_compare_official_sms("Kärnten Orte", head, gefangen.append)
     assert ok and len(gefangen) == 1, (
         f"Setup: Compare-Dispatch muss genau einen Text liefern: {gefangen!r}"
     )

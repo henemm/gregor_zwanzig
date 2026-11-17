@@ -55,6 +55,7 @@ from output.renderers.email.helpers import (
     _effective_format_mode,
     build_format_modes,
     build_friendly_keys,
+    telegram_metric_configs,
 )
 from output.tokens.dto import MetricSpec, TokenLine
 
@@ -141,7 +142,10 @@ class TripReportFormatter:
         # Resolver, auf dem UNGEKOLLABIERTEN dc (die Kollabierung unten
         # erzwingt enabled=True, eine zweite Kaskade darauf waere unbewiesen).
         # Die Spaltenfolge der Mail (HTML und Klartext) kommt allein hieraus.
-        _email_rows = resolve_channel_lists(_dc_uncollapsed, "trip", report_type).email
+        _channel_view = resolve_channel_lists(_dc_uncollapsed, "trip", report_type)
+        _email_rows = _channel_view.email
+        # Issue #3098 (ADR-0121): Telegram-Zeilen aus demselben Resolver-Lauf.
+        _telegram_rows = _channel_view.telegram
         # Issue #3096 (AC-2): die Datenzeilen folgen fuer JEDEN report_type
         # derselben E-Mail-Liste (dieselbe Kaskade ``trip_channel_metrics``);
         # ohne Kanal-Ebene ist das wie bisher die Grundauswahl (nur enabled).
@@ -301,11 +305,24 @@ class TripReportFormatter:
         # EIGENE, aus derselben unverfaelschten Basis gebaute Zeilenmenge,
         # sonst blieben Telegram-Zellen leer ("-"), weil _dp_to_row() nur
         # Metriken eintraegt, die in der uebergebenen dc enabled sind.
-        _telegram_active_metrics = [
-            dataclasses.replace(mc, enabled=True)
-            for mc in _dc_uncollapsed.get_metrics_for_channel("telegram", report_type)
-        ]
-        _dc_telegram = dataclasses.replace(_dc_uncollapsed, metrics=_telegram_active_metrics)
+        # Issue #3098 (ADR-0121): die Menge/Folge/Format kommt ausschliesslich
+        # aus der Resolver-Telegram-Liste (Adapter ``telegram_metric_configs``).
+        # Die Telegram-Kanal-Ebene wird aus _dc_telegram entfernt, damit
+        # ``render_for_channel`` die Liste nicht erneut kaskadiert; die Klasse
+        # ist die Basisklasse (keine Unterklassen-Methode liest einen Altpfad).
+        _dc_telegram = UnifiedWeatherDisplayConfig(**{
+            **{f.name: getattr(_dc_uncollapsed, f.name)
+               for f in dataclasses.fields(UnifiedWeatherDisplayConfig) if f.init},
+            "metrics": telegram_metric_configs(_telegram_rows, _dc_uncollapsed),
+            "per_channel_layouts": {
+                k: v for k, v in (_dc_uncollapsed.per_channel_layouts or {}).items()
+                if k != "telegram"
+            } or None,
+            "per_report_layouts": {
+                rt: {k: v for k, v in kanaele.items() if k != "telegram"}
+                for rt, kanaele in (_dc_uncollapsed.per_report_layouts or {}).items()
+            } or None,
+        })
         seg_tables_telegram = [self._extract_hourly_rows(s, _dc_telegram) for s in segments]
         # Adversary F004 (S2-Fix-Runde): dc=_dc_telegram statt dc=_dc_uncollapsed
         # -- render_telegram_bubbles() liest dc NICHT nur fuer die
@@ -317,9 +334,9 @@ class TripReportFormatter:
         # Gewitter) vom D1-D4-Schnitt UNBERUEHRT -- eine Metrik mit
         # evening_enabled=False erschien dort trotzdem (als "-"-Geisterzeile
         # bzw., mit passenden Segment-Aggregaten, mit echtem Zahlenwert).
-        # _dc_telegram traegt bereits die report-typ- UND kanal-kaskadierte
-        # Menge (Z. 266-270 oben) -- EINE Quelle fuer Tabellenspalten,
-        # Kurzuebersicht UND Fusszeile.
+        # _dc_telegram traegt die Resolver-Telegram-Liste (#3098) -- EINE
+        # Quelle fuer Tabellenspalten, Kurzuebersicht, Fusszeile UND
+        # Windrichtung-Merge.
         from output.renderers.narrow import render_telegram_bubbles
         telegram_bubbles_result = render_telegram_bubbles(
             segments=segments,

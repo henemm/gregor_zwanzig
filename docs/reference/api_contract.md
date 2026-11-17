@@ -4583,10 +4583,11 @@ Körper unverändert durch, Zeitlimit 30 s (`forwardPreview`). Proxy-Ziel: Pytho
   `onsets: [{location_id, onset_minutes, intensity_label, source, is_convective}]`,
   `official: [{source, hazard, level, label, valid_from, valid_to, region_label, location_ids}]`.
   Antwort `{subject, email_html, email_plain, telegram, telegram_bubbles, sms}` aus
-  `src/services/compare_alert_preview_service.py` — dieselben Projektionen wie der
-  Versand (`to_multi_point_alert_message`, `to_multi_location_onset_alert_message`,
-  Bausteine von `send_multi_location_official_alert`, ADR-0011). Keine Seiteneffekte
-  (kein SMS-Kontingent, kein Versand). Ort nicht im Vergleich/Body ungültig → 422,
+  `src/services/compare_alert_preview_service.py` (Wrapper). Nachrichtenbau, Kanal-Rendern,
+  SMS-Limit und Telegram-Plan kommen aus dem geteilten Baustein
+  `src/services/alert_channel_texts.py`, den auch der Versand nutzt (Vorschau = Versand,
+  ADR-0011, Stand 2026-11-17, #2986). Die Antwort-Form ist unverändert.
+  Keine Seiteneffekte (kein SMS-Kontingent, kein Versand). Ort nicht im Vergleich/Body ungültig → 422,
   fremder Vergleich → 404. Ungültige `severity` → 422 `schwere_unbekannt` (Issue #2219, gleiche
   Prüfung wie im Trip-Zweig; erlaubt `minor`, `moderate`, `major`).
 

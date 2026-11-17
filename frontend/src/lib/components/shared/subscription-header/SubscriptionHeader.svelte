@@ -12,6 +12,7 @@
 	import type { Snippet } from 'svelte';
 	import { Btn } from '$lib/components/atoms';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { t } from '$lib/i18n';
 
@@ -32,8 +33,7 @@
 		titleTestid?: string;
 		/** #2284 S2: Desktop-Titelgröße je Hub (Parameter statt kind-Verzweigung); Standard 30 px. */
 		titleSize?: 30 | 38;
-		/** #2284 S2: Controller des Hubs. #2954 (ADR-0120): der Speicherhinweis steht jetzt in der
-		 *  Kopfleiste (HubKopf), der Baustein rendert ihn nicht mehr; die Prop bleibt für den Speicherweg. */
+		/** #2284 S2: Controller des Hubs — der Baustein rendert den Speicher-Chip selbst. */
 		saveController?: SaveStatus;
 		onSaveField: (field: Field, value: string, schliessen: () => void) => Promise<void>;
 		eyebrow?: Snippet;
@@ -185,3 +185,8 @@
 	{/if}
 	{@render fieldError('profile', 'order-2')}
 </div>
+
+<!-- #2284 S2: Speicher-Chip (position:fixed, Mount-Stelle frei) — vom Baustein, nicht von den Seiten. -->
+{#if saveController}
+	<SaveIndicator controller={saveController} />
+{/if}
