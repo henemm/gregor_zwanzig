@@ -1,0 +1,13 @@
+ORTS-VERGLEICH — Urlaubsorte
+Datum: 08.07.2026
+
+Innsbruck
+   Temp max 22°C · Wind 11 km/h · Regen 0.0 mm · Regenwahrscheinlichkeit 10% · Gewitter – · Sonne 6.0h · Wolken 35%
+   UV max 5 · Sicht min 9.0 km · Temp min 12°C · Böen 19 km/h
+   Ausblick
+   ⚠️ Vorhersage derzeit nicht abrufbar.
+Bozen
+   Temp max 27°C · Wind 11 km/h · Regen 0.0 mm · Regenwahrscheinlichkeit 10% · Gewitter – · Sonne 6.0h · Wolken 35%
+   UV max 5 · Sicht min 9.0 km · Temp min 15°C · Böen 19 km/h
+   Ausblick
+   ⚠️ Vorhersage derzeit nicht abrufbar.
