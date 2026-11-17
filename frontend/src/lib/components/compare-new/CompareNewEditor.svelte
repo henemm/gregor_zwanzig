@@ -377,6 +377,7 @@
 			hourlyMetricKeys: wiz.hourlyMetricKeys,
 			outlookMetricKeys: wiz.outlookMetricKeys, // Issue #1361/#1368
 			outlookMetricFormats: wiz.outlookMetricFormats, // Issue #2049
+			hourlyMetricFormats: wiz.hourlyMetricFormats, // Issue #3097
 			metricAlertLevels: wiz.metricAlertLevels, // Issue #1170
 			channelThresholds: wiz.channelThresholds, // Issue #1461 S3b-2b
 			alertMetricChannels: wiz.alertMetricChannels, // Issue #1895 S3b1

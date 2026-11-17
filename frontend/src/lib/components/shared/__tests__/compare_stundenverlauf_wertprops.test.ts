@@ -467,6 +467,8 @@ describe('AC-4 Wirkort-Guard: der Selbst-Speicher-Effekt schweigt ohne Vergleich
 			outlookMetricKeys: null,
 			outlookMetricFormats: null,
 			outlookEnabled: true,
+			hourlyMetricFormats: null, // #3097
+			onHourlyMetricFormatsChange: () => {},
 			onVergleichsMetrikenChange: () => {},
 			onOfficialAlertsEnabledChange: () => {},
 			onDayWindowStartHourChange: () => {},

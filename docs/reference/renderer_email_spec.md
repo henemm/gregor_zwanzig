@@ -295,6 +295,8 @@ und weichen bei Niederschlag bewusst von den Stunden-Schwellen dieser Tabelle ab
 `docs/reference/api_contract.md` (`outlook_metric_formats`), Spec
 `docs/specs/modules/fix_2049_ausblick_darstellungsform.md`.
 
+**Orte-Stundenverlauf (seit Issue #3097, ADR-0121 Nachtrag 3b):** Der Stundenverlauf der Orts-Vergleich-Mail hat eine eigene Roh/Einfach-Entscheidung je Zeile: `display_config.hourly_metric_formats` (fehlt = Roh). Unabhängig von `use_friendly_format`, von `channel_layouts.email` (Vergleichstabelle) und von `outlook_metric_formats`. Einfach bei Wind und Böen: Ampelpunkt im HTML, Wortstufe im Klartext (dort kein Farbpunkt); Wolken Symbol; Niederschlag nach der **Stunden**-Skala (trocken/leicht/mäßig/stark), nicht der Tagessummen-Skala. Temperatur und Gewitter haben keinen Umschalter. Details: `docs/reference/api_contract.md` (`hourly_metric_formats`), Spec `docs/specs/modules/feat_3097_orte_stundenverlauf_darstellung.md`.
+
 **Single Source of Truth: Metrik-spezifische Anzeige-Regeln**
 
 | Kategorie | Metriken | Einfach (HTML) | Einfach (Plain) | Roh (HTML) | Roh (Plain) | Notiz |

@@ -199,6 +199,9 @@ class CompareRenderOptions:
     # zu `outlook_metrics`, das damit eine reine Kennungsliste bleibt. `None`
     # = nie eingestellt; fehlende Kennung = Rohzahl (Default hart "Roh").
     outlook_metric_formats: Optional[dict] = None
+    # Issue #3097 (ADR-0121 Nachtrag 3b): Roh/Einfach je Stundenverlauf-
+    # Groesse `{kennung: True}` aus `view.hourly[].format`; `None` = alles Roh.
+    hourly_metric_formats: Optional[dict] = None
     # Issue #1703 Scheibe 8: kanal-eigene Auswahl der UEBERSICHTSTABELLE, je
     # Kanal bereits gegen die Grundauswahl geschnitten (ADR-0050 Regel 1/2 ueber
     # `resolve_channel_enabled_metrics`). Keys: "email"/"telegram"/"sms" --
@@ -378,6 +381,9 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         outlook_metric_formats=resolve_compare_outlook_formats(
             display_config.get("outlook_metric_formats"),
         ),
+        hourly_metric_formats={
+            z.metric_id: True for z in view.hourly if z.format == "simplified"
+        } or None,
         enabled_metrics_by_channel={
             ch: (
                 None if getattr(view, ch) is None

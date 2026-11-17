@@ -735,7 +735,9 @@ export interface ComparePreset {
 	// schedule==='manual' (KL-3). Schreibende Quelle bleibt in dieser Scheibe
 	// `schedule`; Lesen (deriveStatusFromPreset) bevorzugt paused_at.
 	paused_at?: string;
-	display_config?: Record<string, unknown>;  // ideal_ranges, channel_layouts, region, active_metrics (#680)
+	// ideal_ranges, channel_layouts, region, active_metrics (#680);
+	// hourly_metric_formats (#3097): Roh/Einfach je Stundenverlauf-Groesse, `{kennung: bool}`, fehlt = Roh
+	display_config?: Record<string, unknown>;
 	official_alerts_enabled?: boolean;  // Issue #1040 — amtliche Warnungen ein/aus
 	radar_alert_enabled?: boolean;  // Issue #1041 — Radar-Alarm ein/aus (Default AUS)
 	hourly_enabled?: boolean;  // Issue #1107 — Stundenverlauf-Sektion ein/aus

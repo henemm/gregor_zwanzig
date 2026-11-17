@@ -765,23 +765,24 @@ def test_p7_global_nachtraeglich_in_gespeicherter_liste(fall):
         f"{fall['id']}: global nachtraeglich aufgenommen, fehlt in {spalten}")
 
 
-@pytest.mark.parametrize("fall", _offen("test_w11_darstellung_je_zeile",
-                                        "Konzept W11 / #3047 Phase 3: Stundenverlauf ohne Roh/Einfach"))
+@pytest.mark.parametrize("fall", _faelle("test_w11_darstellung_je_zeile"))
 def test_w11_darstellung_je_zeile(fall):
     """Konzept W11 ("Darstellung Roh oder Einfach je Metrik, in jeder Liste"):
     Bewoelkung steht in der E-Mail-Liste auf Einfach (Symbol), Temperatur auf
     Roh -- auch der Stundenverlauf zeigt Bewoelkung als Symbol ohne Ziffer,
-    Temperatur als Zahl. Angenommener Speicherort: die E-Mail-Liste
-    ``channel_layouts.email`` traegt Roh/Einfach je Metrik wie beim Trip; den
-    endgueltigen legt #3047 Phase 3 fest."""
+    Temperatur als Zahl. Speicherort (#3097, ADR-0121 Nachtrag 3b):
+    ``display_config.hourly_metric_formats``. Gegenprobe: die Vergleichstabelle
+    (``channel_layouts.email``) steht fuer Bewoelkung auf Roh und aendert den
+    Stundenverlauf nicht (eigener Schalter je Liste)."""
     from tests.helpers.einstellung_gleich_mail_orte import _abschnitte, _tabellen_je_ort, _zelltoken
 
     p = preset_dict("basis")
     dc = p["display_config"]
     dc["active_metrics"] += [{"metric_id": "cloud_total", "aggregation": "avg"}]
     dc["hourly_metrics"] = ["cloud_total", "temperature"]
+    dc["hourly_metric_formats"] = {"cloud_total": True, "temperature": False}
     dc["channel_layouts"] = {"email": [
-        {"metric_id": m, "enabled": True, "use_friendly_format": m == "cloud_total"}
+        {"metric_id": m, "enabled": True, "use_friendly_format": False}
         for m in ("cloud_total", "temperature", "wind", "gust", "precipitation", "rain_probability")]}
     mail = sende_orte_mail(p)
     werte: dict[str, list[str]] = {"cloud_total": [], "temperature": []}

@@ -45,6 +45,7 @@
 		applyHourlyMetricToggle,
 		hourlyKeysAusGrundauswahl
 	} from './compareHourlyMetricDefs.ts';
+	import { buildHourlyFriendlyMap } from './hourlyFriendlyMap.ts';
 	// Issue #2659 (i18n F10): voller Name aus dem Register (label_en, sonst deutsch), wie im
 	// Wetter-Metriken-Reiter (F5); `col_label`/Kuerzel bleiben unveraendert.
 	// (Regel wie vergleichsMetrikLabel, compareMetricCatalogLoader.ts — ohne dessen Netz-Import.)
@@ -79,10 +80,17 @@
 		 *  `null` = nie eingestellt (#3047 J1: die Hydration bewahrt es; eine
 		 *  gespeicherte Liste gleich der Vorgabe ist gespeichert): kein Maximum. */
 		grundauswahl?: string[] | null;
+		/** Issue #3097: Roh/Einfach je Groesse (`true` = Einfach), gespeichert in
+		 *  `display_config.hourly_metric_formats`. `null`/fehlend = alles Roh. */
+		metricFormats?: Record<string, boolean> | null;
+		/** Neue Roh/Einfach-Zuordnung nach oben melden. OHNE diesen Prop
+		 *  erscheint KEIN Umschalter (Vorbild OutlookLayoutControls, #2049). */
+		onMetricFormats?: (formats: Record<string, boolean>) => void;
 	}
 	let {
 		metricKeys, onMetricKeys, catalog = [], smsSymbols = {},
-		enabled = true, onEnabledChange, register = {}, grundauswahl = null
+		enabled = true, onEnabledChange, register = {}, grundauswahl = null,
+		metricFormats = null, onMetricFormats
 	}: Props = $props();
 	/** Anzeigename einer Groesse in der aktuellen Sprache (reaktiv ueber `$locale`). */
 	const nameVon = (group: CompareAggregationGroup) =>
@@ -256,11 +264,20 @@
 		onMetricKeys(applyHourlyReorder(materializedHourlyKeys, newOrder, mergeOnlyHourlyKeys));
 	}
 
-	// Roh/Einfach-Umschalter gibt es im Stundenverlauf nicht (indicatorCapable()
-	// ist fuer diese Kennungen durchgaengig false; die Segmented-Steuerung wird
-	// also nie gerendert). Named function statt Inline-Closure im Markup
-	// (Safari-Factory-Muster).
-	function noopHourlyMode(): void {}
+	// Issue #3097 (W11): Roh/Einfach-Umschalter je Zeile. Die `friendlyMap`
+	// enthaelt nur Groessen mit Einfachform (Temperatur/Gewitter nie, AC-7).
+	// Named functions statt Inline-Closures (Safari-Factory-Muster).
+	const hourlyFriendlyMap = $derived(buildHourlyFriendlyMap(orderableHourlyKeys, metricFormats));
+
+	function onHourlyMode(id: string, useIndicator: boolean): void {
+		// Read-Modify-Write auf der gespeicherten Zuordnung: ein Umschalten darf
+		// die Einstellung der anderen Groessen nicht verlieren.
+		onMetricFormats?.({ ...(metricFormats ?? {}), [id]: useIndicator });
+	}
+
+	function hourlyModeCapable(id: string): boolean {
+		return onMetricFormats !== undefined && id in hourlyFriendlyMap;
+	}
 </script>
 
 <SectionH title={$t('vergleich.stundenverlauf.titel')} />
@@ -333,12 +350,13 @@
 		<WeatherV2Reihenfolge
 			primaryColumns={orderableHourlyKeys}
 			metricById={hourlyMetricById}
-			friendlyMap={{}}
+			friendlyMap={hourlyFriendlyMap}
 			activeChannel="email"
 			highlight={null}
 			onRemove={onHourlyRemove}
 			onDndReorder={handleHourlyDndReorder}
-			onMode={noopHourlyMode}
+			onMode={onHourlyMode}
+			modeCapable={hourlyModeCapable}
 			kuerzelById={hourlyKuerzelById}
 		/>
 	</Card>

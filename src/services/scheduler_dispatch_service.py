@@ -998,6 +998,8 @@ def send_one_compare_preset(
         # gemeinsame Liste, mit der alle drei Kanaele dasselbe zeigten.
         enabled_metrics=opts.enabled_metrics_by_channel["email"],
         hourly_metrics=opts.hourly_metrics,
+        # Issue #3097: Roh/Einfach je Stundenverlauf-Zeile (wie die Vorschau).
+        hourly_metric_formats=opts.hourly_metric_formats,
         hourly_enabled=opts.hourly_enabled,
         preset_name=name,
         # Issue #1969 (AC-26): das ganze Preset bis zum Fuss "Naechster

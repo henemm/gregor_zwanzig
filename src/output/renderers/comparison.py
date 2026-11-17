@@ -37,7 +37,7 @@ from output.renderers.compare_metric_catalog import (
 )
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from output.renderers.email.compare_html import (
-    CV2_ZEILEN, _build_location_outlook_rows, _daily_summary, _hour_zeilen,
+    CV2_ZEILEN, _build_location_outlook_rows, _daily_summary, _hour_einfach_text, _hour_zeilen,
     _column_legend_text, _fmt_precip_type, _fmt_thunder,
     _fmt_visibility_overview, _metric_value, _should_merge_wind_dir,
     _units_legend_text, _visible_hour_metrics, derive_row_labels, fmt_word_cell,
@@ -201,11 +201,14 @@ def render_comparison_text(
     show_fallback_notice: bool = False,
     preset: dict,
     metric_formats: dict[str, bool] | None = None,
+    hourly_metric_formats: dict[str, bool] | None = None,
 ) -> str:
     """
     Render ComparisonResult als Klartext (v2, Issue #1110). ``lang``: #2666.
     ``metric_formats`` (Issue #3039): Roh/Einfach je Uebersichtszeile aus
     ``channel_layouts["email"]``; ``None`` = heutiger Festzustand.
+    ``hourly_metric_formats`` (Issue #3097): Roh/Einfach je Stundenverlauf-
+    Spalte, derselbe Einfach-Zweig wie im HTML; ``None`` = Roh.
     ``preset`` (Issue #2792 S1c-4a/4b): rohes Vergleichs-Preset, Pflicht ohne
     Default; seine Ampel bewertet die Ausblick-Zeilen.
     ``show_fallback_notice`` (Issue #1563): Vertretungshinweis je Ort unter
@@ -434,10 +437,16 @@ def render_comparison_text(
                 ts = local_fmt(dp.ts, tz) if hasattr(dp.ts, "astimezone") else str(dp.ts)
                 cells = []
                 for m in visible_hour_metrics:
+                    # Issue #3097: derselbe Einfach-Zweig wie in der HTML-Fassung.
+                    einfach = _hour_einfach_text(
+                        m, getattr(dp, m["key"], None), hourly_metric_formats,
+                        lang, html=False, ampel=ampel)
                     # Issue #1475 Nachbesserung (AC-8, Klartext-Pendant der
                     # Compare-Stundentabelle): Hagel als Text-Anhang, wie in
                     # der HTML-Fassung -- nie als Ring (das ist nur Trip).
-                    if m["fmt"] is _fmt_thunder:
+                    if einfach is not None:
+                        text = einfach
+                    elif m["fmt"] is _fmt_thunder:
                         # Issue #1680 S3 (Spec D4): die Herkunft der Stufe
                         # DIESER Stunde, wie in der HTML-Fassung -- HTML und
                         # Klartext derselben Mail haben zwei unabhaengige
@@ -544,6 +553,7 @@ def render_compare_email(
     lang: Lang = "de",
     show_fallback_notice: bool = False,
     metric_formats: dict[str, bool] | None = None,
+    hourly_metric_formats: dict[str, bool] | None = None,
 ) -> tuple[str, str]:
     """Render both HTML and plain-text parts for a compare email (v2, #1110).
 
@@ -589,6 +599,8 @@ def render_compare_email(
         show_fallback_notice=show_fallback_notice,
         # Issue #3039: Roh/Einfach je Zeile aus `channel_layouts["email"]`.
         metric_formats=metric_formats,
+        # Issue #3097: Roh/Einfach je Stundenverlauf-Spalte (eigener Schalter).
+        hourly_metric_formats=hourly_metric_formats,
     )
     text_body = render_comparison_text(
         result, profile=profile, enabled_metrics=enabled_metrics,
@@ -616,6 +628,7 @@ def render_compare_email(
         preset=preset,
         # Issue #3039: der Klartext zieht dieselbe Zeilenliste samt Format.
         metric_formats=metric_formats,
+        hourly_metric_formats=hourly_metric_formats,
     )
     return html_body, text_body
 

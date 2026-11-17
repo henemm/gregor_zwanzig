@@ -202,6 +202,8 @@ export interface LayoutSnapshot {
 	// Issue #2049: Roh/Einfach je Ausblick-Groesse -- `null` = nie eingestellt.
 	outlookMetricFormats?: Record<string, boolean> | null;
 	outlookEnabled: boolean;
+	// Issue #3097: Roh/Einfach je Stundenverlauf-Groesse -- `null` = nie eingestellt.
+	hourlyMetricFormats?: Record<string, boolean> | null;
 }
 
 /**
@@ -220,7 +222,9 @@ export function hydrateLayoutFieldsFromPreset(
 		outlookMetricKeys: normalizeStoredOutlookMetrics(displayConfig.outlook_metrics, catalog),
 		outlookMetricFormats:
 			(displayConfig.outlook_metric_formats as Record<string, boolean> | undefined) ?? null,
-		outlookEnabled: preset.outlook_enabled ?? true
+		outlookEnabled: preset.outlook_enabled ?? true,
+		hourlyMetricFormats:
+			(displayConfig.hourly_metric_formats as Record<string, boolean> | undefined) ?? null
 	};
 }
 
@@ -242,7 +246,8 @@ export function flushPendingLayoutSave(
 		hourlyEnabled: s.hourlyEnabled,
 		outlookMetricKeys: s.outlookMetricKeys == null ? null : [...s.outlookMetricKeys],
 		outlookMetricFormats: s.outlookMetricFormats == null ? null : { ...s.outlookMetricFormats },
-		outlookEnabled: s.outlookEnabled
+		outlookEnabled: s.outlookEnabled,
+		hourlyMetricFormats: s.hourlyMetricFormats == null ? null : { ...s.hourlyMetricFormats }
 	});
 	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
@@ -256,10 +261,11 @@ export function flushPendingLayoutSave(
 		hourlyEnabled: current.hourlyEnabled,
 		outlookMetricKeys: current.outlookMetricKeys,
 		outlookMetricFormats: current.outlookMetricFormats,
-		outlookEnabled: current.outlookEnabled
+		outlookEnabled: current.outlookEnabled,
+		hourlyMetricFormats: current.hourlyMetricFormats
 	});
 	// Issue #2375: nur die Layout-Eigenfelder.
-	return waehleEigenfelder(voll, ['hourly_enabled', 'outlook_enabled'], ['hourly_metrics', 'outlook_metrics', 'outlook_metric_formats']);
+	return waehleEigenfelder(voll, ['hourly_enabled', 'outlook_enabled'], ['hourly_metrics', 'outlook_metrics', 'outlook_metric_formats', 'hourly_metric_formats']);
 }
 
 /**
@@ -304,6 +310,8 @@ export interface WetterMetrikenLayoutSnapshot {
 	outlookMetricKeys: string[] | null;
 	outlookMetricFormats: Record<string, boolean> | null;
 	outlookEnabled: boolean;
+	// Issue #3097: Roh/Einfach je Stundenverlauf-Groesse; `null` = nie eingestellt.
+	hourlyMetricFormats: Record<string, boolean> | null;
 }
 
 /** Wizard-Zustand, den der Wetter-Metriken/Layout-Reiter liest/schreibt
@@ -334,7 +342,8 @@ export function wetterMetrikenSnapshotAus(zustand: WetterMetrikenZustand): Wette
 			hourlyEnabled: (f.hourlyEnabled as boolean | undefined) ?? true,
 			outlookMetricKeys: (f.outlookMetricKeys as string[] | null | undefined) ?? null,
 			outlookMetricFormats: (f.outlookMetricFormats as Record<string, boolean> | null | undefined) ?? null,
-			outlookEnabled: (f.outlookEnabled as boolean | undefined) ?? true
+			outlookEnabled: (f.outlookEnabled as boolean | undefined) ?? true,
+			hourlyMetricFormats: (f.hourlyMetricFormats as Record<string, boolean> | null | undefined) ?? null
 		})
 	) as WetterMetrikenLayoutSnapshot;
 }
@@ -351,7 +360,9 @@ const WETTER_DISPLAY = [
 	'channel_active_metrics',
 	'hourly_metrics',
 	'outlook_metrics',
-	'outlook_metric_formats'
+	'outlook_metric_formats',
+	// Issue #3097: Roh/Einfach je Stundenverlauf-Zeile.
+	'hourly_metric_formats'
 ] as const;
 
 /**
@@ -384,6 +395,8 @@ export function baueWetterMetrikenNutzlast(
 			current.outlookMetricKeys ?? normalizeStoredOutlookMetrics(displayConfig.outlook_metrics) ?? undefined,
 		outlookMetricFormats:
 			current.outlookMetricFormats ?? (displayConfig.outlook_metric_formats as Record<string, boolean> | undefined),
+		hourlyMetricFormats:
+			current.hourlyMetricFormats ?? (displayConfig.hourly_metric_formats as Record<string, boolean> | undefined),
 		outlookEnabled: current.outlookEnabled,
 		dayWindowStartHour: current.dayWindowStartHour,
 		dayWindowEndHour: current.dayWindowEndHour
@@ -405,7 +418,8 @@ function zustellungsStand(s: WetterMetrikenLayoutSnapshot) {
 		hourlyEnabled: s.hourlyEnabled,
 		outlookMetricKeys: s.outlookMetricKeys == null ? null : [...s.outlookMetricKeys],
 		outlookMetricFormats: s.outlookMetricFormats == null ? null : { ...s.outlookMetricFormats },
-		outlookEnabled: s.outlookEnabled
+		outlookEnabled: s.outlookEnabled,
+		hourlyMetricFormats: s.hourlyMetricFormats == null ? null : { ...s.hourlyMetricFormats }
 	};
 }
 
@@ -446,7 +460,8 @@ export function rollbackWetterMetrikenSnapshot(
 		'hourlyEnabled',
 		'outlookMetricKeys',
 		'outlookMetricFormats',
-		'outlookEnabled'
+		'outlookEnabled',
+		'hourlyMetricFormats'
 	] as const;
 	for (const field of felderListe) {
 		if (JSON.stringify(aktuell[field]) === JSON.stringify(attempted[field])) {

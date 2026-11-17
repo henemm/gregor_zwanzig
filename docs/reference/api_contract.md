@@ -2852,6 +2852,20 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
   `mergeConfigMap` reicht das Unterfeld automatisch durch. Schreiber:
   `shared/OutlookLayoutControls.svelte` (dieselbe Bedienfläche wie `outlook_metrics`).
   Spec: `docs/specs/modules/fix_2049_ausblick_darstellungsform.md`.
+- `hourly_metric_formats`: `Record<string, boolean>`, seit Issue #3097 (ADR-0121 Nachtrag 3b)
+  — Roh/Einfach je Zeile im **Stundenverlauf** der Orts-Vergleich-Mail (HTML und Klartext)
+  und der Editor-Vorschau, Sibling-Feld neben `hourly_metrics`. Schlüssel = Katalog-ID, Wert
+  `true` = „Einfach", `false`/fehlender Eintrag/Feld fehlt = „Roh" (Mail byte-gleich zum Stand
+  ohne Feld). Eigener Schalter, unabhängig von `channel_layouts.email` (Vergleichstabelle) und
+  `outlook_metric_formats` (Ausblick). Einfachformen: Wind/Böen Ampelpunkt (HTML) bzw.
+  Wortstufe (Klartext), Wolken Symbol, Windrichtung Kompass, Regenwahrscheinlichkeit und
+  Sonnenschein Wortskala, Niederschlag Stunden-Intensität (`trocken`/`leicht`/`mäßig`/`stark`,
+  `format_precip_intensity`). Größen ohne Einfachform (u.a. `temperature`, `thunder`) bleiben
+  Roh, auch wenn ein Eintrag gesetzt ist. Der Resolver liefert daraus `hourly[].format`
+  (`simplified`/`raw`/`null`). Keine Go-Änderung (`DisplayConfig` schemalos). Schreiber:
+  `compare/CompareHourlyLayoutControls.svelte` (Read-Modify-Write). Additiv auch im
+  Validator-Vertrag `POST /api/_validator/compare-email-preview` (`hourly_metric_formats`).
+  Spec: `docs/specs/modules/feat_3097_orte_stundenverlauf_darstellung.md`.
 - `output_layout`: opaque (zukünftig) — Spalten-Reihenfolge, Formatierung per Kanal
 - `schedule_config`: opaque (zukünftig) — Wiederholungs-Details
 
@@ -5245,6 +5259,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 
 ## Changelog
 
+- 2026-11-17: Issue #3097 (Epic #3058, Phase 3b, ADR-0121 Nachtrag 3b) — Neues optionales Feld `display_config.hourly_metric_formats: Record<string, boolean>` (Orts-Vergleich): Roh/Einfach je Zeile im Stundenverlauf der Orts-Mail (HTML und Klartext) und der Vorschau; fehlt = Roh, Mail byte-gleich. Der Resolver liefert `hourly[].format` (`simplified`/`raw`/`null`) statt immer `null`. Validator-Vorschau `POST /api/_validator/compare-email-preview` akzeptiert additiv `hourly_metric_formats`. Keine Go-Änderung. Section „Compare Presets" (`hourly_metric_formats`).
 - 2026-11-17: Issue #3096 (Epic #3047, Phase 3a, ADR-0121 Nachtrag 3a) — E-Mail (Trip und Orts-Vergleich, HTML und Klartext) liest Spalten und Folge aus `resolve_channel_lists()`; die Orts-Stundenverlauf-Liste (`hourly`) wird jetzt von der Orts-Mail und vom Resolver-Adapter gelesen und ist für Orte nie `None` (die Vorgabe löst `compare_hourly_metric_ids` einmal auf). `None` bleibt nur bei Trip-`hourly` und kanalweise als „kein Filter“. Korrigiert den Satz „Noch kein Renderer liest sie“ aus dem Eintrag 2026-11-16 (#3065) für `hourly`; `outlook` liest weiterhin kein Renderer. Keine DTO-, Schreib- oder Konfigurationsänderung.
 - 2026-11-16: Issue #3048 (Altbestand-Trip) — Der Loader ergänzt den Trip-Anlege-Standard (`DEFAULT_TRIP_METRIC_IDS`) nur im Trip-Ladepfad (`_parse_display_config(..., trip_standard_bei_leer=True)`), wenn `display_config.metrics` fehlt oder `[]` ist. Vorhandene, alle ausgeschaltete Einträge (#1394, bewusst leer) bleiben leer. Der Orte-Ladepfad ergänzt keinen Trip-Standardsatz (Ort ohne `metrics` bleibt ohne Liste; Prod-Orte haben keine `display_config`, daher ohne Nutzerwirkung), kein Rückschreiben auf die Platte; Mail-Überblick und Etappen-/Nachttabellen nutzen dieselbe Liste. Keine DTO-Änderung. Issue #3052: Telegram-Kopf eines Trip-Briefings zeigt die Briefing-Art in Nutzersprache (`briefing_typ()`, gemeinsam mit der Mail); keine DTO-Änderung. Spec `docs/specs/modules/fix_3048_altbestand_telegram_kopf.md`.
 - 2026-11-16: Issue #3057 (Epic #3047, Phase 2a, ADR-0121) — Kanal-Liste wird über den reinen Resolver `resolve_channel_lists()` gelesen (Trip und Orte, `surface="trip"|"compare"`); `get_metrics_for_channel()` und `resolve_compare_render_options()` sind Adapter mit unveränderten Signaturen. Lesend zusätzlich akzeptiert: Zeilen-Feld `format` (`raw|simplified|null`) und Schlüssel `premium_sms` (Fallback SMS-Liste). Keine Schreibänderung, keine Ausgabeänderung. Section 16.

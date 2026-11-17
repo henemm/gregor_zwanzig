@@ -611,6 +611,9 @@ class CompareEmailPreviewBody(BaseModel):
     # Issue #1406 Scheibe B (AC-8): Stundenverlauf-Auswahl (Renderer-Feldnamen
     # wie "t2m_c"). `None` = nie eingestellt -> Vorgabemenge des Renderers.
     hourly_metrics: list[str] | None = None
+    # Issue #3097: Roh/Einfach je Stundenverlauf-Groesse (`{kennung: bool}`),
+    # dasselbe Feld wie `display_config.hourly_metric_formats`. `None` = Roh.
+    hourly_metric_formats: dict[str, bool] | None = None
 
 
 @router.post("/api/_validator/compare-email-preview")

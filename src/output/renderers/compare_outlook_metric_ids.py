@@ -498,6 +498,34 @@ def _friendly_outlook_text(
     return None
 
 
+def resolve_hourly_metric_formats(stored: object) -> dict[str, bool] | None:
+    """Orte-Stundenverlauf: ``display_config.hourly_metric_formats`` (#3097,
+    ADR-0121 Nachtrag 3b) -> ``{kennung: bool}``; ``None`` = nie eingestellt.
+
+    Nur boolesche Werte zaehlen (wahr = Einfach, ausdruecklich falsch = Roh).
+    Die Faehigkeit filtert hier bewusst NICHT: ``_friendly_hour_text`` liefert
+    fuer Groessen ohne Einfachform ``None``, die Zelle bleibt dann Roh."""
+    if not isinstance(stored, dict):
+        return None
+    return {k: v for k, v in stored.items() if isinstance(k, str) and isinstance(v, bool)}
+
+
+def _friendly_hour_text(
+    metric_id: object, number: float, lang: Lang = "de",
+) -> str | None:
+    """Wort-/Symbolform eines STUNDENwerts oder ``None`` (= Roh, #3097).
+
+    Niederschlag nach der Stunden-Skala ``format_precip_intensity`` (AC-6),
+    nicht nach der Tagessummen-Skala des Ausblicks; alles uebrige wie im
+    Ausblick (``_friendly_outlook_text``). Temperatur, Gewitter u. a. ohne
+    Einfachform liefern ``None`` (AC-7)."""
+    if metric_id == "precipitation":
+        from services.weather_metrics import format_precip_intensity
+
+        return format_precip_intensity(number, lang=lang)
+    return _friendly_outlook_text(metric_id, number, lang)
+
+
 def format_outlook_value(
     value: object, column: dict, *, lang: Lang = "de",
 ) -> str:
@@ -595,6 +623,7 @@ __all__ = [
     "resolve_outlook_metrics",
     "resolve_compare_outlook_metrics",
     "resolve_compare_outlook_formats",
+    "resolve_hourly_metric_formats",
     "resolve_trip_outlook_metrics",
     "resolve_trip_outlook_formats",
     "outlook_columns",

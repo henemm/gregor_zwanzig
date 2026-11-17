@@ -38,6 +38,7 @@ const SOLL: Record<string, unknown> = {
 	hourlyMetricKeys: null,
 	outlookMetricKeys: null,
 	outlookMetricFormats: null,
+	hourlyMetricFormats: null, // #3097: Roh/Einfach je Stundenverlauf-Groesse
 	sendEmail: true,
 	sendTelegram: false,
 	sendSms: false,
