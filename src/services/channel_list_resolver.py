@@ -99,22 +99,30 @@ def resolve_channel_lists(
     hourly_enabled: Optional[bool] = None,
     report_config: object = None,
     outlook_enabled: Optional[bool] = None,
+    with_rows: bool = False,
 ) -> MailViewModel:
     """Reine Funktion: ``display_config`` -> ``MailViewModel`` (ADR-0121).
 
-    #3122: ``enabled_reports`` (eingeschaltete Briefings, Vorbelegung des
-    Ausblicks) und ``hourly_enabled`` (Orte; ``False`` = Stundenverlauf
-    entfaellt) wirken im neuen Eingang; ``report_config``/``outlook_enabled``
-    nur in der Umrechnung des Altbestands (Ausblick-Schalter)."""
+    #3122: ``placements`` wird aus dem Roh-Dict UND aus dem geladenen Modell
+    gelesen (die Trip-Renderer uebergeben das Modell). ``enabled_reports``
+    (eingeschaltete Briefings, Vorbelegung des Ausblicks) und
+    ``hourly_enabled`` (Orte; ``False`` = Stundenverlauf entfaellt) wirken im
+    neuen Eingang. Im bisherigen Pfad entstehen ``rows``/``outlook_reports``
+    nur mit ``with_rows=True`` (Umrechnung des Altbestands; dafuer auch
+    ``report_config``/``outlook_enabled``); ohne Anforderung bleiben sie
+    ``()`` und der Versandweg rechnet nichts um."""
     from services.placements import legacy_placements, read_placements
 
     if surface not in ("trip", "compare"):
         raise ValueError(f"unbekannte Flaeche {surface!r}")
-    stored = read_placements(display_config.get("placements")) if isinstance(
-        display_config, dict) else None
+    roh = display_config.get("placements") if isinstance(display_config, dict) else getattr(
+        display_config, "placements", None)
+    stored = read_placements(roh)
     ansicht = {"enabled_reports": enabled_reports, "hourly_enabled": hourly_enabled}
     if stored is not None:
         return placements_view(display_config, surface, report_type, stored, **ansicht)
+    if not (with_rows or ALTBESTAND_UEBER_UMRECHNUNG):
+        return legacy_view(display_config, surface, report_type)
     umgerechnet = read_placements(legacy_placements(
         display_config, surface, report_config=report_config,
         enabled_reports=enabled_reports, outlook_enabled=outlook_enabled)[0])

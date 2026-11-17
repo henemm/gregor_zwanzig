@@ -14,6 +14,17 @@ robust (Nr. 1): unbekannte Metriken, Stellen, Formate und falsche Typen haben
 keine Wirkung und werfen nicht; bei doppelter ``metric_id`` zaehlt die erste
 Zeile. ``placements_from_legacy`` ist die EINZIGE Umrechnung der Altfelder
 (Nr. 8); sie liest den bisherigen Pfad des Kanal-Listen-Resolvers.
+
+Festlegungen beim Lesen:
+
+* Eine gespeicherte Tabelle liegt vor, sobald ``rows`` eine Liste ist. Auch
+  ``rows: []`` oder eine Liste nur mit unlesbaren Eintraegen ist eine Tabelle
+  ohne Zeilen: alle Metriken der Grundauswahl stehen hinten, ueberall
+  angehakt (Nr. 3.2). Kein Objekt oder keine Liste = Altbestand.
+* ``outlook_reports`` mit ausschliesslich unbekannten Werten ist leer =
+  Ausblick aus. Die Vorbelegung (Nr. 6) greift nur bei fehlendem Schluessel
+  (oder falschem Typ).
+* ``version`` wird derzeit nicht ausgewertet (geschrieben wird ``1``).
 """
 from __future__ import annotations
 
@@ -43,6 +54,9 @@ AUSWERTUNGEN_GEKOPPELT = "auswertungen_gekoppelt"
 AUSSERHALB_GRUNDAUSWAHL = "ausserhalb_grundauswahl"
 MORGEN_FOLGT_ABEND = "morgen_folgt_abend"
 PREMIUM_FOLGT_SMS = "premium_folgt_sms"
+# Altzeile an einer Stelle ohne eigene Ausgabe (Nr. 5), z. B. Nachttief in der
+# Stundentabelle der Trip-Mail: sie zeigte dort nichts und entfaellt.
+GESPERRTE_STELLE_ENTFAELLT = "gesperrte_stelle_entfaellt"
 UNERKLAERT = "unerklaert"
 
 
@@ -353,7 +367,8 @@ def placements_from_legacy(
     Migration, B6). Neben den vier Faellen der Spec meldet sie Folgen anderer
     Festlegungen: ``auswertungen_gekoppelt`` (Orte, Zeile = Katalog-ID, Nr. 2),
     ``ausserhalb_grundauswahl`` (Nr. 3.1), ``morgen_folgt_abend`` (Nr. 8,
-    Abend-Fassung zaehlt), ``premium_folgt_sms`` (ADR-0124 Nr. 8); was sich
+    Abend-Fassung zaehlt), ``premium_folgt_sms`` (ADR-0124 Nr. 8),
+    ``gesperrte_stelle_entfaellt`` (Altzeile an gesperrter Stelle, Nr. 5); was sich
     keiner Art zuordnen laesst, steht als ``unerklaert`` darin.
     Idempotent: ein Abo mit lesbaren ``placements`` wird nicht umgerechnet."""
     vorhanden = read_placements(_feld(display_config, "placements"))
@@ -461,9 +476,10 @@ def _output_changes(dc: object, surface: str, placements: dict) -> tuple[OutputC
         ctx = {"grund": set(clr.grundauswahl(dc, surface, rt).ids),
                "neu_email": {kid(m) for m, _f in neu["email"]}}
         for stelle in neu:
-            a = [(m, f) for m, f in alt[stelle]
-                 if not stellen_sperre(kid(m), "sms" if stelle == "premium_sms" else stelle,
-                                       surface)]
+            sperr_stelle = "sms" if stelle == "premium_sms" else stelle
+            a = [(m, f) for m, f in alt[stelle] if not stellen_sperre(kid(m), sperr_stelle, surface)]
+            out += [OutputChange(GESPERRTE_STELLE_ENTFAELLT, stelle, m, rt)
+                    for m, _f in alt[stelle] if stellen_sperre(kid(m), sperr_stelle, surface)]
             out += _stelle_changes(surface, stelle, rt, a, neu[stelle], ctx, kid)
             out += _regel_changes(surface, stelle, rt, a, neu[stelle], kid)
     return tuple(dict.fromkeys(out))

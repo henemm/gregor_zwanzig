@@ -883,6 +883,11 @@ class UnifiedWeatherDisplayConfig:
     # thunder}, Struktur Spec feat_2792 §1). None = Vorlage (preset_name bzw.
     # allgemein). Aufloesung ueber app.ampel.ampel_for; in S1a ohne Leser.
     ampel: Optional[dict] = None
+    # Issue #3122 (ADR-0124, Spec feat_3122_was_steht_wo Teil A Nr. 1): Tabelle
+    # "Was steht wo" als undurchsichtiges Roh-Objekt (ADR-0077) -- der Loader
+    # prueft nichts, der Kanal-Listen-Resolver liest es robust
+    # (services.placements). None = Schluessel fehlt (Altbestand).
+    placements: Optional[dict] = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_metric_enabled(self, metric_id: str) -> bool:
