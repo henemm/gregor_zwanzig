@@ -1,6 +1,6 @@
 # Frontend Components Reference
 
-**Updated:** 2026-09-27 (Issue #2277 Scheibe S2a — `/trips/new` bekommt den Reiter „Wertebereiche", geteilter `CorridorEditor` mit `createMode`; Anlege-Editoren-Abschnitt zusätzlich korrigiert: kein Auto-Save, sondern EIN finaler `POST`); 2026-09-21 (Issue #1895 — Alert-Rules-Editor kennt nur noch den Änderungs-Modus; `ModeCard` gelöscht, Modus-Toggle und Absolut-Feld aus `AlertRuleRow` entfernt); 2026-09-19 (Mobile-Shell S2 — `TopAppBar`, `topAppBarStore` und Hamburger-Drawer entfernt; Konto-Kreis + `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, Safe-Area oben); 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
+**Updated:** 2026-11-17 (Issue #3006 — Bereichskopf-Baustein `molecules/Bereichskopf` ersetzt `ZustellungKopf` und `wt-kopf`); 2026-09-27 (Issue #2277 Scheibe S2a — `/trips/new` bekommt den Reiter „Wertebereiche", geteilter `CorridorEditor` mit `createMode`; Anlege-Editoren-Abschnitt zusätzlich korrigiert: kein Auto-Save, sondern EIN finaler `POST`); 2026-09-21 (Issue #1895 — Alert-Rules-Editor kennt nur noch den Änderungs-Modus; `ModeCard` gelöscht, Modus-Toggle und Absolut-Feld aus `AlertRuleRow` entfernt); 2026-09-19 (Mobile-Shell S2 — `TopAppBar`, `topAppBarStore` und Hamburger-Drawer entfernt; Konto-Kreis + `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, Safe-Area oben); 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
 **Version:** 1.13
 
 ## Overview
@@ -369,6 +369,28 @@ import { ConfirmDialog, DetailRow, ChannelRow, AlertRow, Stat } from '$lib/compo
 - `molecules/Infobox.svelte` (`<aside>`): immer sichtbar, nicht wegklickbar, „Kannst du überspringen — Standard: …" (Texte `info.*`). Nur auf den Anlege-Seiten `/trips/new` und `/compare/new` über Prop `showInfobox`; Schlüsselauswahl über `shared/infoboxKeys.ts`. Bearbeiten-Hubs zeigen nur die ⓘ, keine Infobox.
 - Eingebunden in die geteilten Reiter-Organismen (AlarmeTab, VersandTab, WeatherMetricsTab; CorridorEditor inkl. Mobile seit #2794 S3a Teil-PR 4a entfernt) — Trip und Ortsvergleich nutzen denselben Code.
 - SSR-Testharness `frontend/test-svelte-ssr-hooks.mjs` kompiliert zusätzlich `node_modules/**/*.svelte.js` (bits-ui-Runen).
+
+### Bereichskopf (#3006, 2026-11-17)
+
+**File:** `frontend/src/lib/components/molecules/Bereichskopf.svelte`
+
+Kopf jedes Reiters der Einstellungen (Trip und Orte): Überschrift, Erklärsatz und optional eine Aktion rechts (z. B. „+ Ort hinzufügen“ im Reiter Orte). Ersetzt die frühere Einzelkopie `ZustellungKopf` und den Wetter-Eigenkopf `wt-kopf`; alle acht Reiter (Übersicht, Etappen bzw. Orte, Wetter, Zustellung) nutzen denselben Baustein.
+
+**Props:** `titel`, `erklaerung` (beide aus dem i18n-Katalog des Aufrufers), `testid` (Präfix: ergibt `<präfix>-titel` und `<präfix>-erklaer`), optional `aktion` (Snippet).
+
+**Marker:** Root trägt `data-abschnitt="abschnittskopf"`; Überschrift, Erklärsatz und Aktion sind direkte Kinder des Roots in dieser Reihenfolge (Elementlisten-Abgleich, Struktur-Test #2980).
+
+**Regeln:** Der Kopf steht vor jeder Lade-, Fehler- und Sperr-Weiche des Reiters, nie darin. Pro Reiter genau ein Marker. `atoms/SectionH` bleibt davon unberührt (anderes Muster).
+
+```svelte
+<Bereichskopf titel={...} erklaerung={...} testid="hub-orte">
+  {#snippet aktion()}
+    <Btn variant="ghost" size="sm" data-testid="hub-orte-add" onclick={toggleAddPanel}>+ Ort hinzufügen</Btn>
+  {/snippet}
+</Bereichskopf>
+```
+
+**Spec:** `docs/specs/modules/feat_3006_bereichskoepfe.md`
 
 ### ConfirmDialog Component
 
