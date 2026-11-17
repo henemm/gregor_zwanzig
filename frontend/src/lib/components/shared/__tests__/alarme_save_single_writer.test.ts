@@ -15,9 +15,8 @@
 // (s. AlarmeTab.svelte route-$effect) — AlarmeScheduleTab.svelte hat keine
 // eigene Schreibquelle mehr.
 //
-// Teil (a): statische Architektur-Invarianz — AlarmeScheduleTab.svelte darf
-// KEIN eigenes `saveController.schedule(`/`doSave(` mehr enthalten (Muster
-// wie legacy_wizard_removed.test.ts).
+// Teil (a) (statische Invarianz auf AlarmeScheduleTab.svelte) ist mit dem
+// toten Container und dem route-Speicherzweig entfernt (#3047 Runde 7, p11).
 // Teil (b): Verhaltens-Test gegen die echte `buildAlarmeDeliveryPayload` —
 // EINE Payload traegt Kanaele + Cooldown + Metrik-Level + amtliche-Toggles
 // GEMEINSAM, und der display_config-RMW-Spread erhaelt fremde Keys.
@@ -26,30 +25,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { buildAlarmeDeliveryPayload } from '../alarme-tab/alarmeDeliveryPayload.ts';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const COMPONENTS = join(here, '..', '..'); // frontend/src/lib/components
-
-// ── Teil (a): keine zweite Schreibquelle im Trip-Container ────────────────
-
-test('#1258 S3 F001: AlarmeScheduleTab.svelte enthaelt keinen eigenen saveController.schedule()-Aufruf mehr', () => {
-	const src = readFileSync(join(COMPONENTS, 'trip-detail', 'AlarmeScheduleTab.svelte'), 'utf-8');
-	assert.ok(
-		!src.includes('saveController.schedule('),
-		'AlarmeScheduleTab.svelte ruft schedule() noch selbst auf — F001-Race lebt fort ' +
-			'(zwei Schreibquellen teilen sich den Ein-Slot-Debounce)'
-	);
-	assert.ok(
-		!src.includes('void doSave('),
-		'AlarmeScheduleTab.svelte hat noch einen eigenen doSave()-Fallback-Pfad — ' +
-			'Persistenz muss ausschliesslich ueber AlarmeTab.svelte laufen'
-	);
-});
 
 // ── Teil (b): EINE konsolidierte Payload traegt alle Felder gemeinsam ─────
 

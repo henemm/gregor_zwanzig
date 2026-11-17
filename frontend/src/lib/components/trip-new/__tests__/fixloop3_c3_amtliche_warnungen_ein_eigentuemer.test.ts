@@ -111,12 +111,15 @@ describe('C3 Kern: ein Bericht des Reiters Wetter uebernimmt den Warn-Schalter n
 });
 
 describe('C3: Trip anlegen — „Amtliche Warnungen" mit einem Eigentuemer', () => {
-	test('ohne Geste: Neuanlage-Vorgabe „aus" in beiden Reitern und im POST (beide Felder false)', async () => {
+	// Umgestellt (#3047 Runde 7, Paket p11): Spec feat_3047 „Nachtrag Runde 7", PO 2026-11-16
+	// „Amtliche Warnungen Neuanlage" loest #1258 AC-4 (Vorgabe „aus") ab — neue Trips bekommen
+	// Warnungen im Briefing UND als Alarm; der POST traegt beide Felder ausdruecklich `true`.
+	test('ohne Geste: Neuanlage-Vorgabe „an" in beiden Reitern und im POST (beide Felder true)', async () => {
 		const ed = await editor();
 		const wt = await wetterTabMontieren(ed);
-		assert.equal(wt.stand.warnungenAn, false, 'Reiter Wetter startet nicht mit der Neuanlage-Vorgabe „aus"');
-		assert.equal(schalterZustellung(ed), false, 'Schalter in der Zustellung springt durch den Wetter-Bericht auf „an"');
-		assert.deepEqual(await warnFelderImPost(ed), { alerts: false, ow: false });
+		assert.equal(wt.stand.warnungenAn, true, 'Reiter Wetter startet nicht mit der Neuanlage-Vorgabe „an"');
+		assert.equal(schalterZustellung(ed), true, 'Schalter in der Zustellung zeigt bei Neuanlage nicht „an"');
+		assert.deepEqual(await warnFelderImPost(ed), { alerts: true, ow: true });
 	});
 
 	test('Geste in der Zustellung ueberlebt einen spaeteren Bericht des Reiters Wetter und reist im POST', async () => {

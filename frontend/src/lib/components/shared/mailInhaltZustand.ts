@@ -20,6 +20,8 @@ export interface MailZustand {
 }
 
 const bool = (v: unknown, vorgabe: boolean): boolean => (typeof v === 'boolean' ? v : vorgabe);
+/** #3047 E8: gespeichertes `null` liest Python als None (`.get(k, True)`) — der Block fehlt in der Mail. */
+const pyBool = (v: unknown, vorgabe: boolean): boolean => (v === null ? false : bool(v, vorgabe));
 
 /** Zustand der Karte aus dem gespeicherten report_config-Blob; fehlende/falsch typisierte Felder -> Default. */
 export function ladeMailZustand(blob: object | null | undefined): MailZustand {
@@ -27,8 +29,8 @@ export function ladeMailZustand(blob: object | null | undefined): MailZustand {
 	return {
 		email_format: c.email_format === 'compact' || c.email_format === 'full' ? c.email_format : 'full',
 		show_outlook: bool(c.show_outlook, true),
-		show_stage_stats: bool(c.show_stage_stats, true),
-		show_yesterday_comparison: bool(c.show_yesterday_comparison, true),
+		show_stage_stats: pyBool(c.show_stage_stats, true),
+		show_yesterday_comparison: pyBool(c.show_yesterday_comparison, true),
 		show_compact_summary: bool(c.show_compact_summary, true),
 		wind_exposition_min_elevation_m:
 			typeof c.wind_exposition_min_elevation_m === 'number' ? c.wind_exposition_min_elevation_m : null,

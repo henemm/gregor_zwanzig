@@ -29,6 +29,7 @@ from app.loader import LoaderError, get_data_dir, load_all_trips, update_trip
 from i18n import Lang, resolve_user_lang, t
 from i18n.format import fmt_date_numeric, fmt_weekday
 from services import pending_briefings
+from services.amtliche_warnungen_schalter import amtliche_warnungen_an_trip
 from services.file_lock import LockTimeout
 from services.send_lock import release_send_lock, try_acquire_send_lock
 from utils.pii_masking import mask_addr_for_pii_log
@@ -1763,8 +1764,9 @@ class TripReportSchedulerService:
         # comparison_engine.py Fetch-Gating, #1040-Pointer-Muster).
         # Issue #1441 S2: Quellen-Gesundheit DIESES Briefing-Laufs je Ort -- fuer
         # den Senk-/Tombstone-Pfad nach Zustellung.
+        # Issue #3047 E4: Briefing ODER Alarm an -> beides an (geteilte Lese-Regel).
         official_queries: list = []
-        if trip.official_alerts_enabled is not False:
+        if amtliche_warnungen_an_trip(trip):
             official_queries = self._lade_amtliche_warnungen(segment_weather, segments)
 
         # Issue #1113: Schwelle statt binärem Totalausfall (#1012) —

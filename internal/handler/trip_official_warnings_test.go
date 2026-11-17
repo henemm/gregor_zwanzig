@@ -20,9 +20,10 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
-// AC-4: POST /api/trips ohne official_warnings im Body setzt enabled=false
-// (bewusster Verhaltenswechsel NUR fuer Neuanlagen).
-func TestCreateTripHandler_OfficialWarningsDefaultsDisabled(t *testing.T) {
+// Umgestellt (#3047 Runde 7, Paket p11): Spec feat_3047 „Nachtrag Runde 7",
+// PO 2026-11-16 „Amtliche Warnungen Neuanlage" loest #1258 AC-4 ab — eine
+// Neuanlage ohne Warn-Felder bekommt Briefing UND Alarm an (enabled=true).
+func TestCreateTripHandler_OfficialWarningsDefaultsEnabled(t *testing.T) {
 	s := newTestStore(t)
 
 	body := map[string]interface{}{
@@ -53,16 +54,16 @@ func TestCreateTripHandler_OfficialWarningsDefaultsDisabled(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if resp.OfficialWarnings == nil || resp.OfficialWarnings.Enabled != false {
-		t.Fatalf("expected official_warnings.enabled=false in response, got %+v", resp.OfficialWarnings)
+	if resp.OfficialWarnings == nil || resp.OfficialWarnings.Enabled != true {
+		t.Fatalf("expected official_warnings.enabled=true in response, got %+v", resp.OfficialWarnings)
 	}
 
 	loaded, err := s.LoadTrip("trip-1258-create")
 	if err != nil {
 		t.Fatalf("LoadTrip: %v", err)
 	}
-	if loaded.OfficialWarnings == nil || loaded.OfficialWarnings.Enabled != false {
-		t.Fatalf("expected persisted official_warnings.enabled=false, got %+v", loaded.OfficialWarnings)
+	if loaded.OfficialWarnings == nil || loaded.OfficialWarnings.Enabled != true {
+		t.Fatalf("expected persisted official_warnings.enabled=true, got %+v", loaded.OfficialWarnings)
 	}
 }
 

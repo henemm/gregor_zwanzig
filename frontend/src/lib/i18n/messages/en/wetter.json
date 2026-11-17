@@ -92,6 +92,7 @@
 	"wetter.nicht_im_briefing.titel": "Not in the briefing:",
 	"wetter.nicht_im_briefing.hinzufuegen": "+ {metrik}",
 	"wetter.nicht_im_briefing.hinzugefuegt": "{metrik} is now in the briefing and appears in all lists under ‘Content per channel and view’. Set raw or simple there.",
+	"wetter.gesperrt.grund": "Not available in the location comparison and therefore not in the briefing: {metriken}. The comparison does not support these values.",
 	"wetter.warnungen.titel": "Official warnings",
 	"wetter.warnungen.beschreibung": "in the briefing and as an alert as soon as they affect your area",
 	"wetter.radar.titel": "Radar rain",

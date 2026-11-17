@@ -376,6 +376,11 @@ def resolve_channel_layout_rows(
     if not isinstance(entries, list):
         return None
 
+    if not entries:
+        # Issue #3047 B-K6: eine ausdruecklich leere Liste ist bewusst leer
+        # (wie Trip ``channel_layouts.<kanal> = []``) -- keine Grundauswahl
+        # anhaengen; "nie eingestellt" ist ein fehlender Schluessel (None oben).
+        return []
     allowed = None if global_metrics is None else set(global_metrics)
     covered: set[str] = set()
     rows: dict[str, bool] = {}

@@ -10,6 +10,7 @@
 
 import type { Ampel, AmpelAlarmAb, AmpelFarbe, AmpelMetrik, AmpelSeite } from '../../../types.ts';
 import { klon } from './klon.ts';
+import { DERIVED_METRIC_RULES } from '../../trip-detail/metricsEditor.ts';
 
 export type { Ampel, AmpelMetrik, AmpelSeite };
 export type AlarmAb = AmpelAlarmAb;
@@ -31,6 +32,8 @@ export type MetrikEigenschaften = {
 	threshold_unit?: string;
 	label_de?: string;
 	label_en?: string;
+	/** Rang im Trip-Register-Standard (#3047 N1/E1, Python `DEFAULT_TRIP_METRIC_IDS`); `null` = nicht im Standard. */
+	trip_default_rank?: number | null;
 	/** Zeilenfolge im Reiter (#2955), aus `/api/metrics` (Python `_REITER_WETTER`), keine Frontend-Tabelle. */
 	rang?: number;
 };
@@ -83,6 +86,7 @@ export function eigenschaftenAusKatalog(apiMetrics: Record<string, Record<string
 				threshold_unit: (k.threshold_unit ?? k.unit) as string,
 				label_de: k.label_de as string | undefined,
 				label_en: k.label_en as string | undefined,
+				trip_default_rank: typeof k.trip_default_rank === 'number' ? k.trip_default_rank : null,
 				rang: typeof k.rang === 'number' ? k.rang : undefined
 			};
 		}
@@ -398,21 +402,124 @@ export function vergleichsMetrikId(eintrag: unknown, alt: AltSchluessel = {}): s
 	return (eintrag as { metric_id: string } | null)?.metric_id as string;
 }
 
-/** Auswahl lesen: Trip aus `metrics[]` (enabled), Vergleich aus `active_metrics` (eindeutig, Alt-
- *  und Neuformat pro Element); fehlt die Liste, gilt die aufgeloeste Ampel (AC-39). Trip
- *  `metrics: []` gilt wie in Python (models.py D4: leer = kein Maximum, Standard gilt) als fehlende
- *  Liste (F007); eine leere Vergleichs-Liste bleibt leer. */
-export function auswahlLesen(context: Kontext, displayConfig: AuswahlQuelle | null | undefined, aufgeloest: Ampel, alt: AltSchluessel = {}): string[] {
-	const liste = AUSWAHL_QUELLE[context](displayConfig, alt);
-	return liste ?? aktiveMetriken(aufgeloest);
+export type TripMetrikEintrag = { metric_id: string; enabled: unknown } & Record<string, unknown>;
+
+/** Trip `metrics[]` normalisiert wie Python `_coerce_metric_entry` (#1262, #3047 E3): Zeichenkette
+ *  -> `{metric_id, enabled: true}`, fehlendes `enabled` = an; ein Eintrag ohne `metric_id`
+ *  (z. B. eine frueher gespreizte Zeichenkette) traegt keine Groesse und entfaellt. */
+export function tripMetrikEintraege(liste: unknown): TripMetrikEintrag[] {
+	const aus: TripMetrikEintrag[] = [];
+	for (const e of Array.isArray(liste) ? liste : []) {
+		if (typeof e === 'string' && e) aus.push({ metric_id: e, enabled: true });
+		else if (e && typeof e === 'object' && typeof (e as { metric_id?: unknown }).metric_id === 'string' && (e as { metric_id: string }).metric_id) {
+			const o = e as Record<string, unknown>;
+			aus.push({ ...o, metric_id: o.metric_id as string, enabled: 'enabled' in o ? o.enabled : true });
+		}
+	}
+	return aus;
 }
+
+/** Python `_append_derived_metrics` (loader.py) auf gespeicherten Eintraegen (#3047 E7): fehlt ein
+ *  Kind (Nacht-Tiefst, Tagestief/-hoch, Windchill-Kinder), uebernimmt es `enabled` (irgendein Elter an)
+ *  sowie `bucket`/`order` des ersten Elter-Eintrags; ohne Elter wird nichts erfunden. */
+export function mitAbgeleiteten(eintraege: TripMetrikEintrag[]): TripMetrikEintrag[] {
+	const aus = [...eintraege];
+	for (const { child, parent } of DERIVED_METRIC_RULES) {
+		const eltern = eintraege.filter((e) => e.metric_id === parent);
+		if (!eltern.length || eintraege.some((e) => e.metric_id === child)) continue;
+		const kind: TripMetrikEintrag = { metric_id: child, enabled: eltern.some((e) => e.enabled === true) };
+		for (const k of ['bucket', 'order'] as const) if (k in eltern[0]) kind[k] = eltern[0][k];
+		aus.push(kind);
+	}
+	return aus;
+}
+
+/** Python-Ableitung auf einer Auswahl ohne Eintraege (#3047 p5c): jedes fehlende Kind eines gewaehlten
+ *  Elters gilt als gewaehlt (loader `_append_derived_metrics`: Kind uebernimmt `enabled` des Elters)
+ *  und steht direkt hinter seinem Elter (Elter-Folge). Fuer Vorlagen und „+“ — dort gibt es keinen
+ *  Kind-Eintrag, Python leitete das Kind ab; nur ein bewusstes „−“ nimmt es heraus. */
+export function auswahlMitAbgeleiteten(auswahl: string[]): string[] {
+	const aus = [...auswahl];
+	for (const { child, parent } of DERIVED_METRIC_RULES) {
+		if (aus.includes(child) || !aus.includes(parent)) continue;
+		let nach = aus.indexOf(parent) + 1;
+		while (nach < aus.length && DERIVED_METRIC_RULES.some((r) => r.parent === parent && r.child === aus[nach])) nach++;
+		aus.splice(nach, 0, child);
+	}
+	return aus;
+}
+
+/** Ableitung je Kontext als Daten: nur der Trip leitet Kinder ab (der Vergleich gibt sie nicht aus). */
+export const AUSWAHL_ABLEITUNG: Record<Kontext, (auswahl: string[]) => string[]> = {
+	route: auswahlMitAbgeleiteten,
+	vergleich: (auswahl) => auswahl
+};
+
+/** Trip-Register-Standard (#3047 E1): Metriken mit `trip_default_rank` aus `/api/metrics` in
+ *  Rangfolge — dieselbe Quelle wie Python `DEFAULT_TRIP_METRIC_IDS`, ohne Ableitung (loader.py N1). */
+export function registerStandard(eig: Record<string, MetrikEigenschaften>): string[] {
+	return Object.values(eig ?? {})
+		.filter((e) => typeof e?.trip_default_rank === 'number')
+		.sort((a, b) => (a.trip_default_rank as number) - (b.trip_default_rank as number))
+		.map((e) => e.id);
+}
+
+/** Groessen des Vergleichs-Katalogs (jede Katalogzeile steht in der Altformat-Tabelle), eindeutig. */
+export function vergleichsKatalogIds(alt: AltSchluessel): string[] {
+	return [...new Set(Object.values(alt ?? {}).map((e) => e.metric_id))];
+}
+
+/** Woraus die Grundauswahl „nie eingestellt" kommt (#3047 E1, Spec-Nachtrag Runde 7). */
+export type AuswahlQuellen = {
+	/** `/api/metrics` (Register-Rang fuer den Trip-Standard). */
+	eig?: Record<string, MetrikEigenschaften>;
+	/** Anlege-Kette: ohne Liste gilt die Vorlage (einziger verbliebener Vorlagen-Rueckfall). */
+	alsVorlage?: boolean;
+};
+
+/** Auswahl lesen: Trip aus `metrics[]` (enabled, mit Python-Ableitung der Kind-Groessen),
+ *  Vergleich aus `active_metrics` (eindeutig, Alt- und Neuformat pro Element). Fehlt die Liste
+ *  (Trip auch `metrics: []`, models.py D4), gilt der Mail-Standard (#3047 E1, Spec-Nachtrag
+ *  Runde 7): Trip der Register-Standard, Vergleich alle Groessen des Vergleichs-Katalogs (die Mail
+ *  zeigt alle Zeilen). Nur die Anlege-Kette (`alsVorlage`) — oder ein Aufrufer ohne Quelle — faellt
+ *  auf die aufgeloeste Ampel zurueck. Eine leere Vergleichs-Liste bleibt leer. */
+export function auswahlLesen(
+	context: Kontext,
+	displayConfig: AuswahlQuelle | null | undefined,
+	aufgeloest: Ampel,
+	alt: AltSchluessel = {},
+	quellen: AuswahlQuellen = {}
+): string[] {
+	const liste = AUSWAHL_QUELLE[context](displayConfig, alt);
+	if (liste) return liste;
+	const standard = quellen.alsVorlage ? [] : MAIL_STANDARD[context](quellen.eig ?? {}, alt);
+	return standard.length ? standard : AUSWAHL_ABLEITUNG[context](aktiveMetriken(aufgeloest));
+}
+
+/** Mail-Standard „nie eingestellt" je Kontext als Daten (Ratsche context_herkunft_zweige_eingefroren). */
+const MAIL_STANDARD: Record<Kontext, (eig: Record<string, MetrikEigenschaften>, alt: AltSchluessel) => string[]> = {
+	route: (eig) => registerStandard(eig),
+	vergleich: (_eig, alt) => vergleichsKatalogIds(alt)
+};
 
 /** Auswahl-Quelle je Kontext als Daten (Trip `metrics[]` mit `enabled`, Vergleich `active_metrics`);
  *  `null` = Liste fehlt. Tabelle statt Kontext-Weiche (Ratsche context_herkunft_zweige_eingefroren). */
 const AUSWAHL_QUELLE: Record<Kontext, (dc: AuswahlQuelle | null | undefined, alt: AltSchluessel) => string[] | null> = {
-	route: (dc) => (Array.isArray(dc?.metrics) && dc.metrics.length > 0 ? dc.metrics.filter((m) => m?.enabled === true).map((m) => m.metric_id) : null),
+	route: (dc) => {
+		const liste = tripMetrikEintraege(dc?.metrics);
+		if (liste.length === 0) return null;
+		return [...new Set(mitAbgeleiteten(liste).filter((m) => m.enabled === true).map((m) => m.metric_id))];
+	},
 	vergleich: (dc, alt) => (Array.isArray(dc?.active_metrics) ? [...new Set(dc.active_metrics.map((m) => vergleichsMetrikId(m, alt)))] : null)
 };
+
+/** Auswahl in Zeilen (stehen in der Ausgabe) und gesperrte Eintraege (#3047 E6: gespeichert, aber vom
+ *  Kontext nicht ausgebbar — die Mail laesst sie weg; der Reiter zeigt sie mit Grund statt still).
+ *  Ausgebbar = dieselbe Regel wie das Angebot (`ANGEBOTS_FILTER`). */
+export function ausgebbarTeilen(context: Kontext, auswahl: string[], katalogIds: Set<string>): { zeilen: string[]; gesperrt: string[] } {
+	const ok = ANGEBOTS_FILTER[context];
+	return { zeilen: auswahl.filter((id) => ok(id, katalogIds)), gesperrt: auswahl.filter((id) => !ok(id, katalogIds)) };
+}
 
 /** Vollstaendige Ampel einer eigenen Vorlage; Bestand ohne `ampel`: „allgemein“ mit `enabled`
  *  aus den Metriken der Vorlage (Spec §6 a, AC-39). */

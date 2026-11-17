@@ -1,8 +1,8 @@
 // Kern-Test — Issue #2347 S3d (AC-1, Trip-Hälfte; PO-Entscheid: Kern-Test statt E2E).
 //
 // Ein Trip OHNE gespeichertes `official_warnings` (Bestandsdaten vor der Migration
-// #1258 — über die API nicht herstellbar: die Neuanlage setzt bewusst
-// `enabled=false`, #1258 AC-4 / PO-Entscheidung F1, `internal/handler/trip.go`; ein
+// #1258 — über die API nicht herstellbar: die Neuanlage schreibt beide Warn-Felder
+// ausdrücklich (seit #3047 Runde 7 `true`, löst #1258 AC-4 ab, `internal/handler/trip.go`); ein
 // PUT ohne das Feld lässt es unverändert) zeigt im Reiter Alarme den Auslöser
 // „Amtliche Warnungen lösen Alert aus" AN — Legacy-Fallback identisch zur Pipeline
 // (`official_alert_triggers_enabled !== false`). Und: das Öffnen allein speichert

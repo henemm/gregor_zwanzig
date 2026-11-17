@@ -5,7 +5,8 @@ SPEC: docs/specs/modules/fix_1435_e3b_sms_kuerzel.md — AC-9.
 Geprueft werden die vier Stellen, die im Trip-SMS-Pfad Symbole fuehren:
 
   * `output/tokens/builder.py`  — `PRIORITY`, `POSITIONAL`, `_wintersport()`
-  * `output/tokens/render.py`   — `DROP_ORDER`
+  * (`output/tokens/render.py` — `DROP_ORDER` entfaellt seit #3047 Runde 7 /
+    AC-23: die Kuerzung arbeitet ueber den Listenplatz, nicht ueber Symbole)
   * `output/adapters/trip_result.py` — `_wintersport_default_config()`
   * `output/renderers/sms_trip.py`   — `SMS_SYMBOL_BY_METRIC`
 
@@ -52,7 +53,6 @@ from output.tokens.builder import (
 from output.tokens.dto import (
     DailyForecast, HourlyValue, MetricSpec, NormalizedForecast,
 )
-from output.tokens.render import DROP_ORDER
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -181,9 +181,7 @@ def test_ratchet_actually_has_material_to_check():
     assert len(positional_ws) >= 3, (
         f"POSITIONAL fuehrt keinen Wintersport-Block mehr: {POSITIONAL!r}"
     )
-    assert len(PRIORITY) > 0 and len(DROP_ORDER) > 0, (
-        "PRIORITY/DROP_ORDER sind leer — nichts zu pruefen."
-    )
+    assert len(PRIORITY) > 0, "PRIORITY ist leer — nichts zu pruefen."
     assert len(SMS_SYMBOL_BY_METRIC) > 0, "SMS_SYMBOL_BY_METRIC ist leer."
     assert len(register) > 0, "Das Register liefert keine Feldzuordnung."
 
@@ -302,11 +300,9 @@ def test_all_symbol_tables_carry_the_same_wintersport_symbols():
         "SMS-Erzeugung stuerzt ab."
     )
 
-    missing_drop = sorted(probed - set(DROP_ORDER))
-    assert not missing_drop, (
-        f"Kuerzel {missing_drop!r} fehlen in DROP_ORDER (render.py) — sie "
-        "wuerden bei zu langer SMS nie gekuerzt."
-    )
+    # #3047 Runde 7 (AC-23, PO-Entscheidung 2026-11-16): DROP_ORDER ist
+    # abgeloest -- die Kuerzung laesst Listenzeilen vom Ende her fallen und
+    # kennt keine Symboltabelle mehr, die ein Kuerzel verfehlen koennte.
 
     missing_default = sorted(probed - default_cfg)
     assert not missing_default, (
@@ -383,9 +379,6 @@ def test_extended_metric_tables_carry_the_symbol_the_builder_emits():
         ("POSITIONAL (builder.py)", {s for s, _cat in POSITIONAL},
          "`POS_INDEX.get(...)` greift den Fallback 99 — das Kuerzel rutscht "
          "ans Zeilenende, hinter die System-Bloecke"),
-        ("DROP_ORDER (render.py)", set(DROP_ORDER),
-         "`_drop_first()` findet das Token nie — es faellt unter "
-         "Kuerzungsdruck NIE mehr an seiner Stelle"),
     ):
         fehlend = sorted(emitted - inhalt)
         assert not fehlend, (
@@ -414,8 +407,6 @@ def test_legacy_snow_symbols_are_absent_from_all_tables(legacy_symbol: str):
         found_in.append("builder.PRIORITY")
     if legacy_symbol in positional_symbols:
         found_in.append("builder.POSITIONAL")
-    if legacy_symbol in DROP_ORDER:
-        found_in.append("render.DROP_ORDER")
     if legacy_symbol in default_cfg:
         found_in.append("trip_result._wintersport_default_config")
     if legacy_symbol in set(SMS_SYMBOL_BY_METRIC.values()):

@@ -1,0 +1,30 @@
+# Paket p5b — RED-Belege vor dem Fix (#3047 Runde 7)
+
+## E4 Python — uv run pytest tests/tdd/test_3047_e4_amtliche_warnungen_beides_an.py (10 failed, 22 passed)
+tests/tdd/test_3047_e4_amtliche_warnungen_beides_an.py:152: AssertionError: briefing_aus_alarm_altfeld_default: Briefing-Warnungen erwartet=True, Abrufe=0 (Regel: Briefing ODER Alarm an -> beides an)
+tests/tdd/test_3047_e4_amtliche_warnungen_beides_an.py:152: AssertionError: briefing_aus_alarm_an_migriert: Briefing-Warnungen erwartet=True, Abrufe=0 (Regel: Briefing ODER Alarm an -> beides an)
+tests/tdd/test_3047_e4_amtliche_warnungen_beides_an.py:194: AssertionError: briefing_an_alarm_aus_migriert: Alarm erwartet=True, Mails=0
+tests/tdd/test_3047_e4_amtliche_warnungen_beides_an.py:194: AssertionError: briefing_fehlt_alarm_aus_migriert: Alarm erwartet=True, Mails=0
+tests/tdd/test_3047_e4_amtliche_warnungen_beides_an.py:194: AssertionError: briefing_an_alarm_altfeld_aus: Alarm erwartet=True, Mails=0
+tests/tdd/test_3047_e4_amtliche_warnungen_beides_an.py:207: AssertionError: briefing_an_alarm_aus_migriert: Orts-Alarm erwartet=True, Mails=[]
+tests/tdd/test_3047_e4_amtliche_warnungen_beides_an.py:207: AssertionError: briefing_fehlt_alarm_aus_migriert: Orts-Alarm erwartet=True, Mails=[]
+tests/tdd/test_3047_e4_amtliche_warnungen_beides_an.py:207: AssertionError: briefing_an_alarm_altfeld_aus: Orts-Alarm erwartet=True, Mails=[]
+tests/tdd/test_3047_e4_amtliche_warnungen_beides_an.py:228: AssertionError: briefing_aus_alarm_altfeld_default: Orts-Briefing-Abruf erwartet=True, erhalten=False
+tests/tdd/test_3047_e4_amtliche_warnungen_beides_an.py:228: AssertionError: briefing_aus_alarm_an_migriert: Orts-Briefing-Abruf erwartet=True, erhalten=False
+
+## E4 Frontend — npm test -- src/lib/components/shared/wetter-tab/__tests__/e4_amtliche_warnungen_mischzustand.test.ts (17 failed, 28 passed)
+not ok e4_{route,vergleich}_lesen_{briefing_fehlt_alarm_aus_migriert,briefing_an_alarm_altfeld_aus,nur_sources,leeres_official_warnings}_ist_true
+not ok e4_{route,vergleich}_speichern_{briefing_fehlt_alarm_aus_migriert,briefing_an_alarm_altfeld_aus,nur_sources,leeres_official_warnings}
+not ok e4_paritaet_python_alle_faelle
+
+## E1 Go — go test ./internal/handler/ -run F3047E1 (Tabelle angelegt, Neuanlage noch nicht verdrahtet)
+--- FAIL: TestF3047E1_NeuerVergleichSchreibtGrundauswahlDerStandardVorlage_ZweiNutzer
+    E1 alice: active_metrics <nil>, erwartet [gust/max temperature/max precipitation/sum] (Grundauswahl der Vorlage)
+    E1 bob: active_metrics <nil>, erwartet [cloud_total/avg wind/max freezing_level/min] (Grundauswahl der Vorlage)
+
+## E3-Nachgang Go — go test ./internal/handler/ -run TestE3_3047
+--- FAIL: TestE3_3047_TripPut_DisplayConfigMetrikOhneID_400_ZweiNutzer
+    nutzer-a|nutzer-b/{gespreizte Zeichenkette,leere metric_id,Zahl statt Eintrag}: Status 200, erwartet 400
+    nutzer-a|nutzer-b: abgewiesene Anfrage hat die Datei veraendert
+--- FAIL: TestE3_3047_TripPost_DisplayConfigMetrikOhneID_400_ZweiNutzer
+    nutzer-a|nutzer-b: Status 201, erwartet 400; abgewiesener Trip wurde angelegt

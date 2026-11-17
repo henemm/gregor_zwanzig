@@ -856,6 +856,7 @@ def _render_overview_row(
 
 def _visible_metrics(
     enabled_metrics: list[str] | None, lang: Lang = "de", *, ampel: dict,
+    alerts_enabled: bool = True,
 ) -> list[dict]:
     """Issue #1104: filtert die NUMERISCHEN Uebersichts-Zeilen auf
     ``enabled_metrics`` (Liste von Renderer-Metrik-IDs wie "wind_max"). Die
@@ -874,6 +875,11 @@ def _visible_metrics(
     bei der englischen Kurzform -- beide Formen kommen aus derselben
     Ableitung, es gibt keine zweite Namensliste."""
     zeilen = build_cv2_metrics(ampel=ampel)
+    # Issue #3047 B-OM-2 (AC-28): Schalter "Amtliche Warnungen" aus -> keine
+    # Warnzeile (sonst laesen sich die Striche wie "keine Warnung", obwohl nie
+    # abgefragt wurde); der Klartext laesst sie ebenso weg.
+    if not alerts_enabled:
+        zeilen = [m for m in zeilen if m["key"] != "warn"]
     warn_row = [m for m in zeilen if m["key"] == "warn"]
     if enabled_metrics is None:
         return derive_row_labels(zeilen, form="long", lang=lang)
@@ -934,6 +940,7 @@ def _render_overview_table(
     *,
     ampel: dict,
     metric_formats: dict[str, bool] | None = None,
+    alerts_enabled: bool = True,
 ) -> str:
     header_cells = [
         f'<th style="text-align:left;padding:9px 5px;font-size:10px;'
@@ -951,7 +958,7 @@ def _render_overview_table(
         f'<tr style="background:{G_PAPER};border-bottom:1px solid #e6e1d3;">'
         f'{"".join(header_cells)}</tr>'
     )
-    visible = _visible_metrics(enabled_metrics, lang, ampel=ampel)
+    visible = _visible_metrics(enabled_metrics, lang, ampel=ampel, alerts_enabled=alerts_enabled)
     # Tages-Aggregate EINMAL je Ort ableiten (nicht je Zeile x Ort) -- nur wenn
     # ueberhaupt eine Zeile davon lebt.
     summaries: dict = {}
@@ -1878,6 +1885,10 @@ def render_compare_html(
         if any_official_alerts_unavailable(locations) else ""
     )
 
+    # Issue #3047 B-OM-2: Preset-Schalter "Amtliche Warnungen" (fehlend = an).
+    alerts_enabled = (
+        preset.get("official_alerts_enabled") if isinstance(preset, dict) else None
+    ) is not False
     overview_head = (
         t("vergleich.abschnitt.uebersicht", lang), t("vergleich.uebersicht.titel", lang),
         t("vergleich.uebersicht.scrollen", lang),
@@ -1885,7 +1896,7 @@ def render_compare_html(
     overview_html = (
         f'<div style="padding:6px 24px 0;">'
         f'{_render_section_head(*overview_head)}'
-        f'{_render_overview_table(locations, enabled_metrics, unresolved_count, lang, ampel=ampel, metric_formats=metric_formats)}</div>'
+        f'{_render_overview_table(locations, enabled_metrics, unresolved_count, lang, ampel=ampel, metric_formats=metric_formats, alerts_enabled=alerts_enabled)}</div>'
     )
     # Issue #1563: leer ohne Vertretung -> faellt durch den `if part`-Filter.
     fallback_html = (

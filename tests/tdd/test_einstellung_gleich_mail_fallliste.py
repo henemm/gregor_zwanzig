@@ -11,7 +11,9 @@ und prueft ohne Testausfuehrung:
     Go per ``func <Name>(`` in ``internal/**/*_test.go`` bei ``seite: "go"``);
 (c) paarweise Ueberdeckung der ``dimensionen`` je Liste;
 (d) "fertig": kein Fall ``rot_erwartet``; ``ausnahme``/``offen_feature`` tragen Verweis;
-(e) Schema: Pflichtfelder, erlaubte Status/Formate, ``id`` global eindeutig.
+(e) Schema: Pflichtfelder, erlaubte Status/Formate, ``id`` global eindeutig;
+(f) Runde 7 (AC-22): je Kontext (Trip, Orte) und Kanal Telegram/SMS/Premium-SMS
+    mindestens ein gruener Fall je Aspekt Auswahl, Reihenfolge, Roh/Einfach.
 
 Die Pruefungen sind reine Funktionen mit Pfadparametern; die Selbsttests am Dateiende
 fuettern sie mit synthetischen Falllisten in ``tmp_path`` (positiv und negativ).
@@ -34,7 +36,14 @@ TEILDATEIEN = ("trip", "orte", "validatoren", "editor")
 
 PFLICHTFELDER = ("id", "liste", "kontext", "format", "pruefung", "test", "ac", "befund", "status")
 ERLAUBTE_STATUS = frozenset({"gruen", "rot_erwartet", "ausnahme", "offen_feature"})
-ERLAUBTE_FORMATE = frozenset({"html", "klartext", "kompakt", "editor"})
+#: Ausgabeformate. Runde 7 (Nachtrag AC-22..AC-28): Telegram, SMS, Premium-SMS
+#: als eigene Ausgaben; ``api`` = Speicherweg (Go/Frontend), ``vorschau`` =
+#: Vorschau-Dienst, ``alarm`` = Alarm-Ausgabe, ``intern`` = Laufzeit-Eigenschaft.
+#: Ein Fall ueber mehrere Ausgaben nennt sie mit ``+`` (``html+klartext``).
+ERLAUBTE_FORMATE = frozenset({
+    "html", "klartext", "kompakt", "editor", "telegram", "sms", "premium_sms",
+    "api", "vorschau", "alarm", "intern",
+})
 #: #3047 J2: jeder Status nennt einen auffindbaren Test -- ein ``offen_feature``
 #: belegt sich mit ``xfail(strict=True)`` rot, eine ``ausnahme`` mit dem Test,
 #: der die gewollte Abweichung zeigt.
@@ -55,8 +64,21 @@ ABDECKUNG_SOLL: dict[str, tuple[str, ...]] = {
 ABDECKUNG_PRUEFUNGEN = ("auswahl", "reihenfolge")
 
 PY_TEST_GLOB = "tests/tdd/test_einstellung_gleich_mail_*.py"
+#: Runde 7: Katalogtests der Behebungspakete liegen auch ausserhalb des
+#: Hauptmusters; ein Verweis mit Pfad (``tests/tdd/x.py::name``) wird direkt
+#: aufgeloest, ein blosser Name in diesen Mustern gesucht.
+PY_TEST_GLOBS = (
+    PY_TEST_GLOB,
+    "tests/tdd/test_3047_*.py",
+    "tests/tdd/test_kompakt_mail_schalter*.py",
+)
 VITEST_GLOB = "frontend/src/**/__tests__/*.test.ts"
 GO_TEST_GLOB = "internal/**/*_test.go"
+
+# (f) Runde 7, AC-22: Kanal-Abdeckung je Kontext.
+KANAL_ABDECKUNG_KONTEXTE = ("trip", "orte")
+KANAL_ABDECKUNG_KANAELE = ("telegram", "sms", "premium_sms")
+KANAL_ABDECKUNG_ASPEKTE = ("auswahl", "reihenfolge", "darstellung")
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +166,21 @@ _VITEST_AUFRUF = r"\b(?:it|test|it\.fails|rotErwartet)\s*\(\s*"
 _VITEST_TEMPLATE_PRAEFIX = re.compile(_VITEST_AUFRUF + r"`([^`$]*)\$\{")
 
 
+#: Vollstaendiger Template-Literal-Titel (Runde 7): ``test(`anzeige_${id}`)``.
+_VITEST_TEMPLATE_GANZ = re.compile(_VITEST_AUFRUF + r"`([^`]*\$\{[^`]*)`")
+_TEMPLATE_PLATZHALTER = re.compile(r"\$\{[^}]*\}")
+
+
+def _template_muster(vorlage: str) -> re.Pattern:
+    """``anzeige_${id}_x`` -> ``anzeige_.+_x`` (jeder Platzhalter >= 1 Zeichen)."""
+    teile = _TEMPLATE_PLATZHALTER.split(vorlage)
+    return re.compile(".+".join(re.escape(t) for t in teile))
+
+
 def _vitest_titel_gefunden(titel: str, dateien: list[Path]) -> bool:
+    """Wortgleicher Titel, fester Template-Praefix oder -- Runde 7 -- ein
+    konkreter Titel, der ein Template-Literal ausfuellt (``anzeige_${id}`` ->
+    ``anzeige_a_nie_eingestellt``)."""
     muster = re.compile(_VITEST_AUFRUF + r"(['\"`])" + re.escape(titel) + r"\1")
     for d in dateien:
         quelle = d.read_text(encoding="utf-8")
@@ -152,6 +188,9 @@ def _vitest_titel_gefunden(titel: str, dateien: list[Path]) -> bool:
             return True
         praefixe = {p.strip() for p in _VITEST_TEMPLATE_PRAEFIX.findall(quelle)}
         if titel.strip() and titel.strip() in praefixe:
+            return True
+        if titel.strip() and any(_template_muster(v).fullmatch(titel.strip())
+                                 for v in _VITEST_TEMPLATE_GANZ.findall(quelle)):
             return True
     return False
 
@@ -178,16 +217,40 @@ def _pruefe_go_verweis(test: str, go_dateien: list[Path]) -> bool:
     return any(muster.search(d.read_text(encoding="utf-8")) for d in go_dateien)
 
 
-def _pruefe_python_verweis(test: str, py_namen: dict[str, set[str]]) -> bool:
+_PARAM_SUFFIX = re.compile(r"\[[^\]]*\]$")
+
+
+def _pruefe_python_verweis(test: str, py_namen: dict[str, set[str]], wurzel: Path | None = None) -> bool:
+    """``datei.py::name`` / ``tests/tdd/datei.py::Klasse::name[param]`` / ``name``.
+
+    Ein Parametrisierungs-Suffix ``[...]`` zaehlt nicht zum Funktionsnamen; ein
+    Verweis mit Pfad wird -- falls die Datei existiert -- direkt gelesen.
+    """
     if ".py::" in test:
         datei_teil, name = test.split(".py::", 1)
+        name = _PARAM_SUFFIX.sub("", name)
         datei_name = Path(datei_teil + ".py").name
+        if wurzel is not None and "/" in datei_teil:
+            pfad = wurzel / (datei_teil + ".py")
+            if pfad.is_file():
+                return name in _python_testnamen(pfad)
+            return False
         return name in py_namen.get(datei_name, set())
-    return any(test in namen for namen in py_namen.values())
+    name = _PARAM_SUFFIX.sub("", test)
+    return any(name in namen for namen in py_namen.values())
+
+
+def _pruefe_go_datei_verweis(test: str, wurzel: Path) -> bool:
+    """``internal/.../x_test.go::TestName``: Funktion in genau dieser Datei."""
+    datei_teil, name = test.split("_test.go::", 1)
+    pfad = wurzel / (datei_teil + "_test.go")
+    if not pfad.is_file() or not re.fullmatch(r"Test\w+", name):
+        return False
+    return bool(re.search(r"^func\s+" + re.escape(name) + r"\s*\(", pfad.read_text(encoding="utf-8"), re.MULTILINE))
 
 
 def pruefe_testverweise(dateien: dict[str, dict], wurzel: Path) -> list[str]:
-    py_namen = {p.name: _python_testnamen(p) for p in sorted(wurzel.glob(PY_TEST_GLOB))}
+    py_namen = {p.name: _python_testnamen(p) for g in PY_TEST_GLOBS for p in sorted(wurzel.glob(g))}
     vitest_dateien = sorted(wurzel.glob(VITEST_GLOB))
     go_dateien = sorted(wurzel.glob(GO_TEST_GLOB))
     fehler = []
@@ -195,15 +258,18 @@ def pruefe_testverweise(dateien: dict[str, dict], wurzel: Path) -> list[str]:
         if fall.get("status") not in STATUS_MIT_TEST:
             continue
         test = str(fall.get("test") or "").strip()
-        if fall.get("seite") == "go":
+        if "_test.go::" in test:
+            ok = _pruefe_go_datei_verweis(test, wurzel)
+            ort = GO_TEST_GLOB
+        elif fall.get("seite") == "go":
             ok = _pruefe_go_verweis(test, go_dateien)
             ort = GO_TEST_GLOB
         elif _ist_vitest_fall(fall):
             ok = _pruefe_vitest_verweis(test, vitest_dateien)
             ort = VITEST_GLOB
         else:
-            ok = bool(test) and _pruefe_python_verweis(test, py_namen)
-            ort = PY_TEST_GLOB
+            ok = bool(test) and _pruefe_python_verweis(test, py_namen, wurzel)
+            ort = ", ".join(PY_TEST_GLOBS)
         if not ok:
             fehler.append(f"{name}: Fall {fall.get('id')!r} nennt Test {test!r}, nicht gefunden in {ort}")
     return fehler
@@ -288,6 +354,11 @@ def pruefe_verweise(dateien: dict[str, dict]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+def _formate(fall: dict) -> set[str]:
+    """Einzelformate eines Falls (``html+klartext`` -> {html, klartext})."""
+    return {teil.strip() for teil in str(fall.get("format", "")).split("+")}
+
+
 def _pruefe_fall_schema(name: str, index: int, fall) -> list[str]:
     if not isinstance(fall, dict):
         return [f"{name}: faelle[{index}] ist kein Objekt"]
@@ -295,7 +366,7 @@ def _pruefe_fall_schema(name: str, index: int, fall) -> list[str]:
     fehler = [f"{kennung}: Pflichtfeld {feld!r} fehlt" for feld in PFLICHTFELDER if feld not in fall]
     if "status" in fall and fall["status"] not in ERLAUBTE_STATUS:
         fehler.append(f"{kennung}: status {fall['status']!r} nicht erlaubt ({sorted(ERLAUBTE_STATUS)})")
-    if "format" in fall and fall["format"] not in ERLAUBTE_FORMATE:
+    if "format" in fall and not _formate(fall) <= ERLAUBTE_FORMATE:
         fehler.append(f"{kennung}: format {fall['format']!r} nicht erlaubt ({sorted(ERLAUBTE_FORMATE)})")
     if "werte" in fall and not isinstance(fall["werte"], dict):
         fehler.append(f"{kennung}: 'werte' muss ein Objekt sein")
@@ -314,6 +385,34 @@ def pruefe_schema(dateien: dict[str, dict]) -> list[str]:
                 ids[fall["id"]] += 1
     fehler.extend(f"id {i!r} kommt {n}-mal vor (muss global eindeutig sein)" for i, n in ids.items() if n > 1)
     return fehler
+
+
+# ---------------------------------------------------------------------------
+# (f) Kanal-Abdeckung Runde 7 (AC-22)
+# ---------------------------------------------------------------------------
+
+
+def pruefe_kanal_abdeckung(dateien: dict[str, dict]) -> list[str]:
+    """Je Kontext x Kanal x Aspekt mindestens ein gruener Fall.
+
+    Ein Fall zaehlt fuer einen Aspekt, wenn seine Liste ``aspekte`` ihn nennt
+    oder seine ``pruefung`` so heisst; Kanal = Teil von ``format``; Kontext =
+    ``kontext`` (``beide`` zaehlt fuer Trip und Orte).
+    """
+    gesehen: set[tuple[str, str, str]] = set()
+    for _, fall in _alle_faelle(dateien):
+        if fall.get("status") != "gruen":
+            continue
+        kontexte = KANAL_ABDECKUNG_KONTEXTE if fall.get("kontext") == "beide" else (fall.get("kontext"),)
+        aspekte = set(fall.get("aspekte") or []) | {fall.get("pruefung")}
+        for kontext, kanal, aspekt in itertools.product(kontexte, _formate(fall), aspekte):
+            gesehen.add((kontext, kanal, aspekt))
+    return [
+        f"kein gruener Fall fuer kontext={k}, kanal={kanal}, aspekt={a}"
+        for k, kanal, a in itertools.product(KANAL_ABDECKUNG_KONTEXTE, KANAL_ABDECKUNG_KANAELE,
+                                             KANAL_ABDECKUNG_ASPEKTE)
+        if (k, kanal, a) not in gesehen
+    ]
 
 
 def zaehle_status(dateien: dict[str, dict]) -> dict[str, int]:
@@ -354,6 +453,12 @@ def _geladen(daten) -> dict[str, dict]:
 def test_abdeckungsmatrix_auswahl_und_reihenfolge(echte_falllisten):
     """(a) jede Liste x Format hat einen Fall auswahl und einen Fall reihenfolge."""
     _melde(pruefe_abdeckung(_geladen(echte_falllisten)), "Abdeckungsmatrix unvollstaendig")
+
+
+def test_kanal_abdeckung_runde7(echte_falllisten):
+    """(f) AC-22: Telegram/SMS/Premium-SMS je Kontext mit Auswahl-, Reihenfolge-
+    und Roh/Einfach-Fall."""
+    _melde(pruefe_kanal_abdeckung(_geladen(echte_falllisten)), "Kanal-Abdeckung Runde 7 unvollstaendig")
 
 
 def test_testverweise_auffindbar(echte_falllisten):
@@ -672,3 +777,82 @@ def test_selbsttest_schema_verstoesse(tmp_path):
     assert any("'gelb'" in f for f in fehler)
     assert any("'pdf'" in f for f in fehler)
     assert any("global eindeutig" in f and faelle[3]["id"] in f for f in fehler)
+
+
+def _syn_kanal_faelle() -> list[dict]:
+    faelle = []
+    for kontext, kanal in itertools.product(KANAL_ABDECKUNG_KONTEXTE, KANAL_ABDECKUNG_KANAELE):
+        faelle.append(_syn_fall(f"k-{kontext}-{kanal}", f"{kontext}_{kanal}", kanal, "kanal_liste",
+                                aspekte=list(KANAL_ABDECKUNG_ASPEKTE)))
+    return faelle
+
+
+def test_selbsttest_kanal_abdeckung_runde7(tmp_path):
+    """(f) AC-22: je Kontext x Kanal x Aspekt ein gruener Fall; ``aspekte``
+    oder ``pruefung`` zaehlen, ``beide`` gilt fuer Trip und Orte, ein
+    zusammengesetztes Format zaehlt je Teil; ein nicht gruener Fall zaehlt nicht."""
+    daten = _syn_daten()
+    daten["fallliste_trip.json"]["faelle"].extend(_syn_kanal_faelle())
+    verzeichnis = _schreibe(tmp_path, daten)
+    d = lade_falllisten(verzeichnis)
+    assert pruefe_kanal_abdeckung(d) == []
+    assert _alle_pruefungen(tmp_path, verzeichnis) == []
+
+    faelle = daten["fallliste_trip.json"]["faelle"]
+    faelle[:] = [f for f in faelle if f["id"] not in ("k-orte-premium_sms", "k-trip-sms")]
+    faelle.append(_syn_fall("k-sms-beide", "sms", "sms+klartext", "reihenfolge", kontext="beide"))
+    faelle.append(_syn_fall("k-pr-rot", "orte_premium_sms", "premium_sms", "kanal_liste",
+                            kontext="orte", aspekte=["auswahl"], status="offen_feature", verweis="#2801"))
+    verzeichnis = _schreibe(tmp_path, daten)
+    fehler = pruefe_kanal_abdeckung(lade_falllisten(verzeichnis))
+    assert fehler == [
+        "kein gruener Fall fuer kontext=trip, kanal=sms, aspekt=auswahl",
+        "kein gruener Fall fuer kontext=trip, kanal=sms, aspekt=darstellung",
+        "kein gruener Fall fuer kontext=orte, kanal=premium_sms, aspekt=auswahl",
+        "kein gruener Fall fuer kontext=orte, kanal=premium_sms, aspekt=reihenfolge",
+        "kein gruener Fall fuer kontext=orte, kanal=premium_sms, aspekt=darstellung",
+    ], fehler
+
+
+def test_selbsttest_runde7_verweise_pfad_param_go_datei_template(tmp_path):
+    """Runde 7: Pfad-Verweis ``tests/tdd/x.py::name[param]`` wird direkt
+    gelesen (auch ausserhalb des Hauptmusters), ``x_test.go::TestName`` in genau
+    dieser Datei, ein konkreter Titel fuellt ein Template-Literal aus. Falsche
+    Namen, fremde Dateien und nur halb passende Titel zaehlen nicht."""
+    daten = _syn_daten()
+    tdd = tmp_path / "tests" / "tdd"
+    tdd.mkdir(parents=True, exist_ok=True)
+    (tdd / "test_andere_runde7.py").write_text(
+        "import pytest\n@pytest.mark.parametrize('l', ['de'])\ndef test_kanal(l):\n    pass\n", encoding="utf-8")
+    vt_datei = tmp_path / "frontend" / "src" / "lib" / "y" / "__tests__" / "ac26_x.test.ts"
+    vt_datei.parent.mkdir(parents=True, exist_ok=True)
+    vt_datei.write_text("for (const id of ids) {\n  test(`anzeige_${id}_gleich`, () => {});\n}\n",
+                        encoding="utf-8")
+    editor = daten["fallliste_editor.json"]["faelle"]
+    editor[0]["test"] = "frontend/src/lib/y/__tests__/ac26_x.test.ts::anzeige_a_nie_gleich"
+    editor[1]["test"] = "internal/handler/syn_test.go::TestSynVorlageFolge"
+    daten["fallliste_trip.json"]["faelle"][0]["test"] = "tests/tdd/test_andere_runde7.py::test_kanal[de]"
+    verzeichnis = _schreibe(tmp_path, daten)
+    assert pruefe_testverweise(lade_falllisten(verzeichnis), tmp_path) == []
+
+    editor[0]["test"] = "frontend/src/lib/y/__tests__/ac26_x.test.ts::anzeige__gleich"
+    editor[1]["test"] = "internal/handler/syn_test.go::TestNurImKommentar"
+    daten["fallliste_trip.json"]["faelle"][0]["test"] = "tests/tdd/test_andere_runde7.py::test_kanal_fehlt[de]"
+    daten["fallliste_trip.json"]["faelle"][1]["test"] = "tests/tdd/test_gibt_es_nicht.py::test_kanal"
+    verzeichnis = _schreibe(tmp_path, daten)
+    fehler = pruefe_testverweise(lade_falllisten(verzeichnis), tmp_path)
+    assert len(fehler) == 4, fehler
+
+
+def test_selbsttest_zusammengesetztes_format(tmp_path):
+    """``html+klartext`` ist erlaubt, wenn jeder Teil erlaubt ist; ``html+pdf`` nicht."""
+    daten = _syn_daten()
+    faelle = daten["fallliste_trip.json"]["faelle"]
+    faelle[0]["format"] = "html+klartext"
+    faelle[1]["format"] = "telegram+sms+premium_sms"
+    verzeichnis = _schreibe(tmp_path, daten)
+    assert pruefe_schema(lade_falllisten(verzeichnis)) == []
+    faelle[2]["format"] = "html+pdf"
+    verzeichnis = _schreibe(tmp_path, daten)
+    fehler = pruefe_schema(lade_falllisten(verzeichnis))
+    assert len(fehler) == 1 and "'html+pdf'" in fehler[0], fehler

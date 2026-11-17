@@ -1,0 +1,11 @@
+# RED Runde 7 Paket p8 (vor dem Fix, Code-Stand 8d69659): Orte-SMS-Kuerzung und Sonnenstunden-Settings
+E   AssertionError: Ort faellt weg, obwohl Zellen kuerzbar sind: Vergleich 08.07.: Innsbruck D 20C W 11 km/h R 3.5 mm PR 40% TH mittel SU 5.0h CT 30% UV 6 VS 8.0 km SD 0 cm NS 0 cm L 10C G 19 km/h WD 250 +1 Orte
+E   AssertionError: Ort faellt weg, obwohl Zellen kuerzbar sind: Vergleich 08.07.: Innsbruck D 20C W 11 km/h R 3.5 mm PR 40% TH mittel SU 5.0h CT 30% UV 6 VS 8.0 km SD 0 cm NS 0 cm L 10C G 19 km/h WD 250 +2 Orte
+E   AssertionError: Ort faellt weg, obwohl Zellen kuerzbar sind: Vergleich 08.07.: Innsbruck G 19 km/h UV 6 D 20C R 3.5 mm W 11 km/h CT 30% PR 40% SU 5.0h TH mittel WD 250 +2 Orte
+E   AssertionError: zu frueh Orte verworfen: Vergleich 08.07.: Innsbruck G 19 km/h UV 6 D 20C R 3.5 mm W 11 km/h CT 30% PR 40% SU 5.0h TH mittel WD 250 +11 Orte
+FAILED tests/tdd/test_3047_runde7_orte_sms_kuerzung.py::test_nie_eingestellt_alle_orte_sichtbar[2]
+FAILED tests/tdd/test_3047_runde7_orte_sms_kuerzung.py::test_nie_eingestellt_alle_orte_sichtbar[3]
+FAILED tests/tdd/test_3047_runde7_orte_sms_kuerzung.py::test_lange_ausdrueckliche_liste_drei_orte
+FAILED tests/tdd/test_3047_runde7_orte_sms_kuerzung.py::test_viele_orte_fallen_erst_nach_der_ersten_zeile_weg
+E   AssertionError: 20 Orte ohne settings 33.1 ms vs. mit 0.0 ms: Settings() wird je Ort neu gebaut
+FAILED tests/tdd/test_3047_runde7_sonnenstunden_settings.py::test_zwanzig_orte_ohne_settings_neubau_je_ort

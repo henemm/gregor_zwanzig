@@ -267,37 +267,18 @@ describe('#1435 E1a-2 AC-7: der Trips-Zweig bleibt unberuehrt', () => {
 		}
 	});
 
-	test('Die Trip-Einbettung bleibt unveraendert (kein Katalog, keine neuen Attribute)', () => {
-		const ast = parseFile(join(here, '..', '..', 'trip-detail', 'AlarmeScheduleTab.svelte'));
+	// #3047 Runde 7 (p11): der Trip-Hub-Container AlarmeScheduleTab war toter Code und ist
+	// entfernt; die einzige Trip-Einbettung ist der Anlege-Editor (Desktop + Mobil).
+	test('Die Trip-Einbettungen (Anlege-Editor) reichen keinen Katalog durch', () => {
+		const ast = parseFile(join(here, '..', '..', 'trip-new', 'TripNewEditor.svelte'));
 		const instanzen = componentInstances(ast, 'AlarmeTab');
-		assert.ok(instanzen.length >= 1, 'Keine <AlarmeTab> in AlarmeScheduleTab.svelte gefunden.');
+		assert.equal(instanzen.length, 2, 'TripNewEditor bettet AlarmeTab nicht genau zweimal ein (Desktop + Mobil).');
 		for (const inst of instanzen) {
 			assert.equal(staticAttr(inst, 'context'), 'route');
 			assert.equal(
 				hasAttr(inst, 'catalog'),
 				false,
-				'Die Trip-Einbettung reicht einen Katalog durch — der Trips-Zweig braucht ' +
-					'keinen und darf sich durch diese Etappe nicht bewegen (AC-7).'
-			);
-			assert.deepEqual(
-				(inst.attributes ?? []).map((a: any) => a.name).sort(),
-				[
-					'activeMetrics',
-					'context',
-					'existingAlertMetricChannels',
-					'existingChannelThresholds',
-					'existingChannels',
-					'metricLevels',
-					'onTripUpdate',
-					'saveController',
-					'trip'
-				],
-				// Issue #1461 S3b-2a: legitime Erweiterung um
-				// `existingChannelThresholds` (Kanal-Schwelle, route-Speicherweg) --
-				// diese Zusicherung bewacht weiterhin, dass KEIN Katalog-Attribut
-				// (#1435-Scope) den Trips-Zweig erreicht. Issue #1895 S3b1: ebenso
-				// `existingAlertMetricChannels` (Kanäle je Wettergröße, Bestand).
-				'Die Attribut-Liste der Trip-Einbettung hat sich unerwartet geaendert (AC-7).'
+				'Die Trip-Einbettung reicht einen Katalog durch — der Trips-Zweig braucht keinen (AC-7).'
 			);
 		}
 	});

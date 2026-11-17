@@ -855,13 +855,13 @@ def compare_erwartete_metriken(preset_json: dict, kanal: str) -> Optional[list[s
 
 
 def compare_telegram_erwartung(erwartet: Optional[list[str]]) -> tuple[list[str], int]:
-    """(Zellen je Ort, Anzahl verdraengter Groessen) unter der 7er-Grenze."""
+    """(Zellen je Ort, Anzahl verdraengter Groessen). #3047 Runde 7 (PO-Entscheidung
+    2026-11-16, AC-24): nichts faellt weg -- die ersten
+    ``COMPARE_TELEGRAM_ZELLEN_JE_ORT`` Zellen stehen in Zeile 1, alle weiteren in
+    Zeile 2 desselben Ortes; verdraengt wird keine Groesse mehr."""
     if erwartet is None:
         return [], 0
-    return (
-        erwartet[:COMPARE_TELEGRAM_ZELLEN_JE_ORT],
-        max(0, len(erwartet) - COMPARE_TELEGRAM_ZELLEN_JE_ORT),
-    )
+    return list(erwartet), 0
 
 
 # --- Parser ---------------------------------------------------------------

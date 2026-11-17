@@ -384,7 +384,14 @@ class TestAC7LegacyDefaultOrderUnchanged:
     # nur das ERSTE WORT jeder Zelle -- bei den mehrwortigen Labels ("Temp
     # max") bleibt dieses erste Wort ("Temp") unveraendert, nur das
     # einwortige "Schnee"-Label aendert sich vollstaendig zu "Schneehöhe".
-    FROZEN_TELEGRAM_ORDER = ["Temp", "Wind", "Sonne", "Wolken", "Schneehöhe", "Neuschnee"]
+    # Issue #3047 Runde 7 (B-L4, Tech-Lead-Entscheidung im Spec-Nachtrag
+    # "Orte nie eingestellt = was die Mail zeigt", ADR-0095): die alte
+    # Sechserliste ["Temp", "Wind", "Sonne", "Wolken", "Schneehöhe",
+    # "Neuschnee"] ist abgeloest. Telegram zeigt bei None die Zeilen der
+    # Mail-Tabelle in derselben Folge; Zeile 1 traegt die ersten 7 mit Wert
+    # (AC-24; dieses Ergebnis hat keinen Gewitterwert, die Zeile entfaellt).
+    FROZEN_TELEGRAM_ORDER = ["Temp", "Wind", "Regen", "Regenwahrscheinlichkeit",
+                             "Sonne", "Wolken", "UV"]
     FROZEN_HTML_ORDER = [
         "Amtliche Warnungen", "Temperatur Maximum", "Wind", "Niederschlag",
         "Regenwahrscheinlichkeit", "Gewitter", "Sonnenstunden", "Bewölkung",

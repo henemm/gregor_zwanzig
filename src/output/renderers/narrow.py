@@ -87,13 +87,20 @@ def _compact_label(metric_id: str) -> str:
 
 def _cell(
     metric_id: str, row: dict, friendly_keys: set[str], *, ampel: dict, lang: Lang = "de",
+    format_modes: Optional[dict[str, str]] = None,
 ) -> str:
-    """Formatiere den Wert einer Metrik aus einem Tabellen-Row-Dict."""
+    """Formatiere den Wert einer Metrik aus einem Tabellen-Row-Dict.
+
+    ``format_modes`` (#3047 Runde 7, #3063 P2): Roh/Einfach je Zeile der
+    Telegram-Liste wie in der Mail (``build_format_modes``) -- ohne sie kennt
+    ``fmt_val`` fuer die Windrichtung nur den Kompasswert.
+    """
     key = _col_key(metric_id)
     if key is None:
         return NO_VALUE
     return fmt_val(
-        key, row.get(key), friendly_keys=friendly_keys, row=row, lang=lang, ampel=ampel)
+        key, row.get(key), friendly_keys=friendly_keys, row=row, lang=lang, ampel=ampel,
+        format_modes=format_modes)
 
 
 def _wrap(text: str, width: int) -> list[str]:
@@ -120,9 +127,35 @@ def _wrap(text: str, width: int) -> list[str]:
     return lines
 
 
+def _wrap_cells(cells: list[str], width: int, sep: str = "  ") -> list[str]:
+    """Packt ganze Zellen (Tageskopf, ``{Label}: {Wert}``) mit ``sep`` auf
+    <=``width``-breite Zeilen; umbrochen wird nur ZWISCHEN zwei Zellen (#3047
+    p9: vorher ``Wind: 28`` / ``km/h``). Erst eine einzelne Zelle breiter als
+    ``width`` faellt auf den Wort-Umbruch von :func:`_wrap` zurueck."""
+    ganz = sep.join(cells)
+    if len(ganz) <= width:
+        return [ganz]  # passt: byte-gleich zur frueheren Ein-Zeilen-Form
+    lines: list[str] = []
+    cur = ""
+    for cell in (c for c in cells if c):
+        candidate = cell if not cur else f"{cur}{sep}{cell}"
+        if len(candidate) <= width:
+            cur = candidate
+            continue
+        if cur:
+            lines.append(cur)
+        teile = _wrap(cell, width)
+        lines.extend(teile[:-1])
+        cur = teile[-1]
+    if cur:
+        lines.append(cur)
+    return lines
+
+
 def _narrow_table(
     table_columns: list[str], rows: list[dict], friendly_keys: set[str],
     width: int, *, ampel: dict, lang: Lang = "de",
+    format_modes: Optional[dict[str, str]] = None,
 ) -> list[str]:
     """Schmale Monospace-Tabelle: Zeit + gekappte Metrik-Spalten.
 
@@ -134,7 +167,8 @@ def _narrow_table(
     for r in rows:
         cells = [str(r.get("time", ""))]
         for mid in table_columns:
-            cells.append(_cell(mid, r, friendly_keys, ampel=ampel, lang=lang))
+            cells.append(_cell(mid, r, friendly_keys, ampel=ampel, lang=lang,
+                               format_modes=format_modes))
         matrix.append(cells)
 
     widths = [len(h) for h in headers]
@@ -220,6 +254,32 @@ def _day_window_hail_note(
             segments, night_weather, tz, start_hour=start_hour, end_hour=end_hour,
         )
     ]))
+
+
+def _day_window_rows(
+    segments: list[SegmentWeatherData],
+    night_weather: Optional["NormalizedTimeseries"],
+    tz: ZoneInfo,
+    dc: UnifiedWeatherDisplayConfig,
+    *,
+    start_hour: int = DAY_WINDOW_START_HOUR,
+    end_hour: int = DAY_WINDOW_END_HOUR,
+) -> list[dict]:
+    """Stundenzeilen der Kurzuebersicht aus dem Tagesfenster (#3047 Runde 7, B-L1).
+
+    DIESELBE Punktmenge wie SMS (``sms_trip``) und Mail-Kachel/-Kurztext
+    (``build_day_window_points`` mit den ueber ``resolve_configured_window``
+    aufgeloesten Grenzen) -- ADR-0035 (ein Fenster fuer Anzeige UND
+    Bewertung), ADR-0095 (gleiche Antwort in jedem Kanal). Loest die
+    Scheibenregel #1498 ("nur Gewitter wechselt aufs Fenster") fuer die
+    Kurzuebersicht ab. Zeilenform wie die Etappentabelle (``dp_to_row``).
+    """
+    from output.renderers.day_window import build_day_window_points
+    from output.renderers.email.helpers import dp_to_row
+
+    return [dp_to_row(dp, dc, tz=tz) for dp in build_day_window_points(
+        segments, night_weather, tz, start_hour=start_hour, end_hour=end_hour,
+    )]
 
 
 def _tg_day_footer(
@@ -466,6 +526,7 @@ def _overview_line(
     day_thunder_sev: Optional[int] = None,
     day_thunder_hail_note: Optional[str] = None,
     ampel: dict, lang: Lang = "de",
+    format_modes: Optional[dict[str, str]] = None,
 ) -> str:
     """Eine Kurzübersicht-Zeile ``{Kürzel} {Min}-{Max}@{Peak-Stunde}`` (oder
     Einzelwert/kategorisch).
@@ -482,11 +543,13 @@ def _overview_line(
     ``night_weather``) ermittelte Schlimmst-Ordinal — vorher las dieser
     Zweig nur die Gehzeit-Reihen (``seg_tables``) und ein Gewitter nach der
     Ankunft (#1317) machte Kurzuebersicht und Fusszeile derselben Bubble
-    widerspruechlich (``⚡ ?`` gegen ``⚡ leicht``). Bewusste
-    Scheiben-Entscheidung (#1498): NUR Gewitter wechselt auf das
-    Tagesfenster; alle uebrigen Metriken behalten die Gehzeit als
-    Bezugsrahmen. Fehlt ``day_thunder_sev`` (None, z.B. Direktaufrufe ohne
-    Tagesfenster-Kontext), bleibt fail-soft der bisherige Gehzeit-Pfad.
+    widerspruechlich (``⚡ ?`` gegen ``⚡ leicht``). Die fruehere
+    Scheiben-Regel (#1498: nur Gewitter im Tagesfenster, alles andere
+    Gehzeit) ist seit #3047 Runde 7 (B-L1, ADR-0035/ADR-0095) abgeloest:
+    der Aufrufer reicht als ``seg_tables`` die Tagesfenster-Zeilen
+    (``_day_window_rows``) -- Werte und ``@h`` wie SMS und Mail. Fehlt
+    ``day_thunder_sev`` (None, z.B. Direktaufrufe ohne Tagesfenster-
+    Kontext), liest Gewitter fail-soft die uebergebenen Zeilen.
     Andere nicht-numerische Metriken zeigen weiterhin den zuletzt
     beobachteten Wert ohne Uhrzeit.
 
@@ -532,8 +595,10 @@ def _overview_line(
 
     try:
         if hiking is not None:
-            lo = fmt_val(key, hiking[0], friendly_keys=fkeys, lang=lang, ampel=ampel)
-            hi = fmt_val(key, hiking[1], friendly_keys=fkeys, lang=lang, ampel=ampel)
+            lo = fmt_val(key, hiking[0], friendly_keys=fkeys, lang=lang, ampel=ampel,
+                         format_modes=format_modes)
+            hi = fmt_val(key, hiking[1], friendly_keys=fkeys, lang=lang, ampel=ampel,
+                         format_modes=format_modes)
             lo_num, hi_num = float(hiking[0]), float(hiking[1])
             peak_hour = hiking[2]
             min_hour = hiking[3] if len(hiking) > 3 else ""
@@ -541,8 +606,10 @@ def _overview_line(
             nums = [float(h[key]) for h in hits]
             lo_row = hits[nums.index(min(nums))]
             hi_row = hits[nums.index(max(nums))]
-            lo = _cell(metric_id, lo_row, fkeys, ampel=ampel, lang=lang)
-            hi = _cell(metric_id, hi_row, fkeys, ampel=ampel, lang=lang)
+            lo = _cell(metric_id, lo_row, fkeys, ampel=ampel, lang=lang,
+                       format_modes=format_modes)
+            hi = _cell(metric_id, hi_row, fkeys, ampel=ampel, lang=lang,
+                       format_modes=format_modes)
             lo_num, hi_num = min(nums), max(nums)
             peak_hour = hi_row.get("time", "")
             min_hour = lo_row.get("time", "")
@@ -595,9 +662,11 @@ def _overview_line(
                 if _thunder_severity(worst_row.get(key)) == 0 and has_gap:
                     value = "?"
                 else:
-                    value = _cell(metric_id, worst_row, fkeys, ampel=ampel, lang=lang)
+                    value = _cell(metric_id, worst_row, fkeys, ampel=ampel, lang=lang,
+                                  format_modes=format_modes)
         else:
-            value = _cell(metric_id, hits[-1], fkeys, ampel=ampel, lang=lang)
+            value = _cell(metric_id, hits[-1], fkeys, ampel=ampel, lang=lang,
+                          format_modes=format_modes)
     return f"{label} {value}"
 
 
@@ -650,10 +719,8 @@ def _outlook_lines(
                 texte[gew_index] = thunder_cell_telegram(
                     format_trend_tokens(stage, ampel=ampel), stage,
                 )
-            values = "  ".join(
-                f"{c['label']}: {texte[i]}" for i, c in enumerate(columns)
-            )
-            lines.extend(_wrap(f"{weekday}  {values}", _TG_PROSE_WIDTH))
+            zellen = [f"{c['label']}: {texte[i]}" for i, c in enumerate(columns)]
+            lines.extend(_wrap_cells([weekday, *zellen], _TG_PROSE_WIDTH))
             note = stage.get("note")
             if note:
                 lines.extend(_wrap(f"    ↳ {note}", _TG_PROSE_WIDTH))
@@ -724,6 +791,7 @@ def render_telegram_bubbles(
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
     starkregen_hint_text: Optional[str] = None,
     lang: Lang = "de",
+    format_modes: Optional[dict[str, str]] = None,
 ) -> list[TelegramBubble]:
     """Render die Telegram-Briefing-Bubble-Liste (Issue #1001). Pure function.
 
@@ -738,6 +806,11 @@ def render_telegram_bubbles(
     einziger Berechnungspunkt, wird 1:1 durchgereicht (Default False fuer
     Vorschau/Tests ohne echten Versandpfad). Dieser Renderer rechnet die
     Luecke nicht selbst nach.
+
+    ``format_modes`` (#3047 Runde 7, #3063 P2): Roh/Einfach der Telegram-
+    Liste (``build_format_modes`` der Telegram-``dc``) -- wirkt in
+    Kurzuebersicht und Tabelle wie in der Mail. ``None`` = Altpfad ueber
+    ``friendly_keys`` (Direktaufrufe ohne Versandpfad).
     """
     fkeys = friendly_keys if friendly_keys is not None else set()
     # Issue #2792 S1c-4b: Einstieg loest die Ampel des Abos (``dc``) auf.
@@ -820,6 +893,13 @@ def render_telegram_bubbles(
         [sd for sd in segments if not sd.has_error], night_weather, tz,
         start_hour=day_window_start_hour, end_hour=day_window_end_hour,
     )
+    # #3047 Runde 7 (B-L1): alle Groessen der Kurzuebersicht im Tagesfenster
+    # wie SMS/Mail. Kein Rueckfall auf die Gehzeit-Reihen: liegt keine
+    # Stunde im Fenster, zeigt auch die SMS fuer diese Groessen nichts.
+    _overview_tables = [_day_window_rows(
+        segments, night_weather, tz, dc,
+        start_hour=day_window_start_hour, end_hour=day_window_end_hour,
+    )]
     overview_lines: list[str] = [t("telegram.kopf.zusammenfassung", lang)]
     # Issue #1484: die Nacht-Untergrenze der T-Zeile folgt der EIGENEN
     # Groesse "temperature_night". Ohne aktive "temperature" bekommt sie
@@ -864,7 +944,7 @@ def render_telegram_bubbles(
         if mid in VISIBILITY_GATE_IDS:
             continue
         overview_lines.extend(_wrap(_esc(_overview_line(
-            mid, seg_tables, fkeys, report_type=report_type,
+            mid, _overview_tables, fkeys, report_type=report_type,
             night_min_c=_night_min_c if _night_selected else None,
             night_wind_chill_min_c=(
                 _night_felt_min_c if _felt_night_selected else None
@@ -874,7 +954,7 @@ def render_telegram_bubbles(
             has_gap=has_gap,
             day_thunder_sev=_day_thunder_sev,
             day_thunder_hail_note=_day_thunder_hail_note,
-            ampel=ampel, lang=lang,
+            ampel=ampel, lang=lang, format_modes=format_modes,
         )), _TG_PROSE_WIDTH))
     # Issue #1331/#1334 F008: has_gap kommt als expliziter Parameter vom
     # echten Versandpfad (notification_service.compute_has_gap() aus
@@ -908,7 +988,7 @@ def render_telegram_bubbles(
     # stuendliche Aufloesung in der Segment-Tabelle) -- ans Ende der
     # Kurzuebersicht, EINMAL fuer den ganzen Trip (dieselbe `layout`-
     # Berechnung wie die Segment-Tabellen oben, nicht je Segment neu).
-    notice = telegram_metric_notice(layout.demoted_count, context="route")
+    notice = telegram_metric_notice(layout.demoted_count, context="route", lang=lang)
     if notice:
         overview_lines.append("")
         overview_lines.extend(_wrap(_esc(notice), _TG_PROSE_WIDTH))
@@ -925,7 +1005,8 @@ def render_telegram_bubbles(
         text_lines = _wrap(_esc(_segment_mini_header(seg_data, lang=lang)), _TG_PROSE_WIDTH)
         if layout.table_columns and rows:
             table_lines = _narrow_table(
-                layout.table_columns, rows, fkeys, _TG_TABLE_WIDTH, ampel=ampel, lang=lang)
+                layout.table_columns, rows, fkeys, _TG_TABLE_WIDTH, ampel=ampel, lang=lang,
+                format_modes=format_modes)
             escaped_table = "\n".join(_esc(ln) for ln in table_lines)
             text_lines = text_lines + ["<pre>", escaped_table, "</pre>"]
         bubbles.append(TelegramBubble(text="\n".join(text_lines)))

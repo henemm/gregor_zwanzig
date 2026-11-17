@@ -47,7 +47,7 @@ const SOLL: Record<string, unknown> = {
 	hourlyEnabled: true,
 	outlookEnabled: true,
 	officialAlertTriggersEnabled: true,
-	officialWarningsEnabled: false,
+	officialWarningsEnabled: true, // #3047 Runde 7 (PO 2026-11-16, Nachtrag Runde 7): loest #1258 AC-4 ab
 	metricAlertLevels: {},
 	channelThresholds: {},
 	alertMetricChannels: {}, // #1895 S3b1: Kanäle je Wettergröße

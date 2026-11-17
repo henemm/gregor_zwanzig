@@ -548,7 +548,11 @@ def test_ac9_m3_friendly_keys_liest_falsche_dc_wird_bei_telegram_rich_rot(monkey
         "sonst faengt die Mutation nichts Neues."
     )
 
-    monkeypatch.setattr(tr_mod, "build_friendly_keys", lambda dc: set(), raising=True)
+    # #3047 Runde 7 (AC-22, #3063 P2): Telegram ruft ``fmt_val()`` jetzt MIT
+    # ``format_modes`` der eigenen ``dc`` auf (wie die Mail) -- die Roh/Einfach-
+    # Quelle ist ``build_format_modes``, ``friendly_keys`` ist dort wirkungslos.
+    # Die Mutation trifft deshalb diese Quelle (leer = alles Roh).
+    monkeypatch.setattr(tr_mod, "build_format_modes", lambda dc: {}, raising=True)
     rot_mutiert = _rot_fuer_golden_b(monkeypatch)
 
     diff = rot_mutiert - rot_basis

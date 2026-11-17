@@ -3,6 +3,9 @@ Korsika Trail - Update-Briefing
 Corsica E5
 11.07.2026
 
+== Warnungen ==
+  ! Amtliche Warnung: Extreme Hitze (Sa 11.07. - 12:00-20:00)
+
 == Metriken-Ueberblick ==
   18-20C - Max 17:00
   gef. 12.0-13.0C - Max 17:00
@@ -12,9 +15,6 @@ Corsica E5
   !!! Gewitter hoch ab 04:00 - staerkste 04:00
   50% bewoelkt - Max 12:00
   Sonne 3.0h
-
-== Warnungen ==
-  ! Amtliche Warnung: Extreme Hitze (Sa 11.07. - 12:00-20:00)
 
 ----------------------------------------
 Generated: 2026-04-28 12:00 UTC

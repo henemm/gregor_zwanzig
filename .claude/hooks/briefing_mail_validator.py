@@ -25,6 +25,7 @@ import re
 import sys
 from email.header import decode_header
 from email.message import Message
+from html import unescape
 from pathlib import Path
 
 # Issue #1282 AC-4: shared-repo _log-Aufloesung (git-common-dir) -- gleiches
@@ -555,8 +556,11 @@ def _check_rendered(html: str, daten_erwartet: bool = True,
 # --------------------------------------------------------------------------- #
 def _validate_full(
     msg: Message, lang: str = "de", erwartet: tuple[bool, bool] = (True, False),
+    band: tuple[int, int] | None = (6, 22),
 ) -> tuple[bool, list[str]]:
-    """``erwartet`` = (Stundentabelle, Ausblick) laut Soll (#3047 F002)."""
+    """``erwartet`` = (Stundentabelle, Ausblick) laut Soll (#3047 F002);
+    ``band`` = erlaubte Stunden (#3047 B-L5: mit ``--konfig`` aus Tagesfenster
+    und Etappenstart, ``None`` = Fenster ueber Mitternacht)."""
     stunden_erwartet, ausblick_erwartet = erwartet
     ausblick_tag = _ml().erwartet("mail.ausblick.spalte_tag", lang) if ausblick_erwartet else None
     errors: list[str] = []
@@ -578,7 +582,7 @@ def _validate_full(
     if html and stunden_erwartet and not _has_hourly_table(html):
         errors.append("FULL: keine sequenzielle Stundentabelle (>=2 HH:00-Zeilen) im HTML-Part")
 
-    errors.extend(_check_plausibility(html, lang))
+    errors.extend(_check_plausibility(html, lang, band))
 
     if html:
         # AC-1 (kann RenderUnavailable werfen)
@@ -592,7 +596,7 @@ def _validate_full(
     return len(errors) == 0, errors
 
 
-def _check_plausibility(html: str, lang: str = "de") -> list[str]:
+def _check_plausibility(html: str, lang: str = "de", band: tuple[int, int] | None = (6, 22)) -> list[str]:
     """Selbst-Konsistenz der Werte (weit kalibriert gegen False-Positives)."""
     errors: list[str] = []
     ranges = _TEMP_RANGE_RE.findall(html)
@@ -607,11 +611,11 @@ def _check_plausibility(html: str, lang: str = "de") -> list[str]:
     night_marker = html.find(_ml().marker("mail.nacht.am_ziel", lang))
     day_html = html[:night_marker] if night_marker != -1 else html
 
-    hours = _distinct_hours(day_html, html=True)
+    hours = _distinct_hours(day_html, html=True) if band else []
     for hour in hours:
         h = int(hour.split(":")[0])
-        if h < 6 or h > 22:
-            errors.append(f"FULL: Stunde {hour} ausserhalb Tagesfenster 06–22")
+        if h < band[0] or h > band[1]:
+            errors.append(f"FULL: Stunde {hour} ausserhalb Tagesfenster {band[0]:02d}–{band[1]:02d}")
 
     return errors
 
@@ -789,11 +793,13 @@ def _soll_kompakt(text: str, s: dict, lang: str) -> list[str]:
     """Kompaktformat: Reihenfolge der Ausblick-Tokens je Tageszeile."""
     ueberschrift = _ml().erwartet("mail.ausblick.naechste_etappen", lang).translate(_FOLD)
     zeilen = [_ausblick_kuerzel(z) for z in _block_zeilen(text, ueberschrift)]
-    if zeilen and not s["ausblick_an"]:
+    # PO-Entscheidung #722: Kompakt ignoriert ``show_outlook`` (Runde 7).
+    if zeilen and not s.get("ausblick_an_kompakt", s["ausblick_an"]):
         return ["SOLL: Ausblick (Kompakt) erscheint, obwohl er laut Konfiguration aus ist"]
+    fehler = _soll_zeilenzahl({"Kompakt": len(zeilen)}, s, text)
     if s["ausblick"] is None or s["ausblick"]["fest"]:
-        return []
-    fehler = _soll_vergleich("Ausblick (Kompakt) Zeile", zeilen, s["ausblick"]["klartext"])
+        return fehler
+    fehler += _soll_vergleich("Ausblick (Kompakt) Zeile", zeilen, s["ausblick"]["klartext"])
     # #3047 N7: Roh/Einfach je Ausblick-Spalte auch im Kompaktformat (ASCII:
     # "0Line" ist die Spalte "0°Line"; Einfach = Wort, Roh = Zahl).
     ascii_ = _soll_modul()._ASCII_KUERZEL
@@ -801,6 +807,56 @@ def _soll_kompakt(text: str, s: dict, lang: str) -> list[str]:
               for z in _ausblick_zellen(_block_zeilen(text, ueberschrift))]
     return fehler + [m.replace("(Klartext)", "(Kompakt)") for m in _darstellung_meldungen(
         "Ausblick", [zellen], s["ausblick"]["formen"], "Klartext", False)]
+
+
+_DATUM_RE = re.compile(r"(?m)^(\d{2})\.(\d{2})\.(\d{4})\s*$")
+
+
+def _maildatum(plain: str) -> str | None:
+    """Datum der berichteten Etappe aus dem Klartext-Kopf (``%d.%m.%Y``) als ISO."""
+    m = _DATUM_RE.search(plain)
+    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else None
+
+
+def _soll_zeilenzahl(zahlen: dict, s: dict, plain: str) -> list[str]:
+    """#3047 Runde 7 (B-V1): Ausblick-Tageszeilen je Teil. HTML und Klartext
+    tragen gleich viele; ist das Mail-Datum ein Etappendatum der Konfiguration,
+    sind es die folgenden Etappen, hoechstens drei (``ausblick_zeilen_trip``).
+    0 Zeilen (Zustandshinweis statt Tabelle) prueft der Ein/Aus-Abgleich."""
+    fehler = []
+    werte = [n for n in zahlen.values() if n]
+    if len(werte) == 2 and werte[0] != werte[1]:
+        fehler.append("SOLL: Ausblick Tageszeilen: " + ", ".join(f"{k} {n}" for k, n in zahlen.items()))
+    soll = _soll_modul().ausblick_zeilen_trip(s.get("etappen_daten") or [], _maildatum(plain))
+    for teil, n in zahlen.items():
+        if n and soll is not None and n != soll:
+            fehler.append(f"SOLL: Ausblick ({teil}) hat {n} Tageszeilen, erwartet {soll} "
+                          "(folgende Etappen laut Konfiguration, hoechstens 3)")
+    return fehler
+
+
+def _soll_zusatz(html: str, plain: str, s: dict, lang: str) -> list[str]:
+    """#3047 Runde 7 (B-V2): Zusatzbloecke im Vollformat. Ausdruecklich aus ->
+    Etappen-Kennzahlen (HTML-Kacheln, Klartext ``12.3 km | ↑800m``) bzw.
+    Vortag-Vergleich duerfen nicht erscheinen; "an" ist datenabhaengig und
+    wird nicht verlangt. Kompakt ignoriert die Schalter (#722)."""
+    zusatz = s.get("zusatz") or {}
+    stats = [_ml().erwartet(f"mail.stats.{k}", lang) for k in ("distanz", "aufstieg", "abstieg", "max_hoehe")]
+    vortag_html = _ml().marker("mail.tageslage.vortag", lang, trenner=" {")
+    vortag_text = _ml().marker("vergleich.vortag.zusammenfassung", lang, trenner=":") + ":"
+    funde = {
+        ("show_stage_stats", "HTML"): any(f">{k}</div>" in html for k in stats),
+        ("show_stage_stats", "Klartext"): bool(re.search(r"(?m)^(?:\d+\.\d km|[↑↓]\d+m)(?: \| .*)?$", plain)),
+        ("show_yesterday_comparison", "HTML"): f">{vortag_html} " in html or vortag_text in html,
+        ("show_yesterday_comparison", "Klartext"): any(z.startswith(vortag_text) for z in plain.splitlines()),
+    }
+    fehler = []
+    for (schalter, teil), da in funde.items():
+        if da and zusatz.get(schalter) is False:
+            fehler.append(f"SOLL: Etappen-Kennzahlen ({teil}) erscheinen, obwohl show_stage_stats aus ist"
+                          if schalter == "show_stage_stats" else
+                          f"SOLL: Vortag-Vergleich ({teil}) erscheint, obwohl show_yesterday_comparison aus ist")
+    return fehler
 
 
 def _zellform(zelle: str, html: bool) -> str | None:
@@ -960,6 +1016,108 @@ def _verwaist_html(html: str, lang: str) -> list[str]:
     return fehler
 
 
+# --------------------------------------------------------------------------- #
+# #3047 B-L5: amtliche Warnungen, Kachelfolge, Ampelfarbe (nur mit --konfig)
+# --------------------------------------------------------------------------- #
+def _nach_kopf(text: str) -> list[str]:
+    """Nicht leere Zeilen nach dem Kopf (bis zur ersten Leerzeile)."""
+    teile = text.split("\n\n", 1)
+    return [z.strip() for z in (teile[1] if len(teile) > 1 else "").splitlines() if z.strip()]
+
+
+def _warnungen_text(teil: str, text: str, s: dict, lang: str) -> list[str]:
+    """Klartext/Kompakt: Warnblock oder Hinweis "nicht abrufbar" nur bei
+    eingeschalteten Warnungen (E4); der Warnblock ist die erste Inhaltszeile
+    nach dem Kopf (davor hoechstens der Hinweis, WV6/AC-25)."""
+    m = _soll_modul()
+    kopf = (f"== {m._falten(_ml().erwartet('mail.kompakt.warnungen', lang))} ==" if teil == "Kompakt"
+            else f"━━ {_ml().erwartet('mail.warnungen.ueberschrift', lang)} ━━")
+    hinweis = m._falten(_ml().erwartet("mail.hinweis.warnungen_nicht_abrufbar.text", lang))
+    zeilen = _nach_kopf(text)
+    ist_hinweis = [hinweis in m._falten(z) for z in zeilen]
+    if not s["warnungen"] and (kopf in zeilen or any(ist_hinweis)):
+        return [f"SOLL: Amtliche Warnungen ({teil}) erscheinen, obwohl sie laut Konfiguration aus sind"]
+    if kopf in zeilen and not all(ist_hinweis[:zeilen.index(kopf)]):
+        return [f"SOLL: Amtliche Warnungen ({teil}) stehen nicht an erster Stelle"]
+    return []
+
+
+def _warnungen_html(html: str, s: dict, lang: str) -> list[str]:
+    """HTML: Warnblock (``.wb``) bzw. Hinweis nur bei eingeschalteten
+    Warnungen; der Warnblock steht vor Tageslage, Ueberblick und erster Tabelle."""
+    html = html[max(html.find("<body"), 0):]  # Stilblock im Kopf nennt ``data-table``
+    block = html.find('class="wb ')
+    hinweis = html.find(f">{_ml().erwartet('mail.hinweis.warnungen_nicht_abrufbar.titel', lang)}<")
+    if not s["warnungen"] and max(block, hinweis) >= 0:
+        return ["SOLL: Amtliche Warnungen (HTML) erscheinen, obwohl sie laut Konfiguration aus sind"]
+    danach = (f">{_ml().erwartet('mail.tageslage.eyebrow', lang)}<",
+              f">{_ml().erwartet('mail.pille.ueberschrift', lang)}</p>", 'data-table="resp"')
+    if block >= 0 and any(0 <= html.find(x) < block for x in danach):
+        return ["SOLL: Amtliche Warnungen (HTML) stehen nicht an erster Stelle"]
+    return []
+
+
+def _kacheln(text: str, html: bool, lang: str, kopf: str) -> list[str]:
+    """Kacheltexte des Metriken-Ueberblicks in Mailfolge."""
+    if html:
+        i = text.find(f">{_ml().erwartet('mail.pille.ueberschrift', lang)}</p>")
+        bereich = text[i:text.find("</div></div>", i)] if i >= 0 else ""
+        return [unescape(_strip_tags(k)) for k in _SPAN_RE.findall(bereich)]
+    zeilen = text.splitlines()
+    if kopf not in zeilen:
+        return []
+    block = []
+    for z in zeilen[zeilen.index(kopf) + 1:]:
+        if not z.strip():
+            break
+        block.append(z.strip())
+    return block
+
+
+def _soll_kachelfolge(teile: dict, s: dict, lang: str) -> list[str]:
+    """Kachelfolge = Folge der E-Mail-Liste (#1703 S7); eine fehlende Kachel
+    (keine Werte) ist erlaubt, eine fremde Groesse nicht."""
+    soll, fehler = s.get("ueberblick_folge") or [], []
+    for teil, kacheln in teile.items():
+        ist = [m for m in (_soll_modul().kachel_metrik(k, lang) for k in kacheln) if m]
+        erwartet = [m for m in soll if m in ist]
+        if any(m not in soll for m in ist):
+            fehler.append(f"SOLL: Metriken-Ueberblick ({teil}): Kachel einer nicht gewaehlten "
+                          f"Groesse {[m for m in ist if m not in soll]} (soll {soll})")
+        elif ist != erwartet:
+            fehler.append(f"SOLL: Metriken-Ueberblick ({teil}): Reihenfolge {ist} statt {erwartet}")
+    return fehler
+
+
+_AMPEL_SPALTEN = ("wind", "gust", "precipitation", "rain_probability")
+
+
+def _soll_ampel(html: str, plain: str, s: dict, lang: str) -> list[str]:
+    """Ampelfarbe der Etappen-Stundentabellen gegen die Ampel-Grenzen:
+    Ampelpunkt gegen den Klartext-Wert derselben Stunde, Zahl-Zelle gegen ihre
+    Toenung; erste Abweichung je Tabelle und Spalte."""
+    m = _soll_modul()
+    spalten = {m._REG[x].col_label: x for x in _AMPEL_SPALTEN}
+    klar = _klartext_zellen(plain, lang, s.get("etappen", ()))["Etappen-Stundentabelle"]
+    nacht, fehler = _night_table_blocks(html, lang), []
+    tabellen = [b for b in _table_blocks(html) if b not in nacht and (_th_tokens(b) or [""])[0] in ("Time", "Zeit")]
+    for i, block in enumerate(tabellen):
+        th, gemeldet = _th_tokens(block), set()
+        zeilen = [re.findall(r"<td([^>]*)>(.*?)</td>", r, re.S) for r in _ROW_RE.findall(block)]
+        for j, zellen in enumerate(z for z in zeilen if z):
+            werte = dict(klar[i][j]) if i < len(klar) and j < len(klar[i]) else {}
+            for spalte, (attrs, inhalt) in zip(th[1:], zellen[1:]):
+                if spalte not in spalten or spalte in gemeldet:
+                    continue
+                text = _strip_tags(inhalt) if m.zellform(inhalt, True) == m.ZAHL else werte.get(spalte, "")
+                diff = m.ampel_abweichung(s["ampel"], spalten[spalte], text, m.ampel_farbe(attrs, inhalt))
+                if diff:
+                    gemeldet.add(spalte)
+                    fehler.append(f"SOLL: Ampelfarbe Etappen-Stundentabelle (HTML) "
+                                  f"{_strip_tags(zellen[0][1]).strip()}:00 '{spalte}': {diff}")
+    return fehler
+
+
 def _soll_report(msg: Message, soll: dict) -> dict:
     """Soll des Reports (Morgen/Abend), den die Mail laut Kopf/Betreff traegt."""
     teile = {p.get_content_type(): _part_text(p) for p in msg.walk()
@@ -997,18 +1155,29 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
     if msg["X-GZ-Format"] != s["email_format"]:
         fehler.append(f"SOLL: Format '{msg['X-GZ-Format']}' statt '{s['email_format']}' (email_format)")
     if msg["X-GZ-Format"] == "compact":
-        return fehler + _soll_kompakt(plain, s, lang)
+        pillen = "== " + _soll_modul()._falten(_ml().erwartet("mail.pille.ueberschrift", lang)) + " =="
+        return (fehler + _soll_kompakt(plain, s, lang) + _warnungen_text("Kompakt", plain, s, lang)
+                + _soll_kachelfolge({"Kompakt": _kacheln(plain, False, lang, pillen)}, s, lang))
     koepfe_html = _soll_html_koepfe(html, lang)
     koepfe_plain = _soll_klartext_koepfe(plain, lang, s.get("etappen", ()))
     for name, h, p in zip(("Etappen-Stundentabelle", "Nachttabelle", "Ausblick"), koepfe_html, koepfe_plain):
         if bool(h) != bool(p):
             fehler.append(f"SOLL: {name} fehlt im {'Klartext' if h else 'HTML'}-Teil")
     fehler += _soll_ueberblick(html, plain, s, lang)
+    fehler += _soll_zusatz(html, plain, s, lang)
+    fehler += _soll_zeilenzahl({"HTML": sum(len(t) for t in _html_zellen(html, lang)["Ausblick"]),
+                                "Klartext": len(koepfe_plain[2])}, s, plain)
     fehler += _soll_tabellen("HTML", *koepfe_html, s)
     fehler += _soll_tabellen("Klartext", *koepfe_plain, s)
     # #3047 N7: keine Ueberschrift ohne Tabelle ("Segment 1"/"Nacht am Ziel"
     # bei bewusst leerer Auswahl) -- dann muss der ganze Abschnitt entfallen.
     fehler += _verwaist_html(html, lang) + _verwaist_klartext(plain, lang)
+    # #3047 B-L5: Warnungen (Schalter, erste Stelle), Kachelfolge, Ampelfarbe.
+    fehler += _warnungen_html(html, s, lang) + _warnungen_text("Klartext", plain, s, lang)
+    pillen = f"━━ {_ml().erwartet('mail.pille.ueberschrift', lang)} ━━"
+    fehler += _soll_kachelfolge({"HTML": _kacheln(html, True, lang, ""),
+                                 "Klartext": _kacheln(plain, False, lang, pillen)}, s, lang)
+    fehler += _soll_ampel(html, plain, s, lang)
     return fehler + _soll_darstellung(html, plain, s, lang) + _soll_windrichtung(html, plain, s, lang)
 
 
@@ -1053,7 +1222,8 @@ def validate_message(
 
     mail_format = msg["X-GZ-Format"]
     if mail_format == "full":
-        ok, errors = _validate_full(msg, lang, _tabellen_erwartet(msg, soll))
+        band = _soll_report(msg, soll)["stundenband"] if soll and soll.get("kontext") == "trip" else (6, 22)
+        ok, errors = _validate_full(msg, lang, _tabellen_erwartet(msg, soll), band)
     elif mail_format == "compact":
         ueberblick = soll is None or soll.get("kontext") != "trip" or _soll_report(msg, soll)["ueberblick"]
         ok, errors = _validate_compact(msg, max_bytes, lang, ueberblick)

@@ -602,7 +602,6 @@ const BESTAND: string[] = [
 	'lib/components/shared/zustellung-tab/ZustellungTab.svelte',
 	'lib/components/trip-detail/AboutOutputLayout.svelte',
 	'lib/components/trip-detail/ActiveMetricRow.svelte',
-	'lib/components/trip-detail/AlarmeScheduleTab.svelte',
 	'lib/components/trip-detail/BriefingScheduleTab.svelte',
 	'lib/components/trip-detail/BucketSection.svelte',
 	'lib/components/trip-detail/BucketSectionOff.svelte',
@@ -714,7 +713,7 @@ const BESTAND: string[] = [
 /** Obergrenze des Bestands (feste Zahl, nicht die Länge): neue Dateien gehen in SEITEN_SCOPE. */
 // #2794 S3a Teil-PR 4a: 204 → 199 (CorridorEditor, CorridorEditorMobile, MetricCheckbox,
 // MetricGroup, HorizonChip entfernt).
-const BESTAND_OBERGRENZE = 198;
+const BESTAND_OBERGRENZE = 197; // #3047 Runde 7 (p11): AlarmeScheduleTab.svelte entfernt
 
 /** Token-Verstöße je Baustein-Datei (Ist-Stand 2026-11-10, ADR-0112). Darf nur sinken. */
 const AUSNAHMEN: Ausnahmen = {

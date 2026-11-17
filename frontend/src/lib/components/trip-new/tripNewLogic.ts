@@ -169,7 +169,9 @@ export interface CreateTripAlarmState {
 
 export function initialCreateTripAlarmState(): CreateTripAlarmState {
 	return {
-		officialWarningsEnabled: false,
+		// #3047 Runde 7 (PO 2026-11-16, loest #1258 AC-4 ab): neue Trips mit amtlichen
+		// Warnungen im Briefing UND als Alarm; der POST traegt beide Felder `true`.
+		officialWarningsEnabled: true,
 		cooldownMinutes: undefined,
 		quietFrom: undefined,
 		quietTo: undefined,
@@ -181,7 +183,7 @@ export function initialCreateTripAlarmState(): CreateTripAlarmState {
 
 /**
  * Fix-Loop 3 #2794 (C3): „Amtliche Warnungen" hat beim Anlegen EINEN Eigentuemer, den
- * Alarm-Zustand (`officialWarningsEnabled`, Neuanlage-Vorgabe aus, #1258). Ein Stand-Bericht des
+ * Alarm-Zustand (`officialWarningsEnabled`, Neuanlage-Vorgabe an, #3047 Runde 7). Ein Stand-Bericht des
  * Reiters Wetter uebernimmt seinen Wert nur bei einer Geste DORT, also wenn er sich gegenueber
  * dem letzten Bericht desselben Reiters aendert. Der erste Bericht (Lesart) und ein Echo des
  * alten Werts nach einer Geste im Schritt Zustellung lassen den Editor-Wert stehen.

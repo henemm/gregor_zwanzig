@@ -98,6 +98,11 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 		if bailIf(w, r, displayConfigAmpelUngueltig(cfg), 400, "ampel_ungueltig") {
 			return
 		}
+		// Issue #3047 E3: metrics[]-Eintrag ohne metric_id nie speichern
+		// (der Python-Loader verwarf daran den ganzen Trip).
+		if bailIf(w, r, tripMetrikenUngueltig(cfg), 400, "invalid_params") {
+			return
+		}
 		// Issue #2961: Wachstumsgrenze vor dem Merge.
 		if configMergesVerletzt(w, r, [2]map[string]interface{}{trip.DisplayConfig, cfg}) {
 			return
@@ -129,6 +134,31 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(trip.DisplayConfig)
 	}
+}
+
+// tripMetrikenUngueltig: Issue #3047 E3. Ein `metrics[]`-Eintrag muss ein
+// Objekt mit nicht-leerer `metric_id` sein oder das Altformat Zeichenkette
+// (#1262, Python `_coerce_metric_entry`); alles andere ist ungueltig.
+func tripMetrikenUngueltig(cfg map[string]interface{}) bool {
+	liste, ok := cfg["metrics"].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, e := range liste {
+		switch v := e.(type) {
+		case string:
+			if v == "" {
+				return true
+			}
+		case map[string]interface{}:
+			if id, _ := v["metric_id"].(string); id == "" {
+				return true
+			}
+		default:
+			return true
+		}
+	}
+	return false
 }
 
 // --- Location Weather Config ---

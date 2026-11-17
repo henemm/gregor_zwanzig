@@ -1,0 +1,1178 @@
+{
+ "bereich": "trip_mail",
+ "zeilen": [
+  {
+   "id": "trip.grundauswahl.auswahl",
+   "kontext": "trip",
+   "einstellung": "Grundauswahl: Metrik an/aus (enabled)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte + shared/wetter-tab/ampelSchreiben.ts::tripSpeicherPayload",
+   "gespeichert_als": "display_config.metrics[].enabled",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac10_abgewaehlt_erscheint_nirgends; M8/M16",
+     "befund": "",
+     "notiz": "selbst ausgefuehrt (219 Tests gruen)"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac10_abgewaehlt_erscheint_nirgends",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_render.py::test_r2_ueberblick_folgt_email_liste; tests/tdd/test_channel_metric_matrix.py (M11 gefangen)",
+     "befund": "",
+     "notiz": "Kompakt: Metriken-Ueberblick + Ausblick folgen der Auswahl"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.grundauswahl.reihenfolge",
+   "kontext": "trip",
+   "einstellung": "Grundauswahl: Reihenfolge (order)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte + shared/wetter-tab/ampelSchreiben.ts::tripSpeicherPayload",
+   "gespeichert_als": "display_config.metrics[].order/bucket",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac2_stundentabelle_folge, test_paarweise_* (M8: 65 Faelle rot)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac2_stundentabelle_folge (M8)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_channel_metric_matrix.py::test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge (M11)",
+     "befund": "",
+     "notiz": "Ueberblick-Pillen in Listenfolge, selbst gesehen (R2)"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.grundauswahl.neu_hinzugefuegt",
+   "kontext": "trip",
+   "einstellung": "Metrik per '+' / Vorlage wieder ins Briefing (AC-19 'hinten angehaengt')",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte + shared/wetter-tab/ampelSchreiben.ts::tripSpeicherPayload (tripMetriken)",
+   "gespeichert_als": "display_config.metrics[] (Eintrag behaelt alte order)",
+   "zellen": {
+    "email_html": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_render.py::test_r1_hub_neue_metrik_hinten[wieder_an-html]",
+     "befund": "B-TM2",
+     "notiz": "neu ohne order: hinten (gruen); wieder eingeschaltet: alte Position statt hinten"
+    },
+    "email_text": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_render.py::test_r1_hub_neue_metrik_hinten[wieder_an-klartext]",
+     "befund": "B-TM2",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "rot",
+     "beleg": "wie HTML (gleiche Kaskade, Ueberblick-Folge)",
+     "befund": "B-TM2",
+     "notiz": "abgeleitet, Kompakt-Ueberblick folgt derselben order"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.grundauswahl.nachtraeglich_global",
+   "kontext": "trip",
+   "einstellung": "Global nachtraeglich eingeschaltete Metrik in bearbeiteter Liste",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.email",
+   "zellen": {
+    "email_html": {
+     "status": "ausgelagert",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_p7_global_nachtraeglich_in_gespeicherter_liste (xfail)",
+     "befund": "#3065",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "#3065",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "#3065",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.email_liste.auswahl",
+   "kontext": "trip",
+   "einstellung": "E-Mail-Liste: Zeile an/aus",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.email[].enabled",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac2_* teilmenge, scratchpad/inventar/trip_mail/test_probe_render.py::test_r3_layout_eintrag_aus (M8)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac2_* teilmenge_zwei_ab--klartext",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_render.py::test_r2_ueberblick_folgt_email_liste",
+     "befund": "",
+     "notiz": "Ueberblick nur mit Listen-Metriken; keine Stundentabelle"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.email_liste.reihenfolge",
+   "kontext": "trip",
+   "einstellung": "E-Mail-Liste: Reihenfolge",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.email[].order",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_paarweise_stundentabelle, test_ac2_stundentabelle_folge (M8)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_paarweise_stundentabelle (M8)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_channel_metric_matrix.py kurz_email_pillen (M11)",
+     "befund": "",
+     "notiz": "Ueberblick-Pillen"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.email_liste.roh_einfach",
+   "kontext": "trip",
+   "einstellung": "E-Mail-Liste: Roh/Einfach je Zeile",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.email[].use_friendly_format",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_paarweise_stundentabelle darstellung (M16), scratchpad/inventar/trip_mail/test_probe_render.py::test_r3_*",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac15_nacht_darstellung_wie_etappe, paarweise (M16)",
+     "befund": "",
+     "notiz": "Ampel-Groessen im Klartext als Zahl = Fallliste 'ausnahme' (#814)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kompakt hat keine Stundentabelle (Fallliste 'ausnahme', email/__init__.py:111)"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.email_liste.je_bericht",
+   "kontext": "trip",
+   "einstellung": "Kanal-Liste je Bericht (Morgen/Abend eigene E-Mail-Liste)",
+   "gesetzt_in": "kein Setzer im Frontend (Editor: #3065)",
+   "gespeichert_als": "display_config.channel_layouts_per_report.<morning|evening>.email",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_m21_kanal_liste_je_bericht; scratchpad/inventar/trip_mail/test_probe_render.py::test_r8_liste_je_bericht",
+     "befund": "",
+     "notiz": "Editor-Seite ausgelagert #3065"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_m21_kanal_liste_je_bericht; scratchpad/inventar/trip_mail/test_probe_render.py::test_r8_liste_je_bericht",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_render.py::test_r2 (Ueberblick folgt kollabierter Liste)",
+     "befund": "",
+     "notiz": "keine Tabelle; Ueberblick aus derselben Kaskade"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.metrik.morgen_abend",
+   "kontext": "trip",
+   "einstellung": "Morgen/Abend je Metrik (morning_enabled/evening_enabled)",
+   "gesetzt_in": "kein Setzer im aktuellen Hub (Altbestand/API)",
+   "gespeichert_als": "display_config.metrics[].morning_enabled|evening_enabled",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ein_aus_metrik_je_bericht (M7, M15); scratchpad/inventar/trip_mail/test_probe_render.py::test_r4",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ein_aus_metrik_je_bericht (M7)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_f007_ausblick_zellen_je_bericht--kompakt (M7/M15); scratchpad/inventar/trip_mail/test_probe_render.py::test_r4[*-kompakt]",
+     "befund": "",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.ausblick.metriken",
+   "kontext": "trip",
+   "einstellung": "3-Tages-Ausblick: Auswahl + Reihenfolge",
+   "gesetzt_in": "frontend/src/lib/components/shared/OutlookLayoutControls.svelte",
+   "gespeichert_als": "display_config.outlook_metrics",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac4_ausblick_gespeicherte_folge, test_paarweise_ausblick",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac4_ausblick_gespeicherte_folge--klartext",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac4_*--kompakt, test_n1_bewusst_leer_kein_ausblick (M14)",
+     "befund": "",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.ausblick.roh_einfach",
+   "kontext": "trip",
+   "einstellung": "3-Tages-Ausblick: Roh/Einfach",
+   "gesetzt_in": "frontend/src/lib/components/shared/OutlookLayoutControls.svelte",
+   "gespeichert_als": "display_config.outlook_metric_formats",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac8_ausblick_roh_einfach",
+     "befund": "",
+     "notiz": "Temp/Gewitter/Sicht ohne Einfach = 'ausnahme'"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac8_ausblick_roh_einfach--klartext",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac8_ausblick_roh_einfach--kompakt",
+     "befund": "",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.ausblick.erscheint_im",
+   "kontext": "trip",
+   "einstellung": "3-Tages-Ausblick: Erscheint im Morgen/Abend",
+   "gesetzt_in": "frontend/src/lib/components/shared/versand-tab/VTSchedulePlan.svelte + reportConfigPayload.ts",
+   "gespeichert_als": "report_config.multi_day_trend_reports (+ multi_day_trend_morning/evening)",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_scheduler.py::test_ausblick_erscheint_im (Zeitplaner-Weg, 20 Faelle; M1, M13)",
+     "befund": "",
+     "notiz": "Pruefkatalog (render_trip_mit_ausblick) umgeht dieses Gate: M1/M13 dort unbemerkt, Bestand nur test_report_config_render_contract / test_config_persistence"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_scheduler.py::test_ausblick_erscheint_im (M1, M13)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_scheduler.py::test_ausblick_erscheint_im[*-compact] (M1, M13)",
+     "befund": "",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.ausblick.show_outlook",
+   "kontext": "trip",
+   "einstellung": "Ausblick-Block an/aus (show_outlook)",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "report_config.show_outlook",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ausblick_ausgeschaltet (M2); scratchpad/inventar/trip_mail/test_probe_scheduler.py::test_show_outlook",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ausblick_ausgeschaltet--klartext (M2)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_scheduler.py::test_show_outlook[*-compact]",
+     "befund": "",
+     "notiz": "Kompakt ignoriert Baustein-Schalter (PO-Entscheidung, compact.py:4-6, Fallliste 'ausnahme'); Editor sperrt die Schalter bei Kompakt"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.zusatz.etappen_kennzahlen",
+   "kontext": "trip",
+   "einstellung": "Zusatzblock Etappen-Kennzahlen (W17)",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "report_config.show_stage_stats",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac9_zusatzblock_aus[etappenkennzahlen]",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac9_zusatzblock_aus[etappenkennzahlen--klartext]",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kompakt ignoriert Baustein-Schalter (PO-Entscheidung, compact.py:4-6, Fallliste 'ausnahme'); Editor sperrt die Schalter bei Kompakt"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Nur E-Mail (Konzept §5 Punkt 8: 'E-Mail -> Format/Zusatzbloecke', W15/W17/W18/W22)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Nur E-Mail (Konzept §5 Punkt 8: 'E-Mail -> Format/Zusatzbloecke', W15/W17/W18/W22)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Nur E-Mail (Konzept §5 Punkt 8: 'E-Mail -> Format/Zusatzbloecke', W15/W17/W18/W22)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.zusatz.vortag",
+   "kontext": "trip",
+   "einstellung": "Zusatzblock Vortag-Vergleich (W18)",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "report_config.show_yesterday_comparison",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac9_zusatzblock_aus[vortag--html] (M3)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac9_zusatzblock_aus[vortag--klartext] (M3)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kompakt ignoriert Baustein-Schalter (PO-Entscheidung, compact.py:4-6, Fallliste 'ausnahme'); Editor sperrt die Schalter bei Kompakt"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Nur E-Mail (Konzept §5 Punkt 8: 'E-Mail -> Format/Zusatzbloecke', W15/W17/W18/W22)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Nur E-Mail (Konzept §5 Punkt 8: 'E-Mail -> Format/Zusatzbloecke', W15/W17/W18/W22)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Nur E-Mail (Konzept §5 Punkt 8: 'E-Mail -> Format/Zusatzbloecke', W15/W17/W18/W22)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.zusatz.nachtblock",
+   "kontext": "trip",
+   "einstellung": "Zusatzblock Nacht-Stundentabelle (W22)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (showNightBlock)",
+   "gespeichert_als": "display_config.show_night_block",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac9_zusatzblock_aus[nachtblock--html] (M4)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac9_zusatzblock_aus[nachtblock--klartext] (M4)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kompakt hat keine Nachttabelle (email/__init__.py:111)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Nur E-Mail (Konzept §5 Punkt 8: 'E-Mail -> Format/Zusatzbloecke', W15/W17/W18/W22)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Nur E-Mail (Konzept §5 Punkt 8: 'E-Mail -> Format/Zusatzbloecke', W15/W17/W18/W22)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Nur E-Mail (Konzept §5 Punkt 8: 'E-Mail -> Format/Zusatzbloecke', W15/W17/W18/W22)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.email_format",
+   "kontext": "trip",
+   "einstellung": "E-Mail-Format Ausfuehrlich/Kompakt (W15)",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "report_config.email_format",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac9_email_format_kompakt",
+     "befund": "",
+     "notiz": "full -> HTML+Klartext"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac9_email_format_kompakt",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac9_email_format_kompakt",
+     "befund": "",
+     "notiz": "compact -> nur Klartext, ASCII"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Nur E-Mail (Konzept §5 Punkt 8: 'E-Mail -> Format/Zusatzbloecke', W15/W17/W18/W22)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Nur E-Mail (Konzept §5 Punkt 8: 'E-Mail -> Format/Zusatzbloecke', W15/W17/W18/W22)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Nur E-Mail (Konzept §5 Punkt 8: 'E-Mail -> Format/Zusatzbloecke', W15/W17/W18/W22)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.tagesfenster",
+   "kontext": "trip",
+   "einstellung": "Tagesfenster von-bis (W12, ADR-0035)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/AnpassenKarte.svelte + ampelSchreiben.ts:130-135",
+   "gespeichert_als": "report_config.day_window_start_hour / day_window_end_hour",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_render.py::test_r5_tagesfenster_wirkt[html] (M5); tests/tdd/test_report_config_render_contract.py",
+     "befund": "",
+     "notiz": "Kopf-Einzeiler + Ueberblick 'ab 04:00' -> 'ab 10:00'; im Pruefkatalog nicht abgedeckt"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_render.py::test_r5_tagesfenster_wirkt[klartext] (M5)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_render.py::test_r5_tagesfenster_wirkt[kompakt] (M5)",
+     "befund": "",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.amtliche_warnungen.schalter",
+   "kontext": "trip",
+   "einstellung": "Amtliche Warnungen an/aus (W20)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WarnungenRadarKarte.svelte + amtlicheWarnungen.ts",
+   "gespeichert_als": "trip.official_alerts_enabled",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_scheduler.py::test_w20_abruf_gesperrt (M6)",
+     "befund": "B-TM3",
+     "notiz": "Wirkung korrekt (kein Abruf -> kein Block); M6 ueberlebt ALLE Bestandstests = Testluecke"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_scheduler.py::test_w20_abruf_gesperrt (M6)",
+     "befund": "B-TM3",
+     "notiz": "gleiche Weiche fuer alle Formate"
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_scheduler.py::test_w20_abruf_gesperrt (M6)",
+     "befund": "B-TM3",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.amtliche_warnungen.position",
+   "kontext": "trip",
+   "einstellung": "Amtliche Warnungen feste erste Zeile (WV6)",
+   "gesetzt_in": "fest (nicht einstellbar)",
+   "gespeichert_als": "-",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_wv6_amtliche_warnung_zuerst; scratchpad/inventar/trip_mail/test_probe_render.py::test_r10_wv6_voll_morgen[*-html]",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_wv6_amtliche_warnung_zuerst; scratchpad/inventar/trip_mail/test_probe_render.py::test_r10_wv6_voll_morgen[*-klartext]",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_render.py::test_r10_wv6_kompakt_warnung_zuerst (4/4 rot, DE+EN, Morgen+Abend)",
+     "befund": "B-TM1",
+     "notiz": "Warnblock steht hinter dem Metriken-Ueberblick (compact.py:196-231)"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.sprache",
+   "kontext": "trip",
+   "einstellung": "Sprache DE/EN (Kopf, Spaltenkoepfe, Kuerzel)",
+   "gesetzt_in": "frontend/src/routes/account/+page.svelte",
+   "gespeichert_als": "users/<id>/user.json: language",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac17_html_tabellenkopf_in_nutzersprache; scratchpad/inventar/trip_mail/test_probe_render.py::test_r6_*[html]",
+     "befund": "",
+     "notiz": "Spaltenkoepfe Gust/Temp/Rain = col_label-Protokoll-Token, bewusst unuebersetzt; Fuss Generated/Data #3074"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac17_klartext_festtexte_in_nutzersprache; scratchpad/inventar/trip_mail/test_probe_render.py::test_r6_*[klartext]",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "tests/unit/test_briefing_compact_plain_sprache.py (M12); scratchpad/inventar/trip_mail/test_probe_render.py::test_r6_*[kompakt]",
+     "befund": "",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.vorlage.ampel",
+   "kontext": "trip",
+   "einstellung": "Vorlage angewendet / Ampel-Grenzen (ampel.template + Abweichungen, Altform preset_name)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/VorlageKarte.svelte + ampelSchreiben.ts::abweichungsMenge",
+   "gespeichert_als": "display_config.ampel {template, metrics}, display_config.preset_name; zusaetzlich metrics[].enabled",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_render.py::test_r7_ampel_grenzen_wirken[html], test_r7_vorlagenwechsel_wirkt[html-*] (M9)",
+     "befund": "",
+     "notiz": "Ampelpunkt nur bei Einfach; M9 nur in Unit-Tests (test_2794_teil3_auswahl_paritaet) gefangen, nicht an der Mail"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Klartext zeigt fuer Ampel-Groessen die Zahl ohne Farbe (#814, Fallliste 'ausnahme')"
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/trip_mail/test_probe_render.py::test_r7_vorlagenwechsel_wirkt[kompakt-*] (M9)",
+     "befund": "",
+     "notiz": "Schwere-Praefix !/!! und Schwelle >30/>40"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  },
+  {
+   "id": "trip.mandantentrennung",
+   "kontext": "trip",
+   "einstellung": "Zwei Nutzer, eigene Konfiguration/Sprache/Empfaenger",
+   "gesetzt_in": "-",
+   "gespeichert_als": "data/users/<user_id>/",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac12_zwei_nutzer_je_eigene_folge",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_trip.py::test_ac12_zwei_nutzer_je_eigene_folge; scratchpad/inventar/trip_mail/test_probe_render.py::test_r9_zwei_nutzer_de_en",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kompakt nicht mit zwei Nutzern gelaufen"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (Einstellungsseite)"
+    }
+   }
+  }
+ ]
+}

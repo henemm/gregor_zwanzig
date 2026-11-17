@@ -138,10 +138,12 @@ def _trip_eml(monkeypatch, daten: dict, *, lang: str = "de", tage=("Di", "Mi", "
                  lang=lang)
 
 
-def _orte_eml(monkeypatch, preset: dict, *, lang: str = "de", namen: dict | None = None) -> bytes:
+def _orte_eml(monkeypatch, preset: dict, *, lang: str = "de", namen: dict | None = None,
+              versatz: int = 0) -> bytes:
     """Orts-Vergleich ueber ``send_one_compare_preset``; Wetter aus
     ``vergleichs_mail_fixture.build_result`` je Orts-Kennung. ``namen``
-    (Kennung -> Name) benennt die gespeicherten Orte um."""
+    (Kennung -> Name) benennt die gespeicherten Orte um. ``versatz`` = Zieltag
+    ab Erstellungstag (Morgen-Slot 0, Abend-Slot 1, ``compare_slot_scheduler``)."""
     import services.comparison_parallel as cp
     import services.scheduler_dispatch_service as sds
     from app.loader import get_data_root, load_all_locations, save_location
@@ -155,9 +157,12 @@ def _orte_eml(monkeypatch, preset: dict, *, lang: str = "de", namen: dict | None
     transport_einrichten(monkeypatch)
     basis = {lr.location.id: lr for lr in build_result(mit_fehlerort=False).locations}
 
-    def _wetter(*, locations, target_date, **_rest):  # Wetter-Naht: echte Funktion
+    def _wetter(*, locations, target_date, official_alerts_enabled=True, **_rest):  # Wetter-Naht
+        # #3047 Runde 7: wie ``comparison_engine`` -- Schalter aus = kein
+        # Abruf, also weder Warnungen noch "nicht abrufbar".
+        aus = {} if official_alerts_enabled else {"official_alerts": [], "official_alerts_unavailable": False}
         return ComparisonResult(
-            locations=[dataclasses.replace(basis[o.id], location=o) for o in locations],
+            locations=[dataclasses.replace(basis[o.id], location=o, **aus) for o in locations],
             time_window=(9, 16), target_date=target_date, created_at=datetime(2026, 10, 29, 4, 0))
 
     monkeypatch.setattr(cp, "run_comparison_parallel", _wetter)
@@ -172,7 +177,7 @@ def _orte_eml(monkeypatch, preset: dict, *, lang: str = "de", namen: dict | None
     sds.send_one_compare_preset(
         preset_laden(uid, preset["id"]), settings_fuer(uid), uid, str(get_data_root()),
         all_locations_cache=load_all_locations(user_id=uid),
-        target_date=date(2026, 10, 29), tage_ab_ortstag=0)
+        target_date=date(2026, 10, 29 + versatz), tage_ab_ortstag=versatz)
     sendung = mit.sendungen("email")[-1]
     return _mime(sendung, to=f"{uid}@example.invalid", html=True,
                  hourly=sendung["compare_hourly_enabled"], lang=lang)
@@ -1241,3 +1246,701 @@ def test_fallliste_validatoren_verweist_auf_vorhandene_tests():
         assert fall["test"] in namen, fall
         assert fall["liste"] in ("validator_trip", "validator_orte"), fall
         assert fall["status"] in ("gruen", "rot_erwartet", "ausnahme", "offen_feature"), fall
+
+
+# --------------------------------------------------------------------------- #
+# Runde 7, Paket p4 (AC-27): Ausblick-Zeilenzahl, Zusatzbloecke, Roh/Einfach der
+# Vergleichstabelle, Klartext-Stunden ab Zeile 2, Tagesfenster, Ortsabschnitte
+# sprachunabhaengig, Warnzeile/Hinweis (AC-28), Mutations-Testluecken V01-V03.
+# Mails aus der echten Kette wie oben; Verfaelschung per Textaenderung.
+# --------------------------------------------------------------------------- #
+_MAILTAG = date(2026, 7, 20)  # Datum der Fixture-Etappe (``fx.segment``), Montag
+
+
+def _wochentage(lang: str, n: int = 3) -> tuple:
+    from datetime import timedelta
+
+    from i18n.format import fmt_weekday
+
+    return tuple(fmt_weekday(_MAILTAG + timedelta(days=i + 1), lang) for i in range(n))
+
+
+def _mit_etappen(daten: dict, folgende: int) -> dict:
+    """Etappen ab dem Mail-Tag: die berichtete Etappe plus ``folgende`` weitere
+    (Scheduler: ``get_future_stages`` -> hoechstens drei Ausblick-Zeilen)."""
+    from datetime import timedelta
+
+    vorlage = daten["stages"][0]
+    daten["stages"] = [{**copy.deepcopy(vorlage), "id": f"R{i}", "name": f"Etappe {i}",
+                        "date": (_MAILTAG + timedelta(days=i)).isoformat()} for i in range(folgende + 1)]
+    return daten
+
+
+def _trip_eml_r7(monkeypatch, daten: dict, *, lang: str = "de", report: str = "evening",
+                 stage_stats: dict | None = None, vortag: bool = False, tage=None) -> bytes:
+    """Wie ``_trip_eml``, zusaetzlich Morgen/Abend (Ausblick nur fuer Berichte in
+    ``multi_day_trend_reports``, wie der Scheduler), Etappen-Kennzahlen und
+    Vortag-Vergleich (Renderer gatet sie an ``show_stage_stats``/
+    ``show_yesterday_comparison``)."""
+    from app.ampel import resolve_ampel
+    from app.loader import load_trip
+    from output.renderers.email.outlook import build_outlook_row
+    from services.notification_service import NotificationService, TripReportRequest
+    from tests.helpers.transport_mitschrift import aufzeichner_installieren
+    from tests.tdd import _einstellung_auslieferung_fixtures as fx
+
+    for name, wert in fx.TRANSPORT_ENV.items():
+        monkeypatch.setenv(name, wert)
+    mit = aufzeichner_installieren(monkeypatch)
+    uid = fx.frisches_profil()
+    _sprache_setzen(uid, lang)
+    trip = load_trip(copy.deepcopy(daten), user_id=uid)
+    seg = fx.segment()
+    zeilen = [build_outlook_row(seg.aggregated, seg.timeseries.data, tag, fx.TZ,
+                                trip_display_config=trip.display_config, report_type=report,
+                                context="route", ampel=resolve_ampel(trip.display_config), lang=lang)
+              for tag in (tage or _wochentage(lang))]
+    rc = trip.report_config
+    vergleich = None
+    if vortag:
+        from services.day_comparison import DayComparison
+        vergleich = DayComparison(wind_delta_kmh=12.0, gust_delta_kmh=18.0, precip_delta_mm=4.0)
+    NotificationService(user_id=uid).send_trip_report(TripReportRequest(
+        trip=trip, report_type=report, segment_weather=[seg], trip_tz=fx.TZ,
+        night_weather=fx.night_weather(), stage_name=fx.STAGE_NAME,
+        multi_day_trend=zeilen if report in (rc.multi_day_trend_reports or []) else None,
+        report_config=rc, display_config=trip.display_config, send_email=True,
+        stage_stats=stage_stats, day_comparison=vergleich,
+    ))
+    sendung = mit.sendungen("email")[-1]
+    return _mime(sendung, to=f"{uid}@example.invalid", html=sendung["mail_format"] == "full", lang=lang)
+
+
+def _zeile_weg_html(tag: str):
+    return lambda h: re.sub(rf"<tr>(?:(?!</tr>).)*?>{tag}</td>(?:(?!</tr>).)*?</tr>", "", h, flags=re.S)
+
+
+def _zeile_weg_klartext(tag: str):
+    return lambda p: re.sub(rf"(?m)^{tag} .*\n", "", p)
+
+
+# ---- B-V1 Trip: Zahl der Ausblick-Zeilen = folgende Etappen (hoechstens 3) ---- #
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_r7_trip_ausblick_tageszeile_fehlt_scheitert(monkeypatch, tmp_path, lang):
+    daten = _mit_etappen(_trip_daten(_TRIP_FOLGE), folgende=4)
+    eml, konfig = _trip_eml_r7(monkeypatch, daten, lang=lang), _konfig(tmp_path, "r7", daten)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, aus
+    mitte = _wochentage(lang)[1]
+    falsch = _aendere(eml, html=_zeile_weg_html(mitte), plain=_zeile_weg_klartext(mitte))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: Ausblick (HTML) hat 2 Tageszeilen, erwartet 3" in aus, aus
+    assert "SOLL: Ausblick (Klartext) hat 2 Tageszeilen, erwartet 3" in aus, aus
+
+
+def test_r7_trip_ausblick_zeilen_nach_folgenden_etappen(monkeypatch, tmp_path):
+    """Zwei folgende Etappen -> zwei Zeilen; die Mail mit drei Zeilen ist falsch,
+    die mit zwei richtig."""
+    daten = _mit_etappen(_trip_daten(_TRIP_FOLGE), folgende=2)
+    konfig = _konfig(tmp_path, "r7-2", daten)
+    code, aus = _lauf(tmp_path, TRIP, _trip_eml_r7(monkeypatch, daten), "--konfig", konfig)
+    assert code == 1 and "SOLL: Ausblick (HTML) hat 3 Tageszeilen, erwartet 2" in aus, aus
+    zwei = _trip_eml_r7(monkeypatch, daten, tage=_wochentage("de", 2))
+    code, aus = _lauf(tmp_path, TRIP, zwei, "--konfig", konfig)
+    assert code == 0, aus
+
+
+def test_r7_trip_ausblick_zeile_fehlt_nur_im_klartext_scheitert(tmp_path, trip_mail):
+    """Ohne verankerbare Etappendaten: HTML und Klartext tragen gleich viele Zeilen."""
+    eml, konfig = trip_mail
+    falsch = _aendere(eml, plain=_zeile_weg_klartext("Mi"))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: Ausblick Tageszeilen: HTML 3, Klartext 2" in aus, aus
+
+
+def test_r7_trip_kompakt_ausblick_tageszeile_fehlt_scheitert(monkeypatch, tmp_path):
+    daten = _mit_etappen(_trip_daten(_TRIP_FOLGE, email_format="compact"), folgende=3)
+    eml, konfig = _trip_eml_r7(monkeypatch, daten), _konfig(tmp_path, "r7k", daten)
+    assert _lauf(tmp_path, TRIP, eml, "--konfig", konfig)[0] == 0
+    code, aus = _lauf(tmp_path, TRIP, _aendere(eml, plain=_zeile_weg_klartext("Mi")), "--konfig", konfig)
+    assert code == 1 and "SOLL: Ausblick (Kompakt) hat 2 Tageszeilen, erwartet 3" in aus, aus
+
+
+# ---- B-V1 Orte: Ausblick je Ort, drei Tageszeilen ---- #
+def test_r7_orte_ausblick_tageszeile_fehlt_scheitert(tmp_path, orte_mail):
+    eml, konfig = orte_mail
+    falsch = _aendere(eml, html=_zeile_weg_html("Sa"), plain=_zeile_weg_klartext("Sa"))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: Ausblick (HTML) Tabelle 1: 2 Tageszeilen, erwartet 3" in aus, aus
+    assert "SOLL: Ausblick (Klartext) Ort 2: 2 Tageszeilen, erwartet 3" in aus, aus
+
+
+def _letzter_ausblick_weg(h: str) -> str:
+    treffer = list(re.finditer(r"<div[^>]*>\s*<div[^>]*>\s*<span[^>]*>AUSBLICK</span>.*?</table>\s*</div>", h, re.S))
+    return h[:treffer[-1].start()] + h[treffer[-1].end():]
+
+
+def test_r7_orte_ausblick_eines_orts_fehlt_im_html_scheitert(tmp_path, orte_mail):
+    eml, konfig = orte_mail
+    code, aus = _lauf(tmp_path, ORTE, _aendere(eml, html=_letzter_ausblick_weg), "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: Ausblick (HTML): 2 Orts-Abschnitte statt 3" in aus, aus
+
+
+# ---- B-V2 Zusatzbloecke (Vollformat); Kompakt ignoriert die Schalter (#722) ---- #
+_KENNZAHLEN = {"distance_km": 12.3, "ascent_m": 800, "descent_m": 400, "max_elevation_m": 2100}
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_r7_trip_zusatzbloecke_trotz_aus_scheitern(monkeypatch, tmp_path, lang):
+    an = _trip_daten(_TRIP_FOLGE)
+    aus_daten = copy.deepcopy(an)
+    aus_daten["report_config"].update(show_stage_stats=False, show_yesterday_comparison=False)
+    mit = _trip_eml_r7(monkeypatch, an, lang=lang, stage_stats=_KENNZAHLEN, vortag=True)
+    code, aus = _lauf(tmp_path, TRIP, mit, "--konfig", _konfig(tmp_path, "an", an))
+    assert code == 0, aus
+    code, aus = _lauf(tmp_path, TRIP, mit, "--konfig", _konfig(tmp_path, "aus", aus_daten))
+    assert code == 1, aus
+    for teil in ("HTML", "Klartext"):
+        assert f"SOLL: Etappen-Kennzahlen ({teil}) erscheinen, obwohl show_stage_stats aus ist" in aus, aus
+        assert f"SOLL: Vortag-Vergleich ({teil}) erscheint, obwohl show_yesterday_comparison aus ist" in aus, aus
+    ohne = _trip_eml_r7(monkeypatch, aus_daten, lang=lang, stage_stats=_KENNZAHLEN, vortag=True)
+    code, aus = _lauf(tmp_path, TRIP, ohne, "--konfig", _konfig(tmp_path, "aus2", aus_daten))
+    assert code == 0, aus
+
+
+def test_r7_trip_kompakt_ignoriert_bausteinschalter(monkeypatch, tmp_path):
+    """PO-Entscheidung #722: das Kompaktformat zeigt Ueberblick, Kennzahlen und
+    Ausblick unabhaengig von den Baustein-Schaltern -- kein Fehler bei Aus."""
+    an = _mit_etappen(_trip_daten(_TRIP_FOLGE, email_format="compact"), folgende=3)
+    eml = _trip_eml_r7(monkeypatch, an, stage_stats=_KENNZAHLEN)
+    assert b"12.3 km" in eml, "Vorbedingung: Kennzahlen in der Kompakt-Mail"
+    aus_daten = copy.deepcopy(an)
+    aus_daten["report_config"].update(show_stage_stats=False, show_outlook=False)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "kaus", aus_daten))
+    assert code == 0, aus
+
+
+def test_r7_trip_show_outlook_aus_vollformat(monkeypatch, tmp_path):
+    """Mutation V14: ``show_outlook`` aus -> im Vollformat kein Ausblick."""
+    daten = _trip_daten(_TRIP_FOLGE)
+    aus_daten = copy.deepcopy(daten)
+    aus_daten["report_config"]["show_outlook"] = False
+    konfig = _konfig(tmp_path, "oaus", aus_daten)
+    code, aus = _lauf(tmp_path, TRIP, _trip_eml_r7(monkeypatch, aus_daten), "--konfig", konfig)
+    assert code == 0, aus
+    code, aus = _lauf(tmp_path, TRIP, _trip_eml_r7(monkeypatch, daten), "--konfig", konfig)
+    assert code == 1 and "SOLL: Ausblick (HTML) erscheint, obwohl er laut Konfiguration aus ist" in aus, aus
+
+
+# ---- B-V3 Roh/Einfach der Vergleichstabelle (HTML und Klartext) ---- #
+@pytest.fixture
+def orte_darstellung_mail(monkeypatch, tmp_path):
+    preset = _orte_preset()
+    preset["display_config"]["active_metrics"] = ["wind_max_kmh", "temp_max_c", "precip_sum_mm", "gust_max_kmh"]
+    preset["display_config"]["channel_layouts"] = {"email": [
+        {"metric_id": "gust", "enabled": True, "use_friendly_format": True},
+        {"metric_id": "temperature", "enabled": True},
+        {"metric_id": "precipitation", "enabled": True, "format": "simplified"},
+        {"metric_id": "wind", "enabled": True, "use_friendly_format": False}]}
+    return _orte_eml(monkeypatch, preset), _orte_konfig(tmp_path, preset, "darst")
+
+
+def test_r7_orte_vergleich_roh_einfach_positiv(tmp_path, orte_darstellung_mail):
+    eml, konfig = orte_darstellung_mail
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, aus
+
+
+_DARSTELLUNG_FAELLE = {
+    "html_zahl_statt_ampel": ("HTML", "Böen", {"html": lambda h: re.sub(
+        r"(>Böen</td>(?:<td[^>]*>)?)<span[^>]*border-radius:50%[^>]*></span>", r"\g<1>48 km/h", h)}),
+    "klartext_zahl_statt_wort": ("Klartext", "Niederschlag", {"plain": lambda p: re.sub(
+        r"Niederschlag: [a-zäöü]+", "Niederschlag: 8.4 mm", p)}),
+    "klartext_wort_statt_zahl": ("Klartext", "Wind", {"plain": lambda p: re.sub(
+        r"Wind: \d+ km/h", "Wind: stark", p)}),
+}
+
+
+@pytest.mark.parametrize("fall", list(_DARSTELLUNG_FAELLE))
+def test_r7_orte_vergleich_falsche_darstellung_scheitert(tmp_path, orte_darstellung_mail, fall):
+    eml, konfig = orte_darstellung_mail
+    teil, spalte, aenderung = _DARSTELLUNG_FAELLE[fall]
+    code, aus = _lauf(tmp_path, ORTE, _aendere(eml, **aenderung), "--konfig", konfig)
+    assert code == 1, aus
+    assert f"SOLL: Darstellung Vergleichstabelle ({teil})" in aus and f"'{spalte}'" in aus, aus
+
+
+# ---- B-V4 Klartext-Stundenverlauf: jede Stundenzeile ---- #
+def test_r7_orte_klartext_spalte_fehlt_ab_zeile_zwei_scheitert(tmp_path, orte_mail):
+    eml, konfig = orte_mail
+    falsch = _aendere(eml, plain=lambda p: re.sub(r"(?m)^(   11:00  .*?)  Temp \S+(.*)$", r"\1\2", p))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "SOLL: Stundenverlauf (Klartext) Ort 1 Zeile 4" in aus and "Spalte fehlt: 'Temp'" in aus, aus
+
+
+# ---- B-V5 Tagesfenster des Presets ---- #
+def test_r7_orte_tagesfenster_wird_nicht_abgelehnt(tmp_path, orte_mail):
+    eml, _konfig_alt = orte_mail
+    preset = _orte_preset()
+    preset.update(day_window_start_hour=12, day_window_end_hour=16)
+    konfig = _orte_konfig(tmp_path, preset, "tf")
+    fenster = _aendere(eml, html=lambda h: re.sub(
+        r"<tr[^>]*><td[^>]*>(?:08|09|10|11)</td>(?:(?!</tr>).)*</tr>", "", h, flags=re.S),
+        plain=lambda p: re.sub(r"(?m)^   (?:08|09|10|11):00  .*\n", "", p))
+    code, aus = _lauf(tmp_path, ORTE, fenster, "--konfig", konfig)
+    assert code == 0, aus
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 1 and "ausserhalb des Tagesfensters 12–16" in aus, aus
+
+
+# ---- B-V7 Ortsabschnitte sprachunabhaengig ---- #
+def _abschnitte_tauschen(h: str) -> str:
+    return re.sub(r'(letter-spacing:0\.1em;">[^<]*</span> <span style="font-size:15px;[^"]*">)(Kufstein|Innsbruck)<',
+                  lambda m: m.group(1) + {"Kufstein": "Innsbruck", "Innsbruck": "Kufstein"}[m.group(2)] + "<", h)
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+@pytest.mark.parametrize("eyebrow", ["unveraendert", "uebersetzt"])
+def test_r7_orte_ortsabschnitte_html_vertauscht_scheitert(monkeypatch, tmp_path, lang, eyebrow):
+    """Nur die HTML-Ortsabschnitte vertauscht (Uebersicht und Klartext richtig);
+    ``uebersetzt`` simuliert die Uebersetzung des Etiketts "ORT" (#3074)."""
+    preset = _orte_preset()
+    eml, konfig = _orte_eml(monkeypatch, preset, lang=lang), _orte_konfig(tmp_path, preset, "ab")
+    if eyebrow == "uebersetzt":
+        eml = _aendere(eml, html=lambda h: h.replace(">ORT</span>", ">PLACE</span>"))
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, aus
+    code, aus = _lauf(tmp_path, ORTE, _aendere(eml, html=_abschnitte_tauschen), "--konfig", konfig)
+    assert code == 1 and "SOLL: Ortsfolge (HTML-Abschnitte)" in aus, aus
+
+
+# ---- AC-28 Warnzeile bei Schalter aus, Hinweis "nicht abrufbar" im Klartext ---- #
+def _ohne_warnzeile(h: str) -> str:
+    return re.sub(r"<tr[^>]*>\s*<td[^>]*>Amtliche Warnungen</td>(?:(?!</tr>).)*</tr>", "", h, count=1, flags=re.S)
+
+
+def test_r7_orte_warnzeile_folgt_dem_schalter(tmp_path, orte_mail):
+    eml, konfig_an = orte_mail
+    preset = _orte_preset()
+    preset.update(official_alerts_enabled=False, official_warnings={"enabled": False})  # E4: beide aus
+    konfig_aus = _orte_konfig(tmp_path, preset, "waus")
+    # #3047 Runde 7 (p4b, B-L5): Schalter aus = kein Abruf, also auch kein
+    # Hinweis "nicht abrufbar" (``comparison_engine``) -- die Aus-Mail traegt
+    # weder Warnzeile noch Hinweis (HTML und Klartext).
+    ohne = _aendere(eml, html=lambda h: re.sub(
+        r'<div[^>]*><strong[^>]*>Amtliche Warnungen aktuell nicht abrufbar</strong>.*?</p></div>', "",
+        _ohne_warnzeile(h), count=1, flags=re.S),
+        plain=lambda p: re.sub(r"(?m)^.*Amtliche Warnungen aktuell nicht abrufbar.*\n\n", "", p, count=1))
+    code, aus = _lauf(tmp_path, ORTE, ohne, "--konfig", konfig_aus)
+    assert code == 0, aus
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig_aus)
+    assert code == 1 and "Spalte zu viel: 'Amtliche Warnungen'" in aus, aus
+    code, aus = _lauf(tmp_path, ORTE, ohne, "--konfig", konfig_an)
+    assert code == 1 and "Spalte fehlt: 'Amtliche Warnungen'" in aus, aus
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_r7_orte_klartext_hinweis_nicht_abrufbar_wie_html(tmp_path, monkeypatch, lang):
+    """AC-28 (nach p2): die echte Mail traegt den Hinweis in beiden Teilen und
+    besteht; fehlt er im Klartext, scheitert sie."""
+    from i18n import t
+
+    preset = _orte_preset()
+    eml, konfig = _orte_eml(monkeypatch, preset, lang=lang), _orte_konfig(tmp_path, preset, "hw")
+    hinweis = t("mail.hinweis.warnungen_nicht_abrufbar.text", lang)
+    # Vorbedingung (Hinweis im Klartext der echten Mail) prueft ``_aendere``.
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, aus
+    falsch = _aendere(eml, plain=lambda p: re.sub(rf"(?m)^.*{re.escape(hinweis)}\n", "", p))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Hinweis 'Amtliche Warnungen nicht abrufbar' fehlt im Klartext-Teil" in aus, aus
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_r7_orte_warnungen_aus_echte_mail(tmp_path, monkeypatch, lang):
+    """AC-28 / E4 (nach p2): Briefing- und Alarm-Schalter aus -> die echte Mail
+    hat keine Warnzeile; der Validator findet die Vergleichstabelle ueber die
+    Kopfzelle und besteht. Gegen die Konfiguration "an" (Mischzustand: nur der
+    Alarm-Schalter an = beides an) fehlt die Zeile."""
+    from i18n import t
+
+    aus_preset = _orte_preset()
+    aus_preset.update(official_alerts_enabled=False, official_warnings={"enabled": False})
+    eml = _orte_eml(monkeypatch, aus_preset, lang=lang)
+    assert t("vergleich.zeile.amtliche_warnungen", lang).encode() not in eml, "Vorbedingung: keine Warnzeile"
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, aus_preset, "waus"))
+    assert code == 0, aus
+    misch = copy.deepcopy(aus_preset)
+    misch["official_warnings"] = {"enabled": True}
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, misch, "wmisch"))
+    warn = t("vergleich.zeile.amtliche_warnungen", lang)
+    assert code == 1 and f"Spalte fehlt: '{warn}'" in aus, aus
+
+
+def test_r7_orte_ortsabschnitt_fehlt_im_html_scheitert(tmp_path, orte_mail):
+    """B-V7: fehlt der HTML-Abschnittskopf eines erwarteten Orts, meldet die
+    Ortsfolge der Abschnitte ihn (nicht nur die Strukturpruefung)."""
+    eml, konfig = orte_mail
+    falsch = _aendere(eml, html=lambda h: re.sub(
+        r'<div style="padding-bottom:8px;[^"]*"><span[^>]*>ORT</span> <span[^>]*>Lienz</span>.*?</div>', "", h,
+        count=1, flags=re.S))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Ortsfolge (HTML-Abschnitte): Ort fehlt: 'Lienz'" in aus, aus
+
+
+@pytest.mark.parametrize("form", ["zeichenketten", "ohne_enabled"])
+def test_r7_trip_altformat_ohne_order_register_prioritaet(monkeypatch, tmp_path, form):
+    """B-L6 (Tech-Lead-Entscheidung Runde 7): Altformat ohne ``order`` -> die
+    Mail ordnet nach Register-Prioritaet (Loader ``auto_distribute``: Temp,
+    Boeen, Regen), das Soll ebenso; vertauschte Spalten scheitern."""
+    daten = _trip_daten(_TRIP_FOLGE)
+    ids = ["gust", "precipitation", "temperature"]
+    daten["display_config"]["metrics"] = ids if form == "zeichenketten" else [{"metric_id": m} for m in ids]
+    eml, konfig = _trip_eml(monkeypatch, daten), _konfig(tmp_path, "alt", daten)
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, aus
+    code, aus = _lauf(tmp_path, TRIP, _aendere(eml, html=lambda h: _tausche(h, ">Gust</th>", ">Rain</th>")),
+                      "--konfig", konfig)
+    assert code == 1 and "SOLL: Etappen-Stundentabelle (HTML)" in aus, aus
+
+
+# ---- B-V8 / H1: Kanal-Liste nach order, Bericht-Flags je Metrik ---- #
+def test_r7_trip_kanal_liste_array_ungleich_order(monkeypatch, tmp_path):
+    """Mutation V03: ``channel_layouts.email`` in Array-Folge Wind, Regen, Temp,
+    ``order`` Regen, Temp, Wind -- die Mail folgt ``order``, das Soll auch."""
+    daten = _trip_daten({"temperature": 0, "wind": 1, "precipitation": 2})
+    daten["display_config"]["channel_layouts"] = {"email": [
+        {"metric_id": "wind", "enabled": True, "bucket": "primary", "order": 2},
+        {"metric_id": "precipitation", "enabled": True, "bucket": "primary", "order": 0},
+        {"metric_id": "temperature", "enabled": True, "bucket": "primary", "order": 1}]}
+    code, aus = _lauf(tmp_path, TRIP, _trip_eml(monkeypatch, daten), "--konfig", _konfig(tmp_path, "t23", daten))
+    assert code == 0, aus
+
+
+def _trip_morgen_flag() -> dict:
+    daten = _trip_daten(_TRIP_FOLGE)
+    for m in daten["display_config"]["metrics"]:
+        if m["metric_id"] == "gust":
+            m["morning_enabled"] = False
+    return daten
+
+
+def test_r7_trip_morgen_flag_je_metrik(monkeypatch, tmp_path):
+    """H1 (Mutationen V01, V02, V19): Boeen nur abends. Morgen- und Abendmail
+    derselben Konfiguration bestehen; eine Morgenmail mit Boeen scheitert."""
+    daten = _trip_morgen_flag()
+    konfig = _konfig(tmp_path, "h1", daten)
+    for report in ("morning", "evening"):
+        code, aus = _lauf(tmp_path, TRIP, _trip_eml_r7(monkeypatch, daten, report=report), "--konfig", konfig)
+        assert code == 0, (report, aus)
+    code, aus = _lauf(tmp_path, TRIP, _trip_eml_r7(monkeypatch, _trip_daten(_TRIP_FOLGE), report="morning"),
+                      "--konfig", konfig)
+    assert code == 1 and "Spalte zu viel: 'Gust'" in aus, aus
+
+
+def test_r7_orte_stundenverlauf_aus(monkeypatch, tmp_path):
+    """Mutation V18: ``hourly_enabled: false`` -> kein Stundenverlauf erwartet."""
+    preset = _orte_preset()
+    preset["hourly_enabled"] = False
+    code, aus = _lauf(tmp_path, ORTE, _orte_eml(monkeypatch, preset), "--konfig", _orte_konfig(tmp_path, preset, "haus"))
+    assert code == 0, aus
+
+
+# --------------------------------------------------------------------------- #
+# Runde 7, Paket p4b (B-L5, Punkt 2): der Trip-Validator prueft amtliche
+# Warnungen (Schalter E4, erste Stelle), die Kachelfolge des Ueberblicks, die
+# Ampelfarbe gegen die Ampel-Grenzen und die erlaubten Stunden aus Tagesfenster
+# und Etappenstart; der Orte-Validator die Zeilen bei nie eingestellter
+# Grundauswahl, den Zieltag, den Hinweis "nicht abrufbar" bei Schalter aus und
+# die Ampelfarbe. Je Pruefung: die echte Mail besteht, die verfaelschte nicht.
+# --------------------------------------------------------------------------- #
+_WARN_AUS = {"official_alerts_enabled": False, "official_warnings": {"enabled": False}}
+
+
+def _segment_naht(monkeypatch, *, warnungen: bool = False, nicht_abrufbar: bool = False, start=None):
+    """Wetter-Naht der Trip-Kette: die Etappe aus ``fx.segment`` mit einer
+    amtlichen Warnung und/oder Ausfall der Warnquelle (wie der Zeitplaner sie
+    bei Schalter an liefert) bzw. mit anderem Etappenstart."""
+    from datetime import timezone
+
+    from services.official_alerts.models import OfficialAlert
+    from tests.tdd import _einstellung_auslieferung_fixtures as fx
+
+    original = fx.segment
+
+    def _segment(*args, **kwargs):
+        s = original(*args, **kwargs)
+        if warnungen:
+            s.official_alerts = [OfficialAlert(
+                source="meteofrance", hazard="thunderstorm", level=3, label="Orages",
+                region_label="Haute-Corse", valid_from=datetime(2026, 7, 20, 6, tzinfo=timezone.utc),
+                valid_to=datetime(2026, 7, 20, 22, tzinfo=timezone.utc))]
+        s.official_alerts_unavailable = nicht_abrufbar
+        if start is not None:
+            s.segment = dataclasses.replace(s.segment, start_time=start)
+        return s
+
+    monkeypatch.setattr(fx, "segment", _segment)
+
+
+def _warnblock_nach_hinten(text: str, kopf: str, vor: str) -> str:
+    """Schneidet den Block ``kopf`` (bis zur Leerzeile) aus und setzt ihn vor ``vor``."""
+    block = re.search(rf"{re.escape(kopf)}\n(?:.+\n)*\n", text).group(0)
+    rest = text.replace(block, "", 1)
+    return rest.replace(vor, block + vor, 1)
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_r7b_trip_warnungen_trotz_schalter_aus_scheitern(monkeypatch, tmp_path, lang):
+    """Briefing- und Alarm-Schalter aus: die echte Mail (kein Abruf) besteht;
+    die Mail mit Warnblock und Hinweis "nicht abrufbar" scheitert in HTML und
+    Klartext. Mischzustand (nur Alarm an) = beides an (E4): sie besteht."""
+    aus = {**_trip_daten(_TRIP_FOLGE), **_WARN_AUS}
+    konfig = _konfig(tmp_path, "waus", aus)
+    code, text = _lauf(tmp_path, TRIP, _trip_eml(monkeypatch, aus, lang=lang), "--konfig", konfig)
+    assert code == 0, text
+    _segment_naht(monkeypatch, warnungen=True, nicht_abrufbar=True)
+    mit = _trip_eml(monkeypatch, aus, lang=lang)
+    code, text = _lauf(tmp_path, TRIP, mit, "--konfig", konfig)
+    assert code == 1, text
+    for teil in ("HTML", "Klartext"):
+        assert f"SOLL: Amtliche Warnungen ({teil}) erscheinen, obwohl sie laut Konfiguration aus sind" in text, text
+    misch = {**aus, "official_warnings": {"enabled": True}}
+    code, text = _lauf(tmp_path, TRIP, mit, "--konfig", _konfig(tmp_path, "wmisch", misch))
+    assert code == 0, text
+
+
+def test_r7b_trip_kompakt_warnungen_trotz_schalter_aus_scheitern(monkeypatch, tmp_path):
+    aus = {**_trip_daten(_TRIP_FOLGE, email_format="compact"), **_WARN_AUS}
+    konfig = _konfig(tmp_path, "kwaus", aus)
+    code, text = _lauf(tmp_path, TRIP, _trip_eml(monkeypatch, aus), "--konfig", konfig)
+    assert code == 0, text
+    _segment_naht(monkeypatch, warnungen=True)
+    code, text = _lauf(tmp_path, TRIP, _trip_eml(monkeypatch, aus), "--konfig", konfig)
+    assert code == 1 and "SOLL: Amtliche Warnungen (Kompakt) erscheinen" in text, text
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_r7b_trip_warnungen_an_erster_stelle(monkeypatch, tmp_path, lang):
+    """AC-25/WV6: die echte Mail mit Warnung besteht; steht der Warnblock hinter
+    dem Metriken-Ueberblick (Klartext) bzw. der Ueberblick vor ihm (HTML),
+    scheitert sie."""
+    from i18n import t
+
+    daten = _trip_daten(_TRIP_FOLGE)
+    konfig = _konfig(tmp_path, "wan", daten)
+    _segment_naht(monkeypatch, warnungen=True, nicht_abrufbar=True)
+    eml = _trip_eml(monkeypatch, daten, lang=lang)
+    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, text
+    pillen = t("mail.pille.ueberschrift", lang)
+    klartext = _aendere(eml, plain=lambda p: _warnblock_nach_hinten(
+        p, f"━━ {t('mail.warnungen.ueberschrift', lang)} ━━", "━━ Segment"))
+    code, text = _lauf(tmp_path, TRIP, klartext, "--konfig", konfig)
+    assert code == 1 and "SOLL: Amtliche Warnungen (Klartext) stehen nicht an erster Stelle" in text, text
+
+    def _ueberblick_nach_vorn(h: str) -> str:
+        block = re.search(rf'<div[^>]*><p[^>]*>{re.escape(pillen)}</p><div[^>]*>.*?</div></div>', h, re.S).group(0)
+        return h.replace(block, "", 1).replace('<div class="wb ', block + '<div class="wb ', 1)
+    code, text = _lauf(tmp_path, TRIP, _aendere(eml, html=_ueberblick_nach_vorn), "--konfig", konfig)
+    assert code == 1 and "SOLL: Amtliche Warnungen (HTML) stehen nicht an erster Stelle" in text, text
+
+
+def test_r7b_trip_kompakt_warnungen_an_erster_stelle(monkeypatch, tmp_path):
+    from i18n import t
+
+    daten = _trip_daten(_TRIP_FOLGE, email_format="compact")
+    konfig = _konfig(tmp_path, "kwan", daten)
+    _segment_naht(monkeypatch, warnungen=True)
+    eml = _trip_eml(monkeypatch, daten)
+    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, text
+    falsch = _aendere(eml, plain=lambda p: _warnblock_nach_hinten(
+        p, f"== {t('mail.kompakt.warnungen', 'de')} ==", "Naechste Etappen"))
+    code, text = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Amtliche Warnungen (Kompakt) stehen nicht an erster Stelle" in text, text
+
+
+def _pillen_tauschen_klartext(kopf: str):
+    def _tausch(p: str) -> str:
+        zeilen = p.split("\n")
+        i = zeilen.index(kopf)
+        zeilen[i + 1], zeilen[i + 2] = zeilen[i + 2], zeilen[i + 1]
+        return "\n".join(zeilen)
+    return _tausch
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_r7b_trip_ueberblick_folge_vertauscht_scheitert(monkeypatch, tmp_path, lang):
+    """Kacheln in der Folge der E-Mail-Liste (Boeen, Temp, Regen, Wind, #1703 S7):
+    die echte Mail besteht, zwei vertauschte Kacheln scheitern je Teil."""
+    from i18n import t
+
+    daten = _trip_daten(_TRIP_FOLGE)
+    eml, konfig = _trip_eml(monkeypatch, daten, lang=lang), _konfig(tmp_path, "pf", daten)
+    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, text
+    titel = t("mail.pille.ueberschrift", lang)
+    code, text = _lauf(tmp_path, TRIP, _aendere(eml, plain=_pillen_tauschen_klartext(f"━━ {titel} ━━")),
+                       "--konfig", konfig)
+    assert code == 1 and "SOLL: Metriken-Ueberblick (Klartext): Reihenfolge ['temperature', 'gust'" in text, text
+
+    def _html(h: str) -> str:
+        spans = re.findall(r'<span style="display:inline-block;vertical-align:middle;[^"]*">[^<]*</span>', h)
+        return _tausche(h, spans[0], spans[1])
+    code, text = _lauf(tmp_path, TRIP, _aendere(eml, html=_html), "--konfig", konfig)
+    assert code == 1 and "SOLL: Metriken-Ueberblick (HTML): Reihenfolge ['temperature', 'gust'" in text, text
+
+
+def test_r7b_trip_kompakt_ueberblick_folge_vertauscht_scheitert(monkeypatch, tmp_path):
+    daten = _trip_daten(_TRIP_FOLGE, email_format="compact")
+    eml, konfig = _trip_eml(monkeypatch, daten), _konfig(tmp_path, "kpf", daten)
+    assert _lauf(tmp_path, TRIP, eml, "--konfig", konfig)[0] == 0
+    falsch = _aendere(eml, plain=_pillen_tauschen_klartext("== Metriken-Ueberblick =="))
+    code, text = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Metriken-Ueberblick (Kompakt): Reihenfolge ['temperature', 'gust'" in text, text
+
+
+def _trip_ampel_daten(eigene_grenzen: bool = True) -> dict:
+    """Boeen Einfach (Ampelpunkt); eigene Grenzen 100/110/120 -> 45 km/h gruen
+    (Vorlage "allgemein": 30/45/60 -> orange)."""
+    daten = _trip_daten(_TRIP_FOLGE)
+    for m in daten["display_config"]["metrics"]:
+        if m["metric_id"] == "gust":
+            m["use_friendly_format"] = True
+    if eigene_grenzen:
+        daten["display_config"]["ampel"] = {"template": "allgemein", "metrics": {
+            "gust": {"upper": {"yellow": 100, "orange": 110, "red": 120}}}}
+    return daten
+
+
+def test_r7b_trip_ampelfarbe_folgt_den_grenzen(monkeypatch, tmp_path):
+    """Ampelpunkt (Einfach) gegen den Klartext-Wert derselben Stunde: die echte
+    Mail besteht; rot statt gruen scheitert; dieselbe Mail gegen die Vorlage
+    ohne eigene Grenzen (45 = orange) scheitert ebenso."""
+    daten = _trip_ampel_daten()
+    eml, konfig = _trip_eml(monkeypatch, daten), _konfig(tmp_path, "amp", daten)
+    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, text
+    falsch = _aendere(eml, html=lambda h: h.replace("background:#15803d;", "background:#a8104a;"))
+    code, text = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Ampelfarbe Etappen-Stundentabelle (HTML) 08:00 'Gust': red statt green" in text, text
+    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "amp2", _trip_ampel_daten(False)))
+    assert code == 1 and "'Gust': green statt orange" in text, text
+
+
+def test_r7b_trip_ampelfarbe_roh_zelle(monkeypatch, tmp_path):
+    """Roh: die Toenung der Zahl-Zelle folgt den Grenzen (Boeen 45 = orange bei
+    "allgemein"); gegen eigene Grenzen 100/110/120 ist die Toenung falsch."""
+    daten = _trip_daten(_TRIP_FOLGE)
+    eml = _trip_eml(monkeypatch, daten)
+    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "roh", daten))
+    assert code == 0, text
+    grenzen = copy.deepcopy(daten)
+    grenzen["display_config"]["ampel"] = {"metrics": {"gust": {"upper": {"yellow": 100, "orange": 110, "red": 120}}}}
+    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "roh2", grenzen))
+    assert code == 1 and "'Gust': orange statt green" in text, text
+
+
+def _trip_fruehstart(start: str | None) -> dict:
+    daten = _trip_daten(_TRIP_FOLGE)
+    daten["report_config"].update(day_window_start_hour=6, day_window_end_hour=20)
+    for etappe in daten["stages"] if start else ():
+        etappe["start_time"] = start
+    return daten
+
+
+def test_r7b_trip_etappenstart_vor_sechs_besteht(monkeypatch, tmp_path):
+    """Punkt 2: Etappenstart 04:30 -> die Stundentabelle beginnt um 04. Mit
+    ``--konfig`` (Start 04:30) besteht die echte Mail; ohne gespeicherten
+    Start (Vorgabe 08:00, Fenster 06-20) ist 04 ausserhalb."""
+    from datetime import timedelta
+
+    from tests.tdd import _einstellung_auslieferung_fixtures as fx
+
+    _segment_naht(monkeypatch, start=fx._local_to_utc(fx.DAY, 4) + timedelta(minutes=30))
+    daten = _trip_fruehstart("04:30")
+    eml = _trip_eml(monkeypatch, daten)
+    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "fs", daten))
+    assert code == 0, text
+    code, text = _lauf(tmp_path, TRIP, eml, "--konfig", _konfig(tmp_path, "fs2", _trip_fruehstart(None)))
+    assert code == 1 and "FULL: Stunde 04 ausserhalb Tagesfenster 06–22" in text, text
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_r7b_orte_nie_eingestellt_zeilen_wie_mail(monkeypatch, tmp_path, lang):
+    """``active_metrics`` fehlt: die Mail zeigt alle Zeilen in Standardfolge,
+    das Soll ebenso; eine fehlende Zeile scheitert im HTML und im Klartext."""
+    from app.metric_catalog import get_metric
+
+    preset = _orte_preset(altbestand=True)
+    eml, konfig = _orte_eml(monkeypatch, preset, lang=lang), _orte_konfig(tmp_path, preset, "nie")
+    code, text = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, text
+    boeen = get_metric("gust").label(lang)
+    falsch = _aendere(eml, plain=lambda p: re.sub(rf"(?m)^   {boeen}: .*\n", "", p, count=1))
+    code, text = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Vergleichstabelle Zeilen (Klartext) Block 1" in text and f"'{boeen}'" in text, text
+    falsch = _aendere(eml, html=lambda h: re.sub(
+        rf"<tr[^>]*>\s*<td[^>]*>{boeen}</td>(?:(?!</tr>).)*</tr>", "", h, count=1, flags=re.S))
+    code, text = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Vergleichstabelle Zeilen (HTML) Block 1" in text, text
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_r7b_orte_zieltag_morgen_heute_abend_morgen(monkeypatch, tmp_path, lang):
+    """Morgen-Slot: Zieltag = Erstellungstag; Abend-Slot: der Folgetag. Die
+    jeweils echte Mail besteht, die des anderen Slots scheitert."""
+    morgen = _orte_preset()
+    abend = {**_orte_preset(), "morning_enabled": False, "evening_enabled": True, "evening_time": "18:00:00"}
+    k_morgen, k_abend = _orte_konfig(tmp_path, morgen, "zm"), _orte_konfig(tmp_path, abend, "za")
+    m_eml = _orte_eml(monkeypatch, morgen, lang=lang)
+    a_eml = _orte_eml(monkeypatch, abend, lang=lang, versatz=1)
+    assert _lauf(tmp_path, ORTE, m_eml, "--konfig", k_morgen)[0] == 0
+    code, text = _lauf(tmp_path, ORTE, a_eml, "--konfig", k_abend)
+    assert code == 0, text
+    code, text = _lauf(tmp_path, ORTE, m_eml, "--konfig", k_abend)
+    assert code == 1 and "SOLL: Zieltag 2026-10-29 bei Erstellung 2026-10-29, erwartet der Folgetag" in text, text
+    code, text = _lauf(tmp_path, ORTE, a_eml, "--konfig", k_morgen)
+    assert code == 1 and "SOLL: Zieltag 2026-10-30 bei Erstellung 2026-10-29, erwartet der Erstellungstag" in text, text
+
+
+def test_r7b_orte_hinweis_nicht_abrufbar_trotz_schalter_aus(monkeypatch, tmp_path):
+    """Schalter aus: kein Abruf, also kein Hinweis "nicht abrufbar". Die echte
+    Mail besteht, mit eingesetztem Hinweis (HTML und Klartext) scheitert sie."""
+    from i18n import t
+
+    preset = {**_orte_preset(), **_WARN_AUS}
+    eml, konfig = _orte_eml(monkeypatch, preset), _orte_konfig(tmp_path, preset, "haus")
+    code, text = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, text
+    titel, satz = (t(f"mail.hinweis.warnungen_nicht_abrufbar.{k}", "de") for k in ("titel", "text"))
+    falsch = _aendere(
+        eml, html=lambda h: h.replace('<div class="container">', f'<div class="container"><div><strong>{titel}</strong></div>', 1),
+        plain=lambda p: p.replace("-" * 50, f"⚠️ {satz}\n\n" + "-" * 50, 1))
+    code, text = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1, text
+    for teil in ("HTML", "Klartext"):
+        assert f"SOLL: Hinweis 'Amtliche Warnungen nicht abrufbar' ({teil}) erscheint" in text, text
+
+
+def test_r7b_orte_ampelfarbe_folgt_den_grenzen(monkeypatch, tmp_path):
+    """Toenung der Zahl-Zellen: Niederschlag 8.4 mm ist bei "allgemein" orange.
+    Die echte Mail besteht; ungetoent scheitert sie; gegen eigene Grenzen
+    50/60/70 ist die echte Toenung falsch."""
+    preset = _orte_preset()
+    eml, konfig = _orte_eml(monkeypatch, preset), _orte_konfig(tmp_path, preset, "oa")
+    code, text = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, text
+    falsch = _aendere(eml, html=lambda h: h.replace("background:#fbe3cc;", "background:transparent;", 1))
+    code, text = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1 and "SOLL: Ampelfarbe Vergleichstabelle (HTML) 'Niederschlag' Ort 1: green statt orange" in text, text
+    grenzen = copy.deepcopy(preset)
+    grenzen["display_config"]["ampel"] = {"metrics": {"precipitation": {"upper": {"yellow": 50, "orange": 60, "red": 70}}}}
+    code, text = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, grenzen, "oa2"))
+    assert code == 1 and "'Niederschlag' Ort 1: orange statt green" in text, text

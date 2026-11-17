@@ -679,7 +679,7 @@ mit Briefing-/Alarm-Schalter und Dringlichkeit je Kanal), `KanalStil`, `StilleSt
 `UebergangBlock` (Altbausteine bis zu den Folge-Teilschritten). Logik: `zustellungModell.ts`, `zustellungSpeicherung.ts`
 (ein Speicherer, Owner `versand`/`alarme`, Profil nur einmal geladen), `kanalStilSpeicherung.ts`. Der Block
 „Kanäle je Wettergröße" entfällt; Texte über den Katalog `zustellung` (de/en). Das frühere Einbinden von
-`WetterMetrikenVersandPanel` (`bereich="zustellung"`) und `AlarmeScheduleTab` ist im Reiter ersetzt. Spec:
+`WetterMetrikenVersandPanel` (`bereich="zustellung"`) und `AlarmeScheduleTab` ist im Reiter ersetzt (`AlarmeScheduleTab` entfernt, #3047). Spec:
 `docs/specs/modules/feat_2795_s3b_teil1_zustellung.md`. „Wetter" rendert `WeatherMetricsTab` mit
 `bereich="wetter"`; `bereich` ist nur ein Darstellungsfilter, kein neuer Speicherweg.
 

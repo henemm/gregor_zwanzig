@@ -1,0 +1,1280 @@
+{
+ "bereich": "orte_mail",
+ "zeilen": [
+  {
+   "id": "orte.grundauswahl.nie_eingestellt",
+   "kontext": "orte",
+   "einstellung": "Grundauswahl nie eingestellt (active_metrics fehlt/null)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte / weather-metrics-tab/WeatherV2Grundauswahl.svelte",
+   "gespeichert_als": "display_config.active_metrics (fehlt)",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_dump.py::test_dump[*-grund_null], tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac11_altbestand_golden[altbestand_ohne_grundauswahl], tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac21_altbestand_ausblick_klartext_gleich_html; Mutation 16 gefangen",
+     "befund": "",
+     "notiz": "Uebersicht alle ~25 Register-Zeilen, Stundenverlauf 9 Vorgabe-Spalten, Ausblick 7 feste Spalten (HTML Tmin/Tmax getrennt, Klartext als Spanne; Golden eingefroren)"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_dump.py::test_dump[*-grund_null], tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac21_altbestand_ausblick_klartext_gleich_html",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.grundauswahl.bewusst_leer",
+   "kontext": "orte",
+   "einstellung": "Grundauswahl bewusst leer (active_metrics = [])",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte / WeatherV2Grundauswahl.svelte",
+   "gespeichert_als": "display_config.active_metrics = []",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_dump.py::test_dump[*-grund_leer], tests/tdd/test_einstellung_gleich_mail_orte.py::test_n2_grundauswahl_bewusst_leer",
+     "befund": "",
+     "notiz": "keine Metrikzeile, Stundenverlauf und Ausblick entfallen (N2)"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_dump.py::test_dump[*-grund_leer], tests/tdd/test_einstellung_gleich_mail_orte.py::test_n2_grundauswahl_bewusst_leer",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.grundauswahl.liste",
+   "kontext": "orte",
+   "einstellung": "Grundauswahl als Liste (Folge Niederschlag, Boeen, Temperatur)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte / WeatherV2Grundauswahl.svelte",
+   "gespeichert_als": "display_config.active_metrics[{metric_id,aggregation}]",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_dump.py::test_dump[*-grund_liste] (alle drei Listen in dieser Folge), tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac10_grundauswahl_*; Mutation 16 gefangen (tests/tdd/test_einstellung_gleich_mail_orte.py::test_3061_*)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_dump.py::test_dump[*-grund_liste], tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac10_grundauswahl_*",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.vergleichstabelle.auswahl_reihenfolge",
+   "kontext": "orte",
+   "einstellung": "Vergleichstabelle (E-Mail-Liste): Folge und an/aus",
+   "gesetzt_in": "frontend/src/lib/components/shared/weather-metrics-tab/compareChannelMetricLayouts.ts (Liste E-Mail, Karte 'Inhalt je Kanal'; Orte-Karte siehe #3031)",
+   "gespeichert_als": "display_config.channel_layouts.email[{metric_id,enabled,use_friendly_format}] vor display_config.channel_active_metrics.email",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_vergleichstabelle_folge_formen_ortsfolge, /tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_dump.py::test_dump[*-cam_email]; Mutationen 14/18 gefangen (tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_reihenfolge_der_kanal_liste_bestimmt_zellen_und_kappung, tests/tdd/test_einstellung_gleich_mail_orte.py)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_vergleichstabelle_folge_formen_ortsfolge, tests/tdd/test_einstellung_gleich_mail_orte.py::test_vergleichstabelle_paarweise",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "einstellungsseite": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "#3031",
+     "notiz": "Orte-Editor liest channel_layouts noch nicht (PR #3042)"
+    }
+   }
+  },
+  {
+   "id": "orte.vergleichstabelle.roh_einfach",
+   "kontext": "orte",
+   "einstellung": "Vergleichstabelle: Roh/Einfach je Zeile (W11)",
+   "gesetzt_in": "compareChannelMetricLayouts.ts (Segment Roh/Einfach)",
+   "gespeichert_als": "display_config.channel_layouts.email[].use_friendly_format",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_vergleichstabelle_folge_formen_ortsfolge; Mutation 11 gefangen (tests/tdd/test_einstellung_gleich_mail_orte.py::test_vergleichstabelle_paarweise[O-VT-P12])",
+     "befund": "",
+     "notiz": "Regenwahrscheinlichkeit hat in der Tabelle keine Einfach-Form (bleibt Zahl), im Ausblick schon"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_vergleichstabelle_folge_formen_ortsfolge; Mutation 10 gefangen (tests/tdd/test_einstellung_gleich_mail_orte.py::test_vergleichstabelle_paarweise[O-VT-P13])",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "einstellungsseite": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "#3031",
+     "notiz": "PR #3042"
+    }
+   }
+  },
+  {
+   "id": "orte.vergleichstabelle.totalschnitt",
+   "kontext": "orte",
+   "einstellung": "Vergleichstabelle: Liste ∩ Grundauswahl leer -> Rueckfall Grundauswahl",
+   "gesetzt_in": "compareChannelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.email vs active_metrics",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_vergleichstabelle_totalschnitt_layout_rueckfall, tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac10_vergleichstabelle_totalschnitt",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_vergleichstabelle_totalschnitt_layout_rueckfall",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.stundenverlauf.auswahl_reihenfolge",
+   "kontext": "orte",
+   "einstellung": "Stundenverlauf: Auswahl und Folge (Regen%, Boeen, Temp)",
+   "gesetzt_in": "frontend/src/lib/components/compare/CompareHourlyLayoutControls.svelte",
+   "gespeichert_als": "display_config.hourly_metrics",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_stundenverlauf_folge_eigen, tests/tdd/test_einstellung_gleich_mail_orte.py::test_stundenverlauf_paarweise, tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac6_stundenverlauf_spalten",
+     "befund": "",
+     "notiz": "Mutation in compare_hourly_metric_ids.py bewusst nicht gesetzt (Datei in PR #3087)"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_stundenverlauf_folge_eigen",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.stundenverlauf.an_aus",
+   "kontext": "orte",
+   "einstellung": "Stundenverlauf im Briefing an/aus (WV8)",
+   "gesetzt_in": "CompareHourlyLayoutControls.svelte (Schalter)",
+   "gespeichert_als": "hourly_enabled (Top-Level)",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_dump.py::test_dump[*-hourly_aus]; Mutation 7 gefangen (tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac6_stundenverlauf_aus_und_leer[hourly_enabled_aus])",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_dump.py::test_dump[*-hourly_aus]; Mutation 7 gefangen (tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_vergleichs_mail_traegt_kennung_compare_klartext_und_stundenkennzeichen)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.stundenverlauf.gesperrt",
+   "kontext": "orte",
+   "einstellung": "Stundenverlauf: gesperrte Groessen (Sonnenstunden, WV9)",
+   "gesetzt_in": "CompareHourlyLayoutControls.svelte",
+   "gespeichert_als": "display_config.hourly_metrics (enthaelt 'sunshine')",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_wv9_sonnenstunden_gesperrt_im_stundenverlauf",
+     "befund": "",
+     "notiz": "keine Spalte, obwohl in Grundauswahl und Liste gespeichert"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_wv9_sonnenstunden_gesperrt_im_stundenverlauf",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.stundenverlauf.roh_einfach",
+   "kontext": "orte",
+   "einstellung": "Stundenverlauf: Roh/Einfach je Zeile (W11)",
+   "gesetzt_in": "CompareHourlyLayoutControls.svelte (kein Umschalter)",
+   "gespeichert_als": "kein Feld (weder Python noch Go)",
+   "zellen": {
+    "email_html": {
+     "status": "rot",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_orte.py::test_w11_darstellung_je_zeile[O-SV-H-DARST] (xfail strict)",
+     "befund": "B-OM-5",
+     "notiz": "Konzept W11 verlangt Roh/Einfach in jeder Liste; Fallliste 'offen_feature' ohne eigenes Issue"
+    },
+    "email_text": {
+     "status": "rot",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_orte.py::test_w11_darstellung_je_zeile[O-SV-K-DARST] (xfail strict)",
+     "befund": "B-OM-5",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.ausblick.auswahl_reihenfolge",
+   "kontext": "orte",
+   "einstellung": "3-Tages-Ausblick: Auswahl und Folge (Boeen, Regen%, Temp, Wind)",
+   "gesetzt_in": "frontend/src/lib/components/shared/OutlookLayoutControls.svelte",
+   "gespeichert_als": "display_config.outlook_metrics",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_ausblick_folge_und_formen_eigen, tests/tdd/test_einstellung_gleich_mail_orte.py::test_ausblick_paarweise; Mutationen 16/17 gefangen",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_ausblick_folge_und_formen_eigen; Mutation 17 gefangen (tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac10_grundauswahl_ausblick)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor (O4/AC-13 im Paket D)"
+    }
+   }
+  },
+  {
+   "id": "orte.ausblick.roh_einfach",
+   "kontext": "orte",
+   "einstellung": "3-Tages-Ausblick: Roh/Einfach je Zeile",
+   "gesetzt_in": "OutlookLayoutControls.svelte",
+   "gespeichert_als": "display_config.outlook_metric_formats {id: bool}",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_ausblick_folge_und_formen_eigen; Mutation 9 gefangen (tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac8_ausblick_roh_einfach)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_ausblick_folge_und_formen_eigen; Mutation 9 gefangen",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.ausblick.an_aus",
+   "kontext": "orte",
+   "einstellung": "3-Tages-Ausblick an/aus",
+   "gesetzt_in": "OutlookLayoutControls.svelte (Schalter)",
+   "gespeichert_als": "outlook_enabled (Top-Level)",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_dump.py::test_dump[*-outlook_aus]; Mutation 8 gefangen (tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac7_ausblick_aus_und_leer[outlook_enabled_aus])",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_dump.py::test_dump[*-outlook_aus]; Mutation 8 gefangen",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.ausblick.morgen_abend",
+   "kontext": "orte",
+   "einstellung": "3-Tages-Ausblick: erscheint im Morgen-/Abend-Briefing",
+   "gesetzt_in": "keine Einstellung im Orte-Editor (OutlookLayoutControls ohne Morgen/Abend)",
+   "gespeichert_als": "kein Feld (Trip: multi_day_trend_reports)",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "src/services/report_config_resolver.py:257 (kein Feld)",
+     "befund": "B-OM-4",
+     "notiz": "V12 ist Kontext Trip; Orte zeigen den Ausblick in beiden Briefings. §5.8 nennt 'Erscheint im Morgen/Abend' ohne Kontext -> Klaerung"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "B-OM-4",
+     "notiz": "wie HTML"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.ortsfolge",
+   "kontext": "orte",
+   "einstellung": "Reihenfolge der Orte im Preset",
+   "gesetzt_in": "frontend/src/lib/components/compare/CompareTabs.svelte (Reiter Orte)",
+   "gespeichert_als": "location_ids",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_vergleichstabelle_folge_formen_ortsfolge (Tabelle, Stundenverlauf, Ausblick); Mutationen 14/18 gefangen",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_vergleichstabelle_folge_formen_ortsfolge; Mutationen 14/18 gefangen",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.email_format",
+   "kontext": "orte",
+   "einstellung": "E-Mail-Format Ausfuehrlich/Kompakt",
+   "gesetzt_in": "MailInhaltCard.svelte (nur Trip)",
+   "gespeichert_als": "Trip: report_config.email_format; Orte: kein Feld",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: fuer Orte erst, wenn die Orts-Mail Nur-Text kann"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Klartext-Teil ist immer dabei, ist aber kein Kompaktformat"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.tagesfenster",
+   "kontext": "orte",
+   "einstellung": "Tagesfenster von-bis (W12, ADR-0035), inkl. ueber Mitternacht",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/AnpassenKarte.svelte",
+   "gespeichert_als": "day_window_start_hour, day_window_end_hour (Top-Level)",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_tagesfenster, /tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_tagesfenster_ueber_mitternacht (echte Engine)",
+     "befund": "B-OM-6",
+     "notiz": "Mutation 1 nur ausserhalb des #3047-Katalogs gefangen (test_compare_dispatch_fixed_window.py, test_compare_alert_day_window.py)"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_tagesfenster, /tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_tagesfenster_ueber_mitternacht",
+     "befund": "B-OM-6",
+     "notiz": "wie HTML (Katalog-Luecke)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.amtliche_warnungen.schalter",
+   "kontext": "orte",
+   "einstellung": "Amtliche Warnungen an/aus",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Snippet officialAlertsToggle)",
+   "gespeichert_als": "official_alerts_enabled (Top-Level)",
+   "zellen": {
+    "email_html": {
+     "status": "rot",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_amtliche_warnungen_schalter_und_erste_zeile[de-False|en-False]",
+     "befund": "B-OM-2",
+     "notiz": "aus: kein Abruf (richtig), aber Zeile 'Amtliche Warnungen – – –' bleibt; Mutation 2 nur ueber test_issue_1040_alerts_toggle.py gefangen (B-OM-6)"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_amtliche_warnungen_schalter_und_erste_zeile, /tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_zwei_nutzer_tagesfenster_und_warnschalter",
+     "befund": "B-OM-6",
+     "notiz": "Mutation 2 nur ueber test_issue_1040_alerts_toggle.py (Durchreichung an die Engine) gefangen"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.amtliche_warnungen.erste_zeile",
+   "kontext": "orte",
+   "einstellung": "Amtliche Warnungen stehen immer zuerst (WV6)",
+   "gesetzt_in": "fest (keine Einstellung)",
+   "gespeichert_als": "-",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_amtliche_warnungen_schalter_und_erste_zeile[*-True]; Mutation 3 gefangen (tests/tdd/test_einstellung_gleich_mail_orte.py::test_wv6_amtliche_warnung_zuerst_html)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_amtliche_warnungen_schalter_und_erste_zeile[*-True]; Mutation 4 gefangen (tests/tdd/test_einstellung_gleich_mail_orte.py::test_wv6_amtliche_warnung_zuerst_klartext)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.amtliche_warnungen.nicht_abrufbar",
+   "kontext": "orte",
+   "einstellung": "Hinweis 'Warnungen aktuell nicht abrufbar' (Warndienst-Ausfall)",
+   "gesetzt_in": "fest (keine Einstellung, Folge des Schalters an)",
+   "gespeichert_als": "LocationResult.official_alerts_unavailable",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_befund_om1_* (Vorbedingung HTML); Mutation 6 nur ueber Golden gefangen (tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac11_altbestand_golden)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "rot",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_befund_om1_klartext_ohne_hinweis_warnungen_nicht_abrufbar",
+     "befund": "B-OM-1",
+     "notiz": "Klartext derselben Mail ohne Hinweis (Trip-Klartext hat ihn, plain.py:86)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.sprache",
+   "kontext": "orte",
+   "einstellung": "Sprache DE/EN",
+   "gesetzt_in": "frontend/src/lib/components/account/SpracheAuswahl.svelte",
+   "gespeichert_als": "user.json language",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_vergleichstabelle_zwei_nutzer_en_und_de, /tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_amtliche_warnungen_schalter_und_erste_zeile[en-*], tests/tdd/test_einstellung_gleich_mail_orte.py::test_orte_koepfe_in_nutzersprache_en",
+     "befund": "B-OM-6",
+     "notiz": "Reste 'ORT', 'Risk' -> ausgelagert #3074; Mutation 15 nur ueber tests/test_amtliche_warnungen_zweisprachig.py gefangen"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_vergleichstabelle_zwei_nutzer_en_und_de",
+     "befund": "B-OM-6",
+     "notiz": "Mutation 15 nur ueber tests/test_amtliche_warnungen_zweisprachig.py gefangen, nicht vom Katalog"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.vorlage_im_kopf",
+   "kontext": "orte",
+   "einstellung": "Vorlage ersetzt Profil im Mail-Kopf (K3b, ADR-0108)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Vorlage-Karte '01 Profil')",
+   "gespeichert_als": "display_config.ampel.template bzw. display_config.preset_name; Alt: profil",
+   "zellen": {
+    "email_html": {
+     "status": "rot",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_befund_om3_k3b_kopf_und_fuss_zeigen_vorlage",
+     "befund": "B-OM-3",
+     "notiz": "Kopfzelle 'Profil' = Vorlage, Eyebrow 'ORTS-VERGLEICH · <profil>' und Abo-Fuss 'Profil <profil>' = altes profil; Scope #2796 offen"
+    },
+    "email_text": {
+     "status": "rot",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_dump.py::test_dump[de-vorlage] (out/vorlage.de.txt)",
+     "befund": "B-OM-3",
+     "notiz": "Klartext-Kopf nennt weder Vorlage noch Profil"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Mail-only-Flaeche (Konzept §5.8: Liste der E-Mail bzw. Tabelle unter der Vergleichstabelle; Telegram/SMS haben eigene Listen, Premium-SMS sendet den SMS-Text, ADR-0049)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.morgen_abend_briefing",
+   "kontext": "orte",
+   "einstellung": "Morgen-Briefing = heute, Abend-Briefing = morgen (V8)",
+   "gesetzt_in": "frontend/src/lib/components/shared/versand-tab/VTSchedulePlan.svelte",
+   "gespeichert_als": "morning_enabled/morning_time, evening_enabled/evening_time",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_morgen_abend[False|True] (Betreff, Datum, Ausblick ab Folgetag)",
+     "befund": "B-OM-6",
+     "notiz": "Mutation 13 nur ueber test_compare_html_email.py::test_ac5_html_behaelt_datum_und_wochentag gefangen, Abend-Fall im Katalog fehlt"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_morgen_abend",
+     "befund": "B-OM-6",
+     "notiz": "Mutation 12 nur ueber test_vergleichsmail_kopfzeile_wochentag_deutsch.py / Golden gefangen"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.zwei_nutzer",
+   "kontext": "orte",
+   "einstellung": "Mandantentrennung: zwei Nutzer, eigene Listen/Empfaenger",
+   "gesetzt_in": "-",
+   "gespeichert_als": "data/users/<uid>/compare_presets",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_vergleichstabelle_zwei_nutzer_en_und_de, /tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_echt.py::test_zwei_nutzer_tagesfenster_und_warnschalter, tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac12_zwei_nutzer",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "/tmp/claude-0/-home-user-gregor-zwanzig/8fd24bbd-2477-52fc-adc3-e2681826a5f8/scratchpad/inventar/orte_mail/test_probe_befunde.py::test_vergleichstabelle_zwei_nutzer_en_und_de, tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac12_zwei_nutzer",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.altbestand",
+   "kontext": "orte",
+   "einstellung": "Altbestand ohne neue Felder (byte-gleich Golden)",
+   "gesetzt_in": "-",
+   "gespeichert_als": "Preset ohne channel_layouts/hourly_metrics/outlook_metrics/outlook_metric_formats",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac11_altbestand_golden (faengt Mutationen 3, 5, 6)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_orte.py::test_ac11_altbestand_golden",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:39",
+     "befund": "",
+     "notiz": "Konzept §5.8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann'. Ist: Orts-Mail immer multipart HTML+Klartext, kein email_format fuer Orte, Editor zeigt die Karte nur bei context=route"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich kanaele/editor"
+    }
+   }
+  }
+ ]
+}

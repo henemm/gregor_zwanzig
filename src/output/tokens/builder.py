@@ -48,7 +48,9 @@ def _sanitize_stage_name(name: str) -> str:
     return name[:10].strip().rstrip(":")
 
 
-# Truncation priority §6: lower drops first.
+# Truncation priority §6: lower drops first. Seit #3047 Runde 7 (AC-23) liest
+# render.py sie nur noch fuer die amtlichen Bausteine (fire/vigilance/
+# official_alert); Listen-Token fallen vom Listenende her.
 PRIORITY = {
     # Issue #1435 E3b: Schnee-Kuerzel folgen dem Wetter-Register
     # (SL/NS24+/SD statt SFL/SN24+/SN) -- 'SN' bezeichnet ausschliesslich die
@@ -81,8 +83,8 @@ PRIORITY = {
 OFFICIAL_ALERT_PRIORITY = 11
 
 # Issue #1349: "amtliche Warnungen nicht abrufbar" — sicherheitsrelevant,
-# darf unter Truncation-Druck nie wegfallen (ausserhalb DROP_ORDER/
-# _last_resort in render.py; Prioritaet hier nur dokumentarisch >= 11).
+# darf unter Truncation-Druck nie wegfallen (weder Listen- noch amtlicher
+# Baustein in render.py; Prioritaet hier nur dokumentarisch >= 11).
 # Issue #1703 Scheibe 6 (AC-S6-6): war zuvor "W?" -- bytegleiche Kollision
 # mit dem Wind-Datenausfall-Marker (Symbol "W" + Gap-Wert "?" ueber
 # _gap_or(), siehe Token.render()). Auf "X?" geaendert, weil beide Zustaende
@@ -642,6 +644,12 @@ def build_token_line(
         return (1, fallback)
 
     tokens.sort(key=_sort_key)
+    # #3047 Runde 7 (AC-23): Listenplatz am Token vermerken -- die Kuerzung
+    # (render.py) laesst ganze Zeilen vom Listenende her fallen.
+    tokens = [
+        replace(t, list_position=k[1]) if (k := _sort_key(t))[0] == 0 else t
+        for t in tokens
+    ]
     return TokenLine(
         stage_name=_sanitize_stage_name(stage_name), report_type=report_type,
         tokens=tuple(tokens), truncated=False, full_length=0,

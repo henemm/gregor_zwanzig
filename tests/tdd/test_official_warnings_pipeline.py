@@ -271,6 +271,9 @@ class TestAC6PipelinePrefersNewFieldOverLegacy:
                 id="trip-ac6-conflict", name="Konflikt-Trip", stages=[_stage()],
                 official_warnings={"enabled": False},
                 official_alert_triggers_enabled=True,
+                # #3047 E4 (PO 2026-11-16): Briefing ODER Alarm an -> beides an;
+                # das neue Feld wirkt als „aus" nur mit Briefing-Schalter aus.
+                official_alerts_enabled=False,
             )
             trip.report_config = TripReportConfig(trip_id=trip.id, send_email=True)
             _save_cached(user_id, trip.id)
@@ -361,6 +364,7 @@ class TestAC6PipelinePrefersNewFieldOverLegacy:
                 id="trip-ac6-f003-empty", name="Leeres-Objekt-Trip", stages=[_stage()],
                 official_warnings={},
                 official_alert_triggers_enabled=False,
+                official_alerts_enabled=False,  # #3047 E4: „aus" = beide aus
             )
             trip.report_config = TripReportConfig(trip_id=trip.id, send_email=True)
             _save_cached(user_id, trip.id)

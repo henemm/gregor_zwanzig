@@ -249,11 +249,12 @@ describe('AC-7: buildCreateTripPayload — vollständiger POST-Payload, kein Dat
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('initialCreateTripAlarmState — Startwert des Alarm-Schatten-States', () => {
-	test('officialWarningsEnabled startet mit false — NICHT dem route-Bestands-Default true (AC-4)', () => {
+	// Umgestellt #3047 Runde 7 (PO 2026-11-16 „Amtliche Warnungen Neuanlage“, loest #1258 AC-4 ab).
+	test('officialWarningsEnabled startet mit true — neue Trips: Warnungen im Briefing UND als Alarm', () => {
 		// Bewusst der ECHTE Aufruf, kein Hand-Literal (AC-4-Testrezept): eine
 		// Mutation am produktiven Default muss GENAU hier auffallen.
 		const s = tripNewLogicNs.initialCreateTripAlarmState!();
-		assert.equal(s.officialWarningsEnabled, false);
+		assert.equal(s.officialWarningsEnabled, true);
 	});
 
 	test('channels/channelThresholds kommen aus denselben geteilten Default-Funktionen wie AlarmeTab.svelte', () => {

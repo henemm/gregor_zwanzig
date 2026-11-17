@@ -27,6 +27,7 @@ fuer die Implementierung vorschreibt (`get_sms_code`, `_metric_value`,
 """
 from __future__ import annotations
 
+import dataclasses
 import re
 from datetime import date, datetime
 
@@ -322,28 +323,37 @@ def test_metric_overflow_and_location_overflow_are_both_present_and_distinguisha
     cells = [c for c in (_sms_cell_text(loc_a, mid) for mid in enabled) if c is not None]
     assert len(cells) == len(enabled), "Testaufbau defekt (s. AC-3-Zwilling)"
 
-    sms = render_compare_sms(_result([loc_a, loc_b]), enabled_metrics=enabled)
+    # #3047 Runde 7 p8 (AC-23, Tech-Lead-Entscheidung ADR-0095): zwei Orte
+    # passen jetzt beide (ihre Zellen werden zuerst gekuerzt). Der Orts-
+    # Ueberlauf braucht deshalb so viele Orte, dass selbst ihre erste
+    # Listenzeile nicht mehr fuer alle reicht: Zermatt plus sieben weitere.
+    weitere = [
+        dataclasses.replace(loc_b, location=_loc(f"b{i}", f"{name_b} Gornergrat {i}"))
+        for i in range(7)
+    ]
+    sms = render_compare_sms(_result([loc_a, loc_b, *weitere]), enabled_metrics=enabled)
 
     assert len(sms) <= SMS_LIMIT, (
         f"SMS-Budget verletzt: {len(sms)} Zeichen ({sms!r})."
     )
 
-    # Der zweite Ort muss vollstaendig entfallen sein -- sonst greift dieser
+    # Der letzte Ort muss vollstaendig entfallen sein -- sonst greift dieser
     # Test den Doppel-Ueberlauf-Fall nicht (Testaufbau-Guard).
-    assert name_b not in sms, (
-        f"Testaufbau defekt: {name_b!r} erscheint noch in der SMS -- kein "
+    assert weitere[-1].location.name not in sms, (
+        f"Testaufbau defekt: der letzte Ort erscheint noch in der SMS -- kein "
         f"Orts-Ueberlauf ausgeloest. SMS: {sms!r}"
     )
 
-    # Orts-Ueberlauf: EIN Ort entfallen, mit Wortzusatz "Orte" am Nachrichtenende.
+    # Orts-Ueberlauf mit Wortzusatz "Orte" am Nachrichtenende; er zaehlt genau
+    # die nicht gezeigten Orte.
     location_overflow = re.search(r" \+(\d+) Orte$", sms)
     assert location_overflow is not None, (
         f"Kein wortbasierter Orts-Ueberlauf-Hinweis (' +k Orte') am "
         f"Nachrichtenende gefunden: {sms!r}"
     )
-    assert int(location_overflow.group(1)) == 1, (
-        f"Orts-Ueberlauf muss genau 1 (Zermatt) zaehlen, war "
-        f"{location_overflow.group(1)}: {sms!r}"
+    gezeigt = sms[:location_overflow.start()].split(": ", 1)[1].split("; ")
+    assert len(gezeigt) + int(location_overflow.group(1)) == 9, (
+        f"Orts-Ueberlauf zaehlt falsch: {sms!r}"
     )
 
     # Metrik-Ueberlauf: der ERSTE (einzige gezeigte) Ortsteil ist ein
@@ -351,8 +361,8 @@ def test_metric_overflow_and_location_overflow_are_both_present_and_distinguisha
     # Zellenliste (identischer Nachweis wie AC-3) -- OHNE den Orts-Ueberlauf-
     # Zusatz, der separat am Nachrichtenende steht (deshalb bis
     # `location_overflow.start()` geschnitten, nicht bis Stringende).
-    name_a_idx = sms.index(name_a)
-    part = sms[name_a_idx:location_overflow.start()]
+    part = gezeigt[0]
+    assert part.startswith(name_a), sms
     candidates = _valid_prefix_candidates(name_a, cells)
     assert part in candidates, (
         f"Ortsteil {part!r} (nach Abzug des Orts-Ueberlauf-Zusatzes) ist "

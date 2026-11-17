@@ -25,7 +25,7 @@
 	import NichtImBriefing from './NichtImBriefing.svelte';
 	import WarnungenRadarKarte from './WarnungenRadarKarte.svelte';
 	import AnpassenKarte from './AnpassenKarte.svelte';
-	import { alarmZaehler, altSchluesselAusKatalog, briefingAngebot, eigeneVorlageAmpel, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
+	import { alarmZaehler, altSchluesselAusKatalog, ausgebbarTeilen, briefingAngebot, eigeneVorlageAmpel, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
 	import type { AlarmAb, AltSchluessel, Farbe, Kontext } from '../../shared/wetter-tab/ampelModell.ts';
 	import { ladeWetterDaten, type WetterDaten } from '../../shared/wetter-tab/wetterTabLaden.ts';
 	import { SPEICHERER, anlegeSpeicherer, type SpeicherOptionen } from '../../shared/wetter-tab/wetterTabSpeicherung.ts';
@@ -101,7 +101,7 @@
 			katalogIds = new Set(katalog.flatMap((e) => (e.metric_id ? [e.metric_id] : [])));
 			daten = d;
 			if (!stand) {
-				stand = Z.standAusAbo(context, abo(), d.vorlagen, altSchluessel);
+				stand = Z.standAusAbo(context, abo(), d.vorlagen, altSchluessel, { eig: d.eig, alsVorlage: createMode });
 				gemeldet = signatur(stand);
 				if (createMode) melden();
 			}
@@ -124,7 +124,7 @@
 	}
 	function neuGeladen(frisch: Z.AboSicht): void {
 		if (!daten) return;
-		stand = Z.standAusAbo(context, frisch, daten.vorlagen, altSchluessel);
+		stand = Z.standAusAbo(context, frisch, daten.vorlagen, altSchluessel, { eig: daten.eig });
 		gemeldet = signatur(stand);
 		offen = null;
 		entwurf = null;
@@ -170,7 +170,7 @@
 		aendern(Z.ohneMetrik(stand!, id));
 	}
 	function hinzufuegen(id: string): void {
-		aendern(Z.mitMetrik(stand!, id));
+		aendern(Z.mitMetrik(stand!, id, context));
 		hinzu = name(id);
 	}
 	function vorlageSetzen(neu: Z.WetterStand): void {
@@ -181,7 +181,7 @@
 	}
 	function eigeneUebernehmen(id: string): void {
 		const e = daten!.eigene.find((x) => x.id === id);
-		if (e) vorlageSetzen(Z.mitEigenerVorlage(stand!, e.ampel, daten!.vorlagen));
+		if (e) vorlageSetzen(Z.mitEigenerVorlage(stand!, e.ampel, daten!.vorlagen, context, altSchluessel));
 	}
 	function vorlageGespeichert(p: MetricPreset): void {
 		if (!daten) return;
@@ -196,10 +196,13 @@
 
 	const anzeige = $derived(stand ? Z.mitEntwurf(stand, entwurf, true) : null);
 	const vorlagen = $derived(daten?.vorlagen ?? {});
-	const abweichungen = $derived(anzeige && daten ? Z.abweichungenVon(anzeige, vorlagen) : 0);
+	const abweichungen = $derived(anzeige && daten ? Z.abweichungenVon(anzeige, vorlagen, context) : 0);
 	const anzeigeMenge = $derived(anzeige && daten ? Z.mengeVon(anzeige, vorlagen) : null);
-	const gruppen = $derived(anzeige && daten ? zeilenGruppen(anzeige.auswahl, daten.eig) : []);
-	const zaehler = $derived(anzeige && daten ? alarmZaehler(anzeige.ampel, anzeige.auswahl, daten.eig) : null);
+	// #3047 E6: nur ausgebbare Groessen sind Zeilen; gespeicherte, nicht ausgebbare stehen gesperrt mit Grund.
+	const teile = $derived(anzeige ? ausgebbarTeilen(context, anzeige.auswahl, katalogIds) : { zeilen: [], gesperrt: [] });
+	const gruppen = $derived(anzeige && daten ? zeilenGruppen(teile.zeilen, daten.eig) : []);
+	const zaehler = $derived(anzeige && daten ? alarmZaehler(anzeige.ampel, teile.zeilen, daten.eig) : null);
+	const gesperrt = $derived(teile.gesperrt.map((id) => ({ id, name: name(id) })));
 	const nichtIm = $derived(
 		anzeige && daten
 			? briefingAngebot(context, daten.eig, anzeige.auswahl, katalogIds).map((id) => ({ id, name: name(id) }))
@@ -243,9 +246,9 @@
 			{abweichungen}
 			metrikName={name}
 			{aboAmpel}
-			onUebernehmen={(id) => vorlageSetzen(Z.mitVorlage(stand!, id, vorlagen))}
+			onUebernehmen={(id) => vorlageSetzen(Z.mitVorlage(stand!, id, vorlagen, context, altSchluessel))}
 			onEigene={eigeneUebernehmen}
-			onZuruecksetzen={() => vorlageSetzen(Z.mitVorlage(stand!, stand!.vorlageId, vorlagen))}
+			onZuruecksetzen={() => vorlageSetzen(Z.mitVorlage(stand!, stand!.vorlageId, vorlagen, context, altSchluessel))}
 			onGespeichert={vorlageGespeichert}
 		/>
 		<div class="wt-karte wt-metriken" data-abschnitt="metriken">
@@ -273,7 +276,7 @@
 					{/each}
 				</div>
 			{/each}
-			<NichtImBriefing metriken={nichtIm} hinzugefuegt={hinzu} onHinzufuegen={hinzufuegen} />
+			<NichtImBriefing metriken={nichtIm} {gesperrt} hinzugefuegt={hinzu} onHinzufuegen={hinzufuegen} />
 		</div>
 		<WarnungenRadarKarte
 			warnungenAn={stand.warnungenAn}

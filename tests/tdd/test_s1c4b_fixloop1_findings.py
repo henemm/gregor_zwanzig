@@ -372,7 +372,11 @@ def test_telegram_untere_haelfte_wind_traegt_stunde_bei_wassersport(reihenfolge)
     for vorlage in reihenfolge:
         w = _kurzuebersicht(vorlage, je, "wind")["W"]
         if vorlage == "wassersport":
-            assert w == "3@08-15", w
+            # Spec-Nachtrag Runde 7 #3047 (B-L1, ADR-0035/0095): die
+            # Kurzuebersicht bewertet im Tagesfenster 04-19 wie SMS/Mail --
+            # das erste 3-km/h-Minimum liegt dort um 04, nicht mehr am
+            # Gehzeit-Beginn 08 (Scheibenregel #1498 abgeloest).
+            assert w == "3@04-15", w
         else:
             assert w == "3-15", w
 

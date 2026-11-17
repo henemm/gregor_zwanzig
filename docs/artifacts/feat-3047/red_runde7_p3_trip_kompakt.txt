@@ -1,0 +1,36 @@
+# #3047 Runde 7, Paket p3_trip_kompakt: RED-Nachweis
+# Lauf vor dem Fix in src/output/renderers/email/compact.py (Basis 5cbf1d5):
+#   uv run pytest tests/tdd/test_kompakt_mail_schalter_runde7.py -q
+
+## B-TM1 (WV6): amtliche Warnung steht im Kompaktformat hinter dem Metriken-Ueberblick
+E       AssertionError: morning/de: erster Block ist '== Metriken-Ueberblick ==' (Zeile 6), die Warnung steht erst in Zeile 12; WV6: immer zuerst
+E       AssertionError: morning/en: erster Block ist '== Metrics overview ==' (Zeile 6), die Warnung steht erst in Zeile 12; WV6: immer zuerst
+E       AssertionError: evening/de: erster Block ist '== Metriken-Ueberblick ==' (Zeile 6), die Warnung steht erst in Zeile 12; WV6: immer zuerst
+E       AssertionError: evening/en: erster Block ist '== Metrics overview ==' (Zeile 6), die Warnung steht erst in Zeile 12; WV6: immer zuerst
+FAILED tests/tdd/test_kompakt_mail_schalter_runde7.py::test_kompakt_amtliche_warnung_vor_jedem_inhaltsblock[morning-de]
+FAILED tests/tdd/test_kompakt_mail_schalter_runde7.py::test_kompakt_amtliche_warnung_vor_jedem_inhaltsblock[morning-en]
+FAILED tests/tdd/test_kompakt_mail_schalter_runde7.py::test_kompakt_amtliche_warnung_vor_jedem_inhaltsblock[evening-de]
+FAILED tests/tdd/test_kompakt_mail_schalter_runde7.py::test_kompakt_amtliche_warnung_vor_jedem_inhaltsblock[evening-en]
+Nach dem Fix: alle Faelle der Datei gruen.
+
+## B-P1 / B-P2: kein Fehler
+Kompakt ignoriert show_stage_stats/show_outlook/show_yesterday_comparison laut PO-Entscheidung #722
+(docs/specs/modules/issue_722_email_compact_format.md); der Editor sperrt die Schalter bei Kompakt.
+Statt eines Fixes sichern test_kompakt_gesperrte_schalter_aendern_die_mail_nicht und
+test_zwei_nutzer_kompakt_und_ausfuehrlich, dass Mail und Editor-Sperre zusammenpassen.
+
+## B-TM3 / B-TM4 / B-OM-6: Katalog-Luecken (Verhalten im Ist korrekt)
+tests/tdd/test_einstellung_gleich_mail_runde7_katalog.py ist im Ist gruen; der Rot-Nachweis ist die
+Mutationsprobe (String-Ersetzung, Sicherung extern, Byte-Vergleich nach jedem Lauf):
+FIX-WV6      Kompakt-Warnblock entfernt                      gefangen (4)
+FIX-WV6-ORT  Warnblock hinter den Ueberblick (= vor Fix)     gefangen (4)
+trip-M1      Erscheint im (multi_day_trend_reports) ignoriert gefangen (10)
+trip-M5      Tagesfenster ignoriert                           gefangen (3)
+trip-M6      W20 Schalter amtliche Warnungen ignoriert (B-TM3) gefangen (5)
+trip-M13     Loader verwirft multi_day_trend_reports          gefangen (8)
+orte-M1      Tagesfenster ignoriert                           gefangen (2)
+orte-M2      Warn-Schalter ignoriert                          gefangen (3)
+orte-M12     Klartext-Datum = Erstellungstag                  gefangen (1)
+orte-M13     HTML-Kopf-Datum = Erstellungstag                 gefangen (1)
+orte-M15     Klartext-Warnzeile immer deutsch                 gefangen (1)
+Summe: 11/11 gefangen

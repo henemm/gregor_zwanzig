@@ -907,6 +907,22 @@ def _coerce_metric_entry(entry: Any) -> Any:
     return entry
 
 
+def _gueltige_metrik_eintraege(eintraege: List[Any], owner_id: str = "") -> List[Dict[str, Any]]:
+    """Issue #3047 E3: ``_coerce_metric_entry`` je Eintrag; ein Eintrag ohne
+    gueltige ``metric_id`` (z. B. eine frueher im Browser gespreizte
+    Zeichenkette ``{"0": "w", ...}``) traegt keine Groesse und wird mit
+    Warnung verworfen -- nur er, nicht der ganze Trip (sonst fielen Briefings
+    und Alarme still weg). Go weist solche Eintraege beim Schreiben ab."""
+    gueltig = []
+    for roh in eintraege:
+        mc = _coerce_metric_entry(roh)
+        if isinstance(mc, dict) and isinstance(mc.get("metric_id"), str) and mc["metric_id"]:
+            gueltig.append(mc)
+        else:
+            logger.warning("Verwerfe Metrik-Eintrag ohne metric_id (Nutzer %s): %r", owner_id, roh)
+    return gueltig
+
+
 # Issue #1484/#1660 A/#1728 S1/S3 — Bestands-Ableitung abgeleiteter Groessen:
 # (Kennung, Elterngroesse, geforderte Auswertung der Eltern | None).
 # Seit #1728 S3 (DEC-1) ist ``MetricConfig.aggregations`` abgeschafft; die
@@ -1007,7 +1023,7 @@ def _parse_display_config(
     register_standard = trip_standard_bei_leer and not data.get("metrics")
     if register_standard:
         data = {**data, "metrics": _register_standard_metrics()}
-    raw_metrics = [_coerce_metric_entry(m) for m in (data.get("metrics") or [])]
+    raw_metrics = _gueltige_metrik_eintraege(data.get("metrics") or [], owner_id)
     # Issue #360 (F002): bucket/order pro Metrik aufloesen. auto_distribute wird
     # IMMER auf die aktiven Metrik-IDs angewandt, damit auch teil-migrierte
     # Configs (eine Metrik hat bucket/order, andere nicht) korrekt sind:

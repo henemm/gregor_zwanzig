@@ -1,0 +1,139 @@
+# #3047 Runde 7, Paket p5c (Nachgaenge p5a: Kind-Ableitung Vorlage/+, Hub-Uebersicht-Zahl, Orte nie eingestellt Abwahl): RED-Lauf vor dem Fix
+# Produktcode = Stand 7066557 (p5a enthalten, vor p5c); Test frontend/src/lib/components/shared/wetter-tab/__tests__/p5c_ableitung_hub_orte_ausgabe.test.ts
+# Befehl: cd frontend && npm test -- src/lib/components/shared/wetter-tab/__tests__/p5c_ableitung_hub_orte_ausgabe.test.ts
+
+    not ok 1 - anlegen_allgemein_mail_spalten_wie_vor_p5a
+    not ok 3 - anlegen_alpen-trekking_mail_spalten_wie_vor_p5a
+    not ok 5 - vorlage_uebernehmen_mail_wie_vor_p5a_und_anzeige_gleich_mail
+    not ok 6 - plus_elter_bringt_abgeleitete_kinder_wie_vor_p5a
+not ok 1 - p5c-1 Anlegen aus Vorlage: Kind-Groessen wie Python abgeleitet, Ausgabe wie vor p5a
+    not ok 1 - trip_alarmzeile_a_nie_eingestellt
+    not ok 2 - trip_alarmzeile_b_nie_eingestellt_alpen
+    not ok 3 - orte_karte_wetter_a_nie_eingestellt
+    not ok 4 - orte_karte_wetter_b_vorlage_alpen_ohne_liste
+    not ok 5 - orte_karte_wetter_a_mit_nacht_tief
+    not ok 6 - orte_karte_ohne_katalog_keine_geratene_zahl
+not ok 3 - p5c-2 Hub-Uebersicht: Zahl der Uebersicht = Zahl der Ausgabe
+    not ok 1 - orte_a_uv_weg_uebrige_zeilen_bleiben
+    not ok 2 - orte_b_wind_weg_vorlage_alpen_uebrige_zeilen_bleiben
+not ok 4 - p5c-3 Orte nie eingestellt: Abwahl entfernt nur die Zeilen dieser Groesse
+# tests 17
+# pass 5
+# fail 12
+
+# Auszuege der Abweichungen (actual = nach Speichern/Uebersicht, expected = Ausgabe vor p5a bzw. Mail):
+    not ok 1 - anlegen_allgemein_mail_spalten_wie_vor_p5a
+        -   'temperature_day_high',
+        -   'temperature_day_low',
+        -   'temperature_night',
+      expected:
+      actual:
+    not ok 3 - anlegen_alpen-trekking_mail_spalten_wie_vor_p5a
+        -   'temperature_day_high',
+        -   'temperature_day_low',
+        -   'wind_chill_day_high',
+        -   'wind_chill_day_low',
+        -   'wind_chill_night'
+      expected:
+      actual:
+    not ok 5 - vorlage_uebernehmen_mail_wie_vor_p5a_und_anzeige_gleich_mail
+        -   'temperature_day_high',
+        -   'temperature_day_low',
+      expected:
+      actual:
+    not ok 6 - plus_elter_bringt_abgeleitete_kinder_wie_vor_p5a
+        -   'temperature_day_high',
+        -   'temperature_day_low',
+        -   'temperature_night',
+        -   'wind_chill_day_high',
+        -   'wind_chill_day_low',
+        -   'wind_chill_night'
+      expected:
+      actual:
+not ok 1 - p5c-1 Anlegen aus Vorlage: Kind-Groessen wie Python abgeleitet, Ausgabe wie vor p5a
+    not ok 1 - trip_alarmzeile_a_nie_eingestellt
+        + '5 von 5 Metriken lösen einen Alarm aus. 3 können keinen auslösen (Vorboten und reine Anzeige).'
+        - '7 von 7 Metriken lösen einen Alarm aus. 2 können keinen auslösen (Vorboten und reine Anzeige).'
+      expected: '7 von 7 Metriken lösen einen Alarm aus. 2 können keinen auslösen (Vorboten und reine Anzeige).'
+      actual: '5 von 5 Metriken lösen einen Alarm aus. 3 können keinen auslösen (Vorboten und reine Anzeige).'
+    not ok 2 - trip_alarmzeile_b_nie_eingestellt_alpen
+        + '9 von 10 Metriken lösen einen Alarm aus. 4 können keinen auslösen (Vorboten und reine Anzeige).'
+        - '7 von 7 Metriken lösen einen Alarm aus. 2 können keinen auslösen (Vorboten und reine Anzeige).'
+      expected: '7 von 7 Metriken lösen einen Alarm aus. 2 können keinen auslösen (Vorboten und reine Anzeige).'
+      actual: '9 von 10 Metriken lösen einen Alarm aus. 4 können keinen auslösen (Vorboten und reine Anzeige).'
+    not ok 3 - orte_karte_wetter_a_nie_eingestellt
+        + '11 Metriken im Briefing'
+        - '23 Metriken im Briefing'
+      expected: '23 Metriken im Briefing'
+      actual: '11 Metriken im Briefing'
+    not ok 4 - orte_karte_wetter_b_vorlage_alpen_ohne_liste
+        + '14 Metriken im Briefing'
+        - '23 Metriken im Briefing'
+      expected: '23 Metriken im Briefing'
+      actual: '14 Metriken im Briefing'
+    not ok 5 - orte_karte_wetter_a_mit_nacht_tief
+        + '2 Metriken im Briefing'
+        - '1 Metrik im Briefing'
+      expected: '1 Metrik im Briefing'
+      actual: '2 Metriken im Briefing'
+    not ok 6 - orte_karte_ohne_katalog_keine_geratene_zahl
+        + '11 Metriken im Briefing'
+        - '—'
+      expected: '—'
+      actual: '11 Metriken im Briefing'
+not ok 3 - p5c-2 Hub-Uebersicht: Zahl der Uebersicht = Zahl der Ausgabe
+    not ok 1 - orte_a_uv_weg_uebrige_zeilen_bleiben
+        +   'snow_depth_cm',
+        +   'snow_new_sum_cm',
+        +   'sunny_hours_h',
+        -   'temp_max_c',
+        +   'cloud_avg_pct',
+        +   'visibility_min_m',
+        +   'temp_max_c',
+        -   'pop_max_pct',
+        -   'sunny_hours_h',
+        -   'cloud_avg_pct',
+        -   'visibility_min_m',
+        -   'snow_depth_cm',
+        -   'snow_new_sum_cm',
+        -   'temp_min_c',
+        +   'pop_max_pct',
+        +   'humidity_avg_pct',
+        +   'dewpoint_avg_c',
+        +   'snowfall_limit_m',
+        +   'precip_type_dominant',
+        -   'wind_chill_max_c',
+        -   'humidity_avg_pct',
+        -   'dewpoint_avg_c',
+        -   'precip_type_dominant',
+        -   'snowfall_limit_m'
+      expected:
+      actual:
+    not ok 2 - orte_b_wind_weg_vorlage_alpen_uebrige_zeilen_bleiben
+        +   'snow_depth_cm',
+        +   'snow_new_sum_cm',
+        -   'temp_max_c',
+        -   'precip_sum_mm',
+        -   'pop_max_pct',
+        -   'thunder_level_max',
+        +   'visibility_min_m',
+        +   'precip_sum_mm',
+        +   'temp_max_c',
+        +   'thunder_level_max',
+        -   'visibility_min_m',
+        -   'snow_depth_cm',
+        -   'snow_new_sum_cm',
+        -   'temp_min_c',
+        +   'pop_max_pct',
+        +   'humidity_avg_pct',
+        +   'dewpoint_avg_c',
+        +   'snowfall_limit_m',
+        +   'precip_type_dominant',
+        -   'wind_chill_max_c',
+        -   'humidity_avg_pct',
+        -   'dewpoint_avg_c',
+        -   'precip_type_dominant',
+        -   'snowfall_limit_m'
+      expected:
+      actual:
+not ok 4 - p5c-3 Orte nie eingestellt: Abwahl entfernt nur die Zeilen dieser Groesse

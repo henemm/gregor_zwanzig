@@ -12,14 +12,19 @@ import { amtlicheWarnungenAn, type WarnFelder } from './amtlicheWarnungen.ts';
 import { abweichungsMenge } from './ampelSchreiben.ts';
 import { klon } from './klon.ts';
 import {
+	aktiveMetriken,
 	alarmAbFuerAlle,
+	ausgebbarTeilen,
+	AUSWAHL_ABLEITUNG,
 	auswahlLesen,
+	vergleichsKatalogIds,
 	verschmelzen,
 	zaehleAbweichungenGegen,
 	zuruecksetzen,
 	STANDARD_VORLAGE,
 	type AlarmAb,
 	type AltSchluessel,
+	type AuswahlQuellen,
 	type Kontext,
 	type MetrikEigenschaften,
 	type VorlagenAmpeln
@@ -45,8 +50,9 @@ export type AboSicht = Record<string, unknown> & {
 
 const STANDARD_FENSTER: Tagesfenster = { start: 4, end: 19 };
 
-function zahl(x: unknown, ersatz: number): number {
-	return typeof x === 'number' && Number.isFinite(x) ? x : ersatz;
+/** Gueltige Stunde wie Python (`type(x) is int`, 0-23). */
+function stunde(x: unknown): x is number {
+	return typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= 23;
 }
 
 /** Wo das Tagesfenster am Abo steht: Trip `report_config.day_window_*`, Orte top-level (Datenfluss). */
@@ -55,26 +61,42 @@ const FENSTER_QUELLE: Record<Kontext, (abo: AboSicht) => Record<string, unknown>
 	vergleich: (abo) => abo
 };
 
+/** Wirksames Tagesfenster wie Python `resolve_configured_window` (#3047 E5): nur ein gueltiges Paar
+ *  (beide Stunden 0-23, Start != Ende) gilt, sonst 4-19 — ein halbes Paar wird nicht einzeln ergaenzt. */
 export function tagesfensterLesen(context: Kontext, abo: AboSicht | null | undefined): Tagesfenster {
 	const q = FENSTER_QUELLE[context](abo ?? {});
-	return {
-		start: zahl(q.day_window_start_hour, STANDARD_FENSTER.start),
-		end: zahl(q.day_window_end_hour, STANDARD_FENSTER.end)
-	};
+	const start = q.day_window_start_hour;
+	const end = q.day_window_end_hour;
+	return stunde(start) && stunde(end) && start !== end ? { start, end } : { ...STANDARD_FENSTER };
 }
 
-/** Erst-Hydration aus dem gespeicherten Abo. `alsVorlage`: ohne eigene Auswahl gilt die Vorlage
- *  (Anlegen, AC-39). Vorlagen-ID wie Python `_aufloesen` (template → preset_name → profil). */
-export function standAusAbo(context: Kontext, abo: AboSicht | null | undefined, vorlagen: VorlagenAmpeln, alt: AltSchluessel = {}): WetterStand {
+/** Vorlagen-Auswahl im Vergleich nur mit Groessen, die der Vergleich ausgeben kann (#3047 E6);
+ *  ohne bekannten Katalog bleibt sie unveraendert. */
+function nurAusgebbar(context: Kontext, auswahl: string[], alt: AltSchluessel): string[] {
+	const ids = new Set(vergleichsKatalogIds(alt));
+	return ids.size ? ausgebbarTeilen(context, auswahl, ids).zeilen : auswahl;
+}
+
+/** Erst-Hydration aus dem gespeicherten Abo. Ohne eigene Auswahl gilt der Mail-Standard
+ *  (#3047 E1, `quellen.eig` fuer den Trip-Register-Standard); `quellen.alsVorlage`: die Vorlage
+ *  (Anlege-Kette). Vorlagen-ID wie Python `_aufloesen` (template → preset_name → profil). */
+export function standAusAbo(
+	context: Kontext,
+	abo: AboSicht | null | undefined,
+	vorlagen: VorlagenAmpeln,
+	alt: AltSchluessel = {},
+	quellen: AuswahlQuellen = {}
+): WetterStand {
 	const dc = (abo?.display_config ?? {}) as Record<string, unknown>;
 	const aboAmpel = (dc.ampel ?? null) as Ampel | null;
 	const vorlageId = vorlageIdFuer(aboAmpel, dc.preset_name as string | undefined, abo?.profil as string | undefined, vorlagen);
 	const ampel = verschmelzen(vorlagen[vorlageId] ?? vorlagen[STANDARD_VORLAGE], aboAmpel);
 	ampel.template = vorlageId;
+	const auswahl = auswahlLesen(context, dc as Parameters<typeof auswahlLesen>[1], ampel, alt, quellen);
 	return {
 		vorlageId,
 		ampel,
-		auswahl: auswahlLesen(context, dc as Parameters<typeof auswahlLesen>[1], ampel, alt),
+		auswahl: quellen.alsVorlage ? nurAusgebbar(context, auswahl, alt) : auswahl,
 		warnungenAn: amtlicheWarnungenAn(abo as WarnFelder),
 		radarAn: abo?.radar_alert_enabled === true,
 		tagesfenster: tagesfensterLesen(context, abo)
@@ -86,26 +108,42 @@ export function mengeVon(s: WetterStand, vorlagen: VorlagenAmpeln): Ampel {
 	return abweichungsMenge(vorlagen[s.vorlageId], s.ampel, s.auswahl);
 }
 
-/** Zahl der Abweichungen, wie der Picker sie zeigt (AC-28: sofort nach jeder Eingabe). */
-export function abweichungenVon(s: WetterStand, vorlagen: VorlagenAmpeln): number {
-	const v = vorlagen[s.vorlageId];
-	return v ? zaehleAbweichungenGegen(v, mengeVon(s, vorlagen)) : 0;
+/** Vorlage, wie der Kontext sie ausgibt (#3047 p15): im Trip gelten die Kinder eines gewaehlten
+ *  Elters als gewaehlt (Python-Ableitung, p5c), im Vergleich bleibt sie unveraendert. */
+function vorlageImKontext(context: Kontext, v: Ampel): Ampel {
+	const aktiv = aktiveMetriken(v);
+	const kinder = AUSWAHL_ABLEITUNG[context](aktiv).filter((id) => !aktiv.includes(id));
+	if (!kinder.length) return v;
+	return verschmelzen(v, { template: v.template, metrics: Object.fromEntries(kinder.map((id) => [id, { enabled: true }])) });
 }
 
-/** Vorlage uebernehmen oder zuruecksetzen: Auswahl, Grenzen, Alarmstufen der Vorlage (AC-11/12). */
-export function mitVorlage(s: WetterStand, vorlageId: string, vorlagen: VorlagenAmpeln): WetterStand {
+/** Zahl der Abweichungen, wie der Picker sie zeigt (AC-28: sofort nach jeder Eingabe). Gemessen
+ *  gegen die Vorlage im Kontext: ein abgeleitetes Kind ist keine Abweichung, sein „−“ schon (p15). */
+export function abweichungenVon(s: WetterStand, vorlagen: VorlagenAmpeln, context: Kontext): number {
+	const roh = vorlagen[s.vorlageId];
+	if (!roh) return 0;
+	const v = vorlageImKontext(context, roh);
+	const aufgeloest = klon(s.ampel);
+	aufgeloest.metrics = aufgeloest.metrics ?? {};
+	for (const [id, e] of Object.entries(v.metrics ?? {})) if (!(id in aufgeloest.metrics)) aufgeloest.metrics[id] = klon(e);
+	return zaehleAbweichungenGegen(v, abweichungsMenge(v, aufgeloest, s.auswahl));
+}
+
+/** Vorlage uebernehmen oder zuruecksetzen: Auswahl, Grenzen, Alarmstufen der Vorlage (AC-11/12);
+ *  im Vergleich nur ausgebbare Groessen (#3047 E6, `alt` = Vergleichs-Katalog). */
+export function mitVorlage(s: WetterStand, vorlageId: string, vorlagen: VorlagenAmpeln, context: Kontext = 'route', alt: AltSchluessel = {}): WetterStand {
 	const r = zuruecksetzen(vorlageId, vorlagen);
 	r.ampel.template = vorlageId;
-	return { ...s, vorlageId, ampel: r.ampel, auswahl: r.auswahl };
+	return { ...s, vorlageId, ampel: r.ampel, auswahl: nurAusgebbar(context, AUSWAHL_ABLEITUNG[context](r.auswahl), alt) };
 }
 
 /** Eigene Vorlage uebernehmen: ihre vollstaendige Ampel, Vorlage = ihre Systemvorlage. */
-export function mitEigenerVorlage(s: WetterStand, ampel: Ampel, vorlagen: VorlagenAmpeln): WetterStand {
+export function mitEigenerVorlage(s: WetterStand, ampel: Ampel, vorlagen: VorlagenAmpeln, context: Kontext = 'route', alt: AltSchluessel = {}): WetterStand {
 	const vorlageId = ampel?.template && ampel.template in vorlagen ? ampel.template : STANDARD_VORLAGE;
 	const neu = klon(ampel);
 	neu.template = vorlageId;
 	const auswahl = Object.entries(neu.metrics ?? {}).filter(([, e]) => e?.enabled === true).map(([id]) => id);
-	return { ...s, vorlageId, ampel: neu, auswahl };
+	return { ...s, vorlageId, ampel: neu, auswahl: nurAusgebbar(context, AUSWAHL_ABLEITUNG[context](auswahl), alt) };
 }
 
 /** „−": Metrik aus dem Briefing nehmen (AC-19). */
@@ -113,9 +151,12 @@ export function ohneMetrik(s: WetterStand, id: string): WetterStand {
 	return { ...s, auswahl: s.auswahl.filter((x) => x !== id) };
 }
 
-/** „+": Metrik hinten anhaengen (AC-19). */
-export function mitMetrik(s: WetterStand, id: string): WetterStand {
-	return s.auswahl.includes(id) ? s : { ...s, auswahl: [...s.auswahl, id] };
+/** „+": Metrik hinten anhaengen (AC-19); im Trip mit den Kindern, die Python aus ihr ableitet
+ *  (#3047 p5c — vorhandene Auswahl bleibt, auch ein bewusst abgewaehltes Kind eines anderen Elters). */
+export function mitMetrik(s: WetterStand, id: string, context: Kontext = 'route'): WetterStand {
+	if (s.auswahl.includes(id)) return s;
+	const neu = AUSWAHL_ABLEITUNG[context]([id]).filter((x) => x === id || !s.auswahl.includes(x));
+	return { ...s, auswahl: [...s.auswahl, ...neu] };
 }
 
 /** „Alarm ab" einer Zeile. */

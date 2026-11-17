@@ -1,0 +1,36 @@
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1710: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1710: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1725: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1745: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1745: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1766: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1791: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1791: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1806: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1832: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1847: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1870: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1888: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1888: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1908: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1908: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1927: AssertionError: ======================================================================
+/home/user/gregor_zwanzig/.claude/worktrees/agent-abe942110ac0c9e8e/tests/tdd/test_einstellung_gleich_mail_validatoren.py:1942: AssertionError: ======================================================================
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_warnungen_trotz_schalter_aus_scheitern[de]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_warnungen_trotz_schalter_aus_scheitern[en]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_kompakt_warnungen_trotz_schalter_aus_scheitern
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_warnungen_an_erster_stelle[de]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_warnungen_an_erster_stelle[en]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_kompakt_warnungen_an_erster_stelle
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_ueberblick_folge_vertauscht_scheitert[de]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_ueberblick_folge_vertauscht_scheitert[en]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_kompakt_ueberblick_folge_vertauscht_scheitert
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_ampelfarbe_folgt_den_grenzen
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_ampelfarbe_roh_zelle
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_etappenstart_vor_sechs_besteht
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_nie_eingestellt_zeilen_wie_mail[de]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_nie_eingestellt_zeilen_wie_mail[en]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_zieltag_morgen_heute_abend_morgen[de]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_zieltag_morgen_heute_abend_morgen[en]
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_hinweis_nicht_abrufbar_trotz_schalter_aus
+FAILED tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_ampelfarbe_folgt_den_grenzen

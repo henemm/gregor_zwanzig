@@ -86,7 +86,7 @@ const { erstelleNaechstesBriefingLader } = await import(
 );
 const { briefingHistoryUrl } = await import(pathToFileURL(join(SHARED, 'briefingHistory.ts')).href);
 const { formatLastSent } = await import(pathToFileURL(join(COMPONENTS, 'compare', 'subscriptionHelpers.ts')).href);
-const { live } = await import(pathToFileURL(join(SHARED, 'wetter-tab', '__tests__', 'wetterTabDaten.ts')).href);
+const { live, liveVergleichsKatalog } = await import(pathToFileURL(join(SHARED, 'wetter-tab', '__tests__', 'wetterTabDaten.ts')).href);
 const { vorlagenAusTemplates } = await import(pathToFileURL(join(SHARED, 'wetter-tab', 'ampelModell.ts')).href);
 const BriefingHistory = (await import(pathToFileURL(BH).href)).default;
 
@@ -119,6 +119,8 @@ function netz(historie: Record<string, Eintrag[] | 'fehler'>, vorlagen: unknown[
 			return log === 'fehler' ? antwort(502, { error: 'bad gateway' }) : antwort(200, log ?? []);
 		}
 		if (url === '/api/templates') return vorlagen === 'fehler' ? antwort(502, { error: 'bad gateway' }) : antwort(200, vorlagen);
+		// #3047 p5c: die Karte zaehlt mit dem Vergleichs-Katalog (Antwort des Python-Core).
+		if (url.startsWith('/api/compare/metrics')) return antwort(200, liveVergleichsKatalog());
 		const nb = /^\/api\/next-briefings\?(trip_id|preset_id)=(.+)$/.exec(url);
 		if (nb) {
 			const id = decodeURIComponent(nb[2]);
@@ -131,7 +133,10 @@ function netz(historie: Record<string, Eintrag[] | 'fehler'>, vorlagen: unknown[
 		historienAbrufe: () => urls.filter((u) => u.includes('/briefing-history')),
 		naechsteAbrufe: () => urls.filter((u) => u.startsWith('/api/next-briefings')),
 		/** Alles, was weder Historie noch „Nächster Versand" ist (Vorlagen-Abruf). */
-		uebrigeAbrufe: () => urls.filter((u) => !u.includes('/briefing-history') && !u.startsWith('/api/next-briefings'))
+		uebrigeAbrufe: () =>
+			urls.filter((u) => !u.includes('/briefing-history') && !u.startsWith('/api/next-briefings') && !u.startsWith('/api/compare/metrics')),
+		/** Vergleichs-Katalog (#3047 p5c); der Lader haelt ihn je Sprache im Speicher. */
+		katalogAbrufe: () => urls.filter((u) => u.startsWith('/api/compare/metrics'))
 	};
 }
 
@@ -416,7 +421,9 @@ function mounten(hu: { ast: Knoten; quelle: string; u: Knoten }): number {
 const VORLAGEN_ANTWORT = live().templates as unknown[];
 const DREI = (() => {
 	const v = vorlagenAusTemplates(VORLAGEN_ANTWORT) as Record<string, { metrics?: Record<string, unknown> }>;
-	const ids = Object.keys(v.allgemein?.metrics ?? Object.values(v)[0]?.metrics ?? {});
+	// #3047 p5c: die Karte zaehlt wie die Mail nur Groessen, die der Vergleich ausgibt (Katalog).
+	const imKatalog = new Set((liveVergleichsKatalog().metrics as { metric_id: string }[]).map((e) => e.metric_id));
+	const ids = Object.keys(v.allgemein?.metrics ?? Object.values(v)[0]?.metrics ?? {}).filter((id) => imKatalog.has(id));
 	assert.ok(ids.length >= 3, 'Fixtur-Schutz: Vorlage braucht mindestens drei Metriken');
 	return ids.slice(0, 3);
 })();
@@ -460,5 +467,17 @@ describe('#2794 teil4b F001 / AC-8, AC-10: HubUebersicht lädt die Vorlagen und 
 		mounten(hu);
 		await setzen();
 		assert.deepEqual(n.uebrigeAbrufe(), [], 'Trip ruft die Vorlagen ab (doppelt zu HubOverview): ' + JSON.stringify(n.urls));
+		assert.deepEqual(n.katalogAbrufe(), [], 'Trip ruft den Vergleichs-Katalog ab');
+	});
+
+	// #3047 p5c: „nie eingestellt" zaehlt wie die Mail alle Groessen des Vergleichs-Katalogs (Ketten-
+	// nachweis gegen die Python-Ausgabe: wetter-tab/__tests__/p5c_ableitung_hub_orte_ausgabe.test.ts).
+	test('Vergleich nie eingestellt ⇒ Karte zaehlt die Groessen des Vergleichs-Katalogs, nicht die Vorlage', async () => {
+		netz({}, VORLAGEN_ANTWORT);
+		const hu = await hubUebersicht({ context: 'vergleich', preset: { ...PRESET, display_config: {} }, orte: [] });
+		mounten(hu);
+		await setzen();
+		const groessen = new Set((liveVergleichsKatalog().metrics as { metric_id: string }[]).map((e) => e.metric_id)).size;
+		assert.equal(wetterKarte(hu).beschreibungKurz, `${groessen} Metriken im Briefing`);
 	});
 });

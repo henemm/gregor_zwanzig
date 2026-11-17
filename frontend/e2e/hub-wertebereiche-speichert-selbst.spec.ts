@@ -21,7 +21,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import { HUB_KINDS, HUB_SEL, hubApiPath, type HubKind } from './helpers';
-import { WT, auswahlImStand, oeffneWetter, vorlagen } from './s3a2794-teil3.helpers';
+import { OHNE_KINDER, WT, abgeleiteteKinder, auswahlImStand, oeffneWetter, vorlagen } from './s3a2794-teil3.helpers';
 import {
 	ALTFELDER,
 	anzeige,
@@ -98,10 +98,11 @@ for (const kind of HUB_KINDS) {
 
 				const plus = reiter.getByTestId(WT.nichtImBriefing).locator('[data-testid^="wetter-nicht-im-briefing-plus-"]');
 				await expect(plus.nth(1), 'Vorbedingung: mindestens zwei Metriken stehen unter „Nicht im Briefing"').toBeVisible();
-				const neu = [
-					(await plus.nth(0).getAttribute('data-testid'))!.replace('wetter-nicht-im-briefing-plus-', ''),
-					(await plus.nth(1).getAttribute('data-testid'))!.replace('wetter-nicht-im-briefing-plus-', '')
-				];
+				// #3047 Runde 7 p5c: „+“ an einem Elter hängt im Trip auch seine Kind-Größen an (die dann nicht mehr
+				// unter „Nicht im Briefing" stehen) — gemessen werden zwei Metriken ohne Kind-Größen.
+				const kandidaten = await plus.evaluateAll((els) => els.map((e) => (e.getAttribute('data-testid') ?? '').replace('wetter-nicht-im-briefing-plus-', '')));
+				const neu = kandidaten.filter(OHNE_KINDER).slice(0, 2);
+				expect(neu, 'Vorbedingung: zwei Metriken ohne Kind-Größen stehen unter „Nicht im Briefing"').toHaveLength(2);
 				await reiter.getByTestId(WT.plus(neu[0])).click();
 				await reiter.getByTestId(WT.plus(neu[1])).click();
 
@@ -114,7 +115,8 @@ for (const kind of HUB_KINDS) {
 					? ((dc(s).metrics ?? []) as Array<{ metric_id: string; enabled?: boolean }>).filter((m) => m.enabled !== false).map((m) => m.metric_id)
 					: ((dc(s).active_metrics ?? []) as Array<{ metric_id: string }>).map((m) => m.metric_id);
 				expect(reihe.slice(-2), 'AC-37: neue Metriken hinten angehängt').toEqual(neu);
-				expect(auswahlImStand(kind, s)).toEqual([...hub.auswahl, ...neu].sort());
+				// #3047 Runde 7 p5c/E7: die vom Elter abgeleiteten Kind-Größen der Vorlage schreibt der Trip ausdrücklich mit.
+				expect(auswahlImStand(kind, s)).toEqual([...new Set([...hub.auswahl, ...abgeleiteteKinder(kind, hub.auswahl), ...neu])].sort());
 				expect(ALTFELDER[kind](s), 'AC-30: Altfelder (Korridore usw.) auf dem Server unverändert').toEqual(vorher);
 
 				const r2 = await oeffneWetter(page, kind, hub.id);

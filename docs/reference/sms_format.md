@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.39"
+version: "2.43"
 status: active
 created: 2025-12-27
-updated: 2026-11-09
+updated: 2026-11-16
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -56,7 +56,7 @@ Diese Spec ersetzt v1.0 und integriert das Format aus dem Vorgänger-Projekt (`w
 - **Trennzeichen:** Einzelnes Leerzeichen zwischen Tokens. Ausnahmen siehe Risks-Block (3.3).
 - **Werte-Rundung:** Temperaturen ganzzahlig gerundet; Niederschlag mit einer Nachkommastelle; Wind/Böen ganzzahlig.
 - **Threshold = Max:** Wenn Threshold-Wert UND Threshold-Stunde exakt dem Tagesmaximum entsprechen, wird der Peak-Block `(max@h)` weggelassen (Details §5).
-- **Priorität bei Truncation:** Thunderstorm > Wind/Gusts > Rain > Temperatur (siehe §6).
+- **Kürzung:** die SMS-Liste fällt von hinten weg, amtliche Warnungen zuletzt (siehe §6, seit v2.40).
 
 ### 1a. Befehlseingang je Kanal (Ist-Stand 2026-10-21)
 
@@ -119,7 +119,7 @@ dieser Zweig hat heute aber keinen eingehenden Aufrufer.
 
 > **Fix #1483 (2026-08-05):** Bis hierhin gab es die `?`-Form nur für die Schwellwert-Kürzel `R`/`PR`/`W`/`G`/`TH:`/`TH+:`. Die Temperatur-Kürzel `N`/`K`/`D`/`FN`/`FK`/`FD` durchliefen stattdessen `render_temperature()`, das ausschliesslich Zahl oder `-` lieferte — eine Datenlücke erschien dort folglich als `K-` und war von „geprüft, kein Wert” nicht unterscheidbar. Jetzt nutzen beide Pfade denselben gemeinsamen Helfer `_gap_or()` (`builder.py:120-130`): `_mk_metric()` (Zeile 150, Schwellwert-Kürzel) UND die Temperatur-Schleife in `build_token_line()` (Zeile 299). `_wintersport()` (Schneehöhe/Neuschnee/Schneefallgrenze/Lawinenstufe/Windchill) bleibt bewusst unverändert und zeigt weiterhin nie `?` — es ruft `render_int()` über einen eigenen Pfad auf, der mit `_gap_or()` nichts zu tun hat. Details: `docs/specs/modules/fix_1483_temp_gap_marker.md`.
 
-> **Fix #1677 (2026-08-10, v2.23):** Die in §2 gezeigte Token-Reihenfolge ist ab jetzt der **Default** — sie gilt unverändert, solange für den Kanal `sms` keine kanal-eigene Kaskadenebene aktiv ist (weder `per_report_layouts[report_type].sms` noch `per_channel_layouts.sms`, geprüft über `UnifiedWeatherDisplayConfig.cascade_source_for_channel("sms", report_type)`). Ist eine dieser beiden Ebenen gesetzt, bestimmt die dort im SMS-Kanal-Tab des Trip-Editors per Drag&Drop gezogene Reihenfolge die Anzeigefolge der **Vorhersage-** (`R PR W G TH: TH+: HU DP WD CP PT CT CL CM CH VS SU UV HP NL K D FK FD N FN`) und **Wintersport-Token** (`SD NS24+ SL`) — jede Metrik ist dabei EIN Anker: bei Mehrfach-Symbol-Metriken (`temperature`→`K D`, `temperature_night`→`N`, `wind_chill`→`FK FD`, `wind_chill_night`→`FN`, `thunder`→`TH: TH+:`) erben alle zugehörigen Symbole dieselbe Nutzer-Position, ihre interne Reihenfolge (z.B. `K` vor `D`) bleibt fix. **Unverändert fix, unabhängig von jeder Nutzer-Reihenfolge:** die Vigilance-Adjazenz `HR:TH:` (§3.3, ohne Leerzeichen), der amtliche Warn-Block, Fire (`Z: M:`), `X?` und `DBG` — diese System-Blöcke stehen immer hinter dem sortierbaren Block, in ihrer bisherigen relativen Reihenfolge (sie sind nicht Teil der wählbaren Metrik-Kaskade). Die Kürzung bei Überlänge (§6) bleibt unverändert prioritätsbasiert — die Anzeige-Position beeinflusst NICHT, welches Token zuerst fällt. Details: `docs/specs/modules/fix_1677_sms_reihenfolge.md`.
+> **Fix #1677 (2026-08-10, v2.23):** Die in §2 gezeigte Token-Reihenfolge ist ab jetzt der **Default** — sie gilt unverändert, solange für den Kanal `sms` keine kanal-eigene Kaskadenebene aktiv ist (weder `per_report_layouts[report_type].sms` noch `per_channel_layouts.sms`, geprüft über `UnifiedWeatherDisplayConfig.cascade_source_for_channel("sms", report_type)`). Ist eine dieser beiden Ebenen gesetzt, bestimmt die dort im SMS-Kanal-Tab des Trip-Editors per Drag&Drop gezogene Reihenfolge die Anzeigefolge der **Vorhersage-** (`R PR W G TH: TH+: HU DP WD CP PT CT CL CM CH VS SU UV HP NL K D FK FD N FN`) und **Wintersport-Token** (`SD NS24+ SL`) — jede Metrik ist dabei EIN Anker: bei Mehrfach-Symbol-Metriken (`temperature`→`K D`, `temperature_night`→`N`, `wind_chill`→`FK FD`, `wind_chill_night`→`FN`, `thunder`→`TH: TH+:`) erben alle zugehörigen Symbole dieselbe Nutzer-Position, ihre interne Reihenfolge (z.B. `K` vor `D`) bleibt fix. **Unverändert fix, unabhängig von jeder Nutzer-Reihenfolge:** die Vigilance-Adjazenz `HR:TH:` (§3.3, ohne Leerzeichen), der amtliche Warn-Block, Fire (`Z: M:`), `X?` und `DBG` — diese System-Blöcke stehen immer hinter dem sortierbaren Block, in ihrer bisherigen relativen Reihenfolge (sie sind nicht Teil der wählbaren Metrik-Kaskade). Die Kürzung bei Überlänge (§6) folgt seit v2.40 (#3047 Runde 7) dieser Anzeige-Position: die hinterste Listenzeile fällt zuerst (vorher prioritätsbasiert). Details: `docs/specs/modules/fix_1677_sms_reihenfolge.md`.
 
 ---
 
@@ -248,7 +248,7 @@ Levels für `TH`/`TH+`:
   - Dieselbe Regel gilt für Premium-SMS, den 3-Tages-Ausblick und die Mail-Kachel (`app.ampel.schlimmster_index`).
 - Ist keine Stunde gelb oder schlechter, bleibt es bei der Null-Form (`R-`, `TH:-`, …).
 - Die Ampel-Hervorhebung gilt für `R`, `PR`, `W`, `G`, `UV`, `TH:`/`TH+:` sowie `L`/`D`/`FL`/`FD` (Temperatur, s. unten). Für `HU` gilt die feste Grenze 90 % (§3.2a). Die übrigen Klasse-(a)-Größen haben keinen Ampel-Leser (§3.2a).
-- `render_compare_sms` (Ortsvergleich) hat keinen Hervorhebungsleser und bleibt unverändert.
+- `render_compare_sms` (Ortsvergleich) hat keinen Hervorhebungsleser und bleibt unverändert (Einfach wirkt in der Ortsvergleich-SMS nur auf die Bewölkungsstufe, daher betrifft B-L3 die SMS nicht).
 - `sms_threshold` und die früheren Standardwerte (`DEFAULTS`) wirken **nicht mehr**. Die Werte bleiben gespeichert, werden aber nicht ausgewertet (E1).
 - Die Mail-Erwähnungen nutzen dasselbe Prädikat „gelb oder schlechter“, damit Mail und Kurzkanal bei jedem Wert gleich entscheiden.
 
@@ -344,7 +344,7 @@ Amtliche Unwetterwarnungen (`official_alerts`-Dienst, alle Provider) erscheinen 
 
 **Sortierung:** Stufe absteigend (rot vor orange), bei Gleichstand die Katalog-Reihenfolge der Tabelle oben — deterministisch, unabhängig vom Gültigkeitsbeginn.
 
-**Truncation:** der Warn-Block trägt die höchste Priorität (11, §6) und fällt beim Kürzen als **letztes** — nach `PR`, `D`, `N` und selbst nach `W`/`G`/`TH:`.
+**Truncation:** der Warn-Block fällt beim Kürzen als **letztes** — nach der gesamten SMS-Liste (§6) und nach Fire/Vigilance (höchste Priorität 11).
 
 **Unbekannte Gefahrenart (Rückfall-Kürzel):** Steht ein `hazard`-Wert **nicht** in der Tabelle oben (neu hinzukommender Provider-Typ), wird die Warnung **niemals verworfen** — `sms_symbol_for()` (`hazard_symbols.py`) bildet ein Kürzel aus den ersten zwei ASCII-Großbuchstaben des `hazard`-Strings, ersatzweise `XX`. Der Stufenfilter (siehe „Filter" oben — seit #1461 S3b-2b bei beiden Entitäten die Startschwelle „gering", Trips zusätzlich je Kanal einstellbar) bleibt davon unberührt wirksam; gefiltert wird ausschließlich nach Schwere, nie nach „Typ unbekannt".
 
@@ -371,7 +371,7 @@ Ein **eigenständiger** Marker `X?` (2 Zeichen, GSM-7-sicher) signalisiert: für
 - **Bedingung:** `any(SegmentWeatherData.official_alerts_unavailable)` — gesetzt am echten Fail-soft-Pfad (`get_official_alerts_with_status`, #1348). Strenge Regel: **eine** ausgefallene abdeckende Quelle genügt.
 - **Kein Warn-Block-Token:** `X?` gehört zur eigenen Kategorie `unavailable`, trägt **nie** den `!`-Marker (§3.4c) und darf nicht als amtliche Warnung („`!X?`") gelesen werden. Es ist „nicht abrufbar", nicht „es liegt eine Warnung vor".
 - **Position:** am Ende der Zeile (nach Wintersport-Block, vor `DBG`).
-- **Truncation:** höchste Priorität (12, §6, noch über dem Warn-Block) und **nicht** in der Drop-Liste — der sicherheitsrelevante Marker fällt unter 160-Zeichen-Druck **strukturell nie** weg.
+- **Truncation:** weder Listenzeile noch amtlicher Baustein (§6) — der sicherheitsrelevante Marker fällt unter 160-Zeichen-Druck **strukturell nie** weg.
 - **Kanäle:** In Telegram-Kurzform (die `sms_text` sendet) erscheint `X?` automatisch mit; das Telegram-„rich"-Briefing und die Compare-/Trip-Mail zeigen stattdessen die ausgeschriebene Hinweiszeile bzw. den Banner.
 
 Quelle des Flags: `src/output/tokens/dto.py` (`NormalizedForecast.official_alerts_unavailable`), Emission in `src/output/tokens/builder.py`. Vertraglich abgesichert durch `docs/specs/modules/feat_1349_sms_unavailable.md`.
@@ -649,24 +649,40 @@ unmittelbar nach den Wertzellen, **vor** dem optionalen `!`-Warn-Block, z. B.
 - **Budget:** Der Zähler ist fester Bestandteil der Budgetprüfung (153 Zeichen,
   `CHANNEL_LIMITS["sms"]`) wie der Warn-Marker; die Wertzellen weichen ihm, nie umgekehrt.
 - **Nicht gezählt:** zentral nicht wählbare Größen (`selectable=False`, z. B.
-  `confidence_pct`, #710) und vom Kanal bewusst abgewählte Größen.
+  `confidence_pct`, #710) und vom Kanal bewusst abgewählte Größen. Ohne gespeicherte
+  Auswahl („nie eingestellt“) zählt `?N` keine fehlenden Werte, weil nichts gewählt ist
+  (die Mail zeigt dafür ebenfalls keinen Hinweis); unmappbare Einträge gibt es dann nicht.
+- **„Nie eingestellt“ (seit v2.42, #3047 Runde 7, B-L4):** Ohne gespeicherte Grundauswahl
+  zeigt die Ortsvergleich-SMS dieselben Zeilen in derselben Folge wie die Vergleichstabelle
+  der Mail (Registerfolge: `D W R PR TH SU CT UV VS SD NS L G …`) und kürzt vom Listenende
+  (§6). Die frühere feste Sechserliste (`D W SU CT SD NS`, ohne Regen, Böen, Gewitter)
+  ist abgelöst. Die volle Liste verdrängt dabei keine Orte: alle Orte bleiben sichtbar,
+  jeder mit derselben Zeichenzahl gekürzt (seit v2.43, §6), z. B.
+  `Vergleich 29.10.: Innsbruck D 11C R 2.4 mm TH - PT Regen +6 ?1; Lienz D 12C R 5.4 mm +8 ?1; …`.
+- **Warndienst nicht erreichbar (seit v2.42, #3047 Runde 7, B-L2):** Ist an mindestens
+  einem Ort eine amtliche Warnquelle ausgefallen, endet die Ortsvergleich-SMS mit ` X?`
+  (§3.4d), z. B. `Vergleich 08.07.: Alpha D 20C W 10 km/h; Beta D 22C W 12 km/h X?`.
+  Der Marker fällt nie weg; Zellen und Orte weichen ihm.
 - GSM-7: `?` und Ziffern sind Basiszeichen.
 
 ---
 
 ## 6. Truncation-Strategie
 
-Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, werden Tokens in dieser **Reihenfolge** entfernt:
+Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, wird so gekürzt (seit v2.40, #3047 Runde 7, PO-Entscheidung 2026-11-16; Spec `docs/specs/modules/feat_3047_einstellung_gleich_mail_pruefkatalog.md`, Nachtrag Runde 7, AC-23):
 
 1. `DBG[...]`
-2. Die 14 erweiterten Metrik-Tokens aus §3.2a (`HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ`, Issue #1660 Scheibe B; `NL`→`FZ` seit Fix #1926) — fallen als erste Fachtoken, noch VOR den Wintersport-Größen
-3. Wintersport-Tokens (`SL`, `NS24+`, `SD`)
-4. Fire-Block komplett (`Z:HIGH...`, `MAX...`, `M:...`)
-5. Peak-Werte `(max@h)` (Threshold-Werte bleiben erhalten)
-6. `FN`, `FL`, `FD` (gefühlte Temperaturen — Komfortangabe, fällt VOR den sicherheitsrelevanten Planungsgrössen, Issue #1410; `FK`→`FL` seit Fix #1926)
-7. `PR` (Regenwahrscheinlichkeit)
-8. `L`, `D`, `N` (gemessene Temperaturen — `L` zuerst, `N` zuletzt; bis 2026-08-17 `K`, Fix #1926). Ein Bereichs-Token `D{min}/{max}` (Issue #1824) fällt **als Ganzes** in einem Schritt: es gibt keinen Zwischenzustand, in dem nur der Tiefst- oder nur der Höchstwert übrig bleibt. Die Kürzung verliert dadurch im „beide gewählt"-Fall eine Granularitätsstufe gegenüber früher (bewusste Nebenwirkung)
-9. Last Resort: verbleibende Forecast-/Vigilance-/Warn-Token nach aufsteigender `PRIORITY`, bis nur noch eines übrig ist (amtliche Warnungen fallen als allerletzte). Dieser Schritt existiert im Code seit jeher, fehlte aber bis v2.12 in dieser Aufzählung.
+2. **Die SMS-Liste von hinten:** es fällt immer die hinterste Listenzeile, und zwar als Ganzes — alle Token derselben Zeile (z.B. `N D` der Temperatur, `TH: TH+:` des Gewitters, `FN FD TF` der gefühlten Temperatur) fallen gemeinsam. „Liste" ist die SMS-Liste des Nutzers (Folge aus dem Editor, §2 Fix-#1677-Absatz); ohne Nutzerliste gilt die Standardfolge aus §2. Token, die nicht in der Liste stehen (stehen hinter ihr), fallen zuerst. Sicherheitsrelevante Größen bleiben dadurch erhalten, dass die Vorbelegung sie vorn führt. Trip und Ortsvergleich kürzen nach derselben Regel.
+3. Amtliche Bausteine zuletzt, nach aufsteigender Priorität: Fire (`Z:`, `MAX`, `M:`), dann Vigilance (`HR:TH:`/`VR:VT:`), dann der amtliche Warn-Block `!` (§3.4c) — einer bleibt immer stehen.
+4. `X?` (Warndaten nicht abrufbar) fällt nie.
+
+**Orts-Überlauf im Ortsvergleich (`render_compare_sms`, seit v2.43, #3047 Runde 7, AC-23, ADR-0095 — ein Vergleich braucht mehrere Orte):** Ist die SMS zu lang, wird in dieser Folge gekürzt:
+1. die Zellen **aller** gezeigten Orte vom Listenende, mit demselben Zeichen-Budget je Ort (verdrängte Zellen als `+N` im Ortsteil), bis je Ort nur noch die erste Listenzeile steht;
+2. erst dann entfallen ganze Orte vom Ende und werden als ` +k Orte` ausgewiesen (ADR-0011) — Orte **ohne** amtliche Warnung zuerst; ein Ort mit Warnung bleibt mit Marker sichtbar;
+3. sind nur noch Orte mit Warnung (oder ein einziger Ort) übrig, weicht auch die erste Zelle dem `!`-Marker.
+Bis v2.42 füllte der erste Ort die SMS und alle weiteren Orte ohne Warnung fielen als ` +k Orte` weg.
+
+Abgelöst: die feste Rangfolge bis v2.39 (`DROP_ORDER`: erweiterte Token → Wintersport → Fire → Peak-Werte → gefühlte Temperatur → `PR` → `L D N` → Last Resort, #1677 AC-6). Die Peak-Werte `(max@h)` werden nicht mehr gesondert gestrichen; sie gehören zu ihrer Zeile.
 
 `{Name}:` plus mindestens **ein** Risk- oder Wert-Token ist Pflicht. Wenn nach allen Truncation-Schritten immer noch >160 Zeichen: ValueError.
 
@@ -851,6 +867,10 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.37 | 2026-10-27 | Neuer §5b: Ortsvergleich-SMS trägt im Ortsteil den Zähler `?N` für gewählte, aber fehlende bzw. nicht darstellbare Größen (nach den Wertzellen, vor `!`); Normalfall unverändert (Issue #1405 S3, Spec `feat_1405_s3_mengenerhalt.md`). |
 | 2.38 | 2026-11-06 | **Profil-Ampel als einzige Bewertung (Issue #2792 S1c-4b, ADR-0106).** Die Hervorhebung `@{h}` (Spitzenwert bei `R`/`PR`/`W`/`G`/`TH:`/`TH+:`) folgt der Ampel des Abos: erste Stunde gelb oder schlechter, beidseitig; Gewitter ab „leicht“. `sms_threshold` und `DEFAULTS` wirken nicht mehr (Werte bleiben gespeichert). Temperatur-Token `L`/`D`/`FL`/`FD` tragen `@{h}` nur ab gelb, Bereichs-Token je Hälfte einzeln (`D-2/9@14`). `HU` erwähnt ab fest 90 %; `VS` ohne Schwellen-Gate über `sms_threshold`. Betrifft §3.2, §3.2a, §4. Gilt identisch für Premium-SMS (gleicher Text) und Telegram-Kurzform. Spec: `docs/specs/modules/feat_2792_s1_profil_ampel.md` §5 (v1.5). |
 | 2.39 | 2026-11-09 | Neuer §3.4i: Radar-Alarm im Ortsvergleich mit mehreren Orten nennt jeden Ort mit Ortsnummer (`1:R@14:05 3:R@14:40`), sortiert nach Beginn, Überlauf ` +k`; Ein-Ort und Trip unverändert (Issue #1767, löst #1948-S4-Entscheid 3b ab). |
+| 2.40 | 2026-11-16 | **Kürzung vom Listenende (#3047 Runde 7, AC-23, PO-Entscheidung 2026-11-16).** Bei Überlänge fällt die SMS-Liste von hinten, ganze Zeilen; amtliche Bausteine (Fire, Vigilance, Warn-Block) zuletzt, `X?` nie. Löst die feste Rangfolge (`DROP_ORDER`, #1677 AC-6) ab. Gilt für Trip-SMS, Premium-SMS (gleicher Text) und Telegram-Kurzform; Alarm-SMS haben eigene Regeln (unverändert). Betrifft §1, §2, §3.4c, §3.4d, §6. |
+| 2.42 | 2026-11-16 | §5b: Ortsvergleich „nie eingestellt“ folgt der Mail-Tabelle (Registerfolge statt fester Sechserliste, ohne `?N` für fehlende Werte); Warndienst-Ausfall hängt ` X?` an die Ortsvergleich-SMS (#3047 Runde 7, B-L4, B-L2). |
+| 2.43 | 2026-11-16 | §5b/§6: Ortsvergleich-SMS kürzt zuerst die Zellen aller Orte (gleiches Budget je Ort, bis zur ersten Listenzeile), erst danach entfallen Orte als ` +k Orte`, ohne Warnung zuerst — auch ohne amtliche Warnung (#3047 Runde 7, AC-23, ADR-0095). |
+| 2.41 | 2026-11-16 | §6: Orts-Überlauf im Ortsvergleich — ein Ort mit amtlicher Warnung fällt nie in ` +k Orte`, er bleibt mit Marker sichtbar; zuerst werden die Zellen aller gezeigten Orte vom Listenende gekürzt (gleiches Budget je Ort), dann entfallen Orte ohne Warnung (#3047 Runde 7, AC-23). |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

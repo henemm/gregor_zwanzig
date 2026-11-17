@@ -34,40 +34,42 @@ function speichern(bestand: Eintrag[], auswahl: string[]): Eintrag[] {
 	return p.weatherConfig.metrics as Eintrag[];
 }
 
-const A = { metric_id: 'temperature', enabled: true, format_mode: 'raw' };
+// #3047 E7: Elter-Groesse ohne Kind-Ableitung (Temperatur leitet Nacht-Tiefst/Tagestief/-hoch ab, die
+// der Schreiber seitdem ausdruecklich aus- oder einschaltet) — die Folge-Regel bleibt so isoliert gemessen.
+const A = { metric_id: 'gust', enabled: true, format_mode: 'raw' };
 const WIND_AUS = { metric_id: 'wind', enabled: false, sms_threshold: 12, use_friendly_format: true };
 const B = { metric_id: 'humidity', enabled: true };
 
 describe('F002/AC-19/AC-37 route: wieder aufgenommene Metrik steht hinten', () => {
 	test('deaktivierter Bestandseintrag in der Auswahl wandert ans Ende und behaelt seine Felder', () => {
-		const metrics = speichern([A, WIND_AUS, B], ['temperature', 'humidity', 'wind']);
-		assert.deepEqual(metrics.map((e) => e.metric_id), ['temperature', 'humidity', 'wind'], 'Wind nicht hinten angehaengt');
+		const metrics = speichern([A, WIND_AUS, B], ['gust', 'humidity', 'wind']);
+		assert.deepEqual(metrics.map((e) => e.metric_id), ['gust', 'humidity', 'wind'], 'Wind nicht hinten angehaengt');
 		const wind = metrics.find((e) => e.metric_id === 'wind');
 		assert.deepEqual(wind, { metric_id: 'wind', enabled: true, sms_threshold: 12, use_friendly_format: true }, 'Felder von Wind verloren oder nicht aktiviert');
 		assert.equal(metrics.length, 3, 'Eintrag doppelt');
 	});
 
 	test('wieder aufgenommene und echt neue Metriken stehen hinten in Auswahl-Reihenfolge', () => {
-		const metrics = speichern([A, WIND_AUS, B], ['temperature', 'dewpoint', 'humidity', 'wind']);
-		assert.deepEqual(metrics.map((e) => e.metric_id), ['temperature', 'humidity', 'dewpoint', 'wind']);
+		const metrics = speichern([A, WIND_AUS, B], ['gust', 'dewpoint', 'humidity', 'wind']);
+		assert.deepEqual(metrics.map((e) => e.metric_id), ['gust', 'humidity', 'dewpoint', 'wind']);
 		assert.deepEqual(metrics[2], { metric_id: 'dewpoint', enabled: true });
 	});
 
 	test('nicht ausgewaehlter deaktivierter Eintrag bleibt an seinem Platz deaktiviert', () => {
-		const metrics = speichern([A, WIND_AUS, B], ['temperature', 'humidity']);
-		assert.deepEqual(metrics.map((e) => e.metric_id), ['temperature', 'wind', 'humidity']);
+		const metrics = speichern([A, WIND_AUS, B], ['gust', 'humidity']);
+		assert.deepEqual(metrics.map((e) => e.metric_id), ['gust', 'wind', 'humidity']);
 		assert.deepEqual(metrics[1], WIND_AUS, 'deaktivierter Eintrag veraendert');
 	});
 
 	test('unveraenderte Auswahl aendert die Reihenfolge nicht', () => {
 		const bestand = [A, B, { metric_id: 'wind', enabled: true, sms_threshold: 12 }];
-		const metrics = speichern(bestand, ['temperature', 'humidity', 'wind']);
+		const metrics = speichern(bestand, ['gust', 'humidity', 'wind']);
 		assert.deepEqual(metrics, bestand);
 	});
 
 	test('entfernte Metrik bleibt an ihrem Platz, nur deaktiviert', () => {
-		const metrics = speichern([A, { metric_id: 'wind', enabled: true, sms_threshold: 12 }, B], ['temperature', 'humidity']);
-		assert.deepEqual(metrics.map((e) => e.metric_id), ['temperature', 'wind', 'humidity']);
+		const metrics = speichern([A, { metric_id: 'wind', enabled: true, sms_threshold: 12 }, B], ['gust', 'humidity']);
+		assert.deepEqual(metrics.map((e) => e.metric_id), ['gust', 'wind', 'humidity']);
 		assert.deepEqual(metrics[1], { metric_id: 'wind', enabled: false, sms_threshold: 12 });
 	});
 });
