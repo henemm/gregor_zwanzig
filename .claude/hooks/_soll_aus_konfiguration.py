@@ -727,6 +727,11 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
     # #3047 N2: ``active_metrics: []`` = bewusst leere Grundauswahl (wie Trip
     # alle ``enabled: false``) -> Ausblick und Stundenverlauf entfallen.
     ids = _ausblick(dc.get("outlook_metrics"), grundauswahl)
+    if ids is None:
+        # #3047 R9: Orte-Altbestand ohne Grundauswahl und ohne Ausblick-Liste
+        # rendert die Vorgabemenge wie eine explizite Liste (HTML = Klartext,
+        # Temp als eine Spanne) -- kein fester Zweig mehr im Ortsvergleich.
+        ids = list(_FEST)
     stunden = _orte_stunden(dc, grundpaare)
     stunden_an = preset.get("hourly_enabled", True) is not False and stunden != []
     ids_orte = [i for i in preset.get("location_ids") or [] if isinstance(i, str)]
