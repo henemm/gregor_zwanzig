@@ -39,7 +39,7 @@ from output.renderers.email.helpers import (
     build_segment_label,
     build_column_legend,
     build_units_legend, fmt_val, format_change_line, format_km_range,
-    render_origin_footer_text, resolve_metric_col_order, tone_symbol,
+    render_origin_footer_text, tone_symbol, trip_email_col_order,
     visible_cols,
 )
 from output.renderers.email.profile_signature import profile_signature
@@ -107,7 +107,7 @@ def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
         return ""
     if col_order:
         # Fix #1575 Scheibe 2: dieselbe ordered+remaining-Merge-Logik wie
-        # html.py:664-682 (geteilter col_order aus resolve_metric_col_order).
+        # html.py:664-682 (geteilter col_order aus helpers.email_col_order).
         col_map = {k: label for k, label in cols}
         ordered = [(k, col_map[k]) for k in col_order if k in col_map]
         remaining = [(k, label) for k, label in cols if k not in col_order]
@@ -164,6 +164,7 @@ def render_plain(
     outlook_state: Optional["OutlookState"] = None,
     outlook_horizon_days: Optional[int] = None,
     outlook_metrics: Optional[list[dict]] = None,
+    email_rows: Optional[tuple] = None,
     compact_summary: Optional[str],
     tz: ZoneInfo,
     friendly_keys: set[str],
@@ -194,7 +195,8 @@ def render_plain(
     ampel = resolve_ampel(dc)
     # Fix #1575 Scheibe 2: einmal berechnen, an beide Aufrufstellen von
     # _render_text_table() durchreichen (Segment- UND Nacht-Tabelle, AC-7).
-    _col_order = resolve_metric_col_order(dc)
+    # Issue #3096: Spaltenfolge aus den Resolver-E-Mail-Zeilen (Adapter).
+    _col_order = trip_email_col_order(dc, report_type, email_rows)
     lines = []
     # Bug #397: Datums-Header in Ortszeit (passt zu lokalen Segment-Zeiten).
     report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")

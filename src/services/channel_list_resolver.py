@@ -44,7 +44,10 @@ class MailViewModel:
 
     ``outlook`` (Trip und Orte) und ``hourly`` (nur Orte) tragen Katalog-IDs
     (#3065, ADR-0121 Nachtrag 2b): ``None`` = Renderer-Vorgabemenge, ``()`` =
-    Block entfaellt. Trip-``hourly`` ist immer ``None``."""
+    Block entfaellt. Orte-``hourly`` ist nie ``None`` (#3096: die Vorgabe "nie
+    eingestellt" kommt als konkrete Liste aus ``compare_hourly_metric_ids``);
+    Trip-``hourly`` ist immer ``None``. Die Trip-Mail liest ihre Spaltenfolge
+    aus ``email`` (Adapter ``email.helpers.email_col_order``, #3096)."""
     email: Rows
     telegram: Rows
     sms: Rows
@@ -111,7 +114,12 @@ def _trip_format(mc: MetricConfig) -> Optional[str]:
 
 
 def _trip_model(display_config) -> UnifiedWeatherDisplayConfig:
-    if isinstance(display_config, UnifiedWeatherDisplayConfig):
+    # #3096: jedes fertige Modell geht durch (auch eine zweite Klassen-
+    # Identitaet derselben Klasse, z. B. Import ueber ``src.app.models``);
+    # geparst wird nur das rohe Dict.
+    if isinstance(display_config, UnifiedWeatherDisplayConfig) or (
+        display_config is not None and not isinstance(display_config, dict)
+    ):
         return display_config
     from app.loader import _parse_display_config
 

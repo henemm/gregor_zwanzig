@@ -9,7 +9,7 @@ SPEC: docs/specs/modules/fix_1677_sms_reihenfolge.md AC-13/AC-14/AC-15.
 Parametrisiert ueber ``app.metric_catalog.get_all_metrics()`` (25 waehlbare
 Metriken, gemessen 2026-08-14). Pro Kanal wird gegen die Funktion getestet,
 die der jeweilige Produktivpfad TATSAECHLICH aufruft (kein Duplikat-Rendering):
-- E-Mail:        ``resolve_metric_col_order`` (email/html.py:1021 ``_col_order``)
+- E-Mail:        ``email_col_order`` (email/html.py:1021 ``_col_order``)
 - Telegram-rich: ``render_for_channel`` (narrow.py:644)
 - SMS-Kurzform:  ``TripReportFormatter().format_email() -> report.sms_text``
   (derselbe Wirkort wie test_sms_user_metric_order.py)
@@ -118,11 +118,12 @@ from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID, 
 from output.renderers.comparison import (
     _PLAIN_ROWS_BY_ID, render_compare_email, render_compare_sms, render_compare_telegram,
 )
-from output.renderers.email.helpers import _PILL_CATALOG_ORDER, resolve_metric_col_order
+from output.renderers.email.helpers import _PILL_CATALOG_ORDER, email_col_order
 from output.renderers.email.html import _render_mobile_compact_rows
 from output.renderers.sms_trip import SMS_SYMBOL_BY_METRIC, SMS_MULTI_SYMBOLS_BY_METRIC
 from output.renderers.trip_metric_ids import DEFAULT_TRIP_METRIC_IDS
 from output.renderers.trip_report import TripReportFormatter
+from services.channel_list_resolver import resolve_channel_lists
 from services.report_config_resolver import ReportRenderOptions
 from services.weather_change_detection import _ALERT_METRIC_TO_CATALOG_ID, is_alert_metric_active
 from services.weather_metrics import WeatherMetricsService, summarize_points
@@ -234,8 +235,14 @@ def _two_metric_dc(first: str, second: str) -> UnifiedWeatherDisplayConfig:
     )
 
 
+def _email_order(dc: UnifiedWeatherDisplayConfig) -> list[str]:
+    """E-Mail-Spaltenfolge wie im Produktivpfad (#3096): Resolver-E-Mail-Liste
+    (``trip_report.py``) -> Adapter ``email_col_order`` (html.py/plain.py)."""
+    return email_col_order(resolve_channel_lists(dc, "trip", "evening").email)
+
+
 # ---------------------------------------------------------------------------
-# AC-13: E-Mail -- resolve_metric_col_order(dc), Bestand (#1575)
+# AC-13: E-Mail -- _email_order(dc), Bestand (#1575)
 # ---------------------------------------------------------------------------
 
 
@@ -245,15 +252,15 @@ def test_ac13_email_column_selection_and_order(metric_id):
     other_id = _partner_of(metric_id)
     other_key = get_metric(other_id).col_key
 
-    assert col_key in resolve_metric_col_order(_single_metric_dc(metric_id, enabled=True)), (
+    assert col_key in _email_order(_single_metric_dc(metric_id, enabled=True)), (
         f"(a) {metric_id} aktiv -> Spalte {col_key!r} muss erscheinen"
     )
-    assert col_key not in resolve_metric_col_order(_single_metric_dc(metric_id, enabled=False)), (
+    assert col_key not in _email_order(_single_metric_dc(metric_id, enabled=False)), (
         f"(b) {metric_id} inaktiv -> Spalte {col_key!r} darf nicht erscheinen"
     )
 
-    order_a = resolve_metric_col_order(_two_metric_dc(metric_id, other_id))
-    order_b = resolve_metric_col_order(_two_metric_dc(other_id, metric_id))
+    order_a = _email_order(_two_metric_dc(metric_id, other_id))
+    order_b = _email_order(_two_metric_dc(other_id, metric_id))
     assert order_a.index(col_key) < order_a.index(other_key), (
         f"(c) Reihenfolge A ({metric_id} vor {other_id}): {order_a}"
     )
@@ -465,7 +472,7 @@ def _mail_table(
 ) -> tuple[list[str], list[list[str]]]:
     """Kopfzeile + Datenzeilen der ECHTEN Trip-Mail-Stundentabelle (Pruefort =
     Wirkort -- s. Korrektur-Abschnitt der Spec: eine isolierte Pruefung von
-    resolve_metric_col_order() haette hier nachweislich die falsche Funktion
+    email_col_order() haette hier nachweislich die falsche Funktion
     getroffen, s. AC-2/AC-5)."""
     report = TripReportFormatter().format_email(
         [_matrix_segment()], trip_name="Issue1703Matrix", report_type=report_type,
@@ -548,11 +555,11 @@ def test_ac2_cape_absent_from_mail_telegram_compare_and_alert():
     enabled=True.
 
     Mutations-Gegenprobe-Ziel: die Mail-Header-Assertion prueft den ECHTEN
-    <thead> (nicht nur resolve_metric_col_order() isoliert) -- wuerde
+    <thead> (nicht nur email_col_order() isoliert) -- wuerde
     _SELECTABLE_GATE_EXEMPT versehentlich um 'cape' erweitert, ueberlebt cape
     die Kanal-Kollabierung (trip_report.py:135) und erschiene ueber den
     remaining-Fallback (email/html.py:678-682) am Tabellenende, OBWOHL
-    resolve_metric_col_order() selbst (roher .selectable-Check, KEINE
+    email_col_order() selbst (roher .selectable-Check, KEINE
     Exemption-Kenntnis) unveraendert bliebe -- dasselbe Pruefort=Wirkort-Muster
     wie bei AC-5/AC-6."""
     metric = get_metric("cape")
@@ -566,8 +573,8 @@ def test_ac2_cape_absent_from_mail_telegram_compare_and_alert():
     assert metric.col_label not in headers, (
         f"AC-2: 'CAPE' erscheint in der echten Trip-Mail-Kopfzeile: {headers}"
     )
-    assert "cape" not in resolve_metric_col_order(dc), (
-        "AC-2: 'cape' col_key erscheint in resolve_metric_col_order()"
+    assert "cape" not in _email_order(dc), (
+        "AC-2: 'cape' col_key erscheint in email_col_order()"
     )
 
     cells = _telegram_cells(dc)
@@ -696,7 +703,7 @@ _NON_SELECTABLE_METRIC_IDS = [m.id for m in _METRICS if not m.selectable]
 def test_ac8_non_selectable_metrics_stay_out_unless_exempt(metric_id):
     """AC-8: fuer JEDE NICHT in _SELECTABLE_GATE_EXEMPT gelistete
     selectable=False-Groesse gilt dieselbe Grundregel aus AC-1/AC-2 an den
-    ID-verankerten Choke-Points (resolve_metric_col_order()-Rueckgabe,
+    ID-verankerten Choke-Points (email_col_order()-Rueckgabe,
     get_compare_metric_catalog()-Metrik-IDs, resolve_enabled_metrics()-
     Ergebnis sofern ein Compare-Katalog-Eintrag existiert, is_alert_metric_
     active() sofern ein alert_metrics-Eintrag existiert). Fuer eine gelistete
@@ -712,10 +719,10 @@ def test_ac8_non_selectable_metrics_stay_out_unless_exempt(metric_id):
     metric = get_metric(metric_id)
     dc = _single_metric_dc(metric_id, enabled=True)
 
-    col_order = resolve_metric_col_order(dc)
+    col_order = _email_order(dc)
     assert metric.col_key not in col_order, (
         f"AC-8: {metric_id!r} (col_key {metric.col_key!r}) erscheint in "
-        f"resolve_metric_col_order(): {col_order}"
+        f"email_col_order(): {col_order}"
     )
 
     compare_ids = {e["metric_id"] for e in get_compare_metric_catalog()}

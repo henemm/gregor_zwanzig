@@ -166,15 +166,17 @@ class TestHourColumnOrder:
         assert header == ["Zeit", "Rain", "Temp", "Wind"], (
             f"RED (AC-2): erwartet Spaltenreihenfolge ['Zeit','Regen','Temp','Wind'] "
             f"(entspricht hourly_metrics=['precip_1h_mm','t2m_c','wind10m_kmh']), "
-            f"erhalten {header} -- _visible_hour_metrics() ignoriert heute die "
-            f"Eingabe-Reihenfolge und nutzt die feste HOUR_METRICS-Deklarationsreihenfolge "
-            f"(Temp vor Wind vor Regen)"
+            f"erhalten {header} -- _visible_hour_metrics() muss der "
+            f"Eingabe-Reihenfolge folgen, nicht der festen HOUR_METRICS-"
+            f"Deklarationsreihenfolge (Temp vor Wind vor Regen)"
         )
 
     def test_ac2_none_keeps_default_order(self):
         """AC-2 zweiter Halbsatz: hourly_metrics=None -> bisherige
         Default-Reihenfolge bleibt unveraendert (Regress-Waechter, muss
-        heute schon und nach dem Fix gruen sein)."""
+        heute schon und nach dem Fix gruen sein). Seit #3096 loest der
+        Einstieg ``render_compare_html`` ``None`` ueber die einzige Quelle
+        ``compare_hourly_metric_ids`` in die konkrete Vorgabeliste auf."""
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_hour_result()

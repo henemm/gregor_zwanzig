@@ -7,7 +7,7 @@ Je Liste (Trip-Tabellen, Trip-Ausblick, Orte-Vergleichstabelle, Orte-Stundenverl
 Orte-Ausblick) laeuft die ECHTE Python-Aufloesung mit der Eingabe aus
 ``tests/fixtures/einstellung_gleich_mail/editor_standard.json`` bis an die Stelle,
 an der die Mail ihre Spalten bzw. Zeilen festlegt (Spaltenkopf des Ausblicks,
-``_visible_hour_metrics``, ``_visible_metrics``, ``resolve_metric_col_order``).
+``_visible_hour_metrics``, ``_visible_metrics``, ``email_col_order``).
 Das Soll steht dort von Hand als Literal-Liste -- es wird hier NICHT aus einem
 Resolver berechnet, deshalb ist der Aufruf der Produkt-Resolver kein Spiegel.
 Dieselbe Datei liest die Frontend-Seite
@@ -22,7 +22,6 @@ Lauf:
 """
 from __future__ import annotations
 
-import dataclasses
 import html
 import json
 import re
@@ -40,8 +39,9 @@ from output.renderers.email.compare_html import (
     _visible_hour_metrics,
     _visible_metrics,
 )
-from output.renderers.email.helpers import resolve_metric_col_order
+from output.renderers.email.helpers import email_col_order
 from output.renderers.email.outlook import render_outlook_table
+from services.channel_list_resolver import resolve_channel_lists
 from services.report_config_resolver import resolve_compare_render_options
 
 FIXTURE = (
@@ -102,15 +102,13 @@ def _ausblick_spalten(metrics: list[str] | None) -> list[str]:
 # ── Python-Seite je Liste ──────────────────────────────────────────────────────
 
 def python_trip_tabellen(eingabe: dict) -> list[str]:
-    """E-Mail-Spaltenfolge der Stundentabelle: Loader -> Kanal-Kaskade
-    (``get_metrics_for_channel``, wie ``trip_report.py:140-157``) ->
-    ``resolve_metric_col_order`` (geteilt von html.py und plain.py)."""
+    """E-Mail-Spaltenfolge der Stundentabelle: Loader -> Kanal-Listen-Resolver
+    (``resolve_channel_lists(dc, "trip", rt).email``, wie ``trip_report.py``,
+    #3096) -> Adapter ``email_col_order`` (geteilt von html.py und plain.py)."""
     dc = _parse_display_config(eingabe["display_config"], trip_standard_bei_leer=True)
-    email = [dataclasses.replace(mc, enabled=True)
-             for mc in dc.get_metrics_for_channel("email", "evening")]
-    kollabiert = dataclasses.replace(dc, metrics=email)
     abbildung = _col_key_zu_kennung()
-    return [abbildung[k] for k in resolve_metric_col_order(kollabiert)]
+    zeilen = resolve_channel_lists(dc, "trip", "evening").email
+    return [abbildung[k] for k in email_col_order(zeilen)]
 
 
 def python_trip_ausblick(eingabe: dict) -> list[str]:

@@ -169,12 +169,13 @@ def normalize_hourly_metrics(hourly_metrics: list[str] | None) -> list[str] | No
 
 def resolve_hourly_metrics(
     hourly_metrics: list[str] | None, enabled_metrics: list[str] | None = None,
-) -> list[str] | None:
+) -> list[str]:
     """Gespeicherte Stundenauswahl -> Renderer-Feldnamen (``dp_field``).
 
-    Rueckgabe ``None`` (= "nie eingestellt", Renderer zeigt seine Vorgabemenge)
-    nur wenn das Feld fehlt oder kein Listenwert ist (defensiv, kein TypeError
-    -- Adversary-Analogie F001, #1104). Eine bewusst leere oder komplett
+    Nie ``None`` (#3096): fehlt das Feld oder ist es kein Listenwert
+    (defensiv, kein TypeError -- Adversary-Analogie F001, #1104), gilt "nie
+    eingestellt" und es kommt die konkrete Vorgabe (s. #3047 H1 unten) zurueck;
+    der Renderer bekommt immer eine Liste. Eine bewusst leere oder komplett
     unaufloesbare Auswahl liefert ``[]``, nicht ``None`` (Issue #1366, AC-4/
     AC-5) -- "leer heisst leer" statt "leer heisst alle".
 
@@ -200,23 +201,23 @@ def resolve_hourly_metrics(
     Issue #3047 H1 (Konzept §5.8): NIE eingestellt (kein Listenwert) mit
     bekannter Grundauswahl heisst "nichts abgewaehlt" -- die stuendlich
     waehlbaren Groessen der Grundauswahl in DEREN Folge, nicht mehr die feste
-    Vorgabemenge. ``None`` (Vorgabemenge des Renderers) bleibt nur, wenn die
-    Grundauswahl selbst nie eingestellt ist (Altbestand) oder keine Groesse
-    mit eigener Stundenspalte traegt. Eine bewusst LEERE Grundauswahl (``[]``)
-    liefert ``[]`` -- der Block entfaellt (#3047 N2).
+    Vorgabemenge. Die Vorgabemenge ``HOURLY_DEFAULT_METRIC_IDS`` gilt nur, wenn
+    die Grundauswahl selbst nie eingestellt ist (Altbestand) oder keine Groesse
+    mit eigener Stundenspalte traegt (#3096: als konkrete Liste, nicht mehr als
+    ``None``). Eine bewusst LEERE Grundauswahl (``[]``) liefert ``[]`` -- der
+    Block entfaellt (#3047 N2).
 
     Issue #3065 (ADR-0121 Nachtrag 2b): die Auswahlregel steht in der
     ID-Stufe ``resolve_hourly_metric_ids``; hier nur noch der ``dp_field``-Schritt.
     """
-    ids = resolve_hourly_metric_ids(hourly_metrics, enabled_metrics)
-    return None if ids is None else [get_metric(m).dp_field for m in ids]
+    return [get_metric(m).dp_field for m in resolve_hourly_metric_ids(hourly_metrics, enabled_metrics)]
 
 
 def resolve_hourly_metric_ids(
     hourly_metrics: list[str] | None, enabled_metrics: list[str] | None = None,
-) -> list[str] | None:
+) -> list[str]:
     """ID-Stufe von ``resolve_hourly_metrics`` (#3065): dieselbe Regel, aber
-    Katalog-IDs statt ``dp_field``; ``None`` = Vorgabemenge des Renderers."""
+    Katalog-IDs statt ``dp_field``; nie ``None`` (#3096)."""
     if not isinstance(hourly_metrics, list):
         return _standard_aus_grundauswahl(enabled_metrics)
     normalized = normalize_hourly_metrics(hourly_metrics) or []
@@ -236,15 +237,19 @@ def resolve_hourly_metric_ids(
     return normalized
 
 
-def _standard_aus_grundauswahl(enabled_metrics: list[str] | None) -> list[str] | None:
+def _standard_aus_grundauswahl(enabled_metrics: list[str] | None) -> list[str]:
     """Nie eingestellter Stundenverlauf = Grundauswahl ∩ stuendlich waehlbar,
-    Folge der Grundauswahl (#3047 H1); ``None`` = Vorgabemenge des Renderers.
+    Folge der Grundauswahl (#3047 H1). Ist die Grundauswahl nie eingestellt
+    oder traegt sie keine Groesse mit eigener Stundenspalte, gilt die
+    Vorgabemenge ``HOURLY_DEFAULT_METRIC_IDS`` -- als konkrete Liste, nie
+    ``None`` (#3096: die Vorgabe wird genau hier aufgeloest, der Renderer
+    fuehrt keine eigene).
 
     #3047 N2 (Konzept §5.8): eine bewusst leere Grundauswahl (``[]``) laesst
     nichts zum Nehmen uebrig -> ``[]``, der Block entfaellt; KEIN Rueckfall
     auf die Vorgabemenge (das gilt nur fuer "nie eingestellt" = ``None``)."""
     if enabled_metrics is None:
-        return None
+        return list(HOURLY_DEFAULT_METRIC_IDS)
     if enabled_metrics == []:
         return []
     from output.renderers.compare_outlook_metric_ids import _kennungen_aus_renderer_ids
@@ -254,7 +259,7 @@ def _standard_aus_grundauswahl(enabled_metrics: list[str] | None) -> list[str] |
         m for m in _kennungen_aus_renderer_ids(enabled_metrics) if m in waehlbar
     ))
     if not [m for m in ids if m not in HOURLY_MERGE_ONLY_METRIC_IDS]:
-        return None
+        return list(HOURLY_DEFAULT_METRIC_IDS)
     return ids
 
 

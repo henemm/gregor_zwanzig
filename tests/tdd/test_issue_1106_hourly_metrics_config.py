@@ -87,6 +87,13 @@ VALIDATOR_PATH = REPO_ROOT / ".claude" / "hooks" / "email_spec_validator.py"
 # ---------------------------------------------------------------------------
 
 
+#: #3096 (ADR-0121 Nachtrag 3a): Vorgabe "nie eingestellt" von Hand (dp_field).
+_VORGABE_DP_3096 = [
+    "t2m_c", "wind_chill_c", "wind10m_kmh", "gust_kmh", "precip_1h_mm",
+    "uv_index", "thunder_level", "pop_pct", "visibility_m",
+]
+
+
 class TestResolveHourlyMetrics:
     """Reiner Unit-Test fuer den (noch nicht existierenden) kanonischen
     ID-Resolver ``resolve_hourly_metrics()``.
@@ -129,11 +136,16 @@ class TestResolveHourlyMetrics:
             f"Erwartet ['pop_pct', 'visibility_m'], erhalten {result!r}"
         )
 
-    def test_none_returns_none(self):
+    def test_none_returns_default_list(self):
+        """#3096 (ADR-0121 Nachtrag 3a): nie eingestellt liefert die konkrete
+        Vorgabe (neun Spalten, Soll von Hand), nie mehr ``None``."""
         from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
 
         result = resolve_hourly_metrics(None)
-        assert result is None, f"None muss None ergeben (kein Filter, alle 9 sichtbar), erhalten {result!r}"
+        assert result == [
+            "t2m_c", "wind_chill_c", "wind10m_kmh", "gust_kmh", "precip_1h_mm",
+            "uv_index", "thunder_level", "pop_pct", "visibility_m",
+        ], f"None muss die neun Vorgabespalten ergeben, erhalten {result!r}"
 
     def test_empty_list_returns_empty_list(self):
         """Issue #1366: bewusste Leerauswahl bleibt leer (kein Rueckfall auf None/alle 9)."""
@@ -159,19 +171,22 @@ class TestResolveHourlyMetrics:
         from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
 
         result = resolve_hourly_metrics("temp_c")
-        assert result is None, f"Scalar-String-Input muss defensiv zu None fuehren, erhalten {result!r}"
+        # #3096: defensiv "nie eingestellt" = konkrete Vorgabe statt None.
+        assert result == _VORGABE_DP_3096, f"Scalar-String-Input muss defensiv zur Vorgabe fuehren, erhalten {result!r}"
 
     def test_dict_input_returns_none_not_crashed(self):
         from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
 
         result = resolve_hourly_metrics({"a": 1})
-        assert result is None, f"Dict-Input muss defensiv zu None fuehren, erhalten {result!r}"
+        # #3096: defensiv "nie eingestellt" = konkrete Vorgabe statt None.
+        assert result == _VORGABE_DP_3096, f"Dict-Input muss defensiv zur Vorgabe fuehren, erhalten {result!r}"
 
     def test_int_input_returns_none_not_typeerror(self):
         from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
 
         result = resolve_hourly_metrics(5)
-        assert result is None, f"Int-Input muss defensiv zu None fuehren (kein TypeError), erhalten {result!r}"
+        # #3096: defensiv "nie eingestellt" = konkrete Vorgabe statt None.
+        assert result == _VORGABE_DP_3096, f"Int-Input muss defensiv zur Vorgabe fuehren, erhalten {result!r}"
 
 
 # ---------------------------------------------------------------------------

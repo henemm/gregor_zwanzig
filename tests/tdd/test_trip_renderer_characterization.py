@@ -141,8 +141,8 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 #
 # #1585 (2026-08-10): die Trip-Mail verliert ABSICHTLICH ihre CAPE-Spalte --
 # CAPE ist zentral nicht mehr waehlbar (AC-2), die Fixture aktiviert sie zwar
-# weiter (s. `_ENABLED_METRICS`), `dp_to_row`/`resolve_metric_col_order`
-# ignorieren sie aber. Der Warnsatz oben ("diese Scheibe darf den
+# weiter (s. `_ENABLED_METRICS`), `dp_to_row`/`email_col_order` (vormals
+# `resolve_metric_col_order`, #3096) ignorieren sie aber. Der Warnsatz oben ("diese Scheibe darf den
 # Trip-Renderer NICHT beruehren") gilt fuer #1425, nicht hier. NACHGEMESSEN
 # statt angenommen: ein Beweislauf hat `cape` zur Laufzeit wieder auf
 # `selectable=True` gesetzt und erhielt EXAKT den alten Digest

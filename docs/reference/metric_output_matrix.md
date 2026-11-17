@@ -43,7 +43,7 @@
 > Alarm-Familie, Ortsvergleich (eigene Scheiben S2–S5, siehe Spec
 > `docs/specs/modules/fix_2422_einstellung_gleich_auslieferung.md`). Ersetzt
 > `tests/tdd/test_channel_metric_matrix.py` nicht — der bewacht andere
-> Zwischenschichten (`resolve_metric_col_order`, `get_metrics_for_channel`).
+> Zwischenschichten (`email_col_order` (Adapter auf `resolve_channel_lists`, #3096), `get_metrics_for_channel`).
 
 ## 1. Zweck & Leitfrage
 
@@ -66,7 +66,7 @@ Leitfrage ist zellenweise anzuwenden — nicht pauschal pro Kanal:
 | 4 | **Wer bewacht das?** konkreter Test oder ausdrücklich „unbewacht" | Ein grüner Testlauf beweist nur, dass Tests durchlaufen. Ohne benannten Wächter ist die Zelle unbewacht — das ist eine Aussage, keine Lücke im Wissen |
 
 **Merksatz für Frage 4:** Ist die Zusicherung an der Stelle geprüft, an der sie
-**wirkt** — oder nur dort, wo der Code steht? Ein Test, der `resolve_metric_col_order()`
+**wirkt** — oder nur dort, wo der Code steht? Ein Test, der `email_col_order()`
 prüft, bewacht die E-Mail-Tabelle. Er bewacht **nicht** den Ausblick derselben Mail.
 
 ### Grundlage: der Katalog und was er nicht abdeckt
@@ -126,7 +126,7 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 
 | Ausgabeort | Datei:Zeile | Quelle | Wächter |
 |---|---|---|---|
-| E-Mail-Tabelle (Vollformat, HTML + Klartext) | `src/output/renderers/email/helpers.py:302` `resolve_metric_col_order()`; Aufrufe `email/html.py:1021`, `email/plain.py:144` | katalog-getrieben | `tests/tdd/test_channel_metric_matrix.py:81` (Auswahl/Abwahl/paarweise Reihenfolge) + Ende-zu-Ende ab gespeichertem Trip-JSON: `tests/tdd/test_einstellung_gleich_auslieferung.py` (#2422 S1) |
+| E-Mail-Tabelle (Vollformat, HTML + Klartext) | `resolve_channel_lists(dc, "trip", report_type).email` → Adapter `src/output/renderers/email/helpers.py:305` `email_col_order()`; Aufrufe `email/html.py:874`, `email/plain.py:199` (#3096) | katalog-getrieben | `tests/tdd/test_channel_metric_matrix.py:81` (Auswahl/Abwahl/paarweise Reihenfolge) + Ende-zu-Ende ab gespeichertem Trip-JSON: `tests/tdd/test_einstellung_gleich_auslieferung.py` (#2422 S1) |
 | E-Mail-Pillen („Metriken-Überblick") | `src/output/renderers/email/helpers.py:1815` `build_metrics_summary_pills()`; Metrik-Auflösung `src/output/renderers/trip_metric_ids.py:37` `resolve_trip_active_metrics()` | katalog-getrieben | **unbewacht** (keine Metrik×Ort-Prüfung) |
 | E-Mail mobile Kompaktzeilen (in der **Voll**mail) | `src/output/renderers/email/html.py:878` `_render_mobile_compact_rows()`; Aufrufe `:1206`, `:1264`, `:1290` (Nachtzeilen) | katalog-getrieben (erbt `col_order`) | **unbewacht** |
 | Kurzform-Mail (eigenes Format `compact`) | `src/output/renderers/email/compact.py:96` `render_compact()`; Pillen-Aufruf `:176` | katalog-getrieben über `resolve_trip_active_metrics` | **unbewacht** |

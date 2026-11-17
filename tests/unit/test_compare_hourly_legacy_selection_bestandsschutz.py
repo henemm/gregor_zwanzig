@@ -8,7 +8,8 @@ Zwei Bestandsfaelle, die diese Scheibe NICHT anfassen darf:
    wurde (``temp_c``, ``wind_kmh``, …), laedt unveraendert und zeigt exakt
    dieselben Spalten wie vor der Umstellung.
 2. Ein Vergleich, der den Stundenverlauf NIE eingestellt hat
-   (``hourly_metrics`` fehlt ⇒ ``None`` ⇒ „kein Filter"), zeigt weiterhin
+   (``hourly_metrics`` fehlt ⇒ Vorgabe aus ``compare_hourly_metric_ids``,
+   seit #3096 als konkrete Liste statt ``None``), zeigt weiterhin
    genau die bisherigen neun Spalten, NAMENTLICH — nicht ploetzlich alle 22.
    Das ist die gefaehrlichste Stelle der Scheibe: ``_visible_hour_metrics``
    (``compare_html.py:696-697``) setzt „kein Filter" heute mit „alle" gleich;
@@ -194,13 +195,17 @@ def test_never_configured_comparison_keeps_the_nine_columns_of_today():
         "Aufzeichnung beschaedigt: erwartet 'Zeit' + neun Wert-Spalten."
     )
     options = resolve_compare_render_options({"id": "p-nie", "display_config": {}})
-    assert options.hourly_metrics is None, (
-        "Vorbedingung: ein nie eingestellter Stundenverlauf muss als 'kein "
-        "Filter' (None) beim Renderer ankommen - sonst prueft dieser Test "
-        "einen anderen Fall als den gemeinten."
+    # #3096 (ADR-0121): der Renderer bekommt nie mehr None -- die Vorgabe
+    # "nie eingestellt" loest `compare_hourly_metric_ids` genau einmal auf und
+    # reicht sie als konkrete Liste durch (Versand- und Vorschaukette).
+    assert options.hourly_metrics is not None, (
+        "Vorbedingung: ein nie eingestellter Stundenverlauf muss als konkrete "
+        "Vorgabeliste beim Renderer ankommen (#3096), nicht als None."
     )
 
-    html = render_compare_html(_result(), hourly_metrics=None, preset=PRESET_ALLGEMEIN)
+    html = render_compare_html(
+        _result(), hourly_metrics=options.hourly_metrics, preset=PRESET_ALLGEMEIN,
+    )
     ist = _hour_header(html)
 
     assert ist == HEUTIGE_SPALTEN, (

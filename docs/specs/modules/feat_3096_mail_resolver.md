@@ -17,7 +17,7 @@ tags: [epic-3058, phase-3a, epic-3047, resolver, kanal-liste, email, mail-altpfa
 
 ## Purpose
 
-Die E-Mail-Renderer für Trip und Orte-Vergleich (HTML und Klartext) beziehen Spalten, Reihenfolge und Stundenverlauf-Vorgabe künftig aus dem gemeinsamen Resolver `resolve_channel_lists` (ADR-0121). Die Mail-Altpfade (`resolve_metric_col_order`, der `None`-Sonderpfad in `_visible_hour_metrics`, `HOURLY_DEFAULT_METRIC_IDS` als zweite Quelle im Renderer) werden gelöscht. Für den Nutzer ändert sich keine zugestellte Mail.
+Die E-Mail-Renderer für Trip und Orte-Vergleich (HTML und Klartext) beziehen Spalten, Reihenfolge und Stundenverlauf-Vorgabe künftig aus dem gemeinsamen Resolver `resolve_channel_lists` (ADR-0121). Die Mail-Altpfade (`resolve_metric_col_order`, der `None`-Sonderpfad in `_visible_hour_metrics`, `HOURLY_DEFAULT_METRIC_IDS` als zweite Quelle im Renderer) werden gelöscht. Morgen-/Abendbericht und Orte-Mail bleiben für den Nutzer unverändert. Einzige gewollte sichtbare Änderung (PO-Entscheidung 2026-11-17): Update- und Alarm-Mails eines Trips folgen ebenfalls der E-Mail-Auswahl des Nutzers (bisher Grundauswahl).
 
 ## Source
 
@@ -34,7 +34,7 @@ Die E-Mail-Renderer für Trip und Orte-Vergleich (HTML und Klartext) beziehen Sp
 
 ## Scope
 
-Phase 3a von #3047 (Epic #3058). Die E-Mail-Renderer für Trip (HTML und Klartext) und Orte-Vergleich (HTML und Klartext) beziehen Spaltenauswahl, Reihenfolge und Stundenverlauf-Vorgabe aus `resolve_channel_lists` (ADR-0121). Gelöscht werden `resolve_metric_col_order`, der `None`-Sonderpfad in `_visible_hour_metrics` und die zweite Auflösung der Stundenverlauf-Vorgabe im Renderer; `HOURLY_DEFAULT_METRIC_IDS` bleibt nur in `compare_hourly_metric_ids` als einzige Quelle. Die zugestellte Mail bleibt in allen Prüfkatalog-Fällen byte-gleich.
+Phase 3a von #3047 (Epic #3058). Die E-Mail-Renderer für Trip (HTML und Klartext) und Orte-Vergleich (HTML und Klartext) beziehen Spaltenauswahl, Reihenfolge und Stundenverlauf-Vorgabe aus `resolve_channel_lists` (ADR-0121). Gelöscht werden `resolve_metric_col_order`, der `None`-Sonderpfad in `_visible_hour_metrics` und die zweite Auflösung der Stundenverlauf-Vorgabe im Renderer; `HOURLY_DEFAULT_METRIC_IDS` bleibt nur in `compare_hourly_metric_ids` als einzige Quelle. Die zugestellte Mail bleibt in allen Prüfkatalog-Fällen byte-gleich; Update-/Alarm-Mails mit eigener E-Mail-Auswahl folgen dieser Auswahl (PO-Entscheidung 2026-11-17, siehe unten).
 
 ## Estimated Scope
 
@@ -60,10 +60,18 @@ Phase 3a von #3047 (Epic #3058). Die E-Mail-Renderer für Trip (HTML und Klartex
 Reihenfolge, nach jedem Schritt Golden-Mails und Prüfkatalog grün:
 
 1. **Orte:** `_standard_aus_grundauswahl` liefert statt `None` die konkrete Liste `HOURLY_DEFAULT_METRIC_IDS` (einzige Quelle bleibt in `compare_hourly_metric_ids.py`). Auch der zweite None-Fall (Grundauswahl ohne Stundengröße) lieferte bisher dieselben neun Vorgabespalten, also gleich. `resolve_compare_render_options` (:278/:307) nimmt `hourly_metrics` aus `view.hourly` (`dp_field`-Abbildung genau einmal dort) statt aus zweiter Auflösung über `resolve_hourly_metrics`. `validator_render_service.py` (:573) löst `hourly_metrics` vor `render_compare_html` auf. In `compare_html.py` verliert `_visible_hour_metrics` den `None`-Zweig (Signatur `list[str]`), der Import `HOURLY_DEFAULT_METRIC_IDS` entfällt, `_should_merge_wind_dir` ohne `is None`. `wind_direction` (Merge-only) steht nicht in der Vorgabeliste, bleibt also unverändert nicht verschmolzen. Klartext (`comparison.py`) ruft denselben `_visible_hour_metrics`.
-2. **Trip:** `trip_report.py` ruft `resolve_channel_lists(dc_unkollabiert, "trip", report_type)` einmal VOR der Kollabierung (:141) auf (nicht auf dem kollabierten dc: `enabled=True` erzwungen, Idempotenz unbewiesen) und reicht `view.email` über `render_email` an `render_html`/`render_plain` durch (analog `outlook_metrics`). morning/evening verhalten sich identisch zur Kollabierung (beide über `trip_channel_metrics`), übrige `report_type`: Global-Zweig = nur `enabled`, wie heute.
+2. **Trip:** `trip_report.py` ruft `resolve_channel_lists(dc_unkollabiert, "trip", report_type)` einmal VOR der Kollabierung (:141) auf (nicht auf dem kollabierten dc: `enabled=True` erzwungen, Idempotenz unbewiesen) und reicht `view.email` über `render_email` an `render_html`/`render_plain` durch (analog `outlook_metrics`). morning/evening verhalten sich identisch zur Kollabierung (beide über `trip_channel_metrics`), übrige `report_type` (Update, Alarm): Die Kaskade `trip_channel_metrics` wendet die E-Mail-Auswahl auch dort an; die Kollabierung läuft daher für jeden `report_type`. Ohne Kanal-Ebene bleibt es wie heute die Grundauswahl (nur `enabled`).
 3. **Adapter:** `email_col_order(rows)` in `helpers.py`: `metric_id` nach `get_metric().col_key`, Folge erhalten, `enabled` und `selectable` filtern (Resolver kennt `selectable` nicht, bleibt unverändert), `KeyError` überspringen. `html.py` (:872) und `plain.py` (:197) nutzen ihn; nur ohne Parameter (direkte Testaufrufe) gilt als einziger Rückfall `resolve_channel_lists(dc, "trip", report_type).email`.
 4. **Löschung:** `resolve_metric_col_order` entfällt samt Aufrufern.
 5. **Tests und ADR:** Tests und Allowlist umstellen; ADR-0121 Nachtrag.
+
+### PO-Entscheidung 2026-11-17: Update- und Alarm-Mail folgen der E-Mail-Auswahl
+
+Der Adversary fand: Update-/Alarm-Mails zeigten bisher die Grundauswahl und ignorierten die E-Mail-Kanal-Auswahl; der Resolver liefert für jeden `report_type` die E-Mail-Auswahl. Der PO hat entschieden, dass die E-Mail-Auswahl überall gilt (einheitlich mit Morgen-/Abendbericht). Trips ohne eigene E-Mail-Auswahl sind unverändert. Nachweis: AC-2 (`update`, `alert`).
+
+**Nachbefund Fix-Loop:** In Produktion erreichen `update`/`alert` `format_email` nicht mehr (zugestellte Alarm-Mails laufen seit #921 über `output/renderers/alert/`; Vorschau und Handversand erlauben nur morning/evening). Die Angleichung wirkt daher nur im CLI-/Direktpfad und ist für den Nutzer derzeit nicht sichtbar. Ob der eigene Alarm-Renderer der E-Mail-Auswahl folgen soll, ist nicht Teil von #3096 (Folge-Issue).
+
+**F001 (Adversary):** Der `selectable`-Filter im Adapter `email_col_order` ist eine dritte, am Mail-Ergebnis redundante Sperre (Kaskade und Zeilenbildung filtern bereits). Er bleibt bewusst (Schritt 3 verlangt ihn; Schutz für künftige Aufrufer), Nachweis per Adapter-Unittest; die Sperre am Mail-Ergebnis ist mit CAPE-Daten belegt (`test_trip_mail_nicht_auswaehlbare_metrik_mit_daten_keine_spalte`).
 
 ### Designentscheidung: Format-Standard ohne Angabe bleibt
 
@@ -72,7 +80,7 @@ Ohne Format-Angabe nutzt Trip heute Katalog-Darstellung (aus `MetricConfig`: `fo
 ## Expected Behavior
 
 - **Input:** `display_config` eines Trips oder Orts-Vergleichs, `report_type`.
-- **Output:** Trip-Mail und Orte-Mail (HTML und Klartext) byte-gleich zum Stand vor der Änderung; Spaltenfolge und Stundenverlauf stammen aus dem Resolver.
+- **Output:** Trip-Mail (morning/evening) und Orte-Mail (HTML und Klartext) byte-gleich zum Stand vor der Änderung; Update-/Alarm-Mail folgt der E-Mail-Auswahl; Spaltenfolge und Stundenverlauf stammen aus dem Resolver.
 - **Side effects:** keine; Resolver ist rein lesend, Eingabe wird nicht verändert.
 
 ## Acceptance Criteria
@@ -131,7 +139,7 @@ Zusicherungen werden am Mail-Ergebnis geprüft, nicht an Hilfsfunktionen; kein M
 - Migration, Differenztest-Orakel und Import-Sperre, Löschung der Orakel aus #3057/#3065: #3102.
 - Roh/Einfach im Stundenverlauf: #3097.
 - Vereinheitlichung des Format-Standards ohne Angabe (Trip Katalog, Orte Roh): bewusst nicht Teil; bei Bedarf eigenes Folge-Issue mit Produktentscheidung.
-- Jede sichtbare Änderung der zugestellten Mail in irgendeinem Kanal.
+- Jede sichtbare Änderung der zugestellten Mail in irgendeinem Kanal, außer der freigegebenen Angleichung von Update-/Alarm-Mail an die E-Mail-Auswahl.
 
 ## Affected Files
 
@@ -167,3 +175,4 @@ Zusicherungen werden am Mail-Ergebnis geprüft, nicht an Hilfsfunktionen; kein M
 ## Changelog
 
 - 2026-11-17: Initial spec created (Phase 3a, Issue #3096, Epic #3058)
+- 2026-11-17: PO-Entscheidung nach Adversary-Finding: Update-/Alarm-Mail folgen der E-Mail-Auswahl (Scope, Schritt 2, Output, Out of Scope angepasst)

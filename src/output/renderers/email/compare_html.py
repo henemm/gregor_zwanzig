@@ -35,8 +35,8 @@ from app.user import ComparisonResult, LocationResult
 from i18n import Lang, t
 from i18n.format import fmt_date_numeric, fmt_weekday
 from output.renderers.compare_hourly_metric_ids import (
-    HOURLY_DEFAULT_METRIC_IDS, HOURLY_MERGE_ONLY_METRIC_IDS,
-    hourly_selectable_metric_ids,
+    HOURLY_MERGE_ONLY_METRIC_IDS, hourly_selectable_metric_ids,
+    resolve_hourly_metrics,
 )
 from output.renderers.email.design_tokens import (
     FONT_DATA, FONT_UI, G_ACCENT, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4,
@@ -1076,19 +1076,16 @@ def _hour_td(
 
 
 def _visible_hour_metrics(
-    hourly_metrics: list[str] | None, zeilen: list[dict],
+    hourly_metrics: list[str], zeilen: list[dict],
 ) -> list[dict]:
     """Issue #1106: filtert ``HOUR_METRICS`` auf ``hourly_metrics`` (Liste von
     Renderer-Metrik-IDs wie "t2m_c").
 
-    Issue #1406 Scheibe B: ``None`` heisst "nie eingestellt" und liefert die
-    ausgesprochene Vorgabemenge ``HOURLY_DEFAULT_METRIC_IDS`` -- exakt die neun
-    Spalten von vor der Katalog-Umstellung, in genau ihrer Reihenfolge. Vorher
-    hiess ``None`` "alle Spalten"; mit 22 waehlbaren Wert-Spalten waere daraus
-    ein ungefragter Sprung fuer jeden Bestands-Vergleich geworden (AC-4: kein
-    automatisches Hinzufuegen der neuen Groessen). Seit #3047 H1 kommt ``None``
-    nur noch bei nie eingestellter Grundauswahl an; mit Grundauswahl liefert
-    ``resolve_hourly_metrics`` deren stuendliche Groessen (Konzept §5.8).
+    Issue #3096 (ADR-0121): ``hourly_metrics`` ist immer eine konkrete Liste.
+    Die Vorgabe "nie eingestellt" (neun Spalten, #1406 Scheibe B) loest
+    ``compare_hourly_metric_ids`` genau einmal auf; der Renderer fuehrt keine
+    eigene Vorgabeliste und keinen ``None``-Sonderpfad mehr (``None`` ist ein
+    ``TypeError``).
 
     Issue #1335 Scheibe 1 (AC-2): die sichtbaren Spalten folgen der Reihenfolge
     von ``hourly_metrics`` statt der festen ``HOUR_METRICS``-Deklarations-
@@ -1099,16 +1096,10 @@ def _visible_hour_metrics(
     ``zeilen`` (Issue #2792 S1c-1): ``build_hour_metrics(ampel=...)`` fuer die
     gefaerbte Tabelle, ``_hour_zeilen()`` fuer reine Struktur-Fragen."""
     by_key = {m["key"]: m for m in zeilen}
-    if hourly_metrics is None:
-        by_metric_id = {m["metric_id"]: m for m in zeilen}
-        return derive_row_labels([
-            by_metric_id[mid] for mid in HOURLY_DEFAULT_METRIC_IDS
-            if mid in by_metric_id
-        ])
     return derive_row_labels([by_key[k] for k in hourly_metrics if k in by_key])
 
 
-def has_visible_hour_columns(hourly_metrics: list[str] | None) -> bool:
+def has_visible_hour_columns(hourly_metrics: list[str]) -> bool:
     """Issue #1366 (Nachtrag): Erzeugt diese Auswahl ueberhaupt eine Wert-
     Spalte? Antwortet aus ``HOUR_METRICS`` heraus, damit es keine zweite,
     driftende Liste "welche Kennung hat eine Spalte" gibt.
@@ -1117,21 +1108,18 @@ def has_visible_hour_columns(hourly_metrics: list[str] | None) -> bool:
     Zeit-Spalte. Das trifft die bewusste Leerauswahl (``[]``) ebenso wie eine
     Auswahl aus ausschliesslich Merge-Signalen -- "wind_direction_deg" ist
     aufloesbar, hat aber bewusst keinen ``HOUR_METRICS``-Eintrag (s.
-    ``_should_merge_wind_dir``). ``None`` (kein Filter/Altbestand) = alle 9
-    Spalten sichtbar."""
+    ``_should_merge_wind_dir``)."""
     return bool(_visible_hour_metrics(hourly_metrics, _hour_zeilen()))
 
 
-def _should_merge_wind_dir(hourly_metrics: list[str] | None) -> bool:
+def _should_merge_wind_dir(hourly_metrics: list[str]) -> bool:
     """Issue #1335 Scheibe 1 (AC-3/AC-4), analog Trip-Muster
     ``helpers.should_merge_wind_dir``: Windrichtung wird nur dann als
     Kompass-Text in die Wind-Zelle gemergt, wenn BEIDE explizit in der
     Auswahl stehen -- "wind10m_kmh" (Wind-Spalte) UND "wind_direction_deg"
-    (Merge-Signal). ``hourly_metrics=None`` (kein Filter/Altbestand) merged
-    nie -- kein stiller Verhaltenswechsel fuer Bestandsnutzer ohne
-    Konfiguration."""
-    if hourly_metrics is None:
-        return False
+    (Merge-Signal). Die Vorgabe "nie eingestellt" enthaelt kein
+    "wind_direction_deg" (Merge-only, #3096) und merged deshalb nie -- kein
+    stiller Verhaltenswechsel fuer Bestandsnutzer ohne Konfiguration."""
     return "wind10m_kmh" in hourly_metrics and "wind_direction_deg" in hourly_metrics
 
 
@@ -1185,7 +1173,7 @@ def _render_hour_row(
 
 
 def _render_hour_table(
-    loc: LocationResult, hourly_metrics: list[str] | None = None,
+    loc: LocationResult, hourly_metrics: list[str],
     lang: Lang = "de",
     *, ampel: dict,
 ) -> str:
@@ -1257,7 +1245,7 @@ def _location_heading(
 
 
 def _render_location_section(
-    loc: LocationResult, index: int, hourly_metrics: list[str] | None = None,
+    loc: LocationResult, index: int, hourly_metrics: list[str],
     lang: Lang = "de",
     *, ampel: dict,
 ) -> str:
@@ -1604,7 +1592,7 @@ def _column_legend_text(
 
 
 def _render_units_legend(
-    hourly_metrics: list[str] | None, outlook_metrics: list[dict] | None = None,
+    hourly_metrics: list[str], outlook_metrics: list[dict] | None = None,
     outlook_enabled: bool = False, lang: Lang = "de",
 ) -> str:
     """Einheiten-Legende UNTER der Stundentabelle (nicht im Spaltenkopf) --
@@ -1628,7 +1616,7 @@ def _render_units_legend(
 
 
 def _render_legend(
-    hourly_metrics: list[str] | None = None, hourly_enabled: bool = True,
+    hourly_metrics: list[str], hourly_enabled: bool = True,
     outlook_metrics: list[dict] | None = None, outlook_enabled: bool = False,
     lang: Lang = "de",
 ) -> str:
@@ -1812,8 +1800,11 @@ def render_compare_html(
             Scheibe 1, AC-2). "wind_direction_deg" erzeugt keine eigene
             Spalte, sondern merged als Kompass-Text in die Wind-Zelle, wenn
             "wind10m_kmh" ebenfalls ausgewaehlt ist (AC-3/AC-4). "Zeit"
-            bleibt immer erste Spalte. ``None`` = alle 9 Spalten in
-            HOUR_METRICS-Reihenfolge (Default).
+            bleibt immer erste Spalte. Ohne Angabe (``None``, nur direkte
+            Aufrufe ohne Preset) wird die Vorgabe "nie eingestellt" hier am
+            Einstieg ueber ``resolve_hourly_metrics(None)`` aus ihrer einzigen
+            Quelle ``compare_hourly_metric_ids`` geholt (#3096); die
+            Produktivketten reichen immer eine konkrete Liste.
         hourly_enabled: Issue #1107 -- ``False`` laesst die komplette
             Stundenverlauf-Sektion (Kopf "STUNDEN" + alle Orts-
             Stundentabellen) weg. ``hourly_metrics`` (Spalten-Filter,
@@ -1860,6 +1851,8 @@ def render_compare_html(
     `TypeError` statt still zu wirken wie eine Einstellung.
     """
     warnings = warnings or []
+    if hourly_metrics is None:
+        hourly_metrics = resolve_hourly_metrics(None)
     # Issue #2792 S1c-4b: Einstieg loest die Ampel des Presets auf (je
     # Rendern, AC-20/AC-25).
     ampel = resolve_ampel(preset)

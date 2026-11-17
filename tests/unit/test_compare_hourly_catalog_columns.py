@@ -463,6 +463,13 @@ def test_plaintext_hour_row_carries_the_same_columns_as_html():
     )
 
 
+#: Vorgabe "nie eingestellt" von Hand (Katalog-IDs, #3096).
+_VORGABE = [
+    "temperature", "wind_chill", "wind", "gust", "precipitation",
+    "uv_index", "thunder", "rain_probability", "visibility",
+]
+
+
 def _grund(*keys: str) -> list[str]:
     return resolve_enabled_metrics(list(keys))
 
@@ -482,9 +489,10 @@ def _grund(*keys: str) -> list[str]:
         # (deren Folge) statt der festen Vorgabemenge (vorher: None).
         (None, ("wind_max_kmh",), ["wind"]),
         (None, ("cloud_avg_pct", "temp_max_c", "sunny_hours_h"), ["cloud_total", "temperature"]),
-        # ... ohne Groesse mit eigener Stundenspalte bzw. ohne Grundauswahl: None
-        (None, ("sunny_hours_h",), None),
-        (None, None, None),
+        # ... ohne Groesse mit eigener Stundenspalte bzw. ohne Grundauswahl:
+        # die Vorgabemenge, seit #3096 als konkrete Liste statt None.
+        (None, ("sunny_hours_h",), _VORGABE),
+        (None, None, _VORGABE),
         # keine Grundauswahl (Altbestand) -> kein Schnitt
         (["gust", "wind"], None, ["gust", "wind"]),
     ],

@@ -20,6 +20,7 @@ ROT vor der Umstellung:
 """
 from __future__ import annotations
 
+import dataclasses
 import re
 
 import pytest
@@ -57,16 +58,45 @@ def _trip_dc(global_ids, email_ids=None, trip_id="t3096") -> UnifiedWeatherDispl
     return dc
 
 
-def _html_koepfe(dc, report_type: str) -> list[str]:
-    report = TripReportFormatter().format_email(
-        [F.segment()], trip_name="Issue3096", report_type=report_type,
+#: CAPE-Wert im Segment: ohne Ausblendung stuende er als Zelle in der Tabelle.
+CAPE_JKG = 1234.0
+
+
+def _segment_mit_cape():
+    """Fixture-Segment, dessen Zeitreihe echte CAPE-Werte traegt (F001): die
+    nicht auswaehlbare Metrik haette damit Daten fuer eine eigene Spalte."""
+    seg = F.segment()
+    data = [dataclasses.replace(dp, cape_jkg=CAPE_JKG) for dp in seg.timeseries.data]
+    return dataclasses.replace(seg, timeseries=dataclasses.replace(seg.timeseries, data=data))
+
+
+def _mail(dc, report_type: str, segment=None):
+    return TripReportFormatter().format_email(
+        [segment or F.segment()], trip_name="Issue3096", report_type=report_type,
         night_weather=F.night_weather(), display_config=dc,
         stage_name=F.STAGE_NAME, tz=F.TZ,
     )
-    head = re.search(r"<thead><tr>(.*?)</tr></thead>", report.email_html, re.S)
+
+
+def _koepfe_html(html: str) -> list[str]:
+    head = re.search(r"<thead><tr>(.*?)</tr></thead>", html, re.S)
     assert head, "Stundentabelle ohne Kopfzeile"
     return [re.sub(r"<[^>]+>", "", th).strip()
             for th in re.findall(r"<th[^>]*>.*?</th>", head.group(1), re.S)]
+
+
+def _koepfe_klartext(plain: str) -> list[str]:
+    """Kopfzeile der ersten Segment-Stundentabelle im Klartext (Zeile vor der
+    ``-----``-Trennlinie)."""
+    zeilen = plain.splitlines()
+    for i, z in enumerate(zeilen[1:], start=1):
+        if z.strip().startswith("-----"):
+            return zeilen[i - 1].split()
+    raise AssertionError("Klartext ohne Stundentabelle")
+
+
+def _html_koepfe(dc, report_type: str) -> list[str]:
+    return _koepfe_html(_mail(dc, report_type).email_html)
 
 
 # Grundauswahl: Temp, Wind, Gust, Rain, UV, CAPE (CAPE nicht auswaehlbar).
@@ -75,17 +105,33 @@ GLOBAL = ["temperature", "wind", "gust", "precipitation", "uv_index", "cape"]
 EMAIL = ["precipitation", "cape", "gust", "temperature"]
 
 
-@pytest.mark.parametrize("report_type", ["morning", "evening", "update"])
-def test_trip_mail_folgt_resolver_email_liste(report_type):
-    """AC-2: Spaltenfolge = E-Mail-Liste (Rain vor Gust), Wind/UV abgewaehlt
-    (nicht in der E-Mail-Liste), CAPE nie als Spalte -- fuer jeden report_type."""
-    koepfe = _html_koepfe(_trip_dc(GLOBAL, EMAIL), report_type)
-    assert "CAPE" not in koepfe, f"{report_type}: nicht auswaehlbare Metrik als Spalte: {koepfe}"
-    assert "Wind" not in koepfe and "UV" not in koepfe, (
-        f"{report_type}: Mail zeigt Grundauswahl statt E-Mail-Liste: {koepfe}")
-    assert "Rain" in koepfe and "Gust" in koepfe, koepfe
-    assert koepfe.index("Rain") < koepfe.index("Gust"), (
-        f"{report_type}: Folge der E-Mail-Liste verletzt: {koepfe}")
+# report_type: Morgen/Abend (Briefing) sowie ``update`` und ``alert`` (Werte,
+# die ``format_email`` ausserhalb von Morgen/Abend kennt: Betreff
+# ``output/subject.py``, Kopf ``briefing_typ``/``mail.kopf.art_alert``).
+# PO-Entscheidung 2026-11-17 (#3096): alle folgen der E-Mail-Auswahl.
+@pytest.mark.parametrize("fmt", ["html", "klartext"])
+@pytest.mark.parametrize("report_type", ["morning", "evening", "update", "alert"])
+def test_trip_mail_folgt_resolver_email_liste(report_type, fmt):
+    """AC-2: Spaltenfolge = E-Mail-Liste (Rain, Gust, Temp), Wind/UV abgewaehlt
+    (nicht in der E-Mail-Liste), CAPE nie als Spalte, obwohl das Segment
+    echte CAPE-Werte traegt -- fuer jeden report_type, HTML und Klartext."""
+    mail = _mail(_trip_dc(GLOBAL, EMAIL), report_type, segment=_segment_mit_cape())
+    koepfe = _koepfe_html(mail.email_html) if fmt == "html" else _koepfe_klartext(mail.email_plain)
+    # Feste Rahmenspalten (Zeit; HTML zusaetzlich Risiko) sind keine Metriken.
+    metriken = [k for k in koepfe if k not in ("Zeit", "Risiko")]
+    assert metriken == ["Rain", "Gust", "Temp"], (
+        f"{report_type}/{fmt}: Spalten folgen nicht der E-Mail-Auswahl: {koepfe}")
+
+
+@pytest.mark.parametrize("fmt", ["html", "klartext"])
+def test_trip_mail_nicht_auswaehlbare_metrik_mit_daten_keine_spalte(fmt):
+    """AC-2 (F001): CAPE in E-Mail-Liste UND Grundauswahl, Segment mit echten
+    CAPE-Werten -- weder Spalte noch Wert erscheinen in der Stundentabelle."""
+    mail = _mail(_trip_dc(GLOBAL, EMAIL), "evening", segment=_segment_mit_cape())
+    text = mail.email_html if fmt == "html" else mail.email_plain
+    koepfe = _koepfe_html(text) if fmt == "html" else _koepfe_klartext(text)
+    assert "CAPE" not in koepfe and "cape" not in koepfe, koepfe
+    assert str(int(CAPE_JKG)) not in text, f"{fmt}: CAPE-Wert in der Mail"
 
 
 def test_trip_mail_ohne_email_liste_folgt_grundauswahl():

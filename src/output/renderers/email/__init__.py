@@ -50,6 +50,10 @@ def render_email(
     # #1720 S1: fertig aufgeloeste Ausblick-Spalten (trip_report.py, aus dem
     # UNGEKOLLABIERTEN dc) -- hier nur durchgereicht. None = Altbestand.
     outlook_metrics: Optional[list[dict]] = None,
+    # #3096 (ADR-0121): E-Mail-Zeilen aus ``resolve_channel_lists(...).email``
+    # (trip_report.py, UNGEKOLLABIERTER dc) -- bestimmen die Spaltenfolge in
+    # HTML und Klartext. None = Rueckfall im Renderer ueber den Resolver.
+    email_rows: Optional[tuple] = None,
     changes: Optional[list[WeatherChange]] = None,
     stage_name: Optional[str] = None,
     stage_stats: Optional[dict] = None,
@@ -162,6 +166,7 @@ def render_email(
         outlook_state=outlook_state,
         outlook_horizon_days=outlook_horizon_days,
         outlook_metrics=outlook_metrics,
+        email_rows=email_rows,
         compact_summary=compact_summary,
         tz=tz,
         friendly_keys=friendly_keys,
@@ -201,6 +206,7 @@ def render_email(
         outlook_state=outlook_state,
         outlook_horizon_days=outlook_horizon_days,
         outlook_metrics=outlook_metrics,
+        email_rows=email_rows,
         compact_summary=compact_summary,
         tz=tz,
         friendly_keys=friendly_keys,

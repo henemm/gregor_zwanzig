@@ -373,7 +373,11 @@ def test_ac4_orte_stundenverlauf_gleich_altpfad_ueber_alle_kombinationen():
         if any(z.format is not None for z in zeilen):
             fehler.append(f"{name}: Stundenverlauf mit format {[z.format for z in zeilen]}")
         fehler.extend(_form_fehler(name, zeilen))
-    assert all(gesehen.values()), f"Kombinationen decken nicht alles ab: {gesehen}"
+    # #3096 (ADR-0121 Nachtrag 3a): Orte-``hourly`` ist nie mehr ``None`` --
+    # die Vorgabe "nie eingestellt" kommt als konkrete Liste ("gefuellt").
+    assert gesehen["none"] == 0, f"Orte-hourly darf nie None sein: {gesehen}"
+    assert gesehen["leer"] and gesehen["gefuellt"], (
+        f"Kombinationen decken nicht alles ab: {gesehen}")
     assert not fehler, f"{len(fehler)} Abweichungen, erste: {fehler[:5]}"
 
 
@@ -396,7 +400,12 @@ def test_ac5_none_heisst_vorgabemenge_leeres_tupel_heisst_block_entfaellt():
     # #3047 R9: Orte-Ausblick "nie eingestellt" (ohne Grundauswahl) = die
     # Vorgabemenge als Liste, wie der Editor sie zeigt -- nicht mehr None.
     assert _ids(_liste(nie, "outlook")) == VORGABE_ORTE_AUSBLICK
-    assert _liste(nie, "hourly") is None
+    # #3096 (ADR-0121 Nachtrag 3a): Orte-hourly ist nie None -- die Vorgabe
+    # kommt als konkrete Liste (Soll von Hand).
+    assert _ids(_liste(nie, "hourly")) == [
+        "temperature", "wind_chill", "wind", "gust", "precipitation",
+        "uv_index", "thunder", "rain_probability", "visibility",
+    ]
     leer = resolve({"active_metrics": copy.deepcopy(AKTIV_ORTE),
                     "outlook_metrics": [], "hourly_metrics": []}, "compare")
     assert _liste(leer, "outlook") == ()
@@ -421,6 +430,12 @@ def test_ac5_trip_stundenverlauf_ist_immer_none():
 # ---------------------------------------------------------------------------
 # Eingabe-/Ausgabe-Tabelle, festgehalten am Stand VOR dem Split (Commit
 # fd15736d1, 2026-11-16) -- (hourly_metrics, enabled_metrics, Rueckgabe).
+
+#: Vorgabe "nie eingestellt" von Hand (#3096: statt ``None``), dp_field-Folge.
+VORGABE_DP = (
+    "t2m_c", "wind_chill_c", "wind10m_kmh", "gust_kmh", "precip_1h_mm",
+    "uv_index", "thunder_level", "pop_pct", "visibility_m",
+)
 
 VOR_SPLIT = [
     (None, None, None),
@@ -508,6 +523,10 @@ VOR_SPLIT = [
 def test_ac6_resolve_hourly_metrics_unveraendert(hourly, enabled, erwartet):
     from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
 
+    if erwartet is None:
+        # #3096 (ADR-0121 Nachtrag 3a): wo vor dem Split ``None`` stand, zeigte
+        # der Renderer die Vorgabemenge; sie kommt jetzt als konkrete Liste.
+        erwartet = list(VORGABE_DP)
     assert resolve_hourly_metrics(copy.deepcopy(hourly), copy.deepcopy(enabled)) == erwartet
 
 

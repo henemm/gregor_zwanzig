@@ -4,7 +4,9 @@ Issue #1406 Scheibe B, AC-8.
 SPEC: docs/specs/modules/feat_1406b_stundenverlauf_katalog.md
 
 ``render_compare_email_preview()`` (``src/services/validator_render_service.py``)
-ruft ``render_compare_html()`` heute OHNE ``hourly_metrics`` auf. Die Vorschau
+rief ``render_compare_html()`` vor #1406 OHNE ``hourly_metrics`` auf (seit #3096
+loest sie die Auswahl vor dem Rendern auf, ohne Auswahl die Vorgabe aus
+``compare_hourly_metric_ids``; der Renderer bekommt nie ``None``). Die Vorschau
 im Editor zeigt deshalb immer die volle Spaltenmenge, gleichgueltig was der
 Nutzer gewaehlt hat — und ein Nachweis, der ueber diesen Endpunkt gefuehrt
 wird, sieht die Wirkung der Auswahl nicht (Muster #1435 E3b:

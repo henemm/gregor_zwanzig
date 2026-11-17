@@ -302,20 +302,36 @@ def visible_cols(rows_or_metrics: list[dict], horizon=_HORIZON_UNSET):
     return [(k, label) for k, label, _ in get_col_defs() if k in keys]
 
 
-def resolve_metric_col_order(dc: UnifiedWeatherDisplayConfig) -> list[str]:
-    """Spaltenreihenfolge aus dc.metrics (AC-3/#911), geteilt von HTML und
-    Plain (Fix #1575 Scheibe 2). Nur enabled+selectable Metriken zaehlen."""
+def email_col_order(rows) -> list[str]:
+    """Adapter Resolver -> Spaltenreihenfolge der Trip-Mail (Issue #3096,
+    ADR-0121 Nr. 8), geteilt von HTML und Klartext (Fix #1575 Scheibe 2).
+
+    ``rows``: E-Mail-Zeilen aus ``resolve_channel_lists(dc, "trip", rt).email``.
+    ``metric_id`` -> ``col_key``, Folge erhalten; nur ``enabled`` und
+    ``selectable`` Metriken zaehlen (der Resolver kennt ``selectable`` nicht),
+    unbekannte Kennungen werden uebersprungen."""
     order: list[str] = []
-    for mc in dc.metrics:
-        if not mc.enabled:
+    for row in rows or ():
+        if not row.enabled:
             continue
         try:
-            mdef = get_metric(mc.metric_id)
-            if mdef.selectable:
-                order.append(mdef.col_key)
+            mdef = get_metric(row.metric_id)
         except KeyError:
             continue
+        if mdef.selectable:
+            order.append(mdef.col_key)
     return order
+
+
+def trip_email_col_order(dc: UnifiedWeatherDisplayConfig, report_type: str, email_rows=None) -> list[str]:
+    """Spaltenfolge fuer ``render_html``/``render_plain``: aus den
+    durchgereichten ``email_rows``; nur ohne Parameter (direkte Aufrufe)
+    einziger Rueckfall ``resolve_channel_lists(dc, "trip", report_type).email``."""
+    if email_rows is None:
+        from services.channel_list_resolver import resolve_channel_lists
+
+        email_rows = resolve_channel_lists(dc, "trip", report_type).email
+    return email_col_order(email_rows)
 
 
 def derive_horizon(report_date: date, etappe_date: date) -> str | None:

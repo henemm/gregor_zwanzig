@@ -47,6 +47,7 @@ from output.renderers.day_window import display_end_time, resolve_configured_win
 import services.alert_urgency as alert_urgency
 from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
 from services.risk_engine import RiskEngine
+from services.channel_list_resolver import resolve_channel_lists
 from output.renderers.compare_outlook_metric_ids import resolve_trip_outlook_metrics
 from output.renderers.email import render_email
 from output.renderers.email.helpers import (
@@ -136,25 +137,35 @@ class TripReportFormatter:
         # gezogen werden -- danach traegt ``dc.metrics`` nur noch die
         # Email-Auswahl und die SMS koennte strukturell nie eine eigene haben.
         _dc_uncollapsed = dc
-        if report_type in ("morning", "evening"):
-            # Issue #434: kanal-bewusste Auflösung (per_report > per_channel > global).
-            active_metrics = dc.get_metrics_for_channel("email", report_type)
-            # Force enabled=True on all active metrics so downstream guards don't skip them
-            # Issue #2422 S3 (AC-16): Layout-Eintraege tragen keine
-            # Erwaehnungsschwelle -- die globale (KL-4, wie in der SMS) wird
-            # uebernommen; ein am Layout-Eintrag gesetzter Wert gewinnt.
-            _globale_schwelle = {
-                mc.metric_id: mc.sms_threshold for mc in _dc_uncollapsed.metrics
-            }
-            active_metrics = [
-                dataclasses.replace(
-                    mc, enabled=True,
-                    sms_threshold=(mc.sms_threshold if mc.sms_threshold is not None
-                                   else _globale_schwelle.get(mc.metric_id)),
-                )
-                for mc in active_metrics
-            ]
-            dc = dataclasses.replace(dc, metrics=active_metrics)
+        # Issue #3096 (ADR-0121): E-Mail-Zeilen EINMAL aus dem Kanal-Listen-
+        # Resolver, auf dem UNGEKOLLABIERTEN dc (die Kollabierung unten
+        # erzwingt enabled=True, eine zweite Kaskade darauf waere unbewiesen).
+        # Die Spaltenfolge der Mail (HTML und Klartext) kommt allein hieraus.
+        _email_rows = resolve_channel_lists(_dc_uncollapsed, "trip", report_type).email
+        # Issue #3096 (AC-2): die Datenzeilen folgen fuer JEDEN report_type
+        # derselben E-Mail-Liste (dieselbe Kaskade ``trip_channel_metrics``);
+        # ohne Kanal-Ebene ist das wie bisher die Grundauswahl (nur enabled).
+        # Morgen/Abend unveraendert; ``update``/``alert`` folgen damit neu der
+        # E-Mail-Auswahl statt der Grundauswahl (PO-Entscheidung 2026-11-17).
+        # Zugestellte Alarm-Mails laufen ueber output/renderers/alert (#921).
+        # Issue #434: kanal-bewusste Auflösung (per_report > per_channel > global).
+        active_metrics = dc.get_metrics_for_channel("email", report_type)
+        # Force enabled=True on all active metrics so downstream guards don't skip them
+        # Issue #2422 S3 (AC-16): Layout-Eintraege tragen keine
+        # Erwaehnungsschwelle -- die globale (KL-4, wie in der SMS) wird
+        # uebernommen; ein am Layout-Eintrag gesetzter Wert gewinnt.
+        _globale_schwelle = {
+            mc.metric_id: mc.sms_threshold for mc in _dc_uncollapsed.metrics
+        }
+        active_metrics = [
+            dataclasses.replace(
+                mc, enabled=True,
+                sms_threshold=(mc.sms_threshold if mc.sms_threshold is not None
+                               else _globale_schwelle.get(mc.metric_id)),
+            )
+            for mc in active_metrics
+        ]
+        dc = dataclasses.replace(dc, metrics=active_metrics)
         self._tz = tz or ZoneInfo("UTC")
         self._exposed_sections = exposed_sections
         self._friendly_keys = build_friendly_keys(dc)
@@ -237,6 +248,8 @@ class TripReportFormatter:
             outlook_state=outlook_state,
             outlook_horizon_days=outlook_horizon_days,
             outlook_metrics=_outlook_metrics,
+            # Issue #3096: Spaltenfolge aus dem Resolver (oben, ungekollabiert).
+            email_rows=_email_rows,
             changes=changes,
             stage_name=stage_name,
             stage_stats=stage_stats,
