@@ -509,10 +509,14 @@ def test_missing_outlook_selection_uses_the_catalog_col_labels():
 
     preset = _preset(region="Tirol")  # kein outlook_metrics-Schluessel
 
-    assert _resolved_outlook_metrics(preset) is None, (
-        "Ein FEHLENDES Auswahl-Feld muss None ergeben (= kein Filter, "
-        "Bestandsverhalten) — nicht [] (= bewusst leer)."
-    )
+    # #3047 R9 (Abnahme 8): ohne Grundauswahl UND ohne Ausblick-Liste loest
+    # der Ortsvergleich zur Vorgabemenge als Liste auf (dieselben Groessen wie
+    # bisher, in derselben Folge, wie der Editor sie zeigt), damit HTML und
+    # Klartext sie in derselben Form tragen -- nicht mehr None (fester Zweig).
+    # Weiterhin gilt: nie [] (= bewusst leer).
+    assert _resolved_outlook_metrics(preset) == [
+        "temperature", "precipitation", "rain_probability", "wind", "gust", "thunder",
+    ], "Ein FEHLENDES Auswahl-Feld ohne Grundauswahl muss die Vorgabemenge ergeben."
     assert resolve_compare_render_options(preset).outlook_enabled is True, (
         "Ohne Auswahl bleibt der Ausblick sichtbar (Default True)."
     )

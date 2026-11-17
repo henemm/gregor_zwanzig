@@ -101,6 +101,8 @@ AUSBLICK_ORTE = {
     # Totalschnitt gegen AKTIV_ORTE: keine Groesse liegt in der Grundauswahl.
     "totalschnitt": ["visibility", "humidity"],
 }
+# #3047 R9: von Hand aus editor_standard.json (Orte-Ausblick "nie_eingestellt").
+VORGABE_ORTE_AUSBLICK = ["temperature", "precipitation", "rain_probability", "wind", "gust", "thunder"]
 STUNDEN_ORTE = {
     "fehlt": None,
     "leer": [],
@@ -158,8 +160,14 @@ def test_ac1_orte_ausblick_gleich_altpfad_ueber_alle_kombinationen():
             fehler.append(f"{name}: Resolver {_ids(zeilen)} != alt {alt_ids}")
             continue
         fehler.extend(_form_fehler(name, zeilen))
-        if alt_ids is None:
+        # #3047 R9 (Abnahme 8): Altbestand ohne Grundauswahl und ohne Ausblick
+        # loest nicht mehr zu None (fester Zweig, HTML Temp Tief/Hoch getrennt)
+        # auf, sondern zur Vorgabemenge, die der Editor als aktiv zeigt
+        # (editor_standard.json, Orte-Ausblick "nie_eingestellt").
+        if "g=fehlt|a=fehlt" in name:
             gesehen["none"] += 1
+            if alt_ids != VORGABE_ORTE_AUSBLICK:
+                fehler.append(f"{name}: Vorgabemenge erwartet, nicht {alt_ids!r}")
         elif alt_ids == []:
             gesehen["leer"] += 1
             if zeilen != ():
@@ -385,7 +393,9 @@ def test_ac4_wind_direction_bleibt_im_stundenverlauf():
 def test_ac5_none_heisst_vorgabemenge_leeres_tupel_heisst_block_entfaellt():
     resolve = _resolver()
     nie = resolve({}, "compare")
-    assert _liste(nie, "outlook") is None
+    # #3047 R9: Orte-Ausblick "nie eingestellt" (ohne Grundauswahl) = die
+    # Vorgabemenge als Liste, wie der Editor sie zeigt -- nicht mehr None.
+    assert _ids(_liste(nie, "outlook")) == VORGABE_ORTE_AUSBLICK
     assert _liste(nie, "hourly") is None
     leer = resolve({"active_metrics": copy.deepcopy(AKTIV_ORTE),
                     "outlook_metrics": [], "hourly_metrics": []}, "compare")

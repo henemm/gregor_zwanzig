@@ -1,0 +1,53 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+E   AssertionError: ('r9-altbestand-anna', 'de', 'HTML', {'Kronplatz': [('Temp Minimum', '6°'), ('Temp Maximum', '11°'), ('Rain', '1.6'), ...': [('Temp', '8/13'), ('Rain', '5.6 mm'), ('Rain%', '70 %'), ('Wind', '28 km/h'), ('Gust', '50 km/h'), ('Thdr', '–')]})
+    assert {'Kronplatz':..., '50'), ...]} == {'Kronplatz':...'Thdr', '–')]}
+      
+      Differing items:
+      {'Kronplatz': [('Temp Minimum', '6°'), ('Temp Maximum', '11°'), ('Rain', '1.6'), ('Rain%', '70%'), ('Wind', '28'), ('Gust', '40'), ...]} != {'Kronplatz': [('Temp', '6/11'), ('Rain', '1.6 mm'), ('Rain%', '70 %'), ('Wind', '28 km/h'), ('Gust', '40 km/h'), ('Thdr', '–')]}
+      {'Sulden': [('Temp Minimum', '7°'), ('Temp Maximum', '12°'), ('Rain', '3.6'), ('Rain%', '70%'), ('Wind', '28'), ('Gust', '45'), ...]} != {'Sulden': [('Temp', '7/12'), ('Rain', '3.6 mm'), ('Rain%', '70 %'), ('Wind', '28 km/h'), ('Gust', '45 km/h'), ('Thdr', 'mittel @13 · CAPE, Blitzdichte · ...
+      
+      ...Full output truncated, use '-vv' to show
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a4fcb38a0a007fd65/tests/tdd/test_3047_r9_orte_altbestand_ausblick.py:63: AssertionError: ('r9-altbestand-anna', 'de', 'HTML', {'Kronplatz': [('Temp Minimum', '6°'), ('Temp Maximum', '11°'), ('Rain', '1.6'), ...': [('Temp', '8/13'), ('Rain', '5.6 mm'), ('Rain%', '70 %'), ('Wind', '28 km/h'), ('Gust', '50 km/h'), ('Thdr', '–')]})
+E   AssertionError: ('r9-altbestand-anna', 'en', 'HTML', {'Kronplatz': [('Temp Minimum', '6°'), ('Temp Maximum', '11°'), ('Rain', '1.6'), ...': [('Temp', '8/13'), ('Rain', '5.6 mm'), ('Rain%', '70 %'), ('Wind', '28 km/h'), ('Gust', '50 km/h'), ('Thdr', '–')]})
+    assert {'Kronplatz':..., '50'), ...]} == {'Kronplatz':...'Thdr', '–')]}
+      
+      Differing items:
+      {'Kronplatz': [('Temp Minimum', '6°'), ('Temp Maximum', '11°'), ('Rain', '1.6'), ('Rain%', '70%'), ('Wind', '28'), ('Gust', '40'), ...]} != {'Kronplatz': [('Temp', '6/11'), ('Rain', '1.6 mm'), ('Rain%', '70 %'), ('Wind', '28 km/h'), ('Gust', '40 km/h'), ('Thdr', '–')]}
+      {'Sulden': [('Temp Minimum', '7°'), ('Temp Maximum', '12°'), ('Rain', '3.6'), ('Rain%', '70%'), ('Wind', '28'), ('Gust', '45'), ...]} != {'Sulden': [('Temp', '7/12'), ('Rain', '3.6 mm'), ('Rain%', '70 %'), ('Wind', '28 km/h'), ('Gust', '45 km/h'), ('Thdr', 'medium @13 · CAPE, Lightning dens...
+      
+      ...Full output truncated, use '-vv' to show
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a4fcb38a0a007fd65/tests/tdd/test_3047_r9_orte_altbestand_ausblick.py:63: AssertionError: ('r9-altbestand-anna', 'en', 'HTML', {'Kronplatz': [('Temp Minimum', '6°'), ('Temp Maximum', '11°'), ('Rain', '1.6'), ...': [('Temp', '8/13'), ('Rain', '5.6 mm'), ('Rain%', '70 %'), ('Wind', '28 km/h'), ('Gust', '50 km/h'), ('Thdr', '–')]})
+E   AssertionError: ('r9-altbestand-anna', 'de', 'Kronplatz', [('Temp Minimum', '6°'), ('Temp Maximum', '11°'), ('Rain', '1.6'), ('Rain%',...40'), ...], [('Temp', '6/11°C'), ('Rain', '1.6mm'), ('Rain%', '70%'), ('Wind', 'S28'), ('Gust', '40'), ('Thdr', '⚡–')])
+    assert ['Temp Minimu..., 'Gust', ...] == ['Temp', 'Rai...Gust', 'Thdr']
+      
+      At index 0 diff: 'Temp Minimum' != 'Temp'
+      Left contains one more item: 'Thdr'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a4fcb38a0a007fd65/tests/tdd/test_3047_r9_orte_altbestand_ausblick.py:76: AssertionError: ('r9-altbestand-anna', 'de', 'Kronplatz', [('Temp Minimum', '6°'), ('Temp Maximum', '11°'), ('Rain', '1.6'), ('Rain%',...40'), ...], [('Temp', '6/11°C'), ('Rain', '1.6mm'), ('Rain%', '70%'), ('Wind', 'S28'), ('Gust', '40'), ('Thdr', '⚡–')])
+E   AssertionError: ('r9-altbestand-anna', 'en', 'Kronplatz', [('Temp Minimum', '6°'), ('Temp Maximum', '11°'), ('Rain', '1.6'), ('Rain%',...40'), ...], [('Temp', '6/11°C'), ('Rain', '1.6mm'), ('Rain%', '70%'), ('Wind', 'S28'), ('Gust', '40'), ('Thdr', '⚡–')])
+    assert ['Temp Minimu..., 'Gust', ...] == ['Temp', 'Rai...Gust', 'Thdr']
+      
+      At index 0 diff: 'Temp Minimum' != 'Temp'
+      Left contains one more item: 'Thdr'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a4fcb38a0a007fd65/tests/tdd/test_3047_r9_orte_altbestand_ausblick.py:76: AssertionError: ('r9-altbestand-anna', 'en', 'Kronplatz', [('Temp Minimum', '6°'), ('Temp Maximum', '11°'), ('Rain', '1.6'), ('Rain%',...40'), ...], [('Temp', '6/11°C'), ('Rain', '1.6mm'), ('Rain%', '70%'), ('Wind', 'S28'), ('Gust', '40'), ('Thdr', '⚡–')])
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/anyio/pytest_plugin.py:14
+  /home/user/gregor_zwanzig/.claude/worktrees/agent-a4fcb38a0a007fd65/.venv/lib/python3.13/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:128
+  /home/user/gregor_zwanzig/.claude/worktrees/agent-a4fcb38a0a007fd65/tests/conftest.py:128: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_3047_r9_orte_altbestand_ausblick.py::test_r9_orte_altbestand_ausblick_wie_explizite_liste[de]
+FAILED tests/tdd/test_3047_r9_orte_altbestand_ausblick.py::test_r9_orte_altbestand_ausblick_wie_explizite_liste[en]
+FAILED tests/tdd/test_3047_r9_orte_altbestand_ausblick.py::test_r9_orte_altbestand_ausblick_html_gleich_klartext[de]
+FAILED tests/tdd/test_3047_r9_orte_altbestand_ausblick.py::test_r9_orte_altbestand_ausblick_html_gleich_klartext[en]
