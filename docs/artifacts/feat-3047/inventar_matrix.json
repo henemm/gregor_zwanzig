@@ -1,5 +1,5 @@
 {
- "stand": "2026-11-17T00:27:37",
+ "stand": "2026-11-17T00:36:09",
  "quellen": {
   "trip_mail": {
    "datei": "trip_mail.json",
@@ -28,7 +28,7 @@
   },
   "status_updates": {
    "datei": "status_updates.json",
-   "eintraege": 446
+   "eintraege": 453
   }
  },
  "spalten": [
@@ -5597,13 +5597,14 @@
     },
     "einstellungsseite": {
      "status": "gruen",
-     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle T07/T16/T19",
-     "befund": "",
-     "notiz": "[trip.briefing_kanaele] Testluecke: Mutation M25 (E-Mail-Standard) ueberlebt",
+     "beleg": "frontend/src/lib/components/shared/zustellung-tab/__tests__/p12_zustellung_gleich_ausgabe.test.ts::tl7_briefing_email_gleich_versand_b_ohne_report_config",
+     "befund": "TL7",
+     "notiz": "Runde 7 p12: Testluecke TL7 geschlossen (Mutation gefangen)",
      "quellen": [
       "editor:trip.briefing_kanaele=gruen"
      ],
-     "unbelegt": false
+     "unbelegt": false,
+     "aktualisiert": true
     },
     "validator_email": {
      "status": "nicht_anwendbar",
@@ -5687,13 +5688,14 @@
     },
     "einstellungsseite": {
      "status": "gruen",
-     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle T19/T21 (ohne Override erbt Briefing-Kanaele)",
-     "befund": "",
-     "notiz": "[trip.alarm_kanaele] Testluecke Go: Mutation M16 (E-Mail-Feldmerge) ueberlebt",
+     "beleg": "internal/handler/f3047_p12_testluecken_test.go::TestF3047P12_TL5_TripAlertChannelsOhneEmail_ZweiNutzer_BehaeltEmail",
+     "befund": "TL5",
+     "notiz": "Runde 7 p12: Testluecke TL5 geschlossen (Mutation gefangen)",
      "quellen": [
       "editor:trip.alarm_kanaele=gruen"
      ],
-     "unbelegt": false
+     "unbelegt": false,
+     "aktualisiert": true
     },
     "validator_email": {
      "status": "nicht_anwendbar",
@@ -5867,13 +5869,14 @@
     },
     "einstellungsseite": {
      "status": "gruen",
-     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall T20 (halb = aus beidseitig)",
-     "befund": "",
-     "notiz": "[trip.stille_stunden] Testluecke: Mutation M6 ueberlebt",
+     "beleg": "frontend/src/lib/components/shared/zustellung-tab/__tests__/p12_zustellung_gleich_ausgabe.test.ts::tl2_stille_gleich_alarm_a_stille_nur_von",
+     "befund": "TL2",
+     "notiz": "Runde 7 p12: Testluecke TL2 geschlossen (Mutation gefangen)",
      "quellen": [
       "editor:trip.stille_stunden=gruen"
      ],
-     "unbelegt": false
+     "unbelegt": false,
+     "aktualisiert": true
     },
     "validator_email": {
      "status": "nicht_anwendbar",
@@ -9869,13 +9872,14 @@
     },
     "einstellungsseite": {
      "status": "gruen",
-     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall O10 nur roh abweichend; ueber den Go-Ladepfad geheilt (compare_preset.go:116)",
-     "befund": "",
-     "notiz": "[orte.tagesfenster] Testluecke: Mutation M21 (Lade-Klemme entfernt) ueberlebt",
+     "beleg": "internal/handler/f3047_p12_testluecken_test.go::TestF3047P12_TL6_ComparePresetHalbesTagesfenster_ZweiNutzer_GetGeheilt",
+     "befund": "TL6",
+     "notiz": "Runde 7 p12: Testluecke TL6 geschlossen (Mutation gefangen)",
      "quellen": [
       "editor:orte.tagesfenster=gruen"
      ],
-     "unbelegt": false
+     "unbelegt": false,
+     "aktualisiert": true
     },
     "validator_email": {
      "status": "gruen",
@@ -10737,13 +10741,14 @@
     },
     "einstellungsseite": {
      "status": "gruen",
-     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall O12",
-     "befund": "",
-     "notiz": "[orte.telegram_kurzstil] Testluecke: Mutation M7 (Laden ignoriert kurzform) ueberlebt",
+     "beleg": "frontend/src/lib/components/shared/zustellung-tab/__tests__/p12_zustellung_gleich_ausgabe.test.ts::tl3_kurzstil_gleich_telegram_a_kurzstil",
+     "befund": "TL3",
+     "notiz": "Runde 7 p12: Testluecke TL3 geschlossen (Mutation gefangen)",
      "quellen": [
       "editor:orte.telegram_kurzstil=gruen"
      ],
-     "unbelegt": false
+     "unbelegt": false,
+     "aktualisiert": true
     },
     "validator_email": {
      "status": "nicht_anwendbar",
@@ -11513,13 +11518,14 @@
     },
     "einstellungsseite": {
      "status": "gruen",
-     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) O-Faelle (Standard Morgen an, Abend aus)",
-     "befund": "",
-     "notiz": "[orte.slots] Testluecke: Mutation M4 (Abend-Standard) ueberlebt",
+     "beleg": "frontend/src/lib/components/shared/zustellung-tab/__tests__/p12_zustellung_gleich_ausgabe.test.ts::tl1_slots_gleich_versand_a_abend_nie_eingestellt",
+     "befund": "TL1",
+     "notiz": "Runde 7 p12: Testluecke TL1 geschlossen (Mutation gefangen)",
      "quellen": [
       "editor:orte.slots=gruen"
      ],
-     "unbelegt": false
+     "unbelegt": false,
+     "aktualisiert": true
     },
     "validator_email": {
      "status": "nicht_anwendbar",
@@ -11873,13 +11879,14 @@
     },
     "einstellungsseite": {
      "status": "gruen",
-     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) O-Faelle",
-     "befund": "",
-     "notiz": "[orte.stille_stunden] Testluecke: Mutation M6 ueberlebt",
+     "beleg": "frontend/src/lib/components/shared/zustellung-tab/__tests__/p12_zustellung_gleich_ausgabe.test.ts::tl2_stille_gleich_alarm_b_stille_paar",
+     "befund": "TL2",
+     "notiz": "Runde 7 p12: Testluecke TL2 geschlossen (Mutation gefangen)",
      "quellen": [
       "editor:orte.stille_stunden=gruen"
      ],
-     "unbelegt": false
+     "unbelegt": false,
+     "aktualisiert": true
     },
     "validator_email": {
      "status": "nicht_anwendbar",

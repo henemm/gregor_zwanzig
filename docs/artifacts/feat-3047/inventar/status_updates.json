@@ -2674,5 +2674,47 @@
   "beleg": "internal/handler/vergleich_grundauswahl_3047_e1_test.go::TestF3047E1_NeuerVergleichSchreibtGrundauswahlDerStandardVorlage_ZweiNutzer",
   "notiz": "Runde 7: p5b E1-Go: neues Orts-Briefing schreibt die Grundauswahl der Standard-Vorlage",
   "befund": "E1"
+ },
+ "orte.slots|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/zustellung-tab/__tests__/p12_zustellung_gleich_ausgabe.test.ts::tl1_slots_gleich_versand_a_abend_nie_eingestellt",
+  "notiz": "Runde 7 p12: Testluecke TL1 geschlossen (Mutation gefangen)",
+  "befund": "TL1"
+ },
+ "trip.stille_stunden|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/zustellung-tab/__tests__/p12_zustellung_gleich_ausgabe.test.ts::tl2_stille_gleich_alarm_a_stille_nur_von",
+  "notiz": "Runde 7 p12: Testluecke TL2 geschlossen (Mutation gefangen)",
+  "befund": "TL2"
+ },
+ "orte.stille_stunden|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/zustellung-tab/__tests__/p12_zustellung_gleich_ausgabe.test.ts::tl2_stille_gleich_alarm_b_stille_paar",
+  "notiz": "Runde 7 p12: Testluecke TL2 geschlossen (Mutation gefangen)",
+  "befund": "TL2"
+ },
+ "orte.telegram_kurzstil.briefing|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/zustellung-tab/__tests__/p12_zustellung_gleich_ausgabe.test.ts::tl3_kurzstil_gleich_telegram_a_kurzstil",
+  "notiz": "Runde 7 p12: Testluecke TL3 geschlossen (Mutation gefangen)",
+  "befund": "TL3"
+ },
+ "trip.alarm_kanaele|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "internal/handler/f3047_p12_testluecken_test.go::TestF3047P12_TL5_TripAlertChannelsOhneEmail_ZweiNutzer_BehaeltEmail",
+  "notiz": "Runde 7 p12: Testluecke TL5 geschlossen (Mutation gefangen)",
+  "befund": "TL5"
+ },
+ "orte.tagesfenster|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "internal/handler/f3047_p12_testluecken_test.go::TestF3047P12_TL6_ComparePresetHalbesTagesfenster_ZweiNutzer_GetGeheilt",
+  "notiz": "Runde 7 p12: Testluecke TL6 geschlossen (Mutation gefangen)",
+  "befund": "TL6"
+ },
+ "trip.briefing_kanaele|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/zustellung-tab/__tests__/p12_zustellung_gleich_ausgabe.test.ts::tl7_briefing_email_gleich_versand_b_ohne_report_config",
+  "notiz": "Runde 7 p12: Testluecke TL7 geschlossen (Mutation gefangen)",
+  "befund": "TL7"
  }
 }

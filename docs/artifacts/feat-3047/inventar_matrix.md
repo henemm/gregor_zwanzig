@@ -1,6 +1,6 @@
 # Inventar-Matrix „Einstellung = Ausgabe“ (#3047, Runde 7)
 
-Stand 2026-11-17T00:27:37 · 121 kanonische Zeilen · 968 Zellen · ✗ rot 17 · ↗ ausgelagert 61 · ✓ gruen 519 · – nicht_anwendbar 371
+Stand 2026-11-17T00:36:09 · 121 kanonische Zeilen · 968 Zellen · ✗ rot 17 · ↗ ausgelagert 61 · ✓ gruen 519 · – nicht_anwendbar 371
 
 Quellen: `trip_mail.json`, `orte_mail.json`, `kanaele.json`, `editor.json`, `validatoren.json`, `status_updates.json`. Erzeugt mit `konsolidieren.py` (Abbildungstabelle im Skript).
 
@@ -76,10 +76,10 @@ Quellen: `trip_mail.json`, `orte_mail.json`, `kanaele.json`, `editor.json`, `val
 | **Zeiten/Versand** | | | | | | | | |
 | Uhrzeit Morgen-/Abend-Briefing <sub>`trip.zeiten`</sub> | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓ | –* |
 | Morgen-/Abend-Briefing an/aus <sub>`trip.slots`</sub> | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓ | –* |
-| Briefing je Kanal <sub>`trip.briefing_kanaele`</sub> | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓ | –* |
-| Alarme je Kanal <sub>`trip.alarm_kanaele`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
+| Briefing je Kanal <sub>`trip.briefing_kanaele`</sub> | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* TL7 | –* |
+| Alarme je Kanal <sub>`trip.alarm_kanaele`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓* TL5 | –* |
 | Alarm ab Dringlichkeit je Kanal <sub>`trip.dringlichkeit`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
-| Stille Stunden <sub>`trip.stille_stunden`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
+| Stille Stunden <sub>`trip.stille_stunden`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓* TL2 | –* |
 | Mindestabstand zwischen Alarmen <sub>`trip.cooldown`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
 | **Mandanten** | | | | | | | | |
 | Zwei Nutzer: eigene Konfiguration/Sprache/Empfänger <sub>`trip.zwei_nutzer`</sub> | ✓ | ✓ | ✓* | ✓ | ✓ | ✓ | ✓ | ✓* |
@@ -135,7 +135,7 @@ Quellen: `trip_mail.json`, `orte_mail.json`, `kanaele.json`, `editor.json`, `val
 | Zusatzblöcke <sub>`orte.zusatzbloecke`</sub> | –* | –* | –* | –* | –* | –* | – | –* |
 | **Format** | | | | | | | | |
 | E-Mail-Format Ausführlich/Kompakt <sub>`orte.email_format`</sub> | – | – | – | – | – | – | – | – |
-| Tagesfenster von–bis (W12, über Mitternacht) <sub>`orte.tagesfenster`</sub> | ✓ B-OM-6 | ✓ B-OM-6 | – | ✓* | ✓* | ✓* | ✓ | ✓* B-V5 |
+| Tagesfenster von–bis (W12, über Mitternacht) <sub>`orte.tagesfenster`</sub> | ✓ B-OM-6 | ✓ B-OM-6 | – | ✓* | ✓* | ✓* | ✓* TL6 | ✓* B-V5 |
 | Morgen-Briefing = heute, Abend = morgen (V8) <sub>`orte.morgen_abend_briefing`</sub> | ✓ B-OM-6 | ✓ B-OM-6 | – | ✓* | ✓* | ✓* | ✓* | ✗* B-L5 |
 | **Warnungen/Alarm** | | | | | | | | |
 | Amtliche Warnungen an/aus <sub>`orte.amtliche_warnungen.schalter`</sub> | ✓* B-OM-2 | ✓ B-OM-6 | – | ✓* | ✓* | ✓* | ✗* E4 | ✓* B-OM-2 |
@@ -146,7 +146,7 @@ Quellen: `trip_mail.json`, `orte_mail.json`, `kanaele.json`, `editor.json`, `val
 | Ampel-Grenzen ändern <sub>`orte.ampel.grenzen`</sub> | ✓* | –* | –* | ✓* B-L3 | ✓* | ✓* | ✓* | ✗* B-L5 |
 | Alarm ab je Metrik / für alle <sub>`orte.ampel.alarm_ab`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓* | –* |
 | **Telegram-Kurzstil** | | | | | | | | |
-| Telegram-Kurzstil: Briefing <sub>`orte.telegram_kurzstil.briefing`</sub> | – | – | – | ✓ | – | – | ✓ | – |
+| Telegram-Kurzstil: Briefing <sub>`orte.telegram_kurzstil.briefing`</sub> | – | – | – | ✓ | – | – | ✓* TL3 | – |
 | Telegram-Kurzstil: Alarm <sub>`orte.telegram_kurzstil.alarm`</sub> | – | – | – | ✓* | – | – | ✓ | – |
 | **Sprache** | | | | | | | | |
 | Sprache DE/EN <sub>`orte.sprache`</sub> | ✓ B-OM-6 | ✓ B-OM-6 | – | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -157,11 +157,11 @@ Quellen: `trip_mail.json`, `orte_mail.json`, `kanaele.json`, `editor.json`, `val
 | Als eigene Vorlage speichern <sub>`orte.vorlage.eigene_speichern`</sub> | ✓* | –* | –* | ✓* B-L4 | ✓* B-L4 | ✓* B-L4 | ✓* | ✗* B-L5 |
 | **Zeiten/Versand** | | | | | | | | |
 | Uhrzeit Morgen-/Abend-Briefing <sub>`orte.zeiten`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
-| Morgen-/Abend-Briefing an/aus <sub>`orte.slots`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
+| Morgen-/Abend-Briefing an/aus <sub>`orte.slots`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓* TL1 | –* |
 | Briefing je Kanal <sub>`orte.briefing_kanaele`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
 | Alarme je Kanal <sub>`orte.alarm_kanaele`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
 | Alarm ab Dringlichkeit je Kanal <sub>`orte.dringlichkeit`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
-| Stille Stunden <sub>`orte.stille_stunden`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
+| Stille Stunden <sub>`orte.stille_stunden`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓* TL2 | –* |
 | Mindestabstand zwischen Alarmen <sub>`orte.cooldown`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
 | Laufzeit bis auf Weiteres / bis Datum <sub>`orte.laufzeit`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓* | –* |
 | **Mandanten** | | | | | | | | |
