@@ -20,3 +20,6 @@ ampelModell.ts registerStandard, ohne Ableitung), der Editor speichert dieselbe 
 "E1: W- G45@4 R2.0@4 TH:M@4 TH+:- FZ2500@4 VS- D15/15", gespeichert identisch.
 Die Vergleichsliste der Abnahme (D7 ohne Tagestief/-hoch-Eintraege) ist eine andere Liste:
 dort leitet der Loader die Kinder mit der Position der Temperatur ab (#1947).
+
+Nachtrag (Koordinator-Nachfrage F1): test_f1_altbestand_leer_jeder_kanal_folgt_editor prueft HTML, Klartext, Ausblick, Kompakt, Telegram (Ueberblick+Tabelle), SMS, Premium-SMS fuer metrics [] und die vom Editor gespeicherte Liste -- alle gleich der Editor-Folge.
+MF1 (Register-Standard aus) GEFANGEN, MF2 (Register-Rang umgekehrt, trip_metric_ids.py) GEFANGEN; byte-gleich zurueckgespielt.

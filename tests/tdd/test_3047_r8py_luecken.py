@@ -54,6 +54,71 @@ def test_f1_altbestand_leer_sms_folgt_register_wie_editor_gespeichert(monkeypatc
     assert len(uids) == 4
 
 
+#: von Hand, je Kanal die Folge der Editor-Liste ``_REGISTER``. Temperatur
+#: (Rang 1) ist in Mail/Telegram eine eigene Spalte vorn; Tagestief/-hoch
+#: (Rang 8/9) haben dort keine Spalte und erscheinen nur in SMS/Premium-SMS als
+#: ``D`` hinten. In der SMS hat die Temperatur selbst kein Kuerzel.
+_SPALTEN = ["temperature", "wind", "gust", "precipitation", "thunder", "freezing_level", "visibility"]
+_TG_KUERZEL = ["T", "W", "G", "R", "TH", "FZ", "VS"]
+_KOMPAKT_AUSBLICK = ["Temp", "Wind", "Gust", "Rain", "Thdr", "0Line", "Visib"]
+_SMS_KUERZEL = ["W", "G", "R", "TH:", "TH+:", "FZ", "VS", "D"]
+
+
+def _alle_kanaele(monkeypatch, metrics: list) -> dict:
+    import re
+
+    from tests.helpers.einstellung_gleich_mail_trip import html_ausblick, html_tabellen, klartext_tabellen
+    from tests.tdd._einstellung_gleich_mail_trip_fixtures import (
+        mail_teile, render_trip_mit_ausblick, trip_json,
+    )
+
+    def lauf(fmt: str):
+        d = trip_json(["wind"], report_config={**_SMS_KANAELE, "email_format": fmt})
+        d["display_config"]["metrics"] = metrics
+        return render_trip_mit_ausblick(monkeypatch, d)
+
+    ms, _t, uid = lauf("full")
+    html, plain = mail_teile(ms)
+    tg = [s["body"] for s in ms.sendungen("telegram")]
+    ov = next(b for b in tg if b.startswith("Kurzübersicht")).splitlines()[1:]
+    tab = next(b for b in tg if "<pre>" in b).split("<pre>")[1].strip().splitlines()[0].split()[1:]
+    mk, _t2, uid2 = lauf("compact")
+    kompakt = next(z for z in mail_teile(mk)[1].splitlines() if re.match(r"^(Mo|Di|Mi)  ", z))
+    return {
+        "uids": {uid, uid2},
+        "html": html_tabellen(html)["etappe"][0].spalten,
+        "klartext": klartext_tabellen(plain)["etappe"][0].spalten,
+        "ausblick": html_ausblick(html).spalten,
+        "telegram_ueberblick": [z.split()[0] for z in ov if z.strip() and not z.startswith("⚡")],
+        "telegram_tabelle": tab,
+        "kompakt_ausblick": [f.split()[0] for f in kompakt.split("  ")[1:]],
+        "sms": [re.match(r"[A-Z]+\+?:?", t).group(0) for t in
+                ms.sendungen("sms")[0]["body"].split(": ", 1)[1].split()],
+        "premium_sms": ms.sendungen("premium_sms")[0]["body"],
+        "sms_roh": ms.sendungen("sms")[0]["body"],
+    }
+
+
+def test_f1_altbestand_leer_jeder_kanal_folgt_editor(monkeypatch):
+    """F1 (AC-22/AC-26), Nachfrage Koordinator: ``metrics: []`` und die vom
+    Editor unveraendert gespeicherte Liste ergeben in HTML, Klartext,
+    Ausblick, Kompakt, Telegram, SMS und Premium-SMS dieselbe Folge -- die
+    Editor-Folge. Zwei Nutzer je Liste."""
+    gespeichert = [{"metric_id": m, "enabled": True, "bucket": "primary", "order": i}
+                   for i, m in enumerate(_REGISTER)]
+    gespeichert.append({"metric_id": "temperature_night", "enabled": False})
+    uids = set()
+    for metrics in ([], [], gespeichert, gespeichert):
+        k = _alle_kanaele(monkeypatch, metrics)
+        uids |= k["uids"]
+        assert k["html"] == k["klartext"] == k["ausblick"] == _SPALTEN, k
+        assert k["telegram_ueberblick"] == k["telegram_tabelle"] == _TG_KUERZEL, k
+        assert k["kompakt_ausblick"] == _KOMPAKT_AUSBLICK, k
+        assert k["sms"] == _SMS_KUERZEL, k["sms_roh"]
+        assert k["premium_sms"] == k["sms_roh"]
+    assert len(uids) == 8
+
+
 # --------------------------------------------------------------------------- #
 # T2 / M05 -- Orte-Altbestand ohne Grundauswahl, Ausblick-Folge gespeichert
 # --------------------------------------------------------------------------- #
