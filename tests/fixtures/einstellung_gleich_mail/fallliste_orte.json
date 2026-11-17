@@ -1109,8 +1109,8 @@
       "test": "test_w11_darstellung_je_zeile",
       "ac": "AC-8",
       "befund": "",
-      "status": "offen_feature",
-      "verweis": "Konzept W11 / #3047 Phase 3 (Stundenverlauf; #3039 baut Roh/Einfach nur fuer Vergleichstabelle, Telegram, SMS)"
+      "status": "gruen",
+      "verweis": "Konzept W11 / #3097 (display_config.hourly_metric_formats, ADR-0121 Nachtrag 3b)"
     },
     {
       "id": "O-AB-H-AUSWAHL",
@@ -1534,8 +1534,8 @@
       "test": "test_w11_darstellung_je_zeile",
       "ac": "AC-8",
       "befund": "",
-      "status": "offen_feature",
-      "verweis": "Konzept W11 / #3047 Phase 3 (Stundenverlauf; #3039 baut Roh/Einfach nur fuer Vergleichstabelle, Telegram, SMS)"
+      "status": "gruen",
+      "verweis": "Konzept W11 / #3097 (display_config.hourly_metric_formats, ADR-0121 Nachtrag 3b)"
     },
     {
       "id": "O-AB-K-AUSWAHL",
