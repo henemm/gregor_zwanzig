@@ -447,16 +447,19 @@ def test_trip_abweichungsalarm_faerbt_ueber_den_versandweg_nach_dem_trip(monkeyp
 
 
 def test_radar_alarm_nachricht_traegt_die_vorlage_des_trips():
-    """``build_onset_alert_message``: die gebaute Nachricht trägt die Ampel
+    """``build_debug_onset_alert_message`` (vormals Altform
+    ``build_onset_alert_message``, Issue #2982): die gebaute Nachricht trägt die Ampel
     des Trips (Vorlage aus ``display_config.preset_name``)."""
     from types import SimpleNamespace
 
-    from services.radar_alert_service import build_onset_alert_message
+    from services.radar_alert_service import build_debug_onset_alert_message
+    from services.radar_service import NowcastResult
     aktiv = SimpleNamespace(start_point=SimpleNamespace(lat=42.2, lon=9.0), distance_km=8.0)
     for v in ("skitouren", "allgemein", "skitouren"):
         trip = SimpleNamespace(name="GR20", alert_cooldown_minutes=120,
                                display_config=SimpleNamespace(preset_name=v, ampel=None))
-        msg = build_onset_alert_message(trip, aktiv, 25, "06:25", "Leichter Regen", "Radar (DWD)")
+        nc = NowcastResult(onset_minutes=25, intensity_label="Leichter Regen", source="dwd")
+        msg = build_debug_onset_alert_message(trip, aktiv, nc, "Radar (DWD)")
         assert msg.ampel["template"] == v
 
 

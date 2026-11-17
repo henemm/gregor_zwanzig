@@ -153,6 +153,7 @@ Alle Tests laufen ohne Mocks, die nur die eigene Annahme spiegeln; Golden-Master
 - Vorschau-Luecken `gap_km` und `stage_number` bleiben unveraendert (der Vorschau-Payload traegt sie nicht); Angleichung waere eine sichtbare Aenderung und gehoert in ein eigenes Issue.
 - Nebenbefund: `OnsetPayload` hat kein Feld `already_running`, die API-Vorschau kann den Laufend-Fall nicht zeigen (nur Replay). Out of Scope, fuer die Nebenbefund-Triage notieren.
 - `RadarAlertRequest` bleibt mit eigenen Feldern (Variante ii-b); die Doppelung der Feldnamen wird durch die Ratsche bewacht, nicht beseitigt.
+- Der Staging-Debug-Trigger (`api/routers/debug.py`, admin-geschuetzt) nutzte die Altform; er laeuft jetzt ueber den Baustein und zeigt bei Folgetag-Beginn zusaetzlich das Wochentagskuerzel wie der echte Versandpfad (bewusste Angleichung, kein Nutzer-Alarm). Bewacht durch `tests/tdd/test_onset_baustein_waechter_2982.py` (F003).
 
 ## Architektur-Entscheidung (ADR)
 
@@ -162,3 +163,4 @@ Alle Tests laufen ohne Mocks, die nur die eigene Annahme spiegeln; Golden-Master
 ## Changelog
 
 - 2026-11-17: Initial spec created (Issue #2982, Folge aus #1986 / NEU-1)
+- 2026-11-17: Fix-Loop nach Adversary (F001-F004): Waechter-Tests fuer Replay-Zeitzone, Trip-Versandbuendel (Etappenkennung, roher Beginn, Zeitzone) und Debug-Ausloeser; AST-Ratsche AC-7 erkennt Alias-Importe; Known Limitation zum Staging-Debug-Trigger ergaenzt.

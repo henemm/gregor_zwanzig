@@ -6,6 +6,7 @@ Disambiguierung mehrdeutiger Felder (`temp_min_c` → `temperature` *und*
 """
 from __future__ import annotations
 
+import dataclasses
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -83,8 +84,8 @@ def onset_display(
 
     Dieselbe Regel wie `event_end_display`: der Versatz entscheidet, das
     Kuerzel steht nur bei Versatz != 0 und stammt aus der ORTSZEIT `tz`.
-    Bislang nur vom Replay-Zweig der Vorschau genutzt; die Versandstellen
-    leiten den Beginn weiter inline ab (Vereinheitlichung = Folge-Ticket).
+    Issue #2982: genutzt vom EINEN Baustein `onset_event_from_nowcast`
+    (Trip-Versand, Ortsvergleich, Replay).
     """
     onset_dt = now_utc + timedelta(minutes=onset_minutes)
     offset = day_offset(now_utc, onset_dt, tz)
@@ -136,6 +137,84 @@ def location_sharpness_display(
         return None, 0
     limit_dt = now_utc + timedelta(minutes=limit)
     return local_fmt(limit_dt, tz), day_offset(now_utc, limit_dt, tz)
+
+
+# Issue #2982: Felder, die als Sequenz ankommen koennen (Request-Listen,
+# Payload-Listen), im frozen `OnsetEvent` aber hashbar bleiben muessen.
+_TUPEL_FELDER = ("rain_zones", "gap_km")
+
+
+def _onset_tupel(werte: dict) -> dict:
+    for name in _TUPEL_FELDER:
+        if name in werte:
+            werte[name] = tuple(werte[name])
+    return werte
+
+
+def onset_event_from_nowcast(
+    nc, *, now_utc: datetime, tz, intensity_label: str, source_label: str,
+    km_from: float = 0.0, km_to: float = 0.0, **ortskontext,
+) -> OnsetEvent:
+    """EIN Baustein NowcastResult -> OnsetEvent (Issue #2982, ADR-0021).
+
+    Gemeinsam fuer Trip-Versand, Ortsvergleich-Buendel und Replay. Der Beginn
+    folgt `alert_log.nowcast_onset_at` (laufend = JETZT), die Anzeigefelder
+    den geteilten Fassungen dieses Moduls. Bewusste Pfad-Unterschiede bleiben
+    EINGABEN: Labels, Zeitzone `tz`, km-Lage und der Ortskontext
+    (`location_label`, `segment_id`, `km_measured`, `rain_zones`, `gap_km`,
+    `briefing_context`, ...), der unveraendert auf das Event geht.
+    """
+    from services.alert_log import nowcast_onset_at
+
+    vorlauf = (nowcast_onset_at(nc, now_utc) - now_utc) // timedelta(minutes=1)
+    onset_time, onset_offset, onset_weekday = onset_display(now_utc, vorlauf, tz)
+    end_time, end_offset, end_ongoing, end_weekday = event_end_display(now_utc, nc, tz)
+    reach_time, reach_offset = source_reach_display(now_utc, nc, tz)
+    sharp_time, sharp_offset = location_sharpness_display(
+        now_utc, nc.onset_minutes, getattr(nc, "event_end_minutes", None), tz,
+    )
+    return OnsetEvent(
+        already_running=bool(getattr(nc, "already_running", False)),
+        onset_minutes=nc.onset_minutes or 0,
+        onset_time=onset_time,
+        onset_day_offset=onset_offset,
+        onset_weekday=onset_weekday,
+        km_from=km_from, km_to=km_to,
+        is_convective=nc.is_convective,
+        intensity_label=intensity_label, source_label=source_label,
+        onset_precip_mm=getattr(nc, "onset_precip_mm", None),
+        event_end_time=end_time,
+        event_end_day_offset=end_offset,
+        event_end_weekday=end_weekday,
+        event_ongoing_beyond_horizon=end_ongoing,
+        source_reach_time=reach_time,
+        source_reach_day_offset=reach_offset,
+        location_sharpness_limit_time=sharp_time,
+        location_sharpness_limit_day_offset=sharp_offset,
+        convective_checked=getattr(nc, "convective_checked", True),
+        **_onset_tupel(dict(ortskontext)),
+    )
+
+
+def onset_event_from_fields(obj, **overrides) -> OnsetEvent:
+    """Objekt mit gleichnamigen Attributen -> OnsetEvent (Issue #2982).
+
+    Generisch ueber `dataclasses.fields(OnsetEvent)`: ein kuenftiges Feld
+    reist ohne Nachtrag mit (Request, API-Payload, Replay). Fehlende
+    Attribute fallen auf die Dataclass-Defaults, `overrides` (z. B.
+    `stage_number`) gehen vor. `onset_minutes=None` (laufender Regen ohne
+    kuenftigen Beginn) wird 0 -- der Renderer-Vertrag verlangt eine Zahl und
+    liest sie im Laufend-Fall nirgends.
+    """
+    werte = {}
+    for feld in dataclasses.fields(OnsetEvent):
+        if feld.name in overrides:
+            werte[feld.name] = overrides[feld.name]
+        elif hasattr(obj, feld.name):
+            werte[feld.name] = getattr(obj, feld.name)
+    if "onset_minutes" in werte:
+        werte["onset_minutes"] = werte["onset_minutes"] or 0
+    return OnsetEvent(**_onset_tupel(werte))
 
 
 def _resolve_metric_id(field: str, direction: str) -> str:
@@ -635,72 +714,14 @@ def to_multi_location_onset_alert_message(
     now = datetime.now(timezone.utc)
     events: list[OnsetEvent] = []
     for location_name, loc, nc in valid_groups:
-        # Issue #2009: Zone JE ORT aufloesen und den Tagesbezug in DERSELBEN
-        # Zone bilden — ein Buendel kann Orte in verschiedenen Zonen tragen,
-        # eine gemeinsame Zone waere fuer alle bis auf einen still falsch.
-        loc_tz = _tz_for_location(loc, tz)
-        # Issue #2050 S2b: laeuft das Ereignis bereits und ist kein kuenftiger
-        # Beginn bestimmbar, ist der Bezugszeitpunkt JETZT -- `timedelta(
-        # minutes=None)` waere ein Absturz (Bruchstelle 3). `onset_minutes`
-        # faellt dann auf 0 zurueck; gelesen wird es in diesem Fall nirgends,
-        # weil jede Textform auf `already_running` verzweigt.
-        _laufend = getattr(nc, "already_running", False)
-        onset_dt = now + timedelta(minutes=nc.onset_minutes or 0)
-        _end_time, _end_offset, _end_ongoing, _end_weekday = event_end_display(
-            now, nc, loc_tz,
-        )
-        # Issue #2054: Versatz und Kuerzel aus DEMSELBEN Zeitpunkt und
-        # DERSELBEN Ortszone -- zwei Herleitungen koennten auseinanderlaufen.
-        _onset_offset = day_offset(now, onset_dt, loc_tz)
-        # Issue #2051 S3: Reichweite und Guete-Grenzzeit JE ORT in DERSELBEN
-        # Ortszone wie Beginn/Ende (`loc_tz`), ueber dieselben geteilten
-        # Fassungen wie der Trip-Pfad (ADR-0021).
-        _reach_time, _reach_offset = source_reach_display(now, nc, loc_tz)
-        _sharp_time, _sharp_offset = location_sharpness_display(
-            now, nc.onset_minutes, getattr(nc, "event_end_minutes", None), loc_tz,
-        )
-        events.append(OnsetEvent(
-            already_running=_laufend,
-            onset_minutes=nc.onset_minutes or 0,
-            onset_time=local_fmt(onset_dt, loc_tz),
-            km_from=0.0, km_to=0.0, is_convective=nc.is_convective,
+        # Issue #2009: Zone JE ORT aufloesen -- ein Buendel kann Orte in
+        # verschiedenen Zonen tragen. Issue #2982: das Event baut der EINE
+        # Baustein; Vergleichs-Eingaben sind rohes `intensity_label`/`source`,
+        # km 0 (kein Streckenkonzept) und das Ortslabel nur im Mehr-Orte-Fall.
+        events.append(onset_event_from_nowcast(
+            nc, now_utc=now, tz=_tz_for_location(loc, tz),
             intensity_label=nc.intensity_label, source_label=nc.source,
             location_label=location_name if multi else None,
-            onset_day_offset=_onset_offset,
-            onset_weekday=(
-                _de_weekday_short(local_dt(onset_dt, loc_tz))
-                if _onset_offset else None
-            ),
-            # Issue #2046: die Mengenangabe der Kurznachricht kommt im
-            # Ortsvergleich-Buendel aus DEMSELBEN NowcastResult wie im
-            # Trip-Pfad -- sonst entstuende hier eine stille Luecke, weil
-            # dieser Pfad sein OnsetEvent selbst baut (ADR-0021: Trip und
-            # Ortsvergleich teilen die Ausgabe).
-            onset_precip_mm=nc.onset_precip_mm,
-            # Issue #2051 S1: Ende und sein EIGENER Tagesbezug in DERSELBEN
-            # Ortszone wie der Beginn (`loc_tz`) -- ein Buendel kann Orte in
-            # verschiedenen Zonen tragen. Geteilte Fassung `event_end_display`,
-            # dieselbe, die der Trip-Pfad benutzt (ADR-0021).
-            event_end_time=_end_time,
-            event_end_day_offset=_end_offset,
-            event_end_weekday=_end_weekday,  # Issue #2054
-            # Issue #2051 S1 (Spec v1.1): der R4-Waechter waehlt die TEXTFORM
-            # des Endes (Untergrenze vs. bekanntes Ende) und muss den Renderer
-            # deshalb erreichen -- er darf nicht mehr stromaufwaerts in einem
-            # fehlenden Ende aufgeloest werden (AC-5/AC-20).
-            event_ongoing_beyond_horizon=_end_ongoing,
-            # Issue #2051 S3: additiv, ueber dieselben geteilten Fassungen.
-            source_reach_time=_reach_time,
-            source_reach_day_offset=_reach_offset,
-            location_sharpness_limit_time=_sharp_time,
-            location_sharpness_limit_day_offset=_sharp_offset,
-            # Issue #2050 S4b-2: die ausgefallene Gewitterpruefung erreicht den
-            # Renderer auch auf DIESEM Pfad -- er baut sein `OnsetEvent` selbst,
-            # ohne den Umweg ueber `RadarAlertRequest`. Ohne diese Zeile waere
-            # der Ortsvergleich still leiser als der Trip (AC-6). Punkt 2
-            # (Messluecken) ist hier gegenstandslos: dieser Pfad kennt keine
-            # Ausdehnung (`km_from=km_to=0.0`, nie `rain_zones`).
-            convective_checked=getattr(nc, "convective_checked", True),
         ))
     # Issue #1767 (Entscheidung 1): EINE Reihenfolge fuer alle Kanaele --
     # frueherer Beginn zuerst (laufend = Minute 0), Gleichstand in der

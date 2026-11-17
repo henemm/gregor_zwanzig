@@ -360,21 +360,54 @@ def test_ac6_mutationsprobe_neues_feld_macht_die_ratsche_rot():
 ERLAUBTER_BAUORT = Path("src/output/renderers/alert/project.py")
 
 
+def _onset_event_namen(baum: ast.AST) -> set[str]:
+    """Alle Namen, unter denen ``OnsetEvent`` in diesem Modul gerufen werden
+    kann: der Klassenname selbst plus jeder Alias aus einem Import
+    (``from ...model import OnsetEvent as _OE``), Fix-Loop F004."""
+    namen = {"OnsetEvent"}
+    for knoten in ast.walk(baum):
+        if isinstance(knoten, ast.ImportFrom):
+            for alias in knoten.names:
+                if alias.name == "OnsetEvent" and alias.asname:
+                    namen.add(alias.asname)
+    return namen
+
+
+def _onset_event_bauorte_im_quelltext(quelltext: str, ort: str) -> list[str]:
+    baum = ast.parse(quelltext, filename=ort)
+    namen = _onset_event_namen(baum)
+    funde = []
+    for knoten in ast.walk(baum):
+        if not isinstance(knoten, ast.Call):
+            continue
+        f = knoten.func
+        name = f.id if isinstance(f, ast.Name) else (
+            f.attr if isinstance(f, ast.Attribute) else None
+        )
+        if name in namen:
+            funde.append(f"{ort}:{knoten.lineno}")
+    return funde
+
+
 def _onset_event_bauorte(wurzeln) -> list[str]:
     funde = []
     for wurzel in wurzeln:
         for pfad in sorted((ROOT / wurzel).rglob("*.py")):
-            baum = ast.parse(pfad.read_text(encoding="utf-8"), filename=str(pfad))
-            for knoten in ast.walk(baum):
-                if not isinstance(knoten, ast.Call):
-                    continue
-                f = knoten.func
-                name = f.id if isinstance(f, ast.Name) else (
-                    f.attr if isinstance(f, ast.Attribute) else None
-                )
-                if name == "OnsetEvent":
-                    funde.append(f"{pfad.relative_to(ROOT)}:{knoten.lineno}")
+            funde += _onset_event_bauorte_im_quelltext(
+                pfad.read_text(encoding="utf-8"), str(pfad.relative_to(ROOT)),
+            )
     return funde
+
+
+@pytest.mark.parametrize("quelltext", [
+    "from output.renderers.alert.model import OnsetEvent as _OE\nx = _OE(a=1)\n",
+    "from output.renderers.alert import model\nx = model.OnsetEvent(a=1)\n",
+    "from output.renderers.alert.model import OnsetEvent\nx = OnsetEvent(a=1)\n",
+])
+def test_ac7_ratsche_erkennt_jede_bauform(quelltext):
+    """AC-7 Selbsttest der Ratsche (F004): direkter Name, Attribut-Zugriff und
+    Alias-Import zaehlen alle als Bau."""
+    assert _onset_event_bauorte_im_quelltext(quelltext, "probe.py") == ["probe.py:2"]
 
 
 def test_ac7_onset_event_wird_nur_im_baustein_gebaut():

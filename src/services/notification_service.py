@@ -10,7 +10,7 @@ from __future__ import annotations
 import inspect
 from html import escape as _html_escape
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import date, datetime, timezone
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Optional
@@ -21,8 +21,10 @@ from app.config import Settings
 from i18n import Lang, resolve_user_lang, t
 from i18n.format import fmt_date_numeric
 from output.renderers.trip_report import TripReportFormatter
-from output.renderers.alert.model import AlertMessage, OnsetEvent
-from output.renderers.alert.project import to_alert_message, to_multi_point_alert_message
+from output.renderers.alert.model import AlertMessage
+from output.renderers.alert.project import (
+    onset_event_from_fields, to_alert_message, to_multi_point_alert_message,
+)
 from output.renderers.alert.render import (
     render_email as render_alert_email,
     render_sms as render_alert_sms,
@@ -348,6 +350,17 @@ class RadarAlertRequest:
     # Trip-Radar-Pfad setzt es immer; der Ortsvergleich-Radar-Pfad baut kein
     # `RadarAlertRequest` und laesst es damit implizit `None`.
     segment_date: date | None = None
+
+
+def radar_request_from_event(event, **request_felder) -> RadarAlertRequest:
+    """Issue #2982 (Variante ii-b): die Spiegelfelder des Trip-Versandbuendels
+    generisch aus dem EINEN Baustein-Event fuellen -- kein zweiter Satz von
+    Feldzuweisungen, der still hinter `OnsetEvent` zurueckbleiben koennte.
+    `request_felder` traegt die Request-eigenen Felder (`tz`, `segment_date`)
+    und gezielte Abweichungen vom Event (`onset_minutes`)."""
+    namen = {f.name for f in fields(RadarAlertRequest)}
+    spiegel = {f.name: getattr(event, f.name) for f in fields(event) if f.name in namen}
+    return RadarAlertRequest(**{**spiegel, **request_felder})
 
 
 def abschnitt_id(segment_data, lang: Lang) -> str:
@@ -1929,45 +1942,10 @@ class NotificationService:
         # Nachtsegment kann der Vortag sein. Ortsvergleich-Radar baut kein
         # `RadarAlertRequest` -> `segment_date` bleibt `None` -> keine Etappe.
         stage_number = _stage_number_for_date(trip, request.segment_date)
-        onset_event = OnsetEvent(
-            # Issue #2050 S2b: ohne kuenftigen Beginn traegt `onset_minutes`
-            # `None` -- der Renderer-Vertrag verlangt eine Zahl, liest sie im
-            # Laufend-Fall aber nirgends (jede Textform verzweigt vorher).
-            onset_minutes=request.onset_minutes or 0,
-            already_running=request.already_running,  # Issue #2050 S2b
-            onset_time=request.onset_time,
-            km_from=request.km_from,
-            km_to=request.km_to,
-            is_convective=request.is_convective,
-            intensity_label=request.intensity_label,
-            source_label=request.source_label,
-            briefing_context=request.briefing_context,
-            segment_id=request.segment_id,  # Issue #1744 A1
-            onset_day_offset=request.onset_day_offset,  # Issue #2009
-            onset_weekday=request.onset_weekday,  # Issue #2054
-            onset_precip_mm=request.onset_precip_mm,  # Issue #2046
-            event_end_time=request.event_end_time,  # Issue #2051 S1
-            event_end_day_offset=request.event_end_day_offset,  # Issue #2051 S1
-            event_end_weekday=request.event_end_weekday,  # Issue #2054
-            # Issue #2051 S1 (Spec v1.1): waehlt die Ende-Textform im Renderer.
-            event_ongoing_beyond_horizon=request.event_ongoing_beyond_horizon,
-            # Issue #2051 S3: additiv durchgereicht.
-            source_reach_time=request.source_reach_time,
-            source_reach_day_offset=request.source_reach_day_offset,
-            location_sharpness_limit_time=request.location_sharpness_limit_time,
-            location_sharpness_limit_day_offset=request.location_sharpness_limit_day_offset,
-            # Issue #2051 S2a: Ausdehnung und die Echtheitspruefung der
-            # km-Zahlen reisen GEMEINSAM -- die Zonen ohne `km_measured`
-            # blieben im Text stumm, das Flag ohne Zonen wirkungslos.
-            km_measured=request.km_measured,
-            rain_zones=tuple(request.rain_zones),
-            # Issue #2050 S4b-2: die ausgefallene Gewitterpruefung und die
-            # Messluecken der Ausdehnung -- beide rein beschreibend, sie
-            # aendern nur den Text (Kennzeichnung), nicht die Entscheidung.
-            convective_checked=request.convective_checked,
-            gap_km=tuple(request.gap_km),
-            stage_number=stage_number,  # Issue #2122
-        )
+        # Issue #2982: EIN Baustein -- jedes `OnsetEvent`-Feld reist generisch
+        # aus dem Request mit (kein Feld-fuer-Feld-Nachtrag mehr, #2009/#2046/
+        # #2050/#2051/#2054); `onset_minutes=None` (laufend) wird dort 0.
+        onset_event = onset_event_from_fields(request, stage_number=stage_number)
         # Issue #1402: kein stiller Rueckfall mehr -- `request.tz` ist seit
         # `RadarAlertRequest` ein Pflichtfeld.
         alert_tz = request.tz

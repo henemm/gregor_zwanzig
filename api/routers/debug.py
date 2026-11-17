@@ -37,7 +37,7 @@ def trigger_radar_alert(user_id: str = Query(...)):
     6. Kein radar_alert_due()-Check, kein Throttle-Eintrag (Test-Seam).
     """
     import sys
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timezone
     from pathlib import Path
     from types import SimpleNamespace
 
@@ -53,11 +53,10 @@ def trigger_radar_alert(user_id: str = Query(...)):
 
     # Lazy imports (Zirkularimport-Schutz beim Prod-Startup)
     from app.loader import load_all_trips
-    from services.radar_alert_service import build_onset_alert_message, send_radar_alert_email
+    from services.radar_alert_service import build_debug_onset_alert_message, send_radar_alert_email
     from services.radar_service import RadarNowcastService
     from services.trip_day import trip_local_today
     from services.trip_segments import convert_trip_to_segments
-    from utils.timezone import tz_for_coords
 
     trips = list(load_all_trips(user_id=user_id))
     if not trips:
@@ -88,10 +87,6 @@ def trigger_radar_alert(user_id: str = Query(...)):
     if active is None:
         active = segments[0]
 
-    lat = active.start_point.lat
-    lon = active.start_point.lon
-    tz = tz_for_coords(lat, lon)
-
     radar_svc = RadarNowcastService()
     # Synthethisches Ergebnis: kein echter Nowcast (Wetter variabel), sondern fester
     # Leichter-Regen-Szenario damit der Validator P-1/P-2/P-3/P-4 sicher pruefen kann.
@@ -103,19 +98,11 @@ def trigger_radar_alert(user_id: str = Query(...)):
     )
 
     source_label = radar_svc.source_label(getattr(result, "source", "test"))
-    onset_local = datetime.now(tz) + timedelta(minutes=result.onset_minutes)
-    onset_time = onset_local.strftime("%H:%M")
     segment_label = f"Etappe {getattr(active, 'segment_id', 1)}"
 
-    msg = build_onset_alert_message(
-        trip=trip,
-        active=active,
-        onset_minutes=result.onset_minutes,
-        onset_time=onset_time,
-        intensity_label=result.intensity_label,
-        source_label=source_label,
-        is_convective=result.is_convective,
-    )
+    # Issue #2982: Beginnzeit, Tagesbezug und Event kommen aus dem EINEN
+    # Baustein (`onset_event_from_nowcast`) statt einer eigenen Ableitung hier.
+    msg = build_debug_onset_alert_message(trip, active, result, source_label)
 
     # Empfaenger-Override: immer an gregor-test@henemm.com, SMTP immer über Stalwart.
     # for_testing() leitet smtp_host → mail.henemm.com weg von Resend (Issue #924).
