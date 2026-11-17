@@ -1,7 +1,7 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.42"
+version: "2.43"
 status: active
 created: 2025-12-27
 updated: 2026-11-16
@@ -656,7 +656,9 @@ unmittelbar nach den Wertzellen, **vor** dem optionalen `!`-Warn-Block, z. B.
   zeigt die Ortsvergleich-SMS dieselben Zeilen in derselben Folge wie die Vergleichstabelle
   der Mail (Registerfolge: `D W R PR TH SU CT UV VS SD NS L G …`) und kürzt vom Listenende
   (§6). Die frühere feste Sechserliste (`D W SU CT SD NS`, ohne Regen, Böen, Gewitter)
-  ist abgelöst.
+  ist abgelöst. Die volle Liste verdrängt dabei keine Orte: alle Orte bleiben sichtbar,
+  jeder mit derselben Zeichenzahl gekürzt (seit v2.43, §6), z. B.
+  `Vergleich 29.10.: Innsbruck D 11C R 2.4 mm TH - PT Regen +6 ?1; Lienz D 12C R 5.4 mm +8 ?1; …`.
 - **Warndienst nicht erreichbar (seit v2.42, #3047 Runde 7, B-L2):** Ist an mindestens
   einem Ort eine amtliche Warnquelle ausgefallen, endet die Ortsvergleich-SMS mit ` X?`
   (§3.4d), z. B. `Vergleich 08.07.: Alpha D 20C W 10 km/h; Beta D 22C W 12 km/h X?`.
@@ -674,7 +676,11 @@ Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, wird so gekürzt (seit v
 3. Amtliche Bausteine zuletzt, nach aufsteigender Priorität: Fire (`Z:`, `MAX`, `M:`), dann Vigilance (`HR:TH:`/`VR:VT:`), dann der amtliche Warn-Block `!` (§3.4c) — einer bleibt immer stehen.
 4. `X?` (Warndaten nicht abrufbar) fällt nie.
 
-**Orts-Überlauf im Ortsvergleich (`render_compare_sms`, seit v2.41, #3047 Runde 7, AC-23):** Passen nicht alle Orte ins Budget, entfallen Orte vom Ende und werden als ` +k Orte` ausgewiesen (ADR-0011). Trüge ein als ` +k Orte` entfallender Ort eine amtliche Warnung, bleibt er mit Marker sichtbar; gekürzt werden zuerst die Zellen aller gezeigten Orte vom Listenende (gleiches Budget je Ort), dann Orte ohne Warnung (AC-23).
+**Orts-Überlauf im Ortsvergleich (`render_compare_sms`, seit v2.43, #3047 Runde 7, AC-23, ADR-0095 — ein Vergleich braucht mehrere Orte):** Ist die SMS zu lang, wird in dieser Folge gekürzt:
+1. die Zellen **aller** gezeigten Orte vom Listenende, mit demselben Zeichen-Budget je Ort (verdrängte Zellen als `+N` im Ortsteil), bis je Ort nur noch die erste Listenzeile steht;
+2. erst dann entfallen ganze Orte vom Ende und werden als ` +k Orte` ausgewiesen (ADR-0011) — Orte **ohne** amtliche Warnung zuerst; ein Ort mit Warnung bleibt mit Marker sichtbar;
+3. sind nur noch Orte mit Warnung (oder ein einziger Ort) übrig, weicht auch die erste Zelle dem `!`-Marker.
+Bis v2.42 füllte der erste Ort die SMS und alle weiteren Orte ohne Warnung fielen als ` +k Orte` weg.
 
 Abgelöst: die feste Rangfolge bis v2.39 (`DROP_ORDER`: erweiterte Token → Wintersport → Fire → Peak-Werte → gefühlte Temperatur → `PR` → `L D N` → Last Resort, #1677 AC-6). Die Peak-Werte `(max@h)` werden nicht mehr gesondert gestrichen; sie gehören zu ihrer Zeile.
 
@@ -863,6 +869,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.39 | 2026-11-09 | Neuer §3.4i: Radar-Alarm im Ortsvergleich mit mehreren Orten nennt jeden Ort mit Ortsnummer (`1:R@14:05 3:R@14:40`), sortiert nach Beginn, Überlauf ` +k`; Ein-Ort und Trip unverändert (Issue #1767, löst #1948-S4-Entscheid 3b ab). |
 | 2.40 | 2026-11-16 | **Kürzung vom Listenende (#3047 Runde 7, AC-23, PO-Entscheidung 2026-11-16).** Bei Überlänge fällt die SMS-Liste von hinten, ganze Zeilen; amtliche Bausteine (Fire, Vigilance, Warn-Block) zuletzt, `X?` nie. Löst die feste Rangfolge (`DROP_ORDER`, #1677 AC-6) ab. Gilt für Trip-SMS, Premium-SMS (gleicher Text) und Telegram-Kurzform; Alarm-SMS haben eigene Regeln (unverändert). Betrifft §1, §2, §3.4c, §3.4d, §6. |
 | 2.42 | 2026-11-16 | §5b: Ortsvergleich „nie eingestellt“ folgt der Mail-Tabelle (Registerfolge statt fester Sechserliste, ohne `?N` für fehlende Werte); Warndienst-Ausfall hängt ` X?` an die Ortsvergleich-SMS (#3047 Runde 7, B-L4, B-L2). |
+| 2.43 | 2026-11-16 | §5b/§6: Ortsvergleich-SMS kürzt zuerst die Zellen aller Orte (gleiches Budget je Ort, bis zur ersten Listenzeile), erst danach entfallen Orte als ` +k Orte`, ohne Warnung zuerst — auch ohne amtliche Warnung (#3047 Runde 7, AC-23, ADR-0095). |
 | 2.41 | 2026-11-16 | §6: Orts-Überlauf im Ortsvergleich — ein Ort mit amtlicher Warnung fällt nie in ` +k Orte`, er bleibt mit Marker sichtbar; zuerst werden die Zellen aller gezeigten Orte vom Listenende gekürzt (gleiches Budget je Ort), dann entfallen Orte ohne Warnung (#3047 Runde 7, AC-23). |
 
 **Quellen für v2.0:**

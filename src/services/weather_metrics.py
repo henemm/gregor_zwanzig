@@ -382,11 +382,10 @@ class WeatherMetricsService:
             return 0.0
 
         if settings is None:
-            from app.config import Settings
-            settings = Settings()
-
-        dni_min = settings.sunny_dni_min_wm2
-        dni_max = settings.sunny_dni_max_wm2
+            dni_min, dni_max = _default_dni_band()
+        else:
+            dni_min = settings.sunny_dni_min_wm2
+            dni_max = settings.sunny_dni_max_wm2
 
         # Main path: any data point with DNI -> DNI interpolation (cloud fallback off)
         has_dni = any(getattr(dp, "dni_wm2", None) is not None for dp in data)
@@ -1271,6 +1270,36 @@ class WeatherMetricsService:
 # Level-1 Aggregation ueber eine nackte Stundenliste (Issue #1285)
 # SPEC: docs/specs/modules/compare_location_summary.md (AC-15)
 # ===========================================================================
+
+def _default_dni_band() -> tuple[float, float]:
+    """DNI-Band aus den Standard-``Settings`` (#3047 Runde 7 p8, Performance).
+
+    ``Settings()`` liest Umgebung und ``.env`` bei jedem Bau neu (~ms); der
+    Orts-Vergleich ruft ``calculate_sunny_hours`` je Ort mehrfach. Das Band wird
+    deshalb einmal je Konfigurationsstand aufgeloest: Schluessel sind die
+    beiden Umgebungsvariablen, die ``.env``-Datei und das Arbeitsverzeichnis --
+    aendert sich einer davon, wird neu gelesen (gleiches Verhalten wie zuvor)."""
+    import os
+
+    from app.config import Settings
+
+    env_file = Settings.model_config.get("env_file")
+    key = (
+        os.environ.get("GZ_SUNNY_DNI_MIN_WM2"), os.environ.get("GZ_SUNNY_DNI_MAX_WM2"),
+        str(env_file), os.getcwd(),
+    )
+    band = _DNI_BAND_CACHE.get(key)
+    if band is None:
+        settings = Settings()
+        band = (settings.sunny_dni_min_wm2, settings.sunny_dni_max_wm2)
+        _DNI_BAND_CACHE.clear()
+        _DNI_BAND_CACHE[key] = band
+    return band
+
+
+#: Ein Eintrag: zuletzt aufgeloestes DNI-Band je Konfigurationsstand.
+_DNI_BAND_CACHE: dict[tuple, tuple[float, float]] = {}
+
 
 def summarize_points(points: list) -> Optional[SegmentWeatherSummary]:
     """Tages-Aggregat aus einer reinen ``ForecastDataPoint``-Liste.

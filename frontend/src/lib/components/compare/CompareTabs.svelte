@@ -89,6 +89,8 @@
 	import { hydrateVersandFieldsFromPreset } from '../shared/versandVergleichSpeicherung.ts';
 	import { sichereSelbstSpeichererVorReiterwechsel } from '../shared/wetter-tab/wertebereicheVergleichSpeicherung.ts';
 	import { groupLocations } from './locationHelpers.js';
+	// #3047 p10: Orts-Aufloesung des Orte-Reiters als reine Funktionen (Ortsfolge = Mail-Folge).
+	import { ortsVerzeichnis, orteAufloesen, reiterNummer } from './orteAufloesung.ts';
 	import { subscriptionTabs, resolveTab, bereinigteTabAdresse, versandSprungStart } from '../shared/subscriptionTabs.ts';
 	import MTabBar from '$lib/components/mobile/MTabBar.svelte';
 
@@ -255,18 +257,8 @@
 	// Orts-Auflösung: location_ids → locations[] (mit elevation_m für CompareLocationRow).
 	// allLocationsForAdd ergänzt Orte, die per Inline-Add-Panel neu hinzugefügt
 	// wurden und daher noch nicht im gefilterten `locations`-Prop stecken.
-	const locationById = $derived.by(() => {
-		const map = new Map<string, Location>();
-		for (const l of locations) map.set(l.id, l);
-		for (const l of allLocationsForAdd) if (!map.has(l.id)) map.set(l.id, l);
-		return map;
-	});
-	const resolvedLocations = $derived(
-		currentLocationIds.map((id, idx) => ({
-			rank: idx + 1,
-			loc: locationById.get(id)
-		}))
-	);
+	const locationById = $derived(ortsVerzeichnis(locations, allLocationsForAdd));
+	const resolvedLocations = $derived(orteAufloesen(currentLocationIds, locationById));
 
 	// Issue #1272: DnD-State/Sync/Flip liegen jetzt im geteilten SortableList
 	// (ADR-0024). Vertrag: onDndReorder(newOrder) — nur bei finalize.
@@ -275,7 +267,7 @@
 	}
 
 	function orteItemLabel(id: string, i: number): string {
-		return `${i + 1}. ${locationById.get(id)?.name ?? id}`;
+		return `${reiterNummer(currentLocationIds, i, locationById)}. ${locationById.get(id)?.name ?? id}`;
 	}
 
 	async function removeLocation(locId: string): Promise<void> {
@@ -773,7 +765,7 @@
 							{#if loc}
 								<div class="hub-orte-row" class:alt={i % 2 === 1} data-testid="hub-orte-row" data-loc-id={id}>
 									<DragHandle />
-									<div class="hub-orte-row-body"><CompareLocationRow {loc} index={i + 1} /></div>
+									<div class="hub-orte-row-body"><CompareLocationRow {loc} index={reiterNummer(currentLocationIds, i, locationById)} /></div>
 									<button
 										type="button"
 										class="hub-orte-remove-btn"
