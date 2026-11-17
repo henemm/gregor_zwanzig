@@ -3854,6 +3854,19 @@
       "status": "gruen",
       "zustand": "ungueltig",
       "sprache": "de+en"
+    },
+    {
+      "id": "T-R8PY-T4-TRIP-VALIDATOR-ORTE-KONFIG",
+      "liste": "validator",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "orte_konfig_abgewiesen",
+      "test": "tests/tdd/test_3047_r8py_luecken.py::test_t4_trip_validator_weist_orte_konfig_ab",
+      "ac": "AC-27",
+      "befund": "T4/M52",
+      "status": "gruen",
+      "zustand": "falscher_kontext",
+      "sprache": "de"
     }
   ]
 }
