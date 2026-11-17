@@ -65,3 +65,30 @@ Der PO hat anhand von Bildern entschieden (Varianten nebeneinander, echte Render
   - Alle Texte in DE und EN (ADR-0104). Kürzel der Kurzform bleiben unübersetzt.
   - Bis zum Bau beschreiben die Ist-Referenzen (`api_contract.md`, `renderer_email_spec.md`, `telegram_format.md`, `sms_format.md`, `mail_validators.md`) weiter das heutige Verhalten. Sie werden mit dem Bau nachgezogen, nicht vorher.
   - Abnahme: Soll/Ist-Bild gegen Fassung 4 und „Einstellung = Ausgabe“ (Katalog #3047).
+
+## Nachtrag 2026-11-17: Festlegungen der Spec
+
+Die Punkte, die oben unter „Folgepflichten“ und in Nr. 5 als offen für die Spec stehen, sind in `docs/specs/modules/feat_3122_was_steht_wo.md` entschieden (vom PO freigegeben am 2026-11-17). Die Spec ist für die Einzelheiten maßgeblich; hier steht die Kurzform.
+
+**Vom PO entschieden (2026-11-17, per Abfrage):**
+
+1. **SMS-Anfang bei Orten:** mehrere Orte `Orte 18.11.: Münster D 13C …`, genau ein Ort `Tecklenburg 18.11.: D 11C …`. „Vergleich“ entfällt.
+2. **Kürzel-Legende:** aufklappbar in der Karte unter dem SMS-Beispiel („Kürzel erklärt“). In den Briefings steht keine Legende; der Satz „Die Legende steht auch am Ende jedes Briefings.“ entfällt.
+3. **Vorbelegung des Ausblicks:** nur im Abend-Briefing. Ist beim Abo nur das Morgen-Briefing eingeschaltet, im Morgen-Briefing. Bestehende Trips und Orte behalten, was sie heute bekommen.
+4. **Führende Reihenfolge bei der Migration:** die heute wirksame Reihenfolge der SMS, weil nur dort die Reihenfolge entscheidet, was bei Platzmangel wegfällt. Was in der SMS fehlt, folgt in der Reihenfolge von Telegram, dann E-Mail, dann Grundauswahl.
+
+**In der Spec festgelegt (Tech Lead):**
+
+5. **Gespeichertes Format:** `display_config.placements` mit `rows` (Katalog-ID, Haken je Stelle, Darstellung je Stelle; Listenposition = Reihenfolge) und `outlook_reports`. Ein fehlender Haken heißt „angehakt“, `false` heißt „bewusst abgewählt“ (löst #3082).
+6. **Zeilen-Kennung der Orte:** die Katalog-ID, aufgeweitet auf die Auswertungen der Grundauswahl (#3101).
+7. **Roh/Einfach:** eine Liste im Katalog, je Metrik die Stellen mit zwei Formen (Tabelle in der Spec, Teil A Nr. 4). Gewitter hat zwei Formen nur in der HTML-Mail, die Regenwahrscheinlichkeit kommt dazu. Die SMS behält je Fläche die Form, die heute ohne Einstellung erscheint.
+8. **Orte-Telegram:** „Einfach“ zeigt Wort oder Symbol nach dieser Liste, bei Wind, Böen, Niederschlag und Regenwahrscheinlichkeit mit der Stunden-Marke `@h`. „Zahl mit Marke“ gibt es nicht mehr.
+9. **Kompakt-Mail:** Den Ausblick steuert auch dort nur die eine Stelle. Die übrigen Block-Schalter ignoriert sie weiter (#722).
+10. **Leere Auswahl:** Leer bleibt leer, an jeder Stelle und bei bewusst leerer Grundauswahl, ohne Rückfall. Nur eine nie eingestellte Grundauswahl bekommt den Standardsatz der Vorlage.
+11. **Stellen ohne eigene Ausgabe:** gesperrt mit Grund (Strich statt Haken), aus einer Liste im Katalog.
+12. **Neue Metrik:** steht hinten und ist an allen ihren Stellen angehakt.
+13. **Genau ein Ort:** Die Tabelle „Übersicht“ steht auch dann in der Mail (Soll-Bild „Orte · 1 Ort“). Das ersetzt die Formulierung „E-Mail ohne Vergleichstabelle“ aus #2798.
+14. **SMS-Schwellen** bekommen keine Oberfläche (Konzept W13: entfallen mit der Profil-Ampel).
+15. **Design-Charter:** §3 bekommt die Ausnahme „Einstell-Tabelle ‚Was steht wo‘“.
+
+**Weiter offen, nicht Teil des Baus zu #3122:** die Schalter der Trip-Mail ohne Platz im Soll-Bild (Kurz-Zusammenfassung, Quick-Take-Chips, Metriken-Überblick, Großwetterlage, Zusammenfassung, Tages-Summe). Sie bleiben bis #3036 im Übergangsblock bedienbar; die Frage gehört zu #3036.

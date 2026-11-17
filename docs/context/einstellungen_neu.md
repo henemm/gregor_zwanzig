@@ -106,7 +106,7 @@ Der PO fand die Karte „Inhalt je Kanal und Fläche“ „viel zu kompliziert, 
 
 **Folgen für den Bau:** ein Datenmodell, ein Speicherweg und ein Resolver für Trip und Orte. `WeatherMetricsTab` und der Übergangsblock im Reiter Zustellung entfallen. Das gespeicherte Format (ADR-0121) wird neu geschnitten: je Metrik ein Satz Stellen-Flaggen, eine Darstellung je Stelle, eine Reihenfolge. Migration nach Read-Modify-Write mit Merge (ADR-0101). Leitlinie: Die Naht ist das View-Model des Lese-Resolvers (`src/services/channel_list_resolver.py`); zuerst lesen alle Ausgaben nur noch daraus (#3099, #3100), danach wird der Eingang des Resolvers getauscht, und die schreibende Migration aus #3102 geht im Bau zu #3122 auf. Die Ist-Referenzen unter `docs/reference/` beschreiben bis zum Bau das heutige Verhalten. Abnahme: Soll/Ist-Bild gegen Fassung 4 und „Einstellung = Ausgabe“ (#3047).
 
-**Offen für die Spec:**
+**Offen für die Spec** (Stand vor der Spec; seit 2026-11-17 entschieden in `docs/specs/modules/feat_3122_was_steht_wo.md`, Kurzform im Nachtrag zu ADR-0124):
 
 - Welche der heutigen Reihenfolgen je Kanal bei der Migration führt.
 - SMS-Anfang bei Orten (Vorschlag `Orte 18.11.: …`, bei einem Ort `Tecklenburg 18.11.: …`; berührt `sms_format.md`).
