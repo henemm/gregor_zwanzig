@@ -85,7 +85,9 @@ const ZUSTAND: [string, string][] = [
 	['let selectedTemplate = $state(\'\');', 'let selectedTemplate = $state(globalThis.__F5.selectedTemplate);'],
 	['let showSavePresetDialog = $state(false);', 'let showSavePresetDialog = $state(globalThis.__F5.showSavePresetDialog);'],
 	['let pendingPreset: string | null = $state(null);', 'let pendingPreset: string | null = $state(globalThis.__F5.pendingPreset);'],
-	['let activeChannel = $state<ChannelId>(\'email\');', 'let activeChannel = $state<ChannelId>(globalThis.__F5.activeChannel);']
+	['let activeChannel = $state<ChannelId>(\'email\');', 'let activeChannel = $state<ChannelId>(globalThis.__F5.activeChannel);'],
+	// #3047 R8 F3: Kanal-Reiter im Ortsvergleich (Telegram-Trennlinie je Kontext).
+	['let compareChannel = $state<ChannelId>(\'email\');', 'let compareChannel = $state<ChannelId>(globalThis.__F5.compareChannel);']
 ];
 const WeatherMetricsTab = await variante(WMT_DATEI, ZUSTAND);
 const WeatherV2PresetBar = await komp(path.join(WMT, 'WeatherV2PresetBar.svelte'));
@@ -114,6 +116,9 @@ export type Zustand = {
 	showSavePresetDialog?: boolean;
 	pendingPreset?: string | null;
 	smsSymbols?: unknown;
+	/** #3047 R8 F3: aktiver Kanal-Reiter und Telegram-Liste im Ortsvergleich. */
+	compareChannel?: 'email' | 'telegram' | 'sms';
+	telegramAuswahl?: string[];
 };
 
 export const BUCKETS_GOLDEN = {
@@ -152,7 +157,8 @@ function setze(z: Zustand): void {
 		selectedTemplate: 'wandern',
 		showSavePresetDialog: z.showSavePresetDialog ?? false,
 		pendingPreset: z.pendingPreset ?? null,
-		activeChannel: z.activeChannel ?? 'email'
+		activeChannel: z.activeChannel ?? 'email',
+		compareChannel: z.compareChannel ?? 'email'
 	};
 }
 
@@ -170,7 +176,7 @@ export function vergleichRendern(z: Zustand = {}, aktiv: string[] = VERGLEICH_AU
 	return html(WeatherMetricsTab, {
 		context: 'vergleich',
 		activeMetricKeys: aktiv,
-		channelActiveMetricKeys: { email: null, telegram: [aktiv[0], aktiv[2]], sms: null },
+		channelActiveMetricKeys: { email: null, telegram: z.telegramAuswahl ?? [aktiv[0], aktiv[2]], sms: null },
 		officialAlertsEnabled: true,
 		dayWindowStartHour: 6,
 		dayWindowEndHour: 18,
@@ -195,7 +201,8 @@ export function bausteineRendern(): string {
 			primaryColumns: ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'cloud_total', 'humidity', 'dewpoint', 'wind_chill'],
 			metricById: byId, friendlyMap: { wind: true }, activeChannel: 'telegram', highlight: null,
 			onRemove: nix, onDndReorder: nix, onMode: nix, offColumns: ['snow_depth'], onRestore: nix,
-			showAbwahlHinweis: false, kuerzelById: { temperature: ['T'], gust: ['G'], snow_depth: ['SD'] }
+			showAbwahlHinweis: false, kuerzelById: { temperature: ['T'], gust: ['G'], snow_depth: ['SD'] },
+			context: 'route' // #3047 R8 F3: Trennlinie nur mit Kontext
 		})
 	].join('\n');
 }

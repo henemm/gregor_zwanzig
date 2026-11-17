@@ -27,7 +27,7 @@ import {
 	type MetricCatalog,
 } from '../../../trip-detail/metricsEditor.ts';
 import {
-	channelOverrideFromMetrics,
+	channelOverridesFromSaved,
 	mergeAllChannelLayoutsForSave,
 	splitChannelMetricsForDisplay,
 	type ChannelOverride,
@@ -113,13 +113,10 @@ export function ladeInEditorState(golden: GoldenTrip, catalog: MinimalCatalog): 
 		horizonsMap[m.metric_id] = { today: true, tomorrow: true, day_after: true };
 	}
 
-	const channelBuckets = {} as Record<ChannelId, ChannelOverride | null>;
-	for (const ch of REITER) {
-		const layout = golden.display_config.channel_layouts[ch];
-		channelBuckets[ch] = layout
-			? channelOverrideFromMetrics(layout as never, alleCatalogIds(catalog), friendlyMap)
-			: null;
-	}
+	// #3047 Runde 8 (T1): DIESELBE Funktion wie initFromTrip(), kein Nachbau.
+	const channelBuckets = channelOverridesFromSaved(
+		golden.display_config.channel_layouts as never, alleCatalogIds(catalog), friendlyMap,
+	);
 
 	return { buckets, friendlyMap, horizonsMap, channelBuckets };
 }

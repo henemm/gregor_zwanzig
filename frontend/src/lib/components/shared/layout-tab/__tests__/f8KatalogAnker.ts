@@ -13,7 +13,9 @@
 export const F8_ANKER: [schluessel: string, de: string, en: string][] = [
 	// Layout-Reiter (LayoutTab, LTCutLine)
 	['layout.tab.eyebrow', 'Kanal · Auswahl & Kappung', 'Channel · selection & cutoff'],
-	['layout.kappung.schnittlinie', '✂ ab hier <kanal>-Limit (max <max>)', '✂ <kanal> limit from here (max <max>)'],
+	// #3047 Runde 8 (F3, PO „Nichts fällt weg“): Kappungs-Satz durch wahre Saetze je Kontext ersetzt.
+	['layout.kappung.schnittlinie_route', '↓ ab Platz <platz> nur in der <kanal>-Kurzübersicht, nicht in der Stundentabelle', '↓ from position <platz> only in the <kanal> summary, not in the hourly table'],
+	['layout.kappung.schnittlinie_vergleich', '↓ ab Platz <platz> in einer zweiten <kanal>-Zeile je Ort', '↓ from position <platz> in a second <kanal> line per location'],
 	// Kappungs-Hinweis (ltChannels.ts::ltCapNoteText) und Abwahl-Hinweis
 	['layout.kappung.zeigt_alles', '<kanal> zeigt alles · keine Begrenzung', '<kanal> shows everything · no limit'],
 	['layout.kappung.zeichen', '<kanal>: kein Raster, keine Tabelle — Fließtext, <zeichen> Zeichen', '<kanal>: no grid, no table — plain text, <zeichen> characters'],

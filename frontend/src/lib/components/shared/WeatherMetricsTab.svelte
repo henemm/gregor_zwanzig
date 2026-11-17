@@ -63,7 +63,7 @@
 	// `mergeChannelLayoutsForSave` bleibt als Funktion bestehen (eigener Test,
 	// #1575), wird hier aber nicht mehr aufgerufen.
 	import {
-		startChannelOverride, channelOverrideFromMetrics,
+		startChannelOverride, channelOverridesFromSaved,
 		splitChannelMetricsForDisplay, mergeAllChannelLayoutsForSave,
 		// Bug #2454 Fix-Loop 1 (Finding F001): globales Toggle inkl. Kind-
 		// Mitnahme UND Kanal-Durchschreibung als EINE geteilte, exportierte
@@ -504,11 +504,8 @@
 		// Issue #1575 Scheibe 3: gespeicherte Kanal-Layouts zurueckbauen, damit ein
 		// editierter Reiter nach dem Reload seine eigene Auswahl zeigt.
 		const savedLayouts = trip!.display_config?.channel_layouts;
-		const cb: Record<ChannelId, ChannelOverride | null> = { email: null, telegram: null, sms: null };
-		for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) { // ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
-			const layout = savedLayouts?.[ch];
-			if (layout) cb[ch] = channelOverrideFromMetrics(layout, allCatalogIds(), fMap);
-		}
+		// Issue #3047 Runde 8 (T1): ausgelagert, damit der echte Ladeweg testbar ist.
+		const cb = channelOverridesFromSaved(savedLayouts, allCatalogIds(), fMap);
 		channelBuckets = cb;
 		// Issue #1720 S1 / #1848 A2: gespeicherte Vorschau-Auswahl (Kennungen,
 		// oder Paar-Altform aus Bestandsdaten) in Kennungen uebersetzen —
@@ -1570,6 +1567,7 @@
 							onRestore={onCompareRestore}
 							showAbwahlHinweis
 							kuerzelById={compareKuerzelById}
+							context="vergleich"
 						/>
 					</Card>
 				{/snippet}
@@ -1748,6 +1746,7 @@
 							onRestore={onRestoreMetric}
 							showAbwahlHinweis
 							kuerzelById={metricSymbols}
+							context="route"
 							modeCapable={(id) =>
 								channel === 'sms'
 									? !!metricById[id]?.sms_format_capable

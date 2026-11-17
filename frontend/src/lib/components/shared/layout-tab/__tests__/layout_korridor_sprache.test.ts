@@ -119,7 +119,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Kanal · Auswahl &amp; Kappung', 'Preset-Auswahl', 'Detail-Werte', 'E-Mail-Inhalt', 'Erscheint nur in der E-Mail.', '✂ ab hier Telegram-Limit (max 7)', 'Etappen-Vorschau', 'Als Trip speichern', 'Trip wurde erfolgreich gespeichert.'])
+		for (const s of ['Kanal · Auswahl &amp; Kappung', 'Preset-Auswahl', 'Detail-Werte', 'E-Mail-Inhalt', 'Erscheint nur in der E-Mail.', /* #3047 R8 F3 */ '↓ ab Platz 8 nur in der Telegram-Kurzübersicht, nicht in der Stundentabelle', 'Etappen-Vorschau', 'Als Trip speichern', 'Trip wurde erfolgreich gespeichert.'])
 			assert.ok(alle.includes(s), s);
 	});
 });
@@ -167,7 +167,7 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 		const { de, en } = deDannEn(() => bausteineRendern());
 		const text = sichtbar(en);
 		for (const s of [
-			'✂ Telegram limit from here (max 7)',
+			'↓ from position 8 only in the Telegram summary, not in the hourly table', // #3047 R8 F3
 			'3-day outlook',
 			'Appears only in the email.',
 			'3-Tages-Vorschau', // vom Trip-Aufrufer uebergebene Ueberschrift (F9) bleibt Aufrufer-Text

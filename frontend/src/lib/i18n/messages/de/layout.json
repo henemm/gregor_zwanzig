@@ -1,6 +1,7 @@
 {
 	"layout.tab.eyebrow": "Kanal · Auswahl & Kappung",
-	"layout.kappung.schnittlinie": "✂ ab hier {kanal}-Limit (max {max})",
+	"layout.kappung.schnittlinie_route": "↓ ab Platz {platz} nur in der {kanal}-Kurzübersicht, nicht in der Stundentabelle",
+	"layout.kappung.schnittlinie_vergleich": "↓ ab Platz {platz} in einer zweiten {kanal}-Zeile je Ort",
 	"layout.kappung.zeigt_alles": "{kanal} zeigt alles · keine Begrenzung",
 	"layout.kappung.zeichen": "{kanal}: kein Raster, keine Tabelle — Fließtext, {zeichen} Zeichen",
 	"layout.kappung.anzahl_passt": "{kanal}: {anzahl} {subjekt} · passt (max {max})",

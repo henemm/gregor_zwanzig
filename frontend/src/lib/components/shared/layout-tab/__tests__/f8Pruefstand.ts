@@ -100,7 +100,7 @@ export function bausteineRendern(): string {
 		html(OutlookLayoutControls, { metricKeys: null, catalog: katalog, onMetricKeys: nix, ...p });
 	const leer = { primary: [] as string[], secondary: [] as string[], off: ['temperature'] };
 	return [
-		html(LTCutLine, { label: 'Telegram', max: 7 }),
+		html(LTCutLine, { label: 'Telegram', platz: 8, context: 'route' }), // #3047 R8 F3
 		ausblick({ enabled: true, onEnabledChange: nix }),
 		ausblick({ title: '3-Tages-Vorschau', showEmailOnlyHint: false }),
 		html(MailInhaltCard, { reportConfig: { email_format: 'full', show_outlook: true } }),
