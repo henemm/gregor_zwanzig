@@ -145,6 +145,7 @@ Echte Renderer-Aufrufe, kein `Mock`/`patch`/`MagicMock`.
 ## Known Limitations
 
 - Plain und Notices können unterschiedliche Segmentlisten je Warnung haben, weil nur die Notices zusätzlich nach Gefahr und Stufe bündeln. Die Ortsauflösung ist je Liste identisch, die Listen selbst nicht.
+- Folge von AC-9: Da Chip und scope_label wieder gleich sind, entfällt der Prosa-Satz „Betrifft nur …“ (keine Doppelnennung, ADR-0033); der Bestandstest test_teilstrecke_mit_km_angabe_und_freier_rest_englisch wird darauf angepasst.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -155,3 +156,4 @@ Echte Renderer-Aufrufe, kein `Mock`/`patch`/`MagicMock`.
 
 - 2026-11-17: Initial spec created (Issue #2984)
 - 2026-11-17: AC-9 (HTML-Orts-Chip über `scope_label`) nach Adversary-Befund F001 ergänzt; AC-4 präzisiert: „roh" = Kennung bleibt erhalten in der bisherigen Segment-Sprache, kein km-Rückfall
+- 2026-11-17: AC-9 um die Folge ergänzt: Prosa-Satz „Betrifft nur …“ entfällt bei gleichem Chip und scope_label (ADR-0033); Bestandstest test_teilstrecke_mit_km_angabe_und_freier_rest_englisch angepasst

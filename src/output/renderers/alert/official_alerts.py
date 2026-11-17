@@ -844,6 +844,7 @@ def _bundle_by_hazard_level(
 
 def render_official_alert_notice_plain(
     alerts: list[tuple["OfficialAlert", list[str]]], tz: "ZoneInfo", *, lang: Lang = "de",
+    segment_km: dict[str, tuple[float, float]] | None = None,
 ) -> list[str]:
     """Standalone-Alert-Format (Issue #1172/#1200): dedupliziert die Warnungen
     (dedupe_official_alerts) und rendert pro echter Warnung einen Block mit
@@ -859,7 +860,11 @@ def render_official_alert_notice_plain(
 
     Issue #1402: `tz` ist PFLICHTPARAMETER — der einzige produktive Aufrufer
     (`NotificationService._dispatch_alert_message`) uebergibt immer
-    `alert_tz` (selbst Pflichtparameter dort)."""
+    `alert_tz` (selbst Pflichtparameter dort).
+
+    Issue #2984: `segment_km` (additiv, Default aus) speist den Zusatz
+    " — <Ort>" der Regionszeile ueber `_official_alert_location`, dieselbe
+    Aufloesung wie der Karten-Kopf. Ohne gemessene Spanne byte-identisch."""
     from utils.timezone import local_fmt
 
     fmt = "%a %d.%m. %H:%M"
@@ -883,8 +888,10 @@ def render_official_alert_notice_plain(
         lines.append(titel if _is_eaws(a) else f"{word} — {titel}")
         region = a.region_label or t("warnung.zeit.unbekannt", lang)
         region_line = f"{t('warnung.zeile.region', lang)}: {region}"
-        if segment_ids:
-            region_line += f" — {format_segment_reference(segment_ids, lang=lang)}"
+        # Issue #2984: dieselbe Ortsaufloesung wie der Karten-Kopf.
+        ort = _official_alert_location(segment_ids, segment_km, lang)
+        if ort:
+            region_line += f" — {ort}"
         lines.append(region_line)
         if a.valid_from and a.valid_to:
             lines.append(
@@ -2473,6 +2480,26 @@ def _measured_km_span(
     return min(s[0] for s in spans), max(s[1] for s in spans)
 
 
+def _official_alert_location(
+    segment_ids: list[str], segment_km: dict | None, lang: Lang,
+) -> str:
+    """Ortsangabe einer amtlichen Warnung fuer ihre Segmentliste (Issue #2984).
+
+    EINE Aufloesung fuer Karten-Kopf (`scope_label`) und Regionszeile des
+    Klartext-Blocks: gemessene gemeinsame Spanne vorhanden -> geteilte
+    `format_alert_location` (km-Sprache, #2036); sonst die Segment-Sprache
+    `format_segment_reference` (nicht-numerische Kennungen bleiben roh,
+    #1965). Leere Segmentliste -> "" (den Rueckfall setzt der Aufrufer)."""
+    if not segment_ids:
+        return ""
+    span = _measured_km_span(segment_ids, segment_km)
+    if span is not None:
+        return format_alert_location(
+            None, segment_ids, span[0], span[1], km_measured=True, lang=lang,
+        )
+    return format_segment_reference(segment_ids, lang=lang)
+
+
 def build_official_alert_notices(
     trip: "Trip | None", tagged_alerts: list[tuple["OfficialAlert", list[str]]],
     segment_km: dict[str, tuple[float, float]] | None = None,
@@ -2517,14 +2544,12 @@ def build_official_alert_notices(
             # Issue #2036: dieselbe Aufloesung wie jeder andere Alarm -- die
             # gemessene km-Spanne verdraengt die Segmentnummer, sonst bleibt
             # alles wie bisher.
-            _span = _measured_km_span(segment_ids, segment_km)
-
+            # Issue #2984: die Aufloesung ist die Modulfunktion
+            # `_official_alert_location`, die auch die Regionszeile des
+            # Klartext-Blocks nutzt; den "unbekannt"-Rueckfall setzt dieser
+            # Aufrufer.
             def _ort(sprache: Lang) -> str:
-                if _span is not None:
-                    return format_alert_location(
-                        None, segment_ids, _span[0], _span[1], km_measured=True, lang=sprache,
-                    )
-                return (format_segment_reference(segment_ids, lang=sprache)
+                return (_official_alert_location(segment_ids, segment_km, sprache)
                         or t("warnung.zeit.unbekannt", sprache))
 
             scope_label = _ort(lang)
@@ -2544,7 +2569,10 @@ def build_official_alert_notices(
             # "N Segmente"-Verdichtung ab >4 Segmenten (Issue #1216 F005).
             affected = [scope_label]
         elif segment_ids:
-            affected = [format_segment_reference(segment_ids, lang=lang)]
+            # Issue #2984 AC-9: der Chip IST `scope_label` -- bei gemessener
+            # km-Spanne dieselbe Ortsangabe wie Kopf und Regionszeile, ohne
+            # Spanne byte-identisch zum frueheren `format_segment_reference`.
+            affected = [scope_label]
         else:
             affected = []
         # Befund 1 (#1326a, ADR-0033): die Karte nennt NUR den betroffenen

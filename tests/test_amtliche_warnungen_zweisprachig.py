@@ -347,8 +347,16 @@ def test_teilstrecke_mit_km_angabe_und_freier_rest_englisch():
 
     notices = oa.build_official_alert_notices(None, [(_alarm(), ["2"])], segment_km={"2": (3.0, 8.0)},
                                               lang="en")
-    assert t("warnung.satz.nur_route", "en", ort=notices[0].scope_label) in _plain(notices)
-    frei = [replace(notices[0], free_chips=["Segment 1", "Segment 3"])]
+    # Issue #2984 AC-9: Chip und `scope_label` sind wieder dieselbe Ortsangabe
+    # (#1326a, ADR-0033) -- der Ort steht einmal als Chip, der Prosa-Satz
+    # "Only affects ..." entfaellt (keine Doppelnennung).
+    assert notices[0].affected_chips == [notices[0].scope_label] == ["km 3-8"]
+    assert t("warnung.satz.nur_route", "en", ort="km 3-8") not in _plain(notices)
+    # Die englische Uebersetzung des Satzes bleibt abgedeckt: weicht der Chip
+    # vom `scope_label` ab, nennt der Satz den Umfang.
+    abweichend = [replace(notices[0], affected_chips=["Segment 2", "Segment 3"])]
+    assert t("warnung.satz.nur_route", "en", ort="km 3-8") in _plain(abweichend)
+    frei =[replace(notices[0], free_chips=["Segment 1", "Segment 3"])]
     abschnitte = t("warnung.liste.und", "en", liste="Segment 1", letztes="Segment 3")
     notiz = t("warnung.zeile.route_frei", "en", abschnitte=abschnitte)
     assert notiz in _plain(frei)

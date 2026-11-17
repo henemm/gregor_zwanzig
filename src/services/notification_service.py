@@ -2066,9 +2066,11 @@ class NotificationService:
             # Issue #2036: dieselbe Ortssprache wie der Aenderungs-Teil
             # DERSELBEN Mail -- die km-Spannen stammen aus den bereits
             # projizierten Ereignissen, nicht aus einer zweiten Quelle.
+            # Issue #2984: EINMAL berechnet, an Notices UND Klartext-Block.
+            embed_segment_km = _measured_event_km(alert_msg)
             embed_notices = build_official_alert_notices(
                 None, official_notices,
-                segment_km=_measured_event_km(alert_msg), lang=lang,
+                segment_km=embed_segment_km, lang=lang,
             )
             embed_source = _official_source_label_for(embed_notices, lang=lang)
             embedded_html = render_warn_block(
@@ -2079,9 +2081,11 @@ class NotificationService:
                 "</body></html>", embedded_html + "</body></html>",
             )
             # Plain/Telegram bleiben beim bestehenden Notice-Text (AC-6 betrifft
-            # nur das HTML-Format, das aus dem Rahmen brach).
+            # nur das HTML-Format, das aus dem Rahmen brach). Issue #2984: die
+            # Regionszeile nennt denselben Ort wie der HTML-Kopf.
             extra_lines = render_official_alert_notice_plain(
                 official_notices, tz=alert_tz, lang=lang,
+                segment_km=embed_segment_km,
             )
             extra_text = "\n".join(extra_lines)
             plain += "\n\n" + extra_text

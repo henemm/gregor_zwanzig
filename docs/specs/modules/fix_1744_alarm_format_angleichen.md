@@ -153,8 +153,11 @@ Klartext ausdrücklich (`notification_service.py:1322,1400-1405`).
 für das HTML ohnehin neu; der Klartext fällt aus denselben Tupeln ab. Ihn später nachzuziehen
 hieße, dieselbe Struktur ein zweites Mal aufzubrechen.
 
-`render_official_alert_notice_plain` (`official_alerts.py:615-662`) ist **nicht** dieser
-Klartext — sie bedient den in eine andere Mail eingebetteten Warnblock und bleibt unangetastet.
+`render_official_alert_notice_plain` (`official_alerts.py`, Funktion `render_official_alert_notice_plain`)
+ist **nicht** dieser Klartext — sie bedient den in eine andere Mail eingebetteten Warnblock und
+bleibt von A2 unberührt. Nachtrag #2984: ihre Regionszeile löst den Ort seither über dieselbe
+Modulfunktion `_official_alert_location` auf wie der Karten-Kopf (`scope_label`) der
+amtlichen Warnung (geteilte Ortsauflösung, gemessene km-Spanne statt Segmentnummer).
 
 ### 🔴 Der Wächter prüft CSS-Klassen, nicht nur Text
 
