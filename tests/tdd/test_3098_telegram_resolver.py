@@ -40,6 +40,7 @@ from tests.tdd._einstellung_auslieferung_fixtures import (
 
 # Orte-Helfer der Runde-7-Kette (echter Versandweg, Transport-Mitschrift);
 # ``mit`` ist dort eine Fixture und wird hier mitbenutzt.
+# ruff: noqa: F811  (mit = geteilte Fixture als Testparameter)
 from tests.tdd.test_3047_runde7_orte_kanaele import (  # noqa: F401  (Fixture)
     _sprache, mit, ortsbloecke, preset, text, wertezeilen, zwei_nutzer,
 )
