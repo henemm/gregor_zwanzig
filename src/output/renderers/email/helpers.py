@@ -1280,6 +1280,43 @@ def build_friendly_keys(dc: UnifiedWeatherDisplayConfig) -> set[str]:
     return keys
 
 
+def telegram_metric_configs(rows, dc: UnifiedWeatherDisplayConfig) -> list:
+    """Issue #3098 (ADR-0121): Telegram-Zeilen des Resolvers -> ``MetricConfig``.
+
+    ``narrow.py``, ``build_friendly_keys`` und ``build_format_modes`` brauchen
+    ``MetricConfig``. Nur ``enabled``-Zeilen, unbekannte IDs entfallen,
+    ``enabled=True``. ``bucket``/``sms_threshold`` aus dem Quell-Eintrag der
+    Grundauswahl (``ChannelRow`` traegt sie nicht); ``order`` = Resolver-Folge,
+    damit die Sortierung in ``render_for_channel`` ihr entspricht. Format:
+    ``None`` = Katalog-Standard: Quell-Eintrag unveraendert, sofern er den
+    Katalog-Standard zeigt, sonst auf ihn zurueckgesetzt (nie als Roh gedeutet);
+    ``raw`` -> ``format_mode="raw"`` + ``use_friendly_format=False``; sonst
+    ``format_mode=<format>`` + ``use_friendly_format=True`` (Umkehr ``_trip_format``)."""
+    import dataclasses
+
+    from app.models import MetricConfig
+
+    grund = {mc.metric_id: mc for mc in dc.metrics}
+    out = []
+    for i, row in enumerate(r for r in (rows or ()) if r.enabled):
+        try:
+            standard = get_metric(row.metric_id).default_format_mode
+        except KeyError:
+            continue
+        quelle = grund.get(row.metric_id) or MetricConfig(metric_id=row.metric_id)
+        mc = dataclasses.replace(quelle, enabled=True, order=i)
+        if row.format is None and _effective_format_mode(mc) != standard:
+            # Katalog-Standard der Kanal-Zeile: ein abweichendes Format der
+            # Grundauswahl (z. B. Roh) wird nicht geerbt.
+            mc = dataclasses.replace(mc, format_mode=None, use_friendly_format=True)
+        elif row.format == "raw":
+            mc = dataclasses.replace(mc, format_mode="raw", use_friendly_format=False)
+        elif row.format is not None:
+            mc = dataclasses.replace(mc, format_mode=row.format, use_friendly_format=True)
+        out.append(mc)
+    return out
+
+
 def build_format_modes(dc: UnifiedWeatherDisplayConfig) -> dict[str, str]:
     """Issue #435: col_key -> effective format_mode mapping for the renderer.
 

@@ -340,6 +340,54 @@ def test_ac8_trip_telegram_folgt_resolver_nicht_altpfad(report_type):
 
 
 # ---------------------------------------------------------------------------
+# Fix-Runde 1 (Adversary F001/F002): Quelle ist der UNKOLLABIERTE dc, und die
+# Telegram-Kanal-Ebene wird nicht ein zweites Mal kaskadiert.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("report_type", REPORT_TYPES)
+def test_f001_email_ebene_schmaler_als_telegram_ebene(report_type):
+    """F001: E-Mail-Ebene [gust], Telegram-Ebene [gust, temperature, wind] --
+    die Telegram-Tabelle zeigt alle Telegram-Metriken in Telegram-Folge (die
+    Kollabierung auf die E-Mail-Auswahl darf Telegram nicht beschneiden)."""
+    d = _trip_dict([_mc("gust", 0), _mc("temperature", 1), _mc("wind", 2)])
+    d["display_config"]["channel_layouts"]["email"] = [_mc("gust", 0)]
+    bubbles = _bubbles(_dc(d), report_type)
+    assert _koepfe(bubbles) == ["G", "T", "W"], bubbles
+    assert _kuerzel_folge(bubbles) == ["G", "T", "W"], _kurzuebersicht(bubbles)
+
+
+#: Telegram-Layout-Eintraege mit abweichendem bucket (gust secondary, Grundauswahl
+#: primary) und abweichender Folge (gust zuerst gespeichert).
+def _tg_bucket_folge() -> list[dict]:
+    gust = _mc("gust", 0)
+    gust["bucket"] = "secondary"
+    return [gust, _mc("temperature", 0), _mc("wind", 1)]
+
+
+@pytest.mark.parametrize("report_type", REPORT_TYPES)
+def test_f002_per_channel_layout_bucket_und_folge(report_type):
+    """F002: Telegram-Ebene in ``channel_layouts`` mit gust als secondary --
+    Spalten folgen der Resolver-Liste (T, W, G); bucket aus der Grundauswahl,
+    die Kanal-Ebene wird nicht erneut kaskadiert."""
+    bubbles = _bubbles(_dc(_trip_dict(_tg_bucket_folge())), report_type)
+    assert _koepfe(bubbles) == ["T", "W", "G"], bubbles
+
+
+@pytest.mark.parametrize("report_type", REPORT_TYPES)
+def test_f002_per_report_layout_bucket_und_folge(report_type):
+    """F002: dieselbe Konfiguration ueber ``channel_layouts_per_report`` --
+    Spalten folgen der Resolver-Liste (T, W, G)."""
+    d = _trip_dict(None)
+    d["display_config"]["channel_layouts_per_report"] = {
+        report_type: {"telegram": _tg_bucket_folge()}}
+    dc = _dc(d)
+    assert dc.per_report_layouts and "telegram" in dc.per_report_layouts[report_type], \
+        "Vorbedingung: per_report-Ebene geladen"
+    bubbles = _bubbles(dc, report_type)
+    assert _koepfe(bubbles) == ["T", "W", "G"], bubbles
+
+
+# ---------------------------------------------------------------------------
 # Adapter telegram_metric_configs (AC-3, AC-8)
 # ---------------------------------------------------------------------------
 

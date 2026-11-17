@@ -87,6 +87,11 @@ Reihenfolge: RED, Adapter, Umstellung, Golden/Prüfkatalog grün, Fallliste und 
 
 Ohne Format-Angabe nutzt Trip Katalog-Darstellung (aus `MetricConfig`), Orte Roh. Bleibt bewusst (Entscheidung #3096): eine Vereinheitlichung würde die Golden-Nachricht ändern und ist eine Produktentscheidung mit sichtbarer Wirkung. Falls gewünscht eigenes Folge-Issue.
 
+### Umsetzungsabweichungen
+
+- **Format `None` = Katalog-Standard:** Der Adapter `telegram_metric_configs` lässt den Quell-Eintrag der Grundauswahl unverändert, wenn er schon den Katalog-Standard zeigt; sonst wird er auf den Katalog-Standard zurückgesetzt (`format_mode=None`, `use_friendly_format=True`). Ein Roh der Grundauswahl wird also nicht geerbt; das entspricht dem Altverhalten (die Telegram-Ebene trug ihren eigenen Eintrag ohne Format).
+- **`order` = Resolver-Index:** `bucket` und `sms_threshold` kommen aus der Grundauswahl, `order` aber aus der Position in der Resolver-Telegram-Liste, damit die Sortierung in `render_for_channel` der Resolver-Folge entspricht.
+
 ## Expected Behavior
 
 - **Input:** `display_config` eines Trips oder Orts-Vergleichs, `report_type`, Sprache.
@@ -178,3 +183,4 @@ Zusicherungen am Ergebnis der Telegram-Ausgabe, kein Mock-Theater (kein `Mock()`
 ## Changelog
 
 - 2026-11-17: Initial spec created (Phase 3c, Issue #3098, Epic #3058)
+- 2026-11-17: Umsetzungsabweichungen ergänzt (Implementation Details): Format `None` = Katalog-Standard ohne Erben eines Roh der Grundauswahl; `order` = Resolver-Index

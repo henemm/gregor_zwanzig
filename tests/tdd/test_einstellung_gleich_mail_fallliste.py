@@ -2,7 +2,7 @@
 
 SPEC: docs/specs/modules/feat_3047_einstellung_gleich_mail_pruefkatalog.md (§2, §3, §4, AC-1)
 
-Liest die vier Teildateien ``tests/fixtures/einstellung_gleich_mail/fallliste_*.json``
+Liest die fuenf Teildateien (seit #3098 auch ``fallliste_telegram.json``) ``tests/fixtures/einstellung_gleich_mail/fallliste_*.json``
 und prueft ohne Testausfuehrung:
 
 (a) Abdeckungsmatrix Liste x Format je Pruefung ``auswahl`` und ``reihenfolge``;
@@ -32,7 +32,8 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FALLLISTEN_DIR = REPO_ROOT / "tests" / "fixtures" / "einstellung_gleich_mail"
-TEILDATEIEN = ("trip", "orte", "validatoren", "editor")
+#: #3098: ``telegram`` = eigene Telegram-Fallliste (Phase 3c von #3047).
+TEILDATEIEN = ("trip", "orte", "validatoren", "editor", "telegram")
 
 PFLICHTFELDER = ("id", "liste", "kontext", "format", "pruefung", "test", "ac", "befund", "status")
 ERLAUBTE_STATUS = frozenset({"gruen", "rot_erwartet", "ausnahme", "offen_feature"})
@@ -71,6 +72,7 @@ PY_TEST_GLOBS = (
     PY_TEST_GLOB,
     "tests/tdd/test_3047_*.py",
     "tests/tdd/test_kompakt_mail_schalter*.py",
+    "tests/tdd/test_3098_*.py",
 )
 VITEST_GLOB = "frontend/src/**/__tests__/*.test.ts"
 GO_TEST_GLOB = "internal/**/*_test.go"
@@ -587,6 +589,8 @@ def _syn_daten() -> dict[str, dict]:
         "fallliste_orte.json": {"dimensionen": {}, "faelle": orte},
         "fallliste_validatoren.json": {"faelle": []},
         "fallliste_editor.json": {"faelle": editor},
+        "fallliste_telegram.json": {"faelle": [
+            _syn_fall("tg-1", "trip_telegram", "telegram", "darstellung")]},
     }
 
 
@@ -617,7 +621,7 @@ def test_selbsttest_vollstaendige_liste_ist_gruen(tmp_path):
     verzeichnis = _schreibe(tmp_path, _syn_daten())
     assert _alle_pruefungen(tmp_path, verzeichnis) == []
     assert zaehle_status(lade_falllisten(verzeichnis)) == {
-        "gruen": 36, "ausnahme": 0, "offen_feature": 1, "rot_erwartet": 0,
+        "gruen": 37, "ausnahme": 0, "offen_feature": 1, "rot_erwartet": 0,
     }
 
 
@@ -626,6 +630,15 @@ def test_selbsttest_fehlende_teildatei_scheitert_klar(tmp_path):
     del daten["fallliste_editor.json"]
     verzeichnis = _schreibe(tmp_path, daten)
     with pytest.raises(FalllisteFehler, match=r"Teildatei fehlt: .*fallliste_editor\.json"):
+        lade_falllisten(verzeichnis)
+
+
+def test_selbsttest_fehlende_telegram_teildatei_scheitert_klar(tmp_path):
+    """#3098: die Telegram-Fallliste ist Pflicht-Teildatei (kein stilles Fehlen)."""
+    daten = _syn_daten()
+    del daten["fallliste_telegram.json"]
+    verzeichnis = _schreibe(tmp_path, daten)
+    with pytest.raises(FalllisteFehler, match=r"Teildatei fehlt: .*fallliste_telegram\.json"):
         lade_falllisten(verzeichnis)
 
 
@@ -654,9 +667,11 @@ def test_selbsttest_unbekannte_testfunktion_wird_gemeldet(tmp_path):
     daten["fallliste_trip.json"]["faelle"][0]["test"] = "test_gibt_es_nicht"
     daten["fallliste_orte.json"]["faelle"][0]["test"] = "test_einstellung_gleich_mail_syn.py::test_nicht_da"
     daten["fallliste_editor.json"]["faelle"][0]["test"] = "editor tippfehler"
+    daten["fallliste_telegram.json"]["faelle"][0]["test"] = "test_telegram_fehlt"
     verzeichnis = _schreibe(tmp_path, daten)
     fehler = pruefe_testverweise(lade_falllisten(verzeichnis), tmp_path)
-    assert len(fehler) == 3
+    assert len(fehler) == 4
+    assert any("test_telegram_fehlt" in f for f in fehler)
     assert any("test_gibt_es_nicht" in f for f in fehler)
     assert any("test_nicht_da" in f for f in fehler)
     assert any("editor tippfehler" in f for f in fehler)
