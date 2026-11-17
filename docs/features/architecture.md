@@ -621,7 +621,7 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
        `data/users/<user_id>/position_fix.json`. Ohne `user_id` unverändert.
      - `tz_for_coords(lat, lon)` bestimmt Tour-Zeitzone; `format_now_text(result, tz=tz)` gibt Onset-Zeit in Tour-TZ aus
      - `build_segment_label()` erzeugt „Etappe N, km X–Y" mit echten Strecken-Kilometern
-   - **Kanonischer Render-Pfad (Issue #919):** `check_radar_alerts` konstruiert `AlertMessage(OnsetEvent(...))` und leitet durch dieselben vier Renderer wie der Abweichungs-Alert:
+   - **Kanonischer Render-Pfad (Issue #919, Baustein seit #2982):** `check_radar_alerts` baut den Alarm-Beginn über den Baustein `onset_event_from_nowcast` (`src/output/renderers/alert/project.py`) zu `AlertMessage(OnsetEvent)` und leitet durch dieselben vier Renderer wie der Abweichungs-Alert. `OnsetEvent(` wird im Produktivcode nur in `project.py` gebaut:
      - `render_subject(msg)` — Betreff: `[<trip>] <Ortsangabe> · Regen/Gewitter in <m> Min` (bei Beginn > 60 Min seit #2261 A-1 mit Uhrzeit statt Minuten),
        an einer echt zugestellten Mail gemessen z.B. `[KHW 403] 🏁 Ziel · Regen in 25 Min`.
        Ortsangabe nach derselben (seit #2036 vierstufigen) Auflösung wie oben (seit #1744 A1;
@@ -802,7 +802,7 @@ check_radar_alerts(user_id)  [Issue #822 + #919, tagesübergreifend seit #1667 S
   ↓ position_at_time(trip, active, segment_date, now + RADAR_MEASURE_OFFSET_MIN)  [#2017, #2261 A-1, s. Punkt 5]
   ↓ get_nowcast(pos.lat, pos.lon, elevation_m=pos.elevation_m)
   ↓ build_segment_label() + format_now_text(tz=tour_tz)
-  ↓ AlertMessage(OnsetEvent(...))  [seit #919]
+  ↓ onset_event_from_nowcast(...) → AlertMessage(OnsetEvent)  [seit #919, Baustein #2982]
   ↓ render_subject / render_email / render_telegram / render_sms
   ↓ Versand + throttle/log setzen (Schnappschuss-Vergleich liest unter dem Segment-Datum)
 

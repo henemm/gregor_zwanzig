@@ -97,6 +97,8 @@ Reihenfolge (Golden-Master zuerst):
 
 **Renderer-Commit-Gate:** Aenderung unter `src/output/renderers/` loest das Gate aus; Modus-Matrix-Test und Validator muessen frisch gruen sein.
 
+**Staging-Debug-Trigger:** `api/routers/debug.py` (admin-geschuetzt) laeuft ueber die Hilfsfunktion `build_debug_onset_alert_message` (`src/services/radar_alert_service.py`), die ihrerseits ueber den Baustein baut.
+
 ## Expected Behavior
 
 - **Input:** `NowcastResult` (Trip, Vergleich, Replay) bzw. Request/Payload mit `OnsetEvent`-Feldern (Versand, Vorschau).
@@ -164,3 +166,4 @@ Alle Tests laufen ohne Mocks, die nur die eigene Annahme spiegeln; Golden-Master
 
 - 2026-11-17: Initial spec created (Issue #2982, Folge aus #1986 / NEU-1)
 - 2026-11-17: Fix-Loop nach Adversary (F001-F004): Waechter-Tests fuer Replay-Zeitzone, Trip-Versandbuendel (Etappenkennung, roher Beginn, Zeitzone) und Debug-Ausloeser; AST-Ratsche AC-7 erkennt Alias-Importe; Known Limitation zum Staging-Debug-Trigger ergaenzt.
+- 2026-11-17: Validierung des Umbaus per Quelltext-Suche: `OnsetEvent(` wird in Produktivcode nur noch in `project.py` gebaut, `build_onset_alert_message` existiert nicht mehr, der Debug-Trigger laeuft ueber `build_debug_onset_alert_message`. Dokumentation (Architektur, Spec-Hinweise) nachgezogen. Der Testlauf von Golden-Master und Ratschen ist im Umsetzungs-Schritt zu bestaetigen, nicht in diesem Eintrag.
