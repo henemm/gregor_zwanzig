@@ -115,7 +115,7 @@ describe('AC-32 U4: Alarm-Zeile der Trip-Übersicht = „Alarm ab"-Zähler des R
 			const z = (await ampelModell()).alarmZaehler(stand.ampel, stand.auswahl, eig);
 			const text: string = m.tripAlarmAbText(t, vorlagen, eig);
 			if (z.art === 'zaehler') {
-				assert.match(text, new RegExp(`^${z.werte.ausloesend} von ${z.werte.alarmfaehig} Metriken lösen einen Alarm aus`), text);
+				assert.match(text, new RegExp(`^${z.werte.ausloesend} von ${z.werte.ausgewaehlt} Metriken lösen einen Alarm aus`), text);
 			} else {
 				assert.ok(!/\d/.test(text) || text === '—', `keine alarmfähige Metrik, aber Zahl geraten: „${text}"`);
 			}

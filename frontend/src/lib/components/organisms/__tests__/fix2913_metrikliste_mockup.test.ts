@@ -171,10 +171,17 @@ describe('AC-5: Untertitel `Einheit · Hinweis` aus dem Katalog DE/EN', () => {
 		assert.notEqual(M.hinweisSchluessel(e.id, { ...e, is_precursor: false }), 'wetter.untertitel.vorbote');
 	});
 
-	test('display_only zeigt „nur Anzeige, keine Ampel“ und hat Vorrang', () => {
-		const e = { ...EIG.temperature, display_only: true, is_precursor: true };
+	test('display_only zeigt „nur Anzeige, keine Ampel“ vor dem Metrik-Hinweis', () => {
+		const e = { ...EIG.temperature, display_only: true, is_precursor: false };
 		assert.equal(M.hinweisSchluessel('temperature', e), 'wetter.untertitel.nur_anzeige');
 		assert.equal(M.untertitel('temperature', e, uebersetzer(DE)), '°C · nur Anzeige, keine Ampel');
+	});
+
+	// #2955 (Spec wetter_metrik_inhalte.md AC-1): Vorbote hat Vorrang vor reiner Anzeige (Luftdruck ist beides).
+	test('Vorbote mit display_only zeigt „Vorbote, kein Alarm“', () => {
+		const e = { ...EIG.temperature, display_only: true, is_precursor: true };
+		assert.equal(M.hinweisSchluessel('temperature', e), 'wetter.untertitel.vorbote');
+		assert.equal(M.untertitel('temperature', e, uebersetzer(DE)), '°C · Vorbote, kein Alarm');
 	});
 
 	test('Metrik ohne Hinweis: nur die Einheit, kein endender Trennpunkt', () => {

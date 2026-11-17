@@ -81,7 +81,7 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | Böen | Wind gusts | Gust |
 | Niederschlag | Precipitation | Rain |
 | Regenwahrscheinlichkeit | Rain probability | Rain% |
-| Luftfeuchtigkeit | Humidity | Humid |
+| Luftfeuchte | Humidity | Humid |
 | Taupunkt | Dew point | Dew |
 | Sichtweite | Visibility | Visib |
 | Bewölkung | Cloud cover | Cloud |

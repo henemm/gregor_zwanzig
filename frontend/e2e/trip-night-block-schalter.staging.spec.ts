@@ -141,6 +141,6 @@ test.describe('Nacht-Stundentabelle-Schalter (#1721, Staging)', () => {
 		const legende = tab.getByTestId('metric-kuerzel-legend');
 		await expect(legende).toBeVisible({ timeout: 10000 });
 		await expect(legende, 'AC-8 FAIL: Legende erklaert FN nicht').toContainText('FN');
-		await expect(legende).toContainText(/Gef(ü|ue)hlte Nacht-Tiefsttemperatur/i);
+		await expect(legende).toContainText(/Gef(ü|ue)hlte Tiefsttemperatur Nacht/i); // #2955: Mockup-Name
 	});
 });

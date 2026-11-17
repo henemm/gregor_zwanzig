@@ -446,7 +446,7 @@
 			"step": 5,
 			"metric_id": "humidity",
 			"aggregation": "avg",
-			"label": "Luftfeuchtigkeit",
+			"label": "Luftfeuchte",
 			"col_label": "Humid",
 			"sms_code": "HU",
 			"kuerzel_metric_id": "humidity",

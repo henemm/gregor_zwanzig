@@ -73,7 +73,7 @@
 	"alarme.metrik.fresh_snow": "Neuschnee",
 	"alarme.metrik.cape": "Gewitterenergie (CAPE)",
 	"alarme.metrik.visibility": "Sichtweite",
-	"alarme.metrik.humidity": "Luftfeuchtigkeit",
+	"alarme.metrik.humidity": "Luftfeuchte",
 	"alarme.metrik.freezing_level": "Nullgradgrenze",
 	"alarme.metrik.thunder_onset": "Gewitter (Beginn)",
 	"alarme.metrik.precipitation_heavy_onset": "Starkregen (Beginn)",

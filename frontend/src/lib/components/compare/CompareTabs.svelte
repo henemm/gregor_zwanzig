@@ -257,7 +257,7 @@
 	// Orts-Auflösung: location_ids → locations[] (mit elevation_m für CompareLocationRow).
 	// allLocationsForAdd ergänzt Orte, die per Inline-Add-Panel neu hinzugefügt
 	// wurden und daher noch nicht im gefilterten `locations`-Prop stecken.
-	const locationById = $derived(ortsVerzeichnis(locations, allLocationsForAdd));
+	const locationById = $derived.by(() => ortsVerzeichnis(locations, allLocationsForAdd));
 	const resolvedLocations = $derived(orteAufloesen(currentLocationIds, locationById));
 
 	// Issue #1272: DnD-State/Sync/Flip liegen jetzt im geteilten SortableList

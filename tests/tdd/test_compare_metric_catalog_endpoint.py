@@ -94,7 +94,7 @@ EXPECTED_METRICS: list[dict] = [
     # Issue #1351 Teil 1: 26. Eintrag, analog temp_max_c (Wertebereich).
     {"key": "wind_chill_max_c", "label": "Gefühlte Temperatur", "higherIsBetter": True,
      "kind": "range", "rangeMin": -20, "rangeMax": 45},
-    {"key": "humidity_avg_pct", "label": "Luftfeuchtigkeit", "higherIsBetter": False,
+    {"key": "humidity_avg_pct", "label": "Luftfeuchte", "higherIsBetter": False,
      "kind": "range", "rangeMin": 0, "rangeMax": 100},
     {"key": "dewpoint_avg_c", "label": "Taupunkt", "higherIsBetter": False,
      "kind": "range", "rangeMin": -20, "rangeMax": 30},

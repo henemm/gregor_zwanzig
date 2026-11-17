@@ -175,7 +175,7 @@ def get_metrics():
                 for a in available_aggregations(m.id)
             ],
             # Issue #2794 S3a (AC-27): group, alertable, is_precursor,
-            # allowed_sides, display_only fuer den Reiter Wetter.
+            # allowed_sides, display_only fuer den Reiter Wetter; #2955: rang.
             **reiter_wetter_eigenschaften(m),
         })
     return result

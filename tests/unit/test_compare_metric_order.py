@@ -401,7 +401,7 @@ class TestAC7LegacyDefaultOrderUnchanged:
         "Nullgradgrenze", "Windrichtung", "Gefühlte Temperatur Minimum",
         "Gefühlte Temperatur Maximum", "Tiefe Wolken", "Mittelhohe Wolken",
         "Hohe Wolken",
-        "Luftfeuchtigkeit", "Taupunkt", "Luftdruck", "Niederschlagsart",
+        "Luftfeuchte", "Taupunkt", "Luftdruck", "Niederschlagsart",
         "Schneefallgrenze",
     ]
     # Issue #1356 (PO-bestaetigt 2026-07-24): die Klartext-Standardreihenfolge

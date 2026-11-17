@@ -63,7 +63,7 @@ test('#1401b AC-3: die 8 uebrigen 1:1-Metriken bleiben unveraendert', () => {
 		thunder_level: 'Gewitter',          // :256 (thunder)
 		snow_line: 'Schneefallgrenze',      // :297 (snowfall_limit)
 		visibility: 'Sichtweite',           // :384
-		humidity: 'Luftfeuchtigkeit',       // :132
+		humidity: 'Luftfeuchte',            // :132 (#2955: Mockup-Name)
 		freezing_level: 'Nullgradgrenze',   // :457
 		fresh_snow: 'Neuschnee',            // :480
 	};
