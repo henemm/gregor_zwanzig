@@ -25,4 +25,4 @@ Die Größe „Bewölkung" zeigte den Modell-Gesamtwert. Dünne hohe Wolken (Cir
 
 - **Positiv:** ein Wert für alle Kanäle und Flächen (Kanal-Parität), Schleierwolken realistischer, Hochlagen-Regel nun auch in Stundenwerten und im Trip.
 - **Negativ / Preis:** `cloud_total_pct` ist nicht mehr der rohe Modellwert; wer ihn braucht, liest `cloud_total_model_pct`. Am ersten Tag nach dem Ausrollen vergleicht „vs. gestern" alt (roh) mit neu (wirksam).
-- **Folgepflichten:** Jeder neue Anbieter-Ausgang, der Bewölkung liefert, ruft `normalisiere_bewoelkung`; kein Leser darf die Bewölkung erneut umrechnen.
+- **Folgepflichten:** Jeder neue Anbieter-Ausgang, der Bewölkung liefert, ruft `normalisiere_bewoelkung`; kein Leser darf die Bewölkung erneut umrechnen. Aus Schnappschüssen geladene Punkte tragen bereits die wirksame Bewölkung (der Modellwert wird nicht gespeichert) und dürfen nie erneut normalisiert werden.
