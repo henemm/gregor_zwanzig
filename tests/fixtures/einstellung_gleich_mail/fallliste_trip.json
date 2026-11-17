@@ -3802,6 +3802,58 @@
       "erwartung": "echter /weather-config-Handler, zwei Nutzer: Stufe bleibt, fremder Nutzer unberuehrt",
       "runde": 7,
       "paket": "p14"
+    },
+    {
+      "id": "T-R8PY-F1-ALTBESTAND-SMS",
+      "liste": "sms",
+      "kontext": "trip",
+      "format": "sms+premium_sms",
+      "pruefung": "metrics_leer_sms_folge_register_gleich_editor_gespeichert",
+      "test": "tests/tdd/test_3047_r8py_luecken.py::test_f1_altbestand_leer_sms_folgt_register_wie_editor_gespeichert",
+      "ac": "AC-22, AC-26",
+      "befund": "F1 (Abnahme 7b; kein Defekt: Folge = Register-Standard wie Editor-Anzeige und Editor-Speicherung)",
+      "status": "gruen",
+      "zustand": "altbestand",
+      "sprache": "de"
+    },
+    {
+      "id": "X-R8PY-T3-KUERZUNG-WARNUNG",
+      "liste": "sms",
+      "kontext": "trip+orte",
+      "format": "sms",
+      "pruefung": "amtliche_bausteine_nach_prioritaet_warnung_zuletzt",
+      "test": "tests/tdd/test_3047_r8py_luecken.py::test_t3_kuerzung_warnung_faellt_zuletzt",
+      "ac": "AC-23",
+      "befund": "T3/M19",
+      "status": "gruen",
+      "zustand": "ueberlaenge",
+      "sprache": "de"
+    },
+    {
+      "id": "T-R8PY-T3-PREMIUM-FOLGT-SMS",
+      "liste": "premium_sms",
+      "kontext": "trip",
+      "format": "premium_sms",
+      "pruefung": "premium_ohne_eigene_liste_folgt_sms_liste",
+      "test": "tests/tdd/test_3047_r8py_luecken.py::test_t3_premium_sms_folgt_sms_liste",
+      "ac": "AC-22",
+      "befund": "T3/M20",
+      "status": "gruen",
+      "zustand": "kanal_liste",
+      "sprache": "de"
+    },
+    {
+      "id": "T-R8PY-T4-FENSTER-GLEICH",
+      "liste": "tagesfenster",
+      "kontext": "trip",
+      "format": "sms+telegram",
+      "pruefung": "start_gleich_ende_wie_standard_4_19",
+      "test": "tests/tdd/test_3047_r8py_luecken.py::test_t4_tagesfenster_start_gleich_ende_wie_standard",
+      "ac": "AC-22, AC-26",
+      "befund": "T4/M32",
+      "status": "gruen",
+      "zustand": "ungueltig",
+      "sprache": "de+en"
     }
   ]
 }

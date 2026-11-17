@@ -3026,6 +3026,32 @@
       "erwartung": "echter Vergleichs-PUT, zwei Nutzer: Stufe bleibt, fremder Nutzer unberuehrt",
       "runde": 7,
       "paket": "p14"
+    },
+    {
+      "id": "O-R8PY-T2-AUSBLICK-ALTBESTAND",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html+klartext",
+      "pruefung": "ohne_grundauswahl_gespeicherte_ausblick_folge",
+      "test": "tests/tdd/test_3047_r8py_luecken.py::test_t2_orte_altbestand_ausblick_folge_gespeichert",
+      "ac": "AC-4, AC-21",
+      "befund": "T2/M05",
+      "status": "gruen",
+      "zustand": "altbestand",
+      "sprache": "de"
+    },
+    {
+      "id": "O-R8PY-T4-FENSTER-GLEICH",
+      "liste": "tagesfenster",
+      "kontext": "orte",
+      "format": "intern",
+      "pruefung": "start_gleich_ende_wie_standard_4_19",
+      "test": "tests/tdd/test_3047_r8py_luecken.py::test_t4_orte_tagesfenster_start_gleich_ende_wie_standard",
+      "ac": "AC-26",
+      "befund": "T4/M32",
+      "status": "gruen",
+      "zustand": "ungueltig",
+      "sprache": "de"
     }
   ]
 }
