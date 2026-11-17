@@ -193,6 +193,17 @@ def test_ac2_kanal_ebene_nie_gesetzt_folgt_grundauswahl(report_type):
 
 
 @pytest.mark.parametrize("report_type", REPORT_TYPES)
+def test_ac2_email_auswahl_leckt_nicht_in_sms_ohne_sms_ebene(report_type):
+    """AC-2: E-Mail-Ebene weicht von der Grundauswahl ab (nur Wind, Boeen), SMS-Ebene
+    nie gesetzt -> die SMS folgt der Grundauswahl, NICHT der E-Mail-Auswahl
+    (der Trip-Pfad kollabiert die Display-Config auf die E-Mail-Auswahl; die SMS
+    muss aus der unkollabierten Resolver-Sicht lesen)."""
+    data = _trip_dict(None, extra_layouts={"email": _liste(["wind", "gust"])})
+    sms = _sms(_trip(data), report_type)
+    assert sms == SOLL_NIE[report_type], sms
+
+
+@pytest.mark.parametrize("report_type", REPORT_TYPES)
 def test_ac2_kanal_ebene_leer_keine_metrik(report_type):
     """AC-2: leere SMS-Ebene -> keine Metrik-Tokens (bewusste Leerauswahl bleibt leer)."""
     sms = _sms(_trip(_trip_dict([])), report_type)
