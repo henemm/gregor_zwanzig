@@ -682,6 +682,16 @@ Bewertung, Bericht, Exit) liegt browserfrei in `e2e/elementliste_abgleich_logik.
 (`elementliste_abgleich_verdrahtung.test.ts`). Neue Seiten markieren ihre Abschnitte
 mit `data-abschnitt="<name aus der Elementliste>"`, sonst bleibt ein Element `abweichend`.
 
+**Bedienplan für Dialoge im Reiter Wetter (#2966, Stand 2026-11-17):** Abschnitte, die sich nur durch Bedienung
+zeigen, prüft ein Bedienplan (`bedienPlan(abschnitt, lage)` in `e2e/elementliste_abgleich_logik.ts`), statt sie
+nur anzuschauen: Abschnittskopf, Laden-Text (`role="status"`), Warnung (zwei Absätze), Grenzen-Dialog je Metrik
+(nur Haken `grenzen-<id>` im offenen Zustand) und die vier Vorlage-Dialoge (Auswahl, Bestätigung, Speichern,
+Speicherfehler). Die Haken sind `data-abschnitt`-Marker in `WetterTabInhalt`, `MetrikZeile`, `VorlageKarte` und
+`SavePresetDialog`, ebenfalls unsichtbar. Der Plan stellt Dialoge nur her und speichert nichts: `schreibBefund` meldet jede schreibende Anfrage
+(PUT, POST, PATCH, DELETE) während der Bedienung als Befund (Schreib-Tripwire). Lädt ein Abschnitt Daten an,
+räumt `mitAufraeumen` sie auch bei Fehlern wieder weg (anlegen → arbeiten → aufräumen). Die Spec lädt die Seite
+je Abschnitt neu, damit der Zustand des einen Dialogs den nächsten nicht beeinflusst.
+
 **Ganzseiten-Abgleich / Gegenrichtung (#2913, Spec `docs/specs/modules/feat_2913_abgleich_ganzseite.md`,
 Stand 2026-11-12):** Der Abgleich prüft auch die Gegenrichtung: Live-Texte unter `[data-seite="hub"]`, die weder
 Listeneintrag noch Konto-Text noch Ausnahme sind, erhalten den Status `zusaetzlich` (stabile ID

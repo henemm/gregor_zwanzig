@@ -79,9 +79,9 @@
 			</Btn>
 		</div>
 		{#if pickerOffen}
-			<div class="wt-menue">
+			<div class="wt-menue" data-abschnitt="vorlage-auswahl">
 				{#if wahl}
-					<div class="wt-frage" role="alertdialog" data-testid="wetter-vorlage-wechsel-dialog">
+					<div class="wt-frage" role="alertdialog" data-testid="wetter-vorlage-wechsel-dialog" data-abschnitt="vorlage-bestaetigung">
 						<p>
 							{$t(FRAGE[context], { neu: wahl.eigen ? wahl.name : vorlageAnzeigename($locale, wahl.id, wahl.name) })}
 							{#if abweichungen > 0}{$tn('wetter.vorlage.verlust', abweichungen, { alt: label })}{/if}

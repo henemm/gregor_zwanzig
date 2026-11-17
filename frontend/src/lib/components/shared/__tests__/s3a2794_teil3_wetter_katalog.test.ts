@@ -54,7 +54,8 @@ const GETEILT = (ac: string, ...muster: string[]): Pflicht => ({ ac, alternative
 const PFLICHT: Pflicht[] = [
 	P('AC-9', '^Wetter', 'Was im Briefing steht, was für dich zu viel oder zu wenig ist und ab wann du einen Alarm bekommst.'),
 	P('AC-9', 'Lade Metriken …'),
-	P('AC-9', 'Die Metriken konnten nicht geladen werden. Die Verbindung zum Server ist abgebrochen. Deine Einstellungen sind gespeichert und gehen nicht verloren.'),
+	// #2966 AC-3: wortlauttreu in zwei Absätze geteilt (Satz 1 | Sätze 2 und 3).
+	P('AC-9', '^Die Metriken konnten nicht geladen werden.', '^Die Verbindung zum Server ist abgebrochen. Deine Einstellungen sind gespeichert und gehen nicht verloren.'),
 	GETEILT('AC-9', '^Erneut laden'),
 	P('AC-10', '^unverändert', '^{*} Abweichungen', '{*} Metriken'),
 	ODER('AC-10', ['^{*} Abweichung'], ['^1 Abweichung']),

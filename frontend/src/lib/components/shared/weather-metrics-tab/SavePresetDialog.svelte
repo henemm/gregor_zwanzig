@@ -85,6 +85,7 @@
 	<div class="spd-scrim" onclick={close} role="presentation">
 		<div
 			data-testid="save-preset-dialog"
+			data-abschnitt="vorlage-speichern"
 			class="spd-dialog"
 			role="dialog"
 			aria-modal="true"
@@ -113,7 +114,7 @@
 				</button>
 				<p class="spd-hinweis" data-testid="save-preset-hinweis">{$t('wetter.dialog.hinweis')}</p>
 				{#if error}
-					<p class="spd-fehler" role="alert" data-testid="save-preset-error">{error}</p>
+					<p class="spd-fehler" role="alert" data-testid="save-preset-error" data-abschnitt="vorlage-speichern-fehler">{error}</p>
 				{/if}
 			</div>
 

@@ -386,6 +386,144 @@ export function seitenPfad(ctx: string, id: string, reiter: string): string {
 /** Abschnitte, die nur nach einer Bedienung erscheinen (Script-Zustände im Mockup). */
 export const SCRIPT_ABSCHNITT = /^(grenzen-|vorlage-auswahl|vorlage-bestaetigung|vorlage-speichern|test-menue|kebab-)/;
 
+/**
+ * #2966 (AC-6): Bedienplan je Abschnitt. Ein Schritt klickt ein testid, liest den Bereich oder schließt
+ * (testid oder Taste). Nichts wird übernommen oder gespeichert: Grenzen nur öffnen und über „Fertig“
+ * schließen, Wechsel-Frage nur abbrechen, Speichern-Dialog nur leer absenden (Pflichtfehler entsteht vor
+ * jedem Netzaufruf) und per Escape schließen.
+ */
+export type BedienSchritt = { aktion: 'klick' | 'lesen' | 'schliessen'; testid?: string; taste?: string };
+/** Lage des Prüf-Datensatzes: Metriken mit Grenzen-Knopf im Briefing, Systemvorlagen, aktive Vorlage. */
+export type BedienLage = { ctx: string; briefing: string[]; vorlagen: string[]; aktiveVorlage: string };
+export type BedienPlan = { art: 'ohne_bedienung' } | { art: 'plan'; schritte: BedienSchritt[] } | { art: 'nicht_herstellbar'; grund: string };
+
+const LESEN: BedienSchritt = { aktion: 'lesen' };
+const VORLAGE_PICKER = 'wetter-vorlage-picker';
+const ALS_EIGENE = 'wetter-vorlage-als-eigene';
+
+/** Reine Funktion: wie der Abschnitt hergestellt wird. Script-Abschnitt ohne Plan ⇒ nie still, immer mit Grund. */
+export function bedienPlan(abschnitt: string, lage: BedienLage): BedienPlan {
+	if (!SCRIPT_ABSCHNITT.test(abschnitt)) return { art: 'ohne_bedienung' };
+	if (abschnitt.startsWith('grenzen-')) {
+		const id = abschnitt.slice('grenzen-'.length);
+		if (!id) return { art: 'nicht_herstellbar', grund: `Script-Zustand „${abschnitt}“: keine Metrik im Abschnittsnamen` };
+		if (!lage.briefing.includes(id)) return { art: 'nicht_herstellbar', grund: `Metrik „${id}“ nicht im Briefing des Prüf-Datensatzes (kein Knopf „Grenzen ändern“)` };
+		const knopf = `wetter-grenzen-aendern-${id}`;
+		return { art: 'plan', schritte: [{ aktion: 'klick', testid: knopf }, LESEN, { aktion: 'schliessen', testid: knopf }] };
+	}
+	if (abschnitt === 'vorlage-auswahl') {
+		return { art: 'plan', schritte: [{ aktion: 'klick', testid: VORLAGE_PICKER }, LESEN, { aktion: 'schliessen', testid: VORLAGE_PICKER }] };
+	}
+	if (abschnitt === 'vorlage-bestaetigung') {
+		const andere = lage.vorlagen.find((v) => v !== lage.aktiveVorlage);
+		if (!andere) return { art: 'nicht_herstellbar', grund: `Script-Zustand „${abschnitt}“: keine andere Systemvorlage als „${lage.aktiveVorlage}“ für die Wechsel-Frage` };
+		return {
+			art: 'plan',
+			schritte: [
+				{ aktion: 'klick', testid: VORLAGE_PICKER },
+				{ aktion: 'klick', testid: `wetter-vorlage-option-${andere}` },
+				LESEN,
+				{ aktion: 'schliessen', testid: 'wetter-vorlage-wechsel-abbrechen' }
+			]
+		};
+	}
+	if (abschnitt === 'vorlage-speichern') {
+		return { art: 'plan', schritte: [{ aktion: 'klick', testid: ALS_EIGENE }, LESEN, { aktion: 'schliessen', taste: 'Escape' }] };
+	}
+	if (abschnitt === 'vorlage-speichern-fehler') {
+		return {
+			art: 'plan',
+			schritte: [{ aktion: 'klick', testid: ALS_EIGENE }, { aktion: 'klick', testid: 'save-preset-submit' }, LESEN, { aktion: 'schliessen', taste: 'Escape' }]
+		};
+	}
+	return { art: 'nicht_herstellbar', grund: `Script-Zustand „${abschnitt}“: kein Bedienplan im Abgleich hinterlegt` };
+}
+
+/** #2966: Weg je Abschnitt vor der Bedienung — lesen, später bedienen (vorab mit allen Metriken) oder nicht herstellbar. */
+export type AbschnittsWeg = { abschnitt: string; weg: 'lesen' } | { abschnitt: string; weg: 'bedienen' } | { abschnitt: string; weg: 'nicht_herstellbar'; grund: string };
+export function ordneAbschnitte(abschnitte: string[], lage: Omit<BedienLage, 'briefing'>, liste: ListenElement[]): AbschnittsWeg[] {
+	return abschnitte.map((abschnitt): AbschnittsWeg => {
+		const vorab = bedienPlan(abschnitt, { ...lage, briefing: wetterPruefMetriken(liste, lage.ctx) });
+		if (vorab.art === 'plan') return { abschnitt, weg: 'bedienen' };
+		if (vorab.art === 'nicht_herstellbar') return { abschnitt, weg: 'nicht_herstellbar', grund: vorab.grund };
+		return { abschnitt, weg: 'lesen' };
+	});
+}
+
+export type BereichsBefund = { marker: boolean; texte: string[] };
+/** Browser-Operationen eines Bedien-Abschnitts; `anfragen` speist der Request-Listener der Seite. */
+export type BedienOps = {
+	neuLaden(): Promise<void>;
+	briefing(): Promise<string[]>;
+	klick(testid: string): Promise<void>;
+	taste(taste: string): Promise<void>;
+	lesen(abschnitt: string): Promise<BereichsBefund>;
+	/** Wartezeit nach der Bedienung, damit verzögerte Speicherungen in `anfragen` landen. */
+	nachlauf(): Promise<void>;
+	anfragen: { method: string; url: string }[];
+};
+export type BedienErgebnis = { art: 'gelesen'; befund: BereichsBefund } | { art: 'nicht_pruefbar'; grund: string } | { art: 'schreibbefund'; grund: string };
+
+/**
+ * #2966 (AC-6, AC-7): einen Bedien-Abschnitt herstellen — Seite neu laden, Plan mit dem echten Briefing bilden,
+ * Schritte in Planreihenfolge ausführen; jede schreibende Anfrage ab Bedienbeginn (inkl. Nachlauf) ist ein Befund.
+ */
+export async function bedieneAbschnitt(abschnitt: string, lage: Omit<BedienLage, 'briefing'>, ops: BedienOps): Promise<BedienErgebnis> {
+	await ops.neuLaden();
+	const bp = bedienPlan(abschnitt, { ...lage, briefing: await ops.briefing() });
+	if (bp.art === 'nicht_herstellbar') return { art: 'nicht_pruefbar', grund: bp.grund };
+	if (bp.art !== 'plan') return { art: 'nicht_pruefbar', grund: `Script-Zustand „${abschnitt}“ ohne Bedienplan` };
+	const start = ops.anfragen.length;
+	let befund: BereichsBefund = { marker: false, texte: [] };
+	let fehler: string | null = null;
+	try {
+		for (const s of bp.schritte) {
+			if (s.aktion === 'lesen') befund = await ops.lesen(abschnitt);
+			else if (s.testid) await ops.klick(s.testid);
+			else if (s.taste) await ops.taste(s.taste);
+		}
+	} catch (e) {
+		fehler = `Bedienung für „${abschnitt}“ fehlgeschlagen: ${e instanceof Error ? e.message.split('\n')[0] : String(e)}`;
+	} finally {
+		await ops.nachlauf();
+	}
+	const schreib = schreibBefund(ops.anfragen.slice(start));
+	if (schreib) return { art: 'schreibbefund', grund: schreib };
+	if (fehler) return { art: 'nicht_pruefbar', grund: fehler };
+	return { art: 'gelesen', befund };
+}
+
+/** #2966 (AC-8): anlegen → arbeiten → aufräumen; jeder Aufräumschritt läuft, auch wenn Anlegen oder Arbeit scheitern. */
+export async function mitAufraeumen<T, R>(anlegen: (aufraeumen: Array<() => Promise<unknown>>) => Promise<T>, arbeit: (daten: T) => Promise<R>): Promise<R> {
+	const aufraeumen: Array<() => Promise<unknown>> = [];
+	try {
+		return await arbeit(await anlegen(aufraeumen));
+	} finally {
+		for (const f of aufraeumen) {
+			try {
+				await f();
+			} catch {
+				// Aufräumen ist bestmöglich; der ursprüngliche Fehler bleibt maßgeblich.
+			}
+		}
+	}
+}
+
+/** #2966 (AC-8): alle Metriken mit Grenzen-Abschnitt im Reiter Wetter je Kontext (Briefing des Wetter-Prüf-Datensatzes). */
+export function wetterPruefMetriken(liste: ListenElement[], ctx: string): string[] {
+	const ids = liste.filter((e) => e.ctx === ctx && e.reiter === 'wetter' && e.abschnitt.startsWith('grenzen-')).map((e) => e.abschnitt.slice('grenzen-'.length));
+	return [...new Set(ids.filter((id) => id.length > 0))];
+}
+
+const SCHREIBEND = new Set(['PUT', 'POST', 'PATCH', 'DELETE']);
+
+/** #2966 (AC-7) Schreib-Tripwire: jede schreibende Anfrage während der Bedienung ist ein Befund (null = keine). */
+export function schreibBefund(anfragen: { method: string; url: string }[]): string | null {
+	const schreibend = anfragen.filter((a) => SCHREIBEND.has(a.method.toUpperCase()));
+	if (schreibend.length === 0) return null;
+	return `Schreib-Tripwire: ${schreibend.length} schreibende Anfrage(n) während der Bedienung: ${schreibend.map((a) => `${a.method.toUpperCase()} ${a.url}`).join(', ')}`;
+}
+
 const HAT_PLATZHALTER = /\{[^}]+\}/;
 
 /**
