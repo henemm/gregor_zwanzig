@@ -201,7 +201,7 @@ def test_ac7_befehlsblock_englisch_und_deutsch_byte_gleich():
     zeilen = dict(command_rows("route", lang="en"))
     assert "STARTDATE YYYY-MM-DD" in zeilen and "STARTDATUM JJJJ-MM-TT" not in zeilen
     block = render_commands_plain("vergleich", lang="en")
-    assert "Send the comparison to all channels now" in block and "HEUTE" not in block
+    assert "Send the briefing to all channels now" in block and "HEUTE" not in block
 
 
 @freeze_time(FEST)

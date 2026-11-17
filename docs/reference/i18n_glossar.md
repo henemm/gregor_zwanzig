@@ -10,9 +10,10 @@
 >
 > **Bereichsname „Orte“ (ADR-0124 Nr. 10, PO 2026-11-17, Issue #3122):** Für **neue** Texte heißt der
 > Bereich einheitlich „Orte“ / *Locations*, auch bei einem einzelnen Ort. „Vergleich“, „Ortsvergleich“,
-> „Orts-Vergleich“ und „Orts-Briefing“ sind kein Name mehr für neue Texte. Zeilen mit dem Vermerk
-> „bis zum Bau im Bestand“ beschreiben Texte, die heute so ausgeliefert werden; sie werden mit dem
-> Bau zu #3122 umgestellt, nicht vorher (die Katalog-Tests prüfen bis dahin die Bestandsform).
+> „Orts-Vergleich“ und „Orts-Briefing“ sind kein Name mehr für neue Texte. Seit #3122 B5 nennen
+> Mail, Telegram und SMS der Orte den Bereich „Orte“ (Kopf „ORTE“/*LOCATIONS*, Betreff „Orte: …“/
+> *Locations: …*, SMS-Kopf sprachfest „Orte TT.MM.:“). Oberfläche (Reiter, Menü, Listen; #2798),
+> Befehlsantworten und Fehlermeldungen tragen den alten Namen noch („bis zum Bau im Bestand“).
 
 ## Produktbegriffe
 
@@ -20,7 +21,8 @@
 |---|---|---|
 | Trip | trip | Eigenname des Produkts, bleibt |
 | Etappe | stage | nie *leg*, nie *tour* |
-| Ortsvergleich | location comparison | Kurz in Reitern: *comparison*. **Bis zum Bau im Bestand** (#3122): als Name für neue Texte abgelöst durch „Orte“ (ADR-0124 Nr. 10); dasselbe gilt für „Orts-Vergleich“ und „Vergleich“ als Name in Oberfläche, Mail, Telegram und SMS |
+| Ortsvergleich | location comparison | Kurz in Reitern: *comparison*. **Bis zum Bau im Bestand** (Oberfläche #2798, Befehlsantworten): als Name für neue Texte abgelöst durch „Orte“ (ADR-0124 Nr. 10); dasselbe gilt für „Orts-Vergleich“ und „Vergleich“. In Mail, Telegram und SMS seit #3122 B5 umgestellt |
+| Orte (Bereichsname) | locations | Seit #3122 B5 in Mail, Telegram und SMS, auch bei einem Ort; Kopf „ORTE“/*LOCATIONS*; Mehrzahl über `.one`/`.other` („1 Ort“/*1 location*) |
 | Briefing | briefing | bleibt |
 | Alarm | alert | Abweichungs-Alarm = *deviation alert*, Regen-/Radar-Alarm = *rain alert (radar)* |
 | Alarm-Auslöser | alert trigger | Zeile der Übersicht; nie „Alert-Trigger" im deutschen UI (#2881) |

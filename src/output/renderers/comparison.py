@@ -1223,6 +1223,7 @@ def _official_alert_sms_marker(
 def _sms_location_variants(
     loc_result, enabled_metrics: list[str] | None,
     unresolved_count: int = 0, metric_formats: dict[str, bool] | None = None,
+    *, mit_name: bool = True,
 ) -> list[str]:
     """Flache SMS-Darstellung EINES Ortes -- alle Formen, absteigend nach
     Zellenzahl (Index d = d Zellen vom Listenende verdraengt).
@@ -1269,6 +1270,9 @@ def _sms_location_variants(
     ueberhaupt keine Zeitzone bestimmen laesst (bewusste SMS-Budget-Konvention,
     ``CHANNEL_LIMITS["sms"]["max_chars"]`` -- kein Platzhalter, s. Spec Known
     Limitations).
+
+    #3122 B5: ``mit_name=False`` (genau ein Ort) laesst den Ortsnamen weg --
+    er steht dann schon im Kopf ``{Ort} TT.MM.:``.
     """
     name = loc_result.location.name
     if loc_result.error is not None:
@@ -1296,7 +1300,7 @@ def _sms_location_variants(
     missing = fehlend + unresolved_count
 
     def _assemble(kept_cells: list[str], demoted: int) -> str:
-        text_parts = [name] + kept_cells
+        text_parts = ([name] if mit_name else []) + kept_cells
         if demoted > 0:
             text_parts.append(f"+{demoted}")
         if missing > 0:
@@ -1368,7 +1372,7 @@ def _sms_fit_locations(
 
         def _body(budget: "int | None") -> str:
             parts = (_sms_pick_form(forms[i], budget, floor) for i in shown)
-            return f"{head} " + "; ".join(parts) + notice
+            return (f"{head} " + "; ".join(parts) + notice).rstrip()
 
         if len(_body(-1)) <= max_chars:
             # Die Laenge waechst monoton mit dem Budget: groesstes passendes suchen.
@@ -1443,19 +1447,22 @@ def _render_compare_sms_body(
     ``len <= max_chars`` (Aufrufer: ``CHANNEL_LIMITS["sms"]`` abzueglich Marker).
     """
     locations = location_render_order(result.locations)
+    # #3122 B5: Kopf aus ``_sms_kopf``; ohne Daten "Orte: keine Daten" bzw.
+    # bei genau einem Ort "{Ort}: keine Daten" (sprachfest, ADR-0104).
     if not locations:
-        return "Vergleich: keine Daten"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
+        return "Orte: keine Daten"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
+    ein_ort = len(locations) == 1
+    if ein_ort and locations[0].error is not None:
+        return f"{locations[0].location.name}: keine Daten"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
 
-    # Issue #1268: Stundenfenster-Angabe ersatzlos entfernt (Bewertung = ganzer
-    # Tag). Sie waere dauerhaft "00-23h" — eine Nicht-Information, die 8 von
-    # `max_chars` Zeichen belegt, die hier fuer echte Messwerte gebraucht werden.
-    head = f"Vergleich {result.target_date.strftime('%d.%m.')}:"
     forms = [
-        _sms_location_variants(loc, enabled_metrics, unresolved_count, metric_formats)
+        _sms_location_variants(loc, enabled_metrics, unresolved_count, metric_formats,
+                               mit_name=not ein_ort)
         for loc in locations
     ]
+    head = _sms_kopf(locations, result.target_date, forms, max_chars)
     if max_chars is None:
-        return f"{head} " + "; ".join(f[0] for f in forms)
+        return (f"{head} " + "; ".join(f[0] for f in forms)).rstrip()
 
     gewarnt = {i for i, loc in enumerate(locations) if _location_sms_alert_marker(loc)}
     body = _sms_fit_locations(head, forms, gewarnt, max_chars)
@@ -1472,15 +1479,40 @@ def _render_compare_sms_body(
     first = forms[0][-1]
     marker = _sms_location_overflow_notice(len(forms) - 1)
     budget = max_chars - len(head) - 1 - len(marker)
-    fitted = _word_boundary_truncate(first, max(budget, 0))
-    if fitted != first and not fitted.endswith("..."):
-        # Der Helfer schneidet nur an Wortgrenzen mit "..."; findet er keine
-        # (Ortsname laenger als das Budget), schneidet er hart und stumm. Ein
-        # abgeschnittener Name darf aber nicht wie ein vollstaendiger aussehen.
-        fitted = fitted[: max(len(fitted) - 3, 0)] + "..."
-    body = f"{head} " + fitted + marker
+    body = (f"{head} " + _sichtbar_gekuerzt(first, budget) + marker).rstrip()
     # Garantie len<=limit auch im Degenerationsfall (Kopf allein zu lang).
     return body[:max_chars]
+
+
+def _sichtbar_gekuerzt(text: str, budget: int) -> str:
+    """``text`` auf ``budget`` Zeichen, eine Kuerzung bleibt als ``...`` sichtbar.
+    Der Helfer schneidet nur an Wortgrenzen mit "..."; findet er keine (Name
+    laenger als das Budget), schneidet er hart und stumm. Ein abgeschnittener
+    Name darf aber nicht wie ein vollstaendiger aussehen."""
+    fitted = _word_boundary_truncate(text, max(budget, 0))
+    if fitted != text and not fitted.endswith("..."):
+        fitted = fitted[: max(len(fitted) - 3, 0)] + "..."
+    return fitted
+
+
+def _sms_kopf(locations: list, target_date, forms: list[list[str]],
+              max_chars: int | None) -> str:
+    """#3122 B5 (ADR-0124 Nachtrag 1): ``Orte TT.MM.:``, bei genau einem Ort
+    ``{Ort} TT.MM.:``. Sprachfest wie zuvor "Vergleich" (ADR-0104).
+
+    Issue #1268: keine Stundenfenster-Angabe (Bewertung = ganzer Tag). Bei
+    einem Ort traegt der Kopf den Namen; ist er zu lang, wird er sichtbar
+    gekuerzt, damit mindestens eine Wertzelle Platz behaelt (sonst stuende nur
+    die Ueberschrift da, #1269)."""
+    datum = f" {target_date.strftime('%d.%m.')}:"
+    if len(locations) != 1:
+        return "Orte" + datum  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
+    name = locations[0].location.name
+    if max_chars is None:
+        return name + datum
+    knapp = forms[0][-2] if len(forms[0]) > 1 else forms[0][-1]
+    platz = max_chars - len(datum) - (len(knapp) + 1 if knapp else 0)
+    return _sichtbar_gekuerzt(name, platz) + datum
 
 
 def _sms_location_overflow_notice(omitted: int) -> str:

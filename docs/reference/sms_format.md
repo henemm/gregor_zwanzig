@@ -636,7 +636,16 @@ mehrere Premium-SMS.
 
 ## 5b. Ortsvergleich-SMS: Zähler `?N` für fehlende Größen (Issue #1405 S3)
 
-> **Soll ab #3122 ([ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), PO 2026-11-17):** Der Bereich heißt künftig „Orte“, auch bei einem einzelnen Ort (Nr. 10). Der Anfang der SMS (heute `Vergleich TT.MM.:`) wird in der Spec zu #3122 neu festgelegt (ADR-0124, offene Punkte; Vorschlag `Orte 18.11.: …`, bei einem Ort `Tecklenburg 18.11.: …`). Die SMS-Liste wird die Spalte „SMS“ (mit Premium-SMS) der Tabelle „Was steht wo“ mit **einer** Reihenfolge für alle Stellen; die Kürzung vom Listenende (§6) bleibt (Nr. 3). Bis zum Bau gilt das hier Beschriebene; die Beispiele mit `Vergleich …` zeigen den heutigen Stand.
+**Kopf der Orte-SMS (seit v2.45, #3122 B5, ADR-0124 Nr. 10 und Nachtrag Nr. 1):** Der Bereich heißt „Orte“, auch bei einem einzelnen Ort; „Vergleich“ entfällt. Der Kopf ist sprachfest (ADR-0104, wie zuvor „Vergleich“), also auch in englischer Sendung deutsch:
+
+| Fall | SMS |
+|---|---|
+| mehrere Orte | `Orte 18.11.: Münster D 13C …; Tecklenburg D 11C …` |
+| genau ein Ort | `Tecklenburg 18.11.: D 11C …` (Ortsname nur im Kopf, nicht noch einmal vor den Werten) |
+| kein Ort im Ergebnis | `Orte: keine Daten` |
+| genau ein Ort ohne Daten | `Tecklenburg: keine Daten` |
+
+Bei mehreren Orten bleibt ein Ort ohne Daten als `Name n/a` sichtbar (`Orte 18.11.: Münster D 13C …; Tecklenburg n/a`). Der Versand schickt bei lauter Orten ohne Daten nichts (`no_weather`); die beiden „keine Daten“-Formen erscheinen nur in Vorschau und Renderer. Die SMS-Liste wird die Spalte „SMS“ (mit Premium-SMS) der Tabelle „Was steht wo“ (ADR-0124 Nr. 3, Bau in B1–B3); die Kürzung vom Listenende (§6) bleibt.
 
 Die Ortsvergleich-SMS (`render_compare_sms`, auch Premium-SMS und Telegram-Kurzform —
 derselbe Text) trägt im **Ortsteil** einen Zähler `?N` (N ≥ 1), **nur wenn** mindestens
@@ -662,10 +671,10 @@ unmittelbar nach den Wertzellen, **vor** dem optionalen `!`-Warn-Block, z. B.
   (§6). Die frühere feste Sechserliste (`D W SU CT SD NS`, ohne Regen, Böen, Gewitter)
   ist abgelöst. Die volle Liste verdrängt dabei keine Orte: alle Orte bleiben sichtbar,
   jeder mit derselben Zeichenzahl gekürzt (seit v2.43, §6), z. B.
-  `Vergleich 29.10.: Innsbruck D 11C R 2.4 mm TH - PT Regen +6 ?1; Lienz D 12C R 5.4 mm +8 ?1; …`.
+  `Orte 29.10.: Innsbruck D 11C R 2.4 mm TH - PT Regen +6 ?1; Lienz D 12C R 5.4 mm +8 ?1; …`.
 - **Warndienst nicht erreichbar (seit v2.42, #3047 Runde 7, B-L2):** Ist an mindestens
   einem Ort eine amtliche Warnquelle ausgefallen, endet die Ortsvergleich-SMS mit ` X?`
-  (§3.4d), z. B. `Vergleich 08.07.: Alpha D 20C W 10 km/h; Beta D 22C W 12 km/h X?`.
+  (§3.4d), z. B. `Orte 08.07.: Alpha D 20C W 10 km/h; Beta D 22C W 12 km/h X?`.
   Der Marker fällt nie weg; Zellen und Orte weichen ihm.
 - GSM-7: `?` und Ziffern sind Basiszeichen.
 
@@ -680,7 +689,7 @@ Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, wird so gekürzt (seit v
 3. Amtliche Bausteine zuletzt, nach aufsteigender Priorität: Fire (`Z:`, `MAX`, `M:`), dann Vigilance (`HR:TH:`/`VR:VT:`), dann der amtliche Warn-Block `!` (§3.4c) — einer bleibt immer stehen.
 4. `X?` (Warndaten nicht abrufbar) fällt nie.
 
-> **Soll ab #3122 (ADR-0124):** Name und SMS-Anfang bei Orten siehe Hinweis in §5b. Die Kürzung vom Listenende bestätigt ADR-0124 Nr. 3; dieser Abschnitt gilt unverändert.
+> **#3122 (ADR-0124):** Name und SMS-Anfang bei Orten siehe §5b (seit v2.45). Die Kürzung vom Listenende bestätigt ADR-0124 Nr. 3; dieser Abschnitt gilt unverändert.
 
 **Orts-Überlauf im Ortsvergleich (`render_compare_sms`, seit v2.43, #3047 Runde 7, AC-23, ADR-0095 — ein Vergleich braucht mehrere Orte):** Ist die SMS zu lang, wird in dieser Folge gekürzt:
 1. die Zellen **aller** gezeigten Orte vom Listenende, mit demselben Zeichen-Budget je Ort (verdrängte Zellen als `+N` im Ortsteil), bis je Ort nur noch die erste Listenzeile steht;
@@ -877,6 +886,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.42 | 2026-11-16 | §5b: Ortsvergleich „nie eingestellt“ folgt der Mail-Tabelle (Registerfolge statt fester Sechserliste, ohne `?N` für fehlende Werte); Warndienst-Ausfall hängt ` X?` an die Ortsvergleich-SMS (#3047 Runde 7, B-L4, B-L2). |
 | 2.44 | 2026-11-17 | §2/§3.4e: Die Trip-SMS liest Auswahl, Folge und Roh/Einfach aus `resolve_channel_lists(...).sms` (Adapter `sms_rows_to_maps`) statt aus `get_metrics_for_channel("sms", ...)`; §2 heißt jetzt Standardreihenfolge, fix am Ende bleiben nur Warn-Block/`X?`/DBG. Zugestellte SMS unverändert (Golden byte-gleich). Spec: `docs/specs/modules/feat_3099_sms_resolver.md` (#3099). |
 | 2.43 | 2026-11-16 | §5b/§6: Ortsvergleich-SMS kürzt zuerst die Zellen aller Orte (gleiches Budget je Ort, bis zur ersten Listenzeile), erst danach entfallen Orte als ` +k Orte`, ohne Warnung zuerst — auch ohne amtliche Warnung (#3047 Runde 7, AC-23, ADR-0095). |
+| 2.45 | 2026-11-17 | §5b: Kopf der Orte-SMS `Orte TT.MM.:` statt `Vergleich TT.MM.:`, bei genau einem Ort `{Ort} TT.MM.:` ohne Wiederholung des Namens; „keine Daten“ als `Orte: keine Daten` bzw. `{Ort}: keine Daten` (#3122 B5, ADR-0124 Nr. 10, Nachtrag Nr. 1). Sprachfest wie zuvor. |
 | 2.41 | 2026-11-16 | §6: Orts-Überlauf im Ortsvergleich — ein Ort mit amtlicher Warnung fällt nie in ` +k Orte`, er bleibt mit Marker sichtbar; zuerst werden die Zellen aller gezeigten Orte vom Listenende gekürzt (gleiches Budget je Ort), dann entfallen Orte ohne Warnung (#3047 Runde 7, AC-23). |
 
 **Quellen für v2.0:**

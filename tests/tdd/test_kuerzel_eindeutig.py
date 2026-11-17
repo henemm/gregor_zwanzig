@@ -774,8 +774,10 @@ BRIEFING_ZEILE_VORHER = (
 )
 
 #: Ortsvergleich-Kurzform vom 27.09.2026 (vor der Umstellung), echter
-#: Renderer ``render_compare_sms`` mit ``temp_max``/``temp_min``.
-VERGLEICH_ZEILE_VORHER = "Vergleich 27.07.: Andermatt D 16C L 6C"
+#: Renderer ``render_compare_sms`` mit ``temp_max``/``temp_min``. #3122 B5:
+#: bei genau einem Ort steht der Ortsname im Kopf ("Vergleich 27.07.: Andermatt
+#: D 16C L 6C" -> "Andermatt 27.07.: D 16C L 6C"); die Kuerzel bleiben gleich.
+VERGLEICH_ZEILE_VORHER = "Andermatt 27.07.: D 16C L 6C"
 
 
 def test_automatische_ausgaben_nach_t_umstellung():

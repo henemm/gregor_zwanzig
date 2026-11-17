@@ -211,7 +211,8 @@ def test_ac23_warnung_zweiter_ort_faellt_zuletzt_weg(mit, folge):
                 assert len(ist) >= 3, f"{kanal}: {name} unnoetig leer gekuerzt: {sms}"
                 assert ist == soll[:len(ist)], (
                     f"{kanal}: {name} kuerzt nicht vom Listenende: {ist} vs {soll}")
-            assert "Orte" not in sms, f"kein Ort darf ganz wegfallen: {sms}"
+            # #3122 B5: der Kopf heisst "Orte TT.MM.:" -- gemeint ist der Ueberlauf " +k Orte".
+            assert not re.search(r"\+\d+ Orte", sms), f"kein Ort darf ganz wegfallen: {sms}"
 
 
 def test_ac23_ohne_warnung_bleibt_kuerzung_wie_bisher(mit):
@@ -223,7 +224,7 @@ def test_ac23_ohne_warnung_bleibt_kuerzung_wie_bisher(mit):
     soll = [KUERZEL[m] for m, _ in GRUND]
     for uid, snap in zwei_nutzer(mit, preset()):
         sms = text(snap, "sms")
-        assert "Orte" not in sms, sms
+        assert not re.search(r"\+\d+ Orte", sms), sms
         for name in ("Innsbruck", "Bozen"):
             ist = _kuerzel_folge(_sms_ort(sms, name))
             assert ist and ist == soll[:len(ist)], (name, ist, sms)
@@ -441,7 +442,7 @@ def test_om1_gegenprobe_ohne_ausfall_kein_hinweis(mit):
     -> kein Hinweis "nicht abrufbar" im Klartext."""
     for uid, snap in zwei_nutzer(mit, preset()):
         plain = snap.sendungen("email")[-1]["plain_text_body"]
-        assert "Kette Basis" in plain or "ORTS-VERGLEICH" in plain, "Vorbedingung: Klartext"
+        assert "Kette Basis" in plain or "ORTE" in plain, "Vorbedingung: Klartext"
         assert "Amtliche Warnungen aktuell nicht abrufbar" not in plain, plain[:600]
 
 

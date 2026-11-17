@@ -15,7 +15,7 @@
   "versand.hinweis.test_vorschau": "Test preview for {etappe} on {datum}",
   "versand.hinweis.auf_anfrage": "Briefing on request for {etappe} on {datum}",
   "versand.etappe.rueckfall": "Stage",
-  "versand.kontext.ortsvergleich": "Location comparison",
+  "versand.kontext.ortsvergleich": "Locations",
   "versand.test.betreff": "Gregor 20 — Test message",
   "versand.test.text": "Your channel works.",
   "versand.test.kanal_unbekannt": "Unknown channel: {kanal}",
@@ -30,7 +30,7 @@
   "versand.ergebnis.channels_unreachable": "No briefing sent — delivery channel configured but not ready (channel technically unreachable)",
   "versand.ergebnis.invalid_report_type": "Invalid report type {report_type} (allowed: morning, evening)",
   "versand.ergebnis.smtp_not_configured": "Email delivery (SMTP) is not set up for this user",
-  "versand.ergebnis.invalid_preset": "Location comparison cannot be sent: {reason}",
+  "versand.ergebnis.invalid_preset": "Locations briefing cannot be sent: {reason}",
   "versand.ergebnis.send_failed": "Delivery failed — internal error, please try again later",
   "versand.ergebnis.kontingent_erschoepft": "No briefing sent — your daily request quota is used up. It resets at midnight (UTC); scheduled briefings and alerts continue.",
   "versand.scheduler.nachgeliefert": "Delivered late — the weather service was unavailable at {stunde}",
@@ -39,7 +39,7 @@
   "versand.scheduler.zustellung_fehlgeschlagen": "Delivered late — delivery at {stunde} failed",
   "versand.scheduler.teilausfall": "Note: weather data is currently missing for the following sections ({abschnitte}) — an update will follow.",
   "versand.scheduler.abschnitt": "Segment {id}",
-  "versand.scheduler.vergleich_betreff": "Weather comparison: {name} ({datum})",
+  "versand.scheduler.vergleich_betreff": "Locations: {name} ({datum})",
   "versand.scheduler.trend_gewitter": "Thunderstorm possible",
   "versand.scheduler.trend_regen": "Rain {mm} mm",
   "versand.scheduler.trend_boeen": "Gusts up to {kmh} km/h",
@@ -48,5 +48,5 @@
   "versand.servicefehler.segmente": "Affected segments:",
   "versand.servicefehler.grund": "This email was sent automatically because your trip only has SMS enabled and provider errors occurred.",
   "versand.servicefehler.fusszeile": "automatic weather service",
-  "versand.grund.orte_geloescht": "Location comparison '{preset_id}' refers to deleted locations. Replace the locations in the location comparison. (Locations {orte} cannot be resolved)"
+  "versand.grund.orte_geloescht": "The subscription '{preset_id}' refers to deleted locations. Replace the locations in the subscription. (Locations {orte} cannot be resolved)"
 }

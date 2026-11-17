@@ -582,6 +582,7 @@ if str(_REPO_SRC) not in sys.path:
 from app.metric_catalog import aggregation_label as _aggregation_label  # noqa: E402
 from app.metric_catalog import get_metric as _get_metric  # noqa: E402
 from i18n import t as _t  # noqa: E402
+from i18n import tn as _tn  # noqa: E402
 from output.renderers.compare_hourly_metric_ids import (  # noqa: E402
     HOURLY_MERGE_ONLY_METRIC_IDS as _HOURLY_MERGE_ONLY,
     hourly_selectable_metric_ids as _hourly_selectable_metric_ids,
@@ -1397,8 +1398,52 @@ def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
     fehler += _soll_hinweis_warnungen(body, plain, lang, soll)
     fehler += _soll_zieltag(plain, lang, soll) + _soll_ampel_orte(body, lang, soll)
     fehler += _soll_ortsabschnitte(plain, lang, soll, html[1], fehlerorte)
+    fehler += _soll_bereichsname(body, plain, lang, len(html[1]))
     return fehler + _soll_teil("Klartext", [b[1] for b in bloecke if b[1] is not None],
                                [b[0] for b in bloecke], stunden, ausblick, soll)
+
+
+#: #3122 B5 (ADR-0124 Nr. 10): alte Bereichsnamen, in keiner Sprache mehr
+#: ausgeliefert ("Ortsvergleich"/"Orts-Vergleich" sind darin enthalten).
+_ALTE_BEREICHSNAMEN = {"de": re.compile(r"vergleich|orts-briefing", re.IGNORECASE),
+                       "en": re.compile(r"vergleich|orts-briefing|comparison", re.IGNORECASE)}
+#: #3122 B5 (AC-36): Texte, die bei genau einem Ort mehrere Orte voraussetzen.
+_MEHRZAHL_BEI_EINEM_ORT = {"de": re.compile(r"alle Orte|\b1 Orte\b", re.IGNORECASE),
+                           "en": re.compile(r"all locations|\b1 locations\b", re.IGNORECASE)}
+
+
+def _sichtbarer_text(body: str) -> str:
+    """Lesbarer Text des HTML-Teils: ohne Stil-Block, Kommentare und Tags."""
+    ohne = re.sub(r"<style.*?</style>|<!--.*?-->", " ", body, flags=re.S | re.I)
+    return re.sub(r"\s+", " ", unescape(re.sub(r"<[^>]+>", " ", ohne)))
+
+
+def _soll_bereichsname(body: str, plain: str, lang: str, orte: int) -> List[str]:
+    """#3122 B5 (AC-35, AC-36): Kopf "ORTE"/"LOCATIONS" in HTML und Klartext,
+    kein alter Bereichsname; bei genau einem Ort Fuss "1 Ort" und kein Text, der
+    mehrere Orte voraussetzt. Die Untergrenze der Ortszahl bleibt bei #2798."""
+    kopf = _t("vergleich.kopf.titel", lang)
+    teile = (("HTML", _sichtbarer_text(body)), ("Klartext", plain))
+    erste = next((z.strip() for z in plain.splitlines() if z.strip()), "")
+    fehler = [] if f"{kopf} · " in teile[0][1] else [f"NAME: Kopf '{kopf}' fehlt (HTML)"]
+    if erste != kopf:
+        fehler.append(f"NAME: Kopf '{kopf}' fehlt (Klartext), erste Zeile {erste!r}")
+    muster = _ALTE_BEREICHSNAMEN["en" if lang == "en" else "de"]
+    for teil, text in teile:
+        treffer = sorted({m.group(0) for m in muster.finditer(text)})
+        if treffer:
+            fehler.append(f"NAME: alter Bereichsname ({teil}): {treffer}")
+    if orte != 1:
+        return fehler
+    mehrzahl = _MEHRZAHL_BEI_EINEM_ORT["en" if lang == "en" else "de"]
+    for teil, text in teile:
+        treffer = sorted({m.group(0) for m in mehrzahl.finditer(text)})
+        if treffer:
+            fehler.append(f"NAME: Text setzt mehrere Orte voraus ({teil}): {treffer}")
+    fuss = _tn("vergleich.fuss.abo_zeile", 1, lang, vorlage="").strip()
+    if fuss not in teile[0][1]:
+        fehler.append(f"NAME: Fuss '{fuss}' fehlt bei einem Ort (HTML)")
+    return fehler
 
 
 def _soll_ausblick_zeilen(body: str, lang: str, je_ort: list, orte: int, soll: dict) -> List[str]:

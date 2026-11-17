@@ -15,7 +15,7 @@
   "versand.hinweis.test_vorschau": "Test-Vorschau für {etappe} am {datum}",
   "versand.hinweis.auf_anfrage": "Briefing auf Anfrage für {etappe} am {datum}",
   "versand.etappe.rueckfall": "Etappe",
-  "versand.kontext.ortsvergleich": "Ortsvergleich",
+  "versand.kontext.ortsvergleich": "Orte",
   "versand.test.betreff": "Gregor 20 — Testmeldung",
   "versand.test.text": "Dein Kanal funktioniert!",
   "versand.test.kanal_unbekannt": "Unbekannter Kanal: {kanal}",
@@ -30,7 +30,7 @@
   "versand.ergebnis.channels_unreachable": "Kein Briefing versendet — Versandweg konfiguriert, aber nicht einsatzbereit (Kanal technisch nicht erreichbar)",
   "versand.ergebnis.invalid_report_type": "Ungültiger Berichtstyp {report_type} (erlaubt: morning, evening)",
   "versand.ergebnis.smtp_not_configured": "E-Mail-Versand (SMTP) ist für diesen Nutzer nicht eingerichtet",
-  "versand.ergebnis.invalid_preset": "Ortsvergleich nicht versendbar: {reason}",
+  "versand.ergebnis.invalid_preset": "Briefing der Orte nicht versendbar: {reason}",
   "versand.ergebnis.send_failed": "Versand fehlgeschlagen — interner Fehler, bitte später erneut versuchen",
   "versand.ergebnis.kontingent_erschoepft": "Kein Briefing versendet — dein Tageskontingent für Abrufe ist aufgebraucht. Ab Mitternacht (UTC) geht es wieder; automatische Briefings und Alarme laufen weiter.",
   "versand.scheduler.nachgeliefert": "Nachgeliefert — der Wetterdienst war um {stunde} nicht erreichbar",
@@ -39,7 +39,7 @@
   "versand.scheduler.zustellung_fehlgeschlagen": "Nachgeliefert — die Zustellung um {stunde} ist fehlgeschlagen",
   "versand.scheduler.teilausfall": "Hinweis: Für folgende Abschnitte liegen aktuell keine Wetterdaten vor ({abschnitte}) — eine Aktualisierung wird nachgeliefert.",
   "versand.scheduler.abschnitt": "Segment {id}",
-  "versand.scheduler.vergleich_betreff": "Wetter-Vergleich: {name} ({datum})",
+  "versand.scheduler.vergleich_betreff": "Orte: {name} ({datum})",
   "versand.scheduler.trend_gewitter": "Gewitter möglich",
   "versand.scheduler.trend_regen": "Regen {mm} mm",
   "versand.scheduler.trend_boeen": "Böen bis {kmh} km/h",
@@ -48,5 +48,5 @@
   "versand.servicefehler.segmente": "Betroffene Segmente:",
   "versand.servicefehler.grund": "Diese E-Mail wurde automatisch gesendet, weil Ihr Trip nur SMS aktiviert hat und Anbieter-Fehler aufgetreten sind.",
   "versand.servicefehler.fusszeile": "automatischer Wetter-Service",
-  "versand.grund.orte_geloescht": "Ortsvergleich '{preset_id}' verweist auf gelöschte Orte. Ersetze die Orte im Ortsvergleich. (Orte {orte} nicht aufloesbar)"
+  "versand.grund.orte_geloescht": "Das Abo '{preset_id}' verweist auf gelöschte Orte. Ersetze die Orte im Abo. (Orte {orte} nicht aufloesbar)"
 }

@@ -200,8 +200,8 @@ def test_ac6_spalten_legende_loest_kuerzel_in_nutzersprache_auf():
 def test_ac6_herkunfts_fusszeile():
     from output.renderers.email.helpers import build_origin_footer
 
-    assert build_origin_footer("compare", source="x").line1 == "Ortsvergleich"
-    assert build_origin_footer("compare", source="x", lang="en").line1 == "Location comparison"
+    assert build_origin_footer("compare", source="x").line1 == "Orte"  # #3122 B5
+    assert build_origin_footer("compare", source="x", lang="en").line1 == "Locations"
     assert build_origin_footer("official-alert", source="x", lang="en").line1 == "Official warning"
     assert build_origin_footer("deviation-alert", source="x", lang="en").line1 == "Deviation alert"
 

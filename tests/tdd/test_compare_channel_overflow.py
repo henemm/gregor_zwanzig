@@ -167,7 +167,9 @@ def test_sms_degenerate_single_long_name_still_shows_content():
     assert long_name[:20] in text, (
         f"Der einzige Ort muss erkennbar bleiben (ggf. gekuerzt). Text: {text!r}"
     )
-    assert text.endswith("..."), (
+    # #3122 B5: bei genau einem Ort steht der Name im Kopf ("{Ort} TT.MM.:");
+    # die Kuerzung des Namens muss dort erkennbar sein.
+    assert head.split(" ")[0].endswith("..."), (
         "Der Ortsname wurde beschnitten, sieht aber vollstaendig aus — die "
         f"Kuerzung muss erkennbar sein. Text: {text!r}"
     )

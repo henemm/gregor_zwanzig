@@ -100,7 +100,8 @@ def _preset(orte: tuple[str, ...]) -> dict:
 def _sichtbar(html: str) -> str:
     """Was der Leser der HTML-Mail sieht: ohne Stil-Block, Kommentare, Tags."""
     ohne = re.sub(r"<style.*?</style>|<!--.*?-->", " ", html, flags=re.S)
-    return html_mod.unescape(re.sub(r"<[^>]+>", " ", ohne))
+    text = html_mod.unescape(re.sub(r"<[^>]+>", " ", ohne))
+    return re.sub(r"\s+", " ", text)
 
 
 def _senden(mit, orte: tuple[str, ...], lang: str) -> dict:

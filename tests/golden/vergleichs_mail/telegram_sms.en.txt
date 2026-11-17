@@ -1,4 +1,4 @@
-LOCATION COMPARISON — Golden-Vergleich
+LOCATIONS — Golden-Vergleich
 Date: 29 Oct 2026
 
 ⚠️ Official warnings are currently unavailable — please check yourself.
@@ -18,7 +18,7 @@ Kufstein
 Brenner
    Error: Zeitueberschreitung beim Abruf
 ----
-LOCATION COMPARISON
+LOCATIONS
 Date: 29 Oct 2026
 
 ⚠️ Official warnings are currently unavailable — please check yourself.
@@ -32,6 +32,6 @@ Kufstein
 Brenner
    Error: Zeitueberschreitung beim Abruf
 ----
-No comparison data available.
+No weather data available.
 ----
-Vergleich 29.10.: Innsbruck D 11C R 2.4 mm TH - PT Regen +6 ?1; Lienz D 12C R 5.4 mm +8 ?1; Kufstein D 13C R 8.4 mm TH - +7 ?1; Brenner n/a X?
+Orte 29.10.: Innsbruck D 11C R 2.4 mm TH - PT Regen +6 ?1; Lienz D 12C R 5.4 mm +8 ?1; Kufstein D 13C R 8.4 mm TH - +7 ?1; Brenner n/a X?

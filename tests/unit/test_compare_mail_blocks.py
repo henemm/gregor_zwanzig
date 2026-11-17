@@ -393,12 +393,12 @@ def test_telegram_and_sms_output_unchanged_by_summary_block_removal():
     sms = render_compare_sms(result, enabled_metrics=enabled)
 
     recorded_telegram = (
-        "ORTS-VERGLEICH — Test-Preset\nDatum: 08.07.2026\n\n"
+        "ORTE — Test-Preset\nDatum: 08.07.2026\n\n"  # #3122 B5
         "Andermatt\n   Temp max 16°C · Regen 3.0 mm\n"
         "Zermatt\n   Temp max 16°C · Regen 3.0 mm"
     )
     recorded_sms = (
-        "Vergleich 08.07.: Andermatt D 16C R 3.0 mm; Zermatt D 16C R 3.0 mm"
+        "Orte 08.07.: Andermatt D 16C R 3.0 mm; Zermatt D 16C R 3.0 mm"
     )
 
     assert telegram == recorded_telegram, (

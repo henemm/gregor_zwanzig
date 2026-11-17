@@ -269,14 +269,14 @@ class TestEmailSubject:
         """
         GIVEN: build_compare_preset_subject pure function
         WHEN: Called with a name and a fixed date
-        THEN: Subject contains 'Wetter-Vergleich' and does not contain 'Ski'
+        THEN: Subject starts with 'Orte:' (#3122 B5, vorher 'Wetter-Vergleich') and does not contain 'Ski'
         No network, no locations, no ValueError.
         """
         from datetime import date
         from services.scheduler_dispatch_service import build_compare_preset_subject
 
         subject = build_compare_preset_subject("Alpen Trip", date(2026, 6, 6))
-        assert "Wetter-Vergleich" in subject, f"Subject should contain 'Wetter-Vergleich', got: {subject}"
+        assert subject.startswith("Orte: "), f"Subject should start with 'Orte: ', got: {subject}"
         assert "Ski" not in subject, f"Subject should not contain 'Ski', got: {subject}"
         # AC-3: verify the exact format matches the old inline f-string
-        assert subject == "Wetter-Vergleich: Alpen Trip (06.06.2026)", f"Unexpected format: {subject}"
+        assert subject == "Orte: Alpen Trip (06.06.2026)", f"Unexpected format: {subject}"

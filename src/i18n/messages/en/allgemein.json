@@ -1,7 +1,7 @@
 {
   "allgemein.hinweis.gewaehlt_ohne_wert.one": "… +{count} selected weather value without data {wo}",
   "allgemein.hinweis.gewaehlt_ohne_wert.other": "… +{count} selected weather values without data {wo}",
-  "allgemein.hinweis.gewaehlt_ohne_wert.vergleich": "in this comparison",
+  "allgemein.hinweis.gewaehlt_ohne_wert.vergleich": "in the overview",
   "allgemein.hinweis.gewaehlt_ohne_wert.ort": "at this location",
   "allgemein.telegram_limit.vergleich.one": "… +{count} more weather value per location (Telegram limit) — full version by email",
   "allgemein.telegram_limit.vergleich.other": "… +{count} more weather values per location (Telegram limit) — full version by email",
