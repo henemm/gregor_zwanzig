@@ -115,7 +115,9 @@ def test_ac12_acht_menue_eintraege_bleiben_bei_2797(daten):
 def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # #2795 (Scheibe d, Reiter Zustellung) hat am 15.11. die 12 Sammel-Einträge #2913-d durch Element-
     # und Text-Besitzer ersetzt (#2795 Übergangsblock/a11y, #2967 Kontodaten, #2968 EN-Lücke, #3022 Orte-Ladezustand).
-    soll = {"#2967": 167, "#2966": 35, "#2913-d": 0, "#2913-e": 6, "#2795": 316, "#2797": 8, "#2968": 170, "#3022": 59}
+    # #2966 (Haken im Reiter Wetter) hat am 17.11. seine 35 Einträge abgeräumt; Restabweichungen werden nach
+    # dem Staging-Abnahmelauf neu zugeordnet (AC-10 der Spec feat_2966_abgleich_haken).
+    soll = {"#2967": 167, "#2966": 0, "#2913-d": 0, "#2913-e": 6, "#2795": 316, "#2797": 8, "#2968": 170, "#3022": 59}
     ist = _verweise(daten)
     assert {k: ist.get(k, 0) for k in soll} == soll
 
