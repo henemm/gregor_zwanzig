@@ -185,7 +185,7 @@ const NEU_IN_F6 = [
 const NEU_IN_F5 = F5_ANKER.map(([k]) => k);
 /** #2657 (F8) Layout-Reiter, Korridor-Editor, Ausgabe-Layout, Mail-Inhalt, GPX: Bereich layout.json. */
 const NEU_IN_F8 = [
-	'layout.tab.eyebrow', 'layout.kappung.schnittlinie', 'layout.kappung.zeigt_alles', 'layout.kappung.zeichen',
+	'layout.tab.eyebrow', 'layout.kappung.schnittlinie_route', 'layout.kappung.schnittlinie_vergleich', 'layout.kappung.zeigt_alles', 'layout.kappung.zeichen',
 	'layout.kappung.anzahl_passt', 'layout.kappung.anzahl_zu_breit', 'layout.kappung.spalten_passt.one',
 	'layout.kappung.spalten_passt.other', 'layout.kappung.spalten_zu_breit.one',
 	'layout.kappung.spalten_zu_breit.other', 'layout.hinweis.kanal_abwahl',
@@ -232,6 +232,8 @@ const NEU_IN_F12 = F12_ANKER.map(([k]) => k);
 /** #2764 (F13) AUSDRUCK_OFFEN: Name-Rueckfall der Karte (wertebereiche.symbolzeile.* stehen in F5_ANKER). */
 const NEU_IN_F13 = ['bausteine.karte.ohne_namen'];
 const NEU_IN_FOLGEPAKETEN = [
+	// #3047 R8 (AC-24): Orts-Vergleich-Telegram — alle Zeilen, ab Platz 8 zweite Zeile je Ort.
+	'layout.kappung.zeilen_umbruch', 'layout.kappung.zeilen_eine', 'versand.briefing.sub.telegram_vergleich',
 	// #3047 H1: 'vergleich.stundenverlauf.nicht_in_grundauswahl' steht als fester
 	// Anker in F10_ANKER (vergleich.json = F9 + F10-Anker) und zaehlt ueber NEU_IN_F10.
 	// #2999 Datumsfeld: Meldung bei einem Datum, das es nicht gibt

@@ -76,12 +76,12 @@ const KATALOG = {
 export const COL_LABELS = ['Temp', 'Wind', 'Gust', 'Rain'];
 const BUCKETS = { primary: ['temperature', 'wind', 'gust'], secondary: ['precipitation'], off: [] as string[] };
 
-/** Layout-Reiter eines Kontexts fuer einen Kanal (Trip: Metriken, Vergleich: Orte als Spalten). */
+/** Layout-Reiter eines Kontexts fuer einen Kanal. #3047 R8: Vergleich mit den Props des echten Aufrufers (WeatherMetricsTab: Metriken als Zeilen, ohne Label-Spalte). */
 export function layoutTabRendern(context: Kontext, channel: 'email' | 'telegram' | 'sms', colCount = 3): string {
 	const props =
 		context === 'route'
 			? { context, channel, colCount, subjectLabel: 'Metriken', hasLabelColumn: false }
-			: { context, channel, colCount, subjectLabel: '4 Orte', hasLabelColumn: true, smsCharLimit: lt.SMS_COMPARE_CHAR_LIMIT };
+			: { context, channel, colCount, subjectLabel: 'Metriken', hasLabelColumn: false, smsCharLimit: lt.SMS_COMPARE_CHAR_LIMIT };
 	return html(LayoutTabPruefstand, {
 		...props,
 		catalog: KATALOG,
@@ -100,7 +100,7 @@ export function bausteineRendern(): string {
 		html(OutlookLayoutControls, { metricKeys: null, catalog: katalog, onMetricKeys: nix, ...p });
 	const leer = { primary: [] as string[], secondary: [] as string[], off: ['temperature'] };
 	return [
-		html(LTCutLine, { label: 'Telegram', max: 7 }),
+		html(LTCutLine, { label: 'Telegram', platz: 8, context: 'route' }), // #3047 R8 F3
 		ausblick({ enabled: true, onEnabledChange: nix }),
 		ausblick({ title: '3-Tages-Vorschau', showEmailOnlyHint: false }),
 		html(MailInhaltCard, { reportConfig: { email_format: 'full', show_outlook: true } }),

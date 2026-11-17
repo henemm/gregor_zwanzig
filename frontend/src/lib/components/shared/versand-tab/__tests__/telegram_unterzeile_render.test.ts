@@ -27,7 +27,8 @@ const VTBriefingChannels = await imp('src/lib/components/shared/versand-tab/VTBr
 const VersandTab = await imp('src/lib/components/shared/VersandTab.svelte');
 
 const KURZ = 'folgt der SMS-Auswahl';
-const RICH = /Layout · \d+ Spalten/;
+// #3047 R8 (AC-24): Trip „Layout · N Spalten“, Orts-Vergleich „alle Zeilen …“.
+const RICH = /Layout · (\d+ Spalten|alle Zeilen, ab Platz \d+ zweite Zeile je Ort)/;
 
 function channels(context: 'route' | 'vergleich', telegramStyle: 'rich' | 'kurzform'): string {
 	return render(VTBriefingChannels, {

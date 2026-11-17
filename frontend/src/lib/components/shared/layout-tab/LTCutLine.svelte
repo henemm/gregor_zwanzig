@@ -9,17 +9,29 @@
 	//
 	// Spec: docs/specs/modules/layout_tab_vergleich.md (Implementation Details §1, KL-1)
 
+	//
+	// Issue #3047 Runde 8 (F3, PO-Entscheidung Spec-Nachtrag Runde 7 „Nichts
+	// fällt weg“, AC-24): die Linie behauptet keine Kappung mehr, sondern sagt,
+	// was die Ausgabe ab Platz {platz} tut — Trip: nur noch Kurzübersicht statt
+	// Stundentabelle; Orts-Vergleich: zweite Telegram-Zeile je Ort.
+
 	import { t } from '$lib/i18n';
 
 	interface Props {
 		label: string;
-		max: number;
+		/** Erste Position, die nicht mehr in der ersten Zeile/Tabelle steht. */
+		platz: number;
+		context: 'route' | 'vergleich';
 	}
-	let { label, max }: Props = $props();
+	let { label, platz, context }: Props = $props();
+	const SCHNITTLINIE = {
+		route: 'layout.kappung.schnittlinie_route',
+		vergleich: 'layout.kappung.schnittlinie_vergleich'
+	} as const;
 </script>
 
 <div class="lt-cut-line mono" data-testid="lt-cut-line">
-	{$t('layout.kappung.schnittlinie', { kanal: label, max })}
+	{$t(SCHNITTLINIE[context], { kanal: label, platz })}
 </div>
 
 <style>

@@ -48,11 +48,13 @@ export const F6_ANKER: [schluessel: string, de: string, en: string][] = [
 	],
 	[
 		'versand.briefing.lead.vergleich',
-		'Der Orts-Vergleich ist eine breite Tabelle — realistisch läuft er per E-Mail. Telegram trägt nur ≤ <telegram_spalten> Spalten, SMS kein Raster, Fließtext.',
-		'The location comparison is a wide table — in practice it goes by email. Telegram carries only ≤ <telegram_spalten> columns, SMS has no grid, plain text.'
+		// #3047 R8 (AC-24, ADR-0095): kein „nur ≤ 7 Spalten“, keine Kanal-Empfehlung.
+		'Der Orts-Vergleich ist eine breite Tabelle — E-Mail trägt alle Spalten, Telegram alle Zeilen (ab Platz <platz> in einer zweiten Zeile je Ort), SMS kein Raster, Fließtext.',
+		'The location comparison is a wide table — email carries all columns, Telegram all rows (from position <platz> in a second line per location), SMS has no grid, plain text.'
 	],
 	['versand.briefing.sub.email', 'Layout · volle Tabelle', 'Layout · full table'],
 	['versand.briefing.sub.telegram', 'Layout · <telegram_spalten> Spalten', 'Layout · <telegram_spalten> columns'],
+	['versand.briefing.sub.telegram_vergleich', 'Layout · alle Zeilen, ab Platz <platz> zweite Zeile je Ort', 'Layout · all rows, from position <platz> a second line per location'],
 	['versand.briefing.sub.telegram_kurzform', 'folgt der SMS-Auswahl', 'follows the SMS selection'],
 	['versand.briefing.sub.sms', 'Layout · kein Raster, <zeichen> Zeichen', 'Layout · no grid, <zeichen> characters'],
 	// Zeitplan (VTSchedulePlan)

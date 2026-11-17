@@ -1,8 +1,11 @@
 {
 	"layout.tab.eyebrow": "Channel · selection & cutoff",
-	"layout.kappung.schnittlinie": "✂ {kanal} limit from here (max {max})",
+	"layout.kappung.schnittlinie_route": "↓ from position {platz} only in the {kanal} summary, not in the hourly table",
+	"layout.kappung.schnittlinie_vergleich": "↓ from position {platz} in a second {kanal} line per location",
 	"layout.kappung.zeigt_alles": "{kanal} shows everything · no limit",
 	"layout.kappung.zeichen": "{kanal}: no grid, no table — plain text, {zeichen} characters",
+	"layout.kappung.zeilen_umbruch": "{kanal}: {anzahl} {subjekt} · all in the message, from position {platz} in a second line per location",
+	"layout.kappung.zeilen_eine": "{kanal}: {anzahl} {subjekt} · all in one line per location",
 	"layout.kappung.anzahl_passt": "{kanal}: {anzahl} {subjekt} · fits (max {max})",
 	"layout.kappung.anzahl_zu_breit": "{kanal}: {anzahl} {subjekt} · too wide — max {max}, further forward = safer",
 	"layout.kappung.spalten_passt.one": "{kanal}: {count} column (label + {subjekt}) · fits (max {max})",

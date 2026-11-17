@@ -9,7 +9,7 @@
 	//
 	// Spec: docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md (Abschnitt 5, AC-5)
 
-	import { ltLimitForChannel, ltCapNoteText, SMS_TRIP_CHAR_LIMIT, type ChannelId } from './ltChannels';
+	import { ltLimitForChannel, ltCapNoteText, SMS_TRIP_CHAR_LIMIT, type ChannelId, type LtContext } from './ltChannels';
 	import { locale } from '$lib/i18n';
 
 	interface Props {
@@ -30,6 +30,8 @@
 		 *  (Trip 160 / Vergleich 153) — Default ist der Trip-Wert, da diese
 		 *  Komponente heute nur ueber LayoutTab im route-Kontext eingebettet ist. */
 		smsCharLimit?: number;
+		/** #3047 R8 (AC-24): Orts-Vergleich-Telegram kappt nicht (zweite Zeile je Ort). */
+		context?: LtContext;
 	}
 	let {
 		channel,
@@ -37,10 +39,11 @@
 		subject,
 		dense = false,
 		hasLabelColumn = true,
-		smsCharLimit = SMS_TRIP_CHAR_LIMIT
+		smsCharLimit = SMS_TRIP_CHAR_LIMIT,
+		context = 'route'
 	}: Props = $props();
 
-	const limit = $derived(ltLimitForChannel(channel, smsCharLimit));
+	const limit = $derived(ltLimitForChannel(channel, smsCharLimit, context));
 	const warn = $derived(limit.kind === 'columns' && colCount > limit.value);
 	// Issue #2657 (i18n F8): Sprachwechsel ohne Neuladen — $locale lesen.
 	const text = $derived.by(() => (void $locale, ltCapNoteText({ channel, limit, colCount, subject, hasLabelColumn })));

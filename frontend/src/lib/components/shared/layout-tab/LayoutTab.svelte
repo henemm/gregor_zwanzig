@@ -65,8 +65,8 @@
 
 	// Issue #1719 S3 Abschnitt 5: der SMS-Zeichenwert kommt vom AUFRUFER, nicht
 	// aus einer geteilten Konstante (Trip 160 / Vergleich 153 / Alarm 140).
-	const overflow = $derived(ltOverflowAcrossChannels(colCount, smsCharLimit));
-	const channels = $derived(ltChannelsFor(smsCharLimit));
+	const overflow = $derived(ltOverflowAcrossChannels(colCount, smsCharLimit, context));
+	const channels = $derived(ltChannelsFor(smsCharLimit, context));
 </script>
 
 <div class="layout-tab" class:dense data-testid="layout-tab" data-context={context}>
@@ -77,7 +77,7 @@
 	     Aufrufer — dieselbe Zahl, die oben schon Badge und Ueberlauf-Chip speist.
 	     Vorher: hasLabelColumn aus `context` abgeleitet, smsCharLimit gar nicht
 	     durchgereicht (LTCapNote fiel still auf den Trip-Default 160 zurueck). -->
-	<LTCapNote {channel} {colCount} subject={subjectLabel} {dense} {hasLabelColumn} {smsCharLimit} />
+	<LTCapNote {channel} {colCount} subject={subjectLabel} {dense} {hasLabelColumn} {smsCharLimit} {context} />
 </div>
 
 <style>
