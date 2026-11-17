@@ -42,3 +42,12 @@ Der Resolver liefert zusätzlich die in Punkt 1 reservierten Flächen-Listen `ou
 4. **None-Vertrag.** `None` = Renderer-Vorgabemenge (Altbestand ohne Grundauswahl), `()` = Block entfällt (bewusst leer), sonst Zeilen in Anzeigefolge mit `order` ab 0 und `enabled=True`.
 5. **Abschaltflags bewusst draußen.** `hourly_enabled` und `outlook_enabled` stehen auf Preset-Ebene, nicht in `display_config`, und sind nicht Teil des View-Models; der Aufrufer schaltet wie bisher ab.
 6. **Kein Adapter-Umbau.** In dieser Scheibe liest niemand `outlook`/`hourly`; die Mail bleibt in jedem Kanal unverändert.
+
+## Nachtrag 3a (2026-11-17, Issue #3096): E-Mail liest aus dem Resolver
+
+Ergänzt Nachtrag 2b Nr. 4 und setzt Nr. 8 (Adapter) für die E-Mail um. Spec: `docs/specs/modules/feat_3096_mail_resolver.md`.
+
+1. **Orte-`hourly` ist nie `None`.** Die Vorgabe „nie eingestellt“ (neun Spalten) löst `compare_hourly_metric_ids` genau einmal auf und liefert sie als konkrete Liste; der Renderer führt keine eigene Vorgabeliste und keinen `None`-Sonderpfad mehr. `None` bleibt nur für Trip-`hourly` und kanalweise als „kein Filter“.
+2. **Trip-Mail.** Spalten und Folge (HTML und Klartext) kommen aus `resolve_channel_lists(dc, "trip", report_type).email`, einmal auf dem ungekollabierten Modell; der Adapter `email_col_order` bildet auf `col_key` ab und filtert `selectable`. `resolve_metric_col_order` entfällt.
+3. **Format-Standard ohne Angabe** bleibt verschieden (Trip Katalog, Orte Roh). Morgen- und Abendbericht sowie die Orte-Mail sind für den Nutzer unverändert.
+4. **Update- und Alarm-Mail folgen der E-Mail-Auswahl** (PO-Entscheidung 2026-11-17, #3096). Der Trip-Briefing-Renderer (`TripReportFormatter.format_email`) schneidet die Datenzeilen jetzt für jeden `report_type` (auch `update` und `alert`) auf die E-Mail-Auswahl zu; bisher galt dort die Grundauswahl. Trips ohne eigene E-Mail-Auswahl sind unverändert. Die zugestellten Alarm-Mails laufen über den eigenen Alarm-Renderer (`output/renderers/alert/`, #921) und sind von dieser Umstellung nicht berührt.

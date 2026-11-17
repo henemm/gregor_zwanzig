@@ -699,9 +699,12 @@ KNOWN_VIOLATIONS: dict[str, str] = {
     # KeyError → continue), nur an neuer Adresse. Analog zur A12/A13-Korrektur
     # oben (Funktionsaufteilung #1445): Schlüssel von Hand nachgezogen, nichts
     # gekürzt oder abgeschwächt.
-    "src/output/renderers/email/helpers.py::resolve_metric_col_order::0": (
+    # #3096: resolve_metric_col_order ist entfallen; dieselbe Schleife liest
+    # jetzt die Resolver-E-Mail-Zeilen im Adapter helpers.py::email_col_order.
+    "src/output/renderers/email/helpers.py::email_col_order::0": (
         "A4 (#1405, vormals html.py::render_html:785; mit Fix #1575 Scheibe 2 "
-        "nach helpers.py::resolve_metric_col_order extrahiert) — "
+        "nach helpers.py::resolve_metric_col_order extrahiert, mit #3096 als "
+        "Adapter helpers.py::email_col_order) — "
         "Spaltenreihenfolge und -sichtbarkeit der ganzen Mail."
     ),
     "src/output/renderers/email/helpers.py::dp_to_row::0": (
@@ -849,7 +852,8 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # extrahiert (Spec-Tabelle nennt weiterhin html.py::render_html:782 — der
     # dortige Code ist jetzt ein Funktionsaufruf, die eigentliche Schleife
     # sitzt an der neuen Adresse; analoge Korrektur wie bei A10/A12/A13 oben).
-    "src/output/renderers/email/helpers.py::resolve_metric_col_order": 1,
+    # #3096: Adapter helpers.py::email_col_order loest resolve_metric_col_order ab.
+    "src/output/renderers/email/helpers.py::email_col_order": 1,
     # A5 — Stunden-Zeile-Spalte
     "src/output/renderers/email/helpers.py::dp_to_row": 1,
     # A6 — Nacht-Block-Spalte

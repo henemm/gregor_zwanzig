@@ -343,6 +343,8 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     (_R + "channel_layout.py", "VISIBILITY_GATE_IDS", "element"),
     (_R + "compare_hourly_metric_ids.py", "FRONTEND_TO_HOURLY_METRIC_ID", "wert"),
     (_R + "compare_hourly_metric_ids.py", "HOURLY_EXCLUDED_METRIC_IDS", "element"),
+    # Issue #3096: einzige Quelle der Stundenverlauf-Vorgabe; der Renderer
+    # (compare_html) fuehrt keine eigene mehr und importiert sie nicht.
     (_R + "compare_hourly_metric_ids.py", "HOURLY_DEFAULT_METRIC_IDS", "element"),
     (_R + "compare_metric_ids.py", "RENDERER_TO_TRIP_METRIC_ID", "wert"),
     # Issue #2049: die vier Wolken-Kennungen, fuer die

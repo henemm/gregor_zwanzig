@@ -233,8 +233,10 @@ def render_comparison_text(
             bleiben davon unabhaengig immer sichtbar.
         hourly_metrics: Issue #1366 F003 (Staging-Fund, AC-4): Spalten-Filter
             fuer die Stundenzeile je Ort, exakt dieselbe Semantik wie im
-            HTML-Pfad (``_visible_hour_metrics``) -- ``None`` = alle 9
-            Spalten, sonst nur die gewaehlten, in der gewaehlten Reihenfolge.
+            HTML-Pfad (``_visible_hour_metrics``) -- nur die gewaehlten, in der
+            gewaehlten Reihenfolge. Ohne Angabe (``None``, nur direkte Aufrufe)
+            gilt wie im HTML-Pfad die Vorgabe aus ``resolve_hourly_metrics(None)``
+            (einzige Quelle ``compare_hourly_metric_ids``, #3096).
         hourly_enabled: Issue #1366 F003: ``False`` laesst den gesamten
             Stundenverlauf-Abschnitt (Ueberschrift + Tabellenzeilen) je Ort
             entfallen -- der 3-Tage-Ausblick haengt NICHT an dieser
@@ -257,6 +259,10 @@ def render_comparison_text(
         Klartext-String fuer die E-Mail.
     """
     _ = profile  # akzeptiert fuer API-Konsistenz, aktuell ohne Wirkung
+    if hourly_metrics is None:
+        from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
+
+        hourly_metrics = resolve_hourly_metrics(None)
     # Issue #2792 S1c-4b: Einstieg loest die Ampel des Presets auf (fuer die
     # Ausblick-Zeilen).
     ampel = resolve_ampel(preset)
@@ -363,9 +369,9 @@ def render_comparison_text(
     # "AUSBLICK"-Sektion am Textende). Fail-soft je Ort -- fehlt Stunden-
     # oder Ausblickdaten, entfaellt nur der jeweils fehlende Teil.
     # Issue #1366 F003 (Staging-Fund, AC-4): dieselbe Spaltenauflösung wie im
-    # HTML-Pfad -- ``hourly_metrics=None`` (Altbestand) liefert alle 9
-    # Spalten in Katalog-Reihenfolge, eine gesetzte Auswahl nur die
-    # gewaehlten, in der gewaehlten Reihenfolge (Issue #1335/#1359).
+    # HTML-Pfad (derselbe ``_visible_hour_metrics``, #3096: immer eine konkrete
+    # Liste) -- nur die gewaehlten, in der gewaehlten Reihenfolge (Issue
+    # #1335/#1359).
     visible_hour_metrics = _visible_hour_metrics(hourly_metrics, _hour_zeilen())
     merge_wind_dir = _should_merge_wind_dir(hourly_metrics)
     section_lines: list[str] = []

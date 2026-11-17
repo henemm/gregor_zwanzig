@@ -174,9 +174,14 @@ def test_hourly_metrics_resolved_from_display_config():
     assert options.hourly_metrics == ["wind10m_kmh"]
 
 
-def test_no_hourly_metrics_means_no_filter():
+def test_no_hourly_metrics_means_default_list():
+    """#3096 (ADR-0121 Nachtrag 3a): nie eingestellt = die konkrete Vorgabe
+    (neun Spalten, Soll von Hand), nicht mehr ``None``."""
     options = resolve_compare_render_options({"id": "p12"})
-    assert options.hourly_metrics is None
+    assert options.hourly_metrics == [
+        "t2m_c", "wind_chill_c", "wind10m_kmh", "gust_kmh", "precip_1h_mm",
+        "uv_index", "thunder_level", "pop_pct", "visibility_m",
+    ]
 
 
 # ---------------------------------------------------------------------------

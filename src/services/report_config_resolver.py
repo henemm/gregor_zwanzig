@@ -259,8 +259,9 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
 
     Reproduziert 1:1 das Bestandsverhalten aus
     `scheduler_dispatch_service.py:252-276` (Issue #1104/#1106/#1107):
-    - `enabled_metrics`/`hourly_metrics`: ueber `resolve_enabled_metrics()`/
-      `resolve_hourly_metrics()` aus `display_config`.
+    - `enabled_metrics`: ueber `resolve_enabled_metrics_report()` aus
+      `display_config`; `hourly_metrics` aus `resolve_channel_lists(...).hourly`
+      (Issue #3096, nie None).
     - `hourly_enabled`: TOP-LEVEL Preset-Feld (nicht im display_config-Blob),
       Default True.
     - `corridors`: Issue #1231, Slice 7 — TOP-LEVEL Preset-Feld `corridors`
@@ -275,12 +276,11 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     Reine Funktion — kein I/O, keine Mutation von `preset`.
     """
     from app.loader import _corridor_from_dict
-    from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
+    from app.metric_catalog import get_metric
     from output.renderers.compare_outlook_metric_ids import (
         resolve_compare_outlook_formats, resolve_compare_outlook_metrics,
     )
     from output.renderers.compare_metric_ids import resolve_enabled_metrics_report
-    from output.renderers.compare_metric_ids import resolve_enabled_metrics
     from services.channel_list_resolver import resolve_channel_lists
     from output.renderers.email.compare_html import has_visible_hour_columns
 
@@ -303,11 +303,13 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
         except (KeyError, TypeError, ValueError, AttributeError):
             logger.warning("Compare-Preset %s: ungueltiger Korridor %r uebersprungen", preset_id, raw)
 
+    # Issue #3057 (ADR-0121): Auswahl, Folge und Format je Kanal sowie
+    # Stundenverlauf kommen aus dem Kanal-Listen-Resolver (EINE Aufloesung).
+    view = resolve_channel_lists(display_config, "compare")
     # Issue #3047 O5 (AC-10): der Stundenverlauf nimmt nur aus der Grundauswahl.
-    resolved_hourly_metrics = resolve_hourly_metrics(
-        display_config.get("hourly_metrics"),
-        resolve_enabled_metrics(display_config.get("active_metrics")),
-    )
+    # Issue #3096: aus `view.hourly` (fuer Orte nie None, die Vorgabe loest
+    # `compare_hourly_metric_ids` genau einmal auf); `dp_field` nur hier.
+    resolved_hourly_metrics = [get_metric(z.metric_id).dp_field for z in view.hourly]
     hourly_enabled = preset.get("hourly_enabled", True)
     if hourly_enabled and not has_visible_hour_columns(resolved_hourly_metrics):
         # Issue #1366/#1361 Befund 3: eine Stundenauswahl ohne jede sichtbare
@@ -335,9 +337,8 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
     # Issue #3039: Kaskade je Kanal -- `channel_layouts[kanal]` vor
     # `channel_active_metrics[kanal]` vor Grundauswahl (ADR-0119).
     # Issue #3057 (ADR-0121): Auswahl, Folge und Format kommen aus dem
-    # Kanal-Listen-Resolver. ADR-0049: nur Metrik-/Layout-Kanaele --
+    # Kanal-Listen-Resolver (`view` oben). ADR-0049: nur Metrik-/Layout-Kanaele --
     # Premium-SMS sendet den SMS-Text.
-    view = resolve_channel_lists(display_config, "compare")
     channel_rows = {
         ch: (
             [(z.metric_id, z.format == "simplified") for z in getattr(view, ch) if z.enabled]

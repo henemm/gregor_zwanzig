@@ -566,11 +566,18 @@ def render_compare_email_preview(body: Any) -> str:
     # Auswahl gar nicht (Muster #1435 E3b: `build_token_line()` ohne
     # `profile=`). `getattr` statt `body.hourly_metrics`, damit auch aeltere
     # Aufrufer ohne das Feld weiterhin durchlaufen.
+    # Issue #3096: ohne Auswahl wird die Vorgabe VOR dem Rendern aufgeloest
+    # (einzige Quelle `compare_hourly_metric_ids`); der Renderer bekommt nie None.
+    from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
+
+    hourly_metrics = getattr(body, "hourly_metrics", None)
+    if hourly_metrics is None:
+        hourly_metrics = resolve_hourly_metrics(None)
     return render_compare_html(
         result,
         profile=profile_enum,
         hourly_enabled=body.hourly_enabled,
-        hourly_metrics=getattr(body, "hourly_metrics", None),
+        hourly_metrics=hourly_metrics,
         # Issue #2792 S1c-4b: die Vorschau kennt nur das Profil des
         # Validators; daraus loest der Renderer die Vorlage auf.
         preset={"profil": body.profile},

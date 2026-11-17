@@ -48,7 +48,7 @@ from output.renderers.email.helpers import (
     build_segment_label, build_units_legend,
     derive_horizon, fmt_val, format_change_line, format_km_range,
     format_trend_tokens, pill_html,
-    render_origin_footer_html, resolve_metric_col_order,
+    render_origin_footer_html, trip_email_col_order,
     shorten_stage_name, visible_cols,
 )
 # Issue #1306: Profil-Signatur (Akzentfarbe/Icon/Eyebrow) fuer den Header —
@@ -818,6 +818,7 @@ def render_html(
     outlook_state: Optional["OutlookState"] = None,
     outlook_horizon_days: Optional[int] = None,
     outlook_metrics: Optional[list[dict]] = None,
+    email_rows: Optional[tuple] = None,
     compact_summary: Optional[str],
     tz: ZoneInfo,
     friendly_keys: set[str],
@@ -869,7 +870,8 @@ def render_html(
     # AC-3 (#911): Spalten-Reihenfolge aus konfiguriertem dc.metrics (links→rechts).
     # Zeit/Temp bleiben implizit vorn; col_order bestimmt nur Metrik-Spalten.
     # Fix #1575 Scheibe 2: geteilter Helper mit plain.py (helpers.py).
-    _col_order = resolve_metric_col_order(dc)
+    # Issue #3096: Spaltenfolge aus den Resolver-E-Mail-Zeilen (Adapter).
+    _col_order = trip_email_col_order(dc, report_type, email_rows)
     sub_header = stage_name or ""
 
     # Issue #884 AC-1: zweispaltiger Header mit G_HEADER_BG + Stats-Grid

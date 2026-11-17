@@ -99,11 +99,15 @@ def _orte(roh: dict) -> list[str]:
 
 
 def _standard_stunden() -> tuple[str, ...]:
-    """Backend-Standardliste "nie eingestellt" (Register-Konstante). Ob sie
-    der Editor-Vorgabe gleicht, prueft Paket D (AC-13, ``editor_standard.json``)."""
-    from output.renderers.compare_hourly_metric_ids import HOURLY_DEFAULT_METRIC_IDS
-
-    return HOURLY_DEFAULT_METRIC_IDS
+    """Standardliste "nie eingestellt" von Hand (Soll, kein Spiegel der
+    Register-Konstante; #3096: die Vorgabe loest allein
+    ``compare_hourly_metric_ids`` auf, der Renderer fuehrt keine eigene).
+    Ob sie der Editor-Vorgabe gleicht, prueft Paket D (AC-13,
+    ``editor_standard.json``)."""
+    return (
+        "temperature", "wind_chill", "wind", "gust", "precipitation",
+        "uv_index", "thunder", "rain_probability", "visibility",
+    )
 
 
 # ---------------------------------------------------------------------------
