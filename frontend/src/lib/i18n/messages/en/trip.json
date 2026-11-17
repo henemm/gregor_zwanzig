@@ -31,6 +31,8 @@
 	"trip.hub.platzhalter_uebersicht": "Content follows with issue #154 (hero) + #156 (elevation profile) + #157 (stage list)",
 	"trip.hub.platzhalter_etappen": "Content follows with epic #137 (waypoint editor)",
 	"trip.etappen": "Stages",
+	"trip.hub.kopf.etappen_titel": "Stages & waypoints",
+	"trip.hub.kopf.etappen_erklaer": "Your pace sets the walking times and thus which hours are assessed for each waypoint.",
 	"trip.uebersicht.reihenfolge_profil": "Order & profile",
 	"trip.uebersicht.im_editor": "Open in editor →",
 	"trip.uebersicht.metriken_fehler": "Weather metrics could not be loaded.",

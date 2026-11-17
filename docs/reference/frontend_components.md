@@ -673,8 +673,8 @@ dort bereits `WeatherMetricsTab` und `AlarmeTab` (S1, #2426). Details:
 `docs/specs/modules/fix_2277_s2a_wertebereiche_trip_anlegen.md`.
 
 Reiter „Zustellung" (S3b Teilschritt 1b, #2795, 2026-11-13, neu gebaut): `shared/zustellung-tab/ZustellungTab.svelte`
-(ein Code, `context="route"|"vergleich"`) setzt die Organismen in `organisms/zustellung-tab/` zusammen:
-`ZustellungKopf`, `BriefingZeiten` (Viertelstunden-Raster), `LaufzeitKarte`, `KanalTabelle` (E-Mail/Telegram/SMS/Premium-SMS
+(ein Code, `context="route"|"vergleich"`) setzt unter dem Kopf aus dem Baustein `molecules/Bereichskopf` (#3006) die Organismen in `organisms/zustellung-tab/` zusammen:
+`BriefingZeiten` (Viertelstunden-Raster), `LaufzeitKarte`, `KanalTabelle` (E-Mail/Telegram/SMS/Premium-SMS
 mit Briefing-/Alarm-Schalter und Dringlichkeit je Kanal), `KanalStil`, `StilleStunden` (inkl. Mindestabstand) und
 `UebergangBlock` (Altbausteine bis zu den Folge-Teilschritten). Logik: `zustellungModell.ts`, `zustellungSpeicherung.ts`
 (ein Speicherer, Owner `versand`/`alarme`, Profil nur einmal geladen), `kanalStilSpeicherung.ts`. Der Block

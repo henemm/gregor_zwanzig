@@ -35,6 +35,7 @@
 	"bausteine.etappe.eta": "ETA {zeit}",
 	"bausteine.etappe.wegpunkt": "Waypoint {nr}",
 	"bausteine.vergleich.orte_anzahl": "{anzahl} locations",
+	"bausteine.hub_uebersicht.kopf_erklaer": "Unchanged: status, latest briefings, next delivery.",
 	"bausteine.setup.fortschritt": "{erledigt} of {gesamt} steps",
 	"bausteine.setup.weiter_bei": "Continue with:",
 	"bausteine.setup.bereit": "Ready to activate",

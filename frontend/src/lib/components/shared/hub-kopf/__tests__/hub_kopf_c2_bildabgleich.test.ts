@@ -56,7 +56,7 @@
 //        --g-paper, font-size 15 px, font-weight 600 (Name erbt); Zusatz-Element mit „▾“ (heute
 //        <small>) samt `wetter-vorlage-status`: Mono (--g-font-mono), 11 px, color --g-ink-3.
 // AC-27 Karte [data-abschnitt="vorlage"]: align-items center (Desktop und Handy).
-// AC-28 WetterTabInhalt Kopf (Elternelement von `wetter-tab-titel`, heute header.wt-kopf):
+// AC-28 WetterTabInhalt Kopf (Elternelement von `wetter-tab-titel`, seit #3006 der Baustein Bereichskopf):
 //        border-bottom 1px solid --g-rule-soft, padding-bottom 12 px; `wetter-tab-erklaer`:
 //        max-width 68ch, font-size 13 px, color --g-ink-3.
 // ─────────────────────────────────────────────────────────────────────────────────────

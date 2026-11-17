@@ -6,6 +6,7 @@
 // an der Briefing-Zeiten-Karte), #1170/ADR-0097 (keine Compare-Komponente mit Trip-Pendant).
 //
 // Reiter-Baum = shared/zustellung-tab/ZustellungTab.svelte + alle .svelte unter organisms/zustellung-tab/
+// + der Baustein molecules/Bereichskopf.svelte (Kopf, #3006)
 // (+ Modell/Speicherer unter shared/zustellung-tab/ fuer die Profil-Zaehlung).
 //
 // Messweise: AST ueber svelte/compiler (s3a2794Ast.ts), keine Textmuster-Suche im Quelltext.
@@ -38,6 +39,8 @@ const KOMP = join(HIER, '..', '..');
 const ORGANISMEN = join(KOMP, 'organisms', 'zustellung-tab');
 const SHARED_ZT = join(KOMP, 'shared', 'zustellung-tab');
 const REITER = join(SHARED_ZT, 'ZustellungTab.svelte');
+// #3006: der Kopf kommt aus dem Design-System-Baustein molecules/Bereichskopf (ersetzt ZustellungKopf).
+const BAUSTEINE = [join(KOMP, 'molecules', 'Bereichskopf.svelte')];
 const PANEL = join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte');
 const TRIP_HUB = join(KOMP, 'trip-detail', 'TripTabs.svelte');
 const VERGLEICH_HUB = join(KOMP, 'compare', 'CompareTabs.svelte');
@@ -74,7 +77,7 @@ function baum(): string[] {
 	assert.ok(existsSync(ORGANISMEN), 'TDD RED: Ordner organisms/zustellung-tab/ fehlt (Organismen des Reiters)');
 	const org = organismDateien();
 	assert.ok(org.length > 0, 'TDD RED: keine .svelte-Datei unter organisms/zustellung-tab/');
-	return [REITER, ...org];
+	return [REITER, ...org, ...BAUSTEINE];
 }
 
 /** Alle Knoten eines Teilbaums, die `pred` erfuellen. */
@@ -106,7 +109,7 @@ function importe(datei: string): Array<{ quelle: string; namen: string[] }> {
 
 /** Datei einer Organismus-/Reiter-Komponente nach Name (nur Reiter-Baum). */
 function dateiZuKomponente(name: string): string | null {
-	for (const d of [REITER, ...organismDateien()]) if (basename(d, '.svelte') === name) return d;
+	for (const d of [REITER, ...organismDateien(), ...BAUSTEINE]) if (basename(d, '.svelte') === name) return d;
 	return null;
 }
 

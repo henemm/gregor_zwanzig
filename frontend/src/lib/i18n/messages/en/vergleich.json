@@ -43,6 +43,8 @@
 	"vergleich.stundenverlauf.titel": "Hourly view",
 	"vergleich.stundenverlauf.nicht_in_grundauswahl": "locked: not in the basic selection above",
 	"vergleich.orte.weitere": "Other",
+	"vergleich.hub.kopf.orte_erklaer": "One location makes a location briefing. From two locations on, the comparison table is added, without ranking.",
+	"vergleich.hub.kopf.ort_hinzufuegen": "+ Add location",
 	"vergleich.orte.min_erforderlich": "min. 2 required",
 	"vergleich.orte.passt": "good",
 	"vergleich.orte.viel": "many — 3–5 recommended",

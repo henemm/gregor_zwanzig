@@ -234,7 +234,8 @@ describe('AC-3: Orte-Reiter, Orte-Schritt, Neuer Ort englisch; Nutzlast nur Ort-
 	test('Orte-Reiter: Kopf, Hinweis, Leerfall, Hinzufuegen-Panel englisch; Reihenfolge der Orte gleich', () => {
 		const { de, en: e } = deDannEn(() => P.hubOrteRendern());
 		const s = sichtbar(e);
-		for (const t of ['Compared locations', 'Order = columns in the briefing · drag to sort', 'drag to sort', 'No locations selected yet.', 'Add location', 'Other · 1', 'No other saved locations available.']) hat(s, t);
+		// #3006: Kopf ist der Bereichskopf „Locations“ mit Erklärsatz und „+ Add location“ (statt „Compared locations“).
+		for (const t of ['Locations', 'One location makes a location briefing.', '+ Add location', 'Order = columns in the briefing · drag to sort', 'drag to sort', 'No locations selected yet.', 'Other · 1', 'No other saved locations available.']) hat(s, t);
 		for (const t of ['title="Remove"', 'aria-label="Compared locations, order"']) hat(e, t);
 		const reihe = (h: string) => [...h.matchAll(/data-loc-id="([^"]+)"/g)].map((m) => m[1]);
 		assert.deepEqual(reihe(e), reihe(de));
