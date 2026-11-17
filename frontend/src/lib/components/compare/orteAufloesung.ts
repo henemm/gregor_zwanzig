@@ -17,15 +17,24 @@ export function ortsVerzeichnis<L extends OrtMitId>(locations: readonly L[], nac
 	return map;
 }
 
-/** `location_ids` -> Eintraege in der gespeicherten Folge (= Folge der Ort-Bloecke der Mail). */
+/** `location_ids` -> aufloesbare Orte in der gespeicherten Folge (= Folge der Ort-Bloecke der Mail).
+ *  #3047 p10: ein geloeschter/unbekannter Ort faellt heraus wie im Versand (`order_locations_by_ids`),
+ *  der Rang zaehlt nur die aufloesbaren Orte (= Position des Blocks in der Mail); keiner uebrig =
+ *  leere Liste (Reiter zeigt „keine Orte", die Mail wird mit `orte_geloescht` nicht versendet). */
 export function orteAufloesen<L extends OrtMitId>(ids: readonly string[], verzeichnis: ReadonlyMap<string, L>): OrtsEintrag<L>[] {
-	return ids.map((id, idx) => ({
-		rank: idx + 1,
-		loc: verzeichnis.get(id)
-	}));
+	const orte: OrtsEintrag<L>[] = [];
+	for (const id of ids) {
+		const loc = verzeichnis.get(id);
+		if (loc) orte.push({ rank: orte.length + 1, loc });
+	}
+	return orte;
 }
 
-/** Nummer (Rang-Abzeichen, Bedienhilfe-Text) der Zeile an Position `i` der Reiterliste `ids`. */
-export function reiterNummer<L extends OrtMitId>(_ids: readonly string[], i: number, _verzeichnis: ReadonlyMap<string, L>): number {
-	return i + 1;
+/** Nummer (Rang-Abzeichen, Bedienhilfe-Text) der Zeile an Position `i` der Reiterliste `ids`:
+ *  zaehlt nur aufloesbare Orte bis einschliesslich `i` (ohne geloeschte Orte = `i + 1`). Die
+ *  Kennungen geloeschter Orte bleiben in der Liste und damit beim Speichern erhalten. */
+export function reiterNummer<L extends OrtMitId>(ids: readonly string[], i: number, verzeichnis: ReadonlyMap<string, L>): number {
+	let nummer = 0;
+	for (let k = 0; k <= i && k < ids.length; k++) if (verzeichnis.has(ids[k])) nummer++;
+	return nummer;
 }
