@@ -166,3 +166,365 @@ def test_ac3_amtliche_warnung_faellt_ohne_segment_km_weiterhin_auf_segmentsprach
         f"Ohne Eintrag in segment_km muss die Segment-Sprache stehen bleiben: "
         f"{notices[0].scope_label!r}"
     )
+
+
+# ===========================================================================
+# Issue #2984 — Regionszeile ueber denselben Ortsformatierer wie der Kopf
+# SPEC: docs/specs/modules/feat_2984_regionszeile_ortsformatierer.md
+#
+# RED-VERTRAG: `render_official_alert_notice_plain()` kennt heute KEIN
+# `segment_km`-Schluesselwort (TypeError), die Modulfunktion
+# `_official_alert_location` existiert nicht (ImportError), und
+# `_dispatch_alert_message` reicht die gemessene Spanne nicht an den
+# Klartext-/Telegram-Text weiter (Regionszeile sagt 'Segment 3', der
+# HTML-Kopf derselben Nachricht 'km 12-20').
+# Echte Renderer, kein Mock()/patch()/MagicMock.
+# ===========================================================================
+import pytest
+
+_MEASURED = {"3": (12.31, 20.0)}
+
+
+def _warnung(region: str | None = "Kaernten"):
+    from services.official_alerts.models import OfficialAlert
+
+    return OfficialAlert(
+        source="geosphere_warn", hazard="thunderstorm", level=2, label="Gewitter",
+        valid_from=WARN_FROM, valid_to=WARN_TO, region_label=region,
+    )
+
+
+def _region_line(segment_ids, segment_km, lang) -> str:
+    """Die Regionszeile des Klartext-Blocks -- ueber den echten Plain-Renderer,
+    mit dem (neuen, additiven) `segment_km`-Parameter."""
+    from i18n import t
+    from output.renderers.alert.official_alerts import render_official_alert_notice_plain
+
+    try:
+        lines = render_official_alert_notice_plain(
+            [(_warnung(), list(segment_ids))], tz=TRIP_TZ, lang=lang,
+            segment_km=segment_km,
+        )
+    except TypeError as exc:
+        raise AssertionError(
+            "render_official_alert_notice_plain() kennt keinen additiven "
+            f"'segment_km'-Parameter (#2984, Spec Punkt 3). Fehler: {exc}"
+        ) from exc
+    prefix = f"{t('warnung.zeile.region', lang)}: "
+    region_lines = [ln for ln in lines if ln.startswith(prefix)]
+    assert len(region_lines) == 1, f"Erwartete genau eine Regionszeile: {lines!r}"
+    return region_lines[0]
+
+
+def _region_suffix(region_line: str) -> str | None:
+    """Ortsangabe nach 'Region: Kaernten — ' oder None, wenn kein Zusatz."""
+    _, sep, rest = region_line.partition(" — ")
+    return rest if sep else None
+
+
+def _scope_label(segment_ids, segment_km, lang) -> str:
+    from output.renderers.alert.official_alerts import build_official_alert_notices
+
+    notices = build_official_alert_notices(
+        _trip(), [(_warnung(), list(segment_ids))], segment_km=segment_km, lang=lang,
+    )
+    assert len(notices) == 1, notices
+    return notices[0].scope_label
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_2984_ac1_ac6_regionszeile_zeigt_gemessene_spanne_wie_karten_kopf(lang):
+    """AC-1/AC-6: Given Segment 3 mit gemessener Spanne 12,31-20,0 km / When
+    Klartext-Block und Karten-Kopf mit demselben `segment_km` rendern / Then
+    zeigt die Regionszeile exakt `scope_label` = 'km 12-20' (in DE und EN)."""
+    line = _region_line(["3"], _MEASURED, lang)
+    head = _scope_label(["3"], _MEASURED, lang)
+
+    assert head == "km 12-20", f"Karten-Kopf ({lang}): {head!r}"
+    assert _region_suffix(line) == head, (
+        f"Regionszeile {line!r} widerspricht dem Karten-Kopf {head!r} ({lang})"
+    )
+    assert "Segment" not in line, f"Segmentnummer trotz gemessener Spanne: {line!r}"
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+@pytest.mark.parametrize("segment_ids", [["3"], ["3", "4", "5"], ["2", "5"], ["4", "Ziel"]])
+def test_2984_ac3_ohne_spanne_byte_identisch_zur_segmentsprache(lang, segment_ids):
+    """AC-3 (Regressionswaechter): ohne gemessene Spanne ist die Regionszeile
+    byte-identisch zur bisherigen Ausgabe 'Region: <R> — <Segment-Bezug>'."""
+    from i18n import t
+    from output.renderers.alert.segments import format_segment_reference
+
+    expected = (
+        f"{t('warnung.zeile.region', lang)}: Kaernten — "
+        f"{format_segment_reference(segment_ids, lang=lang)}"
+    )
+    assert _region_line(segment_ids, None, lang) == expected
+    assert _region_line(segment_ids, {}, lang) == expected
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_2984_ac4_nicht_numerische_kennung_bleibt_roh_ohne_km_rueckfall(lang):
+    """AC-4: Kennung 'Etappe-A' ohne km-Werte wird roh gezeigt (#1965):
+    roh = Kennung bleibt erhalten, kein km-Rueckfall, Segment-Sprache wie
+    bisher."""
+    from output.renderers.alert.segments import format_segment_reference
+
+    line = _region_line(["Etappe-A"], None, lang)
+    assert _region_suffix(line) == format_segment_reference(["Etappe-A"], lang=lang), line
+    assert "Etappe-A" in line, line
+    assert "km" not in line, f"km-Rueckfall ohne km-Werte: {line!r}"
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_2984_ac5_leere_segmentliste_ohne_zusatz_notice_unbekannt(lang):
+    """AC-5: leere Segmentliste -> Regionszeile endet nach dem Regionsnamen;
+    die Notice zeigt weiterhin 'unbekannt' (bzw. das englische Gegenstueck)."""
+    from i18n import t
+    from output.renderers.alert.official_alerts import build_official_alert_notices
+
+    line = _region_line([], _MEASURED, lang)
+    assert line == f"{t('warnung.zeile.region', lang)}: Kaernten", line
+
+    notices = build_official_alert_notices(
+        None, [(_warnung(), [])], segment_km=_MEASURED, lang=lang,
+    )
+    assert notices[0].scope_label == t("warnung.zeit.unbekannt", lang)
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+@pytest.mark.parametrize(
+    "segment_ids, segment_km",
+    [
+        (["3"], _MEASURED),                                      # gemessen
+        (["3", "4"], {"3": (12.31, 20.0), "4": (20.0, 27.6)}),   # gemessen, Buendel
+        (["3", "4"], {"3": (12.31, 20.0)}),                      # halb gemessen -> Segment
+        (["3"], None),                                           # Fallback
+        (["2", "5", "Ziel"], {}),                                # Fallback, Ziel
+        (["Etappe-A"], None),                                    # roh
+    ],
+)
+def test_2984_ac7_eine_modulfunktion_fuer_regionszeile_und_kopf(lang, segment_ids, segment_km):
+    """AC-7: Regionszeile und `scope_label` loesen ihre Ortsangabe ueber die
+    EINE Modulfunktion `_official_alert_location` auf; ueber variierte
+    Eingaben (gemessen, Buendel, halb gemessen, Fallback, Ziel, roh) sind
+    Regionszeile, Kopf und Baustein identisch."""
+    try:
+        from output.renderers.alert.official_alerts import _official_alert_location
+    except ImportError as exc:
+        raise AssertionError(
+            "Modulfunktion `_official_alert_location` fehlt (#2984, Spec Punkt 1)"
+        ) from exc
+
+    ort = _official_alert_location(segment_ids, segment_km, lang)
+    line = _region_line(segment_ids, segment_km, lang)
+    head = _scope_label(segment_ids, segment_km, lang)
+
+    assert ort, f"Baustein liefert leer fuer {segment_ids!r}"
+    assert _region_suffix(line) == ort, f"Regionszeile {line!r} != Baustein {ort!r}"
+    assert head == ort, f"Karten-Kopf {head!r} != Baustein {ort!r}"
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_2984_ac7_baustein_liefert_leer_bei_leerer_liste(lang):
+    """AC-7/Spec Punkt 1: leere Segmentliste -> '' (den Rueckfall setzt der
+    Aufrufer)."""
+    try:
+        from output.renderers.alert.official_alerts import _official_alert_location
+    except ImportError as exc:
+        raise AssertionError("Modulfunktion `_official_alert_location` fehlt") from exc
+    assert _official_alert_location([], _MEASURED, lang) == ""
+
+
+class _Capture2984Email:
+    """Test-Double (kein Mocking-Framework): ersetzt den produktiven
+    Transport, damit kein SMTP-Netz beruehrt wird."""
+
+    sent: list = []
+
+    def __init__(self, settings):
+        self.settings = settings
+
+    def send(self, subject, body, html=True, plain_text_body=None, to=None,
+             mail_type=None, mail_format=None, compare_hourly_enabled=None, lang="de"):
+        _Capture2984Email.sent.append({"subject": subject, "html": body,
+                                       "plain": plain_text_body})
+
+
+class _Capture2984Telegram:
+    """Test-Double (kein Mocking-Framework): sammelt den Telegram-Text ohne
+    Bot-API-Call."""
+
+    sent: list = []
+
+    def __init__(self, settings, recipient=None):
+        self.settings = settings
+
+    def send(self, subject, body, parse_mode=None, suppress_subject_line=False,
+             reply_markup=None):
+        _Capture2984Telegram.sent.append({"subject": subject, "body": body})
+        return 1
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_2984_ac2_dispatch_klartext_und_telegram_zeigen_km_wie_html_kopf(monkeypatch, lang):
+    """AC-2 (Durchstich): Given ein Trip-Alarm (gemessenes Ereignis auf
+    Segment 3, km 12,31-20,0) mit eingebetteter amtlicher Warnung auf
+    Segment 3 / When `_dispatch_alert_message` E-Mail und Telegram erzeugt /
+    Then tragen Klartext-Teil UND Telegram-Text in der Regionszeile
+    'km 12-20' wie der HTML-Kopf derselben Nachricht, nicht 'Segment 3'."""
+    import services.notification_service as ns
+    from app.config import Settings
+    from i18n import t
+    from output.renderers.alert.model import AlertEvent, AlertMessage
+    from tests.helpers.telegram_empfaenger import mit_profil_chat
+
+    _Capture2984Email.sent.clear()
+    _Capture2984Telegram.sent.clear()
+    monkeypatch.setattr(ns, "EmailOutput", _Capture2984Email)
+    monkeypatch.setattr(ns, "TelegramOutput", _Capture2984Telegram)
+
+    settings = Settings(
+        smtp_host="smtp.test.invalid", smtp_user="t@test.invalid",
+        smtp_pass="x", mail_to="to@test.invalid",
+        telegram_bot_token="test-token", telegram_chat_id="12345",
+    )
+    svc = ns.NotificationService(
+        settings, mit_profil_chat("tdd-2984", settings), lang=lang,
+    )
+
+    ev = AlertEvent(
+        metric_id="wind", value_from=20.0, value_to=48.0, threshold=15.0,
+        cmp="über", occurred_at="14:00", km_from=12.31, km_to=20.0,
+        segment_id="3", km_measured=True,
+    )
+    alert_msg = AlertMessage(
+        trip_short=TRIP_NAME, stand_at="09:30", events=(ev,), ampel=resolve_ampel(None),
+    )
+    captured: dict = {}
+
+    def _mail_sink(*, subject, body):
+        captured["plain"] = body
+
+    result = svc._dispatch_alert_message(
+        alert_msg=alert_msg, effective_channels={"email", "telegram"},
+        official_notices=[(_warnung(), ["3"])], alert_tz=TRIP_TZ,
+        mail_sink=_mail_sink,
+    )
+    assert result.sent
+
+    region_ok = f"{t('warnung.zeile.region', lang)}: Kaernten — km 12-20"
+    region_alt = f"{t('warnung.zeile.region', lang)}: Kaernten — Segment 3"
+    plain = captured.get("plain", "")
+    assert plain, "Klartext-Teil wurde nicht erzeugt"
+    assert len(_Capture2984Telegram.sent) == 1, "Telegram nicht (genau einmal) gesendet"
+    telegram = _Capture2984Telegram.sent[0]["body"]
+
+    for kanal, text in (("Klartext", plain), ("Telegram", telegram)):
+        assert region_alt not in text, (
+            f"{kanal}: Regionszeile zeigt noch die Segmentnummer statt der "
+            f"gemessenen Spanne ({lang}):\n{text}"
+        )
+        assert region_ok in text, f"{kanal}: Regionszeile ohne 'km 12-20' ({lang}):\n{text}"
+
+
+# ---------------------------------------------------------------------------
+# AC-9 (Nachzug Adversary-Befund F001): der Orts-Chip der eingebetteten
+# HTML-Warnkarte (`wb-route` der `wb-item`) zeigt dieselbe Ortsangabe wie
+# `scope_label` -- bei gemessener Spanne 'km 12-20', sonst wie bisher.
+# ---------------------------------------------------------------------------
+import re
+
+_WB_ROUTE_CHIPS = re.compile(
+    r'<div class="wb-item"[^>]*>.*?<span class="wb-route">(?P<chips>.*?)</span></span>',
+    re.S,
+)
+_SEG_CHIP = re.compile(r'<span class="seg"[^>]*>(?P<text>.*?)</span>', re.S)
+
+
+def _dispatch_html_2984(monkeypatch, lang, *, km_measured: bool) -> str:
+    """Durchstich ueber `_dispatch_alert_message` OHNE `mail_sink`: der HTML-
+    Teil kommt ueber das Transport-Double `_Capture2984Email`."""
+    import services.notification_service as ns
+    from app.config import Settings
+    from output.renderers.alert.model import AlertEvent, AlertMessage
+    from tests.helpers.telegram_empfaenger import mit_profil_chat
+
+    _Capture2984Email.sent.clear()
+    _Capture2984Telegram.sent.clear()
+    monkeypatch.setattr(ns, "EmailOutput", _Capture2984Email)
+    monkeypatch.setattr(ns, "TelegramOutput", _Capture2984Telegram)
+
+    settings = Settings(
+        smtp_host="smtp.test.invalid", smtp_user="t@test.invalid",
+        smtp_pass="x", mail_to="to@test.invalid",
+    )
+    svc = ns.NotificationService(
+        settings, mit_profil_chat("tdd-2984", settings), lang=lang,
+    )
+    ev = AlertEvent(
+        metric_id="wind", value_from=20.0, value_to=48.0, threshold=15.0,
+        cmp="über", occurred_at="14:00", km_from=12.31, km_to=20.0,
+        segment_id="3", km_measured=km_measured,
+    )
+    alert_msg = AlertMessage(
+        trip_short=TRIP_NAME, stand_at="09:30", events=(ev,), ampel=resolve_ampel(None),
+    )
+    result = svc._dispatch_alert_message(
+        alert_msg=alert_msg, effective_channels={"email"},
+        official_notices=[(_warnung(), ["3"])], alert_tz=TRIP_TZ,
+    )
+    assert result.sent
+    assert len(_Capture2984Email.sent) == 1, "E-Mail nicht (genau einmal) gesendet"
+    return _Capture2984Email.sent[0]["html"]
+
+
+def _warnkarten_orts_chips(html: str) -> list[str]:
+    """Texte der `seg`-Chips im `wb-route` der (einzigen) Warnkarte."""
+    blocks = _WB_ROUTE_CHIPS.findall(html)
+    assert len(blocks) == 1, f"Erwartete genau eine Warnkarte mit wb-route: {blocks!r}"
+    return [m.group("text") for m in _SEG_CHIP.finditer(blocks[0] + "</span>")]
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_2984_ac9_html_orts_chip_zeigt_km_wie_scope_label(monkeypatch, lang):
+    """AC-9: Given Trip-Alarm mit eingebetteter amtlicher Warnung fuer
+    Segment 3 mit gemessener Spanne 12,31-20,0 km / When
+    `_dispatch_alert_message` die HTML-Mail erzeugt / Then zeigt der
+    Orts-Chip der Warnkarte 'km 12-20', nicht 'Segment 3'."""
+    html = _dispatch_html_2984(monkeypatch, lang, km_measured=True)
+    chips = _warnkarten_orts_chips(html)
+    assert chips == ["km 12-20"], (
+        f"Orts-Chip der HTML-Warnkarte ({lang}) zeigt {chips!r} statt "
+        f"['km 12-20'] (wie scope_label und Regionszeile)"
+    )
+    assert not any("Segment 3" in c for c in chips), chips
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_2984_ac9_html_orts_chip_ohne_spanne_bleibt_segmentsprache(monkeypatch, lang):
+    """AC-9 (Fallback): ohne gemessene Spanne bleibt der Chip byte-identisch
+    zur bisherigen Segment-Sprache."""
+    from output.renderers.alert.segments import format_segment_reference
+
+    html = _dispatch_html_2984(monkeypatch, lang, km_measured=False)
+    chips = _warnkarten_orts_chips(html)
+    assert chips == [format_segment_reference(["3"], lang=lang)], chips
+    assert not any("km" in c for c in chips), chips
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_2984_ac9_builder_chip_gleich_scope_label_bei_gemessener_spanne(lang):
+    """AC-9 (Builder): `build_official_alert_notices` mit gemessenem
+    `segment_km` -> einziger Chip == `scope_label` ('km 12-20')."""
+    from output.renderers.alert.official_alerts import build_official_alert_notices
+
+    notices = build_official_alert_notices(
+        _trip(), [(_warnung(), ["3"])], segment_km=_MEASURED, lang=lang,
+    )
+    assert len(notices) == 1, notices
+    notice = notices[0]
+    assert notice.scope_label == "km 12-20", notice.scope_label
+    assert notice.affected_chips == [notice.scope_label], (
+        f"Chips {notice.affected_chips!r} != [scope_label {notice.scope_label!r}]"
+    )
