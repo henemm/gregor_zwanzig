@@ -1,0 +1,1994 @@
+{
+ "bereich": "validatoren",
+ "zeilen": [
+  {
+   "id": "validator.trip.email_liste.auswahl",
+   "kontext": "trip",
+   "einstellung": "E-Mail-Liste: Auswahl (Spalten Stundentabelle)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "display_config.channel_layouts.email[] / channel_layouts_per_report.<r>.email[] / metrics[].enabled",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py spalte_zu_viel_html (18 Trip-Konfig.), scratchpad/inventar/validatoren/mutationen.py V03",
+     "befund": "",
+     "notiz": "Spalte zu viel/fehlt mit Namen"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_spalte_fehlt_im_klartext_scheitert; scratchpad/inventar/validatoren/test_sweep.py T01-T20",
+     "befund": "",
+     "notiz": "Klartext-Kopf je Tabelle"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "src/output/renderers/email/__init__.py:112 (#722: compact ohne Stundentabellen)",
+     "befund": "",
+     "notiz": "Kompakt hat keine Stundentabelle (Issue #722)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.email_liste.reihenfolge",
+   "kontext": "trip",
+   "einstellung": "E-Mail-Liste: Reihenfolge",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "channel_layouts.email[].order/bucket, metrics[].order/bucket",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py spalte_vertauscht_html 19/19, T23 (Array ≠ order); scratchpad/inventar/validatoren/mutationen.py V10; eigene_gegenprobe.py V03",
+     "befund": "B-V8",
+     "notiz": "Validator korrekt; V03 überlebt die Repo-Tests"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py spalte_vertauscht_klartext 18/18",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "src/output/renderers/email/__init__.py:112 (#722: compact ohne Stundentabellen)",
+     "befund": "",
+     "notiz": "Kompakt hat keine Stundentabelle (Issue #722)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.email_liste.darstellung",
+   "kontext": "trip",
+   "einstellung": "E-Mail-Liste: Roh/Einfach je Spalte",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "channel_layouts.email[].use_friendly_format / format_mode",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_darstellung_ampel_fehlt_html_scheitert; scratchpad/inventar/validatoren/test_sweep.py T07 positiv",
+     "befund": "",
+     "notiz": "Ampelpunkt/Symbol vs Zahl"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E01_roh_statt_einfach_stunden_klartext",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "src/output/renderers/email/__init__.py:112 (#722: compact ohne Stundentabellen)",
+     "befund": "",
+     "notiz": "Kompakt hat keine Stundentabelle (Issue #722)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.email_liste.windrichtung",
+   "kontext": "trip",
+   "einstellung": "Windrichtung Einfach (verschmolzen mit Wind) / Roh (eigene Spalte)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "metrics[wind_direction].format_mode",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T07/T08 positiv; scratchpad/inventar/validatoren/mutationen.py V05 gefangen",
+     "befund": "",
+     "notiz": "Kompassrichtung je Wind-Zelle"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E03_windrichtung_fehlt_klartext",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "src/output/renderers/email/__init__.py:112 (#722: compact ohne Stundentabellen)",
+     "befund": "",
+     "notiz": "Kompakt hat keine Stundentabelle (Issue #722)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.grundauswahl",
+   "kontext": "trip",
+   "einstellung": "Grundauswahl (Metriken oben) inkl. Totalschnitt und bewusst leer",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "display_config.metrics[] (enabled)",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T14/T15 positiv; tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_kanal_liste_totalschnitt_volle_grundauswahl",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T14/T15",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_ausblick_totalschnitt_volle_grundauswahl[compact]",
+     "befund": "",
+     "notiz": "nur Ausblick"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.metrik_flags_je_bericht",
+   "kontext": "trip",
+   "einstellung": "Metrik nur morgens/abends (morning_enabled/evening_enabled)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "metrics[].morning_enabled / evening_enabled",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E08 (Abendmail positiv), E09 (Morgen trotz Flag aus -> Exit 1)",
+     "befund": "",
+     "notiz": "Validator korrekt; Testlücke = #3083 H1 (V01/V02)"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E09",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "src/output/renderers/email/__init__.py:112 (#722: compact ohne Stundentabellen)",
+     "befund": "",
+     "notiz": "Kompakt hat keine Stundentabelle (Issue #722)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.per_report_liste",
+   "kontext": "trip",
+   "einstellung": "Eigene E-Mail-Liste je Bericht",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "display_config.channel_layouts_per_report.<morning|evening>.email[]",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T16 positiv + spalte_vertauscht/zu_viel",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T16",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "src/output/renderers/email/__init__.py:112 (#722: compact ohne Stundentabellen)",
+     "befund": "",
+     "notiz": "Kompakt hat keine Stundentabelle (Issue #722)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.ausblick.auswahl",
+   "kontext": "trip",
+   "einstellung": "3-Tages-Ausblick: Auswahl (inkl. nie eingestellt, [] = aus, Totalschnitt)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "display_config.outlook_metrics[]",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T13 positiv, scratchpad/inventar/validatoren/test_extra.py E06 (Spalte zu viel)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E06_ausblick_spalte_zu_viel_klartext",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T05/T06 kompakt_ausblick_tausch; tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_ausblick_totalschnitt_volle_grundauswahl[compact]",
+     "befund": "",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.ausblick.reihenfolge",
+   "kontext": "trip",
+   "einstellung": "3-Tages-Ausblick: Reihenfolge",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "display_config.outlook_metrics[] (Folge)",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_fall_a_ausblickfolge_falsch_scheitert; scratchpad/inventar/validatoren/mutationen.py V10",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E05 (mit Sonderzeichen-Etappennamen)",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T05 kompakt_ausblick_tausch",
+     "befund": "",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.ausblick.darstellung",
+   "kontext": "trip",
+   "einstellung": "3-Tages-Ausblick: Roh/Einfach",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "display_config.outlook_metric_formats{}",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E02_einfach_statt_roh_ausblick",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E02",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E04_kompakt_roh_statt_einfach_ausblick",
+     "befund": "",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.ausblick.zeilenzahl",
+   "kontext": "trip",
+   "einstellung": "3-Tages-Ausblick: drei Tageszeilen",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "(fest 3 Tage, Konzept §5.8)",
+   "zellen": {
+    "email_html": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py ausblick_zeile_fehlt: 15/15 Trip-Konfig. Exit 0",
+     "befund": "B-V1",
+     "notiz": "fehlende Tageszeile bleibt unbemerkt (#3083 H3)"
+    },
+    "email_text": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py ausblick_zeile_fehlt",
+     "befund": "B-V1",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py kompakt_ausblick_zeile_fehlt 3/3 Exit 0",
+     "befund": "B-V1",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.ausblick.berichte",
+   "kontext": "trip",
+   "einstellung": "Ausblick erscheint im Morgen-/Abend-Briefing",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "report_config.multi_day_trend_reports[]",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T03 (Morgen ohne Ausblick), T04 (Morgen mit) beide Exit 0",
+     "befund": "",
+     "notiz": "Gegenrichtung (Mutation V19) nicht abgeschlossen"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T03/T04",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "_soll_aus_konfiguration.py:367-368",
+     "befund": "",
+     "notiz": "nur Code-Lesung"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.ausblick.schalter",
+   "kontext": "trip",
+   "einstellung": "Ausblick an/aus (show_outlook)",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "report_config.show_outlook",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T12 ausblick_trotz_aus Exit 1",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T12",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T22 positiv Exit 1 (Produkt zeigt Ausblick trotz aus, B-P2)",
+     "befund": "B-P2",
+     "notiz": "Validator meldet korrekt"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.email_format",
+   "kontext": "trip",
+   "einstellung": "E-Mail-Format Ausführlich/Kompakt",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "report_config.email_format",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "briefing_mail_validator.py:997-998 (X-GZ-Format gegen email_format)",
+     "befund": "",
+     "notiz": "Code-Lesung; Mutation V15 nicht abgeschlossen"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "wie HTML",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T05/T06/T21 positiv (Kompakt-Konfig. besteht)",
+     "befund": "",
+     "notiz": "Gegenrichtung ungeprüft"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.zusatz.etappen_kennzahlen",
+   "kontext": "trip",
+   "einstellung": "Zusatzblock Etappen-Kennzahlen",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "report_config.show_stage_stats",
+   "zellen": {
+    "email_html": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T10 zusatzblock_trotz_aus Exit 0",
+     "befund": "B-V2",
+     "notiz": "Soll 'zusatz' wird nie geprüft (#3083 H2)"
+    },
+    "email_text": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T10",
+     "befund": "B-V2",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T21 zusatzblock_trotz_aus Exit 0 (Produkt zeigt Kennzahlen trotz aus, B-P1)",
+     "befund": "B-V2",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.zusatz.vortag",
+   "kontext": "trip",
+   "einstellung": "Zusatzblock Vortag-Vergleich",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "report_config.show_yesterday_comparison",
+   "zellen": {
+    "email_html": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T10 zusatzblock_trotz_aus Exit 0",
+     "befund": "B-V2",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T10",
+     "befund": "B-V2",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "src/output/renderers/email/compact.py (kein Vortag-Block)",
+     "befund": "",
+     "notiz": "Kompakt hat keinen Vortag-Block"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.zusatz.nacht",
+   "kontext": "trip",
+   "einstellung": "Zusatzblock Nacht-Stundentabelle",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "display_config.show_night_block",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E07_nacht_trotz_aus; scratchpad/inventar/validatoren/mutationen.py V06",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E07",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "src/output/renderers/email/__init__.py:112 (#722: compact ohne Stundentabellen)",
+     "befund": "",
+     "notiz": "Kompakt hat keine Stundentabelle (Issue #722)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.metriken_ueberblick",
+   "kontext": "trip",
+   "einstellung": "Metriken-Überblick folgt der E-Mail-Liste",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "(abgeleitet aus channel_layouts.email)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "briefing_mail_validator.py:773-785",
+     "befund": "",
+     "notiz": "Positivfälle bestehen; Gegenprobe V11 nicht abgeschlossen"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "wie HTML",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "_check_compact_blocks(ueberblick)",
+     "befund": "",
+     "notiz": "Code-Lesung"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.etappennamen",
+   "kontext": "trip",
+   "einstellung": "Etappennamen (Sonderzeichen, überlang) im Ausblick",
+   "gesetzt_in": "Etappen-Reiter",
+   "gespeichert_als": "stages[].name",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T20 positiv",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E05",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kompakt ohne Namensfeld"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.sprache",
+   "kontext": "trip",
+   "einstellung": "Sprache DE/EN",
+   "gesetzt_in": "Konto",
+   "gespeichert_als": "user.json language / X-GZ-Lang",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T02 positiv + 4 Negativfälle",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T02",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T06 positiv, scratchpad/inventar/validatoren/test_extra.py E04",
+     "befund": "",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.altbestand",
+   "kontext": "trip",
+   "einstellung": "Altbestand Fall A / Grundauswahl = Vorgabe",
+   "gesetzt_in": "-",
+   "gespeichert_als": "metrics fehlt / Register-Standardsatz",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T17/T18 positiv + Negativfälle",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py T17/T18",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_trip_fall_a_register_standard_positiv[*compact]",
+     "befund": "",
+     "notiz": ""
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.trip.tagesfenster",
+   "kontext": "trip",
+   "einstellung": "Tagesfenster von–bis",
+   "gesetzt_in": "Wetter → Anpassen (W12)",
+   "gespeichert_als": "display_config.day_window_start_hour/end_hour",
+   "zellen": {
+    "email_html": {
+     "status": "rot",
+     "beleg": "briefing_mail_validator.py: kein Bezug auf day_window (grep)",
+     "befund": "B-V5",
+     "notiz": "Stunden der Tabelle nie gegen das Tagesfenster geprüft"
+    },
+    "email_text": {
+     "status": "rot",
+     "beleg": "wie HTML",
+     "befund": "B-V5",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "src/output/renderers/email/__init__.py:112 (#722: compact ohne Stundentabellen)",
+     "befund": "",
+     "notiz": "Kompakt hat keine Stundentabelle (Issue #722)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.vergleich.auswahl",
+   "kontext": "orte",
+   "einstellung": "Vergleichstabelle: Auswahl",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "display_config.channel_layouts.email[] / channel_active_metrics.email[]",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py zeile_zu_viel_html 12/12",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py zeile_fehlt_klartext 13/13",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.vergleich.reihenfolge",
+   "kontext": "orte",
+   "einstellung": "Vergleichstabelle: Reihenfolge (Warnungen fest zuerst)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "channel_layouts.email[] (Folge)",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_channel_layouts_vor_channel_active_metrics; scratchpad/inventar/validatoren/mutationen.py V10",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_channel_layouts_vor_channel_active_metrics",
+     "befund": "",
+     "notiz": "Warn-Zeile nur HTML (#1356)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.vergleich.darstellung",
+   "kontext": "orte",
+   "einstellung": "Vergleichstabelle: Roh/Einfach je Zeile",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "channel_layouts.email[].use_friendly_format / format",
+   "zellen": {
+    "email_html": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E10_vergleich_roh_statt_einfach_html Exit 0",
+     "befund": "B-V3",
+     "notiz": "Einfach-Liste lockert nur die FORMAT-Prüfung"
+    },
+    "email_text": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E11 (Roh statt Einfach), E12 (Einfach statt Roh) Exit 0",
+     "befund": "B-V3",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.grundauswahl",
+   "kontext": "orte",
+   "einstellung": "Grundauswahl (active_metrics) inkl. bewusst leer, Totalschnitt, Altbestand",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "display_config.active_metrics[]",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py O06/O07/O08 positiv; tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_totalschnitt_volle_grundauswahl",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py O06/O07/O08",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.stunden.auswahl",
+   "kontext": "orte",
+   "einstellung": "Stundenverlauf: Auswahl",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "display_config.hourly_metrics[]",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_stunden_schnitt_mit_grundauswahl; scratchpad/inventar/validatoren/test_sweep.py O12/O14",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py stunden_klartext_spalte_fehlt_ab_zeile2 13/13 Exit 0",
+     "befund": "B-V4",
+     "notiz": "nur erste Stundenzeile je Ort gelesen (#3083 H3)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.stunden.reihenfolge",
+   "kontext": "orte",
+   "einstellung": "Stundenverlauf: Reihenfolge",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "hourly_metrics[] (Folge)",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py stunden_spalte_vertauscht_html 13/13",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "rot",
+     "beleg": "email_spec_validator.py:1189-1191 (nur Zeile 1 je Ort)",
+     "befund": "B-V4",
+     "notiz": "Vertauschung ab Zeile 2 unbemerkt"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.stunden.schalter",
+   "kontext": "orte",
+   "einstellung": "Stundenverlauf an/aus",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "preset.hourly_enabled",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py O03 block_trotz_aus Exit 1",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py O03",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.stunden.darstellung",
+   "kontext": "orte",
+   "einstellung": "Stundenverlauf: Roh/Einfach (Konzept W11)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "(kein Feld; hourly_metrics nur Kennungen)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "_soll_aus_konfiguration.py:473-494",
+     "befund": "",
+     "notiz": "Einstellung im Datenmodell nicht vorhanden; Produktfrage, anderer Bereich"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "wie HTML"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.ausblick.auswahl_reihenfolge",
+   "kontext": "orte",
+   "einstellung": "3-Tages-Ausblick: Auswahl und Reihenfolge",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "display_config.outlook_metrics[]",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py O13/O15 positiv; tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_totalschnitt_volle_grundauswahl[outlook_metrics]; scratchpad/inventar/validatoren/mutationen.py V10",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_klartext_ausblick_fehlt_scheitert",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.ausblick.darstellung",
+   "kontext": "orte",
+   "einstellung": "3-Tages-Ausblick: Roh/Einfach",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "display_config.outlook_metric_formats{}",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E13_ausblick_roh_statt_einfach; scratchpad/inventar/validatoren/mutationen.py V09",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E13",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.ausblick.schalter",
+   "kontext": "orte",
+   "einstellung": "3-Tages-Ausblick an/aus",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "preset.outlook_enabled",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py O04 block_trotz_aus Exit 1",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py O04",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.ausblick.zeilen_je_ort",
+   "kontext": "orte",
+   "einstellung": "3-Tages-Ausblick: drei Zeilen je Ort, jeder Ort",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Inhalt je Kanal)",
+   "gespeichert_als": "(fest 3 Tage)",
+   "zellen": {
+    "email_html": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py ausblick_zeile_fehlt 12/12, ausblick_eines_orts_fehlt_html 12/12 Exit 0",
+     "befund": "B-V1",
+     "notiz": "#3083 H3"
+    },
+    "email_text": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py ausblick_zeile_fehlt 12/12 Exit 0",
+     "befund": "B-V1",
+     "notiz": "Ausblick-Block je Ort im Klartext geprüft, Zeilenzahl nicht"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.ortsfolge",
+   "kontext": "orte",
+   "einstellung": "Ortsreihenfolge",
+   "gesetzt_in": "Orte-Reiter",
+   "gespeichert_als": "preset.location_ids[]",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E14; tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_orte_ortsfolge_vertauscht_scheitert",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py E14",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.orte_auswahl",
+   "kontext": "orte",
+   "einstellung": "Orte im Briefing (Ort fehlt)",
+   "gesetzt_in": "Orte-Reiter",
+   "gespeichert_als": "preset.location_ids[]",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py ort_abschnitt_fehlt 13/13",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py ort_fehlt_uebersicht_klartext 14/14; scratchpad/inventar/validatoren/mutationen.py V08",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.ortsnamen",
+   "kontext": "orte",
+   "einstellung": "Ortsnamen mit Sonderzeichen (& ' < > Umlaute)",
+   "gesetzt_in": "Orte-Reiter",
+   "gespeichert_als": "locations/<id>.json name",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py O09 positiv + 6 Negativfälle; scratchpad/inventar/validatoren/test_extra.py E14",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py O09",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.sprache",
+   "kontext": "orte",
+   "einstellung": "Sprache DE/EN",
+   "gesetzt_in": "Konto",
+   "gespeichert_als": "user.json language",
+   "zellen": {
+    "email_html": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py O02 positiv + Negativfälle",
+     "befund": "",
+     "notiz": "„ORT“-Rest in EN: ausgelagert #3074"
+    },
+    "email_text": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/validatoren/test_sweep.py O02",
+     "befund": "",
+     "notiz": ""
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  },
+  {
+   "id": "validator.orte.tagesfenster",
+   "kontext": "orte",
+   "einstellung": "Tagesfenster von–bis",
+   "gesetzt_in": "Wetter → Anpassen (W12)",
+   "gespeichert_als": "preset.day_window_start_hour/end_hour",
+   "zellen": {
+    "email_html": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/validatoren/test_extra.py test_orte_tagesfenster_fehlablehnung: Exit 1 'fehlende Stunden 09,10,11'",
+     "befund": "B-V5",
+     "notiz": "Fehlablehnung, fest 09-16 Uhr"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Klartext-Stunden nicht gegen Fenster geprüft"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/context/einstellungen_neu.md §5 Punkt 8 (W15)",
+     "befund": "",
+     "notiz": "Orts-Mail hat kein Kompaktformat („sobald die Orts-Mail Nur-Text kann“)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241; .claude/hooks/e2e_telegram_live.py",
+     "befund": "B-V6",
+     "notiz": "kein Validator für diesen Ausgang; Kanal-Parität (ADR-0095) hat hier eine Lücke"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "docs/reference/mail_validators.md; .claude/commands/e2e-verify.md:239-241",
+     "befund": "",
+     "notiz": "kein Validator für diesen Ausgang"
+    }
+   }
+  }
+ ]
+}

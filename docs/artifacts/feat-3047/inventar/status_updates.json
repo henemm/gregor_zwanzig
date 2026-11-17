@@ -1,0 +1,2678 @@
+{
+ "trip.grundauswahl.gespeichert|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_begrenzt_kanal_listen",
+  "notiz": "Boeen/Feuchte in Grundauswahl aus, in Telegram-/SMS-Liste an -> fehlen in Kurzuebersicht, Tabelle, SMS; Premium = SMS; 2 Nutzer",
+  "befund": ""
+ },
+ "trip.grundauswahl.gespeichert|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_begrenzt_kanal_listen",
+  "notiz": "Boeen/Feuchte in Grundauswahl aus, in Telegram-/SMS-Liste an -> fehlen in Kurzuebersicht, Tabelle, SMS; Premium = SMS; 2 Nutzer",
+  "befund": ""
+ },
+ "trip.grundauswahl.gespeichert|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_begrenzt_kanal_listen",
+  "notiz": "Boeen/Feuchte in Grundauswahl aus, in Telegram-/SMS-Liste an -> fehlen in Kurzuebersicht, Tabelle, SMS; Premium = SMS; 2 Nutzer",
+  "befund": ""
+ },
+ "trip.grundauswahl.reihenfolge|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_reihenfolge_ohne_kanal_liste",
+  "notiz": "ohne Kanal-Liste folgen Telegram/SMS der Grundauswahl-Folge (R W N D G, Folge != Katalog)",
+  "befund": ""
+ },
+ "trip.grundauswahl.reihenfolge|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_reihenfolge_ohne_kanal_liste",
+  "notiz": "ohne Kanal-Liste folgen Telegram/SMS der Grundauswahl-Folge (R W N D G, Folge != Katalog)",
+  "befund": ""
+ },
+ "trip.grundauswahl.reihenfolge|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_reihenfolge_ohne_kanal_liste",
+  "notiz": "ohne Kanal-Liste folgen Telegram/SMS der Grundauswahl-Folge (R W N D G, Folge != Katalog)",
+  "befund": ""
+ },
+ "trip.grundauswahl.reihenfolge|einstellungsseite": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Reiter Wetter zeigt die Grundauswahl gruppiert, ohne Folge (Konzept §5 Punkt 5); die Folge zeigt nur die Liste je Kanal -> Zeile trip.kanal_liste.nie_eingestellt (gruen)",
+  "befund": ""
+ },
+ "trip.grundauswahl.reihenfolge|validator_email": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/validatoren/test_sweep.py T01_de_abend_folge (ohne Kanal-Liste, Folge != Katalog)",
+  "notiz": "positiv Exit 0; Spalte vertauscht HTML/Klartext Exit 1 (validatoren/ergebnisse.jsonl)",
+  "befund": ""
+ },
+ "trip.grundauswahl.nie_eingestellt|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_nie_eingestellt_gleich_vorgabe_alle_kanaele[full/compact]",
+  "notiz": "metrics fehlt == ausdruecklich gespeicherter Register-Standard in Mail HTML/Klartext/Kompakt, Telegram, SMS, Premium; einziger Unterschied: gespeicherte Liste haengt Nachttief an (SMS 'N15', loader.py:1054, Thema E7). Reiter zeigt Vorlage: E1",
+  "befund": ""
+ },
+ "trip.grundauswahl.nie_eingestellt|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_nie_eingestellt_gleich_vorgabe_alle_kanaele[full/compact]",
+  "notiz": "metrics fehlt == ausdruecklich gespeicherter Register-Standard in Mail HTML/Klartext/Kompakt, Telegram, SMS, Premium; einziger Unterschied: gespeicherte Liste haengt Nachttief an (SMS 'N15', loader.py:1054, Thema E7). Reiter zeigt Vorlage: E1",
+  "befund": ""
+ },
+ "trip.grundauswahl.nie_eingestellt|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_nie_eingestellt_gleich_vorgabe_alle_kanaele[full/compact]",
+  "notiz": "metrics fehlt == ausdruecklich gespeicherter Register-Standard in Mail HTML/Klartext/Kompakt, Telegram, SMS, Premium; einziger Unterschied: gespeicherte Liste haengt Nachttief an (SMS 'N15', loader.py:1054, Thema E7). Reiter zeigt Vorlage: E1",
+  "befund": ""
+ },
+ "trip.grundauswahl.nie_eingestellt|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_nie_eingestellt_gleich_vorgabe_alle_kanaele[full/compact]",
+  "notiz": "metrics fehlt == ausdruecklich gespeicherter Register-Standard in Mail HTML/Klartext/Kompakt, Telegram, SMS, Premium; einziger Unterschied: gespeicherte Liste haengt Nachttief an (SMS 'N15', loader.py:1054, Thema E7). Reiter zeigt Vorlage: E1",
+  "befund": ""
+ },
+ "trip.grundauswahl.nie_eingestellt|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_nie_eingestellt_gleich_vorgabe_alle_kanaele[full/compact]",
+  "notiz": "metrics fehlt == ausdruecklich gespeicherter Register-Standard in Mail HTML/Klartext/Kompakt, Telegram, SMS, Premium; einziger Unterschied: gespeicherte Liste haengt Nachttief an (SMS 'N15', loader.py:1054, Thema E7). Reiter zeigt Vorlage: E1",
+  "befund": ""
+ },
+ "trip.grundauswahl.nie_eingestellt|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_nie_eingestellt_gleich_vorgabe_alle_kanaele[full/compact]",
+  "notiz": "metrics fehlt == ausdruecklich gespeicherter Register-Standard in Mail HTML/Klartext/Kompakt, Telegram, SMS, Premium; einziger Unterschied: gespeicherte Liste haengt Nachttief an (SMS 'N15', loader.py:1054, Thema E7). Reiter zeigt Vorlage: E1",
+  "befund": ""
+ },
+ "trip.grundauswahl.bewusst_leer|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_bewusst_leer_alle_kanaele[full/compact]",
+  "notiz": "alle enabled:false: keine Stundentabelle/kein Ueberblick, Kompakt ohne Ueberblick, Telegram ohne Tabelle, SMS 'E1:'",
+  "befund": ""
+ },
+ "trip.grundauswahl.bewusst_leer|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_bewusst_leer_alle_kanaele[full/compact]",
+  "notiz": "alle enabled:false: keine Stundentabelle/kein Ueberblick, Kompakt ohne Ueberblick, Telegram ohne Tabelle, SMS 'E1:'",
+  "befund": ""
+ },
+ "trip.grundauswahl.bewusst_leer|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_bewusst_leer_alle_kanaele[full/compact]",
+  "notiz": "alle enabled:false: keine Stundentabelle/kein Ueberblick, Kompakt ohne Ueberblick, Telegram ohne Tabelle, SMS 'E1:'",
+  "befund": ""
+ },
+ "trip.grundauswahl.bewusst_leer|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_bewusst_leer_alle_kanaele[full/compact]",
+  "notiz": "alle enabled:false: keine Stundentabelle/kein Ueberblick, Kompakt ohne Ueberblick, Telegram ohne Tabelle, SMS 'E1:'",
+  "befund": ""
+ },
+ "trip.grundauswahl.bewusst_leer|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_bewusst_leer_alle_kanaele[full/compact]",
+  "notiz": "alle enabled:false: keine Stundentabelle/kein Ueberblick, Kompakt ohne Ueberblick, Telegram ohne Tabelle, SMS 'E1:'",
+  "befund": ""
+ },
+ "trip.grundauswahl.bewusst_leer|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_bewusst_leer_alle_kanaele[full/compact]",
+  "notiz": "alle enabled:false: keine Stundentabelle/kein Ueberblick, Kompakt ohne Ueberblick, Telegram ohne Tabelle, SMS 'E1:'",
+  "befund": ""
+ },
+ "trip.grundauswahl.altformat|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_altformat_alle_kanaele[string/ohne_enabled x full/compact]",
+  "notiz": "Zeichenkette bzw. ohne enabled: Menge erscheint in allen Ausgaben; ohne order ordnet der Loader nach Register-Prioritaet (auto_distribute, loader.py:1015) -- in allen Kanaelen gleich (Temp, Boeen, Regen). Validator erwartet Array-Folge: B-L6",
+  "befund": ""
+ },
+ "trip.grundauswahl.altformat|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_altformat_alle_kanaele[string/ohne_enabled x full/compact]",
+  "notiz": "Zeichenkette bzw. ohne enabled: Menge erscheint in allen Ausgaben; ohne order ordnet der Loader nach Register-Prioritaet (auto_distribute, loader.py:1015) -- in allen Kanaelen gleich (Temp, Boeen, Regen). Validator erwartet Array-Folge: B-L6",
+  "befund": ""
+ },
+ "trip.grundauswahl.altformat|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_altformat_alle_kanaele[string/ohne_enabled x full/compact]",
+  "notiz": "Zeichenkette bzw. ohne enabled: Menge erscheint in allen Ausgaben; ohne order ordnet der Loader nach Register-Prioritaet (auto_distribute, loader.py:1015) -- in allen Kanaelen gleich (Temp, Boeen, Regen). Validator erwartet Array-Folge: B-L6",
+  "befund": ""
+ },
+ "trip.grundauswahl.altformat|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_altformat_alle_kanaele[string/ohne_enabled x full/compact]",
+  "notiz": "Zeichenkette bzw. ohne enabled: Menge erscheint in allen Ausgaben; ohne order ordnet der Loader nach Register-Prioritaet (auto_distribute, loader.py:1015) -- in allen Kanaelen gleich (Temp, Boeen, Regen). Validator erwartet Array-Folge: B-L6",
+  "befund": ""
+ },
+ "trip.grundauswahl.altformat|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_altformat_alle_kanaele[string/ohne_enabled x full/compact]",
+  "notiz": "Zeichenkette bzw. ohne enabled: Menge erscheint in allen Ausgaben; ohne order ordnet der Loader nach Register-Prioritaet (auto_distribute, loader.py:1015) -- in allen Kanaelen gleich (Temp, Boeen, Regen). Validator erwartet Array-Folge: B-L6",
+  "befund": ""
+ },
+ "trip.grundauswahl.altformat|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_grundauswahl_altformat_alle_kanaele[string/ohne_enabled x full/compact]",
+  "notiz": "Zeichenkette bzw. ohne enabled: Menge erscheint in allen Ausgaben; ohne order ordnet der Loader nach Register-Prioritaet (auto_distribute, loader.py:1015) -- in allen Kanaelen gleich (Temp, Boeen, Regen). Validator erwartet Array-Folge: B-L6",
+  "befund": ""
+ },
+ "trip.grundauswahl.altformat|validator_email": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_altformat_ohne_order_register_prioritaet",
+  "notiz": "Runde 7: p4: Validator-Soll nach Register-Prioritaet wie der Loader",
+  "befund": "B-L6"
+ },
+ "trip.grundauswahl.wieder_eingeschaltet|telegram": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::minus_dann_plus_haengt_hinten_an",
+  "notiz": "Runde 7: p5a: wieder eingeschaltete Metrik bekommt order hinter dem Maximum; Mail/Kanaele/Validator folgen der gespeicherten order",
+  "befund": "B-TM2"
+ },
+ "trip.grundauswahl.wieder_eingeschaltet|sms": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::minus_dann_plus_haengt_hinten_an",
+  "notiz": "Runde 7: p5a: wieder eingeschaltete Metrik bekommt order hinter dem Maximum; Mail/Kanaele/Validator folgen der gespeicherten order",
+  "befund": "B-TM2"
+ },
+ "trip.grundauswahl.wieder_eingeschaltet|premium_sms": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::minus_dann_plus_haengt_hinten_an",
+  "notiz": "Runde 7: p5a: wieder eingeschaltete Metrik bekommt order hinter dem Maximum; Mail/Kanaele/Validator folgen der gespeicherten order",
+  "befund": "B-TM2"
+ },
+ "trip.grundauswahl.wieder_eingeschaltet|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::minus_dann_plus_haengt_hinten_an",
+  "notiz": "Runde 7: p5a: wieder eingeschaltete Metrik bekommt order hinter dem Maximum; Mail/Kanaele/Validator folgen der gespeicherten order",
+  "befund": "B-TM2"
+ },
+ "trip.grundauswahl.wieder_eingeschaltet|validator_email": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::minus_dann_plus_haengt_hinten_an",
+  "notiz": "Runde 7: p5a: wieder eingeschaltete Metrik bekommt order hinter dem Maximum; Mail/Kanaele/Validator folgen der gespeicherten order",
+  "befund": "B-TM2"
+ },
+ "trip.grundauswahl.nachtraeglich_global|telegram": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "#3065",
+  "befund": "#3065"
+ },
+ "trip.grundauswahl.nachtraeglich_global|sms": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "#3065",
+  "befund": "#3065"
+ },
+ "trip.grundauswahl.nachtraeglich_global|premium_sms": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "#3065",
+  "befund": "#3065"
+ },
+ "trip.grundauswahl.nachtraeglich_global|validator_email": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "#3065",
+  "befund": "#3065"
+ },
+ "trip.metrik.morgen_abend|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/.../weather-metrics-tab/__tests__/nur_ein_bericht_kennzeichnung.test.ts (4/4)",
+  "notiz": "Liste kennzeichnet 'nur morgens/abends' aus morning_enabled/evening_enabled; Mutation M23 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.email_liste.an_aus|telegram": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_email_liste_wirkt_nicht_auf_telegram_sms",
+  "notiz": "E-Mail-Liste wirkt nur auf die E-Mail, jeder Kanal hat eine eigene Liste (Konzept §5 P8 'Reihenfolge und Auswahl je Kanal'); Gegenprobe: Telegram/SMS/Premium byte-gleich",
+  "befund": ""
+ },
+ "trip.email_liste.an_aus|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_email_liste_wirkt_nicht_auf_telegram_sms",
+  "notiz": "E-Mail-Liste wirkt nur auf die E-Mail, jeder Kanal hat eine eigene Liste (Konzept §5 P8 'Reihenfolge und Auswahl je Kanal'); Gegenprobe: Telegram/SMS/Premium byte-gleich",
+  "befund": ""
+ },
+ "trip.email_liste.an_aus|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_email_liste_wirkt_nicht_auf_telegram_sms",
+  "notiz": "E-Mail-Liste wirkt nur auf die E-Mail, jeder Kanal hat eine eigene Liste (Konzept §5 P8 'Reihenfolge und Auswahl je Kanal'); Gegenprobe: Telegram/SMS/Premium byte-gleich",
+  "befund": ""
+ },
+ "trip.email_liste.reihenfolge|telegram": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_email_liste_wirkt_nicht_auf_telegram_sms",
+  "notiz": "E-Mail-Liste wirkt nur auf die E-Mail, jeder Kanal hat eine eigene Liste (Konzept §5 P8 'Reihenfolge und Auswahl je Kanal'); Gegenprobe: Telegram/SMS/Premium byte-gleich",
+  "befund": ""
+ },
+ "trip.email_liste.reihenfolge|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_email_liste_wirkt_nicht_auf_telegram_sms",
+  "notiz": "E-Mail-Liste wirkt nur auf die E-Mail, jeder Kanal hat eine eigene Liste (Konzept §5 P8 'Reihenfolge und Auswahl je Kanal'); Gegenprobe: Telegram/SMS/Premium byte-gleich",
+  "befund": ""
+ },
+ "trip.email_liste.reihenfolge|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_email_liste_wirkt_nicht_auf_telegram_sms",
+  "notiz": "E-Mail-Liste wirkt nur auf die E-Mail, jeder Kanal hat eine eigene Liste (Konzept §5 P8 'Reihenfolge und Auswahl je Kanal'); Gegenprobe: Telegram/SMS/Premium byte-gleich",
+  "befund": ""
+ },
+ "trip.email_liste.roh_einfach|telegram": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_email_liste_wirkt_nicht_auf_telegram_sms",
+  "notiz": "E-Mail-Liste wirkt nur auf die E-Mail, jeder Kanal hat eine eigene Liste (Konzept §5 P8 'Reihenfolge und Auswahl je Kanal'); Gegenprobe: Telegram/SMS/Premium byte-gleich",
+  "befund": ""
+ },
+ "trip.email_liste.roh_einfach|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_email_liste_wirkt_nicht_auf_telegram_sms",
+  "notiz": "E-Mail-Liste wirkt nur auf die E-Mail, jeder Kanal hat eine eigene Liste (Konzept §5 P8 'Reihenfolge und Auswahl je Kanal'); Gegenprobe: Telegram/SMS/Premium byte-gleich",
+  "befund": ""
+ },
+ "trip.email_liste.roh_einfach|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_email_liste_wirkt_nicht_auf_telegram_sms",
+  "notiz": "E-Mail-Liste wirkt nur auf die E-Mail, jeder Kanal hat eine eigene Liste (Konzept §5 P8 'Reihenfolge und Auswahl je Kanal'); Gegenprobe: Telegram/SMS/Premium byte-gleich",
+  "befund": ""
+ },
+ "trip.email_liste.je_bericht|telegram": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_email_liste_wirkt_nicht_auf_telegram_sms",
+  "notiz": "E-Mail-Liste wirkt nur auf die E-Mail, jeder Kanal hat eine eigene Liste (Konzept §5 P8 'Reihenfolge und Auswahl je Kanal'); Gegenprobe: Telegram/SMS/Premium byte-gleich",
+  "befund": ""
+ },
+ "trip.email_liste.je_bericht|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_email_liste_wirkt_nicht_auf_telegram_sms",
+  "notiz": "E-Mail-Liste wirkt nur auf die E-Mail, jeder Kanal hat eine eigene Liste (Konzept §5 P8 'Reihenfolge und Auswahl je Kanal'); Gegenprobe: Telegram/SMS/Premium byte-gleich",
+  "befund": ""
+ },
+ "trip.email_liste.je_bericht|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_email_liste_wirkt_nicht_auf_telegram_sms",
+  "notiz": "E-Mail-Liste wirkt nur auf die E-Mail, jeder Kanal hat eine eigene Liste (Konzept §5 P8 'Reihenfolge und Auswahl je Kanal'); Gegenprobe: Telegram/SMS/Premium byte-gleich",
+  "befund": ""
+ },
+ "trip.metriken_ueberblick|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_metriken_ueberblick_folgt_email_liste[full/compact]",
+  "notiz": "Liste A (Regen, Boeen, Temp) vs B (Temp, Boeen; Regen aus): Regen-Kachel nur bei A, in HTML, Klartext und Kompakt",
+  "befund": ""
+ },
+ "trip.metriken_ueberblick|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_metriken_ueberblick_folgt_email_liste[full/compact]",
+  "notiz": "Liste A (Regen, Boeen, Temp) vs B (Temp, Boeen; Regen aus): Regen-Kachel nur bei A, in HTML, Klartext und Kompakt",
+  "befund": ""
+ },
+ "trip.metriken_ueberblick|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_metriken_ueberblick_folgt_email_liste[full/compact]",
+  "notiz": "Liste A (Regen, Boeen, Temp) vs B (Temp, Boeen; Regen aus): Regen-Kachel nur bei A, in HTML, Klartext und Kompakt",
+  "befund": ""
+ },
+ "trip.metriken_ueberblick|telegram": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Metriken-Ueberblick ist ein E-Mail-Block; Telegram-Kurzuebersicht folgt der Telegram-Liste (Konzept §5 P8 Telegram-Erklaersatz), SMS hat keinen Ueberblick",
+  "befund": ""
+ },
+ "trip.metriken_ueberblick|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Metriken-Ueberblick ist ein E-Mail-Block; Telegram-Kurzuebersicht folgt der Telegram-Liste (Konzept §5 P8 Telegram-Erklaersatz), SMS hat keinen Ueberblick",
+  "befund": ""
+ },
+ "trip.metriken_ueberblick|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Metriken-Ueberblick ist ein E-Mail-Block; Telegram-Kurzuebersicht folgt der Telegram-Liste (Konzept §5 P8 Telegram-Erklaersatz), SMS hat keinen Ueberblick",
+  "befund": ""
+ },
+ "trip.metriken_ueberblick|einstellungsseite": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "kein eigenes Bedienelement: der Ueberblick ist aus der E-Mail-Liste abgeleitet (Konzept §5 P8 E-Mail-Erklaersatz)",
+  "befund": ""
+ },
+ "trip.metriken_ueberblick|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "trip.telegram.schnittlinie|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "Schnittlinie/Budgetzeile im Editor: #3032 (offen)",
+  "befund": "#3032"
+ },
+ "trip.sms.kuerzung|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "Schnittlinie/Budgetzeile im Editor: #3032 (offen)",
+  "befund": "#3032"
+ },
+ "orte.telegram.schnittlinie|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "Schnittlinie/Budgetzeile im Editor: #3032 (offen)",
+  "befund": "#3032"
+ },
+ "orte.sms.kuerzung|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "Schnittlinie/Budgetzeile im Editor: #3032 (offen)",
+  "befund": "#3032"
+ },
+ "trip.kanal_liste.nie_eingestellt|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/probe_editor_luecken.test.ts (Kanal-Listen, Fall nie)",
+  "notiz": "Editor-Liste (echte Ladefunktionen computeInitialBuckets/channelOverrideFromMetrics/splitChannelMetricsForDisplay) = Ausgabe (kanaele/pruef_trip_kanaele.py altbestand/bewusst_leer/totalschnitt); Mutation M24 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.kanal_liste.bewusst_leer|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/probe_editor_luecken.test.ts (Kanal-Listen, Fall leer)",
+  "notiz": "Editor-Liste (echte Ladefunktionen computeInitialBuckets/channelOverrideFromMetrics/splitChannelMetricsForDisplay) = Ausgabe (kanaele/pruef_trip_kanaele.py altbestand/bewusst_leer/totalschnitt); Mutation M24 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.kanal_liste.totalschnitt|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/probe_editor_luecken.test.ts (Kanal-Listen, Fall total)",
+  "notiz": "Editor-Liste (echte Ladefunktionen computeInitialBuckets/channelOverrideFromMetrics/splitChannelMetricsForDisplay) = Ausgabe (kanaele/pruef_trip_kanaele.py altbestand/bewusst_leer/totalschnitt); Mutation M24 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ausblick.roh_einfach|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/probe_editor_luecken.test.ts (OutlookLayoutControls SSR)",
+  "notiz": "outlook_metric_formats {wind:true} -> Einfach aktiv, sonst Roh; nie eingestellt -> alles Roh (wie Mail); Mutation M15 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ausblick.erscheint_im|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_ausblick_erscheint_im_telegram (10 Faelle)",
+  "notiz": "Telegram-Ausblick-Blase genau in den Berichten aus multi_day_trend_reports, fehlt = abends; Mutation M01 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ausblick.erscheint_im|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_ausblick_erscheint_im_telegram",
+  "notiz": "SMS/Premium-SMS tragen keinen 3-Tages-Ausblick (ADR-0055:107, baulich nicht erreichbar)",
+  "befund": ""
+ },
+ "trip.ausblick.erscheint_im|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_ausblick_erscheint_im_telegram",
+  "notiz": "SMS/Premium-SMS tragen keinen 3-Tages-Ausblick (ADR-0055:107, baulich nicht erreichbar)",
+  "befund": ""
+ },
+ "trip.ausblick.erscheint_im|validator_email": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_validator_luecken.py::test_trip_erscheint_im",
+  "notiz": "Konfig 'nur morgens', Abendmail mit Ausblick -> Exit 1; passende Konfig Exit 0",
+  "befund": ""
+ },
+ "trip.ausblick.an_aus|telegram": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_show_outlook_telegram",
+  "notiz": "show_outlook ist Baustein der Karte 'E-Mail-Inhalt' (MailInhaltCard.svelte:1-5 'Nur Mail-Felder'); Telegram folgt multi_day_trend_reports (Gegenprobe Telegram unveraendert), SMS ohne Ausblick (ADR-0055)",
+  "befund": ""
+ },
+ "trip.ausblick.an_aus|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_show_outlook_telegram",
+  "notiz": "show_outlook ist Baustein der Karte 'E-Mail-Inhalt' (MailInhaltCard.svelte:1-5 'Nur Mail-Felder'); Telegram folgt multi_day_trend_reports (Gegenprobe Telegram unveraendert), SMS ohne Ausblick (ADR-0055)",
+  "befund": ""
+ },
+ "trip.ausblick.an_aus|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_show_outlook_telegram",
+  "notiz": "show_outlook ist Baustein der Karte 'E-Mail-Inhalt' (MailInhaltCard.svelte:1-5 'Nur Mail-Felder'); Telegram folgt multi_day_trend_reports (Gegenprobe Telegram unveraendert), SMS ohne Ausblick (ADR-0055)",
+  "befund": ""
+ },
+ "trip.ausblick.an_aus|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/probe_editor_luecken.test.ts (ladeMailZustand)",
+  "notiz": "false -> aus, true -> an, fehlt -> an (= loader.py:646 Standard); Mutation M13 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ausblick.zeilenzahl|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_etappennamen_mail[full/compact], test_ausblick_drei_zeilen_und_etappennamen_telegram",
+  "notiz": "Zeitplaner-Weg: HTML 3 Zeilen, Klartext 3 Tageszeilen, Kompakt 3 Zeilen, Telegram 3 Tage",
+  "befund": ""
+ },
+ "trip.ausblick.zeilenzahl|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_etappennamen_mail[full/compact], test_ausblick_drei_zeilen_und_etappennamen_telegram",
+  "notiz": "Zeitplaner-Weg: HTML 3 Zeilen, Klartext 3 Tageszeilen, Kompakt 3 Zeilen, Telegram 3 Tage",
+  "befund": ""
+ },
+ "trip.ausblick.zeilenzahl|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_etappennamen_mail[full/compact], test_ausblick_drei_zeilen_und_etappennamen_telegram",
+  "notiz": "Zeitplaner-Weg: HTML 3 Zeilen, Klartext 3 Tageszeilen, Kompakt 3 Zeilen, Telegram 3 Tage",
+  "befund": ""
+ },
+ "trip.ausblick.zeilenzahl|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_etappennamen_mail[full/compact], test_ausblick_drei_zeilen_und_etappennamen_telegram",
+  "notiz": "Zeitplaner-Weg: HTML 3 Zeilen, Klartext 3 Tageszeilen, Kompakt 3 Zeilen, Telegram 3 Tage",
+  "befund": ""
+ },
+ "trip.ausblick.zeilenzahl|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "SMS/Premium-SMS tragen keinen 3-Tages-Ausblick (ADR-0055:107, baulich nicht erreichbar)",
+  "befund": ""
+ },
+ "trip.ausblick.zeilenzahl|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "SMS/Premium-SMS tragen keinen 3-Tages-Ausblick (ADR-0055:107, baulich nicht erreichbar)",
+  "befund": ""
+ },
+ "trip.ausblick.zeilenzahl|einstellungsseite": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "fest drei Tage, keine Einstellung (Konzept §5 P8 Ausblick-Erklaersatz)",
+  "befund": ""
+ },
+ "trip.ausblick.etappennamen|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_etappennamen_mail[full]",
+  "notiz": "HTML-Ausblick zeigt Wochentag statt Name (kein Markup-Leck '<b>'), 3 Zeilen",
+  "befund": ""
+ },
+ "trip.ausblick.etappennamen|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_etappennamen_mail[full]",
+  "notiz": "Klartext: Name mit Sonderzeichen und ueberlang unveraendert je Tageszeile, 3 Zeilen",
+  "befund": ""
+ },
+ "trip.ausblick.etappennamen|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_etappennamen_mail[compact], test_ausblick_drei_zeilen_und_etappennamen_telegram",
+  "notiz": "Kompakt/Telegram zeigen Wochentag bzw. Datum statt Name; Sonderzeichen ohne Wirkung, 3 Zeilen",
+  "befund": ""
+ },
+ "trip.ausblick.etappennamen|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_etappennamen_mail[compact], test_ausblick_drei_zeilen_und_etappennamen_telegram",
+  "notiz": "Kompakt/Telegram zeigen Wochentag bzw. Datum statt Name; Sonderzeichen ohne Wirkung, 3 Zeilen",
+  "befund": ""
+ },
+ "trip.ausblick.etappennamen|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "SMS/Premium-SMS tragen keinen 3-Tages-Ausblick (ADR-0055:107, baulich nicht erreichbar)",
+  "befund": ""
+ },
+ "trip.ausblick.etappennamen|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "SMS/Premium-SMS tragen keinen 3-Tages-Ausblick (ADR-0055:107, baulich nicht erreichbar)",
+  "befund": ""
+ },
+ "trip.ausblick.etappennamen|einstellungsseite": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Etappenname ist Stammdatum des Reiters Etappen, keine Einstellung dieser Matrix",
+  "befund": ""
+ },
+ "trip.ausblick.etappennamen|validator_email": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/validatoren/test_sweep.py T20_etappennamen_sonderzeichen",
+  "notiz": "positiv Exit 0, Spalten vertauscht HTML/Klartext Exit 1 (fehlende Tageszeile = B-V1, ausgenommen)",
+  "befund": ""
+ },
+ "trip.email_format|validator_email": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_validator_luecken.py::test_trip_email_format",
+  "notiz": "Konfig compact, Mail full -> Exit 1 mit 'SOLL: Format ... (email_format)'",
+  "befund": ""
+ },
+ "trip.tagesfenster|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_telegram_tagesfenster.py::test_b_l1_fenster_10_19_kurzuebersicht_wie_sms",
+  "notiz": "Runde 7: p7: Kurzuebersicht im Tagesfenster wie SMS/Mail (#1498 fuer Kurzuebersicht abgeloest)",
+  "befund": "B-L1"
+ },
+ "trip.amtliche_warnungen.schalter|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_w20_schalter_telegram_sms[True/False]",
+  "notiz": "Zeitplaner-Weg: aus -> kein Abruf, keine Warn-Blase, kein '!TS'; an -> beides; Premium = SMS; Mutation M02 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.amtliche_warnungen.schalter|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_w20_schalter_telegram_sms[True/False]",
+  "notiz": "Zeitplaner-Weg: aus -> kein Abruf, keine Warn-Blase, kein '!TS'; an -> beides; Premium = SMS; Mutation M02 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.amtliche_warnungen.schalter|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_sched_luecken.py::test_w20_schalter_telegram_sms[True/False]",
+  "notiz": "Zeitplaner-Weg: aus -> kein Abruf, keine Warn-Blase, kein '!TS'; an -> beides; Premium = SMS; Mutation M02 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.amtliche_warnungen.schalter|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "trip.amtliche_warnungen.position|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "feste Zeile WV6 in der Liste: #3031 Umfang 4",
+  "befund": "#3031"
+ },
+ "trip.amtliche_warnungen.position|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "trip.amtliche_warnungen.kuerzung_zuletzt|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "Hinweis 'faellt beim Kuerzen als letztes weg': #3031 Umfang 4",
+  "befund": "#3031"
+ },
+ "trip.radar|email_html": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "kein Feld: Trip-Radar-Schalter folgt S8 (#2800, offen); Trip-Radar laeuft heute ohne Einstellung",
+  "befund": "#2800"
+ },
+ "trip.radar|email_text": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "kein Feld: Trip-Radar-Schalter folgt S8 (#2800, offen); Trip-Radar laeuft heute ohne Einstellung",
+  "befund": "#2800"
+ },
+ "trip.radar|email_kompakt": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "kein Feld: Trip-Radar-Schalter folgt S8 (#2800, offen); Trip-Radar laeuft heute ohne Einstellung",
+  "befund": "#2800"
+ },
+ "trip.radar|telegram": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "kein Feld: Trip-Radar-Schalter folgt S8 (#2800, offen); Trip-Radar laeuft heute ohne Einstellung",
+  "befund": "#2800"
+ },
+ "trip.radar|sms": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "kein Feld: Trip-Radar-Schalter folgt S8 (#2800, offen); Trip-Radar laeuft heute ohne Einstellung",
+  "befund": "#2800"
+ },
+ "trip.radar|premium_sms": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "kein Feld: Trip-Radar-Schalter folgt S8 (#2800, offen); Trip-Radar laeuft heute ohne Einstellung",
+  "befund": "#2800"
+ },
+ "trip.radar|validator_email": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "kein Feld: Trip-Radar-Schalter folgt S8 (#2800, offen); Trip-Radar laeuft heute ohne Einstellung",
+  "befund": "#2800"
+ },
+ "trip.ampel.grenzen|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_ampel_grenzen_wirken_in_allen_kanaelen[full/compact]",
+  "notiz": "Boeen-Grenzen 100/110/120 vs 10/20/30: HTML-Ampelpunkt bzw. Kompakt-Text verschieden (auch trip_mail r7)",
+  "befund": ""
+ },
+ "trip.ampel.grenzen|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_ampel_grenzen_wirken_in_allen_kanaelen[full/compact]",
+  "notiz": "Boeen-Grenzen 100/110/120 vs 10/20/30: HTML-Ampelpunkt bzw. Kompakt-Text verschieden (auch trip_mail r7)",
+  "befund": ""
+ },
+ "trip.ampel.grenzen|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_ampel_grenzen_wirken_in_allen_kanaelen[full]",
+  "notiz": "Klartext aendert sich (Ueberblick 'Boeen >x ab ...' folgt der Grenze); Ampelfarbe selbst nur im HTML (#814)",
+  "befund": ""
+ },
+ "trip.ampel.grenzen|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_ampel_grenzen_wirken_in_allen_kanaelen",
+  "notiz": "Kurzuebersicht 'G 45' vs 'G 45@08' (gelb-oder-schlechter-Marke); Alarm: scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_ampel_grenzen_alarm_alle_kanaele; Mutation M16 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ampel.grenzen|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_ampel_grenzen_wirken_in_allen_kanaelen",
+  "notiz": "SMS 'G-' vs 'G45@4', Premium = SMS; Alarm: scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_ampel_grenzen_alarm_alle_kanaele; Mutation M08 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ampel.grenzen|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_ampel_grenzen_wirken_in_allen_kanaelen",
+  "notiz": "SMS 'G-' vs 'G45@4', Premium = SMS; Alarm: scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_ampel_grenzen_alarm_alle_kanaele; Mutation M08 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ampel.grenzen|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/probe_editor_luecken.test.ts (Ampel: standAusAbo = Python resolve_ampel)",
+  "notiz": "Grenzen oben/unten, offene Seite, Vorlage/preset_name je Metrik gleich der Python-Aufloesung; Mutation M12 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ampel.grenzen|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "trip.ampel.alarm_ab|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_alarm_ab_alle_kanaele[never/yellow/orange/red]",
+  "notiz": "aus JSON geladen; nie/rot bei gelb->orange: kein Kanal, gelb/orange: alle vier; Alarm-Mail HTML+Klartext aus einem Versand; Mutation M05 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ampel.alarm_ab|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_alarm_ab_alle_kanaele[never/yellow/orange/red]",
+  "notiz": "aus JSON geladen; nie/rot bei gelb->orange: kein Kanal, gelb/orange: alle vier; Alarm-Mail HTML+Klartext aus einem Versand; Mutation M05 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ampel.alarm_ab|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_alarm_ab_alle_kanaele[never/yellow/orange/red]",
+  "notiz": "aus JSON geladen; nie/rot bei gelb->orange: kein Kanal, gelb/orange: alle vier; Alarm-Mail HTML+Klartext aus einem Versand; Mutation M05 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ampel.alarm_ab|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_alarm_ab_alle_kanaele[never/yellow/orange/red]",
+  "notiz": "aus JSON geladen; nie/rot bei gelb->orange: kein Kanal, gelb/orange: alle vier; Alarm-Mail HTML+Klartext aus einem Versand; Mutation M05 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ampel.alarm_ab|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_alarm_ab_alle_kanaele[never/yellow/orange/red]",
+  "notiz": "aus JSON geladen; nie/rot bei gelb->orange: kein Kanal, gelb/orange: alle vier; Alarm-Mail HTML+Klartext aus einem Versand; Mutation M05 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ampel.alarm_ab|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Mail kennt kein Kompaktformat: render_alert_email liefert immer HTML+Klartext (notification_service.py:2057/2150); email_format gilt nur fuer Briefings (Konzept §5 P8 W15)",
+  "befund": ""
+ },
+ "trip.ampel.alarm_ab|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/probe_editor_luecken.test.ts (Ampel)",
+  "notiz": "alarm_ab je Metrik = Python resolve_ampel; Mutation M11 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.ampel.alarm_ab|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Ausloesung, keine Briefing-Mail; Briefing-Validatoren pruefen Mailinhalt (mail_validators.md Dispatch-Tabelle: deviation-alert ist 'falscher Validator')",
+  "befund": ""
+ },
+ "trip.sms_schwellen|email_html": {
+  "status": "nicht_anwendbar",
+  "beleg": "tests/tdd/test_kanal_an_aus_kette.py::test_globale_sms_schwelle_wirkt_in_allen_drei_sms_texten",
+  "notiz": "sms_threshold wirkt seit #2792 S1c-4b (E1) nicht mehr, Erwaehnung folgt der Ampel (sms_trip.py:592/675); Feld nur Bestand, Editor gesperrt (#2792 S1c-3)",
+  "befund": ""
+ },
+ "trip.sms_schwellen|email_text": {
+  "status": "nicht_anwendbar",
+  "beleg": "tests/tdd/test_kanal_an_aus_kette.py::test_globale_sms_schwelle_wirkt_in_allen_drei_sms_texten",
+  "notiz": "sms_threshold wirkt seit #2792 S1c-4b (E1) nicht mehr, Erwaehnung folgt der Ampel (sms_trip.py:592/675); Feld nur Bestand, Editor gesperrt (#2792 S1c-3)",
+  "befund": ""
+ },
+ "trip.sms_schwellen|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "tests/tdd/test_kanal_an_aus_kette.py::test_globale_sms_schwelle_wirkt_in_allen_drei_sms_texten",
+  "notiz": "sms_threshold wirkt seit #2792 S1c-4b (E1) nicht mehr, Erwaehnung folgt der Ampel (sms_trip.py:592/675); Feld nur Bestand, Editor gesperrt (#2792 S1c-3)",
+  "befund": ""
+ },
+ "trip.sms_schwellen|telegram": {
+  "status": "nicht_anwendbar",
+  "beleg": "tests/tdd/test_kanal_an_aus_kette.py::test_globale_sms_schwelle_wirkt_in_allen_drei_sms_texten",
+  "notiz": "sms_threshold wirkt seit #2792 S1c-4b (E1) nicht mehr, Erwaehnung folgt der Ampel (sms_trip.py:592/675); Feld nur Bestand, Editor gesperrt (#2792 S1c-3)",
+  "befund": ""
+ },
+ "trip.sms_schwellen|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "tests/tdd/test_kanal_an_aus_kette.py::test_globale_sms_schwelle_wirkt_in_allen_drei_sms_texten",
+  "notiz": "sms_threshold wirkt seit #2792 S1c-4b (E1) nicht mehr, Erwaehnung folgt der Ampel (sms_trip.py:592/675); Feld nur Bestand, Editor gesperrt (#2792 S1c-3)",
+  "befund": ""
+ },
+ "trip.sms_schwellen|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "tests/tdd/test_kanal_an_aus_kette.py::test_globale_sms_schwelle_wirkt_in_allen_drei_sms_texten",
+  "notiz": "sms_threshold wirkt seit #2792 S1c-4b (E1) nicht mehr, Erwaehnung folgt der Ampel (sms_trip.py:592/675); Feld nur Bestand, Editor gesperrt (#2792 S1c-3)",
+  "befund": ""
+ },
+ "trip.sms_schwellen|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "tests/tdd/test_kanal_an_aus_kette.py::test_globale_sms_schwelle_wirkt_in_allen_drei_sms_texten",
+  "notiz": "sms_threshold wirkt seit #2792 S1c-4b (E1) nicht mehr, Erwaehnung folgt der Ampel (sms_trip.py:592/675); Feld nur Bestand, Editor gesperrt (#2792 S1c-3)",
+  "befund": ""
+ },
+ "trip.sprache.kappungshinweis|email_html": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kappungshinweis entsteht nur in der Telegram-Kurzuebersicht (7er-Limit, Konzept §5 P8 Schnittlinie); E-Mail hat kein Limit (CHANNEL_LIMITS.email)",
+  "befund": ""
+ },
+ "trip.sprache.kappungshinweis|email_text": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kappungshinweis entsteht nur in der Telegram-Kurzuebersicht (7er-Limit, Konzept §5 P8 Schnittlinie); E-Mail hat kein Limit (CHANNEL_LIMITS.email)",
+  "befund": ""
+ },
+ "trip.sprache.kappungshinweis|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kappungshinweis entsteht nur in der Telegram-Kurzuebersicht (7er-Limit, Konzept §5 P8 Schnittlinie); E-Mail hat kein Limit (CHANNEL_LIMITS.email)",
+  "befund": ""
+ },
+ "trip.sprache.kappungshinweis|einstellungsseite": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kappungshinweis entsteht nur in der Telegram-Kurzuebersicht (7er-Limit, Konzept §5 P8 Schnittlinie); E-Mail hat kein Limit (CHANNEL_LIMITS.email)",
+  "befund": ""
+ },
+ "trip.sprache.kappungshinweis|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kappungshinweis entsteht nur in der Telegram-Kurzuebersicht (7er-Limit, Konzept §5 P8 Schnittlinie); E-Mail hat kein Limit (CHANNEL_LIMITS.email)",
+  "befund": ""
+ },
+ "trip.kuerzel_legende|email_html": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kuerzel-Legende W21 nur bei Telegram/SMS/Premium-SMS (Konzept §5 P8); Mail traegt ausgeschriebene Spaltenkoepfe und die Zeile 'Spalten:'",
+  "befund": ""
+ },
+ "trip.kuerzel_legende|email_text": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kuerzel-Legende W21 nur bei Telegram/SMS/Premium-SMS (Konzept §5 P8); Mail traegt ausgeschriebene Spaltenkoepfe und die Zeile 'Spalten:'",
+  "befund": ""
+ },
+ "trip.kuerzel_legende|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kuerzel-Legende W21 nur bei Telegram/SMS/Premium-SMS (Konzept §5 P8); Mail traegt ausgeschriebene Spaltenkoepfe und die Zeile 'Spalten:'",
+  "befund": ""
+ },
+ "trip.kuerzel_legende|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kuerzel-Legende W21 nur bei Telegram/SMS/Premium-SMS (Konzept §5 P8); Mail traegt ausgeschriebene Spaltenkoepfe und die Zeile 'Spalten:'",
+  "befund": ""
+ },
+ "trip.kuerzel_legende|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "Kuerzel-Legende im Editor: #3032",
+  "befund": "#3032"
+ },
+ "trip.vorlage.anwenden|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_vorlage_wechsel_wirkt_in_telegram_sms[ampel_template/preset_name]",
+  "notiz": "allgemein vs radtour: SMS 'W-' vs 'W20@4', Telegram 'W 20'/'UV 5.0@08' vs 'W 20@08'/'UV 5.0'; Mutation M08/M16 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.vorlage.anwenden|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_vorlage_wechsel_wirkt_in_telegram_sms[ampel_template/preset_name]",
+  "notiz": "allgemein vs radtour: SMS 'W-' vs 'W20@4', Telegram 'W 20'/'UV 5.0@08' vs 'W 20@08'/'UV 5.0'; Mutation M08/M16 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.vorlage.anwenden|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_vorlage_wechsel_wirkt_in_telegram_sms[ampel_template/preset_name]",
+  "notiz": "allgemein vs radtour: SMS 'W-' vs 'W20@4', Telegram 'W 20'/'UV 5.0@08' vs 'W 20@08'/'UV 5.0'; Mutation M08/M16 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.vorlage.anwenden|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "trip.vorlage.neu_aus_standard|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_trip_eigene_standard_vorlage_alle_kanaele[full/compact]",
+  "notiz": "POST Vorlage (Standard) -> POST /api/trips -> Python: Mail-Spalten Regen/Boeen/Wind (Temperatur aus), Telegram R G W, SMS R G W mit G45@ (Grenzen der Vorlage), Kompakt '!' Boeen; bob ohne Standard bekommt nichts davon",
+  "befund": ""
+ },
+ "trip.vorlage.neu_aus_standard|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_trip_eigene_standard_vorlage_alle_kanaele[full/compact]",
+  "notiz": "POST Vorlage (Standard) -> POST /api/trips -> Python: Mail-Spalten Regen/Boeen/Wind (Temperatur aus), Telegram R G W, SMS R G W mit G45@ (Grenzen der Vorlage), Kompakt '!' Boeen; bob ohne Standard bekommt nichts davon",
+  "befund": ""
+ },
+ "trip.vorlage.neu_aus_standard|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_trip_eigene_standard_vorlage_alle_kanaele[full/compact]",
+  "notiz": "POST Vorlage (Standard) -> POST /api/trips -> Python: Mail-Spalten Regen/Boeen/Wind (Temperatur aus), Telegram R G W, SMS R G W mit G45@ (Grenzen der Vorlage), Kompakt '!' Boeen; bob ohne Standard bekommt nichts davon",
+  "befund": ""
+ },
+ "trip.vorlage.neu_aus_standard|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_trip_eigene_standard_vorlage_alle_kanaele[full/compact]",
+  "notiz": "POST Vorlage (Standard) -> POST /api/trips -> Python: Mail-Spalten Regen/Boeen/Wind (Temperatur aus), Telegram R G W, SMS R G W mit G45@ (Grenzen der Vorlage), Kompakt '!' Boeen; bob ohne Standard bekommt nichts davon",
+  "befund": ""
+ },
+ "trip.vorlage.neu_aus_standard|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_trip_eigene_standard_vorlage_alle_kanaele[full/compact]",
+  "notiz": "POST Vorlage (Standard) -> POST /api/trips -> Python: Mail-Spalten Regen/Boeen/Wind (Temperatur aus), Telegram R G W, SMS R G W mit G45@ (Grenzen der Vorlage), Kompakt '!' Boeen; bob ohne Standard bekommt nichts davon",
+  "befund": ""
+ },
+ "trip.vorlage.neu_aus_standard|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_trip_eigene_standard_vorlage_alle_kanaele[full/compact]",
+  "notiz": "POST Vorlage (Standard) -> POST /api/trips -> Python: Mail-Spalten Regen/Boeen/Wind (Temperatur aus), Telegram R G W, SMS R G W mit G45@ (Grenzen der Vorlage), Kompakt '!' Boeen; bob ohne Standard bekommt nichts davon",
+  "befund": ""
+ },
+ "trip.vorlage.neu_aus_standard|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "trip.vorlage.eigene_speichern|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_trip_eigene_standard_vorlage_alle_kanaele",
+  "notiz": "gespeicherte eigene Vorlage (Auswahl, Folge, Grenzen, alarm_ab) kommt ueber die Neuanlage in allen Ausgaben an",
+  "befund": ""
+ },
+ "trip.vorlage.eigene_speichern|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_trip_eigene_standard_vorlage_alle_kanaele",
+  "notiz": "gespeicherte eigene Vorlage (Auswahl, Folge, Grenzen, alarm_ab) kommt ueber die Neuanlage in allen Ausgaben an",
+  "befund": ""
+ },
+ "trip.vorlage.eigene_speichern|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_trip_eigene_standard_vorlage_alle_kanaele",
+  "notiz": "gespeicherte eigene Vorlage (Auswahl, Folge, Grenzen, alarm_ab) kommt ueber die Neuanlage in allen Ausgaben an",
+  "befund": ""
+ },
+ "trip.vorlage.eigene_speichern|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_trip_eigene_standard_vorlage_alle_kanaele",
+  "notiz": "gespeicherte eigene Vorlage (Auswahl, Folge, Grenzen, alarm_ab) kommt ueber die Neuanlage in allen Ausgaben an",
+  "befund": ""
+ },
+ "trip.vorlage.eigene_speichern|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_trip_eigene_standard_vorlage_alle_kanaele",
+  "notiz": "gespeicherte eigene Vorlage (Auswahl, Folge, Grenzen, alarm_ab) kommt ueber die Neuanlage in allen Ausgaben an",
+  "befund": ""
+ },
+ "trip.vorlage.eigene_speichern|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_trip_eigene_standard_vorlage_alle_kanaele",
+  "notiz": "gespeicherte eigene Vorlage (Auswahl, Folge, Grenzen, alarm_ab) kommt ueber die Neuanlage in allen Ausgaben an",
+  "befund": ""
+ },
+ "trip.vorlage.eigene_speichern|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/.../wetter-tab/__tests__/vorlageDialogPayload.test.ts (5/5) + Go TestS3a2794_AC22",
+  "notiz": "Dialog sendet aufgeloeste Ampel + Art, keine Horizonte; Mutation M25 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.vorlage.eigene_speichern|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "trip.zeiten|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_uhrzeit_alle_kanaele (8 Faelle)",
+  "notiz": "echter Sammellauf send_due_reports: Morgen 06:45 -> 06:44 kein Kanal, 06:45 und 09:44 alle vier (+ Voll/Kompakt), 09:46 keiner",
+  "befund": ""
+ },
+ "trip.zeiten|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_uhrzeit_alle_kanaele (8 Faelle)",
+  "notiz": "echter Sammellauf send_due_reports: Morgen 06:45 -> 06:44 kein Kanal, 06:45 und 09:44 alle vier (+ Voll/Kompakt), 09:46 keiner",
+  "befund": ""
+ },
+ "trip.zeiten|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_uhrzeit_alle_kanaele (8 Faelle)",
+  "notiz": "echter Sammellauf send_due_reports: Morgen 06:45 -> 06:44 kein Kanal, 06:45 und 09:44 alle vier (+ Voll/Kompakt), 09:46 keiner",
+  "befund": ""
+ },
+ "trip.zeiten|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_uhrzeit_alle_kanaele (8 Faelle)",
+  "notiz": "echter Sammellauf send_due_reports: Morgen 06:45 -> 06:44 kein Kanal, 06:45 und 09:44 alle vier (+ Voll/Kompakt), 09:46 keiner",
+  "befund": ""
+ },
+ "trip.zeiten|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_uhrzeit_alle_kanaele (8 Faelle)",
+  "notiz": "echter Sammellauf send_due_reports: Morgen 06:45 -> 06:44 kein Kanal, 06:45 und 09:44 alle vier (+ Voll/Kompakt), 09:46 keiner",
+  "befund": ""
+ },
+ "trip.zeiten|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_uhrzeit_alle_kanaele (8 Faelle)",
+  "notiz": "echter Sammellauf send_due_reports: Morgen 06:45 -> 06:44 kein Kanal, 06:45 und 09:44 alle vier (+ Voll/Kompakt), 09:46 keiner",
+  "befund": ""
+ },
+ "trip.slots|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_slots_alle_kanaele",
+  "notiz": "Slot aus -> kein Kanal, Slot an -> alle vier; auch tests/tdd/test_kanal_an_aus_kette.py AC-1/AC-2",
+  "befund": ""
+ },
+ "trip.slots|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_slots_alle_kanaele",
+  "notiz": "Slot aus -> kein Kanal, Slot an -> alle vier; auch tests/tdd/test_kanal_an_aus_kette.py AC-1/AC-2",
+  "befund": ""
+ },
+ "trip.slots|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_slots_alle_kanaele",
+  "notiz": "Slot aus -> kein Kanal, Slot an -> alle vier; auch tests/tdd/test_kanal_an_aus_kette.py AC-1/AC-2",
+  "befund": ""
+ },
+ "trip.slots|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_slots_alle_kanaele",
+  "notiz": "Slot aus -> kein Kanal, Slot an -> alle vier; auch tests/tdd/test_kanal_an_aus_kette.py AC-1/AC-2",
+  "befund": ""
+ },
+ "trip.slots|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_slots_alle_kanaele",
+  "notiz": "Slot aus -> kein Kanal, Slot an -> alle vier; auch tests/tdd/test_kanal_an_aus_kette.py AC-1/AC-2",
+  "befund": ""
+ },
+ "trip.slots|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_slots_alle_kanaele",
+  "notiz": "Slot aus -> kein Kanal, Slot an -> alle vier; auch tests/tdd/test_kanal_an_aus_kette.py AC-1/AC-2",
+  "befund": ""
+ },
+ "trip.briefing_kanaele|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_briefing_je_kanal (8 Faelle)",
+  "notiz": "je Schalter genau dieser Kanal; E-Mail Voll (HTML+Klartext) bzw. Kompakt wie eingestellt",
+  "befund": ""
+ },
+ "trip.briefing_kanaele|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_briefing_je_kanal (8 Faelle)",
+  "notiz": "je Schalter genau dieser Kanal; E-Mail Voll (HTML+Klartext) bzw. Kompakt wie eingestellt",
+  "befund": ""
+ },
+ "trip.briefing_kanaele|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_briefing_je_kanal (8 Faelle)",
+  "notiz": "je Schalter genau dieser Kanal; E-Mail Voll (HTML+Klartext) bzw. Kompakt wie eingestellt",
+  "befund": ""
+ },
+ "trip.briefing_kanaele|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_briefing_je_kanal (8 Faelle)",
+  "notiz": "je Schalter genau dieser Kanal; E-Mail Voll (HTML+Klartext) bzw. Kompakt wie eingestellt",
+  "befund": ""
+ },
+ "trip.briefing_kanaele|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_briefing_je_kanal (8 Faelle)",
+  "notiz": "je Schalter genau dieser Kanal; E-Mail Voll (HTML+Klartext) bzw. Kompakt wie eingestellt",
+  "befund": ""
+ },
+ "trip.briefing_kanaele|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_zustellung_luecken.py::test_trip_briefing_je_kanal (8 Faelle)",
+  "notiz": "je Schalter genau dieser Kanal; E-Mail Voll (HTML+Klartext) bzw. Kompakt wie eingestellt",
+  "befund": ""
+ },
+ "trip.zeiten|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Briefing-Validatoren pruefen den Inhalt einer zugestellten Mail gegen --konfig; ob/wann/an welchen Kanal etwas geht, ist keine Mail-Inhaltsfrage (docs/reference/mail_validators.md, Dispatch)",
+  "befund": ""
+ },
+ "trip.slots|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Briefing-Validatoren pruefen den Inhalt einer zugestellten Mail gegen --konfig; ob/wann/an welchen Kanal etwas geht, ist keine Mail-Inhaltsfrage (docs/reference/mail_validators.md, Dispatch)",
+  "befund": ""
+ },
+ "trip.briefing_kanaele|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Briefing-Validatoren pruefen den Inhalt einer zugestellten Mail gegen --konfig; ob/wann/an welchen Kanal etwas geht, ist keine Mail-Inhaltsfrage (docs/reference/mail_validators.md, Dispatch)",
+  "befund": ""
+ },
+ "trip.alarm_kanaele|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_alarm_kanaele_einzeln, test_alarm_kanaele_alle_vier",
+  "notiz": "je Kanal genau dieser; Mutation M29 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.alarm_kanaele|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_alarm_kanaele_einzeln, test_alarm_kanaele_alle_vier",
+  "notiz": "je Kanal genau dieser; Mutation M29 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.alarm_kanaele|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_alarm_kanaele_einzeln, test_alarm_kanaele_alle_vier",
+  "notiz": "je Kanal genau dieser; Mutation M29 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.alarm_kanaele|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_alarm_kanaele_einzeln, test_alarm_kanaele_alle_vier",
+  "notiz": "je Kanal genau dieser; Mutation M29 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.alarm_kanaele|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_alarm_kanaele_einzeln, test_alarm_kanaele_alle_vier",
+  "notiz": "je Kanal genau dieser; Mutation M29 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.dringlichkeit|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_dringlichkeit_je_kanal",
+  "notiz": "MODERATE-Ereignis: E-Mail LOW + Telegram MODERATE ja, SMS/Premium HIGH nein; Mutation M07 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.dringlichkeit|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_dringlichkeit_je_kanal",
+  "notiz": "MODERATE-Ereignis: E-Mail LOW + Telegram MODERATE ja, SMS/Premium HIGH nein; Mutation M07 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.dringlichkeit|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_dringlichkeit_je_kanal",
+  "notiz": "MODERATE-Ereignis: E-Mail LOW + Telegram MODERATE ja, SMS/Premium HIGH nein; Mutation M07 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.dringlichkeit|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_dringlichkeit_je_kanal",
+  "notiz": "MODERATE-Ereignis: E-Mail LOW + Telegram MODERATE ja, SMS/Premium HIGH nein; Mutation M07 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.dringlichkeit|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_dringlichkeit_je_kanal",
+  "notiz": "MODERATE-Ereignis: E-Mail LOW + Telegram MODERATE ja, SMS/Premium HIGH nein; Mutation M07 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.stille_stunden|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_stille_stunden_alle_kanaele",
+  "notiz": "aus JSON: in der Ruhezeit kein Kanal, ausserhalb alle vier; Mutation M03 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.stille_stunden|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_stille_stunden_alle_kanaele",
+  "notiz": "aus JSON: in der Ruhezeit kein Kanal, ausserhalb alle vier; Mutation M03 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.stille_stunden|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_stille_stunden_alle_kanaele",
+  "notiz": "aus JSON: in der Ruhezeit kein Kanal, ausserhalb alle vier; Mutation M03 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.stille_stunden|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_stille_stunden_alle_kanaele",
+  "notiz": "aus JSON: in der Ruhezeit kein Kanal, ausserhalb alle vier; Mutation M03 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.stille_stunden|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_stille_stunden_alle_kanaele",
+  "notiz": "aus JSON: in der Ruhezeit kein Kanal, ausserhalb alle vier; Mutation M03 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.cooldown|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_cooldown_alle_kanaele[120/0]",
+  "notiz": "neues Ereignis gleicher Dringlichkeit nach 30 min: 120 -> kein Kanal, 0 -> alle vier; Mutation M04 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.cooldown|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_cooldown_alle_kanaele[120/0]",
+  "notiz": "neues Ereignis gleicher Dringlichkeit nach 30 min: 120 -> kein Kanal, 0 -> alle vier; Mutation M04 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.cooldown|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_cooldown_alle_kanaele[120/0]",
+  "notiz": "neues Ereignis gleicher Dringlichkeit nach 30 min: 120 -> kein Kanal, 0 -> alle vier; Mutation M04 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.cooldown|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_cooldown_alle_kanaele[120/0]",
+  "notiz": "neues Ereignis gleicher Dringlichkeit nach 30 min: 120 -> kein Kanal, 0 -> alle vier; Mutation M04 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.cooldown|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_alarm_luecken.py::test_cooldown_alle_kanaele[120/0]",
+  "notiz": "neues Ereignis gleicher Dringlichkeit nach 30 min: 120 -> kein Kanal, 0 -> alle vier; Mutation M04 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "trip.alarm_kanaele|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Mail kennt kein Kompaktformat: render_alert_email liefert immer HTML+Klartext (notification_service.py:2057/2150); email_format gilt nur fuer Briefings (Konzept §5 P8 W15)",
+  "befund": ""
+ },
+ "trip.alarm_kanaele|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Ausloesung, keine Briefing-Mail; Briefing-Validatoren pruefen Mailinhalt (mail_validators.md Dispatch-Tabelle: deviation-alert ist 'falscher Validator')",
+  "befund": ""
+ },
+ "trip.dringlichkeit|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Mail kennt kein Kompaktformat: render_alert_email liefert immer HTML+Klartext (notification_service.py:2057/2150); email_format gilt nur fuer Briefings (Konzept §5 P8 W15)",
+  "befund": ""
+ },
+ "trip.dringlichkeit|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Ausloesung, keine Briefing-Mail; Briefing-Validatoren pruefen Mailinhalt (mail_validators.md Dispatch-Tabelle: deviation-alert ist 'falscher Validator')",
+  "befund": ""
+ },
+ "trip.stille_stunden|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Mail kennt kein Kompaktformat: render_alert_email liefert immer HTML+Klartext (notification_service.py:2057/2150); email_format gilt nur fuer Briefings (Konzept §5 P8 W15)",
+  "befund": ""
+ },
+ "trip.stille_stunden|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Ausloesung, keine Briefing-Mail; Briefing-Validatoren pruefen Mailinhalt (mail_validators.md Dispatch-Tabelle: deviation-alert ist 'falscher Validator')",
+  "befund": ""
+ },
+ "trip.cooldown|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Mail kennt kein Kompaktformat: render_alert_email liefert immer HTML+Klartext (notification_service.py:2057/2150); email_format gilt nur fuer Briefings (Konzept §5 P8 W15)",
+  "befund": ""
+ },
+ "trip.cooldown|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Ausloesung, keine Briefing-Mail; Briefing-Validatoren pruefen Mailinhalt (mail_validators.md Dispatch-Tabelle: deviation-alert ist 'falscher Validator')",
+  "befund": ""
+ },
+ "trip.zwei_nutzer|email_kompakt": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_trip_luecken.py::test_zwei_nutzer_kompakt_je_eigene_konfig_und_sprache",
+  "notiz": "zwei Nutzer, Kompakt: je eigener Empfaenger, eigene Auswahl, DE/EN",
+  "befund": ""
+ },
+ "trip.zwei_nutzer|validator_email": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_validator_luecken.py::test_trip_empfaenger_zwei_nutzer",
+  "notiz": "--to-contains eigener Nutzer Exit 0, fremder Nutzer Exit != 0",
+  "befund": ""
+ },
+ "orte.grundauswahl.gespeichert|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_grundauswahl_begrenzt_kanal_listen",
+  "notiz": "Boeen/Windrichtung aus der Grundauswahl, in Telegram-/SMS-Liste an -> fehlen; Premium = SMS; 2 Nutzer",
+  "befund": ""
+ },
+ "orte.grundauswahl.gespeichert|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_grundauswahl_begrenzt_kanal_listen",
+  "notiz": "Boeen/Windrichtung aus der Grundauswahl, in Telegram-/SMS-Liste an -> fehlen; Premium = SMS; 2 Nutzer",
+  "befund": ""
+ },
+ "orte.grundauswahl.gespeichert|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_grundauswahl_begrenzt_kanal_listen",
+  "notiz": "Boeen/Windrichtung aus der Grundauswahl, in Telegram-/SMS-Liste an -> fehlen; Premium = SMS; 2 Nutzer",
+  "befund": ""
+ },
+ "orte.grundauswahl.nie_eingestellt|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail",
+  "notiz": "Runde 7: p6: nie eingestellt = Zeilen/Folge der Mail (auch test_bl4_nie_eingestellt_sms_folgt_mail); Neuanlage schreibt Grundauswahl (Go TestF3047E1_NeuerVergleichSchreibtGrundauswahlDerStandardVorlage_ZweiNutzer)",
+  "befund": "B-L4"
+ },
+ "orte.grundauswahl.nie_eingestellt|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail",
+  "notiz": "Runde 7: p6: nie eingestellt = Zeilen/Folge der Mail (auch test_bl4_nie_eingestellt_sms_folgt_mail); Neuanlage schreibt Grundauswahl (Go TestF3047E1_NeuerVergleichSchreibtGrundauswahlDerStandardVorlage_ZweiNutzer)",
+  "befund": "B-L4"
+ },
+ "orte.grundauswahl.nie_eingestellt|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail",
+  "notiz": "Runde 7: p6: nie eingestellt = Zeilen/Folge der Mail (auch test_bl4_nie_eingestellt_sms_folgt_mail); Neuanlage schreibt Grundauswahl (Go TestF3047E1_NeuerVergleichSchreibtGrundauswahlDerStandardVorlage_ZweiNutzer)",
+  "befund": "B-L4"
+ },
+ "orte.grundauswahl.nie_eingestellt|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "orte.grundauswahl.bewusst_leer|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_bewusst_leer",
+  "notiz": "active_metrics [] -> keine Metrikzelle in Telegram/SMS",
+  "befund": ""
+ },
+ "orte.grundauswahl.bewusst_leer|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_bewusst_leer",
+  "notiz": "active_metrics [] -> keine Metrikzelle in Telegram/SMS",
+  "befund": ""
+ },
+ "orte.grundauswahl.bewusst_leer|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_bewusst_leer",
+  "notiz": "active_metrics [] -> keine Metrikzelle in Telegram/SMS",
+  "befund": ""
+ },
+ "orte.grundauswahl.altformat|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_altformat_ohne_listen_folgt_grundauswahl",
+  "notiz": "ohne channel_layouts/hourly/outlook: Telegram/SMS in Grundauswahl-Folge (Boeen, Temp, Windrichtung, Wind); Mutation M17 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.grundauswahl.altformat|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_altformat_ohne_listen_folgt_grundauswahl",
+  "notiz": "ohne channel_layouts/hourly/outlook: Telegram/SMS in Grundauswahl-Folge (Boeen, Temp, Windrichtung, Wind); Mutation M17 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.grundauswahl.altformat|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_altformat_ohne_listen_folgt_grundauswahl",
+  "notiz": "ohne channel_layouts/hourly/outlook: Telegram/SMS in Grundauswahl-Folge (Boeen, Temp, Windrichtung, Wind); Mutation M17 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.grundauswahl.altformat|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/.../weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts (41/41)",
+  "notiz": "nie eingestellte Ausblick-/Stundenverlauf-Listen zeigen den Mail-Standard; Mutation M26 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.grundauswahl.altformat|validator_email": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/validatoren/test_sweep.py O12_stunden_nie, O13_ausblick_nie",
+  "notiz": "Altbestand ohne Stundenverlauf-/Ausblick-Liste: positiv Exit 0, Vertauschung/Zeile zu viel/fehlt Exit 1 (validatoren/ergebnisse.jsonl; bekannte Luecken B-V1/B-V4 ausgenommen)",
+  "befund": ""
+ },
+ "orte.grundauswahl.vorlagen_metrik_ohne_pendant|email_html": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::e6_nicht_ausgebbare_groesse_steht_gesperrt_statt_still",
+  "notiz": "Runde 7: p5a: nicht ausgebbare Groesse steht gesperrt mit Grund (DE/EN); Vorlagen im Vergleich nur ausgebbare Groessen; Ausgabe laesst sie weiter weg",
+  "befund": "E6"
+ },
+ "orte.grundauswahl.vorlagen_metrik_ohne_pendant|email_text": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::e6_nicht_ausgebbare_groesse_steht_gesperrt_statt_still",
+  "notiz": "Runde 7: p5a: nicht ausgebbare Groesse steht gesperrt mit Grund (DE/EN); Vorlagen im Vergleich nur ausgebbare Groessen; Ausgabe laesst sie weiter weg",
+  "befund": "E6"
+ },
+ "orte.grundauswahl.vorlagen_metrik_ohne_pendant|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat",
+  "befund": ""
+ },
+ "orte.grundauswahl.vorlagen_metrik_ohne_pendant|telegram": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::e6_nicht_ausgebbare_groesse_steht_gesperrt_statt_still",
+  "notiz": "Runde 7: p5a: nicht ausgebbare Groesse steht gesperrt mit Grund (DE/EN); Vorlagen im Vergleich nur ausgebbare Groessen; Ausgabe laesst sie weiter weg",
+  "befund": "E6"
+ },
+ "orte.grundauswahl.vorlagen_metrik_ohne_pendant|sms": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::e6_nicht_ausgebbare_groesse_steht_gesperrt_statt_still",
+  "notiz": "Runde 7: p5a: nicht ausgebbare Groesse steht gesperrt mit Grund (DE/EN); Vorlagen im Vergleich nur ausgebbare Groessen; Ausgabe laesst sie weiter weg",
+  "befund": "E6"
+ },
+ "orte.grundauswahl.vorlagen_metrik_ohne_pendant|premium_sms": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::e6_nicht_ausgebbare_groesse_steht_gesperrt_statt_still",
+  "notiz": "Runde 7: p5a: nicht ausgebbare Groesse steht gesperrt mit Grund (DE/EN); Vorlagen im Vergleich nur ausgebbare Groessen; Ausgabe laesst sie weiter weg",
+  "befund": "E6"
+ },
+ "orte.grundauswahl.vorlagen_metrik_ohne_pendant|validator_email": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::e6_nicht_ausgebbare_groesse_steht_gesperrt_statt_still",
+  "notiz": "Runde 7: p5a: nicht ausgebbare Groesse steht gesperrt mit Grund (DE/EN); Vorlagen im Vergleich nur ausgebbare Groessen; Ausgabe laesst sie weiter weg",
+  "befund": "E6"
+ },
+ "orte.kanal_liste.altformat|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "Orte-Editor liest channel_layouts noch nicht (#3031, PR #3042)",
+  "befund": "#3031"
+ },
+ "orte.kanal_liste.bewusst_leer|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "Orte-Editor liest channel_layouts noch nicht (#3031, PR #3042)",
+  "befund": "#3031"
+ },
+ "orte.kanal_liste.totalschnitt|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "Orte-Editor liest channel_layouts noch nicht (#3031, PR #3042)",
+  "befund": "#3031"
+ },
+ "orte.stundenverlauf.gesperrt|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/probe_editor_luecken.test.ts (CompareHourlyLayoutControls SSR)",
+  "notiz": "Sonnenstunden-Zeile disabled mit Grund, Temperatur waehlbar",
+  "befund": ""
+ },
+ "orte.stundenverlauf.gesperrt|validator_email": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_validator_luecken.py::test_orte_stundenverlauf_gesperrt",
+  "notiz": "Konfig mit sunshine: korrekte Mail Exit 0, Mail mit Sonnen-Spalte Exit 1",
+  "befund": ""
+ },
+ "orte.stundenverlauf.roh_einfach|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "#3058",
+  "notiz": "Runde 7: Roh/Einfach Stundenverlauf ausgelagert (Spec-Nachtrag Runde 7)",
+  "befund": "B-OM-5"
+ },
+ "orte.stundenverlauf.roh_einfach|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "kein Feld vorhanden (B-OM-5), nichts zu pruefen",
+  "befund": ""
+ },
+ "orte.ausblick.roh_einfach|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_kanaele.py::test_k7_ausblick_im_orte_telegram_kette",
+  "notiz": "Runde 7: p2/p2b: Ausblick im Orte-Telegram, Versand und Vorschau verdrahtet (AC-24)",
+  "befund": "B-K7"
+ },
+ "orte.ausblick.roh_einfach|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "SMS/Premium-SMS tragen keinen 3-Tages-Ausblick (ADR-0055:107, baulich nicht erreichbar)",
+  "befund": ""
+ },
+ "orte.ausblick.roh_einfach|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "SMS/Premium-SMS tragen keinen 3-Tages-Ausblick (ADR-0055:107, baulich nicht erreichbar)",
+  "befund": ""
+ },
+ "orte.ausblick.roh_einfach|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/probe_editor_luecken.test.ts (OutlookLayoutControls SSR, geteilt Trip/Orte)",
+  "notiz": "Roh/Einfach je Zeile aus outlook_metric_formats; Mutation M15 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.ausblick.an_aus|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_kanaele.py::test_k7_ausblick_im_orte_telegram_kette",
+  "notiz": "Runde 7: p2/p2b: Ausblick im Orte-Telegram, Versand und Vorschau verdrahtet (AC-24)",
+  "befund": "B-K7"
+ },
+ "orte.ausblick.an_aus|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "SMS/Premium-SMS tragen keinen 3-Tages-Ausblick (ADR-0055:107, baulich nicht erreichbar)",
+  "befund": ""
+ },
+ "orte.ausblick.an_aus|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "SMS/Premium-SMS tragen keinen 3-Tages-Ausblick (ADR-0055:107, baulich nicht erreichbar)",
+  "befund": ""
+ },
+ "orte.ausblick.erscheint_im|telegram": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "fuer Orte kein Feld 'erscheint im' (report_config_resolver.py:257; Klaerung B-OM-4); Orte zeigen den Ausblick in beiden Briefings",
+  "befund": ""
+ },
+ "orte.ausblick.erscheint_im|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "fuer Orte kein Feld 'erscheint im' (report_config_resolver.py:257; Klaerung B-OM-4); Orte zeigen den Ausblick in beiden Briefings",
+  "befund": ""
+ },
+ "orte.ausblick.erscheint_im|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "fuer Orte kein Feld 'erscheint im' (report_config_resolver.py:257; Klaerung B-OM-4); Orte zeigen den Ausblick in beiden Briefings",
+  "befund": ""
+ },
+ "orte.ausblick.erscheint_im|einstellungsseite": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "fuer Orte kein Feld 'erscheint im' (report_config_resolver.py:257; Klaerung B-OM-4); Orte zeigen den Ausblick in beiden Briefings",
+  "befund": ""
+ },
+ "orte.ausblick.zeilenzahl|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/validatoren/mails/O11_ausblick_einfach.{html,plain} (echter Renderweg vh._orte_eml)",
+  "notiz": "je Ort mit Daten drei Tageszeilen Fr/Sa/So (HTML 2x3 Zellen, Klartext 3 Zeilen je Ort)",
+  "befund": ""
+ },
+ "orte.ausblick.zeilenzahl|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/validatoren/mails/O11_ausblick_einfach.{html,plain} (echter Renderweg vh._orte_eml)",
+  "notiz": "je Ort mit Daten drei Tageszeilen Fr/Sa/So (HTML 2x3 Zellen, Klartext 3 Zeilen je Ort)",
+  "befund": ""
+ },
+ "orte.ausblick.zeilenzahl|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat",
+  "befund": ""
+ },
+ "orte.ausblick.zeilenzahl|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_kanaele.py::test_k7_ausblick_im_orte_telegram_kette",
+  "notiz": "Runde 7: p2/p2b: Ausblick im Orte-Telegram, Versand und Vorschau verdrahtet (AC-24)",
+  "befund": "B-K7"
+ },
+ "orte.ausblick.zeilenzahl|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "SMS/Premium-SMS tragen keinen 3-Tages-Ausblick (ADR-0055:107, baulich nicht erreichbar)",
+  "befund": ""
+ },
+ "orte.ausblick.zeilenzahl|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "SMS/Premium-SMS tragen keinen 3-Tages-Ausblick (ADR-0055:107, baulich nicht erreichbar)",
+  "befund": ""
+ },
+ "orte.ausblick.zeilenzahl|einstellungsseite": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "fest drei Tage, keine Einstellung (Konzept §5 P8)",
+  "befund": ""
+ },
+ "orte.ortsfolge|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_ortsfolge_alle_kanaele",
+  "notiz": "location_ids umgekehrt -> Telegram und SMS beginnen mit Bozen; Premium = SMS; Mutation M10 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.ortsfolge|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_ortsfolge_alle_kanaele",
+  "notiz": "location_ids umgekehrt -> Telegram und SMS beginnen mit Bozen; Premium = SMS; Mutation M10 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.ortsfolge|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_ortsfolge_alle_kanaele",
+  "notiz": "location_ids umgekehrt -> Telegram und SMS beginnen mit Bozen; Premium = SMS; Mutation M10 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.ortsfolge|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/compare/__tests__/p10_ortsfolge_reiter_gleich_mail.test.ts::p10-nutzer-a: Reihenfolge, Auswahl und Namen im Reiter = Ort-Bloecke der Mail",
+  "notiz": "Runde 7: p10: Orte-Reiter loest location_ids wie der Versand auf (zwei Nutzer)",
+  "befund": ""
+ },
+ "orte.orte_auswahl|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_orte_auswahl_alle_kanaele",
+  "notiz": "nur Bozen gewaehlt -> Innsbruck in keiner Ausgabe (HTML, Klartext, Telegram, SMS, Premium)",
+  "befund": ""
+ },
+ "orte.orte_auswahl|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_orte_auswahl_alle_kanaele",
+  "notiz": "nur Bozen gewaehlt -> Innsbruck in keiner Ausgabe (HTML, Klartext, Telegram, SMS, Premium)",
+  "befund": ""
+ },
+ "orte.orte_auswahl|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_orte_auswahl_alle_kanaele",
+  "notiz": "nur Bozen gewaehlt -> Innsbruck in keiner Ausgabe (HTML, Klartext, Telegram, SMS, Premium)",
+  "befund": ""
+ },
+ "orte.orte_auswahl|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_orte_auswahl_alle_kanaele",
+  "notiz": "nur Bozen gewaehlt -> Innsbruck in keiner Ausgabe (HTML, Klartext, Telegram, SMS, Premium)",
+  "befund": ""
+ },
+ "orte.orte_auswahl|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_orte_auswahl_alle_kanaele",
+  "notiz": "nur Bozen gewaehlt -> Innsbruck in keiner Ausgabe (HTML, Klartext, Telegram, SMS, Premium)",
+  "befund": ""
+ },
+ "orte.orte_auswahl|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat",
+  "befund": ""
+ },
+ "orte.orte_auswahl|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/compare/__tests__/p10_ortsfolge_reiter_gleich_mail.test.ts::geloeschter Ort mitten in location_ids: Reiter zeigt dieselben Orte, Nummern und Folge wie die Mail",
+  "notiz": "Runde 7: p10: geloeschte Orte fallen wie in der Mail weg",
+  "befund": ""
+ },
+ "orte.ortsnamen|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_ortsnamen_sonderzeichen",
+  "notiz": "'<b>Alt</b> & Hoetting': HTML maskiert, Klartext roh, Telegram ohne parse_mode, SMS <= 160 Zeichen",
+  "befund": ""
+ },
+ "orte.ortsnamen|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_ortsnamen_sonderzeichen",
+  "notiz": "'<b>Alt</b> & Hoetting': HTML maskiert, Klartext roh, Telegram ohne parse_mode, SMS <= 160 Zeichen",
+  "befund": ""
+ },
+ "orte.ortsnamen|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_ortsnamen_sonderzeichen",
+  "notiz": "'<b>Alt</b> & Hoetting': HTML maskiert, Klartext roh, Telegram ohne parse_mode, SMS <= 160 Zeichen",
+  "befund": ""
+ },
+ "orte.ortsnamen|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_ortsnamen_sonderzeichen",
+  "notiz": "'<b>Alt</b> & Hoetting': HTML maskiert, Klartext roh, Telegram ohne parse_mode, SMS <= 160 Zeichen",
+  "befund": ""
+ },
+ "orte.ortsnamen|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_ortsnamen_sonderzeichen",
+  "notiz": "'<b>Alt</b> & Hoetting': HTML maskiert, Klartext roh, Telegram ohne parse_mode, SMS <= 160 Zeichen",
+  "befund": ""
+ },
+ "orte.ortsnamen|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat",
+  "befund": ""
+ },
+ "orte.ortsnamen|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/compare/__tests__/p10_ortsfolge_reiter_gleich_mail.test.ts::zwei Nutzer: gleiche Kennungen, je eigene Namen; keiner sieht Namen des anderen",
+  "notiz": "Runde 7: p10: Ortsnamen mit Sonderzeichen wie in der Mail",
+  "befund": ""
+ },
+ "orte.zusatzbloecke|email_html": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Zusatzbloecke sind 'Nur Trip' (Konzept §5 Punkt 8, E-Mail-Weitere-Einstellungen)",
+  "befund": ""
+ },
+ "orte.zusatzbloecke|email_text": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Zusatzbloecke sind 'Nur Trip' (Konzept §5 Punkt 8, E-Mail-Weitere-Einstellungen)",
+  "befund": ""
+ },
+ "orte.zusatzbloecke|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Zusatzbloecke sind 'Nur Trip' (Konzept §5 Punkt 8, E-Mail-Weitere-Einstellungen)",
+  "befund": ""
+ },
+ "orte.zusatzbloecke|telegram": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Zusatzbloecke sind 'Nur Trip' (Konzept §5 Punkt 8, E-Mail-Weitere-Einstellungen)",
+  "befund": ""
+ },
+ "orte.zusatzbloecke|sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Zusatzbloecke sind 'Nur Trip' (Konzept §5 Punkt 8, E-Mail-Weitere-Einstellungen)",
+  "befund": ""
+ },
+ "orte.zusatzbloecke|premium_sms": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Zusatzbloecke sind 'Nur Trip' (Konzept §5 Punkt 8, E-Mail-Weitere-Einstellungen)",
+  "befund": ""
+ },
+ "orte.zusatzbloecke|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Zusatzbloecke sind 'Nur Trip' (Konzept §5 Punkt 8, E-Mail-Weitere-Einstellungen)",
+  "befund": ""
+ },
+ "orte.tagesfenster|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_tagesfenster_reicht_an_engine",
+  "notiz": "Fenster 12-16 erreicht die Vergleichs-Engine (Standard 4-19); es wirkt dort vor der Kanalverteilung (ADR-0035 Punkt 2), alle Kanaele aus demselben ComparisonResult; Orte-Telegram/SMS tragen keine Stunden",
+  "befund": ""
+ },
+ "orte.tagesfenster|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_tagesfenster_reicht_an_engine",
+  "notiz": "Fenster 12-16 erreicht die Vergleichs-Engine (Standard 4-19); es wirkt dort vor der Kanalverteilung (ADR-0035 Punkt 2), alle Kanaele aus demselben ComparisonResult; Orte-Telegram/SMS tragen keine Stunden",
+  "befund": ""
+ },
+ "orte.tagesfenster|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_tagesfenster_reicht_an_engine",
+  "notiz": "Fenster 12-16 erreicht die Vergleichs-Engine (Standard 4-19); es wirkt dort vor der Kanalverteilung (ADR-0035 Punkt 2), alle Kanaele aus demselben ComparisonResult; Orte-Telegram/SMS tragen keine Stunden",
+  "befund": ""
+ },
+ "orte.morgen_abend_briefing|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_morgen_abend_datum_alle_kanaele",
+  "notiz": "Zieltag heute/morgen erscheint in Telegram ('Datum') und SMS ('Vergleich TT.MM.'), Premium = SMS",
+  "befund": ""
+ },
+ "orte.morgen_abend_briefing|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_morgen_abend_datum_alle_kanaele",
+  "notiz": "Zieltag heute/morgen erscheint in Telegram ('Datum') und SMS ('Vergleich TT.MM.'), Premium = SMS",
+  "befund": ""
+ },
+ "orte.morgen_abend_briefing|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_morgen_abend_datum_alle_kanaele",
+  "notiz": "Zieltag heute/morgen erscheint in Telegram ('Datum') und SMS ('Vergleich TT.MM.'), Premium = SMS",
+  "befund": ""
+ },
+ "orte.morgen_abend_briefing|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/.../zustellung-tab/__tests__/zustellungModell.test.ts::ac3_orte_unterzeilen",
+  "notiz": "Unterzeilen 'fuer heute'/'fuer morgen'; Mutation M33 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.morgen_abend_briefing|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "orte.amtliche_warnungen.schalter|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_amtliche_warnungen_schalter[True/False]",
+  "notiz": "Schalter erreicht die Engine (kein Abruf bei aus); Telegram ohne Warnung, SMS ohne '!TS'; Mutation M09 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.amtliche_warnungen.schalter|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_amtliche_warnungen_schalter[True/False]",
+  "notiz": "Schalter erreicht die Engine (kein Abruf bei aus); Telegram ohne Warnung, SMS ohne '!TS'; Mutation M09 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.amtliche_warnungen.schalter|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_amtliche_warnungen_schalter[True/False]",
+  "notiz": "Schalter erreicht die Engine (kein Abruf bei aus); Telegram ohne Warnung, SMS ohne '!TS'; Mutation M09 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.amtliche_warnungen.schalter|validator_email": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_mail.py::test_om2_warnungen_aus_keine_leere_warnzeile",
+  "notiz": "Runde 7: p2: keine leere Warnzeile; Validator: tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_warnungen_aus_echte_mail",
+  "befund": "B-OM-2"
+ },
+ "orte.amtliche_warnungen.position|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "feste Zeile WV6: #3031",
+  "befund": "#3031"
+ },
+ "orte.amtliche_warnungen.position|validator_email": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_validator_luecken.py::test_orte_warnzeile_position",
+  "notiz": "Warnzeile mit der Folgezeile vertauscht -> Exit 1 (Erkennung ueber die erste Tabellenzeile, Meldung unspezifisch)",
+  "befund": ""
+ },
+ "orte.amtliche_warnungen.kuerzung_zuletzt|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "#3031 Umfang 4",
+  "befund": "#3031"
+ },
+ "orte.amtliche_warnungen.nicht_abrufbar|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl2_warnungen_nicht_abrufbar_telegram",
+  "notiz": "Runde 7: p6: Telegram-Hinweiszeile, SMS/Premium ' X?' (test_bl2_warnungen_nicht_abrufbar_sms)",
+  "befund": "B-L2"
+ },
+ "orte.amtliche_warnungen.nicht_abrufbar|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl2_warnungen_nicht_abrufbar_telegram",
+  "notiz": "Runde 7: p6: Telegram-Hinweiszeile, SMS/Premium ' X?' (test_bl2_warnungen_nicht_abrufbar_sms)",
+  "befund": "B-L2"
+ },
+ "orte.amtliche_warnungen.nicht_abrufbar|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl2_warnungen_nicht_abrufbar_telegram",
+  "notiz": "Runde 7: p6: Telegram-Hinweiszeile, SMS/Premium ' X?' (test_bl2_warnungen_nicht_abrufbar_sms)",
+  "befund": "B-L2"
+ },
+ "orte.amtliche_warnungen.nicht_abrufbar|einstellungsseite": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Laufzeit-Zustand der Warnquelle, keine Einstellung",
+  "befund": ""
+ },
+ "orte.amtliche_warnungen.nicht_abrufbar|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "orte.radar|email_html": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_radar_alarm_standard_aus_und_kanalmenge_mit_schwelle",
+  "notiz": "ohne Schalter kein Abruf/Versand, mit Schalter Kanalmenge nach Schwelle, je Tarif (Transport-Mitschrift, Mail HTML+Klartext); Mutation M19 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.radar|email_text": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_radar_alarm_standard_aus_und_kanalmenge_mit_schwelle",
+  "notiz": "ohne Schalter kein Abruf/Versand, mit Schalter Kanalmenge nach Schwelle, je Tarif (Transport-Mitschrift, Mail HTML+Klartext); Mutation M19 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.radar|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_radar_alarm_standard_aus_und_kanalmenge_mit_schwelle",
+  "notiz": "ohne Schalter kein Abruf/Versand, mit Schalter Kanalmenge nach Schwelle, je Tarif (Transport-Mitschrift, Mail HTML+Klartext); Mutation M19 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.radar|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_radar_alarm_standard_aus_und_kanalmenge_mit_schwelle",
+  "notiz": "ohne Schalter kein Abruf/Versand, mit Schalter Kanalmenge nach Schwelle, je Tarif (Transport-Mitschrift, Mail HTML+Klartext); Mutation M19 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.radar|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_radar_alarm_standard_aus_und_kanalmenge_mit_schwelle",
+  "notiz": "ohne Schalter kein Abruf/Versand, mit Schalter Kanalmenge nach Schwelle, je Tarif (Transport-Mitschrift, Mail HTML+Klartext); Mutation M19 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.radar|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Mail kennt kein Kompaktformat: render_alert_email liefert immer HTML+Klartext (notification_service.py:2057/2150); email_format gilt nur fuer Briefings (Konzept §5 P8 W15)",
+  "befund": ""
+ },
+ "orte.radar|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Ausloesung, keine Briefing-Mail; Briefing-Validatoren pruefen Mailinhalt (mail_validators.md Dispatch-Tabelle: deviation-alert ist 'falscher Validator')",
+  "befund": ""
+ },
+ "orte.ampel.grenzen|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_luecken.py::test_ampel_grenzen_alle_kanaele",
+  "notiz": "Boeen Einfach in der E-Mail-Liste: HTML-Ampelpunkt folgt den Grenzen; Alarm: scratchpad/inventar/luecken/test_orte_alarm_luecken.py::test_orte_ampel_grenzen_alarm_alle_kanaele",
+  "befund": ""
+ },
+ "orte.ampel.grenzen|email_text": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Klartext zeigt Ampel-Groessen als Zahl ohne Farbe (#814, Fallliste 'ausnahme'); Orte-Klartext byte-gleich bei geaenderten Grenzen (scratchpad/inventar/luecken/test_orte_luecken.py::test_ampel_grenzen_alle_kanaele)",
+  "befund": ""
+ },
+ "orte.ampel.grenzen|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat",
+  "befund": ""
+ },
+ "orte.ampel.grenzen|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl3_einfach_folgt_ampel_grenzen",
+  "notiz": "Runde 7: p6: Einfach folgt den Ampel-Grenzen (Konzept §5 P8, ADR-0097)",
+  "befund": "B-L3"
+ },
+ "orte.ampel.grenzen|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_alarm_luecken.py::test_orte_ampel_grenzen_alarm_alle_kanaele",
+  "notiz": "Alarm-SMS/Premium folgen den Grenzen; Briefing-SMS traegt keine Ampelableitung (Einfach nur fuer SMS_FORMAT_MODE_METRIC_IDS, comparison.py:636-660, keine Stundenmarke)",
+  "befund": ""
+ },
+ "orte.ampel.grenzen|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_alarm_luecken.py::test_orte_ampel_grenzen_alarm_alle_kanaele",
+  "notiz": "Alarm-SMS/Premium folgen den Grenzen; Briefing-SMS traegt keine Ampelableitung (Einfach nur fuer SMS_FORMAT_MODE_METRIC_IDS, comparison.py:636-660, keine Stundenmarke)",
+  "befund": ""
+ },
+ "orte.ampel.grenzen|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/probe_editor_luecken.test.ts (Ampel, orte_abweichung/orte_profil)",
+  "notiz": "standAusAbo('vergleich') = Python resolve_ampel inkl. Profil-Rueckfall; Mutation M12 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.ampel.grenzen|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "orte.ampel.alarm_ab|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_alarm_luecken.py::test_orte_alarm_ab_alle_kanaele",
+  "notiz": "nie: kein Kanal; gelb bei gelb: alle vier; rot bei gelb: keiner, bei rot: alle vier; Mutation M06 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.ampel.alarm_ab|email_text": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_alarm_luecken.py::test_orte_alarm_ab_alle_kanaele",
+  "notiz": "nie: kein Kanal; gelb bei gelb: alle vier; rot bei gelb: keiner, bei rot: alle vier; Mutation M06 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.ampel.alarm_ab|telegram": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_alarm_luecken.py::test_orte_alarm_ab_alle_kanaele",
+  "notiz": "nie: kein Kanal; gelb bei gelb: alle vier; rot bei gelb: keiner, bei rot: alle vier; Mutation M06 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.ampel.alarm_ab|sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_alarm_luecken.py::test_orte_alarm_ab_alle_kanaele",
+  "notiz": "nie: kein Kanal; gelb bei gelb: alle vier; rot bei gelb: keiner, bei rot: alle vier; Mutation M06 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.ampel.alarm_ab|premium_sms": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_orte_alarm_luecken.py::test_orte_alarm_ab_alle_kanaele",
+  "notiz": "nie: kein Kanal; gelb bei gelb: alle vier; rot bei gelb: keiner, bei rot: alle vier; Mutation M06 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.ampel.alarm_ab|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Mail kennt kein Kompaktformat: render_alert_email liefert immer HTML+Klartext (notification_service.py:2057/2150); email_format gilt nur fuer Briefings (Konzept §5 P8 W15)",
+  "befund": ""
+ },
+ "orte.ampel.alarm_ab|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/probe_editor_luecken.test.ts (Ampel)",
+  "notiz": "Mutation M11 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.ampel.alarm_ab|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Alarm-Ausloesung, keine Briefing-Mail; Briefing-Validatoren pruefen Mailinhalt (mail_validators.md Dispatch-Tabelle: deviation-alert ist 'falscher Validator')",
+  "befund": ""
+ },
+ "orte.telegram_kurzstil.alarm|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_alarme_honorieren_telegram_kurzstil",
+  "notiz": "kurzform -> Telegram-Text = SMS-Text in allen drei Alarmarten; rich/fehlend -> ausfuehrlich; Mutation M18 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.kuerzel_legende|email_html": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kuerzel-Legende W21 nur bei Telegram/SMS/Premium-SMS (Konzept §5 P8); Mail traegt ausgeschriebene Spaltenkoepfe und die Zeile 'Spalten:'",
+  "befund": ""
+ },
+ "orte.kuerzel_legende|email_text": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kuerzel-Legende W21 nur bei Telegram/SMS/Premium-SMS (Konzept §5 P8); Mail traegt ausgeschriebene Spaltenkoepfe und die Zeile 'Spalten:'",
+  "befund": ""
+ },
+ "orte.kuerzel_legende|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kuerzel-Legende W21 nur bei Telegram/SMS/Premium-SMS (Konzept §5 P8); Mail traegt ausgeschriebene Spaltenkoepfe und die Zeile 'Spalten:'",
+  "befund": ""
+ },
+ "orte.kuerzel_legende|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Kuerzel-Legende W21 nur bei Telegram/SMS/Premium-SMS (Konzept §5 P8); Mail traegt ausgeschriebene Spaltenkoepfe und die Zeile 'Spalten:'",
+  "befund": ""
+ },
+ "orte.kuerzel_legende|einstellungsseite": {
+  "status": "ausgelagert",
+  "beleg": "",
+  "notiz": "#3032",
+  "befund": "#3032"
+ },
+ "orte.vorlage.anwenden|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "orte.vorlage.neu_aus_standard|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_orte_eigene_standard_vorlage",
+  "notiz": "Neuanlage uebernimmt die Ampel der Orts-Standard-Vorlage (Go displayConfigAusVorlage mitMetriken=false); HTML anders als bei bob",
+  "befund": ""
+ },
+ "orte.vorlage.neu_aus_standard|email_text": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Klartext zeigt Ampel-Groessen als Zahl ohne Farbe (#814, Fallliste 'ausnahme'); Orte-Klartext byte-gleich bei geaenderten Grenzen (scratchpad/inventar/luecken/test_orte_luecken.py::test_ampel_grenzen_alle_kanaele)",
+  "befund": ""
+ },
+ "orte.vorlage.neu_aus_standard|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat",
+  "befund": ""
+ },
+ "orte.vorlage.neu_aus_standard|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail",
+  "notiz": "Runde 7: p6: nie eingestellt = Zeilen/Folge der Mail (auch test_bl4_nie_eingestellt_sms_folgt_mail); Neuanlage schreibt Grundauswahl (Go TestF3047E1_NeuerVergleichSchreibtGrundauswahlDerStandardVorlage_ZweiNutzer)",
+  "befund": "B-L4"
+ },
+ "orte.vorlage.neu_aus_standard|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail",
+  "notiz": "Runde 7: p6: nie eingestellt = Zeilen/Folge der Mail (auch test_bl4_nie_eingestellt_sms_folgt_mail); Neuanlage schreibt Grundauswahl (Go TestF3047E1_NeuerVergleichSchreibtGrundauswahlDerStandardVorlage_ZweiNutzer)",
+  "befund": "B-L4"
+ },
+ "orte.vorlage.neu_aus_standard|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail",
+  "notiz": "Runde 7: p6: nie eingestellt = Zeilen/Folge der Mail (auch test_bl4_nie_eingestellt_sms_folgt_mail); Neuanlage schreibt Grundauswahl (Go TestF3047E1_NeuerVergleichSchreibtGrundauswahlDerStandardVorlage_ZweiNutzer)",
+  "befund": "B-L4"
+ },
+ "orte.vorlage.neu_aus_standard|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "orte.vorlage.eigene_speichern|email_html": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_vorlage_kette_luecken.py:: (Eingabe aus zz_luecken_vorlage_probe_test.go: echte Go-Handler) test_orte_eigene_standard_vorlage",
+  "notiz": "Neuanlage uebernimmt die Ampel der Orts-Standard-Vorlage (Go displayConfigAusVorlage mitMetriken=false); HTML anders als bei bob",
+  "befund": ""
+ },
+ "orte.vorlage.eigene_speichern|email_text": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Klartext zeigt Ampel-Groessen als Zahl ohne Farbe (#814, Fallliste 'ausnahme'); Orte-Klartext byte-gleich bei geaenderten Grenzen (scratchpad/inventar/luecken/test_orte_luecken.py::test_ampel_grenzen_alle_kanaele)",
+  "befund": ""
+ },
+ "orte.vorlage.eigene_speichern|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat",
+  "befund": ""
+ },
+ "orte.vorlage.eigene_speichern|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail",
+  "notiz": "Runde 7: p6: nie eingestellt = Zeilen/Folge der Mail (auch test_bl4_nie_eingestellt_sms_folgt_mail); Neuanlage schreibt Grundauswahl (Go TestF3047E1_NeuerVergleichSchreibtGrundauswahlDerStandardVorlage_ZweiNutzer)",
+  "befund": "B-L4"
+ },
+ "orte.vorlage.eigene_speichern|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail",
+  "notiz": "Runde 7: p6: nie eingestellt = Zeilen/Folge der Mail (auch test_bl4_nie_eingestellt_sms_folgt_mail); Neuanlage schreibt Grundauswahl (Go TestF3047E1_NeuerVergleichSchreibtGrundauswahlDerStandardVorlage_ZweiNutzer)",
+  "befund": "B-L4"
+ },
+ "orte.vorlage.eigene_speichern|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail",
+  "notiz": "Runde 7: p6: nie eingestellt = Zeilen/Folge der Mail (auch test_bl4_nie_eingestellt_sms_folgt_mail); Neuanlage schreibt Grundauswahl (Go TestF3047E1_NeuerVergleichSchreibtGrundauswahlDerStandardVorlage_ZweiNutzer)",
+  "befund": "B-L4"
+ },
+ "orte.vorlage.eigene_speichern|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "befund": "B-L5"
+ },
+ "orte.vorlage.eigene_speichern|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/.../wetter-tab/__tests__/vorlageDialogPayload.test.ts (kind 'vergleich')",
+  "notiz": "Mutation M25 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.zeiten|email_html": {
+  "status": "gruen",
+  "beleg": "tests/test_2795_viertelstunden_faelligkeit.py (vergleich) + tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_slots_morgen_abend_faelligkeit_zieltag_und_betreff_datum",
+  "notiz": "Faelligkeit je Preset vor der Kanalverteilung (compare_slot_scheduler), send_one_compare_preset bedient alle Kanaele (tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_kanalmatrix_briefing_nach_optin_faehigkeit_und_tarif); Mutation M27 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.zeiten|email_text": {
+  "status": "gruen",
+  "beleg": "tests/test_2795_viertelstunden_faelligkeit.py (vergleich) + tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_slots_morgen_abend_faelligkeit_zieltag_und_betreff_datum",
+  "notiz": "Faelligkeit je Preset vor der Kanalverteilung (compare_slot_scheduler), send_one_compare_preset bedient alle Kanaele (tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_kanalmatrix_briefing_nach_optin_faehigkeit_und_tarif); Mutation M27 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.zeiten|telegram": {
+  "status": "gruen",
+  "beleg": "tests/test_2795_viertelstunden_faelligkeit.py (vergleich) + tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_slots_morgen_abend_faelligkeit_zieltag_und_betreff_datum",
+  "notiz": "Faelligkeit je Preset vor der Kanalverteilung (compare_slot_scheduler), send_one_compare_preset bedient alle Kanaele (tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_kanalmatrix_briefing_nach_optin_faehigkeit_und_tarif); Mutation M27 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.zeiten|sms": {
+  "status": "gruen",
+  "beleg": "tests/test_2795_viertelstunden_faelligkeit.py (vergleich) + tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_slots_morgen_abend_faelligkeit_zieltag_und_betreff_datum",
+  "notiz": "Faelligkeit je Preset vor der Kanalverteilung (compare_slot_scheduler), send_one_compare_preset bedient alle Kanaele (tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_kanalmatrix_briefing_nach_optin_faehigkeit_und_tarif); Mutation M27 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.zeiten|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/test_2795_viertelstunden_faelligkeit.py (vergleich) + tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_slots_morgen_abend_faelligkeit_zieltag_und_betreff_datum",
+  "notiz": "Faelligkeit je Preset vor der Kanalverteilung (compare_slot_scheduler), send_one_compare_preset bedient alle Kanaele (tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_kanalmatrix_briefing_nach_optin_faehigkeit_und_tarif); Mutation M27 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.slots|email_html": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_slots_morgen_abend_faelligkeit_zieltag_und_betreff_datum",
+  "notiz": "beide Slots aus -> nie faellig; Mutation M21 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.slots|email_text": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_slots_morgen_abend_faelligkeit_zieltag_und_betreff_datum",
+  "notiz": "beide Slots aus -> nie faellig; Mutation M21 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.slots|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_slots_morgen_abend_faelligkeit_zieltag_und_betreff_datum",
+  "notiz": "beide Slots aus -> nie faellig; Mutation M21 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.slots|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_slots_morgen_abend_faelligkeit_zieltag_und_betreff_datum",
+  "notiz": "beide Slots aus -> nie faellig; Mutation M21 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.slots|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_slots_morgen_abend_faelligkeit_zieltag_und_betreff_datum",
+  "notiz": "beide Slots aus -> nie faellig; Mutation M21 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.briefing_kanaele|email_html": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_kanalmatrix_briefing_nach_optin_faehigkeit_und_tarif, test_email_bei_fehlendem_send_email_aktiv_bei_false_aus",
+  "notiz": "Mutation M22 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.briefing_kanaele|email_text": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_kanalmatrix_briefing_nach_optin_faehigkeit_und_tarif, test_email_bei_fehlendem_send_email_aktiv_bei_false_aus",
+  "notiz": "Mutation M22 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.briefing_kanaele|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_kanalmatrix_briefing_nach_optin_faehigkeit_und_tarif, test_email_bei_fehlendem_send_email_aktiv_bei_false_aus",
+  "notiz": "Mutation M22 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.briefing_kanaele|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_kanalmatrix_briefing_nach_optin_faehigkeit_und_tarif, test_email_bei_fehlendem_send_email_aktiv_bei_false_aus",
+  "notiz": "Mutation M22 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.briefing_kanaele|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_kanalmatrix_briefing_nach_optin_faehigkeit_und_tarif, test_email_bei_fehlendem_send_email_aktiv_bei_false_aus",
+  "notiz": "Mutation M22 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.alarm_kanaele|email_html": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_alarm_kette_trennt_zwei_nutzer, test_briefing_und_alarm_kanaele_sind_unabhaengig",
+  "notiz": "Mutation M28 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.alarm_kanaele|email_text": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_alarm_kette_trennt_zwei_nutzer, test_briefing_und_alarm_kanaele_sind_unabhaengig",
+  "notiz": "Mutation M28 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.alarm_kanaele|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_alarm_kette_trennt_zwei_nutzer, test_briefing_und_alarm_kanaele_sind_unabhaengig",
+  "notiz": "Mutation M28 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.alarm_kanaele|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_alarm_kette_trennt_zwei_nutzer, test_briefing_und_alarm_kanaele_sind_unabhaengig",
+  "notiz": "Mutation M28 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.alarm_kanaele|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_alarm_kette_trennt_zwei_nutzer, test_briefing_und_alarm_kanaele_sind_unabhaengig",
+  "notiz": "Mutation M28 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.dringlichkeit|email_html": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_abweichungsalarm_kanalmenge_schwelle_und_tarif",
+  "notiz": "SMS erst ab HIGH; Mutation M30 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.dringlichkeit|email_text": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_abweichungsalarm_kanalmenge_schwelle_und_tarif",
+  "notiz": "SMS erst ab HIGH; Mutation M30 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.dringlichkeit|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_abweichungsalarm_kanalmenge_schwelle_und_tarif",
+  "notiz": "SMS erst ab HIGH; Mutation M30 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.dringlichkeit|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_abweichungsalarm_kanalmenge_schwelle_und_tarif",
+  "notiz": "SMS erst ab HIGH; Mutation M30 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.dringlichkeit|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_abweichungsalarm_kanalmenge_schwelle_und_tarif",
+  "notiz": "SMS erst ab HIGH; Mutation M30 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.stille_stunden|email_html": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_ruhezeit_und_sperrzeit_unterdruecken_den_compare_alarm",
+  "notiz": "Ruhezeit: kein Kanal, Grund protokolliert; Mutation M31 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.stille_stunden|email_text": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_ruhezeit_und_sperrzeit_unterdruecken_den_compare_alarm",
+  "notiz": "Ruhezeit: kein Kanal, Grund protokolliert; Mutation M31 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.stille_stunden|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_ruhezeit_und_sperrzeit_unterdruecken_den_compare_alarm",
+  "notiz": "Ruhezeit: kein Kanal, Grund protokolliert; Mutation M31 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.stille_stunden|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_ruhezeit_und_sperrzeit_unterdruecken_den_compare_alarm",
+  "notiz": "Ruhezeit: kein Kanal, Grund protokolliert; Mutation M31 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.stille_stunden|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_ruhezeit_und_sperrzeit_unterdruecken_den_compare_alarm",
+  "notiz": "Ruhezeit: kein Kanal, Grund protokolliert; Mutation M31 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.cooldown|email_html": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_ruhezeit_und_sperrzeit_unterdruecken_den_compare_alarm",
+  "notiz": "Sperrzeit: zweiter Alarm in keinem Kanal; Mutation M32 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.cooldown|email_text": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_ruhezeit_und_sperrzeit_unterdruecken_den_compare_alarm",
+  "notiz": "Sperrzeit: zweiter Alarm in keinem Kanal; Mutation M32 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.cooldown|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_ruhezeit_und_sperrzeit_unterdruecken_den_compare_alarm",
+  "notiz": "Sperrzeit: zweiter Alarm in keinem Kanal; Mutation M32 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.cooldown|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_ruhezeit_und_sperrzeit_unterdruecken_den_compare_alarm",
+  "notiz": "Sperrzeit: zweiter Alarm in keinem Kanal; Mutation M32 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.cooldown|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_ruhezeit_und_sperrzeit_unterdruecken_den_compare_alarm",
+  "notiz": "Sperrzeit: zweiter Alarm in keinem Kanal; Mutation M32 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.laufzeit|email_html": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_abgelaufener_ortsvergleich_ist_fuer_briefing_und_alle_alarme_stumm",
+  "notiz": "end_date vorbei: Briefing und alle Alarme in keinem Kanal, heute/fehlend unveraendert; Mutation M20 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.laufzeit|email_text": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_abgelaufener_ortsvergleich_ist_fuer_briefing_und_alle_alarme_stumm",
+  "notiz": "end_date vorbei: Briefing und alle Alarme in keinem Kanal, heute/fehlend unveraendert; Mutation M20 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.laufzeit|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_abgelaufener_ortsvergleich_ist_fuer_briefing_und_alle_alarme_stumm",
+  "notiz": "end_date vorbei: Briefing und alle Alarme in keinem Kanal, heute/fehlend unveraendert; Mutation M20 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.laufzeit|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_abgelaufener_ortsvergleich_ist_fuer_briefing_und_alle_alarme_stumm",
+  "notiz": "end_date vorbei: Briefing und alle Alarme in keinem Kanal, heute/fehlend unveraendert; Mutation M20 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.laufzeit|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_compare_alarm_einstellung_auslieferung_kette.py::test_abgelaufener_ortsvergleich_ist_fuer_briefing_und_alle_alarme_stumm",
+  "notiz": "end_date vorbei: Briefing und alle Alarme in keinem Kanal, heute/fehlend unveraendert; Mutation M20 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.laufzeit|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/probe_editor_luecken.test.ts (standAusPreset + laufzeitOrte)",
+  "notiz": "end_date -> 'bis Datum' mit Datum, fehlt -> 'bis auf Weiteres' (= Python: fehlend unbegrenzt); Mutation M14 gefangen (scratchpad/inventar/luecken/out/mutationen_ergebnis.json)",
+  "befund": ""
+ },
+ "orte.zeiten|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat; Alarm-Mail ohne Kompaktformat",
+  "befund": ""
+ },
+ "orte.zeiten|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Briefing-Validatoren pruefen den Inhalt einer zugestellten Mail gegen --konfig; ob/wann/an welchen Kanal etwas geht, ist keine Mail-Inhaltsfrage (docs/reference/mail_validators.md, Dispatch)",
+  "befund": ""
+ },
+ "orte.slots|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat; Alarm-Mail ohne Kompaktformat",
+  "befund": ""
+ },
+ "orte.slots|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Briefing-Validatoren pruefen den Inhalt einer zugestellten Mail gegen --konfig; ob/wann/an welchen Kanal etwas geht, ist keine Mail-Inhaltsfrage (docs/reference/mail_validators.md, Dispatch)",
+  "befund": ""
+ },
+ "orte.briefing_kanaele|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat; Alarm-Mail ohne Kompaktformat",
+  "befund": ""
+ },
+ "orte.briefing_kanaele|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Briefing-Validatoren pruefen den Inhalt einer zugestellten Mail gegen --konfig; ob/wann/an welchen Kanal etwas geht, ist keine Mail-Inhaltsfrage (docs/reference/mail_validators.md, Dispatch)",
+  "befund": ""
+ },
+ "orte.alarm_kanaele|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat; Alarm-Mail ohne Kompaktformat",
+  "befund": ""
+ },
+ "orte.alarm_kanaele|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Briefing-Validatoren pruefen den Inhalt einer zugestellten Mail gegen --konfig; ob/wann/an welchen Kanal etwas geht, ist keine Mail-Inhaltsfrage (docs/reference/mail_validators.md, Dispatch)",
+  "befund": ""
+ },
+ "orte.dringlichkeit|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat; Alarm-Mail ohne Kompaktformat",
+  "befund": ""
+ },
+ "orte.dringlichkeit|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Briefing-Validatoren pruefen den Inhalt einer zugestellten Mail gegen --konfig; ob/wann/an welchen Kanal etwas geht, ist keine Mail-Inhaltsfrage (docs/reference/mail_validators.md, Dispatch)",
+  "befund": ""
+ },
+ "orte.stille_stunden|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat; Alarm-Mail ohne Kompaktformat",
+  "befund": ""
+ },
+ "orte.stille_stunden|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Briefing-Validatoren pruefen den Inhalt einer zugestellten Mail gegen --konfig; ob/wann/an welchen Kanal etwas geht, ist keine Mail-Inhaltsfrage (docs/reference/mail_validators.md, Dispatch)",
+  "befund": ""
+ },
+ "orte.cooldown|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat; Alarm-Mail ohne Kompaktformat",
+  "befund": ""
+ },
+ "orte.cooldown|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Briefing-Validatoren pruefen den Inhalt einer zugestellten Mail gegen --konfig; ob/wann/an welchen Kanal etwas geht, ist keine Mail-Inhaltsfrage (docs/reference/mail_validators.md, Dispatch)",
+  "befund": ""
+ },
+ "orte.laufzeit|email_kompakt": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Konzept §5 P8 W15: 'Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann' -- Orts-Mail hat heute kein Kompaktformat; Alarm-Mail ohne Kompaktformat",
+  "befund": ""
+ },
+ "orte.laufzeit|validator_email": {
+  "status": "nicht_anwendbar",
+  "beleg": "",
+  "notiz": "Briefing-Validatoren pruefen den Inhalt einer zugestellten Mail gegen --konfig; ob/wann/an welchen Kanal etwas geht, ist keine Mail-Inhaltsfrage (docs/reference/mail_validators.md, Dispatch)",
+  "befund": ""
+ },
+ "orte.zwei_nutzer|validator_email": {
+  "status": "gruen",
+  "beleg": "scratchpad/inventar/luecken/test_validator_luecken.py::test_orte_empfaenger_zwei_nutzer",
+  "notiz": "--to-contains eigener Nutzer Exit 0, fremder Nutzer Exit != 0",
+  "befund": ""
+ },
+ "trip.grundauswahl.gespeichert|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::anzeige_gleich_ausgabe_a_folge_mit_temperatur",
+  "notiz": "Runde 7: p5a/p5c: abgeleitete Groessen wie Python (p5c_ableitung_hub_orte_ausgabe.test.ts)",
+  "befund": "E7"
+ },
+ "trip.grundauswahl.nie_eingestellt|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::anzeige_gleich_ausgabe_a_nie_eingestellt_ohne_metrics",
+  "notiz": "Runde 7: p5a/p5c: Reiter zeigt den Mail-Standard; unbeteiligtes Speichern aendert die Mail nicht",
+  "befund": "E1"
+ },
+ "trip.grundauswahl.altformat|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/e3_trip_altformat_metrics.test.ts::Zeichenkette und Objekt ohne enabled gelten als gewaehlt, enabled:false nicht",
+  "notiz": "Runde 7: E3: Lesen wie Python; Go-PUT weist Eintrag ohne metric_id ab (TestE3_3047_TripPut_DisplayConfigMetrikOhneID_400_ZweiNutzer)",
+  "befund": "E3"
+ },
+ "trip.grundauswahl.wieder_eingeschaltet|email_html": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::minus_dann_plus_haengt_hinten_an",
+  "notiz": "Runde 7: p5a: wieder eingeschaltete Metrik bekommt order hinter dem Maximum; Mail/Kanaele/Validator folgen der gespeicherten order",
+  "befund": "B-TM2"
+ },
+ "trip.grundauswahl.wieder_eingeschaltet|email_text": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::minus_dann_plus_haengt_hinten_an",
+  "notiz": "Runde 7: p5a: wieder eingeschaltete Metrik bekommt order hinter dem Maximum; Mail/Kanaele/Validator folgen der gespeicherten order",
+  "befund": "B-TM2"
+ },
+ "trip.grundauswahl.wieder_eingeschaltet|email_kompakt": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::minus_dann_plus_haengt_hinten_an",
+  "notiz": "Runde 7: p5a: wieder eingeschaltete Metrik bekommt order hinter dem Maximum; Mail/Kanaele/Validator folgen der gespeicherten order",
+  "befund": "B-TM2"
+ },
+ "trip.telegram_liste.windrichtung_roh|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_r7_kanaele_trip.py::test_ac22_telegram_windrichtung_roh_zeigt_grad_wie_mail",
+  "notiz": "Runde 7: p1: Telegram-Liste reicht format_modes an Kurzuebersicht und Tabelle (DE/EN)",
+  "befund": "B-K1"
+ },
+ "trip.telegram.schnittlinie|telegram": {
+  "status": "ausgelagert",
+  "beleg": "#3031",
+  "notiz": "Runde 7: PO 2026-11-16: Trip-Ausgabe bleibt (alle Zeilen Kurzuebersicht, erste 7 stuendlich); Erklaersatz im Editor #3031/#3033",
+  "befund": "B-K5"
+ },
+ "trip.sms.kuerzung|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_r7_kanaele_trip.py::test_ac23_sms_kuerzt_vom_listenende_warnung_bleibt",
+  "notiz": "Runde 7: p1: SMS/Premium-SMS kuerzen vom Listenende (PO 2026-11-16, #1677 AC-6 abgeloest)",
+  "befund": "B-K4"
+ },
+ "trip.sms.kuerzung|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_r7_kanaele_trip.py::test_ac23_sms_kuerzt_vom_listenende_warnung_bleibt",
+  "notiz": "Runde 7: p1: SMS/Premium-SMS kuerzen vom Listenende (PO 2026-11-16, #1677 AC-6 abgeloest)",
+  "befund": "B-K4"
+ },
+ "trip.ausblick.erscheint_im|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::anzeige_gleich_ausgabe_a_trend_nie_eingestellt",
+  "notiz": "Runde 7: p5a: Trend aus der Liste wie Python; Kurzstil-Speichern sendet nur den Stil",
+  "befund": "E2"
+ },
+ "trip.ausblick.zeilenzahl|validator_email": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_ausblick_tageszeile_fehlt_scheitert",
+  "notiz": "Runde 7: p4: Tageszeilen-Zahl und Ausblick je Ort (test_r7_orte_ausblick_tageszeile_fehlt_scheitert)",
+  "befund": "B-V1"
+ },
+ "trip.zusatz.etappen_kennzahlen|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::anzeige_gleich_ausgabe_b_mailinhalt_null",
+  "notiz": "Runde 7: p5a: null-Zusatzbloecke lesen sich wie die Mail (aus)",
+  "befund": "E8"
+ },
+ "trip.zusatz.etappen_kennzahlen|validator_email": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_zusatzbloecke_trotz_aus_scheitern",
+  "notiz": "Runde 7: p4: Zusatzbloecke bei Schalter aus abgelehnt (Vollformat)",
+  "befund": "B-V2"
+ },
+ "trip.zusatz.vortag|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::anzeige_gleich_ausgabe_b_mailinhalt_null",
+  "notiz": "Runde 7: p5a: null-Zusatzbloecke lesen sich wie die Mail (aus)",
+  "befund": "E8"
+ },
+ "trip.zusatz.vortag|validator_email": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_zusatzbloecke_trotz_aus_scheitern",
+  "notiz": "Runde 7: p4: Zusatzbloecke bei Schalter aus abgelehnt (Vollformat)",
+  "befund": "B-V2"
+ },
+ "trip.tagesfenster|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::anzeige_gleich_ausgabe_b_tagesfenster_halb",
+  "notiz": "Runde 7: p5a: Tagesfenster nach Python-Paarregel",
+  "befund": "E5"
+ },
+ "trip.tagesfenster|validator_email": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung: Trip-Validator prueft die Stunden 06-22 noch nicht gegen das Tagesfenster (Orte-Teil gruen: tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_tagesfenster_wird_nicht_abgelehnt)",
+  "befund": "B-V5"
+ },
+ "trip.amtliche_warnungen.schalter|einstellungsseite": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p11): Mischzustand behoben (p5b, e4_amtliche_warnungen_mischzustand.test.ts); Neuanlage 'beides an' (PO 2026-11-16, #1258 AC-4 abgeloest) noch offen",
+  "befund": "E4"
+ },
+ "trip.amtliche_warnungen.position|email_kompakt": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_kompakt_mail_schalter_runde7.py::test_kompakt_amtliche_warnung_vor_jedem_inhaltsblock",
+  "notiz": "Runde 7: p3: Warnblock direkt hinter dem Kopf (WV6, AC-25)",
+  "befund": "B-TM1"
+ },
+ "trip.sprache.kappungshinweis|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_r7_kanaele_trip.py::test_ac22_telegram_kappungshinweis_in_nutzersprache",
+  "notiz": "Runde 7: p1: Kappungshinweis in Nutzersprache",
+  "befund": "B-K2"
+ },
+ "trip.vorlage.anwenden|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::anzeige_gleich_ausgabe_a_folge_mit_temperatur",
+  "notiz": "Runde 7: p5a/p5c: abgeleitete Groessen wie Python (p5c_ableitung_hub_orte_ausgabe.test.ts)",
+  "befund": "E7"
+ },
+ "orte.grundauswahl.nie_eingestellt|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::anzeige_gleich_ausgabe_a_nie_eingestellt_ohne_metrics",
+  "notiz": "Runde 7: p5a/p5c: Reiter zeigt den Mail-Standard; unbeteiligtes Speichern aendert die Mail nicht",
+  "befund": "E1"
+ },
+ "orte.grundauswahl.vorlagen_metrik_ohne_pendant|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::e6_nicht_ausgebbare_groesse_steht_gesperrt_statt_still",
+  "notiz": "Runde 7: p5a: nicht ausgebbare Groesse steht gesperrt mit Grund (DE/EN); Vorlagen im Vergleich nur ausgebbare Groessen; Ausgabe laesst sie weiter weg",
+  "befund": "E6"
+ },
+ "orte.vergleichstabelle.roh_einfach|validator_email": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_vergleich_falsche_darstellung_scheitert",
+  "notiz": "Runde 7: p4: Roh/Einfach der Vergleichstabelle (HTML/Klartext)",
+  "befund": "B-V3"
+ },
+ "orte.telegram.schnittlinie|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_kanaele.py::test_ac24_telegram_zeilen_ab_8_in_zweiter_zeile",
+  "notiz": "Runde 7: p2: Orte-Telegram ab Platz 8 in zweiter Zeile (AC-24)",
+  "befund": "B-K5"
+ },
+ "orte.kanal_liste.bewusst_leer|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_kanaele.py::test_k6_leere_kanal_liste_bleibt_leer",
+  "notiz": "Runde 7: p2: leere Kanal-Liste bleibt leer",
+  "befund": "B-K6"
+ },
+ "orte.kanal_liste.bewusst_leer|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_kanaele.py::test_k6_leere_kanal_liste_bleibt_leer",
+  "notiz": "Runde 7: p2: leere Kanal-Liste bleibt leer",
+  "befund": "B-K6"
+ },
+ "orte.kanal_liste.bewusst_leer|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_kanaele.py::test_k6_leere_kanal_liste_bleibt_leer",
+  "notiz": "Runde 7: p2: leere Kanal-Liste bleibt leer",
+  "befund": "B-K6"
+ },
+ "orte.stundenverlauf.auswahl_reihenfolge|validator_email": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_klartext_spalte_fehlt_ab_zeile_zwei_scheitert",
+  "notiz": "Runde 7: p4: jede Klartext-Stundenzeile",
+  "befund": "B-V4"
+ },
+ "orte.stundenverlauf.roh_einfach|email_html": {
+  "status": "ausgelagert",
+  "beleg": "#3058",
+  "notiz": "Runde 7: Roh/Einfach Stundenverlauf ausgelagert (Spec-Nachtrag Runde 7)",
+  "befund": "B-OM-5"
+ },
+ "orte.stundenverlauf.roh_einfach|email_text": {
+  "status": "ausgelagert",
+  "beleg": "#3058",
+  "notiz": "Runde 7: Roh/Einfach Stundenverlauf ausgelagert (Spec-Nachtrag Runde 7)",
+  "befund": "B-OM-5"
+ },
+ "orte.ausblick.auswahl_reihenfolge|telegram": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_kanaele.py::test_k7_ausblick_im_orte_telegram_kette",
+  "notiz": "Runde 7: p2/p2b: Ausblick im Orte-Telegram, Versand und Vorschau verdrahtet (AC-24)",
+  "befund": "B-K7"
+ },
+ "orte.ausblick.zeilenzahl|validator_email": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_ausblick_tageszeile_fehlt_scheitert",
+  "notiz": "Runde 7: p4: Tageszeilen-Zahl und Ausblick je Ort (test_r7_orte_ausblick_tageszeile_fehlt_scheitert)",
+  "befund": "B-V1"
+ },
+ "orte.tagesfenster|validator_email": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_tagesfenster_wird_nicht_abgelehnt",
+  "notiz": "Runde 7: p4: Orte-Tagesfenster aus --konfig",
+  "befund": "B-V5"
+ },
+ "orte.amtliche_warnungen.schalter|email_html": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_mail.py::test_om2_warnungen_aus_keine_leere_warnzeile",
+  "notiz": "Runde 7: p2: keine leere Warnzeile; Validator: tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_warnungen_aus_echte_mail",
+  "befund": "B-OM-2"
+ },
+ "orte.amtliche_warnungen.schalter|einstellungsseite": {
+  "status": "rot",
+  "beleg": "",
+  "notiz": "Runde 7: rot, in Behebung (p11): Mischzustand behoben (p5b); Neuanlage 'beides an' noch offen",
+  "befund": "E4"
+ },
+ "orte.amtliche_warnungen.kuerzung_zuletzt|sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_kanaele.py::test_ac23_warnung_zweiter_ort_faellt_zuletzt_weg",
+  "notiz": "Runde 7: p2/p8: Warnung eines weiteren Ortes faellt zuletzt weg (AC-23)",
+  "befund": "B-K3"
+ },
+ "orte.amtliche_warnungen.kuerzung_zuletzt|premium_sms": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_kanaele.py::test_ac23_warnung_zweiter_ort_faellt_zuletzt_weg",
+  "notiz": "Runde 7: p2/p8: Warnung eines weiteren Ortes faellt zuletzt weg (AC-23)",
+  "befund": "B-K3"
+ },
+ "orte.amtliche_warnungen.nicht_abrufbar|email_text": {
+  "status": "gruen",
+  "beleg": "tests/tdd/test_3047_runde7_orte_mail.py::test_om1_klartext_traegt_hinweis_nicht_abrufbar_wie_html",
+  "notiz": "Runde 7: p2: Klartext traegt Hinweis wie HTML (AC-28)",
+  "befund": "B-OM-1"
+ },
+ "orte.vorlage.anwenden|email_html": {
+  "status": "ausgelagert",
+  "beleg": "#2796",
+  "notiz": "Runde 7: K3b Profil im Mail-Kopf ausgelagert (Spec-Nachtrag Runde 7)",
+  "befund": "B-OM-3"
+ },
+ "orte.vorlage.anwenden|email_text": {
+  "status": "ausgelagert",
+  "beleg": "#2796",
+  "notiz": "Runde 7: K3b Profil im Mail-Kopf ausgelagert (Spec-Nachtrag Runde 7)",
+  "befund": "B-OM-3"
+ },
+ "orte.vorlage.anwenden|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::e6_nicht_ausgebbare_groesse_steht_gesperrt_statt_still",
+  "notiz": "Runde 7: p5a: nicht ausgebbare Groesse steht gesperrt mit Grund (DE/EN); Vorlagen im Vergleich nur ausgebbare Groessen; Ausgabe laesst sie weiter weg",
+  "befund": "E6"
+ },
+ "orte.vorlage.neu_aus_standard|einstellungsseite": {
+  "status": "gruen",
+  "beleg": "internal/handler/vergleich_grundauswahl_3047_e1_test.go::TestF3047E1_NeuerVergleichSchreibtGrundauswahlDerStandardVorlage_ZweiNutzer",
+  "notiz": "Runde 7: p5b E1-Go: neues Orts-Briefing schreibt die Grundauswahl der Standard-Vorlage",
+  "befund": "E1"
+ }
+}

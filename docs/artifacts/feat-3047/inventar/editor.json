@@ -1,0 +1,3131 @@
+{
+ "bereich": "editor",
+ "stand": "main 6ddf4a1 (2026-11-16)",
+ "zeilen": [
+  {
+   "id": "trip.grundauswahl.gespeichert",
+   "kontext": "trip",
+   "einstellung": "Grundauswahl (Metrik-Zeilen „−“ / „Nicht im Briefing: +“), gespeichert mit enabled-Flags",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte (MetrikZeile, NichtImBriefing) -> shared/wetter-tab/wetterZustand.ts ohneMetrik/mitMetrik -> ampelSchreiben.ts tripMetriken",
+   "gespeichert_als": "display_config.metrics[].enabled (+ display_config.ampel); PUT /api/trips/{id}/weather-config -> internal/handler/weather_config.go:55 (mergeConfigMap Ebene 1, RMW: ja)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall T04; inventar/editor/probe_angebot.test.ts (angebot.json)",
+     "befund": "E7",
+     "notiz": "Auswahl der Hauptgroessen gleich; abgeleitete Groessen (Nacht-/Tagestief/-hoch) zeigt die Mail, der Reiter bietet sie als „Nicht im Briefing“ an"
+    }
+   }
+  },
+  {
+   "id": "trip.grundauswahl.nie_eingestellt",
+   "kontext": "trip",
+   "einstellung": "Grundauswahl Standard bei „nie eingestellt“ (metrics fehlt oder [])",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte -> wetterZustand.ts:68 standAusAbo -> ampelModell.ts:392 auswahlLesen (Rueckfall aktive Metriken der Vorlage)",
+   "gespeichert_als": "display_config.metrics fehlt/[]; Python loader.py:1007 Register-Standard (trip_metric_ids.py:29)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle T01/T02/T03; inventar/editor/probe_folgespeichern.test.ts + inventar/editor/folge_mergen.py (ausgabe_folge.json) Faelle T01/T02",
+     "befund": "E1",
+     "notiz": "Reiter: Vorlage (allgemein 8 bzw. alpen 14); Mail: Register-Standard 9; erste unbeteiligte Speicherung aendert die Mail still"
+    }
+   }
+  },
+  {
+   "id": "trip.grundauswahl.bewusst_leer",
+   "kontext": "trip",
+   "einstellung": "Grundauswahl bewusst leer (alle enabled:false)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte („−“ bis leer)",
+   "gespeichert_als": "display_config.metrics[] alle enabled:false",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall T05 (Reiter [] = Mail []); f007_trip_leere_auswahl.test.ts",
+     "befund": "",
+     "notiz": "Mutation M10 (enabled immer true) gefangen"
+    }
+   }
+  },
+  {
+   "id": "trip.grundauswahl.altformat",
+   "kontext": "trip",
+   "einstellung": "Grundauswahl Altbestand: Eintraege als Zeichenkette oder ohne enabled",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte -> ampelModell.ts:400 (enabled === true, m.metric_id)",
+   "gespeichert_als": "display_config.metrics[] = \"wind\" | {metric_id} ohne enabled",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall T22; inventar/editor/probe_folgespeichern.test.ts + inventar/editor/folge_mergen.py (ausgabe_folge.json) Fall T22 (Python-Loader KeyError)",
+     "befund": "E3",
+     "notiz": "Reiter zeigt nicht gewaehlt, Mail zeigt; Speichern schreibt kaputten Eintrag, Trip wird danach uebersprungen"
+    }
+   }
+  },
+  {
+   "id": "orte.grundauswahl.gespeichert",
+   "kontext": "orte",
+   "einstellung": "Grundauswahl (active_metrics), gespeichert, Folge ungleich Katalog",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte -> ampelSchreiben.ts vergleichMetriken",
+   "gespeichert_als": "display_config.active_metrics[{metric_id,aggregation}]; PUT /api/compare/presets/{id} (Hub-Schlange, If-Match) -> internal/handler/compare_preset.go:393 applyComparePresetPatch (mergeBriefingPatch, display_config eine Ebene tief; RMW: ja)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall O02 (Menge gleich); fixloop3_c2_altformat_active_metrics.test.ts",
+     "befund": "",
+     "notiz": "Folge im Reiter nach Gruppen, Folge der Mail aus der E-Mail-Liste (Zeile orte.liste.vergleichstabelle)"
+    }
+   }
+  },
+  {
+   "id": "orte.grundauswahl.nie_eingestellt",
+   "kontext": "orte",
+   "einstellung": "Grundauswahl Standard bei „nie eingestellt“ (active_metrics fehlt)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte -> ampelModell.ts:401 auswahlLesen (Rueckfall Vorlage)",
+   "gespeichert_als": "display_config.active_metrics fehlt; Python compare_metric_ids.py:219 None = alle Zeilen",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle O01/O04; inventar/editor/probe_folgespeichern.test.ts + inventar/editor/folge_mergen.py (ausgabe_folge.json) Faelle O01/O04/O09/O10",
+     "befund": "E1",
+     "notiz": "Reiter: Vorlage (8 bzw. 14); Mail: 25 Zeilen; erste unbeteiligte Speicherung schrumpft die Mail auf 8"
+    }
+   }
+  },
+  {
+   "id": "orte.grundauswahl.bewusst_leer",
+   "kontext": "orte",
+   "einstellung": "Grundauswahl bewusst leer (active_metrics: [])",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte",
+   "gespeichert_als": "display_config.active_metrics = []",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall O03; frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts (grundauswahl_bewusst_leer)",
+     "befund": "",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "orte.grundauswahl.nachttemperatur",
+   "kontext": "orte",
+   "einstellung": "Grundauswahl mit Vorlagen-Metrik ohne Vergleichs-Pendant (Tiefsttemperatur Nacht)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte (Vorlage alpen-trekking/wandern/skitouren/wintersport/radtour/wassersport)",
+   "gespeichert_als": "display_config.active_metrics += {metric_id: temperature_night, aggregation: max}",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_folgespeichern.test.ts + inventar/editor/folge_mergen.py (ausgabe_folge.json) Fall O04 (editor_folge.json vs ausgabe_folge.json)",
+     "befund": "E6",
+     "notiz": "Reiter zeigt Zeile „Tiefsttemperatur Nacht“, Mail verwirft den Eintrag still (compare_metric_ids.py:233)"
+    }
+   }
+  },
+  {
+   "id": "trip.vorlage.anwenden",
+   "kontext": "trip",
+   "einstellung": "Vorlage uebernehmen / zuruecksetzen",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/VorlageKarte.svelte -> wetterZustand.ts:96 mitVorlage",
+   "gespeichert_als": "display_config.ampel (Abweichungsmenge) + display_config.metrics (Bestandsfolge, neue hinten); PUT /api/trips/{id}/weather-config -> internal/handler/weather_config.go:55 (mergeConfigMap Ebene 1, RMW: ja)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_folgespeichern.test.ts + inventar/editor/folge_mergen.py (ausgabe_folge.json) (Auswahl nach Vorlage), inventar/editor/probe_angebot.test.ts",
+     "befund": "E7",
+     "notiz": "Menge der Hauptgroessen gleich, abgeleitete Groessen weichen ab (E7)"
+    }
+   }
+  },
+  {
+   "id": "orte.vorlage.anwenden",
+   "kontext": "orte",
+   "einstellung": "Vorlage uebernehmen / zuruecksetzen",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/VorlageKarte.svelte -> mitVorlage",
+   "gespeichert_als": "display_config.ampel + display_config.active_metrics; PUT /api/compare/presets/{id} (Hub-Schlange, If-Match) -> internal/handler/compare_preset.go:393 applyComparePresetPatch (mergeBriefingPatch, display_config eine Ebene tief; RMW: ja)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_folgespeichern.test.ts + inventar/editor/folge_mergen.py (ausgabe_folge.json) Fall O04",
+     "befund": "E6",
+     "notiz": "6 von 7 Systemvorlagen enthalten temperature_night"
+    }
+   }
+  },
+  {
+   "id": "trip.vorlage.neu_aus_standard",
+   "kontext": "trip",
+   "einstellung": "Neuer Trip uebernimmt eigene Standard-Vorlage (Folge)",
+   "gesetzt_in": "POST /api/trips (CreateTripHandler)",
+   "gespeichert_als": "internal/handler/metric_preset.go:97 displayConfigAusVorlage -> display_config.metrics (order/bucket) + ampel",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "go test ./internal/handler -run F3047 (TestF3047_NeuerTripAusVorlageBehaeltVorlagenFolge)",
+     "befund": "",
+     "notiz": "Mutation M17 (order++ entfernt) gefangen"
+    }
+   }
+  },
+  {
+   "id": "orte.vorlage.neu_aus_standard",
+   "kontext": "orte",
+   "einstellung": "Neues Orts-Briefing uebernimmt eigene Standard-Vorlage",
+   "gesetzt_in": "POST /api/compare/presets (compare_preset.go:285-290)",
+   "gespeichert_als": "displayConfigAusVorlage(std, false): nur display_config.ampel, kein active_metrics",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "internal/handler/metric_preset.go:97-127 (mitMetriken=false) + Fall O01/O04",
+     "befund": "E1",
+     "notiz": "neues Briefing startet im Zustand „nie eingestellt“: Reiter Vorlage, Mail alle Zeilen"
+    }
+   }
+  },
+  {
+   "id": "vorlage.eigene_speichern",
+   "kontext": "trip|orte",
+   "einstellung": "Als eigene Vorlage speichern (Name, Beschreibung, Standard fuer Neue)",
+   "gesetzt_in": "frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte -> ampelSchreiben.ts:181 eigeneVorlagePayload",
+   "gespeichert_als": "POST /api/metric-presets -> metric_preset.go CreateMetricPresetHandler (ampel, metrics, kind, is_default)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "go test -run S3a2794_AC2[2-5] gruen (ohne eigene Mutation)",
+     "befund": "",
+     "notiz": "Vorlage selbst ist keine Ausgabe; Wirkung ueber trip/orte.vorlage.*"
+    }
+   }
+  },
+  {
+   "id": "trip.ampel.grenzen",
+   "kontext": "trip",
+   "einstellung": "Grenzen aendern (gelb/orange/rot unten/oben, Gewitterfarben)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/GrenzenEditor.svelte -> wetterZustand.ts mitEntwurf",
+   "gespeichert_als": "display_config.ampel.metrics.<id>.lower/upper, ampel.thunder",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "ampelModell.paritaet.test.ts gruen (ohne eigene Mutation)",
+     "befund": "",
+     "notiz": "Wirkung (Einfach-Darstellung, Alarme) Bereich mail/kanaele"
+    }
+   }
+  },
+  {
+   "id": "orte.ampel.grenzen",
+   "kontext": "orte",
+   "einstellung": "Grenzen aendern (gelb/orange/rot unten/oben, Gewitterfarben)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/GrenzenEditor.svelte -> wetterZustand.ts mitEntwurf",
+   "gespeichert_als": "display_config.ampel.metrics.<id>.lower/upper, ampel.thunder",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "ampelModell.paritaet.test.ts gruen (ohne eigene Mutation)",
+     "befund": "",
+     "notiz": "Wirkung (Einfach-Darstellung, Alarme) Bereich mail/kanaele"
+    }
+   }
+  },
+  {
+   "id": "trip.ampel.alarm_ab",
+   "kontext": "trip",
+   "einstellung": "Alarm ab je Metrik und „Alarm ab fuer alle“",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/AlarmAbKopf.svelte, MetrikZeile.svelte -> mitAlarmAb/mitAlarmAbFuerAlle",
+   "gespeichert_als": "display_config.ampel.metrics.<id>.alarm_ab",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Alarm-Ausloesung ausserhalb der Mail; nicht Teil dieser Runde"
+    }
+   }
+  },
+  {
+   "id": "orte.ampel.alarm_ab",
+   "kontext": "orte",
+   "einstellung": "Alarm ab je Metrik und „Alarm ab fuer alle“",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/AlarmAbKopf.svelte, MetrikZeile.svelte -> mitAlarmAb/mitAlarmAbFuerAlle",
+   "gespeichert_als": "display_config.ampel.metrics.<id>.alarm_ab",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Alarm-Ausloesung ausserhalb der Mail; nicht Teil dieser Runde"
+    }
+   }
+  },
+  {
+   "id": "trip.amtliche_warnungen",
+   "kontext": "trip",
+   "einstellung": "Amtliche Warnungen (ein Schalter: Briefing und Alarm)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WarnungenRadarKarte.svelte -> shared/wetter-tab/amtlicheWarnungen.ts",
+   "gespeichert_als": "official_alerts_enabled + official_warnings.enabled (beide gleich); PUT /api/trips/{id} -> internal/handler/trip.go:336 UpdateTripHandler (report_config mergeConfigMap, Top-Level ApplyPtr; RMW: ja)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle T08/T09/T10; inventar/editor/probe_folgespeichern.test.ts + inventar/editor/folge_mergen.py (ausgabe_folge.json) Fall T08",
+     "befund": "E4",
+     "notiz": "gespeichert gleich: gruen (T01 u. a., M2/M24 gefangen); Altbestand-Mischzustand: Reiter „an“, Briefing ohne Warnungen; Speichern schaltet still ein"
+    }
+   }
+  },
+  {
+   "id": "orte.amtliche_warnungen",
+   "kontext": "orte",
+   "einstellung": "Amtliche Warnungen (ein Schalter)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WarnungenRadarKarte.svelte",
+   "gespeichert_als": "official_alerts_enabled + official_warnings.enabled top-level; PUT /api/compare/presets/{id} (Hub-Schlange, If-Match) -> internal/handler/compare_preset.go:393 applyComparePresetPatch (mergeBriefingPatch, display_config eine Ebene tief; RMW: ja)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall O09; inventar/editor/probe_folgespeichern.test.ts + inventar/editor/folge_mergen.py (ausgabe_folge.json) Fall O09",
+     "befund": "E4",
+     "notiz": "wie Trip"
+    }
+   }
+  },
+  {
+   "id": "orte.radar",
+   "kontext": "orte",
+   "einstellung": "Radar-Regen-Alarm",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WarnungenRadarKarte.svelte (mitRadar vergleich)",
+   "gespeichert_als": "radar_alert_enabled; PUT /api/compare/presets/{id} (Hub-Schlange, If-Match) -> internal/handler/compare_preset.go:393 applyComparePresetPatch (mergeBriefingPatch, display_config eine Ebene tief; RMW: ja)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle O07/O08 (fehlt = aus beidseitig, compare_radar_alert.py:228)",
+     "befund": "",
+     "notiz": "Mutation M11 (Schreiben) gefangen"
+    }
+   }
+  },
+  {
+   "id": "trip.radar",
+   "kontext": "trip",
+   "einstellung": "Radar-Regen-Alarm (Konzept N1: auch Trip)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/WetterTabInhalt.svelte MIT_RADAR.route = false",
+   "gespeichert_als": "— (kein Feld, Trip-Radar folgt S8 #2800)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ausgelagert",
+     "beleg": "WetterTabInhalt.svelte:49, WarnungenRadarKarte.svelte:5",
+     "befund": "#2800",
+     "notiz": "Editor bietet Trip-Radar noch nicht an"
+    }
+   }
+  },
+  {
+   "id": "trip.tagesfenster",
+   "kontext": "trip",
+   "einstellung": "Tagesfenster von–bis (Anpassen)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/AnpassenKarte.svelte -> tagesfensterEingabe.ts",
+   "gespeichert_als": "report_config.day_window_start_hour/_end_hour; PUT /api/trips/{id} -> internal/handler/trip.go:336 UpdateTripHandler (report_config mergeConfigMap, Top-Level ApplyPtr; RMW: ja) (ClampReportConfigDayWindow beim Schreiben)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle T11/T12 (T13 Mitternacht gruen); inventar/editor/probe_folgespeichern.test.ts + inventar/editor/folge_mergen.py (ausgabe_folge.json) Fall T11",
+     "befund": "E5",
+     "notiz": "gespeichertes gueltiges Paar gruen (M3/M20 gefangen); halbes/gleiches Altpaar: Reiter 6–19 bzw. 8–8, Ausgabe 4–19"
+    }
+   }
+  },
+  {
+   "id": "orte.tagesfenster",
+   "kontext": "orte",
+   "einstellung": "Tagesfenster von–bis (Anpassen)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/wetter-tab/AnpassenKarte.svelte",
+   "gespeichert_als": "day_window_start_hour/_end_hour top-level; PUT /api/compare/presets/{id} (Hub-Schlange, If-Match) -> internal/handler/compare_preset.go:393 applyComparePresetPatch (mergeBriefingPatch, display_config eine Ebene tief; RMW: ja); Go klemmt auch beim Laden (store/compare_preset.go:116)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall O10 nur roh abweichend; ueber den Go-Ladepfad geheilt (compare_preset.go:116)",
+     "befund": "",
+     "notiz": "Testluecke: Mutation M21 (Lade-Klemme entfernt) ueberlebt"
+    }
+   }
+  },
+  {
+   "id": "trip.zeiten",
+   "kontext": "trip",
+   "einstellung": "Uhrzeit Morgen-/Abend-Briefing",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/BriefingZeiten.svelte -> zustellungSpeicherung.ts",
+   "gespeichert_als": "report_config.morning_time/evening_time; PUT /api/trips/{id} -> internal/handler/trip.go:336 UpdateTripHandler (report_config mergeConfigMap, Top-Level ApplyPtr; RMW: ja) (ValidateReportConfigSlotTimes)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) alle T-Faelle (Standard 07:00/18:00, gesetzt 06:15)",
+     "befund": "",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "orte.zeiten",
+   "kontext": "orte",
+   "einstellung": "Uhrzeit Morgen-/Abend-Briefing",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/BriefingZeiten.svelte",
+   "gespeichert_als": "morning_time/evening_time top-level; PUT /api/compare/presets/{id} (Hub-Schlange, If-Match) -> internal/handler/compare_preset.go:393 applyComparePresetPatch (mergeBriefingPatch, display_config eine Ebene tief; RMW: ja); Altbestand ohne morning_time migriert Go beim Laden auf 06:00",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) (roh 07:00 vs 06:00, ueber Go-Lademigration store/compare_preset.go:218 gleich)",
+     "befund": "",
+     "notiz": "Mutation M19 (Migrationszeit) gefangen"
+    }
+   }
+  },
+  {
+   "id": "trip.slots",
+   "kontext": "trip",
+   "einstellung": "Morgen-/Abend-Briefing an/aus",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/BriefingZeiten.svelte",
+   "gespeichert_als": "report_config.morning_enabled/evening_enabled + enabled (Gesamtschalter)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle T06/T07 (enabled:false Master)",
+     "befund": "",
+     "notiz": "Mutation M13 gefangen"
+    }
+   }
+  },
+  {
+   "id": "orte.slots",
+   "kontext": "orte",
+   "einstellung": "Morgen-/Abend-Briefing an/aus",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/BriefingZeiten.svelte",
+   "gespeichert_als": "morning_enabled/evening_enabled top-level",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) O-Faelle (Standard Morgen an, Abend aus)",
+     "befund": "",
+     "notiz": "Testluecke: Mutation M4 (Abend-Standard) ueberlebt"
+    }
+   }
+  },
+  {
+   "id": "trip.briefing_kanaele",
+   "kontext": "trip",
+   "einstellung": "Briefing je Kanal (E-Mail, Telegram, SMS, Premium-SMS)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/KanalTabelle.svelte",
+   "gespeichert_als": "report_config.send_email/send_telegram/send_sms/send_premium_sms",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle T07/T16/T19",
+     "befund": "",
+     "notiz": "Testluecke: Mutation M25 (E-Mail-Standard) ueberlebt"
+    }
+   }
+  },
+  {
+   "id": "orte.briefing_kanaele",
+   "kontext": "orte",
+   "einstellung": "Briefing je Kanal",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/KanalTabelle.svelte",
+   "gespeichert_als": "send_email/send_telegram/send_sms/send_premium_sms top-level",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle O05/O06; Alt-Premium roh abweichend, Go-Ladepfad bereinigt (store/compare_preset.go:55-70)",
+     "befund": "",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "trip.alarm_kanaele",
+   "kontext": "trip",
+   "einstellung": "Alarme je Kanal",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/KanalTabelle.svelte -> tripChannelReconstruction.ts",
+   "gespeichert_als": "alert_channels.{email,telegram,sms,premium_sms}; PUT /api/trips/{id} -> internal/handler/trip.go:336 UpdateTripHandler (report_config mergeConfigMap, Top-Level ApplyPtr; RMW: ja) (Feld-Merge je Kanal)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle T19/T21 (ohne Override erbt Briefing-Kanaele)",
+     "befund": "",
+     "notiz": "Testluecke Go: Mutation M16 (E-Mail-Feldmerge) ueberlebt"
+    }
+   }
+  },
+  {
+   "id": "orte.alarm_kanaele",
+   "kontext": "orte",
+   "einstellung": "Alarme je Kanal",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/KanalTabelle.svelte",
+   "gespeichert_als": "alert_channels top-level (Go materialisiert beim Laden, store/compare_preset.go:55)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle O05/O13; O05 roh abweichend, ueber Go-Ladepfad/Create nicht erreichbar",
+     "befund": "",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "trip.dringlichkeit",
+   "kontext": "trip",
+   "einstellung": "Alarm schon ab Dringlichkeit je Kanal",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/KanalTabelle.svelte",
+   "gespeichert_als": "alert_channel_thresholds.<kanal> (LOW/MODERATE/HIGH)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall T21 (unbekannt = gering beidseitig)",
+     "befund": "",
+     "notiz": "Mutation M5 gefangen"
+    }
+   }
+  },
+  {
+   "id": "orte.dringlichkeit",
+   "kontext": "orte",
+   "einstellung": "Alarm schon ab Dringlichkeit je Kanal",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/KanalTabelle.svelte",
+   "gespeichert_als": "alert_channel_thresholds top-level",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall O13",
+     "befund": "",
+     "notiz": "Mutation M5 gefangen"
+    }
+   }
+  },
+  {
+   "id": "trip.stille_stunden",
+   "kontext": "trip",
+   "einstellung": "Stille Stunden von–bis an/aus",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/StilleStunden.svelte",
+   "gespeichert_als": "alert_quiet_from/alert_quiet_to (beide null = aus)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall T20 (halb = aus beidseitig)",
+     "befund": "",
+     "notiz": "Testluecke: Mutation M6 ueberlebt"
+    }
+   }
+  },
+  {
+   "id": "orte.stille_stunden",
+   "kontext": "orte",
+   "einstellung": "Stille Stunden",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/StilleStunden.svelte",
+   "gespeichert_als": "alert_quiet_from/alert_quiet_to top-level",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) O-Faelle",
+     "befund": "",
+     "notiz": "Testluecke: Mutation M6 ueberlebt"
+    }
+   }
+  },
+  {
+   "id": "trip.cooldown",
+   "kontext": "trip",
+   "einstellung": "Mindestabstand zwischen Alarmen (Anpassen)",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/StilleStunden.svelte",
+   "gespeichert_als": "alert_cooldown_minutes (fehlt = 120)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) (trip_alert.py:1733 2h = 120)",
+     "befund": "",
+     "notiz": "Mutation M12 gefangen"
+    }
+   }
+  },
+  {
+   "id": "orte.cooldown",
+   "kontext": "orte",
+   "einstellung": "Mindestabstand zwischen Alarmen",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/StilleStunden.svelte",
+   "gespeichert_als": "alert_cooldown_minutes (compare_alert.py:59 = 120)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json)",
+     "befund": "",
+     "notiz": "Mutation M12 gefangen"
+    }
+   }
+  },
+  {
+   "id": "orte.laufzeit",
+   "kontext": "orte",
+   "einstellung": "Laufzeit bis auf Weiteres / bis Datum",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/LaufzeitKarte.svelte",
+   "gespeichert_als": "end_date top-level",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "nicht ausgefuehrt"
+    }
+   }
+  },
+  {
+   "id": "trip.telegram_kurzstil",
+   "kontext": "trip",
+   "einstellung": "Telegram im SMS-Kurzstil",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/UebergangBlock.svelte -> KanalStil.svelte -> kanalStilSpeicherung.ts",
+   "gespeichert_als": "report_config.telegram_style; PUT /api/trips/{id} -> internal/handler/trip.go:336 UpdateTripHandler (report_config mergeConfigMap, Top-Level ApplyPtr; RMW: ja)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall T16 + Standard rich",
+     "befund": "",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "orte.telegram_kurzstil",
+   "kontext": "orte",
+   "einstellung": "Telegram im SMS-Kurzstil",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/UebergangBlock.svelte -> kanalStilSpeicherung.ts:52",
+   "gespeichert_als": "display_config.telegram_style; PUT /api/compare/presets/{id} (Hub-Schlange, If-Match) -> internal/handler/compare_preset.go:393 applyComparePresetPatch (mergeBriefingPatch, display_config eine Ebene tief; RMW: ja)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall O12",
+     "befund": "",
+     "notiz": "Testluecke: Mutation M7 (Laden ignoriert kurzform) ueberlebt"
+    }
+   }
+  },
+  {
+   "id": "trip.mehrtages_trend",
+   "kontext": "trip",
+   "einstellung": "Mehrtages-Trend im Morgen-/Abend-Briefing",
+   "gesetzt_in": "frontend/src/lib/components/organisms/zustellung-tab/UebergangBlock.svelte -> KanalStil.svelte -> kanalStilSpeicherung.ts:26",
+   "gespeichert_als": "report_config.multi_day_trend_morning/_evening + multi_day_trend_reports (Python liest nur _reports, Standard [evening])",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle T05–T21, T15; inventar/editor/probe_folgespeichern.test.ts + inventar/editor/folge_mergen.py (ausgabe_folge.json) Faelle T14/T06",
+     "befund": "E2",
+     "notiz": "nie eingestellt: Reiter aus, Mail abends an; Kurzstil umschalten schreibt reports [] und nimmt den Trend still raus"
+    }
+   }
+  },
+  {
+   "id": "trip.liste.kanaele",
+   "kontext": "trip",
+   "einstellung": "Liste je Kanal E-Mail/Telegram/SMS: Auswahl, Reihenfolge, Roh/Einfach, an/aus",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung) -> layout-tab/LayoutTab.svelte -> channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.<kanal>[] (order, enabled, use_friendly_format)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_anzeige_gleich_erwartung.test.ts + editor_aenderung_gleich_erwartung.test.ts (Python-Orakel), frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts",
+     "befund": "",
+     "notiz": "Mutationen M22 (Folge) und M23 (Roh/Einfach) gefangen"
+    }
+   }
+  },
+  {
+   "id": "trip.liste.premium_sms",
+   "kontext": "trip",
+   "einstellung": "Liste Premium-SMS (Konzept N2: eigene Liste)",
+   "gesetzt_in": "— (LayoutTab kennt nur email/telegram/sms, ltChannels.ts:18)",
+   "gespeichert_als": "display_config.channel_layouts.premium_sms (Python channel_list_resolver.py:132)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ausgelagert",
+     "beleg": "ltChannels.ts:18",
+     "befund": "#3031",
+     "notiz": "Karte „Inhalt je Kanal“ PR #3042"
+    }
+   }
+  },
+  {
+   "id": "trip.liste.je_bericht",
+   "kontext": "trip",
+   "einstellung": "Kanal-Liste je Bericht (Morgen/Abend)",
+   "gesetzt_in": "—",
+   "gespeichert_als": "display_config.per_report_layouts",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "#3065",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "trip.liste.global_nachtraeglich",
+   "kontext": "trip",
+   "einstellung": "Global nachtraeglich eingeschaltete Metrik in bereits bearbeiteter Liste",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung)",
+   "gespeichert_als": "display_config.channel_layouts.*",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "#3065",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "trip.ausblick",
+   "kontext": "trip",
+   "einstellung": "3-Tages-Ausblick: Auswahl, Reihenfolge",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung) -> OutlookLayoutControls.svelte",
+   "gespeichert_als": "display_config.outlook_metrics",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts (trip_ausblick: nie eingestellt, Folge, Totalschnitt, bewusst leer)",
+     "befund": "",
+     "notiz": "vorhandener Abgleich #3047 (Fallliste D-trip_ausblick-*)"
+    }
+   }
+  },
+  {
+   "id": "trip.ausblick.roh_einfach",
+   "kontext": "trip",
+   "einstellung": "3-Tages-Ausblick Roh/Einfach je Zeile",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung) -> OutlookLayoutControls.svelte",
+   "gespeichert_als": "display_config.outlook_metric_formats",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Editor-Anzeige nicht ausgefuehrt"
+    }
+   }
+  },
+  {
+   "id": "orte.liste.vergleichstabelle",
+   "kontext": "orte",
+   "einstellung": "Vergleichstabelle (E-Mail-Liste): Auswahl, Reihenfolge",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung) -> LayoutTab (vergleich)",
+   "gespeichert_als": "display_config.channel_active_metrics.email / active_metrics-Folge",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts (orte_vergleichstabelle)",
+     "befund": "",
+     "notiz": "Orte-Editor liest channel_layouts noch nicht: #3031"
+    }
+   }
+  },
+  {
+   "id": "orte.liste.kanaele_roh_einfach",
+   "kontext": "orte",
+   "einstellung": "Telegram/SMS-Listen und Roh/Einfach je Zeile (Orte)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung)",
+   "gespeichert_als": "display_config.channel_layouts.*",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "#3031",
+     "notiz": "Orte-Editor liest channel_layouts noch nicht"
+    }
+   }
+  },
+  {
+   "id": "orte.stundenverlauf",
+   "kontext": "orte",
+   "einstellung": "Stundenverlauf: Auswahl, Reihenfolge, an/aus",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung) -> compare/CompareHourlyLayoutControls.svelte",
+   "gespeichert_als": "display_config.hourly_metrics, hourly_enabled",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts (orte_stundenverlauf)",
+     "befund": "",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "orte.ausblick",
+   "kontext": "orte",
+   "einstellung": "3-Tages-Ausblick: Auswahl, Reihenfolge, an/aus",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung) -> OutlookLayoutControls.svelte",
+   "gespeichert_als": "display_config.outlook_metrics, outlook_enabled",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "frontend/src/lib/components/shared/weather-metrics-tab/__tests__/editor_standard_gleich_mail.test.ts (orte_ausblick)",
+     "befund": "",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "orte.ortsfolge",
+   "kontext": "orte",
+   "einstellung": "Ortsfolge (Reiter Orte, Ziehen)",
+   "gesetzt_in": "frontend/src/lib/components/compare/CompareTabs.svelte:246-275",
+   "gespeichert_als": "location_ids (Folge)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "CompareTabs.svelte:264 vs compare_preview_service.py:225 (Code-Lesung, nicht ausgefuehrt)",
+     "befund": "",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "trip.email_format",
+   "kontext": "trip",
+   "einstellung": "E-Mail-Format Ausfuehrlich/Kompakt",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung) -> MailInhaltCard.svelte -> mailInhaltZustand.ts",
+   "gespeichert_als": "report_config.email_format",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Faelle T18 (compact) und Standard full",
+     "befund": "",
+     "notiz": "null-Altwert siehe E8 (Mail ebenfalls full)"
+    }
+   }
+  },
+  {
+   "id": "orte.email_format",
+   "kontext": "orte",
+   "einstellung": "E-Mail-Format (Orte)",
+   "gesetzt_in": "—",
+   "gespeichert_als": "—",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "Konzept §5 Punkt 8 E-Mail: „Kompakt gilt fuer Orte, sobald die Orts-Mail Nur-Text kann.“",
+     "befund": "",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "trip.zusatz.etappen_kennzahlen",
+   "kontext": "trip",
+   "einstellung": "Zusatzblock Etappen-Kennzahlen",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung) -> MailInhaltCard.svelte",
+   "gespeichert_als": "report_config.show_stage_stats",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) T18 gruen, T17 (null) rot",
+     "befund": "E8",
+     "notiz": "nur Altwert null"
+    }
+   }
+  },
+  {
+   "id": "trip.zusatz.vortag",
+   "kontext": "trip",
+   "einstellung": "Zusatzblock Vortag-Vergleich",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung) -> MailInhaltCard.svelte",
+   "gespeichert_als": "report_config.show_yesterday_comparison",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "rot",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) T18 gruen, T17 (null) rot",
+     "befund": "E8",
+     "notiz": "Mutation M9 (Standard) gefangen; nur Altwert null"
+    }
+   }
+  },
+  {
+   "id": "trip.zusatz.nachtblock",
+   "kontext": "trip",
+   "einstellung": "Zusatzblock Nacht-Stundentabelle",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung) (Abschnitt nachtblock)",
+   "gespeichert_als": "display_config.show_night_block",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "inventar/editor/probe_editor.test.ts + inventar/editor/probe_ausgabe.py + inventar/editor/vergleich.py (vergleich.json) Fall T18 + Standard an",
+     "befund": "",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "orte.zusatzbloecke",
+   "kontext": "orte",
+   "einstellung": "Zusatzbloecke (Orte)",
+   "gesetzt_in": "—",
+   "gespeichert_als": "—",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "Konzept §5 Punkt 8: Zusatzbloecke „Nur Trip“",
+     "befund": "",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "trip.sms_schwellen",
+   "kontext": "trip",
+   "einstellung": "SMS-Schwellen je Metrik",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (bereich=zustellung) (sms_schwellen, nur lesbar)",
+   "gespeichert_als": "display_config.metrics[].sms_threshold (Bestand)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "WeatherMetricsTab.svelte:1769 (#2792 S1c-3: gesperrt, nicht aenderbar)",
+     "befund": "",
+     "notiz": ""
+    }
+   }
+  },
+  {
+   "id": "editor.sprache",
+   "kontext": "trip|orte",
+   "einstellung": "Sprache DE/EN der Editor-Texte (Reiter Wetter, Zustellung, Uebergangsblock, Vorlagennamen)",
+   "gesetzt_in": "frontend/src/lib/i18n/messages/{de,en}",
+   "gespeichert_als": "Nutzer-Feld language (nicht im Hub einstellbar)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "node --test i18n paritaet_de_en, keine_hartkodierten_nutzertexte, en_katalog_regeln, versand_tab_sprache, wertebereiche_sprache, katalog_sprache_3021 (288 gruen); 381 Schluessel wetter./zustellung./wertebereiche. alle in EN",
+     "befund": "",
+     "notiz": "14 DE=EN-Werte sind Fachwoerter (Wind, Briefing, Telegram, Name)"
+    }
+   }
+  },
+  {
+   "id": "editor.zwei_nutzer",
+   "kontext": "trip|orte",
+   "einstellung": "Zwei Nutzer: Speichern trennt die Daten",
+   "gesetzt_in": "Go-Handler weather_config/trip/compare_preset/metric_preset",
+   "gespeichert_als": "data/users/<user_id>/briefings/*.json",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/kanaele"
+    },
+    "einstellungsseite": {
+     "status": "gruen",
+     "beleg": "go test ./internal/handler -run 'Teil3_2794|WeatherConfigEditorRoundtrip|S3a2794_AC2[2-5]|F3047|DayWindow|AlertChannelsCrossUser|LegacyPremium|SlotSchedule|ZweiNutzer|TwoUsers' (62 gruen)",
+     "befund": "",
+     "notiz": "Mutationen M14/M18 von ZweiNutzer_FeldErhalt-Tests gefangen"
+    }
+   }
+  }
+ ],
+ "zaehler_zellen": {
+  "ungeprueft": 374,
+  "rot": 14,
+  "gruen": 31,
+  "ausgelagert": 5,
+  "nicht_anwendbar": 3
+ },
+ "zaehler_einstellungsseite": {
+  "rot": 14,
+  "gruen": 31,
+  "ungeprueft": 8,
+  "ausgelagert": 5,
+  "nicht_anwendbar": 3
+ }
+}

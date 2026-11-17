@@ -1,0 +1,2351 @@
+{
+ "bereich": "kanaele",
+ "zeilen": [
+  {
+   "id": "trip.telegram_liste.reihenfolge",
+   "kontext": "trip",
+   "einstellung": "Telegram-Liste: Reihenfolge (Folge != Katalog)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.telegram[].order",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_tg_reihenfolge_anaus",
+     "befund": "",
+     "notiz": "Kurzuebersicht + Tabellenspalten in Listenfolge; Mutation M01/M06 gefangen"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.telegram_liste.an_aus",
+   "kontext": "trip",
+   "einstellung": "Telegram-Liste: Zeile aus",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.telegram[].enabled",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_tg_reihenfolge_anaus",
+     "befund": "",
+     "notiz": "Regenwahrscheinlichkeit aus -> fehlt in Kurzuebersicht und Tabelle"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.telegram_liste.roh_einfach",
+   "kontext": "trip",
+   "einstellung": "Telegram-Liste: Roh/Einfach je Zeile (Bewoelkung)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.telegram[].format_mode|use_friendly_format",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_tg_roh_einfach_bewoelkung",
+     "befund": "",
+     "notiz": "Roh 'CT 70', Einfach Symbol; M03 gefangen (auch tests/tdd/test_einstellung_gleich_auslieferung.py::test_ac9_m3)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.telegram_liste.windrichtung_roh",
+   "kontext": "trip",
+   "einstellung": "Telegram-Liste: Windrichtung Roh (#3063 Punkt 2)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.telegram[metric_id=wind_direction].format_mode=raw",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_tg_windrichtung_roh_3063",
+     "befund": "B-K1",
+     "notiz": "Mail Roh '250°', Telegram 'WD W' in Kurzuebersicht und Tabelle"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.telegram.schnittlinie_7",
+   "kontext": "trip",
+   "einstellung": "Telegram-Schnittlinie (erste 7)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts (Erklaersatz #3033)",
+   "gespeichert_als": "abgeleitet: Listenposition, channel_layout.CHANNEL_LIMITS.telegram.max_table_cols=8",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_tg_schnittlinie_erste7_tabelle",
+     "befund": "B-K5",
+     "notiz": "Ist: Tabelle = erste 7, Kurzuebersicht = alle; Konzept §5 P8 sagt umgekehrt (Zielkonflikt Konzepttext); M05 gefangen"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.sms_liste.reihenfolge",
+   "kontext": "trip",
+   "einstellung": "SMS-Liste: Reihenfolge",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.sms[].order",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "SMS-Liste wirkt auf Telegram nur im Kurzstil (eigene Zeile kurzstil)"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_sms_reihenfolge_anaus",
+     "befund": "",
+     "notiz": "Token in Listenfolge R W G N D TH HU; M13 gefangen (tests/tdd/test_einstellung_gleich_auslieferung.py::test_ac5_golden_c_sms_reihenfolge)"
+    },
+    "premium_sms": {
+     "status": "ausgelagert",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_premium_eigene_liste_n2",
+     "befund": "",
+     "notiz": "ausgelagert #2801: Premium-SMS sendet heute den SMS-Text, eigene Liste (N2) wirkungslos"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.sms_liste.an_aus",
+   "kontext": "trip",
+   "einstellung": "SMS-Liste: Zeile aus",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.sms[].enabled",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "SMS-Liste wirkt auf Telegram nur im Kurzstil (eigene Zeile kurzstil)"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_sms_reihenfolge_anaus",
+     "befund": "",
+     "notiz": "PR aus -> kein PR-Token"
+    },
+    "premium_sms": {
+     "status": "ausgelagert",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_premium_eigene_liste_n2",
+     "befund": "",
+     "notiz": "ausgelagert #2801: Premium-SMS sendet heute den SMS-Text, eigene Liste (N2) wirkungslos"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.sms_liste.roh_einfach",
+   "kontext": "trip",
+   "einstellung": "SMS-Liste: Roh/Einfach (Wolken-Stufen)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.sms[].format_mode",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "SMS-Liste wirkt auf Telegram nur im Kurzstil (eigene Zeile kurzstil)"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_einstellung_gleich_auslieferung.py::test_hauptmatrix_einstellung_gleich_auslieferung",
+     "befund": "",
+     "notiz": "M14 gefangen; Windrichtung in SMS ist Protokoll-Token WD:<Kompass> (sms_format.md, nicht umschaltbar)"
+    },
+    "premium_sms": {
+     "status": "ausgelagert",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_premium_eigene_liste_n2",
+     "befund": "",
+     "notiz": "ausgelagert #2801: Premium-SMS sendet heute den SMS-Text, eigene Liste (N2) wirkungslos"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.sms.kuerzung_160",
+   "kontext": "trip",
+   "einstellung": "SMS 160 Zeichen: was faellt zuerst weg",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts (Budgetzeile #3032)",
+   "gespeichert_als": "abgeleitet: Listenposition vs. output/tokens/render.py DROP_ORDER",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "SMS-Liste wirkt auf Telegram nur im Kurzstil (eigene Zeile kurzstil)"
+    },
+    "sms": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_sms_kuerzung_nach_liste",
+     "befund": "B-K4",
+     "notiz": "Kuerzung nach fester Prioritaet (HU/DP zuerst) statt Listenende; bewusst gesichert durch tests/tdd/test_sms_user_metric_order.py::test_ac6 (Zielkonflikt)"
+    },
+    "premium_sms": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_sms_kuerzung_nach_liste",
+     "befund": "B-K4",
+     "notiz": "Premium = SMS-Text, gleiche Kuerzung"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.premium_sms_liste",
+   "kontext": "trip",
+   "einstellung": "Premium-SMS eigene Liste (N2)",
+   "gesetzt_in": "noch keine Oberflaeche (#2801)",
+   "gespeichert_als": "display_config.channel_layouts.premium_sms[]",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Premium-Liste wirkt nicht auf SMS"
+    },
+    "premium_sms": {
+     "status": "ausgelagert",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_premium_eigene_liste_n2",
+     "befund": "",
+     "notiz": "ausgelagert #2801: Premium-SMS sendet heute den SMS-Text, eigene Liste (N2) wirkungslos"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.telegram_style.briefing",
+   "kontext": "trip",
+   "einstellung": "Telegram-Kurzstil: Briefing nutzt SMS-Text/SMS-Liste (A11)",
+   "gesetzt_in": "frontend/src/lib/components/shared/TelegramKurzstilToggle.svelte",
+   "gespeichert_als": "report_config.telegram_style=kurzform",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_tg_kurzstil_sms_liste",
+     "befund": "",
+     "notiz": "eine Nachricht, parse_mode None, == SMS-Text (eigene SMS-Liste)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kurzstil aendert nur Telegram"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kurzstil aendert nur Telegram"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.telegram_style.alarm",
+   "kontext": "trip",
+   "einstellung": "Telegram-Kurzstil: Alarm (A11)",
+   "gesetzt_in": "frontend/src/lib/components/shared/TelegramKurzstilToggle.svelte",
+   "gespeichert_als": "report_config.telegram_style=kurzform",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_telegram_kurzstil_trip_alert.py::TestAC4OfficialAlertKurzstil",
+     "befund": "",
+     "notiz": "M20 (notification_service.send_official_alert) gefangen"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kurzstil aendert nur Telegram"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kurzstil aendert nur Telegram"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.grundauswahl.morgen_abend",
+   "kontext": "trip",
+   "einstellung": "Morgen/Abend je Metrik (Grundauswahl)",
+   "gesetzt_in": "frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte",
+   "gespeichert_als": "display_config.metrics[].morning_enabled|evening_enabled",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_morgen_abend",
+     "befund": "",
+     "notiz": "HU nur morgens, UV nur abends -- in Kurzuebersicht"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_morgen_abend",
+     "befund": "",
+     "notiz": "HU-Token nur morgens"
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_morgen_abend",
+     "befund": "",
+     "notiz": "Premium = SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.grundauswahl.totalschnitt",
+   "kontext": "trip",
+   "einstellung": "Kanal-Liste liegt ganz ausserhalb der Grundauswahl",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.<kanal>[] vs metrics[]",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_totalschnitt",
+     "befund": "",
+     "notiz": "Rueckfall auf Grundauswahl (#3047 AC-10)"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_totalschnitt",
+     "befund": "",
+     "notiz": "Rueckfall auf Grundauswahl"
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_totalschnitt",
+     "befund": "",
+     "notiz": "= SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.kanal_liste.nie_eingestellt",
+   "kontext": "trip",
+   "einstellung": "Kanal-Liste fehlt (Altbestand)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts fehlt",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_altbestand_ohne_layouts",
+     "befund": "",
+     "notiz": "Grundauswahl-Folge"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_altbestand_ohne_layouts",
+     "befund": "",
+     "notiz": "Grundauswahl-Folge G N D PR"
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_altbestand_ohne_layouts",
+     "befund": "",
+     "notiz": "= SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.kanal_liste.bewusst_leer",
+   "kontext": "trip",
+   "einstellung": "Kanal-Liste bewusst leer",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte + weather-metrics-tab/channelMetricLayouts.ts",
+   "gespeichert_als": "display_config.channel_layouts.<kanal>=[]",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_bewusst_leer",
+     "befund": "",
+     "notiz": "keine Tabelle, leere Kurzuebersicht"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_bewusst_leer",
+     "befund": "",
+     "notiz": "SMS 'E1:' wird trotzdem versendet (Hinweis, kein Befund)"
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_bewusst_leer",
+     "befund": "",
+     "notiz": "Premium 'E1:' kostet trotzdem (Hinweis)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.ausblick",
+   "kontext": "trip",
+   "einstellung": "3-Tages-Ausblick (Liste, Roh/Einfach)",
+   "gesetzt_in": "frontend/src/lib/components/shared/OutlookLayoutControls.svelte",
+   "gespeichert_als": "display_config.outlook_metrics + outlook_metric_formats",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_trip_outlook_compact_telegram_dispatch.py::test_ac3_telegram_bubble_zeigt_die_gewaehlten_spalten_mit_katalog_label",
+     "befund": "",
+     "notiz": "M19 gefangen"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "ADR-0055:107 SMS erreicht den Ausblick baulich nicht"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "ADR-0055:107 wie SMS"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.tagesfenster",
+   "kontext": "trip",
+   "einstellung": "Tagesfenster von-bis (W12, ADR-0035)",
+   "gesetzt_in": "frontend/src/lib/components/shared/MailInhaltCard.svelte",
+   "gespeichert_als": "report_config.day_window_start_hour|day_window_end_hour",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram nutzt das Fenster fuer Gewitter-Fusszeile; nicht separat geprueft"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_tagesfenster",
+     "befund": "",
+     "notiz": "10-19 -> @10 statt @4"
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_tagesfenster",
+     "befund": "",
+     "notiz": "= SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.amtliche_warnungen.position",
+   "kontext": "trip",
+   "einstellung": "Amtliche Warnungen: Telegram zuerst, SMS am Ende (WV6)",
+   "gesetzt_in": "frontend/src/lib/components/shared/WeatherMetricsTab.svelte (Karte Amtliche Warnungen)",
+   "gespeichert_als": "official_alerts_enabled",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_tg_warnung_erste_zeile",
+     "befund": "",
+     "notiz": "Warn-Bubble direkt nach Kopf; M02 gefangen"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_sms_warnung_am_ende",
+     "befund": "",
+     "notiz": "!TS:M@10 am Ende; M15 gefangen"
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_sms_warnung_am_ende",
+     "befund": "",
+     "notiz": "= SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.amtliche_warnungen.kuerzung_zuletzt",
+   "kontext": "trip",
+   "einstellung": "Amtliche Warnung faellt beim Kuerzen als letztes weg (WV6)",
+   "gesetzt_in": "-",
+   "gespeichert_als": "abgeleitet",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram kuerzt nicht auf 160"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_sms_official_alert_tokens.py::test_ac7_warn_block_survives_truncation_before_pr",
+     "befund": "",
+     "notiz": "auch eigener Lauf: Warnung bleibt bei 21-Metrik-Liste; M12 gefangen"
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_sms_kuerzung_nach_liste",
+     "befund": "",
+     "notiz": "= SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.sprache.kopf_kuerzel",
+   "kontext": "trip",
+   "einstellung": "Sprache EN: Kopf uebersetzt, Kuerzel bleiben (ADR-0104)",
+   "gesetzt_in": "Konto (user.json language)",
+   "gespeichert_als": "users/<id>/user.json language",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_sprache_en_kopf_uebersetzt_kuerzel_bleiben",
+     "befund": "",
+     "notiz": "Evening/Summary/Hr/medium; Kuerzel WD R G T unveraendert; M04 gefangen"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_sprache_en_kopf_uebersetzt_kuerzel_bleiben",
+     "befund": "",
+     "notiz": "SMS sprachfest (PO 2026-10-31)"
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_sprache_en_kopf_uebersetzt_kuerzel_bleiben",
+     "befund": "",
+     "notiz": "= SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.sprache.kappungshinweis",
+   "kontext": "trip",
+   "einstellung": "Sprache EN: Telegram-Kappungshinweis",
+   "gesetzt_in": "Konto (user.json language)",
+   "gespeichert_als": "users/<id>/user.json language",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::test_t_sprache_en_kappungshinweis",
+     "befund": "B-K2",
+     "notiz": "'… +2 weitere Wettergrößen nur als Tageswert' in EN-Sendung"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "kein Hinweis in SMS"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "kein Hinweis in Premium-SMS"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.kuerzel_legende",
+   "kontext": "trip",
+   "einstellung": "Kuerzel-Legende (W21)",
+   "gesetzt_in": "noch keine Oberflaeche (#3032)",
+   "gespeichert_als": "-",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "B-K9",
+     "notiz": "ausgelagert #3032; Ist-Ausgabe ohne Legende am Briefing-Ende"
+    },
+    "sms": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "B-K9",
+     "notiz": "ausgelagert #3032; SMS hat Befehl KUERZEL, keine Legende"
+    },
+    "premium_sms": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "B-K9",
+     "notiz": "ausgelagert #3032"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "trip.zwei_nutzer",
+   "kontext": "trip",
+   "einstellung": "Zwei Nutzer: eigene Empfaenger je Kanal",
+   "gesetzt_in": "Konto",
+   "gespeichert_als": "users/<id>/user.json",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::zwei()",
+     "befund": "",
+     "notiz": "chat-<uid> je Nutzer, alle Faelle"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py::zwei()",
+     "befund": "",
+     "notiz": "Nutzer-Nummer"
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_trip_kanaele.py",
+     "befund": "",
+     "notiz": "Rueckadresse je Nutzer verschieden (premium_rueckadresse)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.telegram_liste.reihenfolge",
+   "kontext": "orte",
+   "einstellung": "Telegram-Liste: Reihenfolge",
+   "gesetzt_in": "Orte-Editor schreibt channel_layouts noch nicht (#3031/PR #3042); heute nur API/Altbestand channel_active_metrics",
+   "gespeichert_als": "display_config.channel_layouts.telegram[]",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_tg_reihenfolge_anaus",
+     "befund": "",
+     "notiz": "Windrichtung, Regen, Boeen, Temp, Wolken, dann nicht erfasste hinten"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.telegram_liste.an_aus",
+   "kontext": "orte",
+   "einstellung": "Telegram-Liste: Zeile aus",
+   "gesetzt_in": "Orte-Editor schreibt channel_layouts noch nicht (#3031/PR #3042); heute nur API/Altbestand channel_active_metrics",
+   "gespeichert_als": "display_config.channel_layouts.telegram[].enabled",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_tg_reihenfolge_anaus",
+     "befund": "",
+     "notiz": "Regenwahrscheinlichkeit fehlt"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.telegram_liste.roh_einfach",
+   "kontext": "orte",
+   "einstellung": "Telegram-Liste: Roh/Einfach je Zeile",
+   "gesetzt_in": "Orte-Editor schreibt channel_layouts noch nicht (#3031/PR #3042); heute nur API/Altbestand channel_active_metrics",
+   "gespeichert_als": "display_config.channel_layouts.telegram[].use_friendly_format",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_tg_reihenfolge_anaus",
+     "befund": "B-K8",
+     "notiz": "Wolken ⛅; M09 von KEINEM Repo-Test gefangen, nur vom Pruefskript"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.telegram_liste.windrichtung_roh",
+   "kontext": "orte",
+   "einstellung": "Telegram-Liste: Windrichtung Roh/Einfach (#3063 P2)",
+   "gesetzt_in": "Orte-Editor schreibt channel_layouts noch nicht (#3031/PR #3042); heute nur API/Altbestand channel_active_metrics",
+   "gespeichert_als": "display_config.channel_layouts.telegram[metric_id=wind_direction]",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_tg_windrichtung_roh_3063",
+     "befund": "",
+     "notiz": "Roh 'Windrichtung 250°', Einfach 'Windrichtung W' (test_o_tg_windrichtung_einfach)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.telegram.schnittlinie_7",
+   "kontext": "orte",
+   "einstellung": "Telegram-Schnittlinie (7 je Ort)",
+   "gesetzt_in": "Orte-Editor schreibt channel_layouts noch nicht (#3031/PR #3042); heute nur API/Altbestand channel_active_metrics",
+   "gespeichert_als": "abgeleitet: CHANNEL_LIMITS.telegram",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_dump_faelle (out/pruef_orte_ohne_listen.json)",
+     "befund": "B-K5",
+     "notiz": "Zeilen 8+ entfallen ganz ('vollstaendig per E-Mail'); Konzept: 'nur in der Tabelle', ADR-0095 P1"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.sms_liste.reihenfolge_an_aus",
+   "kontext": "orte",
+   "einstellung": "SMS-Liste: Reihenfolge und Zeile aus",
+   "gesetzt_in": "Orte-Editor schreibt channel_layouts noch nicht (#3031/PR #3042); heute nur API/Altbestand channel_active_metrics",
+   "gespeichert_als": "display_config.channel_layouts.sms[]",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "SMS-Liste wirkt auf Telegram nur im Kurzstil (eigene Zeile kurzstil)"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_sms_reihenfolge_anaus",
+     "befund": "",
+     "notiz": "R G D ..., Wind aus"
+    },
+    "premium_sms": {
+     "status": "ausgelagert",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_premium_eigene_liste_n2",
+     "befund": "",
+     "notiz": "ausgelagert #2801: Premium = SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.sms_liste.roh_einfach",
+   "kontext": "orte",
+   "einstellung": "SMS-Liste: Roh/Einfach (Wolken)",
+   "gesetzt_in": "Orte-Editor schreibt channel_layouts noch nicht (#3031/PR #3042); heute nur API/Altbestand channel_active_metrics",
+   "gespeichert_als": "display_config.channel_layouts.sms[].use_friendly_format",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "SMS-Liste wirkt auf Telegram nur im Kurzstil (eigene Zeile kurzstil)"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_sms_einfach_bewoelkung",
+     "befund": "",
+     "notiz": "CT SCT statt CT 35%; M16 gefangen"
+    },
+    "premium_sms": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "",
+     "notiz": "ausgelagert #2801"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.channel_active_metrics",
+   "kontext": "orte",
+   "einstellung": "Altformat channel_active_metrics (Auswahl/Folge je Kanal)",
+   "gesetzt_in": "Altbestand/API",
+   "gespeichert_als": "display_config.channel_active_metrics.<kanal>[]",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_reihenfolge_der_kanal_liste_bestimmt_zellen_und_kappung",
+     "befund": "",
+     "notiz": "M05 gefangen"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_kanal_darf_grundauswahl_nur_abwaehlen",
+     "befund": "",
+     "notiz": "M08 gefangen (test_compare_sms_kuerzel)"
+    },
+    "premium_sms": {
+     "status": "ausgelagert",
+     "beleg": "tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_premium_sms_text_ist_der_sms_text_und_ein_premium_eintrag_wirkt_nicht",
+     "befund": "",
+     "notiz": "ausgelagert #2801"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.sms.kuerzung",
+   "kontext": "orte",
+   "einstellung": "SMS 153/160 Zeichen: Kuerzung",
+   "gesetzt_in": "Orte-Editor schreibt channel_layouts noch nicht (#3031/PR #3042); heute nur API/Altbestand channel_active_metrics",
+   "gespeichert_als": "abgeleitet: CHANNEL_LIMITS.sms.max_chars=153",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "SMS-Liste wirkt auf Telegram nur im Kurzstil (eigene Zeile kurzstil)"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "tests/tdd/test_compare_sms_kuerzel.py::test_sms_cuts_whole_metrics_not_mid_token_when_selection_exceeds_budget",
+     "befund": "",
+     "notiz": "Zellen von hinten (Listenfolge), ganze Orte als '+k Orte'; M07/M08 gefangen. Abweichung zum Trip s. B-K4"
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py",
+     "befund": "",
+     "notiz": "= SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.amtliche_warnungen.kuerzung_zuletzt",
+   "kontext": "orte",
+   "einstellung": "Amtliche Warnung eines weiteren Ortes beim Kuerzen (WV6)",
+   "gesetzt_in": "-",
+   "gespeichert_als": "abgeleitet",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_sms_warnung_zweiter_ort_faellt_als_letztes",
+     "befund": "",
+     "notiz": "Telegram zeigt die Warnung von Bozen"
+    },
+    "sms": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_sms_warnung_zweiter_ort_faellt_als_letztes",
+     "befund": "B-K3",
+     "notiz": "Bozen (mit Warnung) faellt als '+1 Orte' weg, Innsbrucks UV/Sonne bleiben"
+    },
+    "premium_sms": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_sms_warnung_zweiter_ort_faellt_als_letztes",
+     "befund": "B-K3",
+     "notiz": "= SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.amtliche_warnungen.position",
+   "kontext": "orte",
+   "einstellung": "Amtliche Warnungen: Telegram zuerst je Ort, SMS am Ende",
+   "gesetzt_in": "Orte-Editor Karte Amtliche Warnungen",
+   "gespeichert_als": "official_alerts_enabled (Preset)",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_warnung",
+     "befund": "",
+     "notiz": "Warnblock vor den Zellen je Ort"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_warnung",
+     "befund": "",
+     "notiz": "!TS:M@10 am Ortsende; M10 gefangen"
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_warnung",
+     "befund": "",
+     "notiz": "= SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.premium_sms_liste",
+   "kontext": "orte",
+   "einstellung": "Premium-SMS eigene Liste (N2)",
+   "gesetzt_in": "noch keine Oberflaeche (#2801)",
+   "gespeichert_als": "display_config.channel_layouts.premium_sms[]",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Telegram-Liste wirkt nur auf Telegram (je Kanal eigene Liste, Konzept §5 P8)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Premium-Liste wirkt nicht auf SMS"
+    },
+    "premium_sms": {
+     "status": "ausgelagert",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_premium_eigene_liste_n2",
+     "befund": "",
+     "notiz": "ausgelagert #2801"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.telegram_style.briefing",
+   "kontext": "orte",
+   "einstellung": "Telegram-Kurzstil Briefing (A11)",
+   "gesetzt_in": "frontend/src/lib/components/shared/zustellung-tab/kanalStilSpeicherung.ts",
+   "gespeichert_als": "display_config.telegram_style=kurzform",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_kurzstil",
+     "befund": "",
+     "notiz": "Telegram == SMS-Text (auch tests/tdd/test_compare_einstellung_auslieferung_kette.py::test_telegram_kurzstil_erreicht_das_vergleichs_briefing_je_nutzer)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kurzstil aendert nur Telegram"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kurzstil aendert nur Telegram"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.telegram_style.alarm",
+   "kontext": "orte",
+   "einstellung": "Telegram-Kurzstil Alarm (A11)",
+   "gesetzt_in": "frontend/src/lib/components/shared/zustellung-tab/kanalStilSpeicherung.ts",
+   "gespeichert_als": "display_config.telegram_style=kurzform",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "tests/tdd/test_compare_radar_alert_telegram_style.py",
+     "befund": "",
+     "notiz": "Bereich alarme; nicht mutiert"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kurzstil aendert nur Telegram"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Kurzstil aendert nur Telegram"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.kanal_liste.bewusst_leer",
+   "kontext": "orte",
+   "einstellung": "Kanal-Liste bewusst leer (channel_layouts.<kanal> = [])",
+   "gesetzt_in": "Orte-Editor schreibt channel_layouts noch nicht (#3031/PR #3042); heute nur API/Altbestand channel_active_metrics",
+   "gespeichert_als": "display_config.channel_layouts.<kanal>=[]",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_leer_und_totalschnitt",
+     "befund": "B-K6",
+     "notiz": "volle Grundauswahl statt leer (alle enabled:false dagegen leer, test_o_alles_aus)"
+    },
+    "sms": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_leer_und_totalschnitt",
+     "befund": "B-K6",
+     "notiz": "volle Grundauswahl statt leer"
+    },
+    "premium_sms": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_leer_und_totalschnitt",
+     "befund": "B-K6",
+     "notiz": "= SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.kanal_liste.totalschnitt",
+   "kontext": "orte",
+   "einstellung": "Kanal-Liste ganz ausserhalb der Grundauswahl",
+   "gesetzt_in": "Orte-Editor schreibt channel_layouts noch nicht (#3031/PR #3042); heute nur API/Altbestand channel_active_metrics",
+   "gespeichert_als": "display_config.channel_layouts.<kanal>[]",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Einstellung betrifft nur Telegram/SMS/Premium-SMS (Kanal-Liste je Kanal, Konzept §5 P8)"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_leer_und_totalschnitt",
+     "befund": "",
+     "notiz": "Grundauswahl hinten (#3039 AC-14)"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_leer_und_totalschnitt",
+     "befund": "",
+     "notiz": ""
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py",
+     "befund": "",
+     "notiz": "= SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.grundauswahl.morgen_abend",
+   "kontext": "orte",
+   "einstellung": "Morgen/Abend je Metrik",
+   "gesetzt_in": "-",
+   "gespeichert_als": "-",
+   "zellen": {
+    "email_html": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "wie Telegram"
+    },
+    "email_text": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "wie Telegram"
+    },
+    "email_kompakt": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "wie Telegram"
+    },
+    "telegram": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Orte-Grundauswahl (active_metrics: metric_id+aggregation) kennt keine Morgen/Abend-Flags je Metrik; Morgen=heute/Abend=morgen gilt je Briefing (Konzept V8)"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "wie Telegram"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "wie Telegram"
+    },
+    "einstellungsseite": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "wie Telegram"
+    }
+   }
+  },
+  {
+   "id": "orte.ausblick",
+   "kontext": "orte",
+   "einstellung": "3-Tages-Ausblick in Telegram",
+   "gesetzt_in": "frontend/src/lib/components/shared/OutlookLayoutControls.svelte",
+   "gespeichert_als": "display_config.outlook_metrics + outlook_enabled",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "rot",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_dump_faelle (out/pruef_orte_*.json)",
+     "befund": "B-K7",
+     "notiz": "render_compare_telegram kennt keinen Ausblick; Trip-Telegram hat ihn"
+    },
+    "sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "ADR-0055:107 SMS erreicht den Ausblick baulich nicht"
+    },
+    "premium_sms": {
+     "status": "nicht_anwendbar",
+     "beleg": "",
+     "befund": "",
+     "notiz": "wie SMS"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.tagesfenster",
+   "kontext": "orte",
+   "einstellung": "Zeitfenster hour_from/hour_to",
+   "gesetzt_in": "Orte-Editor",
+   "gespeichert_als": "hour_from|hour_to",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Wetter-Naht ersetzt ComparisonEngine, die das Fenster anwendet; #1268 Bewertung ganzer Tag"
+    },
+    "sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "wie Telegram"
+    },
+    "premium_sms": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "wie Telegram"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.sprache",
+   "kontext": "orte",
+   "einstellung": "Sprache EN (Kopf, Hinweise; Kuerzel/SMS sprachfest)",
+   "gesetzt_in": "Konto",
+   "gespeichert_als": "users/<id>/user.json language",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_en",
+     "befund": "",
+     "notiz": "LOCATION COMPARISON, Wind direction, Kappungshinweis EN; M11 gefangen"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_en",
+     "befund": "",
+     "notiz": "sprachfest 'Vergleich ... +1 Orte' (sms_format.md PO 2026-10-31)"
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::test_o_en",
+     "befund": "",
+     "notiz": "= SMS-Text"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.kuerzel_legende",
+   "kontext": "orte",
+   "einstellung": "Kuerzel-Legende (W21)",
+   "gesetzt_in": "noch keine Oberflaeche (#3032)",
+   "gespeichert_als": "-",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "B-K9",
+     "notiz": "ausgelagert #3032"
+    },
+    "sms": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "B-K9",
+     "notiz": "ausgelagert #3032"
+    },
+    "premium_sms": {
+     "status": "ausgelagert",
+     "beleg": "",
+     "befund": "B-K9",
+     "notiz": "ausgelagert #3032"
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  },
+  {
+   "id": "orte.zwei_nutzer",
+   "kontext": "orte",
+   "einstellung": "Zwei Nutzer: eigene Empfaenger",
+   "gesetzt_in": "Konto",
+   "gespeichert_als": "users/<id>/user.json",
+   "zellen": {
+    "email_html": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_text": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "email_kompakt": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    },
+    "telegram": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py::lauf()",
+     "befund": "",
+     "notiz": "chat-<uid>"
+    },
+    "sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py",
+     "befund": "",
+     "notiz": ""
+    },
+    "premium_sms": {
+     "status": "gruen",
+     "beleg": "scratchpad/inventar/kanaele/pruef_orte_kanaele.py",
+     "befund": "",
+     "notiz": ""
+    },
+    "einstellungsseite": {
+     "status": "ungeprueft",
+     "beleg": "",
+     "befund": "",
+     "notiz": "Bereich mail/editor"
+    }
+   }
+  }
+ ]
+}
