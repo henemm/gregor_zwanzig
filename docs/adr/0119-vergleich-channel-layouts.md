@@ -1,8 +1,9 @@
 # ADR-0119: Der Ortsvergleich führt `channel_layouts` wieder — Reihenfolge, Aus und Roh/Einfach je Kanal (löst ADR-0053 Teil „Entfernung channel_layouts (#1351)“ ab)
 
-- **Status:** Akzeptiert
+- **Status:** Teilweise abgelöst durch [ADR-0124](0124-was-steht-wo-eine-tabelle.md) (Nr. 1, Teil „Reihenfolge = Listenindex je Kanal“: es gilt eine Reihenfolge für alle Stellen; Nr. 5, Teil „SMS: Einfach“: die SMS hat keine Wahl mehr; PO 2026-11-17, Issue #3122) — sonst Akzeptiert
 - **Datum:** 2026-11-15
 - **Bezug:** GitHub-Issue #3039 (Vorlauf zu #3031, Teil von #2795, Epic #2791), Spec `docs/specs/modules/feat_3039_vergleich_kanal_layouts.md` (AC-1 bis AC-14), Kontext `docs/context/feat-3039-vergleich-kanal-layouts.md`. **Löst teilweise ab:** [ADR-0053](0053-compare-kanal-eigene-metrikauswahl-uebersicht.md) (Kontext-Tabelle, Zeile „#1351 Teil 2“: Entfernung von `channel_layouts` aus dem Speicherweg samt Bestands-Migration). Schreibt fort: ADR-0050 (Teilmengen-Regel, „Aus ist ein Zustand“, Reihenfolge und Roh/Einfach je Kanal), ADR-0095 (Kanal-Parität), ADR-0049 (Premium-SMS sendet den SMS-Text), ADR-0077 (Go speichert `display_config` unvalidiert).
+- **Ergänzt durch:** [ADR-0124](0124-was-steht-wo-eine-tabelle.md) (PO 2026-11-17, Issue #3122). Die Karte „Inhalt je Kanal“ (#3031), für die dieses ADR `channel_layouts` zurückbrachte, ist durch die Tabelle „Was steht wo“ ersetzt. Aus und Roh/Einfach bleiben je Stelle. Das gespeicherte Format je Kanal wird mit dem Bau zu #3122 neu geschnitten; bis dahin rendert der Bestand nach diesem ADR.
 
 ## Kontext
 

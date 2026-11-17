@@ -121,6 +121,14 @@ label.nl{font-size:13px;color:var(--ink-3);display:block;margin-bottom:4px}
 </style>
 
 <div class="wrap">
+<div role="note" data-hinweis="adr-0124" style="margin:0 0 20px 0;padding:14px 16px;border:2px solid #111111;border-left:8px solid #b45309;background:#fff7d6;color:#111111;font:15px/1.5 system-ui,-apple-system,Segoe UI,Arial,sans-serif;border-radius:4px">
+  <strong style="display:block;font-size:16px;margin-bottom:6px">Historische Kopie. Am 2026-11-17 hat der PO zwei Karten nachentschieden (ADR-0124, Issue #3122).</strong>
+  <ul style="margin:0 0 8px 0;padding-left:20px">
+    <li style="margin:2px 0"><strong>Karte 8 „Auswahl und Reihenfolge je Kanal“</strong> (<code>kanal_inhalt</code>, Wahl „Wie heute“) ist abgelöst. Statt einer eigenen Liste je Kanal gilt eine Tabelle „Was steht wo“: eine Reihenfolge für alle Stellen, Abwahl je Stelle. Die Grundauswahl gibt es nur noch in den Metrik-Zeilen.</li>
+    <li style="margin:2px 0"><strong>Karte 6 „Bericht für nur einen Ort“</strong> (<code>ein_ort</code>): Die Wahl „Orte“ bleibt. Der Name „Orts-Briefing“ entfällt, der Bereich heißt einheitlich „Orte“, auch bei einem Ort. Die E-Mail-Tabelle heißt „Übersicht“ statt „Vergleichstabelle“.</li>
+  </ul>
+  <span>Maßgeblich sind <code>docs/context/einstellungen_neu.md</code> §2.5 und <code>docs/adr/0124-was-steht-wo-eine-tabelle.md</code>. Der Rest dieser Seite ist unverändert der Stand vom 2026-11-03.</span>
+</div>
 
 <header class="stack">
   <span class="eyebrow">Gregor Zwanzig · Trip &amp; Ortsvergleich · Schritt 2</span>

@@ -1,5 +1,7 @@
 # Context: feature-2794-s3a-teil3-wetter (Epic #2791, S3a Teil-PR 3)
 
+> **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Notiz ist Historie eines gebauten Schritts. Wo sie die Karte „Inhalt je Kanal und Fläche“ (eigene Liste je Kanal und Fläche, #3031–#3037, PR #3042, #3060) als künftiges Soll nennt, gilt das nicht mehr: ADR-0124 (PO 2026-11-17) ersetzt die Karte durch **eine** Tabelle „Was steht wo“ im Reiter Wetter. Aktueller Stand: ADR-0124 und `docs/context/einstellungen_neu.md`.
+
 ## Request Summary
 Teil-PR 3 von S3a (#2794): der Inhalt des Reiters **Wetter** für Trip und Orts-Briefing (ein Code, `context="route"|"vergleich"`) nach Mockup Fassung 3. Umfang laut Lieferplan der Gesamt-Spec `docs/specs/modules/feat_2794_s3a_reiter_wetter.md`: **AC-9 bis AC-21, AC-28 (Frontend-Spiegel), AC-29 (Alarmquellen-Gate, in Teil-PR 1 offen geblieben), AC-30**. Teil-PR 1 (Backend, PR #2870) und Teil-PR 2 (Reiterleiste/Umleitungen, PR #2892) sind live; S2b (PR #2862) ist gemergt (2026-11-09).
 Grundlagen: Gesamtkontext `docs/context/feature-2794-s3a-reiter-wetter.md` (Analyse, PO-Entscheidungen 2026-11-08), Konzept `docs/context/einstellungen_neu.md` §4–§8, Mockup `docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html` (704 Zeilen).

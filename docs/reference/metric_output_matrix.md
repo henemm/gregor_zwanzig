@@ -743,6 +743,20 @@ Editor) dafür wiederholen.
 > wirkungslos (auf Staging gegengeprüft). Details:
 > `docs/specs/modules/fix_2049_ausblick_darstellungsform.md`.
 
+> **Nachtrag 2026-11-17 (Issue #3122, ADR-0124):** (1) **Ist-Korrektur:** Die Aussage oben, der
+> Stundenverlauf bleibe ohne Bindung, gilt nicht mehr. Seit #3047 schneidet auch der
+> Orte-Stundenverlauf gegen die Grundauswahl (`resolve_hourly_metric_ids()` in
+> `src/output/renderers/compare_hourly_metric_ids.py`: gespeicherte Liste = Schnitt mit der
+> Grundauswahl; nie eingestellt = Grundauswahl, soweit stündlich wählbar; leere Grundauswahl =
+> Block entfällt). Unverändert gilt: weder Ausblick noch Stundenverlauf haben eine Kanal-Ebene.
+> (2) **Soll, noch nicht gebaut:** [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md) (PO
+> 2026-11-17) löst die getrennt gespeicherten Auswahllisten ab. Im Reiter Wetter steht **eine**
+> Tabelle „Was steht wo“ (Zeile = Metrik der Grundauswahl; Spalten E-Mail, Telegram, SMS mit
+> Premium-SMS, Stundenverlauf nur Orte, 3-Tages-Ausblick) mit **einer** Reihenfolge. Stundenverlauf
+> und Ausblick folgen der E-Mail-Auswahl mit Abwahl je Metrik; Roh/Einfach je Stelle nur bei
+> Metriken mit zwei Formen. ADR-0124 löst ADR-0059 und ADR-0053 Punkt 1 insoweit ab. Bis zum Bau
+> beschreibt dieses Dokument den heutigen Stand.
+
 Bauform: additiv. `CompareRenderOptions.enabled_metrics` behält seine
 Bedeutung (reine globale Auflösung); `enabled_metrics_by_channel` tritt
 daneben. Kein Go-Schema-Change — `DisplayConfig`

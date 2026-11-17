@@ -30,7 +30,7 @@ const MetrikZeile = (await import(pathToFileURL(join(FRONTEND, 'src/lib/componen
 
 afterEach(() => locale.set('de'));
 
-// Mockup Fassung 3 (docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html, TRIP_METRICS / ORTE_METRICS).
+// Mockup Fassung 3, in Fassung 4 unverändert (docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html, TRIP_METRICS / ORTE_METRICS).
 const MOCKUP_TRIP = [
 	'temperature', 'temperature_night', 'wind_chill', 'wind', 'gust', 'wind_direction',
 	'precipitation', 'thunder', 'rain_probability', 'visibility', 'cloud_low', 'uv_index',

@@ -1,6 +1,13 @@
 # ADR-0055: Die 3-Tages-Vorschau des Trip-Briefings bekommt wählbare Spalten (löst ADR-0037 Punkt 2 ab)
 
-- **Status:** Akzeptiert
+- **Status:** Teilweise abgelöst durch [ADR-0124](0124-was-steht-wo-eine-tabelle.md) (PO
+  2026-11-17, Issue #3122). Abgelöst sind Punkt 3 und 4, soweit der Ausblick
+  unmittelbar an die Grundauswahl und ausdrücklich nicht an die E-Mail-Auswahl
+  gebunden ist: Er folgt der E-Mail-Auswahl, je Metrik abwählbar. Abgelöst ist
+  in Punkt 1 die Bedeutung „`[]` = der Block entfällt“: Den Block schalten die
+  Schalter „Morgen-Briefing“ und „Abend-Briefing“. Sonst Akzeptiert: nur
+  abwählen, nie hinzufügen; eine Auflösung an einer Stelle; Punkt 2 und 5.
+  Bis zum Bau zu #3122 gilt das heutige Verhalten.
 - **Datum:** 2026-08-14
 - **Bezug:** Issue #1720 Scheibe 1, Spec
   `docs/specs/modules/feat_1720_s1_trip_ausblick_metriken.md` (AC-1 bis AC-17),
@@ -10,6 +17,10 @@
   **schreibt ADR-0050** (Metrik-Kaskade) auf die Ausgabefläche „Vorschau" fort;
   grenzt sich bewusst gegen ADR-0053 Punkt 1 ab (s. „Divergenz zum
   Ortsvergleich").
+- **Ergänzt durch:** [ADR-0124](0124-was-steht-wo-eine-tabelle.md) (bestätigt
+  Punkt 2: eine Ausblick-Auswahl für E-Mail und Telegram, keine Kanal-Ebene.
+  Der Begriff heißt überall „3-Tages-Ausblick“; „3-Tages-Vorschau“ in Titel
+  und Text dieses ADR ist der alte Name, ADR-0109 Punkt 4)
 
 ## Kontext
 

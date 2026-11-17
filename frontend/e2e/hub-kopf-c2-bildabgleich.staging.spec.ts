@@ -3,7 +3,7 @@
 // Spec: docs/specs/modules/feat_2913_c2_seitenkopf.md — AC-16 bis AC-18, AC-20, AC-21, AC-23 bis AC-28
 // und Nachtrag #3003 AC-32 bis AC-34 (gemessene Geometrie, Bedienart Maus/Finger)
 // (berechnete Stile im echten Browser) und AC-30 (Aufnahmen für den `mockup-bildpruefer`, Runde 2).
-// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html.
+// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html.
 //
 // Acht Zustände: Trip/Orte × DE/EN × 1280×900/390×844, jeweils Reiter Wetter. Aufnahmen landen in
 // docs/artifacts/feature-2980-c2-bildabgleich-r1/ (oder $BILD_DIR): mockup-<ctx>-de-<breite>.png
@@ -29,7 +29,7 @@ import { HUB_KINDS, HUB_KOPF_SEL, type HubKind } from './helpers';
 import { DESKTOP, MOBIL, WT, oeffneWetter, seedWetter } from './s3a2794-teil3.helpers';
 
 const HIER = path.dirname(fileURLToPath(import.meta.url));
-const MOCKUP = 'file://' + path.resolve(HIER, '..', '..', 'docs', 'context', 'einstellungen_neu', 'seiten', 'mockup-hub-fassung3.html');
+const MOCKUP = 'file://' + path.resolve(HIER, '..', '..', 'docs', 'context', 'einstellungen_neu', 'seiten', 'mockup-hub-fassung4.html');
 const ARTEFAKTE = path.resolve(HIER, '..', '..', 'docs', 'artifacts', 'feature-2980-c2-bildabgleich-r1');
 
 type Lang = 'de' | 'en';

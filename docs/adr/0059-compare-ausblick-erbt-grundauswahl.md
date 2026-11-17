@@ -1,6 +1,16 @@
 # ADR-0059: Der 3-Tages-Ausblick verhält sich wie ein Kanal — Grundauswahl statt eigener Liste (löst ADR-0053 Punkt 1 ab)
 
-- **Status:** Akzeptiert
+- **Status:** Teilweise abgelöst durch [ADR-0124](0124-was-steht-wo-eine-tabelle.md) (PO 2026-11-17, Issue #3122).
+  Abgelöst ist Punkt 1, soweit der Ausblick dort eine eigene Liste mit eigener
+  Reihenfolge führt, die unmittelbar aus der Grundauswahl abwählt: Der Ausblick
+  folgt der E-Mail-Auswahl, je Metrik abwählbar, in der einen Reihenfolge aller
+  Stellen. Abgelöst ist auch die Aussage, der Stundenverlauf bleibe eine eigene,
+  globale Liste ohne Kaskadenbindung (Bezug, Punkt 1, Folgepflicht): Er folgt
+  ebenfalls der E-Mail-Auswahl. Es gilt weiter: nur abwählen, nie hinzufügen
+  (ADR-0050), dieselbe Regel für Trip und Orte, keine Kanal-Ebene für den
+  Ausblick (ADR-0055 Punkt 2). Punkt 2 bis 4 beschreiben das heutige
+  Speicherformat und die heutige Umsetzung; sie gelten, bis der Bau zu #3122
+  beides neu schneidet.
 - **Datum:** 2026-08-21
 - **Bezug:** Issue #1848 Scheibe A3, Spec
   `docs/specs/modules/feat_1848_a3_ausblick_erbt_grundauswahl.md` (AC-1 bis
@@ -60,6 +70,18 @@ entfällt ersatzlos.
 **Damit ist ADR-0053 Punkt 1 für den Ausblick abgelöst.** Der
 Stundenverlauf bleibt unberührt und trägt weiterhin eine eigene, globale
 Liste ohne Kaskadenbindung — ADR-0053 Punkt 1 gilt für ihn unverändert fort.
+
+> **Nachtrag 2026-11-17 (Issue #3122) — teilweise abgelöst durch
+> [ADR-0124](0124-was-steht-wo-eine-tabelle.md) Nr. 3 und Nr. 4.**
+> Der Ausblick bekommt keine eigene Liste mit eigener Reihenfolge.
+> Ausgangsmenge ist die E-Mail-Auswahl, nicht unmittelbar die Grundauswahl:
+> Ein Haken im Ausblick ist nur möglich, wenn die Metrik in der E-Mail steht.
+> Vorbelegt ist alles wie in der E-Mail; je Metrik lässt sich der Haken
+> wegnehmen. Der Stundenverlauf folgt der E-Mail auf dieselbe Weise und ist
+> keine eigene, ungebundene Liste mehr. Der Code bindet ihn seit #3047 bereits
+> an die Grundauswahl (`resolve_hourly_metric_ids` in
+> `src/output/renderers/compare_hourly_metric_ids.py`); ein ADR-Nachtrag dazu
+> fehlte bisher. Bis zum Bau zu #3122 gilt das heutige Verhalten weiter.
 
 **Damit entfällt auch die in ADR-0055 („Divergenz zum Ortsvergleich")
 beschriebene Asymmetrie.** Trip- und Compare-Ausblick verhalten sich seit
@@ -147,3 +169,6 @@ Changelog-Eintrag 2026-08-21 (Implementierung).
   doch überall wie beim Ausblick" ist für den Stundenverlauf falsch und muss
   bei jeder Anfrage dazu richtiggestellt werden, bis eine eigene Folge-Scheibe
   das ändert.
+
+  > **Nachtrag 2026-11-17:** Diese Folgepflicht entfällt mit ADR-0124 Nr. 4
+  > (siehe Nachtrag bei Punkt 1).

@@ -1,5 +1,7 @@
 # Context: feat-3097 — Roh/Einfach je Zeile im Orte-Stundenverlauf (Konzept W11)
 
+> **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Notiz ist Historie eines gebauten Schritts. Wo sie die Karte „Inhalt je Kanal und Fläche“ (eigene Liste je Kanal und Fläche, #3031–#3037, PR #3042, #3060) als künftiges Soll nennt, gilt das nicht mehr: ADR-0124 (PO 2026-11-17) ersetzt die Karte durch **eine** Tabelle „Was steht wo“ im Reiter Wetter. Aktueller Stand: ADR-0124 und `docs/context/einstellungen_neu.md`. Die Verlagerung nach `channel_layouts.hourly` mit #3060 entfällt in dieser Form.
+
 Issue #3097, Teil von Epic #3058 (Phase 3b von #3047). Abnahme: `O-SV-H-DARST` und
 `O-SV-K-DARST` in `tests/fixtures/einstellung_gleich_mail/fallliste_orte.json` von
 `offen_feature` auf `gruen` (Test `tests/tdd/test_einstellung_gleich_mail_orte.py::test_w11_darstellung_je_zeile`).

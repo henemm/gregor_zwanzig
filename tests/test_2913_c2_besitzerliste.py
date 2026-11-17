@@ -118,7 +118,8 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # #2966 (Haken im Reiter Wetter) hat am 17.11. seine 35 Einträge abgeräumt; Restabweichungen werden nach
     # dem Staging-Abnahmelauf neu zugeordnet (AC-10 der Spec feat_2966_abgleich_haken): Dialog-Abweichungen im
     # Reiter Wetter → #3111 (156), Mockup-Beispieldaten → #2967 (+80), EN-Lücke → #2968 (+276), Orte-Ladezustand → #3022 (+3).
-    soll = {"#2967": 247, "#2966": 0, "#2913-d": 0, "#2913-e": 6, "#2795": 316, "#2797": 8, "#2968": 446, "#3022": 62, "#3111": 156}
+    # #3122 (ADR-0124, Mockup Fassung 4, 17.11.): die zwei Abschnitts-Besitzer kanal-inhalt (#2795) heißen jetzt was-steht-wo und hängen an #3122.
+    soll = {"#2967": 247, "#2966": 0, "#2913-d": 0, "#2913-e": 6, "#2795": 314, "#2797": 8, "#2968": 446, "#3022": 62, "#3111": 156}
     ist = _verweise(daten)
     assert {k: ist.get(k, 0) for k in soll} == soll
 

@@ -299,7 +299,7 @@ Untertitel-Block: Eyebrow oben, Title 22 px / `font-weight: 600` / `letter-spaci
   im Wetter-Reiter die Mockup-Höhe von ca. 38 px haben (PO-Entscheidung 14.11.2026, #3003; Präzisierung von AC-40 in
   `docs/specs/modules/feat_2794_s3a_teil3_wetter.md`). Alle anderen Ziele bleiben bei mindestens 44 px.
 - **Mobil-Mindestgrößen (#2601):** Datums-/Uhrzeitsegmente (`DatumFeld`/`UhrzeitFeld`) ≥ 24 × 24 px auf Touch bzw. ≤ 899 px; Knopfboden 36 px zentral in `app.css`; Mindestschrift mobil 11 px. Einzige dokumentierte Ausnahme: Höhenprofil-Etappenwahl mit `data-tap-equivalent` (WCAG 2.5.8 „equivalent", gleichwertige Bedienung im Etappen-Tab). Mobil-Audit: Laufanleitung in `docs/specs/modules/mobile_ux_audit_2601.md`.
-- Maßstab sind diese Regeln, das Mockup Fassung 3 und die Playwright-Paritäts-/Kontrasttests
+- Maßstab sind diese Regeln, das Mockup Fassung 4 (bis 2026-11-17 Fassung 3) und die Playwright-Paritäts-/Kontrasttests
   (`hub-tab-bar`, `kontrast-trip-vergleich`, `design-system-trip-vergleich`); die Soll-Bilder unter
   `claude-code-handoff/current/soll/` sind historisch.
 

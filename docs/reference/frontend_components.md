@@ -705,6 +705,12 @@ mit Briefing-/Alarm-Schalter und Dringlichkeit je Kanal), `KanalStil`, `StilleSt
 `docs/specs/modules/feat_2795_s3b_teil1_zustellung.md`. „Wetter" rendert `WeatherMetricsTab` mit
 `bereich="wetter"`; `bereich` ist nur ein Darstellungsfilter, kein neuer Speicherweg.
 
+> **Soll ab #3122 (ADR-0124, PO 2026-11-17), noch nicht gebaut:** Im Reiter Wetter ersetzt die Tabelle
+> „Was steht wo“ (Schalter für Blöcke und Kanal-Einstellungen darunter) die geplante Karte „Inhalt je Kanal
+> und Fläche“. Mit dem Bau entfallen `UebergangBlock` und `WeatherMetricsTab` (ADR-0124, Folgepflichten);
+> es gibt dann ein Datenmodell, einen Speicherweg und einen Resolver für Trip und Orte. Welche weiteren
+> Altbausteine entfallen, legt die Spec zu #3122 fest. Bis dahin gilt das hier Beschriebene.
+
 Reiter „Wetter" (Teil-PR 3, #2794, 2026-11-10): `shared/wetter-tab/*` + `WetterTab.svelte`
 (ein Code, `context="route"|"vergleich"`) mit Vorlage-Karte, Ampel-Zeilen je Metrik,
 „Grenzen ändern", „Alarm ab" und „Nicht im Briefing". `WeatherMetricsTab` rendert nur noch

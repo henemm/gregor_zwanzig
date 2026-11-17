@@ -8,6 +8,8 @@ version: "1.0"
 tags: [hub, reiter, entfernen, vorbelegung, uebersicht, texte, glossar, pendant, epic-2791]
 ---
 
+> **Hinweis (2026-11-17, [ADR-0124](../../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Spec ist gebaut; ihre ACs bleiben unverändert. Wo sie auf die Karte „Inhalt je Kanal und Fläche“ (S3b #2795, Mockup Fassung 3) als Folgearbeit verweist, gilt das nicht mehr: ADR-0124 ersetzt die Karte durch die Tabelle „Was steht wo“ im Reiter Wetter (Grundauswahl nur in den Metrik-Zeilen, Spalten je Stelle, eine Reihenfolge).
+
 # Einstellungen neu S3a, Teil-PR 4: Entfernen und Nachziehen (#2794)
 
 ## Approval

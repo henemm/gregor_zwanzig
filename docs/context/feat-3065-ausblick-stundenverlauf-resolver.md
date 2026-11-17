@@ -1,5 +1,7 @@
 # Context: feat-3065-ausblick-stundenverlauf-resolver
 
+> **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Notiz ist Historie eines gebauten Schritts. Wo sie die Karte „Inhalt je Kanal und Fläche“ (eigene Liste je Kanal und Fläche, #3031–#3037, PR #3042, #3060) als künftiges Soll nennt, gilt das nicht mehr: ADR-0124 (PO 2026-11-17) ersetzt die Karte durch **eine** Tabelle „Was steht wo“ im Reiter Wetter. Aktueller Stand: ADR-0124 und `docs/context/einstellungen_neu.md`. 3-Tages-Ausblick und Stundenverlauf folgen dann der E-Mail-Auswahl statt eigener Listen (ADR-0124 Nr. 4).
+
 Issue #3065 (Phase 2b von Epic #3047 „Einstellung = Mail“). Vorgänger: #3057 (Phase 2, Resolver für die vier Versandkanäle, ADR-0121, live). Stand origin/main nach PR #3068/#3072 (#3047-Nachlieferungen 1+2).
 
 ## Request Summary

@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert
 - **Datum:** 2026-11-16
 - **Bezug:** GitHub-Issue #3057 (Phase 2 von Epic #3047 „Einstellung = Mail“), Spec `docs/specs/modules/feat_3057_kanal_liste_resolver.md`, Kontext `docs/context/feat-3057-kanal-liste-resolver.md`, Konzept `docs/context/einstellungen_neu.md` §5 Punkt 6 und 8. **Verfeinert:** [ADR-0119](0119-vergleich-channel-layouts.md) (Datenform, Standard ohne Angabe) und [ADR-0049](0049-premium-sms-vierter-kanal.md) (Premium-SMS-Inhalt). Schreibt fort: ADR-0050 (Grundauswahl als Maximum, leer bleibt leer), ADR-0077 (Go speichert `display_config` ungeprüft), ADR-0095 (Kanal-Parität), ADR-0097 (Trip und Orte teilen Code), ADR-0101 (Read-Modify-Write-Migration).
+- **Ergänzt durch:** [ADR-0124](0124-was-steht-wo-eine-tabelle.md) (PO 2026-11-17, Issue #3122). Das gespeicherte Format (`channel_layouts` je Kanal, dazu `outlook_metrics`, `hourly_metrics` und ihre Format-Felder) wird mit dem Bau zu #3122 neu geschnitten: je Metrik ein Satz Stellen-Flaggen, eine Darstellung je Stelle, eine Reihenfolge. Bis dahin gilt dieses ADR samt Nachträgen weiter. Die Premium-SMS folgt vorerst der SMS (Nr. 5 bleibt), ihre eigene Auswahl kommt mit S9 (#2801). Überholt ist der Satz „#3042 braucht keine Änderung“ in den Konsequenzen, siehe Nachtrag dort.
 
 ## Kontext
 
@@ -30,6 +31,7 @@ Phase 2 soll EINE Auflösung schaffen, ohne die zugestellte Mail zu ändern und 
 ## Konsequenzen
 
 - **Positiv:** Eine Auflösung für alle vier Kanäle und beide Flächen; #3042 braucht keine Änderung, sein Format ist verlustfrei lesbar; die Mail bleibt in jedem Kanal unverändert; Nachprüfungs-Punkt 6 (Mutation `morning_enabled=False`) wird abgedeckt.
+  > **Nachtrag 2026-11-17 (Issue #3122, ADR-0124):** „#3042 braucht keine Änderung“ ist überholt. PR #3042 (#3031, Karte „Inhalt je Kanal“ mit einer Liste je Kanal) baut die mit ADR-0124 abgelöste Karte und wird geschlossen.
 - **Negativ / Preis:** Bis Phase 3 bestehen Altpfade und Resolver nebeneinander (Differenztest als Klammer). Die zwei Format-Standards (Trip Katalog, Orte Roh) bleiben als `null` sichtbar, bis #3058 sie vereinheitlicht oder bewusst beibehält.
 
 ## Nachtrag 2b (2026-11-16, Issue #3065): Ausblick und Stundenverlauf

@@ -1,9 +1,9 @@
 // TDD RED — Issue #2980, Fix-Loop Bildabgleich Runde 1 der Scheibe c2 (#2913, Epic #2791).
 // Spec: docs/specs/modules/feat_2913_c2_seitenkopf.md — Abschnitt „Fix-Loop Bildabgleich Runde 1
 // (#2980)“, AC-16 bis AC-28 (Unit-Anteil); Implementation Details Punkt 7.
-// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html Z. 34–71 (CSS Kopfband,
-// Kopf, Meta, Pill, Btn, Reiter, Abschnittskopf), 90–92 (Vorlage/Picker), 228–245 (Leiste),
-// 326 (PILL-Zuordnung), 442 (Wetter-Abschnittskopf), 508–512 (Vorlage-Karte).
+// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html Z. 36–73 (CSS Kopfband,
+// Kopf, Meta, Pill, Btn, Reiter, Abschnittskopf), 92–94 (Vorlage/Picker), 265–282 (Leiste),
+// 362 (PILL-Zuordnung), 478 (Wetter-Abschnittskopf), 506–510 (Vorlage-Karte).
 //
 // Geprüft wird dort, wo es WIRKT: die echten Detailseiten /trips/[id] und /compare/[id]
 // (serverseitig gerendert über die Prüfstände f9Pruefstand.ts / f10Pruefstand.ts, Ruhe- und

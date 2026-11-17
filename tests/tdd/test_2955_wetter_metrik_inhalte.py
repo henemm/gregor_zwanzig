@@ -28,7 +28,7 @@ from fastapi.testclient import TestClient
 from api.routers import config
 from app.metric_catalog import _METRICS, get_change_detection_map, get_metric
 
-# ── Soll aus Mockup Fassung 3 (docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html,
+# ── Soll aus Mockup Fassung 3 (damals docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html, seit 2026-11-17 mockup-hub-fassung4.html,
 #    TRIP_METRICS Z. 279ff „Alpen-Trekking“, ORTE_METRICS „Allgemein“) ──────────────────────────
 MOCKUP_TRIP = [
     "temperature", "temperature_night", "wind_chill",

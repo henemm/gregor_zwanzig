@@ -9,6 +9,8 @@ workflow: feat-3097-orte-stundenverlauf-darstellung
 tags: [orte, stundenverlauf, darstellung, roh-einfach, w11, epic-3058, issue-3097]
 ---
 
+> **Hinweis (2026-11-17, [ADR-0124](../../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Spec ist gebaut (`hourly_metric_formats`) und gilt bis zum Bau zu #3122. Die hier vorgesehene Verlagerung nach `channel_layouts.hourly` mit #3060 entfällt in dieser Form: ADR-0124 schneidet das gespeicherte Format mit dem Bau neu. Roh/Einfach bleibt je Stelle getrennt (ADR-0124 Nr. 5, nur bei Metriken mit zwei Formen); der Stundenverlauf selbst folgt dann der E-Mail-Auswahl (Nr. 4). ACs unverändert.
+
 # Orte-Stundenverlauf: Darstellung Roh oder Einfach je Zeile (W11)
 
 ## Approval

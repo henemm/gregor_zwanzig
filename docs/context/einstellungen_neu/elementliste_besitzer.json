@@ -1991,9 +1991,9 @@
 			"art": "abschnitt",
 			"ctx": "trip",
 			"reiter": "wetter",
-			"abschnitt": "kanal-inhalt",
-			"grund": "Kanal-Segmente „Inhalt je Kanal und Fläche“ sind noch nicht gebaut, daher nicht bedienbar. Ursachen: Kanal-Segment nicht bedienbar",
-			"verweis": "#2795"
+			"abschnitt": "was-steht-wo",
+			"grund": "Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.",
+			"verweis": "#3122"
 		},
 		{
 			"art": "abschnitt",
@@ -2063,9 +2063,9 @@
 			"art": "abschnitt",
 			"ctx": "orte",
 			"reiter": "wetter",
-			"abschnitt": "kanal-inhalt",
-			"grund": "Kanal-Segmente „Inhalt je Kanal und Fläche“ sind noch nicht gebaut, daher nicht bedienbar. Ursachen: Kanal-Segment nicht bedienbar",
-			"verweis": "#2795"
+			"abschnitt": "was-steht-wo",
+			"grund": "Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.",
+			"verweis": "#3122"
 		},
 		{
 			"art": "abschnitt",
@@ -2106,6 +2106,30 @@
 			"abschnitt": "test-menue",
 			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
 			"verweis": "#2797"
+		},
+		{
+			"art": "element",
+			"id": "orte.orte.normal.-.abschnittskopf.52b9404608",
+			"grund": "Name „Orte“ (ADR-0124 Nr. 10): neuer Erklärtext im Reiter Orte seit Mockup Fassung 4. Im Katalog steht noch der alte Text (vergleich.hub.kopf.orte_erklaer, „Ein Ort ergibt ein Orts-Briefing …“); Katalogtext DE und EN folgen mit dem Bau zu #3122.",
+			"verweis": "#3122"
+		},
+		{
+			"art": "element",
+			"id": "orte.orte.laedt.-.abschnittskopf.11a0d70022",
+			"grund": "Name „Orte“ (ADR-0124 Nr. 10): neuer Erklärtext im Reiter Orte seit Mockup Fassung 4. Im Katalog steht noch der alte Text (vergleich.hub.kopf.orte_erklaer, „Ein Ort ergibt ein Orts-Briefing …“); Katalogtext DE und EN folgen mit dem Bau zu #3122.",
+			"verweis": "#3122"
+		},
+		{
+			"art": "element",
+			"id": "orte.orte.fehler.-.abschnittskopf.ae19a719ba",
+			"grund": "Name „Orte“ (ADR-0124 Nr. 10): neuer Erklärtext im Reiter Orte seit Mockup Fassung 4. Im Katalog steht noch der alte Text (vergleich.hub.kopf.orte_erklaer, „Ein Ort ergibt ein Orts-Briefing …“); Katalogtext DE und EN folgen mit dem Bau zu #3122.",
+			"verweis": "#3122"
+		},
+		{
+			"art": "element",
+			"id": "orte.orte.luecken.-.abschnittskopf.3a5fd308ea",
+			"grund": "Name „Orte“ (ADR-0124 Nr. 10): neuer Erklärtext im Reiter Orte seit Mockup Fassung 4. Im Katalog steht noch der alte Text (vergleich.hub.kopf.orte_erklaer, „Ein Ort ergibt ein Orts-Briefing …“); Katalogtext DE und EN folgen mit dem Bau zu #3122.",
+			"verweis": "#3122"
 		},
 		{
 			"art": "abschnitt",
@@ -5125,9 +5149,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.kopf.03aa5094b7",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
-			"verweis": "#2913"
+			"id": "orte.wetter.normal.-.kopf.0e2ce0d40d",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts Seit Mockup Fassung 4 steht „Vergleichstabelle“ nicht mehr in der Zeile (ADR-0124 Nr. 10: der Bereich heißt „Orte“); die App nennt sie noch, Rückbau mit dem Bau zu #3122.",
+			"verweis": "#3122"
 		},
 		{
 			"art": "element",
@@ -5179,9 +5203,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.laedt.-.kopf.edce0846c8",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
-			"verweis": "#2913"
+			"id": "orte.wetter.laedt.-.kopf.4614f543dc",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts Seit Mockup Fassung 4 steht „Vergleichstabelle“ nicht mehr in der Zeile (ADR-0124 Nr. 10: der Bereich heißt „Orte“); die App nennt sie noch, Rückbau mit dem Bau zu #3122.",
+			"verweis": "#3122"
 		},
 		{
 			"art": "element",
@@ -5221,9 +5245,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.fehler.-.kopf.56ab95407b",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
-			"verweis": "#2913"
+			"id": "orte.wetter.fehler.-.kopf.0625c47673",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts Seit Mockup Fassung 4 steht „Vergleichstabelle“ nicht mehr in der Zeile (ADR-0124 Nr. 10: der Bereich heißt „Orte“); die App nennt sie noch, Rückbau mit dem Bau zu #3122.",
+			"verweis": "#3122"
 		},
 		{
 			"art": "element",
@@ -5263,9 +5287,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.kopf.c9784644bc",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
-			"verweis": "#2913"
+			"id": "orte.wetter.luecken.-.kopf.0ff6feddaa",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts Seit Mockup Fassung 4 steht „Vergleichstabelle“ nicht mehr in der Zeile (ADR-0124 Nr. 10: der Bereich heißt „Orte“); die App nennt sie noch, Rückbau mit dem Bau zu #3122.",
+			"verweis": "#3122"
 		},
 		{
 			"art": "element",
@@ -5464,7 +5488,7 @@
 			"ctx": "trip",
 			"reiter": "wetter",
 			"text": "−",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Knopftext „−“ der Metrik-Zeile; im Mockup derselbe Knopf (mockup-hub-fassung3.html Z. 433), die Elementliste führt nur seine Beschriftung für Screenreader; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Knopftext „−“ der Metrik-Zeile; im Mockup derselbe Knopf (mockup-hub-fassung4.html Z. 469), die Elementliste führt nur seine Beschriftung für Screenreader; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
 			"verweis": "#2913"
 		},
 		{
@@ -5472,7 +5496,7 @@
 			"ctx": "orte",
 			"reiter": "wetter",
 			"text": "−",
-			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Knopftext „−“ der Metrik-Zeile; im Mockup derselbe Knopf (mockup-hub-fassung3.html Z. 433), die Elementliste führt nur seine Beschriftung für Screenreader; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
+			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Knopftext „−“ der Metrik-Zeile; im Mockup derselbe Knopf (mockup-hub-fassung4.html Z. 469), die Elementliste führt nur seine Beschriftung für Screenreader; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
 			"verweis": "#2913"
 		},
 		{
@@ -5951,7 +5975,7 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-bestaetigung.5c4166f302",
+			"id": "orte.wetter.luecken.-.vorlage-bestaetigung.a37c8ba993",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
 		},
@@ -6449,7 +6473,7 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-bestaetigung.9eff2ce835",
+			"id": "orte.wetter.normal.-.vorlage-bestaetigung.27f10ecaba",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
 		},

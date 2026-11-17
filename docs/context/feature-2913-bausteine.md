@@ -1,5 +1,7 @@
 # Context: feature-2913-bausteine (#2913 Schritt 3)
 
+> **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Notiz ist Historie eines gebauten Schritts. Wo sie die Karte „Inhalt je Kanal und Fläche“ (eigene Liste je Kanal und Fläche, #3031–#3037, PR #3042, #3060) als künftiges Soll nennt, gilt das nicht mehr: ADR-0124 (PO 2026-11-17) ersetzt die Karte durch **eine** Tabelle „Was steht wo“ im Reiter Wetter. Aktueller Stand: ADR-0124 und `docs/context/einstellungen_neu.md`.
+
 ## Request Summary
 Das angenommene Mockup `docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html` (Einstellungs-Hub Trip/Orte, Reiter Wetter, Zustellung, Etappen/Orte) in Atome/Moleküle/Organismen zerlegen; vorhandene Bausteine nutzen, fehlende einmal im Design-System bauen (Trip und Orte teilen sie, ADR-0097), nach ADR-0112 (nur Tokens, Wächter blockt beim Merge). Seiten-Scheiben (a)–(e) sind Schritt 4 (Folge-Workflows).
 

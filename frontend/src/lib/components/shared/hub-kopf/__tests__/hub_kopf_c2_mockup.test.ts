@@ -1,7 +1,9 @@
 // TDD RED — Issue #2913 Scheibe c2 (Seitenkopf des Editor-Hubs nach Mockup), Epic #2791.
 // Spec: docs/specs/modules/feat_2913_c2_seitenkopf.md — AC-1 bis AC-6, AC-8 bis AC-10 (SSR-Anteil).
-// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html Z. 228–245 (Leiste),
-// 310–326 (CTX/PILL), 358–365 (renderHead/Reiter), 454–465 (Picker), 508–512 (Vorlage-Karte).
+// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html Z. 265–282 (Leiste),
+// 347–362 (CTX/PILL), 394–401 (renderHead/Reiter), 488–499 (Picker), 506–510 (Vorlage-Karte).
+// Gebaut nach Fassung 3. Fassung 4 (ADR-0124 Nr. 10) nennt in der Meta-Zeile der Orte keine „Vergleichstabelle“ mehr;
+// App und dieser Test folgen mit dem Bau zu #3122.
 //
 // Geprüft wird dort, wo es WIRKT: die echten Detailseiten /trips/[id] und /compare/[id]
 // (serverseitig gerendert über die Prüfstände f9Pruefstand.ts / f10Pruefstand.ts, feste Uhr,

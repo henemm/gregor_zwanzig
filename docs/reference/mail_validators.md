@@ -136,6 +136,8 @@ Abschnitt „Sprache").
 
 ## Soll aus der gespeicherten Konfiguration — `--konfig PFAD` (seit #3047)
 
+> **Soll ab #3122 ([ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), PO 2026-11-17), noch nicht gebaut:** Im Reiter Wetter ersetzt **eine** Tabelle „Was steht wo“ die Listen je Kanal und Fläche. Stundenverlauf (Orte) und 3-Tages-Ausblick folgen dann der E-Mail-Auswahl mit Abwahl je Metrik statt eigener Listen (Nr. 4), es gilt **eine** Reihenfolge für alle Stellen (Nr. 3), der Ausblick hat **eine** steuernde Stelle „Morgen-Briefing“/„Abend-Briefing“ für Trip und Orte (Nr. 6), und der Bereich heißt „Orte“, die E-Mail-Tabelle „Übersicht“ (Nr. 10). Die Soll-Regeln dieses Abschnitts (`channel_layouts`, `channel_active_metrics`, `outlook_metrics`, `outlook_enabled`, `hourly_metrics`, `hourly_enabled`, Totalschnitt-Rückfälle) beschreiben die heutigen Validatoren und gelten bis zum Bau. Validatoren und Renderer werden **nur zusammen** mit dem Bau zu #3122 geändert, nicht vorher; Abnahme dann „Einstellung = Ausgabe“ gegen den Katalog #3047.
+
 `briefing_mail_validator.py` und `email_spec_validator.py` nehmen optional
 `--konfig PFAD`: das **rohe gespeicherte JSON des Test-Nutzers**, wie die Go-API
 es liefert (Trip: das ganze Trip-Objekt mit `display_config`/`report_config`;

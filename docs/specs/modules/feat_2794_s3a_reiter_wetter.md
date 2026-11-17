@@ -8,6 +8,8 @@ version: "1.0"
 tags: [hub, reiter, wetter, zustellung, ampel, vorlagen, alarm-ab, migration, i18n, epic-2791]
 ---
 
+> **Hinweis (2026-11-17, [ADR-0124](../../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Spec ist gebaut; ihre ACs bleiben unverändert. Wo sie auf die Karte „Inhalt je Kanal und Fläche“ (S3b #2795, Mockup Fassung 3) als Folgearbeit verweist, gilt das nicht mehr: ADR-0124 ersetzt die Karte durch die Tabelle „Was steht wo“ im Reiter Wetter (Grundauswahl nur in den Metrik-Zeilen, Spalten je Stelle, eine Reihenfolge). Der Hinweistext nach „+ {Metrik}“ („… steht in allen Listen unter ‚Inhalt je Kanal und Fläche‘ …“, Katalog `wetter.nicht_im_briefing.hinzugefuegt`) ist so ausgeliefert und wird mit dem Bau zu #3122 umgestellt.
+
 # Einstellungen neu S3a: Reiter „Wetter“ und Reiterleiste nach Soll (#2794)
 
 ## Approval

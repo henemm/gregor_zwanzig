@@ -1,5 +1,7 @@
 # Context: feat-3057-kanal-liste-resolver
 
+> **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Notiz ist Historie eines gebauten Schritts. Wo sie die Karte „Inhalt je Kanal und Fläche“ (eigene Liste je Kanal und Fläche, #3031–#3037, PR #3042, #3060) als künftiges Soll nennt, gilt das nicht mehr: ADR-0124 (PO 2026-11-17) ersetzt die Karte durch **eine** Tabelle „Was steht wo“ im Reiter Wetter. Aktueller Stand: ADR-0124 und `docs/context/einstellungen_neu.md`. Das gespeicherte Format (ADR-0121) wird mit dem Bau zu #3122 neu geschnitten.
+
 Issue #3057 (Phase 2 von Epic #3047 „Einstellung = Mail“). Phase 1 (#3056, Prüfkatalog) ist ausgeliefert; ihr Katalog ist die Messlatte.
 
 ## Request Summary

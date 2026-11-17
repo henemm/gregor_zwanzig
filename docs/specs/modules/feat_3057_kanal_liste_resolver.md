@@ -8,6 +8,8 @@ version: "1.0"
 tags: [epic-3047, phase-2, resolver, kanal-liste]
 ---
 
+> **Hinweis (2026-11-17, [ADR-0124](../../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Der Resolver dieser Spec ist gebaut und gilt weiter. Die in Dependencies und „Out of Scope“ genannte Editor-Karte „Inhalt je Kanal“ (#3060, #3031, PR #3042) wird so nicht gebaut: ADR-0124 ersetzt sie durch die Tabelle „Was steht wo“ und schneidet das gespeicherte Format (ADR-0121) mit dem Bau zu #3122 neu (je Metrik ein Satz Stellen-Flaggen, eine Darstellung je Stelle, eine Reihenfolge). ACs unverändert.
+
 # Kanonische Kanal-Liste und Resolver (Phase 2a von Epic #3047)
 
 ## Approval
