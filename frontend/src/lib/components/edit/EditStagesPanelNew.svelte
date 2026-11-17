@@ -31,7 +31,7 @@
 	import { merkeNutzlast } from '$lib/stores/nutzlastStand';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	// Mobile Usability Paket 1 (Spec mobile_stages_tab_listen_only, Iteration 1):
 	// PO-Entscheid F5 (2026-09-22, Variante B) — Karte + Höhenprofil entfallen
 	// auf Mobile ersatzlos. Der Mobile-Zweig rendert Desktop-Hinweis + Liste.
@@ -61,8 +61,11 @@
 		saveController?: SaveStatus;
 		/** Unten belegte Hoehe (px, ohne Safe-Area); fehlt ⇒ schwebende BottomNav. */
 		bottomReservePx?: number;
+		/** #3006: Bereichskopf des Reiters (vom Hub gereicht) — Handy oben IN der Reiterfläche,
+		 *  Computer oben ÜBER dem Etappen-Band, an derselben Stelle wie beim Vergleich. */
+		kopf?: Snippet;
 	}
-	let { stages = $bindable(), tripId, showSave = true, activityType, onTripUpdate, saveController, bottomReservePx }: Props = $props();
+	let { stages = $bindable(), tripId, showSave = true, activityType, onTripUpdate, saveController, bottomReservePx, kopf }: Props = $props();
 
 	let saving = $state(false);
 	let saveSuccess = $state(false);
@@ -705,8 +708,10 @@
 		     Karte/Profil/Sheet entfallen ersatzlos; Hinweis + vertikale Liste.
 		     F2: Kaskaden-Banner rendert als normale Zeile über der Liste —
 		     kein position:fixed mehr (Karten-Viewport existiert nicht mehr). -->
+		<!-- #3006: Bereichskopf als erstes IN der Reiterfläche (wie Orte); `{/if}` direkt vor der
+		     Liste, damit ohne Kopf kein Leerraum entsteht (Golden f9_trip_flaechen bleibt gleich). -->
 		<HubReiterflaeche testid="etappen-mobil-reiterflaeche">
-		<div class="mobile-stages" data-testid="mobile-stages-list">
+		{#if kopf}<div class="etappen-kopf">{@render kopf()}</div>{/if}<div class="mobile-stages" data-testid="mobile-stages-list">
 			<div class="desktop-hint" data-testid="desktop-hint">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
 				<p><strong>{$t('trip.etappen_editor.desktop_stark')}</strong> {$t('trip.etappen_editor.desktop_text')}</p>
@@ -775,8 +780,11 @@
 		</div>
 		</HubReiterflaeche>
 	{:else}
-	<!-- EtappenStrip (volle Breite, eigene Navigations-Achse) -->
-	<EtappenStrip
+	<!-- #3006: Bereichskopf oben im Reiter (Mockup Fassung 3: Kopf vor allem Inhalt), über dem
+	     Etappen-Band — auch bei Pausentag und ohne Etappen, wo es keine Reiterfläche gibt.
+	     Danach das EtappenStrip (volle Breite, eigene Navigations-Achse); `{/if}` direkt davor,
+	     damit ohne Kopf kein Leerraum entsteht. -->
+	{#if kopf}<div class="etappen-kopf-oben">{@render kopf()}</div>{/if}<EtappenStrip
 		{stages}
 		{activeStageId}
 		onStagesReorder={handleStagesReorder}
@@ -940,6 +948,22 @@
 </Dialog.Root>
 
 <style>
+	/* #3006: Abstand Kopf → Liste wie beim Vergleich (.hub-orte-kopf in CompareTabs). */
+	.etappen-kopf {
+		margin-bottom: var(--g-s-4);
+	}
+	/* #3006: Kopf über dem Etappen-Band mit dem Rand der Reiterfläche (HubReiterflaeche
+	   28/40 bzw. 20/16 px, max. 1480 px) — er steht damit genau dort, wo der Vergleich seinen
+	   Kopf oben in der Reiterfläche hat. Zum Band folgt die Lücke des Panels (gap-4). */
+	.etappen-kopf-oben {
+		padding: 28px 40px 0;
+		max-width: 1480px;
+	}
+	@media (max-width: 899px) {
+		.etappen-kopf-oben {
+			padding: 20px 16px 0;
+		}
+	}
 	/* Issue #675 — Startzeit-Feld neben Datum-Feld im Header */
 	.stage-header-fields {
 		display: inline-flex;

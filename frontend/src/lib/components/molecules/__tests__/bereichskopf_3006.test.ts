@@ -41,7 +41,7 @@ reg(path.join(KOMP, 'organisms/__tests__/startzustandHook.mjs'));
 const { render } = await import('svelte/server');
 const { createRawSnippet } = await import('svelte');
 const { locale } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/i18n/index.ts')).href);
-const { baum, alle, text: rohText } = await import('../../shared/hub-kopf/__tests__/htmlBaum.ts');
+const { baum, alle, text: rohText, vorfahren, liegtIn, lage } = await import('../../shared/hub-kopf/__tests__/htmlBaum.ts');
 const { ladeQuellen, stil, herkunft, token, px, DESKTOP, HANDY } = await import('../../shared/hub-kopf/__tests__/cssKaskade.ts');
 type Knoten = import('../../shared/hub-kopf/__tests__/htmlBaum.ts').Knoten;
 type Kontext = import('../../shared/hub-kopf/__tests__/cssKaskade.ts').Kontext;
@@ -237,13 +237,11 @@ describe('#3006 AC-4–AC-13: Kopf je Reiter aus dem Katalog (DE/EN)', () => {
 		test(`AC-5 (${lang}): Trip-Etappen — geladen und noch ladend`, async () => {
 			pruefeKopf(await tripReiter('etappen', lang), 'etappen', lang, `Trip/Etappen ${lang}`);
 			const mit = await tripReiter('etappen', lang);
-		const ohne = await tripReiter('etappen', lang, true);
-		// Messaufbau: ohne Trip fehlt der Etappen-Inhalt wirklich (das Panel hat weniger direkte Kinder).
-		assert.ok(
-			ohne.kinder.length < mit.kinder.length,
-			`Messaufbau: ohne Trip wird trotzdem Etappen-Inhalt gerendert (${ohne.kinder.length} vs. ${mit.kinder.length} Kinder)`
-		);
-		pruefeKopf(ohne, 'etappen', lang, `Trip/Etappen ohne Trip ${lang}`);
+			const ohne = await tripReiter('etappen', lang, true);
+			// Messaufbau: ohne Trip fehlt der Etappen-Editor wirklich (mit Trip ist er da).
+			assert.equal(mitTestid(mit, 'edit-stages-panel').length, 1, 'Messaufbau: mit Trip fehlt der Etappen-Editor');
+			assert.equal(mitTestid(ohne, 'edit-stages-panel').length, 0, 'Messaufbau: ohne Trip wird trotzdem der Etappen-Editor gerendert');
+			pruefeKopf(ohne, 'etappen', lang, `Trip/Etappen ohne Trip ${lang}`);
 		});
 		test(`AC-6 (${lang}): Trip-Wetter`, async () => {
 			const t = pruefeKopf(await tripReiter('wetter', lang), 'wetter', lang, `Trip/Wetter ${lang}`);
@@ -324,6 +322,87 @@ describe('#3006 AC-14–AC-16: Kopf in jedem Zustand, genau einmal', () => {
 			einzigerKopf(await vergleichReiter(tab, 'de'), `Orte/${tab}`);
 			einzigerKopf(await vergleichReiter(tab, 'de', false), `Orte/${tab} gesperrt`);
 		}
+	});
+});
+
+// ═══ AC-5 Lage (Fix-Loop nach CI-Rot, PF-3): Etappen-Kopf steht wie der Orte-Kopf ═════════
+// Der Kopf darf die Reiterfläche nicht von der Leiste wegschieben (#2880 PF-3). Soll: Handy und
+// Ladezustand oben IN der Reiterfläche (wie Orte); Computer oben im Reiter VOR dem Etappen-Band
+// mit dem Rand der Reiterfläche (28/40 px), also an derselben Stelle wie der Orte-Kopf.
+describe('#3006 AC-5 Lage: Etappen-Kopf oben in der Reiterfläche (Parität zu Orte)', async () => {
+	const Q = await ladeQuellen(FRONTEND);
+	const ESP = path.join(KOMP, 'edit', 'EditStagesPanelNew.svelte');
+	const MOBIL_START: [string, string][] = [['let isMobileViewport = $state(false);', 'let isMobileViewport = $state(true);']];
+	const ETAPPE = { id: 's1', name: 'Tag 1', date: '2026-08-01', waypoints: [{ id: 'w1', name: 'A', lat: 42, lon: 9, elevation_m: 100 }, { id: 'w2', name: 'B', lat: 42.1, lon: 9.1, elevation_m: 200 }] };
+	const probeKopf = createRawSnippet(() => ({ render: () => '<div data-abschnitt="abschnittskopf"><h2>K</h2><p>S</p></div>' }));
+	const flaeche = (n: Knoten) => (n.attrs['data-testid'] ?? '').endsWith('-reiterflaeche');
+	/** Kopf ist das erste Kind seines Wrappers, der Wrapper das erste Kind von `traeger`. */
+	function erstesInTraeger(kopf: Knoten, traeger: Knoten, was: string): void {
+		const weg = lage(kopf, traeger);
+		assert.ok(liegtIn(kopf, traeger), `${was}: Kopf liegt nicht in ${traeger.attrs['data-testid']}`);
+		assert.match(weg, /^[a-z0-9]+\[0\](>[a-z0-9]+\[0\])?$/, `${was}: Kopf steht nicht als erstes in ${traeger.attrs['data-testid']} (Pfad ${weg})`);
+	}
+
+	test('Ladezustand (Trip lädt): Kopf als erstes in einer Reiterfläche, die das erste Kind des Panels ist', async () => {
+		const panel = await tripReiter('etappen', 'de', true);
+		const kopf = einzigerKopf(panel, 'Etappen ohne Trip');
+		const fl = vorfahren(kopf).find(flaeche);
+		assert.ok(fl, 'Ladezustand: Kopf liegt in keiner Reiterfläche [data-testid$="-reiterflaeche"]');
+		assert.equal(panel.kinder[0], fl, 'Ladezustand: Reiterfläche ist nicht das erste Kind des Panels');
+		erstesInTraeger(kopf, fl, 'Ladezustand');
+	});
+
+	test('Handy: Kopf als erstes IN der Reiterfläche etappen-mobil-reiterflaeche, vor der Liste', async () => {
+		const P = await lade(ESP, MOBIL_START);
+		const b = baum(render(P, { props: { stages: [ETAPPE], tripId: 't1', kopf: probeKopf } }).body);
+		const kopf = einzigerKopf(b, 'Handy');
+		const [fl] = mitTestid(b, 'etappen-mobil-reiterflaeche');
+		assert.ok(fl, 'Messaufbau: Handy-Zweig nicht gerendert');
+		erstesInTraeger(kopf, fl, 'Handy');
+		const [liste] = mitTestid(b, 'mobile-stages-list');
+		assert.ok(kopf.nr < liste.nr, 'Handy: Kopf steht nicht vor der Etappen-Liste');
+		assert.equal(px(stil(Q, kopf.eltern!, 'margin-bottom', HANDY)), 16, `Handy: Abstand Kopf → Liste wie Orte (16 px): ${herkunft(Q, kopf.eltern!, 'margin-bottom', HANDY)}`);
+	});
+
+	test('Computer: Kopf als erstes im Reiter, vor dem Etappen-Band, mit dem Rand der Reiterfläche (28/40 px)', async () => {
+		const P = await lade(ESP);
+		const b = baum(render(P, { props: { stages: [ETAPPE], tripId: 't1', kopf: probeKopf } }).body);
+		const kopf = einzigerKopf(b, 'Computer');
+		const [editor] = mitTestid(b, 'edit-stages-panel');
+		erstesInTraeger(kopf, editor, 'Computer');
+		const [band] = mitTestid(b, 'etappen-strip-wrapper');
+		const [fl] = mitTestid(b, 'etappen-reiterflaeche');
+		assert.ok(band && fl, 'Messaufbau: Etappen-Band oder Reiterfläche nicht gerendert');
+		assert.ok(kopf.nr < band.nr, 'Computer: Kopf steht nicht über dem Etappen-Band');
+		assert.ok(!liegtIn(kopf, fl), 'Computer: Kopf steht unter dem Band in der Reiterfläche statt oben im Reiter');
+		const w = kopf.eltern!;
+		const laenge = (v: string | undefined) => (v === '0' ? 0 : px(v));
+		for (const [p, soll] of [['padding-top', 28], ['padding-left', 40], ['padding-right', 40], ['padding-bottom', 0]] as const) {
+			assert.equal(laenge(stil(Q, w, p, DESKTOP)), soll, `Computer: ${p} des Kopf-Wrappers: ${herkunft(Q, w, p, DESKTOP)}`);
+			assert.equal(px(stil(Q, fl, p, DESKTOP)), p === 'padding-bottom' ? 60 : soll, `Messaufbau: Reiterfläche ${p} weicht ab`);
+		}
+	});
+
+	test('Computer mit aktivem Pausentag: genau ein Kopf, als erstes im Reiter vor dem Etappen-Band', async () => {
+		// F-FIX1-1: Pausentag hat keine Reiterfläche; der Kopf muss trotzdem oben stehen.
+		const P = await lade(ESP);
+		const PAUSE = { id: 'p', name: 'Pausentag', date: '', waypoints: [] };
+		const b = baum(render(P, { props: { stages: [PAUSE], tripId: 't1', kopf: probeKopf } }).body);
+		const kopf = einzigerKopf(b, 'Computer Pausentag');
+		const [editor] = mitTestid(b, 'edit-stages-panel');
+		erstesInTraeger(kopf, editor, 'Computer Pausentag');
+		const [band] = mitTestid(b, 'etappen-strip-wrapper');
+		assert.ok(band, 'Messaufbau: Etappen-Band nicht gerendert');
+		assert.ok(kopf.nr < band.nr, 'Computer Pausentag: Kopf steht nicht über dem Etappen-Band');
+		assert.equal(mitTestid(b, 'etappen-reiterflaeche').length, 0, 'Messaufbau: Pausentag nicht aktiv (Reiterfläche gerendert)');
+	});
+
+	test('Computer im Hub (TripTabs, geladen): genau ein Kopf, im Etappen-Editor vor dem Band', async () => {
+		const panel = await tripReiter('etappen', 'de');
+		const kopf = einzigerKopf(panel, 'Etappen geladen');
+		const [editor] = mitTestid(panel, 'edit-stages-panel');
+		erstesInTraeger(kopf, editor, 'TripTabs geladen');
+		assert.equal(panel.kinder.length, 1, 'TripTabs geladen: neben dem Etappen-Editor steht ein weiteres Element im Panel');
 	});
 });
 

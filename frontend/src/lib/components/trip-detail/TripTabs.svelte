@@ -210,12 +210,16 @@
 						</HubUebersicht>
 					</HubReiterflaeche>
 				{:else if tab.value === 'etappen'}
-					<!-- #3006: Bereichskopf vor der Lade-Weiche — steht auch, solange der Trip noch lädt. -->
-					<div class="etappen-kopf">
+					<!-- #3006: EIN Bereichskopf, oben in der Reiterfläche wie beim Vergleich (Orte).
+					     Geladen setzt ihn der Etappen-Editor (Handy in der Fläche, Computer über dem
+					     Band); solange der Trip lädt, steht er allein in der Reiterfläche. -->
+					{#snippet etappenKopf()}
 						<Bereichskopf titel={$t('trip.hub.kopf.etappen_titel')} erklaerung={$t('trip.hub.kopf.etappen_erklaer')} testid="etappen" />
-					</div>
+					{/snippet}
 					{#if trip}
-						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} />
+						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} kopf={etappenKopf} />
+					{:else}
+						<HubReiterflaeche testid="etappen-laden-reiterflaeche">{@render etappenKopf()}</HubReiterflaeche>
 					{/if}
 				{:else if tab.value === 'wetter' && trip}
 					<!-- Issue #2794 S3a Teil-PR 3: genau ein Speicherer im Reiter (AC-38). -->
@@ -230,9 +234,3 @@
 	{/each}
 </div>
 
-<style>
-	/* #3006: Abstand zwischen Bereichskopf und Etappen-Inhalt. */
-	.etappen-kopf {
-		margin-bottom: var(--g-s-4);
-	}
-</style>
