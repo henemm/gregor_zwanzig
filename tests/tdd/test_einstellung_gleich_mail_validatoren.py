@@ -1944,3 +1944,55 @@ def test_r7b_orte_ampelfarbe_folgt_den_grenzen(monkeypatch, tmp_path):
     grenzen["display_config"]["ampel"] = {"metrics": {"precipitation": {"upper": {"yellow": 50, "orange": 60, "red": 70}}}}
     code, text = _lauf(tmp_path, ORTE, eml, "--konfig", _orte_konfig(tmp_path, grenzen, "oa2"))
     assert code == 1 and "'Niederschlag' Ort 1: orange statt green" in text, text
+
+
+# --------------------------------------------------------------------------- #
+# #3122 B5 (AC-35, AC-36): Bereichsname "Orte", Ein-Ort-Texte
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("lang, alt", [("de", "Vergleich in App öffnen →"),
+                                       ("en", "Open comparison in app →")])
+def test_b5_orte_alter_bereichsname_scheitert(monkeypatch, tmp_path, lang, alt):
+    """AC-35: die echte Mail (neue Texte) besteht; steht der alte Bereichsname
+    wieder darin, scheitert der Validator mit ``NAME:`` -- in HTML und Klartext."""
+    preset = _orte_preset()
+    eml, konfig = _orte_eml(monkeypatch, preset, lang=lang), _orte_konfig(tmp_path, preset, f"b5{lang}")
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, aus
+    falsch = _aendere(eml, html=lambda h: h.replace("</body>", f"<p>{alt}</p></body>", 1),
+                      plain=lambda p: p + f"\n{alt}\n")
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "NAME: alter Bereichsname (HTML)" in aus and "NAME: alter Bereichsname (Klartext)" in aus, aus
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_b5_orte_kopf_fehlt_scheitert(monkeypatch, tmp_path, lang):
+    """AC-35: der Kopf heisst "ORTE" bzw. "LOCATIONS"; fehlt er (anderes Wort),
+    scheitert der Validator in HTML und Klartext."""
+    from i18n import t
+
+    preset = _orte_preset()
+    eml, konfig = _orte_eml(monkeypatch, preset, lang=lang), _orte_konfig(tmp_path, preset, f"b5k{lang}")
+    kopf = t("vergleich.kopf.titel", lang)
+    falsch = _aendere(eml, html=lambda h: h.replace(f"{kopf} · ", "BRIEFING · ", 1),
+                      plain=lambda p: p.replace(f"{kopf}\n", "BRIEFING\n", 1))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert f"NAME: Kopf '{kopf}' fehlt (HTML)" in aus and f"NAME: Kopf '{kopf}' fehlt (Klartext)" in aus, aus
+
+
+@pytest.mark.parametrize("lang, mehrzahl", [("de", "1 Orte · Vorlage"), ("en", "1 locations · Template")])
+def test_b5_orte_ein_ort_mehrzahl_scheitert(monkeypatch, tmp_path, lang, mehrzahl):
+    """AC-36: die echte Ein-Ort-Mail besteht (Fuss "1 Ort"); ein Text, der
+    mehrere Orte voraussetzt ("1 Orte"), laesst den Validator scheitern."""
+    from i18n import tn
+
+    preset = _orte_preset(orte=("golden-0",))
+    eml, konfig = _orte_eml(monkeypatch, preset, lang=lang), _orte_konfig(tmp_path, preset, f"b5e{lang}")
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, aus
+    richtig = tn("vergleich.fuss.abo_zeile", 1, lang, vorlage="").strip()
+    falsch = _aendere(eml, html=lambda h: h.replace(richtig, mehrzahl, 1))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "NAME: Text setzt mehrere Orte voraus (HTML)" in aus, aus
