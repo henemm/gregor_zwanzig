@@ -921,6 +921,16 @@ DIENST_EINSTIEGE = {
     # #2794 Teil 3 (AC-29): das Alarmquellen-Gate loest die Abo-Ampel des Trips
     # auf (nur bei gesetztem display_config.ampel), um alarm_ab zu erkennen.
     ("trip_alert.py", "ampel_alarmquelle_aktiv"): 1,
+    # #2796 S4a (ADR-0108 P3): Versand und Vorschau des Orts-Vergleichs bestimmen
+    # das Bewertungsprofil aus der aufgeloesten Vorlage (template_id_for).
+    ("scheduler_dispatch_service.py", "send_one_compare_preset"): 1,
+    ("compare_preview_service.py", "_prepare"): 1,
+}
+# #2796 S4a: diese Einstiege bestimmen nur die Vorlagen-ID (``template_id_for``), sie
+# loesen keine Ampel auf -- kein ``resolve_ampel``-Aufruf (die Mail loest selbst auf).
+DIENST_NUR_VORLAGEN_ID = {
+    ("scheduler_dispatch_service.py", "send_one_compare_preset"),
+    ("compare_preview_service.py", "_prepare"),
 }
 
 
@@ -985,7 +995,8 @@ def _aufloesungen(wurzel: Path) -> list:
     return funde
 
 
-@pytest.mark.parametrize("wurzel,anzahl", [(_OUTPUT, len(EINSTIEGE)), (_SERVICES, len(DIENST_EINSTIEGE))],
+@pytest.mark.parametrize("wurzel,anzahl", [(_OUTPUT, len(EINSTIEGE)),
+                                           (_SERVICES, len(DIENST_EINSTIEGE) - len(DIENST_NUR_VORLAGEN_ID))],
                          ids=["src_output", "src_services"])
 def test_kein_einstieg_loest_still_none_auf(wurzel, anzahl):
     """S1c-4b, AC-25 (umgekehrt aus dem S1c-1-Übergangstest

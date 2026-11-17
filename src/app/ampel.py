@@ -20,6 +20,7 @@ from typing import Any, Optional
 
 from app.ampel_templates import AMPEL_TEMPLATES, DEFAULT_TEMPLATE
 from app.models import ThunderLevel
+from app.profile import ActivityProfile
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +155,21 @@ def _aufloesen(subscription: Any) -> tuple[str, Optional[Mapping]]:
 def template_id_for(subscription: Any) -> str:
     """ID der Vorlage, auf die ein Abo (Trip oder Compare) zurueckfaellt."""
     return _aufloesen(subscription)[0]
+
+
+# Issue #2796 S4a (ADR-0108 P3): Vorlage -> Bewertungsprofil des Orts-Vergleichs
+# (``calculate_score``, Top-Ort). Allgemeine/sonstige/unbekannte Vorlagen geben
+# KEINE Vorgabe (Nachtrag v1.1, F1): dann bewertet die Engine nach dem eigenen
+# Aktivitaetsprofil des Orts (``profile or loc.activity_profile``), sonst Allgemein.
+_VORLAGE_ZU_PROFIL = {
+    "wintersport": ActivityProfile.WINTERSPORT, "skitouren": ActivityProfile.WINTERSPORT,
+    "wandern": ActivityProfile.WANDERN, "alpen-trekking": ActivityProfile.SUMMER_TREKKING,
+}
+
+
+def profile_for_template(template_id: Optional[str]) -> Optional[ActivityProfile]:
+    """Bewertungsvorgabe einer Vorlage (Spec #2796 §2), ``None`` = keine Vorgabe."""
+    return _VORLAGE_ZU_PROFIL.get(template_id or "")
 
 
 def _verschmelzen(tid: str, abo: Optional[Mapping]) -> dict:

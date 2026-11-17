@@ -116,13 +116,9 @@ const FAELLE: KopfFall[] = [
 		ausfuehren: (u, schliessen = () => {}) => (u.onSaveField as SaveField)('region', 'Wallis', schliessen),
 		soll: { display_config: { region: 'Wallis' } },
 		pruefe: (s) => assert.equal((s.display_config as Record<string, unknown>).region, 'Wallis')
-	},
-	{
-		was: "onSaveField('profile')",
-		ausfuehren: (u, schliessen = () => {}) => (u.onSaveField as SaveField)('profile', 'wintersport', schliessen),
-		soll: { profil: 'wintersport' },
-		pruefe: (s) => assert.equal(s.profil, 'wintersport')
 	}
+	// #2796 S4a (ADR-0108 P3): kein Speicherweg `profil` mehr aus dem Kopf
+	// (bewacht in compare_kopf_nutzlast_teilfeld.test.ts).
 ];
 
 describe('AC-10/AC-20: Kopf des Ortsvergleichs — 412 zeigt „Nochmal speichern"', () => {

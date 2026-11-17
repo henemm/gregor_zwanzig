@@ -19,12 +19,13 @@ import {
 	channelNamesLabel,
 	formatLastSent,
 	presetBriefingTimesLabel,
-	presetProfileLabel,
 	type CompareStatus
 } from '../../compare/subscriptionHelpers.ts';
 // Issue #2659 (i18n F10): Texte je Aufruf aus dem Katalog (aktionen.*/home.*/trip.status.*,
 // vergleich.hub.*); der Baustein liest `$locale` und rechnet beim Sprachwechsel neu.
-import { tr, trn, type MessageKey } from '../../../i18n/index.ts';
+import { get } from 'svelte/store';
+import { locale, tr, trn, type MessageKey } from '../../../i18n/index.ts';
+import { aboVorlagenName } from '../wetter-tab/vorlageName.ts';
 import {
 	alarmZaehler,
 	ausgebbarTeilen,
@@ -307,7 +308,8 @@ function wertebereicheKarte(preset: ComparePreset, vorlagen: VorlagenAmpeln | nu
 		: null;
 	return {
 		eyebrow: tr('aktionen.reiter.wetter'),
-		titel: presetProfileLabel(preset.profil) || String(preset.profil ?? ''),
+		// #2796 S4a (ADR-0108 P3): Name der aufgeloesten Vorlage statt des Profils.
+		titel: aboVorlagenName(get(locale), preset, vorlagen),
 		beschreibungKurz: anzahl === null ? '—' : trn('vergleich.hub.wertebereiche_kurz', anzahl),
 		beschreibungLang: anzahl === null ? '—' : trn('vergleich.hub.wertebereiche_lang', anzahl),
 		sprungziel: { tab: 'wetter' }

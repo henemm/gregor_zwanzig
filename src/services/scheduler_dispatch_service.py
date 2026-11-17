@@ -10,6 +10,7 @@ import logging
 from datetime import date, datetime as _datetime, timezone as _timezone_mod
 from pathlib import Path
 
+from app.ampel import profile_for_template, template_id_for
 from app.config import Settings
 from i18n import Lang, resolve_user_lang, t
 from i18n.format import fmt_date_numeric
@@ -17,7 +18,6 @@ from app.loader import (
     VALID_ENTITY_ID_RE,
     InvalidUserIdError,
     LoaderError,
-    _parse_activity_profile,
     compare_preset_to_dict,
     get_data_root,
     is_valid_user_id,
@@ -930,8 +930,9 @@ def send_one_compare_preset(
     report_type, slot_hour, slot_minute = _compare_slot(
         preset, tage_ab_ortstag, report_type, slot_hour, slot_minute)
 
-    profil_str = preset.get("profil", "").lower()
-    profile = _parse_activity_profile(profil_str)
+    # Issue #2796 S4a (ADR-0108 P3): Bewertungsprofil aus der aufgeloesten
+    # Vorlage (ampel.template -> profil -> allgemein), nicht mehr aus `profil`.
+    profile = profile_for_template(template_id_for(preset))
     # Issue #1361/#1372 S1b: der Dispatch liest das Tagesfenster ueber
     # dieselbe Quelle wie der Trip-Zweig (day_window.resolve_configured_window).
     # Die deprecateten Preset-Werte hour_from/hour_to bleiben wirkungslos —

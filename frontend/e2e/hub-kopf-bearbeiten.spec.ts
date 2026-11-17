@@ -39,6 +39,10 @@ const START: Record<HubKind, { profil: string; region: string; extra: Record<str
 
 type Stand = Record<string, unknown>;
 
+// #2796 S4a (ADR-0108 P3): nur der Trip hat noch eine Profil-/Aktivitätsauswahl im Kopf;
+// beim Orts-Vergleich ersetzt die Vorlage das Profil (orte-kopf-vorlage-statt-profil-2796.spec.ts).
+const MIT_PROFIL: readonly HubKind[] = HUB_KINDS.filter((k) => k === 'route');
+
 function seedKopf(page: Page, kind: HubKind): Promise<SeededHub> {
 	return seedHub(page.request, kind, { extra: START[kind].extra });
 }
@@ -153,7 +157,7 @@ for (const kind of HUB_KINDS) {
 }
 
 // ─── KB-3 ──────────────────────────────────────────────────────────────────
-for (const kind of HUB_KINDS) {
+for (const kind of MIT_PROFIL) {
 	test(`KB-3 (${kind}): Profil/Aktivität wählen ⇒ Kachel markiert, persistent`, async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		const hub = await seedKopf(page, kind);
@@ -226,21 +230,26 @@ for (const kind of HUB_KINDS) {
 			expect(bodies.length).toBe(2);
 			expect(Object.keys(bodies[1]).sort()).toEqual(['name']);
 
-			// Profil/Aktivität
-			antwort = putOk();
-			await sicht(page, kind, `profil-option-${profilWert}`).click();
-			expect((await antwort).ok()).toBeTruthy();
-			await expect(sicht(page, kind, `profil-option-${profilWert}`)).toHaveAttribute('data-selected', 'true', {
-				timeout: 5_000
-			});
-			expect(bodies.length).toBe(3);
-			expect(Object.keys(bodies[2]).sort()).toEqual([profilFeld]);
+			// Profil/Aktivität (nur Trip, #2796 S4a)
+			const mitProfil = MIT_PROFIL.includes(kind);
+			if (mitProfil) {
+				antwort = putOk();
+				await sicht(page, kind, `profil-option-${profilWert}`).click();
+				expect((await antwort).ok()).toBeTruthy();
+				await expect(sicht(page, kind, `profil-option-${profilWert}`)).toHaveAttribute('data-selected', 'true', {
+					timeout: 5_000
+				});
+				expect(bodies.length).toBe(3);
+				expect(Object.keys(bodies[2]).sort()).toEqual([profilFeld]);
+			} else {
+				expect(bodies.length).toBe(2);
+			}
 
-			// Server-Wahrheit: nur die drei Felder geändert, alles andere wie vorher
+			// Server-Wahrheit: nur die geänderten Felder anders, alles andere wie vorher
 			// (Orte/Etappen, Empfänger, Zeitplan, Wertebereiche … — Fehlerklasse #2375/#2381).
 			const nachher = ohneZeitstempel(await holeStand(page, kind, hub.id));
 			expect(nachher.name).toBe('Nur Name');
-			expect(nachher[profilFeld]).toBe(profilWert);
+			expect(nachher[profilFeld]).toBe(mitProfil ? profilWert : START[kind].profil);
 			expect(regionAus(kind, nachher)).toBe('Pitztal');
 			const ohneGeaendert = (s: Stand): Stand => {
 				const { name: _n, [profilFeld]: _p, region: _r, display_config: dc, ...rest } = s;
@@ -381,32 +390,36 @@ for (const kind of HUB_KINDS) {
 			await sicht(page, kind, 'region-save').click();
 			await expect(page.getByText(neuRegion).filter({ visible: true }).first()).toBeVisible({ timeout: 5_000 });
 
-			// Mobil: Wahl über Knopf + Auswahl statt Kachel; je genau einmal im DOM.
+			// Mobil: Wahl über Knopf + Auswahl statt Kachel; je genau einmal im DOM (nur Trip, #2796 S4a).
+			const mitProfil = MIT_PROFIL.includes(kind);
 			const knopf = page.locator(`[data-testid="${kopf}-profil-knopf"]`);
 			const auswahl = page.locator(`[data-testid="${kopf}-profil-auswahl"]`);
-			expect(await knopf.count(), `${kopf}-profil-knopf: Anzahl im DOM (ohne :visible)`).toBe(1);
-			expect(await auswahl.count(), `${kopf}-profil-auswahl: Anzahl im DOM (ohne :visible)`).toBe(1);
-			await expect(knopf).toHaveAttribute('data-selected-value', START[kind].profil);
-			await knopf.click();
-			await expect(auswahl).toBeVisible({ timeout: 5_000 });
-			await page.locator(`[data-testid="${kopf}-profil-auswahl-option-${profilWert}"]`).click();
-			await expect(auswahl).toBeHidden({ timeout: 5_000 });
-			await expect(knopf).toHaveAttribute('data-selected-value', profilWert, { timeout: 5_000 });
-			await expect
-				.poll(async () => (await holeStand(page, kind, hub.id))[profilFeld], { timeout: 8_000 })
-				.toBe(profilWert);
+			const anzahl = mitProfil ? 1 : 0;
+			expect(await knopf.count(), `${kopf}-profil-knopf: Anzahl im DOM (ohne :visible)`).toBe(anzahl);
+			expect(await auswahl.count(), `${kopf}-profil-auswahl: Anzahl im DOM (ohne :visible)`).toBe(anzahl);
+			if (mitProfil) {
+				await expect(knopf).toHaveAttribute('data-selected-value', START[kind].profil);
+				await knopf.click();
+				await expect(auswahl).toBeVisible({ timeout: 5_000 });
+				await page.locator(`[data-testid="${kopf}-profil-auswahl-option-${profilWert}"]`).click();
+				await expect(auswahl).toBeHidden({ timeout: 5_000 });
+				await expect(knopf).toHaveAttribute('data-selected-value', profilWert, { timeout: 5_000 });
+				await expect
+					.poll(async () => (await holeStand(page, kind, hub.id))[profilFeld], { timeout: 8_000 })
+					.toBe(profilWert);
+			}
 
 			await page.reload();
 			await expect(page.getByText(neuName).filter({ visible: true }).first()).toBeVisible({ timeout: 10_000 });
 			await expect(page.getByText(neuRegion).filter({ visible: true }).first()).toBeVisible();
-			await expect(knopf).toHaveAttribute('data-selected-value', profilWert);
-			expect(await knopf.count(), `${kopf}-profil-knopf nach Reload: Anzahl im DOM`).toBe(1);
-			expect(await auswahl.count(), `${kopf}-profil-auswahl nach Reload: Anzahl im DOM`).toBe(1);
+			if (mitProfil) await expect(knopf).toHaveAttribute('data-selected-value', profilWert);
+			expect(await knopf.count(), `${kopf}-profil-knopf nach Reload: Anzahl im DOM`).toBe(anzahl);
+			expect(await auswahl.count(), `${kopf}-profil-auswahl nach Reload: Anzahl im DOM`).toBe(anzahl);
 
 			const s = await holeStand(page, kind, hub.id);
 			expect(s.name).toBe(neuName);
 			expect(regionAus(kind, s)).toBe(neuRegion);
-			expect(s[profilFeld]).toBe(profilWert);
+			expect(s[profilFeld]).toBe(mitProfil ? profilWert : START[kind].profil);
 		} finally {
 			await hub.aufraeumen();
 		}
@@ -457,7 +470,7 @@ for (const kind of HUB_KINDS) {
 }
 
 // ─── KB-8 ──────────────────────────────────────────────────────────────────
-for (const kind of HUB_KINDS) {
+for (const kind of MIT_PROFIL) {
 	test(`KB-8 (${kind}): Profil-PUT 500 ⇒ Fehler unter den Kacheln, bisherige Kachel bleibt einzige Auswahl`, async ({
 		page
 	}) => {

@@ -57,9 +57,9 @@ def _vergleich_preset(vorlage: str) -> dict:
 
 
 def _profil_kopfzelle(html: str) -> str:
-    """Wert der Kopfzelle „Profil" der Vergleichs-Mail (AC-15)."""
-    m = re.search(r">Profil</div[^>]*>\s*<div[^>]*>([^<]+)</div", html)
-    assert m, "Vorbedingung: Kopfzelle 'Profil' fehlt"
+    """Wert der Kopfzelle „Vorlage" (bis #2796 „Profil") der Vergleichs-Mail (AC-15)."""
+    m = re.search(r">Vorlage</div[^>]*>\s*<div[^>]*>([^<]+)</div", html)
+    assert m, "Vorbedingung: Kopfzelle 'Vorlage' fehlt"
     return m.group(1).strip()
 
 

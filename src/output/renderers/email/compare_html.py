@@ -46,7 +46,6 @@ from output.renderers.email.design_tokens import (
 from output.renderers.email.outlook import (
     _outlook_row, _thunder_band, render_outlook_table,
 )
-from output.renderers.email.profile_signature import profile_signature
 from output.metric_format import (
     NO_VALUE, format_value, severity_for,
 )
@@ -1488,9 +1487,10 @@ def _render_warning_banner(warning_text: str) -> str:
 
 
 def _render_header(
-    result: ComparisonResult, sig, tz: ZoneInfo, lang: Lang = "de", *, profil_label: str,
+    result: ComparisonResult, tz: ZoneInfo, lang: Lang = "de", *, vorlage_label: str,
 ) -> str:
-    label_text = f"{t('vergleich.kopf.titel', lang)} · {_html.escape(sig.eyebrow)}"
+    # Issue #2796 S4a (ADR-0108 P3): Kennzeile nennt die Vorlage, nicht das Profil.
+    label_text = f"{t('vergleich.kopf.titel', lang)} · {_html.escape(vorlage_label)}"
     label_style = (
         f"font-family:{FONT_DATA};font-size:10px;"
         f"color:{G_ACCENT};letter-spacing:0.08em;"
@@ -1504,7 +1504,7 @@ def _render_header(
     date_line = f"{weekday}, {date_str}"
     date_style = f"font-family:{FONT_DATA};font-size:13px;color:{G_INK};margin-top:6px;"
 
-    profil_val = _html.escape(profil_label)
+    profil_val = _html.escape(vorlage_label)
     orte_val = str(len(result.locations))
     # Issue #1378 (AC-4/AC-8): Erzeugungszeit des Vergleichs (`created_at`,
     # dieselbe Quelle wie der Klartext-Teil -- vorher `datetime.now()`, das
@@ -1711,13 +1711,13 @@ def _compute_next_send(
 
 
 def _render_abo_footer(
-    preset_name, preset, locations_by_id: dict, location_count: int, sig,
+    preset_name, preset, locations_by_id: dict, location_count: int, vorlage_label: str,
     lang: Lang = "de",
 ) -> str:
     name = _html.escape(preset_name) if preset_name else t("vergleich.fuss.abo_name", lang)
     next_send = _compute_next_send(preset, locations_by_id, lang) or NO_VALUE
     abo_zeile = t("vergleich.fuss.abo_zeile", lang, n=location_count,
-                  profil=_html.escape(sig.eyebrow))
+                  vorlage=_html.escape(vorlage_label))
     return (
         f'<div style="padding:20px 24px;background:{G_PAPER};border-top:1px solid #e6e1d3;">'
         f'<table style="width:100%;border-collapse:collapse;"><tr>'
@@ -1828,7 +1828,9 @@ def render_compare_html(
 
     Args:
         result: ComparisonResult aus ComparisonEngine.
-        profile: ActivityProfile fuer Eyebrow. Default ALLGEMEIN.
+        profile: ohne Wirkung auf die Mail seit #2796 S4a -- Kennzeile, Kopfzelle
+            und Abo-Fuss nennen die aufgeloeste Vorlage (``preset``); bewertet
+            wird vor dem Rendern (``profile_for_template``).
         warnings: Liste allgemeiner Betriebswarnungen (orange Banner).
         enabled_metrics: Optionale Liste von Renderer-Metrik-IDs (z.B.
             "wind_max"/"cloud_avg"), filtert UND ordnet die numerischen
@@ -1898,16 +1900,16 @@ def render_compare_html(
     # Issue #2792 S1c-4b: Einstieg loest die Ampel des Presets auf (je
     # Rendern, AC-20/AC-25).
     ampel = resolve_ampel(preset)
-    sig = profile_signature(profile, lang=lang)
     locations = location_render_order(result.locations)
 
     # Issue #1378 (AC-4): Kopfzeilen-Zeitbasis = Ortszeit des ERSTGENANNTEN
     # Ortes der konfigurierten Reihenfolge (`location_render_order`, #1359) --
     # nicht alphabetisch, nicht Serverzeit.
     header_tz = location_tz(locations[0].location) if locations else UTC
-    # AC-15/AC-19 f: Kopfzelle „Profil" = Label der aufgeloesten Vorlage.
-    profil_label = t(vorlage_label_schluessel(ampel["template"]), lang)
-    header_html = _render_header(result, sig, header_tz, lang, profil_label=profil_label)
+    # AC-15/AC-19 f: Kopfzelle „Vorlage" = Label der aufgeloesten Vorlage;
+    # #2796 S4a: dieselbe Quelle fuer Kennzeile und Abo-Fuss.
+    vorlage_label = t(vorlage_label_schluessel(ampel["template"]), lang)
+    header_html = _render_header(result, header_tz, lang, vorlage_label=vorlage_label)
     warnings_html = "".join(_render_warning_banner(w) for w in warnings)
     warn_banner_html = _render_warn_banner(locations, lang)
     # Issue #1349 (Scheibe 3) — geteilter Baustein aus unavailable_hint.py,
@@ -1993,7 +1995,7 @@ def render_compare_html(
         preset_name,
         preset,
         {lr.location.id: lr.location for lr in locations},
-        len(locations), sig, lang,
+        len(locations), vorlage_label, lang,
     )
     from output.renderers.email.command_block import render_commands_html
     commands_html = render_commands_html("vergleich", lang=lang)

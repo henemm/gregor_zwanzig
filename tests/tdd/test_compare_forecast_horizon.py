@@ -270,7 +270,7 @@ class TestCompareForecastHorizonMailHeader:
             "(Spec 'Known Limitations')."
         )
 
-        for expected in ("Profil", "Orte", "Erstellt"):
+        for expected in ("Vorlage", "Orte", "Erstellt"):  # #2796 S4a: „Profil" heisst „Vorlage"
             assert expected in html, (
                 f"Kachel-Label '{expected}' muss weiterhin sichtbar sein "
                 "(nur die Horizont-Kachel entfaellt)."
