@@ -22,6 +22,7 @@ import re
 
 import pytest
 
+# ruff: noqa: F811  (mit = geteilte Fixture als Testparameter)
 from tests.tdd.test_3047_runde7_orte_kanaele import (  # noqa: F401 (Fixture `mit`)
     mit, ortsbloecke, preset, text, zwei_nutzer,
 )
