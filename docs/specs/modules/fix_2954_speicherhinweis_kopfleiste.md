@@ -11,6 +11,8 @@ tags: [frontend, hub-kopf, save-indicator, a11y, adr-0119]
 
 # Speicherhinweis in der Kopfleiste (Issue #2954)
 
+> **Zurückgenommen am 2026-11-17** (PO-Vorgabe): die Kopfleiste liegt beim Scrollen meist außerhalb des sichtbaren Bereichs. Der Hinweis ist wieder das feste Overlay unten rechts (#880); siehe [ADR-0123](../../adr/0123-speicherhinweis-zurueck-als-overlay.md).
+
 ## Approval
 
 - [ ] Approved

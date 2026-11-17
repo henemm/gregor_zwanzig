@@ -60,8 +60,6 @@ ist auf Trip- und Vergleichsseiten durch diese Tokens ersetzt (#2881).
 
 **Hauptaktion = Ink (`Btn primary`, `--g-ink`)** — z. B. „Trip speichern“/„Briefing aktivieren“ unten rechts im Fuß des geteilten Anlege-Rahmens (`shared/anlege-rahmen/AnlegeRahmen.svelte`, „Abbrechen“ als `Btn ghost` unten links, „Weiter“ als `Btn accent`). Ink auf Papier etwa 15:1 (Leitprinzip oben, ADR-0110, #2837). Die Fläche von `Btn accent` ist seit #2879 `--g-accent-deep` (siehe Accent). Ausnahme seit 2026-11-13 (ADR-0118): „Test schicken ▾“ im Hub-Kopf (Trip und Ortsvergleich) ist Akzent-Hauptaktion (`Btn accent`).
 
-**Speicherhinweis (ADR-0120, 2026-11-15):** Kein Overlay, kein festes Element. Der Hinweis (`SaveIndicator`) ist Text ohne Hintergrund, 12,5 px, in der Hub-Kopfleiste links vor Kebab und Hauptknopf. Erfolg „Gespeichert“ in `--g-good` verschwindet nach 5 s; Fehler und Konflikt in `--g-danger-fg` bleiben dauerhaft. Beide Farben erreichen mindestens 4,5:1 gegen den Kopfgrund (hell und dunkel). Die `aria-live`-Region bleibt immer im DOM. Eine feste Fläche oder ein Fenster-Overlay für den Speicherstatus ist verboten, weil sie Bedienelemente verdeckt.
-
 **Design-Vision (nicht implementiert):** vierte Stufe (`--g-ink-4`) für Hint/Placeholder
 — `--g-ink-faint` deckt beide ab.
 
