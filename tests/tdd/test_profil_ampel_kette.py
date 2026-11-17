@@ -890,11 +890,12 @@ def _aufrufe_je_funktion(wurzel: Path = _OUTPUT) -> dict:
 # Dienste, die eine Alarm-/Vorschau-Nachricht bauen, sind legitime Einstiege
 # (AlertMessage braucht die Ampel). Explizite Liste, darf nur schrumpfen.
 DIENST_EINSTIEGE = {
-    ("compare_alert_preview_service.py", "_deviation"): 1,
-    ("compare_alert_preview_service.py", "_onset"): 1,
+    # Issue #2986: Vorschau (_deviation/_onset) und Versand
+    # (send_multi_location_deviation/radar_alert) bauen die Ortsvergleich-
+    # Alarmnachricht ueber EINEN Baustein -- vier Einstiege werden zu zwei.
+    ("alert_channel_texts.py", "build_deviation_message"): 1,
+    ("alert_channel_texts.py", "build_onset_message"): 1,
     ("notification_service.py", "send_deviation_alert"): 1,
-    ("notification_service.py", "send_multi_location_deviation_alert"): 1,
-    ("notification_service.py", "send_multi_location_radar_alert"): 1,
     ("notification_service.py", "send_radar_alert"): 1,
     # Issue #2982: Altform entfernt, der Debug-Ausloeser baut ueber den Baustein.
     ("radar_alert_service.py", "build_debug_onset_alert_message"): 1,
