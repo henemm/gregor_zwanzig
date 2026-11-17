@@ -710,6 +710,11 @@ ADR-0053 verlangte Bedingung für die Entscheidungs-Umkehr gegenüber
 Aufrufstellen umgestellt (`scheduler_dispatch_service.py:439/505/509`,
 `compare_preview_service.py:65/70/105/122/186`).
 
+> **Nachtrag 2026-11-17 (Issue #2983):** Die Zeilenangaben oben sind historisch. Die
+> Aufrufe der Kanal-Renderer für den Ortsvergleich stehen seit #2983 im gemeinsamen Baustein
+> `src/services/compare_briefing_aufbau.py`; Versand und Vorschau rufen ihn auf, statt jeweils
+> eigene Kopien zu führen.
+
 **Zuschnitt-Korrektur festhalten:** Stundenverlauf (`hourly_metrics`) und
 Ausblick (`outlook_metrics`) bleiben **global** — eigene, getrennt
 gespeicherte Auswahllisten, bewusste Schnitt-Entscheidung (ADR-0053), keine
