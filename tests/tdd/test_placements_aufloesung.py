@@ -280,21 +280,27 @@ def _orte_schluessel(metric_id):
     return [e["key"] for e in COMPARE_METRIC_CATALOG if e["metric_id"] == metric_id]
 
 
+def _flaechen_metriken():
+    """(Flaeche, Metrik): Trip jede waehlbare Metrik, Orte jede mit Orte-Zeile."""
+    for m in get_all_metrics():
+        yield "trip", m.id
+        if _orte_schluessel(m.id):
+            yield "compare", m.id
+
+
+def _dc_mit(surface, metric_id, row):
+    if surface == "trip":
+        return _trip([row], grund=[metric_id])
+    return _orte([row], grund=_orte_schluessel(metric_id))
+
+
 @pytest.mark.parametrize("form", ["raw", "simplified"])
-@pytest.mark.parametrize("metric_id", [m.id for m in get_all_metrics()])
-@pytest.mark.parametrize("surface", ["trip", "compare"])
+@pytest.mark.parametrize("surface,metric_id", list(_flaechen_metriken()))
 def test_ac6_format_wirkt_nur_an_stellen_mit_zwei_formen(surface, metric_id, form):
     from app.metric_catalog import zwei_formen_stellen
 
     alle = {s: form for s in ("email", "telegram", "sms", "hourly", "outlook", "premium_sms")}
-    if surface == "trip":
-        dc = _trip([_row(metric_id, formats=alle)], grund=[metric_id])
-    else:
-        schluessel = _orte_schluessel(metric_id)
-        if not schluessel:
-            pytest.skip("Metrik hat bei Orten keine Zeile")
-        dc = _orte([_row(metric_id, formats=alle)], grund=schluessel)
-    vm = _resolve(dc, surface)
+    vm = _resolve(_dc_mit(surface, metric_id, _row(metric_id, formats=alle)), surface)
     zwei = zwei_formen_stellen(metric_id)
     for stelle in ("email", "telegram", "sms", "premium_sms", "outlook", "hourly"):
         for z in getattr(vm, stelle):
@@ -316,29 +322,28 @@ def test_ac6_format_wirkt_nur_an_stellen_mit_zwei_formen(surface, metric_id, for
 # ---------------------------------------------------------------------------
 
 def _gesperrte_kombinationen():
-    from app.metric_catalog import stellen_sperre
-
-    for surface in ("trip", "compare"):
-        stellen = ("email", "telegram", "sms", "outlook") + (("hourly",) if surface == "compare" else ())
-        for m in get_all_metrics():
-            for stelle in stellen:
-                grund = stellen_sperre(m.id, stelle, surface)
-                if grund:
-                    yield surface, m.id, stelle, grund
+    try:
+        from app.metric_catalog import stellen_sperre
+    except ImportError:  # RED: Katalog-Abfrage fehlt noch
+        yield "trip", "sunshine", "hourly", "kein_stundenwert"
+        return
+    for surface, metric_id in _flaechen_metriken():
+        stellen = ("email", "telegram", "sms", "outlook") + (
+            ("hourly",) if surface == "compare" else ())
+        for stelle in stellen:
+            grund = stellen_sperre(metric_id, stelle, surface)
+            if grund:
+                yield surface, metric_id, stelle, grund
 
 
 @pytest.mark.parametrize("surface,metric_id,stelle,grund", list(_gesperrte_kombinationen()))
 def test_ac7_gesperrte_stelle_wirkt_nicht_und_meldet_grund(surface, metric_id, stelle, grund):
-    if surface == "trip":
-        dc = _trip([_row(metric_id, {stelle: True})], grund=[metric_id])
-    else:
-        schluessel = _orte_schluessel(metric_id)
-        if not schluessel:
-            pytest.skip("Metrik hat bei Orten keine Zeile")
-        dc = _orte([_row(metric_id, {stelle: True})], grund=schluessel)
-    vm = _resolve(dc, surface, hourly_enabled=True)
-    ziel = "email" if stelle == "email" else stelle
-    assert metric_id not in [z.metric_id for z in getattr(vm, ziel)]
+    vm = _resolve(_dc_mit(surface, metric_id, _row(metric_id, {stelle: True})), surface,
+                  hourly_enabled=True)
+    ausgabe = {z.metric_id for z in getattr(vm, stelle)}
+    if surface == "compare" and stelle in ("email", "telegram", "sms"):
+        ausgabe = {c for c in ORTE_KENNUNG if set(ORTE_KENNUNG[c]) & ausgabe} | ausgabe
+    assert metric_id not in ausgabe
     zelle = _zelle(vm, metric_id, stelle)
     assert (zelle.state, zelle.reason) == ("locked", grund)
 

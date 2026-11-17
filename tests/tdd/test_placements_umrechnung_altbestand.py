@@ -31,6 +31,9 @@ VIER_FAELLE = {"reihenfolge_wie_sms", "ohne_email_entfaellt", "nur_text_folgt_ht
 #: "zaehlt die Abend-Fassung", ADR-0124 Nr. 8 Premium-SMS = SMS).
 WEITERE_FAELLE = {"auswertungen_gekoppelt", "ausserhalb_grundauswahl", "morgen_folgt_abend",
                   "premium_folgt_sms"}
+#: Faelle, die das View-Model nicht als Mengen-/Folgeabweichung zeigt (sie
+#: stehen nach Regel in der Liste, s. eigene Tests oben).
+REGEL_FAELLE = {"nur_text_folgt_html", "sms_wolkenform_entfaellt"}
 
 
 def _umrechnen(dc, surface, **kw):
@@ -386,11 +389,18 @@ def _begruendet(art, surface, stelle, metric_id, report_type, ctx):
     return False
 
 
+def _konv_kw(kw):
+    """Abo-Angaben, die die Umrechnung liest (hourly_enabled gehoert zum
+    Resolver-Aufruf, nicht zur Umrechnung)."""
+    return {k: v for k, v in kw.items()
+            if k in ("report_config", "enabled_reports", "outlook_enabled")}
+
+
 def _differenz(name, dc, surface, kw, fehler, gesehen):
     from app.metric_catalog import zwei_formen_stellen as zwei
 
     resolver_kw = {k: v for k, v in kw.items() if k in ("enabled_reports", "hourly_enabled")}
-    u = _umrechnen(copy.deepcopy(dc), surface, **kw)
+    u = _umrechnen(copy.deepcopy(dc), surface, **_konv_kw(kw))
     neu_dc = {**copy.deepcopy(dc), "placements": u.placements}
     gemeldet = {(c.kind, c.stelle, c.metric_id, c.report_type) for c in u.changes}
     for c in u.changes:
@@ -411,7 +421,8 @@ def _differenz(name, dc, surface, kw, fehler, gesehen):
                 gesehen["gleich"] += 1
             for mid in [m for m in a_ids if m not in n_ids] + [m for m in n_ids if m not in a_ids]:
                 gesehen["menge"] += 1
-                passend = [g for g in gemeldet if g[1] == stelle and g[2] == mid and g[3] == rt]
+                passend = [g for g in gemeldet if g[1] == stelle and g[2] == mid and g[3] == rt
+                           and g[0] not in REGEL_FAELLE]
                 if not passend or not all(
                         _begruendet(g[0], surface, stelle, mid, rt, ctx) for g in passend):
                     fehler.append(f"{name}/{rt}/{stelle}: {mid} alt={a_ids} neu={n_ids} "
@@ -427,7 +438,11 @@ def _differenz(name, dc, surface, kw, fehler, gesehen):
                 if mid not in alt_form or stelle not in zwei(_katalog_id(surface, mid)):
                     continue
                 soll = _heutige_form(surface, stelle, _katalog_id(surface, mid), alt_form[mid])
-                if form != soll:
+                # Die Form der Morgen-Fassung (channel_layouts_per_report) geht
+                # in die Abend-Fassung auf -- nur so gemeldet zulaessig.
+                morgen = ("morgen_folgt_abend", stelle, mid, rt) in gemeldet and _begruendet(
+                    "morgen_folgt_abend", surface, stelle, mid, rt, ctx)
+                if form != soll and not morgen:
                     fehler.append(f"{name}/{rt}/{stelle}/{mid}: Form {form} != heute {soll}")
 
 
@@ -509,7 +524,7 @@ def test_differenz_sms_identisch_ohne_gemeldete_ausnahme():
     Umrechnung keine SMS-Abweichung meldet."""
     fehler = []
     for name, dc, surface, kw in _stichprobe():
-        u = _umrechnen(copy.deepcopy(dc), surface, **kw)
+        u = _umrechnen(copy.deepcopy(dc), surface, **_konv_kw(kw))
         neu_dc = {**copy.deepcopy(dc), "placements": u.placements}
         resolver_kw = {k: v for k, v in kw.items() if k in ("enabled_reports", "hourly_enabled")}
         for rt in REPORT_TYPEN:
