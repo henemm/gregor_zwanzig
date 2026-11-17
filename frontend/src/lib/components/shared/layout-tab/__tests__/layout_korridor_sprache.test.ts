@@ -119,7 +119,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Kanal · Auswahl &amp; Kappung', 'Preset-Auswahl', 'Detail-Werte', 'E-Mail-Inhalt', 'Erscheint nur in der E-Mail.', '✂ ab hier Telegram-Limit (max 7)', 'Etappen-Vorschau', 'Als Trip speichern', 'Trip wurde erfolgreich gespeichert.'])
+		for (const s of ['Kanal · Auswahl &amp; Kappung', 'Preset-Auswahl', 'Detail-Werte', 'E-Mail-Inhalt', 'Erscheint nur in der E-Mail.', /* #3047 R8 F3 */ '↓ ab Platz 8 nur in der Telegram-Kurzübersicht, nicht in der Stundentabelle', 'Etappen-Vorschau', 'Als Trip speichern', 'Trip wurde erfolgreich gespeichert.'])
 			assert.ok(alle.includes(s), s);
 	});
 });
@@ -134,13 +134,14 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 				hat(en, s);
 			// Kanalnamen (Eigennamen) und Platzgrenzen stehen in beiden Sprachen gleich.
 			const sms = context === 'route' ? '160' : '153';
-			for (const s of ['Email ∞', 'Telegram 7', `SMS ${sms}`]) {
+			// #3047 R8 (AC-24): Orts-Vergleich-Telegram kappt nicht (Badge ∞), Trip-Stundentabelle 7.
+			for (const s of ['Email ∞', context === 'route' ? 'Telegram 7' : 'Telegram ∞', `SMS ${sms}`]) {
 				hat(de, s);
 				hat(en, s);
 			}
 			hat(en, 'Email shows everything · no limit');
 			hat(en, `SMS: no grid, no table — plain text, ${sms} characters`);
-			hat(en, context === 'route' ? 'Telegram: 9 Metriken · too wide — max 7, further forward = safer' : 'Telegram: 9 columns (label + 4 Orte) · too wide — max 7, further forward = safer');
+			hat(en, context === 'route' ? 'Telegram: 9 Metriken · too wide — max 7, further forward = safer' : 'Telegram: 9 Metriken · all in the message, from position 8 in a second line per location');
 			assert.deepEqual(deutscheReste(en, API_METRIKNAMEN), []);
 		});
 	}
@@ -167,7 +168,7 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 		const { de, en } = deDannEn(() => bausteineRendern());
 		const text = sichtbar(en);
 		for (const s of [
-			'✂ Telegram limit from here (max 7)',
+			'↓ from position 8 only in the Telegram summary, not in the hourly table', // #3047 R8 F3
 			'3-day outlook',
 			'Appears only in the email.',
 			'3-Tages-Vorschau', // vom Trip-Aufrufer uebergebene Ueberschrift (F9) bleibt Aufrufer-Text

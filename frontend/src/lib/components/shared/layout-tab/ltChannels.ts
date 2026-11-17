@@ -20,7 +20,17 @@ export type ChannelId = 'email' | 'telegram' | 'sms';
 export type LtLimit =
 	| { kind: 'none' }
 	| { kind: 'columns'; value: number }
-	| { kind: 'chars'; value: number };
+	| { kind: 'chars'; value: number }
+	// #3047 R8 (AC-24): Orts-Vergleich-Telegram — alle Zeilen, ab Platz value+1
+	// in einer zweiten Zeile je Ort (comparison.py). Keine Kappung.
+	| { kind: 'rows'; value: number };
+
+export type LtContext = 'route' | 'vergleich';
+
+/** #3047 R8 (AC-24): Trip-Telegram hat eine Stundentabelle mit 7 Metrik-Spalten
+ *  (narrow.py), der Orts-Vergleich bricht ab Platz 8 in eine zweite Zeile je Ort
+ *  um (comparison.py). Daten je Kontext statt Verzweigung. */
+const TELEGRAM_LIMIT_KIND: Record<LtContext, 'columns' | 'rows'> = { route: 'columns', vergleich: 'rows' };
 
 /**
  * Alias auf die einzige Telegram-Kappungs-Quelle (CHANNEL_COL_BUDGET.telegram,
@@ -49,9 +59,9 @@ const CHANNEL_LABELS: Record<ChannelId, string> = {
  * LTCapNote.svelte. Eine einzige geteilte Zahl wäre in mindestens zwei der
  * drei Ausgabewege (Trip 160 / Vergleich 153 / Alarm 140) nachweislich falsch.
  */
-export function ltLimitForChannel(channel: ChannelId, smsCharLimit: number): LtLimit {
+export function ltLimitForChannel(channel: ChannelId, smsCharLimit: number, context: LtContext = 'route'): LtLimit {
 	if (channel === 'email') return { kind: 'none' };
-	if (channel === 'telegram') return { kind: 'columns', value: TELEGRAM_METRIC_COLUMNS };
+	if (channel === 'telegram') return { kind: TELEGRAM_LIMIT_KIND[context], value: TELEGRAM_METRIC_COLUMNS };
 	return { kind: 'chars', value: smsCharLimit };
 }
 
@@ -68,12 +78,12 @@ export interface LtChannel {
  * Ortsvergleich die Trip-Zahl (160), waehrend der Kappungs-Hinweis darunter
  * korrekt 153 nennt — zwei sich widersprechende Aussagen auf einer Seite.
  */
-export function ltChannelsFor(smsCharLimit: number): LtChannel[] {
+export function ltChannelsFor(smsCharLimit: number, context: LtContext = 'route'): LtChannel[] {
 	// ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
 	return (['email', 'telegram', 'sms'] as ChannelId[]).map((id) => ({
 		id,
 		label: CHANNEL_LABELS[id],
-		limit: ltLimitForChannel(id, smsCharLimit)
+		limit: ltLimitForChannel(id, smsCharLimit, context)
 	}));
 }
 
@@ -91,7 +101,7 @@ export const LT_CH_BY_ID: Record<ChannelId, LtChannel> = Object.fromEntries(
 
 /** ∞ (Email) · sonst die Zahl selbst — Spalten ODER Zeichen, je nach `limit.kind`. */
 export function ltBadgeForLimit(limit: LtLimit): string {
-	return limit.kind === 'none' ? '∞' : String(limit.value);
+	return limit.kind === 'none' || limit.kind === 'rows' ? '∞' : String(limit.value);
 }
 
 /**
@@ -114,12 +124,13 @@ export function ltOverflowForLimit(limit: LtLimit, count: number): number | unde
  */
 export function ltOverflowAcrossChannels(
 	colCount: number,
-	smsCharLimit: number
+	smsCharLimit: number,
+	context: LtContext = 'route'
 ): Partial<Record<ChannelId, number>> {
 	const result: Partial<Record<ChannelId, number>> = {};
 	// ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
 	for (const id of ['email', 'telegram', 'sms'] as ChannelId[]) {
-		const overflow = ltOverflowForLimit(ltLimitForChannel(id, smsCharLimit), colCount);
+		const overflow = ltOverflowForLimit(ltLimitForChannel(id, smsCharLimit, context), colCount);
 		if (overflow !== undefined) result[id] = overflow;
 	}
 	return result;
@@ -143,6 +154,10 @@ export function ltCapNoteText(params: {
 	const kanal = CHANNEL_LABELS[channel];
 	if (limit.kind === 'none') return tr('layout.kappung.zeigt_alles', { kanal });
 	if (limit.kind === 'chars') return tr('layout.kappung.zeichen', { kanal, zeichen: limit.value });
+	if (limit.kind === 'rows') {
+		const werteZeilen = { kanal, anzahl: colCount, subjekt: subject, platz: limit.value + 1 };
+		return tr(colCount > limit.value ? 'layout.kappung.zeilen_umbruch' : 'layout.kappung.zeilen_eine', werteZeilen);
+	}
 	const fits = colCount <= limit.value;
 	const werte = { kanal, max: limit.value, subjekt: subject };
 	if (hasLabelColumn) {

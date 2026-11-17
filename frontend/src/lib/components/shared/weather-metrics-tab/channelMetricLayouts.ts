@@ -67,6 +67,25 @@ export function channelOverrideFromMetrics(
 	};
 }
 
+/**
+ * Issue #3047 Runde 8 (T1): Ladeweg des Trip-Editors fuer ALLE Metrik-Reiter —
+ * `WeatherMetricsTab.svelte::initFromTrip()` und der Test-Nachbau
+ * `_editor_kette.ts` rufen dieselbe Funktion. Ein Reiter ohne gespeicherten
+ * Eintrag bleibt `null` (Backend-Kaskade faellt auf die globale Auswahl).
+ */
+export function channelOverridesFromSaved(
+	savedLayouts: ChannelLayouts | undefined,
+	catalogIds: string[],
+	fallbackFriendly: Record<string, boolean>
+): Record<ChannelId, ChannelOverride | null> {
+	const cb: Record<ChannelId, ChannelOverride | null> = { email: null, telegram: null, sms: null };
+	for (const ch of ['email', 'telegram', 'sms'] as ChannelId[]) { // ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
+		const layout = savedLayouts?.[ch];
+		if (layout) cb[ch] = channelOverrideFromMetrics(layout, catalogIds, fallbackFriendly);
+	}
+	return cb;
+}
+
 /** Startpunkt eines Kanal-Eintrags: tiefe Kopie der globalen Auswahl (AC-2). */
 export function startChannelOverride(
 	buckets: Buckets,

@@ -74,15 +74,18 @@
 		 *  weil Sichtbarkeit und Backend-Wirkung an derselben Quelle haengen
 		 *  muessen. */
 		modeCapable?: (id: string) => boolean;
+		/** Issue #3047 Runde 8 (F3): Kontext der Telegram-Trennlinie. Ohne
+		 *  Angabe keine Linie (Ausblick/Stundenverlauf zeigen nie Telegram). */
+		context?: 'route' | 'vergleich';
 	}
 
 	let {
 		primaryColumns, metricById, friendlyMap, activeChannel, highlight, onRemove, onDndReorder, onMode,
-		offColumns, onRestore, showAbwahlHinweis = false, kuerzelById, modeCapable = indicatorCapable,
+		offColumns, onRestore, showAbwahlHinweis = false, kuerzelById, modeCapable = indicatorCapable, context,
 	}: Props = $props();
 
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
-	const showCutLine = $derived(activeChannel === 'telegram');
+	const showCutLine = $derived(activeChannel === 'telegram' && Boolean(context));
 
 	// Issue #2654 (i18n F5): voller Name aus dem Register in der Nutzersprache
 	// (label_en, sonst deutsch); Kurzform (col_label) und Kuerzel bleiben roh.
@@ -130,7 +133,7 @@
 			{@const kurzform = kuerzelById[id]}
 			{#if showCutLine && i === tgBudget}
 				<div data-testid="wm2-cut-line">
-					<LTCutLine label={/* i18n-neutral: Kanal-Eigenname */ 'Telegram'} max={tgBudget} />
+					<LTCutLine label={/* i18n-neutral: Kanal-Eigenname */ 'Telegram'} platz={tgBudget + 1} context={context!} />
 				</div>
 			{/if}
 			<div class="row" class:hl data-testid="wm2-reihenfolge-row" data-metric-id={id}>

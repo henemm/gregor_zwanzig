@@ -143,7 +143,8 @@ describe('AC-1: Versand-Reiter englisch in Trip und Ortsvergleich, Kanalnamen un
 	test('Ortsvergleich: Einleitung, Zeitplan-Hinweis mit Hervorhebung, Laufzeit englisch', () => {
 		const { en } = deDannEn(() => kanaeleRendern('vergleich', PROFILE.nur_email) + tabRendern('vergleich'));
 		const text = sichtbar(en);
-		hat(text, 'The location comparison is a wide table — in practice it goes by email. Telegram carries only ≤ 7 columns, SMS has no grid, plain text.');
+		// #3047 R8 (AC-24): Orts-Vergleich-Telegram kappt nicht.
+		hat(text, 'The location comparison is a wide table — email carries all columns, Telegram all rows (from position 8 in a second line per location), SMS has no grid, plain text.');
 		hat(text, 'Layout · no grid, 153 characters');
 		hat(text, 'As with a trip: the Morning briefing shows today, the Evening briefing shows tomorrow. You only choose the time.');
 		assert.match(en, /<strong[^>]*>Morning briefing<\/strong>/);

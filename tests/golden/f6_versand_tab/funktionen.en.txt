@@ -38,6 +38,6 @@ formatNextBriefing(abgeschaltet, vergleich) → "Briefings switched off"
 formatNextBriefing(kein_termin, vergleich) → "no time scheduled"
 formatNextBriefing(kaputt, vergleich) → "—"
 formatNextBriefing(nicht_geladen, vergleich) → "—"
-vtBriefingLeadText(vergleich) → "The location comparison is a wide table — in practice it goes by email. Telegram carries only ≤ 7 columns, SMS has no grid, plain text."
-vtBriefingSubTexts(vergleich, rich) → {"email":"Layout · full table","telegram":"Layout · 7 columns","sms":"Layout · no grid, 153 characters"}
+vtBriefingLeadText(vergleich) → "The location comparison is a wide table — email carries all columns, Telegram all rows (from position 8 in a second line per location), SMS has no grid, plain text."
+vtBriefingSubTexts(vergleich, rich) → {"email":"Layout · full table","telegram":"Layout · all rows, from position 8 a second line per location","sms":"Layout · no grid, 153 characters"}
 vtBriefingSubTexts(vergleich, kurzform) → {"email":"Layout · full table","telegram":"follows the SMS selection","sms":"Layout · no grid, 153 characters"}
