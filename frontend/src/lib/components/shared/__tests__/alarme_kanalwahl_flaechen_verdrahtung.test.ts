@@ -3,6 +3,7 @@
 // Einbettungs-Ausdrücke (onChange, premiumSmsGate, onAlertMetricChannelChange, {...alarmePropsAus(wiz)})
 // und die echten Funktionen/Effekte der Komponenten — kein Quelltext-Grep, keine Attrappe des Wegs.
 // Spec alert_metric_channels.md AC-43/45/46/51/53/54/55.
+// #3047 Runde 7 (p11): der Anzeige-Fall ueber den toten Container AlarmeScheduleTab ist mit ihm entfernt.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -193,20 +194,6 @@ test('AC-55 Anzeige Ortsvergleich: aktive Alarm-Zeilen erscheinen im Block mit g
 	const t = await tab({ ...vergleichSaat(z), catalog: katalog });
 	assert.deepStrictEqual(await blockAusTab(t), { gust: [], thunder: ['telegram'] }, 'nach dem Neuladen muss die Wahl sichtbar sein');
 	assert.deepStrictEqual(t.attr('aboKanaele'), { email: false, telegram: false, sms: true, premium_sms: false });
-});
-
-test('AC-43/AC-51 Anzeige Trip-Hub: AlarmeScheduleTab → AlarmeTab → Block zeigt gespeicherte Wahl und Abo-Satz', async () => {
-	const trip = { id: 't-1', display_config: {}, alert_channels: { email: false, telegram: false, sms: true, premium_sms: false },
-		alert_metric_channels: { thunder: TG } };
-	const halter = join(HIER, '..', '..', 'trip-detail', 'AlarmeScheduleTab.svelte');
-	const { quelle, treffer } = einbettungen(halter);
-	// `metricLevels` gesät: ohneTypen() schneidet bei `(x) as T` die schließende Klammer mit ab (Prüfstand-Grenze).
-	// `activeMetrics` gesät: die Herleitung aus dem Trip-Katalog ist nicht Gegenstand (eigene Tests #1544/#1545).
-	const eltern = await umgebungFuer(halter, { trip, metricsCatalog: null, onTripUpdate: undefined, saveController: undefined,
-		metricLevels: {}, activeMetrics: ['thunder_level', 'wind_gust'] });
-	const t = await tab(saatAus(treffer[0], quelle, eltern.u));
-	assert.deepStrictEqual(await blockAusTab(t), { gust: [], thunder: ['telegram'] }, 'Trip-Hub zeigt die gespeicherte Wahl nicht');
-	assert.deepStrictEqual(t.attr('aboKanaele'), trip.alert_channels, 'Vorbelegung/Hinweis brauchen den echten Abo-Satz');
 });
 
 /** Wertet die `$derived`-Deklaration `name` der Komponente neu aus (der Prüfstand rechnet sie sonst nur einmal). */

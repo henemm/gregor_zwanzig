@@ -78,7 +78,6 @@ const ANLEGE = join(COMPONENTS, 'compare-new', 'CompareNewEditor.svelte');
 // `{...alarmePropsAus(wiz)}`-Buendel, derselbe Organismus. Der Selbst-Speicher-Zweig wird wie bisher
 // ueber gesaetes preset/saveController/api am Organismus gemessen.
 const BUENDEL_MOUNT = ANLEGE;
-const TRIP = join(COMPONENTS, 'trip-detail', 'AlarmeScheduleTab.svelte');
 const TRIPNEW = join(COMPONENTS, 'trip-new', 'TripNewEditor.svelte');
 // __tests__ -> shared -> components -> lib -> src -> frontend -> repo
 const REPO = resolve(HIER, '..', '..', '..', '..', '..', '..');
@@ -778,7 +777,8 @@ describe('AC-4 Wirkort-Guard: der Selbst-Speicher-Effekt schweigt ohne Vergleich
 // nicht, bleibt `:345` stehen und sie endet bei 54. Der Beweis besteht aus zwei
 // Teilen — der Praemisse an den ECHTEN Mounts und dem Wirkort-Test des Effekts.
 describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts gleichbedeutend', () => {
-	test('Praemisse: nur die Trip-Mounts (Detail + Anlegen) uebergeben `trip` — und es gibt keinen weiteren Ort', () => {
+	// #3047 Runde 7 (p11): der Trip-Hub-Container AlarmeScheduleTab war toter Code und ist entfernt.
+	test('Praemisse: nur der Trip-Anlege-Mount uebergibt `trip` — und es gibt keinen weiteren Ort', () => {
 		const ausgabe = execSync("grep -rl '<AlarmeTab' src --include='*.svelte'", {
 			cwd: FRONTEND,
 			encoding: 'utf-8'
@@ -792,7 +792,6 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 			dateien,
 			[
 				'src/lib/components/compare-new/CompareNewEditor.svelte',
-				'src/lib/components/trip-detail/AlarmeScheduleTab.svelte',
 				'src/lib/components/trip-new/TripNewEditor.svelte'
 			].sort(),
 			'AC-6 FAIL: die Menge der AlarmeTab-Einbettungen hat sich geaendert. Der ' +
@@ -802,7 +801,6 @@ describe('AC-6: `context !== "route"` und `!trip` sind an den echten Mounts glei
 
 		for (const [datei, mitTrip] of [
 			[ANLEGE, false],
-			[TRIP, true],
 			[TRIPNEW, true]
 		] as [string, boolean][]) {
 			const { treffer } = einbettungen(datei);

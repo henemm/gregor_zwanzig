@@ -252,12 +252,8 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			preset.EveningTime = &eveningTime
 		}
 
-		// Issue #1258 AC-4: Neuanlage ohne mitgeschicktes official_warnings
-		// erhaelt bewusst enabled=false (Verhaltenswechsel NUR fuer Neuanlagen,
-		// PO-Entscheidung F1) -- anders als ein migriertes Bestands-Preset.
-		if preset.OfficialWarnings == nil {
-			preset.OfficialWarnings = &model.OfficialWarningsConfig{Enabled: false}
-		}
+		// Issue #3047 Runde 7 (PO 2026-11-16, loest #1258 AC-4 ab): wie beim Trip.
+		amtlicheWarnungenNeuanlage(&preset.OfficialAlertsEnabled, &preset.OfficialWarnings, preset.OfficialAlertTriggersEnabled)
 
 		if err := validateComparePreset(preset); err != nil {
 			WriteError(w, r, http.StatusBadRequest, "validation_error", i18n.Args{"detail": err.Error()})

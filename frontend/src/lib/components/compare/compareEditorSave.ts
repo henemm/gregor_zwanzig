@@ -479,8 +479,8 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		alert_channels: fields.alertChannels ?? newEntityAlertChannelDefault(),
 		...kanalDiffFeld({}, fields.alertMetricChannels),
 		// Issue #1258 S4 (AC-27/E3): unconditional wie die Geschwister-Booleans
-		// oben — Neuanlagen tragen immer official_warnings.enabled (F1-Default
-		// false), kein sources-Feld (FE schreibt sources nie).
+		// oben — Neuanlagen tragen immer official_warnings.enabled (Vorgabe true,
+		// #3047 Runde 7), kein sources-Feld (FE schreibt sources nie).
 		official_warnings: { enabled: fields.officialWarningsEnabled },
 		// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan (Neu-Preset-Defaults
 		// identisch zur Go-Create-Default-Tabelle aus Scheibe 2a). end_date
@@ -644,7 +644,8 @@ export function compareFeldsatzStandard(): CompareFeldsatz {
 		hourlyEnabled: true,
 		outlookEnabled: true,
 		officialAlertTriggersEnabled: true,
-		officialWarningsEnabled: false,
+		// #3047 Runde 7 (PO 2026-11-16, loest #1258 AC-4 ab): Briefing UND Alarm an.
+		officialWarningsEnabled: true,
 		metricAlertLevels: {},
 		channelThresholds: {},
 		alertMetricChannels: {},

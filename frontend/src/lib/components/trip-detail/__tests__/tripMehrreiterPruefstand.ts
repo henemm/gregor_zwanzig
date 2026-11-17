@@ -308,7 +308,7 @@ function gemeinsam(a: Aufbau): Knoten {
 	};
 }
 
-/** Alarme-Reiter (route), gespeist wie `AlarmeScheduleTab.svelte` ihn speist. */
+/** Alarme-Reiter (route), gespeist wie der fruehere Container `AlarmeScheduleTab.svelte` (entfernt, #3047). */
 export async function alarmeReiter(a: Aufbau): Promise<{
 	inst: Instanz;
 	/** Alarm-Empfindlichkeit einer Metrik aendern und den Speicher-Effekt laufen lassen. */

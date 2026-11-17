@@ -1,0 +1,82 @@
+## RED p11 Neuanlage amtliche Warnungen (vor dem Fix, Basis 5748d62)
+### uv run pytest -q tests/tdd/test_3047_p11_neuanlage_warnungen.py
+E   AssertionError: trip: Briefing-Feld {'id': '53de717e', 'name': 'Neu', 'stages': [{'id': '6c6555d5', 'name': 'A', 'date': '2026-11-20', 'waypoints': []}], 'display_config': {'channels': {'email': True}, 'metrics': [], 'metric_alert_levels': {}}, 'corridors': [], 'official_alerts_enabled': False, 'official_warnings': {'enabled': False}, 'alert_cooldown_minutes': None, 'alert_quiet_from': None, 'alert_quiet_to': None, 'alert_channels': {'email': True, 'telegram': True, 'sms': False, 'premium_sms': False}, 'alert_channel_thresholds': {'email': 'LOW', 'telegram': 'LOW', 'sms': 'LOW', 'premium_sms': 'LOW'}}
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a28dd380dd5411204/tests/tdd/test_3047_p11_neuanlage_warnungen.py:61: AssertionError: trip: Briefing-Feld {'id': '53de717e', 'name': 'Neu', 'stages': [{'id': '6c6555d5', 'name': 'A', 'date': '2026-11-20', 'waypoints': []}], 'display_config': {'channels': {'email': True}, 'metrics': [], 'metric_alert_levels': {}}, 'corridors': [], 'official_alerts_enabled': False, 'official_warnings': {'enabled': False}, 'alert_cooldown_minutes': None, 'alert_quiet_from': None, 'alert_quiet_to': None, 'alert_channels': {'email': True, 'telegram': True, 'sms': False, 'premium_sms': False}, 'alert_channel_thresholds': {'email': 'LOW', 'telegram': 'LOW', 'sms': 'LOW', 'premium_sms': 'LOW'}}
+E   AssertionError: vergleich: Alarm-Feld {'name': '', 'location_ids': [], 'profil': 'wandern', 'schedule': 'daily', 'official_alerts_enabled': True, 'radar_alert_enabled': False, 'hourly_enabled': True, 'outlook_enabled': True, 'official_alert_triggers_enabled': True, 'send_telegram': False, 'send_sms': False, 'send_premium_sms': False, 'alert_channels': {'telegram': True, 'sms': False, 'email': True, 'premium_sms': False}, 'official_warnings': {'enabled': False}, 'morning_enabled': True, 'morning_time': '07:00:00', 'evening_enabled': False, 'evening_time': '18:00:00', 'day_window_start_hour': 4, 'day_window_end_hour': 19, 'empfaenger': [], 'corridors': [], 'display_config': {'region': ''}}
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a28dd380dd5411204/tests/tdd/test_3047_p11_neuanlage_warnungen.py:62: AssertionError: vergleich: Alarm-Feld {'name': '', 'location_ids': [], 'profil': 'wandern', 'schedule': 'daily', 'official_alerts_enabled': True, 'radar_alert_enabled': False, 'hourly_enabled': True, 'outlook_enabled': True, 'official_alert_triggers_enabled': True, 'send_telegram': False, 'send_sms': False, 'send_premium_sms': False, 'alert_channels': {'telegram': True, 'sms': False, 'email': True, 'premium_sms': False}, 'official_warnings': {'enabled': False}, 'morning_enabled': True, 'morning_time': '07:00:00', 'evening_enabled': False, 'evening_time': '18:00:00', 'day_window_start_hour': 4, 'day_window_end_hour': 19, 'empfaenger': [], 'corridors': [], 'display_config': {'region': ''}}
+E   AssertionError: de: Briefing holt bei Neuanlage keine amtlichen Warnungen
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a28dd380dd5411204/tests/tdd/test_3047_p11_neuanlage_warnungen.py:79: AssertionError: de: Briefing holt bei Neuanlage keine amtlichen Warnungen
+FAILED tests/tdd/test_3047_p11_neuanlage_warnungen.py::test_p11_neuanlage_schreibt_beide_felder_true[trip]
+FAILED tests/tdd/test_3047_p11_neuanlage_warnungen.py::test_p11_neuanlage_schreibt_beide_felder_true[vergleich]
+FAILED tests/tdd/test_3047_p11_neuanlage_warnungen.py::test_p11_neuer_trip_briefing_mit_warnung_und_alarm_zwei_nutzer
+### go test ./internal/handler/ -run TestNeuanlage
+--- FAIL: TestNeuanlageTrip_AmtlicheWarnungenBeidesAn_ZweiNutzer (0.01s)
+    --- FAIL: TestNeuanlageTrip_AmtlicheWarnungenBeidesAn_ZweiNutzer/ohne_felder (0.00s)
+        neuanlage_amtliche_warnungen_test.go:79: nutzer-a-p11: official_alerts_enabled nicht ausdruecklich true: <nil>
+        neuanlage_amtliche_warnungen_test.go:79: nutzer-a-p11: official_warnings.enabled nicht true: &{Enabled:false Sources:[]}
+        neuanlage_amtliche_warnungen_test.go:79: nutzer-b-p11: official_alerts_enabled nicht ausdruecklich true: <nil>
+        neuanlage_amtliche_warnungen_test.go:79: nutzer-b-p11: official_warnings.enabled nicht true: &{Enabled:false Sources:[]}
+    --- FAIL: TestNeuanlageTrip_AmtlicheWarnungenBeidesAn_ZweiNutzer/bisherige_neuanlage_briefing_an_alarm_aus (0.00s)
+        neuanlage_amtliche_warnungen_test.go:79: nutzer-a-p11: official_warnings.enabled nicht true: &{Enabled:false Sources:[]}
+        neuanlage_amtliche_warnungen_test.go:79: nutzer-b-p11: official_warnings.enabled nicht true: &{Enabled:false Sources:[]}
+    --- FAIL: TestNeuanlageTrip_AmtlicheWarnungenBeidesAn_ZweiNutzer/briefing_aus_alarm_an (0.00s)
+        neuanlage_amtliche_warnungen_test.go:79: nutzer-a-p11: official_alerts_enabled nicht ausdruecklich true: 0xc00027af55
+        neuanlage_amtliche_warnungen_test.go:79: nutzer-b-p11: official_alerts_enabled nicht ausdruecklich true: 0xc00027b105
+--- FAIL: TestNeuanlageVergleich_AmtlicheWarnungenBeidesAn_ZweiNutzer (0.01s)
+    --- FAIL: TestNeuanlageVergleich_AmtlicheWarnungenBeidesAn_ZweiNutzer/ohne_felder (0.00s)
+        neuanlage_amtliche_warnungen_test.go:105: nutzer-a-p11: official_alerts_enabled nicht ausdruecklich true: <nil>
+        neuanlage_amtliche_warnungen_test.go:105: nutzer-a-p11: official_warnings.enabled nicht true: &{Enabled:false Sources:[]}
+        neuanlage_amtliche_warnungen_test.go:105: nutzer-b-p11: official_alerts_enabled nicht ausdruecklich true: <nil>
+        neuanlage_amtliche_warnungen_test.go:105: nutzer-b-p11: official_warnings.enabled nicht true: &{Enabled:false Sources:[]}
+    --- FAIL: TestNeuanlageVergleich_AmtlicheWarnungenBeidesAn_ZweiNutzer/bisherige_neuanlage_briefing_an_alarm_aus (0.00s)
+        neuanlage_amtliche_warnungen_test.go:105: nutzer-a-p11: official_warnings.enabled nicht true: &{Enabled:false Sources:[]}
+        neuanlage_amtliche_warnungen_test.go:105: nutzer-b-p11: official_warnings.enabled nicht true: &{Enabled:false Sources:[]}
+    --- FAIL: TestNeuanlageVergleich_AmtlicheWarnungenBeidesAn_ZweiNutzer/briefing_aus_alarm_an (0.00s)
+        neuanlage_amtliche_warnungen_test.go:105: nutzer-a-p11: official_alerts_enabled nicht ausdruecklich true: 0xc00034e907
+        neuanlage_amtliche_warnungen_test.go:105: nutzer-b-p11: official_alerts_enabled nicht ausdruecklich true: 0xc00034ea8d
+FAIL
+FAIL	github.com/henemm/gregor-api/internal/handler	0.020s
+FAIL
+### npm test (p11_neuanlage_amtliche_warnungen.test.ts, fixloop3_c3_amtliche_warnungen_ein_eigentuemer.test.ts)
+not ok 1 - p11 Vergleich anlegen: Reiter Wetter und Zustellung zeigen „an"
+  ---
+  error: |-
+    Schalter im Schritt Zustellung zeigt „aus"
+not ok 2 - p11 Vergleich anlegen: POST traegt beide Warn-Felder ausdruecklich true
+  ---
+  error: |-
+    Alarm-Feld
+    ok 1 - warnungenNachWetterBericht: erster Bericht, Echo und Geste
+      ---
+ok 3 - C3 Kern: ein Bericht des Reiters Wetter uebernimmt den Warn-Schalter nur bei einer Geste dort
+  ---
+    not ok 1 - ohne Geste: Neuanlage-Vorgabe „an" in beiden Reitern und im POST (beide Felder true)
+      ---
+      error: |-
+        Reiter Wetter startet nicht mit der Neuanlage-Vorgabe „an"
+    ok 2 - Geste in der Zustellung ueberlebt einen spaeteren Bericht des Reiters Wetter und reist im POST
+      ---
+    ok 3 - Geste im Reiter Wetter erreicht die Zustellung und den POST
+      ---
+    ok 4 - Geste in der Zustellung baut den (verborgen gemounteten) Reiter Wetter neu auf
+      ---
+not ok 4 - C3: Trip anlegen — „Amtliche Warnungen" mit einem Eigentuemer
+  ---
+# pass 4
+# fail 3
+# cancelled 0
+
+## GREEN + Mutationsprobe (nach dem Fix, Fortsetzung nach Container-Neustart)
+- uv run pytest tests/tdd/test_3047_p11_neuanlage_warnungen.py: 3 passed
+- go test ./internal/handler/ -run 'TestNeuanlage|OfficialWarningsDefaults': ok
+- npm test p11_neuanlage_amtliche_warnungen + fixloop3_c3 + umgestellte Alttests: 0 fail
+Mutationen (String-Ersetzung, Sicherung extern, danach zurueck):
+- M1 trip.go Aufruf amtlicheWarnungenNeuanlage entfernt -> TestNeuanlageTrip + DefaultsEnabled rot
+- M2 compare_preset.go Aufruf entfernt -> TestNeuanlageVergleich + Compare DefaultsEnabled rot
+- M3 Regel `an := alarm` (Briefing ignoriert) -> beide Go-Neuanlage-Tests rot
+- M4 `(*ow).Enabled = an` entfernt -> rot
+- M5 `alarm = false` statt ow.Enabled -> rot (Fall briefing_aus_alarm_an)
+- M6 `an := true` (beides-aus ignoriert) -> rot (Fall beides_aus_bleibt_aus)
+- FM1 tripNewLogic.ts Vorgabe false -> 3 Frontend-Tests + pytest rot
+- FM2 compareEditorSave.ts Vorgabe false -> 4 Frontend-Tests + pytest rot
+Gefangen 8/8.

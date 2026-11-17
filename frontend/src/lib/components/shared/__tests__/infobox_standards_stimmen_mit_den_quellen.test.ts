@@ -8,7 +8,7 @@
 //   * Trip-Versand:        ladeReportZustand(null)       -> 07:00 / 18:00, E-Mail
 //   * Vergleichs-Versand:  compareFeldsatzStandard()     -> Morgen 07:00 an, Abend AUS, kein Enddatum
 //   * Alarme (beide):      alertChannelState + Anlege-Zustand -> E-Mail+Telegram an, SMS/Premium aus,
-//                          Schwelle „gering“, amtliche Warnungen aus
+//                          Schwelle „gering“, amtliche Warnungen an (#3047 Runde 7, loest #1258 AC-4 ab)
 // Aendert jemand die Vorgabe (z. B. Abend-Slot im Vergleich an), wird der Text
 // zur Luege und dieser Test rot — genau dafuer ist er da.
 //
@@ -87,7 +87,7 @@ describe('AC-3: Alarm-Standard der Infobox = Anlege-Vorgabe der Quelle (Trip UND
 		]
 	];
 	for (const [kontext, quelle] of quellen) {
-		test(`${kontext}: Text nennt die an-Kanaele, nicht die aus-Kanaele, die Start-Schwelle und amtliche Warnungen aus`, () => {
+		test(`${kontext}: Text nennt die an-Kanaele, nicht die aus-Kanaele, die Start-Schwelle und amtliche Warnungen an`, () => {
 			const q = quelle();
 			assert.equal(q.kanaele.email, true, 'Quelle: E-Mail ist kein Alarm-Standard mehr');
 			assert.equal(q.kanaele.telegram, true, 'Quelle: Telegram ist kein Alarm-Standard mehr');
@@ -100,8 +100,9 @@ describe('AC-3: Alarm-Standard der Infobox = Anlege-Vorgabe der Quelle (Trip UND
 			assert.equal(q.schwellen.email, 'LOW');
 			assert.equal(q.schwellen.telegram, 'LOW');
 			assert.ok(t.includes(`„${CHANNEL_THRESHOLD_LABELS[q.schwellen.email]}“`), `Text nennt die Start-Schwelle nicht: ${t}`);
-			assert.equal(q.amtlich, false, 'Quelle: amtliche Warnungen sind jetzt Standard an — Text anpassen');
-			assert.match(t, /amtliche Warnungen aus/);
+			// Umgestellt #3047 Runde 7 (PO 2026-11-16 „Amtliche Warnungen Neuanlage“, loest #1258 AC-4 ab).
+			assert.equal(q.amtlich, true, 'Quelle: amtliche Warnungen sind nicht mehr Standard an — Text anpassen');
+			assert.match(t, /amtliche Warnungen an\./);
 		});
 	}
 });

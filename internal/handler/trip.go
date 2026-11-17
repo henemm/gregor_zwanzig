@@ -193,12 +193,9 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		// auch nicht ueber einen direkten API-/Import-POST an diesen Pfad.
 		store.ClampReportConfigDayWindow(trip.ReportConfig)
 
-		// Issue #1258 AC-4: Neuanlage ohne mitgeschicktes official_warnings
-		// erhaelt bewusst enabled=false (Verhaltenswechsel NUR fuer Neuanlagen,
-		// PO-Entscheidung F1) -- anders als ein migrierter Bestandstrip.
-		if trip.OfficialWarnings == nil {
-			trip.OfficialWarnings = &model.OfficialWarningsConfig{Enabled: false}
-		}
+		// Issue #3047 Runde 7 (PO 2026-11-16, loest #1258 AC-4 ab): Neuanlage
+		// schreibt beide Warn-Felder nach der gemeinsamen Regel ausdruecklich.
+		amtlicheWarnungenNeuanlage(&trip.OfficialAlertsEnabled, &trip.OfficialWarnings, trip.OfficialAlertTriggersEnabled)
 
 		if err := validateTrip(trip); err != nil {
 			WriteError(w, r, 400, "validation_error", i18n.Args{"detail": err.Error()})
@@ -767,4 +764,23 @@ func DeleteTripHandler(s *store.Store) http.HandlerFunc {
 
 		w.WriteHeader(204)
 	}
+}
+
+// amtlicheWarnungenNeuanlage — Issue #3047 Runde 7, PO 2026-11-16 „Amtliche Warnungen
+// Neuanlage" (loest #1258 AC-4 ab). Gemeinsame Regel wie Python
+// services/amtliche_warnungen_schalter.py: Briefing (fehlend = an) ODER Alarm
+// (official_warnings.enabled, sonst Altfeld; fehlend = an) an -> beides an. Bei der
+// Neuanlage werden beide Felder ausdruecklich geschrieben (kein Mischzustand);
+// weitere Felder von official_warnings (sources) bleiben erhalten.
+func amtlicheWarnungenNeuanlage(briefing **bool, ow **model.OfficialWarningsConfig, altfeld *bool) {
+	alarm := altfeld == nil || *altfeld
+	if *ow != nil {
+		alarm = (*ow).Enabled
+	}
+	an := *briefing == nil || **briefing || alarm
+	*briefing = &an
+	if *ow == nil {
+		*ow = &model.OfficialWarningsConfig{}
+	}
+	(*ow).Enabled = an
 }

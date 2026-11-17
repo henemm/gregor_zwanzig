@@ -20,9 +20,9 @@ export const INFO_TEXTE: Record<string, string> = {
 	'info.wertebereiche.vergleich':
 		'Kannst du überspringen — Standard: die Wertebereiche werden aus dem Aktivitätsprofil vorbelegt.',
 	'info.alarme.route':
-		'Kannst du überspringen — Standard: Alarme per E-Mail und Telegram, Dringlichkeits-Schwelle „gering“, amtliche Warnungen aus. Telegram wirkt erst nach der Verknüpfung.',
+		'Kannst du überspringen — Standard: Alarme per E-Mail und Telegram, Dringlichkeits-Schwelle „gering“, amtliche Warnungen an. Telegram wirkt erst nach der Verknüpfung.',
 	'info.alarme.vergleich':
-		'Kannst du überspringen — Standard: Alarme per E-Mail und Telegram, Dringlichkeits-Schwelle „gering“, amtliche Warnungen aus. Telegram wirkt erst nach der Verknüpfung.',
+		'Kannst du überspringen — Standard: Alarme per E-Mail und Telegram, Dringlichkeits-Schwelle „gering“, amtliche Warnungen an. Telegram wirkt erst nach der Verknüpfung.',
 	'info.versand.route':
 		'Kannst du überspringen — Standard: E-Mail, Morgen-Briefing um 07:00 Uhr und Abend-Briefing um 18:00 Uhr.',
 	'info.versand.vergleich':
