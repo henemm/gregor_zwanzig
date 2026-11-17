@@ -1394,7 +1394,8 @@ def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
     fehler += _soll_ausblick_zeilen(body, lang, ausblick_je_ort, len(html[1]), soll)
     fehler += _soll_darstellung_uebersicht(body, plain, lang, soll, set(html[1]))
     fehler += _soll_stundenzeilen(stunden_alle, soll)
-    fehler += _soll_hinweis_warnungen(body, plain, lang)
+    fehler += _soll_hinweis_warnungen(body, plain, lang, soll)
+    fehler += _soll_zieltag(plain, lang, soll) + _soll_ampel_orte(body, lang, soll)
     fehler += _soll_ortsabschnitte(plain, lang, soll, html[1], fehlerorte)
     return fehler + _soll_teil("Klartext", [b[1] for b in bloecke if b[1] is not None],
                                [b[0] for b in bloecke], stunden, ausblick, soll)
@@ -1421,14 +1422,72 @@ def _soll_ausblick_zeilen(body: str, lang: str, je_ort: list, orte: int, soll: d
     return fehler
 
 
-def _soll_hinweis_warnungen(body: str, plain: str, lang: str) -> List[str]:
+def _soll_hinweis_warnungen(body: str, plain: str, lang: str, soll: "dict | None" = None) -> List[str]:
     """#3047 AC-28: der Hinweis "Amtliche Warnungen aktuell nicht abrufbar"
-    steht im HTML-Teil genau dann, wenn er im Klartext-Teil steht."""
+    steht im HTML-Teil genau dann, wenn er im Klartext-Teil steht. B-L5:
+    beide Schalter aus (E4) -> kein Abruf, also gar kein Hinweis."""
     html = f">{_t('mail.hinweis.warnungen_nicht_abrufbar.titel', lang)}<" in body
     text = _t("mail.hinweis.warnungen_nicht_abrufbar.text", lang) in plain
+    if soll is not None and soll.get("warnungen") is False and (html or text):
+        return [f"SOLL: Hinweis 'Amtliche Warnungen nicht abrufbar' ({teil}) erscheint, obwohl die "
+                "amtlichen Warnungen laut Konfiguration aus sind"
+                for teil, da in (("HTML", html), ("Klartext", text)) if da]
     if html == text:
         return []
     return [f"SOLL: Hinweis 'Amtliche Warnungen nicht abrufbar' fehlt im {'Klartext' if html else 'HTML'}-Teil"]
+
+
+_MONATE_EN = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+
+def _kopfdatum(plain: str, zeile: str) -> "str | None":
+    """ISO-Datum der Klartext-Kopfzeile ``zeile`` (``29.10.2026`` bzw. ``29 Oct 2026``)."""
+    for z in plain.splitlines()[:8]:
+        if z.startswith(zeile):
+            de = re.search(r"(\d{2})\.(\d{2})\.(\d{4})", z)
+            en = re.search(r"(\d{1,2}) (" + "|".join(_MONATE_EN) + r") (\d{4})", z)
+            if de:
+                return f"{de.group(3)}-{de.group(2)}-{de.group(1)}"
+            if en:
+                return f"{en.group(3)}-{_MONATE_EN.index(en.group(2)) + 1:02d}-{int(en.group(1)):02d}"
+    return None
+
+
+def _soll_zieltag(plain: str, lang: str, soll: dict) -> List[str]:
+    """#3047 B-L5: Zieltag (Klartext ``Datum:``) gegen ``Erstellt:`` -- Morgen-
+    Slot derselbe Tag, Abend-Slot der Folgetag; beide an -> beides erlaubt."""
+    from datetime import date, timedelta
+
+    versatz = soll.get("zieltag_versatz") or set()
+    ziel = _kopfdatum(plain, _t("vergleich.kopf.datum", lang, datum="").strip())
+    erstellt = _kopfdatum(plain, _t("vergleich.kopf.erstellt_zeile", lang, zeit="").strip())
+    if not versatz or not ziel or not erstellt:
+        return []
+    ist = (date.fromisoformat(ziel) - date.fromisoformat(erstellt)).days
+    if ist in versatz:
+        return []
+    erwartet = " oder ".join("der Erstellungstag" if v == 0 else "der Folgetag" for v in sorted(versatz))
+    return [f"SOLL: Zieltag {ziel} bei Erstellung {erstellt}, erwartet {erwartet} "
+            f"(Slots laut Konfiguration; Morgen = Erstellungstag, Abend = Folgetag)"]
+
+
+def _soll_ampel_orte(body: str, lang: str, soll: dict) -> List[str]:
+    """#3047 B-L5: Toenung der Zahl-Zellen der Vergleichstabelle gegen die
+    Ampel-Grenzen (ADR-0106); erste Abweichung je Zeile."""
+    zeilen_soll, m = soll.get("ampel_zeilen") or {}, _soll_modul()
+    inner, fehler = _uebersicht_html(body, lang) or "", []
+    for r in _TR_RE.findall(inner)[1:]:
+        zellen = re.findall(r"<t[hd]([^>]*)>(.*?)</t[hd]>", r, re.DOTALL)
+        label = unescape(re.sub(r"<[^>]+>", "", zellen[0][1]).strip()) if zellen else ""
+        for i, (attrs, inhalt) in enumerate(zellen[1:] if label in zeilen_soll else [], start=1):
+            if m.zellform(inhalt, True) != m.ZAHL:
+                continue
+            diff = m.ampel_abweichung(soll["ampel"], zeilen_soll[label], m.zelltext(inhalt, True),
+                                      m.ampel_farbe(attrs, inhalt))
+            if diff:
+                fehler.append(f"SOLL: Ampelfarbe Vergleichstabelle (HTML) '{label}' Ort {i}: {diff}")
+                break
+    return fehler
 
 
 def _uebersicht_html_zellen(body: str, lang: str) -> List[list]:

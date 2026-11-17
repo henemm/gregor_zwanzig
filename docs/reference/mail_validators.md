@@ -282,8 +282,9 @@ Ergänzungen Runde 7 (#3047 AC-27/AC-28), alle nur mit `--konfig`:
   Regel aus ADR-0035 (beide 0–23, verschieden, sonst 4–19; Start > Ende = über
   Mitternacht). Erwartet sind die Kernstunden 09–16 innerhalb des Fensters, eine
   Stunde außerhalb ist ein Fehler — ein gesetztes Fenster wird nicht abgelehnt.
-  Trip: die Mail weist das Fenster nicht aus (Stunden = Etappenzeiten), daher
-  keine Fensterprüfung.
+  Trip: die Stunden der Etappentabellen sind Etappenzeiten; mit `--konfig` gilt
+  statt der festen Heuristik 06–22 das Band aus Tagesfenster und Etappenstart
+  (siehe unten „Stundenband", B-L5).
 - **Ortsabschnitte sprachunabhängig (B-V7):** Abschnittsköpfe werden am Aufbau
   erkannt (Etikett-Span + Name), nicht am Wort „ORT" (#3074); ausgenommen sind
   nur die Katalog-Etiketten Übersicht/Stunden/Ausblick. Bei Stundenverlauf an
@@ -299,6 +300,47 @@ Ergänzungen Runde 7 (#3047 AC-27/AC-28), alle nur mit `--konfig`:
   (Zeichenkette bzw. Objekt ohne beides) folgen der Register-Priorität wie im
   Loader (`auto_distribute`, `METRIC_PRIORITY`), nicht der Array-Folge
   (Tech-Lead-Entscheidung Runde 7).
+
+Lückenschluss Runde 7 (#3047 B-L5, Paket p4b), alle nur mit `--konfig`:
+
+- **Trip, amtliche Warnungen:** Schalter nach der E4-Regel („Briefing ODER
+  Alarm an → beides an", `warnungen_an`). Beide aus → weder Warnblock (HTML
+  `.wb`, Klartext `━━ Amtliche Warnungen ━━`, Kompakt `== Warnungen ==`) noch
+  Hinweis „nicht abrufbar" (kein Abruf). An → stehen sie, wenn vorhanden, an
+  erster Stelle (WV6/AC-25): Klartext/Kompakt erste Inhaltszeile nach dem Kopf
+  (davor höchstens der Hinweis „nicht abrufbar"), HTML vor Tageslage,
+  Metriken-Überblick und erster Etappentabelle. Meldungen
+  „Amtliche Warnungen (Klartext) erscheinen, obwohl …" bzw. „… stehen nicht an
+  erster Stelle".
+- **Trip, Kachelfolge des Metriken-Überblicks:** die Kacheln folgen der Folge
+  der E-Mail-Liste (#1703 S7) in HTML, Klartext und Kompakt; die Metrik einer
+  Kachel wird am Katalogtext (`mail.pille.*`, Register-Label) erkannt, eine
+  unbekannte Form bleibt ungeprüft, eine fehlende Kachel (keine Werte) ist
+  erlaubt, eine Kachel einer nicht gewählten Größe ist ein Fehler.
+- **Ampelfarbe (Trip und Orte):** Grenzen nach der Rückfallkette ADR-0106
+  (`ampel.template` > `preset_name` > Profil > „allgemein", Abo-Grenzen je
+  Metrik überschreiben; gelesen wird nur die statische Vorlagentabelle). Trip:
+  je Stunde für Wind, Böen, Regen, Regen-W. — Ampelpunkt (Einfach) gegen den
+  Klartext-Wert derselben Stunde, Zahl-Zelle (Roh) gegen ihre Tönung
+  (ungetönt = grün), erste Abweichung je Tabelle und Spalte. Orte: Tönung der Zahl-Zellen der Vergleichstabelle
+  (Temperatur, Wind, Böen, Niederschlag, Regen-W., UV; Sicht ungeprüft). Eine
+  gerundete Zahl darf eine halbe letzte Stelle abweichen.
+- **Trip, Stundenband:** erlaubt sind Stunden vom früheren aus Tagesfensterbeginn
+  (Regel `tagesfenster` = ADR-0035) und Etappenstart (`stages[].start_time`,
+  Vorgabe 08:00), höchstens 06, bis zum späteren aus Fensterende und 22;
+  Fenster über Mitternacht → keine Stundengrenze. Ein Etappenstart 04:30 lehnt
+  die korrekte Mail damit nicht mehr ab. Ohne `--konfig` bleibt 06–22.
+- **Orte, Grundauswahl nie eingestellt** (`active_metrics` fehlt, keine
+  Kanal-Liste): Soll = alle Zeilen der Vergleichstabelle in Standardfolge
+  (`CV2_ZEILEN`), wie die Mail; vorher blieb die Zeilenliste ungeprüft.
+- **Orte, Zieltag:** Klartext `Datum:` gegen `Erstellt:` — Morgen-Slot
+  (`morning_enabled`, Vorgabe an) = derselbe Tag, Abend-Slot
+  (`evening_enabled`) = der Folgetag; sind beide an, ist beides erlaubt.
+- **Orte, Hinweis „nicht abrufbar" bei Schalter aus:** beide Schalter aus →
+  kein Abruf, also auch kein Hinweis (HTML und Klartext).
+
+Nachweis: `test_r7b_*` in `tests/tdd/test_einstellung_gleich_mail_validatoren.py`
+(echte Mail besteht, gezielt verfälschte scheitert).
 
 **Auflösung des Verbots aus #1381:** Eine feste Spaltenfolge (`_HOUR_COLUMNS_V2`)
 wird weiterhin **nie** vorausgesetzt — die Folge ist seit #1359 frei
