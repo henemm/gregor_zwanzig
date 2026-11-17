@@ -4,7 +4,7 @@ type: module
 created: 2026-11-17
 updated: 2026-11-17
 status: approved
-version: "1.0"
+version: "1.1"
 tags: [hub, kopf, orte, vergleich, vorlage, profil, versand, mail, i18n, epic-2791]
 ---
 
@@ -75,9 +75,9 @@ Ca. 150–250 Zeilen Code ohne Tests und Goldens; Frontend + Python-Core; Go unv
 | `wintersport`, `skitouren` | WINTERSPORT |
 | `wandern` | WANDERN |
 | `alpen-trekking` | SUMMER_TREKKING |
-| `allgemein`, `radtour`, `wassersport`, unbekannt | ALLGEMEIN |
+| `allgemein`, `radtour`, `wassersport`, unbekannt | keine Vorgabe (`None`): es gilt das eigene Aktivitätsprofil des Orts, sonst Allgemein |
 
-Versand (`scheduler_dispatch_service`) und Vorschau (`compare_preview_service`) rufen `profile_for_template(template_id_for(preset))` statt `_parse_activity_profile(preset["profil"])`. Für jeden Vergleich, dessen Vorlage aus seinem `profil` stammt (Migration S1 oder Rückfallkette), ist das Ergebnis identisch zu heute: `wintersport`→`wintersport`→WINTERSPORT, `wandern`→`wandern`→WANDERN, `summer_trekking`→`alpen-trekking`→SUMMER_TREKKING, `allgemein`→`allgemein`→ALLGEMEIN. Anders wird es nur, wenn der Nutzer im Reiter Wetter bewusst eine andere Vorlage gewählt hat — dann folgt die Bewertung jetzt dieser Wahl (gewollt, ADR-0108). Der Pfad des Validator-Renderdienstes (`validator_render_service`, Testmail mit festem Profil) bleibt unverändert.
+Versand (`scheduler_dispatch_service`) und Vorschau (`compare_preview_service`) rufen `profile_for_template(template_id_for(preset))` statt `_parse_activity_profile(preset["profil"])`. Für jeden Vergleich, dessen Vorlage aus seinem `profil` stammt (Migration S1 oder Rückfallkette), ist das Ergebnis identisch zu heute: `wintersport`→`wintersport`→WINTERSPORT, `wandern`→`wandern`→WANDERN, `summer_trekking`→`alpen-trekking`→SUMMER_TREKKING, `allgemein`→`allgemein`→ALLGEMEIN. Anders wird es nur, wenn der Nutzer im Reiter Wetter bewusst eine andere Vorlage gewählt hat — dann folgt die Bewertung jetzt dieser Wahl (gewollt, ADR-0108). Nachtrag v1.1 (Adversary-Befund F1): Die allgemeinen Vorlagen geben bewusst **keine** Vorgabe (`None`) zurück. Die Bewertung nutzt dann wie bisher das eigene Aktivitätsprofil des Orts (`comparison_engine`: `profile or loc.activity_profile`), sonst nach Allgemein. So bleibt das Verhalten für Vergleiche ohne gültiges `profil` (leer, unbekannt, nach S1 ohne Reiter Wetter angelegt) wie heute; ein ausdrücklich auf „Allgemein“ stehender Vergleich lässt ein am Ort gesetztes eigenes Profil künftig gelten, statt es zu überschreiben. Der Pfad des Validator-Renderdienstes (`validator_render_service`, Testmail mit festem Profil) bleibt unverändert.
 
 ### 3. Mail-Kopf und Abo-Fuß (Python)
 
@@ -120,7 +120,7 @@ Nach dem Staging-Deploy `npm run elementliste:abgleich -- --scope orte/zustellun
   - Test: Unit über den echten Versandweg (`scheduler_dispatch_service`, gerenderte Mail DE und EN); Gleichheit des Bewertungsprofils für alle vier alten Profile (`wintersport`, `wandern`, `summer_trekking`, `allgemein`) gegen die bisherige Zuordnung; E2E `email_spec_validator.py` gegen die echt zugestellte Staging-Mail.
 - **AC-5:** Given ein Orts-Vergleich mit `profil` „wandern“, bei dem der Nutzer im Reiter Wetter die Vorlage „Wintersport“ gewählt hat / When das Briefing versendet wird oder die Vorschau gerendert wird / Then folgen Bewertung, Farbakzent und Name in der Mail der Vorlage „Wintersport“ und nicht dem alten Profil „Wandern“.
   - Test: Unit Versand und Vorschau mit abweichendem `profil` und `ampel.template` (wirkt dort, wo bewertet und gerendert wird).
-- **AC-6:** Given ein Orts-Vergleich ohne gespeicherte Vorlage, nur mit `profil` „summer_trekking“ / When versendet wird / Then gilt die Vorlage „Alpen-Trekking“ (Name in der Mail, Bewertung wie bisher Sommer-Trekking); ohne `profil` und ohne Vorlage gilt „Allgemein“.
+- **AC-6:** Given ein Orts-Vergleich ohne gespeicherte Vorlage, nur mit `profil` „summer_trekking“ / When versendet wird / Then gilt die Vorlage „Alpen-Trekking“ (Name in der Mail, Bewertung wie bisher Sommer-Trekking); ohne `profil` und ohne Vorlage heißt die Vorlage „Allgemein“, und bewertet wird wie bisher nach dem eigenen Aktivitätsprofil des Orts, sonst nach Allgemein.
   - Test: Unit über `profile_for_template(template_id_for(…))` und gerenderte Mail.
 - **AC-7:** Given der Nutzer öffnet die Übersicht eines Orts-Vergleichs bzw. die Liste seiner Orts-Vergleiche / When die Karte „Wetter“ bzw. die Listenkarte betrachtet wird / Then steht dort der Name der aktuellen Vorlage in seiner Sprache (z. B. „Wintersport“ / „Winter sports“) und nicht mehr der Profilname; nach einem Vorlagenwechsel im Reiter Wetter zeigt die Übersicht den neuen Namen.
   - Test: Unit `hubUebersichtModell` und `SubscriptionCard` (DE/EN, abweichendes `profil` vs. Vorlage); E2E Vorlage wechseln → Übersicht neu laden → neuer Name.
@@ -141,4 +141,5 @@ Keine neue ADR: Umsetzung von ADR-0108 Punkt 3 (Orte-Teil). ADR-0108 bleibt „V
 
 ## Changelog
 
+- 2026-11-17: v1.1 Nachtrag Adversary F1 (allgemeine Vorlagen ohne Bewertungsvorgabe, Ortsprofil bleibt wirksam; präzisiert AC-6, Freigabe-Umfang unverändert).
 - 2026-11-17: Erstfassung v1.0 (Scheibe S4a, Orte), Anlass PO-Hinweis zu den Profil-Kacheln im Orte-Kopf.
