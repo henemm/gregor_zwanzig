@@ -11,6 +11,7 @@
 
 import { expect, type APIRequestContext, type Page, type Request, type Locator } from '@playwright/test';
 import { createTestLocation, hubApiPath, openHub, seedHub, HUB_SEL, type HubKind, type SeededHub } from './helpers';
+import { DERIVED_METRIC_RULES } from '../src/lib/components/trip-detail/metricsEditor.ts';
 
 export type Json = any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -116,6 +117,15 @@ export async function metriken(request: APIRequestContext): Promise<Record<strin
 	for (const liste of Object.values((await r.json()) as Record<string, Json[]>)) for (const m of liste) out[m.id] = m;
 	return out;
 }
+
+/** #3047 Runde 7 p5c (Spec feat_3047 Nachtrag Runde 7, Python `loader._append_derived_metrics`): im Trip
+ *  bringt „+“ an einem Elter (Temperatur, Windchill) seine abgeleiteten Kind-Groessen mit. Faelle, die
+ *  genau EINE neue Zeile je „+“ messen, waehlen deshalb Kandidaten ohne Kinder; die Kinder-Ableitung
+ *  selbst pruefen die Kern-Tests p5c/p15 unter src/lib/components/shared/wetter-tab/__tests__/. */
+export const OHNE_KINDER = (id: string): boolean => !DERIVED_METRIC_RULES.some((r) => r.parent === id);
+/** Im Trip abgeleitete Kinder einer Auswahl (fuer Mengenvergleiche mit dem Serverstand). */
+export const abgeleiteteKinder = (kind: HubKind, auswahl: string[]): string[] =>
+	kind === 'route' ? DERIVED_METRIC_RULES.filter((r) => auswahl.includes(r.parent)).map((r) => r.child) : [];
 
 export const aktiveDerVorlage = (v: Json): string[] =>
 	Object.entries(v.ampel.metrics as Record<string, Json>).filter(([, e]) => e.enabled === true).map(([id]) => id);

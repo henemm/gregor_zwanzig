@@ -18,7 +18,7 @@
 
 import { test, expect } from '@playwright/test';
 import { HUB_KINDS } from './helpers';
-import { DESKTOP, MOBIL, WT, auswahlImStand, oeffneWetter } from './s3a2794-teil3.helpers';
+import { DESKTOP, MOBIL, OHNE_KINDER, WT, auswahlImStand, oeffneWetter } from './s3a2794-teil3.helpers';
 import {
 	ALTFELDER,
 	anzeige,
@@ -128,8 +128,13 @@ for (const kind of HUB_KINDS) {
 				const vorher = ALTFELDER[kind](await stand(page, kind, hub.id));
 				const { puts, beantwortet } = zaehleWetterSchreiben(page, kind, hub.id);
 				const reiter = await oeffneWetter(page, kind, hub.id);
-				const plus = reiter.getByTestId(WT.nichtImBriefing).locator('[data-testid^="wetter-nicht-im-briefing-plus-"]').first();
-				const neu = (await plus.getAttribute('data-testid'))!.replace('wetter-nicht-im-briefing-plus-', '');
+				// #3047 Runde 7 p5c: ein Elter brächte im Trip seine Kind-Größen mit — gemessen wird EINE neue Zeile.
+				const kandidaten = await reiter.getByTestId(WT.nichtImBriefing).locator('[data-testid^="wetter-nicht-im-briefing-plus-"]').evaluateAll((els) =>
+					els.map((e) => (e.getAttribute('data-testid') ?? '').replace('wetter-nicht-im-briefing-plus-', ''))
+				);
+				const neu = kandidaten.find(OHNE_KINDER)!;
+				expect(neu, 'Vorbedingung: eine Metrik ohne Kind-Größen steht unter „Nicht im Briefing"').toBeTruthy();
+				const plus = reiter.getByTestId(WT.plus(neu));
 				const zeilenVorher = await reiter.locator('[data-testid^="wetter-zeile-"]:not([data-testid^="wetter-zeile-entfernen-"])').count();
 				await plus.click();
 				await expect(reiter.getByTestId(WT.zeile(neu)), 'die neue Zeile steht im Briefing').toBeVisible();

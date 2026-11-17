@@ -12,6 +12,7 @@ import { amtlicheWarnungenAn, type WarnFelder } from './amtlicheWarnungen.ts';
 import { abweichungsMenge } from './ampelSchreiben.ts';
 import { klon } from './klon.ts';
 import {
+	aktiveMetriken,
 	alarmAbFuerAlle,
 	ausgebbarTeilen,
 	AUSWAHL_ABLEITUNG,
@@ -107,10 +108,25 @@ export function mengeVon(s: WetterStand, vorlagen: VorlagenAmpeln): Ampel {
 	return abweichungsMenge(vorlagen[s.vorlageId], s.ampel, s.auswahl);
 }
 
-/** Zahl der Abweichungen, wie der Picker sie zeigt (AC-28: sofort nach jeder Eingabe). */
-export function abweichungenVon(s: WetterStand, vorlagen: VorlagenAmpeln): number {
-	const v = vorlagen[s.vorlageId];
-	return v ? zaehleAbweichungenGegen(v, mengeVon(s, vorlagen)) : 0;
+/** Vorlage, wie der Kontext sie ausgibt (#3047 p15): im Trip gelten die Kinder eines gewaehlten
+ *  Elters als gewaehlt (Python-Ableitung, p5c), im Vergleich bleibt sie unveraendert. */
+function vorlageImKontext(context: Kontext, v: Ampel): Ampel {
+	const aktiv = aktiveMetriken(v);
+	const kinder = AUSWAHL_ABLEITUNG[context](aktiv).filter((id) => !aktiv.includes(id));
+	if (!kinder.length) return v;
+	return verschmelzen(v, { template: v.template, metrics: Object.fromEntries(kinder.map((id) => [id, { enabled: true }])) });
+}
+
+/** Zahl der Abweichungen, wie der Picker sie zeigt (AC-28: sofort nach jeder Eingabe). Gemessen
+ *  gegen die Vorlage im Kontext: ein abgeleitetes Kind ist keine Abweichung, sein „−“ schon (p15). */
+export function abweichungenVon(s: WetterStand, vorlagen: VorlagenAmpeln, context: Kontext): number {
+	const roh = vorlagen[s.vorlageId];
+	if (!roh) return 0;
+	const v = vorlageImKontext(context, roh);
+	const aufgeloest = klon(s.ampel);
+	aufgeloest.metrics = aufgeloest.metrics ?? {};
+	for (const [id, e] of Object.entries(v.metrics ?? {})) if (!(id in aufgeloest.metrics)) aufgeloest.metrics[id] = klon(e);
+	return zaehleAbweichungenGegen(v, abweichungsMenge(v, aufgeloest, s.auswahl));
 }
 
 /** Vorlage uebernehmen oder zuruecksetzen: Auswahl, Grenzen, Alarmstufen der Vorlage (AC-11/12);

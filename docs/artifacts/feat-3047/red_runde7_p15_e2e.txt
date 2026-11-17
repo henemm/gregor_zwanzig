@@ -1,0 +1,420 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts
+
+TAP version 13
+# warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+# Subtest: p15 Trip: abgeleitete Kinder sind keine Abweichung von der Vorlage
+    # Subtest: messaufbau_vorlagen_mit_elter_ohne_kinder
+    ok 1 - messaufbau_vorlagen_mit_elter_ohne_kinder
+      ---
+      duration_ms: 1.109957
+      type: 'test'
+      ...
+    # Subtest: trip_nach_vorlage_alpen-trekking_null_abweichungen
+    not ok 2 - trip_nach_vorlage_alpen-trekking_null_abweichungen
+      ---
+      duration_ms: 224.7641
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:96:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        5 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 5
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:99:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_zuruecksetzen_alpen-trekking_null_abweichungen
+    not ok 3 - trip_zuruecksetzen_alpen-trekking_null_abweichungen
+      ---
+      duration_ms: 96.547487
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:101:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Messaufbau: „−“ an Boeen ist eine Abweichung
+        
+        6 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 6
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:104:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_nach_vorlage_wandern_null_abweichungen
+    not ok 4 - trip_nach_vorlage_wandern_null_abweichungen
+      ---
+      duration_ms: 19.174987
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:96:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        2 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 2
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:99:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_zuruecksetzen_wandern_null_abweichungen
+    not ok 5 - trip_zuruecksetzen_wandern_null_abweichungen
+      ---
+      duration_ms: 20.05824
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:101:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Messaufbau: „−“ an Boeen ist eine Abweichung
+        
+        3 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 3
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:104:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_nach_vorlage_skitouren_null_abweichungen
+    not ok 6 - trip_nach_vorlage_skitouren_null_abweichungen
+      ---
+      duration_ms: 17.171845
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:96:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        5 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 5
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:99:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_zuruecksetzen_skitouren_null_abweichungen
+    not ok 7 - trip_zuruecksetzen_skitouren_null_abweichungen
+      ---
+      duration_ms: 23.783837
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:101:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Messaufbau: „−“ an Boeen ist eine Abweichung
+        
+        6 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 6
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:104:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_nach_vorlage_wintersport_null_abweichungen
+    not ok 8 - trip_nach_vorlage_wintersport_null_abweichungen
+      ---
+      duration_ms: 15.86664
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:96:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        5 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 5
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:99:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_zuruecksetzen_wintersport_null_abweichungen
+    not ok 9 - trip_zuruecksetzen_wintersport_null_abweichungen
+      ---
+      duration_ms: 20.405288
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:101:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Messaufbau: „−“ an Boeen ist eine Abweichung
+        
+        6 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 6
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:104:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_nach_vorlage_radtour_null_abweichungen
+    not ok 10 - trip_nach_vorlage_radtour_null_abweichungen
+      ---
+      duration_ms: 19.779181
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:96:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        5 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 5
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:99:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_zuruecksetzen_radtour_null_abweichungen
+    not ok 11 - trip_zuruecksetzen_radtour_null_abweichungen
+      ---
+      duration_ms: 16.744274
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:101:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Messaufbau: „−“ an Boeen ist eine Abweichung
+        
+        6 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 6
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:104:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_nach_vorlage_wassersport_null_abweichungen
+    not ok 12 - trip_nach_vorlage_wassersport_null_abweichungen
+      ---
+      duration_ms: 15.712246
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:96:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        2 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 2
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:99:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_zuruecksetzen_wassersport_null_abweichungen
+    not ok 13 - trip_zuruecksetzen_wassersport_null_abweichungen
+      ---
+      duration_ms: 19.264123
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:101:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Messaufbau: „−“ an Boeen ist eine Abweichung
+        
+        3 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 3
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:104:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_nach_vorlage_allgemein_null_abweichungen
+    not ok 14 - trip_nach_vorlage_allgemein_null_abweichungen
+      ---
+      duration_ms: 19.849561
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:96:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        3 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 3
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:99:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_zuruecksetzen_allgemein_null_abweichungen
+    not ok 15 - trip_zuruecksetzen_allgemein_null_abweichungen
+      ---
+      duration_ms: 14.711169
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:101:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Messaufbau: „−“ an Boeen ist eine Abweichung
+        
+        4 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 4
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:104:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_kind_bewusst_entfernt_ist_eine_abweichung
+    not ok 16 - trip_kind_bewusst_entfernt_ist_eine_abweichung
+      ---
+      duration_ms: 15.075612
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:109:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        „−“ an temperature_night
+        
+        3 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 3
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:113:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip_grenze_geaendert_zaehlt_weiter
+    not ok 17 - trip_grenze_geaendert_zaehlt_weiter
+      ---
+      duration_ms: 14.856554
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:115:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        3 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 3
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:119:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..17
+not ok 1 - p15 Trip: abgeleitete Kinder sind keine Abweichung von der Vorlage
+  ---
+  duration_ms: 577.1983
+  type: 'suite'
+  location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:87:1'
+  failureType: 'subtestsFailed'
+  error: '16 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+# Subtest: p15 Vergleich: leitet nichts ab, Zahl unveraendert
+    # Subtest: vergleich_nach_vorlage_wandern_null_abweichungen
+    not ok 1 - vergleich_nach_vorlage_wandern_null_abweichungen
+      ---
+      duration_ms: 445.592609
+      type: 'test'
+      location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:124:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        The expression evaluated to a falsy value:
+        
+          assert.ok(!r.u.stand.auswahl.some((m        ) => KINDER.includes(m)))
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:131:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
+not ok 2 - p15 Vergleich: leitet nichts ab, Zahl unveraendert
+  ---
+  duration_ms: 445.901511
+  type: 'suite'
+  location: '/home/user/gregor_zwanzig/.claude/worktrees/agent-ae1549d5e6733c5c5/frontend/src/lib/components/shared/wetter-tab/__tests__/p15_abweichung_abgeleitete_kinder.test.ts:123:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..2
+# tests 18
+# suites 2
+# pass 1
+# fail 17
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1830.802258

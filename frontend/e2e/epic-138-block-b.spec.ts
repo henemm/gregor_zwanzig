@@ -90,7 +90,13 @@ test.describe('Block B — #178 dirty-State', () => {
 	test('AC-1: Auswahl-Änderung zeigt die Abweichung von der Vorlage („ungespeichert" gegenüber der Vorlage)', async ({ page }) => {
 		await navigateToMetricsTab(page);
 
-		// Initial: keine Abweichung von der Vorlage, kein Zurücksetzen-Knopf (nichts geändert).
+		// #3047 Runde 7 (Spec feat_3047 Nachtrag, Tech-Lead-Entscheidung „Grundauswahl nie eingestellt"):
+		// der per API ohne Auswahl angelegte Trip zeigt den Mail-Standard (Register-Standardsatz), nicht die
+		// Vorlage — er weicht also von ihr ab. Erst „Auf ‚…‘ zurücksetzen" bringt ihn auf die Vorlage.
+		await expect(reiter(page).getByTestId('wetter-vorlage-status')).toHaveText(/^\d+ Abweichung/);
+		await reiter(page).getByTestId('wetter-vorlage-zuruecksetzen').click();
+
+		// Auf der Vorlage: keine Abweichung, kein Zurücksetzen-Knopf.
 		await expect(reiter(page).getByTestId('wetter-vorlage-status')).toHaveText('unverändert');
 		await expect(reiter(page).getByTestId('wetter-vorlage-zuruecksetzen')).toHaveCount(0);
 

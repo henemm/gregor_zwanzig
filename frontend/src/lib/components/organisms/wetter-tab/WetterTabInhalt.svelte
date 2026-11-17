@@ -196,7 +196,7 @@
 
 	const anzeige = $derived(stand ? Z.mitEntwurf(stand, entwurf, true) : null);
 	const vorlagen = $derived(daten?.vorlagen ?? {});
-	const abweichungen = $derived(anzeige && daten ? Z.abweichungenVon(anzeige, vorlagen) : 0);
+	const abweichungen = $derived(anzeige && daten ? Z.abweichungenVon(anzeige, vorlagen, context) : 0);
 	const anzeigeMenge = $derived(anzeige && daten ? Z.mengeVon(anzeige, vorlagen) : null);
 	// #3047 E6: nur ausgebbare Groessen sind Zeilen; gespeicherte, nicht ausgebbare stehen gesperrt mit Grund.
 	const teile = $derived(anzeige ? ausgebbarTeilen(context, anzeige.auswahl, katalogIds) : { zeilen: [], gesperrt: [] });

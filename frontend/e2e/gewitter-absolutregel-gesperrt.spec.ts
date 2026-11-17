@@ -166,7 +166,11 @@ test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
 		await expect(schwelle(scope, 'sms', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
 		await expect(schwelle(scope, 'sms', 'LOW')).toHaveAttribute('aria-pressed', 'false');
 
+		// #3047 Runde 7 (Spec feat_3047 Nachtrag, PO 2026-11-16, löst #1258 AC-4 ab): neue Trips starten mit
+		// amtlichen Warnungen im Briefing und als Alarm — der Schalter steht an und lässt sich ausschalten.
 		const cb = amtlicheWarnungen(scope);
+		await expect(cb).toBeChecked();
+		await cb.click();
 		await expect(cb).not.toBeChecked();
 		await cb.click();
 		await expect(cb).toBeChecked();
@@ -179,8 +183,10 @@ test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
 		await expect(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'true');
 		await schwelle(scope, 'sms', 'HIGH').click();
 		await expect(schwelle(scope, 'sms', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
-		await amtlicheWarnungen(scope).click();
+		// #3047 Runde 7 (PO 2026-11-16): Neuanlage startet mit amtlichen Warnungen an — die Eingabe ist das Ausschalten.
 		await expect(amtlicheWarnungen(scope)).toBeChecked();
+		await amtlicheWarnungen(scope).click();
+		await expect(amtlicheWarnungen(scope)).not.toBeChecked();
 
 		const tabbar = page.getByTestId('tn-mobile-tabbar');
 		await tabbar.getByRole('tab', { name: /Route/ }).click({ force: true });
@@ -191,6 +197,6 @@ test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
 		await expect.soft(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'true');
 		await expect.soft(schwelle(scope, 'sms', 'HIGH')).toHaveAttribute('aria-pressed', 'true');
 		await expect.soft(schwelle(scope, 'sms', 'LOW')).toHaveAttribute('aria-pressed', 'false');
-		await expect.soft(amtlicheWarnungen(scope)).toBeChecked();
+		await expect.soft(amtlicheWarnungen(scope)).not.toBeChecked();
 	});
 });
