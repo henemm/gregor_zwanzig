@@ -152,13 +152,13 @@ describe('F-A1 (Trip): Warnungen und Tagesfenster aus dem Reiter Wetter reisen i
 		ow: (p.official_warnings as Knoten | undefined)?.enabled
 	});
 
-	// Fix-Loop 3 (C3, Tech-Lead-Entscheid fix-loop-3.md): Neuanlage-Vorgabe ist „aus" (#1258);
-	// vorher stand hier „an" — das war der Befund (zwei Eigentuemer, Startwert falsch).
-	test('ohne Aenderung: Neuanlage-Vorgabe aus ⇒ official_alerts_enabled UND official_warnings.enabled false', async () => {
+	// Umgestellt #3047 Runde 7 (Spec feat_3047 „Nachtrag Runde 7“, PO 2026-11-16 „Amtliche Warnungen
+	// Neuanlage“ loest #1258 AC-4 ab): Neuanlage-Vorgabe ist „an“, beide Felder true (ein Eigentuemer, C3).
+	test('ohne Aenderung: Neuanlage-Vorgabe an ⇒ official_alerts_enabled UND official_warnings.enabled true', async () => {
 		const ed = await editor();
 		const wt = await wetterTabMontieren(ed);
-		assert.equal(wt.stand.warnungenAn, false, 'Neuanlage-Vorgabe ist „aus" (#1258)');
-		assert.deepEqual(warnung(await speichern(ed)), { alerts: false, ow: false });
+		assert.equal(wt.stand.warnungenAn, true, 'Neuanlage-Vorgabe ist „an“ (#3047 Runde 7)');
+		assert.deepEqual(warnung(await speichern(ed)), { alerts: true, ow: true });
 	});
 
 	test('Warnungen an, Tagesfenster 6–21 ⇒ beide Warn-Felder true, report_config 6/21; ein Neuaufbau behaelt beides', async () => {

@@ -478,7 +478,7 @@
 	// Fix-Loop F001 (Neuaufbau beim Wechsel Desktop/Mobil): die zuletzt gemeldete Ampel gehoert
 	// zur Abo-Sicht, sonst liest der neue WetterTab den Profil-Standard und meldet ihn zurueck.
 	// Fix-Loop 3 (C3): „Amtliche Warnungen" hat EINEN Eigentuemer, `alarm.officialWarningsEnabled`
-	// (Neuanlage-Vorgabe aus, #1258). Die Abo-Sicht des Reiters Wetter und der POST tragen BEIDE
+	// (Neuanlage-Vorgabe an, #3047 Runde 7). Die Abo-Sicht des Reiters Wetter und der POST tragen BEIDE
 	// Felder mit diesem Wert (AC-20); ein Bericht des Reiters Wetter wirkt nur bei einer Geste dort
 	// (warnungenNachWetterBericht), eine Geste in der Zustellung baut ihn neu auf (wetterNeuaufbau).
 	let wetterWarnungenGemeldet: boolean | undefined = undefined;

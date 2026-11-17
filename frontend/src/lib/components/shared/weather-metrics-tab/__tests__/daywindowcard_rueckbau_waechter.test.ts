@@ -140,7 +140,8 @@ describe('AC-5: BESTAND-Ratsche gesenkt', () => {
 	test('bestand_ohne_daywindowcard_und_obergrenze_198', async () => {
 		const { KONFIG } = await import(pathToFileURL(join(LIB, '__tests__', 'bausteine_waechter_regeln.ts')).href);
 		assert.ok(!KONFIG.BESTAND.some((b: string) => /DayWindowCard/.test(b)), 'AC-5: DayWindowCard steht noch in BESTAND');
-		assert.equal(KONFIG.BESTAND_OBERGRENZE, 198, 'AC-5: BESTAND_OBERGRENZE muss von 199 auf 198 sinken');
+		// #3047 Runde 7 (p11): AlarmeScheduleTab.svelte entfernt, 198 -> 197; die Ratsche darf nur sinken.
+		assert.ok(KONFIG.BESTAND_OBERGRENZE <= 198, 'AC-5: BESTAND_OBERGRENZE muss von 199 auf 198 sinken');
 	});
 });
 

@@ -596,7 +596,12 @@ const GEAENDERT: Record<string, string> = {
 	'hilfe.briefing.abends':
 		'Abends kommt ein Briefing mit dem Wetter für die Etappe des nächsten Tages (Standard beim Trip: 18:00 Uhr). Die Zeiten stehen im Reiter Zustellung deines Trips bzw. Ortsvergleichs.',
 	'hilfe.alarme.text':
-		'Zwischen den Briefings meldet Gregor einen Alarm, wenn sich das Wetter für deine Strecke relevant ändert, etwa bei Gewitter, Starkregen oder Sturm. Welche Stufe über welchen Kanal kommt, legt die Dringlichkeits-Schwelle im Reiter Zustellung fest.'
+		'Zwischen den Briefings meldet Gregor einen Alarm, wenn sich das Wetter für deine Strecke relevant ändert, etwa bei Gewitter, Starkregen oder Sturm. Welche Stufe über welchen Kanal kommt, legt die Dringlichkeits-Schwelle im Reiter Zustellung fest.',
+	// #3047 Runde 7 (PO 2026-11-16 „Amtliche Warnungen Neuanlage“, loest #1258 AC-4 ab): Vorgabe an.
+	'info.alarme.route':
+		'Kannst du überspringen — Standard: Alarme per E-Mail und Telegram, Dringlichkeits-Schwelle „gering“, amtliche Warnungen an. Telegram wirkt erst nach der Verknüpfung.',
+	'info.alarme.vergleich':
+		'Kannst du überspringen — Standard: Alarme per E-Mail und Telegram, Dringlichkeits-Schwelle „gering“, amtliche Warnungen an. Telegram wirkt erst nach der Verknüpfung.'
 };
 const soll = (k: string): string => GEAENDERT[k] ?? GOLDEN[k];
 
