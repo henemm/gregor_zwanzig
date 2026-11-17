@@ -537,12 +537,29 @@ def hole_nowcasts(dienst, elemente: list, *, user_id: Optional[str],
     return outcomes
 
 
-def wirf_radar_grenze(outcomes) -> None:
+def wirf_radar_grenze(outcomes, bezeichnung: Optional[Callable] = None) -> None:
     """Issue #1539 S4: ein im Worker aufgetretener Grenzabbruch wird im
-    Hauptfaden neu geworfen -- weder Luecke noch Quellenausfall."""
+    Hauptfaden neu geworfen -- weder Luecke noch Quellenausfall.
+
+    Fix #3085 (ADR-0082 Punkt 5): jedes uebersprungene Teilergebnis
+    (``skipped`` = "deadline" nie gestartet, "timeout" lief bei Fristablauf
+    noch) entsteht im Radar-Pfad nur durch Fristablauf und ist darum ebenfalls
+    ein Grenzabbruch der Einheit. Vorher steht je uebersprungenem Punkt/Ort eine
+    Log-Zeile mit Grund; ``bezeichnung(out)`` benennt ihn (Standard: Koordinate)."""
+    uebersprungen = [out for out in outcomes if out.skipped is not None]
+    for out in uebersprungen:
+        name = (bezeichnung(out) if bezeichnung is not None
+                else f"Punkt ({out.item[0]:.4f}, {out.item[1]:.4f})")
+        logger.warning(
+            "Radar alert: Nowcast fuer %s uebersprungen (%s, Frist/Zeitgrenze "  # i18n-log
+            "des Laufs) — die Einheit wird abgebrochen (Grenzabbruch).",
+            name, out.skipped,
+        )
     for out in outcomes:
         if isinstance(out.error, RadarDeadlineExceeded):
             raise out.error
+    if uebersprungen:
+        raise RadarDeadlineExceeded("Zeitgrenze vor dem Abschluss aller Abrufe erreicht")
 
 
 class RadarNowcastService:

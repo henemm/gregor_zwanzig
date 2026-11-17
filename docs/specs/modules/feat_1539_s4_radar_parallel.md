@@ -205,11 +205,13 @@ typisch 2 bis 5, Orte je Preset typisch 3 bis 9. Echte Nebenläufigkeit ist auf 
     Zähler an der HTTP-Grenze gegen Gate-Stand.
 
 - **AC-8:** Given eine Frist, die bereits ganz oder teilweise abgelaufen ist, und mehr Punkte bzw. Orte als freie
-  Slots / When der Radar-Abruf endet / Then zählt jeder übersprungene Punkt (`skipped` mit Grund Frist oder
-  Zeitüberschreitung) wie gescheitert, fehlt im Ergebnis, und für jeden steht eine Fehlerzeile mit Grund im Log;
-  nichts wird still weggelassen.
+  Slots / When der Radar-Abruf endet / Then ist jeder übersprungene Punkt bzw. Ort (`skipped` mit Grund Frist
+  oder Zeitüberschreitung) ein Grenzabbruch der Einheit (Trip und Ortsvergleich gleich: keine Auswertung, kein
+  Alarm, kein Protokolleintrag, kein Stempel, ADR-0082 Punkt 5), und für jeden übersprungenen Punkt bzw. Ort
+  steht vorher eine Fehlerzeile mit Grund im Log; nichts wird still weggelassen. (Geändert durch Fix #3085,
+  `fix_3085_radar_grenzabbruch.md`; bis dahin zählte ein übersprungener Punkt als Lücke bzw. Ausfall.)
   - Test: `tests/tdd/test_radar_parallel_fetch.py`; Open-Meteo auf einen Slot begrenzt, Frist verkürzt, Logzeilen
-    und Ergebnis geprüft (Trip- und Compare-Pfad).
+    und Grenzabbruch geprüft (Trip- und Compare-Pfad).
 
 - **AC-9:** Given zwei verschiedene Nutzer mit je einem Trip bzw. Ortsvergleich führen gleichzeitig den
   Radar-Abruf aus / When die Worker laufen / Then trägt jeder Abruf die `user_id` seines Nutzers (am

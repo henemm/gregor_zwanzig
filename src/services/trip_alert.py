@@ -1849,10 +1849,11 @@ class TripAlertService:
         """Issue #1539 S4: Nowcasts der Zonen-Folgepunkte PARALLEL
         (``fetch_ordered``), ausgewertet im Hauptfaden in Eingabereihenfolge.
 
-        Je Punkt ohne verwertbares Ergebnis (Fehler, uebersprungen wegen Frist/
-        Zeitueberschreitung, Ausfall/Drosselung) eine Luecke ``None`` mit lauter
-        Logzeile samt Koordinate -- nie ein Abbruch (ADR-0038). Ein
-        ``RadarDeadlineExceeded`` im Worker wird hier neu geworfen."""
+        Je Punkt ohne verwertbares Ergebnis (Fehler, Ausfall/Drosselung) eine
+        Luecke ``None`` mit lauter Logzeile samt Koordinate (ADR-0038). Ein
+        ``RadarDeadlineExceeded`` im Worker und jeder wegen der Frist
+        uebersprungene Punkt (Fix #3085, ADR-0082 Punkt 5) ist dagegen ein
+        Grenzabbruch der Einheit und wird hier geworfen."""
         from services import radar_service as radar_service_mod
 
         elemente = [
@@ -1864,12 +1865,13 @@ class TripAlertService:
             radar_svc, elemente, user_id=self._user_id,
             deadline_at=deadline_at, frist=deadline_at,
         )
-        radar_service_mod.wirf_radar_grenze(outcomes)
+        radar_service_mod.wirf_radar_grenze(
+            outcomes,
+            lambda out: f"Zonenpunkt ({out.item[0]:.4f}, {out.item[1]:.4f}) des Trips {trip_id}",
+        )
         ergebnisse: list = []
         for out in outcomes:
-            if out.skipped is not None:
-                grund = f"uebersprungen: {out.skipped} (Frist/Zeitgrenze des Laufs)"
-            elif out.error is not None:
+            if out.error is not None:
                 grund = f"fehlgeschlagen: {out.error}"  # i18n-log
             elif _zonen_messwert(out.value) is None:
                 grund = "keine verwertbaren Daten (Ausfall/Drosselung)"  # i18n-log

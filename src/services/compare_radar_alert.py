@@ -575,24 +575,18 @@ class CompareRadarAlertService:
                 continue
             orte.append((location_id, loc))
         # Issue #1539 S4: Abrufe parallel. Jeder Grenzabbruch (im Worker, im
-        # seriellen Zweig nach Fristablauf, nie gestarteter Ort) geht HIER hoch,
-        # also VOR der Auswertung -- es ist noch kein Ausfall gesammelt, das
-        # Preset bleibt "nicht erreicht" ohne Spur (A-2 S2). Darum braucht der
-        # `finally`-Block unten keinen Grenz-Merker mehr (Adversary F003).
+        # seriellen Zweig nach Fristablauf, wegen der Frist uebersprungener Ort --
+        # nie gestartet oder noch laufend, Fix #3085) geht HIER hoch, also VOR
+        # der Auswertung -- es ist noch kein Ausfall gesammelt, das Preset bleibt
+        # "nicht erreicht" ohne Spur (A-2 S2, ADR-0082 Punkt 5). Darum braucht
+        # der `finally`-Block unten keinen Grenz-Merker mehr (Adversary F003).
         outcomes = self._hole_nowcasts(radar_service, [o for _, o in orte], deadline_at)
-        radar_service_mod.wirf_radar_grenze(outcomes)
-        self._wirf_bei_nie_gestarteten(preset_id, orte, outcomes)
+        radar_service_mod.wirf_radar_grenze(
+            outcomes, lambda out: f"{preset_id}/{orte[out.index][0]}",
+        )
         try:
             for out in outcomes:
                 location_id, loc = orte[out.index]
-                if out.skipped is not None:
-                    logger.warning(
-                        "Compare-Radar-Alert: Nowcast fuer %s/%s uebersprungen "
-                        "(%s, Frist/Zeitgrenze des Laufs) — zaehlt als Ausfall.",
-                        preset_id, location_id, out.skipped,
-                    )
-                    ausfaelle.append(location_id)
-                    continue
                 result = out.value
                 if out.error is not None:
                     e = out.error
@@ -645,24 +639,6 @@ class CompareRadarAlertService:
             self._settings, self._user_id, preset, log_label="Compare-Alert (Radar):",
             lang=self._lang,
         )
-
-    @staticmethod
-    def _wirf_bei_nie_gestarteten(preset_id: str, orte: list, outcomes: list) -> None:
-        """Issue #1539 S4 (Orchestrator-Entscheid, Option a): ein Ort, der wegen
-        der Frist NIE gestartet wurde (``skipped="deadline"``), ist ein
-        Grenzabbruch wie im seriellen Ablauf -- das Preset gilt als nicht
-        erreicht, keine Ausfall-Spur (A-2 S2, ADR-0021). Jeder uebersprungene
-        Ort steht vorher laut mit Grund im Log."""
-        if not any(out.skipped == "deadline" for out in outcomes):
-            return
-        for out in outcomes:
-            if out.skipped is not None:
-                logger.warning(
-                    "Compare-Radar-Alert: Nowcast fuer %s/%s uebersprungen (%s, "  # i18n-log
-                    "Frist/Zeitgrenze des Laufs) — Preset gilt als nicht erreicht.",
-                    preset_id, orte[out.index][0], out.skipped,
-                )
-        raise RadarDeadlineExceeded("Zeitgrenze vor dem Abruf aller Orte erreicht")
 
     def _hole_nowcasts(self, radar_service, orte: list, deadline_at: Optional[float]) -> list:
         """Issue #1539 S4: Nowcasts aller Orte parallel (``fetch_ordered``),
