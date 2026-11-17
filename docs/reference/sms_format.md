@@ -1,7 +1,7 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.44"
+version: "2.45"
 status: active
 created: 2025-12-27
 updated: 2026-11-17
@@ -692,6 +692,8 @@ Abgelöst: die feste Rangfolge bis v2.39 (`DROP_ORDER`: erweiterte Token → Win
 
 `{Name}:` plus mindestens **ein** Risk- oder Wert-Token ist Pflicht. Wenn nach allen Truncation-Schritten immer noch >160 Zeichen: ValueError.
 
+> **Premium-SMS-Trip (#3100, ADR-0124 Nr. 8):** Die Premium-SMS nutzt denselben Text. Ist der SMS-Text ≤ 153 Zeichen, ist er identisch; sonst kürzt derselbe Formatter nach denselben Regeln 1–4 mit Grenze 153 (`premium_sms_format.md` §1). Die Premium-SMS hat keine eigene Auswahl.
+
 ---
 
 ## 7. Pflicht-Tokens
@@ -877,6 +879,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.42 | 2026-11-16 | §5b: Ortsvergleich „nie eingestellt“ folgt der Mail-Tabelle (Registerfolge statt fester Sechserliste, ohne `?N` für fehlende Werte); Warndienst-Ausfall hängt ` X?` an die Ortsvergleich-SMS (#3047 Runde 7, B-L4, B-L2). |
 | 2.44 | 2026-11-17 | §2/§3.4e: Die Trip-SMS liest Auswahl, Folge und Roh/Einfach aus `resolve_channel_lists(...).sms` (Adapter `sms_rows_to_maps`) statt aus `get_metrics_for_channel("sms", ...)`; §2 heißt jetzt Standardreihenfolge, fix am Ende bleiben nur Warn-Block/`X?`/DBG. Zugestellte SMS unverändert (Golden byte-gleich). Spec: `docs/specs/modules/feat_3099_sms_resolver.md` (#3099). |
 | 2.43 | 2026-11-16 | §5b/§6: Ortsvergleich-SMS kürzt zuerst die Zellen aller Orte (gleiches Budget je Ort, bis zur ersten Listenzeile), erst danach entfallen Orte als ` +k Orte`, ohne Warnung zuerst — auch ohne amtliche Warnung (#3047 Runde 7, AC-23, ADR-0095). |
+| 2.45 | 2026-11-17 | §6: Premium-SMS-Trip (#3100) — `premium_sms_text` ist der SMS-Text, solange er ≤ 153 Zeichen hat, sonst derselbe Formatter mit Grenze 153 (Kürzung vom Listenende, amtliche Warnung bleibt). Keine Änderung am SMS-Format selbst. |
 | 2.41 | 2026-11-16 | §6: Orts-Überlauf im Ortsvergleich — ein Ort mit amtlicher Warnung fällt nie in ` +k Orte`, er bleibt mit Marker sichtbar; zuerst werden die Zellen aller gezeigten Orte vom Listenende gekürzt (gleiches Budget je Ort), dann entfallen Orte ohne Warnung (#3047 Runde 7, AC-23). |
 
 **Quellen für v2.0:**
