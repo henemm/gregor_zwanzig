@@ -318,7 +318,7 @@ Die siebte Prüfrunde hat jede im Hub änderbare Einstellung gegen jede Ausgabe 
 - **AC-22:** Given eine Trip- oder Orte-Konfiguration mit beliebiger Telegram-, SMS- oder Premium-SMS-Liste (Folge ≠ Katalog, an/aus, Roh/Einfach) in DE oder EN / When das Briefing über den echten Weg bis zum Transport-Ausgang erzeugt wird / Then entsprechen Auswahl, Folge und Roh/Einfach je Zeile der gespeicherten Liste (inkl. Windrichtung Roh, #3063), Nutzertexte stehen in Nutzersprache, Kürzel bleiben unübersetzt.
 - **AC-23:** Given eine SMS oder Premium-SMS über 160 Zeichen / When gekürzt wird / Then fällt die Liste von hinten weg, amtliche Warnungen (auch die eines weiteren Ortes) fallen zuletzt weg, Trip und Orte gleich.
 - **AC-24:** Given ein Orts-Vergleich mit mehr als 7 Telegram-Zeilen / When das Telegram-Briefing erzeugt wird / Then erscheinen alle Zeilen (ab Platz 8 in einer zweiten Zeile je Ort) und der 3-Tages-Ausblick ist enthalten wie beim Trip.
-- **AC-25:** Given die Kompakt-Mail (Trip) / When `show_stage_stats`, `show_outlook` aus bzw. amtliche Warnungen vorhanden / Then fehlen Kennzahlen bzw. Ausblick, und die Warnungen stehen an erster Stelle.
+- **AC-25:** Given die Kompakt-Mail (Trip) / When `show_stage_stats` aus bzw. amtliche Warnungen vorhanden / Then fehlen die Kennzahlen, und die Warnungen stehen an erster Stelle; der Ausblick steht unabhängig von `show_outlook` immer drin (PO-Entscheidung #722, der Editor sperrt den Schalter bei Kompakt; korrigiert Runde 8).
 - **AC-26:** Given eine gespeicherte Konfiguration (nie eingestellt, Altbestand, Altformat, Mischzustand Warnungen, halbes Tagesfenster, `null`-Zusatzblöcke, Trend nie eingestellt) / When die Einstellungsseite sie lädt und eine unbeteiligte Änderung speichert / Then zeigt sie genau, was die Ausgabe tut, und die Ausgabe ändert sich durch das Speichern nicht.
 - **AC-27:** Given die Validatoren mit `--konfig` / When eine Mail eine Ausblick-Zeile, den Ausblick eines Orts, eine Stundenspalte ab der zweiten Zeile, die richtige Roh/Einfach-Form der Vergleichstabelle oder den Aus-Zustand eines Zusatzblocks verfehlt / Then scheitern sie; ein vom Nutzer gesetztes Tagesfenster lehnen sie nicht ab.
 - **AC-28:** Given amtliche Warnungen sind aus bzw. der Warndienst ist nicht erreichbar / When die Orts-Mail erzeugt wird / Then zeigt das HTML keine leere Warnzeile, und der Klartext trägt denselben Hinweis „nicht abrufbar“ wie das HTML.
@@ -341,5 +341,6 @@ Die siebte Prüfrunde hat jede im Hub änderbare Einstellung gegen jede Ausgabe 
 
 ## Changelog
 
+- 2026-11-17: Runde 8: AC-25 an PO-Entscheidung #722 angeglichen (Kompakt-Ausblick immer an), Befunde F1/F3/T1–T4 der Abnahme Runde 7 behoben
 - 2026-11-16: Nachtrag Runde 7 (AC-22 bis AC-28, PO-Entscheidungen SMS-Kürzung, Telegram-Schnittlinie, Warnungen-Altbestand)
 - 2026-11-15: Initial spec created (Phase 1 von #3047, Prüfkatalog zuerst)
