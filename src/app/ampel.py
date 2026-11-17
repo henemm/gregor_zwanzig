@@ -158,16 +158,18 @@ def template_id_for(subscription: Any) -> str:
 
 
 # Issue #2796 S4a (ADR-0108 P3): Vorlage -> Bewertungsprofil des Orts-Vergleichs
-# (``calculate_score``, Top-Ort). Unbekannte/sonstige Vorlagen -> ALLGEMEIN.
+# (``calculate_score``, Top-Ort). Allgemeine/sonstige/unbekannte Vorlagen geben
+# KEINE Vorgabe (Nachtrag v1.1, F1): dann bewertet die Engine nach dem eigenen
+# Aktivitaetsprofil des Orts (``profile or loc.activity_profile``), sonst Allgemein.
 _VORLAGE_ZU_PROFIL = {
-    "wintersport": "wintersport", "skitouren": "wintersport",
-    "wandern": "wandern", "alpen-trekking": "summer_trekking",
+    "wintersport": ActivityProfile.WINTERSPORT, "skitouren": ActivityProfile.WINTERSPORT,
+    "wandern": ActivityProfile.WANDERN, "alpen-trekking": ActivityProfile.SUMMER_TREKKING,
 }
 
 
-def profile_for_template(template_id: Optional[str]) -> ActivityProfile:
-    """Bewertungsprofil einer Vorlage (Spec #2796 §2)."""
-    return ActivityProfile(_VORLAGE_ZU_PROFIL.get(template_id or "", "allgemein"))
+def profile_for_template(template_id: Optional[str]) -> Optional[ActivityProfile]:
+    """Bewertungsvorgabe einer Vorlage (Spec #2796 §2), ``None`` = keine Vorgabe."""
+    return _VORLAGE_ZU_PROFIL.get(template_id or "")
 
 
 def _verschmelzen(tid: str, abo: Optional[Mapping]) -> dict:

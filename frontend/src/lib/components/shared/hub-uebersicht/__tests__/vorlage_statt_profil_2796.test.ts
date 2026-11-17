@@ -78,3 +78,29 @@ describe('#2796 AC-7: Listenkarte „{n} Orte · {Vorlagenname}"', () => {
 		});
 	}
 });
+
+// Adversary F4: `aboVorlagenName` mit und ohne geladene Vorlagenliste. `/api/templates` liefert nur
+// Systemvorlagen (Python `get_templates` über AMPEL_TEMPLATES), das Abo speichert nur deren IDs —
+// die Liste ist für den NAMEN daher wirkungsgleich mit der eingebauten Systemmenge. Gewacht wird,
+// dass beide Wege für jede Systemvorlage denselben Namen liefern und eine unbekannte ID wie die
+// Mail (`_bekannte_vorlage`) auf „Allgemein" fällt — nie die rohe ID, nie ein Katalogschlüssel.
+describe('#2796 F4: Vorlagenname mit/ohne Vorlagenliste, unbekannte ID wie die Mail', async () => {
+	const { aboVorlagenName } = await lade(join(LIB, 'components', 'shared', 'wetter-tab', 'vorlageName.ts'));
+	test('jede Systemvorlage: mit Liste == ohne Liste, in DE und EN', () => {
+		const ids = Object.keys(VORLAGEN);
+		assert.ok(ids.length >= 7, `Messaufbau: Systemvorlagen ${ids.join(', ')}`);
+		for (const lang of ['de', 'en'] as const) {
+			for (const id of ids) {
+				const p = preset('wandern', id);
+				assert.equal(aboVorlagenName(lang, p, VORLAGEN), aboVorlagenName(lang, p, null), `${lang}/${id}`);
+				assert.notEqual(aboVorlagenName(lang, p, VORLAGEN), id, `${lang}/${id}: rohe ID statt Katalogname`);
+			}
+		}
+	});
+	test('unbekannte Vorlagen-ID ⇒ „Allgemein"/„General" (wie die Mail), mit und ohne Liste', () => {
+		for (const v of [VORLAGEN, null]) {
+			assert.equal(aboVorlagenName('de', preset('wandern', 'eigene-xyz'), v), 'Allgemein');
+			assert.equal(aboVorlagenName('en', preset('wandern', 'eigene-xyz'), v), 'General');
+		}
+	});
+});

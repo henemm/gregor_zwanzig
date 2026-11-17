@@ -416,3 +416,31 @@ describe('#2837 S1b — Profil in der Zeile unter dem Titel bei beiden Arten (AC
 		assert.ok(!v || !text(v).startsWith(`· ${C.helfer.presetProfileLabel('wintersport')}`), `Vergleich ohne Profil: Zusatz „${v && text(v)}"`);
 	});
 });
+
+// #2796 S4a (ADR-0108 P3), Adversary F2: Wächter auf Seitenebene (echtes SSR beider Hub-Seiten,
+// nicht nur der Baustein): der Orts-Vergleich übergibt dem Kopf KEINE Profil-Auswahl mehr —
+// keine Kachel, kein Knopf, keine Auswahl, kein Profilname hinter der Region, auch mit
+// gespeichertem `profil` —, der Trip-Kopf behält Kacheln, Knopf und Auswahl (AC-3).
+describe('#2796 S4a — Profil-Auswahl im Kopf: Orts-Vergleich ohne, Trip mit', () => {
+	const profilIds = (w: Knoten, praefix: string): string[] =>
+		alle(w, (n) => (n.attrs['data-testid'] ?? '').startsWith(`${praefix}-profil`)).map((n) => n.attrs['data-testid']);
+	for (const lang of ['de', 'en'] as const) {
+		test(`${lang}: Vergleich mit profil „wandern" — kein compare-hub-profil-* im Seitenkopf`, () => {
+			locale.set(lang);
+			const w = seite('vergleich', C.vergleichAktiv({ profil: 'wandern' }));
+			assert.ok(mitTestid(w, 'compare-hub-region-edit-toggle').length >= 1, 'Messaufbau: Vergleichskopf gerendert');
+			assert.deepEqual(profilIds(w, 'compare-hub'), []);
+			const stift = einzig(w, 'compare-hub-region-edit-toggle');
+			const zeile = stift.eltern!;
+			const hinter = zeile.kinder[zeile.kinder.indexOf(stift) + 1];
+			assert.ok(!hinter || !text(hinter).includes(trFor(lang, 'bausteine.profil.wandern' as never)), `Profilname hinter dem Stift: ${hinter && text(hinter)}`);
+		});
+	}
+	test('Trip-Kopf behält Aktivitäts-Kacheln, Knopf und Auswahl', () => {
+		locale.set('de');
+		const ids = profilIds(seite('route'), 'trip');
+		for (const id of ['trip-profil-knopf', 'trip-profil-auswahl', 'trip-profil-option-trekking']) {
+			assert.ok(ids.includes(id), `${id} fehlt im Trip-Kopf: ${ids.join(', ')}`);
+		}
+	});
+});
