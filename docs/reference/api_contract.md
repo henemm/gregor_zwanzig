@@ -401,7 +401,7 @@ Ein **Normalized Forecast Timeseries**-Objekt (siehe unten), bestehend aus `meta
 | gust_kmh           | float           | Böenspitze [km/h]                              |
 | precip_rate_mmph   | float           | Niederschlagsrate [mm/h] zum Zeitpunkt         |
 | precip_1h_mm       | float           | 1-h-Akkumulation [mm]                          |
-| cloud_total_pct    | integer (0–100) | Gesamtbewölkung [%]                            |
+| cloud_total_pct    | integer (0–100) | **Wirksame** Bewölkung [%] (ADR-0122, #3106): hohe Wolken zählen halb, ab 2500 m Standorthöhe ohne tiefe Wolken; ohne Schichten = Modellwert |
 | symbol             | enum            | Normalisiertes Symbol (siehe SYMBOL_MAPPING)   |
 | thunder_level      | enum            | Gewitter-**Stärke** {NONE, LOW, MED, HIGH} — seit #1474 vierstufig |
 | cape_jkg           | float           | CAPE [J/kg]                                    |
@@ -431,6 +431,7 @@ Ein **Normalized Forecast Timeseries**-Objekt (siehe unten), bestehend aus `meta
 | wind_direction_deg | integer (0–359) | Windrichtung [Grad], 0=N/90=O. Python nimmt `wind_dir_deg=` als Alias an und kanonisiert (`src/app/models.py`, #435) — auf der Leitung heißt das Feld `wind_direction_deg` |
 | cloud_mid_pct      | integer (0–100) | Mittelhohe Wolken (3–8 km) [%]                 |
 | cloud_high_pct     | integer (0–100) | Hohe Wolken (ab 8 km) [%]                      |
+| cloud_total_model_pct | integer (0–100) | Gesamtbewölkung des Modells [%], unverändert (nur Transparenz/Prüfung, ADR-0122). **Nur Python-DTO**, nicht im Go-Spiegel |
 | uv_index           | float           | UV-Index                                       |
 | wmo_code           | integer (0–99)  | WMO-Wettercode                                 |
 | is_day             | integer (0/1)   | 1 = Tag, 0 = Nacht (Open-Meteo)                |

@@ -291,42 +291,7 @@ class WeatherMetricsService:
     # ============================================================================
 
     # Legacy constants for compare.py compatibility
-    HIGH_ELEVATION_THRESHOLD_M = 2500
     SUNNY_HOUR_CLOUD_THRESHOLD_PCT = 30
-
-    @staticmethod
-    def calculate_effective_cloud(
-        elevation_m: Optional[int],
-        cloud_total_pct: Optional[int],
-        cloud_mid_pct: Optional[int] = None,
-        cloud_high_pct: Optional[int] = None,
-    ) -> Optional[int]:
-        """
-        Calculate effective cloud cover based on elevation.
-
-        High elevations (>= 2500m) ignore low clouds because they are
-        below the observation point.
-
-        Legacy static method for compare.py compatibility.
-
-        SPEC: docs/specs/compare_email.md Zeile 134-150
-
-        Args:
-            elevation_m: Location elevation in meters
-            cloud_total_pct: Total cloud cover (0-100%)
-            cloud_mid_pct: Mid-level clouds 3-8km (0-100%)
-            cloud_high_pct: High-level clouds >8km (0-100%)
-
-        Returns:
-            Effective cloud cover in % (0-100) or None if no data
-        """
-        if (elevation_m is not None
-            and elevation_m >= WeatherMetricsService.HIGH_ELEVATION_THRESHOLD_M
-            and cloud_mid_pct is not None
-            and cloud_high_pct is not None):
-            # High elevation: ignore low clouds, use only mid + high
-            return (cloud_mid_pct + cloud_high_pct) // 2
-        return cloud_total_pct
 
     @staticmethod
     def dni_to_sunny_fraction(
@@ -351,7 +316,6 @@ class WeatherMetricsService:
     @staticmethod
     def calculate_sunny_hours(
         data: List["ForecastDataPoint"],
-        elevation_m: Optional[int] = None,
         settings: Optional["Settings"] = None,
     ) -> float:
         """
@@ -363,8 +327,8 @@ class WeatherMetricsService:
         ``dni <= min`` -> +0.0 h.
 
         Fallback path (proportional cloud): only when NO data point carries DNI
-        (e.g. Geosphere). Per point ``(100 - effective_cloud) / 100`` h via
-        ``calculate_effective_cloud`` (elevation logic preserved). No binary cutoff.
+        (e.g. Geosphere). Per point ``(100 - cloud_total_pct) / 100`` h -- the
+        normalised, already effective cloud cover (ADR-0122). No binary cutoff.
 
         Legacy static method for compare.py compatibility.
 
@@ -372,7 +336,6 @@ class WeatherMetricsService:
 
         Args:
             data: List of ForecastDataPoint with weather data
-            elevation_m: Location elevation in meters
             settings: Optional Settings for DNI band; None -> defaults 60/180
 
         Returns:
@@ -399,14 +362,8 @@ class WeatherMetricsService:
                 )
             else:
                 # Proportional cloud fallback (no DNI available, e.g. Geosphere)
-                eff_cloud = WeatherMetricsService.calculate_effective_cloud(
-                    elevation_m,
-                    dp.cloud_total_pct,
-                    getattr(dp, "cloud_mid_pct", None),
-                    getattr(dp, "cloud_high_pct", None),
-                )
-                if eff_cloud is not None:
-                    total_hours += (100 - eff_cloud) / 100
+                if dp.cloud_total_pct is not None:
+                    total_hours += (100 - dp.cloud_total_pct) / 100
 
         return round(total_hours, 1)
 
@@ -415,14 +372,11 @@ class WeatherMetricsService:
         cloud_total_pct: Optional[int],
         precip_mm: Optional[float],
         temp_c: Optional[float],
-        elevation_m: Optional[int] = None,
-        cloud_mid_pct: Optional[int] = None,
-        cloud_high_pct: Optional[int] = None,
     ) -> str:
         """
         Determine weather symbol based on conditions.
 
-        Considers elevation for effective cloud cover.
+        ``cloud_total_pct`` is the normalised effective cloud cover (ADR-0122).
 
         Legacy static method for compare.py compatibility.
 
@@ -432,9 +386,6 @@ class WeatherMetricsService:
             cloud_total_pct: Total cloud cover (0-100%)
             precip_mm: Precipitation amount in mm
             temp_c: Temperature in Celsius
-            elevation_m: Location elevation in meters
-            cloud_mid_pct: Mid-level clouds (0-100%)
-            cloud_high_pct: High-level clouds (0-100%)
 
         Returns:
             Weather symbol emoji
@@ -446,17 +397,13 @@ class WeatherMetricsService:
             return "🌧️"  # Rain
 
         # Cloud-based symbol
-        eff_cloud = WeatherMetricsService.calculate_effective_cloud(
-            elevation_m, cloud_total_pct, cloud_mid_pct, cloud_high_pct
-        )
-
-        if eff_cloud is None:
+        if cloud_total_pct is None:
             return "?"
-        if eff_cloud < 20:
+        if cloud_total_pct < 20:
             return "☀️"  # Sunny
-        if eff_cloud < 50:
+        if cloud_total_pct < 50:
             return "⛅"  # Partly cloudy
-        if eff_cloud < 80:
+        if cloud_total_pct < 80:
             return "🌥️"  # Mostly cloudy
         return "☁️"  # Overcast
 

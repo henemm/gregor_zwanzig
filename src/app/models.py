@@ -139,6 +139,9 @@ class ForecastDataPoint:
     cloud_low_pct: Optional[int] = None   # 0-100%, bis 3km
     cloud_mid_pct: Optional[int] = None   # 0-100%, 3-8km
     cloud_high_pct: Optional[int] = None  # 0-100%, ab 8km
+    # Issue #3106 / ADR-0122: cloud_total_pct traegt nach der Normalisierung
+    # (app.cloud_cover) die WIRKSAME Bewoelkung; hier bleibt der Modellwert.
+    cloud_total_model_pct: Optional[int] = None
 
     # DNI-based weather emoji fields (SPEC: weather_emoji_dni.md)
     wmo_code: Optional[int] = None        # WMO weather code (0-99)

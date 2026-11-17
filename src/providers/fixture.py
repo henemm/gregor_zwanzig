@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
+from app.cloud_cover import normalisiere_bewoelkung
 from app.models import (
     ForecastDataPoint,
     ForecastMeta,
@@ -135,6 +136,8 @@ class FixtureProvider:
                     uv_index=p.get("uv_index"),
                     snow_depth_cm=p.get("snow_depth_cm"),
                     cloud_low_pct=_maybe_int(p.get("cloud_low_pct")),
+                    cloud_mid_pct=_maybe_int(p.get("cloud_mid_pct")),
+                    cloud_high_pct=_maybe_int(p.get("cloud_high_pct")),
                     pop_pct=_maybe_int(p.get("pop_pct")),
                     snowfall_limit_m=_maybe_int(p.get("snowfall_limit_m")),
                     wind_dir_deg=p.get("wind_dir_deg"),
@@ -147,4 +150,7 @@ class FixtureProvider:
             model="fixture",
             grid_res_km=0.0,
         )
-        return NormalizedTimeseries(meta=meta, data=data_points)
+        # Issue #3106 / ADR-0122: Offline-Spiegel derselben Normalisierung.
+        return normalisiere_bewoelkung(
+            NormalizedTimeseries(meta=meta, data=data_points), location.elevation_m,
+        )
