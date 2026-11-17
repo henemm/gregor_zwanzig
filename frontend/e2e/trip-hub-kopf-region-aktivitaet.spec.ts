@@ -536,63 +536,22 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 		}
 	});
 
-	test('AC-4 (Vergleich, Handy 375): Knopf mit gewaehltem Profil, keine sichtbare Kachel; Auswahl → Wandern persistent', async ({
-		page
-	}) => {
-		await page.setViewportSize(MOBILE);
-		const seeded = await seedPreset(page);
-		try {
-			await openCompareHub(page, seeded.presetId);
-			const knopf = profilKnopf(page, 'compare-hub');
-			await expect(knopf, 'AC-4: der Vergleich-Kopf zeigt auf dem Handy keinen Knopf').toBeVisible({ timeout: 10_000 });
-			await expect(knopf).toHaveCount(1);
-			await expect(knopf).toContainText('Allgemein');
-			await expect(knopf).toHaveAttribute('data-selected-value', 'allgemein');
-			const kacheln = page.locator('[data-testid^="compare-hub-profil-option-"]');
-			await expect(kacheln).toHaveCount(4);
-			for (const v of ['allgemein', 'wintersport', 'wandern', 'summer_trekking']) {
-				await expect(page.getByTestId(`compare-hub-profil-option-${v}`), `Kachel ${v} auf dem Handy sichtbar`).toBeHidden();
+	// #2796 S4a (ADR-0108 P3) — UMGEDREHT: der Orts-Vergleich hat im Kopf weder Profil-Knopf
+	// noch -Kacheln mehr (die Vorlage ersetzt das Profil); Volltest DE/EN:
+	// orte-kopf-vorlage-statt-profil-2796.spec.ts. Der Trip behält Knopf und Kacheln (oben).
+	for (const [breite, vp] of [['Handy 375', MOBILE], ['Desktop 1280', DESKTOP]] as const) {
+		test(`AC-4 (Vergleich, ${breite}): kein Profil-Knopf, keine Profil-Kacheln, keine Auswahl (#2796)`, async ({ page }) => {
+			await page.setViewportSize(vp);
+			const seeded = await seedPreset(page);
+			try {
+				await openCompareHub(page, seeded.presetId);
+				await expect(page.getByTestId('compare-hub-region-edit-toggle').filter({ visible: true }).first()).toBeVisible({ timeout: 10_000 });
+				expect(await page.locator('[data-testid^="compare-hub-profil"]').count(), 'Profil-Elemente im Orte-Kopf').toBe(0);
+			} finally {
+				await cleanupPreset(page, seeded);
 			}
-			await tippflaeche44(page, knopf, 'compare-hub-profil-knopf');
-
-			await knopf.click();
-			await expect(page.getByTestId('compare-hub-profil-auswahl')).toBeVisible({ timeout: 5_000 });
-			await expect(auswahlOptionen(page, 'compare-hub')).toHaveCount(4);
-			await page.getByTestId('compare-hub-profil-auswahl-option-wandern').click();
-			await expect(page.getByTestId('compare-hub-profil-auswahl')).toBeHidden({ timeout: 5_000 });
-			await expect(knopf).toContainText('Wandern');
-			await expect(knopf).not.toContainText('Allgemein');
-			await expect
-				.poll(
-					async () => {
-						const r = await page.request.get(`/api/compare/presets/${seeded.presetId}`);
-						return ((await r.json()) as { profil?: string }).profil;
-					},
-					{ message: 'AC-4: die Wahl ueber den Knopf wurde im Vergleich nicht gespeichert', timeout: 8_000 }
-				)
-				.toBe('wandern');
-
-			await page.reload();
-			await expect(profilKnopf(page, 'compare-hub')).toContainText('Wandern', { timeout: 15_000 });
-		} finally {
-			await cleanupPreset(page, seeded);
-		}
-	});
-
-	test('AC-4 (Vergleich, Desktop 1280): 4 Kacheln sichtbar, Knopf im Markup aber unsichtbar', async ({ page }) => {
-		await page.setViewportSize(DESKTOP);
-		const seeded = await seedPreset(page);
-		try {
-			await openCompareHub(page, seeded.presetId);
-			for (const v of ['allgemein', 'wintersport', 'wandern', 'summer_trekking']) {
-				await expect(page.getByTestId(`compare-hub-profil-option-${v}`)).toBeVisible({ timeout: 10_000 });
-			}
-			await expect(profilKnopf(page, 'compare-hub')).toHaveCount(1);
-			await expect(profilKnopf(page, 'compare-hub'), 'AC-4: am Desktop ist der Handy-Knopf sichtbar').toBeHidden();
-		} finally {
-			await cleanupPreset(page, seeded);
-		}
-	});
+		});
+	}
 
 	// ─── AC-5 ────────────────────────────────────────────────────────────────
 	test('AC-5: Aktivitaet im Kopf wechseln → Ankunftszeiten im Etappen-Reiter aendern sich ohne Neuladen/Reiterwechsel', async ({

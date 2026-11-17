@@ -15,7 +15,6 @@
 	import { deleteSubscription, sendSubscription, setArchived, SubscriptionExecError } from '$lib/components/shared/subscriptionExec.js';
 	import {
 		deriveStatusWithScheduleOverride,
-		presetProfileLabel,
 		isRuntimeExceeded,
 		compareFilterStatus
 	} from '$lib/components/compare/subscriptionHelpers.js';
@@ -34,7 +33,7 @@
 	import { api, getMitFassung } from '$lib/api';
 	import { baueSpeicherung, speichereKopfFeld } from '$lib/components/shared/tripSpeicherung';
 	import { adoptEtagBeiSeitenaufbau, adoptEtagFromPageLoad } from '$lib/etagRegistry';
-	import { ACTIVITY_PROFILE_OPTIONS, type ComparePreset } from '$lib/types';
+	import type { ComparePreset } from '$lib/types';
 	import HubKopf from '$lib/components/shared/hub-kopf/HubKopf.svelte';
 	import type { TripStatus } from '$lib/utils/tripStatus';
 	// Issue #2659 (i18n F10): Texte aus dem Katalog — Aktionen/Senden wortgleich zum Trip-Hub
@@ -190,16 +189,10 @@
 	// Issue #1250 Scheibe 3 (AC-12): Hub-Hinweis, wenn Auto-Pause wegen
 	// ueberschrittenem end_date gegriffen hat.
 	let runtimeExceeded = $derived(isRuntimeExceeded(currentPreset));
-	// Adversary-Finding F001: geguardetes Profil-Label für die mobile Kontext-
-	// Unterzeile (Muster SubscriptionCard.svelte) — leer bei unbekanntem/fehlendem profil.
-	// Issue #2659 (i18n F10): Profilnamen je Sprache (`$locale`/`$t`), Kennungen unveraendert.
-	let profileLabel = $derived((void $locale, presetProfileLabel(currentPreset.profil)));
-	const profileOptions = $derived(
-		ACTIVITY_PROFILE_OPTIONS.map((o) => ({ value: o.value, label: $t(`bausteine.profil.${o.value}` as MessageKey) }))
-	);
-
 	// Issue #2284 S1 — Speicherweg des geteilten Kopfs (SubscriptionHeader).
-	// KRITISCH (#2375/#2381): NUR das eigene Feld senden ({ name } / { profil } /
+	// #2796 S4a (ADR-0108 P3): keine Profil-Auswahl mehr im Kopf, kein Speicherweg `profil`
+	// aus dem Hub — die Vorlage (Reiter Wetter) ersetzt das Profil; `profil` bleibt gespeichert.
+	// KRITISCH (#2375/#2381): NUR das eigene Feld senden ({ name } /
 	// { display_config: { region } }), KEIN Spread von currentPreset — der Go-Handler
 	// mergt fehlende Felder als „unveraendert"; ein Spread der (hier veralteten)
 	// Seiten-Kopie schriebe Reiter-Werte anderer Tabs/desselben Tabs zurueck. Nach Erfolg
@@ -214,11 +207,13 @@
 	//   (c) jeder andere Fehler    ⇒ wirft, der Baustein zeigt die Meldung am Feld
 	const KOPF_RUMPF = {
 		name: (v: string) => ({ name: v }),
-		region: (v: string) => ({ display_config: { region: v } }),
-		profile: (v: string) => ({ profil: v })
+		region: (v: string) => ({ display_config: { region: v } })
 	};
-	const KOPF_SCHLUESSEL = { name: 'kopf-name', region: 'kopf-region', profile: 'kopf-profil' };
+	const KOPF_SCHLUESSEL = { name: 'kopf-name', region: 'kopf-region' };
+	// Die Signatur bleibt die des Kopfs (Feld-Typ inkl. 'profile'); ohne Auswahlliste ruft
+	// der Kopf 'profile' nie auf — ein solcher Aufruf ist ein Programmierfehler.
 	async function onSaveField(field: 'name' | 'region' | 'profile', value: string, schliessen: () => void): Promise<void> {
+		if (field === 'profile') throw new Error('profile is not saved from the comparison header (#2796)');
 		const pfad = `/api/compare/presets/${currentPreset.id}`;
 		const speichern = baueSpeicherung<ComparePreset>(api, pfad, KOPF_RUMPF[field](value), (updated) => {
 			// Waehrend „Nochmal speichern" NICHT uebernehmen: eine neue `preset`-Referenz baut
@@ -398,9 +393,6 @@
 		onSheetOpen={() => (actionSheetOpen = true)}
 		name={currentPreset.name}
 		region={currentPreset.display_config?.region as string | undefined}
-		profile={currentPreset.profil}
-		{profileOptions}
-		{profileLabel}
 		regionMaxLength={60}
 		testidPrefix="compare-hub"
 		titleSize={38}

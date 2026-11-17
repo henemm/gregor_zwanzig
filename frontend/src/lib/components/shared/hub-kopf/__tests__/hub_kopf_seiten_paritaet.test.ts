@@ -388,14 +388,20 @@ describe('#2837 S1b — Profil in der Zeile unter dem Titel bei beiden Arten (AC
 		const zeile = stift.eltern!;
 		return zeile.kinder[zeile.kinder.indexOf(stift) + 1];
 	};
-	test('AC-6: Trip mit Aktivität trekking zeigt „· Trekking" direkt hinter dem Region-Stift (wie der Vergleich sein Profil)', () => {
+	test('AC-6: Trip mit Aktivität trekking zeigt „· Trekking" direkt hinter dem Region-Stift', () => {
 		locale.set('de');
 		const trip = hinterStift(seite('route'), 'route');
-		const vergleich = hinterStift(seite('vergleich'), 'vergleich');
-		assert.equal(vergleich && text(vergleich), `· ${C.helfer.presetProfileLabel('wintersport')}`, 'Messaufbau: Vergleich ohne Profil-Zusatz');
 		assert.ok(trip, 'Trip: hinter dem Region-Stift steht nichts — profileLabel fehlt');
 		assert.equal(text(trip), `· ${trFor('de', 'trip.aktivitaet.trekking')}`, 'Trip: Profil-Zusatz falsch oder fehlt');
-		assert.equal(trip.tag, vergleich!.tag, 'Profil-Zusatz bei Trip und Vergleich verschieden gebaut');
+	});
+	test('#2796 S4a AC-1: Vergleich mit profil „wintersport" — kein Profilname hinter dem Region-Stift', () => {
+		locale.set('de');
+		const vergleich = hinterStift(seite('vergleich'), 'vergleich');
+		assert.equal(C.vergleichAktiv().profil, 'wintersport', 'Messaufbau: Vergleich mit gespeichertem Profil');
+		assert.ok(
+			!vergleich || !text(vergleich).includes(C.helfer.presetProfileLabel('wintersport')),
+			`Vergleich: Profilname hinter dem Stift „${vergleich && text(vergleich)}"`
+		);
 	});
 	test('AC-6/AC-11: Profil-Zusatz des Trips folgt der Nutzersprache (en)', () => {
 		locale.set('en');
@@ -408,5 +414,33 @@ describe('#2837 S1b — Profil in der Zeile unter dem Titel bei beiden Arten (AC
 		const v = hinterStift(seite('vergleich', C.vergleichAktiv({ profil: undefined })), 'vergleich');
 		// Der Vergleich hängt danach die Orte-Anzahl (meta, Whitelist) an; ein Profil darf dort nicht stehen.
 		assert.ok(!v || !text(v).startsWith(`· ${C.helfer.presetProfileLabel('wintersport')}`), `Vergleich ohne Profil: Zusatz „${v && text(v)}"`);
+	});
+});
+
+// #2796 S4a (ADR-0108 P3), Adversary F2: Wächter auf Seitenebene (echtes SSR beider Hub-Seiten,
+// nicht nur der Baustein): der Orts-Vergleich übergibt dem Kopf KEINE Profil-Auswahl mehr —
+// keine Kachel, kein Knopf, keine Auswahl, kein Profilname hinter der Region, auch mit
+// gespeichertem `profil` —, der Trip-Kopf behält Kacheln, Knopf und Auswahl (AC-3).
+describe('#2796 S4a — Profil-Auswahl im Kopf: Orts-Vergleich ohne, Trip mit', () => {
+	const profilIds = (w: Knoten, praefix: string): string[] =>
+		alle(w, (n) => (n.attrs['data-testid'] ?? '').startsWith(`${praefix}-profil`)).map((n) => n.attrs['data-testid']);
+	for (const lang of ['de', 'en'] as const) {
+		test(`${lang}: Vergleich mit profil „wandern" — kein compare-hub-profil-* im Seitenkopf`, () => {
+			locale.set(lang);
+			const w = seite('vergleich', C.vergleichAktiv({ profil: 'wandern' }));
+			assert.ok(mitTestid(w, 'compare-hub-region-edit-toggle').length >= 1, 'Messaufbau: Vergleichskopf gerendert');
+			assert.deepEqual(profilIds(w, 'compare-hub'), []);
+			const stift = einzig(w, 'compare-hub-region-edit-toggle');
+			const zeile = stift.eltern!;
+			const hinter = zeile.kinder[zeile.kinder.indexOf(stift) + 1];
+			assert.ok(!hinter || !text(hinter).includes(trFor(lang, 'bausteine.profil.wandern' as never)), `Profilname hinter dem Stift: ${hinter && text(hinter)}`);
+		});
+	}
+	test('Trip-Kopf behält Aktivitäts-Kacheln, Knopf und Auswahl', () => {
+		locale.set('de');
+		const ids = profilIds(seite('route'), 'trip');
+		for (const id of ['trip-profil-knopf', 'trip-profil-auswahl', 'trip-profil-option-trekking']) {
+			assert.ok(ids.includes(id), `${id} fehlt im Trip-Kopf: ${ids.join(', ')}`);
+		}
 	});
 });

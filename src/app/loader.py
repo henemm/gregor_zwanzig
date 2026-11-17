@@ -2217,22 +2217,5 @@ def delete_trip(trip_id: str, user_id: str) -> None:
     path.unlink()
 
 
-# =============================================================================
-# Activity Profile Parsing (bleibt — genutzt von scheduler_dispatch_service.py)
-# =============================================================================
-# Issue #1250 Scheibe 0: Compare-Subscription-CRUD (get/load/save/delete) hier
-# entfernt — Legacy-Drittstack CompareSubscription stillgelegt (#1131).
-# _parse_activity_profile bleibt: aktiver Import in scheduler_dispatch_service.py.
-
-def _parse_activity_profile(value: str | None):
-    """Parse activity_profile string to enum, returns None if missing/invalid."""
-    if not value:
-        return None
-    from app.profile import ActivityProfile
-    try:
-        return ActivityProfile(value)
-    except ValueError:
-        return None
-
 # Public alias for _trip_to_dict (Issue #664 — tests import this name)
 dump_trip_to_dict = _trip_to_dict

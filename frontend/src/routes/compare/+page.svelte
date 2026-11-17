@@ -19,7 +19,6 @@
 	import {
 		deriveStatusFromPreset,
 		presetLocationsLabel,
-		presetProfileLabel,
 		presetChannels,
 		presetTileScheduleLabel,
 		relativeLastSent,
@@ -29,6 +28,7 @@
 	import { subscriptionActions, subscriptionLifecycle } from '$lib/components/shared/subscriptionActions.js';
 	import { setPaused, deleteSubscription, sendSubscription } from '$lib/components/shared/subscriptionExec.js';
 	import { t, tr, locale, type MessageKey } from '$lib/i18n/index.js';
+	import { aboVorlagenName } from '$lib/components/shared/wetter-tab/vorlageName.js';
 
 	let { data } = $props();
 	let presets: ComparePreset[] = $state(data.presets ?? []);
@@ -82,10 +82,11 @@
 			render: (row: unknown) => presetLocationsLabel(row as ComparePreset)
 		},
 		{
-			key: 'profil',
-			header: $t('listen.spalte.profil'),
+			// #2796 S4a (ADR-0108 P3): Name der aufgeloesten Vorlage statt des Profils.
+			key: 'vorlage',
+			header: $t('listen.spalte.vorlage'),
 			width: '0.9fr',
-			render: (row: unknown) => presetProfileLabel((row as ComparePreset).profil) || '—'
+			render: (row: unknown) => aboVorlagenName($locale, row as ComparePreset)
 		},
 		{
 			key: 'kanaele',

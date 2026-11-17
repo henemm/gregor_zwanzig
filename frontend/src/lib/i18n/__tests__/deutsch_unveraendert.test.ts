@@ -583,6 +583,8 @@ const NEU_IN_FOLGEPAKETEN = [
 	// #3006: Erklaersatz des geteilten Reiters Uebersicht (Mockup Fassung 3, `.sectionh`; Titel = aktionen.reiter.uebersicht); die Koepfe
 	// Etappen (trip.hub.kopf.*) und Orte (vergleich.hub.kopf.*) zaehlen ueber F9_ANKER bzw. F10_ANKER.
 	'bausteine.hub_uebersicht.kopf_erklaer',
+	// #2796 S4a (ADR-0108 P3): Spaltenkopf der Orte-Liste nennt die Vorlage statt des Profils.
+	'listen.spalte.vorlage',
 	// #2795 S3b Teilschritt 1b: neuer Bereich zustellung.json (Reiter Zustellung) — vollstaendig neu,
 	// kein Bestandsschluessel; die Pflichttexte prueft s3b2795_zustellung_katalog.test.ts.
 	...Object.keys(ZUSTELLUNG_DE)

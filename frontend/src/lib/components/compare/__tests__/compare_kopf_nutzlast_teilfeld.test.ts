@@ -6,7 +6,7 @@
 // gespeicherte Reiter-Werte zurück (#2381).
 //
 // Spec: docs/specs/bugfix/compare_konfliktschutz_teilfelder.md
-//   Test 3 / AC-9 — Body exakt { name } / { display_config: { region } } / { profil }
+//   Test 3 / AC-9 — Body exakt { name } / { display_config: { region } } (#2796: kein { profil } mehr)
 //   AC-5         — ein zuvor gespeicherter Reiter-Wert bleibt nach dem Kopf-Edit
 //
 // Wo die Zusicherung wirkt: `onSaveField` (#2284 S1, vormals saveName/saveRegion/saveProfil) steht im
@@ -92,15 +92,19 @@ const KOPF_EDITS: Array<{ was: string; ausfuehren: (u: Knoten) => Promise<void>;
 			await (u.onSaveField as SaveField)('region', 'Wallis', () => {});
 		},
 		soll: { display_config: { region: 'Wallis' } }
-	},
-	{
-		was: "onSaveField('profile')",
-		ausfuehren: async (u) => {
-			await (u.onSaveField as SaveField)('profile', 'wintersport', () => {});
-		},
-		soll: { profil: 'wintersport' }
 	}
+	// #2796 S4a (ADR-0108 P3): kein Speicherweg `profil` mehr aus dem Kopf — siehe unten.
 ];
+
+describe('#2796 S4a: der Kopf des Ortsvergleichs schreibt `profil` nicht mehr', () => {
+	test("onSaveField('profile') scheitert laut, sendet keinen PUT, Server unveraendert", async () => {
+		const u = await seite();
+		const vorher = JSON.stringify(server.stand(ID));
+		await assert.rejects((u.onSaveField as SaveField)('profile', 'wintersport', () => {}));
+		assert.equal(server.putRuempfe().length, 0, 'kein PUT fuer profil');
+		assert.equal(JSON.stringify(server.stand(ID)), vorher);
+	});
+});
 
 describe('Test 3 / AC-9: Kopf-Edits senden nur ihr eigenes Feld', () => {
 	for (const k of KOPF_EDITS) {

@@ -116,7 +116,7 @@ class ComparePreviewService:
         laufen lassen (gleichzeitig, #1765 B1). Alle Kanal-Renderer eines
         Aufrufs sitzen auf demselben ``ComparisonResult`` (AC-7).
         """
-        from app.loader import _parse_activity_profile
+        from app.ampel import profile_for_template, template_id_for
         from services.comparison_engine import COMPARE_FORECAST_HOURS
         from services.comparison_parallel import run_comparison_parallel
         from services.report_config_resolver import (
@@ -128,7 +128,8 @@ class ComparePreviewService:
         resolved_date = _resolve_target_date(
             target_date, locations, datetime.now(timezone.utc),
         )
-        profile = _parse_activity_profile(str(preset.get("profil", "")).lower())
+        # Issue #2796 S4a: Bewertungsprofil aus der Vorlage (wie der Versand).
+        profile = profile_for_template(template_id_for(preset))
 
         # Issue #1361/#1372 S1b (AC-2): die Vorschau MUSS mit demselben
         # Tagesfenster rechnen wie der echte Versand

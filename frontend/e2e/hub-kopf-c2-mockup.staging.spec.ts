@@ -192,7 +192,9 @@ for (const kind of HUB_KINDS) {
 		await expect(sichtbar(page, HUB_KOPF_SEL.breadcrumb)).toContainText(neu);
 	});
 
-	test(`c2 ${kind}: AC-9 Profil bleibt nach Name-Speichern und Neuladen unverändert (gespeichert + im Kopf gewählt)`, async ({ page }) => {
+	// #2796 S4a (ADR-0108 P3): Profil-Kacheln nur noch im Trip-Kopf; der Orts-Vergleich prüft
+	// in orte-kopf-vorlage-statt-profil-2796.spec.ts, dass dort keine mehr stehen.
+	if (kind === 'route') test(`c2 ${kind}: AC-9 Profil bleibt nach Name-Speichern und Neuladen unverändert (gespeichert + im Kopf gewählt)`, async ({ page }) => {
 		await page.setViewportSize(VIEWPORTS.desktop);
 		await sprache(page, 'de');
 		const id = await seed(page, kind);
@@ -210,9 +212,10 @@ for (const kind of HUB_KINDS) {
 		expect(nachher, 'AC-9: gespeichertes Profil unverändert').toBe(vorher);
 	});
 
-	// AC-15: Profil-Zeile/-Chip bleibt im Ruhezustand sichtbar (Entfernung gehört zu #2796).
+	// AC-15: Profil-Zeile/-Chip bleibt im Ruhezustand sichtbar — seit #2796 S4a nur noch beim Trip
+	// (beim Orts-Vergleich entfallen, orte-kopf-vorlage-statt-profil-2796.spec.ts).
 	for (const [vp, groesse] of Object.entries(VIEWPORTS) as Array<[keyof typeof VIEWPORTS, { width: number; height: number }]>) {
-		test(`c2 ${kind} ${vp}: AC-15 Profil im Ruhezustand sichtbar`, async ({ page }) => {
+		if (kind === 'route') test(`c2 ${kind} ${vp}: AC-15 Profil im Ruhezustand sichtbar`, async ({ page }) => {
 			await page.setViewportSize(groesse);
 			await sprache(page, 'de');
 			const id = await seed(page, kind);

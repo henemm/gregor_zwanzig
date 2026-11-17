@@ -124,7 +124,7 @@ def test_ac1_kopf_datum_und_fuss_englisch():
     assert fmt_date_numeric(d, "en") == "29 Oct 2026"
     assert t("vergleich.kopf.datum", "en", datum=f"{fmt_weekday(d, 'en', kurz=False)}, "
              f"{fmt_date_numeric(d, 'en')}") in text.splitlines()
-    zeile = t("vergleich.fuss.abo_zeile", "en", n=4, profil=t("mail.profil.wandern", "en"))
+    zeile = t("vergleich.fuss.abo_zeile", "en", n=4, vorlage=t("mail.vorlage.allgemein", "en"))
     assert zeile in sichtbar(html)
     assert any(z.startswith(fmt_date_numeric(d, "en")) for z in sichtbar(html)), "Naechster Versand"
 
