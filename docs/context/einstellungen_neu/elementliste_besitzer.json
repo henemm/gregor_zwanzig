@@ -5474,6 +5474,3248 @@
 			"text": "−",
 			"grund": "Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Knopftext „−“ der Metrik-Zeile; im Mockup derselbe Knopf (mockup-hub-fassung3.html Z. 433), die Elementliste führt nur seine Beschriftung für Screenreader; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts",
 			"verweis": "#2913"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.fehler.-.warnung.be872fe303",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.fehler.-.warnung.f7465bf359",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.laedt.-.abschnittskopf.85ca311eb0",
+			"grund": "Echter Befund: im Zustand „lädt“ zeigt der Orte-Reiter Wetter den Seitenlader statt Wetter-Kopf und „Lade Metriken …“ (gleiche Ursache wie Reiter Zustellung). Ursache: Abschnitt-Haken data-abschnitt=\"abschnittskopf\" fehlt",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.laedt.-.abschnittskopf.cf459ff99f",
+			"grund": "Echter Befund: im Zustand „lädt“ zeigt der Orte-Reiter Wetter den Seitenlader statt Wetter-Kopf und „Lade Metriken …“ (gleiche Ursache wie Reiter Zustellung). Ursache: Text nicht sichtbar",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.laedt.-.laden.6bed8da96c",
+			"grund": "Echter Befund: im Zustand „lädt“ zeigt der Orte-Reiter Wetter den Seitenlader statt Wetter-Kopf und „Lade Metriken …“ (gleiche Ursache wie Reiter Zustellung). Ursache: Text nicht sichtbar",
+			"verweis": "#3022"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-cloud_total.4a7c5a72c0",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-cloud_total.71ce88b60a",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-cloud_total.78798cb6cd",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-cloud_total.82cfd6ab13",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-cloud_total.83da138637",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-cloud_total.aef90891ac",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-cloud_total.e9e01ccaa2",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-gust.0dc303f500",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-gust.207d01cb71",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-gust.268a926a83",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-gust.4dd2562f5a",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-gust.72cfcfb347",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-gust.88dfc490a4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-gust.abb98e9e68",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-precipitation.2ccadbd2b0",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-precipitation.9172cf4dd6",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-precipitation.92748ad513",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-precipitation.9c5c1f8e12",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-precipitation.b389816c67",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-precipitation.d9df15dec3",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-precipitation.f352695023",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-rain_probability.248d38a8b5",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-rain_probability.891bc7e219",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-rain_probability.9fa96ccb34",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-rain_probability.a5a9f8a085",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-rain_probability.bf03f53864",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-rain_probability.bfab1e067e",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-rain_probability.c1ed6ab99d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-sunshine.097b2db687",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-sunshine.1a5ba640d0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-sunshine.1cd3e56e4e",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-sunshine.2a4ba51362",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-sunshine.9bf6e52157",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-sunshine.e5ea1bcdb4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-sunshine.efd26bfc04",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-temperature.022d440542",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-temperature.264e103ea0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-temperature.69a7c64336",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-temperature.86be83be13",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-temperature.8d115b1bea",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-temperature.99d1cf67ac",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-temperature.b1be753b84",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-temperature.b70276eb55",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-temperature.dbcb219d1a",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-temperature.e5c5b68ff8",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-temperature.f7698ff818",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-temperature.faf1d7e247",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-thunder.03c1bbc703",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-thunder.a8e8df0698",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-wind.11e1c5c579",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-wind.173de5b07e",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-wind.3a6fb9f221",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-wind.84a3ba935e",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-wind.ad39cda27f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-wind.c0c1a8700b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-wind.c4f404a58f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-wind.cfd3d219ff",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-wind.d8c0abf86b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-wind.e13a42c7b0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.grenzen-wind.e3b0a93a9b",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.0e1025a5a8",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.289c2a0748",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.42abd3511d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.54127b1601",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.60a9ab706e",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.85799db8a4",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.89047acf80",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.8db33332d2",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.9a9818d548",
+			"grund": "Mockup-Beispieldaten: eigene Vorlage „Mallorca Frühling“ des Mockup-Kontos fehlt im Staging-Prüfkonto. Ursache: Text nicht sichtbar",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.b57f75837e",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.c0c3c1b99b",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.c828fa37ef",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.e583f21154",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-auswahl.fdd0abda68",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-bestaetigung.5c4166f302",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-bestaetigung.8e8354bbdb",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-bestaetigung.dc3fc81e5e",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-speichern.4698ffbdc9",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-speichern.539bcb744b",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-speichern.7e9d0b3def",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.luecken.-.vorlage-speichern.ce497cd409",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Reihenfolge im Abschnitt",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-cloud_total.18043498ee",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-cloud_total.3fda1d80e1",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-cloud_total.a3d1725cb2",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-cloud_total.b9dd803f2f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-cloud_total.cca3b7e47e",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-cloud_total.e255a215dd",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-cloud_total.eed63e68f9",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-gust.28c2989831",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-gust.2ab61dce87",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-gust.59795d2897",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-gust.7c5122477c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-gust.bd762ea8a7",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-gust.f596889d87",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-gust.fedf2b056b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-precipitation.0591bc3691",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-precipitation.26c5fc6f62",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-precipitation.a244f76dcd",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-precipitation.ab27bee5ff",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-precipitation.ae29ea6f5c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-precipitation.d63daa4bce",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-precipitation.db5e96485e",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-rain_probability.4fb90f9b81",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-rain_probability.767b5d2c02",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-rain_probability.88f5785e17",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-rain_probability.94014a0074",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-rain_probability.c1a99ba8f4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-rain_probability.de7a568c0d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-rain_probability.f44fa81064",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-sunshine.09f613f074",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-sunshine.27be2a3e6f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-sunshine.428d9ce340",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-sunshine.4536efc8c5",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-sunshine.490447dcec",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-sunshine.8d8195144d",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-sunshine.dba5f92419",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-temperature.0db8d42970",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-temperature.0eaf1465d8",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-temperature.21d65fa0ba",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-temperature.401cc1b8ad",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-temperature.41c1fae3cd",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-temperature.4879524a43",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-temperature.8437b687d4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-temperature.b08d0d3251",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-temperature.b94a539dce",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-temperature.c7cbfb4bb0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-temperature.e64e1c2bf9",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-temperature.eee0b30fab",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-thunder.4c3ad13864",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-thunder.c4331193e7",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-wind.02e4ebbb6c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-wind.06ec90df6b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-wind.1ef00cbf2a",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-wind.2390db8162",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-wind.433a6b4f2c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-wind.6e4773bbad",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-wind.740f1d75cf",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-wind.8b8d01b7fe",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-wind.8bef112e3b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-wind.8f41de4fb9",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.grenzen-wind.acb9ffec20",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.02fa9a88a9",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.05e0b5d592",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.05e3a37612",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.2d45b14e28",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.73a94296e4",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.7a418c5c87",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.7a87a1072c",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.827b20495b",
+			"grund": "Mockup-Beispieldaten: eigene Vorlage „Mallorca Frühling“ des Mockup-Kontos fehlt im Staging-Prüfkonto. Ursache: Text nicht sichtbar",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.8bb0fbb34c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.9098441f9b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.b973176a52",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.e965e7f4dc",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.ecbd79ec81",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-auswahl.f4a14bdb8d",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-bestaetigung.172f41be1b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-bestaetigung.24ed01f0a6",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-bestaetigung.9eff2ce835",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-speichern.5a99386342",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-speichern.7bf753d847",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-speichern.d2f4b2ae33",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Reihenfolge im Abschnitt",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "orte.wetter.normal.-.vorlage-speichern.e9269ad043",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.fehler.-.warnung.179b27aa33",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.fehler.-.warnung.abef561e26",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-cloud_low.04fd16ce02",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-cloud_low.1a05988af4",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-cloud_low.3cc5ba1ce0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-cloud_low.57236abdf7",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-cloud_low.a30d3b6f3e",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-cloud_low.cae8788077",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-cloud_low.f595d797ce",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-freezing_level.106f817e21",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-freezing_level.163e7601d4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-freezing_level.2995531dba",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-freezing_level.33fc60b588",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-freezing_level.36aac20b61",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-freezing_level.5ba06a44f6",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-freezing_level.5d1db38e85",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-freezing_level.a291084161",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-freezing_level.b36dba8294",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-freezing_level.b5f241a64d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-freezing_level.d6635aac0a",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-freezing_level.f4070295e6",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-gust.382c1f5848",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-gust.7f1644dc4b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-gust.9928eb6366",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-gust.d3bceaf440",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-gust.dd5c0ab339",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-gust.e4534320ab",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-gust.f7d0c92205",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-precipitation.2bcfc2b13a",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-precipitation.8a81d8d70d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-precipitation.8fa48d9cc8",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-precipitation.b8aa2bc891",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-precipitation.f3ede97eef",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-precipitation.f4cad41754",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-precipitation.ff039487aa",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-rain_probability.2c5522e33f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-rain_probability.45f85914c1",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-rain_probability.8ce844f194",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-rain_probability.afe386e1e1",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-rain_probability.bf371af439",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-rain_probability.d9f21456d4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-rain_probability.fb39e053d4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.1828034a7c",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.22052359ba",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.2a74b70260",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.50ad263095",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.78e4802877",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.99c610d59f",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.9e4e4be5c5",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.a0279e70ab",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.a8b0109a15",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.b6056277f7",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.cc580d7a27",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.d69856a6b7",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature.51678af89b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature.532c865d55",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature.58fe34eff3",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature.647cdea711",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature.649b31b257",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature.68101ff364",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature.7a63a3ab6b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature.98d1a95b14",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature.bc570780cb",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature.cd79b22b34",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature.ee68252e5a",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature.f3fbcd8a07",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature_night.2943379a52",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature_night.31a7f407c4",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature_night.39d96526a2",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature_night.4c5de3e083",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature_night.586d040b15",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature_night.90c901891c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature_night.961a9ae5c8",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature_night.aeba2e4058",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature_night.bd3157c29d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature_night.ce6e1fc1d8",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature_night.e0da51ba3f",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-temperature_night.fa6cdf7956",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-thunder.0f0ce6fdbd",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-thunder.66a1113e89",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-uv_index.1d8ea8756b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-uv_index.5522873caf",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-uv_index.8bcb03bcf9",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-uv_index.ab28d7c8ea",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-uv_index.b12b9fcbe3",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-uv_index.b641177766",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-uv_index.d63244d6e9",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-visibility.09313d1126",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-visibility.15a4982350",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-visibility.17a27de6fd",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-visibility.1a59727bd0",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-visibility.4c43a5c0de",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-visibility.597fef0bdc",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-visibility.db8cf216db",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind.242dba652a",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind.2e1b6fdf27",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind.4f9a172fbe",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind.6498f67edc",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind.6678b98840",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind.76d2384a8d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind.77ebf05ed4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind.9a1bfecb3a",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind.bbaf36cf9f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind.bbeeadc8fc",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind.bf20daad0e",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind_chill.14b729df90",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind_chill.25cb1466ca",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind_chill.26fe27cb83",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind_chill.35aa420cae",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind_chill.4bdbb96a7e",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind_chill.51e9961ee0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind_chill.8885c3b4e2",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind_chill.bc1c5b0d3a",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind_chill.be436e5e73",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind_chill.c5681d7ed6",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.grenzen-wind_chill.f2f3a81099",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.0a0186009f",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.0f1ef50ff0",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.1b1dfc2075",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.3ce3f4db83",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.409e0a1d41",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.5121793c2e",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.5676f6a504",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.5d4950244c",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.6ee3bf7e90",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.72bcb169cc",
+			"grund": "Mockup-Beispieldaten: eigene Vorlage „Mallorca Frühling“ des Mockup-Kontos fehlt im Staging-Prüfkonto. Ursache: Text nicht sichtbar",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.8f670012a9",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.a880464e5f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.b0edf83b7a",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-auswahl.f761e9c5f1",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-bestaetigung.17ae730d83",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-bestaetigung.da46974681",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-bestaetigung.f1bfa64f3c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-speichern.0e26835627",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-speichern.99eb58e1be",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-speichern.bf72c3eefa",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Reihenfolge im Abschnitt",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.luecken.-.vorlage-speichern.dc9007cd4a",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-cloud_low.057d9d2ad4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-cloud_low.638eca5345",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-cloud_low.68030ba4d9",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-cloud_low.6b51d53fbd",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-cloud_low.a83c614053",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-cloud_low.af83b3bc95",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-cloud_low.e00056addb",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-freezing_level.2008240090",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-freezing_level.34a8a8d9ec",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-freezing_level.3c161400c0",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-freezing_level.47d231d91c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-freezing_level.4a072dced9",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-freezing_level.62e87516a1",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-freezing_level.6b34c0f604",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-freezing_level.9bd8e94833",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-freezing_level.a228ac59aa",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-freezing_level.a5777aa55b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-freezing_level.c48316b1b7",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-freezing_level.cb4b23a864",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-gust.1a9aa3c7fa",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-gust.23f49d8e18",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-gust.28fa2a2be4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-gust.558c53879d",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-gust.747a00ac34",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-gust.77696c7774",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-gust.e5178cf331",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-precipitation.2324a035b9",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-precipitation.4752d70d9c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-precipitation.54425abe52",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-precipitation.7a60fbf310",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-precipitation.7b4f9d0330",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-precipitation.89676ad435",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-precipitation.95aea47dbf",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-rain_probability.1793ff8413",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-rain_probability.5b66695b58",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-rain_probability.70e0e85557",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-rain_probability.789294a276",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-rain_probability.c1c32b554d",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-rain_probability.fb7cdf9914",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-rain_probability.fcc87ba724",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.1b3b6c9158",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.1edbd900aa",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.271c0ad5a7",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.41c0d1b7bf",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.6102c04a0e",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.90c8b9323c",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.9b506bad00",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.cbba9fa931",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.d8bd83fc23",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.e30153eef5",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.fa6f3f031b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.fb3662c1f7",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature.03cdb369a4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature.091e482cc6",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature.0a233c4c8f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature.10787589df",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature.7186601a32",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature.82c614f604",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature.8dea6e05cc",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature.988aef2a41",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature.b226bc419d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature.e24da0eaae",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature.e38df53357",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature.f284e7983f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature_night.1c9bbb021f",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature_night.2ca70ff21c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature_night.4b1b9556fd",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature_night.546129e871",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature_night.62e7721321",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature_night.6e3c8ad081",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature_night.7d72bf816c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature_night.8df7f503e0",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature_night.be9ef8696e",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature_night.dd05169329",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature_night.e94fa2c972",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-temperature_night.ebaa524787",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-thunder.06dea6c028",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-thunder.62283074ac",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-uv_index.3c86670db5",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-uv_index.49b50f67a4",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-uv_index.574fdc1933",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-uv_index.7cd068ca8f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-uv_index.e041cb4e9f",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-uv_index.e8cb0b84bb",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-uv_index.eb11f2a878",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-visibility.0925e896f2",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-visibility.25343e150d",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-visibility.37665250d2",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-visibility.b9b43795ef",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-visibility.cf8b6f719b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-visibility.ed8842f12c",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-visibility.f23bd9b200",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind.129667b5d4",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind.16d2cf019b",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind.28c189998e",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind.34bfa419ee",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind.60329d04b3",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind.7cdbf7eb97",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind.ca182edfae",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind.d0ec881ee2",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind.f1b3bc8fa0",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind.f5911e5cb7",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind.fd6e1cae4b",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind_chill.03d3e171b1",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind_chill.1b2b078aaa",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind_chill.3cb4642fd2",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind_chill.55dd377fb7",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind_chill.5a07368f78",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind_chill.71cc03e720",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind_chill.a2eea193cf",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind_chill.a9d9a52e98",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind_chill.db1cd31ed1",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind_chill.ecb8575dba",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.grenzen-wind_chill.ecd8f0b01b",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.25d2b55c21",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.27ad1894a1",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.57b9c0308e",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.5b7b600176",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.606434af83",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.670f5535b0",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.b559ad3522",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.bf12740658",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.cfde1a2564",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.ea608a1196",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.eda27b7726",
+			"grund": "Mockup-Beispieldaten: eigene Vorlage „Mallorca Frühling“ des Mockup-Kontos fehlt im Staging-Prüfkonto. Ursache: Text nicht sichtbar",
+			"verweis": "#2967"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.f1b65f5d5e",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.f44a3af674",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-auswahl.fb8c97b641",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-bestaetigung.9e98a167ba",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-bestaetigung.ca84b97a96",
+			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
+			"verweis": "#2968"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-bestaetigung.ebdecee793",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-speichern.6c29d42ded",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Reihenfolge im Abschnitt",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-speichern.a8401ae8b1",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-speichern.ca65b75f34",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "element",
+			"id": "trip.wetter.normal.-.vorlage-speichern.fa3c2ed506",
+			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
+			"verweis": "#3111"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"muster": "{zahl} Abweichungen",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"muster": "Auf \"{vorlage}\" zurücksetzen",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "Tages-Tiefsttemperatur (Gehzeit)",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "°C · nur Anzeige, keine Ampel",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "keine Ampel, nur Anzeige",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten je Liste ein.",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "Tages-Höchsttemperatur (Gehzeit)",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "grün: ab 2000 m",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"muster": "{zahl} Abweichungen",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"muster": "Auf \"{vorlage}\" zurücksetzen",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Gefühlte Temperatur",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "°C · Vorbote, kein Alarm",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Luftfeuchte",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Taupunkt",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Windrichtung",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "° · nur Anzeige, keine Ampel",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "keine Ampel, nur Anzeige",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten je Liste ein.",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Niederschlagsart",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "nur Anzeige, keine Ampel",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Sichtweite",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "m · Minimum",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Alarm, wenn der Wert seit dem letzten Briefing unter 1000 m fällt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht.",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "grün: ab 2000 m",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Tiefe Wolken",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "% · Gipfel in Wolken",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Mittelhohe Wolken",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "% · nur Anzeige, keine Ampel",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Hohe Wolken",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Luftdruck",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "hPa · Vorbote, kein Alarm",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Schnee & Höhe",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Nullgradgrenze",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "m · m über höchster Stelle",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Schneefallgrenze",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Neuschnee",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "cm",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Schneehöhe",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"muster": "{zahl} changes",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"muster": "Reset to \"{vorlage}\"",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "Daytime low (walking hours)",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "°C · display only, no traffic light",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "no traffic light, display only",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "Display only: no traffic light and no alert. You set raw or simple below for each list.",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "Daytime high (walking hours)",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "m · minimum",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "green: from 2000 m",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"text": "m · m above highest point",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"muster": "{zahl} changes",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"muster": "Reset to \"{vorlage}\"",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Feels-like temperature",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "°C · precursor, no alert",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Dew point",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Wind direction",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "° · display only, no traffic light",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "no traffic light, display only",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Display only: no traffic light and no alert. You set raw or simple below for each list.",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Precipitation type",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "display only, no traffic light",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Visibility",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "m · minimum",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Alert when the value falls below 1000 m since the last briefing (Orange), and on very large jumps. All clear when it goes back.",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "green: from 2000 m",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Low clouds",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "% · summit in cloud",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Mid-level clouds",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "% · display only, no traffic light",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "High clouds",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Air pressure",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "hPa · precursor, no alert",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Snow & altitude",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Freezing level",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "m · m above highest point",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Snow line",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Fresh snow",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"text": "Snow depth",
+			"grund": "Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt",
+			"verweis": "#2967"
 		}
 	],
 	"ausnahmen": [
