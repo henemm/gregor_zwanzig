@@ -118,7 +118,7 @@ Der PO fand die Karte „Inhalt je Kanal und Fläche“ „viel zu kompliziert, 
 - Die Regel bei leerer Grundauswahl. Heute ist sie je Fläche und Stelle verschieden (ADR-0050, Nachtrag 2026-11-17).
 - Die Kürzel-Legende (W21, W10). Fassung 4 zeigt keine.
 - Stellen ohne eigene Ausgabe: Haken dort sperren oder die Zeile kennzeichnen. Beispiel Trip, Tiefsttemperatur Nacht: nie eine Spalte der Stundentabelle (`NO_HOURLY_COLUMN_METRIC_IDS` in `src/output/renderers/email/helpers.py`), in Telegram nur abends eine eigene Zeile und nur, wenn „Temperatur“ nicht gewählt ist.
-- Ob eine in der E-Mail abgewählte Metrik in der Alarm-Mail erscheinen darf (#3107, Frage an den PO).
+- Entschieden (PO 2026-11-17, #3107, ADR-0124 Nr. 11): Die Tabelle steuert nur die Briefings. Alarme hängen allein an „Alarm ab“ in der Metrik-Zeile; eine in der E-Mail abgewählte Metrik erscheint weiter in der Alarm-Mail, wenn sie auslöst.
 - Die Zeilen-Kennung der Orte: Katalog-ID mit Aufweitung auf Höchst- und Tiefstwert oder `metric_id` plus Aggregation (#3101).
 - Die Ergänzung der Design-Charter: `docs/design-system/CHARTER.md` erlaubt ein Tabellen-Layout bisher nur für stündliche Wetterdaten, die Hourly-Matrix der Orte und System-Status-Tabellen im Konto.
 

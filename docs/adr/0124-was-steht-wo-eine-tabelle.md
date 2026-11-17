@@ -37,6 +37,7 @@ Der PO hat anhand von Bildern entschieden (Varianten nebeneinander, echte Render
 8. **Die Premium-SMS folgt vorerst der SMS** und hat keine eigene Spalte. Ihre eigene Auswahl kommt mit S9 (#2801).
 9. **Amtliche Warnungen** sind eine feste Zeile ohne Abwahl: in E-Mail und Telegram zuerst, in der SMS am Ende.
 10. **Der Bereich heißt einheitlich „Orte“** (EN „Locations“), auch bei einem einzelnen Ort. „Vergleich“, „Orts-Vergleich“ und „Orts-Briefing“ entfallen als Name in Oberfläche, Mail, Telegram und SMS. Kein Text setzt mehrere Orte voraus: bei einem Ort steht nicht „alle Orte“ und nicht „1 Orte“. Die E-Mail-Tabelle der Orte heißt „Übersicht“.
+11. **Die Tabelle steuert nur die Briefings, nicht die Alarme.** Welche Metrik einen Alarm auslöst, bestimmt allein „Alarm ab“ in ihrer Metrik-Zeile (ADR-0106). Eine in der E-Mail-Spalte abgewählte Metrik erscheint deshalb weiter in der Alarm-Mail, wenn sie auslöst (PO 2026-11-17, Issue #3107). Roh/Einfach der Alarm-Mail folgt wie bisher der Stelle E-Mail bzw. Telegram.
 
 ## Verworfene Alternativen
 
@@ -59,7 +60,6 @@ Der PO hat anhand von Bildern entschieden (Varianten nebeneinander, echte Render
     - Regel bei leerer Grundauswahl. Heute ist sie je Fläche und Stelle verschieden (ADR-0050, Nachtrag 2026-11-17).
     - Kürzel-Legende (Konzept W21, W10). Fassung 4 zeigt keine.
     - Stellen ohne eigene Ausgabe: Haken dort sperren oder die Zeile kennzeichnen. Beispiel Trip, Tiefsttemperatur Nacht: nie eine Spalte der Stundentabelle (`NO_HOURLY_COLUMN_METRIC_IDS` in `src/output/renderers/email/helpers.py`), in Telegram nur abends eine eigene Zeile und nur, wenn „Temperatur“ nicht gewählt ist (`src/output/renderers/narrow.py`).
-    - Darf eine in der E-Mail abgewählte Metrik in der Alarm-Mail erscheinen (#3107, Frage an den PO)?
     - Zeilen-Kennung der Orte: Katalog-ID mit Aufweitung auf Höchst- und Tiefstwert oder `metric_id` plus Aggregation (#3101).
     - Ergänzung der Design-Charter: `docs/design-system/CHARTER.md` erlaubt ein Tabellen-Layout bisher nur für stündliche Wetterdaten, die Hourly-Matrix der Orte und System-Status-Tabellen im Konto.
   - Alle Texte in DE und EN (ADR-0104). Kürzel der Kurzform bleiben unübersetzt.
