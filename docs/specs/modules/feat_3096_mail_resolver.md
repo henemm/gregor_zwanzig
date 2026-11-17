@@ -166,6 +166,7 @@ Zusicherungen werden am Mail-Ergebnis geprüft, nicht an Hilfsfunktionen; kein M
 - Format-Standard ohne Angabe bleibt zwischen Trip (Katalog) und Orte (Roh) verschieden (Designentscheidung, siehe oben).
 - Differenztest-Orakel aus #3057/#3065 bestehen bis #3102 weiter; deshalb bleibt `resolve_hourly_metrics` erhalten.
 - `hourlyDefault` im Frontend-Katalog bleibt als Anzeige für den Editor.
+- Der Umfang liegt über der Schätzung (src rund +157/-98 statt rund +60/-60, 11 Code-Dateien), weil neben Trip- und Orte-Mail auch Vorschau-, Validator- und Konfig-Resolver auf den Adapter umgestellt wurden und mehrere Bestandstests auf den neuen Adapter zeigen mussten; keine Code-Datei liegt außerhalb der Datei-Tabelle der Spec.
 
 ## Architektur-Entscheidung (ADR)
 

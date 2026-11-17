@@ -257,3 +257,23 @@ def test_ac4_renderer_ohne_eigene_vorgabeliste():  # doc-compliance-test
 
     assert not hasattr(compare_html, "HOURLY_DEFAULT_METRIC_IDS"), (
         "compare_html fuehrt die Vorgabeliste noch als zweite Quelle")
+
+
+# ---------------------------------------------------------------------------
+# AC-8: ADR-0121 Nachtrag 3a
+# ---------------------------------------------------------------------------
+
+
+def test_ac8_adr_0121_nachtrag_3a_vorhanden():  # doc-compliance-test
+    from pathlib import Path
+
+    adr = Path(__file__).resolve().parents[2] / "docs" / "adr" / "0121-kanonische-kanal-liste.md"
+    text = adr.read_text(encoding="utf-8")
+    start = text.find("## Nachtrag 3a")
+    assert start != -1, "ADR-0121 hat keinen Abschnitt '## Nachtrag 3a'"
+    rest = text[start + 5:]
+    nxt = rest.find("\n## ")
+    abschnitt = text[start:] if nxt == -1 else text[start:start + 5 + nxt]
+    assert "#3096" in abschnitt
+    assert "nie `None`" in abschnitt
+    assert "Trip-`hourly`" in abschnitt
