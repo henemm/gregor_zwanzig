@@ -1,0 +1,22 @@
+#3047 Runde 8, Paket r8py: Mutationsproben (String-Ersetzung, Sicherung extern, Rueckspielung byte-gleich geprueft)
+Testlauf je Mutation: uv run pytest -q tests/tdd/test_3047_r8py_luecken.py
+Vorher (Abnahme 7b): M05, M19, M20, M32, M52 UEBERLEBT
+
+M05 compare_outlook_metric_ids.py (grundauswahl None -> None)      GEFANGEN  test_t2_orte_altbestand_ausblick_folge_gespeichert[folge0,folge1]
+M19 tokens/render.py (Kuerzung [0] -> [-1])                        GEFANGEN  test_t3_kuerzung_warnung_faellt_zuletzt[160,40,25]
+M20 channel_list_resolver.py (Premium folgt SMS -> if False)       GEFANGEN  test_t3_premium_sms_folgt_sms_liste[morning,evening]
+M32 app/day_window.py (start == end ohne Rueckfall)                GEFANGEN  test_t4_orte_tagesfenster_start_gleich_ende_wie_standard[10-10,0-0]
+M52 .claude/hooks/briefing_mail_validator.py (Orte-Konfig -> if False) GEFANGEN test_t4_trip_validator_weist_orte_konfig_ab
+MF1 app/loader.py (Register-Standard bei metrics [] -> aus)        GEFANGEN  test_f1_altbestand_leer_sms_folgt_register_wie_editor_gespeichert
+Alle sechs Dateien nach jeder Probe byte-gleich zur Sicherung (restored_identisch: true).
+
+M32-Hinweis: der Trip-Loader klemmt start == end schon beim Lesen (_clamped_day_window);
+erreichbar ist der Rueckfall in day_window.py nur ueber Orte-Presets (Loader ungeklemmt) ->
+der fangende Test laeuft ueber den echten Orte-Loader bis resolve_compare_time_window.
+
+F1: kein RED. metrics: [] zeigt im Editor den Register-Standard (Tagestief/-hoch auf Rang 8/9,
+ampelModell.ts registerStandard, ohne Ableitung), der Editor speichert dieselbe Folge
+(ampelSchreiben.ts, Kind temperature_night ausdruecklich aus). Die SMS folgt ihr:
+"E1: W- G45@4 R2.0@4 TH:M@4 TH+:- FZ2500@4 VS- D15/15", gespeichert identisch.
+Die Vergleichsliste der Abnahme (D7 ohne Tagestief/-hoch-Eintraege) ist eine andere Liste:
+dort leitet der Loader die Kinder mit der Position der Temperatur ab (#1947).
