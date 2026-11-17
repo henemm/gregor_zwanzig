@@ -87,8 +87,7 @@ async function oeffneAusloeser(page: Page, kind: HubKind, id: string): Promise<v
 		await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 10_000 });
 		await expect(feldEingabe(etappenDatum(page))).toHaveText(datumAnzeige(SEED_DATUM));
 	}
-	// #2954: beim Öffnen ist die Hinweis-Region leer (im DOM, ohne Text) — toBeAttached.
-	await expect(chip(page)).toBeAttached({ timeout: 10_000 });
+	await expect(chip(page)).toBeVisible({ timeout: 10_000 });
 }
 
 /** Löst die echte, kind-eigene Änderung aus (Ort entfernen bzw. Etappen-Datum + blur). */
@@ -108,17 +107,15 @@ for (const kind of HUB_KINDS) {
 	// Zur Sammelzeit gelesen: ohne HUB_SEL in helpers.ts bricht schon die Liste ab.
 	const sel = HUB_SEL[kind];
 
-	// #2954 (ADR-0120): beim Öffnen ohne Speichern steht KEIN Text im Hinweis (vormals
-	// „Gespeichert") — die Region ist leer, aber im DOM (toBeAttached statt toBeVisible).
-	test(`SC-1 (${kind}): Hub öffnen ⇒ Chip idle ohne Text, genau ein save-indicator im DOM`, async ({ page }) => {
+	test(`SC-1 (${kind}): Hub öffnen ⇒ Chip idle „Gespeichert", genau ein save-indicator im DOM`, async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		const hub = await seedHub(page.request, kind);
 		try {
 			await openHub(page, kind, hub.id);
 			await expect(page.getByTestId(sel.reiterListe)).toBeVisible({ timeout: 10_000 });
-			await expect(chip(page)).toBeAttached({ timeout: 10_000 });
+			await expect(chip(page)).toBeVisible({ timeout: 10_000 });
 			await expect(chip(page)).toHaveAttribute('data-state', 'idle');
-			await expect(chip(page)).toHaveText('');
+			await expect(chip(page)).toContainText('Gespeichert');
 			// Ohne :visible — ein zweiter, versteckter Chip zählt mit.
 			await expect(chip(page)).toHaveCount(1);
 		} finally {
@@ -159,8 +156,7 @@ for (const kind of HUB_KINDS) {
 				page.locator('[data-testid="layout-tab"]:visible').first(),
 				'SC-1b: der geteilte LayoutTab (Kanal-Umschalter) im Reiter Zustellung fehlt'
 			).toBeVisible({ timeout: 15_000 });
-			// #2954: beim Öffnen leer, aber im DOM.
-			await expect(chip(page)).toBeAttached({ timeout: 10_000 });
+			await expect(chip(page)).toBeVisible({ timeout: 10_000 });
 
 			// Stabilitätsfenster statt festem Schlaf (Alt: fester 2,5-s-Schlaf): in dieser Zeit
 			// hätte ein Rewrite-Effekt geschrieben bzw. den Chip umgestellt.

@@ -1,8 +1,6 @@
 <script lang="ts">
 	// Issue #758 — SaveIndicator Atom.
-	// #2954 (ADR-0120): schlichter Inline-Text in der Kopfleiste (HubKopf .hub-actions, vor dem
-	// Drei-Punkte-Menü) statt festem Overlay unten rechts. Stabile aria-live-Region, bleibt immer
-	// im DOM; nur der Inhalt wechselt.
+	// Renders a compact, high-contrast save-state label in the TripHeader and CompareEditor.
 	// Prop: controller — eine SaveStatus-Instanz (nie global singleton — AC-6).
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	// Issue #2653 (i18n F4): Zustandstexte aus dem Katalog (nav.*); die Uhrzeit
@@ -15,30 +13,6 @@
 	}
 	let { controller }: Props = $props();
 
-	/** #2954 AC-3: „Gespeichert" steht 5 s nach dem Speichern, dann wird die Region leer. */
-	const ERFOLG_MS = 5000;
-	let abgelaufen = $state(false);
-
-	// Jeder neue Speichervorgang (neues savedAt) startet den Timer neu; gemessen ab savedAt,
-	// damit ein späterer Rückfall dirty → idle (ohne neues savedAt) den Text nicht verlängert.
-	// Timer wird bei jedem Neulauf und beim Abbau aufgeräumt. SSR: Effekte laufen nicht.
-	$effect(() => {
-		const gespeichert = controller.savedAt;
-		const zustand = controller.state;
-		abgelaufen = false;
-		if (zustand !== 'idle' || !gespeichert) return;
-		const rest = ERFOLG_MS - (Date.now() - gespeichert.getTime());
-		if (rest <= 0) {
-			abgelaufen = true;
-			return;
-		}
-		const id = setTimeout(() => (abgelaufen = true), rest);
-		return () => clearTimeout(id);
-	});
-
-	/** #2954 Fix-Loop 1 (F002): Region ohne sichtbaren Text — bleibt im DOM, nimmt aber keinen Platz. */
-	const leer = $derived(controller.state === 'idle' && !(controller.savedAt && !abgelaufen));
-
 	// Issue #880: SSR-sichere HH:MM-Formatierung (keine Locale-abhängigen Date-Methoden).
 	function formatTime(d: Date): string {
 		const h = d.getHours();
@@ -50,20 +24,17 @@
 <span
 	data-testid="save-indicator"
 	data-state={controller.state}
-	aria-live="polite"
 	class="save-indicator"
 	class:save-indicator--idle={controller.state === 'idle'}
 	class:save-indicator--dirty={controller.state === 'dirty'}
 	class:save-indicator--saving={controller.state === 'saving'}
 	class:save-indicator--error={controller.state === 'error'}
-	class:save-indicator--leer={leer}
 >
 	{#if controller.state === 'idle'}
-		<!-- #2954 AC-4: beim Öffnen ohne Speichern leer — Text erst nach echtem Speichern (savedAt). -->
-		{#if controller.savedAt && !abgelaufen}
-			<!-- #2881 R3 (ADR-0111 Punkt 7): Dot + Text statt ✓ -->
-			<Dot tone="good" size="xs" />
-			<span>{$t('nav.gespeichert')}</span>
+		<!-- #2881 R3 (ADR-0111 Punkt 7): Dot + Text statt ✓ -->
+		<Dot tone="good" size="xs" />
+		<span>{$t('nav.gespeichert')}</span>
+		{#if controller.savedAt}
 			<span class="save-time">{formatTime(controller.savedAt)}</span>
 		{/if}
 	{:else if controller.state === 'dirty'}
@@ -85,29 +56,54 @@
 </span>
 
 <style>
-	/* #2954 (ADR-0120): Inline-Text in der Kopfleiste, kein Overlay, kein Hintergrund.
-	   Ausblenden des Erfolgs per JS-Timer (5 s) statt Abblend-Animation; Fehler/Konflikt
-	   bleiben dauerhaft. Bricht bei Platzmangel innerhalb der Aktionen um (#2837 AC-8). */
+	/* Issue #880: fixes Overlay unten rechts statt inline in Statuszeile. */
+	/* Issue #963 (Fix-Loop 3, Nebenbefund): z-index von 40 auf 62 angehoben —
+	   die BottomNav-bewusste Höhenkorrektur von `.mobile-editor` (F004) verschiebt
+	   das eingeklappte Wegpunkte-Sheet (Sheet.svelte, z-index:61) exakt in den
+	   Bereich direkt über der BottomNav, wo auch dieser Indikator sitzt. Als
+	   persistenter Speicher-Status darf er nie von App-Inhalten verdeckt werden
+	   (unter Dialogen/Modalen mit z-index:100 bleibend). */
 	.save-indicator {
+		position: fixed;
+		bottom: 16px;
+		right: 16px;
+		z-index: 62;
 		display: inline-flex;
 		align-items: center;
-		flex-wrap: wrap;
 		gap: 5px;
-		font-size: 12.5px;
+		font-size: 12px;
 		font-family: var(--g-font-mono, ui-monospace, monospace);
 		letter-spacing: 0.02em;
+		padding: 3px 8px;
+		border-radius: 4px;
+		transition: background 200ms, color 200ms;
+		white-space: nowrap;
 		font-weight: 500;
-		min-width: 0;
+		opacity: 1;
 	}
-	/* #2954 Fix-Loop 1 (F002): leere Region aus dem Fluss nehmen — kein Flex-Kind, also kein
-	   gap-Abstand neben dem Kebab und keine leere Zusatzzeile am Handy. Sie bleibt im DOM
-	   (aria-live, data-state), hat aber keine Größe. */
-	.save-indicator--leer {
-		position: absolute;
+
+	/* Mobile: über der schwebenden BottomNav (Oberkante = --g-nav-clearance). */
+	@media (max-width: 899px) {
+		.save-indicator {
+			bottom: calc(var(--g-nav-clearance) + var(--g-s-2));
+		}
 	}
 
 	.save-indicator--idle {
-		color: var(--g-good);
+		color: var(--g-ok-fg);
+		background: var(--g-ok-bg);
+		/* Issue #880: Idle-Zuruecktreten nach 3s Inaktivitaet, nie display:none/
+		   visibility:hidden (Barrierefreiheit). #2400 (Staging-Messlauf 2): frueher
+		   opacity 0.5 — Text fiel auf 2,9:1 (dunkel). Leitprinzip „Hoher Kontrast =
+		   Lesbarkeit" (design_system.md) hat Vorrang: Toenung faellt weg, Schrift wird
+		   neutral (--g-ink-3), Deckkraft bleibt 1 — Text >= 4,5:1 hell und dunkel. */
+		animation: gz-save-fade 200ms ease-out 3s forwards;
+	}
+	@keyframes gz-save-fade {
+		to {
+			background: transparent;
+			color: var(--g-ink-3);
+		}
 	}
 	.save-time {
 		color: var(--g-ink-3);
@@ -115,18 +111,26 @@
 	}
 	.save-indicator--dirty {
 		color: var(--g-warn-fg);
+		background: var(--g-warn-bg);
 	}
 	.save-indicator--saving {
 		color: var(--g-ink-3);
+		background: var(--g-surface-2);
 	}
-	/* Fehler-Zustand: dauerhaft sichtbar (#880 AC-4 bleibt gültig). */
+	/* Fehler-Zustand: keine Animation, opacity bleibt dauerhaft 1 (AC-4). */
 	.save-indicator--error {
 		color: var(--g-danger-fg);
+		background: var(--g-danger-bg);
+		animation: none;
+		opacity: 1;
 	}
 
 	/* Konflikt-Zustand: gleiche Signalfarbe wie der Fehler, dauerhaft sichtbar. */
 	.save-indicator[data-state='conflict'] {
 		color: var(--g-danger-fg);
+		background: var(--g-danger-bg);
+		animation: none;
+		opacity: 1;
 	}
 
 	.save-indicator__retry {

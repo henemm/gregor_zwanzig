@@ -156,7 +156,8 @@ const TRIP_KOPF_IDS = [
 	// Kachel-testid doppelt im DOM steht (Strict-Mode der E2E-Locator).
 	'trip-profil-knopf',
 	'trip-profil-auswahl',
-	...TRIP_AKTIVITAETEN.map((o) => `trip-profil-auswahl-option-${o.value}`)
+	...TRIP_AKTIVITAETEN.map((o) => `trip-profil-auswahl-option-${o.value}`),
+	'save-indicator'
 ];
 
 describe('#2284 S2 AC-10 — Baustein mit Trip-Satz: jede Kopf-testid und der Chip genau einmal', () => {
@@ -184,15 +185,6 @@ describe('#2284 S2 AC-10 — Baustein mit Trip-Satz: jede Kopf-testid und der Ch
 			assert.equal(n, 1, `${id}: ${n}× im SSR-Output (erwartet genau 1)`);
 		});
 	}
-
-	// #2954 (ADR-0120): der Speicherhinweis wandert aus dem Baustein (unter dem Titelblock) in die
-	// Kopfleiste des geteilten HubKopf (.hub-actions, vor dem Drei-Punkte-Menü). Der Baustein
-	// rendert ihn NICHT mehr — auch MIT saveController 0× (vormals „genau einmal", #2284 S2 AC-10).
-	// „Genau einmal im Trip-Kopf" bewacht der TripHeader-Block unten (HubKopf mountet ihn).
-	test('save-indicator kommt im Baustein nicht mehr vor, auch mit saveController (#2954)', async () => {
-		const n = zaehle(await tripHtml(), 'save-indicator');
-		assert.equal(n, 0, `save-indicator: ${n}× im Baustein (erwartet 0 — der Hinweis gehört in die Kopfleiste, #2954)`);
-	});
 });
 
 describe('#2284 S2 AC-10/AC-4 — TripHeader mountet den Baustein: alles genau einmal', () => {
@@ -229,8 +221,6 @@ describe('#2284 S2 AC-10/AC-4 — TripHeader mountet den Baustein: alles genau e
 	// „Zusatz trip-detail-status-supplement genau einmal, in der Titelzeile").
 	const HUELLE_IDS = [
 		...TRIP_KOPF_IDS,
-		// #2954: der Speicherhinweis kommt jetzt vom HubKopf (Kopfleiste) — im Trip-Kopf weiter genau einmal.
-		'save-indicator',
 		// #2913 c2: Eyebrow und Meta-Zeile des Mockups (vormals trip-detail-meta) aus dem HubKopf.
 		'hub-kopf-eyebrow',
 		'hub-kopf-meta'

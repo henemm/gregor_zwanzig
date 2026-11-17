@@ -585,7 +585,7 @@ Schwebende Glas-Leiste (iOS-27-Stil) für Mobile-Viewports (< 900px). 4 Workspac
 - **Fallback:** ohne `backdrop-filter`-Support oder bei `prefers-reduced-transparency: reduce` opak `--g-paper-deep`
 - **Grid:** 4 gleiche Spalten, `gap: var(--g-s-1)`
 - **Visibility:** Mobile only (`class="desktop:hidden"`)
-- **Oberkante für Dritte:** `--g-nav-clearance` = `--g-nav-h + --g-nav-gap + safe-area`; `.mobile-scroll-pad` und Toast-Anker in `+layout.svelte` rechnen damit — nie mit 64px hart. (`SaveIndicator` ist seit #2954 kein festes Element mehr, er sitzt in der Hub-Kopfleiste.)
+- **Oberkante für Dritte:** `--g-nav-clearance` = `--g-nav-h + --g-nav-gap + safe-area`; `.mobile-scroll-pad`, Toast-Anker in `+layout.svelte` und `SaveIndicator` rechnen damit — nie mit 64px hart.
 
 **Navigation Items:**
 

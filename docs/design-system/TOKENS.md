@@ -198,7 +198,7 @@ Dezent. Kein Material-Lifting.
 
 ### 11a. Schwebende Tabbar (Mobile-Shell)
 
-Einzige erlaubte Glas-Fläche im Produkt. Konsumenten: `BottomNav.svelte`, `.mobile-scroll-pad`, Toast-Anker. Der Speicherhinweis (`SaveIndicator`) ist seit #2954 (ADR-0120) kein Anker dieser Fläche mehr, er steht als Text in der Hub-Kopfleiste.
+Einzige erlaubte Glas-Fläche im Produkt. Konsumenten: `BottomNav.svelte`, `.mobile-scroll-pad`, Toast-/SaveIndicator-Anker.
 
 | Token | Wert | Verwendung |
 |---|---|---|
