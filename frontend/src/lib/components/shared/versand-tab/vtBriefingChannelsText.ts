@@ -26,9 +26,17 @@ export function vtBriefingSmsCharLimit(context: VtBriefingContext): number {
 export function vtBriefingLeadText(context: VtBriefingContext): string {
 	// #2655 (F6): je Kontext ein ganzer Satz im Katalog (keine Satz-Konkatenation).
 	const telegram_spalten = CHANNEL_COL_BUDGET.telegram;
-	if (context === 'vergleich') return tr('versand.briefing.lead.vergleich', { telegram_spalten });
+	if (context === 'vergleich') return tr('versand.briefing.lead.vergleich', { platz: telegram_spalten + 1 }); // #3047 R8 (AC-24): ab Platz 8 zweite Zeile je Ort
 	return tr('versand.briefing.lead.route', { telegram_spalten });
 }
+
+/** #3047 R8 (AC-24): Telegram-Unterzeile je Kontext — Trip: Etappen-Tabelle mit
+ *  7 Spalten (narrow.py); Orts-Vergleich: alle Zeilen, ab Platz 8 eine zweite
+ *  Zeile je Ort (comparison.py). Daten je Kontext statt Verzweigung. */
+const TELEGRAM_SUB: Record<VtBriefingContext, () => string> = {
+	route: () => tr('versand.briefing.sub.telegram', { telegram_spalten: CHANNEL_COL_BUDGET.telegram }),
+	vergleich: () => tr('versand.briefing.sub.telegram_vergleich', { platz: CHANNEL_COL_BUDGET.telegram + 1 })
+};
 
 /** Kanal-Unterzeile je Kanal (Layout-Hinweis) — keine Wertung (AC-5/AC-5a). */
 export function vtBriefingSubTexts(
@@ -41,7 +49,7 @@ export function vtBriefingSubTexts(
 		telegram:
 			telegramStyle === 'kurzform'
 				? tr('versand.briefing.sub.telegram_kurzform')
-				: tr('versand.briefing.sub.telegram', { telegram_spalten: CHANNEL_COL_BUDGET.telegram }),
+				: TELEGRAM_SUB[context](),
 		sms: tr('versand.briefing.sub.sms', { zeichen: vtBriefingSmsCharLimit(context) })
 	};
 }

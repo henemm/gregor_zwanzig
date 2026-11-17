@@ -4,6 +4,8 @@
 	"layout.kappung.schnittlinie_vergleich": "↓ ab Platz {platz} in einer zweiten {kanal}-Zeile je Ort",
 	"layout.kappung.zeigt_alles": "{kanal} zeigt alles · keine Begrenzung",
 	"layout.kappung.zeichen": "{kanal}: kein Raster, keine Tabelle — Fließtext, {zeichen} Zeichen",
+	"layout.kappung.zeilen_umbruch": "{kanal}: {anzahl} {subjekt} · alle in der Nachricht, ab Platz {platz} in einer zweiten Zeile je Ort",
+	"layout.kappung.zeilen_eine": "{kanal}: {anzahl} {subjekt} · alle in einer Zeile je Ort",
 	"layout.kappung.anzahl_passt": "{kanal}: {anzahl} {subjekt} · passt (max {max})",
 	"layout.kappung.anzahl_zu_breit": "{kanal}: {anzahl} {subjekt} · zu breit — max {max}, weiter vorne = sicherer",
 	"layout.kappung.spalten_passt.one": "{kanal}: {count} Spalten (Label + {subjekt}) · passt (max {max})",

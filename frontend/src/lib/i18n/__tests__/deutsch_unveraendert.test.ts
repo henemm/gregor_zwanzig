@@ -232,6 +232,8 @@ const NEU_IN_F12 = F12_ANKER.map(([k]) => k);
 /** #2764 (F13) AUSDRUCK_OFFEN: Name-Rueckfall der Karte (wertebereiche.symbolzeile.* stehen in F5_ANKER). */
 const NEU_IN_F13 = ['bausteine.karte.ohne_namen'];
 const NEU_IN_FOLGEPAKETEN = [
+	// #3047 R8 (AC-24): Orts-Vergleich-Telegram — alle Zeilen, ab Platz 8 zweite Zeile je Ort.
+	'layout.kappung.zeilen_umbruch', 'layout.kappung.zeilen_eine', 'versand.briefing.sub.telegram_vergleich',
 	// #3047 H1: 'vergleich.stundenverlauf.nicht_in_grundauswahl' steht als fester
 	// Anker in F10_ANKER (vergleich.json = F9 + F10-Anker) und zaehlt ueber NEU_IN_F10.
 	// #2999 Datumsfeld: Meldung bei einem Datum, das es nicht gibt

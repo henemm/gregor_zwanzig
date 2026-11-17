@@ -85,7 +85,7 @@
 	}: Props = $props();
 
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
-	const showCutLine = $derived(activeChannel === 'telegram' && context !== undefined);
+	const showCutLine = $derived(activeChannel === 'telegram' && Boolean(context));
 
 	// Issue #2654 (i18n F5): voller Name aus dem Register in der Nutzersprache
 	// (label_en, sonst deutsch); Kurzform (col_label) und Kuerzel bleiben roh.

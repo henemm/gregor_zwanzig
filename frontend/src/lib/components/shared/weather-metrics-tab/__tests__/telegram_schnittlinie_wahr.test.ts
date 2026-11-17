@@ -78,7 +78,7 @@ describe('F3: Telegram-Trennlinie sagt, was die Ausgabe tut (keine Kappung bei 7
 	});
 	test('WeatherMetricsTab Orts-Vergleich, Telegram-Reiter (9 Zeilen): zweite Zeile je Ort', () => {
 		const neun = VERGLEICH_KATALOG().slice(0, 9).map((e: { metric: string }) => e.metric);
-		assert.ok(neun.every((k) => typeof k === 'string' && k.length > 0), 'Messaufbau: Kennungen fehlen');
+		assert.ok(neun.every((k: unknown) => typeof k === 'string' && k.length > 0), 'Messaufbau: Kennungen fehlen');
 		assert.equal(neun.length, 9, 'Messaufbau: Katalog zu klein');
 		const text = sichtbar(vergleichRendern({ compareChannel: 'telegram', telegramAuswahl: neun }, neun));
 		assert.ok(text.includes(SOLL.vergleich.de), 'Vergleich-Satz fehlt');

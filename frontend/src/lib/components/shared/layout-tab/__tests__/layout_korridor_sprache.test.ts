@@ -134,13 +134,14 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 				hat(en, s);
 			// Kanalnamen (Eigennamen) und Platzgrenzen stehen in beiden Sprachen gleich.
 			const sms = context === 'route' ? '160' : '153';
-			for (const s of ['Email ∞', 'Telegram 7', `SMS ${sms}`]) {
+			// #3047 R8 (AC-24): Orts-Vergleich-Telegram kappt nicht (Badge ∞), Trip-Stundentabelle 7.
+			for (const s of ['Email ∞', context === 'route' ? 'Telegram 7' : 'Telegram ∞', `SMS ${sms}`]) {
 				hat(de, s);
 				hat(en, s);
 			}
 			hat(en, 'Email shows everything · no limit');
 			hat(en, `SMS: no grid, no table — plain text, ${sms} characters`);
-			hat(en, context === 'route' ? 'Telegram: 9 Metriken · too wide — max 7, further forward = safer' : 'Telegram: 9 columns (label + 4 Orte) · too wide — max 7, further forward = safer');
+			hat(en, context === 'route' ? 'Telegram: 9 Metriken · too wide — max 7, further forward = safer' : 'Telegram: 9 Metriken · all in the message, from position 8 in a second line per location');
 			assert.deepEqual(deutscheReste(en, API_METRIKNAMEN), []);
 		});
 	}

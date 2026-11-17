@@ -24,12 +24,14 @@
 		context: 'route' | 'vergleich';
 	}
 	let { label, platz, context }: Props = $props();
+	const SCHNITTLINIE = {
+		route: 'layout.kappung.schnittlinie_route',
+		vergleich: 'layout.kappung.schnittlinie_vergleich'
+	} as const;
 </script>
 
 <div class="lt-cut-line mono" data-testid="lt-cut-line">
-	{context === 'vergleich'
-		? $t('layout.kappung.schnittlinie_vergleich', { kanal: label, platz })
-		: $t('layout.kappung.schnittlinie_route', { kanal: label, platz })}
+	{$t(SCHNITTLINIE[context], { kanal: label, platz })}
 </div>
 
 <style>

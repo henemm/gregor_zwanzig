@@ -504,7 +504,10 @@
 		// Issue #1575 Scheibe 3: gespeicherte Kanal-Layouts zurueckbauen, damit ein
 		// editierter Reiter nach dem Reload seine eigene Auswahl zeigt.
 		const savedLayouts = trip!.display_config?.channel_layouts;
-		// Issue #3047 Runde 8 (T1): ausgelagert, damit der echte Ladeweg testbar ist.
+		// Issue #3047 Runde 8 (T1): die Schleife ueber die drei Metrik-Reiter ist
+		// nach channelMetricLayouts.ts::channelOverridesFromSaved() ausgelagert,
+		// damit der echte Ladeweg testbar ist (Mutation M39). Zeilenzahl bleibt
+		// gleich (Ratsche context_herkunft_zweige_eingefroren).
 		const cb = channelOverridesFromSaved(savedLayouts, allCatalogIds(), fMap);
 		channelBuckets = cb;
 		// Issue #1720 S1 / #1848 A2: gespeicherte Vorschau-Auswahl (Kennungen,
@@ -1566,8 +1569,7 @@
 							offColumns={compareChannelSections.off}
 							onRestore={onCompareRestore}
 							showAbwahlHinweis
-							kuerzelById={compareKuerzelById}
-							context="vergleich"
+							kuerzelById={compareKuerzelById} context="vergleich"
 						/>
 					</Card>
 				{/snippet}
@@ -1745,8 +1747,7 @@
 							offColumns={activeChannelSections.off}
 							onRestore={onRestoreMetric}
 							showAbwahlHinweis
-							kuerzelById={metricSymbols}
-							context="route"
+							kuerzelById={metricSymbols} context="route"
 							modeCapable={(id) =>
 								channel === 'sms'
 									? !!metricById[id]?.sms_format_capable
