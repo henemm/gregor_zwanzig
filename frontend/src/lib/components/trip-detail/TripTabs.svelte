@@ -217,7 +217,7 @@
 						<Bereichskopf titel={$t('trip.hub.kopf.etappen_titel')} erklaerung={$t('trip.hub.kopf.etappen_erklaer')} testid="etappen" />
 					{/snippet}
 					{#if trip}
-						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} kopf={etappenKopf} />
+						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} kopf={etappenKopf} listeZuerst />
 					{:else}
 						<HubReiterflaeche testid="etappen-laden-reiterflaeche">{@render etappenKopf()}</HubReiterflaeche>
 					{/if}

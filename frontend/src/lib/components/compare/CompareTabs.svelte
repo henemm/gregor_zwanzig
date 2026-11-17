@@ -13,7 +13,8 @@
 
 	import { Dot, Pill, Btn, Card } from '$lib/components/atoms';
 	import Bereichskopf from '$lib/components/molecules/Bereichskopf.svelte';
-	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
+	// Issue #3007: Orte-Zeile = geteilter Baustein Listenzeile (wie die Etappen-Liste, ADR-0097).
+	import Listenzeile from '$lib/components/molecules/Listenzeile.svelte';
 	// Issue #2794 S3a Teil-PR 3 (AC-38): Reiter Wetter = genau EIN WetterTab (Ampel).
 	import WetterTab from '$lib/components/shared/WetterTab.svelte';
 	// Issue #2682: die Übersicht ist der geteilte Baustein (context="vergleich").
@@ -255,7 +256,7 @@
 	// aelteren, beim Funktionsaufruf gelesenen Stand.
 	let lastPersistedLocationIds: string[] = [...currentLocationIds];
 
-	// Orts-Auflösung: location_ids → locations[] (mit elevation_m für CompareLocationRow).
+	// Orts-Auflösung: location_ids → locations[] (mit elevation_m für die Orte-Zeile).
 	// allLocationsForAdd ergänzt Orte, die per Inline-Add-Panel neu hinzugefügt
 	// wurden und daher noch nicht im gefilterten `locations`-Prop stecken.
 	const locationById = $derived.by(() => ortsVerzeichnis(locations, allLocationsForAdd));
@@ -269,6 +270,14 @@
 
 	function orteItemLabel(id: string, i: number): string {
 		return `${reiterNummer(currentLocationIds, i, locationById)}. ${locationById.get(id)?.name ?? id}`;
+	}
+
+	// #3007 (AC-4/AC-5): Zweitzeile „Gruppe · Höhe m“; nur der vorhandene Teil, ohne verwaistes „·“.
+	function ortZweitzeile(loc: Location): string | undefined {
+		const hoehe = loc.elevation_m ?? null;
+		if (loc.group && hoehe !== null) return $t('vergleich.hub.ort_gruppe_hoehe', { gruppe: loc.group, hoehe });
+		if (loc.group) return loc.group;
+		return hoehe !== null ? `${hoehe} m` : undefined;
 	}
 
 	async function removeLocation(locId: string): Promise<void> {
@@ -744,8 +753,10 @@
 					{/snippet}
 				</Bereichskopf>
 			</div>
-			<p class="hub-section-hint hub-orte-hinweis">{isMobileViewport ? $t('vergleich.hub.ziehen_sortieren') : $t('vergleich.hub.reihenfolge_hinweis')}</p>
-			<Card padding={0} style="overflow: hidden">
+			<!-- #3007 (Mockup Fassung 3, viewOrte): Liste aus dem Baustein Listenzeile — Name, „Gruppe · Höhe m“,
+			     Textknopf „entfernen“. Rang, Reihenfolge-Hinweis, Wechselfarbe und ✕ entfallen; Sortieren per
+			     textlosem Ziehgriff bleibt (Reihenfolge = Spalten der Vergleichstabelle). -->
+			<Card padding={0} style="overflow: hidden" data-abschnitt="liste">
 				{#if resolvedLocations.length === 0}
 					<p class="empty-state" style="padding: 0 16px">{$t('vergleich.hub.keine_orte')}</p>
 				{:else}
@@ -757,20 +768,13 @@
 						flipDurationMs={150}
 						zoneClass="hub-orte-list"
 					>
-						{#snippet row(id: string, i: number)}
+						{#snippet row(id: string)}
 							{@const loc = locationById.get(id)}
 							{#if loc}
-								<div class="hub-orte-row" class:alt={i % 2 === 1} data-testid="hub-orte-row" data-loc-id={id}>
-									<DragHandle />
-									<div class="hub-orte-row-body"><CompareLocationRow {loc} index={reiterNummer(currentLocationIds, i, locationById)} /></div>
-									<button
-										type="button"
-										class="hub-orte-remove-btn"
-										data-testid="hub-orte-remove"
-										title={$t('layout.ausgabe.entfernen')}
-										onclick={() => removeLocation(id)}
-									>✕</button>
-								</div>
+								<Listenzeile titel={$t('vergleich.hub.ort_name', { name: loc.name })} zweitzeile={ortZweitzeile(loc)} testid="hub-orte-row" data-loc-id={id}>
+									{#snippet griff()}<DragHandle label={$t('vergleich.hub.ziehen_sortieren')} />{/snippet}
+									<Btn variant="quiet" size="sm" data-testid="hub-orte-remove" onclick={() => removeLocation(id)}>{$t('vergleich.hub.ort_entfernen')}</Btn>
+								</Listenzeile>
 							{/if}
 						{/snippet}
 					</SortableList>
@@ -920,33 +924,7 @@
 	@media (max-width: 899px) {
 	}
 
-	/* ── Issue #1256 Scheibe 6 — Hub-Orte-Tab (Drag/Entfernen/Add-Panel) ──── */
-	.hub-orte-row {
-		display: flex;
-		align-items: center;
-		background: transparent;
-	}
-	.hub-orte-row.alt {
-		background: var(--g-paper-deep);
-	}
-	.hub-orte-row :global(.drag-handle) {
-		padding-left: 16px;
-	}
-	.hub-orte-row-body {
-		flex: 1;
-		min-width: 0;
-	}
-	.hub-orte-remove-btn {
-		margin-right: 14px;
-		width: 32px;
-		height: 32px;
-		flex-shrink: 0;
-		border: 1px solid var(--g-rule-soft);
-		border-radius: var(--g-r-2, 6px);
-		background: transparent;
-		color: var(--g-ink-3);
-		cursor: pointer;
-	}
+	/* ── Issue #1256 Scheibe 6 — Hub-Orte-Tab (Add-Panel); Zeilen seit #3007 aus dem Baustein Listenzeile ── */
 	.hub-add-panel {
 		margin-top: 12px;
 		padding: 14px 16px;
@@ -1005,28 +983,17 @@
 		}
 	}
 
-	/* #3006: Abstand Kopf → Hinweis → Liste (vorher margin-bottom der SectionH). */
+	/* #3006: Abstand Kopf → Liste (vorher margin-bottom der SectionH). */
 	.hub-orte-kopf {
 		margin-bottom: var(--g-s-4);
-	}
-	.hub-orte-hinweis {
-		margin: 0 0 var(--g-s-2);
-	}
-
-	/* Issue #1256 S8c — Layout-/Orte-Tab Section-Hint (AC-1/AC-2/AC-9). */
-	.hub-section-hint {
-		font-family: var(--g-font-mono);
-		font-size: 11px;
-		color: var(--g-ink-3);
-		letter-spacing: 0.03em;
 	}
 
 	/* Issue #1256 S8c (AC-1/AC-2) — Layout-Tab Limit-Pillen. */
 
-	/* Issue #1256 S8c (AC-9) — Orte-Liste im Card-Rahmen: Trenner nur unter der Liste. */
-	/* :global, weil `hub-orte-list` als zoneClass an SortableList durchgereicht
-	   wird und dort den Scope-Hash dieser Komponente nicht traegt (#1272). */
-	:global(.hub-orte-list) {
-		border-bottom: 1px solid var(--g-rule-soft);
+	/* #3007 (Mockup `.lrow`): Trennlinie zwischen den Orte-Zeilen, die erste ohne. Jede Listenzeile steht
+	   allein in ihrem Sortier-Element, daher die Linie am Element. :global, weil `hub-orte-list` als
+	   zoneClass an SortableList durchgereicht wird und dort den Scope-Hash nicht trägt (#1272). */
+	:global(.hub-orte-list > .sortable-item + .sortable-item) {
+		border-top: 1px solid var(--g-rule-soft);
 	}
 </style>

@@ -23,7 +23,7 @@ import { test, expect, type Page, type APIRequestContext } from '@playwright/tes
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertNotProdBaseURL } from './prodUrlGuard';
-import { E2E_TEST_PREFIX, feldEingabe, tippeDatum } from './helpers';
+import { E2E_TEST_PREFIX, feldEingabe, tippeDatum, oeffneEtappenEditor } from './helpers';
 import { ausUmgebung } from './stagingZugang';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -146,6 +146,7 @@ async function countTripPuts(page: Page): Promise<{ n: number }> {
 async function openStagesEditor(page: Page, tripId: string) {
 	await page.goto(`/trips/${tripId}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 30_000 });
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await expect(page.locator('[data-testid="stage-date-field"]:visible').first()).toBeVisible({
 		timeout: 30_000
 	});
@@ -231,6 +232,7 @@ test('#1393 Fall A: ungleiche Abstaende, Ausloeser an Etappe 3 — lueckenlos da
 		// Gespeicherten Stand hart nachladen und IM UI ablesen.
 		await page.reload();
 		await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 30_000 });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		const ui = {
 			s1: await readUiDate(page, 0, 'Tag 1'),
 			s2: await readUiDate(page, 1, 'Tag 2'),
@@ -321,6 +323,7 @@ test('#1393 Fall B: Pausentag rueckt mit, Etappe ohne Datum verbraucht keinen Ta
 		console.log('[#1393 Fall B] Schritt: neu laden');
 		await page.reload();
 		await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 30_000 });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		console.log('[#1393 Fall B] Schritt: UI ablesen');
 		const ui = {
 			b1: await readUiDate(page, 0, 'Tag 1'),

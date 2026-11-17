@@ -13,7 +13,7 @@
 // Auth via storageState (issue-675.staging.setup.ts) — kein per-Test-Login.
 
 import { test, expect } from '@playwright/test';
-import { feldEingabe, tippeUhrzeit } from './helpers';
+import { feldEingabe, tippeUhrzeit, oeffneEtappenEditor } from './helpers';
 
 const TRIP_ID = 'e2e-675-starttime';
 const TRIP_NAME = 'E2E #675 Startzeit-Test';
@@ -38,6 +38,7 @@ const seedBody = { id: TRIP_ID, name: TRIP_NAME, region: 'Korsika', stages: seed
 async function openStagesEditor(page: import('@playwright/test').Page) {
 	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await expect(page.getByTestId('stage-date-field').first()).toBeVisible();
 }
 

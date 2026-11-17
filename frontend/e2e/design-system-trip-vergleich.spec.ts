@@ -81,7 +81,8 @@ import {
 	tippeUhrzeit,
 	tripGpxHochladen,
 	waehleOption,
-	type HubKind
+	type HubKind,
+	oeffneEtappenEditor
 } from './helpers';
 
 const DESKTOP = { width: 1280, height: 900 };
@@ -547,6 +548,7 @@ for (const [lang, anzeige, montag] of [
 			expect(stages[0]?.date, 'gespeichertes Startdatum').toBe('2026-11-19');
 			// Neuladen: das Etappen-Datum im Hub zeigt dasselbe Datum im Format der Sprache.
 			await openHub(page, 'route', id, { tab: 'etappen' });
+			await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 			const etappe = page.locator('[data-testid="stage-date-field"]:visible').first();
 			await expect(etappe.locator(DATUM.eingabe), 'Anzeige nach Neuladen').toHaveText(anzeige, { timeout: 15_000 });
 		} finally {
@@ -581,6 +583,7 @@ for (const breite of BREITEN) {
 		const hub = await seedHub(page.request, 'route');
 		try {
 			await openHub(page, 'route', hub.id, { tab: 'etappen' });
+			await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 			const datum = page.locator('[data-testid="stage-date-field"]:visible').first();
 			const zeit = page.locator('[data-testid="stage-start-time-field"]:visible').first();
 			await tippeDatum(page, datum, '2026-11-20');
@@ -595,6 +598,7 @@ for (const breite of BREITEN) {
 				)
 				.toBe('2026-11-20 07:30');
 			await openHub(page, 'route', hub.id, { tab: 'etappen' });
+			await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 			const datumNeu = page.locator('[data-testid="stage-date-field"]:visible').first();
 			const zeitNeu = page.locator('[data-testid="stage-start-time-field"]:visible').first();
 			await expect(datumNeu.locator(DATUM.eingabe)).toHaveText('20.11.2026', { timeout: 15_000 });
@@ -628,6 +632,7 @@ test('DS-2 Etappenwechsel (1280 px): Datum/Zeit in Etappe 2 tippen, sofort zu Et
 	const hub = await seedHub(page.request, 'route', { extra: { stages: ZWEI_ETAPPEN } });
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await waehleEtappe(page, 1);
 		await expect(feldEingabe(datumFeld(page))).toHaveText('02.08.2027', { timeout: 15_000 });
 		await tippeUhrzeit(page, zeitFeld(page), '06:45');
@@ -642,6 +647,7 @@ test('DS-2 Etappenwechsel (1280 px): Datum/Zeit in Etappe 2 tippen, sofort zu Et
 			})
 			.toBe(JSON.stringify([['s1', '2027-08-01', null], ['s2', '2027-08-20', '06:45']]));
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await waehleEtappe(page, 1);
 		await expect(feldEingabe(datumFeld(page))).toHaveText('20.08.2027', { timeout: 15_000 });
 		await expect(feldEingabe(zeitFeld(page))).toHaveText('06:45');
@@ -661,6 +667,7 @@ test('DS-2 Etappenwechsel (1280 px): Datum/Zeit in Etappe 2 tippen, sofort zu Et
 			.poll(async () => (await etappen(page, hub.id))[0]?.date, { message: 'Etappe 1 darf nichts abbekommen', timeout: 5_000 })
 			.toBe('2027-08-01');
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
 	} finally {
 		await hub.aufraeumen();
@@ -682,6 +689,7 @@ test('DS-2 Zwischenstände (1280 px): langsam getippt geht kein halbes Segment (
 	});
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
 		// Pause zwischen den Ziffern länger als die Speicher-Entprellung: ein Zwischenstand ginge hinaus.
 		await datumFeld(page).locator('[data-segment="day"]').click();
@@ -710,6 +718,7 @@ test('DS-2 Leeren (1280 px): Startzeit leeren ⇒ 08:00 (gespeichert ohne Startz
 	});
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(zeitFeld(page))).toHaveText('07:30', { timeout: 15_000 });
 		await zeitFeld(page).locator('[data-segment="hour"]').click();
 		await page.keyboard.press('Backspace');
@@ -732,6 +741,7 @@ test('DS-2 Leeren (1280 px): Startzeit leeren ⇒ 08:00 (gespeichert ohne Startz
 		await expect(feldEingabe(datumFeld(page)), 'Anzeige zurück auf das gespeicherte Datum').toHaveText('01.08.2027');
 		expect((await etappen(page, hub.id))[0]?.date, 'kein Datenverlust').toBe('2027-08-01');
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
 		await expect(feldEingabe(zeitFeld(page))).toHaveText('08:00');
 	} finally {
@@ -745,12 +755,14 @@ test('DS-2 (en, 1280 px): Startzeit 17:30 im englischen UI in 24 h, ohne AM/PM, 
 	const hub = await seedHub(page.request, 'route');
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(zeitFeld(page))).toHaveText('08:00', { timeout: 15_000 });
 		await expect(zeitFeld(page).locator('[data-segment="dayPeriod"]'), '24 h: kein AM/PM-Segment').toHaveCount(0);
 		await tippeUhrzeit(page, zeitFeld(page), '17:30');
 		await verlasseFeld(page);
 		await expect.poll(async () => (await etappen(page, hub.id))[0]?.start_time, { timeout: 15_000 }).toBe('17:30');
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(zeitFeld(page))).toHaveText('17:30', { timeout: 15_000 });
 		await expect(zeitFeld(page).locator('[data-segment="dayPeriod"]')).toHaveCount(0);
 	} finally {
@@ -798,6 +810,7 @@ test('DS-2 Jahr angefangen (1280 px): „202" ins Jahr getippt und Feld verlasse
 	const hub = await seedHub(page.request, 'route');
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
 		const puts = zaehlePuts(page, hub.id);
 		await datumFeld(page).locator('[data-segment="year"]').click();
@@ -817,6 +830,7 @@ test('DS-2 dasselbe Datum (1280 px): gespeichertes Datum und gespeicherte Startz
 	const hub = await seedHub(page.request, 'route', { extra: { stages: [{ ...ZWEI_ETAPPEN[0], start_time: '07:30' }] } });
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
 		await expect(feldEingabe(zeitFeld(page))).toHaveText('07:30');
 		const puts = zaehlePuts(page, hub.id);
@@ -841,6 +855,7 @@ test('DS-2 Rückkehr ins fertige Segment (1280 px): Tag „1" nachgetippt ist an
 	const hub = await seedHub(page.request, 'route');
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
 		await tippeDatum(page, datumFeld(page), '2027-08-20');
 		await expect.poll(async () => (await etappen(page, hub.id))[0]?.date, { timeout: 15_000 }).toBe('2027-08-20');
@@ -864,6 +879,7 @@ test('DS-2 Rücktaste (1280 px): eine Ziffer im fertigen Tag gelöscht ist angef
 	const hub = await seedHub(page.request, 'route');
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
 		await tippeDatum(page, datumFeld(page), '2027-08-20');
 		await expect.poll(async () => (await etappen(page, hub.id))[0]?.date, { timeout: 15_000 }).toBe('2027-08-20');
@@ -898,6 +914,7 @@ test('DS-2 Rücknahme beim Tippen (1280 px): scheitert das Speichern, während e
 	});
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
 		// Tag fertig (wird gespeichert und scheitert), Monat gleich danach angefangen („1").
 		await datumFeld(page).locator('[data-segment="day"]').click();
@@ -925,6 +942,7 @@ test('DS-2 Etappenwechsel Startzeit (1280 px): Startzeit in Etappe 2 fertig bzw.
 	const hub = await seedHub(page.request, 'route', { extra: { stages: ZWEI_ETAPPEN } });
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await waehleEtappe(page, 1);
 		await expect(feldEingabe(datumFeld(page))).toHaveText('02.08.2027', { timeout: 15_000 });
 		await tippeUhrzeit(page, zeitFeld(page), '06:45');
@@ -945,6 +963,7 @@ test('DS-2 Etappenwechsel Startzeit (1280 px): Startzeit in Etappe 2 fertig bzw.
 			})
 			.toBe(JSON.stringify([['s1', null], ['s2', '06:45']]));
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(zeitFeld(page))).toHaveText('08:00', { timeout: 15_000 });
 		await waehleEtappe(page, 1);
 		await expect(feldEingabe(zeitFeld(page))).toHaveText('06:45');
@@ -969,6 +988,7 @@ test('DS-2 Rücknahme Startzeit (1280 px): scheitert das Speichern, während die
 	});
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(zeitFeld(page))).toHaveText('07:30', { timeout: 15_000 });
 		// Stunde fertig (wird gespeichert und scheitert), Minute gleich danach angefangen („1").
 		await zeitFeld(page).locator('[data-segment="hour"]').click();
@@ -994,6 +1014,7 @@ test('DS-2 Startzeit neu tippen (1280 px): Stunde per Rücktaste geleert ⇒ bis
 	const hub = await seedHub(page.request, 'route', { extra: { stages: [{ ...ZWEI_ETAPPEN[0], start_time: '07:30' }] } });
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(zeitFeld(page))).toHaveText('07:30', { timeout: 15_000 });
 		const puts = zaehlePuts(page, hub.id);
 		await zeitFeld(page).locator('[data-segment="hour"]').click();

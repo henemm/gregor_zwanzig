@@ -14,7 +14,7 @@
 // Auth via storageState (playwright.config 'tests'-Projekt → admin.json).
 
 import { test, expect, type Page } from '@playwright/test';
-import { dragDndZoneItem, feldEingabe, tippeDatum } from './helpers';
+import { dragDndZoneItem, feldEingabe, tippeDatum, oeffneEtappenEditor } from './helpers';
 
 const TRIP_ID = 'e2e-498-autosave';
 const TRIP_NAME = 'E2E #498 Datum-Autosave';
@@ -34,6 +34,7 @@ const seedBody = { id: TRIP_ID, name: TRIP_NAME, region: 'Korsika', stages: seed
 async function openStagesEditor(page: Page) {
 	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await expect(page.getByTestId('stage-date-field').first()).toBeVisible();
 }
 
@@ -108,6 +109,7 @@ test('AC-1: Datum-Änderung persistiert sofort ohne Save-Klick', async ({ page }
 	// BEWUSST KEIN Klick auf „Etappen speichern".
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	const dates = await fetchStageDates(page);
 	expect(dates['s2']).toBe('2026-08-20');
@@ -130,6 +132,7 @@ test('AC-2: bestätigte Kaskade persistiert alle Etappen sofort', async ({ page 
 	// BEWUSST KEIN Klick auf „Etappen speichern".
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	const dates = await fetchStageDates(page);
 	expect(dates['s1']).toBe('2026-07-22');
@@ -190,6 +193,7 @@ test('AC-5: Pausentag-Datum persistiert sofort', async ({ page }) => {
 	// KEIN Save-Klick.
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	const dates = await fetchStageDates(page);
 	expect(dates['pause']).toBe('2026-08-09');
@@ -265,6 +269,7 @@ test('AC-6 (#1389): veralteter Auto-Speichervorgang überholt die Kaskade nicht'
 
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	const dates = await fetchStageDates(page);
 	expect(dates['s1'], 'Etappe 1 trägt das neue Datum').toBe('2026-07-22');
@@ -292,6 +297,7 @@ test('AC-7 (#1389): Etappe-1-Änderung überlebt einen Reload bei OFFENER Rückf
 	await page.waitForTimeout(1500);
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	await expect
 		.poll(async () => (await fetchStageDates(page))['s1'], { timeout: 15_000 })
@@ -368,6 +374,7 @@ test('AC-9 (#1389 F004): Doppeltipp auf „Lückenlos anschließen" datiert die 
 	await page.waitForTimeout(2000);
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	const dates = await fetchStageDates(page);
 	expect(dates['s1']).toBe('2026-08-22');
@@ -470,6 +477,7 @@ test('AC-11 (#1389 F005): EIN Wiederholungs-Klick nach fehlgeschlagenem Schreibv
 
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await expectShiftedExactlyOnce(page);
 });
 
@@ -489,6 +497,7 @@ test('AC-12 (#1389 F005): zwei Fehlschläge, dann Erfolg — der Versatz bleibt 
 
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	// Dreifacher Versatz wäre 2026-10-04 — auch das darf nicht passieren.
 	await expectShiftedExactlyOnce(page);
 });
@@ -516,6 +525,7 @@ test('AC-13 (#1389 F005 / Nebenbefund #1199): zweimal umdatieren vor der Antwort
 
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	const dates = await fetchStageDates(page);
 	expect(dates['s1']).toBe('2026-08-21');
 	expect(dates['s2'], 'Folgetag der ZULETZT gewählten Wahl').toBe('2026-08-22');
@@ -665,6 +675,7 @@ test('AC-17 (#1390): Umsortieren bei offener Rückfrage lässt beide Knöpfe err
 	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	// Bug #1393 F002: „Tag 2" steht nach dem Umsortieren VOR der bearbeiteten
 	// Etappe — sie gehört damit nicht mehr zu den Folge-Etappen und bleibt
@@ -699,6 +710,7 @@ test('AC-18 (#1390): Löschen der Etappe mit offener Rückfrage lässt keine Lei
 	// Das Löschen selbst persistiert; die Folge-Etappen bleiben unverschoben.
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	const dates = await fetchStageDates(page);
 	expect(dates['s1'], 'gelöschte Etappe ist weg').toBeUndefined();
 	expect(dates['s2']).toBe('2026-08-02');
@@ -725,6 +737,7 @@ test('AC-19 (#1390): eine andere Etappe anklicken lässt die Rückfrage erreichb
 	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await expectShiftedExactlyOnce(page);
 });
 
@@ -770,6 +783,7 @@ test('AC-20 (#1390 F001/F002): zweites Umdatieren NACH dem Umsortieren rechnet m
 	// stünde dort 08-23 statt 09-02.
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	const dates = await fetchStageDates(page);
 	expect(dates['s1'], 'bearbeitete Etappe trägt das zuletzt gewählte Datum').toBe('2026-09-01');
 	expect(dates['s2'], 'steht jetzt davor — unberührt').toBe('2026-08-02');
@@ -822,6 +836,7 @@ test('AC-21 (#1393): mittlere Etappe umdatieren — Rückfrage, lückenlos dahin
 
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	const dates = await fetchStageDates(page);
 	expect(dates['s1'], 'Etappen VOR der bearbeiteten bleiben unberührt').toBe('2026-08-01');
 	expect(dates['s2'], 'Etappen VOR der bearbeiteten bleiben unberührt').toBe('2026-08-02');
@@ -873,6 +888,7 @@ test('AC-23 (#1393): ungleiche Abstände werden lückenlos eingeebnet', async ({
 
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	const dates = await fetchStageDates(page);
 	expect(dates['s1']).toBe('2026-08-03');
 	expect(dates['s2'], 'Folgetag, nicht +2 wie der alte Versatz').toBe('2026-08-04');
@@ -898,6 +914,7 @@ test('AC-24 (#1393): ein Pausentag dazwischen belegt einen Tag und rückt mit', 
 
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	const dates = await fetchStageDates(page);
 	expect(dates['s1']).toBe('2026-08-10');
 	expect(dates['pause'], 'der Ruhetag bleibt ein Tag und rückt mit').toBe('2026-08-11');
@@ -927,6 +944,7 @@ test('AC-25 (#1393): eine Etappe ohne Datum bleibt ohne Datum und verbraucht kei
 
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	const dates = await fetchStageDates(page);
 	expect(dates['s1']).toBe('2026-08-10');
 	expect(dates['s2'] ?? '', 'ohne Datum bleibt ohne Datum').toBe('');
@@ -988,6 +1006,7 @@ test('AC-27 (#1393 F001): eine Folge-Etappe löschen — Rückfrage zählt neu, 
 	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	const dates = await fetchStageDates(page);
 	expect(dates['s1'], 'davor bleibt unberührt').toBe('2026-08-01');
@@ -1020,6 +1039,7 @@ test('AC-28 (#1393 F002): eine Folge-Etappe vor die bearbeitete ziehen — sie b
 	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	const dates = await fetchStageDates(page);
 	expect(dates['s1']).toBe('2026-08-01');
@@ -1103,6 +1123,7 @@ test('AC-30 (#1393 R2-F001): „Nur diese Etappe" fasst eine fremde, bewusst ge�
 		.toBe('2026-08-22');
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	const dates = await fetchStageDates(page);
 	expect(dates['s5'], 'die eigene, bereits gespeicherte Änderung darf nicht verschwinden').toBe(
@@ -1186,6 +1207,7 @@ test('AC-31 (#1393 R2-F002): eine Ziehgeste über die letzte Position beantworte
 	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	const dates = await fetchStageDates(page);
 	expect(dates['s2'], 'steht jetzt davor — unberührt').toBe('2026-08-02');
@@ -1275,6 +1297,7 @@ test('AC-32 (#1393 R4-F001): nach Fehlschlägen bleibt die eigene Eingabe an ein
 		.toBe('2026-08-22');
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	const dates = await fetchStageDates(page);
 	expect(dates['s1'], 'bearbeitete Etappe behält ihr neues Datum').toBe('2026-08-22');
@@ -1317,6 +1340,7 @@ test('AC-33 (#1393 R4-F002): eine offene Rückfrage verfällt nicht, wenn eine z
 	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 	const dates = await fetchStageDates(page);
 	expect(dates['s1']).toBe('2026-08-22');
@@ -1399,6 +1423,7 @@ test('AC-34 (#1393 R5-F001): während des Schreibens sind bauliche Änderungen s
 	// Keine Etappe ist verlorengegangen oder wiederauferstanden.
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	const dates = await fetchStageDates(page);
 	expect(dates['s1']).toBe('2026-08-22');
 	expect(dates['s2']).toBe('2026-08-23');
@@ -1430,6 +1455,7 @@ test('AC-35 (#1393 R5-F001): nach einem Fehlschlag löst sich die Sperre und Lö
 	// Löschen — er darf „Tag 2" beim Verlassen nicht wiederauferstehen lassen.
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	const dates = await fetchStageDates(page);
 	expect(dates['s2'], 'gelöschte Etappe bleibt weg').toBeUndefined();
 	expect(dates['s1'], 'die Datumsänderung ist trotz Fehlschlag gesichert').toBe('2026-08-22');
@@ -1498,6 +1524,7 @@ test('AC-36 (#1393 R6-F001): ein zurückgestellter Vorgang dreht die bestätigte
 	// zurück, obwohl die Kaskade bestätigt geschrieben wurde.
 	await page.reload();
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await expect
 		.poll(async () => (await fetchStageDates(page))['s1'], { timeout: 15_000 })
 		.toBe('2026-08-29');

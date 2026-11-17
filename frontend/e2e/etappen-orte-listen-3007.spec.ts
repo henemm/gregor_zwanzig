@@ -45,6 +45,59 @@ test.describe('#3007 Etappen-Liste: Zeile klappt den Editor auf', () => {
 			await expect(zeilen.nth(0)).toHaveAttribute('aria-expanded', 'true');
 			await expect(zeilen.nth(1)).toHaveAttribute('aria-expanded', 'false');
 			await expect(editor).toHaveCount(1);
+			// Leertaste auf der offenen Zeile schließt wieder (Tastatur = Klick).
+			await page.keyboard.press(' ');
+			await expect(zeilen.nth(0)).toHaveAttribute('aria-expanded', 'false');
+			await expect(editor).toHaveCount(0);
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
+
+	// Fix-Loop 1 (Adversary F003, M5/M17): der Editor gehört GENAU zur geklickten Etappe — er steht
+	// direkt unter ihrer Zeile und zeigt ihren Namen und ihre Wegpunkte; ein Wechsel im Etappen-Band
+	// nimmt ihn zur anderen Zeile mit.
+	test('AC-13: Editor zeigt die geklickte Etappe unter ihrer Zeile; Wechsel im Band nimmt ihn mit', async ({ page, request }) => {
+		const hub = await seedHub(request, 'route', { extra: { stages: ETAPPEN } });
+		try {
+			await openHub(page, 'route', hub.id, { tab: 'etappen' });
+			const zeilen = page.locator('[data-abschnitt="liste"] [data-testid="etappen-liste-zeile"]');
+			await expect(zeilen).toHaveCount(2);
+			const editor = page.getByTestId('etappen-reiterflaeche');
+			const sidebar = editor.getByTestId('waypoint-sidebar');
+			const unter = (i: number) => zeilen.nth(i).locator('xpath=following-sibling::*[1]');
+
+			await zeilen.nth(1).click();
+			await expect(zeilen.nth(1)).toHaveAttribute('aria-expanded', 'true');
+			await expect(zeilen.nth(0)).toHaveAttribute('aria-expanded', 'false');
+			await expect(editor).toHaveCount(1);
+			await expect(unter(1)).toHaveAttribute('data-testid', 'etappen-aufklapp');
+			await expect(unter(1).getByTestId('etappen-reiterflaeche')).toHaveCount(1);
+			await expect(editor.locator('p', { hasText: /^Tag 2$/ })).toBeVisible();
+			await expect(sidebar).toContainText('Ziel C');
+			await expect(sidebar).not.toContainText('Start A');
+
+			// Wechsel über das Etappen-Band im aufgeklappten Bereich: Editor wandert unter Zeile 1.
+			await page.getByTestId('etappen-strip').getByTestId('stage-card-0').click();
+			await expect(zeilen.nth(0)).toHaveAttribute('aria-expanded', 'true');
+			await expect(zeilen.nth(1)).toHaveAttribute('aria-expanded', 'false');
+			await expect(editor).toHaveCount(1);
+			await expect(unter(0)).toHaveAttribute('data-testid', 'etappen-aufklapp');
+			await expect(editor.locator('p', { hasText: /^Tag 1$/ })).toBeVisible();
+			await expect(sidebar).toContainText('Start A');
+			await expect(sidebar).not.toContainText('Ziel C');
+
+			// Enter auf Zeile 2 wechselt direkt (höchstens ein Editor), Enter erneut schließt.
+			await zeilen.nth(1).focus();
+			await page.keyboard.press('Enter');
+			await expect(zeilen.nth(1)).toHaveAttribute('aria-expanded', 'true');
+			await expect(zeilen.nth(0)).toHaveAttribute('aria-expanded', 'false');
+			await expect(editor).toHaveCount(1);
+			await expect(sidebar).toContainText('Ziel C');
+			await zeilen.nth(1).focus();
+			await page.keyboard.press('Enter');
+			await expect(zeilen.nth(1)).toHaveAttribute('aria-expanded', 'false');
+			await expect(editor).toHaveCount(0);
 		} finally {
 			await hub.aufraeumen();
 		}
@@ -53,7 +106,7 @@ test.describe('#3007 Etappen-Liste: Zeile klappt den Editor auf', () => {
 
 test.describe('#3007 Orte-Liste: entfernen per Textknopf', () => {
 	test.use({ viewport: DESKTOP });
-	test('AC-7/AC-22: „entfernen“ entfernt genau diesen Ort, Testids bleiben', async ({ page, request }) => {
+	test('AC-7/AC-22: „entfernen“ bei Ort 2 entfernt genau Ort 2, Testids bleiben', async ({ page, request }) => {
 		const hub = await seedHub(request, 'vergleich');
 		try {
 			await openHub(page, 'vergleich', hub.id, { tab: 'orte' });
@@ -62,13 +115,19 @@ test.describe('#3007 Orte-Liste: entfernen per Textknopf', () => {
 			const zeilen = liste.locator('[data-testid="hub-orte-row"]');
 			const vorher = await zeilen.count();
 			test.skip(vorher < 2, 'Prüf-Vergleich braucht mindestens zwei Orte');
+			// Fix-Loop 1 (Adversary M1): den ZWEITEN Ort entfernen — ein Handler, der immer den ersten
+			// (oder einen anderen) entfernt, fällt damit auf. Geprüft über Kennung UND sichtbaren Namen.
 			const ids = await zeilen.evaluateAll((els) => els.map((e) => e.getAttribute('data-loc-id')));
-			const knopf = zeilen.nth(0).getByTestId('hub-orte-remove');
+			const namen = await zeilen.locator('b').allInnerTexts();
+			expect(namen).toHaveLength(vorher);
+			const knopf = zeilen.nth(1).getByTestId('hub-orte-remove');
 			await expect(knopf).not.toHaveText('✕');
 			await knopf.click();
 			await expect(zeilen).toHaveCount(vorher - 1);
 			const nachher = await zeilen.evaluateAll((els) => els.map((e) => e.getAttribute('data-loc-id')));
-			expect(nachher).toEqual(ids.slice(1));
+			expect(nachher).toEqual([ids[0], ...ids.slice(2)]);
+			await expect(zeilen.locator('b')).toHaveText([namen[0], ...namen.slice(2)]);
+			await expect(liste).not.toContainText(namen[1]);
 			await expect(page.getByTestId('hub-orte-add')).toHaveCount(1);
 		} finally {
 			await hub.aufraeumen();

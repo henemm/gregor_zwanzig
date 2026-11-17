@@ -283,13 +283,15 @@ test.describe('Ortsvergleich: Orte-Karte und Orte-Reiter (compare-eigen)', () =>
 	});
 
 	// #3006: „Verglichene Orte“ ist durch den Bereichskopf „Orte“ (Mockup Fassung 3) ersetzt.
-	test('S8c AC-9: Orte-Reiter zeigt den Bereichskopf „Orte" und den Desktop-Sortier-Hinweis', async ({ page }) => {
+	// #3007: der Sortier-Hinweis entfällt (Mockup ohne Hinweis); Sortieren bleibt über den textlosen Ziehgriff.
+	test('S8c AC-9: Orte-Reiter zeigt den Bereichskopf „Orte", keinen Sortier-Hinweis, aber den Ziehgriff', async ({ page }) => {
 		const hub = await aktiverHub(page, 'vergleich');
 		await openHub(page, 'vergleich', hub.id, { tab: 'orte' });
 		const panel = page.locator('[data-testid="compare-detail-panel-orte"]:visible').first();
 		await expect(panel).toBeVisible({ timeout: 10_000 });
 		await expect(panel.locator('[data-testid="orte-titel"]')).toHaveText('Orte');
 		await expect(panel.getByText('Verglichene Orte')).toHaveCount(0);
-		await expect(panel.getByText('Reihenfolge = Spalten im Briefing · ziehen zum Sortieren')).toBeVisible();
+		await expect(panel.getByText('Reihenfolge = Spalten im Briefing · ziehen zum Sortieren')).toHaveCount(0);
+		await expect(panel.locator('[data-abschnitt="liste"] [data-testid="hub-orte-row"] [data-testid="drag-handle"]').first()).toHaveAttribute('aria-label', 'ziehen zum Sortieren');
 	});
 });

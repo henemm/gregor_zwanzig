@@ -5,7 +5,7 @@
 // und den Befund verdecken). Vorlage: mobile-etappen-sortieren-speichert.spec.ts.
 
 import { test, expect, type Page } from '@playwright/test';
-import { tippeDatum } from './helpers';
+import { tippeDatum, oeffneEtappenEditor } from './helpers';
 
 const TRIP_ID = 'e2e-2213-bauliche';
 const wp = (id: string, lat: number) => ({ id, name: id, lat, lon: 9.0, elevation_m: Math.round(800 + lat * 10) });
@@ -26,6 +26,7 @@ async function oeffnen(page: Page, mobil = false): Promise<void> {
 	if (mobil) await page.setViewportSize({ width: 390, height: 844 });
 	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 }
 
 test.beforeEach(async ({ page }) => {
@@ -44,6 +45,7 @@ test('AC-1: Desktop „+ Etappe" speichert sofort, nach Neuladen vorhanden', asy
 	await page.locator('.add-stage-btn').click();
 	await expect.poll(async () => (await serverEtappen(page)).length, { timeout: 10_000 }).toBe(4);
 	await page.reload();
+	await oeffneEtappenEditor(page); // #3007: Etappen-Band steht im aufgeklappten Editor
 	await expect(page.getByTestId('stage-card-3')).toBeVisible();
 });
 
@@ -55,6 +57,8 @@ test('AC-1: Desktop Etappe loeschen (Dialog) speichert sofort, nach Neuladen weg
 		.poll(async () => (await serverEtappen(page)).map((s) => s.id), { timeout: 10_000 })
 		.toEqual(['s1', 's3']);
 	await page.reload();
+	await oeffneEtappenEditor(page); // #3007: Etappen-Band steht im aufgeklappten Editor
+	await expect(page.getByTestId('stage-card-1')).toBeVisible();
 	await expect(page.getByTestId('stage-card-2')).toHaveCount(0);
 });
 

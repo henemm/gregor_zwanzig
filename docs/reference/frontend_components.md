@@ -1,6 +1,6 @@
 # Frontend Components Reference
 
-**Updated:** 2026-11-17 (Issue #3006 — Bereichskopf-Baustein `molecules/Bereichskopf` ersetzt `ZustellungKopf` und `wt-kopf`); 2026-09-27 (Issue #2277 Scheibe S2a — `/trips/new` bekommt den Reiter „Wertebereiche", geteilter `CorridorEditor` mit `createMode`; Anlege-Editoren-Abschnitt zusätzlich korrigiert: kein Auto-Save, sondern EIN finaler `POST`); 2026-09-21 (Issue #1895 — Alert-Rules-Editor kennt nur noch den Änderungs-Modus; `ModeCard` gelöscht, Modus-Toggle und Absolut-Feld aus `AlertRuleRow` entfernt); 2026-09-19 (Mobile-Shell S2 — `TopAppBar`, `topAppBarStore` und Hamburger-Drawer entfernt; Konto-Kreis + `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, Safe-Area oben); 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
+**Updated:** 2026-11-17 (Issue #3007 — Listenzeile-Baustein `molecules/Listenzeile` für die Reiter Etappen und Orte, `CompareLocationRow` gelöscht); 2026-11-17 (Issue #3006 — Bereichskopf-Baustein `molecules/Bereichskopf` ersetzt `ZustellungKopf` und `wt-kopf`); 2026-09-27 (Issue #2277 Scheibe S2a — `/trips/new` bekommt den Reiter „Wertebereiche", geteilter `CorridorEditor` mit `createMode`; Anlege-Editoren-Abschnitt zusätzlich korrigiert: kein Auto-Save, sondern EIN finaler `POST`); 2026-09-21 (Issue #1895 — Alert-Rules-Editor kennt nur noch den Änderungs-Modus; `ModeCard` gelöscht, Modus-Toggle und Absolut-Feld aus `AlertRuleRow` entfernt); 2026-09-19 (Mobile-Shell S2 — `TopAppBar`, `topAppBarStore` und Hamburger-Drawer entfernt; Konto-Kreis + `KontoSheet`, `PageHeader back`, `EditorStickyFooter`, Safe-Area oben); 2026-08-03 (Issue #1196 S1 — Wordmark-Props + 10 real existierende Komponenten ergänzt: MapCanvas, WaypointPin, ProfileEditor, StageCard, WaypointCard, PauseStageView, AlertRulesEditor, AlertRuleRow, ModeCard, LocationPreviewMap); 2026-07-21 (Doku-Audit #1341 — Wizard-Sektionen und Datei-Inventar entfernt, Anlege-Editoren dokumentiert); 2026-05-25 (Issue #316 — briefing-history/ + trip-new/ Kategorien ergänzt, verwaiste Cockpit-Molekül-Referenz entfernt); 2026-07-15 (Issue #1256 Scheibe S8d — TopAppBar per-page fill pattern via `topAppBar.svelte.ts`, additive `title`/`backHref` props); 2026-06-08 (Issue #647 — Home-Screen Fidelity: homeCompareTimeline Helper); 2026-05-31; 2026-07-19 (Epic #1301 Scheibe F2b — `CompareEditor.svelte` gelöscht, TopAppBar-Referenzimplementierung entsprechend aktualisiert)  
 **Version:** 1.13
 
 ## Overview
@@ -391,6 +391,20 @@ Kopf jedes Reiters der Einstellungen (Trip und Orte): Überschrift, Erklärsatz 
 ```
 
 **Spec:** `docs/specs/modules/feat_3006_bereichskoepfe.md`
+
+### Listenzeile (#3007, 2026-11-17)
+
+**File:** `frontend/src/lib/components/molecules/Listenzeile.svelte`
+
+EINE Listenzeile für die Reiter Etappen (Trip) und Orte (Orts-Briefing): links Titel (fett) und Zweitzeile, rechts Meta (Mono) vor der Aktion. Setzt auf `molecules/Einstellungszeile` auf (kein zweites Zeilenmuster). Ersetzt die frühere Orte-Zeile `CompareLocationRow` (gelöscht) und die Eigenzeilen der Etappenliste.
+
+**Props:** `titel`, optional `zweitzeile`, `meta`, `testid`, `onclick` (Zeile klickbar), `offen` (→ `aria-expanded`), `griff` (Snippet für den Ziehgriff), `children` (Aktion rechts), `data-*` werden durchgereicht. Texte kommen fertig aus dem Katalog des Aufrufers.
+
+**Marker:** Zeile trägt `data-listenzeile`; der Listen-Container jedes Reiters trägt genau einmal `data-abschnitt="liste"` (Elementlisten-Abgleich).
+
+**Inhalte Etappen:** `edit/etappenListe.ts` (reine Funktionen): Titel „E{n} · Start → Ziel“, Zweitzeile „x km · ↑y m“, Meta „Gehzeit h:mm“ aus derselben Rechnung wie die Ankunftszeiten der Wegpunkte. Der Knopf „Tempo ändern“ folgt mit #2796.
+
+**Spec:** `docs/specs/modules/feat_3007_etappen_orte_listen.md`
 
 ### ConfirmDialog Component
 

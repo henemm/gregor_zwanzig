@@ -20,7 +20,10 @@
 	import StageDateField from './StageDateField.svelte';
 	import StageTimeField from './StageTimeField.svelte';
 	import { computeCascadeDelta, consecutiveDates, formatDeDate } from './cascade.ts';
-	import { Eyebrow, Btn, Dot, Pill } from '$lib/components/atoms';
+	import { Eyebrow, Btn, Dot, Pill, Card } from '$lib/components/atoms';
+	// Issue #3007: Etappen-Liste im Hub aus dem geteilten Baustein Listenzeile (wie Orte, ADR-0097).
+	import Listenzeile from '$lib/components/molecules/Listenzeile.svelte';
+	import { etappenZeile } from './etappenListe.ts';
 	import { computeArrivalTimes, activityToSpeed } from '$lib/utils/naismith';
 	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
 	import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
@@ -64,8 +67,11 @@
 		/** #3006: Bereichskopf des Reiters (vom Hub gereicht) — Handy oben IN der Reiterfläche,
 		 *  Computer oben ÜBER dem Etappen-Band, an derselben Stelle wie beim Vergleich. */
 		kopf?: Snippet;
+		/** #3007: Hub-Modus — Computer zeigt zuerst nur die Etappen-Liste; eine Zeile klappt den
+		 *  bestehenden Editor dieser Etappe darunter auf. Standard aus (Anlegen-Editor unverändert). */
+		listeZuerst?: boolean;
 	}
-	let { stages = $bindable(), tripId, showSave = true, activityType, onTripUpdate, saveController, bottomReservePx, kopf }: Props = $props();
+	let { stages = $bindable(), tripId, showSave = true, activityType, onTripUpdate, saveController, bottomReservePx, kopf, listeZuerst = false }: Props = $props();
 
 	let saving = $state(false);
 	let saveSuccess = $state(false);
@@ -544,10 +550,23 @@
 		speichereBaulicheAenderung();
 	}
 	function handleStageActivate(stageId: string): void {
+		// #3007: im Listenmodus wandert der offene Editor mit der gewählten Etappe (höchstens einer offen).
+		if (offeneEtappeId !== null) offeneEtappeId = stageId;
 		if (stageId === activeStageId) return;
 		activeStageId = stageId;
 		activeWaypointId = null;
 		addModeHint = false;
+	}
+	// #3007 (AC-13): Klick/Enter auf eine Etappenzeile klappt den Editor dieser Etappe auf, erneut zu.
+	let offeneEtappeId = $state<string | null>(null);
+	const offenId = $derived(offeneEtappeId !== null && stages.some((s) => s.id === offeneEtappeId) ? offeneEtappeId : null);
+	function zeileUmschalten(stageId: string): void {
+		if (offenId === stageId) {
+			offeneEtappeId = null;
+			return;
+		}
+		offeneEtappeId = stageId;
+		handleStageActivate(stageId);
 	}
 	function handlePauseInsert(afterIndex: number): void {
 		if (cascadeBusy) return; // R5-F001
@@ -784,7 +803,50 @@
 	     Etappen-Band — auch bei Pausentag und ohne Etappen, wo es keine Reiterfläche gibt.
 	     Danach das EtappenStrip (volle Breite, eigene Navigations-Achse); `{/if}` direkt davor,
 	     damit ohne Kopf kein Leerraum entsteht. -->
-	{#if kopf}<div class="etappen-kopf-oben">{@render kopf()}</div>{/if}<EtappenStrip
+	{#if listeZuerst}
+		{@render etappenListe()}
+	{:else}
+	{#if kopf}<div class="etappen-kopf-oben">{@render kopf()}</div>{/if}{@render etappenBand()}
+	{@render etappenEditor(false)}
+	{/if}
+
+	{#if showSave && !saveController}
+		<div class="save-bar">
+			<!-- Bug #1393 R5-F002: NICHT `onclick={save}` — der Browser übergäbe das
+			     Klick-Ereignis als `payload` und schriebe `{ stages: <MouseEvent> }`. -->
+			<Btn variant="primary" size="sm" onclick={() => save()} disabled={saving || !tripId}>
+				{saving ? $t('trip.speichern_laeuft') : $t('trip.etappen_editor.speichern')}
+			</Btn>
+			{#if saveSuccess}<span class="save-ok" style="display: inline-flex; align-items: center; gap: 6px;"><Dot tone="good" size="xs" />{$t('trip.etappen_editor.gespeichert')}</span>{/if}
+			{#if saveError !== null}<span class="save-err">{saveError || $t('aktionen.speichern_fehlgeschlagen')}</span>{/if}
+		</div>
+	{/if}
+	{/if}
+</div>
+
+<!-- Bug #708 — Bestätigungs-Dialog für Etappen-Löschen -->
+<Dialog.Root
+	open={pendingRemoveStageId !== null}
+	onOpenChange={(open) => { if (!open) pendingRemoveStageId = null; }}
+>
+	<Dialog.Content>
+		<Dialog.Header>
+			<Dialog.Title>{$t('trip.etappe_loeschen')}</Dialog.Title>
+			<Dialog.Description>
+				{$t('trip.etappen_editor.loeschen_frage', { name: stages.find(s => s.id === pendingRemoveStageId)?.name ?? '' })}
+			</Dialog.Description>
+		</Dialog.Header>
+		<Dialog.Footer>
+			<Btn variant="outline" data-testid="cancel-delete-stage" onclick={() => { pendingRemoveStageId = null; }}>{$t('aktionen.abbrechen')}</Btn>
+			<Btn variant="destructive" data-testid="confirm-delete-stage" onclick={confirmRemoveStage} disabled={cascadeBusy}>{$t('aktionen.delete')}</Btn>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
+
+<!-- #3007: Etappen-Band (Auswahl, Sortieren, Pausentag, Hinzufügen, Löschen) — im Anlegen-Editor über
+     dem Editor, im Hub-Listenmodus im aufgeklappten Bereich, damit keine Funktion entfällt. -->
+{#snippet etappenBand()}
+	<EtappenStrip
 		{stages}
 		{activeStageId}
 		onStagesReorder={handleStagesReorder}
@@ -795,20 +857,11 @@
 		onRemoveStage={(id) => { if (!cascadeBusy) pendingRemoveStageId = id; }}
 		onAddStage={handleAddStage}
 	/>
+{/snippet}
 
-	{#if activeStage}
-		{#if activeIsPause}
-			{@render cascadeBanner()}
-			<PauseStageView
-				stage={activeStage}
-				{prevStage}
-				{nextStage}
-				onDateChange={(newDate) => handleDateChange(activeStage!.id, newDate)}
-			/>
-		{:else}
-			<!-- Issue #2880: Inhaltsbereich in der geteilten Reiterfläche (28/40/60, max. 1480 px);
-			     das Etappen-Band darüber bleibt volle Breite. Vorher eigener Rand 20/40/60 (#585). -->
-			<HubReiterflaeche testid="etappen-reiterflaeche">
+<!-- #3007: bestehender Editor der aktiven Etappe (unverändert); `eingebettet` = unter der Listenzeile. -->
+{#snippet editorInhalt()}
+{#if activeStage}
 			<!-- Etappen-Header mit editierbarem Datum (Issue #498) -->
 			<div class="flex items-start justify-between gap-8">
 				<div class="min-w-0 flex-1">
@@ -910,42 +963,60 @@
 					</div>
 				</div>
 			</div>
-			</HubReiterflaeche>
+{/if}
+{/snippet}
+
+{#snippet etappenEditor(eingebettet: boolean)}
+	{#if activeStage}
+		{#if activeIsPause}
+			{@render cascadeBanner()}
+			<PauseStageView
+				stage={activeStage}
+				{prevStage}
+				{nextStage}
+				onDateChange={(newDate) => handleDateChange(activeStage!.id, newDate)}
+			/>
+		{:else if eingebettet}
+			<div class="etappen-aufklapp-flaeche" data-testid="etappen-reiterflaeche">{@render editorInhalt()}</div>
+		{:else}
+			<!-- Issue #2880: Inhaltsbereich in der geteilten Reiterfläche (28/40/60, max. 1480 px);
+			     das Etappen-Band darüber bleibt volle Breite. Vorher eigener Rand 20/40/60 (#585). -->
+			<HubReiterflaeche testid="etappen-reiterflaeche">{@render editorInhalt()}</HubReiterflaeche>
 		{/if}
 	{/if}
+{/snippet}
 
-	{#if showSave && !saveController}
-		<div class="save-bar">
-			<!-- Bug #1393 R5-F002: NICHT `onclick={save}` — der Browser übergäbe das
-			     Klick-Ereignis als `payload` und schriebe `{ stages: <MouseEvent> }`. -->
-			<Btn variant="primary" size="sm" onclick={() => save()} disabled={saving || !tripId}>
-				{saving ? $t('trip.speichern_laeuft') : $t('trip.etappen_editor.speichern')}
-			</Btn>
-			{#if saveSuccess}<span class="save-ok" style="display: inline-flex; align-items: center; gap: 6px;"><Dot tone="good" size="xs" />{$t('trip.etappen_editor.gespeichert')}</span>{/if}
-			{#if saveError !== null}<span class="save-err">{saveError || $t('aktionen.speichern_fehlgeschlagen')}</span>{/if}
+<!-- #3007 (Mockup Fassung 3, viewEtappen): Hub-Listenmodus — Kopf, dann je Etappe eine Listenzeile
+     „E{n} · Start → Ziel“, „x km · ↑y m“, „Gehzeit h:mm“; die Zeile klappt den Editor darunter auf. -->
+{#snippet etappenListe()}
+	<HubReiterflaeche testid="etappen-liste-reiterflaeche">
+		{#if kopf}{@render kopf()}{/if}<div class="etappen-liste-rahmen">
+			<Card padding={0} data-abschnitt="liste">
+				{#each stages as stage, i (stage.id)}
+					{@const zeile = etappenZeile(stage, i, $locale, $t, activityToSpeed(activityType))}
+					<Listenzeile
+						titel={zeile.titel}
+						zweitzeile={zeile.zweitzeile}
+						meta={zeile.meta}
+						testid="etappen-liste-zeile"
+						data-stage-id={stage.id}
+						onclick={() => zeileUmschalten(stage.id)}
+						offen={offenId === stage.id}
+					/>
+					{#if offenId === stage.id}
+						<div class="etappen-aufklapp" data-testid="etappen-aufklapp">
+							{@render etappenBand()}
+							{@render etappenEditor(true)}
+						</div>
+					{/if}
+				{:else}
+					<p class="etappen-liste-leer">{$t('trip.hub.keine_etappen')}</p>
+				{/each}
+			</Card>
+			{#if stages.length === 0}<div class="etappen-liste-band">{@render etappenBand()}</div>{/if}
 		</div>
-	{/if}
-	{/if}
-</div>
-
-<!-- Bug #708 — Bestätigungs-Dialog für Etappen-Löschen -->
-<Dialog.Root
-	open={pendingRemoveStageId !== null}
-	onOpenChange={(open) => { if (!open) pendingRemoveStageId = null; }}
->
-	<Dialog.Content>
-		<Dialog.Header>
-			<Dialog.Title>{$t('trip.etappe_loeschen')}</Dialog.Title>
-			<Dialog.Description>
-				{$t('trip.etappen_editor.loeschen_frage', { name: stages.find(s => s.id === pendingRemoveStageId)?.name ?? '' })}
-			</Dialog.Description>
-		</Dialog.Header>
-		<Dialog.Footer>
-			<Btn variant="outline" data-testid="cancel-delete-stage" onclick={() => { pendingRemoveStageId = null; }}>{$t('aktionen.abbrechen')}</Btn>
-			<Btn variant="destructive" data-testid="confirm-delete-stage" onclick={confirmRemoveStage} disabled={cascadeBusy}>{$t('aktionen.delete')}</Btn>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
+	</HubReiterflaeche>
+{/snippet}
 
 <style>
 	/* #3006: Abstand Kopf → Liste wie beim Vergleich (.hub-orte-kopf in CompareTabs). */
@@ -963,6 +1034,26 @@
 		.etappen-kopf-oben {
 			padding: 20px 16px 0;
 		}
+	}
+	/* #3007: Hub-Listenmodus — Abstand Kopf → Liste wie beim Vergleich, aufgeklappter Editor in der Karte. */
+	.etappen-liste-rahmen {
+		margin-top: var(--g-s-4);
+	}
+	.etappen-aufklapp {
+		display: flex;
+		flex-direction: column;
+		gap: var(--g-s-4);
+		padding: var(--g-s-4) var(--g-s-5) var(--g-s-5);
+		border-top: 1px solid var(--g-rule-soft);
+	}
+	.etappen-liste-leer {
+		margin: 0;
+		padding: var(--g-size-14px) var(--g-s-5);
+		font-size: var(--g-text-sm);
+		color: var(--g-ink-3);
+	}
+	.etappen-liste-band {
+		margin-top: var(--g-s-4);
 	}
 	/* Issue #675 — Startzeit-Feld neben Datum-Feld im Header */
 	.stage-header-fields {

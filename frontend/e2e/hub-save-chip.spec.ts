@@ -29,6 +29,7 @@ import {
 	openHub,
 	seedHub,
 	tippeDatum,
+	oeffneEtappenEditor,
 	type HubKind
 } from './helpers';
 import { cooldownFeld } from './s3b2795-zustellung.helpers';
@@ -85,6 +86,7 @@ async function oeffneAusloeser(page: Page, kind: HubKind, id: string): Promise<v
 		await expect(page.getByTestId('hub-orte-row')).toHaveCount(2);
 	} else {
 		await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 10_000 });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(feldEingabe(etappenDatum(page))).toHaveText(datumAnzeige(SEED_DATUM));
 	}
 	await expect(chip(page)).toBeVisible({ timeout: 10_000 });
@@ -216,7 +218,10 @@ for (const kind of HUB_KINDS) {
 				timeout: 10_000
 			});
 			if (kind === 'vergleich') await expect(page.getByTestId('hub-orte-row')).toHaveCount(1);
-			else await expect(feldEingabe(etappenDatum(page))).toHaveText(datumAnzeige('2027-08-20'));
+			else {
+				await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
+				await expect(feldEingabe(etappenDatum(page))).toHaveText(datumAnzeige('2027-08-20'));
+			}
 		} finally {
 			await hub.aufraeumen();
 		}
