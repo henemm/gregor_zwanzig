@@ -169,3 +169,4 @@ Zusicherungen am Wirkort (Aufzeichner an den Kanal-Ausgängen), kein Mock-Theate
 ## Changelog
 
 - 2026-11-17: Initial spec created (Phase 3e, Issue #3100, Epic #3058)
+- 2026-11-17: Befund aus RED (AC-4) im Rahmen behoben: das Trip-Briefing sandte an die Premium-SMS den 160er-SMS-Text (bis 160 > 153 Zeichen). Neu `TripReport.premium_sms_text` (gleich `sms_text`, solange ≤ 153; sonst derselbe Formatter mit Grenze 153), gesendet in `notification_service.py`. Damit sind „Side effects: keine“ und „src: keine Änderung“ überholt; keine eigene Premium-Auswahl (AC-8 unverändert). `test_3047_r7_kanaele_trip.py::test_ac23` sicherte das alte Verhalten zu und folgt jetzt der Regel aus Punkt 3.

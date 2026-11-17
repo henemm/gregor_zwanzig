@@ -268,11 +268,12 @@ def _warnungen_heute() -> list:
 
 
 def _teile(text: str) -> tuple[list[str], str]:
-    """(Metrik-Tokens, Warnblock) -- der Warnblock beginnt mit ``!``."""
+    """(Metrik-Tokens, Warnblock) -- der Warnblock reicht vom ersten ``!``-Token
+    bis zum Textende (nur sein erstes Token traegt das ``!``)."""
     kopf, _, rest = text.partition(": ")
     tokens = rest.split()
-    warn = [t for t in tokens if t.startswith("!")]
-    return [kopf, *[t for t in tokens if not t.startswith("!")]], " ".join(warn)
+    start = next((i for i, t in enumerate(tokens) if t.startswith("!")), len(tokens))
+    return [kopf, *tokens[:start]], " ".join(tokens[start:])
 
 
 def test_ac4_ueberlaenge_premium_kuerzt_vom_listenende_warnung_bleibt(monkeypatch, mit):
@@ -422,3 +423,13 @@ def test_ac7_alarm_verweis_faelle():
     assert "test_onset_ende_kanalparitaet.py::" in tests, verweise
     assert all("alarm" in f["format"].split("+") for f in verweise), verweise
     assert all("#1701" in f["befund"] for f in verweise), verweise
+
+
+def test_ac9_ausgabe_matrix_premium_zeile():  # doc-compliance-test
+    """AC-9: Die Premium-SMS-Zeile der Ausgabe-Matrix nennt die Fallliste, ADR-0124
+    (Premium folgt vorerst der SMS) und #2801 (eigene Auswahl)."""
+    doku = (REPO_ROOT / "docs" / "reference" / "metric_output_matrix.md").read_text(encoding="utf-8")
+    zeilen = [z for z in doku.splitlines() if z.startswith("| Premium-SMS")]
+    assert len(zeilen) == 1, zeilen
+    for pflicht in (PREMIUM_DATEI, "ADR-0124", "#2801"):
+        assert pflicht in zeilen[0], pflicht

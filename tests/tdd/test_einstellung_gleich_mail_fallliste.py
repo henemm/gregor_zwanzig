@@ -34,7 +34,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 FALLLISTEN_DIR = REPO_ROOT / "tests" / "fixtures" / "einstellung_gleich_mail"
 #: #3098: ``telegram`` = eigene Telegram-Fallliste (Phase 3c von #3047).
 #: #3099: ``sms`` = eigene SMS-Fallliste (Phase 3d von #3047).
-TEILDATEIEN = ("trip", "orte", "validatoren", "editor", "telegram", "sms")
+#: #3100: ``premium_sms`` = eigene Premium-SMS-Fallliste (Phase 3e von #3047).
+TEILDATEIEN = ("trip", "orte", "validatoren", "editor", "telegram", "sms", "premium_sms")
 
 PFLICHTFELDER = ("id", "liste", "kontext", "format", "pruefung", "test", "ac", "befund", "status")
 ERLAUBTE_STATUS = frozenset({"gruen", "rot_erwartet", "ausnahme", "offen_feature"})
@@ -75,6 +76,7 @@ PY_TEST_GLOBS = (
     "tests/tdd/test_kompakt_mail_schalter*.py",
     "tests/tdd/test_3098_*.py",
     "tests/tdd/test_3099_*.py",
+    "tests/tdd/test_3100_*.py",
 )
 VITEST_GLOB = "frontend/src/**/__tests__/*.test.ts"
 GO_TEST_GLOB = "internal/**/*_test.go"
@@ -594,6 +596,7 @@ def _syn_daten() -> dict[str, dict]:
         "fallliste_telegram.json": {"faelle": [
             _syn_fall("tg-1", "trip_telegram", "telegram", "darstellung")]},
         "fallliste_sms.json": {"faelle": []},
+        "fallliste_premium_sms.json": {"faelle": []},
     }
 
 
@@ -642,6 +645,15 @@ def test_selbsttest_fehlende_telegram_teildatei_scheitert_klar(tmp_path):
     del daten["fallliste_telegram.json"]
     verzeichnis = _schreibe(tmp_path, daten)
     with pytest.raises(FalllisteFehler, match=r"Teildatei fehlt: .*fallliste_telegram\.json"):
+        lade_falllisten(verzeichnis)
+
+
+def test_selbsttest_fehlende_premium_teildatei_scheitert_klar(tmp_path):
+    """#3100: die Premium-SMS-Fallliste ist Pflicht-Teildatei (kein stilles Fehlen)."""
+    daten = _syn_daten()
+    del daten["fallliste_premium_sms.json"]
+    verzeichnis = _schreibe(tmp_path, daten)
+    with pytest.raises(FalllisteFehler, match=r"Teildatei fehlt: .*fallliste_premium_sms\.json"):
         lade_falllisten(verzeichnis)
 
 
