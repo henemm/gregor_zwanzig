@@ -1,4 +1,4 @@
-# Vorlage an den PO: Inhalt je Kanal, vier Entscheidungen (Issue #3122, Schritt 1)
+# Vorlage an den PO: Inhalt je Kanal, drei Entscheidungen (Issue #3122, Schritt 1)
 
 Stand 2026-11-17. Bildvorlage für die PO-Entscheidung, **noch kein Soll**. Erst nach der Wahl folgen ADR,
 Konzept-Endfassung (`../../einstellungen_neu.md`), Mockup Fassung 4 (endgültig), Elementliste, Spec und Bau.
@@ -8,12 +8,16 @@ Konzept-Endfassung (`../../einstellungen_neu.md`), Mockup Fassung 4 (endgültig)
 | Entscheidungsseite mit Bildern (Computer und Handy) | `index.html`, `img/` | https://claude.ai/artifact/BzVRAuGPeg5cA6nxkhHY9b |
 | Anklickbares Mockup mit Varianten-Schaltern | `../seiten/mockup-hub-fassung4-varianten.html` | https://claude.ai/artifact/CqB42zYt9mHJAmKWqQLq1r |
 
-## Die vier Punkte
+## Die offenen Punkte
 
 1. **Kanal-Auswahl:** A eine Tabelle (Zeilen = Grundauswahl, Spalten = Kanäle, eine Reihenfolge) oder B eine Liste je Kanal.
 2. **Roh/Einfach** (nur bei A): einmal je Metrik (gilt für E-Mail und Telegram) oder je Metrik und Kanal.
-3. **3-Tages-Ausblick und Stundenverlauf** im Abschnitt „Teile des Briefings“: fest wie die E-Mail oder wie die E-Mail mit Abwahl.
-4. **Name bei Orten** (auch für einen einzelnen Ort): Orts-Briefing, Ortswetter oder Ortsbeobachtung.
+3. **Stundenverlauf und 3-Tages-Ausblick** im Abschnitt „Teile des Briefings“: fest wie die Übersicht oder wie die Übersicht mit Abwahl.
+
+**Entschieden (PO 2026-11-17, im Chat):** Der Bereich heißt einheitlich **„Orte“**, auch bei einem einzelnen Ort. Die drei
+Namensvorschläge (Orts-Briefing, Ortswetter, Ortsbeobachtung) sind entfallen. Nachgezogen nach PO-Rückfrage: Bei Orten
+heißt die E-Mail-Spalte „Übersicht“, und „Teile des Briefings“ zeigt die drei Stellen der E-Mail untereinander
+(Übersicht, Stundenverlauf, Ausblick); der Haken bei E-Mail ist die eine Auswahl für alle drei.
 
 Fest eingebaut (PO 2026-11-17): Grundauswahl nur in den Metrik-Zeilen des Reiters Wetter, alles Weitere nur
 Abwahl; Ausblick morgens/abends auch bei Orten (vorbelegt abends); Premium-SMS folgt der SMS; Telegram-Kurzstil

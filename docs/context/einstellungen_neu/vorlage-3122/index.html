@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Inhalt je Kanal – vier Entscheidungen</title>
+<title>Inhalt je Kanal – drei Entscheidungen</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
 /* Vorlage zu Issue #3122. Farben und Schriften aus dem Design-System von Gregor Zwanzig (nur helles Thema, wie die App).
@@ -56,7 +56,8 @@ section.q{display:flex;flex-direction:column;gap:18px}
 .figs{display:flex;flex-direction:column;gap:14px}
 figure{margin:0;display:flex;flex-direction:column;gap:6px;min-width:0}
 figure img{border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
-figcaption{font-family:var(--f-mono);font-size:11px;letter-spacing:.04em;color:var(--ink-3)}
+figcaption{font-size:13.5px;color:var(--ink-2);max-width:86ch}
+figcaption b{font-family:var(--f-mono);font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;background:var(--ink);color:var(--paper);border-radius:3px;padding:2px 7px;margin-right:6px;white-space:nowrap}
 .rat{background:var(--accent-tint);border:1px solid rgba(196,90,42,.3);border-radius:6px;padding:12px 16px;max-width:86ch}
 .rat b{color:var(--accent-deep)}
 .note{color:var(--ink-3);font-size:14px;max-width:78ch;margin:0}
@@ -78,7 +79,7 @@ body[data-view="handy"] .figs{gap:18px}
 <div class="wrap">
   <header class="top">
     <span class="eyebrow">Gregor Zwanzig · Einstellungen neu · Reiter Wetter</span>
-    <h1>Inhalt je Kanal: vier Entscheidungen</h1>
+    <h1>Inhalt je Kanal: drei Entscheidungen</h1>
     <p class="lead">Die Bilder zeigen den Reiter Wetter mit echten Werten aus dem System: den Trip GR221 Mallorca, das Münsterland mit drei Orten und Tecklenburg als einzelnen Ort. Jede Variante gibt es für Computer und Handy. Zum Ausprobieren gibt es dasselbe als <a href="https://claude.ai/artifact/CqB42zYt9mHJAmKWqQLq1r">anklickbares Mockup</a>.</p>
   </header>
 </div>
@@ -92,7 +93,7 @@ body[data-view="handy"] .figs{gap:18px}
     <a href="#kanal-auswahl"><b>1</b>Kanal-Auswahl</a>
     <a href="#roh-einfach"><b>2</b>Roh oder Einfach</a>
     <a href="#briefing-teile"><b>3</b>Ausblick und Stundenverlauf</a>
-    <a href="#ein-ort"><b>4</b>Name bei einem Ort</a>
+    <a href="#ein-ort"><b>+</b>Ein einzelner Ort</a>
   </nav>
 </div></div>
 
@@ -107,33 +108,34 @@ body[data-view="handy"] .figs{gap:18px}
       <li>Den Ausblick gibt es morgens und abends, auch bei Orten. Vorbelegt ist nur abends.</li>
       <li>Die Premium-SMS bekommt vorerst denselben Text wie die SMS.</li>
       <li>Den Telegram-Kurzstil gibt es an genau einer Stelle.</li>
+      <li>Der Bereich heißt einheitlich „Orte“, auch bei einem einzelnen Ort. „Vergleich“ ist kein Name mehr.</li>
     </ul>
   </div>
 
   <section class="q" id="kanal-auswahl">
     <div class="qh"><span class="num">1</span><div>
       <h2>Wie legst du fest, was jeder Kanal zeigt?</h2>
-      <p>Beide Varianten nehmen nur die Metriken, die oben gewählt sind. Der Unterschied ist, wie oft du sie anfassen musst.</p>
+      <p>Beide Varianten nehmen nur die Metriken, die oben gewählt sind. Der Unterschied ist, wie oft du sie anfassen musst. Bei Orten steht die E-Mail-Auswahl für die Übersicht; Stundenverlauf und Ausblick richten sich danach (Punkt 3).</p>
     </div></div>
     <div class="vars pair">
       <div class="var">
         <div class="vh"><span class="tag">Variante A</span><h3>Eine Tabelle für alle Kanäle</h3><span class="emp">Empfehlung</span></div>
         <p>Jede Metrik steht einmal da, mit einem Haken je Kanal. Die Reihenfolge ziehst du einmal. <b>Preis:</b> Die Reihenfolge ist in E-Mail, Telegram und SMS dieselbe.</p>
         <div class="figs">
-          <figure class="c"><img src="img/c-1a-trip.png" width="1132" height="924" alt="Variante A beim Trip am Computer: Tabelle mit den Spalten Metrik, Darstellung, E-Mail, Telegram und SMS"><figcaption>Trip · Computer</figcaption></figure>
-          <figure class="c"><img src="img/c-1a-orte.png" width="1132" height="892" alt="Variante A bei drei Orten am Computer: die letzten fünf Metriken passen nicht mehr in die SMS"><figcaption>Orte, drei Orte · Computer · die SMS wird bei drei Orten zu lang, die Tabelle zeigt, was wegfällt</figcaption></figure>
-          <figure class="h"><img src="img/h-1a-trip.png" width="390" height="1483" alt="Variante A beim Trip auf dem Handy"><figcaption>Trip · Handy</figcaption></figure>
-          <figure class="h"><img src="img/h-1a-orte.png" width="390" height="1506" alt="Variante A bei drei Orten auf dem Handy"><figcaption>Orte, drei Orte · Handy</figcaption></figure>
+          <figure class="c"><figcaption><b>Orte</b>Drei Orte. Unter „E-Mail“ steht „Übersicht“. Die SMS wird bei drei Orten zu lang, die Tabelle zeigt, was wegfällt.</figcaption><img src="img/c-1a-orte.png" width="1132" height="913" alt="Variante A bei drei Orten am Computer"></figure>
+          <figure class="c"><figcaption><b>Trip</b>Unter „E-Mail“ steht hier „Stundentabelle“: Die Trip-Mail hat keine Übersicht, ihre Haupttabelle zeigt direkt die Stunden der Etappe.</figcaption><img src="img/c-1a-trip.png" width="1132" height="924" alt="Variante A beim Trip am Computer"></figure>
+          <figure class="h"><figcaption><b>Orte</b>Drei Orte</figcaption><img src="img/h-1a-orte.png" width="390" height="1550" alt="Variante A bei drei Orten auf dem Handy"></figure>
+          <figure class="h"><figcaption><b>Trip</b></figcaption><img src="img/h-1a-trip.png" width="390" height="1483" alt="Variante A beim Trip auf dem Handy"></figure>
         </div>
       </div>
       <div class="var">
         <div class="vh"><span class="tag">Variante B</span><h3>Eine Liste je Kanal</h3></div>
         <p>Drei Listen hintereinander: E-Mail, Telegram, SMS. Jede hat ihre eigene Reihenfolge. <b>Preis:</b> Du pflegst dieselben Metriken dreimal und siehst immer nur einen Kanal.</p>
         <div class="figs">
-          <figure class="c"><img src="img/c-1b-trip.png" width="1132" height="737" alt="Variante B beim Trip am Computer: Liste für die E-Mail, Telegram und SMS liegen hinter eigenen Reitern"><figcaption>Trip · Computer · Liste für die E-Mail, Telegram und SMS sehen genauso aus</figcaption></figure>
-          <figure class="c"><img src="img/c-1b-orte.png" width="1132" height="735" alt="Variante B bei drei Orten am Computer: Liste für die SMS"><figcaption>Orte, drei Orte · Computer · Liste für die SMS</figcaption></figure>
-          <figure class="h"><img src="img/h-1b-trip.png" width="390" height="1047" alt="Variante B beim Trip auf dem Handy"><figcaption>Trip · Handy · Liste für die E-Mail</figcaption></figure>
-          <figure class="h"><img src="img/h-1b-orte.png" width="390" height="1062" alt="Variante B bei drei Orten auf dem Handy"><figcaption>Orte, drei Orte · Handy · Liste für die SMS</figcaption></figure>
+          <figure class="c"><figcaption><b>Orte</b>Drei Orte, Liste für die SMS. E-Mail und Telegram haben je eine eigene Liste gleicher Bauart.</figcaption><img src="img/c-1b-orte.png" width="1132" height="735" alt="Variante B bei drei Orten am Computer, Liste für die SMS"></figure>
+          <figure class="c"><figcaption><b>Trip</b>Liste für die E-Mail.</figcaption><img src="img/c-1b-trip.png" width="1132" height="737" alt="Variante B beim Trip am Computer, Liste für die E-Mail"></figure>
+          <figure class="h"><figcaption><b>Orte</b>Liste für die SMS</figcaption><img src="img/h-1b-orte.png" width="390" height="1062" alt="Variante B bei drei Orten auf dem Handy"></figure>
+          <figure class="h"><figcaption><b>Trip</b>Liste für die E-Mail</figcaption><img src="img/h-1b-trip.png" width="390" height="1047" alt="Variante B beim Trip auf dem Handy"></figure>
         </div>
       </div>
     </div>
@@ -150,16 +152,16 @@ body[data-view="handy"] .figs{gap:18px}
         <div class="vh"><span class="tag">Einmal je Metrik</span><h3>Eine Einstellung, gilt für E-Mail und Telegram</h3><span class="emp">Empfehlung</span></div>
         <p>Eine Spalte „Darstellung“ neben dem Namen. <b>Preis:</b> E-Mail und Telegram zeigen eine Metrik immer in derselben Form.</p>
         <div class="figs">
-          <figure class="c"><img src="img/c-1a-orte.png" width="1132" height="892" alt="Tabelle mit einer Spalte Darstellung je Metrik"><figcaption>Orte, drei Orte · Computer</figcaption></figure>
-          <figure class="h"><img src="img/h-1a-orte.png" width="390" height="1506" alt="Tabelle mit einer Darstellung je Metrik auf dem Handy"><figcaption>Orte, drei Orte · Handy</figcaption></figure>
+          <figure class="c"><figcaption><b>Orte</b>Drei Orte</figcaption><img src="img/c-1a-orte.png" width="1132" height="913" alt="Tabelle mit einer Spalte Darstellung je Metrik"></figure>
+          <figure class="h"><figcaption><b>Orte</b>Drei Orte</figcaption><img src="img/h-1a-orte.png" width="390" height="1550" alt="Tabelle mit einer Darstellung je Metrik auf dem Handy"></figure>
         </div>
       </div>
       <div class="var">
         <div class="vh"><span class="tag">Je Metrik und Kanal</span><h3>Eigene Form in E-Mail und in Telegram</h3></div>
         <p>In jedem Feld steht neben dem Haken ein Knopf Roh oder Einfach. <b>Preis:</b> doppelt so viele Bedienelemente, auf dem Handy wird es eng.</p>
         <div class="figs">
-          <figure class="c"><img src="img/c-2b-orte.png" width="1132" height="884" alt="Tabelle mit einem Knopf Roh oder Einfach in jedem Feld"><figcaption>Orte, drei Orte · Computer</figcaption></figure>
-          <figure class="h"><img src="img/h-2b-orte.png" width="390" height="1347" alt="Tabelle mit einem Knopf Roh oder Einfach in jedem Feld auf dem Handy"><figcaption>Orte, drei Orte · Handy</figcaption></figure>
+          <figure class="c"><figcaption><b>Orte</b>Drei Orte</figcaption><img src="img/c-2b-orte.png" width="1132" height="905" alt="Tabelle mit einem Knopf Roh oder Einfach in jedem Feld"></figure>
+          <figure class="h"><figcaption><b>Orte</b>Drei Orte</figcaption><img src="img/h-2b-orte.png" width="390" height="1391" alt="Tabelle mit einem Knopf Roh oder Einfach in jedem Feld auf dem Handy"></figure>
         </div>
       </div>
     </div>
@@ -168,76 +170,52 @@ body[data-view="handy"] .figs{gap:18px}
 
   <section class="q" id="briefing-teile">
     <div class="qh"><span class="num">3</span><div>
-      <h2>Ausblick und Stundenverlauf: fest wie die E-Mail oder mit Abwahl?</h2>
-      <p>Beide Blöcke stehen im neuen Abschnitt „Teile des Briefings“. Sie haben keine eigene Liste mehr, sondern zeigen die Metriken, die du für die E-Mail gewählt hast, in derselben Reihenfolge. Den Stundenverlauf gibt es nur bei Orten und nur in der E-Mail.</p>
+      <h2>Stundenverlauf und Ausblick: genau wie die Übersicht oder mit Abwahl?</h2>
+      <p>Bei Orten stehen die Metriken in der E-Mail an drei Stellen: in der Übersicht, im Stundenverlauf und im 3-Tages-Ausblick. Dafür gibt es nur noch eine Auswahl, den Haken bei E-Mail. Der neue Abschnitt „Teile des Briefings“ zeigt die drei Stellen untereinander. Beim Trip gibt es nur den Ausblick, weil die Haupttabelle der Mail dort schon die Stunden zeigt.</p>
     </div></div>
     <div class="vars pair">
       <div class="var">
-        <div class="vh"><span class="tag">Fest</span><h3>Genau die Metriken der E-Mail</h3></div>
-        <p>Einzustellen ist nur an oder aus und beim Ausblick morgens oder abends. <b>Preis:</b> Wer viele Metriken in der E-Mail hat, bekommt einen entsprechend breiten Ausblick.</p>
+        <div class="vh"><span class="tag">Fest</span><h3>Alle drei Stellen zeigen dasselbe</h3></div>
+        <p>Stundenverlauf und Ausblick zeigen genau die Metriken der Übersicht. Einzustellen ist nur an oder aus und beim Ausblick morgens oder abends. <b>Preis:</b> Wer viele Metriken in der E-Mail hat, bekommt entsprechend breite Tabellen.</p>
         <div class="figs">
-          <figure class="c"><img src="img/c-3a-orte.png" width="1132" height="366" alt="Teile des Briefings, fest: Ausblick und Stundenverlauf zeigen die Metriken der E-Mail ohne Auswahl"><figcaption>Orte, drei Orte · Computer</figcaption></figure>
-          <figure class="h"><img src="img/h-3a-orte.png" width="390" height="637" alt="Teile des Briefings, fest, auf dem Handy"><figcaption>Orte, drei Orte · Handy</figcaption></figure>
+          <figure class="c"><figcaption><b>Orte</b>Drei Orte</figcaption><img src="img/c-3a-orte.png" width="1132" height="499" alt="Teile des Briefings, fest: Übersicht, Stundenverlauf und Ausblick zeigen dieselben Metriken"></figure>
+          <figure class="h"><figcaption><b>Orte</b>Drei Orte</figcaption><img src="img/h-3a-orte.png" width="390" height="875" alt="Teile des Briefings, fest, auf dem Handy"></figure>
         </div>
       </div>
       <div class="var">
-        <div class="vh"><span class="tag">Mit Abwahl</span><h3>Wie die E-Mail, einzelne Metriken weglassbar</h3><span class="emp">Empfehlung</span></div>
-        <p>Vorbelegt ist alles wie in der E-Mail. Ein Tipp auf eine Metrik lässt sie in diesem Block weg. Hinzufügen geht nicht. <b>Preis:</b> eine kleine Auswahl mehr, die man aber nie anfassen muss.</p>
+        <div class="vh"><span class="tag">Mit Abwahl</span><h3>Wie die Übersicht, einzelne Metriken weglassbar</h3><span class="emp">Empfehlung</span></div>
+        <p>Vorbelegt ist alles wie in der Übersicht. Ein Tipp auf eine Metrik lässt sie im Stundenverlauf oder im Ausblick weg. Hinzufügen geht nicht. <b>Preis:</b> eine kleine Auswahl mehr, die man aber nie anfassen muss.</p>
         <div class="figs">
-          <figure class="c"><img src="img/c-3b-orte.png" width="1132" height="366" alt="Teile des Briefings mit Abwahl: im Ausblick sind drei Metriken weggelassen, im Stundenverlauf eine"><figcaption>Orte, drei Orte · Computer · im Ausblick sind hier drei Metriken weggelassen</figcaption></figure>
-          <figure class="c"><img src="img/c-3b-orte-mail.png" width="1132" height="674" alt="So kommt die E-Mail an: Übersicht mit allen Metriken, Stundenverlauf und Ausblick mit weniger Spalten"><figcaption>So käme diese Einstellung in der E-Mail an</figcaption></figure>
-          <figure class="c"><img src="img/c-3b-trip.png" width="1132" height="483" alt="Teile des Briefings beim Trip: Ausblick und die drei Zusatzblöcke der Mail"><figcaption>Trip · Computer · hier stehen auch die drei Zusatzblöcke der Mail</figcaption></figure>
-          <figure class="h"><img src="img/h-3b-orte.png" width="390" height="739" alt="Teile des Briefings mit Abwahl auf dem Handy"><figcaption>Orte, drei Orte · Handy</figcaption></figure>
-          <figure class="h"><img src="img/h-3b-trip.png" width="390" height="721" alt="Teile des Briefings beim Trip auf dem Handy"><figcaption>Trip · Handy</figcaption></figure>
+          <figure class="c"><figcaption><b>Orte</b>Drei Orte. Im Ausblick sind hier drei Metriken weggelassen, im Stundenverlauf eine.</figcaption><img src="img/c-3b-orte.png" width="1132" height="499" alt="Teile des Briefings mit Abwahl bei drei Orten"></figure>
+          <figure class="c"><figcaption><b>Orte</b>So käme diese Einstellung in der E-Mail an: Übersicht, darunter Stundenverlauf und Ausblick.</figcaption><img src="img/c-3b-orte-mail.png" width="1132" height="674" alt="E-Mail mit Übersicht, Stundenverlauf und Ausblick"></figure>
+          <figure class="c"><figcaption><b>Trip</b>Nur der Ausblick, dazu die drei Zusatzblöcke der Mail.</figcaption><img src="img/c-3b-trip.png" width="1132" height="483" alt="Teile des Briefings beim Trip"></figure>
+          <figure class="h"><figcaption><b>Orte</b>Drei Orte</figcaption><img src="img/h-3b-orte.png" width="390" height="976" alt="Teile des Briefings mit Abwahl auf dem Handy"></figure>
+          <figure class="h"><figcaption><b>Orte</b>So käme es in der E-Mail an</figcaption><img src="img/h-3b-orte-mail.png" width="390" height="732" alt="E-Mail mit Übersicht, Stundenverlauf und Ausblick auf dem Handy"></figure>
+          <figure class="h"><figcaption><b>Trip</b></figcaption><img src="img/h-3b-trip.png" width="390" height="721" alt="Teile des Briefings beim Trip auf dem Handy"></figure>
         </div>
       </div>
     </div>
-    <div class="rat"><b>Empfehlung: mit Abwahl.</b> Der Ausblick soll kompakt bleiben, auch wenn die E-Mail viele Metriken hat. Wer nichts anfasst, bekommt genau das Verhalten von „fest“.</div>
+    <div class="rat"><b>Empfehlung: mit Abwahl.</b> Der Ausblick soll kompakt bleiben, auch wenn die Übersicht viele Metriken hat. Wer nichts anfasst, bekommt genau das Verhalten von „fest“.</div>
     <p class="note">Beim Trip stehen im selben Abschnitt auch Etappen-Kennzahlen, Vortag-Vergleich und Nacht-Stundentabelle. Sie waren bisher unter „Weitere Einstellungen für E-Mail“ versteckt und sind ebenfalls Teile des Briefings.</p>
   </section>
 
   <section class="q" id="ein-ort">
-    <div class="qh"><span class="num">4</span><div>
-      <h2>Wie heißt es, wenn nur ein Ort beobachtet wird?</h2>
-      <p>Heute steht in jeder Ausgabe „Vergleich“ und „alle Orte“, auch bei einem einzigen Ort. Neu kommt das Wort Vergleich nur noch vor, wenn es mindestens zwei Orte gibt, und dann nur für die Tabelle. Offen ist der Name für das Ganze.</p>
+    <div class="qh"><span class="num">+</span><div>
+      <h2>Zur Ansicht: ein einzelner Ort</h2>
+      <p>Hier ist nichts mehr zu entscheiden: Der Bereich heißt einheitlich „Orte“. Heute steht in jeder Ausgabe „Vergleich“ und „alle Orte“, auch bei einem einzigen Ort. Die Bilder zeigen, wie es neu aussieht.</p>
     </div></div>
     <div class="vars">
       <div class="var">
-        <div class="vh"><span class="tag">Name 1</span><h3>Orts-Briefing</h3><span class="emp">Empfehlung</span></div>
-        <p>Passt zu Morgen-Briefing, Abend-Briefing und zum Briefing beim Trip.</p>
         <div class="figs">
-          <figure class="c"><img src="img/c-4-reiter-orte.png" width="1132" height="445" alt="Kopf und Reiter Orte bei einem einzelnen Ort mit dem Namen Orts-Briefing"><figcaption>Ein Ort · Computer · Kopf und Reiter Orte</figcaption></figure>
-          <figure class="h"><img src="img/h-4-reiter-orte.png" width="390" height="475" alt="Kopf und Reiter Orte bei einem einzelnen Ort auf dem Handy"><figcaption>Ein Ort · Handy</figcaption></figure>
-        </div>
-      </div>
-      <div class="var">
-        <div class="vh"><span class="tag">Name 2</span><h3>Ortswetter</h3></div>
-        <p>Kürzer und alltagsnäher. Das Wort Briefing bleibt dann nur für die einzelne Sendung morgens und abends.</p>
-        <div class="figs">
-          <figure class="c"><img src="img/c-4-kopf-wetter.png" width="1132" height="263" alt="Kopf bei einem einzelnen Ort mit dem Namen Ortswetter"><figcaption>Ein Ort · Computer</figcaption></figure>
-          <figure class="h"><img src="img/h-4-kopf-wetter.png" width="390" height="252" alt="Kopf mit dem Namen Ortswetter auf dem Handy"><figcaption>Ein Ort · Handy</figcaption></figure>
-        </div>
-      </div>
-      <div class="var">
-        <div class="vh"><span class="tag">Name 3</span><h3>Ortsbeobachtung</h3></div>
-        <p>Betont das Beobachten eines Ortes über längere Zeit. Das längste der drei Wörter.</p>
-        <div class="figs">
-          <figure class="c"><img src="img/c-4-kopf-beobachtung.png" width="1132" height="263" alt="Kopf bei einem einzelnen Ort mit dem Namen Ortsbeobachtung"><figcaption>Ein Ort · Computer</figcaption></figure>
-          <figure class="h"><img src="img/h-4-kopf-beobachtung.png" width="390" height="252" alt="Kopf mit dem Namen Ortsbeobachtung auf dem Handy"><figcaption>Ein Ort · Handy</figcaption></figure>
-        </div>
-      </div>
-      <div class="var">
-        <div class="vh"><span class="tag">Für alle drei Namen</span><h3>So ändern sich die Texte bei einem einzelnen Ort</h3></div>
-        <p>Links steht, was das System heute bei einem einzelnen Ort verschickt, rechts der neue Text, hier mit dem Namen Orts-Briefing. Darunter das ganze Briefing für einen Ort.</p>
-        <div class="figs">
-          <figure class="c"><img src="img/c-4-texte.png" width="1132" height="426" alt="Tabelle heute und neu: Texte in App, E-Mail, Telegram und SMS bei einem einzelnen Ort"><figcaption>Ein Ort · Texte heute und neu</figcaption></figure>
-          <figure class="c"><img src="img/c-4-ankunft.png" width="1132" height="962" alt="So kommt das Briefing für einen einzelnen Ort an: E-Mail, Telegram und SMS"><figcaption>Ein Ort · so käme das Briefing an</figcaption></figure>
-          <figure class="h"><img src="img/h-4-texte.png" width="390" height="813" alt="Texte heute und neu auf dem Handy"><figcaption>Ein Ort · Texte heute und neu</figcaption></figure>
-          <figure class="h"><img src="img/h-4-ankunft.png" width="390" height="1159" alt="Briefing für einen einzelnen Ort auf dem Handy"><figcaption>Ein Ort · so käme das Briefing an</figcaption></figure>
+          <figure class="c"><figcaption><b>Ein Ort</b>Kopf und Reiter Orte</figcaption><img src="img/c-4-reiter-orte.png" width="1132" height="445" alt="Kopf und Reiter Orte bei einem einzelnen Ort"></figure>
+          <figure class="c"><figcaption><b>Ein Ort</b>Links, was das System heute verschickt, rechts der neue Text.</figcaption><img src="img/c-4-texte.png" width="1132" height="426" alt="Texte heute und neu bei einem einzelnen Ort"></figure>
+          <figure class="c"><figcaption><b>Ein Ort</b>So käme das Briefing an.</figcaption><img src="img/c-4-ankunft.png" width="1132" height="962" alt="Briefing für einen einzelnen Ort: E-Mail, Telegram und SMS"></figure>
+          <figure class="h"><figcaption><b>Ein Ort</b>Kopf und Reiter Orte</figcaption><img src="img/h-4-reiter-orte.png" width="390" height="495" alt="Kopf und Reiter Orte auf dem Handy"></figure>
+          <figure class="h"><figcaption><b>Ein Ort</b>Texte heute und neu</figcaption><img src="img/h-4-texte.png" width="390" height="765" alt="Texte heute und neu auf dem Handy"></figure>
+          <figure class="h"><figcaption><b>Ein Ort</b>So käme das Briefing an</figcaption><img src="img/h-4-ankunft.png" width="390" height="1159" alt="Briefing für einen einzelnen Ort auf dem Handy"></figure>
         </div>
       </div>
     </div>
-    <div class="rat"><b>Empfehlung: Orts-Briefing.</b> Der Bereich im Menü heißt weiter „Orte“. Ein Eintrag darin ist ein Orts-Briefing, egal ob er einen Ort oder zehn enthält.</div>
   </section>
 
   <div class="next">

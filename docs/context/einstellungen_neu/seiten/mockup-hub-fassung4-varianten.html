@@ -338,7 +338,6 @@ body.only .vlabel{display:none}
     <div class="fr-row"><span class="fr-l"><i>1</i> Kanal-Auswahl</span><span class="sw" role="group" aria-label="Kanal-Auswahl"><button data-set="varK:A" type="button">A · Eine Tabelle</button><button data-set="varK:B" type="button">B · Liste je Kanal</button></span></div>
     <div class="fr-row"><span class="fr-l"><i>2</i> Roh / Einfach <small>nur bei A</small></span><span class="sw" role="group" aria-label="Roh oder Einfach"><button data-set="varF:einmal" type="button">einmal je Metrik</button><button data-set="varF:kanal" type="button">je Metrik und Kanal</button></span></div>
     <div class="fr-row"><span class="fr-l"><i>3</i> Ausblick und Stundenverlauf</span><span class="sw" role="group" aria-label="Ausblick und Stundenverlauf"><button data-set="varT:fest" type="button">wie E-Mail, fest</button><button data-set="varT:abwahl" type="button">wie E-Mail, mit Abwahl</button></span></div>
-    <div class="fr-row"><span class="fr-l"><i>4</i> Name bei Orten</span><span class="sw" role="group" aria-label="Name bei Orten"><button data-set="nameV:Orts-Briefing" type="button">Orts-Briefing</button><button data-set="nameV:Ortswetter" type="button">Ortswetter</button><button data-set="nameV:Ortsbeobachtung" type="button">Ortsbeobachtung</button></span></div>
   </div>
 </div>
 <div class="crumbs">
@@ -369,6 +368,7 @@ body.only .vlabel{display:none}
     <li>Den Ausblick gibt es morgens und abends, auch bei Orten. Vorbelegt ist nur abends.</li>
     <li>Die Premium-SMS bekommt vorerst denselben Text wie die SMS.</li>
     <li>Den Telegram-Kurzstil gibt es an genau einer Stelle.</li>
+    <li>Der Bereich heißt einheitlich „Orte“, auch bei einem einzelnen Ort. „Vergleich“ steht nirgends mehr als Name.</li>
   </ul>
 </div></section>
 
@@ -411,7 +411,7 @@ const ORTE_OFF=['Sichtweite','UV-Index','Gefühlte Temperatur','Taupunkt','Luftf
 const CTX={
  trip:{path:'Trips / <b>GR221 Mallorca</b>',eyebrow:'Trip · Mallorca',title:'GR221 Mallorca',pill:['fertig','neutral'],meta:'23.–26. Februar 2026 · 4 Etappen · 31,5 km · ↑1.737 m',
    tabs:[['uebersicht','Übersicht'],['etappen','Etappen','4'],['wetter','Wetter'],['zustellung','Zustellung']],vorlage:'Wandern',metrics:TRIP_METRICS,off:TRIP_OFF},
- orte:{path:'Orte / <b>Münsterland</b>',eyebrow:'Orte · Münsterland',title:'Münsterland',pill:['aktiv','good'],meta:'3 Orte · Vergleichstabelle · Morgen 07:00 · Abend 18:00',
+ orte:{path:'Orte / <b>Münsterland</b>',eyebrow:'Orte · Münsterland',title:'Münsterland',pill:['aktiv','good'],meta:'3 Orte · Morgen 07:00 · Abend 18:00',
    tabs:[['uebersicht','Übersicht'],['orte','Orte','3'],['wetter','Wetter'],['zustellung','Zustellung']],vorlage:'Allgemein',metrics:ORTE_METRICS,off:ORTE_OFF},
  ort1:{path:'Orte / <b>Tecklenburg</b>',eyebrow:'Orte · Tecklenburg',title:'Tecklenburg',pill:['aktiv','good'],meta:'1 Ort · Morgen 07:00 · Abend 18:00',
    tabs:[['uebersicht','Übersicht'],['orte','Orte','1'],['wetter','Wetter'],['zustellung','Zustellung']],vorlage:'Allgemein',metrics:ORTE_METRICS,off:ORTE_OFF}
@@ -468,7 +468,7 @@ function renderHead(){
   renderMenu();renderKebab();
 }
 function pillHtml(){const p=PILL[status[ctx]];return `<span class="pill ${p[1]}">${p[0]}</span>`+(status[ctx]==='entwurf'?`<button class="btn sm accent" type="button" data-activate="1">Aktivieren</button>${tg('V16')}`:'');}
-function slotLabel(){return ctx==='trip'?(testSlot==='morgen'?'Morgen-Briefing':'Abend-Briefing'):V.nameV;}
+function slotLabel(){return ctx==='trip'?(testSlot==='morgen'?'Morgen-Briefing':'Abend-Briefing'):'Briefing';}
 function renderMenu(){
   const acc=konto(), ch=S().sw.ch;
   const head=ctx==='trip'?`<div class="mhead">${seg('slot',['Morgen-Briefing','Abend-Briefing'],slotLabel())}${tg('K11')}</div><hr>`:'';
@@ -603,7 +603,7 @@ const KAN=['E-Mail','Telegram','SMS'];
 const O=()=>ctx!=='trip';
 const EIN=()=>ctx==='ort1';
 const PLACES=()=>EIN()?['Tecklenburg']:['Münster','Telgte','Tecklenburg'];
-const GEN={'Orts-Briefing':'dieses Orts-Briefings','Ortswetter':'dieses Ortswetters','Ortsbeobachtung':'dieser Ortsbeobachtung'};
+const GEN={'Orte':'für diese Orte'};
 const OD={
  'Münster':{tmax:13,tmin:4,wind:30,gust:51,rain:'1.8',th:'–',pr:60,ct:70,su:'3.0'},
  'Telgte':{tmax:12,tmin:3,wind:33,gust:57,rain:'3.3',th:'–',pr:70,ct:65,su:'2.0'},
@@ -631,7 +631,7 @@ const TF={
  thunder:{h:['leicht','leicht','leicht'],tg:'TH leicht',sms:'TH:L@13 TH+:-',a:['kein','kein']},
  cloud_total:{h:['⛅','⛅','☁'],tg:'CT 42-75@15',sms:'CT75@15',a:['40%','80%']},
  sunshine:{h:['–','–','–'],tg:'SU 5',sms:'SU5',a:['6.0','2.5']}};
-const V={varK:'A',varF:'einmal',varT:'abwahl',nameV:'Orts-Briefing'};
+const V={varK:'A',varF:'einmal',varT:'abwahl',nameV:'Orte'};
 let ONLY=null; const PRE=[];
 function K(){const s=S(); if(!s.kan){s.kan={sel:{'E-Mail':{},'Telegram':{},'SMS':{}},fmt:{},fmtK:{'E-Mail':{},'Telegram':{}},weg:{ausblick:{},stunden:{}}};
   PRE.forEach(x=>{if(x[0]==='sel') s.kan.sel[x[1]][x[2]]=false; else s.kan.weg[x[0]][x[1]]=true;});} return s.kan;}
@@ -642,7 +642,7 @@ const fmt1=id=>K().fmt[id]||defFmt(id);
 const fmtK=(ch,id)=>K().fmtK[ch][id]||defFmt(id);
 const mailM=()=>onMs().filter(m=>isSel('E-Mail',m[0]));
 const weg=(part,id)=>V.varT==='abwahl'&&!!K().weg[part][id];
-const mailName=()=>!O()?'Stundentabelle':EIN()?'Wertetabelle':'Vergleichstabelle';
+const mailName=()=>!O()?'Stundentabelle':'Übersicht';
 
 function smsCalc(){
   const ms=onMs().filter(m=>isSel('SMS',m[0]));
@@ -655,7 +655,7 @@ function smsCalc(){
   const ps=PLACES(), rows=ms.filter(m=>OF[m[0]]); let keep=rows.length;
   const build=k=>{const drop=rows.slice(k).reduce((a,m)=>a+(OF[m[0]].n||1),0);
     const part=p=>rows.slice(0,k).map(m=>OF[m[0]].sms(OD[p])).join(' ')+(drop?' +'+drop:'');
-    return EIN()?`${ps[0]} 18.11.: ${part(ps[0])}`:'Vergleich 18.11.: '+ps.map(p=>p+' '+part(p)).join('; ');};
+    return EIN()?`${ps[0]} 18.11.: ${part(ps[0])}`:'Orte 18.11.: '+ps.map(p=>p+' '+part(p)).join('; ');};
   let line=build(keep); while(line.length>160&&keep>1){keep--;line=build(keep);}
   return {line,len:line.length,cutIds:rows.slice(keep).map(m=>m[0])};
 }
@@ -691,7 +691,7 @@ function kanalTabelle(){
     return `<div class="kx ${je?'nofmt':''}"><span class="h" aria-hidden="true" title="ziehen zum Umsortieren">⋮⋮</span><span class="kn">${m[1]}</span>${je?'':`<span class="kfmt">${seg('f1:'+id,['Roh','Einfach'],fmt1(id))}</span>`}${KAN.map(cell).join('')}</div>`;
   }).join('');
   return `<div class="card" data-abschnitt="kanal-inhalt">
-    <div class="lrow" style="border-top:0"><div class="t"><b>Inhalt je Kanal</b><small>Eine Tabelle für alle Kanäle. Sie zeigt die Metriken aus der Auswahl oben. Hier wählst du nur ab, was ein Kanal nicht zeigen soll. Die Reihenfolge ziehst du einmal, sie gilt überall. Roh zeigt die Zahl, Einfach einen Ampelpunkt, ein Symbol oder ein Wort. Neue Metriken kommen oben über „+“ dazu.</small></div></div>
+    <div class="lrow" style="border-top:0"><div class="t"><b>Inhalt je Kanal</b><small>Eine Tabelle für alle Kanäle. Sie zeigt die Metriken aus der Auswahl oben. ${O()?'Der Haken bei E-Mail gilt für alle drei Stellen der Mail: Übersicht, Stundenverlauf und Ausblick. ':''} Hier wählst du nur ab, was ein Kanal nicht zeigen soll. Die Reihenfolge ziehst du einmal, sie gilt überall. Roh zeigt die Zahl, Einfach einen Ampelpunkt, ein Symbol oder ein Wort. Neue Metriken kommen oben über „+“ dazu.</small></div></div>
     ${head}${fix}${rows}
     ${budgetZeile(sm)}
     <div class="sub">Einstellungen je Kanal</div>
@@ -701,7 +701,7 @@ function kanalTabelle(){
 function kanalListen(){
   const s=S(), ms=onMs(), sm=smsCalc(), ch=KAN.includes(channelTab)?channelTab:'E-Mail', kurz=s.sw.tgkurz&&ch==='Telegram';
   const tgCut=!O()?ms.filter(m=>isSel('Telegram',m[0])).slice(7).map(m=>m[0]):[];
-  const was={'E-Mail':`Diese Liste sind die ${!O()?'Spalten der Stundentabelle':EIN()?'Zeilen der Wertetabelle':'Zeilen der Vergleichstabelle'} in der Mail.`,'Telegram':'Diese Liste steht in der Telegram-Nachricht.','SMS':'Diese Liste steht in der SMS und in der Premium-SMS. Was nicht in 160 Zeichen passt, fällt von hinten weg.'}[ch];
+  const was={'E-Mail':`Diese Liste sind die ${!O()?'Spalten der Stundentabelle':'Zeilen der Übersicht'} in der Mail. ${O()?'Stundenverlauf und Ausblick folgen ihr.':''}`,'Telegram':'Diese Liste steht in der Telegram-Nachricht.','SMS':'Diese Liste steht in der SMS und in der Premium-SMS. Was nicht in 160 Zeichen passt, fällt von hinten weg.'}[ch];
   const warn=s.sw.official?`<div class="oi fixed"><span class="h" aria-hidden="true"></span><span class="n">Amtliche Warnungen <span class="muted">· immer dabei, ${ch==='SMS'?'steht am Ende':'steht zuerst'}</span></span></div>`:'';
   const rows=ms.map(m=>{const id=m[0], on=isSel(ch,id);
     const note=ch==='SMS'&&on&&sm.cutIds.includes(id)?'passt nicht mehr in 160 Zeichen':ch==='Telegram'&&on&&tgCut.includes(id)?'nur als Tageswert':'';
@@ -727,16 +727,18 @@ function teileCard(){
   const ausblick=`<div class="teil"><div class="top"><div class="t"><b>3-Tages-Ausblick <span class="wo">E-Mail · Telegram</span></b><small>Tageswerte der nächsten drei ${O()?'Tage':'Etappen'}${O()&&!EIN()?' je Ort':''}. Vorbelegt: nur im Abend-Briefing.${ausAn?'':' <strong>Zurzeit aus.</strong>'}</small></div>
       <div class="r"><span class="chk">${sw('outM',s.outM,'Ausblick im Morgen-Briefing')} Morgen-Briefing</span><span class="chk">${sw('outA',s.outA,'Ausblick im Abend-Briefing')} Abend-Briefing</span></div></div>
     ${ausAn?vals('ausblick',[]):''}</div>`;
-  const stunden=O()?`<div class="teil"><div class="top"><div class="t"><b>Stundenverlauf <span class="wo">nur E-Mail</span></b><small>Stunden-Tabelle ${EIN()?'unter der Wertetabelle':'je Ort unter der Vergleichstabelle'}.${s.std?'':' <strong>Zurzeit aus.</strong>'}</small></div>
+  const stunden=O()?`<div class="teil"><div class="top"><div class="t"><b>Stundenverlauf <span class="wo">nur E-Mail</span></b><small>Stunden-Tabelle ${EIN()?'':'je Ort '}unter der Übersicht.${s.std?'':' <strong>Zurzeit aus.</strong>'}</small></div>
       <div class="r">${sw('std',s.std,'Stundenverlauf')}</div></div>
     ${s.std?vals('stunden',['sunshine']):''}</div>`:'';
+  const ueber=O()?`<div class="teil"><div class="top"><div class="t"><b>Übersicht <span class="wo">E-Mail</span></b><small>Die Tageswerte ${EIN()?'des Ortes':'je Ort, nebeneinander zum Vergleichen'}. Immer dabei.</small></div></div>
+    <div class="tvals"><span class="tl">Zeigt</span>${mm.map(m=>`<span class="tchip stat">${m[1]}</span>`).join('')}<span class="muted">Alle Metriken mit Haken bei E-Mail${V.varK==='A'?' in der Tabelle oben':' in der Liste oben'}. Die beiden Blöcke darunter richten sich danach.</span></div></div>`:'';
   const zusatz=!O()?`<div class="sub">Zusatzblöcke, nur in der E-Mail</div>
       <div class="lrow" style="border-top:0"><div class="t"><b>Etappen-Kennzahlen</b><small>Länge, Höhenmeter und Gehzeit je Etappe</small></div><div class="r">${sw('stats',s.stats,'Etappen-Kennzahlen')}</div></div>
       <div class="lrow"><div class="t"><b>Vortag-Vergleich</b><small>was sich seit dem letzten Briefing geändert hat</small></div><div class="r">${sw('yday',s.yday,'Vortag-Vergleich')}</div></div>
       <div class="lrow"><div class="t"><b>Nacht-Stundentabelle</b><small>die Stunden der Nacht am Etappenziel</small></div><div class="r">${sw('night',s.night,'Nacht-Stundentabelle')}</div></div>`:'';
   return `<div class="card" data-abschnitt="briefing-teile">
-    <div class="lrow" style="border-top:0"><div class="t"><b>Teile des Briefings</b><small>Blöcke, die zusätzlich im Briefing stehen. Sie sind keine eigenen Kanäle${!O()?'':' und haben keine eigene Metrik-Liste'}: Sie zeigen, was du für die E-Mail gewählt hast.</small></div></div>
-    ${ausblick}${stunden}${zusatz}
+    <div class="lrow" style="border-top:0"><div class="t"><b>Teile des Briefings</b><small>${O()?'In der E-Mail stehen die Metriken an drei Stellen: Übersicht, Stundenverlauf und Ausblick. Es gibt dafür nur eine Auswahl, den Haken bei E-Mail. Der Ausblick steht auch in Telegram.':'Blöcke, die zusätzlich im Briefing stehen. Sie sind keine eigenen Kanäle: Der Ausblick zeigt, was du für die E-Mail gewählt hast.'}</small></div></div>
+    ${ueber}${O()?stunden+ausblick:ausblick}${zusatz}
   </div>`;
 }
 function tbl(head,rows){return `<div class="tblwrap"><table class="bx"><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
@@ -780,17 +782,17 @@ function nameBox(){
   if(!O()) return '';
   const N=V.nameV, NU=N.toUpperCase(), ein=EIN(), t=CTX[ctx].title;
   const rows=[
-    ['Name in der App','Orts-Vergleich',N],
+    ['Name in der App','Orts-Vergleich','Orte'],
     ['Kopf der E-Mail','ORTS-VERGLEICH · WANDERN',`${NU} · ${t.toUpperCase()}`],
     ['Tabelle in der E-Mail','ÜBERSICHT Alle Orte · gewählte Metriken',ein?'ÜBERSICHT Tecklenburg · gewählte Metriken':'ÜBERSICHT Alle Orte · gewählte Metriken'],
     ['Stunden-Tabelle','Stundenverlauf · alle Orte',ein?'Stundenverlauf':'Stundenverlauf · alle Orte'],
     ['Fuß der E-Mail',ein?'1 Orte · Profil WANDERN':'3 Orte · Profil WANDERN',ein?'1 Ort · Vorlage Allgemein':'3 Orte · Vorlage Allgemein'],
-    ['Knopf in der E-Mail','Vergleich in App öffnen →',`${N} in der App öffnen →`],
+    ['Knopf in der E-Mail','Vergleich in App öffnen →','In der App öffnen →'],
     ['Telegram, erste Zeile',`ORTS-VERGLEICH — ${t}`,`${NU} — ${t}`],
-    ['SMS, Anfang',ein?'Vergleich 18.11.: Tecklenburg D 11C L 2C …':'Vergleich 18.11.: Münster D 13C …',ein?'Tecklenburg 18.11.: D 11C L 2C …':'Vergleich 18.11.: Münster D 13C …']];
+    ['SMS, Anfang',ein?'Vergleich 18.11.: Tecklenburg D 11C L 2C …':'Vergleich 18.11.: Münster D 13C …',ein?'Tecklenburg 18.11.: D 11C L 2C …':'Orte 18.11.: Münster D 13C …']];
   return `<div class="bbox wide" data-sub="bsp-name"><span class="bt">Name und Texte ${ein?'bei einem einzelnen Ort':'bei mehreren Orten'} · heute und neu</span>
-    <div class="tblwrap"><table class="hn"><thead><tr><th>Stelle</th><th>Heute</th><th>Neu mit „${N}“</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r[0]}</td><td class="m alt">${esc(r[1])}</td><td class="m">${esc(r[2])}</td></tr>`).join('')}</tbody></table></div>
-    ${ein?`<span class="bn">Heute spricht jede Ausgabe von „Vergleich“ und „alle Orte“, auch wenn es nur einen Ort gibt. Neu kommt das Wort Vergleich nur noch vor, wenn es mindestens zwei Orte gibt.</span>`:''}</div>`;
+    <div class="tblwrap"><table class="hn"><thead><tr><th>Stelle</th><th>Heute</th><th>Neu</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r[0]}</td><td class="m alt">${esc(r[1])}</td><td class="m">${esc(r[2])}</td></tr>`).join('')}</tbody></table></div>
+    ${ein?`<span class="bn">Heute spricht jede Ausgabe von „Vergleich“ und „alle Orte“, auch wenn es nur einen Ort gibt. Neu heißt alles „Orte“, das Wort Vergleich entfällt als Name.</span>`:''}</div>`;
 }
 function beispielPanel(){
   const sm=smsCalc();
@@ -874,7 +876,7 @@ function viewEtappen(){
 }
 function viewOrte(){
   const o=EIN()?[['Tecklenburg','Teutoburger Wald · 235 m']]:[['Münster','Stadt · 60 m'],['Telgte','Ems · 52 m'],['Tecklenburg','Teutoburger Wald · 235 m']];
-  return `<div class="sectionh"><div><h2>Orte</h2><p>Schon ein einzelner Ort ergibt ein vollständiges Briefing. Ab zwei Orten kommt die Vergleichstabelle dazu, ohne Rangfolge.</p></div><button class="btn sm ghost" type="button">+ Ort hinzufügen</button></div>
+  return `<div class="sectionh"><div><h2>Orte</h2><p>Schon ein einzelner Ort ergibt ein vollständiges Briefing. Ab zwei Orten stehen die Orte in der Übersicht nebeneinander, ohne Rangfolge.</p></div><button class="btn sm ghost" type="button">+ Ort hinzufügen</button></div>
   <div class="card">${o.map(x=>`<div class="lrow"><div class="t"><b>${x[0]}</b><small>${x[1]}</small></div><div class="r"><button class="btn sm quiet" type="button">entfernen</button></div></div>`).join('')}</div>`;
 }
 function viewUebersicht(){
