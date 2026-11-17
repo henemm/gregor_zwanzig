@@ -50,6 +50,10 @@ def provider_mit_antwort(monkeypatch, tmp_path, antwort: dict,
     monkeypatch.setattr("providers.openmeteo.DIAGNOSTICS_PATH", tmp_path / "calls.jsonl")
     monkeypatch.setattr(OpenMeteoProvider._request.retry, "wait", tenacity.wait_none())
     monkeypatch.setattr(OpenMeteoProvider._request.retry, "stop", tenacity.stop_after_attempt(1))
+    # Gewitter-Anreicherung fragt FREMDE Direkt-Provider (DWD) per Netz ab --
+    # fremde HTTP-Grenze, fuer die Bewoelkung irrelevant, daher still
+    # (Muster tests/tdd/test_openmeteo_availability_probe_single.py).
+    monkeypatch.setattr(OpenMeteoProvider, "_enrich_thunder", lambda self, *a, **k: None)
     status = dict(status_je_pfad or {})
 
     def _antworten(request: httpx.Request) -> httpx.Response:

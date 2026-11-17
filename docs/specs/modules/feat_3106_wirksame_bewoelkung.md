@@ -90,7 +90,7 @@ Begründung: Der Anteil der Gesamtbewölkung, der nicht durch tiefe oder mittelh
 
 - **Input:** Open-Meteo-Stundenwerte mit Gesamt-, tiefer, mittelhoher und hoher Bewölkung; Standorthöhe.
 - **Output:** `cloud_total_pct` = wirksame Bewölkung, überall gleich verwendet; `cloud_total_model_pct` = Modellwert.
-- **Side effects:** keine Datenmigration; neue Wetter-Schnappschüsse enthalten die wirksame Bewölkung.
+- **Side effects:** keine Datenmigration; neue Wetter-Schnappschüsse (Trip und Ortsvergleich) enthalten die wirksame Bewölkung als `cloud_total_pct`. `cloud_total_model_pct` wird nie gespeichert (`NICHT_PERSISTIERTE_FELDER` in `services/weather_snapshot.py`), damit ein zurückgerollter Stand die Schnappschüsse weiter laden kann.
 
 ## Acceptance Criteria
 
@@ -127,6 +127,7 @@ Begründung: Der Anteil der Gesamtbewölkung, der nicht durch tiefe oder mittelh
 - **Vorhersagefehler bleiben:** Kommt eine Front früher oder später als vorhergesagt (Aabenraa 2026-11-17: alle Modelle 1–2 h zu früh, zudem mittelhohe Wolken ab 10 Uhr vorhergesagt), behebt diese Änderung das nicht. Am Beispieltag hätte sie die Stunde 9 Uhr verbessert (☁️ 66 % → ⛅ 33 %), nicht 10–11 Uhr.
 - **Go `/api/forecast`** liefert weiter die Rohwerte von Open-Meteo; keine Oberfläche zeigt daraus Bewölkung an.
 - **Gewicht 0,5** ist eine feste Setzung nach Praxis, keine eigene Eichung.
+- **Alt-CLI** (`src/app/cli.py`, lokale Debug-CLI) läuft mit ihrem Standardanbieter GeoSphere nicht durch die Normalisierung und zeigt dort weiter den Modellwert; sie ist kein Produktionspfad.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -137,3 +138,4 @@ Begründung: Der Anteil der Gesamtbewölkung, der nicht durch tiefe oder mittelh
 
 - 2026-11-17: v1.0 Entwurf (#3106).
 - 2026-11-17: v1.0 vom PO freigegeben.
+- 2026-11-17: Adversary-Befunde: Modellwert nicht in Schnappschüssen, Alt-CLI als bekannte Grenze.

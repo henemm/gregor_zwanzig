@@ -16,7 +16,6 @@ from __future__ import annotations
 import json
 import logging
 from datetime import date, datetime
-from enum import Enum
 from pathlib import Path
 from typing import List
 
@@ -26,6 +25,7 @@ from services.point_weather import PointWeatherData
 from services.weather_snapshot import (
     _deserialize_summary,
     _deserialize_timeseries,
+    _serialize_hourly_point,
     _serialize_summary,
 )
 
@@ -70,15 +70,9 @@ class CompareWeatherSnapshotService:
             if point.target_date is not None:
                 entry["target_date"] = point.target_date.isoformat()
             if point.timeseries is not None:
-                hourly = []
-                for dp in point.timeseries.data:
-                    row: dict = {"ts": dp.ts.isoformat()}
-                    for fname, fval in vars(dp).items():
-                        if fname == "ts" or fval is None:
-                            continue
-                        row[fname] = fval.name if isinstance(fval, Enum) else fval
-                    hourly.append(row)
-                entry["hourly"] = hourly
+                entry["hourly"] = [
+                    _serialize_hourly_point(dp) for dp in point.timeseries.data
+                ]
             atomic_write_json(self._path(preset_id, location_id), entry)
         except OSError as e:
             logger.error(f"Failed to save compare snapshot {preset_id}/{location_id}: {e}")
