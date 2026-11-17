@@ -62,6 +62,8 @@ export interface WetterMetrikenZustandsQuelle {
 	outlookMetricKeys?: string[] | null;
 	outlookMetricFormats?: Record<string, boolean> | null;
 	outlookEnabled?: boolean;
+	// Issue #3097: Roh/Einfach je Stundenverlauf-Groesse.
+	hourlyMetricFormats?: Record<string, boolean> | null;
 }
 
 /**
@@ -82,6 +84,7 @@ export function wetterMetrikenPropsAus(wiz: WetterMetrikenZustandsQuelle) {
 		outlookMetricKeys: wiz.outlookMetricKeys ?? null,
 		outlookMetricFormats: wiz.outlookMetricFormats ?? null,
 		outlookEnabled: wiz.outlookEnabled ?? true,
+		hourlyMetricFormats: wiz.hourlyMetricFormats ?? null,
 		onVergleichsMetrikenChange: (active: string[] | null, channelActive: CompareChannelActiveMetrics) => {
 			wiz.activeMetricKeys = active;
 			wiz.channelActiveMetricKeys = channelActive;
@@ -109,6 +112,9 @@ export function wetterMetrikenPropsAus(wiz: WetterMetrikenZustandsQuelle) {
 		},
 		onOutlookEnabledChange: (an: boolean) => {
 			wiz.outlookEnabled = an;
+		},
+		onHourlyMetricFormatsChange: (formats: Record<string, boolean> | null) => {
+			wiz.hourlyMetricFormats = formats;
 		}
 	};
 }

@@ -243,13 +243,18 @@ def _compare_view(dc: dict) -> MailViewModel:
     from output.renderers.compare_hourly_metric_ids import resolve_hourly_metric_ids
     from output.renderers.compare_outlook_metric_ids import (
         resolve_compare_outlook_formats, resolve_compare_outlook_metrics,
+        resolve_hourly_metric_formats,
     )
 
     outlook = _area_rows(
         resolve_compare_outlook_metrics(dc.get("outlook_metrics"), global_metrics),
         resolve_compare_outlook_formats(dc.get("outlook_metric_formats")),
     )
-    hourly = _area_rows(resolve_hourly_metric_ids(dc.get("hourly_metrics"), global_metrics))
+    # #3097 (ADR-0121 Nachtrag 3b): Format aus `hourly_metric_formats`, fehlt = Roh.
+    hourly = _area_rows(
+        resolve_hourly_metric_ids(dc.get("hourly_metrics"), global_metrics),
+        resolve_hourly_metric_formats(dc.get("hourly_metric_formats")),
+    )
     return MailViewModel(
         **kanaele, layout_channels=tuple(layout_channels), outlook=outlook, hourly=hourly,
     )

@@ -245,14 +245,14 @@ const EINGEFROREN: readonly string[] = [
 	// Stundentabelle in der Mail zeigen": die Nacht-Stundentabelle gibt es nur in
 	// der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre,
 	// dokumentierte einseitige Anlage). Soll 47 → 48.
-	'WeatherMetricsTab.svelte:592',
-	'WeatherMetricsTab.svelte:607',
-	'WeatherMetricsTab.svelte:636',
-	'WeatherMetricsTab.svelte:649',
+	'WeatherMetricsTab.svelte:595',
+	'WeatherMetricsTab.svelte:610',
+	'WeatherMetricsTab.svelte:639',
+	'WeatherMetricsTab.svelte:652',
 	// 🔴 Issue #2792 S1a: die beiden Markup-Zweige um 10 Zeilen nach unten
 	// (Ampel-Zustand, Anwenden, Nutzlast im Script-Teil); Bedingungen
 	// unveraendert, nachgemessen, Inhalt unten gefesselt.
-	'WeatherMetricsTab.svelte:1459',
+	'WeatherMetricsTab.svelte:1466',
 	// #2794 S3a: Schalter Nacht-Stundentabelle +4 verschoben, Text unveraendert.
 	// #2931 (Rueckbau DayWindowCard/Tagesfenster-Abschnitt): alle sechs WeatherMetricsTab-
 	// Eintraege nach oben verschoben (-7/-7/-7/-7/-20/-89: entfallene Prop onDayWindowChange,
@@ -260,7 +260,7 @@ const EINGEFROREN: readonly string[] = [
 	// #3047 H1: +1 (Prop `grundauswahl` am Stundenverlauf-Mount im Vergleichs-Zweig
 	// oberhalb), #3061/#3047 J5: null-Grundauswahl der Ausblick-Einbettung oberhalb
 	// zeilenneutral zusammengefuehrt (+0), Bedingung unveraendert, nachgemessen, unten gefesselt.
-	'WeatherMetricsTab.svelte:1981',
+	'WeatherMetricsTab.svelte:1990',
 	// #2655 (F6): beide nur verschoben (Katalog-Import, Satz je Kontext aus
 	// dem Katalog statt Konkatenation); Bedingungen unveraendert, nachgemessen.
 	'versand-tab/vtBriefingChannelsText.ts:22',
@@ -285,7 +285,8 @@ const EINGEFROREN: readonly string[] = [
 	// nur um 5 Zeilen verschoben (Wetter-Felder aus dem Zustellungs-Speicherer entfernt).
 	// #3061/#3047 J5: der eigene null-Hydrierer ist in hydrateWeatherMetricsFromPreset
 	// aufgegangen (+0 netto), Text unveraendert.
-	'weather-metrics-tab/weatherMetricsCompareSave.ts:556',
+	// #3097: +15 (Feld `hourlyMetricFormats` in Snapshots/Nutzlast oberhalb), Text unveraendert.
+	'weather-metrics-tab/weatherMetricsCompareSave.ts:571',
 	// Issue #1743: der geteilte Baustein „Wetter-Metriken + Versand" waehlt den
 	// Versand-Inhalt nach Herkunft — Trip-Hub ueber BriefingScheduleTab (route ohne
 	// createMode), Vergleich und Trip-Anlegen ueber den EINEN VersandTab. Diese Weiche
@@ -378,33 +379,35 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 	// Issue #1721: alle fuenf um 13 bzw. 28 Zeilen verschoben (Schalter-State,
 	// Snapshot, Handler), Text unveraendert; dazu der neue Schalter-Zweig :2042.
 	// #3047 N1-N3: die vier Script-Eintraege um 5 verschoben (Importe), Text unveraendert.
+	// #3097: Wertprop `hourlyMetricFormats` + Rueckruf oberhalb, +3 (Script) / +7 / +9
+	// (Markup, Bruecke und Stundenverlauf-Mount); Bedingungen unveraendert, nachgemessen.
 	{
-		eintrag: 'WeatherMetricsTab.svelte:592',
+		eintrag: 'WeatherMetricsTab.svelte:595',
 		zeile: "if (context === 'route' && trip && catalogLoaded && !isDirty) {",
 		folgt: 'normalizeStoredOutlookMetrics('
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:607',
+		eintrag: 'WeatherMetricsTab.svelte:610',
 		zeile: "if (context === 'route' && Object.keys(catalog).length === 0) load();",
 		folgt: 'Issue #1350 Teil 2: analog dem Route-Guard oben'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:636',
+		eintrag: 'WeatherMetricsTab.svelte:639',
 		zeile: "if (context === 'vergleich' && !smsSymbols) loadSmsSymbols();",
 		folgt: '#1401 Scheibe B: der Stundenverlauf beschriftet'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:649',
+		eintrag: 'WeatherMetricsTab.svelte:652',
 		zeile: "if (context === 'vergleich' && Object.keys(catalog).length === 0) {",
 		folgt: ".get<MetricCatalog>('/api/metrics')"
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:1459', // #2792 S1a: +10, #3047 N1-N3: +12, Text unveraendert
+		eintrag: 'WeatherMetricsTab.svelte:1466', // #2792 S1a: +10, #3047 N1-N3: +12, Text unveraendert
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:1981', // #2792 S1a: +10, #2794 S3a: +4, #3047 H1: +1, #3061/#3047 J5: +0, #3047 N1-N3: +13, Text unveraendert
+		eintrag: 'WeatherMetricsTab.svelte:1990', // #2792 S1a: +10, #2794 S3a: +4, #3047 H1: +1, #3061/#3047 J5: +0, #3047 N1-N3: +13, Text unveraendert
 		zeile: "{#if !createMode && context === 'route'}",
 		folgt: 'Issue #1721: Nacht-Stundentabelle der Trip-Mail'
 	}

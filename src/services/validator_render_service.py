@@ -466,6 +466,7 @@ def render_compare_email_preview(body: Any) -> str:
     # Issue #3096: ohne Auswahl wird die Vorgabe VOR dem Rendern aufgeloest
     # (einzige Quelle `compare_hourly_metric_ids`); der Renderer bekommt nie None.
     from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
+    from output.renderers.compare_outlook_metric_ids import resolve_hourly_metric_formats
 
     hourly_metrics = getattr(body, "hourly_metrics", None)
     if hourly_metrics is None:
@@ -475,6 +476,10 @@ def render_compare_email_preview(body: Any) -> str:
         profile=profile_enum,
         hourly_enabled=body.hourly_enabled,
         hourly_metrics=hourly_metrics,
+        # Issue #3097: Roh/Einfach je Stundenverlauf-Zeile (dieselbe Regel wie
+        # der Resolver, `getattr` fuer aeltere Aufrufer ohne das Feld).
+        hourly_metric_formats=resolve_hourly_metric_formats(
+            getattr(body, "hourly_metric_formats", None)),
         # Issue #2792 S1c-4b: die Vorschau kennt nur das Profil des
         # Validators; daraus loest der Renderer die Vorlage auf.
         preset={"profil": body.profile},

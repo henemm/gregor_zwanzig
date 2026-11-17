@@ -51,3 +51,12 @@ Ergänzt Nachtrag 2b Nr. 4 und setzt Nr. 8 (Adapter) für die E-Mail um. Spec: `
 2. **Trip-Mail.** Spalten und Folge (HTML und Klartext) kommen aus `resolve_channel_lists(dc, "trip", report_type).email`, einmal auf dem ungekollabierten Modell; der Adapter `email_col_order` bildet auf `col_key` ab und filtert `selectable`. `resolve_metric_col_order` entfällt.
 3. **Format-Standard ohne Angabe** bleibt verschieden (Trip Katalog, Orte Roh). Morgen- und Abendbericht sowie die Orte-Mail sind für den Nutzer unverändert.
 4. **Update- und Alarm-Mail folgen der E-Mail-Auswahl** (PO-Entscheidung 2026-11-17, #3096). Der Trip-Briefing-Renderer (`TripReportFormatter.format_email`) schneidet die Datenzeilen jetzt für jeden `report_type` (auch `update` und `alert`) auf die E-Mail-Auswahl zu; bisher galt dort die Grundauswahl. Trips ohne eigene E-Mail-Auswahl sind unverändert. Die zugestellten Alarm-Mails laufen über den eigenen Alarm-Renderer (`output/renderers/alert/`, #921) und sind von dieser Umstellung nicht berührt.
+
+## Nachtrag 3b (2026-11-17, Issue #3097): Roh/Einfach im Orte-Stundenverlauf
+
+Löst Nachtrag 2b Nr. 3 für den Stundenverlauf ein („Roh/Einfach dort = #3058"). Spec: `docs/specs/modules/feat_3097_orte_stundenverlauf_darstellung.md`.
+
+1. **Quelle.** `hourly[].format` stammt aus `display_config.hourly_metric_formats` (`{kennung: bool}`): wahr = `simplified`, ausdrücklich falsch = `raw`, kein Eintrag = `null` (Roh, ADR-0119 Nr. 4). Schwesterfeld zu `outlook_metric_formats`; ohne das Feld bleibt jede Mail byte-gleich.
+2. **Eigener Schalter je Liste (W11).** `channel_layouts.email` (Vergleichstabelle) wirkt nicht auf den Stundenverlauf und umgekehrt. `channel_layouts.hourly` bleibt reserviert (Nr. 7, erst mit #3060 schreibbar; der Go-Merge ersetzt Unterschlüssel). Die spätere Verlagerung dorthin ist verlustfrei möglich.
+3. **Einfachformen.** Wind und Böen im HTML als Ampelpunkt (wie die Vergleichstabelle), im Klartext als Wortstufe; Wolken Symbol, Regenwahrscheinlichkeit und Sonnenschein Wortskala; Niederschlag nach der Stunden-Skala (`format_precip_intensity`), nicht der Tagessummen-Skala des Ausblicks. Temperatur, Gewitter und weitere Größen ohne Einfachform ignorieren einen gesetzten Eintrag und bekommen im Editor keinen Umschalter.
+4. **Verbraucher.** Versand, Editor-Vorschau und Validator-Vorschau reichen dieselben Stundenformate an HTML- und Klartext-Renderer durch (Vorschau = Mail).

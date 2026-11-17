@@ -84,7 +84,9 @@ const WERTPROPS = [
 	'hourlyEnabled',
 	'outlookMetricKeys',
 	'outlookMetricFormats',
-	'outlookEnabled'
+	'outlookEnabled',
+	// Issue #3097: Roh/Einfach je Stundenverlauf-Groesse.
+	'hourlyMetricFormats'
 ] as const;
 
 /** Die neun Rueckrufe — `onVergleichsMetrikenChange` ist der gekoppelte. */
@@ -97,7 +99,8 @@ const RUECKRUFE = [
 	'onHourlyEnabledChange',
 	'onOutlookMetricKeysChange',
 	'onOutlookMetricFormatsChange',
-	'onOutlookEnabledChange'
+	'onOutlookEnabledChange',
+	'onHourlyMetricFormatsChange'
 ] as const;
 
 /** Einfeld-Rueckruf -> sein Feld (alle ausser dem gekoppelten). */
@@ -109,7 +112,8 @@ const EINFELD_RUECKRUF: [string, string][] = [
 	['onHourlyEnabledChange', 'hourlyEnabled'],
 	['onOutlookMetricKeysChange', 'outlookMetricKeys'],
 	['onOutlookMetricFormatsChange', 'outlookMetricFormats'],
-	['onOutlookEnabledChange', 'outlookEnabled']
+	['onOutlookEnabledChange', 'outlookEnabled'],
+	['onHourlyMetricFormatsChange', 'hourlyMetricFormats']
 ];
 
 /** Unveraenderte Props — die Flaeche A (Trip) darf nichts verlieren (AC-6). */
@@ -265,7 +269,8 @@ function wertpropsStand(): Knoten {
 		hourlyEnabled: true,
 		outlookMetricKeys: [ANDERE],
 		outlookMetricFormats: {},
-		outlookEnabled: true
+		outlookEnabled: true,
+		hourlyMetricFormats: {}
 	};
 }
 
@@ -411,7 +416,8 @@ function quellStand(): Knoten {
 		hourlyEnabled: false,
 		outlookMetricKeys: [ANDERE],
 		outlookMetricFormats: { [ANDERE]: true },
-		outlookEnabled: false
+		outlookEnabled: false,
+		hourlyMetricFormats: { wind: true }
 	};
 }
 
@@ -525,7 +531,8 @@ describe('AC-2: `wetterMetrikenPropsAus` selbst (Fake-Quelle)', () => {
 			hourlyEnabled: true,
 			outlookMetricKeys: null,
 			outlookMetricFormats: null,
-			outlookEnabled: true
+			outlookEnabled: true,
+			hourlyMetricFormats: null
 		};
 		for (const feld of WERTPROPS) {
 			assert.deepStrictEqual(

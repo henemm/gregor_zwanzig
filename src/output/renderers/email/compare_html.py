@@ -1123,9 +1123,39 @@ def _should_merge_wind_dir(hourly_metrics: list[str]) -> bool:
     return "wind10m_kmh" in hourly_metrics and "wind_direction_deg" in hourly_metrics
 
 
+def _hour_einfach_text(
+    m: dict, value, formats: dict | None, lang: Lang = "de",
+    *, html: bool, ampel: dict,
+) -> str | None:
+    """Einfach-Zelle einer Stundenverlauf-Spalte (Issue #3097) oder ``None``
+    (= Roh). EIN Zweig fuer HTML und Klartext: Wind/Boeen im HTML als
+    Ampelpunkt wie in der Vergleichstabelle, sonst Wort/Symbol ueber
+    ``_friendly_hour_text`` (Niederschlag Stunden-Skala). ``formats`` ist
+    ``{kennung: bool}`` aus ``display_config.hourly_metric_formats``."""
+    from output.renderers.compare_outlook_metric_ids import _friendly_hour_text
+
+    metric_id = m.get("metric_id")
+    if value is None or not (formats or {}).get(metric_id):
+        return None
+    if html and metric_id in ("wind", "gust"):
+        from output.renderers.email.helpers import fmt_val
+
+        col_key = get_metric(metric_id).col_key
+        return fmt_val(
+            col_key, value, html=True, format_modes={col_key: "raw"},
+            indicator_keys={col_key}, lang=lang, ampel=ampel,
+        )
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return _friendly_hour_text(metric_id, number, lang)
+
+
 def _render_hour_row(
     dp, visible: list[dict], merge_wind_dir: bool = False,
     *, tz: ZoneInfo, lang: Lang = "de",
+    hourly_metric_formats: dict | None = None, ampel: dict,
 ) -> str:
     # Issue #1237 (AC-1): nur die Stunde ("07"), kein Minutenanteil -- identisch
     # zur bereits korrekten Trip-Briefing-Formatierung (helpers.dp_to_row).
@@ -1138,12 +1168,18 @@ def _render_hour_row(
     cells = _hour_td(hh, fg=G_INK_MUTED, align="left")
     for m in visible:
         value = getattr(dp, m["key"], None)
+        einfach = _hour_einfach_text(
+            m, value, hourly_metric_formats, lang, html=True, ampel=ampel)
         # Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 2 / AC-8): die
         # Compare-Stundentabelle zeigt Gewitter als TEXT (kein Ampel-Kreis) --
         # der Hagel-Zusatz haengt deshalb als Text an, NICHT als Doppelring
         # (das ist ausschliesslich die Trip-Stundentabelle, Punkt 2). `dp` ist
         # hier bereits im Scope, analog zum Windrichtungs-Muster unten.
-        if m["fmt"] is _fmt_thunder:
+        if einfach is not None:
+            # Issue #3097: Einfach aus `hourly_metric_formats`; die
+            # Zelltoenung (`sev`) unten bleibt unveraendert.
+            text = einfach
+        elif m["fmt"] is _fmt_thunder:
             # Issue #1680 S3 (Spec D4): die Herkunft der Stufe DIESER Stunde --
             # `value` (`dp.thunder_level`) und `dp.thunder_level_signals`
             # stammen aus DEMSELBEN Datenpunkt, kein zweiter Rechenweg (AC-9).
@@ -1175,7 +1211,7 @@ def _render_hour_row(
 def _render_hour_table(
     loc: LocationResult, hourly_metrics: list[str],
     lang: Lang = "de",
-    *, ampel: dict,
+    *, ampel: dict, hourly_metric_formats: dict | None = None,
 ) -> str:
     visible = _visible_hour_metrics(hourly_metrics, build_hour_metrics(ampel=ampel))
     merge_wind_dir = _should_merge_wind_dir(hourly_metrics)
@@ -1190,7 +1226,8 @@ def _render_hour_table(
     )
     header = f'<tr style="background:{G_PAPER};border-bottom:1px solid #e6e1d3;">{ths}</tr>'
     rows = "".join(
-        _render_hour_row(dp, visible, merge_wind_dir, tz=tz, lang=lang)
+        _render_hour_row(dp, visible, merge_wind_dir, tz=tz, lang=lang,
+                         hourly_metric_formats=hourly_metric_formats, ampel=ampel)
         for dp in loc.hourly_data
     )
     table = (
@@ -1247,7 +1284,7 @@ def _location_heading(
 def _render_location_section(
     loc: LocationResult, index: int, hourly_metrics: list[str],
     lang: Lang = "de",
-    *, ampel: dict,
+    *, ampel: dict, hourly_metric_formats: dict | None = None,
 ) -> str:
     """Ort-Kopf + Langform-Warn-Streifen + Stundentabelle. Entfaellt bei Fehler
     bzw. fehlenden Stundendaten (SPEC §4)."""
@@ -1268,7 +1305,7 @@ def _render_location_section(
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'
         f'{header}{strip}'
-        f'{_render_hour_table(loc, hourly_metrics, lang, ampel=ampel)}</div>'
+        f'{_render_hour_table(loc, hourly_metrics, lang, ampel=ampel, hourly_metric_formats=hourly_metric_formats)}</div>'
     )
 
 
@@ -1770,12 +1807,17 @@ def render_compare_html(
     lang: Lang = "de",
     show_fallback_notice: bool = False,
     metric_formats: dict[str, bool] | None = None,
+    hourly_metric_formats: dict[str, bool] | None = None,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
 
     ``metric_formats`` (Issue #3039): ``{renderer_id: einfach}`` aus
     ``channel_layouts["email"]``; Einfach zeigt Ampelpunkt/Wort/Symbol wie
     der Trip, die Zelltoenung bleibt. ``None`` = heutiger Festzustand.
+
+    ``hourly_metric_formats`` (Issue #3097): ``{kennung: einfach}`` des
+    Stundenverlaufs aus ``display_config.hourly_metric_formats``, getrennt von
+    ``metric_formats``; ``None``/fehlender Eintrag = Roh (byte-gleich).
 
     Issue #2792 S1c-4b: ``preset`` ist Pflicht ohne Default; die Farben
     folgen der Ampel des Presets (``resolve_ampel(preset)``), die Kopfzelle
@@ -1914,7 +1956,8 @@ def render_compare_html(
     # bei fehlenden Daten "").
     def _per_location(loc, i: int) -> str:
         section = (
-            _render_location_section(loc, i, hourly_metrics, lang, ampel=ampel)
+            _render_location_section(loc, i, hourly_metrics, lang, ampel=ampel,
+                                     hourly_metric_formats=hourly_metric_formats)
             if hourly_enabled else ""
         )
         if not outlook_enabled:

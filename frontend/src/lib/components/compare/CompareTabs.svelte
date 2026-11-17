@@ -570,6 +570,8 @@
 		// Issue #2049: Roh/Einfach je Ausblick-Groesse, aus derselben Hydration.
 		wizardState.outlookMetricFormats = hydrated.outlookMetricFormats ?? null;
 		wizardState.outlookEnabled = hydrated.outlookEnabled;
+		// Issue #3097: Roh/Einfach je Stundenverlauf-Groesse, aus derselben Hydration.
+		wizardState.hourlyMetricFormats = hydrated.hourlyMetricFormats ?? null;
 		layoutHydrated = true;
 	}
 

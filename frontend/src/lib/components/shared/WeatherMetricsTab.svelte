@@ -199,6 +199,8 @@
 		outlookMetricKeys?: string[] | null;
 		outlookMetricFormats?: Record<string, boolean> | null;
 		outlookEnabled?: boolean;
+		/** Issue #3097: Roh/Einfach je Stundenverlauf-Groesse (`display_config.hourly_metric_formats`). */
+		hourlyMetricFormats?: Record<string, boolean> | null;
 		/** Gekoppelter Rueckruf (Spec Design-Entscheidung 3): `toggleCompareMetric`
 		 *  schreibt `activeMetricKeys` UND (bei globaler Abwahl mit vorhandenen
 		 *  Kanal-Overrides) `channelActiveMetricKeys` in EINEM synchronen Aufruf —
@@ -213,6 +215,7 @@
 		onOutlookMetricKeysChange?: (keys: string[] | null) => void;
 		onOutlookMetricFormatsChange?: (formats: Record<string, boolean> | null) => void;
 		onOutlookEnabledChange?: (checked: boolean) => void;
+		onHourlyMetricFormatsChange?: (formats: Record<string, boolean> | null) => void;
 		// Issue #2276 S4: der vergleich-Zweig speichert selbst (Hub), analog
 		// AlarmeTab/CorridorEditor — ersetzt `onCompareCommit`/`onHourlyCommit`/
 		// `onOutlookCommit` (Wrapper-Bubble entfaellt). Ohne `preset` oder
@@ -225,10 +228,10 @@
 		context = 'route', bereich = 'alles', trip, createMode = false, onChannelsChange, onWeatherMetricsChange,
 		onTripUpdate, saveController,
 		activeMetricKeys, channelActiveMetricKeys, officialAlertsEnabled, dayWindowStartHour, dayWindowEndHour,
-		hourlyMetricKeys, hourlyEnabled, outlookMetricKeys, outlookMetricFormats, outlookEnabled,
+		hourlyMetricKeys, hourlyEnabled, outlookMetricKeys, outlookMetricFormats, outlookEnabled, hourlyMetricFormats,
 		onVergleichsMetrikenChange, onOfficialAlertsEnabledChange, onDayWindowStartHourChange, onDayWindowEndHourChange,
 		onHourlyMetricKeysChange, onHourlyEnabledChange, onOutlookMetricKeysChange, onOutlookMetricFormatsChange,
-		onOutlookEnabledChange,
+		onOutlookEnabledChange, onHourlyMetricFormatsChange,
 		preset, onCompareUpdate, enqueueHubWrite, showInfobox = false, profil
 	}: Props = $props();
 
@@ -1348,7 +1351,8 @@
 			hourlyEnabled,
 			outlookMetricKeys,
 			outlookMetricFormats,
-			outlookEnabled
+			outlookEnabled,
+			hourlyMetricFormats
 		}),
 		(feld, wert) => {
 			switch (feld) {
@@ -1389,6 +1393,9 @@
 					break;
 				case 'outlookEnabled':
 					onOutlookEnabledChange?.(wert as boolean);
+					break;
+				case 'hourlyMetricFormats':
+					onHourlyMetricFormatsChange?.(wert as Record<string, boolean> | null);
 					break;
 			}
 		}
@@ -1601,6 +1608,8 @@
 				<CompareHourlyLayoutControls
 					metricKeys={hourlyMetricKeys}
 					onMetricKeys={(keys) => onHourlyMetricKeysChange?.(keys)}
+					metricFormats={hourlyMetricFormats ?? null}
+					onMetricFormats={(formats) => onHourlyMetricFormatsChange?.(formats)}
 					enabled={hourlyEnabled}
 					onEnabledChange={(checked) => onHourlyEnabledChange?.(checked)}
 					catalog={compareCatalog}

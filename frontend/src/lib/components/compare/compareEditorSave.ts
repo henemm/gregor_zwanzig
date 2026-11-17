@@ -62,6 +62,9 @@ export interface CompareEditorEdits {
 	// Issue #2049: Roh/Einfach je Ausblick-Größe (`true` = Einfach), paralleles
 	// Feld zu outlookMetricKeys. undefined = Feld nicht editiert.
 	outlookMetricFormats?: Record<string, boolean> | null;
+	// Issue #3097: Roh/Einfach je Stundenverlauf-Größe (`true` = Einfach),
+	// paralleles Feld zu hourlyMetricKeys. undefined = Feld nicht editiert.
+	hourlyMetricFormats?: Record<string, boolean> | null;
 	// Issue #1361/#1368: 3-Tages-Ausblick-Sektion ein/aus (Top-Level, analog
 	// hourlyEnabled). Optional → rückwärtskompatibel.
 	outlookEnabled?: boolean;
@@ -205,6 +208,13 @@ export function buildComparePresetSavePayload(
 		// `null` (nie eingestellt) bleibt ungesendet und round-trippt über
 		// `...original.display_config`.
 		displayConfig.outlook_metric_formats = edits.outlookMetricFormats;
+	}
+
+	if (edits.hourlyMetricFormats !== undefined && edits.hourlyMetricFormats !== null) {
+		// Issue #3097: dieselbe Regel wie outlook_metric_formats -- explizit
+		// schreiben (mergeConfigMap löscht nie), `null` bleibt ungesendet und
+		// round-trippt über `...original.display_config` (Read-Modify-Write).
+		displayConfig.hourly_metric_formats = edits.hourlyMetricFormats;
 	}
 
 	// Issue #1170: metric_alert_levels lebt in display_config (analog Trip).
@@ -423,6 +433,9 @@ export interface NewComparePresetFields {
 	// `outlook_metric_formats` wird dann gar nicht gesendet (Default: alles
 	// Roh), analog outlookMetricKeys.
 	outlookMetricFormats?: Record<string, boolean> | null;
+	// Issue #3097: `null` = „nie eingestellt" -- `hourly_metric_formats` wird
+	// dann gar nicht gesendet (Default: alles Roh), analog outlookMetricFormats.
+	hourlyMetricFormats?: Record<string, boolean> | null;
 	metricAlertLevels: Record<string, string>;
 	// Issue #1461 S3b-2b: Kanal-Schwelle beim Anlegen (PO-Entscheid 2026-08-06,
 	// Spec v1.3) — nur nicht-leere Werte werden gesendet (analog
@@ -544,6 +557,10 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 			...(fields.outlookMetricFormats != null
 				? { outlook_metric_formats: fields.outlookMetricFormats }
 				: {}),
+			// Issue #3097: analog -- `null` laesst den Schluessel weg (alles Roh).
+			...(fields.hourlyMetricFormats != null
+				? { hourly_metric_formats: fields.hourlyMetricFormats }
+				: {}),
 			...(Object.keys(fields.metricAlertLevels).length > 0
 				? { metric_alert_levels: fields.metricAlertLevels }
 				: {}),
@@ -585,6 +602,8 @@ export interface CompareFeldsatz {
 	outlookMetricKeys: string[] | null;
 	// Issue #2049: Roh/Einfach je Ausblick-Groesse; `null` = „nie eingestellt".
 	outlookMetricFormats: Record<string, boolean> | null;
+	// Issue #3097: Roh/Einfach je Stundenverlauf-Groesse; `null` = „nie eingestellt".
+	hourlyMetricFormats: Record<string, boolean> | null;
 	// Issue #443: Versand-Felder.
 	sendEmail: boolean;
 	sendTelegram: boolean;
@@ -634,6 +653,7 @@ export function compareFeldsatzStandard(): CompareFeldsatz {
 		hourlyMetricKeys: null,
 		outlookMetricKeys: null,
 		outlookMetricFormats: null,
+		hourlyMetricFormats: null,
 		sendEmail: true,
 		sendTelegram: false,
 		sendSms: false,
