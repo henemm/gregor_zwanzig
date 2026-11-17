@@ -1,10 +1,10 @@
 ---
 entity_id: premium_sms_format
 type: reference
-version: "1.1"
+version: "1.2"
 status: active
 created: 2026-10-21
-updated: 2026-11-06
+updated: 2026-11-17
 tags: [premium-sms, garmin, inreach, sms, channel, inbound, reference]
 ---
 
@@ -22,8 +22,8 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 
 | Eigenschaft | Wert |
 |---|---|
-| Nachrichtentext | **unverändert der SMS-Text** (`report.sms_text` bzw. SMS-Alarmtext) — kein eigener Renderer, damit SMS und Premium-SMS inhaltlich nicht auseinanderlaufen |
-| Länge Trip-Briefing | ≤ 160 Zeichen (Renderer-Aufruf mit `max_length=160`), Kürzungsrangfolge `sms_format.md` §6 |
+| Nachrichtentext | **der SMS-Text** (`report.sms_text` bzw. SMS-Alarmtext) — kein eigener Renderer, damit SMS und Premium-SMS inhaltlich nicht auseinanderlaufen. Trip-Briefing: `report.premium_sms_text` ist derselbe Text, solange er ≤ 153 Zeichen hat; sonst derselbe Formatter mit Grenze 153 (#3100) |
+| Länge Trip-Briefing | ≤ 153 Zeichen (`CHANNEL_LIMITS["premium_sms"]`, #3100; vorher 160). Ist der SMS-Text länger, kürzt derselbe Formatter vom Listenende (`sms_format.md` §6); die amtliche Warnung bleibt erhalten |
 | Länge Vergleich/sonst | `CHANNEL_LIMITS["premium_sms"]` = 153 Zeichen, 0 Tabellenspalten (Vorsorge, damit kein Pfad auf die Telegram-Grenzen 4096 zurückfällt) |
 | Zeichensatz | ASCII/GSM-7 über `fold_ascii()` (ADR-0022): Umlaut-Digraphen, dann `anyascii`; nicht faltbar → `?`. Ein GSM-7-fremdes Zeichen schaltete auf UCS-2 und halbierte das Budget |
 | Ad-hoc-Verlauf (Befehl) | Kurzform `sms_format.md` §5a, immer **genau eine** Nachricht (`_KURZFORM_KANAELE = ("premium_sms", "sms")`) |
@@ -118,7 +118,7 @@ Der Premium-SMS-Kanal ist Kurzform-Kanal (`_KURZFORM_KANAELE = ("premium_sms", "
 (ADR-0104, Präzisierung 2026-10-31; ADR-0042 Platzgrenze).
 
 **Was bleibt:** Token-Zeile, Kürzel, `sms_code`, `compact_label`, `col_label`, das Zeichenbudget von
-160 Zeichen in GSM-7. Die Antworten auf Rückkanal-Befehle sind wie bisher englisch, unabhängig vom
+160 Zeichen in GSM-7 (Premium-SMS-Trip-Briefing 153, #3100). Die Antworten auf Rückkanal-Befehle sind wie bisher englisch, unabhängig vom
 Konto.
 
 **Was sich ändert:** nur die Eingabe. Jedes Befehlswort wird in der deutschen oder englischen Form
@@ -137,7 +137,7 @@ Token-Wächter `tests/test_metric_tokens_eingefroren.py`.
 | Empfänger-Auflösung / Sperrgründe | `src/output/channels/premium_sms.py:64` |
 | Gemeinsamer seven.io-Transport | `src/output/channels/seven_io_base.py:166` |
 | Zeichenbudget 153 | `src/output/renderers/channel_layout.py:55` |
-| Briefing-Länge 160 | `src/output/renderers/trip_report.py:469` |
+| Trip-Briefing: SMS-Text (160) und Premium-Text (153) | `src/output/renderers/trip_report.py:477` (SMS), `:484–490` (`premium_sms_text`) |
 | ASCII-Faltung | `src/utils/ascii_fold.py:51` |
 | Kurzform-Kanäle | `src/services/trip_command_processor.py:782` |
 | Tarif-Gate / Kontingent | `src/services/user_tier.py:73`, `:82`; `internal/model/tier.go:23` |
