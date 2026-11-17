@@ -392,6 +392,16 @@ Kopf jedes Reiters der Einstellungen (Trip und Orte): Überschrift, Erklärsatz 
 
 **Spec:** `docs/specs/modules/feat_3006_bereichskoepfe.md`
 
+### Einstellungszeile (#2913 Teil 2, erweitert #3007)
+
+**File:** `frontend/src/lib/components/molecules/Einstellungszeile.svelte`
+
+Generische Zeile (Mockup `.lrow`): links Titel und optionaler Hinweis, rechts das Bedienelement (Snippet `children`).
+
+**Klickbar (#3007, AC-2):** Mit `onclick` wird die Zeile zum Knopf: `role="button"`, `tabindex="0"`, `aria-expanded` (über `offen`), Enter und Leertaste lösen den Klick aus. Optional ein Element vor dem Text über das Snippet `vorne` (z. B. Ziehgriff). Ohne `onclick` ist die Zeile unverändert.
+
+Wird von `Listenzeile`, `AlarmAbKopf`, `WarnungenRadarKarte`, `AnpassenKarte` und `StilleStunden` genutzt.
+
 ### Listenzeile (#3007, 2026-11-17)
 
 **File:** `frontend/src/lib/components/molecules/Listenzeile.svelte`
@@ -400,9 +410,13 @@ EINE Listenzeile für die Reiter Etappen (Trip) und Orte (Orts-Briefing): links 
 
 **Props:** `titel`, optional `zweitzeile`, `meta`, `testid`, `onclick` (Zeile klickbar), `offen` (→ `aria-expanded`), `griff` (Snippet für den Ziehgriff), `children` (Aktion rechts), `data-*` werden durchgereicht. Texte kommen fertig aus dem Katalog des Aufrufers.
 
-**Marker:** Zeile trägt `data-listenzeile`; der Listen-Container jedes Reiters trägt genau einmal `data-abschnitt="liste"` (Elementlisten-Abgleich).
+**Marker:** Zeile trägt `data-listenzeile`; der Listen-Container jedes Reiters trägt genau einmal `data-abschnitt="liste"` (Elementlisten-Abgleich). Stand: Orte in `compare/CompareTabs.svelte`, Etappen in `edit/EditStagesPanelNew.svelte`.
+
+**Orte (Orts-Briefing):** Zweitzeile „Gruppe · Höhe m“ (fehlt eine der beiden Angaben, nur die andere), Aktion „entfernen“ als Textknopf, Ziehgriff (`DragHandle`, beschriftet) zum Umsortieren. Kein Rang-Badge.
 
 **Inhalte Etappen:** `edit/etappenListe.ts` (reine Funktionen): Titel „E{n} · Start → Ziel“, Zweitzeile „x km · ↑y m“, Meta „Gehzeit h:mm“ aus derselben Rechnung wie die Ankunftszeiten der Wegpunkte. Der Knopf „Tempo ändern“ folgt mit #2796.
+
+**Etappen-Reiter Verhalten:** Die Liste steht zuerst (Prop `listeZuerst` in `EditStagesPanelNew`, durchgereicht über `EditStagesSection`); Klick auf eine Zeile klappt den Editor darunter auf, höchstens eine Etappe ist gleichzeitig offen. Anlege-Editor und Mobilansicht bleiben unverändert.
 
 **Spec:** `docs/specs/modules/feat_3007_etappen_orte_listen.md`
 
