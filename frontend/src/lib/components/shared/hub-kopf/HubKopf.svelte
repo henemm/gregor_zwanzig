@@ -43,8 +43,9 @@
 		leisteTestid?: string;
 		name: string;
 		region: string | undefined;
-		profile: string | undefined;
-		profileOptions: ReadonlyArray<{ value: string; label: string }>;
+		/** #2796 S4a: Profil-Auswahl optional (Orts-Vergleich ohne, Trip mit), siehe SubscriptionHeader. */
+		profile?: string | undefined;
+		profileOptions?: ReadonlyArray<{ value: string; label: string }>;
 		profileLabel?: string;
 		regionMaxLength?: number;
 		testidPrefix: string;
@@ -70,7 +71,7 @@
 	let {
 		context, parent, crumb, sendLabel, onSend, sendDisabled = false, sendMode = 'senden', onSetup,
 		actions = [], onSelect, mobil = false, onSheetOpen, leisteTestid,
-		name, region, profile, profileOptions, profileLabel = '', regionMaxLength = 60, testidPrefix,
+		name, region, profile, profileOptions = [], profileLabel = '', regionMaxLength = 60, testidPrefix,
 		titleTestid, titleSize = 38, saveController, onSaveField,
 		status, eyebrow, namePrefix, meta, eyebrowText, metaTeile, aktivierenHref, meldungen, unten
 	}: Props = $props();

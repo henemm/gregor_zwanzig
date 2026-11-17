@@ -10,7 +10,6 @@
 	import type { ComparePreset, Trip } from '$lib/types.js';
 	import {
 		presetLocationsLabel,
-		presetProfileLabel,
 		presetTileScheduleLabel,
 		relativeLastSent,
 		presetChannels
@@ -21,6 +20,7 @@
 	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import { t, locale } from '$lib/i18n';
+	import { aboVorlagenName } from '$lib/components/shared/wetter-tab/vorlageName.js';
 
 	interface Props {
 		kind: SubscriptionKind;
@@ -95,8 +95,8 @@
 			const range = dates.length === 0 ? '-' : dates.length === 1 ? dates[0] : `${dates[0]} — ${dates[dates.length - 1]}`;
 			return $t('bausteine.abo.etappen', { anzahl: trip.stages?.length ?? 0, zeitraum: range });
 		}
-		const profil = presetProfileLabel(preset.profil);
-		return presetLocationsLabel(preset) + (profil ? ` · ${profil}` : '');
+		// #2796 S4a (ADR-0108 P3): Name der aufgeloesten Vorlage statt des Profils.
+		return `${presetLocationsLabel(preset)} · ${aboVorlagenName($locale, preset)}`;
 	});
 	// Issue #2346 S2: Felder erscheinen, wenn ihre Daten vorliegen — nicht nach kind. Geliefert vom
 	// Aufrufer (Kachel, beide kinds, auch compact) oder aus der eingebauten Quelle des Vergleichs

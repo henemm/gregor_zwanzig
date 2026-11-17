@@ -44,11 +44,13 @@ const MOBIL = { width: 375, height: 812 };
 const MOBIL_SENDEN = { width: 390, height: 844 };
 
 // Wertevorrat des Profils je kind (Selektor-Unterschied): Trip `activity`
-// mit 8 Werten (ACTIVITY_TYPE_OPTIONS), Vergleich `profil` mit 4 Werten.
+// mit 8 Werten (ACTIVITY_TYPE_OPTIONS). Vergleich: seit #2796 S4a (ADR-0108 P3) keine
+// Profil-Auswahl mehr im Kopf — die Vorlage ersetzt das Profil (leerer Vorrat).
 const PROFIL_WERTE: Record<HubKind, readonly string[]> = {
 	route: ['trekking', 'skitour', 'hochtour', 'klettersteig', 'mtb', 'fahrrad_15', 'fahrrad_20', 'fahrrad_25'],
-	vergleich: ['allgemein', 'wintersport', 'wandern', 'summer_trekking']
+	vergleich: []
 };
+const MIT_PROFIL = (kind: HubKind): boolean => PROFIL_WERTE[kind].length > 0;
 
 // Seed-Startwerte je kind. Vergleich behält das Standard-Profil `wandern` aus
 // helpers.seedHub (die Unterzeile „Wandern · 2 Orte“ der Altfälle hängt daran);
@@ -139,6 +141,8 @@ for (const kind of HUB_KINDS) {
 				expect(await loc.count(), `${id}: Anzahl im DOM (ohne :visible)`).toBe(1);
 				await expect(loc).toBeVisible();
 			}
+			// #2796 S4a: der Vergleich hat gar keine Profil-Elemente im Kopf (auch keine verborgenen).
+			if (!MIT_PROFIL(kind)) expect(await page.locator(`[data-testid^="${HUB_SEL[kind].kopf}-profil"]`).count()).toBe(0);
 			// Compare-eigener Rahmen (Orte-Anzahl gibt es nur im Vergleich).
 			if (kind === 'vergleich') await pruefeOrteAnzahlSpans(page, 'desktop');
 			await pruefeEditEinmal(page, kind);
@@ -169,13 +173,19 @@ for (const kind of HUB_KINDS) {
 			}
 			const knopf = page.locator(`[data-testid="${kopf}-profil-knopf"]`);
 			const auswahl = page.locator(`[data-testid="${kopf}-profil-auswahl"]`);
-			await expect(knopf, `${kopf}-profil-knopf: auf dem Handy nicht sichtbar`).toBeVisible({ timeout: 10_000 });
-			expect(await knopf.count(), `${kopf}-profil-knopf: Anzahl im DOM (ohne :visible)`).toBe(1);
-			expect(await auswahl.count(), `${kopf}-profil-auswahl: Anzahl im DOM (ohne :visible)`).toBe(1);
-			await expect(knopf).toHaveAttribute('data-selected-value', START[kind].profil);
-			for (const v of PROFIL_WERTE[kind]) {
-				const opt = page.locator(`[data-testid="${kopf}-profil-auswahl-option-${v}"]`);
-				expect(await opt.count(), `${kopf}-profil-auswahl-option-${v}: Anzahl im DOM (ohne :visible)`).toBe(1);
+			if (MIT_PROFIL(kind)) {
+				await expect(knopf, `${kopf}-profil-knopf: auf dem Handy nicht sichtbar`).toBeVisible({ timeout: 10_000 });
+				expect(await knopf.count(), `${kopf}-profil-knopf: Anzahl im DOM (ohne :visible)`).toBe(1);
+				expect(await auswahl.count(), `${kopf}-profil-auswahl: Anzahl im DOM (ohne :visible)`).toBe(1);
+				await expect(knopf).toHaveAttribute('data-selected-value', START[kind].profil);
+				for (const v of PROFIL_WERTE[kind]) {
+					const opt = page.locator(`[data-testid="${kopf}-profil-auswahl-option-${v}"]`);
+					expect(await opt.count(), `${kopf}-profil-auswahl-option-${v}: Anzahl im DOM (ohne :visible)`).toBe(1);
+				}
+			} else {
+				// #2796 S4a AC-2: kein Knopf „Profil ▾", keine Auswahl.
+				expect(await knopf.count(), `${kopf}-profil-knopf trotz entfallener Profil-Auswahl`).toBe(0);
+				expect(await auswahl.count(), `${kopf}-profil-auswahl trotz entfallener Profil-Auswahl`).toBe(0);
 			}
 			// Compare-eigener Rahmen (Orte-Anzahl gibt es nur im Vergleich).
 			if (kind === 'vergleich') await pruefeOrteAnzahlSpans(page, 'mobil');
@@ -247,27 +257,29 @@ for (const kind of HUB_KINDS) {
 			await expect(sicht(page, kind, 'region-edit')).toHaveValue(REGION);
 			await abbrechen(page);
 
-			// Profil-PUT hängt ⇒ alle Kacheln gesperrt, bis die Antwort kommt.
-			let freigeben: () => void = () => {};
-			const gehalten = new Promise<void>((r) => (freigeben = r));
-			await page.route(`**${pfad}`, async (route) => {
-				if (route.request().method() !== 'PUT') return route.continue();
-				await gehalten;
-				return route.continue();
-			});
-			await sicht(page, kind, `profil-option-${ziel}`).click();
-			for (const v of PROFIL_WERTE[kind]) {
-				await expect(sicht(page, kind, `profil-option-${v}`)).toBeDisabled();
+			// Profil-PUT hängt ⇒ alle Kacheln gesperrt, bis die Antwort kommt (nur Trip, #2796 S4a).
+			if (MIT_PROFIL(kind)) {
+				let freigeben: () => void = () => {};
+				const gehalten = new Promise<void>((r) => (freigeben = r));
+				await page.route(`**${pfad}`, async (route) => {
+					if (route.request().method() !== 'PUT') return route.continue();
+					await gehalten;
+					return route.continue();
+				});
+				await sicht(page, kind, `profil-option-${ziel}`).click();
+				for (const v of PROFIL_WERTE[kind]) {
+					await expect(sicht(page, kind, `profil-option-${v}`)).toBeDisabled();
+				}
+				freigeben();
+				await expect(sicht(page, kind, `profil-option-${ziel}`)).toHaveAttribute('data-selected', 'true', {
+					timeout: 5_000
+				});
+				await expect(sicht(page, kind, `profil-option-${START[kind].profil}`)).toBeEnabled();
+				await page.unroute(`**${pfad}`);
+				await expect
+					.poll(async () => (await holeStand(page, kind, hub.id))[profilFeld], { timeout: 8_000 })
+					.toBe(ziel);
 			}
-			freigeben();
-			await expect(sicht(page, kind, `profil-option-${ziel}`)).toHaveAttribute('data-selected', 'true', {
-				timeout: 5_000
-			});
-			await expect(sicht(page, kind, `profil-option-${START[kind].profil}`)).toBeEnabled();
-			await page.unroute(`**${pfad}`);
-			await expect
-				.poll(async () => (await holeStand(page, kind, hub.id))[profilFeld], { timeout: 8_000 })
-				.toBe(ziel);
 
 			// 500 ohne `error` im Rumpf ⇒ Fallback-Meldung „Speichern fehlgeschlagen“.
 			await page.route(`**${pfad}`, (route) =>

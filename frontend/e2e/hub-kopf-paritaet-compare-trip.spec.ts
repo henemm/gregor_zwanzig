@@ -555,7 +555,13 @@ test.describe('HS S1b — Profil in der Zeile unter dem Titel bei beiden Arten',
 					await openHub(page, kind, hub.id);
 					const stift = page.getByTestId(`${HUB_SEL[kind].kopf}-region-edit-toggle`).filter({ visible: true }).first();
 					await expect(stift.locator('xpath=preceding-sibling::span[1]'), 'Region-Platzhalter').toHaveText('—');
-					await expect(hinterStift(page, kind), `AC-6: Profil fehlt hinter dem Stift (${kind})`).toHaveText(`· ${PROFIL[kind].label}`);
+					if (kind === 'route') {
+						await expect(hinterStift(page, kind), `AC-6: Profil fehlt hinter dem Stift (${kind})`).toHaveText(`· ${PROFIL[kind].label}`);
+					} else {
+						// #2796 S4a (ADR-0108 P3): beim Orts-Vergleich steht kein Profilname mehr hinter der Region.
+						const n = hinterStift(page, kind);
+						if (await n.count()) await expect(n, '#2796 AC-1: Profilname hinter dem Stift').not.toContainText(PROFIL[kind].label);
+					}
 				} finally {
 					await hub.aufraeumen();
 				}
@@ -594,7 +600,9 @@ for (const kind of HUB_KINDS) {
 				const s = await schildMessen(page);
 				expect(s.text.toLowerCase(), `${lang}: Status-Text`).toBe(ERWARTET[lang].status);
 				const zusatz = page.getByTestId(`${HUB_SEL[kind].kopf}-region-edit-toggle`).filter({ visible: true }).first().locator('xpath=following-sibling::*[1]');
-				await expect(zusatz, `${lang}: Profil-Zusatz`).toHaveText(`· ${ERWARTET[lang].profil}`);
+				if (kind === 'route') await expect(zusatz, `${lang}: Profil-Zusatz`).toHaveText(`· ${ERWARTET[lang].profil}`);
+				// #2796 S4a: kein Profilname mehr im Kopf des Orts-Vergleichs.
+				else if (await zusatz.count()) await expect(zusatz, `${lang}: Profilname im Orte-Kopf`).not.toContainText(ERWARTET[lang].profil);
 			}
 		} finally {
 			await page.request.put('/api/auth/profile', { data: { language: 'de' } }).catch(() => {});

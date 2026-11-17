@@ -336,7 +336,8 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 
-	test(`SC-6 (${kind}): Profil/Aktivität im Kopf wählen (PUT verzögert) ⇒ Chip saving ⇒ idle am selben Controller, genau ein Chip`, async ({
+	// #2796 S4a (ADR-0108 P3): nur der Trip hat noch eine Profil-/Aktivitätsauswahl im Kopf.
+	if (kind === 'route') test(`SC-6 (${kind}): Profil/Aktivität im Kopf wählen (PUT verzögert) ⇒ Chip saving ⇒ idle am selben Controller, genau ein Chip`, async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);

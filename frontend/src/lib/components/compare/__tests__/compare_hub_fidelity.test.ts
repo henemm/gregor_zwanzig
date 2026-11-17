@@ -79,12 +79,15 @@ describe('AC-5: Versand-SummaryCard Draft-Sonderfall (jsx:175-177)', () => {
 	});
 });
 
-describe('AC-6: Wertebereiche-Karte Profil-Label (jsx:163)', () => {
-	test('presetProfileLabel wird im Modell der Übersicht verwendet (#2682: vorher CompareTabs)', () => {
+describe('AC-6: Wertebereiche-Karte Vorlagen-Name (jsx:163)', () => {
+	// #2796 S4a (ADR-0108 P3): die Karte nennt die aufgelöste Vorlage statt des Profils;
+	// das Verhalten (DE/EN, mit/ohne Vorlagenliste) bewacht
+	// shared/hub-uebersicht/__tests__/vorlage_statt_profil_2796.test.ts.
+	test('aboVorlagenName wird im Modell der Übersicht verwendet (#2796: vorher presetProfileLabel)', () => {
 		assert.match(
 			modell(),
-			/presetProfileLabel\(/,
-			'AC-6 FAIL: hubUebersichtModell nutzt presetProfileLabel nicht — Karte zeigt rohes preset.profil'
+			/aboVorlagenName\(/,
+			'AC-6 FAIL: hubUebersichtModell nutzt aboVorlagenName nicht — Karte zeigt nicht die Vorlage'
 		);
 	});
 });

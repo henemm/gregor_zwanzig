@@ -388,14 +388,20 @@ describe('#2837 S1b — Profil in der Zeile unter dem Titel bei beiden Arten (AC
 		const zeile = stift.eltern!;
 		return zeile.kinder[zeile.kinder.indexOf(stift) + 1];
 	};
-	test('AC-6: Trip mit Aktivität trekking zeigt „· Trekking" direkt hinter dem Region-Stift (wie der Vergleich sein Profil)', () => {
+	test('AC-6: Trip mit Aktivität trekking zeigt „· Trekking" direkt hinter dem Region-Stift', () => {
 		locale.set('de');
 		const trip = hinterStift(seite('route'), 'route');
-		const vergleich = hinterStift(seite('vergleich'), 'vergleich');
-		assert.equal(vergleich && text(vergleich), `· ${C.helfer.presetProfileLabel('wintersport')}`, 'Messaufbau: Vergleich ohne Profil-Zusatz');
 		assert.ok(trip, 'Trip: hinter dem Region-Stift steht nichts — profileLabel fehlt');
 		assert.equal(text(trip), `· ${trFor('de', 'trip.aktivitaet.trekking')}`, 'Trip: Profil-Zusatz falsch oder fehlt');
-		assert.equal(trip.tag, vergleich!.tag, 'Profil-Zusatz bei Trip und Vergleich verschieden gebaut');
+	});
+	test('#2796 S4a AC-1: Vergleich mit profil „wintersport" — kein Profilname hinter dem Region-Stift', () => {
+		locale.set('de');
+		const vergleich = hinterStift(seite('vergleich'), 'vergleich');
+		assert.equal(C.vergleichAktiv().profil, 'wintersport', 'Messaufbau: Vergleich mit gespeichertem Profil');
+		assert.ok(
+			!vergleich || !text(vergleich).includes(C.helfer.presetProfileLabel('wintersport')),
+			`Vergleich: Profilname hinter dem Stift „${vergleich && text(vergleich)}"`
+		);
 	});
 	test('AC-6/AC-11: Profil-Zusatz des Trips folgt der Nutzersprache (en)', () => {
 		locale.set('en');

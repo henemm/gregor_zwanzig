@@ -21,8 +21,10 @@
 		kind: 'trip' | 'vergleich';
 		name: string;
 		region: string | undefined;
-		profile: string | undefined;
-		profileOptions: ReadonlyArray<{ value: string; label: string }>;
+		/** #2796 S4a (ADR-0108 P3): Profil-Auswahl optional — ohne Liste (Orts-Vergleich) weder
+		 *  Kacheln noch Handy-Knopf noch Profilname hinter der Region. Der Trip übergibt sie weiter. */
+		profile?: string | undefined;
+		profileOptions?: ReadonlyArray<{ value: string; label: string }>;
 		profileLabel?: string;
 		regionMaxLength?: number;
 		testidPrefix: string;
@@ -48,7 +50,7 @@
 		name,
 		region,
 		profile,
-		profileOptions,
+		profileOptions = [],
 		profileLabel = '',
 		regionMaxLength = 60,
 		testidPrefix: p,
@@ -71,6 +73,7 @@
 	// #2284 S2 (Entscheidung 14): Handy-Knopf. Text nur aus der Prop `profile` (kein
 	// optimistischer Zustand) ⇒ nach Erfolg sofort neu, nach Fehler unverändert.
 	let auswahlOffen = $state(false);
+	const mitProfil = $derived(profileOptions.length > 0);
 	const knopfText = $derived(profileOptions.find((o) => o.value === profile)?.label ?? $t('aktionen.kopf.aktivitaet_waehlen'));
 	function waehle(value: string): void {
 		auswahlOffen = false;
@@ -145,12 +148,13 @@
 			<!-- Mobil 44×44-Tippfläche ohne Layout-Höhe (negativer Rand), Desktop unverändert (#2284 S2 AC-13). -->
 			<button type="button" data-testid={`${p}-region-edit-toggle`} aria-label={$t('aktionen.kopf.region_bearbeiten')} onclick={() => start('region')} class="inline-flex items-center justify-center min-h-[44px] min-w-[44px] -my-3 -mx-2 desktop:min-h-0 desktop:min-w-0 desktop:m-0 p-0.5 cursor-pointer" style="color: var(--g-ink-3)"><PencilIcon size={13} /></button>
 			<!-- {' · '} statt " · ": Svelte trimmt sonst das Leerzeichen vor {/if} weg. -->
-			{#if profileLabel}<span>{' · '}{profileLabel}</span>{/if}
+			{#if mitProfil && profileLabel}<span>{' · '}{profileLabel}</span>{/if}
 			{#if meta}{@render meta()}{/if}
 		{/if}
 	</div>
 	{@render fieldError('region', 'order-1')}
 	<!-- #2284 S2 (Entscheidung 14): Kacheln nur am Desktop, Knopf nur mobil — Umschaltung allein per CSS. -->
+	{#if mitProfil}
 	<div class="order-2 hidden desktop:flex gap-2 flex-wrap desktop:mb-[18px]">
 		{#each profileOptions as opt (opt.value)}
 			{@const sel = profile === opt.value}
@@ -178,5 +182,6 @@
 			{/each}
 		</div>
 	</div>
+	{/if}
 	{@render fieldError('profile', 'order-2')}
 </div>
