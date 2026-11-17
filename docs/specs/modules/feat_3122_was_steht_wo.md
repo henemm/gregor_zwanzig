@@ -3,7 +3,7 @@ entity_id: feat_3122_was_steht_wo
 type: feature
 created: 2026-11-17
 updated: 2026-11-17
-status: draft
+status: approved
 version: "1.0"
 tags: [issue-3122, adr-0124, epic-2791, epic-2795, was-steht-wo, resolver, speicherformat, orte, ausblick]
 ---
@@ -12,7 +12,8 @@ tags: [issue-3122, adr-0124, epic-2791, epic-2795, was-steht-wo, resolver, speic
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
+- PO-Freigabe 2026-11-17 (per Abfrage, Antwort „Freigabe“), einschließlich der zwei Abweichungen vom Soll-Bild bei Roh/Einfach (Gewitter nur in der E-Mail, Regenwahrscheinlichkeit kommt dazu). Lesefassung für den PO: https://claude.ai/artifact/HHRhCQGbTKnRi5Nvc3Hw87
 
 ## Purpose
 
@@ -356,3 +357,4 @@ Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail (Soll-Bi
 ## Changelog
 
 - 2026-11-17: Erste Fassung (Teil A „Vertrag“ und Teil B „Oberfläche und Texte“), offene Punkte aus ADR-0124 und #3122 entschieden.
+- 2026-11-17: Vom PO freigegeben.

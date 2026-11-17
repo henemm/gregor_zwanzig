@@ -68,7 +68,7 @@ Der PO hat anhand von Bildern entschieden (Varianten nebeneinander, echte Render
 
 ## Nachtrag 2026-11-17: Festlegungen der Spec
 
-Die Punkte, die oben unter „Folgepflichten“ und in Nr. 5 als offen für die Spec stehen, sind in `docs/specs/modules/feat_3122_was_steht_wo.md` entschieden. Die Spec ist für die Einzelheiten maßgeblich; hier steht die Kurzform.
+Die Punkte, die oben unter „Folgepflichten“ und in Nr. 5 als offen für die Spec stehen, sind in `docs/specs/modules/feat_3122_was_steht_wo.md` entschieden (vom PO freigegeben am 2026-11-17). Die Spec ist für die Einzelheiten maßgeblich; hier steht die Kurzform.
 
 **Vom PO entschieden (2026-11-17, per Abfrage):**
 
