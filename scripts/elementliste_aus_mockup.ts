@@ -1,16 +1,20 @@
-// Issue #2913 (Epic #2791) — Elementliste aus dem Mockup „Hub Wetter & Zustellung“ (Fassung 3).
+// Issue #2913 (Epic #2791) — Elementliste aus dem Mockup „Hub Wetter & Zustellung“ (Fassung 4, #3122).
 // Spec: docs/specs/modules/einstellungen_neu_neustart_adr_waechter_elementliste.md (AC-9 bis AC-12).
+// Fassung 4 (ADR-0124): Die Karte „Inhalt je Kanal und Fläche“ mit ihren Kanal-Segmenten gibt es nicht mehr.
+// An ihrer Stelle steht die Tabelle „Was steht wo“ (Abschnitt was-steht-wo); sie wird mit dem Reiter Wetter
+// in einem Zug gelesen. Das Feld `segment` bleibt im Schema und ist immer null.
 //
 // Das Mockup baut seine Oberfläche erst per Script; das statische HTML enthält die Elemente nicht.
 // Darum rendert Playwright die Datei per file:// und stellt jede Kombination her:
 //   Kontext (Trip, Orte) × Zustand (normal, lädt, Ladefehler, Konto mit Lücken)
-//   × Reiter (Wetter, Zustellung, Etappen bzw. Orte) × Kanal-Segment (E-Mail, Telegram, SMS,
-//   Premium-SMS, 3-Tages-Ausblick, bei Orte zusätzlich Stundenverlauf)
+//   × Reiter (Wetter, Zustellung, Etappen bzw. Orte)
+// Der Ein-Ort-Kontext des Mockups (data-ctx="ort1") wird nicht gelesen: Der Staging-Abgleich kennt nur
+// die Kontexte trip und orte.
 // dazu die reinen Script-Zustände (Grenzen bearbeiten = openEdit, Vorlagen-Auswahl = pickerOpen,
 // Speichern-Dialog = saveOpen, Kebab-Bestätigung = kebabConfirm, Test-Menü). Die Zustandsvariablen
 // liegen im Mockup in einer Closure (IIFE) und sind von außen nicht erreichbar; sie werden deshalb
 // über dieselben Klicks hergestellt, die auch ein Mensch macht (data-ctx, data-zst, data-tab,
-// data-seg, data-edit, data-picker, data-save, data-k).
+// data-edit, data-picker, data-save, data-k).
 // Ausgeschlossen: Mockup-Rahmen (.frame), Rückmeldungsbereich (.fb, data-fb), Marken (.tag).
 //
 // Aufruf (schreibt docs/context/einstellungen_neu/elementliste.json):
@@ -26,7 +30,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HIER, '..');
-export const STANDARD_MOCKUP = join(REPO, 'docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html');
+export const STANDARD_MOCKUP = join(REPO, 'docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html');
 export const STANDARD_LISTE = join(REPO, 'docs/context/einstellungen_neu/elementliste.json');
 export const STANDARD_MESSAGES = join(REPO, 'frontend/src/lib/i18n/messages');
 
@@ -156,7 +160,7 @@ export function chipEn(rolle: string, textDe: string, katalog: Katalog): EnErgeb
 // ------------------------------------------------------------------ Auslesen im Browser
 
 type Roh = { abschnitt: string; rolle: string; text: string };
-type AusleseArg = { wurzeln: string[]; abschnitt: string | null; nur: string | null; ohne: string | null };
+type AusleseArg = { wurzeln: string[]; abschnitt: string | null; nur: string | null };
 
 /**
  * Läuft im Browser (page.evaluate): liest sichtbare Texte und Bedienelemente unter den Wurzeln aus.
@@ -185,7 +189,7 @@ function ausleseImBrowser(arg: AusleseArg): Roh[] {
 			return 'vorlage';
 		}
 		if (top.querySelector('.dialog')) return el.closest('.err') ? 'vorlage-speichern-fehler' : 'vorlage-speichern';
-		if (top.querySelector('[data-seg="channel"]')) return 'kanal-inhalt';
+		if (top.matches('[data-abschnitt="was-steht-wo"]')) return 'was-steht-wo';
 		if (top.querySelector('.mgroup,[data-seg="alarmall"],.more')) return 'metriken';
 		if (top.querySelector('[data-sw="official"]')) return 'warnungen-radar';
 		if (top.getAttribute('aria-busy') === 'true') return 'laden';
@@ -229,7 +233,6 @@ function ausleseImBrowser(arg: AusleseArg): Roh[] {
 				if (el.closest(SKIP) || !sichtbar(el)) continue;
 				const abschnitt = abschnittVon(el);
 				if (arg.nur && abschnitt !== arg.nur) continue;
-				if (arg.ohne && abschnitt === arg.ohne) continue;
 				if (el instanceof HTMLInputElement) {
 					const t = n(el.getAttribute('aria-label') || el.getAttribute('placeholder') || (el.type === 'checkbox' ? '' : el.value));
 					if (t && hatInhalt(t)) out.push({ abschnitt, rolle: 'eingabe', text: t });
@@ -319,7 +322,6 @@ function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEintrag[] {
 
 const KONTEXTE = ['trip', 'orte'];
 const ZUSTAENDE = ['normal', 'laedt', 'fehler', 'luecken'];
-const KANAL_SEGMENTE = ['E-Mail', 'Telegram', 'SMS', 'Premium-SMS', '3-Tages-Ausblick'];
 const KOPF = ['.crumbs #path', '.crumbs #kebabBtn', '.crumbs #testBtn', '#head', '#tabs'];
 
 // Minimaler Ausschnitt der Playwright-API, den der Generator braucht (Typen ohne Import).
@@ -367,12 +369,11 @@ export async function erzeugeElementliste(opt: { mockupPfad: string; messagesDir
 			if (ctx !== 'trip') await page.click(`.frame [data-ctx="${ctx}"]`);
 			if (zustand !== 'normal') await page.click(`.frame [data-zst="${zustand}"]`);
 		};
-		const lies = (wurzeln: string[], extra: { abschnitt?: string; nur?: string; ohne?: string } = {}) =>
+		const lies = (wurzeln: string[], extra: { abschnitt?: string; nur?: string } = {}) =>
 			page.evaluate(ausleseImBrowser, {
 				wurzeln,
 				abschnitt: extra.abschnitt ?? null,
-				nur: extra.nur ?? null,
-				ohne: extra.ohne ?? null
+				nur: extra.nur ?? null
 			});
 		const aufklappen = () =>
 			page.evaluate(() => {
@@ -381,13 +382,12 @@ export async function erzeugeElementliste(opt: { mockupPfad: string; messagesDir
 		const da = async (sel: string) => (await page.locator(sel).count()) > 0;
 
 		for (const ctx of KONTEXTE) {
-			const segmente = ctx === 'orte' ? [...KANAL_SEGMENTE, 'Stundenverlauf'] : KANAL_SEGMENTE;
 			const zweiter = ctx === 'trip' ? 'etappen' : 'orte';
 			for (const zustand of ZUSTAENDE) {
-				// --- Wetter: Kopf, Reiterleiste, Inhalt ohne die Kanal-Karte
+				// --- Wetter: Kopf, Reiterleiste, Inhalt samt Tabelle „Was steht wo“
 				await frisch(ctx, zustand);
 				await aufklappen();
-				const wetter: Roh[] = [...(await lies(KOPF)), ...(await lies(['#content'], { ohne: 'kanal-inhalt' }))];
+				const wetter: Roh[] = [...(await lies(KOPF)), ...(await lies(['#content']))];
 
 				// Script-Zustände im Wetter-Reiter (nur wo der Zustand die Elemente zeigt)
 				await frisch(ctx, zustand);
@@ -425,16 +425,6 @@ export async function erzeugeElementliste(opt: { mockupPfad: string; messagesDir
 					await page.click('#kebabMenu [data-kno]');
 				}
 				gruppen.push({ ctx, reiter: 'wetter', zustand, segment: null, roh: wetter });
-
-				// --- Wetter: Karte „Inhalt je Kanal und Fläche“ je Kanal-Segment
-				await frisch(ctx, zustand);
-				if (await da('[data-seg="channel"]')) {
-					for (const seg of segmente) {
-						await page.click(`[data-seg="channel"][data-v="${seg}"]`);
-						await aufklappen();
-						gruppen.push({ ctx, reiter: 'wetter', zustand, segment: seg, roh: await lies(['#content'], { nur: 'kanal-inhalt' }) });
-					}
-				}
 
 				// --- Zustellung
 				await frisch(ctx, zustand);

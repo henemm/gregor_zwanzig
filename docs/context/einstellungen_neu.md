@@ -14,7 +14,7 @@ Das Konzept ist auf vier claude.ai-Seiten entstanden. Ihre Speicher wurden am 20
 |---|---|---|---|
 | Grundentscheidungen (12 Karten) | https://claude.ai/artifact/4j3tRPtmBxRkL67UU2JENB | `einstellungen_neu/seiten/grundentscheidungen.html` | `einstellungen_neu/daten/entscheidungen/*.json` |
 | Ampel-Grenzen je Vorlage | https://claude.ai/artifact/1JjnLbshMDUCn1EZGGYBzu | `einstellungen_neu/seiten/ampel-grenzen.html` | `einstellungen_neu/daten/grenzwerte/*.json` |
-| Hi-Fi-Mockup Hub (Fassung 3, Version 9) | https://claude.ai/artifact/Lfo1pdrjrgcA3XMLLJrrwQ | `einstellungen_neu/seiten/mockup-hub-fassung3.html` | Collection `rueckmeldung` leer, Mockup **angenommen**. Seit 2026-11-17 sind darin die Karte „Inhalt je Kanal und Fläche“ und der Name „Orts-Briefing“ durch Fassung 4 abgelöst (ADR-0124) |
+| Hi-Fi-Mockup Hub (Fassung 3, Version 9) | https://claude.ai/artifact/Lfo1pdrjrgcA3XMLLJrrwQ | bis 2026-11-17 `einstellungen_neu/seiten/mockup-hub-fassung3.html`; die Datei ist durch `mockup-hub-fassung4.html` ersetzt, der letzte Stand liegt im Git-Verlauf | Collection `rueckmeldung` leer, Mockup **angenommen**. Seit 2026-11-17 sind darin die Karte „Inhalt je Kanal und Fläche“ und der Name „Orts-Briefing“ durch Fassung 4 abgelöst (ADR-0124) |
 | Abgleich alt gegen neu (40 Punkte, 57 Inventar) | https://claude.ai/artifact/2HFmTFD5jnMVX8ShwMxZa8 | `einstellungen_neu/seiten/abgleich-alt-neu.html` | `einstellungen_neu/daten/abgleich/*.json` (nur Abweichungen) |
 | Verbindlicher Stand (Text) | Speicher der ersten Seite, `stand/aktuell` | `einstellungen_neu/stand-2026-11-03.md` | – |
 | Entscheidungsvorlage 2026-11-17 (Issue #3122): Bildseite und Mockup Fassung 4 | Entscheidungsseite https://claude.ai/artifact/BzVRAuGPeg5cA6nxkhHY9b · Mockup Fassung 4 https://claude.ai/artifact/CqB42zYt9mHJAmKWqQLq1r | `einstellungen_neu/seiten/mockup-hub-fassung4.html` (Soll-Bild der Karte „Was steht wo“) | Entscheidung des PO vom 2026-11-17: [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), §2.5 |
@@ -477,7 +477,7 @@ Alle Sätze kommen in den Katalog, mit EN-Fassung.
 
 ## 5. Mockup: was wo sitzt (Fassung 3; Karte „Was steht wo“ und Name „Orte“ nach Fassung 4)
 
-Das Mockup (`einstellungen_neu/seiten/mockup-hub-fassung3.html`) hat oben eine Rahmenleiste (nicht Teil der App): Kontext **Trip/Orte**, Zustand **normal / lädt / Ladefehler / Konto mit Lücken**, Marken für die Abgleich-Punkte an/aus.
+Das Mockup (`einstellungen_neu/seiten/mockup-hub-fassung4.html`, bis 2026-11-17 `mockup-hub-fassung3.html`) hat oben eine Rahmenleiste (nicht Teil der App): Kontext **Trip/Orte**, Zustand **normal / lädt / Ladefehler / Konto mit Lücken**, Marken für die Abgleich-Punkte an/aus.
 
 **Seit 2026-11-17 (ADR-0124):** Für die Karte „Was steht wo“ (Reiter Wetter, Punkt 8), die Meldung in Punkt 6 und alle Texte mit dem Namen „Orte“ gilt Fassung 4 (`einstellungen_neu/seiten/mockup-hub-fassung4.html`). Fassung 4 zeigt drei Kontexte: Trip, drei Orte, ein Ort. Diese Stellen sind unten nach Fassung 4 beschrieben; alles Übrige beschreibt Fassung 3.
 

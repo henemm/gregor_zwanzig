@@ -1,6 +1,8 @@
 // Abnahme — Issue #2913 Scheibe c2: Seitenkopf des Editor-Hubs nach Mockup (Trip + Orts-Vergleich).
 // Spec: docs/specs/modules/feat_2913_c2_seitenkopf.md — AC-1 bis AC-6, AC-8 bis AC-11 (Browser-Anteil).
-// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html.
+// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html.
+// Gebaut nach Fassung 3. Fassung 4 (ADR-0124 Nr. 10) nennt in der Meta-Zeile der Orte keine „Vergleichstabelle“ mehr;
+// App und diese Spec folgen mit dem Bau zu #3122.
 //
 // Nur in /e2e-verify gegen Staging, nie gegen Produktion, nicht in der CI-Positivliste.
 // Config (legt der Developer an, Phase 6 — Vorlage playwright.2913-metrikliste.staging.config.ts,

@@ -1,6 +1,8 @@
 // TDD RED — Issue #3006 (Epic #2913): Bereichsköpfe je Reiter der Einstellungen (Trip + Orts-Vergleich).
 // Spec: docs/specs/modules/feat_3006_bereichskoepfe.md — AC-1 bis AC-9, AC-11 bis AC-18.
-// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html Z. 69–71 (.sectionh), 442, 556, 579, 590, 594.
+// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html Z. 71–73 (.sectionh), 478, 670, 693, 704, 708.
+// Gebaut nach Fassung 3. Fassung 4 (ADR-0124 Nr. 10) hat für den Reiter Orte einen neuen Erklärtext (Z. 704);
+// Katalog, App und dieser Test folgen mit dem Bau zu #3122.
 //
 // Geprüft wird dort, wo es WIRKT: der neue Baustein `molecules/Bereichskopf.svelte` UND die ECHTEN Hubs
 // `trip-detail/TripTabs.svelte` und `compare/CompareTabs.svelte`, serverseitig gerendert (svelte/server).

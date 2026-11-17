@@ -1,6 +1,6 @@
 // Abnahme-Aufnahmen — Issue #2795 S3b, Teilschritt 1b (Neubau Reiter „Zustellung“), AC-38.
 // Spec: docs/specs/modules/feat_2795_s3b_teil1_zustellung.md
-// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html (per file://, nur Deutsch).
+// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html (per file://, nur Deutsch).
 //
 // Erzeugt in docs/artifacts/feature-2795-s3b1b-bilder/ (oder $BILD_DIR):
 //   - mockup-<ctx>-<geraet>.png und staging-<ctx>-<geraet>.png für ctx trip|orte × desktop 1280×900 |
@@ -24,7 +24,7 @@ import { HUB_KINDS, HUB_SEL, type HubKind } from './helpers';
 import { DESKTOP, MARKER, MOBIL, oeffneZustellung, seedZustellung } from './s3b2795-zustellung.helpers';
 
 const HIER = path.dirname(fileURLToPath(import.meta.url));
-const MOCKUP = 'file://' + path.resolve(HIER, '..', '..', 'docs', 'context', 'einstellungen_neu', 'seiten', 'mockup-hub-fassung3.html');
+const MOCKUP = 'file://' + path.resolve(HIER, '..', '..', 'docs', 'context', 'einstellungen_neu', 'seiten', 'mockup-hub-fassung4.html');
 const ARTEFAKTE = path.resolve(HIER, '..', '..', 'docs', 'artifacts', 'feature-2795-s3b1b-bilder');
 
 type Lang = 'de' | 'en';

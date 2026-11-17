@@ -71,7 +71,7 @@
 
 ### 5a. Ampel — Wetter-Reiter (#2913)
 
-Grafische Farben der Ampelstufen (Ampel-Leiste, Input-Unterkante, Segment-Farbpunkt). Nahe am Mockup Fassung 3, jede mindestens **3:1 gegen `--g-card`** in Hell und Dunkel (eigener Dark-Block). Abweichung vom Mockup nur, wo WCAG es verlangt. Farbe ist nie alleiniger Informationsträger. Prüfung: `ampel_tokens_kontrast.test.ts`.
+Grafische Farben der Ampelstufen (Ampel-Leiste, Input-Unterkante, Segment-Farbpunkt). Nahe am Mockup (Fassung 3, unverändert in Fassung 4), jede mindestens **3:1 gegen `--g-card`** in Hell und Dunkel (eigener Dark-Block). Abweichung vom Mockup nur, wo WCAG es verlangt. Farbe ist nie alleiniger Informationsträger. Prüfung: `ampel_tokens_kontrast.test.ts`.
 
 | Token | Hell | Dunkel | Mockup |
 |---|---|---|---|

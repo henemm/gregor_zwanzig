@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { erzeugeElementliste } from '../../scripts/elementliste_aus_mockup.ts';
 
 const REPO = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..');
-const MOCKUP = join(REPO, 'docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html');
+const MOCKUP = join(REPO, 'docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html');
 const MESSAGES = join(REPO, 'frontend/src/lib/i18n/messages');
 const LISTE = join(REPO, 'docs/context/einstellungen_neu/elementliste.json');
 
@@ -38,6 +38,6 @@ test('Generator steuert Script-Zustände: Bearbeiten offen, Vorlagen-Auswahl, Sp
 	// Texte, die das Mockup nur in Script-Zuständen rendert, müssen in der Liste auftauchen.
 	const texte = l.elemente.map((e: { text_de: string }) => e.text_de).join('\n');
 	expect(texte).toContain('Erneut laden'); // Ladefehler-Zustand
-	expect(texte).toMatch(/Kurzstil/); // Kanal-Segment Telegram (channelTab)
-	expect(texte).toMatch(/Stundenverlauf im Briefing/); // Orte-Segment Stundenverlauf
+	expect(texte).toMatch(/Telegram: Kurzstil/); // Tabelle „Was steht wo“, Einstellungen je Kanal
+	expect(texte).toMatch(/kein Stundenwert/); // Spalte Stundenverlauf, nur im Kontext Orte
 });

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { cleanupTracked, createTestTrip, seedHub } from './helpers';
 
 const HIER = path.dirname(fileURLToPath(import.meta.url));
-const MOCKUP = 'file://' + path.resolve(HIER, '..', '..', 'docs', 'context', 'einstellungen_neu', 'seiten', 'mockup-hub-fassung3.html');
+const MOCKUP = 'file://' + path.resolve(HIER, '..', '..', 'docs', 'context', 'einstellungen_neu', 'seiten', 'mockup-hub-fassung4.html');
 
 /** Bildablage außerhalb des versionierten Baums (BILD_DIR oder Playwright-Ausgabeordner). */
 function bild(name: string): string {

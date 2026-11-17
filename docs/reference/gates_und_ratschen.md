@@ -661,7 +661,7 @@ Konfiguration in `frontend/src/lib/__tests__/bausteine_waechter_regeln.ts` (Svel
 Design-Gate. Löschbedingung: kein nachweisbarer Fang bis dahin → Rückbau. Spec:
 `docs/specs/modules/einstellungen_neu_neustart_adr_waechter_elementliste.md`.*
 
-Zum Wächter gehört die **Elementliste** aus dem Mockup (Fassung 3): Generator
+Zum Wächter gehört die **Elementliste** aus dem Mockup (Fassung 4, bis 2026-11-17 Fassung 3; ADR-0124): Generator
 `scripts/elementliste_aus_mockup.ts` (Playwright per `file://`, Lauf: `cd frontend && node
 --experimental-strip-types ../scripts/elementliste_aus_mockup.ts`), Artefakt
 `docs/context/einstellungen_neu/elementliste.json` mit Mockup-Hash; `elementliste_aktuell.test.ts` wird rot,

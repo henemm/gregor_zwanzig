@@ -1,5 +1,7 @@
-// TDD RED — Issue #2913 (Epic #2791): Elementliste aus dem Mockup (Fassung 3).
+// TDD RED — Issue #2913 (Epic #2791): Elementliste aus dem Mockup (Fassung 4, #3122).
 // Spec: docs/specs/modules/einstellungen_neu_neustart_adr_waechter_elementliste.md — AC-9 bis AC-12.
+// Fassung 4 (ADR-0124): Die Karte „Inhalt je Kanal und Fläche“ mit ihren Kanal-Segmenten ist durch die
+// Tabelle „Was steht wo“ ersetzt (Abschnitt was-steht-wo). Kanal-Segmente gibt es nicht mehr, `segment` ist immer null.
 //
 // Läuft OHNE Browser im CI-Job `frontend-test`. Geprüft wird das echte, eingecheckte Artefakt
 // `docs/context/einstellungen_neu/elementliste.json` gegen das echte Mockup und den echten
@@ -32,7 +34,7 @@ import {
 } from '../../../../scripts/elementliste_aus_mockup.ts';
 
 const REPO = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..', '..', '..');
-const MOCKUP = join(REPO, 'docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html');
+const MOCKUP = join(REPO, 'docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html');
 const LISTE = join(REPO, 'docs/context/einstellungen_neu/elementliste.json');
 const MESSAGES = join(REPO, 'frontend/src/lib/i18n/messages');
 
@@ -58,23 +60,19 @@ function liste(): { mockup_hash: string; elemente: Element[] } {
 
 // Soll unabhängig vom Generator festgehalten (Spec AC-9) — sonst prüfte der Test sich selbst.
 const ZUSTAENDE = ['normal', 'laedt', 'fehler', 'luecken'];
-const KANAL_SEGMENTE = ['E-Mail', 'Telegram', 'SMS', 'Premium-SMS', '3-Tages-Ausblick'];
-// Die Kanal-Segmente gehören zur Karte „Inhalt je Kanal und Fläche“, die das Mockup im Reiter
-// WETTER rendert (viewWetter, mockup-hub-fassung3.html Z. 451/524-525; stand-2026-11-03.md:137),
-// und nur in den Zuständen normal und Konto mit Lücken — bei lädt/Ladefehler zeigt viewWetter nur
-// Skelett bzw. Fehlerbox, die Karte gibt es dort nicht.
 const SOLL: Array<{ ctx: string; reiter: string; zustand: string; segment: string | null }> = [];
 for (const ctx of ['trip', 'orte']) {
 	for (const zustand of ZUSTAENDE) {
 		SOLL.push({ ctx, reiter: 'wetter', zustand, segment: null });
 		SOLL.push({ ctx, reiter: ctx === 'trip' ? 'etappen' : 'orte', zustand, segment: null });
 		SOLL.push({ ctx, reiter: 'zustellung', zustand, segment: null });
-		if (zustand === 'normal' || zustand === 'luecken') {
-			const segs = ctx === 'orte' ? [...KANAL_SEGMENTE, 'Stundenverlauf'] : KANAL_SEGMENTE;
-			for (const segment of segs) SOLL.push({ ctx, reiter: 'wetter', zustand, segment });
-		}
 	}
 }
+// Die Tabelle „Was steht wo“ rendert das Mockup im Reiter WETTER (viewWetter ruft wasStehtWo auf,
+// mockup-hub-fassung4.html) und nur in den Zuständen normal und Konto mit Lücken — bei lädt/Ladefehler
+// zeigt viewWetter nur Skelett bzw. Fehlerbox, die Karte gibt es dort nicht.
+const TABELLE = 'was-steht-wo';
+const TABELLE_ZUSTAENDE = ['normal', 'luecken'];
 
 // ---------------------------------------------------------------- AC-12
 describe('AC-12: Hash-Check Mockup ↔ elementliste.json (ohne Browser)', () => {
@@ -101,7 +99,7 @@ describe('AC-12: Hash-Check Mockup ↔ elementliste.json (ohne Browser)', () => 
 });
 
 // ---------------------------------------------------------------- AC-9
-describe('AC-9: alle Kombinationen Kontext × Zustand × Reiter × Kanal-Segment, ohne Mockup-Rahmen', () => {
+describe('AC-9: alle Kombinationen Kontext × Zustand × Reiter, Tabelle „Was steht wo“, ohne Mockup-Rahmen', () => {
 	test('jede Soll-Kombination hat mindestens ein Element', () => {
 		const el = liste().elemente;
 		const fehlend = SOLL.filter(
@@ -113,16 +111,54 @@ describe('AC-9: alle Kombinationen Kontext × Zustand × Reiter × Kanal-Segment
 		assert.deepEqual(fehlend, [], `fehlende Kombinationen: ${fehlend.length}`);
 	});
 
-	test('Kanal-Segmente gehören nur zum Wetter-Reiter (Karte „Inhalt je Kanal und Fläche“); Stundenverlauf nur bei Orte', () => {
+	test('kein Eintrag trägt ein Kanal-Segment, die ersetzte Karte „Inhalt je Kanal und Fläche“ ist weg (ADR-0124)', () => {
 		for (const e of liste().elemente) {
-			if (e.reiter !== 'wetter') assert.equal(e.segment ?? null, null, `${e.id}: Segment außerhalb des Wetter-Reiters`);
-			if (e.segment === 'Stundenverlauf') assert.equal(e.ctx, 'orte', `${e.id}: Stundenverlauf bei Trip`);
+			assert.equal(e.segment ?? null, null, `${e.id}: Kanal-Segment gibt es seit Fassung 4 nicht mehr`);
+			assert.notEqual(e.abschnitt, 'kanal-inhalt', `${e.id}: Abschnitt der ersetzten Karte`);
+			assert.ok(!e.text_de.includes('Inhalt je Kanal'), `${e.id}: Text der ersetzten Karte`);
 		}
+	});
+
+	test('Tabelle „Was steht wo“: nur im Wetter-Reiter, nur normal und Konto mit Lücken, für Trip und Orte', () => {
+		const tab = liste().elemente.filter((e) => e.abschnitt === TABELLE);
+		for (const e of tab) {
+			assert.equal(e.reiter, 'wetter', `${e.id}: Tabelle außerhalb des Wetter-Reiters`);
+			assert.ok(TABELLE_ZUSTAENDE.includes(e.zustand), `${e.id}: Tabelle im Zustand ${e.zustand}`);
+		}
+		for (const ctx of ['trip', 'orte']) {
+			for (const zustand of TABELLE_ZUSTAENDE) {
+				const texte = tab.filter((e) => e.ctx === ctx && e.zustand === zustand).map((e) => e.text_de);
+				for (const soll of ['Was steht wo', 'Amtliche Warnungen', 'Ganze Blöcke ein- und ausschalten', 'Einstellungen je Kanal']) {
+					assert.ok(texte.includes(soll), `${ctx}/${zustand}: „${soll}“ fehlt in der Tabelle`);
+				}
+				assert.ok(texte.some((t) => t.startsWith('SMS-Beispiel:')), `${ctx}/${zustand}: SMS-Beispielzeile fehlt`);
+			}
+		}
+	});
+
+	test('Stellen der Tabelle: E-Mail, Telegram, SMS und 3-Tages-Ausblick überall; Stundenverlauf nur bei Orte', () => {
+		const tab = liste().elemente.filter((e) => e.abschnitt === TABELLE && e.zustand === 'normal');
+		const texte = (ctx: string) => tab.filter((e) => e.ctx === ctx).map((e) => e.text_de);
+		for (const ctx of ['trip', 'orte']) {
+			for (const stelle of ['E-Mail', 'Telegram', 'SMS', '3-Tages-Ausblick']) {
+				assert.ok(texte(ctx).includes(stelle), `${ctx}: Spalte ${stelle} fehlt`);
+			}
+			assert.ok(texte(ctx).includes('Temperatur in E-Mail'), `${ctx}: Haken „Temperatur in E-Mail“ fehlt`);
+			assert.ok(texte(ctx).includes('Temperatur im 3-Tages-Ausblick'), `${ctx}: Haken im Ausblick fehlt`);
+			// Roh/Einfach je Stelle nur bei Metriken mit zwei Formen (ADR-0124 Nr. 5): Wind ja, Temperatur nein.
+			assert.ok(texte(ctx).some((t) => t.startsWith('Darstellung Wind in E-Mail:')), `${ctx}: Umschalter Wind fehlt`);
+			assert.ok(!texte(ctx).some((t) => t.startsWith('Darstellung Temperatur')), `${ctx}: Umschalter bei Temperatur`);
+			// SMS und Premium-SMS haben keine Wahl.
+			assert.ok(!texte(ctx).some((t) => /^Darstellung .* in SMS:/.test(t)), `${ctx}: Umschalter in der SMS-Spalte`);
+		}
+		assert.ok(texte('orte').includes('Stundenverlauf') && texte('orte').includes('Temperatur im Stundenverlauf'));
+		assert.ok(texte('orte').includes('kein Stundenwert'), 'Sonnenstunden sind im Stundenverlauf gesperrt');
+		assert.ok(!texte('trip').some((t) => t.includes('Stundenverlauf')), 'Trip hat keine Spalte Stundenverlauf');
 	});
 
 	test('keine Texte aus .frame, data-fb oder .tag', () => {
 		const texte = liste().elemente.map((e) => e.text_de);
-		for (const rahmen of ['Mockup · Fassung 3', 'neu markiert', 'Konto mit Lücken', 'Neue Punkte markieren', 'Kopf & Test schicken', 'Sonstiges']) {
+		for (const rahmen of ['Mockup · Fassung 4', 'Orte · 3 Orte', 'Orte · 1 Ort', 'neu markiert', 'Konto mit Lücken', 'Neue Punkte markieren', 'Kopf & Test schicken', 'Sonstiges']) {
 			assert.ok(!texte.some((t) => t.includes(rahmen)), `Rahmen-/Feedbacktext in der Liste: ${rahmen}`);
 		}
 		const lade = liste().elemente.filter((e) => e.text_de.startsWith('Lade Metriken'));
@@ -131,11 +167,17 @@ describe('AC-9: alle Kombinationen Kontext × Zustand × Reiter × Kanal-Segment
 		for (const t of texte) assert.doesNotMatch(t, /\s(?:[A-Z]\d{1,2})$/, `Tag-Kürzel am Textende: ${t}`);
 	});
 
-	test('beide Kontexte und alle vier Kanäle sind vertreten', () => {
+	test('beide Kontexte und alle vier Kanäle sind vertreten (Kanal-Tabelle im Reiter Zustellung)', () => {
 		const el = liste().elemente;
 		assert.ok(el.some((e) => e.ctx === 'trip') && el.some((e) => e.ctx === 'orte'));
-		for (const k of ['E-Mail', 'Telegram', 'SMS', 'Premium-SMS']) {
-			assert.ok(el.some((e) => e.segment === k), `Kanal ${k} fehlt`);
+		assert.deepEqual([...new Set(el.map((e) => e.ctx))].sort(), ['orte', 'trip'], 'der Ein-Ort-Kontext wird nicht gelesen');
+		for (const ctx of ['trip', 'orte']) {
+			for (const k of ['E-Mail', 'Telegram', 'SMS', 'Premium-SMS']) {
+				assert.ok(
+					el.some((e) => e.ctx === ctx && e.reiter === 'zustellung' && e.abschnitt === 'kanaele' && e.text_de === k),
+					`${ctx}: Kanal ${k} fehlt`
+				);
+			}
 		}
 	});
 });

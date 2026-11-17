@@ -1,6 +1,6 @@
 // TDD RED — Issue #2913, Fix „Metrik-Liste nach Mockup“ (PO-Befund 12.11.2026).
 // Spec: docs/specs/modules/fix_2913_metrikliste_mockup.md — AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-11.
-// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html (Fassung 3).
+// Soll: docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html (Metrik-Liste unverändert seit Fassung 3).
 //
 // Vertrag (hier festgelegt, /50 baut danach):
 //   ampelModell.ts

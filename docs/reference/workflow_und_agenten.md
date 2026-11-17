@@ -34,7 +34,7 @@ Nach der Implementation führt ein unabhängiger `implementation-validator` (Son
 
 ## Oberflächen-Scheiben: Scheibe → Staging-Abgleich → Prüf-Agent (ADR-0112, #2913)
 
-Seiten nach einem Mockup (zuerst „Einstellungen neu“, Mockup Fassung 3) entstehen in Scheiben, je eine
+Seiten nach einem Mockup (zuerst „Einstellungen neu“, Mockup Fassung 4, bis 2026-11-17 Fassung 3) entstehen in Scheiben, je eine
 mit eigener Spec. „Fertig“ heißt „Elementliste lückenlos und Prüf-Agent ohne Befund“, nicht „Tests grün“.
 Ablauf am Ende jeder Scheibe: **Scheibe → Staging-Abgleich → Prüf-Agent**.
 

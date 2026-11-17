@@ -18,7 +18,7 @@ import { HUB_KINDS, type HubKind } from './helpers';
 import { DESKTOP, MOBIL, WT, aktiveDerVorlage, oeffneWetter, seedWetter, vorlagen } from './s3a2794-teil3.helpers';
 
 const HIER = path.dirname(fileURLToPath(import.meta.url));
-const MOCKUP = 'file://' + path.resolve(HIER, '..', '..', 'docs', 'context', 'einstellungen_neu', 'seiten', 'mockup-hub-fassung3.html');
+const MOCKUP = 'file://' + path.resolve(HIER, '..', '..', 'docs', 'context', 'einstellungen_neu', 'seiten', 'mockup-hub-fassung4.html');
 const KATALOG = path.resolve(HIER, '..', 'src', 'lib', 'i18n', 'messages');
 const katalog = (s: 'de' | 'en'): Record<string, string> => JSON.parse(readFileSync(path.join(KATALOG, s, 'wetter.json'), 'utf8'));
 

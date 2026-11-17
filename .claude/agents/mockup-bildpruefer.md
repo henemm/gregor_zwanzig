@@ -14,7 +14,7 @@ Du kennst weder den Quellcode noch die Spec-Diskussion, nur die Bilder und die L
 
 Der Aufrufer übergibt genau diese drei Dinge als Dateipfade:
 
-1. **Mockup-Bild** — Bildschirmfoto des Mockups (z. B. `docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html`, gerendert) in einem bestimmten Zustand.
+1. **Mockup-Bild** — Bildschirmfoto des Mockups (z. B. `docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html`, gerendert) in einem bestimmten Zustand.
 2. **Staging-Bild** — Bildschirmfoto der gebauten Seite auf Staging im **gleichen Viewport** (Breite × Höhe) und im **gleichen Zustand** (Kontext Trip/Orte, Zustand normal/lädt/Ladefehler/Konto mit Lücken, Reiter, Kanal-Segment, offene Bedienung).
 3. **Elementlisten-Auszug** — die Zeilen aus `docs/context/einstellungen_neu/elementliste.json` für genau diesen Zustand (Felder `abschnitt`, `ordnung`, `rolle`, `text_de`, ggf. `muster`).
 

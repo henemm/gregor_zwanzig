@@ -1,16 +1,11 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Inhalt je Kanal – Mockup Fassung 4 (Varianten)</title>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Hub Wetter & Zustellung</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
-/* Fassung 4 (Varianten, Issue #3122): Kopie von Fassung 3; ersetzt ist nur die Karte „Inhalt je Kanal und Fläche“.
-   Die Rahmen-Leiste schaltet die Varianten, über die der PO entscheidet. Nach der Entscheidung wird daraus Fassung 4.
-   Layout: Rahmen-Leiste (Kontext und Varianten umschalten), darunter der Hub im Look des Atomic-Design-Handoffs.
+/* Fassung 4 (Issue #3122): Soll laut ADR-0124 (docs/adr/0124-was-steht-wo-eine-tabelle.md). Entstanden aus Fassung 3;
+   geändert sind nur die Karte „Was steht wo“ (ersetzt „Inhalt je Kanal und Fläche“), der Name „Orte“ und der Ein-Ort-Kontext.
+   Layout: Rahmen-Leiste (Trip/Orte umschalten), darunter der Hub im Look des Atomic-Design-Handoffs.
    Bewusst nur helles Thema: das Mockup zeigt die App, wie sie aussieht. */
 :root{
   color-scheme:light;
@@ -122,7 +117,6 @@ h1{font-size:clamp(28px,5vw,38px);font-weight:600;letter-spacing:-.02em;line-hei
 .why{font-size:12px;color:var(--g-ink-2);margin-top:4px}
 .why .gr{color:var(--a-green);font-weight:600}
 .edit .grp > span{line-height:1.25}
-.exm{font-family:var(--f-mono);font-size:10.5px;color:var(--g-ink-3);white-space:nowrap}
 .vmenu{position:absolute;top:100%;left:0;margin-top:6px;z-index:6;background:var(--g-card);border:1px solid var(--g-rule);border-radius:var(--g-r-3);box-shadow:0 8px 24px rgba(26,26,24,.12);padding:6px;width:min(360px,calc(100vw - 48px));display:flex;flex-direction:column}
 .vmenu .vg{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--g-ink-3);padding:8px 10px 4px}
 .vmenu > button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:transparent;border:0;border-radius:var(--g-r-2);padding:8px 10px;cursor:pointer;text-align:left;color:var(--g-ink);font-size:13.5px}
@@ -131,11 +125,6 @@ h1{font-size:clamp(28px,5vw,38px);font-weight:600;letter-spacing:-.02em;line-hei
 .vmenu small{font-size:11.5px;color:var(--g-ink-3)}
 .confirm{display:flex;flex-direction:column;gap:8px;background:var(--g-accent-tint);border:1px solid var(--g-accent-soft);border-radius:var(--g-r-2);padding:10px 12px;margin-bottom:4px;font-size:13px;color:var(--g-ink-2)}
 .confirm b{color:var(--g-ink)}
-.kz{font-family:var(--f-mono);font-size:11px;font-weight:600;background:var(--g-paper-deep);color:var(--g-ink-2);border-radius:3px;padding:1px 6px}
-.oi.ohead{font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--g-ink-2);border-top:1px solid var(--g-rule);background:var(--g-card-alt);line-height:1.35}
-.oi.ohead .muted{text-transform:none;letter-spacing:0;font-family:var(--f-ui);font-size:11px}
-.oh-f{width:150px;text-align:left}.oh-s{width:70px;text-align:left}
-.mono-s{font-family:var(--f-mono);font-size:11.5px}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .quick button{font:inherit;font-size:12px;border:1px dashed var(--g-rule);background:transparent;color:var(--g-ink-2);border-radius:999px;padding:2px 9px;cursor:pointer}
 .legend{padding:10px 20px 14px;border-top:1px solid var(--g-rule-soft);display:flex;gap:6px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--g-ink-2);align-items:center}
@@ -160,13 +149,7 @@ h1{font-size:clamp(28px,5vw,38px);font-weight:600;letter-spacing:-.02em;line-hei
 .tblwrap{overflow-x:auto}
 .kt{min-width:620px}
 
-/* Inhalt je Kanal */
-.olist{display:flex;flex-direction:column}
-.oi{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:9px 20px;border-top:1px solid var(--g-rule-soft)}
-.oi .h{color:var(--g-ink-4);font-family:var(--f-mono);cursor:grab}
-.oi .n{flex:1 1 220px;min-width:0}
-.oi .k{font-family:var(--f-mono);font-size:11px;color:var(--g-ink-3)}
-.oi.off .n{color:var(--g-ink-3);text-decoration:line-through}
+/* Budgetzeile und Aufklapper */
 .budget{padding:10px 20px;border-top:1px dashed var(--g-rule);font-family:var(--f-mono);font-size:11.5px;color:var(--g-ink-3)}
 details.adv{border-top:1px solid var(--g-rule-soft)}
 details.adv summary{padding:14px 20px;cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between}
@@ -202,9 +185,6 @@ body.marks .tag{display:inline-block}
 .linkish{background:none;border:0;padding:0;color:var(--g-accent-deep);font:inherit;font-size:12px;text-decoration:underline;cursor:pointer}
 .switch[disabled]{opacity:.4;cursor:not-allowed}
 .lock{font-size:12px;color:var(--g-ink-3)}
-.oi.fixed{background:var(--g-card-alt)}
-.oi.fixed .n{color:var(--g-ink-2)}
-.oi.locked .n{color:var(--g-ink-3)}
 .skel{height:14px;border-radius:4px;background:var(--g-rule-soft)}
 .dialog{display:flex;flex-direction:column;gap:12px;padding:18px 20px}
 .input.wide{width:100%;max-width:380px;font-family:var(--f-ui)}
@@ -222,36 +202,18 @@ body.marks .tag{display:inline-block}
 .frame .grp > small{color:#a3a093}
 @media (prefers-reduced-motion:reduce){.switch::after{transition:none}}
 
-/* ===== Fassung 4 · Varianten (#3122) ===== */
-.frame{display:block;padding-block:12px 14px}
-.fr-top{display:flex;gap:6px 12px;flex-wrap:wrap;align-items:baseline;margin-bottom:10px}
-.fr-rows{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:8px 22px}
-.fr-row{display:flex;flex-direction:column;gap:4px;min-width:0}
-.fr-l{font-size:12px;color:#cfccc1;display:flex;gap:6px;align-items:center}
-.fr-l i{font-style:normal;font-family:var(--f-mono);font-size:10.5px;font-weight:600;background:var(--frame-ink);color:var(--frame);border-radius:50%;width:17px;height:17px;display:inline-grid;place-items:center}
-.fr-l small{color:#a3a093}
-.frame .sw{flex-wrap:wrap;align-self:flex-start}
-.part{display:flex;flex-direction:column;gap:22px}
-.vlabel{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--mark);border-radius:3px;padding:2px 7px;align-self:flex-start;margin-bottom:-14px}
-/* Kanal-Tabelle (Variante A) */
-.kx{display:grid;grid-template-columns:22px minmax(130px,1.2fr) minmax(170px,.8fr) repeat(3,minmax(104px,1fr));gap:4px 14px;align-items:center;padding:9px 20px;border-top:1px solid var(--g-rule-soft)}
-.kx.nofmt{grid-template-columns:22px minmax(130px,.9fr) repeat(3,minmax(150px,1fr))}
-.kx.x1{grid-template-columns:22px minmax(130px,1.2fr) minmax(170px,.8fr) repeat(3,minmax(104px,1fr)) 118px}
-.kx.x2{grid-template-columns:22px minmax(130px,1.2fr) minmax(170px,.8fr) repeat(3,minmax(104px,1fr)) 118px 118px}
-.kx.nofmt.x1{grid-template-columns:22px minmax(130px,.9fr) repeat(3,minmax(150px,1fr)) 118px}
-.kx.nofmt.x2{grid-template-columns:22px minmax(130px,.9fr) repeat(3,minmax(150px,1fr)) 118px 118px}
-.kx .xc{border-left:1px solid var(--g-rule-soft);padding-left:12px;align-self:stretch}
+/* Fassung 4 (ADR-0124): Tabelle „Was steht wo“. Der Trip hat vier Stellen (.s4), Orte haben fünf (.s5). */
+.kx{display:grid;gap:4px 14px;align-items:center;padding:9px 20px;border-top:1px solid var(--g-rule-soft)}
+.kx.s4{grid-template-columns:22px minmax(130px,.9fr) repeat(3,minmax(150px,1fr)) 118px}
+.kx.s5{grid-template-columns:22px minmax(130px,.9fr) repeat(3,minmax(150px,1fr)) 118px 118px}
+.kx .xc{border-left:1px solid var(--g-rule-soft);padding-left:12px;align-self:stretch;gap:6px}
 .kx .sh{display:none}
 .nix{width:28px;display:inline-grid;place-items:center;color:var(--g-ink-4)}
-.nurz{font-size:12px;color:var(--g-ink-3)}
-.kx .xc{gap:6px}
 .kx.kxh{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--g-ink-2);background:var(--g-card-alt);border-top:1px solid var(--g-rule);align-items:start;padding-block:10px}
 .kx.kxh small{display:block;text-transform:none;letter-spacing:0;font-family:var(--f-ui);font-size:11px;color:var(--g-ink-3);margin-top:1px}
 .kx .h{color:var(--g-ink-4);font-family:var(--f-mono);cursor:grab;font-size:12px}
 .kx .kn{font-weight:600;font-size:14px;min-width:0;hyphens:auto;overflow-wrap:anywhere}
 .kx .kn small{display:block;font-weight:400;color:var(--g-ink-3);font-size:12px}
-.kx .kfmt{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0}
-.kx.kxh .kfmt{display:block}
 .kc{display:flex;flex-direction:row;gap:8px;align-items:center;min-width:0}
 .kx.kxh .kc{display:block}
 .kex{font-family:var(--f-mono);font-size:11px;color:var(--g-ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
@@ -269,64 +231,17 @@ body.marks .tag{display:inline-block}
 .ck input:disabled+i{opacity:.3}
 .ck input:focus-visible+i{outline:2px solid var(--g-accent);outline-offset:2px}
 .mini{font-family:var(--f-mono);font-size:10.5px;font-weight:600;border:1px solid var(--g-rule);background:var(--g-paper);color:var(--g-accent-deep);border-radius:3px;padding:3px 6px;cursor:pointer;white-space:nowrap}
-.kbx{display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .budget b{color:var(--g-ink);font-weight:500}
 .budget .warn{color:var(--g-bad);font-family:var(--f-ui);font-size:12.5px;display:block;margin-top:3px}
 .ruht{opacity:.45}
-/* Teile des Briefings */
-.teil{padding:14px 20px;border-top:1px solid var(--g-rule-soft);display:flex;flex-direction:column;gap:10px}
-.teil .top{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.teil .t b{display:block;font-weight:600}
-.teil .t small{color:var(--g-ink-3);font-size:12.5px}
-.teil .wo{font-family:var(--f-mono);font-size:10.5px;font-weight:600;background:var(--g-paper-deep);color:var(--g-ink-2);border-radius:3px;padding:1px 6px;margin-left:6px;white-space:nowrap;vertical-align:1px}
-.tvals{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px}
-.tvals .tl{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--g-ink-3);margin-right:2px}
-.tchip{font:inherit;font-size:12.5px;border:1px solid var(--g-rule);background:var(--g-card);color:var(--g-ink);border-radius:999px;padding:3px 10px;white-space:nowrap}
-button.tchip{cursor:pointer;border-color:var(--g-ink-3)}
-button.tchip.off{color:var(--g-ink-3);border-style:dashed;border-color:var(--g-rule);text-decoration:line-through}
-.tchip.stat{background:var(--g-card-alt);color:var(--g-ink-2)}
-.tchip.lock{background:var(--g-card-alt);color:var(--g-ink-3);border-style:dashed}
-.tvals .muted{flex-basis:100%;font-size:12px}
-/* Beispiel (nur Mockup) */
-.bsp{border:1.5px dashed var(--mark);border-radius:var(--g-r-3);padding:14px 16px 16px;background:#f1f6fa;display:flex;flex-direction:column;gap:12px}
-.bsp > .bhd{display:flex;gap:6px 10px;flex-wrap:wrap;align-items:baseline}
-.bsp > .bhd b{font-size:14px}
-.bsp > .bhd small{color:var(--g-ink-3);font-size:12px}
-.bgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
-.bbox{background:#fff;border:1px solid var(--g-rule);border-radius:var(--g-r-3);padding:10px 12px;min-width:0;display:flex;flex-direction:column;gap:8px}
-.bbox.wide{grid-column:1/-1}
-.bt{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--g-ink-3)}
-.bh{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--g-ink-2);margin-top:4px}
-table.bx{border-collapse:collapse;font-family:var(--f-mono);font-size:11.5px;font-variant-numeric:tabular-nums;min-width:100%}
-table.bx th{text-align:left;font-weight:600;color:var(--g-ink-2);border-bottom:1px solid var(--g-rule);padding:3px 12px 3px 0;white-space:nowrap}
-table.bx td{padding:3px 12px 3px 0;border-bottom:1px solid var(--g-rule-soft);white-space:nowrap}
-pre.bpre{font:11.5px/1.55 var(--f-mono);white-space:pre-wrap;word-break:break-word;margin:0;color:var(--g-ink)}
-.bn{font-size:12px;color:var(--g-ink-3)}
-table.hn{border-collapse:collapse;width:100%;font-size:12.5px}
-table.hn th{text-align:left;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--g-ink-3);font-weight:500;padding:4px 12px 4px 0;border-bottom:1px solid var(--g-rule)}
-table.hn td{padding:5px 12px 5px 0;border-bottom:1px solid var(--g-rule-soft);vertical-align:top}
-table.hn td.m{font-family:var(--f-mono);font-size:11.5px}
-table.hn td.alt{color:var(--g-ink-3)}
-.fix-list{margin:10px 0 0;padding-left:18px;font-size:13px;color:var(--g-ink-2);display:flex;flex-direction:column;gap:4px;max-width:78ch}
-body.only .frame,body.only .fb{display:none}
-body.only:not(.mitkopf) .crumbs,body.only:not(.mitkopf) #headwrap,body.only:not(.mitkopf) .tabs{display:none}
-body.only .content{padding-block:14px 14px}
-body.only .vlabel{display:none}
 @media (max-width:760px){
-  .kx,.kx.nofmt{grid-template-columns:14px minmax(0,1fr) repeat(3,52px);gap:4px 8px;padding:9px 12px}
-  .kx.nofmt{grid-template-columns:14px minmax(0,1fr) repeat(3,62px)}
+  .kx.s4{grid-template-columns:14px minmax(0,1fr) 50px 50px 36px 50px;gap:4px 5px;padding:9px 12px}
+  .kx.s5{grid-template-columns:14px minmax(0,1fr) 45px 45px 32px 45px 45px;gap:4px 3px;padding:9px 12px}
   .kx .h{font-size:10px;letter-spacing:-2px}
-  .kx.x1,.kx.nofmt.x1{grid-template-columns:14px minmax(0,1fr) repeat(4,46px);gap:4px 6px}
-  .kx.x2{grid-template-columns:14px minmax(0,1fr) repeat(5,40px);gap:4px 4px}
-  .kx.nofmt.x1{grid-template-columns:14px minmax(0,1fr) 50px 50px 36px 50px;gap:4px 5px}
-  .kx.nofmt.x2{grid-template-columns:14px minmax(0,1fr) 45px 45px 32px 45px 45px;gap:4px 3px}
-  .kx .nurz{font-size:11.5px}
   .kx .xc{padding-left:0;border-left:0}
   .kx .lg{display:none}
   .kx .sh{display:inline}
   .kx .mini{padding:3px 4px;font-size:10px}
-  .kx .kfmt{grid-column:2/-1;grid-row:2}
-  .kx.kxh .kfmt{display:none}
   .kx.kxh{font-size:9.5px;letter-spacing:.02em}
   .kx.kxh small{display:none}
   .kx.kxh .kc{text-align:center}
@@ -334,30 +249,19 @@ body.only .vlabel{display:none}
   .kex{display:none}
   .cutn{font-size:9.5px;text-align:center;line-height:1.15;white-space:normal}
   .kx .kn{font-size:13.5px}
-  .oi.kb{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:6px 8px}
-  .oi.kb .kbx{grid-column:2/-1;grid-row:2;justify-content:flex-start}
-  .oi.kb .cutn{font-size:11px;text-align:left;white-space:nowrap}
-  .oi.ohead{flex-wrap:nowrap;align-items:flex-start}
-  .oi.ohead .oh-f{display:none}
-  .teil{padding:14px 12px}
-  .oi{padding-inline:12px}
-  .lrow{padding-inline:12px}
-  .budget{padding-inline:12px}
-  .sub{padding-inline:12px}
+  [data-abschnitt="was-steht-wo"] .lrow,[data-abschnitt="was-steht-wo"] .budget,[data-abschnitt="was-steht-wo"] .sub{padding-inline:12px}
 }
 </style>
-</head>
-<body>
 
 <div class="frame">
-  <div class="fr-top"><b>Mockup · Fassung 4 · Varianten zur Entscheidung</b><small>alles anklickbar, nichts wird an die App geschickt</small></div>
-  <div class="fr-rows">
-    <div class="fr-row"><span class="fr-l">Ansicht</span><span class="sw" role="group" aria-label="Kontext"><button class="on" data-ctx="trip" type="button">Trip</button><button data-ctx="orte" type="button">Orte · 3 Orte</button><button data-ctx="ort1" type="button">Orte · 1 Ort</button></span></div>
-    <div class="fr-row"><span class="fr-l"><i>1</i> Kanal-Auswahl</span><span class="sw" role="group" aria-label="Kanal-Auswahl"><button data-set="varK:A" type="button">A · Eine Tabelle</button><button data-set="varK:B" type="button">B · Liste je Kanal</button></span></div>
-    <div class="fr-row"><span class="fr-l"><i>2</i> Roh / Einfach <small>nur bei A</small></span><span class="sw" role="group" aria-label="Roh oder Einfach"><button data-set="varF:einmal" type="button">einmal je Metrik</button><button data-set="varF:kanal" type="button">je Metrik und Stelle</button></span></div>
-    <div class="fr-row"><span class="fr-l"><i>3</i> Stundenverlauf und Ausblick</span><span class="sw" role="group" aria-label="Ausblick und Stundenverlauf"><button data-set="varT:fest" type="button">nur Schalter</button><button data-set="varT:abwahl" type="button">eigene Spalten mit Abwahl</button></span></div>
-  </div>
+  <span><b>Mockup · Fassung 4</b> · mit den angenommenen Punkten aus dem Abgleich · <small>alles anklickbar, nichts wird an die App geschickt</small></span>
+  <span class="grp">
+    <span class="sw" role="group" aria-label="Kontext"><button class="on" data-ctx="trip" type="button">Trip</button><button data-ctx="orte" type="button">Orte · 3 Orte</button><button data-ctx="ort1" type="button">Orte · 1 Ort</button></span>
+    <small>Zustand</small><span class="sw" role="group" aria-label="Zustand zeigen"><button class="on" data-zst="normal" type="button">normal</button><button data-zst="laedt" type="button">lädt</button><button data-zst="fehler" type="button">Ladefehler</button><button data-zst="luecken" type="button">Konto mit Lücken</button></span>
+    <small>Marken</small><span class="sw" role="group" aria-label="Neue Punkte markieren"><button class="on" data-mark="1" type="button">neu markiert</button><button data-mark="0" type="button">aus</button></span>
+  </span>
 </div>
+
 <div class="crumbs">
   <span class="path" id="path"></span>
   <span style="display:flex;gap:8px;align-items:center">
@@ -373,21 +277,36 @@ body.only .vlabel{display:none}
   </span>
 </div>
 
-<div class="inner" id="headwrap"><div class="head" id="head"></div></div>
+<div class="inner"><div class="head" id="head"></div></div>
 <nav class="tabs" aria-label="Reiter"><div class="tabs-in" id="tabs"></div></nav>
 <main class="inner"><div class="content" id="content"></div></main>
 
 <section class="fb"><div class="inner">
-  <h3>Schon entschieden und hier eingebaut</h3>
-  <ul class="fix-list">
-    <li>Welche Metriken es überhaupt gibt, legst du genau einmal fest: oben in den Metrik-Zeilen mit „−“ und „+“.</li>
-    <li>Alles darunter kann nur abwählen, nie hinzufügen.</li>
-    <li>3-Tages-Ausblick und Stundenverlauf haben keine eigene Liste mehr. Sie richten sich nach der E-Mail.</li>
-    <li>Den Ausblick gibt es morgens und abends, auch bei Orten. Vorbelegt ist nur abends.</li>
-    <li>Die Premium-SMS bekommt vorerst denselben Text wie die SMS.</li>
-    <li>Den Telegram-Kurzstil gibt es an genau einer Stelle.</li>
-    <li>Der Bereich heißt einheitlich „Orte“, auch bei einem einzelnen Ort. „Vergleich“ steht nirgends mehr als Name.</li>
-  </ul>
+  <div class="card pad" style="margin-bottom:24px">
+    <h3>Im Konzept, aber hier nicht zu sehen</h3>
+    <p class="muted" style="margin:0;font-size:13px">Die blauen Marken im Mockup zeigen, wo die angenommenen Punkte aus dem Abgleich jetzt sitzen. Diese Punkte haben keine Oberfläche:</p>
+    <ul class="hidden-list">
+      <li><b>K17</b>Alte Links wie ?tab=wertebereiche und ?tab=alarme leiten auf Wetter bzw. Zustellung um.</li>
+      <li><b>K3b</b>Orte: Der Name der Vorlage ersetzt das Profil und steht im Kopf der Mail.</li>
+      <li><b>B8</b>Migration per Read-Modify-Write: alte Wertebereiche und Alarmstufen werden Ampel-Grenzen, nichts geht verloren.</li>
+      <li><b>W5b</b>Zeithorizonte entfallen. Gespeicherte Altwerte werden auf „alle Tage“ gesetzt.</li>
+      <li><b>V12</b>Der „Mehrtages-Trend“ ist derselbe Block wie der 3-Tages-Ausblick und geht darin auf. Ein Name überall: 3-Tages-Ausblick.</li>
+      <li><b>A6</b>CAPE geht in der Gewitter-Zeile auf, die eigene Erklärung entfällt.</li>
+      <li><b>V11</b>Die Schnellwahl 07:00/18:00 entfällt, das Uhrzeitfeld bleibt.</li>
+      <li><b>A15</b>Toter Code (AlertsTab, AlertPresetSelector, AlertCard) wird entfernt.</li>
+      <li><b>Radtour</b>Die Vorlage hat jetzt „Gefühlte Temperatur“ an (deine Änderung bei den Grenzen).</li>
+    </ul>
+  </div>
+  <h3>Rückmeldung zum Mockup</h3>
+  <p class="muted" style="margin:0">Schreib zu jedem Bereich, was passt und was nicht. Wird gespeichert, ich lese es danach aus. <span class="st" id="fbState">Speicher wird verbunden …</span></p>
+  <div class="fbgrid">
+    <div><label for="fb-kopf">Kopf &amp; Test schicken</label><textarea id="fb-kopf" data-fb="kopf"></textarea></div>
+    <div><label for="fb-reiter">Reiterleiste</label><textarea id="fb-reiter" data-fb="reiter"></textarea></div>
+    <div><label for="fb-wetter">Reiter Wetter</label><textarea id="fb-wetter" data-fb="wetter"></textarea></div>
+    <div><label for="fb-zustellung">Reiter Zustellung</label><textarea id="fb-zustellung" data-fb="zustellung"></textarea></div>
+    <div><label for="fb-etappen">Etappen (Tempo) / Orte</label><textarea id="fb-etappen" data-fb="etappen_orte"></textarea></div>
+    <div><label for="fb-sonst">Sonstiges</label><textarea id="fb-sonst" data-fb="sonstiges"></textarea></div>
+  </div>
 </div></section>
 
 <script>
@@ -396,23 +315,21 @@ const COL={rot:'var(--a-red)',orange:'var(--a-orange)',gelb:'var(--a-yellow)',gr
 // Metrik: id,label,hint,unit,scale,lo[rot,orange,gelb],hi[gelb,orange,rot],alarm|null,on,group,ordinal
 const TRIP_METRICS=[
  ['temperature','Temperatur','Tageshöchst · Tagestief','°C',[-25,40],[-10,-3,2],[27,30,33],'orange',true,'Temperatur'],
- ['temperature_night','Tiefsttemperatur Nacht','vor der Etappe','°C',[-20,25],[-8,-3,0],[null,null,null],'orange',false,'Temperatur'],
- ['wind_chill','Gefühlte Temperatur','Vorbote, kein Alarm','°C',[-30,40],[-15,-8,-2],[null,null,null],null,false,'Temperatur'],
+ ['temperature_night','Tiefsttemperatur Nacht','vor der Etappe','°C',[-20,25],[-8,-3,0],[null,null,null],'orange',true,'Temperatur'],
+ ['wind_chill','Gefühlte Temperatur','Vorbote, kein Alarm','°C',[-30,40],[-15,-8,-2],[null,null,null],null,true,'Temperatur'],
  ['wind','Wind','Mittelwind','km/h',[0,90],[null,null,null],[30,45,60],'orange',true,'Wind'],
  ['gust','Böen','Spitze','km/h',[0,100],[null,null,null],[35,50,70],'orange',true,'Wind'],
  ['wind_direction','Windrichtung','nur Anzeige, keine Ampel','°',[0,360],null,null,null,false,'Wind',false,true],
  ['precipitation','Niederschlag','Summe','mm',[0,25],[null,null,null],[1,5,15],'orange',true,'Niederschlag & Gewitter'],
  ['thunder','Gewitter','Stufe','',[0,3],null,null,'orange',true,'Niederschlag & Gewitter',true],
  ['rain_probability','Regenwahrscheinlichkeit','Vorbote, kein Alarm','%',[0,100],[null,null,null],[30,60,80],null,true,'Niederschlag & Gewitter'],
- ['cloud_total','Bewölkung','Vorbote, kein Alarm','%',[0,100],[null,null,null],[60,85,null],null,true,'Himmel & Sicht'],
- ['sunshine','Sonnenstunden','zu wenig ist schlecht','h',[0,14],[null,1,3],[null,null,null],null,true,'Himmel & Sicht'],
- ['visibility','Sichtweite','Minimum','m',[0,5000],[100,300,1000],[null,null,null],'orange',false,'Himmel & Sicht'],
- ['cloud_low','Tiefe Wolken','Gipfel in Wolken','%',[0,100],[null,null,null],[50,80,null],null,false,'Himmel & Sicht'],
- ['uv_index','UV-Index','Maximum','',[0,12],[null,null,null],[6,8,10],'nie',false,'Himmel & Sicht'],
- ['freezing_level','Nullgradgrenze','m über höchster Stelle','m',[-1500,2500],[-300,0,300],[null,null,null],'orange',false,'Schnee & Höhe'],
- ['snowfall_limit','Schneefallgrenze','m über höchster Stelle','m',[-1500,2500],[-500,0,300],[null,null,null],'orange',false,'Schnee & Höhe']
+ ['visibility','Sichtweite','Minimum','m',[0,5000],[100,300,1000],[null,null,null],'orange',true,'Himmel & Sicht'],
+ ['cloud_low','Tiefe Wolken','Gipfel in Wolken','%',[0,100],[null,null,null],[50,80,null],null,true,'Himmel & Sicht'],
+ ['uv_index','UV-Index','Maximum','',[0,12],[null,null,null],[6,8,10],'nie',true,'Himmel & Sicht'],
+ ['freezing_level','Nullgradgrenze','m über höchster Stelle','m',[-1500,2500],[-300,0,300],[null,null,null],'orange',true,'Schnee & Höhe'],
+ ['snowfall_limit','Schneefallgrenze','m über höchster Stelle','m',[-1500,2500],[-500,0,300],[null,null,null],'orange',true,'Schnee & Höhe']
 ];
-const TRIP_OFF=['Neuschnee','Schneehöhe','Taupunkt','Luftfeuchte','Luftdruck'];
+const TRIP_OFF=['Bewölkung','Sonnenstunden','Neuschnee','Schneehöhe','Taupunkt','Luftfeuchte','Luftdruck'];
 const ORTE_METRICS=[
  ['temperature','Temperatur','Tageshöchst · Tagestief','°C',[-25,40],[-15,-5,0],[28,31,34],'orange',true,'Temperatur'],
  ['wind','Wind','Mittelwind','km/h',[0,90],[null,null,null],[30,50,70],'orange',true,'Wind'],
@@ -428,23 +345,20 @@ const ORTE_OFF=['Sichtweite','UV-Index','Gefühlte Temperatur','Taupunkt','Luftf
 
 const CTX={
  trip:{path:'Trips / <b>GR221 Mallorca</b>',eyebrow:'Trip · Mallorca',title:'GR221 Mallorca',pill:['fertig','neutral'],meta:'23.–26. Februar 2026 · 4 Etappen · 31,5 km · ↑1.737 m',
-   tabs:[['uebersicht','Übersicht'],['etappen','Etappen','4'],['wetter','Wetter'],['zustellung','Zustellung']],vorlage:'Wandern',metrics:TRIP_METRICS,off:TRIP_OFF},
- orte:{path:'Orte / <b>Münsterland</b>',eyebrow:'Orte · Münsterland',title:'Münsterland',pill:['aktiv','good'],meta:'3 Orte · Morgen 07:00 · Abend 18:00',
+   tabs:[['uebersicht','Übersicht'],['etappen','Etappen','4'],['wetter','Wetter'],['zustellung','Zustellung']],vorlage:'Alpen-Trekking',metrics:TRIP_METRICS,off:TRIP_OFF},
+ orte:{path:'Orte / <b>Münsterland</b>',eyebrow:'Orte · Münsterland',title:'Münsterland',pill:['aktiv','good'],meta:'3 Orte · Morgen-Briefing 07:00',
    tabs:[['uebersicht','Übersicht'],['orte','Orte','3'],['wetter','Wetter'],['zustellung','Zustellung']],vorlage:'Allgemein',metrics:ORTE_METRICS,off:ORTE_OFF},
- ort1:{path:'Orte / <b>Tecklenburg</b>',eyebrow:'Orte · Tecklenburg',title:'Tecklenburg',pill:['aktiv','good'],meta:'1 Ort · Morgen 07:00 · Abend 18:00',
+ ort1:{path:'Orte / <b>Tecklenburg</b>',eyebrow:'Orte · Tecklenburg',title:'Tecklenburg',pill:['aktiv','good'],meta:'1 Ort · Morgen-Briefing 07:00',
    tabs:[['uebersicht','Übersicht'],['orte','Orte','1'],['wetter','Wetter'],['zustellung','Zustellung']],vorlage:'Allgemein',metrics:ORTE_METRICS,off:ORTE_OFF}
 };
-// SMS-/Telegram-Kürzel laut docs/reference/sms_format.md (nur belegte)
-const KZ={wind_direction:'WD',temperature:'D',temperature_night:'N',wind:'W',gust:'G',precipitation:'R',thunder:'TH',rain_probability:'PR',visibility:'VS',uv_index:'UV',sunshine:'SU',humidity:'HU',dewpoint:'DP'};
 // Englische Spaltenköpfe der Mail-Tabelle laut metric_catalog.py (col_label)
 const COLL={wind_direction:'WDir',temperature:'Temp',temperature_night:'Night',wind_chill:'Feels',wind:'Wind',gust:'Gust',precipitation:'Rain',thunder:'Thdr',rain_probability:'Rain%',visibility:'Visib',cloud_total:'Cloud',cloud_low:'CldLow',uv_index:'UV',sunshine:'Sun',freezing_level:'0°Line',snowfall_limit:'SnowL',humidity:'Humid',dewpoint:'Dew'};
-const VORLAGEN=[['Alpen-Trekking','14 Metriken · Gewitter, Böen, Nullgradgrenze'],['Wandern','8 Metriken · Regen, Wind, Sonne'],['Skitouren','13 Metriken · Neuschnee, Schneehöhe, Sicht'],['Wintersport','11 Metriken · Schnee, Kälte'],['Radtour','12 Metriken · Wind, Regen, gefühlte Temperatur'],['Wassersport','10 Metriken · Wind beidseitig, Gewitter'],['Allgemein','8 Metriken · Standard-Ampel']];
+const VORLAGEN=[['Alpen-Trekking','14 Metriken · Gewitter, Böen, Nullgradgrenze'],['Wandern','10 Metriken · Regen, Sonne, UV'],['Skitouren','13 Metriken · Neuschnee, Schneehöhe, Sicht'],['Wintersport','11 Metriken · Schnee, Kälte'],['Radtour','12 Metriken · Wind, Regen, gefühlte Temperatur'],['Wassersport','10 Metriken · Wind beidseitig, Gewitter'],['Allgemein','8 Metriken · Standard-Ampel']];
 const EIGENE=[['Mallorca Frühling','eigene · aus GR221 gespeichert']];
 const SIDES={temperature:'both',temperature_night:'both',wind_chill:'both',wind:'both',gust:'up',precipitation:'up',rain_probability:'up',visibility:'down',cloud_low:'up',cloud_total:'up',uv_index:'up',freezing_level:'both',snowfall_limit:'both',sunshine:'down'};
-const EX={wind_direction:['270°','W'],wind:['30 km/h','● gelb'],gust:['45 km/h','● orange'],precipitation:['2,1 mm','● gelb'],thunder:['mittel','● orange'],temperature:['27 °C','● gelb'],cloud_total:['70 %','☁'],uv_index:['7','● gelb']};
-let ctx='trip', tab='wetter', openEdit=null, channelTab='E-Mail', pickerOpen=false, pending=null;
+let ctx='trip', tab='wetter', openEdit=null, pickerOpen=false, pending=null;
 let zst='normal', testSlot='morgen', kebabConfirm=null, saveOpen=false, saveErr='', saveName='', laufzeit='Bis auf Weiteres';
-const status={trip:'fertig',orte:'aktiv',ort1:'aktiv'};
+const status={trip:'fertig',orte:'entwurf',ort1:'entwurf'};
 const PILL={fertig:['fertig','neutral'],aktiv:['aktiv','good'],entwurf:['Entwurf','neutral'],pausiert:['pausiert','neutral'],archiviert:['archiviert','neutral']};
 function tg(c){return `<span class="tag" title="neu aus dem Abgleich">${c}</span>`;}
 // Konto-Zustand je Kanal: normal = alles eingerichtet, „Konto mit Lücken“ zeigt Sperren und Hinweise
@@ -456,7 +370,7 @@ function konto(){const l=zst==='luecken';return {
 };}
 const st={}; // pro Kontext: metric on/alarm
 function S(){ if(!st[ctx]){st[ctx]={};CTX[ctx].metrics.forEach(m=>st[ctx][m[0]]={on:m[8],alarm:m[7],lo:m[5]?m[5].slice():null,hi:m[6]?m[6].slice():null,mittel:'orange',hoch:'rot'});
-  st[ctx].sw={official:true,radar:true,morning:true,evening:true,quiet:true,tgkurz:false,outM:false,outA:true,std:true,mailfmt:'Ausführlich (HTML)',stats:true,yday:true,night:true,
+  st[ctx].sw={official:true,radar:true,morning:true,evening:ctx==='trip',quiet:true,tgkurz:false,outM:false,outA:true,std:true,mailfmt:'Ausführlich (HTML)',stats:true,yday:true,night:true,
     ch:{'E-Mail':{b:true,a:true,s:'gering'},'Telegram':{b:true,a:true,s:'gering'},'SMS':{b:false,a:true,s:'mittel'},'Premium-SMS':{b:false,a:true,s:'hoch'}}};}
   return st[ctx]; }
 
@@ -480,7 +394,7 @@ function seg(name,opts,val,dots){return `<span class="seg" role="radiogroup">${o
 function renderHead(){
   const c=CTX[ctx];
   document.getElementById('path').innerHTML=c.path;
-  document.getElementById('head').innerHTML=`<span class="eyebrow">${O()?V.nameV+' · '+c.title:c.eyebrow}</span>
+  document.getElementById('head').innerHTML=`<span class="eyebrow">${c.eyebrow}</span>
     <h1>${c.title} ${pillHtml()}</h1><span class="meta">${c.meta}</span>`;
   document.getElementById('tabs').innerHTML=c.tabs.map(([id,l,b])=>`<button class="tab ${id===tab?'on':''}" data-tab="${id}" type="button" aria-current="${id===tab?'page':'false'}">${l}${b?`<span class="badge">${b}</span>`:''}</button>`).join('');
   renderMenu();renderKebab();
@@ -510,7 +424,7 @@ function renderKebab(){
 }
 
 function why(m,r){
-  if(m[11]) return 'Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten unter „Inhalt je Kanal“ ein.';
+  if(m[11]) return 'Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten unter „Was steht wo“ ein.';
   if(m[7]===null) return 'Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus.';
   if(r.alarm==='nie') return 'Kein Alarm. Die Farbe erscheint nur im Briefing.';
   const lvl={gelb:'Gelb',orange:'Orange',rot:'Rot'}[r.alarm];
@@ -571,7 +485,7 @@ function viewWetter(){
   const dots={Gelb:'var(--a-yellow)',Orange:'var(--a-orange)',Rot:'var(--a-red)'};
   const devs=s.devs||0;
   const pick=pickerOpen?`<div class="vmenu" role="listbox">
-      ${pending?`<div class="confirm"><b>„${pending}“ übernehmen?</b><span>Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen ${ctx==='trip'?'dieses Trips':GEN[V.nameV]}.${devs?` Deine ${devs} Abweichung${devs>1?'en':''} von „${c.vorlage}“ gehen verloren.`:''} Zustellung, Etappen und Orte bleiben unverändert.</span>
+      ${pending?`<div class="confirm"><b>„${pending}“ übernehmen?</b><span>Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen ${ctx==='trip'?'dieses Trips':EIN()?'für diesen Ort':'für diese Orte'}.${devs?` Deine ${devs} Abweichung${devs>1?'en':''} von „${c.vorlage}“ gehen verloren.`:''} Zustellung, Etappen und Orte bleiben unverändert.</span>
         <span style="display:flex;gap:8px"><button class="btn sm accent" type="button" data-apply="1">Übernehmen</button><button class="btn sm ghost" type="button" data-cancel="1">Abbrechen</button></span></div>`:''}
       <div class="vg">Vorlagen</div>${VORLAGEN.map(([n,d])=>`<button type="button" data-vorlage="${n}" class="${n===c.vorlage?'cur':''}"><span>${n}${n===c.vorlage?' · aktiv':''}</span><small>${d}</small></button>`).join('')}
       <div class="vg">Eigene</div>${EIGENE.map(([n,d])=>`<button type="button" data-vorlage="${n}"><span>${n}</span><small>${d}</small></button>`).join('')}
@@ -588,7 +502,7 @@ function viewWetter(){
   const allRow=`<div class="lrow" style="border-top:0;background:var(--g-card-alt)"><div class="t"><b>Alarm ab für alle ${tg('A5')}</b><small>${nAl} von ${onM.length} Metriken lösen einen Alarm aus. ${onM.length-alarmable.length} können keinen auslösen (Vorboten und reine Anzeige).</small></div><div class="r">${alarmable.length?seg('alarmall',['Nie','Gelb','Orange','Rot'],'',dots):''}</div></div>`
     +(alarmable.length?'':`<div style="padding:0 20px 12px"><div class="warnbox info">Keine der gewählten Metriken kann einen Alarm auslösen. Nimm z.B. Wind, Böen oder Gewitter dazu. ${tg('A3')}</div></div>`);
 
-  return head+`<div class="part" data-part="grund">
+  return head+`
   <div class="card pad vorlage">
     <div style="display:flex;flex-direction:column;gap:6px;position:relative"><span class="eyebrow">Vorlage</span>
       <button class="picker" type="button" data-picker="1" aria-expanded="${pickerOpen}">${c.vorlage} <small>▾ ${devs?devs+' Abweichung'+(devs>1?'en':''):'unverändert'}</small></button>${pick}</div>
@@ -604,24 +518,20 @@ function viewWetter(){
     <div class="lrow"><div class="t"><b>Amtliche Warnungen</b><small>im Briefing und als Alarm, sobald sie dein Gebiet betreffen</small></div><div class="r">${sw('official',s.sw.official,'Amtliche Warnungen')}</div></div>
     <div class="lrow"><div class="t"><b>Radar-Regen ${ctx==='trip'?tg('N1'):''}</b><small>Alarm, wenn in der nächsten Stunde Regen auf ${ctx==='trip'?'deine Etappe':EIN()?'deinen Ort':'deine Orte'} zukommt</small></div><div class="r">${sw('radar',s.sw.radar,'Radar-Regen')}</div></div>
   </div>
-  </div>
-  <div class="part" data-part="kanal"><span class="vlabel">${V.varK==='A'?'Variante A · Eine Tabelle'+(V.varF==='kanal'?' · Roh/Einfach je Stelle':' · Roh/Einfach einmal je Metrik')+(V.varT==='abwahl'?' · Stundenverlauf und Ausblick als Spalten':' · Stundenverlauf und Ausblick nur als Schalter'):'Variante B · Liste je Kanal'}</span>${V.varK==='A'?kanalTabelle():kanalListen()}</div>
-  ${V.varK==='B'?`<div class="part" data-part="teile"><span class="vlabel">${V.varT==='fest'?'Wie E-Mail, fest':'Wie E-Mail, mit Abwahl'}</span>${teileCard()}</div>`:''}
-  <div class="part" data-part="bsp">${beispielPanel()}</div>
-  <div class="part" data-part="anpassen">
+  ${wasStehtWo()}
   <div class="card"><details class="adv"><summary>Anpassen</summary>
     <div class="lrow"><div class="t"><b>Tagesfenster</b><small>Welche Stunden bewertet werden</small></div><div class="r"><input class="input" value="06:00" aria-label="von"> – <input class="input" value="20:00" aria-label="bis"></div></div>
-  </details></div>
-  </div>`;
+  </details></div>`;
 }
 
-// ===== Fassung 4 · Varianten (#3122): Inhalt je Kanal, Teile des Briefings, Beispiel =====
-// Beispielwerte: echte Renderer-Ausgabe (Stand main 87bacf412), Orte „Münsterland“ 18.11.2026, Trip „GR221“ Etappe 2.
+// ===== Fassung 4 (ADR-0124): Tabelle „Was steht wo“ =====
+// Beispielwerte sind echte Renderer-Ausgabe (Stand 17.11.2026, Commit 7f1c57a22), in der vorbelegten Darstellung:
+// Orte „Münsterland“ am 18.11.2026 (render_compare_email, render_compare_telegram, render_compare_sms),
+// Trip „GR221 Mallorca“ Etappe 2 am 24.02.2026, Abend-Briefing, Vorlage Alpen-Trekking (TripReportFormatter.format_email).
 const KAN=['E-Mail','Telegram','SMS'];
 const O=()=>ctx!=='trip';
 const EIN=()=>ctx==='ort1';
 const PLACES=()=>EIN()?['Tecklenburg']:['Münster','Telgte','Tecklenburg'];
-const GEN={'Orte':'für diese Orte'};
 const OD={
  'Münster':{tmax:13,tmin:4,wind:30,gust:51,rain:'1.8',th:'–',pr:60,ct:70,su:'3.0'},
  'Telgte':{tmax:12,tmin:3,wind:33,gust:57,rain:'3.3',th:'–',pr:70,ct:65,su:'2.0'},
@@ -635,39 +545,36 @@ const OF={
  rain_probability:{mail:[['Regenwahrscheinlichkeit',d=>d.pr+'%']],tg:d=>`Regenwahrscheinlichkeit ${d.pr}%`,sms:d=>`PR ${d.pr}%`},
  cloud_total:{mail:[['Bewölkung',d=>d.ct+'%']],tg:d=>`Wolken ${d.ct}%`,sms:d=>`CT ${d.ct}%`},
  sunshine:{mail:[['Sonnenstunden',d=>d.su+' h']],tg:d=>`Sonne ${d.su}h`,sms:d=>`SU ${d.su}h`}};
-// Stundenverlauf (Orte): echte Stundenwerte; Sonnenstunden haben keinen Stundenwert
-const OH={
- 'Münster':{z:['08','09','10'],temperature:['7°','8°','8°'],wind:['20','21','22'],gust:['36','38','39'],precipitation:['·','·','·'],thunder:['–','–','–'],rain_probability:['15%','15%','15%'],cloud_total:['72','76','80']},
- 'Tecklenburg':{z:['14','15','16'],temperature:['9°','9°','10°'],wind:['32','33','34'],gust:['57','58','60'],precipitation:['1.6','1.6','1.6'],thunder:['–','mittel','leicht'],rain_probability:['80%','80%','80%'],cloud_total:['86','90','94']}};
-const OA={tage:['Do','Fr','Sa'],temperature:['7°/13°','5°/11°','6°/12°'],wind:['30','22','35'],gust:['51','38','62'],precipitation:['1.2','0.0','6.4'],thunder:['–','–','leicht'],rain_probability:['60%','15%','85%'],cloud_total:['70%','45%','90%'],sunshine:['3.0','5.5','0.5']};
+// Trip: m = Zelle der Stundentabelle der Mail um 14 Uhr, tg = Zeile der Kurzübersicht in Telegram, sms = Token der SMS.
+// Ein leeres Feld heißt: Der Renderer gibt für diese Metrik an dieser Stelle nichts aus.
 const TF={
- temperature:{h:['12.0','13.0','13.0'],tg:'T 11.2-15.2',sms:'D11/15',a:['9°/16°','10°/17°']},
- wind:{h:['23','24','25'],tg:'W 20-38@15',sms:'W30@10(38@15)',a:['20','28']},
- gust:{h:['33','34','35'],tg:'G 30@04-52@15',sms:'G30@4(52@15)',a:['34','46']},
- precipitation:{h:['0.2','0.2','0.0'],tg:'R 0.0-0.4',sms:'R-',a:['0.0','0.0']},
- rain_probability:{h:['10%','60%','60%'],tg:'PR 10-60@14',sms:'PR60%@14',a:['10%','20%']},
- thunder:{h:['leicht','leicht','leicht'],tg:'TH leicht',sms:'TH:L@13 TH+:-',a:['kein','kein']},
- cloud_total:{h:['⛅','⛅','☁'],tg:'CT 42-75@15',sms:'CT75@15',a:['40%','80%']},
- sunshine:{h:['–','–','–'],tg:'SU 5',sms:'SU5',a:['6.0','2.5']}};
-const V={varK:'A',varF:'kanal',varT:'abwahl',nameV:'Orte'};
-let ONLY=null; const PRE=[];
-function K(){const s=S(); if(!s.kan){s.kan={sel:{'E-Mail':{},'Telegram':{},'SMS':{}},fmt:{},fmtK:{'E-Mail':{},'Telegram':{},stunden:{},ausblick:{}},weg:{ausblick:{},stunden:{}}};
-  PRE.forEach(x=>{if(x[0]==='sel') s.kan.sel[x[1]][x[2]]=false; else s.kan.weg[x[0]][x[1]]=true;});} return s.kan;}
+ temperature:{m:'14.4',tg:'T 9.6-15.2',sms:'D10/15'},
+ temperature_night:{m:'',tg:'',sms:'N10'},
+ wind_chill:{m:'11.0',tg:'TF 6.8-11.7',sms:'TF- FN7 FD7/12'},
+ wind:{m:'36',tg:'W 20-38@15',sms:'W30@10(38@15)'},
+ gust:{m:'50',tg:'G 30-52@15',sms:'G36@7(52@15)'},
+ precipitation:{m:'0.4',tg:'R 0.0-0.4',sms:'R-'},
+ thunder:{m:'● gelb',tg:'TH leicht',sms:'TH:L@13 TH+:-'},
+ rain_probability:{m:'60',tg:'PR 10-60@14',sms:'PR60%@14'},
+ visibility:{m:'4.0',tg:'VS 4.0-15',sms:'VS-'},
+ cloud_low:{m:'🌥️',tg:'CL 🌤️-🌥️@15',sms:'CL:BKN@15'},
+ uv_index:{m:'3.5',tg:'UV 0.0-4.0',sms:'UV-'},
+ freezing_level:{m:'2120',tg:'FZ 2100-2320@04',sms:'FZ2100@15'},
+ snowfall_limit:{m:'1820',tg:'SL 1800-2020@04',sms:'SL1780'}};
+// Zustand der Tabelle je Kontext: Haken je Kanal (sel), Roh/Einfach je Stelle (fmtK), abgewählt in Stundenverlauf und Ausblick (weg)
+function K(){const s=S(); if(!s.kan) s.kan={sel:{'E-Mail':{},'Telegram':{},'SMS':{}},fmtK:{'E-Mail':{},'Telegram':{},stunden:{},ausblick:{}},weg:{ausblick:{},stunden:{}}}; return s.kan;}
 const onMs=()=>CTX[ctx].metrics.filter(m=>S()[m[0]].on);
 const isSel=(ch,id)=>K().sel[ch][id]!==false;
 // Zweite Darstellungsform laut metric_catalog.py (format_modes); alle anderen Metriken kennen nur die Zahl
 const HASF=['wind','gust','wind_direction','precipitation','thunder','cloud_total','cloud_low','cloud_mid','cloud_high','sunshine'];
 const defFmt=id=>['wind_direction','thunder','cloud_total','cloud_low','cloud_mid','cloud_high','sunshine'].includes(id)?'Einfach':'Roh';
-const fmt1=id=>K().fmt[id]||defFmt(id);
 const fmtK=(ch,id)=>K().fmtK[ch][id]||defFmt(id);
-const mailM=()=>onMs().filter(m=>isSel('E-Mail',m[0]));
-const weg=(part,id)=>V.varT==='abwahl'&&!!K().weg[part][id];
 const mailName=()=>!O()?'Stundentabelle':'Übersicht';
 
 function smsCalc(){
   const ms=onMs().filter(m=>isSel('SMS',m[0]));
   if(!O()){
-    const rows=ms.filter(m=>TF[m[0]]); let keep=rows.length;
+    const rows=ms.filter(m=>TF[m[0]]&&TF[m[0]].sms); let keep=rows.length;
     const build=k=>'GR221 E2: '+rows.slice(0,k).map(m=>TF[m[0]].sms).join(' ');
     let line=build(keep); while(line.length>160&&keep>1){keep--;line=build(keep);}
     return {line,len:line.length,cutIds:rows.slice(keep).map(m=>m[0])};
@@ -681,16 +588,16 @@ function smsCalc(){
 }
 function exCell(ch,m){
   const id=m[0];
-  if(!O()){const f=TF[id]; if(!f) return ''; return ch==='E-Mail'?`${COLL[id]} ${f.h[1]}`:ch==='Telegram'?f.tg:f.sms;}
+  if(!O()){const f=TF[id]; if(!f) return ''; return ch==='E-Mail'?(f.m?`${COLL[id]} ${f.m}`:''):ch==='Telegram'?f.tg:f.sms;}
   const f=OF[id]; if(!f) return ''; const d=OD[PLACES()[0]];
   return ch==='E-Mail'?f.mail.map(r=>r[1](d)).join(' / '):ch==='Telegram'?f.tg(d):f.sms(d);
 }
 function ckBox(ch,m,dis){const on=isSel(ch,m[0]);return `<label class="ck"><input type="checkbox" id="ck-${ch}-${m[0]}" data-ck="${ch}:${m[0]}" ${on?'checked':''} ${dis?'disabled':''} aria-label="${m[1]} in ${ch}"><i></i></label>`;}
-function kanalEinst(nur){
+function kanalEinst(){
   const s=S().sw, r=[];
-  if((!nur||nur==='E-Mail')&&!O()) r.push(`<div class="lrow"><div class="t"><b>E-Mail: Format</b><small>Ausführlich mit Tabellen und Farben, oder Kompakt als reiner Text für schwache Verbindungen.</small></div><div class="r">${seg('mailfmt',['Ausführlich (HTML)','Kompakt (Nur-Text)'],s.mailfmt)}</div></div>`);
-  if(!nur||nur==='Telegram') r.push(`<div class="lrow"><div class="t"><b>Telegram: Kurzstil</b><small>Telegram bekommt denselben kurzen Text wie die SMS, ohne Knöpfe. Gilt für Briefing und Alarme. ${V.varK==='A'?'Die Telegram-Spalte ruht dann, es gilt die SMS-Spalte.':'Die Telegram-Liste ruht dann, es gilt die SMS-Liste.'}</small></div><div class="r">${sw('tgkurz',s.tgkurz,'Telegram im Kurzstil',!konto()['Telegram'].ok)}</div></div>`);
-  if(!nur||nur==='SMS') r.push(`<div class="lrow"><div class="t"><b>Premium-SMS</b><small>Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später.</small></div></div>`);
+  if(!O()) r.push(`<div class="lrow"><div class="t"><b>E-Mail: Format</b><small>Ausführlich mit Tabellen und Farben, oder Kompakt als reiner Text für schwache Verbindungen.</small></div><div class="r">${seg('mailfmt',['Ausführlich (HTML)','Kompakt (Nur-Text)'],s.mailfmt)}</div></div>`);
+  r.push(`<div class="lrow"><div class="t"><b>Telegram: Kurzstil</b><small>Telegram bekommt denselben kurzen Text wie die SMS, ohne Knöpfe. Gilt für Briefing und Alarme. Die Telegram-Spalte ruht dann, es gilt die SMS-Spalte.</small></div><div class="r">${sw('tgkurz',s.tgkurz,'Telegram im Kurzstil',!konto()['Telegram'].ok)}</div></div>`);
+  r.push(`<div class="lrow"><div class="t"><b>Premium-SMS</b><small>Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später.</small></div></div>`);
   return r.join('');
 }
 function budgetZeile(sm){
@@ -698,40 +605,42 @@ function budgetZeile(sm){
   return `<div class="budget">SMS-Beispiel: <b>${esc(sm.line)}</b> · ${sm.len} von 160 Zeichen${n?`<span class="warn">${EIN()||!O()?`Die letzten ${n} Metriken passen nicht mehr in die SMS.`:`Bei ${PLACES().length} Orten passen die letzten ${n} Metriken nicht mehr in die SMS. Dafür steht „+${sm.cutIds.reduce((a,id)=>a+(OF[id].n||1),0)}“ je Ort.`} Zieh nach oben, was dir in der SMS wichtig ist.</span>`:''}</div>`;
 }
 function blockEinst(){
-  const s=S().sw, fest=V.varT==='fest', r=[];
-  if(O()) r.push(`<div class="lrow"><div class="t"><b>Stundenverlauf</b><small>Stunden-Tabelle ${EIN()?'':'je Ort '}unter der Übersicht, nur in der E-Mail.${fest?' Zeigt dieselben Metriken wie die Übersicht.':''}</small></div><div class="r">${sw('std',s.std,'Stundenverlauf')}</div></div>`);
-  r.push(`<div class="lrow"><div class="t"><b>3-Tages-Ausblick</b><small>Tageswerte der nächsten drei ${O()?'Tage':'Etappen'}, in E-Mail und Telegram. Vorbelegt: nur im Abend-Briefing.${fest?` Zeigt dieselben Metriken wie die ${O()?'Übersicht':'E-Mail'}.`:''}</small></div><div class="r"><span class="chk">${sw('outM',s.outM,'Ausblick im Morgen-Briefing')} Morgen-Briefing</span><span class="chk">${sw('outA',s.outA,'Ausblick im Abend-Briefing')} Abend-Briefing</span></div></div>`);
+  const s=S().sw, r=[];
+  if(O()) r.push(`<div class="lrow"><div class="t"><b>Stundenverlauf</b><small>Stunden-Tabelle ${EIN()?'':'je Ort '}unter der Übersicht, nur in der E-Mail.</small></div><div class="r">${sw('std',s.std,'Stundenverlauf')}</div></div>`);
+  r.push(`<div class="lrow"><div class="t"><b>3-Tages-Ausblick</b><small>Tageswerte der nächsten drei ${O()?'Tage':'Etappen'}, in E-Mail und Telegram. Vorbelegt: nur im Abend-Briefing.</small></div><div class="r"><span class="chk">${sw('outM',s.outM,'Ausblick im Morgen-Briefing')} Morgen-Briefing</span><span class="chk">${sw('outA',s.outA,'Ausblick im Abend-Briefing')} Abend-Briefing</span></div></div>`);
   if(!O()) r.push(`<div class="lrow"><div class="t"><b>Etappen-Kennzahlen</b><small>Länge, Höhenmeter und Gehzeit je Etappe, nur in der E-Mail</small></div><div class="r">${sw('stats',s.stats,'Etappen-Kennzahlen')}</div></div>
       <div class="lrow"><div class="t"><b>Vortag-Vergleich</b><small>was sich seit dem letzten Briefing geändert hat, nur in der E-Mail</small></div><div class="r">${sw('yday',s.yday,'Vortag-Vergleich')}</div></div>
       <div class="lrow"><div class="t"><b>Nacht-Stundentabelle</b><small>die Stunden der Nacht am Etappenziel, nur in der E-Mail</small></div><div class="r">${sw('night',s.night,'Nacht-Stundentabelle')}</div></div>`);
   return r.join('');
 }
-function kanalTabelle(){
-  const s=S(), ms=onMs(), sm=smsCalc(), kurz=s.sw.tgkurz, je=V.varF==='kanal';
-  const ext=V.varT==='abwahl'?(O()?['stunden','ausblick']:['ausblick']):[];
-  const cls=`${je?'nofmt':''} x${ext.length}`;
-  const tgCut=!O()?ms.filter(m=>isSel('Telegram',m[0])).slice(7).map(m=>m[0]):[];
+function wasStehtWo(){
+  const s=S(), ms=onMs(), sm=smsCalc(), kurz=s.sw.tgkurz;
+  const ext=O()?['stunden','ausblick']:['ausblick'];
+  const cls=O()?'s5':'s4';
+  // Telegram (Trip): die Stundentabelle fasst sieben Metriken, alle weiteren stehen nur als Tageswert in der Kurzübersicht.
+  // Gezählt werden nur Metriken, die in Telegram überhaupt eine Ausgabe haben.
+  const tgCut=!O()?ms.filter(m=>isSel('Telegram',m[0])&&TF[m[0]]&&TF[m[0]].tg).slice(7).map(m=>m[0]):[];
   const sub={'E-Mail':mailName(),'Telegram':kurz?'Kurzstil: wie SMS':'Nachricht','SMS':'und Premium-SMS'};
   const kurzn={'E-Mail':'E-Mail','Telegram':ext.length>1?'Telegr.':'Telegram','SMS':'SMS'};
   const XH={stunden:['Stundenverlauf','Std.','nur E-Mail'],ausblick:['3-Tages-Ausblick','Ausbl.','E-Mail und Telegram']};
-  const head=`<div class="kx kxh ${cls}"><span></span><span>Metrik</span>${je?'':`<span class="kfmt">Darstellung<small>gilt überall außer in der SMS</small></span>`}${KAN.map(ch=>`<span class="kc"><span class="lg">${ch}</span><span class="sh">${kurzn[ch]}</span><small>${sub[ch]}</small></span>`).join('')}${ext.map(x=>`<span class="kc xc"><span class="lg">${XH[x][0]}</span><span class="sh">${XH[x][1]}</span><small>${XH[x][2]}</small></span>`).join('')}</div>`;
-  const fix=s.sw.official?`<div class="kx fix ${cls}"><span></span><span class="kn">Amtliche Warnungen<small>immer dabei: in E-Mail und Telegram zuerst, in der SMS am Ende</small></span>${je?'':'<span class="kfmt"></span>'}${KAN.map(()=>`<span class="kc"><span class="lockck" title="immer dabei">✓</span></span>`).join('')}${ext.map(()=>'<span class="kc xc"></span>').join('')}</div>`:'';
+  const head=`<div class="kx kxh ${cls}"><span></span><span>Metrik</span>${KAN.map(ch=>`<span class="kc"><span class="lg">${ch}</span><span class="sh">${kurzn[ch]}</span><small>${sub[ch]}</small></span>`).join('')}${ext.map(x=>`<span class="kc xc"><span class="lg">${XH[x][0]}</span><span class="sh">${XH[x][1]}</span><small>${XH[x][2]}</small></span>`).join('')}</div>`;
+  const fix=s.sw.official?`<div class="kx fix ${cls}"><span></span><span class="kn">Amtliche Warnungen<small>immer dabei: in E-Mail und Telegram zuerst, in der SMS am Ende</small></span>${KAN.map(()=>`<span class="kc"><span class="lockck" title="immer dabei">✓</span></span>`).join('')}${ext.map(()=>'<span class="kc xc"></span>').join('')}</div>`:'';
   const rows=ms.map(m=>{const id=m[0];
     const cell=ch=>{const on=isSel(ch,id), dis=ch==='Telegram'&&kurz;
       const note=ch==='SMS'&&on&&sm.cutIds.includes(id)?'<em class="cutn">passt nicht mehr</em>':ch==='Telegram'&&on&&!dis&&tgCut.includes(id)?'<em class="cutn soft">nur Tageswert</em>':'';
-      const f=je&&ch!=='SMS'&&on&&!dis&&HASF.includes(id)?`<button class="mini" type="button" data-fk="${ch}:${id}" aria-label="Darstellung ${m[1]} in ${ch}: ${fmtK(ch,id)}"><span class="lg">${fmtK(ch,id)}</span><span class="sh">${fmtK(ch,id)==='Roh'?'Roh':'Einf.'}</span></button>`:'';
+      const f=ch!=='SMS'&&on&&!dis&&HASF.includes(id)?`<button class="mini" type="button" data-fk="${ch}:${id}" aria-label="Darstellung ${m[1]} in ${ch}: ${fmtK(ch,id)}"><span class="lg">${fmtK(ch,id)}</span><span class="sh">${fmtK(ch,id)==='Roh'?'Roh':'Einf.'}</span></button>`:'';
       return `<span class="kc ${on?'':'aus'} ${dis?'ruht':''}">${ckBox(ch,m,dis)}${f}<span class="kex">${on&&!dis?esc(exCell(ch,m)):''}</span>${note}</span>`;};
     const xcell=part=>{const an=part==='stunden'?s.sw.std:(s.sw.outM||s.sw.outA), name=part==='stunden'?'Stundenverlauf':'3-Tages-Ausblick';
       if(part==='stunden'&&id==='sunshine') return `<span class="kc xc"><span class="nix">–</span><em class="cutn soft">kein Stundenwert</em></span>`;
       if(!isSel('E-Mail',id)) return `<span class="kc xc"><span class="nix" title="nicht in der E-Mail">–</span></span>`;
       const xon=!K().weg[part][id];
-      const xf=je&&xon&&an&&HASF.includes(id)?`<button class="mini" type="button" data-fk="${part}:${id}" aria-label="Darstellung ${m[1]} im ${name}: ${fmtK(part,id)}"><span class="lg">${fmtK(part,id)}</span><span class="sh">${fmtK(part,id)==='Roh'?'Roh':'Einf.'}</span></button>`:'';
+      const xf=xon&&an&&HASF.includes(id)?`<button class="mini" type="button" data-fk="${part}:${id}" aria-label="Darstellung ${m[1]} im ${name}: ${fmtK(part,id)}"><span class="lg">${fmtK(part,id)}</span><span class="sh">${fmtK(part,id)==='Roh'?'Roh':'Einf.'}</span></button>`:'';
       return `<span class="kc xc ${an?'':'ruht'}"><label class="ck"><input type="checkbox" id="wk-${part}-${id}" data-wk="${part}:${id}" ${xon?'checked':''} ${an?'':'disabled'} aria-label="${m[1]} im ${name}"><i></i></label>${xf}</span>`;};
-    return `<div class="kx ${cls}"><span class="h" aria-hidden="true" title="ziehen zum Umsortieren">⋮⋮</span><span class="kn">${m[1]}</span>${je?'':`<span class="kfmt">${HASF.includes(id)?seg('f1:'+id,['Roh','Einfach'],fmt1(id)):'<span class="nurz">nur Zahl</span>'}</span>`}${KAN.map(cell).join('')}${ext.map(xcell).join('')}</div>`;
+    return `<div class="kx ${cls}"><span class="h" aria-hidden="true" title="ziehen zum Umsortieren">⋮⋮</span><span class="kn">${m[1]}</span>${KAN.map(cell).join('')}${ext.map(xcell).join('')}</div>`;
   }).join('');
-  const was=ext.length?`Jede Spalte ist eine Stelle, an der eine Metrik erscheinen kann: die drei Kanäle${O()?', der Stundenverlauf':''} und der 3-Tages-Ausblick. ${O()?'Stundenverlauf und Ausblick':'Der Ausblick'} gibt es nur für Metriken, die auch in der E-Mail stehen.`:`Jede Spalte ist ein Kanal. ${O()?'Stundenverlauf und Ausblick zeigen':'Der Ausblick zeigt'} immer dieselben Metriken wie die E-Mail.`;
-  return `<div class="card" data-abschnitt="kanal-inhalt">
-    <div class="lrow" style="border-top:0"><div class="t"><b>Was steht wo</b><small>Eine Tabelle für alles. Jede Zeile ist eine Metrik aus der Auswahl oben. ${was} Ein Haken heißt: erscheint dort. Hier wählst du nur ab. Die Reihenfolge ziehst du einmal, sie gilt überall. Roh zeigt die Zahl, Einfach ein Symbol oder ein Wort. ${je?'Wo eine Metrik beide Formen hat, stellst du das je Stelle ein.':'Nicht jede Metrik hat beide Formen.'} Die SMS bleibt bei ihren Kürzeln. Neue Metriken kommen oben über „+“ dazu.</small></div></div>
+  const was=`Jede Spalte ist eine Stelle, an der eine Metrik erscheinen kann: die drei Kanäle${O()?', der Stundenverlauf':''} und der 3-Tages-Ausblick. ${O()?'Stundenverlauf und Ausblick':'Der Ausblick'} gibt es nur für Metriken, die auch in der E-Mail stehen.`;
+  return `<div class="card" data-abschnitt="was-steht-wo" lang="de">
+    <div class="lrow" style="border-top:0"><div class="t"><b>Was steht wo</b><small>Eine Tabelle für alles. Jede Zeile ist eine Metrik aus der Auswahl oben. ${was} Ein Haken heißt: erscheint dort. Hier wählst du nur ab. Die Reihenfolge ziehst du einmal, sie gilt überall. Roh zeigt die Zahl, Einfach ein Symbol oder ein Wort. Wo eine Metrik beide Formen hat, stellst du das je Stelle ein. Die SMS bleibt bei ihren Kürzeln. Neue Metriken kommen oben über „+“ dazu.</small></div></div>
     ${head}${fix}${rows}
     ${budgetZeile(sm)}
     <div class="sub">Ganze Blöcke ein- und ausschalten</div>
@@ -740,132 +649,6 @@ function kanalTabelle(){
     ${kanalEinst()}
   </div>`;
 }
-function kanalListen(){
-  const s=S(), ms=onMs(), sm=smsCalc(), ch=KAN.includes(channelTab)?channelTab:'E-Mail', kurz=s.sw.tgkurz&&ch==='Telegram';
-  const tgCut=!O()?ms.filter(m=>isSel('Telegram',m[0])).slice(7).map(m=>m[0]):[];
-  const was={'E-Mail':`Diese Liste sind die ${!O()?'Spalten der Stundentabelle':'Zeilen der Übersicht'} in der Mail. ${O()?'Stundenverlauf und Ausblick folgen ihr.':''}`,'Telegram':'Diese Liste steht in der Telegram-Nachricht.','SMS':'Diese Liste steht in der SMS und in der Premium-SMS. Was nicht in 160 Zeichen passt, fällt von hinten weg.'}[ch];
-  const warn=s.sw.official?`<div class="oi fixed"><span class="h" aria-hidden="true"></span><span class="n">Amtliche Warnungen <span class="muted">· immer dabei, ${ch==='SMS'?'steht am Ende':'steht zuerst'}</span></span></div>`:'';
-  const rows=ms.map(m=>{const id=m[0], on=isSel(ch,id);
-    const note=ch==='SMS'&&on&&sm.cutIds.includes(id)?'passt nicht mehr in 160 Zeichen':ch==='Telegram'&&on&&tgCut.includes(id)?'nur als Tageswert':'';
-    return `<div class="oi kb ${on?'':'off'} ${kurz?'ruht':''}"><span class="h" aria-hidden="true" title="ziehen zum Umsortieren">⋮⋮</span><span class="n">${m[1]}</span><span class="kbx">${ch!=='SMS'&&HASF.includes(id)?seg('fb:'+ch+':'+id,['Roh','Einfach'],fmtK(ch,id)):''}<span class="exm">${on?esc(exCell(ch,m)):''}</span>${note?`<span class="cutn ${ch==='SMS'?'':'soft'}">${note}</span>`:''}</span>${sw('kb:'+ch+':'+id,on,m[1]+' in '+ch,kurz)}</div>`;}).join('');
-  return `<div class="card" data-abschnitt="kanal-inhalt">
-    <div class="lrow" style="border-top:0"><div class="t"><b>Inhalt je Kanal</b><small>Je Kanal eine eigene Liste mit eigener Reihenfolge. Jede Liste nimmt nur aus der Auswahl oben: abwählen ja, hinzufügen nein. Neue Metriken kommen oben über „+“ dazu.</small></div>
-      <div class="r">${seg('channel',KAN,ch)}</div></div>
-    <div class="olist"><div class="oi ohead"><span class="h"></span><span class="n">Metrik <span class="muted">· ${was}</span></span>${ch!=='SMS'?`<span class="oh-f">Darstellung<br><span class="muted">Roh = Zahl · Einfach = Symbol/Ampel</span></span>`:''}<span class="oh-s">In ${ch}<br><span class="muted">an = erscheint</span></span></div>
-      ${ch==='SMS'?'':warn}${rows}${ch==='SMS'?warn:''}</div>
-    ${ch==='SMS'?budgetZeile(sm):''}
-    <div class="sub">Einstellungen für ${ch==='SMS'?'SMS und Premium-SMS':ch}</div>
-    ${kanalEinst(ch)||`<div class="lrow"><div class="t"><small>Keine weiteren Einstellungen.</small></div></div>`}
-  </div>`;
-}
-function teileCard(){
-  const s=S().sw, k=K(), mm=mailM(), fest=V.varT==='fest';
-  const vals=(part,lock)=>{
-    const list=mm.filter(m=>!lock.includes(m[0]));
-    const locked=mm.filter(m=>lock.includes(m[0])).map(m=>`<span class="tchip lock">${m[1]} · kein Stundenwert</span>`).join('');
-    if(fest) return `<div class="tvals"><span class="tl">Zeigt</span>${list.map(m=>`<span class="tchip stat">${m[1]}</span>`).join('')}${locked}<span class="muted">Dieselben Metriken und dieselbe Reihenfolge wie in der E-Mail. Hier ist nichts einzustellen.</span></div>`;
-    return `<div class="tvals"><span class="tl">Zeigt</span>${list.map(m=>{const off=!!k.weg[part][m[0]];return `<button type="button" class="tchip ${off?'off':''}" aria-pressed="${!off}" data-weg="${part}:${m[0]}">${off?'':'✓ '}${m[1]}</button>`;}).join('')}${locked}<span class="muted">Dieselben Metriken und dieselbe Reihenfolge wie in der E-Mail. Tippe eine Metrik an, um sie hier wegzulassen. Hinzufügen geht nur über die E-Mail.</span></div>`;};
-  const ausAn=s.outM||s.outA;
-  const ausblick=`<div class="teil"><div class="top"><div class="t"><b>3-Tages-Ausblick <span class="wo">E-Mail · Telegram</span></b><small>Tageswerte der nächsten drei ${O()?'Tage':'Etappen'}${O()&&!EIN()?' je Ort':''}. Vorbelegt: nur im Abend-Briefing.${ausAn?'':' <strong>Zurzeit aus.</strong>'}</small></div>
-      <div class="r"><span class="chk">${sw('outM',s.outM,'Ausblick im Morgen-Briefing')} Morgen-Briefing</span><span class="chk">${sw('outA',s.outA,'Ausblick im Abend-Briefing')} Abend-Briefing</span></div></div>
-    ${ausAn?vals('ausblick',[]):''}</div>`;
-  const stunden=O()?`<div class="teil"><div class="top"><div class="t"><b>Stundenverlauf <span class="wo">nur E-Mail</span></b><small>Stunden-Tabelle ${EIN()?'':'je Ort '}unter der Übersicht.${s.std?'':' <strong>Zurzeit aus.</strong>'}</small></div>
-      <div class="r">${sw('std',s.std,'Stundenverlauf')}</div></div>
-    ${s.std?vals('stunden',['sunshine']):''}</div>`:'';
-  const ueber=O()?`<div class="teil"><div class="top"><div class="t"><b>Übersicht <span class="wo">E-Mail</span></b><small>Die Tageswerte ${EIN()?'des Ortes':'je Ort, nebeneinander zum Vergleichen'}. Immer dabei.</small></div></div>
-    <div class="tvals"><span class="tl">Zeigt</span>${mm.map(m=>`<span class="tchip stat">${m[1]}</span>`).join('')}<span class="muted">Alle Metriken mit Haken bei E-Mail${V.varK==='A'?' in der Tabelle oben':' in der Liste oben'}. Die beiden Blöcke darunter richten sich danach.</span></div></div>`:'';
-  const zusatz=!O()?`<div class="sub">Zusatzblöcke, nur in der E-Mail</div>
-      <div class="lrow" style="border-top:0"><div class="t"><b>Etappen-Kennzahlen</b><small>Länge, Höhenmeter und Gehzeit je Etappe</small></div><div class="r">${sw('stats',s.stats,'Etappen-Kennzahlen')}</div></div>
-      <div class="lrow"><div class="t"><b>Vortag-Vergleich</b><small>was sich seit dem letzten Briefing geändert hat</small></div><div class="r">${sw('yday',s.yday,'Vortag-Vergleich')}</div></div>
-      <div class="lrow"><div class="t"><b>Nacht-Stundentabelle</b><small>die Stunden der Nacht am Etappenziel</small></div><div class="r">${sw('night',s.night,'Nacht-Stundentabelle')}</div></div>`:'';
-  return `<div class="card" data-abschnitt="briefing-teile">
-    <div class="lrow" style="border-top:0"><div class="t"><b>Teile des Briefings</b><small>${O()?'In der E-Mail stehen die Metriken an drei Stellen: Übersicht, Stundenverlauf und Ausblick. Es gibt dafür nur eine Auswahl, den Haken bei E-Mail. Der Ausblick steht auch in Telegram.':'Blöcke, die zusätzlich im Briefing stehen. Sie sind keine eigenen Kanäle: Der Ausblick zeigt, was du für die E-Mail gewählt hast.'}</small></div></div>
-    ${ueber}${O()?stunden+ausblick:ausblick}${zusatz}
-  </div>`;
-}
-function tbl(head,rows){return `<div class="tblwrap"><table class="bx"><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
-function bspMail(){
-  const s=S().sw, mm=mailM(); let h='';
-  if(!O()){
-    const ms=mm.filter(m=>TF[m[0]]);
-    h+=`<div class="bh">Etappe 2 · Estellencs → Esporles · Stundentabelle</div>`+tbl(['Zeit',...ms.map(m=>COLL[m[0]])],['13','14','15'].map((z,i)=>[z,...ms.map(m=>TF[m[0]].h[i])]));
-    if(s.outA){const as=ms.filter(m=>!weg('ausblick',m[0]));
-      h+=`<div class="bh">3-Tages-Ausblick</div>`+tbl(['Tag','Etappe',...as.map(m=>COLL[m[0]])],[['Mi','E3 Esporles → Valldemossa'],['Do','E4 Valldemossa → Deià']].map((r,i)=>[...r,...as.map(m=>TF[m[0]].a[i])]));}
-    return h;
-  }
-  const ps=PLACES(), ms=mm.filter(m=>OF[m[0]]), p=ps[0];
-  h+=`<div class="bh">${EIN()?'Übersicht · Tecklenburg':'Übersicht · alle Orte'}</div>`+tbl(['Metrik',...ps],ms.flatMap(m=>OF[m[0]].mail.map(r=>[r[0],...ps.map(q=>r[1](OD[q]))])));
-  if(s.std){const hs=ms.filter(m=>OH[p][m[0]]&&!weg('stunden',m[0]));
-    h+=`<div class="bh">Stundenverlauf · ${p}${EIN()?'':' (die anderen Orte genauso)'}</div>`+tbl(['Zeit',...hs.map(m=>COLL[m[0]])],OH[p].z.map((z,i)=>[z,...hs.map(m=>OH[p][m[0]][i])]));}
-  if(s.outA){const as=ms.filter(m=>!weg('ausblick',m[0]));
-    h+=`<div class="bh">3-Tages-Ausblick · ${p}</div>`+tbl(['Tag',...as.map(m=>COLL[m[0]])],OA.tage.map((t,i)=>[t,...as.map(m=>OA[m[0]][i])]));}
-  return h;
-}
-function bspTg(){
-  const s=S().sw;
-  if(s.tgkurz) return `<pre class="bpre">${esc(smsCalc().line)}</pre><div class="bn">Kurzstil ist an: Telegram bekommt den SMS-Text.</div>`;
-  const ms=onMs().filter(m=>isSel('Telegram',m[0])), L=[];
-  if(!O()){
-    const f=ms.filter(m=>TF[m[0]]);
-    L.push('GR221 Mallorca','Abend 23.02.2026','---','Kurzübersicht',...f.map(m=>TF[m[0]].tg));
-    if(f.length>7) L.push('',`… +${f.length-7} weitere Wettergrößen nur als Tageswert`,'(Telegram-Limit)');
-    if(s.outA) L.push('---','3-Tages-Ausblick','Mi 25.02.  9.0/16.0°C  R–  NW20.0  ⚡–','Do 26.02.  10.0/17.0°C  R–  SW28.0  ⚡–');
-  }else{
-    const ps=PLACES(), f=ms.filter(m=>OF[m[0]]), p=ps[0], d=OD[p];
-    L.push(V.nameV.toUpperCase()+' — '+CTX[ctx].title,'Datum: 18.11.2026','',p);
-    const parts=f.flatMap(m=>OF[m[0]].tg(d).split(' · '));
-    L.push('   '+parts.slice(0,7).join(' · ')); if(parts.length>7) L.push('   '+parts.slice(7).join(' · '));
-    if(s.outA) L.push('   3-Tages-Ausblick',EIN()?'   Do  5/11°C  R1.6@13  W30@10(36@22)  ⚡mittel@16':'   Do  7/13°C  1.2mm  W30@22  ⚡–','   Fr  …','   Sa  …');
-    if(!EIN()) L.push('Telgte','   …','Tecklenburg','   …');
-  }
-  return `<pre class="bpre">${esc(L.join('\n'))}</pre>`;
-}
-function nameBox(){
-  if(!O()) return '';
-  const N=V.nameV, NU=N.toUpperCase(), ein=EIN(), t=CTX[ctx].title;
-  const rows=[
-    ['Name in der App','Orts-Vergleich','Orte'],
-    ['Kopf der E-Mail','ORTS-VERGLEICH · WANDERN',`${NU} · ${t.toUpperCase()}`],
-    ['Tabelle in der E-Mail','ÜBERSICHT Alle Orte · gewählte Metriken',ein?'ÜBERSICHT Tecklenburg · gewählte Metriken':'ÜBERSICHT Alle Orte · gewählte Metriken'],
-    ['Stunden-Tabelle','Stundenverlauf · alle Orte',ein?'Stundenverlauf':'Stundenverlauf · alle Orte'],
-    ['Fuß der E-Mail',ein?'1 Orte · Profil WANDERN':'3 Orte · Profil WANDERN',ein?'1 Ort · Vorlage Allgemein':'3 Orte · Vorlage Allgemein'],
-    ['Knopf in der E-Mail','Vergleich in App öffnen →','In der App öffnen →'],
-    ['Telegram, erste Zeile',`ORTS-VERGLEICH — ${t}`,`${NU} — ${t}`],
-    ['SMS, Anfang',ein?'Vergleich 18.11.: Tecklenburg D 11C L 2C …':'Vergleich 18.11.: Münster D 13C …',ein?'Tecklenburg 18.11.: D 11C L 2C …':'Orte 18.11.: Münster D 13C …']];
-  return `<div class="bbox wide" data-sub="bsp-name"><span class="bt">Name und Texte ${ein?'bei einem einzelnen Ort':'bei mehreren Orten'} · heute und neu</span>
-    <div class="tblwrap"><table class="hn"><thead><tr><th>Stelle</th><th>Heute</th><th>Neu</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r[0]}</td><td class="m alt">${esc(r[1])}</td><td class="m">${esc(r[2])}</td></tr>`).join('')}</tbody></table></div>
-    ${ein?`<span class="bn">Heute spricht jede Ausgabe von „Vergleich“ und „alle Orte“, auch wenn es nur einen Ort gibt. Neu heißt alles „Orte“, das Wort Vergleich entfällt als Name.</span>`:''}</div>`;
-}
-function beispielPanel(){
-  const sm=smsCalc();
-  return `<div class="bsp"><div class="bhd"><b>So käme es an</b><small>Nur im Mockup, nicht Teil der App. Abend-Briefing mit echten Werten, folgt deinen Klicks oben.</small></div>
-    <div class="bgrid">
-      <div class="bbox wide" data-sub="bsp-mail"><span class="bt">E-Mail</span>${bspMail()}</div>
-      <div class="bbox" data-sub="bsp-tg"><span class="bt">Telegram</span>${bspTg()}</div>
-      <div class="bbox" data-sub="bsp-sms"><span class="bt">SMS und Premium-SMS</span><pre class="bpre">${esc(sm.line)}</pre><span class="bn">${sm.len} von 160 Zeichen</span></div>
-      ${nameBox()}
-    </div></div>`;
-}
-function syncFrame(){
-  document.querySelectorAll('[data-set]').forEach(b=>{const i=b.dataset.set.indexOf(':');b.classList.toggle('on',V[b.dataset.set.slice(0,i)]===b.dataset.set.slice(i+1));});
-  document.querySelectorAll('.frame [data-ctx]').forEach(b=>b.classList.toggle('on',b.dataset.ctx===ctx));
-}
-function applyOnly(){
-  if(!ONLY) return;
-  document.querySelectorAll('#content [data-part]').forEach(p=>{p.hidden=!ONLY.includes(p.dataset.part);});
-  const sh=document.querySelector('#content .sectionh'); if(sh&&tab==='wetter') sh.hidden=!ONLY.includes('grund');
-  const subs=ONLY.filter(x=>x.startsWith('bsp-')); if(subs.length) document.querySelectorAll('#content [data-sub]').forEach(p=>{p.hidden=!subs.includes(p.dataset.sub);});
-}
-// Zustand aus der Adresse (nur für Bildaufnahmen): #ctx=orte&varK=B&only=kanal,bsp
-(function(){
-  const h=decodeURIComponent(location.hash.slice(1)); if(!h||!h.includes('=')) return;
-  h.split('&').forEach(kv=>{const i=kv.indexOf('='), k=kv.slice(0,i), v=kv.slice(i+1);
-    if(k==='ctx'&&CTX[v]) ctx=v; else if(k==='tab') tab=v; else if(k in V) V[k]=v;
-    else if(k==='kanal') channelTab=v;
-    else if(k==='weg') v.split(',').forEach(x=>{const [p,id]=x.split(':');PRE.push([p,id]);});
-    else if(k==='ab') v.split(',').forEach(x=>{const [ch,id]=x.split(':');PRE.push(['sel',ch,id]);});
-    else if(k==='only'){ONLY=v.split(',');document.body.classList.add('only');if(ONLY.includes('kopf'))document.body.classList.add('mitkopf');}});
-})();
 
 function viewZustellung(){
   const s=S().sw, acc=konto(), ch=Object.entries(s.ch);
@@ -927,18 +710,15 @@ function viewUebersicht(){
 function renderContent(){
   const el=document.getElementById('content');
   el.innerHTML = tab==='wetter'?viewWetter(): tab==='zustellung'?viewZustellung(): tab==='etappen'?viewEtappen(): tab==='orte'?viewOrte(): viewUebersicht();
-  applyOnly();
 }
-function render(){renderHead();renderContent();syncFrame();}
+function render(){renderHead();renderContent();}
 
 document.addEventListener('click',e=>{
   const t=e.target.closest('button'); const menu=document.getElementById('testMenu'), tb=document.getElementById('testBtn'), km=document.getElementById('kebabMenu'), kb=document.getElementById('kebabBtn');
   const closeMenus=()=>{menu.hidden=true;tb.setAttribute('aria-expanded','false');km.hidden=true;kb.setAttribute('aria-expanded','false');kebabConfirm=null;};
   if(!t){if(!e.target.closest('.menu')) closeMenus();return;}
-  if(t.dataset.ctx){closeMenus();ctx=t.dataset.ctx;tab='wetter';openEdit=null;saveOpen=false;render();return;}
-  if(t.dataset.set){const i=t.dataset.set.indexOf(':');V[t.dataset.set.slice(0,i)]=t.dataset.set.slice(i+1);closeMenus();render();return;}
+  if(t.dataset.ctx){closeMenus();ctx=t.dataset.ctx;document.querySelectorAll('[data-ctx]').forEach(b=>b.classList.toggle('on',b===t));tab='wetter';openEdit=null;saveOpen=false;render();return;}
   if(t.dataset.fk){const [ch,id]=t.dataset.fk.split(':');K().fmtK[ch][id]=fmtK(ch,id)==='Roh'?'Einfach':'Roh';renderContent();return;}
-  if(t.dataset.weg){const [p,id]=t.dataset.weg.split(':');K().weg[p][id]=!K().weg[p][id];renderContent();return;}
   if(t.dataset.zst){zst=t.dataset.zst;document.querySelectorAll('.frame [data-zst]').forEach(b=>b.classList.toggle('on',b.dataset.zst===zst));closeMenus();render();return;}
   if(t.dataset.mark){document.body.classList.toggle('marks',t.dataset.mark==='1');document.querySelectorAll('[data-mark]').forEach(b=>b.classList.toggle('on',b===t));return;}
   if(t.id==='testBtn'){const was=menu.hidden;closeMenus();renderMenu();menu.hidden=!was;tb.setAttribute('aria-expanded',String(was));return;}
@@ -977,14 +757,13 @@ document.addEventListener('click',e=>{
   if(t.dataset.apply){const v=pending;delete st[ctx];CTX[ctx].vorlage=v;pending=null;pickerOpen=false;render();flash('Vorlage „'+v+'“ übernommen (Mockup: Werte bleiben die Beispielwerte)');return;}
   if(t.dataset.reset){delete st[ctx];render();flash('Auf Vorlage zurückgesetzt');return;}
   if(t.dataset.rm){const s=S();s[t.dataset.rm].on=false;s.devs=(s.devs||0)+1;openEdit=null;renderContent();return;}
-  if(t.dataset.add){const s=S();s[t.dataset.add].on=true;s.devs=(s.devs||0)+1;renderContent();const m=CTX[ctx].metrics.find(x=>x[0]===t.dataset.add);flash(m[1]+' ist jetzt im Briefing und in jedem Kanal angehakt. Unter „Inhalt je Kanal“ kannst du sie für einzelne Kanäle abwählen.');return;}
+  if(t.dataset.add){const s=S();s[t.dataset.add].on=true;s.devs=(s.devs||0)+1;renderContent();const m=CTX[ctx].metrics.find(x=>x[0]===t.dataset.add);flash(m[1]+' ist jetzt im Briefing und in jedem Kanal angehakt. Unter „Was steht wo“ kannst du sie für einzelne Kanäle abwählen.');return;}
   if(t.dataset.addx){flash(t.dataset.addx+' würde mit den Grenzen der Vorlage hinzugefügt (Mockup)');return;}
   if(t.dataset.edit){openEdit=openEdit===t.dataset.edit?null:t.dataset.edit;renderContent();return;}
   if(t.dataset.sw){
     const k=t.dataset.sw, s=S(); const on=t.getAttribute('aria-checked')!=='true';
     if(k.startsWith('m:')){s[k.slice(2)].on=on;renderContent();return;}
-    if(k.startsWith('kb:')){const [,ch,id]=k.split(':');K().sel[ch][id]=on;renderContent();return;}
-    if(['tgkurz','outM','outA','std'].includes(k)){s.sw[k]=on;renderContent();return;}
+    if(['official','tgkurz','outM','outA','std'].includes(k)){s.sw[k]=on;renderContent();return;}
     if(k.startsWith('cb:')){s.sw.ch[k.slice(3)].b=on;renderContent();return;}
     else if(k.startsWith('ca:')){s.sw.ch[k.slice(3)].a=on;renderContent();return;}
     else if(k in s.sw){s.sw[k]=on;}
@@ -992,14 +771,11 @@ document.addEventListener('click',e=>{
   }
   if(t.dataset.seg){
     const name=t.dataset.seg, v=t.dataset.v, s=S();
-    if(name.startsWith('f1:')){K().fmt[name.slice(3)]=v;renderContent();return;}
-    if(name.startsWith('fb:')){const [,ch,id]=name.split(':');K().fmtK[ch][id]=v;renderContent();return;}
     if(name==='alarmall'){const lv=v.toLowerCase();CTX[ctx].metrics.forEach(m=>{if(s[m[0]].on&&m[7]!==null){s[m[0]].alarm=(m[10]&&lv==='gelb')?'orange':lv;}});s.devs=(s.devs||0)+1;renderContent();flash('Alarm ab '+v+' für alle alarmfähigen Metriken gesetzt');return;}
     if(name==='laufzeit'){laufzeit=v;renderContent();return;}
     if(name.startsWith('thm:')||name.startsWith('thh:')){const id=name.slice(4);s[id][name.startsWith('thm:')?'mittel':'hoch']=v;s.devs=(s.devs||0)+1;renderContent();return;}
     if(name==='mailfmt'){s.sw.mailfmt=v;}
     if(name.startsWith('alarm:')){const id=name.slice(6);s[id].alarm=v.toLowerCase();s.devs=(s.devs||0)+1;const m=CTX[ctx].metrics.find(x=>x[0]===id);const w=document.querySelector(`[data-row="${id}"] .why`);if(w) w.textContent=why(m,s[id]);}
-    else if(name==='channel'){channelTab=v;renderContent();return;}
     else if(name.startsWith('thr:')){s.sw.ch[name.slice(4)].s=v;}
     t.parentElement.querySelectorAll('button').forEach(b=>{const on=b===t;b.classList.toggle('on',on);b.setAttribute('aria-checked',String(on));});
   }
@@ -1018,10 +794,29 @@ document.addEventListener('change',e=>{
   const pk=document.querySelector('[data-picker] small'); if(pk) pk.textContent='▾ '+s.devs+' Abweichung'+(s.devs>1?'en':'');
 });
 function flash(msg,bad){const to=document.getElementById('toast');to.textContent=msg;to.classList.toggle('bad',!!bad);clearTimeout(flash.t);flash.t=setTimeout(()=>to.textContent='',5000);}
+document.body.classList.add('marks');
 render();
+
+// Rückmeldung speichern
+let db=null; const fbState=document.getElementById('fbState'); const timers={};
+document.querySelectorAll('[data-fb]').forEach(ta=>ta.addEventListener('input',()=>{
+  clearTimeout(timers[ta.dataset.fb]); fbState.textContent='Änderung …'; fbState.classList.remove('ok');
+  timers[ta.dataset.fb]=setTimeout(async()=>{
+    if(!db){fbState.textContent='nicht gespeichert (kein Speicher)';return;}
+    try{await db.doc('rueckmeldung/'+ta.dataset.fb).set({text:ta.value,aktualisiert:new Date().toISOString()});fbState.textContent='gespeichert';fbState.classList.add('ok');}
+    catch(err){fbState.textContent='nicht gespeichert: '+((err&&err.code)||'Fehler');}
+  },900);
+}));
+const to=setTimeout(()=>{if(!db) fbState.textContent='Speicher nicht erreichbar';},10000);
+(async()=>{try{
+  if(!window.claude||!window.claude.use){clearTimeout(to);fbState.textContent='Speicher nicht verfügbar';return;}
+  const d0=await window.claude.use('db'); clearTimeout(to);
+  if(!d0){fbState.textContent='Nicht angemeldet: Rückmeldung wird nicht gespeichert';return;}
+  db=d0; fbState.textContent='Speicher verbunden'; fbState.classList.add('ok');
+  const snap=await db.collection('rueckmeldung').get();
+  snap.docs.forEach(doc=>{const ta=document.querySelector(`[data-fb="${doc.id}"]`);const x=doc.data()||{};if(ta&&typeof x.text==='string'&&document.activeElement!==ta) ta.value=x.text;});
+}catch(err){clearTimeout(to);fbState.textContent='Speicher-Fehler';}})();
 })();
 </script>
 
 </body></html>
-</body>
-</html>
