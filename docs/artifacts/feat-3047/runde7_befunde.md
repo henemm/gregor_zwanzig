@@ -1,6 +1,6 @@
 # Befunde Runde 7 (#3047)
 
-Status nach den Behebungspaketen: ausgelagert 8 · geklaert 3 · gruen 51 · rot 4.
+Status nach den Behebungspaketen: ausgelagert 9 · geklaert 3 · gruen 57.
 Quelle: `inventar/*_befunde.md` und `inventar/befund_status.json`, erzeugt mit `inventar/konsolidieren.py`.
 
 | ID | Schwere | Kurztext | Status | Test/Issue |
@@ -44,7 +44,7 @@ Quelle: `inventar/*_befunde.md` und `inventar/befund_status.json`, erzeugt mit `
 | B-V2 | mittel | Zusatzblöcke Etappen-Kennzahlen und Vortag-Vergleich nie geprüft (bekannt #3083 H2, gegen den Auftrag echte Lücke) | gruen | tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_zusatzbloecke_trotz_aus_scheitern |
 | B-V3 | mittel | Orte-Vergleichstabelle: Roh/Einfach je Zeile ungeprüft (neu) | gruen | tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_vergleich_falsche_darstellung_scheitert |
 | B-V4 | niedrig–mittel | Orte-Klartext-Stundenverlauf: nur erste Stundenzeile je Ort gelesen (bekannt #3083 H3) | gruen | tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_klartext_spalte_fehlt_ab_zeile_zwei_scheitert |
-| B-V5 | mittel | Tagesfenster: Orte-Validator lehnt korrektes Fenster ab, Trip-Validator prüft es nicht (neu) | rot | Orte gruen: tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_tagesfenster_wird_nicht_abgelehnt; Trip-Validator 06-22: rot, in Behebung |
+| B-V5 | mittel | Tagesfenster: Orte-Validator lehnt korrektes Fenster ab, Trip-Validator prüft es nicht (neu) | gruen | Orte: tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_tagesfenster_wird_nicht_abgelehnt; Trip (p4b): tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_etappenstart_vor_sechs_besteht |
 | B-V6 | mittel | Kanal-Parität der Prüfwerkzeuge: kein Soll-Validator für Telegram, SMS, Premium-SMS (neu) | ausgelagert | #3090 (Soll-Validator Telegram/SMS/Premium-SMS) |
 | B-V7 | niedrig | Ortsfolge der HTML-Abschnitte hängt am deutschen Wort „ORT“ (latent, Code-Lesung) | gruen | tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_ortsabschnitte_html_vertauscht_scheitert (#3074) |
 | B-V8 | niedrig | Testlücke: Sortierung der E-Mail-Kanal-Liste nach `bucket`/`order` ungetestet (neu) | gruen | tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_kanal_liste_array_ungleich_order |
@@ -54,7 +54,7 @@ Quelle: `inventar/*_befunde.md` und `inventar/befund_status.json`, erzeugt mit `
 | B-L2 | mittel | Orte-Telegram/SMS/Premium-SMS ohne Hinweis „Warnungen nicht abrufbar“ | gruen | tests/tdd/test_3047_runde7_orte_luecken.py::test_bl2_warnungen_nicht_abrufbar_telegram |
 | B-L3 | niedrig | Orte-Telegram: Ampel-Grenzen ohne Wirkung, „Einfach“ zeigt Windwort | gruen | tests/tdd/test_3047_runde7_orte_luecken.py::test_bl3_einfach_folgt_ampel_grenzen |
 | B-L4 | hoch | Orts-Vergleich „nie eingestellt“ / jede Neuanlage: Telegram und SMS zeigen alten Sechsersatz | gruen | tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail |
-| B-L5 | niedrig (Testlücke) | Validatoren: weitere ungeprüfte Einstellungen | rot | rot, in Behebung (p4b) |
+| B-L5 | niedrig (Testlücke) | Validatoren: weitere ungeprüfte Einstellungen | gruen | p4b, Mutationen 18/18: tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_warnungen_trotz_schalter_aus_scheitern, ::test_r7b_trip_warnungen_an_erster_stelle, ::test_r7b_trip_ueberblick_folge_vertauscht_scheitert, ::test_r7b_trip_ampelfarbe_folgt_den_grenzen, ::test_r7b_orte_nie_eingestellt_zeilen_wie_mail, ::test_r7b_orte_zieltag_morgen_heute_abend_morgen, ::test_r7b_orte_hinweis_nicht_abrufbar_trotz_schalter_aus, ::test_r7b_orte_ampelfarbe_folgt_den_grenzen |
 | B-L6 | niedrig | Trip-Altformat ohne `order`: Validator lehnt die korrekte Mail ab | gruen | tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_altformat_ohne_order_register_prioritaet |
 | p8-1 | mittel | Orte-SMS: weitere Orte fielen als '+k Orte' weg, bevor die Zellen aller Orte gekuerzt waren | gruen | tests/tdd/test_3047_runde7_orte_sms_kuerzung.py::test_nie_eingestellt_alle_orte_sichtbar |
 | p8-2 | niedrig | Sonnenstunden bauten Settings je Ort neu (Laufzeit) | gruen | tests/tdd/test_3047_runde7_sonnenstunden_settings.py::test_zwanzig_orte_ohne_settings_neubau_je_ort |
@@ -64,10 +64,13 @@ Quelle: `inventar/*_befunde.md` und `inventar/befund_status.json`, erzeugt mit `
 | p5c-2 | mittel | Hub-Uebersicht zaehlte anders als die Mail | gruen | frontend/src/lib/components/shared/wetter-tab/__tests__/p5c_ableitung_hub_orte_ausgabe.test.ts::trip_alarmzeile_a_nie_eingestellt |
 | p5c-3 | mittel | Orte nie eingestellt: Abwahl entfernte mehr als die abgewaehlte Groesse | gruen | frontend/src/lib/components/shared/wetter-tab/__tests__/p5c_ableitung_hub_orte_ausgabe.test.ts::orte_a_uv_weg_uebrige_zeilen_bleiben |
 | p2b-tags | mittel | Orte-Telegram: Warnblock mit rohen HTML-Tags/Entities (parse_mode=None) | gruen | tests/tdd/test_3047_runde7_orte_kanaele.py::test_orte_telegram_warnung_ohne_rohe_tags |
-| R7-p11 | mittel | Neuanlage Trip/Orts-Vergleich: amtliche Warnungen 'beides an' (PO 2026-11-16, #1258 AC-4 abgeloest) | rot | rot, in Behebung (p11) |
-| R7-p9 | niedrig | Uhrzeitabhaengige Tests (Ergebnis haengt von der Laufzeit-Uhrzeit ab) | rot | rot, in Behebung (p9) |
+| R7-p11 | mittel | Neuanlage Trip/Orts-Vergleich: amtliche Warnungen 'beides an' (PO 2026-11-16, #1258 AC-4 abgeloest) | gruen | tests/tdd/test_3047_p11_neuanlage_warnungen.py::test_p11_neuanlage_schreibt_beide_felder_true, ::test_p11_neuer_trip_briefing_mit_warnung_und_alarm_zwei_nutzer; internal/handler/neuanlage_amtliche_warnungen_test.go |
+| R7-p9 | niedrig | Uhrzeitabhaengige Tests (Ergebnis haengt von der Laufzeit-Uhrzeit ab) | gruen | p9 (wanduhrfest): tests/tdd/test_official_alert_allclear.py::test_ac13_briefing_mit_gesunder_quelle_informiert_nicht_abrufbar_nicht, ::test_ac14_briefing_zeigt_warnung_noch_loescht_absent_since_und_verschiebt_beendet; tests/tdd/test_official_alert_allclear_channels.py::test_ac12_von_der_sms_kuerzung_verdraengte_entwarnung_gilt_als_nicht_zugestellt; tests/tdd/test_fix_2598_ortsvergleich_alarm_kopfzeile.py::test_ac5_radar_ein_ort_nennt_den_ort_statt_km; Ausblick-Umbruch: tests/tdd/test_3047_p9_ausblick_umbruch.py |
 | R7-3091 | – | Tagesfenster in Ueberblick/Stundentabellen | ausgelagert | #3091 |
 | R7-3092 | – | Go-PUT nimmt unbekannte Felder an | ausgelagert | #3092 |
 | R7-2801 | – | Eigene Premium-SMS-Liste | ausgelagert | #2801 |
 | R7-3065 | – | Ausgelagerte Editor-/Kanal-Zellen (siehe Matrix) | ausgelagert | #3065 |
 | R7-3083 | – | Validator-Haertung H1-H3 (B-V1, B-V2, B-V4 in Runde 7 behoben) | gruen | siehe B-V1, B-V2, B-V4 |
+| R7-p13 | niedrig | Radar-Zonen-Doubles zaehlten Messpunkte in Aufrufreihenfolge (flaky bei parallelem Abruf, Produkt korrekt) | gruen | p13, Mutationen 4/4: tests/tdd/test_radar_messluecken_protokoll.py::test_luecke_in_der_mitte_haelt_zahl_und_km_lage_fest; tests/tdd/test_regen_ausdehnung_textstellen.py::test_zonengrenzen_werden_aus_der_kilometrierung_der_nassen_punkte_gebildet |
+| R7-p14 | mittel | #1544/#1545 AC-6 (Stufe bleibt beim Abwaehlen) war nach Entfernen von AlarmeScheduleTab nur noch tot abgesichert; Live-Weg Reiter Wetter + Go-Merge ungeprueft (5 Mutationen ueberlebten) | gruen | frontend/src/lib/components/shared/wetter-tab/__tests__/p14_ac6_stufen_bleiben_beim_abwaehlen.test.ts; internal/handler/p14_ac6_stufen_bleiben_test.go (zwei Nutzer); Mutationen 8/8: docs/artifacts/feat-3047/red_runde7_p14.txt |
+| R7-3094 | – | Toter route-Zweig im AlarmeTab (nur noch vom Mehrreiter-Pruefstand gefahren) | ausgelagert | #3094 |

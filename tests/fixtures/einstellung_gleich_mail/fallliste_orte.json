@@ -2896,6 +2896,136 @@
       "runde": 7,
       "paket": "katalog",
       "hinweis": "#3039 AC-10: Premium-SMS-Text = SMS-Text mit Kanal-Auswahl, -Folge und Einfach (eigene Liste #2801)"
+    },
+    {
+      "id": "O-P11-NEU-FELDER",
+      "liste": "warnungen",
+      "kontext": "orte",
+      "format": "api",
+      "pruefung": "neuanlage_beide_felder_true",
+      "test": "tests/tdd/test_3047_p11_neuanlage_warnungen.py::test_p11_neuanlage_schreibt_beide_felder_true[vergleich]",
+      "ac": "Nachtrag Runde 7 Warnungen Neuanlage",
+      "befund": "p11-1",
+      "status": "gruen",
+      "zustand": "neuanlage",
+      "sprache": "de",
+      "runde": 7,
+      "paket": "p11"
+    },
+    {
+      "id": "O-P11-GO-ANLAGE",
+      "liste": "warnungen",
+      "kontext": "orte",
+      "format": "api",
+      "pruefung": "go_anlage_regel_zwei_nutzer",
+      "test": "internal/handler/neuanlage_amtliche_warnungen_test.go::TestNeuanlageVergleich_AmtlicheWarnungenBeidesAn_ZweiNutzer",
+      "ac": "Nachtrag Runde 7 Warnungen Neuanlage",
+      "befund": "p11-1",
+      "status": "gruen",
+      "zustand": "neuanlage",
+      "runde": 7,
+      "paket": "p11"
+    },
+    {
+      "id": "O-P11-EDITOR-AN",
+      "liste": "warnungen",
+      "kontext": "orte",
+      "format": "editor",
+      "pruefung": "editor_zeigt_an",
+      "test": "frontend/src/lib/components/compare-new/__tests__/p11_neuanlage_amtliche_warnungen.test.ts::p11 Vergleich anlegen: Reiter Wetter und Zustellung zeigen „an\"",
+      "ac": "Nachtrag Runde 7 Warnungen Neuanlage",
+      "befund": "p11-1",
+      "status": "gruen",
+      "zustand": "neuanlage",
+      "runde": 7,
+      "paket": "p11",
+      "seite": "frontend"
+    },
+    {
+      "id": "O-P9-TG-AUSBLICK-UMBRUCH-DE",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "telegram",
+      "pruefung": "umbruch",
+      "test": "tests/tdd/test_3047_p9_ausblick_umbruch.py::test_p9_orte_telegram_ausblick_bricht_nur_zwischen_werten_um[de]",
+      "ac": "AC-24",
+      "befund": "p9-3 (Wind: 28 / km/h)",
+      "status": "gruen",
+      "zustand": "teilmenge_roh_folge_gemischt",
+      "sprache": "de",
+      "kanaele": [
+        "telegram"
+      ],
+      "erwartung": "Ausblick-Tageszeile bricht nur zwischen ganzen Zellen um, Zeilen <= 56, kein Umbruch ohne Not; zwei Nutzer",
+      "runde": 7,
+      "paket": "p9"
+    },
+    {
+      "id": "O-P9-TG-AUSBLICK-UMBRUCH-EN",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "telegram",
+      "pruefung": "umbruch",
+      "test": "tests/tdd/test_3047_p9_ausblick_umbruch.py::test_p9_orte_telegram_ausblick_bricht_nur_zwischen_werten_um[en]",
+      "ac": "AC-24",
+      "befund": "p9-3",
+      "status": "gruen",
+      "zustand": "teilmenge_roh_folge_gemischt",
+      "sprache": "en",
+      "kanaele": [
+        "telegram"
+      ],
+      "erwartung": "wie DE, englische Kopfzeile Outlook",
+      "runde": 7,
+      "paket": "p9"
+    },
+    {
+      "id": "X-P9-TG-AUSBLICK-UEBERBREIT",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "telegram",
+      "pruefung": "umbruch",
+      "test": "tests/tdd/test_3047_p9_ausblick_umbruch.py::test_p9_ueberbreite_einzelzelle_faellt_auf_wortumbruch_zurueck",
+      "ac": "AC-24",
+      "befund": "p9-3 (Rueckfall)",
+      "status": "gruen",
+      "zustand": "ueberbreite_zelle",
+      "sprache": "de",
+      "kanaele": [
+        "telegram"
+      ],
+      "erwartung": "einzelne Zelle > 56 Zeichen: Wort-Umbruch nur in dieser Zelle, Nachbarzellen ganz",
+      "runde": 7,
+      "paket": "p9"
+    },
+    {
+      "id": "O-P14-AC6-ABWAHL",
+      "liste": "alarm_stufen",
+      "kontext": "orte",
+      "format": "editor",
+      "seite": "frontend",
+      "pruefung": "abwahl_stufe_bleibt",
+      "test": "frontend/src/lib/components/shared/wetter-tab/__tests__/p14_ac6_stufen_bleiben_beim_abwaehlen.test.ts::Boeen abwaehlen, speichern, wieder aufnehmen: Stufe und Altstufen bleiben",
+      "ac": "#1544/#1545 AC-6",
+      "befund": "p14-1",
+      "status": "gruen",
+      "erwartung": "Orts-Briefing: Abwahl und Wieder-Aufnahme ueber den Go-Merge-Pruefstand, Stufe bleibt",
+      "runde": 7,
+      "paket": "p14"
+    },
+    {
+      "id": "O-P14-AC6-GO",
+      "liste": "alarm_stufen",
+      "kontext": "orte",
+      "format": "api",
+      "pruefung": "abwahl_stufe_bleibt_zwei_nutzer",
+      "test": "internal/handler/p14_ac6_stufen_bleiben_test.go::TestP14_AC6_Vergleich_AbwaehlenUndWiederAufnehmen_StufeBleibt_ZweiNutzer",
+      "ac": "#1544/#1545 AC-6",
+      "befund": "p14-1",
+      "status": "gruen",
+      "erwartung": "echter Vergleichs-PUT, zwei Nutzer: Stufe bleibt, fremder Nutzer unberuehrt",
+      "runde": 7,
+      "paket": "p14"
     }
   ]
 }

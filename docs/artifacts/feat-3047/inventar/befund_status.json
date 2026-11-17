@@ -1,5 +1,5 @@
 {
- "_hinweis": "#3047 Runde 7: Status je Befund nach den Behebungspaketen p1-p10 (Commits 6ddf4a1..d2ffe59). gruen = behoben, Beleg ist der Test, der rot war und jetzt gruen ist; ausgelagert = eigenes Issue; rot = noch offen bzw. in Behebung; geklaert = kein Fehler (PO-/Konzept-Entscheidung).",
+ "_hinweis": "#3047 Runde 7: Status je Befund nach den Behebungspaketen p1-p14 (Commits 6ddf4a1..d2ffe59). gruen = behoben, Beleg ist der Test, der rot war und jetzt gruen ist; ausgelagert = eigenes Issue; rot = noch offen bzw. in Behebung; geklaert = kein Fehler (PO-/Konzept-Entscheidung).",
  "befunde": {
   "B-TM1": {"status": "gruen", "beleg": "tests/tdd/test_kompakt_mail_schalter_runde7.py::test_kompakt_amtliche_warnung_vor_jedem_inhaltsblock"},
   "B-TM2": {"status": "gruen", "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/ac26_einstellung_gleich_ausgabe.test.ts::minus_dann_plus_haengt_hinten_an"},
@@ -40,7 +40,7 @@
   "B-V2": {"status": "gruen", "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_zusatzbloecke_trotz_aus_scheitern"},
   "B-V3": {"status": "gruen", "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_vergleich_falsche_darstellung_scheitert"},
   "B-V4": {"status": "gruen", "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_klartext_spalte_fehlt_ab_zeile_zwei_scheitert"},
-  "B-V5": {"status": "rot", "beleg": "Orte gruen: tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_tagesfenster_wird_nicht_abgelehnt; Trip-Validator 06-22: rot, in Behebung"},
+  "B-V5": {"status": "gruen", "beleg": "Orte: tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_tagesfenster_wird_nicht_abgelehnt; Trip (p4b): tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_etappenstart_vor_sechs_besteht"},
   "B-V6": {"status": "ausgelagert", "beleg": "#3090 (Soll-Validator Telegram/SMS/Premium-SMS)"},
   "B-V7": {"status": "gruen", "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_ortsabschnitte_html_vertauscht_scheitert (#3074)"},
   "B-V8": {"status": "gruen", "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_kanal_liste_array_ungleich_order"},
@@ -50,7 +50,7 @@
   "B-L2": {"status": "gruen", "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl2_warnungen_nicht_abrufbar_telegram"},
   "B-L3": {"status": "gruen", "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl3_einfach_folgt_ampel_grenzen"},
   "B-L4": {"status": "gruen", "beleg": "tests/tdd/test_3047_runde7_orte_luecken.py::test_bl4_nie_eingestellt_telegram_folgt_mail"},
-  "B-L5": {"status": "rot", "beleg": "rot, in Behebung (p4b)"},
+  "B-L5": {"status": "gruen", "beleg": "p4b, Mutationen 18/18: tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_warnungen_trotz_schalter_aus_scheitern, ::test_r7b_trip_warnungen_an_erster_stelle, ::test_r7b_trip_ueberblick_folge_vertauscht_scheitert, ::test_r7b_trip_ampelfarbe_folgt_den_grenzen, ::test_r7b_orte_nie_eingestellt_zeilen_wie_mail, ::test_r7b_orte_zieltag_morgen_heute_abend_morgen, ::test_r7b_orte_hinweis_nicht_abrufbar_trotz_schalter_aus, ::test_r7b_orte_ampelfarbe_folgt_den_grenzen"},
   "B-L6": {"status": "gruen", "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_trip_altformat_ohne_order_register_prioritaet"}
  },
  "zusatz": [
@@ -62,12 +62,15 @@
   {"id": "p5c-2", "schwere": "mittel", "titel": "Hub-Uebersicht zaehlte anders als die Mail", "status": "gruen", "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/p5c_ableitung_hub_orte_ausgabe.test.ts::trip_alarmzeile_a_nie_eingestellt"},
   {"id": "p5c-3", "schwere": "mittel", "titel": "Orte nie eingestellt: Abwahl entfernte mehr als die abgewaehlte Groesse", "status": "gruen", "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/p5c_ableitung_hub_orte_ausgabe.test.ts::orte_a_uv_weg_uebrige_zeilen_bleiben"},
   {"id": "p2b-tags", "schwere": "mittel", "titel": "Orte-Telegram: Warnblock mit rohen HTML-Tags/Entities (parse_mode=None)", "status": "gruen", "beleg": "tests/tdd/test_3047_runde7_orte_kanaele.py::test_orte_telegram_warnung_ohne_rohe_tags"},
-  {"id": "R7-p11", "schwere": "mittel", "titel": "Neuanlage Trip/Orts-Vergleich: amtliche Warnungen 'beides an' (PO 2026-11-16, #1258 AC-4 abgeloest)", "status": "rot", "beleg": "rot, in Behebung (p11)"},
-  {"id": "R7-p9", "schwere": "niedrig", "titel": "Uhrzeitabhaengige Tests (Ergebnis haengt von der Laufzeit-Uhrzeit ab)", "status": "rot", "beleg": "rot, in Behebung (p9)"},
+  {"id": "R7-p11", "schwere": "mittel", "titel": "Neuanlage Trip/Orts-Vergleich: amtliche Warnungen 'beides an' (PO 2026-11-16, #1258 AC-4 abgeloest)", "status": "gruen", "beleg": "tests/tdd/test_3047_p11_neuanlage_warnungen.py::test_p11_neuanlage_schreibt_beide_felder_true, ::test_p11_neuer_trip_briefing_mit_warnung_und_alarm_zwei_nutzer; internal/handler/neuanlage_amtliche_warnungen_test.go"},
+  {"id": "R7-p9", "schwere": "niedrig", "titel": "Uhrzeitabhaengige Tests (Ergebnis haengt von der Laufzeit-Uhrzeit ab)", "status": "gruen", "beleg": "p9 (wanduhrfest): tests/tdd/test_official_alert_allclear.py::test_ac13_briefing_mit_gesunder_quelle_informiert_nicht_abrufbar_nicht, ::test_ac14_briefing_zeigt_warnung_noch_loescht_absent_since_und_verschiebt_beendet; tests/tdd/test_official_alert_allclear_channels.py::test_ac12_von_der_sms_kuerzung_verdraengte_entwarnung_gilt_als_nicht_zugestellt; tests/tdd/test_fix_2598_ortsvergleich_alarm_kopfzeile.py::test_ac5_radar_ein_ort_nennt_den_ort_statt_km; Ausblick-Umbruch: tests/tdd/test_3047_p9_ausblick_umbruch.py"},
   {"id": "R7-3091", "schwere": "–", "titel": "Tagesfenster in Ueberblick/Stundentabellen", "status": "ausgelagert", "beleg": "#3091"},
   {"id": "R7-3092", "schwere": "–", "titel": "Go-PUT nimmt unbekannte Felder an", "status": "ausgelagert", "beleg": "#3092"},
   {"id": "R7-2801", "schwere": "–", "titel": "Eigene Premium-SMS-Liste", "status": "ausgelagert", "beleg": "#2801"},
   {"id": "R7-3065", "schwere": "–", "titel": "Ausgelagerte Editor-/Kanal-Zellen (siehe Matrix)", "status": "ausgelagert", "beleg": "#3065"},
-  {"id": "R7-3083", "schwere": "–", "titel": "Validator-Haertung H1-H3 (B-V1, B-V2, B-V4 in Runde 7 behoben)", "status": "gruen", "beleg": "siehe B-V1, B-V2, B-V4"}
+  {"id": "R7-3083", "schwere": "–", "titel": "Validator-Haertung H1-H3 (B-V1, B-V2, B-V4 in Runde 7 behoben)", "status": "gruen", "beleg": "siehe B-V1, B-V2, B-V4"},
+  {"id": "R7-p13", "schwere": "niedrig", "titel": "Radar-Zonen-Doubles zaehlten Messpunkte in Aufrufreihenfolge (flaky bei parallelem Abruf, Produkt korrekt)", "status": "gruen", "beleg": "p13, Mutationen 4/4: tests/tdd/test_radar_messluecken_protokoll.py::test_luecke_in_der_mitte_haelt_zahl_und_km_lage_fest; tests/tdd/test_regen_ausdehnung_textstellen.py::test_zonengrenzen_werden_aus_der_kilometrierung_der_nassen_punkte_gebildet"},
+  {"id": "R7-p14", "schwere": "mittel", "titel": "#1544/#1545 AC-6 (Stufe bleibt beim Abwaehlen) war nach Entfernen von AlarmeScheduleTab nur noch tot abgesichert; Live-Weg Reiter Wetter + Go-Merge ungeprueft (5 Mutationen ueberlebten)", "status": "gruen", "beleg": "frontend/src/lib/components/shared/wetter-tab/__tests__/p14_ac6_stufen_bleiben_beim_abwaehlen.test.ts; internal/handler/p14_ac6_stufen_bleiben_test.go (zwei Nutzer); Mutationen 8/8: docs/artifacts/feat-3047/red_runde7_p14.txt"},
+  {"id": "R7-3094", "schwere": "–", "titel": "Toter route-Zweig im AlarmeTab (nur noch vom Mehrreiter-Pruefstand gefahren)", "status": "ausgelagert", "beleg": "#3094"}
  ]
 }
