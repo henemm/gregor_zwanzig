@@ -328,6 +328,12 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     # SMS-Builder, SMS-Reiter im Editor (/api/metrics sms_format_capable) und das
     # Orakel (Drift-Test test_sms_einfach_roh_je_metrik.py).
     ("src/app/metric_catalog.py", "SMS_FORMAT_MODE_METRIC_IDS", "element"),
+    # Issue #3122 (Spec feat_3122_was_steht_wo Nr. 4/5): EINE Quelle fuer
+    # Roh/Einfach je Stelle der Tabelle "Was steht wo" und die Fenstergroessen
+    # ohne Stundenwert (gesperrte Stellen). Deckung mit den alten Listen:
+    # tests/tdd/test_katalog_stellen_formen.py.
+    ("src/app/metric_catalog.py", "STELLEN_ZWEI_FORMEN", "schluessel"),
+    ("src/app/metric_catalog.py", "FENSTER_METRIC_IDS", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['alpen-trekking']['metrics']", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['wandern']['metrics']", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['skitouren']['metrics']", "element"),
