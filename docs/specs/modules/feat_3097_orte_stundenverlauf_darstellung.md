@@ -80,6 +80,11 @@ Phase 3b von #3047 (Epic #3058). Im Stundenverlauf der Orts-Vergleich-Mail (HTML
 
 **Dokumentation:** ADR-0121 Nachtrag 3b (Stundenverlauf-`format` stammt aus `display_config.hourly_metric_formats`, Fehlt = Roh, Migration nach `channel_layouts.hourly` mit #3060); `docs/reference/api_contract.md` erhaelt das Feld `display_config.hourly_metric_formats` mit Changelog-Zeile.
 
+**Umsetzungsabweichungen (2026-11-17, bei der Implementierung entschieden):**
+
+- **Persistenz ohne `pickEigenfelder.ts`:** Das Feld wird nicht in `shared/pickEigenfelder.ts` eingetragen; diese Datei bleibt unveraendert, weil sie Trip-only ist. Die Eigenfelder fuer den Ortsvergleich liegen in `shared/weather-metrics-tab/weatherMetricsCompareSave.ts` (Read-Modify-Write, Schluessel `hourly_metric_formats` in der Eigenfeld-Liste dort).
+- **Umschalter ueber `WeatherV2Reihenfolge`:** Die Bedienflaeche im Stundenverlauf-Editor laeuft nicht ueber `shared/OutputLayoutEditor.svelte`, sondern ueber `shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte`, das `CompareHourlyLayoutControls.svelte` mit der `friendlyMap` aus `compare/hourlyFriendlyMap.ts` einbindet. Begruendung: Dieselbe Reihenfolge-Komponente bedient bereits die Uebersichts-Groessen; eine zweite Liste waere eine neue Compare-Komponente mit Pendant (Trip/Ortsvergleich-Teilung).
+
 ## Expected Behavior
 
 - **Input:** Orts-Vergleich-Konfiguration mit optionalem `display_config.hourly_metric_formats`, z. B. `{"wind": true, "precip": true}`.
@@ -178,6 +183,8 @@ Zusicherungen werden am Mail-Ergebnis bzw. am gespeicherten Datensatz geprueft, 
 - Telegram, SMS und Premium-SMS haben keinen Stundenverlauf; Roh/Einfach dort ist Sache von #3098 bis #3100.
 - `hourly_metric_formats` ist ein Zwischenspeicherort; die Verlagerung nach `channel_layouts.hourly` folgt mit #3060 und ist dann verlustfrei moeglich.
 - Gewitter, Temperatur und weitere Metriken ohne Einfachform bleiben bewusst ohne Umschalter.
+- **Klartext zeigt Wortstufe statt Ampelpunkt:** Im Klartext gibt es keinen Farbpunkt; Wind und Boeen erscheinen dort als Wortstufe (wie in der Ausgabe von `_friendly_hour_text`).
+- **Validator-Vorschau ohne Stundendaten (Adversary F004, aequivalente Mutante):** Der Stub-Ort im Validator-Render-Pfad (`validator_render_service.py`) enthaelt keine Stundendaten. Die Stundenformate werden dort zwar durchgereicht, die Mutation dieser Durchreichung bleibt aber ohne Wirkung auf das Ergebnis; eine Stundentabelle wird im Validator-Pfad nicht erzeugt. Die Zusicherung "Vorschau = Mail" ist fuer Versand und Editor-Vorschau belegt (AC-3), nicht fuer den Validator-Stub.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -186,4 +193,5 @@ Zusicherungen werden am Mail-Ergebnis bzw. am gespeicherten Datensatz geprueft, 
 
 ## Changelog
 
+- 2026-11-17: Umsetzung dokumentiert: zwei Abweichungen (Persistenz ohne `pickEigenfelder.ts`, Umschalter ueber `WeatherV2Reihenfolge`), Known Limitations (Klartext Wortstufe, Validator-Stub ohne Stundendaten). API-Vertrag und ADR-0121 Nachtrag 3b bereits eingetragen.
 - 2026-11-17: Initial spec created (Issue #3097, Epic #3058)
