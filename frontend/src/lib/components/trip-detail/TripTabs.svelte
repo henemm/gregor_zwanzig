@@ -15,6 +15,7 @@
 	import type { Trip, Stage } from '$lib/types';
 	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
+	import Bereichskopf from '$lib/components/molecules/Bereichskopf.svelte';
 	import { subscriptionTabs, resolveTab, bereinigteTabAdresse, versandSprungStart } from '../shared/subscriptionTabs.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { t, locale, type MessageKey } from '$lib/i18n';
@@ -209,8 +210,16 @@
 						</HubUebersicht>
 					</HubReiterflaeche>
 				{:else if tab.value === 'etappen'}
+					<!-- #3006: EIN Bereichskopf, oben in der Reiterfläche wie beim Vergleich (Orte).
+					     Geladen setzt ihn der Etappen-Editor (Handy in der Fläche, Computer über dem
+					     Band); solange der Trip lädt, steht er allein in der Reiterfläche. -->
+					{#snippet etappenKopf()}
+						<Bereichskopf titel={$t('trip.hub.kopf.etappen_titel')} erklaerung={$t('trip.hub.kopf.etappen_erklaer')} testid="etappen" />
+					{/snippet}
 					{#if trip}
-						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} />
+						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} kopf={etappenKopf} />
+					{:else}
+						<HubReiterflaeche testid="etappen-laden-reiterflaeche">{@render etappenKopf()}</HubReiterflaeche>
 					{/if}
 				{:else if tab.value === 'wetter' && trip}
 					<!-- Issue #2794 S3a Teil-PR 3: genau ein Speicherer im Reiter (AC-38). -->

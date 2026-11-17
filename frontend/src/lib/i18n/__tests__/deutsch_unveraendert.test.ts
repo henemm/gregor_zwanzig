@@ -580,6 +580,9 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.gesperrt.grund',
 	// #2955 (AC-2): Gewitter-Satz „mittel oder hoch“, wenn schon „mittel“ die Alarmstufe erreicht.
 	'wetter.gewitter.mittel_ab',
+	// #3006: Erklaersatz des geteilten Reiters Uebersicht (Mockup Fassung 3, `.sectionh`; Titel = aktionen.reiter.uebersicht); die Koepfe
+	// Etappen (trip.hub.kopf.*) und Orte (vergleich.hub.kopf.*) zaehlen ueber F9_ANKER bzw. F10_ANKER.
+	'bausteine.hub_uebersicht.kopf_erklaer',
 	// #2795 S3b Teilschritt 1b: neuer Bereich zustellung.json (Reiter Zustellung) — vollstaendig neu,
 	// kein Bestandsschluessel; die Pflichttexte prueft s3b2795_zustellung_katalog.test.ts.
 	...Object.keys(ZUSTELLUNG_DE)

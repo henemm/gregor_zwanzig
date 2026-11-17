@@ -11,9 +11,9 @@
 	// (Kanaele je Wettergroesse, amtliche Warnungen, „Alarm ab“, zweite Kanalauswahl, AC-27/AC-31).
 	import { onMount, untrack, type ComponentProps, type Snippet } from 'svelte';
 	import { api } from '$lib/api.js';
-	import { locale } from '$lib/i18n';
+	import { locale, t } from '$lib/i18n';
 	import type { AlertRule, ComparePreset, Trip } from '$lib/types';
-	import ZustellungKopf from '../../organisms/zustellung-tab/ZustellungKopf.svelte';
+	import Bereichskopf from '$lib/components/molecules/Bereichskopf.svelte';
 	import BriefingZeiten from '../../organisms/zustellung-tab/BriefingZeiten.svelte';
 	import LaufzeitKarte from '../../organisms/zustellung-tab/LaufzeitKarte.svelte';
 	import KanalTabelle from '../../organisms/zustellung-tab/KanalTabelle.svelte';
@@ -106,7 +106,7 @@
 </script>
 
 <div class="zustellung-tab" data-testid="zustellung-tab" data-context={context}>
-	<ZustellungKopf />
+	<Bereichskopf titel={$t('zustellung.kopf.titel')} erklaerung={$t('zustellung.kopf.erklaer')} testid="zustellung" />
 	<BriefingZeiten {context} {stand} onaendern={aendern} {versandSprung} />
 	<LaufzeitKarte {context} {stand} onaendern={aendern} stages={panel.trip?.stages ?? []} {onJump} />
 	<KanalTabelle {stand} {status} onaendern={aendern} />

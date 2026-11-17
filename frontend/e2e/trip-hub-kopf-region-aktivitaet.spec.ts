@@ -37,7 +37,7 @@
 //
 // Spec v1.3 (nach F5/PR #2495, Karte entfaellt mobil): AC-13 misst die Oberkante
 // der Etappen-Liste `mobile-stages-list` (≤ 474 px, Basis 472 px am Stand
-// 461c696a2). AC-18 = Titel mobil 20 px in Trip- UND Vergleich-Hub, seit #2878
+// 461c696a2; seit #3006 plus 103 px Bereichskopf, also ≤ 577 px). AC-18 = Titel mobil 20 px in Trip- UND Vergleich-Hub, seit #2878
 // umbrechend statt einzeilig/Ellipsis (Spec fix_2878_etappenliste_und_titel.md
 // AC-3/AC-4), Desktop unveraendert. AC-19 = Chip genau einmal mit sichtbarer
 // MTabBar (im Fall AC-10 mobil). Die v1.2-Faelle Pillen-Topmost, /trips/new und
@@ -1072,7 +1072,15 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 	});
 
 	const AC13_BASIS_VOR_S2 = 472;
-	const AC13_GRENZE = AC13_BASIS_VOR_S2 + 2;
+	// #3006 (freigegebener Bereichskopf „Etappen & Wegpunkte“ oben in der Reiterfläche): er schiebt
+	// die Liste um seine eigene Höhe nach unten — gemessen 87 px Kopf + 16 px Abstand zur Liste =
+	// 103 px, in allen drei Fällen gleich (lokaler CI-Stack 2026-11-17, deckungsgleich mit den
+	// CI-Werten). Die Grenze wächst genau um diesen Betrag, die Toleranz bleibt 2 px; der Kopf
+	// wird zusätzlich einzeln gegen denselben Betrag geprüft, damit sein Platz nicht von einem
+	// aufgeblähten Trip-Kopf aufgebraucht werden kann. Die Fälle unterscheiden sich untereinander
+	// nur durch die Höhe von header.trip-header (Name bricht seit #2878 um), nicht durch #3006.
+	const AC13_BEREICHSKOPF_3006 = 103;
+	const AC13_GRENZE = AC13_BASIS_VOR_S2 + AC13_BEREICHSKOPF_3006 + 2;
 
 	for (const fall of [
 		{ label: '375x667 langer Name', size: { width: 375, height: 667 }, name: null },
@@ -1106,10 +1114,14 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 							return e ? Math.round(e.getBoundingClientRect().top * 10) / 10 : -1;
 						};
 						const kopf = document.querySelector('header.trip-header');
+						const listeOben = top('[data-testid="mobile-stages-list"]');
+						const bereichskopfOben = top('[data-testid="etappen-mobil-reiterflaeche"] [data-abschnitt="abschnittskopf"]');
 						return {
-							listeOben: top('[data-testid="mobile-stages-list"]'),
+							listeOben,
 							navOben: top('[data-testid="bottom-nav"]'),
 							kopfHoehe: kopf ? Math.round(kopf.getBoundingClientRect().height * 10) / 10 : -1,
+							// #3006: Platz des Bereichskopfs über der Liste (Kopf + Abstand zur Liste).
+							bereichskopf: bereichskopfOben < 0 ? -1 : Math.round((listeOben - bereichskopfOben) * 10) / 10,
 							scrollY: window.scrollY
 						};
 					});
@@ -1130,7 +1142,8 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 					testInfo,
 					`AC-13 Messung ${fall.label}`,
 					`Liste oben=${mass.listeOben}px (Basis vor S2 ${AC13_BASIS_VOR_S2}px, Grenze ${AC13_GRENZE}px) · ` +
-						`Navigation oben=${mass.navOben}px · Kopf(header.trip-header)=${mass.kopfHoehe}px · scrollY=${mass.scrollY}`
+						`Navigation oben=${mass.navOben}px · Kopf(header.trip-header)=${mass.kopfHoehe}px · ` +
+						`Bereichskopf #3006=${mass.bereichskopf}px · scrollY=${mass.scrollY}`
 				);
 
 				const bar = page.getByTestId('trip-detail-breadcrumb-bar');
@@ -1153,9 +1166,19 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 				expect(mass.scrollY, 'AC-13: Messung nur bei scrollY = 0 gueltig').toBe(0);
 				expect(mass.listeOben, 'AC-13: mobile-stages-list muss gemessen sein').toBeGreaterThan(0);
 				expect(mass.navOben, 'AC-13: bottom-nav muss gemessen sein').toBeGreaterThan(0);
+				// Untergrenze (F-FIX1-2): ein schrumpfender Bereichskopf darf seinen Platz nicht
+				// still an einen aufgeblähten Trip-Kopf weitergeben; beidseitig 2 px Toleranz.
+				expect(
+					mass.bereichskopf,
+					`AC-13/#3006: Bereichskopf über der Liste ist ${mass.bereichskopf} px statt ${AC13_BEREICHSKOPF_3006} px (- 2 px Toleranz)`
+				).toBeGreaterThanOrEqual(AC13_BEREICHSKOPF_3006 - 2);
+				expect(
+					mass.bereichskopf,
+					`AC-13/#3006: Bereichskopf über der Liste ist ${mass.bereichskopf} px statt ${AC13_BEREICHSKOPF_3006} px (+ 2 px Toleranz)`
+				).toBeLessThanOrEqual(AC13_BEREICHSKOPF_3006 + 2);
 				expect(
 					mass.listeOben,
-					`AC-13: die Etappen-Liste liegt tiefer als vor S2 (${mass.listeOben} px > ${AC13_BASIS_VOR_S2} px + 2 px Toleranz)`
+					`AC-13: die Etappen-Liste liegt tiefer als vor S2 (${mass.listeOben} px > ${AC13_BASIS_VOR_S2} px + ${AC13_BEREICHSKOPF_3006} px Bereichskopf #3006 + 2 px Toleranz)`
 				).toBeLessThanOrEqual(AC13_GRENZE);
 				expect(
 					mass.listeOben,

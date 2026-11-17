@@ -43,6 +43,8 @@ export { default as Einstellungszeile } from './Einstellungszeile.svelte';
 export { default as ChipLeiste } from './ChipLeiste.svelte';
 // Issue #2913 Scheibe (c) — Aufklapper (Mockup `details.adv`).
 export { default as Aufklapper } from './Aufklapper.svelte';
+// Issue #3006 — Bereichskopf je Reiter der Einstellungen (Mockup `.sectionh`).
+export { default as Bereichskopf } from './Bereichskopf.svelte';
 // #2283 AC-14: ComparePreviewMissing, CompareSmsPreview, CompareBriefingPreview
 // entfernt (Hub-Vorschau-Reiter entfiel mit #1743). #1743 F003 (PO-Entscheid
 // 2026-10-22): auch CompareChannelSwitch und CompareChatBubble entfallen ersatzlos.

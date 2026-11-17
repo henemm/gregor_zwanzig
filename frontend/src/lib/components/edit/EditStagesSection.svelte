@@ -2,6 +2,7 @@
 	import EditStagesPanelNew from './EditStagesPanelNew.svelte';
 	import type { Stage, Trip, ActivityType } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import type { Snippet } from 'svelte';
 
 	interface Props {
 		stages?: Stage[];
@@ -10,8 +11,10 @@
 		onTripUpdate?: (updated: Trip) => void;
 		saveController?: SaveStatus;
 		activityType?: ActivityType;
+		/** #3006: Bereichskopf des Reiters, wird an EditStagesPanelNew durchgereicht. */
+		kopf?: Snippet;
 	}
-	let { stages = $bindable([]), tripId, showSave = true, onTripUpdate, saveController, activityType }: Props = $props();
+	let { stages = $bindable([]), tripId, showSave = true, onTripUpdate, saveController, activityType, kopf }: Props = $props();
 </script>
 
-<EditStagesPanelNew bind:stages {tripId} {showSave} {onTripUpdate} {saveController} {activityType} />
+<EditStagesPanelNew bind:stages {tripId} {showSave} {onTripUpdate} {saveController} {activityType} {kopf} />

@@ -31,6 +31,8 @@
 	"trip.hub.platzhalter_uebersicht": "Inhalt folgt mit Issue #154 (Hero) + #156 (Höhenprofil) + #157 (Stage-Liste)",
 	"trip.hub.platzhalter_etappen": "Inhalt folgt mit Epic #137 (Wegpunkt-Editor)",
 	"trip.etappen": "Etappen",
+	"trip.hub.kopf.etappen_titel": "Etappen & Wegpunkte",
+	"trip.hub.kopf.etappen_erklaer": "Das Tempo bestimmt die Gehzeiten und damit, welche Stunden je Wegpunkt bewertet werden.",
 	"trip.uebersicht.reihenfolge_profil": "Reihenfolge & Profil",
 	"trip.uebersicht.im_editor": "Im Editor öffnen →",
 	"trip.uebersicht.metriken_fehler": "Wetter-Metriken konnten nicht geladen werden.",
