@@ -211,16 +211,16 @@ ORTS-VERGLEICH — Tirol
 Datum: 29.10.2026
 
 Innsbruck
-   Temp max 14°C · Wind 12 km/h · Sonne 4.0h · Wolken 40%
-   … +2 gewählte Wettergrößen ohne Wert an diesem Ort
+   Temp max 14°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h · Wolken 40%
+   UV max 2 · Sicht min 9.0 km · Temp min 4°C · Böen 25 km/h
 Stubai
-   Temp max 14°C · Wind 12 km/h · Sonne 4.0h · Wolken 40%
-   … +2 gewählte Wettergrößen ohne Wert an diesem Ort
+   Temp max 14°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h · Wolken 40%
+   UV max 2 · Sicht min 9.0 km · Temp min 4°C · Böen 25 km/h
 Zillertal
-   Temp max 14°C · Wind 12 km/h · Sonne 4.0h · Wolken 40%
-   … +2 gewählte Wettergrößen ohne Wert an diesem Ort
+   Temp max 14°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h · Wolken 40%
+   UV max 2 · Sicht min 9.0 km · Temp min 4°C · Böen 25 km/h
 ----- vergleich.sms -----
-Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% +7; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
 ----- vergleich_nachgeholt.betreff -----
 Wetter-Vergleich: Tirol (29.10.2026)
 ----- vergleich_nachgeholt.header -----
@@ -230,7 +230,7 @@ Nachgeliefert — die Zustellung um 06:00 ist fehlgeschlagen
 ----- vergleich_nachgeholt.telegram -----
 Nachgeliefert — die Zustellung um 06:00 ist fehlgeschlagen
 ----- vergleich_nachgeholt.sms -----
-Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% +7; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
 ----- vergleich_kurzform.betreff -----
 Wetter-Vergleich: Tirol (29.10.2026)
 ----- vergleich_kurzform.header -----
@@ -241,9 +241,9 @@ ORTS-VERGLEICH
 Datum: Donnerstag, 29.10.2026
 Erstellt: 29.10.2026 05:00 (CET)
 ----- vergleich_kurzform.telegram -----
-Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% +7; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
 ----- vergleich_kurzform.sms -----
-Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% +7; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
 ----- vorschau.subject -----
 Wetter-Vergleich: Tirol (29.10.2026)
 ----- vorschau.telegram -----
@@ -251,16 +251,16 @@ ORTS-VERGLEICH — Tirol
 Datum: 29.10.2026
 
 Innsbruck
-   Temp max 14°C · Wind 12 km/h · Sonne 4.0h · Wolken 40%
-   … +2 gewählte Wettergrößen ohne Wert an diesem Ort
+   Temp max 14°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h · Wolken 40%
+   UV max 2 · Sicht min 9.0 km · Temp min 4°C · Böen 25 km/h
 Stubai
-   Temp max 14°C · Wind 12 km/h · Sonne 4.0h · Wolken 40%
-   … +2 gewählte Wettergrößen ohne Wert an diesem Ort
+   Temp max 14°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h · Wolken 40%
+   UV max 2 · Sicht min 9.0 km · Temp min 4°C · Böen 25 km/h
 Zillertal
-   Temp max 14°C · Wind 12 km/h · Sonne 4.0h · Wolken 40%
-   … +2 gewählte Wettergrößen ohne Wert an diesem Ort
+   Temp max 14°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h · Wolken 40%
+   UV max 2 · Sicht min 9.0 km · Temp min 4°C · Böen 25 km/h
 ----- vorschau.sms -----
-Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% +7; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
 ----- alarm.gesendet -----
 1
 ----- alarm.0.betreff -----

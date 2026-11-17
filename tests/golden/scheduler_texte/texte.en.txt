@@ -211,16 +211,16 @@ LOCATION COMPARISON — Tirol
 Date: 29 Oct 2026
 
 Innsbruck
-   Temp max 14°C · Wind 12 km/h · Sun 4.0h · Clouds 40%
-   … +2 selected weather values without data at this location
+   Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
+   UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
 Stubai
-   Temp max 14°C · Wind 12 km/h · Sun 4.0h · Clouds 40%
-   … +2 selected weather values without data at this location
+   Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
+   UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
 Zillertal
-   Temp max 14°C · Wind 12 km/h · Sun 4.0h · Clouds 40%
-   … +2 selected weather values without data at this location
+   Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
+   UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
 ----- vergleich.sms -----
-Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% +7; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
 ----- vergleich_nachgeholt.betreff -----
 Weather comparison: Tirol (29 Oct 2026)
 ----- vergleich_nachgeholt.header -----
@@ -230,7 +230,7 @@ Delivered late — delivery at 06:00 failed
 ----- vergleich_nachgeholt.telegram -----
 Delivered late — delivery at 06:00 failed
 ----- vergleich_nachgeholt.sms -----
-Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% +7; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
 ----- vergleich_kurzform.betreff -----
 Weather comparison: Tirol (29 Oct 2026)
 ----- vergleich_kurzform.header -----
@@ -241,9 +241,9 @@ LOCATION COMPARISON
 Date: Thursday, 29 Oct 2026
 Created: 29 Oct 2026 05:00 (CET)
 ----- vergleich_kurzform.telegram -----
-Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% +7; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
 ----- vergleich_kurzform.sms -----
-Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% +7; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
 ----- vorschau.subject -----
 Weather comparison: Tirol (29 Oct 2026)
 ----- vorschau.telegram -----
@@ -251,16 +251,16 @@ LOCATION COMPARISON — Tirol
 Date: 29 Oct 2026
 
 Innsbruck
-   Temp max 14°C · Wind 12 km/h · Sun 4.0h · Clouds 40%
-   … +2 selected weather values without data at this location
+   Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
+   UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
 Stubai
-   Temp max 14°C · Wind 12 km/h · Sun 4.0h · Clouds 40%
-   … +2 selected weather values without data at this location
+   Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
+   UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
 Zillertal
-   Temp max 14°C · Wind 12 km/h · Sun 4.0h · Clouds 40%
-   … +2 selected weather values without data at this location
+   Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
+   UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
 ----- vorschau.sms -----
-Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% +7; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
 ----- alarm.gesendet -----
 1
 ----- alarm.0.betreff -----
