@@ -390,18 +390,37 @@ def test_compare_radar_zwei_laeufe_decken_alle_presets_ab(monkeypatch):
     radar2 = _ScriptedRadar(_loc_idx, sleep_first_s=SLEEP_S)
     second = _compare_service(uid, radar2).check_all_compare_presets_run()
     run2 = _ids(radar2.first_seen, ids)
+    stamped_after_run2 = set(_read_state(uid, COMPARE_STATE))
 
+    # Fix #3085 (ADR-0082 Punkt 5): ein Preset, dessen Orts-Abruf beim
+    # Fristablauf noch laeuft, ist ein Grenzabbruch -- gestartet heisst nicht
+    # erreicht. "Erreicht" = gestempelt; die gestarteten Presets (run1/run2)
+    # pruefen weiterhin die Reihenfolge.
+    run1_done = stamped_after_run1
     assert first.hit_deadline, f"Lauf 1 muss an der Grenze abbrechen: {first!r}"
     assert 0 < len(run1) < len(ids), run1
     assert run1 == sorted(ids)[: len(run1)], f"Lauf 1 prueft nach ID: {run1!r}"
-    not_reached = [p for p in sorted(ids) if p not in run1]
+    assert run1_done and run1_done < set(run1), (run1_done, run1)
+    not_reached = [p for p in sorted(ids) if p not in run1_done]
+    assert run1[-1] in first.skipped_ids and run1[-1] not in run1_done, (
+        f"Das gestartete, aber abgebrochene Preset {run1[-1]!r} muss uebersprungen "
+        f"und ungestempelt sein: {first.skipped_ids!r}, Stempel {sorted(run1_done)!r}"
+    )
     assert first.skipped_ids == not_reached, (first.skipped_ids, not_reached)
     assert len(first.skipped_ids) == first.skipped == len(not_reached)
-    assert stamped_after_run1 == set(run1), (
-        "Nur erreichte Ortsvergleiche tragen einen Stempel"
-    )
-    assert run2[: len(not_reached)] == not_reached, (not_reached, run2)
-    assert set(run1) | set(run2) == set(ids), (run1, run2)
+    assert first.checked == len(run1_done), first
+    # AC-5: Lauf 2 beginnt mit den nicht erreichten Presets in ID-Reihenfolge,
+    # das abgebrochene zuerst.
+    assert run2 and run2 == not_reached[: len(run2)], (not_reached, run2)
+    # Abdeckung ueber die Stempel: Lauf 2 stempelt genau die ersten
+    # ``second.checked`` nicht erreichten Presets (Fortschritt >= 1); schafft er
+    # die Frist, ist die Vereinigung gleich allen.
+    run2_done = set(not_reached[: second.checked])
+    assert second.checked >= 1, second
+    assert stamped_after_run2 == run1_done | run2_done, (stamped_after_run2, run1_done, run2_done)
+    assert set(second.skipped_ids) == set(ids) - run2_done, (second.skipped_ids, run2_done)
+    if not second.hit_deadline:
+        assert stamped_after_run2 == set(ids), stamped_after_run2
     assert len(second.skipped_ids) == second.skipped
     assert not _state_path(uid, S1_STATE).exists(), (
         "Radar-Laeufe duerfen alert_last_checked.json (Abweichungslauf) nicht anlegen"
@@ -511,7 +530,9 @@ def test_radar_endpunkte_melden_skipped_ids(monkeypatch, caplog):
     caplog.clear()
     with caplog.at_level(logging.WARNING):
         cdata = client.post(f"/api/scheduler/compare-radar-alert-checks?user_id={uid_c}").json()
-    c_reached = _ids(c_radar.first_seen, preset_ids)
+    # Fix #3085 (ADR-0082 Punkt 5): ein beim Fristablauf noch laufendes Preset
+    # ist abgebrochen, nicht erreicht -- erreicht = gestempelt.
+    c_reached = sorted(_read_state(uid_c, COMPARE_STATE))
     c_expected = [p for p in sorted(preset_ids) if p not in c_reached]
     assert cdata.get("status") == "partial" and cdata.get("reason") == "deadline", cdata
     assert cdata.get("skipped_ids") == c_expected, (cdata, c_expected)

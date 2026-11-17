@@ -987,24 +987,25 @@ def test_ac8_compare_nie_gestartete_orte_sind_grenzabbruch_und_stehen_im_log(
         assert zeilen, f"Fuer {ort.id} fehlt eine Fehlerzeile mit Grund im Log"
 
 
-def test_ac8_compare_zeitueberschreitung_zaehlt_als_ausfall_und_steht_im_log(
+def test_ac8_compare_zeitueberschreitung_ist_grenzabbruch_und_steht_im_log(
     monkeypatch, uhr, compare_umgebung, caplog
 ):
-    """AC-8 (Gegenstueck zum Grenzabbruch): beide Orte GESTARTET, aber bei
-    Fristablauf noch nicht fertig (``skipped="timeout"``) => Ausfall wie
-    bisher, protokolliert nach der Schleife, laut im Log -- kein Abbruch."""
+    """AC-8, umgestellt durch Fix #3085 (ADR-0082 Punkt 5): beide Orte
+    GESTARTET, aber bei Fristablauf noch nicht fertig (``skipped="timeout"``)
+    => Grenzabbruch wie bei nie gestarteten Orten: Preset nicht erreicht,
+    KEINE Ausfall-Spur, aber je Ort laut im Log mit Grund."""
     uid = compare_umgebung("ac8to")
     orte = _orte(2)
     rand = _Rand(_soll(orte), verzoegerung=lambda idx, m: 0.6).installiere(monkeypatch)
     ausfaelle = _Spion(monkeypatch, alert_log, "append_suppressed_entry")
     caplog.set_level(logging.DEBUG)
 
-    ausgeloest = _compare_lauf(uid, orte, deadline_s=0.3)
+    with pytest.raises(RadarDeadlineExceeded):
+        _compare_lauf(uid, orte, deadline_s=0.3)
 
     _assert_in_workern(rand)
-    assert ausgeloest == []
-    assert len(ausfaelle.aufrufe) == 2, (
-        f"Zeitueberschreitung zaehlt als Ausfall (2), war {len(ausfaelle.aufrufe)}"
+    assert ausfaelle.aufrufe == [], (
+        f"Zeitueberschreitung ist Grenzabbruch, keine Ausfall-Spur, war {len(ausfaelle.aufrufe)}"
     )
     for ort in orte:
         assert [r for r in caplog.records if r.levelno >= logging.WARNING
@@ -1013,9 +1014,13 @@ def test_ac8_compare_zeitueberschreitung_zaehlt_als_ausfall_und_steht_im_log(
         )
 
 
-def test_ac8_trip_uebersprungene_punkte_sind_luecken_und_stehen_im_log(
+def test_ac8_trip_uebersprungene_punkte_sind_grenzabbruch_und_stehen_im_log(
     monkeypatch, uhr, trip_umgebung, caplog
 ):
+    """AC-8, umgestellt durch Fix #3085 (ADR-0082 Punkt 5): uebersprungene
+    Zonenpunkte (laufend = timeout, nie gestartet = deadline) sind ein
+    Grenzabbruch der Einheit -- keine Luecken-Auswertung, kein Alarm, kein
+    Protokoll; je uebersprungenem Punkt eine Log-Zeile mit Grund."""
     uid, trip = trip_umgebung("ac8t")
     monkeypatch.setenv("GZ_PARALLEL_FETCH_SLOTS_OPEN_METEO", "1")
     parallel_fetch._reset_for_tests()
@@ -1025,20 +1030,26 @@ def test_ac8_trip_uebersprungene_punkte_sind_luecken_und_stehen_im_log(
     zonen = _ZonenSpion(monkeypatch)
     caplog.set_level(logging.DEBUG)
 
-    _trip_lauf(uid, rand)
+    lauf = _trip_lauf(uid, rand)
 
     _assert_in_workern(rand, ab_index=1)
-    assert zonen.aufrufe, "Die Zonen wurden nicht abgeleitet"
-    ergebnisse = zonen.letzte[1]
-    luecken = [i for i, e in enumerate(ergebnisse) if e is None]
-    assert len(luecken) >= 3, f"Uebersprungene Punkte muessen Luecken sein: {luecken}"
-    zeilen = [r for r in caplog.records
-              if r.levelno >= logging.WARNING
-              and any(w in r.getMessage().lower() for w in ("deadline", "timeout", "frist", "zeit"))]
-    assert len(zeilen) >= len(luecken) - 1, (
-        f"Fuer jeden uebersprungenen Punkt muss eine Fehlerzeile mit Grund stehen "
-        f"({len(luecken)} Luecken, {len(zeilen)} Zeilen)"
-    )
+    assert lauf.hit_deadline is True, "Uebersprungene Punkte muessen die Einheit abbrechen"
+    assert not zonen.aufrufe, "Nach dem Grenzabbruch darf nichts ausgewertet werden"
+    assert lauf.alerts_sent == 0
+    assert alert_log.read_undelivered(
+        uid, entity_id=trip.id, entity_type="trip",
+        since=datetime.now(timezone.utc) - timedelta(minutes=5),
+    ) == [], "Grenzabbruch ist weder Quellenausfall noch Entwarnung"
+    gestartet = {c["idx"] for c in rand.hauptabrufe()}
+    for idx in range(3, len(soll)):
+        lat, _lon = soll[idx]
+        zeilen = [r.getMessage() for r in caplog.records
+                  if r.levelno >= logging.WARNING and f"{lat:.4f}" in r.getMessage()
+                  and any(w in r.getMessage().lower() for w in ("deadline", "timeout"))]
+        assert zeilen, (
+            f"Fuer den uebersprungenen Punkt {idx} ({lat:.4f}) fehlt die Zeile mit "
+            f"Grund (gestartet: {sorted(gestartet)})"
+        )
 
 
 # ===========================================================================

@@ -46,7 +46,11 @@ Minuten. Ein Laufbudget von 720 s passt nicht mehr in einen 300-s-Takt; die
    teilen Baustein und Konstante `RADAR_RUN_DEADLINE_SECONDS = 45`. Ein
    Grenzabbruch ist kein Quellenausfall und keine Entwarnung: keine
    Auswertung, kein Protokolleintrag, keine Sperrzeit-/Tageslimit-Buchung,
-   kein Stempel.
+   kein Stempel. Präzisierung (Fix #3085, keine neue Entscheidung): auch ein
+   in der Parallelphase wegen der Frist übersprungenes Teilergebnis (Punkt
+   bzw. Ort nie gestartet oder bei Fristablauf noch laufend) gilt als
+   Grenzabbruch der ganzen Einheit, nicht als Lücke oder Ausfall; je
+   übersprungenem Punkt bzw. Ort steht eine Log-Zeile mit Grund.
 6. **Laufzählende Schwellen bleiben 3 / 8.** Echtzeit ändert sich: Radar-
    Störmeldung nach 15 statt 45 Minuten, Teilausfall nach 40 statt 120.
 
