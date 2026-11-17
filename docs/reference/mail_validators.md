@@ -228,7 +228,7 @@ Randfälle (vierte Prüfung #3047, F001–F008a), alle nur mit `--konfig`:
 - **Ortszahl aus der Konfiguration (F008a):** ohne ausdrückliches
   `--min-locations` gilt die Ortszahl der Konfiguration; eine Kennung ohne
   Ortsdatei (gelöschter Ort) fällt wie im Versand heraus
-  (`order_locations_by_ids`). Ein gesetztes `--min-locations` hat Vorrang.
+  (`order_locations_by_ids` aus `src/services/compare_briefing_aufbau.py`, seit #2983). Ein gesetztes `--min-locations` hat Vorrang.
 - **Verschmolzene Windrichtung (F004):** Windrichtung Einfach neben Wind (keine
   eigene WDir-Spalte) → jede Wind-Zelle der Etappen- und Nachttabelle trägt eine
   Kompassrichtung, im HTML auch neben dem Ampelpunkt, im Klartext („20 W");

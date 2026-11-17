@@ -10,10 +10,8 @@ import logging
 from datetime import date, datetime as _datetime, timezone as _timezone_mod
 from pathlib import Path
 
-from app.ampel import profile_for_template, template_id_for
 from app.config import Settings
-from i18n import Lang, resolve_user_lang, t
-from i18n.format import fmt_date_numeric
+from i18n import Lang, resolve_user_lang
 from app.loader import (
     VALID_ENTITY_ID_RE,
     InvalidUserIdError,
@@ -26,7 +24,6 @@ from app.loader import (
     user_dir,
 )
 from services.alert_check_state import report_unit_failure
-from services.amtliche_warnungen_schalter import amtliche_warnungen_an_preset
 from services.file_lock import LockTimeout, locked_json_rmw
 from services.send_lock import release_send_lock, try_acquire_send_lock
 from services.send_outcomes import InvalidPresetError, SendOutcomeError, outcome_from_result
@@ -36,10 +33,9 @@ from services.alert_briefing_anchor import (
     undelivered_since_last_briefing,
     write_anchor_and_reset_memory,
 )
-from services.compare_alert_channels import (
-    effective_compare_briefing_channels,
-    effective_compare_telegram_style,
-)
+from services.compare_alert_channels import effective_compare_briefing_channels
+# Issue #2983: Re-Export unter dem alten Namen; der Aufbau liegt im Baustein.
+from services.compare_briefing_aufbau import build_compare_preset_subject  # noqa: F401
 
 from services.user_tier import resolve_restricted_channel_flags
 
@@ -714,19 +710,6 @@ def resume_compare_preset(
     return "not_found"
 
 
-def build_compare_preset_subject(name: str, target_date: date, *, lang: Lang = "de") -> str:
-    """Baut den Mail-Betreff fuer einen Compare-Preset-Versand (pure Funktion).
-
-    Adversary-Fund F001 (#1232 Scheibe 2a): Das Betreff-Datum MUSS
-    `target_date` widerspiegeln, nicht den Sende-Zeitpunkt — sonst
-    widerspricht der Betreff beim Abend-Slot (target=morgen) dem Mail-Body
-    ("Datum: morgen"). Als eigene pure Funktion extrahiert, damit sie ohne
-    Netz/Mail-Versand deterministisch testbar ist.
-    """
-    return t("versand.scheduler.vergleich_betreff", lang, name=name,
-             datum=fmt_date_numeric(target_date, lang))
-
-
 def _effective_compare_briefing_channels(preset: dict, settings: Settings, user_id: str) -> set[str]:
     """Duenner Wrapper (Issue #1467 S2 AG1, umbenannt in Issue #2279 S1) —
     delegiert an den geteilten Briefing-Resolver
@@ -850,16 +833,10 @@ def send_one_compare_preset(
             f"{preset.get('id', '?')}, target_date={target_date}, "
             f"tage_ab_ortstag={tage_ab_ortstag})."
         )
-    from output.renderers.comparison import (
-        render_compare_email, render_compare_sms, render_compare_telegram,
-    )
-    from services.compare_preview_service import order_locations_by_ids
-    from services.comparison_engine import COMPARE_FORECAST_HOURS
-    from services.comparison_parallel import run_comparison_parallel
+    # Issue #2983: Berichtsaufbau ueber den gemeinsamen Baustein, zur Laufzeit
+    # ueber das Modul aufgeloest (Vorschau und Versand teilen dieselbe Stelle).
+    import services.compare_briefing_aufbau as aufbau
     from services.notification_service import NotificationService
-    from services.report_config_resolver import (
-        resolve_compare_render_options, resolve_compare_time_window,
-    )
 
     preset_id = preset.get("id", "")
     location_ids = preset.get("location_ids") or []
@@ -895,7 +872,7 @@ def send_one_compare_preset(
         all_locations_cache = load_all_locations(user_id=user_id)
     # Issue #1359 Scheibe 2: reihenfolge-erhaltend über location_ids filtern
     # (konfigurierte Orts-Reihenfolge), nicht über die Cache-Reihenfolge.
-    locations = order_locations_by_ids(all_locations_cache, location_ids)
+    locations = aufbau.order_locations_by_ids(all_locations_cache, location_ids)
     if not locations:
         raise InvalidPresetError("versand.grund.orte_geloescht",
                                  preset_id=preset_id, orte=location_ids)
@@ -919,47 +896,24 @@ def send_one_compare_preset(
         # Kontrakt aus #1661 F003 zusammenhalten sollte.
         # Der Empfaenger-Check bleibt VOR der Ortspruefung: die Reihenfolge der
         # beiden ValueError-Pfade zueinander ist unveraendert.
-        from datetime import timezone as _timezone
-
-        from utils.timezone import first_resolvable_tz, local_dt
-
-        zone = first_resolvable_tz(locations, context_label=f"Preset {preset_id}")
-        target_date = local_dt(_datetime.now(_timezone.utc), zone).date()
+        # Issue #2983 (AC-9): dieselbe Ermittlung wie die Vorschau.
+        target_date = aufbau.compare_zieltag_bestimmen(
+            locations, _datetime.now(_timezone_mod.utc), context_label=f"Preset {preset_id}",
+        )
         tage_ab_ortstag = 0
     # Issue #2587: Slot + Stunde fuer Vermerk und Versand-Historie.
     report_type, slot_hour, slot_minute = _compare_slot(
         preset, tage_ab_ortstag, report_type, slot_hour, slot_minute)
 
-    # Issue #2796 S4a (ADR-0108 P3): Bewertungsprofil aus der aufgeloesten
-    # Vorlage (ampel.template -> profil -> allgemein), nicht mehr aus `profil`.
-    profile = profile_for_template(template_id_for(preset))
-    # Issue #1361/#1372 S1b: der Dispatch liest das Tagesfenster ueber
-    # dieselbe Quelle wie der Trip-Zweig (day_window.resolve_configured_window).
-    # Die deprecateten Preset-Werte hour_from/hour_to bleiben wirkungslos —
-    # nur noch zur Bestandswahrung persistiert (#1361 Befund 1).
-    # Issue #1765 Scheibe B1b: die Orte werden gleichzeitig statt nacheinander
-    # gerechnet (ein Engine-Lauf JE ORT) -- sonst riss der Versand ab drei Orten
-    # die 60-Sekunden-Grenze zwischen Go-API und nginx. Alle uebrigen Parameter
-    # unveraendert; ``comparison_engine.py`` bleibt unangetastet.
-    # ``call_source`` MUSS ausdruecklich gesetzt werden: ein ThreadPoolExecutor
-    # reicht den ContextVar-Kontext nicht an seine Arbeiter weiter, die
-    # Stack-Marker des Aufruf-Journals liefen im Worker-Thread ins Leere.
+    # Issue #2983: Profil (Vorlage, #2796 S4a), Tagesfenster und Wetterlauf je
+    # Ort im gemeinsamen Baustein; Kontingent und no_weather bleiben hier.
     try:
-        result = run_comparison_parallel(
-            locations=locations,
-            time_window=resolve_compare_time_window(preset),
-            target_date=target_date,
-            forecast_hours=COMPARE_FORECAST_HOURS,  # Issue #1305: geteilte Konstante statt 48 fest
-            profile=profile,
-            # Issue #1040; #3047 E4: Briefing ODER Alarm an -> beides an.
-            official_alerts_enabled=amtliche_warnungen_an_preset(preset),
-            call_source="vergleich",
-            user_id=user_id,  # Issue #2234: Budget beim ausloesenden Nutzer
-        )
+        kontext = aufbau.compare_wetter_laden(preset, locations, target_date, user_id)
     except Exception as exc:
         if not weather_failure_as_outcome:
             raise
         raise SendOutcomeError("no_weather") from exc
+    result = kontext["result"]
     # Issue #2961 (ADR-0117 Nachtrag): Handversand/Befehl am erschoepften
     # Tageskontingent -- vor jeder Zustellung abbrechen, kein Teil-Briefing.
     # Ohne manuellen Kontext (Zeitplan) immer False.
@@ -977,50 +931,15 @@ def send_one_compare_preset(
 
     top_ort = result.locations[0].location.name if result.locations else None
 
-    name = preset.get("name", preset_id)
-    subject = build_compare_preset_subject(name, target_date, lang=lang)
-    # Issue #1209 (Scheibe B): Render-Optionen ausschliesslich ueber den
-    # Resolver aufloesen, statt inline aus dem rohen Preset-Dict zu lesen.
-    opts = resolve_compare_render_options(preset)
-    # Issue #1110: Abo-Footer-Metadaten (Preset-Name/Schedule/Weekday) zusaetzlich
-    # zu den #1104-Parametern durchreichen (Merge beider Feature-Branches).
+    subject = aufbau.build_compare_preset_subject(kontext["name"], target_date, lang=lang)
+    opts = kontext["opts"]
     # Issue #1461 S3b-1: die Vorfaelle haengen an der PROTOKOLL-Kennung
     # (`preset_id`, so schreiben compare_alert.py/compare_official_alert.py) --
     # NICHT an den Anker-Kennungen f"{preset_id}:{loc.id}" weiter unten.
     undelivered = undelivered_since_last_briefing(
         user_id=user_id, entity_id=preset_id, entity_type="compare",
     )
-    html_body, text_body = render_compare_email(
-        result,
-        undelivered=undelivered,
-        profile=profile,
-        # Issue #1703 S8: kanal-eigene Uebersichts-Auswahl (bereits gegen die
-        # Grundauswahl geschnitten). NICHT `opts.enabled_metrics` -- das ist die
-        # gemeinsame Liste, mit der alle drei Kanaele dasselbe zeigten.
-        enabled_metrics=opts.enabled_metrics_by_channel["email"],
-        hourly_metrics=opts.hourly_metrics,
-        # Issue #3097: Roh/Einfach je Stundenverlauf-Zeile (wie die Vorschau).
-        hourly_metric_formats=opts.hourly_metric_formats,
-        hourly_enabled=opts.hourly_enabled,
-        preset_name=name,
-        # Issue #1969 (AC-26): das ganze Preset bis zum Fuss "Naechster
-        # Versand" -- derselbe Weg wie in der Vorschau (compare_preview_service).
-        preset=preset,
-        corridors=opts.corridors,
-        outlook_enabled=opts.outlook_enabled,
-        outlook_metrics=opts.outlook_metrics,
-        # Issue #2049: dieselbe Zuordnung wie in der Vorschau (compare_preview_
-        # service) -- sonst zeigte die versendete Mail etwas anderes als die
-        # Vorschau, an der der Nutzer sie eingestellt hat.
-        outlook_metric_formats=opts.outlook_metric_formats,
-        # Issue #1405 S3: unmappbare Auswahl sichtbar, nicht nur im Log.
-        unresolved_count=opts.unresolved_by_channel.get("email", 0),
-        # Issue #3039: Roh/Einfach je Zeile (derselbe Resolver wie die Vorschau).
-        metric_formats=opts.metric_formats("email"),
-        lang=lang,
-        # Issue #1563: Briefing zeigt den Vertretungshinweis je Ort.
-        show_fallback_notice=True,
-    )
+    html_body, text_body = aufbau.compare_email_rendern(kontext, lang=lang, undelivered=undelivered)
     # Issue #1169: Δ-Anker je Ort schreiben (ADR-0009 — Abweichung vom zuletzt
     # gemeldeten Stand). Best-effort: ein fehlgeschlagener Snapshot-Write darf
     # den bereits erfolgten Report-Versand nicht rückwirkend als Fehler zaehlen.
@@ -1067,30 +986,9 @@ def send_one_compare_preset(
     # ausschliesslich den Versandaufruf (AC-10), danach fliegt die Ausnahme
     # unveraendert weiter.
     try:
-        # Issue #2422 S5 (AC-28): Telegram-Stil "kurzform" = derselbe Text wie
-        # die SMS; sonst der bisherige Telegram-Renderer.
-        _sms_text = render_compare_sms(
-            result, enabled_metrics=opts.enabled_metrics_by_channel["sms"],
-            unresolved_count=opts.unresolved_by_channel.get("sms", 0),
-            metric_formats=opts.metric_formats("sms"),
-        )
-        if effective_compare_telegram_style(preset) == "kurzform":
-            _telegram_text = _sms_text
-        else:
-            _telegram_text = render_compare_telegram(
-                result,
-                enabled_metrics=opts.enabled_metrics_by_channel["telegram"],
-                preset_name=name,
-                unresolved_count=opts.unresolved_by_channel.get("telegram", 0),
-                metric_formats=opts.metric_formats("telegram"),
-                lang=lang,
-                show_fallback_notice=True,
-                # Issue #3047 B-K7 (AC-24): 3-Tages-Ausblick je Ort wie in der Mail.
-                outlook_enabled=opts.outlook_enabled,
-                outlook_metrics=opts.outlook_metrics,
-                outlook_metric_formats=opts.outlook_metric_formats,
-                preset=preset,
-            )
+        # Issue #2422 S5 (AC-28) / #2983: Telegram-Stil "kurzform" = derselbe
+        # Text wie die SMS -- entschieden im gemeinsamen Baustein.
+        _sms_text, _telegram_text = aufbau.compare_kanaltexte_rendern(kontext, lang=lang)
         # Issue #2587: Nachhol-Hinweis (nur Nachholversand), geteilter Baustein.
         html_body, text_body, _telegram_text = _apply_catchup_hint(
             settings, user_id, catchup_hint, html_body, text_body, _telegram_text, lang=lang,
