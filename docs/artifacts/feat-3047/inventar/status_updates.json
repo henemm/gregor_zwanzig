@@ -336,9 +336,9 @@
   "befund": ""
  },
  "trip.metriken_ueberblick|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_ueberblick_folge_vertauscht_scheitert",
+  "notiz": "Runde 7 p4b: Validator prueft Kachelfolge des Metriken-Ueberblicks; echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "trip.telegram.schnittlinie|einstellungsseite": {
@@ -558,9 +558,9 @@
   "befund": ""
  },
  "trip.amtliche_warnungen.schalter|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_warnungen_trotz_schalter_aus_scheitern",
+  "notiz": "Runde 7 p4b: Validator prueft Warnungen trotz Schalter aus scheitern (HTML/Klartext/Kompakt); echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "trip.amtliche_warnungen.position|einstellungsseite": {
@@ -570,9 +570,9 @@
   "befund": "#3031"
  },
  "trip.amtliche_warnungen.position|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_warnungen_an_erster_stelle",
+  "notiz": "Runde 7 p4b: Validator prueft Warnungen an erster Stelle; echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "trip.amtliche_warnungen.kuerzung_zuletzt|einstellungsseite": {
@@ -666,9 +666,9 @@
   "befund": ""
  },
  "trip.ampel.grenzen|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_ampelfarbe_folgt_den_grenzen",
+  "notiz": "Runde 7 p4b: Validator prueft Ampelfarbe gegen die eigenen Grenzen; echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "trip.ampel.alarm_ab|email_html": {
@@ -840,9 +840,9 @@
   "befund": ""
  },
  "trip.vorlage.anwenden|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_ampelfarbe_folgt_den_grenzen",
+  "notiz": "Runde 7 p4b: Validator prueft Ampelfarbe gegen die aufgeloeste Ampel (Vorlage + Abweichung; gegen die blanke Vorlage scheitert dieselbe Mail); echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "trip.vorlage.neu_aus_standard|email_html": {
@@ -882,9 +882,9 @@
   "befund": ""
  },
  "trip.vorlage.neu_aus_standard|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_ampelfarbe_folgt_den_grenzen",
+  "notiz": "Runde 7 p4b: Validator prueft Ampelfarbe gegen die aufgeloeste Ampel (Vorlage wirkt nur ueber sie); echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "trip.vorlage.eigene_speichern|email_html": {
@@ -930,9 +930,9 @@
   "befund": ""
  },
  "trip.vorlage.eigene_speichern|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_ampelfarbe_folgt_den_grenzen",
+  "notiz": "Runde 7 p4b: Validator prueft Ampelfarbe gegen die aufgeloeste Ampel (Vorlage wirkt nur ueber sie); echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "trip.zeiten|email_html": {
@@ -1278,9 +1278,9 @@
   "befund": "B-L4"
  },
  "orte.grundauswahl.nie_eingestellt|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_nie_eingestellt_zeilen_wie_mail",
+  "notiz": "Runde 7 p4b: Validator prueft Zeilen bei nie eingestellter Grundauswahl (DE/EN); echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "orte.grundauswahl.bewusst_leer|telegram": {
@@ -1716,9 +1716,9 @@
   "befund": ""
  },
  "orte.morgen_abend_briefing|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_zieltag_morgen_heute_abend_morgen",
+  "notiz": "Runde 7 p4b: Validator prueft Zieltag je Slot (Morgen = heute, Abend = morgen); echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "orte.amtliche_warnungen.schalter|telegram": {
@@ -1788,9 +1788,9 @@
   "befund": ""
  },
  "orte.amtliche_warnungen.nicht_abrufbar|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_hinweis_nicht_abrufbar_trotz_schalter_aus",
+  "notiz": "Runde 7 p4b: Validator prueft Hinweis nicht abrufbar trotz Schalter aus; echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "orte.radar|email_html": {
@@ -1878,9 +1878,9 @@
   "befund": ""
  },
  "orte.ampel.grenzen|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_ampelfarbe_folgt_den_grenzen",
+  "notiz": "Runde 7 p4b: Validator prueft Toenung der Vergleichstabelle gegen die Grenzen; echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "orte.ampel.alarm_ab|email_html": {
@@ -1968,9 +1968,9 @@
   "befund": "#3032"
  },
  "orte.vorlage.anwenden|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_ampelfarbe_folgt_den_grenzen",
+  "notiz": "Runde 7 p4b: Validator prueft Toenung gegen die aufgeloeste Ampel (Vorlage wirkt nur ueber sie); echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "orte.vorlage.neu_aus_standard|email_html": {
@@ -2010,9 +2010,9 @@
   "befund": "B-L4"
  },
  "orte.vorlage.neu_aus_standard|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_ampelfarbe_folgt_den_grenzen",
+  "notiz": "Runde 7 p4b: Validator prueft Toenung gegen die aufgeloeste Ampel (Vorlage wirkt nur ueber sie); echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "orte.vorlage.eigene_speichern|email_html": {
@@ -2052,9 +2052,9 @@
   "befund": "B-L4"
  },
  "orte.vorlage.eigene_speichern|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p4b): Validator prueft diese Einstellung noch nicht",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_orte_ampelfarbe_folgt_den_grenzen",
+  "notiz": "Runde 7 p4b: Validator prueft Toenung gegen die aufgeloeste Ampel (Vorlage wirkt nur ueber sie); echte Mail besteht, verfaelschte scheitert (Mutationen 18/18)",
   "befund": "B-L5"
  },
  "orte.vorlage.eigene_speichern|einstellungsseite": {
@@ -2514,15 +2514,15 @@
   "befund": "E5"
  },
  "trip.tagesfenster|validator_email": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung: Trip-Validator prueft die Stunden 06-22 noch nicht gegen das Tagesfenster (Orte-Teil gruen: tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7_orte_tagesfenster_wird_nicht_abgelehnt)",
+  "status": "gruen",
+  "beleg": "tests/tdd/test_einstellung_gleich_mail_validatoren.py::test_r7b_trip_etappenstart_vor_sechs_besteht",
+  "notiz": "Runde 7 p4b: Trip-Validator leitet die erlaubten Stunden aus Tagesfenster und Etappenstart ab (Start 04:30 besteht, ohne Start scheitert Stunde 04 ausserhalb 06-22); Orte: test_r7_orte_tagesfenster_wird_nicht_abgelehnt",
   "befund": "B-V5"
  },
  "trip.amtliche_warnungen.schalter|einstellungsseite": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p11): Mischzustand behoben (p5b, e4_amtliche_warnungen_mischzustand.test.ts); Neuanlage 'beides an' (PO 2026-11-16, #1258 AC-4 abgeloest) noch offen",
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/trip-new/__tests__/fixloop3_c3_amtliche_warnungen_ein_eigentuemer.test.ts::ohne Geste: Neuanlage-Vorgabe „an\" in beiden Reitern und im POST (beide Felder true)",
+  "notiz": "Runde 7: Mischzustand behoben (p5b, e4_amtliche_warnungen_mischzustand.test.ts); Neuanlage beides an (p11, PO 2026-11-16, #1258 AC-4 abgeloest), Go-Anlage zwei Nutzer: internal/handler/neuanlage_amtliche_warnungen_test.go",
   "befund": "E4"
  },
  "trip.amtliche_warnungen.position|email_kompakt": {
@@ -2628,9 +2628,9 @@
   "befund": "B-OM-2"
  },
  "orte.amtliche_warnungen.schalter|einstellungsseite": {
-  "status": "rot",
-  "beleg": "",
-  "notiz": "Runde 7: rot, in Behebung (p11): Mischzustand behoben (p5b); Neuanlage 'beides an' noch offen",
+  "status": "gruen",
+  "beleg": "frontend/src/lib/components/compare-new/__tests__/p11_neuanlage_amtliche_warnungen.test.ts::p11 Vergleich anlegen: Reiter Wetter und Zustellung zeigen „an\"",
+  "notiz": "Runde 7: Mischzustand behoben (p5b, e4_amtliche_warnungen_mischzustand.test.ts); Neuanlage beides an (p11, PO 2026-11-16, #1258 AC-4 abgeloest), Go-Anlage zwei Nutzer: internal/handler/neuanlage_amtliche_warnungen_test.go",
   "befund": "E4"
  },
  "orte.amtliche_warnungen.kuerzung_zuletzt|sms": {

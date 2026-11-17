@@ -1,0 +1,48 @@
+#3047 Runde 7, Paket p14 — #1544/#1545 AC-6 („Stufe bleibt beim Abwaehlen“) auf dem Live-Weg
+=============================================================================================
+
+Ausgangslage: Mit p11 entfiel AlarmeScheduleTab.svelte (toter Container) und mit ihm Ebene 2/3
+von alarme_delivery_payload_preserves_inactive_levels.test.ts. Live wird eine Groesse im Reiter
+Wetter abgewaehlt (Speicherer SPEICHERER.route -> PUT /api/trips/{id}/weather-config + PUT
+/api/trips/{id}; SPEICHERER.vergleich -> PUT /api/compare/presets/{id}); der Go-Handler mergt
+display_config einstufig. Reiter Zustellung sendet nie display_config (zustellungSpeicherung.ts).
+„Stufe“ heute: Ampel-Zeile (alarm_ab + Grenzen, ADR-0106) und Altbestand metric_alert_levels.
+
+Verhalten des Produkts: korrekt (kein Fix noetig). Luecke: Tests.
+
+RED-Nachweis = Mutationen, die die Stufe beim Speichern verlieren, VOR p14 gegen die bestehenden
+Tests (Frontend: gesamte node-Testsuite bzw. 157 einschlaegige Dateien; Go: ./internal/handler/
+ohne TestP14_; die dort roten Tests TestForecastHandler_ValidRequest_Returns200,
+TestResolveHandlerKomootHighlight, TestUpdateTripStateHandler_WriteFailure... scheitern
+umgebungsbedingt auch ohne Mutation):
+
+  M1b ampelSchreiben.ts tripSpeicherPayload sendet metric_alert_levels nur fuer sichtbare
+      Groessen (Falle 4)                                  -> UEBERLEBT (Gesamtsuite 10338/0)
+  M5  ampelSchreiben.ts zeilenAbweichung: alarm_ab nur bei aktiver Zeile   -> UEBERLEBT (157 Dateien)
+  M6  ampelSchreiben.ts zeilenAbweichung: Grenzen nur bei aktiver Zeile    -> UEBERLEBT (157 Dateien)
+  M2b wetterTabSpeicherung.ts vergleichNutzlast sendet gefilterte Altstufen
+                                                          -> gefangen (F003/AC-38, Schluesselsatz)
+  G1  weather_config.go: Altstufen nach Merge auf aktive Groessen beschnitten
+                                                          -> gefangen (TestTeil3_2794_TripWeatherConfig_...)
+  G2  weather_config.go: alarm_ab abgewaehlter Ampel-Zeilen gestrichen    -> UEBERLEBT
+  G3  compare_preset.go: alarm_ab abgewaehlter Ampel-Zeilen gestrichen    -> UEBERLEBT
+  G4  compare_preset.go: Altstufen geleert                -> gefangen (TestTeil3_2794_ComparePreset_...)
+
+Neue Tests (echter Speicherer bzw. echter Go-Handler, zwei Nutzer, kein Mock):
+  frontend/src/lib/components/shared/wetter-tab/__tests__/p14_ac6_stufen_bleiben_beim_abwaehlen.test.ts
+    - Trip: Boeen abwaehlen + speichern: Ampel-Zeile und Altstufen bleiben gespeichert
+    - Trip: neu oeffnen + Boeen wieder aufnehmen: dieselbe Stufe, auch nach erneutem Speichern
+    - Vergleich (Go-Merge-Pruefstand): abwaehlen, speichern, wieder aufnehmen
+  internal/handler/p14_ac6_stufen_bleiben_test.go
+    - TestP14_AC6_Trip_AbwaehlenUndWiederAufnehmen_StufeBleibt_ZweiNutzer
+    - TestP14_AC6_Vergleich_AbwaehlenUndWiederAufnehmen_StufeBleibt_ZweiNutzer
+
+Mutationsprobe MIT p14 (String-Ersetzung, Sicherung extern, danach zurueck, git diff leer):
+  M1b GEFANGEN (2 rot)   M5 GEFANGEN (3 rot)   M6 GEFANGEN (2 rot)   M2b GEFANGEN (1 rot)
+  G1  GEFANGEN (P14 + Teil3)   G2 GEFANGEN (P14 Trip)   G3 GEFANGEN (P14 Vergleich)   G4 GEFANGEN
+  => 8/8 gefangen; 5 davon (M1b, M5, M6, G2, G3) fing vorher kein Test.
+
+Nebenbefund (nicht im Scope, kein Live-Weg): erstelleWertebereicheVergleichSpeicherung
+(wertebereicheVergleichSpeicherung.ts) wird in keinem Produktivcode instanziiert; seine
+Nutzlast sendet metric_alert_levels aus dem Zustand. Toter Code wie der route-Zweig im AlarmeTab
+(#3094).

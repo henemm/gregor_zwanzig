@@ -1,6 +1,6 @@
 # Inventar-Matrix „Einstellung = Ausgabe“ (#3047, Runde 7)
 
-Stand 2026-11-17T00:36:09 · 121 kanonische Zeilen · 968 Zellen · ✗ rot 17 · ↗ ausgelagert 61 · ✓ gruen 519 · – nicht_anwendbar 371
+Stand 2026-11-17T01:34:35 · 121 kanonische Zeilen · 968 Zellen · ↗ ausgelagert 61 · ✓ gruen 536 · – nicht_anwendbar 371
 
 Quellen: `trip_mail.json`, `orte_mail.json`, `kanaele.json`, `editor.json`, `validatoren.json`, `status_updates.json`. Erzeugt mit `konsolidieren.py` (Abbildungstabelle im Skript).
 
@@ -22,7 +22,7 @@ Quellen: `trip_mail.json`, `orte_mail.json`, `kanaele.json`, `editor.json`, `val
 | E-Mail-Liste: Reihenfolge <sub>`trip.email_liste.reihenfolge`</sub> | ✓ | ✓ | ✓ | –* | –* | –* | ✓ | ✓ B-V8 |
 | E-Mail-Liste: Roh/Einfach je Zeile (inkl. Windrichtung) <sub>`trip.email_liste.roh_einfach`</sub> | ✓ | ✓ | – | –* | –* | –* | ✓ | ✓ |
 | Kanal-Liste je Bericht (Morgen/Abend) <sub>`trip.email_liste.je_bericht`</sub> | ✓ | ✓ | ✓ | –* | –* | –* | ↗ #3065 | ✓ |
-| Metriken-Überblick folgt der E-Mail-Liste <sub>`trip.metriken_ueberblick`</sub> | ✓* | ✓* | ✓* | –* | –* | –* | –* | ✗* B-L5 |
+| Metriken-Überblick folgt der E-Mail-Liste <sub>`trip.metriken_ueberblick`</sub> | ✓* | ✓* | ✓* | –* | –* | –* | –* | ✓* B-L5 |
 | **Telegram-Liste** | | | | | | | | |
 | Telegram-Liste: Zeile an/aus <sub>`trip.telegram_liste.an_aus`</sub> | – | – | – | ✓ | – | – | ✓ | – |
 | Telegram-Liste: Reihenfolge <sub>`trip.telegram_liste.reihenfolge`</sub> | – | – | – | ✓ | – | – | ✓ | – |
@@ -53,13 +53,13 @@ Quellen: `trip_mail.json`, `orte_mail.json`, `kanaele.json`, `editor.json`, `val
 | Zusatzblock Nacht-Stundentabelle (W22) <sub>`trip.zusatz.nachtblock`</sub> | ✓ | ✓ | – | – | – | – | ✓ | ✓ |
 | **Format** | | | | | | | | |
 | E-Mail-Format Ausführlich/Kompakt (W15) <sub>`trip.email_format`</sub> | ✓ | ✓ | ✓ | – | – | – | ✓ | ✓* |
-| Tagesfenster von–bis (W12) <sub>`trip.tagesfenster`</sub> | ✓ | ✓ | ✓ | ✓* B-L1 | ✓ | ✓ | ✓* E5 | ✗* B-V5 |
+| Tagesfenster von–bis (W12) <sub>`trip.tagesfenster`</sub> | ✓ | ✓ | ✓ | ✓* B-L1 | ✓ | ✓ | ✓* E5 | ✓* B-V5 |
 | **Warnungen/Alarm** | | | | | | | | |
-| Amtliche Warnungen an/aus (W20) <sub>`trip.amtliche_warnungen.schalter`</sub> | ✓ B-TM3 | ✓ B-TM3 | ✓ B-TM3 | ✓* | ✓* | ✓* | ✗* E4 | ✗* B-L5 |
-| Amtliche Warnungen feste erste Zeile (WV6) <sub>`trip.amtliche_warnungen.position`</sub> | ✓ | ✓ | ✓* B-TM1 | ✓ | ✓ | ✓ | ↗* #3031 | ✗* B-L5 |
+| Amtliche Warnungen an/aus (W20) <sub>`trip.amtliche_warnungen.schalter`</sub> | ✓ B-TM3 | ✓ B-TM3 | ✓ B-TM3 | ✓* | ✓* | ✓* | ✓* E4 | ✓* B-L5 |
+| Amtliche Warnungen feste erste Zeile (WV6) <sub>`trip.amtliche_warnungen.position`</sub> | ✓ | ✓ | ✓* B-TM1 | ✓ | ✓ | ✓ | ↗* #3031 | ✓* B-L5 |
 | Amtliche Warnung fällt beim Kürzen zuletzt weg <sub>`trip.amtliche_warnungen.kuerzung_zuletzt`</sub> | – | – | – | – | ✓ | ✓ | ↗* #3031 | – |
 | Radar-Regen-Alarm (N1) <sub>`trip.radar`</sub> | ↗* #2800 | ↗* #2800 | ↗* #2800 | ↗* #2800 | ↗* #2800 | ↗* #2800 | ↗ #2800 | ↗* #2800 |
-| Ampel-Grenzen ändern <sub>`trip.ampel.grenzen`</sub> | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✗* B-L5 |
+| Ampel-Grenzen ändern <sub>`trip.ampel.grenzen`</sub> | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* B-L5 |
 | Alarm ab je Metrik / für alle <sub>`trip.ampel.alarm_ab`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓* | –* |
 | SMS-Schwellen je Metrik <sub>`trip.sms_schwellen`</sub> | –* | –* | –* | –* | –* | –* | – | –* |
 | **Telegram-Kurzstil** | | | | | | | | |
@@ -70,9 +70,9 @@ Quellen: `trip_mail.json`, `orte_mail.json`, `kanaele.json`, `editor.json`, `val
 | Sprache EN: Telegram-Kappungshinweis <sub>`trip.sprache.kappungshinweis`</sub> | –* | –* | –* | ✓* B-K2 | – | – | –* | –* |
 | Kürzel-Legende (W21) <sub>`trip.kuerzel_legende`</sub> | –* | –* | –* | ↗ B-K9 | ↗ B-K9 | ↗ B-K9 | ↗* #3032 | –* |
 | **Vorlagen** | | | | | | | | |
-| Vorlage übernehmen/zurücksetzen (Ampel, abgeleitete Größen) <sub>`trip.vorlage.anwenden`</sub> | ✓ | – | ✓ | ✓* | ✓* | ✓* | ✓* E7 | ✗* B-L5 |
-| Neuer Trip übernimmt eigene Standard-Vorlage <sub>`trip.vorlage.neu_aus_standard`</sub> | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓ | ✗* B-L5 |
-| Als eigene Vorlage speichern <sub>`trip.vorlage.eigene_speichern`</sub> | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✗* B-L5 |
+| Vorlage übernehmen/zurücksetzen (Ampel, abgeleitete Größen) <sub>`trip.vorlage.anwenden`</sub> | ✓ | – | ✓ | ✓* | ✓* | ✓* | ✓* E7 | ✓* B-L5 |
+| Neuer Trip übernimmt eigene Standard-Vorlage <sub>`trip.vorlage.neu_aus_standard`</sub> | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓ | ✓* B-L5 |
+| Als eigene Vorlage speichern <sub>`trip.vorlage.eigene_speichern`</sub> | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* B-L5 |
 | **Zeiten/Versand** | | | | | | | | |
 | Uhrzeit Morgen-/Abend-Briefing <sub>`trip.zeiten`</sub> | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓ | –* |
 | Morgen-/Abend-Briefing an/aus <sub>`trip.slots`</sub> | ✓* | ✓* | ✓* | ✓* | ✓* | ✓* | ✓ | –* |
@@ -90,7 +90,7 @@ Quellen: `trip_mail.json`, `orte_mail.json`, `kanaele.json`, `editor.json`, `val
 |---|---|---|---|---|---|---|---|---|
 | **Grundauswahl** | | | | | | | | |
 | Grundauswahl gespeichert (Liste, Folge ≠ Katalog) <sub>`orte.grundauswahl.gespeichert`</sub> | ✓ | ✓ | – | ✓* | ✓* | ✓* | ✓ | ✓ |
-| Grundauswahl nie eingestellt (active_metrics fehlt) <sub>`orte.grundauswahl.nie_eingestellt`</sub> | ✓ | ✓ | – | ✓* B-L4 | ✓* B-L4 | ✓* B-L4 | ✓* E1 | ✗* B-L5 |
+| Grundauswahl nie eingestellt (active_metrics fehlt) <sub>`orte.grundauswahl.nie_eingestellt`</sub> | ✓ | ✓ | – | ✓* B-L4 | ✓* B-L4 | ✓* B-L4 | ✓* E1 | ✓* B-L5 |
 | Grundauswahl bewusst leer (active_metrics = []) <sub>`orte.grundauswahl.bewusst_leer`</sub> | ✓ | ✓ | – | ✓* | ✓* | ✓* | ✓ | ✓ |
 | Altbestand ohne neue Felder (Golden) <sub>`orte.grundauswahl.altformat`</sub> | ✓ | ✓ | – | ✓* | ✓* | ✓* | ✓* | ✓* |
 | Vorlagen-Metrik ohne Vergleichs-Pendant (Tiefsttemp. Nacht) <sub>`orte.grundauswahl.vorlagen_metrik_ohne_pendant`</sub> | ✓* E6 | ✓* E6 | –* | ✓* E6 | ✓* E6 | ✓* E6 | ✓* E6 | ✓* E6 |
@@ -136,14 +136,14 @@ Quellen: `trip_mail.json`, `orte_mail.json`, `kanaele.json`, `editor.json`, `val
 | **Format** | | | | | | | | |
 | E-Mail-Format Ausführlich/Kompakt <sub>`orte.email_format`</sub> | – | – | – | – | – | – | – | – |
 | Tagesfenster von–bis (W12, über Mitternacht) <sub>`orte.tagesfenster`</sub> | ✓ B-OM-6 | ✓ B-OM-6 | – | ✓* | ✓* | ✓* | ✓* TL6 | ✓* B-V5 |
-| Morgen-Briefing = heute, Abend = morgen (V8) <sub>`orte.morgen_abend_briefing`</sub> | ✓ B-OM-6 | ✓ B-OM-6 | – | ✓* | ✓* | ✓* | ✓* | ✗* B-L5 |
+| Morgen-Briefing = heute, Abend = morgen (V8) <sub>`orte.morgen_abend_briefing`</sub> | ✓ B-OM-6 | ✓ B-OM-6 | – | ✓* | ✓* | ✓* | ✓* | ✓* B-L5 |
 | **Warnungen/Alarm** | | | | | | | | |
-| Amtliche Warnungen an/aus <sub>`orte.amtliche_warnungen.schalter`</sub> | ✓* B-OM-2 | ✓ B-OM-6 | – | ✓* | ✓* | ✓* | ✗* E4 | ✓* B-OM-2 |
+| Amtliche Warnungen an/aus <sub>`orte.amtliche_warnungen.schalter`</sub> | ✓* B-OM-2 | ✓ B-OM-6 | – | ✓* | ✓* | ✓* | ✓* E4 | ✓* B-OM-2 |
 | Amtliche Warnungen zuerst (WV6) <sub>`orte.amtliche_warnungen.position`</sub> | ✓ | ✓ | – | ✓ | ✓ | ✓ | ↗* #3031 | ✓* |
 | Warnung eines weiteren Ortes beim Kürzen <sub>`orte.amtliche_warnungen.kuerzung_zuletzt`</sub> | – | – | – | ✓ | ✓* B-K3 | ✓* B-K3 | ↗* #3031 | – |
-| Hinweis „Warnungen nicht abrufbar“ <sub>`orte.amtliche_warnungen.nicht_abrufbar`</sub> | ✓ | ✓* B-OM-1 | – | ✓* B-L2 | ✓* B-L2 | ✓* B-L2 | –* | ✗* B-L5 |
+| Hinweis „Warnungen nicht abrufbar“ <sub>`orte.amtliche_warnungen.nicht_abrufbar`</sub> | ✓ | ✓* B-OM-1 | – | ✓* B-L2 | ✓* B-L2 | ✓* B-L2 | –* | ✓* B-L5 |
 | Radar-Regen-Alarm <sub>`orte.radar`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
-| Ampel-Grenzen ändern <sub>`orte.ampel.grenzen`</sub> | ✓* | –* | –* | ✓* B-L3 | ✓* | ✓* | ✓* | ✗* B-L5 |
+| Ampel-Grenzen ändern <sub>`orte.ampel.grenzen`</sub> | ✓* | –* | –* | ✓* B-L3 | ✓* | ✓* | ✓* | ✓* B-L5 |
 | Alarm ab je Metrik / für alle <sub>`orte.ampel.alarm_ab`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓* | –* |
 | **Telegram-Kurzstil** | | | | | | | | |
 | Telegram-Kurzstil: Briefing <sub>`orte.telegram_kurzstil.briefing`</sub> | – | – | – | ✓ | – | – | ✓* TL3 | – |
@@ -152,9 +152,9 @@ Quellen: `trip_mail.json`, `orte_mail.json`, `kanaele.json`, `editor.json`, `val
 | Sprache DE/EN <sub>`orte.sprache`</sub> | ✓ B-OM-6 | ✓ B-OM-6 | – | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Kürzel-Legende (W21) <sub>`orte.kuerzel_legende`</sub> | –* | –* | –* | ↗ B-K9 | ↗ B-K9 | ↗ B-K9 | ↗* #3032 | –* |
 | **Vorlagen** | | | | | | | | |
-| Vorlage übernehmen/zurücksetzen; Vorlage im Mail-Kopf (K3b) <sub>`orte.vorlage.anwenden`</sub> | ↗* B-OM-3 | ↗* B-OM-3 | – | – | – | – | ✓* E6 | ✗* B-L5 |
-| Neues Orts-Briefing übernimmt Standard-Vorlage <sub>`orte.vorlage.neu_aus_standard`</sub> | ✓* | –* | –* | ✓* B-L4 | ✓* B-L4 | ✓* B-L4 | ✓* E1 | ✗* B-L5 |
-| Als eigene Vorlage speichern <sub>`orte.vorlage.eigene_speichern`</sub> | ✓* | –* | –* | ✓* B-L4 | ✓* B-L4 | ✓* B-L4 | ✓* | ✗* B-L5 |
+| Vorlage übernehmen/zurücksetzen; Vorlage im Mail-Kopf (K3b) <sub>`orte.vorlage.anwenden`</sub> | ↗* B-OM-3 | ↗* B-OM-3 | – | – | – | – | ✓* E6 | ✓* B-L5 |
+| Neues Orts-Briefing übernimmt Standard-Vorlage <sub>`orte.vorlage.neu_aus_standard`</sub> | ✓* | –* | –* | ✓* B-L4 | ✓* B-L4 | ✓* B-L4 | ✓* E1 | ✓* B-L5 |
+| Als eigene Vorlage speichern <sub>`orte.vorlage.eigene_speichern`</sub> | ✓* | –* | –* | ✓* B-L4 | ✓* B-L4 | ✓* B-L4 | ✓* | ✓* B-L5 |
 | **Zeiten/Versand** | | | | | | | | |
 | Uhrzeit Morgen-/Abend-Briefing <sub>`orte.zeiten`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓ | –* |
 | Morgen-/Abend-Briefing an/aus <sub>`orte.slots`</sub> | ✓* | ✓* | –* | ✓* | ✓* | ✓* | ✓* TL1 | –* |
