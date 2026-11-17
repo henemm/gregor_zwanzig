@@ -50,8 +50,8 @@ Der Staging-Abgleich (#2913) kann im Reiter Wetter (Trip und Orte) 35 Abschnitte
 | frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte | MODIFY | Haken `vorlage-speichern`, `vorlage-speichern-fehler` (additiv, geteilt) |
 | frontend/src/lib/i18n/messages/de/wetter.json, en/wetter.json | MODIFY | `wetter.kopf.fehler` = Satz 1, neu `wetter.kopf.fehler_verbindung` = Sätze 2 und 3 |
 | frontend/src/lib/i18n/__tests__/deutsch_unveraendert.test.ts | MODIFY | Neuschlüssel in `NEU_IN_FOLGEPAKETEN` |
-| frontend/src/lib/__tests__/elementliste_abgleich_bedienplan.test.ts | CREATE | node-Tests für `bedienPlan`, `schreibBefund` (Tripwire, reine Funktion), Besitzer ohne `#2966` (RED, Phase 5) |
-| frontend/src/lib/components/organisms/__tests__/wetter_tab_abschnitt_marker_2966.test.ts | CREATE | SSR-Tests für die neuen Haken, Laden-Text, zwei Absätze (RED, Phase 5) |
+| frontend/src/lib/__tests__/elementliste_abgleich_bedienplan.test.ts | CREATE | node-Tests für `bedienPlan` |
+| frontend/src/lib/components/organisms/__tests__/wetter_tab_abschnitt_marker.test.ts | MODIFY | SSR-Tests für die neuen Haken, Laden-Text, zwei Absätze |
 | frontend/src/lib/components/organisms/__tests__/wetter_tab_anker_tap.test.ts | MODIFY | Skelett-Label-Prüfung an den Wrapper-Umbau anpassen |
 | docs/context/einstellungen_neu/elementliste_besitzer.json | MODIFY | 35 Einträge `#2966` entfernen, Restabweichungen neu zuordnen |
 
