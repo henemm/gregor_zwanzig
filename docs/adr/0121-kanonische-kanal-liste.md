@@ -39,6 +39,7 @@ Phase 2 soll EINE Auflösung schaffen, ohne die zugestellte Mail zu ändern und 
 Der Resolver liefert zusätzlich die in Punkt 1 reservierten Flächen-Listen `outlook` (Trip und Orte) und `hourly` (nur Orte) im selben Zeilenformat. Spec: `docs/specs/modules/feat_3065_ausblick_stundenverlauf_resolver.md`.
 
 1. **Vokabular.** In `outlook` und `hourly` ist `metric_id` die Katalog-ID (`temperature`), so wie sie der Ausblick schon liefert und der Editor später speichert. Die Orte-Kanäle bleiben bei der Renderer-Kennung (`temp_max`). Diese Zwei-Vokabular-Lage ist bewusst; es gibt keine Rückübersetzungstabelle `dp_field` nach Katalog-ID. Vereinheitlichung gehört zu #3058.
+   > **Abgelöst durch [Nachtrag 4](#nachtrag-4-2026-11-18-issue-3101-ein-vokabular-in-allen-listen) (Issue #3101):** Die Orte-Kanäle tragen jetzt ebenfalls Katalog-IDs (samt `aggregation`); die Zwei-Vokabular-Lage ist aufgehoben.
 2. **Quellen.** Werte nur aus den bestehenden Altfunktionen: Trip-Ausblick `resolve_trip_outlook_metrics` auf dem ungekollabierten Modell (kein Schnitt mit `channel_layouts.email`), Orte-Ausblick `resolve_compare_outlook_metrics`, beide über `_erbe_grundauswahl` (ADR-0059). Stundenverlauf über die ID-Stufe `resolve_hourly_metric_ids`, aus der `resolve_hourly_metrics` verhaltensgleich `dp_field` bildet. Trip-`hourly` ist immer `None` (keine eigene Trip-Stundenliste).
 3. **Format.** Ausblick: wahr = `simplified`, ausdrücklich falsch = `raw`, kein Eintrag oder nicht ausblick-fähig = `null` (Flächen-Standard Roh), über `resolve_*_outlook_formats`. Stundenverlauf: `format` immer `null` (Roh/Einfach dort = #3058).
 4. **None-Vertrag.** `None` = Renderer-Vorgabemenge (Altbestand ohne Grundauswahl), `()` = Block entfällt (bewusst leer), sonst Zeilen in Anzeigefolge mit `order` ab 0 und `enabled=True`.
@@ -71,3 +72,11 @@ Setzt Nr. 8 (Adapter) für Telegram um, analog Nachtrag 3a für die E-Mail. Spec
 2. **Format `null` = Katalog-Standard.** Ein Roh der Grundauswahl wird für eine Telegram-Zeile ohne eigenes Format nicht geerbt (Nr. 1 gilt unverändert).
 3. **Orte-Telegram** liest bereits aus dem Resolver und bleibt unverändert; es bekommt nur Nachweis-Fälle. Der Format-Standard ohne Angabe bleibt Roh (ADR-0119 Nr. 4).
 4. **Keine Ausgabeänderung.** Die zugestellte Telegram-Nachricht bleibt in allen Bestandsfällen gleich (ADR-0095). Keine Entscheidung wird geändert, daher kein neues ADR.
+
+## Nachtrag 4 (2026-11-18, Issue #3101): Ein Vokabular in allen Listen
+
+Löst Nachtrag 2b Nr. 1 ab (Zwei-Vokabular-Lage). Spec: `docs/specs/modules/feat_3101_ein_vokabular.md`.
+
+1. **Katalog-ID überall.** Auch in den Orte-Kanallisten `email`, `telegram`, `sms`, `premium_sms` (samt Layout-Kanälen) ist `metric_id` die Katalog-ID (`temperature`). Jede Zeile trägt zusätzlich `aggregation` (`max`, `min`, `sum`, `avg`) und steht 1:1 für eine Zeile des Renderers. So bleiben Teilauswahl je Kanal (z. B. nur der Höchstwert in der SMS) und Reihenfolge je Kanal (Höchstwert, Wind, Tiefstwert) erhalten; eine reine Katalog-ID-Liste könnte beides nicht ausdrücken.
+2. **Ein Adapter vor dem Renderer.** Renderer-Kennungen (`temp_max`) entstehen erst an der Grenze zum Renderer (`report_config_resolver`, `compare_metric_ids.renderer_kennung`); die Rückrichtung ist `katalog_paar`. Beide sind aus `COMPARE_METRIC_CATALOG` gerechnet, es gibt keine zweite Abbildungstabelle. Die Tabelle „Was steht wo“ und der Alt/Neu-Vergleich der Umrechnung gehen über dieselbe Abbildung; Max/Min-Doppelzeilen fallen dort auf eine Katalog-ID zusammen.
+3. **Keine Ausgabeänderung, keine Datenmigration.** Mail, Telegram, SMS und Premium-SMS bleiben Zeichen für Zeichen gleich; Renderer-Kennungen waren nirgends gespeichert. Der Alarm-Pfad (`compare_alert`) behält seine eigene Abbildung.

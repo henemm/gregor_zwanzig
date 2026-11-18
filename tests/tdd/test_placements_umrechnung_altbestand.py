@@ -246,7 +246,8 @@ def test_fall4_abweichende_wolkenform_der_sms_entfaellt():
     assert not any(a[0] == "sms_wolkenform_entfaellt" for a in _arten(standard))
     orte = _umrechnen({"active_metrics": ["cloud_avg_pct"], "channel_layouts": {"sms": [
         {"metric_id": "cloud_total", "use_friendly_format": True}]}}, "compare")
-    assert ("sms_wolkenform_entfaellt", "sms", "cloud_avg") in _arten(orte)
+    # #3101: gemeldet im einen Vokabular (Katalog-ID).
+    assert ("sms_wolkenform_entfaellt", "sms", "cloud_total") in _arten(orte)
 
 
 # ---------------------------------------------------------------------------
@@ -306,6 +307,11 @@ AMPEL4 = {"wind", "gust", "precipitation", "rain_probability"}
 
 
 def _katalog_id(surface, metric_id):
+    """Zeilen-Schluessel (Katalog-ID, Aggregation) des View-Models (#3101),
+    Trip-Kennung oder Renderer-Kennung (Grundauswahl des Altpfads) ->
+    Katalog-ID."""
+    if isinstance(metric_id, tuple):
+        return metric_id[0]
     if surface == "trip":
         return metric_id
     from output.renderers.compare_outlook_metric_ids import _kennungen_aus_renderer_ids
@@ -334,6 +340,12 @@ def _orte_standard():
     from output.renderers.email.compare_html import CV2_ZEILEN
 
     return [z["key"] for z in CV2_ZEILEN if z["key"] != "warn"]
+
+
+def _schluessel(z):
+    """Zeile des View-Models -> Vergleichs-Schluessel: (Katalog-ID,
+    Aggregation) -- je Renderer-Zeile genau einer (#3101)."""
+    return (z.metric_id, getattr(z, "aggregation", None))
 
 
 def _ausblick_an_alt(dc, surface, report_type, kw):
@@ -366,13 +378,16 @@ def _alt_gesperrt(alt, dc, surface, stelle, report_type, kw):
 def _alt_liste(alt, dc, surface, stelle, report_type, kw, sperren=True):
     zeilen = getattr(alt, stelle)
     if zeilen is None:
-        zeilen = [type("Z", (), {"metric_id": m, "format": None})() for m in _orte_standard()]
+        from tests.helpers.kanal_liste_orakel import alt_katalog_paare
+
+        zeilen = [type("Z", (), {"metric_id": m, "aggregation": a, "format": None})()
+                  for m, a in alt_katalog_paare(_orte_standard())]
     if stelle == "outlook" and not _ausblick_an_alt(dc, surface, report_type, kw):
         zeilen = []
     if stelle == "hourly" and kw.get("hourly_enabled", True) is False:
         zeilen = []
     sperr_stelle = "sms" if stelle == "premium_sms" else stelle
-    return [(z.metric_id, z.format) for z in zeilen
+    return [(_schluessel(z), z.format) for z in zeilen
             if not (sperren and _sperrt(_katalog_id(surface, z.metric_id), sperr_stelle,
                                         surface))]
 
@@ -441,16 +456,17 @@ def _differenz(name, dc, surface, kw, fehler, gesehen):
         for stelle in stellen:
             a = _alt_liste(alt, dc, surface, stelle, rt, kw)
             for mid in _alt_gesperrt(alt, dc, surface, stelle, rt, kw):
-                if ("gesperrte_stelle_entfaellt", stelle, mid, rt) not in gemeldet:
+                if ("gesperrte_stelle_entfaellt", stelle, _katalog_id(surface, mid),
+                        rt) not in gemeldet:
                     fehler.append(f"{name}/{rt}/{stelle}: gesperrte Altzeile {mid} ungemeldet")
-            n = [(z.metric_id, z.format) for z in getattr(neu, stelle)]
+            n = [(_schluessel(z), z.format) for z in getattr(neu, stelle)]
             a_ids, n_ids = [m for m, _f in a], [m for m, _f in n]
             if a_ids == n_ids:
                 gesehen["gleich"] += 1
             for mid in [m for m in a_ids if m not in n_ids] + [m for m in n_ids if m not in a_ids]:
                 gesehen["menge"] += 1
-                passend = [g for g in gemeldet if g[1] == stelle and g[2] == mid and g[3] == rt
-                           and g[0] not in REGEL_FAELLE]
+                passend = [g for g in gemeldet if g[1] == stelle and g[3] == rt
+                           and g[2] == _katalog_id(surface, mid) and g[0] not in REGEL_FAELLE]
                 if not passend or not all(
                         _begruendet(g[0], surface, stelle, mid, rt, ctx) for g in passend):
                     fehler.append(f"{name}/{rt}/{stelle}: {mid} alt={a_ids} neu={n_ids} "
@@ -468,7 +484,8 @@ def _differenz(name, dc, surface, kw, fehler, gesehen):
                 soll = _heutige_form(surface, stelle, _katalog_id(surface, mid), alt_form[mid])
                 # Die Form der Morgen-Fassung (channel_layouts_per_report) geht
                 # in die Abend-Fassung auf -- nur so gemeldet zulaessig.
-                morgen = ("morgen_folgt_abend", stelle, mid, rt) in gemeldet and _begruendet(
+                morgen = ("morgen_folgt_abend", stelle, _katalog_id(surface, mid),
+                          rt) in gemeldet and _begruendet(
                     "morgen_folgt_abend", surface, stelle, mid, rt, ctx)
                 if form != soll and not morgen:
                     fehler.append(f"{name}/{rt}/{stelle}/{mid}: Form {form} != heute {soll}")
@@ -561,7 +578,7 @@ def test_differenz_sms_identisch_ohne_gemeldete_ausnahme():
                 continue
             alt = [m for m, _f in _alt_liste(_resolve(copy.deepcopy(dc), surface, rt), dc,
                                              surface, "sms", rt, kw)]
-            neu = [z.metric_id for z in _resolve(neu_dc, surface, rt, **resolver_kw).sms]
+            neu = [_schluessel(z) for z in _resolve(neu_dc, surface, rt, **resolver_kw).sms]
             if alt != neu:
                 fehler.append(f"{name}/{rt}: alt={alt} neu={neu}")
     assert not fehler, f"{len(fehler)}: {fehler[:5]}"

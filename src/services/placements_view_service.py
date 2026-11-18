@@ -224,8 +224,9 @@ def _sms_kuerzel(metric_id: str, surface: str, vm) -> list[tuple[str, str]]:
         return [(s.rstrip(":"), metric_id) for s in symbole]
     from app.metric_catalog import kurzform_kuerzel
     from output.renderers.comparison import _RENDERER_TO_CATALOG_METRIC_ID
+    from services.report_config_resolver import orte_renderer_ids
 
-    in_sms = set(_orte_sms_liste(None if vm.sms is None else [z.metric_id for z in vm.sms]))
+    in_sms = set(_orte_sms_liste(orte_renderer_ids(vm.sms)))
     quellen = [_RENDERER_TO_CATALOG_METRIC_ID.get(rid) for rid in _renderer_ids(metric_id)
                if rid in in_sms]
     return [(kurzform_kuerzel(q), q) for q in quellen if q and kurzform_kuerzel(q)]

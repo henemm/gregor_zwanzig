@@ -29,7 +29,6 @@ Festlegungen beim Lesen:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import partial
 from typing import Mapping, Optional, Sequence
 
 from app.metric_catalog import (
@@ -440,15 +439,19 @@ def _art_folge(surface, stelle, ids, rt) -> str:
 
 
 def _stelle_changes(surface, stelle, rt, alt, neu, ctx, kid) -> list[OutputChange]:
+    """``alt``/``neu``: ``[(zeile, format)]`` mit Zeile = (Katalog-ID,
+    Aggregation) -- verglichen wird je Zeile, gemeldet die Katalog-ID (#3101):
+    Max/Min-Doppelzeilen fallen in der Meldung auf eine Kennung zusammen."""
     out = []
     a_ids, n_ids = [m for m, _f in alt], [m for m, _f in neu]
     for mid in [m for m in a_ids if m not in n_ids]:
-        out.append(OutputChange(_art_entfallen(surface, stelle, kid(mid), rt, ctx), stelle, mid, rt))
+        out.append(OutputChange(_art_entfallen(surface, stelle, kid(mid), rt, ctx), stelle,
+                                kid(mid), rt))
     for mid in [m for m in n_ids if m not in a_ids]:
         art = PREMIUM_FOLGT_SMS if stelle == "premium_sms" else _art_sonst(surface, kid(mid), rt)
         if stelle == "email" and bleibt_in_ausgabe(stellen_sperre(kid(mid), stelle, surface)):
             art = OHNE_SPALTE_FOLGT_GRUNDAUSWAHL
-        out.append(OutputChange(art, stelle, mid, rt))
+        out.append(OutputChange(art, stelle, kid(mid), rt))
     if set(a_ids) == set(n_ids) and a_ids != n_ids:
         out.append(OutputChange(_art_folge(surface, stelle, [kid(m) for m in n_ids], rt),
                                 stelle, None, rt))
@@ -458,7 +461,7 @@ def _stelle_changes(surface, stelle, rt, alt, neu, ctx, kid) -> list[OutputChang
         if mid in alt_form and stelle in zwei_formen_stellen(c) and form != heutige_form(
                 surface, stelle, c, alt_form[mid]):
             art = MORGEN_FOLGT_ABEND if surface == "trip" and rt == "morning" else UNERKLAERT
-            out.append(OutputChange(art, stelle, mid, rt))
+            out.append(OutputChange(art, stelle, c, rt))
     return out
 
 
@@ -470,15 +473,15 @@ def _regel_changes(surface, stelle, rt, alt, neu, kid) -> list[OutputChange]:
 
     out = []
     if stelle == "email" and surface == "trip":
-        out += [OutputChange(NUR_TEXT_FOLGT_HTML, "email", m, None) for m, f in neu
-                if m in _AMPEL_CAPABLE_METRIC_IDS and f == "simplified"]
+        out += [OutputChange(NUR_TEXT_FOLGT_HTML, "email", kid(m), None) for m, f in neu
+                if kid(m) in _AMPEL_CAPABLE_METRIC_IDS and f == "simplified"]
     if stelle == "sms":
         for mid, fmt in alt:
             c = kid(mid)
             standard = standard_form(c) if surface == "trip" else "raw"
             # Bisher zwei Formen in der SMS hatte nur die Bewoelkung (#2422 S6).
             if c in SMS_FORMAT_MODE_METRIC_IDS and heutige_form(surface, "sms", c, fmt) != standard:
-                out.append(OutputChange(SMS_WOLKENFORM_ENTFAELLT, "sms", mid, rt))
+                out.append(OutputChange(SMS_WOLKENFORM_ENTFAELLT, "sms", c, rt))
     return out
 
 
@@ -489,12 +492,13 @@ def _output_changes(dc: object, surface: str, placements: dict) -> tuple[OutputC
     reports = stored.outlook_reports or ()
     out: list[OutputChange] = []
     for rt in BRIEFINGS:
-        alt = clr.vm_lists(clr.legacy_view(dc, surface, rt), surface)
+        alt = clr.vm_lists(clr.legacy_view(dc, surface, rt), surface, paare=True)
         if rt not in reports:
             alt["outlook"] = []
-        neu = clr.vm_lists(clr.placements_view(dc, surface, rt, stored), surface)
+        neu = clr.vm_lists(clr.placements_view(dc, surface, rt, stored), surface, paare=True)
 
-        kid = partial(clr.katalog_id, surface)
+        def kid(zeile):
+            return zeile[0]
         ctx = {"grund": set(clr.grundauswahl(dc, surface, rt).ids),
                "neu_email": {kid(m) for m, _f in neu["email"]}}
         for stelle in neu:
@@ -505,7 +509,7 @@ def _output_changes(dc: object, surface: str, placements: dict) -> tuple[OutputC
                 return bool(grund) and not bleibt_in_ausgabe(grund)
 
             a = [(m, f) for m, f in alt[stelle] if not entfaellt(m)]
-            out += [OutputChange(GESPERRTE_STELLE_ENTFAELLT, stelle, m, rt)
+            out += [OutputChange(GESPERRTE_STELLE_ENTFAELLT, stelle, kid(m), rt)
                     for m, _f in alt[stelle] if entfaellt(m)]
             out += _stelle_changes(surface, stelle, rt, a, neu[stelle], ctx, kid)
             out += _regel_changes(surface, stelle, rt, a, neu[stelle], kid)

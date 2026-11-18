@@ -28,13 +28,14 @@ from __future__ import annotations
 import copy
 import json
 import os
-from datetime import timedelta
 from pathlib import Path
 
 import pytest
 
 GOLDEN_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "ein_vokabular_3101"
 SCHREIBEN = os.environ.get("EIN_VOKABULAR_GOLDEN_SCHREIBEN") == "1"
+#: Zeitpunkt der Aufnahme des Versand-Orakels (Kopfzeile "Erstellt 19:00 (CET)").
+ORAKEL_ZEITPUNKT = "2026-11-18T18:00:00+00:00"
 
 #: Renderer-Kennungen, die nach #3101 in keiner Orte-Kanalliste mehr stehen
 #: duerfen (von Hand, Auszug aus ``FRONTEND_TO_RENDERER_METRIC_ID``).
@@ -381,16 +382,23 @@ def _senden(mit, dc: dict) -> dict:
              morning_enabled=True, evening_enabled=True,
              alert_channels={"email": True, "telegram": False, "sms": False,
                              "premium_sms": False})
-    uid = nutzer_anlegen("premium")
-    orte_anlegen(uid)
-    preset_ablegen(uid, copy.deepcopy(p))
-    mit.leeren()
-    with wetter_naht():
-        send_one_compare_preset(
-            preset_laden(uid, p["id"]), settings_fuer(uid), uid, str(get_data_root()),
-            all_locations_cache=load_all_locations(user_id=uid),
-            target_date=ZIELTAG, tage_ab_ortstag=0,
-        )
+    from freezegun import freeze_time
+
+    # Die Kopfzeile "Erstellt" nennt die Uhrzeit des Laufs; eingefroren auf
+    # den Zeitpunkt, zu dem das Orakel geschrieben wurde (sonst rot ausser
+    # zur vollen Stunde der Aufnahme). Schon beim Anlegen, damit die gelernte
+    # Premium-SMS-Rueckadresse nicht in der Zukunft liegt.
+    with freeze_time(ORAKEL_ZEITPUNKT):
+        uid = nutzer_anlegen("premium")
+        orte_anlegen(uid)
+        preset_ablegen(uid, copy.deepcopy(p))
+        mit.leeren()
+        with wetter_naht():
+            send_one_compare_preset(
+                preset_laden(uid, p["id"]), settings_fuer(uid), uid, str(get_data_root()),
+                all_locations_cache=load_all_locations(user_id=uid),
+                target_date=ZIELTAG, tage_ab_ortstag=0,
+            )
     mail = mit.sendungen("email")
     assert len(mail) == 1, f"Vorbedingung: genau eine Mail, {mit!r}"
     aus = {"email_html": mail[0]["body"], "email_text": mail[0]["plain_text_body"]}

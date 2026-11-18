@@ -333,7 +333,7 @@ def resolve_compare_render_options(
     # ADR-0049: nur Metrik-/Layout-Kanaele -- Premium-SMS sendet den SMS-Text.
     kanaele = ("email", "telegram", "sms")
     channel_rows = {
-        ch: ([(z.metric_id, z.format == "simplified") for z in getattr(view, ch) if z.enabled]
+        ch: ([(rid, z.format == "simplified") for rid, z in orte_renderer_zeilen(getattr(view, ch))]
              if ch in view.layout_channels else None)
         for ch in kanaele
     }
@@ -345,11 +345,7 @@ def resolve_compare_render_options(
         **hourly,
         corridors=_compare_corridors(preset) or None,
         **_compare_outlook(view.outlook),
-        enabled_metrics_by_channel={
-            ch: (None if getattr(view, ch) is None
-                 else [z.metric_id for z in getattr(view, ch) if z.enabled])
-            for ch in kanaele
-        },
+        enabled_metrics_by_channel={ch: orte_renderer_ids(getattr(view, ch)) for ch in kanaele},
         unresolved_by_channel={
             ch: _channel_unresolved_count(
                 unaufloesbar, channel_raw if channel_rows[ch] is None else None, ch)
@@ -357,6 +353,27 @@ def resolve_compare_render_options(
         },
         channel_rows_by_channel=channel_rows,
     )
+
+
+def orte_renderer_zeilen(zeilen) -> list[tuple[str, object]]:
+    """Adapter vor dem Renderer (Issue #3101, ADR-0121 Nachtrag 4): die
+    eingeschalteten Zeilen einer Orte-Kanalliste des View-Models (Katalog-ID
+    + Aggregation) -> ``[(renderer_kennung, zeile)]`` in Listenfolge.
+    Ein Paar ohne Renderer-Zeile hat keine Ausgabe und faellt heraus."""
+    from output.renderers.compare_metric_ids import renderer_kennung
+
+    out = []
+    for z in zeilen or ():
+        rid = renderer_kennung(z.metric_id, z.aggregation) if z.enabled else None
+        if rid is not None:
+            out.append((rid, z))
+    return out
+
+
+def orte_renderer_ids(zeilen) -> Optional[list[str]]:
+    """Renderer-Kennungen einer Orte-Kanalliste; ``None`` (kein Filter)
+    bleibt ``None``."""
+    return None if zeilen is None else [rid for rid, _z in orte_renderer_zeilen(zeilen)]
 
 
 def compare_enabled_reports(preset: dict) -> Optional[list[str]]:

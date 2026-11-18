@@ -332,6 +332,35 @@ def _renderer_ids_for_kennung(kennung: object) -> list[str]:
     ]
 
 
+def _katalog_paare() -> dict[tuple[str, str], str]:
+    """(Katalog-ID, Aggregation) -> Renderer-Kennung, gerechnet aus
+    ``COMPARE_METRIC_CATALOG`` und ``FRONTEND_TO_RENDERER_METRIC_ID`` (Issue
+    #3101) -- keine zweite getippte Abbildung. Jeder Katalog-Key hat eine
+    Renderer-Kennung (Drift-Waechter in ``compare_metric_catalog``), daher
+    ohne Filter. Import in der Funktion (Zyklus, s. ``_to_key``)."""
+    from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
+
+    return {
+        (entry["metric_id"], entry["aggregation"]): FRONTEND_TO_RENDERER_METRIC_ID[entry["key"]]
+        for entry in COMPARE_METRIC_CATALOG
+    }
+
+
+def renderer_kennung(katalog_id: object, aggregation: object) -> str | None:
+    """Adapter vor dem Renderer (Issue #3101): eine Zeile der Orte-Kanallisten
+    (Katalog-ID + Aggregation) -> Renderer-Kennung; unbekanntes Paar -> None."""
+    return _katalog_paare().get((katalog_id, aggregation))
+
+
+def katalog_paar(renderer_id: object) -> tuple[str, str] | None:
+    """Rueckrichtung zu ``renderer_kennung``: Renderer-Kennung ->
+    (Katalog-ID, Aggregation); unbekannt -> None."""
+    for paar, rid in _katalog_paare().items():
+        if rid == renderer_id:
+            return paar
+    return None
+
+
 def _friendly_effective(kennung: str, entry: dict) -> bool:
     """Roh/Einfach eines Kanal-Eintrags (Issue #3039, Spec Punkt 4): fehlt
     ``use_friendly_format``, gilt Roh (Praezedenz ``outlook_metric_formats``,
