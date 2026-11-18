@@ -30,7 +30,7 @@ NUTZER_A, NUTZER_B = "p3122-b2-a", "p3122-b2-b"
 TRIP_GRUND = [
     "wind", "gust", "rain_probability", "precipitation", "thunder", "cloud_total",
     "visibility", "freezing_level", "uv_index", "humidity", "dewpoint", "pressure",
-    "cloud_low", "cloud_mid", "cloud_high", "cape", "snowfall_limit", "sunshine",
+    "cloud_low", "cloud_mid", "cloud_high", "precip_type", "snowfall_limit", "sunshine",
 ]
 ORTE_GRUND = [
     {"metric_id": "temperature", "aggregation": "max"},
@@ -44,6 +44,13 @@ ORTE_GRUND = [
     {"metric_id": "humidity", "aggregation": "avg"},
     {"metric_id": "visibility", "aggregation": "min"},
     {"metric_id": "uv_index", "aggregation": "max"},
+    {"metric_id": "dewpoint", "aggregation": "avg"},
+    {"metric_id": "pressure", "aggregation": "avg"},
+    {"metric_id": "freezing_level", "aggregation": "min"},
+    {"metric_id": "cloud_low", "aggregation": "avg"},
+    {"metric_id": "cloud_mid", "aggregation": "avg"},
+    {"metric_id": "cloud_high", "aggregation": "avg"},
+    {"metric_id": "snowfall_limit", "aggregation": "min"},
 ]
 ORTSNAMEN = ("Innsbruck", "Lienz", "Kufstein")
 
@@ -257,9 +264,9 @@ def test_ac16_trip_jede_metrik_in_einer_folge_mit_zustand_form_und_beispiel(clie
         for stelle, zelle in zeile["cells"].items():
             if zelle["state"] != "on" or zelle["mark"] == "passt_nicht_mehr":
                 continue
-            if stelle == "outlook" and zeile["metric_id"] in ("cape",):
+            if stelle == "outlook" and zeile["metric_id"] in ():
                 continue  # Ausblick ohne Tageswert-Spalte im heutigen Renderer
-            assert zelle["example"], f"{zeile['metric_id']}/{stelle}: Beispielwert fehlt"
+            assert zelle["example"] or zelle["ampel"], f"{zeile['metric_id']}/{stelle}: Beispielwert fehlt"
 
 
 def test_ac16_trip_beispielwerte_aus_dem_renderer(client):
@@ -271,9 +278,13 @@ def test_ac16_trip_beispielwerte_aus_dem_renderer(client):
     wind = _zeile(antwort, "wind")["cells"]
     assert wind["sms"]["example"].startswith("W") and wind["sms"]["example"] in sms.split(" ")
     assert wind["telegram"]["example"].startswith("W ")
-    assert _zeile(antwort, "gust")["cells"]["email"]["example"].isdigit()
+    # Zahl ohne Ampel in der Stundentabelle (Temperatur hat nur eine Form)
+    temp = _zeile(antwort, "visibility")["cells"]["email"]
+    assert re.fullmatch(r"\d+(\.\d)?", temp["example"]) and temp["ampel"] is None
     # Einfach in der HTML-Mail: Ampelpunkt mit Stufe
     assert wind["email"]["ampel"] in ("green", "yellow", "orange", "red")
+    # Ausblick: Zelle der ersten Ausblick-Zeile
+    assert _zeile(antwort, "gust")["cells"]["outlook"]["example"].endswith("km/h")
 
 
 def test_ac16_trip_nur_tageswert_ab_der_achten_telegram_metrik(client):
@@ -316,7 +327,7 @@ def test_ac16_orte_spalten_zeilen_formen_und_beispiele(client, anzahl):
         assert zeile["cells"]["telegram"]["mark"] is None, "nur_tageswert gibt es nur beim Trip"
         for stelle, zelle in zeile["cells"].items():
             if zelle["state"] == "on" and zelle["mark"] != "passt_nicht_mehr":
-                assert zelle["example"], f"{zeile['metric_id']}/{stelle}: Beispielwert fehlt"
+                assert zelle["example"] or zelle["ampel"], f"{zeile['metric_id']}/{stelle}: Beispielwert fehlt"
 
 
 # ---------------------------------------------------------------------------
@@ -489,6 +500,18 @@ def test_abo_ohne_tabelle_zeigt_die_umrechnung(client):
     assert antwort["stored"] is False
     assert antwort["placements"] == soll
     assert [z["metric_id"] for z in antwort["rows"]] == [r["metric_id"] for r in soll["rows"]]
+
+
+def test_orte_ohne_tabelle_zeigt_die_umrechnung(client):
+    from services.placements import placements_from_legacy
+
+    _orte(NUTZER_A, "o-alt", extra={"outlook_enabled": False})
+    antwort = _ok(client, "o-alt", "vergleich")
+    soll = placements_from_legacy({"active_metrics": ORTE_GRUND}, "compare",
+                                  enabled_reports=["morning"], outlook_enabled=False).placements
+    assert antwort["stored"] is False
+    assert antwort["placements"] == soll
+    assert antwort["outlook_reports"] == []
 
 
 def test_get_schreibt_nichts(client):
