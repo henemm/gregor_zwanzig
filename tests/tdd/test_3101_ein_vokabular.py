@@ -468,3 +468,14 @@ def test_ac5_b2b_tabelle_unveraendert(name):
     _b2b_orte(uid, kennung, GOLDEN_FAELLE[name])
     antwort = build_placements_view("vergleich", kennung, uid)
     _vergleichen(f"b2b_{name}", json.loads(json.dumps(antwort, ensure_ascii=False)))
+
+
+def test_ac3_reihenfolge_in_der_gerenderten_ausgabe(mit):
+    """AC-3 in der echten Ausgabe: Hoechsttemperatur, Wind, Tiefsttemperatur
+    erscheinen im Text-Teil der Orts-Vergleich-Mail in genau dieser Folge."""
+    dc = {"active_metrics": GRUND_TEMP_WIND, "channel_active_metrics": {"email": FOLGE}}
+    text = _senden(mit, dc)["email_text"]
+    erster_ort = text.split("\nSulden\n")[0]
+    pos = [erster_ort.index(b) for b in
+           ("Temperatur Maximum:", "Wind:", "Temperatur Minimum:")]
+    assert pos == sorted(pos), f"Reihenfolge Hoechst, Wind, Tiefst verletzt: {pos}"
