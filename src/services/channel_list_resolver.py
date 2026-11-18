@@ -121,18 +121,29 @@ def resolve_channel_lists(
     ansicht = {"enabled_reports": enabled_reports, "hourly_enabled": hourly_enabled}
     if stored is not None:
         return placements_view(display_config, surface, report_type, stored, **ansicht)
+    bisher = _abo_schalter(legacy_view(display_config, surface, report_type), surface,
+                           outlook_enabled=outlook_enabled, hourly_enabled=hourly_enabled)
     if not (with_rows or ALTBESTAND_UEBER_UMRECHNUNG):
-        return legacy_view(display_config, surface, report_type)
+        return bisher
     umgerechnet = read_placements(legacy_placements(
         display_config, surface, report_config=report_config,
         enabled_reports=enabled_reports, outlook_enabled=outlook_enabled)[0])
     neu = placements_view(display_config, surface, report_type, umgerechnet, **ansicht)
     if ALTBESTAND_UEBER_UMRECHNUNG:
         return neu
-    return dataclasses.replace(
-        legacy_view(display_config, surface, report_type),
-        rows=neu.rows, outlook_reports=neu.outlook_reports,
-    )
+    return dataclasses.replace(bisher, rows=neu.rows, outlook_reports=neu.outlook_reports)
+
+
+def _abo_schalter(view: MailViewModel, surface: str, *, outlook_enabled: Optional[bool],
+                  hourly_enabled: Optional[bool]) -> MailViewModel:
+    """#3122 B1b: Block-Schalter eines Orte-Abos im bisherigen Pfad -- ``False``
+    heisst "Block entfaellt" (``()``); ``None`` (nicht angegeben) laesst die
+    Listen unveraendert. Die Ausgaben lesen nur noch das View-Model."""
+    if surface != "compare":
+        return view
+    aus = {k: () for k, an in (("outlook", outlook_enabled), ("hourly", hourly_enabled))
+           if an is False}
+    return dataclasses.replace(view, **aus) if aus else view
 
 
 def legacy_view(display_config, surface: str, report_type: Optional[str] = None) -> MailViewModel:
@@ -148,10 +159,16 @@ def legacy_view(display_config, surface: str, report_type: Optional[str] = None)
 
 class Grundauswahl(NamedTuple):
     """Katalog-IDs der Grundauswahl (Maximum, Nr. 3.1), abgeleitete Groesse
-    -> Eltern-Kennung, bei Orten die Renderer-Kennungen der Auswahl."""
+    -> Eltern-Kennung, bei Orten die Renderer-Kennungen der Auswahl.
+
+    Orte (#3122 B1b): ``unaufloesbar`` = gewaehlte Eintraege ohne Renderer-
+    Zuordnung (Hinweiszaehler, #1405 S3); ``nie_eingestellt`` = die Auswahl
+    fehlt, ``renderer`` ist dann der Standardsatz (Orte-Alarm, #1191)."""
     ids: list
     parents: dict
     renderer: Optional[frozenset]
+    unaufloesbar: tuple = ()
+    nie_eingestellt: bool = False
 
 
 def _orte_standard() -> list[str]:
@@ -179,14 +196,17 @@ def grundauswahl(display_config, surface: str, report_type: Optional[str]) -> Gr
         parents = {mc.metric_id: eltern[mc.metric_id] for mc in mcs
                    if mc.derived and mc.metric_id in eltern}
         return Grundauswahl(ids, parents, None)
-    from output.renderers.compare_metric_ids import resolve_enabled_metrics
+    from output.renderers.compare_metric_ids import resolve_enabled_metrics_report
     from output.renderers.compare_outlook_metric_ids import _kennungen_aus_renderer_ids
 
-    renderer = resolve_enabled_metrics((display_config or {}).get("active_metrics"))
-    if renderer is None:
+    renderer, unaufloesbar = resolve_enabled_metrics_report(
+        (display_config or {}).get("active_metrics"))
+    nie_eingestellt = renderer is None
+    if nie_eingestellt:
         renderer = _orte_standard()
     return Grundauswahl(
-        list(dict.fromkeys(_kennungen_aus_renderer_ids(renderer))), {}, frozenset(renderer))
+        list(dict.fromkeys(_kennungen_aus_renderer_ids(renderer))), {}, frozenset(renderer),
+        unaufloesbar, nie_eingestellt)
 
 
 def placements_view(

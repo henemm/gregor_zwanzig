@@ -463,27 +463,41 @@ def render_compare_email_preview(body: Any) -> str:
     # Auswahl gar nicht (Muster #1435 E3b: `build_token_line()` ohne
     # `profile=`). `getattr` statt `body.hourly_metrics`, damit auch aeltere
     # Aufrufer ohne das Feld weiterhin durchlaufen.
-    # Issue #3096: ohne Auswahl wird die Vorgabe VOR dem Rendern aufgeloest
-    # (einzige Quelle `compare_hourly_metric_ids`); der Renderer bekommt nie None.
-    from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics
-    from output.renderers.compare_outlook_metric_ids import resolve_hourly_metric_formats
+    # Issue #3122 B1b: kein eigener Lesepfad -- aus dem Body entsteht ein
+    # Orte-Preset (``display_config.hourly_metrics``/``hourly_metric_formats``,
+    # ``hourly_enabled``), das durch dieselbe Aufloesung wie der Versand geht
+    # (Kanal-Listen-Resolver, #3096/#3097). Ohne Auswahl gilt die Vorgabe.
+    from services.report_config_resolver import resolve_compare_render_options
 
-    hourly_metrics = getattr(body, "hourly_metrics", None)
-    if hourly_metrics is None:
-        hourly_metrics = resolve_hourly_metrics(None)
+    display_config: dict = {}
+    if getattr(body, "hourly_metrics", None) is not None:
+        display_config["hourly_metrics"] = _hourly_kennungen(body.hourly_metrics)
+    if getattr(body, "hourly_metric_formats", None) is not None:
+        display_config["hourly_metric_formats"] = body.hourly_metric_formats
+    opts = resolve_compare_render_options(
+        {"display_config": display_config, "hourly_enabled": body.hourly_enabled})
     return render_compare_html(
         result,
         profile=profile_enum,
-        hourly_enabled=body.hourly_enabled,
-        hourly_metrics=hourly_metrics,
-        # Issue #3097: Roh/Einfach je Stundenverlauf-Zeile (dieselbe Regel wie
-        # der Resolver, `getattr` fuer aeltere Aufrufer ohne das Feld).
-        hourly_metric_formats=resolve_hourly_metric_formats(
-            getattr(body, "hourly_metric_formats", None)),
+        hourly_enabled=opts.hourly_enabled,
+        hourly_metrics=opts.hourly_metrics,
+        hourly_metric_formats=opts.hourly_metric_formats,
         # Issue #2792 S1c-4b: die Vorschau kennt nur das Profil des
         # Validators; daraus loest der Renderer die Vorlage auf.
         preset={"profil": body.profile},
     )
+
+
+def _hourly_kennungen(felder: list) -> list:
+    """Body-Auswahl (Renderer-Feldnamen wie ``t2m_c``, #1406) -> Katalog-IDs
+    des gespeicherten Formats; je Feld die erste Katalog-ID. Unbekannte Werte
+    (auch schon Katalog-IDs) gehen unveraendert weiter."""
+    from app.metric_catalog import get_all_metrics
+
+    zuordnung: dict = {}
+    for m in get_all_metrics():
+        zuordnung.setdefault(m.dp_field, m.id)
+    return [zuordnung.get(f, f) for f in felder]
 
 
 # ---------------------------------------------------------------------------
