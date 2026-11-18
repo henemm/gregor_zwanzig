@@ -107,8 +107,14 @@ def ausblick_html(html: str) -> Optional[list[str]]:
 
 
 def ausblick_text(text: str) -> Optional[list[str]]:
+    """Ausblick-Spalten im Klartext/Kompakt; ``None`` = Block fehlt ganz --
+    auch die Ueberschrift "Naechste Etappen" (sonst bliebe ein leerer Block
+    ohne Spalten unbemerkt)."""
     tab = klartext_ausblick(text, AUSBLICK_TAGE)
-    return None if tab is None else tab.spalten
+    if tab is None:
+        assert not re.search(r"N(ä|ae)chste Etappen", text), "Ausblick-Kopf ohne Zeilen"
+        return None
+    return tab.spalten
 
 
 def telegram_bubbles(mit) -> list[str]:
@@ -343,11 +349,51 @@ def test_ac5_boeen_nur_text_mail_einfach_ist_wortstufe(monkeypatch):
     assert all(re.fullmatch(r"\d+", z) for z in _gust_zellen_text(plain_roh)), plain_roh[:400]
 
 
-@pytest.mark.xfail(strict=True, reason="#3122: Trip-Telegram kennt die Wortstufe fuer Boeen noch nicht (Renderer-Nachzug, eigene Scheibe)")
+def _tg_kurz(mit, kuerzel: str) -> str:
+    """Wert der Zeile ``kuerzel`` in der Telegram-Kurzuebersicht."""
+    for b in telegram_bubbles(mit):
+        zeilen = b.splitlines()
+        if zeilen and zeilen[0] in ("Kurzübersicht", "Summary"):
+            for z in zeilen[1:]:
+                if z.startswith(kuerzel + " "):
+                    return z[len(kuerzel) + 1:]
+    raise AssertionError(f"keine Zeile {kuerzel!r}: {telegram_bubbles(mit)}")
+
+
 def test_ac5_boeen_telegram_einfach_ist_wortstufe(monkeypatch):
-    """AC-5 (offen_feature): Boeen Telegram Einfach -> Wortstufe statt Zahl."""
-    mit, _html, _plain = _ac5(monkeypatch, "raw", "simplified")
-    assert not any(re.fullmatch(r"\d+", z) for z in _tg_spalte(mit, "G")), _tg_spalte(mit, "G")
+    """AC-5: Boeen Telegram Einfach -> Wortstufe statt Zahl (Kurzuebersicht),
+    Telegram Roh -> Zahl; die E-Mail (Roh) bleibt dabei gleich."""
+    mit, html, _plain = _ac5(monkeypatch, "raw", "simplified")
+    assert re.fullmatch(r"[^\d@]+@\d\d", _tg_kurz(mit, "G")), _tg_kurz(mit, "G")
+    mit_roh, html_roh, _ = _ac5(monkeypatch, "raw", "raw")
+    assert re.fullmatch(r"\d+@\d\d", _tg_kurz(mit_roh, "G")), _tg_kurz(mit_roh, "G")
+    assert _gust_zellen_html(html) == _gust_zellen_html(html_roh)
+
+
+def _regenwahrscheinlichkeit(monkeypatch, email: str) -> tuple[str, str]:
+    folge = list(BASIS_KATALOG) + ["rain_probability"]
+    data = trip(tabelle([zeile("rain_probability", email=email), zeile("temperature")],
+                        outlook_reports=[]), folge=folge)
+    return mail_teile(senden(monkeypatch, data, "evening", mit_ausblick=False))
+
+
+def test_ac5_regenwahrscheinlichkeit_html_einfach_ampelpunkt(monkeypatch):
+    """AC-5 (HTML): Regenwahrscheinlichkeit E-Mail Einfach -> Ampelpunkt, Roh -> ohne."""
+    html, _ = _regenwahrscheinlichkeit(monkeypatch, "simplified")
+    tab = html_tabellen(html)["etappe"][0]
+    j = tab.spalten.index("rain_probability")
+    assert all("border-radius:50%" in f[j].replace(" ", "") for f in tab.fragmente)
+    html_roh, _ = _regenwahrscheinlichkeit(monkeypatch, "raw")
+    tab = html_tabellen(html_roh)["etappe"][0]
+    assert not any("border-radius:50%" in f[j].replace(" ", "") for f in tab.fragmente)
+
+
+@pytest.mark.xfail(strict=True, reason="#3122: Nur-Text-Mail kennt fuer die Regenwahrscheinlichkeit keine Wortstufe (Renderer-Nachzug, eigene Scheibe)")
+def test_ac5_regenwahrscheinlichkeit_nur_text_einfach_ist_wortstufe(monkeypatch):
+    """AC-5 (offen_feature): Regenwahrscheinlichkeit Einfach -> Wortstufe im Klartext."""
+    _html, plain = _regenwahrscheinlichkeit(monkeypatch, "simplified")
+    zellen = klartext_tabellen(plain)["etappe"][0].spalte("rain_probability")
+    assert not any(re.match(r"\d", z) for z in zellen), zellen
 
 
 def test_ac5_ausblick_format_folgt_stelle_ausblick(monkeypatch):
@@ -378,9 +424,10 @@ def _ausblick_ueberall(monkeypatch, data_voll: dict, data_kompakt: dict, rt: str
             "kompakt": ausblick_text(kompakt), "telegram": telegram_ausblick(mit)}
 
 
-def _ausblick_trip(reports, **kw) -> tuple[dict, dict]:
+def _ausblick_trip(reports, report_config: Optional[dict] = None) -> tuple[dict, dict]:
     t = tabelle([zeile("gust"), zeile("temperature"), zeile("wind")], outlook_reports=reports)
-    return trip(t, **kw), trip(t, report_config={"email_format": "compact"}, **kw)
+    rc = report_config or {}
+    return trip(t, report_config=rc), trip(t, report_config={**rc, "email_format": "compact"})
 
 
 def test_ac8_ausblick_nur_abends(monkeypatch):
@@ -565,15 +612,60 @@ def test_ac19_alarm_mail_darstellung_folgt_stelle_email_auch_abgewaehlt(monkeypa
     assert all(hat_punkt) if punkt else not any(hat_punkt), zeilen[:2]
 
 
-def test_ac19_alarm_telegram_darstellung_folgt_stelle_telegram(monkeypatch):
+@pytest.mark.parametrize("email,telegram", [("simplified", "raw"), ("raw", "simplified")])
+def test_ac19_alarm_telegram_darstellung_folgt_stelle_telegram(monkeypatch, email, telegram):
     """ADR-0124 Nr. 11: das Alarm-Telegram folgt dem Format der Stelle
-    Telegram (Roh), unabhaengig vom Format der E-Mail (Einfach)."""
-    from tests.tdd.test_alert_hour_rows import _cell, _rows
+    Telegram (Roh = Zahl, Einfach = Wortstufe), unabhaengig vom Format der
+    E-Mail."""
+    from tests.tdd.test_alert_hour_rows import _rows
 
-    mit = _alarm_senden(monkeypatch, {"email": "simplified"}, "raw")
+    mit = _alarm_senden(monkeypatch, {"email": email}, telegram)
     tg = mit.sendungen("telegram")
     assert len(tg) == 1, mit
     zeilen = _rows(tg[0]["body"])
     assert zeilen, tg[0]["body"]
-    assert all(re.fullmatch(r"\d+ → \d+", rest) for _t, rest in zeilen), zeilen
-    assert _cell("gust", 10.0, "raw") == "10"
+    zahlen = [bool(re.fullmatch(r"\d+ → \d+", rest)) for _t, rest in zeilen]
+    assert all(zahlen) if telegram == "raw" else not any(zahlen), zeilen
+
+
+#: Kanal-Eintrag mit eigenen Horizonten und einer Format-Schreibweise, die die
+#: View-Model-Zeile nicht unterscheidet (``format_mode: raw`` bei
+#: ``use_friendly_format: true`` -- HTML-Ampelpunkt an, Wert roh).
+_EIGENE_HORIZONTE = {
+    "metrics": [{"metric_id": m, "enabled": True, "bucket": "primary", "order": i}
+                for i, m in enumerate(["temperature", "wind", "gust", "precipitation"])],
+    "channel_layouts": {"email": [
+        {"metric_id": "gust", "bucket": "primary", "order": 0, "format_mode": "raw",
+         "use_friendly_format": True, "horizons": {"today": True, "tomorrow": False}},
+        {"metric_id": "temperature", "bucket": "primary", "order": 1,
+         "horizons": {"today": False, "tomorrow": True}},
+    ]},
+}
+
+
+def test_bestand_ohne_tabelle_mail_eintraege_gleich_bisheriger_kaskade():
+    """Unveraendertheit (Abos ohne ``placements``): fuer jede Kombination aus
+    Kanal-Ebenen, Briefing-Typ und Grundauswahl liefert der Mail-Adapter aus
+    den E-Mail-Zeilen des View-Models dieselben Eintraege (samt ``horizons``,
+    ``use_friendly_format``) wie die bisherige Kaskade -- Orakel ist die
+    wortgleiche Kopie ``alt_trip_metrics_for_channel`` (Stand vor #3057)."""
+    import dataclasses
+
+    from app.loader import _parse_display_config
+    from output.renderers.email.helpers import channel_metric_configs
+    from services.channel_list_resolver import resolve_channel_lists
+    from tests.helpers.kanal_liste_orakel import alt_trip_metrics_for_channel
+    from tests.tdd.test_3057_channel_list_resolver import _trip_kombinationen
+
+    faelle = list(_trip_kombinationen()) + [("eigene_horizonte", _EIGENE_HORIZONTE)]
+    fehler = []
+    for name, roh in faelle:
+        dc = _parse_display_config(copy.deepcopy(roh))
+        for rt in REPORT_TYPES:
+            vm = resolve_channel_lists(dc, "trip", rt)
+            neu = channel_metric_configs(vm.email, dc, "email", rt)
+            alt = [dataclasses.replace(mc, enabled=True)
+                   for mc in alt_trip_metrics_for_channel(dc, "email", rt)]
+            if neu != alt:
+                fehler.append(f"{name}/{rt}")
+    assert len(faelle) > 50 and not fehler, f"{len(fehler)} Abweichungen: {fehler[:5]}"

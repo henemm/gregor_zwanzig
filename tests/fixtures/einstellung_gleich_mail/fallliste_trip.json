@@ -3993,10 +3993,9 @@
       "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_ac5_boeen_telegram_einfach_ist_wortstufe",
       "ac": "AC-5",
       "befund": "#3122 B1b",
-      "status": "offen_feature",
+      "status": "gruen",
       "zustand": "placements",
-      "sprache": "de",
-      "verweis": "#3122 (Renderer-Nachzug Wortstufe im Trip-Telegram, Spec Teil A Nr. 4)"
+      "sprache": "de"
     },
     {
       "id": "T-3122-B1B-AC5-AUSBLICK-FORMAT",
@@ -4139,6 +4138,46 @@
       "befund": "#3122 B1b",
       "status": "gruen",
       "zustand": "placements",
+      "sprache": "de"
+    },
+    {
+      "id": "T-3122-B1B-AC5-REGENWAHRSCHEINLICHKEIT-HTML",
+      "liste": "trip_tabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_ac5_regenwahrscheinlichkeit_html_einfach_ampelpunkt",
+      "ac": "AC-5",
+      "befund": "#3122 B1b",
+      "status": "gruen",
+      "zustand": "placements",
+      "sprache": "de"
+    },
+    {
+      "id": "T-3122-B1B-AC5-REGENWAHRSCHEINLICHKEIT-NUR-TEXT",
+      "liste": "trip_tabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "darstellung",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_ac5_regenwahrscheinlichkeit_nur_text_einfach_ist_wortstufe",
+      "ac": "AC-5",
+      "befund": "#3122 B1b",
+      "status": "offen_feature",
+      "zustand": "placements",
+      "sprache": "de",
+      "verweis": "#3122 (Renderer-Nachzug: Wortstufe der Regenwahrscheinlichkeit in der Nur-Text-Mail, Spec Teil A Nr. 4)"
+    },
+    {
+      "id": "T-3122-B1B-BESTAND-MAIL-ADAPTER",
+      "liste": "trip_tabelle",
+      "kontext": "trip",
+      "format": "intern",
+      "pruefung": "bestand_ohne_tabelle_unveraendert",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_bestand_ohne_tabelle_mail_eintraege_gleich_bisheriger_kaskade",
+      "ac": "AC-11",
+      "befund": "#3122 B1b",
+      "status": "gruen",
+      "zustand": "kanal_liste",
       "sprache": "de"
     }
   ]
