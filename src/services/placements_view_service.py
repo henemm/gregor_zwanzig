@@ -109,7 +109,6 @@ def _tabelle_aufloesen(abo: _Abo, report_type: str):
 
 def _antwort(kind, abo: _Abo, vm, placements, gespeichert, muster: _Muster, lang) -> dict:
     from app.metric_catalog import get_metric
-    from output.renderers.sms_trip import SMSTripFormatter
     from services.channel_list_resolver import grundauswahl
 
     eltern = grundauswahl(abo.display_config, abo.surface, None).parents
@@ -118,7 +117,7 @@ def _antwort(kind, abo: _Abo, vm, placements, gespeichert, muster: _Muster, lang
         "position": r.position, "parent": eltern.get(r.metric_id),
         "cells": {stelle: _zelle(r.metric_id, stelle, c, muster) for stelle, c in r.cells},
     } for r in vm.rows]
-    max_laenge = _sms_max_laenge(SMSTripFormatter)
+    max_laenge = _sms_max_laenge(abo.surface)
     return {
         "kind": kind, "lang": lang, "stored": gespeichert, "placements": placements,
         "location_count": abo.ort_anzahl,
@@ -130,7 +129,7 @@ def _antwort(kind, abo: _Abo, vm, placements, gespeichert, muster: _Muster, lang
         "outlook_reports": list(vm.outlook_reports),
         "blocks": {**abo.bloecke, "outlook": {
             rt: rt in vm.outlook_reports for rt in ("morning", "evening")}},
-        "legend": _legende(zeilen, lang),
+        "legend": _legende(zeilen, abo.surface, vm, lang),
         "example_version": _beispiel_version(),
     }
 
@@ -141,11 +140,21 @@ def _beispiel_version() -> int:
     return VERSION
 
 
-def _sms_max_laenge(formatter) -> int:
-    """Laengengrenze der SMS aus dem Renderer (Vorgabe von ``format_sms``)."""
-    import inspect
+def _sms_max_laenge(surface: str) -> int:
+    """Grenze, mit der der Versandweg der Flaeche die SMS kuerzt (SMS und
+    Premium-SMS senden denselben Text). Trip: ``format_sms(max_length=...)``
+    -- der Trip-Renderer uebergibt dort den Vorgabewert 160 ausdruecklich.
+    Orte: ``render_compare_sms`` kuerzt auf ``CHANNEL_LIMITS["sms"]["max_chars"]``
+    (verkettungssicheres GSM-7-Budget, #1362)."""
+    if surface == "trip":
+        import inspect
 
-    return inspect.signature(formatter.format_sms).parameters["max_length"].default
+        from output.renderers.sms_trip import SMSTripFormatter
+
+        return inspect.signature(SMSTripFormatter.format_sms).parameters["max_length"].default
+    from output.renderers.channel_layout import CHANNEL_LIMITS
+
+    return CHANNEL_LIMITS["sms"]["max_chars"]
 
 
 def _zelle(metric_id: str, stelle: str, cell, muster: _Muster) -> dict:
@@ -171,9 +180,32 @@ def _spalten(abo: _Abo, vm) -> list[dict]:
     } for stelle, unterzeile in _UNTERZEILE[abo.surface].items()]
 
 
-def _legende(zeilen: list[dict], lang: str) -> dict:
-    """Spec Nr. 12: Kuerzel genau der Metriken mit SMS-Haken (Bedeutung aus
-    dem Katalog) und die festen Eintraege als Token mit Kennung."""
+def _sms_kuerzel(metric_id: str, surface: str, vm) -> list[tuple[str, str]]:
+    """(Kuerzel, Katalog-ID der Bedeutung) genau so, wie der SMS-Renderer der
+    Flaeche sie fuer diese Zeile ausgibt. Trip: Symboltabellen des Trip-SMS-
+    Renderers (Doppelpunkt gehoert zur Grammatik, nicht zum Kuerzel). Orte:
+    Kuerzel-Kennung je Auswertung der Zeile in der SMS-Liste (Temperatur
+    -> Tageshoechst ``D`` / Tagestiefst ``L``), wie ``_sms_metric_cell``."""
+    if surface == "trip":
+        from output.renderers.sms_trip import SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC
+
+        symbole = SMS_MULTI_SYMBOLS_BY_METRIC.get(metric_id) or tuple(
+            s for s in (SMS_SYMBOL_BY_METRIC.get(metric_id),) if s)
+        return [(s.rstrip(":"), metric_id) for s in symbole]
+    from app.metric_catalog import kurzform_kuerzel
+    from output.renderers.comparison import _RENDERER_TO_CATALOG_METRIC_ID
+
+    in_sms = {z.metric_id for z in (vm.sms or ())}
+    quellen = [_RENDERER_TO_CATALOG_METRIC_ID.get(rid) for rid in _renderer_ids(metric_id)
+               if rid in in_sms]
+    return [(kurzform_kuerzel(q), q) for q in quellen if q and kurzform_kuerzel(q)]
+
+
+def _legende(zeilen: list[dict], surface: str, vm, lang: str) -> dict:
+    """Spec Nr. 12: die Kuerzel, die der SMS-Renderer fuer die Metriken mit
+    SMS-Haken sendet, je mit der Bedeutung aus dem Katalog in der Sprache des
+    Nutzers (``None``, wo der Katalog keine fuehrt -- kein erfundener Text);
+    dazu die festen Eintraege als Token mit Kennung."""
     from app.metric_catalog import get_metric
     from output.tokens.builder import UNAVAILABLE_SYMBOL
     from output.tokens.hazard_symbols import (
@@ -184,10 +216,11 @@ def _legende(zeilen: list[dict], lang: str) -> dict:
     for z in zeilen:
         if z["cells"]["sms"]["state"] != "on":
             continue
-        definition = get_metric(z["metric_id"])
-        bedeutung = definition.kuerzel_bedeutung_en if lang == "en" else definition.kuerzel_bedeutung_de
-        metriken += [{"metric_id": z["metric_id"], "kuerzel": k, "meaning": v}
-                     for k, v in bedeutung.items()]
+        for kuerzel, quelle in dict.fromkeys(_sms_kuerzel(z["metric_id"], surface, vm)):
+            d = get_metric(quelle)
+            bedeutung = d.kuerzel_bedeutung_en if lang == "en" else d.kuerzel_bedeutung_de
+            metriken.append({"metric_id": z["metric_id"], "kuerzel": kuerzel,
+                             "meaning": bedeutung.get(kuerzel)})
     warnung = "!" + "".join(alert_entry_token_parts(
         HAZARD_SMS_SYMBOLS["thunderstorm"], LEVEL_LETTERS[4], 14))
     lawine = "".join(alert_entry_token_parts(HAZARD_SMS_SYMBOLS["avalanche_bulletin"], "4", None))

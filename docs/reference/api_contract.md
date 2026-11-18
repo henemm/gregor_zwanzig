@@ -1449,12 +1449,12 @@ placements = { version: 1,
                                  example: string|null,    // Beispielwert aus dem Renderer (nur bei state "on")
                                  ampel: "green"|"yellow"|"orange"|"red"|null,  // HTML-Ampelpunkt
                                  mark: "passt_nicht_mehr"|"nur_tageswert"|null } } } ],
-  sms_example: { text, length, max_length } | null,   // null: Orte-Abo ohne auffindbaren Ort
+  sms_example: { text, length, max_length } | null,   // max_length = Kuerzungsgrenze des Versandwegs: Trip 160 (format_sms), Orte CHANNEL_LIMITS sms 153; null: Orte-Abo ohne Ort
   outlook_reports: ["morning"|"evening", ...],         // aufgelöst, inkl. Vorbelegung
   blocks: { outlook: {morning: bool, evening: bool}, telegram_style,
             // Trip: show_stage_stats, show_yesterday_comparison, show_night_block, email_format
             // Orte: hourly },
-  legend: { metrics: [ { metric_id, kuerzel, meaning } ],   // Kürzel der Metriken mit SMS-Haken, Bedeutung aus dem Katalog
+  legend: { metrics: [ { metric_id, kuerzel, meaning } ],   // Kürzel, die der SMS-Renderer der Fläche für Metriken mit SMS-Haken sendet (Trip-Symboltabellen, Orte kurzform_kuerzel je Auswertung, z. B. Temperatur -> D/L); meaning aus kuerzel_bedeutung_de/en, null wenn der Katalog keine führt
             fixed: [ { token, key } ] },                    // @14, !TS:H@14, L, M, H, WG, RA, AV4, X? -- Texte im Frontend
   example_version: int }        // Version des festen Beispiel-Datensatzes
 ```
