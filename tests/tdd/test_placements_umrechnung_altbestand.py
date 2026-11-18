@@ -30,7 +30,12 @@ VIER_FAELLE = {"reihenfolge_wie_sms", "ohne_email_entfaellt", "nur_text_folgt_ht
 #: (Nr. 2 Katalog-ID als Zeile, Nr. 3.1 Grundauswahl als Maximum, Nr. 8
 #: "zaehlt die Abend-Fassung", ADR-0124 Nr. 8 Premium-SMS = SMS).
 WEITERE_FAELLE = {"auswertungen_gekoppelt", "ausserhalb_grundauswahl", "morgen_folgt_abend",
-                  "premium_folgt_sms", "gesperrte_stelle_entfaellt"}
+                  "premium_folgt_sms", "gesperrte_stelle_entfaellt",
+                  # #3122 Fix-Loop B1b: Nacht-/Tagesgroessen ohne eigene Spalte
+                  # gehoeren zur Trip-Mail, folgen der Grundauswahl und sind in
+                  # der E-Mail-Spalte nicht abwaehlbar -- eine Kanal-Liste, die
+                  # sie weggelassen hatte, verliert diese Wirkung.
+                  "ohne_spalte_folgt_grundauswahl"}
 #: Faelle, die das View-Model nicht als Mengen-/Folgeabweichung zeigt (sie
 #: stehen nach Regel in der Liste, s. eigene Tests oben).
 REGEL_FAELLE = {"nur_text_folgt_html", "sms_wolkenform_entfaellt"}
@@ -401,6 +406,11 @@ def _begruendet(art, surface, stelle, metric_id, report_type, ctx):
         return surface == "trip" and report_type == "morning"
     if art == "premium_folgt_sms":
         return stelle == "premium_sms"
+    if art == "ohne_spalte_folgt_grundauswahl":
+        from app.metric_catalog import stellen_sperre
+
+        return (surface == "trip" and stelle == "email" and kid in ctx["grund"]
+                and stellen_sperre(kid, "email", surface) == "keine_eigene_spalte")
     return False
 
 
