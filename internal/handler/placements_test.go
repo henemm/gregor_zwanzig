@@ -17,9 +17,11 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -84,26 +86,33 @@ const placementsB2PresetJSON = `{
 func seedPlacementsB2(t *testing.T, s *store.Store, nutzer ...string) {
 	t.Helper()
 	for _, u := range nutzer {
-		trip := model.Trip{
-			ID: "trip-" + u, Name: "Placements-Trip",
-			Stages: []model.Stage{{ID: "S1", Name: "D1", Date: "2026-05-01",
-				Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
-			}},
-			DisplayConfig: map[string]interface{}{
-				"metrics": []interface{}{
-					map[string]interface{}{"metric_id": "wind", "enabled": true},
-					map[string]interface{}{"metric_id": "gust", "enabled": true},
-				},
-				"show_night_block": true,
-				"placements":       placements3122(t),
-			},
-		}
-		if err := s.WithUser(u).SaveTrip(&trip); err != nil {
-			t.Fatalf("SaveTrip: %v", err)
-		}
-		writeRawComparePresetFixture(t, s, u, "orte-"+u,
-			strings.ReplaceAll(placementsB2PresetJSON, "%ID%", "orte-"+u))
+		seedPlacementsB2Als(t, s, u, "trip-"+u, "orte-"+u)
 	}
+}
+
+// seedPlacementsB2Als legt fuer einen Nutzer Trip und Orte-Abo unter frei
+// gewaehlten Kennungen an (zwei Nutzer koennen dieselbe Kennung tragen).
+func seedPlacementsB2Als(t *testing.T, s *store.Store, u, tripID, orteID string) {
+	t.Helper()
+	trip := model.Trip{
+		ID: tripID, Name: "Placements-Trip",
+		Stages: []model.Stage{{ID: "S1", Name: "D1", Date: "2026-05-01",
+			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
+		}},
+		DisplayConfig: map[string]interface{}{
+			"metrics": []interface{}{
+				map[string]interface{}{"metric_id": "wind", "enabled": true},
+				map[string]interface{}{"metric_id": "gust", "enabled": true},
+			},
+			"show_night_block": true,
+			"placements":       placements3122(t),
+		},
+	}
+	if err := s.WithUser(u).SaveTrip(&trip); err != nil {
+		t.Fatalf("SaveTrip: %v", err)
+	}
+	writeRawComparePresetFixture(t, s, u, orteID,
+		strings.ReplaceAll(placementsB2PresetJSON, "%ID%", orteID))
 }
 
 func aboDatei(s *store.Store, user, id string) string {
@@ -336,5 +345,174 @@ func TestPlacements3122B2Robustheit(t *testing.T) {
 	}
 	if _, err := os.Stat(aboDatei(s, "b2-a", "gibt-es-nicht")); !os.IsNotExist(err) {
 		t.Errorf("PUT auf unbekannte Kennung hat eine Datei angelegt")
+	}
+}
+
+// T1: der Store wird an die Anmeldung gebunden, nie an eine user_id der Query.
+// Beide Nutzer tragen DIESELBE Kennung -- ein an die Query gebundener Store
+// schriebe die Datei von B.
+func TestPlacements3122B2PutBindetAnAnmeldungNichtAnQuery(t *testing.T) {
+	for _, f := range placementsB2Faelle {
+		t.Run(f.kind, func(t *testing.T) {
+			s := newTestStore(t)
+			r := placementsRouter(s, neuerKern(t).srv.URL)
+			id := f.praefix + "gleich"
+			seedPlacementsB2Als(t, s, "b2-a", "trip-gleich", "orte-gleich")
+			seedPlacementsB2Als(t, s, "b2-b", "trip-gleich", "orte-gleich")
+			vorherB, _ := os.ReadFile(aboDatei(s, "b2-b", id))
+
+			w := doReq(r, http.MethodPut, placementsPfad(id, f.kind)+"&user_id=b2-b", placementsB2Neu, "", "b2-a")
+			if w.Code != http.StatusOK {
+				t.Fatalf("PUT: %d %s", w.Code, w.Body.String())
+			}
+			var soll map[string]interface{}
+			_ = json.Unmarshal([]byte(placementsB2Neu), &soll)
+			gotA := roheDatei(t, aboDatei(s, "b2-a", id))["display_config"].(map[string]interface{})["placements"]
+			if !reflect.DeepEqual(gotA, soll) {
+				t.Errorf("geschrieben werden muss bei A (Anmeldung), dort steht %#v", gotA)
+			}
+			if nachherB, _ := os.ReadFile(aboDatei(s, "b2-b", id)); !bytes.Equal(nachherB, vorherB) {
+				t.Errorf("Datei von B (user_id der Query) wurde veraendert")
+			}
+		})
+	}
+}
+
+// T4: PUT ersetzt placements vollstaendig -- Schluessel und Zeilen des alten
+// Stands, die im neuen fehlen, sind danach weg (kein tiefer Merge).
+func TestPlacements3122B2PutErsetztVollstaendig(t *testing.T) {
+	const kleiner = `{"version": 1, "rows": [{"metric_id": "gust"}]}`
+	for _, f := range placementsB2Faelle {
+		t.Run(f.kind, func(t *testing.T) {
+			s := newTestStore(t)
+			r := placementsRouter(s, neuerKern(t).srv.URL)
+			seedPlacementsB2(t, s, "b2-a")
+			id := f.praefix + "b2-a"
+			alt := roheDatei(t, aboDatei(s, "b2-a", id))["display_config"].(map[string]interface{})["placements"].(map[string]interface{})
+			if _, ok := alt["outlook_reports"]; !ok || len(alt["rows"].([]interface{})) != 2 {
+				t.Fatalf("Ausgangslage: outlook_reports und zwei Zeilen erwartet, war %#v", alt)
+			}
+			if w := doReq(r, http.MethodPut, placementsPfad(id, f.kind), kleiner, "", "b2-a"); w.Code != http.StatusOK {
+				t.Fatalf("PUT: %d %s", w.Code, w.Body.String())
+			}
+			var soll map[string]interface{}
+			_ = json.Unmarshal([]byte(kleiner), &soll)
+			got := roheDatei(t, aboDatei(s, "b2-a", id))["display_config"].(map[string]interface{})["placements"]
+			if !reflect.DeepEqual(got, soll) {
+				t.Errorf("placements nicht vollstaendig ersetzt: %#v", got)
+			}
+		})
+	}
+}
+
+// T3 (Sperre, strukturell): solange die Briefing-Sperre gehalten wird,
+// schreibt kein PUT. Aendert sich das Abo waehrenddessen, bekommen die
+// wartenden PUTs mit dem alten Stempel 412 und ueberschreiben nichts.
+func TestPlacements3122B2PutWartetAufSperreUndPrueftDanach(t *testing.T) {
+	for _, f := range placementsB2Faelle {
+		t.Run(f.kind, func(t *testing.T) {
+			s := newTestStore(t)
+			r := placementsRouter(s, neuerKern(t).srv.URL)
+			seedPlacementsB2(t, s, "b2-a")
+			id := f.praefix + "b2-a"
+			datei := aboDatei(s, "b2-a", id)
+			nutzerStore := s.WithUser("b2-a")
+			fp, _ := nutzerStore.BriefingFingerprint(id)
+			vorher, _ := os.ReadFile(datei)
+
+			unlock := nutzerStore.LockBriefing(id)
+			freigegeben := false
+			defer func() {
+				if !freigegeben {
+					unlock()
+				}
+			}()
+			const n = 4
+			gestartet := make(chan struct{}, n)
+			fertig := make(chan *httptest.ResponseRecorder, n)
+			for i := 0; i < n; i++ {
+				go func() {
+					gestartet <- struct{}{}
+					fertig <- doReq(r, http.MethodPut, placementsPfad(id, f.kind), placementsB2Neu, `"`+fp+`"`, "b2-a")
+				}()
+			}
+			for i := 0; i < n; i++ {
+				<-gestartet
+			}
+			// Unter gehaltener Sperre darf die Datei nicht angefasst werden
+			// (ohne Sperre liefe der PUT sofort durch).
+			frist := time.Now().Add(250 * time.Millisecond)
+			for time.Now().Before(frist) {
+				if jetzt, _ := os.ReadFile(datei); !bytes.Equal(jetzt, vorher) {
+					t.Fatalf("PUT hat geschrieben, obwohl die Briefing-Sperre gehalten wurde")
+				}
+				select {
+				case w := <-fertig:
+					t.Fatalf("PUT hat unter gehaltener Sperre geantwortet: %d", w.Code)
+				case <-time.After(5 * time.Millisecond):
+				}
+			}
+			// Ein anderer Schreiber aendert das Abo, waehrend die PUTs warten.
+			zwischen := bytes.Replace(vorher, []byte("Placements-Trip"), []byte("Zwischenzeitlich"), 1)
+			zwischen = bytes.Replace(zwischen, []byte("Orte B2"), []byte("Zwischenzeitlich"), 1)
+			if bytes.Equal(zwischen, vorher) {
+				t.Fatal("Testaufbau: Zwischen-Aenderung ohne Wirkung")
+			}
+			if err := os.WriteFile(datei, zwischen, 0o660); err != nil {
+				t.Fatal(err)
+			}
+			unlock()
+			freigegeben = true
+			for i := 0; i < n; i++ {
+				if w := <-fertig; w.Code != http.StatusPreconditionFailed {
+					t.Errorf("wartender PUT mit altem Stempel: Status %d, erwartet 412", w.Code)
+				}
+			}
+			if nachher, _ := os.ReadFile(datei); !bytes.Equal(nachher, zwischen) {
+				t.Errorf("wartender PUT hat den zwischenzeitlichen Stand ueberschrieben")
+			}
+		})
+	}
+}
+
+// T3: gleichzeitige PUTs mit demselben If-Match -- genau einer schreibt, alle
+// anderen bekommen 412.
+func TestPlacements3122B2GleichzeitigePutsGenauEinerSchreibt(t *testing.T) {
+	for _, f := range placementsB2Faelle {
+		t.Run(f.kind, func(t *testing.T) {
+			s := newTestStore(t)
+			r := placementsRouter(s, neuerKern(t).srv.URL)
+			seedPlacementsB2(t, s, "b2-a")
+			id := f.praefix + "b2-a"
+			fp, _ := s.WithUser("b2-a").BriefingFingerprint(id)
+
+			const n = 10
+			var wg sync.WaitGroup
+			start := make(chan struct{})
+			codes := make([]int, n)
+			for i := 0; i < n; i++ {
+				wg.Add(1)
+				go func(i int) {
+					defer wg.Done()
+					<-start
+					body := `{"version": 1, "rows": [{"metric_id": "wind"}], "schreiber": ` + strconv.Itoa(i) + `}`
+					codes[i] = doReq(r, http.MethodPut, placementsPfad(id, f.kind), body, `"`+fp+`"`, "b2-a").Code
+				}(i)
+			}
+			close(start)
+			wg.Wait()
+			ok, konflikt := 0, 0
+			for _, c := range codes {
+				switch c {
+				case http.StatusOK:
+					ok++
+				case http.StatusPreconditionFailed:
+					konflikt++
+				}
+			}
+			if ok != 1 || konflikt != n-1 {
+				t.Errorf("erwartet genau 1x200 und %dx412, war %v", n-1, codes)
+			}
+		})
 	}
 }

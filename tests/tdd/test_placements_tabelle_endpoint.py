@@ -73,7 +73,7 @@ def _schreibe(user: str, ordner: str, kennung: str, daten: dict) -> Path:
 
 
 def _trip(user: str, kennung: str, *, placements=None, grund=TRIP_GRUND, rc=None,
-          warnungen=True) -> Path:
+          warnungen=True, etappe="Etappe 1") -> Path:
     dc = {"trip_id": kennung, "metrics": [
         {"metric_id": m, "enabled": True, "bucket": "primary", "order": i}
         for i, m in enumerate(grund)]}
@@ -81,7 +81,7 @@ def _trip(user: str, kennung: str, *, placements=None, grund=TRIP_GRUND, rc=None
         dc["placements"] = placements
     daten = {
         "id": kennung, "name": "Trip " + kennung, "kind": "route",
-        "stages": [{"id": "T1", "name": "Etappe 1", "date": "2026-07-14", "waypoints": [
+        "stages": [{"id": "T1", "name": etappe, "date": "2026-07-14", "waypoints": [
             {"id": "W1", "name": "Start", "lat": 47.27, "lon": 11.40, "elevation_m": 600},
             {"id": "W2", "name": "Ziel", "lat": 47.29, "lon": 11.42, "elevation_m": 900}]}],
         "official_alerts_enabled": warnungen, "display_config": dc,
@@ -94,9 +94,9 @@ def _trip(user: str, kennung: str, *, placements=None, grund=TRIP_GRUND, rc=None
 
 
 def _orte(user: str, kennung: str, *, anzahl=3, placements=None, grund=ORTE_GRUND,
-          warnungen=True, morgen=True, abend=False, extra=None) -> Path:
+          warnungen=True, morgen=True, abend=False, extra=None, namen=ORTSNAMEN) -> Path:
     ids = []
-    for i, name in enumerate(ORTSNAMEN[:anzahl]):
+    for i, name in enumerate(namen[:anzahl]):
         ort_id = f"{kennung}-ort{i}"
         ids.append(ort_id)
         _schreibe(user, "locations", ort_id, {
@@ -146,7 +146,7 @@ def _zeile(antwort, metric_id) -> dict:
 # Versandweg-Orakel (aus demselben Beispiel-Datensatz)
 # ---------------------------------------------------------------------------
 
-def _trip_versand_sms(user: str, kennung: str) -> str:
+def _trip_versand_sms(user: str, kennung: str, report_type: str = "evening") -> str:
     """SMS ueber den Renderer des Versands mit dem festen Beispiel-Datensatz."""
     from app.ampel import resolve_ampel
     from app.loader import get_data_root, load_trip
@@ -158,10 +158,10 @@ def _trip_versand_sms(user: str, kennung: str) -> str:
     trip = load_trip(kennung, data_dir=get_data_root(), user_id=user)
     dc = trip.display_config
     trend = [build_outlook_row(summarize_points(p), p, wd, pb.ZONE, trip_display_config=dc,
-                               report_type="evening", context="route", ampel=resolve_ampel(trip))
+                               report_type=report_type, context="route", ampel=resolve_ampel(trip))
              for wd, p in pb.ausblick_tage()]
     return TripReportFormatter().format_email(
-        pb.trip_segmente(), trip.name, "evening", display_config=dc, multi_day_trend=trend,
+        pb.trip_segmente(), trip.name, report_type, display_config=dc, multi_day_trend=trend,
         report_config=trip.report_config, trip=trip, tz=pb.ZONE,
         stage_name=trip.stages[0].name, lang="de",
     ).sms_text
@@ -193,12 +193,14 @@ def _trip_symbole(metric_id: str) -> tuple[str, ...]:
     return (SMS_SYMBOL_BY_METRIC[metric_id],) if metric_id in SMS_SYMBOL_BY_METRIC else ()
 
 
-def _trip_fehlt_in_sms(sms: str, metric_id: str) -> bool:
+def _trip_fehlt_in_sms(sms: str, metric_id: str, rumpf: str | None = None) -> bool:
+    """``rumpf``: Text hinter dem (vom Test woertlich bekannten) Kopf; ohne
+    Angabe gilt der Kopf ``E<n>: `` der Standard-Etappe."""
     from output.renderers.sms_trip import SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC
 
     alle = set(SMS_SYMBOL_BY_METRIC.values()) | {
         s for syms in SMS_MULTI_SYMBOLS_BY_METRIC.values() for s in syms}
-    token = sms.split(": ", 1)[1].split(" ")
+    token = (sms.split(": ", 1)[1] if rumpf is None else rumpf).split(" ")
 
     def _symbol(tok: str) -> str | None:
         treffer = [s for s in alle if tok.startswith(s)]
@@ -208,12 +210,14 @@ def _trip_fehlt_in_sms(sms: str, metric_id: str) -> bool:
     return not any(s in vorhanden for s in _trip_symbole(metric_id))
 
 
-def _orte_fehlt_in_sms(sms: str, metric_id: str) -> bool:
+def _orte_fehlt_in_sms(sms: str, metric_id: str, teil: str | None = None) -> bool:
     """Ein Ort-Teil der Orte-SMS: ``Name K1 Wert K2 Wert ...``; die Metrik
-    fehlt, wenn keines ihrer Kuerzel im ersten Ort-Teil steht."""
+    fehlt, wenn keines ihrer Kuerzel im ersten Ort-Teil steht. ``teil``: die
+    Zellen des ersten Orts, vom Test ueber woertliche Raender bestimmt."""
     from app.metric_catalog import kurzform_kuerzel
 
-    teil = sms.split(": ", 1)[1].split("; ")[0]
+    if teil is None:
+        teil = sms.split(": ", 1)[1].split("; ")[0]
     kuerzel = {"temperature": ("D", "L")}.get(metric_id, (kurzform_kuerzel(metric_id),))
     return not any(re.search(rf"(^| ){re.escape(k)} ", teil) for k in kuerzel if k)
 
@@ -632,3 +636,215 @@ def _kuerzel_quellen(metric_id: str) -> tuple[str, ...]:
 
     return tuple(_RENDERER_TO_CATALOG_METRIC_ID[r] for r in _renderer_ids_for_kennung(metric_id)
                  if r in _RENDERER_TO_CATALOG_METRIC_ID)
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 2 (Adversary): Namen mit Trennzeichen, verschmolzene Token,
+# ueberlange Kennung, echte App, fremde Orte, fester Datensatz
+# ---------------------------------------------------------------------------
+
+def _markiert(antwort) -> set[str]:
+    return {z["metric_id"] for z in antwort["rows"]
+            if z["cells"]["sms"]["mark"] == "passt_nicht_mehr"}
+
+
+@pytest.mark.parametrize("etappe,kopf", [
+    ("Tag 1: SU7", "Tag 1: SU7: "), ("W: G5 R1", "W: G5 R1: "),
+])
+def test_f001_etappenname_mit_trennzeichen_verfaelscht_nichts(client, etappe, kopf):
+    """Der Kopf der Trip-SMS ist der Etappenname; steht darin ``: `` oder ein
+    Text, der wie ein Kuerzel aussieht, bleiben Beispielwerte und Marken
+    die der wirklichen Token."""
+    _trip(NUTZER_A, "t-f001", placements={"version": 1, "rows": []}, etappe=etappe)
+    antwort = _ok(client, "t-f001", "route")
+    versand = _trip_versand_sms(NUTZER_A, "t-f001")
+    assert versand.startswith(kopf), versand
+    rumpf = versand[len(kopf):]
+    token = rumpf.split(" ")
+
+    assert antwort["sms_example"]["text"] == versand
+    fehlend = {m for m in _sms_an(antwort) if _trip_fehlt_in_sms(versand, m, rumpf)}
+    assert "sunshine" in fehlend, "Datensatz muss die SMS ueberlaufen lassen"
+    assert _markiert(antwort) == fehlend
+    for zeile in antwort["rows"]:
+        beispiel = zeile["cells"]["sms"]["example"]
+        if beispiel:
+            assert set(beispiel.split(" ")) <= set(token), (zeile["metric_id"], beispiel)
+    assert _zeile(antwort, "wind")["cells"]["sms"]["example"].startswith("W3")
+    assert _zeile(antwort, "gust")["cells"]["sms"]["example"].startswith("G3")
+
+
+@pytest.mark.parametrize("anzahl", [1, 3])
+def test_f002_ortsname_mit_trennzeichen_verfaelscht_nichts(client, anzahl):
+    namen = ("Wind 5: B; C", "Lienz", "Kufstein")
+    kennung = f"o-f002-{anzahl}"
+    _orte(NUTZER_A, kennung, anzahl=anzahl, placements={"version": 1, "rows": []}, namen=namen)
+    antwort = _ok(client, kennung, "vergleich")
+    versand = _orte_versand_sms(NUTZER_A, kennung)
+    kopf = "Vergleich 14.07.: Wind 5: B; C "
+    assert versand.startswith(kopf), versand
+    teil = versand[len(kopf):].split("; Lienz ")[0]
+
+    assert antwort["sms_example"]["text"] == versand
+    fehlend = {m for m in _sms_an(antwort) if _orte_fehlt_in_sms(versand, m, teil)}
+    assert fehlend and len(fehlend) < len(_sms_an(antwort)), "weder alles noch nichts darf fehlen"
+    assert _markiert(antwort) == fehlend
+    wind = _zeile(antwort, "wind")["cells"]
+    assert wind["sms"]["example"] == "W 43 km/h"
+    assert wind["telegram"]["example"] == "Wind 43 km/h", "Ortsname ist keine Wind-Zelle"
+
+
+def test_f003_ueberlange_kennung_ist_kein_serverfehler(client):
+    _trip(NUTZER_A, "t-lang")
+    for kind in ("route", "vergleich"):
+        for laenge in (300, 5000):
+            antwort = _get(client, "x" * laenge, kind)
+            assert antwort.status_code == 404, (kind, laenge, antwort.status_code)
+            assert antwort.json()["code"] == "not_found"
+
+
+def test_f004_verschmolzenes_token_steht_bei_beiden_haelften(client):
+    """``L``/``D`` und ``FL``/``FD`` verschmelzen in der SMS zu EINEM Bereichs-
+    Token unter dem Hoechstwert-Kuerzel; die Tiefstwert-Zeile zeigt dieses
+    Token und gilt nicht als 'passt nicht mehr' -- auch als letzte SMS-Zeile."""
+    _trip(NUTZER_A, "t-f004", grund=["temperature", "wind_chill", "wind"],
+          placements={"version": 1, "rows": [
+              {"metric_id": "temperature_day_high"}, {"metric_id": "wind_chill_day_high"},
+              {"metric_id": "wind"}, {"metric_id": "wind_chill_day_low"},
+              {"metric_id": "temperature_day_low"}]})
+    antwort = _ok(client, "t-f004", "route")
+    token = antwort["sms_example"]["text"].split(": ", 1)[1].split(" ")
+    bereich = {"D": next(t for t in token if re.fullmatch(r"D-?\d+/-?\d+", t)),
+               "FD": next(t for t in token if re.fullmatch(r"FD-?\d+/-?\d+", t))}
+    assert not any(re.match(r"F?L-?\d", t) for t in token), "Vorbedingung: kein eigenes L/FL-Token"
+    for tief, hoch, sym in (("temperature_day_low", "temperature_day_high", "D"),
+                            ("wind_chill_day_low", "wind_chill_day_high", "FD")):
+        for mid in (tief, hoch):
+            zelle = _zeile(antwort, mid)["cells"]["sms"]
+            assert (zelle["state"], zelle["example"], zelle["mark"]) == ("on", bereich[sym], None), mid
+    assert _markiert(antwort) == set()
+
+
+def test_t2_t6_echte_app_route_und_kern_geheimnis():
+    """Die Route haengt in der echten FastAPI-App ``api.main`` und liegt
+    hinter dem Kern-Geheimnis (ADR-0062)."""
+    from api.main import CORE_AUTH_HEADER, app
+
+    _trip(NUTZER_A, "t-app", placements=TRIP_PLACEMENTS)
+    pfad, params = "/api/briefings/t-app/placements", {"kind": "route", "user_id": NUTZER_A}
+    mit = TestClient(app)
+    antwort = mit.get(pfad, params=params)
+    assert antwort.status_code == 200, antwort.text
+    assert antwort.json()["rows"][0]["metric_id"] == "gust"
+
+    ohne = TestClient(app)
+    del ohne.headers[CORE_AUTH_HEADER]
+    assert ohne.get(pfad, params=params).status_code == 401
+    falsch = TestClient(app)
+    falsch.headers[CORE_AUTH_HEADER] = "falsches-geheimnis"
+    abgewiesen = falsch.get(pfad, params=params)
+    assert abgewiesen.status_code == 401 and "rows" not in abgewiesen.text
+
+
+def test_t5_orte_nur_aus_dem_bestand_des_nutzers(client):
+    """Ein Abo von A, das auf eine Orts-Kennung zeigt, die nur B besitzt,
+    bekommt weder Name noch Daten von B."""
+    _schreibe(NUTZER_B, "locations", "nur-b", {
+        "id": "nur-b", "name": "GeheimerOrtVonB", "lat": 46.0, "lon": 10.0, "elevation_m": 2000})
+    pfad = _orte(NUTZER_A, "o-t5", anzahl=1, placements={"version": 1, "rows": []})
+    daten = json.loads(pfad.read_text())
+    daten["location_ids"] = ["nur-b"] + daten["location_ids"]
+    pfad.write_text(json.dumps(daten), encoding="utf-8")
+
+    antwort = _get(client, "o-t5", "vergleich")
+    assert antwort.status_code == 200, antwort.text
+    assert "GeheimerOrtVonB" not in antwort.text
+    assert antwort.json()["location_count"] == 1
+    assert antwort.json()["sms_example"]["text"].startswith("Vergleich 14.07.: Innsbruck ")
+
+    daten["location_ids"] = ["nur-b"]
+    pfad.write_text(json.dumps(daten), encoding="utf-8")
+    nur_fremd = _get(client, "o-t5", "vergleich")
+    assert nur_fremd.status_code == 200 and "GeheimerOrtVonB" not in nur_fremd.text
+    assert (nur_fremd.json()["location_count"], nur_fremd.json()["sms_example"]) == (0, None)
+
+
+@pytest.mark.parametrize("kind,kennung", [("route", "t-t7"), ("vergleich", "o-t7")])
+def test_t7_antwort_haengt_nicht_am_tag_des_abrufs(client, kind, kennung):
+    from freezegun import freeze_time
+
+    _trip(NUTZER_A, "t-t7", placements={"version": 1, "rows": []})
+    _orte(NUTZER_A, "o-t7", placements={"version": 1, "rows": []})
+    with freeze_time("2026-01-05T07:30:00+00:00"):
+        winter = _ok(client, kennung, kind)
+    with freeze_time("2027-08-21T22:10:00+00:00"):
+        sommer = _ok(client, kennung, kind)
+    assert winter == sommer
+
+
+#: Fingerabdruck der Beispieldaten je ``VERSION``. Wer die Daten aendert,
+#: erhoeht ``placements_beispiel.VERSION`` und traegt den neuen Wert ein.
+BEISPIEL_FINGERABDRUCK = {1: "234803e3fa81a6a02011d175f952d8b5f1c01df3a76eb97843034afc3adec366"}
+
+
+def _beispiel_fingerabdruck() -> str:
+    import dataclasses
+    import hashlib
+
+    from app.user import SavedLocation
+    from services import placements_beispiel as pb
+
+    orte = [SavedLocation(id=f"f{i}", name=f"F{i}", lat=47.0 + i, lon=11.0, elevation_m=500)
+            for i in range(2)]
+
+    def _roh(o):
+        return dataclasses.asdict(o) if dataclasses.is_dataclass(o) else str(o)
+
+    daten = [pb.trip_segmente(), pb.ausblick_tage(), pb.orte_ergebnis(orte), str(pb.ZONE), str(pb.TAG)]
+    return hashlib.sha256(json.dumps(daten, default=_roh, sort_keys=True).encode()).hexdigest()
+
+
+def test_t7_beispieldaten_sind_an_die_version_gebunden():
+    from services import placements_beispiel as pb
+
+    assert pb.VERSION in BEISPIEL_FINGERABDRUCK, "neue VERSION ohne Fingerabdruck"
+    assert _beispiel_fingerabdruck() == BEISPIEL_FINGERABDRUCK[pb.VERSION], (
+        "Beispieldaten geaendert: placements_beispiel.VERSION erhoehen und den "
+        "Fingerabdruck der neuen Version eintragen")
+
+
+def test_t8_metrik_name_in_der_sprache_des_nutzers(client):
+    from app.metric_catalog import get_metric
+
+    assert get_metric("gust").label("en") != get_metric("gust").label("de")
+    _trip(NUTZER_A, "t-en", placements=TRIP_PLACEMENTS)
+    _sprache(NUTZER_A, "en")
+    antwort = _ok(client, "t-en", "route")
+    assert antwort["lang"] == "en"
+    assert _zeile(antwort, "gust")["name"] == get_metric("gust").label("en")
+    _sprache(NUTZER_A, "de")
+    assert _zeile(_ok(client, "t-en", "route"), "gust")["name"] == get_metric("gust").label("de")
+
+
+def test_t9_reines_morgen_abo_zeigt_das_morgen_briefing(client):
+    """Beispiel = das Briefing, das der Nutzer bekommt: bei reinem Morgen-Abo
+    das Morgen-Briefing, sonst das Abend-Briefing."""
+    grund = ["temperature", "wind"]
+    _trip(NUTZER_A, "t-morgen", grund=grund, placements={"version": 1, "rows": []},
+          rc={"enabled": True, "morning_enabled": True, "evening_enabled": False})
+    _trip(NUTZER_A, "t-beide", grund=grund, placements={"version": 1, "rows": []})
+    morgen = _trip_versand_sms(NUTZER_A, "t-morgen", "morning")
+    abend = _trip_versand_sms(NUTZER_A, "t-beide", "evening")
+    assert morgen != abend, "Vorbedingung: Morgen- und Abend-SMS unterscheiden sich"
+    assert _ok(client, "t-morgen", "route")["sms_example"]["text"] == morgen
+    assert _ok(client, "t-beide", "route")["sms_example"]["text"] == abend
+
+
+def test_t9_parent_nennt_die_eltern_zeile(client):
+    _trip(NUTZER_A, "t-parent", grund=["temperature", "wind_chill", "wind"],
+          placements={"version": 1, "rows": []})
+    antwort = _ok(client, "t-parent", "route")
+    assert _zeile(antwort, "temperature_night")["parent"] == "temperature"
+    assert _zeile(antwort, "wind_chill_day_low")["parent"] == "wind_chill"
+    assert _zeile(antwort, "temperature")["parent"] is None
+    assert _zeile(antwort, "wind")["parent"] is None
