@@ -209,9 +209,12 @@
 		gap: var(--g-s-2);
 		min-width: 0;
 	}
+	/* Der Beispielwert bekommt nur den Platz, den Haken, Knopf und Marke übrig lassen (Auslassungspunkte),
+	   höchstens seine eigene Breite. Erst wenn auch ohne ihn kein Platz ist, bricht die Marke um. */
 	.et-beispiel {
-		flex: 0 1 auto;
+		flex: 1 1 0;
 		min-width: 0;
+		max-width: max-content;
 		overflow: hidden;
 		color: var(--g-ink-2);
 		font-family: var(--g-font-mono);
@@ -219,13 +222,16 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
+	/* Die Marke bleibt in ihrer Zelle: einzeilig, solange Platz ist, sonst bricht sie um. */
 	.et-marke {
-		flex: 0 0 auto;
+		flex: 0 1 auto;
+		min-width: 0;
 		color: var(--g-bad);
 		font-size: var(--g-text-xs);
 		font-style: normal;
 		font-weight: 600;
-		white-space: nowrap;
+		line-height: 1.2;
+		overflow-wrap: anywhere;
 	}
 	.et-marke[data-ton='leise'] {
 		color: var(--g-ink-3);
