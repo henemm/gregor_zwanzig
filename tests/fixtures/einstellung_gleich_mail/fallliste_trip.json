@@ -4179,6 +4179,19 @@
       "status": "gruen",
       "zustand": "kanal_liste",
       "sprache": "de"
+    },
+    {
+      "id": "T-3122-B1B-AC5-TABELLE-SCHLAEGT-ALTSCHREIBWEISE",
+      "liste": "trip_tabelle",
+      "kontext": "trip",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_ac5_tabellen_format_schlaegt_altschreibweise_der_grundauswahl",
+      "ac": "AC-5",
+      "befund": "#3122 B1b",
+      "status": "gruen",
+      "zustand": "placements",
+      "sprache": "de"
     }
   ]
 }

@@ -370,6 +370,24 @@ def test_ac5_boeen_telegram_einfach_ist_wortstufe(monkeypatch):
     assert _gust_zellen_html(html) == _gust_zellen_html(html_roh)
 
 
+def test_ac5_tabellen_format_schlaegt_altschreibweise_der_grundauswahl(monkeypatch):
+    """AC-5: mit Tabelle gilt allein deren Format. Steht im Grundauswahl-
+    Eintrag der Boeen noch die Alt-Schreibweise ``format_mode: raw`` mit
+    ``use_friendly_format: true`` (dort: Ampelpunkt), zeigt die HTML-Mail bei
+    E-Mail Roh in der Tabelle keinen Ampelpunkt."""
+    from tests.tdd._einstellung_gleich_mail_trip_fixtures import metrik_eintraege
+
+    eintraege = metrik_eintraege(list(BASIS_KATALOG))
+    for e in eintraege:
+        if e["metric_id"] == "gust":
+            e.update(format_mode="raw", use_friendly_format=True)
+    data = trip(tabelle([zeile("gust", email="raw"), zeile("temperature")], outlook_reports=[]),
+                display={"metrics": eintraege})
+    html, _plain = mail_teile(senden(monkeypatch, data, "evening", mit_ausblick=False))
+    zellen = _gust_zellen_html(html)
+    assert zellen and not any("border-radius:50%" in z.replace(" ", "") for z in zellen), zellen[:1]
+
+
 def _regenwahrscheinlichkeit(monkeypatch, email: str) -> tuple[str, str]:
     folge = list(BASIS_KATALOG) + ["rain_probability"]
     data = trip(tabelle([zeile("rain_probability", email=email), zeile("temperature")],
