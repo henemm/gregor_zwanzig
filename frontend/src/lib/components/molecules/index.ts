@@ -20,11 +20,7 @@ export { default as Stat } from './Stat.svelte';
 export { default as AlertRow } from './AlertRow.svelte';
 export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 
-// Issue #488 — Compare-Kachel-Atome (Epic #485 Block A).
-// Cross-Verzeichnis-Re-Export, damit alle Downstream-Issues (#485-B/C/D)
-// die Molecule-API einheitlich aus `$lib/components/molecules` importieren.
-// (CompareTile/CompareKebab entfallen mit #2278: SubscriptionCard/SubscriptionKebab.)
-export { default as CompareLocationRow } from './CompareLocationRow.svelte';
+// (CompareTile/CompareKebab entfallen mit #2278; CompareLocationRow mit #3007: Orte-Zeile = Listenzeile.)
 
 // Issue #568 — Startseite-Cockpit-Molecules (Spec: docs/specs/modules/issue_568_home_redesign.md).
 export { default as QuickAction } from './QuickAction.svelte';
@@ -45,6 +41,8 @@ export { default as ChipLeiste } from './ChipLeiste.svelte';
 export { default as Aufklapper } from './Aufklapper.svelte';
 // Issue #3006 — Bereichskopf je Reiter der Einstellungen (Mockup `.sectionh`).
 export { default as Bereichskopf } from './Bereichskopf.svelte';
+// Issue #3007 — Listenzeile der Reiter Etappen und Orte (Mockup `.lrow`, auf der Einstellungszeile).
+export { default as Listenzeile } from './Listenzeile.svelte';
 // #2283 AC-14: ComparePreviewMissing, CompareSmsPreview, CompareBriefingPreview
 // entfernt (Hub-Vorschau-Reiter entfiel mit #1743). #1743 F003 (PO-Entscheid
 // 2026-10-22): auch CompareChannelSwitch und CompareChatBubble entfallen ersatzlos.

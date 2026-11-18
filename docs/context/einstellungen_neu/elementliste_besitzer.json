@@ -2044,12 +2044,100 @@
 			"verweis": "#2913-e"
 		},
 		{
-			"art": "abschnitt",
-			"ctx": "trip",
-			"reiter": "etappen",
-			"abschnitt": "liste",
-			"grund": "Reiter Etappen wird in Scheibe e neu gebaut. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
-			"verweis": "#2913-e"
+			"art": "element",
+			"id": "trip.etappen.fehler.-.liste.08723778e3",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.fehler.-.liste.1969ce724e",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.fehler.-.liste.79bc834b3d",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.fehler.-.liste.c413f3e67a",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.laedt.-.liste.0853ab711f",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.laedt.-.liste.1b86fd63a8",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.laedt.-.liste.4470d60542",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.laedt.-.liste.a95b684cb4",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.luecken.-.liste.04d595eae4",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.luecken.-.liste.134e3304f0",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.luecken.-.liste.31c40d3e0b",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.luecken.-.liste.aefbd3fd74",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.normal.-.liste.215b8fdc26",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.normal.-.liste.2e4760e8f5",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.normal.-.liste.3dd383a647",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
+		},
+		{
+			"art": "element",
+			"id": "trip.etappen.normal.-.liste.b24b3f85da",
+			"grund": "Knopf „Tempo ändern“ je Etappenzeile öffnet die Tempo-Einstellung; die braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108). Die Listenzeile (#3007) zeigt ihn bis dahin nicht; Spec docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-16)",
+			"verweis": "#2796"
 		},
 		{
 			"art": "abschnitt",
@@ -2137,14 +2225,6 @@
 			"reiter": "orte",
 			"abschnitt": "abschnittskopf",
 			"grund": "Reiter Orte wird in Scheibe e neu gebaut. Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, EN-Lücke: #2968",
-			"verweis": "#2913-e"
-		},
-		{
-			"art": "abschnitt",
-			"ctx": "orte",
-			"reiter": "orte",
-			"abschnitt": "liste",
-			"grund": "Reiter Orte wird in Scheibe e neu gebaut. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
 			"verweis": "#2913-e"
 		},
 		{
@@ -4932,22 +5012,6 @@
 			"text": "∞",
 			"grund": "Übergangsblock „Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm\" (AC-30): bisherige Einstellungen wirken bis zum Umzug weiter und stehen nicht in der Elementliste; entfällt mit Teil A",
 			"verweis": "#2795"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "etappen",
-			"muster": "{text}",
-			"grund": "Reiter Etappen wird in Scheibe e neu gebaut; zusätzliche Live-Texte bleiben im Bericht sichtbar",
-			"verweis": "#2913-e"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "orte",
-			"reiter": "orte",
-			"muster": "{text}",
-			"grund": "Reiter Orte wird in Scheibe e neu gebaut; zusätzliche Live-Texte bleiben im Bericht sichtbar",
-			"verweis": "#2913-e"
 		},
 		{
 			"art": "element",

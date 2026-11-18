@@ -715,3 +715,15 @@ e2e/sicherheitsrichtlinie-ohne-verletzung.spec.ts
 #   Filter B: 3x gruen im Zielverbund misst der CI-Hauptlauf des PR.
 #   Filter C: Aufnahmen nur nach test.info().outputPath (test-results, nicht versioniert).
 e2e/ganzseitenaufnahme-selbsttest.spec.ts
+# Aufnahme 2026-11-17 (#3007 Fix-Runde 3):
+# etappen-orte-listen-3007.spec.ts -- Etappen- und Orte-Liste im Hub (Mockup Fassung 3):
+# Etappenzeile klappt den Editor auf/zu per Klick, Enter und Leertaste, hoechstens ein Editor,
+# Editor unter der geklickten Zeile, Wechsel im Etappen-Band nimmt ihn mit, Wechsel nach unten
+# per Enter behaelt den Tastaturfokus (AC-2/AC-13); Orte-Liste „entfernen" bei Ort 2 entfernt
+# genau Ort 2 (AC-7/AC-22). Fallzahl: 4 (+ global.setup).
+#   Filter A: kein waitForTimeout/skip/fixme/__dirname/Hauptrepo-Pfad, kein .staging.spec
+#             (frueheres test.skip durch harte Erwartung ersetzt).
+#   Filter B: lokal im isolierten Stack (Go 8197 / Py 8107) gruen, Fokus-Fall 3x; 3x gruen im
+#             Zielverbund misst der CI-Hauptlauf des PR.
+#   Filter C: kein Screenshot-Schreibziel.
+e2e/etappen-orte-listen-3007.spec.ts

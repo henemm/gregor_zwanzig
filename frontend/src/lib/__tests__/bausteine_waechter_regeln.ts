@@ -730,7 +730,6 @@ const AUSNAHMEN: Ausnahmen = {
 	'lib/components/molecules/BriefingTimelineRow.svelte': { n: 11, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/molecules/ChannelChip.svelte': { n: 7, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/molecules/ChannelRow.svelte': { n: 16, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
-	'lib/components/molecules/CompareLocationRow.svelte': { n: 8, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/molecules/CompareStatusRow.svelte': { n: 11, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/molecules/DatumFeld.svelte': { n: 41, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/molecules/DetailRow.svelte': { n: 9, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },

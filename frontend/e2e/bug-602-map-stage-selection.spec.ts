@@ -14,6 +14,7 @@
 //   cd frontend && npx playwright test bug-602-map-stage-selection.spec.ts
 
 import { test, expect } from '@playwright/test';
+import { oeffneEtappenEditor } from './helpers';
 
 const TRIP_ID = 'e2e-cockpit-test';
 
@@ -30,6 +31,7 @@ test('AC-1: Etappe 2 wählen → map-canvas wird remounted', async ({ page }) =>
 
 	// Stages-Panel muss geladen sein
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 10_000 });
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await expect(page.locator(DESKTOP_MAP_CANVAS)).toBeVisible({ timeout: 10_000 });
 
 	// Stage-1-Fingerprint setzen
@@ -67,6 +69,7 @@ test('AC-2: Zurück zu Etappe 1 → map-canvas wird erneut remounted', async ({ 
 	await page.getByTestId('trip-detail-tab-etappen').click();
 
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 10_000 });
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await expect(page.locator(DESKTOP_MAP_CANVAS)).toBeVisible({ timeout: 10_000 });
 
 	// Auf Stage 2 wechseln
@@ -110,6 +113,8 @@ test('AC-3: Etappe ohne Wegpunkte → kein Absturz, Seite bleibt bedienbar', asy
 	await page.goto(`/trips/${TRIP_ID}`);
 	await page.getByTestId('trip-detail-tab-etappen').click();
 
+	// #3007: Etappenzeile aufklappen (Etappen-Band steht im aufgeklappten Editor)
+	await oeffneEtappenEditor(page);
 	// Stage 3 (0 Wegpunkte / Pausenetappe) wählen
 	await page.getByTestId('stage-card-2').click();
 

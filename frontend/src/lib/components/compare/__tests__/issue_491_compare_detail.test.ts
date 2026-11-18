@@ -88,7 +88,7 @@ describe('AC-1: Preset-Name, Status, Schedule, Empfänger angezeigt', () => {
 	});
 });
 
-// ── AC-2: Standort-Kacheln via CompareLocationRow ────────────────────────────
+// ── AC-2: Standort-Zeilen (seit #3007 Listenzeile) ────────────────────────────
 // Issue #1256 Scheibe 8 (AC-22, Ein-Mount-Strategie): die nummerierte
 // Standort-Liste lebt nicht mehr bespoke in +page.svelte, sondern im geteilten
 // Orte-Tab von CompareTabs.svelte (über CompareDetail gemountet) — dort für
@@ -97,14 +97,13 @@ describe('AC-1: Preset-Name, Status, Schedule, Empfänger angezeigt', () => {
 describe('AC-2: Nummerierte Standort-Kacheln vorhanden (geteilter Orte-Tab)', () => {
 	const TABS = join(COMPARE_DIR, 'CompareTabs.svelte');
 
-	test('CompareTabs.svelte importiert CompareLocationRow', () => {
+	// Umgehängt durch #3007 (ADR-0097): die Orte-Zeile ist der geteilte Baustein Listenzeile (wie die
+	// Etappen-Liste); CompareLocationRow (Rang-Badge) ist gelöscht. Verhalten prüft listenzeile_3007.test.ts.
+	test('CompareTabs.svelte nutzt die geteilte Listenzeile (nicht mehr CompareLocationRow)', () => {
 		assert.ok(existsSync(TABS), 'CompareTabs.svelte fehlt');
 		const src = readFileSync(TABS, 'utf-8');
-		assert.match(
-			src,
-			/CompareLocationRow/,
-			'CompareLocationRow wird in CompareTabs.svelte nicht importiert — Standortliste fehlt'
-		);
+		assert.match(src, /<Listenzeile\b/, 'CompareTabs.svelte rendert die Orte nicht über Listenzeile');
+		assert.doesNotMatch(src, /CompareLocationRow/, 'CompareTabs.svelte nutzt noch CompareLocationRow');
 	});
 
 	// Issue #1272: die Orte-Schleife lebt nicht mehr bespoke hier, sondern im
@@ -120,7 +119,7 @@ describe('AC-2: Nummerierte Standort-Kacheln vorhanden (geteilter Orte-Tab)', ()
 		);
 		assert.match(
 			src,
-			/data-testid="hub-orte-row"/,
+			/testid="hub-orte-row"/,
 			'CompareTabs.svelte rendert keine hub-orte-row für die Standortliste'
 		);
 	});

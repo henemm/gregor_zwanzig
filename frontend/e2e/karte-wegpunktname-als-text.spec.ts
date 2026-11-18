@@ -10,7 +10,7 @@
 //   cd frontend && npx playwright test e2e/karte-wegpunktname-als-text.spec.ts
 
 import { test, expect } from '@playwright/test';
-import { createTestTrip } from './helpers';
+import { createTestTrip, oeffneEtappenEditor } from './helpers';
 
 const DESKTOP_MAP_CANVAS = '[data-testid="map-card"] [data-testid="map-canvas"]';
 const NAME_MIT_AUSZEICHNUNG = '<img src="x" data-gz-probe="1" onerror="window.__gzProbe=1">Gipfel';
@@ -35,6 +35,7 @@ test('AC-1: ein Wegpunktname mit Auszeichnung erscheint in der Sprechblase als T
 
 	await page.goto(`/trips/${trip.id}`);
 	await page.getByTestId('trip-detail-tab-etappen').click();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	const karte = page.locator(DESKTOP_MAP_CANVAS);
 	await expect(karte).toBeVisible({ timeout: 15_000 });
 	const marker = karte.locator('.leaflet-marker-icon');
@@ -75,6 +76,7 @@ test('AC-1: einziger Wegpunkt einer Etappe — Name mit Auszeichnung erscheint a
 
 	await page.goto(`/trips/${trip.id}`);
 	await page.getByTestId('trip-detail-tab-etappen').click();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	const karte = page.locator(DESKTOP_MAP_CANVAS);
 	await expect(karte).toBeVisible({ timeout: 15_000 });
 	const marker = karte.locator('.leaflet-marker-icon');
