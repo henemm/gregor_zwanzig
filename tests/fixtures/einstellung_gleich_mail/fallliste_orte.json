@@ -3293,6 +3293,28 @@
       "ac": "AC-10",
       "befund": "#3122 B1b Tabelle 'Was steht wo'",
       "status": "gruen"
+    },
+    {
+      "id": "O-3122-STUNDENVERLAUF-AUS-LEGENDE-OHNE-REST",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html+klartext",
+      "pruefung": "block",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_tabelle_stundenverlauf_aus_ohne_rest_in_der_legende",
+      "ac": "AC-8, AC-10",
+      "befund": "#3122 B1b Fix-Loop (Adversary F1/F2)",
+      "status": "gruen"
+    },
+    {
+      "id": "O-3122-BESTAND-STUNDENVERLAUF-AUS-LEGENDE-KOPF",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html+klartext",
+      "pruefung": "block",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_bestand_stundenverlauf_aus_legende_und_kopf_unveraendert",
+      "ac": "AC-11",
+      "befund": "#3122 B1b Fix-Loop (Adversary F1/F2)",
+      "status": "gruen"
     }
   ]
 }

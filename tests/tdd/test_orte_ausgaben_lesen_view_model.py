@@ -123,6 +123,26 @@ def test_validator_render_auswahl_ohne_sichtbare_spalte_schaltet_block_ab():
     assert "STUNDEN" in render_compare_email_preview(_body(hourly_enabled=True))
 
 
+def test_validator_render_stundenformate_kommen_durch_den_resolver():
+    """Roh/Einfach je Stundenverlauf-Groesse aus dem Body geht durch dieselbe
+    Aufloesung wie der Versand: nur echte Booleans, nur Groessen der Auswahl
+    (Boeen sind nicht gewaehlt). Wirkung am echten Renderer mit Stundendaten
+    (der Stub-Ort der Vorschau hat keine)."""
+    from output.renderers.email.compare_html import render_compare_html
+    from services.validator_render_service import compare_preview_render_kwargs
+    from tests.helpers.vergleichs_mail_fixture import build_result
+
+    auswahl = ["t2m_c", "wind10m_kmh"]
+    einfach = compare_preview_render_kwargs(_body(
+        hourly_enabled=True, hourly_metrics=auswahl,
+        hourly_metric_formats={"wind": True, "gust": True, "temperature": "true"}))
+    assert einfach["hourly_metric_formats"] == {"wind": True}
+    roh = compare_preview_render_kwargs(_body(hourly_enabled=True, hourly_metrics=auswahl))
+    assert roh["hourly_metric_formats"] is None
+    assert einfach["hourly_metrics"] == roh["hourly_metrics"] == auswahl
+    assert render_compare_html(build_result(), **einfach) != render_compare_html(build_result(), **roh)
+
+
 # ---------------------------------------------------------------------------
 # Orte-Alarm: Grundauswahl ueber die Resolver-Hilfe, Tabelle wirkt nicht
 # ---------------------------------------------------------------------------

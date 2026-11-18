@@ -457,3 +457,63 @@ def test_ac10_grundauswahl_bewusst_leer(mit):
     for ort in ORTSNAMEN:
         assert tg_werte(tg_bloecke(aus["telegram"])[ort]) == []
         assert sms_kuerzel(aus["sms"], ort) == []
+
+
+# ---------------------------------------------------------------------------
+# Spalten-Legende und Mail-Kopf bei abgeschaltetem Stundenverlauf
+# ---------------------------------------------------------------------------
+
+def legende(aus: dict) -> dict[str, list[str]]:
+    """Legenden-Zeilen ("Einheiten: ..."/"Spalten: ...") je Mail-Fassung."""
+    import html as html_mod
+
+    def zeilen(text: str) -> list[str]:
+        return [z.strip() for z in text.splitlines()
+                if z.strip().startswith(("Einheiten:", "Spalten:"))]
+
+    return {"html": zeilen(html_mod.unescape(re.sub(r"<[^>]+>", "\n", aus["html"]))),
+            "klartext": zeilen(aus["plain"])}
+
+
+def test_tabelle_stundenverlauf_aus_ohne_rest_in_der_legende(mit):
+    """Abo mit Tabelle, ``hourly_enabled: false``, Stundenverlauf-Haken
+    gespeichert: kein Stundenverlauf und keine Einheiten-Zeile der
+    Stundenspalten in HTML und Nur-Text (Block entfaellt ohne Rest); die
+    Spalten-Zeile des Ausblicks bleibt."""
+    aus = senden(mit, preset(hourly_enabled=False), slot="evening")
+    assert stunden_ids(aus) == {"html": None, "klartext": None}
+    for fassung, zeilen in legende(aus).items():
+        assert not [z for z in zeilen if z.startswith("Einheiten:")], f"{fassung}: {zeilen}"
+        assert [z for z in zeilen if z.startswith("Spalten:")], f"{fassung}: Ausblick-Legende fehlt"
+
+
+def bestand(schalter, *, stunden: bool) -> dict:
+    """Bestands-Abo ohne Tabelle (orte_basis.json) mit Stundenverlauf-Schalter."""
+    p = preset_dict("basis")
+    p.update(id="orte-bestand", send_telegram=True, send_sms=True, send_premium_sms=True,
+             alert_channels={"email": True, "telegram": False, "sms": False, "premium_sms": False},
+             hourly_enabled=schalter)
+    if not stunden:
+        p["display_config"]["hourly_metrics"] = []
+    return p
+
+
+#: Heutiger Stand (von Hand aus der zugestellten Mail vor #3122 B1b): die
+#: Legende nennt die Stundenspalten auch bei abgeschaltetem Block, solange der
+#: Ausblick sichtbar ist; ``Wind`` erklaert sich selbst (keine Spalten-Zeile).
+EINHEITEN_BESTAND = "Einheiten: Temp °C · Wind, Gust km/h · Rain mm · Rain% %"
+SPALTEN_BESTAND = ("Spalten: Temp = Temperatur · Gust = Böen · Rain = Niederschlag · "
+                   "Rain% = Regenwahrscheinlichkeit")
+
+
+@pytest.mark.parametrize("schalter, kopf_soll", [(False, False), (None, None)])
+@pytest.mark.parametrize("stunden", [True, False])
+def test_bestand_stundenverlauf_aus_legende_und_kopf_unveraendert(mit, schalter, kopf_soll, stunden):
+    """Bestands-Abo ohne Tabelle, ``hourly_enabled: false`` bzw. ``null``, mit
+    und ohne Stundenauswahl: kein Stundenverlauf; Legende (HTML, Nur-Text) und
+    Mail-Kopf ``X-GZ-Compare-Hourly-Enabled`` wie heute (``null`` = kein Kopf)."""
+    aus = senden(mit, bestand(schalter, stunden=stunden), slot="evening")
+    assert stunden_ids(aus) == {"html": None, "klartext": None}
+    soll = ([EINHEITEN_BESTAND] if stunden else []) + [SPALTEN_BESTAND]
+    assert legende(aus) == {"html": soll, "klartext": soll}
+    assert aus["hourly_header"] is kopf_soll
