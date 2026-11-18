@@ -272,10 +272,12 @@ test.describe('Handy 390 px', () => {
 				expect(ueberlappt, `Tippflächen ${i} und ${j} überlappen`).toBe(false);
 			}
 
-		// Enges Raster: Beispielwerte sind da, aber ausgeblendet (kein Platz in 44 px).
+		// Enges Raster: Beispielwerte sind da, aber ausgeblendet (kein Platz in 44 px). Gemessen mit
+		// checkVisibility() wie im Elementlisten-Abgleich: ein nur auf Höhe 0 gestauchter Text gälte dort
+		// als sichtbar, deshalb reicht „hat keine Fläche“ nicht.
 		const beispiele = orte.locator('[data-slot="et-beispiel"]');
 		expect(await beispiele.count(), 'Beispielwerte fehlen im Dokument').toBeGreaterThanOrEqual(20);
-		await expect(orte.locator('[data-slot="et-beispiel"]:visible')).toHaveCount(0);
+		expect(await beispiele.evaluateAll((els) => els.filter((el) => el.checkVisibility()).map((el) => el.textContent))).toEqual([]);
 
 		// Bedienung per Tippen in der letzten Spalte.
 		await zelle(orte, 'wind', 'outlook').getByRole('checkbox').tap();
