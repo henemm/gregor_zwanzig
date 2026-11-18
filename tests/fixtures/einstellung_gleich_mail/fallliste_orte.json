@@ -3104,6 +3104,195 @@
       "status": "gruen",
       "zustand": "nie_eingestellt",
       "sprache": "de,en"
+    },
+    {
+      "id": "O-3122-AC1-UEBERSICHT-AUSWAHL",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html+klartext",
+      "pruefung": "auswahl",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac1_jede_stelle_zeigt_genau_ihre_haken",
+      "ac": "AC-1",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen",
+      "aspekte": [
+        "auswahl",
+        "reihenfolge"
+      ]
+    },
+    {
+      "id": "O-3122-AC1-TELEGRAM",
+      "liste": "orte_telegram",
+      "kontext": "orte",
+      "format": "telegram",
+      "pruefung": "auswahl",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac1_jede_stelle_zeigt_genau_ihre_haken",
+      "ac": "AC-1",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen",
+      "aspekte": [
+        "auswahl",
+        "reihenfolge"
+      ]
+    },
+    {
+      "id": "O-3122-AC1-SMS",
+      "liste": "orte_sms",
+      "kontext": "orte",
+      "format": "sms+premium_sms",
+      "pruefung": "auswahl",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac1_jede_stelle_zeigt_genau_ihre_haken",
+      "ac": "AC-1",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen",
+      "aspekte": [
+        "auswahl",
+        "reihenfolge"
+      ]
+    },
+    {
+      "id": "O-3122-AC2-AUSSERHALB-GRUNDAUSWAHL",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html+klartext+telegram+sms",
+      "pruefung": "grundauswahl",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac2_zeile_ausserhalb_grundauswahl_erscheint_nirgends",
+      "ac": "AC-2",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen"
+    },
+    {
+      "id": "O-3122-AC4-OHNE-EMAIL-STUNDENVERLAUF",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html+klartext",
+      "pruefung": "auswahl",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac4_ohne_email_haken_fehlt_in_stundenverlauf_und_ausblick",
+      "ac": "AC-4",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen"
+    },
+    {
+      "id": "O-3122-AC4-OHNE-EMAIL-AUSBLICK",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html+klartext+telegram",
+      "pruefung": "auswahl",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac4_ohne_email_haken_fehlt_in_stundenverlauf_und_ausblick",
+      "ac": "AC-4",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen"
+    },
+    {
+      "id": "O-3122-AC5-FORMAT-JE-STELLE",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html+klartext+telegram",
+      "pruefung": "darstellung",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac5_format_je_stelle_unabhaengig",
+      "ac": "AC-5",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen"
+    },
+    {
+      "id": "O-3122-AC5-REGENWAHRSCHEINLICHKEIT-HTML-AMPEL",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html",
+      "pruefung": "darstellung",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac5_regenwahrscheinlichkeit_einfach_html_ampelpunkt",
+      "ac": "AC-5",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "offen_feature",
+      "verweis": "#3122 Spec Teil A Nr. 4: Regenwahrscheinlichkeit auf Einfach zeigt in der HTML-Uebersicht noch die Wortstufe statt des Ampelpunkts; Renderer-Nachzug ist eine eigene Scheibe"
+    },
+    {
+      "id": "O-3122-AC7-SONNE-STUNDENVERLAUF-GESPERRT",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html+klartext",
+      "pruefung": "auswahl",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac7_sonnenstunden_im_stundenverlauf_trotz_haken_nicht_da",
+      "ac": "AC-7",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen"
+    },
+    {
+      "id": "O-3122-AC8-AUSBLICK-ABEND",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html+klartext+telegram",
+      "pruefung": "block",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac8_ausblick_nur_im_abend_briefing",
+      "ac": "AC-8",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen"
+    },
+    {
+      "id": "O-3122-AC8-AUSBLICK-MORGEN",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html+klartext+telegram",
+      "pruefung": "block",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac8_ausblick_nur_im_morgen_briefing",
+      "ac": "AC-8",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen"
+    },
+    {
+      "id": "O-3122-AC8-AUSBLICK-AUS",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html+klartext+telegram",
+      "pruefung": "block",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac8_ausblick_beide_schalter_aus_nirgends",
+      "ac": "AC-8",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen"
+    },
+    {
+      "id": "O-3122-AC9-AUSBLICK-VORBELEGUNG",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html+klartext+telegram",
+      "pruefung": "block",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac9_vorbelegung_ohne_gespeicherte_ausblick_einstellung",
+      "ac": "AC-9",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen"
+    },
+    {
+      "id": "O-3122-AC8-STUNDENVERLAUF-AUS",
+      "liste": "orte_stundenverlauf",
+      "kontext": "orte",
+      "format": "html+klartext",
+      "pruefung": "block",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac8_stundenverlauf_aus_schalter",
+      "ac": "AC-8",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen"
+    },
+    {
+      "id": "O-3122-AC10-SPALTE-LEER",
+      "liste": "orte_ausblick",
+      "kontext": "orte",
+      "format": "html+klartext+telegram",
+      "pruefung": "grundauswahl",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac10_spalte_leer_kein_rueckfall",
+      "ac": "AC-10",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen"
+    },
+    {
+      "id": "O-3122-AC10-GRUNDAUSWAHL-LEER",
+      "liste": "orte_vergleichstabelle",
+      "kontext": "orte",
+      "format": "html+klartext+telegram+sms",
+      "pruefung": "grundauswahl",
+      "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac10_grundauswahl_bewusst_leer",
+      "ac": "AC-10",
+      "befund": "#3122 B1b Tabelle 'Was steht wo'",
+      "status": "gruen"
     }
   ]
 }
