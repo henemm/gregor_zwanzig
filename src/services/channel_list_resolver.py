@@ -202,6 +202,8 @@ def placements_view(
     grund = grundauswahl(display_config, surface, rt)
     rows = resolve_rows(stored.rows, grund.ids, surface, parents=grund.parents)
     reports = resolve_outlook_reports(stored.outlook_reports, enabled_reports)
+    # Stellen der Tabelle, keine Versandliste: die Premium-SMS folgt der SMS
+    # ohne eigene Spalte bis S9 (ADR-0049, ADR-0124 Nr. 8).
     kanaele = {ch: _kanal_rows(metrics_at(rows, ch), grund) for ch in ("email", "telegram", "sms")}
     outlook = _area_from(metrics_at(rows, "outlook")) if outlook_applies(rows, reports, rt) else ()
     hourly = () if surface == "trip" or hourly_enabled is False else _area_from(
