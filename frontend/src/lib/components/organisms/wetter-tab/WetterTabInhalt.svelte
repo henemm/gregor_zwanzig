@@ -125,6 +125,8 @@
 
 	/** Jede Aenderung: neuer Stand; nur wenn sich Gespeichertes aendert, meldet der Speicherer. */
 	function aendern(neu: Z.WetterStand): void {
+		// #3122 B3b (Spec Nr. 13, Fix-Loop F2): „−“, „+“ und Vorlagenwechsel schreiben die Tabelle im selben Vorgang mit.
+		if (stand) karte?.grundauswahlGeaendert(stand.auswahl, neu.auswahl);
 		stand = neu;
 		const sig = signatur(neu);
 		if (sig === gemeldet) return;
@@ -176,11 +178,9 @@
 	function entfernen(id: string): void {
 		if (offen === id) ((offen = null), (entwurf = null), (fehler = []));
 		hinzu = null;
-		karte?.grundauswahlEntfernt(id);
 		aendern(Z.ohneMetrik(stand!, id));
 	}
 	function hinzufuegen(id: string): void {
-		karte?.grundauswahlHinzugefuegt(id);
 		aendern(Z.mitMetrik(stand!, id, context));
 		hinzu = name(id);
 	}

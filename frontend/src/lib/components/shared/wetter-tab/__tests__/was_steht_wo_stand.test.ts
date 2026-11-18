@@ -15,6 +15,7 @@ import {
 	mitAusblick,
 	ohneZeile,
 	mitZeileHinten,
+	mitGrundauswahl,
 	antwortMitHaken,
 	antwortMitFormat,
 	antwortMitReihenfolge,
@@ -105,6 +106,31 @@ describe('3-Tages-Ausblick: outlook_reports', () => {
 		assert.deepEqual(mitAusblick(gespeichert(), { morning: true, evening: true }).outlook_reports, ['morning', 'evening']);
 		assert.deepEqual(mitAusblick(gespeichert(), { morning: false, evening: false }).outlook_reports, []);
 		assert.deepEqual(mitAusblick(gespeichert(), { morning: true, evening: false }).rows, gespeichert().rows);
+	});
+});
+
+describe('Fix-Loop F2: Wechsel der Grundauswahl (auch Vorlage)', () => {
+	test('weggefallene Metriken verlieren ihre Zeile, neue stehen hinten überall angehakt, gemeinsame behalten Abwahlen', () => {
+		const p = mitGrundauswahl(gespeichert(), ['temperature', 'wind', 'gust'], ['wind', 'precipitation', 'temperature']);
+		assert.deepEqual(p.rows.map((r) => r.metric_id), ['temperature', 'wind', 'precipitation'], 'Böen weg, Niederschlag hinten');
+		assert.deepEqual(p.rows[0].places, { sms: false }, 'gemeinsame Metrik behält ihre Abwahl');
+		assert.deepEqual(p.rows[1].places, { email: true });
+		assert.deepEqual(p.rows[2], { metric_id: 'precipitation' });
+		assert.equal(p.unbekannt, 'bleibt');
+	});
+	test('Zurückwechseln bringt die Metrik ohne alte Abwahlen zurück', () => {
+		const hin = mitGrundauswahl(gespeichert(), ['temperature', 'wind', 'gust'], ['wind', 'gust']);
+		const zurueck = mitGrundauswahl(hin, ['wind', 'gust'], ['temperature', 'wind', 'gust']);
+		assert.deepEqual(zurueck.rows.find((r) => r.metric_id === 'temperature'), { metric_id: 'temperature' });
+		assert.equal(zurueck.rows[zurueck.rows.length - 1].metric_id, 'temperature');
+	});
+	test('neu hinzugekommene Metrik mit Altzeile (Abwahl) kommt überall angehakt zurück', () => {
+		const alt = { version: 1, rows: [{ metric_id: 'wind' }, { metric_id: 'gust', places: { telegram: false } }] };
+		const p = mitGrundauswahl(alt, ['wind'], ['wind', 'gust']);
+		assert.deepEqual(p.rows, [{ metric_id: 'wind' }, { metric_id: 'gust' }]);
+	});
+	test('unveränderte Grundauswahl ändert nichts', () => {
+		assert.deepEqual(mitGrundauswahl(gespeichert(), ['wind', 'gust'], ['gust', 'wind']), gespeichert());
 	});
 });
 

@@ -749,7 +749,8 @@ e2e/einstelltabelle-bausteine.spec.ts
 # was-steht-wo-karte.spec.ts -- Karte „Was steht wo“ im Reiter Wetter gegen echten Go- und Python-Server
 # (Trip, drei Orte, ein Ort): Spalten je Kontext, Haken/Reihenfolge (Tastatur und Maus)/Roh-Einfach nach
 # Neuladen, Bloecke und Ausblick, Kurzstil, „−“/„+“ der Grundauswahl, Konflikt 412, englischer Nutzer
-# bei 390 px mit Kontrast und fremder Tabelle (404). Fallzahl: 14.
+# bei 390 px mit Kontrast und fremder Tabelle (404); Fix-Loop: Schalter-Fehler, Vorlagenwechsel, „+“ mit
+# Altzeile, Neuladen nach Reiter-Speichern, Zustellung laesst die Tabelle unveraendert. Fallzahl: 18.
 #   Filter A: kein waitForTimeout/skip/fixme/__dirname/Hauptrepo-Pfad, kein .staging.spec.
 #   Filter B: 3x gruen am 2026-11-18 (lokaler isolierter Stack, --repeat-each=3: 43 passed inkl. setup);
 #             3x im Zielverbund misst der CI-Hauptlauf des PR.

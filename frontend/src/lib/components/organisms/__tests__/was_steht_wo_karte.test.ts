@@ -307,6 +307,12 @@ describe('Blöcke und Einstellungen je Kanal (AC-29, AC-30, AC-37)', () => {
 		assert.equal(attr(eins(t, 'data-testid="was-steht-wo-ausblick-morning"').auf, 'aria-checked'), 'false');
 		assert.equal(attr(eins(t, 'data-testid="was-steht-wo-ausblick-evening"').auf, 'aria-checked'), 'true');
 	});
+	test('Fix-Loop T2: Kurzstil ohne verbundenes Telegram gesperrt; ein eingeschalteter Kurzstil bleibt abschaltbar (AC-28)', async () => {
+		const aus = await karte(trip(), { context: 'route' });
+		assert.equal(attr(eins(aus, 'data-testid="was-steht-wo-kurzstil"').auf, 'aria-disabled'), 'true');
+		const an = await karte(trip({ blocks: { ...trip().blocks, telegram_style: 'kurzform' } }), { context: 'route' });
+		assert.equal(attr(eins(an, 'data-testid="was-steht-wo-kurzstil"').auf, 'aria-disabled'), null);
+	});
 	test('drei Orte: Stundenverlauf „je Ort“, kein E-Mail-Format, keine Trip-Blöcke', async () => {
 		const s = text(await karte(orte(3), { context: 'vergleich' }));
 		assert.ok(s.includes('Stundenverlauf Stunden-Tabelle je Ort unter der Übersicht, nur in der E-Mail.'));

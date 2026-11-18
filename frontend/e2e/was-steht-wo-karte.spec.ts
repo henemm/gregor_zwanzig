@@ -13,6 +13,13 @@
 //   WS-7  Konflikt: ein zweiter Client ändert das Abo, die Karte speichert -> Meldung, aktueller Stand (AC-20).
 //   WS-8  Englischer Nutzer, 390 px, drei Orte: keine seitliche Seite, jede Spalte erreichbar, Kontrast;
 //         fremde Tabelle (Admin) ist für ihn nicht lesbar und nicht schreibbar (AC-33, Mandantentrennung).
+//   Fix-Loop (Adversary B3b):
+//   WS-9  Schalter-PUT scheitert (500): Schalter springt zurück, Meldung; der nächste Schalter schreibt die
+//         gescheiterte Änderung nicht mit (F1).
+//   WS-10 Vorlagenwechsel: Zeilen weggefallener Metriken entfallen im selben Speichervorgang, Abwahlen
+//         gemeinsamer Metriken bleiben, Zurückwechseln bringt die Metrik ohne alte Abwahl (F2).
+//   WS-11 „+“ mit Altzeile kommt überall angehakt zurück (T4); Speichern des Reiters lädt die Karte neu (T5).
+//   WS-12 Speichern im Reiter Zustellung (Übergangsblock) lässt die gespeicherte Tabelle unverändert.
 //
 //   cd frontend && npx playwright test e2e/was-steht-wo-karte.spec.ts --workers=1 --trace off
 
@@ -20,6 +27,7 @@ import { test, expect, request as pwRequest, type APIRequestContext, type Locato
 import { createTestLocation, kontrastBericht, kontrastVerstoesse, messeKontrast, seedHub, type HubKind } from './helpers';
 import { wegwerfPasswort } from './stagingZugang';
 import { DESKTOP, MOBIL, WT, aktiveDerVorlage, oeffneWetter, stand, vorlagen, type Json } from './s3a2794-teil3.helpers';
+import { oeffneZustellung } from './s3b2795-zustellung.helpers';
 
 type Fall = { name: string; kind: HubKind; orte: number };
 const FAELLE: Fall[] = [
@@ -35,20 +43,21 @@ const tabellenUrl = (kind: HubKind, id: string) => `${tabellenPfad(id)}?kind=${k
 type Abo = { kind: HubKind; id: string; ortNamen: string[]; aufraeumen: () => Promise<void> };
 
 /** Abo mit Grundauswahl einer Vorlage (Trip: Alpen-Trekking, Orte: Allgemein mit vielen Metriken). */
-async function seed(request: APIRequestContext, fall: Fall): Promise<Abo> {
+async function seed(request: APIRequestContext, fall: Fall, opts: { ohne?: string[]; placements?: Json } = {}): Promise<Abo> {
 	const vorlageId = fall.kind === 'route' ? 'alpen-trekking' : 'allgemein';
-	const auswahl = aktiveDerVorlage((await vorlagen(request))[vorlageId]);
+	const auswahl = aktiveDerVorlage((await vorlagen(request))[vorlageId]).filter((m) => !(opts.ohne ?? []).includes(m));
+	const extraDc = opts.placements ? { placements: opts.placements } : {};
 	const ampel = { template: vorlageId };
 	if (fall.kind === 'route') {
 		const hub = await seedHub(request, 'route', {
-			extra: { display_config: { preset_name: vorlageId, metrics: auswahl.map((metric_id) => ({ metric_id, enabled: true })), ampel } }
+			extra: { display_config: { preset_name: vorlageId, metrics: auswahl.map((metric_id) => ({ metric_id, enabled: true })), ampel, ...extraDc } }
 		});
 		return { kind: 'route', id: hub.id, ortNamen: [], aufraeumen: hub.aufraeumen };
 	}
 	const orte = [];
 	for (let i = 0; i < fall.orte; i++) orte.push(await createTestLocation(request, { name: `WSW-Ort-${i}`, lat: 47.1 + i * 0.1, lon: 11.2 + i * 0.1 }));
 	const hub = await seedHub(request, 'vergleich', {
-		extra: { location_ids: orte.map((o) => o.id), display_config: { ampel, active_metrics: auswahl.map((metric_id) => ({ metric_id, aggregation: 'max' })) } }
+		extra: { location_ids: orte.map((o) => o.id), display_config: { ampel, active_metrics: auswahl.map((metric_id) => ({ metric_id, aggregation: 'max' })), ...extraDc } }
 	});
 	return {
 		kind: 'vergleich',
@@ -122,6 +131,8 @@ test.describe('Karte „Was steht wo“', () => {
 				}
 				if (fall.orte === 3) await expect(karte).toContainText('Stunden-Tabelle je Ort unter der Übersicht, nur in der E-Mail.');
 
+				// T2 (AC-28): ohne verbundenes Telegram (Profil ohne Chat-ID) ist der Kurzstil gesperrt.
+				await expect(karte.getByTestId('was-steht-wo-kurzstil')).toHaveAttribute('aria-disabled', 'true');
 				const m = await ersteAngehakte(karte, 'telegram');
 				const gespeichert = tabelleGespeichert(page, abo);
 				await haken(karte, m, 'telegram').click();
@@ -340,6 +351,13 @@ test.describe('Karte „Was steht wo“', () => {
 				expect((await put).status()).toBe(200);
 				expect('placements' in ((await stand(page.request, abo.kind, abo.id)).display_config ?? {}), 'stored: false bleibt').toBe(false);
 				await expect(zeile(karte, 'gust')).toHaveCount(0);
+				// T1: auch „+“ legt ohne gespeicherte Tabelle keine an.
+				put = wetterPut();
+				await reiter.getByTestId(WT.plus('gust')).click();
+				const plusRumpf = (await put).request().postDataJSON();
+				expect('placements' in (plusRumpf.display_config ?? plusRumpf), '„+“ sendet keine Tabelle').toBe(false);
+				expect('placements' in ((await stand(page.request, abo.kind, abo.id)).display_config ?? {}), 'stored: false bleibt nach „+“').toBe(false);
+				await expect(zeile(karte, 'gust')).toHaveCount(1, { timeout: 20_000 });
 
 				// 2. Tabelle speichern (Haken ab), dann „−“ an Wind: Zeile im selben Speichervorgang weg.
 				const m = await ersteAngehakte(karte, 'sms', ['wind']);
@@ -401,6 +419,132 @@ test.describe('Karte „Was steht wo“', () => {
 			const server = await tabelle(page.request, abo);
 			expect(rowVon(server.placements, fremd)?.places?.sms).toBe(false);
 			expect(rowVon(server.placements, eigen)?.places?.telegram, 'nichts überschrieben').not.toBe(false);
+			// T3: der nächste Klick speichert sauber, die Meldung verschwindet.
+			const nochmal = tabelleGespeichert(page, abo);
+			await haken(karte, eigen, 'telegram').click();
+			await nochmal;
+			await expect(karte.getByTestId('was-steht-wo-meldung')).toHaveCount(0);
+			expect(rowVon((await tabelle(page.request, abo)).placements, eigen)?.places?.telegram).toBe(false);
+		} finally {
+			await abo.aufraeumen();
+		}
+	});
+
+	test('WS-9 (Trip): Schalter-PUT scheitert — Schalter springt zurück, nächster Schalter schreibt nur sich selbst', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const abo = await seed(page.request, FAELLE[0]);
+		try {
+			const karte = await oeffneKarte(page, abo);
+			const pfad = `/api/trips/${abo.id}`;
+			await page.route(`**${pfad}`, (route) =>
+				route.request().method() === 'PUT' ? route.fulfill({ status: 500, json: { error: 'kaputt' } }) : route.continue()
+			);
+			const etappen = karte.getByTestId('was-steht-wo-show_stage_stats');
+			const fehlschlag = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad);
+			await etappen.click();
+			expect((await fehlschlag).status()).toBe(500);
+			await expect(etappen).toHaveAttribute('aria-checked', 'true');
+			await expect(karte.getByTestId('was-steht-wo-meldung')).toHaveAttribute('data-art', 'fehler');
+			await page.unroute(`**${pfad}`);
+			const put = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad);
+			await karte.getByTestId('was-steht-wo-show_night_block').click();
+			const antwort = await put;
+			expect(antwort.status()).toBe(200);
+			expect(antwort.request().postDataJSON(), 'gescheiterte Änderung fährt nicht mit').toEqual({ display_config: { show_night_block: false } });
+			const t = await stand(page.request, 'route', abo.id);
+			expect(t.report_config.show_stage_stats ?? true).toBe(true);
+			expect(t.display_config.show_night_block).toBe(false);
+		} finally {
+			await abo.aufraeumen();
+		}
+	});
+
+	test('WS-10 (drei Orte): Vorlagenwechsel entfernt Zeilen weggefallener Metriken, gemeinsame Abwahlen bleiben', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const v = await vorlagen(page.request);
+		const alt = aktiveDerVorlage(v.allgemein);
+		// Zielvorlage: die erste, der eine Metrik von „Allgemein“ fehlt und die eine mit ihr teilt.
+		const zielId = Object.keys(v).find((id) => id !== 'allgemein' && alt.some((m) => !aktiveDerVorlage(v[id]).includes(m)) && alt.some((m) => aktiveDerVorlage(v[id]).includes(m)))!;
+		const neu = aktiveDerVorlage(v[zielId] ?? { ampel: { metrics: {} } });
+		const nurAlt = alt.find((m) => !neu.includes(m));
+		const gemeinsam = alt.find((m) => neu.includes(m));
+		expect(nurAlt && gemeinsam, 'Messaufbau: Vorlagen unterscheiden sich und überschneiden sich').toBeTruthy();
+		const abo = await seed(page.request, FAELLE[1], {
+			placements: { version: 1, rows: [{ metric_id: gemeinsam, places: { telegram: false } }, { metric_id: nurAlt, places: { sms: false } }] }
+		});
+		try {
+			const reiter = await oeffneWetter(page, 'vergleich', abo.id);
+			const karte = reiter.getByTestId('was-steht-wo');
+			await expect(karte.getByTestId('was-steht-wo-tabelle')).toBeVisible({ timeout: 20_000 });
+			const wechsel = async (id: string) => {
+				const put = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/compare/presets/${abo.id}`);
+				await reiter.getByTestId(WT.picker).click();
+				await reiter.getByTestId(WT.vorlageOption(id)).click();
+				await reiter.getByTestId(WT.wechselUebernehmen).click();
+				const a = await put;
+				expect(a.status()).toBe(200);
+				return a.request().postDataJSON();
+			};
+			const rumpf = await wechsel(zielId);
+			expect(rowVon(rumpf.display_config.placements, nurAlt!), 'Zeile im selben Speichervorgang entfernt').toBeUndefined();
+			await expect.poll(async () => rowVon((await tabelle(page.request, abo)).placements, nurAlt!)).toBeUndefined();
+			expect(rowVon((await tabelle(page.request, abo)).placements, gemeinsam!)?.places?.telegram, 'gemeinsame Abwahl bleibt').toBe(false);
+			await wechsel('allgemein');
+			await expect.poll(async () => rowVon((await tabelle(page.request, abo)).placements, nurAlt!)?.places ?? null).toEqual(null);
+			const server = await tabelle(page.request, abo);
+			expect(rowVon(server.placements, nurAlt!), 'zurück, ohne alte Abwahl').toEqual({ metric_id: nurAlt });
+			expect(rowVon(server.placements, gemeinsam!)?.places?.telegram).toBe(false);
+		} finally {
+			await abo.aufraeumen();
+		}
+	});
+
+	test('WS-11 (drei Orte): „+“ mit Altzeile kommt überall angehakt zurück; Speichern des Reiters lädt die Karte neu', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const abo = await seed(page.request, FAELLE[1], {
+			ohne: ['gust'],
+			placements: { version: 1, rows: [{ metric_id: 'wind', places: { sms: false } }, { metric_id: 'gust', places: { telegram: false, sms: false } }] }
+		});
+		try {
+			const reiter = await oeffneWetter(page, 'vergleich', abo.id);
+			let karte = reiter.getByTestId('was-steht-wo');
+			await expect(karte.getByTestId('was-steht-wo-tabelle')).toBeVisible({ timeout: 20_000 });
+			await expect(zeile(karte, 'gust')).toHaveCount(0);
+			// T5: Amtliche Warnungen aus -> nach dem Speichern des Reiters verschwindet die feste Zeile ohne Neuladen.
+			await expect(karte.locator('[data-slot="et-fest"]')).toHaveCount(1);
+			await reiter.getByTestId(WT.warnungen).click();
+			await expect(karte.locator('[data-slot="et-fest"]')).toHaveCount(0, { timeout: 20_000 });
+			// T4: „+“ Böen.
+			const put = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/compare/presets/${abo.id}`);
+			await reiter.getByTestId(WT.plus('gust')).click();
+			expect((await put).status()).toBe(200);
+			await expect.poll(async () => rowVon((await tabelle(page.request, abo)).placements, 'gust')).toEqual({ metric_id: 'gust' });
+			await page.reload();
+			karte = await oeffneKarte(page, abo);
+			for (const s of ['email', 'telegram', 'sms']) await expect(haken(karte, 'gust', s)).toBeChecked();
+			await expect(haken(karte, 'wind', 'sms')).not.toBeChecked();
+		} finally {
+			await abo.aufraeumen();
+		}
+	});
+
+	test('WS-12 (Trip): Speichern im Reiter Zustellung lässt die gespeicherte Tabelle unverändert', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const abo = await seed(page.request, FAELLE[0]);
+		try {
+			const karte = await oeffneKarte(page, abo);
+			const m = await ersteAngehakte(karte, 'sms');
+			const gespeichert = tabelleGespeichert(page, abo);
+			await haken(karte, m, 'sms').click();
+			await gespeichert;
+			const vorher = (await stand(page.request, 'route', abo.id)).display_config.placements;
+			expect(vorher, 'Messaufbau: Tabelle gespeichert').toBeTruthy();
+			const zustellung = await oeffneZustellung(page, 'route', abo.id);
+			const trend = zustellung.getByTestId('report-morning-trend').locator('input[type="checkbox"]');
+			const put = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/trips/${abo.id}`, { timeout: 20_000 });
+			await trend.click();
+			expect((await put).status()).toBe(200);
+			expect((await stand(page.request, 'route', abo.id)).display_config.placements).toEqual(vorher);
 		} finally {
 			await abo.aufraeumen();
 		}

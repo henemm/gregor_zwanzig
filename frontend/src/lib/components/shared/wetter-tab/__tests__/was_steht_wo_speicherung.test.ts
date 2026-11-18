@@ -233,6 +233,42 @@ describe('Schalter unter der Tabelle: nur geänderte Felder am heutigen Ort', ()
 		c.aufrufe[1].erledigen({});
 		await lauf2;
 	});
+	test('Fix-Loop F1: Fehler -> Rückmeldung mit gespeichertem Stand; der nächste Schalter schreibt die gescheiterte Änderung nicht mit', async () => {
+		const c = client();
+		const ctl = controller();
+		const fehler: Array<{ status?: number; stand: Felder }> = [];
+		const f = erstelleFelderSpeicherung({
+			client: c, kind: 'route', id: 'gr', saveController: ctl, start: trip,
+			onFehler: (e, stand) => fehler.push({ status: (e as { status?: number }).status, stand })
+		});
+		f.melden({ ...trip, show_stage_stats: false });
+		const lauf = ctl.los();
+		await ruhe();
+		c.aufrufe[0].scheitern({ status: 500 });
+		await lauf;
+		assert.equal(ctl.fehler.length, 1, 'der Controller sieht den Fehler');
+		assert.deepEqual(fehler, [{ status: 500, stand: trip }], 'Karte springt auf den gespeicherten Stand zurück');
+		// anderer Schalter, ausgehend vom zurückgesetzten Stand der Karte
+		f.melden({ ...trip, show_night_block: false });
+		const lauf2 = ctl.los();
+		await ruhe();
+		assert.deepEqual(c.aufrufe[1].rumpf, { display_config: { show_night_block: false } }, 'gescheiterte Änderung fährt nicht still mit');
+		c.aufrufe[1].erledigen({});
+		await lauf2;
+	});
+	test('Fix-Loop F1: nach einem Fehler ist der Vorgang ohne neue Meldung leer (Wiederholen schreibt nichts)', async () => {
+		const c = client();
+		const fns: Array<() => Promise<void>> = [];
+		const f = erstelleFelderSpeicherung({ client: c, kind: 'vergleich', id: 'cp', saveController: { schedule: (fn) => void fns.push(fn) }, start: trip });
+		f.melden({ ...trip, hourly_enabled: false });
+		const lauf = fns[0]().catch(() => {});
+		await ruhe();
+		c.aufrufe[0].scheitern({ status: 412 });
+		await lauf;
+		void fns[0]().catch(() => {});
+		await ruhe();
+		assert.equal(c.aufrufe.length, 1, 'kein zweiter PUT mit dem verworfenen Stand');
+	});
 	test('Orte: Pfad des Presets', async () => {
 		const c = client();
 		const ctl = controller();

@@ -133,21 +133,26 @@
 			onAntwort: (abo) => {
 				onUebernahme?.(abo);
 				tabelle.nachFremdemSpeichern();
+			},
+			// Fix-Loop F1: wie bei den Haken — Anzeige zurück auf den gespeicherten Stand, Meldung; bei 412 neu laden.
+			onFehler: (e, gespeichert) => {
+				felder = gespeichert;
+				const konflikt = (e as { status?: number })?.status === 412;
+				meldung = konflikt ? 'konflikt' : 'fehler';
+				if (konflikt) void tabelle.laden().catch(() => {});
 			}
 		});
 		schalter.melden(felder);
 	}
 
 	// ── Schnittstelle für den Reiter (Grundauswahl „−“/„+“, Speichern des Reiters) ──
-	/** „−“: Zeile im selben Speichervorgang entfernen (nur bei gespeicherter Tabelle). */
-	export function grundauswahlEntfernt(metrik: string): void {
+	/** „−“, „+“ oder Vorlagenwechsel (Fix-Loop F2): Zeilen weggefallener Metriken entfallen, neue stehen hinten,
+	 *  überall angehakt — im selben Speichervorgang wie die Grundauswahl. Nur bei gespeicherter Tabelle. */
+	export function grundauswahlGeaendert(vorher: readonly string[], nachher: readonly string[]): void {
 		if (!antwort?.stored || !lokal) return;
-		aendern(S.ohneZeile(lokal, metrik), S.antwortOhneZeile(antwort, metrik));
-	}
-	/** „+“: Zeile hinten anhängen, überall angehakt (nur bei gespeicherter Tabelle). */
-	export function grundauswahlHinzugefuegt(metrik: string): void {
-		if (!antwort?.stored || !lokal) return;
-		aendern(S.mitZeileHinten(lokal, metrik), antwort);
+		const weg = vorher.filter((m) => !nachher.includes(m));
+		if (!weg.length && nachher.every((m) => vorher.includes(m))) return;
+		aendern(S.mitGrundauswahl(lokal, vorher, nachher), weg.reduce((a, m) => S.antwortOhneZeile(a, m), antwort));
 	}
 	/** Für den PUT des Reiters: der vollständige Stand, nur wenn die Tabelle schon gespeichert ist. */
 	export function placementsZumMitspeichern(): Placements | undefined {

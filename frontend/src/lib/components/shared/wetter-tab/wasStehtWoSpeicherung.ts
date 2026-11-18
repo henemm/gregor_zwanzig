@@ -180,6 +180,8 @@ export function erstelleFelderSpeicherung(o: {
 	enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
 	start: Felder;
 	onAntwort?: (antwort: unknown) => void;
+	/** Fix-Loop F1: Speichern gescheitert -> Anzeige auf den gespeicherten Stand `stand` zurück (412 wie Fehler). */
+	onFehler?: (e: unknown, stand: Felder) => void;
 }): { melden(neu: Felder): void } {
 	let aktuell: Felder = { ...o.start };
 	let bezug: Felder = { ...o.start };
@@ -192,7 +194,14 @@ export function erstelleFelderSpeicherung(o: {
 				bezug = gesendet;
 				o.onAntwort?.(antwort);
 			})(init);
-		await (o.enqueueHubWrite ? o.enqueueHubWrite(lauf) : lauf());
+		try {
+			await (o.enqueueHubWrite ? o.enqueueHubWrite(lauf) : lauf());
+		} catch (e) {
+			// Die gescheiterte Änderung fährt nicht still mit dem nächsten Schalter mit.
+			aktuell = { ...bezug };
+			o.onFehler?.(e, { ...bezug });
+			throw e;
+		}
 	};
 	const vorgang = mitKonfliktSchluessel(fn, FELDER_OWNER);
 	return {

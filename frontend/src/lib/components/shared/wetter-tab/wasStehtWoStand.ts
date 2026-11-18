@@ -139,6 +139,16 @@ export function mitZeileHinten(alt: Placements, metrik: string): Placements {
 	return p;
 }
 
+/** Fix-Loop F2: Die Grundauswahl hat sich geändert (−, +, Vorlage). Eine Abwahl gilt nur, solange die Metrik in der
+ *  Grundauswahl steht: weggefallene Metriken verlieren ihre Zeile, neu hinzugekommene stehen hinten, überall angehakt
+ *  (eine Altzeile fällt weg). Metriken in beiden Auswahlen bleiben unverändert. */
+export function mitGrundauswahl(alt: Placements, vorher: readonly string[], nachher: readonly string[]): Placements {
+	let p = kopie(alt);
+	for (const m of vorher) if (!nachher.includes(m)) p = ohneZeile(p, m);
+	for (const m of nachher) if (!vorher.includes(m)) p = mitZeileHinten(p, m);
+	return p;
+}
+
 // ── Sofortanzeige der Antwort (bis das frische GET kommt) ─────────────────────
 
 function antwortKopie(a: PlacementsAntwort): PlacementsAntwort {
