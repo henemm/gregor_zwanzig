@@ -113,5 +113,12 @@
 	"bausteine.datum.voriger_monat": "Voriger Monat",
 	"bausteine.datum.naechster_monat": "Nächster Monat",
 	"bausteine.datum.ungueltig": "Dieses Datum gibt es nicht.",
-	"bausteine.skelett.laedt": "Wird geladen …"
+	"bausteine.skelett.laedt": "Wird geladen …",
+	"bausteine.haken.name_mit_grund": "{name}: {grund}",
+	"bausteine.darstellung.name": "Darstellung {name}: {form}",
+	"bausteine.darstellung.raw": "Roh",
+	"bausteine.darstellung.simplified": "Einfach",
+	"bausteine.darstellung.simplified_kurz": "Einf.",
+	"bausteine.einstelltabelle.zeilen_sortieren": "Reihenfolge der Zeilen",
+	"bausteine.einstelltabelle.zeile_verschieben": "{name} verschieben: ziehen, oder mit der Leertaste greifen und mit den Pfeiltasten bewegen"
 }

@@ -55,6 +55,7 @@ Drei kanonische Patterns. Jeder Screen muss in genau einem dieser Patterns sein.
 - Stündliche Wetterdaten (technische Dichte erforderlich)
 - Hourly-Matrix in Compare (Vergleichszweck)
 - System-Status-Tabellen in Konto
+- Einstell-Tabelle „Was steht wo“ im Reiter Wetter (Spec `feat_3122_was_steht_wo` Nr. 10): Jede Metrik hat an bis zu fünf Stellen einen Haken und eine Form; nur Zeile mal Spalte zeigt das auf einen Blick und mit einer Reihenfolge für alle Stellen ([ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md)). Baustein `EinstellTabelle`, am Handy dieselbe Tabelle mit schmalen Spalten.
 
 Trip-Liste und Vergleichsliste sind **Tabellen** (`ListTable`, gleich gebaut); die frühere Kachel-Pflicht ist für diese beiden Listen durch ADR-0111 Punkt 2 abgelöst. Neue Listen folgen ihrer Schwesterliste, keine dritte Form.
 
@@ -171,3 +172,4 @@ Implementierungen, die dieser Charter widersprechen, sind als Bug behandelt.
 |---|---|---|
 | v1.0 | 2026-05-21 | Initiale Charter — Runde 1 |
 | v1.1 | 2026-11-09 | ADR-0111 (#2881): §2 Navigation wie die Seitenleiste, „Trip" statt „Tour"; §3 Trip-/Vergleichsliste als Tabelle, Anlegen statt Wizard; §5 Hauptaktion Ink, Accent unter Text `--g-accent-deep`, `Dot` statt ✓/⊘; §7 Verweis auf ADR-0111. |
+| v1.2 | 2026-11-18 | ADR-0124 (#3122): §3 vierte Ausnahme für das Tabellen-Layout, Einstell-Tabelle „Was steht wo“. |

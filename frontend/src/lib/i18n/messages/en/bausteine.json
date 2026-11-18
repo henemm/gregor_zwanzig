@@ -113,5 +113,12 @@
 	"bausteine.datum.voriger_monat": "Previous month",
 	"bausteine.datum.naechster_monat": "Next month",
 	"bausteine.datum.ungueltig": "This date does not exist.",
-	"bausteine.skelett.laedt": "Loading …"
+	"bausteine.skelett.laedt": "Loading …",
+	"bausteine.haken.name_mit_grund": "{name}: {grund}",
+	"bausteine.darstellung.name": "Format of {name}: {form}",
+	"bausteine.darstellung.raw": "Raw",
+	"bausteine.darstellung.simplified": "Simple",
+	"bausteine.darstellung.simplified_kurz": "Simp.",
+	"bausteine.einstelltabelle.zeilen_sortieren": "Row order",
+	"bausteine.einstelltabelle.zeile_verschieben": "Move {name}: drag, or press Space to grab and use the arrow keys to move"
 }
