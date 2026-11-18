@@ -5,6 +5,7 @@
 // Ausgangsreihenfolge sichtbar. Der Etappen-Strip ist hier der Konsument des Bausteins.
 
 import { test, expect, type Page } from '@playwright/test';
+import { oeffneEtappenEditor } from './helpers';
 
 const TRIP_ID = 'e2e-2288-kbd';
 const wp = (id: string, lat: number) => ({ id, name: id, lat, lon: 9.0, elevation_m: 800 });
@@ -22,6 +23,7 @@ async function open(page: Page) {
 	});
 	expect(res.ok()).toBeTruthy();
 	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
+	await oeffneEtappenEditor(page); // #3007: Etappen-Band steht im aufgeklappten Editor
 	await expect(page.getByTestId('etappen-strip')).toBeVisible();
 }
 

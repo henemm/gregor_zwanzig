@@ -90,9 +90,16 @@ func pruefeEntityGroesse(data []byte) error {
 // zu loeschen war (Issue #2815): der Handler antwortet dann 404 not_found.
 var ErrNotFound = errors.New("not found")
 
+// MaxEntityIDBytes ist die groesste Laenge einer Entitaets-Kennung in Bytes
+// (Issue #3122 B2, F003): die Kennung wird zum Dateinamen <id>.json, und ein
+// Dateiname fasst hoechstens 255 Bytes. Eine laengere Kennung kann keine Datei
+// benennen; ohne die Grenze endete sie im Store als Lesefehler (500) statt als
+// Eingabefehler (400).
+const MaxEntityIDBytes = 255 - len(".json")
+
 // ValidEntityID prueft, ob eine Entitaets-Kennung ein sicheres Pfadsegment ist.
 func ValidEntityID(id string) bool {
-	return utf8.ValidString(id) && ValidEntityIDRe.MatchString(id)
+	return len(id) <= MaxEntityIDBytes && utf8.ValidString(id) && ValidEntityIDRe.MatchString(id)
 }
 
 // requireUser verweigert jeden nutzerbezogenen Dateizugriff, solange der

@@ -15,7 +15,7 @@
 //   cd frontend && npx playwright test e2e/sicherheitsrichtlinie-ohne-verletzung.spec.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestComparePreset, createTestLocation, createTestTrip, registerForCleanup } from './helpers';
+import { createTestComparePreset, createTestLocation, createTestTrip, registerForCleanup, oeffneEtappenEditor } from './helpers';
 
 type Fenster = Window & { __gzCspVerletzungen?: string[] };
 
@@ -145,6 +145,7 @@ test.describe('AC-4: keine Verletzung der Richtlinie', () => {
 		const konsole = await sammlerAnhaengen(page);
 		await richtlinieAktiv(page, `/trips/${trip.id}`);
 		await page.getByTestId('trip-detail-tab-etappen').click();
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		const karte = page.locator('[data-testid="map-card"] [data-testid="map-canvas"]');
 		await expect(karte.locator('.leaflet-marker-icon')).toHaveCount(2, { timeout: 15_000 });
 		await expect(karte.locator('.leaflet-tile').first()).toBeAttached({ timeout: 15_000 });

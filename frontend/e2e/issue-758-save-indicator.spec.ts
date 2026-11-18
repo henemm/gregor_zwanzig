@@ -17,7 +17,7 @@
 //     npx playwright test e2e/issue-758-save-indicator.spec.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestLocation, feldEingabe, tippeDatum, waehleOption } from './helpers';
+import { createTestLocation, feldEingabe, tippeDatum, waehleOption, oeffneEtappenEditor } from './helpers';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Trip-Seed (analog issue-498)
@@ -56,6 +56,7 @@ function saveIndicator(page: Page) {
 async function openStagesEditor(page: Page) {
 	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await expect(page.getByTestId('stage-date-field').first()).toBeVisible();
 }
 
