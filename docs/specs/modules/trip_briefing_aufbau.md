@@ -187,6 +187,8 @@ bleibt inhaltlich bestehen.
 - Der Baustein ist in fuenf Funktionen geteilt (nicht nur eine), weil der Versand zwischen Wetterabruf und Rendern Kontingent und `no_weather` pruft, Phasenuhr misst und Anker im try-Block setzt.
 - Bis #3144 zeigt die SMS-Vorschau in vier Punkten weiterhin nicht exakt die zugestellte SMS; das ist heutiger Stand, kein neuer Fehler.
 - Der Umbau liegt ueber dem Standard-LoC-Limit (`loc_limit_override 500`), siehe Estimated Scope.
+- Zusaetzlich zu den geplanten Testdateien entstand `tests/tdd/test_trip_briefing_aufbau_luecken.py` (Luecken-Tests aus der Adversary-Runde). Ausserdem wurde `tests/test_preview_trend_laeuft_nebenlaeufig.py` angepasst (Trend-Nebenlaeufigkeit der Vorschau nach dem Umbau).
+- AC-7 formuliert „Anker nur nach erfolgreichem Versand“ ungenau: Der Versand setzt den Anker im Fehlerpfad der Dispatch-Stufe (`trip_report_scheduler.py`, Dispatch-Fehler) ebenfalls, wie schon vor dem Umbau. Das Verhalten ist unveraendert; korrekt ist die Formulierung „Anker wie bisher, auch im Dispatch-Fehlerpfad“.
 
 ## Scope
 
@@ -214,4 +216,5 @@ bleibt inhaltlich bestehen.
 
 ## Changelog
 
+- 2026-11-18: Known Limitations ergaenzt: Lueckentests `tests/tdd/test_trip_briefing_aufbau_luecken.py` und Anpassung `tests/test_preview_trend_laeuft_nebenlaeufig.py`; AC-7-Wortlaut zum Anker im Dispatch-Fehlerpfad praezisiert (Verhalten unveraendert)
 - 2026-11-18: Initial spec created (Issue #3128, Trip-Teil aus #2983; Drift-Angleichung als #3144 ausgelagert)

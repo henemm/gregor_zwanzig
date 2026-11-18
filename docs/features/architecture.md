@@ -227,7 +227,11 @@ eines Trips zentral und an EINER Stelle in ein frozen `ReportRenderOptions`-Obje
 Scheduler-Versandpfad (`trip_report_scheduler.py` → `notification_service.py` →
 `TripReportFormatter.format_email()`) reicht nur noch dieses Objekt durch statt
 einzelner Config-Felder; `format_email()` hat bei `render_options=None` einen
-internen Resolver-Fallback für Bestandsverhalten. Details:
+internen Resolver-Fallback für Bestandsverhalten. Der Aufbau des Trip-Briefings
+(Segmente, Wetterabruf, Anreicherung, Render-Aufruf) liegt seit #3128 in EINEM
+Baustein `src/services/trip_briefing_aufbau.py`; Versand (`trip_report_scheduler.py`)
+und Vorschau (`preview_service.py`, Fassade) rufen ihn auf, Details:
+`docs/specs/modules/trip_briefing_aufbau.md`. Details:
 `docs/specs/modules/report_config_resolver.md`. Scheibe B (Issue #1209) 
 stellt zusätzlich Preview- und Compare-Pfad auf einen parallelen 
 `CompareRenderOptions`-Resolver um und ergänzt ein src-weites Struktur-Gate gegen 

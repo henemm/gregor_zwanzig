@@ -589,3 +589,63 @@ def test_f005_baustein_baut_zieltag_ohne_nachtrag_auch_bei_scharfem_scheduler(en
     assert all(v is None for v in km[ziel_etappe]), (
         f"AC-6: Zieltag-Etappe {ziel_etappe} wurde nachgetragen: {km[ziel_etappe]}"
     )
+
+
+# ---------------------------------------------------------------------------
+# AC-5 (Spec "Zirkelimport": kein Alt-Name wird entfernt):
+# ``PreviewService._fetch_main_and_night`` bleibt aufrufbar
+# ---------------------------------------------------------------------------
+
+
+class _StubScheduler:
+    """Echte kleine Klasse statt Mock: liefert ein festes Wetterergebnis und
+    merkt sich, womit der Hauptabruf gerufen wurde."""
+
+    def __init__(self, ergebnis: list):
+        self._ergebnis = ergebnis
+        self.aufrufe: list = []
+
+    def _fetch_weather(self, segments, provider=None):
+        self.aufrufe.append((list(segments), provider))
+        return list(self._ergebnis)
+
+
+def test_ac5_alt_name_fetch_main_and_night_delegiert_an_baustein(env):
+    """AC-5: Given ein Trip ohne Nachtbedarf und ein Scheduler mit Wetter /
+    When der Alt-Name ``PreviewService._fetch_main_and_night`` gerufen wird /
+    Then liefert er dasselbe wie ``_vorschau_haupt_und_nacht``; bei leerem
+    Wetter den Fehlercode ``vorschau_wetter_fehlt``.
+
+    Faengt: Alt-Name entfernt (AttributeError) oder anders verdrahtet."""
+    from services import trip_briefing_aufbau as aufbau
+    from services.preview_service import PreviewService
+    from services.segment_weather import night_weather_needed
+    from tests.tdd.test_trip_briefing_aufbau import (
+        TRIP_A_OHNE_NACHT,
+        _ohne_nacht_display_config,
+    )
+
+    _trip_anlegen(NUTZER_A, TRIP_A_OHNE_NACHT, TRIP_NAME_A, ETAPPE_A,
+                  display_config=_ohne_nacht_display_config(TRIP_A_OHNE_NACHT))
+    trip = _trip(NUTZER_A, TRIP_A_OHNE_NACHT)
+    assert not night_weather_needed(trip.display_config), "Vorbedingung: kein Nachtbedarf"
+
+    segmente = ["seg-1", "seg-2"]
+    wetter = ["wetter-1", "wetter-2"]
+    alt = _StubScheduler(wetter)
+    neu = _StubScheduler(wetter)
+
+    ergebnis_alt = PreviewService._fetch_main_and_night(
+        alt, segmente, trip, TAG, None, NUTZER_A,
+    )
+    ergebnis_neu = aufbau._vorschau_haupt_und_nacht(
+        neu, segmente, trip, TAG, None, NUTZER_A,
+    )
+    assert ergebnis_alt == ergebnis_neu == (wetter, None)
+    assert alt.aufrufe == neu.aufrufe == [(segmente, None)]
+
+    with pytest.raises(RuntimeError) as fehler:
+        PreviewService._fetch_main_and_night(
+            _StubScheduler([]), segmente, trip, TAG, None, NUTZER_A,
+        )
+    assert getattr(fehler.value, "code", None) == "vorschau_wetter_fehlt"

@@ -189,6 +189,15 @@ class PreviewService:
         )
         return report, segment_weather, stage_name, trip_tz
 
+    @staticmethod
+    def _fetch_main_and_night(scheduler, segments, trip, target, provider, user_id):
+        """Alt-Name bleibt (Spec #3128, AC-5): delegiert an den gemeinsamen
+        Baustein ``trip_briefing_aufbau._vorschau_haupt_und_nacht``."""
+        from services import trip_briefing_aufbau as aufbau
+        return aufbau._vorschau_haupt_und_nacht(
+            scheduler, segments, trip, target, provider, user_id,
+        )
+
     def _render_email(
         self,
         scheduler,
