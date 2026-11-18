@@ -1461,6 +1461,23 @@ placements = { version: 1,
 
 - **Beispielwerte, SMS-Beispiel, Marken** entstehen aus dem festen Datensatz `src/services/placements_beispiel.py` (ohne Wetterabruf) über die Renderer des Versands: Trip `TripReportFormatter.format_email` (Abend-Briefing, Morgen nur bei reinem Morgen-Abo), Orte `compare_briefing_aufbau.compare_email_rendern`/`compare_kanaltexte_rendern`. Gelesen wird die fertige Ausgabe (HTML-Stundentabelle bzw. Übersicht, Telegram, SMS, Ausblick-Zeile). `passt_nicht_mehr`: Metrik mit SMS-Haken, deren Kürzel in der Beispiel-SMS fehlt (Trip: hinter der letzten enthaltenen; Orte: im ersten Ort). `nur_tageswert` (nur Trip): Telegram-Metrik ohne Spalte in der Telegram-Stundentabelle (Spaltenberechnung des Renderers, `CHANNEL_LIMITS`).
 - **PUT**: Rumpf = vollständiger Stand von `placements` als JSON-Objekt (Inhalt ungeprüft, ADR-0077; Liste, `null`, Zahl, kaputtes JSON: 400 `bad_request`). `If-Match` wie beim Abo: veralteter Stand 412 `precondition_failed`, nichts geschrieben. Read-Modify-Write auf der Datei (`store.SaveBriefingPlacements`): nur `display_config.placements` wird ersetzt, alle anderen Felder bleiben wertgleich. Antwort 200 `{ "placements": <gespeichert> }` mit neuem `ETag`.
+- **Statuscodes** (beide Methoden, soweit nicht anders vermerkt):
+
+  | Status | Code | Wann |
+  |---|---|---|
+  | 400 | `kind_required` | `kind` fehlt oder ist weder `route` noch `vergleich` |
+  | 400 | `validation_error` | Kennung ist kein sicheres Pfadsegment oder länger als 250 Bytes (`store.MaxEntityIDBytes`; gilt seit B2 für jede Route mit Entitäts-Kennung, vorher endete eine überlange Kennung als 500) |
+  | 400 | `bad_request` | nur PUT: Rumpf ist kein JSON-Objekt |
+  | 401 | `unauthorized` | keine gültige Anmeldung |
+  | 404 | `not_found` | Abo fremd, unbekannt oder von der anderen Art (der Kern wird nicht erreicht); auch vom Kern, wenn er das Abo im Bestand des Nutzers nicht findet |
+  | 412 | `precondition_failed` | nur PUT: `If-Match` passt nicht zum aktuellen Stempel; nichts geschrieben, Antwort ohne `ETag` |
+  | 413 | `payload_too_large` / `entity_too_large` | nur PUT: Rumpf über der allgemeinen Rumpfgrenze der API bzw. Abo-Datei nach dem Schreiben über `store.MaxEntityFileBytes` |
+  | 415 | `unsupported_media_type` | nur PUT: `Content-Type` ist nicht `application/json` |
+  | 500 | `store_error` | Abo-Datei nicht les- oder schreibbar; GET zusätzlich `proxy_error`, wenn die Anfrage an den Kern nicht gebaut werden kann |
+  | 502 | `upstream_unreachable` | nur GET: Python-Kern nicht erreichbar oder Antwort nicht binnen 120 s |
+  | 503 | `busy` (mit `Retry-After: 5`) | Briefing-Sperre des Abos nicht binnen der Frist erhalten (ein anderer Schreiber hält sie) |
+
+  Der Kern selbst antwortet 400 `kind_required`, 404 `not_found` und 401 ohne gültiges `X-GZ-Core-Auth`; diese Antworten reicht Go beim GET unverändert durch.
 
 ### DELETE /api/locations/{id} — Ort-Loeschen-Sperre (Issue #2216, seit 2026-10-08)
 
@@ -5316,6 +5333,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 
 ## Changelog
 
+- 2026-11-18: Issue #3122 B2 Fix-Loop — Entitäts-Kennungen sind auf 250 Bytes begrenzt (`store.MaxEntityIDBytes`, Dateiname `<id>.json` ≤ 255 Bytes): überlange Kennung ergibt auf allen Routen 400 `validation_error` statt 500. Statuscode-Tabelle für `GET|PUT /api/briefings/{id}/placements` ergänzt (413, 415, 500, 502, 503).
 - 2026-11-18: Issue #3122 B2 (ADR-0124) — neu `GET|PUT /api/briefings/{id}/placements?kind=route|vergleich`: Lesen der Tabelle „Was steht wo“ über den Python-Kern (Zeilen, Zustände, Beispielwerte und SMS-Beispiel aus dem echten Renderer mit festem Beispiel-Datensatz, Marken, `outlook_reports`, Blöcke, Kürzel-Legende), Schreiben nur von `display_config.placements` mit `If-Match`. Abschnitt „Tabelle … Lese- und Schreib-Endpoint“, Inventar 0.5.
 - 2026-11-17: Issue #3122 (ADR-0124), Doku-Abgleich ohne Codeänderung — `TripReportConfig.show_outlook` richtiggestellt: der Schalter wirkt nur auf die Vollformat-Mail (HTML und Klartext), nicht auf Kompakt-Mail und Telegram; die beiden weiteren Steuerstellen des Ausblicks (`multi_day_trend_reports`, `display_config.outlook_metrics`) sind an derselben Zeile genannt. Belege: `src/output/renderers/email/html.py` (`outlook_active`), `plain.py`, `email/__init__.py` (Aufruf `render_compact` ohne `show_outlook`), `narrow.py` (`render_telegram_bubbles`), `src/services/report_config_resolver.py` (`show_multi_day_trend`). Dazu Soll-Hinweise auf ADR-0124 (eine Tabelle „Was steht wo“, eine steuernde Stelle für den Ausblick, neu geschnittenes Speicherformat); bis zum Bau zu #3122 bleibt der Vertrag unverändert.
 - 2026-11-17: Issue #3097 (Epic #3058, Phase 3b, ADR-0121 Nachtrag 3b) — Neues optionales Feld `display_config.hourly_metric_formats: Record<string, boolean>` (Orts-Vergleich): Roh/Einfach je Zeile im Stundenverlauf der Orts-Mail (HTML und Klartext) und der Vorschau; fehlt = Roh, Mail byte-gleich. Der Resolver liefert `hourly[].format` (`simplified`/`raw`/`null`) statt immer `null`. Validator-Vorschau `POST /api/_validator/compare-email-preview` akzeptiert additiv `hourly_metric_formats`. Keine Go-Änderung. Section „Compare Presets" (`hourly_metric_formats`).

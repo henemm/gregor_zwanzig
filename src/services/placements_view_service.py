@@ -37,8 +37,21 @@ _UNTERZEILE = {
 }
 
 
+#: Groesste Kennung in Bytes -- gleich ``store.MaxEntityIDBytes`` der Go-API
+#: (Dateiname ``<id>.json`` fasst 255 Bytes). Laengere Kennungen benennen
+#: keine Datei: "nicht gefunden" statt eines Dateisystemfehlers (500).
+MAX_KENNUNG_BYTES = 255 - len(".json")
+
+
 class AboNichtGefunden(LookupError):
     """Kein Abo dieser Art mit dieser Kennung im Bestand des Nutzers."""
+
+
+def _kennung_gueltig(entity_id: str) -> bool:
+    from app.loader import VALID_ENTITY_ID_RE
+
+    return (len(entity_id.encode("utf-8", "replace")) <= MAX_KENNUNG_BYTES
+            and bool(VALID_ENTITY_ID_RE.fullmatch(entity_id)))
 
 
 @dataclass
@@ -71,6 +84,8 @@ def build_placements_view(kind: str, entity_id: str, user_id: str) -> dict:
 
     if kind not in KINDS:
         raise ValueError(kind)
+    if not _kennung_gueltig(entity_id):
+        raise AboNichtGefunden(entity_id)
     lang = resolve_user_lang(user_id)
     if kind == "route":
         abo, muster_fn = _trip_abo(entity_id, user_id, lang)
@@ -237,12 +252,10 @@ def _legende(zeilen: list[dict], surface: str, vm, lang: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def _trip_abo(entity_id: str, user_id: str, lang: str):
-    from app.loader import VALID_ENTITY_ID_RE, get_data_root, load_trip
+    from app.loader import get_data_root, load_trip
     from app.models import UnifiedWeatherDisplayConfig, slot_aktiv
     from services.amtliche_warnungen_schalter import amtliche_warnungen_an_trip
 
-    if not VALID_ENTITY_ID_RE.fullmatch(entity_id):
-        raise AboNichtGefunden(entity_id)
     trip = load_trip(entity_id, data_dir=get_data_root(), user_id=user_id)
     if trip is None:
         raise AboNichtGefunden(entity_id)
@@ -274,13 +287,13 @@ def _trip_muster(trip, dc, vm, report_type: str, lang: str) -> _Muster:
     trend = [build_outlook_row(summarize_points(p), p, wd, pb.ZONE, trip_display_config=dc,
                                report_type=report_type, context="route", ampel=ampel, lang=lang)
              for wd, p in pb.ausblick_tage()]
-    stage_name = trip.stages[0].name if trip.stages else trip.name
+    stage_name = (trip.stages[0].name if trip.stages else "") or trip.name
     bericht = TripReportFormatter().format_email(
         pb.trip_segmente(), trip.name, report_type, display_config=dc, multi_day_trend=trend,
         report_config=trip.report_config, trip=trip, tz=pb.ZONE, stage_name=stage_name, lang=lang,
     )
     ids = [r.metric_id for r in vm.rows]
-    sms_werte = _trip_sms_werte(bericht.sms_text, ids)
+    sms_werte = _trip_sms_werte(_trip_sms_rumpf(bericht.sms_text, stage_name), ids)
     return _Muster(
         sms=bericht.sms_text,
         beispiele={
@@ -303,16 +316,35 @@ def _trip_sms_symbole() -> dict[str, str]:
     return symbole
 
 
-def _trip_sms_werte(sms: str, ids: list[str]) -> dict[str, str]:
-    """Katalog-ID -> Token der SMS (laengstes passendes Symbol). Eine
-    Eltern-Metrik ohne eigenes Symbol (Temperatur) traegt die Token ihrer
-    abgeleiteten Groessen; der Warnblock (``!``) gehoert zu keiner Metrik."""
+def _trip_sms_rumpf(sms: str, etappe: str) -> str:
+    """Token-Teil der Trip-SMS hinter dem Kopf ``<Etappe>: ``. Der Kopf wird
+    mit denselben zwei Funktionen gebildet wie im Versand (``format_sms`` ->
+    ``build_token_line``) und als Ganzes abgetrennt -- nie am ersten ``: ``,
+    denn der Etappenname darf selbst ``: `` oder kuerzelartigen Text tragen.
+    Passt der Kopf nicht (Renderer geaendert), gilt der letzte ``: `` als
+    Trenner: Token enthalten kein ``: ``."""
+    from output.renderers.sms_trip import _sms_stage_prefix
+    from output.tokens.builder import _sanitize_stage_name
+
+    kopf = f"{_sanitize_stage_name(_sms_stage_prefix(etappe))}: "
+    if sms.startswith(kopf):
+        return sms[len(kopf):]
+    return sms.rpartition(": ")[2]
+
+
+def _trip_sms_werte(rumpf: str, ids: list[str]) -> dict[str, str]:
+    """Katalog-ID -> Token der SMS (laengstes passendes Symbol); ``rumpf`` ist
+    der Token-Teil ohne Kopf. Eine Eltern-Metrik ohne eigenes Symbol
+    (Temperatur) traegt die Token ihrer abgeleiteten Groessen; der Warnblock
+    (``!``) gehoert zu keiner Metrik. Ein Tagestiefstwert, der mit dem
+    Hoechstwert zu EINEM Bereichs-Token verschmolzen ist (``D14/18``,
+    ``FD12/16``; Trenner ``/`` kommt im Format sonst nicht vor), zeigt dieses
+    gemeinsame Token."""
     from app.loader import _DERIVED_METRIC_RULES
 
     symbole = _trip_sms_symbole()
     eltern = {kind: elter for kind, elter, _agg in _DERIVED_METRIC_RULES}
     werte: dict[str, list[str]] = {}
-    rumpf = sms.split(": ", 1)[1] if ": " in sms else ""
     for token in rumpf.split(" "):
         treffer = [s for s in symbole if token.startswith(s)]
         if not token or token.startswith("!") or not treffer:
@@ -321,6 +353,10 @@ def _trip_sms_werte(sms: str, ids: list[str]) -> dict[str, str]:
         for ziel in (mid, eltern.get(mid)):
             if ziel in ids:
                 werte.setdefault(ziel, []).append(token)
+    for tief in (m for m in ids if m.endswith("_day_low") and m not in werte):
+        bereich = [t for t in werte.get(f"{tief[:-len('low')]}high", []) if "/" in t]
+        if bereich:
+            werte[tief] = bereich
     return {mid: " ".join(dict.fromkeys(t)) for mid, t in werte.items()}
 
 
@@ -531,31 +567,45 @@ def _renderer_ids(metric_id: str) -> list[str]:
 def _orte_sms_werte(sms: str, kontext: dict, ids: list[str]) -> dict:
     """Katalog-ID -> Zellen des ersten Orts in der SMS; ``None`` = die Metrik
     hat Zellen, keine davon steht in der SMS (passt nicht mehr). Metriken der
-    SMS-Spalte, die der Renderer nicht zeigt, fehlen."""
-    from output.renderers.comparison import _sms_metric_cell
+    SMS-Spalte, die der Renderer nicht zeigt, fehlen.
 
-    ort = kontext["result"].locations[0]
-    teil = sms.split(": ", 1)[1].split("; ")[0] if ": " in sms else ""
-    formen = kontext["opts"].metric_formats("sms") or {}
-    sms_ids = set(kontext["opts"].enabled_metrics_by_channel["sms"] or [])
+    Welche Zellen stehen, sagt der Renderer selbst: ``_sms_location_variants``
+    liefert fuer den ersten Ort alle Formen von "alle Zellen" bis "keine"
+    (Kuerzung vom Listenende); die zellenreichste Form, die in der SMS steht,
+    ist die gesendete. Der Ortsname wird dabei nie zerlegt -- er darf ``: ``
+    oder ``; `` enthalten."""
+    from output.renderers.comparison import _sms_location_variants, _sms_metric_cell
+    from output.renderers.email.compare_html import location_render_order
+
+    opts = kontext["opts"]
+    ort = location_render_order(kontext["result"].locations)[0]
+    sms_liste = list(dict.fromkeys(opts.enabled_metrics_by_channel["sms"] or []))
+    formen = opts.metric_formats("sms") or {}
+    varianten = _sms_location_variants(
+        ort, opts.enabled_metrics_by_channel["sms"], opts.unresolved_by_channel.get("sms", 0),
+        opts.metric_formats("sms"))
+    verdraengt = next((d for d, form in enumerate(varianten) if form in sms), len(varianten) - 1)
+    zellen = [(rid, zelle) for rid in sms_liste
+              if (zelle := _sms_metric_cell(ort, rid, bool(formen.get(rid))))]
+    gezeigt = dict(zellen[:max(len(zellen) - verdraengt, 0)])
+    alle = dict(zellen)
     out: dict = {}
     for mid in ids:
-        zellen = [_sms_metric_cell(ort, rid, bool(formen.get(rid))) for rid in _renderer_ids(mid)
-                  if rid in sms_ids]
-        zellen = [z for z in zellen if z]
-        if not zellen:
-            continue
-        drin = [z for z in zellen if re.search(rf"(^| ){re.escape(z)}( |$)", teil)]
-        out[mid] = " ".join(drin) if drin else None
+        rids = [rid for rid in _renderer_ids(mid) if rid in alle]
+        if rids:
+            out[mid] = " ".join(gezeigt[rid] for rid in rids if rid in gezeigt) or None
     return out
 
 
 def _orte_telegram_werte(telegram: str, ids: list[str], lang: str) -> dict:
-    """Katalog-ID -> ``Label Wert``-Zellen des ersten Orts im Telegram."""
+    """Katalog-ID -> ``Label Wert``-Zellen des ersten Orts im Telegram. Nur
+    die eingerueckten Zeilen eines Ortsblocks tragen Zellen; Kopf und
+    Ortsnamen (nicht eingerueckt) sind Freitext und werden nie gedeutet."""
     from i18n import t
     from output.renderers.comparison import _PLAIN_ROWS_BY_ID
 
-    teile = [p.strip() for zeile in telegram.split("\n") for p in zeile.split(" · ")]
+    teile = [p.strip() for zeile in telegram.split("\n") if zeile.startswith("   ")
+             for p in zeile.split(" · ")]
     out = {}
     for mid in ids:
         gefunden = []

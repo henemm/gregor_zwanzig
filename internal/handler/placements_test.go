@@ -516,3 +516,32 @@ func TestPlacements3122B2GleichzeitigePutsGenauEinerSchreibt(t *testing.T) {
 		})
 	}
 }
+
+// F003: eine ueberlange Kennung ist ein Eingabefehler (400), kein 500.
+func TestPlacements3122B2UeberlangeKennungIst400(t *testing.T) {
+	s := newTestStore(t)
+	kern := neuerKern(t)
+	r := placementsRouter(s, kern.srv.URL)
+	seedPlacementsB2(t, s, "b2-a")
+	for _, laenge := range []int{300, 5000} {
+		lang := strings.Repeat("x", laenge)
+		for _, f := range placementsB2Faelle {
+			for _, m := range []string{http.MethodGet, http.MethodPut} {
+				body := ""
+				if m == http.MethodPut {
+					body = placementsB2Neu
+				}
+				if w := doReq(r, m, placementsPfad(lang, f.kind), body, "", "b2-a"); w.Code != http.StatusBadRequest {
+					t.Errorf("%s %s Kennung mit %d Zeichen: Status %d, erwartet 400", m, f.kind, laenge, w.Code)
+				}
+			}
+		}
+		// Gleiches Verhalten wie die bestehende Abo-Route.
+		if w := doReq(r, http.MethodGet, "/api/briefings/"+lang+"?kind=route", "", "", "b2-a"); w.Code != http.StatusBadRequest {
+			t.Errorf("GET /api/briefings/{id} mit %d Zeichen: Status %d, erwartet 400", laenge, w.Code)
+		}
+	}
+	if kern.zahl() != 0 {
+		t.Errorf("ueberlange Kennung hat den Kern erreicht")
+	}
+}
