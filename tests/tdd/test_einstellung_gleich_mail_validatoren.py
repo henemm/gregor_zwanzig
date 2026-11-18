@@ -1996,3 +1996,58 @@ def test_b5_orte_ein_ort_mehrzahl_scheitert(monkeypatch, tmp_path, lang, mehrzah
     code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
     assert code == 1, aus
     assert "NAME: Text setzt mehrere Orte voraus (HTML)" in aus, aus
+
+
+@pytest.mark.parametrize("lang, orte, namen, abo", [
+    ("de", ("golden-2", "golden-0", "golden-1"), {"golden-0": "Vergleichsberg"}, "Vergleich Tirol"),
+    ("en", ("golden-2", "golden-0", "golden-1"), {"golden-0": "Comparison Peak"}, "Comparison Tour"),
+    ("de", ("golden-0",), {"golden-0": "Alle Orte Bar"}, "Gleich Orte"),
+], ids=["vergleichsberg", "comparison_peak", "alle_orte_bar_ein_ort"])
+def test_b5_orte_nutzernamen_loesen_keinen_fehlalarm_aus(monkeypatch, tmp_path, lang, orte,
+                                                         namen, abo):
+    """F-V1: Orts- und Abo-Namen sind Nutzerdaten. "Vergleichsberg",
+    "Comparison Peak" oder bei einem Ort "Alle Orte Bar" sind kein alter
+    Bereichsname und kein Mehrzahl-Text -- die echte Mail besteht."""
+    preset = {**_orte_preset(orte=orte), "name": abo}
+    eml = _orte_eml(monkeypatch, preset, lang=lang, namen=namen)
+    konfig = _konfig(tmp_path, f"fv1{lang}", {"preset": preset, "orte": {**_ORTSNAMEN, **namen}})
+    code, aus = _lauf(tmp_path, ORTE, eml, "--konfig", konfig)
+    assert code == 0, aus
+    # Gegenprobe: der alte Name an fester Stelle (Kopf) scheitert weiter.
+    from i18n import t
+
+    kopf = t("vergleich.kopf.titel", lang)
+    alt = {"de": "ORTS-VERGLEICH", "en": "LOCATION COMPARISON"}[lang]
+    falsch = _aendere(eml, html=lambda h: h.replace(f"{kopf} · ", f"{alt} · ", 1))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1 and "NAME: Kopf" in aus, aus
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_b5_orte_ein_ort_alle_orte_in_fester_zeile_scheitert(monkeypatch, tmp_path, lang):
+    """AC-36: bei einem Ort steht in der Unterzeile der Uebersicht die
+    Mehrzahl-Form ("Alle Orte · gewählte Metriken") -> Fehler."""
+    from i18n import tn
+
+    preset = _orte_preset(orte=("golden-0",))
+    eml, konfig = _orte_eml(monkeypatch, preset, lang=lang), _orte_konfig(tmp_path, preset, f"b5a{lang}")
+    eins, viele = (tn("vergleich.uebersicht.titel", n, lang) for n in (1, 3))
+    falsch = _aendere(eml, html=lambda h: h.replace(f">{eins}<", f">{viele}<", 1))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1 and "NAME: Text setzt mehrere Orte voraus (HTML)" in aus, aus
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_b5_orte_ein_ort_fuss_fehlt_scheitert(monkeypatch, tmp_path, lang):
+    """T3: bei einem Ort fehlt der Fuss "1 Ort · Vorlage …" -> Fehler, auch
+    ohne Mehrzahl-Text."""
+    from i18n import tn
+
+    preset = _orte_preset(orte=("golden-0",))
+    eml, konfig = _orte_eml(monkeypatch, preset, lang=lang), _orte_konfig(tmp_path, preset, f"b5f{lang}")
+    fuss = tn("vergleich.fuss.abo_zeile", 1, lang, vorlage="").strip()
+    falsch = _aendere(eml, html=lambda h: h.replace(fuss, "", 1))
+    code, aus = _lauf(tmp_path, ORTE, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert "NAME: Fuss" in aus and "fehlt bei einem Ort (HTML)" in aus, aus
+    assert "NAME: Text setzt mehrere Orte voraus" not in aus, aus
