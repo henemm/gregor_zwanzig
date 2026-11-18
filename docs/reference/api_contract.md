@@ -1422,7 +1422,7 @@ placements = { version: 1,
                outlook_reports: ["morning"|"evening", ...] }       // fehlt = ["evening"], nur Morgen-Briefing aktiv = ["morning"]
 ```
 
-- **Speichern:** Go speichert das Objekt ungeprueft (ADR-0077) als Teil von `display_config`; andere Schreibwege (`PUT /api/trips/{id}`, `PUT /api/trips/{id}/weather-config`, `PUT /api/compare/presets/{id}`, `PUT /api/briefings/{id}?kind=vergleich`) lassen es per Read-Modify-Write unveraendert. Wer es sendet, sendet immer den vollstaendigen Stand (`mergeConfigMap` ersetzt Unterschluessel als Ganzes). Python traegt es beim Laden roh durch und schreibt es als ganzen Unterbaum zurueck.
+- **Speichern:** Go speichert das Objekt ungeprueft (ADR-0077) als Teil von `display_config`; andere Schreibwege (`PUT /api/trips/{id}`, `PUT /api/trips/{id}/weather-config`, `PUT /api/compare/presets/{id}`, `PUT /api/briefings/{id}?kind=vergleich`) lassen es per Read-Modify-Write unveraendert. Wer es sendet, sendet immer den vollstaendigen Stand (`mergeConfigMap` ersetzt Unterschluessel als Ganzes). Python traegt es beim Laden roh durch und schreibt es als ganzen Unterbaum zurueck. Ein `display_config` allein mit `placements` (so legt es der PUT bei einem Trip ohne `display_config` an) gilt beim Trip-Laden wie ein fehlendes `display_config` (Grundauswahl „nie eingestellt“ = Profil-Default bzw. `weather_config`, #3122 B2b) -- sonst tauschte das erste Speichern der Tabelle die Metriken aus.
 - **Lesen:** nur der Kanal-Listen-Resolver (`src/services/channel_list_resolver.py`, `services/placements.py`), robust: unbekannte Metriken, Stellen, Formate und falsche Typen wirken nicht. Fehlt das Objekt oder hat es keine Liste `rows`, gelten bis B3 die Altfelder.
 
 ### Tabelle „Was steht wo“ — Lese- und Schreib-Endpoint (Issue #3122 B2, seit B2)
@@ -1434,7 +1434,9 @@ placements = { version: 1,
 ```
 { kind: "route"|"vergleich", lang: "de"|"en",
   stored: bool,                 // false = Abo ohne gespeicherte Tabelle, Inhalt = Umrechnung placements_from_legacy
-  placements: {...},            // vollständiger Stand (gespeichert oder umgerechnet) -- Grundlage für den PUT
+  placements: {...},            // Grundlage für den PUT: stored true = gespeicherter Stand WIE GESPEICHERT (unbekannte und reservierte
+                                //   Schlüssel wie places.premium_sms, künftige Felder je Zeile/oben, version bleiben; unlesbare Einträge wirken
+                                //   weiter nicht) -- unverändert zurückgeschrieben verliert er nichts; stored false = Umrechnung placements_from_legacy
   location_count: int|null,     // nur Orte: Zahl der Orte des Abos
   columns: [ { stelle: "email"|"telegram"|"sms"|"hourly"|"outlook",   // hourly nur Orte
                subtitle: "stundentabelle"|"uebersicht"|"nachricht"|"und_premium_sms"|"nur_email"|"email_und_telegram",
@@ -1449,17 +1451,21 @@ placements = { version: 1,
                                  example: string|null,    // Beispielwert aus dem Renderer (nur bei state "on")
                                  ampel: "green"|"yellow"|"orange"|"red"|null,  // HTML-Ampelpunkt
                                  mark: "passt_nicht_mehr"|"nur_tageswert"|null } } } ],
-  sms_example: { text, length, max_length } | null,   // max_length = Kuerzungsgrenze des Versandwegs: Trip 160 (format_sms), Orte CHANNEL_LIMITS sms 153; null: Orte-Abo ohne Ort
+  sms_example: { text, length, max_length,           // max_length = Kuerzungsgrenze des Versandwegs: Trip 160 (format_sms), Orte CHANNEL_LIMITS sms 153
+                 overflow: { locations: int,          // Orte: Zahl der Orte, deren SMS-Teil einen Rest-Zähler "+N" trägt (N Metrik-Zellen verdrängt)
+                             per_location: [int|null, ...] }  // je in der SMS gezeigtem Ort (SMS-Folge) N bzw. null; abgelesen an der Renderer-Form,
+                           | null }                   //   nicht nachgerechnet; entfallene Orte ("+k Orte") fehlen. Trip: null
+               | null,                                // null: Orte-Abo ohne Ort
   outlook_reports: ["morning"|"evening", ...],         // aufgelöst, inkl. Vorbelegung
   blocks: { outlook: {morning: bool, evening: bool}, telegram_style,
             // Trip: show_stage_stats, show_yesterday_comparison, show_night_block, email_format
             // Orte: hourly },
-  legend: { metrics: [ { metric_id, kuerzel, meaning } ],   // Kürzel, die der SMS-Renderer der Fläche für Metriken mit SMS-Haken sendet (Trip-Symboltabellen, Orte kurzform_kuerzel je Auswertung, z. B. Temperatur -> D/L); meaning aus kuerzel_bedeutung_de/en, null wenn der Katalog keine führt
+  legend: { metrics: [ { metric_id, kuerzel, meaning } ],   // Kürzel, die der SMS-Renderer der Fläche für Metriken mit SMS-Haken sendet (Trip-Symboltabellen, Orte kurzform_kuerzel je Auswertung, z. B. Temperatur -> D/L); meaning aus kuerzel_bedeutung_de/en (metric_catalog.kuerzel_bedeutung: das Register-Kürzel der Orte-SMS, z. B. NS, liest die Bedeutung seiner Grammatikform NS24+), null wenn der Katalog keine führt
             fixed: [ { token, key } ] },                    // @14, !TS:H@14, L, M, H, WG, RA, AV4, X? -- Texte im Frontend
   example_version: int }        // Version des festen Beispiel-Datensatzes
 ```
 
-- **Beispielwerte, SMS-Beispiel, Marken** entstehen aus dem festen Datensatz `src/services/placements_beispiel.py` (ohne Wetterabruf) über die Renderer des Versands: Trip `TripReportFormatter.format_email` (Abend-Briefing, Morgen nur bei reinem Morgen-Abo), Orte `compare_briefing_aufbau.compare_email_rendern`/`compare_kanaltexte_rendern`. Gelesen wird die fertige Ausgabe (HTML-Stundentabelle bzw. Übersicht, Telegram, SMS, Ausblick-Zeile). `passt_nicht_mehr`: Metrik mit SMS-Haken, deren Kürzel in der Beispiel-SMS fehlt (Trip: hinter der letzten enthaltenen; Orte: im ersten Ort). `nur_tageswert` (nur Trip): Telegram-Metrik ohne Spalte in der Telegram-Stundentabelle (Spaltenberechnung des Renderers, `CHANNEL_LIMITS`).
+- **Beispielwerte, SMS-Beispiel, Marken** entstehen aus dem festen Datensatz `src/services/placements_beispiel.py` (ohne Wetterabruf) über die Renderer des Versands: Trip `TripReportFormatter.format_email` (Abend-Briefing, Morgen nur bei reinem Morgen-Abo), Orte `compare_briefing_aufbau.compare_email_rendern`/`compare_kanaltexte_rendern`. Gelesen wird die fertige Ausgabe (HTML-Stundentabelle bzw. Übersicht, Telegram, SMS, Ausblick-Zeile). `passt_nicht_mehr`: Metrik mit SMS-Haken, deren Kürzel in der Beispiel-SMS fehlt (Trip: hinter der letzten enthaltenen; Orte: im ersten Ort). Gilt auch für Abos ohne gespeicherte Tabelle (`stored: false`), bei Orten mit nie eingestellter Grundauswahl über die Vorgabefolge, die der SMS-Renderer selbst nimmt. `nur_tageswert` (nur Trip): Telegram-Metrik ohne Spalte in der Telegram-Stundentabelle (Spaltenberechnung des Renderers, `CHANNEL_LIMITS`).
 - **PUT**: Rumpf = vollständiger Stand von `placements` als JSON-Objekt (Inhalt ungeprüft, ADR-0077; Liste, `null`, Zahl, kaputtes JSON: 400 `bad_request`). `If-Match` wie beim Abo: veralteter Stand 412 `precondition_failed`, nichts geschrieben. Read-Modify-Write auf der Datei (`store.SaveBriefingPlacements`): nur `display_config.placements` wird ersetzt, alle anderen Felder bleiben wertgleich. Antwort 200 `{ "placements": <gespeichert> }` mit neuem `ETag`.
 - **Statuscodes** (beide Methoden, soweit nicht anders vermerkt):
 
@@ -5333,6 +5339,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 
 ## Changelog
 
+- 2026-11-18: Issue #3122 B2b — `GET /api/briefings/{id}/placements`: `placements` bei `stored: true` wie gespeichert (unbekannte/reservierte Schlüssel überleben GET → PUT); neu `sms_example.overflow` (Rest-Zähler `+N` je Ort, Trip `null`); Orte ohne gespeicherte Tabelle mit Beispielwerten, Marken und Legende; Legende erklärt `NS` (Orte). Trip-Laden: `display_config` nur mit `placements` = wie fehlend (erstes Speichern tauscht die Grundauswahl nicht aus).
 - 2026-11-18: Issue #3122 B2 Fix-Loop — Entitäts-Kennungen sind auf 250 Bytes begrenzt (`store.MaxEntityIDBytes`, Dateiname `<id>.json` ≤ 255 Bytes): überlange Kennung ergibt auf allen Routen 400 `validation_error` statt 500. Statuscode-Tabelle für `GET|PUT /api/briefings/{id}/placements` ergänzt (413, 415, 500, 502, 503).
 - 2026-11-18: Issue #3122 B2 (ADR-0124) — neu `GET|PUT /api/briefings/{id}/placements?kind=route|vergleich`: Lesen der Tabelle „Was steht wo“ über den Python-Kern (Zeilen, Zustände, Beispielwerte und SMS-Beispiel aus dem echten Renderer mit festem Beispiel-Datensatz, Marken, `outlook_reports`, Blöcke, Kürzel-Legende), Schreiben nur von `display_config.placements` mit `If-Match`. Abschnitt „Tabelle … Lese- und Schreib-Endpoint“, Inventar 0.5.
 - 2026-11-17: Issue #3122 (ADR-0124), Doku-Abgleich ohne Codeänderung — `TripReportConfig.show_outlook` richtiggestellt: der Schalter wirkt nur auf die Vollformat-Mail (HTML und Klartext), nicht auf Kompakt-Mail und Telegram; die beiden weiteren Steuerstellen des Ausblicks (`multi_day_trend_reports`, `display_config.outlook_metrics`) sind an derselben Zeile genannt. Belege: `src/output/renderers/email/html.py` (`outlook_active`), `plain.py`, `email/__init__.py` (Aufruf `render_compact` ohne `show_outlook`), `narrow.py` (`render_telegram_bubbles`), `src/services/report_config_resolver.py` (`show_multi_day_trend`). Dazu Soll-Hinweise auf ADR-0124 (eine Tabelle „Was steht wo“, eine steuernde Stelle für den Ausblick, neu geschnittenes Speicherformat); bis zum Bau zu #3122 bleibt der Vertrag unverändert.
