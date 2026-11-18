@@ -5,7 +5,7 @@
 // Anmeldung über storageState (global.setup.ts); kein fester Schlaf, kein networkidle.
 
 import { test, expect } from '@playwright/test';
-import { openHub, seedHub } from './helpers';
+import { openHub, seedHub, tippeDatum, feldEingabe } from './helpers';
 
 const DESKTOP = { width: 1280, height: 900 };
 const wp = (id: string, name: string, lat: number, lon: number, elevation_m: number) => ({ id, name, lat, lon, elevation_m });
@@ -159,6 +159,39 @@ test.describe('#3007 Etappen-Liste: Zeile klappt den Editor auf', () => {
 			await expect(page.locator('[data-stage-id="e3007a"]')).toBeFocused();
 			await expect(page.locator('[data-stage-id="e3007c"]')).not.toBeFocused();
 			await alleTitelInReihenfolge();
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
+
+	// Fix-Runde 5 (V-2, AC-14, Fehlerklasse #1389/#1390): Datum der Etappe 1 ändern stellt das Speichern
+	// zurück und fragt nach den Folge-Etappen. Klappt der Nutzer die Zeile zu oder öffnet eine andere,
+	// muss die Rückfrage sichtbar bleiben — genau einmal — sonst bleibt die Änderung unbemerkt ungespeichert.
+	test('AC-14: offene Kaskaden-Rückfrage bleibt nach dem Zuklappen sichtbar, genau einmal', async ({ page, request }) => {
+		const hub = await seedHub(request, 'route', { extra: { stages: ETAPPEN } });
+		try {
+			await openHub(page, 'route', hub.id, { tab: 'etappen' });
+			const zeilen = page.locator('[data-abschnitt="liste"] [data-testid="etappen-liste-zeile"]');
+			await expect(zeilen).toHaveCount(2);
+			await zeilen.nth(0).click();
+			await expect(zeilen.nth(0)).toHaveAttribute('aria-expanded', 'true');
+			const datum = page.locator('[data-testid="etappen-aufklapp"] [data-testid="stage-date-field"]:visible').first();
+			await expect(feldEingabe(datum)).toHaveText('01.06.2027');
+			await tippeDatum(page, datum, '2027-06-10');
+			const rueckfrage = page.getByTestId('cascade-strip');
+			await expect(rueckfrage).toHaveCount(1);
+			await expect(rueckfrage).toBeVisible();
+
+			await zeilen.nth(0).click();
+			await expect(zeilen.nth(0)).toHaveAttribute('aria-expanded', 'false');
+			await expect(page.getByTestId('etappen-aufklapp')).toHaveCount(0);
+			await expect(rueckfrage, 'zugeklappt: Rückfrage verschwunden').toHaveCount(1);
+			await expect(rueckfrage).toBeVisible();
+
+			await zeilen.nth(1).click();
+			await expect(zeilen.nth(1)).toHaveAttribute('aria-expanded', 'true');
+			await expect(rueckfrage, 'andere Etappe offen: Rückfrage nicht genau einmal').toHaveCount(1);
+			await expect(rueckfrage).toBeVisible();
 		} finally {
 			await hub.aufraeumen();
 		}

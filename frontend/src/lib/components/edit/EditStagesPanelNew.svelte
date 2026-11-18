@@ -905,7 +905,8 @@
 				</div>
 			</div>
 
-			{@render cascadeBanner()}
+			<!-- #3007 Fix-Runde 5 (V-2, AC-14): im Hub-Listenmodus steht die Rückfrage über der Liste. -->
+			{#if !listeZuerst}{@render cascadeBanner()}{/if}
 
 			<!-- Issue #503: Grid 1fr / 360px — Karte+Profil links, Wegpunkte rechts -->
 			<div class="editor-grid" data-testid="editor-grid">
@@ -982,7 +983,7 @@
 {#snippet etappenEditor(eingebettet: boolean)}
 	{#if activeStage}
 		{#if activeIsPause}
-			{@render cascadeBanner()}
+			{#if !listeZuerst}{@render cascadeBanner()}{/if}
 			<PauseStageView
 				stage={activeStage}
 				{prevStage}
@@ -1016,7 +1017,10 @@
 
 {#snippet etappenListe()}
 	<HubReiterflaeche testid="etappen-liste-reiterflaeche">
-		{#if kopf}{@render kopf()}{/if}<div class="etappen-liste-rahmen" bind:this={listeRahmen}>
+		{#if kopf}{@render kopf()}{/if}<!-- #3007 Fix-Runde 5 (V-2, AC-14, Fehlerklasse #1389/#1390): die Kaskaden-Rückfrage
+		     steht einmal über der Liste statt im aufgeklappten Editor — sie bleibt sichtbar, wenn der Nutzer
+		     die Etappe zuklappt oder eine andere aufklappt, solange das Speichern zurückgestellt ist. -->
+		{#if cascade && cascadeVisible}<div class="etappen-liste-kaskade">{@render cascadeBanner()}</div>{/if}<div class="etappen-liste-rahmen" bind:this={listeRahmen}>
 			<Card padding={0} data-abschnitt="liste">
 				<!-- Zeilen bis einschließlich der offenen, dann der Editor, dann die übrigen Zeilen. Der Editor
 				     steht AUSSERHALB der Zeilen-Schleifen: wechselt die Etappe (Zeile oder Etappen-Band), wandert
@@ -1061,7 +1065,8 @@
 		}
 	}
 	/* #3007: Hub-Listenmodus — Abstand Kopf → Liste wie beim Vergleich, aufgeklappter Editor in der Karte. */
-	.etappen-liste-rahmen {
+	.etappen-liste-rahmen,
+	.etappen-liste-kaskade {
 		margin-top: var(--g-s-4);
 	}
 	.etappen-aufklapp {

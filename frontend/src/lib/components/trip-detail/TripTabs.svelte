@@ -16,6 +16,7 @@
 	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
 	import Bereichskopf from '$lib/components/molecules/Bereichskopf.svelte';
+	import { Card } from '$lib/components/atoms';
 	import { subscriptionTabs, resolveTab, bereinigteTabAdresse, versandSprungStart } from '../shared/subscriptionTabs.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { t, locale, type MessageKey } from '$lib/i18n';
@@ -219,7 +220,8 @@
 					{#if trip}
 						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} kopf={etappenKopf} listeZuerst />
 					{:else}
-						<HubReiterflaeche testid="etappen-laden-reiterflaeche">{@render etappenKopf()}</HubReiterflaeche>
+						<!-- #3007 Fix-Runde 5 (V-1, AC-17): auch beim Laden genau ein (leerer) Listen-Container. -->
+						<HubReiterflaeche testid="etappen-laden-reiterflaeche">{@render etappenKopf()}<div class="etappen-laden-liste"><Card padding={0} data-abschnitt="liste"></Card></div></HubReiterflaeche>
 					{/if}
 				{:else if tab.value === 'wetter' && trip}
 					<!-- Issue #2794 S3a Teil-PR 3: genau ein Speicherer im Reiter (AC-38). -->
@@ -233,4 +235,11 @@
 		{/if}
 	{/each}
 </div>
+
+<style>
+	/* #3007 Fix-Runde 5 (V-1): Abstand Kopf → Liste wie im geladenen Reiter (.etappen-liste-rahmen). */
+	.etappen-laden-liste {
+		margin-top: var(--g-s-4);
+	}
+</style>
 
