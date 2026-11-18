@@ -343,7 +343,12 @@ def test_ac7_gesperrte_stelle_wirkt_nicht_und_meldet_grund(surface, metric_id, s
     ausgabe = {z.metric_id for z in getattr(vm, stelle)}
     if surface == "compare" and stelle in ("email", "telegram", "sms"):
         ausgabe = {c for c in ORTE_KENNUNG if set(ORTE_KENNUNG[c]) & ausgabe} | ausgabe
-    assert metric_id not in ausgabe
+    if grund == "keine_eigene_spalte":
+        # #3122 Fix-Loop B1b: ohne eigene Spalte bleibt die Groesse Teil der
+        # Mail (Kurz-Zusammenfassung u. a.); gesperrt ist nur der Haken.
+        assert metric_id in ausgabe
+    else:
+        assert metric_id not in ausgabe
     zelle = _zelle(vm, metric_id, stelle)
     assert (zelle.state, zelle.reason) == ("locked", grund)
 
@@ -369,8 +374,10 @@ def test_abgeleitete_groessen_folgen_der_eltern_zeile():
     kinder = ["temperature_night", "temperature_day_low", "temperature_day_high"]
     assert _ids(vm, "telegram") == ["wind", "temperature", *kinder, "gust"]
     assert _ids(vm, "sms") == ["wind", "gust"]
-    # Stundentabelle der Trip-Mail: Fenstergroessen haben keine eigene Spalte.
-    assert _ids(vm, "email") == ["wind", "temperature", "gust"]
+    # Stundentabelle der Trip-Mail: Fenstergroessen haben keine eigene Spalte,
+    # bleiben aber Teil der Mail (#3122 Fix-Loop B1b).
+    assert _ids(vm, "email") == ["wind", "temperature", *kinder, "gust"]
+    assert _zelle(vm, "temperature_night", "email").state == "locked"
 
 
 # ---------------------------------------------------------------------------

@@ -175,8 +175,10 @@ def test_f2_wegfall_an_gesperrter_stelle_wird_gemeldet():
         {"metric_id": "temperature", "enabled": True, "order": 0},
         {"metric_id": "wind", "enabled": True, "order": 1}]}
     arten = {(c.kind, c.stelle, c.metric_id) for c in placements_from_legacy(dc, "trip").changes}
+    # #3122 Fix-Loop B1b: "keine eigene Spalte" laesst die Groesse in der Mail
+    # -- an der E-Mail-Stelle entfaellt nichts mehr.
     for kind in ("temperature_night", "temperature_day_low", "temperature_day_high"):
-        assert ("gesperrte_stelle_entfaellt", "email", kind) in arten
+        assert not any(a[1] == "email" and a[2] == kind for a in arten), arten
     assert not any(a[0] == "gesperrte_stelle_entfaellt" and a[2] == "wind" for a in arten)
 
 

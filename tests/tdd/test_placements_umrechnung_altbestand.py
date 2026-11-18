@@ -342,18 +342,23 @@ def _ausblick_an_alt(dc, surface, report_type, kw):
     return report_type in reports
 
 
-def _alt_gesperrt(alt, dc, surface, stelle, report_type, kw):
-    """Altzeilen an gesperrten Stellen (sie zeigten dort nichts, Nr. 5)."""
+def _sperrt(mid: str, stelle: str, surface: str) -> bool:
+    """Gesperrt UND ohne Ausgabe; "keine eigene Spalte" (Trip-Mail) laesst die
+    Groesse in der Mail (#3122 Fix-Loop B1b)."""
     from app.metric_catalog import stellen_sperre
 
+    grund = stellen_sperre(mid, stelle, surface)
+    return bool(grund) and grund != "keine_eigene_spalte"
+
+
+def _alt_gesperrt(alt, dc, surface, stelle, report_type, kw):
+    """Altzeilen an gesperrten Stellen (sie zeigten dort nichts, Nr. 5)."""
     sperr_stelle = "sms" if stelle == "premium_sms" else stelle
     alle = [m for m, _f in _alt_liste(alt, dc, surface, stelle, report_type, kw, sperren=False)]
-    return [m for m in alle if stellen_sperre(_katalog_id(surface, m), sperr_stelle, surface)]
+    return [m for m in alle if _sperrt(_katalog_id(surface, m), sperr_stelle, surface)]
 
 
 def _alt_liste(alt, dc, surface, stelle, report_type, kw, sperren=True):
-    from app.metric_catalog import stellen_sperre
-
     zeilen = getattr(alt, stelle)
     if zeilen is None:
         zeilen = [type("Z", (), {"metric_id": m, "format": None})() for m in _orte_standard()]
@@ -363,8 +368,8 @@ def _alt_liste(alt, dc, surface, stelle, report_type, kw, sperren=True):
         zeilen = []
     sperr_stelle = "sms" if stelle == "premium_sms" else stelle
     return [(z.metric_id, z.format) for z in zeilen
-            if not (sperren and stellen_sperre(_katalog_id(surface, z.metric_id), sperr_stelle,
-                                               surface))]
+            if not (sperren and _sperrt(_katalog_id(surface, z.metric_id), sperr_stelle,
+                                        surface))]
 
 
 def _grund_katalog(dc, surface, report_type):

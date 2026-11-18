@@ -646,6 +646,94 @@ def test_ac19_alarm_telegram_darstellung_folgt_stelle_telegram(monkeypatch, emai
     assert all(zahlen) if telegram == "raw" else not any(zahlen), zeilen
 
 
+# ---------------------------------------------------------------------------
+# Nacht-/Tagesgroessen: gesperrte E-Mail-Stelle ("keine eigene Spalte") heisst
+# nicht "fehlt in der Mail" (Entscheidung Fix-Loop B1b-Trip)
+# ---------------------------------------------------------------------------
+
+#: Nachttief am Ziel 4 Grad (Nacht 20-06 Uhr), tagsueber 15 Grad -- Nachttief
+#: und Gehzeit-Minimum unterscheiden sich (die Basis-Fixtur ist konstant 15).
+NACHT_TIEF = 4.0
+
+
+def _nennt_nachttief(zeile: str) -> bool:
+    """``E1: 4–15°C, ...`` bzw. ``E1: 4°C, ...`` (nicht ``ab 4:00``)."""
+    return bool(re.search(rf"(?<![\d.]){int(NACHT_TIEF)}(?:–-?\d+)?°C", zeile))
+
+
+def _kalte_nacht():
+    import dataclasses
+
+    from tests.tdd._einstellung_gleich_mail_trip_fixtures import night_weather
+
+    nw = night_weather()
+    kalt = [dataclasses.replace(dp, t2m_c=NACHT_TIEF)
+            if dp.ts.astimezone(_tz()).hour >= 20 or dp.ts.astimezone(_tz()).hour <= 6 else dp
+            for dp in nw.data]
+    return dataclasses.replace(nw, data=kalt)
+
+
+def _tz():
+    from tests.tdd._einstellung_gleich_mail_trip_fixtures import TZ
+
+    return TZ
+
+
+def _zusammenfassung(data: dict, report_type: str = "evening") -> str:
+    """Kurz-Zusammenfassung der Trip-Mail (Klartext und HTML) ueber den echten
+    Formatter, mit kalter Nacht; ``E1: ...``-Zeile des Klartexts."""
+    from app.loader import load_trip
+    from output.renderers.trip_report import TripReportFormatter
+    from tests.tdd._einstellung_gleich_mail_trip_fixtures import (
+        STAGE_NAME, frisches_profil, segment,
+    )
+
+    t = load_trip(copy.deepcopy(data), user_id=frisches_profil())
+    bericht = TripReportFormatter().format_email(
+        [segment()], trip_name="Nacht", report_type=report_type,
+        display_config=t.display_config, report_config=t.report_config,
+        night_weather=_kalte_nacht(), stage_name=STAGE_NAME, tz=_tz(), trip=t,
+    )
+    zeilen = [z for z in bericht.email_plain.splitlines() if z.startswith(f"{STAGE_NAME}: ")]
+    assert zeilen, bericht.email_plain[:800]
+    return zeilen[0]
+
+
+def _mit_tabelle_aus_altbestand(alt: dict) -> dict:
+    from app.loader import load_trip
+    from services.placements import placements_from_legacy
+    from tests.tdd._einstellung_gleich_mail_trip_fixtures import frisches_profil
+
+    t = load_trip(copy.deepcopy(alt), user_id=frisches_profil())
+    neu = copy.deepcopy(alt)
+    neu["display_config"]["placements"] = placements_from_legacy(
+        t.display_config, "trip", report_config=t.report_config).placements
+    return neu
+
+
+@pytest.mark.parametrize("folge", [
+    ["temperature", "wind", "gust"],          # Nachttief abgeleitet aus Temperatur
+    ["temperature_night", "wind", "gust"],    # nur die Nachtgroesse gewaehlt
+], ids=["mit_temperatur", "nur_nachtgroesse"])
+def test_nachttief_in_kurzzusammenfassung_wie_ohne_tabelle(folge):
+    """Abend-Kurz-Zusammenfassung: das Abo mit (umgerechneter) Tabelle nennt
+    das Nachttief wie dasselbe Abo ohne Tabelle -- die Nachtgroesse hat in der
+    Stundentabelle keine Spalte, gehoert aber weiter zur Mail."""
+    alt = trip_json(folge, report_config=ALLE_KANAELE)
+    ohne = _zusammenfassung(alt)
+    assert _nennt_nachttief(ohne), f"Vorbedingung: Nachttief im Bestand: {ohne}"
+    assert _zusammenfassung(_mit_tabelle_aus_altbestand(alt)) == ohne
+
+
+def test_nachttief_bleibt_auch_bei_abgewaehlter_tabellenzeile():
+    """Die Nachtgroesse ist an der Stelle E-Mail nicht abwaehlbar: auch eine
+    gespeicherte Abwahl in der E-Mail-Spalte entfernt sie nicht aus der Mail."""
+    data = trip(tabelle([zeile("temperature_night", aus=("email",)), zeile("wind")]),
+                folge=["temperature_night", "wind", "gust"])
+    satz = _zusammenfassung(data)
+    assert _nennt_nachttief(satz), satz
+
+
 #: Kanal-Eintrag mit eigenen Horizonten und einer Format-Schreibweise, die die
 #: View-Model-Zeile nicht unterscheidet (``format_mode: raw`` bei
 #: ``use_friendly_format: true`` -- HTML-Ampelpunkt an, Wert roh).
