@@ -256,7 +256,7 @@ def test_dispatch_and_preview_share_render_path_without_summary_block():
     # Versand-/Vorschau-Pfad nach dem Rueckbau.
     html_body, text_body = render_compare_email(
         result,
-        enabled_metrics=opts.enabled_metrics,
+        enabled_metrics=opts.enabled_metrics_by_channel["email"],
         hourly_metrics=opts.hourly_metrics,
         hourly_enabled=opts.hourly_enabled,
         corridors=opts.corridors, preset=PRESET_ALLGEMEIN,

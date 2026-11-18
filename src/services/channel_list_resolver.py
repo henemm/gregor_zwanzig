@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import NamedTuple, Optional, Sequence
 
 from app import models as _models
@@ -45,6 +45,14 @@ class ChannelRow:
     enabled: bool
     format: Optional[str]
     order: int
+    # #3122: Herkunft einer Trip-Kanal-Zeile im bisherigen Pfad -- genau der
+    # Eintrag, den die Kaskade geliefert hat (Kanal-Ebene oder, im Rueckfall
+    # und ohne Kanal-Ebene, Grundauswahl). Er traegt, was die Zeile nicht
+    # traegt (``horizons``, Position, Format-Schreibweise); die Adapter der
+    # Ausgaben reichen ihn durch, statt die Kaskaden-Regeln nachzubilden.
+    # ``None`` im neuen Eingang (``placements``) und bei Orten. Kein Teil von
+    # Vergleich und Hash der Zeile.
+    source: Optional[MetricConfig] = field(default=None, compare=False, repr=False)
 
 
 Rows = Optional[tuple[ChannelRow, ...]]
@@ -100,6 +108,7 @@ def resolve_channel_lists(
     report_config: object = None,
     outlook_enabled: Optional[bool] = None,
     with_rows: bool = False,
+    ausblick: bool = True,
 ) -> MailViewModel:
     """Reine Funktion: ``display_config`` -> ``MailViewModel`` (ADR-0121).
 
@@ -110,7 +119,9 @@ def resolve_channel_lists(
     neuen Eingang. Im bisherigen Pfad entstehen ``rows``/``outlook_reports``
     nur mit ``with_rows=True`` (Umrechnung des Altbestands; dafuer auch
     ``report_config``/``outlook_enabled``); ohne Anforderung bleiben sie
-    ``()`` und der Versandweg rechnet nichts um."""
+    ``()`` und der Versandweg rechnet nichts um. ``ausblick=False``: der
+    bisherige Pfad loest den Ausblick nicht auf (``outlook`` bleibt ``None``),
+    fuer Leser, die nur Kanal-Zeilen brauchen (Alarm-Format, #3122)."""
     from services.placements import legacy_placements, read_placements
 
     if surface not in ("trip", "compare"):
@@ -121,24 +132,38 @@ def resolve_channel_lists(
     ansicht = {"enabled_reports": enabled_reports, "hourly_enabled": hourly_enabled}
     if stored is not None:
         return placements_view(display_config, surface, report_type, stored, **ansicht)
+    bisher = _abo_schalter(
+        legacy_view(display_config, surface, report_type, ausblick=ausblick), surface,
+        outlook_enabled=outlook_enabled, hourly_enabled=hourly_enabled)
     if not (with_rows or ALTBESTAND_UEBER_UMRECHNUNG):
-        return legacy_view(display_config, surface, report_type)
+        return bisher
     umgerechnet = read_placements(legacy_placements(
         display_config, surface, report_config=report_config,
         enabled_reports=enabled_reports, outlook_enabled=outlook_enabled)[0])
     neu = placements_view(display_config, surface, report_type, umgerechnet, **ansicht)
     if ALTBESTAND_UEBER_UMRECHNUNG:
         return neu
-    return dataclasses.replace(
-        legacy_view(display_config, surface, report_type),
-        rows=neu.rows, outlook_reports=neu.outlook_reports,
-    )
+    return dataclasses.replace(bisher, rows=neu.rows, outlook_reports=neu.outlook_reports)
 
 
-def legacy_view(display_config, surface: str, report_type: Optional[str] = None) -> MailViewModel:
+def _abo_schalter(view: MailViewModel, surface: str, *, outlook_enabled: Optional[bool],
+                  hourly_enabled: Optional[bool]) -> MailViewModel:
+    """#3122 B1b: Block-Schalter eines Orte-Abos im bisherigen Pfad -- ``False``
+    heisst "Block entfaellt" (``()``); ``None`` (nicht angegeben) laesst die
+    Listen unveraendert. Die Ausgaben lesen nur noch das View-Model."""
+    if surface != "compare":
+        return view
+    aus = {k: () for k, an in (("outlook", outlook_enabled), ("hourly", hourly_enabled))
+           if an is False}
+    return dataclasses.replace(view, **aus) if aus else view
+
+
+def legacy_view(
+    display_config, surface: str, report_type: Optional[str] = None, *, ausblick: bool = True,
+) -> MailViewModel:
     """Bisheriger Pfad aus den Altfeldern (ohne ``rows``/``outlook_reports``)."""
     if surface == "trip":
-        return _trip_view(display_config, report_type or "evening")
+        return _trip_view(display_config, report_type or "evening", ausblick=ausblick)
     return _compare_view(display_config or {})
 
 
@@ -148,10 +173,16 @@ def legacy_view(display_config, surface: str, report_type: Optional[str] = None)
 
 class Grundauswahl(NamedTuple):
     """Katalog-IDs der Grundauswahl (Maximum, Nr. 3.1), abgeleitete Groesse
-    -> Eltern-Kennung, bei Orten die Renderer-Kennungen der Auswahl."""
+    -> Eltern-Kennung, bei Orten die Renderer-Kennungen der Auswahl.
+
+    Orte (#3122 B1b): ``unaufloesbar`` = gewaehlte Eintraege ohne Renderer-
+    Zuordnung (Hinweiszaehler, #1405 S3); ``nie_eingestellt`` = die Auswahl
+    fehlt, ``renderer`` ist dann der Standardsatz (Orte-Alarm, #1191)."""
     ids: list
     parents: dict
     renderer: Optional[frozenset]
+    unaufloesbar: tuple = ()
+    nie_eingestellt: bool = False
 
 
 def _orte_standard() -> list[str]:
@@ -179,14 +210,17 @@ def grundauswahl(display_config, surface: str, report_type: Optional[str]) -> Gr
         parents = {mc.metric_id: eltern[mc.metric_id] for mc in mcs
                    if mc.derived and mc.metric_id in eltern}
         return Grundauswahl(ids, parents, None)
-    from output.renderers.compare_metric_ids import resolve_enabled_metrics
+    from output.renderers.compare_metric_ids import resolve_enabled_metrics_report
     from output.renderers.compare_outlook_metric_ids import _kennungen_aus_renderer_ids
 
-    renderer = resolve_enabled_metrics((display_config or {}).get("active_metrics"))
-    if renderer is None:
+    renderer, unaufloesbar = resolve_enabled_metrics_report(
+        (display_config or {}).get("active_metrics"))
+    nie_eingestellt = renderer is None
+    if nie_eingestellt:
         renderer = _orte_standard()
     return Grundauswahl(
-        list(dict.fromkeys(_kennungen_aus_renderer_ids(renderer))), {}, frozenset(renderer))
+        list(dict.fromkeys(_kennungen_aus_renderer_ids(renderer))), {}, frozenset(renderer),
+        unaufloesbar, nie_eingestellt)
 
 
 def placements_view(
@@ -342,11 +376,11 @@ def _trip_entries(roh: dict):
                 yield from (e for e in liste if isinstance(e, dict))
 
 
-def _trip_view(display_config, report_type: str) -> MailViewModel:
+def _trip_view(display_config, report_type: str, *, ausblick: bool = True) -> MailViewModel:
     dc = _trip_model(display_config)
     kanaele = {
         ch: tuple(
-            ChannelRow(mc.metric_id, True, _trip_format(mc), i)
+            ChannelRow(mc.metric_id, True, _trip_format(mc), i, source=mc)
             for i, mc in enumerate(trip_channel_metrics(dc, ch, report_type))
         )
         for ch in KANAELE
@@ -356,6 +390,8 @@ def _trip_view(display_config, report_type: str) -> MailViewModel:
     ) != "global"
     if not eigene_premium:
         kanaele["premium_sms"] = kanaele["sms"]
+    if not ausblick:
+        return MailViewModel(**kanaele)
     from output.renderers.compare_outlook_metric_ids import (
         resolve_trip_outlook_formats, resolve_trip_outlook_metrics,
     )

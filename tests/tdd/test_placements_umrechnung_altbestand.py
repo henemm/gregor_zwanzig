@@ -30,7 +30,12 @@ VIER_FAELLE = {"reihenfolge_wie_sms", "ohne_email_entfaellt", "nur_text_folgt_ht
 #: (Nr. 2 Katalog-ID als Zeile, Nr. 3.1 Grundauswahl als Maximum, Nr. 8
 #: "zaehlt die Abend-Fassung", ADR-0124 Nr. 8 Premium-SMS = SMS).
 WEITERE_FAELLE = {"auswertungen_gekoppelt", "ausserhalb_grundauswahl", "morgen_folgt_abend",
-                  "premium_folgt_sms", "gesperrte_stelle_entfaellt"}
+                  "premium_folgt_sms", "gesperrte_stelle_entfaellt",
+                  # #3122 Fix-Loop B1b: Nacht-/Tagesgroessen ohne eigene Spalte
+                  # gehoeren zur Trip-Mail, folgen der Grundauswahl und sind in
+                  # der E-Mail-Spalte nicht abwaehlbar -- eine Kanal-Liste, die
+                  # sie weggelassen hatte, verliert diese Wirkung.
+                  "ohne_spalte_folgt_grundauswahl"}
 #: Faelle, die das View-Model nicht als Mengen-/Folgeabweichung zeigt (sie
 #: stehen nach Regel in der Liste, s. eigene Tests oben).
 REGEL_FAELLE = {"nur_text_folgt_html", "sms_wolkenform_entfaellt"}
@@ -342,18 +347,23 @@ def _ausblick_an_alt(dc, surface, report_type, kw):
     return report_type in reports
 
 
-def _alt_gesperrt(alt, dc, surface, stelle, report_type, kw):
-    """Altzeilen an gesperrten Stellen (sie zeigten dort nichts, Nr. 5)."""
+def _sperrt(mid: str, stelle: str, surface: str) -> bool:
+    """Gesperrt UND ohne Ausgabe; "keine eigene Spalte" (Trip-Mail) laesst die
+    Groesse in der Mail (#3122 Fix-Loop B1b)."""
     from app.metric_catalog import stellen_sperre
 
+    grund = stellen_sperre(mid, stelle, surface)
+    return bool(grund) and grund != "keine_eigene_spalte"
+
+
+def _alt_gesperrt(alt, dc, surface, stelle, report_type, kw):
+    """Altzeilen an gesperrten Stellen (sie zeigten dort nichts, Nr. 5)."""
     sperr_stelle = "sms" if stelle == "premium_sms" else stelle
     alle = [m for m, _f in _alt_liste(alt, dc, surface, stelle, report_type, kw, sperren=False)]
-    return [m for m in alle if stellen_sperre(_katalog_id(surface, m), sperr_stelle, surface)]
+    return [m for m in alle if _sperrt(_katalog_id(surface, m), sperr_stelle, surface)]
 
 
 def _alt_liste(alt, dc, surface, stelle, report_type, kw, sperren=True):
-    from app.metric_catalog import stellen_sperre
-
     zeilen = getattr(alt, stelle)
     if zeilen is None:
         zeilen = [type("Z", (), {"metric_id": m, "format": None})() for m in _orte_standard()]
@@ -363,8 +373,8 @@ def _alt_liste(alt, dc, surface, stelle, report_type, kw, sperren=True):
         zeilen = []
     sperr_stelle = "sms" if stelle == "premium_sms" else stelle
     return [(z.metric_id, z.format) for z in zeilen
-            if not (sperren and stellen_sperre(_katalog_id(surface, z.metric_id), sperr_stelle,
-                                               surface))]
+            if not (sperren and _sperrt(_katalog_id(surface, z.metric_id), sperr_stelle,
+                                        surface))]
 
 
 def _grund_katalog(dc, surface, report_type):
@@ -396,6 +406,11 @@ def _begruendet(art, surface, stelle, metric_id, report_type, ctx):
         return surface == "trip" and report_type == "morning"
     if art == "premium_folgt_sms":
         return stelle == "premium_sms"
+    if art == "ohne_spalte_folgt_grundauswahl":
+        from app.metric_catalog import stellen_sperre
+
+        return (surface == "trip" and stelle == "email" and kid in ctx["grund"]
+                and stellen_sperre(kid, "email", surface) == "keine_eigene_spalte")
     return False
 
 

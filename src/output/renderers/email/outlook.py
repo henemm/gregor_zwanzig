@@ -529,6 +529,7 @@ def build_outlook_row(
     *,
     metrics: Optional[list] = None,
     trip_display_config: object = None,
+    outlook_rows: Optional[tuple] = None,
     report_type: Optional[str] = None,
     day_window_start_hour: Optional[int] = None,
     day_window_end_hour: Optional[int] = None,
@@ -567,15 +568,16 @@ def build_outlook_row(
     ``MetricDefinition.summary_fields``. ``None`` laesst das Dict
     unveraendert (rein additiv, AC-11).
 
-    ``trip_display_config``/``report_type`` (#1720 S1, Trip): statt einer
-    fertigen Auswahl reicht der Zeitplaner die UNGEKOLLABIERTE
-    ``display_config`` durch -- die Aufloesung (``resolve_trip_outlook_metrics``)
-    passiert dann hier, in derselben Schicht wie der Spaltenbau und nach
-    derselben Regel. So braucht der Zeitplaner kein Renderer-Vokabular
-    (Architektur-Wache ``test_scheduler_has_no_output_imports``), und die
-    Zellen dieser Zeile koennen nicht nach einer anderen Regel entstehen als
-    die Ueberschriften darueber. Ein ausdrueckliches ``metrics`` hat Vorrang
-    (Compare-Pfad unveraendert).
+    ``outlook_rows`` (#3122, Trip): die Ausblick-Zeilen des View-Models
+    (``resolve_channel_lists(...).outlook``), die der Zeitplaner durchreicht --
+    Auswahl, Folge und Roh/Einfach kommen allein daraus (``()`` = Block
+    entfaellt, ``None`` = feste Vorgabe). ``trip_display_config``/
+    ``report_type`` (#1720 S1, direkte Aufrufe): ohne ``outlook_rows`` wird
+    dasselbe View-Model hier aufgeloest. So braucht der Zeitplaner kein
+    Renderer-Vokabular (Architektur-Wache ``test_scheduler_has_no_output_imports``),
+    und die Zellen dieser Zeile koennen nicht nach einer anderen Regel
+    entstehen als die Ueberschriften darueber. Ein ausdrueckliches ``metrics``
+    hat Vorrang (Compare-Pfad unveraendert).
 
     ``hiking_extrema`` (#1848 A1, AC-1/AC-2/AC-3): optionales Mapping
     ``{"t2m_c": (min, max, max_ts), "wind_chill_c": (...)}`` --
@@ -588,8 +590,8 @@ def build_outlook_row(
 
     ``outlook_metric_formats`` (#2049): Roh/Einfach je Ausblick-Groesse
     (``{kennung: bool}``). Wie bei ``metrics`` hat die ausdrueckliche Uebergabe
-    Vorrang; ohne sie wird die Zuordnung aus ``trip_display_config``
-    aufgeloest, damit der Zeitplaner auch dafuer kein Renderer-Vokabular
+    Vorrang; ohne sie kommt die Zuordnung aus ``outlook_rows`` (bzw.
+    ``trip_display_config``), damit der Zeitplaner auch dafuer kein Renderer-Vokabular
     braucht. Die ZELLEN entstehen hier genau einmal und speisen alle vier
     Ausgabeorte -- deshalb ist dies die einzige Stelle, an der das Flag
     ankommen muss (die Kopfzeilen der Renderer brauchen es nicht, ihre
@@ -611,7 +613,8 @@ def build_outlook_row(
     return _outlook_row(
         summary, points, weekday, tz,
         metrics=metrics,
-        trip_display_config=trip_display_config, report_type=report_type,
+        trip_display_config=trip_display_config, outlook_rows=outlook_rows,
+        report_type=report_type,
         day_window_start_hour=day_window_start_hour,
         day_window_end_hour=day_window_end_hour,
         hiking_extrema=hiking_extrema, segments=segments,
@@ -629,6 +632,7 @@ def _outlook_row(
     *,
     metrics: Optional[list] = None,
     trip_display_config: object = None,
+    outlook_rows: Optional[tuple] = None,
     report_type: Optional[str] = None,
     day_window_start_hour: Optional[int] = None,
     day_window_end_hour: Optional[int] = None,
@@ -644,21 +648,22 @@ def _outlook_row(
     if context not in ("route", "vergleich"):
         raise ValueError(f"context muss 'route' oder 'vergleich' sein, nicht {context!r}")  # i18n-log
     hiking_extrema = _resolve_hiking_extrema(hiking_extrema, segments)
-    if metrics is None and trip_display_config is not None:
-        from output.renderers.compare_outlook_metric_ids import (
-            resolve_trip_outlook_metrics,
-        )
+    # Issue #3122: Auswahl, Folge und Roh/Einfach des Trip-Ausblicks kommen
+    # allein aus ``view.outlook`` (``outlook_rows``, vom Zeitplaner aus dem
+    # View-Model durchgereicht); ein direkter Aufruf mit ``trip_display_config``
+    # loest dasselbe View-Model hier auf. ``()`` = Block entfaellt.
+    braucht_zeilen = metrics is None or outlook_metric_formats is None
+    if outlook_rows is None and trip_display_config is not None and braucht_zeilen:
+        from services.channel_list_resolver import resolve_channel_lists
 
-        metrics = resolve_trip_outlook_metrics(trip_display_config, report_type)
-    if outlook_metric_formats is None and trip_display_config is not None:
-        # #2049: dieselbe Bauart wie `metrics` eine Zeile darueber -- der
-        # Zeitplaner reicht die ungekollabierte Konfiguration durch, die
-        # Aufloesung passiert in der Ausgabeschicht.
-        from output.renderers.compare_outlook_metric_ids import (
-            resolve_trip_outlook_formats,
-        )
+        outlook_rows = resolve_channel_lists(trip_display_config, "trip", report_type).outlook
+    if outlook_rows is not None:
+        from output.renderers.email.helpers import outlook_auswahl
 
-        outlook_metric_formats = resolve_trip_outlook_formats(trip_display_config)
+        zeilen_ids, zeilen_formate = outlook_auswahl(outlook_rows)
+        metrics = zeilen_ids if metrics is None else metrics
+        if outlook_metric_formats is None:
+            outlook_metric_formats = zeilen_formate
     from output.metric_format import thunder_label_value
     from output.tokens.dto import HourlyValue
     from utils.timezone import local_hour as _lh

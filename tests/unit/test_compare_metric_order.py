@@ -226,7 +226,7 @@ class TestAC4PlainTextFollowsMetricOrder:
             },
         }
         opts = resolve_compare_render_options(preset)
-        text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics, preset=None)
+        text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics_by_channel["email"], preset=None)
         assert _text_labels(text) == [
             "Bewölkung", "Temperatur", "Sonnenstunden", "Wind",
         ], (
@@ -431,8 +431,8 @@ class TestAC7LegacyDefaultOrderUnchanged:
     def test_preset_without_active_metrics_uses_default_order(self):
         """Der Weg, den ein Altbestand tatsaechlich nimmt (kein display_config)."""
         opts = resolve_compare_render_options({"id": "legacy", "display_config": {}})
-        assert opts.enabled_metrics is None
-        text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics, preset=None)
+        assert opts.enabled_metrics_by_channel["email"] is None
+        text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics_by_channel["email"], preset=None)
         assert _text_labels(text) == self.FROZEN_PLAIN_ORDER
 
 
@@ -470,7 +470,7 @@ class TestAC8ExplicitEmptySelection:
         opts = resolve_compare_render_options({
             "id": "p-empty", "display_config": {"active_metrics": []},
         })
-        text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics, preset=None)
+        text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics_by_channel["email"], preset=None)
         assert _text_labels(text) == [], (
             "Bewusste Leerauswahl darf nicht durch die Altbestands-Regel (AC-7) "
             f"ueberschrieben werden.\nText:\n{text}"
