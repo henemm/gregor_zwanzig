@@ -4192,6 +4192,45 @@
       "status": "gruen",
       "zustand": "placements",
       "sprache": "de"
+    },
+    {
+      "id": "T-3122-B1B-NACHTTIEF-WIE-OHNE-TABELLE",
+      "liste": "trip_tabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "ohne_spalte_bleibt_in_mail",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_nachttief_in_kurzzusammenfassung_wie_ohne_tabelle",
+      "ac": "AC-7, AC-11",
+      "befund": "#3122 B1b Fix-Loop",
+      "status": "gruen",
+      "zustand": "placements",
+      "sprache": "de"
+    },
+    {
+      "id": "T-3122-B1B-NACHTTIEF-NICHT-ABWAEHLBAR",
+      "liste": "trip_tabelle",
+      "kontext": "trip",
+      "format": "klartext",
+      "pruefung": "ohne_spalte_bleibt_in_mail",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_nachttief_bleibt_auch_bei_abgewaehlter_tabellenzeile",
+      "ac": "AC-7",
+      "befund": "#3122 B1b Fix-Loop",
+      "status": "gruen",
+      "zustand": "placements",
+      "sprache": "de"
+    },
+    {
+      "id": "T-3122-B1B-ALARM-OHNE-AUSBLICK",
+      "liste": "trip_tabelle",
+      "kontext": "trip",
+      "format": "alarm",
+      "pruefung": "darstellung",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_alarm_format_loest_keinen_ausblick_auf",
+      "ac": "AC-19",
+      "befund": "#3122 B1b Fix-Loop",
+      "status": "gruen",
+      "zustand": "placements",
+      "sprache": "de"
     }
   ]
 }
