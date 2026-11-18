@@ -44,7 +44,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.tdd.test_trip_briefing_aufbau import (  # noqa: F401 (env = Fixture)
+from tests.tdd.test_trip_briefing_aufbau import (
     ETAPPE_A,
     FIXTURES,
     INNSBRUCK,
@@ -60,8 +60,11 @@ from tests.tdd.test_trip_briefing_aufbau import (  # noqa: F401 (env = Fixture)
     _tupel_inhalt,
     _versand,
     _vorschau_bericht,
-    env,
 )
+from tests.tdd import test_trip_briefing_aufbau as _basis
+
+# Fixture aus der Basisdatei uebernehmen (Zuweisung statt Import, sonst F811).
+env = _basis.env
 
 # ---------------------------------------------------------------------------
 # F001 (AC-2): Demo-Vorschau nutzt im Hauptabruf den Fixture-Provider
