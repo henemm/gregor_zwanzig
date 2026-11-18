@@ -3225,7 +3225,7 @@
       "liste": "orte_name",
       "format": "sms",
       "pruefung": "ein_ort",
-      "test": "tests/tdd/test_orte_bereichsname_in_ausgaben.py::test_sms_ein_ort_langer_name_grenzen[100]",
+      "test": "tests/tdd/test_orte_bereichsname_in_ausgaben.py::test_sms_ein_ort_langer_name_grenzen",
       "ac": "#3122 AC-36",
       "erwartung": "Grenze, Datum ganz, ein Wert, Name mit '...' (T2)",
       "kontext": "orte",

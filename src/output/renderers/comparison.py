@@ -1447,13 +1447,15 @@ def _render_compare_sms_body(
     ``len <= max_chars`` (Aufrufer: ``CHANNEL_LIMITS["sms"]`` abzueglich Marker).
     """
     locations = location_render_order(result.locations)
-    # #3122 B5: Kopf aus ``_sms_kopf``; ohne Daten "Orte: keine Daten" bzw.
-    # bei genau einem Ort "{Ort}: keine Daten" (sprachfest, ADR-0104).
-    if not locations:
-        return "Orte: keine Daten"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
+    # #3122 B5: Kopf aus ``_sms_kopf``; ohne Daten (kein Ort oder alle Orte
+    # ohne Daten) "Orte: keine Daten" bzw. bei genau einem Ort "{Ort}: keine
+    # Daten" (sprachfest, ADR-0104). Ein Ort ohne Daten unter anderen bleibt
+    # als "Name n/a" sichtbar.
     ein_ort = len(locations) == 1
-    if ein_ort and locations[0].error is not None:
-        return f"{locations[0].location.name}: keine Daten"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
+    if all(loc.error is not None for loc in locations):
+        if ein_ort:
+            return f"{locations[0].location.name}: keine Daten"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
+        return "Orte: keine Daten"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
 
     forms = [
         _sms_location_variants(loc, enabled_metrics, unresolved_count, metric_formats,

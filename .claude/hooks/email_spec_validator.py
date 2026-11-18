@@ -1398,7 +1398,8 @@ def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
     fehler += _soll_hinweis_warnungen(body, plain, lang, soll)
     fehler += _soll_zieltag(plain, lang, soll) + _soll_ampel_orte(body, lang, soll)
     fehler += _soll_ortsabschnitte(plain, lang, soll, html[1], fehlerorte)
-    fehler += _soll_bereichsname(body, plain, lang, len(html[1]))
+    nutzernamen = {*html[1], *(soll.get("orte") or []), soll.get("abo_name") or ""}
+    fehler += _soll_bereichsname(body, plain, lang, len(html[1]), nutzernamen)
     return fehler + _soll_teil("Klartext", [b[1] for b in bloecke if b[1] is not None],
                                [b[0] for b in bloecke], stunden, ausblick, soll)
 
@@ -1418,14 +1419,26 @@ def _sichtbarer_text(body: str) -> str:
     return re.sub(r"\s+", " ", unescape(re.sub(r"<[^>]+>", " ", ohne)))
 
 
-def _soll_bereichsname(body: str, plain: str, lang: str, orte: int) -> List[str]:
+def _ohne_nutzernamen(text: str, namen) -> str:
+    """Orts- und Abo-Namen (Nutzerdaten, z. B. "Vergleichsberg") vor dem
+    Namens-Check ausblenden -- laengste zuerst (#3122 B5, F-V1)."""
+    for name in sorted((n for n in namen if n), key=len, reverse=True):
+        text = re.sub(rf"(?<!\w){re.escape(name)}(?!\w)", " ", text)
+    return text
+
+
+def _soll_bereichsname(body: str, plain: str, lang: str, orte: int, namen=()) -> List[str]:
     """#3122 B5 (AC-35, AC-36): Kopf "ORTE"/"LOCATIONS" in HTML und Klartext,
     kein alter Bereichsname; bei genau einem Ort Fuss "1 Ort" und kein Text, der
-    mehrere Orte voraussetzt. Die Untergrenze der Ortszahl bleibt bei #2798."""
+    mehrere Orte voraussetzt. Orts- und Abo-Namen (``namen``) zaehlen nicht.
+    Die Untergrenze der Ortszahl bleibt bei #2798."""
     kopf = _t("vergleich.kopf.titel", lang)
-    teile = (("HTML", _sichtbarer_text(body)), ("Klartext", plain))
+    sichtbar = _sichtbarer_text(body)
+    # Feste Texte (Kopf, Fuss) am vollen Text, Verbote ohne Nutzernamen.
+    teile = (("HTML", _ohne_nutzernamen(sichtbar, namen)),
+             ("Klartext", _ohne_nutzernamen(plain, namen)))
     erste = next((z.strip() for z in plain.splitlines() if z.strip()), "")
-    fehler = [] if f"{kopf} · " in teile[0][1] else [f"NAME: Kopf '{kopf}' fehlt (HTML)"]
+    fehler = [] if f"{kopf} · " in sichtbar else [f"NAME: Kopf '{kopf}' fehlt (HTML)"]
     if erste != kopf:
         fehler.append(f"NAME: Kopf '{kopf}' fehlt (Klartext), erste Zeile {erste!r}")
     muster = _ALTE_BEREICHSNAMEN["en" if lang == "en" else "de"]
@@ -1441,7 +1454,7 @@ def _soll_bereichsname(body: str, plain: str, lang: str, orte: int) -> List[str]
         if treffer:
             fehler.append(f"NAME: Text setzt mehrere Orte voraus ({teil}): {treffer}")
     fuss = _tn("vergleich.fuss.abo_zeile", 1, lang, vorlage="").strip()
-    if fuss not in teile[0][1]:
+    if fuss not in sichtbar:
         fehler.append(f"NAME: Fuss '{fuss}' fehlt bei einem Ort (HTML)")
     return fehler
 

@@ -156,7 +156,7 @@ def test_s2_report_heute_als_mail_antwort_versenden_den_vergleich(monkeypatch, u
 
 
 @pytest.mark.parametrize("befehl,erwartet", [
-    ("STARTDATUM", "gibt es beim Ortsvergleich nicht"),
+    ("STARTDATUM", "gibt es beim Orte-Abo nicht"),
 ])
 def test_ac13_nicht_angebotene_woerter_bleiben_ablehnungsantwort(
     monkeypatch, user_ids, befehl, erwartet,

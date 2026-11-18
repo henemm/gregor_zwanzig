@@ -47,7 +47,7 @@ from services.trip_command_processor import (  # noqa: E402
     TripCommandProcessor,
 )
 
-KEIN_KANDIDAT = "Kein aktiver Trip oder Ortsvergleich gefunden"
+KEIN_KANDIDAT = "Kein aktiver Trip und kein aktives Orte-Abo gefunden"  # #3122 B5
 
 
 # ---------------------------------------------------------------------------
@@ -586,7 +586,7 @@ def test_ac7_namensgleichheit_fragt_zurueck(monkeypatch, user_ids, kanal):
 
     assert sent, "Nutzer muss eine Antwort bekommen"
     # #2417 Abschnitt H: "pause" ohne eindeutiges Ziel -> englische Rueckfrage.
-    assert "Trip" in sent[-1] and "comparison" in sent[-1], sent[-1]
+    assert "(Trip)" in sent[-1] and "(locations)" in sent[-1], sent[-1]
     assert _preset_file(uid, p["id"]).read_bytes() == vorher_preset
     geladen = next(t for t in load_all_trips(uid) if t.id == trip.id)
     assert geladen.report_config.paused_until is None
@@ -677,11 +677,12 @@ def test_f002_name_gleich_befehlswort_mit_folgebefehl_spricht_trip_an(
 # ---------------------------------------------------------------------------
 
 def _vergleichsname_aus_rueckfrage(text: str) -> str:
-    """Liest den bei '(Vergleich)' angezeigten Namen aus einer Rueckfrage
+    """Liest den bei '(Orte)' angezeigten Namen aus einer Rueckfrage
     aus -- NICHT hartkodiert, da genau die Faltung selbst geprueft wird.
     #2417 Kurzform englisch: Premium-SMS fragt englisch zurueck
-    ("(comparison)"), Telegram mit deutschem Wort weiter "(Vergleich)"."""
-    marke = "(comparison)" if "(comparison)" in text else "(Vergleich)"
+    ("(locations)"), Telegram mit deutschem Wort "(Orte)" (#3122 B5)."""
+    marke = "(locations)" if "(locations)" in text else "(Orte)"
+    assert marke in text, text
     vor = text.split(marke)[0].strip()
     return vor.rsplit(", ", 1)[-1].strip()
 

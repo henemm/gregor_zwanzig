@@ -642,10 +642,10 @@ mehrere Premium-SMS.
 |---|---|
 | mehrere Orte | `Orte 18.11.: Münster D 13C …; Tecklenburg D 11C …` |
 | genau ein Ort | `Tecklenburg 18.11.: D 11C …` (Ortsname nur im Kopf, nicht noch einmal vor den Werten) |
-| kein Ort im Ergebnis | `Orte: keine Daten` |
+| mehrere Orte, alle ohne Daten (oder kein Ort im Ergebnis) | `Orte: keine Daten` |
 | genau ein Ort ohne Daten | `Tecklenburg: keine Daten` |
 
-Bei mehreren Orten bleibt ein Ort ohne Daten als `Name n/a` sichtbar (`Orte 18.11.: Münster D 13C …; Tecklenburg n/a`). Der Versand schickt bei lauter Orten ohne Daten nichts (`no_weather`); die beiden „keine Daten“-Formen erscheinen nur in Vorschau und Renderer. Die SMS-Liste wird die Spalte „SMS“ (mit Premium-SMS) der Tabelle „Was steht wo“ (ADR-0124 Nr. 3, Bau in B1–B3); die Kürzung vom Listenende (§6) bleibt.
+Hat unter mehreren Orten nur ein Teil keine Daten, bleibt jeder solche Ort als `Name n/a` sichtbar (`Orte 18.11.: Münster D 13C …; Tecklenburg n/a`). Der Versand schickt bei lauter Orten ohne Daten nichts (`no_weather`); die beiden „keine Daten“-Formen erscheinen nur in Vorschau und Renderer. Ist der Name eines einzelnen Orts zu lang, wird er im Kopf sichtbar mit `...` gekürzt, sodass Datum und mindestens ein Wert in der Zeichengrenze bleiben; ohne Wertzelle endet die SMS nach dem Kopf (`Tecklenburg 18.11.:`), ohne hängendes Leerzeichen. Die SMS-Liste wird die Spalte „SMS“ (mit Premium-SMS) der Tabelle „Was steht wo“ (ADR-0124 Nr. 3, Bau in B1–B3); die Kürzung vom Listenende (§6) bleibt.
 
 Die Ortsvergleich-SMS (`render_compare_sms`, auch Premium-SMS und Telegram-Kurzform —
 derselbe Text) trägt im **Ortsteil** einen Zähler `?N` (N ≥ 1), **nur wenn** mindestens

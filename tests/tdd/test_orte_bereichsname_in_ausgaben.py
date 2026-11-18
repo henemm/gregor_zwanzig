@@ -309,22 +309,31 @@ def _sms_ein_ort(name: str, enabled_metrics=None) -> str:
     return render_compare_sms(res, enabled_metrics=enabled_metrics)
 
 
+@pytest.mark.parametrize("form", ["mehrere_woerter", "ein_wort"])
 @pytest.mark.parametrize("laenge", range(100, 200, 3))
-def test_sms_ein_ort_langer_name_grenzen(laenge):
+def test_sms_ein_ort_langer_name_grenzen(laenge, form):
     """Ein Ort mit langem Namen: nie laenger als die SMS-Grenze, Datum
     vollstaendig, mindestens ein Wert, ein gekuerzter Name endet sichtbar auf
-    "..." direkt vor dem Datum; ein Name, der passt, bleibt ganz."""
+    "..." direkt vor dem Datum; ein Name, der passt, bleibt ganz. Ein Name aus
+    einem Wort wird hart gekuerzt: dann fuellt die SMS die Grenze genau aus
+    (kein verschenktes und kein ueberzaehliges Zeichen)."""
     from output.renderers.channel_layout import CHANNEL_LIMITS
 
     grenze = CHANNEL_LIMITS["sms"]["max_chars"]
-    name = ("Sankt Wolfgang im Salzkammergut " * 8)[:laenge].strip()
+    if form == "ein_wort":
+        name = ("Wolfgangimsalzkammergut" * 10)[:laenge]
+    else:
+        name = ("Sankt Wolfgang im Salzkammergut " * 8)[:laenge].strip()
     sms = _sms_ein_ort(name)
     assert len(sms) <= grenze, (len(sms), sms)
     kopf, sep, rest = sms.partition(" 08.07.: ")
     assert sep, f"Datum unvollstaendig: {sms!r}"
     assert _ZELLE.search(rest), f"kein Wert nach dem Kopf: {sms!r}"
-    if kopf != name:
-        assert kopf.endswith("...") and name.startswith(kopf[:-3].rstrip()), sms
+    if kopf == name:
+        return
+    assert kopf.endswith("...") and name.startswith(kopf[:-3].rstrip()), sms
+    if form == "ein_wort":
+        assert len(sms) == grenze, (len(sms), grenze, sms)
 
 
 def test_sms_ein_ort_ohne_wertzelle_ohne_haengenden_trenner():

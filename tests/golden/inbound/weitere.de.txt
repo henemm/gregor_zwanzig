@@ -76,19 +76,19 @@ Warnungen nach !: TS Gewitter, FO Hochwasser, RA Starkregen, WG Wind, SN Schnee,
 ----- vergleich_status -----
 [[Golden Vergleich] Befehl nicht verfügbar]
 
-'status' gibt es beim Ortsvergleich nicht.
+'status' gibt es beim Orte-Abo nicht.
 ----- vergleich_pause -----
-[[Golden Vergleich] Ortsvergleich pausiert]
+[[Golden Vergleich] Orte-Abo pausiert]
 
-Ortsvergleich 'Golden Vergleich' pausiert unbefristet, bis du WEITER sendest. Eine angegebene Dauer wird nicht ausgewertet.
+Orte-Abo 'Golden Vergleich' pausiert unbefristet, bis du WEITER sendest. Eine angegebene Dauer wird nicht ausgewertet.
 ----- vergleich_weiter -----
-[[Golden Vergleich] Ortsvergleich fortgesetzt]
+[[Golden Vergleich] Orte-Abo fortgesetzt]
 
-Ortsvergleich 'Golden Vergleich' wieder aktiv.
+Orte-Abo 'Golden Vergleich' wieder aktiv.
 ----- vergleich_weiter_nicht_pausiert -----
-[[Golden Vergleich] Ortsvergleich]
+[[Golden Vergleich] Orte-Abo]
 
-Ortsvergleich 'Golden Vergleich' ist nicht pausiert.
+Orte-Abo 'Golden Vergleich' ist nicht pausiert.
 ----- pause_ohne_dauer -----
 [[Golden Trip] PAUSE: Dauer fehlt]
 
@@ -140,9 +140,9 @@ Neue Etappen-Daten:
   Etappe 2: Stubai - Neustift: 03.11.2026
   Etappe 3: Neustift - Elfer: 07.11.2026
 ----- ziel_kein_kandidat -----
-Kein aktiver Trip oder Ortsvergleich gefunden.
+Kein aktiver Trip und kein aktives Orte-Abo gefunden.
 ----- ziel_kein_aktives -----
-Kein aktiver Trip. Dieser Befehl gilt nur für Trips, nicht für Ortsvergleiche.
+Kein aktiver Trip. Dieser Befehl gilt nur für Trips, nicht für Orte-Abos.
 ----- command_rows_route -----
 HEUTE | Wetter der heutigen Etappe
 MORGEN | Wetter der morgigen Etappe

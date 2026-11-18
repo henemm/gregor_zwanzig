@@ -94,7 +94,7 @@ def _dateien(user_id: str) -> dict[str, bytes]:
 
 
 # ---------------------------------------------------------------------------
-# AC-11: Trip-only-Befehle -> „gibt es beim Ortsvergleich nicht"
+# AC-11: Trip-only-Befehle -> „gibt es beim Orte-Abo nicht" (#3122 B5)
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("befehl, woerter", [
@@ -113,7 +113,7 @@ def test_ac11_trip_befehl_am_vergleich_wird_abgelehnt(uid, versand, befehl, woer
     _preset(uid)
     vorher = _dateien(uid)
     res = _send(uid, befehl)
-    assert "gibt es beim Ortsvergleich nicht" in res.confirmation_body, res.confirmation_body
+    assert "gibt es beim Orte-Abo nicht" in res.confirmation_body, res.confirmation_body
     assert any(w in res.confirmation_body.lower() for w in woerter), res.confirmation_body
     assert res.success is False
     assert _dateien(uid) == vorher
@@ -124,7 +124,7 @@ def test_ac11_metrikwort_am_vergleich_wird_abgelehnt(uid, versand):
     _preset(uid)
     vorher = _dateien(uid)
     res = _send(uid, "wind")
-    assert "gibt es beim Ortsvergleich nicht" in res.confirmation_body, res.confirmation_body
+    assert "gibt es beim Orte-Abo nicht" in res.confirmation_body, res.confirmation_body
     assert _dateien(uid) == vorher
     assert versand == []
 
@@ -133,7 +133,7 @@ def test_ac11_drilldown_am_vergleich_wird_abgelehnt(uid, versand):
     _preset(uid)
     vorher = _dateien(uid)
     res = _send(uid, "### query: dd_hours_today")
-    assert "gibt es beim Ortsvergleich nicht" in res.confirmation_body, res.confirmation_body
+    assert "gibt es beim Orte-Abo nicht" in res.confirmation_body, res.confirmation_body
     assert _dateien(uid) == vorher
     assert versand == []
 
@@ -143,7 +143,7 @@ def test_ac11_report_heute_morgen_ohne_uebergangsantwort(uid, versand, befehl):
     """#2282 S2 dreht S1-AC-11 um: report/heute/morgen am Vergleich gehen in
     den Vergleichsversand statt in die Uebergangsantwort. Die Orte dieses
     Presets (loc-a/loc-b) existieren nicht -- der Versand endet deshalb im
-    benannten Fehlercode (invalid_preset) mit Label „Ortsvergleich", ohne
+    benannten Fehlercode (invalid_preset) mit Label „Orte-Abo" (#3122 B5), ohne
     Transport. Die echte Zustellung pruefen
     test_ortsvergleich_befehle_versand.py (AC-1 bis AC-6)."""
     _preset(uid)
@@ -152,7 +152,7 @@ def test_ac11_report_heute_morgen_ohne_uebergangsantwort(uid, versand, befehl):
     text = f"{res.confirmation_subject}\n{res.confirmation_body}"
     assert NICHT_VERFUEGBAR not in text, text
     assert "Web-App" not in text, text
-    assert "Ortsvergleich" in text, text
+    assert "Orte-Abo" in text and "Ortsvergleich" not in text, text
     assert res.success is False
     assert _dateien(uid) == vorher
     assert versand == [], f"ohne aufloesbare Orte darf nichts hinausgehen: {versand}"

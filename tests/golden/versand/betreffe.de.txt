@@ -43,7 +43,7 @@ Etappe 3: Refuge d'Ortu di u Piobbu nach Refuge de Carrozzu — Abend — Kälte
 ----- fehler.smtp_not_configured -----
 422 smtp_not_configured E-Mail-Versand (SMTP) ist für diesen Nutzer nicht eingerichtet
 ----- fehler.invalid_preset -----
-422 invalid_preset Briefing der Orte nicht versendbar: keine Orte
+422 invalid_preset Orte-Abo nicht versendbar: keine Orte
 ----- fehler.send_failed -----
 500 send_failed Versand fehlgeschlagen — interner Fehler, bitte später erneut versuchen
 ----- fehler.kontingent_erschoepft -----

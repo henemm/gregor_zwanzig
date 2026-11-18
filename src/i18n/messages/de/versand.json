@@ -30,7 +30,7 @@
   "versand.ergebnis.channels_unreachable": "Kein Briefing versendet — Versandweg konfiguriert, aber nicht einsatzbereit (Kanal technisch nicht erreichbar)",
   "versand.ergebnis.invalid_report_type": "Ungültiger Berichtstyp {report_type} (erlaubt: morning, evening)",
   "versand.ergebnis.smtp_not_configured": "E-Mail-Versand (SMTP) ist für diesen Nutzer nicht eingerichtet",
-  "versand.ergebnis.invalid_preset": "Briefing der Orte nicht versendbar: {reason}",
+  "versand.ergebnis.invalid_preset": "Orte-Abo nicht versendbar: {reason}",
   "versand.ergebnis.send_failed": "Versand fehlgeschlagen — interner Fehler, bitte später erneut versuchen",
   "versand.ergebnis.kontingent_erschoepft": "Kein Briefing versendet — dein Tageskontingent für Abrufe ist aufgebraucht. Ab Mitternacht (UTC) geht es wieder; automatische Briefings und Alarme laufen weiter.",
   "versand.scheduler.nachgeliefert": "Nachgeliefert — der Wetterdienst war um {stunde} nicht erreichbar",
@@ -48,5 +48,5 @@
   "versand.servicefehler.segmente": "Betroffene Segmente:",
   "versand.servicefehler.grund": "Diese E-Mail wurde automatisch gesendet, weil Ihr Trip nur SMS aktiviert hat und Anbieter-Fehler aufgetreten sind.",
   "versand.servicefehler.fusszeile": "automatischer Wetter-Service",
-  "versand.grund.orte_geloescht": "Das Abo '{preset_id}' verweist auf gelöschte Orte. Ersetze die Orte im Abo. (Orte {orte} nicht aufloesbar)"
+  "versand.grund.orte_geloescht": "Das Orte-Abo '{preset_id}' verweist auf gelöschte Orte. Ersetze die Orte im Orte-Abo. (Orte {orte} nicht aufloesbar)"
 }

@@ -75,19 +75,19 @@ Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, AW avalanch
 ----- vergleich_status -----
 [[Golden Vergleich] Command not available]
 
-'status' is not available for location comparisons.
+'status' is not available for locations subscriptions.
 ----- vergleich_pause -----
-[[Golden Vergleich] Comparison paused]
+[[Golden Vergleich] Locations subscription paused]
 
-Comparison 'Golden Vergleich' paused until you send RESUME. A given duration is ignored.
+Locations subscription 'Golden Vergleich' paused until you send RESUME. A given duration is ignored.
 ----- vergleich_weiter -----
-[[Golden Vergleich] Comparison resumed]
+[[Golden Vergleich] Locations subscription resumed]
 
-Comparison 'Golden Vergleich' active again.
+Locations subscription 'Golden Vergleich' active again.
 ----- vergleich_weiter_nicht_pausiert -----
-[[Golden Vergleich] Comparison]
+[[Golden Vergleich] Locations subscription]
 
-Comparison 'Golden Vergleich' is not paused.
+Locations subscription 'Golden Vergleich' is not paused.
 ----- pause_ohne_dauer -----
 [[Golden Trip] PAUSE: duration missing]
 
@@ -139,9 +139,9 @@ New stage dates:
   Stage 2: Stubai - Neustift: Tue 3 Nov
   Stage 3: Neustift - Elfer: Sat 7 Nov
 ----- ziel_kein_kandidat -----
-No active trip or location comparison found.
+No active trip or locations subscription found.
 ----- ziel_kein_aktives -----
-No active trip. This command only works for trips, not for location comparisons.
+No active trip. This command only works for trips, not for locations subscriptions.
 ----- command_rows_route -----
 TODAY | Weather for today's stage
 TOMORROW | Weather for tomorrow's stage
