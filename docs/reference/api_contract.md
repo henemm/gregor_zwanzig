@@ -1408,6 +1408,21 @@ ampel = { template: "<vorlagen-id>",
 - **`GET /api/templates`** liefert je Vorlage zusaetzlich `ampel` (vollstaendig, `template` = Vorlagen-ID); `id`/`label`/`metrics` unveraendert. Quelle `src/app/ampel_templates.py` (Zahlen aus `docs/context/einstellungen_neu.md` §4.4).
 - **Eigene Vorlage** (`MetricPreset.ampel`, §15.5): Anwenden im Trip-Editor sendet deren Ampel als `display_config.ampel`; eine eingebaute Vorlage sendet `{template: "<id>"}`; Zustellung und Etappen bleiben unberuehrt.
 
+### Tabelle „Was steht wo“ `display_config.placements` (Issue #3122, ADR-0124, seit B1a)
+
+Gilt identisch fuer Trip (Python `UnifiedWeatherDisplayConfig.placements`, Roh-Dict) und ComparePreset (Dict). Spec: `docs/specs/modules/feat_3122_was_steht_wo.md` Teil A Nr. 1.
+
+```
+placements = { version: 1,
+               rows: [ { metric_id: "<katalog-id>",                 // Listenposition = Reihenfolge aller Stellen
+                         places:  { email|telegram|sms|hourly|outlook: bool },   // fehlt = angehakt, false = abgewaehlt; hourly nur Orte
+                         formats: { email|telegram|hourly|outlook: "raw"|"simplified" } } ],  // fehlt = Katalog-Standard
+               outlook_reports: ["morning"|"evening", ...] }       // fehlt = ["evening"], nur Morgen-Briefing aktiv = ["morning"]
+```
+
+- **Speichern:** Go speichert das Objekt ungeprueft (ADR-0077) als Teil von `display_config`; andere Schreibwege (`PUT /api/trips/{id}`, `PUT /api/trips/{id}/weather-config`, `PUT /api/compare/presets/{id}`, `PUT /api/briefings/{id}?kind=vergleich`) lassen es per Read-Modify-Write unveraendert. Wer es sendet, sendet immer den vollstaendigen Stand (`mergeConfigMap` ersetzt Unterschluessel als Ganzes). Python traegt es beim Laden roh durch und schreibt es als ganzen Unterbaum zurueck.
+- **Lesen:** nur der Kanal-Listen-Resolver (`src/services/channel_list_resolver.py`, `services/placements.py`), robust: unbekannte Metriken, Stellen, Formate und falsche Typen wirken nicht. Fehlt das Objekt oder hat es keine Liste `rows`, gelten bis B3 die Altfelder.
+
 ### DELETE /api/locations/{id} — Ort-Loeschen-Sperre (Issue #2216, seit 2026-10-08)
 
 Ein Ort, der in `LocationIDs` eines Ortsvergleichs **desselben Nutzers** steht, wird nicht geloescht.

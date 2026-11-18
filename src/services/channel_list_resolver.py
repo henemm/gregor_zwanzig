@@ -11,18 +11,32 @@ keine Datei und veraendert die Eingabe nicht.
 ``format`` einer Zeile: ``raw | simplified | None`` (None = Flaechen-Standard,
 Trip Katalog, Orte Roh). Gelesen aus ``format`` vor ``format_mode`` vor
 ``use_friendly_format`` (Lese-Adapter, der Loader bleibt unveraendert).
+
+Issue #3122 (ADR-0124, Spec feat_3122_was_steht_wo Teil A): zweiter Eingang.
+Traegt ``display_config`` eine lesbare Tabelle ``placements``, entsteht das
+View-Model allein daraus (``services.placements``): eine Reihenfolge fuer alle
+Stellen, ``None`` kommt nicht vor, ``()`` heisst "Stelle leer" bzw. "Block
+entfaellt". Abos ohne ``placements`` lesen ihre Kanal-Listen bis B3 ueber den
+bisherigen Pfad (Schalter ``ALTBESTAND_UEBER_UMRECHNUNG``); ``rows`` und
+``outlook_reports`` kommen fuer sie aus der Umrechnung des Altbestands.
 """
 from __future__ import annotations
 
 import copy
+import dataclasses
 from dataclasses import dataclass
-from typing import Optional
+from typing import NamedTuple, Optional, Sequence
 
 from app import models as _models
 from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 
 KANAELE = ("email", "telegram", "sms", "premium_sms")
 _FORMATE = ("raw", "simplified")
+
+#: #3122 B1a: Abos ohne ``placements`` lesen ihre Kanal-Listen ueber den
+#: bisherigen Pfad (``False``). B3 legt den Schalter um: dann laufen sie ueber
+#: die Umrechnung ``placements_from_legacy`` und den neuen Eingang.
+ALTBESTAND_UEBER_UMRECHNUNG = False
 
 
 @dataclass(frozen=True)
@@ -46,8 +60,13 @@ class MailViewModel:
     (#3065, ADR-0121 Nachtrag 2b): ``None`` = Renderer-Vorgabemenge, ``()`` =
     Block entfaellt. Orte-``hourly`` ist nie ``None`` (#3096: die Vorgabe "nie
     eingestellt" kommt als konkrete Liste aus ``compare_hourly_metric_ids``);
-    Trip-``hourly`` ist immer ``None``. Die Trip-Mail liest ihre Spaltenfolge
-    aus ``email`` (Adapter ``email.helpers.email_col_order``, #3096)."""
+    Trip-``hourly`` ist im bisherigen Pfad immer ``None``. Die Trip-Mail liest
+    ihre Spaltenfolge aus ``email`` (Adapter ``email.helpers.email_col_order``,
+    #3096).
+
+    #3122, neuer Eingang (``placements``): nirgends ``None``; ``outlook``/
+    ``hourly`` sind ``()``, wenn der Block fuer den Briefing-Typ entfaellt
+    (Trip-``hourly`` immer ``()``); ``premium_sms`` ist ``sms``."""
     email: Rows
     telegram: Rows
     sms: Rows
@@ -55,6 +74,11 @@ class MailViewModel:
     layout_channels: tuple[str, ...] = ()
     outlook: Rows = None
     hourly: Rows = None
+    # #3122: Zeilen der Tabelle "Was steht wo" (Katalog-IDs, je Stelle Zustand
+    # und Format, ``services.placements.PlacementRow``) und die aufgeloesten
+    # Briefing-Typen mit 3-Tages-Ausblick.
+    rows: tuple = ()
+    outlook_reports: tuple[str, ...] = ()
 
 
 def _area_rows(ids, formats=None) -> Rows:
@@ -69,13 +93,185 @@ def _area_rows(ids, formats=None) -> Rows:
     )
 
 
-def resolve_channel_lists(display_config, surface: str, report_type: Optional[str] = None) -> MailViewModel:
-    """Reine Funktion: ``display_config`` -> ``MailViewModel`` (ADR-0121)."""
+def resolve_channel_lists(
+    display_config, surface: str, report_type: Optional[str] = None, *,
+    enabled_reports: Optional[Sequence[str]] = None,
+    hourly_enabled: Optional[bool] = None,
+    report_config: object = None,
+    outlook_enabled: Optional[bool] = None,
+    with_rows: bool = False,
+) -> MailViewModel:
+    """Reine Funktion: ``display_config`` -> ``MailViewModel`` (ADR-0121).
+
+    #3122: ``placements`` wird aus dem Roh-Dict UND aus dem geladenen Modell
+    gelesen (die Trip-Renderer uebergeben das Modell). ``enabled_reports``
+    (eingeschaltete Briefings, Vorbelegung des Ausblicks) und
+    ``hourly_enabled`` (Orte; ``False`` = Stundenverlauf entfaellt) wirken im
+    neuen Eingang. Im bisherigen Pfad entstehen ``rows``/``outlook_reports``
+    nur mit ``with_rows=True`` (Umrechnung des Altbestands; dafuer auch
+    ``report_config``/``outlook_enabled``); ohne Anforderung bleiben sie
+    ``()`` und der Versandweg rechnet nichts um."""
+    from services.placements import legacy_placements, read_placements
+
+    if surface not in ("trip", "compare"):
+        raise ValueError(f"unbekannte Flaeche {surface!r}")
+    roh = display_config.get("placements") if isinstance(display_config, dict) else getattr(
+        display_config, "placements", None)
+    stored = read_placements(roh)
+    ansicht = {"enabled_reports": enabled_reports, "hourly_enabled": hourly_enabled}
+    if stored is not None:
+        return placements_view(display_config, surface, report_type, stored, **ansicht)
+    if not (with_rows or ALTBESTAND_UEBER_UMRECHNUNG):
+        return legacy_view(display_config, surface, report_type)
+    umgerechnet = read_placements(legacy_placements(
+        display_config, surface, report_config=report_config,
+        enabled_reports=enabled_reports, outlook_enabled=outlook_enabled)[0])
+    neu = placements_view(display_config, surface, report_type, umgerechnet, **ansicht)
+    if ALTBESTAND_UEBER_UMRECHNUNG:
+        return neu
+    return dataclasses.replace(
+        legacy_view(display_config, surface, report_type),
+        rows=neu.rows, outlook_reports=neu.outlook_reports,
+    )
+
+
+def legacy_view(display_config, surface: str, report_type: Optional[str] = None) -> MailViewModel:
+    """Bisheriger Pfad aus den Altfeldern (ohne ``rows``/``outlook_reports``)."""
     if surface == "trip":
         return _trip_view(display_config, report_type or "evening")
-    if surface == "compare":
-        return _compare_view(display_config or {})
-    raise ValueError(f"unbekannte Flaeche {surface!r}")
+    return _compare_view(display_config or {})
+
+
+# ---------------------------------------------------------------------------
+# Neuer Eingang: Tabelle "Was steht wo" (#3122)
+# ---------------------------------------------------------------------------
+
+class Grundauswahl(NamedTuple):
+    """Katalog-IDs der Grundauswahl (Maximum, Nr. 3.1), abgeleitete Groesse
+    -> Eltern-Kennung, bei Orten die Renderer-Kennungen der Auswahl."""
+    ids: list
+    parents: dict
+    renderer: Optional[frozenset]
+
+
+def _orte_standard() -> list[str]:
+    """Nie eingestellte Orte-Grundauswahl: alle Zeilen der Uebersicht in der
+    Standardfolge (CV2-Deklarationsfolge, wie ``_ordered_rows`` bei None)."""
+    from output.renderers.email.compare_html import CV2_ZEILEN
+
+    return [z["key"] for z in CV2_ZEILEN if z["key"] != "warn"]
+
+
+def grundauswahl(display_config, surface: str, report_type: Optional[str]) -> Grundauswahl:
+    """Grundauswahl je Flaeche; nie eingestellt = Standardsatz wie im
+    bisherigen Pfad (Trip: Register-Standard ueber den Trip-Ladepfad)."""
+    from app.metric_catalog import _METRICS_BY_ID
+
+    if surface == "trip":
+        from app.loader import _DERIVED_METRIC_RULES
+
+        eltern = {kind: elter for kind, elter, _agg in _DERIVED_METRIC_RULES}
+        mcs = _trip_model(display_config).get_metrics_for_report_type(report_type or "evening")
+        ids = list(dict.fromkeys(
+            mc.metric_id for mc in mcs
+            if getattr(_METRICS_BY_ID.get(mc.metric_id), "selectable", False)
+        ))
+        parents = {mc.metric_id: eltern[mc.metric_id] for mc in mcs
+                   if mc.derived and mc.metric_id in eltern}
+        return Grundauswahl(ids, parents, None)
+    from output.renderers.compare_metric_ids import resolve_enabled_metrics
+    from output.renderers.compare_outlook_metric_ids import _kennungen_aus_renderer_ids
+
+    renderer = resolve_enabled_metrics((display_config or {}).get("active_metrics"))
+    if renderer is None:
+        renderer = _orte_standard()
+    return Grundauswahl(
+        list(dict.fromkeys(_kennungen_aus_renderer_ids(renderer))), {}, frozenset(renderer))
+
+
+def placements_view(
+    display_config, surface: str, report_type: Optional[str], stored, *,
+    enabled_reports: Optional[Sequence[str]] = None, hourly_enabled: Optional[bool] = None,
+) -> MailViewModel:
+    """View-Model aus einer gelesenen Tabelle (``StoredPlacements``)."""
+    from services.placements import (
+        metrics_at, outlook_applies, resolve_outlook_reports, resolve_rows,
+    )
+
+    rt = report_type or ("evening" if surface == "trip" else None)
+    grund = grundauswahl(display_config, surface, rt)
+    rows = resolve_rows(stored.rows, grund.ids, surface, parents=grund.parents)
+    reports = resolve_outlook_reports(stored.outlook_reports, enabled_reports)
+    # Stellen der Tabelle, keine Versandliste: die Premium-SMS folgt der SMS
+    # ohne eigene Spalte bis S9 (ADR-0049, ADR-0124 Nr. 8).
+    kanaele = {ch: _kanal_rows(metrics_at(rows, ch), grund) for ch in ("email", "telegram", "sms")}
+    outlook = _area_from(metrics_at(rows, "outlook")) if outlook_applies(rows, reports, rt) else ()
+    hourly = () if surface == "trip" or hourly_enabled is False else _area_from(
+        metrics_at(rows, "hourly"))
+    return MailViewModel(
+        **kanaele, premium_sms=kanaele["sms"],
+        layout_channels=() if surface == "trip" else KANAELE,
+        outlook=outlook, hourly=hourly, rows=rows, outlook_reports=reports,
+    )
+
+
+def _area_from(eintraege) -> tuple[ChannelRow, ...]:
+    return tuple(ChannelRow(mid, True, fmt, i) for i, (mid, fmt) in enumerate(eintraege))
+
+
+def _kanal_rows(eintraege, grund: Grundauswahl) -> tuple[ChannelRow, ...]:
+    """Trip: Katalog-IDs wie heute. Orte: Aufweitung der Katalog-ID auf die
+    Auswertungen der Grundauswahl (Nr. 2), Format der Zeile fuer alle."""
+    if grund.renderer is None:
+        return _area_from(eintraege)
+    from output.renderers.compare_metric_ids import _renderer_ids_for_kennung
+
+    return _area_from([
+        (rid, fmt) for cid, fmt in eintraege
+        for rid in _renderer_ids_for_kennung(cid) if rid in grund.renderer
+    ])
+
+
+def katalog_id(surface: str, metric_id: str) -> str:
+    """Kennung einer View-Model-Zeile -> Katalog-ID (Orte-Kanaele tragen
+    Renderer-Kennungen, Ausblick/Stundenverlauf schon Katalog-IDs)."""
+    if surface == "trip":
+        return metric_id
+    from output.renderers.compare_outlook_metric_ids import _kennungen_aus_renderer_ids
+
+    return (_kennungen_aus_renderer_ids([metric_id]) or [metric_id])[0]
+
+
+def vm_lists(vm: MailViewModel, surface: str) -> dict[str, list]:
+    """Je Stelle ``[(kennung, format)]``; ``None`` des bisherigen Pfads als
+    das, was die Ausgabe heute zeigt (Orte-Kanal: Standardfolge, Ausblick:
+    feste Vorgabe). Einen Trip-Stundenverlauf gibt es nicht."""
+    out: dict[str, list] = {}
+    stellen = KANAELE + ("outlook",) + (() if surface == "trip" else ("hourly",))
+    for stelle in stellen:
+        zeilen = getattr(vm, stelle)
+        if zeilen is None and stelle == "outlook":
+            from output.renderers.email.helpers import OUTLOOK_FIXED_METRIC_IDS
+
+            out[stelle] = [(m, None) for m in OUTLOOK_FIXED_METRIC_IDS]
+        elif zeilen is None:
+            out[stelle] = [(m, None) for m in _orte_standard()] if stelle in KANAELE else []
+        else:
+            out[stelle] = [(z.metric_id, z.format) for z in zeilen if z.enabled]
+    return out
+
+
+def legacy_lists(display_config, surface: str, report_type: str) -> dict[str, dict]:
+    """Bisheriger Pfad je Stelle als ``{katalog_id: format}`` (erstes
+    Vorkommen) -- Quelle der Umrechnung ``placements_from_legacy``."""
+    listen = vm_lists(legacy_view(display_config, surface, report_type), surface)
+    out: dict[str, dict] = {}
+    for stelle, eintraege in listen.items():
+        ziel: dict = {}
+        for mid, fmt in eintraege:
+            ziel.setdefault(katalog_id(surface, mid), fmt)
+        out[stelle] = ziel
+    return out
 
 
 # ---------------------------------------------------------------------------

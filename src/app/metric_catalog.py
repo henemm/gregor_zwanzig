@@ -1176,6 +1176,85 @@ def normalize_outlook_metric_formats(stored: object) -> Optional[dict[str, bool]
             if isinstance(v, bool) and outlook_friendly_capable(k)}
 
 
+# Issue #3122 (Spec feat_3122_was_steht_wo, Teil A Nr. 4): EINE Quelle fuer
+# "an welchen Stellen der Tabelle 'Was steht wo' hat diese Metrik zwei Formen
+# (Roh/Einfach)". Nur dort gibt es einen Umschalter, nur dort wirkt ein
+# gespeichertes Format; die SMS hat nie eine Wahl. Die alten Faehigkeits-
+# Listen (``format_modes``, ``OUTLOOK_FRIENDLY_CAPABLE``, Renderer-Listen)
+# bestehen bis zum Renderer-Nachzug (B1b) weiter; ihre Deckung mit dieser
+# Tabelle sichert tests/tdd/test_katalog_stellen_formen.py.
+_VIER_STELLEN: frozenset = frozenset({"email", "telegram", "hourly", "outlook"})
+_OHNE_STUNDENVERLAUF: frozenset = frozenset({"email", "telegram", "outlook"})
+STELLEN_ZWEI_FORMEN: dict[str, frozenset] = {
+    "wind": _VIER_STELLEN,
+    "gust": _VIER_STELLEN,
+    "precipitation": _VIER_STELLEN,
+    "rain_probability": _VIER_STELLEN,
+    "cloud_total": _VIER_STELLEN,
+    "cloud_low": _VIER_STELLEN,
+    "cloud_mid": _VIER_STELLEN,
+    "cloud_high": _VIER_STELLEN,
+    # Sonnenstunden: im Stundenverlauf gesperrt (kein Stundenwert).
+    "sunshine": _OHNE_STUNDENVERLAUF,
+    # Windrichtung: im Stundenverlauf immer Kompass (eine Form, nicht gesperrt).
+    "wind_direction": _OHNE_STUNDENVERLAUF,
+    # Gewitter: Ampelpunkt nur in der HTML-Mail (PO-Freigabe 2026-11-17).
+    "thunder": frozenset({"email"}),
+}
+
+# Spec Teil A Nr. 5: Groessen, die ein Zeitfenster zusammenfassen (Nacht,
+# Tagestief/-hoch der Gehzeit) -- ohne Stundenwert, daher keine eigene Spalte
+# in der Stundentabelle der Trip-Mail und gesperrt im Stundenverlauf.
+# Deckungsgleich mit ``email.helpers.NO_HOURLY_COLUMN_METRIC_IDS`` und (plus
+# Sonnenstunden) ``compare_hourly_metric_ids.HOURLY_EXCLUDED_METRIC_IDS``.
+FENSTER_METRIC_IDS: frozenset = frozenset({
+    "temperature_night", "wind_chill_night",
+    "temperature_day_low", "temperature_day_high",
+    "wind_chill_day_low", "wind_chill_day_high",
+})
+
+
+def zwei_formen_stellen(metric_id: object) -> frozenset:
+    """Stellen, an denen ``metric_id`` zwei Formen hat (Spec #3122 Nr. 4)."""
+    if not isinstance(metric_id, str):
+        return frozenset()
+    return STELLEN_ZWEI_FORMEN.get(metric_id, frozenset())
+
+
+def standard_form(metric_id: str) -> str:
+    """Katalog-Standard ``raw | simplified`` einer Metrik (Trip und Orte
+    gleich): Einfach, wenn der Katalog-Standard keine Rohzahl ist."""
+    definition = _METRICS_BY_ID.get(metric_id)
+    if definition is None or definition.default_format_mode == "raw":
+        return "raw"
+    return "simplified"
+
+
+def _hat_sms_kuerzel(metric_id: str) -> bool:
+    return bool(
+        SMS_SYMBOL_BY_METRIC.get(metric_id)
+        or SMS_MULTI_SYMBOLS_BY_METRIC.get(metric_id)
+        or get_sms_code(metric_id)
+    )
+
+
+def stellen_sperre(metric_id: object, stelle: object, surface: object) -> Optional[str]:
+    """Grund-Schluessel, wenn ``metric_id`` an ``stelle`` keine eigene Ausgabe
+    hat (Spec #3122 Nr. 5), sonst ``None``. Eine Bedingung (z. B. Nachttief
+    in Telegram nur abends) ist keine Sperre. Unbekanntes sperrt nie."""
+    if not isinstance(metric_id, str) or metric_id not in _METRICS_BY_ID:
+        return None
+    if stelle == "hourly" and (metric_id in FENSTER_METRIC_IDS or metric_id == "sunshine"):
+        return "kein_stundenwert"
+    if stelle == "email" and surface == "trip" and metric_id in FENSTER_METRIC_IDS:
+        return "keine_eigene_spalte"
+    if stelle == "outlook" and not available_aggregations(metric_id):
+        return "kein_tageswert"
+    if stelle == "sms" and not _hat_sms_kuerzel(metric_id):
+        return "kein_kuerzel"
+    return None
+
+
 def aggregation_label_de(aggregation: object) -> str:
     """Deutsche Beschriftung einer Auswertung (``""`` wenn unbekannt)."""
     return _AGGREGATION_LABELS_DE.get(aggregation, "") if isinstance(aggregation, str) else ""

@@ -6,6 +6,7 @@ with validation and error handling.
 """
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import math
@@ -1177,6 +1178,10 @@ def _parse_display_config(
         outlook_metric_formats=normalize_outlook_metric_formats(
             data.get("outlook_metric_formats")),
         ampel=_ampel_beim_laden(data.get("ampel"), owner_id or data.get("trip_id", "")),
+        # Issue #3122: Roh-Durchreichung (Kopie, damit Modell und Eingabe-Dict
+        # sich nicht teilen); nur ein Objekt gilt, alles andere = fehlt.
+        placements=copy.deepcopy(data["placements"])
+        if isinstance(data.get("placements"), dict) else None,
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
 
@@ -1702,6 +1707,9 @@ def save_location(location: SavedLocation, user_id: str) -> Path:
             "sms_metrics": dc.sms_metrics,
             "telegram_kurzform": dc.telegram_kurzform,
             "updated_at": dc.updated_at.isoformat(),
+            # Issue #3122: Roh-Objekt unveraendert zurueck (wie im Trip-Schreibweg).
+            **({"placements": copy.deepcopy(dc.placements)}
+               if dc.placements is not None else {}),
         }
         # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
         if dc.per_channel_layouts is not None:
@@ -1944,6 +1952,10 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             # Issue #2792 S1a: BEDINGT -- None (keine/verworfene Ampel) bleibt
             # ungeschrieben, der Bestand auf der Platte bleibt per Merge erhalten.
             **({"ampel": dc.ampel} if dc.ampel is not None else {}),
+            # Issue #3122: unveraendert zurueck (Roh-Objekt, BEDINGT wie ampel;
+            # fehlt es im Modell, bleibt der Plattenstand per Merge erhalten).
+            **({"placements": copy.deepcopy(dc.placements)}
+               if dc.placements is not None else {}),
         }
         # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
         if dc.per_channel_layouts is not None:
@@ -2152,6 +2164,10 @@ def _write_trip_locked(trip: Trip, path: Path, existing: dict) -> None:
     # tiefer Merge wuerde geloeschte Grenzen wiederbeleben.
     if "ampel" in python_data.get("display_config", {}):
         merged["display_config"]["ampel"] = python_data["display_config"]["ampel"]
+    # Issue #3122: ``placements`` ist immer der vollstaendige Stand (Spec Nr. 1)
+    # -- ganzer Unterbaum, kein tiefer Merge mit dem Plattenstand.
+    if "placements" in python_data.get("display_config", {}):
+        merged["display_config"]["placements"] = python_data["display_config"]["placements"]
     atomic_write_json(path, merged)
 
 
