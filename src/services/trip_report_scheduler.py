@@ -409,6 +409,16 @@ def _trend_note(
     return " · ".join(notes) if notes else None
 
 
+def _ausblick_zeilen(report_config, display_config, report_type: str):
+    """#3122: ``view.outlook`` des Trips (``None`` ohne Anzeige-Konfiguration:
+    Renderer-Vorgabe wie bisher)."""
+    if display_config is None:
+        return None
+    from services.report_config_resolver import resolve_trip_view
+
+    return resolve_trip_view(report_config, display_config, report_type).outlook
+
+
 def trend_zeile(
     stage_trip, agg, seg_weather: list, weekday: str, tz, *,
     report_type: str, lang: Lang = "de",
@@ -444,10 +454,9 @@ def trend_zeile(
         # Issue #2792 S1c-4b (Spec v1.5 Punkt 3): je stage_trip dessen
         # Ampel; `sms_threshold` wirkt nicht mehr (E1).
         ampel=resolve_ampel(stage_trip),
-        # #1720 S1: ungekollabierte Konfiguration durchreichen, nicht selbst
-        # aufloesen -- Renderer-Vokabular gehoert in die Ausgabeschicht
-        # (test_scheduler_has_no_output_imports).
-        trip_display_config=dc, report_type=report_type,
+        # #3122: die Ausblick-Zeilen des View-Models (Auswahl, Folge, Roh/
+        # Einfach) statt der rohen Konfiguration; ``()`` = Block entfaellt.
+        outlook_rows=_ausblick_zeilen(_rc, dc, report_type), report_type=report_type,
         # Issue #2792 S1c-4a: Trip-Zweig ausdruecklich, auch ohne dc.
         context="route",
         day_window_start_hour=_win_start,

@@ -1317,6 +1317,91 @@ def telegram_metric_configs(rows, dc: UnifiedWeatherDisplayConfig) -> list:
     return out
 
 
+def mit_zeilen_format(mc, fmt):
+    """Issue #3122: Format einer View-Model-Zeile -> ``MetricConfig``-Felder
+    (Umkehr ``channel_list_resolver._trip_format``). ``None`` = Katalog-
+    Standard; ``raw`` = Roh; sonst ``format_mode=<format>`` mit
+    ``use_friendly_format=True`` (daran haengt der HTML-Ampelpunkt, #814).
+    Kennt der Katalog fuer die Metrik keinen Modus dieses Namens (Bewoelkung:
+    Symbol, Windrichtung: Kompass), ist "Einfach" ihr Katalog-Standard."""
+    import dataclasses
+
+    if fmt == "raw":
+        return dataclasses.replace(mc, format_mode="raw", use_friendly_format=False)
+    try:
+        bekannt = fmt in get_metric(mc.metric_id).format_modes
+    except KeyError:
+        bekannt = False
+    return dataclasses.replace(
+        mc, format_mode=fmt if fmt is not None and bekannt else None, use_friendly_format=True,
+    )
+
+
+def _kanal_quellen(dc: UnifiedWeatherDisplayConfig, channel: str, report_type: str) -> dict:
+    """Bisheriger Pfad: Eintraege der wirksamen Kanal-Ebene je ``metric_id``
+    (erstes Vorkommen) -- sie tragen, was eine View-Model-Zeile nicht traegt
+    (``horizons`` u. a.). Nur die Ebenen-ERKENNUNG der Kaskade, keine Auswahl."""
+    from app import models as _models
+
+    quelle = _models._cascade_source_for_channel(
+        dc.per_report_layouts, dc.per_channel_layouts, channel, report_type,
+    )
+    if quelle == "per_report":
+        liste = dc.per_report_layouts[report_type][channel]  # type: ignore[index]
+    elif quelle == "per_channel":
+        liste = dc.per_channel_layouts[channel]  # type: ignore[index]
+    else:
+        liste = []
+    out: dict = {}
+    for mc in liste:
+        out.setdefault(mc.metric_id, mc)
+    return out
+
+
+def channel_metric_configs(
+    rows, dc: UnifiedWeatherDisplayConfig, channel: str, report_type: str,
+) -> list:
+    """Issue #3122 (ADR-0124): Zeilen des View-Models (E-Mail, Alarm) ->
+    ``MetricConfig`` -- Auswahl, Folge und Roh/Einfach allein aus den Zeilen.
+
+    Abo mit Tabelle ``placements``: Eintrag der Grundauswahl (sonst neu) mit
+    dem Format der Zeile, ``order`` = Folge. Bisheriger Pfad: der Quell-
+    Eintrag (Kanal-Ebene, sonst Grundauswahl) geht unveraendert durch, sofern
+    er das Format der Zeile zeigt -- so bleibt die Ausgabe bytegleich (auch
+    ``horizons``); sonst traegt er das Format der Zeile."""
+    import dataclasses
+
+    from app.models import MetricConfig
+    from services.channel_list_resolver import _trip_format
+    from services.placements import read_placements
+
+    tabelle = read_placements(getattr(dc, "placements", None)) is not None
+    quellen = {} if tabelle else _kanal_quellen(dc, channel, report_type)
+    grund: dict = {}
+    for mc in dc.metrics:
+        grund.setdefault(mc.metric_id, mc)
+    out = []
+    for i, row in enumerate(r for r in (rows or ()) if r.enabled):
+        quelle = quellen.get(row.metric_id) or grund.get(row.metric_id)
+        if quelle is not None and not tabelle and _trip_format(quelle) == row.format:
+            out.append(dataclasses.replace(quelle, enabled=True))
+            continue
+        basis = quelle or MetricConfig(metric_id=row.metric_id)
+        out.append(dataclasses.replace(mit_zeilen_format(basis, row.format), enabled=True, order=i))
+    return out
+
+
+def outlook_auswahl(rows) -> tuple:
+    """Issue #3122: Ausblick-Zeilen des View-Models -> (Kennungen,
+    ``{Kennung: Einfach?}``). ``None`` (nur bisheriger Pfad) = Renderer-
+    Vorgabemenge; ``()`` -> ``[]`` = Block entfaellt in jeder Ausgabe."""
+    if rows is None:
+        return None, None
+    an = [r for r in rows if r.enabled]
+    formate = {r.metric_id: r.format == "simplified" for r in an if r.format is not None}
+    return [r.metric_id for r in an], formate or None
+
+
 def build_format_modes(dc: UnifiedWeatherDisplayConfig) -> dict[str, str]:
     """Issue #435: col_key -> effective format_mode mapping for the renderer.
 

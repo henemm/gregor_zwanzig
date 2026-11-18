@@ -13,7 +13,7 @@ Keine I/O, keine Mutation der Eingaben — reine Aufloesungsfunktion.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -135,6 +135,23 @@ def resolve_report_render_options(
 
     dc = display_config if display_config is not None else build_default_display_config()
 
+    bisher = _options_bisher(report_config, dc, report_type)
+    if not _hat_tabelle(dc):
+        return bisher
+    # #3122 (Spec Nr. 6): mit Tabelle steuert den 3-Tages-Ausblick allein das
+    # View-Model (Briefing-Typ in ``outlook_reports``, mindestens eine
+    # Metrik); ``show_outlook``/``multi_day_trend_reports`` wirken nicht, die
+    # Grosswetterlage haengt allein an ``show_stability``.
+    ausblick = bool(resolve_trip_view(report_config, dc, report_type).outlook)
+    return replace(bisher, show_outlook=True, show_multi_day_trend=ausblick)
+
+
+def _options_bisher(
+    report_config: Optional["TripReportConfig"],
+    dc: "UnifiedWeatherDisplayConfig",
+    report_type: str,
+) -> ReportRenderOptions:
+    """Bisheriger Pfad (Abos ohne Tabelle ``placements``)."""
     if report_config is None:
         return ReportRenderOptions(
             email_format="full",
@@ -157,6 +174,34 @@ def resolve_report_render_options(
         show_multi_day_trend=report_type in trend_reports,
         show_yesterday_comparison=report_config.show_yesterday_comparison,
         display_config=dc,
+    )
+
+
+def _hat_tabelle(display_config: object) -> bool:
+    """#3122: traegt das Abo eine lesbare Tabelle ``placements``?"""
+    from services.placements import read_placements
+
+    return read_placements(getattr(display_config, "placements", None)) is not None
+
+
+def trip_enabled_reports(report_config: Optional["TripReportConfig"]) -> tuple[str, ...]:
+    """#3122 (Spec Nr. 6/7): die eingeschalteten Briefings des Trips -- die
+    eine Regel ``slot_aktiv`` (ohne report_config beide)."""
+    from app.models import slot_aktiv
+
+    return tuple(rt for rt in ("morning", "evening") if slot_aktiv(report_config, rt))
+
+
+def resolve_trip_view(
+    report_config: Optional["TripReportConfig"], display_config: object, report_type: str,
+):
+    """#3122: das View-Model eines Trip-Briefings (``resolve_channel_lists``)
+    mit den eingeschalteten Briefings des Abos (Vorbelegung des Ausblicks)."""
+    from services.channel_list_resolver import resolve_channel_lists
+
+    return resolve_channel_lists(
+        display_config, "trip", report_type,
+        enabled_reports=trip_enabled_reports(report_config),
     )
 
 

@@ -639,11 +639,28 @@ def _official_source_url_for(dto_notices: list) -> str | None:
     return getattr(leading.alert, "url", None)
 
 
+def _alert_kanal_metriken(display_config, channel: str, report_type: str) -> list:
+    """Issue #3122 (ADR-0124 Nr. 11): Roh/Einfach des Alarms je Kanal aus dem
+    View-Model des Briefings -- keine eigene Kaskade. Mit Tabelle
+    ``placements`` jede Zeile der Grundauswahl mit dem Format ihrer Stelle,
+    auch wenn sie dort abgewaehlt ist (ob eine Metrik im Alarm erscheint,
+    haengt nicht an der Tabelle); sonst die Kanal-Zeilen des bisherigen Pfads."""
+    from output.renderers.email.helpers import channel_metric_configs
+    from services.channel_list_resolver import ChannelRow, resolve_channel_lists
+
+    view = resolve_channel_lists(display_config, "trip", report_type)
+    zeilen = getattr(view, channel)
+    if view.rows:
+        zeilen = tuple(ChannelRow(r.metric_id, True, r.cell(channel).format, i)
+                       for i, r in enumerate(view.rows))
+    return channel_metric_configs(zeilen, display_config, channel, report_type)
+
+
 def _alert_format_modes(display_config) -> dict[str, dict[str, str]]:
     """Issue #1737: Kanal -> {col_key: Anzeigemodus} aus der Anzeige-
-    Konfiguration DES jeweiligen Trips bzw. Vergleichs (Kanal-Kaskade
-    `get_metrics_for_channel`, ADR-0050) -- dieselbe Aufloesung wie das
-    Briefing. Ohne Konfiguration leer (= ROH). Nie aus einem anderen Nutzer."""
+    Konfiguration DES jeweiligen Trips bzw. Vergleichs -- dieselbe
+    Aufloesung wie das Briefing (View-Model, #3122). Ohne Konfiguration leer
+    (= ROH). Nie aus einem anderen Nutzer."""
     if display_config is None:
         return {}
     from app.metric_catalog import get_metric
@@ -654,7 +671,7 @@ def _alert_format_modes(display_config) -> dict[str, dict[str, str]]:
     for channel in ("email", "telegram"):
         modes: dict[str, str] = {}
         for report_type in ("morning", "evening"):
-            for mc in display_config.get_metrics_for_channel(channel, report_type):
+            for mc in _alert_kanal_metriken(display_config, channel, report_type):
                 try:
                     col = get_metric(mc.metric_id).col_key
                 except KeyError:
@@ -673,8 +690,8 @@ def _alert_format_modes(display_config) -> dict[str, dict[str, str]]:
 
 def _alert_indicator_keys(display_config) -> dict[str, frozenset[str]]:
     """Issue #1737: Kanal -> col_keys mit Ampel-Punkt im HTML -- wie
-    `build_html_indicator_keys` des Briefings, aber ueber die Kanal-Kaskade
-    DES jeweiligen Trips ("Einfach" ist dort `use_friendly_format`)."""
+    `build_html_indicator_keys` des Briefings, ueber das View-Model DES
+    jeweiligen Trips ("Einfach" ist dort `use_friendly_format`, #3122)."""
     if display_config is None:
         return {}
     from app.metric_catalog import get_metric
@@ -684,7 +701,7 @@ def _alert_indicator_keys(display_config) -> dict[str, frozenset[str]]:
     for channel in ("email", "telegram"):
         keys: set[str] = set()
         for report_type in ("morning", "evening"):
-            for mc in display_config.get_metrics_for_channel(channel, report_type):
+            for mc in _alert_kanal_metriken(display_config, channel, report_type):
                 if mc.metric_id in _AMPEL_CAPABLE_METRIC_IDS and getattr(
                     mc, "use_friendly_format", True,
                 ):

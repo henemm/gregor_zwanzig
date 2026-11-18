@@ -45,15 +45,17 @@ from app.profile import ActivityProfile
 from i18n import Lang
 from output.renderers.day_window import display_end_time, resolve_configured_window
 import services.alert_urgency as alert_urgency
-from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
+from services.report_config_resolver import (
+    ReportRenderOptions, resolve_report_render_options, resolve_trip_view,
+)
 from services.risk_engine import RiskEngine
-from services.channel_list_resolver import resolve_channel_lists
-from output.renderers.compare_outlook_metric_ids import resolve_trip_outlook_metrics
 from output.renderers.email import render_email
 from output.renderers.email.helpers import (
     NO_HOURLY_COLUMN_METRIC_IDS,
     build_format_modes,
     build_friendly_keys,
+    channel_metric_configs,
+    outlook_auswahl,
     telegram_metric_configs,
 )
 from output.tokens.dto import MetricSpec, TokenLine
@@ -141,7 +143,10 @@ class TripReportFormatter:
         # Resolver, auf dem UNGEKOLLABIERTEN dc (die Kollabierung unten
         # erzwingt enabled=True, eine zweite Kaskade darauf waere unbewiesen).
         # Die Spaltenfolge der Mail (HTML und Klartext) kommt allein hieraus.
-        _channel_view = resolve_channel_lists(_dc_uncollapsed, "trip", report_type)
+        # Issue #3122: mit den eingeschalteten Briefings des Abos (Vorbelegung
+        # des 3-Tages-Ausblicks); traegt das Abo die Tabelle ``placements``,
+        # entsteht das View-Model allein daraus.
+        _channel_view = resolve_trip_view(report_config, _dc_uncollapsed, report_type)
         _email_rows = _channel_view.email
         # Issue #3098 (ADR-0121): Telegram-Zeilen aus demselben Resolver-Lauf.
         _telegram_rows = _channel_view.telegram
@@ -152,7 +157,11 @@ class TripReportFormatter:
         # E-Mail-Auswahl statt der Grundauswahl (PO-Entscheidung 2026-11-17).
         # Zugestellte Alarm-Mails laufen ueber output/renderers/alert (#921).
         # Issue #434: kanal-bewusste Auflösung (per_report > per_channel > global).
-        active_metrics = dc.get_metrics_for_channel("email", report_type)
+        # Issue #3122: Auswahl, Folge und Roh/Einfach der Mail (HTML, Klartext,
+        # Kompakt) kommen allein aus den E-Mail-Zeilen des View-Models
+        # (Adapter ``channel_metric_configs``) -- keine zweite Kaskade; davon
+        # leben friendly/format/indicator keys, Kacheln, Nacht und Kompakt.
+        active_metrics = channel_metric_configs(_email_rows, dc, "email", report_type)
         # Force enabled=True on all active metrics so downstream guards don't skip them
         # Issue #2422 S3 (AC-16): Layout-Eintraege tragen keine
         # Erwaehnungsschwelle -- die globale (KL-4, wie in der SMS) wird
@@ -235,7 +244,9 @@ class TripReportFormatter:
         # Klartext, Kompakt) UND an render_telegram_bubbles(); ein zweiter
         # Aufruf koennte die beiden Konsumenten spaeter auseinanderlaufen
         # lassen (ADR-0055 Punkt 4).
-        _outlook_metrics = resolve_trip_outlook_metrics(_dc_uncollapsed, report_type)
+        # Issue #3122: Auswahl und Folge aus ``view.outlook`` (``()`` -> ``[]``
+        # = Block entfaellt in HTML, Klartext, Kompakt und Telegram).
+        _outlook_metrics, _ = outlook_auswahl(_channel_view.outlook)
         email_html, email_plain = render_email(
             token_line,
             segments=segments,
