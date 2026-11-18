@@ -203,7 +203,7 @@
 			{/if}
 			<Aufklapper titel={$t('wetter.wsw.legende.titel')} testid="was-steht-wo-legende" summaryTestid="was-steht-wo-legende-auf">
 				<dl class="wsw-legende">
-					{#each legende as e (e.token)}
+					{#each legende as e, i (i)}
 						<div class="wsw-legende-eintrag" data-legende={e.token}><dt>{e.token}</dt>{#if e.text}<dd>{e.text}</dd>{/if}</div>
 					{/each}
 				</dl>

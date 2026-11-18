@@ -163,5 +163,12 @@ export function legendeAus(a: PlacementsAntwort, t: Uebersetzer): LegendenEintra
 	const smsAn = new Set(a.rows.filter((r) => r.cells.sms?.state === 'on').map((r) => r.metric_id));
 	const metriken = a.legend.metrics.filter((m) => smsAn.has(m.metric_id)).map((m) => ({ token: m.kuerzel, text: m.meaning ?? '' }));
 	const fest = a.legend.fixed.filter((f) => LEGENDE[f.key]).map((f) => ({ token: f.token, text: t(LEGENDE[f.key]) }));
-	return [...metriken, ...fest];
+	// Dasselbe Kürzel kann für zwei Zeilen kommen (Eltern- und abgeleitete Größe): jeder Eintrag nur einmal.
+	const gesehen = new Set<string>();
+	return [...metriken, ...fest].filter((e) => {
+		const k = `${e.token}\u0000${e.text}`;
+		if (gesehen.has(k)) return false;
+		gesehen.add(k);
+		return true;
+	});
 }

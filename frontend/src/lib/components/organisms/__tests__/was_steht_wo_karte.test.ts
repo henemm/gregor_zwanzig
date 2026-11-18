@@ -277,6 +277,13 @@ describe('„Kürzel erklärt“ (AC-31)', () => {
 			assert.ok(inhalt.includes(s), `fehlt: ${s}`);
 		assert.doesNotMatch(o, /Legende steht auch am Ende/);
 	});
+	test('dasselbe Kürzel zweier Zeilen und ein Kürzel gleich einem festen Token rendern ohne Abbruch', async () => {
+		const a = orte(3);
+		a.legend.metrics = [...a.legend.metrics, { metric_id: 'sunshine', kuerzel: 'W', meaning: 'Wind km/h' }, { metric_id: 'wind', kuerzel: 'L', meaning: 'Tiefstwert' }];
+		const o = await karte(a, { context: 'vergleich' });
+		assert.equal(elemente(o, 'data-legende="W"').length, 1, 'gleicher Eintrag nur einmal');
+		assert.equal(elemente(o, 'data-legende="L"').length, 2, 'L als Metrik-Kürzel und als Stufe gelb');
+	});
 	test('Kürzel einer Metrik ohne SMS-Haken fehlt; Eintrag ohne Bedeutung zeigt nur das Kürzel', async () => {
 		const a = trip();
 		a.rows[0].cells.sms = z('off');
