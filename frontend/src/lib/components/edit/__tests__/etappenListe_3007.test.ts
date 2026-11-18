@@ -56,6 +56,31 @@ const BERGAB: Stage = {
 	waypoints: [wp('a', 'Hütte', 47.0, 11.0, 2200), wp('b', 'Tal', 47.03, 11.02, 900)]
 } as Stage;
 
+// Fix-Loop AC-12: gleiche Koordinate, nur Höhe ändert sich — Distanz 0, Aufstieg 400 + 850 = 1250 m.
+const STEIL: Stage = {
+	id: 's1',
+	name: 'Steil',
+	date: '2026-08-05',
+	start_time: '07:00',
+	waypoints: [wp('a', 'Fuß', 46.5, 8.0, 1000), wp('b', 'Mitte', 46.5, 8.0, 1400), wp('c', 'Gipfel', 46.5, 8.0, 2250)]
+} as Stage;
+// ~33 m Luftlinie (0,0003° Breite) — gerundet „0,0 km“ gilt als fehlend; Aufstieg 40 m.
+const KURZ_STEIL: Stage = {
+	id: 'k1',
+	name: 'Kurz',
+	date: '2026-08-06',
+	start_time: '07:00',
+	waypoints: [wp('a', 'Unten', 46.5, 8.0, 1000), wp('b', 'Oben', 46.5003, 8.0, 1040)]
+} as Stage;
+// Zwei Wegpunkte, gleiche Koordinate und Höhe — Distanz 0, Aufstieg 0.
+const STILL: Stage = {
+	id: 'h1',
+	name: 'Still',
+	date: '2026-08-07',
+	start_time: '07:00',
+	waypoints: [wp('a', 'Hof', 46.5, 8.0, 500), wp('b', 'Hof', 46.5, 8.0, 500)]
+} as Stage;
+
 describe('#3007 F002: Gehzeit (AC-11)', () => {
 	test('über Mitternacht: Dauer = dieselbe Etappe ab 00:00, nicht negativ', () => {
 		const tempo = activityToSpeed(undefined);
@@ -119,6 +144,28 @@ describe('#3007 F002: Zeileninhalt (AC-10, AC-12)', () => {
 			assert.equal(z.titel, `E1 · ${trFor(lang, 'bausteine.etappe.pausentag' as any)}`);
 			assert.equal(z.zweitzeile, undefined);
 			assert.equal(z.meta, undefined);
+		});
+		test(`${lang}: Distanz 0, Aufstieg > 0 — nur „↑y m“, kein „0,0 km“, kein verwaistes „·“`, () => {
+			const st = computeHeaderStats(STEIL);
+			assert.ok(st.distanceKm === 0 && st.ascentM > 0, 'Messaufbau: Etappe hat Distanz oder keinen Aufstieg');
+			const z = etappenZeile(STEIL, 0, lang, katalog(lang), 4);
+			assert.equal(z.titel, 'E1 · Fuß → Gipfel');
+			assert.equal(z.zweitzeile, `↑${zahl(lang, 1250, 0)} m`);
+			assert.equal(z.meta, `${trFor(lang, 'trip.hub.etappe_gehzeit' as any, { dauer: dauerText(dauerAbMitternacht(STEIL, 4)) })}`);
+		});
+		test(`${lang}: Distanz gerundet 0,0 (≈ 30 m), Aufstieg > 0 — nur „↑y m“`, () => {
+			const st = computeHeaderStats(KURZ_STEIL);
+			assert.ok(st.distanceKm > 0 && st.distanceKm < 0.05 && st.ascentM > 0, `Messaufbau: Distanz ${st.distanceKm}`);
+			const z = etappenZeile(KURZ_STEIL, 0, lang, katalog(lang), 4);
+			assert.equal(z.zweitzeile, `↑${zahl(lang, 40, 0)} m`);
+		});
+		test(`${lang}: Distanz 0 und Aufstieg 0 (zwei Wegpunkte) — keine Zweitzeile, Titel und Gehzeit wie bisher`, () => {
+			const st = computeHeaderStats(STILL);
+			assert.ok(st.distanceKm === 0 && st.ascentM === 0, 'Messaufbau: Etappe hat Distanz oder Aufstieg');
+			const z = etappenZeile(STILL, 1, lang, katalog(lang), 4);
+			assert.equal(z.titel, 'E2 · Hof → Hof');
+			assert.equal(z.zweitzeile, undefined);
+			assert.equal(z.meta, `${trFor(lang, 'trip.hub.etappe_gehzeit' as any, { dauer: dauerText(dauerAbMitternacht(STILL, 4)) })}`);
 		});
 		test(`${lang}: nur ein Wegpunkt — Titel mit Namen, ohne Kennzahlen und Gehzeit`, () => {
 			const eins = { ...FLACH, name: 'Einzeln', waypoints: [FLACH.waypoints[0]] } as Stage;

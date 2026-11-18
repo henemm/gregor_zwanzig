@@ -40,12 +40,17 @@ export function dauerText(min: number): string {
 	return `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
 }
 
-/** Zweitzeile „x km · ↑y m“; fehlt der Aufstieg, nur die Distanz (kein verwaistes „·“). */
-function kennzahlen(stage: Stage, lang: Lang, t: Katalog): string {
+/** Zweitzeile „x km · ↑y m“ (AC-12): fehlt ein Teil, entfällt nur er (kein verwaistes „·“);
+ *  fehlen beide, keine Zweitzeile. Maßgeblich ist der angezeigte, gerundete Wert. */
+function kennzahlen(stage: Stage, lang: Lang, t: Katalog): string | undefined {
 	const s = computeHeaderStats(stage);
-	const km = zahl(lang, s.distanceKm, 1);
+	const hatKm = Math.round(s.distanceKm * 10) > 0;
 	const aufstieg = Math.round(s.ascentM);
-	return aufstieg > 0 ? t('trip.hub.etappe_kennzahlen', { km, aufstieg: zahl(lang, aufstieg, 0) }) : `${km} km`;
+	const km = zahl(lang, s.distanceKm, 1);
+	const hoch = zahl(lang, aufstieg, 0);
+	if (hatKm && aufstieg > 0) return t('trip.hub.etappe_kennzahlen', { km, aufstieg: hoch });
+	if (hatKm) return `${km} km`;
+	return aufstieg > 0 ? `↑${hoch} m` : undefined;
 }
 
 /** Zeileninhalt der Etappe an Position `index` (0-basiert). Pausentag: nur Titel. */
