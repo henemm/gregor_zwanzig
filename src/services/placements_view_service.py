@@ -210,7 +210,7 @@ def _sms_kuerzel(metric_id: str, surface: str, vm) -> list[tuple[str, str]]:
     from app.metric_catalog import kurzform_kuerzel
     from output.renderers.comparison import _RENDERER_TO_CATALOG_METRIC_ID
 
-    in_sms = {z.metric_id for z in (vm.sms or ())}
+    in_sms = set(_orte_sms_liste(None if vm.sms is None else [z.metric_id for z in vm.sms]))
     quellen = [_RENDERER_TO_CATALOG_METRIC_ID.get(rid) for rid in _renderer_ids(metric_id)
                if rid in in_sms]
     return [(kurzform_kuerzel(q), q) for q in quellen if q and kurzform_kuerzel(q)]
@@ -564,6 +564,15 @@ def _renderer_ids(metric_id: str) -> list[str]:
     return list(_renderer_ids_for_kennung(metric_id))
 
 
+def _orte_sms_liste(liste) -> list[str]:
+    """Renderer-Kennungen, die die Orte-SMS fuehrt: die Kanal-Liste, bei
+    ``None`` ("nie eingestellt", kein Filter) die Vorgabefolge, die der
+    SMS-Renderer selbst dann nimmt (``_sms_location_variants``)."""
+    from output.renderers.comparison import _NIE_EINGESTELLT_IDS
+
+    return list(_NIE_EINGESTELLT_IDS if liste is None else liste)
+
+
 def _orte_sms_werte(sms: str, kontext: dict, ids: list[str]) -> dict:
     """Katalog-ID -> Zellen des ersten Orts in der SMS; ``None`` = die Metrik
     hat Zellen, keine davon steht in der SMS (passt nicht mehr). Metriken der
@@ -579,7 +588,7 @@ def _orte_sms_werte(sms: str, kontext: dict, ids: list[str]) -> dict:
 
     opts = kontext["opts"]
     ort = location_render_order(kontext["result"].locations)[0]
-    sms_liste = list(dict.fromkeys(opts.enabled_metrics_by_channel["sms"] or []))
+    sms_liste = list(dict.fromkeys(_orte_sms_liste(opts.enabled_metrics_by_channel["sms"])))
     formen = opts.metric_formats("sms") or {}
     varianten = _sms_location_variants(
         ort, opts.enabled_metrics_by_channel["sms"], opts.unresolved_by_channel.get("sms", 0),
