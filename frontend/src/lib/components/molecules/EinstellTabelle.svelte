@@ -27,6 +27,8 @@
 		/** Gewählte Form; null oder fehlend: die Stelle hat nur eine Form, kein Knopf. */
 		format?: Darstellung | null;
 		beispiel?: string;
+		/** #3122 B3b: Ampelpunkt der HTML-Mail (Farbe aus --g-ampel-*), `name` ist die Farbe als Wort für Screenreader. */
+		ampel?: { farbe: 'green' | 'yellow' | 'orange' | 'red'; name: string };
 		/** warn = „passt nicht mehr“, leise = „nur Tageswert“. */
 		marke?: { text: string; ton: 'warn' | 'leise' };
 	}
@@ -124,6 +126,7 @@
 								<Haken zustand={HAKEN[z.zustand]} {name} grund={z.grund} {bedienbar} onAenderung={(an) => onHaken?.({ metrik: m.id, stelle: s.id, an })} />
 								{#if z.zustand === 'on' && bedienbar}
 									<RohEinfachKnopf wert={z.format ?? null} {name} onAenderung={(format) => onFormat?.({ metrik: m.id, stelle: s.id, format })} />
+									{#if z.ampel}<span class="et-ampel" data-slot="et-ampel" data-farbe={z.ampel.farbe} role="img" aria-label={z.ampel.name} title={z.ampel.name}></span>{/if}
 									{#if z.beispiel}<span class="et-beispiel" data-slot="et-beispiel">{z.beispiel}</span>{/if}
 									{#if z.marke}<em class="et-marke" data-slot="et-marke" data-ton={z.marke.ton}>{z.marke.text}</em>{/if}
 								{/if}
@@ -219,6 +222,27 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
+	/* #3122 B3b: Ampelpunkt wie in der HTML-Mail (Design-System: --g-ampel-*, Kontur gegen die Karte). */
+	.et-ampel {
+		flex: 0 0 auto;
+		width: var(--g-size-10px);
+		height: var(--g-size-10px);
+		box-sizing: border-box;
+		border: 1px solid var(--g-rule);
+		border-radius: 50%;
+	}
+	.et-ampel[data-farbe='green'] {
+		background: var(--g-ampel-gruen);
+	}
+	.et-ampel[data-farbe='yellow'] {
+		background: var(--g-ampel-gelb);
+	}
+	.et-ampel[data-farbe='orange'] {
+		background: var(--g-ampel-orange);
+	}
+	.et-ampel[data-farbe='red'] {
+		background: var(--g-ampel-rot);
+	}
 	.et-marke {
 		flex: 0 0 auto;
 		color: var(--g-bad);
@@ -257,6 +281,7 @@
 		.et-lang,
 		.et-kopf small,
 		.et-beispiel,
+		.et-ampel,
 		.et-raster :global([data-slot='roh-einfach-lang']) {
 			display: none;
 		}

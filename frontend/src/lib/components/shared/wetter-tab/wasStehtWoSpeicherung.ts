@@ -121,6 +121,19 @@ export interface Felder {
 }
 type Rumpf = Record<string, unknown>;
 
+/** Startwerte der Schalter aus `blocks` der Antwort (fehlende Werte: Vorgaben des Python-Kerns). */
+export function felderAusAntwort(a: Pick<PlacementsAntwort, 'blocks'>): Felder {
+	const b = (a?.blocks ?? {}) as Record<string, unknown>;
+	return {
+		show_stage_stats: b.show_stage_stats !== false,
+		show_yesterday_comparison: b.show_yesterday_comparison !== false,
+		show_night_block: b.show_night_block !== false,
+		email_format: b.email_format === 'compact' ? 'compact' : 'full',
+		telegram_style: b.telegram_style === 'kurzform' ? 'kurzform' : 'rich',
+		hourly_enabled: b.hourly !== false
+	};
+}
+
 const geaendert = <K extends keyof Felder>(neu: Felder, alt: Felder, k: K) => neu[k] !== alt[k];
 function nurGeaendert(neu: Felder, alt: Felder, keys: (keyof Felder)[]): Rumpf {
 	return Object.fromEntries(keys.filter((k) => geaendert(neu, alt, k)).map((k) => [k, neu[k]]));

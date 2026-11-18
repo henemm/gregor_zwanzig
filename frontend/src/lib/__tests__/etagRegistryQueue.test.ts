@@ -69,6 +69,11 @@ describe('etagRegistry — Stand je Trip', () => {
 		// darum bewusst ausserhalb des Trichters.
 		assert.equal(extractTripId('/api/locations/korsika'), null);
 		assert.equal(extractTripId('/api/briefings/abc?kind=vergleich'), null);
+		// #3122 B3b: die Tabelle „Was steht wo“ traegt den Stempel des Abos (Go: BriefingFingerprint) —
+		// ihr PUT reiht sich in dieselbe Warteschlange ein und sendet dasselbe If-Match.
+		assert.equal(extractTripId('/api/briefings/cp-abc/placements?kind=vergleich'), 'cp-abc');
+		assert.equal(extractTripId('/api/briefings/gr20/placements?kind=route'), 'gr20');
+		assert.equal(extractTripId('/api/briefings/gr20/alert-preview?kind=route'), null);
 	});
 
 	test('test_setKnownEtagIfUnchanged_rejectsStampFromOutdatedView', () => {
