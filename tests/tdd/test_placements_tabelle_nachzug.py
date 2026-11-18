@@ -263,6 +263,29 @@ def test_orte_sms_example_meldet_rest_zaehler(client, fall):
         assert ueberlauf["locations"] >= 1
 
 
+VIELE_ORTE = ("Innsbruck", "Lienz", "Kufstein", "Imst", "Landeck", "Reutte", "Schwaz",
+              "Telfs", "Wattens")
+
+
+@pytest.mark.parametrize("anzahl", [8, 9])
+def test_orte_entfallene_orte_zaehlen_nicht_im_rest_zaehler(client, anzahl):
+    """Passen nicht alle Orte, endet die SMS auf ``+k Orte``; ``per_location``
+    nennt nur die gezeigten Orte, ``locations`` nur die mit ``+N``."""
+    kennung = f"o-p4-viele-{anzahl}"
+    _orte(NUTZER_A, kennung, anzahl=anzahl, namen=VIELE_ORTE,
+          placements={"version": 1, "rows": []})
+    antwort = _ok(client, kennung, "vergleich")
+    versand = antwort["sms_example"]["text"]
+    entfallen = re.search(r" \+(\d+) Orte$", versand)
+    assert entfallen, f"Vorbedingung: SMS ohne '+k Orte': {versand!r}"
+    soll = _rest_zaehler_soll(versand, list(VIELE_ORTE[:anzahl]))
+    assert len(soll) + int(entfallen.group(1)) == anzahl
+    ueberlauf = antwort["sms_example"]["overflow"]
+    assert ueberlauf["per_location"] == soll
+    assert len(ueberlauf["per_location"]) < anzahl
+    assert ueberlauf["locations"] == sum(1 for n in soll if n)
+
+
 def test_trip_sms_example_ohne_rest_zaehler(client):
     _trip(NUTZER_A, "t-p4", placements={"version": 1, "rows": []})
     assert _ok(client, "t-p4", "route")["sms_example"]["overflow"] is None
