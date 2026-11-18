@@ -271,7 +271,9 @@ for (const kind of HUB_KINDS) {
 // Orte-Karte). Die Sprungziele gehören zur context-eigenen Hauptfläche (Etappen bzw.
 // Orte, #2682 Entscheidung 1) — nur die Beschriftung unterscheidet sich, die Aussage
 // ist gleich. Ein Sprungknopf „Alle Alerts →" existiert in KEINER Art mehr (HT-13).
-const PUNKTE_TEXT: Record<HubKind, string> = { route: 'Tag 1', vergleich: 'Innsbruck (E2E)' };
+// #3007 (AC-10/AC-13): der Etappen-Reiter zeigt am Computer zuerst die Liste — Zeile „E1 · Start → Ziel“
+// der ersten Seed-Etappe statt ihres Namens im (zugeklappten) Editor.
+const PUNKTE_TEXT: Record<HubKind, string> = { route: 'E1 · a → b', vergleich: 'Innsbruck (E2E)' };
 const SPRUNGKNOPF: Record<HubKind, (page: Page) => ReturnType<Page['locator']>> = {
 	route: (page) =>
 		page.locator(`[data-testid="${HUB_SEL.route.panel}-uebersicht"]`).getByRole('button', { name: 'Im Editor öffnen →' }),

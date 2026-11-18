@@ -27,6 +27,7 @@ import {
 	tippeDatum,
 	tippeUhrzeit,
 	type HubKind,
+	oeffneEtappenEditor,
 	type SeededHub
 } from './helpers';
 
@@ -100,6 +101,7 @@ async function oeffnePunkte(page: Page, kind: HubKind, id: string, anzahl: numbe
 		// Trip: der Etappen-Reiter zeigt das Datumsfeld nur für die AKTIVE Etappe
 		// (EditStagesPanelNew); die Etappen selbst stehen als Karten im Etappen-Streifen.
 		await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 10_000 });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(page.locator('[data-testid="etappen-strip"] [data-testid^="stage-card-"]')).toHaveCount(anzahl, { timeout: 10_000 });
 		await expect(page.getByTestId('stage-date-field')).toHaveCount(1, { timeout: 10_000 });
 	}

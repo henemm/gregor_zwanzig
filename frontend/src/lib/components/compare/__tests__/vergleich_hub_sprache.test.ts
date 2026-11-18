@@ -231,12 +231,14 @@ describe('AC-2: Compare-Helfer in Deutsch und Englisch (Eingabe -> Ausgabe)', ()
 });
 
 describe('AC-3: Orte-Reiter, Orte-Schritt, Neuer Ort englisch; Nutzlast nur Ort-IDs', () => {
-	test('Orte-Reiter: Kopf, Hinweis, Leerfall, Hinzufuegen-Panel englisch; Reihenfolge der Orte gleich', () => {
+	test('Orte-Reiter: Kopf, Zeilen, Leerfall, Hinzufuegen-Panel englisch; Reihenfolge der Orte gleich', () => {
 		const { de, en: e } = deDannEn(() => P.hubOrteRendern());
 		const s = sichtbar(e);
 		// #3006: Kopf ist der Bereichskopf „Locations“ mit Erklärsatz und „+ Add location“ (statt „Compared locations“).
-		for (const t of ['Locations', 'One location makes a location briefing.', '+ Add location', 'Order = columns in the briefing · drag to sort', 'drag to sort', 'No locations selected yet.', 'Other · 1', 'No other saved locations available.']) hat(s, t);
-		for (const t of ['title="Remove"', 'aria-label="Compared locations, order"']) hat(e, t);
+		// #3007: kein Reihenfolge-Hinweis mehr; Textknopf „remove“ statt ✕, Ziehgriff mit aria-label „drag to sort“.
+		for (const t of ['Locations', 'One location makes a location briefing.', '+ Add location', 'remove', 'No locations selected yet.', 'Other · 1', 'No other saved locations available.']) hat(s, t);
+		hatNicht(s, 'Order = columns in the briefing');
+		for (const t of ['aria-label="drag to sort"', 'aria-label="Compared locations, order"']) hat(e, t);
 		const reihe = (h: string) => [...h.matchAll(/data-loc-id="([^"]+)"/g)].map((m) => m[1]);
 		assert.deepEqual(reihe(e), reihe(de));
 		assert.ok(reihe(e).length > 0, 'Messaufbau');

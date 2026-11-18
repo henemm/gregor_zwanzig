@@ -42,6 +42,7 @@ import {
 	kontrastVerhaeltnis,
 	kontrastVerstoesse,
 	messeKontrast,
+	oeffneEtappenEditor,
 	openHub,
 	registerForCleanup,
 	tippeDatum,
@@ -167,6 +168,14 @@ async function pruefeListenUndHubs(page: Page, d: Daten, wo: string, sammel: str
 			await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-${reiter}"]:visible`).first()).toBeVisible({
 				timeout: 15_000
 			});
+			// #3007 (AC-13): am Computer zeigt der Reiter Etappen zuerst die Liste („E3 · a2 → b2“); gemessen
+			// werden Liste UND aufgeklappter Editor (vorher sofort offen), am Handy wie bisher die Etappen-Karten.
+			const listenModus = reiter === 'etappen' && (page.viewportSize()?.width ?? 1280) >= 900;
+			if (listenModus) {
+				await expect(sichtbar(page.getByText('E3 · a2 → b2'))).toBeVisible({ timeout: 15_000 });
+				await pruefe(page, `${wo} Trip-Hub ${reiter} (Liste)`, sammel);
+				await oeffneEtappenEditor(page);
+			}
 			if (reiter === 'etappen') await expect(sichtbar(page.getByText('Etappe 3'))).toBeVisible({ timeout: 15_000 });
 			if (reiter === 'orte') await expect(sichtbar(page.getByText(d.orte[2].name))).toBeVisible({ timeout: 15_000 });
 			await pruefe(page, `${wo} ${kind === 'route' ? 'Trip' : 'Vergleich'}-Hub ${reiter}`, sammel);

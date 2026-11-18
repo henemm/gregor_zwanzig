@@ -27,7 +27,8 @@ import {
 	createTestLocation,
 	createTestComparePreset,
 	createTestTrip,
-	cleanupTracked
+	cleanupTracked,
+	oeffneEtappenEditor
 } from './helpers';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import { ausUmgebung } from './stagingZugang';
@@ -275,6 +276,7 @@ test.describe('eingeloggt', () => {
 		// EditStagesSection → EditStagesPanelNew, Karten-Card `map-card`), nicht in der Übersicht.
 		await page.goto(`/trips/${tripId}?tab=etappen`);
 		await page.waitForLoadState('networkidle');
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		// Der selbst angelegte Trip hat eine Etappe mit Wegpunkten ⇒ Karte muss da sein (kein Skip).
 		const karte = page.locator('.leaflet-container').first();
 		await expect(karte, 'keine Karte im Etappen-Reiter der Trip-Seite').toBeVisible({ timeout: 20_000 });

@@ -925,6 +925,12 @@ DIENST_EINSTIEGE = {
     # das Bewertungsprofil aus der aufgeloesten Vorlage (template_id_for).
     # #2983: beide gehen durch den gemeinsamen Baustein -- genau EINE Stelle.
     ("compare_briefing_aufbau.py", "compare_wetter_laden"): 1,
+    # #3122 B2: Beispielwerte der Tabelle "Was steht wo" -- Trip baut den
+    # Ausblick mit der Trip-Ampel wie trend_zeile; Orte bestimmen das Profil
+    # wie compare_wetter_laden und loesen die Ampel einmal fuer die
+    # Zeilenbeschriftung der Uebersicht auf.
+    ("placements_view_service.py", "_trip_muster"): 1,
+    ("placements_view_service.py", "_orte_muster"): 2,
 }
 # #2796 S4a: diese Einstiege bestimmen nur die Vorlagen-ID (``template_id_for``), sie
 # loesen keine Ampel auf -- kein ``resolve_ampel``-Aufruf (die Mail loest selbst auf).

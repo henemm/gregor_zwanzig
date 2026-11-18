@@ -50,7 +50,7 @@
 //   e2e/trip-hub-kopf-region-aktivitaet.spec.ts --project=tests
 
 import { test, expect, type Page, type Request, type TestInfo } from '@playwright/test';
-import { feldEingabe } from './helpers';
+import { feldEingabe, oeffneEtappenEditor } from './helpers';
 
 const DESKTOP = { width: 1280, height: 900 };
 const MOBILE = { width: 375, height: 667 };
@@ -562,6 +562,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 		try {
 			await openTripHub(page, id, 'etappen');
 			await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible({ timeout: 10_000 });
+			await oeffneEtappenEditor(page); // #3007: Ankunftszeiten stehen im aufgeklappten Editor
 			const ankunft = page.locator('[data-testid="wp-arrival-1"]:visible').first();
 			await expect(ankunft).toBeVisible({ timeout: 10_000 });
 			const vorher = (await ankunft.innerText()).trim();
@@ -772,7 +773,8 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			await openTripHub(page, id, 'etappen');
 			await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible({ timeout: 10_000 });
 
-			// Geoeffneter Zustand im Etappen-Reiter: zweite Etappe aktiv.
+			// Geoeffneter Zustand im Etappen-Reiter: zweite Etappe aktiv (#3007: ihre Zeile aufgeklappt).
+			await oeffneEtappenEditor(page, 1);
 			await page.getByText('Tag 2', { exact: false }).first().click();
 			// #2881 Lieferung B: Baustein DatumFeld (Segmente) statt <input type="date">.
 			const datum = feldEingabe(page.getByTestId('stage-date-field').first());

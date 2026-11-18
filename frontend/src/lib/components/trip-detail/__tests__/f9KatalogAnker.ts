@@ -103,6 +103,12 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	// #3006: Bereichskopf des Reiters Etappen (Mockup Fassung 3, Z. 579).
 	['trip.hub.kopf.etappen_titel', 'Etappen & Wegpunkte', 'Stages & waypoints'],
 	['trip.hub.kopf.etappen_erklaer', 'Das Tempo bestimmt die Gehzeiten und damit, welche Stunden je Wegpunkt bewertet werden.', 'Your pace sets the walking times and thus which hours are assessed for each waypoint.'],
+	// #3007: Listenzeile des Reiters Etappen (Mockup Fassung 3, Z. 581-585); „Tempo ändern“ gehört zu #2796.
+	['trip.hub.etappe_titel', 'E<n> · <start> → <ziel>', 'E<n> · <start> → <ziel>'],
+	['trip.hub.etappe_titel_name', 'E<n> · <name>', 'E<n> · <name>'],
+	['trip.hub.etappe_kennzahlen', '<km> km · ↑<aufstieg> m', '<km> km · ↑<aufstieg> m'],
+	['trip.hub.etappe_gehzeit', 'Gehzeit <dauer>', 'Walking time <dauer>'],
+	['trip.hub.tempo_aendern', 'Tempo ändern', 'Change pace'],
 
 	// ── trip.uebersicht.* — Reiter Uebersicht (HubOverview, ReportLine, FullProfile) ──
 	['trip.etappen', 'Etappen', 'Stages'],

@@ -30,6 +30,7 @@ import {
 	registriereBestaetigtenZweitnutzer,
 	seedHub,
 	tippeDatum,
+	oeffneEtappenEditor,
 	type HubKind,
 	type SeededHub
 } from './helpers';
@@ -88,6 +89,7 @@ async function autosaveGeste(page: Page, kind: HubKind, id: string): Promise<voi
 		await entfernen.click();
 	} else {
 		// Trip-Gegenstück: Etappen-Datum ändern + blur (Eigen-Seed: genau eine Etappe).
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		await expect(page.getByTestId('stage-date-field')).toHaveCount(1, { timeout: 10_000 });
 		// #2881 Lieferung B: Baustein DatumFeld (Segmente) statt <input type="date">.
 		const datum = page.getByTestId('stage-date-field');

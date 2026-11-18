@@ -662,6 +662,23 @@ export async function openHub(
 	if (kind === 'vergleich' && opts.tab) await reiter.click();
 }
 
+/**
+ * #3007 (AC-13): Im Trip-Hub zeigt der Reiter Etappen am Computer zuerst nur die Liste; der bestehende
+ * Editor (Etappen-Band, Karte, Profil, Wegpunkte, Datum, Startzeit) klappt unter einer Etappenzeile auf.
+ * Öffnet ihn für die Zeile `index`; ohne Angabe die erste Etappe mit Strecke (bisherige Startetappe).
+ * Ohne Listenmodus (Anlegen-Editor /trips/new, Handy-Zweig) tut der Helfer nichts.
+ */
+export async function oeffneEtappenEditor(page: Page, index?: number): Promise<void> {
+	if ((page.viewportSize()?.width ?? 1280) < 900) return;
+	const zeilen = page.getByTestId('etappen-liste-zeile');
+	await page.locator('[data-testid="etappen-liste-zeile"], [data-testid="etappen-strip-wrapper"]').first().waitFor({ state: 'visible', timeout: 15_000 });
+	if ((await zeilen.count()) === 0) return;
+	const mitStrecke = zeilen.filter({ has: page.locator('[data-slot="einstellungszeile-hinweis"]') });
+	const zeile = index !== undefined ? zeilen.nth(index) : (await mitStrecke.count()) > 0 ? mitStrecke.first() : zeilen.first();
+	if ((await zeile.getAttribute('aria-expanded')) !== 'true') await zeile.click();
+	await expect(zeile).toHaveAttribute('aria-expanded', 'true');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Issue #2837 S1 (Epic #2345, ADR-0110): geteilter Hub-Kopf `shared/hub-kopf/HubKopf.svelte`.
 // Seine testids sind für BEIDE Arten gleich (kein kind-Eintrag nötig) — deshalb ein
