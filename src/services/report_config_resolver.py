@@ -277,10 +277,12 @@ def resolve_compare_render_options(
         hourly_enabled=bool(hourly_schalter),
         outlook_enabled=bool(preset.get("outlook_enabled", True)),
     )
-    # Spalten-Legende: bei abgeschaltetem Block nennt sie die Stundenspalten
-    # weiter (bisheriges Verhalten, #2136) -- dieselbe Aufloesung ohne Schalter.
-    spalten = view.hourly or resolve_channel_lists(
-        display_config, "compare", report_type, **abo).hourly
+    # Spalten-Legende: im bisherigen Pfad nennt sie die Stundenspalten auch bei
+    # abgeschaltetem Block (Bestand, #2136) -- dieselbe Aufloesung ohne
+    # Schalter. Mit Tabelle (``view.rows`` gefuellt) folgt sie allein
+    # ``view.hourly``: Block entfaellt = kein Rest in der Legende.
+    spalten = view.hourly or (() if view.rows else resolve_channel_lists(
+        display_config, "compare", report_type, **abo).hourly)
     hourly = _compare_hourly(view.hourly, spalten, hourly_schalter)
     # Issue #3039/#3057: Kanal-Zeilen samt Format nur fuer Layout-Kanaele.
     # ADR-0049: nur Metrik-/Layout-Kanaele -- Premium-SMS sendet den SMS-Text.

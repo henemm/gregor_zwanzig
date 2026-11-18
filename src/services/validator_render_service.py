@@ -437,7 +437,7 @@ def _render_nowcast_replay(trip_obj: Trip, body_nf: Any) -> dict:
 
 def render_compare_email_preview(body: Any) -> str:
     """Render compare-email HTML for the validator without fetching weather data."""
-    profile_enum = ActivityProfile(body.profile)
+    ActivityProfile(body.profile)  # ungueltiges Profil scheitert vor jedem Aufbau
     target_date = date_type.fromisoformat(body.target_date)
 
     stub_location = SavedLocation(
@@ -463,10 +463,17 @@ def render_compare_email_preview(body: Any) -> str:
     # Auswahl gar nicht (Muster #1435 E3b: `build_token_line()` ohne
     # `profile=`). `getattr` statt `body.hourly_metrics`, damit auch aeltere
     # Aufrufer ohne das Feld weiterhin durchlaufen.
-    # Issue #3122 B1b: kein eigener Lesepfad -- aus dem Body entsteht ein
-    # Orte-Preset (``display_config.hourly_metrics``/``hourly_metric_formats``,
-    # ``hourly_enabled``), das durch dieselbe Aufloesung wie der Versand geht
-    # (Kanal-Listen-Resolver, #3096/#3097). Ohne Auswahl gilt die Vorgabe.
+    return render_compare_html(result, **compare_preview_render_kwargs(body))
+
+
+def compare_preview_render_kwargs(body: Any) -> dict:
+    """Render-Argumente der Validator-Vorschau (ohne Wetterdaten).
+
+    Issue #3122 B1b: kein eigener Lesepfad -- aus dem Body entsteht ein
+    Orte-Preset (``display_config.hourly_metrics``/``hourly_metric_formats``,
+    ``hourly_enabled``), das durch dieselbe Aufloesung wie der Versand geht
+    (Kanal-Listen-Resolver, #3096/#3097). Ohne Auswahl gilt die Vorgabe;
+    ``getattr`` fuer aeltere Aufrufer ohne die Felder."""
     from services.report_config_resolver import resolve_compare_render_options
 
     display_config: dict = {}
@@ -476,16 +483,15 @@ def render_compare_email_preview(body: Any) -> str:
         display_config["hourly_metric_formats"] = body.hourly_metric_formats
     opts = resolve_compare_render_options(
         {"display_config": display_config, "hourly_enabled": body.hourly_enabled})
-    return render_compare_html(
-        result,
-        profile=profile_enum,
-        hourly_enabled=opts.hourly_enabled,
-        hourly_metrics=opts.hourly_metrics,
-        hourly_metric_formats=opts.hourly_metric_formats,
+    return {
+        "profile": ActivityProfile(body.profile),
+        "hourly_enabled": opts.hourly_enabled,
+        "hourly_metrics": opts.hourly_metrics,
+        "hourly_metric_formats": opts.hourly_metric_formats,
         # Issue #2792 S1c-4b: die Vorschau kennt nur das Profil des
         # Validators; daraus loest der Renderer die Vorlage auf.
-        preset={"profil": body.profile},
-    )
+        "preset": {"profil": body.profile},
+    }
 
 
 def _hourly_kennungen(felder: list) -> list:
