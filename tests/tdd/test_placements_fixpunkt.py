@@ -336,3 +336,49 @@ def test_neue_metrik_ohne_tabelle_zeigt_die_haken_des_versands(client, kind, fal
     for stelle in ("email", "telegram", "sms"):
         im_versand = any(katalog_id(surface, m) == "pressure" for m, _f in versand[(rt, stelle)])
         assert (zellen[stelle]["state"] == "on") == im_versand, (stelle, zellen[stelle])
+
+
+# ---------------------------------------------------------------------------
+# AC-16 Orte: jede Katalog-ID der Grundauswahl hat genau eine Zeile
+# ---------------------------------------------------------------------------
+
+def _orte_auswertungen() -> list[dict]:
+    from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
+    from output.renderers.compare_metric_ids import (
+        FRONTEND_TO_RENDERER_METRIC_ID, _non_selectable_keys,
+    )
+
+    return [e for e in COMPARE_METRIC_CATALOG
+            if e["key"] in FRONTEND_TO_RENDERER_METRIC_ID and e["key"] not in _non_selectable_keys()]
+
+
+def _alle_orte_metriken(form: str) -> list:
+    """Alle waehlbaren Orte-Auswertungen als Zeichenkette (Altformat, z. B.
+    ``cloud_avg_pct``), Paar ``{metric_id, aggregation}`` oder gemischt."""
+    out = []
+    for i, e in enumerate(_orte_auswertungen()):
+        paar = {"metric_id": e["metric_id"], "aggregation": e["aggregation"]}
+        out.append(e["key"] if form == "zeichenkette" or (form == "gemischt" and i % 2) else paar)
+    return out
+
+
+@pytest.mark.parametrize("form", ["zeichenkette", "paar", "gemischt"])
+def test_orte_jede_metrik_der_grundauswahl_hat_eine_zeile(client, form):
+    from services.channel_list_resolver import katalog_id
+
+    kennung = f"o-alle-{form}"
+    _orte(kennung, {"active_metrics": _alle_orte_metriken(form)})
+    erwartet = {e["metric_id"] for e in _orte_auswertungen()}
+    assert {"cloud_total", "precipitation", "sunshine"} <= erwartet
+    for gespeichert in (False, True):
+        antwort = _get(client, kennung, "vergleich")
+        assert antwort["stored"] is gespeichert
+        ids = [z["metric_id"] for z in antwort["rows"]]
+        assert len(ids) == len(set(ids)), "jede Katalog-ID genau eine Zeile"
+        assert set(ids) == erwartet, (erwartet - set(ids), set(ids) - erwartet)
+        versand = _versand_listen(kennung, "compare", antwort["outlook_reports"])
+        for stelle in ("email", "telegram", "sms"):
+            im_versand = {katalog_id("compare", m) for m, _f in versand[(None, stelle)]}
+            assert im_versand == erwartet, (gespeichert, stelle, erwartet ^ im_versand)
+        if not gespeichert:
+            go_put(kennung, antwort["placements"])
