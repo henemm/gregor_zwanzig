@@ -908,7 +908,9 @@ def send_one_compare_preset(
     # Issue #2983: Profil (Vorlage, #2796 S4a), Tagesfenster und Wetterlauf je
     # Ort im gemeinsamen Baustein; Kontingent und no_weather bleiben hier.
     try:
-        kontext = aufbau.compare_wetter_laden(preset, locations, target_date, user_id)
+        # #3122 B1b: der Slot-Typ steuert den Ausblick eines Abos mit Tabelle.
+        kontext = aufbau.compare_wetter_laden(preset, locations, target_date, user_id,
+                                              report_type=report_type)
     except Exception as exc:
         if not weather_failure_as_outcome:
             raise

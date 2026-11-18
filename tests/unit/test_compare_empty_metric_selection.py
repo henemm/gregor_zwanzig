@@ -220,15 +220,15 @@ class TestMailWirkungAC1AC9:
         Wettergroessen-Zeile."""
         preset = {"id": "p-ac1", "display_config": {"active_metrics": []}}
         options = resolve_compare_render_options(preset)
-        assert options.enabled_metrics == [], (
+        assert options.enabled_metrics_by_channel["email"] == [], (
             f"Bewusste Leerauswahl muss als [] aufgeloest werden (AC-1-"
-            f"Voraussetzung), erhalten {options.enabled_metrics!r}"
+            f"Voraussetzung), erhalten {options.enabled_metrics_by_channel!r}"
         )
 
         result = _result()
         html, plain = render_compare_email(
             result,
-            enabled_metrics=options.enabled_metrics,
+            enabled_metrics=options.enabled_metrics_by_channel["email"],
             hourly_metrics=options.hourly_metrics,
             hourly_enabled=options.hourly_enabled, preset=PRESET_ALLGEMEIN,
         )
@@ -241,7 +241,8 @@ class TestMailWirkungAC1AC9:
                 f"Klartext darf bei Leerauswahl keine Wettergroessen-Zeile '{label}' zeigen"
             )
 
-        msg = render_compare_telegram(result, enabled_metrics=options.enabled_metrics)
+        msg = render_compare_telegram(
+            result, enabled_metrics=options.enabled_metrics_by_channel["telegram"])
         assert " · " not in msg.split("\n")[0], "Telegram darf keine Metrik-Zellen zeigen"
         for label in ("Temp", "Wind", "Sonne", "Wolken"):
             assert f"{label} " not in msg, (
