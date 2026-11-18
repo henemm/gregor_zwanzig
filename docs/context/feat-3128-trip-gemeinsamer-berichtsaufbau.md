@@ -110,3 +110,11 @@ Reihenfolge: (1) Golden SMS/Telegram/Mail gegen Ist-Stand, (2) Spec, (3) Baustei
 
 ### Open Questions
 - keine Produktfrage (Vorschau = zugestellte SMS ist mit #1743 entschieden; Drift-Behebung in #3144).
+
+## Hinweise fuer /50-implement (aus Phase 5, TDD RED)
+- RED: `tests/tdd/test_trip_briefing_aufbau.py` 4 rot (AC-4, AC-5, AC-6, AC-7 Kontingent; alle `ModuleNotFoundError services.trip_briefing_aufbau`), 13 gruen (Golden AC-1/2, AC-3, AC-7 no_stage/no_weather, AC-8). Golden: `tests/golden/trip_briefing_aufbau/`, neu erzeugen nur mit `GZ_GOLDEN_ERZEUGEN=3128` (nicht im Umbau!).
+- AC-4 erzwingt: der Versand-Render-Aufruf in `NotificationService.send_trip_report` (~Z. 832, `format_email(..., has_gap, undelivered, lang)`) muss zur Laufzeit ueber `services.trip_briefing_aufbau.trip_report_rendern` laufen (Modul-Attribut aufloesen, nicht per `from ... import` an Modulebene binden). `notification_service.py` ist damit Pflichtaenderung.
+- Kontingent-Ergebnis heisst real `"kontingent_erschoepft"` (`manuell_abgelehnt` ist nur die Pruef-Funktion); Test prueft `kontingent_erschoepft`.
+- AC-6 ruft direkt `trip_segmente_bauen(scheduler, trip, TAG, persist=False)`; Buchungen in `forecast_budget.json`(+`.lock`) sind erlaubt.
+- `tests/tdd/test_bug_397_output_localtime.py:539-551` prueft per `inspect.getsource(PreviewService._build_report)` auf `"trip_tz"`: wird `_build_report` eine reine Weiterleitung, Fundstelle auf die Baustein-Funktion verschieben (wo `tz=trip_tz` an den Formatter geht) oder `trip_tz` in der Fassade behalten. `test_issue_1004_ssot_callers.py`: keine Quelltextpruefung; `_convert_trip_to_segments` und Demo-FixtureProvider (`demo=True`) muessen erhalten bleiben.
+- Bestehende Waechter, die gruen bleiben muessen: Anker `test_briefing_anchor_survives_dispatch_failure.py`, `test_erfolg_heisst_wirkung_s4b.py`, `test_alert_channel_anchor_delivery.py`; Kontingent `test_abruf_kontingent_manuell.py`, `test_abruf_kontingent_interaktiv.py`; Phasenuhr `tests/test_befehl_antwortzeit.py`, `tests/test_befehl_messlogik_paarung.py`; Mail-Golden `test_einstellung_gleich_mail_trip.py`.
