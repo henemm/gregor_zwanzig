@@ -727,3 +727,21 @@ e2e/ganzseitenaufnahme-selbsttest.spec.ts
 #             Zielverbund misst der CI-Hauptlauf des PR.
 #   Filter C: kein Screenshot-Schreibziel.
 e2e/etappen-orte-listen-3007.spec.ts
+# Aufnahme 2026-11-18 (#3122 B3a):
+# einstelltabelle-bausteine.spec.ts -- Bausteine Haken, RohEinfachKnopf und EinstellTabelle auf der
+# Vorschauseite /_design-system/einstelltabelle (nur Bausteine, Beispieldaten, kein Netz, keine
+# Serverdaten): Ereignisse fuer Haken, Format und Reihenfolge, Tastatur und Ziehen, nicht bedienbare
+# Spalte, 390 px mit fuenf Spalten ohne seitliches Scrollen und ohne sichtbare Beispielwerte,
+# Kontrast der Texte nach WCAG AA, Nicht-Text-Kontrast 3:1 fuer Strich, festen Haken und Kaestchen
+# (hell und dunkel), Marke bei 1200 px in ihrer Zelle.
+# Fallzahl: 13 (ET-1 bis ET-8 und ET-11 je ein Fall, ET-9 und ET-10 je zwei) (+ global.setup).
+#   Filter A: kein waitForTimeout/skip/fixme/__dirname/Hauptrepo-Pfad, kein .staging.spec.
+#   Filter B: vor dem Fix-Loop (10 Faelle) 3x im Zielverbund gemessen am 2026-11-18 (Positivliste
+#             ohne bug-703 + diese Datei, lokaler ci-stack auf 8091/8000, CI=1): die Faelle dieser
+#             Datei in jedem Lauf gruen. Lauf 1 und 3: 1 rot (mobile-ux-messung AC-9, in jener
+#             Umgebung auch auf origin/main rot: Segmentbreiten weichen um Bruchteile ab). Lauf 2
+#             ohne Neustart des Go-Servers: 45 Faelle anderer Dateien rot mit 429
+#             (Registrierungsbremse je Stunde), in der CI startet der Stack je Lauf frisch.
+#             Mit 13 Faellen 3x einzeln gruen; den Zielverbund misst der CI-Hauptlauf des PR.
+#   Filter C: keine Aufnahmen, schreibt keine Datei.
+e2e/einstelltabelle-bausteine.spec.ts

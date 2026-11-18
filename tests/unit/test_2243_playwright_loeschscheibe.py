@@ -259,15 +259,15 @@ CI_YML = REPO_ROOT / ".github" / "workflows" / "ci.yml"
 
 def test_ac7_positivliste_eintraege_und_alle_existieren():
     eintraege = [z.strip() for z in POSITIVLISTE.read_text("utf-8").splitlines() if z.startswith("e2e/")]
-    assert len(eintraege) == 84  # 80 + 2 (#2961) + 1 (#2953) + 1 (#3007)
+    assert len(eintraege) == 85  # 80 + 2 (#2961) + 1 (#2953) + 1 (#3007) + 1 (#3122 B3a)
     fehlend = [e for e in eintraege if not (FRONTEND / e).exists()]
     assert fehlend == []
 
 
 def test_ac7_ratschen_unveraendert():
     text = CI_YML.read_text("utf-8")
-    assert re.search(r"^\s*E2E_MIN_SPECS: 84\b", text, re.M)
-    assert re.search(r"^\s*E2E_MIN_EXECUTED_HAUPT: 725\b", text, re.M)  # 716 + 1 (#2961 F003) + 4 (#2953) + 4 (#3007)
+    assert re.search(r"^\s*E2E_MIN_SPECS: 85\b", text, re.M)
+    assert re.search(r"^\s*E2E_MIN_EXECUTED_HAUPT: 738\b", text, re.M)  # 716 + 1 (#2961 F003) + 4 (#2953) + 4 (#3007) + 13 (#3122 B3a)
 
 
 def test_ac7_positivlisten_kopf_nennt_geloeschte_specs_nicht_mehr():

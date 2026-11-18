@@ -38,6 +38,12 @@ export { default as Stat } from './Stat.svelte';
 // Issue #2913 Teil 2 — Skelett (Lade-Platzhalter, Mockup `.skel`)
 export { default as Skelett } from './Skelett.svelte';
 
+// Issue #3122 B3a — Bausteine der Einstell-Tabelle „Was steht wo“
+export { default as Haken } from './Haken.svelte';
+export { default as RohEinfachKnopf } from './RohEinfachKnopf.svelte';
+
 // Typen aus neuen Atomen
+export type { HakenZustand } from './Haken.svelte';
+export type { Darstellung } from './RohEinfachKnopf.svelte';
 export type { SwitchSize, SwitchTone } from './Switch.svelte';
 export type { AvatarUser } from './AvatarStack.svelte';

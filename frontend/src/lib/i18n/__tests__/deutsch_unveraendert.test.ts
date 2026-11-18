@@ -441,6 +441,14 @@ const NEU_IN_FOLGEPAKETEN = [
 	'bausteine.datum.naechster_monat',
 	// #2913 Teil 2 (K-4): Standard-Beschriftung des Atoms atoms/Skelett: bausteine.json
 	'bausteine.skelett.laedt',
+	// #3122 B3a: Bausteine der Einstell-Tabelle „Was steht wo“ (Haken, RohEinfachKnopf, EinstellTabelle): bausteine.json
+	'bausteine.haken.name_mit_grund',
+	'bausteine.darstellung.name',
+	'bausteine.darstellung.raw',
+	'bausteine.darstellung.simplified',
+	'bausteine.darstellung.simplified_kurz',
+	'bausteine.einstelltabelle.zeilen_sortieren',
+	'bausteine.einstelltabelle.zeile_verschieben',
 	// #2794 S3a Teil-PR 3: Reiter Wetter und Dialog „Als eigene Vorlage speichern“: wetter.json
 	'wetter.kopf.titel',
 	'wetter.kopf.erklaerung',

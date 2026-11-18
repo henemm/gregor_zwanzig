@@ -503,7 +503,9 @@ export function bestandImBaum(srcWurzel: string): string[] {
 /** Seiten/Reiter, für die Regel (a) gilt. Startet leer; jede Scheibe trägt ihre neuen Dateien ein. */
 const SEITEN_SCOPE: string[] = [
 	// #2913 Teil 2 (AC-17, K-1): Reiter „Wetter“ (Trip und Orts-Briefing) als dünne Seite.
-	'lib/components/shared/WetterTab.svelte'
+	'lib/components/shared/WetterTab.svelte',
+	// #3122 B3a: Vorschauseite der Bausteine Haken, RohEinfachKnopf und EinstellTabelle.
+	'routes/_design-system/einstelltabelle/+page.svelte'
 ];
 
 /** Freigegebene Kompositionen außerhalb der Baustein-Ordner (Import-Ausnahme für Regel (a)). */
