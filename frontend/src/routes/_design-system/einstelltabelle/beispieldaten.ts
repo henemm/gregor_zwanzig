@@ -12,6 +12,7 @@ export const FESTE_ZEILE: EinstellFesteZeile = {
 	name: 'Amtliche Warnungen',
 	hinweis: 'immer dabei: in E-Mail und Telegram zuerst, in der SMS am Ende',
 	grund: 'immer dabei',
+	// ADR-0049: Stellen (Spalten) der Tabelle, keine Versand-Kanal-Liste. Die Premium-SMS folgt der SMS und hat bis S9 keine eigene Spalte (ADR-0124 Nr. 8).
 	stellen: ['email', 'telegram', 'sms']
 };
 
