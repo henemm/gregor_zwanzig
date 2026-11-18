@@ -341,7 +341,10 @@ def test_ac17_trip_sms_beispiel_gleich_versand_und_marken(client):
 
     assert antwort["sms_example"]["text"] == versand
     assert antwort["sms_example"]["length"] == len(versand)
+    # Grenze des Versandwegs: trip_report.format_email ruft format_sms(max_length=160)
+    # (SMS und Premium-SMS senden denselben report.sms_text).
     assert antwort["sms_example"]["max_length"] == 160
+    assert len(versand) <= antwort["sms_example"]["max_length"]
     fehlend = {m for m in _sms_an(antwort) if _trip_fehlt_in_sms(versand, m)}
     assert fehlend, "Datensatz muss die SMS ueberlaufen lassen"
     markiert = {z["metric_id"] for z in antwort["rows"]
@@ -358,6 +361,12 @@ def test_ac17_orte_sms_beispiel_gleich_versand_und_marken(client, anzahl):
 
     assert antwort["sms_example"]["text"] == versand
     assert antwort["sms_example"]["length"] == len(versand)
+    # Grenze des Versandwegs: render_compare_sms kuerzt auf CHANNEL_LIMITS["sms"]["max_chars"]
+    # (verkettungssicheres GSM-7-Budget); die Premium-SMS sendet denselben Text.
+    from output.renderers.channel_layout import CHANNEL_LIMITS
+
+    assert antwort["sms_example"]["max_length"] == CHANNEL_LIMITS["sms"]["max_chars"]
+    assert len(versand) <= antwort["sms_example"]["max_length"]
     if anzahl == 1:
         teil = versand.split(": ", 1)[1]
         assert teil.startswith(ORTSNAMEN[0])
@@ -476,8 +485,7 @@ def test_legende_kuerzel_genau_der_sms_metriken_und_feste_eintraege(client):
     antwort = _ok(client, "t-leg", "route")
     legende = antwort["legend"]
     metriken = {e["metric_id"] for e in legende["metrics"]}
-    soll = {m for m in _sms_an(antwort) if get_metric(m).kuerzel_bedeutung_de}
-    assert metriken == soll and "gust" not in metriken
+    assert metriken <= set(_sms_an(antwort)) and "gust" not in metriken
     wind = next(e for e in legende["metrics"] if e["metric_id"] == "wind")
     assert (wind["kuerzel"], wind["meaning"]) == next(iter(get_metric("wind").kuerzel_bedeutung_de.items()))
     assert [e["token"] for e in legende["fixed"]] == [
@@ -542,3 +550,85 @@ def test_robustheit_kind_kennung_und_user_id(client):
     assert _get(client, "..%2Fx", "route").status_code in (400, 404)
     ohne = client.get("/api/briefings/t-rob/placements", params={"kind": "route"})
     assert ohne.status_code == 422, "user_id ist Pflicht"
+
+
+# ---------------------------------------------------------------------------
+# Kuerzel-Legende = Kuerzel, die der SMS-Renderer der Flaeche wirklich sendet
+# (Spec Teil B Nr. 12, AC-31), Deutsch und Englisch
+# ---------------------------------------------------------------------------
+
+def _sprache(user: str, lang: str) -> None:
+    pfad = _root() / "users" / user / "user.json"
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    pfad.write_text(json.dumps({"id": user, "language": lang}), encoding="utf-8")
+
+
+def _trip_kuerzel_in_sms(sms: str) -> set[str]:
+    """Metrik-Kuerzel der Trip-SMS aus den Symboltabellen des Renderers
+    (laengstes passendes Symbol, ohne Doppelpunkt, Warnblock ausgenommen)."""
+    from output.renderers.sms_trip import SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC
+
+    alle = set(SMS_SYMBOL_BY_METRIC.values()) | {
+        s for syms in SMS_MULTI_SYMBOLS_BY_METRIC.values() for s in syms}
+    out = set()
+    for tok in sms.split(": ", 1)[1].split(" "):
+        treffer = [s for s in alle if tok.startswith(s)]
+        if treffer and not tok.startswith("!"):
+            out.add(max(treffer, key=len).rstrip(":"))
+    return out
+
+
+def _orte_kuerzel_in_sms(sms: str) -> set[str]:
+    """Metrik-Kuerzel der Orte-SMS: Woerter, die ein Kuerzel aus der
+    Kuerzel-Tabelle des Orte-Renderers sind."""
+    from app.metric_catalog import kurzform_kuerzel
+    from output.renderers.comparison import _RENDERER_TO_CATALOG_METRIC_ID
+
+    codes = {kurzform_kuerzel(c) for c in _RENDERER_TO_CATALOG_METRIC_ID.values()} - {""}
+    worte = re.split(r"[ ;]+", sms.split(": ", 1)[1])
+    return {w for w in worte if w in codes}
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+@pytest.mark.parametrize("kind", ["route", "vergleich"])
+def test_legende_hat_jedes_gesendete_kuerzel_mit_bedeutung(client, kind, lang):
+    from app.metric_catalog import get_metric
+
+    _sprache(NUTZER_A, lang)
+    if kind == "route":
+        _trip(NUTZER_A, "t-kz", grund=["temperature"] + TRIP_GRUND[:8],
+              placements={"version": 1, "rows": [{"metric_id": "uv_index", "places": {"sms": False}}]})
+        antwort, gesendet_fn = _ok(client, "t-kz", kind), _trip_kuerzel_in_sms
+    else:
+        _orte(NUTZER_A, "o-kz", anzahl=1, placements={"version": 1, "rows": [
+            {"metric_id": "uv_index", "places": {"sms": False}}]})
+        antwort, gesendet_fn = _ok(client, "o-kz", kind), _orte_kuerzel_in_sms
+    legende = antwort["legend"]["metrics"]
+    gesendet = gesendet_fn(antwort["sms_example"]["text"])
+    assert gesendet, "Beispiel-SMS ohne Metrik-Kuerzel"
+    in_legende = {e["kuerzel"] for e in legende}
+    assert gesendet <= in_legende, f"gesendet, aber nicht erklaert: {gesendet - in_legende}"
+    assert all(e["meaning"] for e in legende)
+    sms_an = set(_sms_an(antwort))
+    assert {e["metric_id"] for e in legende} <= sms_an and "uv_index" not in sms_an
+    if kind == "route":
+        assert "T" not in in_legende, "Temperatur sendet kein T in der Trip-SMS"
+    else:
+        assert {"D", "L"} <= in_legende, "Orte senden Hoechst/Tiefst als D/L"
+    for e in legende:
+        # Kuerzel unuebersetzt, Bedeutung in der Sprache des Nutzers aus dem Katalog
+        katalog = {}
+        for m in (e["metric_id"], *_kuerzel_quellen(e["metric_id"])):
+            d = get_metric(m)
+            katalog.update(d.kuerzel_bedeutung_en if lang == "en" else d.kuerzel_bedeutung_de)
+        assert e["meaning"] == katalog[e["kuerzel"]], e
+
+
+def _kuerzel_quellen(metric_id: str) -> tuple[str, ...]:
+    """Katalog-IDs, unter denen der Orte-Renderer die Kuerzel einer Zeile fuehrt
+    (Temperatur -> Tageshoechst/-tiefst)."""
+    from output.renderers.compare_metric_ids import _renderer_ids_for_kennung
+    from output.renderers.comparison import _RENDERER_TO_CATALOG_METRIC_ID
+
+    return tuple(_RENDERER_TO_CATALOG_METRIC_ID[r] for r in _renderer_ids_for_kennung(metric_id)
+                 if r in _RENDERER_TO_CATALOG_METRIC_ID)
