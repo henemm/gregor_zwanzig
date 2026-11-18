@@ -1,0 +1,119 @@
+❄ WINTERSPORT · PISTE
+Hoehenweg Nord - Abend-Briefing
+Etappe 3: Kamm 2
+30.10.2026
+43.4 km | ↑600m | ↓0m | max. 1200m
+
+Etappe 3: Kamm 2: 2°C, ⛅, starker Regen max 16:00, starker Wind 50 km/h, Böen bis 75 km/h ab 11:00, ⚡ möglich 11:00–17:00
+
+━━ Metriken-Überblick ━━
+  -5 – 2°C · Max 08:00
+  Wind >30 km/h ab 11:00 · max 50 (11:00)
+  Böen >30 km/h ab 11:00 · max 75 (11:00)
+  Regen ab 11:00 · 18.1 mm
+  Gewitter mittel ab 11:00 · stärkste 11:00
+  40–60% bewölkt · Max 14:00
+  Sicht min 7.0 km (14:00)
+  Sonne 42.0h
+
+━━ Segment 1: km 0.0–20.4 | 08:00–14:05 | ↑600m → 900m ━━
+  Zeit   Temp   Feels   Wind   Gust   Rain   Thdr     Cloud   Visib   Sun   SnowH   NewSn 
+  -----  -----  ------  -----  -----  -----  -------  ------  ------  ----  ------  ------
+  08     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
+  09     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
+  10     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
+  11     2.0    –       50     75     2.5    mittel   ⛅       9.0     ⛅     5       –     
+  12     2.0    –       50     75     2.6    mittel   ⛅       9.0     ⛅     5       –     
+  13     2.0    –       50     75     2.7    mittel   ⛅       9.0     ⛅     5       –     
+  14     2.0    –       50     75     2.8    mittel   ⛅       9.0     ⛅     5       –     
+  08     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
+  09     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
+  10     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
+  11     2.0    –       50     75     2.5    mittel   ⛅       9.0     ⛅     5       –     
+  12     2.0    –       50     75     2.6    mittel   ⛅       9.0     ⛅     5       –     
+  13     2.0    –       50     75     2.7    mittel   ⛅       9.0     ⛅     5       –     
+  14     2.0    –       50     75     2.8    mittel   ⛅       9.0     ⛅     5       –     
+  08     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
+  09     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
+  10     2.0    –       15     22     0.1    kein     ⛅       9.0     ⛅     5       –     
+  11     2.0    –       50     75     2.5    mittel   ⛅       9.0     ⛅     5       –     
+  12     2.0    –       50     75     2.6    mittel   ⛅       9.0     ⛅     5       –     
+  13     2.0    –       50     75     2.7    mittel   ⛅       9.0     ⛅     5       –     
+  14     2.0    –       50     75     2.8    mittel   ⛅       9.0     ⛅     5       –     
+
+━━ Segment 2: km 20.4–43.4 | 14:05–20:51 | ↑900m → 1200m ━━
+  Zeit   Temp   Feels   Wind   Gust   Rain   Thdr     Cloud   Visib   Sun   SnowH   NewSn 
+  -----  -----  ------  -----  -----  -----  -------  ------  ------  ----  ------  ------
+  14     -5.0   –       50     75     2.8    mittel   ⛅       7.0     ⛅     45      –     
+  15     -5.0   –       50     75     2.9    mittel   ⛅       7.0     ⛅     45      –     
+  16     -5.0   –       50     75     3.0    mittel   ⛅       7.0     ⛅     45      –     
+  17     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+  18     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+  19     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+  20     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+  14     -5.0   –       50     75     2.8    mittel   ⛅       7.0     ⛅     45      –     
+  15     -5.0   –       50     75     2.9    mittel   ⛅       7.0     ⛅     45      –     
+  16     -5.0   –       50     75     3.0    mittel   ⛅       7.0     ⛅     45      –     
+  17     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+  18     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+  19     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+  20     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+  14     -5.0   –       50     75     2.8    mittel   ⛅       7.0     ⛅     45      –     
+  15     -5.0   –       50     75     2.9    mittel   ⛅       7.0     ⛅     45      –     
+  16     -5.0   –       50     75     3.0    mittel   ⛅       7.0     ⛅     45      –     
+  17     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+  18     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+  19     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+  20     -5.0   –       20     30     0.3    kein     ⛅       7.0     ⛅     45      –     
+
+━━ 🏁 Wetter am Ziel: 20:51–21:51 | 1200m ━━
+  Zeit   Temp   Feels   Wind   Gust   Rain   Thdr   Cloud   Visib   Sun   SnowH   NewSn 
+  -----  -----  ------  -----  -----  -----  -----  ------  ------  ----  ------  ------
+  20     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
+  21     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
+  20     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
+  21     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
+  20     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
+  21     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
+
+━━ Nacht am Ziel (1200m) ━━
+Ankunft 21:51 → Morgen 06:00
+  Zeit   Temp   Feels   Wind   Gust   Rain   Thdr   Cloud   Visib   Sun   SnowH   NewSn 
+  -----  -----  ------  -----  -----  -----  -----  ------  ------  ----  ------  ------
+  20     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
+  22     2.0    –       15     22     0.2    kein   ⛅       9.0     ⛅     5       –     
+  00     2.0    –       15     22     0.2    kein   ⛅       9.0     ⛅     5       –     
+  02     2.0    –       15     22     4.1    hoch   ⛅       9.0     ⛅     5       –     
+  04     2.0    –       15     22     0.2    kein   ⛅       9.0     ⛅     5       –     
+  06     2.0    –       15     22     0.1    kein   ⛅       9.0     ⛅     5       –     
+  * Temperatur/Nullgradgrenze: Minimum im 2h-Block
+
+
+Nächste Etappen
+Sa  Kamm 3                     Temp -5/2  Feels -/-  Wind 50 km/h  Gust 75 km/h  Rain 17.8 mm  Thdr ⚡mittel@11  Cloud 47 %  Visib 7000 m  Sun 13.0 h  SnowH 45 cm  NewSn –  ACC –
+    ↳ Gewitter möglich · Regen 18 mm · Böen bis 50 km/h
+
+
+── Antwort-Kommandos ──
+  HEUTE                – Wetter der heutigen Etappe
+  MORGEN               – Wetter der morgigen Etappe
+  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)
+  GEWITTER             – Gewittergefahr heutige Etappe
+  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke
+  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)
+  STATUS               – Heute und kommende Etappen
+  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen
+  SKIP                 – Nächstes Briefing überspringen
+  STOP                 – Briefings dauerhaft deaktivieren (auch ABBRUCH)
+  WEITER               – Briefings reaktivieren
+  HILFE                – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
+  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben
+  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)
+
+Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · Cloud % · Visib km · Sun h · SnowH, NewSn cm
+Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · Thdr = Gewitter · Cloud = Bewölkung · Visib = Sichtweite · Sun = Sonnenstunden · SnowH = Schneehöhe · NewSn = Neuschnee
+------------------------------------------------------------
+Generated: 2026-10-29 04:00 UTC
+Data: openmeteo (fixture)
+Etappen-Briefing · Vollversion · openmeteo
