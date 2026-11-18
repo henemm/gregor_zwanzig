@@ -33,7 +33,7 @@
 		aria-label={$t('bausteine.darstellung.name', { name, form })}
 		onclick={() => onAenderung?.(wert === 'raw' ? 'simplified' : 'raw')}
 	>
-		<span class="rek-pille">
+		<span class="rek-pille" data-slot="roh-einfach-pille">
 			<span data-slot="roh-einfach-lang">{form}</span><span class="rek-kurz" data-slot="roh-einfach-kurz">{kurz}</span>
 		</span>
 	</button>

@@ -8,7 +8,7 @@
 		/** Kennung der Stelle (email, telegram, sms, hourly, outlook); steht in jedem Ereignis. */
 		id: string;
 		titel: string;
-		/** Kurztitel für das enge Raster (Handy); ohne Angabe der Titel. */
+		/** Kurztitel für das enge Raster (Handy, höchstens etwa acht Zeichen); ohne Angabe der Titel. */
 		titelKurz?: string;
 		unterzeile?: string;
 		/** Mit Trennlinie abgesetzt (Stundenverlauf, 3-Tages-Ausblick). */
@@ -246,8 +246,13 @@
 			padding: var(--g-s-2) var(--g-s-3);
 		}
 		.et-abgesetzt {
+			align-self: center;
 			padding-left: 0;
 			border-left: 0;
+		}
+		.et-raster :global([data-slot='roh-einfach-pille']) {
+			padding: var(--g-size-3px) var(--g-s-1);
+			font-size: var(--g-size-10px);
 		}
 		.et-lang,
 		.et-kopf small,
@@ -270,12 +275,18 @@
 			flex-direction: column;
 			gap: 0;
 		}
+		.et-raster :global([data-slot='haken'][data-zustand='gesperrt']) {
+			max-width: 100%;
+		}
 		.et-marke,
-		.et-raster :global([data-slot='haken-grund']) {
+		.et-raster :global(em[data-slot='haken-grund']) {
+			max-width: 100%;
 			font-size: var(--g-size-10px);
 			line-height: 1.15;
 			text-align: center;
 			white-space: normal;
+			hyphens: auto;
+			overflow-wrap: anywhere;
 		}
 	}
 	/* Handy: feste Spaltenbreite = Tippfläche, der Name bekommt den Rest (Mockup `.kx.s5`). */
@@ -283,10 +294,17 @@
 		.et-raster {
 			grid-template-columns: var(--g-size-14px) minmax(0, 1fr) !important;
 			grid-auto-columns: var(--g-tap-min);
+			column-gap: var(--g-size-2px);
 			padding-block: var(--g-s-1);
 		}
 		.et-kopf {
 			padding-block: var(--g-s-2);
+		}
+		/* Kurztitel bleiben einzeilig und mittig über ihrer Spalte (bis etwa acht Zeichen). */
+		.et-kopfzelle {
+			display: flex;
+			justify-content: center;
+			white-space: nowrap;
 		}
 		.et-name {
 			font-size: var(--g-size-13px);

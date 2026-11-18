@@ -26,8 +26,9 @@
 
 	function aendern(e: Event & { currentTarget: HTMLInputElement }) {
 		const neu = e.currentTarget.checked;
+		// Gesteuert: die Anzeige folgt der Prop. Ein Skript-Klick auf ein gesperrtes Kästchen meldet nichts.
 		e.currentTarget.checked = zustand === 'an';
-		onAenderung?.(neu);
+		if (bedienbar) onAenderung?.(neu);
 	}
 </script>
 
@@ -74,6 +75,7 @@
 		position: relative;
 		display: block;
 		box-sizing: border-box;
+		pointer-events: none;
 		width: var(--g-s-5);
 		height: var(--g-s-5);
 		border: var(--g-size-2px) solid var(--g-ink-3);
@@ -120,15 +122,20 @@
 	.hk-strich {
 		display: inline-flex;
 		align-items: center;
-		gap: var(--g-s-2);
+		gap: var(--g-size-6px);
 		min-width: 0;
 		color: var(--g-ink-3);
+	}
+	/* Mit Kurztext daneben rückt der Strich enger, damit der Grund in eine schmale Spalte passt. */
+	.hk-strich[data-zustand='gesperrt'] .hk-nix {
+		width: var(--g-s-5);
 	}
 	.hk-grund {
 		font-style: normal;
 		font-size: var(--g-text-xs);
 		font-weight: 500;
 		line-height: 1.2;
+		white-space: nowrap;
 		color: var(--g-ink-3);
 	}
 	/* Tippfläche ≥ --g-tap-min (Charter §7), die sichtbare Größe bleibt. Bedingung wie app.css (#2601). */

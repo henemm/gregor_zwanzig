@@ -21,7 +21,7 @@
 //   cd frontend && npx playwright test e2e/einstelltabelle-bausteine.spec.ts --workers=1 --trace off
 
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { dragDndZoneItem, kontrastBericht, kontrastVerstoesse, messeKontrast } from './helpers';
+import { kontrastBericht, kontrastVerstoesse, messeKontrast } from './helpers';
 
 const DESKTOP = { width: 1280, height: 900 };
 const MOBIL = { width: 390, height: 844 };
@@ -88,10 +88,10 @@ test.describe('Atome', () => {
 		await oeffne(page);
 		const bereich = page.getByTestId('demo-knopf');
 		const roh = bereich.getByRole('button', { name: 'Darstellung Wind in E-Mail: Roh' });
-		await expect(roh).toHaveText('Roh');
+		await expect(roh).toHaveText('Roh', { useInnerText: true });
 		await roh.click();
 		const einfach = bereich.getByRole('button', { name: 'Darstellung Wind in E-Mail: Einfach' });
-		await expect(einfach).toHaveText('Einfach');
+		await expect(einfach).toHaveText('Einfach', { useInnerText: true });
 		await expect(einfach).toHaveAttribute('data-wert', 'simplified');
 		expect(await ereignisse(page)).toEqual([{ quelle: 'knopf', format: 'simplified' }]);
 		await einfach.focus();
@@ -136,9 +136,9 @@ test.describe('Einstell-Tabelle', () => {
 
 		// Format: genau ein Ereignis; die Knöpfe der anderen Stellen bleiben, wie sie sind.
 		await zelle(orte, 'wind', 'hourly').getByRole('button', { name: 'Darstellung Wind im Stundenverlauf: Roh' }).click();
-		await expect(zelle(orte, 'wind', 'hourly').getByRole('button')).toHaveText('Einfach');
-		await expect(zelle(orte, 'wind', 'email').getByRole('button')).toHaveText('Roh');
-		await expect(zelle(orte, 'wind', 'outlook').getByRole('button')).toHaveText('Roh');
+		await expect(zelle(orte, 'wind', 'hourly').getByRole('button')).toHaveText('Einfach', { useInnerText: true });
+		await expect(zelle(orte, 'wind', 'email').getByRole('button')).toHaveText('Roh', { useInnerText: true });
+		await expect(zelle(orte, 'wind', 'outlook').getByRole('button')).toHaveText('Roh', { useInnerText: true });
 		expect((await ereignisse(page)).slice(2)).toEqual([{ quelle: 'orte', art: 'format', metrik: 'wind', stelle: 'hourly', format: 'simplified' }]);
 
 		// Nie ein Knopf in der SMS-Spalte; Marken stehen in ihrer Zelle.
@@ -190,10 +190,25 @@ test.describe('Einstell-Tabelle', () => {
 		await oeffne(page);
 		const trip = page.getByTestId('demo-trip');
 		const start = await reihenfolge(trip);
-		await dragDndZoneItem(page, zeile(trip, start[2]!).getByTestId('drag-handle'), zeile(trip, start[0]!).getByTestId('drag-handle'));
+		const mitte = async (l: Locator) => {
+			const b = (await l.boundingBox())!;
+			return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+		};
+		// Dritte Zeile am Griff über die erste ziehen. Losgelassen wird erst, wenn die Zone den Platz
+		// freigemacht hat (Zwischenstand von SortableList) — ohne feste Wartezeit.
+		await zeile(trip, start[0]!).scrollIntoViewIfNeeded();
+		const von = await mitte(zeile(trip, start[2]!).getByTestId('drag-handle'));
+		const nach = await mitte(zeile(trip, start[0]!).getByTestId('drag-handle'));
+		await page.mouse.move(von.x, von.y);
+		await page.mouse.down();
+		await page.mouse.move(von.x, von.y - 12, { steps: 6 });
+		await page.mouse.move(nach.x, nach.y, { steps: 15 });
 		const neu = [start[2], start[0], start[1], ...start.slice(3)];
 		await expect.poll(() => reihenfolge(trip)).toEqual(neu);
-		expect(await ereignisse(page)).toEqual([{ quelle: 'trip', art: 'reihenfolge', metriken: neu }]);
+		expect(await ereignisse(page), 'während des Ziehens wird nichts gemeldet').toEqual([]);
+		await page.mouse.up();
+		await expect.poll(() => ereignisse(page)).toEqual([{ quelle: 'trip', art: 'reihenfolge', metriken: neu }]);
+		expect(await reihenfolge(trip)).toEqual(neu);
 	});
 });
 
