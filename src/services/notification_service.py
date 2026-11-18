@@ -654,7 +654,7 @@ def _alert_kanal_metriken(display_config, channel: str, report_type: str) -> lis
     if view.rows:
         zeilen = tuple(ChannelRow(r.metric_id, True, r.cell(channel).format, i)
                        for i, r in enumerate(view.rows))
-    return channel_metric_configs(zeilen, display_config, channel, report_type)
+    return channel_metric_configs(zeilen, display_config)
 
 
 def _alert_format_modes(display_config) -> dict[str, dict[str, str]]:

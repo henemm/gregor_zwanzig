@@ -910,7 +910,7 @@ def _adapter_gegen_orakel(name: str, roh: dict) -> list[str]:
     for rt in REPORT_TYPES:
         vm = resolve_channel_lists(dc, "trip", rt)
         for kanal in ("email", "telegram"):
-            neu = channel_metric_configs(getattr(vm, kanal), dc, kanal, rt)
+            neu = channel_metric_configs(getattr(vm, kanal), dc)
             alt = [dataclasses.replace(mc, enabled=True)
                    for mc in alt_trip_metrics_for_channel(dc, kanal, rt)]
             if [m.metric_id for m in neu] != [m.metric_id for m in alt]:

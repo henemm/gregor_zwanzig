@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import NamedTuple, Optional, Sequence
 
 from app import models as _models
@@ -45,6 +45,14 @@ class ChannelRow:
     enabled: bool
     format: Optional[str]
     order: int
+    # #3122: Herkunft einer Trip-Kanal-Zeile im bisherigen Pfad -- genau der
+    # Eintrag, den die Kaskade geliefert hat (Kanal-Ebene oder, im Rueckfall
+    # und ohne Kanal-Ebene, Grundauswahl). Er traegt, was die Zeile nicht
+    # traegt (``horizons``, Position, Format-Schreibweise); die Adapter der
+    # Ausgaben reichen ihn durch, statt die Kaskaden-Regeln nachzubilden.
+    # ``None`` im neuen Eingang (``placements``) und bei Orten. Kein Teil von
+    # Vergleich und Hash der Zeile.
+    source: Optional[MetricConfig] = field(default=None, compare=False, repr=False)
 
 
 Rows = Optional[tuple[ChannelRow, ...]]
@@ -351,7 +359,7 @@ def _trip_view(display_config, report_type: str, *, ausblick: bool = True) -> Ma
     dc = _trip_model(display_config)
     kanaele = {
         ch: tuple(
-            ChannelRow(mc.metric_id, True, _trip_format(mc), i)
+            ChannelRow(mc.metric_id, True, _trip_format(mc), i, source=mc)
             for i, mc in enumerate(trip_channel_metrics(dc, ch, report_type))
         )
         for ch in KANAELE

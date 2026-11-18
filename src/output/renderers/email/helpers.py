@@ -1337,56 +1337,29 @@ def mit_zeilen_format(mc, fmt):
     )
 
 
-def _kanal_quellen(dc: UnifiedWeatherDisplayConfig, channel: str, report_type: str) -> dict:
-    """Bisheriger Pfad: Eintraege der wirksamen Kanal-Ebene je ``metric_id``
-    (erstes Vorkommen) -- sie tragen, was eine View-Model-Zeile nicht traegt
-    (``horizons`` u. a.). Nur die Ebenen-ERKENNUNG der Kaskade, keine Auswahl."""
-    from app import models as _models
-
-    quelle = _models._cascade_source_for_channel(
-        dc.per_report_layouts, dc.per_channel_layouts, channel, report_type,
-    )
-    if quelle == "per_report":
-        liste = dc.per_report_layouts[report_type][channel]  # type: ignore[index]
-    elif quelle == "per_channel":
-        liste = dc.per_channel_layouts[channel]  # type: ignore[index]
-    else:
-        liste = []
-    out: dict = {}
-    for mc in liste:
-        out.setdefault(mc.metric_id, mc)
-    return out
-
-
-def channel_metric_configs(
-    rows, dc: UnifiedWeatherDisplayConfig, channel: str, report_type: str,
-) -> list:
+def channel_metric_configs(rows, dc: UnifiedWeatherDisplayConfig) -> list:
     """Issue #3122 (ADR-0124): Zeilen des View-Models (E-Mail, Alarm) ->
     ``MetricConfig`` -- Auswahl, Folge und Roh/Einfach allein aus den Zeilen.
 
-    Abo mit Tabelle ``placements``: Eintrag der Grundauswahl (sonst neu) mit
-    dem Format der Zeile, ``order`` = Folge. Bisheriger Pfad: der Quell-
-    Eintrag (Kanal-Ebene, sonst Grundauswahl) geht unveraendert durch, sofern
-    er das Format der Zeile zeigt -- so bleibt die Ausgabe bytegleich (auch
-    ``horizons``); sonst traegt er das Format der Zeile."""
+    Bisheriger Pfad: die Zeile traegt den Eintrag, den die Kaskade geliefert
+    hat (``ChannelRow.source``); er geht unveraendert durch -- EINE Quelle,
+    keine Nachbildung der Kaskaden-Regeln, die Ausgabe bleibt bytegleich (auch
+    ``horizons``, Rueckfall auf die Grundauswahl). Abo mit Tabelle
+    ``placements`` (Zeile ohne Herkunft): Eintrag der Grundauswahl (sonst
+    neu) mit dem Format der Zeile, ``order`` = Folge."""
     import dataclasses
 
     from app.models import MetricConfig
-    from services.channel_list_resolver import _trip_format
-    from services.placements import read_placements
 
-    tabelle = read_placements(getattr(dc, "placements", None)) is not None
-    quellen = {} if tabelle else _kanal_quellen(dc, channel, report_type)
     grund: dict = {}
     for mc in dc.metrics:
         grund.setdefault(mc.metric_id, mc)
     out = []
     for i, row in enumerate(r for r in (rows or ()) if r.enabled):
-        quelle = quellen.get(row.metric_id) or grund.get(row.metric_id)
-        if quelle is not None and not tabelle and _trip_format(quelle) == row.format:
-            out.append(dataclasses.replace(quelle, enabled=True))
+        if row.source is not None:
+            out.append(dataclasses.replace(row.source, enabled=True))
             continue
-        basis = quelle or MetricConfig(metric_id=row.metric_id)
+        basis = grund.get(row.metric_id) or MetricConfig(metric_id=row.metric_id)
         out.append(dataclasses.replace(mit_zeilen_format(basis, row.format), enabled=True, order=i))
     return out
 

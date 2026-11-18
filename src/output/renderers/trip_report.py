@@ -161,7 +161,7 @@ class TripReportFormatter:
         # Kompakt) kommen allein aus den E-Mail-Zeilen des View-Models
         # (Adapter ``channel_metric_configs``) -- keine zweite Kaskade; davon
         # leben friendly/format/indicator keys, Kacheln, Nacht und Kompakt.
-        active_metrics = channel_metric_configs(_email_rows, dc, "email", report_type)
+        active_metrics = channel_metric_configs(_email_rows, dc)
         # Force enabled=True on all active metrics so downstream guards don't skip them
         # Issue #2422 S3 (AC-16): Layout-Eintraege tragen keine
         # Erwaehnungsschwelle -- die globale (KL-4, wie in der SMS) wird
