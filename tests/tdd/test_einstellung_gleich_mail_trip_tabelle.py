@@ -775,3 +775,42 @@ def test_bestand_ohne_tabelle_mail_eintraege_gleich_bisheriger_kaskade():
             if neu != alt:
                 fehler.append(f"{name}/{rt}")
     assert len(faelle) > 50 and not fehler, f"{len(fehler)} Abweichungen: {fehler[:5]}"
+
+
+def test_telegram_einfach_bei_bewoelkung_ohne_ladewarnung(monkeypatch, caplog):
+    """Telegram Einfach bei Bewoelkung und Windrichtung ist deren Katalog-
+    Standard (Symbol, Kompass) -- ohne Warnung "Unknown format_mode"."""
+    import logging
+
+    data = trip(tabelle([zeile("cloud_total", telegram="simplified"),
+                         zeile("wind_direction", telegram="simplified"), zeile("wind")],
+                        outlook_reports=[]))
+    with caplog.at_level(logging.WARNING):
+        mit = senden(monkeypatch, data, "evening", mit_ausblick=False)
+    assert _tg_kurz(mit, "CT") == "⛅", telegram_bubbles(mit)
+    assert not any("Unknown format_mode" in r.getMessage() for r in caplog.records), caplog.text
+
+
+def test_alarm_format_loest_keinen_ausblick_auf(caplog):
+    """Der Alarm-Pfad braucht nur die Kanal-Zeilen: er loest den 3-Tages-
+    Ausblick nicht mit auf und meldet darum auch dessen Rueckfall-Warnung
+    (#1848 A3, unaufloesbare Ausblick-Liste) nicht."""
+    import logging
+
+    from app.loader import _parse_display_config
+    from services.channel_list_resolver import resolve_channel_lists
+    from services.notification_service import _alert_format_modes, _alert_indicator_keys
+
+    dc = _parse_display_config({
+        "metrics": [{"metric_id": "gust", "enabled": True}],
+        "outlook_metrics": ["humidity"],
+    })
+    with caplog.at_level(logging.WARNING):
+        resolve_channel_lists(dc, "trip", "evening")
+    assert any("#1848 A3" in r.getMessage() for r in caplog.records), "Vorbedingung"
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        modi = _alert_format_modes(dc)
+        _alert_indicator_keys(dc)
+    assert "gust" in modi["email"]
+    assert not any("#1848 A3" in r.getMessage() for r in caplog.records), caplog.text
