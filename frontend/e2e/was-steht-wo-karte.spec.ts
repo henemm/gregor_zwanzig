@@ -18,6 +18,7 @@
 
 import { test, expect, request as pwRequest, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { createTestLocation, kontrastBericht, kontrastVerstoesse, messeKontrast, seedHub, type HubKind } from './helpers';
+import { wegwerfPasswort } from './stagingZugang';
 import { DESKTOP, MOBIL, WT, aktiveDerVorlage, oeffneWetter, stand, vorlagen, type Json } from './s3a2794-teil3.helpers';
 
 type Fall = { name: string; kind: HubKind; orte: number };
@@ -409,7 +410,7 @@ test.describe('Karte „Was steht wo“', () => {
 		const admin = await seed(page.request, FAELLE[1]);
 		const basis = new URL((await page.goto('/'))!.url()).origin;
 		const name = `e2ewswen${Date.now()}`;
-		const passwort = `Wsw-${Date.now()}-Kennwort!`;
+		const passwort = wegwerfPasswort();
 		const gast = await pwRequest.newContext({ baseURL: basis, storageState: { cookies: [], origins: [] }, extraHTTPHeaders: { 'X-Real-IP': '10.31.22.8' } });
 		const reg = await gast.post('/api/auth/register', { data: { username: name, password: passwort, email: `${name}@example.com`, language: 'en' } });
 		expect([200, 201]).toContain(reg.status());
