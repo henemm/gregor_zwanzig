@@ -4231,6 +4231,84 @@
       "status": "gruen",
       "zustand": "placements",
       "sprache": "de"
+    },
+    {
+      "id": "T-3122-B1B-BESTAND-RUECKFALL-BOEEN-SPALTE",
+      "liste": "trip_tabelle",
+      "kontext": "trip",
+      "format": "html+klartext",
+      "pruefung": "rueckfall_wie_ohne_kanal_liste",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_bestand_rueckfall_mail_zeigt_boeen_wie_ohne_kanal_liste",
+      "ac": "AC-11",
+      "befund": "#3122 B1b Fix-Loop 2 (F001-F003)",
+      "status": "gruen",
+      "zustand": "kanal_liste",
+      "sprache": "de"
+    },
+    {
+      "id": "T-3122-B1B-BESTAND-RUECKFALL-MAIL",
+      "liste": "trip_tabelle",
+      "kontext": "trip",
+      "format": "html+klartext",
+      "pruefung": "rueckfall_wie_ohne_kanal_liste",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_bestand_rueckfall_mail_wie_ohne_kanal_liste",
+      "ac": "AC-11",
+      "befund": "#3122 B1b Fix-Loop 2 (F001-F003)",
+      "status": "gruen",
+      "zustand": "kanal_liste",
+      "sprache": "de"
+    },
+    {
+      "id": "T-3122-B1B-BESTAND-RUECKFALL-TELEGRAM",
+      "liste": "trip_tabelle",
+      "kontext": "trip",
+      "format": "telegram",
+      "pruefung": "rueckfall_wie_ohne_kanal_liste",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_bestand_rueckfall_telegram_wie_ohne_kanal_liste",
+      "ac": "AC-11",
+      "befund": "#3122 B1b Fix-Loop 2 (F001-F003)",
+      "status": "gruen",
+      "zustand": "kanal_liste",
+      "sprache": "de"
+    },
+    {
+      "id": "T-3122-B1B-BESTAND-RUECKFALL-ADAPTER",
+      "liste": "trip_tabelle",
+      "kontext": "trip",
+      "format": "intern",
+      "pruefung": "bestand_ohne_tabelle_unveraendert",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_bestand_rueckfall_liefert_eintraege_der_grundauswahl",
+      "ac": "AC-11",
+      "befund": "#3122 B1b Fix-Loop 2 (F001-F003)",
+      "status": "gruen",
+      "zustand": "kanal_liste",
+      "sprache": "de"
+    },
+    {
+      "id": "T-3122-B1B-BESTAND-ZUFALLSLAUF",
+      "liste": "trip_tabelle",
+      "kontext": "trip",
+      "format": "intern",
+      "pruefung": "bestand_ohne_tabelle_unveraendert",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_bestand_zufallslauf_adapter_gleich_bisheriger_kaskade",
+      "ac": "AC-11",
+      "befund": "#3122 B1b Fix-Loop 2 (F001-F003)",
+      "status": "gruen",
+      "zustand": "kanal_liste",
+      "sprache": "de"
+    },
+    {
+      "id": "T-3122-B1B-AC19-ALARM-MAIL-GEWITTER",
+      "liste": "alarm",
+      "kontext": "trip",
+      "format": "alarm",
+      "pruefung": "darstellung",
+      "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_ac19_alarm_mail_gewitter_darstellung_folgt_stelle_email",
+      "ac": "AC-19",
+      "befund": "#3122 B1b Fix-Loop 2 (F001-F003)",
+      "status": "gruen",
+      "zustand": "placements",
+      "sprache": "de"
     }
   ]
 }

@@ -501,8 +501,16 @@ def test_ac9_vorbelegung_nur_morgen_briefing_eingeschaltet(monkeypatch):
     t = tabelle([zeile("gust"), zeile("temperature")])
     mit = senden(monkeypatch, trip(t, report_config={"evening_enabled": False}), "morning")
     html, _plain = mail_teile(mit)
-    assert ausblick_html(html) is not None
-    assert telegram_ausblick(mit) is not None
+    assert (ausblick_html(html) or [])[:2] == ["gust", "temperature"]
+    # F002: nicht nur der Block, auch seine WERTE -- die Ausblick-Zeilen baut
+    # der Zeitplaner (``trend_zeile``); loest er ohne die eingeschalteten
+    # Briefings auf, bleibt die Tabelle stehen, aber ihre Zellen sind leer.
+    zellen = html_ausblick(html).spalte("gust")
+    assert len(zellen) == len(AUSBLICK_TAGE) and all(
+        re.fullmatch(r"45( km/h)?", z) for z in zellen), zellen
+    tg = telegram_ausblick(mit)
+    assert tg is not None and tg.count(f"{ausblick_label('gust')}: 45 km/h") == len(
+        AUSBLICK_TAGE), tg
 
 
 # ---------------------------------------------------------------------------
@@ -544,9 +552,10 @@ def test_ac10_grundauswahl_bewusst_leer_keine_metrik_nirgends(monkeypatch, repor
 # AC-19 (Trip-Teil): Alarm haengt nicht an der Tabelle, Darstellung folgt der Stelle
 # ---------------------------------------------------------------------------
 
-def _alarm_trip(uid: str, gust_email: dict, gust_telegram: Optional[str] = None):
-    """Trip mit Boeen in der Grundauswahl und gespeicherter Tabelle, in der die
-    Boeen in der E-Mail-Spalte abgewaehlt sind."""
+def _alarm_trip(uid: str, gust_email: dict, gust_telegram: Optional[str] = None,
+                mid: str = "gust"):
+    """Trip mit ``mid`` (Boeen) in der Grundauswahl und gespeicherter Tabelle,
+    in der die Metrik in der E-Mail-Spalte abgewaehlt ist."""
     import uuid
     from datetime import datetime
 
@@ -563,26 +572,27 @@ def _alarm_trip(uid: str, gust_email: dict, gust_telegram: Optional[str] = None)
     return Trip(
         id=tid, name="Alarm-Trip", stages=[stage], official_warnings=None, corridors=[],
         display_config=UnifiedWeatherDisplayConfig(
-            trip_id=tid, metrics=[MetricConfig(metric_id="gust", enabled=True),
+            trip_id=tid, metrics=[MetricConfig(metric_id=mid, enabled=True),
                                   MetricConfig(metric_id="temperature", enabled=True)],
-            placements=tabelle([{"metric_id": "gust", "places": {"email": False},
+            placements=tabelle([{"metric_id": mid, "places": {"email": False},
                                  "formats": formate}, zeile("temperature")]),
         ),
     )
 
 
-def _alarm_senden(monkeypatch, gust_email: dict, gust_telegram: Optional[str] = None):
+def _alarm_senden(monkeypatch, gust_email: dict, gust_telegram: Optional[str] = None, *,
+                  mid: str = "gust", fixtur: str = "boeen_neun_stunden.json"):
     from services.notification_service import NotificationService
     from tests.helpers.sms_empfaenger import mit_profil_kanaele
     from tests.helpers.transport_mitschrift import aufzeichner_installieren
     from tests.tdd.test_alert_hour_rows import _load, _segment_data, _settings, _user, _wc
 
-    fx = _load("boeen_neun_stunden.json")
+    fx = _load(fixtur)
     mit = aufzeichner_installieren(monkeypatch)
     settings = _settings()
     uid = mit_profil_kanaele(_user("3122"), settings)
     NotificationService(settings, uid).send_deviation_alert(
-        trip=_alarm_trip(uid, gust_email, gust_telegram),
+        trip=_alarm_trip(uid, gust_email, gust_telegram, mid),
         weather=[_segment_data(fx, fx["fresh"])], changes=[_wc(fx["change"])],
         effective_channels={"email", "telegram"},
         anchor_weather=[_segment_data(fx, fx["anchor"])],
@@ -628,6 +638,35 @@ def test_ac19_alarm_mail_darstellung_folgt_stelle_email_auch_abgewaehlt(monkeypa
     assert zeilen, "Vorbedingung: Stundenzeilen in der Alarm-Mail"
     hat_punkt = ["border-radius:50%" in z.replace(" ", "") for z in zeilen]
     assert all(hat_punkt) if punkt else not any(hat_punkt), zeilen[:2]
+    # F003: der Nur-Text-Teil derselben Mail haengt allein an den Format-Modi
+    # (kein Ampelpunkt): Einfach = Wortstufe, Roh = Zahl.
+    from tests.tdd.test_alert_hour_rows import _rows
+
+    text = _rows(mails[0]["plain_text_body"])
+    assert text, mails[0]["plain_text_body"]
+    zahlen = [bool(re.fullmatch(r"\d+ → \d+", rest)) for _t, rest in text]
+    assert not any(zahlen) if punkt else all(zahlen), text
+
+
+@pytest.mark.parametrize("fmt", ["simplified", "raw"])
+def test_ac19_alarm_mail_gewitter_darstellung_folgt_stelle_email(monkeypatch, fmt):
+    """F003 / ADR-0124 Nr. 11: Gewitter hat keinen Ampelpunkt aus den
+    Indikator-Schluesseln -- seine Form in der Alarm-Mail haengt allein an den
+    Format-Modi der Stelle E-Mail: Einfach = Kreis ohne Stufenwort, Roh =
+    Stufenwort ohne Kreis (auch fuer die in der E-Mail-Spalte abgewaehlte Zeile)."""
+    mit = _alarm_senden(monkeypatch, {"email": fmt}, mid="thunder",
+                        fixtur="gewitter_14_16.json")
+    mails = mit.sendungen("email")
+    assert len(mails) == 1, mit
+    zeilen = _alarm_zeilen_html(mails[0]["body"])
+    assert len(zeilen) == 3, "Vorbedingung: drei Stundenzeilen (14-16 Uhr)"
+    kreis = ["border-radius:50%" in z.replace(" ", "") for z in zeilen]
+    wort = [bool(re.search(r"hoch|mittel|leicht|kein", re.sub(r"<[^>]+>", " ", z)))
+            for z in zeilen]
+    if fmt == "simplified":
+        assert all(kreis) and not any(wort), zeilen[:1]
+    else:
+        assert all(wort) and not any(kreis), zeilen[:1]
 
 
 @pytest.mark.parametrize("email,telegram", [("simplified", "raw"), ("raw", "simplified")])
@@ -749,32 +788,260 @@ _EIGENE_HORIZONTE = {
 }
 
 
-def test_bestand_ohne_tabelle_mail_eintraege_gleich_bisheriger_kaskade():
-    """Unveraendertheit (Abos ohne ``placements``): fuer jede Kombination aus
-    Kanal-Ebenen, Briefing-Typ und Grundauswahl liefert der Mail-Adapter aus
-    den E-Mail-Zeilen des View-Models dieselben Eintraege (samt ``horizons``,
-    ``use_friendly_format``) wie die bisherige Kaskade -- Orakel ist die
-    wortgleiche Kopie ``alt_trip_metrics_for_channel`` (Stand vor #3057)."""
+def _grund(*mids: str, **extra) -> list[dict]:
+    return [{"metric_id": m, "enabled": True, "bucket": "primary", "order": i, **extra}
+            for i, m in enumerate(mids)]
+
+
+_GRUND_FUENF = ("temperature", "wind", "gust", "cloud_total", "uv_index")
+_AUSSERHALB = {"metric_id": "pressure", "enabled": True, "bucket": "primary", "order": 1}
+
+#: Rueckfall #3047 AC-10 (alle AKTIVEN Eintraege der Kanal-Liste liegen
+#: ausserhalb der Grundauswahl -> volle Grundauswahl): die Kaskade liefert die
+#: Eintraege der GRUNDAUSWAHL, nie den abgewaehlten/gefilterten Kanal-Eintrag
+#: derselben Metrik (mit dessen ``horizons``, Format, Position).
+_RUECKFALL_FAELLE: dict[str, dict] = {
+    # Fund des Adversary (F001): abgewaehlter Kanal-Eintrag mit eigenen Horizonten.
+    "abgewaehlt_horizonte": {"metrics": _grund(*_GRUND_FUENF), "channel_layouts": {"email": [
+        {"metric_id": "gust", "enabled": False, "bucket": "primary", "order": 5,
+         "horizons": {"today": False, "tomorrow": True, "day_after": True}}, _AUSSERHALB]}},
+    "abgewaehlt_formate": {"metrics": _grund(*_GRUND_FUENF), "channel_layouts": {"email": [
+        {"metric_id": "gust", "enabled": False, "order": 5, "use_friendly_format": False},
+        {"metric_id": "cloud_total", "enabled": False, "order": 1, "use_friendly_format": False},
+        _AUSSERHALB]}},
+    "abgewaehlt_alle_andere_folge": {"metrics": _grund(*_GRUND_FUENF), "channel_layouts": {
+        "email": [{"metric_id": m, "enabled": False, "bucket": "secondary", "order": 9 - i,
+                   "use_friendly_format": i % 2 == 0}
+                  for i, m in enumerate(_GRUND_FUENF)] + [_AUSSERHALB]}},
+    "briefing_typ_gefiltert": {"metrics": _grund(*_GRUND_FUENF), "channel_layouts": {"email": [
+        {"metric_id": "gust", "enabled": True, "order": 0, "morning_enabled": False,
+         "horizons": {"today": False}},
+        {"metric_id": "wind", "enabled": True, "order": 1, "evening_enabled": False,
+         "format_mode": "simplified"}, _AUSSERHALB]}},
+    "je_briefing_typ": {"metrics": _grund(*_GRUND_FUENF), "channel_layouts_per_report": {
+        "morning": {"email": [
+            {"metric_id": "gust", "enabled": False, "order": 5, "evening_enabled": True,
+             "horizons": {"today": False}}, _AUSSERHALB]},
+        "evening": {"telegram": [
+            {"metric_id": "cloud_total", "enabled": False, "format_mode": "raw"}, _AUSSERHALB]}}},
+    "telegram_abgewaehlt": {"metrics": _grund(*_GRUND_FUENF), "channel_layouts": {"telegram": [
+        {"metric_id": "gust", "enabled": False, "order": 5, "use_friendly_format": False},
+        _AUSSERHALB]}},
+    # Kein Rueckfall, aber derselbe Fehlgriff: abgewaehlte Dublette vor dem aktiven Eintrag.
+    "dublette_abgewaehlt_zuerst": {"metrics": _grund(*_GRUND_FUENF), "channel_layouts": {"email": [
+        {"metric_id": "gust", "enabled": False, "order": 0, "horizons": {"today": False}},
+        {"metric_id": "gust", "enabled": True, "order": 1, "format_mode": "raw"},
+        {"metric_id": "wind", "enabled": True, "order": 2}]}},
+}
+
+_ZUFALL_POOL = ("temperature", "wind", "gust", "precipitation", "cloud_total", "uv_index",
+                "wind_direction", "thunder", "humidity", "pressure", "sunshine",
+                "rain_probability")
+_ZUFALL_STARTWERT = 3122
+_ZUFALL_ANZAHL = 400
+
+
+def _zufalls_eintrag(rng, mid: str) -> dict:
+    """Ein Listen-Eintrag ueber die Achsen abgewaehlt, Position, Format-
+    Schreibweisen, ``horizons`` und Briefing-Typ."""
+    e: dict = {"metric_id": mid}
+    if rng.random() < 0.8:
+        e["enabled"] = rng.random() < 0.6
+    if rng.random() < 0.7:
+        e["bucket"] = rng.choice(["primary", "secondary"])
+        e["order"] = rng.randrange(8)
+    modus = rng.choice([None, None, "raw", "simplified", "symbol", "scale"])
+    if modus is not None:
+        e["format_mode"] = modus
+    if rng.random() < 0.5:
+        e["use_friendly_format"] = rng.random() < 0.5
+    if rng.random() < 0.4:
+        e["horizons"] = {h: rng.random() < 0.6 for h in ("today", "tomorrow", "day_after")}
+    for rt in REPORT_TYPES:
+        if rng.random() < 0.2:
+            e[f"{rt}_enabled"] = rng.random() < 0.5
+    return e
+
+
+def _zufalls_liste(rng, grund: list[str]) -> list[dict]:
+    """Kanal-Liste: Auswahl aus der Grundauswahl (auch doppelt), dazu Eintraege
+    ausserhalb; in einem Drittel der Faelle sind alle Grundauswahl-Eintraege
+    abgewaehlt (Rueckfall, sobald ein aktiver Eintrag ausserhalb liegt)."""
+    aussen = [m for m in _ZUFALL_POOL if m not in grund]
+    mids = [rng.choice(grund) for _ in range(rng.randrange(0, 5))] if grund else []
+    mids += [rng.choice(aussen) for _ in range(rng.randrange(0, 3))] if aussen else []
+    rng.shuffle(mids)
+    liste = [_zufalls_eintrag(rng, m) for m in mids]
+    if rng.random() < 0.34:
+        for e in liste:
+            e["enabled"] = e["metric_id"] not in grund
+    return liste
+
+
+def _zufalls_konfiguration(rng) -> dict:
+    grund = rng.sample(_ZUFALL_POOL, rng.randrange(0, 7))
+    dc: dict = {"trip_id": "zufall-3122"}
+    if grund or rng.random() < 0.5:
+        dc["metrics"] = [_zufalls_eintrag(rng, m) for m in grund]
+    kanaele = [k for k in ("email", "telegram", "sms") if rng.random() < 0.7]
+    if kanaele and rng.random() < 0.8:
+        dc["channel_layouts"] = {k: _zufalls_liste(rng, grund) for k in kanaele}
+    if rng.random() < 0.4:
+        dc["channel_layouts_per_report"] = {
+            rt: {k: _zufalls_liste(rng, grund) for k in ("email", "telegram")
+                 if rng.random() < 0.6}
+            for rt in REPORT_TYPES if rng.random() < 0.7}
+    return dc
+
+
+def _adapter_gegen_orakel(name: str, roh: dict) -> list[str]:
+    """Eintraege des Adapters (aus den Kanal-Zeilen des View-Models) feldweise
+    gegen die wortgleiche Kopie der bisherigen Kaskade; E-Mail (Briefing und
+    Alarm-Format) und Telegram (Alarm-Format)."""
     import dataclasses
 
     from app.loader import _parse_display_config
     from output.renderers.email.helpers import channel_metric_configs
     from services.channel_list_resolver import resolve_channel_lists
     from tests.helpers.kanal_liste_orakel import alt_trip_metrics_for_channel
+
+    fehler = []
+    dc = _parse_display_config(copy.deepcopy(roh))
+    for rt in REPORT_TYPES:
+        vm = resolve_channel_lists(dc, "trip", rt)
+        for kanal in ("email", "telegram"):
+            neu = channel_metric_configs(getattr(vm, kanal), dc, kanal, rt)
+            alt = [dataclasses.replace(mc, enabled=True)
+                   for mc in alt_trip_metrics_for_channel(dc, kanal, rt)]
+            if [m.metric_id for m in neu] != [m.metric_id for m in alt]:
+                fehler.append(f"{name}/{rt}/{kanal}: Auswahl/Folge "
+                              f"{[m.metric_id for m in neu]} != {[m.metric_id for m in alt]}")
+                continue
+            for n, a in zip(neu, alt):
+                felder = [f.name for f in dataclasses.fields(a)
+                          if getattr(n, f.name) != getattr(a, f.name)]
+                if felder:
+                    fehler.append(f"{name}/{rt}/{kanal}/{a.metric_id}: " + ", ".join(
+                        f"{f}={getattr(n, f)!r} statt {getattr(a, f)!r}" for f in felder))
+    return fehler
+
+
+def test_bestand_ohne_tabelle_mail_eintraege_gleich_bisheriger_kaskade():
+    """Unveraendertheit (Abos ohne ``placements``): fuer jede Kombination aus
+    Kanal-Ebenen, Briefing-Typ und Grundauswahl liefert der Adapter aus den
+    Kanal-Zeilen des View-Models dieselben Eintraege (samt ``horizons``,
+    ``use_friendly_format``, Position) wie die bisherige Kaskade -- Orakel ist
+    die wortgleiche Kopie ``alt_trip_metrics_for_channel`` (Stand vor #3057)."""
     from tests.tdd.test_3057_channel_list_resolver import _trip_kombinationen
 
     faelle = list(_trip_kombinationen()) + [("eigene_horizonte", _EIGENE_HORIZONTE)]
-    fehler = []
-    for name, roh in faelle:
-        dc = _parse_display_config(copy.deepcopy(roh))
-        for rt in REPORT_TYPES:
-            vm = resolve_channel_lists(dc, "trip", rt)
-            neu = channel_metric_configs(vm.email, dc, "email", rt)
-            alt = [dataclasses.replace(mc, enabled=True)
-                   for mc in alt_trip_metrics_for_channel(dc, "email", rt)]
-            if neu != alt:
-                fehler.append(f"{name}/{rt}")
+    fehler = [f for name, roh in faelle for f in _adapter_gegen_orakel(name, roh)]
     assert len(faelle) > 50 and not fehler, f"{len(fehler)} Abweichungen: {fehler[:5]}"
+
+
+@pytest.mark.parametrize("name", sorted(_RUECKFALL_FAELLE))
+def test_bestand_rueckfall_liefert_eintraege_der_grundauswahl(name):
+    """F001: greift der Rueckfall auf die volle Grundauswahl (oder steht eine
+    abgewaehlte Dublette vorn), reicht der Adapter die Eintraege durch, die die
+    Kaskade geliefert haette -- nicht den abgewaehlten oder per Briefing-Typ
+    gefilterten Kanal-Eintrag derselben Metrik."""
+    fehler = _adapter_gegen_orakel(name, _RUECKFALL_FAELLE[name])
+    assert not fehler, fehler[:5]
+
+
+def test_bestand_zufallslauf_adapter_gleich_bisheriger_kaskade():
+    """Deterministischer Zufallslauf (fester Startwert) ueber die Achsen
+    Auswahl, abgewaehlt, ausserhalb der Grundauswahl, ``horizons``, Format-
+    Schreibweisen, Briefing-Typ und Kanal-Ebene: der Adapter liefert feldweise
+    die Eintraege der bisherigen Kaskade."""
+    import random
+
+    rng = random.Random(_ZUFALL_STARTWERT)
+    fehler, rueckfaelle = [], 0
+    for i in range(_ZUFALL_ANZAHL):
+        roh = _zufalls_konfiguration(rng)
+        grund = {e["metric_id"] for e in roh.get("metrics", [])}
+        rueckfaelle += any(
+            liste and all(e["metric_id"] not in grund for e in liste if e.get("enabled", True))
+            and any(e.get("enabled", True) for e in liste)
+            for liste in (roh.get("channel_layouts") or {}).values())
+        fehler += _adapter_gegen_orakel(f"zufall-{i}", roh)
+    assert rueckfaelle >= 20, f"Vorbedingung: Zufallslauf trifft den Rueckfall ({rueckfaelle})"
+    assert not fehler, f"{len(fehler)} Abweichungen, erste: {fehler[:5]}"
+
+
+def _mail_bild(mit) -> dict:
+    """Was die Mail zeigt: Spalten und Zellformen der Stunden- und
+    Nachttabellen (HTML, Klartext), Ausblick-Spalten und Kurz-Zusammenfassung."""
+    from tests.tdd._einstellung_gleich_mail_trip_fixtures import STAGE_NAME
+
+    html, plain = mail_teile(mit)
+    h, k = html_tabellen(html), klartext_tabellen(plain)
+    return {
+        "html": {art: [(t.spalten, t.formen()) for t in tabs] for art, tabs in h.items()},
+        "klartext": {art: [(t.spalten, t.zellen) for t in tabs] for art, tabs in k.items()},
+        "ausblick": (ausblick_html(html), ausblick_text(plain)),
+        "satz": [z for z in plain.splitlines() if z.startswith(f"{STAGE_NAME}: ")],
+    }
+
+
+def _rueckfall_trip(layout_schluessel: str, layout: dict) -> tuple[dict, dict]:
+    """(Trip mit Kanal-Liste im Rueckfall, derselbe Trip ohne Kanal-Liste)."""
+    ohne = trip_json(list(_GRUND_FUENF), einfach={"cloud_total", "gust"})
+    for e in ohne["display_config"]["metrics"]:
+        # Alt-Schreibweise der Grundauswahl: Wert roh, ``use_friendly_format``
+        # an (HTML-Ampelpunkt der Boeen, Symbol in der Kurz-Zusammenfassung).
+        if e["metric_id"] in ("gust", "cloud_total"):
+            e["format_mode"] = "raw"
+    mit = copy.deepcopy(ohne)
+    mit["display_config"][layout_schluessel] = layout
+    return mit, ohne
+
+
+@pytest.mark.parametrize("report_type", REPORT_TYPES)
+def test_bestand_rueckfall_mail_zeigt_boeen_wie_ohne_kanal_liste(monkeypatch, report_type):
+    """F001 ueber die echte Kette: Grundauswahl mit Boeen; die E-Mail-Liste
+    traegt Boeen abgewaehlt (eigene Horizonte) und sonst nur den Luftdruck
+    ausserhalb der Grundauswahl -> Rueckfall auf die volle Grundauswahl. Die
+    HTML-Stundentabelle fuehrt die Spalte Boeen, und die ganze Mail zeigt
+    dasselbe wie das Abo ohne Kanal-Liste."""
+    mit_liste, ohne = _rueckfall_trip(
+        "channel_layouts", _RUECKFALL_FAELLE["abgewaehlt_horizonte"]["channel_layouts"])
+    bild = _mail_bild(senden(monkeypatch, mit_liste, report_type))
+    assert "gust" in bild["html"]["etappe"][0][0], bild["html"]["etappe"][0][0]
+    assert bild == _mail_bild(senden(monkeypatch, ohne, report_type))
+
+
+@pytest.mark.parametrize("name", ["abgewaehlt_formate", "abgewaehlt_alle_andere_folge",
+                                  "briefing_typ_gefiltert", "je_briefing_typ"])
+@pytest.mark.parametrize("report_type", REPORT_TYPES)
+def test_bestand_rueckfall_mail_wie_ohne_kanal_liste(monkeypatch, name, report_type):
+    """F001, weitere Erscheinungen desselben Rueckfalls (Kurz-Zusammenfassung,
+    Spaltenmenge, Ampelpunkte): die Mail zeigt dasselbe wie ohne Kanal-Liste."""
+    fall = _RUECKFALL_FAELLE[name]
+    schluessel = "channel_layouts" if "channel_layouts" in fall else "channel_layouts_per_report"
+    liste = {k: v for k, v in fall[schluessel].items()}
+    if name == "briefing_typ_gefiltert":
+        # Vergleich mit "ohne Liste" gilt fuer den Typ, in dem BEIDE Eintraege
+        # der Grundauswahl gefiltert sind: hier keiner -> je Typ ein Eintrag weg.
+        liste = {"email": [dict(e, morning_enabled=False, evening_enabled=False)
+                           if e["metric_id"] != "pressure" else e for e in liste["email"]]}
+    mit_liste, ohne = _rueckfall_trip(schluessel, liste)
+    assert _mail_bild(senden(monkeypatch, mit_liste, report_type)) == _mail_bild(
+        senden(monkeypatch, ohne, report_type))
+
+
+@pytest.mark.parametrize("report_type", REPORT_TYPES)
+def test_bestand_rueckfall_telegram_wie_ohne_kanal_liste(monkeypatch, report_type):
+    """Dieselbe Regel im Telegram-Adapter: Telegram-Liste im Rueckfall mit
+    abgewaehltem Boeen-Eintrag (anderes Format) -> Nachricht wie ohne Liste."""
+    rc = {"send_telegram": True}
+    ohne = trip_json(list(_GRUND_FUENF), einfach={"cloud_total", "gust"}, report_config=rc)
+    mit_liste = copy.deepcopy(ohne)
+    mit_liste["display_config"]["channel_layouts"] = (
+        _RUECKFALL_FAELLE["telegram_abgewaehlt"]["channel_layouts"])
+    a = telegram_bubbles(senden(monkeypatch, mit_liste, report_type))
+    assert a and a == telegram_bubbles(senden(monkeypatch, ohne, report_type))
 
 
 def test_alarm_format_loest_keinen_ausblick_auf(caplog):
