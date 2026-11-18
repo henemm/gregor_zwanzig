@@ -134,8 +134,10 @@
 		font-style: normal;
 		font-size: var(--g-text-xs);
 		font-weight: 500;
+		flex: 0 1 auto;
+		min-width: 0;
 		line-height: 1.2;
-		white-space: nowrap;
+		overflow-wrap: anywhere;
 		color: var(--g-ink-3);
 	}
 	/* Tippfläche ≥ --g-tap-min (Charter §7), die sichtbare Größe bleibt. Bedingung wie app.css (#2601). */

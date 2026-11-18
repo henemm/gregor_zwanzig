@@ -12,6 +12,9 @@
 //   ET-7  Umsortieren per Maus am Griff.
 //   ET-8  390 px, fünf Spalten: Seite scrollt nicht seitlich, jede Spalte erreichbar, Tippfläche ≥ 44 px.
 //   ET-9  Kontrast aller Texte der Tabelle nach WCAG AA (Messhelfer aus #2879), 1280 px und 390 px.
+//   ET-10 Nicht-Text-Kontrast (WCAG 1.4.11, mindestens 3:1) für Strich, festen Haken und Kästchen,
+//         helles und dunkles Thema; dazu die Texte im dunklen Thema.
+//   ET-11 1200 px: Marke und Grund liegen vollständig in ihrer Zelle, nie in der Nachbarzelle.
 //
 // Messort ist die Vorschauseite /_design-system/einstelltabelle (nur Bausteine, Beispieldaten nach dem
 // Soll-Bild Fassung 4). Sie hält den Zustand selbst und schreibt jedes gemeldete Ereignis als JSON in
@@ -21,7 +24,7 @@
 //   cd frontend && npx playwright test e2e/einstelltabelle-bausteine.spec.ts --workers=1 --trace off
 
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { kontrastBericht, kontrastVerstoesse, messeKontrast } from './helpers';
+import { kontrastBericht, kontrastVerhaeltnis, kontrastVerstoesse, messeKontrast } from './helpers';
 
 const DESKTOP = { width: 1280, height: 900 };
 const MOBIL = { width: 390, height: 844 };
@@ -31,9 +34,9 @@ const TRIP_STELLEN = ['email', 'telegram', 'sms', 'outlook'];
 
 type Ereignis = Record<string, unknown>;
 
-async function oeffne(page: Page, viewport = DESKTOP): Promise<void> {
+async function oeffne(page: Page, viewport = DESKTOP, query = ''): Promise<void> {
 	await page.setViewportSize(viewport);
-	await page.goto(SEITE);
+	await page.goto(SEITE + query);
 	await expect(page.getByTestId('demo-orte')).toBeVisible();
 	await expect(page.getByTestId('demo-ereignisse')).toHaveAttribute('data-bereit', 'true');
 }
@@ -269,6 +272,13 @@ test.describe('Handy 390 px', () => {
 				expect(ueberlappt, `Tippflächen ${i} und ${j} überlappen`).toBe(false);
 			}
 
+		// Enges Raster: Beispielwerte sind da, aber ausgeblendet (kein Platz in 44 px). Gemessen mit
+		// checkVisibility() wie im Elementlisten-Abgleich: ein nur auf Höhe 0 gestauchter Text gälte dort
+		// als sichtbar, deshalb reicht „hat keine Fläche“ nicht.
+		const beispiele = orte.locator('[data-slot="et-beispiel"]');
+		expect(await beispiele.count(), 'Beispielwerte fehlen im Dokument').toBeGreaterThanOrEqual(20);
+		expect(await beispiele.evaluateAll((els) => els.filter((el) => el.checkVisibility()).map((el) => el.textContent))).toEqual([]);
+
 		// Bedienung per Tippen in der letzten Spalte.
 		await zelle(orte, 'wind', 'outlook').getByRole('checkbox').tap();
 		expect(await ereignisse(page)).toEqual([{ quelle: 'orte', art: 'haken', metrik: 'wind', stelle: 'outlook', an: false }]);
@@ -290,4 +300,87 @@ test.describe('Kontrast', () => {
 			expect(kontrastBericht(`demo-orte Kurzstil ${name}`, kontrastVerstoesse(await messeKontrast(page.getByTestId('demo-orte'))))).toEqual([]);
 		});
 	}
+});
+
+test.describe('Nicht-Text-Kontrast', () => {
+	const SCHWELLE = 3;
+	const farbe = (l: Locator, eigenschaft: string, pseudo: string | null = null) =>
+		l.evaluate((el, [e, p]) => getComputedStyle(el, p).getPropertyValue(e as string), [eigenschaft, pseudo] as const);
+	/** Effektiver Hintergrund einer Fläche: der Grund, den der Messhelfer (#2879) für ihren Text berechnet. */
+	async function grundVon(flaeche: Locator, text: string): Promise<string> {
+		const befund = (await messeKontrast(flaeche)).find((b) => b.text === text);
+		expect(befund, `kein Text „${text}“ gemessen`).toBeTruthy();
+		expect(befund!.berechenbar, `Grund unter „${text}“ nicht berechenbar`).toBe(true);
+		return befund!.hintergrund;
+	}
+
+	for (const thema of ['hell', 'dunkel'] as const) {
+		test(`ET-10: Strich, fester Haken und Kästchen halten 3:1 gegen ihren Grund (${thema})`, async ({ page }) => {
+			if (thema === 'dunkel') await page.addInitScript(() => localStorage.setItem('gz-dark', '1'));
+			await oeffne(page, DESKTOP, '?zustand=gemischt');
+			expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(thema === 'dunkel' ? 'dark' : null);
+			const orte = page.getByTestId('demo-orte');
+			const messe = (was: string, vorn: string, hinten: string) =>
+				expect(kontrastVerhaeltnis(vorn, hinten), `${was} (${thema}): ${vorn} auf ${hinten}`).toBeGreaterThanOrEqual(SCHWELLE);
+
+			// Strich (gesperrt mit Kurztext, nicht in der E-Mail ohne Text): der Messhelfer misst das Zeichen selbst.
+			for (const [metrik, stelle] of [['sunshine', 'hourly'], ['gust', 'outlook']] as const) {
+				const strich = (await messeKontrast(zelle(orte, metrik, stelle))).find((b) => b.text === '–');
+				expect(strich, `Strich ${metrik}/${stelle} nicht gemessen`).toBeTruthy();
+				expect(strich!.berechenbar).toBe(true);
+				expect(strich!.verhaeltnis, `Strich ${metrik}/${stelle} (${thema}): ${strich!.farbe} auf ${strich!.hintergrund}`).toBeGreaterThanOrEqual(SCHWELLE);
+			}
+
+			// Fester Haken: gezeichnete Form (Rahmenfarbe) gegen den Grund der festen Zeile.
+			const fest = orte.locator('[data-slot="et-fest"]');
+			const festGrund = await grundVon(fest, 'Amtliche Warnungen');
+			const festHaken = fest.locator('[data-zustand="fest"] > span');
+			await expect(festHaken).toHaveCount(3);
+			messe('fester Haken', await farbe(festHaken.first(), 'border-bottom-color'), festGrund);
+
+			// Kästchen: leer der Rahmen gegen den Zeilengrund und gegen die eigene Fläche, gesetzt die Fläche
+			// gegen den Zeilengrund und der Haken gegen die Fläche.
+			const zeilenGrund = await grundVon(zeile(orte, 'wind'), 'Wind');
+			const leer = zelle(orte, 'wind', 'telegram').locator('[data-slot="haken"] > span');
+			await expect(zelle(orte, 'wind', 'telegram').getByRole('checkbox')).not.toBeChecked();
+			messe('Kästchen leer, Rahmen gegen Zeile', await farbe(leer, 'border-top-color'), zeilenGrund);
+			messe('Kästchen leer, Rahmen gegen Fläche', await farbe(leer, 'border-top-color'), await farbe(leer, 'background-color'));
+			const gesetzt = zelle(orte, 'wind', 'email').locator('[data-slot="haken"] > span');
+			await expect(zelle(orte, 'wind', 'email').getByRole('checkbox')).toBeChecked();
+			messe('Kästchen gesetzt, Fläche gegen Zeile', await farbe(gesetzt, 'background-color'), zeilenGrund);
+			messe('Kästchen gesetzt, Haken gegen Fläche', await farbe(gesetzt, 'border-bottom-color', '::after'), await farbe(gesetzt, 'background-color'));
+
+			// Texte der Tabellen auch im dunklen Thema (ET-9 misst das helle).
+			if (thema === 'dunkel')
+				for (const id of ['demo-trip', 'demo-orte', 'demo-haken', 'demo-knopf'])
+					expect(kontrastBericht(`${id} dunkel`, kontrastVerstoesse(await messeKontrast(page.getByTestId(id))))).toEqual([]);
+		});
+	}
+});
+
+test.describe('Breites Raster an der Schwelle', () => {
+	test('ET-11: 1200 px — Marke und Grund liegen vollständig in ihrer Zelle', async ({ page }) => {
+		await oeffne(page, { width: 1200, height: 900 });
+		for (const id of ['demo-trip', 'demo-orte']) {
+			const tabelle = page.getByTestId(id);
+			// Breites Raster ist aktiv: Beispielwerte sind sichtbar.
+			await expect(tabelle.locator('[data-slot="et-beispiel"]:visible').first()).toBeVisible();
+			const messung = await tabelle.locator('[data-slot="et-marke"], [data-slot="haken-grund"]').evaluateAll((els) =>
+				els.map((el) => {
+					const z = el.closest('[data-slot="et-zelle"]')!;
+					const r = el.getBoundingClientRect();
+					const c = z.getBoundingClientRect();
+					const wo = `${z.closest('[data-metrik]')?.getAttribute('data-metrik')}/${z.getAttribute('data-stelle')} „${el.textContent}“`;
+					return { wo, links: r.left - c.left, rechts: c.right - r.right, oben: r.top - c.top, unten: c.bottom - r.bottom };
+				})
+			);
+			expect(messung.length, `${id}: keine Marke gemessen`).toBeGreaterThanOrEqual(4);
+			for (const m of messung) {
+				expect(m.links, `${id} ${m.wo} ragt links über`).toBeGreaterThanOrEqual(-0.5);
+				expect(m.rechts, `${id} ${m.wo} ragt rechts über`).toBeGreaterThanOrEqual(-0.5);
+				expect(m.oben, `${id} ${m.wo} ragt oben über`).toBeGreaterThanOrEqual(-0.5);
+				expect(m.unten, `${id} ${m.wo} ragt unten über`).toBeGreaterThanOrEqual(-0.5);
+			}
+		}
+	});
 });
