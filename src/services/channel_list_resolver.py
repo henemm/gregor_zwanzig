@@ -100,6 +100,7 @@ def resolve_channel_lists(
     report_config: object = None,
     outlook_enabled: Optional[bool] = None,
     with_rows: bool = False,
+    ausblick: bool = True,
 ) -> MailViewModel:
     """Reine Funktion: ``display_config`` -> ``MailViewModel`` (ADR-0121).
 
@@ -110,7 +111,9 @@ def resolve_channel_lists(
     neuen Eingang. Im bisherigen Pfad entstehen ``rows``/``outlook_reports``
     nur mit ``with_rows=True`` (Umrechnung des Altbestands; dafuer auch
     ``report_config``/``outlook_enabled``); ohne Anforderung bleiben sie
-    ``()`` und der Versandweg rechnet nichts um."""
+    ``()`` und der Versandweg rechnet nichts um. ``ausblick=False``: der
+    bisherige Pfad loest den Ausblick nicht auf (``outlook`` bleibt ``None``),
+    fuer Leser, die nur Kanal-Zeilen brauchen (Alarm-Format, #3122)."""
     from services.placements import legacy_placements, read_placements
 
     if surface not in ("trip", "compare"):
@@ -122,7 +125,7 @@ def resolve_channel_lists(
     if stored is not None:
         return placements_view(display_config, surface, report_type, stored, **ansicht)
     if not (with_rows or ALTBESTAND_UEBER_UMRECHNUNG):
-        return legacy_view(display_config, surface, report_type)
+        return legacy_view(display_config, surface, report_type, ausblick=ausblick)
     umgerechnet = read_placements(legacy_placements(
         display_config, surface, report_config=report_config,
         enabled_reports=enabled_reports, outlook_enabled=outlook_enabled)[0])
@@ -135,10 +138,12 @@ def resolve_channel_lists(
     )
 
 
-def legacy_view(display_config, surface: str, report_type: Optional[str] = None) -> MailViewModel:
+def legacy_view(
+    display_config, surface: str, report_type: Optional[str] = None, *, ausblick: bool = True,
+) -> MailViewModel:
     """Bisheriger Pfad aus den Altfeldern (ohne ``rows``/``outlook_reports``)."""
     if surface == "trip":
-        return _trip_view(display_config, report_type or "evening")
+        return _trip_view(display_config, report_type or "evening", ausblick=ausblick)
     return _compare_view(display_config or {})
 
 
@@ -342,7 +347,7 @@ def _trip_entries(roh: dict):
                 yield from (e for e in liste if isinstance(e, dict))
 
 
-def _trip_view(display_config, report_type: str) -> MailViewModel:
+def _trip_view(display_config, report_type: str, *, ausblick: bool = True) -> MailViewModel:
     dc = _trip_model(display_config)
     kanaele = {
         ch: tuple(
@@ -356,6 +361,8 @@ def _trip_view(display_config, report_type: str) -> MailViewModel:
     ) != "global"
     if not eigene_premium:
         kanaele["premium_sms"] = kanaele["sms"]
+    if not ausblick:
+        return MailViewModel(**kanaele)
     from output.renderers.compare_outlook_metric_ids import (
         resolve_trip_outlook_formats, resolve_trip_outlook_metrics,
     )

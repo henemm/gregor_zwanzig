@@ -648,7 +648,8 @@ def _alert_kanal_metriken(display_config, channel: str, report_type: str) -> lis
     from output.renderers.email.helpers import channel_metric_configs
     from services.channel_list_resolver import ChannelRow, resolve_channel_lists
 
-    view = resolve_channel_lists(display_config, "trip", report_type)
+    # Nur die Kanal-Zeilen: der Ausblick wird hier nicht aufgeloest.
+    view = resolve_channel_lists(display_config, "trip", report_type, ausblick=False)
     zeilen = getattr(view, channel)
     if view.rows:
         zeilen = tuple(ChannelRow(r.metric_id, True, r.cell(channel).format, i)
