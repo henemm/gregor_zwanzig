@@ -43,7 +43,7 @@
 //   cd frontend && npx playwright test e2e/mobile-ux-messung.spec.ts --workers=1
 
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { openHub, seedHub, createTestComparePreset, cleanupTracked, type HubKind, type SeededHub } from './helpers';
+import { openHub, seedHub, createTestComparePreset, cleanupTracked, type HubKind, type SeededHub, oeffneEtappenEditor } from './helpers';
 
 type Lang = 'de' | 'en';
 const SPRACHEN: readonly Lang[] = ['de', 'en'];
@@ -138,6 +138,7 @@ test('AC-7: Datums-/Uhrzeitsegmente im Etappen-Tab und im Trip-Anlegen ≥ 24×2
 			const wo = `${p.name}/${lang}`;
 
 			await openHub(page, 'route', tripId, { tab: 'etappen' });
+			await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 			await spracheAktiv(page, lang, `${wo} Etappen-Tab`);
 			const datum = page.getByTestId('stage-date-field');
 			const zeit = page.getByTestId('stage-start-time-field');
@@ -226,6 +227,7 @@ test('AC-9: Desktop 1280×800 — Segmentmaße in Etappen-Tab und Trip-Anlegen u
 	};
 
 	await openHub(page, 'route', tripId, { tab: 'etappen' });
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await page.getByTestId('stage-date-field').locator('[data-segment="day"]').first().waitFor({ state: 'visible', timeout: 15_000 });
 	await pruefe(page.getByTestId('stage-date-field'), SOLL_DESKTOP.etappenDatum, 'Etappen-Tab Datum');
 	await pruefe(page.getByTestId('stage-start-time-field'), SOLL_DESKTOP.etappenZeit, 'Etappen-Tab Startzeit');
@@ -294,6 +296,7 @@ test('AC-11: Höhenprofil-Etappenrechtecke tragen data-tap-equivalent, Etappenwa
 		for (const a of attr) if (!a.eq) befunde.push(`${p.name}: ${a.id} (${a.w} px breit) ohne data-tap-equivalent`);
 
 		await openHub(page, 'route', tripId, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		const rows = page.locator('[data-testid="stage-cardm-row"]:visible');
 		await expect(rows, `${p.name}: Etappenwahl je Etappe im Etappen-Tab`).toHaveCount(ETAPPEN.length, { timeout: 15_000 });
 		const masse = await rows.evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; }));

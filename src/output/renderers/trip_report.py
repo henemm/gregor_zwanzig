@@ -43,6 +43,7 @@ from app.models import (
 )
 from app.profile import ActivityProfile
 from i18n import Lang
+from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.day_window import display_end_time, resolve_configured_window
 import services.alert_urgency as alert_urgency
 from services.report_config_resolver import (
@@ -470,12 +471,9 @@ class TripReportFormatter:
             _sms_threshold or "LOW"
         )
         # Issue #868: SMS-Text immer erzeugen (max 160 Zeichen, Standard-SMS-Limit).
-        sms_text = SMSTripFormatter().format_sms(
-            segments,
+        _sms_kwargs = dict(
             stage_name=stage_name or trip_name,
             report_type=report_type,
-            tz=self._tz,
-            max_length=160,
             thunder_forecast=thunder_forecast,
             disabled_specs=_disabled_sms_specs or None,
             night_weather=night_weather,
@@ -485,6 +483,21 @@ class TripReportFormatter:
             sms_alert_min_level=_sms_alert_min_level,
             # Issue #2792 S1c-4b: Ampel aus derselben dc wie die Mail.
             ampel=resolve_ampel(_dc_uncollapsed),
+        )
+        sms_text = SMSTripFormatter().format_sms(
+            segments, tz=self._tz, max_length=160, **_sms_kwargs,
+        )
+        # Issue #3100 (ADR-0124 Nr. 8, ADR-0121 Nr. 6): die Premium-SMS folgt
+        # dem SMS-Text, hat aber die kuerzere Grenze 153 (channel_layout.py).
+        # Passt der SMS-Text, ist es derselbe Text; sonst kuerzt derselbe
+        # Formatter nach derselben Regel (vom Listenende, Warnung bleibt).
+        # Bewusst KEINE eigene Premium-Auswahl (#2801).
+        _premium_max = CHANNEL_LIMITS["premium_sms"]["max_chars"]
+        premium_sms_text = (
+            sms_text if len(sms_text) <= _premium_max
+            else SMSTripFormatter().format_sms(
+                segments, tz=self._tz, max_length=_premium_max, **_sms_kwargs,
+            )
         )
 
         # Issue #1001 AC-10: telegram_kurzform ist wirkungslos (Kurzuebersicht-
@@ -503,6 +516,7 @@ class TripReportFormatter:
             email_html=email_html,
             email_plain=email_plain,
             sms_text=sms_text,
+            premium_sms_text=premium_sms_text,
             telegram_bubbles=telegram_bubbles,
             telegram_actions_markup=telegram_actions_markup,
             triggered_by="schedule" if not changes else "change_detection",

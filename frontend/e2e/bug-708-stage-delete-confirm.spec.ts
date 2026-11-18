@@ -11,7 +11,7 @@
 // Auth via storageState (global.setup.ts) — kein per-Test-Login.
 
 import { test, expect } from '@playwright/test';
-import { tippeDatum } from './helpers';
+import { tippeDatum, oeffneEtappenEditor } from './helpers';
 
 const TRIP_ID = 'e2e-708-stage-confirm';
 const TRIP_NAME = 'E2E #708 Etappe-Confirm-Test';
@@ -43,6 +43,7 @@ const seedBody = { id: TRIP_ID, name: TRIP_NAME, region: 'Korsika', stages: seed
 async function openStagesEditor(page: import('@playwright/test').Page) {
 	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 }
 
 test.beforeEach(async ({ page }) => {
@@ -103,6 +104,8 @@ test('AC-3: Löschen bestätigen entfernt die Etappe', async ({ page }) => {
 
 	// Dialog geschlossen
 	await expect(page.getByTestId('confirm-delete-stage')).toHaveCount(0);
+	// #3007: die gelöschte Etappe war die aufgeklappte — die Liste klappt zu; verbleibende aufklappen.
+	await oeffneEtappenEditor(page);
 	// Nur noch eine Karte
 	await expect(page.getByTestId('stage-card-0')).toBeVisible();
 	await expect(page.getByTestId('stage-card-1')).toHaveCount(0);
@@ -123,6 +126,7 @@ test('AC-5: Aktive Etappe löschen aktiviert die verbleibende', async ({ page })
 
 	// Panel noch intakt, eine Karte sichtbar
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await expect(page.getByTestId('stage-card-0')).toBeVisible();
 	await expect(page.getByTestId('stage-card-1')).toHaveCount(0);
 });

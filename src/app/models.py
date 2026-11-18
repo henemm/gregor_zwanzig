@@ -1111,6 +1111,9 @@ class TripReport:
     email_html: str
     email_plain: str
     sms_text: Optional[str] = None  # Feature 3.2 will populate
+    # Issue #3100: SMS-Text in der Premium-Grenze (153); gleich ``sms_text``,
+    # solange dieser passt (ADR-0124 Nr. 8). ``None`` = ``sms_text`` nehmen.
+    premium_sms_text: Optional[str] = None
     # Issue #1001: Multi-Bubble-Telegram-Format ersetzt das fruehere
     # telegram_text (Einzelnachricht). telegram_actions_markup traegt das
     # Inline-Keyboard der letzten (Aktionen-)Bubble getrennt von den reinen

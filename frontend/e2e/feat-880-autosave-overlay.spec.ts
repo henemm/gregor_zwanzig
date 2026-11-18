@@ -6,7 +6,7 @@
 //   --config=playwright.880.staging.config.ts --reporter=list
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestLocation, feldEingabe, tippeDatum } from './helpers';
+import { createTestLocation, feldEingabe, tippeDatum, oeffneEtappenEditor } from './helpers';
 
 const TRIP_ID = 'e2e-880-overlay';
 const TRIP_NAME = 'E2E #880 Overlay';
@@ -37,6 +37,7 @@ function saveIndicator(page: Page) {
 async function openStagesEditor(page: Page) {
 	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await expect(page.getByTestId('stage-date-field').first()).toBeVisible();
 }
 
@@ -242,6 +243,7 @@ test.describe('feat_880 — Compare-Editor & Cross-Tab-Isolation', () => {
 			// Im Trip-Editor speichern → dessen Timestamp erscheint.
 			await pageTrip.goto(`/trips/${TRIP_ID}?tab=etappen`);
 			await expect(pageTrip.getByTestId('edit-stages-panel')).toBeVisible();
+			await oeffneEtappenEditor(pageTrip); // #3007: Etappenzeile aufklappen
 			const input = pageTrip.getByTestId('stage-date-field').first();
 			await tippeDatum(pageTrip, input, '2026-08-23');
 			await expect(saveIndicator(pageTrip)).toHaveAttribute('data-state', 'idle', {

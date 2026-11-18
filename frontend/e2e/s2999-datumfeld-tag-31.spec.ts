@@ -11,7 +11,7 @@
 //   cd frontend && npx playwright test --config playwright.2999-datumfeld.staging.config.ts
 
 import { test, expect, type Locator, type Page, type Request } from '@playwright/test';
-import { ANLEGE_SEL, feldEingabe, hubApiPath, openHub, seedHub, tippeDatum, tippeUhrzeit } from './helpers';
+import { ANLEGE_SEL, feldEingabe, hubApiPath, openHub, seedHub, tippeDatum, tippeUhrzeit, oeffneEtappenEditor } from './helpers';
 import { DESKTOP, ZT, gespeicherteZeit, oeffneZustellung, seedZustellung, stand } from './s3b2795-zustellung.helpers';
 
 const UHREN = [
@@ -177,6 +177,7 @@ test('AC-7: Etappe 15.04.2027, 31052027 darübergetippt → genau ein Speichervo
 	});
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		const feld = page.locator('[data-testid="stage-date-field"]:visible').first();
 		await expect(feldEingabe(feld)).toHaveText('15.04.2027', { timeout: 15_000 });
 		const puts = sammlePuts(page, hubApiPath('route', hub.id));
@@ -209,6 +210,7 @@ for (const basis of ['2027-04-15', '2027-02-15'] as const) {
 		});
 		try {
 			await openHub(page, 'route', hub.id, { tab: 'etappen' });
+			await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 			const feld = page.locator('[data-testid="stage-date-field"]:visible').first();
 			await expect(feldEingabe(feld)).toHaveText(anzeige(basis), { timeout: 15_000 });
 			const puts = sammlePuts(page, hubApiPath('route', hub.id));
@@ -243,6 +245,7 @@ test('AC-5 langsam: Etappe 15.05.2027, 31062027 Ziffer für Ziffer → Meldung, 
 	});
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		const feld = page.locator('[data-testid="stage-date-field"]:visible').first();
 		await expect(feldEingabe(feld)).toHaveText('15.05.2027', { timeout: 15_000 });
 		await feld.locator('[data-segment="day"]').click();

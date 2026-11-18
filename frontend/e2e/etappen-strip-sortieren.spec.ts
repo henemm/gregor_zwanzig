@@ -7,7 +7,7 @@
 // Gemessen wird die Browser-Geste, nicht der Quelltext.
 
 import { test, expect, type Page } from '@playwright/test';
-import { dragDndZoneItem } from './helpers';
+import { dragDndZoneItem, oeffneEtappenEditor } from './helpers';
 
 const TRIP_ID = 'e2e-2288-strip';
 const wp = (id: string, lat: number) => ({ id, name: id, lat, lon: 9.0, elevation_m: 800 });
@@ -31,6 +31,7 @@ async function seed(page: Page, n: number) {
 async function openEditor(page: Page) {
 	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
 	await expect(page.getByTestId('edit-stages-panel')).toBeVisible();
+	await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 	await expect(page.getByTestId('etappen-strip')).toBeVisible();
 }
 

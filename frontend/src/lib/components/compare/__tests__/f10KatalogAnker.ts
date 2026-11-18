@@ -56,10 +56,14 @@ export const F10_ANKER: [schluessel: string, de: string, en: string][] = [
 	['vergleich.hub.tabs_aria', 'Vergleich-Detail', 'Comparison details'],
 	['vergleich.hub.verglichene_orte', 'Verglichene Orte', 'Compared locations'],
 	['vergleich.hub.ziehen_sortieren', 'ziehen zum Sortieren', 'drag to sort'],
-	['vergleich.hub.reihenfolge_hinweis', 'Reihenfolge = Spalten im Briefing · ziehen zum Sortieren', 'Order = columns in the briefing · drag to sort'],
+	// vergleich.hub.reihenfolge_hinweis entfällt mit #3007 (Mockup Fassung 3: kein Reihenfolge-Hinweis).
 	// #3006: Bereichskopf des Reiters Orte (Mockup Fassung 3, Z. 590) mit Knopf rechts; Titel = aktionen.reiter.orte.
 	['vergleich.hub.kopf.orte_erklaer', 'Ein Ort ergibt ein Orts-Briefing. Ab zwei Orten kommt die Vergleichstabelle dazu, ohne Rangfolge.', 'One location makes a location briefing. From two locations on, the comparison table is added, without ranking.'],
 	['vergleich.hub.kopf.ort_hinzufuegen', '+ Ort hinzufügen', '+ Add location'],
+	// #3007: Listenzeile des Reiters Orte (Mockup Fassung 3, Z. 591): Name, „Gruppe · Höhe m“, Textknopf.
+	['vergleich.hub.ort_name', '<name>', '<name>'],
+	['vergleich.hub.ort_gruppe_hoehe', '<gruppe> · <hoehe> m', '<gruppe> · <hoehe> m'],
+	['vergleich.hub.ort_entfernen', 'entfernen', 'remove'],
 	['vergleich.hub.keine_orte', 'Noch keine Orte ausgewählt.', 'No locations selected yet.'],
 	['vergleich.hub.keine_weiteren', 'Keine weiteren gespeicherten Orte verfügbar.', 'No other saved locations available.'],
 	['vergleich.hub.laufzeit_ueberschritten', 'Laufzeit überschritten', 'End date passed'],

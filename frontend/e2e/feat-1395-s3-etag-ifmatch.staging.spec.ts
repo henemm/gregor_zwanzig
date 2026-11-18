@@ -21,7 +21,7 @@ import { test, expect, type Page, type Request, type APIRequestContext } from '@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertNotProdBaseURL } from './prodUrlGuard';
-import { E2E_TEST_PREFIX, feldEingabe, tippeUhrzeit } from './helpers';
+import { E2E_TEST_PREFIX, feldEingabe, tippeUhrzeit, oeffneEtappenEditor } from './helpers';
 import { ausUmgebung } from './stagingZugang';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -532,6 +532,7 @@ test('#1395 S3 Fall 5 (Regression): Etappen-Reiter speichert weiterhin, mit If-M
 		const puts = recordBrowserTripPuts(page, trip.id);
 		await page.goto(`/trips/${trip.id}?tab=etappen`);
 		await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 30_000 });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 
 		const timeInput = page
 			.locator('[data-testid="stage-start-time-field"]:visible')
@@ -556,6 +557,7 @@ test('#1395 S3 Fall 5 (Regression): Etappen-Reiter speichert weiterhin, mit If-M
 
 		await page.reload();
 		await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 30_000 });
+		await oeffneEtappenEditor(page); // #3007: Etappenzeile aufklappen
 		const timeAfter = page
 			.locator('[data-testid="stage-start-time-field"]:visible')
 			.first();

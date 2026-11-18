@@ -959,9 +959,10 @@ class NotificationService:
                 "premium_sms", "briefing", now_premium, blocked_channels, blocked_reason_codes,
             ):
                 try:
+                    # Issue #3100: Premium-Grenze 153 (gleicher Text, solange er passt).
                     self._premium_sms_output().send(
                         subject=report.email_subject,
-                        body=report.sms_text or report.email_plain,
+                        body=report.premium_sms_text or report.sms_text or report.email_plain,
                     )
                     sent_channels.append("premium_sms")
                 except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld

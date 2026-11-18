@@ -7,7 +7,7 @@
 // Mobil-Zweig. KEINE Mausereignisse (sonst misst der Test nur AC-1 noch einmal).
 
 import { test, expect, type Page } from '@playwright/test';
-import { dragDndZoneItemTouch } from './helpers';
+import { dragDndZoneItemTouch, oeffneEtappenEditor } from './helpers';
 
 const TRIP_ID = 'e2e-2288-touch';
 const wp = (id: string, lat: number) => ({ id, name: id, lat, lon: 9.0, elevation_m: 800 });
@@ -42,6 +42,7 @@ test('AC-10: Fingergeste sortiert die Etappen um, speichert nur beim Ablegen, sc
 }) => {
 	test.setTimeout(60_000);
 	await page.goto(`/trips/${TRIP_ID}?tab=etappen`);
+	await oeffneEtappenEditor(page); // #3007: Etappen-Band steht im aufgeklappten Editor
 	await expect(page.getByTestId('etappen-strip')).toBeVisible();
 	const card = (i: number) => page.getByTestId('etappen-strip').getByTestId(`stage-card-${i}`);
 
