@@ -1666,6 +1666,26 @@ def get_sms_code(metric_id: str) -> str:
     return m.sms_code if m is not None else ""
 
 
+def kuerzel_bedeutung(metric_id: str, kuerzel: str, lang: str) -> Optional[str]:
+    """Bedeutung eines gesendeten Kuerzels aus ``kuerzel_bedeutung_de/en``
+    der Metrik; ``None``, wo der Katalog keine fuehrt.
+
+    #3122 B2b: Die Orte-SMS sendet das Register-Kuerzel (``NS``), die Trip-SMS
+    dessen Grammatikform (``SMS_SYMBOL_GRAMMAR``, ``NS24+``); die Bedeutung
+    steht einmal, unter der Grammatikform. Das Register-Kuerzel liest sie
+    dort -- ein zweiter Schluessel im dict stuende sonst zusaetzlich in der
+    CODES-/KUERZEL-Antwort (``codes_text`` nennt jeden Schluessel)."""
+    m = _METRICS_BY_ID.get(metric_id)
+    if m is None:
+        return None
+    bedeutung = m.kuerzel_bedeutung_en if lang == "en" else m.kuerzel_bedeutung_de
+    if kuerzel in bedeutung:
+        return bedeutung[kuerzel]
+    grammatik = SMS_SYMBOL_GRAMMAR.get(metric_id, "").rstrip(":")
+    if kuerzel and kuerzel == m.sms_code and grammatik:
+        return bedeutung.get(grammatik)
+    return None
+
 
 def kurzform_kuerzel(
     metric_id: str,
