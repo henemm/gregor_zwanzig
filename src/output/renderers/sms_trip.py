@@ -7,7 +7,7 @@ WIRE: docs/specs/modules/sms_format.md v2.0 §2/§3 (POSITIONAL)
 Adapter-Vertrag (§A3):
   SMSTripFormatter bleibt importierbar, format_sms() delegiert intern an
   render_sms() (TokenLine-Pipeline). Output ist v2.0 (N12 D18 ..., Stage-
-  Prefix '{Name}: '), kein Legacy 'E1:T12/18 | E2:...' mehr.
+  Prefix '{Name} ', ohne Doppelpunkt seit #3174), kein Legacy 'E1:T12/18 | E2:...' mehr.
 
 Domain-Logik (RiskEngine, Risk-Labels) bleibt für format_alert_sms() und
 _detect_risk() erhalten (§A4 - Alert-Pfad nicht migriert in β3).
@@ -600,7 +600,7 @@ class SMSTripFormatter:
             segments: SegmentWeatherData list (Story 2)
             max_length: max SMS length (sms_format.md §1, default 160)
             exposed_sections: kept for API parity (Risk-Pfad rebuild)
-            stage_name: prefix '{Name}: ' (v2.0 §2). Default: 'Etappe'.
+            stage_name: prefix '{Name} ' (v2.0 §2, ohne Doppelpunkt seit #3174). Default: 'Etappe'.
             report_type: 'morning' or 'evening' (default 'evening').
             tz: Zielzeitzone für Stunden-Token (Bug #398). Default UTC
                 (abwärtskompatibel: UTC→UTC = keine Verschiebung).

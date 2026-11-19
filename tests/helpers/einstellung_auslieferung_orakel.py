@@ -499,8 +499,11 @@ def _sms_treffer(text: str) -> list[tuple[int, str, str]]:
     """(index, metric_id, roher Wert) je erkanntem Kuerzel-Token in
     Token-Reihenfolge -- gemeinsame Grundlage fuer ``parse_sms_artig``
     (Modus) und ``roh_wert_der_metrik`` (Rohwert, AC-13)."""
-    rumpf = text.split(": ", 1)[1] if ": " in text else text
-    tokens = rumpf.split(" ")
+    # #3174: der Kopf (``E3``, ``GR221 km0-11``) traegt keinen Doppelpunkt
+    # mehr. Das erste Wort ist immer das Praefix und wird nie zugeordnet (auch
+    # ein kuerzelartiger Name wie ``W99`` nicht); weitere Kopf-Woerter
+    # (``km0-11``) entsprechen nicht der Token-Grammatik.
+    tokens = text.split(" ")[1:]
     treffer: list[tuple[int, str, str]] = []  # (index, metric_id, wert)
     for i, tok in enumerate(tokens):
         for symbol, mid in _SMS_SYMBOL_TO_METRIC.items():
