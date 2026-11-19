@@ -466,7 +466,10 @@ describe('Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) 
 		assert.match(spec, /const regeln = ladeRegeln\(\{ freigaben: FREIGABEN, besitzer: BESITZER \}, alle\);/);
 		assert.match(spec, /const konto = await ladeKontoTexte\(\(pfad\) => api\.get\(pfad\), ids\);/);
 		// Fix-Loop 2/3 (Befund 1, F002): beide Hub-Anker werden mitgegeben, der Befund ohne Hub landet in ohneHub und geht an werteLaufAus.
-		assert.match(spec, /werteGegenrichtungAus\(\{ ctx: k\.ctx, reiter: k\.reiter, anker: hub\.anker, texte: hub\.texte \}, alle, regeln\.ausnahmen, konto, plan\.sprache\)/);
+		assert.match(spec, /werteGegenrichtungAus\(\{ ctx: k\.ctx, reiter: k\.reiter, anker: hub\.anker, texte: hub\.texte \}, alle, regeln\.ausnahmen, konto, plan\.sprache, metrikNamen\)/);
+		// #3011: Metriknamen aus dem Register werden geladen und an die Gegenrichtung durchgereicht.
+		assert.match(spec, /const metrikNamen = register\?\.ok\(\) \? metrikNamenAusRegister\(/);
+		assert.match(spec, /api\.get\('\/api\/metrics'\)/);
 		assert.match(spec, /if \(gegen\.ohneHub\) ohneHub\.push\(gegen\.ohneHub\);/);
 		assert.match(spec, /zusaetzlich\.push\(\.\.\.gegen\.zusaetzlich\);/);
 		assert.match(spec, /werteLaufAus\(\{ plan, ergebnisse, zusaetzlich, ohneHub, regeln, berichtDir: BERICHT_DIR \}\)/);
