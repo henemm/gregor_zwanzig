@@ -881,3 +881,46 @@ def test_t9_parent_nennt_die_eltern_zeile(client):
     assert _zeile(antwort, "wind_chill_day_low")["parent"] == "wind_chill"
     assert _zeile(antwort, "temperature")["parent"] is None
     assert _zeile(antwort, "wind")["parent"] is None
+
+
+#: Abo-Ampel mit tiefer Wind-Gelbgrenze (wie ``ABO_AMPEL`` in test_3172):
+#: der Wind-Token haengt sichtbar an der Ampel DIESES Abos.
+_ABO_AMPEL_WIND = {"template": "allgemein",
+                   "metrics": {"wind": {"upper": {"yellow": 12, "orange": 40, "red": 60}}}}
+
+
+def _wind_token_mit(ampel: dict, kennung: str) -> str:
+    """Wind-Token des ersten Orts aus dem Beispiel-Datensatz mit ``ampel``."""
+    from app.loader import load_all_locations
+    from output.renderers.orte_sms import orte_token_reihen
+    from services import placements_beispiel as pb
+
+    ort = next(o for o in load_all_locations(NUTZER_A) if o.id == f"{kennung}-ort0")
+    loc = pb.orte_ergebnis([ort]).locations[0]
+    return " ".join(t.render() for t in orte_token_reihen(loc, ["wind_max"], None, ampel=ampel)[0])
+
+
+def test_3172_f002_sms_beispielwert_folgt_der_abo_ampel(client):
+    """#3172 Adversary F002: der SMS-Beispielwert der Karte entsteht mit der
+    Ampel des Abos -- derselben, mit der die SMS rendert. Mit einer anderen
+    Ampel (Standard-Vorlage) waere der Wind-Token ein anderer, stuende nicht
+    in der SMS, und die Zeile hiesse faelschlich "passt nicht mehr"."""
+    from app.ampel import resolve_ampel
+
+    kennung = "o-f002-ampel"
+    pfad = _orte(NUTZER_A, kennung, anzahl=1, placements={"version": 1, "rows": []},
+                 grund=[{"metric_id": "wind", "aggregation": "max"}])
+    daten = json.loads(pfad.read_text(encoding="utf-8"))
+    daten["display_config"]["ampel"] = _ABO_AMPEL_WIND
+    pfad.write_text(json.dumps(daten), encoding="utf-8")
+
+    antwort = _ok(client, kennung, "vergleich")
+    sms = antwort["sms_example"]["text"]
+    assert sms == _orte_versand_sms(NUTZER_A, kennung), sms
+    abo = _wind_token_mit(resolve_ampel(daten), kennung)
+    # Vorbedingung: die Abo-Ampel aendert den Token gegenueber der Standard-Vorlage.
+    assert abo != _wind_token_mit(resolve_ampel({}), kennung), abo
+    assert sms == f"O1 {abo}", sms
+    zelle = _zeile(antwort, "wind")["cells"]["sms"]
+    assert zelle["example"] == abo, (zelle, sms)
+    assert zelle["mark"] is None, zelle

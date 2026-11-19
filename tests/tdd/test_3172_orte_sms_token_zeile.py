@@ -515,3 +515,76 @@ def test_ac8_listenfolge_abwahl_und_einfach():
 def test_ac8_roh_zeigt_die_zahl():
     sms = _ac8_sms(einfach=False)
     assert sms == "O1 G- CT70@13 W-", sms
+
+
+# ---------------------------------------------------------------------------
+# Adversary F003 -- Grenzen
+# ---------------------------------------------------------------------------
+
+def test_f003_grenze_ist_einschliesslich():
+    """Passt die volle Zeile genau auf die Grenze, steht sie ungekuerzt; ein
+    Zeichen weniger kuerzt vom Listenende (Grenze einschliesslich, wie
+    ``format_sms(max_length=160)``). Die Versandgrenze selbst ist 160."""
+    from output.renderers.comparison import ORTE_SMS_MAX_ZEICHEN, render_compare_sms
+
+    ergebnis = pb.orte_ergebnis(_beispiel_orte(1))
+    auswahl = ["temp_max", "temp_min", "wind_max", "gust_max", "precip_sum", "pop_max",
+               "thunder_max", "uv_max"]
+    voll = render_compare_sms(ergebnis, enabled_metrics=auswahl, max_chars=500)
+    assert render_compare_sms(ergebnis, enabled_metrics=auswahl, max_chars=len(voll)) == voll
+    kuerzer = render_compare_sms(ergebnis, enabled_metrics=auswahl, max_chars=len(voll) - 1)
+    assert voll.startswith(kuerzer) and len(kuerzer) < len(voll) - 1, (kuerzer, voll)
+    assert ORTE_SMS_MAX_ZEICHEN == SMS_MAX == 160
+
+
+def test_f003_ohne_stundenwerte_niederschlagsart_ist_fragezeichen():
+    """Ort ohne Stundenwerte: die gewaehlte Niederschlagsart steht als ``PT:?``
+    (kein Wert), nicht als ``PT:-`` ("trocken")."""
+    from output.renderers.comparison import render_compare_sms
+
+    ohne = LocationResult(location=_ort("Husum"), temp_max=14.0)
+    sms = render_compare_sms(_vergleich([ohne]), enabled_metrics=["temp_max", "precip_type"])
+    assert sms == "O1 D14 PT:?", sms
+
+
+def _warnungen_aller_gefahren() -> list[OfficialAlert]:
+    from output.renderers.alert.official_alerts import HAZARD_SMS_SYMBOLS
+
+    return [OfficialAlert(source="meteoalarm", hazard=h, level=4, label=h,
+                          valid_from=_ts(10 + i % 6), valid_to=_ts(20), region_label="R")
+            for i, h in enumerate(HAZARD_SMS_SYMBOLS)]
+
+
+def test_f003_warnblock_aller_gefahren_passt_in_jede_echte_grenze():
+    """Der laengste Warnblock (jede Gefahr, hoechste Stufe) passt mit ``O1``
+    und ``X?`` in 153 Zeichen: der Degenerationszweig von
+    ``_render_compare_sms_body`` ist mit den echten Grenzen (160/153) nicht
+    erreichbar -- er sichert nur die Endgarantie fuer kleinere ``max_chars``
+    (naechster Test)."""
+    from output.renderers.comparison import render_compare_sms
+
+    ort = _ergebnis(_ort("Kiel"), _punkte({"t2m_c": 15.0}),
+                    official_alerts=_warnungen_aller_gefahren())
+    for grenze in (SMS_MAX, PREMIUM_MAX):
+        sms = render_compare_sms(_vergleich([ort]), enabled_metrics=[], max_chars=grenze)
+        assert sms.startswith("O1 !TS:") and not sms.endswith("..."), sms
+
+
+@pytest.mark.parametrize("anzahl", [1, 3])
+def test_f003_endgarantie_jede_grenze_auch_im_degenerationsfall(anzahl):
+    """Endgarantie ``len <= max_chars`` fuer JEDE Grenze -- auch dort, wo schon
+    der erste Ort ohne Listenzeile (nur sein Warnblock) nicht passt
+    (Degenerationszweig): dann EIN sichtbar gekuerzter Ortsteil (``...``)
+    plus ``+k Orte``, notfalls hart auf die Grenze geschnitten."""
+    from output.renderers.comparison import render_compare_sms
+
+    orte = [_ergebnis(_ort(f"Kiel {i}", ort_id=f"k{i}"), _punkte({"t2m_c": 15.0}),
+                      official_alerts=_warnungen_aller_gefahren())
+            for i in range(anzahl)]
+    degeneriert = 0
+    for grenze in range(0, 100):
+        sms = render_compare_sms(_vergleich(orte), enabled_metrics=["temp_max"], max_chars=grenze)
+        assert len(sms) <= grenze, (grenze, sms)
+        if "..." in sms:
+            degeneriert += 1
+    assert degeneriert, "Vorbedingung: der Degenerationszweig wurde nie erreicht"
