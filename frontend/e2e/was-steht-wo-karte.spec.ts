@@ -844,6 +844,9 @@ test.describe('Karte „Was steht wo“', () => {
 				const vorher = altStand(abo.kind, await stand(page.request, abo.kind, abo.id));
 				const fremdVorher = altStand(fremd.kind, await stand(zweit.seite.request, fremd.kind, fremd.id));
 				expect(vorher, 'Messaufbau: Altfelder gespeichert').toMatchObject(abo.kind === 'route' ? { report_config: { multi_day_trend_reports: ['morning'] } } : { outlook_enabled: false });
+				// #3155: Orte-Anlage mit outlook_enabled false schreibt die Marke „aus“ (leere Liste, ADR-0124 Nr. 6).
+				if (abo.kind === 'vergleich')
+					expect(vorher.display_config.placements, 'Anlage-Marke bei outlook_enabled false').toEqual({ version: 1, outlook_reports: [] });
 				expect((await page.request.get(tabellenUrl(fremd.kind, fremd.id))).status(), 'fremdes Abo nicht lesbar').toBe(404);
 
 				// Reiter Zustellung: ein Schalter außerhalb des Übergangsblocks; bei Orten zusätzlich die Pausieren-Karte im Block.
@@ -877,4 +880,47 @@ test.describe('Karte „Was steht wo“', () => {
 			}
 		});
 	}
+});
+
+// ── #3155 (Scheibe B4): eine steuernde Stelle, ein Name ─────────────────────────────────────────
+// Spec docs/specs/modules/feat_3155_ein_name_ausblick.md AC-7, AC-8, AC-11. Die Orte-Anlage legt die
+// Vorbelegung des 3-Tages-Ausblicks als Marke an (placements ohne rows, nur outlook_reports); die Karte
+// zeigt sie. Der Reiter Wetter kennt die Karte „Mehrtages-Trend“, ihre Haken und alte Namen nicht mehr.
+test.describe('Karte „Was steht wo“ — #3155 Vorbelegung und ein Name', () => {
+	for (const [name, slots, soll] of [
+		['Morgen und Abend an', { morning_enabled: true, evening_enabled: true }, { morning: 'false', evening: 'true', reports: ['evening'] }],
+		['nur Morgen an', { morning_enabled: true, evening_enabled: false }, { morning: 'true', evening: 'false', reports: ['morning'] }],
+		// Ausblick bei der Anlage aus: Marke mit leerer Liste (ADR-0124 Nr. 6), beide Schalter aus.
+		['Ausblick aus', { morning_enabled: true, evening_enabled: true, outlook_enabled: false }, { morning: 'false', evening: 'false', reports: [] }]
+	] as const) {
+		test(`WS-B4 (drei Orte, ${name}): neu angelegtes Abo — Ausblick nach der Regel vorbelegt, Karte zeigt es`, async ({ page }) => {
+			await page.setViewportSize(DESKTOP);
+			const abo = await seed(page.request, FAELLE[1], { oben: { ...slots, morning_time: '07:00:00', evening_time: '18:00:00' } });
+			try {
+				const gespeichert = await stand(page.request, 'vergleich', abo.id);
+				expect(gespeichert.display_config.placements, 'Anlage-Marke ohne rows').toEqual({ version: 1, outlook_reports: [...soll.reports] });
+				expect((await tabelle(page.request, abo)).outlook_reports, 'Tabellen-Antwort').toEqual([...soll.reports]);
+				const karte = await oeffneKarte(page, abo);
+				await expect(karte.getByTestId('was-steht-wo-ausblick-morning')).toHaveAttribute('aria-checked', soll.morning);
+				await expect(karte.getByTestId('was-steht-wo-ausblick-evening')).toHaveAttribute('aria-checked', soll.evening);
+			} finally {
+				await abo.aufraeumen();
+			}
+		});
+	}
+
+	test('WS-B4 (Trip): Reiter Wetter ohne Karte „Mehrtages-Trend“, ohne Trend-Haken und ohne alte Namen', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const abo = await seed(page.request, FAELLE[0]);
+		try {
+			const karte = await oeffneKarte(page, abo);
+			await expect(karte.getByTestId('was-steht-wo-ausblick-evening')).toBeVisible();
+			for (const id of ['report-morning-trend', 'report-evening-trend'])
+				await expect(page.getByTestId(id), `${id} entfernt`).toHaveCount(0);
+			for (const alt of ['Mehrtages-Trend', '3-Tages-Vorschau', 'Nächste Etappen'])
+				await expect(page.getByText(alt, { exact: false }), `„${alt}“ steht noch im Reiter Wetter`).toHaveCount(0);
+		} finally {
+			await abo.aufraeumen();
+		}
+	});
 });

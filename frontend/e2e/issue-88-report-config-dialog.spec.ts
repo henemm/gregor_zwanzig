@@ -10,7 +10,8 @@
 //   morning-master-switch, evening-master-switch
 //   report-morning-time, report-evening-time (existieren bereits)
 //   report-morning-quickpick-07, report-evening-quickpick-18
-//   report-morning-trend, report-evening-trend
+//   (#3155: report-morning-trend/report-evening-trend entfallen mit der Karte
+//   „Mehrtages-Trend"; der Ausblick wird allein in der Karte „Was steht wo" gesteuert.)
 //   channel-email, channel-telegram
 //
 // Alle Threshold-Inputs (change_threshold_*) sind in der Komponente entfernt.
@@ -135,11 +136,9 @@ test.describe('Issue #88: Report Config Dialog', () => {
 			const morningQuickpick = page.locator('[data-testid="report-morning-quickpick-07"]');
 			await expect(morningQuickpick).toBeDisabled();
 
-			// Trend-Switch in Morgen-Sektion: disabled
-			const morningTrend = page
-				.locator('[data-testid="report-morning-trend"]')
-				.locator('input[type="checkbox"]');
-			await expect(morningTrend).toBeDisabled();
+			// #3155: kein Trend-Schalter mehr in der Morgen-Sektion (Karte „Mehrtages-Trend" entfernt).
+			await expect(page.locator('[data-testid="report-morning-trend"]')).toHaveCount(0);
+			await expect(page.locator('[data-testid="report-evening-trend"]')).toHaveCount(0);
 		} finally {
 			await deleteTrip(request, id);
 		}
@@ -238,9 +237,11 @@ test.describe('Issue #88: Report Config Dialog', () => {
 	});
 
 	// ----------------------------------------------------------------------------
-	// AC-6: Trend-Schalter pro Sektion — Toggle + Save sendet korrektes Feld
+	// AC-6 (abgeloest durch #3155, Spec feat_3155_ein_name_ausblick.md Entscheidung 4,
+	// AC-7): die Karte „Mehrtages-Trend" ist entfernt -- kein Trend-Schalter mehr; ein
+	// gespeicherter Ausblick-Wert (multi_day_trend_reports) gewinnt beim Speichern.
 	// ----------------------------------------------------------------------------
-	test('AC-6: Trend-Switch Morgen togglen und in PUT /api/trips/[id] persistieren', async ({
+	test('AC-6/#3155: kein Trend-Schalter, gespeicherter Ausblick bleibt beim Speichern erhalten', async ({
 		page,
 		request
 	}) => {
@@ -250,27 +251,15 @@ test.describe('Issue #88: Report Config Dialog', () => {
 				enabled: true,
 				morning_time: '07:00',
 				evening_time: '18:00',
-				multi_day_trend_morning: false
+				multi_day_trend_reports: ['morning']
 			}
 		});
 		try {
 			await openReportsSection(page, id);
 
-			// Master-Switch Morgen sicher AN
-			const morningSwitch = page
-				.locator('[data-testid="morning-master-switch"]')
-				.locator('input[type="checkbox"]');
-			if (!(await morningSwitch.isChecked())) {
-				await morningSwitch.click();
-			}
-
-			// Trend-Switch innerhalb Morgen-Sektion togglen (war false → wird true)
-			const morningTrend = page
-				.locator('[data-testid="report-morning-trend"]')
-				.locator('input[type="checkbox"]');
-			await expect(morningTrend).not.toBeChecked();
-			await morningTrend.click();
-			await expect(morningTrend).toBeChecked();
+			await expect(page.locator('[data-testid="report-morning-trend"]')).toHaveCount(0);
+			await expect(page.locator('[data-testid="report-evening-trend"]')).toHaveCount(0);
+			await expect(page.getByText('Mehrtages-Trend')).toHaveCount(0);
 
 			// Save → PUT abfangen und Body inspizieren
 			const putPromise = page.waitForRequest(
@@ -281,15 +270,15 @@ test.describe('Issue #88: Report Config Dialog', () => {
 			const body = JSON.parse(putReq.postData() || '{}');
 
 			expect(body.report_config).toBeTruthy();
-			expect(body.report_config.multi_day_trend_morning).toBe(true);
+			expect(body.report_config.multi_day_trend_reports, 'vorhandener Wert gewinnt').toEqual(['morning']);
 
 			await page.waitForURL('/trips', { timeout: 5000 });
 
-			// Reload via API: Wert ist persistiert
+			// Reload via API: Wert ist unveraendert gespeichert
 			const after = await request.get(`/api/trips/${id}`);
 			expect(after.ok()).toBe(true);
 			const afterJson = await after.json();
-			expect(afterJson.report_config.multi_day_trend_morning).toBe(true);
+			expect(afterJson.report_config.multi_day_trend_reports).toEqual(['morning']);
 		} finally {
 			await deleteTrip(request, id);
 		}

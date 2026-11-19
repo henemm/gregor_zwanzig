@@ -92,7 +92,13 @@ async function tripMitStandardwerten(page: Page, name: string, datum: string): P
 
 async function tripDurchgeklickt(page: Page, name: string, datum: string): Promise<string> {
 	await tripPflicht(page, false, name, datum);
-	for (const reiter of TRIP_KETTE) await tripTab(page, false, reiter).click();
+	for (const reiter of TRIP_KETTE) {
+		await tripTab(page, false, reiter).click();
+		// #3155 (AC-7): die Trip-Anlage zeigt in keinem Reiter die Karte „Mehrtages-Trend".
+		await expect(page.getByTestId('report-morning-trend')).toHaveCount(0);
+		await expect(page.getByTestId('report-evening-trend')).toHaveCount(0);
+		await expect(page.getByText('Mehrtages-Trend', { exact: false })).toHaveCount(0);
+	}
 	const knopf = page.getByTestId('trip-new-save-btn');
 	await expect(knopf).toBeEnabled({ timeout: 15_000 });
 	const id = await postId(page, '/api/trips', () => knopf.click());
@@ -116,7 +122,9 @@ test.describe('Teil A: Trip /trips/new', () => {
 		const tb = await lies(page.request, `/api/trips/${b}`);
 		expect(normalisiert(ta)).toEqual(normalisiert(tb));
 		const rc = ta.report_config as Record<string, unknown>;
-		expect(rc.multi_day_trend_reports, 'kein Mehrtages-Trend im Abend-Briefing').toEqual([]);
+		// #3155 (Spec feat_3155 AC-7): Vorbelegung des 3-Tages-Ausblicks nach der einen Regel --
+		// Morgen- und Abend-Briefing an -> nur abends.
+		expect(rc.multi_day_trend_reports, '3-Tages-Ausblick nur im Abend-Briefing').toEqual(['evening']);
 	});
 
 	test('AC-9 + AC-11: Detailseite mit Standardwerten, genau EIN Trip nach Wegnavigieren, Nutzer B sieht ihn nicht', async ({ page, browser }) => {

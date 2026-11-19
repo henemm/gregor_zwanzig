@@ -65,6 +65,10 @@ for (const kind of HUB_KINDS) {
 				expect(await angezeigteZeit(reiter.getByTestId(ZT.stilleBis)), 'Stille Stunden bis').toBe('06:00');
 				await expect(await cooldownFeld(reiter), 'Mindestabstand').toHaveValue('90');
 				await expect(reiter.getByTestId(ZT.tabelle), 'Kanal-Tabelle').toBeVisible();
+				// #3155: keine Trend-Schalter und kein Name „Mehrtages-Trend" mehr.
+				for (const id of ['report-morning-trend', 'report-evening-trend'])
+					await expect(page.getByTestId(id), `${id} entfernt`).toHaveCount(0);
+				await expect(page.getByText('Mehrtages-Trend', { exact: false })).toHaveCount(0);
 
 				const karte = await oeffneKarte(page, kind, hub.id);
 				await expect(karte.getByTestId('was-steht-wo-kurzstil'), 'Telegram-Kurzstil (Karte)').toHaveAttribute('aria-checked', 'true');

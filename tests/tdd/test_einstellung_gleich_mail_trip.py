@@ -1208,3 +1208,168 @@ def test_eml_aus_kette_ist_multipart_mit_beiden_teilen(monkeypatch):
     text = msg.get_body(("plain",)).get_content()
     assert html_tabellen(html)["etappe"][0].spalten == ["gust", "temperature"]
     assert klartext_tabellen(text)["etappe"][0].spalten == ["gust", "temperature"]
+
+
+# ---------------------------------------------------------------------------
+# #3155 (B4 von #3122): eine steuernde Stelle, ein Name -- je Briefing,
+# Ausgabe und Sprache. SPEC: docs/specs/modules/feat_3155_ein_name_ausblick.md
+# (AC-1, AC-3, AC-4, AC-5, AC-10, AC-11, AC-13).
+#
+# Fallfelder: ``konfig`` (Schluessel in ``_B4_KONFIG``), ``briefing``
+# (morning/evening), ``sprache`` (de/en), ``format`` (html/klartext/kompakt/
+# telegram), ``soll`` (an/aus). Fehlt ``briefing``/``sprache``, gilt das
+# bisherige Verhalten (Abend, Deutsch). Die Ausblick-Zeilen entstehen wie im
+# Zeitplaner nur, wenn ``resolve_report_render_options`` sie anfordert
+# (``ausblick_nach_zeitplaner``) -- sonst laege der Block morgens in jeder
+# Mail, obwohl der Zeitplaner ihn nie gebaut haette.
+# ---------------------------------------------------------------------------
+
+from tests.helpers.ausblick_name import (  # noqa: E402
+    NAME, alte_namen_in, html_textknoten, name_steht, textzeilen,
+    trip_telegram_ausblick, trip_telegram_kopf,
+)
+
+#: Telegram ist die vierte Ausgabe des Ausblicks (frisches Profil hat Chat).
+_B4_KANAELE = {"send_email": True, "send_telegram": True}
+_B4_GRUND = ["gust", "temperature", "wind"]
+
+
+def _b4_tabelle(outlook_reports) -> dict:
+    return {"version": 1, "rows": [{"metric_id": m} for m in _B4_GRUND],
+            "outlook_reports": outlook_reports}
+
+
+def _b4_alt(rc=None, **kw) -> dict:
+    return trip_json(_B4_GRUND, report_config={**_B4_KANAELE, **(rc or {})}, **kw)
+
+
+#: Konfiguration je Fall (rohes Trip-JSON im Persistenzformat).
+_B4_KONFIG = {
+    # AC-1: Ausblick nur abends -- Altbestand ohne Tabelle ...
+    "alt_abend": lambda: _b4_alt({"multi_day_trend_reports": ["evening"]},
+                                 outlook_metrics=["gust", "temperature"]),
+    # ... und mit Tabelle (``outlook_reports``).
+    "tabelle_abend": lambda: _b4_alt(display={"placements": _b4_tabelle(["evening"])}),
+    # AC-3: beide Schalter aus -- Altbestand ``show_outlook: false`` (Format
+    # ausfuehrlich; der Telegram-Fall belegt die bewusste Ausgabeaenderung) ...
+    "alt_show_outlook_aus": lambda: _b4_alt(
+        {"show_outlook": False, "multi_day_trend_reports": ["morning", "evening"]},
+        outlook_metrics=["gust", "temperature"]),
+    # ... Kompakt-Ausnahme: dort war der Schalter gesperrt, der Ausblick folgt
+    # ``multi_day_trend_reports`` (Ober-Spec AC-12, #3154 F003) ...
+    "alt_show_outlook_aus_kompakt": lambda: _b4_alt(
+        {"show_outlook": False, "multi_day_trend_reports": ["evening"],
+         "email_format": "compact"},
+        outlook_metrics=["gust", "temperature"]),
+    # ... und Tabelle mit ``outlook_reports: []``.
+    "tabelle_aus": lambda: _b4_alt(display={"placements": _b4_tabelle([])}),
+    # AC-4: Altbestand ``outlook_metrics: []`` -> nirgends (auch Telegram) ...
+    "alt_metriken_leer": lambda: _b4_alt({"multi_day_trend_reports": ["morning", "evening"]},
+                                         outlook_metrics=[]),
+    # ... und Altbestand morgens UND abends -> beide (AC-4, AC-13 Bestand).
+    "alt_beide": lambda: _b4_alt({"multi_day_trend_reports": ["morning", "evening"]},
+                                 outlook_metrics=["gust", "temperature"]),
+}
+
+
+def _b4_senden(monkeypatch, fall: dict, **kw):
+    """(HTML|None, Klartext/Kompakttext, Telegram-Bubbles) EINER Sendung."""
+    data = _B4_KONFIG[fall["konfig"]]()
+    if fall["format"] == "kompakt":
+        data["report_config"]["email_format"] = "compact"
+    mit, _trip, _uid = render_trip_mit_ausblick(
+        monkeypatch, data, report_type=fall.get("briefing", "evening"),
+        language=fall.get("sprache"), ausblick_nach_zeitplaner=True, **kw)
+    html, text = mail_teile(mit)
+    return html, text, [s["body"] for s in mit.sendungen("telegram")]
+
+
+def _b4_ausblick_da(fall: dict, html, text, bubbles) -> bool:
+    fmt = fall["format"]
+    if fmt == "html":
+        return html_ausblick(html) is not None
+    if fmt == "telegram":
+        return trip_telegram_ausblick(bubbles) is not None
+    return klartext_ausblick(text, AUSBLICK_TAGE) is not None
+
+
+@pytest.mark.parametrize("fall", _faelle("test_b4_ausblick_je_briefing"))
+def test_b4_ausblick_je_briefing(monkeypatch, fall):
+    """AC-1/AC-3/AC-4 (#3155): der Ausblick steht in einem Briefing genau dann,
+    wenn die eine Stelle ihn dort einschaltet -- in HTML-, Nur-Text-,
+    Kompakt-Mail und Telegram gleich, Deutsch und Englisch."""
+    html, text, bubbles = _b4_senden(monkeypatch, fall)
+    ist = _b4_ausblick_da(fall, html, text, bubbles)
+    soll = fall["soll"] == "an"
+    assert ist is soll, (
+        f"{fall['id']}: Ausblick {'fehlt' if soll else 'steht trotzdem'} "
+        f"({fall['konfig']}, {fall['briefing']}, {fall['format']}, {fall['sprache']})")
+
+
+def _b4_texte(fall: dict, html, text, bubbles) -> list[str]:
+    fmt = fall["format"]
+    if fmt == "html":
+        return html_textknoten(html)
+    if fmt == "telegram":
+        return [z for b in bubbles for z in textzeilen(b)]
+    return textzeilen(text)
+
+
+@pytest.mark.parametrize("fall", _faelle("test_b4_ausblick_heisst_ueberall_gleich"))
+def test_b4_ausblick_heisst_ueberall_gleich(monkeypatch, fall):
+    """AC-10 (#3155): der Ausblick-Block heisst in jeder Ausgabe
+    "3-Tages-Ausblick" bzw. "3-day outlook" (Kompakt in ASCII-Schreibweise --
+    beide Namen sind bereits ASCII)."""
+    html, text, bubbles = _b4_senden(monkeypatch, fall)
+    lang = fall["sprache"]
+    assert _b4_ausblick_da(fall, html, text, bubbles), f"{fall['id']}: Vorbedingung Ausblick"
+    if fall["format"] == "telegram":
+        kopf = trip_telegram_kopf(bubbles)
+        assert kopf == NAME[lang], f"{fall['id']}: Telegram-Kopf {kopf!r} != {NAME[lang]!r}"
+        return
+    texte = _b4_texte(fall, html, text, bubbles)
+    assert name_steht(texte, lang), (
+        f"{fall['id']}: Blocktitel {NAME[lang]!r} fehlt; Kandidaten: "
+        f"{[t for t in texte if any(w in t.casefold() for w in ('ausblick', 'outlook', 'etappen', 'stages'))]}")
+
+
+@pytest.mark.parametrize("fall", _faelle("test_b4_keine_alten_ausblick_namen"))
+def test_b4_keine_alten_ausblick_namen(monkeypatch, fall):
+    """AC-11 (#3155): in keiner Ausgabe steht "Mehrtages-Trend",
+    "3-Tages-Vorschau", "Naechste Etappen"/"Next stages" oder "Ausblick"/
+    "Outlook" als alleiniger Blocktitel."""
+    html, text, bubbles = _b4_senden(monkeypatch, fall)
+    assert _b4_ausblick_da(fall, html, text, bubbles), f"{fall['id']}: Vorbedingung Ausblick"
+    funde = alte_namen_in(_b4_texte(fall, html, text, bubbles))
+    assert not funde, f"{fall['id']}: alte Namen in der Ausgabe: {funde}"
+
+
+def _stabil():
+    from app.models import StabilityResult
+
+    return StabilityResult(label="STABIL", confidence_pct=82)
+
+
+#: Grosswetterlage-Zeile je Sprache (von Hand, ``mail.stabilitaet.stabil``).
+_GROSSWETTERLAGE = {"de": "Wetterlage: STABIL", "en": "Weather pattern: STABLE"}
+
+
+@pytest.mark.parametrize("fall", _faelle("test_b4_grosswetterlage_folgt_show_outlook"))
+def test_b4_grosswetterlage_folgt_show_outlook(monkeypatch, fall):
+    """AC-5 (#3155): ``show_outlook`` steuert im Altbestand nur noch die
+    Grosswetterlage -- aus: keine Grosswetterlage in HTML- und Nur-Text-Mail;
+    an: sie steht weiterhin da (Bestand, AC-13)."""
+    schalter = fall["konfig"] == "grosswetterlage_an"
+    data = _b4_alt({"show_outlook": schalter, "show_stability": True,
+                    "multi_day_trend_reports": ["evening"]},
+                   outlook_metrics=["gust", "temperature"])
+    mit, _trip, _uid = render_trip_mit_ausblick(
+        monkeypatch, data, report_type=fall.get("briefing", "evening"),
+        language=fall.get("sprache"), ausblick_nach_zeitplaner=True,
+        stability_result=_stabil())
+    html, text = mail_teile(mit)
+    texte = html_textknoten(html) if fall["format"] == "html" else textzeilen(text)
+    zeile = _GROSSWETTERLAGE[fall.get("sprache") or "de"]
+    da = any(t.startswith(zeile) for t in texte)
+    assert da is schalter, (
+        f"{fall['id']}: Grosswetterlage {'fehlt' if schalter else 'steht trotz show_outlook=false'}")
