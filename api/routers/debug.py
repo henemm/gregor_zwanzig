@@ -16,6 +16,33 @@ router = APIRouter(prefix="/api/debug", tags=["debug"])
 logger = logging.getLogger(__name__)
 
 
+def _pick_debug_segment(trip, now_utc, today):
+    """Segmentwahl der Debug-Route (Issue #2985).
+
+    1. `resolve_current_segment` liefert ein Segment -> genau dieses.
+    2. Sonst Test-Seam-Rueckfall (nur Debug): erstes Segment von `today`,
+       sonst erstes Segment des ersten Etappendatums mit Segmenten.
+    3. Sonst None.
+    """
+    # Lazy import (Zirkularimport-Schutz beim Prod-Startup)
+    from services.trip_segments import convert_trip_to_segments, resolve_current_segment
+
+    resolved = resolve_current_segment(trip, now_utc, today)
+    if resolved is not None:
+        return resolved[0]
+
+    segments = convert_trip_to_segments(trip, today)
+    if segments:
+        return segments[0]
+    for stage in getattr(trip, "stages", None) or []:
+        stage_date = getattr(stage, "date", None)
+        if stage_date:
+            segments = convert_trip_to_segments(trip, stage_date)
+            if segments:
+                return segments[0]
+    return None
+
+
 @router.post("/trigger-radar-alert")
 def trigger_radar_alert(user_id: str = Query(...)):
     """Staging-only: loest echten Radar-Alert-Pfad aus, sendet an gregor-test@henemm.com.
@@ -23,12 +50,13 @@ def trigger_radar_alert(user_id: str = Query(...)):
     Ablauf (analog check_radar_alerts(), ohne Throttle-Check):
     1. Staging-Guard (GZ_ENV=staging) -> sonst 404.
     2. Trips fuer user_id laden.
-    3. Ersten Trip + Segment ableiten — eigene Kopie der Basisregel (nur
-       heutiges Datum, aktives-oder-erstes Segment), KEIN Vortags-Rueckgriff.
-       Anders als `TripAlertService.check_radar_alerts()` seit Issue #1667 S3
-       geht diese Debug-Route NICHT ueber `resolve_current_segment` — eine
-       Etappe mit Ankunft nach Mitternacht, die nur gestern eine aktive
-       Etappe hatte, liefert hier `no_segment` statt eines Segments.
+    3. Ersten Trip + Segment ableiten ueber `_pick_debug_segment`: zuerst der
+       gemeinsame Baustein `resolve_current_segment` (wie
+       `TripAlertService.check_radar_alerts()`, inkl. Vortags-Rueckgriff bei
+       Ankunft nach Mitternacht, Issue #2985). Nur wenn der nichts liefert,
+       greift ein Test-Seam-Rueckfall (Staging-Testdaten liegen oft in der
+       Vergangenheit): erstes Segment von heute, sonst erstes Segment des
+       ersten Etappendatums mit Segmenten; sonst `no_segment`.
     4. Nowcast-Ergebnis als deterministisches Fixture injizieren (source="test") —
        KEIN echter Quellen-Abruf (#1190): geprueft wird nur die Alarm-Mechanik
        (Throttle/Mail-Format/Cooldown), nicht die Provider-Kette. Fuer
@@ -56,7 +84,6 @@ def trigger_radar_alert(user_id: str = Query(...)):
     from services.radar_alert_service import build_debug_onset_alert_message, send_radar_alert_email
     from services.radar_service import RadarNowcastService
     from services.trip_day import trip_local_today
-    from services.trip_segments import convert_trip_to_segments
 
     trips = list(load_all_trips(user_id=user_id))
     if not trips:
@@ -65,27 +92,9 @@ def trigger_radar_alert(user_id: str = Query(...)):
     trip = trips[0]
     now_utc = datetime.now(timezone.utc)
     today = trip_local_today(trip, now_utc)
-    segments = convert_trip_to_segments(trip, today)
-    # Fallback: Trip-Etappen liegen evtl. in der Vergangenheit (Staging-Testdaten).
-    # Debug-Seam nutzt einfach die erste Etappe des Trips, egal welches Datum.
-    if not segments:
-        for stage in getattr(trip, "stages", []):
-            stage_date = getattr(stage, "date", None)
-            if stage_date:
-                segments = convert_trip_to_segments(trip, stage_date)
-                if segments:
-                    break
-    if not segments:
-        return JSONResponse({"status": "no_segment"})
-
-    # Aktives oder erstes Segment
-    active = None
-    for seg in segments:
-        if seg.start_time <= now_utc <= seg.end_time:
-            active = seg
-            break
+    active = _pick_debug_segment(trip, now_utc, today)
     if active is None:
-        active = segments[0]
+        return JSONResponse({"status": "no_segment"})
 
     radar_svc = RadarNowcastService()
     # Synthethisches Ergebnis: kein echter Nowcast (Wetter variabel), sondern fester

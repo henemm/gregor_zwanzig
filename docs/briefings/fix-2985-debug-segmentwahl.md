@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/fast/fix-2985-debug-segmentwahl.md
-spec_sha256: 32a30a0c8cda7b1b4287b9f35c8e26beedba21ffec47f4e27945ec6da8e7bbcd
-spec_frozen_sha256: 1cf19e821e5b690d4c972f8ea860d667d3f5267b69b81a457447871277196ed7
+spec_sha256: c914da365abb6fce489c209345c67b93bd1429d596639b7ec43afc95d03b17a0
+spec_frozen_sha256: 1d091cbf9f60118e090720749967b223cf3c8fa0095f6b127d176f99ff81e0d2
 ---
 
 # PO-Briefing: fix-2985-debug-segmentwahl
@@ -12,20 +12,20 @@ spec_frozen_sha256: 1cf19e821e5b690d4c972f8ea860d667d3f5267b69b81a45744787127719
 
 ## Was gebaut wird
 
-Die Test-Funktion für Radar-Alarme auf Staging wählt die Etappe mit demselben Baustein wie der echte Alarm, nicht mehr mit einer Kopie.
+Der Radar-Testalarm auf Staging wählt die Etappe jetzt mit demselben Baustein wie der echte Radar-Alarm.
 
 ## Definition of Done
 
-Die Test-Funktion wählt dieselbe Etappe wie der echte Alarm, einschliesslich Etappen nach Mitternacht, und kennt nur noch diese eine Auswahl.
+Der Testalarm wählt dieselbe Etappe wie der echte Alarm, auch bei Ankunft nach Mitternacht; bei heute aktiver Etappe bleibt alles unverändert.
 
 ## Wie geprüft wird
 
-Neue Tests rufen die Auswahl mit echten Trips auf; eine gezielte Fälschung muss rot werden, die Live-Mail wird nicht geprüft.
+Ein neuer Test mit echten Trips prüft drei Fälle, eine Gegenprobe beweist seine Wirksamkeit; Versand und Staging-Sperre prüft er nicht.
 
 ## Kritische Anmerkungen
 
-- Der im Ticket erwähnte Paritätstest wird nicht behandelt (entfällt oder bleibt); Folge gering, nur Aufräumfrage.
-- Rückfall auf erste Etappe bleibt ein Sonderweg nur für Staging-Testdaten; dort bleibt eine kleine Restlogik bestehen.
+- Bewusste Abweichung vom echten Alarm: Bei nur vergangenen Etappen greift ein Testrückfall auf die erste Etappe; in der Spec benannt.
+- Der Fall „keine Etappe vorhanden" (Antwort no_segment) hat keine eigene Acceptance Criterion.
 
 ## Freigabe-Frage
 

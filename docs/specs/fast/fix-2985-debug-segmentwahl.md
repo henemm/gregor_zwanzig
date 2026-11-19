@@ -17,10 +17,10 @@ Issue #2985 (Rest aus #1982, Paritäts-Bestandsaufnahme #1986 Eintrag NEU-4). PO
 - Ist heute ein Segment aktiv, wählt die Route dasselbe Segment wie vorher.
 
 ## Acceptance Criteria
-**AC-1:** Given ein Trip, dessen gestrige Etappe nach Mitternacht ankommt und jetzt noch aktiv ist, und heute keine Etappe, When die Debug-Segmentwahl läuft, Then liefert sie genau das Segment, das `resolve_current_segment` liefert (das aktive Segment von gestern), nicht das erste Segment des Trips.
-**AC-2:** Given ein Trip mit heute aktivem Segment, When die Debug-Segmentwahl läuft, Then liefert sie dieses aktive Segment (unverändertes Verhalten).
-**AC-3:** Given ein Trip, dessen Etappen alle in der Vergangenheit liegen (keine aktive, keine Vorschau), When die Debug-Segmentwahl läuft, Then liefert sie über den Test-Seam-Rückfall das erste Segment der ersten Etappe statt `None`.
-**AC-4:** Given die Mutation, dass die Hilfsfunktion `resolve_current_segment` nicht mehr aufruft (eigene Heute-Schleife), When der neue Test läuft, Then wird AC-1 rot (Mutations-Gegenprobe).
+- **AC-1:** Given ein Trip, dessen gestrige Etappe nach Mitternacht ankommt und jetzt noch aktiv ist, und heute keine Etappe, When die Debug-Segmentwahl läuft, Then liefert sie genau das Segment, das `resolve_current_segment` liefert (das aktive Segment von gestern), nicht das erste Segment des Trips.
+- **AC-2:** Given ein Trip mit heute aktivem Segment, When die Debug-Segmentwahl läuft, Then liefert sie dieses aktive Segment (unverändertes Verhalten).
+- **AC-3:** Given ein Trip, dessen Etappen alle in der Vergangenheit liegen (keine aktive, keine Vorschau), When die Debug-Segmentwahl läuft, Then liefert sie über den Test-Seam-Rückfall das erste Segment der ersten Etappe statt `None`.
+- **AC-4:** Given die Mutation, dass die Hilfsfunktion `resolve_current_segment` nicht mehr aufruft (eigene Heute-Schleife), When der neue Test läuft, Then wird AC-1 rot (Mutations-Gegenprobe).
 
 ## Manuelle Test-Schritte
 1. Neuen Test einzeln ausführen → grün.

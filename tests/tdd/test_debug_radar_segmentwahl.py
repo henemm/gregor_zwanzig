@@ -27,12 +27,16 @@ Ausfuehrung:
 """
 from __future__ import annotations
 
+import smtplib
+import time
 from datetime import date as date_type
 from datetime import datetime, timezone
 
+import pytest
+
 from services.trip_segments import convert_trip_to_segments, resolve_current_segment
 
-from tests.helpers.nowcast_gate_fixtures import make_trip
+from tests.helpers.nowcast_gate_fixtures import make_trip, save_trip, trip_stage
 
 # Atlantic/Reykjavik (UTC+0): Ortstag == UTC-Tag, kein Zonenrauschen.
 REYKJAVIK_LAT, REYKJAVIK_LON = 64.1466, -21.9426
@@ -162,3 +166,188 @@ def test_trip_ohne_etappen_liefert_kein_segment():
     trip = Trip(id="trip-2985-leer", name="leer", stages=[])
 
     assert _pick()(trip, now_utc, heute) is None
+
+
+def test_heute_alle_segmente_vorbei_rueckfall_auf_erstes_segment_von_heute():
+    """Test-Seam-Rueckfall Stufe 1 (Fix-Loop F002): heute gibt es eine Etappe,
+    aber alle Segmente sind vorbei (21:00 UTC nach 08-16 Uhr + Ziel bis 20:00),
+    ``resolve_current_segment`` liefert None. Erwartet: das ERSTE Segment von
+    heute — nicht das letzte und nicht das erste Segment der fruehesten
+    Trip-Etappe (die liegt bewusst an anderem Ort, damit beides unterscheidbar
+    ist)."""
+    frueher = date_type(2026, 8, 8)
+    heute = date_type(2026, 8, 11)
+    now_utc = datetime(2026, 8, 11, 21, 0, tzinfo=timezone.utc)
+    trip = make_trip(
+        "trip-2985-abend", stage_date=heute, lat=REYKJAVIK_LAT, lon=REYKJAVIK_LON,
+        arrival_start="08:00", arrival_end="16:00",
+    )
+    trip.stages.insert(0, trip_stage(
+        "S0", frueher, REYKJAVIK_LAT + 1.0, REYKJAVIK_LON + 1.0,
+        arrival_start="08:00", arrival_end="16:00", wp_prefix="A",
+    ))
+    assert resolve_current_segment(trip, now_utc, heute) is None, (
+        "Vorbedingung: heute ist nichts mehr aktiv, keine Vorschau"
+    )
+    heute_segs = convert_trip_to_segments(trip, heute)
+    assert len(heute_segs) >= 2, f"Vorbedingung: mehrere Segmente heute, war {heute_segs!r}"
+    erstes_heute = heute_segs[0]
+    erstes_trip = convert_trip_to_segments(trip, frueher)[0]
+    assert _key(erstes_heute) != _key(heute_segs[-1])
+    assert _key(erstes_heute) != _key(erstes_trip), (
+        "Vorbedingung: erstes Segment von heute und erstes Segment der "
+        "fruehesten Etappe muessen sich unterscheiden"
+    )
+
+    gewaehlt = _pick()(trip, now_utc, heute)
+
+    assert gewaehlt is not None, "Heute-Rueckfall lieferte None"
+    assert _key(gewaehlt) == _key(erstes_heute), (
+        f"erwartet das erste Segment von heute {_key(erstes_heute)!r}, "
+        f"war {_key(gewaehlt)!r}"
+    )
+
+
+def test_zwei_vergangene_etappen_rueckfall_auf_erste_etappe():
+    """Test-Seam-Rueckfall Stufe 2 (Fix-Loop F003): zwei vergangene Etappen,
+    heute nichts. Erwartet: erstes Segment der ERSTEN Etappe (Reihenfolge
+    der Etappenliste), nicht der letzten."""
+    erste = date_type(2026, 8, 1)
+    zweite = date_type(2026, 8, 3)
+    heute = date_type(2026, 8, 11)
+    now_utc = datetime(2026, 8, 11, 12, 0, tzinfo=timezone.utc)
+    trip = make_trip(
+        "trip-2985-zwei-alt", stage_date=erste, lat=REYKJAVIK_LAT, lon=REYKJAVIK_LON,
+        arrival_start="08:00", arrival_end="16:00",
+        extra_stages=[trip_stage(
+            "S2", zweite, REYKJAVIK_LAT + 1.0, REYKJAVIK_LON + 1.0,
+            arrival_start="08:00", arrival_end="16:00", wp_prefix="B",
+        )],
+    )
+    assert resolve_current_segment(trip, now_utc, heute) is None
+    erwartet = convert_trip_to_segments(trip, erste)[0]
+    andere = convert_trip_to_segments(trip, zweite)[0]
+    assert _key(erwartet) != _key(andere), "Vorbedingung: Etappen unterscheidbar"
+
+    gewaehlt = _pick()(trip, now_utc, heute)
+
+    assert gewaehlt is not None
+    assert _key(gewaehlt) == _key(erwartet), (
+        f"erwartet das erste Segment der ersten Etappe {_key(erwartet)!r}, "
+        f"war {_key(gewaehlt)!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Route-Test (Fix-Loop F001): die Route verwendet das gewaehlte Segment
+# ---------------------------------------------------------------------------
+
+class _FakeSocket:
+    def settimeout(self, timeout: float) -> None:
+        pass
+
+
+class _FakeSMTPConnection:
+    """Ersetzt die SMTP-Verbindung am Transportrand — kein Netz (Muster aus
+    ``tests/tdd/test_mail_fallback_guard.py``)."""
+
+    def __init__(self, calls: list[dict], host: str) -> None:
+        self._calls = calls
+        self._host = host
+        self.sock = _FakeSocket()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc) -> bool:
+        return False
+
+    def ehlo(self, *a, **k):
+        return (250, b"ok")
+
+    def starttls(self, context=None) -> None:
+        return None
+
+    def login(self, user, password) -> None:
+        return None
+
+    def sendmail(self, from_addr, to_addrs, msg) -> None:
+        self._calls.append({"host": self._host, "to": tuple(to_addrs)})
+
+    def quit(self) -> None:
+        return None
+
+
+class _RecordingSMTP:
+    def __init__(self, calls: list[dict]) -> None:
+        self.calls = calls
+
+    def __call__(self, host, port, *a, **kw):
+        return _FakeSMTPConnection(self.calls, host)
+
+
+@pytest.fixture
+def smtp_sink(monkeypatch):
+    calls: list[dict] = []
+    monkeypatch.setattr(smtplib, "SMTP", _RecordingSMTP(calls))
+    monkeypatch.setattr(time, "sleep", lambda *a, **k: None)
+    return calls
+
+
+def test_route_verwendet_aktives_segment_von_heute(monkeypatch, smtp_sink):
+    """F001: Die Route ``POST /api/debug/trigger-radar-alert`` nimmt das von
+    ``_pick_debug_segment`` gewaehlte Segment. Gestellte Uhr 11.8. 12:00 UTC,
+    fruehere Etappe am 8.8., heutige Etappe 08-10 Uhr -> aktiv ist das
+    Ziel-Segment von heute (``segment_id`` "Ziel"). Wuerde die Route ein
+    falsches ``today`` weiterreichen, fiele sie auf das erste Segment der
+    Etappe vom 8.8. ("Etappe 1"); wuerde sie das Segment verwerfen, kaeme
+    ``no_segment``."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from freezegun import freeze_time
+
+    from api.routers import debug as debug_router
+
+    # ``api.main`` bindet den Debug-Router nur ein, wenn GZ_ENV beim IMPORT
+    # schon "staging" war — im Testprozess ist das nicht steuerbar. Deshalb
+    # der ECHTE Router in einer eigenen App; die Route selbst prueft GZ_ENV
+    # zur Anfragezeit (Staging-Guard) und laeuft unveraendert.
+    app = FastAPI()
+    app.include_router(debug_router.router)
+
+    monkeypatch.setenv("GZ_ENV", "staging")
+    user_id = "user-2985-route"
+    heute = date_type(2026, 8, 11)
+    trip = make_trip(
+        "trip-2985-route", stage_date=heute, lat=REYKJAVIK_LAT, lon=REYKJAVIK_LON,
+        arrival_start="08:00", arrival_end="10:00",
+    )
+    trip.stages.insert(0, trip_stage(
+        "S0", date_type(2026, 8, 8), REYKJAVIK_LAT + 1.0, REYKJAVIK_LON + 1.0,
+        arrival_start="08:00", arrival_end="10:00", wp_prefix="A",
+    ))
+    save_trip(trip, user_id)
+
+    now_utc = datetime(2026, 8, 11, 12, 0, tzinfo=timezone.utc)
+    erwartet_seg, _ = resolve_current_segment(trip, now_utc, heute)
+    assert str(erwartet_seg.segment_id) == "Ziel", "Vorbedingung: heute aktiv ist das Ziel"
+    assert str(convert_trip_to_segments(trip, date_type(2026, 8, 8))[0].segment_id) != "Ziel"
+
+    # Gestellt wird nur die Uhr der Segmentwahl. Das Mail-Modul laeuft auf der
+    # echten Uhr: im Worker-Thread des TestClient mischte freezegun sonst echte
+    # und gestellte ``time.monotonic``-Werte, das SMTP-Zeitbudget war sofort
+    # "erschoepft" und der Ersatzweg sprang ein (nicht Gegenstand dieses Tests).
+    with freeze_time(now_utc, ignore=["output.channels.email"]):
+        resp = TestClient(app).post(
+            "/api/debug/trigger-radar-alert", params={"user_id": user_id},
+        )
+
+    assert resp.status_code == 200, f"Status {resp.status_code}: {resp.text}"
+    body = resp.json()
+    assert body.get("status") == "sent", f"erwartet 'sent', war {body!r}"
+    assert body.get("trip_id") == "trip-2985-route"
+    assert body.get("segment") == "Etappe Ziel", (
+        f"Route verwendet nicht das aktive Segment von heute: {body!r}"
+    )
+    assert smtp_sink, "keine Mail am Transportrand angekommen"
+    assert all(c["to"] == ("gregor-test@henemm.com",) for c in smtp_sink), smtp_sink
