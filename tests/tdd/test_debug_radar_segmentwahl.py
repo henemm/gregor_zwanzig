@@ -316,19 +316,25 @@ def test_route_verwendet_aktives_segment_von_heute(monkeypatch, smtp_sink):
     app.include_router(debug_router.router)
 
     monkeypatch.setenv("GZ_ENV", "staging")
+    # Mail-Konfiguration unabhaengig von einer lokalen .env vollstaendig machen
+    # (Versand selbst faengt ``smtp_sink`` ab).
+    monkeypatch.setenv("GZ_SMTP_HOST", "smtp.example.invalid")
+    monkeypatch.setenv("GZ_SMTP_USER", "test-user")
+    monkeypatch.setenv("GZ_SMTP_PASS", "test-pass")
     user_id = "user-2985-route"
     heute = date_type(2026, 8, 11)
-    trip = make_trip(
-        "trip-2985-route", stage_date=heute, lat=REYKJAVIK_LAT, lon=REYKJAVIK_LON,
-        arrival_start="08:00", arrival_end="10:00",
-    )
-    trip.stages.insert(0, trip_stage(
-        "S0", date_type(2026, 8, 8), REYKJAVIK_LAT + 1.0, REYKJAVIK_LON + 1.0,
-        arrival_start="08:00", arrival_end="10:00", wp_prefix="A",
-    ))
-    save_trip(trip, user_id)
-
     now_utc = datetime(2026, 8, 11, 12, 0, tzinfo=timezone.utc)
+    with freeze_time(now_utc):
+        trip = make_trip(
+            "trip-2985-route", stage_date=heute, lat=REYKJAVIK_LAT, lon=REYKJAVIK_LON,
+            arrival_start="08:00", arrival_end="10:00",
+        )
+        trip.stages.insert(0, trip_stage(
+            "S0", date_type(2026, 8, 8), REYKJAVIK_LAT + 1.0, REYKJAVIK_LON + 1.0,
+            arrival_start="08:00", arrival_end="10:00", wp_prefix="A",
+        ))
+        save_trip(trip, user_id)
+
     erwartet_seg, _ = resolve_current_segment(trip, now_utc, heute)
     assert str(erwartet_seg.segment_id) == "Ziel", "Vorbedingung: heute aktiv ist das Ziel"
     assert str(convert_trip_to_segments(trip, date_type(2026, 8, 8))[0].segment_id) != "Ziel"
