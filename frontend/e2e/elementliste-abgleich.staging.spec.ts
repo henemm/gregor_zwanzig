@@ -43,6 +43,7 @@ import {
 	werteGegenrichtungAus,
 	ladeRegeln,
 	ladeKontoTexte,
+	metrikNamenAusRegister,
 	werteLaufAus,
 	bedieneAbschnitt,
 	mitAufraeumen,
@@ -343,6 +344,10 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 		const gesetzt = await api.put('/api/auth/profile', { data: { language: plan.sprache } });
 		expect(gesetzt.ok(), `Profilsprache ${plan.sprache} setzen: HTTP ${gesetzt.status()}`).toBeTruthy();
 		const konto = await ladeKontoTexte((pfad) => api.get(pfad), ids);
+		// #3011: Metriknamen einmal laden; `{metrik}` der Gegenrichtung erklärt nur sie (und Listen-Namen). Fehlschlag ⇒ [] (nie geraten).
+		const register = await api.get('/api/metrics').catch(() => null);
+		const metrikNamen = register?.ok() ? metrikNamenAusRegister(await register.json().catch(() => null)) : [];
+		if (metrikNamen.length === 0) console.error('Elementlisten-Abgleich: keine Metriknamen aus /api/metrics; {metrik} erklärt nur Namen der Elementliste');
 		const templates = await api.get('/api/templates');
 		const vorlagen = alsListe(templates.ok() ? await templates.json() : []).map((v) => String(v.id));
 		// #2966 (AC-8): Wetter-Prüf-Datensatz (alle Metriken) nur für Bedien-Abschnitte; mitAufraeumen löscht ihn immer.
@@ -426,7 +431,7 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 				if (istGegenrichtung(k)) {
 					const hub = await texteUnterHub(page);
 					// Fehlt Kopf oder Reiterfläche, ist die Seite nur teilweise gelesen: nie still „kein zusaetzlich“, sondern Befund ohneHub.
-					const gegen = werteGegenrichtungAus({ ctx: k.ctx, reiter: k.reiter, anker: hub.anker, texte: hub.texte }, alle, regeln.ausnahmen, konto, plan.sprache);
+					const gegen = werteGegenrichtungAus({ ctx: k.ctx, reiter: k.reiter, anker: hub.anker, texte: hub.texte }, alle, regeln.ausnahmen, konto, plan.sprache, metrikNamen);
 					zusaetzlich.push(...gegen.zusaetzlich);
 					if (gegen.ohneHub) ohneHub.push(gegen.ohneHub);
 				}

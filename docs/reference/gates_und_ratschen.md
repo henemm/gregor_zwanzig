@@ -718,6 +718,7 @@ Präfix „Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: …“; belegt w
 `frontend/e2e/hub-kopf-c2-mockup.staging.spec.ts`. `#2913` (ohne Teil-Kennung) ist nach `BESITZER_VERWEIS` zulässig (`#NNNN`). Flag `--abnahme`: Exit ≠ 0, solange ein Eintrag dieser drei Arten keinen Besitzer hat (Freigaben zählen
 als Besitzer). `--strict` unverändert (rot bei Abweichung oder `nicht_pruefbar`); `--abnahme` ist die mildere,
 besitzerbasierte Prüfung für den Scheiben-Abschluss.
+Stand 2026-11-19 (#3008, #3011): Der Platzhalter `{metrik}` in der Gegenrichtung passt nur auf bekannte Metriknamen (Registernamen aus `GET /api/metrics`, im Staging-Lauf einmal geladen, plus DE-Namen der Elementliste); ist die Menge leer, erklärt er nichts (fail-closed), und Fremdtexte mit „+ “ werden `zusaetzlich`. `{zahl}` und die Hinrichtung bleiben unverändert. `leseBesitzer` prüft zusätzlich Abschnitts-Besitzer (`ctx`, `reiter`, `abschnitt`) gegen die Elementliste; der Kern-Test `elementliste_besitzer_kern.test.ts` fängt verwaiste Einträge ohne Staging ab.
 
 ## Aktive Hooks in `.claude/settings.json` — Kurzreferenz (Stand 2026-10-21)
 
