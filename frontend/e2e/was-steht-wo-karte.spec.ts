@@ -51,9 +51,8 @@ const tabellenUrl = (kind: HubKind, id: string) => `${tabellenPfad(id)}?kind=${k
 type Abo = { kind: HubKind; id: string; ortNamen: string[]; aufraeumen: () => Promise<void> };
 
 /** Ortsnamen je Abo eindeutig (WS-16: zwei Nutzer, verschiedene Ortskennungen; die Kennung wird aus dem
- *  Namen gebildet) UND kurz: der Name steht je Ort in der Orte-SMS (153 Zeichen). Mit langen Namen passt bei
- *  drei Orten nur noch die erste Listenzeile hinein, und WS-2/WS-8 verlieren ihre Voraussetzung (mehrere
- *  Metriken im SMS-Beispiel). Lauf-Kennung zufällig (3 Zeichen), Zähler je Abo (2 Zeichen): feste Länge, z. B.
+ *  Namen gebildet) UND kurz (seit #3172 stehen in der Orte-SMS keine Namen mehr, sondern O1, O2, …; die
+ *  kurzen Namen halten Mail und Telegram der Karte übersichtlich). Lauf-Kennung zufällig (3 Zeichen), Zähler je Abo (2 Zeichen): feste Länge, z. B.
  *  `E2E-GZ-Wab307-0` (15 Zeichen). Zwei Nutzer im selben Fall bekommen verschiedene Zählerstände. */
 const LAUF = Math.random().toString(36).slice(2, 5).padEnd(3, '0');
 let seedZaehler = 0;
@@ -664,7 +663,8 @@ test.describe('Karte „Was steht wo“', () => {
 			await expect(karte).toContainText('What goes where');
 			await expect(karte).toContainText('Abbreviations explained');
 			for (const w of ['Was steht wo', 'Übersicht', 'Zeichen', 'Kürzel erklärt', 'Einstellungen je Kanal']) await expect(karte).not.toContainText(w);
-			await expect(karte.getByTestId('was-steht-wo-sms-text')).toHaveText(/ W \d+ km\/h/);
+			// #3172 (ADR-0125): Token-Zeile der Trip-SMS, Wind als `W30@10(43@16)`, `W-` oder `W?`.
+			await expect(karte.getByTestId('was-steht-wo-sms-text')).toHaveText(/ W(?:\d+@\d+(?:\(\d+@\d+\))?|-|\?)(?: |$)/);
 			const breiten = await en.evaluate(() => ({ seite: document.documentElement.scrollWidth, fenster: window.innerWidth }));
 			expect(breiten.seite, 'Seite scrollt seitlich').toBeLessThanOrEqual(breiten.fenster);
 			for (const s of SPALTEN.vergleich) {

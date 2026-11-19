@@ -210,19 +210,37 @@ def _trip_fehlt_in_sms(sms: str, metric_id: str, rumpf: str | None = None) -> bo
     return not any(s in vorhanden for s in _trip_symbole(metric_id))
 
 
+def _orte_symbole() -> set[str]:
+    from output.renderers.sms_trip import SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC
+
+    return set(SMS_SYMBOL_BY_METRIC.values()) | {
+        s for syms in SMS_MULTI_SYMBOLS_BY_METRIC.values() for s in syms}
+
+
 def _orte_fehlt_in_sms(sms: str, metric_id: str, teil: str | None = None) -> bool:
-    """Ein Ort-Teil der Orte-SMS: ``Name K1 Wert K2 Wert ...`` (bei genau einem
-    Ort steht der Name im Kopf ``{Ort} TT.MM.:``, #3122 B5); die Metrik
-    fehlt, wenn keines ihrer Kuerzel im ersten Ort-Teil steht. ``teil``: die
-    Zellen des ersten Orts, vom Test ueber woertliche Raender bestimmt.
-    Gefuehlte Temperatur steht in der Orte-SMS als ``FL``/``FD`` (Tiefst/Hoechst)."""
-    from app.metric_catalog import kurzform_kuerzel
+    """Ein Ort-Teil der Orte-SMS (#3172, Token-Zeile der Trip-SMS:
+    ``Name: D15/19 W30@10(43@16) ...``; bei genau einem Ort steht der Name im
+    Kopf ``{Ort} TT.MM.:``, #3122 B5); die Metrik fehlt, wenn keines ihrer
+    Kuerzel im ersten Ort-Teil steht (laengstes passendes Symbol je Token).
+    ``teil``: die Token des ersten Orts, vom Test ueber woertliche Raender
+    bestimmt. Temperatur steht als ``D``/``L`` (Bereich ``D15/19``), gefuehlte
+    Temperatur als ``FL``/``FD``."""
+    from output.renderers.sms_trip import SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC
 
     if teil is None:
-        teil = sms.split(": ", 1)[1].split("; ")[0]
-    kuerzel = {"temperature": ("D", "L"), "wind_chill": ("FL", "FD")}.get(
-        metric_id, (kurzform_kuerzel(metric_id),))
-    return not any(re.search(rf"(^| ){re.escape(k)} ", teil) for k in kuerzel if k)
+        # #3172 (PO 2026-11-19): erster Ort ``O1 <Token>``, kein Kopf, keine Namen.
+        from tests.helpers.orte_sms import orte_teile, orte_token
+
+        teil = " ".join(orte_token(orte_teile(sms)[0]))
+    alle = _orte_symbole()
+    vorhanden = set()
+    for tok in teil.split(" "):
+        treffer = [s for s in alle if tok.startswith(s)]
+        if treffer:
+            vorhanden.add(max(treffer, key=len))
+    kuerzel = {"temperature": ("D", "L"), "wind_chill": ("FL", "FD")}.get(metric_id) or (
+        SMS_MULTI_SYMBOLS_BY_METRIC.get(metric_id) or (SMS_SYMBOL_BY_METRIC.get(metric_id),))
+    return not any(k in vorhanden for k in kuerzel if k)
 
 
 def _sms_an(antwort) -> list[str]:
@@ -368,17 +386,17 @@ def test_ac17_orte_sms_beispiel_gleich_versand_und_marken(client, anzahl):
 
     assert antwort["sms_example"]["text"] == versand
     assert antwort["sms_example"]["length"] == len(versand)
-    # Grenze des Versandwegs: render_compare_sms kuerzt auf CHANNEL_LIMITS["sms"]["max_chars"]
-    # (verkettungssicheres GSM-7-Budget); die Premium-SMS sendet denselben Text.
-    from output.renderers.channel_layout import CHANNEL_LIMITS
+    # Grenze des Versandwegs (#3172): 160 wie die Trip-SMS; die Premium-SMS
+    # kuerzt ueber 153 Zeichen neu (#3100).
+    from output.renderers.comparison import ORTE_SMS_MAX_ZEICHEN
 
-    assert antwort["sms_example"]["max_length"] == CHANNEL_LIMITS["sms"]["max_chars"]
+    assert antwort["sms_example"]["max_length"] == ORTE_SMS_MAX_ZEICHEN == 160
     assert len(versand) <= antwort["sms_example"]["max_length"]
-    if anzahl == 1:
-        # #3122 B5: bei genau einem Ort beginnt die SMS mit dem Ortsnamen.
-        assert versand.startswith(f"{ORTSNAMEN[0]} 14.07.: ")
+    # #3172: kein Kopf, keine Namen -- die SMS beginnt mit O1.
+    assert versand.startswith("O1 ") and ORTSNAMEN[0] not in versand, versand
     fehlend = {m for m in _sms_an(antwort) if _orte_fehlt_in_sms(versand, m)}
-    assert fehlend, "Datensatz muss die SMS ueberlaufen lassen"
+    # #3172: ein Ort passt ohne Namen und Kopf ganz in 160 Zeichen; ab drei Orten laeuft sie ueber.
+    assert fehlend or anzahl == 1, "Datensatz muss die SMS ueberlaufen lassen"
     markiert = {z["metric_id"] for z in antwort["rows"]
                 if z["cells"]["sms"]["mark"] == "passt_nicht_mehr"}
     assert markiert == fehlend
@@ -586,14 +604,19 @@ def _trip_kuerzel_in_sms(sms: str) -> set[str]:
 
 
 def _orte_kuerzel_in_sms(sms: str) -> set[str]:
-    """Metrik-Kuerzel der Orte-SMS: Woerter, die ein Kuerzel aus der
-    Kuerzel-Tabelle des Orte-Renderers sind."""
-    from app.metric_catalog import kurzform_kuerzel
-    from output.renderers.comparison import _RENDERER_TO_CATALOG_METRIC_ID
-
-    codes = {kurzform_kuerzel(c) for c in _RENDERER_TO_CATALOG_METRIC_ID.values()} - {""}
-    worte = re.split(r"[ ;]+", sms.split(": ", 1)[1])
-    return {w for w in worte if w in codes}
+    """Metrik-Kuerzel der Orte-SMS (#3172: Token-Zeile wie im Trip, laengstes
+    passendes Symbol, ohne Doppelpunkt, Warnblock ausgenommen). Ein Bereich
+    ``D15/19`` sendet Tageshoechst UND -tiefst (``D``/``L``)."""
+    alle = _orte_symbole()
+    out = set()
+    for tok in sms.split(" "):
+        treffer = [s for s in alle if tok.startswith(s)]
+        if treffer and not tok.startswith("!"):
+            symbol = max(treffer, key=len)
+            out.add(symbol.rstrip(":"))
+            if symbol in ("D", "FD") and "/" in tok:
+                out.add({"D": "L", "FD": "FL"}[symbol])
+    return out
 
 
 @pytest.mark.parametrize("lang", ["de", "en"])
@@ -684,17 +707,20 @@ def test_f002_ortsname_mit_trennzeichen_verfaelscht_nichts(client, anzahl):
     _orte(NUTZER_A, kennung, anzahl=anzahl, placements={"version": 1, "rows": []}, namen=namen)
     antwort = _ok(client, kennung, "vergleich")
     versand = _orte_versand_sms(NUTZER_A, kennung)
-    # #3122 B5: Kopf "Orte TT.MM.:", bei genau einem Ort "{Ort} TT.MM.:".
-    kopf = "Wind 5: B; C 14.07.: " if anzahl == 1 else "Orte 14.07.: Wind 5: B; C "
-    assert versand.startswith(kopf), versand
-    teil = versand[len(kopf):].split("; Lienz ")[0]
+    # #3172 (PO 2026-11-19): keine Namen in der SMS -- ein Name mit Trennzeichen
+    # kann sie nicht mehr verfaelschen; der erste Ort steht als ``O1``.
+    from tests.helpers.orte_sms import orte_teil, orte_token
+
+    assert versand.startswith("O1 ") and "Wind 5" not in versand, versand
+    teil = " ".join(orte_token(orte_teil(versand, 1)))
 
     assert antwort["sms_example"]["text"] == versand
     fehlend = {m for m in _sms_an(antwort) if _orte_fehlt_in_sms(versand, m, teil)}
-    assert fehlend and len(fehlend) < len(_sms_an(antwort)), "weder alles noch nichts darf fehlen"
+    # #3172: ein Ort passt ohne Namen und Kopf ganz in 160 Zeichen.
+    assert (fehlend or anzahl == 1) and len(fehlend) < len(_sms_an(antwort)), "weder alles noch nichts darf fehlen"
     assert _markiert(antwort) == fehlend
     wind = _zeile(antwort, "wind")["cells"]
-    assert wind["sms"]["example"] == "W 43 km/h"
+    assert wind["sms"]["example"] == "W30@10(43@16)"  # #3172: Token der Token-Zeile
     assert wind["telegram"]["example"] == "Wind 43 km/h", "Ortsname ist keine Wind-Zelle"
 
 
@@ -764,7 +790,10 @@ def test_t5_orte_nur_aus_dem_bestand_des_nutzers(client):
     assert antwort.status_code == 200, antwort.text
     assert "GeheimerOrtVonB" not in antwort.text
     assert antwort.json()["location_count"] == 1
-    assert antwort.json()["sms_example"]["text"].startswith("Innsbruck 14.07.: ")
+    # #3172: keine Namen in der SMS -- genau ein Ort (der eigene) als O1.
+    from tests.helpers.orte_sms import orte_nummern
+
+    assert orte_nummern(antwort.json()["sms_example"]["text"]) == [1]
 
     daten["location_ids"] = ["nur-b"]
     pfad.write_text(json.dumps(daten), encoding="utf-8")

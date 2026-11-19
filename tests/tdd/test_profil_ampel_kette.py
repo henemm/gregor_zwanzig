@@ -828,6 +828,11 @@ EINSTIEGE = {
     ("renderers/comparison.py", "render_comparison_text"): 1,
     # Issue #3047 B-K7: Orte-Telegram traegt den 3-Tages-Ausblick (Ampel des Presets).
     ("renderers/comparison.py", "render_compare_telegram"): 1,
+    # Issue #3172 (ADR-0125): die Orte-SMS ist die Token-Zeile der Trip-SMS und
+    # hebt wie sie nach der Abo-Ampel hervor (``@h``) -- Einstieg wie
+    # render_compare_telegram, aufgeloest aus dem Preset; die Zwischenstellen
+    # (``_render_compare_sms_body``, ``orte_sms``) verlangen die Ampel.
+    ("renderers/comparison.py", "render_compare_sms"): 1,
     ("renderers/narrow.py", "render_telegram_bubbles"): 1,
     # S1c-4b (Spec v1.5 Punkt 4): die SMS bekommt die Ampel aus derselben dc
     # wie die Mail; aufgeloest im Formatter, der format_sms ruft.

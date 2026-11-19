@@ -54,6 +54,8 @@ echter Renderer-Aufruf.
 """
 from __future__ import annotations
 
+import re
+
 from datetime import date, datetime
 
 from app.models import ForecastDataPoint, PrecipType, ThunderLevel
@@ -154,6 +156,9 @@ def _dp(hour: int, *, precip_type: "PrecipType | None" = None) -> ForecastDataPo
         pressure_msl_hpa=1013.0, cape_jkg=1500.0, freezing_level_m=1200,
         snowfall_limit_m=1300, wind_chill_c=12.0, cloud_low_pct=10,
         cloud_mid_pct=20, cloud_high_pct=30, precip_type=precip_type,
+        # #3172: die Token-Zeile liest UV und Regenwahrscheinlichkeit aus den
+        # Stundenwerten (wie die Trip-SMS) -- ohne sie stuende ``UV?``/``PR?``.
+        uv_index=7.0, pop_pct=40,
     )
 
 
@@ -221,18 +226,24 @@ def test_every_compare_metric_renders_unclipped_and_gsm7_clean():
     zusaetzlich ueber alle Gewitterstufen/Niederschlagsarten, weil deren
     Formatierung vom jeweiligen Enum-Wert abhaengt (s. `ThunderLevel.NONE`-
     Fund oben)."""
-    from output.renderers.comparison import _sms_metric_cell
+    from app.ampel import resolve_ampel
+    from output.renderers.orte_sms import orte_token_reihen
 
     checked: set[str] = set()
 
     def _check_one(loc: LocationResult, metric_id: str, context: str) -> None:
-        cell = _sms_metric_cell(loc, metric_id)
-        assert cell is not None, (
+        # #3172 (ADR-0125): die "Zelle" ist das Token der Token-Zeile, gelesen
+        # aus dem Produktiv-Baustein mit ``metric_id`` als einziger Groesse.
+        tokens = [t for t in orte_token_reihen(loc, [metric_id], None,
+                                               ampel=resolve_ampel({}))[0]
+                  if t.category in ("forecast", "wintersport")]
+        assert len(tokens) == 1 and tokens[0].value != "?", (
             f"Testaufbau/Produktion defekt: {metric_id!r} liefert an diesem "
-            "Ort keine Zelle (kein Wert oder kein Kuerzel) -- der "
+            f"Ort kein Token mit Wert ({tokens}) -- der "
             "Vollstaendigkeits-Anspruch dieses Waechters (JEDE Groesse "
             "mindestens einmal ungekuerzt pruefen) waere sonst verletzt."
         )
+        cell = tokens[0].render()
         sms = render_compare_sms(_result([loc]), enabled_metrics=[metric_id])
         assert cell in sms, (
             f"Zelle {cell!r} fuer {metric_id!r} fehlt im Einzelauswahl-"
@@ -349,7 +360,8 @@ def test_hoechst_und_tiefstwert_derselben_groesse_bleiben_gsm7_clean():
     sms = render_compare_sms(
         _result([loc]), enabled_metrics=["temp_max", "temp_min"],
     )
-    assert "D " in sms and "L " in sms, f"Testaufbau defekt: {sms!r}"
+    # #3172 (ADR-0125): beide Richtungen stehen als Bereich ``D17/33`` (Trip-Grammatik).
+    assert re.search(r"^O1 D-?\d+(?:@\d+)?/-?\d+", sms), f"Testaufbau defekt: {sms!r}"
     assert "D+" not in sms and "D-" not in sms, (
         f"Das mit #2232 entfallene Auswertungszeichen steht noch in {sms!r}."
     )
@@ -396,7 +408,8 @@ def test_sms_budget_lets_more_metrics_through_than_the_old_140():
     py::test_sms_cuts_whole_metrics_not_mid_token_...`) zeigt bei Budget 140
     (dem ALTEN Wert) weniger Zellen als bei 153 (dem NEUEN) -- sonst waere die
     Anhebung folgenlos."""
-    from output.renderers.comparison import _sms_location_part, _sms_metric_cell
+    from app.ampel import resolve_ampel
+    from output.renderers.comparison import _sms_location_variants
 
     name = "Andermatt Talstation"
     loc = LocationResult(
@@ -409,22 +422,29 @@ def test_sms_budget_lets_more_metrics_through_than_the_old_140():
         # standardmaessig (s. Definition oben) -- keine weitere Fixture noetig.
         hourly_data=[_dp(h) for h in range(24)],
     )
+    # #3172: die Token-Zeile ist kuerzer als die alte Zellform -- 14 Groessen
+    # passen inzwischen in beide Budgets; erst die volle Auswahl laeuft ueber.
     enabled = [
         "temp_max", "wind_max", "gust_max", "precip_sum", "pop_max",
         "thunder_max", "visibility_min", "uv_max", "snow_depth_cm",
         "snow_new_cm", "humidity_avg", "cape_max", "freezing_level",
-        "snowfall_limit",
+        "snowfall_limit", "cloud_avg", "wind_direction_avg", "dewpoint_avg",
+        "pressure_avg", "sunny_hours", "cloud_low_avg", "cloud_mid_avg",
+        "cloud_high_avg", "temp_min", "wind_chill_min", "wind_chill_max",
+        "precip_type",
     ]
-    head_len = len("Vergleich 30.07.:") + 1  # Kopf + ein Trennzeichen
-    part_140 = _sms_location_part(loc, enabled, budget=140 - head_len)
-    part_153 = _sms_location_part(loc, enabled, budget=153 - head_len)
+    # #3172 (ADR-0125, PO 2026-11-19): Formen des Ortsteils ``O1 {Token}``
+    # von "alle Listenzeilen" bis "keine" (Kuerzung vom Listenende), ohne Kopf;
+    # gezeigt wird die zeilenreichste Form im Budget -- dieselbe Auswahl wie
+    # ``_sms_fit_locations``.
+    formen = _sms_location_variants(loc, enabled, nummer=1, ampel=resolve_ampel({}))
+    part_140 = next(f for f in formen if len(f) <= 140)
+    part_153 = next(f for f in formen if len(f) <= 153)
 
     def _shown_metric_count(part: str) -> int:
-        """Zahl der ausgewaehlten Groessen, deren VOLLSTAENDIGE Kuerzel-Wert-
-        Zelle im Ortsteil steht (nicht ueber den `+N`-Ueberlaufhinweis
-        verdraengt) -- dieselbe Zellberechnung wie die Produktion selbst."""
-        cells = (_sms_metric_cell(loc, mid) for mid in enabled)
-        return sum(1 for cell in cells if cell is not None and cell in part)
+        """Zahl der Token im Ortsteil (ohne ``O1``)."""
+        assert part.startswith("O1 ") and name not in part, part
+        return len(part.split(" ")) - 1
 
     count_140 = _shown_metric_count(part_140)
     count_153 = _shown_metric_count(part_153)

@@ -43,7 +43,8 @@ DISPLAY_CONFIG = {
 VISIBLE_HIDDEN: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "email": (("Temperatur", "Sonnenstunden"), ("UV-Index",)),
     "telegram": (("Temp max", "UV max"), ("Sonne",)),
-    "sms": ((" D ",), (" SU ", " UV ")),
+    # #3172 (ADR-0125): Token-Zeile der Trip-SMS -- Kuerzel direkt vor dem Wert (``D22``).
+    "sms": ((" D2",), (" SU", " UV")),
 }
 
 

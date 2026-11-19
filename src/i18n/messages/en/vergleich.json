@@ -111,5 +111,6 @@
   "vergleich.stunden.ausschluss.temperature_night": "Single value for the night window, not an hourly value — hourly, the temperature answers the same question.",
   "vergleich.stunden.ausschluss.wind_chill_night": "Single value for the night window, not an hourly value — hourly, the feels-like temperature answers the same question.",
   "vergleich.stunden.ausschluss.tagesrichtung_temperatur": "Daytime low or high over the walking hours, not an hourly value — hourly, the temperature answers the same question.",
-  "vergleich.stunden.ausschluss.tagesrichtung_gefuehlt": "Daytime low or high over the walking hours, not an hourly value — hourly, the feels-like temperature answers the same question."
+  "vergleich.stunden.ausschluss.tagesrichtung_gefuehlt": "Daytime low or high over the walking hours, not an hourly value — hourly, the feels-like temperature answers the same question.",
+  "vergleich.sms.ort_nummer": "Location 1 in the order of the subscription"
 }

@@ -123,12 +123,6 @@ export function festeZeileAus(a: PlacementsAntwort, t: Uebersetzer): EinstellFes
 	};
 }
 
-/** „+N“ je Ort im SMS-Beispiel mehrerer Orte (Zahl der weggefallenen Werte, vom Renderer gesetzt). */
-function plusJeOrt(text: string): number | null {
-	const m = text.match(/\s\+(\d+)(?=;|$)/);
-	return m ? Number(m[1]) : null;
-}
-
 export interface SmsZeile {
 	text: string;
 	zeichen: string;
@@ -143,11 +137,8 @@ export function smsAus(a: PlacementsAntwort, t: Uebersetzer, tn: MehrzahlUeberse
 	let hinweis: string | null = null;
 	if (k > 0) {
 		const orte = a.location_count ?? 0;
-		const plus = plusJeOrt(s.text);
-		const teile =
-			orte > 1
-				? [tn('wetter.wsw.sms_orte_passt_nicht', k, { orte }), ...(plus !== null ? [t('wetter.wsw.sms.plus_je_ort', { plus })] : [])]
-				: [tn('wetter.wsw.sms_passt_nicht', k)];
+		// #3172: die Orte-SMS traegt keinen Rest-Zaehler „+N“ je Ort mehr.
+		const teile = orte > 1 ? [tn('wetter.wsw.sms_orte_passt_nicht', k, { orte })] : [tn('wetter.wsw.sms_passt_nicht', k)];
 		hinweis = [...teile, t('wetter.wsw.sms.hochziehen')].join(' ');
 	}
 	return { text: s.text, zeichen: t('wetter.wsw.sms.zeichen', { n: s.length, max: s.max_length }), hinweis };
@@ -162,7 +153,10 @@ export interface LegendenEintrag {
 export function legendeAus(a: PlacementsAntwort, t: Uebersetzer): LegendenEintrag[] {
 	const smsAn = new Set(a.rows.filter((r) => r.cells.sms?.state === 'on').map((r) => r.metric_id));
 	const metriken = a.legend.metrics.filter((m) => smsAn.has(m.metric_id)).map((m) => ({ token: m.kuerzel, text: m.meaning ?? '' }));
-	const fest = a.legend.fixed.filter((f) => LEGENDE[f.key]).map((f) => ({ token: f.token, text: t(LEGENDE[f.key]) }));
+	// #3172: ein fester Eintrag kann seine Bedeutung aus dem Server-Katalog mitbringen (`O1` der Orte-SMS).
+	const fest = a.legend.fixed
+		.filter((f) => f.meaning || LEGENDE[f.key])
+		.map((f) => ({ token: f.token, text: f.meaning ?? t(LEGENDE[f.key]) }));
 	// Dasselbe Kürzel kann für zwei Zeilen kommen (Eltern- und abgeleitete Größe): jeder Eintrag nur einmal.
 	const gesehen = new Set<string>();
 	return [...metriken, ...fest].filter((e) => {

@@ -4855,7 +4855,7 @@ def test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge(metric_id):
 def test_ac_s7_8b_compare_sms_folgt_der_reihenfolge(metric_id):
     """AC-S7-8 (SMS): die Kuerzel-Token-Folge je Ort folgt der eingestellten
     Reihenfolge. Ebenfalls paarweise -- die SMS kappt am Zeichenbudget
-    (``CHANNEL_LIMITS["sms"]["max_chars"]``, gemessen 153)."""
+    (``comparison.ORTE_SMS_MAX_ZEICHEN``, 160 wie die Trip-SMS seit #3172)."""
     partner = partner_von(metric_id)
     ort = _s7_result().locations[0]
     kuerzel_m, kuerzel_p = sms_kuerzel(ort, metric_id), sms_kuerzel(ort, partner)
@@ -4906,7 +4906,10 @@ def test_ac_s7_8c_kappung_folgt_der_reihenfolge_und_wird_zum_inhaltsfehler():
     sms_rueckwaerts = render_compare_sms(
         _s7_result(), enabled_metrics=list(reversed(_S7_SOLL))
     )
-    max_chars = CHANNEL_LIMITS["sms"]["max_chars"]
+    # #3172: die Orte-SMS hat 160 Zeichen wie die Trip-SMS.
+    from output.renderers.comparison import ORTE_SMS_MAX_ZEICHEN
+
+    max_chars = ORTE_SMS_MAX_ZEICHEN
     for text in (sms_vorwaerts, sms_rueckwaerts):
         assert len(text) <= max_chars, f"SMS zu lang ({len(text)}): {text!r}"
     assert sms_index(sms_vorwaerts, kuerzel_letzte) is None, (

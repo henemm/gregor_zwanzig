@@ -154,7 +154,6 @@
 	"wetter.wsw.sms_passt_nicht.other": "Die letzten {count} Metriken passen nicht mehr in die SMS.",
 	"wetter.wsw.sms_orte_passt_nicht.one": "Bei {orte} Orten passt die letzte Metrik nicht mehr in die SMS.",
 	"wetter.wsw.sms_orte_passt_nicht.other": "Bei {orte} Orten passen die letzten {count} Metriken nicht mehr in die SMS.",
-	"wetter.wsw.sms.plus_je_ort": "Dafür steht „+{plus}“ je Ort.",
 	"wetter.wsw.sms.hochziehen": "Zieh nach oben, was dir in der SMS wichtig ist.",
 	"wetter.wsw.legende.titel": "Kürzel erklärt",
 	"wetter.wsw.legende.zeit_ab_gelb": "ab 14 Uhr gelb oder schlechter",
