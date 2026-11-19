@@ -351,7 +351,7 @@ def test_ac9_sms_einfach_nur_fuer_wolken_gsm7_und_hoechstens_160(mit):
     for lauf in _zwei(mit, _vorlage(layouts)):
         sms = _text(lauf.snap, "sms")
         # #3172 (ADR-0125): Token-Zeile, Einfach als Stufe ``CT:SCT@11``.
-        assert re.search(rf"Innsbruck: CT:{_WOLKEN_STUFE}@\d+", sms), (
+        assert re.search(rf"^O1 CT:{_WOLKEN_STUFE}@\d+", sms), (
             f"SMS: Wolken muessen bei Einfach als Stufe erscheinen\n{sms}")
         # Boeen haben keine Einfachform: Zahl bzw. Leerwert unter Gelb, nie Stufe.
         assert re.search(r"(?:: | )G(?:-|\d+@)", sms) and "G:" not in sms, (

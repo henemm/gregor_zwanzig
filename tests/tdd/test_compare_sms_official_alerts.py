@@ -62,13 +62,12 @@ def _result(locations: list[LocationResult]) -> ComparisonResult:
     )
 
 
-def _location_part(sms: str, name: str) -> str:
-    """Der Teiltext eines Ortes innerhalb der flachen Semikolon-getrennten
-    Compare-SMS (bis zum naechsten '; ' bzw. Stringende)."""
-    idx = sms.index(name)
-    rest = sms[idx:]
-    end = rest.find("; ")
-    return rest if end == -1 else rest[:end]
+def _location_part(sms: str, nummer: int) -> str:
+    """Der Teiltext ``O{nummer} ...`` eines Ortes (#3172: keine Ortsnamen in
+    der SMS; Nummer = Stelle in der Reihenfolge des Ergebnisses)."""
+    from tests.helpers.orte_sms import orte_teil
+
+    return orte_teil(sms, nummer)
 
 
 # ---------------------------------------------------------------------------
@@ -84,10 +83,10 @@ def test_only_location_at_or_above_threshold_carries_marker():
 
     sms = render_compare_sms(_result([ort_a, ort_b, ort_c, ort_d]))
 
-    part_a = _location_part(sms, "Aachen")
-    part_b = _location_part(sms, "Berg")
-    part_c = _location_part(sms, "Chur")
-    part_d = _location_part(sms, "Dorf")
+    part_a = _location_part(sms, 1)  # Aachen
+    part_b = _location_part(sms, 2)  # Berg
+    part_c = _location_part(sms, 3)  # Chur
+    part_d = _location_part(sms, 4)  # Dorf
 
     assert "!TS:H" in part_a, (
         f"Ort mit roter amtlicher Warnung traegt keinen `!`-Kuerzel-Marker: "

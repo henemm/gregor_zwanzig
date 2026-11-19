@@ -89,6 +89,11 @@
    {
     "key": "warnquelle_nicht_erreichbar",
     "token": "X?"
+   },
+   {
+    "key": "ort_nummer",
+    "meaning": "Ort 1 in der Reihenfolge des Abos",
+    "token": "O1"
    }
   ],
   "metrics": [
@@ -623,10 +628,10 @@
   }
  ],
  "sms_example": {
-  "length": 105,
-  "max_length": 153,
+  "length": 71,
+  "max_length": 160,
   "overflow": null,
-  "text": "Orte 14.07.: Innsbruck: D15/19 W30@10(43@16); Lienz: D16/20 W31@10(44@16); Kufstein: D17/21 W32@10(45@16)"
+  "text": "O1 D15/19 W30@10(43@16) O2 D16/20 W31@10(44@16) O3 D17/21 W32@10(45@16)"
  },
  "stored": false
 }

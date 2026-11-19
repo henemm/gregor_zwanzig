@@ -31,7 +31,6 @@ from datetime import date, datetime, timezone
 
 from app.models import ForecastDataPoint
 from app.user import ComparisonResult, LocationResult, SavedLocation
-from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.comparison import (
     render_comparison_text, render_compare_sms, render_compare_telegram,
 )
@@ -41,7 +40,8 @@ from output.renderers.comparison import (
 # genutzt) auf 153 (verkettungssicherer GSM-7-Wert, s. channel_layout.py fuer
 # die Herleitung) -- gegen die KONSTANTE pruefen, nicht gegen den alten
 # Literalwert 140.
-SMS_LIMIT = CHANNEL_LIMITS["sms"]["max_chars"]
+# #3172: die Orte-SMS hat 160 Zeichen wie die Trip-SMS.
+from output.renderers.comparison import ORTE_SMS_MAX_ZEICHEN as SMS_LIMIT  # noqa: E402
 from output.renderers.email.compare_html import render_compare_html
 
 # ---------------------------------------------------------------------------
@@ -299,11 +299,13 @@ class TestAC6AlphabeticalPresetUnchanged:
         alle drei Orte erneut passen -- der Praefix-Vergleich deckt beide
         Faelle (mit UND ohne Orts-Ueberlauf) korrekt ab, ohne bei der naechsten
         Budget-Verschiebung erneut angefasst werden zu muessen."""
+        from tests.helpers.orte_sms import orte_nummern
+
         msg = render_compare_sms(self._alpha_result())
-        shown = _order_of(msg, self.FROZEN)
-        assert shown == self.FROZEN[: len(shown)], (
-            f"Gezeigte Orte {shown} weichen von der alphabetischen "
-            f"Reihenfolge {self.FROZEN} ab. SMS: {msg!r}"
+        # #3172: keine Namen -- die Orte stehen als O1, O2, O3 in Eingabefolge.
+        shown = orte_nummern(msg)
+        assert shown == [1, 2, 3][: len(shown)] and shown, (
+            f"Gezeigte Orte {shown} weichen von der Eingabefolge ab. SMS: {msg!r}"
         )
         assert len(msg) <= SMS_LIMIT
 
@@ -318,9 +320,18 @@ SMS_ORDER_A = ["Zermatt", "Oberstdorf", "Garmisch", "Innsbruck", "Kitzbuehel", "
 SMS_ORDER_B = list(reversed(SMS_ORDER_A))
 
 
+#: #3172 (PO 2026-11-19): die Orte-SMS nennt keine Namen (``O1``, ``O2``, ...).
+#: Damit erkennbar bleibt, WELCHER Ort an welcher Stelle steht, traegt jeder
+#: Ort eine eigene Tageshoechsttemperatur (``D21`` = Zermatt, ...).
+_SMS_TEMP = {n: 21.0 + i for i, n in enumerate(SMS_ORDER_A)}
+
+
 def _sms_result(names: list[str]) -> ComparisonResult:
+    orte = [_loc_result(n.lower(), n) for n in names]
+    for ort in orte:
+        ort.temp_max = _SMS_TEMP.get(ort.location.name, ort.temp_max)
     return ComparisonResult(
-        locations=[_loc_result(n.lower(), n) for n in names],
+        locations=orte,
         time_window=(0, 23),
         target_date=date(2026, 7, 24),
         created_at=datetime(2026, 7, 24, 4, 0),
@@ -336,8 +347,15 @@ _LOCATION_OVERFLOW_RE = re.compile(r" \+(\d+) Orte$")
 
 
 def _sms_named_and_plus(msg: str, names: list[str]) -> tuple[list[str], int]:
-    """(genannte Orte in Render-Reihenfolge, k aus dem ' +k Orte'-Suffix)."""
-    named = _order_of(msg, names)
+    """(gezeigte Orte in Render-Reihenfolge, k aus dem ' +k Orte'-Suffix).
+    #3172: der Ort wird ueber seine eigene Tageshoechsttemperatur erkannt
+    (``O1 D21/10 ...``), die Nummern muessen lueckenlos ``O1, O2, ...`` sein."""
+    from tests.helpers.orte_sms import orte_nummern, orte_teile, orte_token
+
+    teile = orte_teile(msg)
+    assert orte_nummern(msg) == list(range(1, len(teile) + 1)), msg
+    nach_temp = {f"{int(_SMS_TEMP[n])}": n for n in names}
+    named = [nach_temp[re.match(r"D\d+/(\d+)", orte_token(t)[0]).group(1)] for t in teile]
     match = _LOCATION_OVERFLOW_RE.search(msg)
     plus = int(match.group(1)) if match else 0
     return named, plus

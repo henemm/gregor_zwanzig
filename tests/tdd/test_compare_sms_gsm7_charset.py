@@ -361,7 +361,7 @@ def test_hoechst_und_tiefstwert_derselben_groesse_bleiben_gsm7_clean():
         _result([loc]), enabled_metrics=["temp_max", "temp_min"],
     )
     # #3172 (ADR-0125): beide Richtungen stehen als Bereich ``D17/33`` (Trip-Grammatik).
-    assert re.search(r": D-?\d+(?:@\d+)?/-?\d+", sms), f"Testaufbau defekt: {sms!r}"
+    assert re.search(r"^O1 D-?\d+(?:@\d+)?/-?\d+", sms), f"Testaufbau defekt: {sms!r}"
     assert "D+" not in sms and "D-" not in sms, (
         f"Das mit #2232 entfallene Auswertungszeichen steht noch in {sms!r}."
     )
@@ -408,6 +408,7 @@ def test_sms_budget_lets_more_metrics_through_than_the_old_140():
     py::test_sms_cuts_whole_metrics_not_mid_token_...`) zeigt bei Budget 140
     (dem ALTEN Wert) weniger Zellen als bei 153 (dem NEUEN) -- sonst waere die
     Anhebung folgenlos."""
+    from app.ampel import resolve_ampel
     from output.renderers.comparison import _sms_location_variants
 
     name = "Andermatt Talstation"
@@ -429,19 +430,21 @@ def test_sms_budget_lets_more_metrics_through_than_the_old_140():
         "snow_new_cm", "humidity_avg", "cape_max", "freezing_level",
         "snowfall_limit", "cloud_avg", "wind_direction_avg", "dewpoint_avg",
         "pressure_avg", "sunny_hours", "cloud_low_avg", "cloud_mid_avg",
-        "cloud_high_avg",
+        "cloud_high_avg", "temp_min", "wind_chill_min", "wind_chill_max",
+        "precip_type",
     ]
-    head_len = len("Vergleich 30.07.:") + 1  # Kopf + ein Trennzeichen
-    # #3172 (ADR-0125): Formen des Ortsteils von "alle Listenzeilen" bis
-    # "keine" (Kuerzung vom Listenende); gezeigt wird die zeilenreichste Form
-    # im Budget -- dieselbe Auswahl wie ``_sms_fit_locations``.
-    formen = _sms_location_variants(loc, enabled)
-    part_140 = next(f for f in formen if len(f) <= 140 - head_len)
-    part_153 = next(f for f in formen if len(f) <= 153 - head_len)
+    # #3172 (ADR-0125, PO 2026-11-19): Formen des Ortsteils ``O1 {Token}``
+    # von "alle Listenzeilen" bis "keine" (Kuerzung vom Listenende), ohne Kopf;
+    # gezeigt wird die zeilenreichste Form im Budget -- dieselbe Auswahl wie
+    # ``_sms_fit_locations``.
+    formen = _sms_location_variants(loc, enabled, nummer=1, ampel=resolve_ampel({}))
+    part_140 = next(f for f in formen if len(f) <= 140)
+    part_153 = next(f for f in formen if len(f) <= 153)
 
     def _shown_metric_count(part: str) -> int:
-        """Zahl der Token im Ortsteil (ohne den Ortsnamen)."""
-        return len(part[len(name) + 2:].split(" "))
+        """Zahl der Token im Ortsteil (ohne ``O1``)."""
+        assert part.startswith("O1 ") and name not in part, part
+        return len(part.split(" ")) - 1
 
     count_140 = _shown_metric_count(part_140)
     count_153 = _shown_metric_count(part_153)

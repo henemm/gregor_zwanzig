@@ -137,10 +137,12 @@ def wertezeilen(tg: str, ort: str = "Innsbruck") -> list[list[str]]:
 
 
 def _sms_ort(sms: str, name: str) -> str:
-    teile = sms.split(": ", 1)[1].split("; ")
-    treffer = [t for t in teile if t.startswith(name + ": ")]
-    assert treffer, f"Ort {name} fehlt in der SMS: {sms}"
-    return treffer[0]
+    """#3172 (PO 2026-11-19): die Orte-SMS nennt keine Namen -- der Ort steht
+    als ``O{n}`` an seiner Stelle in ``location_ids`` (``ORTSNAMEN``-Folge)."""
+    from tests.helpers.orte_sms import orte_teil
+    from tests.tdd._compare_kette_fixtures import ORTSNAMEN
+
+    return orte_teil(sms, ORTSNAMEN.index(name) + 1)
 
 
 # ---------------------------------------------------------------------------
@@ -199,13 +201,15 @@ def test_bl4_nie_eingestellt_sms_folgt_mail(mit):
         assert len(sms) <= 160, len(sms)
         ort = _sms_ort(sms, "Innsbruck")
         # #3172 (ADR-0125): Kuerzel der Token-Zeile (``D12/22``, ``R1.5@11``).
-        kuerzel = [re.match(r"[A-Z]+", t).group(0) for t in ort.split(": ", 1)[1].split(" ")]
+        kuerzel = [re.match(r"[A-Z]+", t).group(0) for t in ort.split(" ")[1:]]
         # Mail-Folge: Temp max (D), Wind (W), Regen (R), Regenwahrsch. (PR) ...
         assert kuerzel[:3] == ["D", "W", "R"], f"B-L4 SMS-Festsatz statt Mail-Folge: {ort}"
         assert "SU" not in kuerzel[:3] and "SD" not in kuerzel[:3], ort
-        # Kuerzung vom Listenende (AC-23) still wie im Trip: die hinteren Zeilen
-        # der Mail-Folge (Boeen, Windrichtung) fehlen, kein Zaehler +N/?N.
-        assert "G" not in kuerzel and "WD" not in kuerzel, ort
+        # Kuerzung vom Listenende (AC-23) still wie im Trip: gezeigt wird ein
+        # Anfang der Mail-Folge, die hinteren Zeilen fehlen, kein Zaehler +N/?N.
+        mail_folge = ["D", "W", "R", "PR", "TH", "SU", "CT", "UV", "VS", "SD", "NS", "G",
+                      "FZ", "WD", "FD", "CL", "CM", "CH", "HU", "DP", "HP", "PT", "SL"]
+        assert kuerzel == mail_folge[:len(kuerzel)] and len(kuerzel) < len(mail_folge), ort
         assert not re.search(r" [+?]\d", ort), f"Zaehler in der SMS: {ort}"
         assert text(snap, "premium_sms") == sms
 
@@ -241,15 +245,19 @@ def test_bl2_warnungen_nicht_abrufbar_sms(mit):
 
 def test_bl2_marker_faellt_nie_weg_und_haelt_budget(mit):
     """Volle SMS (nie eingestellt = alle Mail-Zeilen) und Warndienst-Ausfall:
-    ``X?`` steht am Ende, die Zellen weichen ihm, das SMS-Budget haelt."""
+    ``X?`` steht am Ende, die Zellen weichen ihm, das SMS-Budget haelt
+    (#3172: 160 wie die Trip-SMS)."""
     from output.renderers.channel_layout import CHANNEL_LIMITS
+    from output.renderers.comparison import ORTE_SMS_MAX_ZEICHEN
 
     STATE["unavailable"] = True
     for uid, snap in zwei_nutzer(mit, _nie_eingestellt()):
         sms = text(snap, "sms")
         assert sms.endswith(" X?"), sms
-        assert len(sms) <= CHANNEL_LIMITS["sms"]["max_chars"], (len(sms), sms)
-        assert text(snap, "premium_sms") == sms
+        assert len(sms) <= ORTE_SMS_MAX_ZEICHEN, (len(sms), sms)
+        # #3172: die Premium-SMS kuerzt ueber 153 Zeichen neu -- der Marker bleibt.
+        premium = text(snap, "premium_sms")
+        assert premium.endswith(" X?") and len(premium) <= CHANNEL_LIMITS["premium_sms"]["max_chars"]
 
 
 def test_bl2_gegenprobe_ohne_ausfall_kein_hinweis(mit):
@@ -298,21 +306,22 @@ def test_bl3_einfach_folgt_ampel_grenzen(mit, ausblick):
 
 
 def test_bl2_marker_budget_bei_jeder_namenslaenge():
-    """Reine Renderer-Pruefung (kein Netz): ueber viele Ortsnamen-Laengen liegt
-    die Nachricht ohne Marker irgendwann knapp am Budget -- ``X?`` darf es auch
-    dann nicht sprengen (das Budget des Kerns ist um den Marker verkleinert)."""
+    """Reine Renderer-Pruefung (kein Netz): ueber viele Ortszahlen liegt die
+    Nachricht ohne Marker irgendwann knapp am Budget -- ``X?`` darf es auch
+    dann nicht sprengen (das Budget des Kerns ist um den Marker verkleinert).
+    #3172: die Orte-SMS nennt keine Namen mehr, die Laenge waechst ueber die
+    Zahl der Orte (``O1 D20 W? G? O2 ...``); Grenze 160 wie die Trip-SMS."""
     from app.user import ComparisonResult, LocationResult, SavedLocation
-    from output.renderers.channel_layout import CHANNEL_LIMITS
-    from output.renderers.comparison import render_compare_sms
+    from output.renderers.comparison import ORTE_SMS_MAX_ZEICHEN, render_compare_sms
 
-    grenze = CHANNEL_LIMITS["sms"]["max_chars"]
+    grenze = ORTE_SMS_MAX_ZEICHEN
     knapp = 0
-    for n in range(1, 80):
+    for n in range(1, 40):
         orte = [LocationResult(
-            location=SavedLocation(id=f"o{i}", name=("Ort" + "x" * n)[: n + 1] + str(i),
+            location=SavedLocation(id=f"o{i}", name=f"Ort{i}",
                                    lat=47.27, lon=11.39, elevation_m=1000),
             score=50, temp_max=20.0, wind_max=10.0, gust_max=30.0, cloud_avg=40,
-        ) for i in range(3)]
+        ) for i in range(n)]
         ergebnis = ComparisonResult(locations=orte, time_window=(9, 16), target_date=TARGET_DATE,
                                     created_at=datetime(2026, 7, 8, 4, 0))
         ohne = render_compare_sms(ergebnis, enabled_metrics=["temp_max", "wind_max", "gust_max"])

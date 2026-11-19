@@ -284,6 +284,14 @@ describe('„Kürzel erklärt“ (AC-31)', () => {
 		assert.equal(elemente(o, 'data-legende="W"').length, 1, 'gleicher Eintrag nur einmal');
 		assert.equal(elemente(o, 'data-legende="L"').length, 2, 'L als Metrik-Kürzel und als Stufe gelb');
 	});
+	test('#3172: fester Eintrag mit Bedeutung aus der Antwort (O1 der Orte-SMS) erscheint, ohne Bedeutung und Schlüssel nicht', async () => {
+		const a = orte(3);
+		a.legend.fixed = [...a.legend.fixed, { token: 'O1', key: 'ort_nummer', meaning: 'Ort 1 in der Reihenfolge des Abos' }, { token: 'Q9', key: 'unbekannt' }];
+		const o = await karte(a, { context: 'vergleich' });
+		const inhalt = text(eins(o, 'data-testid="was-steht-wo-legende"').innen);
+		assert.ok(inhalt.includes('O1 Ort 1 in der Reihenfolge des Abos'), inhalt);
+		assert.equal(elemente(o, 'data-legende="Q9"').length, 0, 'unbekannter Schlüssel ohne Bedeutung bleibt weg');
+	});
 	test('Kürzel einer Metrik ohne SMS-Haken fehlt; Eintrag ohne Bedeutung zeigt nur das Kürzel', async () => {
 		const a = trip();
 		a.rows[0].cells.sms = z('off');

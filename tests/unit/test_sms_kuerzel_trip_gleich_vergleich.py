@@ -114,7 +114,7 @@ def _vergleich_kuerzel(renderer_id: str, loc_feld: dict) -> str:
     sms = render_compare_sms(ComparisonResult(
         locations=[loc], time_window=(0, 23), target_date=date(2026, 7, 27),
         created_at=datetime(2026, 7, 27, 6, 0)), enabled_metrics=[renderer_id])
-    token = sms.partition(": ")[2].split()
+    token = sms.split()[1:]  # #3172: "O1 <Token>", ohne Kopf und Namen
     if not token:
         return ""  # keine Zeile (z.B. verfaelschte Aufloesung ohne Kurzform-Kuerzel)
     assert len(token) == 1, f"Testaufbau: genau ein Token erwartet: {sms!r}"

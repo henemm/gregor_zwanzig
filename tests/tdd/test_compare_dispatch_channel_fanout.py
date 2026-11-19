@@ -240,7 +240,8 @@ def test_preset_with_telegram_and_sms_optin_dispatches_all_three_channels(
     assert "Innsbruck" in telegram_sink.calls[0], (
         f"Telegram-Nachricht ohne Vergleichs-Inhalt: {telegram_sink.calls[0][:300]!r}"
     )
-    assert "Innsbruck" in sms_sink.calls[0], (
+    # #3172: die Orte-SMS nennt keine Namen -- der erste Ort steht als ``O1``.
+    assert sms_sink.calls[0].startswith("O1 "), (
         f"SMS-Nachricht ohne Vergleichs-Inhalt: {sms_sink.calls[0][:300]!r}"
     )
 

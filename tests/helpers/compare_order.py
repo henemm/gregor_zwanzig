@@ -191,15 +191,12 @@ def telegram_zellen(nachricht: str) -> list[str]:
 
 def sms_tokens(nachricht: str) -> list[str]:
     """Die Leerzeichen-getrennten Tokens des ERSTEN Ortsteils einer
-    Compare-SMS (Kuerzel UND Wert, #3172: Token-Zeile ``W30@10(43@16)``), in
-    Render-Reihenfolge, ohne Ortsnamen."""
-    _kopf, trenner, rumpf = nachricht.partition(": ")
-    if not trenner:
-        return []
-    erster = rumpf.split("; ")[0]
-    # Mehrere Orte: der Ortsteil beginnt mit "{Name}: " (#3172, ADR-0125).
-    _name, trenner, token = erster.partition(": ")
-    return (token if trenner else erster).split(" ")
+    Compare-SMS (Kuerzel UND Wert, #3172: Token-Zeile ``O1 W30@10(43@16) ...``),
+    in Render-Reihenfolge, ohne die Ortsnummer ``O1``."""
+    from tests.helpers.orte_sms import orte_teile
+
+    teile = orte_teile(nachricht)
+    return teile[0].split(" ")[1:] if teile else []
 
 
 def _token_kuerzel(token: str) -> str | None:

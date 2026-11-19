@@ -530,7 +530,7 @@ def _orte_sms(cloud_fmt: str | None) -> list[dict]:
 
 def _orte_kuerzel_folge(ortsteil: str) -> list[str]:
     """#3172 (ADR-0125): Kuerzel der Token-Zeile (``CT:SCT@11`` -> ``CT``)."""
-    kuerzel = (re.match(r"[A-Z]+", t) for t in ortsteil.split(": ", 1)[1].split(" "))
+    kuerzel = (re.match(r"[A-Z]+", t) for t in ortsteil.split(" ")[1:])
     return [k.group(0) for k in kuerzel if k and k.group(0) in ORTE_KUERZEL.values()]
 
 

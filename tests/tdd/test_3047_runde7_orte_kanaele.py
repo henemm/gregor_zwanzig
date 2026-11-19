@@ -177,23 +177,20 @@ KUERZEL = {"gust": "G", "temperature": "D", "wind_direction": "WD", "wind": "W",
 
 
 def _sms_ort(sms: str, name: str) -> str:
-    teile = sms.split(": ", 1)[1].split("; ")
-    treffer = [t for t in teile if t.startswith(name + ": ")]
-    assert treffer, f"Ort {name} fehlt in der SMS: {sms}"
-    return treffer[0]
+    """#3172 (PO 2026-11-19): die Orte-SMS nennt keine Namen -- der Ort steht
+    als ``O{n}`` an seiner Stelle in ``location_ids`` (``ORTSNAMEN``-Folge)."""
+    from tests.helpers.orte_sms import orte_teil
+    from tests.tdd._compare_kette_fixtures import ORTSNAMEN
+
+    return orte_teil(sms, ORTSNAMEN.index(name) + 1)
 
 
 def _kuerzel_folge(ortsteil: str) -> list[str]:
     """#3172 (ADR-0125): Kuerzel der Token-Zeile (``TH:-`` -> ``TH``,
     ``WD:SW`` -> ``WD``) bis zum Warnblock ``!``."""
-    out = []
-    for token in ortsteil.split(": ", 1)[1].split(" "):
-        if token.startswith("!"):
-            break
-        treffer = re.match(r"[A-Z]+", token)
-        if treffer and treffer.group(0) in KUERZEL.values():
-            out.append(treffer.group(0))
-    return out
+    from tests.helpers.orte_sms import orte_kuerzel
+
+    return [k for k in orte_kuerzel(ortsteil) if k in KUERZEL.values()]
 
 
 @pytest.mark.parametrize("folge", ["grund", "eigene_sms_liste"])
@@ -289,8 +286,10 @@ def test_k6_leere_kanal_liste_bleibt_leer(mit):
     for uid, snap in zwei_nutzer(mit, p):
         for kanal in ("sms", "premium_sms"):
             sms = text(snap, kanal)
-            # #3172: kein Wert-Token der Token-Zeile (``D12``, ``W-``, ``TH:-``).
-            assert not re.search(r"(?:: | )[A-Z]{1,3}:?(?:-?\d|-|\?)", sms), (
+            # #3172: kein Wert-Token der Token-Zeile, nur die Ortsnummern (``O1 O2``).
+            from tests.helpers.orte_sms import orte_teile, orte_token
+
+            assert orte_teile(sms) and all(orte_token(t) == [] for t in orte_teile(sms)), (
                 f"{kanal}: leer bleibt leer: {sms}")
         tg = text(snap, "telegram")
         for block in ortsbloecke(tg).values():

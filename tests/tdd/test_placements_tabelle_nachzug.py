@@ -72,9 +72,10 @@ def test_orte_ohne_tabelle_marken_beispiele_und_legende(client, anzahl, grund):
     assert antwort["stored"] is False
     assert antwort["sms_example"]["text"] == versand
     fehlend = {m for m in _sms_an(antwort) if _orte_fehlt_in_sms(versand, m)}
-    assert fehlend, "Datensatz muss die SMS ueberlaufen lassen"
+    # #3172: ein Ort passt ohne Namen und Kopf ganz in 160 Zeichen.
+    assert fehlend or anzahl == 1, "Datensatz muss die SMS ueberlaufen lassen"
     assert _markiert(antwort) == fehlend
-    worte = set(re.split(r"[ ;]+", versand))
+    worte = set(versand.split(" "))
     for zeile in antwort["rows"]:
         sms = zeile["cells"]["sms"]
         if sms["state"] == "on" and zeile["metric_id"] not in fehlend:
@@ -234,17 +235,14 @@ def test_jedes_kuerzel_der_orte_sms_hat_eine_bedeutung(lang):
 # ---------------------------------------------------------------------------
 
 def _ortsteile(versand: str, orte: list[str]) -> list[str]:
-    """Ortsteile der Versand-SMS (Kopf ``Orte TT.MM.: ``, Trenner ``; ``, die
-    Testnamen enthalten keinen). #3122 B5: bei genau einem Ort steht der Name
-    im Kopf (``{Ort} TT.MM.: ``), der einzige Ortsteil traegt ihn nicht."""
-    kopf, rumpf = versand.split(": ", 1)
-    rumpf = re.sub(r" \+\d+ Orte$", "", rumpf)
-    if len(orte) == 1:
-        assert kopf.split(" ")[0] == orte[0], versand
-        return [rumpf]
-    teile = rumpf.split("; ")
-    for teil in teile:
-        assert teil.split(": ", 1)[0] in orte, teil
+    """Ortsteile der Versand-SMS ``O1 ... O2 ...`` (#3172, PO 2026-11-19: kein
+    Kopf, keine Namen); die Nummern sind lueckenlos ``O1, O2, ...`` und
+    nie groesser als die Zahl der Orte."""
+    from tests.helpers.orte_sms import orte_nummern, orte_teile
+
+    teile = orte_teile(versand)
+    assert orte_nummern(versand) == list(range(1, len(teile) + 1)), versand
+    assert len(teile) <= len(orte) and not any(n in versand for n in orte), versand
     return teile
 
 
@@ -268,17 +266,17 @@ def test_orte_sms_example_meldet_rest_zaehler(client, fall):
     assert antwort["sms_example"]["overflow"] is None
     for teil in teile:
         assert not re.search(r"(?:^| )[+?]\d+(?= |$)", teil), f"Zaehler im Ortsteil: {teil!r}"
-    zahl = {len(t.split(": ", 1)[-1].split(" ")) for t in teile}
+    zahl = {len(t.split(" ")) - 1 for t in teile}
     assert len(zahl) == 1, f"ungleiche Zeilenzahl je Ort: {versand!r}"
     if fall == "drei_ohne_ueberlauf":
         assert zahl == {1}, versand
 
 
 VIELE_ORTE = ("Innsbruck", "Lienz", "Kufstein", "Imst", "Landeck", "Reutte", "Schwaz",
-              "Telfs", "Wattens")
+              "Telfs", "Wattens") + tuple(f"Ortschaft{i}" for i in range(10, 31))
 
 
-@pytest.mark.parametrize("anzahl", [8, 9])
+@pytest.mark.parametrize("anzahl", [8, 30])
 def test_orte_entfallene_orte_zaehlen_nicht_im_rest_zaehler(client, anzahl):
     """Passen nicht alle Orte, endet die SMS auf ``+k Orte`` -- erst wenn je Ort
     nur noch die erste Listenzeile steht (#3172, ADR-0125); gezeigte plus
@@ -293,9 +291,11 @@ def test_orte_entfallene_orte_zaehlen_nicht_im_rest_zaehler(client, anzahl):
     assert len(teile) + (int(entfallen.group(1)) if entfallen else 0) == anzahl, versand
     assert antwort["sms_example"]["overflow"] is None
     if entfallen:
-        assert all(len(t.split(": ", 1)[1].split(" ")) == 1 for t in teile), versand
-    if anzahl == 9:
-        assert entfallen, f"Vorbedingung: 9 Orte passen nicht: {versand!r}"
+        assert all(len(t.split(" ")) == 2 for t in teile), versand
+    if anzahl == 30:
+        # #3172: die Orte-SMS ist kuerzer (keine Namen, 160 Zeichen) -- erst
+        # 30 Orte lassen sie ueberlaufen.
+        assert entfallen, f"Vorbedingung: 30 Orte passen nicht: {versand!r}"
 
 
 def test_trip_sms_example_ohne_rest_zaehler(client):

@@ -65,15 +65,11 @@ def _zahlen(muster: re.Pattern, text: str) -> list[int]:
 
 
 def _sms_orte(sms: str) -> list[str]:
-    """Ortsteile der SMS: ``Orte 08.07.: A ...; B ...; C ...``. #3122 B5: bei
-    genau einem Ort steht der Name im Kopf (``A 08.07.: ...``) -- hier wieder
-    als Ortsteil ``A ...`` gelesen."""
-    kopf, nach_kopf = sms.split(": ", 1)
-    teile = [t.strip() for t in nach_kopf.split("; ")]
-    if not kopf.startswith("Orte "):
-        # #3172: Ortsteil wie bei mehreren Orten, ``{Name}: {Token}``.
-        return [f"{kopf.rsplit(' ', 1)[0]}: {teile[0]}"]
-    return teile
+    """Ortsteile der SMS ``O1 ... O2 ... O3 ...`` (#3172, PO 2026-11-19: kein
+    Kopf, keine Ortsnamen, Orte durch ein Leerzeichen getrennt)."""
+    from tests.helpers.orte_sms import orte_teile
+
+    return orte_teile(sms)
 
 
 def _fragezaehler(teil: str) -> int | None:
@@ -91,8 +87,8 @@ _KUERZEL = {"temp_max": "D", "wind_max": "W", "cloud_avg": "CT", "sunny_hours": 
 
 
 def _token(teil: str) -> list[str]:
-    """Token eines Ortsteils ``Name: D20 W- SD?`` (ohne Namen)."""
-    return teil.split(": ", 1)[1].split(" ") if ": " in teil else []
+    """Token eines Ortsteils ``O1 D20 W- SD?`` (ohne ``O{n}``)."""
+    return teil.split(" ")[1:]
 
 
 def _kuerzel_folge(teil: str) -> list[str]:
@@ -268,7 +264,7 @@ def test_ac11_sms_normalfall_ist_zeichen_fuer_zeichen_unveraendert():
     sms = render_compare_sms(_result(), enabled_metrics=["temp_max", "wind_max"])
     # #3172 (ADR-0125): Token-Zeile der Trip-SMS.
     assert sms == (
-        "Orte 08.07.: Alpha: D20 W-; Beta: D21 W-; Gamma: D22 W-"
+        "O1 D20 W- O2 D21 W- O3 D22 W-"
     ), "Normalfall darf sich nicht veraendern (kein ?, kein zusaetzliches Leerzeichen)"
     assert "?" not in sms
 
@@ -296,13 +292,14 @@ def test_ac13_premium_sms_bekommt_denselben_text_wie_sms_inklusive_zaehler(tmp_p
 
 
 def test_ac14_sms_laenge_gsm7_und_zaehler_wird_nie_verdraengt():
-    from output.renderers.channel_layout import CHANNEL_LIMITS
     from output.renderers.comparison import render_compare_sms
 
     viele = ["temp_max", "wind_max", "cloud_avg", "sunny_hours", "precip_sum",
              "pop_max", "uv_max", "temp_min", "gust_max", OHNE_WERT]
     sms = render_compare_sms(_result(), enabled_metrics=viele)
-    assert len(sms) <= CHANNEL_LIMITS["sms"]["max_chars"] == 153
+    from output.renderers.comparison import ORTE_SMS_MAX_ZEICHEN
+
+    assert len(sms) <= ORTE_SMS_MAX_ZEICHEN == 160  # #3172: wie die Trip-SMS
     assert all(ord(c) < 128 for c in sms), f"nicht-GSM-7-sicher: {sms!r}"
     for teil in _sms_orte(sms):
         if teil.endswith("n/a") or re.search(r"\+\d+ Orte", teil):
@@ -327,9 +324,9 @@ def test_ac14_zaehler_ist_fester_teil_des_budgets():
     for laenge in range(20, 130):
         name = "N" * laenge
         sms = render_compare_sms(_make_comparison_result([name]), enabled_metrics=gewaehlt)
-        assert len(sms) <= 153, sms
+        assert len(sms) <= 160, sms  # #3172: wie die Trip-SMS
         teile = _sms_orte(sms)
-        assert len(teile) == 1 and teile[0].startswith(name + ": "), (
+        assert len(teile) == 1 and teile[0].startswith("O1 ") and name not in sms, (
             f"Ort fiel der Notkuerzung zum Opfer (Name {laenge}): {sms!r}"
         )
         teil = teile[0]
@@ -350,7 +347,7 @@ def test_ac12_reihenfolge_platzmangel_vor_fehlend_exakt():
     gewaehlt = ["temp_max", "wind_max", "cloud_avg", "sunny_hours", "precip_sum",
                 "pop_max", "uv_max", OHNE_WERT]
     sms = render_compare_sms(_make_comparison_result([name]), enabled_metrics=gewaehlt)
-    assert sms == f"{name} 08.07.: D20 W- CT30@11 SU5 R- PR- UV4@11 SD?", sms
+    assert sms == "O1 D20 W- CT30@11 SU5 R- PR- UV4@11 SD?", sms
 
 
 def _sms_ueber_echten_eingang(display_config: dict):
@@ -398,7 +395,7 @@ def test_ac15_unmappbarer_schluessel_erhoeht_den_zaehler_an_jedem_ort():
     # #3172 (ADR-0125): ``unresolved_count`` erzeugt in der SMS kein Zeichen.
     zaehler = [_fragezaehler(t) for t in _sms_orte(sms)]
     assert zaehler == [None, None, None], zaehler
-    assert sms == "Orte 08.07.: Alpha: D20 W-; Beta: D21 W-; Gamma: D22 W-", sms
+    assert sms == "O1 D20 W- O2 D21 W- O3 D22 W-", sms
 
 
 # ===========================================================================

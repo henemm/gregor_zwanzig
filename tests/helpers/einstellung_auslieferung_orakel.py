@@ -932,27 +932,28 @@ _SMS_KUERZEL_KEY = {v[4]: k for k, v in COMPARE_METRIKEN.items()}
 
 
 def compare_parse_sms(text: str, orte: list[str]) -> dict[str, list[str]]:
-    """SMS-Vergleichstext ``Orte TT.MM.: Ort: D10/20 W-; Ort2: ...`` (#3172,
-    Token-Zeile der Trip-SMS) -> {Ort: [Schluessel in Token-Folge]}. Ein Ort,
-    den das Zeichenbudget verdraengt hat (``+N Orte``), fehlt im Ergebnis.
-    Ein Token ohne Wert (``W?``) zaehlt nicht als Zelle; der Bereich
-    ``D10/20`` zeigt Hoechst- und Tiefstwert (in dieser Folge)."""
-    _, _, rest = text.partition(": ")
-    rest = re.sub(r"( \+\d+ Orte)?( X\?)?$", "", rest)
+    """Orte-SMS ``O1 D10/20 W- O2 ...`` (#3172, Token-Zeile der Trip-SMS, ohne
+    Kopf und ohne Namen) -> {Ort: [Schluessel in Token-Folge]}. ``orte`` ist
+    die Reihenfolge des Abos: ``O{n}`` = ``orte[n-1]``. Ein Ort, den das
+    Zeichenbudget verdraengt hat (``+N Orte``), fehlt im Ergebnis. Ein Token
+    ohne Wert (``W?``) zaehlt nicht als Zelle; der Bereich ``D10/20`` zeigt
+    Hoechst- und Tiefstwert (in dieser Folge)."""
+    from tests.helpers.orte_sms import orte_teile, orte_token
+
     ergebnis: dict[str, list[str]] = {}
-    for segment in rest.split("; "):
-        for ort in orte:
-            if segment != ort and not segment.startswith(ort + ": "):
+    for teil in orte_teile(text):
+        nummer = int(teil.split(" ", 1)[0][1:])
+        if not 1 <= nummer <= len(orte):
+            continue
+        schluessel: list[str] = []
+        for token in orte_token(teil):
+            m = re.match(r"([A-Z]+)(.*)$", token)
+            if not m or m.group(1) not in _SMS_KUERZEL_KEY or m.group(2).lstrip(":") == "?":
                 continue
-            schluessel: list[str] = []
-            for token in segment[len(ort) + 2:].split(" "):
-                m = re.match(r"([A-Z]+)(.*)$", token)
-                if not m or m.group(1) not in _SMS_KUERZEL_KEY or m.group(2).lstrip(":") == "?":
-                    continue
-                schluessel.append(_SMS_KUERZEL_KEY[m.group(1)])
-                if m.group(1) == "D" and "/" in m.group(2):
-                    schluessel.append(_SMS_KUERZEL_KEY["L"])
-            ergebnis[ort] = schluessel
+            schluessel.append(_SMS_KUERZEL_KEY[m.group(1)])
+            if m.group(1) == "D" and "/" in m.group(2):
+                schluessel.append(_SMS_KUERZEL_KEY["L"])
+        ergebnis[orte[nummer - 1]] = schluessel
     return ergebnis
 
 

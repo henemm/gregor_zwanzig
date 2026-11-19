@@ -701,7 +701,7 @@ def test_f001_sms_zeigt_unmappbare_auswahl_in_vorschau_und_versand(env):
 
     #3172 (ADR-0125): der Zaehler ``?N`` ist abgeloest -- die unmappbare
     Auswahl erzeugt in der SMS kein Zeichen mehr (die Mail weist sie aus);
-    jeder Ortsteil ist die Token-Zeile ``{Name}: D22``."""
+    jeder Ortsteil ist die Token-Zeile ``O1 D22``."""
     from services.report_config_resolver import resolve_compare_render_options
 
     preset = _preset_ablegen(
@@ -722,14 +722,16 @@ def test_f001_sms_zeigt_unmappbare_auswahl_in_vorschau_und_versand(env):
     for quelle, payload in (("Vorschau", vorschau), ("Versand", versand)):
         for kanal in ("sms", "telegram"):
             text = payload[kanal]
-            # Wire-Form "Orte TT.MM.: <Ort>: <Token>; <Ort>: <Token>" (sms_format.md §5b)
-            teile = [t.strip() for t in text.split(": ", 1)[-1].split(";") if t.strip()]
-            assert [t.split(": ", 1)[0] for t in teile] == ["Innsbruck", "Bozen"], text
+            # Wire-Form "O1 <Token> O2 <Token>" (sms_format.md §5b, #3172)
+            from tests.helpers.orte_sms import orte_teile
+
+            teile = orte_teile(text)
+            assert [t.split(" ", 1)[0] for t in teile] == ["O1", "O2"], text
             for teil in teile:
                 assert _fragezaehler(teil) == 0, (
                     f"#3172: {quelle}-{kanal} mit abgeloestem Zaehler ?N in {teil!r}: {text!r}"
                 )
-                assert re.fullmatch(r"\w+: D\d+", teil), (quelle, kanal, teil)
+                assert re.fullmatch(r"O\d D\d+", teil), (quelle, kanal, teil)
     assert vorschau["sms"] == versand["sms"], "F001/M12: Vorschau-SMS != Versand-SMS"
     assert vorschau["telegram"] == versand["telegram"], "F001/M12: Kurzform weicht ab"
 

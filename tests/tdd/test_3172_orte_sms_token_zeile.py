@@ -4,7 +4,13 @@ SPEC: docs/specs/modules/feat_3172_orte_sms_token_zeile.md (AC-1 bis AC-8)
 
 RED vor der Umstellung, warum: die Orte-SMS schreibt je Ort die alte Zellform
 (``Aabenraa D 19C W 43 km/h ... +21``) statt der Token-Zeile der Trip-SMS
-(``Aabenraa: D9/16 W13@11 G31@12 R- PR53%@13 TH:-``).
+(``O1 D9/16 W13@11 G31@12 R- PR53%@13 TH:-``).
+
+PO-Entscheidungen 2026-11-19 (Nachtrag zu ADR-0125, "jedes Zeichen ist
+kostbar"): keine Ortsnamen, kein Kopf, kein Datum -- die Orte heissen ``O1``,
+``O2``, ... wie die Etappen der Trip-SMS (Stelle in der Reihenfolge des Abos),
+ohne Doppelpunkt, durch ein Leerzeichen getrennt; Grenze 160 Zeichen wie die
+Trip-SMS, die Premium-SMS rendert ueber 153 Zeichen neu (Regel #3100).
 
 Alle Faelle laufen ueber den echten Versandweg ``compare_kanaltexte_rendern``
 (Kontext wie ``placements_view_service._orte_muster``); keine Mocks. Die
@@ -36,7 +42,8 @@ from utils.timezone import to_utc
 ZONE = ZoneInfo("Europe/Berlin")
 TAG = date(2026, 7, 14)
 STUNDEN = range(9, 17)
-SMS_MAX = CHANNEL_LIMITS["sms"]["max_chars"]
+SMS_MAX = 160  # wie die Trip-SMS (format_sms max_length=160)
+PREMIUM_MAX = CHANNEL_LIMITS["premium_sms"]["max_chars"]
 
 #: SMS-Spalte von AC-1 (Frontend-Schluessel der Orte-Auswahl).
 AC1_AUSWAHL = ["temp_max_c", "temp_min_c", "wind_max_kmh", "gust_max_kmh",
@@ -100,22 +107,23 @@ def _sms(kontext: dict, lang: str = "de") -> str:
 
 
 def _ortsteile(sms: str) -> list[str]:
-    """Ortsteile hinter dem Kopf ``Orte TT.MM.: `` (ohne ``+k Orte``/``X?``)."""
-    rumpf = sms.split(": ", 1)[1]
-    rumpf = re.sub(r"( \+\d+ Orte)?( X\?)?$", "", rumpf)
-    return rumpf.split("; ")
+    """Ortsteile ``O{n} {Token}`` (ohne ``+k Orte``/``X?``); die SMS beginnt
+    direkt mit ``O1`` (kein Kopf)."""
+    assert sms.startswith("O1"), sms
+    rumpf = re.sub(r"( \+\d+ Orte)?( X\?)?$", "", sms)
+    return re.split(r" (?=O\d+(?: |$))", rumpf)
 
 
-def _teil(sms: str, name: str) -> str:
-    treffer = [t for t in _ortsteile(sms) if t.startswith(f"{name}: ") or t == f"{name}:"]
-    assert treffer, f"Ort {name} fehlt in der SMS: {sms!r}"
+def _teil(sms: str, nummer: int) -> str:
+    """Ortsteil ``O{nummer} ...`` (1-basierte Stelle in der Reihenfolge des Abos)."""
+    treffer = [t for t in _ortsteile(sms) if t.startswith(f"O{nummer} ") or t == f"O{nummer}"]
+    assert treffer, f"Ort O{nummer} fehlt in der SMS: {sms!r}"
     return treffer[0]
 
 
 def _token(teil: str) -> list[str]:
-    """Token eines Ortsteils (ohne Namen, ohne Warnblock)."""
-    rumpf = teil.split(": ", 1)[1] if ": " in teil else teil
-    return [t for t in rumpf.split(" ") if t and not t.startswith("!")]
+    """Token eines Ortsteils (ohne ``O{n}``, ohne Warnblock)."""
+    return [t for t in teil.split(" ")[1:] if t and not t.startswith("!")]
 
 
 def _beispiel_orte(n: int) -> list[SavedLocation]:
@@ -188,26 +196,31 @@ def test_ac1_ortsteil_ist_die_token_zeile_von_build_token_line():
     ampel = resolve_ampel(kontext["preset"])
     sms = _sms(kontext)
 
-    assert sms.startswith("Orte 14.07.: "), sms
+    assert not sms.startswith("Orte") and "14.07." not in sms, f"kein Kopf: {sms}"
     assert len(sms) <= SMS_MAX, (len(sms), sms)
     teile = _ortsteile(sms)
     assert len(teile) == 3, sms
-    for teil, (name, felder) in zip(teile, AC1_ORTE):
-        assert teil == f"{name}: {_erwartete_token(felder, ampel)}", (teil, sms)
+    for nummer, (teil, (_name, felder)) in enumerate(zip(teile, AC1_ORTE), start=1):
+        assert teil == f"O{nummer} {_erwartete_token(felder, ampel)}", (teil, sms)
 
 
 def test_ac1_hervorhebung_folgt_der_abo_ampel():
     sms = _sms(_ac1_kontext())
-    kiel = _token(_teil(sms, "Kiel"))
+    kiel = _token(_teil(sms, 1))
     # Wind 13 km/h liegt nur nach der Abo-Ampel (Gelb ab 12) ueber Gelb.
     assert kiel == ["D9/16", "W13@11", "G31@12", "R-", "PR53%@13", "TH:-"], sms
-    sylt = _token(_teil(sms, "Sylt"))
+    sylt = _token(_teil(sms, 3))
     assert sylt == ["D7/14", "W-", "G-", "R1.5@13", "PR-", "TH:L@15"], sms
 
 
-def test_ac1_voller_ortsname_ohne_kuerzung():
+def test_ac1_keine_ortsnamen_nur_nummern():
+    """PO 2026-11-19: Orte stehen als ``O1``, ``O2``, ... -- kein Ortsname,
+    kein Doppelpunkt, kein ``; `` in der SMS."""
     sms = _sms(_ac1_kontext())
-    assert "; Sankt Peter-Ording: " in sms, sms
+    for name, _felder in AC1_ORTE:
+        assert name not in sms, sms
+    assert ";" not in sms and not re.search(r"O\d+:", sms), sms
+    assert [t.split(" ", 1)[0] for t in _ortsteile(sms)] == ["O1", "O2", "O3"], sms
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +259,7 @@ def test_ac2_keine_alte_zellform_keine_negative_null(tief, hoch, auswahl):
         assert not re.search(r" [+?]\d+(?: |$)", teil), f"Zaehler +N/?N: {sms}"
         assert not re.search(r"(?<![\d.])-0(?![\d.])", teil), f"negative Null: {sms}"
     if auswahl is not None:
-        assert "WD:NW" in _token(_teil(sms, "Kiel")), sms
+        assert "WD:NW" in _token(_teil(sms, 1)), sms
 
 
 # ---------------------------------------------------------------------------
@@ -260,15 +273,15 @@ def test_ac3_strich_fuer_unauffaellig_fragezeichen_fuer_fehlenden_wert():
     sms = _sms(_kontext(_vergleich(orte),
                         {"active_metrics": ["temp_max_c", "wind_max_kmh", "pop_max_pct"]}))
 
-    assert _token(_teil(sms, "Kiel")) == ["D15", "W-", "PR-"], sms
-    assert _token(_teil(sms, "Husum")) == ["D?", "W?", "PR?"], sms
+    assert _token(_teil(sms, 1)) == ["D15", "W-", "PR-"], sms
+    assert _token(_teil(sms, 2)) == ["D?", "W?", "PR?"], sms
 
 
 def test_ac3_ohne_stundenwerte_steht_fragezeichen_nicht_strich():
     orte = [_ergebnis(_ort("Kiel"), _punkte({"t2m_c": 15.0, "wind10m_kmh": 9.0})),
             LocationResult(location=_ort("Husum"), temp_max=14.0, wind_max=8.0)]
     sms = _sms(_kontext(_vergleich(orte), {"active_metrics": ["temp_max_c", "wind_max_kmh"]}))
-    assert _token(_teil(sms, "Husum")) == ["D14", "W?"], sms
+    assert _token(_teil(sms, 2)) == ["D14", "W?"], sms
 
 
 # ---------------------------------------------------------------------------
@@ -280,11 +293,12 @@ def test_ac4_volle_liste_gleich_viele_zeilen_je_ort(anzahl):
     sms = _sms(_kontext(pb.orte_ergebnis(_beispiel_orte(anzahl))))
     assert len(sms) <= SMS_MAX, (len(sms), sms)
     assert "+" not in sms.replace("NS24+", ""), f"kein +N/+k Orte erwartet: {sms}"
-    if anzahl == 1:
-        assert sms.startswith("Aabenraa 14.07.: "), sms
-        assert sms.count("Aabenraa") == 1, sms
-        return
+    assert "Aabenraa" not in sms and "Garmisch" not in sms, sms
     teile = _ortsteile(sms)
+    assert [t.split(" ", 1)[0] for t in teile] == [f"O{i}" for i in range(1, anzahl + 1)], sms
+    if anzahl == 1:
+        assert sms.startswith("O1 D"), sms
+        return
     assert len(teile) == anzahl, sms
     folgen = [[re.match(r"[A-Z+:]+", t).group(0) for t in _token(teil)] for teil in teile]
     assert all(f == folgen[0] for f in folgen), f"ungleiche Zeilenzahl/Folge: {sms}"
@@ -308,7 +322,7 @@ def _viele_orte(n: int, *, warnung_bei: int | None = None, ausfall_bei: int | No
 
 
 def test_ac4_orte_entfallen_erst_bei_einer_zeile_warnort_bleibt_x_am_ende():
-    orte = _viele_orte(8, warnung_bei=7, ausfall_bei=2)
+    orte = _viele_orte(16, warnung_bei=15, ausfall_bei=2)
     sms = _sms(_kontext(_vergleich(orte), {"active_metrics": AC1_AUSWAHL}))
 
     assert len(sms) <= SMS_MAX, (len(sms), sms)
@@ -317,7 +331,7 @@ def test_ac4_orte_entfallen_erst_bei_einer_zeile_warnort_bleibt_x_am_ende():
     teile = _ortsteile(sms)
     for teil in teile:
         assert len(_token(teil)) == 1, f"vor dem Wegfall von Orten nur die erste Zeile: {sms}"
-    gewarnt = _teil(sms, "Ortschaft Nummer 8")
+    gewarnt = _teil(sms, 16)
     assert "!" in gewarnt, f"Ort mit amtlicher Warnung muss sichtbar bleiben: {sms}"
 
 
@@ -349,18 +363,19 @@ def test_ac5_kein_nachtwert_kein_folgetag(report_type):
         assert not any(re.match(r"(N|FN)[-?\d]", t) for t in token), sms
         assert not any(t.startswith("TH+:") for t in token), sms
         assert sum(t.startswith("TH:") for t in token) == 1, sms
-    assert "TH:M@15" in _token(_teil(sms, "Kiel")), sms
-    assert "TH:-" in _token(_teil(sms, "Husum")), sms
+    assert "TH:M@15" in _token(_teil(sms, 1)), sms
+    assert "TH:-" in _token(_teil(sms, 2)), sms
 
 
 # ---------------------------------------------------------------------------
 # AC-6 -- ein Ort, Fehler-Ort, lauter Orte ohne Daten
 # ---------------------------------------------------------------------------
 
-def test_ac6_ein_ort_name_nur_im_kopf():
+def test_ac6_ein_ort_heisst_o1_unter_dem_kopf_orte():
+    """PO 2026-11-19: auch bei genau einem Ort ``O1`` ohne Kopf und ohne Namen."""
     orte = [_ergebnis(_ort("Sankt Peter-Ording"), _punkte({"t2m_c": 15.0, "wind10m_kmh": 9.0}))]
     sms = _sms(_kontext(_vergleich(orte), {"active_metrics": ["temp_max_c", "wind_max_kmh"]}))
-    assert sms == "Sankt Peter-Ording 14.07.: D15 W-", sms
+    assert sms == "O1 D15 W-", sms
 
 
 def test_ac6_fehler_ort_und_keine_daten():
@@ -368,10 +383,14 @@ def test_ac6_fehler_ort_und_keine_daten():
     kaputt = LocationResult(location=_ort("Husum"), error="Abruf gescheitert")
     dc = {"active_metrics": ["temp_max_c", "wind_max_kmh"]}
 
-    assert _sms(_kontext(_vergleich([gut, kaputt]), dc)) == "Orte 14.07.: Kiel: D15 W-; Husum n/a"
+    assert _sms(_kontext(_vergleich([gut, kaputt]), dc)) == "O1 D15 W- O2 n/a"
+    # Die Nummer zaehlt auch Orte ohne Daten: der Ort danach bleibt O3.
+    dritter = _ergebnis(_ort("Sylt"), _punkte({"t2m_c": 14.0, "wind10m_kmh": 9.0}))
+    assert _sms(_kontext(_vergleich([gut, kaputt, dritter]), dc)) == "O1 D15 W- O2 n/a O3 D14 W-"
+    # Ohne Daten an jedem Ort: nur die Liste ``O{n} n/a`` (kein Sondertext).
     alle_kaputt = [kaputt, LocationResult(location=_ort("Sylt"), error="x")]
-    assert _sms(_kontext(_vergleich(alle_kaputt), dc)) == "Orte: keine Daten"
-    assert _sms(_kontext(_vergleich([kaputt]), dc)) == "Husum: keine Daten"
+    assert _sms(_kontext(_vergleich(alle_kaputt), dc)) == "O1 n/a O2 n/a"
+    assert _sms(_kontext(_vergleich([kaputt]), dc)) == "O1 n/a"
 
 
 # ---------------------------------------------------------------------------
@@ -384,7 +403,7 @@ def test_ac7_kurzstil_und_sms_identisch_in_beiden_sprachen():
     sms_en, tg_en = aufbau.compare_kanaltexte_rendern(kontext, lang="en")
 
     assert sms_de == tg_de == sms_en == tg_en, (sms_de, sms_en)
-    assert re.match(r"Orte 14\.07\.: Aabenraa: D\d+/\d+", sms_de), sms_de
+    assert re.match(r"O1 D\d+/\d+", sms_de), sms_de
 
 
 @pytest.fixture
@@ -425,8 +444,24 @@ def test_ac7_premium_sms_sendet_die_token_zeile(premium_nutzer):
         sms_text=sms, recipients=["to@example.invalid"], effective_channels={"premium_sms"},
         premium_sms_sink=gesehen.append,
     )
-    assert gesehen == [sms], gesehen
-    assert re.match(r"Orte 14\.07\.: Aabenraa: D\d+/\d+", gesehen[0]), gesehen
+    assert gesehen == [aufbau.compare_premium_sms_rendern(kontext, sms)], gesehen
+    assert re.match(r"O1 D\d+/\d+", gesehen[0]), gesehen
+
+
+def test_ac7_premium_sms_ueber_153_zeichen_neu_gekuerzt():
+    """#3172 (Regel #3100 wie im Trip): passt die 160-Zeichen-SMS nicht in die
+    153 Zeichen der Premium-SMS, kuerzt derselbe Renderer erneut vom
+    Listenende; sonst ist die Premium-SMS der SMS-Text."""
+    kontext = _kontext(pb.orte_ergebnis(_beispiel_orte(1)))
+    sms = _sms(kontext)
+    assert PREMIUM_MAX < len(sms) <= SMS_MAX, (len(sms), sms)
+    premium = aufbau.compare_premium_sms_rendern(kontext, sms)
+    assert len(premium) <= PREMIUM_MAX, (len(premium), premium)
+    assert sms.startswith(premium), (premium, sms)
+    kurz = _kontext(_vergleich([_ergebnis(_ort("Kiel"), _punkte({"t2m_c": 15.0}))]),
+                    {"active_metrics": ["temp_max_c"]})
+    kurz_sms = _sms(kurz)
+    assert aufbau.compare_premium_sms_rendern(kurz, kurz_sms) == kurz_sms == "O1 D15"
 
 
 # ---------------------------------------------------------------------------
@@ -446,9 +481,9 @@ def _ac8_sms(einfach: bool) -> str:
 
 def test_ac8_listenfolge_abwahl_und_einfach():
     sms = _ac8_sms(einfach=True)
-    assert sms == "Kiel 14.07.: G- CT:SCT@13 W-", sms
+    assert sms == "O1 G- CT:SCT@13 W-", sms
 
 
 def test_ac8_roh_zeigt_die_zahl():
     sms = _ac8_sms(einfach=False)
-    assert sms == "Kiel 14.07.: G- CT70@13 W-", sms
+    assert sms == "O1 G- CT70@13 W-", sms

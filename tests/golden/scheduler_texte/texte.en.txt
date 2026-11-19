@@ -220,7 +220,7 @@ Zillertal
    Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
    UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
 ----- vergleich.sms -----
-Orte 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% TH - +6; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
+O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD?
 ----- vergleich_nachgeholt.betreff -----
 Locations: Tirol (29 Oct 2026)
 ----- vergleich_nachgeholt.header -----
@@ -230,7 +230,7 @@ Delivered late — delivery at 06:00 failed
 ----- vergleich_nachgeholt.telegram -----
 Delivered late — delivery at 06:00 failed
 ----- vergleich_nachgeholt.sms -----
-Orte 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% TH - +6; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
+O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD?
 ----- vergleich_kurzform.betreff -----
 Locations: Tirol (29 Oct 2026)
 ----- vergleich_kurzform.header -----
@@ -241,9 +241,9 @@ LOCATIONS
 Date: Thursday, 29 Oct 2026
 Created: 29 Oct 2026 05:00 (CET)
 ----- vergleich_kurzform.telegram -----
-Orte 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% TH - +6; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
+O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD?
 ----- vergleich_kurzform.sms -----
-Orte 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% TH - +6; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
+O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD?
 ----- vorschau.subject -----
 Locations: Tirol (29 Oct 2026)
 ----- vorschau.telegram -----
@@ -260,7 +260,7 @@ Zillertal
    Temp max 14°C · Wind 12 km/h · Rain 0.6 mm · Rain probability 20% · Thunderstorm – · Sun 4.0h · Clouds 40%
    UV max 2 · Visibility min 9.0 km · Temp min 4°C · Gusts 25 km/h
 ----- vorschau.sms -----
-Orte 29.10.: Innsbruck D 14C W 12 km/h R 0.6 mm PR 20% +7; Stubai D 14C W 12 km/h R 0.6 mm PR 20% TH - +6; Zillertal D 14C W 12 km/h R 0.6 mm PR 20% +7
+O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD?
 ----- alarm.gesendet -----
 1
 ----- alarm.0.betreff -----

@@ -434,7 +434,8 @@ def test_ac5_preset_versand_reicht_premium_sms_sink_bis_zum_zweig_durch(
 
     _preset_senden(uid, tmp_path, premium_sms_sink=gesehen.append)
 
-    assert len(gesehen) == 1 and "Innsbruck" in gesehen[0], gesehen
+    # #3172: die Orte-SMS nennt keine Namen -- der erste Ort steht als ``O1``.
+    assert len(gesehen) == 1 and gesehen[0].startswith("O1 "), gesehen
 
 
 def test_ac5_gescheiterter_transport_warnt_und_preset_versand_gilt_als_erfolg(

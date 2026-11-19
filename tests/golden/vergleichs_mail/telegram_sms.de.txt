@@ -34,4 +34,4 @@ Brenner
 ----
 Keine Wetterdaten verfügbar.
 ----
-Orte 29.10.: Innsbruck: D11 R- TH:- PT:R; Lienz: D12 R1.8@13 TH:M@14+HL PT:R; Kufstein: D13 R2.8@13 TH:- PT:M; Brenner n/a X?
+O1 D11 R- TH:- PT:R G30@8(38@16) PR70%@13 W- O2 D12 R1.8@13 TH:M@14+HL PT:R G35@8(43@16) PR70%@13 W- O3 D13 R2.8@13 TH:- PT:M G40@8(48@16) PR70%@13 W- O4 n/a X?

@@ -263,7 +263,7 @@ def test_vergleich_hochlage_uebersicht_und_stunden_gleich(monkeypatch, tmp_path)
     assert set(_stundenwerte_klartext(k["klartext"])) == {0}
     assert "Bewölkung: 0%" in k["klartext"]
     # #3172: 0 % in jeder Stunde = Leerwert der Token-Zeile.
-    assert re.search(r": CT-$", k["sms"]), k["sms"]
+    assert k["sms"] == "O1 CT-", k["sms"]
 
 
 def test_vergleich_hochlage_dichte_mittelschicht_voll(monkeypatch, tmp_path):
