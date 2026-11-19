@@ -234,8 +234,24 @@ test('#3013 AX-1 Gegenprobe: ohne Ausblenden liegt die fixed-Leiste im Ganzseite
 	expect(treffer, 'der Aufbau bildet den Fehler aus #3003 nach (sonst beweist AX-2 nichts)').toBeGreaterThan(1000);
 });
 
+/** Auffällige Farbe eines sticky-Kopfs (gehört zum Seiteninhalt und bleibt im Foto sichtbar). */
+const STICKY = { r: 0, g: 200, b: 255 };
+const STICKY_HTML = `<div data-testid="sticky-kopf" style="position:sticky;top:0;height:40px;background:rgb(${STICKY.r},${STICKY.g},${STICKY.b})">Kopf</div>`;
+
 test('#3013 AX-2: ganzseite() zeigt keine fixed-Leiste, der Inhalt darunter ist sichtbar', async ({ page }) => {
-	await rahmenMitFixed(page, MIT_LEISTE, LEISTEN_HTML);
+	// Leiste verschachtelt wie die BottomNav in der App (nicht direktes body-Kind); eine Seiten-Regel
+	// `visibility: visible !important` verlangt, dass der Helfer per Inline-!important ausblendet;
+	// ein sticky-Kopf im Inhalt muss sichtbar bleiben.
+	await rahmenMitFixed(
+		page,
+		STICKY_HTML + MIT_LEISTE,
+		`<div class="huelle"><nav>${LEISTEN_HTML}</nav></div>`,
+		'[data-testid="leiste-fixed"] { visibility: visible !important; }'
+	);
+	expect(
+		await page.getByTestId('leiste-fixed').evaluate((el) => el.parentElement?.parentElement?.parentElement === document.body),
+		'Aufbau: Leiste liegt zwei Ebenen unter body'
+	).toBe(true);
 	const datei = test.info().outputPath('fixed-ausgeblendet-390.png');
 	const { hoehe } = await ganzseite(page, datei);
 	const bild = readFileSync(datei);
@@ -246,6 +262,7 @@ test('#3013 AX-2: ganzseite() zeigt keine fixed-Leiste, der Inhalt darunter ist 
 	]);
 	expect(treffer, 'keine Leistenpixel im Foto').toBe(0);
 	for (const w of werte) expect(w, 'Inhalt unter der Leiste sichtbar').toEqual(INHALT);
+	expect((await pixel(page, bild, STICKY)).treffer, 'sticky-Kopf bleibt im Foto sichtbar').toBeGreaterThan(1000);
 });
 
 test('#3013 AX-3: nach ganzseite() sind alle style-Attribute byte-identisch und die Leisten wieder sichtbar', async ({ page }) => {
@@ -256,17 +273,20 @@ test('#3013 AX-3: nach ganzseite() sind alle style-Attribute byte-identisch und 
 		MIT_LEISTE,
 		`${LEISTEN_HTML}
 		<div data-testid="beide-marker" class="h-screen" style="position: fixed; top: 0px; right: 0px; width: 12px; background: rgb(0, 0, 255);"></div>
-		<div data-testid="toast" class="toast">Hinweis</div>`,
+		<div data-testid="toast" class="toast">Hinweis</div>
+		<div data-testid="leer-style" class="toast" style="">Leer</div>`,
 		'.toast { position: fixed; top: 8px; left: 8px; background: rgb(255, 0, 255); }'
 	);
+	// Leeres style="" (Attribut vorhanden, Wert leer) muss leer zurückkommen, nicht entfernt werden.
 	const vorher = await alleStile(page);
 	expect(vorher.find((e) => e.testid === 'toast')?.style, 'Toast hat anfangs kein style-Attribut').toBeNull();
+	expect(vorher.find((e) => e.testid === 'leer-style')?.style, 'zweiter Toast hat anfangs ein leeres style-Attribut').toBe('');
 	const datei = test.info().outputPath('fixed-zurueck-390.png');
 	await ganzseite(page, datei);
 	// Leiste UND der stillose Toast tragen die Leistenfarbe: beide müssen während des Fotos verborgen sein.
 	expect((await pixel(page, readFileSync(datei), LEISTE)).treffer, 'Leiste und Toast ohne style-Attribut im Foto verborgen').toBe(0);
 	expect(await alleStile(page), 'style-Attribute exakt wie vorher, keine Marker übrig').toEqual(vorher);
-	for (const id of ['leiste-fixed', 'beide-marker', 'toast']) expect(await sichtbarkeit(page, id), `${id} wieder sichtbar`).toBe('visible');
+	for (const id of ['leiste-fixed', 'beide-marker', 'toast', 'leer-style']) expect(await sichtbarkeit(page, id), `${id} wieder sichtbar`).toBe('visible');
 });
 
 test('#3013 AX-4: scheitert die Breitenprüfung, ist die fixed-Leiste trotzdem wiederhergestellt', async ({ page }) => {
