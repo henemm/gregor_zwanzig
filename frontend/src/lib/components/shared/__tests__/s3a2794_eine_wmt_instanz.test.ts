@@ -88,6 +88,7 @@ function paarweiseExklusiv(e: Einbettung[], quelle: string, wo: string): void {
 	}
 }
 
+
 /** Bereich einer Einbettung: Literal oder (bei Zustellungs-Baustein) implizit 'zustellung'. */
 function bereichLiteral(e: Einbettung, quelle: string): string | null {
 	if (e.name === 'ZustellungTab') return 'zustellung';
@@ -156,21 +157,22 @@ describe('§3: shared/zustellung-tab/ZustellungTab.svelte — Übergangsreiter',
 		assert.ok(propNamen(ast).includes('context'), `ZustellungTab: keine Prop context (Props: ${propNamen(ast).join(', ')})`);
 	});
 
-	// #2795 S3b 1b: ZustellungTab bettet den Uebergangsblock genau einmal ein, der traegt das Panel.
-	test('s3a2794_zustellung_genau_ein_wmt_traeger_mit_bereich_zustellung', () => {
+	// #2795 S3b 1b: ZustellungTab bettet den Uebergangsblock genau einmal ein.
+	// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): der Uebergangsblock traegt keine
+	// Metrik-Oberflaeche mehr — Listen, Stundenverlauf, Ausblick, Mail-Inhalt und Nacht-Block bedient die
+	// Karte „Was steht wo“ im Reiter Wetter. Im Reiter Zustellung steht damit KEIN WMT-Traeger.
+	test('s3a2794_zustellung_kein_wmt_traeger_im_reiter', () => {
 		assert.ok(existiert(DATEI.zustellung), 'ZustellungTab.svelte fehlt');
 		const z = traeger(DATEI.zustellung);
-		assert.deepEqual(z.e.map((x) => beschreibe(x, z.quelle)), [], 'ZustellungTab bettet zusaetzlich direkt einen WMT-Traeger ein');
+		assert.deepEqual(z.e.map((x) => beschreibe(x, z.quelle)), [], 'ZustellungTab bettet direkt einen WMT-Traeger ein');
 		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['UebergangBlock']).length, 1, 'ZustellungTab: Uebergangsblock nicht genau einmal');
-		const { e, quelle } = traeger(DATEI.uebergang);
-		assert.ok(e.length >= 1, 'ZustellungTab zeigt keine Zustellungs-Blöcke der Metrik-Oberfläche');
-		paarweiseExklusiv(e, quelle, 'ZustellungTab');
-		for (const x of e) assert.equal(bereichLiteral(x, quelle), 'zustellung', `${beschreibe(x, quelle)}: bereich ≠ 'zustellung'`);
+		const u = traeger(DATEI.uebergang);
+		assert.deepEqual(u.e.map((x) => beschreibe(x, u.quelle)), [], 'Uebergangsblock traegt noch die Metrik-Oberflaeche (#3154)');
 	});
 
 	// #2795 S3b 1b: Sprungziel #versand ist die Karte der Briefing-Zeiten (AC-40, „genau ein
-	// id=versand“ im Reitbaum prueft s3b2795_zustellung_struktur); das Panel im Uebergangsblock
-	// laeuft OHNE seinen Versand-Abschnitt (mitVersandAbschnitt={false}).
+	// id=versand“ im Reitbaum prueft s3b2795_zustellung_struktur); der Uebergangsblock bringt seit
+	// #3154 kein Panel (und damit keinen zweiten Versand-Abschnitt) mehr mit.
 	test('s3a2794_zustellung_enthaelt_section_versand', () => {
 		assert.ok(existiert(DATEI.zustellung), 'ZustellungTab.svelte fehlt');
 		const { ast, quelle } = svelteAst(DATEI.zustellung);
@@ -178,11 +180,8 @@ describe('§3: shared/zustellung-tab/ZustellungTab.svelte — Übergangsreiter',
 		const b = svelteAst(DATEI.briefingZeiten);
 		assert.equal(elementeMitId(b.ast, b.quelle, 'div', 'versand').length, 1, 'Zustellung: kein Sprungziel id="versand" an den Briefing-Zeiten');
 		const u = svelteAst(DATEI.uebergang);
-		const panel = einbettungenMitWeichen(u.ast, u.quelle, ['WetterMetrikenVersandPanel']);
-		assert.ok(
-			panel.length === 1 && attribut(panel[0].knoten, u.quelle, 'mitVersandAbschnitt')?.ausdruck === 'false',
-			'Zustellung: das Panel im Uebergangsblock bringt seinen Versand-Abschnitt mit (zweites #versand)'
-		);
+		assert.equal(einbettungenMitWeichen(u.ast, u.quelle, ['WetterMetrikenVersandPanel', 'VersandTab', 'BriefingScheduleTab']).length, 0, 'Zustellung: der Uebergangsblock bringt einen Versand-Abschnitt mit (zweites #versand)');
+		assert.equal(elementeMitId(u.ast, u.quelle, 'section', 'versand').length + elementeMitId(u.ast, u.quelle, 'div', 'versand').length, 0, 'Zustellung: zweites id="versand" im Uebergangsblock');
 	});
 
 	// #2795 S3b 1b (Spec §4, AC-27/AC-33): die Alarm-Zustellung ist Teil des Reiters (Kanal-Tabelle,

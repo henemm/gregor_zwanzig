@@ -494,14 +494,15 @@ describe('AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen 
 			// Zustellungs-Huelle, VersandTab in BriefingScheduleTab, WetterTab); CompareTabs 3 (AlarmeTab, Panel
 			// in der Zustellungs-Huelle, WetterTab — EIN WetterTab ersetzt die zwei Wertebereiche-Mounts).
 			// #2795 S3b 1b: je Hub 2 (Panel im Uebergangsblock, WetterTab); kein AlarmeTab/VersandTab mehr.
+			// #3154 (#3122 B3b): je Hub 1 (WetterTab) — der Uebergangsblock traegt kein Panel mehr.
 			const ERWARTET_GESAMT: Record<string, number> = {
-				'Trip-Hub (TripTabs + Reiter Zustellung)': 2,
-				CompareTabs: 2
+				'Trip-Hub (TripTabs + Reiter Zustellung)': 1,
+				CompareTabs: 1
 			};
 			const soll = ERWARTET_GESAMT[name] ?? -1;
 			assert.equal(gesamt, soll, `${name}: ${gesamt} Organismus-Mounts gefunden (erwartet ${soll}) — Messaufbau kaputt`);
 			assert.equal(alle.AlarmeTab.length + alle.VersandTab.length, 0, `${name}: alter AlarmeTab/VersandTab noch im Hub gemountet`);
-			assert.equal(alle.WetterMetrikenVersandPanel.length, 1, `${name}: kein WetterMetrikenVersandPanel-Mount gefunden`);
+			assert.equal(alle.WetterMetrikenVersandPanel.length, 0, `${name}: WetterMetrikenVersandPanel noch im Hub gemountet (#3154)`);
 			// #2794 S3a Teil-PR 3: Traeger der Grenzen im Hub ist der WetterTab (statt CorridorEditor).
 			assert.ok(alle.WetterTab.length >= 1, `${name}: kein WetterTab-Mount (Grenzen-Traeger)`);
 			for (const org of HUB_ORGANISMEN) {

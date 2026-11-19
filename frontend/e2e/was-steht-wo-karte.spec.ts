@@ -19,15 +19,19 @@
 //   WS-10 Vorlagenwechsel: Zeilen weggefallener Metriken entfallen im selben Speichervorgang, Abwahlen
 //         gemeinsamer Metriken bleiben, Zurückwechseln bringt die Metrik ohne alte Abwahl (F2).
 //   WS-11 „+“ mit Altzeile kommt überall angehakt zurück (T4); Speichern des Reiters lädt die Karte neu (T5).
-//   WS-12 Speichern im Reiter Zustellung (Übergangsblock) lässt die gespeicherte Tabelle unverändert.
+//   WS-12 Speichern im Reiter Zustellung lässt die gespeicherte Tabelle unverändert.
+//   Rückbau des Übergangsblocks (#3154, Spec Teil B Nr. 14, AC-30):
+//   WS-13 Trip/Orte: die umgezogenen Einstellungen fehlen im Reiter Zustellung und stehen genau einmal in der Karte.
+//   WS-14 Trip/Orte: Speichern im Reiter Zustellung (bei Orten auch die Pausieren-Karte im Übergangsblock) und
+//         in der Karte lässt gespeicherte Altfelder stehen; das Abo eines zweiten Nutzers bleibt unberührt.
 //
 //   cd frontend && npx playwright test e2e/was-steht-wo-karte.spec.ts --workers=1 --trace off
 
-import { test, expect, request as pwRequest, type APIRequestContext, type Locator, type Page } from '@playwright/test';
+import { test, expect, request as pwRequest, type APIRequestContext, type Browser, type Locator, type Page } from '@playwright/test';
 import { createTestLocation, kontrastBericht, kontrastVerstoesse, messeKontrast, seedHub, type HubKind } from './helpers';
 import { wegwerfPasswort } from './stagingZugang';
 import { DESKTOP, MOBIL, WT, aktiveDerVorlage, oeffneWetter, stand, vorlagen, type Json } from './s3a2794-teil3.helpers';
-import { oeffneZustellung } from './s3b2795-zustellung.helpers';
+import { ZT, oeffneZustellung, tid } from './s3b2795-zustellung.helpers';
 
 type Fall = { name: string; kind: HubKind; orte: number };
 const FAELLE: Fall[] = [
@@ -42,22 +46,23 @@ const tabellenUrl = (kind: HubKind, id: string) => `${tabellenPfad(id)}?kind=${k
 
 type Abo = { kind: HubKind; id: string; ortNamen: string[]; aufraeumen: () => Promise<void> };
 
-/** Abo mit Grundauswahl einer Vorlage (Trip: Alpen-Trekking, Orte: Allgemein mit vielen Metriken). */
-async function seed(request: APIRequestContext, fall: Fall, opts: { ohne?: string[]; placements?: Json } = {}): Promise<Abo> {
+/** Abo mit Grundauswahl einer Vorlage (Trip: Alpen-Trekking, Orte: Allgemein mit vielen Metriken).
+ *  `oben`/`dc`: zusätzliche Felder auf oberster Ebene bzw. in `display_config` (Altfelder, #3154). */
+async function seed(request: APIRequestContext, fall: Fall, opts: { ohne?: string[]; placements?: Json; oben?: Json; dc?: Json } = {}): Promise<Abo> {
 	const vorlageId = fall.kind === 'route' ? 'alpen-trekking' : 'allgemein';
 	const auswahl = aktiveDerVorlage((await vorlagen(request))[vorlageId]).filter((m) => !(opts.ohne ?? []).includes(m));
-	const extraDc = opts.placements ? { placements: opts.placements } : {};
+	const extraDc = { ...(opts.placements ? { placements: opts.placements } : {}), ...opts.dc };
 	const ampel = { template: vorlageId };
 	if (fall.kind === 'route') {
 		const hub = await seedHub(request, 'route', {
-			extra: { display_config: { preset_name: vorlageId, metrics: auswahl.map((metric_id) => ({ metric_id, enabled: true })), ampel, ...extraDc } }
+			extra: { ...opts.oben, display_config: { preset_name: vorlageId, metrics: auswahl.map((metric_id) => ({ metric_id, enabled: true })), ampel, ...extraDc } }
 		});
 		return { kind: 'route', id: hub.id, ortNamen: [], aufraeumen: hub.aufraeumen };
 	}
 	const orte = [];
 	for (let i = 0; i < fall.orte; i++) orte.push(await createTestLocation(request, { name: `WSW-Ort-${i}`, lat: 47.1 + i * 0.1, lon: 11.2 + i * 0.1 }));
 	const hub = await seedHub(request, 'vergleich', {
-		extra: { location_ids: orte.map((o) => o.id), display_config: { ampel, active_metrics: auswahl.map((metric_id) => ({ metric_id, aggregation: 'max' })), ...extraDc } }
+		extra: { ...opts.oben, location_ids: orte.map((o) => o.id), display_config: { ampel, active_metrics: auswahl.map((metric_id) => ({ metric_id, aggregation: 'max' })), ...extraDc } }
 	});
 	return {
 		kind: 'vergleich',
@@ -106,6 +111,88 @@ async function ersteAngehakte(karte: Locator, stelle: string, ohne: string[] = [
 	throw new Error(`keine angehakte Zelle in ${stelle}`);
 }
 const rowVon = (p: Json, m: string) => (p.rows as Json[]).find((r) => r.metric_id === m);
+
+/** Zweiter, frisch registrierter und angemeldeter Nutzer in eigenem Browser-Kontext (Mandantentrennung). */
+async function zweitNutzer(browser: Browser, admin: Page, o: { sprache: 'de' | 'en'; ip: string; mobil?: boolean }): Promise<{ seite: Page; aufraeumen: () => Promise<void> }> {
+	const basis = new URL((await admin.goto('/'))!.url()).origin;
+	const name = `e2ewsw${o.sprache}${Date.now()}`;
+	const passwort = wegwerfPasswort();
+	const gast = await pwRequest.newContext({ baseURL: basis, storageState: { cookies: [], origins: [] }, extraHTTPHeaders: { 'X-Real-IP': o.ip } });
+	const reg = await gast.post('/api/auth/register', { data: { username: name, password: passwort, email: `${name}@example.com`, language: o.sprache } });
+	expect([200, 201]).toContain(reg.status());
+	const { id: nutzer } = (await reg.json()) as { id: string };
+	const tok = (await (await admin.request.post('/api/auth/verify-email/staging-token', { data: { username: nutzer } })).json()) as { token: string };
+	expect((await gast.post('/api/auth/verify-email', { data: { user: nutzer, token: tok.token } })).ok()).toBeTruthy();
+	await gast.dispose();
+	const geraet = o.mobil ? { viewport: MOBIL, hasTouch: true, isMobile: true } : { viewport: DESKTOP };
+	const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] }, serviceWorkers: 'block', locale: o.sprache === 'de' ? 'de-DE' : 'en-US', ...geraet });
+	const seite = await ctx.newPage();
+	await seite.goto('/login');
+	await seite.fill('input[name="username"]', `${name}@example.com`);
+	await seite.fill('input[name="password"]', passwort);
+	await seite.click('form[action="?/login"] button[type="submit"]');
+	await seite.waitForURL((u) => u.pathname === '/', { timeout: 15_000 });
+	return {
+		seite,
+		aufraeumen: async () => {
+			await seite.request.post('/api/auth/account/delete', { data: { password: passwort } }).catch(() => {});
+			await ctx.close();
+		}
+	};
+}
+
+// ── #3154: Rückbau des Übergangsblocks (Spec Teil B Nr. 14, AC-30) ─────────────────────────────
+/** Alte Bedienelemente, die aus dem Übergangsblock verschwinden (Listen je Kanal, Stundenverlauf, Ausblick,
+ *  Kurzstil, Mehrtages-Trend, E-Mail-Format, Etappen-Kennzahlen, Vortag-Vergleich, Nacht-Stundentabelle). */
+const ALT_TESTIDS = [
+	'telegram-kurzstil-toggle',
+	'report-morning-trend',
+	'report-evening-trend',
+	'report-mail-content',
+	'report-email-format-switcher',
+	'report-show-outlook',
+	'report-show-stage-stats',
+	'report-show-yesterday-comparison',
+	'wm-night-block-toggle',
+	'weather-metrics-ausblick',
+	'weather-metrics-stundenverlauf',
+	'weather-metrics-kanal-reihenfolge',
+	'sms-thresholds'
+];
+/** Dieselben Einstellungen als sichtbare Beschriftung (alt und neu) — im Reiter Zustellung nirgends mehr. */
+const ALT_TEXTE = ['Kurzstil', 'Mehrtages-Trend', 'E-Mail-Inhalt', 'E-Mail: Format', 'Etappen-Kennzahlen', 'Vortag-Vergleich', 'Nacht-Stundentabelle', '3-Tages-Vorschau', '3-Tages-Ausblick', 'Stundenverlauf'];
+/** Bedienelemente der Karte unter der Tabelle: wie oft im Reiter Wetter, je Kontext. */
+const KARTE_EINMAL: Record<HubKind, Record<string, number>> = {
+	route: { 'was-steht-wo-kurzstil': 1, 'was-steht-wo-email-format': 1, 'was-steht-wo-ausblick-morning': 1, 'was-steht-wo-ausblick-evening': 1, 'was-steht-wo-show_stage_stats': 1, 'was-steht-wo-show_yesterday_comparison': 1, 'was-steht-wo-show_night_block': 1, 'was-steht-wo-stundenverlauf': 0 },
+	vergleich: { 'was-steht-wo-kurzstil': 1, 'was-steht-wo-email-format': 0, 'was-steht-wo-ausblick-morning': 1, 'was-steht-wo-ausblick-evening': 1, 'was-steht-wo-show_stage_stats': 0, 'was-steht-wo-show_yesterday_comparison': 0, 'was-steht-wo-show_night_block': 0, 'was-steht-wo-stundenverlauf': 1 }
+};
+const PREMIUM_HINWEIS = 'Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später.';
+
+/** Altfelder je Kontext, die der Rückbau nie überschreiben darf (Read-Modify-Write mit Merge). */
+const ALTFELDER: Record<HubKind, { oben: Json; dc: Json }> = {
+	route: {
+		oben: {
+			report_config: {
+				enabled: true, morning_enabled: true, evening_enabled: true, morning_time: '07:00:00', evening_time: '18:00:00', send_email: true,
+				show_compact_summary: false, show_quick_take_tags: false, show_metrics_summary: false, show_stability: false, show_highlights: false,
+				daily_summary_metrics: ['thunder'], wind_exposition_min_elevation_m: 1800, show_outlook: false,
+				multi_day_trend_morning: true, multi_day_trend_evening: false, multi_day_trend_reports: ['morning']
+			}
+		},
+		dc: { channel_layouts: { sms: [{ metric_id: 'wind', enabled: true }, { metric_id: 'precipitation', enabled: true }] } }
+	},
+	vergleich: {
+		oben: { morning_enabled: true, morning_time: '07:00:00', outlook_enabled: false, hourly_enabled: true },
+		dc: { hourly_metrics: ['temperature', 'wind'], hourly_metric_formats: { wind: true }, outlook_metric_formats: { temperature: true } }
+	}
+};
+/** Vergleichbarer Ausschnitt eines gespeicherten Abos (ohne die Felder, die der Test selbst schaltet). */
+function altStand(kind: HubKind, s: Json): Json {
+	const { morning_enabled: _m, show_stage_stats: _e, ...rc } = (s.report_config ?? {}) as Json;
+	return kind === 'route'
+		? { report_config: rc, display_config: s.display_config }
+		: { display_config: s.display_config, outlook_enabled: s.outlook_enabled };
+}
 
 test.describe('Karte „Was steht wo“', () => {
 	for (const fall of FAELLE) {
@@ -540,9 +627,9 @@ test.describe('Karte „Was steht wo“', () => {
 			const vorher = (await stand(page.request, 'route', abo.id)).display_config.placements;
 			expect(vorher, 'Messaufbau: Tabelle gespeichert').toBeTruthy();
 			const zustellung = await oeffneZustellung(page, 'route', abo.id);
-			const trend = zustellung.getByTestId('report-morning-trend').locator('input[type="checkbox"]');
+			// #3154: der Mehrtages-Trend ist aus dem Übergangsblock entfernt; gespeichert wird über den Morgen-Schalter.
 			const put = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/trips/${abo.id}`, { timeout: 20_000 });
-			await trend.click();
+			await tid(zustellung, ZT.schalter('morgen')).click();
 			expect((await put).status()).toBe(200);
 			expect((await stand(page.request, 'route', abo.id)).display_config.placements).toEqual(vorher);
 		} finally {
@@ -552,25 +639,9 @@ test.describe('Karte „Was steht wo“', () => {
 
 	test('WS-8: englischer Nutzer, 390 px, drei Orte — Spalten erreichbar, Kontrast, fremde Tabelle gesperrt', async ({ browser, page }) => {
 		const admin = await seed(page.request, FAELLE[1]);
-		const basis = new URL((await page.goto('/'))!.url()).origin;
-		const name = `e2ewswen${Date.now()}`;
-		const passwort = wegwerfPasswort();
-		const gast = await pwRequest.newContext({ baseURL: basis, storageState: { cookies: [], origins: [] }, extraHTTPHeaders: { 'X-Real-IP': '10.31.22.8' } });
-		const reg = await gast.post('/api/auth/register', { data: { username: name, password: passwort, email: `${name}@example.com`, language: 'en' } });
-		expect([200, 201]).toContain(reg.status());
-		const { id: nutzer } = (await reg.json()) as { id: string };
-		const tok = (await (await page.request.post('/api/auth/verify-email/staging-token', { data: { username: nutzer } })).json()) as { token: string };
-		expect((await gast.post('/api/auth/verify-email', { data: { user: nutzer, token: tok.token } })).ok()).toBeTruthy();
-		await gast.dispose();
-		const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] }, serviceWorkers: 'block', viewport: MOBIL, hasTouch: true, isMobile: true });
-		const en = await ctx.newPage();
+		const zweit = await zweitNutzer(browser, page, { sprache: 'en', ip: '10.31.22.8', mobil: true });
+		const en = zweit.seite;
 		try {
-			await en.goto('/login');
-			await en.fill('input[name="username"]', `${name}@example.com`);
-			await en.fill('input[name="password"]', passwort);
-			await en.click('form[action="?/login"] button[type="submit"]');
-			await en.waitForURL((u) => u.pathname === '/', { timeout: 15_000 });
-
 			// Mandantentrennung: die Tabelle des Admins ist für ihn weder lesbar noch schreibbar.
 			expect((await en.request.get(tabellenUrl('vergleich', admin.id))).status()).toBe(404);
 			expect((await en.request.put(tabellenUrl('vergleich', admin.id), { data: { version: 1, rows: [] } })).status()).toBe(404);
@@ -598,9 +669,80 @@ test.describe('Karte „Was steht wo“', () => {
 			expect(kontrastBericht('Karte en 390 px', kontrastVerstoesse(await messeKontrast(karte)))).toEqual([]);
 			await eigen.aufraeumen();
 		} finally {
-			await en.request.post('/api/auth/account/delete', { data: { password: passwort } }).catch(() => {});
-			await ctx.close();
+			await zweit.aufraeumen();
 			await admin.aufraeumen();
 		}
 	});
+
+	for (const fall of [FAELLE[0], FAELLE[1]]) {
+		test(`WS-13 (${fall.name}): jede Einstellung genau einmal — nicht mehr im Reiter Zustellung, einmal in der Karte`, async ({ page }) => {
+			await page.setViewportSize(DESKTOP);
+			const abo = await seed(page.request, fall);
+			try {
+				const z = await oeffneZustellung(page, abo.kind, abo.id);
+				const ueb = z.getByTestId(ZT.uebergang);
+				await expect(ueb).toBeVisible();
+				await expect(ueb.getByTestId('alert-preview-card')).toBeVisible();
+				await expect(ueb.getByTestId('compare-hub-activation-card')).toHaveCount(abo.kind === 'vergleich' ? 1 : 0);
+				for (const id of [...ALT_TESTIDS, ...Object.keys(KARTE_EINMAL[abo.kind])]) await expect(z.getByTestId(id), `Reiter Zustellung: ${id}`).toHaveCount(0);
+				for (const w of ALT_TEXTE) await expect(z, `Reiter Zustellung: „${w}“`).not.toContainText(w);
+
+				const reiter = await oeffneWetter(page, abo.kind, abo.id);
+				const karte = reiter.getByTestId('was-steht-wo');
+				await expect(karte.getByTestId('was-steht-wo-tabelle')).toBeVisible({ timeout: 20_000 });
+				for (const [id, n] of Object.entries(KARTE_EINMAL[abo.kind])) await expect(reiter.getByTestId(id), `Reiter Wetter: ${id}`).toHaveCount(n);
+				for (const id of ALT_TESTIDS) await expect(reiter.getByTestId(id), `Reiter Wetter: ${id}`).toHaveCount(0);
+				await expect(reiter.getByText(PREMIUM_HINWEIS, { exact: true })).toHaveCount(1);
+				await expect(reiter.getByText('Telegram: Kurzstil', { exact: true })).toHaveCount(1);
+				await expect(reiter.getByText('E-Mail: Format', { exact: true })).toHaveCount(abo.kind === 'route' ? 1 : 0);
+				// AC-30: Roh/Einfach erreichbar; Kurzstil ohne verbundenes Telegram gesperrt.
+				await expect(karte.locator('[data-slot="roh-einfach"]').first()).toBeVisible();
+				await expect(karte.getByTestId('was-steht-wo-kurzstil')).toHaveAttribute('aria-disabled', 'true');
+			} finally {
+				await abo.aufraeumen();
+			}
+		});
+
+		test(`WS-14 (${fall.name}): Speichern in Zustellung und Karte lässt Altfelder stehen; zweiter Nutzer unberührt`, async ({ browser, page }) => {
+			await page.setViewportSize(DESKTOP);
+			const abo = await seed(page.request, fall, ALTFELDER[fall.kind]);
+			const zweit = await zweitNutzer(browser, page, { sprache: 'de', ip: `10.31.23.${fall.kind === 'route' ? 1 : 2}` });
+			const fremd = await seed(zweit.seite.request, fall, ALTFELDER[fall.kind]);
+			try {
+				const vorher = altStand(abo.kind, await stand(page.request, abo.kind, abo.id));
+				const fremdVorher = altStand(fremd.kind, await stand(zweit.seite.request, fremd.kind, fremd.id));
+				expect(vorher, 'Messaufbau: Altfelder gespeichert').toMatchObject(abo.kind === 'route' ? { report_config: { multi_day_trend_reports: ['morning'] } } : { outlook_enabled: false });
+				expect((await page.request.get(tabellenUrl(fremd.kind, fremd.id))).status(), 'fremdes Abo nicht lesbar').toBe(404);
+
+				// Reiter Zustellung: ein Schalter außerhalb des Übergangsblocks; bei Orten zusätzlich die Pausieren-Karte im Block.
+				const z = await oeffneZustellung(page, abo.kind, abo.id);
+				const pfad = abo.kind === 'route' ? `/api/trips/${abo.id}` : `/api/compare/presets/${abo.id}`;
+				const put = () => page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad, { timeout: 20_000 });
+				let p = put();
+				await tid(z, ZT.schalter('morgen')).click();
+				expect((await p).status()).toBe(200);
+				if (abo.kind === 'vergleich') {
+					p = put();
+					await z.getByTestId(ZT.uebergang).getByTestId('compare-hub-activation-cta').click();
+					expect((await p).status()).toBe(200);
+					expect((await stand(page.request, abo.kind, abo.id)).schedule, 'Pausieren im Übergangsblock speichert').toBe('manual');
+				}
+				expect(altStand(abo.kind, await stand(page.request, abo.kind, abo.id)), 'nach Speichern im Reiter Zustellung').toEqual(vorher);
+
+				// Karte: ein Schalter unter der Tabelle.
+				const karte = await oeffneKarte(page, abo);
+				p = put();
+				await karte.getByTestId(abo.kind === 'route' ? 'was-steht-wo-show_stage_stats' : 'was-steht-wo-stundenverlauf').click();
+				expect((await p).status()).toBe(200);
+				const nachher = await stand(page.request, abo.kind, abo.id);
+				expect(abo.kind === 'route' ? nachher.report_config.show_stage_stats : nachher.hourly_enabled).toBe(false);
+				expect(altStand(abo.kind, nachher), 'nach Speichern in der Karte').toEqual(vorher);
+				expect(altStand(fremd.kind, await stand(zweit.seite.request, fremd.kind, fremd.id)), 'Abo des zweiten Nutzers').toEqual(fremdVorher);
+			} finally {
+				await fremd.aufraeumen();
+				await zweit.aufraeumen();
+				await abo.aufraeumen();
+			}
+		});
+	}
 });

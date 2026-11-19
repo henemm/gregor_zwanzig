@@ -11,29 +11,19 @@
 //
 // Kein fester Schlaf: der Speichervorgang wird über die abgewartete PUT-ANTWORT belegt,
 // nicht über die Bildschirm-Optik. Anmeldung über den storageState aus global.setup.ts.
+//
+// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 13/14, AC-24): die Kanal-Reihenfolge-Karte
+// des Übergangsblocks (Reiter Zustellung) ist entfernt. Es gibt EINE Reihenfolge für alle Stellen, gezogen
+// in der Karte „Was steht wo“ im Reiter Wetter (Griff je Zeile, SortableList), gespeichert als `rows` der
+// Tabelle (PUT /api/briefings/{id}/placements). RO-1/RO-2 laufen dort; Ausgangsreihenfolge ist die Folge
+// der gespeicherten Grundauswahl, die die Karte ohne gespeicherte Tabelle zeigt.
 
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { HUB_KINDS, HUB_SEL, dragDndZoneItem, hubApiPath, openHub, seedHub, type HubKind } from './helpers';
+import { HUB_KINDS, HUB_SEL, openHub, seedHub, type HubKind } from './helpers';
 
-type Stand = Record<string, unknown>;
-
-/** Kind-Kontraste (Spec): Seed, Zeilen-Kennungen (fest, nie aus dem Produkt gelesen), Karten-Testid. */
-const RO_SEL: Record<
-	HubKind,
-	{
-		seed: Record<string, unknown>;
-		start: [string, string, string];
-		/** Erwartete Reihenfolge nach „dritte Zeile vor die erste ziehen" (Zeilen-Kennungen der Karte). */
-		nachZug: [string, string, string];
-		/** Dieselbe Reihenfolge im gespeicherten Zielfeld (Kennungsraum des Servers, fest). */
-		serverNachZug: [string, string, string];
-		panel: string;
-		karte: string;
-	}
-> = {
+/** Kind-Kontraste (Spec): Seed je Abo-Art; drei Metriken ohne Auffächerung. */
+const RO_SEL: Record<HubKind, { seed: Record<string, unknown>; start: [string, string, string] }> = {
 	route: {
-		// Metriken OHNE Auffächerung: `temperature` fächert in der Kanal-Karte in vier Zeilen
-		// auf (temperature, _night, _day_low, _day_high) — dann wäre „dritte Zeile" keine Seed-Metrik.
 		seed: {
 			display_config: {
 				metrics: [
@@ -43,60 +33,30 @@ const RO_SEL: Record<
 				]
 			}
 		},
-		start: ['wind', 'precipitation', 'gust'],
-		nachZug: ['gust', 'wind', 'precipitation'],
-		// Zielfeld Trip (in /50 gemessen, Entscheidung 8): die Kanal-Karte schreibt über
-		// PUT …/weather-config nach `display_config.channel_layouts.email` (aktive Einträge, `order`).
-		serverNachZug: ['gust', 'wind', 'precipitation'],
-		panel: 'weather-metrics-tab',
-		karte: 'weather-metrics-kanal-reihenfolge'
+		start: ['wind', 'precipitation', 'gust']
 	},
 	vergleich: {
 		seed: { display_config: { active_metrics: ['temp_max_c', 'wind_max_kmh', 'sunny_hours_h'] } },
-		start: ['temp_max_c', 'wind_max_kmh', 'sunny_hours_h'],
-		nachZug: ['sunny_hours_h', 'temp_max_c', 'wind_max_kmh'],
-		// Zielfeld Vergleich (in /50 gemessen, Entscheidung 8): die Kanal-Karte (E-Mail) schreibt
-		// `display_config.channel_active_metrics.email` im Register-Format {metric_id, aggregation}
-		// (#1373); `active_metrics` behält die Ausgangsreihenfolge. Kennungen hier fest:
-		// sunny_hours_h = sunshine/sum, temp_max_c = temperature/max, wind_max_kmh = wind/max.
-		serverNachZug: ['sunshine:sum', 'temperature:max', 'wind:max'],
-		panel: 'weather-metrics-tab-vergleich',
-		karte: 'weather-metrics-vergleich-reihenfolge'
+		start: ['temp_max_c', 'wind_max_kmh', 'sunny_hours_h']
 	}
 };
 
-async function stand(page: Page, kind: HubKind, id: string): Promise<Stand> {
-	const res = await page.request.get(hubApiPath(kind, id));
-	expect(res.ok(), `GET ${hubApiPath(kind, id)} HTTP ${res.status()}`).toBeTruthy();
-	return (await res.json()) as Stand;
+const tabellenPfad = (id: string) => `/api/briefings/${id}/placements`;
+
+/** Reihenfolge der Zeilen laut Endpoint (als dieser Nutzer). */
+async function serverFolge(page: Page, kind: HubKind, id: string): Promise<string[]> {
+	const r = await page.request.get(`${tabellenPfad(id)}?kind=${kind}`);
+	expect(r.ok(), `GET Tabelle HTTP ${r.status()}`).toBeTruthy();
+	return ((await r.json()).rows as Array<{ metric_id: string }>).map((x) => x.metric_id);
 }
 
-/** Reihenfolge der E-Mail-Kanal-Auswahl im gespeicherten Stand (Zielfeld je kind, siehe RO_SEL). */
-function gespeicherteReihenfolge(kind: HubKind, s: Stand): string[] {
-	const dc = (s.display_config as Stand | undefined) ?? {};
-	if (kind === 'route') {
-		const layouts = (dc.channel_layouts as Record<string, unknown> | undefined) ?? {};
-		const email = (layouts.email as Array<{ metric_id: string; enabled?: boolean; order?: number }> | undefined) ?? [];
-		return email
-			.filter((m) => m.enabled === true)
-			.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-			.map((m) => m.metric_id);
-	}
-	const kanal = (dc.channel_active_metrics as Record<string, unknown> | undefined) ?? {};
-	const email = (kanal.email as Array<string | { metric_id: string; aggregation?: string }> | undefined) ?? [];
-	return email.map((m) => (typeof m === 'string' ? m : `${m.metric_id}:${m.aggregation}`));
-}
-
-const zeilen = (karte: Locator) => karte.locator('[data-testid="wm2-reihenfolge-row"]');
-const zeilenIds = (karte: Locator) => zeilen(karte).evaluateAll((els) => els.map((el) => el.getAttribute('data-metric-id')));
+const zeilen = (karte: Locator) => karte.locator('[data-slot="et-zeile"]');
+const zeilenIds = (karte: Locator) => zeilen(karte).evaluateAll((els) => els.map((el) => el.getAttribute('data-metrik')!));
 
 async function oeffneKarte(page: Page, kind: HubKind, id: string): Promise<Locator> {
-	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Abschnitt Layout/Kanal im Reiter Zustellung.
-	await openHub(page, kind, id, { tab: 'zustellung' });
-	const panel = page.locator(`[data-testid="${RO_SEL[kind].panel}"]:visible`);
-	await expect(panel).toBeVisible({ timeout: 10_000 });
-	const karte = panel.locator(`[data-testid="${RO_SEL[kind].karte}"]`);
-	await expect(karte, 'Die Reihenfolge-Karte muss im Reiter Zustellung stehen').toBeVisible({ timeout: 10_000 });
+	await openHub(page, kind, id, { tab: 'wetter' });
+	const karte = page.locator('[data-testid="was-steht-wo"]:visible');
+	await expect(karte.getByTestId('was-steht-wo-tabelle'), 'Die Tabelle „Was steht wo“ muss im Reiter Wetter stehen').toBeVisible({ timeout: 20_000 });
 	return karte;
 }
 
@@ -109,85 +69,68 @@ for (const kind of HUB_KINDS) {
 			await page.setViewportSize({ width: 1440, height: 900 });
 		});
 
-		// RO-1 — Alt compare-metric-order AC-3. Fängt: Ziehen ruft den Speicherweg nicht auf
-		// (Diff-Guard wertet reine Umsortierung als „keine Änderung"), Server speichert die alte
-		// Reihenfolge, Neuladen zeigt die alte Reihenfolge.
+		// RO-1 — Alt compare-metric-order AC-3. Fängt: Ziehen ruft den Speicherweg nicht auf, Server
+		// speichert die alte Reihenfolge, Neuladen zeigt die alte Reihenfolge.
 		test(`RO-1 (${kind}): dritte Zeile vor die erste ziehen → PUT-Antwort, Server trägt die Reihenfolge, Neuladen zeigt sie`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: ro.seed });
 			try {
 				const karte = await oeffneKarte(page, kind, hub.id);
-				await expect(zeilen(karte)).toHaveCount(ro.start.length, { timeout: 10_000 });
-				expect(await zeilenIds(karte), 'Vorbedingung: Ausgangsreihenfolge laut Seed').toEqual(ro.start);
+				const start = await serverFolge(page, kind, hub.id);
+				expect(start.length, 'Vorbedingung: drei Zeilen laut Seed').toBe(ro.start.length);
+				await expect.poll(() => zeilenIds(karte), { message: 'Vorbedingung: Karte zeigt die Folge des Endpoints' }).toEqual(start);
+				const nachZug = [start[2], start[0], start[1]];
 
 				// Nur ZIEHEN — keine Metrik an- oder abwählen. Antwort VOR der Geste vormerken.
-				const pfad = hubApiPath(kind, hub.id);
-				const antwort = page.waitForResponse(
-					(r) => r.request().method() === 'PUT' && new URL(r.url()).pathname.startsWith(pfad),
-					{ timeout: 15_000 }
-				);
-				await dragDndZoneItem(
-					page,
-					karte.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${ro.start[2]}"]`),
-					karte.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${ro.start[0]}"]`)
-				);
+				const antwort = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === tabellenPfad(hub.id), { timeout: 15_000 });
+				const mitte = async (l: Locator) => {
+					const b = (await l.boundingBox())!;
+					return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+				};
+				const griff = (m: string) => karte.locator(`[data-slot="et-zeile"][data-metrik="${m}"]`).getByTestId('drag-handle');
+				await karte.locator(`[data-slot="et-zeile"][data-metrik="${start[0]}"]`).scrollIntoViewIfNeeded();
+				const von = await mitte(griff(start[2]));
+				const nach = await mitte(griff(start[0]));
+				await page.mouse.move(von.x, von.y);
+				await page.mouse.down();
+				await page.mouse.move(von.x, von.y - 12, { steps: 6 });
+				await page.mouse.move(nach.x, nach.y, { steps: 15 });
 				await expect
 					.poll(() => zeilenIds(karte), { message: 'RO-1 FAIL: die gezogene Zeile steht nicht an der neuen Position', timeout: 5_000 })
-					.toEqual(ro.nachZug);
+					.toEqual(nachZug);
+				await page.mouse.up();
 
 				const res = await antwort.catch(() => null);
-				expect(
-					res,
-					'RO-1 FAIL: nach der Ziehgeste feuert kein PUT — der Diff-Guard wertet reine Umsortierung als „keine Änderung"'
-				).not.toBeNull();
+				expect(res, 'RO-1 FAIL: nach der Ziehgeste feuert kein PUT').not.toBeNull();
 				expect(res!.status(), 'RO-1 FAIL: der Speichervorgang wurde nicht mit 200 beantwortet').toBe(200);
-				await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
-				// Server-Stand trägt die neue Reihenfolge (Zielfeld je kind, im RED gemessen).
 				await expect
-					.poll(async () => gespeicherteReihenfolge(kind, await stand(page, kind, hub.id)), {
-						timeout: 10_000,
-						message: 'RO-1 FAIL: der Server trägt die neue Reihenfolge nicht'
-					})
-					.toEqual(ro.serverNachZug);
+					.poll(() => serverFolge(page, kind, hub.id), { timeout: 10_000, message: 'RO-1 FAIL: der Server trägt die neue Reihenfolge nicht' })
+					.toEqual(nachZug);
 
-				// Neuladen zeigt sie unverändert.
 				const nachLaden = await oeffneKarte(page, kind, hub.id);
 				await expect
-					.poll(() => zeilenIds(nachLaden), {
-						timeout: 10_000,
-						message: 'RO-1 FAIL: nach dem Neuladen steht wieder die alte Reihenfolge'
-					})
-					.toEqual(ro.nachZug);
+					.poll(() => zeilenIds(nachLaden), { timeout: 10_000, message: 'RO-1 FAIL: nach dem Neuladen steht wieder die alte Reihenfolge' })
+					.toEqual(nachZug);
 			} finally {
 				await hub.aufraeumen();
 			}
 		});
 
-		// RO-2 — Alt compare-metric-order AC-6. „Amtliche Warnungen" ist KEINE ziehbare Zeile
-		// (beide kinds). Der erklärende Hinweis ist Compare-eigen: im Trip sind Amtliche Warnungen
-		// ein eigener Abschnitt `official_alerts` (Spec „Kind-Kontraste").
-		test(`RO-2 (${kind}): „Amtliche Warnungen" ist keine ziehbare Zeile${kind === 'vergleich' ? ', der Hinweis erklärt es' : ''}`, async ({
-			page
-		}) => {
+		// RO-2 — Alt compare-metric-order AC-6. „Amtliche Warnungen" ist KEINE ziehbare Zeile (beide kinds):
+		// in der Karte eine feste Zeile ohne Griff über den Metrik-Zeilen.
+		test(`RO-2 (${kind}): „Amtliche Warnungen" ist keine ziehbare Zeile`, async ({ page }) => {
 			const hub = await seedHub(page.request, kind, { extra: ro.seed });
 			try {
 				const karte = await oeffneKarte(page, kind, hub.id);
 				await expect(zeilen(karte)).toHaveCount(ro.start.length, { timeout: 10_000 });
-				const ids = (await zeilenIds(karte)).map((i) => String(i));
-				expect(
-					ids.filter((i) => /official|warn/i.test(i)),
-					'RO-2 FAIL: „Amtliche Warnungen" darf keine ziehbare Zeile der Reihenfolge-Karte sein'
-				).toEqual([]);
-
-				if (kind === 'vergleich') {
-					// Compare-eigen (Kind-Kontraste): nur der Vergleich trägt den Hinweis.
-					const hinweis = page.getByTestId('weather-metrics-vergleich-warn-hint');
-					await expect(hinweis).toBeVisible({ timeout: 10_000 });
-					await expect(hinweis).toContainText(/Amtliche Warnungen/);
-					await expect(hinweis).toContainText(/erste/i);
-				}
+				const ids = await zeilenIds(karte);
+				expect(ids.filter((i) => /official|warn/i.test(i)), 'RO-2 FAIL: „Amtliche Warnungen" darf keine ziehbare Zeile sein').toEqual([]);
+				const fest = karte.locator('[data-slot="et-fest"]');
+				await expect(fest).toHaveCount(1);
+				await expect(fest).toContainText('Amtliche Warnungen');
+				await expect(fest.getByTestId('drag-handle'), 'RO-2 FAIL: die feste Zeile hat einen Griff').toHaveCount(0);
 				// Der Hub ist offen (Kontrolle gegen leeren Treffer durch falsche Seite).
 				await expect(page.getByTestId(sel.reiterListe)).toBeVisible();
 			} finally {

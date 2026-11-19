@@ -20,7 +20,7 @@ Beide Hubs nutzen EINE gemeinsame Reiter-Definition: `frontend/src/lib/component
 | `etappen` | Etappen (EN: Stages) | nur Trip |
 | `orte` | Orte | nur Ortsvergleich |
 | `wetter` | Wetter | bündelt Wetter-Metriken und Wertebereiche |
-| `zustellung` | Zustellung | bündelt Versand (Briefing-Zeiten, Layout/Kanal, Stundenverlauf, Ausblick, Nachtblock; Anker `#versand`) und Alarme |
+| `zustellung` | Zustellung | bündelt Versand (Briefing-Zeiten, Laufzeit, Kanäle; Anker `#versand`) und Alarme (Kanal-Tabelle, Stille Stunden); Inhalt je Kanal seit #3154 im Reiter Wetter |
 
 Seit Epic #2791 S3a Teil-PR 2 (2026-11-09) hat die Leiste **vier Reiter** (Trip und Ortsvergleich, gleiche Reihenfolge):
 Übersicht · Etappen (Trip) bzw. Orte (Vergleich) · Wetter · Zustellung. „Zustellung" ist bis S3b ein Übergangsreiter
@@ -29,11 +29,12 @@ Seit Epic #2791 S3a Teil-PR 2 (2026-11-09) hat die Leiste **vier Reiter** (Trip 
 
 - **Versand** ist ein Abschnitt im Reiter Zustellung (Anker `#versand`, Baustein
   `shared/zustellung-tab/ZustellungTab.svelte`, `context="route"|"vergleich"`; seit #2795 S3b Teilschritt 1b
-  (2026-11-13) neu gebaut, Altbausteine nur noch im Übergangsblock).
-  *Soll ab #3122 (ADR-0124, PO 2026-11-17):* Layout je Kanal, Stundenverlauf, Ausblick und Nachtblock ziehen aus dem
-  Übergangsblock in den Reiter Wetter (Tabelle „Was steht wo“ mit Schaltern darunter); der Übergangsblock entfällt
-  mit diesem Bau. Bis dahin gilt die Zuordnung der Tabelle oben.
-  Beim Ortsvergleich steht dort zusätzlich die Aktivierungs-Karte (Pausieren/Aktivieren).
+  (2026-11-13) neu gebaut).
+  Seit #3154 (#3122 B3b, ADR-0124, Spec `feat_3122_was_steht_wo.md` Teil B Nr. 14) stehen Listen je Kanal,
+  Stundenverlauf, Ausblick, Telegram-Kurzstil, Mehrtages-Trend (jetzt Ausblick je Briefing), E-Mail-Format,
+  Etappen-Kennzahlen, Vortag-Vergleich und Nacht-Stundentabelle allein im Reiter Wetter (Tabelle „Was steht wo“
+  mit Schaltern darunter). Im Übergangsblock am Ende des Reiters Zustellung bleiben bis #3036 nur der
+  Beispiel-Alarm und beim Ortsvergleich die Aktivierungs-Karte (Pausieren/Aktivieren).
 - **Vorschau** entfällt ersatzlos (samt Endpoint `GET /api/briefings/{id}/preview` und den verwaisten Resten
   `CompareChatBubble`/`CompareChannelSwitch`, PO-Entscheid 2026-10-22). Es bleibt nur die Alarm-Vorschau im Reiter
   Alarme (`POST /api/briefings/{id}/alert-preview`); weitere Kanal-Vorschauen gibt es in der Oberfläche nicht mehr.

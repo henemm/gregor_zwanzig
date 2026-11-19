@@ -6,12 +6,15 @@
 	// Stille Stunden/Anpassen · Uebergangsblock. Die Organismen liegen unter organisms/zustellung-tab/
 	// und speichern nicht selbst: jede Aenderung geht als neuer Stand an den EINEN Speicherer
 	// (zustellungSpeicherung.ts, Owner 'versand' und 'alarme', AC-33). Das Profil wird hier EINMAL
-	// geladen und an Tabelle und Uebergangsblock gereicht (AC-36).
+	// geladen und an die Kanal-Tabelle gereicht (AC-36).
 	// Abgeloest: WetterMetrikenVersandPanel mit Versand-Abschnitt und der Alarm-Baustein im Reiter
 	// (Kanaele je Wettergroesse, amtliche Warnungen, „Alarm ab“, zweite Kanalauswahl, AC-27/AC-31).
-	import { onMount, untrack, type ComponentProps, type Snippet } from 'svelte';
+	// Issue #3154 (#3122 B3b, Spec Teil B Nr. 14): Telegram-Kurzstil, Mehrtages-Trend und die
+	// Metrik-Oberflaeche des Uebergangsblocks sind entfernt — sie bedient die Karte „Was steht wo“.
+	import { onMount, untrack, type Snippet } from 'svelte';
 	import { api } from '$lib/api.js';
 	import { locale, t } from '$lib/i18n';
+	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import type { AlertRule, ComparePreset, Trip } from '$lib/types';
 	import Bereichskopf from '$lib/components/molecules/Bereichskopf.svelte';
 	import BriefingZeiten from '../../organisms/zustellung-tab/BriefingZeiten.svelte';
@@ -19,15 +22,21 @@
 	import KanalTabelle from '../../organisms/zustellung-tab/KanalTabelle.svelte';
 	import StilleStunden from '../../organisms/zustellung-tab/StilleStunden.svelte';
 	import UebergangBlock from '../../organisms/zustellung-tab/UebergangBlock.svelte';
-	import WetterMetrikenVersandPanel from '../WetterMetrikenVersandPanel.svelte';
 	import { kanalStatus, standAusPreset, standAusTrip, type ZustellungProfil, type ZustellungStand } from './zustellungModell.ts';
 	import { erstelleZustellungSpeicherung } from './zustellungSpeicherung.ts';
-	import { erstelleKanalStilSpeicherung, kanalStilStart, type KanalStilStand } from './kanalStilSpeicherung.ts';
 
-	type PanelProps = ComponentProps<typeof WetterMetrikenVersandPanel>;
-
-	interface Props extends Omit<PanelProps, 'context' | 'bereich' | 'mitVersandAbschnitt'> {
+	interface Props {
 		context: 'route' | 'vergleich';
+		trip?: Trip;
+		preset?: ComparePreset;
+		onTripUpdate?: (t: Trip) => void;
+		onCompareUpdate?: (updated: ComparePreset) => void;
+		saveController?: SaveStatus;
+		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
+		/** Reiter-Sprung aus der Laufzeit-Karte ("Etappen öffnen →"). Nur route. */
+		onJump?: (tab: string) => void;
+		/** Zaehler: jede Erhoehung scrollt zu den Briefing-Zeiten (Sprung `#versand`). */
+		versandSprung?: number;
 		/** Orts-Briefing: Pausieren/Aktivieren-Karte des Hubs (steht im Uebergangsblock). */
 		activation?: Snippet;
 		/** Orts-Briefing: Regeln des Beispiel-Alarms (aus der Metrik-Auswahl des Hubs). */
@@ -83,26 +92,6 @@
 		speicherung?.aenderungMelden(neu);
 	}
 
-	// ── Uebergangsblock: Telegram-Kurzstil + Mehrtages-Trend (eigene Felder, bis Teil 2) ─────────
-	let kanalStil = $state<KanalStilStand>(untrack(() => kanalStilStart(context, panel.trip, panel.preset)));
-	const kanalStilSpeicherung = untrack(() => {
-		const id = KONTEXT[context].id();
-		if (!panel.saveController || !id) return null;
-		return erstelleKanalStilSpeicherung({
-			context,
-			id,
-			client: api,
-			saveController: panel.saveController,
-			enqueueHubWrite: panel.enqueueHubWrite,
-			onAntwort: uebernimmAntwort,
-			// #3047 E2: geladener Stand — gespeichert werden nur die geaenderten Felder.
-			start: kanalStil
-		});
-	});
-	function aendernKanalStil(neu: KanalStilStand): void {
-		kanalStil = neu;
-		kanalStilSpeicherung?.aenderungMelden(neu);
-	}
 </script>
 
 <div class="zustellung-tab" data-testid="zustellung-tab" data-context={context}>
@@ -111,17 +100,7 @@
 	<LaufzeitKarte {context} {stand} onaendern={aendern} stages={panel.trip?.stages ?? []} {onJump} />
 	<KanalTabelle {stand} {status} onaendern={aendern} />
 	<StilleStunden {stand} onaendern={aendern} />
-	<UebergangBlock
-		{context}
-		{...panel}
-		{onJump}
-		profil={profilGeladen ? profil : null}
-		telegramAn={stand.briefing.telegram || stand.alarme.telegram}
-		{activation}
-		{beispielAlarmRegeln}
-		{kanalStil}
-		onKanalStil={aendernKanalStil}
-	/>
+	<UebergangBlock {context} trip={panel.trip} preset={panel.preset} {activation} {beispielAlarmRegeln} />
 </div>
 
 <style>

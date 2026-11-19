@@ -227,7 +227,10 @@ describe('AC-27/AC-31: keine Kanaele je Wettergroesse, keine amtlichen Warnungen
 
 // ── Uebergangsblock (AC-30, §5) ─────────────────────────────────────────────
 
-describe('AC-30: Uebergangsblock am Ende — Inhalt je Kanal (ohne alten Versand-Abschnitt) und Beispiel-Alarm', () => {
+// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14, AC-30): Inhalt je Kanal (Listen,
+// Stundenverlauf, Ausblick, Kurzstil, Mehrtages-Trend, Mail-Inhalt, Nacht-Block) bedient allein die Karte
+// „Was steht wo“ im Reiter Wetter; der Uebergangsblock behaelt Beispiel-Alarm (und bei Orten die Pausieren-Karte).
+describe('AC-30: Uebergangsblock am Ende — nur noch Beispiel-Alarm, Inhalt je Kanal in der Karte (#3154)', () => {
 	function uebergang(): { knoten: Knoten; quelle: string } {
 		for (const d of baum()) {
 			const { ast, quelle } = svelteAst(d);
@@ -240,17 +243,12 @@ describe('AC-30: Uebergangsblock am Ende — Inhalt je Kanal (ohne alten Versand
 		assert.fail('kein Element mit data-abschnitt="uebergang" im Reiter-Baum');
 	}
 
-	test('s3b2795_uebergang_enthaelt_inhalt_je_kanal_und_beispiel_alarm', () => {
+	test('s3b2795_uebergang_ohne_inhalt_je_kanal_mit_beispiel_alarm', () => {
 		const { knoten } = uebergang();
-		assert.ok(enthaelt(knoten, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']), 'Uebergangsblock ohne WetterMetrikenVersandPanel/WeatherMetricsTab (Telegram-Kurzstil, Layout je Kanal, Ausblick, Nachtblock, Report-Config, SMS-Schwellen)');
-		assert.ok(enthaelt(knoten, ['AlertPreviewCard']), 'Uebergangsblock ohne Beispiel-Alarm (AlertPreviewCard)');
-	});
-
-	test('s3b2795_uebergang_bereich_zustellung', () => {
-		const { knoten, quelle } = uebergang();
-		for (const k of alle(knoten, (n) => n.type === 'Component' && ['WetterMetrikenVersandPanel', 'WeatherMetricsTab'].includes(n.name))) {
-			assert.equal(attribut(k, quelle, 'bereich')?.literal, 'zustellung', `${k.name} im Uebergangsblock ohne bereich="zustellung"`);
+		for (const name of ['WetterMetrikenVersandPanel', 'WeatherMetricsTab', 'KanalStil', 'TelegramKurzstilToggle', 'MailInhaltCard']) {
+			assert.ok(!enthaelt(knoten, [name]), `Uebergangsblock enthaelt noch ${name} — die Einstellung steht sonst doppelt (Karte „Was steht wo“)`);
 		}
+		assert.ok(enthaelt(knoten, ['AlertPreviewCard']), 'Uebergangsblock ohne Beispiel-Alarm (AlertPreviewCard)');
 	});
 
 	test('s3b2795_kein_alter_versand_abschnitt_im_reiter', () => {

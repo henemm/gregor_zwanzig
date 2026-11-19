@@ -401,25 +401,26 @@ describe('Panel-Weichen nutzen die neuen Kennungen (doc-compliance-test)', () =>
 //
 // Spec: docs/specs/modules/feat_2727_compare_wizardstate_abloesen.md — AC-15/AC-22.
 // Der Hub haelt seinen Feldsatz lokal (`$state(compareFeldsatzStandard())`); der Pruefstand wertet
-// diese Deklaration selbst aus. Gefunden wird der Feldsatz ueber das Argument von
-// `alarmePropsAus(…)` im Markup (kein Variablenname). Ablauf: `?tab=alarme` oeffnen → vor der
+// diese Deklaration selbst aus. Gefunden wird der Feldsatz an dieser Deklaration (kein Variablenname). Ablauf: `?tab=alarme` oeffnen → vor der
 // Hydration zeigen die Reiter Standardwerte → ein Nutzerwert in einem Nicht-Alarm-Feld wird gesetzt
 // → die (asynchrone, katalogabhaengige) Alarm-Hydration laeuft → der Alarme-Reiter zeigt die
 // Preset-Werte, der Nutzerwert bleibt. Heute rot: der Hub instanziiert noch die Klasse (VERTRAG FEHLT).
 
-function hubFeldsatzAus(ast: Knoten, u: Knoten, adapter: string): Knoten {
+// #3154: das Panel-Buendel wetterMetrikenPropsAus(…) steht nicht mehr im Hub-Markup (Uebergangsblock ohne
+// Metrik-Oberflaeche); gefunden wird der Feldsatz an seiner Deklaration `$state(compareFeldsatzStandard())`.
+function hubFeldsatzAus(ast: Knoten, u: Knoten): Knoten {
 	let name: string | null = null;
 	(function lauf(n: unknown): void {
 		if (name || n === null || typeof n !== 'object') return;
 		if (Array.isArray(n)) return n.forEach(lauf);
 		const k = n as Knoten;
-		if (k.type === 'CallExpression' && k.callee?.name === adapter && k.arguments?.[0]?.type === 'Identifier') {
-			name = k.arguments[0].name;
+		if (k.type === 'VariableDeclarator' && k.id?.type === 'Identifier' && k.init?.type === 'CallExpression' && k.init.callee?.name === '$state' && k.init.arguments?.[0]?.callee?.name === 'compareFeldsatzStandard') {
+			name = k.id.name;
 			return;
 		}
 		for (const key of Object.keys(k)) if (key !== 'parent' && key !== 'loc') lauf(k[key]);
-	})(ast.fragment);
-	assert.ok(name, `Messaufbau: kein ${adapter}(<Bezeichner>) im Hub-Markup`);
+	})(ast.instance?.content);
+	assert.ok(name, 'Messaufbau: keine Deklaration $state(compareFeldsatzStandard()) im Hub');
 	const f = u[name!];
 	assert.ok(
 		f && typeof f === 'object',
@@ -445,9 +446,8 @@ describe('#2727 AC-15: CompareTabs — verzoegerte Alarm-Hydration fuellt den Re
 		);
 		const { alarmePropsAus } = await import('../../compare/alarmePropsAus.ts');
 		const { versandPropsAus } = await import('../../compare/versandPropsAus.ts');
-		// #2795 S3b 1b: der Hub ruft alarmePropsAus nicht mehr (der neue Reiter liest das Preset);
-		// derselbe Feldsatz steht weiter am Panel-Buendel wetterMetrikenPropsAus(…) im Markup.
-		const feldsatz = hubFeldsatzAus(ast, u, 'wetterMetrikenPropsAus');
+		// #2795 S3b 1b: der Hub ruft alarmePropsAus nicht mehr (der neue Reiter liest das Preset).
+		const feldsatz = hubFeldsatzAus(ast, u);
 		for (const e of effekteVon(ast, quelle, u, 'initialTab')) e();
 		// #2794 S3a: der Alt-Link ?tab=alarme oeffnet den Reiter Zustellung (dort stehen die Alarme).
 		assert.equal(u.activeTab, 'zustellung', 'Vorbedingung: Deep-Link oeffnet den Reiter mit dem Alarm-Baustein');

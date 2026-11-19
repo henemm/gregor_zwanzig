@@ -15,7 +15,8 @@
 //   - Kanal + Kanal-Schwelle → Kanal-Tabelle (Alarm-Schalter + Dringlichkeit, AC-17). Bedienbar ist
 //     nur ein VERBUNDENER Kanal (AC-15); deshalb läuft die Datei als bestätigter Zweitnutzer mit
 //     E-Mail-Adresse (testMitZustellbaremZiel) und prüft die E-Mail-Zeile.
-//   - Telegram-Kurzstil (nur vergleich) → Übergangsblock (AC-30).
+//   - Telegram-Kurzstil (nur vergleich) → seit #3154 allein die Karte „Was steht wo“ im Reiter Wetter
+//     (Spec feat_3122_was_steht_wo.md Teil B Nr. 14, AC-30); der Übergangsblock hat ihn nicht mehr.
 //   - Cooldown + Stille Stunden → Karte Stille Stunden / „Anpassen“ (AC-24, AC-26).
 //   - AW-5c: der Speicherer sendet nur geänderte Felder (AC-32) — eine Folge-Geste im selben Reiter
 //     darf die gesetzte Dringlichkeit weder mitschicken (Alt-Baseline) noch zurücksetzen.
@@ -33,6 +34,7 @@ import {
 	seedZustellung,
 	warnungenSchalter
 } from './s3b2795-zustellung.helpers';
+import { oeffneWetter } from './s3a2794-teil3.helpers';
 // #1373 / ADR-0037: `display_config.active_metrics` wird in ZWEI Formen
 // gespeichert (Kurzform und Paar {metric_id, aggregation}). Der Vergleich der
 // Nachbar-Einstellungen im Ortsvergleich läuft deshalb über die
@@ -306,11 +308,20 @@ for (const kind of HUB_KINDS) {
 					})
 					.toBe('HIGH');
 
-				// compare-eigen: Telegram-Kurzstil (`display_config.telegram_style`), seit 1b im Übergangsblock.
+				// compare-eigen: Telegram-Kurzstil (`display_config.telegram_style`). Seit #3154 nicht mehr im
+				// Übergangsblock, sondern allein in der Karte „Was steht wo“ (Reiter Wetter). Freigeschaltet nur mit
+				// verbundenem Telegram: die Profil-Lesung bekommt eine Test-Chat-ID (Muster was-steht-wo-karte WS-5).
 				if (kind === 'vergleich') {
-					const kurzstil = reiter.locator('[data-testid="zustellung-uebergang"] [data-testid="telegram-kurzstil-toggle"] input[type="checkbox"]').first();
-					await expect(kurzstil, 'AW-3 FAIL: der Kurzstil-Schalter fehlt im Übergangsblock des Vergleichs.').toBeVisible();
-					await kurzstil.check();
+					await expect(reiter.getByTestId('telegram-kurzstil-toggle'), 'AW-3 FAIL: der Kurzstil steht noch im Reiter Zustellung (#3154).').toHaveCount(0);
+					await page.route('**/api/auth/profile', async (route) => {
+						if (route.request().method() !== 'GET') return route.continue();
+						const echt = await route.fetch();
+						await route.fulfill({ response: echt, json: { ...((await echt.json()) as Stand), telegram_chat_id: 'e2e-aw3-test-chat' } });
+					});
+					const kurzstil = (await oeffneWetter(page, kind, hub.id)).getByTestId('was-steht-wo-kurzstil');
+					await expect(kurzstil, 'AW-3 FAIL: der Kurzstil-Schalter fehlt in der Karte.').toBeVisible({ timeout: 20_000 });
+					await expect(kurzstil).not.toHaveAttribute('aria-disabled', 'true');
+					await kurzstil.click();
 					await warteAufGespeichert(page);
 					await expect
 						.poll(async () => dc(await stand(page, kind, hub.id)).telegram_style, {
@@ -318,17 +329,13 @@ for (const kind of HUB_KINDS) {
 							message: 'AW-3 FAIL: der Telegram-Kurzstil wurde nicht gespeichert.'
 						})
 						.toBe('kurzform');
+					const wieder = (await oeffneWetter(page, kind, hub.id)).getByTestId('was-steht-wo-kurzstil');
+					await expect(wieder, 'AW-3 FAIL: der Kurzstil ist nach dem Neuladen wieder aus.').toHaveAttribute('aria-checked', 'true', { timeout: 20_000 });
 				}
 
 				const neu = await oeffneZustellung(page, kind, hub.id);
 				await expect(emailAlarm(neu), 'AW-3 FAIL: der E-Mail-Alarm ist nach dem Neuladen wieder aus.').toHaveAttribute('aria-checked', 'true');
 				await expect(emailStufe(neu, 'HIGH'), 'AW-3 FAIL: die Dringlichkeit „hoch“ fehlt nach dem Neuladen.').toHaveAttribute('aria-checked', 'true');
-				if (kind === 'vergleich') {
-					await expect(
-						neu.locator('[data-testid="zustellung-uebergang"] [data-testid="telegram-kurzstil-toggle"] input[type="checkbox"]').first(),
-						'AW-3 FAIL: der Kurzstil ist nach dem Neuladen wieder aus.'
-					).toBeChecked();
-				}
 			} finally {
 				await hub.aufraeumen();
 			}

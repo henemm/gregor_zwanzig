@@ -1091,7 +1091,7 @@ test('DS-4 Aktivität Standard (1280 px): „Wandern (Standard)" zurückwählen 
 // ─── DS-3 (AC-3) ────────────────────────────────────────────────────────────
 
 /** Zustellung im Hub/Anlegen: Reiter Zustellung (Hub, #2795 S3b 1b), Versand-Abschnitt (Anlegen),
- *  Mail-Inhalt-Karte, Speicher-Chip. */
+ *  Mail-Inhalt-Karte (seit #3154 nur noch beim Anlegen), Speicher-Chip. */
 const ZUSTELLUNG =
 	'[data-testid="zustellung-tab"], [data-testid="versand-abschnitt"], [data-testid="report-mail-content"], [data-testid="save-indicator"]';
 
@@ -1223,7 +1223,9 @@ test('DS-4 Aktivität: Auswahl beim Trip-Anlegen ist eine listbox, per Maus und 
 	}
 });
 
-test('DS-4 Mail-Format: Zustellung im Trip-Hub ist eine radiogroup, per Maus und Pfeiltaste bedienbar, Fokus sichtbar, gespeichert', async ({
+// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14, AC-30): das Mail-Format steht nicht mehr im
+// Reiter Zustellung, sondern genau einmal in der Karte „Was steht wo“ im Reiter Wetter (derselbe Segmented-Baustein).
+test('DS-4 Mail-Format: Karte im Trip-Hub (Reiter Wetter) ist eine radiogroup, per Maus und Pfeiltaste bedienbar, Fokus sichtbar, gespeichert', async ({
 	page
 }) => {
 	await page.setViewportSize(DESKTOP);
@@ -1231,19 +1233,20 @@ test('DS-4 Mail-Format: Zustellung im Trip-Hub ist eine radiogroup, per Maus und
 	const hub = await seedHub(page.request, 'route');
 	const format = async () =>
 		((await tripStand(page, hub.id)).report_config as { email_format?: string } | undefined)?.email_format ?? 'full';
-	const gruppe = page.getByTestId('report-email-format-switcher');
+	const gruppe = page.getByTestId('was-steht-wo-email-format');
 	const voll = gruppe.getByRole('radio', { name: /Ausführlich/ });
 	const kompakt = gruppe.getByRole('radio', { name: /Kompakt/ });
 	try {
-		await openHub(page, 'route', hub.id, { tab: 'zustellung' });
-		await expect(gruppe).toBeVisible({ timeout: 15_000 });
+		await openHub(page, 'route', hub.id, { tab: 'wetter' });
+		await expect(gruppe).toBeVisible({ timeout: 20_000 });
+		await expect(page.getByTestId('report-email-format-switcher'), 'Mail-Format doppelt (alter Schalter)').toHaveCount(0);
 		await expect(gruppe, 'Mail-Format ist keine radiogroup').toHaveAttribute('role', 'radiogroup');
 		await expect(voll).toBeChecked();
 		// Maus
 		await kompakt.click();
 		await expect(kompakt).toBeChecked();
 		await expect.poll(format, { message: 'Kompakt nicht gespeichert', timeout: 15_000 }).toBe('compact');
-		await openHub(page, 'route', hub.id, { tab: 'zustellung' });
+		await openHub(page, 'route', hub.id, { tab: 'wetter' });
 		await expect(kompakt).toBeChecked({ timeout: 15_000 });
 		// Fix-Loop F-B3: nur der gewählte Eintrag liegt in der Tab-Reihenfolge (WAI-ARIA-Radiogroup) —
 		// Umschalt+Tab vom gewählten verlässt die Gruppe, statt auf „Ausführlich" zu landen.
@@ -1262,7 +1265,7 @@ test('DS-4 Mail-Format: Zustellung im Trip-Hub ist eine radiogroup, per Maus und
 		});
 		expect(fokus.sichtbar && fokus.stil !== 'none' && fokus.breite !== '0px', `Fokus nicht sichtbar: ${JSON.stringify(fokus)}`).toBe(true);
 		await expect.poll(format, { message: 'Ausführlich nicht gespeichert', timeout: 15_000 }).toBe('full');
-		await openHub(page, 'route', hub.id, { tab: 'zustellung' });
+		await openHub(page, 'route', hub.id, { tab: 'wetter' });
 		await expect(voll).toBeChecked({ timeout: 15_000 });
 	} finally {
 		await hub.aufraeumen();

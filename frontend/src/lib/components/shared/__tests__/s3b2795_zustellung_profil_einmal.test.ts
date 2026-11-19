@@ -2,13 +2,10 @@
 // Spec: docs/specs/modules/feat_2795_s3b_teil1_zustellung.md — AC-36 (GET /api/auth/profile genau
 // einmal je Aufruf des Reiters).
 //
-// Der Reiter laedt das Profil EINMAL (ZustellungTab, onMount) und reicht es ueber den
-// Uebergangsblock und den Panel-Baustein an WeatherMetricsTab. WeatherMetricsTab laedt nur dann
-// selbst, wenn die Prop `profil` `undefined` ist (Anlegeseiten). Damit im montierten Reiter genau
-// ein Abruf entsteht, muss die Kette (1) einen Wert liefern, der NIE `undefined` ist (vor dem Laden
-// `null`, danach das Profil), (2) die Prop unterwegs nicht abfangen und (3) WeatherMetricsTab muss
-// sie tatsaechlich auswerten. Die Zahl der Abrufe im Browser zaehlt zusaetzlich die E2E-Spec
-// s3b2795-zustellung-kanaele.spec.ts.
+// Der Reiter laedt das Profil EINMAL (ZustellungTab, onMount). Seit #3154 traegt der Uebergangsblock
+// keine Metrik-Oberflaeche (WeatherMetricsTab) mehr, die eine zweite Ladestelle waere. WeatherMetricsTab
+// laedt weiter nur dann selbst, wenn die Prop `profil` `undefined` ist (Anlegeseiten). Die Zahl der
+// Abrufe im Browser zaehlt zusaetzlich die E2E-Spec s3b2795-zustellung-kanaele.spec.ts.
 //
 // Messweise: AST der ECHTEN Komponenten (svelte/compiler); die Ausdruecke am Wirkort werden
 // AUSGEWERTET (svelteInstanzPruefstand.werte), nicht nur gelesen.
@@ -21,7 +18,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { svelteAst, einbettungenMitWeichen, propNamen, aufrufe, type Knoten } from './s3a2794Ast.ts';
-import { attributAusdruck, werte } from './svelteInstanzPruefstand.ts';
+import { werte } from './svelteInstanzPruefstand.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const KOMP = join(HIER, '..', '..');
@@ -34,38 +31,28 @@ const DATEI = {
 
 const PROFIL = { mail_to: 'a@example.com', telegram_chat_id: '4711' };
 
-describe('AC-36 (F006): das eine Profil erreicht WeatherMetricsTab — nie undefined', () => {
-	test('f006_zustellungtab_reicht_vor_und_nach_dem_laden_einen_wert_nie_undefined', () => {
+describe('AC-36 (F006): im Reiter Zustellung genau eine Profil-Ladestelle', () => {
+	// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): der Uebergangsblock traegt keine
+	// Metrik-Oberflaeche mehr. Statt der Durchreich-Kette ZustellungTab -> Uebergangsblock -> Panel ->
+	// WeatherMetricsTab gilt: ZustellungTab laedt das Profil genau einmal, und unter ihm laedt niemand nach.
+	const profilAbrufe = (datei: string): number => {
+		const { ast } = svelteAst(datei);
+		return [...aufrufe(ast.instance?.content), ...aufrufe(ast.fragment)].filter(
+			(a) => (a.callee as Knoten)?.name === 'fetch' && (a.arguments?.[0] as Knoten)?.value === '/api/auth/profile'
+		).length;
+	};
+
+	test('f006_zustellungtab_laedt_das_profil_genau_einmal', () => {
+		assert.equal(profilAbrufe(DATEI.zustellung), 1, 'ZustellungTab: nicht genau eine Profil-Ladestelle');
 		const { ast, quelle } = svelteAst(DATEI.zustellung);
-		const ub = einbettungenMitWeichen(ast, quelle, ['UebergangBlock']);
-		assert.equal(ub.length, 1, 'Messaufbau: ZustellungTab bettet den Uebergangsblock nicht genau einmal ein');
-		const ausdruck = attributAusdruck(ub[0].knoten, quelle, 'profil');
-		assert.ok(ausdruck, 'ZustellungTab reicht kein profil an den Uebergangsblock — WeatherMetricsTab laedt dann selbst (zweiter Abruf)');
-		for (const [fall, u, soll] of [
-			['vor dem Laden', { profilGeladen: false, profil: null }, null],
-			['geladen', { profilGeladen: true, profil: PROFIL }, PROFIL],
-			['geladen, Abruf gescheitert', { profilGeladen: true, profil: null }, null]
-		] as const) {
-			const wert = werte(ausdruck!, { ...u });
-			assert.notEqual(wert, undefined, `${fall}: profil ist undefined — WeatherMetricsTab ruefe /api/auth/profile selbst ab`);
-			assert.deepEqual(wert, soll, `${fall}: falscher Wert ${JSON.stringify(wert)}`);
-		}
+		assert.equal(einbettungenMitWeichen(ast, quelle, ['UebergangBlock']).length, 1, 'Messaufbau: ZustellungTab bettet den Uebergangsblock nicht genau einmal ein');
+		assert.equal(einbettungenMitWeichen(ast, quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'ZustellungTab bettet die Metrik-Oberflaeche ein (zweite Profil-Ladestelle)');
 	});
 
-	test('f006_uebergangsblock_und_panel_fangen_profil_nicht_ab_und_streuen_weiter', () => {
-		for (const [datei, ziel] of [
-			[DATEI.uebergang, 'WetterMetrikenVersandPanel'],
-			[DATEI.panel, 'WeatherMetricsTab']
-		] as const) {
-			const { ast, quelle } = svelteAst(datei);
-			assert.ok(!propNamen(ast).includes('profil'), `${datei}: profil wird abgefangen statt weitergereicht`);
-			const e = einbettungenMitWeichen(ast, quelle, [ziel]);
-			assert.equal(e.length, 1, `Messaufbau: ${ziel} nicht genau einmal in ${datei}`);
-			assert.ok(
-				((e[0].knoten.attributes ?? []) as Knoten[]).some((a) => a.type === 'SpreadAttribute'),
-				`${datei}: ${ziel} bekommt die Rest-Props nicht gestreut — profil kaeme nicht an`
-			);
-		}
+	test('f006_uebergangsblock_laedt_kein_profil_und_traegt_keine_metrik_oberflaeche', () => {
+		assert.equal(profilAbrufe(DATEI.uebergang), 0, 'Uebergangsblock laedt das Profil selbst');
+		const { ast, quelle } = svelteAst(DATEI.uebergang);
+		assert.equal(einbettungenMitWeichen(ast, quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'Uebergangsblock traegt noch die Metrik-Oberflaeche (#3154)');
 	});
 
 	test('f006_weathermetricstab_laedt_nur_ohne_profil_prop_selbst', async () => {

@@ -33,7 +33,7 @@
 		reportConfig?: ReportConfig;
 		/** Zaehler: jede Erhoehung scrollt zum Versand-Abschnitt (Sprung `#versand`).
 		 *  Der Hub setzt ihn bei jedem Reiterwechsel ohne Anker auf 0 zurueck. */
-		versandSprung?: number; /** #2795 S3b 1b: false = ohne alten Versand-Abschnitt (Uebergangsblock des Reiters Zustellung; dort kein zweites `#versand`). Anlegeseiten: Default an. */ mitVersandAbschnitt?: boolean;
+		versandSprung?: number;
 	}
 
 	let {
@@ -43,7 +43,7 @@
 		versand = {},
 		vergleichTelegramStyle = 'rich',
 		reportConfig = $bindable(),
-		versandSprung = 0, mitVersandAbschnitt = true,
+		versandSprung = 0,
 		...wetter
 	}: Props = $props();
 
@@ -62,7 +62,7 @@
 </script>
 
 <WeatherMetricsTab {context} {...wetter} {bereich} />
-{#if mitVersandAbschnitt}<section id="versand" data-testid="versand-abschnitt" class="wmv-versand" bind:this={abschnitt}>
+<section id="versand" data-testid="versand-abschnitt" class="wmv-versand" bind:this={abschnitt}>
 	{#if context === 'route' && !wetter.createMode}
 		{#if wetter.trip}
 			<BriefingScheduleTab
@@ -89,7 +89,6 @@
 		/>
 	{/if}
 </section>
-{/if}
 
 <style>
 	.wmv-versand {
