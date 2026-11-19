@@ -683,6 +683,8 @@ Die Entscheidungslogik (Prod-Schutz, Scope, Route-Abfangen-Plan,
 Bewertung, Bericht, Exit) liegt browserfrei in `e2e/elementliste_abgleich_logik.ts`
 (`elementliste_abgleich_verdrahtung.test.ts`). Neue Seiten markieren ihre Abschnitte
 mit `data-abschnitt="<name aus der Elementliste>"`, sonst bleibt ein Element `abweichend`.
+Das Staging-Prüfkonto ist mit den Mockup-Beispieldaten vorbefüllt (Seed-Skript `scripts/staging_pruefkonto_mockupdaten.py`,
+Runbook `docs/runbooks/staging_pruefkonto_seed.md`, #2967), damit der Abgleich dort keine Scheinabweichungen meldet.
 
 **Bedienplan für Dialoge im Reiter Wetter (#2966, Stand 2026-11-17):** Abschnitte, die sich nur durch Bedienung
 zeigen, prüft ein Bedienplan (`bedienPlan(abschnitt, lage)` in `e2e/elementliste_abgleich_logik.ts`), statt sie

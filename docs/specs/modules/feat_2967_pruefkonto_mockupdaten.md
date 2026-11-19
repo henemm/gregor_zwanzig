@@ -187,6 +187,7 @@ Das Skript folgt dem Muster von `staging_e2e_user_en.py`: Basis-URL und Zugangsd
 - Das Skript funktioniert nur auf dem Staging-Host (Loopback-Zugriff und `.env` mit Core-Secret und `GZ_PRUEFKONTO_*`); von einem anderen Rechner scheitert es bewusst vor dem ersten Schreibzugriff.
 - Das Trip-Datum liegt in der Vergangenheit (Status „fertig“ wie im Mockup); zeigen Wetter- oder Zustellteile dann Zusatzhinweise, wird das als Abweichung zugeordnet, das Datum nicht verbogen.
 - Das Skript ist ein Handwerkzeug für Staging und läuft nie in Produktion.
+- Die ID des Orts-Vergleichs vergibt der Server; der Seed findet „Münsterland“ deshalb über den Namen (nur im eigenen Prüfkonto). Ein dort von Hand angelegter Vergleich gleichen Namens wird zum Seed-Datensatz: Soll-Felder werden per Read-Modify-Write gesetzt, übrige Felder bleiben erhalten. Andere Nutzer sind nie betroffen (AC-10).
 
 ## Kein Cron, kein Heartbeat
 
