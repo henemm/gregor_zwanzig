@@ -260,8 +260,13 @@ def _warnungen_heute() -> list:
 
     zone = tz_for_coords(*INNSBRUCK)
     jetzt = datetime.now(timezone.utc).astimezone(zone)
+    # Beginn fest gestern 10:00 Ortszeit: die Beginn-Stunde ``@h`` ist so immer
+    # zweistellig. Mit ``jetzt - 12h`` war sie zwischen 12 und 22 Uhr Ortszeit
+    # einstellig, der SMS-Text vier Zeichen kuerzer (152) und die
+    # Ueberlaenge-Vorbedingung tageszeitabhaengig rot (CI 2026-11-19).
+    beginn = (jetzt - timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
     return [OfficialAlert(source="meteoalarm", hazard=hazard, level=3, label=label,
-                          region_label="Tirol", valid_from=jetzt - timedelta(hours=12),
+                          region_label="Tirol", valid_from=beginn,
                           valid_to=jetzt + timedelta(days=2))
             for hazard, label in (("thunderstorm", "Gewitter"), ("rain", "Starkregen"),
                                   ("wind_gust", "Sturm"), ("snow", "Schnee"))]
