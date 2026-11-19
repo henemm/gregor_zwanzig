@@ -309,6 +309,7 @@ type tripUpdateRequest struct {
 	Region                       Optional[string] `json:"region"`
 	Activity                     Optional[string] `json:"activity"`
 	OfficialAlertsEnabled        Optional[bool]   `json:"official_alerts_enabled"`
+	RadarAlertEnabled            Optional[bool]   `json:"radar_alert_enabled"` // Issue #2800
 	OfficialAlertTriggersEnabled Optional[bool]   `json:"official_alert_triggers_enabled"`
 	// OfficialWarnings — Issue #1258, RMW-Kontrakt analog OfficialAlertTriggersEnabled
 	// (nil = im Body nicht gesendet -> bestehender Wert bleibt erhalten).
@@ -464,6 +465,7 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		req.Region.ApplyValue(&existing.Region)
 		req.Activity.ApplyValue(&existing.Activity)
 		req.OfficialAlertsEnabled.ApplyPtr(&existing.OfficialAlertsEnabled)
+		req.RadarAlertEnabled.ApplyPtr(&existing.RadarAlertEnabled) // Issue #2800, Dreizustand
 		req.OfficialAlertTriggersEnabled.ApplyPtr(&existing.OfficialAlertTriggersEnabled)
 		// Issue #1258 — gleiches RMW-Merge-Muster wie OfficialAlertTriggersEnabled.
 		if req.OfficialWarnings != nil {

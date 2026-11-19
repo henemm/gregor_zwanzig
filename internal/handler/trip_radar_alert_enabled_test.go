@@ -103,23 +103,41 @@ func assertAndereFelderErhalten(t *testing.T, m map[string]interface{}, wantName
 	}
 }
 
-// AC-7 Fall 1: PUT ohne Feld laesst den gespeicherten Schalter (false) stehen.
+// AC-7 Fall 1: PUT ohne Feld laesst den gespeicherten Schalter stehen — fuer
+// alle drei Bestaende (false, true, nie gesetzt). Fix-Loop 1 (F001): nur mit
+// true und nil faellt ein Replace statt ApplyPtr auf (Replace schriebe den
+// Nullwert false bzw. machte aus "fehlt" ein explizites false).
 func TestUpdateTripHandler_RadarAlertEnabled_FehltImBody_BestandBleibt(t *testing.T) {
-	s := newTestStore(t)
-	falseVal := false
-	seedTripRadarRaw(t, s, "trip-radar-rwm-1", "Radar-Schalter", &falseVal)
+	falseVal, trueVal := false, true
+	for _, tc := range []struct {
+		name    string
+		bestand *bool
+	}{
+		{"bestand-false_bleibt-false", &falseVal},
+		{"bestand-true_bleibt-true", &trueVal},
+		{"bestand-ohne-feld_bleibt-ohne-feld", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newTestStore(t)
+			seedTripRadarRaw(t, s, "trip-radar-rwm-1", "Radar-Schalter", tc.bestand)
 
-	w := putTripRadar(t, s, "test", "trip-radar-rwm-1", map[string]interface{}{
-		"name": "Radar-Schalter (umbenannt)",
-	})
-	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+			w := putTripRadar(t, s, "test", "trip-radar-rwm-1", map[string]interface{}{
+				"name": "Radar-Schalter (umbenannt)",
+			})
+			if w.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+			}
+			v, ok, m := radarFeld(t, s, "trip-radar-rwm-1")
+			if tc.bestand == nil {
+				if ok {
+					t.Errorf("AC-7: nie gesetzter Schalter darf nach PUT ohne Feld nicht erscheinen, got value=%v", v)
+				}
+			} else if !ok || v != *tc.bestand {
+				t.Errorf("AC-7: radar_alert_enabled=%v muss PUT ohne Feld ueberstehen, got present=%v value=%v", *tc.bestand, ok, v)
+			}
+			assertAndereFelderErhalten(t, m, "Radar-Schalter (umbenannt)")
+		})
 	}
-	v, ok, m := radarFeld(t, s, "trip-radar-rwm-1")
-	if !ok || v != false {
-		t.Errorf("AC-7: radar_alert_enabled=false muss PUT ohne Feld ueberstehen, got present=%v value=%v", ok, v)
-	}
-	assertAndereFelderErhalten(t, m, "Radar-Schalter (umbenannt)")
 }
 
 // AC-7 Fall 2/3: PUT mit true bzw. false setzt den Schalter, andere Felder bleiben.

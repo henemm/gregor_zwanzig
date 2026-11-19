@@ -77,6 +77,7 @@
   "paused_at": "2026-10-02T08:00:00Z",
   "archived_at": "2026-10-03T08:00:00Z",
   "official_alerts_enabled": true,
+  "radar_alert_enabled": false,
   "official_alert_triggers_enabled": true,
   "official_warnings": {"enabled": true, "sources": ["meteoalarm"]},
   "alert_channels": {"email": true, "telegram": false, "sms": false, "premium_sms": false},

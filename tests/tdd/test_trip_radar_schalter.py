@@ -238,6 +238,51 @@ def test_ac4_bestandstrip_ohne_feld_alarmiert_weiter():
         _clean_user(uid)
 
 
+def test_ac4_direkt_konstruierter_trip_ohne_feld_alarmiert():
+    """AC-4 (Fix-Loop 1, F002): der Default des Trip-Modells selbst ist „an".
+    Ein direkt per ``Trip(...)`` gebauter Trip ohne ``radar_alert_enabled``
+    (keine Loader-Runde, die ``None`` explizit setzt) geht durch die echte
+    Trip-Schleife des Radarlaufs: Nowcast wird abgerufen, der Alarm geht per
+    E-Mail raus. Wuerde der Modell-Default auf ``False`` kippen, verstummten
+    alle intern gebauten Trips still."""
+    import time
+
+    from services.trip_alert import RADAR_RUN_DEADLINE_SECONDS, TripAlertService
+
+    uid = _uid("ac4-direkt")
+    _clean_user(uid)
+    try:
+        # `_radar_trip` baut den Trip per `Trip(id=..., name=..., stages=[...])`
+        # ohne das Feld; das Objekt selbst (nicht die geladene Datei) laeuft durch.
+        trip = _radar_trip(uid, "trip-2800-direkt", send_email=True)
+        default = trip.radar_alert_enabled
+        radar = _ZaehlendesNassRadar()
+        mails: list = []
+        with freeze_time(_AT):
+            svc = TripAlertService(
+                settings=settings_email_only(), user_id=uid, radar_service=radar,
+                mail_sink=lambda subject, body: mails.append((subject, body)),
+            )
+            reached: dict = {}
+            progress = {"checked": 0, "hit_deadline": False}
+            sent, failed = svc._check_radar_trips(
+                [trip], datetime.now(timezone.utc),
+                time.monotonic() + RADAR_RUN_DEADLINE_SECONDS, reached, progress,
+            )
+
+        assert radar.calls, (
+            "AC-4: direkt gebauter Trip ohne Feld muss den Nowcast abrufen (Default = an), "
+            f"Modell-Default war {default!r}"
+        )
+        assert sent == 1 and failed == 0 and len(mails) == 1, (
+            f"AC-4: direkt gebauter Trip ohne Feld muss alarmieren: sent={sent} "
+            f"failed={failed} mails={len(mails)}, Modell-Default war {default!r}"
+        )
+        assert default is None, f"Modell-Default muss None sein, war {default!r}"
+    finally:
+        _clean_user(uid)
+
+
 def test_ac4_gegenprobe_ortsvergleich_ohne_feld_bleibt_aus():
     """AC-4 (dokumentierte Default-Asymmetrie): beim Ortsvergleich bedeutet
     „nicht gesetzt" weiterhin AUS (``compare_radar_alert.py``) — kein Abruf,
@@ -318,6 +363,66 @@ def test_ac5_stille_stunden_halten_radar_alarm_zurueck():
             at=_AT, zweig="radar", trip=trip_k, radar_service=_ZaehlendesNassRadar(),
         )
         assert lauf_k.triggered_count == 1, "Gegenprobe: ausserhalb der Stillen Stunden zugestellt"
+    finally:
+        _clean_user(uid)
+        _clean_user(ctrl)
+
+
+def _protokoll_eintraege(uid: str, trip_id: str) -> list[dict]:
+    """Alle Alarm-Protokolleintraege dieses Trips, gleich in welchem Fach."""
+    eintraege: list[dict] = []
+    for bucket in ("entries", "not_delivered"):
+        eintraege += entries_for(uid, trip_id, bucket=bucket)
+    return eintraege
+
+
+def test_ac3_schalter_aus_in_stillen_stunden_kein_protokolleintrag():
+    """AC-3 + Spec Implementation Details (Fix-Loop 2, F004): die Schalter-
+    Pruefung sitzt VOR dem Gate. Ein abgeschalteter Trip in seinen Stillen
+    Stunden erzeugt deshalb weder Nowcast-Abruf noch Versand NOCH einen
+    Alarm-Protokolleintrag „zurueckgehalten (Stille Stunden)" — der Nutzer hat
+    den Radar-Alarm abgeschaltet, im Protokoll darf er nicht als zurueck-
+    gehaltener Alarm auftauchen. Gegenprobe: derselbe Aufbau mit Schalter an
+    erzeugt den Unterdrueckungs-Eintrag (der Eintrag ist also beobachtbar)."""
+    uid, ctrl = _uid("ac3-still"), _uid("ac3-still-ctrl")
+    trip_id = "trip-2800-ac3-still"
+    _clean_user(uid)
+    _clean_user(ctrl)
+    try:
+        trip = _alle_kanaele_trip(
+            uid, trip_id, False,
+            alert_quiet_from="11:00", alert_quiet_to="13:00",
+        )
+        radar = _ZaehlendesNassRadar()
+        lauf = AlarmPruefstrecke(user_id=uid, settings=_settings_all_channels()).lauf(
+            at=_AT, zweig="radar", trip=trip, radar_service=radar,
+        )
+        assert radar.calls == [], f"Schalter aus, trotzdem {len(radar.calls)} Nowcast-Abruf(e)"
+        assert lauf.triggered_count == 0 and not any(_kanal_texte(lauf).values()), (
+            f"Schalter aus, trotzdem Versand: {_kanal_texte(lauf)!r}"
+        )
+        eintraege = _protokoll_eintraege(uid, trip_id)
+        assert eintraege == [], (
+            "F004: Schalter aus, trotzdem Alarm-Protokolleintrag — die Schalter-"
+            f"Pruefung sitzt hinter dem Gate: {eintraege!r}"
+        )
+
+        trip_k = _alle_kanaele_trip(
+            ctrl, trip_id, True,
+            alert_quiet_from="11:00", alert_quiet_to="13:00",
+        )
+        radar_k = _ZaehlendesNassRadar()
+        lauf_k = AlarmPruefstrecke(user_id=ctrl, settings=_settings_all_channels()).lauf(
+            at=_AT, zweig="radar", trip=trip_k, radar_service=radar_k,
+        )
+        assert lauf_k.triggered_count == 0, "Gegenprobe: Stille Stunden halten zurueck"
+        gruende = set()
+        for eintrag in _protokoll_eintraege(ctrl, trip_id):
+            gruende |= suppression_reasons(eintrag)
+        assert alert_log.REASON_QUIET_HOURS in gruende, (
+            "Gegenprobe: Schalter an in den Stillen Stunden muss einen "
+            f"Unterdrueckungs-Eintrag erzeugen, Gruende: {gruende!r}"
+        )
     finally:
         _clean_user(uid)
         _clean_user(ctrl)

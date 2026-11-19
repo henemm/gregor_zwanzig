@@ -135,11 +135,13 @@ export type TripSpeicherEingabe = {
 	reportConfig: Record<string, unknown> | null | undefined;
 	warnFelder: WarnFelder | null | undefined;
 	warnungenAn: boolean;
+	/** #2800: Radar-Regen-Schalter des Trips (`radar_alert_enabled`). */
+	radarAn: boolean;
 	tagesfenster: Tagesfenster;
 };
 
 /** Trip: zwei disjunkte PUTs (`/weather-config` mit `ampel` + `metrics`, danach `/trips/{id}`
- *  mit Warn-Feldern und `report_config`). Fremde `display_config`-Schluessel sendet der Reiter nicht. */
+ *  mit Warn-Feldern, Radar-Schalter (#2800) und `report_config`). Fremde `display_config`-Schluessel sendet der Reiter nicht. */
 export function tripSpeicherPayload(e: TripSpeicherEingabe) {
 	const warn = amtlicheWarnungenFelder(e.warnungenAn, e.warnFelder);
 	return {
@@ -150,6 +152,7 @@ export function tripSpeicherPayload(e: TripSpeicherEingabe) {
 		tripFelder: {
 			official_alerts_enabled: warn.official_alerts_enabled,
 			official_warnings: warn.official_warnings,
+			radar_alert_enabled: e.radarAn,
 			report_config: {
 				...klon(e.reportConfig ?? {}),
 				day_window_start_hour: e.tagesfenster.start,
