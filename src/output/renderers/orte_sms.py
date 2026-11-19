@@ -13,7 +13,9 @@ Formatierung fuer Orte. Dieses Modul bildet nur die Eingaben:
   Tageswerte, die die Orte-Mail als Zahl zeigt, aus ``_metric_value``
   (dieselbe Quelle wie die Mail).
 * ``MetricSpec``-Liste aus der SMS-Spalte (Auswahl, Reihenfolge, Roh/Einfach).
-* ``?`` statt ``-`` fuer gewaehlte Groessen ohne Wert an diesem Ort.
+* ``?`` statt ``-`` fuer gewaehlte Groessen ohne Wert an diesem Ort;
+  Wintersport (``SD``/``NS24+``/``SL``) ohne Wert entfaellt wie im Trip
+  (``builder._wintersport``).
 
 Die Kuerzung (Formen von "alle Listenzeilen" bis "keine") nutzt
 ``tokens.render._drop_last_list_row``; die Verteilung des Platzes auf die Orte
@@ -34,7 +36,7 @@ from output.renderers.email.compare_html import _daily_summary, _metric_value, l
 from output.renderers.sms_trip import (
     _dominant_precip_type_code, _dominant_wind_sector, sms_format_fields,
 )
-from output.tokens.builder import PRIORITY, build_token_line
+from output.tokens.builder import build_token_line
 from output.tokens.dto import DailyForecast, HourlyValue, MetricSpec, NormalizedForecast, Token
 from output.tokens.render import _drop_last_list_row, _fuse
 from utils.timezone import local_hour, location_tz, resolve_location_tz
@@ -73,7 +75,6 @@ _STUNDENFELD: dict[str, str] = {
     "TH:": "thunder_level", "WD:": "wind_direction_deg",
 }
 _LISTEN_KATEGORIEN = ("forecast", "wintersport")
-_WINTERSPORT = ("SD", "NS24+", "SL")
 #: Bereichs-Token (``D-5/0``): Hoechstwert-Kuerzel -> Tiefstwert-Kuerzel.
 _BEREICH = {"D": "L", "FD": "FL"}
 
@@ -226,17 +227,11 @@ def _fragezeichen(token: Token, fehlend: set[str]) -> Token:
     return token
 
 
-def _mit_fragezeichen(tokens: list[Token], fehlend: set[str], specs: list[MetricSpec]) -> list[Token]:
+def _mit_fragezeichen(tokens: list[Token], fehlend: set[str]) -> list[Token]:
     """``-`` -> ``?`` fuer gewaehlte Groessen ohne Wert. Wintersport-Werte ohne
-    Wert laesst der Baukasten ganz weg; sie bekommen hier ihr ``?``-Token an
-    ihrem Listenplatz."""
-    out = [_fragezeichen(t, fehlend) if t.category in _LISTEN_KATEGORIEN else t for t in tokens]
-    da = {t.symbol for t in out}
-    out += [Token(s.symbol, "?", "wintersport", PRIORITY[s.symbol], list_position=s.position)
-            for s in specs if s.enabled and s.symbol in _WINTERSPORT
-            and s.symbol in fehlend and s.symbol not in da]
-    liste = sorted((t for t in out if t.list_position is not None), key=lambda t: t.list_position)
-    return liste + [t for t in out if t.list_position is None]
+    Wert (``SD``/``NS24+``/``SL``) laesst der Baukasten ganz weg -- wie im Trip
+    bleiben sie weg, auch bei "nie eingestellt" (kein ``SD?``)."""
+    return [_fragezeichen(t, fehlend) if t.category in _LISTEN_KATEGORIEN else t for t in tokens]
 
 
 # ---------------------------------------------------------------------------
@@ -257,7 +252,7 @@ def orte_token_reihen(
     werte = {sym: _metric_value(loc, rid, summary) for sym, rid in _TAGESWERT_RID.items()}
     zeile = build_token_line(orte_forecast(loc, werte, summary), specs, report_type="morning",
                              stage_name="Ort", ampel=ampel)
-    tokens = _mit_fragezeichen(list(zeile.tokens), _fehlende_kuerzel(loc, werte), specs)
+    tokens = _mit_fragezeichen(list(zeile.tokens), _fehlende_kuerzel(loc, werte))
     reihen = [list(tokens)]
     while _drop_last_list_row(tokens):
         reihen.append(list(tokens))

@@ -220,7 +220,7 @@ Zillertal
    Temp max 14°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h · Wolken 40%
    UV max 2 · Sicht min 9.0 km · Temp min 4°C · Böen 25 km/h
 ----- vergleich.sms -----
-O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD?
+O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ?
 ----- vergleich_nachgeholt.betreff -----
 Orte: Tirol (29.10.2026)
 ----- vergleich_nachgeholt.header -----
@@ -230,7 +230,7 @@ Nachgeliefert — die Zustellung um 06:00 ist fehlgeschlagen
 ----- vergleich_nachgeholt.telegram -----
 Nachgeliefert — die Zustellung um 06:00 ist fehlgeschlagen
 ----- vergleich_nachgeholt.sms -----
-O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD?
+O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ?
 ----- vergleich_kurzform.betreff -----
 Orte: Tirol (29.10.2026)
 ----- vergleich_kurzform.header -----
@@ -241,9 +241,9 @@ ORTE
 Datum: Donnerstag, 29.10.2026
 Erstellt: 29.10.2026 05:00 (CET)
 ----- vergleich_kurzform.telegram -----
-O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD?
+O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ?
 ----- vergleich_kurzform.sms -----
-O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD?
+O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ?
 ----- vorschau.subject -----
 Orte: Tirol (29.10.2026)
 ----- vorschau.telegram -----
@@ -260,7 +260,7 @@ Zillertal
    Temp max 14°C · Wind 12 km/h · Regen 0.6 mm · Regenwahrscheinlichkeit 20% · Gewitter – · Sonne 4.0h · Wolken 40%
    UV max 2 · Sicht min 9.0 km · Temp min 4°C · Böen 25 km/h
 ----- vorschau.sms -----
-O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- SD?
+O1 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O2 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ? O3 D4/14 W- R- PR- TH:- SU4 CT40@9 UV- VS- G- FZ?
 ----- alarm.gesendet -----
 1
 ----- alarm.0.betreff -----

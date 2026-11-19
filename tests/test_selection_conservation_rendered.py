@@ -87,7 +87,7 @@ _KUERZEL = {"temp_max": "D", "wind_max": "W", "cloud_avg": "CT", "sunny_hours": 
 
 
 def _token(teil: str) -> list[str]:
-    """Token eines Ortsteils ``O1 D20 W- SD?`` (ohne ``O{n}``)."""
+    """Token eines Ortsteils ``O1 D20 W-`` (ohne ``O{n}``)."""
     return teil.split(" ")[1:]
 
 
@@ -102,6 +102,13 @@ def _soll_folge(gewaehlt: list[str]) -> list[str]:
     if "D" in folge and "L" in folge:
         folge.remove("L")
     return folge
+
+
+def _soll_sms(gewaehlt: list[str]) -> list[str]:
+    """Erwartete Kuerzel-Folge der Orte-SMS: Wintersport ohne Wert (hier
+    ``SD``, ``OHNE_WERT``) entfaellt wie im Trip (``builder._wintersport``,
+    #3172 Koordinator 2026-11-19); jede andere Groesse ohne Wert stuende als ``?``."""
+    return [k for k in _soll_folge(gewaehlt) if k != "SD"]
 
 
 def _telegram_ortsbloecke(text: str) -> dict[str, list[str]]:
@@ -253,8 +260,8 @@ def test_ac10_sms_zaehler_nur_an_orten_mit_luecke():
     teile = _sms_orte(sms)
     assert len(teile) == 3
     for teil in teile:
-        # #3172 (ADR-0125): die Groesse ohne Wert traegt ``?`` am eigenen Token.
-        assert _token(teil)[-1] == "SD?", f"SD? fehlt im Ortsteil: {teil!r}"
+        # #3172: Wintersport ohne Wert entfaellt wie im Trip (kein ``SD?``).
+        assert _kuerzel_folge(teil) == ["D", "W"], f"SD ohne Wert im Ortsteil: {teil!r}"
         assert _fragezaehler(teil) is None, f"abgeloester Zaehler ?N: {teil!r}"
 
 
@@ -276,11 +283,12 @@ def test_ac12_sms_sichtbar_plus_verdraengt_plus_fehlend_ergibt_gewaehlt():
     sms = render_compare_sms(_result(), enabled_metrics=gewaehlt)
     for teil in _sms_orte(sms):
         # #3172 (ADR-0125): jede gewaehlte Groesse steht als Token (mit Wert,
-        # ``-`` oder ``?``) -- verdraengt wird nur vom Listenende, ohne Zaehler.
+        # ``-`` oder ``?``) -- verdraengt wird nur vom Listenende, ohne Zaehler;
+        # Wintersport ohne Wert entfaellt wie im Trip.
         ist = _kuerzel_folge(teil)
-        assert ist == _soll_folge(gewaehlt)[:len(ist)], f"{teil!r}: Luecke in der Mitte"
-        assert len(ist) == len(gewaehlt), f"{teil!r}: alles passt, nichts darf fehlen"
-        assert "SD?" in _token(teil), f"? fehlt: {teil!r}"
+        assert ist == _soll_sms(gewaehlt)[:len(ist)], f"{teil!r}: Luecke in der Mitte"
+        assert len(ist) == len(_soll_sms(gewaehlt)), f"{teil!r}: alles passt, nichts darf fehlen"
+        assert "SD" not in ist, f"SD ohne Wert: {teil!r}"
 
 
 def test_ac13_premium_sms_bekommt_denselben_text_wie_sms_inklusive_zaehler(tmp_path, monkeypatch):
@@ -306,7 +314,7 @@ def test_ac14_sms_laenge_gsm7_und_zaehler_wird_nie_verdraengt():
             continue
         # #3172 (ADR-0125): gekuerzt wird nur vom Listenende, ohne Zaehler.
         ist = _kuerzel_folge(teil)
-        assert ist and ist == _soll_folge(viele)[:len(ist)], f"nicht vom Ende gekuerzt: {teil!r}"
+        assert ist and ist == _soll_sms(viele)[:len(ist)], f"nicht vom Ende gekuerzt: {teil!r}"
         assert _fragezaehler(teil) is None, teil
 
 
@@ -315,7 +323,7 @@ def test_ac14_zaehler_ist_fester_teil_des_budgets():
     die Notkuerzung zu verlieren. Die Ortsnamen-Laenge wird durchgefahren,
     damit jede Restluecke im Budget einmal knapp ist (ein fester Name traefe
     die kritische Laenge nur zufaellig). #3172 (ADR-0125): kein Zaehler
-    ``?N`` mehr -- die Groesse ohne Wert steht als ``SD?``, gekuerzt wird
+    ``?N`` mehr -- Wintersport ohne Wert entfaellt wie im Trip, gekuerzt wird
     vom Listenende."""
     from output.renderers.comparison import render_compare_sms
 
@@ -332,13 +340,13 @@ def test_ac14_zaehler_ist_fester_teil_des_budgets():
         teil = teile[0]
         assert _fragezaehler(teil) is None, f"abgeloester Zaehler (Name {laenge}): {teil!r}"
         ist = _kuerzel_folge(teil)
-        assert ist and ist == _soll_folge(gewaehlt)[:len(ist)], teil
+        assert ist and ist == _soll_sms(gewaehlt)[:len(ist)], teil
 
 
 def test_ac12_reihenfolge_platzmangel_vor_fehlend_exakt():
     """Adversary F005: Wire-Vertrag sms_format.md §5b, Zeichen fuer Zeichen.
-    #3172 (ADR-0125): die Zaehler ``+N``/``?N`` sind abgeloest; die Groesse
-    ohne Wert steht als ``SD?`` an ihrem Listenplatz."""
+    #3172 (ADR-0125): die Zaehler ``+N``/``?N`` sind abgeloest; Wintersport
+    ohne Wert (``SD``) entfaellt wie im Trip (kein ``SD?``)."""
     from output.renderers.comparison import render_compare_sms
 
     # #3122 B5: bei einem Ort steht der Name im Kopf und nur einmal in der SMS;
@@ -347,7 +355,7 @@ def test_ac12_reihenfolge_platzmangel_vor_fehlend_exakt():
     gewaehlt = ["temp_max", "wind_max", "cloud_avg", "sunny_hours", "precip_sum",
                 "pop_max", "uv_max", OHNE_WERT]
     sms = render_compare_sms(_make_comparison_result([name]), enabled_metrics=gewaehlt)
-    assert sms == "O1 D20 W- CT30@11 SU5 R- PR- UV4@11 SD?", sms
+    assert sms == "O1 D20 W- CT30@11 SU5 R- PR- UV4@11", sms
 
 
 def _sms_ueber_echten_eingang(display_config: dict):

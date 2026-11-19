@@ -340,8 +340,8 @@ def test_sms_ein_ort_ohne_wertzelle_ohne_haengenden_trenner():
     """Ein Ort, bewusst leere Auswahl bzw. gewaehlte Groesse ohne Wert: kein
     haengendes Leerzeichen und kein Trenner (#3172: nur ``O1``)."""
     assert _sms_ein_ort("Tecklenburg", enabled_metrics=[]) == "O1"
-    # #3172 (ADR-0125): gewaehlte Groesse ohne Wert = ``?`` am Kuerzel (statt ``?1``).
-    assert _sms_ein_ort("Tecklenburg", enabled_metrics=["snow_depth_cm"]) == "O1 SD?"
+    # #3172: Wintersport ohne Wert entfaellt wie im Trip (kein ``SD?``).
+    assert _sms_ein_ort("Tecklenburg", enabled_metrics=["snow_depth_cm"]) == "O1"
 
 
 def test_sms_ein_ort_ohne_wertzelle_ungekuerzt_ohne_haengendes_leerzeichen():

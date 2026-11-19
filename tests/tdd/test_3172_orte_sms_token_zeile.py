@@ -284,6 +284,34 @@ def test_ac3_ohne_stundenwerte_steht_fragezeichen_nicht_strich():
     assert _token(_teil(sms, 2)) == ["D14", "W?"], sms
 
 
+_WINTERSPORT_AUSWAHL = ["temp_max_c", "snow_depth_cm", "snow_new_sum_cm", "snowfall_limit_m",
+                        "wind_max_kmh"]
+
+
+@pytest.mark.parametrize("auswahl", [_WINTERSPORT_AUSWAHL, None],
+                         ids=["gewaehlt", "nie_eingestellt"])
+def test_ac3_wintersport_ohne_wert_entfaellt_wie_im_trip(auswahl):
+    """Koordinator 2026-11-19: Schneehoehe, Neuschnee und Schneefallgrenze
+    OHNE Wert stehen nicht in der SMS (kein ``SD?``/``NS24+?``/``SL?``) --
+    genau wie ``builder._wintersport`` im Trip; auch bei "nie eingestellt".
+    Andere gewaehlte Groessen ohne Wert behalten ihr ``?`` (``W?``)."""
+    ohne = _ergebnis(_ort("Kiel"), _punkte({"t2m_c": 15.0, "wind10m_kmh": None}))
+    mit = _ergebnis(_ort("Oberstdorf"),
+                    _punkte({"t2m_c": 2.0, "wind10m_kmh": 9.0, "snowfall_limit_m": 900}),
+                    snow_depth_cm=40.0, snow_new_cm=12.0)
+    dc = {} if auswahl is None else {"active_metrics": auswahl}
+    sms = _sms(_kontext(_vergleich([ohne, mit]), dc))
+
+    kiel = _token(_teil(sms, 1))
+    assert not any(t.startswith(("SD", "NS24+", "SL")) for t in kiel), sms
+    assert "SD?" not in sms and "NS24+?" not in sms and "SL?" not in sms, sms
+    assert "W?" in kiel, f"die ?-Regel gilt weiter fuer andere Groessen: {sms}"
+    # Gegenprobe: mit Wert stehen die Wintersport-Token wie im Trip.
+    if auswahl is not None:
+        ober = _token(_teil(sms, 2))
+        assert {"SD40", "NS24+12", "SL900"} <= set(ober), sms
+
+
 # ---------------------------------------------------------------------------
 # AC-4 -- Kuerzung: gleich viele Listenzeilen, dann erst " +k Orte"
 # ---------------------------------------------------------------------------

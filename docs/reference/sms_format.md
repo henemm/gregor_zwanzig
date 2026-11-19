@@ -682,7 +682,8 @@ Regeln je Ort:
   (`L`, `D`, `FL`, `FD`, `SU`, `HP`, `SD`, `NS24+`, `SL`) aus derselben Quelle wie die Orte-Mail.
   Temperaturen ganzzahlig gerundet (keine negative Null), Windrichtung als Himmelsrichtung (`WD:NW`).
 - **Leer- und Fehlwerte wie im Trip (§4):** `-` = geprüft und unauffällig (unter Gelb, kein Regen,
-  kein Gewitter), `?` = an diesem Ort kein Wert vorhanden (`W?`, `D?`, `SD?`).
+  kein Gewitter), `?` = an diesem Ort kein Wert vorhanden (`W?`, `D?`). Wintersport (`SD`, `NS24+`,
+  `SL`) ohne Wert entfällt wie im Trip (`builder._wintersport`, nie `SD?`), auch bei „nie eingestellt“.
 - **Nacht `N`/`FN` und Folgetag `TH+:` entfallen bei Orten** (ADR-0125 Nr. 5); die Gewitter-Zeile
   ist `TH:` allein.
 - **Amtliche Warnungen** als `!`-Block am Ende des Ortsteils (§3.4c, Startschwelle „gering“).
