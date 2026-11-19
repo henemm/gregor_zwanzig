@@ -433,6 +433,11 @@ test.describe('Karte „Was steht wo“', () => {
 		}
 	});
 
+	// „Gespeicherte Tabelle“ heißt: placements.rows liegt vor (wie read_placements im Kern).
+	// Die Ausblick-Marke der Orte-Anlage (#3155, placements ohne rows) ist keine Tabelle.
+	const hatTabelle = (dc: Json | undefined): boolean =>
+		Array.isArray(((dc ?? {}) as { placements?: { rows?: unknown } }).placements?.rows);
+
 	for (const fall of [FAELLE[0], FAELLE[1]]) {
 		test(`WS-6 (${fall.name}): „−“ und „+“ schreiben die Tabelle mit; ohne gespeicherte Tabelle legt „−“ keine an`, async ({ page }) => {
 			await page.setViewportSize(DESKTOP);
@@ -450,14 +455,14 @@ test.describe('Karte „Was steht wo“', () => {
 				let put = wetterPut();
 				await reiter.getByTestId(WT.entfernen('gust')).click();
 				expect((await put).status()).toBe(200);
-				expect('placements' in ((await stand(page.request, abo.kind, abo.id)).display_config ?? {}), 'stored: false bleibt').toBe(false);
+				expect(hatTabelle((await stand(page.request, abo.kind, abo.id)).display_config), 'stored: false bleibt').toBe(false);
 				await expect(zeile(karte, 'gust')).toHaveCount(0);
 				// T1: auch „+“ legt ohne gespeicherte Tabelle keine an.
 				put = wetterPut();
 				await reiter.getByTestId(WT.plus('gust')).click();
 				const plusRumpf = (await put).request().postDataJSON();
-				expect('placements' in (plusRumpf.display_config ?? plusRumpf), '„+“ sendet keine Tabelle').toBe(false);
-				expect('placements' in ((await stand(page.request, abo.kind, abo.id)).display_config ?? {}), 'stored: false bleibt nach „+“').toBe(false);
+				expect(hatTabelle(plusRumpf.display_config ?? plusRumpf), '„+“ sendet keine Tabelle').toBe(false);
+				expect(hatTabelle((await stand(page.request, abo.kind, abo.id)).display_config), 'stored: false bleibt nach „+“').toBe(false);
 				await expect(zeile(karte, 'gust')).toHaveCount(1, { timeout: 20_000 });
 
 				// 2. Tabelle speichern (Haken ab), dann „−“ an Wind: Zeile im selben Speichervorgang weg.
