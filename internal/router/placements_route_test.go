@@ -17,8 +17,14 @@ import (
 )
 
 func TestPlacementsRoutenAmEchtenRouter(t *testing.T) {
-	var kernAnfragen []*url.URL
+	var kernAnfragen, erstanlage []*url.URL
 	kern := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/placements/erstanlage") {
+			// #3154: Begleitfeld-Abfrage des PUT (eigene Mitschrift).
+			erstanlage = append(erstanlage, r.URL)
+			_, _ = w.Write([]byte(`{"show_stability_off": false}`))
+			return
+		}
 		kernAnfragen = append(kernAnfragen, r.URL)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"rows": [], "kern": "antwort"}`))
@@ -91,6 +97,9 @@ func TestPlacementsRoutenAmEchtenRouter(t *testing.T) {
 	}
 	if roh, _ := os.ReadFile(datei); !strings.Contains(string(roh), `"placements"`) {
 		t.Errorf("PUT hat placements nicht in die Abo-Datei geschrieben")
+	}
+	if len(erstanlage) != 1 || erstanlage[0].Query().Get("user_id") != "userA" {
+		t.Errorf("Begleitfeld-Abfrage beim Kern: %v", erstanlage)
 	}
 	req2 := httptest.NewRequest(http.MethodPut, pfad, strings.NewReader(`{"version": 1, "rows": []}`))
 	req2.Header.Set("Content-Type", "application/json")

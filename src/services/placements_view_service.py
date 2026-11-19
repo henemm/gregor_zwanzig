@@ -103,6 +103,32 @@ def build_placements_view(kind: str, entity_id: str, user_id: str) -> dict:
     return _antwort(kind, abo, tabelle, placements, gespeichert, muster, lang)
 
 
+def erstanlage_begleitfelder(kind: str, entity_id: str, user_id: str) -> dict:
+    """#3154 F002 (Spec Nr. 8, AC-11): was das Speichern der Tabelle JETZT
+    neben ``placements`` mitschreiben muss, damit die Ausgabe gleich bleibt.
+
+    Die Aussage kommt allein aus der Umrechnung ``placements_from_legacy``:
+    ``show_stability_off`` gilt nur fuer ein Abo ohne lesbare Tabelle (erstes
+    Speichern); mit Tabelle ist sie immer ``False``. Der Go-PUT fragt das
+    unter der Briefing-Sperre ab und schreibt ``report_config.show_stability
+    = false`` im selben Schreibvorgang. Fehler wie ``build_placements_view``."""
+    from services.placements import placements_from_legacy
+
+    if kind not in KINDS:
+        raise ValueError(kind)
+    if not _kennung_gueltig(entity_id):
+        raise AboNichtGefunden(entity_id)
+    if kind == "route":
+        abo, _muster = _trip_abo(entity_id, user_id, "de")
+    else:
+        abo, _muster = _orte_abo(entity_id, user_id, "de")
+    umgerechnet = placements_from_legacy(
+        abo.display_config, abo.surface, report_config=abo.report_config,
+        enabled_reports=abo.enabled_reports, outlook_enabled=abo.outlook_enabled,
+    )
+    return {"show_stability_off": umgerechnet.show_stability_off}
+
+
 # ---------------------------------------------------------------------------
 # Aufloesung und Antwort
 # ---------------------------------------------------------------------------

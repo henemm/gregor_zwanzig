@@ -45,3 +45,23 @@ def get_briefing_placements(
         return build_placements_view(kind, entity_id, user_id)
     except (AboNichtGefunden, InvalidUserIdError):
         return _error("not_found", user_id, entity_id=entity_id)
+
+
+@router.get("/api/briefings/{entity_id}/placements/erstanlage")
+def get_placements_erstanlage(
+    entity_id: str,
+    user_id: str = Query(...),
+    kind: str | None = Query(None),
+):
+    """#3154 F002: Begleitfelder des Tabellen-Speicherns (nur fuer den
+    Go-PUT): ``{"show_stability_off": bool}`` aus ``placements_from_legacy``."""
+    from services.placements_view_service import (
+        KINDS, AboNichtGefunden, erstanlage_begleitfelder,
+    )
+
+    if kind not in KINDS:
+        return _error("kind_required", user_id)
+    try:
+        return erstanlage_begleitfelder(kind, entity_id, user_id)
+    except (AboNichtGefunden, InvalidUserIdError):
+        return _error("not_found", user_id, entity_id=entity_id)

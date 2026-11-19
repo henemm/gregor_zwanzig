@@ -84,7 +84,7 @@ var storeMethodRegister = map[string]guardEntry{
 
 	"BriefingFingerprint": guarded(func(s *Store) error { _, err := s.BriefingFingerprint("b1"); return err }),
 	// Issue #3122 B2: Schreibweg der Tabelle "Was steht wo".
-	"SaveBriefingPlacements": guarded(func(s *Store) error { return s.SaveBriefingPlacements("b1", false, []byte(`{}`)) }),
+	"SaveBriefingPlacements": guarded(func(s *Store) error { return s.SaveBriefingPlacements("b1", false, []byte(`{}`), false) }),
 
 	"LoadBriefingLog":       guarded(func(s *Store) error { _, err := s.LoadBriefingLog(); return err }),
 	"LoadAlertLog":          guarded(func(s *Store) error { _, err := s.LoadAlertLog(); return err }),

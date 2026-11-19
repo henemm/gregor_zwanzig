@@ -44,6 +44,12 @@ func neuerKern(t *testing.T) *kernMitschrift {
 	t.Helper()
 	k := &kernMitschrift{}
 	k.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/placements/erstanlage") {
+			// #3154: Begleitfeld-Abfrage des PUT -- hier nichts mitzuschreiben.
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"show_stability_off": false}`))
+			return
+		}
 		k.mu.Lock()
 		k.anfragen = append(k.anfragen, r.URL)
 		k.mu.Unlock()
@@ -63,7 +69,7 @@ func (k *kernMitschrift) zahl() int {
 func placementsRouter(s *store.Store, pythonURL string) *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/api/briefings/{id}/placements", BriefingPlacementsGetHandler(s, pythonURL))
-	r.Put("/api/briefings/{id}/placements", BriefingPlacementsPutHandler(s))
+	r.Put("/api/briefings/{id}/placements", BriefingPlacementsPutHandler(s, pythonURL))
 	r.Get("/api/briefings/{id}", GetBriefingHandler(s))
 	r.Put("/api/briefings/{id}", UpdateBriefingHandler(s))
 	r.Put("/api/trips/{id}", UpdateTripHandler(s))
