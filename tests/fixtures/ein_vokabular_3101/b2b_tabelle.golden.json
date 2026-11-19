@@ -561,7 +561,7 @@
   }
  ],
  "sms_example": {
-  "length": 152,
+  "length": 147,
   "max_length": 153,
   "overflow": {
    "locations": 3,
@@ -571,7 +571,7 @@
     3
    ]
   },
-  "text": "Vergleich 14.07.: Innsbruck G 62 km/h FL 12C CT 70% R 3.4 mm +3; Lienz G 63 km/h FL 13C CT 70% R 3.4 mm +3; Kufstein G 64 km/h FL 14C CT 70% R 3.4 mm +3"
+  "text": "Orte 14.07.: Innsbruck G 62 km/h FL 12C CT 70% R 3.4 mm +3; Lienz G 63 km/h FL 13C CT 70% R 3.4 mm +3; Kufstein G 64 km/h FL 14C CT 70% R 3.4 mm +3"
  },
  "stored": true
 }

@@ -623,7 +623,7 @@
   }
  ],
  "sms_example": {
-  "length": 110,
+  "length": 105,
   "max_length": 153,
   "overflow": {
    "locations": 0,
@@ -633,7 +633,7 @@
     null
    ]
   },
-  "text": "Vergleich 14.07.: Innsbruck D 19C W 43 km/h L 15C; Lienz D 20C W 44 km/h L 16C; Kufstein D 21C W 45 km/h L 17C"
+  "text": "Orte 14.07.: Innsbruck D 19C W 43 km/h L 15C; Lienz D 20C W 44 km/h L 16C; Kufstein D 21C W 45 km/h L 17C"
  },
  "stored": false
 }

@@ -745,6 +745,8 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
     labels = _uebersicht_labels(paare, lang)
     return {
         "kontext": "orte",
+        # #3122 B5 (F-V1): Nutzerdaten, die der Namens-Check ausblendet.
+        "abo_name": preset.get("name") if isinstance(preset.get("name"), str) else "",
         "uebersicht": warn + labels,
         "warnungen": warnungen_an(preset),
         # Zieltag-Versatz je eingeschaltetem Slot (Morgen 0, Abend +1 Tag).

@@ -1798,5 +1798,5 @@ FEHLERTEXTE = (
     # Premium-SMS und Telegram-Kurzform seither senden.
     "Ambiguous",
     "Unknown command",
-    "No active trip or location comparison found.",
+    "No active trip or locations subscription found.",
 )

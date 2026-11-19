@@ -1,4 +1,4 @@
-LOCATION COMPARISON
+LOCATIONS
 ========================
 Date: Thursday, 29 Oct 2026
 Created: 29 Oct 2026 05:00 (CET)
@@ -90,7 +90,7 @@ Kufstein
 Brenner
    Error: Zeitueberschreitung beim Abruf
 
-… +1 selected weather value without data in this comparison
+… +1 selected weather value without data in the overview
 
 HOURLY VIEW
 ---------------
@@ -145,13 +145,13 @@ HELD BACK — as you set it up
 
 
 ── Reply commands ──
-  TODAY                – Send the comparison for today now
-  TOMORROW             – Send the comparison for tomorrow now
+  TODAY                – Send today's briefing now
+  TOMORROW             – Send tomorrow's briefing now
   PAUSE                – Pause briefings for a while
   RESUME               – Turn briefings back on
   HELP                 – Show this help
   CODES                – Show what the codes mean
-  REPORT               – Send the comparison to all channels now
+  REPORT               – Send the briefing to all channels now
 
 ---
 Gregor Zwanzig

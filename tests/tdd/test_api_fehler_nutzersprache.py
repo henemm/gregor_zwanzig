@@ -139,22 +139,22 @@ def test_vergleichs_alarm_vorschau_fremd_und_ohne_orte(client, nutzer):
     fremd = post("cp-b", a)
     assert fremd.status_code == 404
     assert fremd.json() == {
-        "detail": f"Location comparison 'cp-b' not found for user '{a}'",
+        "detail": f"Locations subscription 'cp-b' not found for user '{a}'",
         "code": "vergleich_nicht_gefunden"}
     assert "Bertsdorf" not in fremd.text and "loc-b" not in fremd.text
 
     leer_en = post("cp-a-leer", a)
     assert leer_en.status_code == 422
     assert leer_en.json() == {
-        "detail": "Invalid alert body: Location comparison 'cp-a-leer' has no locations "
-                  "configured - there is nothing to compare.",
+        "detail": "Invalid alert body: Locations subscription 'cp-a-leer' has no locations "
+                  "configured.",
         "code": "vergleich_ohne_orte"}
 
     leer_de = post("cp-b-leer", b)
     assert leer_de.status_code == 422
     assert leer_de.json() == {
-        "detail": "Ungültiger Alarm-Körper: Orts-Vergleich 'cp-b-leer' hat keine Orte "
-                  "konfiguriert — es gibt nichts zu vergleichen.",
+        "detail": "Ungültiger Alarm-Körper: Orte-Abo 'cp-b-leer' hat keine Orte "
+                  "konfiguriert.",
         "code": "vergleich_ohne_orte"}
 
     eigen_de = post("cp-b", b)
@@ -171,7 +171,7 @@ def test_vergleichs_alarm_vorschau_fremder_ort_behaelt_deutschen_text(client, nu
     assert antwort.status_code == 422
     assert antwort.json() == {
         "detail": "Ungültiger Alarm-Körper: Orte ['loc-x'] gehoeren nicht zu diesem "
-                  "Orts-Vergleich",
+                  "Orte-Abo",
         "code": "vergleich_orte_fremd"}
 
 
@@ -270,8 +270,8 @@ def test_leerer_vergleich_meldet_ohne_orte_vor_body_pruefung(client, nutzer, bod
                           params={"kind": "vergleich", "user_id": uid}, json=body)
     assert antwort.status_code == 422
     assert antwort.json() == {
-        "detail": "Ungültiger Alarm-Körper: Orts-Vergleich 'cp-leer' hat keine Orte "
-                  "konfiguriert — es gibt nichts zu vergleichen.",
+        "detail": "Ungültiger Alarm-Körper: Orte-Abo 'cp-leer' hat keine Orte "
+                  "konfiguriert.",
         "code": "vergleich_ohne_orte"}
 
 
@@ -295,7 +295,7 @@ def test_ohne_nutzer_deutsch_auch_wenn_default_englisch_ist(default_nutzer_en):
 
     assert resolve_user_lang("default") == "en"  # Fixture wirkt
     exc = fehler_mit_code(ValueError, "vergleich_ohne_orte", preset_id="p")
-    deutsch = "Orts-Vergleich 'p' hat keine Orte konfiguriert — es gibt nichts zu vergleichen."
+    deutsch = "Orte-Abo 'p' hat keine Orte konfiguriert."
     assert api_fehler(422, "vergleich_ohne_orte", None, preset_id="p").detail == deutsch
     assert meldung_aus(exc, None) == deutsch
     fehler = api_fehler_aus(exc, 422, None)

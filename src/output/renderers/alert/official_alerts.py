@@ -2627,7 +2627,14 @@ def build_compare_official_alert_notices(
         # Issue #2668: `scope_label` in ``lang``; `sms_scope` in jeder Sprache
         # der bisherige (deutsche) Wert (PO-Korrektur 2026-10-31).
         unbekannt = t("warnung.zeit.unbekannt")
-        if is_full:
+        if is_full and len(all_set) == 1 and len(affected) == 1:
+            # #3153 AC-2 (#3122 AC-36): ein Abo mit genau einem Ort sagt nie
+            # "alle Orte" -- der Umfang ist der Ort selbst (ohne "nur"); das
+            # Label gleicht dem einzigen Chip, Headline und Quelle-Satz nennen
+            # ihn daher nicht ein zweites Mal (`_scope_matches_sole_chip`).
+            scope_label = affected[0]
+            sms_scope = affected[0].replace(" ", "")
+        elif is_full:
             scope_label, sms_scope = t("warnung.umfang.alle_orte", lang), "alleOrte"
         elif len(affected) == 1:
             scope_label = t("warnung.umfang.nur", lang, ort=affected[0])

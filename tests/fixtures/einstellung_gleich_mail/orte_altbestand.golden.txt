@@ -1,4 +1,4 @@
-ORTS-VERGLEICH
+ORTE
 ========================
 Datum: Donnerstag, 29.10.2026
 Erstellt: 29.10.2026 05:00 (CET)
@@ -75,13 +75,13 @@ Einheiten: Temp °C · Wind, Gust km/h · Rain mm
 Spalten: Temp = Temperatur · Rain = Niederschlag · Gust = Böen
 
 ── Antwort-Kommandos ──
-  HEUTE                – Vergleich für heute jetzt senden
-  MORGEN               – Vergleich für morgen jetzt senden
+  HEUTE                – Briefing für heute jetzt senden
+  MORGEN               – Briefing für morgen jetzt senden
   PAUSE                – Briefings für Dauer unterbrechen
   WEITER               – Briefings reaktivieren
   HILFE                – Diese Hilfe anzeigen (auch HELP)
   KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
-  REPORT               – Vergleich jetzt an alle Kanäle senden
+  REPORT               – Briefing jetzt an alle Kanäle senden
 
 ---
 Gregor Zwanzig

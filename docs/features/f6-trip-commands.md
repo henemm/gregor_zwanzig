@@ -4,7 +4,7 @@
 drei Eingangskanäle auch am **Ortsvergleich** ansprechbar — Details im Abschnitt
 „Ortsvergleich per Nachricht" unten.
 
-**Updated:** 2026-09-28 (Issue #2417, Kurzform englisch — jeder Befehl bekommt ein
+**Updated:** 2026-11-19 (#3153 B5, ADR-0124 Nr. 10): Befehlsantworten nennen den Bereich „Orte-Abo“ (EN „Locations subscription“) statt „Ortsvergleich“; die zitierten Antworttexte unten sind angepasst. Der Abschnitt-Titel „Ortsvergleich per Nachricht“ bleibt als interner Name. **Vorher:** 2026-09-28 (Issue #2417, Kurzform englisch — jeder Befehl bekommt ein
 englisches Wort (`TODAY`, `TOMORROW`, `STORMS`, `ROUTE`, `RESTDAY`, `RESUME`, `HELP`
 waren teils schon da, neu `CODES`/`KUERZEL`); die Antwortsprache folgt Kanal/Ziel statt
 der Eingabesprache (Premium-SMS immer englisch, E-Mail immer deutsch, Telegram nach
@@ -269,7 +269,7 @@ Befehlsart (löst die vorherige pauschale Mehrdeutigkeits-Regel ab):
   unabhängig davon, wie viele Ortsvergleiche daneben aktiv sind, und **ohne**
   Rückfrage. Gibt es **keinen** aktiven Trip, aber ≥1 aktiven Ortsvergleich,
   antwortet Gregor mit „Kein aktiver Trip. Dieser Befehl gilt nur für Trips, nicht
-  für Ortsvergleiche." — bewusst unterscheidbar vom Fall „gar nichts aktiv" unten.
+  für Orte-Abos." — bewusst unterscheidbar vom Fall „gar nichts aktiv" unten.
   **Ausnahme seit #2282 S2 (2026-10-22):** `REPORT`/`HEUTE`/`MORGEN` gelten auch am
   Ortsvergleich (siehe Tabelle unten). Ohne Namen bei Trip **und** Vergleich fragt
   Gregor deshalb zurück (wie `PAUSE`/`WEITER`); bei reinem Vergleichsnutzer wird der
@@ -282,8 +282,8 @@ Befehlsart (löst die vorherige pauschale Mehrdeutigkeits-Regel ab):
   bereits pausierten) Ortsvergleich, wird dieser direkt angesprochen.
 
 Gibt es weder einen aktiven Trip noch einen aktiven Ortsvergleich, lautet die
-Antwort auf allen Kanälen einheitlich „Kein aktiver Trip oder Ortsvergleich
-gefunden."
+Antwort auf allen Kanälen einheitlich „Kein aktiver Trip und kein aktives Orte-Abo
+gefunden." (Katalog `inbound.ziel.kein_kandidat`; seit #3153 B5 heißt der Bereich „Orte-Abo“, nicht „Ortsvergleich“)
 
 **Adressierung mit Namen:** Ein vorangestellter Name (Telegram/Premium-SMS) bzw. das
 `[Name]` im Email-Betreff wird gegen Trips **und** Ortsvergleiche geprüft. Tragen ein
@@ -299,8 +299,8 @@ ebenfalls zurück, statt still den Trip zu bevorzugen.
 | `HILFE` / `HELP` | Zeigt nur die am Ortsvergleich verfügbaren Befehle (`HEUTE`, `MORGEN`, `REPORT`, `PAUSE`, `WEITER`/`RESUME`, `HILFE`/`HELP`, `KUERZEL`/`CODES`; der Befehlsblock der Vergleichs-Mail nennt HEUTE/MORGEN/REPORT ebenfalls) — nicht die volle Trip-Befehlsliste |
 | `KUERZEL` / `CODES` | Kürzel-Legende (seit Issue #2417) — wie am Trip; „TF" (gefühlte Temperatur) steht seit Issue #2422 S6 (2026-10-01) auch in der Trip-Antwort, weil der Trip das Token jetzt versendet (zuvor seit #2454 dort ausgeblendet) |
 | `REPORT` | Seit #2282 S2: liefert das Vergleichs-Briefing auf **allen aktivierten Kanälen** (Handversand `on_demand`; Δ-Anker und reguläres Briefing bleiben unberührt) |
-| `HEUTE`, `MORGEN` | Seit #2282 S2: Vergleichs-Briefing **nur auf dem Anfragekanal**. `MORGEN` = Ortstag+1 im Abend-Slot; Ortstag über `preset_ortstag` (`compare_slot_scheduler.py`) wie im Cron. Kanal-Auflösung geteilt mit dem Trip (`resolve_restricted_channel_flags`, `src/services/user_tier.py`); Premium-SMS am Anfragekanal nur mit Premium-Tarif, sonst „nicht erreichbar". Fehlertexte aus denselben Tabellen wie beim Trip (Label „Ortsvergleich"), neuer Code `invalid_preset` |
-| alle übrigen (`STRECKE`, `SKIP`, `RUHETAG`, `STARTDATUM`, `STOP`, `JETZT`/`NOW`, `STATUS`, `GEWITTER`, Drilldowns, Metrikwörter) | „'<befehl>' gibt es beim Ortsvergleich nicht." |
+| `HEUTE`, `MORGEN` | Seit #2282 S2: Vergleichs-Briefing **nur auf dem Anfragekanal**. `MORGEN` = Ortstag+1 im Abend-Slot; Ortstag über `preset_ortstag` (`compare_slot_scheduler.py`) wie im Cron. Kanal-Auflösung geteilt mit dem Trip (`resolve_restricted_channel_flags`, `src/services/user_tier.py`); Premium-SMS am Anfragekanal nur mit Premium-Tarif, sonst „nicht erreichbar". Fehlertexte aus denselben Tabellen wie beim Trip (Label „Orte-Abo“), neuer Code `invalid_preset` |
+| alle übrigen (`STRECKE`, `SKIP`, `RUHETAG`, `STARTDATUM`, `STOP`, `JETZT`/`NOW`, `STATUS`, `GEWITTER`, Drilldowns, Metrikwörter) | „'<befehl>' gibt es beim Orte-Abo nicht." (Katalog `inbound.vergleich.nicht_verfuegbar.text`) |
 
 **Bekannte Grenze:** Die Pause-Semantik am Ortsvergleich unterscheidet sich bewusst
 vom Trip — unbefristet bis `WEITER`, keine Dauer, kein `STOP`-Verweis. Der Wortlaut

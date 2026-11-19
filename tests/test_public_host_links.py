@@ -346,7 +346,7 @@ class TestAC4TelegramProseUsesConfiguredHost:
         reader._process_update(_incoming_update(chat_id, "status"), settings)
         body = "\n".join(rec.texts())
         assert KEIN_KANDIDAT_TEXT in body, (
-            f"#2282 AC-5: 'Kein aktiver Trip oder Ortsvergleich'-Meldung "
+            f"#2282 AC-5: 'Kein aktiver Trip und kein aktives Orte-Abo'-Meldung "
             f"fehlt oder weicht vom Text aus trip_selection ab: {body!r}"
         )
         assert "staging.gregor20.henemm.com" not in body, (
