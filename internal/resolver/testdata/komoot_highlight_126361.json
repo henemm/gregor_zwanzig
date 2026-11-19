@@ -1,0 +1,166 @@
+{
+  "id": 126361,
+  "type": "highlight_point",
+  "base_name": "Passo Gavia",
+  "name": "Gavia Pass",
+  "name_translation_metadata": {
+    "original_text": "Passo Gavia",
+    "is_automated": true,
+    "language": "en"
+  },
+  "created_at": "2016-01-26T09:00:07.647Z",
+  "changed_at": "2026-09-27T02:18:46.262Z",
+  "sport": "touringbicycle",
+  "routable": true,
+  "start_point": {
+    "lat": 46.343469,
+    "lng": 10.487384,
+    "alt": 2614.9
+  },
+  "mid_point": {
+    "lat": 46.343469,
+    "lng": 10.487384,
+    "alt": 2614.9
+  },
+  "end_point": {
+    "lat": 46.343469,
+    "lng": 10.487384,
+    "alt": 2614.9
+  },
+  "distance": 0,
+  "elevation_up": 0,
+  "elevation_down": 0,
+  "score": 0.31,
+  "wiki_poi_id": "efbI",
+  "poor_quality": false,
+  "category": "mountain_pass",
+  "categories": [
+    "mountain_pass",
+    "trail",
+    "viewpoint",
+    "climb",
+    "challenging",
+    "mountain_pass",
+    "hut",
+    "restaurant",
+    "intermediate",
+    "cafe",
+    "natural_monument"
+  ],
+  "flagged": false,
+  "information": [
+    {
+      "type": "RESTRICTED",
+      "segments": [
+        {
+          "from": 0,
+          "to": 0
+        }
+      ]
+    },
+    {
+      "type": "CONSERVATION_AREA",
+      "segments": [
+        {
+          "from": 0,
+          "to": 0,
+          "extra": {
+            "name": "Parco Nazionale dello Stelvio - Nationalpark Stilfser Joch",
+            "protect_class": "2"
+          }
+        }
+      ]
+    }
+  ],
+  "sport_scores": {
+    "mtb": 0.31,
+    "hike": 0.31,
+    "sled": 0.31,
+    "e_mtb": 0.31,
+    "nordic": 0.31,
+    "skaten": 0.17,
+    "jogging": 0.31,
+    "skitour": 0.17,
+    "citybike": 0.31,
+    "climbing": 0.17,
+    "mtb_easy": 0.31,
+    "racebike": 0.31,
+    "skialpin": 0.17,
+    "snowshoe": 0.17,
+    "unicycle": 0.31,
+    "snowboard": 0.17,
+    "e_mtb_easy": 0.31,
+    "e_racebike": 0.31,
+    "downhillbike": 0.31,
+    "mtb_advanced": 0.31,
+    "nordicwalking": 0.17,
+    "e_mtb_advanced": 0.31,
+    "mountaineering": 0.31,
+    "touringbicycle": 0.31,
+    "e_touringbicycle": 0.31,
+    "mountaineering_advanced": 0.17
+  },
+  "editorial": true,
+  "_links": {
+    "self": {
+      "href": "https://api.komoot.de/v007/highlights/126361"
+    },
+    "seasonality": {
+      "href": "https://api.komoot.de/v007/highlights/126361/seasonality"
+    },
+    "tips": {
+      "href": "https://api.komoot.de/v007/highlights/126361/tips/"
+    },
+    "images": {
+      "href": "https://api.komoot.de/v007/highlights/126361/images/"
+    },
+    "recommenders": {
+      "href": "https://api.komoot.de/v007/highlights/126361/recommenders/"
+    },
+    "creator": {
+      "href": "https://api.komoot.de/v007/users/komoot/profile_embedded"
+    },
+    "discover_tours": {
+      "href": "https://api.komoot.de/v007/discover_tours/for_highlight/126361/"
+    },
+    "bookmark": {
+      "href": "https://api.komoot.de/v007/highlights/126361/bookmark/{username}",
+      "templated": true
+    },
+    "recommendation": {
+      "href": "https://api.komoot.de/v007/highlights/126361/recommendation/{username}",
+      "templated": true
+    },
+    "seo_regions": {
+      "href": "https://api.komoot.de/v007/highlights/126361/seo_regions/"
+    },
+    "content": {
+      "href": "https://api.komoot.de/v007/highlights/126361/content"
+    },
+    "front_image": {
+      "href": "https://api.komoot.de/v007/highlights/126361/images/60872942"
+    }
+  },
+  "_embedded": {
+    "creator": {
+      "username": "komoot",
+      "avatar": {
+        "src": "https://d2exd72xrrp1s7.cloudfront.net/www/000/defaultuserimage-full/1?width={width}&height={height}&crop={crop}",
+        "templated": true,
+        "type": "image/*"
+      },
+      "status": "public",
+      "_links": {
+        "self": {
+          "href": "https://api.komoot.de/v007/users/komoot/profile_embedded"
+        },
+        "relation": {
+          "href": "https://api.komoot.de/v007/users/{username}/relations/komoot",
+          "templated": true
+        }
+      },
+      "display_name": "a_komoot_user",
+      "is_premium": false
+    }
+  }
+}
