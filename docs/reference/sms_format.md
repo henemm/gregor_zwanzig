@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.46"
+version: "2.47"
 status: active
 created: 2025-12-27
-updated: 2026-11-17
+updated: 2026-11-19
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -250,7 +250,7 @@ Levels für `TH`/`TH+`:
   - Dieselbe Regel gilt für Premium-SMS, den 3-Tages-Ausblick und die Mail-Kachel (`app.ampel.schlimmster_index`).
 - Ist keine Stunde gelb oder schlechter, bleibt es bei der Null-Form (`R-`, `TH:-`, …).
 - Die Ampel-Hervorhebung gilt für `R`, `PR`, `W`, `G`, `UV`, `TH:`/`TH+:` sowie `L`/`D`/`FL`/`FD` (Temperatur, s. unten). Für `HU` gilt die feste Grenze 90 % (§3.2a). Die übrigen Klasse-(a)-Größen haben keinen Ampel-Leser (§3.2a).
-- `render_compare_sms` (Ortsvergleich) hat keinen Hervorhebungsleser und bleibt unverändert (Einfach wirkt in der Ortsvergleich-SMS nur auf die Bewölkungsstufe, daher betrifft B-L3 die SMS nicht).
+- `render_compare_sms` (Orte) schreibt seit v2.47 (#3172, ADR-0125) dieselbe Token-Zeile und liest dafür die Abo-Ampel des Orte-Abos; die Hervorhebung gilt dort genauso (§5b). Bis v2.46 hatte die Orte-SMS keinen Hervorhebungsleser.
 - `sms_threshold` und die früheren Standardwerte (`DEFAULTS`) wirken **nicht mehr**. Die Werte bleiben gespeichert, werden aber nicht ausgewertet (E1).
 - Die Mail-Erwähnungen nutzen dasselbe Prädikat „gelb oder schlechter“, damit Mail und Kurzkanal bei jedem Wert gleich entscheiden.
 
@@ -634,49 +634,63 @@ mehrere Premium-SMS.
 
 ---
 
-## 5b. Ortsvergleich-SMS: Zähler `?N` für fehlende Größen (Issue #1405 S3)
+## 5b. Orte-SMS: Token-Zeile je Ort (seit v2.47, Issue #3172, ADR-0125)
 
-**Kopf der Orte-SMS (seit v2.45, #3122 B5, ADR-0124 Nr. 10 und Nachtrag Nr. 1):** Der Bereich heißt „Orte“, auch bei einem einzelnen Ort; „Vergleich“ entfällt. Der Kopf ist sprachfest (ADR-0104, wie zuvor „Vergleich“), also auch in englischer Sendung deutsch:
+Die Orte-SMS (`render_compare_sms`, auch Premium-SMS und Telegram-Kurzstil der Orte —
+derselbe Text) schreibt je Ort **die Token-Zeile der Trip-SMS** (§2–§6): dieselben Kürzel,
+dieselbe Wert-Syntax, dieselbe Hervorhebung `@h` nach der Abo-Ampel, gebaut über denselben
+Token-Baukasten (`output/tokens/builder.py::build_token_line`, Eingaben aus
+`output/renderers/orte_sms.py`). Eine eigene Formatierung für Orte gibt es nicht mehr (ADR-0125).
+
+**Kopf (seit v2.45, #3122 B5, ADR-0124 Nr. 10 und Nachtrag Nr. 1):** Der Bereich heißt „Orte“,
+auch bei einem einzelnen Ort. Der Kopf ist sprachfest (ADR-0104):
 
 | Fall | SMS |
 |---|---|
-| mehrere Orte | `Orte 18.11.: Münster D 13C …; Tecklenburg D 11C …` |
-| genau ein Ort | `Tecklenburg 18.11.: D 11C …` (Ortsname nur im Kopf, nicht noch einmal vor den Werten) |
+| mehrere Orte | `Orte 18.11.: Münster: D9/13 W-; Tecklenburg: D8/11 W-` |
+| genau ein Ort | `Tecklenburg 18.11.: D8/11 W-` (Ortsname nur im Kopf) |
 | mehrere Orte, alle ohne Daten (oder kein Ort im Ergebnis) | `Orte: keine Daten` |
 | genau ein Ort ohne Daten | `Tecklenburg: keine Daten` |
 
-Hat unter mehreren Orten nur ein Teil keine Daten, bleibt jeder solche Ort als `Name n/a` sichtbar (`Orte 18.11.: Münster D 13C …; Tecklenburg n/a`). Der Versand schickt bei lauter Orten ohne Daten nichts (`no_weather`); die beiden „keine Daten“-Formen erscheinen nur in Vorschau und Renderer. Ist der Name eines einzelnen Orts zu lang, wird er im Kopf sichtbar mit `...` gekürzt, sodass Datum und mindestens ein Wert in der Zeichengrenze bleiben; ohne Wertzelle endet die SMS nach dem Kopf (`Tecklenburg 18.11.:`), ohne hängendes Leerzeichen. Die SMS-Liste wird die Spalte „SMS“ (mit Premium-SMS) der Tabelle „Was steht wo“ (ADR-0124 Nr. 3, Bau in B1–B3); die Kürzung vom Listenende (§6) bleibt.
+**Ortsteil** = `{Name}: {Token}` wie das Etappen-Präfix der Trip-SMS (§3.1), aber mit dem
+**vollen** Ortsnamen (keine 10-Zeichen-Kürzung, keine Faltung; #3163). Trenner zwischen Orten `; `.
+Hat unter mehreren Orten nur ein Teil keine Daten, bleibt jeder solche Ort als `Name n/a`
+sichtbar. Ein Ort ohne jedes Token (leere SMS-Liste) steht nur mit seinem Namen da. Ist der Name
+eines einzelnen Orts zu lang, wird er im Kopf sichtbar mit `...` gekürzt.
 
-Die Ortsvergleich-SMS (`render_compare_sms`, auch Premium-SMS und Telegram-Kurzform —
-derselbe Text) trägt im **Ortsteil** einen Zähler `?N` (N ≥ 1), **nur wenn** mindestens
-eine gewählte Größe an diesem Ort keinen darstellbaren Wert hat oder ihr Schlüssel
-keine Renderer-Zuordnung besitzt (unmappbar → fehlt an jedem Ort). Position:
-unmittelbar nach den Wertzellen, **vor** dem optionalen `!`-Warn-Block, z. B.
-`Alpha D 20C W 10 km/h ?1` bzw. `Alpha D 20C ?2 !TH:M@14`.
+**Beispiele** (fester Beispiel-Datensatz der Karte „Was steht wo“, `placements_beispiel`, SMS-Liste
+nie eingestellt, Werte aus dem echten Renderer):
 
-- **Abgrenzung:** `+N` bleibt der **Platzmangel**-Zähler (vorhandene, verdrängte Werte);
-  `?N` zählt **fehlende** Werte. Je Ort gilt: sichtbare Zellen + `+N` + `?N` = Anzahl
-  gewählter Größen. `?` bedeutet wie im Trip (§4) „keine Daten“.
-- **Normalfall unverändert:** ohne fehlende Größe steht weder `?` noch ein zusätzliches
-  Leerzeichen im Text (Zeichen für Zeichen wie vor v2.37).
-- **Budget:** Der Zähler ist fester Bestandteil der Budgetprüfung (153 Zeichen,
-  `CHANNEL_LIMITS["sms"]`) wie der Warn-Marker; die Wertzellen weichen ihm, nie umgekehrt.
-- **Nicht gezählt:** zentral nicht wählbare Größen (`selectable=False`, z. B.
-  `confidence_pct`, #710) und vom Kanal bewusst abgewählte Größen. Ohne gespeicherte
-  Auswahl („nie eingestellt“) zählt `?N` keine fehlenden Werte, weil nichts gewählt ist
-  (die Mail zeigt dafür ebenfalls keinen Hinweis); unmappbare Einträge gibt es dann nicht.
-- **„Nie eingestellt“ (seit v2.42, #3047 Runde 7, B-L4):** Ohne gespeicherte Grundauswahl
-  zeigt die Ortsvergleich-SMS dieselben Zeilen in derselben Folge wie die Vergleichstabelle
-  der Mail (Registerfolge: `D W R PR TH SU CT UV VS SD NS L G …`) und kürzt vom Listenende
-  (§6). Die frühere feste Sechserliste (`D W SU CT SD NS`, ohne Regen, Böen, Gewitter)
-  ist abgelöst. Die volle Liste verdrängt dabei keine Orte: alle Orte bleiben sichtbar,
-  jeder mit derselben Zeichenzahl gekürzt (seit v2.43, §6), z. B.
-  `Orte 29.10.: Innsbruck D 11C R 2.4 mm TH - PT Regen +6 ?1; Lienz D 12C R 5.4 mm +8 ?1; …`.
-- **Warndienst nicht erreichbar (seit v2.42, #3047 Runde 7, B-L2):** Ist an mindestens
-  einem Ort eine amtliche Warnquelle ausgefallen, endet die Ortsvergleich-SMS mit ` X?`
-  (§3.4d), z. B. `Orte 08.07.: Alpha D 20C W 10 km/h; Beta D 22C W 12 km/h X?`.
-  Der Marker fällt nie weg; Zellen und Orte weichen ihm.
-- GSM-7: `?` und Ziffern sind Basiszeichen.
+| Orte | SMS |
+|---|---|
+| 1 | `Aabenraa 14.07.: D15/19 W30@10(43@16) R1.0@15(1.3@16) PR70%@13 TH:L@14(M@15) SU5 CT84@16 UV3@9(7@13) VS- SD0 NS24+0 G41@9(62@16) FZ3300@9 WD:SW FD12/17` |
+| 3 | `Orte 14.07.: Aabenraa: D15/19 W30@10(43@16); Flensburg: D16/20 W31@10(44@16); Schleswig: D17/21 W32@10(45@16)` |
+| 5 | `Orte 14.07.: Aabenraa: D15/19; Flensburg: D16/20; Schleswig: D17/21; Garmisch-Partenkirchen: D18/22; Bad Toelz: D19/23` |
+
+Regeln je Ort:
+
+- **Auswahl, Folge, Roh/Einfach** aus der SMS-Spalte der Tabelle „Was steht wo“ (ADR-0124);
+  „nie eingestellt“ folgt der Vergleichstabelle der Mail (Registerfolge `D W R PR TH SU CT UV VS SD
+  NS L G …`, #3047 Runde 7, B-L4). Tiefst- und Höchstwert stehen wie im Trip als Bereich unter dem
+  Höchstwert-Kürzel (`D-5/0`, `FD12/17`). Einfach wirkt wie im Trip (`CT:SCT@13`), Roh als Zahl
+  (`CT70@13`).
+- **Werte:** Stundengrößen (`R`, `PR`, `W`, `G`, `TH:`, `HU`, `DP`, `UV`, `CT`/`CL`/`CM`/`CH`, `VS`,
+  `FZ`, `WD:`, `PT:`) aus den Stundenwerten des Tagesfensters am Ort (Ortszeit); Tageswerte
+  (`L`, `D`, `FL`, `FD`, `SU`, `HP`, `SD`, `NS24+`, `SL`) aus derselben Quelle wie die Orte-Mail.
+  Temperaturen ganzzahlig gerundet (keine negative Null), Windrichtung als Himmelsrichtung (`WD:NW`).
+- **Leer- und Fehlwerte wie im Trip (§4):** `-` = geprüft und unauffällig (unter Gelb, kein Regen,
+  kein Gewitter), `?` = an diesem Ort kein Wert vorhanden (`W?`, `D?`, `SD?`).
+- **Nacht `N`/`FN` und Folgetag `TH+:` entfallen bei Orten** (ADR-0125 Nr. 5); die Gewitter-Zeile
+  ist `TH:` allein.
+- **Amtliche Warnungen** als `!`-Block am Ende des Ortsteils (§3.4c, Startschwelle „gering“).
+- **Warndienst nicht erreichbar (#3047 Runde 7, B-L2):** Ist an mindestens einem Ort eine amtliche
+  Warnquelle ausgefallen, endet die SMS einmal mit ` X?` (§3.4d); der Marker fällt nie weg.
+
+**Abgelöst (ADR-0125):** die Zellform `Kürzel Leerzeichen Wert mit Einheit` (`W 13 km/h`, `FL -5C`,
+`WD 33`; `compare_kanal_metriken.md` §3), der Zähler `?N` für fehlende bzw. nicht darstellbare
+Größen (v2.37, #1405 S3) und der Platzmangel-Zähler `+N` im Ortsteil (#1362 S5b). Fehlende Werte
+tragen `?` am eigenen Token, unmappbare Auswahl-Einträge erzeugen kein Zeichen mehr (die Mail weist
+sie aus), was nicht passt, fällt still vom Listenende (§6).
 
 ---
 
@@ -691,11 +705,11 @@ Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, wird so gekürzt (seit v
 
 > **#3122 (ADR-0124):** Name und SMS-Anfang bei Orten siehe §5b (seit v2.45). Die Kürzung vom Listenende bestätigt ADR-0124 Nr. 3; dieser Abschnitt gilt unverändert.
 
-**Orts-Überlauf im Ortsvergleich (`render_compare_sms`, seit v2.43, #3047 Runde 7, AC-23, ADR-0095 — ein Vergleich braucht mehrere Orte):** Ist die SMS zu lang, wird in dieser Folge gekürzt:
-1. die Zellen **aller** gezeigten Orte vom Listenende, mit demselben Zeichen-Budget je Ort (verdrängte Zellen als `+N` im Ortsteil), bis je Ort nur noch die erste Listenzeile steht;
-2. erst dann entfallen ganze Orte vom Ende und werden als ` +k Orte` ausgewiesen (ADR-0011) — Orte **ohne** amtliche Warnung zuerst; ein Ort mit Warnung bleibt mit Marker sichtbar;
-3. sind nur noch Orte mit Warnung (oder ein einziger Ort) übrig, weicht auch die erste Zelle dem `!`-Marker.
-Bis v2.42 füllte der erste Ort die SMS und alle weiteren Orte ohne Warnung fielen als ` +k Orte` weg.
+**Orts-Überlauf in der Orte-SMS (`render_compare_sms`, seit v2.43, #3047 Runde 7, AC-23, ADR-0095 — ein Vergleich braucht mehrere Orte; seit v2.47 in der Token-Zeile, ADR-0125 Nr. 4):** Ist die SMS zu lang, wird in dieser Folge gekürzt:
+1. die Listenzeilen **aller** gezeigten Orte vom Listenende — alle Orte tragen gleich viele Listenzeilen (die größte Zahl, bei der alle passen), ohne Zähler, bis je Ort nur noch die erste Listenzeile steht;
+2. erst dann entfallen ganze Orte vom Ende und werden als ` +k Orte` ausgewiesen (ADR-0011) — Orte **ohne** amtliche Warnung zuerst; ein Ort mit Warnung bleibt mit `!`-Block sichtbar;
+3. sind nur noch Orte mit Warnung (oder ein einziger Ort) übrig, darf auch die erste Listenzeile fallen (der `!`-Block bleibt).
+Bis v2.42 füllte der erste Ort die SMS und alle weiteren Orte ohne Warnung fielen als ` +k Orte` weg; bis v2.46 kürzte jeder Ort auf dasselbe Zeichen-Budget und wies verdrängte Zellen als `+N` aus.
 
 Abgelöst: die feste Rangfolge bis v2.39 (`DROP_ORDER`: erweiterte Token → Wintersport → Fire → Peak-Werte → gefühlte Temperatur → `PR` → `L D N` → Last Resort, #1677 AC-6). Die Peak-Werte `(max@h)` werden nicht mehr gesondert gestrichen; sie gehören zu ihrer Zeile.
 
@@ -890,6 +904,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.43 | 2026-11-16 | §5b/§6: Ortsvergleich-SMS kürzt zuerst die Zellen aller Orte (gleiches Budget je Ort, bis zur ersten Listenzeile), erst danach entfallen Orte als ` +k Orte`, ohne Warnung zuerst — auch ohne amtliche Warnung (#3047 Runde 7, AC-23, ADR-0095). |
 | 2.45 | 2026-11-17 | §6: Premium-SMS-Trip (#3100) — `premium_sms_text` ist der SMS-Text, solange er ≤ 153 Zeichen hat, sonst derselbe Formatter mit Grenze 153 (Kürzung vom Listenende, amtliche Warnung bleibt). Keine Änderung am SMS-Format selbst. |
 | 2.46 | 2026-11-17 | §5b: Kopf der Orte-SMS `Orte TT.MM.:` statt `Vergleich TT.MM.:`, bei genau einem Ort `{Ort} TT.MM.:` ohne Wiederholung des Namens; „keine Daten“ als `Orte: keine Daten` bzw. `{Ort}: keine Daten` (#3122 B5, ADR-0124 Nr. 10, Nachtrag Nr. 1). Sprachfest wie zuvor. |
+| 2.47 | 2026-11-19 | **§5b neu: Orte-SMS in der Token-Zeile der Trip-SMS (Issue #3172, ADR-0125).** Je Ort `{Name}: {Token}` aus `build_token_line` (dieselben Kürzel, Wert-Syntax und Abo-Ampel wie der Trip); `-` = unauffällig, `?` = kein Wert; `N`/`FN`/`TH+:` entfallen bei Orten. Die Zellform (`W 13 km/h`) und die Zähler `?N`/`+N` sind abgelöst. §6: alle gezeigten Orte tragen gleich viele Listenzeilen, erst dann ` +k Orte`. Gilt für SMS, Premium-SMS und Telegram-Kurzstil der Orte. Spec: `docs/specs/modules/feat_3172_orte_sms_token_zeile.md`. |
 | 2.41 | 2026-11-16 | §6: Orts-Überlauf im Ortsvergleich — ein Ort mit amtlicher Warnung fällt nie in ` +k Orte`, er bleibt mit Marker sichtbar; zuerst werden die Zellen aller gezeigten Orte vom Listenende gekürzt (gleiches Budget je Ort), dann entfallen Orte ohne Warnung (#3047 Runde 7, AC-23). |
 
 **Quellen für v2.0:**

@@ -1,10 +1,10 @@
 ---
 entity_id: premium_sms_format
 type: reference
-version: "1.2"
+version: "1.3"
 status: active
 created: 2026-10-21
-updated: 2026-11-17
+updated: 2026-11-19
 tags: [premium-sms, garmin, inreach, sms, channel, inbound, reference]
 ---
 
@@ -50,7 +50,7 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 | Variante | Inhalt | Verdrahtung |
 |---|---|---|
 | Trip-Briefing | SMS-Briefingzeile | `Trip.report_config.send_premium_sms` |
-| Ortsvergleich-Briefing | SMS-Vergleichstext (`render_compare_sms`) | `ComparePreset.send_premium_sms` (#2275) |
+| Ortsvergleich-Briefing | Orte-SMS-Text (`render_compare_sms`), je Ort die Token-Zeile der Trip-SMS (`Orte 14.07.: Aabenraa: D15/19 W30@10(43@16); …`, `sms_format.md` §5b, ADR-0125 seit #3172) | `ComparePreset.send_premium_sms` (#2275) |
 | Alarme (Änderung, Radar/Regen, amtlich, Entwarnung) | SMS-Alarmtext | `alert_channels.premium_sms`, Trip **und** Ortsvergleich, geteilte Auflösung `services/alert_channels.py` (ADR-0095) |
 | Befehlsantwort | `CommandResult.confirmation_body` | `send_command_reply_premium_sms` |
 
