@@ -92,3 +92,25 @@ func LinkClientOhneUmgebungsProxy() bool {
 	tr, ok := et.next.(*http.Transport)
 	return ok && tr.Proxy == nil
 }
+
+// NominatimAuf lenkt die Ortsnamen-Suche auf einen lokalen Fixture-Server
+// (vollstaendige Such-URL, z. B. srv.URL+"/search"; Issue #3115).
+func NominatimAuf(t *testing.T, suchURL string) {
+	t.Helper()
+	orig := nominatimSearchURL
+	t.Cleanup(func() { nominatimSearchURL = orig })
+	nominatimSearchURL = suchURL
+}
+
+// KomootAPIAuf lenkt den Komoot-Highlight-Abruf auf einen lokalen
+// Fixture-Server; der Pfad /api/v007/highlights/<id> bleibt (Issue #3115).
+// In Produktion ist die Komoot-API nicht umschaltbar (ADR-0114).
+func KomootAPIAuf(t *testing.T, basis string) {
+	t.Helper()
+	orig := komootAPIURLFormat
+	t.Cleanup(func() { komootAPIURLFormat = orig })
+	komootAPIURLFormat = basis + "/api/v007/highlights/%s"
+}
+
+// KomootAPIStandard liefert die in Produktion genutzte Komoot-API-Vorlage.
+func KomootAPIStandard() string { return komootAPIURLFormat }

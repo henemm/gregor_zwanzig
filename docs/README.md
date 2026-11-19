@@ -15,7 +15,7 @@
 | `design-system/` | CHARTER, COMPONENTS, TOKENS, SCREENS |
 | `features/` | `architecture.md` (Systemarchitektur), `scope.md` (Vision), **`gewitter-gesamtkonzept.md`** (Gewitter Ende zu Ende: was der Nutzer sieht, wie die Stufe entsteht, Eichung, Fahrplan — führend gegenüber den Einzel-Specs), `openspec_workflow.md` (Workflow-Wegweiser) + aktive Epic-Dokumente |
 | `project/` | `known_issues.md` (Root-Cause-Archiv), `strategic-directions.md` (PO-Richtungsentscheide über ein Ticket hinaus — 2026-08-05 aufgelöst, #1166, am 2026-08-17 neu angelegt, weil CLAUDE.md dorthin verweist; Grundsatzentscheidungen weiterhin als ADR), Architektur-Programm 2026-07 |
-| `runbooks/` | Betriebsanleitungen (`telegram-webhook.md`, `inbound-webhooks.md`, `premium_sms_generalprobe.md`) |
+| `runbooks/` | Betriebsanleitungen (`telegram-webhook.md`, `inbound-webhooks.md`, `premium_sms_generalprobe.md`, `staging_pruefkonto_seed.md` — Seed des Staging-Prüfkontos mit Mockup-Daten für den Elementlisten-Abgleich, #2967) |
 
 ## Arbeits- und Wegwerf-Material
 

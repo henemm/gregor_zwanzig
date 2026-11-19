@@ -2,6 +2,12 @@ package resolver_test
 
 import (
 	"math"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/henemm/gregor-api/internal/resolver"
@@ -9,6 +15,7 @@ import (
 
 // AC-2: Dezimalkoordinaten werden korrekt geparst
 func TestResolveDecimalCoordinates(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	// GIVEN: Dezimalkoordinaten als String
 	result, err := resolver.Resolve("47.0789, 11.6856")
 
@@ -29,6 +36,7 @@ func TestResolveDecimalCoordinates(t *testing.T) {
 
 // AC-2: Dezimalkoordinaten mit negativen Werten (Südhalbkugel)
 func TestResolveDecimalCoordinatesNegative(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	result, err := resolver.Resolve("-33.8688, 151.2093")
 
 	if err != nil {
@@ -44,6 +52,7 @@ func TestResolveDecimalCoordinatesNegative(t *testing.T) {
 
 // AC-5: DMS-Koordinaten werden korrekt konvertiert
 func TestResolveDMSCoordinates(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	// GIVEN: DMS-Format mit Grad/Minuten/Sekunden
 	result, err := resolver.Resolve(`47°04'44.0"N 11°41'08.2"E`)
 
@@ -64,6 +73,7 @@ func TestResolveDMSCoordinates(t *testing.T) {
 
 // AC-5: DMS südliche Hemisphäre (negatives lat)
 func TestResolveDMSSouthernHemisphere(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	result, err := resolver.Resolve(`33°52'07.7"S 151°12'33.5"E`)
 
 	if err != nil {
@@ -79,6 +89,7 @@ func TestResolveDMSSouthernHemisphere(t *testing.T) {
 
 // UTM-Koordinaten werden korrekt konvertiert
 func TestResolveUTMCoordinates(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	// GIVEN: UTM Zone 33T, Easting/Northing für Österreich
 	result, err := resolver.Resolve("33T 296000 5215000")
 
@@ -100,6 +111,7 @@ func TestResolveUTMCoordinates(t *testing.T) {
 
 // GPX-Wegpunkt wird korrekt geparst
 func TestResolveGPXWaypoint(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	// GIVEN: GPX trkpt-Element als Text
 	gpx := `<trkpt lat="47.0789" lon="11.6856"><ele>3250</ele><name>Hintertuxer Gletscher</name></trkpt>`
 	result, err := resolver.Resolve(gpx)
@@ -124,6 +136,7 @@ func TestResolveGPXWaypoint(t *testing.T) {
 
 // GPX ohne Elevation und Name
 func TestResolveGPXWaypointMinimal(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	gpx := `<trkpt lat="48.1234" lon="16.5678"></trkpt>`
 	result, err := resolver.Resolve(gpx)
 
@@ -140,6 +153,7 @@ func TestResolveGPXWaypointMinimal(t *testing.T) {
 
 // AC-3: Unbekanntes Format liefert ResolveError
 func TestResolveUnknownFormat(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	// GIVEN: Klartext-Name ohne Koordinaten
 	_, err := resolver.Resolve("Gasthof Zum Löwen")
 
@@ -161,6 +175,7 @@ func TestResolveUnknownFormat(t *testing.T) {
 
 // AC-4: Komoot-Tour-URL liefert ResolveError "unsupported_url"
 func TestResolveKomootTourUnsupported(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	// GIVEN: Komoot Tour-URL (keine Highlights)
 	_, err := resolver.Resolve("https://www.komoot.com/de-de/tour/12345")
 
@@ -177,31 +192,9 @@ func TestResolveKomootTourUnsupported(t *testing.T) {
 	}
 }
 
-// AC-1: Komoot-Highlight-URL löst via API auf (echter HTTP-Call)
-func TestResolveKomootHighlight(t *testing.T) {
-	// GIVEN: Komoot Highlight 126361 = Gavia Pass (Norditalien, Alpen)
-	result, err := resolver.Resolve("https://www.komoot.com/de-de/highlight/126361")
-
-	// THEN: Plausible Koordinaten (Norditalien: lat 45-47, lon 9-12)
-	if err != nil {
-		t.Fatalf("expected no error for valid Komoot Highlight, got %v", err)
-	}
-	if result.SourceType != "komoot" {
-		t.Errorf("expected source_type 'komoot', got %q", result.SourceType)
-	}
-	if result.Lat < 45.0 || result.Lat > 47.5 {
-		t.Errorf("expected Alpine lat range [45.0, 47.5], got %f", result.Lat)
-	}
-	if result.Lon < 9.0 || result.Lon > 12.0 {
-		t.Errorf("expected Alpine lon range [9.0, 12.0], got %f", result.Lon)
-	}
-	if result.Timezone == "" {
-		t.Error("expected non-empty timezone")
-	}
-}
-
 // Koordinaten-Bereichsvalidierung: Ungültige Koordinaten
 func TestResolveDecimalOutOfRange(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	_, err := resolver.Resolve("95.0, 181.0")
 
 	if err == nil {
@@ -211,6 +204,7 @@ func TestResolveDecimalOutOfRange(t *testing.T) {
 
 // Timezone wird immer gesetzt
 func TestResolveTimezoneAlwaysSet(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	result, err := resolver.Resolve("47.0789, 11.6856")
 
 	if err != nil {
@@ -221,42 +215,201 @@ func TestResolveTimezoneAlwaysSet(t *testing.T) {
 	}
 }
 
-// AC-1 (Issue #276): Mobiler Google Maps Sharing-Link wird aufgelöst (echter HTTP-Call)
-func TestResolveMobileGoogleMapsLink(t *testing.T) {
-	// GIVEN: Mobiler Google Maps Sharing-Link (maps.google.com?q=...&ftid=...&entry=gps)
-	result, err := resolver.Resolve("https://maps.google.com?q=Freden%20op%27n%20Kliff%2C%2023758%20Wangels&ftid=0x47b287f8362cffa1:0x43d19fdda3876e3f&entry=gps")
+// --- Netzfreie Anbieter-Tests (Issue #3115, ADR-0094) ---
+// Die Anbieter (Komoot, Google, Nominatim) werden durch lokale httptest-Server
+// ersetzt, die Antworten im Originalformat liefern und jede unerwartete
+// Anfrage als Testfehler melden. Den echten Anbieter-Vertrag pruefen die
+// Live-Varianten in resolver_live_test.go (-tags integration).
 
-	// THEN: Kein Fehler, SourceType google_maps, Koordinaten nahe Wangels (54.3°N, 10.8°E)
+// anfrageProtokoll haelt fest, was ein Fixture-Server gesehen hat.
+type anfrageProtokoll struct {
+	mu      sync.Mutex
+	eintrag []string
+}
+
+func (p *anfrageProtokoll) merke(s string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.eintrag = append(p.eintrag, s)
+}
+
+func (p *anfrageProtokoll) liste() []string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return append([]string(nil), p.eintrag...)
+}
+
+func leseFixture(t *testing.T, name string) []byte {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join("testdata", name))
+	if err != nil {
+		t.Fatalf("Fixture %s fehlt: %v", name, err)
+	}
+	return b
+}
+
+// AC-1 (#276) / AC-3 (#3115): Komoot-Highlight-Link wird ueber die Komoot-API
+// aufgeloest — hier gegen einen lokalen Server mit der Original-Antwort.
+// Fixture: GET https://www.komoot.com/api/v007/highlights/126361 mit
+// Accept: application/hal+json, aufgezeichnet 2026-11-19 (Gavia Pass);
+// nur _embedded.front_image (Bild-Metadaten mit Nutzerkennung) entfernt.
+func TestResolveKomootHighlight(t *testing.T) {
+	fixture := leseFixture(t, "komoot_highlight_126361.json")
+	var gesehen anfrageProtokoll
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gesehen.merke(r.Method + " " + r.URL.Path + " accept=" + r.Header.Get("Accept"))
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v007/highlights/126361" {
+			t.Errorf("Komoot-Fixture-Server: unerwartete Anfrage %s %s", r.Method, r.URL.String())
+			http.NotFound(w, r)
+			return
+		}
+		if r.Header.Get("Accept") != "application/hal+json" {
+			t.Errorf("Komoot-Fixture-Server: Accept %q, erwartet application/hal+json", r.Header.Get("Accept"))
+		}
+		w.Header().Set("Content-Type", "application/hal+json;charset=utf-8")
+		_, _ = w.Write(fixture)
+	}))
+	t.Cleanup(srv.Close)
+	resolver.OhneNachschlagDienste(t)
+	resolver.KomootAPIAuf(t, srv.URL)
+
+	result, err := resolver.Resolve("https://www.komoot.com/de-de/highlight/126361")
+	if err != nil {
+		t.Fatalf("expected no error for valid Komoot Highlight, got %v", err)
+	}
+	if result.SourceType != "komoot" {
+		t.Errorf("expected source_type 'komoot', got %q", result.SourceType)
+	}
+	if result.SuggestedName != "Gavia Pass" {
+		t.Errorf("Name aus der Fixture erwartet %q, bekam %q", "Gavia Pass", result.SuggestedName)
+	}
+	if result.Lat != 46.343469 || result.Lon != 10.487384 {
+		t.Errorf("Koordinaten aus der Fixture erwartet (46.343469, 10.487384), bekam (%v, %v)", result.Lat, result.Lon)
+	}
+	if result.ElevationM == nil || *result.ElevationM != 2615 {
+		t.Errorf("Hoehe aus der Fixture erwartet 2615 m (alt 2614.9), bekam %v", result.ElevationM)
+	}
+	if result.Timezone != "Europe/Rome" {
+		t.Errorf("Zeitzone erwartet Europe/Rome, bekam %q", result.Timezone)
+	}
+	want := "GET /api/v007/highlights/126361 accept=application/hal+json"
+	if got := gesehen.liste(); len(got) != 1 || got[0] != want {
+		t.Errorf("Komoot-Server sah %q, erwartet genau %q", got, want)
+	}
+}
+
+// AC-6 (#3115): Ohne Testhebel zeigt der Komoot-Abruf weiterhin auf die
+// echte Komoot-API.
+func TestKomootAPIStandardIstEchteKomootAPI(t *testing.T) {
+	const want = "https://www.komoot.com/api/v007/highlights/%s"
+	if got := resolver.KomootAPIStandard(); got != want {
+		t.Fatalf("Komoot-API in Produktion %q, erwartet %q", got, want)
+	}
+}
+
+// AC-1 (#276) / AC-4 (#3115): Mobiler Google-Sharing-Link, dessen
+// Weiterleitung keine Koordinaten traegt (Einwilligungsseite wie bei Google):
+// der Ortsname aus q= der Original-URL geht an Nominatim.
+// Nominatim-Fixture: GET https://nominatim.openstreetmap.org/search?q=23758+Wangels&format=json&limit=1,
+// aufgezeichnet 2026-11-19; die volle Adresse lieferte live [] (ebenso nachgestellt).
+func TestResolveMobileGoogleMapsLink(t *testing.T) {
+	const ortsname = "Freden op'n Kliff, 23758 Wangels"
+	wangels := leseFixture(t, "nominatim_search_23758_wangels.json")
+
+	var nominatim anfrageProtokoll
+	nomSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		nominatim.merke(q.Get("q"))
+		if r.URL.Path != "/search" || q.Get("format") != "json" || q.Get("limit") != "1" {
+			t.Errorf("Nominatim-Fixture-Server: unerwartete Anfrage %s", r.URL.String())
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		switch q.Get("q") {
+		case ortsname:
+			_, _ = w.Write([]byte("[]"))
+		case "23758 Wangels":
+			_, _ = w.Write(wangels)
+		default:
+			t.Errorf("Nominatim-Fixture-Server: unerwartetes q=%q", q.Get("q"))
+			_, _ = w.Write([]byte("[]"))
+		}
+	}))
+	t.Cleanup(nomSrv.Close)
+
+	var einwilligung anfrageProtokoll
+	einwSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		einwilligung.merke(r.URL.String())
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(einwSrv.Close)
+
+	var link anfrageProtokoll
+	linkSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		link.merke(r.URL.String())
+		// Wie Google: Weiterleitung auf eine Einwilligungsseite (Host nicht auf
+		// der Liste), das Kartenziel nur als Parameter, ohne Koordinaten.
+		ziel := url.QueryEscape("https://maps.google.com/?q=" + url.QueryEscape(ortsname) + "&entry=gps")
+		http.Redirect(w, r, einwSrv.URL+"/m?continue="+ziel, http.StatusFound)
+	}))
+	t.Cleanup(linkSrv.Close)
+	u, _ := url.Parse(linkSrv.URL)
+
+	resolver.OhneNachschlagDienste(t)
+	resolver.NominatimAuf(t, nomSrv.URL+"/search")
+	resolver.ErlaubeTestHosts(t, "localhost")
+	resolver.ErlaubeHTTPSchema(t)
+	resolver.ErlaubeLoopbackVerbindung(t)
+
+	input := "http://localhost:" + u.Port() + "/maps?q=Freden%20op%27n%20Kliff%2C%2023758%20Wangels&ftid=0x47b287f8362cffa1:0x43d19fdda3876e3f&entry=gps&src=.google."
+	result, err := resolver.Resolve(input)
 	if err != nil {
 		t.Fatalf("expected no error for mobile Google Maps URL, got %v", err)
 	}
 	if result.SourceType != "google_maps" {
 		t.Errorf("expected source_type 'google_maps', got %q", result.SourceType)
 	}
-	if math.Abs(result.Lat-54.3) > 0.5 {
-		t.Errorf("expected lat near 54.3 (Wangels), got %f", result.Lat)
+	if result.Lat != 54.271871 || result.Lon != 10.7647971 {
+		t.Errorf("Koordinaten aus der Nominatim-Fixture erwartet (54.271871, 10.7647971), bekam (%v, %v)", result.Lat, result.Lon)
 	}
-	if math.Abs(result.Lon-10.8) > 0.5 {
-		t.Errorf("expected lon near 10.8 (Wangels), got %f", result.Lon)
+	if got := nominatim.liste(); len(got) != 2 || got[0] != ortsname || got[1] != "23758 Wangels" {
+		t.Errorf("Nominatim sah q=%q, erwartet zuerst den Ortsnamen aus der Original-URL %q, dann %q", got, ortsname, "23758 Wangels")
+	}
+	if n := len(link.liste()); n != 1 {
+		t.Errorf("Link-Server %d-mal abgerufen, erwartet 1", n)
+	}
+	if got := einwilligung.liste(); len(got) != 0 {
+		t.Errorf("Einwilligungsseite (Host nicht auf der Liste) wurde abgerufen: %q", got)
 	}
 }
 
-// AC-2 (Issue #276): Desktop Google Maps Place-Link wird aufgelöst (echter HTTP-Call)
+// AC-2 (#276) / AC-5 (#3115): Desktop-Place-Link mit @lat,lon im Pfad.
 func TestResolveDesktopGoogleMapsPlaceLink(t *testing.T) {
-	// GIVEN: Desktop Google Maps Place-URL mit @lat,lon im Pfad
-	result, err := resolver.Resolve("https://www.google.com/maps/place/Innsbruck/@47.2692,11.4041,13z")
+	var link anfrageProtokoll
+	linkSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		link.merke(r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(linkSrv.Close)
+	u, _ := url.Parse(linkSrv.URL)
 
-	// THEN: Kein Fehler, SourceType google_maps, Koordinaten nahe Innsbruck
+	resolver.OhneNachschlagDienste(t)
+	resolver.ErlaubeTestHosts(t, "localhost")
+	resolver.ErlaubeHTTPSchema(t)
+	resolver.ErlaubeLoopbackVerbindung(t)
+
+	result, err := resolver.Resolve("http://localhost:" + u.Port() + "/maps/place/Innsbruck/@47.2692,11.4041,13z?src=.google.")
 	if err != nil {
 		t.Fatalf("expected no error for desktop Google Maps URL, got %v", err)
 	}
 	if result.SourceType != "google_maps" {
 		t.Errorf("expected source_type 'google_maps', got %q", result.SourceType)
 	}
-	if math.Abs(result.Lat-47.27) > 0.1 {
-		t.Errorf("expected lat near 47.27 (Innsbruck), got %f", result.Lat)
+	if result.Lat != 47.2692 || result.Lon != 11.4041 {
+		t.Errorf("Koordinaten aus dem Link erwartet (47.2692, 11.4041), bekam (%v, %v)", result.Lat, result.Lon)
 	}
-	if math.Abs(result.Lon-11.40) > 0.1 {
-		t.Errorf("expected lon near 11.40 (Innsbruck), got %f", result.Lon)
+	if got := link.liste(); len(got) != 1 || got[0] != "/maps/place/Innsbruck/@47.2692,11.4041,13z" {
+		t.Errorf("Link-Server sah %q, erwartet genau einen Abruf des Place-Pfads", got)
 	}
 }
