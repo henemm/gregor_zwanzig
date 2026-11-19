@@ -589,10 +589,12 @@ def test_ac11_alle_vier_kanaele_wie_mockup(fake, capsys):
     empf = _seed_daten(server)["compare"][orte_id]["empfaenger"]
     assert len(set(empf)) == 2
     assert all(a == PRUEF["mail"] or a.endswith(".invalid") for a in empf), empf
-    # SMS bestaetigt, Telegram verbunden, Premium-SMS frisch
-    assert prof["sms_to"] and prof["sms_verified"]
-    assert prof["telegram_chat_id"]
-    assert prof["premium_sms_reply_state"] == "fresh" and prof["premium_sms_reply_to"]
+    assert sorted(empf) == sorted([PRUEF["mail"], mod.ZWEIT_EMPFAENGER]), empf
+    # SMS bestaetigt, Telegram verbunden, Premium-SMS frisch (exakte Sollwerte)
+    assert prof["sms_to"] == mod.SMS_NUMMER and prof["sms_verified"] is True
+    assert prof["telegram_chat_id"] == mod.TELEGRAM_CHAT_ID
+    assert prof["premium_sms_reply_to"] == mod.INREACH_FROM
+    assert prof["premium_sms_reply_state"] == "fresh"
     assert prof["tier"] == "premium" and konto["zaehler"] == {"sms": 0, "premium_sms": 0}
     intern = [a for a in server.aufrufe if a["host"] in ("localhost:8091", "127.0.0.1:8091")]
     assert {a["pfad"] for a in intern} == {"/api/internal/telegram-connect",
@@ -683,6 +685,22 @@ def test_ac11_f002_konto_ohne_mailadresse_exit1_kein_leerer_empfaenger(fake, cap
     assert "Empfaenger" in aus.err
     assert _schreibaufrufe(server) == []
     assert _seed_daten(server)["compare"] == {}
+
+
+def test_ac11_e_mail_unbestaetigt_exit1_ohne_schreibzugriff(fake, capsys):
+    """AC-11 „E-Mail bestaetigt": auf Staging gibt es keinen versandfreien Weg zur
+    Bestaetigung; ein unbestaetigtes Konto endet mit Exit 1 vor jedem Schreibzugriff."""
+    mod = _modul()
+    server, env = fake
+    server.konten[PRUEF["user"]]["profil"]["email_verified"] = False
+    vorher = server.zustand()
+    assert _lauf(mod, server, env) == 1
+    aus = capsys.readouterr()
+    assert _ausgabe_ids(aus.out) == (None, None)
+    assert "nicht bestätigt" in aus.err or "nicht bestaetigt" in aus.err, aus.err
+    assert "E-Mail" in aus.err
+    assert _schreibaufrufe(server) == []
+    assert server.zustand() == vorher
 
 
 def test_ac13_f003_env_nur_mit_gz_praefix_laeuft_mit_core_header(fake):
@@ -1031,3 +1049,95 @@ def test_fr42_orte_metriken_mit_sollaggregation(fake, capsys):
     _, orte_id = _ausgabe_ids(capsys.readouterr().out)
     aktiv = _seed_daten(server)["compare"][orte_id]["display_config"]["active_metrics"]
     assert aktiv == ORTE_SOLL
+
+
+# --- Fix-Loop 5: F001 / F002 / F003 / F004 ---------------------------------------
+
+def _profil_ohne_email_verified(server):
+    """Transport, dessen Profil-Antwort das Feld ``email_verified`` nicht traegt."""
+    innen = server.transport()
+
+    def transport(methode, url, headers, body):
+        status, antwort = innen(methode, url, headers, body)
+        if url.endswith("/api/auth/profile") and isinstance(antwort, dict):
+            antwort = {k: v for k, v in antwort.items() if k != "email_verified"}
+        return status, antwort
+
+    return transport
+
+
+@pytest.mark.parametrize("fall", ["fehlt", "none"])
+def test_ac11_fl5_email_verified_fehlt_oder_none_exit1_ohne_schreibzugriff(fake, capsys, fall):
+    """F001: nur ausdruecklich ``true`` gilt als bestaetigt; fehlendes Feld oder None
+    endet mit Exit 1 vor jedem Schreibzugriff."""
+    mod = _modul()
+    server, env = fake
+    if fall == "none":
+        server.konten[PRUEF["user"]]["profil"]["email_verified"] = None
+        transport = server.transport()
+    else:
+        transport = _profil_ohne_email_verified(server)
+    vorher = server.zustand()
+    assert mod.main(["--env-datei", str(env)], transport=transport) == 1
+    aus = capsys.readouterr()
+    assert _ausgabe_ids(aus.out) == (None, None)
+    assert "nicht bestätigt" in aus.err, aus.err
+    assert _schreibaufrufe(server) == []
+    assert server.zustand() == vorher
+
+
+def test_ac11_fl5_fiktive_kanalwerte_sind_fest_und_erkennbar_fiktiv(fake):
+    """F002: Festwerte statt Selbstvergleich gegen ``mod.<KONST>``. Die Werte sind die
+    Identitaet des Pruefkontos auf Staging (Idempotenz: ein anderer Wert wuerde jeden
+    Kanal neu verbinden); Spec: fiktive, eindeutige Testwerte, Zweitadresse ``.invalid``,
+    SMS in der Form „+49 171 …“."""
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    soll = {"sms": "+491713920967", "inreach": "+491713920968",
+            "telegram": "2967000001", "zweit": "pruefkonto-2967@gregor-test.invalid"}
+    assert soll["zweit"].endswith(".invalid") and soll["sms"].startswith("+49171")
+    assert len(set(soll.values())) == 4, "Kanalwerte muessen eindeutig sein"
+    prof = server._profil(PRUEF["user"])
+    assert prof["sms_to"] == soll["sms"] and prof["sms_verified"] is True
+    assert prof["telegram_chat_id"] == soll["telegram"]
+    assert prof["premium_sms_reply_to"] == soll["inreach"]
+    (vgl,) = _seed_daten(server)["compare"].values()
+    assert sorted(vgl["empfaenger"]) == sorted([PRUEF["mail"], soll["zweit"]])
+
+
+@pytest.mark.parametrize("outcome", ["rate_limited", "already_linked", "would_skip", None])
+def test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf(fake, capsys, outcome):
+    """F003: Trockenlauf nennt den eigenen Nutzer, aber nicht ``would_learn`` =>
+    Exit 1 und kein scharfer Lernaufruf."""
+    mod = _modul()
+    server, env = fake
+    innen = server.transport()
+
+    def transport(methode, url, headers, body):
+        status, antwort = innen(methode, url, headers, body)
+        if url.endswith("/api/internal/premium-sms-learn") and (body or {}).get("dry_run"):
+            antwort = {"status": "dry_run", "user_id": PRUEF["user"]}
+            if outcome is not None:
+                antwort["outcome"] = outcome
+        return status, antwort
+
+    assert mod.main(["--env-datei", str(env)], transport=transport) == 1
+    assert server.zaehle("/api/internal/premium-sms-learn", scharf=False) == 1
+    assert server.zaehle("/api/internal/premium-sms-learn", scharf=True) == 0
+    assert server.konten[PRUEF["user"]]["profil"]["premium_sms_reply_to"] == ""
+    assert _ausgabe_ids(capsys.readouterr().out) == (None, None)
+
+
+@pytest.mark.parametrize("antwort", [{"code": ""}, {"code": None}, {}])
+def test_ac11_fl5_link_code_leer_exit1_ohne_lernaufruf(fake, capsys, antwort):
+    """F004: leerer Verknuepfungscode => Exit 1 mit Meldung, kein Aufruf an
+    /api/internal/premium-sms-learn (auch kein Trockenlauf)."""
+    mod = _modul()
+    server, env = fake
+    server.stoerung[("POST", "/api/auth/premium-sms-link-code")] = (200, antwort)
+    assert _lauf(mod, server, env) == 1
+    aus = capsys.readouterr()
+    assert "premium-sms-link-code ohne Code" in aus.err, aus.err
+    assert server.zaehle("/api/internal/premium-sms-learn") == 0
+    assert _ausgabe_ids(aus.out) == (None, None)

@@ -16,7 +16,8 @@ Loopback der Staging-Go-API (``http://localhost:8091``) mit Core-Auth-Header.
 Aufruf:  uv run python scripts/staging_pruefkonto_mockupdaten.py
          [--basis-url URL] [--intern-url URL] [--env-datei PFAD]
 Exit:    0 = Soll-Zustand erreicht; stdout: ELEMENTLISTE_TRIP_ID=…, ELEMENTLISTE_ORTE_ID=…
-         1 = API-/Datenfehler (Login, Statuscode, 409 fremde Chat-ID, 429 Ratebremse)
+         1 = API-/Datenfehler (Login, E-Mail des Kontos unbestaetigt, Statuscode,
+             409 fremde Chat-ID, 429 Ratebremse)
          2 = Aufruf-/Schutzfehler (Prod-/fremde URL, unzulaessiges Loopback-Ziel,
              fehlende .env-Schluessel inkl. Core-Secret, aktiver Live-SMS-Schluessel
              GZ_SEVEN_API_KEY in der .env)
@@ -230,6 +231,14 @@ def soll_empfaenger(profil: dict) -> list[str]:
     return empfaenger
 
 
+def pruefe_email_bestaetigt(profil: dict) -> None:
+    """AC-11: Konto-Adresse muss bestaetigt sein; ein versandfreier Weg zur Bestaetigung
+    fehlt auf Staging, darum nur pruefen (nicht bestaetigt => Exit 1, vor jedem Schreiben)."""
+    if profil.get("email_verified") is not True:
+        raise SeedFehler("E-Mail des Pruefkontos nicht bestätigt - einmal über den "
+                         "Bestätigungslink im Test-Postfach bestätigen, dann erneut starten")
+
+
 def soll_vergleich(location_ids: list[str], empfaenger: list[str]) -> dict:
     # Go speichert Briefing-Zeiten als "HH:MM:SS" (ValidateQuarterHourSlotTime) und
     # verlangt schedule daily|weekly|manual (validateComparePreset).
@@ -361,6 +370,7 @@ class PruefkontoSeed:
 def fuehre_seed(seed: PruefkontoSeed, nutzer: str, passwort: str) -> tuple[str, str]:
     """Gesamtlauf; liefert (Trip-ID, Orts-Vergleich-ID)."""
     profil = seed.anmelden(nutzer, passwort)
+    pruefe_email_bestaetigt(profil)  # vor jedem Schreibzugriff
     empfaenger = soll_empfaenger(profil)  # vor jedem Schreibzugriff
     seed.sichere_tarif()  # vor den Datensaetzen: sonst Free-Quote (409 quota_exceeded)
     trip = seed.sichere_datensatz("/api/trips", soll_trip())
