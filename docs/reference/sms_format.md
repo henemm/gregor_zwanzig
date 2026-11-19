@@ -642,30 +642,33 @@ dieselbe Wert-Syntax, dieselbe Hervorhebung `@h` nach der Abo-Ampel, gebaut übe
 Token-Baukasten (`output/tokens/builder.py::build_token_line`, Eingaben aus
 `output/renderers/orte_sms.py`). Eine eigene Formatierung für Orte gibt es nicht mehr (ADR-0125).
 
-**Kopf (seit v2.45, #3122 B5, ADR-0124 Nr. 10 und Nachtrag Nr. 1):** Der Bereich heißt „Orte“,
-auch bei einem einzelnen Ort. Der Kopf ist sprachfest (ADR-0104):
+**Form (PO-Entscheidungen 2026-11-19, „jedes Zeichen ist kostbar“):** Die Orte-SMS hat **keinen
+Kopf und kein Datum** und nennt **keine Ortsnamen**. Die Orte heißen `O1`, `O2`, … wie die Etappen der
+Trip-SMS (`E3`); die Nummer ist die Stelle in der Reihenfolge des Abos, gezählt über **alle** Orte
+(auch Orte ohne Daten), und ändert sich beim Kürzen nie. Ortsteil = `O{n} {Token}` **ohne
+Doppelpunkt**, zwischen Orten steht **ein Leerzeichen** (kein `; `). Die Karte „Was steht wo“ erklärt
+`O1` in der Legende („Ort 1 in der Reihenfolge des Abos“). Die Trip-SMS behält ihr `E3: `.
 
 | Fall | SMS |
 |---|---|
-| mehrere Orte | `Orte 18.11.: Münster: D9/13 W-; Tecklenburg: D8/11 W-` |
-| genau ein Ort | `Tecklenburg 18.11.: D8/11 W-` (Ortsname nur im Kopf) |
-| mehrere Orte, alle ohne Daten (oder kein Ort im Ergebnis) | `Orte: keine Daten` |
-| genau ein Ort ohne Daten | `Tecklenburg: keine Daten` |
+| mehrere Orte | `O1 D9/13 W- O2 D8/11 W-` |
+| genau ein Ort | `O1 D8/11 W-` |
+| ein Ort ohne Daten unter anderen | `O1 D9/13 W- O2 n/a O3 D7/10 W-` |
+| alle Orte ohne Daten | `O1 n/a O2 n/a` (kein Sondertext; der Versand schickt dann nichts, `no_weather`) |
+| leere SMS-Liste | `O1 O2` |
 
-**Ortsteil** = `{Name}: {Token}` wie das Etappen-Präfix der Trip-SMS (§3.1), aber mit dem
-**vollen** Ortsnamen (keine 10-Zeichen-Kürzung, keine Faltung; #3163). Trenner zwischen Orten `; `.
-Hat unter mehreren Orten nur ein Teil keine Daten, bleibt jeder solche Ort als `Name n/a`
-sichtbar. Ein Ort ohne jedes Token (leere SMS-Liste) steht nur mit seinem Namen da. Ist der Name
-eines einzelnen Orts zu lang, wird er im Kopf sichtbar mit `...` gekürzt.
+**Zeichengrenze:** 160 wie die Trip-SMS (`SMSTripFormatter.format_sms(max_length=160)`). Die
+Premium-SMS ist derselbe Text, solange er ≤ 153 Zeichen hat; sonst kürzt derselbe Renderer mit 153
+(Regel wie beim Trip, #3100; `compare_briefing_aufbau.compare_premium_sms_rendern`).
 
 **Beispiele** (fester Beispiel-Datensatz der Karte „Was steht wo“, `placements_beispiel`, SMS-Liste
 nie eingestellt, Werte aus dem echten Renderer):
 
 | Orte | SMS |
 |---|---|
-| 1 | `Aabenraa 14.07.: D15/19 W30@10(43@16) R1.0@15(1.3@16) PR70%@13 TH:L@14(M@15) SU5 CT84@16 UV3@9(7@13) VS- SD0 NS24+0 G41@9(62@16) FZ3300@9 WD:SW FD12/17` |
-| 3 | `Orte 14.07.: Aabenraa: D15/19 W30@10(43@16); Flensburg: D16/20 W31@10(44@16); Schleswig: D17/21 W32@10(45@16)` |
-| 5 | `Orte 14.07.: Aabenraa: D15/19; Flensburg: D16/20; Schleswig: D17/21; Garmisch-Partenkirchen: D18/22; Bad Toelz: D19/23` |
+| 1 | `O1 D15/19 W30@10(43@16) R1.0@15(1.3@16) PR70%@13 TH:L@14(M@15) SU5 CT84@16 UV3@9(7@13) VS- SD0 NS24+0 G41@9(62@16) FZ3300@9 WD:SW FD12/17 CL53@16 CM42@16 CH25@9` (160 Zeichen; Premium-SMS ohne die letzte Zeile) |
+| 3 | `O1 D15/19 W30@10(43@16) R1.0@15(1.3@16) PR70%@13 O2 D16/20 W31@10(44@16) R1.0@15(1.3@16) PR70%@13 O3 D17/21 W32@10(45@16) R1.0@15(1.3@16) PR70%@13` |
+| 5 | `O1 D15/19 W30@10(43@16) O2 D16/20 W31@10(44@16) O3 D17/21 W32@10(45@16) O4 D18/22 W31@9(46@16) O5 D19/23 W32@9(47@16)` |
 
 Regeln je Ort:
 
@@ -690,7 +693,9 @@ Regeln je Ort:
 `WD 33`; `compare_kanal_metriken.md` §3), der Zähler `?N` für fehlende bzw. nicht darstellbare
 Größen (v2.37, #1405 S3) und der Platzmangel-Zähler `+N` im Ortsteil (#1362 S5b). Fehlende Werte
 tragen `?` am eigenen Token, unmappbare Auswahl-Einträge erzeugen kein Zeichen mehr (die Mail weist
-sie aus), was nicht passt, fällt still vom Listenende (§6).
+sie aus), was nicht passt, fällt still vom Listenende (§6). Ebenfalls abgelöst (PO 2026-11-19): der Kopf
+`Orte TT.MM.:` bzw. `{Ort} TT.MM.:` (#3122 B5, v2.45/v2.46), die Ortsnamen, der Trenner `; ` und die
+Sondertexte `Orte: keine Daten`/`{Ort}: keine Daten`; die Grenze 153 gilt nur noch für die Premium-SMS.
 
 ---
 
@@ -707,7 +712,7 @@ Wenn die zusammengesetzte Token-Zeile >160 Zeichen ist, wird so gekürzt (seit v
 
 **Orts-Überlauf in der Orte-SMS (`render_compare_sms`, seit v2.43, #3047 Runde 7, AC-23, ADR-0095 — ein Vergleich braucht mehrere Orte; seit v2.47 in der Token-Zeile, ADR-0125 Nr. 4):** Ist die SMS zu lang, wird in dieser Folge gekürzt:
 1. die Listenzeilen **aller** gezeigten Orte vom Listenende — alle Orte tragen gleich viele Listenzeilen (die größte Zahl, bei der alle passen), ohne Zähler, bis je Ort nur noch die erste Listenzeile steht;
-2. erst dann entfallen ganze Orte vom Ende und werden als ` +k Orte` ausgewiesen (ADR-0011) — Orte **ohne** amtliche Warnung zuerst; ein Ort mit Warnung bleibt mit `!`-Block sichtbar;
+2. erst dann entfallen ganze Orte vom Ende und werden als ` +k Orte` ausgewiesen (ADR-0011) — Orte **ohne** amtliche Warnung zuerst; ein Ort mit Warnung bleibt mit `!`-Block sichtbar; die gezeigten Orte behalten ihre Nummer `O{n}` (z. B. `O1 D15/19 O2 D16/20 O16 D18/22 !TS:H@14 +13 Orte`);
 3. sind nur noch Orte mit Warnung (oder ein einziger Ort) übrig, darf auch die erste Listenzeile fallen (der `!`-Block bleibt).
 Bis v2.42 füllte der erste Ort die SMS und alle weiteren Orte ohne Warnung fielen als ` +k Orte` weg; bis v2.46 kürzte jeder Ort auf dasselbe Zeichen-Budget und wies verdrängte Zellen als `+N` aus.
 
@@ -904,7 +909,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.43 | 2026-11-16 | §5b/§6: Ortsvergleich-SMS kürzt zuerst die Zellen aller Orte (gleiches Budget je Ort, bis zur ersten Listenzeile), erst danach entfallen Orte als ` +k Orte`, ohne Warnung zuerst — auch ohne amtliche Warnung (#3047 Runde 7, AC-23, ADR-0095). |
 | 2.45 | 2026-11-17 | §6: Premium-SMS-Trip (#3100) — `premium_sms_text` ist der SMS-Text, solange er ≤ 153 Zeichen hat, sonst derselbe Formatter mit Grenze 153 (Kürzung vom Listenende, amtliche Warnung bleibt). Keine Änderung am SMS-Format selbst. |
 | 2.46 | 2026-11-17 | §5b: Kopf der Orte-SMS `Orte TT.MM.:` statt `Vergleich TT.MM.:`, bei genau einem Ort `{Ort} TT.MM.:` ohne Wiederholung des Namens; „keine Daten“ als `Orte: keine Daten` bzw. `{Ort}: keine Daten` (#3122 B5, ADR-0124 Nr. 10, Nachtrag Nr. 1). Sprachfest wie zuvor. |
-| 2.47 | 2026-11-19 | **§5b neu: Orte-SMS in der Token-Zeile der Trip-SMS (Issue #3172, ADR-0125).** Je Ort `{Name}: {Token}` aus `build_token_line` (dieselben Kürzel, Wert-Syntax und Abo-Ampel wie der Trip); `-` = unauffällig, `?` = kein Wert; `N`/`FN`/`TH+:` entfallen bei Orten. Die Zellform (`W 13 km/h`) und die Zähler `?N`/`+N` sind abgelöst. §6: alle gezeigten Orte tragen gleich viele Listenzeilen, erst dann ` +k Orte`. Gilt für SMS, Premium-SMS und Telegram-Kurzstil der Orte. Spec: `docs/specs/modules/feat_3172_orte_sms_token_zeile.md`. |
+| 2.47 | 2026-11-19 | **§5b neu: Orte-SMS in der Token-Zeile der Trip-SMS (Issue #3172, ADR-0125, PO-Entscheidungen 2026-11-19).** Je Ort `O{n} {Token}` aus `build_token_line` (dieselben Kürzel, Wert-Syntax und Abo-Ampel wie der Trip), kein Kopf, kein Datum, keine Ortsnamen, Orte durch ein Leerzeichen getrennt; `-` = unauffällig, `?` = kein Wert; `N`/`FN`/`TH+:` entfallen bei Orten. Grenze 160 wie die Trip-SMS, Premium-SMS über 153 Zeichen neu gekürzt. Die Zellform (`W 13 km/h`), die Zähler `?N`/`+N`, der Kopf `Orte TT.MM.:` und „keine Daten“ sind abgelöst. §6: alle gezeigten Orte tragen gleich viele Listenzeilen, erst dann ` +k Orte`. Gilt für SMS, Premium-SMS und Telegram-Kurzstil der Orte. Spec: `docs/specs/modules/feat_3172_orte_sms_token_zeile.md`. |
 | 2.41 | 2026-11-16 | §6: Orts-Überlauf im Ortsvergleich — ein Ort mit amtlicher Warnung fällt nie in ` +k Orte`, er bleibt mit Marker sichtbar; zuerst werden die Zellen aller gezeigten Orte vom Listenende gekürzt (gleiches Budget je Ort), dann entfallen Orte ohne Warnung (#3047 Runde 7, AC-23). |
 
 **Quellen für v2.0:**
