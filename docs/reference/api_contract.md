@@ -1444,7 +1444,8 @@ placements = { version: 1,
                rests: "kurzstil"|null } ],  // Telegram-Kurzstil: Spalte ruht
   fixed_rows: [ { id: "amtliche_warnungen",
                   position: { email: "first", telegram: "first", sms: "last" } } ],  // leer, wenn Warnungen aus
-  rows: [ { metric_id, name,                 // name = Katalog-Name in der Sprache des Nutzers
+  rows: [ { metric_id, name,                 // name = Katalog-Name in der Sprache des Nutzers; je Zeile von `placements` genau eine:
+                                             //   Grundauswahl beider Briefing-Typen (auch nur morgens/abends gewählte Metriken, #3154)
             position: int, parent: <katalog-id>|null,   // abgeleitete Größe -> Eltern-Zeile
             cells: { <stelle>: { state: "on"|"off"|"locked"|"not_in_email",
                                  format: "raw"|"simplified"|null, reason: <grund-schlüssel>|null,
@@ -5339,6 +5340,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 
 ## Changelog
 
+- 2026-11-19: Issue #3154 (Epic #3122) — `GET /api/briefings/{id}/placements`: `rows` führt jede Metrik der Grundauswahl beider Briefing-Typen, auch eine nur morgens oder nur abends gewählte (`morning_enabled`/`evening_enabled`), genau wie `placements`. Beispielwerte und Marken gelten weiter für das gerenderte Briefing; eine dort nicht gewählte Metrik bekommt keine Marke. Keine DTO-Änderung.
 - 2026-11-18: Issue #3101 (Epic #3047, ADR-0121 Nachtrag 4) — Ein Vokabular in allen Kanal-Listen: Der Kanal-Listen-Resolver liefert für Orte die Listen `email`, `telegram`, `sms`, `premium_sms` (samt Layout-Kanälen) mit Katalog-ID (`metric_id` = `temperature`) und `aggregation` statt Renderer-Kennung (`temp_max`). Die Übersetzung in die Renderer-Kennung geschieht erst direkt vor dem Renderer (`compare_metric_ids.renderer_kennung`, Gegenrichtung `katalog_paar`). Der Alt/Neu-Vergleich der Platzierungen (`placements`) vergleicht über die Katalog-ID; die Tabelle „Was steht wo“ liest Ausblick-Spalten aus denselben Zeilen wie der Renderer. Keine DTO-, Daten- oder Ausgabeänderung. Section 16.
 - 2026-11-18: Issue #3122 B2b — `GET /api/briefings/{id}/placements`: `placements` bei `stored: true` wie gespeichert (unbekannte/reservierte Schlüssel überleben GET → PUT); neu `sms_example.overflow` (Rest-Zähler `+N` je Ort, Trip `null`); Orte ohne gespeicherte Tabelle mit Beispielwerten, Marken und Legende; Legende erklärt `NS` (Orte). Trip-Laden: `display_config` nur mit `placements` = wie fehlend (erstes Speichern tauscht die Grundauswahl nicht aus).
 - 2026-11-18: Issue #3122 B2 Fix-Loop — Entitäts-Kennungen sind auf 250 Bytes begrenzt (`store.MaxEntityIDBytes`, Dateiname `<id>.json` ≤ 255 Bytes): überlange Kennung ergibt auf allen Routen 400 `validation_error` statt 500. Statuscode-Tabelle für `GET|PUT /api/briefings/{id}/placements` ergänzt (413, 415, 500, 502, 503).
