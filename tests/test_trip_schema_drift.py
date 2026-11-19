@@ -153,3 +153,33 @@ def test_gates_doku_fuehrt_das_gate_mit_pruefdatum():  # doc-compliance-test
     assert "trip_schema_drift" in text, "Gate fehlt in gates_und_ratschen.md"
     zeilen = [z for z in text.splitlines() if "trip_schema_drift" in z]
     assert any("2027-01-03" in z for z in zeilen), "Pruefdatum 2027-01-03 fehlt beim Gate-Eintrag"
+
+
+def test_radar_alert_enabled_ueberlebt_python_roundtrip():
+    """#2800 (S8, AC-7): der Trip-Radar-Schalter steht in der gemeinsamen
+    Fixture, ist im Python-Modell bekannt (nicht im extra-Auffangnetz) und
+    kommt nach Laden+Schreiben mit demselben Wert zurueck — true UND false.
+    Go-Pendant: TestTripSchemaDrift_RadarAlertEnabledBleibtErhalten."""
+    fixture = _load_fixture()
+    assert "radar_alert_enabled" in fixture, (
+        "Fixture fuehrt radar_alert_enabled nicht — Drift-Gate waere fuer das Feld blind"
+    )
+    for wert in (True, False):
+        probe = dict(fixture, radar_alert_enabled=wert)
+        trip, out = _roundtrip(probe)
+        assert "radar_alert_enabled" not in trip.extra, (
+            "radar_alert_enabled landet in trip.extra — Python modelliert das Feld nicht"
+        )
+        assert getattr(trip, "radar_alert_enabled", "FEHLT") is wert
+        assert out.get("radar_alert_enabled") is wert
+
+
+def test_radar_alert_enabled_none_wird_nicht_geschrieben():
+    """#2800: ein Bestandstrip ohne Schalter (None = an) bekommt beim
+    Speichern KEIN radar_alert_enabled-Feld (Loader schreibt nur, wenn nicht
+    None) — sonst entstuende still ein expliziter Wert."""
+    fixture = _load_fixture()
+    probe = {k: v for k, v in fixture.items() if k != "radar_alert_enabled"}
+    trip, out = _roundtrip(probe)
+    assert getattr(trip, "radar_alert_enabled", "FEHLT") is None
+    assert "radar_alert_enabled" not in out

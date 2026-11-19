@@ -137,6 +137,10 @@ type Trip struct {
 	// nil = Feld fehlte (Altdaten/Default aktiv), false = strukturell kein
 	// Fetch amtlicher Warnungen fuer diesen Trip.
 	OfficialAlertsEnabled *bool `json:"official_alerts_enabled,omitempty"`
+	// RadarAlertEnabled — Issue #2800, Trip-Radar-Alarm-Schalter, gleiches
+	// Pointer-Muster: nil/true = an (Bestandstrips), false = kein Nowcast-Abruf.
+	// Abweichung: beim Ortsvergleich bedeutet nil = aus.
+	RadarAlertEnabled *bool `json:"radar_alert_enabled,omitempty"`
 	// OfficialAlertTriggersEnabled — Issue #1088, gleiches Pointer-Muster wie
 	// OfficialAlertsEnabled: nil/true = eigenstaendiger Sofort-Alert-Trigger
 	// bei amtlichen Warnungen aktiv, false = kein Sofort-Alert-Trigger.

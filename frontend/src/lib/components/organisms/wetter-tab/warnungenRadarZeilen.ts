@@ -1,8 +1,11 @@
 // Issue #2913 Scheibe (c) (AC-2, AC-3): Zeilen der Karte „Amtliche Warnungen & Radar" als reine Daten —
 // je Zeile Testid, Katalogschlüssel, Zustand und der Handler, der beim Umlegen gerufen wird. Die
 // Komponente WarnungenRadarKarte rendert nur diese Liste; die Zuordnung Schalter → Handler ist damit
-// ohne DOM prüfbar. Die Radar-Zeile gibt es nur mit `mitRadar` (Orts-Briefing; Trip folgt mit S8 #2800).
+// ohne DOM prüfbar. Die Radar-Zeile gibt es nur mit `mitRadar` (Orts-Briefing und seit #2800 S8 Trip).
 // Kein Svelte-/Browser-Import, lauffähig unter node --experimental-strip-types.
+
+/** #2800: Katalogschlüssel für `{orte}` im Radar-Hinweis — Trip „deine Etappe", Orts-Briefing „deine Orte". */
+export type RadarZiel = 'wetter.radar.deine_orte' | 'wetter.radar.deine_etappe';
 
 export interface SchalterZeile {
 	testid: 'wetter-warnungen-schalter' | 'wetter-radar-schalter';

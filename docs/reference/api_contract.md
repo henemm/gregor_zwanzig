@@ -261,7 +261,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/compare/presets/{id}/send` | POST | — Delegate (Alt-Route) auf denselben Versandweg wie `/api/briefings/{id}/send?kind=vergleich` (#2280)
 | `/api/compare/presets/{id}/state` | PATCH |
 | `/api/config` | GET |
-| `/api/debug/trigger-radar-alert` | POST | — nur `GZ_ENV=staging`, nur Admin (401 ohne Sitzung, 403 Nicht-Admin, #2155 S2)
+| `/api/debug/trigger-radar-alert` | POST | — nur `GZ_ENV=staging`, nur Admin (401 ohne Sitzung, 403 Nicht-Admin, #2155 S2); Trip mit `radar_alert_enabled=false` → `{"status":"disabled"}` ohne Versand (#2800)
 | `/api/forecast` | GET |
 | `/api/gpx/parse` | POST |
 | `/api/groups` | GET, POST |
@@ -1043,6 +1043,7 @@ type Trip struct {
     PausedAt                *time.Time             `json:"paused_at,omitempty"`
     ArchivedAt              *time.Time             `json:"archived_at,omitempty"`
     OfficialAlertsEnabled   *bool                  `json:"official_alerts_enabled,omitempty"` // Issue #1087, Pointer-Muster analog ComparePreset (#1040): nil = Default true; false = kein Fetch amtlicher Warnungen für diesen Trip
+    RadarAlertEnabled       *bool                  `json:"radar_alert_enabled,omitempty"`     // Issue #2800: Trip-Radar-Alarm („Regen in der nächsten Stunde auf deiner Etappe"). nil/true = AN (Bestandstrips laufen seit #822 ohne Schalter weiter), false = kein Nowcast-Abruf, kein Versand auf keinem Kanal. ACHTUNG Default-Asymmetrie: am ComparePreset bedeutet nil = AUS (opt-in, #1041)
     OfficialAlertTriggersEnabled *bool             `json:"official_alert_triggers_enabled,omitempty"` // @deprecated (Issue #1258, ersetzt durch official_warnings.enabled) — bleibt in den Daten fuer Rollback-Sicherheit, wird ab #1258 von UI und Pipeline nicht mehr geschrieben/gelesen. Vormals: nil = Default true; false = amtliche Warnungen lösen keinen eigenständigen Sofort-Alert aus (Briefing-Anzeige bleibt unberührt)
     OfficialWarnings        *OfficialWarningsConfig `json:"official_warnings,omitempty"`      // Issue #1258 — s. „official_warnings (Issue #1258)" unten
     AlertChannels            *AlertChannelsConfig   `json:"alert_channels,omitempty"`          // Issue #1258 Scheibe S3 — s. „alert_channels (Issue #1258)" unten
@@ -1218,10 +1219,10 @@ Pflicht-Wert der Anfrage (kein separates Preserve für `enabled` selbst).
 
 **Drei Zustände optionaler Felder (Issue #2211, `internal/handler/optional_field.go`,
 `internal/handler/trip.go`):** `PUT /api/trips/{id}` (und `PUT /api/briefings/{id}?kind=route`,
-das dorthin delegiert) unterscheidet bei sieben optionalen Feldern: **Key fehlt** → Bestand bleibt
+das dorthin delegiert) unterscheidet bei acht optionalen Feldern: **Key fehlt** → Bestand bleibt
 (#99-Kontrakt) · **Key mit `null`** → Feld wird geleert (Systemstandard greift) · **Wert** → gesetzt.
 Felder: `alert_cooldown_minutes`, `alert_quiet_from`, `alert_quiet_to`, `official_alerts_enabled`,
-`official_alert_triggers_enabled`, `region`, `activity`. Listen, Maps, Structs und `name` behalten
+`radar_alert_enabled` (#2800), `official_alert_triggers_enabled`, `region`, `activity`. Listen, Maps, Structs und `name` behalten
 bei `null` den Bestand. Ein halbes Ruhezeit-Paar (nur `alert_quiet_from` oder nur `alert_quiet_to`)
 wird gespeichert, aber als „keine Ruhezeit" gelesen. Ortsvergleich-Frontend
 (`alarmeVergleichSpeicherung.ts`) sendet `null` für Alarm-Pause/Ruhezeit nur, wenn der Bestand einen
@@ -2803,7 +2804,7 @@ type ComparePreset struct {
     PausedAt             *time.Time             `json:"paused_at,omitempty"`                   // Issue #1250 Scheibe 2: aus schedule=="manual" abgeleitet (Dual-Write); nil = nicht pausiert
     ArchivedAt           *time.Time             `json:"archived_at,omitempty"`                 // Issue #611: nil = aktiv, gesetzt = archiviert
     OfficialAlertsEnabled *bool                 `json:"official_alerts_enabled,omitempty"`     // Issue #1040: nil/true = amtliche Quellen abgefragt (Default), false = kein Fetch
-    RadarAlertEnabled    *bool                  `json:"radar_alert_enabled,omitempty"`         // Issue #1041 Slice 1b: UMGEKEHRTER Default — nil/fehlend = AUS (opt-in, Netzwerkkosten je Ort)
+    RadarAlertEnabled    *bool                  `json:"radar_alert_enabled,omitempty"`         // Issue #1041 Slice 1b: UMGEKEHRTER Default — nil/fehlend = AUS (opt-in, Netzwerkkosten je Ort); am Trip dagegen nil = AN (#2800, s. Section 10.5)
     AlertCooldownMinutes *int                   `json:"alert_cooldown_minutes,omitempty"`      // Issue #1170: nil = Default in compare_alert.py
     AlertQuietFrom       *string                `json:"alert_quiet_from,omitempty"`            // Issue #1170
     AlertQuietTo         *string                `json:"alert_quiet_to,omitempty"`              // Issue #1170

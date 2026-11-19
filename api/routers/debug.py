@@ -50,6 +50,8 @@ def trigger_radar_alert(user_id: str = Query(...)):
     Ablauf (analog check_radar_alerts(), ohne Throttle-Check):
     1. Staging-Guard (GZ_ENV=staging) -> sonst 404.
     2. Trips fuer user_id laden.
+       Erster Trip mit ``radar_alert_enabled=False`` -> ``disabled``, kein
+       Versand (Issue #2800, Staging-Gegenprobe „Schalter aus"); None = an.
     3. Ersten Trip + Segment ableiten ueber `_pick_debug_segment`: zuerst der
        gemeinsame Baustein `resolve_current_segment` (wie
        `TripAlertService.check_radar_alerts()`, inkl. Vortags-Rueckgriff bei
@@ -90,6 +92,8 @@ def trigger_radar_alert(user_id: str = Query(...)):
         return JSONResponse({"status": "no_trips"})
 
     trip = trips[0]
+    if trip.radar_alert_enabled is False:
+        return JSONResponse({"status": "disabled", "trip_id": str(trip.id)})
     now_utc = datetime.now(timezone.utc)
     today = trip_local_today(trip, now_utc)
     active = _pick_debug_segment(trip, now_utc, today)

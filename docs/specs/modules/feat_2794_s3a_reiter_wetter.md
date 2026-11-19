@@ -240,6 +240,7 @@ Zwischen den Teil-PRs bleibt jeder Stand lauffähig: PR 2 liefert Wetter vorläu
   - Test: Go- und Python-Tests der Lese-Regel mit allen Kombinationen; Playwright auf Staging mit Datei-Zustand; Renderer und Alarm-Engine werden nicht verändert (bestehende Tests grün).
 
 - **AC-21:** Given ein Orts-Briefing und ein Trip / When der Nutzer die Karten „Radar“ und „Anpassen“ ansieht / Then zeigt nur das Orts-Briefing den Schalter „Radar-Regen“ (Speichern setzt `radar_alert_enabled`), der Trip zeigt ihn nicht, und die eingeklappte Karte „Anpassen“ lässt das Tagesfenster von–bis einstellen, das wie bisher begrenzt (ADR-0035) und gespeichert wird
+  - **Teil „der Trip zeigt ihn nicht“ abgelöst durch #2800** (Spec `feat_2800_trip_radar_alarm.md` AC-6): der Trip zeigt die Radar-Zeile mit „deine Etappe“ und speichert `radar_alert_enabled` (fehlt = an).
   - Test: Playwright auf Staging je Kontext; Tagesfenster-Grenzen über den bestehenden Clamp-Test.
 
 ### Teil-PR 1: Backend (Vorlagen, Katalog, Zähler, Migration)
@@ -320,7 +321,7 @@ Je AC steht die konkrete Prüfung in der `Test:`-Zeile oben. Die Schichten:
 ## Known Limitations
 
 - **Zustellung ist ein Übergangsreiter:** er zeigt bis S3b die heutigen Bausteine in der heutigen Reihenfolge, noch nicht die Kanal-Tabelle. Layout, 3-Tages-Ausblick, Stundenverlauf und Roh/Einfach je Liste wandern erst mit S3b in „Inhalt je Kanal und Fläche“. Die Hinweise auf diese Karte in den Texten von „Nicht im Briefing“ verweisen auf einen Ort, der bis S3b nur als Abschnitt im Übergangsreiter existiert.
-- **Radar-Alarm beim Trip** fehlt bis S8 (#2800).
+- **Radar-Alarm beim Trip** fehlt bis S8 (#2800). Erledigt mit #2800.
 - **Gate-Reihenfolge:** Die „Alarm ab“-Bedienung (Teil-PR 3) wird erst nach Merge von PR #2862 ausgeliefert. Wird PR #2862 vorher geändert, sind Gate-Zeilen und Katalogschlüssel `alarm.ampel.*` neu abzugleichen.
 - **Testumzug:** ca. 150 Test-Dateien nennen alte Kennungen; sie werden auf die neuen Kennungen und Reiter umgestellt (Teil-PR 2 und 4). Tests, die ausschließlich entfallene Oberflächen prüfen, werden gelöscht statt umgebogen.
 - **Vorlagen-Migration `kind`:** Bestandsvorlagen bekommen `kind` per Lese-Default `route`; ein Schreiben der Datei setzt das Feld dauerhaft.

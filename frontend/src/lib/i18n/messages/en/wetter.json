@@ -99,6 +99,7 @@
 	"wetter.radar.titel": "Radar rain",
 	"wetter.radar.beschreibung": "Alert when rain is coming towards {orte} within the next hour",
 	"wetter.radar.deine_orte": "your locations",
+	"wetter.radar.deine_etappe": "your stage",
 	"wetter.anpassen.titel": "Adjust",
 	"wetter.anpassen.tagesfenster": "Day window",
 	"wetter.anpassen.von": "from",

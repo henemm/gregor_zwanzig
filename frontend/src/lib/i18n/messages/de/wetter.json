@@ -99,6 +99,7 @@
 	"wetter.radar.titel": "Radar-Regen",
 	"wetter.radar.beschreibung": "Alarm, wenn in der nächsten Stunde Regen auf {orte} zukommt",
 	"wetter.radar.deine_orte": "deine Orte",
+	"wetter.radar.deine_etappe": "deine Etappe",
 	"wetter.anpassen.titel": "Anpassen",
 	"wetter.anpassen.tagesfenster": "Tagesfenster",
 	"wetter.anpassen.von": "von",

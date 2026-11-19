@@ -47,6 +47,8 @@ const BASIS = git(['merge-base', 'HEAD', 'origin/main'])?.trim() || null;
 // kein Schlüssel entfällt, und hinzukommen dürfen nur die hier freigegebenen Schlüssel.
 // #2913 Fix Metrik-Liste (Spec fix_2913_metrikliste_mockup.md, AC-5): Untertitel-Hinweise der Metrik-Zeile.
 const NEU_FREIGEGEBEN = new Set([
+	// #2800 (Spec feat_2800_trip_radar_alarm.md AC-6): Radar-Hinweis im Trip „deine Etappe" / „your stage".
+	'wetter.radar.deine_etappe',
 	// #3122 B3b (Spec feat_3122_was_steht_wo.md Teil B Nr. 10 bis 12): Texte der Karte „Was steht wo“.
 	'wetter.wsw.titel',
 	'wetter.wsw.text_route',

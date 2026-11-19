@@ -25,6 +25,7 @@
 	import MetrikZeile from './MetrikZeile.svelte';
 	import NichtImBriefing from './NichtImBriefing.svelte';
 	import WarnungenRadarKarte from './WarnungenRadarKarte.svelte';
+	import type { RadarZiel } from './warnungenRadarZeilen.ts';
 	import AnpassenKarte from './AnpassenKarte.svelte';
 	import WasStehtWoKarte from './WasStehtWoKarte.svelte';
 	import { alarmZaehler, altSchluesselAusKatalog, ausgebbarTeilen, briefingAngebot, eigeneVorlageAmpel, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
@@ -48,7 +49,9 @@
 	let { context, trip, preset, createMode = false, saveController, enqueueHubWrite, onTripUpdate, onCompareUpdate, onAnlegeStand }: Props = $props();
 
 	/** Kontext-Unterschiede als Daten (Ratsche context_herkunft_zweige_eingefroren). */
-	const MIT_RADAR: Record<Kontext, boolean> = { route: false, vergleich: true };
+	// #2800 (S8): Radar-Regen auch im Trip; der Hinweis nennt dort „deine Etappe".
+	const MIT_RADAR: Record<Kontext, boolean> = { route: true, vergleich: true };
+	const RADAR_ZIEL: Record<Kontext, RadarZiel> = { route: 'wetter.radar.deine_etappe', vergleich: 'wetter.radar.deine_orte' };
 	// Vergleichs-Katalog: Auswertung neuer Metriken und Altformat-Schluessel von `active_metrics`
 	// (Fix-Loop 3, C2 — muss VOR der Erst-Hydration da sein). Scheitert er, ist das ein Ladefehler
 	// wie beim Metrik-Katalog (Fix-Loop 4, F001): Fehlerzustand AC-9, keine Hydration, kein Speichern;
@@ -296,6 +299,7 @@
 			warnungenAn={stand.warnungenAn}
 			radarAn={stand.radarAn}
 			mitRadar={MIT_RADAR[context]}
+			radarZiel={RADAR_ZIEL[context]}
 			onWarnungen={(an) => aendern({ ...stand!, warnungenAn: an })}
 			onRadar={(an) => aendern({ ...stand!, radarAn: an })}
 		/>

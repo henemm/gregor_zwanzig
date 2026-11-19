@@ -4,7 +4,7 @@
 //
 //   AC-20 — Altfelder auseinander (Bericht an, Alarm aus) -> Schalter steht auf an (ODER-Regel);
 //           Umlegen auf aus -> official_alerts_enabled UND official_warnings.enabled false, wieder an -> beide true.
-//   AC-21 — Radar-Schalter nur im Orts-Briefing (setzt radar_alert_enabled), nicht im Trip; Karte „Anpassen“
+//   AC-21 — Radar-Schalter setzt radar_alert_enabled (seit #2800 auch im Trip, abgelöst: „nicht im Trip“); Karte „Anpassen“
 //           eingeklappt, Tagesfenster von–bis ueber das Select-Atom (kein natives <select>), gespeichert
 //           (Trip report_config.day_window_*_hour, Orte top-level), Begrenzung wie bisher (ADR-0035).
 //
@@ -15,6 +15,8 @@ import { HUB_KINDS, type HubKind } from './helpers';
 import { DESKTOP, WT, fremdeFelder, oeffneWetter, seedWetter, setzeStunde, stand, stundeAnzeige, stundeEingabe, type Json } from './s3a2794-teil3.helpers';
 
 const warnFelder = (s: Json) => ({ bericht: s.official_alerts_enabled, alarm: s.official_warnings?.enabled });
+// #2800: Trip-Default None = an (`!== false`), Orts-Briefing None = aus (`=== true`).
+const radarAn = (kind: HubKind, s: Json) => (kind === 'route' ? s.radar_alert_enabled !== false : s.radar_alert_enabled === true);
 const tagesfenster = (kind: HubKind, s: Json) =>
 	kind === 'route' ? [s.report_config?.day_window_start_hour, s.report_config?.day_window_end_hour] : [s.day_window_start_hour, s.day_window_end_hour];
 
@@ -42,24 +44,23 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 
-	test(`AC-21 (${kind}): Radar-Schalter nur im Orts-Briefing`, async ({ page }) => {
+	// abgelöst durch #2800 (feat_2800_trip_radar_alarm AC-6): früher „Radar-Schalter nur im Orts-Briefing"
+	// (Trip ohne Radar). Jetzt in beiden Kontexten; Trip-Text „deine Etappe", Trip-Default None = an.
+	test(`AC-21/#2800 (${kind}): Radar-Schalter in Trip und Orts-Briefing`, async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		const hub = await seedWetter(page.request, kind);
 		try {
 			const reiter = await oeffneWetter(page, kind, hub.id);
 			const radar = reiter.getByTestId(WT.radar);
-			if (kind === 'route') {
-				await expect(radar, 'AC-21: Radar-Schalter im Trip').toHaveCount(0);
-				await expect(reiter).not.toContainText('Radar-Regen');
-				return;
-			}
 			await expect(radar).toBeVisible();
 			await expect(reiter).toContainText('Radar-Regen');
-			await expect(reiter).toContainText(/Alarm, wenn in der nächsten Stunde Regen auf .+ zukommt/);
-			const vorher = Boolean((await stand(page.request, kind, hub.id)).radar_alert_enabled);
+			await expect(reiter).toContainText(
+				kind === 'route' ? 'Alarm, wenn in der nächsten Stunde Regen auf deine Etappe zukommt' : /Alarm, wenn in der nächsten Stunde Regen auf .+ zukommt/
+			);
+			const vorher = radarAn(kind, await stand(page.request, kind, hub.id));
 			await expect(radar).toHaveAttribute('aria-checked', String(vorher));
 			await radar.click();
-			await expect.poll(async () => Boolean((await stand(page.request, kind, hub.id)).radar_alert_enabled), { timeout: 20_000 }).toBe(!vorher);
+			await expect.poll(async () => radarAn(kind, await stand(page.request, kind, hub.id)), { timeout: 20_000 }).toBe(!vorher);
 		} finally {
 			await hub.aufraeumen();
 		}

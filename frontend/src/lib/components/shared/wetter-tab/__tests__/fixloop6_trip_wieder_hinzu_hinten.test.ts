@@ -29,6 +29,7 @@ function speichern(bestand: Eintrag[], auswahl: string[]): Eintrag[] {
 		reportConfig: {},
 		warnFelder: {},
 		warnungenAn: false,
+		radarAn: true, // #2800: Pflichtfeld der Trip-Eingabe, hier ohne Bedeutung
 		tagesfenster: { start: 6, end: 20 }
 	});
 	return p.weatherConfig.metrics as Eintrag[];

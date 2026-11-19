@@ -344,12 +344,22 @@ describe('Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) 
 	const KONTEXT = join(FRONTEND, '..', 'docs/context/einstellungen_neu');
 	const liste = [el('w.a', 'kopf', 1, 'Wetter', { reiter: 'zustellung' })];
 	const zusFremd = () => findeZusaetzliche({ ctx: 'trip', reiter: 'zustellung', texte: ['Wetter', 'Fremd 3'] }, liste, [], [], 'de');
+	// abgelöst durch #2800 (AC-9): die echte Freigaben-Datei darf leer sein (die einzige Freigabe „Trip ohne
+	// Radar" entfällt). Der Mechanismus wird deshalb mit einer Muster-Freigabe im Temp-Ordner geprüft; dass die
+	// echte Datei lädt, prüft „echte Besitzer-Datei lädt gegen die echte Elementliste".
+	const MUSTER_FREIGABEN = {
+		freigaben: [
+			{ ctx: 'trip', reiter: 'wetter', abschnitt: 'warnungen-radar', i18n_keys: ['wetter.radar.titel'], grund: 'Muster-Abweichung', spec: 'docs/specs/modules/muster.md AC-1' }
+		]
+	};
 	const mitDateien = <T>(besitzer: unknown, f: (d: { freigaben: string; besitzer: string }) => T): T => {
 		const dir = mkdtempSync(join(tmpdir(), 'abgleich-regeln-'));
 		try {
 			const pfad = join(dir, 'elementliste_besitzer.json');
 			writeFileSync(pfad, JSON.stringify(besitzer));
-			return f({ freigaben: join(KONTEXT, 'elementliste_freigaben.json'), besitzer: pfad });
+			const freigaben = join(dir, 'elementliste_freigaben.json');
+			writeFileSync(freigaben, JSON.stringify(MUSTER_FREIGABEN));
+			return f({ freigaben, besitzer: pfad });
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
@@ -425,8 +435,8 @@ describe('Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) 
 		assert.equal(laufOhneHub({ ELEMENTLISTE_STRICT: '1', ELEMENTLISTE_ABNAHME: '1' }).ende.exit, 1);
 		assert.equal(laufOhneHub({}).ende.exit, 0);
 	});
-	test('werteLaufAus wendet Freigaben an (echte Freigaben-Datei)', () => {
-		const f = JSON.parse(readFileSync(join(KONTEXT, 'elementliste_freigaben.json'), 'utf8')).freigaben[0];
+	test('werteLaufAus wendet Freigaben an (Muster-Freigaben-Datei, abgelöst durch #2800)', () => {
+		const f = MUSTER_FREIGABEN.freigaben[0];
 		const e = el('fg.1', f.abschnitt, 1, 'x', { ctx: f.ctx, reiter: f.reiter, i18n_key: f.i18n_keys[0] });
 		const dir = mkdtempSync(join(tmpdir(), 'abgleich-fg-'));
 		try {

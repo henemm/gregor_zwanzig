@@ -414,6 +414,7 @@ export interface Trip {
 	paused_at?: string;
 	archived_at?: string;
 	official_alerts_enabled?: boolean; // Issue #1087 — Trip-Toggle amtliche Warnungen
+	radar_alert_enabled?: boolean; // Issue #2800 — Trip-Radar-Alarm; fehlt = an (Vergleich: fehlt = aus)
 	official_alert_triggers_enabled?: boolean; // Issue #1088 — Trip-Toggle amtlicher Sofort-Alert-Trigger
 	// Issue #1250 Scheibe 4 (Trip-Konvergenz) — additive flache Slot-/Kanal-
 	// Felder, serverseitig aus report_config ABGELEITET (Dual-Read, analog

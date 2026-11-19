@@ -2116,6 +2116,11 @@ class TripAlertService:
             # Stempel fuer JEDEN erreichten Trip (auch bei continue/Exception).
             reached[trip.id] = datetime.now(timezone.utc)
             try:
+                # Issue #2800: Trip-Radar-Schalter. Nur ein explizites False schaltet
+                # ab (None = an, Bestandstrips). Pruefung VOR Segmentwahl, Kanal-
+                # Aufloesung und Nowcast-Abruf (ADR-0082-Budget).
+                if trip.radar_alert_enabled is False:
+                    continue
                 # Issue #1697: Ortstag dieses Trips statt Serverdatum (ADR-0044) —
                 # je Trip, die Zone haengt vom Trip ab.
                 today = trip_local_today(trip, now_utc)
