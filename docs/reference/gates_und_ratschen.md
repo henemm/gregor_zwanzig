@@ -720,6 +720,35 @@ als Besitzer). `--strict` unverändert (rot bei Abweichung oder `nicht_pruefbar`
 besitzerbasierte Prüfung für den Scheiben-Abschluss.
 Stand 2026-11-19 (#3008, #3011): Der Platzhalter `{metrik}` in der Gegenrichtung passt nur auf bekannte Metriknamen (Registernamen aus `GET /api/metrics`, im Staging-Lauf einmal geladen, plus DE-Namen der Elementliste); ist die Menge leer, erklärt er nichts (fail-closed), und Fremdtexte mit „+ “ werden `zusaetzlich`. `{zahl}` und die Hinrichtung bleiben unverändert. `leseBesitzer` prüft zusätzlich Abschnitts-Besitzer (`ctx`, `reiter`, `abschnitt`) gegen die Elementliste; der Kern-Test `elementliste_besitzer_kern.test.ts` fängt verwaiste Einträge ohne Staging ab.
 
+**EN-Zuordner des Generators (#2968, Spec `docs/specs/modules/feat_2968_elementliste_en_zuordnung.md`, Stand
+2026-11-19):** Grundsatz „nichts erfinden“: `text_en` kommt nur aus dem i18n-Katalog oder ist ein sprachneutrales
+DE-Muster; neue Katalogschlüssel entstehen dafür nie. `ermittleEn(text, katalog, bekannte?)` prüft der Reihe nach:
+exakter Katalogwert → Katalogmuster → sprachneutral → Segmente → Lücke. **Regel a** (Muster ohne Wortlaut-Hälfte):
+passt ein Katalogmuster und ist **jeder** eingesetzte Wert aufgelöst (exakter Katalogwert, bekannter Metrikname,
+Zahl/Einheit oder rekursiv wieder ein Muster nach Regel a, Rekursionstiefe höchstens 2), gilt der Treffer, auch
+wenn der Wortlaut kürzer als die halbe Textlänge ist; sonst gilt weiter die Wortlaut-Hälfte (≥ halbe Textlänge,
+Werte ≤ 40 Zeichen). **Regel b** (Segmente): ein Text mit „ · “ (auch führendes „· “) ist nur aufgelöst, wenn
+jedes Segment aufgelöst ist (exakt, Regel a oder sprachneutral); `text_en` = Segment-EN mit „ · “ verbunden,
+`i18n_key` null. Innerhalb eines Segments gilt die Wortlaut-Hälfte nicht, darum trifft „°C · vor der Etappe“ nie
+über „{count} Etappe“. **Regel c** (sprachneutral, Feld `sprachneutral: true`, `text_en` = DE-Muster mit
+`{zahl}`): nur Texte ohne Buchstaben, Zahl/Einheit (°C, km/h, mm, %, m, h), bekannte Kurz-/Protokoll-Token
+(auch mit Zahlen/Zeichen dahinter, „N10“, „VS-“, „W 20-38@15“) und Eigennamen der Liste; ein deutsches Wort ist
+nie sprachneutral, auch kein Metrikname. **Regel e** (Katalogwert + Zeichen): „<exakter Katalogwert> <Zeichen
+ohne Buchstabe/Ziffer>“ („gelb >“) ist aufgelöst, EN = EN des Werts mit demselben Zeichen („yellow >“); die App
+setzt die Grenzen-Beschriftungen so zusammen. **Regel f** (mehrdeutiges EN): steht ein DE-Text unter mehreren
+Schlüsseln mit verschiedenem EN („Fertig“ ⇒ Done/Finished), trägt der Eintrag alle Kandidaten in
+`text_en_alternativen`, und `erwartung(e,'en')` akzeptiert jeden davon (verankerte Alternation). Sonderfall
+**Listenzeile** (#3007, `listenzeileEn`, analog `chipEn`): im Abschnitt `liste` der Reiter Etappen/Orte
+ordnet der Generator Titel- und Lagezeilen den Kurzmustern `trip.hub.etappe_titel`, `vergleich.hub.ort_name`,
+`vergleich.hub.ort_gruppe_hoehe` zu, wenn der allgemeine Zuordner keinen Schlüssel fand. Der EN-Abgleich (`erwartung`) prüft sprachneutrale Einträge wie das
+DE-Muster, `{zahl}` nur auf Zahlen. **Regel d** (Schnappschüsse, kein Python zur Laufzeit):
+`docs/context/einstellungen_neu/daten/metriknamen.json` aus `src/app/metric_catalog.py` (Drift-Test
+`tests/test_2968_metriknamen_schnappschuss.py`; bei Katalogänderung neu schreiben aus dessen `erwartet()`) und
+`daten/eigennamen.json` (handgepflegt, exakte Zeichenfolgen mit `quelle`, nur was im Mockup steht und kein
+DE-Katalogwert ist; Test `elementliste_en_zuordnung_2968.test.ts`). Der Generator nennt am Ende die
+verbleibenden EN-Lücken je Grund und Besitzer (`lueckenJeGrund`); jede Restlücke braucht einen Besitzer in
+`elementliste_besitzer.json`.
+
 ## Aktive Hooks in `.claude/settings.json` — Kurzreferenz (Stand 2026-10-21)
 
 Vollständige Liste der im Repo verdrahteten Hooks. Alle stehen in der geschützten Form

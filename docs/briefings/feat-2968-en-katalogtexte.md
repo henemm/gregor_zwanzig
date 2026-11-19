@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/feat_2968_elementliste_en_zuordnung.md
-spec_sha256: cf3022e2ab72274b5aee672f0910da7a85d7e1bdc8db291c706128d52d7b326c
-spec_frozen_sha256: f3d03c8f005dbb4f95d5fb22d71f6bdc8c06cc46446e7ce48d0a886447feb56f
+spec_sha256: d250908670d6aad6aaf7560a69054d207246adc4d412ed4d036ae8e1932677f0
+spec_frozen_sha256: ee2b57bd7e351d7fd7851438c281c668310da7380f1c0e553632d1b56f38e8d0
 ---
 
 # PO-Briefing: feat-2968-en-katalogtexte
@@ -12,25 +12,25 @@ spec_frozen_sha256: f3d03c8f005dbb4f95d5fb22d71f6bdc8c06cc46446e7ce48d0a886447fe
 
 ## Was gebaut wird
 
-Die Prüfung der Englisch-Oberfläche erkennt vorhandene englische Texte deutlich öfter und prüft damit so tief wie die deutsche.
+Der englische Seitenabgleich erkennt deutlich mehr Texte als prüfbar, statt sie als Lücke zu melden.
 
 ## Definition of Done
 
-Höchstens ein Viertel der bisher 1022 Lücken bleibt, jede mit zuständiger Scheibe, und kein Eintrag verweist mehr auf dieses Ticket.
+Die Restlücken liegen unter dem Ausgangswert 1022, jede hat einen anderen Besitzer als dieses Ticket, alle Prüfungen laufen grün.
 
 ## Wie geprüft wird
 
-Automatische Tests gegen den echten Katalog belegen Treffer und Gegenfälle; fachliche Richtigkeit der Restlücken prüft keiner.
+Tests gegen den echten Katalog belegen jede Regel samt Gegenbeispiel; ob die App selbst richtiges Englisch zeigt, prüfen sie nicht.
 
 ## Kritische Anmerkungen
 
-- Es entstehen keine neuen englischen Texte: Der Katalog ist vollständig, verbessert wird nur die Zuordnung in der Prüfliste.
-- Bis zu 25 % Restlücken bleiben, weil Mockup und App dort abweichen; Besitzer sind die jeweiligen Scheiben.
+- Abweichung: Statt Texte zu ergänzen, wird der Zuordner verbessert; rund 540 Lücken bleiben, gleiche Prüftiefe wie Deutsch nur teilweise.
+- Nachträglich ergänzt, nicht verlangt: Regeln für Zeichen-Texte und mehrere gültige englische Varianten.
 
 ## Freigabe-Frage
 
-Keine – Ampel gruen.
+Genügt es, dass rund 540 Einträge als Lücke mit neuem Besitzer bleiben, statt dass dieses Ticket sie schließt?
 
 ## Ampel
 
-Ampel: gruen
+Ampel: rot

@@ -48,10 +48,29 @@ export type ListenEintrag = {
 	i18n_key: string | null;
 	text_en: string | null;
 	luecke: boolean;
+	/** #2968 Regel c: nur gesetzt (true), wenn EN = DE-Muster gilt. */
+	sprachneutral?: boolean;
+	/** #2968 Regel f: nur gesetzt bei mehrdeutigem EN (alle Kandidaten, sortiert). */
+	text_en_alternativen?: string[];
 };
 export type Elementliste = { schema: number; mockup: string; mockup_hash: string; elemente: ListenEintrag[] };
 export type Katalog = { de: Record<string, string>; en: Record<string, string> };
-export type EnErgebnis = { i18n_key: string | null; text_en: string | null; muster: string | null; luecke: boolean };
+export type EnErgebnis = {
+	i18n_key: string | null;
+	text_en: string | null;
+	muster: string | null;
+	luecke: boolean;
+	/** #2968 Regel c: EN = DE-Muster (Zahlen, Einheiten, Kurz-/Protokoll-Token, Eigennamen aus der Liste). */
+	sprachneutral?: boolean;
+	/** #2968 Regel f: alle EN-Kandidaten, wenn der DE-Text unter mehreren Schlüsseln mit verschiedenem EN steht. */
+	text_en_alternativen?: string[];
+};
+/**
+ * #2968 Regel d: bekannte Werte aus den Schnappschüssen unter docs/context/einstellungen_neu/daten/.
+ * metriknamen = DE-Metriknamen (label_de, alert_label); token = Kurz-/Protokoll-Token (sms_code,
+ * sms_multi_symbols, kuerzel, compact_label, col_label); eigennamen = `text` aus eigennamen.json.
+ */
+export type Bekannte = { metriknamen: string[]; token: string[]; eigennamen: string[] };
 
 // ------------------------------------------------------------------ Hash (ohne Browser)
 
@@ -87,18 +106,21 @@ const norm = (s: string) => s.replace(/\s+/g, ' ').trim();
 const PLATZHALTER = /\{([a-zA-Z_]\w*)\}/g;
 
 type MusterEintrag = { key: string; de: string; re: RegExp; namen: string[]; literal: number };
-const katalogIndex = new WeakMap<Katalog, { exakt: Map<string, string>; muster: MusterEintrag[] }>();
+const katalogIndex = new WeakMap<Katalog, { exakt: Map<string, string>; enJeDe: Map<string, string[]>; muster: MusterEintrag[] }>();
 
 function index(katalog: Katalog) {
 	const vorhanden = katalogIndex.get(katalog);
 	if (vorhanden) return vorhanden;
 	const exakt = new Map<string, string>();
+	const enJeDe = new Map<string, string[]>(); // #2968 Regel f: alle EN-Kandidaten je DE-Text
 	const muster: MusterEintrag[] = [];
 	for (const key of Object.keys(katalog.de).sort()) {
 		const en = katalog.en[key];
 		if (typeof en !== 'string' || en.trim() === '') continue; // ohne EN-Wert kein Treffer
 		const d = norm(katalog.de[key]);
 		if (!exakt.has(d)) exakt.set(d, key);
+		const kandidaten = enJeDe.get(d) ?? [];
+		if (!kandidaten.includes(en)) enJeDe.set(d, [...kandidaten, en].sort());
 		const namen = [...d.matchAll(PLATZHALTER)].map((m) => m[1]);
 		if (namen.length === 0) continue;
 		const teile = d.split(PLATZHALTER).filter((_, i) => i % 2 === 0);
@@ -112,32 +134,201 @@ function index(katalog: Katalog) {
 		muster.push({ key, de: d, re: new RegExp('^' + quelle + '$', 'u'), namen, literal: literal.length });
 	}
 	muster.sort((a, b) => b.literal - a.literal || (a.key < b.key ? -1 : 1));
-	const idx = { exakt, muster };
+	const idx = { exakt, enJeDe, muster };
 	katalogIndex.set(katalog, idx);
 	return idx;
 }
 
+// ------------------------------------------------------------------ #2968: bekannte Werte (Schnappschüsse)
+
+export const STANDARD_DATEN = join(REPO, 'docs/context/einstellungen_neu/daten');
+const bekannteCache = new Map<string, Bekannte>();
+
+type MetrikSchnappschuss = {
+	label_de: string;
+	alert_label: string;
+	compact_label: string;
+	col_label: string;
+	sms_code: string;
+	sms_multi_symbols: string[];
+	kuerzel: string[];
+};
+
 /**
- * EN für einen Mockup-Text: exakter Treffer im DE-Katalog → EN desselben Schlüssels;
- * sonst Musterabgleich (Platzhalter) → EN-Muster MIT Platzhaltern; sonst Lücke (nichts erfunden).
+ * #2968 Regel d: liest daten/metriknamen.json (Drift-Test tests/test_2968_metriknamen_schnappschuss.py gegen
+ * src/app/metric_catalog.py) und daten/eigennamen.json. Kein Python-Aufruf zur Laufzeit.
+ */
+export function ladeBekannte(datenDir: string = STANDARD_DATEN): Bekannte {
+	const vorhanden = bekannteCache.get(datenDir);
+	if (vorhanden) return vorhanden;
+	const lies = (datei: string) => JSON.parse(readFileSync(join(datenDir, datei), 'utf8'));
+	const metriken = (lies('metriknamen.json') as { metriken: MetrikSchnappschuss[] }).metriken;
+	const eigen = (lies('eigennamen.json') as { eigennamen: Array<{ text: string }> }).eigennamen;
+	const liste = (xs: string[]) => [...new Set(xs.map((x) => norm(String(x ?? ''))).filter((x) => x !== ''))];
+	const b: Bekannte = {
+		metriknamen: liste(metriken.flatMap((m) => [m.label_de, m.alert_label])),
+		token: liste(metriken.flatMap((m) => [m.sms_code, m.compact_label, m.col_label, ...m.sms_multi_symbols, ...m.kuerzel])),
+		eigennamen: liste(eigen.map((e) => e.text))
+	};
+	bekannteCache.set(datenDir, b);
+	return b;
+}
+
+// ------------------------------------------------------------------ #2968: Zuordner (Regeln a bis d)
+
+const ZAHL_WERT = '[-−+]?\\d+(?:[.,:]\\d+)*';
+const EINHEIT = '(?:°C|km/h|mm|%|m|h)';
+/** Zahl, Einheit oder Zahl mit Einheit („30“, „-15“, „°C“, „1200 m“, „60%“). */
+const ZAHL_ODER_EINHEIT = new RegExp(`^(?:${ZAHL_WERT}|(?:${ZAHL_WERT} ?)?${EINHEIT})$`, 'u');
+/** Rekursionstiefe der Regel a: äußeres Muster = 1, Muster als Wert darin = 2. */
+const MAX_TIEFE = 2;
+const TRENNER = ' · ';
+const luecke = (): EnErgebnis => ({ i18n_key: null, text_en: null, muster: null, luecke: true });
+
+/**
+ * Regel c: Text ohne Buchstaben, Zahl/Einheit, Eigenname der Liste oder bekanntes Token, dem nur Zahlen,
+ * Zeichen oder eine Zahl mit Einheit folgen („N10“, „SnowL 1820“, „VS-“, „W 20-38@15“, „G 51 km/h“).
+ */
+function istSprachneutral(t: string, b: Bekannte): boolean {
+	if (!/\p{L}/u.test(t) || ZAHL_ODER_EINHEIT.test(t) || b.eigennamen.includes(t)) return true;
+	return b.token.some((k) => {
+		if (!t.startsWith(k)) return false;
+		const rest = t.slice(k.length);
+		return !/\p{L}/u.test(rest) || (/^ ?\d/.test(rest) && ZAHL_ODER_EINHEIT.test(rest.trim()));
+	});
+}
+
+/** Regel c: EN = DE-Muster (Zahlen als {zahl}), kein Katalogschlüssel. */
+function neutral(t: string): EnErgebnis {
+	const muster = t.replace(ZAHL, '{zahl}');
+	return { i18n_key: null, text_en: muster, muster: muster === t ? null : muster, luecke: false, sprachneutral: true };
+}
+
+/** Regel a: ein eingesetzter Wert ist aufgelöst (Katalogwert, Metrikname, Zahl/Einheit, Muster bis Tiefe 2). */
+function wertAufgeloest(w: string, katalog: Katalog, b: Bekannte, tiefe: number): boolean {
+	const v = norm(w);
+	if (index(katalog).exakt.has(v) || b.metriknamen.includes(v) || ZAHL_ODER_EINHEIT.test(v)) return true;
+	return tiefe < MAX_TIEFE && musterAufgeloest(v, katalog, b, tiefe + 1) !== null;
+}
+
+/** Regel a: erstes Katalogmuster, dessen eingesetzte Werte alle aufgelöst sind (ohne Wortlaut-Hälfte). */
+function musterAufgeloest(t: string, katalog: Katalog, b: Bekannte, tiefe: number): MusterEintrag | null {
+	for (const m of index(katalog).muster) {
+		const treffer = t.match(m.re);
+		if (treffer && treffer.slice(1).every((w) => wertAufgeloest(w, katalog, b, tiefe))) return m;
+	}
+	return null;
+}
+
+/**
+ * Muster für den ganzen Text: Regel a (alle Werte aufgelöst) oder die alte Wortlaut-Hälfte. Der Wortlaut muss
+ * dort den Text tragen (mind. die Hälfte, Werte ≤ 40 Zeichen), sonst wäre der Treffer zufällig
+ * („{count} Etappe“ passte auf „°C · vor der Etappe“) und das EN erfunden.
+ */
+function musterTreffer(t: string, katalog: Katalog, b: Bekannte): MusterEintrag | null {
+	for (const m of index(katalog).muster) {
+		const treffer = t.match(m.re);
+		if (!treffer) continue;
+		const werte = treffer.slice(1);
+		if (werte.every((w) => wertAufgeloest(w, katalog, b, 1))) return m;
+		if (m.literal * 2 >= t.length && werte.every((w) => w.length <= 40)) return m;
+	}
+	return null;
+}
+
+/** Regel b: ein Segment ist aufgelöst über Katalog exakt, Muster nach Regel a oder sprachneutral (Regel c). */
+function segmentEn(s: string, katalog: Katalog, b: Bekannte): EnErgebnis | null {
+	const key = index(katalog).exakt.get(s);
+	if (key) return { i18n_key: key, text_en: katalog.en[key], muster: s, luecke: false };
+	const m = musterAufgeloest(s, katalog, b, 1);
+	if (m) return { i18n_key: m.key, text_en: katalog.en[m.key], muster: m.de, luecke: false };
+	if (istSprachneutral(s, b)) return { ...neutral(s), muster: s.replace(ZAHL, '{zahl}') };
+	return null;
+}
+
+/**
+ * Regel b: Text mit „ · “ (oder führendem „· “) segmentweise; aufgelöst nur, wenn jedes Segment aufgelöst ist.
+ * null = kein Segmenttext. EN = Segment-EN mit „ · “ verbunden, führendes „· “ bleibt vorn.
+ */
+function segmenteEn(t: string, katalog: Katalog, b: Bekannte): EnErgebnis | null {
+	const fuehrend = t.startsWith('· ');
+	const teile = (fuehrend ? t.slice(2) : t).split(TRENNER).map(norm);
+	if (!fuehrend && teile.length < 2) return null;
+	const erg = teile.map((s) => segmentEn(s, katalog, b));
+	if (erg.some((e) => e === null || !e.text_en)) return luecke();
+	const fertig = erg as EnErgebnis[];
+	if (fertig.every((e) => e.sprachneutral)) return neutral(t);
+	const vorn = fuehrend ? '· ' : '';
+	const muster = vorn + fertig.map((e) => e.muster).join(TRENNER);
+	// Ohne Platzhalter ist das Muster fester Text (wie ein exakter Treffer): kein Muster.
+	return { i18n_key: null, text_en: vorn + fertig.map((e) => e.text_en).join(TRENNER), muster: /\{\w+\}/.test(muster) ? muster : null, luecke: false };
+}
+
+/**
+ * EN für einen Mockup-Text, nichts erfunden: exakter Treffer im DE-Katalog → EN desselben Schlüssels;
+ * sonst Katalogmuster (Regel a bzw. Wortlaut-Hälfte) → EN-Muster MIT Platzhaltern; sonst sprachneutral
+ * (Regel c) → EN = DE-Muster; sonst Segmente an „ · “ (Regel b); sonst Lücke.
  * #2913 Fix-Loop 2 (C5): die eingesetzten Werte stammen aus dem deutschen Mockup (z. B. Metriknamen);
  * sie in den EN-Text zu kopieren, hieße Deutsch als Englisch zu erwarten. Der Abgleich liest
  * Platzhalter als „beliebiger Wert“.
  */
-export function ermittleEn(textDe: string, katalog: Katalog): EnErgebnis {
+export function ermittleEn(textDe: string, katalog: Katalog, bekannte: Bekannte = ladeBekannte()): EnErgebnis {
 	const t = norm(textDe);
+	const exakt = exaktEn(t, katalog);
+	if (exakt) return exakt;
+	const m = musterTreffer(t, katalog, bekannte);
+	if (m) return { i18n_key: m.key, text_en: katalog.en[m.key], muster: m.de, luecke: false };
+	if (istSprachneutral(t, bekannte)) return neutral(t);
+	return zeichenEn(t, katalog) ?? segmenteEn(t, katalog, bekannte) ?? luecke();
+}
+
+/**
+ * Exakter Katalogtreffer; #2968 Regel f: steht der DE-Text unter mehreren Schlüsseln mit verschiedenem EN
+ * („Fertig“ ⇒ Done, Finished), trägt das Ergebnis alle Kandidaten — nicht nur den ersten Schlüssel.
+ */
+function exaktEn(t: string, katalog: Katalog, zeichen = ''): EnErgebnis | null {
 	const idx = index(katalog);
 	const key = idx.exakt.get(t);
-	if (key) return { i18n_key: key, text_en: katalog.en[key], muster: null, luecke: false };
-	for (const m of idx.muster) {
-		// Der Wortlaut des Musters muss den Text tragen (mind. die Hälfte), sonst wäre der Treffer
-		// zufällig („{count} Etappe“ passte auf „°C · vor der Etappe“) und das EN erfunden.
-		if (m.literal * 2 < t.length) continue;
-		const treffer = t.match(m.re);
-		if (!treffer || treffer.slice(1).some((w) => w.length > 40)) continue;
-		return { i18n_key: m.key, text_en: katalog.en[m.key], muster: m.de, luecke: false };
+	if (!key) return null;
+	const kandidaten = idx.enJeDe.get(t) ?? [];
+	const r: EnErgebnis = { i18n_key: key, text_en: katalog.en[key] + zeichen, muster: null, luecke: false };
+	if (kandidaten.length > 1) r.text_en_alternativen = kandidaten.map((k) => k + zeichen);
+	return r;
+}
+
+/**
+ * #2968 Regel e: „<Katalogwert> <Zeichen>“ („gelb >“, „rot <“) — die App setzt Grenzen-Beschriftungen so
+ * zusammen. Zeichen = weder Buchstabe noch Ziffer; der Wert muss als Ganzes exakt im Katalog stehen.
+ * EN = EN des Werts mit demselben Zeichen.
+ */
+function zeichenEn(t: string, katalog: Katalog): EnErgebnis | null {
+	const m = t.match(/^(.+) ([^\p{L}\p{N}\s]+)$/u);
+	return m ? exaktEn(m[1], katalog, ' ' + m[2]) : null;
+}
+
+/**
+ * #3007 (Listenzeile): Titel- und Lagezeilen der Listen in den Reitern Etappen und Orte sind Kontodaten in
+ * einem Katalogmuster ohne Mindest-Wortlaut („E{n} · {start} → {ziel}“, „{name}“, „{gruppe} · {hoehe} m“).
+ * Wie bei `chipEn` macht der Ort (Reiter + Abschnitt `liste`) den Treffer eindeutig. Greift nur, wenn der
+ * allgemeine Zuordner keinen Katalogschlüssel gefunden hat (Lücke oder sprachneutral); EN bleibt das Muster.
+ */
+const LISTENZEILE: Record<string, string[]> = {
+	etappen: ['trip.hub.etappe_titel'],
+	orte: ['vergleich.hub.ort_gruppe_hoehe', 'vergleich.hub.ort_name']
+};
+
+export function listenzeileEn(reiter: string, abschnitt: string, textDe: string, katalog: Katalog, allgemein: EnErgebnis): EnErgebnis {
+	if (abschnitt !== 'liste' || allgemein.i18n_key || !Object.hasOwn(LISTENZEILE, reiter)) return allgemein;
+	const t = norm(textDe);
+	for (const key of LISTENZEILE[reiter]) {
+		const de = katalog.de[key];
+		const en = katalog.en[key];
+		if (typeof de !== 'string' || typeof en !== 'string' || !en.trim()) continue;
+		const teile = norm(de).split(PLATZHALTER).filter((_, i) => i % 2 === 0);
+		const re = new RegExp('^' + teile.map((x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(.+?)') + '$', 'u');
+		if (re.test(t)) return { i18n_key: key, text_en: en, muster: norm(de), luecke: false };
 	}
-	return { i18n_key: null, text_en: null, muster: null, luecke: true };
+	return allgemein;
 }
 
 /** Katalogschlüssel der „+ Metrik“-Chips in „Nicht im Briefing“. */
@@ -159,7 +350,7 @@ export function chipEn(rolle: string, textDe: string, katalog: Katalog): EnErgeb
 
 // ------------------------------------------------------------------ Auslesen im Browser
 
-type Roh = { abschnitt: string; rolle: string; text: string };
+export type Roh = { abschnitt: string; rolle: string; text: string };
 type AusleseArg = { wurzeln: string[]; abschnitt: string | null; nur: string | null };
 
 /**
@@ -262,9 +453,13 @@ function ausleseImBrowser(arg: AusleseArg): Roh[] {
 const ZAHL = /\d+([.,]\d+)?/g;
 const zahlNeutral = (t: string) => t.replace(ZAHL, '#');
 
-type Rohgruppe = { ctx: string; reiter: string; zustand: string; segment: string | null; roh: Roh[] };
+export type Rohgruppe = { ctx: string; reiter: string; zustand: string; segment: string | null; roh: Roh[] };
 
-function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEintrag[] {
+/**
+ * Roh-Gruppen (aus dem Browser) → Listeneinträge, ohne Browser (reine Funktion, #2968 F002 testbar):
+ * EN je Element über `chipEn` (Chip-Rolle), sonst `ermittleEn` mit Sonderfall `listenzeileEn` (#3007).
+ */
+export function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEintrag[] {
 	const elemente: ListenEintrag[] = [];
 	for (const g of gruppen) {
 		const abschnitte = new Map<string, Roh[]>();
@@ -293,7 +488,7 @@ function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEintrag[] {
 					[g.ctx, g.reiter, g.zustand, g.segment ?? '-', abschnitt].join('.') +
 					'.' +
 					createHash('sha256').update(identitaet + '|' + nr).digest('hex').slice(0, 10);
-				const en = chipEn(r.rolle, r.text, katalog) ?? ermittleEn(r.text, katalog);
+				const en = chipEn(r.rolle, r.text, katalog) ?? listenzeileEn(g.reiter, abschnitt, r.text, katalog, ermittleEn(r.text, katalog));
 				// Muster: aus dem Katalog (Platzhalter) oder, ohne Katalogtreffer, Zahlen als {zahl}.
 				// Ein exakter Katalogtreffer ist fester Text (z. B. „3-Tages-Ausblick“), kein Muster.
 				const zahlMuster = !en.i18n_key && /\d/.test(r.text) ? r.text.replace(ZAHL, '{zahl}') : null;
@@ -310,7 +505,9 @@ function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEintrag[] {
 					muster: en.muster ?? zahlMuster,
 					i18n_key: en.i18n_key,
 					text_en: en.text_en,
-					luecke: en.luecke
+					luecke: en.luecke,
+					...(en.sprachneutral ? { sprachneutral: true } : {}),
+					...(en.text_en_alternativen ? { text_en_alternativen: en.text_en_alternativen } : {})
 				});
 			}
 		}
@@ -464,9 +661,49 @@ export function alsJson(liste: Elementliste): string {
 	);
 }
 
+// ------------------------------------------------------------------ #2968 (AC-10): Lücken je Grund
+
+export const STANDARD_BESITZER = join(REPO, 'docs/context/einstellungen_neu/elementliste_besitzer.json');
+type BesitzerRoh = { art: string; id?: string; ctx?: string; reiter?: string; abschnitt?: string; grund: string; verweis: string };
+
+/** Klasse einer Restlücke aus dem Grund ihres Besitzers (nur für die Ausgabe). */
+export function lueckenKlasse(b: BesitzerRoh | undefined): string {
+	if (!b) return 'ohne Besitzer';
+	const g = b.grund;
+	if (g.startsWith('EN-Lücke (Zusammensetzung im Code)')) return 'Zusammensetzung im Code (kein Katalogmuster)';
+	if (/Mockup-Beispieldaten|Prüfkonto|Kontodaten/.test(g)) return 'Kontodaten/Eigennamen ohne Listeneintrag';
+	if (/noch nicht gebaut|neu gebaut|fehlen noch|braucht persistente/.test(g)) return 'ungebautes Pendant';
+	return 'Mockup≠App-Abweichung';
+}
+
+/**
+ * #2968 (AC-10): verbleibende EN-Lücken je Grund (Klasse) und Besitzer-Verweis; Besitzer wie im Abgleich
+ * (Element-ID vor Abschnitt). Rückgabe absteigend nach Anzahl, eine Zeile je Klasse und Verweis.
+ */
+export function lueckenJeGrund(elemente: ListenEintrag[], besitzerJson: string): Array<{ klasse: string; verweis: string; anzahl: number }> {
+	const besitzer = (JSON.parse(besitzerJson) as { besitzer: BesitzerRoh[] }).besitzer;
+	const zaehler = new Map<string, { klasse: string; verweis: string; anzahl: number }>();
+	for (const e of elemente.filter((x) => x.luecke)) {
+		const b =
+			besitzer.find((x) => x.art === 'element' && x.id === e.id) ??
+			besitzer.find((x) => x.art === 'abschnitt' && x.ctx === e.ctx && x.reiter === e.reiter && x.abschnitt === e.abschnitt);
+		const klasse = lueckenKlasse(b);
+		const verweis = b?.verweis ?? '—';
+		const z = zaehler.get(klasse + '|' + verweis) ?? { klasse, verweis, anzahl: 0 };
+		z.anzahl += 1;
+		zaehler.set(klasse + '|' + verweis, z);
+	}
+	return [...zaehler.values()].sort((a, b) => b.anzahl - a.anzahl || (a.klasse + a.verweis < b.klasse + b.verweis ? -1 : 1));
+}
+
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
 	const liste = await erzeugeElementliste({ mockupPfad: STANDARD_MOCKUP, messagesDir: STANDARD_MESSAGES });
 	writeFileSync(STANDARD_LISTE, alsJson(liste));
 	const luecken = liste.elemente.filter((e) => e.luecke).length;
-	console.log(`${relative(REPO, STANDARD_LISTE)}: ${liste.elemente.length} Elemente, ${luecken} EN-Lücken, ${liste.mockup_hash}`);
+	const neutral = liste.elemente.filter((e) => e.sprachneutral).length;
+	console.log(`${relative(REPO, STANDARD_LISTE)}: ${liste.elemente.length} Elemente, ${luecken} EN-Lücken, ${neutral} sprachneutral, ${liste.mockup_hash}`);
+	console.log('Verbleibende EN-Lücken je Grund (Besitzer aus elementliste_besitzer.json):');
+	for (const z of lueckenJeGrund(liste.elemente, readFileSync(STANDARD_BESITZER, 'utf8'))) {
+		console.log(`  ${String(z.anzahl).padStart(4)}  ${z.klasse} · ${z.verweis}`);
+	}
 }

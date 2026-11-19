@@ -1,0 +1,24 @@
+{
+"zweck": "#2968 Regel c.4: Eigennamen und Kontodaten des Mockups, die nie übersetzt werden (i18n_konventionen.md §2). Exakte, normalisierte Zeichenfolgen, keine Heuristik; ein Text mit Eigennamen, der nicht vollständig hier steht, bleibt EN-Lücke. Jeder Eintrag steht im Mockup und ist kein DE-Katalogwert (Test frontend/src/lib/__tests__/elementliste_en_zuordnung_2968.test.ts).",
+"eigennamen": [
+{"text": "GR221 Mallorca", "quelle": "mockup-hub-fassung4.html Kopf Trip (Trip-Name, Prüfkonto #2967)"},
+{"text": "Mallorca", "quelle": "mockup-hub-fassung4.html Kopf Trip, Eyebrow „Trip · Mallorca“ (Region)"},
+{"text": "Münsterland", "quelle": "mockup-hub-fassung4.html Kopf Orte (Name des Orts-Vergleichs, Prüfkonto #2967)"},
+{"text": "Münster", "quelle": "mockup-hub-fassung4.html PLACES (Ort im Orts-Vergleich „Münsterland“)"},
+{"text": "Telgte", "quelle": "mockup-hub-fassung4.html PLACES (Ort im Orts-Vergleich „Münsterland“)"},
+{"text": "Tecklenburg", "quelle": "mockup-hub-fassung4.html PLACES (Ort im Orts-Vergleich „Münsterland“)"},
+{"text": "Ems", "quelle": "mockup-hub-fassung4.html Reiter Orte (Lage von Telgte, Fluss)"},
+{"text": "Teutoburger Wald", "quelle": "mockup-hub-fassung4.html Reiter Orte (Lage von Tecklenburg, Gebirge)"},
+{"text": "E1", "quelle": "mockup-hub-fassung4.html Reiter Etappen (Etappen-Kürzel)"},
+{"text": "E2", "quelle": "mockup-hub-fassung4.html Reiter Etappen (Etappen-Kürzel)"},
+{"text": "E3", "quelle": "mockup-hub-fassung4.html Reiter Etappen (Etappen-Kürzel)"},
+{"text": "E4", "quelle": "mockup-hub-fassung4.html Reiter Etappen (Etappen-Kürzel)"},
+{"text": "Port d'Andratx → Estellencs", "quelle": "mockup-hub-fassung4.html Reiter Etappen (Etappenname GR221 E1)"},
+{"text": "Estellencs → Esporles", "quelle": "mockup-hub-fassung4.html Reiter Etappen (Etappenname GR221 E2)"},
+{"text": "Esporles → Valldemossa", "quelle": "mockup-hub-fassung4.html Reiter Etappen (Etappenname GR221 E3)"},
+{"text": "Valldemossa → Deià", "quelle": "mockup-hub-fassung4.html Reiter Etappen (Etappenname GR221 E4)"},
+{"text": "@henning", "quelle": "mockup-hub-fassung4.html Reiter Zustellung (Telegram-Konto, Kontodaten)"},
+{"text": "henning@…", "quelle": "mockup-hub-fassung4.html Reiter Zustellung (E-Mail-Adresse gekürzt, Kontodaten)"},
+{"text": "inReach", "quelle": "mockup-hub-fassung4.html Reiter Zustellung (Gerätename Garmin inReach, Premium-SMS)"}
+]
+}

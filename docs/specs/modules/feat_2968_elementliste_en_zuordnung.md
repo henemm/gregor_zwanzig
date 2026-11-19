@@ -43,7 +43,7 @@ Der Elementlisten-Generator ordnet deutsche Mockup-Texte heute nur selten einem 
 ## Definition of Done
 
 - Alle ACs grün, Kern-Tests (`elementliste_*`, `paritaet_de_en`, Drift-Tests) grün.
-- Elementliste neu erzeugt, Lückenzahl im Test festgeschrieben und ≤ 25 % von 1022.
+- Elementliste neu erzeugt, Lückenzahl im Test festgeschrieben; Restlücken nur noch Klassen Mockup≠App, ungebaut, Kontodaten (Ausgangswert 1022; die frühere Schätzung ≤ 25 % war zu niedrig, weil allein die DE-seitigen Abweichungen rund 380 Einträge ausmachen).
 - Jede Restlücke ist ein Eintrag, der auch im DE-Abgleich nicht `gefunden` sein kann (Mockup≠App oder ungebaut), und hat einen Besitzer ≠ #2968.
 - Kein Eintrag der Besitzerliste verweist auf #2968.
 - Doku in `gates_und_ratschen.md` beschreibt die Zuordner-Regeln.
@@ -88,6 +88,10 @@ Ein deutsches Wort ist nie sprachneutral: Prüfreihenfolge ist Katalog/Muster zu
 **Erwartete Rest-Lücken (echte Mockup≠App-Abweichungen):** „obenzu viel“ vs. „oben / zu viel“, Anführungszeichen „“ vs. ‚‘, „Uhrzeit Morgen“ (#2795), „Archivieren?“, Test-Alarm-Menü, Tempo-Karte (#2796), Reiter Orte/Etappen (#2913-e). Die Ausgabe des Generators nennt die verbleibenden Lücken je Grund (Anzahl je Besitzer/Klasse).
 
 **Doku.** Neuer Absatz im Abschnitt Elementliste von `docs/reference/gates_und_ratschen.md`: Regeln a bis d, Eigennamen-Schnappschuss, Schutzgrundsatz „nichts erfinden“.
+
+**Regel e: Katalogwert + Zeichen.** Ein Text „<Katalogwert> <Zeichen ohne Buchstaben>“ ist aufgelöst; EN = EN des Katalogwerts + dasselbe Zeichen (die App setzt Grenzen-Beschriftungen so zusammen).
+
+**Regel f: Mehrdeutiges EN.** Steht ein DE-Text unter mehreren Schlüsseln mit verschiedenem EN, trägt der Eintrag alle EN-Kandidaten (`text_en_alternativen`); der EN-Abgleich akzeptiert jeden davon. Nichts wird erfunden, es wird nur nicht mehr willkürlich der erste Schlüssel gewählt.
 
 ## Expected Behavior
 
@@ -135,8 +139,17 @@ Alle Tests laufen gegen den echten Katalog (`ladeKatalog`), ohne Mocks.
 - **AC-7:** Given der Schnappschuss `metriknamen.json` / When der Python-Drift-Test ihn gegen `src/app/metric_catalog.py` vergleicht / Then sind beide gleich, und eine Änderung am Katalog ohne Schnappschuss-Update macht den Test rot.
   - Test: pytest `tests/test_2968_metriknamen_schnappschuss.py` mit echtem Katalog.
 
-- **AC-8:** Given die Elementliste wird neu erzeugt / When die Lücken gezählt werden / Then liegt die Zahl bei höchstens 25 % des Ausgangswerts 1022 (genaue Zahl wird bei der Umsetzung gemessen und im Test festgeschrieben, nur Senkung erlaubt), und es entstehen keine neuen Katalogschlüssel.
-  - Test: Test über `elementliste.json` mit Lückenobergrenze; Katalog-Verwender-Test bleibt grün.
+- **AC-8:** Given die Elementliste wird neu erzeugt / When die Lücken gezählt werden / Then ist jede verbleibende Lücke ein Eintrag, der auch im DE-Abgleich nicht wörtlich aus dem Katalog stammt (Mockup≠App-Abweichung, ungebautes Pendant oder Kontodaten), die gemessene Zahl ist im Test als Obergrenze festgeschrieben (nur Senkung erlaubt), und es entstehen keine neuen Katalogschlüssel.
+  - Test: Test über `elementliste.json` mit festgeschriebener Lückenobergrenze und Klassen-Zählung (`lueckenJeGrund`); Katalog-Verwender-Test bleibt grün.
+
+- **AC-11:** Given ein Mockup-Text aus einem Katalogwert und einem durch Leerzeichen abgetrennten Zeichen ohne Buchstaben (z. B. „gelb >“, „rot <“) / When der Generator ihn auflöst / Then ist er aufgelöst, EN = EN des Katalogwerts mit demselben Zeichen („yellow >“); ein Text mit zwei Wörtern oder einem unbekannten Wort bleibt Lücke.
+  - Test: positiv „gelb >“ gegen Ist-Katalog; Gegenbeispiele „Hagelschauer >“ und „gelb sehr >“ ⇒ Lücke.
+
+- **AC-12:** Given ein DE-Text, der im Katalog unter mehreren Schlüsseln mit verschiedenem EN steht (z. B. „Fertig“ ⇒ „Finished“ und „Done“) / When der Generator den Eintrag erzeugt und der EN-Abgleich die Erwartung bildet / Then gelten alle EN-Kandidaten dieser Schlüssel als erwartet (Alternative), nicht nur der erste; ein fremder Text passt weiterhin nicht.
+  - Test: „Fertig“ ⇒ Erwartung passt auf „Done“ und „Finished“, nicht auf „Ready“.
+
+- **AC-13:** Given die Listenzeilen der Reiter Etappen und Orte (#3007, z. B. „E1 · Port d'Andratx → Estellencs“) / When die Elementliste neu erzeugt wird / Then bleiben ihre Katalogschlüssel und EN-Muster wie bisher erhalten (Sonderfall nur im Abschnitt `liste` dieser Reiter, analog `chipEn`).
+  - Test: `elementliste_listen_3007.test.ts` bleibt grün.
 
 - **AC-9:** Given die bereinigte `elementliste_besitzer.json` / When der Abgleich-Lauf die Besitzer anwendet / Then verweist kein Eintrag mehr auf #2968, jede verbleibende Lücke hat einen Besitzer mit passendem Grund, und `elementliste_besitzer_kern.test.ts` sowie `elementliste_aktuell.test.ts` sind grün.
   - Test: Besitzer-Test über alle Einträge gegen die neu erzeugte Liste.
@@ -155,5 +168,7 @@ Alle Tests laufen gegen den echten Katalog (`ladeKatalog`), ohne Mocks.
 - **Rationale:** Reine Verfeinerung des Prüfwerkzeugs innerhalb bestehender Entscheidungen (ADR-0104 Zweisprachigkeit, ADR-0112 Oberflächen aus Bausteinen, Abnahme per Elementliste); keine Entscheidungsfläche wird geändert.
 
 ## Changelog
+
+- 2026-11-19: Nach Umsetzungsmessung (540 Restlücken, davon 162 „Katalogwert + Zeichen“ und 54 mehrdeutiges EN): Regeln e/f und AC-11..AC-13 ergänzt, AC-8 auf festgeschriebene gemessene Zahl und Klassen statt 25 % umgestellt.
 
 - 2026-11-19: Initial spec created

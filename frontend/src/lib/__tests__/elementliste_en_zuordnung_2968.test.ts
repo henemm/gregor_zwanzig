@@ -290,13 +290,13 @@ describe('#2968 AC-6 Abgleich: sprachneutral im EN-Lauf', () => {
 });
 
 describe('#2968 AC-8/AC-9 Messgröße und Besitzer über die eingecheckte Elementliste', () => {
-	// Ausgangswert 1022 Lücken (Neu-Erzeugung 2026-11-19); Ziel ≤ 25 %. Der Developer misst die Zahl nach
-	// dem Neu-Erzeugen und schreibt sie hier fest (nur Senkung erlaubt).
-	const OBERGRENZE = 255;
+	// Ausgangswert 1022 Lücken (Neu-Erzeugung 2026-11-19). Gemessen nach Regeln a–f (Spec-Revision AC-8):
+	// 352 Restlücken, alle Mockup≠App, ungebaut oder Kontodaten. Nur Senkung erlaubt.
+	const OBERGRENZE = 352;
 	const liste = JSON.parse(readFileSync(LISTE, 'utf8')) as { elemente: Array<ListenElement & { sprachneutral?: boolean }> };
 	const luecken = liste.elemente.filter((e) => e.luecke);
 
-	test(`Lücken ≤ ${OBERGRENZE} (25 % von 1022)`, () => {
+	test(`Lücken ≤ ${OBERGRENZE} (gemessen, nur Senkung)`, () => {
 		assert.ok(luecken.length <= OBERGRENZE, `${luecken.length} Lücken > ${OBERGRENZE}`);
 	});
 	test('sprachneutrale Einträge: vorhanden, keine Lücke, text_en = DE-Muster', () => {
@@ -326,5 +326,208 @@ describe('#2968 AC-8/AC-9 Messgröße und Besitzer über die eingecheckte Elemen
 		const roh = JSON.parse(readFileSync(BESITZER, 'utf8')) as { besitzer: Array<{ verweis: string }> };
 		const treffer = roh.besitzer.filter((b) => String(b.verweis).includes('2968'));
 		assert.equal(treffer.length, 0, `${treffer.length} Besitzer-Einträge mit #2968`);
+	});
+});
+
+// TDD RED (Spec-Revision 2026-11-19, Regeln e/f): AC-11, AC-12, AC-8 (Klassen der Restlücken).
+// Vertrag Regel f: EnErgebnis/ListenElement bekommen `text_en_alternativen?: string[]` (alle EN-Kandidaten
+// der Schlüssel mit demselben DE-Text, nur bei Mehrdeutigkeit); `erwartung(e,'en')` akzeptiert jeden davon.
+describe('#2968 AC-11 Regel e: Katalogwert + Zeichen', () => {
+	test('„gelb >“ ⇒ aufgelöst, EN = EN des Katalogwerts mit demselben Zeichen', () => {
+		assert.equal(katalog.de['wetter.farbe.yellow'], 'gelb', 'Vorbedingung: „gelb“ ist Katalogwert');
+		const r = mitBekannten('gelb >');
+		assert.equal(r.luecke, false, JSON.stringify(r));
+		assert.equal(r.text_en, katalog.en['wetter.farbe.yellow'] + ' >');
+		assert.notEqual(r.sprachneutral, true);
+	});
+	test('„rot <“ ⇒ „red <“', () => {
+		const r = mitBekannten('rot <');
+		assert.equal(r.luecke, false, JSON.stringify(r));
+		assert.equal(r.text_en, katalog.en['wetter.farbe.red'] + ' <');
+	});
+	test('Gegenbeispiel: unbekanntes Wort + Zeichen („Hagelschauer >“) ⇒ Lücke', () => {
+		const r = mitBekannten('Hagelschauer >');
+		assert.equal(r.luecke, true, JSON.stringify(r));
+		assert.equal(r.text_en, null);
+	});
+	// Fix-Loop 1 (F001): das „Zeichen“ ist nie ein Wort — sonst entstünde EN wie „Done Münster“.
+	for (const text of ['Fertig Telgte', 'gelb Wind', 'Fertig Münster']) {
+		test(`Gegenbeispiel: Katalogwert + Wort („${text}“) ⇒ Lücke`, () => {
+			const r = mitBekannten(text);
+			assert.equal(r.luecke, true, JSON.stringify(r));
+			assert.equal(r.text_en, null);
+		});
+	}
+	test('Gegenbeispiel: zwei Wörter vor dem Zeichen („gelb sehr >“) ⇒ Lücke', () => {
+		const r = mitBekannten('gelb sehr >');
+		assert.equal(r.luecke, true, JSON.stringify(r));
+		assert.equal(r.text_en, null);
+	});
+});
+
+describe('#2968 F003 Reihenfolge: Katalogtreffer vor sprachneutral', () => {
+	test('„Wind“ ist Katalogwert UND Token ⇒ Katalogtreffer, nicht sprachneutral', () => {
+		assert.ok(bekannte().token.includes('Wind'), 'Vorbedingung: Wind ist Token');
+		assert.ok(keyVonWert('Wind').length > 0, 'Vorbedingung: Wind ist Katalogwert');
+		const r = mitBekannten('Wind');
+		assert.ok(r.i18n_key && keyVonWert('Wind').includes(r.i18n_key), JSON.stringify(r));
+		assert.notEqual(r.sprachneutral, true);
+		assert.equal(r.text_en, katalog.en[r.i18n_key!]);
+	});
+});
+
+describe('#2968 F002/AC-13 Erzeugungsweg baueElemente (ohne Browser)', () => {
+	type Bau = (g: unknown[], k: Katalog) => Array<ListenElement & { sprachneutral?: boolean }>;
+	const bau = (gen as Record<string, unknown>).baueElemente as Bau | undefined;
+	const gruppe = (ctx: string, reiter: string, roh: Array<{ abschnitt: string; rolle: string; text: string }>) => [
+		{ ctx, reiter, zustand: 'normal', segment: null, roh }
+	];
+	const eins = (ctx: string, reiter: string, abschnitt: string, rolle: string, text: string) => {
+		assert.equal(typeof bau, 'function', 'baueElemente ist nicht exportiert');
+		const el = bau!(gruppe(ctx, reiter, [{ abschnitt, rolle, text }]), katalog);
+		assert.equal(el.length, 1);
+		return el[0];
+	};
+	test('Reiter etappen, Abschnitt liste: Etappentitel ⇒ trip.hub.etappe_titel', () => {
+		const e = eins('trip', 'etappen', 'liste', 'text', "E1 · Port d'Andratx → Estellencs");
+		assert.equal(e.i18n_key, 'trip.hub.etappe_titel');
+		assert.equal(e.text_en, katalog.en['trip.hub.etappe_titel']);
+	});
+	test('derselbe Text in anderem Abschnitt ⇒ kein Listenzeilen-Schlüssel', () => {
+		const e = eins('trip', 'etappen', 'kopf', 'text', "E1 · Port d'Andratx → Estellencs");
+		assert.notEqual(e.i18n_key, 'trip.hub.etappe_titel');
+	});
+	test('Reiter orte, Abschnitt liste: „Stadt · 60 m“ ⇒ vergleich.hub.ort_gruppe_hoehe; anderswo Lücke', () => {
+		assert.equal(eins('orte', 'orte', 'liste', 'text', 'Stadt · 60 m').i18n_key, 'vergleich.hub.ort_gruppe_hoehe');
+		const anders = eins('orte', 'orte', 'kopf', 'text', 'Stadt · 60 m');
+		assert.equal(anders.luecke, true, JSON.stringify(anders));
+	});
+	test('Reiter orte, Abschnitt liste: Ortsname ⇒ vergleich.hub.ort_name; im Reiter etappen nicht', () => {
+		assert.equal(eins('orte', 'orte', 'liste', 'text', 'Münster').i18n_key, 'vergleich.hub.ort_name');
+		assert.notEqual(eins('trip', 'etappen', 'liste', 'text', 'Münster').i18n_key, 'vergleich.hub.ort_name');
+	});
+	// Fix-Loop 2 (F005): Felder und Zusammenbau des Listeneintrags.
+	test('sprachneutraler Text „60%“ ⇒ Eintrag sprachneutral: true, Muster {zahl}%', () => {
+		const e = eins('trip', 'wetter', 'metriken', 'text', '60%');
+		assert.equal(e.sprachneutral, true, JSON.stringify(e));
+		assert.equal(e.text_en, '{zahl}%');
+		assert.equal(e.muster, '{zahl}%');
+	});
+	test('„Fertig“ ⇒ Eintrag text_en_alternativen mit Done und Finished', () => {
+		const e = eins('trip', 'wetter', 'grenzen-wind', 'knopf', 'Fertig') as ListenElement & { text_en_alternativen?: string[] };
+		assert.ok(e.text_en_alternativen?.includes('Done') && e.text_en_alternativen.includes('Finished'), JSON.stringify(e));
+	});
+	test('normaler Katalogtreffer ⇒ weder sprachneutral noch text_en_alternativen', () => {
+		const e = eins('trip', 'wetter', 'kopf', 'text', 'Zustellung');
+		assert.equal(e.i18n_key !== null, true);
+		assert.ok(!('sprachneutral' in e), JSON.stringify(e));
+		assert.ok(!('text_en_alternativen' in e), JSON.stringify(e));
+		assert.equal(e.muster, null);
+	});
+	test('Lücke mit Zahl ⇒ Muster mit {zahl} (ohne Katalogtreffer)', () => {
+		const e = eins('trip', 'wetter', 'metriken', 'text', 'Hagelschauer 3');
+		assert.equal(e.luecke, true);
+		assert.equal(e.muster, 'Hagelschauer {zahl}');
+	});
+	test('ordnung fortlaufend in DOM-Reihenfolge; Zahlvarianten werden EIN Element', () => {
+		assert.equal(typeof bau, 'function');
+		const el = bau!(
+			gruppe('trip', 'wetter', [
+				{ abschnitt: 'metriken', rolle: 'text', text: 'Zustellung' },
+				{ abschnitt: 'metriken', rolle: 'text', text: 'Hagelschauer 3' },
+				{ abschnitt: 'metriken', rolle: 'text', text: 'Hagelschauer 5' },
+				{ abschnitt: 'metriken', rolle: 'text', text: 'Gewitter' }
+			]),
+			katalog
+		);
+		assert.deepEqual(el.map((x) => [x.text_de, x.ordnung]), [['Zustellung', 1], ['Hagelschauer 3', 2], ['Gewitter', 3]]);
+		assert.equal(el[1].muster, 'Hagelschauer {zahl}');
+	});
+	test('Listenzeile greift nur ohne allgemeinen Schlüssel: „entfernen“ bleibt vergleich.hub.ort_entfernen', () => {
+		const e = eins('orte', 'orte', 'liste', 'knopf', 'entfernen');
+		assert.ok(e.i18n_key && e.i18n_key !== 'vergleich.hub.ort_name', JSON.stringify(e));
+		assert.equal(katalog.de[e.i18n_key!], 'entfernen');
+	});
+	test('Chip-Rolle ⇒ CHIP_SCHLUESSEL; dieselbe Zeile als Text nicht', () => {
+		assert.equal(eins('trip', 'wetter', 'metriken', 'chip', '+ Böen').i18n_key, gen.CHIP_SCHLUESSEL);
+		assert.notEqual(eins('trip', 'wetter', 'metriken', 'text', '+ Böen').i18n_key, gen.CHIP_SCHLUESSEL);
+	});
+});
+
+describe('#2968 AC-12 Regel f: mehrdeutiges EN als Alternativen', () => {
+	type MitAlt = Ergebnis & { text_en_alternativen?: string[] };
+	test('Generator: „Fertig“ trägt beide EN-Kandidaten (Done, Finished)', () => {
+		assert.equal(katalog.de['wetter.grenzen.fertig'], 'Fertig', 'Vorbedingung');
+		assert.equal(katalog.de['trip.status.finished'], 'Fertig', 'Vorbedingung');
+		const r = mitBekannten('Fertig') as MitAlt;
+		assert.equal(r.luecke, false, JSON.stringify(r));
+		const alle = [...new Set([r.text_en, ...(r.text_en_alternativen ?? [])])].sort();
+		assert.ok(alle.includes('Done') && alle.includes('Finished'), `EN-Kandidaten: ${JSON.stringify(alle)}`);
+	});
+	test('eindeutiger DE-Text trägt keine Alternativen', () => {
+		const r = mitBekannten('Zustellung') as MitAlt;
+		assert.ok(!r.text_en_alternativen || r.text_en_alternativen.length <= 1, JSON.stringify(r));
+	});
+	test('Abgleich: Erwartung passt auf „Done“ und „Finished“, nicht auf „Ready“', () => {
+		const e = {
+			id: 'x', ctx: 'trip', reiter: 'wetter', zustand: 'normal', segment: null, abschnitt: 'grenzen-wind', ordnung: 1,
+			rolle: 'knopf', text_de: 'Fertig', muster: null, i18n_key: 'trip.status.finished', text_en: 'Finished', luecke: false,
+			text_en_alternativen: ['Done', 'Finished']
+		} as unknown as ListenElement;
+		const re = logik.erwartung(e, 'en');
+		assert.ok(re);
+		assert.match('Finished', re!);
+		assert.match('Done', re!);
+		assert.doesNotMatch('Ready', re!);
+		assert.doesNotMatch('Done Finished', re!);
+	});
+	test('eingecheckte Liste: „Fertig“ im Grenzen-Dialog erwartet auch „Done“', () => {
+		const liste = JSON.parse(readFileSync(LISTE, 'utf8')) as { elemente: ListenElement[] };
+		const fertig = liste.elemente.filter((x) => x.text_de === 'Fertig' && x.abschnitt.startsWith('grenzen-'));
+		assert.ok(fertig.length > 0, 'Vorbedingung: Fertig-Knöpfe im Grenzen-Dialog');
+		for (const x of fertig) {
+			const re = logik.erwartung(x, 'en');
+			assert.ok(re && re.test('Done'), `${x.id}: „Done“ nicht erwartet`);
+		}
+	});
+});
+
+describe('#2968 AC-8 Restlücken nur in den Klassen Mockup≠App / ungebaut / Kontodaten', () => {
+	test('keine Restlücke der Klasse „Zusammensetzung im Code“ oder anderer Klassen', () => {
+		const liste = JSON.parse(readFileSync(LISTE, 'utf8')) as { elemente: unknown[] };
+		const jeGrund = (gen as Record<string, unknown>).lueckenJeGrund as (e: unknown[], b: string) => Array<{ klasse: string; verweis: string; anzahl: number }>;
+		const erlaubt = new Set(['Mockup≠App-Abweichung', 'ungebautes Pendant', 'Kontodaten/Eigennamen ohne Listeneintrag']);
+		const fremd = jeGrund(liste.elemente, readFileSync(BESITZER, 'utf8')).filter((z) => !erlaubt.has(z.klasse));
+		assert.deepEqual(fremd, [], `Restlücken außerhalb der erlaubten Klassen: ${JSON.stringify(fremd)}`);
+	});
+});
+
+describe('#2968 AC-10 Lücken je Grund und Doku', () => {
+	const liste = JSON.parse(readFileSync(LISTE, 'utf8')) as { elemente: Array<ListenElement & { sprachneutral?: boolean }> };
+	type JeGrund = (e: unknown[], b: string) => Array<{ klasse: string; verweis: string; anzahl: number }>;
+	const jeGrund = (gen as Record<string, unknown>).lueckenJeGrund as JeGrund | undefined;
+
+	test('Zusammenfassung zählt jede Lücke genau einmal, je Klasse und Besitzer, keine ohne Besitzer', () => {
+		assert.equal(typeof jeGrund, 'function', 'lueckenJeGrund fehlt in scripts/elementliste_aus_mockup.ts');
+		const zeilen = jeGrund!(liste.elemente, readFileSync(BESITZER, 'utf8'));
+		const summe = zeilen.reduce((s, z) => s + z.anzahl, 0);
+		assert.equal(summe, liste.elemente.filter((e) => e.luecke).length);
+		assert.deepEqual(zeilen.filter((z) => z.klasse === 'ohne Besitzer'), []);
+		assert.ok(zeilen.some((z) => z.klasse === 'Mockup≠App-Abweichung'), JSON.stringify(zeilen));
+		for (const z of zeilen) assert.doesNotMatch(z.verweis, /2968/);
+	});
+	test('Gegenprobe: ohne Besitzer-Einträge landet jede Lücke in „ohne Besitzer“', () => {
+		const zeilen = jeGrund!(liste.elemente, JSON.stringify({ besitzer: [] }));
+		assert.deepEqual(zeilen.map((z) => z.klasse), ['ohne Besitzer']);
+	});
+	// doc-compliance-test
+	test('gates_und_ratschen.md beschreibt die Zuordner-Regeln a bis d im Abschnitt Elementliste', () => {
+		const doku = readFileSync(join(REPO, 'docs/reference/gates_und_ratschen.md'), 'utf8');
+		const start = doku.indexOf('**EN-Zuordner des Generators (#2968');
+		assert.ok(start > 0, 'Absatz „EN-Zuordner des Generators (#2968 …)“ fehlt');
+		const absatz = doku.slice(start, doku.indexOf('\n## ', start));
+		for (const s of ['**Regel a**', '**Regel b**', '**Regel c**', '**Regel d**', '**Regel e**', '**Regel f**', 'text_en_alternativen', 'listenzeileEn', 'sprachneutral', 'metriknamen.json', 'eigennamen.json', 'nichts erfinden']) {
+			assert.ok(absatz.includes(s), `Doku-Absatz nennt „${s}“ nicht`);
+		}
 	});
 });
