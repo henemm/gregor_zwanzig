@@ -167,8 +167,8 @@ def test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis(daten, ctx, text)
 
 
 def test_ac12_bisherige_ausnahmen_bleiben(daten):
+    # #2969: Die Pauschal-Ausnahmen der Übersicht (Muster „{text}“) sind durch Einzel-Ausnahmen ersetzt
+    # (Spec feat_2969_elementliste_uebersicht.md, Test elementliste_uebersicht_2969.test.ts); keine andere
+    # Ausnahme der Vorgänger-Spec darf entstehen.
     alt = [a for a in daten["ausnahmen"] if a.get("spec") == "docs/specs/modules/feat_2913_abgleich_ganzseite.md"]
-    assert {(a["ctx"], a["reiter"], a["muster"]) for a in alt} == {
-        ("trip", "uebersicht", "{text}"),
-        ("orte", "uebersicht", "{text}"),
-    }
+    assert alt == []
