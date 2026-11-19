@@ -97,7 +97,10 @@ def build_placements_view(kind: str, entity_id: str, user_id: str) -> dict:
     report_type = "morning" if abo.enabled_reports == ("morning",) else "evening"
     vm, placements, gespeichert = _tabelle_aufloesen(abo, report_type)
     muster = muster_fn(vm, report_type)
-    return _antwort(kind, abo, vm, placements, gespeichert, muster, lang)
+    # Beispielwerte und Marken gelten fuer das gerenderte Briefing; die Zeilen
+    # der Tabelle fuer beide Briefing-Typen (#3154).
+    tabelle = dataclasses.replace(vm, rows=_tabellen_zeilen(abo, placements))
+    return _antwort(kind, abo, tabelle, placements, gespeichert, muster, lang)
 
 
 # ---------------------------------------------------------------------------
@@ -128,11 +131,36 @@ def _tabelle_aufloesen(abo: _Abo, report_type: str):
     return vm, umgerechnet.placements, False
 
 
-def _antwort(kind, abo: _Abo, vm, placements, gespeichert, muster: _Muster, lang) -> dict:
-    from app.metric_catalog import get_metric
+def _tabellen_grundauswahl(abo: _Abo) -> tuple[list[str], dict]:
+    """Grundauswahl der Tabelle: Abend-Fassung, dahinter, was nur morgens
+    gewaehlt ist -- dieselbe Menge wie die Umrechnung (``_legacy_rows``).
+    ``morning_enabled``/``evening_enabled`` wirken im Versand je Briefing-Typ,
+    die Tabelle hat dafuer keine Bedienung und zeigt jede Metrik (#3154)."""
     from services.channel_list_resolver import grundauswahl
 
-    eltern = grundauswahl(abo.display_config, abo.surface, None).parents
+    ids: list[str] = []
+    eltern: dict = {}
+    for rt in ("evening", "morning"):
+        grund = grundauswahl(abo.display_config, abo.surface, rt)
+        ids += [m for m in grund.ids if m not in ids]
+        eltern = {**grund.parents, **eltern}
+    return ids, eltern
+
+
+def _tabellen_zeilen(abo: _Abo, placements: dict) -> tuple:
+    """Zeilen der Tabelle aus demselben ``placements``, das die Antwort traegt."""
+    from services.placements import read_placements, resolve_rows
+
+    ids, eltern = _tabellen_grundauswahl(abo)
+    gelesen = read_placements(placements)
+    gespeichert = gelesen.rows if gelesen is not None else ()
+    return resolve_rows(gespeichert, ids, abo.surface, parents=eltern)
+
+
+def _antwort(kind, abo: _Abo, vm, placements, gespeichert, muster: _Muster, lang) -> dict:
+    from app.metric_catalog import get_metric
+
+    eltern = _tabellen_grundauswahl(abo)[1]
     zeilen = [{
         "metric_id": r.metric_id, "name": get_metric(r.metric_id).label(lang),
         "position": r.position, "parent": eltern.get(r.metric_id),
