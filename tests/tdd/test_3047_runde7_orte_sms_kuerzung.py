@@ -1,6 +1,9 @@
 """#3047 Runde 7, Paket p8: Orte-SMS/Premium-SMS kuerzen zuerst die Zellen
 ALLER Orte, erst dann ganze Orte (AC-23, ADR-0095).
 
+#3172 (ADR-0125): die Orte-SMS schreibt die Token-Zeile der Trip-SMS; alle
+gezeigten Orte tragen gleich viele Listenzeilen, der Zaehler ``+N`` entfaellt.
+
 SPEC: docs/specs/modules/feat_3047_einstellung_gleich_mail_pruefkatalog.md,
 "Nachtrag Runde 7" (AC-23; Tech-Lead-Entscheidung p8: ein Vergleich braucht
 mehrere Orte -- jeder Kanal beantwortet jede Frage, ADR-0095).
@@ -32,10 +35,19 @@ from tests.tdd._compare_kette_fixtures import (
 ORTE = [("loc-ibk", "Innsbruck"), ("loc-bz", "Bozen"), ("loc-kuf", "Kufstein"),
         ("loc-lz", "Lienz"), ("loc-sz", "Salzburg"), ("loc-vil", "Villach"),
         ("loc-gr", "Graz"), ("loc-li", "Linz"), ("loc-br", "Bregenz"),
-        ("loc-kl", "Klagenfurt"), ("loc-sp", "St. Poelten"), ("loc-ei", "Eisenstadt")]
+        ("loc-kl", "Klagenfurt"), ("loc-sp", "St. Poelten"), ("loc-ei", "Eisenstadt"),
+        # #3172: die Orte-SMS ist kuerzer (keine Namen, 160 Zeichen) -- fuer den
+        # Orts-Ueberlauf braucht es mehr Orte.
+        ("loc-we", "Wels"), ("loc-st", "Steyr"), ("loc-do", "Dornbirn"),
+        ("loc-fe", "Feldkirch"), ("loc-le", "Leoben"), ("loc-ki", "Kitzbuehel"),
+        ("loc-ze", "Zell am See"), ("loc-ha", "Hallein")]
+ORTE += [(f"loc-x{i}", f"Ort {i}") for i in range(21, 31)]
+#: Orte fuer den Orts-Ueberlauf; die beiden letzten tragen im Warnungs-Fall die Warnung.
+VIELE = 30
 
 #: Mail-Tabellenfolge bei "nie eingestellt" (CV2), als SMS-Kuerzel von Hand.
-MAIL_KUERZEL = ["D", "W", "R", "PR", "TH", "SU", "CT", "UV", "VS", "SD", "NS", "L", "G", "WD"]
+#: #3172: der Tagestiefstwert ``L`` steht im Bereich ``D10/20`` der ersten Zeile.
+MAIL_KUERZEL = ["D", "W", "R", "PR", "TH", "SU", "CT", "UV", "VS", "SD", "NS", "G", "WD"]
 
 #: Ausdrueckliche lange Liste, Folge bewusst != Katalogfolge, Kuerzel von Hand.
 LANGE_LISTE = [("gust", "G"), ("uv_index", "UV"), ("temperature", "D"),
@@ -144,33 +156,44 @@ def zwei_nutzer(mit, p) -> list:
 
 
 def _teile(sms: str) -> list[str]:
-    rumpf = sms.split(": ", 1)[1]
-    rumpf = re.sub(r" \+\d+ Orte$", "", rumpf)
-    return rumpf.split("; ")
+    from tests.helpers.orte_sms import orte_teile
+
+    return orte_teile(sms)
+
+
+def _name(ortsteil: str) -> str:
+    """#3172 (PO 2026-11-19): keine Namen in der SMS -- die Ortsnummer ``O{n}``
+    (Stelle in ``location_ids``) wird auf den Namen zurueckgefuehrt."""
+    return ORTE[int(ortsteil.split(" ", 1)[0][1:]) - 1][1]
 
 
 def _kuerzel(ortsteil: str) -> list[str]:
-    alle = "|".join(ALLE_KUERZEL)
-    return re.findall(rf"(?<= )({alle}) (?=[-\w])", ortsteil)
+    """Kuerzel der Token eines Ortsteils (#3172: ``D10/20``, ``TH:M@12``,
+    ``NS24+0`` -> ``D``, ``TH``, ``NS``), bis zum Warnblock ``!``."""
+    from tests.helpers.orte_sms import orte_kuerzel
+
+    return [k for k in orte_kuerzel(ortsteil) if k in ALLE_KUERZEL]
 
 
 def _pruefe(snap, namen: list[str], soll: list[str], *, alle_orte: bool) -> list[str]:
     sms = snap.sendungen("sms")[-1]["body"]
+    from tests.helpers.orte_sms import assert_premium_folgt_sms
+
     assert len(sms) <= 160, (len(sms), sms)
-    assert snap.sendungen("premium_sms")[-1]["body"] == sms
+    assert_premium_folgt_sms(sms, snap.sendungen("premium_sms")[-1]["body"])
     teile = _teile(sms)
-    gezeigt = [t.split(" ")[0] for t in teile]
+    gezeigt = [_name(t) for t in teile]
     if alle_orte:
         assert " Orte" not in sms, f"Ort faellt weg, obwohl Zellen kuerzbar sind: {sms}"
-        assert gezeigt == [n.split(" ")[0] for n in namen], sms
+        assert gezeigt == namen, sms
     for teil in teile:
         ist = _kuerzel(teil)
         assert ist and ist[0] == soll[0], f"erste Listenzeile fehlt: {teil!r} in {sms}"
         assert ist == soll[:len(ist)], f"nicht vom Listenende gekuerzt: {ist} vs {soll}"
-    if any(re.search(r" \+\d+$", t) for t in teile):
-        # Gekuerzt wird nur so weit wie noetig: die SMS ist danach fast voll
-        # (eine weitere Zelle je Ort haette nicht mehr gepasst).
-        assert len(sms) >= 160 - 7 - 15 * len(teile), (len(sms), sms)
+    # #3172 (ADR-0125 Nr. 4): alle gezeigten Orte tragen gleich viele Zeilen,
+    # kein Zaehler ``+N`` mehr im Ortsteil.
+    assert len({len(_kuerzel(t)) for t in teile}) == 1, f"ungleiche Zeilenzahl: {sms}"
+    assert not any(re.search(r" [+?]\d+(?: |$)", t) for t in teile), sms
     return teile
 
 
@@ -179,10 +202,8 @@ def test_nie_eingestellt_alle_orte_sichtbar(mit, anzahl):
     namen = [n for _, n in ORTE[:anzahl]]
     for uid, snap in zwei_nutzer(mit, preset(anzahl, None)):
         teile = _pruefe(snap, namen, MAIL_KUERZEL, alle_orte=True)
-        # Gleiches Budget je Ort: keiner der Orte steht voll, waehrend ein
-        # anderer auf weniger als die Haelfte seiner Zellen faellt.
-        zahl = [len(_kuerzel(t)) for t in teile]
-        assert max(zahl) - min(zahl) <= 2, (zahl, teile)
+        # #3172: gleiche Zeilenzahl je Ort (in ``_pruefe``), mehr als eine Zeile.
+        assert len(_kuerzel(teile[0])) > 1, teile
 
 
 def test_lange_ausdrueckliche_liste_drei_orte(mit):
@@ -193,37 +214,39 @@ def test_lange_ausdrueckliche_liste_drei_orte(mit):
 
 
 def test_viele_orte_fallen_erst_nach_der_ersten_zeile_weg(mit):
-    """12 Orte: selbst mit nur der ersten Listenzeile passen nicht alle -- dann
+    """30 Orte: selbst mit nur der ersten Listenzeile passen nicht alle -- dann
     erst fallen Orte vom Ende als ``+k Orte`` weg, jeder gezeigte Ort behaelt
     seine erste Zeile, die Zahl der gezeigten plus k ergibt alle Orte."""
     soll = [k for _, k in LANGE_LISTE]
-    for uid, snap in zwei_nutzer(mit, preset(12, [m for m, _ in LANGE_LISTE])):
+    for uid, snap in zwei_nutzer(mit, preset(VIELE, [m for m, _ in LANGE_LISTE])):
         sms = snap.sendungen("sms")[-1]["body"]
         treffer = re.search(r" \+(\d+) Orte$", sms)
         assert treffer, sms
         teile = _pruefe(snap, [], soll, alle_orte=False)
-        assert len(teile) + int(treffer.group(1)) == 12, sms
+        assert len(teile) + int(treffer.group(1)) == VIELE, sms
         assert len(teile) >= 3, f"zu frueh Orte verworfen: {sms}"
-        gezeigt = [t.split(" ")[0] for t in teile]
-        assert gezeigt == [n.split(" ")[0] for _, n in ORTE[:len(teile)]], sms
+        assert all(len(_kuerzel(t)) == 1 for t in teile), f"Orte vor der ersten Zeile weg: {sms}"
+        gezeigt = [_name(t) for t in teile]
+        assert gezeigt == [n for _, n in ORTE[:len(teile)]], sms
 
 
 def test_viele_orte_warnung_eines_hinteren_ortes_faellt_zuletzt_weg(mit):
-    """12 Orte, nur der letzte (Eisenstadt) und der vorletzte (St. Poelten)
+    """30 Orte, nur der letzte (Ort 30) und der vorletzte (Ort 29)
     tragen eine Gewitterwarnung: beide bleiben mit ``!TS`` sichtbar, statt
     ihrer entfallen Orte ohne Warnung vom Ende; jeder gezeigte Ort behaelt
-    seine erste Listenzeile."""
-    WARN["orte"] = {"loc-ei", "loc-sp"}
+    seine erste Listenzeile und seine Nummer (``O29``, ``O30``)."""
+    WARN["orte"] = {"loc-x29", "loc-x30"}
     soll = [k for _, k in LANGE_LISTE]
-    for uid, snap in zwei_nutzer(mit, preset(12, [m for m, _ in LANGE_LISTE])):
+    for uid, snap in zwei_nutzer(mit, preset(VIELE, [m for m, _ in LANGE_LISTE])):
         sms = snap.sendungen("sms")[-1]["body"]
         treffer = re.search(r" \+(\d+) Orte$", sms)
         assert treffer, sms
         teile = _pruefe(snap, [], soll, alle_orte=False)
-        gezeigt = [t.split(" ")[0] for t in teile]
-        assert gezeigt[-2:] == ["St.", "Eisenstadt"], sms
+        gezeigt = [_name(t) for t in teile]
+        assert gezeigt[-2:] == ["Ort 29", "Ort 30"], sms
+        assert [t.split(" ", 1)[0] for t in teile[-2:]] == ["O29", "O30"], sms
         for teil in teile[-2:]:
             assert "!TS" in teil, f"Warnung fehlt: {sms}"
-        ohne = [n.split(" ")[0] for _, n in ORTE[:10]]
+        ohne = [n for _, n in ORTE[:28]]
         assert gezeigt[:-2] == ohne[:len(gezeigt) - 2], sms
-        assert len(teile) + int(treffer.group(1)) == 12, sms
+        assert len(teile) + int(treffer.group(1)) == VIELE, sms

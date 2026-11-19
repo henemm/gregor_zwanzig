@@ -656,7 +656,8 @@ def test_ac12_compare_sms_und_telegram_zeigen_keine_stunden_herkunft():
         f"Stundentabelle erscheinen, sonst beweist ihre Abwesenheit in "
         f"SMS/Telegram nichts: {_text_stunden(text)!r}")
 
-    assert "hoch" in sms, f"Die Stufe selbst muss in der SMS stehen: {sms!r}"
+    # #3172 (ADR-0125): Stufe als Token der Trip-SMS (``TH:H@16``).
+    assert "TH:H" in sms, f"Die Stufe selbst muss in der SMS stehen: {sms!r}"
     for zutat in ALLE_ZUTATEN:
         assert zutat not in sms, (
             f"Compare-SMS ist bewusst OHNE Herkunft (PO-Entscheidung) -- "

@@ -1604,9 +1604,13 @@ class NotificationService:
         sms_sink: Optional[object] = None,
         telegram_sink: Optional[object] = None,
         premium_sms_sink: Optional[object] = None,
+        premium_sms_text: Optional[str] = None,
     ) -> NotificationResult:
         """Versendet ein Vergleichs-Briefing ueber die aufgeloesten Kanaele
         (Issue #1270, Scheibe S5).
+
+        ``premium_sms_text`` (Issue #3172): Text der Premium-SMS, wenn er vom
+        SMS-Text abweicht (ueber 153 Zeichen neu gerendert); ``None`` = SMS-Text.
 
         Content-Type-spezifische Methode auf der geteilten Klasse — dasselbe
         Muster wie `send_multi_location_official_alert` (Compare-Alarm) neben
@@ -1705,10 +1709,11 @@ class NotificationService:
                 "premium_sms", "briefing", now_premium, blocked_channels, blocked_reason_codes,
             ):
                 try:
+                    premium_text = premium_sms_text or sms_text
                     if premium_sms_sink is not None:
-                        premium_sms_sink(sms_text)
+                        premium_sms_sink(premium_text)
                     else:
-                        self._premium_sms_output().send(subject="", body=sms_text)
+                        self._premium_sms_output().send(subject="", body=premium_text)
                     sent_channels.append("premium_sms")
                 except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
                     sms_daily_limit.release_reservation(

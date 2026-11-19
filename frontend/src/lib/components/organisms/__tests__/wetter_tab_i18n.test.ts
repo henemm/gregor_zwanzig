@@ -88,7 +88,6 @@ const NEU_FREIGEGEBEN = new Set([
 	'wetter.wsw.sms_passt_nicht.other',
 	'wetter.wsw.sms_orte_passt_nicht.one',
 	'wetter.wsw.sms_orte_passt_nicht.other',
-	'wetter.wsw.sms.plus_je_ort',
 	'wetter.wsw.sms.hochziehen',
 	'wetter.wsw.legende.titel',
 	'wetter.wsw.legende.zeit_ab_gelb',
@@ -173,6 +172,10 @@ const GEAENDERT_FREIGEGEBEN: Record<string, Record<string, string>> = {
 	}
 };
 
+// #3172 (ADR-0125): die Orte-SMS trägt keinen Rest-Zähler „+N“ je Ort mehr -- der Hinweissatz dazu entfällt
+// ersatzlos. Bewusst entfernt; jede andere Entfernung bleibt rot.
+const ENTFERNT_FREIGEGEBEN = new Set(['wetter.wsw.sms.plus_je_ort']);
+
 describe('AC-21: wetter.json DE/EN — Bestandstexte unverändert gegenüber dem Abzweigpunkt von origin/main', () => {
 	for (const lang of ['de', 'en']) {
 		const rel = `frontend/src/lib/i18n/messages/${lang}/wetter.json`;
@@ -183,6 +186,7 @@ describe('AC-21: wetter.json DE/EN — Bestandstexte unverändert gegenüber dem
 			const vorher: Record<string, string> = JSON.parse(vorherText!);
 			const jetzt: Record<string, string> = JSON.parse(readFileSync(path.join(REPO, rel), 'utf8'));
 			for (const [k, v] of Object.entries(vorher)) {
+				if (ENTFERNT_FREIGEGEBEN.has(k) && !(k in jetzt)) continue;
 				const soll = GEAENDERT_FREIGEGEBEN[lang][k] !== undefined && jetzt[k] !== v ? GEAENDERT_FREIGEGEBEN[lang][k] : v;
 				assert.equal(jetzt[k], soll, `${rel}: ${k} wurde gegenüber ${BASIS.slice(0, 9)} verändert oder entfernt (AC-21: Texte unverändert)`);
 			}

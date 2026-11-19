@@ -28,7 +28,6 @@ import re
 from datetime import date, datetime
 
 from app.user import ComparisonResult, LocationResult, SavedLocation
-from output.renderers.channel_layout import CHANNEL_LIMITS
 from output.renderers.comparison import (
     render_comparison_text, render_compare_sms, render_compare_telegram,
 )
@@ -38,7 +37,8 @@ from services.report_config_resolver import resolve_compare_render_options
 
 # Issue #1362 S5b, Adversary-Fund Runde 5 (PO-Entscheidung 2026-07-30): gegen
 # die KONSTANTE pruefen, nicht gegen den alten Literalwert 140.
-_SMS_LIMIT = CHANNEL_LIMITS["sms"]["max_chars"]
+# #3172: die Orte-SMS hat 160 Zeichen wie die Trip-SMS.
+from output.renderers.comparison import ORTE_SMS_MAX_ZEICHEN as _SMS_LIMIT  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Fixtures (fest, ohne Netz) — Werte sind bewusst unspektakulaer; geprueft wird
@@ -134,12 +134,17 @@ _SMS_LABEL_TOKENS = set(_SMS_CODE.values())
 
 
 def _sms_labels(msg: str) -> list[str]:
-    """Kurz-Labels des ERSTEN Ortsteils der SMS, in Render-Reihenfolge."""
-    _, sep, body = msg.partition(": ")
-    if not sep:
+    """Kurz-Labels des ERSTEN Ortsteils der SMS, in Render-Reihenfolge.
+
+    #3172 (ADR-0125): Token-Zeile der Trip-SMS (``O1 CT? D20 SU5 W?``),
+    das Kuerzel ist der Buchstaben-Anfang des Tokens."""
+    from tests.helpers.orte_sms import orte_teile, orte_token
+
+    teile = orte_teile(msg)
+    if not teile:
         return []
-    first_location = body.split("; ")[0]
-    return [t for t in first_location.split(" ") if t in _SMS_LABEL_TOKENS]
+    kuerzel = (re.match(r"[A-Z]+", t) for t in orte_token(teile[0]))
+    return [k.group(0) for k in kuerzel if k and k.group(0) in _SMS_LABEL_TOKENS]
 
 
 def _telegram_labels(msg: str) -> list[str]:

@@ -1,0 +1,154 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+FFFFFFFFFFFFFFFFFFFFFFFF                                                 [100%]
+=================================== FAILURES ===================================
+E   AssertionError: ('Kiel D 16C L 9C R 0.0 mm PR 53% TH - ?2', 'Orte 14.07.: Kiel D 16C L 9C R 0.0 mm PR 53% TH - ?2; Sankt Peter-Ording D 15C L 8C R 0.0 mm PR 10% TH - ?2; Sylt D 14C L 7C R 1.5 mm PR 25% TH leicht ?2')
+    assert 'Kiel D 16C L...R 53% TH - ?2' == 'Kiel: D9/16 ...PR53%@13 TH:-'
+      
+      - Kiel: D9/16 W13@11 G31@12 R- PR53%@13 TH:-
+      + Kiel D 16C L 9C R 0.0 mm PR 53% TH - ?2
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:196: AssertionError: ('Kiel D 16C L 9C R 0.0 mm PR 53% TH - ?2', 'Orte 14.07.: Kiel D 16C L 9C R 0.0 mm PR 53% TH - ?2; Sankt Peter-Ording D 15C L 8C R 0.0 mm PR 10% TH - ?2; Sylt D 14C L 7C R 1.5 mm PR 25% TH leicht ?2')
+E   AssertionError: Ort Kiel fehlt in der SMS: 'Orte 14.07.: Kiel D 16C L 9C R 0.0 mm PR 53% TH - ?2; Sankt Peter-Ording D 15C L 8C R 0.0 mm PR 10% TH - ?2; Sylt D 14C L 7C R 1.5 mm PR 25% TH leicht ?2'
+    assert []
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:111: AssertionError: Ort Kiel fehlt in der SMS: 'Orte 14.07.: Kiel D 16C L 9C R 0.0 mm PR 53% TH - ?2; Sankt Peter-Ording D 15C L 8C R 0.0 mm PR 10% TH - ?2; Sylt D 14C L 7C R 1.5 mm PR 25% TH leicht ?2'
+E   AssertionError: Orte 14.07.: Kiel D 16C L 9C R 0.0 mm PR 53% TH - ?2; Sankt Peter-Ording D 15C L 8C R 0.0 mm PR 10% TH - ?2; Sylt D 14C L 7C R 1.5 mm PR 25% TH leicht ?2
+    assert '; Sankt Peter-Ording: ' in 'Orte 14.07.: Kiel D 16C L 9C R 0.0 mm PR 53% TH - ?2; Sankt Peter-Ording D 15C L 8C R 0.0 mm PR 10% TH - ?2; Sylt D 14C L 7C R 1.5 mm PR 25% TH leicht ?2'
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:210: AssertionError: Orte 14.07.: Kiel D 16C L 9C R 0.0 mm PR 53% TH - ?2; Sankt Peter-Ording D 15C L 8C R 0.0 mm PR 10% TH - ?2; Sylt D 14C L 7C R 1.5 mm PR 25% TH leicht ?2
+E   AssertionError: Orte 14.07.: Kiel D -0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 FL -0C +1; Husum D -0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 +2
+    assert not <re.Match object; span=(7, 10), match='-0C'>
+     +  where <re.Match object; span=(7, 10), match='-0C'> = <function search at 0x7f568da70400>('-?\\d+C\\b', 'Kiel D -0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 FL -0C +1')
+     +    where <function search at 0x7f568da70400> = re.search
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:244: AssertionError: Orte 14.07.: Kiel D -0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 FL -0C +1; Husum D -0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 +2
+E   AssertionError: Orte 14.07.: Kiel D 0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 FL -0C +1; Husum D 0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 +2
+    assert not <re.Match object; span=(7, 9), match='0C'>
+     +  where <re.Match object; span=(7, 9), match='0C'> = <function search at 0x7f568da70400>('-?\\d+C\\b', 'Kiel D 0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 FL -0C +1')
+     +    where <function search at 0x7f568da70400> = re.search
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:244: AssertionError: Orte 14.07.: Kiel D 0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 FL -0C +1; Husum D 0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 +2
+E   AssertionError: Orte 14.07.: Kiel D 0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 FL -0C +1; Husum D 0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 +2
+    assert not <re.Match object; span=(7, 9), match='0C'>
+     +  where <re.Match object; span=(7, 9), match='0C'> = <function search at 0x7f568da70400>('-?\\d+C\\b', 'Kiel D 0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 FL -0C +1')
+     +    where <function search at 0x7f568da70400> = re.search
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:244: AssertionError: Orte 14.07.: Kiel D 0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 FL -0C +1; Husum D 0C R 0.0 mm PR 10% TH - UV 1 VS 20.0 km L -0C WD 330 +2
+E   AssertionError: Orte 14.07.: Kiel L -0C D -0C WD 330 FL -0C FD -0C ?1; Husum L -0C D -0C WD 330 FL -0C FD -0C ?1
+    assert not <re.Match object; span=(7, 10), match='-0C'>
+     +  where <re.Match object; span=(7, 10), match='-0C'> = <function search at 0x7f568da70400>('-?\\d+C\\b', 'Kiel L -0C D -0C WD 330 FL -0C FD -0C ?1')
+     +    where <function search at 0x7f568da70400> = re.search
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:244: AssertionError: Orte 14.07.: Kiel L -0C D -0C WD 330 FL -0C FD -0C ?1; Husum L -0C D -0C WD 330 FL -0C FD -0C ?1
+E   AssertionError: Orte 14.07.: Kiel L -0C D 0C WD 330 FL -0C FD 0C ?1; Husum L -0C D 0C WD 330 FL -0C FD -0C ?1
+    assert not <re.Match object; span=(7, 10), match='-0C'>
+     +  where <re.Match object; span=(7, 10), match='-0C'> = <function search at 0x7f568da70400>('-?\\d+C\\b', 'Kiel L -0C D 0C WD 330 FL -0C FD 0C ?1')
+     +    where <function search at 0x7f568da70400> = re.search
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:244: AssertionError: Orte 14.07.: Kiel L -0C D 0C WD 330 FL -0C FD 0C ?1; Husum L -0C D 0C WD 330 FL -0C FD -0C ?1
+E   AssertionError: Orte 14.07.: Kiel L -0C D 0C WD 330 FL -0C FD 0C ?1; Husum L -0C D 0C WD 330 FL -0C FD -0C ?1
+    assert not <re.Match object; span=(7, 10), match='-0C'>
+     +  where <re.Match object; span=(7, 10), match='-0C'> = <function search at 0x7f568da70400>('-?\\d+C\\b', 'Kiel L -0C D 0C WD 330 FL -0C FD 0C ?1')
+     +    where <function search at 0x7f568da70400> = re.search
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:244: AssertionError: Orte 14.07.: Kiel L -0C D 0C WD 330 FL -0C FD 0C ?1; Husum L -0C D 0C WD 330 FL -0C FD -0C ?1
+E   AssertionError: Ort Kiel fehlt in der SMS: 'Orte 14.07.: Kiel D 15C PR 20% ?1; Husum ?3'
+    assert []
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:111: AssertionError: Ort Kiel fehlt in der SMS: 'Orte 14.07.: Kiel D 15C PR 20% ?1; Husum ?3'
+E   AssertionError: Ort Husum fehlt in der SMS: 'Orte 14.07.: Kiel D 15C ?1; Husum D 14C W 8 km/h'
+    assert []
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:111: AssertionError: Ort Husum fehlt in der SMS: 'Orte 14.07.: Kiel D 15C ?1; Husum D 14C W 8 km/h'
+E   AssertionError: kein +N/+k Orte erwartet: Aabenraa 14.07.: D 19C W 43 km/h R 3.4 mm PR 70% TH mittel SU 5.0h CT 70% UV 7 VS 14.4 km SD 0 cm NS 0 cm L 15C G 62 km/h FZ 3300 m WD 240 FL 12C +9
+    assert '+' not in 'Aabenraa 14...40 FL 12C +9'
+      
+      '+' is contained here:
+        40 FL 12C +9
+      ?           +
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:282: AssertionError: kein +N/+k Orte erwartet: Aabenraa 14.07.: D 19C W 43 km/h R 3.4 mm PR 70% TH mittel SU 5.0h CT 70% UV 7 VS 14.4 km SD 0 cm NS 0 cm L 15C G 62 km/h FZ 3300 m WD 240 FL 12C +9
+E   AssertionError: kein +N/+k Orte erwartet: Orte 14.07.: Aabenraa D 19C W 43 km/h R 3.4 mm PR 70% +21; Flensburg D 20C W 44 km/h R 3.4 mm PR 70% +21; Schleswig D 21C W 45 km/h R 3.4 mm PR 70% +21
+    assert '+' not in 'Orte 14.07....m PR 70% +21'
+      
+      '+' is contained here:
+        mm PR 70% +21; Flensburg D 20C W 44 km/h R 3.4 mm PR 70% +21; Schleswig D 21C W 45 km/h R 3.4 mm PR 70% +21
+      ?           +
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:282: AssertionError: kein +N/+k Orte erwartet: Orte 14.07.: Aabenraa D 19C W 43 km/h R 3.4 mm PR 70% +21; Flensburg D 20C W 44 km/h R 3.4 mm PR 70% +21; Schleswig D 21C W 45 km/h R 3.4 mm PR 70% +21
+E   AssertionError: kein +N/+k Orte erwartet: Orte 14.07.: Aabenraa D 19C W 43 km/h +23; Flensburg D 20C +24; Schleswig D 21C +24; Garmisch-Partenkirchen D 22C +24; Bad Toelz D 23C +24
+    assert '+' not in 'Orte 14.07....lz D 23C +24'
+      
+      '+' is contained here:
+        Orte 14.07.: Aabenraa D 19C W 43 km/h +23; Flensburg D 20C +24; Schleswig D 21C +24; Garmisch-Partenkirchen D 22C +24; Bad Toelz D 23C +24
+      ?                                       +
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:282: AssertionError: kein +N/+k Orte erwartet: Orte 14.07.: Aabenraa D 19C W 43 km/h +23; Flensburg D 20C +24; Schleswig D 21C +24; Garmisch-Partenkirchen D 22C +24; Bad Toelz D 23C +24
+E   AssertionError: vor dem Wegfall von Orten nur die erste Zeile: Orte 14.07.: Ortschaft Nummer 1 D 15C L 15C +3 ?2; Ortschaft Nummer 2 D 15C L 15C +3 ?2; Ortschaft Nummer 8 D 15C +4 ?2 !TS:H@14 +5 Orte X?
+    assert 9 == 1
+     +  where 9 = len(['Ortschaft', 'Nummer', '1', 'D', '15C', 'L', ...])
+     +    where ['Ortschaft', 'Nummer', '1', 'D', '15C', 'L', ...] = _token('Ortschaft Nummer 1 D 15C L 15C +3 ?2')
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:319: AssertionError: vor dem Wegfall von Orten nur die erste Zeile: Orte 14.07.: Ortschaft Nummer 1 D 15C L 15C +3 ?2; Ortschaft Nummer 2 D 15C L 15C +3 ?2; Ortschaft Nummer 8 D 15C +4 ?2 !TS:H@14 +5 Orte X?
+E   AssertionError: Orte 14.07.: Ortschaft Nummer 1 D 15C L 15C R 0.0 mm PR 10% TH - ?2; Ortschaft Nummer 2 D 15C L 15C R 0.0 mm PR 10% TH - ?2
+    assert ['Ortschaft',...5C', 'L', ...] == ['D15', 'W-',...'PR-', 'TH:-']
+      
+      At index 0 diff: 'Ortschaft' != 'D15'
+      Left contains 9 more items, first extra item: '15C'
+      Use -v to get more diff
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:328: AssertionError: Orte 14.07.: Ortschaft Nummer 1 D 15C L 15C R 0.0 mm PR 10% TH - ?2; Ortschaft Nummer 2 D 15C L 15C R 0.0 mm PR 10% TH - ?2
+E   AssertionError: Orte 14.07.: Kiel L 12C D 12C FL 10C FD 10C TH mittel; Husum L 12C D 12C TH - ?2
+    assert 0 == 1
+     +  where 0 = sum(<generator object test_ac5_kein_nachtwert_kein_folgetag.<locals>.<genexpr> at 0x7f5679347850>)
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:351: AssertionError: Orte 14.07.: Kiel L 12C D 12C FL 10C FD 10C TH mittel; Husum L 12C D 12C TH - ?2
+E   AssertionError: Orte 14.07.: Kiel L 12C D 12C FL 10C FD 10C TH mittel; Husum L 12C D 12C TH - ?2
+    assert 0 == 1
+     +  where 0 = sum(<generator object test_ac5_kein_nachtwert_kein_folgetag.<locals>.<genexpr> at 0x7f56793476b0>)
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:351: AssertionError: Orte 14.07.: Kiel L 12C D 12C FL 10C FD 10C TH mittel; Husum L 12C D 12C TH - ?2
+E   AssertionError: Sankt Peter-Ording 14.07.: D 15C ?1
+    assert 'Sankt Peter-...07.: D 15C ?1' == 'Sankt Peter-...4.07.: D15 W-'
+      
+      - Sankt Peter-Ording 14.07.: D15 W-
+      ?                               ^^^
+      + Sankt Peter-Ording 14.07.: D 15C ?1
+      ?                             +  ^^^^
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:363: AssertionError: Sankt Peter-Ording 14.07.: D 15C ?1
+E   AssertionError: assert 'Orte 14.07.:...?1; Husum n/a' == 'Orte 14.07.:...W-; Husum n/a'
+      
+      - Orte 14.07.: Kiel: D15 W-; Husum n/a
+      ?                  -    ^^^
+      + Orte 14.07.: Kiel D 15C ?1; Husum n/a
+      ?                    +  ^^^^
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:371: AssertionError: assert 'Orte 14.07.:...?1; Husum n/a' == 'Orte 14.07.:...W-; Husum n/a'
+E   AssertionError: Orte 14.07.: Aabenraa D 19C W 43 km/h R 3.4 mm PR 70% +21; Flensburg D 20C W 44 km/h R 3.4 mm PR 70% +21; Schleswig D 21C W 45 km/h R 3.4 mm PR 70% +21
+    assert None
+     +  where None = <function match at 0x7f568da0cae0>('Orte 14\\.07\\.: Aabenraa: D\\d+/\\d+', 'Orte 14.07.: Aabenraa D 19C W 43 km/h R 3.4 mm PR 70% +21; Flensburg D 20C W 44 km/h R 3.4 mm PR 70% +21; Schleswig D 21C W 45 km/h R 3.4 mm PR 70% +21')
+     +    where <function match at 0x7f568da0cae0> = re.match
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:387: AssertionError: Orte 14.07.: Aabenraa D 19C W 43 km/h R 3.4 mm PR 70% +21; Flensburg D 20C W 44 km/h R 3.4 mm PR 70% +21; Schleswig D 21C W 45 km/h R 3.4 mm PR 70% +21
+E   AssertionError: ['Orte 14.07.: Aabenraa D 19C W 43 km/h R 3.4 mm PR 70% +21; Flensburg D 20C W 44 km/h R 3.4 mm PR 70% +21; Schleswig D 21C W 45 km/h R 3.4 mm PR 70% +21']
+    assert None
+     +  where None = <function match at 0x7f568da0cae0>('Orte 14\\.07\\.: Aabenraa: D\\d+/\\d+', 'Orte 14.07.: Aabenraa D 19C W 43 km/h R 3.4 mm PR 70% +21; Flensburg D 20C W 44 km/h R 3.4 mm PR 70% +21; Schleswig D 21C W 45 km/h R 3.4 mm PR 70% +21')
+     +    where <function match at 0x7f568da0cae0> = re.match
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:429: AssertionError: ['Orte 14.07.: Aabenraa D 19C W 43 km/h R 3.4 mm PR 70% +21; Flensburg D 20C W 44 km/h R 3.4 mm PR 70% +21; Schleswig D 21C W 45 km/h R 3.4 mm PR 70% +21']
+E   AssertionError: Kiel 14.07.: CT SCT ?2
+    assert 'Kiel 14.07.: CT SCT ?2' == 'Kiel 14.07.: G- CT:SCT@13 W-'
+      
+      - Kiel 14.07.: G- CT:SCT@13 W-
+      + Kiel 14.07.: CT SCT ?2
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:449: AssertionError: Kiel 14.07.: CT SCT ?2
+E   AssertionError: Kiel 14.07.: CT 40% ?2
+    assert 'Kiel 14.07.: CT 40% ?2' == 'Kiel 14.07.: G- CT70@13 W-'
+      
+      - Kiel 14.07.: G- CT70@13 W-
+      + Kiel 14.07.: CT 40% ?2
+/home/user/gregor_zwanzig/.claude/worktrees/agent-ab83ee6de2bc5f520/tests/tdd/test_3172_orte_sms_token_zeile.py:454: AssertionError: Kiel 14.07.: CT 40% ?2
+=========================== short test summary info ============================
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac1_ortsteil_ist_die_token_zeile_von_build_token_line
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac1_hervorhebung_folgt_der_abo_ampel
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac1_voller_ortsname_ohne_kuerzung
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac2_keine_alte_zellform_keine_negative_null[None--0.4--0.1]
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac2_keine_alte_zellform_keine_negative_null[None--0.5-0.0]
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac2_keine_alte_zellform_keine_negative_null[None--0.2-0.4]
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac2_keine_alte_zellform_keine_negative_null[auswahl1--0.4--0.1]
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac2_keine_alte_zellform_keine_negative_null[auswahl1--0.5-0.0]
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac2_keine_alte_zellform_keine_negative_null[auswahl1--0.2-0.4]
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac3_strich_fuer_unauffaellig_fragezeichen_fuer_fehlenden_wert
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac3_ohne_stundenwerte_steht_fragezeichen_nicht_strich
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac4_volle_liste_gleich_viele_zeilen_je_ort[1]
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac4_volle_liste_gleich_viele_zeilen_je_ort[3]
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac4_volle_liste_gleich_viele_zeilen_je_ort[5]
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac4_orte_entfallen_erst_bei_einer_zeile_warnort_bleibt_x_am_ende
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac4_ohne_platzmangel_alle_orte_mit_allen_zeilen
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac5_kein_nachtwert_kein_folgetag[morning]
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac5_kein_nachtwert_kein_folgetag[evening]
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac6_ein_ort_name_nur_im_kopf
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac6_fehler_ort_und_keine_daten
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac7_kurzstil_und_sms_identisch_in_beiden_sprachen
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac7_premium_sms_sendet_die_token_zeile
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac8_listenfolge_abwahl_und_einfach
+FAILED tests/tdd/test_3172_orte_sms_token_zeile.py::test_ac8_roh_zeigt_die_zahl

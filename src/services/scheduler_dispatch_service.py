@@ -991,6 +991,8 @@ def send_one_compare_preset(
         # Issue #2422 S5 (AC-28) / #2983: Telegram-Stil "kurzform" = derselbe
         # Text wie die SMS -- entschieden im gemeinsamen Baustein.
         _sms_text, _telegram_text = aufbau.compare_kanaltexte_rendern(kontext, lang=lang)
+        # Issue #3172: Premium-SMS = SMS-Text, ueber 153 Zeichen neu gerendert (wie Trip #3100).
+        _premium_sms_text = aufbau.compare_premium_sms_rendern(kontext, _sms_text)
         # Issue #2587: Nachhol-Hinweis (nur Nachholversand), geteilter Baustein.
         html_body, text_body, _telegram_text = _apply_catchup_hint(
             settings, user_id, catchup_hint, html_body, text_body, _telegram_text, lang=lang,
@@ -1005,6 +1007,7 @@ def send_one_compare_preset(
             # failure` + `_anchor_and_reset()` (#1629).
             telegram_text=_telegram_text,
             sms_text=_sms_text,
+            premium_sms_text=_premium_sms_text,
             recipients=empfaenger,
             effective_channels=effective_channels,
             compare_hourly_enabled=opts.hourly_enabled,

@@ -154,7 +154,6 @@
 	"wetter.wsw.sms_passt_nicht.other": "The last {count} metrics no longer fit in the SMS.",
 	"wetter.wsw.sms_orte_passt_nicht.one": "With {orte} locations, the last metric no longer fits in the SMS.",
 	"wetter.wsw.sms_orte_passt_nicht.other": "With {orte} locations, the last {count} metrics no longer fit in the SMS.",
-	"wetter.wsw.sms.plus_je_ort": "Instead, “+{plus}” appears for each location.",
 	"wetter.wsw.sms.hochziehen": "Drag up what matters to you in the SMS.",
 	"wetter.wsw.legende.titel": "Abbreviations explained",
 	"wetter.wsw.legende.zeit_ab_gelb": "yellow or worse from 2 pm",

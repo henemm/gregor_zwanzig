@@ -174,6 +174,13 @@ allein erfüllt „nichts verschwindet still" — s. AC-2.
 
 ### 3. SMS (S5b)
 
+> **Zellform abgelöst durch ADR-0125 (#3172, 2026-11-19):** Die Orte-SMS schreibt je Ort die
+> Token-Zeile der Trip-SMS (`output/renderers/orte_sms.py` über `build_token_line`), nicht mehr
+> die hier beschriebene Zelle „Kürzel Leerzeichen Wert mit Einheit“; die Zähler `+N`/`?N` und
+> `_sms_metric_cell`/`_sms_location_part` sind entfallen. Geltender Vertrag:
+> `docs/reference/sms_format.md` §5b/§6, Spec `feat_3172_orte_sms_token_zeile.md`. Der Abschnitt
+> bleibt als Nachweis der früheren Entscheidung stehen.
+
 `_sms_location_part` ersetzt die feste `_SMS_METRICS_PER_LOCATION = 2` durch
 eine Zeichen-Budget-Schleife nach demselben PRINZIP wie
 `tokens/render.py:_truncate` (Größen einzeln, in aufsteigender

@@ -158,7 +158,8 @@ def test_ac5_sms_zeigt_die_stufe_aber_keine_herkunft():
     sms = render_compare_sms(result, enabled_metrics=["thunder_max"])
     telegram = render_compare_telegram(result, enabled_metrics=["thunder_max"])
 
-    assert "hoch" in sms, f"Die Stufe selbst muss in der SMS stehen: {sms!r}"
+    # #3172 (ADR-0125): Stufe als Token der Trip-SMS (``TH:H@16``).
+    assert "TH:H" in sms, f"Die Stufe selbst muss in der SMS stehen: {sms!r}"
     for zutat in ALLE_ZUTATEN:
         assert zutat not in sms, (
             f"SMS ist bewusst OHNE Herkunft (PO-Entscheidung) -- '{zutat}' "

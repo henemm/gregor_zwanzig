@@ -224,7 +224,10 @@ def test_vergleich_schleierwolken_in_allen_kanaelen(monkeypatch, tmp_path):
     assert re.findall(r">(50|52)</td>", k["html"]), "Stundentabelle HTML"
     assert not re.search(r">(84|92|100)%?</td>", k["html"]), "kein Modellwert in der Mail"
     assert "Wolken 51%" in k["telegram"], k["telegram"]
-    assert "CT 51%" in k["sms"], k["sms"]
+    # #3172 (ADR-0125): Token-Zeile der Trip-SMS -- Spitze der WIRKSAMEN
+    # Stundenwerte (52 %), nie ein Modellwert.
+    assert re.search(r"CT52@\d+", k["sms"]), k["sms"]
+    assert not re.search(r"CT(84|92|100)", k["sms"]), k["sms"]
     # AC-8: unterhalb der gelben Grenze -> keine Ampel-Stundenmarke (``@h``).
     from app.ampel import gelb_oder_schlechter
 
@@ -259,7 +262,8 @@ def test_vergleich_hochlage_uebersicht_und_stunden_gleich(monkeypatch, tmp_path)
     k = _kanaele(ergebnis)
     assert set(_stundenwerte_klartext(k["klartext"])) == {0}
     assert "Bewölkung: 0%" in k["klartext"]
-    assert "CT 0%" in k["sms"], k["sms"]
+    # #3172: 0 % in jeder Stunde = Leerwert der Token-Zeile.
+    assert k["sms"] == "O1 CT-", k["sms"]
 
 
 def test_vergleich_hochlage_dichte_mittelschicht_voll(monkeypatch, tmp_path):
@@ -268,4 +272,4 @@ def test_vergleich_hochlage_dichte_mittelschicht_voll(monkeypatch, tmp_path):
                           hoehe_m=2800)
     ort = ergebnis.locations[0]
     assert ort.cloud_avg == 100
-    assert "CT 100%" in _kanaele(ergebnis)["sms"]
+    assert re.search(r"CT100@\d+", _kanaele(ergebnis)["sms"])  # #3172 Token-Zeile

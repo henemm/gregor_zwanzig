@@ -187,6 +187,8 @@ def test_f004_premium_sms_des_briefings_ohne_hinweis_und_hoechstens_160(provider
     assert len(premium) == 1, "Premium-SMS muss im Briefing versendet werden"
     sms = premium[0]
     assert len(sms) <= 160
-    assert "Seefeld: " not in sms
+    # #3172: "Seefeld: D..." ist der Ortsteil der Token-Zeile -- verboten ist nur
+    # der Vertretungshinweis selbst.
+    assert f"Seefeld: {zeilen[0]}" not in sms
     for z in zeilen:
         assert z not in sms

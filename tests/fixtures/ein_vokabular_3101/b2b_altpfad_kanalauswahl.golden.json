@@ -89,6 +89,11 @@
    {
     "key": "warnquelle_nicht_erreichbar",
     "token": "X?"
+   },
+   {
+    "key": "ort_nummer",
+    "meaning": "Ort 1 in der Reihenfolge des Abos",
+    "token": "O1"
    }
   ],
   "metrics": [
@@ -265,7 +270,7 @@
     },
     "sms": {
      "ampel": null,
-     "example": "D 19C L 15C",
+     "example": "D15/19",
      "format": null,
      "mark": null,
      "reason": null,
@@ -313,7 +318,7 @@
     },
     "sms": {
      "ampel": null,
-     "example": "W 43 km/h",
+     "example": "W30@10(43@16)",
      "format": null,
      "mark": null,
      "reason": null,
@@ -623,17 +628,9 @@
   }
  ],
  "sms_example": {
-  "length": 105,
-  "max_length": 153,
-  "overflow": {
-   "locations": 0,
-   "per_location": [
-    null,
-    null,
-    null
-   ]
-  },
-  "text": "Orte 14.07.: Innsbruck D 19C W 43 km/h L 15C; Lienz D 20C W 44 km/h L 16C; Kufstein D 21C W 45 km/h L 17C"
+  "length": 71,
+  "max_length": 160,
+  "text": "O1 D15/19 W30@10(43@16) O2 D16/20 W31@10(44@16) O3 D17/21 W32@10(45@16)"
  },
  "stored": false
 }
