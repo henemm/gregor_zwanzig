@@ -20,9 +20,9 @@
 //     --experimental-test-module-mocks --test src/lib/__tests__/bausteine_waechter.test.ts
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync, statSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join, dirname, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
 	pruefeSeitenDatei,
@@ -198,6 +198,56 @@ describe('AC-3: Regel (b) — neue Baustein-Dateien nur über var(--g-*)-Tokens 
 		const ist = { [BAUSTEIN]: zaehleTokenVerstoesse(BAUSTEIN, mitStyle('padding: 12px;')).length };
 		const fehler = pruefeRatsche(ist, {});
 		assert.ok(fehler.some((f) => f.includes(BAUSTEIN)));
+	});
+});
+
+// ---------------------------------------------------------------- #3010 AC-5/AC-6
+// Spec: docs/specs/modules/feat_3010_wetter_schrift_tokens.md — font-size nur aus Schrift-Tokens.
+describe('#3010: Regel (b) — Schriftgröße nie aus Abstands-Token (--g-s-*)', () => {
+	const GRUND = 'Schriftgröße aus Abstands-Token';
+	const mitStyle = (css: string) => `<div class="z"><slot /></div>\n<style>\n\t.z { ${css} }\n</style>\n`;
+	const ORDNER = ['atoms', 'molecules', 'organisms'];
+	const schriftAusAbstand = (datei: string, text: string) =>
+		zaehleTokenVerstoesse(datei, text).filter((v) => v.art.includes(GRUND) || v.meldung.includes(GRUND));
+
+	for (const ordner of ORDNER) {
+		const datei = `lib/components/${ordner}/Probe.svelte`;
+		for (const css of ['font-size: var(--g-s-3);', 'font-size: var(--g-s-4);', 'font-size: calc(var(--g-s-3) + 1px);']) {
+			test(`rot in ${ordner}: ${css} meldet „${GRUND}“`, () => {
+				const v = schriftAusAbstand(datei, mitStyle(css));
+				assert.ok(v.length > 0, `nicht erkannt: ${css} — ${JSON.stringify(zaehleTokenVerstoesse(datei, mitStyle(css)))}`);
+				assert.equal(v[0].regel, 'b');
+				assert.ok(v[0].meldung.includes(datei), 'Meldung muss die Datei nennen');
+			});
+		}
+		for (const css of ['font-size: var(--g-text-12px);', 'font-size: var(--g-text-16px);', 'font-size: var(--g-text-sm);']) {
+			test(`grün in ${ordner}: ${css}`, () => {
+				assert.deepEqual(zaehleTokenVerstoesse(datei, mitStyle(css)), []);
+			});
+		}
+	}
+
+	test('Abstands-Token bleibt in Abstands-Eigenschaften erlaubt (keine Fehlmeldung)', () => {
+		assert.deepEqual(zaehleTokenVerstoesse(BAUSTEIN, mitStyle('padding: var(--g-s-3); gap: var(--g-s-4);')), []);
+	});
+
+	test('rot auch im style=-Attribut eines Bausteins', () => {
+		const t = '<div style="font-size: var(--g-s-3)">x</div>\n';
+		assert.ok(schriftAusAbstand(BAUSTEIN, t).length > 0, JSON.stringify(zaehleTokenVerstoesse(BAUSTEIN, t)));
+	});
+
+	test('echter Quellbaum: keine Baustein-Datei bezieht font-size aus --g-s-* (Bestand 0)', () => {
+		const funde: string[] = [];
+		const lauf = (rel: string) => {
+			for (const name of readdirSync(join(FRONTEND_SRC, rel))) {
+				const kind = posix.join(rel, name);
+				if (statSync(join(FRONTEND_SRC, kind)).isDirectory()) lauf(kind);
+				else if (name.endsWith('.svelte'))
+					for (const v of schriftAusAbstand(kind, readFileSync(join(FRONTEND_SRC, kind), 'utf-8'))) funde.push(v.meldung);
+			}
+		};
+		for (const ordner of ORDNER) lauf(`lib/components/${ordner}`);
+		assert.deepEqual(funde, [], `${funde.length} Fundstelle(n):\n${funde.join('\n')}`);
 	});
 });
 

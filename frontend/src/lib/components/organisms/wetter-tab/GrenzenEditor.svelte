@@ -109,7 +109,7 @@
 		gap: var(--g-s-2);
 	}
 	.wt-grp-name {
-		font-size: var(--g-s-3);
+		font-size: var(--g-text-12px);
 		color: var(--g-ink-2);
 		max-width: 9ch;
 		align-self: center;
@@ -118,7 +118,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--g-size-2px);
-		font-size: var(--g-s-3);
+		font-size: var(--g-text-12px);
 		color: var(--g-ink-2);
 	}
 	/* Unterkante (Ampelfarbe, --g-size-3px) setzt app.css über data-ampel; hier nur die übrigen Kanten. */
@@ -158,7 +158,7 @@
 	}
 	@media (max-width: 899px) {
 		.wt-feld :global([data-slot='input']) {
-			font-size: var(--g-s-4);
+			font-size: var(--g-text-16px);
 		}
 	}
 </style>

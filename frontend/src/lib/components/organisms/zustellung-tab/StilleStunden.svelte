@@ -128,7 +128,7 @@
 	}
 	@media (max-width: 899px), (pointer: coarse) {
 		.zt-minuten :global([data-slot='input']) {
-			font-size: var(--g-s-4);
+			font-size: var(--g-text-16px);
 		}
 	}
 </style>

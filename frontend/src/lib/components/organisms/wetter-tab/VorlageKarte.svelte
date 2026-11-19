@@ -229,7 +229,7 @@
 		background: var(--g-paper-deep);
 	}
 	.wt-option small {
-		font-size: var(--g-s-3);
+		font-size: var(--g-text-12px);
 		color: var(--g-ink-2);
 	}
 	.wt-frage {
