@@ -444,7 +444,7 @@ def _debug_trigger(monkeypatch, smtp_calls: list, schalter) -> tuple[dict, list]
     from fastapi.testclient import TestClient
 
     from api.routers import debug as debug_router
-    from tests.helpers.nowcast_gate_fixtures import make_trip
+    from tests.helpers.nowcast_gate_fixtures import frozen_active_window, make_trip
     from tests.tdd.test_debug_radar_segmentwahl import _RecordingSMTP
 
     monkeypatch.setattr(smtplib, "SMTP", _RecordingSMTP(smtp_calls))
@@ -462,11 +462,12 @@ def _debug_trigger(monkeypatch, smtp_calls: list, schalter) -> tuple[dict, list]
     trip_id = "trip-2800-debug"
     try:
         # Vergangene Etappe: die Route faellt per Test-Seam auf das erste Segment.
-        trip = make_trip(trip_id, stage_date=date_type(2026, 8, 1), lat=64.1466, lon=-21.9426,
-                         arrival_start="08:00", arrival_end="16:00")
-        save_trip(trip, user_id=uid)
-        _schalter_auf_platte(uid, trip_id, schalter)
-        resp = TestClient(app).post("/api/debug/trigger-radar-alert", params={"user_id": uid})
+        with frozen_active_window():
+            trip = make_trip(trip_id, stage_date=date_type(2026, 8, 1), lat=64.1466, lon=-21.9426,
+                             arrival_start="08:00", arrival_end="16:00")
+            save_trip(trip, user_id=uid)
+            _schalter_auf_platte(uid, trip_id, schalter)
+            resp = TestClient(app).post("/api/debug/trigger-radar-alert", params={"user_id": uid})
         assert resp.status_code == 200, f"Status {resp.status_code}: {resp.text}"
         return resp.json(), smtp_calls
     finally:
@@ -500,30 +501,31 @@ def test_loader_roundtrip_schalter_true_und_false():
     """AC-7 (Python-Seite): ein Trip mit ``radar_alert_enabled`` true bzw.
     false uebersteht ``save_trip`` + ``load_all_trips`` mit demselben Wert und
     steht als Feld in der Datei."""
-    from tests.helpers.nowcast_gate_fixtures import make_trip
+    from tests.helpers.nowcast_gate_fixtures import frozen_active_window, make_trip
 
     uid = _uid("loader")
     _clean_user(uid)
     try:
-        for wert in (True, False):
-            trip_id = f"trip-2800-loader-{str(wert).lower()}"
-            trip = make_trip(trip_id)
-            trip.radar_alert_enabled = wert
-            save_trip(trip, user_id=uid)
+        with frozen_active_window():
+            for wert in (True, False):
+                trip_id = f"trip-2800-loader-{str(wert).lower()}"
+                trip = make_trip(trip_id)
+                trip.radar_alert_enabled = wert
+                save_trip(trip, user_id=uid)
 
-            raw = json.loads((get_briefings_dir(uid) / f"{trip_id}.json").read_text(encoding="utf-8"))
-            assert raw.get("radar_alert_enabled", "FEHLT") is wert, (
-                f"save_trip muss radar_alert_enabled={wert} schreiben, Datei hat "
-                f"{raw.get('radar_alert_enabled', 'FEHLT')!r}"
-            )
-            geladen = {t.id: t for t in load_all_trips(user_id=uid)}[trip_id]
-            assert getattr(geladen, "radar_alert_enabled", "FEHLT") is wert, (
-                f"load_all_trips muss radar_alert_enabled={wert} liefern, "
-                f"war {getattr(geladen, 'radar_alert_enabled', 'FEHLT')!r}"
-            )
-            assert "radar_alert_enabled" not in getattr(geladen, "extra", {}), (
-                "radar_alert_enabled darf nicht im extra-Auffangnetz landen"
-            )
+                raw = json.loads((get_briefings_dir(uid) / f"{trip_id}.json").read_text(encoding="utf-8"))
+                assert raw.get("radar_alert_enabled", "FEHLT") is wert, (
+                    f"save_trip muss radar_alert_enabled={wert} schreiben, Datei hat "
+                    f"{raw.get('radar_alert_enabled', 'FEHLT')!r}"
+                )
+                geladen = {t.id: t for t in load_all_trips(user_id=uid)}[trip_id]
+                assert getattr(geladen, "radar_alert_enabled", "FEHLT") is wert, (
+                    f"load_all_trips muss radar_alert_enabled={wert} liefern, "
+                    f"war {getattr(geladen, 'radar_alert_enabled', 'FEHLT')!r}"
+                )
+                assert "radar_alert_enabled" not in getattr(geladen, "extra", {}), (
+                    "radar_alert_enabled darf nicht im extra-Auffangnetz landen"
+                )
     finally:
         _clean_user(uid)
 
@@ -531,20 +533,21 @@ def test_loader_roundtrip_schalter_true_und_false():
 def test_loader_none_wird_nicht_geschrieben():
     """Ein Trip ohne Schalter (None = an) bekommt beim Speichern kein Feld —
     sonst entstuende still ein expliziter Wert; geladen ist er None."""
-    from tests.helpers.nowcast_gate_fixtures import make_trip
+    from tests.helpers.nowcast_gate_fixtures import frozen_active_window, make_trip
 
     uid = _uid("loader-none")
     _clean_user(uid)
     try:
-        trip = make_trip("trip-2800-loader-none")
-        save_trip(trip, user_id=uid)
-        raw = json.loads(
-            (get_briefings_dir(uid) / "trip-2800-loader-none.json").read_text(encoding="utf-8")
-        )
-        assert "radar_alert_enabled" not in raw
-        geladen = {t.id: t for t in load_all_trips(user_id=uid)}["trip-2800-loader-none"]
-        assert getattr(geladen, "radar_alert_enabled", "FEHLT") is None, (
-            "Trip-Modell muss radar_alert_enabled mit Default None fuehren"
-        )
+        with frozen_active_window():
+            trip = make_trip("trip-2800-loader-none")
+            save_trip(trip, user_id=uid)
+            raw = json.loads(
+                (get_briefings_dir(uid) / "trip-2800-loader-none.json").read_text(encoding="utf-8")
+            )
+            assert "radar_alert_enabled" not in raw
+            geladen = {t.id: t for t in load_all_trips(user_id=uid)}["trip-2800-loader-none"]
+            assert getattr(geladen, "radar_alert_enabled", "FEHLT") is None, (
+                "Trip-Modell muss radar_alert_enabled mit Default None fuehren"
+            )
     finally:
         _clean_user(uid)
