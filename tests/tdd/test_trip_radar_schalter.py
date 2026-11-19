@@ -467,7 +467,9 @@ def _debug_trigger(monkeypatch, smtp_calls: list, schalter) -> tuple[dict, list]
                              arrival_start="08:00", arrival_end="16:00")
             save_trip(trip, user_id=uid)
             _schalter_auf_platte(uid, trip_id, schalter)
-            resp = TestClient(app).post("/api/debug/trigger-radar-alert", params={"user_id": uid})
+        # Aufruf ausserhalb der gestellten Uhr: das SMTP-Zeitbudget misst echte
+        # Zeit und laeuft unter eingefrorener Uhr in der CI sofort leer.
+        resp = TestClient(app).post("/api/debug/trigger-radar-alert", params={"user_id": uid})
         assert resp.status_code == 200, f"Status {resp.status_code}: {resp.text}"
         return resp.json(), smtp_calls
     finally:
