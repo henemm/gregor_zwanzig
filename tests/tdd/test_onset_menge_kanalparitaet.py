@@ -181,7 +181,8 @@ def test_ac6_ortsvergleich_buendel_traegt_dieselbe_menge_wie_der_trip_pfad():
 
     Wanduhrfest: der Buendel-Konstruktor leitet `onset_time` aus
     `datetime.now()` ab, deshalb Strukturpruefung der Uhrzeit und exakte
-    Pruefung nur an Kopf und Zahl.
+    Pruefung nur an Kopf und Zahl. Kurz vor Mitternacht traegt die Uhrzeit
+    das Tageskuerzel (z. B. `Do0:00`), das die Struktur zulassen muss (#3150).
 
     RED heute: `NowcastResult` kennt `onset_precip_mm` nicht (`TypeError`)."""
     fuehrend = NowcastResult(
@@ -207,11 +208,11 @@ def test_ac6_ortsvergleich_buendel_traegt_dieselbe_menge_wie_der_trip_pfad():
     assert sms.startswith("Zermatt:R"), (
         f"Voraussetzung: das erste Token gehoert dem fuehrenden Ort: {sms!r}"
     )
-    assert re.search(r"\bZermatt:R1\.8@\d{1,2}:\d{2}", sms), (
+    assert re.search(r"\bZermatt:R1\.8@(?:[A-Z][a-z])?\d{1,2}:\d{2}", sms), (
         f"RED: die Menge des fuehrenden Ortes fehlt in der Buendel-Kurzform: "
         f"{sms!r}"
     )
-    assert re.search(r"\bChamonix:R0\.4@\d{1,2}:\d{2}", sms), (
+    assert re.search(r"\bChamonix:R0\.4@(?:[A-Z][a-z])?\d{1,2}:\d{2}", sms), (
         f"Die Menge des zweiten Ortes fehlt in der Buendel-Kurzform: {sms!r}"
     )
     assert "R@" not in sms, (

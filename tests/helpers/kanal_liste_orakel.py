@@ -88,6 +88,22 @@ def alt_compare_kanaele(preset: dict) -> tuple[
     return enabled, rows
 
 
+def alt_katalog_paare(renderer_ids: Optional[list[str]]) -> Optional[list[tuple[str, str]]]:
+    """Renderer-Kennungen des Altpfads -> (Katalog-ID, Aggregation) im einen
+    Vokabular des View-Models (#3101, ADR-0121 Nachtrag 4). Abbildung direkt
+    aus den Katalog-Daten, bewusst NICHT ueber den Adapter
+    ``compare_metric_ids.renderer_kennung``/``katalog_paar`` -- sonst pruefte
+    der Test den Adapter mit sich selbst."""
+    if renderer_ids is None:
+        return None
+    from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
+    from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
+
+    umkehr = {FRONTEND_TO_RENDERER_METRIC_ID[e["key"]]: (e["metric_id"], e["aggregation"])
+              for e in COMPARE_METRIC_CATALOG}
+    return [umkehr[rid] for rid in renderer_ids]
+
+
 def alt_compare_premium_zeilen(preset: dict) -> Optional[list[str]]:
     """Was eine eigene ``channel_layouts.premium_sms``-Liste nach der heutigen
     Orte-Primitive ergaebe (fuer AC-5, eigene Liste lesbar)."""

@@ -89,15 +89,19 @@ def test_deactivated_metric_missing_from_enabled_metrics():
         "display_config": {"active_metrics": ["temp_max_c", "cloud_avg_pct"]},
     }
     options = resolve_compare_render_options(preset)
-    assert options.enabled_metrics is not None
-    assert "wind_max" not in options.enabled_metrics
+    # Issue #3122 B1b: das tote Feld `enabled_metrics` ist entfallen; die
+    # Grundauswahl erreicht die Mail ueber den E-Mail-Kanal.
+    email = options.enabled_metrics_by_channel["email"]
+    assert email is not None
+    assert "wind_max" not in email
     # Issue #1335 Scheibe 1: reihenfolge-erhaltende Liste statt Set.
-    assert options.enabled_metrics == ["temp_max", "cloud_avg"]
+    assert email == ["temp_max", "cloud_avg"]
 
 
 def test_no_active_metrics_means_no_filter():
     options = resolve_compare_render_options({"id": "p8"})
-    assert options.enabled_metrics is None
+    assert options.enabled_metrics_by_channel["email"] is None
+    assert not hasattr(options, "enabled_metrics"), "totes Feld (#3122 B1b) ist zurueck"
 
 
 # ---------------------------------------------------------------------------
@@ -145,8 +149,6 @@ def test_channel_selection_is_clipped_to_the_global_maximum_per_channel():
     )
     assert by_channel["email"] == ["temp_max", "cloud_avg"]
     assert by_channel["telegram"] == ["temp_max", "cloud_avg"]
-    # Bewusst additiv: das globale Feld behaelt Bedeutung UND Wert.
-    assert options.enabled_metrics == ["temp_max", "cloud_avg"]
 
 
 # ---------------------------------------------------------------------------
@@ -258,7 +260,7 @@ def test_disabled_metric_absent_from_rendered_compare_mail_html_and_plain():
 
     html, plain = render_compare_email(
         result,
-        enabled_metrics=options.enabled_metrics,
+        enabled_metrics=options.enabled_metrics_by_channel["email"],
         hourly_metrics=options.hourly_metrics,
         hourly_enabled=options.hourly_enabled, preset=PRESET_ALLGEMEIN,
     )

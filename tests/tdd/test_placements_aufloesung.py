@@ -33,6 +33,12 @@ def _ids(vm, stelle):
     return [z.metric_id for z in zeilen]
 
 
+def _paare(vm, stelle):
+    """Orte-Kanalzeilen im einen Vokabular (#3101): (Katalog-ID, Aggregation)."""
+    _ids(vm, stelle)
+    return [(z.metric_id, z.aggregation) for z in getattr(vm, stelle)]
+
+
 def _formen(vm, stelle):
     return {z.metric_id: z.format for z in getattr(vm, stelle)}
 
@@ -68,11 +74,13 @@ def _trip(rows, grund=TRIP_GRUND, **extra):
 
 ORTE_GRUND = ["temp_max_c", "temp_min_c", "wind_max_kmh", "gust_max_kmh", "precip_sum_mm",
               "pop_max_pct", "sunny_hours_h", "cloud_avg_pct"]
-#: Katalog-ID -> Renderer-Kennungen (Aufweitung, Spec Nr. 2), von Hand.
+#: Katalog-ID -> Zeilen (Katalog-ID, Aggregation) der Aufweitung (Spec Nr. 2,
+#: #3101: eine Zeile je Renderer-Zeile), von Hand.
 ORTE_KENNUNG = {
-    "temperature": ["temp_max", "temp_min"], "wind": ["wind_max"], "gust": ["gust_max"],
-    "precipitation": ["precip_sum"], "rain_probability": ["pop_max"],
-    "sunshine": ["sunny_hours"], "cloud_total": ["cloud_avg"],
+    "temperature": [("temperature", "max"), ("temperature", "min")],
+    "wind": [("wind", "max")], "gust": [("gust", "max")],
+    "precipitation": [("precipitation", "sum")], "rain_probability": [("rain_probability", "max")],
+    "sunshine": [("sunshine", "sum")], "cloud_total": [("cloud_total", "avg")],
 }
 
 
@@ -113,11 +121,11 @@ def test_ac1_trip_je_stelle_genau_die_haken_in_einer_folge(report_type):
 def test_ac1_orte_je_stelle_genau_die_haken_mit_aufweitung(report_type):
     rows = [_row("temperature", {"sms": False})] + copy.deepcopy(AC1_ROWS)
     vm = _resolve(_orte(rows), "compare", report_type)
-    assert _ids(vm, "email") == _orte_ids("temperature", "wind", "gust", "cloud_total",
-                                          "rain_probability")
-    assert _ids(vm, "telegram") == _orte_ids("temperature", "precipitation", "gust",
-                                             "rain_probability")
-    assert _ids(vm, "sms") == _orte_ids("precipitation", "wind", "cloud_total")
+    assert _paare(vm, "email") == _orte_ids("temperature", "wind", "gust", "cloud_total",
+                                            "rain_probability")
+    assert _paare(vm, "telegram") == _orte_ids("temperature", "precipitation", "gust",
+                                               "rain_probability")
+    assert _paare(vm, "sms") == _orte_ids("precipitation", "wind", "cloud_total")
     assert vm.premium_sms == vm.sms
     # Zeilen der Tabelle tragen Katalog-IDs (#3101), nie Renderer-Kennungen.
     assert [z.metric_id for z in vm.rows][:2] == ["temperature", "precipitation"]
@@ -125,9 +133,9 @@ def test_ac1_orte_je_stelle_genau_die_haken_mit_aufweitung(report_type):
 
 def test_ac1_aufweitung_nur_auf_auswertungen_der_grundauswahl():
     """Temperatur mit nur dem Hoechstwert in der Grundauswahl: die Zeile
-    'temperature' ergibt nur ``temp_max``."""
+    'temperature' ergibt nur die Zeile Temperatur-Maximum."""
     vm = _resolve(_orte([_row("temperature")], grund=["temp_max_c", "wind_max_kmh"]), "compare")
-    assert _ids(vm, "email") == ["temp_max", "wind_max"]
+    assert _paare(vm, "email") == [("temperature", "max"), ("wind", "max")]
 
 
 # ---------------------------------------------------------------------------
@@ -149,7 +157,7 @@ def test_ac2_orte_zeile_ausserhalb_der_grundauswahl_wirkungslos():
     vm = _resolve(_orte(rows, grund=["wind_max_kmh", "precip_sum_mm"]), "compare",
                   hourly_enabled=True)
     for stelle in ("email", "telegram", "sms", "premium_sms"):
-        assert set(_ids(vm, stelle)) == {"wind_max", "precip_sum"}, stelle
+        assert set(_paare(vm, stelle)) == {("wind", "max"), ("precipitation", "sum")}, stelle
     assert _ids(vm, "outlook") == ["wind", "precipitation"]
     assert _ids(vm, "hourly") == ["wind", "precipitation"]
 
@@ -174,8 +182,8 @@ def test_ac3_orte_neue_metrik_hinten_ueberall_an_abwahl_bleibt():
     rows = [_row("gust", {"telegram": False}), _row("wind")]
     vm = _resolve(_orte(rows, grund=["wind_max_kmh", "gust_max_kmh", "precip_sum_mm"]),
                   "compare")
-    assert _ids(vm, "email") == ["gust_max", "wind_max", "precip_sum"]
-    assert _ids(vm, "telegram") == ["wind_max", "precip_sum"]
+    assert _paare(vm, "email") == [("gust", "max"), ("wind", "max"), ("precipitation", "sum")]
+    assert _paare(vm, "telegram") == [("wind", "max"), ("precipitation", "sum")]
     assert _ids(vm, "hourly") == ["gust", "wind", "precipitation"]
     assert _ids(vm, "outlook") == ["gust", "wind", "precipitation"]
 
@@ -197,8 +205,8 @@ def test_ac4_orte_ohne_email_kein_stundenverlauf_und_ausblick_mit_wiederkehr():
                          grund=["wind_max_kmh", "gust_max_kmh"]), "compare")
     assert "wind" not in _ids(aus, "hourly")
     assert "wind" not in _ids(aus, "outlook")
-    assert "wind_max" not in _ids(aus, "email")
-    assert "wind_max" in _ids(aus, "telegram")
+    assert "wind" not in _ids(aus, "email")
+    assert ("wind", "max") in _paare(aus, "telegram")
     assert _zelle(aus, "wind", "hourly").state == "not_in_email"
     assert _zelle(aus, "wind", "outlook").state == "not_in_email"
     assert _zelle(aus, "wind", "email").state == "off"
@@ -233,7 +241,7 @@ def test_ac4_ausblick_haken_aus_bleibt_aus_bei_email_an():
 
 @pytest.mark.parametrize("surface", ["trip", "compare"])
 def test_ac5_format_je_stelle_unabhaengig(surface):
-    gust = "gust" if surface == "trip" else "gust_max"
+    gust = "gust"  # #3101: Orte-Zeilen tragen wie Trip die Katalog-ID
 
     def _vm(formats):
         rows = [_row("gust", formats=formats), _row("wind")]
@@ -252,7 +260,7 @@ def test_ac5_format_je_stelle_unabhaengig(surface):
     if surface == "compare":
         st = _vm({"hourly": "simplified"})
         assert _formen(st, "hourly")["gust"] == "simplified"
-        assert _formen(st, "email")["gust_max"] == "raw", "Katalog-Standard Wind/Boeen: Roh"
+        assert _formen(st, "email")["gust"] == "raw", "Katalog-Standard Wind/Boeen: Roh"
 
 
 @pytest.mark.parametrize("surface", ["trip", "compare"])
@@ -263,7 +271,7 @@ def test_ac5_fehlendes_format_ist_katalog_standard_fuer_beide_flaechen_gleich(su
     dc = (_trip(rows, grund=["cloud_total", "gust"]) if surface == "trip"
           else _orte(rows, grund=["cloud_avg_pct", "gust_max_kmh"]))
     vm = _resolve(dc, surface)
-    cloud, gust = ("cloud_total", "gust") if surface == "trip" else ("cloud_avg", "gust_max")
+    cloud, gust = "cloud_total", "gust"  # #3101: ein Vokabular
     for stelle in ("email", "telegram"):
         assert _formen(vm, stelle) == {cloud: "simplified", gust: "raw"}, stelle
     assert _formen(vm, "outlook") == {"cloud_total": "simplified", "gust": "raw"}
@@ -343,7 +351,12 @@ def test_ac7_gesperrte_stelle_wirkt_nicht_und_meldet_grund(surface, metric_id, s
     ausgabe = {z.metric_id for z in getattr(vm, stelle)}
     if surface == "compare" and stelle in ("email", "telegram", "sms"):
         ausgabe = {c for c in ORTE_KENNUNG if set(ORTE_KENNUNG[c]) & ausgabe} | ausgabe
-    assert metric_id not in ausgabe
+    if grund == "keine_eigene_spalte":
+        # #3122 Fix-Loop B1b: ohne eigene Spalte bleibt die Groesse Teil der
+        # Mail (Kurz-Zusammenfassung u. a.); gesperrt ist nur der Haken.
+        assert metric_id in ausgabe
+    else:
+        assert metric_id not in ausgabe
     zelle = _zelle(vm, metric_id, stelle)
     assert (zelle.state, zelle.reason) == ("locked", grund)
 
@@ -352,7 +365,7 @@ def test_ac7_sonnenstunden_orte_stundenverlauf_gesperrt():
     vm = _resolve(_orte([_row("sunshine", {"hourly": True}), _row("wind")],
                         grund=["sunny_hours_h", "wind_max_kmh"]), "compare")
     assert _ids(vm, "hourly") == ["wind"]
-    assert "sunny_hours" in _ids(vm, "email")
+    assert ("sunshine", "sum") in _paare(vm, "email")
     assert _zelle(vm, "sunshine", "hourly").reason == "kein_stundenwert"
 
 
@@ -369,8 +382,10 @@ def test_abgeleitete_groessen_folgen_der_eltern_zeile():
     kinder = ["temperature_night", "temperature_day_low", "temperature_day_high"]
     assert _ids(vm, "telegram") == ["wind", "temperature", *kinder, "gust"]
     assert _ids(vm, "sms") == ["wind", "gust"]
-    # Stundentabelle der Trip-Mail: Fenstergroessen haben keine eigene Spalte.
-    assert _ids(vm, "email") == ["wind", "temperature", "gust"]
+    # Stundentabelle der Trip-Mail: Fenstergroessen haben keine eigene Spalte,
+    # bleiben aber Teil der Mail (#3122 Fix-Loop B1b).
+    assert _ids(vm, "email") == ["wind", "temperature", *kinder, "gust"]
+    assert _zelle(vm, "temperature_night", "email").state == "locked"
 
 
 # ---------------------------------------------------------------------------
@@ -384,7 +399,7 @@ def test_ac10_spalte_leer_bleibt_leer_und_bloecke_entfallen():
     assert vm.email == ()
     assert vm.hourly == ()
     assert vm.outlook == ()
-    assert _ids(vm, "telegram") == ["wind_max", "gust_max"]
+    assert _paare(vm, "telegram") == [("wind", "max"), ("gust", "max")]
     trip = _resolve(_trip([_row("wind", {"sms": False}), _row("gust", {"sms": False})],
                           grund=["wind", "gust"]), "trip")
     assert trip.sms == () and trip.premium_sms == ()
@@ -415,7 +430,8 @@ def test_ac10_nie_eingestellte_grundauswahl_bekommt_standardsatz():
         DEFAULT_TRIP_METRIC_IDS)
     assert _ids(trip, "sms")
     orte = _resolve({"placements": {"rows": []}}, "compare")
-    assert _ids(orte, "email")[:4] == ["temp_max", "temp_min", "wind_max", "precip_sum"]
+    assert _paare(orte, "email")[:4] == [("temperature", "max"), ("temperature", "min"),
+                                         ("wind", "max"), ("precipitation", "sum")]
     assert _ids(orte, "hourly") and _ids(orte, "outlook")
 
 

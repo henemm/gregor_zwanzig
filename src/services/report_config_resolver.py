@@ -13,7 +13,7 @@ Keine I/O, keine Mutation der Eingaben — reine Aufloesungsfunktion.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -135,6 +135,23 @@ def resolve_report_render_options(
 
     dc = display_config if display_config is not None else build_default_display_config()
 
+    bisher = _options_bisher(report_config, dc, report_type)
+    if not _hat_tabelle(dc):
+        return bisher
+    # #3122 (Spec Nr. 6): mit Tabelle steuert den 3-Tages-Ausblick allein das
+    # View-Model (Briefing-Typ in ``outlook_reports``, mindestens eine
+    # Metrik); ``show_outlook``/``multi_day_trend_reports`` wirken nicht, die
+    # Grosswetterlage haengt allein an ``show_stability``.
+    ausblick = bool(resolve_trip_view(report_config, dc, report_type).outlook)
+    return replace(bisher, show_outlook=True, show_multi_day_trend=ausblick)
+
+
+def _options_bisher(
+    report_config: Optional["TripReportConfig"],
+    dc: "UnifiedWeatherDisplayConfig",
+    report_type: str,
+) -> ReportRenderOptions:
+    """Bisheriger Pfad (Abos ohne Tabelle ``placements``)."""
     if report_config is None:
         return ReportRenderOptions(
             email_format="full",
@@ -160,6 +177,34 @@ def resolve_report_render_options(
     )
 
 
+def _hat_tabelle(display_config: object) -> bool:
+    """#3122: traegt das Abo eine lesbare Tabelle ``placements``?"""
+    from services.placements import read_placements
+
+    return read_placements(getattr(display_config, "placements", None)) is not None
+
+
+def trip_enabled_reports(report_config: Optional["TripReportConfig"]) -> tuple[str, ...]:
+    """#3122 (Spec Nr. 6/7): die eingeschalteten Briefings des Trips -- die
+    eine Regel ``slot_aktiv`` (ohne report_config beide)."""
+    from app.models import slot_aktiv
+
+    return tuple(rt for rt in ("morning", "evening") if slot_aktiv(report_config, rt))
+
+
+def resolve_trip_view(
+    report_config: Optional["TripReportConfig"], display_config: object, report_type: str,
+):
+    """#3122: das View-Model eines Trip-Briefings (``resolve_channel_lists``)
+    mit den eingeschalteten Briefings des Abos (Vorbelegung des Ausblicks)."""
+    from services.channel_list_resolver import resolve_channel_lists
+
+    return resolve_channel_lists(
+        display_config, "trip", report_type,
+        enabled_reports=trip_enabled_reports(report_config),
+    )
+
+
 @dataclass(frozen=True)
 class CompareRenderOptions:
     """Aufgeloeste Render-Optionen fuer den Compare-Versandpfad (Scheibe B, #1209).
@@ -173,14 +218,11 @@ class CompareRenderOptions:
     # entfernt. Der Wert wurde seit der PO-Entscheidung 2026-07-08 von JEDEM
     # Render-Pfad verworfen (`compare_html.py`: `_ = top_n_details`) und
     # taeuschte im Editor eine Wirkung vor, die es nie gab.
-    # Issue #1359: GEORDNETE Liste, kein `set`. `resolve_enabled_metrics()`
-    # liefert seit #1335 bewusst eine reihenfolge-erhaltende Liste — die
-    # Listenposition IST die vom Nutzer eingestellte Metrik-Reihenfolge und
-    # bestimmt die Zeilenfolge in HTML-Mail, Klartext und Telegram (und ueber
-    # das SMS-Budget, welche Metriken die SMS erreichen). Eine Mengen-
-    # Annotation an dieser vorgelagerten Stelle laedt zum naechsten
-    # Reihenfolge-Verlust ein (dieselbe Fehlerklasse wie in comparison.py).
-    enabled_metrics: Optional[list[str]]
+    # Issue #3122 B1b: das fruehere Feld `enabled_metrics` (globale
+    # Grundauswahl) ist entfallen -- es hatte keinen Leser mehr; die Renderer
+    # lesen `enabled_metrics_by_channel` (geordnete Listen, #1359).
+    # `hourly_metrics`: Spalten des Stundenverlaufs (auch bei abgeschaltetem
+    # Block -- die Spalten-Legende nennt sie dann weiter, bisheriges Verhalten).
     hourly_metrics: Optional[set]
     hourly_enabled: bool
     corridors: "Optional[list[Corridor]]" = None
@@ -209,12 +251,8 @@ class CompareRenderOptions:
     # ist seit #2275 auch im Vergleich Briefing-Kanal, hat aber keine eigene
     # Metrik-Auswahl -- sie sendet den fertig gerenderten SMS-Text.
     #
-    # BEWUSST ADDITIV: `enabled_metrics` daruerber behaelt Bedeutung UND Wert
-    # (reine globale Aufloesung). Nur die zwei Leser dieses Objekts
-    # (scheduler_dispatch_service, compare_preview_service) wechseln auf das
-    # kanalweise Feld; die Renderer-Signaturen bleiben unveraendert
-    # `list[str] | None`. Ein Wert von `None` je Kanal heisst weiterhin "kein
-    # Filter" und entsteht genau dann, wenn auch `enabled_metrics` None ist.
+    # Die Renderer-Signaturen bleiben `list[str] | None`; `None` je Kanal
+    # heisst "kein Filter" (nur Altbestand ohne Grundauswahl und Kanal-Liste).
     enabled_metrics_by_channel: dict[str, Optional[list[str]]] = field(
         default_factory=dict
     )
@@ -257,45 +295,136 @@ def resolve_compare_time_window(preset: dict) -> tuple[int, int]:
     )
 
 
-def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
+def resolve_compare_render_options(
+    preset: dict, *, report_type: Optional[str] = None,
+) -> CompareRenderOptions:
     """Loest ein rohes Compare-Preset-Dict VOLLSTAENDIG in `CompareRenderOptions` auf.
 
-    Reproduziert 1:1 das Bestandsverhalten aus
-    `scheduler_dispatch_service.py:252-276` (Issue #1104/#1106/#1107):
-    - `enabled_metrics`: ueber `resolve_enabled_metrics_report()` aus
-      `display_config`; `hourly_metrics` aus `resolve_channel_lists(...).hourly`
-      (Issue #3096, nie None).
-    - `hourly_enabled`: TOP-LEVEL Preset-Feld (nicht im display_config-Blob),
-      Default True.
-    - `corridors`: Issue #1231, Slice 7 — TOP-LEVEL Preset-Feld `corridors`
-      (Dual-Write seit Slice 1/2), geparst ueber denselben defensiven
-      Trip-Parser `_corridor_from_dict` (malformte Eintraege fallen still
-      raus statt den Versand zu crashen, analog Trip-Ladepfad).
+    Issue #3122 B1b: Auswahl, Reihenfolge, Darstellung und die Block-
+    Entscheidung fuer Stundenverlauf und Ausblick kommen allein aus dem
+    View-Model des Kanal-Listen-Resolvers. Er bekommt dafuer die Abo-Angaben
+    (Briefing-Typ ``report_type`` des Versand-Slots, eingeschaltete Briefings,
+    ``hourly_enabled``, ``outlook_enabled``); ``report_type=None`` (Vorschau)
+    heisst "irgendein Typ". Abos ohne ``placements`` behalten ihr Ergebnis.
+    - `corridors`: Issue #1231, Slice 7 — TOP-LEVEL Preset-Feld `corridors`,
+      geparst ueber den defensiven Trip-Parser `_corridor_from_dict`.
 
     Issue #1360: ein noch gespeichertes `display_config.top_n` wird nicht mehr
-    gelesen — es hat auf die Auflösung und damit auf die Mail keinerlei
-    Wirkung. Aus den Daten raeumt es `scripts/migrate_1360_drop_compare_top_n.py`.
-
-    Reine Funktion — kein I/O, keine Mutation von `preset`.
+    gelesen. Reine Funktion — kein I/O, keine Mutation von `preset`.
     """
-    from app.loader import _corridor_from_dict
-    from app.metric_catalog import get_metric
-    from output.renderers.compare_outlook_metric_ids import (
-        resolve_compare_outlook_formats, resolve_compare_outlook_metrics,
+    from services.channel_list_resolver import grundauswahl, resolve_channel_lists
+
+    display_config = preset.get("display_config") or {}
+    hourly_schalter = preset.get("hourly_enabled", True)
+    abo = {"enabled_reports": compare_enabled_reports(preset)}
+    view = resolve_channel_lists(
+        display_config, "compare", report_type, **abo,
+        hourly_enabled=bool(hourly_schalter),
+        outlook_enabled=bool(preset.get("outlook_enabled", True)),
     )
-    from output.renderers.compare_metric_ids import resolve_enabled_metrics_report
-    from services.channel_list_resolver import resolve_channel_lists
+    # Spalten-Legende: im bisherigen Pfad nennt sie die Stundenspalten auch bei
+    # abgeschaltetem Block (Bestand, #2136) -- dieselbe Aufloesung ohne
+    # Schalter. Mit Tabelle (``view.rows`` gefuellt) folgt sie allein
+    # ``view.hourly``: Block entfaellt = kein Rest in der Legende.
+    spalten = view.hourly or (() if view.rows else resolve_channel_lists(
+        display_config, "compare", report_type, **abo).hourly)
+    hourly = _compare_hourly(view.hourly, spalten, hourly_schalter)
+    # Issue #3039/#3057: Kanal-Zeilen samt Format nur fuer Layout-Kanaele.
+    # ADR-0049: nur Metrik-/Layout-Kanaele -- Premium-SMS sendet den SMS-Text.
+    kanaele = ("email", "telegram", "sms")
+    channel_rows = {
+        ch: ([(rid, z.format == "simplified") for rid, z in orte_renderer_zeilen(getattr(view, ch))]
+             if ch in view.layout_channels else None)
+        for ch in kanaele
+    }
+    # Issue #1405 S3: Hinweiszaehler -- Grundauswahl ueber die Resolver-Hilfe;
+    # eine Kanal-Altliste zaehlt nur, wo der Kanal sie noch liest (#3039).
+    unaufloesbar = grundauswahl(display_config, "compare", report_type).unaufloesbar
+    channel_raw = display_config.get("channel_active_metrics")
+    return CompareRenderOptions(
+        **hourly,
+        corridors=_compare_corridors(preset) or None,
+        **_compare_outlook(view.outlook),
+        enabled_metrics_by_channel={ch: orte_renderer_ids(getattr(view, ch)) for ch in kanaele},
+        unresolved_by_channel={
+            ch: _channel_unresolved_count(
+                unaufloesbar, channel_raw if channel_rows[ch] is None else None, ch)
+            for ch in kanaele
+        },
+        channel_rows_by_channel=channel_rows,
+    )
+
+
+def orte_renderer_zeilen(zeilen) -> list[tuple[str, object]]:
+    """Adapter vor dem Renderer (Issue #3101, ADR-0121 Nachtrag 4): die
+    eingeschalteten Zeilen einer Orte-Kanalliste des View-Models (Katalog-ID
+    + Aggregation) -> ``[(renderer_kennung, zeile)]`` in Listenfolge.
+    Ein Paar ohne Renderer-Zeile hat keine Ausgabe und faellt heraus."""
+    from output.renderers.compare_metric_ids import renderer_kennung
+
+    out = []
+    for z in zeilen or ():
+        rid = renderer_kennung(z.metric_id, z.aggregation) if z.enabled else None
+        if rid is not None:
+            out.append((rid, z))
+    return out
+
+
+def orte_renderer_ids(zeilen) -> Optional[list[str]]:
+    """Renderer-Kennungen einer Orte-Kanalliste; ``None`` (kein Filter)
+    bleibt ``None``."""
+    return None if zeilen is None else [rid for rid, _z in orte_renderer_zeilen(zeilen)]
+
+
+def compare_enabled_reports(preset: dict) -> Optional[list[str]]:
+    """Eingeschaltete Briefings eines Orte-Abos (``morning``/``evening``) aus
+    den Slot-Feldern (``resolve_preset_slots``, samt Altbestand-Rueckfall);
+    ``None`` bei unlesbaren Zeitplan-Daten."""
+    from services.compare_slot_scheduler import resolve_preset_slots
+
+    try:
+        slots = resolve_preset_slots(preset)
+    except (ValueError, TypeError, KeyError):
+        return None
+    return [typ for typ, an in (("morning", slots.morning_enabled),
+                                ("evening", slots.evening_enabled)) if an]
+
+
+def _compare_hourly(block: tuple, spalten: tuple, schalter: object) -> dict:
+    """Stundenverlauf aus dem View-Model: ``block == ()`` = Block entfaellt;
+    eine Auswahl ohne sichtbare Wert-Spalte schaltet ihn ebenfalls ab
+    (#1366/#1361 Befund 3). ``hourly_enabled`` behaelt bei gespeichertem
+    ``null`` den Wert ``None`` (Mail-Kopf entfaellt dann wie bisher, #1107)."""
+    from app.metric_catalog import get_metric
     from output.renderers.email.compare_html import has_visible_hour_columns
 
-    preset_id = preset.get("id", "")
-    display_config = preset.get("display_config") or {}
+    an = bool(block) and has_visible_hour_columns([get_metric(z.metric_id).dp_field for z in block])
+    return {
+        "hourly_metrics": [get_metric(z.metric_id).dp_field for z in spalten],
+        "hourly_enabled": an if (an or schalter) else schalter,
+        # Issue #3097: Roh/Einfach je Stundenverlauf-Groesse; None = alles Roh.
+        "hourly_metric_formats": {
+            z.metric_id: True for z in spalten if z.format == "simplified"} or None,
+    }
 
-    # Adversary F004 (Fix-Loop): Nicht-Dict-Eintraege (str/int/None/...) crashen
-    # sonst den gesamten Versand -- `_corridor_from_dict` ruft `d.get(...)`
-    # auf, was bei Nicht-Dicts AttributeError statt der bisher gefangenen
-    # (KeyError, TypeError, ValueError) wirft. isinstance-Check UND breiteres
-    # except (Belt-and-Suspenders) -- ein malformter Korridor darf nie den
-    # kompletten Preset-Versand verhindern (BUG-DATALOSS-GR221-Muster).
+
+def _compare_outlook(zeilen: Optional[tuple]) -> dict:
+    """3-Tages-Ausblick aus dem View-Model: ``()`` = Block entfaellt, ``None``
+    = Renderer-Vorgabe; Auswahl, Folge und Roh/Einfach aus den Zeilen."""
+    return {
+        "outlook_enabled": zeilen != (),
+        "outlook_metrics": None if zeilen is None else [z.metric_id for z in zeilen],
+        "outlook_metric_formats": {
+            z.metric_id: True for z in zeilen or () if z.format == "simplified"} or None,
+    }
+
+
+def _compare_corridors(preset: dict) -> list:
+    """Adversary F004: Nicht-Dict-Eintraege und malformte Korridore fallen
+    still heraus (geloggt), statt den ganzen Versand zu verhindern."""
+    from app.loader import _corridor_from_dict
+
+    preset_id = preset.get("id", "")
     corridors = []
     for raw in preset.get("corridors") or []:
         if not isinstance(raw, dict):
@@ -305,105 +434,7 @@ def resolve_compare_render_options(preset: dict) -> CompareRenderOptions:
             corridors.append(_corridor_from_dict(raw))
         except (KeyError, TypeError, ValueError, AttributeError):
             logger.warning("Compare-Preset %s: ungueltiger Korridor %r uebersprungen", preset_id, raw)
-
-    # Issue #3057 (ADR-0121): Auswahl, Folge und Format je Kanal sowie
-    # Stundenverlauf kommen aus dem Kanal-Listen-Resolver (EINE Aufloesung).
-    view = resolve_channel_lists(display_config, "compare")
-    # Issue #3047 O5 (AC-10): der Stundenverlauf nimmt nur aus der Grundauswahl.
-    # Issue #3096: aus `view.hourly` (fuer Orte nie None, die Vorgabe loest
-    # `compare_hourly_metric_ids` genau einmal auf); `dp_field` nur hier.
-    resolved_hourly_metrics = [get_metric(z.metric_id).dp_field for z in view.hourly]
-    hourly_enabled = preset.get("hourly_enabled", True)
-    if hourly_enabled and not has_visible_hour_columns(resolved_hourly_metrics):
-        # Issue #1366/#1361 Befund 3: eine Stundenauswahl ohne jede sichtbare
-        # Wert-Spalte schaltet den Block ab statt eine Tabelle mit nur der
-        # Zeit-Spalte zu rendern (Pflicht-Validator lehnt das ab, s. Spec).
-        # Massgeblich sind die SICHTBAREN Spalten, nicht die Laenge der
-        # aufgeloesten Liste: eine Auswahl aus reinen Merge-Signalen (nur
-        # "wind_direction_deg", ohne eigene Spalte) ist nicht leer, ergaebe
-        # aber genau dasselbe Zeit-only-Geruest. Wer hourly_enabled selbst
-        # schon aus hatte, bleibt unberuehrt.
-        hourly_enabled = False
-
-    # Issue #1703 Scheibe 8: die Grundauswahl der Uebersichtstabelle wird EINMAL
-    # aufgeloest und dient doppelt -- als unveraendertes `enabled_metrics` UND
-    # als MAXIMUM, gegen das jede Kanal-Auswahl geschnitten wird (ADR-0050).
-    # Issue #1848 A3: dieselbe Menge ist jetzt auch das Maximum des Ausblicks
-    # (dritter Konsument, KEINE zweite Aufloesung) -- deshalb steht sie vor der
-    # Ausblick-Aufloesung darunter.
-    # Issue #1405 S3: dieselbe EINE Aufloesung liefert zusaetzlich die
-    # unmappbaren Eintraege -- sie werden je Kanal gezaehlt und sichtbar.
-    global_metrics, global_unresolved = resolve_enabled_metrics_report(
-        display_config.get("active_metrics"),
-    )
-    channel_raw = display_config.get("channel_active_metrics")
-    # Issue #3039: Kaskade je Kanal -- `channel_layouts[kanal]` vor
-    # `channel_active_metrics[kanal]` vor Grundauswahl (ADR-0119).
-    # Issue #3057 (ADR-0121): Auswahl, Folge und Format kommen aus dem
-    # Kanal-Listen-Resolver (`view` oben). ADR-0049: nur Metrik-/Layout-Kanaele --
-    # Premium-SMS sendet den SMS-Text.
-    channel_rows = {
-        ch: (
-            [(z.metric_id, z.format == "simplified") for z in getattr(view, ch) if z.enabled]
-            if ch in view.layout_channels else None
-        )
-        # ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS sendet den SMS-Text.
-        for ch in ("email", "telegram", "sms")
-    }
-
-    # Issue #1361/#1368 (AC-8): eine bewusst geleerte Ausblick-Auswahl laesst
-    # den ganzen Block entfallen -- eine Tagestabelle mit nur der Wochentag-
-    # Spalte hat keinen Nutzwert (identische Kopplung wie beim Stundenverlauf
-    # daruerber). Fehlendes Feld (None) bleibt unberuehrt.
-    # Issue #1848 A3 (AC-6): geklemmt wird gegen `global_metrics` -- der
-    # Ausblick erbt die Grundauswahl in BEIDEN Flaechen gleich (loest ADR-0053
-    # Punkt 1 ab). Nur eine ausdrueckliche Leerauswahl liefert weiterhin `[]`;
-    # ein Totalschnitt faellt auf die volle Grundauswahl zurueck (AC-10), der
-    # Block verschwindet also nicht stillschweigend.
-    resolved_outlook_metrics = resolve_compare_outlook_metrics(
-        display_config.get("outlook_metrics"), global_metrics,
-    )
-    outlook_enabled = preset.get("outlook_enabled", True)
-    if outlook_enabled and resolved_outlook_metrics == []:
-        outlook_enabled = False
-
-    return CompareRenderOptions(
-        enabled_metrics=global_metrics,
-        hourly_metrics=resolved_hourly_metrics,
-        hourly_enabled=hourly_enabled,
-        corridors=corridors or None,
-        outlook_enabled=outlook_enabled,
-        outlook_metrics=resolved_outlook_metrics,
-        # Issue #2049: dieselbe Regel wie im Trip (EINE Normalisierung, siehe
-        # resolve_compare_outlook_formats) -- nicht-faehige Kennungen und
-        # nicht-boolesche Werte fallen hier heraus, damit ein wirkungsloser
-        # Zustand gar nicht erst in den Renderpfad gelangt.
-        outlook_metric_formats=resolve_compare_outlook_formats(
-            display_config.get("outlook_metric_formats"),
-        ),
-        hourly_metric_formats={
-            z.metric_id: True for z in view.hourly if z.format == "simplified"
-        } or None,
-        enabled_metrics_by_channel={
-            ch: (
-                None if getattr(view, ch) is None
-                else [z.metric_id for z in getattr(view, ch) if z.enabled]
-            )
-            # ADR-0049: nur Metrik-/Layout-Kanäle — Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
-            for ch in ("email", "telegram", "sms")
-        },
-        unresolved_by_channel={
-            ch: _channel_unresolved_count(
-                global_unresolved,
-                # Issue #3039: mit `channel_layouts` wird `channel_active_metrics`
-                # fuer diesen Kanal nicht gelesen -- dann zaehlt nur die Grundauswahl.
-                channel_raw if channel_rows[ch] is None else None, ch,
-            )
-            # ADR-0049: Premium-SMS hat keine eigene Auswahl, sie sendet den SMS-Text
-            for ch in ("email", "telegram", "sms")
-        },
-        channel_rows_by_channel=channel_rows,
-    )
+    return corridors
 
 
 def _channel_unresolved_count(

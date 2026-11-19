@@ -18,6 +18,7 @@ Sprache des Nutzers; alles andere als Kennung (Frontend-Katalog).
 """
 from __future__ import annotations
 
+import copy
 import dataclasses
 import html as _html
 import re
@@ -62,6 +63,8 @@ class _Muster:
     beispiele: dict = field(default_factory=dict)
     sms_fehlt: set = field(default_factory=set)
     tageswert: set = field(default_factory=set)
+    #: Orte: Rest-Zaehler ``+N`` je gezeigtem Ort (``None`` = keiner); Trip None.
+    rest_zaehler: Optional[list] = None
 
 
 @dataclass
@@ -103,7 +106,7 @@ def build_placements_view(kind: str, entity_id: str, user_id: str) -> dict:
 
 def _tabelle_aufloesen(abo: _Abo, report_type: str):
     from services.channel_list_resolver import resolve_channel_lists
-    from services.placements import placements_dict, placements_from_legacy, read_placements
+    from services.placements import placements_from_legacy, read_placements
 
     dc = abo.display_config
     vm = resolve_channel_lists(
@@ -112,9 +115,12 @@ def _tabelle_aufloesen(abo: _Abo, report_type: str):
         outlook_enabled=abo.outlook_enabled, with_rows=True,
     )
     roh = dc.get("placements") if isinstance(dc, dict) else getattr(dc, "placements", None)
-    gespeichert = read_placements(roh)
-    if gespeichert is not None:
-        return vm, placements_dict(gespeichert.rows, gespeichert.outlook_reports), True
+    if read_placements(roh) is not None:
+        # Gespeicherter Stand wie gespeichert (nicht normalisiert): die
+        # Oberflaeche schreibt ihn vollstaendig zurueck (PUT), unbekannte und
+        # reservierte Schluessel (``premium_sms``, kuenftige Felder) gehen so
+        # nicht verloren; unlesbare Eintraege wirken weiter nicht (Nr. 1).
+        return vm, copy.deepcopy(roh), True
     umgerechnet = placements_from_legacy(
         dc, abo.surface, report_config=abo.report_config,
         enabled_reports=abo.enabled_reports, outlook_enabled=abo.outlook_enabled,
@@ -140,13 +146,22 @@ def _antwort(kind, abo: _Abo, vm, placements, gespeichert, muster: _Muster, lang
         "fixed_rows": [WARNUNGEN] if abo.warnungen else [],
         "rows": zeilen,
         "sms_example": None if muster.sms is None else {
-            "text": muster.sms, "length": len(muster.sms), "max_length": max_laenge},
+            "text": muster.sms, "length": len(muster.sms), "max_length": max_laenge,
+            "overflow": _ueberlauf(muster.rest_zaehler)},
         "outlook_reports": list(vm.outlook_reports),
         "blocks": {**abo.bloecke, "outlook": {
             rt: rt in vm.outlook_reports for rt in ("morning", "evening")}},
         "legend": _legende(zeilen, abo.surface, vm, lang),
         "example_version": _beispiel_version(),
     }
+
+
+def _ueberlauf(rest_zaehler: Optional[list]) -> Optional[dict]:
+    """Orte: ``{locations: <Zahl der Orte mit +N>, per_location: [N|None]}``
+    je in der SMS gezeigtem Ort (SMS-Folge); Trip: ``None``."""
+    if rest_zaehler is None:
+        return None
+    return {"locations": sum(1 for n in rest_zaehler if n), "per_location": rest_zaehler}
 
 
 def _beispiel_version() -> int:
@@ -209,8 +224,9 @@ def _sms_kuerzel(metric_id: str, surface: str, vm) -> list[tuple[str, str]]:
         return [(s.rstrip(":"), metric_id) for s in symbole]
     from app.metric_catalog import kurzform_kuerzel
     from output.renderers.comparison import _RENDERER_TO_CATALOG_METRIC_ID
+    from services.report_config_resolver import orte_renderer_ids
 
-    in_sms = {z.metric_id for z in (vm.sms or ())}
+    in_sms = set(_orte_sms_liste(orte_renderer_ids(vm.sms)))
     quellen = [_RENDERER_TO_CATALOG_METRIC_ID.get(rid) for rid in _renderer_ids(metric_id)
                if rid in in_sms]
     return [(kurzform_kuerzel(q), q) for q in quellen if q and kurzform_kuerzel(q)]
@@ -221,7 +237,7 @@ def _legende(zeilen: list[dict], surface: str, vm, lang: str) -> dict:
     SMS-Haken sendet, je mit der Bedeutung aus dem Katalog in der Sprache des
     Nutzers (``None``, wo der Katalog keine fuehrt -- kein erfundener Text);
     dazu die festen Eintraege als Token mit Kennung."""
-    from app.metric_catalog import get_metric
+    from app.metric_catalog import kuerzel_bedeutung
     from output.tokens.builder import UNAVAILABLE_SYMBOL
     from output.tokens.hazard_symbols import (
         HAZARD_SMS_SYMBOLS, LEVEL_LETTERS, alert_entry_token_parts,
@@ -232,10 +248,8 @@ def _legende(zeilen: list[dict], surface: str, vm, lang: str) -> dict:
         if z["cells"]["sms"]["state"] != "on":
             continue
         for kuerzel, quelle in dict.fromkeys(_sms_kuerzel(z["metric_id"], surface, vm)):
-            d = get_metric(quelle)
-            bedeutung = d.kuerzel_bedeutung_en if lang == "en" else d.kuerzel_bedeutung_de
             metriken.append({"metric_id": z["metric_id"], "kuerzel": kuerzel,
-                             "meaning": bedeutung.get(kuerzel)})
+                             "meaning": kuerzel_bedeutung(quelle, kuerzel, lang)})
     warnung = "!" + "".join(alert_entry_token_parts(
         HAZARD_SMS_SYMBOLS["thunderstorm"], LEVEL_LETTERS[4], 14))
     lawine = "".join(alert_entry_token_parts(HAZARD_SMS_SYMBOLS["avalanche_bulletin"], "4", None))
@@ -281,11 +295,16 @@ def _trip_muster(trip, dc, vm, report_type: str, lang: str) -> _Muster:
     from output.renderers.email.outlook import build_outlook_row
     from output.renderers.trip_report import TripReportFormatter
     from services import placements_beispiel as pb
+    from services.channel_list_resolver import resolve_channel_lists
     from services.weather_metrics import summarize_points
 
     ampel = resolve_ampel(trip)
+    # Ausblick-Zeilen einmal aufloesen, wie der Renderer es tut (#3122 B1b);
+    # Zellen und Spaltenkoepfe lesen dieselben Zeilen.
+    outlook_rows = resolve_channel_lists(dc, "trip", report_type).outlook
     trend = [build_outlook_row(summarize_points(p), p, wd, pb.ZONE, trip_display_config=dc,
-                               report_type=report_type, context="route", ampel=ampel, lang=lang)
+                               outlook_rows=outlook_rows, report_type=report_type,
+                               context="route", ampel=ampel, lang=lang)
              for wd, p in pb.ausblick_tage()]
     stage_name = (trip.stages[0].name if trip.stages else "") or trip.name
     bericht = TripReportFormatter().format_email(
@@ -300,7 +319,7 @@ def _trip_muster(trip, dc, vm, report_type: str, lang: str) -> _Muster:
             "email": _html_stundentabelle(bericht.email_html, ids),
             "telegram": _telegram_kurzuebersicht(bericht.telegram_bubbles, ids, lang),
             "sms": {m: (t, None) for m, t in sms_werte.items()},
-            "outlook": _trip_ausblick(trend, dc, report_type, ids),
+            "outlook": _trip_ausblick(trend, outlook_rows, ids),
         },
         sms_fehlt=_trip_sms_fehlt(vm, sms_werte),
         tageswert=_trip_nur_tageswert(dc, vm, report_type),
@@ -390,16 +409,15 @@ def _trip_nur_tageswert(dc, vm, report_type: str) -> set[str]:
             if mc.metric_id not in spalten and mc.metric_id not in ausgenommen}
 
 
-def _trip_ausblick(trend: list, dc, report_type: str, ids: list[str]) -> dict:
-    """Erste Zeile des Ausblicks, Zellen nach den Spalten des Renderers."""
-    from output.renderers.compare_outlook_metric_ids import (
-        outlook_columns, resolve_trip_outlook_formats, resolve_trip_outlook_metrics,
-    )
+def _trip_ausblick(trend: list, outlook_rows, ids: list[str]) -> dict:
+    """Erste Zeile des Ausblicks, Zellen nach den Spalten des Renderers
+    (dieselben View-Model-Zeilen ueber ``outlook_auswahl``, #3122 B1b)."""
+    from output.renderers.compare_outlook_metric_ids import outlook_columns
+    from output.renderers.email.helpers import outlook_auswahl
 
     if not trend:
         return {}
-    spalten = outlook_columns(resolve_trip_outlook_metrics(dc, report_type),
-                              resolve_trip_outlook_formats(dc))
+    spalten = outlook_columns(*outlook_auswahl(outlook_rows))
     out: dict = {}
     for spalte, text in zip(spalten, trend[0].get("cells") or []):
         if spalte["metric_id"] in ids:
@@ -555,13 +573,51 @@ def _orte_muster(preset: dict, orte: list, vm, lang: str) -> _Muster:
             "sms": {m: (t, None) for m, t in sms_werte.items() if t},
         },
         sms_fehlt={m for m, t in sms_werte.items() if t is None},
+        rest_zaehler=_orte_rest_zaehler(sms, kontext),
     )
+
+
+def _orte_sms_formen(ort, opts) -> list[str]:
+    """Formen eines Ortsteils der SMS, von "alle Zellen" (Index 0) bis "keine"
+    (Index d = d Zellen verdraengt, Ortsteil endet auf ``+d``) -- dieselbe
+    Funktion und dieselben Angaben wie ``render_compare_sms``."""
+    from output.renderers.comparison import _sms_location_variants
+
+    return _sms_location_variants(
+        ort, opts.enabled_metrics_by_channel["sms"], opts.unresolved_by_channel.get("sms", 0),
+        opts.metric_formats("sms"))
+
+
+def _orte_rest_zaehler(sms: str, kontext: dict) -> list:
+    """Je Ort, dessen Teil in der SMS steht (Renderer-Folge), der Rest-Zaehler
+    ``+N`` -- abgelesen: die Form des Renderers, die als ganzer Ortsteil in
+    der SMS steht, nennt ihn (``None`` = alle Zellen stehen). Ein entfallener
+    Ort (``+k Orte``) oder ein hart gekuerzter steht nicht darin."""
+    from output.renderers.email.compare_html import location_render_order
+
+    out = []
+    for ort in location_render_order(kontext["result"].locations):
+        formen = _orte_sms_formen(ort, kontext["opts"])
+        d = next((d for d, form in enumerate(formen)
+                  if re.search(r"(?:: |; )" + re.escape(form) + r"(?=;|\s|$)", sms)), None)
+        if d is not None:
+            out.append(d or None)
+    return out
 
 
 def _renderer_ids(metric_id: str) -> list[str]:
     from output.renderers.compare_metric_ids import _renderer_ids_for_kennung
 
     return list(_renderer_ids_for_kennung(metric_id))
+
+
+def _orte_sms_liste(liste) -> list[str]:
+    """Renderer-Kennungen, die die Orte-SMS fuehrt: die Kanal-Liste, bei
+    ``None`` ("nie eingestellt", kein Filter) die Vorgabefolge, die der
+    SMS-Renderer selbst dann nimmt (``_sms_location_variants``)."""
+    from output.renderers.comparison import _NIE_EINGESTELLT_IDS
+
+    return list(_NIE_EINGESTELLT_IDS if liste is None else liste)
 
 
 def _orte_sms_werte(sms: str, kontext: dict, ids: list[str]) -> dict:
@@ -574,16 +630,14 @@ def _orte_sms_werte(sms: str, kontext: dict, ids: list[str]) -> dict:
     (Kuerzung vom Listenende); die zellenreichste Form, die in der SMS steht,
     ist die gesendete. Der Ortsname wird dabei nie zerlegt -- er darf ``: ``
     oder ``; `` enthalten."""
-    from output.renderers.comparison import _sms_location_variants, _sms_metric_cell
+    from output.renderers.comparison import _sms_metric_cell
     from output.renderers.email.compare_html import location_render_order
 
     opts = kontext["opts"]
     ort = location_render_order(kontext["result"].locations)[0]
-    sms_liste = list(dict.fromkeys(opts.enabled_metrics_by_channel["sms"] or []))
+    sms_liste = list(dict.fromkeys(_orte_sms_liste(opts.enabled_metrics_by_channel["sms"])))
     formen = opts.metric_formats("sms") or {}
-    varianten = _sms_location_variants(
-        ort, opts.enabled_metrics_by_channel["sms"], opts.unresolved_by_channel.get("sms", 0),
-        opts.metric_formats("sms"))
+    varianten = _orte_sms_formen(ort, opts)
     verdraengt = next((d for d, form in enumerate(varianten) if form in sms), len(varianten) - 1)
     zellen = [(rid, zelle) for rid in sms_liste
               if (zelle := _sms_metric_cell(ort, rid, bool(formen.get(rid))))]

@@ -86,6 +86,7 @@ in `docs/reference/api_contract.md`.
 
 ## Changelog
 
+- 2026-11-18: Issue #3128 — `_build_report` ist nur noch Fassade auf den Baustein `src/services/trip_briefing_aufbau.py` (`trip_briefing_bauen`); Signatur, Rückgabe-Tupel und `vorschau_*`-Fehlercodes unverändert, Trend bleibt nebenläufig (#1839). Die Abweichungen der Vorschau gegen den Versand bleiben bis #3144.
 - 2026-07-16: Issue #1270 — Compare-Pendant `ComparePreviewService` ergänzt
   (Konventions-Parität, eigene Klasse; Abschnitt „Verwandtes Modul" oben).
 - 2026-07-11: AC-3 präzisiert (Issue #990: Unterscheidung „keine Stage am Datum" vs. „Stage mit zu wenig Wegpunkten"), Implementation-Details um `_resolve_target_date`-Verhalten ergänzt

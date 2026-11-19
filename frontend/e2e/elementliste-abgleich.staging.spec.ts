@@ -13,6 +13,11 @@
 // Fehlt dem Test-Konto ein Trip bzw. Orts-Vergleich, legt die Spec einen kurzlebigen Prüf-Datensatz
 // (Präfix E2E-GZ) an und löscht ihn am Ende wieder. „Konto mit Lücken“ entsteht nur durch Umschreiben
 // lesender Konto-Abrufe (GET) im Browser; das Konto selbst bleibt unverändert.
+// Mockup-Daten im Prüfkonto (#2967): vorher auf dem Staging-Host scripts/staging_pruefkonto_mockupdaten.py
+// laufen lassen (Runbook docs/runbooks/staging_pruefkonto_seed.md); es gibt ELEMENTLISTE_TRIP_ID und
+// ELEMENTLISTE_ORTE_ID aus. Geschrieben wird nur dort, dieser Abgleich bleibt rein lesend.
+// Login dafür mit dem Prüfkonto: GZ_AUTH_USER/GZ_AUTH_PASS = GZ_PRUEFKONTO_USER/GZ_PRUEFKONTO_PASS aus der
+// Staging-.env (nicht das geteilte Konto „default“, sonst fehlen die Seed-IDs).
 import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

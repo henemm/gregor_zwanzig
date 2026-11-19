@@ -579,7 +579,14 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
 
     # Parse unified display config (Feature 2.6 v2) or migrate from old weather_config
     display_config = None
-    if "display_config" in data:
+    # Issue #3122 B2b: Das Speichern der Tabelle "Was steht wo" (Go
+    # ``store.SaveBriefingPlacements``) legt bei einem Trip ohne
+    # ``display_config`` eines NUR mit ``placements`` an. Das ist keine
+    # Anzeige-Einstellung: die Grundauswahl "nie eingestellt" bleibt die des
+    # fehlenden Schluessels (Profil-Default bzw. weather_config), sonst
+    # tauschte das erste Speichern der Tabelle die Metriken des Briefings aus.
+    nur_tabelle = _nur_placements(data.get("display_config"))
+    if "display_config" in data and not nur_tabelle:
         # Issue #1244: "display_config": null (explizites JSON-null) darf
         # nicht crashen -- fail-soft heisst hier: valider Default statt
         # AttributeError in _parse_display_config.
@@ -597,6 +604,8 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
             else ActivityProfile.ALLGEMEIN
         )
         display_config = build_default_display_config_for_profile(data["id"], profile)
+    if nur_tabelle:
+        display_config.placements = copy.deepcopy(data["display_config"]["placements"])
 
     # Parse report config if present (Feature 3.5)
     report_config = None
@@ -998,6 +1007,14 @@ def _register_standard_metrics() -> List[Dict[str, Any]]:
         {"metric_id": mid, "enabled": True, "bucket": "primary", "order": i}
         for i, mid in enumerate(DEFAULT_TRIP_METRIC_IDS)
     ]
+
+
+def _nur_placements(display_config: object) -> bool:
+    """``display_config`` traegt allein die Tabelle ``placements`` (Objekt) --
+    so legt es das Speichern der Tabelle bei einem Trip ohne
+    ``display_config`` an (Issue #3122 B2b)."""
+    return (isinstance(display_config, dict) and set(display_config) == {"placements"}
+            and isinstance(display_config["placements"], dict))
 
 
 def _parse_display_config(

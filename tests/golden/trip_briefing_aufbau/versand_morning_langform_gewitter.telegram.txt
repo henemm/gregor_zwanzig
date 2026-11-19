@@ -1,0 +1,95 @@
+Hoehenweg Nord
+Morgen 29.10.2026
+
+<<<BUBBLE>>>
+
+Kurzübersicht
+T -5.0@14-2.0
+TF –
+W 15-50@11
+G 22-75@11
+R 0.1-3.0@16
+TH mittel
+CT ⛅
+VS 7.0-9.0
+SU ⛅
+SD 5-45@15
+NS24+ –
+
+⚡ mittel · Sicht mäßig
+
+… +4 weitere Wettergrößen nur als Tageswert
+(Telegram-Limit)
+
+<<<BUBBLE>>>
+
+Segment 1 · 0.0–20.4 km · ↑300 m ↓0 m
+<pre>
+Zt T   TF W  G  R   TH     CT
+08 2.0 –  15 22 0.1 kein   ⛅
+09 2.0 –  15 22 0.1 kein   ⛅
+10 2.0 –  15 22 0.1 kein   ⛅
+11 2.0 –  50 75 2.5 mittel ⛅
+12 2.0 –  50 75 2.6 mittel ⛅
+13 2.0 –  50 75 2.7 mittel ⛅
+14 2.0 –  50 75 2.8 mittel ⛅
+08 2.0 –  15 22 0.1 kein   ⛅
+09 2.0 –  15 22 0.1 kein   ⛅
+10 2.0 –  15 22 0.1 kein   ⛅
+11 2.0 –  50 75 2.5 mittel ⛅
+12 2.0 –  50 75 2.6 mittel ⛅
+13 2.0 –  50 75 2.7 mittel ⛅
+14 2.0 –  50 75 2.8 mittel ⛅
+08 2.0 –  15 22 0.1 kein   ⛅
+09 2.0 –  15 22 0.1 kein   ⛅
+10 2.0 –  15 22 0.1 kein   ⛅
+11 2.0 –  50 75 2.5 mittel ⛅
+12 2.0 –  50 75 2.6 mittel ⛅
+13 2.0 –  50 75 2.7 mittel ⛅
+14 2.0 –  50 75 2.8 mittel ⛅
+</pre>
+
+<<<BUBBLE>>>
+
+Segment 2 · 20.4–43.4 km · ↑300 m ↓0 m
+<pre>
+Zt T    TF W  G  R   TH     CT
+14 -5.0 –  50 75 2.8 mittel ⛅
+15 -5.0 –  50 75 2.9 mittel ⛅
+16 -5.0 –  50 75 3.0 mittel ⛅
+17 -5.0 –  20 30 0.3 kein   ⛅
+18 -5.0 –  20 30 0.3 kein   ⛅
+19 -5.0 –  20 30 0.3 kein   ⛅
+20 -5.0 –  20 30 0.3 kein   ⛅
+14 -5.0 –  50 75 2.8 mittel ⛅
+15 -5.0 –  50 75 2.9 mittel ⛅
+16 -5.0 –  50 75 3.0 mittel ⛅
+17 -5.0 –  20 30 0.3 kein   ⛅
+18 -5.0 –  20 30 0.3 kein   ⛅
+19 -5.0 –  20 30 0.3 kein   ⛅
+20 -5.0 –  20 30 0.3 kein   ⛅
+14 -5.0 –  50 75 2.8 mittel ⛅
+15 -5.0 –  50 75 2.9 mittel ⛅
+16 -5.0 –  50 75 3.0 mittel ⛅
+17 -5.0 –  20 30 0.3 kein   ⛅
+18 -5.0 –  20 30 0.3 kein   ⛅
+19 -5.0 –  20 30 0.3 kein   ⛅
+20 -5.0 –  20 30 0.3 kein   ⛅
+</pre>
+
+<<<BUBBLE>>>
+
+Ziel · 43.4–43.4 km · ↑0 m ↓0 m
+<pre>
+Zt T   TF W  G  R   TH   CT
+20 2.0 –  15 22 0.1 kein ⛅
+21 2.0 –  15 22 0.1 kein ⛅
+20 2.0 –  15 22 0.1 kein ⛅
+21 2.0 –  15 22 0.1 kein ⛅
+20 2.0 –  15 22 0.1 kein ⛅
+21 2.0 –  15 22 0.1 kein ⛅
+</pre>
+
+<<<BUBBLE>>>
+
+Aktionen

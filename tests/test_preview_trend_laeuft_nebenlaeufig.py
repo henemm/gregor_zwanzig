@@ -53,6 +53,19 @@ def _bau(trip, heute: date, user_id: str = "nutzer-a"):
     )
 
 
+#: Namenspraefix des Trend-Pools der Vorschau (``ThreadPoolExecutor(
+#: thread_name_prefix="preview-trend")`` in ``services.trip_briefing_aufbau``).
+#: Gezaehlt werden NUR diese Threads -- der globale ``threading.active_count()``
+#: schwankte durch unbeteiligte Pools (Cache, Abruf-Pool) und machte den Test
+#: flaky (#3128 Adversary F006).
+_TREND_PRAEFIX = "preview-trend"
+
+
+def _trend_threads() -> list[str]:
+    return [t.name for t in threading.enumerate()
+            if t.name.startswith(_TREND_PRAEFIX) and t.is_alive()]
+
+
 class _Spur:
     def __init__(self):
         self.iv: dict[str, tuple[float, float]] = {}
@@ -152,11 +165,10 @@ def test_ac4_trend_wirft_gleiche_ausnahme_kein_verwaister_thread(monkeypatch, sp
     trip, heute = _trip()
     _bau(trip, heute)  # Aufwaermlauf: gemeinsamer Pool legt seine Worker an
     monkeypatch.setattr(TripReportSchedulerService, "_build_stage_trend", kaputt)
-    vorher = threading.active_count()
     with pytest.raises(ValueError, match="trend kaputt 1839"):
         _bau(trip, heute)
     time.sleep(0.05)
-    assert threading.active_count() <= vorher, "AC-4: verwaister Thread nach Trend-Fehler"
+    assert _trend_threads() == [], "AC-4: verwaister Thread nach Trend-Fehler"
 
 
 def test_ac4_hauptabruf_wirft_trend_thread_wird_nicht_verwaist(monkeypatch, spur):
@@ -166,11 +178,10 @@ def test_ac4_hauptabruf_wirft_trend_thread_wird_nicht_verwaist(monkeypatch, spur
     trip, heute = _trip()
     _bau(trip, heute)  # Aufwaermlauf: gemeinsamer Pool legt seine Worker an
     monkeypatch.setattr(TripReportSchedulerService, "_fetch_weather", kaputt)
-    vorher = threading.active_count()
     with pytest.raises(RuntimeError, match="abruf kaputt 1839"):
         _bau(trip, heute)
     time.sleep(0.05)
-    assert threading.active_count() <= vorher, "AC-4: verwaister Trend-Thread nach Hauptabruf-Fehler"
+    assert _trend_threads() == [], "AC-4: verwaister Trend-Thread nach Hauptabruf-Fehler"
 
 
 def test_ac5_zwei_nutzer_parallel_jeder_nur_eigene_daten(spur):

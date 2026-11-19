@@ -1,0 +1,126 @@
+❄ WINTERSPORT · PISTE
+Hoehenweg Nord - Abend-Briefing
+Etappe 2: Kamm 1
+29.10.2026
+43.4 km | ↑600m | ↓0m | max. 1200m
+
+Etappe 2: Kamm 1: 2°C, ⛅, mäßiger Regen, mäßiger Wind 20 km/h, Böen bis 30 km/h ab 14:00
+
+━━ Metriken-Überblick ━━
+  -5 – 2°C · Max 08:00
+  Wind max 20 km/h (14:00)
+  Böen >30 km/h ab 14:00 · max 30 (14:00)
+  Regen ges. 2.8 mm
+  40–60% bewölkt · Max 14:00
+  Sicht min 7.0 km (14:00)
+  Sonne 42.0h
+
+---
+Wetterlage: FRAGIL — Schnelle Frontverlagerung möglich. Prognosen ab Tag 2 konservativ planen.
+---
+
+Ab Donnerstag ist die Vorhersage weniger verlässlich.
+
+━━ Segment 1: km 0.0–20.4 | 08:00–14:05 | ↑600m → 900m ━━
+  Zeit   Temp   Feels   Wind   Gust   Rain   Cloud   Visib   Sun   SnowH   NewSn 
+  -----  -----  ------  -----  -----  -----  ------  ------  ----  ------  ------
+  08     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  09     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  10     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  11     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  12     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  13     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  14     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  08     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  09     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  10     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  11     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  12     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  13     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  14     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  08     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  09     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  10     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  11     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  12     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  13     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  14     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+
+━━ Segment 2: km 20.4–43.4 | 14:05–20:51 | ↑900m → 1200m ━━
+  Zeit   Temp   Feels   Wind   Gust   Rain   Cloud   Visib   Sun   SnowH   NewSn 
+  -----  -----  ------  -----  -----  -----  ------  ------  ----  ------  ------
+  14     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  15     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  16     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  17     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  18     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  19     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  20     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  14     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  15     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  16     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  17     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  18     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  19     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  20     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  14     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  15     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  16     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  17     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  18     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  19     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+  20     -5.0   –       20     30     0.3    ⛅       7.0     ⛅     45      –     
+
+━━ 🏁 Wetter am Ziel: 20:51–21:51 | 1200m ━━
+  Zeit   Temp   Feels   Wind   Gust   Rain   Cloud   Visib   Sun   SnowH   NewSn 
+  -----  -----  ------  -----  -----  -----  ------  ------  ----  ------  ------
+  20     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  21     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  20     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  21     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  20     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  21     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+
+━━ Nacht am Ziel (1200m) ━━
+Ankunft 21:51 → Morgen 06:00
+  Zeit   Temp   Feels   Wind   Gust   Rain   Cloud   Visib   Sun   SnowH   NewSn 
+  -----  -----  ------  -----  -----  -----  ------  ------  ----  ------  ------
+  20     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  22     2.0    –       15     22     0.2    ⛅       9.0     ⛅     5       –     
+  00     2.0    –       15     22     0.2    ⛅       9.0     ⛅     5       –     
+  02     2.0    –       15     22     0.2    ⛅       9.0     ⛅     5       –     
+  04     2.0    –       15     22     0.2    ⛅       9.0     ⛅     5       –     
+  06     2.0    –       15     22     0.1    ⛅       9.0     ⛅     5       –     
+  * Temperatur/Nullgradgrenze: Minimum im 2h-Block
+
+━━ Gewitter-Vorschau ━━
+  30.10.2026: Kein Gewitter erwartet
+  31.10.2026: Kein Gewitter erwartet
+
+━━ Nächste Etappen ━━
+⚠️ Vorhersage derzeit nicht abrufbar.
+
+
+── Antwort-Kommandos ──
+  HEUTE                – Wetter der heutigen Etappe
+  MORGEN               – Wetter der morgigen Etappe
+  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)
+  GEWITTER             – Gewittergefahr heutige Etappe
+  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke
+  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)
+  STATUS               – Heute und kommende Etappen
+  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen
+  SKIP                 – Nächstes Briefing überspringen
+  STOP                 – Briefings dauerhaft deaktivieren (auch ABBRUCH)
+  WEITER               – Briefings reaktivieren
+  HILFE                – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
+  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben
+  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)
+
+Einheiten: Temp, Feels °C · Wind, Gust km/h · Rain mm · Cloud % · Visib km · Sun h · SnowH, NewSn cm
+Spalten: Temp = Temperatur · Feels = Gefühlte Temperatur · Gust = Böen · Rain = Niederschlag · Cloud = Bewölkung · Visib = Sichtweite · Sun = Sonnenstunden · SnowH = Schneehöhe · NewSn = Neuschnee
+------------------------------------------------------------
+Generated: 2026-10-29 04:00 UTC
+Data: openmeteo (fixture)
+Etappen-Briefing · Vollversion · openmeteo

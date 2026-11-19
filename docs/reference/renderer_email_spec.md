@@ -264,8 +264,8 @@ X-GZ-Lang:      de | en
 
 | Mail-Typ | Format | Quelle | Validator |
 |----------|--------|--------|-----------|
-| `trip-briefing` | `full` | `trip_report_scheduler.py` (Briefing-Versand) | `.claude/hooks/briefing_mail_validator.py` (AC-1/4) |
-| `trip-briefing` | `compact` | `trip_report_scheduler.py` (compact-Renderer seit #722) | `.claude/hooks/briefing_mail_validator.py` (AC-2/6) |
+| `trip-briefing` | `full` | `trip_report_scheduler.py` (Briefing-Versand) → `src/services/trip_briefing_aufbau.py` (Aufbau der Mail, seit #3128) | `.claude/hooks/briefing_mail_validator.py` (AC-1/4) |
+| `trip-briefing` | `compact` | `trip_report_scheduler.py` (compact-Renderer seit #722) → `src/services/trip_briefing_aufbau.py` (Aufbau der Mail, seit #3128) | `.claude/hooks/briefing_mail_validator.py` (AC-2/6) |
 | `compare` | `full` | `src/services/scheduler_dispatch_service.py` → `src/services/compare_briefing_aufbau.py` (Aufbau der Mail, seit #2983) → `notification_service.py` (Scheduler-Lauf + „Senden“-Button) | `.claude/hooks/email_spec_validator.py` (AC-3) |
 
 ### Validierungslogik

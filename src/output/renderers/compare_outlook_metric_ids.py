@@ -274,15 +274,10 @@ def _kennungen_aus_renderer_ids(renderer_ids: list[str]) -> list[str]:
     Auswertungen derselben Groesse fallen dabei auf dieselbe Kennung zusammen;
     die Reihenfolge des ersten Vorkommens bleibt erhalten.
     """
-    from output.renderers.compare_metric_catalog import get_compare_metric_catalog
-    from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
+    from output.renderers.compare_metric_ids import katalog_paar
 
-    umkehr: dict[str, str] = {}
-    for eintrag in get_compare_metric_catalog():
-        renderer_id = FRONTEND_TO_RENDERER_METRIC_ID.get(eintrag["key"])
-        if renderer_id is not None:
-            umkehr.setdefault(renderer_id, eintrag["metric_id"])
-    return [umkehr[r] for r in renderer_ids if r in umkehr]
+    paare = [katalog_paar(r) for r in renderer_ids]
+    return [p[0] for p in paare if p is not None]
 
 
 def resolve_trip_outlook_formats(dc: object) -> dict[str, bool] | None:

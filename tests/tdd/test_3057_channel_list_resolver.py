@@ -46,6 +46,7 @@ from tests.helpers.kanal_liste_orakel import (
     KANAELE_ORTE,
     alt_compare_kanaele,
     alt_compare_premium_zeilen,
+    alt_katalog_paare,
     alt_trip_format,
     alt_trip_metrics_for_channel,
 )
@@ -65,6 +66,13 @@ def _aktiv(zeilen) -> Optional[list[str]]:
     if zeilen is None:
         return None
     return [z.metric_id for z in zeilen if z.enabled]
+
+
+def _paare(zeilen) -> Optional[list[tuple[str, str]]]:
+    """Orte-Kanalzeilen im einen Vokabular (#3101): (Katalog-ID, Aggregation)."""
+    if zeilen is None:
+        return None
+    return [(z.metric_id, z.aggregation) for z in zeilen if z.enabled]
 
 
 def _zeilen(vm, kanal: str):
@@ -292,8 +300,11 @@ def _vergleiche_orte(name: str, preset: dict, fehler: list) -> None:
     opts = resolve_compare_render_options(copy.deepcopy(preset))
     for kanal in KANAELE_ORTE:
         zeilen = _zeilen(vm, kanal)
-        if _aktiv(zeilen) != alt_enabled[kanal]:
-            fehler.append(f"{name}/{kanal}: Resolver {_aktiv(zeilen)} != alt {alt_enabled[kanal]}")
+        # #3101: das View-Model spricht (Katalog-ID, Aggregation), der Altpfad
+        # Renderer-Kennungen -- je Zeile genau eine, in derselben Folge.
+        soll = alt_katalog_paare(alt_enabled[kanal])
+        if _paare(zeilen) != soll:
+            fehler.append(f"{name}/{kanal}: Resolver {_paare(zeilen)} != alt {soll}")
         elif zeilen is not None:
             aktiv = [z for z in zeilen if z.enabled]
             if [z.order for z in zeilen] != list(range(len(zeilen))):
@@ -302,11 +313,11 @@ def _vergleiche_orte(name: str, preset: dict, fehler: list) -> None:
                 if any(z.format is not None for z in aktiv):
                     fehler.append(f"{name}/{kanal}: ohne channel_layouts muss format None sein")
             else:
-                einfach = dict(alt_rows[kanal])
-                for z in aktiv:
-                    if (z.format == "simplified") != einfach[z.metric_id]:
+                einfach = [e for _rid, e in alt_rows[kanal]]
+                for z, alt_einfach in zip(aktiv, einfach):
+                    if (z.format == "simplified") != alt_einfach:
                         fehler.append(f"{name}/{kanal}/{z.metric_id}: format {z.format!r} "
-                                      f"!= alt einfach={einfach[z.metric_id]}")
+                                      f"!= alt einfach={alt_einfach}")
         if opts.enabled_metrics_by_channel.get(kanal) != alt_enabled[kanal]:
             fehler.append(f"{name}/{kanal}: enabled_metrics_by_channel weicht ab")
         if opts.channel_rows_by_channel.get(kanal) != alt_rows[kanal]:
@@ -430,8 +441,8 @@ def test_ac4_drei_schreibweisen_ergeben_dieselbe_darstellung(surface, wert, schr
         vorher = _schluessel(dc)
         vm = resolve(dc, surface, "evening")
         assert _schluessel(dc) == vorher, "Eingabe veraendert"
-        # Orte-Zeilen tragen Renderer-IDs (wind -> wind_max), Trip-Zeilen Kennungen.
-        ids = ("wind_max", "gust_max") if surface == "compare" else ("wind", "gust")
+        # #3101: Orte- und Trip-Zeilen tragen beide die Katalog-ID.
+        ids = ("wind", "gust")
         zeilen = [z for z in _zeilen(vm, "email") if z.metric_id in ids]
         assert zeilen and all(z.format == wert for z in zeilen), (schreibweise, zeilen)
         ergebnisse.append(_zeilentupel(zeilen))
@@ -445,8 +456,8 @@ def test_ac4_vorrang_format_vor_format_mode_vor_use_friendly_format():
         {"metric_id": "gust", "format_mode": "raw", "use_friendly_format": True},
     ]}}
     zeilen = {z.metric_id: z.format for z in _zeilen(_resolver()(dc, "compare"), "email")}
-    assert zeilen["wind_max"] == "raw"
-    assert zeilen["gust_max"] == "raw"
+    assert zeilen["wind"] == "raw"
+    assert zeilen["gust"] == "raw"
 
 
 @pytest.mark.parametrize("wert", ["raw", "simplified"])
@@ -528,8 +539,9 @@ def test_ac5_premium_sms_eigene_liste_wird_gelesen():
     preset = {"display_config": {"active_metrics": copy.deepcopy(AKTIV_ORTE), "channel_layouts": {
         "premium_sms": [{"metric_id": "gust"}, {"metric_id": "temperature"}]}}}
     vm = resolve(copy.deepcopy(preset["display_config"]), "compare")
-    assert _aktiv(_zeilen(vm, "premium_sms")) == alt_compare_premium_zeilen(preset)
-    assert _aktiv(vm.premium_sms) != _aktiv(vm.sms)
+    assert _paare(_zeilen(vm, "premium_sms")) == alt_katalog_paare(
+        alt_compare_premium_zeilen(preset))
+    assert _paare(vm.premium_sms) != _paare(vm.sms)
 
 
 # ---------------------------------------------------------------------------
@@ -538,7 +550,7 @@ def test_ac5_premium_sms_eigene_liste_wird_gelesen():
 
 def test_ac6_nur_katalog_metriken_und_leer_bleibt_leer():
     from app.metric_catalog import _METRICS_BY_ID
-    from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
+    from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG
 
     resolve = _resolver()
     warnung = {"metric_id": "official_alerts", "enabled": True}
@@ -556,10 +568,12 @@ def test_ac6_nur_katalog_metriken_und_leer_bleibt_leer():
             "channel_layouts": {"email": [warnung, {"metric_id": "wind"}]},
             "channel_active_metrics": {"sms": [], "telegram": []}}
     vm = resolve(orte, "compare")
-    renderer_ids = set(FRONTEND_TO_RENDERER_METRIC_ID.values())
+    # #3101: Orte-Zeilen tragen Katalog-ID + Aggregation, je Paar eine
+    # Vergleichs-Zeile -- die amtliche Warnung ist keine.
+    katalog_paare = {(e["metric_id"], e["aggregation"]) for e in COMPARE_METRIC_CATALOG}
     for kanal in ("email", "telegram", "sms", "premium_sms"):
-        ids = {z.metric_id for z in _zeilen(vm, kanal)}
-        assert ids <= renderer_ids, (kanal, ids - renderer_ids)
+        paare = {(z.metric_id, z.aggregation) for z in _zeilen(vm, kanal)}
+        assert paare <= katalog_paare, (kanal, paare - katalog_paare)
     assert _aktiv(vm.telegram) == []
     assert _aktiv(vm.sms) == []
 

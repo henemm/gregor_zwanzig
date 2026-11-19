@@ -409,6 +409,16 @@ def _trend_note(
     return " · ".join(notes) if notes else None
 
 
+def _ausblick_zeilen(report_config, display_config, report_type: str):
+    """#3122: ``view.outlook`` des Trips (``None`` ohne Anzeige-Konfiguration:
+    Renderer-Vorgabe wie bisher)."""
+    if display_config is None:
+        return None
+    from services.report_config_resolver import resolve_trip_view
+
+    return resolve_trip_view(report_config, display_config, report_type).outlook
+
+
 def trend_zeile(
     stage_trip, agg, seg_weather: list, weekday: str, tz, *,
     report_type: str, lang: Lang = "de",
@@ -444,10 +454,9 @@ def trend_zeile(
         # Issue #2792 S1c-4b (Spec v1.5 Punkt 3): je stage_trip dessen
         # Ampel; `sms_threshold` wirkt nicht mehr (E1).
         ampel=resolve_ampel(stage_trip),
-        # #1720 S1: ungekollabierte Konfiguration durchreichen, nicht selbst
-        # aufloesen -- Renderer-Vokabular gehoert in die Ausgabeschicht
-        # (test_scheduler_has_no_output_imports).
-        trip_display_config=dc, report_type=report_type,
+        # #3122: die Ausblick-Zeilen des View-Models (Auswahl, Folge, Roh/
+        # Einfach) statt der rohen Konfiguration; ``()`` = Block entfaellt.
+        outlook_rows=_ausblick_zeilen(_rc, dc, report_type), report_type=report_type,
         # Issue #2792 S1c-4a: Trip-Zweig ausdruecklich, auch ohne dc.
         context="route",
         day_window_start_hour=_win_start,
@@ -1654,8 +1663,13 @@ class TripReportSchedulerService:
         # ersetzt die interne Auflösung — kein zweiter Auflöser.
         if target_date is None:
             target_date = self._get_target_date(report_type, trip, now_utc)
+        # Issue #3128: Segment-, Wetter-, Anreicherungs- und Render-Aufbau im
+        # gemeinsamen Baustein (auch von der Vorschau genutzt); Zwischenstopps,
+        # Phasenuhr, Anker, Marker und Logs bleiben hier.
+        from services import trip_briefing_aufbau as aufbau
+
         self._last_converted_trip = None
-        segments = self._convert_trip_to_segments(trip, target_date)
+        segments = aufbau.trip_segmente_bauen(self, trip, target_date)
         if self._last_converted_trip is not None:
             trip = self._last_converted_trip
 
@@ -1668,7 +1682,7 @@ class TripReportSchedulerService:
             if fb is not None:
                 target_date = fb.date
                 self._last_converted_trip = None
-                segments = self._convert_trip_to_segments(trip, target_date)
+                segments = aufbau.trip_segmente_bauen(self, trip, target_date)
                 if self._last_converted_trip is not None:
                     trip = self._last_converted_trip
 
@@ -1750,7 +1764,7 @@ class TripReportSchedulerService:
 
         # 3. Fetch weather for each segment
         uhr.wechsel("zieltag")
-        segment_weather = self._fetch_weather(weather_segments)
+        segment_weather = aufbau.trip_wetter_laden(self, weather_segments)
         # Issue #2961 (ADR-0117 Nachtrag): Handversand/Befehl am erschoepften
         # Tageskontingent -- kein Teil-Briefing, auch kein Ausfall-Hinweis.
         # Ohne manuellen Kontext (Zeitplan-Versand) immer False.
@@ -1818,64 +1832,24 @@ class TripReportSchedulerService:
         self._enrich_ensemble_for_trip(trip, segment_weather)
         uhr.wechsel("rest")
 
-        # 2c. F12 / Issue #122 (refactored Issue #479):
-        # Stabilitäts-Label für die kommenden Etappen — wird aus den bereits
-        # vorhandenen `confidence_pct_min`-Werten der Folge-Segmente
-        # abgeleitet; kein separater Z500-API-Call mehr.
-        stability_result = None
-        try:
-            from services.weather_pattern import WeatherPatternService
-            stability_result = WeatherPatternService().compute_for_trip(
-                trip, target_date, segment_weather
-            )
-        except Exception as e:
-            logger.warning(f"WeatherPatternService failed for {trip.id}: {e}")
-
-        # 3. Stage info for header
-        stage = trip.get_stage_for_date(target_date)
-        stage_name = trip.numbered_stage_label(stage) if stage else None
-        stage_stats = self._compute_stage_stats(stage) if stage else None
-
-        # 4. Night weather (both report types — Issue #1313)
-        night_weather = None
-        uhr.wechsel("nacht")
-        if segment_weather:
-            night_weather = self._fetch_night_weather(segment_weather[-1])
-        uhr.wechsel("rest")
-
-        # 6. Multi-day trend (configurable per report type — via Resolver, Issue #1208)
-        #    Built BEFORE the thunder forecast (#1275): both must reflect the
-        #    SAME actual future stage(s), never today's last segment.
-        #    Fix #1486: `.rows` ist der unveraenderte Bestandswert, `.state`/
-        #    `.horizon_days` benennen zusaetzlich, warum der Ausblick entfaellt.
-        multi_day_trend = None
-        outlook_state = None
-        outlook_horizon_days = None
-        if segment_weather and render_options.show_multi_day_trend:
-            uhr.wechsel("ausblick")
-            trend_result = self._build_stage_trend(
-                trip, target_date, now_utc=now_utc, tz=trip_tz,
-                report_type=report_type,
-            )
-            multi_day_trend = trend_result.rows
-            outlook_state = trend_result.state
-            outlook_horizon_days = trend_result.horizon_days
-
-        # 5. Thunder forecast (+1/+2 days) — Issue #1275
-        #    Same data source as the outlook table, so SMS/Telegram/E-Mail-
-        #    Vorschau agree with it. When the multi-day trend was already built
-        #    (evening default) its rows are REUSED — no second weather fetch.
-        #    Only offsets not covered by the trend fall back to a dedicated
-        #    single-stage fetch (typically morning, where the trend is off).
-        #    Issue #1651: `night_weather` (Schritt 4, oben) wird durchgereicht,
-        #    damit der Satz ein Gewitter ausserhalb des Tagesfensters nennt --
-        #    aus DERSELBEN Reihe, die daneben als Nacht-Tabelle steht.
-        uhr.wechsel("gewitter_vorschau")
-        thunder_forecast = self._build_thunder_forecast_from_trend_or_fetch(
-            trip, target_date, now_utc=now_utc, tz=trip_tz,
-            multi_day_trend=multi_day_trend, night_weather=night_weather,
+        # 2c-5. Issue #3128: Wetterlage (F12, #479), Etappe/Stats, Nachtwetter
+        # (beide report_types, #1313), Mehrtages-Trend (#1208, vor dem
+        # Gewitter #1275, Fix #1486) und Gewitter-Vorschau (#1275, #1651)
+        # im gemeinsamen Baustein -- seriell, die Phasenuhr misst ueber den
+        # Rueckruf weiter jede Phase (nacht/ausblick/gewitter_vorschau).
+        anreicherung = aufbau.trip_anreicherung_bauen(
+            self, trip, target_date, segment_weather,
+            report_type=report_type, now_utc=now_utc, trip_tz=trip_tz,
+            render_options=render_options, phase=uhr.wechsel,
         )
-        uhr.wechsel("rest")
+        stability_result = anreicherung.stability_result
+        stage_name = anreicherung.stage_name
+        stage_stats = anreicherung.stage_stats
+        night_weather = anreicherung.night_weather
+        multi_day_trend = anreicherung.multi_day_trend
+        outlook_state = anreicherung.outlook_state
+        outlook_horizon_days = anreicherung.outlook_horizon_days
+        thunder_forecast = anreicherung.thunder_forecast
 
         # 7b. Vortag-Vergleich (Issue #750): gestrigen Snapshot laden + Deltas
         # berechnen. Fail-soft — fehlt der Vortag, bleibt day_comparison None.
