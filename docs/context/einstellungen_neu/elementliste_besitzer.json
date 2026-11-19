@@ -6137,16 +6137,709 @@
 		{
 			"ctx": "trip",
 			"reiter": "uebersicht",
-			"muster": "{text}",
-			"grund": "Reiter Übersicht fehlt in der Elementliste; Einträge aus dem Mockup erzeugen: #2969",
-			"spec": "docs/specs/modules/feat_2913_abgleich_ganzseite.md"
+			"text": "Fertig",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht); Status des Prüfkonto-Trips GR221 (Etappen in der Vergangenheit)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Finished",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht); Status des Prüfkonto-Trips GR221 (Etappen in der Vergangenheit)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Trip beendet",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht); nächster Versand des beendeten Prüfkonto-Trips",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Trip ended",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht); nächster Versand des beendeten Prüfkonto-Trips",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "T02",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht); Etappen-Code des Prüfkonto-Trips",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "T03",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht); Etappen-Code des Prüfkonto-Trips",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "T04",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht); Etappen-Code des Prüfkonto-Trips",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Temperatur, Tiefsttemperatur Nacht, Gefühlte Temperatur, Wind, Böen, Niederschlag, Regenwahrscheinlichkeit, Gewitter, Schneefallgrenze, Tiefe Wolken, Sichtweite, UV-Index, Nullgradgrenze",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht); Metrik-Auswahl des Prüfkonto-Trips (Karte Wetter)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Temperature, Night low, Feels-like temperature, Wind, Wind gusts, Precipitation, Rain probability, Thunderstorm, Snow line, Low clouds, Visibility, UV index, Freezing level",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht); Metrik-Auswahl des Prüfkonto-Trips (Karte Wetter)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
 		},
 		{
 			"ctx": "orte",
 			"reiter": "uebersicht",
-			"muster": "{text}",
-			"grund": "Reiter Übersicht fehlt in der Elementliste; Einträge aus dem Mockup erzeugen: #2969",
-			"spec": "docs/specs/modules/feat_2913_abgleich_ganzseite.md"
+			"text": "Münster · Telgte · Tecklenburg",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht); Orte des Prüfkonto-Vergleichs Münsterland",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Status",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Nächster Versand",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "kein Termin geplant",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Briefings",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Zuletzt raus",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Noch kein Versand",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Kanäle",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Email",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Reihenfolge & Profil",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Im Editor öffnen →",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "T01",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "—",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Risiko",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Achten",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "OK",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Noch nicht eingestellt — es gilt der Standardsatz.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Wetter bearbeiten →",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Briefings laufen",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Morgen-Briefing",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "✉",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Abend-Briefing",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Alarm-Auslöser",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Zeitplan bearbeiten →",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Versand",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Bearbeiten →",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Versand-Historie",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Noch keine Briefings zugestellt.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Next delivery",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "no time scheduled",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Last sent",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "No delivery yet",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Channels",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Order & profile",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Open in editor →",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Risk",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Caution",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Not set yet — the standard set applies.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Edit weather →",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Briefings running",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Morning briefing",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Evening briefing",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Alert trigger",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Edit schedule →",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Edit →",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "Delivery history",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"text": "No briefings delivered yet.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"muster": "Morgen {zeit} · Abend {zeit}",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"muster": "Morning {zeit} · Evening {zeit}",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"muster": "20{jahr}-{monat}-{tag}",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"muster": "· {anzahl} WP",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"muster": "{ausloesend} von {ausgewaehlt} Metriken lösen einen Alarm aus. {ohne} können keinen auslösen (Vorboten und reine Anzeige).",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"muster": "{ausloesend} of {ausgewaehlt} metrics trigger an alert. {ohne} cannot trigger one (precursors and display only).",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"muster": "Briefings {zeiten} · nächster Versand {naechster}.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"muster": "Briefings {zeiten} · next delivery {naechster}.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"muster": "{wochentag} {tag}.{monat}. {stunde}:{minute} ({zone})",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"muster": "{wochentag} {tag} {monat} {stunde}:{minute} ({zone})",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Status",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Läuft automatisch",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Nächster Versand",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Briefings",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Zuletzt raus",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Noch kein Versand",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Kanäle",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Email",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Bearbeiten →",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Versand",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Versand-Historie",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Noch keine Briefings zugestellt.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Runs automatically",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Next delivery",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Last sent",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "No delivery yet",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Channels",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Edit →",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "Delivery history",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"text": "No briefings delivered yet.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "Orte · {region}",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "Locations · {region}",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "Morgen {zeit}",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "Morning {zeit}",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "{count} Kandidaten",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "{count} candidate",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "{count} candidates",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "{count} Metriken im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "{count} Metrik im Briefing, für alle Orte nebeneinander. Kein Score, kein Ranking.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "{count} metrics in the briefing, side by side for all locations. No score, no ranking.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "{count} metric in the briefing, side by side for all locations. No score, no ranking.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "Briefings {zeiten} · nächster Versand {naechster}.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "Briefings {zeiten} · next delivery {naechster}.",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "{wochentag} {tag}.{monat}. {stunde}:{minute} ({zone})",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "{wochentag} {tag} {monat} {stunde}:{minute} ({zone})",
+			"grund": "Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht)",
+			"spec": "docs/specs/modules/feat_2969_elementliste_uebersicht.md"
 		},
 		{
 			"ctx": "trip",

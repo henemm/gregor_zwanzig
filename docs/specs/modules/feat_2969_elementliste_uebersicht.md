@@ -105,8 +105,8 @@ Neue Datei `frontend/src/lib/__tests__/elementliste_uebersicht_2969.test.ts` (Ke
 - **AC-6:** Given der Staging-Lauf für Trip und Orte / When der Abgleich den Reiter Übersicht besucht / Then wird der Bereichskopf live gegen die Liste geprüft (Hinrichtung) und der ganze Hub gelesen (Gegenrichtung)
   - Test: Der Staging-Bericht enthält für `uebersicht` geprüfte Elemente mit Status `ok` im Bereichskopf.
 
-- **AC-7:** Given Staging und die neue Besitzerliste / When `npm run elementliste:abgleich -- --abnahme` für DE und EN läuft / Then ist der Exit 0, und jedes neue `nicht_pruefbar` oder `abweichend` der Übersicht in laedt/fehler/luecken hat einen Besitzer mit Grund
-  - Test: Beide Abnahme-Läufe enden mit Exit 0, der Bericht zeigt keine herrenlose Übersicht-Abweichung.
+- **AC-7:** Given Staging und die neue Besitzerliste / When `npm run elementliste:abgleich -- --abnahme` für DE und EN läuft / Then hat im Reiter Übersicht (Trip und Orte, alle vier Zustände) kein Befund ohne Besitzer, alle 16 Übersicht-Einträge sind gefunden, und kein herrenloser Befund außerhalb der Übersicht ist durch #2969 neu entstanden; der Gesamt-Exit 0 über alle Reiter gehört zu #3009
+  - Test: Beide Abnahme-Berichte zeigen für `uebersicht` 16 gefunden und 0 herrenlose Befunde; die übrigen herrenlosen Befunde liegen in Wetter, Zustellung, Etappen und Orte (Alt-Einträge byte-gleich, Ausnahmen nur für `uebersicht` geändert).
 
 - **AC-8:** Given die Spec des Vorgängers / When #2969 ausgeliefert ist / Then vermerkt `feat_2913_abgleich_ganzseite.md`, dass die Übersicht-Ausnahme durch #2969 ersetzt ist
   - Test: Doku-Pflege (`# doc-compliance-test`-Ausnahme); Nutzerverhalten wird durch AC-6 und AC-7 bewiesen.
@@ -115,10 +115,14 @@ Neue Datei `frontend/src/lib/__tests__/elementliste_uebersicht_2969.test.ts` (Ke
 
 - AC-1 bis AC-8 erfüllt und durch die genannten Tests belegt; Mutations-Gegenprobe ohne unbewachte Verfälschung.
 - Kern-Tests und bestehende Elementlisten-Wächter grün; alle sechs CI-Checks grün.
-- Staging-Lauf DE und EN mit `--abnahme` Exit 0.
+- Staging-Lauf DE und EN mit `--abnahme`: Reiter Übersicht ohne herrenlosen Befund (Gesamt-Exit 0: #3009).
 - Keine Produktfunktion verändert.
 
 ## Known Limitations
+
+- Platzhalter in Ausnahme-Mustern sind beliebiger Text (`.+?`); Datums- und Uhrzeitmuster der Übersicht sind dadurch breit. Engere, typisierte Platzhalter: #3177.
+- Ein Teil der Einzel-Ausnahmen hält Werte des Staging-Prüfkontos fest (z. B. „Trip beendet“, „T02“); ändert sich das Prüfkonto, fällt das erst im Staging-Lauf auf, nicht in den Kern-Tests.
+- Die Übereinstimmung Generator ↔ eingecheckte Liste prüft nur der manuelle Generator-Lauf; automatische Prüfung: #3178.
 
 - Der Inhalt unter dem Bereichskopf ist im Mockup nicht gestaltet; die Einzel-Ausnahmen halten den heutigen Live-Stand als Soll („unverändert“) fest. Ändert sich der Inhalt bewusst, müssen die Ausnahmen mit angepasst werden.
 - Gegenrichtung weiterhin nur Desktop und Zustand `normal` (siehe Vorgänger-Spec).
@@ -131,4 +135,5 @@ Neue Datei `frontend/src/lib/__tests__/elementliste_uebersicht_2969.test.ts` (Ke
 
 ## Changelog
 
+- 2026-11-19: AC-7 auf den Reiter Übersicht präzisiert (Gesamt-Exit 0 gehört #3009); Known Limitations aus dem Adversary-Dialog (#3177, #3178)
 - 2026-11-19: Initial spec created (Issue #2969, Epic #2913, Workflow feat-2969-elementliste-uebersicht)

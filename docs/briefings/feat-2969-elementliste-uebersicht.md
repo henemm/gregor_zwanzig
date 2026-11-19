@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/feat_2969_elementliste_uebersicht.md
-spec_sha256: 79fc00f2a9f956840b508a4ffa59210685015e70a1469fec5bf098dc013b5f8c
-spec_frozen_sha256: ab3005ac111297411a38ed7b5082ca2a3104fc22a611725614f405cb27d0d4f8
+spec_sha256: 3a4764f8cc88121a5cee6109298afefdcede56c202089a1af875426bd852d87c
+spec_frozen_sha256: 29a26afba310ad075c3c31d925a14da9fb1f3bdc6c0f97eb8fe0d81f31f01ae1
 ---
 
 # PO-Briefing: feat-2969-elementliste-uebersicht
@@ -12,20 +12,21 @@ spec_frozen_sha256: ab3005ac111297411a38ed7b5082ca2a3104fc22a611725614f405cb27d0
 
 ## Was gebaut wird
 
-Der Seitenabgleich prüft künftig auch den Reiter Übersicht (Trip und Orte, Deutsch und Englisch) gegen das Mockup.
+Der Reiter Übersicht wird in die Prüfliste aufgenommen, damit der Seitenabgleich ihn künftig für Trip und Orte prüft.
 
 ## Definition of Done
 
-Der Abgleich läuft auf Staging für Deutsch und Englisch fehlerfrei durch, die Pauschal-Ausnahme für die Übersicht ist entfernt, die Oberfläche bleibt unverändert.
+Der Abgleich auf Staging prüft die Übersicht in Deutsch und Englisch ohne herrenlosen Befund, und die Pauschal-Ausnahme ist entfernt.
 
 ## Wie geprüft wird
 
-Automatische Tests prüfen Liste, Ausnahmen und Erkennung unbekannter Texte; Staging-Läufe belegen den Abgleich, nur die Doku-Notiz hat keinen Test.
+Automatische Tests prüfen Liste, Ausnahmen und Erkennung unbekannter Texte; der Staging-Lauf prüft die echte Seite. Die Produktoberfläche bleibt unverändert.
 
 ## Kritische Anmerkungen
 
-- Das Mockup gestaltet nur Titel und Erklärsatz; der übrige Inhalt wird als heutiger Stand festgeschrieben, nicht aus dem Mockup erzeugt.
-- Die Einzel-Ausnahmen entstehen erst beim Staging-Lesen; ändert sich der Übersichtsinhalt bewusst, müssen sie nachgezogen werden.
+- Aus dem Mockup entsteht nur der Kopf; der übrige Inhalt wird als „unverändert“ per Einzel-Ausnahmen festgehalten, nicht neu geprüft.
+- Ausnahmen halten Werte des Prüfkontos fest; Änderungen fallen erst im Staging-Lauf auf (Folge-Tickets #3177, #3178).
+- Gesamt-Exit 0 über alle Reiter gehört zu #3009, nicht hierher.
 
 ## Freigabe-Frage
 
