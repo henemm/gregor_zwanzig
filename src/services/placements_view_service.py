@@ -295,11 +295,16 @@ def _trip_muster(trip, dc, vm, report_type: str, lang: str) -> _Muster:
     from output.renderers.email.outlook import build_outlook_row
     from output.renderers.trip_report import TripReportFormatter
     from services import placements_beispiel as pb
+    from services.channel_list_resolver import resolve_channel_lists
     from services.weather_metrics import summarize_points
 
     ampel = resolve_ampel(trip)
+    # Ausblick-Zeilen einmal aufloesen, wie der Renderer es tut (#3122 B1b);
+    # Zellen und Spaltenkoepfe lesen dieselben Zeilen.
+    outlook_rows = resolve_channel_lists(dc, "trip", report_type).outlook
     trend = [build_outlook_row(summarize_points(p), p, wd, pb.ZONE, trip_display_config=dc,
-                               report_type=report_type, context="route", ampel=ampel, lang=lang)
+                               outlook_rows=outlook_rows, report_type=report_type,
+                               context="route", ampel=ampel, lang=lang)
              for wd, p in pb.ausblick_tage()]
     stage_name = (trip.stages[0].name if trip.stages else "") or trip.name
     bericht = TripReportFormatter().format_email(
@@ -314,7 +319,7 @@ def _trip_muster(trip, dc, vm, report_type: str, lang: str) -> _Muster:
             "email": _html_stundentabelle(bericht.email_html, ids),
             "telegram": _telegram_kurzuebersicht(bericht.telegram_bubbles, ids, lang),
             "sms": {m: (t, None) for m, t in sms_werte.items()},
-            "outlook": _trip_ausblick(trend, dc, report_type, ids),
+            "outlook": _trip_ausblick(trend, outlook_rows, ids),
         },
         sms_fehlt=_trip_sms_fehlt(vm, sms_werte),
         tageswert=_trip_nur_tageswert(dc, vm, report_type),
@@ -404,16 +409,15 @@ def _trip_nur_tageswert(dc, vm, report_type: str) -> set[str]:
             if mc.metric_id not in spalten and mc.metric_id not in ausgenommen}
 
 
-def _trip_ausblick(trend: list, dc, report_type: str, ids: list[str]) -> dict:
-    """Erste Zeile des Ausblicks, Zellen nach den Spalten des Renderers."""
-    from output.renderers.compare_outlook_metric_ids import (
-        outlook_columns, resolve_trip_outlook_formats, resolve_trip_outlook_metrics,
-    )
+def _trip_ausblick(trend: list, outlook_rows, ids: list[str]) -> dict:
+    """Erste Zeile des Ausblicks, Zellen nach den Spalten des Renderers
+    (dieselben View-Model-Zeilen ueber ``outlook_auswahl``, #3122 B1b)."""
+    from output.renderers.compare_outlook_metric_ids import outlook_columns
+    from output.renderers.email.helpers import outlook_auswahl
 
     if not trend:
         return {}
-    spalten = outlook_columns(resolve_trip_outlook_metrics(dc, report_type),
-                              resolve_trip_outlook_formats(dc))
+    spalten = outlook_columns(*outlook_auswahl(outlook_rows))
     out: dict = {}
     for spalte, text in zip(spalten, trend[0].get("cells") or []):
         if spalte["metric_id"] in ids:
