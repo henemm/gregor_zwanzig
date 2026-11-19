@@ -851,33 +851,37 @@ class NotificationService:
                 source_reach_minutes=_source_reach_minutes,
             )
 
-        report = self._formatter.format_email(
-            segments=request.segment_weather,
-            trip_name=request.trip.name,
+        # Issue #3128: der EINE Render-Weg des Trip-Briefings (gemeinsam mit
+        # der Vorschau), zur Laufzeit ueber das Modul aufgeloest.
+        from services import trip_briefing_aufbau
+
+        report = trip_briefing_aufbau.trip_report_rendern(
+            formatter=self._formatter,
+            segment_weather=request.segment_weather,
             trip=request.trip,
-            undelivered=undelivered,
             report_type=request.report_type,
             display_config=request.display_config,
+            profile=request.profile,
+            report_config=request.report_config,
+            render_options=request.render_options,
+            tz=request.trip_tz,
+            stage_name=request.stage_name,
+            stage_stats=request.stage_stats,
+            stability_result=request.stability_result,
             night_weather=request.night_weather,
             thunder_forecast=request.thunder_forecast,
             multi_day_trend=request.multi_day_trend,
             outlook_state=request.outlook_state,
             outlook_horizon_days=request.outlook_horizon_days,
-            stage_name=request.stage_name,
-            stage_stats=request.stage_stats,
             exposed_sections=request.exposed_sections,
-            tz=request.trip_tz,
-            profile=request.profile,
-            stability_result=request.stability_result,
-            report_config=request.report_config,
-            day_comparison=request.day_comparison,
             shortcode=request.shortcode,
             stage_total=request.stage_total,
             trip_url=request.trip_url,
-            render_options=request.render_options,
             has_gap=has_gap,
-            starkregen_hint_text=starkregen_hint_text,
             lang=self._lang,
+            undelivered=undelivered,
+            vortag=request.day_comparison,
+            starkregen=starkregen_hint_text,
         )
 
         self._apply_prefixes(report, request)
