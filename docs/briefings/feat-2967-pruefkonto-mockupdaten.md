@@ -1,31 +1,31 @@
 ---
 spec_file: docs/specs/modules/feat_2967_pruefkonto_mockupdaten.md
-spec_sha256: 2b4113d7459122648ecffda6cb403d28e83584c41b1e1e476312ebe95ccbe4fe
-spec_frozen_sha256: 53a6f451b2fe1e3e966ab855b4194a368dd5065d03d274a75964d187b9fa10d0
+spec_sha256: f4bd707da7a6fcc5d31ce488c17bbaf00ff244ab3e32553499e2fb7747955c54
+spec_frozen_sha256: 0fcbb256085d9c33832a56419adf1be549e2fb02b9158dd7cfb198e266b1e3f8
 ---
 
 # PO-Briefing: feat-2967-pruefkonto-mockupdaten
 
 - **Spec:** docs/specs/modules/feat_2967_pruefkonto_mockupdaten.md
 - **Issue:** #2967
-- **Erstellt:** 2026-11-18
+- **Erstellt:** 2026-11-19
 
 ## Was gebaut wird
 
-Ein Testkonto auf Staging bekommt automatisch die Beispieldaten des Mockups: Trip GR221 Mallorca, Vergleich Münsterland und alle vier verbundenen Kanäle.
+Ein Werkzeug füllt das Staging-Prüfkonto mit den Mockup-Beispieldaten: Trip Mallorca, Vorlage, Orts-Vergleich und alle vier verbundenen Kanäle.
 
 ## Definition of Done
 
-Das Skript läuft zweimal fehlerfrei, der Abgleich zeigt keine Scheinabweichungen aus Kontounterschieden mehr, und alle 247 Einträge sind gelöst oder neu zugeordnet.
+Das Werkzeug läuft zweimal nacheinander auf Staging fehlerfrei, der zweite Lauf ändert nichts, und ein Runbook beschreibt Seed und Abgleich.
 
 ## Wie geprüft wird
 
-Automatische Tests mit simuliertem Server prüfen Daten, Wiederholbarkeit, Produktionsschutz und Nutzertrennung; Abgleich und Kanalverbindung werden nur live auf Staging nachgewiesen.
+Automatische Tests gegen einen Nachbau des Servers decken alle Kriterien ab; der echte Staging-Lauf bleibt manuell, der Abgleich selbst gehört zu #3151.
 
 ## Kritische Anmerkungen
 
-- Echte Abweichungen (Reihenfolge „Nicht im Briefing", Vorlage „allgemein", Rückadresse-Datum) bleiben sichtbar und werden eigene Folge-Tickets.
-- Premium-SMS-Datum ist nicht wie im Mockup fest, sondern der Laufzeitpunkt; sonst würde der Zustand nach 30 Tagen kippen.
+- Die 247 Scheinabweichungen verschwinden erst durch Folge-Issue #3151, nicht durch dieses Ticket (PO-Entscheid vom 19.11.).
+- Der Vergleich heißt womöglich „Westfalen“ statt „Münsterland“, falls die Suche kollidiert; Kriterium nennt nur „Münsterland“.
 
 ## Freigabe-Frage
 
