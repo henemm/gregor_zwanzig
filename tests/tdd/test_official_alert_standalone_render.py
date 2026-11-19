@@ -275,7 +275,7 @@ def test_ac11_trip_and_compare_paths_share_identical_body_structure():
     """Trip-Pfad (`send_official_alert`) und Compare-Pfad
     (`send_multi_location_official_alert`) rufen denselben Renderer auf ->
     identische Klassen-/Reihenfolge-Struktur bei äquivalentem Szenario (1
-    Warnung Stufe 2, volle Abdeckung, 1 aktiver Chip). Einziger legitimer
+    Warnung Stufe 2, Umfang = der einzige aktive Chip). Einziger legitimer
     Unterschied sind die Chip-Beschriftungen (Segment- vs. Ortsname), die der
     Fingerabdruck bewusst ausblendet."""
     from app.config import Settings
@@ -288,10 +288,15 @@ def test_ac11_trip_and_compare_paths_share_identical_body_structure():
         mail_to="to@test.invalid",
     )
 
-    # Trip-Pfad: 1 Wegpunkt -> 1 Segment, volle Route betroffen.
+    # Trip-Pfad: 2 Wegpunkte -> 2 Segmente, nur Segment 1 betroffen (Umfang =
+    # der einzige Chip). #3153 AC-2: das Compare-Pendant mit genau einem Ort
+    # sagt nicht mehr "alle Orte", sein Umfang ist der Ort selbst (= der
+    # einzige Chip); aequivalent ist daher der Trip-Fall "ein Chip, kein
+    # Voll-Umfang", nicht mehr "gesamte Route".
     stage = Stage(
         id="s1", name="Tag 1", date=date(2026, 7, 10),
-        waypoints=[Waypoint(id="w1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0)],
+        waypoints=[Waypoint(id="w1", name="Start", lat=47.0, lon=11.0, elevation_m=1000.0),
+                   Waypoint(id="w2", name="Ziel", lat=47.1, lon=11.1, elevation_m=1200.0)],
     )
     trip = Trip(id="tdd-1233-ac11-trip", name="AC11 Trip", stages=[stage])
     trip_notices_raw = [(_alert(2, "extreme_heat", "Hitze", FR_ALLDAY_FROM, FR_ALLDAY_TO), ["1"])]

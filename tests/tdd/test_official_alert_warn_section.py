@@ -312,7 +312,8 @@ def test_ac10_source_box_sentence_unchanged_for_uniform_scope():
         affected_chips=["alle Orte"], free_chips=[],
     )
     src = _src_text(_render_standalone([a, b]))
-    assert "Alle Warnungen decken die alle Orte ab." in src, (
+    # #3153: Grammatik korrigiert ("decken die alle Orte" -> "decken alle Orte").
+    assert "Alle Warnungen decken alle Orte ab." in src, (
         f"Scope-Satz bei uniformem Umfang veraendert: {src!r}"
     )
 

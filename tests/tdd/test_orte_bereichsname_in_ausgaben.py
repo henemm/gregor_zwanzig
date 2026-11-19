@@ -387,6 +387,104 @@ def test_warnmail_der_orte_nennt_orte(lang, soll):
     assert not muster.findall(_sichtbar(tx.html) + tx.plain)
 
 
+def _warn_kanaele_orte(orte: tuple[str, ...], betroffen: tuple[str, ...], lang: str,
+                       namen: dict[str, str] | None = None) -> dict:
+    """Amtliche Warnung eines Orte-Abos ueber die echten Bausteine des
+    Versands (``send_multi_location_official_alert``): Builder ->
+    ``official_header_texts`` (Betreff, Mail HTML+Klartext, SMS = auch
+    Premium-SMS, ``head.sms``) und ``official_telegram_text`` (reich und Kurzform)."""
+    from zoneinfo import ZoneInfo
+
+    from output.renderers.alert.official_alerts import build_compare_official_alert_notices
+    from services.alert_channel_texts import official_header_texts, official_telegram_text
+    from tests.helpers.amtliche_warnungen_fixture import meteoalarm_gewitter
+
+    tz = ZoneInfo("Europe/Vienna")
+    if namen is None:
+        namen = {lid: ORTE[lid][0] for lid in orte}
+    notices = build_compare_official_alert_notices(
+        list(orte), namen, [(meteoalarm_gewitter(), list(betroffen))], lang=lang)
+    head = official_header_texts(notices, [], prefix="Kette Basis", tz=tz, lang=lang)
+    tg = {
+        stil: html_mod.unescape(re.sub(r"<[^>]+>", "", official_telegram_text(
+            notices, [], style=stil, prefix="Kette Basis", source_label=head.source_label,
+            tz=tz, lang=lang)))
+        for stil in ("rich", "kurzform")
+    }
+    return {
+        "betreff": head.subject, "html": _sichtbar(head.html), "klartext": head.plain,
+        "telegram": tg["rich"], "telegram_kurz": tg["kurzform"],
+        "sms": head.sms, "premium_sms": head.sms,
+    }
+
+
+ALLE_ORTE = re.compile(r"alle Orte|all locations|alleOrte|nicht alle|not all", re.IGNORECASE)
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_ac2_warnung_bei_einem_ort_sagt_nicht_alle_orte(lang):
+    """Given ein Orte-Abo mit genau einem Ort und eine amtliche Warnung fuer
+    diesen Ort / When Mail (HTML, Klartext), Telegram, SMS und Premium-SMS
+    gerendert werden / Then sagt kein Text "alle Orte" ("all locations",
+    SMS "alleOrte", auch nicht "nicht alle Orte"), und der Ortsname steht als
+    Umfang in jedem Kanal (SMS: "Tecklenburg: ...")."""
+    tx = _warn_kanaele_orte(EINER, EINER, lang)
+    for kanal, text in tx.items():
+        treffer = ALLE_ORTE.findall(text)
+        assert not treffer, f"{kanal} ({lang}) sagt {treffer} bei einem Ort: {text[:600]!r}"
+        assert "Tecklenburg" in text, f"{kanal} ({lang}) nennt den Ort nicht: {text[:600]!r}"
+    for kanal in ("sms", "premium_sms", "telegram_kurz"):
+        assert tx[kanal].startswith("Tecklenburg: "), f"{kanal}: Umfang ist nicht der Ort: {tx[kanal]!r}"
+    assert "nur Tecklenburg" not in tx["html"] + tx["klartext"], "Ein-Ort-Umfang mit 'nur'"
+
+
+@pytest.mark.parametrize("lang, voll", [("de", "alle Orte"), ("en", "all locations")])
+def test_ac2_zwei_gleichnamige_orte_alle_betroffen_bleibt_alle_orte(lang, voll):
+    """Given ein Orte-Abo mit zwei verschiedenen Orten (zwei IDs), die denselben
+    Anzeigenamen tragen, und eine Warnung fuer beide / When die Kanaele
+    gerendert werden / Then heisst der Umfang "alle Orte" ("all locations",
+    SMS/Premium-SMS/Telegram-Kurzform "alleOrte: "), nicht der Ortsname --
+    die Ein-Ort-Regel zaehlt Orts-IDs, nicht Namen (Adversary F003)."""
+    orte = ("loc-gleich-1", "loc-gleich-2")
+    namen = {"loc-gleich-1": "Tecklenburg", "loc-gleich-2": "Tecklenburg"}
+    tx = _warn_kanaele_orte(orte, orte, lang, namen=namen)
+    assert voll in tx["html"] and voll in tx["klartext"], tx["html"][:600]
+    for kanal in ("sms", "premium_sms", "telegram_kurz"):
+        assert tx[kanal].startswith("alleOrte: "), f"{kanal}: {tx[kanal]!r}"
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_ac2_ein_ort_mit_leerzeichen_sms_ohne_leerzeichen(lang):
+    """Given ein Orte-Abo mit genau einem Ort, dessen Name ein Leerzeichen
+    enthaelt ("Bad Ischl"), und eine Warnung fuer ihn / When die Kanaele
+    gerendert werden / Then beginnen SMS, Premium-SMS und Telegram-Kurzform
+    mit "BadIschl: " (Leerzeichen entfernt), die Mail nennt "Bad Ischl"
+    (Adversary F004)."""
+    orte = ("loc-bad-ischl",)
+    tx = _warn_kanaele_orte(orte, orte, lang, namen={"loc-bad-ischl": "Bad Ischl"})
+    for kanal in ("sms", "premium_sms", "telegram_kurz"):
+        assert tx[kanal].startswith("BadIschl: "), f"{kanal}: {tx[kanal]!r}"
+    assert "Bad Ischl" in tx["html"], tx["html"][:600]
+    assert "Bad Ischl" in tx["klartext"], tx["klartext"][:600]
+    for kanal, text in tx.items():
+        assert not ALLE_ORTE.findall(text), f"{kanal} ({lang}): {text[:600]!r}"
+
+
+@pytest.mark.parametrize("lang, voll, satz", [
+    ("de", "alle Orte", "Die Warnung deckt alle Orte ab."),
+    ("en", "all locations", "The warning covers all locations."),
+])
+def test_ac2_gegenprobe_drei_orte_alle_betroffen_bleibt_alle_orte(lang, voll, satz):
+    """Gegenprobe: drei Orte, Warnung fuer alle drei -> der Umfang heisst
+    weiter "alle Orte" (SMS "alleOrte"), der Satz ist grammatisch richtig."""
+    tx = _warn_kanaele_orte(DREI, DREI, lang)
+    assert voll in tx["html"] and voll in tx["klartext"], tx["html"][:600]
+    assert satz in tx["html"], tx["html"][:800]
+    assert "die alle Orte" not in tx["html"] + tx["klartext"]
+    for kanal in ("sms", "premium_sms", "telegram_kurz"):
+        assert tx[kanal].startswith("alleOrte: "), tx[kanal]
+
+
 @pytest.mark.parametrize("lang, soll", [
     ("de", "Das Orte-Abo 'kette-basis' verweist auf gelöschte Orte."),
     ("en", "The locations subscription 'kette-basis' refers to deleted locations."),
