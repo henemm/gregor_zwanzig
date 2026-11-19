@@ -147,3 +147,95 @@ def test_nur_morgens_gewaehlte_metrik_am_ende_passt_nicht_mehr_nicht(client):
     zelle = antwort["rows"][2]["cells"]["sms"]
     assert zelle["state"] == "on"
     assert zelle["mark"] is None
+
+
+# ---------------------------------------------------------------------------
+# Folge und Typ-Faelle (Adversary F001, #3154)
+# ---------------------------------------------------------------------------
+
+def _trip_mit_flags(kennung: str, grund: list[str], flags: dict, *, rc=None) -> Path:
+    """Trip mit Grundauswahl ``grund``; ``flags`` = {metric_id: {feld: wert}}."""
+    from tests.tdd.test_placements_tabelle_endpoint import _trip
+
+    pfad = _trip(NUTZER_A, kennung, grund=grund, rc=rc)
+    daten = json.loads(pfad.read_text(encoding="utf-8"))
+    for m in daten["display_config"]["metrics"]:
+        m.update(flags.get(m["metric_id"], {}))
+    pfad.write_text(json.dumps(daten), encoding="utf-8")
+    return pfad
+
+
+NUR_MORGENS_VORN = ["cloud_low", "wind", "gust", "rain_probability"]
+FOLGE_ABEND_ZUERST = ["wind", "gust", "rain_probability", "cloud_low"]
+
+
+def test_nur_morgens_vorn_ohne_tabelle_steht_hinter_den_abend_metriken(client):
+    _trip_mit_flags("t-3154-folge-roh", NUR_MORGENS_VORN, {"cloud_low": {"evening_enabled": False}})
+    antwort = _ok(client, "t-3154-folge-roh", "route")
+    assert antwort["stored"] is False
+    assert _zeilen_ids(antwort) == FOLGE_ABEND_ZUERST
+
+
+def test_nur_morgens_vorn_mit_tabelle_nur_wind_steht_hinten(client):
+    """Metriken ohne Zeile stehen hinten, in der Folge Abend, dann nur morgens."""
+    pfad = _trip_mit_flags("t-3154-folge-tab", NUR_MORGENS_VORN,
+                           {"cloud_low": {"evening_enabled": False}})
+    _zurueckschreiben(pfad, {"version": 1, "rows": [{"metric_id": "wind"}]})
+    antwort = _ok(client, "t-3154-folge-tab", "route")
+    assert antwort["stored"] is True
+    assert _zeilen_ids(antwort) == FOLGE_ABEND_ZUERST
+
+
+def test_nur_abends_metrik_im_reinen_morgen_abo_hat_eine_zeile(client):
+    _trip_mit_flags("t-3154-morgen-abo", ["wind", "gust", "cloud_low"],
+                    {"cloud_low": {"morning_enabled": False}},
+                    rc={"enabled": True, "morning_enabled": True, "evening_enabled": False})
+    from app.loader import get_data_root, load_trip
+    from services.channel_list_resolver import resolve_channel_lists
+
+    dc = load_trip("t-3154-morgen-abo", data_dir=get_data_root(), user_id=NUTZER_A).display_config
+    # Vorbedingung: das gerenderte Morgen-Briefing fuehrt cloud_low nirgends.
+    morgen = resolve_channel_lists(dc, "trip", "morning")
+    assert all("cloud_low" not in [r.metric_id for r in getattr(morgen, k)]
+               for k in ("email", "telegram", "sms"))
+    antwort = _ok(client, "t-3154-morgen-abo", "route")
+    assert _zeilen_ids(antwort) == ["wind", "gust", "cloud_low"]
+    assert antwort["rows"][2]["cells"]["sms"]["mark"] is None
+
+
+def test_in_beiden_typen_abgewaehlte_metrik_hat_keine_zeile(client):
+    _trip_mit_flags("t-3154-beide-aus", ["wind", "gust", "cloud_low"],
+                    {"cloud_low": {"morning_enabled": False, "evening_enabled": False}})
+    antwort = _ok(client, "t-3154-beide-aus", "route")
+    assert _zeilen_ids(antwort) == ["wind", "gust"]
+    assert "cloud_low" not in _placements_ids(antwort["placements"])
+
+
+def test_abgewaehlter_telegram_haken_an_nur_morgens_zeile_wirkt_im_morgen_briefing(client):
+    """Nach dem PUT: morgens Telegram ohne, SMS mit cloud_low; abends unveraendert."""
+    from app.loader import get_data_root, load_trip
+    from services.channel_list_resolver import resolve_channel_lists
+
+    pfad = _trip_mit_flags("t-3154-haken", ["wind", "gust", "cloud_low"],
+                           {"cloud_low": {"evening_enabled": False}})
+
+    def listen(rt):
+        dc = load_trip("t-3154-haken", data_dir=get_data_root(), user_id=NUTZER_A).display_config
+        vm = resolve_channel_lists(dc, "trip", rt)
+        return {k: [r.metric_id for r in getattr(vm, k)] for k in ("email", "telegram", "sms")}
+
+    abend_vorher = listen("evening")
+    placements = copy.deepcopy(_ok(client, "t-3154-haken", "route")["placements"])
+    zeile = next(r for r in placements["rows"] if r["metric_id"] == "cloud_low")
+    zeile.setdefault("places", {})["telegram"] = False
+    _zurueckschreiben(pfad, placements)
+
+    morgen = listen("morning")
+    assert "cloud_low" not in morgen["telegram"]
+    assert "cloud_low" in morgen["sms"]
+    assert listen("evening") == abend_vorher
+    assert all("cloud_low" not in v for v in abend_vorher.values())
+    tabelle = next(z for z in _ok(client, "t-3154-haken", "route")["rows"]
+                   if z["metric_id"] == "cloud_low")
+    assert tabelle["cells"]["telegram"]["state"] == "off"
+    assert tabelle["cells"]["sms"]["state"] == "on"
