@@ -43,8 +43,9 @@
 // (reference_staging_e2e_storagestate_login_rate_limit).
 // Testids kommen doppelt vor (Desktop/Mobil-Zweig) ⇒ durchgängig `:visible`.
 
-import { test, expect, type Locator, type Page, type Request } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { cleanupTracked, createTestLocation, createTestComparePreset } from './helpers';
+import { oeffneKarte, schalterGespeichert } from './was-steht-wo.helpers';
 
 /**
  * Aussagen, die es im Vergleichs-Editor NICHT mehr geben darf (AC-4).
@@ -97,26 +98,6 @@ async function openHub(page: Page, id: string, query = ''): Promise<void> {
 	await page.waitForLoadState('networkidle');
 }
 
-async function openHubMetricsTab(page: Page, id: string): Promise<Locator> {
-	await openHub(page, id);
-	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Stundenverlauf/Layout im Reiter Zustellung.
-	await page.locator('[data-testid="compare-detail-tab-zustellung"]:visible').first().click();
-	const panel = page.locator('[data-testid="compare-detail-panel-zustellung"]:visible').first();
-	await expect(panel).toBeVisible({ timeout: 10_000 });
-	return panel;
-}
-
-/** Zeichnet jeden PUT auf diesen Vergleich auf (Speicher-Nachweis, AC-5). */
-function collectPresetPuts(page: Page, id: string): Request[] {
-	const puts: Request[] = [];
-	page.on('request', (req) => {
-		if (req.method() === 'PUT' && req.url().includes(`/api/compare/presets/${id}`)) {
-			puts.push(req);
-		}
-	});
-	return puts;
-}
-
 async function readPreset(page: Page, id: string): Promise<Record<string, unknown>> {
 	const res = await page.request.get(`/api/compare/presets/${id}`);
 	expect(res.ok(), `GET des Presets fehlgeschlagen: ${res.status()}`).toBeTruthy();
@@ -164,14 +145,14 @@ test.describe('Issue #1360: Layout-Reiter aufgelöst, Stundenverlauf bei den Wet
 		expect(before.hour_from, 'Vorbedingung: hour_from=10 angelegt').toBe(10);
 		expect(before.hour_to, 'Vorbedingung: hour_to=14 angelegt').toBe(14);
 
-		const panel = await openHubMetricsTab(page, id);
-		const puts = collectPresetPuts(page, id);
-		const toggle = panel
-			.locator('[data-testid="compare-layout-hourly-metric-uv_index"] input')
-			.first();
-		await expect(toggle).toBeVisible({ timeout: 10_000 });
-		await toggle.click();
-		await expect.poll(() => puts.length, { timeout: 10_000 }).toBeGreaterThan(0);
+		// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 13/14): der Stundenverlauf wird im Hub
+		// in der Karte „Was steht wo“ geschaltet; der Schalter schreibt `hourly_enabled` per PUT auf das
+		// Preset — genau der Speicherweg, gegen den diese Zusicherung (hour_from/hour_to) wirkt.
+		const karte = await oeffneKarte(page, 'vergleich', id);
+		const gespeichert = schalterGespeichert(page, 'vergleich', id);
+		await karte.getByTestId('was-steht-wo-stundenverlauf').click();
+		await gespeichert;
+		expect((await readPreset(page, id)).hourly_enabled, 'Messaufbau: der Schalter hat gespeichert').toBe(false);
 
 		const after = await readPreset(page, id);
 		expect(

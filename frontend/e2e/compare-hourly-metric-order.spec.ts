@@ -16,7 +16,7 @@
 // beweist, dass dieser Callback tatsächlich beim Hub UND bei der Anlege-Seite
 // ankommt (PUT-Zähler > 0), nicht nur, dass sich die Liste optisch verschiebt.
 //
-// AC-1/AC-2/AC-3 → Hub. AC-4 → Anlege-Seite (`/compare/new`). AC-5 (keine
+// AC-3 → Hub (seit #3154 Karte „Was steht wo“, AC-1/AC-2 gestrichen, s. unten). AC-4 → Anlege-Seite (`/compare/new`). AC-5 (keine
 // Regression der An/Aus-Auswahl) ist bereits durch
 // hub-wetter-metriken-speichert-selbst.spec.ts MS-2 + compare-stundenverlauf-wertprops.spec.ts
 // abgedeckt (Toggle + PUT; vormals compare-layout-tab-dissolution AC-2, #2347 S4) — hier
@@ -45,10 +45,11 @@
 // überall auf den Container `weather-metrics-stundenverlauf` scopen, NICHT
 // pauschal `:visible` (beide Blöcke sind gleichzeitig sichtbar).
 
-import { test, expect, type Locator, type Page, type Request } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 // `dragDndZoneItem` ist seit #1771 S1 geteilt (war hier lokal kopiert) und
 // wartet auf das echte `finalize`-Ereignis statt auf eine feste Frist.
 import { createTestLocation, dragDndZoneItem } from './helpers';
+import { oeffneKarte } from './was-steht-wo.helpers';
 
 let createdPresetIds: string[] = [];
 let createdLocationIds: string[] = [];
@@ -93,7 +94,7 @@ async function createPreset(page: Page, name: string, locationIds: string[]): Pr
 			hour_from: 7,
 			hour_to: 16,
 			empfaenger: ['urlauber@example.com'],
-			display_config: { hourly_metrics: [...START_ORDER] }
+			display_config: { hourly_metrics: [...START_ORDER], active_metrics: ['temp_max_c', 'wind_max_kmh', 'sunny_hours_h'] }
 		}
 	});
 	expect(res.ok(), 'Preset-Anlage fehlgeschlagen: ' + res.status()).toBeTruthy();
@@ -102,181 +103,16 @@ async function createPreset(page: Page, name: string, locationIds: string[]): Pr
 	return body.id as string;
 }
 
-/**
- * Vorbereitungs-Update AUSSERHALB der UI (z.B. um vor einem Test einen
- * bestimmten Ausgangszustand zu setzen). Team-Lead-Fund: ein PUT mit NUR
- * `display_config` wird vom Go-Handler mit HTTP 400 abgewiesen
- * (`validateComparePreset`, compare_preset.go:109-138 — verlangt u.a. `name`,
- * `schedule`, `forecast_hours`, `hour_from`/`hour_to`). Deshalb hier erst der
- * aktuelle Preset-Stand per GET geholt und die volle Struktur zurückgesendet
- * (display_config gemergt) — UND der Rückgabewert geprüft, damit ein
- * fehlgeschlagenes Vorbereiten nicht als inhaltliches Test-Scheitern maskiert
- * wird (genau das ist beim ursprünglichen rohen PUT passiert).
- */
-async function updatePresetDisplayConfig(
-	page: Page,
-	id: string,
-	displayConfigPatch: Record<string, unknown>
-): Promise<void> {
-	const getRes = await page.request.get(`/api/compare/presets/${id}`);
-	expect(getRes.ok(), `Vorbereitung: GET Preset fehlgeschlagen: HTTP ${getRes.status()}`).toBeTruthy();
-	const preset = await getRes.json();
-	const putRes = await page.request.put(`/api/compare/presets/${id}`, {
-		data: {
-			...preset,
-			display_config: { ...(preset.display_config ?? {}), ...displayConfigPatch }
-		}
-	});
-	expect(
-		putRes.ok(),
-		`Vorbereitung: PUT fehlgeschlagen: HTTP ${putRes.status()} — ${await putRes.text()}`
-	).toBeTruthy();
-}
-
-/** Zeichnet jeden PUT auf diesen Vergleich auf (Speicher-Nachweis). */
-function collectPresetPuts(page: Page, id: string): Request[] {
-	const puts: Request[] = [];
-	page.on('request', (req) => {
-		if (req.method() === 'PUT' && req.url().includes(`/api/compare/presets/${id}`)) {
-			puts.push(req);
-		}
-	});
-	return puts;
-}
-
-/** Öffnet den Vergleich am Hub und wechselt per Klick auf den Metriken-Tab. */
-async function openHubMetricsTab(page: Page, id: string): Promise<Locator> {
-	await page.goto(`/compare/${id}`);
-	await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 15_000 });
-	// SvelteKit-Hydration-Race (#1359): die Tab-Leiste ist server-gerendert VOR
-	// der Hydration — ein zu früher Klick geht spurlos verloren.
-	await page.waitForLoadState('networkidle');
-	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Stundenverlauf im Reiter Zustellung.
-	await page.getByTestId('compare-detail-tab-zustellung').click();
-	const panel = page.getByTestId('compare-detail-panel-zustellung');
-	await expect(panel).toBeVisible({ timeout: 10_000 });
-	// #2347 S3d (Entscheidung 7): die frühere Vorbedingung „keine wm2-aus-gruppe im
-	// Ortsvergleich" ist entfallen — seit #1703 S8 gilt „Aus ist ein Zustand" auch in
-	// der Kanal-Karte des Vergleichs. Die Fälle prüfen ihre Zeilen im Stundenverlauf-Block.
-	return panel;
-}
-
-/** Der Stundenverlauf-Container innerhalb des Wetter-Metriken-Panels — grenzt
- *  gegen die Übersichts-Reihenfolge (#1359) ab, die im selben Panel liegt. */
-function hourlyBlock(panel: Locator): Locator {
-	return panel.locator('[data-testid="weather-metrics-stundenverlauf"]');
-}
-
-function hourlyReihenfolgeRows(panel: Locator): Locator {
-	return hourlyBlock(panel).locator('[data-testid="wm2-reihenfolge-row"]');
-}
-
-async function hourlyOrderInEditor(panel: Locator): Promise<(string | null)[]> {
-	return hourlyReihenfolgeRows(panel).evaluateAll((els) =>
-		els.map((el) => el.getAttribute('data-metric-id'))
-	);
-}
-
 test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsvergleich', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize({ width: 1280, height: 900 });
 	});
 
-	// ── AC-1/AC-2: Ziehen im Hub speichert die Reihenfolge und wirkt sich auf ──
-	// die Renderer-Reihenfolge aus (AC-2 hier: Speicher-Nachweis; die
-	// tatsächliche Spalten-Reihenfolge in der Mail ist Kern-Schicht-getestet,
-	// _visible_hour_metrics in compare_html.py folgt display_config.hourly_metrics).
-	test('AC-1/AC-2: Stundengröße ziehen speichert die Reihenfolge und überlebt den Reload', async ({
-		page
-	}) => {
-		const suffix = Date.now();
-		const locA = await createLocation(page, `E2E 1361 Hourly A ${suffix}`, 47.0, 11.0);
-		const locB = await createLocation(page, `E2E 1361 Hourly B ${suffix}`, 47.1, 11.1);
-		const locC = await createLocation(page, `E2E 1361 Hourly C ${suffix}`, 47.2, 11.2);
-		const id = await createPreset(page, `E2E 1361 Hourly ${suffix}`, [locA, locB, locC]);
-
-		const panel = await openHubMetricsTab(page, id);
-
-		await expect(hourlyReihenfolgeRows(panel)).toHaveCount(START_ORDER.length, { timeout: 10_000 });
-		expect(await hourlyOrderInEditor(panel)).toEqual(START_ORDER);
-
-		const puts = collectPresetPuts(page, id);
-		const source = hourlyBlock(panel).locator(
-			'[data-testid="wm2-reihenfolge-row"][data-metric-id="uv_index"]'
-		);
-		const target = hourlyBlock(panel).locator(
-			'[data-testid="wm2-reihenfolge-row"][data-metric-id="temp_c"]'
-		);
-
-		const expectedOrder = ['uv_index', 'temp_c', 'wind_kmh'];
-
-		// Team-Lead-Fund (Flake, reproduzierbar): der sichtbare DOM-Zustand nach
-		// der Ziehgeste kann bereits aus `consider` (Live-Vorschau während des
-		// Drags) stammen -- VOR dem eigentlichen State-Commit in `finalize`
-		// (SortableList.svelte). Anders als auf der Anlege-Seite (AC-4, feste
-		// Wartezeit, dort gibt es kein beobachtbares Signal) hat der Hub eins:
-		// den PUT selbst (`onHourlyCommit` -> `handleLayoutCommit`, synchron aus
-		// `handleDndFinalize` ausgeloest). Der Test haengt deshalb kausal an
-		// `page.waitForResponse()` auf genau diesen PUT -- gekoppelt per
-		// `Promise.all` an die Ziehgeste selbst, nicht an eine geratene Dauer
-		// oder eine reine DOM-Umsortierungs-Pruefung danach.
-		const [putResponse] = await Promise.all([
-			page.waitForResponse(
-				(res) =>
-					res.request().method() === 'PUT' &&
-					res.url().includes(`/api/compare/presets/${id}`),
-				{ timeout: 10_000 }
-			),
-			dragDndZoneItem(page, source, target)
-		]);
-
-		// Nachweis 1 (Fallstrick 1 aus dem Auftrag): es wurde WIRKLICH
-		// gespeichert — der Wrapper-Bubble-Handler ist bei einer Ziehgeste kein
-		// verlässlicher Speicherweg. `waitForResponse` oben ist bereits der
-		// kausale Beweis (kein DOM-Umsortieren allein); die folgende Prüfung
-		// verifiziert zusätzlich den INHALT dieses PUT.
-		const putBody = putResponse.request().postDataJSON() as {
-			display_config?: { hourly_metrics?: string[] };
-		};
-		expect(
-			putBody.display_config?.hourly_metrics,
-			'AC-2: der PUT muss die neue Stundenverlauf-Reihenfolge tragen'
-		).toEqual(expectedOrder);
-		expect(puts.length, 'AC-2: genau der erwartete PUT wurde erfasst').toBeGreaterThan(0);
-
-		// Jetzt, NACH dem bestätigten PUT, muss auch das DOM die neue Position
-		// zeigen (kein Wettlauf mehr — der Commit ist bereits durch).
-		expect(await hourlyOrderInEditor(panel)).toEqual(expectedOrder);
-
-		// Nachweis 2 — Server behält sie, und der Editor zeigt sie nach echtem Reload.
-		await expect
-			.poll(
-				async () => {
-					const r = await page.request.get(`/api/compare/presets/${id}`);
-					return ((await r.json()).display_config ?? {}).hourly_metrics as string[];
-				},
-				{ message: 'AC-1: die Reihenfolge muss serverseitig persistent sein', timeout: 8_000 }
-			)
-			.toEqual(expectedOrder);
-
-		const reloadedPanel = await openHubMetricsTab(page, id);
-		await expect
-			.poll(async () => hourlyOrderInEditor(reloadedPanel), {
-				message: 'AC-1: nach dem Neuladen muss die gezogene Reihenfolge noch da sein',
-				timeout: 10_000
-			})
-			.toEqual(expectedOrder);
-	});
-
-	// ── AC-3 (korrigiert, s. Team-Lead-Gegencheck): KEINE Schnittlinie ────────
-	// Ursprüngliche Annahme war fachlich falsch: `hourly_metrics` geht laut
-	// Backend ausschließlich an `render_compare_email` (comparison.py:230-242).
-	// `render_compare_telegram` (comparison.py:360) kennt keinerlei
-	// Stundendaten, SMS hat `max_table_cols: 0` — der Stundenverlauf existiert
-	// nur in der E-Mail. Eine "ab hier von Telegram gekappt"-Linie wäre also
-	// eine Falschaussage — exakt die Fehlerklasse, die #1360 AC-4 beseitigt hat
-	// (keine Fläche behauptet mehr eine Kappung je Kanal). Verbotene Aussagen
-	// 1:1 aus compare-layout-tab-dissolution.spec.ts FORBIDDEN_CLAIMS.
+	// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 13/14): im Hub gibt es keine eigene
+	// Stundenverlauf-Liste mehr. AC-1/AC-2 (Ziehen im Hub speichert die Stundenverlauf-Reihenfolge) sind
+	// gestrichen — es gibt EINE Reihenfolge fuer alle Stellen der Karte „Was steht wo“, Ersatz:
+	// was-steht-wo-karte.spec.ts WS-2 (Tastatur und Maus, drei Faelle inkl. Orte, Neuladen). AC-3 laeuft an der
+	// Karte: die Spalte und der Schalter „Stundenverlauf“ behaupten keine Kanal-Kappung, nur „nur in der E-Mail“.
 	const FORBIDDEN_CHANNEL_CLAIMS: RegExp[] = [
 		/Telegram\s*·\s*max\s*\d+/i,
 		/kappt\s+je\s+Kanal/i,
@@ -285,42 +121,21 @@ test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsve
 		/max\.?\s*\d+\s*(Orte|Spalten)/i
 	];
 
-	test('AC-3: die Stundenverlauf-Liste zeigt KEINE Kappungs-Linie, sondern den Hinweis "nur E-Mail"', async ({
+	test('AC-3: der Stundenverlauf (Karte im Reiter Wetter) behauptet KEINE Kappung, sondern „nur in der E-Mail“', async ({
 		page
 	}) => {
-		// Alle 9 sortierbaren Stundengrößen auswählen (ohne wind_dir_deg) — auch
-		// mit mehr als 8 Einträgen darf keine Schnittlinie erscheinen, da die
-		// Telegram-8er-Grenze für den Stundenverlauf gar nicht gilt.
 		const suffix = Date.now();
 		const locA = await createLocation(page, `E2E 1361 CutLine A ${suffix}`, 47.3, 11.3);
 		const locB = await createLocation(page, `E2E 1361 CutLine B ${suffix}`, 47.4, 11.4);
 		const id = await createPreset(page, `E2E 1361 CutLine ${suffix}`, [locA, locB]);
-		// Alle 9 orderable Keys nachtragen (Preset startete mit START_ORDER = 3).
-		const allNine = ['temp_c', 'wind_chill_c', 'wind_kmh', 'gust_kmh', 'precip_mm', 'uv_index', 'thunder_level', 'pop_pct', 'visibility_m'];
-		await updatePresetDisplayConfig(page, id, { hourly_metrics: allNine });
 
-		const panel = await openHubMetricsTab(page, id);
-		await expect(hourlyReihenfolgeRows(panel)).toHaveCount(allNine.length, { timeout: 10_000 });
-
-		await expect(
-			hourlyBlock(panel).locator('[data-testid="wm2-cut-line"]'),
-			'AC-3: KEINE Schnittlinie beim Stundenverlauf — er erscheint ausschließlich in der ' +
-				'E-Mail, eine Telegram-Kappungslinie wäre eine Falschaussage (comparison.py:230-242 ' +
-				'vs. :360)'
-		).toHaveCount(0);
-
-		await expect(
-			hourlyBlock(panel).getByTestId('compare-layout-hourly-email-only-hint'),
-			'AC-3: sichtbarer, wahrer Hinweis, dass der Block nur die E-Mail betrifft'
-		).toContainText(/nur.*E-Mail/i, { timeout: 10_000 });
-
-		const panelText = await panel.innerText();
+		const karte = await oeffneKarte(page, 'vergleich', id);
+		await expect(karte.locator('[data-slot="et-kopf-stelle"][data-stelle="hourly"]'), 'Spalte Stundenverlauf fehlt').toHaveCount(1);
+		await expect(karte, 'AC-3: sichtbarer, wahrer Hinweis, dass der Block nur die E-Mail betrifft').toContainText(/Stunden-Tabelle je Ort unter der Übersicht, nur in der E-Mail/);
+		await expect(karte.locator('[data-testid="wm2-cut-line"]'), 'AC-3: keine Schnittlinie').toHaveCount(0);
+		const text = await karte.innerText();
 		for (const claim of FORBIDDEN_CHANNEL_CLAIMS) {
-			expect(
-				panelText,
-				`AC-3: der Stundenverlauf-Block darf keine Kanal-Kappungs-Aussage behaupten (${claim}) — ` +
-					'exakt die mit #1360 AC-4 beseitigte Fehlerklasse'
-			).not.toMatch(claim);
+			expect(text, `AC-3: die Karte darf keine Kanal-Kappungs-Aussage behaupten (${claim})`).not.toMatch(claim);
 		}
 	});
 

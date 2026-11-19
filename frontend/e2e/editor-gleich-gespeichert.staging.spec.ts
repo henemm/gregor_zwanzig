@@ -45,6 +45,19 @@
 // Testnummer ausloesen (#1477-Nachbarschaft). Der Editor selbst rendert alle
 // drei Kanal-Reiter unabhaengig von `enabled`.
 //
+// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 13/14, ADR-0124): die Kanal-Reiter der
+// Metrik-Oberflaeche im Reiter Zustellung sind entfernt. Im Hub zeigt und schreibt die Karte „Was steht wo“
+// im Reiter Wetter, was in welchem Kanal steht — mit EINER Reihenfolge fuer alle Stellen und einem Haken je
+// Stelle; gespeichert wird `display_config.placements`, `channel_layouts` bleibt als Altfeld unberuehrt.
+// Die Zusicherungen sind auf die heutige Wirkung umformuliert:
+//   AC-10: je Stelle (E-Mail/Telegram/SMS) sind GENAU die Metriken der eingefrorenen Erwartung angehakt
+//          (Menge; die Reihenfolge je Kanal gibt es nicht mehr, die eine Reihenfolge prueft WS-2).
+//   AC-11: Speichern eines Schalters der Karte laesst `channel_layouts` und `metrics` bitgleich stehen.
+//   AC-17: erstmalige SMS-Bearbeitung (cloud_total ab, gust/precipitation tauschen) steht so in `placements`
+//          und in der Antwort des Endpoints (SMS-Spalte, Reihenfolge), die uebrigen Stellen unveraendert.
+//
+// Ausfuehren (lokal gegen ci-stack.sh mit der Haupt-Config, oder gegen Staging, aus frontend/):
+//   npx playwright test --project=tests e2e/editor-gleich-gespeichert.staging.spec.ts
 // Ausführen (gegen Staging, aus frontend/):
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
 //   npx playwright test --config=e2e/playwright.editor-gleich-gespeichert.staging.config.ts \
@@ -53,7 +66,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { test, expect, type APIRequestContext, type Page, type Locator } from '@playwright/test';
+import { test, expect, type APIRequestContext } from '@playwright/test';
+import { folge, gespeichertAn, haken, oeffneKarte, schalterGespeichert, stand, tabelle, tabelleGespeichert, zeile } from './was-steht-wo.helpers';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = path.resolve(__dirname, '../../tests/fixtures/einstellung_auslieferung');
@@ -98,67 +112,10 @@ async function createGoldenCTrip(request: APIRequestContext, id: string) {
 	expect([200, 201], `Seed HTTP ${res.status()}`).toContain(res.status());
 }
 
-async function fetchWeatherConfig(request: APIRequestContext, id: string) {
-	const res = await request.get(`/api/trips/${id}/weather-config`);
-	expect(res.ok(), `GET weather-config HTTP ${res.status()}`).toBeTruthy();
-	return res.json();
-}
 
-/** Liest die Reihenfolge-Zeilen EINES Reiters in DOM-Reihenfolge -- prueft
- * damit auch die REIHENFOLGE (nicht nur "ist irgendwo sichtbar"), was der
- * eigentliche B9-Anzeige-Nachweis ist (AC-10). */
-// Scope auf den Kanal-Reiter-Block: `wm2-aus-gruppe`/`wm2-aus-row`/`wm2-reihenfolge-row`
-// gibt es auf der Seite ZWEIMAL (Kanal-Reiter + 3-Tages-Vorschau), siehe
-// WeatherMetricsTab.svelte:1741-1745 (Anker `weather-metrics-kanal-reihenfolge`).
-function kanalBlock(tab: Locator): Locator {
-	return tab.getByTestId('weather-metrics-kanal-reihenfolge');
-}
+const STELLEN = ['email', 'telegram', 'sms'] as const;
 
-async function geleseneReihenfolge(tab: Locator): Promise<string[]> {
-	return kanalBlock(tab).locator('[data-testid="wm2-reihenfolge-row"]').evaluateAll((rows) =>
-		rows.map((r) => r.getAttribute('data-metric-id') ?? ''),
-	);
-}
-
-/** Reihenfolge-Drag (VOLLSTAENDIG uebernommen aus
- * kuerzel-marken-sichtbar.staging.spec.ts::ziehe -- inkl. `.sortable-zone`-
- * `finalize`-Warten, sonst liest eine feste Pause danach faelschlich einen
- * `consider`-Zwischenstand als abgeschlossene Geste). */
-async function ziehe(page: Page, quelle: Locator, ziel: Locator): Promise<void> {
-	await quelle.scrollIntoViewIfNeeded();
-	await ziel.scrollIntoViewIfNeeded();
-	const q = await quelle.boundingBox();
-	const z = await ziel.boundingBox();
-	if (!q || !z) throw new Error('ziehe: Quelle/Ziel ohne BoundingBox');
-
-	await page.evaluate(() => {
-		const zone = document.querySelector('.sortable-zone');
-		if (!zone) throw new Error('ziehe: .sortable-zone nicht im DOM gefunden');
-		(window as unknown as { __gzDndFinalize?: Promise<void> }).__gzDndFinalize = new Promise((resolve) =>
-			zone.addEventListener('finalize', () => resolve(), { once: true }),
-		);
-	});
-
-	await page.mouse.move(q.x + q.width / 2, q.y + q.height / 2);
-	await page.mouse.down();
-	await page.mouse.move(q.x + q.width / 2, q.y + q.height / 2 - 12, { steps: 6 });
-	await page.waitForTimeout(120);
-	await page.mouse.move(z.x + z.width / 2, z.y + z.height / 2, { steps: 15 });
-	await page.waitForTimeout(120);
-	await page.mouse.up();
-
-	const gefeuert = await page.evaluate(({ ms }) => {
-		const w = window as unknown as { __gzDndFinalize?: Promise<void> };
-		if (!w.__gzDndFinalize) return Promise.resolve(false);
-		return Promise.race([
-			w.__gzDndFinalize.then(() => true),
-			new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ms)),
-		]);
-	}, { ms: 3_000 });
-	if (!gefeuert) throw new Error('ziehe: "finalize"-Ereignis der Sortable-Zone kam nicht rechtzeitig');
-}
-
-test.describe('Issue #2422 S2a: Editor-Anzeige = gespeicherter Stand (Golden C, Kaskadenquelle global)', () => {
+test.describe('Issue #2422 S2a: Karten-Anzeige = gespeicherter Stand (Golden C, Kaskadenquelle global)', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize({ width: 1440, height: 900 });
 	});
@@ -167,135 +124,61 @@ test.describe('Issue #2422 S2a: Editor-Anzeige = gespeicherter Stand (Golden C, 
 		await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 	});
 
-	test('AC-10: jeder Kanal-Reiter (email/telegram/sms) zeigt die eingefrorene Erwartung in EXAKT dieser Reihenfolge, ohne Ausnahme', async ({
-		page,
-		request,
-	}) => {
+	test('AC-10: je Stelle (email/telegram/sms) sind genau die Metriken der eingefrorenen Erwartung angehakt', async ({ page, request }) => {
 		await createGoldenCTrip(request, TRIP_ID);
-		const erwartung = ladeFixture<{ channels: Record<string, Array<{ metric_id: string }>> }>(
-			'erwartung_golden_c.json',
-		);
-
-		await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
-		await page.getByTestId('trip-detail-tab-zustellung').click();
-		const tab = page.getByTestId('weather-metrics-tab');
-		await expect(tab).toBeVisible({ timeout: 10_000 });
-		// #2794 S3a: die Kanal-Karte steht im Reiter Zustellung — Katalog-Ende an ihren
-		// Zeilen abwarten (die Grundauswahl liegt im Reiter Wetter).
-		await expect(tab.locator('[data-testid="wm2-reihenfolge-row"]').first()).toBeVisible({
-			timeout: 10_000,
-		});
-
-		for (const reiter of ['email', 'telegram', 'sms'] as const) {
-			await tab.getByTestId(`channel-tab-${reiter}`).click();
-			const erwarteteReihenfolge = erwartung.channels[reiter].map((m) => m.metric_id);
-			await expect
-				.poll(() => geleseneReihenfolge(tab), { timeout: 10_000 })
-				.toEqual(erwarteteReihenfolge);
+		const erwartung = ladeFixture<{ channels: Record<string, Array<{ metric_id: string }>> }>('erwartung_golden_c.json');
+		const karte = await oeffneKarte(page, 'route', TRIP_ID);
+		const zeilen = await folge(karte);
+		for (const stelle of STELLEN) {
+			const angehakt: string[] = [];
+			for (const m of zeilen) {
+				const h = haken(karte, m, stelle);
+				if ((await h.count()) && (await h.isChecked())) angehakt.push(m);
+			}
+			expect([...angehakt].sort(), `AC-10: Stelle ${stelle}`).toEqual(erwartung.channels[stelle].map((m) => m.metric_id).sort());
 		}
 	});
 
-	test('AC-11: Speichern ohne Aenderung (SMS-Reiter bleibt unbearbeitet) -> GET = eingefrorener Stand (B9-Nachweis bei global)', async ({
-		page,
-		request,
-	}) => {
+	test('AC-11: Speichern in der Karte laesst channel_layouts und metrics bitgleich stehen (B9-Nachweis bei global)', async ({ page, request }) => {
 		await createGoldenCTrip(request, TRIP_ID);
-		await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
-		await page.getByTestId('trip-detail-tab-zustellung').click();
-		const tab = page.getByTestId('weather-metrics-tab');
-		await expect(tab).toBeVisible({ timeout: 10_000 });
-
-		// Auto-Save OHNE die SMS-Metrik-Auswahl anzufassen UND ohne den
-		// gespeicherten Endzustand zu veraendern: ein Tab-Besuch allein loest
-		// laut bestehender Gate-Semantik (weatherSaveGate) KEINEN Speichervorgang
-		// aus (Vorbild: "Reiter öffnen ohne Änderung → kein PUT" im Bestand) --
-		// `report-show-outlook` (MailInhaltCard.svelte) ist NICHT
-		// geeignet, weil dieses Feld ausserhalb von display_config liegt und
-		// laut Bestandstest NUR den Trip-PUT (nicht weather-config) ausloest.
-		// Stattdessen: im E-Mail-Reiter (SMS bleibt unberuehrt) eine aktuell
-		// AUSGESCHALTETE Metrik (uv_index, golden_c.json::channel_layouts.email)
-		// AN- und wieder AUSSCHALTEN -- der Netto-Endzustand ist identisch zu
-		// Golden C, aber `userTouched` wird gesetzt (das Gate prueft nur "wurde
-		// je beruehrt", nicht "weicht vom Original ab" -- Kommentar bei
-		// handleSave() oben in WeatherMetricsTab.svelte), der reale
-		// Speicherpfad (buildWeatherPayload -> PUT /weather-config) laeuft
-		// also echt, mit dem GLEICHEN Ergebnis wie "nichts angefasst".
-		await tab.getByTestId('channel-tab-email').click();
-		const uvOffToggle = kanalBlock(tab).locator(
-			'[data-testid="wm2-aus-gruppe"] [data-testid="wm2-aus-row"][data-metric-id="uv_index"] button',
-		);
-		await expect(uvOffToggle).toBeVisible();
-		await uvOffToggle.click();
-		const uvOnRow = kanalBlock(tab).locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="uv_index"]');
-		await expect(uvOnRow).toBeVisible();
-		const [putResponse] = await Promise.all([
-			page.waitForResponse(
-				(r) => r.url().includes(`/api/trips/${TRIP_ID}/weather-config`) && r.request().method() === 'PUT',
-				{ timeout: 10_000 },
-			),
-			uvOnRow.getByRole('button', { name: 'Aus' }).click(),
-		]);
-		expect(putResponse.ok(), `weather-config PUT HTTP ${putResponse.status()}`).toBeTruthy();
-
-		const gespeichert = await fetchWeatherConfig(request, TRIP_ID);
-		const eingefroren = ladeFixture<{ display_config: { channel_layouts: unknown; metrics: unknown } }>(
-			'nach_speichern_golden_c.json',
-		);
-		expect(gespeichert.channel_layouts, 'AC-11: channel_layouts weicht vom eingefrorenen Stand ab').toEqual(
-			eingefroren.display_config.channel_layouts,
-		);
-		expect(
-			gespeichert.metrics,
-			'AC-11: metrics (inkl. morning_enabled/evening_enabled) weicht ab (K8-Fix)',
-		).toEqual(eingefroren.display_config.metrics);
+		const vorher = (await stand(request, 'route', TRIP_ID)).display_config;
+		const karte = await oeffneKarte(page, 'route', TRIP_ID);
+		const gespeichert = schalterGespeichert(page, 'route', TRIP_ID);
+		await karte.getByTestId('was-steht-wo-show_yesterday_comparison').click();
+		await gespeichert;
+		const nachher = (await stand(request, 'route', TRIP_ID)).display_config;
+		expect(nachher.channel_layouts, 'AC-11: channel_layouts veraendert').toEqual(vorher.channel_layouts);
+		expect(nachher.metrics, 'AC-11: metrics (inkl. morning_enabled/evening_enabled) veraendert').toEqual(vorher.metrics);
 	});
 
-	test('AC-17: erstmalige SMS-Bearbeitung (Metrik abwaehlen + zwei benachbarte tauschen) kommt an wie eingestellt', async ({
-		page,
-		request,
-	}) => {
+	test('AC-17: erstmalige SMS-Bearbeitung (Metrik abwaehlen + zwei benachbarte tauschen) kommt an wie eingestellt', async ({ page, request }) => {
 		await createGoldenCTrip(request, TRIP_ID);
-		await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
-		await page.getByTestId('trip-detail-tab-zustellung').click();
-		const tab = page.getByTestId('weather-metrics-tab');
-		await expect(tab).toBeVisible({ timeout: 10_000 });
+		const karte = await oeffneKarte(page, 'route', TRIP_ID);
+		const vorher = await tabelle(request, 'route', TRIP_ID);
+		let gespeichert = tabelleGespeichert(page, TRIP_ID);
+		await haken(karte, 'cloud_total', 'sms').click();
+		await gespeichert;
 
-		await tab.getByTestId('channel-tab-sms').click();
+		const start = await folge(karte);
+		const i = start.indexOf('gust');
+		const j = start.indexOf('precipitation');
+		expect(Math.abs(i - j), 'Messaufbau: gust und precipitation benachbart').toBe(1);
+		const oben = i < j ? 'gust' : 'precipitation';
+		gespeichert = tabelleGespeichert(page, TRIP_ID);
+		await zeile(karte, oben).getByTestId('drag-handle').focus();
+		await page.keyboard.press('Space');
+		await page.keyboard.press('ArrowDown');
+		await page.keyboard.press('Space');
+		await gespeichert;
 
-		// Fall 4 (aenderungsfaelle.json::fall4_sms_erstbearbeitung): cloud_total
-		// abwaehlen, dann gust/precipitation (im SMS-Reiter BENACHBART, Position
-		// 0/1 -- ein Drag ist ein Verschieben, kein reiner Tausch; ein
-		// nicht-benachbartes Paar wie gust/wind wuerde bei einem einzelnen Drag
-		// eine ANDERE Zielreihenfolge ergeben als der Tausch-Nachbau im TS-Kern)
-		// tauschen -- dieselbe Bedienung wie in `_editor_kette.ts::wendeAenderungAn`.
-		const cloudTotalRow = kanalBlock(tab).locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="cloud_total"]');
-		await expect(cloudTotalRow).toBeVisible();
-		await cloudTotalRow.getByRole('button', { name: 'Aus' }).click();
-		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-
-		const gustRow = kanalBlock(tab).locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="gust"]');
-		const precipRow = kanalBlock(tab).locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="precipitation"]');
-		const [putResponse] = await Promise.all([
-			page.waitForResponse(
-				(r) => r.url().includes(`/api/trips/${TRIP_ID}/weather-config`) && r.request().method() === 'PUT',
-				{ timeout: 10_000 },
-			),
-			ziehe(page, gustRow, precipRow),
-		]);
-		expect(putResponse.ok(), `weather-config PUT HTTP ${putResponse.status()}`).toBeTruthy();
-		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-
-		const gespeichert = await fetchWeatherConfig(request, TRIP_ID);
-		const eingefroren = ladeFixture<{ display_config: { channel_layouts: unknown; metrics: unknown } }>(
-			'nach_aenderung_fall4_sms_erstbearbeitung.json',
-		);
-		expect(
-			gespeichert.channel_layouts,
-			'AC-17: channel_layouts.sms weicht vom eingefrorenen Aenderungsstand ab',
-		).toEqual(eingefroren.display_config.channel_layouts);
-		expect(
-			gespeichert.metrics,
-			'AC-17: die globale metrics-Liste muss unveraendert bleiben (nur SMS wurde bearbeitet)',
-		).toEqual(eingefroren.display_config.metrics);
+		const a = await tabelle(request, 'route', TRIP_ID);
+		const ids = (a.placements.rows as Array<{ metric_id: string }>).map((r) => r.metric_id);
+		expect(ids.indexOf('gust') - ids.indexOf('precipitation'), 'AC-17: Tausch gespeichert').toBe(i < j ? 1 : -1);
+		expect(gespeichertAn(a.placements, 'cloud_total', 'sms'), 'AC-17: cloud_total in der SMS ab').toBe(false);
+		for (const stelle of ['email', 'telegram'] as const) {
+			const z = (vorher.rows as Array<{ metric_id: string; cells: Record<string, { state: string }> }>).find((r) => r.metric_id === 'cloud_total')?.cells?.[stelle]?.state;
+			if (z === 'on' || z === 'off') expect(gespeichertAn(a.placements, 'cloud_total', stelle), `AC-17: ${stelle} unveraendert`).toBe(z === 'on');
+		}
+		expect((a.rows as Array<{ metric_id: string }>).map((r) => r.metric_id), 'AC-17: Antwort zeigt die neue Reihenfolge').toEqual(ids);
 	});
 });
