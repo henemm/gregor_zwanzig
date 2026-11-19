@@ -424,12 +424,20 @@ function quellStand(): Knoten {
 // #2794 S3a Teil-PR 3: der Reiter bzw. Schritt Wetter ist der WetterTab (eigener Speicherer, kein
 // Buendel); der Baustein steht nur noch im Reiter/Schritt Zustellung — Hub 1 (ZustellungTab),
 // Anlegen je Geraet 1. Jede verbleibende Einbettung streut weiter dasselbe Buendel.
-const MOUNTS: [string, string, number][] = [
-	['Hub /compare/[id] (Mount B)', HUB, 1],
-	['Anlege-Seite /compare/new, Desktop + Mobil (Mounts C und D)', ANLEGE, 2]
-];
+// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): der Uebergangsblock des Reiters
+// Zustellung traegt keine Metrik-Oberflaeche mehr — der Hub (Mount B) streut das Buendel nicht mehr;
+// Listen, Stundenverlauf und Ausblick bedient dort die Karte „Was steht wo“ im Reiter Wetter.
+const MOUNTS: [string, string, number][] = [['Anlege-Seite /compare/new, Desktop + Mobil (Mounts C und D)', ANLEGE, 2]];
 
-describe('AC-2: alle drei Vergleichs-Mounts speisen dasselbe Buendel ein', () => {
+describe('#3154: der Hub /compare/[id] streut das Buendel nicht mehr', () => {
+	test('ZustellungTab im Hub ohne `wetterMetrikenPropsAus(…)`, kein WetterMetrikenVersandPanel', () => {
+		const { quelle, treffer } = einbettungen(HUB);
+		assert.deepEqual(treffer.map((e) => e.name), ['ZustellungTab'], 'Hub: erwartet genau die Einbettung ZustellungTab, kein Panel');
+		assert.equal(streuung(treffer[0], quelle), null, 'Hub: ZustellungTab bekommt weiter das Metrik-Buendel gestreut (#3154)');
+	});
+});
+
+describe('AC-2: alle Vergleichs-Mounts mit Metrik-Oberflaeche speisen dasselbe Buendel ein', () => {
 	for (const [was, datei, anzahl] of MOUNTS) {
 		test(`${was}: ruft \`wetterMetrikenPropsAus(<zustand>)\` IM Markup-Ausdruck auf und reicht kein \`wiz\` mehr durch`, () => {
 			const { quelle, treffer } = einbettungen(datei);

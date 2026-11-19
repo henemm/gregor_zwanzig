@@ -1,16 +1,15 @@
-// Issue #2795 S3b, Teilschritt 1b (AC-30, Uebergangsblock): Telegram-Kurzstil und (nur Trip)
-// Mehrtages-Trend. Beide sassen bisher im alten Versand-Abschnitt (Trip: `report_config`) bzw. im
-// Alarm-Baustein (Orte: `display_config.telegram_style`), die der neue Reiter abloest. Bis Teil 2
-// („Inhalt je Kanal“ im Reiter Wetter) bleiben sie im Uebergangsblock bedienbar und speichern
-// dieselben Felder wie vorher — unter eigenem Owner 'kanal-stil', damit sie den Reiter-Speicherer
-// (Owner 'versand'/'alarme', zustellungSpeicherung.ts) nie verdraengen. Wird mit Teil 2 abgebaut.
+// Issue #2795 S3b, Teilschritt 1b (AC-30): Telegram-Kurzstil und (nur Trip) Mehrtages-Trend — Lesen des
+// gespeicherten Stands und Formen der Teilfeld-Nutzlast (Trip `report_config`, Orte
+// `display_config.telegram_style`).
+// Issue #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): die Bedienung im Uebergangsblock
+// (KanalStil, eigener Speicherer mit Owner 'kanal-stil') ist entfernt. Den Kurzstil schaltet allein die Karte
+// „Was steht wo“ (wasStehtWoSpeicherung.ts formt ihre Nutzlast hier); den Ausblick je Briefing schreibt die
+// Karte als `outlook_reports`. `kanalStilStart` liest die Altfelder (`multi_day_trend_*`) weiter, bis B6 sie
+// abbaut — die Gleichheits-Pruefungen ac26/p12 vergleichen damit Einstellung und Ausgabe.
 //
 // Kein Browser-/SvelteKit-Import — lauffaehig unter node --experimental-strip-types.
 
-import type { SaveFn, SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
-import { merkeNutzlast } from '../../../stores/nutzlastStand.ts';
 import type { ComparePreset, Trip } from '../../../types.ts';
-import type { PutClient } from '../tripSpeicherung.ts';
 import { ladeReportZustand } from '../versand-tab/reportConfigPayload.ts';
 import type { Kontext } from './zustellungModell.ts';
 
@@ -19,9 +18,6 @@ export interface KanalStilStand {
 	trendMorgen: boolean;
 	trendAbend: boolean;
 }
-
-/** Mehrtages-Trend gibt es nur im Trip (VTSchedulePlan, KL-2). */
-export const MIT_TREND: Record<Kontext, boolean> = { route: true, vergleich: false };
 
 /** Gespeicherter Trip: der Trend steht, wie Python ihn liest (#3047 E2) — allein `multi_day_trend_reports`,
  *  fehlt die Liste, gilt ["evening"] (loader.py, Konzept §5 Punkt 8 „Vorbelegung: nur abends“). */
@@ -71,39 +67,4 @@ export function kanalStilStart(context: Kontext, trip?: Trip, preset?: ComparePr
  *  `vorher` = zuletzt gespeicherter Stand: der Trip sendet dann nur, was sich geaendert hat (#3047 E2). */
 export function kanalStilNutzlast(context: Kontext, s: KanalStilStand, vorher?: KanalStilStand): Record<string, unknown> {
 	return KONTEXT[context].nutzlast(s, vorher);
-}
-
-export function erstelleKanalStilSpeicherung(opt: {
-	context: Kontext;
-	id: string;
-	client: PutClient;
-	saveController: SaveStatus;
-	enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>;
-	onAntwort?: (antwort: unknown) => void;
-	/** Geladener Stand (#3047 E2): Grundlage fuer „nur geaenderte Felder“. */
-	start?: KanalStilStand;
-}): { aenderungMelden(s: KanalStilStand): void } {
-	const pfad = KONTEXT[opt.context].pfad(opt.id);
-	let aktuell: KanalStilStand | null = null;
-	let gespeichert: KanalStilStand | undefined = opt.start ? { ...opt.start } : undefined;
-	const fn: SaveFn = async (init) => {
-		const lauf = async () => {
-			if (!aktuell) return;
-			const gesendet = aktuell;
-			const body = kanalStilNutzlast(opt.context, gesendet, gespeichert);
-			merkeNutzlast(fn, body);
-			// PUT getrennt abwarten: `opt.onAntwort?.(await …)` wertete das Argument (den PUT) bei
-			// fehlendem onAntwort gar nicht aus (Optional-Call schliesst kurz) — Fix-Loop 1, F004.
-			const antwort = await opt.client.put<unknown>(pfad, body, init);
-			if (gespeichert) gespeichert = gesendet;
-			opt.onAntwort?.(antwort);
-		};
-		await (opt.enqueueHubWrite ? opt.enqueueHubWrite(lauf) : lauf());
-	};
-	return {
-		aenderungMelden(s: KanalStilStand): void {
-			aktuell = { ...s };
-			opt.saveController.schedule(fn, 700, 'kanal-stil');
-		}
-	};
 }

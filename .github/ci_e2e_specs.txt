@@ -745,3 +745,14 @@ e2e/etappen-orte-listen-3007.spec.ts
 #             Mit 13 Faellen 3x einzeln gruen; den Zielverbund misst der CI-Hauptlauf des PR.
 #   Filter C: keine Aufnahmen, schreibt keine Datei.
 e2e/einstelltabelle-bausteine.spec.ts
+# Aufnahme 2026-11-18 (#3122 B3b):
+# was-steht-wo-karte.spec.ts -- Karte „Was steht wo“ im Reiter Wetter gegen echten Go- und Python-Server
+# (Trip, drei Orte, ein Ort): Spalten je Kontext, Haken/Reihenfolge (Tastatur und Maus)/Roh-Einfach nach
+# Neuladen, Bloecke und Ausblick, Kurzstil, „−“/„+“ der Grundauswahl, Konflikt 412, englischer Nutzer
+# bei 390 px mit Kontrast und fremder Tabelle (404); Fix-Loop: Schalter-Fehler, Vorlagenwechsel, „+“ mit
+# Altzeile, Neuladen nach Reiter-Speichern, Zustellung laesst die Tabelle unveraendert. Fallzahl: 18.
+#   Filter A: kein waitForTimeout/skip/fixme/__dirname/Hauptrepo-Pfad, kein .staging.spec.
+#   Filter B: 3x gruen am 2026-11-18 (lokaler isolierter Stack, --repeat-each=3: 43 passed inkl. setup);
+#             3x im Zielverbund misst der CI-Hauptlauf des PR.
+#   Filter C: keine Aufnahmen, schreibt keine Datei (Testdaten per API, am Ende geloescht).
+e2e/was-steht-wo-karte.spec.ts

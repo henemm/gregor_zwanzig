@@ -83,22 +83,24 @@ async function hubOeffnen(tab: string): Promise<{ u: Knoten; ast: Knoten; quelle
 	);
 }
 
-/** Der lokale Feldsatz des Hubs: das Objekt, das der Hub an `wetterMetrikenPropsAus(…)` uebergibt.
+/** Der lokale Feldsatz des Hubs: die Deklaration `const <name> = $state(compareFeldsatzStandard())`.
  *  #2795 S3b Teilschritt 1b: der Hub ruft versandPropsAus nicht mehr (der neue Reiter Zustellung
- *  liest das Preset selbst); derselbe Feldsatz haengt weiter am Panel-Buendel im Markup. */
+ *  liest das Preset selbst). #3154: auch das Panel-Buendel wetterMetrikenPropsAus(…) steht nicht mehr
+ *  im Hub-Markup (Uebergangsblock ohne Metrik-Oberflaeche) — gefunden wird der Feldsatz an seiner
+ *  Deklaration im Instanz-Skript. */
 function hubFeldsatz(ast: Knoten, u: Knoten): Knoten {
 	let name: string | null = null;
 	(function lauf(n: unknown): void {
 		if (name || n === null || typeof n !== 'object') return;
 		if (Array.isArray(n)) return n.forEach(lauf);
 		const k = n as Knoten;
-		if (k.type === 'CallExpression' && k.callee?.name === 'wetterMetrikenPropsAus' && k.arguments?.[0]?.type === 'Identifier') {
-			name = k.arguments[0].name;
+		if (k.type === 'VariableDeclarator' && k.id?.type === 'Identifier' && k.init?.type === 'CallExpression' && k.init.callee?.name === '$state' && k.init.arguments?.[0]?.callee?.name === 'compareFeldsatzStandard') {
+			name = k.id.name;
 			return;
 		}
 		for (const key of Object.keys(k)) if (key !== 'parent' && key !== 'loc') lauf(k[key]);
-	})(ast.fragment);
-	assert.ok(name, 'Messaufbau: kein wetterMetrikenPropsAus(<Bezeichner>) im Hub-Markup');
+	})(ast.instance?.content);
+	assert.ok(name, 'Messaufbau: keine Deklaration $state(compareFeldsatzStandard()) im Hub');
 	const f = u[name!];
 	assert.ok(
 		f && typeof f === 'object',

@@ -134,7 +134,7 @@ for (const kind of HUB_KINDS) {
 	// #1351). Geöffnet wird der Reiter, der das Feld verarbeitet (Wetter-Metriken mit dem
 	// geteilten LayoutTab) — der Standard-Reiter allein würde den Fehlerweg nie betreten.
 	// Nur die Metrik-Kennung ist katalogbedingt je Art (Trip `gust`, Vergleich `wind_max_kmh`).
-	test(`SC-1b (${kind}): Bestand MIT channel_layouts im Reiter Wetter-Metriken öffnen ⇒ Chip idle, null PUTs, Feld unverändert`, async ({
+	test(`SC-1b (${kind}): Bestand MIT channel_layouts im Reiter Wetter (Karte) öffnen ⇒ Chip idle, null PUTs, Feld unverändert`, async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
@@ -152,12 +152,14 @@ for (const kind of HUB_KINDS) {
 			).toEqual(expect.arrayContaining(['email', 'telegram', 'sms']));
 
 			const puts = zaehlePuts(page, hubApiPath(kind, hub.id));
-			// #2794 S3a: der Abschnitt Layout/Kanal steht im Reiter Zustellung.
-			await openHub(page, kind, hub.id, { tab: 'zustellung' });
+			// #2794 S3a: der Abschnitt Layout/Kanal stand im Reiter Zustellung. #3154: die Kanal-Listen sind
+			// dort entfernt; die Inhalte je Kanal liest seither die Karte „Was steht wo“ im Reiter Wetter
+			// (ohne gespeicherte Tabelle aus den Altfeldern) — sie ist der Wirkort, der beim Öffnen nichts schreiben darf.
+			await openHub(page, kind, hub.id, { tab: 'wetter' });
 			await expect(
-				page.locator('[data-testid="layout-tab"]:visible').first(),
-				'SC-1b: der geteilte LayoutTab (Kanal-Umschalter) im Reiter Zustellung fehlt'
-			).toBeVisible({ timeout: 15_000 });
+				page.locator('[data-testid="was-steht-wo"]:visible [data-testid="was-steht-wo-show_stage_stats"], [data-testid="was-steht-wo"]:visible [data-testid="was-steht-wo-stundenverlauf"]').first(),
+				'SC-1b: die Karte „Was steht wo“ im Reiter Wetter fehlt'
+			).toBeVisible({ timeout: 20_000 });
 			await expect(chip(page)).toBeVisible({ timeout: 10_000 });
 
 			// Stabilitätsfenster statt festem Schlaf (Alt: fester 2,5-s-Schlaf): in dieser Zeit

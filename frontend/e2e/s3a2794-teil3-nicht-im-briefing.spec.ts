@@ -59,7 +59,7 @@ for (const kind of HUB_KINDS) {
 			await reiter.getByTestId(WT.plus('wind')).click();
 			await expect(reiter.getByTestId(WT.zeile('wind'))).toBeVisible();
 			await expect(reiter.getByTestId(WT.hinzuMeldung)).toHaveText(
-				`${kat.wind.label} ist jetzt im Briefing und steht in allen Listen unter ‚Inhalt je Kanal und Fläche‘. Dort stellst du Roh oder Einfach ein.`
+				`${kat.wind.label} ist jetzt im Briefing und in jedem Kanal angehakt. Unter ‚Was steht wo‘ kannst du sie für einzelne Kanäle abwählen.`
 			);
 			await expect(reiter.getByTestId(WT.pickerStatus)).toHaveText('unverändert');
 			await speichern;

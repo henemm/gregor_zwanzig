@@ -269,3 +269,20 @@ describe('Aufbau: Sortierung über SortableList, kein eigener Sortier-Code', () 
 		assert.match(barrel, /export\s*\{\s*default\s+as\s+EinstellTabelle\s*\}\s*from\s*['"]\.\/EinstellTabelle\.svelte['"]/);
 	});
 });
+
+// Issue #3122 B3b: Ampelpunkt der HTML-Mail in der Zelle (Antwort-Feld `ampel`), Farbe als Wort für Screenreader.
+describe('B3b: Ampelpunkt', () => {
+	test('nur bei gesetztem Haken und bedienbarer Spalte, mit Farbe und Namen', async () => {
+		const mit = (zustand: string) => [
+			{ id: 'gust', name: 'Böen', zellen: { email: { zustand, format: 'simplified', ampel: { farbe: 'yellow', name: 'gelb' } } } }
+		];
+		const h = html(await lade(), props({ stellen: [TRIP_STELLEN[0]], metriken: mit('on') }));
+		const punkt = eins(zelle(h, 'gust', 'email').innen, 'data-slot="et-ampel"');
+		assert.equal(attr(punkt.auf, 'data-farbe'), 'yellow');
+		assert.equal(attr(punkt.auf, 'aria-label'), 'gelb');
+		const aus = html(await lade(), props({ stellen: [TRIP_STELLEN[0]], metriken: mit('off') }));
+		assert.equal(elemente(zelle(aus, 'gust', 'email').innen, 'data-slot="et-ampel"').length, 0);
+		const ruht = html(await lade(), props({ stellen: [{ ...TRIP_STELLEN[0], bedienbar: false }], metriken: mit('on') }));
+		assert.equal(elemente(zelle(ruht, 'gust', 'email').innen, 'data-slot="et-ampel"').length, 0);
+	});
+});

@@ -1,273 +1,49 @@
-// E2E (Staging) — Issue #1719 Scheibe 3: echte Platzgrenzen im Trip-Editor.
+// E2E (Staging) — Issue #1719 S3 (echte Platzgrenzen im Trip-Editor) und #2438 (Abwahl-Hinweis im Trip-Editor).
 //
-// Spec: docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md
-//   AC-3 (Telegram-Kapplinie nach der 7. Metrik), AC-4 (SMS nennt 160
-//   Zeichen, keine Spaltengrenze), AC-8 (global abgewählte Metrik erscheint
-//   in keinem Kanal-Reiter — Playwright-Anteil, Unit-Anteil bereits in
-//   channelOffGroupListBuilding.test.ts). Zuordnungstabelle: Commit 3da43cad
-//   (Bündel `kanal-grenzen-und-hinweise`).
+// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 11/14): die Kanal-Reiter der Metrik-Oberflaeche sind
+// aus dem Reiter Zustellung entfernt. Im Hub zeigt die Karte „Was steht wo“ (Reiter Wetter) die Kanaele als Spalten:
+//   AC-4: das SMS-Beispiel nennt die Zeichengrenze 160 (nicht „—“, nicht 140).
+//   #2438 AC-1: der Hinweis, dass ein Kanal nur abwaehlt, was die Grundauswahl hat, steht im Kartentext.
+// Gestrichen:
+//   AC-3 (Telegram-Kapplinie nach der 7. Zeile, Ueberlauf-Chip): Wirkort ersatzlos entfallen — die Karte hat keine
+//     Spaltenliste je Kanal und keine Kapplinie; die SMS-Kappung zeigt die Marke „passt nicht mehr“ (WS-2).
+//   AC-8 (global abgewaehlte Metrik erscheint im Kanal weder aktiv noch in der „Aus“-Gruppe): Ersatz
+//     kanal-abwahl-bleibt-reversibel.staging.spec.ts AC-9 und ausblick-erbt-grundauswahl.staging.spec.ts AC-5
+//     (keine Zeile ausserhalb der Grundauswahl).
+//   #2438 AC-5 (320/375 px ohne Ueberlauf, Kontrast >= 4.5:1): Ersatz was-steht-wo-karte.spec.ts WS-8 (390 px,
+//     keine seitliche Seite, jede Spalte erreichbar, Kontrast der Karte).
 //
-// SCHREIBT NUR — wird in dieser RED-Phase NICHT ausgeführt (Testauflage PO,
-// "Das ist KRITISCH!!!!!" — der Lauf gehört in die GREEN-/Verifikationsphase).
-//
-// Vorbilder: metrik-grundauswahl-schneidet-kanal.staging.spec.ts (S2,
-// Dreier-Struktur), layout-tab-route.spec.ts (Overflow-Trip-Testaufbau,
-// AC-4 "9 Metriken > Telegram-Budget" — dort noch mit dem FALSCHEN Budget 8;
-// dieser Test verankert das korrigierte Budget 7).
-//
-// Ausführen (gegen Staging, aus frontend/, NACH GREEN):
-//   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
-//   npx playwright test --config=e2e/playwright.kanal-grenzen-und-hinweise.staging.config.ts
+// Ausfuehren (lokal gegen ci-stack.sh mit der Haupt-Config, oder gegen Staging, aus frontend/):
+//   npx playwright test --project=tests e2e/kanal-grenzen-und-hinweise.staging.spec.ts
 
-import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { oeffneKarte, seedAbo, tabelle, type Abo } from './was-steht-wo.helpers';
 
-const TRIP_ID = 'e2e-1719-s3-kanal-grenzen';
-
-const REPORT_CONFIG = {
-	enabled: true,
-	morning_enabled: true,
-	evening_enabled: true,
-	morning_time: '07:00:00',
-	evening_time: '18:00:00',
-	send_email: true,
-	send_telegram: false,
-	send_sms: false,
-	multi_day_trend_morning: false,
-	multi_day_trend_evening: true,
-	multi_day_trend_reports: ['evening'],
-	show_compact_summary: true,
-	show_daylight: true,
-	wind_exposition_min_elevation_m: null,
-	show_stage_stats: true,
-	show_quick_take_tags: true,
-	show_stability: true,
-	show_highlights: true,
-	daily_summary_metrics: ['precipitation', 'wind', 'visibility', 'thunder'],
-	show_metrics_summary: false,
-	show_outlook: true,
-	email_format: 'full',
-	show_yesterday_comparison: true
-};
-
-// 9 global aktive Metriken (> Telegram-Budget 7) + EINE global abgewählte
-// ("wind_direction", AC-8-Ziel-Metrik: enabled:false, kein bucket).
-const ACTIVE_METRICS = [
-	'temperature',
-	'wind',
-	'gust',
-	'precipitation',
-	'thunder',
-	'visibility',
-	'humidity',
-	'dewpoint',
-	'cloud_total'
-];
-const OFF_METRIC = 'wind_direction';
-
-async function createTrip(request: APIRequestContext) {
-	await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
-	await request.post('/api/trips', {
-		data: {
-			id: TRIP_ID,
-			name: 'E2E #1719 S3 Kanal-Grenzen',
-			report_config: REPORT_CONFIG,
-			display_config: {
-				metrics: [
-					...ACTIVE_METRICS.map((metric_id, order) => ({
-						metric_id,
-						enabled: true,
-						bucket: 'primary',
-						order
-					})),
-					{ metric_id: OFF_METRIC, enabled: false }
-				]
-			},
-			stages: [
-				{
-					id: `${TRIP_ID}-stage-1`,
-					name: 'Etappe 1',
-					date: new Date().toISOString().slice(0, 10),
-					waypoints: [
-						{ id: `${TRIP_ID}-wp-1`, name: 'Start', lat: 46.5, lon: 8.1, elevation_m: 1800 },
-						{ id: `${TRIP_ID}-wp-2`, name: 'Ziel', lat: 46.6, lon: 8.2, elevation_m: 2400 }
-					]
-				}
-			]
-		}
-	});
-}
-
-async function openMetricsTab(page: Page) {
-	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): die Kanal-Karte steht im Reiter
-	// Zustellung; dieser Test braucht die Grundauswahl (Reiter Wetter) nicht.
-	await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
-	const zustellungBtn = page.getByTestId('trip-detail-tab-zustellung');
-	await expect(zustellungBtn).toBeVisible({ timeout: 10_000 });
-	await zustellungBtn.click();
-	const tab = page.getByTestId('weather-metrics-tab');
-	await expect(tab).toBeVisible({ timeout: 10_000 });
-	await expect(tab.locator('[data-testid="wm2-reihenfolge-row"]').first()).toBeVisible({
-		timeout: 10_000
-	});
-	return tab;
-}
-
-test.describe('Issue #1719 S3: echte Platzgrenzen im Trip-Editor', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 1440, height: 900 });
-	});
-
-	test.beforeAll(async ({ request }) => {
-		await createTrip(request);
-	});
-
-	test.afterAll(async ({ request }) => {
-		await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
-	});
-
-	test('AC-3: bei 12 aktiven Zeilen sitzt die Telegram-Kapplinie nach der 7., Überlauf-Chip nennt 5', async ({
-		page
-	}) => {
-		const tab = await openMetricsTab(page);
-		const rows = tab
-			.getByTestId('weather-metrics-kanal-reihenfolge')
-			.locator('[data-testid="wm2-reihenfolge-row"]');
-		// 9 gewählte Metriken, aber `temperature` bringt Nacht-/Tages-Tief/-Hoch als
-		// eigene Zeilen mit (#2454/#1613): 12 Zeilen im Kanal-Block.
-		await expect(rows).toHaveCount(12);
-
-		const telegramBtn = tab.getByTestId('channel-tab-telegram');
-		await telegramBtn.click();
-		const cutLine = tab.locator('[data-testid="wm2-cut-line"]');
-		await expect(cutLine).toBeVisible();
-		await expect(cutLine).toContainText('Telegram');
-		await expect(
-			cutLine,
-			'AC-3 FAIL: die Kapplinie muss "7" nennen (nicht mehr "8" — die 8. Spalte ist die Uhrzeit)'
-		).toContainText('7');
-
-		await expect(
-			telegramBtn,
-			'AC-3 FAIL: Überlauf-Chip am Telegram-Tab muss "−5" zeigen (12 aktive Zeilen − 7 Budget)'
-		).toContainText('−5');
-	});
-
-	test('AC-4: SMS-Reiter nennt die Zeichengrenze 160, nicht "—" und nicht "140", keine Spaltengrenze', async ({
-		page
-	}) => {
-		const tab = await openMetricsTab(page);
-		const smsBtn = tab.getByTestId('channel-tab-sms');
-		await expect(
-			smsBtn.locator('.lt-ch-badge'),
-			'AC-4 FAIL: der SMS-Chip muss "160" zeigen, nicht "—" (der heutige Spalten-Sentinel-Fallback)'
-		).toContainText('160');
-
-		await smsBtn.click();
-		const capNote = page.locator('[data-testid="lt-cap-note"]:visible').first();
-		await expect(capNote).toContainText('160');
-		await expect(
-			capNote,
-			'AC-4 FAIL: der SMS-Hinweistext darf nicht "140" nennen (falscher Wert, gehört zum Vergleichspfad)'
-		).not.toContainText('140');
-		await expect(
-			capNote,
-			'AC-4 FAIL: der SMS-Hinweistext darf keine Spaltengrenze behaupten'
-		).not.toContainText(/max\s*\d+\s*Spalten/i);
-	});
-
-	test('AC-8: eine in der Grundauswahl abgewählte Metrik erscheint im Kanal-Reiter weder aktiv noch in der Aus-Gruppe', async ({
-		page
-	}) => {
-		const tab = await openMetricsTab(page);
-
-		// Ziel-Metrik ist bereits GLOBAL abgewählt (OFF_METRIC) -- ein Kanal kann
-		// sie nicht zurückholen (ADR-0050 Regel 1/2).
-		await tab.getByTestId('channel-tab-sms').click();
-		await expect(
-			tab.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${OFF_METRIC}"]`),
-			'AC-8 FAIL: eine global abgewählte Metrik darf im Kanal-Reiter nicht aktiv erscheinen'
-		).toHaveCount(0);
-		await expect(
-			tab.getByTestId('wm2-aus-gruppe').locator(`[data-testid="wm2-aus-row"][data-metric-id="${OFF_METRIC}"]`),
-			'AC-8 FAIL: eine global abgewählte Metrik darf auch nicht in der Aus-Gruppe des Kanals auftauchen'
-		).toHaveCount(0);
-
-		// Dasselbe im Telegram-Reiter (die Regel gilt kanalunabhängig).
-		await tab.getByTestId('channel-tab-telegram').click();
-		await expect(
-			tab.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${OFF_METRIC}"]`)
-		).toHaveCount(0);
-		await expect(
-			tab.getByTestId('wm2-aus-gruppe').locator(`[data-testid="wm2-aus-row"][data-metric-id="${OFF_METRIC}"]`)
-		).toHaveCount(0);
-	});
+let abos: Abo[] = [];
+test.afterEach(async () => {
+	for (const a of abos) await a.aufraeumen().catch(() => {});
+	abos = [];
 });
 
-// Issue #2438 (S2b von #2422): Hinweis „Kanal kann nur abwählen" (AC-1, AC-5).
-// Spec: docs/specs/modules/feat_2438_kanal_abwahl_hinweis.md
-const ABWAHL_HINWEIS =
-	'Ein Kanal zeigt höchstens, was in der Grundauswahl gewählt ist. Was dort fehlt, erscheint in keinem Kanal.';
+test.beforeEach(async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+});
 
-test.describe('Issue #2438: Abwahl-Hinweis im Trip-Editor', () => {
-	test.beforeAll(async ({ request }) => {
-		await createTrip(request);
-	});
+test('AC-4: das SMS-Beispiel nennt die Zeichengrenze 160, nicht "—" und nicht "140"', async ({ page }) => {
+	const abo = await seedAbo(page.request, 'route');
+	abos.push(abo);
+	const karte = await oeffneKarte(page, 'route', abo.id);
+	expect((await tabelle(page.request, 'route', abo.id)).sms_example.max_length).toBe(160);
+	const zeichen = karte.getByTestId('was-steht-wo-sms-zeichen');
+	await expect(zeichen).toContainText('von 160 Zeichen');
+	await expect(zeichen).not.toContainText('140');
+	await expect(zeichen).not.toContainText('—');
+});
 
-	test.afterAll(async ({ request }) => {
-		await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
-	});
-
-	for (const kanal of ['email', 'telegram', 'sms']) {
-		test(`AC-1: Kanal-Reiter ${kanal} zeigt den Hinweis unter „Aus in diesem Kanal"`, async ({
-			page
-		}) => {
-			await page.setViewportSize({ width: 1440, height: 900 });
-			const tab = await openMetricsTab(page);
-			await tab.getByTestId(`channel-tab-${kanal}`).click();
-			const hinweis = tab
-				.getByTestId('weather-metrics-kanal-reihenfolge')
-				.getByTestId('wm2-aus-gruppe')
-				.getByTestId('wm2-aus-hinweis');
-			await expect(hinweis).toBeVisible();
-			await expect(hinweis).toHaveText(ABWAHL_HINWEIS);
-		});
-	}
-
-	for (const breite of [320, 375]) {
-		test(`AC-5: ${breite}px ohne Überlauf, Kontrast >= 4.5:1`, async ({ page }) => {
-			await page.setViewportSize({ width: breite, height: 800 });
-			const tab = await openMetricsTab(page);
-			await tab.getByTestId('channel-tab-sms').click();
-			const hinweis = tab
-				.getByTestId('weather-metrics-kanal-reihenfolge')
-				.getByTestId('wm2-aus-hinweis');
-			await expect(hinweis).toBeVisible();
-			const m = await hinweis.evaluate((el) => {
-				const lum = (c: string) => {
-					const [r, g, b] = (c.match(/[\d.]+/g) ?? ['0', '0', '0'])
-						.slice(0, 3)
-						.map(Number)
-						.map((v) => {
-							const s = v / 255;
-							return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-						});
-					return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-				};
-				let bg: Element | null = el;
-				let bgc = 'rgba(0, 0, 0, 0)';
-				while (bg && /rgba\(.*, 0\)|transparent/.test(bgc)) {
-					bgc = getComputedStyle(bg).backgroundColor;
-					bg = bg.parentElement;
-				}
-				const a = lum(getComputedStyle(el).color);
-				const b = lum(bgc);
-				return {
-					kontrast: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
-					ueberlauf: document.documentElement.scrollWidth - document.documentElement.clientWidth
-				};
-			});
-			expect(m.ueberlauf, 'horizontales Scrollen').toBeLessThanOrEqual(0);
-			expect(m.kontrast, 'Kontrast').toBeGreaterThanOrEqual(4.5);
-		});
-	}
+test('#2438 AC-1: der Kartentext erklaert, dass jede Spalte nur abwaehlt, was die Grundauswahl hat', async ({ page }) => {
+	const abo = await seedAbo(page.request, 'route');
+	abos.push(abo);
+	const karte = await oeffneKarte(page, 'route', abo.id);
+	await expect(karte).toContainText('Jede Zeile ist eine Metrik aus der Auswahl oben.');
+	await expect(karte).toContainText('Hier wählst du nur ab.');
 });

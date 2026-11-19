@@ -58,8 +58,10 @@ export function etagVersion(tripId: string): number {
 }
 
 /**
- * Einen ETag tragen laut Server-Vertrag genau drei Pfade: `/api/trips/{id}`,
- * `/api/trips/{id}/weather-config` (S2) und `/api/compare/presets/{id}` (S6).
+ * Einen ETag tragen laut Server-Vertrag genau vier Pfade: `/api/trips/{id}`,
+ * `/api/trips/{id}/weather-config` (S2), `/api/compare/presets/{id}` (S6) und
+ * `/api/briefings/{id}/placements` (#3122 B2, Tabelle „Was steht wo“: Stempel des Abos —
+ * derselbe wie beim Abo, deshalb dieselbe Warteschlange und dasselbe If-Match).
  * `/state`, `/waypoints/{wp}/confirm` und alle uebrigen Unterpfade matchen
  * bewusst NICHT — dort prueft der Server kein `If-Match` (S2 AC-15, S6 AC-15)
  * und liefert keinen Stempel.
@@ -84,7 +86,7 @@ export function etagVersion(tripId: string): number {
  * immer uebergeben (s. `refreshResourceEtag` in `api.ts`).
  */
 const RESOURCE_PATH_RE =
-	/^\/api\/(?:trips\/([^/?#]+)(?:\/weather-config)?|compare\/presets\/([^/?#]+))(?:[?#]|$)/;
+	/^\/api\/(?:trips\/([^/?#]+)(?:\/weather-config)?|compare\/presets\/([^/?#]+)|briefings\/([^/?#]+)\/placements)(?:[?#]|$)/;
 
 /**
  * Ressourcen-Kennung eines Pfades (Trip oder Ortsvergleich), oder `null` fuer
@@ -94,7 +96,7 @@ const RESOURCE_PATH_RE =
 export function extractTripId(path: string): string | null {
 	const match = RESOURCE_PATH_RE.exec(path);
 	if (!match) return null;
-	const id = match[1] ?? match[2];
+	const id = match[1] ?? match[2] ?? match[3];
 	try {
 		return decodeURIComponent(id);
 	} catch {

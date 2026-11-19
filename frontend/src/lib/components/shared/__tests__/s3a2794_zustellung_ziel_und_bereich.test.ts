@@ -114,31 +114,24 @@ describe('AC-6 (F007): Trip-Anlegen — „Zustellung einrichten →“ schaltet
 
 // ── F008: ZustellungTab gibt dem Panel bereich="zustellung" ──────────────────────────
 
-describe('AC-1/AC-7 (F008): ZustellungTab zeigt am Panel nur die Zustellungs-Abschnitte', () => {
-	test('s3a2794_f008_zustellungtab_uebergibt_bereich_zustellung_und_filter_wirkt', () => {
-		// #2795 S3b 1b: ZustellungTab -> UebergangBlock (genau einmal) -> Panel; gemessen am Panel-Mount.
+describe('AC-1/AC-7 (F008): Reiter Zustellung ohne Wetter-Abschnitte', () => {
+	// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): der Uebergangsblock traegt kein Panel
+	// mehr — im Reiter Zustellung steht damit gar keine Metrik-Oberflaeche (auch kein Wetter-Abschnitt). Der
+	// Abschnitts-Filter `bereich="zustellung"` gilt weiter fuer die Anlege-Seiten (Schritt Zustellung).
+	test('s3a2794_f008_zustellungtab_ohne_panel_und_filter_wirkt', () => {
 		const z = svelteAst(DATEI.zustellung);
-		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['WetterMetrikenVersandPanel']).length, 0, 'F008: ZustellungTab bettet das Panel zusaetzlich direkt ein');
+		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'F008: ZustellungTab bettet die Metrik-Oberflaeche direkt ein');
 		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['UebergangBlock']).length, 1, 'Messaufbau: ZustellungTab bettet den Uebergangsblock nicht genau einmal ein');
-		const { ast, quelle } = svelteAst(DATEI.uebergang);
-		const panel = einbettungenMitWeichen(ast, quelle, ['WetterMetrikenVersandPanel']);
-		assert.equal(panel.length, 1, `Messaufbau: der Uebergangsblock bettet das Panel ${panel.length}× ein (erwartet 1)`);
-		const attrs = panel[0].knoten.attributes as Knoten[];
-		const b = attribut(panel[0].knoten, quelle, 'bereich');
-		assert.ok(b, 'F008: ZustellungTab uebergibt dem Panel kein `bereich` — der Reiter zeigte alles (Wetter + Zustellung)');
-		assert.equal(b!.literal, 'zustellung', `F008: ZustellungTab uebergibt bereich=${JSON.stringify(b)} statt "zustellung"`);
-		// Reihenfolge: das feste `bereich` steht NACH der Streuung, sonst koennte die Streuung es ueberschreiben.
-		const iBereich = attrs.findIndex((a) => a.type === 'Attribute' && a.name === 'bereich');
-		const iSpread = attrs.findIndex((a) => a.type === 'SpreadAttribute');
-		assert.ok(iSpread === -1 || iBereich > iSpread, 'F008: `bereich` steht vor der Streuung und kann ueberschrieben werden');
+		const u = svelteAst(DATEI.uebergang);
+		assert.equal(einbettungenMitWeichen(u.ast, u.quelle, ['WetterMetrikenVersandPanel', 'WeatherMetricsTab']).length, 0, 'F008: der Uebergangsblock traegt noch die Metrik-Oberflaeche (#3154)');
 
-		// Wirkung des Werts im echten Abschnitts-Filter, beide Kontexte: keine Wetter-Abschnitte.
+		// Wirkung des Filters im echten Abschnitts-Filter (Anlege-Seiten), beide Kontexte: keine Wetter-Abschnitte.
 		for (const ctx of ['route', 'vergleich'] as const) {
-			const zu = weatherMetricsTabSections(ctx, b!.literal as 'zustellung');
+			const zu = weatherMetricsTabSections(ctx, 'zustellung');
 			const wetter = weatherMetricsTabSections(ctx, 'wetter');
 			assert.ok(zu.length > 0, `F008 (${ctx}): Zustellung ohne Abschnitte`);
 			for (const s of ['grundauswahl']) {
-				assert.ok(!zu.includes(s), `F008 (${ctx}): Reiter Zustellung zeigt den Wetter-Abschnitt '${s}' (${zu.join(', ')})`);
+				assert.ok(!zu.includes(s), `F008 (${ctx}): Schritt Zustellung zeigt den Wetter-Abschnitt '${s}' (${zu.join(', ')})`);
 			}
 			assert.deepEqual(zu.filter((s) => wetter.includes(s)), [], `F008 (${ctx}): Zustellung und Wetter ueberschneiden sich`);
 		}

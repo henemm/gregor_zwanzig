@@ -66,6 +66,6 @@
 	"zustellung.anpassen.cooldown": "Mindestabstand zwischen zwei Alarmen",
 	"zustellung.anpassen.cooldown_sub": "derselben Metrik",
 	"zustellung.anpassen.minuten": "Minuten",
-	"zustellung.uebergang.titel": "Vorübergehend hier: Inhalt je Kanal und Beispiel-Alarm",
-	"zustellung.uebergang.hinweis": "Diese Einstellungen ziehen in einem späteren Schritt um und wirken bis dahin wie bisher."
+	"zustellung.uebergang.titel": "Vorübergehend hier: Beispiel-Alarm",
+	"zustellung.uebergang.hinweis": "Inhalt und Darstellung je Kanal stellst du im Reiter Wetter unter „Was steht wo“ ein. Was hier steht, zieht in einem späteren Schritt um und wirkt bis dahin wie bisher."
 }

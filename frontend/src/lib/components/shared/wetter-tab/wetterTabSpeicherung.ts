@@ -48,7 +48,16 @@ export type SpeicherOptionen = {
 	aggregationFuer?: (id: string) => string;
 	/** Vergleich: Altformat-Schluessel von `active_metrics` -> Groesse (Fix-Loop 3, C2). */
 	altSchluessel?: AltSchluessel;
+	/** #3122 B3b (Spec Nr. 13, AC-32): vollstaendiger Stand der Tabelle „Was steht wo“, wenn „−“/„+“ ihn
+	 *  im selben Speichervorgang mitschreiben muss; `undefined` = nichts mitsenden (keine gespeicherte Tabelle). */
+	placements?: () => unknown;
 };
+
+/** `placements` nur, wenn die Karte einen Stand zum Mitspeichern liefert (sonst bleibt der Schluessel weg). */
+function mitPlacements(o: SpeicherOptionen): { placements?: unknown } {
+	const p = o.placements?.();
+	return p === undefined ? {} : { placements: p };
+}
 
 export type Speicherer = { melden(): void };
 
@@ -57,7 +66,7 @@ export function tripNutzlast(o: SpeicherOptionen) {
 	const s = o.stand();
 	const abo = o.abo();
 	const v = o.vorlagen();
-	return tripSpeicherPayload({
+	const teile = tripSpeicherPayload({
 		vorlage: v[s.vorlageId],
 		aufgeloest: s.ampel,
 		auswahl: s.auswahl,
@@ -67,6 +76,7 @@ export function tripNutzlast(o: SpeicherOptionen) {
 		warnungenAn: s.warnungenAn,
 		tagesfenster: s.tagesfenster
 	});
+	return { ...teile, weatherConfig: { ...teile.weatherConfig, ...mitPlacements(o) } };
 }
 
 /** Vergleichs-Nutzlast: nur Eigenfelder, display_config nur `ampel` + `active_metrics`. */
@@ -87,7 +97,7 @@ export function vergleichNutzlast(o: SpeicherOptionen) {
 	});
 	const { ampel, active_metrics } = voll.display_config as { ampel: unknown; active_metrics?: unknown };
 	// #3047 E1: ungesetzte Grundauswahl bleibt ungesetzt (kein Schluessel in der Nutzlast).
-	return { ...voll, display_config: { ampel, ...(active_metrics === undefined ? {} : { active_metrics }) } };
+	return { ...voll, display_config: { ampel, ...(active_metrics === undefined ? {} : { active_metrics }), ...mitPlacements(o) } };
 }
 
 function tripSpeicherer(o: SpeicherOptionen): Speicherer {

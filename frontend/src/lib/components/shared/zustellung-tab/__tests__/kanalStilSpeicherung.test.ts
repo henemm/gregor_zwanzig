@@ -11,6 +11,12 @@
 // (saveStatusStore.schedule: gleicher Owner ersetzt, fremder Owner wird vorher gesendet) — der Nutzer
 // verloere still seine Uhrzeit. Gemessen am ECHTEN SaveStatus mit beiden echten Speicherern.
 //
+// Issue #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): der Kurzstil-Schalter des
+// Uebergangsblocks (eigener Speicherer, Owner 'kanal-stil') ist entfernt; den Kurzstil schaltet allein die
+// Karte „Was steht wo“ ueber `erstelleFelderSpeicherung` (Owner 'was-steht-wo-schalter'), die ihre Nutzlast
+// mit `kanalStilNutzlast` formt. F004 (Orte, Go-Merge) und F001 (kein Verdraengen der wartenden
+// Zustellungs-Aenderung im geteilten Hub-Controller) gelten unveraendert und laufen jetzt gegen diesen Speicherer.
+//
 //   cd frontend && npm test -- src/lib/components/shared/zustellung-tab/__tests__/kanalStilSpeicherung.test.ts
 
 import { test, describe, beforeEach, afterEach } from 'node:test';
@@ -21,7 +27,8 @@ import { clearEtagRegistry } from '../../../../etagRegistry.ts';
 import { createGoMergeServer, vollerVergleich, type GoMergeServer } from '../../__tests__/goMergeServerPruefstand.ts';
 import { createController } from '../../wetter-tab/__tests__/wertebereicheVergleichPruefstand.ts';
 import { ladeReportZustand } from '../../versand-tab/reportConfigPayload.ts';
-import { erstelleKanalStilSpeicherung, kanalStilNutzlast, kanalStilStart } from '../kanalStilSpeicherung.ts';
+import { kanalStilNutzlast, kanalStilStart } from '../kanalStilSpeicherung.ts';
+import { erstelleFelderSpeicherung, felderAusAntwort, type Felder } from '../../wetter-tab/wasStehtWoSpeicherung.ts';
 import { erstelleZustellungSpeicherung } from '../zustellungSpeicherung.ts';
 import { standAusTrip } from '../zustellungModell.ts';
 import { hhmm, presetVoll, tripVoll, type Json } from './zustellungTabDaten.ts';
@@ -90,8 +97,9 @@ describe('F004 (vergleich): Read-Modify-Write gegen den Go-Merge-Pruefstand', ()
 	test('f004_orte_kurzstil_aendert_nur_telegram_style', async () => {
 		const ctl = createController(PRESET_ID);
 		const davor = server.stand(PRESET_ID);
-		const sp = erstelleKanalStilSpeicherung({ context: 'vergleich', id: PRESET_ID, client: api, saveController: ctl });
-		sp.aenderungMelden({ stil: 'kurzform', trendMorgen: false, trendAbend: false });
+		const start = felderAusAntwort({ blocks: {} });
+		const sp = erstelleFelderSpeicherung({ kind: 'vergleich', id: PRESET_ID, client: api, saveController: ctl, start });
+		sp.melden({ ...start, telegram_style: 'kurzform' });
 		await ctl.flush();
 		const ruempfe = server.putRuempfe();
 		assert.equal(ruempfe.length, 1);
@@ -118,9 +126,10 @@ describe('F001: Kurzstil-Aenderung verdraengt keine wartende Zeit-/Kanal-Aenderu
 			const ctl = createController('trip-2795');
 			const vorher = standAusTrip(tripVoll());
 			const reiter = erstelleZustellungSpeicherung({ context: 'route', id: 'trip-2795', client, saveController: ctl, basis: vorher });
-			const stil = erstelleKanalStilSpeicherung({ context: 'route', id: 'trip-2795', client, saveController: ctl });
+			const start: Felder = felderAusAntwort({ blocks: {} });
+			const stil = erstelleFelderSpeicherung({ kind: 'route', id: 'trip-2795', client, saveController: ctl, start });
 			const zeit = () => reiter.aenderungMelden({ ...kopie(vorher), morgenZeit: '06:45' });
-			const kurz = () => stil.aenderungMelden({ stil: 'kurzform', trendMorgen: false, trendAbend: true });
+			const kurz = () => stil.melden({ ...start, telegram_style: 'kurzform' });
 			if (reihenfolge === 'zeit_dann_stil') {
 				zeit();
 				kurz();

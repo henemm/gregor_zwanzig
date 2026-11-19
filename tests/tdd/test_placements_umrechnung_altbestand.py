@@ -153,7 +153,8 @@ def test_format_orte_ohne_angabe_ausdruecklich_roh():
 
 @pytest.mark.parametrize("report_config,erwartet,stabilitaet_aus", [
     ({"show_outlook": False}, [], True),
-    ({"show_outlook": False, "email_format": "compact"}, [], False),
+    # #3154 F003: Kompakt wertet show_outlook nicht aus (Ausblick wie gesendet).
+    ({"show_outlook": False, "email_format": "compact"}, ["evening"], False),
     ({"multi_day_trend_reports": ["morning", "evening"]}, ["morning", "evening"], False),
     ({"multi_day_trend_reports": ["morning"]}, ["morning"], False),
     ({}, ["evening"], False),

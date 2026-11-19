@@ -81,9 +81,9 @@ const HUB_MODELL = join(here, '..', '..', 'shared', 'hub-uebersicht', 'hubUebers
 const NEW_EDITOR = join(here, '..', '..', 'compare-new', 'CompareNewEditor.svelte');
 const METRICS_TAB = join(here, '..', '..', 'shared', 'WeatherMetricsTab.svelte');
 
-const PANEL = join(here, '..', '..', 'shared', 'WetterMetrikenVersandPanel.svelte');
 const ZUSTELLUNG_TAB = join(here, '..', '..', 'shared', 'zustellung-tab', 'ZustellungTab.svelte');
 const UEBERGANG_BLOCK = join(here, '..', '..', 'organisms', 'zustellung-tab', 'UebergangBlock.svelte');
+const WETTER_TAB_INHALT = join(here, '..', '..', 'organisms', 'wetter-tab', 'WetterTabInhalt.svelte');
 function ast(file: string): unknown {
 	return parse(readFileSync(file, 'utf-8'), { modern: true });
 }
@@ -272,52 +272,28 @@ describe('Stundenverlauf-Steuerung: neue Heimat + Speicherweg', () => {
 		);
 	});
 
-	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md §3): der Stundenverlauf ist ein Zustellungs-Block —
-	// im Hub liegt die Steuerung im Panel `zustellung`, das den geteilten ZustellungTab mountet; dieser
-	// mountet genau einen WetterMetrikenVersandPanel (bereich="zustellung").
-	test('im Hub liegt die Steuerung im Zustellungs-Panel — WeatherMetricsTab speichert seit #2276 S4 selbst', () => {
-		// Issue #2276 S4: der Bubble-Wrapper `.hub-layout-hourly-wrap` ist
-		// entfallen — WeatherMetricsTab erzeugt seine kombinierte Wetter-
-		// Metriken/Layout-Speicherung selbst (analog AlarmeTab/CorridorEditor,
-		// reaktiver $effect statt Wrapper-Bubble). Der Speicherweg (jetzt
-		// `erstelleWetterMetrikenVergleichSpeicherung` → `baueWetterMetrikenNutzlast`
-		// → `buildComparePresetSavePayload`, Round-Trip-Spread) haengt nicht
-		// mehr an diesem Markup-Wrapper, sondern ist Kern-getestet in
-		// wetter_metriken_*.test.ts.
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md §3): der Stundenverlauf war ein Zustellungs-Block.
+	// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): im Hub bedient ihn allein die Karte
+	// „Was steht wo“ im Reiter Wetter (Spalte und Schalter „Stundenverlauf“); der Uebergangsblock des Reiters
+	// Zustellung traegt keine Metrik-Oberflaeche mehr. Die geteilte Steuerung oben bleibt fuer das Anlegen.
+	test('im Hub liegt die Steuerung in der Karte „Was steht wo“ im Reiter Wetter, nicht mehr im Zustellungs-Panel', () => {
 		const panel = findTabPanelFragment(ast(HUB), 'zustellung');
 		assert.notEqual(panel, null, "Panel `activeTab === 'zustellung'` nicht gefunden");
-
-		assert.equal(
-			findElementsWithClass(panel, 'hub-layout-hourly-wrap').length,
-			0,
-			'Der alte Bubble-Wrapper `.hub-layout-hourly-wrap` haette mit S4 verschwinden muessen'
-		);
-		assert.equal(
-			findElementsWithClass(panel, 'hub-wetter-metriken-wrap').length,
-			0,
-			'Der alte Bubble-Wrapper `.hub-wetter-metriken-wrap` haette mit S4 verschwinden muessen'
-		);
-
-		// Und die Steuerung muss innerhalb dieses Panels tatsächlich gemountet
-		// werden — #1743: über den geteilten Baustein WetterMetrikenVersandPanel, der
-		// genau einen WeatherMetricsTab mountet.
-		assert.equal(
-			findComponents(panel, 'ZustellungTab').length,
-			1,
-			'Das Panel mountet den geteilten Baustein ZustellungTab (context="vergleich")'
-		);
-		// #2795 S3b Teilschritt 1b: der Baustein steht im Uebergangsblock des neuen Reiters.
+		assert.equal(findElementsWithClass(panel, 'hub-layout-hourly-wrap').length, 0, 'Der alte Bubble-Wrapper `.hub-layout-hourly-wrap` haette mit S4 verschwinden muessen');
+		assert.equal(findElementsWithClass(panel, 'hub-wetter-metriken-wrap').length, 0, 'Der alte Bubble-Wrapper `.hub-wetter-metriken-wrap` haette mit S4 verschwinden muessen');
+		assert.equal(findComponents(panel, 'ZustellungTab').length, 1, 'Das Panel mountet den geteilten Baustein ZustellungTab (context="vergleich")');
 		assert.equal(findComponents(ast(ZUSTELLUNG_TAB), 'UebergangBlock').length, 1, 'ZustellungTab mountet genau einen Uebergangsblock');
-		assert.equal(
-			findComponents(ast(UEBERGANG_BLOCK), 'WetterMetrikenVersandPanel').length,
-			1,
-			'der Uebergangsblock mountet genau einen geteilten WetterMetrikenVersandPanel'
-		);
-		assert.equal(
-			findComponents(ast(PANEL), 'WeatherMetricsTab').length,
-			1,
-			'Der Baustein mountet genau einen geteilten WeatherMetricsTab'
-		);
+		for (const [datei, name] of [
+			[ZUSTELLUNG_TAB, 'ZustellungTab'],
+			[UEBERGANG_BLOCK, 'UebergangBlock']
+		] as const) {
+			assert.equal(findComponents(ast(datei), 'WetterMetrikenVersandPanel').length, 0, `${name} mountet noch die Metrik-Oberflaeche (#3154)`);
+			assert.equal(findComponents(ast(datei), 'WeatherMetricsTab').length, 0, `${name} mountet noch WeatherMetricsTab (#3154)`);
+		}
+		const wetter = findTabPanelFragment(ast(HUB), 'wetter');
+		assert.notEqual(wetter, null, "Panel `activeTab === 'wetter'` nicht gefunden");
+		assert.equal(findComponents(wetter, 'WetterTab').length, 1, 'Das Panel Wetter mountet den geteilten WetterTab');
+		assert.equal(findComponents(ast(WETTER_TAB_INHALT), 'WasStehtWoKarte').length, 1, 'Der Reiter Wetter mountet genau eine Karte „Was steht wo“');
 	});
 });
 

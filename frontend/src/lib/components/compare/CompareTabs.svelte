@@ -41,8 +41,6 @@
 	import { vergleichAlarmRegeln } from '$lib/components/alerts-tab/alertPreviewHelpers';
 	import { deriveActiveAlertMetricsFromCatalog } from '../shared/alarme-tab/activeAlertMetricsFromCatalog.ts';
 	import { materializeActiveMetricKeys } from '../shared/weather-metrics-tab/compareMetricOrder.ts';
-	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle Vergleichs-Mounts.
-	import { wetterMetrikenPropsAus } from './wetterMetrikenPropsAus.ts';
 	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
 	// vergleich-Kontext) — seit #1743 ueber WetterMetrikenVersandPanel eingebettet.
 	import {
@@ -841,10 +839,11 @@
 				     Alarm-Hydration (alarmeHydrated, wie bisher der Alarme-Reiter). -->
 				<!-- Issue #2795 S3b Teilschritt 1b: der neue Reiter speichert Briefing und Alarme ueber
 				     EINEN Speicherer; die Aktivierungs-Karte und der Beispiel-Alarm stehen bis auf
-				     Weiteres in seinem Uebergangsblock (kein AlarmeTab/VersandTab mehr im Reiter). -->
+				     Weiteres in seinem Uebergangsblock (kein AlarmeTab/VersandTab mehr im Reiter).
+				     Issue #3154: ohne Metrik-Oberflaeche — Listen, Stundenverlauf und Ausblick bedient die
+				     Karte „Was steht wo“ im Reiter Wetter (kein Wizard-Buendel mehr hier). -->
 				<ZustellungTab
 					context="vergleich"
-					{...wetterMetrikenPropsAus(wizardState)}
 					activation={hubActivationCard}
 					beispielAlarmRegeln={beispielAlarmRegeln}
 					preset={currentPreset}

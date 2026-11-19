@@ -1,309 +1,80 @@
-// E2E (Staging) — Issue #1848 Scheibe A3: der 3-Tages-Ausblick verhaelt sich
-// wie ein Kanal (Grundauswahl als Ausgangsmenge, "Aus"-Knopf/"Aus"-Gruppe
-// statt einer zweiten Kaestchenliste).
+// E2E (Staging) — Issue #1848 Scheibe A3: der 3-Tages-Ausblick erbt die Grundauswahl.
 //
-// Spec: docs/specs/modules/feat_1848_a3_ausblick_erbt_grundauswahl.md
-//   AC-5, AC-7, AC-8, AC-9
-// Kontext: docs/context/feat-1848-a3-outlook-kanal-modul.md
-//   Mutations-Gegenproben M-2 (offColumns fehlt), M-3 (onRestore schreibt in
-//   die Grundauswahl), M-6 (Grundauswahl-Prop nur an einem Mountpunkt).
+// Spec: docs/specs/modules/feat_1848_a3_ausblick_erbt_grundauswahl.md (AC-5, AC-7, AC-8, AC-9)
 //
-// Vorbild (WOERTLICH uebertragen): kanal-abwahl-bleibt-reversibel.staging.spec.ts
-// (AC-7/AC-9/AC-11 desselben Reihenfolge-Bausteins, nur im Trip-Kanal-Reiter
-// statt im Ausblick) und trip-outlook-metric-selection.staging.spec.ts /
-// compare-outlook-metric-selection.staging.spec.ts (Ausblick-spezifische
-// Navigation).
+// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 13/14): die Ausblick-Liste mit „Aus“-Gruppe ist aus
+// dem Reiter Zustellung entfernt. Im Hub ist der Ausblick die Spalte „3-Tages-Ausblick“ der Karte „Was steht wo“
+// im Reiter Wetter; ihre Zeilen SIND die Grundauswahl (eine Zeile je Metrik, ein Haken je Stelle). Trip und Orte
+// laufen weiter als getrennte Faelle (ein einseitig verdrahteter Kontext faende sich sonst nicht).
+//   AC-7: Haken im Ausblick abwaehlen → Neuladen → bleibt ab → wieder an (statt „Aus“-Gruppe: die Zeile bleibt).
+//   AC-5: eine Groesse ausserhalb der Grundauswahl hat keine Zeile (also auch keine Ausblick-Zelle).
+//   AC-9: der Ausblick-Haken schreibt nur die Tabelle, nie die Grundauswahl.
+//   AC-8 (Abwahl im Ausblick bleibt nach „−“/„+“ der Grundauswahl erhalten): gestrichen — die freigegebene Spec legt
+//     das Gegenteil fest (AC-32: „+“ haengt die Zeile hinten an, ueberall angehakt); Ersatz was-steht-wo-karte.spec.ts
+//     WS-6 und WS-11.
 //
-// 🔴 AC-7 UND diese Datei insgesamt trennen Trip und Ortsvergleich in ZWEI
-// eigene Test-Faelle (nicht summarisch) -- ein einseitig verdrahteter
-// Mountpunkt (M-6: `grundauswahl`-Prop nur am Trip-Mount) faende sich sonst
-// nicht.
-//
-// SCHREIBT NUR — wird in der RED-Phase NICHT ausgefuehrt (Testauflage,
-// Marker `staging`). Ausfuehren erst NACH GREEN, gegen Staging, aus frontend/.
+// Ausfuehren (lokal gegen ci-stack.sh mit der Haupt-Config, oder gegen Staging, aus frontend/):
+//   npx playwright test --project=tests e2e/ausblick-erbt-grundauswahl.staging.spec.ts
 
-import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
-import { createTestLocation, createTestTrip } from './helpers';
+import { test, expect } from '@playwright/test';
+import { ersteAngehakte, gespeichertAn, haken, oeffneKarte, seedAbo, stand, tabelle, tabelleGespeichert, zeile, type Abo, type HubKind } from './was-steht-wo.helpers';
 
-// ─── Trip ────────────────────────────────────────────────────────────────
-
-// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): der 3-Tages-Ausblick steht im Reiter
-// Zustellung, die Grundauswahl im Reiter Wetter. Die Faelle wechseln per echtem Klick
-// zwischen beiden Reitern (kein Reload); jede Geste wird wie bisher an IHREM PUT
-// abgewartet, bevor der Reiter wechselt — der Reiterwechsel erzeugt daher keinen
-// zusaetzlichen PUT. Die Locatoren sind seitenweit und loesen nach jedem Wechsel neu auf.
-async function zuTripReiter(page: Page, ziel: 'wetter' | 'zustellung'): Promise<void> {
-	await page.getByTestId(`trip-detail-tab-${ziel}`).click();
-	await expect(page.getByTestId(`trip-detail-panel-${ziel}`)).toBeVisible({ timeout: 15000 });
-	const tab = page.getByTestId('weather-metrics-tab');
-	if (ziel === 'wetter') {
-		await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({ timeout: 10000 });
-	} else {
-		await expect(tab.getByTestId('weather-metrics-ausblick')).toBeVisible({ timeout: 10000 });
-	}
-}
-
-async function oeffneTripAusblick(page: Page, tripId: string): Promise<Locator> {
-	await page.goto(`/trips/${tripId}?tab=zustellung`);
-	const tabBtn = page.getByTestId('trip-detail-tab-zustellung');
-	await expect(tabBtn).toBeVisible({ timeout: 15000 });
-	await tabBtn.click();
-	const tab = page.getByTestId('weather-metrics-tab');
-	await expect(tab).toBeVisible({ timeout: 15000 });
-	const ausblick = tab.getByTestId('weather-metrics-ausblick');
-	await expect(
-		ausblick,
-		'AC-1: der Abschnitt "3-Tages-Vorschau" fehlt im Trip-Reiter'
-	).toBeVisible({ timeout: 10000 });
-	return ausblick;
-}
-
-function wartetAufTripAutosave(page: Page, tripId: string) {
-	return page.waitForResponse(
-		(r) => r.url().includes(`/api/trips/${tripId}/weather-config`) && r.request().method() === 'PUT',
-		{ timeout: 15000 }
-	);
-}
-
-test.describe('Trip: 3-Tages-Vorschau erbt die Grundauswahl (#1848 A3, Staging)', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 1400, height: 950 });
-	});
-
-	test('AC-7: eine im Ausblick abgewaehlte Groesse landet in der Aus-Gruppe, uebersteht einen Reload und ist von dort zurueckholbar', async ({
-		page,
-		request
-	}) => {
-		const trip = await createTestTrip(request, { name: '1848-A3-trip-ac7' });
-		const ausblick = await oeffneTripAusblick(page, trip.id);
-
-		const windRow = ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]');
-		await expect(windRow, 'Vorbedingung: "Wind" ist aktiv im Ausblick').toBeVisible();
-		const gespeichertePut = wartetAufTripAutosave(page, trip.id);
-		await windRow.getByRole('button', { name: 'Aus' }).click();
-		await gespeichertePut;
-
-		await expect(
-			ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]'),
-			'AC-7 FAIL: "Wind" bleibt in der aktiven Ausblick-Liste'
-		).toHaveCount(0);
-		const ausGruppe = ausblick.getByTestId('wm2-aus-gruppe');
-		await expect(ausGruppe, 'AC-7 FAIL: keine "Aus"-Gruppe im Ausblick').toBeVisible();
-		const windAusRow = ausGruppe.locator('[data-testid="wm2-aus-row"][data-metric-id="wind"]');
-		await expect(windAusRow, 'AC-7 FAIL: "Wind" landet nicht in der Aus-Gruppe').toBeVisible();
-
-		await page.reload();
-		const ausblickNachReload = await oeffneTripAusblick(page, trip.id);
-		await expect(
-			ausblickNachReload
-				.getByTestId('wm2-aus-gruppe')
-				.locator('[data-testid="wm2-aus-row"][data-metric-id="wind"]'),
-			'AC-7 FAIL: "Wind" steht nach dem Reload nicht mehr in der Aus-Gruppe'
-		).toBeVisible();
-
-		await ausblickNachReload
-			.getByTestId('wm2-aus-gruppe')
-			.locator('[data-testid="wm2-aus-row"][data-metric-id="wind"]')
-			.getByRole('button', { name: 'Ein' })
-			.click();
-		await expect(
-			ausblickNachReload.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]'),
-			'AC-7 FAIL: "Wind" steht nach "Ein" nicht wieder in der aktiven Liste'
-		).toBeVisible();
-	});
-
-	test('AC-5: eine Groesse ausserhalb der Grundauswahl erscheint weder in der aktiven Ausblick-Liste noch in dessen Aus-Gruppe', async ({
-		page,
-		request
-	}) => {
-		const trip = await createTestTrip(request, { name: '1848-A3-trip-ac5' });
-		const tab = page.getByTestId('weather-metrics-tab');
-		const ausblick = await oeffneTripAusblick(page, trip.id);
-
-		await expect(
-			ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="precipitation"]'),
-			'Vorbedingung: "Niederschlag" ist zunaechst aktiv im Ausblick'
-		).toBeVisible();
-
-		await zuTripReiter(page, 'wetter');
-		const precipToggle = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Niederschlag"]');
-		await expect(precipToggle).toHaveClass(/\bon\b/);
-		const gespeichertePut = wartetAufTripAutosave(page, trip.id);
-		await precipToggle.click();
-		await gespeichertePut;
-		await zuTripReiter(page, 'zustellung');
-
-		await expect(
-			ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="precipitation"]'),
-			'AC-5 FAIL: eine global abgewaehlte Groesse bleibt in der aktiven Ausblick-Liste'
-		).toHaveCount(0);
-		await expect(
-			ausblick.getByTestId('wm2-aus-gruppe').locator('[data-testid="wm2-aus-row"][data-metric-id="precipitation"]'),
-			'AC-5 FAIL: eine global abgewaehlte Groesse taucht in der Ausblick-Aus-Gruppe auf — dort steht nur, was abwaehlbar WAERE'
-		).toHaveCount(0);
-	});
-
-	test('AC-8: eine im Ausblick abgewaehlte Groesse bleibt abgewaehlt, wenn die Grundauswahl aus- und wieder eingeschaltet wird', async ({
-		page,
-		request
-	}) => {
-		const trip = await createTestTrip(request, { name: '1848-A3-trip-ac8' });
-		const tab = page.getByTestId('weather-metrics-tab');
-		const ausblick = await oeffneTripAusblick(page, trip.id);
-
-		const tempRow = ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temperature"]');
-		await expect(tempRow).toBeVisible();
-		const putAbwahl = wartetAufTripAutosave(page, trip.id);
-		await tempRow.getByRole('button', { name: 'Aus' }).click();
-		await putAbwahl;
-		await expect(
-			ausblick.getByTestId('wm2-aus-gruppe').locator('[data-testid="wm2-aus-row"][data-metric-id="temperature"]')
-		).toBeVisible();
-
-		await zuTripReiter(page, 'wetter');
-		const tempToggle = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Temperatur"]');
-		await expect(tempToggle).toHaveClass(/\bon\b/);
-		const putAus = wartetAufTripAutosave(page, trip.id);
-		await tempToggle.click();
-		await putAus;
-		const putEin = wartetAufTripAutosave(page, trip.id);
-		await tempToggle.click();
-		await putEin;
-		await zuTripReiter(page, 'zustellung');
-
-		await expect(
-			ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temperature"]'),
-			'AC-8 FAIL: die Anwahl in der Grundauswahl schreibt in die Ausblick-Abwahl durch'
-		).toHaveCount(0);
-		await expect(
-			ausblick.getByTestId('wm2-aus-gruppe').locator('[data-testid="wm2-aus-row"][data-metric-id="temperature"]'),
-			'AC-8 FAIL: "Temperatur" muss weiterhin in der Ausblick-Aus-Gruppe stehen'
-		).toBeVisible();
-	});
-
-	test('AC-9: das Zurueckholen einer abgewaehlten Groesse im Ausblick schreibt ausschliesslich in outlook_metrics, nie in die Grundauswahl', async ({
-		page,
-		request
-	}) => {
-		const trip = await createTestTrip(request, { name: '1848-A3-trip-ac9' });
-		const tab = page.getByTestId('weather-metrics-tab');
-		const ausblick = await oeffneTripAusblick(page, trip.id);
-
-		const gustRow = ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="gust"]');
-		await expect(gustRow).toBeVisible();
-		const putAbwahl = wartetAufTripAutosave(page, trip.id);
-		await gustRow.getByRole('button', { name: 'Aus' }).click();
-		await putAbwahl;
-
-		await zuTripReiter(page, 'wetter');
-		const gustToggleVorher = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Böen"]');
-		await expect(gustToggleVorher, 'Vorbedingung: Grundauswahl "Böen" bleibt aktiv').toHaveClass(/\bon\b/);
-		await zuTripReiter(page, 'zustellung');
-
-		const ausGruppe = ausblick.getByTestId('wm2-aus-gruppe');
-		const putZurueckholen = wartetAufTripAutosave(page, trip.id);
-		await ausGruppe.locator('[data-testid="wm2-aus-row"][data-metric-id="gust"]').getByRole('button', { name: 'Ein' }).click();
-		await putZurueckholen;
-
-		await zuTripReiter(page, 'wetter');
-		await expect(
-			tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Böen"]'),
-			'AC-9 FAIL: das Zurueckholen im Ausblick hat die Grundauswahl veraendert'
-		).toHaveClass(/\bon\b/);
-
-		const gespeichert = await page.request.get(`/api/trips/${trip.id}`);
-		const body = await gespeichert.json();
-		const gustGrundauswahl = (body.display_config?.metrics ?? []).find(
-			(m: { metric_id: string }) => m.metric_id === 'gust'
-		);
-		expect(
-			gustGrundauswahl?.enabled,
-			'AC-9 FAIL: display_config.metrics (Grundauswahl) wurde durch das Zurueckholen im Ausblick veraendert'
-		).toBe(true);
-	});
+let abos: Abo[] = [];
+test.afterEach(async () => {
+	for (const a of abos) await a.aufraeumen().catch(() => {});
+	abos = [];
 });
 
-// ─── Ortsvergleich ───────────────────────────────────────────────────────
+test.beforeEach(async ({ page }) => {
+	await page.setViewportSize({ width: 1400, height: 950 });
+});
 
-async function createComparePreset(request: APIRequestContext, locationId: string): Promise<string> {
-	const res = await request.post('/api/compare/presets', {
-		data: {
-			name: 'E2E #1848 A3 Ausblick',
-			location_ids: [locationId],
-			schedule: 'manual',
-			profil: 'wandern',
-			hour_from: 7,
-			hour_to: 18,
-			empfaenger: ['urlauber@example.com'],
-			display_config: {}
-		}
-	});
-	expect(res.ok(), `Preset-Anlage fehlgeschlagen: ${res.status()}`).toBeTruthy();
-	const body = await res.json();
-	return body.id as string;
-}
-
-async function oeffneCompareAusblick(page: Page, presetId: string): Promise<Locator> {
-	await page.goto(`/compare/${presetId}`);
-	await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 15000 });
-	await page.getByTestId('compare-detail-tab-zustellung').click(); // #2794 S3a: Ausblick im Reiter Zustellung
-	const panel = page.getByTestId('compare-detail-panel-zustellung');
-	await expect(panel).toBeVisible({ timeout: 10000 });
-	const ausblick = panel.getByTestId('weather-metrics-ausblick');
-	await expect(
-		ausblick,
-		'AC-2: der Abschnitt "3-Tages-Ausblick" fehlt im Ortsvergleich-Reiter'
-	).toBeVisible({ timeout: 10000 });
-	return ausblick;
-}
-
-test.describe('Ortsvergleich: 3-Tages-Ausblick erbt die Grundauswahl (#1848 A3, Staging)', () => {
-	test.beforeEach(async ({ page }) => {
-		await page.setViewportSize({ width: 1400, height: 950 });
-	});
-
-	test('AC-7 (eigener Lauf im Ortsvergleich, s. M-6): eine abgewaehlte Groesse landet in der Aus-Gruppe, uebersteht einen Reload und ist zurueckholbar', async ({
-		page,
-		request
-	}) => {
-		const loc = await createTestLocation(request, { name: '1848-A3-compare-loc' });
-		const presetId = await createComparePreset(request, loc.id);
-		const ausblick = await oeffneCompareAusblick(page, presetId);
-
-		const windRow = ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]');
-		await expect(windRow, 'Vorbedingung: "Wind" ist aktiv im Ortsvergleich-Ausblick').toBeVisible();
-		await windRow.getByRole('button', { name: 'Aus' }).click();
-
-		await expect(
-			ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]'),
-			'AC-7 FAIL (Ortsvergleich): "Wind" bleibt in der aktiven Liste'
-		).toHaveCount(0);
-		const ausGruppe = ausblick.getByTestId('wm2-aus-gruppe');
-		await expect(ausGruppe, 'AC-7 FAIL (Ortsvergleich): keine "Aus"-Gruppe im Ausblick').toBeVisible();
-		await expect(
-			ausGruppe.locator('[data-testid="wm2-aus-row"][data-metric-id="wind"]'),
-			'AC-7 FAIL (Ortsvergleich): "Wind" landet nicht in der Aus-Gruppe'
-		).toBeVisible();
+for (const kind of ['route', 'vergleich'] as HubKind[]) {
+	test(`AC-7 (${kind === 'route' ? 'Trip' : 'Ortsvergleich'}): im Ausblick abgewaehlt uebersteht einen Reload und ist zurueckholbar`, async ({ page }) => {
+		const abo = await seedAbo(page.request, kind);
+		abos.push(abo);
+		let karte = await oeffneKarte(page, kind, abo.id);
+		const m = await ersteAngehakte(karte, 'outlook');
+		let gespeichert = tabelleGespeichert(page, abo.id);
+		await haken(karte, m, 'outlook').click();
+		await gespeichert;
 
 		await page.reload();
-		const panelNachReload = page.getByTestId('compare-detail-panel-zustellung');
-		await expect(panelNachReload).toBeVisible({ timeout: 15000 });
-		const ausblickNachReload = panelNachReload.getByTestId('weather-metrics-ausblick');
-		const ausRowNachReload = ausblickNachReload
-			.getByTestId('wm2-aus-gruppe')
-			.locator('[data-testid="wm2-aus-row"][data-metric-id="wind"]');
-		await expect(
-			ausRowNachReload,
-			'AC-7 FAIL (Ortsvergleich): "Wind" steht nach dem Reload nicht mehr in der Aus-Gruppe'
-		).toBeVisible();
-
-		await ausRowNachReload.getByRole('button', { name: 'Ein' }).click();
-		await expect(
-			ausblickNachReload.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind"]'),
-			'AC-7 FAIL (Ortsvergleich): "Wind" steht nach "Ein" nicht wieder in der aktiven Liste'
-		).toBeVisible();
-
-		await request.delete(`/api/compare/presets/${presetId}`).catch(() => {});
-		await request.delete(`/api/locations/${loc.id}`).catch(() => {});
+		karte = await oeffneKarte(page, kind, abo.id);
+		await expect(zeile(karte, m), 'AC-7 FAIL: die Zeile verschwindet').toHaveCount(1);
+		await expect(haken(karte, m, 'outlook'), 'AC-7 FAIL: nach dem Reload wieder angehakt').not.toBeChecked();
+		gespeichert = tabelleGespeichert(page, abo.id);
+		await haken(karte, m, 'outlook').click();
+		await gespeichert;
+		await expect(haken(karte, m, 'outlook')).toBeChecked();
+		expect(gespeichertAn((await tabelle(page.request, kind, abo.id)).placements, m, 'outlook'), 'AC-7 FAIL: Zurueckholen nicht gespeichert').toBe(true);
 	});
+}
+
+test('AC-5 (Trip): eine Groesse ausserhalb der Grundauswahl hat keine Zeile und damit keine Ausblick-Zelle', async ({ page }) => {
+	const abo = await seedAbo(page.request, 'route');
+	abos.push(abo);
+	let karte = await oeffneKarte(page, 'route', abo.id);
+	await expect(haken(karte, 'precipitation', 'outlook'), 'Vorbedingung: Niederschlag im Ausblick').toHaveCount(1);
+	const put = page.waitForResponse((r) => r.request().method() === 'PUT' && r.url().includes(`/api/trips/${abo.id}`), { timeout: 20_000 });
+	await page.locator('[data-testid="wetter-zeile-entfernen-precipitation"]:visible').first().click();
+	expect((await put).ok()).toBeTruthy();
+	await page.reload();
+	karte = await oeffneKarte(page, 'route', abo.id);
+	await expect(zeile(karte, 'precipitation'), 'AC-5 FAIL: eine global abgewaehlte Groesse hat noch eine Zeile').toHaveCount(0);
+	expect(((await tabelle(page.request, 'route', abo.id)).rows as Array<{ metric_id: string }>).map((r) => r.metric_id)).not.toContain('precipitation');
+});
+
+test('AC-9 (Trip): der Ausblick-Haken schreibt nur die Tabelle, nie die Grundauswahl', async ({ page }) => {
+	const abo = await seedAbo(page.request, 'route');
+	abos.push(abo);
+	const vorher = (await stand(page.request, 'route', abo.id)).display_config.metrics;
+	const karte = await oeffneKarte(page, 'route', abo.id);
+	const m = await ersteAngehakte(karte, 'outlook');
+	for (let i = 0; i < 2; i++) {
+		const gespeichert = tabelleGespeichert(page, abo.id);
+		await haken(karte, m, 'outlook').click();
+		await gespeichert;
+	}
+	expect((await stand(page.request, 'route', abo.id)).display_config.metrics, 'AC-9 FAIL: die Grundauswahl wurde veraendert').toEqual(vorher);
 });

@@ -226,21 +226,20 @@ function pruefeHuelle(flaeche: string, datei: string, ctx: string): void {
 	const m = mounts(a.fragment, 'ZustellungTab');
 	assert.equal(m.length, 1, `${flaeche} bettet die Huelle ZustellungTab nicht genau einmal ein`);
 	assert.equal(contextWert(m[0], quelle), ctx, `${flaeche}: context der Huelle muss statisch "${ctx}" sein`);
-	// #2795 S3b Teilschritt 1b: die Huelle reicht den context an den Uebergangsblock, der den
-	// geteilten Baustein (ohne Versand-Abschnitt) traegt — gemessen wird die ganze Kette.
+	// #2795 S3b Teilschritt 1b: die Huelle reicht den context an den Uebergangsblock.
+	// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): der Uebergangsblock traegt den
+	// geteilten Baustein nicht mehr — Listen, Stundenverlauf, Ausblick und Mail-Inhalt bedient die Karte
+	// „Was steht wo“ im Reiter Wetter. In den Hubs steht der Baustein damit nirgends mehr.
 	const h = ast(ZUSTELLUNG_HUELLE);
 	const hq = readFileSync(ZUSTELLUNG_HUELLE, 'utf-8');
 	const um = mounts(h.fragment, 'UebergangBlock');
 	assert.equal(um.length, 1, 'ZustellungTab bettet den Uebergangsblock nicht genau einmal ein');
 	assert.equal(contextWert(um[0], hq), 'context', 'ZustellungTab reicht den context nicht an den Uebergangsblock');
-	assert.equal(mounts(h.fragment, 'WetterMetrikenVersandPanel').length, 0, 'ZustellungTab bettet den Baustein zusaetzlich direkt ein');
-	const u = ast(UEBERGANG);
-	const uq = readFileSync(UEBERGANG, 'utf-8');
-	const q = importQuelle(u, 'WetterMetrikenVersandPanel');
-	assert.ok(q && resolve(dirname(UEBERGANG), q) === PANEL, `UebergangBlock importiert nicht den geteilten Baustein: ${q}`);
-	const pm = mounts(u.fragment, 'WetterMetrikenVersandPanel');
-	assert.equal(pm.length, 1, 'UebergangBlock bettet den Baustein nicht genau einmal ein');
-	assert.equal(contextWert(pm[0], uq), 'context', 'UebergangBlock reicht den context nicht durch');
+	for (const d of [datei, ZUSTELLUNG_HUELLE, UEBERGANG]) {
+		const x = ast(d);
+		assert.equal(mounts(x.fragment, 'WetterMetrikenVersandPanel').length, 0, `${flaeche}: ${d} bettet den Baustein noch ein (#3154)`);
+		assert.equal(importQuelle(x, 'WetterMetrikenVersandPanel'), null, `${flaeche}: ${d} importiert den Baustein noch (#3154)`);
+	}
 }
 
 describe('#1743 AC-8 (Einsatz): Trip-Hub, Vergleichs-Hub und beide Anlege-Seiten mounten DENSELBEN Baustein', () => {

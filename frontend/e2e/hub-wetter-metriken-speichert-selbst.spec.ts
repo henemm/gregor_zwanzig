@@ -251,8 +251,11 @@ for (const kind of HUB_KINDS) {
 		// Reiter Zustellung. Beide Domänen teilen weiter EINEN Speicherplatz; der
 		// Reiterwechsel flusht die Metrik-Änderung (ein PUT), der Schalter schreibt den
 		// zweiten. Zusicherung unverändert: keine Domäne überschreibt die andere.
+		// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): der Stundenverlauf-Schalter steht
+		// nicht mehr im Reiter Zustellung, sondern in der Karte „Was steht wo“ im selben Reiter Wetter
+		// (eigener Speicher-Besitzer 'was-steht-wo-schalter'). Zusicherung unverändert.
 		if (kind === 'vergleich') {
-			test(`MS-2 (${kind}): Metrikauswahl (Wetter), sofort Stundenverlauf-Schalter (Zustellung) → BEIDE Änderungen gespeichert, je ein PUT`, async ({
+			test(`MS-2 (${kind}): Metrikauswahl (Wetter), sofort Stundenverlauf-Schalter (Karte) → BEIDE Änderungen gespeichert, je ein PUT`, async ({
 				page
 			}) => {
 				const hub = await seedHub(page.request, kind, { extra: ms.seed });
@@ -262,13 +265,12 @@ for (const kind of HUB_KINDS) {
 
 					// Domäne A: Metrikauswahl
 					await metrik(tab).click();
-					// Domäne B: Stundenverlauf-Schalter — sofort, innerhalb des Entprell-Fensters, im Reiter Zustellung
-					await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).click();
-					await page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first().click();
+					// Domäne B: Stundenverlauf-Schalter — sofort, innerhalb des Entprell-Fensters, in der Karte
+					await page.locator('[data-testid="was-steht-wo"]:visible [data-testid="was-steht-wo-stundenverlauf"]').click();
 
 					await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(2);
 					await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-					await bleibtBei(() => puts.length, 2, 1_200, 'Reiterwechsel-Flush + Schalter: genau zwei PUTs, kein Doppel-Commit');
+					await bleibtBei(() => puts.length, 2, 1_200, 'Metrikauswahl + Schalter: genau zwei PUTs, kein Doppel-Commit');
 
 					const s = await stand(page, kind, hub.id);
 					expect(ms.gewaehlt(s), 'die Metrikauswahl-Änderung darf vom Layout-Bubble nicht überschrieben werden').toBe(false);

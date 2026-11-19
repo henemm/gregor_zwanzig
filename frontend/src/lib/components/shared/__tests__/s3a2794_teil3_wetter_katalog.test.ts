@@ -87,7 +87,8 @@ const PFLICHT: Pflicht[] = [
 	P('AC-18', 'Mit diesen Farben erreicht Gewitter nie {*}, daher kein Alarm.'),
 	P('AC-18', 'Kein Alarm. Die Farbe erscheint nur im Briefing.', 'Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus.'),
 	P('AC-18', 'Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten je Liste ein.', 'Für {*} ist keine Grenze gesetzt, daher kein Alarm.'),
-	P('AC-19', '{*} ist jetzt im Briefing und steht in allen Listen unter ‚Inhalt je Kanal und Fläche‘. Dort stellst du Roh oder Einfach ein.'),
+	// #3122 B3b (AC-32, ADR-0124): Wortlaut nach einstellungen_neu.md §5 Punkt 6, löst den Text aus #2794 ab.
+	P('AC-19', '{*} ist jetzt im Briefing und in jedem Kanal angehakt. Unter ‚Was steht wo‘ kannst du sie für einzelne Kanäle abwählen.'),
 	P('AC-19', 'Nicht im Briefing', '{*} aus dem Briefing nehmen'),
 	P('AC-20', 'im Briefing und als Alarm, sobald sie dein Gebiet betreffen'),
 	P('AC-21', 'Radar-Regen', 'Alarm, wenn in der nächsten Stunde Regen auf {*} zukommt', '^Anpassen'),

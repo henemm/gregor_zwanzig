@@ -293,7 +293,9 @@ class LegacyConversion:
     placements: dict
     changes: tuple[OutputChange, ...]
     # Trip mit ``show_outlook: false`` (nicht Kompakt): ``show_stability``
-    # gehoert auf ``false`` -- die Umrechnung schreibt es nicht.
+    # gehoert auf ``false``. Die Umrechnung schreibt es nicht; das erste
+    # Speichern der Tabelle (Go-PUT, fragt ``erstanlage_begleitfelder``)
+    # schreibt es im selben Vorgang mit (#3154 F002).
     show_stability_off: bool = False
 
 
@@ -328,8 +330,12 @@ def _legacy_outlook_reports(
         if outlook_enabled is False or _feld(dc, "outlook_metrics") == []:
             return [], False
         return [r for r in BRIEFINGS if enabled_reports is None or r in enabled_reports], False
-    if _feld(report_config, "show_outlook") is False:
-        return [], _feld(report_config, "email_format", "full") != "compact"
+    # #3154 F003: die Kompakt-Mail wertet ``show_outlook`` nicht aus (der
+    # Schalter war dort gesperrt); sie zeigt den Ausblick wie bisher nach
+    # ``multi_day_trend_reports`` und ``outlook_metrics`` (unten).
+    kompakt = _feld(report_config, "email_format", "full") == "compact"
+    if _feld(report_config, "show_outlook") is False and not kompakt:
+        return [], True
     if _feld(dc, "outlook_metrics") == []:
         return [], False
     reports = _feld(report_config, "multi_day_trend_reports")

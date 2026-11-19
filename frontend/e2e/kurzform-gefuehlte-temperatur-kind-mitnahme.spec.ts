@@ -154,14 +154,6 @@ async function fetchTrip(request: APIRequestContext, id: string) {
 	return res.json();
 }
 
-async function openWeatherTab(page: Page, id: string, reiter: 'wetter' | 'zustellung' = 'wetter'): Promise<void> {
-	await page.goto(`/trips/${id}`);
-	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible();
-	// #2794 S3a: Metrik-Auswahl im Reiter Wetter, Layout je Kanal (Kanal-Reiter) im Reiter Zustellung
-	await page.getByTestId(`trip-detail-tab-${reiter}`).first().click();
-	await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-}
-
 async function waitForWeatherConfigPut(page: Page, id: string) {
 	return page.waitForResponse(
 		(r) => r.url().includes(`/api/trips/${id}/weather-config`) && r.request().method() === 'PUT',
@@ -271,159 +263,11 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 		}
 	});
 
-	// Szenario 3 (Kanal-eigener Restore-Pfad, deckt den direkten
-	// moveWithDerivedChildren()-Aufruf in onRestoreMetric() ab -- kein
-	// Einheit-Test erreicht diese Aufrufstelle; das Gegenstueck onRemove()
-	// deckt Szenario 4 ab): wind_chill ist global aktiv (Kinder bereits
-	// vorhanden), im SMS-Kanal aber in der "Aus"-Gruppe.
-	// Der Nutzer stellt es im SMS-Reiter wieder her -- die Kinder muessen im
-	// Kanal-Layout mitkommen.
-	test('Szenario 3 (SMS-Kanal-Restore): wind_chill im SMS-Reiter wiederherstellen nimmt seine Kinder in den Kanal-Override mit', async ({
-		page,
-		request
-	}) => {
-		const id = tripId('restore');
-		await deleteTrip(request, id).catch(() => {});
-		const res = await request.post('/api/trips', {
-			data: {
-				id,
-				name: `Bug 2454 Restore ${id}`,
-				stages: [
-					{
-						id: `${id}-stage-1`,
-						name: 'Etappe 1',
-						date: '2026-08-01',
-						waypoints: [{ id: `${id}-wp-1`, name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 500 }]
-					}
-				],
-				display_config: {
-					metrics: [
-						{ metric_id: 'wind_chill', enabled: true, bucket: 'primary', order: 0 },
-						{ metric_id: 'wind_chill_day_low', enabled: true, bucket: 'primary', order: 1 },
-						{ metric_id: 'wind_chill_day_high', enabled: true, bucket: 'primary', order: 2 },
-						{ metric_id: 'wind_chill_night', enabled: true, bucket: 'primary', order: 3 },
-						{ metric_id: 'wind', enabled: true, bucket: 'primary', order: 4 }
-					],
-					// SMS-Kanal fuehrt wind_chill selbst als AUS (0 = 'off'-Bucket-
-					// Aequivalent: nicht in der Liste -> aus).
-					channel_layouts: { sms: [] }
-				}
-			}
-		});
-		expect([200, 201]).toContain(res.status());
-		try {
-			await openWeatherTab(page, id, 'zustellung');
-			await page.getByTestId('channel-tab-sms').click();
-
-			// Scoping auf die Kanal-Reihenfolge-Karte (#2049): die "3-Tages-
-			// Vorschau" (OutlookLayoutControls) nutzt denselben geteilten
-			// WeatherV2Reihenfolge-Baustein mit identischen Testids fuer ihre
-			// EIGENE Aus-Gruppe -- ohne Scoping ein strict-mode violation-Risiko.
-			const kanalReihenfolge = page.getByTestId('weather-metrics-kanal-reihenfolge');
-			const ausRow = kanalReihenfolge.locator('[data-testid="wm2-aus-row"][data-metric-id="wind_chill"]');
-			await expect(ausRow).toBeVisible();
-			const restoreButton = ausRow.getByRole('button').first();
-
-			const [putResponse] = await Promise.all([waitForWeatherConfigPut(page, id), restoreButton.click()]);
-			expect(putResponse.ok()).toBeTruthy();
-			const body = putResponse.request().postDataJSON() as {
-				channel_layouts?: Record<string, Array<{ metric_id: string; enabled: boolean }>>;
-			};
-			const smsActive = activeIds(body.channel_layouts?.sms);
-			expect(smsActive.has('wind_chill'), 'wind_chill selbst fehlt im gespeicherten SMS-Kanal-Layout').toBe(true);
-			for (const kind of WIND_CHILL_KINDER) {
-				expect(
-					smsActive.has(kind),
-					`${kind} fehlt im gespeicherten SMS-Kanal-Layout nach der Wiederherstellung (Ist: ${[...smsActive].join(', ')})`
-				).toBe(true);
-			}
-		} finally {
-			await deleteTrip(request, id);
-		}
-	});
-
-	// Szenario 4 (SMS-Kanal-Entfernen, faengt Finding F004 -- onRemove() ruft
-	// moveWithDerivedChildren() direkt auf, primary->off): wind_chill ist
-	// global UND im SMS-Kanal aktiv (Kinder ueberall bereits vorhanden). Der
-	// Nutzer entfernt wind_chill NUR aus dem SMS-Reiter -- die Kinder muessen
-	// im SMS-Kanal-Override mit nach "off" wandern, waehrend sie GLOBAL aktiv
-	// bleiben (onRemove wirkt kanal-eigen, nicht global).
-	test('Szenario 4 (SMS-Kanal-Entfernen): wind_chill im SMS-Reiter entfernen nimmt seine Kinder in den Kanal-Override mit', async ({
-		page,
-		request
-	}) => {
-		const id = tripId('remove');
-		await deleteTrip(request, id).catch(() => {});
-		const res = await request.post('/api/trips', {
-			data: {
-				id,
-				name: `Bug 2454 Remove ${id}`,
-				stages: [
-					{
-						id: `${id}-stage-1`,
-						name: 'Etappe 1',
-						date: '2026-08-01',
-						waypoints: [{ id: `${id}-wp-1`, name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 500 }]
-					}
-				],
-				display_config: {
-					metrics: [
-						{ metric_id: 'wind_chill', enabled: true, bucket: 'primary', order: 0 },
-						{ metric_id: 'wind_chill_day_low', enabled: true, bucket: 'primary', order: 1 },
-						{ metric_id: 'wind_chill_day_high', enabled: true, bucket: 'primary', order: 2 },
-						{ metric_id: 'wind_chill_night', enabled: true, bucket: 'primary', order: 3 },
-						{ metric_id: 'wind', enabled: true, bucket: 'primary', order: 4 }
-					],
-					channel_layouts: {
-						sms: [
-							{ metric_id: 'wind_chill', enabled: true, order: 0 },
-							{ metric_id: 'wind_chill_day_low', enabled: true, order: 1 },
-							{ metric_id: 'wind_chill_day_high', enabled: true, order: 2 },
-							{ metric_id: 'wind_chill_night', enabled: true, order: 3 },
-							{ metric_id: 'wind', enabled: true, order: 4 }
-						]
-					}
-				}
-			}
-		});
-		expect([200, 201]).toContain(res.status());
-		try {
-			await openWeatherTab(page, id, 'zustellung');
-			await page.getByTestId('channel-tab-sms').click();
-
-			// Scoping auf die Kanal-Reihenfolge-Karte (#2049, s. Szenario 3): die
-			// "3-Tages-Vorschau" rendert denselben Baustein mit identischen
-			// Testids fuer wind_chill in ihrer eigenen Grundauswahl -- ohne
-			// Scoping resolved der Locator auf zwei Elemente (strict mode).
-			const kanalReihenfolge = page.getByTestId('weather-metrics-kanal-reihenfolge');
-			const primaryRow = kanalReihenfolge.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="wind_chill"]');
-			await expect(primaryRow).toBeVisible();
-			const removeButton = primaryRow.getByRole('button', { name: 'Aus' });
-
-			const [putResponse] = await Promise.all([waitForWeatherConfigPut(page, id), removeButton.click()]);
-			expect(putResponse.ok()).toBeTruthy();
-			const body = putResponse.request().postDataJSON() as {
-				metrics?: Array<{ metric_id: string; enabled: boolean }>;
-				channel_layouts?: Record<string, Array<{ metric_id: string; enabled: boolean }>>;
-			};
-			const smsActive = activeIds(body.channel_layouts?.sms);
-			expect(smsActive.has('wind_chill'), 'wind_chill ist im SMS-Kanal-Layout noch aktiv').toBe(false);
-			for (const kind of WIND_CHILL_KINDER) {
-				expect(
-					smsActive.has(kind),
-					`${kind} ist im SMS-Kanal-Layout nach dem Entfernen noch aktiv (Ist: ${[...smsActive].join(', ')})`
-				).toBe(false);
-			}
-			const globalActive = activeIds(body.metrics);
-			expect(globalActive.has('wind_chill'), 'wind_chill wurde faelschlich auch global entfernt').toBe(true);
-			for (const kind of WIND_CHILL_KINDER) {
-				expect(
-					globalActive.has(kind),
-					`${kind} wurde faelschlich auch global entfernt (Ist: ${[...globalActive].join(', ')})`
-				).toBe(true);
-			}
-		} finally {
-			await deleteTrip(request, id);
-		}
-	});
+	// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14): Szenario 3 (SMS-Kanal-Restore) und
+	// Szenario 4 (SMS-Kanal-Entfernen) sind gestrichen. Ihr Wirkort — die Kanal-Listen der Metrik-Oberflaeche
+	// im Uebergangsblock des Reiters Zustellung (onRestoreMetric/onRemove in WeatherMetricsTab) — ist entfernt;
+	// im Hub bestimmt die Karte „Was steht wo“ je Stelle, was in der SMS steht (Tabelle `placements`, kein
+	// `channel_layouts`-Schreiber mehr). Die Mitnahme-Logik selbst bleibt unit-getestet
+	// (kindmetriken_ableitung_und_mitnahme.test.ts); Szenario 1 sichert weiter, dass `channel_layouts.sms`
+	// beim Speichern unberuehrt bleibt.
 });

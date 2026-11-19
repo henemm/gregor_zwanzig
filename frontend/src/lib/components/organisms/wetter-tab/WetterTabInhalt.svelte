@@ -26,6 +26,7 @@
 	import NichtImBriefing from './NichtImBriefing.svelte';
 	import WarnungenRadarKarte from './WarnungenRadarKarte.svelte';
 	import AnpassenKarte from './AnpassenKarte.svelte';
+	import WasStehtWoKarte from './WasStehtWoKarte.svelte';
 	import { alarmZaehler, altSchluesselAusKatalog, ausgebbarTeilen, briefingAngebot, eigeneVorlageAmpel, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
 	import type { AlarmAb, AltSchluessel, Farbe, Kontext } from '../../shared/wetter-tab/ampelModell.ts';
 	import { ladeWetterDaten, type WetterDaten } from '../../shared/wetter-tab/wetterTabLaden.ts';
@@ -68,6 +69,9 @@
 	let altSchluessel: AltSchluessel = {};
 	let katalogIds = $state<Set<string>>(new Set());
 	let gemeldet = '';
+	// #3122 B3b: Karte „Was steht wo“ (Grundauswahl „−“/„+“ schreibt ihre Zeile im selben Speichervorgang mit).
+	let karte = $state<WasStehtWoKarte | undefined>();
+	const aboId = $derived(String((trip ?? preset)?.id ?? ''));
 
 	const abo = (): Z.AboSicht => (trip ?? preset ?? {}) as Z.AboSicht;
 	const uebernahme: Record<Kontext, (a: unknown) => void> = {
@@ -83,7 +87,11 @@
 			abo,
 			saveController,
 			enqueueHubWrite,
-			uebernehmen: (a) => uebernahme[context](a),
+			uebernehmen: (a) => {
+				uebernahme[context](a);
+				karte?.nachFremdemSpeichern();
+			},
+			placements: () => karte?.placementsZumMitspeichern(),
 			neuGeladen,
 			anlegen: onAnlegeStand,
 			aggregationFuer: (id) => aggregation(id),
@@ -117,6 +125,8 @@
 
 	/** Jede Aenderung: neuer Stand; nur wenn sich Gespeichertes aendert, meldet der Speicherer. */
 	function aendern(neu: Z.WetterStand): void {
+		// #3122 B3b (Spec Nr. 13, Fix-Loop F2): „−“, „+“ und Vorlagenwechsel schreiben die Tabelle im selben Vorgang mit.
+		if (stand) karte?.grundauswahlGeaendert(stand.auswahl, neu.auswahl);
 		stand = neu;
 		const sig = signatur(neu);
 		if (sig === gemeldet) return;
@@ -289,6 +299,9 @@
 			onWarnungen={(an) => aendern({ ...stand!, warnungenAn: an })}
 			onRadar={(an) => aendern({ ...stand!, radarAn: an })}
 		/>
+		{#if !createMode && aboId}
+			<WasStehtWoKarte bind:this={karte} {context} id={aboId} {saveController} {enqueueHubWrite} onUebernahme={(a) => uebernahme[context](a)} />
+		{/if}
 		<AnpassenKarte
 			tagesfenster={stand.tagesfenster}
 			onStart={(h) => aendern({ ...stand!, tagesfenster: { ...stand!.tagesfenster, start: h } })}

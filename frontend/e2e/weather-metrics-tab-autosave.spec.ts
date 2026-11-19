@@ -15,6 +15,7 @@
 //   npx playwright test --config=playwright.1234.staging.config.ts
 
 import { test, expect, type Page, type Request, type APIRequestContext } from '@playwright/test';
+import { oeffneKarte } from './was-steht-wo.helpers';
 
 const TRIP_PREFIX = 'e2e-1234';
 const HORIZONS_ALL = { today: true, tomorrow: true, day_after: true };
@@ -279,167 +280,49 @@ test.describe('Issue #1234: Auto-Save-Hydration-Gate im Inhalt-Tab', () => {
 		}
 	});
 
-	// Regressionsschutz #774 (Fix-Loop 1 / F001): das neue Absichts-Gate darf
-	// nur die Normalisierungs-Rueckschreibung von MailInhaltCard beim
-	// Mounten blocken (AC-6), nicht einen echten Nutzerklick auf eine der
-	// E-Mail-Inhalt-Checkboxen. Sonst waere AC-6 auf Kosten von #774 "gefixt".
-	test('#774-Regression: echter Checkbox-Klick in der E-Mail-Inhalt-Karte speichert weiterhin und bleibt nach Reload erhalten', async ({
+	// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 13/14): die E-Mail-Inhalt-Karte steht nicht mehr im
+	// Reiter Zustellung; ihre Schalter (Etappen-Kennzahlen, Vortag-Vergleich, E-Mail-Format) bedient die Karte
+	// „Was steht wo“ im Reiter Wetter, sie speichert jede Geste ohne Gesten-Gate (Teilfeld-PUT auf den Trip).
+	//   #774-Regression (echter Klick speichert, ueberlebt Reload): Ersatz was-steht-wo-karte.spec.ts WS-4 (Trip).
+	//   F004 programmatische Aktivierung (change ohne Pointer/Keydown speichert trotz Gesten-Gate): Wirkort ersatzlos
+	//     entfallen — die Karte hat kein Gesten-Gate, jede Aenderung eines Schalters speichert.
+	//   F004 Tastatur-Pfad und F003 Streuklick laufen an der Karte.
+	test('F004 Tastatur-Pfad: Schalter der Karte per Tastatur (Fokus + Leertaste) speichert und bleibt nach Reload erhalten', async ({
 		page,
 		request
 	}) => {
-		const id = tripId('reg774');
-		await createTrip(request, id, { metrics: seedMetrics(METRIC_IDS) });
+		const id = tripId('f004-tastatur');
+		await createTrip(request, id, { metrics: [{ metric_id: 'temperature', enabled: true }, { metric_id: 'wind', enabled: true }] });
 		try {
-			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-zustellung').click(); // #2794 S3a: Mail-Inhalt im Reiter Zustellung
-			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-
-			const checkbox = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
-			await expect(checkbox).toBeVisible();
-			const wasChecked = await checkbox.isChecked();
-
-			// Der zweite PUT (Trip-Update mit report_config) — nicht der
-			// weather-config-PUT — traegt die Checkbox-Aenderung.
-			const [putResponse] = await Promise.all([
-				page.waitForResponse(
-					(r) =>
-						r.url().includes(`/api/trips/${id}`) &&
-						!r.url().includes('weather-config') &&
-						r.request().method() === 'PUT',
-					{ timeout: 10_000 }
-				),
-				checkbox.click()
-			]);
-			expect(putResponse.ok()).toBeTruthy();
-
+			let karte = await oeffneKarte(page, 'route', id);
+			const sw = karte.getByTestId('was-steht-wo-show_stage_stats');
+			await expect(sw).toHaveAttribute('aria-checked', 'true');
+			const put = page.waitForResponse((r) => new URL(r.url()).pathname === `/api/trips/${id}` && r.request().method() === 'PUT', { timeout: 15_000 });
+			await sw.focus();
+			await page.keyboard.press('Space');
+			expect((await put).ok()).toBeTruthy();
+			expect((await fetchTrip(request, id)).report_config.show_stage_stats).toBe(false);
 			await page.reload();
-			await page.getByTestId('trip-detail-tab-zustellung').click();
-			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-			const afterReload = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
-			await expect(afterReload).toBeVisible();
-			expect(await afterReload.isChecked()).toBe(!wasChecked);
-
-			const trip = await fetchTrip(request, id);
-			expect(trip.report_config?.show_outlook).toBe(!wasChecked);
+			karte = await oeffneKarte(page, 'route', id);
+			await expect(karte.getByTestId('was-steht-wo-show_stage_stats')).toHaveAttribute('aria-checked', 'false');
 		} finally {
 			await deleteTrip(request, id);
 		}
 	});
 
-	// Fix-Loop 2 / F004: Tastatur-Pfad. Checkbox per Tastatur fokussieren und mit
-	// Leertaste umschalten — kein Maus-`pointerdown`, aber ein echtes `keydown`
-	// UND ein `change`-Ereignis feuern. Muss weiterhin speichern.
-	test('F004 Tastatur-Pfad: Checkbox per Tastatur (Fokus + Leertaste) speichert und bleibt nach Reload erhalten', async ({
+	test('F003 Streuklick: Klick auf die Ueberschrift „Ganze Blöcke ein- und ausschalten“ loest keinen Speichervorgang aus', async ({
 		page,
 		request
 	}) => {
-		const id = tripId('kbd');
-		await createTrip(request, id, { metrics: seedMetrics(METRIC_IDS) });
+		const id = tripId('f003-streuklick');
+		await createTrip(request, id, { metrics: [{ metric_id: 'temperature', enabled: true }, { metric_id: 'wind', enabled: true }] });
 		try {
-			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-zustellung').click(); // #2794 S3a: Mail-Inhalt im Reiter Zustellung
-			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-
-			const checkbox = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
-			await expect(checkbox).toBeVisible();
-			const wasChecked = await checkbox.isChecked();
-
-			await checkbox.focus();
-			const [putResponse] = await Promise.all([
-				page.waitForResponse(
-					(r) =>
-						r.url().includes(`/api/trips/${id}`) &&
-						!r.url().includes('weather-config') &&
-						r.request().method() === 'PUT',
-					{ timeout: 10_000 }
-				),
-				page.keyboard.press('Space')
-			]);
-			expect(putResponse.ok()).toBeTruthy();
-
-			await page.reload();
-			await page.getByTestId('trip-detail-tab-zustellung').click();
-			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-			const afterReload = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
-			await expect(afterReload).toBeVisible();
-			expect(await afterReload.isChecked()).toBe(!wasChecked);
-		} finally {
-			await deleteTrip(request, id);
-		}
-	});
-
-	// Fix-Loop 2 / F004 (Kern-Nachweis): programmatische/AT-nahe Aktivierung ohne
-	// jedes Maus- oder Tastatur-Ereignis auf dem Teilbaum — nur ein echtes
-	// `change`-Ereignis auf der Checkbox (analog Screenreader-/AT-synthetisierter
-	// Aktivierung). Ohne die change/input-Capture-Listener (F004-Fix) wuerde das
-	// Absichts-Gate dies als "keine Nutzergeste" werten und die Aenderung still
-	// verwerfen — genau das Loch, das dieser Test schliesst.
-	test('F004 programmatische Aktivierung: change-Event ohne Pointerdown/Keydown speichert dennoch', async ({
-		page,
-		request
-	}) => {
-		const id = tripId('prog');
-		await createTrip(request, id, { metrics: seedMetrics(METRIC_IDS) });
-		try {
-			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-zustellung').click(); // #2794 S3a: Mail-Inhalt im Reiter Zustellung
-			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-
-			const checkbox = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
-			await expect(checkbox).toBeVisible();
-			const wasChecked = await checkbox.isChecked();
-
-			const [putResponse] = await Promise.all([
-				page.waitForResponse(
-					(r) =>
-						r.url().includes(`/api/trips/${id}`) &&
-						!r.url().includes('weather-config') &&
-						r.request().method() === 'PUT',
-					{ timeout: 10_000 }
-				),
-				checkbox.evaluate((el: HTMLInputElement) => {
-					// Kein Playwright-Pointer-/Tastatur-Event — nur der reine
-					// DOM-Vorgang, den eine echte Wertaenderung ausloest.
-					el.checked = !el.checked;
-					el.dispatchEvent(new Event('change', { bubbles: true }));
-				})
-			]);
-			expect(putResponse.ok()).toBeTruthy();
-
-			await page.reload();
-			await page.getByTestId('trip-detail-tab-zustellung').click();
-			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-			const afterReload = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
-			await expect(afterReload).toBeVisible();
-			expect(await afterReload.isChecked()).toBe(!wasChecked);
-		} finally {
-			await deleteTrip(request, id);
-		}
-	});
-
-	// Fix-Loop 2 / F003: Streuklick auf die Überschrift "E-Mail-Inhalt" (kein
-	// Bedienelement, kein Label-Kind) darf das Gate NICHT entwaffnen — sonst
-	// wuerde ein einziger Klick fuer den Rest der Sitzung jede echte
-	// Nutzeraenderung faelschlich als "Geste bereits vorhanden" durchwinken.
-	test('F003 Streuklick: Klick auf Überschrift "E-Mail-Inhalt" löst keinen Speichervorgang aus', async ({
-		page,
-		request
-	}) => {
-		const id = tripId('stray');
-		await createTrip(request, id, { metrics: seedMetrics(METRIC_IDS) });
-		const puts = collectTripPuts(page, id);
-		try {
-			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-zustellung').click(); // #2794 S3a: Mail-Inhalt im Reiter Zustellung
-			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-
-			await page.locator('[data-testid="report-mail-content"] h3', { hasText: 'E-Mail-Inhalt' }).click();
-			await page.waitForTimeout(1_500);
-
-			expect(
-				puts.map((p) => p.url()),
-				'Streuklick auf die Überschrift darf keinen PUT auslösen'
-			).toHaveLength(0);
+			const karte = await oeffneKarte(page, 'route', id);
+			const puts = collectTripPuts(page, id);
+			await karte.getByText('Ganze Blöcke ein- und ausschalten').click();
+			await karte.getByText('Etappen-Kennzahlen', { exact: true }).click();
+			await page.waitForTimeout(2_000);
+			expect(puts.length, 'F003 FAIL: ein Klick auf Text speichert').toBe(0);
 		} finally {
 			await deleteTrip(request, id);
 		}

@@ -19,6 +19,12 @@
 //   daily-summary-metric-*, report-daily-summary-toggle, report-show-daylight,
 //   report-wind-exposition, report-compact-summary, report-show-advanced,
 //   report-show-metrics-summary (#971/#774)
+//
+// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14, AC-30): die Karte „E-Mail-Inhalt“ steht
+// nicht mehr im Reiter Zustellung. E-Mail-Format, Etappen-Kennzahlen, Vortag-Vergleich und der
+// 3-Tages-Ausblick (je Briefing) stehen genau einmal in der Karte „Was steht wo“ im Reiter Wetter; die Fälle
+// laufen dort. AC-4: im Kompakt-Format sind Etappen-Kennzahlen, Vortag-Vergleich und Nacht-Stundentabelle
+// gesperrt (sie wirken in der Kompakt-Mail nicht); der Ausblick bleibt bedienbar (er wirkt auch in Kompakt).
 
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
@@ -64,12 +70,12 @@ async function deleteTrip(
 	expect([200, 204, 404]).toContain(res.status());
 }
 
-async function openReportsSection(page: import('@playwright/test').Page, id: string) {
-	// Fix #1047: Reiter "Wetter-Metriken" (?tab=wetter-metriken), nicht mehr "Briefing-Zeitplan".
-	// #2794 S3a: die Mail-Inhalt-Karte (Abschnitt report_config) steht im Reiter Zustellung.
-	await page.goto(`/trips/${id}?tab=zustellung`);
-	await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
-	await page.locator('[data-testid="report-mail-content"]').waitFor({ state: 'visible' });
+/** #3154: die Mail-Inhalte stehen in der Karte „Was steht wo“ im Reiter Wetter. */
+async function openKarte(page: import('@playwright/test').Page, id: string) {
+	await page.goto(`/trips/${id}?tab=wetter`);
+	const karte = page.getByTestId('was-steht-wo');
+	await karte.getByTestId('was-steht-wo-show_stage_stats').waitFor({ state: 'visible', timeout: 20_000 });
+	return karte;
 }
 
 const REMOVED_TESTIDS = [
@@ -97,22 +103,17 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 		const id = tripId('ac1');
 		await createTrip(request, id);
 		try {
-			await openReportsSection(page, id);
+			const karte = await openKarte(page, id);
 
-			// Format-Schalter (#722)
-			await expect(page.locator('[data-testid="report-email-format-full"]')).toBeVisible();
-			await expect(page.locator('[data-testid="report-email-format-compact"]')).toBeVisible();
+			// Format-Schalter (#722), seit #3154 in der Karte
+			await expect(karte.getByTestId('was-steht-wo-email-format-full')).toBeVisible();
+			await expect(karte.getByTestId('was-steht-wo-email-format-compact')).toBeVisible();
 
-			// Genau 3 Bausteine
-			await expect(
-				page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]')
-			).toBeVisible();
-			await expect(
-				page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]')
-			).toBeVisible();
-			await expect(
-				page.locator('[data-testid="report-show-yesterday-comparison"] input[type="checkbox"]')
-			).toBeVisible();
+			// Bausteine: Ausblick je Briefing, Etappen-Kennzahlen, Vortag-Vergleich
+			for (const tid of ['was-steht-wo-ausblick-morning', 'was-steht-wo-ausblick-evening', 'was-steht-wo-show_stage_stats', 'was-steht-wo-show_yesterday_comparison']) {
+				await expect(karte.getByTestId(tid)).toBeVisible();
+			}
+			await expect(page.locator('[data-testid="report-mail-content"], [data-testid="report-show-outlook"]')).toHaveCount(0);
 
 			// Entfernte Optionen NICHT mehr im DOM
 			for (const tid of REMOVED_TESTIDS) {
@@ -125,7 +126,8 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 		}
 	});
 
-	// ── AC-3: fehlendes show_outlook → Checkbox initial AN (Default true) ───────
+	// ── AC-3: fehlendes show_outlook → Ausblick an ─────────────────────────────
+	// #3154: in der Karte je Briefing; Vorbelegung „nur im Abend-Briefing“ (Spec Teil B, Kartentext).
 	test('AC-3: Trip ohne show_outlook → Ausblick-Checkbox ist angehakt', async ({
 		page,
 		request
@@ -138,16 +140,15 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 			evening_time: '18:00'
 		});
 		try {
-			await openReportsSection(page, id);
-			await expect(
-				page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]')
-			).toBeChecked();
+			const karte = await openKarte(page, id);
+			await expect(karte.getByTestId('was-steht-wo-ausblick-evening')).toHaveAttribute('aria-checked', 'true');
+			await expect(karte.getByTestId('was-steht-wo-ausblick-morning')).toHaveAttribute('aria-checked', 'false');
 		} finally {
 			await deleteTrip(request, id);
 		}
 	});
 
-	// ── AC-4: Kompakt-Modus deaktiviert alle 3 Bausteine ───────────────────────
+	// ── AC-4: Kompakt-Modus sperrt die Bausteine, die nur in der ausführlichen Mail wirken ──
 	test('AC-4: Format=Kompakt → 3 Bausteine disabled', async ({ page, request }) => {
 		const id = tripId('ac4');
 		await createTrip(request, id, {
@@ -157,25 +158,26 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 			email_format: 'full'
 		});
 		try {
-			await openReportsSection(page, id);
-
-			await page.locator('[data-testid="report-email-format-compact"]').check();
-
-			await expect(
-				page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]')
-			).toBeDisabled();
-			await expect(
-				page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]')
-			).toBeDisabled();
-			await expect(
-				page.locator('[data-testid="report-show-yesterday-comparison"] input[type="checkbox"]')
-			).toBeDisabled();
+			const karte = await openKarte(page, id);
+			const put = page.waitForResponse((r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok());
+			await karte.getByTestId('was-steht-wo-email-format-compact').click();
+			const body = (await put).request().postDataJSON();
+			expect(body.report_config.email_format).toBe('compact');
+			expect(((await (await request.get(`/api/trips/${id}`)).json()).report_config).email_format).toBe('compact');
+			for (const tid of ['was-steht-wo-show_stage_stats', 'was-steht-wo-show_yesterday_comparison', 'was-steht-wo-show_night_block']) {
+				await expect(karte.getByTestId(tid), `${tid}: bei Kompakt gesperrt`).toHaveAttribute('aria-disabled', 'true');
+			}
+			await page.reload();
+			const neu = await openKarte(page, id);
+			await expect(neu.getByTestId('was-steht-wo-email-format-compact')).toHaveAttribute('aria-checked', 'true');
+			await expect(neu.getByTestId('was-steht-wo-show_stage_stats'), 'nach Neuladen weiter gesperrt').toHaveAttribute('aria-disabled', 'true');
 		} finally {
 			await deleteTrip(request, id);
 		}
 	});
 
 	// ── AC-5: Ausblick umschalten, speichern, persistiert über Reload ──────────
+	// #3154: Ausblick im Abend-Briefing in der Karte (`outlook_reports` der Tabelle); `show_outlook` bleibt.
 	test('AC-5: show_outlook abwählen wird gespeichert und überlebt Reload', async ({
 		page,
 		request
@@ -188,27 +190,23 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 			show_outlook: true
 		});
 		try {
-			await openReportsSection(page, id);
-
-			// Ausblick abwählen — Auto-Save (kein expliziter Button im Wetter-Metriken-Reiter)
-			const putRequestPromise = page.waitForRequest(
-				(req) => req.method() === 'PUT' && req.url().endsWith(`/api/trips/${id}`)
+			const karte = await openKarte(page, id);
+			const abend = karte.getByTestId('was-steht-wo-ausblick-evening');
+			await expect(abend).toHaveAttribute('aria-checked', 'true');
+			const tabelle = page.waitForResponse(
+				(r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/briefings/${id}/placements` && r.ok()
 			);
-			const putResponsePromise = page.waitForResponse(
-				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
-			);
-			await page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]').click();
-			const putReq = await putRequestPromise;
-			const body = JSON.parse(putReq.postData() || '{}');
-			expect(body.report_config.show_outlook).toBe(false);
+			await abend.click();
+			await tabelle;
 
-			await putResponsePromise;
-
-			// Persistiert via API
+			// Persistiert via API und nach dem Neuladen
 			const after = await request.get(`/api/trips/${id}`);
 			expect(after.ok()).toBe(true);
-			const rc = (await after.json()).report_config;
-			expect(rc.show_outlook).toBe(false);
+			const trip = await after.json();
+			expect(trip.display_config.placements.outlook_reports).not.toContain('evening');
+			expect(trip.report_config.show_outlook).toBe(true);
+			await page.reload();
+			await expect((await openKarte(page, id)).getByTestId('was-steht-wo-ausblick-evening')).toHaveAttribute('aria-checked', 'false');
 		} finally {
 			await deleteTrip(request, id);
 		}
@@ -233,13 +231,12 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 			custom_unknown_field: 'preserve-me'
 		});
 		try {
-			await openReportsSection(page, id);
-
-			// Einen verbleibenden Baustein ändern — Auto-Save
+			// Einen Baustein in der Karte ändern — Auto-Save (#3154)
+			const karte = await openKarte(page, id);
 			const putResponsePromise = page.waitForResponse(
 				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
 			);
-			await page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]').click();
+			await karte.getByTestId('was-steht-wo-show_stage_stats').click();
 			await putResponsePromise;
 
 			const after = await request.get(`/api/trips/${id}`);

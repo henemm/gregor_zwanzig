@@ -41,12 +41,10 @@ const STELLEN: Array<[string, string, string, number]> = [
 	// Nutzlast-Teilen — Owner bleiben 'versand' und 'alarme' (nicht 'zustellung'). TDD RED bis
 	// shared/zustellung-tab/zustellungSpeicherung.ts existiert.
 	['shared/zustellung-tab/zustellungSpeicherung.ts', 'saveController.schedule', 'versand', 1],
-	['shared/zustellung-tab/zustellungSpeicherung.ts', 'saveController.schedule', 'alarme', 1],
-	// #2795 S3b 1b Fix-Loop 1 (F001): Telegram-Kurzstil/Mehrtages-Trend im Uebergangsblock speichern
-	// unter EIGENEM Owner — waere es 'versand', verdraengte eine Stil-Aenderung eine wartende
-	// Zeit-/Kanal-Aenderung des Reiter-Speicherers (gleicher Owner ersetzt, saveStatusStore.schedule).
-	// Das Verhalten selbst bewacht kanalStilSpeicherung.test.ts.
-	['shared/zustellung-tab/kanalStilSpeicherung.ts', 'saveController.schedule', 'kanal-stil', 1]
+	['shared/zustellung-tab/zustellungSpeicherung.ts', 'saveController.schedule', 'alarme', 1]
+	// #3154: der eigene Kurzstil-/Trend-Speicherer des Uebergangsblocks (Owner 'kanal-stil') ist entfernt;
+	// den Kurzstil speichert die Karte „Was steht wo“ unter eigenem Owner 'was-steht-wo-schalter'. Dass er
+	// keine wartende Zustellungs-Aenderung verdraengt, bewacht kanalStilSpeicherung.test.ts (F001).
 	// #2794 S3a Teil-PR 4a (AC-31): der Owner 'wertebereiche' stand nur im CorridorEditor/
 	// CorridorEditorMobile (entfernt); die Grenzen speichert der Reiter Wetter ('wetter-ampel').
 ];

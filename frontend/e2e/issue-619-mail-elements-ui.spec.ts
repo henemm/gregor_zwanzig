@@ -19,6 +19,12 @@
 //   report-show-stage-stats           — Schalter Etappen-Kennzahlen
 //   report-show-yesterday-comparison  — Schalter Vortagesvergleich (#785)
 //   report-email-format-full / -compact — Format-Schalter (#722)
+//
+// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14, AC-30): die Karte „E-Mail-Inhalt“ ist aus
+// dem Übergangsblock des Reiters Zustellung entfernt. Etappen-Kennzahlen, Vortag-Vergleich, E-Mail-Format und
+// der 3-Tages-Ausblick (je Briefing, `outlook_reports`) stehen genau einmal in der Karte „Was steht wo“ im
+// Reiter Wetter; die Fälle unten laufen dort. Der alte Schalter `show_outlook` hat keine Bedienung mehr — das
+// Feld bleibt gespeichert (Read-Modify-Write), AC-3 prüft genau das.
 
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
@@ -61,12 +67,25 @@ async function deleteTrip(
 	expect([200, 204, 404]).toContain(res.status());
 }
 
-async function openReportsSection(page: import('@playwright/test').Page, id: string) {
-	// Fix #1047: Reiter "Wetter-Metriken" (?tab=wetter-metriken), nicht mehr "Briefing-Zeitplan".
-	// #2794 S3a: die Mail-Inhalt-Karte (Abschnitt report_config) steht im Reiter Zustellung.
+/** #3154: Reiter Zustellung (Briefing-Zeiten, Kanal-Tabelle). */
+async function openZustellung(page: import('@playwright/test').Page, id: string) {
 	await page.goto(`/trips/${id}?tab=zustellung`);
-	await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
-	await page.locator('[data-testid="report-mail-content"]').waitFor({ state: 'visible' });
+	await page.getByTestId('zustellung-kanal-tabelle').waitFor({ state: 'visible' });
+}
+
+/** #3154: die Schalter der Mail-Inhalte stehen in der Karte „Was steht wo“ im Reiter Wetter. */
+async function openKarte(page: import('@playwright/test').Page, id: string) {
+	await page.goto(`/trips/${id}?tab=wetter`);
+	const karte = page.getByTestId('was-steht-wo');
+	await karte.getByTestId('was-steht-wo-show_stage_stats').waitFor({ state: 'visible', timeout: 20_000 });
+	return karte;
+}
+
+/** Klickt einen Schalter der Karte und wartet auf den erfolgreichen PUT des Trips. */
+async function schalteUndSpeichere(page: import('@playwright/test').Page, id: string, testid: string) {
+	const put = page.waitForResponse((r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok());
+	await page.getByTestId('was-steht-wo').getByTestId(testid).click();
+	await put;
 }
 
 test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
@@ -91,20 +110,20 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 			show_yesterday_comparison: false
 		});
 		try {
-			await openReportsSection(page, id);
+			// #3154: Etappen-Kennzahlen, Vortag-Vergleich und 3-Tages-Ausblick (je Briefing) in der Karte.
+			const karte = await openKarte(page, id);
 
-			const stageStats = page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]');
-			const outlook = page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]');
-			const yesterdayComparison = page.locator('[data-testid="report-show-yesterday-comparison"] input[type="checkbox"]');
-
+			const stageStats = karte.getByTestId('was-steht-wo-show_stage_stats');
+			const yesterdayComparison = karte.getByTestId('was-steht-wo-show_yesterday_comparison');
 			await expect(stageStats).toBeVisible();
-			await expect(outlook).toBeVisible();
 			await expect(yesterdayComparison).toBeVisible();
+			await expect(karte.getByTestId('was-steht-wo-ausblick-morning')).toBeVisible();
+			await expect(karte.getByTestId('was-steht-wo-ausblick-evening')).toBeVisible();
 
 			// Spiegeln den gespeicherten Stand
-			await expect(stageStats).toBeChecked();
-			await expect(outlook).toBeChecked();
-			await expect(yesterdayComparison).not.toBeChecked();
+			await expect(stageStats).toHaveAttribute('aria-checked', 'true');
+			await expect(yesterdayComparison).toHaveAttribute('aria-checked', 'false');
+			await expect(page.locator('[data-testid="report-show-outlook"], [data-testid="report-mail-content"]')).toHaveCount(0);
 
 			// Entfernte Optionen nicht mehr im DOM
 			await expect(page.locator('[data-testid="report-show-quick-take"]')).toHaveCount(0);
@@ -126,7 +145,7 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 		const id = tripId('fix1047-ac2');
 		await createTrip(request, id);
 		try {
-			await openReportsSection(page, id);
+			await openZustellung(page, id);
 
 			// #2795 S3b 1b: Zeitplan = Briefing-Zeiten-Karten des Reiters Zustellung (Anker #versand, AC-2).
 			const abschnitt = page.locator('#versand');
@@ -152,14 +171,16 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 		await createTrip(request, id);
 		try {
 			await page.goto(`/trips/${id}?tab=zustellung#versand`);
-			// #2795 S3b 1b: der Anker #versand liegt auf den Briefing-Zeiten des Reiters Zustellung; die
-			// Mail-Inhalt-Karte steht genau einmal (im Übergangsblock, AC-30), nicht bei den Zeiten.
+			// #2795 S3b 1b: der Anker #versand liegt auf den Briefing-Zeiten des Reiters Zustellung.
+			// #3154: die Mail-Inhalt-Karte steht im Reiter Zustellung gar nicht mehr; das E-Mail-Format
+			// steht genau einmal, in der Karte „Was steht wo“ im Reiter Wetter (AC-30).
 			const abschnitt = page.locator('#versand');
 			await page.getByTestId('zustellung-kanal-tabelle').waitFor({ state: 'visible' });
 			await expect(abschnitt).toHaveAttribute('data-abschnitt', 'briefing-zeiten');
-			await expect(abschnitt.locator('[data-testid="report-mail-content"]')).toHaveCount(0);
-			await expect(page.getByTestId('zustellung-uebergang').locator('[data-testid="report-mail-content"]')).toHaveCount(1);
-			await expect(page.locator('[data-testid="report-mail-content"]')).toHaveCount(1);
+			await expect(page.locator('[data-testid="report-mail-content"], [data-testid="report-email-format-switcher"]')).toHaveCount(0);
+			await openKarte(page, id);
+			await expect(page.getByTestId('was-steht-wo-email-format')).toHaveCount(1);
+			await expect(page.locator('[data-testid="report-mail-content"], [data-testid="report-email-format-switcher"]')).toHaveCount(0);
 		} finally {
 			await deleteTrip(request, id);
 		}
@@ -187,16 +208,9 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 			daily_summary_metrics: ['precipitation', 'thunder']
 		});
 		try {
-			await openReportsSection(page, id);
-
-			// show_stage_stats ändern (verbleibender Baustein) — Wetter-Metriken-Reiter
-			// speichert per Auto-Save (kein expliziter Button, siehe WeatherMetricsTab.svelte
-			// $effect + scheduleAutoSave, 700ms Debounce).
-			const putResponsePromise = page.waitForResponse(
-				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
-			);
-			await page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]').click();
-			await putResponsePromise;
+			// #3154: Etappen-Kennzahlen in der Karte umschalten (Teilfeld-PUT, Auto-Save).
+			await openKarte(page, id);
+			await schalteUndSpeichere(page, id, 'was-steht-wo-show_stage_stats');
 
 			const after = await request.get(`/api/trips/${id}`);
 			expect(after.ok()).toBe(true);
@@ -208,7 +222,9 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 		}
 	});
 
-	// ── AC-3: show_outlook umschalten + speichern + persistiert ────────────────
+	// ── AC-3: Ausblick umschalten + speichern + persistiert ────────────────────
+	// #3154: der Ausblick wird je Briefing in der Karte geschaltet (`outlook_reports` der Tabelle); das
+	// Altfeld `show_outlook` hat keine Bedienung mehr und bleibt beim Speichern unverändert erhalten.
 	test('AC-3: Ausblick-Schalter ändern, speichern, persistiert', async ({
 		page,
 		request
@@ -221,28 +237,23 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 			show_outlook: true
 		});
 		try {
-			await openReportsSection(page, id);
-
-			// Ausblick AUS — Auto-Save (kein expliziter Button im Wetter-Metriken-Reiter)
-			const putRequestPromise = page.waitForRequest(
-				(req) => req.method() === 'PUT' && req.url().endsWith(`/api/trips/${id}`)
+			const karte = await openKarte(page, id);
+			const abend = karte.getByTestId('was-steht-wo-ausblick-evening');
+			const vorher = (await abend.getAttribute('aria-checked')) === 'true';
+			const tabelle = page.waitForResponse(
+				(r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/briefings/${id}/placements` && r.ok()
 			);
-			const putResponsePromise = page.waitForResponse(
-				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
-			);
-			await page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]').click();
-			const putReq = await putRequestPromise;
-			const body = JSON.parse(putReq.postData() || '{}');
+			await abend.click();
+			await tabelle;
 
-			expect(body.report_config.show_outlook).toBe(false);
-
-			await putResponsePromise;
-
-			// Reload via API: persistiert
+			// Reload via API: persistiert; das Altfeld show_outlook bleibt unberührt.
 			const after = await request.get(`/api/trips/${id}`);
 			expect(after.ok()).toBe(true);
-			const rc = (await after.json()).report_config;
-			expect(rc.show_outlook).toBe(false);
+			const trip = await after.json();
+			expect((trip.display_config.placements.outlook_reports as string[]).includes('evening')).toBe(!vorher);
+			expect(trip.report_config.show_outlook).toBe(true);
+			await page.reload();
+			await expect((await openKarte(page, id)).getByTestId('was-steht-wo-ausblick-evening')).toHaveAttribute('aria-checked', vorher ? 'false' : 'true');
 		} finally {
 			await deleteTrip(request, id);
 		}
@@ -263,14 +274,9 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 			change_threshold_wind_kmh: 20.0
 		});
 		try {
-			await openReportsSection(page, id);
-
-			// show_outlook ändern (verbleibender Baustein) — Auto-Save
-			const putResponsePromise = page.waitForResponse(
-				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
-			);
-			await page.locator('[data-testid="report-show-outlook"] input[type="checkbox"]').click();
-			await putResponsePromise;
+			// #3154: Vortag-Vergleich in der Karte umschalten (Teilfeld-PUT, Auto-Save).
+			await openKarte(page, id);
+			await schalteUndSpeichere(page, id, 'was-steht-wo-show_yesterday_comparison');
 
 			const after = await request.get(`/api/trips/${id}`);
 			expect(after.ok()).toBe(true);
@@ -300,17 +306,13 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 			show_metrics_summary: true
 		});
 		try {
-			await openReportsSection(page, id);
+			await openKarte(page, id);
 
 			// Kein UI-Element für show_metrics_summary mehr vorhanden.
 			await expect(page.locator('[data-testid="report-show-metrics-summary"]')).toHaveCount(0);
 
-			// Anderen Baustein ändern und per Auto-Save speichern.
-			const putResponsePromise = page.waitForResponse(
-				(r) => r.url().endsWith(`/api/trips/${id}`) && r.request().method() === 'PUT' && r.ok()
-			);
-			await page.locator('[data-testid="report-show-stage-stats"] input[type="checkbox"]').click();
-			await putResponsePromise;
+			// Anderen Baustein in der Karte ändern und per Auto-Save speichern (#3154).
+			await schalteUndSpeichere(page, id, 'was-steht-wo-show_stage_stats');
 
 			const after = await request.get(`/api/trips/${id}`);
 			const rc = (await after.json()).report_config;

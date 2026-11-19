@@ -359,7 +359,7 @@ func New(deps Deps) chi.Router {
 	r.Get("/api/briefings/{id}/briefing-history", handler.BriefingHistoryHandler(deps.Store))
 	// Issue #3122 B2: Tabelle "Was steht wo" (Lesen ueber den Python-Kern, Schreiben nur placements).
 	r.Get("/api/briefings/{id}/placements", handler.BriefingPlacementsGetHandler(deps.Store, deps.Config.PythonCoreURL))
-	r.Put("/api/briefings/{id}/placements", handler.BriefingPlacementsPutHandler(deps.Store))
+	r.Put("/api/briefings/{id}/placements", handler.BriefingPlacementsPutHandler(deps.Store, deps.Config.PythonCoreURL))
 	r.Post("/api/briefings/{id}/alert-preview", bremsen.Vorschau(handler.BriefingAlertPreviewHandler(deps.Config.PythonCoreURL)))
 	// Issue #2280: kind-neutraler Handversand (Alt-Routen oben sind Delegates).
 	r.Post("/api/briefings/{id}/send", bremsen.Versand(handler.BriefingSendHandler(deps.Config.PythonCoreURL)))
