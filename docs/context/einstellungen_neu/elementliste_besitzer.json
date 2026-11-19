@@ -1118,876 +1118,6 @@
 			"verweis": "#2795"
 		},
 		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.abschnittskopf.4472458afb",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.briefing-zeiten.254b3320e5",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.briefing-zeiten.2a817e4aa3",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.0a3624db34",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.836712cea8",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.755701587b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.71e34788e1",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.2aaa170334",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.7077ba8ba9",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.686bf26748",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.6b90906239",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.7202040104",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.aaa02bd645",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.cfda07275b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.819b8ef7de",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.stille-stunden.bef0ff6e74",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.stille-stunden.591117a34d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.stille-stunden.05235ef5be",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.abschnittskopf.e84168469c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.briefing-zeiten.355bafb755",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.briefing-zeiten.adfdacc188",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.3333108366",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.955022df16",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.ec8e432d31",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.c6ed773242",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.40f632a501",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.d7660151c3",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.e7f7d1fbf0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.68db9cc9ec",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.fc7cfc383d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.eb9eec0c22",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.41d14589da",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.59b5a1e937",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.stille-stunden.41d65311d6",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.stille-stunden.ea4c3552fc",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.stille-stunden.74083318c8",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.abschnittskopf.d118b49940",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.briefing-zeiten.5cb7062fa8",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.briefing-zeiten.8f62c663f0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.8074e809ee",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.c200af4f47",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.8dd3a2f85d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.51b805710e",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.3ab5d92cd7",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.aeccaad7df",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.38b594f5ac",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.5598627430",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.b372548cd2",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.3f59301443",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.6a6c1e3460",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.8c96339093",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.stille-stunden.a229fb6939",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.stille-stunden.36dfc25f13",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.stille-stunden.37899d9221",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.abschnittskopf.110bdf241f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.briefing-zeiten.0b49f43b70",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.briefing-zeiten.1b93260fb5",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.19b4cb26e7",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.a214de7e41",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.1ee3011f38",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.eb3e1da2e0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.6059ec2067",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.eccf5534da",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.2ba8d3b20c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.ecf6669703",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.ebff82c749",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.f175053d41",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.a8c81cc9a0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.506a584790",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.6730272e28",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.546f62d78f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.1ccd25736a",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.fa61e870c2",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.7c94df4428",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.1e688e91e1",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.5cadee038c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.99a967cfa4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.stille-stunden.c8d64c9fbe",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.stille-stunden.2f0014461f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.stille-stunden.cfeaa46e94",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.abschnittskopf.7c037eafcc",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.briefing-zeiten.cba7907a48",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.briefing-zeiten.7eb518b46f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.laufzeit.9a573b42e6",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.a94a834046",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.ccbef68a08",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.5b85223ee7",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.8e78dfc8a4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.ad8bcee346",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.016c37b8a1",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.519af8e34a",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.58218ead01",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.9a75b3a008",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.8b5e768371",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.49d0a58be6",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.315f22a70f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.stille-stunden.b6cea537b0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.stille-stunden.0c653ca7ca",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.stille-stunden.e1dd642c79",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.abschnittskopf.24b36eca5b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.briefing-zeiten.b49aed815a",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.briefing-zeiten.2440df2b4a",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.laufzeit.d1196d968d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.5aa4119a94",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.b59e49d1db",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.daa3b5fb42",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.52c59ab7fe",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.f8c5fe0d8f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.bbf4fab019",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.6fcd9efa44",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.f83c4898a2",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.61b4a3abb4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.4ba5244691",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.2f36d26195",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.1d1d2937e0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.stille-stunden.ffdfdad9ff",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.stille-stunden.17425a28d7",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.stille-stunden.1267e81613",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.abschnittskopf.923bb4d327",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.briefing-zeiten.37fd360b11",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.briefing-zeiten.3f138a926f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.laufzeit.922abd97b6",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.ed84d4da17",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.17481528cb",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.292ebd7144",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.06be371961",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.968ce49252",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.0eac716197",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.5bcfa1e89c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.da1ecc4499",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.f9cb892939",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.a64203e4b5",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.835659f7c4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.a6bdfef880",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.5547c68fba",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.59e0600a28",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.85996c5212",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.74a97ee8e6",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.7d6c6503b8",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.7d60fa1d29",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.25902f9b94",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.a75f412ae1",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.stille-stunden.c4a8805bed",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.stille-stunden.fba1c459b8",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.stille-stunden.72bb5041a7",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste",
-			"verweis": "#2968"
-		},
-		{
 			"art": "abschnitt",
 			"ctx": "trip",
 			"reiter": "wetter",
@@ -2024,7 +1154,7 @@
 			"ctx": "trip",
 			"reiter": "wetter",
 			"abschnitt": "metriken",
-			"grund": "Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke: #2968",
+			"grund": "Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)",
 			"verweis": "#2967"
 		},
 		{
@@ -2040,7 +1170,7 @@
 			"ctx": "trip",
 			"reiter": "etappen",
 			"abschnitt": "abschnittskopf",
-			"grund": "Reiter Etappen wird in Scheibe e neu gebaut. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
+			"grund": "Reiter Etappen wird in Scheibe e neu gebaut. Ursachen: Text nicht sichtbar, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)",
 			"verweis": "#2913-e"
 		},
 		{
@@ -2144,7 +1274,7 @@
 			"ctx": "trip",
 			"reiter": "etappen",
 			"abschnitt": "tempo",
-			"grund": "Tempo-Karte im Reiter Etappen (Fortbewegung, Tempo flach, Aufstieg, Gehzeit je Etappe) braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108), aus c2 umgehängt. Ursachen: Text nicht sichtbar, Abschnitt-Haken fehlt, EN-Lücke: #2968",
+			"grund": "Tempo-Karte im Reiter Etappen (Fortbewegung, Tempo flach, Aufstieg, Gehzeit je Etappe) braucht persistente Tempo-Felder: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108), aus c2 umgehängt. Ursachen: Text nicht sichtbar, Abschnitt-Haken fehlt, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)",
 			"verweis": "#2796"
 		},
 		{
@@ -2184,7 +1314,7 @@
 			"ctx": "orte",
 			"reiter": "wetter",
 			"abschnitt": "metriken",
-			"grund": "Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke: #2968",
+			"grund": "Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)",
 			"verweis": "#2967"
 		},
 		{
@@ -2224,7 +1354,7 @@
 			"ctx": "orte",
 			"reiter": "orte",
 			"abschnitt": "abschnittskopf",
-			"grund": "Reiter Orte wird in Scheibe e neu gebaut. Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, EN-Lücke: #2968",
+			"grund": "Reiter Orte wird in Scheibe e neu gebaut. Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)",
 			"verweis": "#2913-e"
 		},
 		{
@@ -2867,177 +1997,30 @@
 		{
 			"art": "zusaetzlich",
 			"reiter": "zustellung",
-			"text": "A channel without a connection is locked until you set it up in your account.",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "Alert from urgency",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "Alerts via Email",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "Briefing",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "Briefing via Email",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "Briefing via Premium SMS",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "Briefing via SMS",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "Briefing via Telegram",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "Minimum interval between two alerts",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "Premium SMS",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
 			"text": "Quiet hours from",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig (WCAG 2.4.6). Bleibt so. Englische Fassung des Live-Texts.",
+			"verweis": "#2795"
 		},
 		{
 			"art": "zusaetzlich",
 			"reiter": "zustellung",
 			"text": "Quiet hours to",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "SMS",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "SMS is cheap and therefore already gets alerts from \"moderate\". Premium SMS goes via satellite and only reports at \"high\".",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "Telegram",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "The briefing runs until you pause it.",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig (WCAG 2.4.6). Bleibt so. Englische Fassung des Live-Texts.",
+			"verweis": "#2795"
 		},
 		{
 			"art": "zusaetzlich",
 			"reiter": "zustellung",
 			"text": "Time of the evening briefing",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig (WCAG 2.4.6). Bleibt so. Englische Fassung des Live-Texts.",
+			"verweis": "#2795"
 		},
 		{
 			"art": "zusaetzlich",
 			"reiter": "zustellung",
 			"text": "Time of the morning briefing",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "When the briefings arrive and how briefings and alerts reach you.",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "for the stage of the day",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "for today",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "for tomorrow",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "for tomorrow's stage",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "no alerts, they come with the next morning briefing",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"text": "of the same metric",
-			"grund": "Englischer Live-Text des neuen Reiters Zustellung; die Elementliste führt für diesen Reiter noch keine text_en",
-			"verweis": "#2968"
+			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig (WCAG 2.4.6). Bleibt so. Englische Fassung des Live-Texts.",
+			"verweis": "#2795"
 		},
 		{
 			"art": "zusaetzlich",
@@ -5565,18 +4548,6 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.fehler.-.warnung.be872fe303",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.fehler.-.warnung.f7465bf359",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.laedt.-.abschnittskopf.85ca311eb0",
 			"grund": "Echter Befund: im Zustand „lädt“ zeigt der Orte-Reiter Wetter den Seitenlader statt Wetter-Kopf und „Lade Metriken …“ (gleiche Ursache wie Reiter Zustellung). Ursache: Abschnitt-Haken data-abschnitt=\"abschnittskopf\" fehlt",
 			"verweis": "#3022"
@@ -5607,69 +4578,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-cloud_total.78798cb6cd",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-cloud_total.82cfd6ab13",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-cloud_total.83da138637",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-cloud_total.aef90891ac",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-cloud_total.e9e01ccaa2",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-gust.0dc303f500",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-gust.207d01cb71",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-gust.268a926a83",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-gust.4dd2562f5a",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-gust.72cfcfb347",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-gust.88dfc490a4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -5685,57 +4596,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-precipitation.9172cf4dd6",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-precipitation.92748ad513",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-precipitation.9c5c1f8e12",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-precipitation.b389816c67",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-precipitation.d9df15dec3",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-precipitation.f352695023",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-rain_probability.248d38a8b5",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-rain_probability.891bc7e219",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-rain_probability.9fa96ccb34",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -5745,33 +4608,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-rain_probability.bf03f53864",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-rain_probability.bfab1e067e",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-rain_probability.c1ed6ab99d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-sunshine.097b2db687",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-sunshine.1a5ba640d0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -5787,33 +4626,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-sunshine.9bf6e52157",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-sunshine.e5ea1bcdb4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-sunshine.efd26bfc04",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-temperature.022d440542",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-temperature.264e103ea0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -5823,63 +4638,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-temperature.86be83be13",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-temperature.8d115b1bea",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-temperature.99d1cf67ac",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-temperature.b1be753b84",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-temperature.b70276eb55",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-temperature.dbcb219d1a",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-temperature.e5c5b68ff8",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-temperature.f7698ff818",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-temperature.faf1d7e247",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-thunder.03c1bbc703",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -5889,63 +4650,15 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-wind.11e1c5c579",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-wind.173de5b07e",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-wind.3a6fb9f221",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-wind.84a3ba935e",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-wind.ad39cda27f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-wind.c0c1a8700b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-wind.c4f404a58f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-wind.cfd3d219ff",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-wind.d8c0abf86b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.grenzen-wind.e13a42c7b0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -5967,18 +4680,6 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.42abd3511d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.54127b1601",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.luecken.-.vorlage-auswahl.60a9ab706e",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
@@ -5988,12 +4689,6 @@
 			"id": "orte.wetter.luecken.-.vorlage-auswahl.85799db8a4",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.89047acf80",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6027,12 +4722,6 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.e583f21154",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.luecken.-.vorlage-auswahl.fdd0abda68",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
@@ -6042,12 +4731,6 @@
 			"id": "orte.wetter.luecken.-.vorlage-bestaetigung.a37c8ba993",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-bestaetigung.8e8354bbdb",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6081,36 +4764,6 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-cloud_total.18043498ee",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-cloud_total.3fda1d80e1",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-cloud_total.a3d1725cb2",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-cloud_total.b9dd803f2f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-cloud_total.cca3b7e47e",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-cloud_total.e255a215dd",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
@@ -6123,27 +4776,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-gust.28c2989831",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-gust.2ab61dce87",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-gust.59795d2897",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-gust.7c5122477c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6153,51 +4788,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-gust.f596889d87",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-gust.fedf2b056b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-precipitation.0591bc3691",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-precipitation.26c5fc6f62",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-precipitation.a244f76dcd",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-precipitation.ab27bee5ff",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-precipitation.ae29ea6f5c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-precipitation.d63daa4bce",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6213,57 +4806,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-rain_probability.767b5d2c02",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-rain_probability.88f5785e17",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-rain_probability.94014a0074",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-rain_probability.c1a99ba8f4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-rain_probability.de7a568c0d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-rain_probability.f44fa81064",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-sunshine.09f613f074",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-sunshine.27be2a3e6f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-sunshine.428d9ce340",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6273,27 +4818,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-sunshine.490447dcec",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-sunshine.8d8195144d",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-sunshine.dba5f92419",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-temperature.0db8d42970",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6303,33 +4830,9 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-temperature.21d65fa0ba",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-temperature.401cc1b8ad",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-temperature.41c1fae3cd",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-temperature.4879524a43",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-temperature.8437b687d4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6339,75 +4842,15 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-temperature.b94a539dce",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-temperature.c7cbfb4bb0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-temperature.e64e1c2bf9",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-temperature.eee0b30fab",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-thunder.4c3ad13864",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-thunder.c4331193e7",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-wind.02e4ebbb6c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-wind.06ec90df6b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-wind.1ef00cbf2a",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-wind.2390db8162",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-wind.433a6b4f2c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-wind.6e4773bbad",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6423,24 +4866,6 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-wind.8bef112e3b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-wind.8f41de4fb9",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.grenzen-wind.acb9ffec20",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.normal.-.vorlage-auswahl.02fa9a88a9",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
@@ -6450,18 +4875,6 @@
 			"id": "orte.wetter.normal.-.vorlage-auswahl.05e0b5d592",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.05e3a37612",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.2d45b14e28",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6489,18 +4902,6 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.8bb0fbb34c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.9098441f9b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.normal.-.vorlage-auswahl.b973176a52",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
@@ -6522,12 +4923,6 @@
 			"id": "orte.wetter.normal.-.vorlage-auswahl.f4a14bdb8d",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-bestaetigung.172f41be1b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6567,39 +4962,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.fehler.-.warnung.179b27aa33",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.fehler.-.warnung.abef561e26",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-cloud_low.04fd16ce02",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-cloud_low.1a05988af4",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-cloud_low.3cc5ba1ce0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-cloud_low.57236abdf7",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6609,51 +4974,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-cloud_low.cae8788077",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-cloud_low.f595d797ce",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-freezing_level.106f817e21",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-freezing_level.163e7601d4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-freezing_level.2995531dba",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-freezing_level.33fc60b588",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-freezing_level.36aac20b61",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-freezing_level.5ba06a44f6",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6663,51 +4986,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-freezing_level.a291084161",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-freezing_level.b36dba8294",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-freezing_level.b5f241a64d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-freezing_level.d6635aac0a",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-freezing_level.f4070295e6",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-gust.382c1f5848",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-gust.7f1644dc4b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-gust.9928eb6366",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6717,33 +4998,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-gust.dd5c0ab339",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-gust.e4534320ab",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-gust.f7d0c92205",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-precipitation.2bcfc2b13a",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-precipitation.8a81d8d70d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6753,33 +5010,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-precipitation.b8aa2bc891",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-precipitation.f3ede97eef",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-precipitation.f4cad41754",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-precipitation.ff039487aa",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-rain_probability.2c5522e33f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6789,33 +5022,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-rain_probability.8ce844f194",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-rain_probability.afe386e1e1",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-rain_probability.bf371af439",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-rain_probability.d9f21456d4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-rain_probability.fb39e053d4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6825,45 +5034,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.22052359ba",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.2a74b70260",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.50ad263095",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.78e4802877",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.99c610d59f",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.9e4e4be5c5",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.a0279e70ab",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6873,45 +5046,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.b6056277f7",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.cc580d7a27",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.d69856a6b7",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature.51678af89b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-temperature.532c865d55",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature.58fe34eff3",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature.647cdea711",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6921,51 +5058,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature.68101ff364",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature.7a63a3ab6b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature.98d1a95b14",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature.bc570780cb",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-temperature.cd79b22b34",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature.ee68252e5a",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature.f3fbcd8a07",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature_night.2943379a52",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -6975,51 +5070,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature_night.39d96526a2",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-temperature_night.4c5de3e083",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature_night.586d040b15",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature_night.90c901891c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature_night.961a9ae5c8",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature_night.aeba2e4058",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature_night.bd3157c29d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature_night.ce6e1fc1d8",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7029,27 +5082,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-temperature_night.fa6cdf7956",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-thunder.0f0ce6fdbd",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-thunder.66a1113e89",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-uv_index.1d8ea8756b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7059,39 +5094,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-uv_index.8bcb03bcf9",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-uv_index.ab28d7c8ea",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-uv_index.b12b9fcbe3",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-uv_index.b641177766",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-uv_index.d63244d6e9",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-visibility.09313d1126",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7101,33 +5106,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-visibility.17a27de6fd",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-visibility.1a59727bd0",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-visibility.4c43a5c0de",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-visibility.597fef0bdc",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-visibility.db8cf216db",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7137,75 +5118,15 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind.2e1b6fdf27",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind.4f9a172fbe",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-wind.6498f67edc",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind.6678b98840",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind.76d2384a8d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind.77ebf05ed4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind.9a1bfecb3a",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind.bbaf36cf9f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind.bbeeadc8fc",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-wind.bf20daad0e",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind_chill.14b729df90",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind_chill.25cb1466ca",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7221,45 +5142,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind_chill.4bdbb96a7e",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind_chill.51e9961ee0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind_chill.8885c3b4e2",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind_chill.bc1c5b0d3a",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind_chill.be436e5e73",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-wind_chill.c5681d7ed6",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.grenzen-wind_chill.f2f3a81099",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7299,21 +5184,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-auswahl.5676f6a504",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.vorlage-auswahl.5d4950244c",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-auswahl.6ee3bf7e90",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7329,21 +5202,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-auswahl.a880464e5f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.vorlage-auswahl.b0edf83b7a",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-auswahl.f761e9c5f1",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7356,12 +5217,6 @@
 			"id": "trip.wetter.luecken.-.vorlage-bestaetigung.da46974681",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-bestaetigung.f1bfa64f3c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7389,39 +5244,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-cloud_low.057d9d2ad4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-cloud_low.638eca5345",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-cloud_low.68030ba4d9",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-cloud_low.6b51d53fbd",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-cloud_low.a83c614053",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-cloud_low.af83b3bc95",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7431,69 +5256,15 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-freezing_level.2008240090",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-freezing_level.34a8a8d9ec",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-freezing_level.3c161400c0",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-freezing_level.47d231d91c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-freezing_level.4a072dced9",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-freezing_level.62e87516a1",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-freezing_level.6b34c0f604",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-freezing_level.9bd8e94833",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-freezing_level.a228ac59aa",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-freezing_level.a5777aa55b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-freezing_level.c48316b1b7",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7509,39 +5280,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-gust.23f49d8e18",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-gust.28fa2a2be4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-gust.558c53879d",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-gust.747a00ac34",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-gust.77696c7774",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-gust.e5178cf331",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7551,63 +5292,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-precipitation.4752d70d9c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-precipitation.54425abe52",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-precipitation.7a60fbf310",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-precipitation.7b4f9d0330",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-precipitation.89676ad435",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-precipitation.95aea47dbf",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-rain_probability.1793ff8413",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-rain_probability.5b66695b58",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-rain_probability.70e0e85557",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-rain_probability.789294a276",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7617,39 +5304,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-rain_probability.fb7cdf9914",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-rain_probability.fcc87ba724",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.1b3b6c9158",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.1edbd900aa",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.271c0ad5a7",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.41c0d1b7bf",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7665,45 +5322,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.9b506bad00",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.cbba9fa931",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.d8bd83fc23",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.e30153eef5",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.fa6f3f031b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.fb3662c1f7",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature.03cdb369a4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7713,51 +5334,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature.0a233c4c8f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-temperature.10787589df",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature.7186601a32",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature.82c614f604",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature.8dea6e05cc",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature.988aef2a41",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature.b226bc419d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature.e24da0eaae",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7767,27 +5346,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature.f284e7983f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-temperature_night.1c9bbb021f",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature_night.2ca70ff21c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature_night.4b1b9556fd",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7797,51 +5358,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature_night.62e7721321",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature_night.6e3c8ad081",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature_night.7d72bf816c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-temperature_night.8df7f503e0",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature_night.be9ef8696e",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature_night.dd05169329",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature_night.e94fa2c972",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-temperature_night.ebaa524787",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7851,63 +5370,15 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-thunder.62283074ac",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-uv_index.3c86670db5",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-uv_index.49b50f67a4",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-uv_index.574fdc1933",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-uv_index.7cd068ca8f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-uv_index.e041cb4e9f",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-uv_index.e8cb0b84bb",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-uv_index.eb11f2a878",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-visibility.0925e896f2",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-visibility.25343e150d",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -7923,75 +5394,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-visibility.cf8b6f719b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-visibility.ed8842f12c",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-visibility.f23bd9b200",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind.129667b5d4",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind.16d2cf019b",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-wind.28c189998e",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind.34bfa419ee",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind.60329d04b3",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind.7cdbf7eb97",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind.ca182edfae",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind.d0ec881ee2",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind.f1b3bc8fa0",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -8007,63 +5412,15 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind_chill.03d3e171b1",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind_chill.1b2b078aaa",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind_chill.3cb4642fd2",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-wind_chill.55dd377fb7",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind_chill.5a07368f78",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind_chill.71cc03e720",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-wind_chill.a2eea193cf",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind_chill.a9d9a52e98",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind_chill.db1cd31ed1",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.grenzen-wind_chill.ecb8575dba",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -8076,18 +5433,6 @@
 			"id": "trip.wetter.normal.-.vorlage-auswahl.25d2b55c21",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-auswahl.27ad1894a1",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-auswahl.57b9c0308e",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",
@@ -8121,12 +5466,6 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-auswahl.cfde1a2564",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.vorlage-auswahl.ea608a1196",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
@@ -8145,12 +5484,6 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-auswahl.f44a3af674",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.vorlage-auswahl.fb8c97b641",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
@@ -8160,12 +5493,6 @@
 			"id": "trip.wetter.normal.-.vorlage-bestaetigung.9e98a167ba",
 			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
 			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-bestaetigung.ca84b97a96",
-			"grund": "EN-Lücke: kein englischer Katalogtext in der Elementliste bzw. falsche EN-Zuordnung (gleichlautender DE-Text aus fremdem Schlüssel)",
-			"verweis": "#2968"
 		},
 		{
 			"art": "element",

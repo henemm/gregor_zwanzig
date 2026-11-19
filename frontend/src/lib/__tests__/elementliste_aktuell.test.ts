@@ -270,6 +270,13 @@ describe('AC-11: EN aus dem Katalog — exakter Treffer, Muster, sonst Lücke (n
 		for (const e of liste().elemente) {
 			if (e.luecke) {
 				assert.equal(e.text_en, null, `${e.id}: Lücke mit EN-Text`);
+			} else if ((e as { sprachneutral?: boolean }).sprachneutral) {
+				// #2968 Regel c: sprachneutral ⇒ kein Schlüssel, EN = DE-Muster (Zahlen als {zahl}).
+				assert.equal(e.i18n_key, null, e.id);
+				assert.equal(e.text_en, e.text_de.replace(/\d+([.,]\d+)?/g, '{zahl}'), e.id);
+			} else if (e.i18n_key === null) {
+				// #2968 Regel b: Segmente ohne einzelnen Schlüssel, EN = Segment-EN mit „ · “ verbunden.
+				assert.ok(e.text_en && (e.text_en.includes(' · ') || e.text_en.startsWith('· ')), `${e.id}: Treffer ohne Schlüssel und ohne Segmente`);
 			} else {
 				assert.ok(e.i18n_key && e.i18n_key in katalog.en, `${e.id}: Schlüssel ${e.i18n_key} fehlt im EN-Katalog`);
 				assert.ok(e.text_en && e.text_en.length > 0);

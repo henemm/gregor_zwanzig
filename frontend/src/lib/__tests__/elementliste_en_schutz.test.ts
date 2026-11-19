@@ -16,11 +16,24 @@ const katalog = ladeKatalog(join(REPO, 'frontend/src/lib/i18n/messages'));
 
 describe('F006: EN-Schutzregeln des Generators', () => {
 	test('Wortlaut-Hälfte: „°C · vor der Etappe“ passt nicht zufällig auf „{count} Etappe“', () => {
+		// #2968: „vor der Etappe“ steht inzwischen exakt im Katalog (wetter.hinweis.temperature_night) und
+		// trifft als Segment (Regel b). Der Schutz gilt dem Muster „{count} Etappe“; darum hier eine Kopie des
+		// echten Katalogs OHNE den Wert „vor der Etappe“ — dann bleibt nur „{count} Etappe“, und das darf nie greifen.
+		const ohne: typeof katalog = { de: {}, en: {} };
+		for (const [k, v] of Object.entries(katalog.de)) {
+			if (v.replace(/\s+/g, ' ').trim() === 'vor der Etappe') continue;
+			ohne.de[k] = v;
+			ohne.en[k] = katalog.en[k];
+		}
 		// Vorbedingung: das kurze Muster existiert im echten Katalog (sonst wäre der Fall wertlos).
-		assert.ok(Object.values(katalog.de).includes('{count} Etappe'), 'Muster „{count} Etappe“ fehlt im Katalog');
-		const r = ermittleEn('°C · vor der Etappe', katalog);
+		assert.ok(Object.values(ohne.de).includes('{count} Etappe'), 'Muster „{count} Etappe“ fehlt im Katalog');
+		const r = ermittleEn('°C · vor der Etappe', ohne);
 		assert.equal(r.luecke, true, JSON.stringify(r));
 		assert.equal(r.text_en, null);
+		// Mit dem Ist-Katalog trifft das Segment, aber nie über „{count} Etappe“.
+		const ist = ermittleEn('°C · vor der Etappe', katalog);
+		assert.notEqual(ist.muster, '{count} Etappe');
+		assert.doesNotMatch(ist.text_en ?? '', /\{count\}/);
 	});
 	test('Wortlaut-Hälfte erlaubt echte Muster („Etappe T3 auswählen“)', () => {
 		// #2913 Fix-Loop 2 (C5): EN bleibt Muster mit Platzhalter, kein DE-Wert eingesetzt.

@@ -40,6 +40,10 @@ export type ListenElement = {
 	i18n_key: string | null;
 	text_en: string | null;
 	luecke: boolean;
+	/** #2968 Regel c: EN = DE-Muster (Zahlen, Einheiten, Kurz-/Protokoll-Token, Eigennamen); fehlt = false. */
+	sprachneutral?: boolean;
+	/** #2968 Regel f: alle EN-Kandidaten bei mehrdeutigem DE-Text; der EN-Abgleich akzeptiert jeden. */
+	text_en_alternativen?: string[];
 };
 
 export type BerichtEintrag = {
@@ -534,15 +538,32 @@ const HAT_PLATZHALTER = /\{[^}]+\}/;
 export function erwartung(e: ListenElement, sprache: Sprache): RegExp | null {
 	if (sprache === 'en') {
 		if (e.luecke || !e.text_en) return null;
-		if (HAT_PLATZHALTER.test(e.text_en)) return new RegExp('^' + musterAlsRegExp(e.text_en).source + '$');
-		return new RegExp('^' + normalisiere(e.text_en).split(/\d+(?:[.,]\d+)?/).map(esc).join('[\\d.,]+') + '$');
+		if (e.sprachneutral) return neutralMuster(e.text_en);
+		const kandidaten = e.text_en_alternativen?.length ? e.text_en_alternativen : [e.text_en];
+		return new RegExp('^(?:' + kandidaten.map(enQuelle).join('|') + ')$');
 	}
 	if (e.muster) return new RegExp('^' + musterAlsRegExp(e.muster).source + '$');
 	return new RegExp('^' + esc(normalisiere(e.text_de)) + '$');
 }
 
+/** EN-Erwartung eines Kandidaten (ohne Anker): Platzhalter beliebig, sonst wörtlich mit beliebigen Zahlen. */
+function enQuelle(text: string): string {
+	if (HAT_PLATZHALTER.test(text)) return musterAlsRegExp(text).source;
+	return normalisiere(text).split(/\d+(?:[.,]\d+)?/).map(esc).join('[\\d.,]+');
+}
+
 /** Zahl-Text, den `{zahl}` in der Gegenrichtung erklärt (Vorzeichen, Dezimal-, Tausender-, Uhrzeit-Trenner). */
 const ZAHL_TEXT = '[-−+]?\\d+(?:[.,:]\\d+)*';
+
+/**
+ * #2968 (AC-6): sprachneutraler Eintrag im EN-Lauf wie das DE-Muster: `{zahl}` passt nur auf eine Zahl, alles
+ * andere wörtlich (ein Eigenname oder Token erklärt keinen fremden Text).
+ * Bewusst (Adversary F004): `{zahl}` passt auf JEDE Zahl, auch mit anderer Stellenzahl („60%“ erwartet „5%“ wie
+ * „100%“) — AC-6 sagt „Zahlen beliebig“, wie das DE-Muster; geprüft wird die Form, nicht der Wert (Kontodaten).
+ */
+function neutralMuster(muster: string): RegExp {
+	return new RegExp('^' + normalisiere(muster).split('{zahl}').map(esc).join('\\d+(?:[.,]\\d+)*') + '$');
+}
 
 /**
  * `{metrik}` der Gegenrichtung (#3011): genau einer der bekannten Namen (normalisiert, wörtlich escaped);
