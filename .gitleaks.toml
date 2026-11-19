@@ -117,3 +117,16 @@ regexes = [
   '''^AT-1944-passthrough$''',
   '''^KERN-SECRET-PLATZHALTER-5b7d$''',
 ]
+
+[[allowlists]]
+description = "Seed-Pruefkonto (#2967): erfundenes Core-Secret und Schein-SMS-Schluessel im Kern-Test und dessen Testprotokollen"
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = [
+  '''(^|/)tests/tdd/test_staging_pruefkonto_mockupdaten\.py$''',
+  '''(^|/)docs/artifacts/feat-2967-pruefkonto-mockupdaten/[a-z-]+-output\.txt$''',
+]
+regexes = [
+  '''^kern-geheimnis-XYZ-2967-erkennbar$''',
+  '''^live-schluessel-2967$''',
+]
