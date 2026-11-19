@@ -28,7 +28,7 @@ entfernt Warnung, Antwort an fremden Nutzer).
 from __future__ import annotations
 
 import copy
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -260,8 +260,13 @@ def _warnungen_heute() -> list:
 
     zone = tz_for_coords(*INNSBRUCK)
     jetzt = datetime.now(timezone.utc).astimezone(zone)
+    # #3168: fester Beginn gestern 22:00 Ortszeit statt "jetzt - 12 h". Die
+    # Warntokens tragen die lokale Beginnstunde (`!TS:M@22`); eine einstellige
+    # Stunde (Lauf zwischen 12 und 22 Uhr Ortszeit) machte den SMS-Text vier
+    # Zeichen kuerzer und liess die Vorbedingung `> 153` je nach Uhrzeit scheitern.
+    beginn = datetime.combine(jetzt.date() - timedelta(days=1), time(22, 0), tzinfo=zone)
     return [OfficialAlert(source="meteoalarm", hazard=hazard, level=3, label=label,
-                          region_label="Tirol", valid_from=jetzt - timedelta(hours=12),
+                          region_label="Tirol", valid_from=beginn,
                           valid_to=jetzt + timedelta(days=2))
             for hazard, label in (("thunderstorm", "Gewitter"), ("rain", "Starkregen"),
                                   ("wind_gust", "Sturm"), ("snow", "Schnee"))]
