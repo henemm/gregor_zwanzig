@@ -158,3 +158,4 @@ Der Staging-Abgleich prüft heute nur Abschnitte, die in der Elementliste stehen
 
 - 2026-11-12: Initial spec created (Issue #2913, Plan A–C, Workflow feature-2913-abgleich-ganzseite)
 - 2026-11-13: Fix-Loop 4 (Staging-Befund `zusaetzlich = 0`): In der Gegenrichtung erklärt `{zahl}` nur noch Zahl-Text (`erwartungGegenrichtung`); ein Eintrag `muster: "{zahl}"` wurde vorher zu `^.+?$` und erklärte jeden Live-Text. Hinrichtung (`erwartung`) und ID-Bildung (AC-2) unverändert. Bekannte Grenze: andere Platzhalter (`{metrik}`, `{zeit}` …) bleiben in der Gegenrichtung beliebig; Zahlen mit Leerzeichen-Tausendertrenner gelten nicht als Zahl-Text.
+- 2026-11-19: Die Pauschal-Ausnahme für den Reiter Übersicht (AC-14, Z. 72) ist durch #2969 ersetzt: Übersicht-Bereichskopf steht in der Elementliste, der unveränderte Inhalt ist über Einzel-Ausnahmen geführt (`docs/specs/modules/feat_2969_elementliste_uebersicht.md`).
