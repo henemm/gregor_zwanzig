@@ -244,9 +244,34 @@ for (const art of ARTEN) {
 				const beschriftet = [kebab, ...alle(kebab, () => true)].some((n) => n.attrs['aria-label'] === (lang === 'de' ? 'Weitere Aktionen' : 'More actions'));
 				assert.ok(beschriftet, 'Kebab ohne aria-label „Weitere Aktionen“');
 			});
+
+			// #3008 F002 (Spec feat_3008_abgleich_waechter AC-4): bisher nur per Byte-Golden bewacht.
+			test(`AC-4: Reihenfolge der Leiste: Kebab vor ‚${lang === 'de' ? 'Test schicken ▾' : 'Send test ▾'}‘`, () => {
+				const w = seite(art, lang);
+				assert.deepEqual(leistenFolge(einzig(w, 'hub-kopf-leiste')), ['subscription-kebab', 'subscription-hub-send']);
+			});
 		});
 	}
 }
+
+/** testids von Kebab und Senden-Knopf in Dokument-Reihenfolge (Tiefensuche) innerhalb der Leiste. */
+function leistenFolge(leiste: Knoten): string[] {
+	const ids = new Set(['subscription-kebab', 'subscription-hub-send']);
+	return alle(leiste, (n) => ids.has(n.attrs['data-testid'])).map((n) => n.attrs['data-testid']);
+}
+
+test('AC-4 Gegenprobe: vertauschte Leiste (Knopf vor Kebab) wird als falsche Reihenfolge erkannt', () => {
+	const w = seite('route', 'de');
+	const leiste = einzig(w, 'hub-kopf-leiste');
+	const kebab = einzig(w, 'subscription-kebab');
+	const knopf = einzig(w, 'subscription-hub-send');
+	// Leiste mit den beiden echten gerenderten Teilbäumen in vertauschter Reihenfolge.
+	const kopie = baum('<div data-testid="hub-kopf-leiste"></div>');
+	const kopieLeiste = einzig(kopie, 'hub-kopf-leiste');
+	kopieLeiste.kinder = [knopf, kebab];
+	assert.deepEqual(leistenFolge(kopieLeiste), ['subscription-hub-send', 'subscription-kebab']);
+	assert.notDeepEqual(leistenFolge(kopieLeiste), leistenFolge(leiste));
+});
 
 // ═══ Status-Pill über fünf Zustände, Aktivieren im Entwurf (AC-5, AC-10) ═════════════
 
