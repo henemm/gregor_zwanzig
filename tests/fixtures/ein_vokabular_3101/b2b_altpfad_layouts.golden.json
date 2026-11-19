@@ -648,7 +648,7 @@
   }
  ],
  "sms_example": {
-  "length": 153,
+  "length": 148,
   "max_length": 153,
   "overflow": {
    "locations": 3,
@@ -658,7 +658,7 @@
     4
    ]
   },
-  "text": "Vergleich 14.07.: Innsbruck D 19C L 15C R 3.4 mm G 62 km/h +4; Lienz D 20C L 16C R 3.4 mm G 63 km/h PR 70% +3; Kufstein D 21C L 17C R 3.4 mm G 64 km/h +4"
+  "text": "Orte 14.07.: Innsbruck D 19C L 15C R 3.4 mm G 62 km/h +4; Lienz D 20C L 16C R 3.4 mm G 63 km/h PR 70% +3; Kufstein D 21C L 17C R 3.4 mm G 64 km/h +4"
  },
  "stored": false
 }
