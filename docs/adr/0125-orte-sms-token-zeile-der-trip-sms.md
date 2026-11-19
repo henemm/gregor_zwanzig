@@ -34,7 +34,8 @@ abschließend definierte bestätigt.
    153 Zeichen nicht überschreitet, sonst nach derselben Regel auf 153 gekürzt (#3100). Die
    Ortsnamen stehen in Mail und Telegram-Normalstil; die Legende der Karte „Was steht wo“ erklärt
    `O1`. Die Trip-SMS verliert den Doppelpunkt nach `E{n}` in einem Folge-Ticket (#3174) (PO-Auswahl „Beide
-   ohne“), danach gilt wieder eine Schreibweise.
+   ohne“), danach gilt wieder eine Schreibweise. **Umgesetzt 2026-11-19 (#3174):** `E3 N12 D17 …`,
+   `GR221 km0-11 …` (Spec `docs/specs/modules/feat_3174_trip_sms_ohne_doppelpunkt.md`, `sms_format.md` v2.48).
 3. **Leer- und Fehlwerte wie im Trip:** `-` = geprüft und unauffällig (unter Gelb, kein Regen,
    kein Gewitter), `?` = kein Wert vorhanden (Datenlücke). Die Zähler `?N` und `+N` im Ortsteil
    entfallen; was nicht passt, fällt wie im Trip still vom Listenende (§6).

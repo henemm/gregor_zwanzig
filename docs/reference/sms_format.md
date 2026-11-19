@@ -1,7 +1,7 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.47"
+version: "2.48"
 status: active
 created: 2025-12-27
 updated: 2026-11-19
@@ -82,14 +82,14 @@ dieser Zweig hat heute aber keinen eingehenden Aufrufer.
 > **#3099 (2026-11-17, v2.44):** Die unten gezeigte Folge ist die **Standardreihenfolge**. Wirksam ist die SMS-Liste des Kanal-Listen-Resolvers (`resolve_channel_lists(...).sms`, ADR-0121): Auswahl, Folge und Roh/Einfach der wählbaren Metriken kommen aus ihr, im Trip wie im Ortsvergleich. **Fix am Ende** stehen nur die System-Blöcke amtlicher Warn-Block, `X?` und `DBG` (sowie Vigilance/Fire wie in der Fix-#1677-Notiz unten); sie sind keine Zeile der Liste, nicht abwählbar und wandern durch Umsortieren nicht.
 
 ```
-{Name}: N L D FN FL FD R PR W G TH: TH+: HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ C VR:VT: !{Warn-Block} Z: M: [SD NS24+ SL] X? DBG
+{Name} N L D FN FL FD R PR W G TH: TH+: HU DP WD: CP PT: CT CL CM CH VS SU UV HP FZ C VR:VT: !{Warn-Block} Z: M: [SD NS24+ SL] X? DBG
 ```
 
 **Hinweis zu `L D` / `FL FD` (Issue #1824, 2026-08-14; Kürzel `K`→`L`/`FK`→`FL` seit Fix #1926, 2026-08-17):** Sind bei einer Temperatur-Metrik **beide** Auswertungen („Tiefstwert" UND „Höchstwert") gewählt, erscheinen die beiden Kürzel nicht getrennt, sondern als **ein Bereichs-Token** unter dem Höchstwert-Kürzel: `D{min}/{max}` statt `L{min} D{max}` (gefühlt: `FD{min}/{max}`). Ist nur eine der beiden Auswertungen gewählt, bleibt die bisherige Einzelform (`L13` bzw. `D27`) unverändert — `L`/`FL` bedeuten also weiterhin immer den Tiefstwert. `N`/`FN` (Nacht) sind davon nicht betroffen.
 
 | Block | Tokens | Pflicht? |
 |-------|--------|---------|
-| Header | `{Name}:` | immer |
+| Header | `{Name}` (ohne Doppelpunkt, seit #3174) | immer |
 | Forecast (Nacht) | `N` | **nur Abendbriefing** (Issue #1319 Scheibe D) — im Morgenbriefing entfällt der Token komplett, nicht als `N-` — UND nur bei aktivierter Metrik „Nacht-Tiefsttemperatur“ (`temperature_night`, Issue #1484; bis dahin an „Temperatur“ gekoppelt, Issue #1415) |
 | Forecast (Tiefst unterwegs) | `L` (bis 2026-08-17 `K`, Fix #1926) | Morgen + Abend (Issue #1410) — kälteste Gehzeit-Stunde, von `N` unterschieden — **seit 2026-08-15 nur bei aktivierter Metrik „Tages-Tiefsttemperatur (Gehzeit)“** (`temperature_day_low`, Issue #1728; bis dahin an die Auswertungswahl der Metrik „Temperatur“ gekoppelt, Issue #1415/#1824); ist zusätzlich „Tages-Höchsttemperatur (Gehzeit)“ (`temperature_day_high`) aktiviert, tragen die beiden Werte gemeinsam den Bereichs-Token `D{min}/{max}` (Issue #1824) |
 | Forecast (gefühlt, Nacht) | `FN` | **nur Abendbriefing** UND nur bei aktivierter Metrik „Gefühlte Nacht-Tiefsttemperatur“ (`wind_chill_night`, Issue #1660; bis dahin an „Gefühlte Temperatur“ gekoppelt, Issue #1410) |
@@ -107,7 +107,7 @@ dieser Zweig hat heute aber keinen eingehenden Aufrufer.
 
 **Hinweis zu `VR:VT:`** (bis #2417 `HR:TH:`) — Das sind zwei separate Tokens, die ohne Leerzeichen aneinandergeschrieben werden (z.B. `VR:M@17VT:H@17` oder `VR:-VT:-`). Siehe §3.3 und §3.4.
 
-**Hinweis zu `N` (Issue #1319 Scheibe D, 2026-07-23):** Im Abendbriefing ist `N` das erste Forecast-Token wie oben dargestellt. Im Morgenbriefing entfällt `N` vollständig aus der Zeile (nicht `N-`) — die Reihenfolge rutscht entsprechend nach: `{Name}: L D FL FD R PR W G TH: TH+: ...`.
+**Hinweis zu `N` (Issue #1319 Scheibe D, 2026-07-23):** Im Abendbriefing ist `N` das erste Forecast-Token wie oben dargestellt. Im Morgenbriefing entfällt `N` vollständig aus der Zeile (nicht `N-`) — die Reihenfolge rutscht entsprechend nach: `{Name} L D FL FD R PR W G TH: TH+: ...`.
 
 **Hinweis zu `L`/`FL`/`FD`/`FN` (Issue #1410, 2026-07-28; Kürzel-Bindung nachgezogen durch Issue #1660, 2026-08-09; erneut geändert durch Issue #1728, 2026-08-15; Kürzel `K`→`L`/`FK`→`FL` seit Fix #1926, 2026-08-17):** `L` ist die Tiefsttemperatur **unterwegs** (kälteste Gehzeit-Stunde) und steht unabhängig neben `N` (Nacht am Schlafplatz) — beide erscheinen abends gemeinsam (`N` seit Issue #1484 nur bei gewählter eigener Metrik „Nacht-Tiefsttemperatur“), morgens nur `L`. Das `F`-Präfix bezeichnet die **gefühlte** Temperatur (`FN`/`FL`/`FD` als Parität zu `N`/`L`/`D`). `FN` folgt seit Issue #1660 — wie `N` seit #1484 — der eigenen wählbaren Metrik „Gefühlte Nacht-Tiefsttemperatur“ (`wind_chill_night`), statt wie zuvor an „Gefühlte Temperatur“ zu hängen.
 
@@ -131,7 +131,7 @@ dieser Zweig hat heute aber keinen eingehenden Aufrufer.
 
 | Token | Bedeutung | Beispiel |
 |-------|-----------|----------|
-| `{Name}:` | Etappen-/Location-Name (max 10 Zeichen, ASCII) oder mit km-Bereich | `Ballone:` oder `GR221 km0-11:` |
+| `{Name}` | Etappen-/Location-Name (max 10 Zeichen, ASCII) oder mit km-Bereich, `Etappe N` als `EN`; danach ein Leerzeichen, **kein Doppelpunkt** (Issue #3174, PO 2026-11-19: „Jedes Zeichen ist kostbar!!!“; wie `O1` der Orte-SMS) | `E3`, `Ballone` oder `GR221 km0-11` |
 
 **Name-Truncation & km-Bereichs-Bewahrung (Issue #936):**
 1. Falten **zuerst** — Umlaute ersetzen (ä→ae, ö→oe, ü→ue, ß→ss) und alle sonstigen
@@ -142,9 +142,9 @@ dieser Zweig hat heute aber keinen eingehenden Aufrufer.
 2. Auf "km" prüfen im Namen. Wenn gefunden:
    - Prefix vor "km" auf **max. 10 Zeichen** kürzen.
    - **Kompletten km-Bereich** (z.B. `km0-11`) bewahren und anhängen.
-   - Beispiel: `GR221 Mallorca km0-11` → `GR221 km0-11:` (Name gekürzt, km-Teil vollständig).
+   - Beispiel: `GR221 Mallorca km0-11` → `GR221 km0-11` (Name gekürzt, km-Teil vollständig).
 3. Wenn kein "km": Standard-Truncation auf 10 Zeichen.
-4. Trailingde Leerzeichen und `:` entfernen.
+4. Trailingde Leerzeichen und `:` entfernen (ein Name wie `Ballone:` ergibt `Ballone`, nie einen Doppelpunkt im Kopf).
 
 **Implementierung:** `_sanitize_stage_name()` in `src/output/tokens/builder.py`.
 
@@ -357,11 +357,11 @@ Beides ist sicherheitsrelevant, nicht kosmetisch: eine amtliche Warnung, die sti
 **Beispiele:**
 
 ```
-Nur Vorhersage:   GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16
-Mit Warnung:      GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 !TS:H@14 WG:M
-Brand + Sperrung: GR20 E5: N9 D28 R- W12@11 TH:- !FR:H AB
-Lagebericht:      KHW E5: N-6 D2 R- W20@11 !AV4
-Nicht abrufbar:   GR20 E5: N9 D24 R0.2@6 W10@11 TH:M@16 X?
+Nur Vorhersage:   GR20 E5 N9 D24 R0.2@6 W10@11 TH:M@16
+Mit Warnung:      GR20 E5 N9 D24 R0.2@6 W10@11 TH:M@16 !TS:H@14 WG:M
+Brand + Sperrung: GR20 E5 N9 D28 R- W12@11 TH:- !FR:H AB
+Lagebericht:      KHW E5 N-6 D2 R- W20@11 !AV4
+Nicht abrufbar:   GR20 E5 N9 D24 R0.2@6 W10@11 TH:M@16 X?
 ```
 
 ### 3.4d Nicht-abrufbar-Marker `X?` (Issue #1349, Folge von #1348; Kürzel seit Epic #1703 Scheibe 6)
@@ -647,7 +647,7 @@ Kopf und kein Datum** und nennt **keine Ortsnamen**. Die Orte heißen `O1`, `O2`
 Trip-SMS (`E3`); die Nummer ist die Stelle in der Reihenfolge des Abos, gezählt über **alle** Orte
 (auch Orte ohne Daten), und ändert sich beim Kürzen nie. Ortsteil = `O{n} {Token}` **ohne
 Doppelpunkt**, zwischen Orten steht **ein Leerzeichen** (kein `; `). Die Karte „Was steht wo“ erklärt
-`O1` in der Legende („Ort 1 in der Reihenfolge des Abos“). Die Trip-SMS behält ihr `E3: `.
+`O1` in der Legende („Ort 1 in der Reihenfolge des Abos“). Die Trip-SMS schreibt seit #3174 ebenso ohne Doppelpunkt (`E3 N12 D17 …`).
 
 | Fall | SMS |
 |---|---|
@@ -719,7 +719,7 @@ Bis v2.42 füllte der erste Ort die SMS und alle weiteren Orte ohne Warnung fiel
 
 Abgelöst: die feste Rangfolge bis v2.39 (`DROP_ORDER`: erweiterte Token → Wintersport → Fire → Peak-Werte → gefühlte Temperatur → `PR` → `L D N` → Last Resort, #1677 AC-6). Die Peak-Werte `(max@h)` werden nicht mehr gesondert gestrichen; sie gehören zu ihrer Zeile.
 
-`{Name}:` plus mindestens **ein** Risk- oder Wert-Token ist Pflicht. Wenn nach allen Truncation-Schritten immer noch >160 Zeichen: ValueError.
+`{Name}` plus mindestens **ein** Risk- oder Wert-Token ist Pflicht. Wenn nach allen Truncation-Schritten immer noch >160 Zeichen: ValueError.
 
 > **Premium-SMS-Trip (#3100, ADR-0124 Nr. 8):** Die Premium-SMS nutzt denselben Text. Ist der SMS-Text ≤ 153 Zeichen, ist er identisch; sonst kürzt derselbe Formatter nach denselben Regeln 1–4 mit Grenze 153 (`premium_sms_format.md` §1). Die Premium-SMS hat keine eigene Auswahl.
 
@@ -727,11 +727,11 @@ Abgelöst: die feste Rangfolge bis v2.39 (`DROP_ORDER`: erweiterte Token → Win
 
 ## 7. Pflicht-Tokens
 
-- `{Name}:` ist immer im Output.
+- `{Name}` ist immer im Output (ohne Token steht nur das Präfix, z. B. `E3`).
 - Mindestens **ein** Wert-/Risk-Token ist Pflicht (z.B. `TH:M@14`, `W22@14`, `R0.2@6` oder `VR:M@17`).
 - Reine Null-Zeilen sind erlaubt und zeigen "alles ruhig" — Abendbriefing (alle
-  gezeigten Metriken gewählt): `Ballone: N- D- R- PR- W- G- TH:- TH+:-`;
-  Morgenbriefing (ohne `N`, Issue #1319): `Ballone: D- R- PR- W- G- TH:- TH+:-`.
+  gezeigten Metriken gewählt): `Ballone N- D- R- PR- W- G- TH:- TH+:-`;
+  Morgenbriefing (ohne `N`, Issue #1319): `Ballone D- R- PR- W- G- TH:- TH+:-`.
 - **Kein Vorhersage-Kürzel ist unbedingt** (Issue #1415): Jedes Kürzel setzt die
   zugehörige Metrik im Trip voraus; abgewählt entfällt es samt Null-Form. Wählt
   ein Nutzer gar keine Metrik, bleibt nur der Header — dann ist die
@@ -747,45 +747,45 @@ die `N` zeigen, sind als Abendbriefing zu lesen.
 
 ### 8.1 Morning Report (Forecast, kein Risiko)
 ```
-Ballone: D16 R- PR10%@14(20%@17) W- G- TH:- TH+:-
+Ballone D16 R- PR10%@14(20%@17) W- G- TH:- TH+:-
 ```
-**Länge:** 49 Zeichen. (Kein `N`-Token — Morgenbriefing.)
+**Länge:** 48 Zeichen. (Kein `N`-Token — Morgenbriefing.)
 
 ### 8.2 Morning Report (mit Schwellenwerten)
 ```
-Paliri: D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17)
+Paliri D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17)
 ```
-**Länge:** 102 Zeichen. (Kein `N`-Token — Morgenbriefing.)
+**Länge:** 100 Zeichen. (Kein `N`-Token — Morgenbriefing.)
 
 ### 8.3 Evening Report mit Vigilance + Fire-Block (Korsika)
 ```
-Paliri: N8 D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17) VR:M@17VT:H@17 Z:HIGH208 M:24
+Paliri N8 D24 R0.2@6(1.4@16) PR20%@11(100%@17) W10@11(15@17) G20@11(30@17) TH:M@16(H@18) TH+:M@14(H@17) VR:M@17VT:H@17 Z:HIGH208 M:24
 ```
-**Länge:** 134 Zeichen.
+**Länge:** 133 Zeichen.
 
 ### 8.4 Update Report (nur kritische Werte)
 ```
-Paliri: D24 G35@14(58@17) TH:H@15 VR:-VT:H@15
+Paliri D24 G35@14(58@17) TH:H@15 VR:-VT:H@15
 ```
-**Länge:** 46 Zeichen.
+**Länge:** 44 Zeichen.
 
 ### 8.5 Wintersport
 ```
-Arlberg: N-12 D-5 SD180 NS24+25 SL1800 W45@12 G78@14(85@16)
+Arlberg N-12 D-5 SD180 NS24+25 SL1800 W45@12 G78@14(85@16)
 ```
-**Länge:** 59 Zeichen. (Bis #1441 stand hier zusätzlich `AV3` — die Lawinenstufe steht seither
+**Länge:** 58 Zeichen. (Bis #1441 stand hier zusätzlich `AV3` — die Lawinenstufe steht seither
 als amtlicher Lagebericht im `!`-Block, §3.4c.) (Bis Fix #1887 stand hier zusätzlich `WC-22` am Ende —
 entfallen, verdoppelte den Wert von `FK`, s. §3.6/§9.)
 
 ### 8.6 Mit Debug
 ```
-Monte: N15 D25 R- PR20%@14 W22@14(28@16) G35@14(48@17) TH:M@14 TH+:- DBG[MET MED]
+Monte N15 D25 R- PR20%@14 W22@14(28@16) G35@14(48@17) TH:M@14 TH+:- DBG[MET MED]
 ```
-**Länge:** 81 Zeichen.
+**Länge:** 80 Zeichen.
 
 ### 8.7 Alles ruhig (alle Null)
 ```
-Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
+Ballone N9 D16 R- PR- W- G- TH:- TH+:-
 ```
 **Länge:** 38 Zeichen.
 
@@ -911,6 +911,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.45 | 2026-11-17 | §6: Premium-SMS-Trip (#3100) — `premium_sms_text` ist der SMS-Text, solange er ≤ 153 Zeichen hat, sonst derselbe Formatter mit Grenze 153 (Kürzung vom Listenende, amtliche Warnung bleibt). Keine Änderung am SMS-Format selbst. |
 | 2.46 | 2026-11-17 | §5b: Kopf der Orte-SMS `Orte TT.MM.:` statt `Vergleich TT.MM.:`, bei genau einem Ort `{Ort} TT.MM.:` ohne Wiederholung des Namens; „keine Daten“ als `Orte: keine Daten` bzw. `{Ort}: keine Daten` (#3122 B5, ADR-0124 Nr. 10, Nachtrag Nr. 1). Sprachfest wie zuvor. |
 | 2.47 | 2026-11-19 | **§5b neu: Orte-SMS in der Token-Zeile der Trip-SMS (Issue #3172, ADR-0125, PO-Entscheidungen 2026-11-19).** Je Ort `O{n} {Token}` aus `build_token_line` (dieselben Kürzel, Wert-Syntax und Abo-Ampel wie der Trip), kein Kopf, kein Datum, keine Ortsnamen, Orte durch ein Leerzeichen getrennt; `-` = unauffällig, `?` = kein Wert; `N`/`FN`/`TH+:` entfallen bei Orten. Grenze 160 wie die Trip-SMS, Premium-SMS über 153 Zeichen neu gekürzt. Die Zellform (`W 13 km/h`), die Zähler `?N`/`+N`, der Kopf `Orte TT.MM.:` und „keine Daten“ sind abgelöst. §6: alle gezeigten Orte tragen gleich viele Listenzeilen, erst dann ` +k Orte`. Gilt für SMS, Premium-SMS und Telegram-Kurzstil der Orte. Spec: `docs/specs/modules/feat_3172_orte_sms_token_zeile.md`. |
+| 2.48 | 2026-11-19 | **Trip-SMS ohne Doppelpunkt nach dem Präfix (Issue #3174, PO-Auswahl „Beide ohne“ 2026-11-19, ADR-0125 Nr. 2).** Kopf `{Name}` statt `{Name}:` — `E3 N12 D17 …`, `GR221 km0-11 …`, `Ballone …`; ohne Token steht nur das Präfix. Ein Zeichen mehr Platz für Werte (§6 misst denselben Text). Kürzel-Doppelpunkte (`TH:`, `WD:`, `PT:`, `VR:`/`VT:` …) bleiben. Gilt für SMS, Premium-SMS und Telegram-Kurzstil des Trips; damit schreiben Trip und Orte (`O1 …`, v2.47) wieder eine Form. Betrifft §2, §3.1, §5, §5b, §6, §7, §8. Spec: `docs/specs/modules/feat_3174_trip_sms_ohne_doppelpunkt.md`. |
 | 2.41 | 2026-11-16 | §6: Orts-Überlauf im Ortsvergleich — ein Ort mit amtlicher Warnung fällt nie in ` +k Orte`, er bleibt mit Marker sichtbar; zuerst werden die Zellen aller gezeigten Orte vom Listenende gekürzt (gleiches Budget je Ort), dann entfallen Orte ohne Warnung (#3047 Runde 7, AC-23). |
 
 **Quellen für v2.0:**
