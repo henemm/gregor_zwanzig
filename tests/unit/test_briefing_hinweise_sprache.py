@@ -158,8 +158,8 @@ def test_ausblick_zustand_uebrige_zustaende_und_kanalformen():
     assert render_outlook_state_plain(OutlookState.UNAVAILABLE, ascii_safe=True, lang="en") == (
         "!! Forecast currently unavailable.")
     html = render_outlook_state_html(OutlookState.UNAVAILABLE, lang="en")
-    assert "Outlook</strong>" in html and "Forecast currently unavailable." in html
-    assert "Ausblick</strong>" in render_outlook_state_html(OutlookState.UNAVAILABLE)
+    assert ">3-day outlook</strong>" in html and "Forecast currently unavailable." in html
+    assert ">3-Tages-Ausblick</strong>" in render_outlook_state_html(OutlookState.UNAVAILABLE)
     assert outlook_state_text(OutlookState.NO_STAGES) == "Keine weiteren Etappen — kein Ausblick."
     assert outlook_state_text(OutlookState.UNAVAILABLE) == "Vorhersage derzeit nicht abrufbar."
 

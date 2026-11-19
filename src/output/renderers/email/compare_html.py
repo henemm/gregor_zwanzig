@@ -1377,9 +1377,8 @@ def _build_location_outlook_rows(
 
 # Issue #1368: der Block hiess bisher wie der Stundenblock darueber ("ORT
 # <Name>") und war damit fuer den Empfaenger nicht als Ausblick erkennbar.
-# Issue #2666: der Renderer liest ``vergleich.ausblick.titel`` (je Sprache);
-# die Konstante bleibt als deutscher Wert fuer Bestands-Importe.
-OUTLOOK_HEADING = "3-Tages-Ausblick"
+# Issue #2666/#3155: der Renderer liest ``vergleich.ausblick.titel`` (je
+# Sprache); der fruehere Hardcode ``OUTLOOK_HEADING`` ist entfallen.
 
 
 def _render_outlook_unavailable(

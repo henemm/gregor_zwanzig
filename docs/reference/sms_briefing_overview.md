@@ -105,7 +105,7 @@ Im Morgenbriefing entfällt `N` komplett.
 Lagerplatz oder in der Hütte), erscheint in der SMS **nicht** — auch wenn die große E-Mail es in der
 Tabelle „Nacht am Ziel" zeigt. Genau das ist der offene Streitpunkt (Issue #1317).
 
-**`TH+:` (Folgetag)** kommt aus einer anderen Quelle (Mehrtages-Trend bzw. eigener Abruf der
+**`TH+:` (Folgetag)** kommt aus einer anderen Quelle (3-Tages-Ausblick bzw. eigener Abruf der
 Folge-Etappe), nicht aus der Nacht am Ziel.
 
 **Soll-vs-Ist-Abweichung:** Der Format-Vertrag (`sms_format.md`) beschreibt `R/PR/W/G` als

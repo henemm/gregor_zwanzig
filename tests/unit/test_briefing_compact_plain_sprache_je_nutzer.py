@@ -87,12 +87,12 @@ def test_ac7_jeder_nutzer_bekommt_seine_sprache_im_kompaktformat(smtp_rand, reih
 
     assert anna["X-GZ-Lang"] == "en" and anna["X-GZ-Format"] == "compact"
     text_a = anna.get_payload(decode=True).decode("ascii")
-    assert "== Metrics overview ==" in text_a and "Next stages" in text_a
-    assert "Metriken-Ueberblick" not in text_a and "Naechste Etappen" not in text_a
+    assert "== Metrics overview ==" in text_a and "3-day outlook" in text_a
+    assert "Metriken-Ueberblick" not in text_a and "3-Tages-Ausblick" not in text_a
     assert "Anna Hut Trail" in text_a and "Bernds Huettentour" not in text_a
 
     assert bernd["X-GZ-Lang"] == "de" and bernd["X-GZ-Format"] == "compact"
     text_b = bernd.get_payload(decode=True).decode("ascii")
-    assert "== Metriken-Ueberblick ==" in text_b and "Naechste Etappen" in text_b
-    assert "Metrics overview" not in text_b and "Next stages" not in text_b
+    assert "== Metriken-Ueberblick ==" in text_b and "3-Tages-Ausblick" in text_b
+    assert "Metrics overview" not in text_b and "3-day outlook" not in text_b
     assert "Bernds Huettentour" in text_b and "Anna Hut Trail" not in text_b

@@ -4,9 +4,8 @@
 	//
 	// 1:1-Struktur aus versand-tab.jsx (VT_SchedulePlan), Datenbindung an die
 	// echten ReportConfig-Felder statt der JSX-Mock-Seeds:
-	//   morning_enabled/evening_enabled, morning_time/evening_time,
-	//   multi_day_trend_morning/evening (KL-2: eigene Trend-Karte mit zwei
-	//   Anhänge-Schaltern statt eigener Uhrzeit).
+	//   morning_enabled/evening_enabled, morning_time/evening_time.
+	//   #3155: die fruehere Trend-Karte (KL-2) ist entfallen.
 	// KL-1: keine per-Karte-Kanal-Chips (kein Backend-Feld für per-Briefing-Kanäle).
 	//
 	// Spec: docs/specs/modules/versand_tab_route.md (AC-3, AC-4, KL-1, KL-2)
@@ -20,22 +19,17 @@
 
 	interface Props {
 		/** Issue #1232 Scheibe 2b: context-Diskriminierung — vergleich zeigt
-		 * keine Mehrtages-Trend-Karte (KL-2: kein multi_day_trend-Feld am
-		 * ComparePreset) und eine eigene Intro-Copy-Zeile. */
+		 * eine eigene Intro-Copy-Zeile. */
 		context?: 'route' | 'vergleich';
 		hasActiveChannel: boolean;
 		morning_enabled: boolean;
 		morning_time: string;
 		evening_enabled: boolean;
 		evening_time: string;
-		multi_day_trend_morning?: boolean;
-		multi_day_trend_evening?: boolean;
 		onMorningToggle: (e: Event) => void;
 		onEveningToggle: (e: Event) => void;
 		onMorningTime: (e: Event) => void;
 		onEveningTime: (e: Event) => void;
-		onTrendMorningToggle?: (e: Event) => void;
-		onTrendEveningToggle?: (e: Event) => void;
 	}
 	let {
 		context = 'route',
@@ -44,17 +38,11 @@
 		morning_time,
 		evening_enabled,
 		evening_time,
-		multi_day_trend_morning = false,
-		multi_day_trend_evening = false,
 		onMorningToggle,
 		onEveningToggle,
 		onMorningTime,
-		onEveningTime,
-		onTrendMorningToggle,
-		onTrendEveningToggle
+		onEveningTime
 	}: Props = $props();
-
-	const isRoute = $derived(context === 'route');
 
 	// Issue #1379: Versandzeit = volle Stunde aus HOUR_OPTIONS (kein eintippbares
 	// Uhrzeit-Feld mehr; Minuten wurden serverseitig ohnehin gekappt, #1280). Ein
@@ -176,29 +164,8 @@
 					</div>
 				</div>
 			</Card>
-
-			{#if isRoute}
-				<Card padding={18}>
-					<div class="vt-card-head">
-						<div>
-							<div class="vt-card-title">{$t('versand.zeitplan.trend')}</div>
-							<div class="vt-card-sub">{$t('versand.zeitplan.trend_sub')}</div>
-						</div>
-					</div>
-					<div class="vt-card-body vt-trend-body">
-						<span data-testid="report-morning-trend">
-							<Checkbox checked={multi_day_trend_morning} disabled={!morning_enabled} onchange={onTrendMorningToggle}
-								>{$t('versand.zeitplan.im_morgen')}</Checkbox
-							>
-						</span>
-						<span data-testid="report-evening-trend">
-							<Checkbox checked={multi_day_trend_evening} disabled={!evening_enabled} onchange={onTrendEveningToggle}
-								>{$t('versand.zeitplan.im_abend')}</Checkbox
-							>
-						</span>
-					</div>
-				</Card>
-			{/if}
+			<!-- #3155 (Spec feat_3155 Nr. 4): die Karte „Mehrtages-Trend" ist entfallen;
+			     den 3-Tages-Ausblick steuert allein die Karte „Was steht wo". -->
 		</div>
 	{/if}
 </div>
@@ -250,11 +217,6 @@
 		margin-top: 14px;
 		padding-top: 12px;
 		border-top: 1px solid var(--g-rule-soft, #e2ddd2);
-	}
-	.vt-trend-body {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
 	}
 	.vt-time-label {
 		display: inline-flex;

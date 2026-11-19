@@ -352,7 +352,7 @@ def render_outlook_plain(
     in Nutzersprache; ohne ``lang`` deutsch (Ortsvergleich bis P4).
     """
     if heading is None:
-        heading = _t("mail.ausblick.naechste_etappen", lang)
+        heading = _t("mail.ausblick.name", lang)
     lines: list[str] = []
     lines.append("")
     lines.append(heading)

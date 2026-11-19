@@ -71,6 +71,6 @@ def test_matrix_bleibt_in_beiden_sprachen_gruen(roh, profil, auswahl, lang):
     koepfe = " | ".join(_ueberschriften(html))
     if lang == "en":
         assert "Nacht" not in koepfe and "Ausblick" not in koepfe, koepfe
-        assert "Night at destination" in koepfe and "Outlook · next 3 days" in koepfe
+        assert "Night at destination" in koepfe and "3-day outlook" in koepfe
     else:
-        assert "Nacht am Ziel" in koepfe and "Ausblick · nächste 3 Tage" in koepfe
+        assert "Nacht am Ziel" in koepfe and "3-Tages-Ausblick" in koepfe

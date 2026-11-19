@@ -370,7 +370,7 @@ class TestTelegramInlineTokens:
         )]
         body = _render_narrow("telegram", trend=trend)
         # Issue #1001: Ausblick-Bubble-Ueberschrift heisst jetzt "Ausblick"
-        # statt "Nächste Etappen" (Spec Implementation Details Punkt 5).
+        # statt "3-Tages-Ausblick" (Spec Implementation Details Punkt 5).
         assert "Ausblick" in body
         # No @ in threshold lines for this stage
         trend_section = body.split("Ausblick")[-1]
@@ -421,7 +421,7 @@ class TestTelegramInlineTokens:
             thunder="HIGH",
         )]
         body = _render_narrow("telegram", trend=trend)
-        trend_section = body.split("Nächste Etappen")[-1] if "Nächste Etappen" in body else body
+        trend_section = body.split("3-Tages-Ausblick")[-1] if "3-Tages-Ausblick" in body else body
         assert "mittel" in trend_section or "hoch" in trend_section, (
             f"Expected mittel/hoch in telegram trend, got:\n{trend_section!r}"
         )

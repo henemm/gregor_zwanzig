@@ -93,8 +93,8 @@ _LAT, _LON, _MODELL = 47.0, 12.0, "icon_d2"   # Gebiet DE_ALPEN
 _HEUTE = date(2026, 8, 20)     # Etappe des Briefings -> Pille
 _MORGEN = date(2026, 8, 21)    # kuenftige Etappe    -> Ausblick-Zeile
 _WOCHENTAG = "Di"
-_AUSBLICK_PLAIN = "Nächste Etappen"      # Klartext-Vollmail
-_AUSBLICK_KOMPAKT = "Naechste Etappen"   # Kompakt-Mail ist ASCII-gefaltet
+_AUSBLICK_PLAIN = "3-Tages-Ausblick"      # Klartext-Vollmail
+_AUSBLICK_KOMPAKT = "3-Tages-Ausblick"   # Kompakt-Mail ist ASCII-gefaltet
 _AUSBLICK_COMPARE = "3-Tages-Ausblick"   # im Ortsvergleich gibt es keine Etappen
 _KOMPAKT = TripReportConfig(email_format="compact")
 
@@ -330,7 +330,7 @@ def _telegram_ausblick(bericht) -> str:
     """Der Telegram-Ausblick-Block als EINE Zeile (``narrow._wrap`` bricht auf
     56 Zeichen an Wortgrenzen um; das Zusammenfuegen stellt den Originaltext
     her, solange kein Wort laenger als 56 Zeichen ist)."""
-    bubbles = [b for b in bericht.telegram_bubbles if b.startswith("Ausblick")]
+    bubbles = [b for b in bericht.telegram_bubbles if b.startswith("3-Tages-Ausblick")]
     assert len(bubbles) == 1, (
         f"Erwartet genau EINE Ausblick-Bubble, gefunden: {bubbles!r}")
     return " ".join(bubbles[0].splitlines()[1:])
@@ -402,7 +402,7 @@ def test_ac2_klartext_pille_nennt_dieselbe_gewitterstufe():
 def test_ac3_klartext_ausblick_zeigt_die_onset_stunde():
     """AC-3: Given eine kuenftige Etappe im mehrtaegigen Ausblick mit
     Tagesgewitter ab Stunde 14 Uhr / When der Empfaenger den Klartext-Ausblick
-    "Nächste Etappen" liest / Then sieht er in der Gewitterspalte dieser Zeile
+    "3-Tages-Ausblick" liest / Then sieht er in der Gewitterspalte dieser Zeile
     die Uhrzeit direkt neben dem Stufenwort (``⚡mittel@14``), nicht nur das
     Wort ohne jede Zeitangabe.
 

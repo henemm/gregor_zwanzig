@@ -16,7 +16,9 @@ const BAUSTEIN_TEXTE: Record<string, [label: MessageKey, description: MessageKey
 	show_stage_stats: ['layout.mail_inhalt.etappen_kennzahlen', 'layout.mail_inhalt.etappen_kennzahlen_text'],
 	show_quick_take_tags: ['layout.mail_inhalt.quick_take', 'layout.mail_inhalt.quick_take_text'],
 	show_metrics_summary: ['layout.mail_inhalt.metriken_ueberblick', 'layout.mail_inhalt.metriken_ueberblick_text'],
-	show_outlook: ['layout.mail_inhalt.ausblick', 'layout.mail_inhalt.ausblick_text'],
+	// #3155 (Spec feat_3155 Nr. 8): show_outlook steuert ohne Tabelle nur noch die
+	// Grosswetterlage -- der Haken traegt deren Namen und Text.
+	show_outlook: ['layout.mail_inhalt.grosswetterlage', 'layout.mail_inhalt.grosswetterlage_text'],
 	show_stability: ['layout.mail_inhalt.grosswetterlage', 'layout.mail_inhalt.grosswetterlage_text'],
 	show_highlights: ['layout.mail_inhalt.zusammenfassung', 'layout.mail_inhalt.zusammenfassung_text'],
 	show_yesterday_comparison: ['layout.mail_inhalt.vortag_vergleich', 'layout.mail_inhalt.vortag_vergleich_text'],

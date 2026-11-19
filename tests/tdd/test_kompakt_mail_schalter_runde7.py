@@ -33,9 +33,9 @@ FOLGE = ["gust", "precipitation", "temperature", "wind"]
 #: Erwartete Nutzertexte je Sprache (ASCII-gefaltet wie im Kompaktformat).
 TEXT = {
     "de": {"warn": "== Warnungen ==", "ueberblick": "== Metriken-Ueberblick ==",
-           "ausblick": "Naechste Etappen"},
+           "ausblick": "3-Tages-Ausblick"},
     "en": {"warn": "== Warnings ==", "ueberblick": "== Metrics overview ==",
-           "ausblick": "Next stages"},
+           "ausblick": "3-day outlook"},
 }
 
 def _warnung():
@@ -121,6 +121,6 @@ def test_zwei_nutzer_kompakt_und_ausfuehrlich(monkeypatch):
     assert uid_a != uid_b and "default" not in (uid_a, uid_b)
     sa, sb = mitschrift.sendungen("email")
     assert sa["empfaenger"] != sb["empfaenger"]
-    assert sa["mail_format"] == "compact" and "Naechste Etappen" in sa["body"]
+    assert sa["mail_format"] == "compact" and "3-Tages-Ausblick" in sa["body"]
     assert sb["mail_format"] != "compact"
-    assert "Nächste Etappen" not in sb["plain_text_body"]
+    assert "3-Tages-Ausblick" not in sb["plain_text_body"]

@@ -25,7 +25,7 @@ from tests.helpers.mail_lang_fixture import lade, validator_lauf
 # Deutsche Signalwoerter (AC-1) -- jedes steht in mindestens einer deutschen
 # Fassung des reichen Szenarios (Gegenprobe unten), damit die Liste nicht leer laeuft.
 SIGNALWOERTER = [
-    "Naechste Etappen", "Nächste Etappen", "Wetterlage", "Metriken-Ueberblick",
+    "3-Tages-Ausblick", "3-Tages-Ausblick", "Wetterlage", "Metriken-Ueberblick",
     "Metriken-Überblick", "Nacht am Ziel", "Ankunft", "Antwort-Kommandos", "Einheiten",
     "Spalten", "nicht abrufbar", "FEHLGESCHLAGEN", "ZURUeCKGEHALTEN", "ZURÜCKGEHALTEN",
     "Stille Stunden", "Tageslimit", "Versand fehlgeschlagen", "Ersatzquelle",
@@ -91,7 +91,7 @@ def test_ac1_kompakt_englisch_inhalt_ausblick():
     for erwartet in (
         "WEATHER BRIEFING", "Corsica North - Evening Report", "== Metrics overview ==",
         "Weather pattern: CHANGEABLE - The pattern is in transition.",
-        "Next stages", "Thdr Tmedium@13 (high @15)",
+        "3-day outlook", "Thdr Tmedium@13 (high @15)",
         "!! Official warnings are currently unavailable - please check yourself.",
         "FAILED - something went wrong", "HELD BACK - as you set it up",
         "Delivery failed", "Quiet hours", "... and 2 more",
@@ -198,7 +198,7 @@ def test_ac1_kompakt_fester_ausblick_zweig_englisch():
 
 def test_ac1_kompakt_englisch_inhalt_zustand():
     text = render_briefing("en", email_format="compact", variante="zustand").email_plain
-    assert "Next stages\nNext stage is too far ahead (max. 1 day)." in text, text
+    assert "3-day outlook\nNext stage is too far ahead (max. 1 day)." in text, text
 
 
 def test_ac1_klartext_englisch_inhalt():
@@ -207,7 +207,7 @@ def test_ac1_klartext_englisch_inhalt():
         "WEATHER BRIEFING", "━━ Metrics overview ━━",
         "Weather pattern: CHANGEABLE — The pattern is in transition.",
         "Night at destination (1600m)", "Arrival ", "→ next morning 06:00",
-        "Next stages", "⚠️ Official warnings are currently unavailable — please check yourself.",
+        "3-day outlook", "⚠️ Official warnings are currently unavailable — please check yourself.",
         "⚠️ Heavy rain from about ", "(in ~30 min), last rain around ",
         "── Reply commands ──", "Units: ", "Columns: ", "Stage briefing · full version",
         "Some weather values from backup model: DWD Europa (Wind gusts)",
@@ -220,7 +220,7 @@ def test_ac1_klartext_englisch_inhalt():
 def test_ac1_klartext_zustand_englisch():
     text = render_briefing("en", email_format="full", variante="zustand").email_plain
     for erwartet in (
-        "━━ Next stages ━━\nNext stage is too far ahead (max. 1 day).",
+        "━━ 3-day outlook ━━\nNext stage is too far ahead (max. 1 day).",
         "━━ Thunderstorm preview ━━", "━━ Segment 2: WEATHER DATA UNAVAILABLE ━━",
         "Provider error after 5 attempts", "Weather at destination: ",
     ):
@@ -292,7 +292,7 @@ def test_ac3_englische_kompakt_mail_traegt_kopf_und_englischen_inhalt():
     assert msg["X-GZ-Lang"] == "en"
     assert msg["X-GZ-Format"] == "compact"
     text = msg.get_payload(decode=True).decode("ascii")
-    assert "== Metrics overview ==" in text and "Next stages" in text
+    assert "== Metrics overview ==" in text and "3-day outlook" in text
     assert _deutsche_reste(text) == [], text
 
 

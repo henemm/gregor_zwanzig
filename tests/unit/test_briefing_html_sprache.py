@@ -62,7 +62,7 @@ def test_ac1_legende_gewitterstufe_datum_und_fusszeile_englisch():
     assert "Thunderstorm medium from 11:00" in text
     assert "Stage 2 / 5" in text
     assert "Night at destination (1600m)" in text
-    assert "Outlook · next 3 days" in text
+    assert "3-day outlook" in text
     assert "Open trip overview →" in text and "Briefing schedule" in text
     assert "Stage briefing · full version" in text
     kopfdatum = re.search(r"\n(\w+) · \d\d\.\d\d\.\d{4} · \d\d:\d\d", text)

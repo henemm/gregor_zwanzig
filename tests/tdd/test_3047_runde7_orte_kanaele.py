@@ -158,9 +158,9 @@ def ortsbloecke(tg: str) -> dict[str, list[str]]:
 
 def wertezeilen(block: list[str]) -> list[list[str]]:
     """Zellen der Werte-Zeilen eines Ortsblocks (Zeilen mit ' · '), nur der
-    Telegram-Liste: der 3-Tages-Ausblick (ab Kopf "Ausblick"/"Outlook", B-K7)
+    Telegram-Liste: der 3-Tages-Ausblick (ab Kopf "3-Tages-Ausblick"/"3-day outlook", B-K7)
     gehoert nicht dazu."""
-    for kopf in ("Ausblick", "Outlook"):
+    for kopf in ("3-Tages-Ausblick", "3-day outlook"):
         if kopf in block:
             block = block[:block.index(kopf)]
     return [z.split(" · ") for z in block if " · " in z]
@@ -338,7 +338,7 @@ def _ausblick_preset(**top) -> dict:
 
 
 def _ausblick_zeilen(block: list[str], lang: str) -> list[str]:
-    kopf = {"de": "Ausblick", "en": "Outlook"}[lang]
+    kopf = {"de": "3-Tages-Ausblick", "en": "3-day outlook"}[lang]
     assert kopf in block, f"Ausblick-Kopf fehlt im Ortsblock: {block}"
     return block[block.index(kopf) + 1:]
 
@@ -389,7 +389,7 @@ def test_k7_ausblick_im_orte_telegram_renderer(mit, lang):
             if soll:
                 _pruefe_ausblick(tg, lang)
             else:
-                assert not any("Ausblick" in z or "Outlook" in z for z in tg.splitlines()), tg
+                assert not any("3-Tages-Ausblick" in z or "3-day outlook" in z for z in tg.splitlines()), tg
 
 
 def _ausblick_faelle() -> tuple:
@@ -410,7 +410,7 @@ def test_k7_ausblick_im_orte_telegram_kette(mit, lang):
             if soll:
                 _pruefe_ausblick(tg, lang)
             else:
-                assert not any(z.strip() in ("Ausblick", "Outlook") for z in tg.splitlines()), tg
+                assert not any(z.strip() in ("3-Tages-Ausblick", "3-day outlook") for z in tg.splitlines()), tg
 
 
 @pytest.mark.parametrize("lang", ["de", "en"])
@@ -432,7 +432,7 @@ def test_k7_ausblick_in_orte_telegram_vorschau(mit, lang):
             if soll:
                 _pruefe_ausblick(tg, lang)
             else:
-                assert not any(z.strip() in ("Ausblick", "Outlook") for z in tg.splitlines()), tg
+                assert not any(z.strip() in ("3-Tages-Ausblick", "3-day outlook") for z in tg.splitlines()), tg
             uids.append(uid)
         assert uids[0] != uids[1]
 

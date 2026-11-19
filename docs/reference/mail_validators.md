@@ -145,7 +145,7 @@ Orte: das Preset, für die Ortsfolge mit `--orte PFAD` oder als Hülle
 `{"preset": {...}, "orte": {"<id>": "<Name>"}}`). `.claude/hooks/_soll_aus_konfiguration.py` leitet daraus
 das Soll ab — nur aus der Datei und dem statischen Register (`col_label`,
 `label`, Compare-Katalogtabelle), **nie** über ein `resolve_*` des Produkts
-(Spiegel-Test-Verbot). `pruefe_soll(msg, soll, lang)` vergleicht dann im
+(Spiegel-Test-Verbot; einzige Ausnahme: Ausblick je Briefing, #3155, unten). `pruefe_soll(msg, soll, lang)` vergleicht dann im
 **HTML- und im Klartext-Teil**:
 
 - **Trip:** Spaltenfolge jeder Etappen-Stundentabelle und der Nachttabelle
@@ -190,6 +190,32 @@ dokumentierte Folge (Trip-Altbestand ohne `metrics`, Orte-Vergleichstabelle
 ohne `active_metrics`) prüft der Validator nicht; ihre Vorgabe
 sichert der Editor-Standard-Abgleich (AC-13). Ohne `--konfig` ist das Verhalten
 unverändert.
+
+**3-Tages-Ausblick: ein Name, ein Briefing (#3155, Scheibe B4, AC-12)**, nur mit `--konfig`:
+
+- **Soll aus einer Regel:** ob der Ausblick im Morgen- bzw. Abend-Briefing steht,
+  liefert `ausblick_briefings` in `_soll_aus_konfiguration.py` über die **echten**
+  Funktionen aus `src/services/placements.py` (Spec-Vorgabe, bewusste Ausnahme vom
+  `resolve_*`-Verbot oben): mit Tabelle `resolve_outlook_reports` + `outlook_applies`,
+  sonst `_legacy_outlook_reports` (Trip samt Kompakt-Ausnahme, Orte samt
+  Anlage-Marke `display_config.placements.outlook_reports` ohne `rows`). Die
+  Altfelder `show_outlook`/`multi_day_trend_reports` liest der Validator nicht mehr selbst.
+- **Nur im eingestellten Briefing:** ein Ausblick im falschen Briefing scheitert
+  mit „SOLL: Ausblick (HTML) erscheint im Abend-Briefing, laut Konfiguration steht
+  er nur im Morgen-Briefing“; fehlt er im eingestellten Briefing, „Ausblick-Block
+  (…) fehlt (kein Titel '3-Tages-Ausblick')“ (Trip: außer an der letzten Etappe).
+  Briefing der Mail: Trip aus Kopf/Betreff („Evening Report“/„Abend-Briefing“);
+  Orte (kein Briefing-Kopf) aus `--briefing morning|evening`, sonst aus dem Slot
+  (nur ein Briefing an) bzw. dem Zieltag (Morgen = Erstellungstag, Abend =
+  Folgetag). Hängt der Ausblick am Briefing und ist es nicht ablesbar: Exit 1 mit
+  Hinweis auf `--briefing`. `--briefing` ohne `--konfig` ist Exit 2.
+- **Blockname** in der Sprache von `X-GZ-Lang`: „3-Tages-Ausblick“/„3-day outlook“
+  (Trip: HTML-Eyebrow `mail.ausblick.eyebrow`, Klartext `mail.ausblick.name`,
+  Kompakt dessen ASCII-Form; Orte: `vergleich.ausblick.eyebrow`/`.titel`). Ein
+  früherer Name als eigener Blocktitel („Nächste Etappen“, „Ausblick“,
+  „Ausblick · nächste 3 Tage“, „Mehrtages-Trend“, „3-Tages-Vorschau“, EN „Next
+  stages“, „Outlook“ …) scheitert mit „Ausblick-Block (Klartext) heisst 'Nächste
+  Etappen' statt '3-Tages-Ausblick'“. Tests: `tests/tdd/test_validatoren_ausblick_3155.py`.
 
 Randfälle (dritte Nachprüfung #3047, N1–N7), alle nur mit `--konfig`:
 

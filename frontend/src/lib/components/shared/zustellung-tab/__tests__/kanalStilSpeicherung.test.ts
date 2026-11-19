@@ -70,8 +70,9 @@ describe('F004: Nutzlast des Kanal-Stils', () => {
 		}
 		const neuGeladen = ladeReportZustand(danach);
 		assert.equal(neuGeladen.telegram_style, 'kurzform');
-		assert.equal(neuGeladen.multi_day_trend_morning, true, 'Morgen-Trend ist nach dem Neuladen weg');
-		assert.equal(neuGeladen.multi_day_trend_evening, false, 'Abend-Trend ist nach dem Neuladen noch an');
+		// #3155 (Spec feat_3155 Entscheidung 4): der Versand-Zustand fuehrt keine Trend-Bool-Felder
+		// mehr; gueltig bleibt, dass die Liste (die Python liest) nach dem Merge den Stand traegt.
+		assert.deepEqual(danach.multi_day_trend_reports, ['morning'], 'Ausblick-Liste ist nach dem Neuladen falsch');
 		assert.deepEqual(kanalStilStart('route', { ...trip, report_config: danach }), { stil: 'kurzform', trendMorgen: true, trendAbend: false });
 	});
 

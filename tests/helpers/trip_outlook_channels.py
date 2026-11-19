@@ -50,8 +50,8 @@ REFERENCE_COMPACT = REFERENCE_DIR / "compact_block.txt"
 REFERENCE_TELEGRAM = REFERENCE_DIR / "telegram_bubble.txt"
 
 LAT, LON = 46.65, 12.85
-COMPACT_OUTLOOK_HEADING = "Naechste Etappen"
-TELEGRAM_OUTLOOK_HEADING = "Ausblick"
+COMPACT_OUTLOOK_HEADING = "3-Tages-Ausblick"
+TELEGRAM_OUTLOOK_HEADING = "3-Tages-Ausblick"  # #3155: ein Name
 
 # #1848 A2: Auswahl-Bausteine sind reine Kennungen (vorher Paare, #1373).
 NIEDERSCHLAG = "precipitation"

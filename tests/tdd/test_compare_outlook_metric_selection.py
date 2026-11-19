@@ -75,11 +75,10 @@ _ALLOWED_LABELS = {
     "precipitation": {"Rain", "Niederschlag"},
 }
 
-# Ausblick-Ueberschriften im Klartext: der Ist-Zustand ("Nächste Etappen",
-# Trip-Wortlaut) UND der Soll-Zustand. Der Block-Ableser unten muss beide
-# kennen, damit ein RED-Lauf den Block ueberhaupt findet und inhaltlich (statt
-# mit "Block nicht gefunden") scheitert.
-_PLAIN_OUTLOOK_HEADINGS = ("3-Tages-Ausblick", "Nächste Etappen")
+# Ausblick-Ueberschrift im Klartext: seit #3155 traegt der Block in jeder
+# Ausgabe den einen Namen "3-Tages-Ausblick"; der alte Trip-Wortlaut
+# ("Nächste Etappen") wird bewusst nicht mehr erkannt.
+_PLAIN_OUTLOOK_HEADINGS = ("3-Tages-Ausblick",)
 
 
 # ---------------------------------------------------------------------------

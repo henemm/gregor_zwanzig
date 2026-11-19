@@ -31,7 +31,7 @@ Seit Epic #2791 S3a Teil-PR 2 (2026-11-09) hat die Leiste **vier Reiter** (Trip 
   `shared/zustellung-tab/ZustellungTab.svelte`, `context="route"|"vergleich"`; seit #2795 S3b Teilschritt 1b
   (2026-11-13) neu gebaut).
   Seit #3154 (#3122 B3b, ADR-0124, Spec `feat_3122_was_steht_wo.md` Teil B Nr. 14) stehen Listen je Kanal,
-  Stundenverlauf, Ausblick, Telegram-Kurzstil, Mehrtages-Trend (jetzt Ausblick je Briefing), E-Mail-Format,
+  Stundenverlauf, Ausblick, Telegram-Kurzstil, 3-Tages-Ausblick (je Briefing, seit #3155), E-Mail-Format,
   Etappen-Kennzahlen, Vortag-Vergleich und Nacht-Stundentabelle allein im Reiter Wetter (Tabelle „Was steht wo“
   mit Schaltern darunter). Im Übergangsblock am Ende des Reiters Zustellung bleiben bis #3036 nur der
   Beispiel-Alarm und beim Ortsvergleich die Aktivierungs-Karte (Pausieren/Aktivieren).

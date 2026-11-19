@@ -174,6 +174,14 @@ func TestOrteAnlage_AusblickMarkeAuchMitStandardvorlage(t *testing.T) {
 	basis := t.TempDir()
 	uid := "nutzer-a-3155"
 	s := store.New(basis, uid)
+	// Vorbedingung: eine Orts-Standardvorlage DIESES Nutzers (sonst bliebe
+	// display_config ohne Grundauswahl und "Vorlage verloren" waere unpruefbar).
+	if err := s.WithUser(uid).SaveMetricPresets([]model.MetricPreset{{
+		ID: "vorlage-3155", Name: "Orte-Standard", Kind: model.PresetKindVergleich, IsDefault: true,
+		Metrics: []model.DisplayMetric{{MetricID: "wind", Enabled: true}},
+	}}); err != nil {
+		t.Fatalf("Standardvorlage anlegen: %v", err)
+	}
 	body := orteBody3155("Orte", slots3155(true, false))
 	delete(body, "display_config")
 	postOrteAnlage3155(t, s, uid, body)

@@ -188,7 +188,7 @@ describe('AC-1: Metrik-Namen aus dem Register, Kurzform und Kuerzel unveraendert
 			'Which metrics go into the briefing?', '9 active', 'Temperature', 'Atmosphere', 'Winter / snow',
 			'Activated metrics appear in section 3, where you set their order and display.', 'Order', '· 9 metrics',
 			'left → right in the email table', 'Raw', 'Simple', 'Off', 'Off in this channel',
-			'04 — Thresholds', 'Apply to SMS tokens, Telegram compact style and the email outlook/trend block', 'Gusts (km/h)',
+			'04 — Thresholds', 'Apply to SMS tokens, Telegram compact style and the email\'s 3-day outlook', 'Gusts (km/h)',
 			'Precipitation (mm)', 'Snow line (m)', 'Sensitive Standard Robust', 'Thunderstorm TH Light Moderate High',
 			'Official warnings in the report', 'everything after it is an official warning', 'L = yellow', 'TH:H = red thunderstorm warning',
 			// #2794 S3a Teil-PR 3 (AC-42): Dialog-Texte aus `wetter.dialog.*` (ohne Zeithorizonte/Zusammenfassung).

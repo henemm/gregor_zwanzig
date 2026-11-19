@@ -25,7 +25,7 @@
 	// reine Funktionen in reportConfigPayload.ts (Slot-Regel reportSlotAktiv,
 	// Read-Modify-Write ueber mergeReportConfig) — dieselben wie in
 	// die frühere Report-Config-Section (#2277 S5 entfernt).
-	import { baueReportConfigPayload, ladeReportZustand } from './versand-tab/reportConfigPayload.ts';
+	import { baueReportConfigPayload, istGespeicherterReportConfig, ladeReportZustand } from './versand-tab/reportConfigPayload.ts';
 	// Issue #2276 S5: Speicherweg des vergleich-Zweigs (kein Laufzeit-Import aus
 	// der Compare-Hub-Klebeschicht, aufgeloest in S6f, AC-8).
 	import {
@@ -149,8 +149,10 @@
 	let evening_enabled = $state(startZustand.evening_enabled);
 	let morning_time = $state('07:00');
 	let evening_time = $state('18:00');
-	let multi_day_trend_morning = $state(false);
-	let multi_day_trend_evening = $state(false);
+	// #3155 (Spec feat_3155 Nr. 4/9): die Karte „Mehrtages-Trend" ist entfallen.
+	// Den 3-Tages-Ausblick belegt nur die Trip-ANLAGE vor (kein gespeicherter
+	// report_config); das Speichern eines bestehenden Trips setzt ihn nie neu.
+	const ausblickVorbelegung = untrack(() => !istGespeicherterReportConfig(reportConfig as Record<string, unknown> | undefined));
 	// Issue #1717 S3: die vier Briefing-Kanal-Flags stehen schon BEIM ERZEUGEN
 	// aus report_config (untrack, Muster die frühere Report-Config-Section (#2277 S5 entfernt)) und
 	// nicht erst in onMount. Zwei Gruende: der erste Rahmen zeigte sonst
@@ -193,8 +195,6 @@
 			send_sms = z.send_sms;
 			send_premium_sms = z.send_premium_sms;
 			telegram_style = z.telegram_style ?? 'rich';
-			multi_day_trend_morning = z.multi_day_trend_morning;
-			multi_day_trend_evening = z.multi_day_trend_evening;
 		}
 	});
 
@@ -227,10 +227,9 @@
 				send_sms,
 				// Issue #1717 S3 — derselbe Write-Back-Pfad wie die drei darueber.
 				send_premium_sms,
-				telegram_style,
-				multi_day_trend_morning,
-				multi_day_trend_evening
-			}
+				telegram_style
+			},
+			ausblickVorbelegung
 		});
 		reportConfig = merged as ReportConfig;
 	});
@@ -391,14 +390,10 @@
 			{morning_time}
 			{evening_enabled}
 			{evening_time}
-			{multi_day_trend_morning}
-			{multi_day_trend_evening}
 			onMorningToggle={makeToggleHandler((v) => (morning_enabled = v))}
 			onEveningToggle={makeToggleHandler((v) => (evening_enabled = v))}
 			onMorningTime={makeTimeHandler((v) => (morning_time = v))}
 			onEveningTime={makeTimeHandler((v) => (evening_time = v))}
-			onTrendMorningToggle={makeToggleHandler((v) => (multi_day_trend_morning = v))}
-			onTrendEveningToggle={makeToggleHandler((v) => (multi_day_trend_evening = v))}
 		/>
 		<VTNextBriefing {context} id={saveController ? trip?.id : undefined} reloadKey={saveController?.savedAt} />
 		<VTLaufzeitRoute {tripEnd} onOpenStages={handleOpenStages} />

@@ -1,10 +1,10 @@
 ---
 entity_id: telegram_format
 type: reference
-version: "1.6"
+version: "1.7"
 status: active
 created: 2026-10-21
-updated: 2026-11-17
+updated: 2026-11-19
 tags: [telegram, channel, renderer, inbound, reference]
 ---
 
@@ -37,12 +37,12 @@ Der Stil wird je Trip/Vergleich über `report_config.telegram_style` gewählt: `
 | Variante | `rich` | `kurzform` |
 |---|---|---|
 | **Trip-Briefing** | **Multi-Bubble** (ADR-0014): Folge einzelner `sendMessage`-Aufrufe, `parse_mode="HTML"`. Reihenfolge: Kopf → ggf. „amtliche Warnungen nicht abrufbar“ → ggf. Starkregen-Kurzfristhinweis → ggf. amtliche Warnungen → Kurzübersicht (alle konfigurierten Metriken) → je Segment/Ziel eine `<pre>`-Tabelle → optional Ausblick → Aktionen-Bubble mit Inline-Keyboard (nur letzte Bubble trägt `reply_markup`). Scheitern Bubbles, folgt ein Hinweis „unvollständig“ | **eine** Nachricht mit dem SMS-Text (`report.sms_text`), `parse_mode=None`, keine Bubbles/Knöpfe |
-| **Ortsvergleich-Briefing** | **eine** Nachricht aus `render_compare_telegram()` (kein Score/Rang, ≤ 4096 Zeichen), `parse_mode=None`: alle Zeilen der Telegram-Liste je Ort (Plätze 1–7 in Zeile 1, ab Platz 8 in Zeile 2, kein Kappungshinweis), danach je Ort der 3-Tages-Ausblick (Kopf „Ausblick“, Form wie Trip-Telegram; Schalter aus/leere Ausblick-Liste → entfällt). Amtliche Warnung je Ort als Klartext (keine HTML-Tags, Ortsnamen wortgetreu, #3047). Ohne gespeicherte Grundauswahl („nie eingestellt“) dieselben Zeilen in derselben Folge wie die Vergleichstabelle der Mail, Zeilen ohne Wert entfallen ohne Zähler (B-L4). Warndienst nicht erreichbar: Hinweiszeile „⚠️ Amtliche Warnungen aktuell nicht abrufbar …“ in Nutzersprache nach dem Kopf, vor den Orten (B-L2) | SMS-Vergleichstext (`render_compare_sms`), eine Nachricht, `parse_mode=None` (`scheduler_dispatch_service.py:697`) |
+| **Ortsvergleich-Briefing** | **eine** Nachricht aus `render_compare_telegram()` (kein Score/Rang, ≤ 4096 Zeichen), `parse_mode=None`: alle Zeilen der Telegram-Liste je Ort (Plätze 1–7 in Zeile 1, ab Platz 8 in Zeile 2, kein Kappungshinweis), danach je Ort der 3-Tages-Ausblick (Kopf „3-Tages-Ausblick“ / EN „3-day outlook“ seit #3155, Form wie Trip-Telegram; Schalter aus/leere Ausblick-Liste → entfällt). Amtliche Warnung je Ort als Klartext (keine HTML-Tags, Ortsnamen wortgetreu, #3047). Ohne gespeicherte Grundauswahl („nie eingestellt“) dieselben Zeilen in derselben Folge wie die Vergleichstabelle der Mail, Zeilen ohne Wert entfallen ohne Zähler (B-L4). Warndienst nicht erreichbar: Hinweiszeile „⚠️ Amtliche Warnungen aktuell nicht abrufbar …“ in Nutzersprache nach dem Kopf, vor den Orten (B-L2) | SMS-Vergleichstext (`render_compare_sms`), eine Nachricht, `parse_mode=None` (`scheduler_dispatch_service.py:697`) |
 | **Änderungs-/Radar-Alarm** | eine Nachricht aus `alert/render.py::render_telegram()` (fette Kopfzeile, dieselben Sätze wie die E-Mail, #2020), `parse_mode="HTML"`; Ortsvergleich ggf. je Ort aufgefächert | **eine** gemeinsame Nachricht mit dem SMS-Alarmtext, Vorrang vor dem Fan-out je Ort (#1467 K-6) |
 | **Amtliche Warnung** | reiche Warnvorlage `render_official_alert_telegram` (+ Entwarnung), `parse_mode="HTML"`, ohne Betreffzeile | SMS-Text, `parse_mode=None` |
 | **Befehlsantwort** | Klartext-Bestätigung, optional mit Inline-Keyboard (Zoom-Navigation per `callback_query` + `editMessageText`, #655) | — |
 
-> **Soll ab #3122 ([ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), PO 2026-11-17):** (1) Der Block heißt überall „3-Tages-Ausblick“; der Kopf „Ausblick“ (Katalog `telegram.kopf.ausblick`) beschreibt den heutigen Stand. (2) *Gebaut mit B5, siehe unten.* (3) Die Telegram-Liste wird die Spalte „Telegram“ der Tabelle „Was steht wo“ mit **einer** Reihenfolge für alle Stellen; beim Trip zeigt die Spalte ab der achten Metrik „nur Tageswert“ (Nr. 2, 3). (4) Der Ausblick bleibt **eine** Auswahl für E-Mail und Telegram und bekommt „Morgen-Briefing“/„Abend-Briefing“ auch bei Orten (Nr. 4, 6). (5) Der Kurzstil steht genau einmal unter der Tabelle; ist er an, ruht die Telegram-Spalte und es gilt die SMS-Spalte (Nr. 7). Offen für die Spec: Wirkung von „Einfach“ im Orte-Telegram. Bis zum Bau gilt das hier Beschriebene.
+> **Soll ab #3122 ([ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), PO 2026-11-17):** (1) Der Block heißt überall „3-Tages-Ausblick“: *gebaut mit B4 (#3155)*, Kopf `telegram.kopf.ausblick` = „3-Tages-Ausblick“ / EN „3-day outlook“ in Trip- und Orte-Telegram; der Ausblick steht nur in dem Briefing, das die eine steuernde Stelle nennt (ohne Tabelle: dieselbe Regel wie in der E-Mail, `show_outlook: false` wirkt auch im Telegram). (2) *Gebaut mit B5, siehe unten.* (3) Die Telegram-Liste wird die Spalte „Telegram“ der Tabelle „Was steht wo“ mit **einer** Reihenfolge für alle Stellen; beim Trip zeigt die Spalte ab der achten Metrik „nur Tageswert“ (Nr. 2, 3). (4) Der Ausblick bleibt **eine** Auswahl für E-Mail und Telegram und bekommt „Morgen-Briefing“/„Abend-Briefing“ auch bei Orten (Nr. 4, 6). (5) Der Kurzstil steht genau einmal unter der Tabelle; ist er an, ruht die Telegram-Spalte und es gilt die SMS-Spalte (Nr. 7). Offen für die Spec: Wirkung von „Einfach“ im Orte-Telegram. Bis zum Bau gilt das hier Beschriebene.
 
 **Name „Orte“ (seit #3122 B5, ADR-0124 Nr. 10):** Der Kopf der Orte-Nachricht lautet `ORTE — {Abo-Name}` (EN `LOCATIONS — {Abo-Name}`, Katalog `vergleich.kopf.titel`), auch bei einem einzelnen Ort; „ORTS-VERGLEICH“ entfällt. Die Kurzform (SMS-Text) beginnt mit `Orte TT.MM.:` bzw. bei einem Ort mit `{Ort} TT.MM.:` (`sms_format.md` §5b).
 
@@ -144,6 +144,7 @@ das Menü ist botweit und bleibt deutsch (P7 #2669, Known Limitations); die Zeil
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 1.7 | 2026-11-19 | 3-Tages-Ausblick (#3155, B4 von #3122): Kopf „3-Tages-Ausblick“ / „3-day outlook“ statt „Ausblick“/„Outlook“ in Trip und Orte; Trip ohne Tabelle mit `show_outlook: false` (nicht Kompakt) zeigt im Telegram keinen Ausblick mehr (bewusste Änderung, eine steuernde Stelle). |
 | 1.6 | 2026-11-17 | Trip-Briefing (#3098, ADR-0121 Nachtrag 3c): Menge, Folge und Roh/Einfach der Telegram-Zeilen kommen aus dem Kanal-Listen-Resolver statt aus der Kanal-Kaskade im Renderer. Ausgabe unverändert. |
 | 1.5 | 2026-11-16 | Ortsvergleich-Briefing (#3047 Runde 7): „nie eingestellt“ folgt der Mail-Tabelle (B-L4); Hinweis „Warnungen nicht abrufbar“ (B-L2); Einfach bei Ampel-Größen mit `@{h}` nach der Ampel des Ortsvergleichs (B-L3). |
 | 1.4 | 2026-11-16 | Ortsvergleich-Briefing (#3047 Runde 7, AC-24): alle Zeilen der Telegram-Liste je Ort (Plätze 1–7 in Zeile 1, ab Platz 8 in Zeile 2, kein Kappungshinweis), danach je Ort der 3-Tages-Ausblick (Kopf „Ausblick“, Form wie Trip-Telegram; Schalter aus/leere Ausblick-Liste → entfällt). Amtliche Warnung im Ortsvergleich als Klartext, weil die Nachricht mit `parse_mode=None` hinausgeht (vorher erschienen `<b>…</b>` und `&amp;` wörtlich). |

@@ -50,7 +50,7 @@ Siehe CLAUDE.md für Scope-Details und Pflicht-Gate-Dokumentation.
 | 3 | **Stirnlampe** | ENTFÄLLT | (PO-Entscheidung aus Issue #790 — nicht mehr in neuem Cloud-Design) |
 | 4 | **Segmente** (Stundentabellen) | LIVE | Pro Etappensegment: Segment-Header + zwei-stufige Desktop-Tabelle (Gruppen-Row TEMP/WIND/NIEDERSCHLAG + Einheiten-Row) + Mobile-Variante (`EmailHourList` zwei-Zeilen-Format) |
 | 5 | **Wetter am Ziel** (abgesetzte Sektion) | LIVE | Eigene abgesetzte Sektion mit accent-Eyebrow, Zielname, Ankunftszeiten-Range, identische Tabelle wie Segmente |
-| 6 | **Ausblick** (Folge-Etappen) | LIVE | Bis zu 3 Folge-Etappen (Trip) bzw. die 3 Folgetage je Ort (Ortsvergleich) als kompakte Zeilen-Tabelle (Korrektur 2026-11-17, #3122: hier stand „Nächste 4 Tage“; Beleg `_build_stage_trend()` `future_stages[:3]`, `comparison_engine.py` `_outlook_days … [:3]`, Katalog `mail.ausblick.eyebrow` „Ausblick · nächste 3 Tage“); Trip zeigt Wochentag + Code + Name+Note + Temp-Range + (konfigurierbare Metriken) + ACC-Spalte + Risk-Dot; Ortsvergleich ohne ACC-Spalte; Gewitter-Badge falls vorhanden |
+| 6 | **3-Tages-Ausblick** (Folge-Etappen) | LIVE | Bis zu 3 Folge-Etappen (Trip) bzw. die 3 Folgetage je Ort (Ortsvergleich) als kompakte Zeilen-Tabelle (Korrektur 2026-11-17, #3122: hier stand „Nächste 4 Tage“; Beleg `_build_stage_trend()` `future_stages[:3]`, `comparison_engine.py` `_outlook_days … [:3]`). Blockname seit #3155 in jeder Ausgabe „3-Tages-Ausblick“ / EN „3-day outlook“: HTML-Eyebrow `mail.ausblick.eyebrow` (Orte `vergleich.ausblick.eyebrow`), Nur-Text- und Kompakt-Titel `mail.ausblick.name` (Kompakt in ASCII), Zustandshinweis `mail.ausblick.titel`; Trip zeigt Wochentag + Code + Name+Note + Temp-Range + (konfigurierbare Metriken) + ACC-Spalte + Risk-Dot; Ortsvergleich ohne ACC-Spalte; Gewitter-Badge falls vorhanden |
 | 7 | **Antwort-Kommandos** | LIVE | Dedizierte Sektion mit 3-spaltigem Grid der Befehle (HEUTE, MORGEN, JETZT/NOW, GEWITTER, STRECKE [km], RUHETAG [N], STATUS, PAUSE [2d/12h], SKIP, STOP, WEITER, HILFE/HELP) + Hinweistext |
 | 8 | **Footer** (zweigeteilt) | LIVE | Obere Zeile: Brand + Briefing-Typ; untere Zeile: Links (Trip-Übersicht, Zeitplan, Abmelden) |
 
@@ -92,7 +92,9 @@ Detaillierte Sektionsspezifikationen: siehe `docs/specs/_archive/modules/issue_8
 - **Kopfzeile:** Zweispaltig space-between; Links accent-Eyebrow `"ANKUNFT · WETTER AM ZIEL"` (`#c45a2a`) + Zielname; Rechts Zeitraum-String
 - **Tabelle:** identischer Stil wie Segment-Tabellen (Desktop + Mobile)
 
-#### Ausblick (Sektion 6)
+#### 3-Tages-Ausblick (Sektion 6)
+
+> **Gebaut mit B4 (#3155):** Der Block heißt in HTML-, Nur-Text- und Kompakt-Mail sowie im Zustandshinweis „3-Tages-Ausblick“ / EN „3-day outlook“ (Kompakt ASCII „3-Tages-Ausblick“); „Nächste Etappen“, „Ausblick · nächste 3 Tage“ und „Mehrtages-Trend“ entfallen. Gesteuert wird er an **einer** Stelle: mit Tabelle `outlook_reports`, ohne Tabelle die Umrechnungsregel `_legacy_outlook_reports` (Trip: `show_outlook: false` außer im Kompakt-Format und leere `outlook_metrics` = aus, sonst `multi_day_trend_reports`; Orte: `outlook_enabled`, sonst die Anlage-Marke `placements.outlook_reports` ohne `rows`). `show_outlook` steuert ohne Tabelle nur noch die Großwetterlage.
 
 > **Soll ab #3122 ([ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md), PO 2026-11-17):** Der Block heißt überall „3-Tages-Ausblick“. Er bekommt keine eigene, unabhängige Liste mehr: er folgt der E-Mail-Auswahl (Spalte „3-Tages-Ausblick“ der Tabelle „Was steht wo“, je Metrik abwählbar, Roh/Einfach je Stelle; ADR-0124 Nr. 4 und 5) und hat **eine** steuernde Stelle „Morgen-Briefing“/„Abend-Briefing“ für Trip und Orte (Nr. 6). Bis zum Bau gilt das hier Beschriebene (`outlook_metrics`, `outlook_metric_formats`, `show_outlook`, `multi_day_trend_reports`, Orte `outlook_enabled`); Renderer und Validatoren werden nur zusammen geändert.
 

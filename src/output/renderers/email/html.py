@@ -1266,7 +1266,7 @@ def render_html(
         if show_outlook and show_stability and stability_result is not None:
             _outlook_stability_html = render_stability_label_html(stability_result, lang=lang)
 
-        # AC-9 (#911): Eyebrow "Ausblick · nächste 3 Tage" über dem Ausblick-Block
+        # AC-9 (#911), #3155: Eyebrow "3-Tages-Ausblick" über dem Ausblick-Block
         # AC-9 (#911): Eyebrow ZUERST, dann Stabilitäts-Label, dann Tabelle
         # (Reihenfolge: Ausblick-Eyebrow → Wetterlage → Etappen-Tabelle)
         _outlook_eyebrow = _eyebrow(t("mail.ausblick.eyebrow", lang))

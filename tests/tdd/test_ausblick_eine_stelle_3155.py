@@ -282,3 +282,24 @@ def test_trip_mail_mit_zustandshinweis_traegt_den_einen_namen(monkeypatch, lang)
     assert any(k.casefold() == NAME[lang].casefold() for k in knoten), [
         k for k in knoten if "usblick" in k or "utlook" in k.casefold()]
     assert not alte_namen_in(knoten), alte_namen_in(knoten)
+
+
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_klartext_mail_zustandshinweis_traegt_den_einen_namen(lang):
+    """AC-10 (Adversary F002, Fix-Loop 1): in der Nur-Text-Mail des Trips
+    (ausfuehrlich, Ausblick an, Zustand != FOUND) heisst der Titel des
+    Zustandshinweises "3-Tages-Ausblick"/"3-day outlook" -- in BEIDEN Sprachen,
+    nie ein Altname ("Nächste Etappen", "Naechste Etappen", "Next stages")."""
+    from tests.helpers.ausblick_name import textzeilen
+    from tests.helpers.briefing_compact_plain_fixture import render_briefing
+
+    text = render_briefing(lang, email_format="full", variante="zustand").email_plain
+    zeilen = textzeilen(text)
+    titel = [z for z in zeilen if z.startswith("━━")]
+    assert f"━━ {NAME[lang]} ━━" in titel, titel
+    # Der Titel steht direkt ueber dem Zustandshinweis (Block, nicht Zufallstreffer).
+    i = zeilen.index(f"━━ {NAME[lang]} ━━")
+    assert zeilen[i + 1], zeilen[i:i + 3]
+    for alt in ("Nächste Etappen", "Naechste Etappen", "Next stages"):
+        assert alt.casefold() not in text.casefold(), (alt, titel)
+    assert not alte_namen_in(zeilen), alte_namen_in(zeilen)

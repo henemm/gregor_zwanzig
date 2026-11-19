@@ -221,9 +221,12 @@ const EINGEFROREN: readonly string[] = [
 	// 🔴 Issue #2293 Scheibe S2 (#2448): zusaetzliche Verschiebung um 8 Zeilen
 	// durch den neunten Klasse-A-Prop `sendPremiumSms` (Prop-Deklaration,
 	// Destrukturierung, `werte()`-Bruecke) — `:348/:358/:394` -> `:356/:366/:402`.
-	'VersandTab.svelte:360',
-	'VersandTab.svelte:370',
-	'VersandTab.svelte:406',
+	// 🔴 Issue #3155 (B4): Karte „Mehrtages-Trend" entfernt (Trend-State, Props
+	// und Haken weg, Vorbelegungs-Konstante neu) — `:360/:370/:406` ->
+	// `:359/:369/:401`, Bedingungen byte-identisch, unten inhaltlich gefesselt.
+	'VersandTab.svelte:359',
+	'VersandTab.svelte:369',
+	'VersandTab.svelte:401',
 	// 🔴 Issue #2293 Scheibe S2: `versandVergleichSpeicherung.ts:221` verschob
 	// sich auf `:235` (+14 Zeilen VOR dieser Stelle: `sendPremiumSms` in zwei
 	// Interfaces, zwei Snapshot-/Hydrations-Funktionen und der Payload-Trennung
@@ -272,8 +275,10 @@ const EINGEFROREN: readonly string[] = [
 	'wetter-tab/corridorEditorState.ts:331',
 	// #2655 (F6): verschoben (zwei Katalog-Importe, Zeitplan-Hinweis einzeilig);
 	// Bedingungen `context === 'route'` / `{#if context === 'vergleich'}` unveraendert.
-	'versand-tab/VTSchedulePlan.svelte:57',
-	'versand-tab/VTSchedulePlan.svelte:84',
+	// #3155 (B4): die Weiche `isRoute = context === 'route'` (:57) ist mit der Karte
+	// „Mehrtages-Trend" ENTFERNT (Soll 26 → 25); `{#if context === 'vergleich'}`
+	// verschoben :84 → :72 (Trend-Props/Kommentar entfallen), Bedingung unveraendert.
+	'versand-tab/VTSchedulePlan.svelte:72',
 	'alarme-tab/alarmeTabSections.ts:27',
 	'alarme-tab/alarmeTabSections.ts:38',
 	'wetter-tab/wertebereicheVergleichSpeicherung.ts:209',
@@ -305,7 +310,8 @@ const EINGEFROREN: readonly string[] = [
 // Schalter nur im Trip, kein Compare-Pendant — Spec fix_1721_nachtausgabe.md).
 // Soll 47 → 48.
 // #2794 S3a Teil-PR 4a: CorridorEditor/CorridorEditorMobile entfernt (22 Eintraege). Soll 48 → 26.
-const EINGEFROREN_SOLL_ANZAHL = 26;
+// #3155 (B4): VTSchedulePlan-Weiche `isRoute` mit der Karte „Mehrtages-Trend" entfernt. Soll 26 → 25.
+const EINGEFROREN_SOLL_ANZAHL = 25;
 
 /**
  * S6c: die vier ueberlebenden AlarmeTab-Eintraege, GEGEN IHREN INHALT gefesselt.
@@ -353,17 +359,17 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 	// ist in beiden Zweigen gleich und taugte als Anker nicht — ein vertauschtes
 	// Paar faende dort seinen Anker und die Fesselung waere wertlos.
 	{
-		eintrag: 'VersandTab.svelte:360',
+		eintrag: 'VersandTab.svelte:359',
 		zeile: "if (context !== 'vergleich' || !vergleichSpeicherung) return;",
 		folgt: 'versandSnapshotAus(versandZustand);'
 	},
 	{
-		eintrag: 'VersandTab.svelte:370',
+		eintrag: 'VersandTab.svelte:369',
 		zeile: "{#if context === 'route'}",
 		folgt: 'email: send_email,'
 	},
 	{
-		eintrag: 'VersandTab.svelte:406',
+		eintrag: 'VersandTab.svelte:401',
 		zeile: "{:else if context === 'vergleich'}",
 		folgt: 'email: sendEmail ?? false,'
 	},

@@ -86,8 +86,6 @@
 				evening_enabled: false,
 				morning_time: '07:00',
 				evening_time: '18:00',
-				multi_day_trend_morning: false,
-				multi_day_trend_evening: false,
 				send_email: true,
 				send_telegram: false,
 				send_sms: false,

@@ -35,28 +35,34 @@ export interface ReportZustand {
 	 *  Zustand, wird er NICHT geschrieben — sonst waere es ein zweiter
 	 *  Schreibpfad auf ein fremdes Feld (#1738 Fix-Loop 4). */
 	telegram_style?: 'rich' | 'kurzform';
-	multi_day_trend_morning: boolean;
-	multi_day_trend_evening: boolean;
 }
 
-/** Trend-Standardwerte, wenn der Blob weder Liste noch Bool-Felder
- *  traegt (VersandTab: beide aus; die frühere Report-Config-Section (#2277 S5 entfernt): Abend an). */
-export interface TrendVorgaben {
-	multi_day_trend_morning?: boolean;
-	multi_day_trend_evening?: boolean;
+/** #3155 (Spec feat_3155 Nr. 9): liegt ein GESPEICHERTER report_config vor?
+ *  Der Server schreibt `enabled` bei jedem gespeicherten Trip mit; die Anlage
+ *  (/trips/new) traegt vor dem ersten Versand-Lauf nur Wetter-Felder. */
+export function istGespeicherterReportConfig(rc: Record<string, unknown> | null | undefined): boolean {
+	return typeof rc?.enabled === 'boolean';
 }
 
-/** #3047 E2: Python liest NUR `multi_day_trend_reports` (loader.py) — die Liste hat daher Vorrang vor
- *  den Bool-Feldern; diese gelten nur ohne Liste (Bestand), danach die Vorgabe. */
-function trendAus(
-	c: Record<string, unknown>,
-	slot: 'morning' | 'evening',
-	vorgabe: boolean
-): boolean {
-	if (Array.isArray(c.multi_day_trend_reports)) return c.multi_day_trend_reports.includes(slot);
-	const wert = c[`multi_day_trend_${slot}`];
-	if (typeof wert === 'boolean') return wert;
-	return vorgabe;
+/** #3155 (Ober-Spec feat_3122 Nr. 6, AC-9): Vorbelegung des 3-Tages-Ausblicks
+ *  bei der Anlage -- allein das Morgen-Briefing an -> ['morning'], sonst
+ *  ['evening'] (dieselbe Regel wie `resolve_outlook_reports` im Kern). */
+export function ausblickVorbelegung(morning_enabled: boolean, evening_enabled: boolean): string[] {
+	return morning_enabled && !evening_enabled ? ['morning'] : ['evening'];
+}
+
+/** #3155: `multi_day_trend_reports` beim Speichern. Ein gespeicherter Wert
+ *  gewinnt immer (Schnappschuss vor dem lebenden Blob: in der Anlage traegt der
+ *  lebende Blob die eigene Vorbelegung des letzten Laufs). Fehlt er, belegt nur
+ *  die Anlage nach der Regel vor; ein bestehender Trip bleibt beim Stand vor B4
+ *  (`[]`), die Vorbelegung wird nie nachtraeglich gesetzt (AC-13). */
+function ausblickReports(eingabe: ReportConfigPayloadEingabe): string[] {
+	for (const quelle of [eingabe.snapshot, eingabe.ausblickVorbelegung ? null : eingabe.live]) {
+		const liste = quelle?.multi_day_trend_reports;
+		if (Array.isArray(liste)) return liste.filter((r): r is string => typeof r === 'string');
+	}
+	const z = eingabe.zustand;
+	return eingabe.ausblickVorbelegung ? ausblickVorbelegung(z.morning_enabled, z.evening_enabled) : [];
 }
 
 /**
@@ -64,10 +70,7 @@ function trendAus(
  * `reportSlotAktiv` (AC-24); Zeiten 07:00/18:00 als Default; E-Mail Default an,
  * die anderen drei Kanaele Default aus; telegram_style Default 'rich'.
  */
-export function ladeReportZustand(
-	rc: Record<string, unknown> | null | undefined,
-	vorgaben: TrendVorgaben = {}
-): ReportZustand {
+export function ladeReportZustand(rc: Record<string, unknown> | null | undefined): ReportZustand {
 	const c: Record<string, unknown> = rc ?? {};
 	return {
 		morning_enabled: reportSlotAktiv(rc, 'morning'),
@@ -78,9 +81,7 @@ export function ladeReportZustand(
 		send_telegram: c.send_telegram === true,
 		send_sms: c.send_sms === true,
 		send_premium_sms: c.send_premium_sms === true,
-		telegram_style: c.telegram_style === 'kurzform' ? 'kurzform' : 'rich',
-		multi_day_trend_morning: trendAus(c, 'morning', vorgaben.multi_day_trend_morning ?? false),
-		multi_day_trend_evening: trendAus(c, 'evening', vorgaben.multi_day_trend_evening ?? false)
+		telegram_style: c.telegram_style === 'kurzform' ? 'kurzform' : 'rich'
 	};
 }
 
@@ -94,19 +95,21 @@ export interface ReportConfigPayloadEingabe {
 	showSchedule?: boolean;
 	/** Zeigt die Instanz die Kanal-Schalter? Default an (VersandTab immer). */
 	showChannels?: boolean;
+	/** #3155: Trip-ANLAGE -- fehlt `multi_day_trend_reports`, wird der
+	 *  3-Tages-Ausblick nach der Regel vorbelegt. Default aus (Speichern eines
+	 *  bestehenden Trips setzt die Liste nie neu). */
+	ausblickVorbelegung?: boolean;
 }
 
 /**
  * `$effect`-Rumpf: Read-Modify-Write ueber `mergeReportConfig` mit
  * `enabled = morning_enabled || evening_enabled`, `toHHMMSS` auf beide Zeiten
- * und `multi_day_trend_reports` aus den beiden Trend-Flags. Unbekannte
- * Bestandsfelder bleiben erhalten.
+ * und `multi_day_trend_reports` (#3155: gespeicherter Wert, sonst Vorbelegung
+ * der Anlage bzw. `[]`). Unbekannte Bestandsfelder bleiben erhalten.
  */
 export function baueReportConfigPayload(eingabe: ReportConfigPayloadEingabe): Record<string, unknown> {
 	const z = eingabe.zustand;
-	const multi_day_trend_reports: string[] = [];
-	if (z.multi_day_trend_morning) multi_day_trend_reports.push('morning');
-	if (z.multi_day_trend_evening) multi_day_trend_reports.push('evening');
+	const multi_day_trend_reports = ausblickReports(eingabe);
 	return mergeReportConfig({
 		snapshot: eingabe.snapshot,
 		live: eingabe.live,
@@ -121,8 +124,6 @@ export function baueReportConfigPayload(eingabe: ReportConfigPayloadEingabe): Re
 			evening_enabled: z.evening_enabled,
 			morning_time: toHHMMSS(z.morning_time),
 			evening_time: toHHMMSS(z.evening_time),
-			multi_day_trend_morning: z.multi_day_trend_morning,
-			multi_day_trend_evening: z.multi_day_trend_evening,
 			multi_day_trend_reports
 		},
 		showChannels: eingabe.showChannels ?? true,

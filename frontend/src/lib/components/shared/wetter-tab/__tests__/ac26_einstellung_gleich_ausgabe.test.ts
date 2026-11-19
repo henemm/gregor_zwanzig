@@ -30,7 +30,7 @@ import * as Z from '../wetterZustand.ts';
 import { tripNutzlast, vergleichNutzlast } from '../wetterTabSpeicherung.ts';
 import { kanalStilNutzlast, kanalStilStart } from '../../zustellung-tab/kanalStilSpeicherung.ts';
 import { ladeMailZustand } from '../../mailInhaltZustand.ts';
-import { ladeReportZustand } from '../../versand-tab/reportConfigPayload.ts';
+import { baueReportConfigPayload, ladeReportZustand } from '../../versand-tab/reportConfigPayload.ts';
 import { umgebungFuer } from '../../__tests__/svelteInstanzPruefstand.ts';
 import { DERIVED_METRIC_RULES } from '../../../trip-detail/metricsEditor.ts';
 
@@ -298,11 +298,17 @@ describe('E6: gesperrte Groesse mit Grund in DE und EN', () => {
 	}
 });
 
-describe('E2: Versand-Lader liest den Trend aus der Liste wie Python (Liste vor Bool-Feldern)', () => {
+// #3155 (Spec feat_3155 Entscheidung 4): die Karte „Mehrtages-Trend" und ihre Bool-Felder
+// entfallen; gueltig bleibt, dass die Liste (die Python allein liest) das Speichern
+// unveraendert uebersteht und widersprechende Bool-Felder nichts bewirken.
+describe('E2: Speichern erhaelt die Ausblick-Liste, die Python liest (Liste vor Bool-Feldern)', () => {
 	for (const id of Object.keys(TRIPS).filter((k) => Array.isArray(TRIPS[k].report_config?.multi_day_trend_reports))) {
 		test(`liste_vor_flags_${id}`, () => {
-			const z = ladeReportZustand(TRIPS[id].report_config);
-			assert.deepEqual([z.multi_day_trend_morning, z.multi_day_trend_evening], AUS.trip[id].trend);
+			const rc = TRIPS[id].report_config as Record<string, unknown>;
+			const liste = rc.multi_day_trend_reports as string[];
+			const nach = baueReportConfigPayload({ snapshot: rc, live: rc, zustand: ladeReportZustand(rc) });
+			assert.deepEqual(nach.multi_day_trend_reports, liste, 'Speichern veraendert die Ausblick-Liste');
+			assert.deepEqual([liste.includes('morning'), liste.includes('evening')], AUS.trip[id].trend);
 		});
 	}
 });

@@ -115,7 +115,7 @@ def test_trip_outlook_plain_is_byte_identical():
     """AC-11 (Klartext): Given dieselben Ausblick-Zeilen / When der Trip-
     Renderpfad `render_outlook_plain(rows, show_acc=True)` sie rendert / Then
     ist die Ausgabe byte-identisch zur aufgezeichneten Referenz — inklusive
-    Ueberschrift "Nächste Etappen", 26-Zeichen-Etappennamen-Feld und
+    Ueberschrift "3-Tages-Ausblick", 26-Zeichen-Etappennamen-Feld und
     Notiz-Zeilen.
     """
     from output.renderers.email.outlook import render_outlook_plain
@@ -125,7 +125,7 @@ def test_trip_outlook_plain_is_byte_identical():
 
     assert actual == expected, (
         "Der Klartext-Ausblick der TRIP-Mail hat sich veraendert. Der neue "
-        "`heading`-Parameter muss den Default 'Nächste Etappen' behalten und "
+        "`heading`-Parameter muss den Default '3-Tages-Ausblick' behalten und "
         "das feste Namensfeld darf fuer Aufrufer ohne Auswahl bleiben "
         f"(AC-11).\nErwartet: {expected!r}\nErhalten: {actual!r}\n"
         + _diff(expected, actual)

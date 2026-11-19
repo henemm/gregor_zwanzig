@@ -92,7 +92,7 @@ _LAT, _LON, _MODELL = 47.0, 12.0, "icon_d2"   # Gebiet DE_ALPEN
 _HEUTE = date(2026, 8, 20)     # Etappe des Briefings
 _MORGEN = date(2026, 8, 21)    # kuenftige Etappe = Ausblick-Zeile
 _WOCHENTAG = "Di"
-_AUSBLICK_UEBERSCHRIFT = "Nächste Etappen"
+_AUSBLICK_UEBERSCHRIFT = "3-Tages-Ausblick"
 _COMPARE_UEBERSCHRIFT = "3-Tages-Ausblick"
 
 
@@ -277,7 +277,7 @@ def _telegram_ausblick(bericht) -> str:
     geprueft werden, ohne AC-3 ("nicht zwingend zusammenhaengend") zu
     verschaerfen.
     """
-    bubbles = [b for b in bericht.telegram_bubbles if b.startswith("Ausblick")]
+    bubbles = [b for b in bericht.telegram_bubbles if b.startswith("3-Tages-Ausblick")]
     assert len(bubbles) == 1, (
         f"Erwartet genau EINE Ausblick-Bubble, gefunden: {bubbles!r}")
     return " ".join(bubbles[0].splitlines()[1:])
@@ -808,7 +808,7 @@ def test_ac12_sms_und_premium_sms_bleiben_ohne_herkunft():
 
 def test_ac13_kompaktmail_bleibt_zeichengleich():
     """AC-13: Given ein Trip-Briefing im KOMPAKTFORMAT / When die Mail
-    gerendert wird / Then bleibt deren Ausblick-Block ("Naechste Etappen")
+    gerendert wird / Then bleibt deren Ausblick-Block ("3-Tages-Ausblick")
     zeichengleich zu heute — er liest ``thunder_plain`` und wird von dieser
     Scheibe nicht beruehrt.
 

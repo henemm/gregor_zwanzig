@@ -494,7 +494,7 @@ class TestTrendRendering:
             display_config=self._dc_ohne_grundauswahl(),
         )
 
-        # AC-9 (#911): Eyebrow "Ausblick · nächste 3 Tage" über der OutlookTable
+        # AC-9 (#911): Eyebrow "3-Tages-Ausblick" über der OutlookTable
         assert "Ausblick" in report.email_html
         # Wochentag- und Temperatur-Spalten (N=Tagestief, D=Tag-Hoch)
         assert "Mi" in report.email_html
@@ -502,7 +502,7 @@ class TestTrendRendering:
         assert "14°" in report.email_html
 
     def test_trend_rendering_plain_two_lines(self):
-        """v4.0 (#911): Plain-Text-Block 'Nächste Etappen' zeigt weiterhin den
+        """v4.0 (#911): Plain-Text-Block '3-Tages-Ausblick' zeigt weiterhin den
         Etappennamen + Temperatur-/Niederschlags-Tokens (format_trend_tokens()),
         nur das darunterliegende Datenmodell wechselte von stage_name/summary
         auf name/temp_lo/temp_hi (Commits 9f14fd39/2205639e)."""
@@ -520,7 +520,7 @@ class TestTrendRendering:
             display_config=self._dc_ohne_grundauswahl(),
         )
 
-        assert "Nächste Etappen" in report.email_plain
+        assert "3-Tages-Ausblick" in report.email_plain
         assert "Tossals Verds" in report.email_plain
         # #1848 A1 AC-9: Schraegstrich statt Halbgeviertstrich (SMS-Trenner).
         assert "6/14°C" in report.email_plain
@@ -544,7 +544,7 @@ class TestTrendRendering:
         )
 
         assert "Ausblick" not in report.email_html
-        assert "Nächste Etappen" not in report.email_plain
+        assert "3-Tages-Ausblick" not in report.email_plain
 
     def test_morning_report_with_trend_when_configured(self):
         """Morning report WITH trend data should contain trend block."""
@@ -588,7 +588,7 @@ class TestTrendRendering:
         )
 
         assert "Ausblick" not in report.email_html
-        assert "Nächste Etappen" not in report.email_plain
+        assert "3-Tages-Ausblick" not in report.email_plain
 
 
 # ===========================================================================

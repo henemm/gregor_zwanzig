@@ -388,7 +388,7 @@ def render_plain(
     ):
         # Fix #1486: der Ausblick entfaellt nicht mehr wortlos, er sagt warum.
         # Aufrufer ohne `outlook_state` (Default None) bleiben unveraendert.
-        lines.append(f"━━ {t('mail.ausblick.naechste_etappen', lang)} ━━")
+        lines.append(f"━━ {t('mail.ausblick.name', lang)} ━━")
         lines.append(render_outlook_state_plain(outlook_state, outlook_horizon_days,
                                                 lang=lang))
         lines.append("")

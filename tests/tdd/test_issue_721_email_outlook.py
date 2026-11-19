@@ -195,7 +195,7 @@ class TestAC4OutlookToggleOff:
         trend = [_trend_stage(weekday="Di", name="E1", confidence_pct=82)]
         html = _render(trend, stability_result=_stability("STABIL", 82),
                        show_outlook=False)
-        assert "Nächste Etappen" not in html, "Etappen-Tabelle trotz show_outlook=False sichtbar"
+        assert "3-Tages-Ausblick" not in html, "Etappen-Tabelle trotz show_outlook=False sichtbar"
         assert "STABIL" not in html, "Großwetterlage trotz show_outlook=False sichtbar"
 
     def test_outlook_true_shows_block(self):
@@ -382,7 +382,7 @@ class TestAC4OutlookToggleOffPlain:
             stability_result=_stability("STABIL", 82),
             show_outlook=False,
         )
-        assert "Nächste Etappen" not in plain, (
+        assert "3-Tages-Ausblick" not in plain, (
             "Etappen-Trend-Block trotz show_outlook=False im Plain-Body sichtbar"
         )
         assert "Wetterlage" not in plain, (
@@ -400,7 +400,7 @@ class TestAC4OutlookToggleOffPlain:
             stability_result=_stability("STABIL", 82),
             show_outlook=True,
         )
-        assert "Nächste Etappen" in plain, (
+        assert "3-Tages-Ausblick" in plain, (
             "Etappen-Trend-Block fehlt bei show_outlook=True im Plain-Body"
         )
         assert "STABIL" in plain, (

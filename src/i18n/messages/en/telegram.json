@@ -1,6 +1,6 @@
 {
   "telegram.kopf.zusammenfassung": "Summary",
-  "telegram.kopf.ausblick": "Outlook",
+  "telegram.kopf.ausblick": "3-day outlook",
   "telegram.kopf.aktionen": "Actions",
   "telegram.fuss.luftmasse": "Air mass {wort}",
   "telegram.fuss.sicht": "Visibility {wort}",

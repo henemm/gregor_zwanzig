@@ -40,6 +40,16 @@ Die Regeln sind das dokumentierte Produktverhalten:
   Ortsfolge = ``location_ids`` (#1359), Namen aus ``--orte``/Huelle, sonst
   ``orte_unpruefbar`` (nie still uebersprungen).
 * Darstellung Roh/Einfach je Spalte (Trip, ``formen_*``, Spec §2 Punkt 3).
+* 3-Tages-Ausblick je Briefing (#3155, Spec B4 AC-12): OB der Ausblick im
+  Morgen- bzw. Abend-Briefing steht, entscheidet EINE Regel des Produkts --
+  bewusst die echten Funktionen aus ``services.placements`` (Tabelle:
+  ``resolve_outlook_reports`` + ``outlook_applies``; sonst
+  ``_legacy_outlook_reports`` samt Orte-Anlage-Marke), nicht die Altfelder
+  ``show_outlook``/``multi_day_trend_reports`` (``ausblick_briefings``). Die
+  Spec verlangt diese eine Stelle ausdruecklich (Ausnahme vom resolve-Verbot
+  oben); nachgebaut waere sie eine zweite Regel, die still auseinanderlaeuft.
+  Gegenstand der Pruefung bleibt die zugestellte Mail (Block da/nicht da,
+  Blockname).
 
 ``None`` an einer Liste heisst "keine Aussage", der Validator prueft sie dann
 nicht.
@@ -364,18 +374,131 @@ def _trip_display_config(trip: dict) -> dict:
                               for i, m in enumerate(_TRIP_STANDARD)]}
 
 
+# --------------------------------------------------------------------------- #
+# 3-Tages-Ausblick je Briefing (#3155, Spec B4 Nr. 1/5/6, AC-12)
+# --------------------------------------------------------------------------- #
+#: Fruehere Namen des Blocks (vor B4), in keiner Ausgabe mehr erlaubt -- als
+#: eigenstaendiger Blocktitel (Klartext-Zeile bzw. Element-Text), Gross/klein
+#: egal. "Großwetterlage" und Fliesstext mit "Ausblick" bleiben erlaubt (AC-11).
+ALTE_AUSBLICK_NAMEN = {
+    "de": ("Nächste Etappen", "Naechste Etappen", "Ausblick", "Ausblick · nächste 3 Tage",
+           "Mehrtages-Trend", "3-Tages-Vorschau"),
+    "en": ("Next stages", "Outlook", "Outlook · next 3 days", "Multi-day trend", "3-day preview"),
+}
+_ELEMENT_TEXT = re.compile(r">([^<>]+)<")
+
+
+def ausblick_name(lang: str, ascii_: bool = False) -> str:
+    """Der eine Name des Blocks (``mail.ausblick.name``); Kompakt in ASCII."""
+    name = t("mail.ausblick.name", lang)
+    return _falten(name) if ascii_ else name
+
+
+def _titel_kandidaten(text: str, html: bool):
+    if html:
+        return (unescape(m.group(1)).strip() for m in _ELEMENT_TEXT.finditer(text))
+    return (z.strip().strip("━=").strip() for z in text.splitlines())
+
+
+def alte_ausblick_namen(text: str, lang: str, html: bool) -> list[str]:
+    """Fruehere Blocknamen, die ``text`` als eigenen Titel traegt: im Klartext
+    eine ganze (ggf. mit ``━━``/``==`` umrahmte) Zeile, im HTML der ganze Text
+    eines Elements."""
+    alte = {n.casefold() for n in ALTE_AUSBLICK_NAMEN.get(lang, ALTE_AUSBLICK_NAMEN["de"])}
+    return list(dict.fromkeys(k for k in _titel_kandidaten(text, html) if k and k.casefold() in alte))
+
+
+def name_im_text(text: str, name: str, html: bool) -> bool:
+    """Steht ``name`` als eigener Blocktitel in ``text`` (Zeile bzw. Element-Text)?"""
+    return any(k.casefold() == name.casefold() for k in _titel_kandidaten(text, html))
+
+
+def ausblick_briefings(dc: object, surface: str, *, report_config: object = None,
+                       enabled_reports=None, outlook_enabled=None) -> dict[str, bool]:
+    """Je Briefing (morning/evening): steht der 3-Tages-Ausblick darin? Die EINE
+    Regel des Produkts: mit Tabelle ``resolve_outlook_reports`` +
+    ``outlook_applies`` (Briefing in ``outlook_reports`` und mindestens eine
+    Metrik an der Stelle "outlook"), sonst ``_legacy_outlook_reports``
+    (Trip: ``show_outlook``/Kompakt-Ausnahme/``multi_day_trend_reports``;
+    Orte: ``outlook_enabled``, Anlage-Marke ``placements.outlook_reports``)."""
+    from services.channel_list_resolver import grundauswahl
+    from services.placements import (
+        _feld, _legacy_outlook_reports, outlook_applies, read_placements, resolve_outlook_reports,
+        resolve_rows,
+    )
+
+    stored = read_placements(_feld(dc, "placements"))
+    if stored is not None:
+        reports = resolve_outlook_reports(stored.outlook_reports, enabled_reports)
+        an = {}
+        for report in _REPORTS:
+            grund = grundauswahl(dc, surface, report)
+            rows = resolve_rows(stored.rows, grund.ids, surface, parents=grund.parents)
+            an[report] = outlook_applies(rows, reports, report)
+        return an
+    legacy, _stabilitaet = _legacy_outlook_reports(
+        dc, surface, report_config, enabled_reports, outlook_enabled)
+    return {report: report in legacy for report in _REPORTS}
+
+
+def trip_ausblick_briefings(trip: dict) -> tuple[dict[str, bool], bool]:
+    """(Ausblick je Briefing, hat Tabelle) eines Trips, gelesen wie der
+    Versand: Trip ueber den Loader (``load_trip_from_dict``, Vorgaben der
+    Modelle), eingeschaltete Briefings ueber ``trip_enabled_reports``."""
+    from app.loader import load_trip_from_dict
+    from services.placements import read_placements
+    from services.report_config_resolver import trip_enabled_reports
+
+    if "display_config" not in trip:  # nur eine display_config, ohne report_config
+        return ausblick_briefings(trip, "trip"), read_placements(trip.get("placements")) is not None
+    geladen = load_trip_from_dict(trip)
+    rc, dc = geladen.report_config, geladen.display_config
+    tabelle = read_placements(getattr(dc, "placements", None)) is not None
+    return ausblick_briefings(dc, "trip", report_config=rc,
+                              enabled_reports=trip_enabled_reports(rc)), tabelle
+
+
+def _hat_tabelle(dc: object) -> bool:
+    from services.placements import _feld, read_placements
+
+    return read_placements(_feld(dc, "placements")) is not None
+
+
+def ausblick_im_briefing(soll: dict, briefing: str | None) -> bool:
+    """Steht laut Soll ein Ausblick in der Mail des Briefings ``briefing``?
+    ``None`` (Typ unbekannt): wie bisher ``ausblick_an`` (irgendein Briefing)."""
+    if briefing is None or "ausblick_briefings" not in soll:
+        return bool(soll.get("ausblick_an"))
+    return bool(soll.get("ausblick_an")) and briefing in soll["ausblick_briefings"]
+
+
+def orte_ausblick_briefings(preset: dict) -> dict[str, bool]:
+    """Ausblick je Briefing eines Orte-Abos; eingeschaltete Briefings ueber
+    ``resolve_preset_slots`` wie der Versand (``placements_view_service``)."""
+    from services.compare_slot_scheduler import resolve_preset_slots
+
+    slots = resolve_preset_slots(preset)
+    an = tuple(r for r, ein in (("morning", slots.morning_enabled),
+                                ("evening", slots.evening_enabled)) if ein)
+    return ausblick_briefings(preset.get("display_config") or {}, "compare", enabled_reports=an,
+                              outlook_enabled=preset.get("outlook_enabled"))
+
+
 def trip_soll(trip: dict, report: str = "evening") -> dict:
     """Soll eines Trip-Briefings fuer ``report`` (morning/evening)."""
     dc = _trip_display_config(trip)
-    rc = trip.get("report_config") or {}
     liste = _trip_email_liste(dc, report)
     grund = _sortiert([e for e in _eintraege(dc.get("metrics"))
                        if _waehlbar(e.get("metric_id")) and _an(e, report)])
     grundauswahl = list(dict.fromkeys(
         e["metric_id"] for e in grund if _ausblickfaehig(e["metric_id"])))
+    rc = trip.get("report_config") or {}
     # Bewusst leer: alle Zeilen abgewaehlt -> der Ausblick entfaellt.
     ids = _ausblick(dc.get("outlook_metrics"), grundauswahl) if grundauswahl else []
-    trend_reports = rc.get("multi_day_trend_reports", dc.get("multi_day_trend_reports", ["evening"]))
+    # #3155 (AC-12): Ausblick je Briefing aus der EINEN Regel (Kompakt-Ausnahme
+    # inklusive); im Altpfad zusaetzlich nur mit Spalten (bewusst leer).
+    briefings, tabelle = trip_ausblick_briefings(trip)
+    ausblick_an = briefings[report] and (tabelle or ids != [])
     return {
         "kontext": "trip", "report": report,
         # #3047 F2: Etappennamen trennen den Klartext-Ausblick exakt ab.
@@ -387,12 +510,12 @@ def trip_soll(trip: dict, report: str = "evening") -> dict:
         # #3047 F004: verschmolzene Windrichtung -> jede Wind-Zelle traegt die Richtung.
         "wind_richtung": _wind_verschmolzen(liste),
         "nacht": bool(dc.get("show_night_block", True)),
-        "ausblick_an": ids != [] and rc.get("show_outlook", True) is not False
-        and report in (trend_reports or []),
-        # PO-Entscheidung #722: das Kompaktformat ignoriert die Baustein-
-        # Schalter (``show_outlook``, ``show_stage_stats``) -- nur die Liste
-        # (``[]`` = bewusst leer) und der Bericht zaehlen (#3047 Runde 7).
-        "ausblick_an_kompakt": ids != [] and report in (trend_reports or []),
+        "ausblick_an": ausblick_an,
+        # #3155: Kompakt folgt derselben Regel (die Kompakt-Ausnahme von
+        # ``show_outlook``, PO-Entscheidung #722, steckt in ihr).
+        "ausblick_an_kompakt": ausblick_an,
+        # #3155 (AC-12): in welchen Briefings der Ausblick laut Konfiguration steht.
+        "ausblick_briefings": tuple(r for r in _REPORTS if briefings[r]),
         "ausblick": None if ids == [] else _ausblick_spalten(ids, dc.get("outlook_metric_formats")),
         # #3047 Runde 7 (B-V1): Etappendaten verankern die Zahl der Ausblick-
         # Zeilen (``ausblick_zeilen_trip``) am Datum der Mail.
@@ -732,6 +855,8 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
         # rendert die Vorgabemenge wie eine explizite Liste (HTML = Klartext,
         # Temp als eine Spanne) -- kein fester Zweig mehr im Ortsvergleich.
         ids = list(_FEST)
+    an = orte_ausblick_briefings(preset)
+    briefings = tuple(r for r in _REPORTS if an[r])
     stunden = _orte_stunden(dc, grundpaare)
     stunden_an = preset.get("hourly_enabled", True) is not False and stunden != []
     ids_orte = [i for i in preset.get("location_ids") or [] if isinstance(i, str)]
@@ -762,7 +887,11 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
         "ausblick_zeilen": (2, 3) if fenster[0] > fenster[1] else (3,),
         "stunden_an": stunden_an,
         "stunden": stunden if stunden_an else [],
-        "ausblick_an": preset.get("outlook_enabled", True) is not False and ids != [],
+        # #3155 (AC-12): Ausblick je Briefing aus der EINEN Regel;
+        # ``ausblick_an`` = in irgendeinem Briefing, der Validator setzt es
+        # je Briefing der Mail (``ausblick_im_briefing``).
+        "ausblick_briefings": briefings,
+        "ausblick_an": bool(briefings) and (_hat_tabelle(dc) or ids != []),
         "ausblick": None if ids == [] else _ausblick_spalten(ids, dc.get("outlook_metric_formats")),
         **_ortsfolge(ids_orte, ortsnamen),
     }

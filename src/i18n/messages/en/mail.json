@@ -1,6 +1,6 @@
 {
   "mail.ausblick.spalte_tag": "Day",
-  "mail.ausblick.eyebrow": "Outlook · next 3 days",
+  "mail.ausblick.eyebrow": "3-day outlook",
   "mail.ausblick.gesendet": "sent {wochentag} · {zeit}",
   "mail.nacht.am_ziel": "Night at destination ({hoehe}m)",
   "mail.nacht.ankunft": "Arrival {zeit} → next morning 06:00",
@@ -72,8 +72,8 @@
   "mail.profil.wandern": "HIKING",
   "mail.profil.summer_trekking": "ALPINE TREK",
   "mail.profil.allgemein": "WEATHER BRIEFING",
-  "mail.ausblick.naechste_etappen": "Next stages",
-  "mail.ausblick.titel": "Outlook",
+  "mail.ausblick.name": "3-day outlook",
+  "mail.ausblick.titel": "3-day outlook",
   "mail.acc.hoch": "high",
   "mail.acc.mittel": "medium",
   "mail.acc.niedrig": "low",
