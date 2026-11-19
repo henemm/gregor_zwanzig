@@ -29,6 +29,15 @@
 	const ZEICHEN: Record<Seite, string> = { lower: '<', upper: '>' };
 	const seiten = $derived(SEITEN[erlaubt ?? ''] ?? []);
 	const STUFEN: ('mittel' | 'hoch')[] = ['mittel', 'hoch'];
+	// #3111 AC-1 (Mockup Fassung 4): Gruppentitel zweizeilig, Zeilen mit <br> verbunden.
+	const TITEL = {
+		lower: ['wetter.grenzen.unten_1', 'wetter.grenzen.unten_2'],
+		upper: ['wetter.grenzen.oben_1', 'wetter.grenzen.oben_2']
+	} as const;
+	// #3111 AC-2: Abweichend-Satz als Text im selben Absatz wie der Hinweis (ein Textknoten,
+	// kein Kind-Element), nur bei Abweichung von der Vorlage.
+	const mitAbweichung = (hinweis: string) =>
+		abweichend ? `${hinweis} ${$t('wetter.grenzen.abweichend', { vorlage: vorlageLabel })}` : hinweis;
 
 	// Eingabetexte lokal (ein halb getippter Wert wie „-" bleibt stehen); Startwert beim Oeffnen.
 	const start = (s: Seite, f: Farbe) => {
@@ -61,11 +70,11 @@
 				</div>
 			</div>
 		{/each}
-		<p class="wt-hint" data-testid="wetter-gewitter-keins-hinweis">{$t('wetter.gewitter.keins_gruen')}</p>
+		<p class="wt-hint" data-testid="wetter-gewitter-keins-hinweis">{mitAbweichung($t('wetter.gewitter.keins_gruen'))}</p>
 	{:else}
 		{#each seiten as s (s)}
 			<div class="wt-grp">
-				<span class="wt-grp-name">{$t(s === 'lower' ? 'wetter.grenzen.unten' : 'wetter.grenzen.oben')}</span>
+				<span class="wt-grp-name">{$t(TITEL[s][0])}<br />{$t(TITEL[s][1])}</span>
 				{#each FOLGE[s] as f (f)}
 					<label class="wt-feld">
 						<span>{farbwort(f)} {ZEICHEN[s]}</span>
@@ -81,10 +90,7 @@
 				{/each}
 			</div>
 		{/each}
-		<p class="wt-hint" data-testid="wetter-grenzen-hinweis-{id}">{$t('wetter.grenzen.hinweis')}</p>
-	{/if}
-	{#if abweichend}
-		<p class="wt-hint" data-testid="wetter-grenzen-abweichend-{id}">{$t('wetter.grenzen.abweichend', { vorlage: vorlageLabel })}</p>
+		<p class="wt-hint" data-testid="wetter-grenzen-hinweis-{id}">{mitAbweichung($t('wetter.grenzen.hinweis'))}</p>
 	{/if}
 	{#if fehler.length > 0}
 		<p class="wt-fehler" role="alert" data-testid="wetter-grenzen-fehler-{id}">

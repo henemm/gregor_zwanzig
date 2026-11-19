@@ -6,10 +6,10 @@
 	import type { Ampel, MetricPreset } from '$lib/types';
 	// #2913 Teil 2 (K-6): alle Knöpfe aus dem Atom Btn (Größe tap, Touch-Ziel >= 44px).
 	import { Btn } from '$lib/components/atoms';
-	import { locale, t, tn } from '$lib/i18n';
+	import { locale, t, tn, type MessageKey } from '$lib/i18n';
 	import SavePresetDialog from '../../shared/weather-metrics-tab/SavePresetDialog.svelte';
 	import type { Kontext } from '../../shared/wetter-tab/ampelModell.ts';
-	import type { EigeneVorlage, VorlageEintrag } from '../../shared/wetter-tab/wetterTabLaden.ts';
+	import { vorlageKurzbeschreibung, type EigeneVorlage, type VorlageEintrag } from '../../shared/wetter-tab/wetterTabLaden.ts';
 	// #2981: Systemvorlagen-Namen sprachabhaengig aus dem Katalog (Fallback Server-Label, dann ID).
 	import { vorlageAnzeigename } from '../../shared/wetter-tab/vorlageName.ts';
 
@@ -27,10 +27,16 @@
 		onEigene: (id: string) => void;
 		onZuruecksetzen: () => void;
 		onGespeichert: (preset: MetricPreset) => void;
+		/** #3111 AC-6: Zahl der Orte (nur Orte), waehlt „für diesen Ort“ bzw. „für diese Orte“. */
+		ortAnzahl?: number;
 	}
-	let { context, vorlageId, liste, eigene, abweichungen, metrikName, aboAmpel, onUebernehmen, onEigene, onZuruecksetzen, onGespeichert }: Props = $props();
+	let { context, vorlageId, liste, eigene, abweichungen, metrikName, aboAmpel, onUebernehmen, onEigene, onZuruecksetzen, onGespeichert, ortAnzahl }: Props = $props();
 
-	const FRAGE = { route: 'wetter.vorlage.frage_route', vergleich: 'wetter.vorlage.frage_vergleich' } as const;
+	// #3111 AC-6 (Mockup Fassung 4): Bestätigung zweiteilig, fetter Titel plus EIN Rumpf-Text.
+	const ERSETZT: Record<Kontext, () => MessageKey> = {
+		route: () => 'wetter.vorlage.ersetzt_route',
+		vergleich: () => (ortAnzahl === 1 ? 'wetter.vorlage.ersetzt_vergleich_ein' : 'wetter.vorlage.ersetzt_vergleich')
+	};
 
 	let pickerOffen = $state(false);
 	let wahl = $state<{ id: string; name: string; eigen: boolean } | null>(null);
@@ -45,8 +51,22 @@
 	const status = $derived(abweichungen > 0 ? $tn('wetter.vorlage.abweichungen', abweichungen) : $t('wetter.vorlage.unveraendert'));
 
 	function beschreibung(v: VorlageEintrag): string {
-		return [$t('wetter.vorlage.metrikzahl', { count: v.anzahl }), ...v.stichworte.map(metrikName)].join(' · ');
+		return vorlageKurzbeschreibung(v, $t, metrikName);
 	}
+	/** #3111 AC-3: „Name · aktiv“ als ein Text (kein Kind-Element). */
+	function optionName(v: VorlageEintrag): string {
+		return v.id === vorlageId ? `${name(v)} ${$t('wetter.vorlage.aktiv_marker')}` : name(v);
+	}
+	/** #3111 AC-5: Unterzeile eigener Vorlagen „eigene“ (+ Beschreibung). */
+	function eigeneUnterzeile(e: EigeneVorlage): string {
+		return [$t('wetter.vorlage.eigene_unterzeile'), ...(e.beschreibung ? [e.beschreibung] : [])].join(' · ');
+	}
+	/** #3111 AC-6: Rumpf der Bestätigung als ein Text: Ersetzt-Satz, ggf. Verlust-Satz, Bleibt-Satz. */
+	const rumpf = $derived(
+		[$t(ERSETZT[context]()), abweichungen > 0 ? $tn('wetter.vorlage.verlust', abweichungen, { alt: label }) : '', $t('wetter.vorlage.bleibt')]
+			.filter(Boolean)
+			.join(' ')
+	);
 	function waehlen(id: string, name: string, eigen: boolean): void {
 		wahl = { id, name, eigen };
 	}
@@ -82,11 +102,8 @@
 			<div class="wt-menue" data-abschnitt="vorlage-auswahl">
 				{#if wahl}
 					<div class="wt-frage" role="alertdialog" data-testid="wetter-vorlage-wechsel-dialog" data-abschnitt="vorlage-bestaetigung">
-						<p>
-							{$t(FRAGE[context], { neu: wahl.eigen ? wahl.name : vorlageAnzeigename($locale, wahl.id, wahl.name) })}
-							{#if abweichungen > 0}{$tn('wetter.vorlage.verlust', abweichungen, { alt: label })}{/if}
-							{$t('wetter.vorlage.bleibt')}
-						</p>
+						<b>{$t('wetter.vorlage.frage_titel', { neu: wahl.eigen ? wahl.name : vorlageAnzeigename($locale, wahl.id, wahl.name) })}</b>
+						<span class="wt-frage-rumpf">{rumpf}</span>
 						<div class="wt-reihe">
 							<Btn variant="accent" size="tap" data-testid="wetter-vorlage-wechsel-uebernehmen" onclick={uebernehmen}>{$t('wetter.vorlage.uebernehmen')}</Btn>
 							<Btn variant="ghost" size="tap" data-testid="wetter-vorlage-wechsel-abbrechen" onclick={schliessen}>{$t('aktionen.abbrechen')}</Btn>
@@ -97,7 +114,7 @@
 				{#each liste as v (v.id)}
 					<div class="wt-option">
 						<Btn variant="quiet" size="tap" data-aktiv={v.id === vorlageId ? 'true' : undefined} data-testid="wetter-vorlage-option-{v.id}" onclick={() => waehlen(v.id, v.label, false)}>
-							<span>{name(v)}</span>
+							<span>{optionName(v)}</span>
 							<small data-testid="wetter-vorlage-beschreibung-{v.id}">{beschreibung(v)}</small>
 						</Btn>
 					</div>
@@ -108,6 +125,7 @@
 						<div class="wt-option">
 							<Btn variant="quiet" size="tap" data-testid="wetter-vorlage-eigene-{e.id}" onclick={() => waehlen(e.id, e.name, true)}>
 								<span>{e.name}</span>
+								<small>{eigeneUnterzeile(e)}</small>
 							</Btn>
 						</div>
 					{/each}
@@ -241,7 +259,10 @@
 		font-size: var(--g-text-sm);
 		color: var(--g-ink);
 	}
-	.wt-frage p {
+	/* Titel ohne eigene Klasse (Mockup .confirm b); :global, damit kein Scope-Attribut am <b> landet. */
+	.wt-frage :global(b),
+	.wt-frage-rumpf {
+		display: block;
 		margin: 0 0 var(--g-s-2);
 	}
 	.wt-reihe {

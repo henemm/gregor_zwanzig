@@ -130,13 +130,15 @@ describe('VorlageKarte: Auswahlliste und eigene Vorlage (AC-2, AC-4, AC-5)', () 
 		assert.match(opt('skitouren'), /^Ski touring\b/);
 		assert.doesNotMatch(opt('wandern'), /Wandern/);
 		assert.match(opt('gletscher-neu'), /^Gletschertour\b/);
-		assert.equal(text(elementMitTestid(h, 'wetter-vorlage-eigene-eigen-7f3a')), 'Mein Wochenende');
+		// #3111 AC-5: Name unverändert, darunter die Unterzeile „own“ (ohne Beschreibung).
+		assert.equal(text(elementMitTestid(h, 'wetter-vorlage-eigene-eigen-7f3a')), 'Mein Wochenende own');
 	});
 	test('DE: Optionen deutsch, eigene Vorlage unverändert', async () => {
 		locale.set('de');
 		const h = html(await lade(KARTE, [MENUE_OFFEN]), props(0));
 		assert.match(text(elementMitTestid(h, 'wetter-vorlage-option-wandern')), /^Wandern\b/);
-		assert.equal(text(elementMitTestid(h, 'wetter-vorlage-eigene-eigen-7f3a')), 'Mein Wochenende');
+		// #3111 AC-5: Name unverändert, darunter die Unterzeile „eigene“ (ohne Beschreibung).
+		assert.equal(text(elementMitTestid(h, 'wetter-vorlage-eigene-eigen-7f3a')), 'Mein Wochenende eigene');
 	});
 });
 
@@ -145,15 +147,16 @@ describe('VorlageKarte: Rückfrage {neu} und Verlust-Text (AC-2, AC-4)', () => {
 		locale.set('en');
 		const V = await lade(KARTE, [MENUE_OFFEN, mitWahl("{ id: 'skitouren', name: 'Skitouren', eigen: false }")]);
 		const frage = text(elementMitTestid(html(V, props(2)), 'wetter-vorlage-wechsel-dialog'));
-		assert.match(frage, /Use ‘Ski touring’\?/);
-		assert.match(frage, /from ‘Hiking’ will be lost/);
+		// #3111: Anführungszeichen “…” (Mockup Fassung 4).
+		assert.match(frage, /Use “Ski touring”\?/);
+		assert.match(frage, /from “Hiking” will be lost/);
 		assert.doesNotMatch(frage, /Skitouren|Wandern/);
 	});
 	test('EN: Wechsel auf eigene Vorlage nennt den Nutzernamen unverändert', async () => {
 		locale.set('en');
 		const V = await lade(KARTE, [MENUE_OFFEN, mitWahl("{ id: 'eigen-7f3a', name: 'Mein Wochenende', eigen: true }")]);
 		const frage = text(elementMitTestid(html(V, props(0)), 'wetter-vorlage-wechsel-dialog'));
-		assert.match(frage, /Use ‘Mein Wochenende’\?/);
+		assert.match(frage, /Use “Mein Wochenende”\?/);
 	});
 });
 

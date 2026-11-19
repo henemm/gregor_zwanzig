@@ -26,7 +26,7 @@ register(pathToFileURL(path.join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, p
 register(pathToFileURL(path.join(HERE, 'startzustandHook.mjs')).href, pathToFileURL(FRONTEND + '/').href);
 const { render } = await import('svelte/server');
 const { locale } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/i18n/index.ts')).href);
-const { eigeneVorlagen } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/shared/wetter-tab/wetterTabLaden.ts')).href);
+const { eigeneVorlagen, eigeneVorlageAus, ortAnzahlVon } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/shared/wetter-tab/wetterTabLaden.ts')).href);
 after(() => locale.set('de'));
 
 const datei = (n: string) => path.join(WT, `${n}.svelte`);
@@ -109,7 +109,8 @@ describe('#3111 AC-1: Grenzen-Gruppentitel zweizeilig (zwei Textknoten mit <br>)
 			const titel = [...h.matchAll(/<span class="wt-grp-name[^"]*"[^>]*>(.*?)<\/span>/g)].map((m) => m[1]);
 			assert.equal(titel.length, 2, 'zwei Gruppentitel (unten, oben)');
 			for (const t of titel) assert.match(t, /^[^<]+<br\s*\/?>[^<]+$/, `Titel muss „Zeile1<br>Zeile2“ sein, war: ${t}`);
-			assert.doesNotMatch(titel.join(' '), /\//, 'kein Schrägstrich mehr im Titel');
+			// Svelte-SSR schreibt leere Elemente als `<br/>`; geprüft wird der Schrägstrich im TEXT, nicht im Tag.
+			assert.doesNotMatch(titel.join(' ').replace(/<br\s*\/?>/g, ''), /\//, 'kein Schrägstrich mehr im Titel');
 			if (sprache === 'de') {
 				assert.deepEqual(eigeneTexte(h).filter((t) => t === 'untenzu wenig' || t === 'obenzu viel'), ['untenzu wenig', 'obenzu viel']);
 			} else {
@@ -264,8 +265,92 @@ describe('#3111 AC-6: Bestätigung zweiteilig, Übernehmen vor Abbrechen', () =>
 });
 
 // ---------------------------------------------------------------------------------------------------------------
+// AC-6 (Fix-Loop 1, F001/F002): Orte-Rumpf Einzahl/Mehrzahl — an der Karte UND über den Hub (WetterTabInhalt)
+// ---------------------------------------------------------------------------------------------------------------
+const RUMPF_ORTE = {
+	de: {
+		ein: 'Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen für diesen Ort. Zustellung, Etappen und Orte bleiben unverändert.',
+		mehr: 'Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen für diese Orte. Zustellung, Etappen und Orte bleiben unverändert.',
+	},
+	en: {
+		ein: 'Replaces the metric selection, traffic-light limits and alert levels for this location. Delivery, stages and locations stay unchanged.',
+		mehr: 'Replaces the metric selection, traffic-light limits and alert levels for these locations. Delivery, stages and locations stay unchanged.',
+	},
+} as const;
+const WAHL_WANDERN = "({ id: 'wandern', name: 'Wandern', eigen: false })";
+
+describe('#3111 AC-6 (F001): Orte-Rumpf an der Karte — ein Ort Einzahl, mehrere Orte Mehrzahl', () => {
+	for (const sprache of ['de', 'en'] as const) {
+		for (const [anzahl, form] of [[1, 'ein'], [3, 'mehr']] as const) {
+			test(`${sprache}, ortAnzahl=${anzahl}: Rumpf „${RUMPF_ORTE[sprache][form]}“`, async () => {
+				const h = await menue(sprache, { ...vorlageProps('vergleich', 'alpen-trekking', 0), ortAnzahl: anzahl }, mitWahl(WAHL_WANDERN));
+				const texte = eigeneTexte(elementMit(h, 'wetter-vorlage-wechsel-dialog'));
+				assert.ok(texte.includes(RUMPF_ORTE[sprache][form]), JSON.stringify(texte));
+				assert.ok(!texte.includes(RUMPF_ORTE[sprache][form === 'ein' ? 'mehr' : 'ein']), 'falsche Form zusätzlich');
+			});
+		}
+	}
+});
+
+describe('#3111 AC-6 (F002): Hub-Verdrahtung — Ortezahl aus location_ids erreicht die Bestätigung', () => {
+	// Hub im Zustand „bereit“ mit offenem Menü und gewählter Vorlage: WetterTabInhalt (Startwerte über den Hook),
+	// die Karte über denselben Hook am Import. Alles andere ist Produktcode.
+	const KARTE_START = JSON.stringify(mitWahl(WAHL_WANDERN));
+	const HUB_START: [string, string][] = [
+		["$state<'laedt' | 'fehler' | 'bereit'>('laedt')", "$state<'laedt' | 'fehler' | 'bereit'>('bereit')"],
+		[
+			'let daten = $state<WetterDaten | null>(null);',
+			"let daten = $state<WetterDaten | null>({ eig: {}, vorlagen: { 'alpen-trekking': { metrics: {} }, wandern: { metrics: {} } }, liste: [{ id: 'alpen-trekking', label: 'Alpen-Trekking', anzahl: 0, stichworte: [] }, { id: 'wandern', label: 'Wandern', anzahl: 0, stichworte: [] }], eigene: [] });",
+		],
+		[
+			'let stand = $state<Z.WetterStand | null>(null);',
+			"let stand = $state<Z.WetterStand | null>({ vorlageId: 'alpen-trekking', ampel: { template: 'alpen-trekking', metrics: {} }, auswahl: [], warnungenAn: false, radarAn: false, tagesfenster: { start: 6, end: 20 } });",
+		],
+		// Absolute file-URL: der relative Auflöser des SSR-Hooks würde an eine Abfrage „.ts“ anhängen.
+		["import VorlageKarte from './VorlageKarte.svelte';", `import VorlageKarte from '${pathToFileURL(datei('VorlageKarte')).href}?start=${encodeURIComponent(KARTE_START).replace(/'/g, '%27')}';`],
+	];
+	for (const sprache of ['de', 'en'] as const) {
+		for (const [ids, form] of [[['o1'], 'ein'], [['o1', 'o2', 'o3'], 'mehr']] as const) {
+			test(`${sprache}, Orte-Briefing mit ${ids.length} Ort(en): Rumpf in der ${form === 'ein' ? 'Einzahl' : 'Mehrzahl'}`, async () => {
+				locale.set(sprache);
+				const h = html(await lade(datei('WetterTabInhalt'), HUB_START), { context: 'vergleich', preset: { id: 'p1', name: 'Orte', location_ids: [...ids] } });
+				const texte = eigeneTexte(elementMit(h, 'wetter-vorlage-wechsel-dialog'));
+				assert.ok(texte.includes(RUMPF_ORTE[sprache][form]), JSON.stringify(texte));
+			});
+		}
+	}
+	test('ortAnzahlVon: Länge von location_ids, ohne Liste undefined', () => {
+		assert.equal(ortAnzahlVon({ location_ids: ['a'] }), 1);
+		assert.equal(ortAnzahlVon({ location_ids: ['a', 'b', 'c'] }), 3);
+		assert.equal(ortAnzahlVon({}), undefined);
+		assert.equal(ortAnzahlVon(undefined), undefined);
+	});
+});
+
+describe('#3111 AC-5 (F002): frisch gespeicherte eigene Vorlage behält ihre Beschreibung', () => {
+	// Laden UND „gespeichert“ im Hub (WetterTabInhalt.vorlageGespeichert) bilden die Karte über eigeneVorlageAus.
+	test('mit Beschreibung: beschreibung gesetzt, Unterzeile „eigene · …“ in der Karte', async () => {
+		const e = eigeneVorlageAus({ id: 'n1', name: 'Neu', kind: 'route', description: 'für Mallorca', metrics: [] }, { allgemein: { metrics: {} } });
+		assert.equal(e.beschreibung, 'für Mallorca');
+		const h = await menue('de', { ...vorlageProps('route'), eigene: [e] });
+		assert.ok(eigeneTexte(elementMit(h, 'wetter-vorlage-eigene-n1')).includes('eigene · für Mallorca'));
+	});
+	test('ohne Beschreibung: kein beschreibung-Feld', () => {
+		const e = eigeneVorlageAus({ id: 'n2', name: 'Neu', kind: 'route', metrics: [] }, { allgemein: { metrics: {} } });
+		assert.equal('beschreibung' in e, false);
+	});
+});
+
+// ---------------------------------------------------------------------------------------------------------------
 // AC-7: Speichern-Dialog
 // ---------------------------------------------------------------------------------------------------------------
+/** Wert des Attributs `placeholder` (mit Attribut-Grenze) am öffnenden Tag des Felds mit `data-testid`. */
+function platzhalterVon(h: string, testid: string): string | null {
+	const tag = h.match(new RegExp(`<(?:input|textarea)\\b[^>]*\\sdata-testid="${testid}"[^>]*>`));
+	assert.ok(tag, `Feld ${testid} fehlt`);
+	const m = tag![0].match(/\splaceholder="([^"]*)"/);
+	return m ? entschluesseln(m[1]) : null;
+}
 const dialogProps = (kind: string) => ({ open: true, kind, ampel: {}, onClose: noop, onSaved: noop });
 
 describe('#3111 AC-7: Dialog „Als eigene Vorlage speichern“', () => {
@@ -275,8 +360,9 @@ describe('#3111 AC-7: Dialog „Als eigene Vorlage speichern“', () => {
 			const h = html(await lade(SPD), dialogProps(kind));
 			const texte = eigeneTexte(h);
 			assert.ok(texte.includes('Beschreibung (optional)'), JSON.stringify(texte));
-			assert.match(h, /placeholder="z\.B\. Mallorca Frühling"/);
-			assert.match(h, /placeholder="wofür die Vorlage gedacht ist"/);
+			// Attribut-Grenze (F003): das Attribut `placeholder` am richtigen Feld, nicht irgendein `…placeholder=`.
+			assert.equal(platzhalterVon(h, 'save-preset-name'), 'z.B. Mallorca Frühling');
+			assert.equal(platzhalterVon(h, 'save-preset-description'), 'wofür die Vorlage gedacht ist');
 			const submit = h.indexOf('data-testid="save-preset-submit"');
 			const abbrechen = h.indexOf('>Abbrechen<');
 			assert.ok(submit > 0 && abbrechen > 0, 'Knöpfe fehlen');
@@ -286,9 +372,8 @@ describe('#3111 AC-7: Dialog „Als eigene Vorlage speichern“', () => {
 			locale.set('en');
 			const h = html(await lade(SPD), dialogProps(kind));
 			assert.ok(eigeneTexte(h).some((t) => /^Description \(optional\)$/i.test(t)), JSON.stringify(eigeneTexte(h)));
-			const ph = [...h.matchAll(/placeholder="([^"]*)"/g)].map((m) => m[1]);
-			assert.equal(ph.length, 2, `zwei Platzhalter erwartet: ${JSON.stringify(ph)}`);
-			assert.ok(ph.every((p) => p !== 'z.B. Mallorca Frühling' && p !== 'wofür die Vorlage gedacht ist'), 'EN-Platzhalter nicht übersetzt');
+			assert.equal(platzhalterVon(h, 'save-preset-name'), 'e.g. Mallorca spring');
+			assert.equal(platzhalterVon(h, 'save-preset-description'), 'what the template is meant for');
 			assert.ok(h.indexOf('data-testid="save-preset-submit"') < h.indexOf('>Cancel<'), 'Save vor Cancel');
 		});
 	}
