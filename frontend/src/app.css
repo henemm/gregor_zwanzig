@@ -149,6 +149,9 @@
 
     /* Type Scale (Spec design_system_tokens.css Z. 47–55) */
     --g-text-xs:  11px;
+    /* #3010: pixelgleiche Zwischenstufen — 12px Metadaten/Kleinschrift, 16px mobile Eingabefelder (iOS-Zoom-Schutz) */
+    --g-text-12px: 12px;
+    --g-text-16px: 16px;
     --g-text-sm:  13px;
     --g-text-md:  15px;
     --g-text-lg:  17px;
