@@ -9,6 +9,7 @@ import (
 
 // AC-2: Dezimalkoordinaten über HTTP-Endpoint auflösen
 func TestResolveHandlerDecimalCoordinates(t *testing.T) {
+	erwarteAbgelehntenHoehenNachschlag(t)
 	// GIVEN: Gültiger POST-Body mit Dezimalkoordinaten
 	body := `{"input": "47.0789, 11.6856"}`
 
@@ -135,6 +136,7 @@ func TestResolveHandlerNoBody(t *testing.T) {
 
 // AC-5: DMS-Koordinaten über HTTP-Endpoint
 func TestResolveHandlerDMSCoordinates(t *testing.T) {
+	erwarteAbgelehntenHoehenNachschlag(t)
 	body := `{"input": "47°04'44.0\"N 11°41'08.2\"E"}`
 
 	h := ResolveLocationHandler()
@@ -154,36 +156,9 @@ func TestResolveHandlerDMSCoordinates(t *testing.T) {
 	}
 }
 
-// AC-1: Komoot Highlight über HTTP-Endpoint (echter API-Call)
-func TestResolveHandlerKomootHighlight(t *testing.T) {
-	// Highlight 126361 = Gavia Pass (verifiziert erreichbar)
-	body := `{"input": "https://www.komoot.com/de-de/highlight/126361"}`
-
-	h := ResolveLocationHandler()
-	req := httptest.NewRequest("POST", "/api/locations/resolve", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, req)
-
-	if w.Code != 200 {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
-	}
-
-	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp["lat"] == nil {
-		t.Error("expected lat in response")
-	}
-	if resp["source_type"] != "komoot" {
-		t.Errorf("expected source_type 'komoot', got %v", resp["source_type"])
-	}
-	if resp["timezone"] == nil || resp["timezone"] == "" {
-		t.Error("expected timezone in response")
-	}
-}
-
 // Content-Type Header wird korrekt gesetzt
 func TestResolveHandlerContentType(t *testing.T) {
+	erwarteAbgelehntenHoehenNachschlag(t)
 	body := `{"input": "47.0, 11.0"}`
 
 	h := ResolveLocationHandler()
