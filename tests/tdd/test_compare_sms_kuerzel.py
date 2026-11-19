@@ -153,7 +153,13 @@ def _sms_cell_text(loc_result: LocationResult, renderer_id: str) -> str | None:
 def _location_part(sms: str, name: str) -> str:
     """Teiltext EINES Ortes innerhalb der flachen, Semikolon-getrennten
     Compare-SMS -- bis zum naechsten '; ' bzw. Stringende (analog
-    tests/tdd/test_compare_sms_official_alerts.py::_location_part)."""
+    tests/tdd/test_compare_sms_official_alerts.py::_location_part).
+
+    #3122 B5: bei genau einem Ort steht der Name im Kopf (``{Ort} TT.MM.: …``)
+    statt vor den Werten -- hier wieder als ``{Ort} …`` gelesen."""
+    kopf = re.match(rf"{re.escape(name)} \d\d\.\d\d\.:(?: |$)", sms)
+    if kopf:
+        return f"{name} {sms[kopf.end():]}".rstrip()
     idx = sms.index(name)
     rest = sms[idx:]
     end = rest.find("; ")

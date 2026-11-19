@@ -267,7 +267,9 @@ class TestAC3CompareFooter:
 
         html = render_compare_html(self._result(), profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
 
-        assert LBL_COMPARE in html, "Compare-Footer-Label 'Ortsvergleich' fehlt"
+        # #3122 B5: die Herkunftszeile nennt den Bereich "Orte".
+        assert "<div>Orte</div>" in html, "Compare-Footer-Label 'Orte' fehlt"
+        assert LBL_COMPARE not in html
         # warnmail-Spec AC-5/Befund 4a: Compare hat keine echte per-Event-
         # Provider-Info verfügbar -- fester Fallback "Open-Meteo" (ADR-0029)
         # statt Commit-Hash.

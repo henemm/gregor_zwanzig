@@ -32,7 +32,7 @@ from app.models import Corridor, ThunderLevel
 from app.profile import ActivityProfile
 from app.thunder_scale import thunder_label
 from app.user import ComparisonResult, LocationResult
-from i18n import Lang, t
+from i18n import Lang, t, tn
 from i18n.format import fmt_date_numeric, fmt_weekday
 from output.renderers.compare_hourly_metric_ids import (
     HOURLY_MERGE_ONLY_METRIC_IDS, hourly_selectable_metric_ids,
@@ -1716,8 +1716,9 @@ def _render_abo_footer(
 ) -> str:
     name = _html.escape(preset_name) if preset_name else t("vergleich.fuss.abo_name", lang)
     next_send = _compute_next_send(preset, locations_by_id, lang) or NO_VALUE
-    abo_zeile = t("vergleich.fuss.abo_zeile", lang, n=location_count,
-                  vorlage=_html.escape(vorlage_label))
+    # #3122 B5 (AC-36): Mehrzahl ueber .one/.other -- bei einem Ort "1 Ort".
+    abo_zeile = tn("vergleich.fuss.abo_zeile", location_count, lang,
+                   vorlage=_html.escape(vorlage_label))
     return (
         f'<div style="padding:20px 24px;background:{G_PAPER};border-top:1px solid #e6e1d3;">'
         f'<table style="width:100%;border-collapse:collapse;"><tr>'
@@ -1926,8 +1927,10 @@ def render_compare_html(
     alerts_enabled = (
         preset.get("official_alerts_enabled") if isinstance(preset, dict) else None
     ) is not False
+    # #3122 B5 (AC-36): bei genau einem Ort weder "alle Orte" noch "1 Orte".
     overview_head = (
-        t("vergleich.abschnitt.uebersicht", lang), t("vergleich.uebersicht.titel", lang),
+        t("vergleich.abschnitt.uebersicht", lang),
+        tn("vergleich.uebersicht.titel", len(locations), lang),
         t("vergleich.uebersicht.scrollen", lang),
     )
     overview_html = (
@@ -1944,7 +1947,8 @@ def render_compare_html(
     # laeuft seit #1268 ueber den ganzen Tag; die Angabe behauptete eine
     # Einschraenkung, die es nicht gibt. Ersatzlos leer (analog zur bereits
     # entfernten Zeitfenster-Zeile im Klartext-Header, comparison.py:77).
-    hourly_head = (t("vergleich.abschnitt.stunden", lang), t("vergleich.stunden.titel", lang), "")
+    hourly_head = (t("vergleich.abschnitt.stunden", lang),
+                   tn("vergleich.stunden.titel", len(locations), lang), "")
     hourly_head_html = (
         f'<div style="padding:26px 24px 0;">'
         f'{_render_section_head(*hourly_head)}</div>'

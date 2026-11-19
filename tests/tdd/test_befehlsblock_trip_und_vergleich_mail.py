@@ -200,7 +200,7 @@ def test_ac10_vergleich_html_block_steht_zwischen_abo_hinweis_und_app_fusszeile(
     html = _compare_html()
     abo = html.find("Dieses Abo")
     block = html.find("Antwort-Kommandos")
-    fuss = html.find("Vergleich in App")
+    fuss = html.find("In der App öffnen")
     assert -1 not in (abo, block, fuss), (abo, block, fuss)
     assert abo < block < fuss, f"Reihenfolge Abo={abo} Block={block} App-Fuss={fuss}"
 

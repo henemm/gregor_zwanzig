@@ -211,14 +211,17 @@ def _trip_fehlt_in_sms(sms: str, metric_id: str, rumpf: str | None = None) -> bo
 
 
 def _orte_fehlt_in_sms(sms: str, metric_id: str, teil: str | None = None) -> bool:
-    """Ein Ort-Teil der Orte-SMS: ``Name K1 Wert K2 Wert ...``; die Metrik
+    """Ein Ort-Teil der Orte-SMS: ``Name K1 Wert K2 Wert ...`` (bei genau einem
+    Ort steht der Name im Kopf ``{Ort} TT.MM.:``, #3122 B5); die Metrik
     fehlt, wenn keines ihrer Kuerzel im ersten Ort-Teil steht. ``teil``: die
-    Zellen des ersten Orts, vom Test ueber woertliche Raender bestimmt."""
+    Zellen des ersten Orts, vom Test ueber woertliche Raender bestimmt.
+    Gefuehlte Temperatur steht in der Orte-SMS als ``FL``/``FD`` (Tiefst/Hoechst)."""
     from app.metric_catalog import kurzform_kuerzel
 
     if teil is None:
         teil = sms.split(": ", 1)[1].split("; ")[0]
-    kuerzel = {"temperature": ("D", "L")}.get(metric_id, (kurzform_kuerzel(metric_id),))
+    kuerzel = {"temperature": ("D", "L"), "wind_chill": ("FL", "FD")}.get(
+        metric_id, (kurzform_kuerzel(metric_id),))
     return not any(re.search(rf"(^| ){re.escape(k)} ", teil) for k in kuerzel if k)
 
 
@@ -372,8 +375,8 @@ def test_ac17_orte_sms_beispiel_gleich_versand_und_marken(client, anzahl):
     assert antwort["sms_example"]["max_length"] == CHANNEL_LIMITS["sms"]["max_chars"]
     assert len(versand) <= antwort["sms_example"]["max_length"]
     if anzahl == 1:
-        teil = versand.split(": ", 1)[1]
-        assert teil.startswith(ORTSNAMEN[0])
+        # #3122 B5: bei genau einem Ort beginnt die SMS mit dem Ortsnamen.
+        assert versand.startswith(f"{ORTSNAMEN[0]} 14.07.: ")
     fehlend = {m for m in _sms_an(antwort) if _orte_fehlt_in_sms(versand, m)}
     assert fehlend, "Datensatz muss die SMS ueberlaufen lassen"
     markiert = {z["metric_id"] for z in antwort["rows"]
@@ -681,7 +684,8 @@ def test_f002_ortsname_mit_trennzeichen_verfaelscht_nichts(client, anzahl):
     _orte(NUTZER_A, kennung, anzahl=anzahl, placements={"version": 1, "rows": []}, namen=namen)
     antwort = _ok(client, kennung, "vergleich")
     versand = _orte_versand_sms(NUTZER_A, kennung)
-    kopf = "Vergleich 14.07.: Wind 5: B; C "
+    # #3122 B5: Kopf "Orte TT.MM.:", bei genau einem Ort "{Ort} TT.MM.:".
+    kopf = "Wind 5: B; C 14.07.: " if anzahl == 1 else "Orte 14.07.: Wind 5: B; C "
     assert versand.startswith(kopf), versand
     teil = versand[len(kopf):].split("; Lienz ")[0]
 
@@ -760,7 +764,7 @@ def test_t5_orte_nur_aus_dem_bestand_des_nutzers(client):
     assert antwort.status_code == 200, antwort.text
     assert "GeheimerOrtVonB" not in antwort.text
     assert antwort.json()["location_count"] == 1
-    assert antwort.json()["sms_example"]["text"].startswith("Vergleich 14.07.: Innsbruck ")
+    assert antwort.json()["sms_example"]["text"].startswith("Innsbruck 14.07.: ")
 
     daten["location_ids"] = ["nur-b"]
     pfad.write_text(json.dumps(daten), encoding="utf-8")

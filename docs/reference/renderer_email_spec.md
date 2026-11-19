@@ -277,6 +277,21 @@ X-GZ-Lang:      de | en
 
 - **`email_spec_validator.py`** prüft Orts-Vergleich-Mails (Vergleichstabelle, Winner-Box, min-locations). Für andere Mail-Typen nicht zuständig.
 
+**Orte-Mail: Bereichsname und Ein-Ort-Texte (seit #3122 B5, ADR-0124 Nr. 10 und Nachtrag Nr. 13):** Der Bereich heißt „Orte“ (EN „Locations“), auch bei einem Ort; „Vergleich“, „Orts-Vergleich“, „Ortsvergleich“ und „Orts-Briefing“ stehen in keiner Ausgabe mehr. Interne Bezeichner (`compare`, `vergleich`, `X-GZ-Mail-Type: compare`) bleiben.
+
+| Stelle (Katalog) | mehrere Orte | genau ein Ort |
+|---|---|---|
+| Kopf HTML/Klartext/Telegram (`vergleich.kopf.titel`) | `ORTE` (EN `LOCATIONS`) | `ORTE` |
+| Mail-Titel, Marke im Fuß, Abo-Name (`vergleich.kopf.titel_kurz`, `vergleich.fuss.abo_name`) | `Orte` (EN `Locations`) | `Orte` |
+| Herkunftszeile (`mail.herkunft.vergleich`) | `Orte` | `Orte` |
+| Betreff (`versand.scheduler.vergleich_betreff`) | `Orte: {name} ({datum})` (EN `Locations: …`) | dasselbe |
+| Übersicht, Unterzeile (`vergleich.uebersicht.titel.one/.other`) | `Alle Orte · gewählte Metriken` | `Gewählte Metriken` |
+| Stundenverlauf, Titel (`vergleich.stunden.titel.one/.other`) | `Stundenverlauf · alle Orte` | `Stundenverlauf` |
+| Fuß (`vergleich.fuss.abo_zeile.one/.other`) | `{n} Orte · Vorlage {vorlage}` | `1 Ort · Vorlage {vorlage}` |
+| Knopf (`vergleich.fuss.app_oeffnen`) | `In der App öffnen →` (EN `Open in app →`) | dasselbe |
+
+Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail. Der Befehlsblock nennt „Briefing für heute/morgen jetzt senden“ statt „Vergleich …“, der Hinweis auf gewählte Größen ohne Wert endet auf „in der Übersicht“, die leere Mail sagt „Keine Wetterdaten verfügbar.“
+
 **Acceptance Gating:** Nur Exit 0 der entsprechenden Validator erlaubt „E2E Test bestanden".
 
 ---

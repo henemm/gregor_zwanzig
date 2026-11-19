@@ -209,7 +209,7 @@ def _angezeigte_namen(text: str) -> list[str]:
     import re
 
     rumpf = text.split(": ", 1)[1].rsplit(". ", 1)[0]
-    return [m.group(1).strip() for m in re.finditer(r"(?:^|, )(.+?) \((?:comparison|route|Trip)\)", rumpf)]
+    return [m.group(1).strip() for m in re.finditer(r"(?:^|, )(.+?) \((?:locations|route|Trip)\)", rumpf)]
 
 
 def test_ac7_gekuerzte_namen_sind_paarweise_verschieden_und_passen_in_160():

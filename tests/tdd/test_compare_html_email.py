@@ -206,7 +206,7 @@ class TestCompareHTMLRenderer:
     def test_header_label(self):
         """
         Given ein beliebiges ComparisonResult /
-        When render_compare_html() / Then HTML enthält 'ORTS-VERGLEICH'.
+        When render_compare_html() / Then HTML enthält 'ORTE · ' (#3122 B5, vorher 'ORTS-VERGLEICH').
 
         Issue #1268: Die Erwartung hat sich gedreht. Dieser Test prüfte zuvor
         zusätzlich '09:00'/'16:00' im Header (Bewertungs-Zeitfenster). Das
@@ -221,7 +221,8 @@ class TestCompareHTMLRenderer:
         result = _make_result()
         html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
 
-        assert "ORTS-VERGLEICH" in html, "Profil-Label-Prefix 'ORTS-VERGLEICH' muss im Header erscheinen"
+        assert "ORTE · " in html, "Kennzeile 'ORTE · {Vorlage}' muss im Header erscheinen"
+        assert "ORTS-VERGLEICH" not in html
 
     def test_winner_tags_feature_entfernt_v2(self):
         """

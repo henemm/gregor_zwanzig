@@ -343,6 +343,25 @@ def test_sms_ein_ort_ohne_wertzelle_ohne_haengenden_trenner():
     assert _sms_ein_ort("Tecklenburg", enabled_metrics=["snow_depth_cm"]) == "Tecklenburg 08.07.: ?1"
 
 
+def test_sms_ein_ort_ohne_wertzelle_ungekuerzt_ohne_haengendes_leerzeichen():
+    """Kern ohne Laengengrenze (``max_chars=None``, Zweig ohne Einpassung): ein
+    Ort ohne Wertzelle endet direkt auf dem Kopf, ohne Leerzeichen (Adversary
+    F002). Echter Renderer-Kern, keine Attrappe."""
+    from app.user import ComparisonResult, LocationResult
+    from output.renderers.comparison import _render_compare_sms_body
+
+    loc = SavedLocation(id="loc-x", name="Tecklenburg", lat=47.0, lon=11.0, elevation_m=1000)
+    werte = {"precip_1h": 1.0, "pop": 10}
+    lr = LocationResult(location=loc, temp_max=12.0, temp_min=3.0, wind_max=11.0, gust_max=19.0,
+                        cloud_avg=35, sunny_hours=6, official_alerts=[],
+                        hourly_data=[_dp(9, werte), _dp(12, werte), _dp(15, werte)])
+    res = ComparisonResult(locations=[lr], time_window=(9, 16), target_date=TARGET_DATE,
+                           created_at=datetime(2026, 7, 8, 4, 0))
+    sms = _render_compare_sms_body(res, enabled_metrics=[], unresolved_count=0,
+                                   metric_formats=None, max_chars=None)
+    assert sms == "Tecklenburg 08.07.:", repr(sms)
+
+
 # ---------------------------------------------------------------------------
 # T1: Warnmail-Kontext, geloeschte Orte, Abo ohne Namen
 # ---------------------------------------------------------------------------

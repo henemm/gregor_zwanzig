@@ -91,8 +91,8 @@ def test_ac1_ueberschriften_englisch_aus_dem_katalog():
     vis = "\n".join(sichtbar(html))
     for key in ("vergleich.kopf.titel", "vergleich.zeile.amtliche_warnungen",
                 "vergleich.ausblick.titel", "vergleich.fuss.naechster_versand",
-                "vergleich.abschnitt.uebersicht", "vergleich.uebersicht.titel",
-                "vergleich.abschnitt.stunden", "vergleich.stunden.titel",
+                "vergleich.abschnitt.uebersicht", "vergleich.uebersicht.titel.other",
+                "vergleich.abschnitt.stunden", "vergleich.stunden.titel.other",
                 "vergleich.fuss.dieses_abo", "vergleich.fuss.app_oeffnen",
                 "vergleich.ausblick.eyebrow", "vergleich.uebersicht.spalte_metrik"):
         assert t(key, "en") in vis, key
@@ -124,7 +124,8 @@ def test_ac1_kopf_datum_und_fuss_englisch():
     assert fmt_date_numeric(d, "en") == "29 Oct 2026"
     assert t("vergleich.kopf.datum", "en", datum=f"{fmt_weekday(d, 'en', kurz=False)}, "
              f"{fmt_date_numeric(d, 'en')}") in text.splitlines()
-    zeile = t("vergleich.fuss.abo_zeile", "en", n=4, vorlage=t("mail.vorlage.allgemein", "en"))
+    zeile = t("vergleich.fuss.abo_zeile.other", "en", count=4,
+              vorlage=t("mail.vorlage.allgemein", "en"))
     assert zeile in sichtbar(html)
     assert any(z.startswith(fmt_date_numeric(d, "en")) for z in sichtbar(html)), "Naechster Versand"
 
@@ -267,7 +268,7 @@ def test_ac4_notice_bausteine_englisch_und_deutsch_unveraendert():
     from output.renderers.channel_layout import selection_gap_notice, telegram_metric_notice
 
     assert selection_gap_notice(2, scope="vergleich") == (
-        "… +2 gewählte Wettergrößen ohne Wert in diesem Vergleich")
+        "… +2 gewählte Wettergrößen ohne Wert in der Übersicht")  # #3122 B5
     assert selection_gap_notice(2, scope="ort") == "… +2 gewählte Wettergrößen ohne Wert an diesem Ort"
     assert telegram_metric_notice(2, context="route") == (
         "… +2 weitere Wettergrößen nur als Tageswert (Telegram-Limit)")
@@ -287,7 +288,7 @@ def test_klartext_und_telegram_ohne_orte_englisch():
 
     leer = ComparisonResult(locations=[], time_window=(9, 16), target_date=build_result().target_date)
     assert render_comparison_text(leer, lang="en", preset=None) == t("vergleich.allgemein.keine_daten", "en")
-    assert render_comparison_text(leer, preset=None) == "Keine Vergleichsdaten verfügbar."
+    assert render_comparison_text(leer, preset=None) == "Keine Wetterdaten verfügbar."  # #3122 B5
 
 
 # --------------------------------------------------------------------------- AC-6

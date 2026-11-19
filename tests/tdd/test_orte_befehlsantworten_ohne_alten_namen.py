@@ -110,6 +110,30 @@ def test_orte_versand_fehlerantwort_ohne_alten_namen(lang, en_kurz, ergebnis):
         assert text.startswith("Keine Versandkanäle für dieses Orte-Abo aktiv"), text
 
 
+@pytest.mark.parametrize("lang, en_kurz, soll", [
+    ("de", False, "Heute (29.10.2026): Orte-Abo nicht ladbar oder Orte gelöscht — "
+                  "Orte im Orte-Abo prüfen."),
+    ("de", True, "Heute (29.10.2026): locations subscription not loadable or its "
+                 "locations were deleted."),
+    ("en", False, "Heute (Thu 29 Oct): locations subscription not loadable or its locations "
+                  "were deleted — check the locations in the subscription."),
+    ("en", True, "Heute (29.10.2026): locations subscription not loadable or its "
+                 "locations were deleted."),
+])
+def test_orte_versand_invalid_preset_hat_eigenen_text(lang, en_kurz, soll):
+    """``invalid_preset`` traegt seinen eigenen Text (Orte-Abo nicht ladbar) und
+    faellt nicht still auf den ``no_stage``-Text zurueck (Adversary F001)."""
+    from services.trip_command_processor import _on_demand_failure_body
+
+    text = _on_demand_failure_body("invalid_preset", "Heute", date(2026, 10, 29), en=en_kurz,
+                                   objekt="vergleich", lang=lang)
+    kein_ziel = _on_demand_failure_body("no_stage", "Heute", date(2026, 10, 29), en=en_kurz,
+                                        objekt="vergleich", lang=lang)
+    assert text == soll
+    assert text != kein_ziel, text
+    assert not re.search(r"(?i)etappe|stage", text), text
+
+
 @pytest.mark.parametrize("lang", ["de", "en"])
 @pytest.mark.parametrize("ergebnis", ["no_channels", "channels_unreachable"])
 def test_trip_versand_fehlerantwort_unveraendert(lang, ergebnis):

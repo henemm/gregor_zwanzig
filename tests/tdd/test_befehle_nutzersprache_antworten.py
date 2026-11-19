@@ -173,8 +173,8 @@ def test_ac7_ohne_trip_und_vergleich_antwortet_die_zielauswahl_in_kontosprache(n
         uid = f"p10-ac7-leer-{lang}-{befehl.lower()}"
         nutzer_anlegen(uid, lang)
         (texte[lang],) = telegram_texte(netz, basis_settings(), uid, befehl)
-    assert "Kein aktiver Trip oder Ortsvergleich gefunden." in texte["de"]
-    assert texte["en"] == "[Error]\n\nNo active trip or location comparison found."
+    assert "Kein aktiver Trip und kein aktives Orte-Abo gefunden." in texte["de"]  # #3122 B5
+    assert texte["en"] == "[Error]\n\nNo active trip or locations subscription found."
 
 
 @freeze_time(FEST)
@@ -201,7 +201,7 @@ def test_ac7_befehlsblock_englisch_und_deutsch_byte_gleich():
     zeilen = dict(command_rows("route", lang="en"))
     assert "STARTDATE YYYY-MM-DD" in zeilen and "STARTDATUM JJJJ-MM-TT" not in zeilen
     block = render_commands_plain("vergleich", lang="en")
-    assert "Send the comparison to all channels now" in block and "HEUTE" not in block
+    assert "Send the briefing to all channels now" in block and "HEUTE" not in block
 
 
 @freeze_time(FEST)
@@ -263,7 +263,7 @@ def _fall_act_pause_mehrdeutig(netz, uid):
     trip_anlegen(uid)
     vergleich_anlegen(uid)
     text, knoepfe = _knopf(netz, uid, "act_pause")
-    return text, knoepfe, [], ["Ambiguous:", "(comparison)", "Reply with name"]
+    return text, knoepfe, [], ["Ambiguous:", "(locations)", "Reply with name"]
 
 
 def _fall_knopf_nur_trip(netz, uid):
@@ -280,7 +280,7 @@ def _fall_namensgleich_mehrdeutig(netz, uid):
     trip_anlegen(uid)
     vergleich_anlegen(uid, TRIP_NAME)
     (mail,) = email_texte(netz, basis_settings(), uid, "PAUSE")
-    return mail, [], [], ["[Ambiguous]", "Ambiguous:", "(Trip)", "(comparison)"]
+    return mail, [], [], ["[Ambiguous]", "Ambiguous:", "(Trip)", "(locations)"]
 
 
 def _fall_niederschlagsart(netz, uid):
@@ -313,7 +313,7 @@ def _fall_vergleich_ablehnung(netz, uid):
     vergleich_anlegen(uid)
     text, knoepfe = _tg(netz, uid, f"{VERGLEICH_NAME} GEWITTER")
     return text, knoepfe, [], ["Command not available",
-                               "'storms' is not available for location comparisons."]
+                               "'storms' is not available for locations subscriptions."]
 
 
 _F004 = {f.__name__.removeprefix("_fall_"): f for f in (

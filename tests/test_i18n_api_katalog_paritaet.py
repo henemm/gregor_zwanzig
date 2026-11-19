@@ -76,16 +76,16 @@ ANKER: dict[str, tuple[str, str]] = {
         "Onset shift of '{metric}' is {sekunden} s, below the smallest reporting "
         "threshold of {grenze} s"),
     "api.fehler.vergleich_nicht_gefunden": (
-        "Orts-Vergleich '{preset_id}' nicht gefunden für Nutzer '{user_id}'",
-        "Location comparison '{preset_id}' not found for user '{user_id}'"),
+        "Orte-Abo '{preset_id}' nicht gefunden für Nutzer '{user_id}'",
+        "Locations subscription '{preset_id}' not found for user '{user_id}'"),
     "api.fehler.vergleich_ohne_orte": (
-        "Orts-Vergleich '{preset_id}' hat keine Orte konfiguriert — es gibt nichts zu vergleichen.",
-        "Location comparison '{preset_id}' has no locations configured - there is nothing to compare."),
+        "Orte-Abo '{preset_id}' hat keine Orte konfiguriert.",
+        "Locations subscription '{preset_id}' has no locations configured."),
     "api.fehler.vergleich_orte_geloescht": (
-        "Ortsvergleich '{preset_id}' verweist auf gelöschte Orte. Ersetze die Orte im "
-        "Ortsvergleich. (Orte {location_ids} nicht aufloesbar)",
-        "Location comparison '{preset_id}' points to deleted locations. Replace the locations "
-        "in the comparison. (Locations {location_ids} not resolvable)"),
+        "Orte-Abo '{preset_id}' verweist auf gelöschte Orte. Ersetze die Orte im "
+        "Orte-Abo. (Orte {location_ids} nicht aufloesbar)",
+        "Locations subscription '{preset_id}' points to deleted locations. Replace the locations "
+        "in the subscription. (Locations {location_ids} not resolvable)"),
     "api.fehler.vergleich_datum_ungueltig": (
         "Ungültiges Datum '{datum}' (erwartet ISO JJJJ-MM-TT)",
         "Invalid date '{datum}' (expected ISO YYYY-MM-DD)"),
@@ -93,11 +93,11 @@ ANKER: dict[str, tuple[str, str]] = {
         "Body muss genau einen von 'changes', 'onsets' oder 'official' enthalten",
         "Body must contain exactly one of 'changes', 'onsets' or 'official'"),
     "api.fehler.vergleich_orte_fremd": (
-        "Orte {orte} gehoeren nicht zu diesem Orts-Vergleich",
-        "Locations {orte} do not belong to this location comparison"),
+        "Orte {orte} gehoeren nicht zu diesem Orte-Abo",
+        "Locations {orte} do not belong to this locations subscription"),
     "api.fehler.vergleich_keine_warnung": (
-        "Keine amtliche Warnung fuer die Orte dieses Vergleichs",
-        "No official warning for the locations of this comparison"),
+        "Keine amtliche Warnung fuer die Orte dieses Orte-Abos",
+        "No official warning for the locations of this locations subscription"),
     "api.fehler.gpx_nur_gpx": (
         "Nur .gpx Dateien erlaubt, nicht '{filename}'",
         "Only .gpx files are allowed, not '{filename}'"),

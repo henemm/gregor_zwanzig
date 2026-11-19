@@ -344,6 +344,24 @@ Lückenschluss Runde 7 (#3047 B-L5, Paket p4b), alle nur mit `--konfig`:
 Nachweis: `test_r7b_*` in `tests/tdd/test_einstellung_gleich_mail_validatoren.py`
 (echte Mail besteht, gezielt verfälschte scheitert).
 
+Bereichsname „Orte“ (#3122 B5, ADR-0124 Nr. 10, AC-35/AC-36), nur mit `--konfig`:
+
+- **Kopf:** HTML-Kennzeile `ORTE · {Vorlage}` (EN `LOCATIONS · …`), erste
+  Klartext-Zeile `ORTE`/`LOCATIONS`; sonst `NAME: Kopf 'ORTE' fehlt (HTML|Klartext)`.
+- **Alter Bereichsname:** „Vergleich“ (deckt „Orts-Vergleich“, „Ortsvergleich“)
+  und „Orts-Briefing“, in englischen Mails zusätzlich „comparison“, im
+  lesbaren HTML-Text und im Klartext → `NAME: alter Bereichsname (…)`.
+- **Nutzerdaten zählen nicht:** Orts- und Abo-Namen aus Konfiguration und Mail
+  (z. B. „Vergleichsberg“, „Comparison Peak“, bei einem Ort „Alle Orte Bar“)
+  werden vor der Prüfung ausgeblendet; geprüft werden nur die festen Texte.
+- **Genau ein Ort** (eine Ortsspalte in der Übersicht): kein „alle Orte“/„1 Orte“
+  (EN „all locations“/„1 locations“) → `NAME: Text setzt mehrere Orte voraus (…)`;
+  der Fuß trägt „1 Ort · Vorlage“ (EN „1 location · Template“), sonst
+  `NAME: Fuss '1 Ort · Vorlage' fehlt bei einem Ort (HTML)`. Die Untergrenze
+  der Ortszahl (`--min-locations`, ohne `--konfig` 3) bleibt bei #2798.
+
+Nachweis: `test_b5_*` in `tests/tdd/test_einstellung_gleich_mail_validatoren.py`.
+
 **Auflösung des Verbots aus #1381:** Eine feste Spaltenfolge (`_HOUR_COLUMNS_V2`)
 wird weiterhin **nie** vorausgesetzt — die Folge ist seit #1359 frei
 einstellbar, die alte Kanon-Projektion lehnte korrekte Mails ab und blockierte

@@ -24,7 +24,7 @@ from app.config import Settings
 from app.models import ForecastDataPoint, ThunderLevel
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult, SavedLocation
-from i18n import t
+from i18n import t, tn
 from tests.helpers.compare_briefings import write_compare_briefings
 
 TAG = date(2026, 7, 8)
@@ -132,7 +132,7 @@ def _mail_nennt_vorlage(html: str, lang: str, name: str, n: int = len(ORTE)) -> 
     zeilen = _sichtbar(html)
     assert f"{t('vergleich.kopf.titel', lang)} · {name}" in zeilen, zeilen[:6]
     assert _kopfzelle(html) == (t("vergleich.kopf.profil", lang), name)
-    assert t("vergleich.fuss.abo_zeile", lang, n=n, vorlage=name) in zeilen
+    assert tn("vergleich.fuss.abo_zeile", n, lang, vorlage=name) in zeilen
 
 
 # ------------------------------------------------------- profile_for_template
@@ -187,8 +187,8 @@ def test_ac4_texte_konkret_de_und_en(rig):
     preset = _preset(user_id, profil="wintersport", vorlage="wintersport")
     de = _sichtbar(_versand(rig, user_id, preset, "de"))
     en = _sichtbar(_versand(rig, user_id, preset, "en"))
-    assert "ORTS-VERGLEICH · Wintersport" in de and "2 Orte · Vorlage Wintersport" in de
-    assert "LOCATION COMPARISON · Winter sports" in en
+    assert "ORTE · Wintersport" in de and "2 Orte · Vorlage Wintersport" in de  # #3122 B5
+    assert "LOCATIONS · Winter sports" in en
     assert "2 locations · Template Winter sports" in en
 
 
@@ -363,5 +363,8 @@ def test_v11_allgemeine_vorlage_laesst_das_ortsprofil_wirken(echte_engine, vorla
 def test_ac9_katalog_vorlage_template_und_gleiche_platzhalter():
     assert t("vergleich.kopf.profil", "de") == "Vorlage"
     assert t("vergleich.kopf.profil", "en") == "Template"
-    assert t("vergleich.fuss.abo_zeile", "de", n=3, vorlage="X") == "3 Orte · Vorlage X"
-    assert t("vergleich.fuss.abo_zeile", "en", n=3, vorlage="X") == "3 locations · Template X"
+    assert tn("vergleich.fuss.abo_zeile", 3, "de", vorlage="X") == "3 Orte · Vorlage X"
+    assert tn("vergleich.fuss.abo_zeile", 3, "en", vorlage="X") == "3 locations · Template X"
+    # #3122 B5 (AC-36): bei genau einem Ort die Einzahl.
+    assert tn("vergleich.fuss.abo_zeile", 1, "de", vorlage="X") == "1 Ort · Vorlage X"
+    assert tn("vergleich.fuss.abo_zeile", 1, "en", vorlage="X") == "1 location · Template X"

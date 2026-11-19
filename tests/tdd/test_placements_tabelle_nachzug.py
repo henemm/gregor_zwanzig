@@ -228,13 +228,19 @@ def test_jedes_kuerzel_der_orte_sms_hat_eine_bedeutung(lang):
 # ---------------------------------------------------------------------------
 
 def _rest_zaehler_soll(versand: str, orte: list[str]) -> list:
-    """Orakel: je Ortsteil der Versand-SMS (Kopf ``Vergleich TT.MM.: ``,
+    """Orakel: je Ortsteil der Versand-SMS (Kopf ``Orte TT.MM.: ``,
     Trenner ``; ``, die Testnamen enthalten keinen) die Zahl hinter ``+`` als
-    eigenes Wort, sonst ``None``."""
-    rumpf = re.sub(r" \+\d+ Orte$", "", versand.split(": ", 1)[1])
+    eigenes Wort, sonst ``None``. #3122 B5: bei genau einem Ort steht der Name
+    im Kopf (``{Ort} TT.MM.: ``), der einzige Ortsteil traegt ihn nicht."""
+    kopf, rumpf = versand.split(": ", 1)
+    rumpf = re.sub(r" \+\d+ Orte$", "", rumpf)
+    ein_ort = len(orte) == 1
+    if ein_ort:
+        assert kopf.split(" ")[0] == orte[0], versand
     out = []
     for teil in rumpf.split("; "):
-        assert teil.split(" ")[0] in orte, teil
+        if not ein_ort:
+            assert teil.split(" ")[0] in orte, teil
         treffer = re.findall(r"(?:^| )\+(\d+)(?= |$)", teil)
         out.append(int(treffer[0]) if treffer else None)
     return out

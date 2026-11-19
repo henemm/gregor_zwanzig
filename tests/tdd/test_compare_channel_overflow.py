@@ -167,7 +167,9 @@ def test_sms_degenerate_single_long_name_still_shows_content():
     assert long_name[:20] in text, (
         f"Der einzige Ort muss erkennbar bleiben (ggf. gekuerzt). Text: {text!r}"
     )
-    assert text.endswith("..."), (
+    # #3122 B5: bei genau einem Ort steht der Name im Kopf ("{Ort} TT.MM.:");
+    # die Kuerzung des Namens muss dort erkennbar sein.
+    assert head.split(" ")[0].endswith("..."), (
         "Der Ortsname wurde beschnitten, sieht aber vollstaendig aus — die "
         f"Kuerzung muss erkennbar sein. Text: {text!r}"
     )
@@ -242,29 +244,19 @@ def test_sms_error_locations_count_toward_overflow_marker():
 def test_sms_all_locations_failed_is_honest():
     """GIVEN alle Orte haben `error`
     WHEN render_compare_sms rendert
-    THEN entsteht eine ehrliche Nachricht: die Orte sind erkennbar (oder als
-    ' +k' ausgewiesen), nicht bloss die Ueberschrift und kein Eindruck eines
-    leeren Vergleichs."""
+    THEN sagt die SMS ehrlich, dass es keine Daten gibt: "Orte: keine Daten".
+
+    #3122 B5 (Spec Nr. 16, ADR-0124) dreht die fruehere Erwartung aus #1269
+    ("Kopf + jeder Ort als n/a"): sind ALLE Orte ohne Daten, steht die eine
+    feste Zeile. Ein Ort ohne Daten unter anderen bleibt als "Name n/a"
+    sichtbar (Gegenprobe unten) -- kein Ort verschwindet still."""
     from output.renderers.comparison import render_compare_sms
 
     names = [f"Ort{i:02d}" for i in range(3)]
-    text = render_compare_sms(_result(names, errors=set(names)))
-
-    assert len(text) <= SMS_LIMIT, f"SMS-Budget verletzt: {len(text)}: {text!r}"
-    head = text.split(":")[0] + ":"
-    rest = text[len(head):].strip()
-    assert rest, f"Nur die Ueberschrift, kein Inhalt: {text!r}"
-    match = _OVERFLOW_MARKER.search(text)
-    omitted = int(match.group(1)) if match else 0
-    shown = [name for name in names if name in text]
-    assert len(shown) + omitted == len(names), (
-        f"Alle 3 Orte sind fehlerhaft — die SMS muss das ausweisen, statt einen "
-        f"leeren Vergleich zu suggerieren. Text: {text!r}"
-    )
-    assert shown, (
-        f"Kein einziger Ort erkennbar — die Nachricht sagt nicht, worum es geht. "
-        f"Text: {text!r}"
-    )
+    assert render_compare_sms(_result(names, errors=set(names))) == "Orte: keine Daten"
+    teil = render_compare_sms(_result(names, errors={names[1]}))
+    assert len(teil) <= SMS_LIMIT, teil
+    assert f"{names[1]} n/a" in teil and all(n in teil for n in names), teil
 
 
 # ---------------------------------------------------------------------------

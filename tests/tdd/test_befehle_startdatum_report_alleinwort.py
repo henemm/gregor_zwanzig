@@ -386,8 +386,8 @@ def test_ac5_matrix_befehl_x_lage(monkeypatch, user_ids, befehl, lage, kanal):
 
 
 @pytest.mark.parametrize("kanal,erwartung_startdatum,uebergangsantwort", [
-    ("telegram", "gibt es beim Ortsvergleich nicht", "Web-App"),
-    ("premium_sms", "not available for location comparisons", "web app"),
+    ("telegram", "gibt es beim Orte-Abo nicht", "Web-App"),
+    ("premium_sms", "not available for locations subscriptions", "web app"),
 ])
 def test_ac5_vorangestellter_vergleichsname_lehnt_startdatum_ab_report_ohne_uebergangsantwort(
     monkeypatch, user_ids, kanal, erwartung_startdatum, uebergangsantwort,
