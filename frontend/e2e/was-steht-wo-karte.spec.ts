@@ -223,10 +223,12 @@ test.describe('Karte „Was steht wo“', () => {
 				if (fall.orte === 1) {
 					await expect(karte).toContainText('Stunden-Tabelle unter der Übersicht, nur in der E-Mail.');
 					await expect(karte).not.toContainText('je Ort');
-					// Text des Beispiels kommt aus der Antwort; der SMS-Anfang „{Ort} TT.MM.:“ ist Sache von B5 (Renderer).
+					// Text des Beispiels kommt aus der Antwort. #3172 (AC-6): auch bei genau einem Ort beginnt die
+					// SMS ohne Kopf mit `O1 ` und nennt keinen Ortsnamen.
 					const sms = (await tabelle(page.request, abo)).sms_example.text as string;
 					await expect(karte.getByTestId('was-steht-wo-sms-text')).toHaveText(sms);
-					expect(sms).toContain(abo.ortNamen[0]);
+					expect(sms).toMatch(/^O1 \S/);
+					expect(sms).not.toContain(abo.ortNamen[0]);
 				}
 				if (fall.orte === 3) await expect(karte).toContainText('Stunden-Tabelle je Ort unter der Übersicht, nur in der E-Mail.');
 
