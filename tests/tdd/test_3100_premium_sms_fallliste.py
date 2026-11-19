@@ -27,6 +27,8 @@ entfernt Warnung, Antwort an fremden Nutzer).
 """
 from __future__ import annotations
 
+import re
+
 import copy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -210,7 +212,8 @@ def test_ac2_orte_eingang_premium_gleich_sms(monkeypatch, mit, cloud_fmt):
     assert mit.kanaele == ["premium_sms"] and len(texte) == 1, mit
     sms_text = _orte_sms_text(mit, uid, p["id"])
 
-    assert " CT " in sms_text, sms_text
+    # #3172 (ADR-0125): Bewoelkung als Token der Token-Zeile (``CT35@11``/``CT:SCT@11``).
+    assert re.search(r" CT(?::[A-Z]+|\d)", sms_text), sms_text
     assert texte[0] == sms_text, (texte[0], sms_text)
     assert len(texte[0]) <= PREMIUM_GRENZE, texte[0]
 

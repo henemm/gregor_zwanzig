@@ -58,7 +58,7 @@ export interface PlacementsAntwort {
 	sms_example: { text: string; length: number; max_length: number } | null;
 	outlook_reports: string[];
 	blocks: Record<string, unknown>;
-	legend: { metrics: { metric_id: string; kuerzel: string; meaning: string | null }[]; fixed: { token: string; key: string }[] };
+	legend: { metrics: { metric_id: string; kuerzel: string; meaning: string | null }[]; fixed: { token: string; key: string; meaning?: string }[] };
 	example_version: number;
 }
 

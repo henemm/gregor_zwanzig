@@ -119,22 +119,23 @@ def test_sms_render_has_no_time_window_in_head(time_window):
 
     text = render_compare_sms(_result(time_window))
 
-    assert "Innsbruck" in text, "Fixture trifft nicht — der Ort muss gerendert sein"
+    # #3172 (PO 2026-11-19): keine Namen in der SMS -- der Ort steht als O1.
+    assert text.startswith("O1 "), "Fixture trifft nicht — der Ort muss gerendert sein"
     _assert_no_time_window(text, "SMS")
 
 
 def test_sms_head_stays_within_budget_and_names_the_date():
     """GIVEN ein Vergleichsergebnis
     WHEN render_compare_sms rendert
-    THEN bleibt der Kopf eine sinnvolle Ueberschrift: er nennt weiterhin das
-    Datum und die SMS haelt ihr 140-Zeichen-Budget.
+    THEN haelt die SMS ihr Budget.
 
-    Sichert, dass die Zeitfenster-Entfernung nicht versehentlich die
-    Datumsangabe mitnimmt (der Kopf muss sagen, worum es geht)."""
-    from output.renderers.channel_layout import CHANNEL_LIMITS
-    from output.renderers.comparison import render_compare_sms
+    #3172 (PO-Entscheidung 2026-11-19, "jedes Zeichen ist kostbar"): die
+    Orte-SMS hat keinen Kopf und kein Datum mehr (wie die Trip-SMS, die mit
+    ``E3`` beginnt) -- abgeloest ist die fruehere Zusicherung "Datum im Kopf".
+    Die SMS beginnt direkt mit dem ersten Ort und haelt 160 Zeichen."""
+    from output.renderers.comparison import ORTE_SMS_MAX_ZEICHEN, render_compare_sms
 
     text = render_compare_sms(_result((0, 23)))
 
-    assert "08.07." in text, f"Das Datum muss im SMS-Kopf bleiben: {text!r}"
-    assert len(text) <= CHANNEL_LIMITS["sms"]["max_chars"]
+    assert text.startswith("O1 ") and "08.07." not in text, text
+    assert len(text) <= ORTE_SMS_MAX_ZEICHEN

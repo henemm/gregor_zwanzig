@@ -491,7 +491,7 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.wsw.sms_passt_nicht.other',
 	'wetter.wsw.sms_orte_passt_nicht.one',
 	'wetter.wsw.sms_orte_passt_nicht.other',
-	'wetter.wsw.sms.plus_je_ort',
+	// #3172 (ADR-0125): 'wetter.wsw.sms.plus_je_ort' entfaellt -- die Orte-SMS kennt keinen Rest-Zaehler „+N“ je Ort mehr.
 	'wetter.wsw.sms.hochziehen',
 	'wetter.wsw.legende.titel',
 	'wetter.wsw.legende.zeit_ab_gelb',

@@ -397,8 +397,10 @@ def test_telegram_and_sms_output_unchanged_by_summary_block_removal():
         "Andermatt\n   Temp max 16°C · Regen 3.0 mm\n"
         "Zermatt\n   Temp max 16°C · Regen 3.0 mm"
     )
+    # #3172 (ADR-0125, PO 2026-11-19): Token-Zeile der Trip-SMS, Orte als O1/O2
+    # ohne Kopf und Namen; Regen ab Gelb mit Stunde.
     recorded_sms = (
-        "Orte 08.07.: Andermatt D 16C R 3.0 mm; Zermatt D 16C R 3.0 mm"
+        "O1 D16 R1.0@15 O2 D16 R1.0@15"
     )
 
     assert telegram == recorded_telegram, (

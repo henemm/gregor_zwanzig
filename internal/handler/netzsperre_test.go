@@ -14,7 +14,6 @@ import (
 	"net/netip"
 	"strings"
 	"sync"
-	"testing"
 )
 
 type netzsperreTransport struct{ next http.RoundTripper }
@@ -46,33 +45,3 @@ func (n netzsperreTransport) RoundTrip(req *http.Request) (*http.Response, error
 	netzsperreMu.Unlock()
 	return nil, fmt.Errorf("%s: Abruf an %q ausserhalb Loopback im Kern-Test verboten", netzsperreFehlerTag, host)
 }
-
-// erwarteAbgelehntenHoehenNachschlag erklaert den Hoehen-Nachschlag
-// (open-elevation, Soft-Fail im Resolver) fuer diesen Test als erwartet
-// abgelehnt: die Netzsperre lehnt ihn ab, der Resolver laesst die Hoehe leer,
-// und der Versuch zaehlt am Laufende nicht als Rueckfall. Jeder andere
-// Netzabruf bleibt ein Fehler. Das Handler-Paket kann den Testhebel
-// resolver.OhneNachschlagDienste nicht nutzen (export_test.go gilt nur im
-// Resolver-Paket), und einen Laufzeitschalter gibt es bewusst nicht (ADR-0114).
-func erwarteAbgelehntenHoehenNachschlag(t *testing.T) {
-	t.Helper()
-	netzsperreMu.Lock()
-	start := len(netzsperreVersuche)
-	netzsperreMu.Unlock()
-	t.Cleanup(func() {
-		netzsperreMu.Lock()
-		defer netzsperreMu.Unlock()
-		if start > len(netzsperreVersuche) {
-			return
-		}
-		rest := append([]string(nil), netzsperreVersuche[:start]...)
-		for _, v := range netzsperreVersuche[start:] {
-			if !strings.HasPrefix(v, hoehenNachschlagPraefix) {
-				rest = append(rest, v)
-			}
-		}
-		netzsperreVersuche = rest
-	})
-}
-
-const hoehenNachschlagPraefix = "https://api.open-elevation.com/"

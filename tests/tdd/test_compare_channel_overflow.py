@@ -28,7 +28,8 @@ from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.channel_layout import CHANNEL_LIMITS
 
 TARGET_DATE = date(2026, 7, 8)
-SMS_LIMIT = CHANNEL_LIMITS["sms"]["max_chars"]            # 140
+# #3172: die Orte-SMS hat 160 Zeichen wie die Trip-SMS.
+from output.renderers.comparison import ORTE_SMS_MAX_ZEICHEN as SMS_LIMIT  # noqa: E402
 TELEGRAM_LIMIT = CHANNEL_LIMITS["telegram"]["max_chars"]  # 4096
 
 # ` +k Orte` am Textende, k = Anzahl weggelassener Orte. Der Wortzusatz
@@ -100,16 +101,24 @@ def _result(names: list[str], errors: set[str] | None = None) -> ComparisonResul
 # ---------------------------------------------------------------------------
 
 
+def _gezeigt(text: str) -> list[int]:
+    """#3172 (PO 2026-11-19): die Orte-SMS nennt keine Namen -- gezeigt sind
+    die Ortsnummern ``O{n}`` (Stelle in der Reihenfolge des Abos)."""
+    from tests.helpers.orte_sms import orte_nummern
+
+    return orte_nummern(text)
+
+
 def test_sms_overflow_marks_omitted_locations_with_plus_k():
-    """GIVEN so viele Orte, dass das 140-Zeichen-Budget ueberlaeuft
+    """GIVEN so viele Orte, dass das SMS-Budget ueberlaeuft
     WHEN render_compare_sms rendert
-    THEN endet der Text mit ' +k', k == Anzahl NICHT dargestellter Orte,
-    und len(text) <= 140.
+    THEN endet der Text mit ' +k Orte', k == Anzahl NICHT dargestellter Orte,
+    und len(text) <= Budget (#3172: 160 wie die Trip-SMS).
 
     RED: der Renderer bricht die Schleife wortlos ab (kein Marker)."""
     from output.renderers.comparison import render_compare_sms
 
-    names = [f"Ortsname{i:02d}" for i in range(12)]
+    names = [f"Ortsname{i:02d}" for i in range(30)]
     text = render_compare_sms(_result(names))
 
     assert len(text) <= SMS_LIMIT, f"SMS-Budget verletzt: {len(text)} > {SMS_LIMIT}: {text!r}"
@@ -118,11 +127,12 @@ def test_sms_overflow_marks_omitted_locations_with_plus_k():
         "AC-3/#1269: Orte entfallen still — es fehlt der ' +k'-Ueberlauf-Marker "
         f"(Hauskonvention alert/render.py:507-535). Text: {text!r}"
     )
-    shown = [name for name in names if name in text]
+    shown = _gezeigt(text)
     assert int(match.group(1)) == len(names) - len(shown), (
         f"' +k' muss die weggelassenen Orte EXAKT zaehlen: k={match.group(1)}, "
         f"dargestellt={len(shown)}/{len(names)}. Text: {text!r}"
     )
+    assert shown == list(range(1, len(shown) + 1)), "Orte entfallen vom Ende, Nummern bleiben"
     assert shown, "Mindestens ein Ort muss dargestellt sein"
 
 
@@ -132,77 +142,46 @@ def test_sms_without_overflow_has_no_marker():
     THEN erscheint KEIN '+k'-Marker (kein Verlust => kein Hinweis)."""
     from output.renderers.comparison import render_compare_sms
 
-    # Issue #3047 B-L4: ohne Auswahl (None) zeigt die SMS seit Runde 7 alle
-    # Zeilen der Mail-Tabelle und kuerzt vom Listenende -- zwei Orte passen dann
-    # nicht mehr zusammen ins Budget. Die Vorbedingung "alle Orte passen" wird
-    # deshalb mit einer kurzen ausdruecklichen Liste hergestellt.
     text = render_compare_sms(_result(["Ax", "Bx"]), enabled_metrics=["temp_max", "wind_max"])
 
     assert len(text) <= SMS_LIMIT
-    assert "Ax" in text and "Bx" in text
+    assert _gezeigt(text) == [1, 2], text
     assert _OVERFLOW_MARKER.search(text) is None, (
         f"Kein Ort entfaellt — der '+k'-Marker darf nicht erscheinen: {text!r}"
     )
 
 
 def test_sms_degenerate_single_long_name_still_shows_content():
-    """GIVEN der Degenerationsfall: ein Ort mit extrem langem Namen
-    WHEN render_compare_sms rendert
-    THEN ist das Ergebnis nicht nur die Ueberschrift und len <= 140.
-
-    Vorbild: alert/render.py:534 — Garantie len<=limit auch im
-    Degenerationsfall, aber NIE 'Ueberschrift + nichts'."""
+    """#3172 (PO 2026-11-19): der Ortsname steht nicht mehr in der SMS -- auch
+    ein extrem langer Name kostet kein Zeichen; der Ort erscheint als ``O1``
+    mit Werten, nie als leere Nachricht."""
     from output.renderers.comparison import render_compare_sms
 
     long_name = "Sankt" + "Wolfgangimsalzkammergut" * 20
     text = render_compare_sms(_result([long_name]))
 
     assert len(text) <= SMS_LIMIT, f"SMS-Budget verletzt: {len(text)}"
-    head = text.split(":")[0] + ":"
-    rest = text[len(head):].strip()
-    assert rest, (
-        "Degenerationsfall liefert nur die Ueberschrift ohne jeden Ort — "
-        f"verboten (luegende Ausgabe). Text: {text!r}"
-    )
-    assert long_name[:20] in text, (
-        f"Der einzige Ort muss erkennbar bleiben (ggf. gekuerzt). Text: {text!r}"
-    )
-    # #3122 B5: bei genau einem Ort steht der Name im Kopf ("{Ort} TT.MM.:");
-    # die Kuerzung des Namens muss dort erkennbar sein.
-    assert head.split(" ")[0].endswith("..."), (
-        "Der Ortsname wurde beschnitten, sieht aber vollstaendig aus — die "
-        f"Kuerzung muss erkennbar sein. Text: {text!r}"
-    )
+    assert text.startswith("O1 D"), text
+    assert "Wolfgang" not in text, text
 
 
 def test_sms_degenerate_long_names_marks_remaining_locations():
-    """GIVEN mehrere Orte, von denen schon der erste das Budget sprengt
-    WHEN render_compare_sms rendert
-    THEN bleibt der erste Ort erkennbar UND die restlichen sind als ' +k'
-    ausgewiesen (kein stiller Totalverlust)."""
+    """#3172: lange Namen verdraengen keine Orte mehr -- alle drei Orte stehen
+    als ``O1 O2 O3`` mit Werten, ohne ``+k Orte``."""
     from output.renderers.comparison import render_compare_sms
 
     names = ["A" + "berglandschaft" * 12, "Bozen", "Chur"]
     text = render_compare_sms(_result(names))
 
     assert len(text) <= SMS_LIMIT, f"SMS-Budget verletzt: {len(text)}"
-    match = _OVERFLOW_MARKER.search(text)
-    assert match is not None and int(match.group(1)) == 2, (
-        f"Zwei Orte entfallen — erwartet ' +2' am Ende. Text: {text!r}"
-    )
+    assert _gezeigt(text) == [1, 2, 3] and _OVERFLOW_MARKER.search(text) is None, text
 
 
 def test_sms_error_locations_are_not_silently_dropped():
     """GIVEN 4 Orte, davon 2 mit `error` (alles passt ins Budget)
     WHEN render_compare_sms rendert
     THEN ist erkennbar, dass der Vergleich 4 Orte umfasst — die Fehler-Orte sind
-    dargestellt ODER im ' +k'-Marker mitgezaehlt.
-
-    RED-Grund: der Renderer filtert Fehler-Orte VOR der Ueberlauf-Zaehlung raus
-    (comparison.py:389-396). Die SMS sieht dann aus wie ein 2-Orte-Vergleich —
-    exakt die luegende Ausgabe aus #1269, die der eigene Docstring
-    (comparison.py:373-378) ausschliesst. `render_compare_telegram` haelt
-    Fehler-Orte sichtbar (comparison.py:308-311)."""
+    als ``O{n} n/a`` dargestellt ODER im ' +k'-Marker mitgezaehlt (#1269)."""
     from output.renderers.comparison import render_compare_sms
 
     names = [f"Ort{i:02d}" for i in range(4)]
@@ -211,29 +190,29 @@ def test_sms_error_locations_are_not_silently_dropped():
     assert len(text) <= SMS_LIMIT, f"SMS-Budget verletzt: {len(text)}: {text!r}"
     match = _OVERFLOW_MARKER.search(text)
     omitted = int(match.group(1)) if match else 0
-    shown = [name for name in names if name in text]
+    shown = _gezeigt(text)
     assert len(shown) + omitted == len(names), (
         f"Die SMS behauptet einen Vergleich ueber {len(shown) + omitted} Orte, "
-        f"tatsaechlich sind es {len(names)} — {len(names) - len(shown) - omitted} "
-        f"Fehler-Ort(e) verschwinden spurlos (#1269). Text: {text!r}"
+        f"tatsaechlich sind es {len(names)} (#1269). Text: {text!r}"
     )
+    assert "O2 n/a" in text and "O4 n/a" in text, text
 
 
 def test_sms_error_locations_count_toward_overflow_marker():
-    """GIVEN 15 Orte (10 mit Werten, 5 mit `error`), Budget laeuft ueber
+    """GIVEN 30 Orte (20 mit Werten, 10 mit `error`), Budget laeuft ueber
     WHEN render_compare_sms rendert
-    THEN gilt: dargestellte Orte + k == 15 (nicht 10) — der Marker darf die
+    THEN gilt: dargestellte Orte + k == 30 (nicht 20) — der Marker darf die
     Fehler-Orte nicht unterschlagen."""
     from output.renderers.comparison import render_compare_sms
 
-    names = [f"Ort{i:02d}" for i in range(15)]
-    errors = {f"Ort{i:02d}" for i in range(10, 15)}
+    names = [f"Ort{i:02d}" for i in range(30)]
+    errors = {f"Ort{i:02d}" for i in range(20, 30)}
     text = render_compare_sms(_result(names, errors=errors))
 
     assert len(text) <= SMS_LIMIT, f"SMS-Budget verletzt: {len(text)}: {text!r}"
     match = _OVERFLOW_MARKER.search(text)
     assert match is not None, f"Ueberlauf ohne ' +k'-Marker: {text!r}"
-    shown = [name for name in names if name in text]
+    shown = _gezeigt(text)
     assert len(shown) + int(match.group(1)) == len(names), (
         f"' +k' muss ALLE nicht dargestellten Orte zaehlen (auch Fehler-Orte): "
         f"dargestellt={len(shown)}, k={match.group(1)}, gesamt={len(names)}. "
@@ -244,19 +223,19 @@ def test_sms_error_locations_count_toward_overflow_marker():
 def test_sms_all_locations_failed_is_honest():
     """GIVEN alle Orte haben `error`
     WHEN render_compare_sms rendert
-    THEN sagt die SMS ehrlich, dass es keine Daten gibt: "Orte: keine Daten".
+    THEN steht jeder Ort als ``O{n} n/a`` -- kein Ort verschwindet still.
 
-    #3122 B5 (Spec Nr. 16, ADR-0124) dreht die fruehere Erwartung aus #1269
-    ("Kopf + jeder Ort als n/a"): sind ALLE Orte ohne Daten, steht die eine
-    feste Zeile. Ein Ort ohne Daten unter anderen bleibt als "Name n/a"
-    sichtbar (Gegenprobe unten) -- kein Ort verschwindet still."""
+    #3172 (PO 2026-11-19, "jedes Zeichen ist kostbar"): der Sondertext
+    "Orte: keine Daten" (#3122 B5) entfaellt; der Versand schickt bei lauter
+    Orten ohne Daten ohnehin nichts (``no_weather``)."""
     from output.renderers.comparison import render_compare_sms
 
     names = [f"Ort{i:02d}" for i in range(3)]
-    assert render_compare_sms(_result(names, errors=set(names))) == "Orte: keine Daten"
+    assert render_compare_sms(_result(names, errors=set(names))) == "O1 n/a O2 n/a O3 n/a"
     teil = render_compare_sms(_result(names, errors={names[1]}))
     assert len(teil) <= SMS_LIMIT, teil
-    assert f"{names[1]} n/a" in teil and all(n in teil for n in names), teil
+    assert "O2 n/a" in teil and _gezeigt(teil) == [1, 2, 3], teil
+
 
 
 # ---------------------------------------------------------------------------

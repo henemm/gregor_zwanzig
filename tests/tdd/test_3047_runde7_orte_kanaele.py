@@ -177,15 +177,20 @@ KUERZEL = {"gust": "G", "temperature": "D", "wind_direction": "WD", "wind": "W",
 
 
 def _sms_ort(sms: str, name: str) -> str:
-    teile = sms.split(": ", 1)[1].split("; ")
-    treffer = [t for t in teile if t.startswith(name + " ")]
-    assert treffer, f"Ort {name} fehlt in der SMS: {sms}"
-    return treffer[0]
+    """#3172 (PO 2026-11-19): die Orte-SMS nennt keine Namen -- der Ort steht
+    als ``O{n}`` an seiner Stelle in ``location_ids`` (``ORTSNAMEN``-Folge)."""
+    from tests.helpers.orte_sms import orte_teil
+    from tests.tdd._compare_kette_fixtures import ORTSNAMEN
+
+    return orte_teil(sms, ORTSNAMEN.index(name) + 1)
 
 
 def _kuerzel_folge(ortsteil: str) -> list[str]:
-    alle = "|".join(sorted(KUERZEL.values(), key=len, reverse=True))
-    return re.findall(rf"(?<= )({alle}) (?=[-\w])", ortsteil)
+    """#3172 (ADR-0125): Kuerzel der Token-Zeile (``TH:-`` -> ``TH``,
+    ``WD:SW`` -> ``WD``) bis zum Warnblock ``!``."""
+    from tests.helpers.orte_sms import orte_kuerzel
+
+    return [k for k in orte_kuerzel(ortsteil) if k in KUERZEL.values()]
 
 
 @pytest.mark.parametrize("folge", ["grund", "eigene_sms_liste"])
@@ -281,7 +286,11 @@ def test_k6_leere_kanal_liste_bleibt_leer(mit):
     for uid, snap in zwei_nutzer(mit, p):
         for kanal in ("sms", "premium_sms"):
             sms = text(snap, kanal)
-            assert not re.search(r"\b[A-Z]{1,2} \d", sms), f"{kanal}: leer bleibt leer: {sms}"
+            # #3172: kein Wert-Token der Token-Zeile, nur die Ortsnummern (``O1 O2``).
+            from tests.helpers.orte_sms import orte_teile, orte_token
+
+            assert orte_teile(sms) and all(orte_token(t) == [] for t in orte_teile(sms)), (
+                f"{kanal}: leer bleibt leer: {sms}")
         tg = text(snap, "telegram")
         for block in ortsbloecke(tg).values():
             assert not wertezeilen(block), f"Telegram: leer bleibt leer:\n{tg}"
@@ -291,7 +300,8 @@ def test_k6_leere_kanal_liste_bleibt_leer(mit):
 def test_k6_gegenprobe_ohne_liste_volle_grundauswahl(mit):
     """Gegenprobe: ohne ``channel_layouts`` gilt die Grundauswahl (nie eingestellt)."""
     for uid, snap in zwei_nutzer(mit, preset()):
-        assert "G 19 km/h" in text(snap, "sms")
+        # #3172: Token-Zeile -- Boeen 19 km/h liegen unter Gelb (``G-``).
+        assert re.search(r"(?:: | )G-(?: |;|$)", text(snap, "sms")), text(snap, "sms")
         assert "Böen 19 km/h" in text(snap, "telegram")
 
 

@@ -51,9 +51,8 @@ const tabellenUrl = (kind: HubKind, id: string) => `${tabellenPfad(id)}?kind=${k
 type Abo = { kind: HubKind; id: string; ortNamen: string[]; aufraeumen: () => Promise<void> };
 
 /** Ortsnamen je Abo eindeutig (WS-16: zwei Nutzer, verschiedene Ortskennungen; die Kennung wird aus dem
- *  Namen gebildet) UND kurz: der Name steht je Ort in der Orte-SMS (153 Zeichen). Mit langen Namen passt bei
- *  drei Orten nur noch die erste Listenzeile hinein, und WS-2/WS-8 verlieren ihre Voraussetzung (mehrere
- *  Metriken im SMS-Beispiel). Lauf-Kennung zufällig (3 Zeichen), Zähler je Abo (2 Zeichen): feste Länge, z. B.
+ *  Namen gebildet) UND kurz (seit #3172 stehen in der Orte-SMS keine Namen mehr, sondern O1, O2, …; die
+ *  kurzen Namen halten Mail und Telegram der Karte übersichtlich). Lauf-Kennung zufällig (3 Zeichen), Zähler je Abo (2 Zeichen): feste Länge, z. B.
  *  `E2E-GZ-Wab307-0` (15 Zeichen). Zwei Nutzer im selben Fall bekommen verschiedene Zählerstände. */
 const LAUF = Math.random().toString(36).slice(2, 5).padEnd(3, '0');
 let seedZaehler = 0;
@@ -224,10 +223,12 @@ test.describe('Karte „Was steht wo“', () => {
 				if (fall.orte === 1) {
 					await expect(karte).toContainText('Stunden-Tabelle unter der Übersicht, nur in der E-Mail.');
 					await expect(karte).not.toContainText('je Ort');
-					// Text des Beispiels kommt aus der Antwort; der SMS-Anfang „{Ort} TT.MM.:“ ist Sache von B5 (Renderer).
+					// Text des Beispiels kommt aus der Antwort. #3172 (AC-6): auch bei genau einem Ort beginnt die
+					// SMS ohne Kopf mit `O1 ` und nennt keinen Ortsnamen.
 					const sms = (await tabelle(page.request, abo)).sms_example.text as string;
 					await expect(karte.getByTestId('was-steht-wo-sms-text')).toHaveText(sms);
-					expect(sms).toContain(abo.ortNamen[0]);
+					expect(sms).toMatch(/^O1 \S/);
+					expect(sms).not.toContain(abo.ortNamen[0]);
 				}
 				if (fall.orte === 3) await expect(karte).toContainText('Stunden-Tabelle je Ort unter der Übersicht, nur in der E-Mail.');
 
@@ -664,7 +665,8 @@ test.describe('Karte „Was steht wo“', () => {
 			await expect(karte).toContainText('What goes where');
 			await expect(karte).toContainText('Abbreviations explained');
 			for (const w of ['Was steht wo', 'Übersicht', 'Zeichen', 'Kürzel erklärt', 'Einstellungen je Kanal']) await expect(karte).not.toContainText(w);
-			await expect(karte.getByTestId('was-steht-wo-sms-text')).toHaveText(/ W \d+ km\/h/);
+			// #3172 (ADR-0125): Token-Zeile der Trip-SMS, Wind als `W30@10(43@16)`, `W-` oder `W?`.
+			await expect(karte.getByTestId('was-steht-wo-sms-text')).toHaveText(/ W(?:\d+@\d+(?:\(\d+@\d+\))?|-|\?)(?: |$)/);
 			const breiten = await en.evaluate(() => ({ seite: document.documentElement.scrollWidth, fenster: window.innerWidth }));
 			expect(breiten.seite, 'Seite scrollt seitlich').toBeLessThanOrEqual(breiten.fenster);
 			for (const s of SPALTEN.vergleich) {

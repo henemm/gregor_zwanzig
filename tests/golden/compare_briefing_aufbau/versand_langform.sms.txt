@@ -1,1 +1,1 @@
-Orte 08.07.: Innsbruck D 22C W 11 km/h R 0.0 mm PR 10% TH - SU 6.0h CT 35% UV 5 +3; Bozen D 27C W 11 km/h R 0.0 mm PR 10% TH - SU 6.0h CT 35% UV 5 +3
+O1 D12/22 W- R- PR- TH:- SU6 CT35@11 UV5@11 VS- G- FZ? WD:? FD?/? CL? CM? CH? O2 D15/27 W- R- PR- TH:- SU6 CT35@11 UV5@11 VS- G- FZ? WD:? FD?/? CL? CM? CH?
