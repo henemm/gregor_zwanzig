@@ -1128,30 +1128,28 @@ def _official_alert_sms_marker(
 def _sms_location_variants(
     loc_result, enabled_metrics: list[str] | None,
     metric_formats: dict[str, bool] | None = None,
-    *, mit_name: bool = True, ampel: dict | None = None,
+    *, nummer: int, ampel: dict,
 ) -> list[str]:
     """Formen EINES Ortsteils der SMS, absteigend nach Listenzeilen (Index d =
     d Listenzeilen vom Listenende entfernt; letzte Form: keine Listenzeile).
 
     Issue #3172 (ADR-0125): je Ort die Token-Zeile der Trip-SMS
     (``orte_sms.orte_token_formen`` ueber ``build_token_line``), Ortsteil
-    ``{Name}: {Token}``. ``-`` = geprueft und unauffaellig, ``?`` = kein Wert;
-    die Zaehler ``+N``/``?N`` der frueheren Zellform entfallen.
+    ``O{n} {Token}`` -- ``nummer`` = 1-basierte Stelle in der Reihenfolge des
+    Abos (PO 2026-11-19: keine Ortsnamen in der SMS, Orte wie Etappen
+    nummeriert). ``-`` = geprueft und unauffaellig, ``?`` = kein Wert; die
+    Zaehler ``+N``/``?N`` der frueheren Zellform entfallen.
 
-    Orte ohne abrufbare Daten (``error``) bleiben als ``"<Name> n/a"``
+    Orte ohne abrufbare Daten (``error``) bleiben als ``"O{n} n/a"``
     sichtbar statt weggefiltert (#1269): ein weggefilterter Ort waere weder
     sichtbar noch im ``+k Orte`` gezaehlt. Amtliche Warnungen stehen als
     ``!``-Block am Ende des Ortsteils und fallen beim Kuerzen nie weg (#1332).
-
-    #3122 B5: ``mit_name=False`` (genau ein Ort) laesst den Ortsnamen weg --
-    er steht dann schon im Kopf ``{Ort} TT.MM.:``. ``ampel=None`` = Standard-
-    Vorlage (``resolve_ampel({})``).
+    ``ampel`` = aufgeloeste Abo-Ampel (Pflicht, kein stiller Fallback, F002).
     """
     from output.renderers.orte_sms import orte_token_formen
 
     return orte_token_formen(
-        loc_result, enabled_metrics, metric_formats, mit_name=mit_name,
-        ampel=resolve_ampel({}) if ampel is None else ampel,
+        loc_result, enabled_metrics, metric_formats, nummer=nummer, ampel=ampel,
     )
 
 
@@ -1165,8 +1163,15 @@ def _location_sms_alert_marker(loc_result) -> str:
     return _official_alert_sms_marker(orte_warn_eintraege(loc_result))
 
 
+#: Zeichengrenze der Orte-SMS (#3172, PO 2026-11-19): dieselbe wie die
+#: Trip-SMS (``SMSTripFormatter.format_sms(max_length=160)``). Die Premium-SMS
+#: rendert mit ``CHANNEL_LIMITS["premium_sms"]`` neu, wenn der Text laenger ist
+#: (Regel wie beim Trip, #3100; ``compare_briefing_aufbau``).
+ORTE_SMS_MAX_ZEICHEN = 160
+
+
 def _sms_fit_locations(
-    head: str, forms: list[list[str]], gewarnt: set[int], max_chars: int,
+    forms: list[list[str]], gewarnt: set[int], max_chars: int,
 ) -> str | None:
     """Issue #3047 AC-23 / #3172 (ADR-0125 Nr. 4). Einpassung von hinten:
 
@@ -1174,13 +1179,15 @@ def _sms_fit_locations(
        je k Listenzeilen (bzw. allen, wenn ein Ort weniger hat) passen --
        alle Orte tragen gleich viele Zeilen, gekuerzt vom Listenende;
     2. erst wenn auch k = 1 nicht passt, entfallen ganze Orte vom Ende als
-       `` +k Orte`` -- Orte OHNE amtliche Warnung zuerst;
+       `` +k Orte`` -- Orte OHNE amtliche Warnung zuerst; die gezeigten Orte
+       behalten ihre Nummer ``O{n}``;
     3. sind nur Orte mit Warnung (oder ein einziger Ort) uebrig, darf auch
        die erste Listenzeile fallen (k = 0, der ``!``-Block bleibt).
 
     ``forms[i]`` = Formen des Ortes i (``_sms_location_variants``, Index d =
-    d Zeilen entfernt). ``None`` = nicht einmal ein Ort ohne Zeile passt
-    (Degenerationsfall beim Aufrufer)."""
+    d Zeilen entfernt). Orte stehen durch ein Leerzeichen getrennt
+    hintereinander (PO 2026-11-19: jedes Zeichen zaehlt). ``None`` = nicht
+    einmal ein Ort ohne Zeile passt (Degenerationsfall beim Aufrufer)."""
     n = len(forms)
     shown = list(range(n))
     while shown:
@@ -1190,7 +1197,7 @@ def _sms_fit_locations(
         floor = 0 if len(shown) == 1 or all(i in gewarnt for i in shown) else min(1, meiste)
         for k in range(meiste, floor - 1, -1):
             parts = (forms[i][max(len(forms[i]) - 1 - k, 0)] for i in shown)
-            body = (f"{head} " + "; ".join(parts) + notice).rstrip()
+            body = " ".join(parts) + notice
             if len(body) <= max_chars:
                 return body
         ohne = [i for i in shown if i not in gewarnt]
@@ -1204,29 +1211,34 @@ def render_compare_sms(
     enabled_metrics: list[str] | None = None,
     unresolved_count: int = 0,
     metric_formats: dict[str, bool] | None = None,
-    ampel: dict | None = None,
+    preset: dict | None = None,
+    max_chars: int = ORTE_SMS_MAX_ZEICHEN,
 ) -> str:
-    """Orts-Vergleich als flache SMS (Issue #1270), Kern: ``_render_compare_sms_body``.
+    """Orte-SMS (Issue #1270), Kern: ``_render_compare_sms_body``.
 
-    Issue #3172 (ADR-0125): je Ort die Token-Zeile der Trip-SMS; ``ampel`` ist
-    die aufgeloeste Abo-Ampel (Hervorhebung ``@h``), ``None`` = Standard-
-    Vorlage. ``unresolved_count`` (unmappbare Eintraege) erzeugt kein Zeichen
-    mehr -- die Mail weist sie aus; der Parameter bleibt fuer die Aufrufer.
+    Issue #3172 (ADR-0125, PO 2026-11-19): je Ort ``O{n} {Token}`` -- die
+    Token-Zeile der Trip-SMS, ohne Kopf, ohne Datum, ohne Ortsnamen, Orte
+    durch ein Leerzeichen getrennt (``O1 D-5/0 W- R- O2 D-4/1 W- R-``).
+    ``preset`` ist das Orte-Abo: Einstieg wie ``render_compare_telegram``, die
+    Abo-Ampel (Hervorhebung ``@h``) wird hier genau einmal aufgeloest
+    (``resolve_ampel``; ohne Abo die Standard-Vorlage wie
+    ``render_comparison_text``). ``max_chars`` = Zeichengrenze (160 wie die Trip-SMS;
+    die Premium-SMS uebergibt ihre 153). ``unresolved_count`` (unmappbare
+    Eintraege) erzeugt kein Zeichen mehr -- die Mail weist sie aus; der
+    Parameter bleibt fuer die Aufrufer.
 
     Issue #3047 B-L2 (sms_format.md §3.4d): ist an einem Ort ein amtlicher
     Warndienst ausgefallen, endet die SMS mit dem Marker ``X?``. Er ist fester
     Bestandteil wie im Trip (faellt nie weg): das Budget des Kerns wird um ihn
     verkleinert, die Zeilen-/Orts-Kuerzung weicht ihm."""
-    max_chars = CHANNEL_LIMITS["sms"]["max_chars"]
+    ampel = resolve_ampel(preset)
     marker = (
         f" {_UNAVAILABLE_SYMBOL}"
         if any_official_alerts_unavailable(result.locations) else ""
     )
-    if max_chars is not None:
-        max_chars -= len(marker)
     return _render_compare_sms_body(
         result, enabled_metrics=enabled_metrics, metric_formats=metric_formats,
-        max_chars=max_chars, ampel=resolve_ampel({}) if ampel is None else ampel,
+        max_chars=max_chars - len(marker), ampel=ampel,
     ) + marker
 
 
@@ -1238,88 +1250,50 @@ def _render_compare_sms_body(
     max_chars: int | None,
     ampel: dict,
 ) -> str:
-    """Rendert einen Orts-Vergleich als flache SMS (Issue #1270, #3172).
+    """Rendert die Orte-SMS ohne ``X?`` (Issue #1270, #3172).
 
     ``metric_formats`` (Issue #3039): ``{renderer_id: einfach}`` aus
     ``channel_layouts``; Einfach wirkt wie im Trip (``CT:SCT@13``).
 
-    Reine Funktion, kein Score/Rang (AC-3). Budget ``max_chars`` aus
-    ``CHANNEL_LIMITS["sms"]`` (verkettungssicherer GSM-7-Wert, #1362 S5b).
+    Reine Funktion, kein Score/Rang (AC-3). Die Orte heissen ``O1``, ``O2``,
+    ... in der Reihenfolge des Abos, ueber ALLE Orte gezaehlt; ein Ort ohne
+    Daten bleibt als ``O{n} n/a`` sichtbar (#1269), auch wenn kein Ort Daten
+    hat (der Versand schickt dann ohnehin nichts, ``no_weather``).
 
-    Ueberlauf (ADR-0011:42, #1269): Kopf immer; erst werden die Listenzeilen
-    aller Orte vom Listenende gekuerzt, erst danach entfallen Orte und werden
-    als ` +k Orte` AUSGEWIESEN (``_sms_fit_locations``). Endgarantie:
+    Ueberlauf (ADR-0011:42, #1269): erst werden die Listenzeilen aller Orte
+    vom Listenende gekuerzt, erst danach entfallen Orte und werden als
+    ` +k Orte` AUSGEWIESEN (``_sms_fit_locations``). Endgarantie:
     ``len <= max_chars``.
     """
     locations = location_render_order(result.locations)
-    # #3122 B5: Kopf aus ``_sms_kopf``; ohne Daten (kein Ort oder alle Orte
-    # ohne Daten) "Orte: keine Daten" bzw. bei genau einem Ort "{Ort}: keine
-    # Daten" (sprachfest, ADR-0104). Ein Ort ohne Daten unter anderen bleibt
-    # als "Name n/a" sichtbar.
-    ein_ort = len(locations) == 1
-    if all(loc.error is not None for loc in locations):
-        if ein_ort:
-            return f"{locations[0].location.name}: keine Daten"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
-        return "Orte: keine Daten"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
-
     forms = [
         _sms_location_variants(loc, enabled_metrics, metric_formats,
-                               mit_name=not ein_ort, ampel=ampel)
-        for loc in locations
+                               nummer=i + 1, ampel=ampel)
+        for i, loc in enumerate(locations)
     ]
-    head = _sms_kopf(locations, result.target_date, forms, max_chars)
-    if max_chars is None:
-        return (f"{head} " + "; ".join(f[0] for f in forms)).rstrip()
+    if max_chars is None or not forms:
+        return " ".join(f[0] for f in forms)
 
     gewarnt = {i for i, loc in enumerate(locations) if _location_sms_alert_marker(loc)}
-    body = _sms_fit_locations(head, forms, gewarnt, max_chars)
+    body = _sms_fit_locations(forms, gewarnt, max_chars)
     if body is not None:
         return body
-    # Degenerationsfall: schon der erste Ort ohne Listenzeile sprengt das
-    # Budget. "Ueberschrift + nichts" ist verboten -- dann lieber EIN
-    # gekuerzter Ort. Gekuerzt wird der Ortsblock ALLEIN (nicht Kopf+Block),
-    # weil eine Wortgrenzen-Kuerzung ueber den Kopf hinweg bei einem einzigen
-    # ueberlangen Ortsnamen genau auf der Kopf-Grenze schnitte.
-    # `_word_boundary_truncate` faellt bei einem Wort > Budget auf den harten
-    # Schnitt zurueck: ein unkenntlicher Ort ist ehrlicher als ein
-    # verschwiegener.
-    first = forms[0][-1]
+    # Degenerationsfall: schon der erste Ort ohne Listenzeile (nur sein
+    # Warnblock) sprengt das Budget -- dann EIN sichtbar gekuerzter Ortsteil.
     marker = _sms_location_overflow_notice(len(forms) - 1)
-    budget = max_chars - len(head) - 1 - len(marker)
-    body = (f"{head} " + _sichtbar_gekuerzt(first, budget) + marker).rstrip()
-    # Garantie len<=limit auch im Degenerationsfall (Kopf allein zu lang).
+    body = _sichtbar_gekuerzt(forms[0][-1], max_chars - len(marker)) + marker
     return body[:max_chars]
 
 
 def _sichtbar_gekuerzt(text: str, budget: int) -> str:
     """``text`` auf ``budget`` Zeichen, eine Kuerzung bleibt als ``...`` sichtbar.
-    Der Helfer schneidet nur an Wortgrenzen mit "..."; findet er keine (Name
-    laenger als das Budget), schneidet er hart und stumm. Ein abgeschnittener
-    Name darf aber nicht wie ein vollstaendiger aussehen."""
+    Der Helfer schneidet nur an Wortgrenzen mit "..."; findet er keine,
+    schneidet er hart und stumm. Ein abgeschnittener Ortsteil darf aber nicht
+    wie ein vollstaendiger aussehen."""
     fitted = _word_boundary_truncate(text, max(budget, 0))
     if fitted != text and not fitted.endswith("..."):
         fitted = fitted[: max(len(fitted) - 3, 0)] + "..."
     return fitted
-
-
-def _sms_kopf(locations: list, target_date, forms: list[list[str]],
-              max_chars: int | None) -> str:
-    """#3122 B5 (ADR-0124 Nachtrag 1): ``Orte TT.MM.:``, bei genau einem Ort
-    ``{Ort} TT.MM.:``. Sprachfest wie zuvor "Vergleich" (ADR-0104).
-
-    Issue #1268: keine Stundenfenster-Angabe (Bewertung = ganzer Tag). Bei
-    einem Ort traegt der Kopf den Namen; ist er zu lang, wird er sichtbar
-    gekuerzt, damit mindestens eine Wertzelle Platz behaelt (sonst stuende nur
-    die Ueberschrift da, #1269)."""
-    datum = f" {target_date.strftime('%d.%m.')}:"
-    if len(locations) != 1:
-        return "Orte" + datum  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
-    name = locations[0].location.name
-    if max_chars is None:
-        return name + datum
-    knapp = forms[0][-2] if len(forms[0]) > 1 else forms[0][-1]
-    platz = max_chars - len(datum) - (len(knapp) + 1 if knapp else 0)
-    return _sichtbar_gekuerzt(name, platz) + datum
 
 
 def _sms_location_overflow_notice(omitted: int) -> str:

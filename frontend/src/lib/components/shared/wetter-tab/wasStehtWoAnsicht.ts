@@ -162,7 +162,10 @@ export interface LegendenEintrag {
 export function legendeAus(a: PlacementsAntwort, t: Uebersetzer): LegendenEintrag[] {
 	const smsAn = new Set(a.rows.filter((r) => r.cells.sms?.state === 'on').map((r) => r.metric_id));
 	const metriken = a.legend.metrics.filter((m) => smsAn.has(m.metric_id)).map((m) => ({ token: m.kuerzel, text: m.meaning ?? '' }));
-	const fest = a.legend.fixed.filter((f) => LEGENDE[f.key]).map((f) => ({ token: f.token, text: t(LEGENDE[f.key]) }));
+	// #3172: ein fester Eintrag kann seine Bedeutung aus dem Server-Katalog mitbringen (`O1` der Orte-SMS).
+	const fest = a.legend.fixed
+		.filter((f) => f.meaning || LEGENDE[f.key])
+		.map((f) => ({ token: f.token, text: f.meaning ?? t(LEGENDE[f.key]) }));
 	// Dasselbe Kürzel kann für zwei Zeilen kommen (Eltern- und abgeleitete Größe): jeder Eintrag nur einmal.
 	const gesehen = new Set<string>();
 	return [...metriken, ...fest].filter((e) => {

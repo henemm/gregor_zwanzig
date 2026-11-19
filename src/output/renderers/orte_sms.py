@@ -256,7 +256,7 @@ def orte_token_reihen(
     summary = _daily_summary(loc) if loc.hourly_data else None
     werte = {sym: _metric_value(loc, rid, summary) for sym, rid in _TAGESWERT_RID.items()}
     zeile = build_token_line(orte_forecast(loc, werte, summary), specs, report_type="morning",
-                             stage_name=loc.location.name or "Ort", ampel=ampel)
+                             stage_name="Ort", ampel=ampel)
     tokens = _mit_fragezeichen(list(zeile.tokens), _fehlende_kuerzel(loc, werte), specs)
     reihen = [list(tokens)]
     while _drop_last_list_row(tokens):
@@ -264,28 +264,32 @@ def orte_token_reihen(
     return reihen
 
 
-def orte_ortsteil(name: Optional[str], tokens: list[Token]) -> str:
-    """Ortsteil ``"{Name}: {Token}"`` (``name=None``: genau ein Ort, der Name
-    steht im Kopf). Warnblock ``!`` wie im Trip (``render._fuse``)."""
-    rumpf = " ".join(_fuse(tokens))
-    if name is None:
-        return rumpf
-    # Ohne Token (leere SMS-Liste) steht nur der Name, ohne haengenden Trenner.
-    return f"{name}: {rumpf}" if rumpf else name
+def orte_kennung(nummer: int) -> str:
+    """Ortsnummer der Orte-SMS (PO 2026-11-19, #3172): ``O{n}`` wie das
+    Etappen-Praefix ``E{n}`` der Trip-SMS; ``n`` = 1-basierte Stelle in der
+    Reihenfolge des Abos, ueber ALLE Orte gezaehlt (auch Orte ohne Daten).
+    Ortsnamen stehen nie in der SMS."""
+    return f"O{nummer}"
+
+
+def orte_ortsteil(kennung: str, tokens: list[Token]) -> str:
+    """Ortsteil ``"O{n} {Token}"`` -- ohne Doppelpunkt (PO 2026-11-19: jedes
+    Zeichen zaehlt); Warnblock ``!`` wie im Trip (``render._fuse``). Ohne
+    Token (leere SMS-Liste) steht nur ``O{n}``."""
+    return " ".join([kennung, *_fuse(tokens)])
 
 
 def orte_token_formen(
     loc: LocationResult, enabled_metrics: Optional[list[str]],
-    metric_formats: Optional[dict[str, bool]], *, mit_name: bool, ampel: dict,
+    metric_formats: Optional[dict[str, bool]], *, nummer: int, ampel: dict,
 ) -> list[str]:
-    """Formen des Ortsteils zu ``orte_token_reihen``. ``"{Name}: "`` mit dem
-    vollen Ortsnamen (keine Kuerzung/Faltung, ADR-0125 Nr. 2); ``mit_name=False``
-    (genau ein Ort) ohne Namen. Fehler-Ort: ``"{Name} n/a"``."""
-    name = loc.location.name
+    """Formen des Ortsteils ``O{n} {Token}`` zu ``orte_token_reihen``.
+    Ort ohne Daten: ``O{n} n/a``."""
+    kennung = orte_kennung(nummer)
     if loc.error is not None:
-        return [f"{name} n/a"]
+        return [f"{kennung} n/a"]
     reihen = orte_token_reihen(loc, enabled_metrics, metric_formats, ampel=ampel)
-    return [orte_ortsteil(name if mit_name else None, tokens) for tokens in reihen]
+    return [orte_ortsteil(kennung, tokens) for tokens in reihen]
 
 
 def orte_kuerzel_je_metrik() -> dict[str, str]:

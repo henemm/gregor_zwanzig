@@ -216,20 +216,16 @@ def _beispiel_version() -> int:
 
 
 def _sms_max_laenge(surface: str) -> int:
-    """Grenze, mit der der Versandweg der Flaeche die SMS kuerzt (SMS und
-    Premium-SMS senden denselben Text). Trip: ``format_sms(max_length=...)``
-    -- der Trip-Renderer uebergibt dort den Vorgabewert 160 ausdruecklich.
-    Orte: ``render_compare_sms`` kuerzt auf ``CHANNEL_LIMITS["sms"]["max_chars"]``
-    (verkettungssicheres GSM-7-Budget, #1362)."""
-    if surface == "trip":
-        import inspect
+    """Grenze, mit der der Versandweg die SMS kuerzt -- fuer Trip und Orte
+    dieselbe (#3172, PO 2026-11-19): ``format_sms(max_length=...)``, der
+    Trip-Renderer uebergibt dort den Vorgabewert 160 ausdruecklich; die
+    Orte-SMS (``render_compare_sms``) nutzt dieselbe Zahl. Die Premium-SMS
+    rendert ueber 153 Zeichen neu (#3100)."""
+    import inspect
 
-        from output.renderers.sms_trip import SMSTripFormatter
+    from output.renderers.sms_trip import SMSTripFormatter
 
-        return inspect.signature(SMSTripFormatter.format_sms).parameters["max_length"].default
-    from output.renderers.channel_layout import CHANNEL_LIMITS
-
-    return CHANNEL_LIMITS["sms"]["max_chars"]
+    return inspect.signature(SMSTripFormatter.format_sms).parameters["max_length"].default
 
 
 def _zelle(metric_id: str, stelle: str, cell, muster: _Muster) -> dict:
@@ -305,7 +301,15 @@ def _legende(zeilen: list[dict], surface: str, vm, lang: str) -> dict:
             (LEVEL_LETTERS[4], "stufe_rot"), (HAZARD_SMS_SYMBOLS["wind_gust"], "warnung_wind"),
             (HAZARD_SMS_SYMBOLS["rain"], "warnung_starkregen"), (lawine, "lawinenstufe"),
             (UNAVAILABLE_SYMBOL, "warnquelle_nicht_erreichbar")]
-    return {"metrics": metriken, "fixed": [{"token": t, "key": k} for t, k in fest]}
+    feste = [{"token": t, "key": k} for t, k in fest]
+    if surface == "compare":
+        # #3172 (PO 2026-11-19): die Orte-SMS nummeriert die Orte wie Etappen.
+        from i18n import t as _t
+        from output.renderers.orte_sms import orte_kennung
+
+        feste.append({"token": orte_kennung(1), "key": "ort_nummer",
+                      "meaning": _t("vergleich.sms.ort_nummer", lang)})
+    return {"metrics": metriken, "fixed": feste}
 
 
 # ---------------------------------------------------------------------------
@@ -611,11 +615,13 @@ def _orte_muster(preset: dict, orte: list, vm, lang: str) -> _Muster:
     email_html, _text_mail = aufbau.compare_email_rendern(kontext, lang=lang)
     sms, telegram = aufbau.compare_kanaltexte_rendern(kontext, lang=lang)
     ids = [r.metric_id for r in vm.rows]
-    sms_werte = _orte_sms_werte(sms, kontext, ids)
+    # Abo-Ampel einmal: Zeilenbeschriftung der Mail und Token der SMS (#3172).
+    ampel = resolve_ampel(preset)
+    sms_werte = _orte_sms_werte(sms, kontext, ids, ampel)
     return _Muster(
         sms=sms,
         beispiele={
-            **_orte_mail_beispiele(email_html, kontext, ids, lang, resolve_ampel(preset)),
+            **_orte_mail_beispiele(email_html, kontext, ids, lang, ampel),
             "telegram": _orte_telegram_werte(telegram, ids, lang),
             "sms": {m: (t, None) for m, t in sms_werte.items() if t},
         },
@@ -623,16 +629,15 @@ def _orte_muster(preset: dict, orte: list, vm, lang: str) -> _Muster:
     )
 
 
-def _orte_sms_reihen(ort, kontext: dict) -> list:
+def _orte_sms_reihen(ort, kontext: dict, ampel: dict) -> list:
     """Token des Orts je Form von "alle Listenzeilen" (Index 0) bis "keine" --
     dieselbe Funktion und dieselben Angaben wie ``render_compare_sms``
-    (Auswahl, Roh/Einfach, Abo-Ampel; Issue #3172)."""
-    from app.ampel import resolve_ampel
+    (Auswahl, Roh/Einfach, Abo-Ampel ``ampel`` aus ``_orte_muster``; #3172)."""
     from output.renderers.orte_sms import orte_token_reihen
 
     opts = kontext["opts"]
     return orte_token_reihen(ort, opts.enabled_metrics_by_channel["sms"],
-                             opts.metric_formats("sms"), ampel=resolve_ampel(kontext["preset"]))
+                             opts.metric_formats("sms"), ampel=ampel)
 
 
 def _renderer_ids(metric_id: str) -> list[str]:
@@ -650,7 +655,7 @@ def _orte_sms_liste(liste) -> list[str]:
     return list(_NIE_EINGESTELLT_IDS if liste is None else liste)
 
 
-def _orte_sms_werte(sms: str, kontext: dict, ids: list[str]) -> dict:
+def _orte_sms_werte(sms: str, kontext: dict, ids: list[str], ampel: dict) -> dict:
     """Katalog-ID -> Token des ersten Orts, wie sie in der SMS stehen (z. B.
     ``W13@9``; Temperatur mit Tiefst- und Hoechstwert als Bereich ``D-5/0``);
     ``None`` = die Metrik hat Token, keiner steht in der SMS (passt nicht
@@ -659,19 +664,18 @@ def _orte_sms_werte(sms: str, kontext: dict, ids: list[str]) -> dict:
     Welche Token stehen, sagt der Renderer selbst: ``orte_token_reihen``
     liefert fuer den ersten Ort alle Formen (Kuerzung vom Listenende); die
     zeilenreichste Form, die als ganzer Ortsteil in der SMS steht, ist die
-    gesendete. Der Ortsname wird dabei nie zerlegt."""
+    gesendete. Der erste Ort heisst in der SMS ``O1`` (#3172)."""
     from output.renderers.email.compare_html import location_render_order
-    from output.renderers.orte_sms import orte_ortsteil, token_metriken
+    from output.renderers.orte_sms import orte_kennung, orte_ortsteil, token_metriken
 
     orte = location_render_order(kontext["result"].locations)
     ort = orte[0]
     if ort.error is not None:
         return {}
-    reihen = _orte_sms_reihen(ort, kontext)
-    name = None if len(orte) == 1 else ort.location.name
-    ende = r"(?=; | \+\d+ Orte| X\?|$)"
-    gezeigt = next((r for r in reihen if re.search(
-        r"(?:: |; )" + re.escape(orte_ortsteil(name, r)) + ende, sms)), [])
+    reihen = _orte_sms_reihen(ort, kontext, ampel)
+    ende = r"(?= O\d+ | O\d+$| \+\d+ Orte| X\?|$)"
+    gezeigt = next((r for r in reihen if re.match(
+        re.escape(orte_ortsteil(orte_kennung(1), r)) + ende, sms)), [])
     out: dict = {}
     for mid in ids:
         quellen = _sms_quellen(mid, kontext)

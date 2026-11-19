@@ -121,21 +121,41 @@ def compare_email_rendern(kontext: dict, *, lang: Lang = "de", undelivered=None)
     )
 
 
+def _orte_sms_rendern(kontext: dict, max_chars: int) -> str:
+    """Orte-SMS mit Zeichengrenze ``max_chars`` (Issue #3172, ADR-0125):
+    Hervorhebung `@h` nach der Abo-Ampel wie im Trip (aufgeloest im Renderer
+    aus ``preset``, Einstieg wie ``render_compare_telegram``)."""
+    from output.renderers.comparison import render_compare_sms
+
+    opts = kontext["opts"]
+    return render_compare_sms(
+        kontext["result"], enabled_metrics=opts.enabled_metrics_by_channel["sms"],
+        unresolved_count=opts.unresolved_by_channel.get("sms", 0),
+        metric_formats=opts.metric_formats("sms"),
+        preset=kontext["preset"], max_chars=max_chars,
+    )
+
+
+def compare_premium_sms_rendern(kontext: dict, sms: str) -> str:
+    """Premium-SMS der Orte (Issue #3172, Regel wie beim Trip #3100): der
+    SMS-Text, solange er in ``CHANNEL_LIMITS["premium_sms"]`` passt, sonst
+    derselbe Renderer mit dieser Grenze (Kuerzung vom Listenende)."""
+    from output.renderers.channel_layout import CHANNEL_LIMITS
+
+    grenze = CHANNEL_LIMITS["premium_sms"]["max_chars"]
+    return sms if len(sms) <= grenze else _orte_sms_rendern(kontext, grenze)
+
+
 def compare_kanaltexte_rendern(kontext: dict, *, lang: Lang = "de") -> tuple[str, str]:
     """(SMS-Text, Telegram-Text). Telegram-Stil "kurzform" = derselbe Text wie
-    die SMS (Issue #2422 S5, AC-28), sonst der Telegram-Renderer."""
-    from app.ampel import resolve_ampel
-    from output.renderers.comparison import render_compare_sms, render_compare_telegram
+    die SMS (Issue #2422 S5, AC-28), sonst der Telegram-Renderer. Die SMS hat
+    160 Zeichen wie die Trip-SMS (#3172); die Premium-SMS liefert
+    ``compare_premium_sms_rendern``."""
+    from output.renderers.comparison import ORTE_SMS_MAX_ZEICHEN, render_compare_telegram
     from services.compare_alert_channels import effective_compare_telegram_style
 
     opts, result, preset = kontext["opts"], kontext["result"], kontext["preset"]
-    sms = render_compare_sms(
-        result, enabled_metrics=opts.enabled_metrics_by_channel["sms"],
-        unresolved_count=opts.unresolved_by_channel.get("sms", 0),
-        metric_formats=opts.metric_formats("sms"),
-        # Issue #3172 (ADR-0125): Hervorhebung `@h` nach der Abo-Ampel wie im Trip.
-        ampel=resolve_ampel(preset),
-    )
+    sms = _orte_sms_rendern(kontext, ORTE_SMS_MAX_ZEICHEN)
     if effective_compare_telegram_style(preset) == "kurzform":
         return sms, sms
     telegram = render_compare_telegram(
