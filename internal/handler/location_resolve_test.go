@@ -9,7 +9,7 @@ import (
 
 // AC-2: Dezimalkoordinaten über HTTP-Endpoint auflösen
 func TestResolveHandlerDecimalCoordinates(t *testing.T) {
-	erwarteAbgelehntenHoehenNachschlag(t)
+	fx := hoehenDienstAuf(t, 1234.6)
 	// GIVEN: Gültiger POST-Body mit Dezimalkoordinaten
 	body := `{"input": "47.0789, 11.6856"}`
 
@@ -39,6 +39,23 @@ func TestResolveHandlerDecimalCoordinates(t *testing.T) {
 	}
 	if resp["timezone"] == nil || resp["timezone"] == "" {
 		t.Error("expected non-empty timezone in response")
+	}
+	// AC-1 (#3158): Hoehe kommt aus dem echten Nachschlag-Pfad gegen den
+	// lokalen Open-Elevation-Nachbau, gerundet 1234.6 -> 1235.
+	pruefeHoeheUndKoordinaten(t, resp, fx, "47.078900,11.685600")
+}
+
+// pruefeHoeheUndKoordinaten: die Antwort traegt die gerundete Fixture-Hoehe,
+// und der Fixture-Server hat genau eine Abfrage mit den erwarteten
+// Koordinaten erhalten (Issue #3158).
+func pruefeHoeheUndKoordinaten(t *testing.T, resp map[string]interface{}, fx *hoehenFixture, locations string) {
+	t.Helper()
+	if got, ok := resp["elevation_m"].(float64); !ok || got != 1235 {
+		t.Errorf("expected elevation_m 1235 (gerundeter Fixture-Wert 1234.6), got %v", resp["elevation_m"])
+	}
+	angekommen := fx.locations()
+	if len(angekommen) != 1 || angekommen[0] != locations {
+		t.Errorf("Fixture muss genau die Abfrage locations=%s erhalten, bekam %v", locations, angekommen)
 	}
 }
 
@@ -136,7 +153,7 @@ func TestResolveHandlerNoBody(t *testing.T) {
 
 // AC-5: DMS-Koordinaten über HTTP-Endpoint
 func TestResolveHandlerDMSCoordinates(t *testing.T) {
-	erwarteAbgelehntenHoehenNachschlag(t)
+	fx := hoehenDienstAuf(t, 1234.6)
 	body := `{"input": "47°04'44.0\"N 11°41'08.2\"E"}`
 
 	h := ResolveLocationHandler()
@@ -154,11 +171,13 @@ func TestResolveHandlerDMSCoordinates(t *testing.T) {
 	if resp["source_type"] != "dms" {
 		t.Errorf("expected source_type 'dms', got %v", resp["source_type"])
 	}
+	// AC-2 (#3158): 47 Grad 04'44.0" = 47.078889, 11 Grad 41'08.2" = 11.685611
+	pruefeHoeheUndKoordinaten(t, resp, fx, "47.078889,11.685611")
 }
 
 // Content-Type Header wird korrekt gesetzt
 func TestResolveHandlerContentType(t *testing.T) {
-	erwarteAbgelehntenHoehenNachschlag(t)
+	fx := hoehenDienstAuf(t, 1234.6)
 	body := `{"input": "47.0, 11.0"}`
 
 	h := ResolveLocationHandler()
@@ -170,4 +189,11 @@ func TestResolveHandlerContentType(t *testing.T) {
 	if ct != "application/json" {
 		t.Errorf("expected Content-Type application/json, got %q", ct)
 	}
+
+	// AC-2 (#3158): auch ohne Content-Type im Request kommt die Hoehe aus dem Fixture.
+	var resp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("expected valid JSON, got error: %v", err)
+	}
+	pruefeHoeheUndKoordinaten(t, resp, fx, "47.000000,11.000000")
 }
