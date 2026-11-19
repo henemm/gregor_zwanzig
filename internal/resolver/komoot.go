@@ -14,6 +14,10 @@ import (
 
 var reKomootHighlight = regexp.MustCompile(`komoot\.com/(?:[^/]+/)?highlight/(\d+)`)
 
+// komootAPIURLFormat ist die feste Komoot-Highlight-API. Ersetzbar nur ueber den
+// Test-Hebel KomootAPIAuf (export_test.go), kein Env/Flag (ADR-0114, Issue #3115).
+var komootAPIURLFormat = "https://www.komoot.com/api/v007/highlights/%s"
+
 type komootPoint struct {
 	Lat float64 `json:"lat"`
 	Lng float64 `json:"lng"`
@@ -63,7 +67,7 @@ func resolveKomoot(input string) (ResolveResult, error) {
 	}
 	id := m[1]
 
-	apiURL := fmt.Sprintf("https://www.komoot.com/api/v007/highlights/%s", id)
+	apiURL := fmt.Sprintf(komootAPIURLFormat, id)
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.komoot_anfrage", nil)
