@@ -142,3 +142,41 @@ def test_ac5_karte_ordnet_werte_trotz_tokenartigem_etappennamen(client):
         if zelle["state"] == "on" and zelle.get("example"):
             for wort in zelle["example"].split(" "):
                 assert wort in token_teil, (mid, zelle["example"], versand)
+
+
+# ---------------------------------------------------------------------------
+# F001 (Adversary): Kopf-Abtrennung der Karte direkt -- woertlicher Kopf und
+# deterministischer Ersatzweg (genau so viele Woerter wie das Praefix).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("sms, etappe, rumpf", [
+    # Kopf passt woertlich: mehrteiliges und kuerzelartiges Praefix.
+    ("GR221 Mall N9 W45@10 TH:-", "GR221 Mallorca km0-11", "N9 W45@10 TH:-"),
+    ("W99 W30@10 G32@6", "W99", "W30@10 G32@6"),
+    ("E3 N12 D17 TH:- TH+:-", "Etappe 3: Kamm", "N12 D17 TH:- TH+:-"),
+    # Kopf passt nicht (anderer Kopf gleicher Wortzahl): genau die Wortzahl
+    # des berechneten Praefixes faellt weg, nie mehr, nie weniger.
+    ("GR221 Xxxx N9 W45@10 TH:-", "GR221 Mallorca km0-11", "N9 W45@10 TH:-"),
+    ("W98 W30@10 G32@6", "W99", "W30@10 G32@6"),
+    ("E4 N12 D17 TH:-", "Etappe 3: Kamm", "N12 D17 TH:-"),
+])
+def test_f001_trip_sms_rumpf_trennt_genau_den_kopf_ab(sms, etappe, rumpf):
+    from services.placements_view_service import _trip_sms_rumpf
+
+    assert _trip_sms_rumpf(sms, etappe) == rumpf
+
+
+# ---------------------------------------------------------------------------
+# F002 (Adversary): das Pruef-Orakel ordnet das Praefix nie als Wert zu, auch
+# wenn es wie ein Kuerzel aussieht.
+# ---------------------------------------------------------------------------
+
+def test_f002_orakel_nimmt_kuerzelartiges_praefix_nicht_als_wert():
+    from tests.helpers.einstellung_auslieferung_orakel import (
+        _sms_treffer, parse_sms_artig,
+    )
+
+    wind = [w for _, mid, w in _sms_treffer("W99 W30@10 G32@6") if mid == "wind"]
+    assert wind == ["30@10"], wind
+    ids, _ = parse_sms_artig("PR5 W30@10 G32@6")
+    assert ids == ["wind", "gust"], ids

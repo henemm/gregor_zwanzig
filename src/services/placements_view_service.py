@@ -391,21 +391,17 @@ def _trip_sms_rumpf(sms: str, etappe: str) -> str:
     Doppelpunkt). Der Kopf wird mit denselben zwei Funktionen gebildet wie im
     Versand (``format_sms`` -> ``build_token_line``) und als Ganzes
     abgetrennt -- der Etappenname darf selbst kuerzelartig sein (``W99``).
-    Passt der Kopf nicht (Renderer geaendert), beginnt der Rumpf beim ersten
-    bekannten Token NACH dem ersten Wort; nie am ``:`` trennen, denn Token
-    tragen selbst ``:`` (``TH:-``)."""
+    Passt der Kopf nicht woertlich (Renderer geaendert), faellt genau so viele
+    fuehrende Woerter weg, wie das berechnete Praefix hat -- nie nach Token
+    suchen, nie am ``:`` trennen (Token tragen selbst ``:``, ``TH:-``)."""
     from output.renderers.sms_trip import _sms_stage_prefix
     from output.tokens.builder import _sanitize_stage_name
 
-    kopf = f"{_sanitize_stage_name(_sms_stage_prefix(etappe))} "
+    praefix = _sanitize_stage_name(_sms_stage_prefix(etappe))
+    kopf = f"{praefix} "
     if sms.startswith(kopf):
         return sms[len(kopf):]
-    worte = sms.split(" ")[1:]
-    symbole = _trip_sms_symbole()
-    for i, wort in enumerate(worte):
-        if wort.startswith("!") or any(wort.startswith(s) for s in symbole):
-            return " ".join(worte[i:])
-    return ""
+    return " ".join(sms.split(" ")[len(praefix.split(" ")):])
 
 
 def _trip_sms_werte(rumpf: str, ids: list[str]) -> dict[str, str]:
