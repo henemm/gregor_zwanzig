@@ -261,7 +261,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/compare/presets/{id}/send` | POST | — Delegate (Alt-Route) auf denselben Versandweg wie `/api/briefings/{id}/send?kind=vergleich` (#2280)
 | `/api/compare/presets/{id}/state` | PATCH |
 | `/api/config` | GET |
-| `/api/debug/trigger-radar-alert` | POST | — nur `GZ_ENV=staging`, nur Admin (401 ohne Sitzung, 403 Nicht-Admin, #2155 S2)
+| `/api/debug/trigger-radar-alert` | POST | — nur `GZ_ENV=staging`, nur Admin (401 ohne Sitzung, 403 Nicht-Admin, #2155 S2); Trip mit `radar_alert_enabled=false` → `{"status":"disabled"}` ohne Versand (#2800)
 | `/api/forecast` | GET |
 | `/api/gpx/parse` | POST |
 | `/api/groups` | GET, POST |
