@@ -2,7 +2,7 @@
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-11-19
-- **Bezug:** Issue #3172, Spec `docs/specs/modules/feat_3172_orte_sms_token_zeile.md`. **Löst ab:** die Zellform der Orte-SMS aus `docs/specs/modules/compare_kanal_metriken.md` §3 (S5b, PO-Freigabe 2026-07-29: „Eine 1:1-Nutzung von `_truncate`/`Token`/`TokenLine` selbst ist NICHT vorgesehen“), den Zähler `?N` (`sms_format.md` §5b, #1405 S3) und den Platzmangel-Zähler `+N` im Ortsteil (#1362 S5b). **Präzisiert:** ADR-0124 Nr. 3 (Kürzung vom Listenende) und Nr. 10 (Name „Orte“) für die Orte-SMS.
+- **Bezug:** Issue #3172, Spec `docs/specs/modules/feat_3172_orte_sms_token_zeile.md`. **Löst ab:** die Zellform der Orte-SMS aus `docs/specs/modules/compare_kanal_metriken.md` §3 (S5b, PO-Freigabe 2026-07-29: „Eine 1:1-Nutzung von `_truncate`/`Token`/`TokenLine` selbst ist NICHT vorgesehen“), den Zähler `?N` (`sms_format.md` §5b, #1405 S3) und den Platzmangel-Zähler `+N` im Ortsteil (#1362 S5b). **Präzisiert:** ADR-0124 Nr. 3 (Kürzung vom Listenende) und Nr. 10 (Name „Orte“) für die Orte-SMS. **Löst teilweise ab:** ADR-0124 Nachtrag 1 (SMS-Kopf `{Ort} TT.MM.:` bei genau einem Ort) und die Ortsnamen in der Orte-SMS aus #3163.
 
 ## Kontext
 
@@ -23,10 +23,14 @@ abschließend definierte bestätigt.
    dieselbe Hervorhebung nach der Abo-Ampel (`sms_format.md` §2–§5), gebaut über denselben
    Token-Baukasten (`output/tokens/builder.py::build_token_line`). Eine zweite Formatierung für
    Orte gibt es nicht mehr.
-2. Ortsteil = `{Name}: {Token}` wie das Etappen-Präfix der Trip-SMS (§3.1). Der Name bleibt der
-   volle Ortsname nach #3163 (keine 10-Zeichen-Kürzung, keine Faltung); bei genau einem Ort steht
-   er nur im Kopf `{Ort} TT.MM.:` (ADR-0124 Nachtrag 1). Kopf `Orte TT.MM.:`, Trenner `; ` zwischen
-   Orten, ` +k Orte` und ` X?` am Ende bleiben.
+2. **Orte werden durchgezählt, nicht ausgeschrieben** (PO-Vorgabe 2026-11-19: „Die Orte dürfen in
+   der SMS NICHT ausgeschrieben werden … O1: xxx O2: xxxx muss reichen“). Ortsteil = `O{n}: {Token}`
+   wie das Etappen-Präfix `E{n}:` der Trip-SMS (§3.1); n = Platz in der Reihenfolge des Abos
+   (gezählt über alle Orte, auch solche ohne Daten; entfallene Orte nummerieren nie um). Der Kopf
+   lautet immer `Orte TT.MM.:`, auch bei genau einem Ort (`Orte 19.11.: O1: …`); ein Ort ohne Daten
+   ist `O2: n/a`, lauter Orte ohne Daten ergeben `Orte: keine Daten`. Trenner `; ` zwischen Orten,
+   ` +k Orte` und ` X?` am Ende bleiben. Die Ortsnamen stehen in Mail und Telegram-Normalstil; die
+   Legende der Karte „Was steht wo“ erklärt `O1`.
 3. **Leer- und Fehlwerte wie im Trip:** `-` = geprüft und unauffällig (unter Gelb, kein Regen,
    kein Gewitter), `?` = kein Wert vorhanden (Datenlücke). Die Zähler `?N` und `+N` im Ortsteil
    entfallen; was nicht passt, fällt wie im Trip still vom Listenende (§6).
@@ -43,9 +47,9 @@ abschließend definierte bestätigt.
 
 - **Alte Zellform beibehalten und nur `-0C`/`WD 33` reparieren** — widerspricht der PO-Vorgabe
   „eine Schreibweise für alle“ und dem Kopfsatz von `sms_format.md`.
-- **Ortsnamen auf 10 Zeichen kürzen und falten wie Etappennamen (§3.1)** — spart Zeichen, macht
-  aber Orte mit gleichem Anfang („Monte Rosa Hütte“/„Monte Rosa Gipfel“) ununterscheidbar; die
-  Namen sind seit #3163 festgelegt.
+- **Volle Ortsnamen (#3163) oder auf 10 Zeichen gekürzte Namen** — volle Namen sprengen bei
+  mehreren Orten das 160-Zeichen-Budget (PO 2026-11-19); gekürzte Namen kosten ebenfalls bis zu
+  10 Zeichen je Ort und machen Orte mit gleichem Anfang ununterscheidbar.
 - **`+N` als Platzmangel-Zähler behalten** — die Trip-SMS kennt ihn nicht; er wäre eine zweite
   Grammatik nur für Orte.
 - **`N` und `TH+:` für Orte aus zusätzlichen Abrufen bilden** — braucht Daten, die das Orte-Abo

@@ -17,7 +17,9 @@ tags: [orte, sms, premium-sms, telegram, kurzstil, token-zeile, kanal-paritaet]
 
 ## Purpose
 
-Die Orte-SMS geht heute in einer eigenen, ausgeschriebenen Zellform heraus (`Aabenraa FL -5C FD -0C W 13 km/h WD 33 +12 ?1`), obwohl `sms_format.md` die kompakte Token-Zeile als einzige Schreibweise für alle Kanäle festlegt. Nach dieser Spec schreibt die Orte-SMS – und damit Premium-SMS und Telegram-Kurzstil der Orte, die denselben Text senden – je Ort die Token-Zeile der Trip-SMS (`Aabenraa: D-5/0 W13@9 G26@10(31@13) R- PR53%@13 TH:-`), gebaut über denselben Token-Baukasten.
+Die Orte-SMS geht heute in einer eigenen, ausgeschriebenen Zellform heraus (`Aabenraa FL -5C FD -0C W 13 km/h WD 33 +12 ?1`), obwohl `sms_format.md` die kompakte Token-Zeile als einzige Schreibweise für alle Kanäle festlegt. Nach dieser Spec schreibt die Orte-SMS – und damit Premium-SMS und Telegram-Kurzstil der Orte, die denselben Text senden – je Ort die Token-Zeile der Trip-SMS, die Orte durchgezählt wie Etappen (`O1: D-5/0 W13@9 G26@10(31@13) R- PR53%@13 TH:-; O2: …`), gebaut über denselben Token-Baukasten.
+
+**PO-Nachtrag 2026-11-19:** „Die Orte dürfen in der SMS NICHT ausgeschrieben werden. Sie müssen durch gezählt werden. Es gibt nur 160 Zeichen … O1: xxx O2: xxxx muss reichen.“ Damit entfallen Ortsnamen in der SMS ganz, auch der Ein-Ort-Kopf `{Ort} TT.MM.:` (ADR-0124 Nachtrag 1).
 
 ## Source
 
@@ -67,23 +69,23 @@ Nur die Orte-Kurznachricht (SMS, Premium-SMS, Telegram-Kurzstil der Orte). Mail,
 1. **Forecast je Ort (`orte_sms.py`).** Aus `LocationResult.hourly_data` (Stundenwerte des Tagesfensters, Ortszeit über `resolve_location_tz`) eine `NormalizedForecast(days=(today,))` bilden, Feld für Feld wie `sms_trip._segments_to_normalized_forecast` (Stundenproben nur `> 0` für R/PR/W/G/TH/HU/DP/CT/CL/CM/CH/UV; Tiefstwert-Proben ohne Filter für VS/FZ; je Stunde Höchst- bzw. Tiefstwert). Tageswerte, die die Orte-Mail als Zahl zeigt (`L`, `D`, `FL`, `FD`, `SU`, `HP`, `SD`, `NS24+`, `SL`), kommen aus `_metric_value(loc, renderer_id, summary)` (dieselbe Quelle wie die Mail); die Stunde von Tiefst-/Höchstwert für `@h` aus `hourly_data`. `WD:` = vorherrschende Himmelsrichtung (`_dominant_wind_sector`), `PT:` = vorherrschende Niederschlagsart (`_dominant_precip_type_code`). Amtliche Warnungen: `official_alerts_to_sms_entries(loc.official_alerts, tz, min_level=…("LOW"))` wie heute. `official_alerts_unavailable` bleibt beim Ort **aus** der Zeile (Orte führen ` X?` einmal am Nachrichtenende, wie bisher).
 2. **Specs aus der SMS-Spalte.** Für jede Katalog-Metrik mit SMS-Symbol (`SMS_SYMBOL_BY_METRIC`, `SMS_MULTI_SYMBOLS_BY_METRIC`) eine `MetricSpec(symbol, enabled=<in der SMS-Liste>, position=<Listenindex>, **sms_format_fields(...)>)`; Renderer-IDs der SMS-Liste über `_RENDERER_TO_CATALOG_METRIC_ID`. „Nie eingestellt“ (`None`) = `_NIE_EINGESTELLT_IDS` in dieser Folge. `N`, `FN`, `TH+:` und `TF` sind für Orte immer `enabled=False` (ADR-0125 Nr. 5). Einfach (`metric_formats[rid] is True`) ergibt den Einfach-Modus des Trips (`CT:SCT@13`), sonst Roh.
 3. **`?` statt `?N`.** Ist eine gewählte Größe an einem Ort ohne Wert (Tageswert `None` bzw. alle Stundenwerte des zugehörigen Feldes `None`, oder `hourly_data` leer), trägt ihr Token `?` statt `-` (`W?`, `D?`). `-` bleibt „geprüft, unauffällig“. Unmappbare Einträge (`unresolved_count`) erzeugen kein Zeichen mehr in der SMS (sie fehlen an jedem Ort; die Mail weist sie aus).
-4. **Formen je Ort.** `build_token_line(forecast, specs, report_type="morning", stage_name=<Name>, ampel=ampel)`; daraus die Formen „alle Listenzeilen“, „eine weniger“, … „keine Listenzeile“ über `render._drop_last_list_row`, gezeichnet als `"{Name}: " + " ".join(render._fuse(tokens))` (bei genau einem Ort ohne `"{Name}: "`). Der Name ist der volle `location.name` (keine 10-Zeichen-Kürzung, keine Faltung; `TokenLine.stage_name` wird dafür nicht genutzt). Fehler-Ort bleibt `"{Name} n/a"`.
-5. **Kürzung (`_sms_fit_locations`).** Gesucht wird die größte Zeilenzahl k, bei der alle gezeigten Orte mit je k Listenzeilen (bzw. allen, wenn ein Ort weniger hat) in `max_chars` passen. Ab k = 1 ohne Erfolg entfallen Orte vom Ende als ` +k Orte`, Orte ohne `!`-Warnung zuerst; sind nur noch Orte mit Warnung oder ein Ort übrig, darf auch die erste Listenzeile fallen (k = 0, Warnblock bleibt). Kopf, Degenerationsfall (`...`) und ` X?` unverändert.
+4. **Formen je Ort.** `build_token_line(forecast, specs, report_type="morning", stage_name=<Name>, ampel=ampel)`; daraus die Formen „alle Listenzeilen“, „eine weniger“, … „keine Listenzeile“ über `render._drop_last_list_row`, gezeichnet als `f"O{n}: " + " ".join(render._fuse(tokens))`; n = 1-basierter Platz in `location_render_order` (über alle Orte, auch ohne Daten; entfallene Orte nummerieren nie um). Auch bei genau einem Ort `O1: …`. Fehler-Ort: `O{n}: n/a`. Ortsnamen stehen nicht in der SMS.
+5. **Kürzung (`_sms_fit_locations`).** Gesucht wird die größte Zeilenzahl k, bei der alle gezeigten Orte mit je k Listenzeilen (bzw. allen, wenn ein Ort weniger hat) in `max_chars` passen. Ab k = 1 ohne Erfolg entfallen Orte vom Ende als ` +k Orte`, Orte ohne `!`-Warnung zuerst; sind nur noch Orte mit Warnung oder ein Ort übrig, darf auch die erste Listenzeile fallen (k = 0, Warnblock bleibt). Kopf immer `Orte TT.MM.:` (auch bei einem Ort), ` X?` unverändert; die Namenskürzung im Degenerationsfall entfällt mit den Namen.
 6. **`render_compare_sms(result, *, enabled_metrics, unresolved_count, metric_formats, ampel=None)`**: `ampel=None` → `resolve_ampel({})` (Standard-Vorlage). `compare_kanaltexte_rendern` übergibt `resolve_ampel(preset)`.
-7. **Karte „Was steht wo“ (`placements_view_service.py`).** Das SMS-Beispiel bleibt der Renderer-Text. Beispielwert je Zeile = Token(s) der Metrik im ersten Ort, wie sie in der SMS stehen (z. B. `W13@9`, bei L+D der Bereich `D-5/0`); „passt nicht mehr“ = die Metrik hat Token, keiner steht in der SMS. `_sms_kuerzel` (Legende) nennt für Orte dieselben Symbole wie für Trip (Doppelpunkt gehört zur Grammatik). `overflow`/Rest-Zähler entfällt für Orte (`None` wie beim Trip).
+7. **Karte „Was steht wo“ (`placements_view_service.py`).** Das SMS-Beispiel bleibt der Renderer-Text. Beispielwert je Zeile = Token(s) der Metrik im ersten Ort, wie sie in der SMS stehen (z. B. `W13@9`, bei L+D der Bereich `D-5/0`); „passt nicht mehr“ = die Metrik hat Token, keiner steht in der SMS. `_sms_kuerzel` (Legende) nennt für Orte dieselben Symbole wie für Trip (Doppelpunkt gehört zur Grammatik). `overflow`/Rest-Zähler entfällt für Orte (`None` wie beim Trip). Die Legende der Orte bekommt den festen Eintrag `O1` = „Ort 1 in der Reihenfolge des Abos“ (EN „Location 1 in the order of the subscription“, Katalog); die Trip-Legende bleibt unverändert.
 
 ## Expected Behavior
 
 - **Input:** Orte-Abo mit 1 bis n Orten, SMS-Spalte der Tabelle „Was steht wo“ (oder nie eingestellt), Abo-Ampel, Stundenwerte je Ort.
 - **Output:** SMS ≤ 153 Zeichen, z. B. (Werte illustrativ, exakte Zeichen aus dem Renderer im Test):
-  - 1 Ort: `Aabenraa 19.11.: D-5/0 W13 G26@10(31@13) R- PR53%@13 TH:- SU2 CT:BKN@9 UV1 VS10.0@8 …`
-  - 3 Orte: `Orte 19.11.: Aabenraa: D-5/0 W- G26@10(31@13) R-; Flensburg: D-4/1 W- G24@11 R-; Schleswig: D-6/0 W- G-  R-`
-  - 5 Orte: `Orte 19.11.: Aabenraa: D-5/0 W-; Flensburg: D-4/1 W-; Schleswig: D-6/0 W-; Husum: D-3/2 W25@12; Kiel: D-4/1 W-`
+  - 1 Ort: `Orte 19.11.: O1: D-5/0 W- G26@10(31@13) R- PR53%@13 TH:- SU2 CT:BKN@9 UV1 VS10.0@8 …`
+  - 3 Orte: `Orte 19.11.: O1: D-5/0 W- G26@10(31@13) R- PR53%@13; O2: D-4/1 W- G24@11 R- PR40%@12; O3: D-6/0 W- G- R- PR-`
+  - 5 Orte: `Orte 19.11.: O1: D-5/0 W- G26@10(31@13); O2: D-4/1 W- G24@11; O3: D-6/0 W- G-; O4: D-3/2 W25@12 G41@12; O5: D-4/1 W- G-`
 - **Side effects:** keine Datenänderung. Premium-SMS und Telegram-Kurzstil der Orte senden denselben Text.
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein Orte-Abo mit drei Orten, dessen SMS-Spalte Temperatur, Wind, Böen, Regen, Regenwahrscheinlichkeit und Gewitter führt, und Stundenwerte mit Wind und Böen über Gelb der Abo-Ampel / When das Briefing über den echten Versandweg (`compare_kanaltexte_rendern`) gebaut wird / Then beginnt die SMS mit `Orte TT.MM.: `, jeder Ortsteil lautet `{Name}: ` gefolgt von den Token in Listenfolge, und jeder Ortsteil ist zeichengleich mit der Token-Zeile, die `build_token_line` aus denselben Werten mit derselben Ampel ergibt (z. B. `W21@13`, `G26@10(31@13)`, `R-`, `PR53%@13`, `TH:-`).
+- **AC-1:** Given ein Orte-Abo mit drei Orten, dessen SMS-Spalte Temperatur, Wind, Böen, Regen, Regenwahrscheinlichkeit und Gewitter führt, und Stundenwerte mit Wind und Böen über Gelb der Abo-Ampel / When das Briefing über den echten Versandweg (`compare_kanaltexte_rendern`) gebaut wird / Then beginnt die SMS mit `Orte TT.MM.: `, die Ortsteile lauten `O1: `, `O2: `, `O3: ` (Reihenfolge des Abos, kein Ortsname) gefolgt von den Token in Listenfolge, und jeder Ortsteil ist zeichengleich mit der Token-Zeile, die `build_token_line` aus denselben Werten mit derselben Ampel ergibt (z. B. `W21@13`, `G26@10(31@13)`, `R-`, `PR53%@13`, `TH:-`).
   - Test: `tests/tdd/test_3172_orte_sms_token_zeile.py` (Kern-Schicht, Gegenbau über `build_token_line`).
 
 - **AC-2:** Given beliebige Orte-Werte inklusive Temperaturen zwischen −0,5 und 0 °C und einer Windrichtung von 330° / When die Orte-SMS gerendert wird / Then enthält sie keine alte Zellform mehr (kein ` km/h`, keine Temperatur mit `C`, kein `°`, kein Kürzel mit Leerzeichen vor dem Wert, keine Zähler `+N`/`?N` im Ortsteil), keine negative Null (`-0`), und die Windrichtung steht als Himmelsrichtung (`WD:NW`).
@@ -98,8 +100,8 @@ Nur die Orte-Kurznachricht (SMS, Premium-SMS, Telegram-Kurzstil der Orte). Mail,
 - **AC-5:** Given ein Orte-Abo mit Gewitter und Temperatur in der SMS-Liste, als Morgen- und als Abend-Briefing / When die SMS gerendert wird / Then erscheinen weder `N`, `FN` noch `TH+:`; die Gewitter-Zeile ist `TH:` allein.
   - Test: Kern-Schicht.
 
-- **AC-6:** Given ein Orte-Abo mit genau einem Ort, eines mit einem Ort ohne Daten unter mehreren und eines mit lauter Orten ohne Daten / When die SMS gerendert wird / Then lautet sie `{Ort} TT.MM.: {Token}` ohne zweiten Namen, bzw. `… {Name} n/a …`, bzw. `Orte: keine Daten` / `{Ort}: keine Daten` wie bisher.
-  - Test: Kern-Schicht; `tests/tdd/test_orte_bereichsname_in_ausgaben.py` bleibt grün.
+- **AC-6:** Given ein Orte-Abo mit genau einem Ort, eines mit einem Ort ohne Daten unter mehreren und eines mit lauter Orten ohne Daten / When die SMS gerendert wird / Then lautet sie `Orte TT.MM.: O1: {Token}`, bzw. `… O2: n/a …` (die übrigen Orte behalten ihre Nummer), bzw. `Orte: keine Daten`; in keinem Fall steht ein Ortsname in der SMS.
+  - Test: Kern-Schicht; `tests/tdd/test_orte_bereichsname_in_ausgaben.py` auf die Nummern umgestellt (Mail und Telegram-Normalstil unverändert).
 
 - **AC-7:** Given dasselbe Orte-Abo für einen deutschen und einen englischen Nutzer, Telegram im Kurzstil / When Briefing-SMS, Premium-SMS und Telegram-Kurzstil gebaut werden / Then sind alle drei Texte zeichengleich, in beiden Sprachen identisch, und verwenden die Token-Zeile.
   - Test: Kern-Schicht über `compare_kanaltexte_rendern` und den Premium-Pfad.
@@ -121,7 +123,7 @@ Nur die Orte-Kurznachricht (SMS, Premium-SMS, Telegram-Kurzstil der Orte). Mail,
 
 ## Test Plan
 
-- **Kern-Schicht (ohne Netz):** `tests/tdd/test_3172_orte_sms_token_zeile.py` (AC-1 bis AC-8) über den echten Versandweg `compare_kanaltexte_rendern` mit kaltem Datensatz (`placements_beispiel.orte_ergebnis`, Orte Aabenraa/Flensburg/Schleswig/…); Gegenbau über `build_token_line` für die Parität (AC-1).
+- **Kern-Schicht (ohne Netz):** `tests/tdd/test_3172_orte_sms_token_zeile.py` (AC-1 bis AC-8) über den echten Versandweg `compare_kanaltexte_rendern` mit kaltem Datensatz (`placements_beispiel.orte_ergebnis`, Orte Aabenraa/Flensburg/Schleswig/…); Gegenbau über `build_token_line` für die Parität (AC-1); Mutation „Ortsname statt `O{n}`“ muss rot werden.
 - **Umgestellte Bestandstests:** alle Tests, die die alte Zellform (` km/h`, `D 20C`, `+N`, `?N`) erwarten, prüfen dieselbe Zusicherung in der Token-Form; keine Zusicherung entfällt ersatzlos außer den durch ADR-0125 abgelösten Zählern `+N`/`?N`.
 - **RED-Nachweis:** der neue Test läuft gegen `origin/main` rot (alte Zellform).
 - **Mutations-Gegenprobe:** alte Zelle zurück (`f"{code} {wert}"`), Ampel nicht durchgereicht (`@h` fehlt), `?` → `-`, `TH+:` aktiviert, Zeilenzahl je Ort ungleich, ` X?` vergessen, Trip-Präfix gekürzt (`_sanitize_stage_name`) – jede Verfälschung muss ein Test fangen.
@@ -131,7 +133,7 @@ Nur die Orte-Kurznachricht (SMS, Premium-SMS, Telegram-Kurzstil der Orte). Mail,
 
 - Bei Werten ab Gelb ist `@h(max@h)` länger als die alte Zelle; bei drei und mehr Orten stehen dann weniger Größen je Ort.
 - Verdrängte Größen werden nicht mehr gezählt (wie im Trip). Wer alles sehen will, liest Mail oder Telegram-Normalstil.
-- Volle Ortsnamen kosten Zeichen; lange Namen verdrängen bei vielen Orten Größen.
+- Die SMS nennt keine Ortsnamen; die Zuordnung `O1`… folgt der Reihenfolge der Orte im Abo (wie in Mail und Liste).
 
 ## Out of Scope
 
@@ -147,3 +149,4 @@ Nur die Orte-Kurznachricht (SMS, Premium-SMS, Telegram-Kurzstil der Orte). Mail,
 ## Changelog
 
 - 2026-11-19: Initial spec created (Issue #3172, PO-Vorgabe gleichen Tags)
+- 2026-11-19: PO-Nachtrag: Orte als `O1`, `O2` … statt Namen, Kopf immer `Orte TT.MM.:`
