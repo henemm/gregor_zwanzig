@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import NamedTuple, Optional, Sequence
 
 from app import models as _models
@@ -45,6 +45,19 @@ class ChannelRow:
     enabled: bool
     format: Optional[str]
     order: int
+    # #3122: Herkunft einer Trip-Kanal-Zeile im bisherigen Pfad -- genau der
+    # Eintrag, den die Kaskade geliefert hat (Kanal-Ebene oder, im Rueckfall
+    # und ohne Kanal-Ebene, Grundauswahl). Er traegt, was die Zeile nicht
+    # traegt (``horizons``, Position, Format-Schreibweise); die Adapter der
+    # Ausgaben reichen ihn durch, statt die Kaskaden-Regeln nachzubilden.
+    # ``None`` im neuen Eingang (``placements``) und bei Orten. Kein Teil von
+    # Vergleich und Hash der Zeile.
+    source: Optional[MetricConfig] = field(default=None, compare=False, repr=False)
+    # #3101: Auswertung einer Orte-Kanalzeile (``max``/``min``/``sum``/``avg``);
+    # ``metric_id`` ist dort die Katalog-ID, das Paar adressiert genau eine
+    # Renderer-Zeile (Adapter ``compare_metric_ids.renderer_kennung``). ``None``
+    # bei Trip-Zeilen und in Ausblick/Stundenverlauf.
+    aggregation: Optional[str] = None
 
 
 Rows = Optional[tuple[ChannelRow, ...]]
@@ -56,8 +69,13 @@ class MailViewModel:
     (nur Orte ohne Grundauswahl und ohne Kanal-Liste). ``layout_channels``:
     Orte-Kanaele, deren Zeilen aus ``channel_layouts`` stammen.
 
-    ``outlook`` (Trip und Orte) und ``hourly`` (nur Orte) tragen Katalog-IDs
-    (#3065, ADR-0121 Nachtrag 2b): ``None`` = Renderer-Vorgabemenge, ``()`` =
+    Ein Vokabular (#3101, ADR-0121 Nachtrag 4): alle Listen tragen Katalog-IDs;
+    Orte-Kanalzeilen zusaetzlich ``aggregation`` (je Zeile genau eine
+    Renderer-Zeile, Teilauswahl und Folge je Kanal bleiben erhalten). Die
+    Renderer-Kennung entsteht erst im Adapter vor dem Renderer.
+
+    ``outlook`` (Trip und Orte) und ``hourly`` (nur Orte): ``None`` =
+    Renderer-Vorgabemenge, ``()`` =
     Block entfaellt. Orte-``hourly`` ist nie ``None`` (#3096: die Vorgabe "nie
     eingestellt" kommt als konkrete Liste aus ``compare_hourly_metric_ids``);
     Trip-``hourly`` ist im bisherigen Pfad immer ``None``. Die Trip-Mail liest
@@ -100,6 +118,7 @@ def resolve_channel_lists(
     report_config: object = None,
     outlook_enabled: Optional[bool] = None,
     with_rows: bool = False,
+    ausblick: bool = True,
 ) -> MailViewModel:
     """Reine Funktion: ``display_config`` -> ``MailViewModel`` (ADR-0121).
 
@@ -110,7 +129,9 @@ def resolve_channel_lists(
     neuen Eingang. Im bisherigen Pfad entstehen ``rows``/``outlook_reports``
     nur mit ``with_rows=True`` (Umrechnung des Altbestands; dafuer auch
     ``report_config``/``outlook_enabled``); ohne Anforderung bleiben sie
-    ``()`` und der Versandweg rechnet nichts um."""
+    ``()`` und der Versandweg rechnet nichts um. ``ausblick=False``: der
+    bisherige Pfad loest den Ausblick nicht auf (``outlook`` bleibt ``None``),
+    fuer Leser, die nur Kanal-Zeilen brauchen (Alarm-Format, #3122)."""
     from services.placements import legacy_placements, read_placements
 
     if surface not in ("trip", "compare"):
@@ -121,24 +142,38 @@ def resolve_channel_lists(
     ansicht = {"enabled_reports": enabled_reports, "hourly_enabled": hourly_enabled}
     if stored is not None:
         return placements_view(display_config, surface, report_type, stored, **ansicht)
+    bisher = _abo_schalter(
+        legacy_view(display_config, surface, report_type, ausblick=ausblick), surface,
+        outlook_enabled=outlook_enabled, hourly_enabled=hourly_enabled)
     if not (with_rows or ALTBESTAND_UEBER_UMRECHNUNG):
-        return legacy_view(display_config, surface, report_type)
+        return bisher
     umgerechnet = read_placements(legacy_placements(
         display_config, surface, report_config=report_config,
         enabled_reports=enabled_reports, outlook_enabled=outlook_enabled)[0])
     neu = placements_view(display_config, surface, report_type, umgerechnet, **ansicht)
     if ALTBESTAND_UEBER_UMRECHNUNG:
         return neu
-    return dataclasses.replace(
-        legacy_view(display_config, surface, report_type),
-        rows=neu.rows, outlook_reports=neu.outlook_reports,
-    )
+    return dataclasses.replace(bisher, rows=neu.rows, outlook_reports=neu.outlook_reports)
 
 
-def legacy_view(display_config, surface: str, report_type: Optional[str] = None) -> MailViewModel:
+def _abo_schalter(view: MailViewModel, surface: str, *, outlook_enabled: Optional[bool],
+                  hourly_enabled: Optional[bool]) -> MailViewModel:
+    """#3122 B1b: Block-Schalter eines Orte-Abos im bisherigen Pfad -- ``False``
+    heisst "Block entfaellt" (``()``); ``None`` (nicht angegeben) laesst die
+    Listen unveraendert. Die Ausgaben lesen nur noch das View-Model."""
+    if surface != "compare":
+        return view
+    aus = {k: () for k, an in (("outlook", outlook_enabled), ("hourly", hourly_enabled))
+           if an is False}
+    return dataclasses.replace(view, **aus) if aus else view
+
+
+def legacy_view(
+    display_config, surface: str, report_type: Optional[str] = None, *, ausblick: bool = True,
+) -> MailViewModel:
     """Bisheriger Pfad aus den Altfeldern (ohne ``rows``/``outlook_reports``)."""
     if surface == "trip":
-        return _trip_view(display_config, report_type or "evening")
+        return _trip_view(display_config, report_type or "evening", ausblick=ausblick)
     return _compare_view(display_config or {})
 
 
@@ -148,10 +183,16 @@ def legacy_view(display_config, surface: str, report_type: Optional[str] = None)
 
 class Grundauswahl(NamedTuple):
     """Katalog-IDs der Grundauswahl (Maximum, Nr. 3.1), abgeleitete Groesse
-    -> Eltern-Kennung, bei Orten die Renderer-Kennungen der Auswahl."""
+    -> Eltern-Kennung, bei Orten die Renderer-Kennungen der Auswahl.
+
+    Orte (#3122 B1b): ``unaufloesbar`` = gewaehlte Eintraege ohne Renderer-
+    Zuordnung (Hinweiszaehler, #1405 S3); ``nie_eingestellt`` = die Auswahl
+    fehlt, ``renderer`` ist dann der Standardsatz (Orte-Alarm, #1191)."""
     ids: list
     parents: dict
     renderer: Optional[frozenset]
+    unaufloesbar: tuple = ()
+    nie_eingestellt: bool = False
 
 
 def _orte_standard() -> list[str]:
@@ -179,14 +220,17 @@ def grundauswahl(display_config, surface: str, report_type: Optional[str]) -> Gr
         parents = {mc.metric_id: eltern[mc.metric_id] for mc in mcs
                    if mc.derived and mc.metric_id in eltern}
         return Grundauswahl(ids, parents, None)
-    from output.renderers.compare_metric_ids import resolve_enabled_metrics
+    from output.renderers.compare_metric_ids import resolve_enabled_metrics_report
     from output.renderers.compare_outlook_metric_ids import _kennungen_aus_renderer_ids
 
-    renderer = resolve_enabled_metrics((display_config or {}).get("active_metrics"))
-    if renderer is None:
+    renderer, unaufloesbar = resolve_enabled_metrics_report(
+        (display_config or {}).get("active_metrics"))
+    nie_eingestellt = renderer is None
+    if nie_eingestellt:
         renderer = _orte_standard()
     return Grundauswahl(
-        list(dict.fromkeys(_kennungen_aus_renderer_ids(renderer))), {}, frozenset(renderer))
+        list(dict.fromkeys(_kennungen_aus_renderer_ids(renderer))), {}, frozenset(renderer),
+        unaufloesbar, nie_eingestellt)
 
 
 def placements_view(
@@ -219,6 +263,19 @@ def _area_from(eintraege) -> tuple[ChannelRow, ...]:
     return tuple(ChannelRow(mid, True, fmt, i) for i, (mid, fmt) in enumerate(eintraege))
 
 
+def _orte_zeilen(eintraege) -> tuple[ChannelRow, ...]:
+    """Orte-Kanalzeilen aus ``[(renderer_kennung, format)]``: je Renderer-Zeile
+    eine Zeile mit Katalog-ID und Auswertung (#3101), Folge bleibt."""
+    from output.renderers.compare_metric_ids import katalog_paar
+
+    zeilen = []
+    for rid, fmt in eintraege:
+        paar = katalog_paar(rid)
+        if paar is not None:
+            zeilen.append(ChannelRow(paar[0], True, fmt, len(zeilen), aggregation=paar[1]))
+    return tuple(zeilen)
+
+
 def _kanal_rows(eintraege, grund: Grundauswahl) -> tuple[ChannelRow, ...]:
     """Trip: Katalog-IDs wie heute. Orte: Aufweitung der Katalog-ID auf die
     Auswertungen der Grundauswahl (Nr. 2), Format der Zeile fuer alle."""
@@ -226,26 +283,28 @@ def _kanal_rows(eintraege, grund: Grundauswahl) -> tuple[ChannelRow, ...]:
         return _area_from(eintraege)
     from output.renderers.compare_metric_ids import _renderer_ids_for_kennung
 
-    return _area_from([
+    return _orte_zeilen([
         (rid, fmt) for cid, fmt in eintraege
         for rid in _renderer_ids_for_kennung(cid) if rid in grund.renderer
     ])
 
 
 def katalog_id(surface: str, metric_id: str) -> str:
-    """Kennung einer View-Model-Zeile -> Katalog-ID (Orte-Kanaele tragen
-    Renderer-Kennungen, Ausblick/Stundenverlauf schon Katalog-IDs)."""
-    if surface == "trip":
-        return metric_id
-    from output.renderers.compare_outlook_metric_ids import _kennungen_aus_renderer_ids
-
-    return (_kennungen_aus_renderer_ids([metric_id]) or [metric_id])[0]
+    """Kennung einer View-Model-Zeile -> Katalog-ID. Seit #3101 tragen alle
+    Listen beider Flaechen schon die Katalog-ID; ``surface`` bleibt fuer die
+    Aufrufer der Umrechnung."""
+    return metric_id
 
 
-def vm_lists(vm: MailViewModel, surface: str) -> dict[str, list]:
+def vm_lists(vm: MailViewModel, surface: str, *, paare: bool = False) -> dict[str, list]:
     """Je Stelle ``[(kennung, format)]``; ``None`` des bisherigen Pfads als
     das, was die Ausgabe heute zeigt (Orte-Kanal: Standardfolge, Ausblick:
-    feste Vorgabe). Einen Trip-Stundenverlauf gibt es nicht."""
+    feste Vorgabe). Einen Trip-Stundenverlauf gibt es nicht. ``paare=True``:
+    Kennung = (Katalog-ID, Aggregation) -- unterscheidet die Zeilen einer
+    Katalog-ID mit zwei Auswertungen (#3101, Alt/Neu-Vergleich)."""
+    def schluessel(z):
+        return (z.metric_id, z.aggregation) if paare else z.metric_id
+
     out: dict[str, list] = {}
     stellen = KANAELE + ("outlook",) + (() if surface == "trip" else ("hourly",))
     for stelle in stellen:
@@ -253,11 +312,12 @@ def vm_lists(vm: MailViewModel, surface: str) -> dict[str, list]:
         if zeilen is None and stelle == "outlook":
             from output.renderers.email.helpers import OUTLOOK_FIXED_METRIC_IDS
 
-            out[stelle] = [(m, None) for m in OUTLOOK_FIXED_METRIC_IDS]
+            out[stelle] = [((m, None) if paare else m, None) for m in OUTLOOK_FIXED_METRIC_IDS]
         elif zeilen is None:
-            out[stelle] = [(m, None) for m in _orte_standard()] if stelle in KANAELE else []
+            out[stelle] = [(schluessel(z), None) for z in _orte_zeilen(
+                (rid, None) for rid in _orte_standard())] if stelle in KANAELE else []
         else:
-            out[stelle] = [(z.metric_id, z.format) for z in zeilen if z.enabled]
+            out[stelle] = [(schluessel(z), z.format) for z in zeilen if z.enabled]
     return out
 
 
@@ -342,11 +402,11 @@ def _trip_entries(roh: dict):
                 yield from (e for e in liste if isinstance(e, dict))
 
 
-def _trip_view(display_config, report_type: str) -> MailViewModel:
+def _trip_view(display_config, report_type: str, *, ausblick: bool = True) -> MailViewModel:
     dc = _trip_model(display_config)
     kanaele = {
         ch: tuple(
-            ChannelRow(mc.metric_id, True, _trip_format(mc), i)
+            ChannelRow(mc.metric_id, True, _trip_format(mc), i, source=mc)
             for i, mc in enumerate(trip_channel_metrics(dc, ch, report_type))
         )
         for ch in KANAELE
@@ -356,6 +416,8 @@ def _trip_view(display_config, report_type: str) -> MailViewModel:
     ) != "global"
     if not eigene_premium:
         kanaele["premium_sms"] = kanaele["sms"]
+    if not ausblick:
+        return MailViewModel(**kanaele)
     from output.renderers.compare_outlook_metric_ids import (
         resolve_trip_outlook_formats, resolve_trip_outlook_metrics,
     )
@@ -407,10 +469,8 @@ def _layout_rows(rows: list[tuple[str, bool]], entries: list) -> tuple[ChannelRo
         fmt = None if _requested_format(e) is None else "raw"
         for rid in _renderer_ids_for_kennung(e.get("metric_id")):
             angegeben.setdefault(rid, fmt)
-    return tuple(
-        ChannelRow(rid, True, "simplified" if einfach else angegeben.get(rid), i)
-        for i, (rid, einfach) in enumerate(rows)
-    )
+    return _orte_zeilen(
+        (rid, "simplified" if einfach else angegeben.get(rid)) for rid, einfach in rows)
 
 
 def _compare_view(dc: dict) -> MailViewModel:
@@ -433,9 +493,7 @@ def _compare_view(dc: dict) -> MailViewModel:
             ids = resolve_channel_enabled_metrics(
                 global_metrics, dc.get("channel_active_metrics"), ch,
             )
-            kanaele[ch] = None if ids is None else tuple(
-                ChannelRow(rid, True, None, i) for i, rid in enumerate(ids)
-            )
+            kanaele[ch] = None if ids is None else _orte_zeilen((rid, None) for rid in ids)
     from output.renderers.compare_hourly_metric_ids import resolve_hourly_metric_ids
     from output.renderers.compare_outlook_metric_ids import (
         resolve_compare_outlook_formats, resolve_compare_outlook_metrics,

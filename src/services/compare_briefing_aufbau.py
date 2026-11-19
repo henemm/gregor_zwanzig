@@ -55,9 +55,12 @@ def compare_zieltag_bestimmen(locations: list, jetzt_utc: datetime, *, context_l
     return local_dt(jetzt_utc, zone).date()
 
 
-def compare_wetter_laden(preset: dict, locations: list, zieltag: date, user_id: str) -> dict:
+def compare_wetter_laden(preset: dict, locations: list, zieltag: date, user_id: str, *,
+                         report_type: str | None = None) -> dict:
     """Profil aus der Vorlage, Tagesfenster und Wetterlauf je Ort (gleichzeitig,
-    #1765 B1). Ausnahmen des Wetterlaufs fliegen unveraendert weiter."""
+    #1765 B1). Ausnahmen des Wetterlaufs fliegen unveraendert weiter.
+    ``report_type`` (#3122 B1b): Briefing-Typ des Versand-Slots fuer die
+    Render-Optionen; ``None`` (Vorschau) = irgendein Typ."""
     from app.ampel import profile_for_template, template_id_for
     from services.amtliche_warnungen_schalter import amtliche_warnungen_an_preset
     from services.comparison_engine import COMPARE_FORECAST_HOURS
@@ -84,7 +87,8 @@ def compare_wetter_laden(preset: dict, locations: list, zieltag: date, user_id: 
         "preset": preset,
         "result": result,
         "profile": profile,
-        "opts": resolve_compare_render_options(preset),  # Issue #1209 (Scheibe B)
+        # Issue #1209 (Scheibe B); #3122 B1b: Briefing-Typ des Slots.
+        "opts": resolve_compare_render_options(preset, report_type=report_type),
         "name": preset.get("name", preset.get("id", "")),
         "target_date": zieltag,
     }

@@ -29,7 +29,6 @@ Festlegungen beim Lesen:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import partial
 from typing import Mapping, Optional, Sequence
 
 from app.metric_catalog import (
@@ -57,6 +56,10 @@ PREMIUM_FOLGT_SMS = "premium_folgt_sms"
 # Altzeile an einer Stelle ohne eigene Ausgabe (Nr. 5), z. B. Nachttief in der
 # Stundentabelle der Trip-Mail: sie zeigte dort nichts und entfaellt.
 GESPERRTE_STELLE_ENTFAELLT = "gesperrte_stelle_entfaellt"
+# Nacht-/Tagesgroesse ohne eigene Spalte (Trip-Mail): sie folgt der
+# Grundauswahl und ist in der E-Mail-Spalte nicht abwaehlbar; eine Kanal-Liste,
+# die sie weggelassen hatte, verliert diese Wirkung (#3122 Fix-Loop B1b).
+OHNE_SPALTE_FOLGT_GRUNDAUSWAHL = "ohne_spalte_folgt_grundauswahl"
 UNERKLAERT = "unerklaert"
 
 
@@ -221,13 +224,28 @@ def resolve_rows(
     return tuple(_resolved_row(r, i, surface) for i, r in enumerate(ordered))
 
 
+#: Sperrgrund ohne Wegfall: die Groesse hat an der Stelle keine eigene Spalte
+#: (Nacht-/Tagesgroessen in der Stundentabelle der Trip-Mail), gehoert aber
+#: weiter zur Ausgabe (Kurz-Zusammenfassung u. a.) und folgt dort der
+#: Grundauswahl. Gesperrt ist nur der Haken (#3122 Fix-Loop B1b).
+OHNE_EIGENE_SPALTE = "keine_eigene_spalte"
+
+
+def bleibt_in_ausgabe(grund: Optional[str]) -> bool:
+    """Gesperrte Stelle, an der die Groesse trotzdem zur Ausgabe gehoert."""
+    return grund == OHNE_EIGENE_SPALTE
+
+
 def metrics_at(rows: Sequence[PlacementRow], stelle: str) -> list[tuple[str, Optional[str]]]:
-    """(Katalog-ID, Format) der Zeilen, die an ``stelle`` gelten, in Folge."""
+    """(Katalog-ID, Format) der Zeilen, die an ``stelle`` gelten, in Folge;
+    dazu Zeilen, deren Stelle nur mangels eigener Spalte gesperrt ist."""
     out = []
     for row in rows:
         cells = dict(row.cells)
-        if stelle in cells and cells[stelle].state == "on":
-            out.append((row.metric_id, cells[stelle].format))
+        zelle = cells.get(stelle)
+        if zelle is not None and (zelle.state == "on" or (
+                zelle.state == "locked" and bleibt_in_ausgabe(zelle.reason))):
+            out.append((row.metric_id, zelle.format))
     return out
 
 
@@ -368,7 +386,8 @@ def placements_from_legacy(
     Festlegungen: ``auswertungen_gekoppelt`` (Orte, Zeile = Katalog-ID, Nr. 2),
     ``ausserhalb_grundauswahl`` (Nr. 3.1), ``morgen_folgt_abend`` (Nr. 8,
     Abend-Fassung zaehlt), ``premium_folgt_sms`` (ADR-0124 Nr. 8),
-    ``gesperrte_stelle_entfaellt`` (Altzeile an gesperrter Stelle, Nr. 5); was sich
+    ``gesperrte_stelle_entfaellt`` (Altzeile an gesperrter Stelle, Nr. 5),
+    ``ohne_spalte_folgt_grundauswahl`` (Nacht-/Tagesgroesse der Trip-Mail); was sich
     keiner Art zuordnen laesst, steht als ``unerklaert`` darin.
     Idempotent: ein Abo mit lesbaren ``placements`` wird nicht umgerechnet."""
     vorhanden = read_placements(_feld(display_config, "placements"))
@@ -420,13 +439,19 @@ def _art_folge(surface, stelle, ids, rt) -> str:
 
 
 def _stelle_changes(surface, stelle, rt, alt, neu, ctx, kid) -> list[OutputChange]:
+    """``alt``/``neu``: ``[(zeile, format)]`` mit Zeile = (Katalog-ID,
+    Aggregation) -- verglichen wird je Zeile, gemeldet die Katalog-ID (#3101):
+    Max/Min-Doppelzeilen fallen in der Meldung auf eine Kennung zusammen."""
     out = []
     a_ids, n_ids = [m for m, _f in alt], [m for m, _f in neu]
     for mid in [m for m in a_ids if m not in n_ids]:
-        out.append(OutputChange(_art_entfallen(surface, stelle, kid(mid), rt, ctx), stelle, mid, rt))
+        out.append(OutputChange(_art_entfallen(surface, stelle, kid(mid), rt, ctx), stelle,
+                                kid(mid), rt))
     for mid in [m for m in n_ids if m not in a_ids]:
         art = PREMIUM_FOLGT_SMS if stelle == "premium_sms" else _art_sonst(surface, kid(mid), rt)
-        out.append(OutputChange(art, stelle, mid, rt))
+        if stelle == "email" and bleibt_in_ausgabe(stellen_sperre(kid(mid), stelle, surface)):
+            art = OHNE_SPALTE_FOLGT_GRUNDAUSWAHL
+        out.append(OutputChange(art, stelle, kid(mid), rt))
     if set(a_ids) == set(n_ids) and a_ids != n_ids:
         out.append(OutputChange(_art_folge(surface, stelle, [kid(m) for m in n_ids], rt),
                                 stelle, None, rt))
@@ -436,7 +461,7 @@ def _stelle_changes(surface, stelle, rt, alt, neu, ctx, kid) -> list[OutputChang
         if mid in alt_form and stelle in zwei_formen_stellen(c) and form != heutige_form(
                 surface, stelle, c, alt_form[mid]):
             art = MORGEN_FOLGT_ABEND if surface == "trip" and rt == "morning" else UNERKLAERT
-            out.append(OutputChange(art, stelle, mid, rt))
+            out.append(OutputChange(art, stelle, c, rt))
     return out
 
 
@@ -448,15 +473,15 @@ def _regel_changes(surface, stelle, rt, alt, neu, kid) -> list[OutputChange]:
 
     out = []
     if stelle == "email" and surface == "trip":
-        out += [OutputChange(NUR_TEXT_FOLGT_HTML, "email", m, None) for m, f in neu
-                if m in _AMPEL_CAPABLE_METRIC_IDS and f == "simplified"]
+        out += [OutputChange(NUR_TEXT_FOLGT_HTML, "email", kid(m), None) for m, f in neu
+                if kid(m) in _AMPEL_CAPABLE_METRIC_IDS and f == "simplified"]
     if stelle == "sms":
         for mid, fmt in alt:
             c = kid(mid)
             standard = standard_form(c) if surface == "trip" else "raw"
             # Bisher zwei Formen in der SMS hatte nur die Bewoelkung (#2422 S6).
             if c in SMS_FORMAT_MODE_METRIC_IDS and heutige_form(surface, "sms", c, fmt) != standard:
-                out.append(OutputChange(SMS_WOLKENFORM_ENTFAELLT, "sms", mid, rt))
+                out.append(OutputChange(SMS_WOLKENFORM_ENTFAELLT, "sms", c, rt))
     return out
 
 
@@ -467,19 +492,25 @@ def _output_changes(dc: object, surface: str, placements: dict) -> tuple[OutputC
     reports = stored.outlook_reports or ()
     out: list[OutputChange] = []
     for rt in BRIEFINGS:
-        alt = clr.vm_lists(clr.legacy_view(dc, surface, rt), surface)
+        alt = clr.vm_lists(clr.legacy_view(dc, surface, rt), surface, paare=True)
         if rt not in reports:
             alt["outlook"] = []
-        neu = clr.vm_lists(clr.placements_view(dc, surface, rt, stored), surface)
+        neu = clr.vm_lists(clr.placements_view(dc, surface, rt, stored), surface, paare=True)
 
-        kid = partial(clr.katalog_id, surface)
+        def kid(zeile):
+            return zeile[0]
         ctx = {"grund": set(clr.grundauswahl(dc, surface, rt).ids),
                "neu_email": {kid(m) for m, _f in neu["email"]}}
         for stelle in neu:
             sperr_stelle = "sms" if stelle == "premium_sms" else stelle
-            a = [(m, f) for m, f in alt[stelle] if not stellen_sperre(kid(m), sperr_stelle, surface)]
-            out += [OutputChange(GESPERRTE_STELLE_ENTFAELLT, stelle, m, rt)
-                    for m, _f in alt[stelle] if stellen_sperre(kid(m), sperr_stelle, surface)]
+
+            def entfaellt(m, _s=sperr_stelle):
+                grund = stellen_sperre(kid(m), _s, surface)
+                return bool(grund) and not bleibt_in_ausgabe(grund)
+
+            a = [(m, f) for m, f in alt[stelle] if not entfaellt(m)]
+            out += [OutputChange(GESPERRTE_STELLE_ENTFAELLT, stelle, kid(m), rt)
+                    for m, _f in alt[stelle] if entfaellt(m)]
             out += _stelle_changes(surface, stelle, rt, a, neu[stelle], ctx, kid)
             out += _regel_changes(surface, stelle, rt, a, neu[stelle], kid)
     return tuple(dict.fromkeys(out))

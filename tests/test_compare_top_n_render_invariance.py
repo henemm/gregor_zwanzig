@@ -177,7 +177,7 @@ def _render_from_options(result: ComparisonResult, preset: dict) -> tuple[str, s
     opts = resolve_compare_render_options(preset)
     return render_compare_email(
         result,
-        enabled_metrics=opts.enabled_metrics,
+        enabled_metrics=opts.enabled_metrics_by_channel["email"],
         hourly_metrics=opts.hourly_metrics,
         hourly_enabled=opts.hourly_enabled,
         preset_name=preset.get("name"),

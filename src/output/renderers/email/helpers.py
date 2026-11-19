@@ -1317,6 +1317,64 @@ def telegram_metric_configs(rows, dc: UnifiedWeatherDisplayConfig) -> list:
     return out
 
 
+def mit_zeilen_format(mc, fmt):
+    """Issue #3122: Format einer View-Model-Zeile -> ``MetricConfig``-Felder
+    (Umkehr ``channel_list_resolver._trip_format``). ``None`` = Katalog-
+    Standard; ``raw`` = Roh; sonst ``format_mode=<format>`` mit
+    ``use_friendly_format=True`` (daran haengt der HTML-Ampelpunkt, #814).
+    Kennt der Katalog fuer die Metrik keinen Modus dieses Namens (Bewoelkung:
+    Symbol, Windrichtung: Kompass), ist "Einfach" ihr Katalog-Standard."""
+    import dataclasses
+
+    if fmt == "raw":
+        return dataclasses.replace(mc, format_mode="raw", use_friendly_format=False)
+    try:
+        bekannt = fmt in get_metric(mc.metric_id).format_modes
+    except KeyError:
+        bekannt = False
+    return dataclasses.replace(
+        mc, format_mode=fmt if fmt is not None and bekannt else None, use_friendly_format=True,
+    )
+
+
+def channel_metric_configs(rows, dc: UnifiedWeatherDisplayConfig) -> list:
+    """Issue #3122 (ADR-0124): Zeilen des View-Models (E-Mail, Alarm) ->
+    ``MetricConfig`` -- Auswahl, Folge und Roh/Einfach allein aus den Zeilen.
+
+    Bisheriger Pfad: die Zeile traegt den Eintrag, den die Kaskade geliefert
+    hat (``ChannelRow.source``); er geht unveraendert durch -- EINE Quelle,
+    keine Nachbildung der Kaskaden-Regeln, die Ausgabe bleibt bytegleich (auch
+    ``horizons``, Rueckfall auf die Grundauswahl). Abo mit Tabelle
+    ``placements`` (Zeile ohne Herkunft): Eintrag der Grundauswahl (sonst
+    neu) mit dem Format der Zeile, ``order`` = Folge."""
+    import dataclasses
+
+    from app.models import MetricConfig
+
+    grund: dict = {}
+    for mc in dc.metrics:
+        grund.setdefault(mc.metric_id, mc)
+    out = []
+    for i, row in enumerate(r for r in (rows or ()) if r.enabled):
+        if row.source is not None:
+            out.append(dataclasses.replace(row.source, enabled=True))
+            continue
+        basis = grund.get(row.metric_id) or MetricConfig(metric_id=row.metric_id)
+        out.append(dataclasses.replace(mit_zeilen_format(basis, row.format), enabled=True, order=i))
+    return out
+
+
+def outlook_auswahl(rows) -> tuple:
+    """Issue #3122: Ausblick-Zeilen des View-Models -> (Kennungen,
+    ``{Kennung: Einfach?}``). ``None`` (nur bisheriger Pfad) = Renderer-
+    Vorgabemenge; ``()`` -> ``[]`` = Block entfaellt in jeder Ausgabe."""
+    if rows is None:
+        return None, None
+    an = [r for r in rows if r.enabled]
+    formate = {r.metric_id: r.format == "simplified" for r in an if r.format is not None}
+    return [r.metric_id for r in an], formate or None
+
+
 def build_format_modes(dc: UnifiedWeatherDisplayConfig) -> dict[str, str]:
     """Issue #435: col_key -> effective format_mode mapping for the renderer.
 

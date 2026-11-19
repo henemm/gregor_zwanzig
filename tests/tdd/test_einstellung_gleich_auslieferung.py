@@ -567,14 +567,18 @@ def test_ac9_m4_formatter_liest_globale_liste_wird_bei_uv_index_rot(monkeypatch)
     """AC-9 M4: der Formatter liest ``dc.metrics`` (die globale Liste)
     statt des Kanal-Layouts -- sichtbar an P3 (``uv_index``: global aktiv,
     in KEINEM Kanal-Layout aktiv)."""
-    from app.models import UnifiedWeatherDisplayConfig as DC
+    import services.channel_list_resolver as clr
 
     rot_basis = _rot_fuer_golden_b(monkeypatch)
 
-    def immer_global(self, channel, report_type):
-        return self.get_metrics_for_report_type(report_type)
+    def immer_global(dc, channel, report_type):
+        return dc.get_metrics_for_report_type(report_type)
 
-    monkeypatch.setattr(DC, "get_metrics_for_channel", immer_global, raising=True)
+    # #3122: der Formatter liest Auswahl und Folge aus dem View-Model
+    # (``resolve_channel_lists``), nicht mehr ueber ``get_metrics_for_channel``;
+    # die Kanal-Kaskade beider Wege ist ``trip_channel_metrics`` -- die
+    # Mutation "liest die globale Liste" trifft deshalb diese eine Stelle.
+    monkeypatch.setattr(clr, "trip_channel_metrics", immer_global, raising=True)
     rot_mutiert = _rot_fuer_golden_b(monkeypatch)
 
     diff = rot_mutiert - rot_basis

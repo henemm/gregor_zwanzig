@@ -1,0 +1,577 @@
+{
+ "blocks": {
+  "hourly": true,
+  "outlook": {
+   "evening": false,
+   "morning": true
+  },
+  "telegram_style": "rich"
+ },
+ "columns": [
+  {
+   "block_off": false,
+   "rests": null,
+   "stelle": "email",
+   "subtitle": "uebersicht"
+  },
+  {
+   "block_off": false,
+   "rests": null,
+   "stelle": "telegram",
+   "subtitle": "nachricht"
+  },
+  {
+   "block_off": false,
+   "rests": null,
+   "stelle": "sms",
+   "subtitle": "und_premium_sms"
+  },
+  {
+   "block_off": false,
+   "rests": null,
+   "stelle": "hourly",
+   "subtitle": "nur_email"
+  },
+  {
+   "block_off": false,
+   "rests": null,
+   "stelle": "outlook",
+   "subtitle": "email_und_telegram"
+  }
+ ],
+ "example_version": 1,
+ "fixed_rows": [
+  {
+   "id": "amtliche_warnungen",
+   "position": {
+    "email": "first",
+    "sms": "last",
+    "telegram": "first"
+   }
+  }
+ ],
+ "kind": "vergleich",
+ "lang": "de",
+ "legend": {
+  "fixed": [
+   {
+    "key": "zeit_ab_gelb",
+    "token": "@14"
+   },
+   {
+    "key": "amtliche_warnung",
+    "token": "!TS:H@14"
+   },
+   {
+    "key": "stufe_gelb",
+    "token": "L"
+   },
+   {
+    "key": "stufe_orange",
+    "token": "M"
+   },
+   {
+    "key": "stufe_rot",
+    "token": "H"
+   },
+   {
+    "key": "warnung_wind",
+    "token": "WG"
+   },
+   {
+    "key": "warnung_starkregen",
+    "token": "RA"
+   },
+   {
+    "key": "lawinenstufe",
+    "token": "AV4"
+   },
+   {
+    "key": "warnquelle_nicht_erreichbar",
+    "token": "X?"
+   }
+  ],
+  "metrics": [
+   {
+    "kuerzel": "G",
+    "meaning": "Böen",
+    "metric_id": "gust"
+   },
+   {
+    "kuerzel": "FL",
+    "meaning": "L gefühlt",
+    "metric_id": "wind_chill"
+   },
+   {
+    "kuerzel": "CT",
+    "meaning": "Bewölkung gesamt",
+    "metric_id": "cloud_total"
+   },
+   {
+    "kuerzel": "R",
+    "meaning": "Regen mm",
+    "metric_id": "precipitation"
+   },
+   {
+    "kuerzel": "W",
+    "meaning": "Wind km/h",
+    "metric_id": "wind"
+   },
+   {
+    "kuerzel": "PR",
+    "meaning": "Regenwahrscheinlichkeit %",
+    "metric_id": "rain_probability"
+   },
+   {
+    "kuerzel": "SU",
+    "meaning": "Sonnenstunden",
+    "metric_id": "sunshine"
+   }
+  ]
+ },
+ "location_count": 3,
+ "outlook_reports": [
+  "morning"
+ ],
+ "placements": {
+  "outlook_reports": [
+   "morning"
+  ],
+  "rows": [
+   {
+    "formats": {
+     "telegram": "simplified"
+    },
+    "metric_id": "gust"
+   },
+   {
+    "metric_id": "temperature",
+    "places": {
+     "sms": false
+    }
+   },
+   {
+    "metric_id": "wind_chill"
+   },
+   {
+    "formats": {
+     "email": "simplified"
+    },
+    "metric_id": "cloud_total",
+    "places": {
+     "telegram": false
+    }
+   },
+   {
+    "metric_id": "precipitation"
+   },
+   {
+    "metric_id": "wind",
+    "places": {
+     "email": false
+    }
+   }
+  ],
+  "version": 1
+ },
+ "rows": [
+  {
+   "cells": {
+    "email": {
+     "ampel": null,
+     "example": "62 km/h",
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "hourly": {
+     "ampel": null,
+     "example": "41",
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "outlook": {
+     "ampel": null,
+     "example": "84 km/h",
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "sms": {
+     "ampel": null,
+     "example": "G 62 km/h",
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "telegram": {
+     "ampel": null,
+     "example": "Böen sehr stark@16",
+     "format": "simplified",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    }
+   },
+   "metric_id": "gust",
+   "name": "Böen",
+   "parent": null,
+   "position": 0
+  },
+  {
+   "cells": {
+    "email": {
+     "ampel": null,
+     "example": "19°C / 15°C",
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "hourly": {
+     "ampel": null,
+     "example": "15°",
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "outlook": {
+     "ampel": null,
+     "example": "10/24",
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "sms": {
+     "ampel": null,
+     "example": null,
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "off"
+    },
+    "telegram": {
+     "ampel": null,
+     "example": "Temp max 19°C · Temp min 15°C",
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    }
+   },
+   "metric_id": "temperature",
+   "name": "Temperatur",
+   "parent": null,
+   "position": 1
+  },
+  {
+   "cells": {
+    "email": {
+     "ampel": null,
+     "example": "12°C",
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "hourly": {
+     "ampel": null,
+     "example": "12°",
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "outlook": {
+     "ampel": null,
+     "example": "8/22",
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "sms": {
+     "ampel": null,
+     "example": "FL 12C",
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "telegram": {
+     "ampel": null,
+     "example": "Gefühlte Temp. min 12°C",
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    }
+   },
+   "metric_id": "wind_chill",
+   "name": "Gefühlte Temperatur",
+   "parent": null,
+   "position": 2
+  },
+  {
+   "cells": {
+    "email": {
+     "ampel": null,
+     "example": "⛅",
+     "format": "simplified",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "hourly": {
+     "ampel": null,
+     "example": "⛅",
+     "format": "simplified",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "outlook": {
+     "ampel": null,
+     "example": "⛅",
+     "format": "simplified",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "sms": {
+     "ampel": null,
+     "example": "CT 70%",
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "telegram": {
+     "ampel": null,
+     "example": null,
+     "format": "simplified",
+     "mark": null,
+     "reason": null,
+     "state": "off"
+    }
+   },
+   "metric_id": "cloud_total",
+   "name": "Bewölkung",
+   "parent": null,
+   "position": 3
+  },
+  {
+   "cells": {
+    "email": {
+     "ampel": null,
+     "example": "3.4 mm",
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "hourly": {
+     "ampel": null,
+     "example": "·",
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "outlook": {
+     "ampel": null,
+     "example": "3.4 mm",
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "sms": {
+     "ampel": null,
+     "example": "R 3.4 mm",
+     "format": null,
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "telegram": {
+     "ampel": null,
+     "example": "Regen 3.4 mm",
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    }
+   },
+   "metric_id": "precipitation",
+   "name": "Niederschlag",
+   "parent": null,
+   "position": 4
+  },
+  {
+   "cells": {
+    "email": {
+     "ampel": null,
+     "example": null,
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "off"
+    },
+    "hourly": {
+     "ampel": null,
+     "example": null,
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "not_in_email"
+    },
+    "outlook": {
+     "ampel": null,
+     "example": null,
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "not_in_email"
+    },
+    "sms": {
+     "ampel": null,
+     "example": null,
+     "format": null,
+     "mark": "passt_nicht_mehr",
+     "reason": null,
+     "state": "on"
+    },
+    "telegram": {
+     "ampel": null,
+     "example": "Wind 43 km/h",
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    }
+   },
+   "metric_id": "wind",
+   "name": "Wind",
+   "parent": null,
+   "position": 5
+  },
+  {
+   "cells": {
+    "email": {
+     "ampel": null,
+     "example": "70%",
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "hourly": {
+     "ampel": null,
+     "example": "15%",
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "outlook": {
+     "ampel": null,
+     "example": "70 %",
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "sms": {
+     "ampel": null,
+     "example": null,
+     "format": null,
+     "mark": "passt_nicht_mehr",
+     "reason": null,
+     "state": "on"
+    },
+    "telegram": {
+     "ampel": null,
+     "example": "Regenwahrscheinlichkeit 70%",
+     "format": "raw",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    }
+   },
+   "metric_id": "rain_probability",
+   "name": "Regenwahrscheinlichkeit",
+   "parent": null,
+   "position": 6
+  },
+  {
+   "cells": {
+    "email": {
+     "ampel": null,
+     "example": "freundlich",
+     "format": "simplified",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "hourly": {
+     "ampel": null,
+     "example": null,
+     "format": null,
+     "mark": null,
+     "reason": "kein_stundenwert",
+     "state": "locked"
+    },
+    "outlook": {
+     "ampel": null,
+     "example": "sonnig",
+     "format": "simplified",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    },
+    "sms": {
+     "ampel": null,
+     "example": null,
+     "format": null,
+     "mark": "passt_nicht_mehr",
+     "reason": null,
+     "state": "on"
+    },
+    "telegram": {
+     "ampel": null,
+     "example": "Sonne freundlich",
+     "format": "simplified",
+     "mark": null,
+     "reason": null,
+     "state": "on"
+    }
+   },
+   "metric_id": "sunshine",
+   "name": "Sonnenstunden",
+   "parent": null,
+   "position": 7
+  }
+ ],
+ "sms_example": {
+  "length": 152,
+  "max_length": 153,
+  "overflow": {
+   "locations": 3,
+   "per_location": [
+    3,
+    3,
+    3
+   ]
+  },
+  "text": "Vergleich 14.07.: Innsbruck G 62 km/h FL 12C CT 70% R 3.4 mm +3; Lienz G 63 km/h FL 13C CT 70% R 3.4 mm +3; Kufstein G 64 km/h FL 14C CT 70% R 3.4 mm +3"
+ },
+ "stored": true
+}
