@@ -40,7 +40,9 @@ def _fuse(tokens: list[Token]) -> list[str]:
 
 
 def _draw(stage: str, tokens: list[Token]) -> str:
-    return f"{stage}: " + " ".join(_fuse(tokens))
+    # #3174: Kopf ohne Doppelpunkt (``E3 N12 ...``), wie die Orte-SMS (#3172);
+    # ohne Token steht nur das Praefix, ohne Leerzeichen am Ende.
+    return " ".join([stage, *_fuse(tokens)])
 
 
 def _drop_last_list_row(tokens: list[Token]) -> bool:

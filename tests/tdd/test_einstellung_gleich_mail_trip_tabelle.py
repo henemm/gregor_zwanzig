@@ -153,8 +153,8 @@ def sms_text(mit, kanal: str = "sms") -> str:
 
 
 def sms_kuerzel(text: str) -> list[str]:
-    """Kuerzel der Metrik-Tokens in Folge (``E1: D15/15 W- R2.0@4`` -> D, W, R)."""
-    rumpf = text.split(":", 1)[1] if ":" in text else text
+    """Kuerzel der Metrik-Tokens in Folge (``E1 D15/15 W- R2.0@4`` -> D, W, R)."""
+    rumpf = text.split(" ", 1)[1] if " " in text else ""  # #3174: Praefix ohne ':'
     out = []
     for token in rumpf.split():
         m = re.match(r"([A-Z]+)", token)

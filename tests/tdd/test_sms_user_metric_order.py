@@ -138,7 +138,7 @@ _VALUE_GRAMMAR = re.compile(
 def _token_index(sms: str, symbol: str) -> int:
     """Index des Tokens mit exakt diesem Symbol (fullmatch auf Symbol+Wert,
     schliesst Praefix-Verwechslungen strukturell aus, Muster F.sms_token_value)."""
-    body = sms.split(": ", 1)[1] if ": " in sms else sms
+    body = sms.split(" ", 1)[1] if " " in sms else ""  # #3174: Praefix ohne ':'
     pattern = re.compile(rf"{re.escape(symbol)}(?:{_VALUE_GRAMMAR.pattern})")
     for i, tok in enumerate(body.split(" ")):
         if pattern.fullmatch(tok):
@@ -166,7 +166,7 @@ def _exact_token_index(sms: str, literal: str) -> int:
     """Index eines Tokens, der EXAKT dem literalen String entspricht (fuer
     wertlose System-Marker wie 'W?', deren Symbol bereits den vollen Text
     traegt)."""
-    body = sms.split(": ", 1)[1] if ": " in sms else sms
+    body = sms.split(" ", 1)[1] if " " in sms else ""  # #3174: Praefix ohne ':'
     for i, tok in enumerate(body.split(" ")):
         if tok == literal:
             return i
@@ -219,7 +219,7 @@ def test_ac2_default_order_byte_identical_without_sms_layout():
     # „allgemein" -- die Einsatzwerte W12/G22/R0.5 liegen darunter, erste
     # Stunde ab Gelb ist die Spitze (frueher G22@4(70@10) W12@4(45@10)
     # R0.5@5(8.4@11)). Gepruefte Zusicherung (Reihenfolge G,W,R) unveraendert.
-    expected = "E7: G70@10 W45@10 R8.4@11"
+    expected = "E7 G70@10 W45@10 R8.4@11"
     assert _render_sms(dc, "evening") == expected, (
         "AC-13/B9-Fix: Abend-SMS muss bei Kaskadenquelle 'global' jetzt der "
         "globalen Editor-Reihenfolge (G,W,R) folgen, nicht mehr der alten "
@@ -284,7 +284,7 @@ def test_ac4_vigilance_block_stays_behind_forecast_and_fused():
         MetricSpec(symbol="TH:", enabled=True, position=0),  # type: ignore[call-arg]
     ]
     line = build_token_line(forecast, specs, report_type="evening", stage_name="E7", ampel=AMPEL_ALLGEMEIN)
-    body = line.render(160).split(": ", 1)[1]
+    body = line.render(160).split(" ", 1)[1]  # #3174: Praefix ohne ':'
 
     i_th_forecast = body.index("TH:M@11")
     # Issue #2792 S1c-4b (E1): 25 km/h liegt unter Gelb „allgemein" -> „W-".

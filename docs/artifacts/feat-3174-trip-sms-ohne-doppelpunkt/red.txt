@@ -1,0 +1,299 @@
+FFFFFFFFFFFFFFFFF........F                                               [100%]
+=================================== FAILURES ===================================
+____________ test_ac1_trip_sms_beginnt_mit_praefix_ohne_doppelpunkt ____________
+>       assert sms.startswith(f"{F.STAGE_NAME} "), sms
+E       AssertionError: E7: D13/27 W45@10
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x7fcbbee0feb0>('E7 ')
+E        +    where <built-in method startswith of str object at 0x7fcbbee0feb0> = 'E7: D13/27 W45@10'.startswith
+tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py:46: AssertionError
+_________________ test_ac1_etappe_n_wird_e_n_ohne_doppelpunkt __________________
+>       assert sms.startswith("E3 "), sms
+E       AssertionError: E3: N9 D13/27 FN7 FD10/20 R8.4@11 PR40%@5(95%@11) W45@10 G70@10 TH:M@11 TH+:- HU- CT50@4 SU8
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x7fcbbed4cd20>('E3 ')
+E        +    where <built-in method startswith of str object at 0x7fcbbed4cd20> = 'E3: N9 D13/27 FN7 FD10/20 R8.4@11 PR40%@5(95%@11) W45@10 G70@10 TH:M@11 TH+:- HU- CT50@4 SU8'.startswith
+tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py:55: AssertionError
+_ test_ac3_name_mit_km_bereich_und_freier_name[GR221 Mallorca km0-11-GR221 km0-11 ] _
+name = 'GR221 Mallorca km0-11', kopf = 'GR221 km0-11 '
+>       assert sms.startswith(kopf), sms
+E       AssertionError: GR221 Mall: N9 D13/27 FN7 FD10/20 R8.4@11 PR40%@5(95%@11) W45@10 G70@10 TH:M@11 TH+:- HU- CT50@4 SU8
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x7fcbbed4cc00>('GR221 km0-11 ')
+E        +    where <built-in method startswith of str object at 0x7fcbbed4cc00> = 'GR221 Mall: N9 D13/27 FN7 FD10/20 R8.4@11 PR40%@5(95%@11) W45@10 G70@10 TH:M@11 TH+:- HU- CT50@4 SU8'.startswith
+tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py:66: AssertionError
+________ test_ac3_name_mit_km_bereich_und_freier_name[Ballone-Ballone ] ________
+name = 'Ballone', kopf = 'Ballone '
+>       assert sms.startswith(kopf), sms
+E       AssertionError: Ballone: N9 D13/27 FN7 FD10/20 R8.4@11 PR40%@5(95%@11) W45@10 G70@10 TH:M@11 TH+:- HU- CT50@4 SU8
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x7fcbbed4ce40>('Ballone ')
+E        +    where <built-in method startswith of str object at 0x7fcbbed4ce40> = 'Ballone: N9 D13/27 FN7 FD10/20 R8.4@11 PR40%@5(95%@11) W45@10 G70@10 TH:M@11 TH+:- HU- CT50@4 SU8'.startswith
+tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py:66: AssertionError
+_______ test_ac3_name_mit_km_bereich_und_freier_name[Ballone:-Ballone ] ________
+name = 'Ballone:', kopf = 'Ballone '
+>       assert sms.startswith(kopf), sms
+E       AssertionError: Ballone: N9 D13/27 FN7 FD10/20 R8.4@11 PR40%@5(95%@11) W45@10 G70@10 TH:M@11 TH+:- HU- CT50@4 SU8
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x7fcbbed4cf60>('Ballone ')
+E        +    where <built-in method startswith of str object at 0x7fcbbed4cf60> = 'Ballone: N9 D13/27 FN7 FD10/20 R8.4@11 PR40%@5(95%@11) W45@10 G70@10 TH:M@11 TH+:- HU- CT50@4 SU8'.startswith
+tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py:66: AssertionError
+______________ test_ac4_gespartes_zeichen_steht_fuer_werte_bereit ______________
+>       assert len(text) == 160, (len(text), text)
+E       AssertionError: (158, 'E3: W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123')
+E       assert 158 == 160
+E        +  where 158 = len('E3: W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123 W123')
+tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py:80: AssertionError
+________________ test_ac4_zeile_ohne_token_ist_nur_das_praefix _________________
+>       assert render_line(zeile, 160) == "E3"
+E       AssertionError: assert 'E3: ' == 'E3'
+E         
+E         - E3
+E         + E3:
+tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py:88: AssertionError
+____________________ test_ac6_kuerzel_doppelpunkte_bleiben _____________________
+>       assert worte[0] == F.STAGE_NAME, sms
+E       AssertionError: E7: TH:M@11 TH+:- WD:-
+E       assert 'E7:' == 'E7'
+E         
+E         - E7
+E         + E7:
+E         ?   +
+tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py:96: AssertionError
+_________ test_ac5_karte_ordnet_werte_trotz_tokenartigem_etappennamen __________
+client = <starlette.testclient.TestClient object at 0x7fcbbebdb380>
+>       assert versand.startswith("W99 "), versand
+E       AssertionError: W99: W30@10(41@15) G32@6(59@15) PR70%@13 R1.0@15 TH:L@14(M@15) TH+:- CT:BKN@15 VS- FZ3300@4 UV3@9(7@13) HU- DP9@15 HP1014 CL:SCT@15 CM:SCT@15 CH:FEW@4 PT:R
+E       assert False
+E        +  where False = <built-in method startswith of str object at 0x7fcba8761fe0>('W99 ')
+E        +    where <built-in method startswith of str object at 0x7fcba8761fe0> = 'W99: W30@10(41@15) G32@6(59@15) PR70%@13 R1.0@15 TH:L@14(M@15) TH+:- CT:BKN@15 VS- FZ3300@4 UV3@9(7@13) HU- DP9@15 HP1014 CL:SCT@15 CM:SCT@15 CH:FEW@4 PT:R'.startswith
+tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py:126: AssertionError
+_ test_ac1_versand_bleibt_byte_gleich[morning-aufbau3128-trip-a-langform-ruhig] _
+env = {'mitschrift': Kanalmitschrift({'email': [{'empfaenger': 'aufbau3128-nutzer-a@example.invalid', 'subject': '[Hoehenweg...ng_aufbau._Beobachtung object at 0x7fcbc10ee510>, 'data_root': PosixPath('/tmp/pytest-of-root/pytest-2755/data_root9')}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fcbbea69810>
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-2755/test_ac1_versand_bleibt_byte_g0')
+report_type = 'morning', trip_id = 'aufbau3128-trip-a', stil = 'langform'
+wetter = 'ruhig'
+>       _golden_pruefen(fall, ist, "AC-1")
+tests/tdd/test_trip_briefing_aufbau.py:416: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+fall = 'versand_morning_langform'
+ist = {'subject': '[Hoehenweg Nord] Etappe 2: Kamm 1 — Morgen', 'email_html': '<!DOCTYPE html>\n<html>\n<head>\n    <meta ch...teo (fixture)\nEtappen-Briefing · Vollversion · openmeteo', 'sms': 'E2: TF- W- G30@14 R- CT:SCT@14 VS- SU16 SD45', ...}
+ac = 'AC-1'
+>           assert wert.encode("utf-8") == soll.encode("utf-8"), (
+E           AssertionError: AC-1: versand_morning_langform/sms weicht vom Stand vor dem Umbau ab (versand_morning_langform.sms.txt)
+E           assert b'E2: TF- W- ...VS- SU16 SD45' == b'E2 TF- W- G...VS- SU16 SD45'
+E             
+E             At index 2 diff: b':' != b' '
+E             Use -v to get more diff
+tests/tdd/test_trip_briefing_aufbau.py:352: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-29T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+_ test_ac1_versand_bleibt_byte_gleich[evening-aufbau3128-trip-a-langform-ruhig] _
+env = {'mitschrift': Kanalmitschrift({'email': [{'empfaenger': 'aufbau3128-nutzer-a@example.invalid', 'subject': '[Hoehenweg...g_aufbau._Beobachtung object at 0x7fcba021fd90>, 'data_root': PosixPath('/tmp/pytest-of-root/pytest-2755/data_root10')}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fcbc0f4b490>
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-2755/test_ac1_versand_bleibt_byte_g1')
+report_type = 'evening', trip_id = 'aufbau3128-trip-a', stil = 'langform'
+wetter = 'ruhig'
+>       _golden_pruefen(fall, ist, "AC-1")
+tests/tdd/test_trip_briefing_aufbau.py:416: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+fall = 'versand_evening_langform'
+ist = {'subject': '[Hoehenweg Nord] Etappe 3: Kamm 2 — Abend', 'email_html': '<!DOCTYPE html>\n<html>\n<head>\n    <meta cha... (fixture)\nEtappen-Briefing · Vollversion · openmeteo', 'sms': 'E3: N2 TF- W- G30@14 R- CT:SCT@14 VS- SU16 SD45', ...}
+ac = 'AC-1'
+>           assert wert.encode("utf-8") == soll.encode("utf-8"), (
+E           AssertionError: AC-1: versand_evening_langform/sms weicht vom Stand vor dem Umbau ab (versand_evening_langform.sms.txt)
+E           assert b'E3: N2 TF- ...VS- SU16 SD45' == b'E3 N2 TF- W...VS- SU16 SD45'
+E             
+E             At index 2 diff: b':' != b' '
+E             Use -v to get more diff
+tests/tdd/test_trip_briefing_aufbau.py:352: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+_ test_ac1_versand_bleibt_byte_gleich[morning-aufbau3128-trip-a-kurz-kurzform-ruhig] _
+env = {'mitschrift': Kanalmitschrift({'email': [{'empfaenger': 'aufbau3128-nutzer-a@example.invalid', 'subject': '[Hoehenweg...g_aufbau._Beobachtung object at 0x7fcba0289590>, 'data_root': PosixPath('/tmp/pytest-of-root/pytest-2755/data_root11')}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fcbc11e4ef0>
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-2755/test_ac1_versand_bleibt_byte_g2')
+report_type = 'morning', trip_id = 'aufbau3128-trip-a-kurz', stil = 'kurzform'
+wetter = 'ruhig'
+>       _golden_pruefen(fall, ist, "AC-1")
+tests/tdd/test_trip_briefing_aufbau.py:416: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+fall = 'versand_morning_kurzform'
+ist = {'subject': '[Hoehenweg Nord] Etappe 2: Kamm 1 — Morgen', 'sms': 'E2: TF- W- G30@14 R- CT:SCT@14 VS- SU16 SD45', 'premium_sms': 'E2: TF- W- G30@14 R- CT:SCT@14 VS- SU16 SD45', 'telegram': 'E2: TF- W- G30@14 R- CT:SCT@14 VS- SU16 SD45'}
+ac = 'AC-1'
+>           assert wert.encode("utf-8") == soll.encode("utf-8"), (
+E           AssertionError: AC-1: versand_morning_kurzform/sms weicht vom Stand vor dem Umbau ab (versand_morning_kurzform.sms.txt)
+E           assert b'E2: TF- W- ...VS- SU16 SD45' == b'E2 TF- W- G...VS- SU16 SD45'
+E             
+E             At index 2 diff: b':' != b' '
+E             Use -v to get more diff
+tests/tdd/test_trip_briefing_aufbau.py:352: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-29T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+_ test_ac1_versand_bleibt_byte_gleich[evening-aufbau3128-trip-a-kurz-kurzform-ruhig] _
+env = {'mitschrift': Kanalmitschrift({'email': [{'empfaenger': 'aufbau3128-nutzer-a@example.invalid', 'subject': '[Hoehenweg...g_aufbau._Beobachtung object at 0x7fcbc115d6e0>, 'data_root': PosixPath('/tmp/pytest-of-root/pytest-2755/data_root12')}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fcbc11cf570>
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-2755/test_ac1_versand_bleibt_byte_g3')
+report_type = 'evening', trip_id = 'aufbau3128-trip-a-kurz', stil = 'kurzform'
+wetter = 'ruhig'
+>       _golden_pruefen(fall, ist, "AC-1")
+tests/tdd/test_trip_briefing_aufbau.py:416: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+fall = 'versand_evening_kurzform'
+ist = {'subject': '[Hoehenweg Nord] Etappe 3: Kamm 2 — Abend', 'sms': 'E3: N2 TF- W- G30@14 R- CT:SCT@14 VS- SU16 SD45', 'pr...sms': 'E3: N2 TF- W- G30@14 R- CT:SCT@14 VS- SU16 SD45', 'telegram': 'E3: N2 TF- W- G30@14 R- CT:SCT@14 VS- SU16 SD45'}
+ac = 'AC-1'
+>           assert wert.encode("utf-8") == soll.encode("utf-8"), (
+E           AssertionError: AC-1: versand_evening_kurzform/sms weicht vom Stand vor dem Umbau ab (versand_evening_kurzform.sms.txt)
+E           assert b'E3: N2 TF- ...VS- SU16 SD45' == b'E3 N2 TF- W...VS- SU16 SD45'
+E             
+E             At index 2 diff: b':' != b' '
+E             Use -v to get more diff
+tests/tdd/test_trip_briefing_aufbau.py:352: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+_ test_ac1_versand_bleibt_byte_gleich[morning-aufbau3128-trip-a-gewitter-langform-gewitter] _
+env = {'mitschrift': Kanalmitschrift({'email': [{'empfaenger': 'aufbau3128-nutzer-a@example.invalid', 'subject': '[Hoehenweg...g_aufbau._Beobachtung object at 0x7fcbc115ed70>, 'data_root': PosixPath('/tmp/pytest-of-root/pytest-2755/data_root13')}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fcbc11cfbd0>
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-2755/test_ac1_versand_bleibt_byte_g4')
+report_type = 'morning', trip_id = 'aufbau3128-trip-a-gewitter'
+stil = 'langform', wetter = 'gewitter'
+>       _golden_pruefen(fall, ist, "AC-1")
+tests/tdd/test_trip_briefing_aufbau.py:416: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+fall = 'versand_morning_langform_gewitter'
+ist = {'subject': '[Hoehenweg Nord] Etappe 2: Kamm 1 — Morgen', 'email_html': '<!DOCTYPE html>\n<html>\n<head>\n    <meta ch...Vollversion · openmeteo', 'sms': 'E2: TF- W50@11 G75@11 R2.5@11(3.0@16) TH:M@11 TH+:M@11 CT:SCT@15 VS- SU16 SD45', ...}
+ac = 'AC-1'
+>           assert wert.encode("utf-8") == soll.encode("utf-8"), (
+E           AssertionError: AC-1: versand_morning_langform_gewitter/sms weicht vom Stand vor dem Umbau ab (versand_morning_langform_gewitter.sms.txt)
+E           assert b'E2: TF- W50...VS- SU16 SD45' == b'E2 TF- W50@...VS- SU16 SD45'
+E             
+E             At index 2 diff: b':' != b' '
+E             Use -v to get more diff
+tests/tdd/test_trip_briefing_aufbau.py:352: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-29T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  radar_service:radar_service.py:1265 Radar-Fixture nicht ladbar (/tmp/pytest-of-root/pytest-2755/test_ac1_versand_bleibt_byte_g4/radar/minutely_15.json): [Errno 2] No such file or directory: '/tmp/pytest-of-root/pytest-2755/test_ac1_versand_bleibt_byte_g4/radar/minutely_15.json'
+_ test_ac1_versand_bleibt_byte_gleich[evening-aufbau3128-trip-a-gewitter-langform-gewitter] _
+env = {'mitschrift': Kanalmitschrift({'email': [{'empfaenger': 'aufbau3128-nutzer-a@example.invalid', 'subject': '[Hoehenweg...g_aufbau._Beobachtung object at 0x7fcba01bc5f0>, 'data_root': PosixPath('/tmp/pytest-of-root/pytest-2755/data_root14')}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fcbc1321f50>
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-2755/test_ac1_versand_bleibt_byte_g5')
+report_type = 'evening', trip_id = 'aufbau3128-trip-a-gewitter'
+stil = 'langform', wetter = 'gewitter'
+>       _golden_pruefen(fall, ist, "AC-1")
+tests/tdd/test_trip_briefing_aufbau.py:416: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+fall = 'versand_evening_langform_gewitter'
+ist = {'subject': '[Hoehenweg Nord] Etappe 3: Kamm 2 — Abend', 'email_html': '<!DOCTYPE html>\n<html>\n<head>\n    <meta cha...lversion · openmeteo', 'sms': 'E3: N2 TF- W50@11 G75@11 R2.5@11(3.0@16) TH:M@11 TH+:M@11 CT:SCT@15 VS- SU16 SD45', ...}
+ac = 'AC-1'
+>           assert wert.encode("utf-8") == soll.encode("utf-8"), (
+E           AssertionError: AC-1: versand_evening_langform_gewitter/sms weicht vom Stand vor dem Umbau ab (versand_evening_langform_gewitter.sms.txt)
+E           assert b'E3: N2 TF- ...VS- SU16 SD45' == b'E3 N2 TF- W...VS- SU16 SD45'
+E             
+E             At index 2 diff: b':' != b' '
+E             Use -v to get more diff
+tests/tdd/test_trip_briefing_aufbau.py:352: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+___________ test_ac2_vorschau_tupel_und_sms_bleiben_gleich[morning] ____________
+env = {'mitschrift': Kanalmitschrift({}), 'beob': <tdd.test_trip_briefing_aufbau._Beobachtung object at 0x7fcb9bfe4270>, 'data_root': PosixPath('/tmp/pytest-of-root/pytest-2755/data_root15')}
+report_type = 'morning'
+>       _golden_pruefen(f"vorschau_{report_type}", ist, "AC-2")
+tests/tdd/test_trip_briefing_aufbau.py:439: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+fall = 'vorschau_morning'
+ist = {'subject': '[Hoehenweg Nord] Etappe 2: Kamm 1 — Morgen', 'email_html': '<!DOCTYPE html>\n<html>\n<head>\n    <meta ch...teo (fixture)\nEtappen-Briefing · Vollversion · openmeteo', 'sms': 'E2: TF- W- G30@14 R- CT:SCT@14 VS- SU16 SD45', ...}
+ac = 'AC-2'
+>           assert wert.encode("utf-8") == soll.encode("utf-8"), (
+E           AssertionError: AC-2: vorschau_morning/sms weicht vom Stand vor dem Umbau ab (vorschau_morning.sms.txt)
+E           assert b'E2: TF- W- ...VS- SU16 SD45' == b'E2 TF- W- G...VS- SU16 SD45'
+E             
+E             At index 2 diff: b':' != b' '
+E             Use -v to get more diff
+tests/tdd/test_trip_briefing_aufbau.py:352: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-29T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-29T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+___________ test_ac2_vorschau_tupel_und_sms_bleiben_gleich[evening] ____________
+env = {'mitschrift': Kanalmitschrift({}), 'beob': <tdd.test_trip_briefing_aufbau._Beobachtung object at 0x7fcbc11cf350>, 'data_root': PosixPath('/tmp/pytest-of-root/pytest-2755/data_root16')}
+report_type = 'evening'
+>       _golden_pruefen(f"vorschau_{report_type}", ist, "AC-2")
+tests/tdd/test_trip_briefing_aufbau.py:439: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+fall = 'vorschau_evening'
+ist = {'subject': '[Hoehenweg Nord] Etappe 2: Kamm 1 — Abend', 'email_html': '<!DOCTYPE html>\n<html>\n<head>\n    <meta cha... (fixture)\nEtappen-Briefing · Vollversion · openmeteo', 'sms': 'E2: N2 TF- W- G30@14 R- CT:SCT@14 VS- SU16 SD45', ...}
+ac = 'AC-2'
+>           assert wert.encode("utf-8") == soll.encode("utf-8"), (
+E           AssertionError: AC-2: vorschau_evening/sms weicht vom Stand vor dem Umbau ab (vorschau_evening.sms.txt)
+E           assert b'E2: N2 TF- ...VS- SU16 SD45' == b'E2 N2 TF- W...VS- SU16 SD45'
+E             
+E             At index 2 diff: b':' != b' '
+E             Use -v to get more diff
+tests/tdd/test_trip_briefing_aufbau.py:352: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-29T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_report_scheduler:trip_report_scheduler.py:3048 Stage T2 (2026-10-30): kein Ausblick — Abruf nicht abgeschlossen (deadline)
+WARNING  trip_report_scheduler:trip_report_scheduler.py:3048 Stage T3 (2026-10-31): kein Ausblick — Abruf nicht abgeschlossen (deadline)
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-29T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_report_scheduler:trip_report_scheduler.py:3048 Stage T2 (2026-10-30): kein Ausblick — Abruf nicht abgeschlossen (deadline)
+WARNING  trip_report_scheduler:trip_report_scheduler.py:3048 Stage T3 (2026-10-31): kein Ausblick — Abruf nicht abgeschlossen (deadline)
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+env = {'mitschrift': Kanalmitschrift({}), 'beob': <tdd.test_trip_briefing_aufbau._Beobachtung object at 0x7fcb9bf587d0>, 'data_root': PosixPath('/tmp/pytest-of-root/pytest-2755/data_root25')}
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fcb9bfda620>
+>       _golden_pruefen("vorschau_ohne_nacht_morning", {"subject": betreff, "sms": sms}, "AC-8")
+tests/tdd/test_trip_briefing_aufbau.py:770: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+fall = 'vorschau_ohne_nacht_morning'
+ist = {'subject': '[Hoehenweg Nord] Etappe 2: Kamm 1 — Morgen', 'sms': 'E2: W- G30@14 R- D-5@14/2'}
+ac = 'AC-8'
+>           assert wert.encode("utf-8") == soll.encode("utf-8"), (
+E           AssertionError: AC-8: vorschau_ohne_nacht_morning/sms weicht vom Stand vor dem Umbau ab (vorschau_ohne_nacht_morning.sms.txt)
+E           assert b'E2: W- G30@14 R- D-5@14/2' == b'E2 W- G30@14 R- D-5@14/2'
+E             
+E             At index 2 diff: b':' != b' '
+E             Use -v to get more diff
+tests/tdd/test_trip_briefing_aufbau.py:352: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-29T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-30T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+WARNING  trip_segments:trip_segments.py:391 Ziel-Segment: Ankunft 2026-10-31T19:51:00+00:00 laesst bis zum Tagesfenster-Ende (bis einschliesslich 19:00 Ortszeit) weniger als eine Stunde — minimales Fenster von 1 h wird verwendet
+.venv/lib/python3.13/site-packages/anyio/pytest_plugin.py:14
+tests/conftest.py:128
+=========================== short test summary info ============================
+FAILED tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py::test_ac1_trip_sms_beginnt_mit_praefix_ohne_doppelpunkt
+FAILED tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py::test_ac1_etappe_n_wird_e_n_ohne_doppelpunkt
+FAILED tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py::test_ac3_name_mit_km_bereich_und_freier_name[GR221 Mallorca km0-11-GR221 km0-11 ]
+FAILED tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py::test_ac3_name_mit_km_bereich_und_freier_name[Ballone-Ballone ]
+FAILED tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py::test_ac3_name_mit_km_bereich_und_freier_name[Ballone:-Ballone ]
+FAILED tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py::test_ac4_gespartes_zeichen_steht_fuer_werte_bereit
+FAILED tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py::test_ac4_zeile_ohne_token_ist_nur_das_praefix
+FAILED tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py::test_ac6_kuerzel_doppelpunkte_bleiben
+FAILED tests/tdd/test_3174_trip_sms_ohne_doppelpunkt.py::test_ac5_karte_ordnet_werte_trotz_tokenartigem_etappennamen
+FAILED tests/tdd/test_trip_briefing_aufbau.py::test_ac1_versand_bleibt_byte_gleich[morning-aufbau3128-trip-a-langform-ruhig]
+FAILED tests/tdd/test_trip_briefing_aufbau.py::test_ac1_versand_bleibt_byte_gleich[evening-aufbau3128-trip-a-langform-ruhig]
+FAILED tests/tdd/test_trip_briefing_aufbau.py::test_ac1_versand_bleibt_byte_gleich[morning-aufbau3128-trip-a-kurz-kurzform-ruhig]
+FAILED tests/tdd/test_trip_briefing_aufbau.py::test_ac1_versand_bleibt_byte_gleich[evening-aufbau3128-trip-a-kurz-kurzform-ruhig]
+FAILED tests/tdd/test_trip_briefing_aufbau.py::test_ac1_versand_bleibt_byte_gleich[morning-aufbau3128-trip-a-gewitter-langform-gewitter]
+FAILED tests/tdd/test_trip_briefing_aufbau.py::test_ac1_versand_bleibt_byte_gleich[evening-aufbau3128-trip-a-gewitter-langform-gewitter]
+FAILED tests/tdd/test_trip_briefing_aufbau.py::test_ac2_vorschau_tupel_und_sms_bleiben_gleich[morning]
+FAILED tests/tdd/test_trip_briefing_aufbau.py::test_ac2_vorschau_tupel_und_sms_bleiben_gleich[evening]

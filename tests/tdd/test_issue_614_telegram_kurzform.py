@@ -200,7 +200,7 @@ def test_ac3_disabled_no_kurzform_block():
 # ---------------------------------------------------------------------------
 
 def test_ac4_sms_format_unchanged():
-    """GIVEN denselben Trip WHEN SMS gerendert THEN beginnt mit '{Stage}: ' und
+    """GIVEN denselben Trip WHEN SMS gerendert THEN beginnt mit '{Stage} ' (#3174) und
     nutzt das bestehende N/D/W/G-Token-Schema (sms_format.md v2.0)."""
     from src.output.renderers.sms_trip import SMSTripFormatter
 
@@ -211,7 +211,7 @@ def test_ac4_sms_format_unchanged():
         tz=ZoneInfo("Europe/Berlin"),
         max_length=160, ampel=AMPEL_ALLGEMEIN,
     )
-    assert sms.startswith("KHW403: ")
+    assert sms.startswith("KHW403 ") and not sms.startswith("KHW403:")
     assert len(sms) <= 160
     # bestehendes Schema: Tag-Max-Temp-Token 'D' + Wind 'W'
     assert " D" in sms and " W" in sms

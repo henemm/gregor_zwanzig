@@ -393,7 +393,7 @@ def _first_index_starting_with(sms: str, symbol: str) -> int | None:
     """Index des ersten Tokens, der mit ``symbol`` beginnt und danach nur aus
     Wert-Grammatik-Zeichen besteht (Praefix-Kollisionen sind fuer die hier
     verwendeten Partner-Paare ausgeschlossen, s. ``_partner_of``)."""
-    body = sms.split(": ", 1)[1] if ": " in sms else sms
+    body = sms.split(" ", 1)[1] if " " in sms else ""  # #3174: Praefix ohne ':'
     for i, tok in enumerate(body.split(" ")):
         if tok.startswith(symbol) and _GRAMMAR_SUFFIX.fullmatch(tok[len(symbol):]):
             return i

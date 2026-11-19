@@ -42,7 +42,7 @@ def test_f1_altbestand_leer_sms_folgt_register_wie_editor_gespeichert(monkeypatc
                    for i, m in enumerate(_REGISTER)]
     gespeichert.append({"metric_id": "temperature_night", "enabled": False})
     #: von Hand: Folge der SMS-Token
-    soll = "E1: W- G45@4 R2.0@4 TH:M@4 TH+:- FZ2500@4 VS- D15/15"
+    soll = "E1 W- G45@4 R2.0@4 TH:M@4 TH+:- FZ2500@4 VS- D15/15"
     uids = set()
     for _ in range(2):
         uid, sms, premium = _sms_trip(monkeypatch, [])
@@ -93,7 +93,7 @@ def _alle_kanaele(monkeypatch, metrics: list) -> dict:
         "telegram_tabelle": tab,
         "kompakt_ausblick": [f.split()[0] for f in kompakt.split("  ")[1:]],
         "sms": [re.match(r"[A-Z]+\+?:?", t).group(0) for t in
-                ms.sendungen("sms")[0]["body"].split(": ", 1)[1].split()],
+                ms.sendungen("sms")[0]["body"].split()[1:]],  # #3174: Praefix ohne ':'
         "premium_sms": ms.sendungen("premium_sms")[0]["body"],
         "sms_roh": ms.sendungen("sms")[0]["body"],
     }
@@ -174,10 +174,10 @@ def _lange_warnzeile(max_len: int) -> str:
 
 @pytest.mark.parametrize("max_len, soll", [
     # von Hand: Liste weg, dann Brandzonen (Prio 3) vor Vigilance (10), Warnung (11) zuletzt
-    (160, "E1: VR:M@14VT:H@17 !TS:H@14 WI:M@10 MAX300,301,302,303,304,305,306,307,308,"
+    (160, "E1 VR:M@14VT:H@17 !TS:H@14 WI:M@10 MAX300,301,302,303,304,305,306,307,308,"
           "309,310,311 M:0,1,2,3,4,5,6,7,8,9"),
-    (40, "E1: VR:M@14VT:H@17 !TS:H@14 WI:M@10"),
-    (25, "E1: !TS:H@14 WI:M@10"),
+    (40, "E1 VR:M@14VT:H@17 !TS:H@14 WI:M@10"),
+    (25, "E1 !TS:H@14 WI:M@10"),
 ])
 def test_t3_kuerzung_warnung_faellt_zuletzt(max_len, soll):
     """M19 (AC-23): beim Kuerzen fallen die amtlichen Bausteine in aufsteigender

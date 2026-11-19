@@ -277,12 +277,12 @@ POSITIONAL_ORDER = ["N", "D", "R", "PR", "W", "G", "TH:", "TH+:"]
 
 
 def _strip_stage_prefix(rendered: str, stage_name: str) -> str:
-    """Return the part after '{stage_name}: '."""
-    prefix = f"{stage_name}:"
-    assert rendered.startswith(prefix), (
+    """Return the part after '{stage_name} ' (#3174: kein Doppelpunkt)."""
+    prefix = f"{stage_name} "
+    assert rendered.startswith(prefix) and not rendered.startswith(f"{stage_name}:"), (
         f"Render must start with {prefix!r}; got {rendered!r}"
     )
-    return rendered[len(prefix):].lstrip(" ")
+    return rendered[len(prefix):]
 
 
 def _assert_positional_order_v2(body: str, rendered: str) -> None:

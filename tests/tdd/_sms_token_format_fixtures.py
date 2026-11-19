@@ -212,8 +212,8 @@ def sms(*metric_ids: str,
 
 
 def body(sms_text: str) -> str:
-    """SMS ohne Etappen-Praefix ('E7: ' -> Rest)."""
-    return sms_text.split(": ", 1)[1] if ": " in sms_text else sms_text
+    """SMS ohne Etappen-Praefix ('E7 ' -> Rest; #3174: kein Doppelpunkt)."""
+    return sms_text.split(" ", 1)[1] if " " in sms_text else ""
 
 
 def tokens(sms_text: str) -> list[str]:

@@ -278,7 +278,7 @@ def _warnungen_heute() -> list:
 def _teile(text: str) -> tuple[list[str], str]:
     """(Metrik-Tokens, Warnblock) -- der Warnblock reicht vom ersten ``!``-Token
     bis zum Textende (nur sein erstes Token traegt das ``!``)."""
-    kopf, _, rest = text.partition(": ")
+    kopf, _, rest = text.partition(" ")  # #3174: Praefix ohne ':'
     tokens = rest.split()
     start = next((i for i, t in enumerate(tokens) if t.startswith("!")), len(tokens))
     return [kopf, *tokens[:start]], " ".join(tokens[start:])

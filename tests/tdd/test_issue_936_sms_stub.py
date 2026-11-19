@@ -204,7 +204,7 @@ def test_sms_stage_name_no_parens():
 
 
 # ---------------------------------------------------------------------------
-# AC-5: km-Format korrekt (km0-11: nicht km 0 oder km-11:)
+# AC-5: km-Format korrekt (km0-11 nicht km 0 oder km-11; #3174: ohne Doppelpunkt)
 # ---------------------------------------------------------------------------
 
 @pytest.mark.live
@@ -212,7 +212,7 @@ def test_sms_km_format():
     """
     AC-5: Given Stub-text mit stage_name 'GR221 Mallorca km0-11'
     When nach km-Bereichsformat gesucht wird
-    Then enthält text 'km0-11:' (Bindestrich, kein Leerzeichen, Doppelpunkt direkt)
+    Then enthält text 'km0-11 ' (Bindestrich, kein Leerzeichen im Bereich; #3174: kein Doppelpunkt)
     """
     stub = _SMSStub().start()
     try:
@@ -223,8 +223,8 @@ def test_sms_km_format():
 
         text = stub.last_text()
         assert text is not None, "Stub hat keinen POST empfangen"
-        assert "km0-11:" in text, (
-            f"km-Format falsch — erwartet 'km0-11:' (Bindestrich+Doppelpunkt direkt). "
+        assert "km0-11 " in text and "km0-11:" not in text, (
+            f"km-Format falsch — erwartet 'km0-11 ' (Bindestrich, ohne Doppelpunkt, #3174). "
             f"Tatsächlicher Text: {text!r}"
         )
     finally:
@@ -329,7 +329,7 @@ def test_sms_morning_report_km_format():
     """
     Issue #945: Given morning-Report mit stage_name 'GR221 Mallorca km0-11'
     When SMS gesendet wird
-    Then enthält der Stub-Text 'km0-11:' (identisches km-Format wie evening).
+    Then enthält der Stub-Text 'km0-11 ' (identisches km-Format wie evening; #3174 ohne ':').
     """
     stub = _SMSStub().start()
     try:
@@ -338,12 +338,12 @@ def test_sms_morning_report_km_format():
 
         _stub_ausgang(stub.port).send("", expected)
 
-        text = stub.last_text_matching("km0-11:")
+        text = stub.last_text_matching("km0-11 ")
         assert text is not None, (
-            f"Stub hat keinen POST mit 'km0-11:' empfangen. Erwartet: {expected!r}"
+            f"Stub hat keinen POST mit 'km0-11 ' empfangen. Erwartet: {expected!r}"
         )
-        assert "km0-11:" in text, (
-            f"km-Format im morning-Report falsch — erwartet 'km0-11:'. Text: {text!r}"
+        assert "km0-11 " in text and "km0-11:" not in text, (
+            f"km-Format im morning-Report falsch — erwartet 'km0-11 '. Text: {text!r}"
         )
     finally:
         stub.stop()
