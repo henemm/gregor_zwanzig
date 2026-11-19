@@ -715,6 +715,11 @@ Aufrufstellen umgestellt (`scheduler_dispatch_service.py:439/505/509`,
 > Aufrufe der Kanal-Renderer für den Ortsvergleich stehen seit #2983 im gemeinsamen Baustein
 > `src/services/compare_briefing_aufbau.py`; Versand und Vorschau rufen ihn auf, statt jeweils
 > eigene Kopien zu führen.
+>
+> **Nachtrag 2026-11-18 (Issue #3128):** Gleiches Muster für das Trip-Briefing. Der Render-Aufruf
+> des Trip-Versands (E-Mail, SMS, Telegram) und der Vorschau läuft über
+> `src/services/trip_briefing_aufbau.py` (`trip_report_rendern`); die Zeilenangaben der Trip-Abschnitte
+> oben sind dafür historisch. Die Gewitter-Vorschau (`trip_report_scheduler.py`) bleibt unverändert.
 
 **Zuschnitt-Korrektur festhalten:** Stundenverlauf (`hourly_metrics`) und
 Ausblick (`outlook_metrics`) bleiben **global** — eigene, getrennt

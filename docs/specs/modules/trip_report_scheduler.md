@@ -366,6 +366,8 @@ Fehler bei einem Trip blockieren NICHT die anderen Trips.
 
 ## Changelog
 
+- 2026-11-18: Issue #3128 — `_briefing_bauen_und_senden` ruft für Segmente, Wetterabruf, Anreicherung und Render den Baustein `src/services/trip_briefing_aufbau.py` auf; Zwischenstopps (`no_stage`, `no_weather`, Kontingent), Phasenuhr, Anker, Marker, Logs und Test-Fallback bleiben im Scheduler. Ausgabe byte-gleich (Golden-Tests).
+
 - 2026-10-26: v1.2 - #1405 S4b: toter Code `send_reports(report_type)` geloescht (kein Produktionsaufrufer); Skizzen auf `send_due_reports(now_utc)` umgestellt; `_process_pending_markers` liefert `(delivered, failed)`, Begleit-Hinweis-Fehlschlaege als `notice_failed`
 
 - 2026-09-09: v1.1 - Nachzug #2236 (C4-44): `_get_active_trips(report_type, now_utc)` und Ein-`now_utc`-pro-Lauf in `send_reports()` seit #1724; reale Signatur von `_send_trip_report` dokumentiert

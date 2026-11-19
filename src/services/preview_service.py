@@ -8,10 +8,8 @@ ruft dann format_email() direkt auf — kein Versand, nur Render.
 """
 from __future__ import annotations
 
-import contextvars
 import json
 import logging
-from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -159,6 +157,13 @@ class PreviewService:
         stage_name und trip_tz werden von render_sms_preview wiederverwendet
         (Issue #188 / Bug #397: tz muss in die SMS-Token durchgereicht werden).
         """
+        # Issue #3128: der Aufbau (Segmente, Zeitzone, Render-Optionen, Trend
+        # nebenlaeufig #1839, Hauptabruf + Nacht, Etappe, Gewitter, Wetterlage,
+        # Render) liegt im gemeinsamen Baustein ``trip_briefing_aufbau`` --
+        # zur Laufzeit ueber das Modul aufgeloest, damit Vorschau und Versand
+        # denselben Code nutzen. Die Vorschau-Abweichungen (keine amtlichen
+        # Warnungen, has_gap False, Nachtwetter-Gate) bleiben bis #3144.
+        from services import trip_briefing_aufbau as aufbau
         from services.trip_report_scheduler import TripReportSchedulerService
         # Ohne user_id bekommt der Scheduler ``None`` statt seines
         # Signatur-Defaults "default": ``_convert_trip_to_segments`` ueberspringt
@@ -168,176 +173,30 @@ class PreviewService:
         # Issue #2036 CI-Nachschlag (PR #2055/#2058): eine Vorschau ist "kein
         # Versand, nur Render" (Modul-Docstring) -- sie darf den
         # Trip-Bestand nicht als Seiteneffekt veraendern. Das Attribut steuert
-        # ALLE Nebenpfade (Trend, Thunder-Fallback) gleichermassen -- die
-        # direkte Zeile darunter uebergibt zusaetzlich noch explizit
-        # persist=False, weil sie ohnehin schon einen Keyword-Wert traegt.
+        # ALLE Nebenpfade (Trend, Thunder-Fallback); der Segmentbau im
+        # Baustein uebergibt zusaetzlich explizit persist=False.
         scheduler.persist_backfill = False
-        segments = scheduler._convert_trip_to_segments(trip, target, persist=False)
-        if not segments:
-            # Issue #990: Zwei Ursachen unterscheiden, damit die Frontend-
-            # Erkennung aus #421 (matcht "waypoint" case-insensitive) nur beim
-            # echten Wegpunkt-Fall greift, nicht beim "Datum falsch"-Fall.
-            stage = trip.get_stage_for_date(target)
-            if stage is None:
-                raise fehler_mit_code(LookupError, "vorschau_etappe_fehlt",
-                                      datum=target.isoformat(), trip_id=trip.id)
-            raise fehler_mit_code(LookupError, "vorschau_zu_wenige_wegpunkte",
-                                  datum=target.isoformat(), trip_id=trip.id)
-
+        # Issue #483: Demo-Modus = FixtureProvider fuer Haupt- UND Nachtabruf.
+        provider = None
         if demo:
             from providers.fixture import FixtureProvider
             provider = FixtureProvider(str(_FIXTURE_DIR))
-        else:
-            provider = None
-        from utils.timezone import tz_for_coords
-        trip_tz = tz_for_coords(segments[0].start_point.lat, segments[0].start_point.lon)
-
-        # Issue #1209 (Scheibe B): EINZIGER Ableitungspfad report_config ->
-        # render-wirksame Optionen, ersetzt den Patch-Hack (F002), der
-        # trip.display_config mutiert hat.
-        from services.report_config_resolver import resolve_report_render_options
-        render_options = resolve_report_render_options(
-            trip.report_config, trip.display_config, report_type,
-        )
-
-        # Issue #1839 (Ae3): der Etappen-Trend haengt weder vom Hauptabruf noch
-        # vom Nachtwetter ab und laeuft deshalb in EIGENEM Thread gleichzeitig
-        # dazu (nicht im gemeinsamen Pool, dort liefe er bei Vollbelegung
-        # inline seriell). copy_context() bringt ContextVar-Werte (call_log-
-        # Quelle u. a.) in den Zweig. Der `with`-Block wartet beim Verlassen
-        # IMMER auf den Trend-Thread -- auch wenn der Hauptzweig wirft (kein
-        # verwaister Thread).
-        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="preview-trend") as pool:
-            trend_future = None
-            if render_options.show_multi_day_trend:
-                # Issue #1720 S1: `report_type` ist hier NICHT optional -- der
-                # Zeilenbau loest damit die Ausblick-Spalten auf. Ohne ihn baute
-                # die Vorschau die Zellen nach dem Abend-Default (Spaltenversatz
-                # bei Morgen-/Abend-Overrides, nur in der Vorschau).
-                trend_future = pool.submit(
-                    contextvars.copy_context().run,
-                    scheduler._build_stage_trend,
-                    trip, target, now_utc=now_utc, tz=trip_tz,
-                    report_type=report_type,
-                )
-            try:
-                segment_weather, night_weather = self._fetch_main_and_night(
-                    scheduler, segments, trip, target, provider, user_id,
-                )
-            except BaseException:
-                # Hauptzweig wirft: Trend abwarten, seinen Fehler nicht still
-                # verschlucken (protokollieren), Ausnahme des Hauptzweigs steigt
-                # unveraendert auf.
-                if trend_future is not None:
-                    trend_exc = trend_future.exception()
-                    if trend_exc is not None:
-                        logger.warning(
-                            "Vorschau-Trend verworfen, Hauptabruf gescheitert: %r",  # i18n-log
-                            trend_exc,
-                        )
-                raise
-            # Zusammenfuehrung: ein Trend-Fehler steigt hier auf wie frueher
-            # beim seriellen Aufruf.
-            trend_result = trend_future.result() if trend_future is not None else None
-
-        stage = trip.get_stage_for_date(target)
-        stage_name = trip.numbered_stage_label(stage) if stage else None
-        stage_stats = scheduler._compute_stage_stats(stage) if stage else None
-
-        # Fix #1297: Vorschau-Pfad war nicht Teil von ADR-0025. multi_day_trend
-        # und thunder_forecast werden hier ueber DIESELBEN Scheduler-Methoden
-        # bezogen, die auch der Versandweg nutzt (trip_report_scheduler.py:836-848)
-        # — keine lokale Nachbau-Berechnung, sonst divergiert die Vorschau
-        # strukturell (SMS immer `TH+:-`). Gate auf show_multi_day_trend identisch
-        # zum Versand.
-        # Fix #1486: identisches Entpacken wie im Versandpfad
-        # (trip_report_scheduler.py:878-887) — `.rows` bleibt der bisherige
-        # Wert, `.state`/`.horizon_days` werden zusaetzlich durchgereicht.
-        # Jede Abweichung hier liesse die Vorschau wieder divergieren (AC-6).
-        # Issue #1315: Nacht-Wetter fuer BEIDE report_types (#1313-Semantik),
-        # ueber dieselbe geteilte Funktion wie der Versand (kein Duplikat).
-        # Nur beschaffen, wenn der Trip die Sektion ueberhaupt zeigen wuerde
-        # -- has_gap bleibt bewusst False (#1331, kein Versand-Kontext hier).
-        # Adversary-Fix (F001, Issue #483): im Demo-Modus denselben
-        # FixtureProvider durchreichen wie an _fetch_weather (Z.158-163) --
-        # sonst loest die Demo-Vorschau einen echten Live-open-meteo-Call
-        # fuer das Nacht-Segment aus und verletzt den Demo-Vertrag.
-        # Issue #1484 AC-8: auch die gewaehlte Nacht-Tiefsttemperatur
-        # braucht Nachtdaten, nicht nur die Nacht-Stundentabelle — geteilte
-        # Entscheidung night_weather_needed (Paritaet zum Versand).
-        # Issue #1651: die Beschaffung steht VOR dem Bau von Trend und
-        # Vorschau-Eintrag (vorher danach) — sonst faehrt der Vorschau-Pfad
-        # den Vorschau-Satz ohne die Nacht-Reihe und divergiert vom Versand
-        # (AC-9). Reine Umstellung, kein zusaetzlicher Abruf.
-        # (Beschaffung: _fetch_main_and_night, oben vor dem Trend zusammengefuehrt.)
-        multi_day_trend = None
-        outlook_state = None
-        outlook_horizon_days = None
-        # Issue #1727 S5c: EIN von aussen uebergebenes `now_utc` speist BEIDE
-        # Scheduler-Methoden — dieselbe Zeitbasis, mit der `_resolve_target_date`
-        # (aufgerufen von den drei oeffentlichen render_*_preview-Methoden)
-        # bereits die Etappe gewaehlt hat. Die frueher hier lokal aufgeloeste
-        # zweite `datetime.now(timezone.utc)` entfaellt ersatzlos (ADR-0051
-        # Regel 3, keine Umgebungsuhr).
-        if trend_result is not None:
-            multi_day_trend = trend_result.rows
-            outlook_state = trend_result.state
-            outlook_horizon_days = trend_result.horizon_days
-        # Issue #2036 CI-Nachschlag (PR #2055/#2058): beide Bauwege bauen
-        # Segmente auch fuer zukuenftige Etappen (Trend +3 Tage, Thunder-
-        # Fallback +1/+2) -- ``scheduler.persist_backfill = False`` oben
-        # steuert BEIDE Nebenpfade, damit die Vorschau nicht in den echten
-        # Trip-Bestand schreibt.
-        thunder_forecast = scheduler._build_thunder_forecast_from_trend_or_fetch(
-            trip, target, now_utc=now_utc, tz=trip_tz,
-            multi_day_trend=multi_day_trend, night_weather=night_weather,
-        )
-
-        # Issue #474: F12 Wetterlage-Label vor format_email berechnen.
-        try:
-            from services.weather_pattern import WeatherPatternService
-            stability_result = WeatherPatternService().compute_for_trip(
-                trip, target, segment_weather
-            )
-        except Exception:
-            stability_result = None
-
-        report = self._render_email(
-            scheduler=scheduler,
-            segment_weather=segment_weather,
-            trip=trip,
-            report_type=report_type,
-            stage_name=stage_name,
-            stage_stats=stage_stats,
-            trip_tz=trip_tz,
-            stability_result=stability_result,
-            render_options=render_options,
-            thunder_forecast=thunder_forecast,
-            multi_day_trend=multi_day_trend,
-            outlook_state=outlook_state,
-            outlook_horizon_days=outlook_horizon_days,
-            night_weather=night_weather,
+        # Bug #397/F001: trip_tz (Ortszeit der Etappe) geht im Baustein als
+        # tz= in den Render und kommt hier fuer render_sms_preview zurueck.
+        report, segment_weather, stage_name, trip_tz = aufbau.trip_briefing_bauen(
+            scheduler, trip, target, report_type, now_utc=now_utc,
+            provider=provider, user_id=user_id,
         )
         return report, segment_weather, stage_name, trip_tz
 
     @staticmethod
     def _fetch_main_and_night(scheduler, segments, trip, target, provider, user_id):
-        """Hauptabruf plus Nachtwetter (Issue #1839: Hauptzweig neben dem Trend).
-
-        Reihenfolge und Aufrufe unveraendert gegenueber dem frueheren seriellen
-        Pfad: Nachtwetter wartet auf ``segment_weather[-1]``.
-        """
-        segment_weather = scheduler._fetch_weather(segments, provider=provider)
-        if not segment_weather:
-            raise fehler_mit_code(RuntimeError, "vorschau_wetter_fehlt",
-                                  trip_id=trip.id, datum=target.isoformat())
-        from services.segment_weather import fetch_night_weather, night_weather_needed
-        night_weather = None
-        if night_weather_needed(trip.display_config):
-            night_weather = fetch_night_weather(
-                segment_weather[-1], provider=provider, user_id=user_id,
-            )
-        return segment_weather, night_weather
+        """Alt-Name bleibt (Spec #3128, AC-5): delegiert an den gemeinsamen
+        Baustein ``trip_briefing_aufbau._vorschau_haupt_und_nacht``."""
+        from services import trip_briefing_aufbau as aufbau
+        return aufbau._vorschau_haupt_und_nacht(
+            scheduler, segments, trip, target, provider, user_id,
+        )
 
     def _render_email(
         self,
@@ -365,21 +224,21 @@ class PreviewService:
         Fix #1486: outlook_state/outlook_horizon_days ebenso -- die Naht muss
         JEDEN ausblick-bezogenen Parameter des Renders durchreichen koennen,
         sonst divergiert die Vorschau wieder strukturell.
+        Issue #3128: delegiert an den EINEN Render-Weg des Bausteins.
         """
-        from output.renderers.trip_report import TripReportFormatter
-        return TripReportFormatter().format_email(
-            segments=segment_weather,
-            trip_name=trip.name,
+        from services import trip_briefing_aufbau as aufbau
+        return aufbau.trip_report_rendern(
+            segment_weather=segment_weather,
             trip=trip,
             report_type=report_type,
             display_config=trip.display_config,
-            stage_name=stage_name,
-            stage_stats=stage_stats,
-            tz=trip_tz,
             profile=trip.aggregation.profile,
-            stability_result=stability_result,
             report_config=trip.report_config,
             render_options=render_options,
+            tz=trip_tz,
+            stage_name=stage_name,
+            stage_stats=stage_stats,
+            stability_result=stability_result,
             thunder_forecast=thunder_forecast,
             multi_day_trend=multi_day_trend,
             outlook_state=outlook_state,
