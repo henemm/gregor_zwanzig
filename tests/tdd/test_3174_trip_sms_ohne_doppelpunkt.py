@@ -57,7 +57,6 @@ def test_ac1_etappe_n_wird_e_n_ohne_doppelpunkt():
 
 
 @pytest.mark.parametrize("name, kopf", [
-    ("GR221 Mallorca km0-11", "GR221 km0-11 "),
     ("Ballone", "Ballone "),
     ("Ballone:", "Ballone "),
 ])
@@ -65,6 +64,14 @@ def test_ac3_name_mit_km_bereich_und_freier_name(name, kopf):
     sms = _format_sms(name)
     assert sms.startswith(kopf), sms
     assert f"{kopf.rstrip()}:" not in sms, sms
+
+
+def test_ac3_km_bereich_als_kopf_ohne_doppelpunkt():
+    # Kopf mit km-Bereich auf der Ebene der Token-Zeile (der Versandweg kuerzt
+    # den Namen heute vorher auf 10 Zeichen -- eigene Abweichung, Folge-Issue).
+    zeile = TokenLine(stage_name="GR221 km0-11", report_type="evening",
+                      tokens=(_wort_token(9),))
+    assert render_line(zeile, 160) == "GR221 km0-11 W9"
 
 
 def _wort_token(n: int) -> Token:

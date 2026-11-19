@@ -163,7 +163,7 @@ def test_trip_briefing_sms_stays_gsm7_clean_with_dense_token_line():
     sms = formatter.format_sms([_dense_segment()], **kwargs)
     full = formatter.format_sms([_dense_segment()], max_length=2000, **kwargs)
 
-    assert full.startswith("Swinica: "), (
+    assert full.startswith("Swinica "), (  # #3174: Kopf ohne Doppelpunkt
         f"Der Etappenname wurde nicht gefaltet: {full[:20]!r}. Ohne Faltung "
         "traegt die SMS das GSM-7-fremde Zeichen weiter -- der Zeichensatz-"
         "Check unten muss dann rot werden, nicht diese Zusicherung."

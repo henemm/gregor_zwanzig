@@ -158,8 +158,8 @@ def test_ac5_orakel_liest_roh_als_raw_und_einfach_als_friendly():
     (heute gruen, Guard der Orakel-Erweiterung)."""
     from tests.helpers.einstellung_auslieferung_orakel import parse_sms_artig
 
-    _, roh = parse_sms_artig("E1: CT70@4 CL40@4")
-    _, einfach = parse_sms_artig("E1: CT:SCT@4 CL:BKN@4(OVC@9)")
+    _, roh = parse_sms_artig("E1 CT70@4 CL40@4")
+    _, einfach = parse_sms_artig("E1 CT:SCT@4 CL:BKN@4(OVC@9)")
     assert roh["cloud_total"] == "raw" and roh["cloud_low"] == "raw"
     assert einfach["cloud_total"] == "friendly" and einfach["cloud_low"] == "friendly"
 
@@ -578,7 +578,8 @@ def test_ac8_vakuum_schutz_jede_produkterreichbare_groesse_hat_einen_geprueften_
 #: 55 -> 64 Zeichen.
 #: Issue #2792 S1c-4b (E1, AC-19 e): Wind 20 liegt unter Gelb der Ampel
 #: „allgemein" (30) -> ``W-`` statt ``W20@4`` (61 Zeichen).
-GOLDEN_SMS_NACH_S6 = "E1: TF-3@6 W- R2.0@4 PR60%@4 G45@4 TH:M@4 TH+:- CT:SCT@4 SU16"
+#: #3174: Kopf ohne Doppelpunkt (``E1 ``) -> 60 Zeichen.
+GOLDEN_SMS_NACH_S6 = "E1 TF-3@6 W- R2.0@4 PR60%@4 G45@4 TH:M@4 TH+:- CT:SCT@4 SU16"
 
 
 def test_ac9_golden_sms_text_und_laenge_nach_s6(monkeypatch):
@@ -588,7 +589,7 @@ def test_ac9_golden_sms_text_und_laenge_nach_s6(monkeypatch):
     64 Zeichen, in SMS, Premium-SMS und Telegram-Kurzform. HANDGESCHRIEBENE
     Soll-Werte (nicht aus dem aktuellen Output eingefroren). Die unveraenderten
     Goldens tragen ``cloud_total`` mit ``use_friendly_format: true``."""
-    assert len(GOLDEN_SMS_NACH_S6) == 61
+    assert len(GOLDEN_SMS_NACH_S6) == 60
     mit_b, _ = render_golden(monkeypatch, "golden_b")
     mit_a, _ = render_golden(monkeypatch, "golden_a")
     kurz = [s for s in mit_a.sendungen("telegram") if s["parse_mode"] is None][0]["body"]
@@ -598,7 +599,7 @@ def test_ac9_golden_sms_text_und_laenge_nach_s6(monkeypatch):
         ("telegram_kurzform", kurz),
     ):
         assert text == GOLDEN_SMS_NACH_S6, (
-            f"AC-9 ({kanal}): erwartet {GOLDEN_SMS_NACH_S6!r} (61 Zeichen), "
+            f"AC-9 ({kanal}): erwartet {GOLDEN_SMS_NACH_S6!r} (60 Zeichen), "
             f"erhalten {text!r} ({len(text)} Zeichen)"
         )
 

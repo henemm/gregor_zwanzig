@@ -219,7 +219,7 @@ class TestAC1ShowsUnknownTokenOnSegmentError:
             f"faelschliche Entwarnung.\nSMS: {sms}"
         )
         assert "TH:-" not in sms, f"Fehl-Entwarnung `TH:-` darf nicht erscheinen.\nSMS: {sms}"
-        assert sms == "E1: R? PR? W? G? TH:? TH+:-", (
+        assert sms == "E1 R? PR? W? G? TH:? TH+:-", (
             f"Erwartet, dass die verschaerfte Regel jede Entwarnung im "
             f"lueckenhaften Fenster zu `?` macht (R/PR/W/G/TH:) -- und dass "
             f"ausser den abgewaehlten Temperatur-Token nichts sonst in der "

@@ -104,7 +104,11 @@ def _sms_symbols(sms_text: str) -> set[str]:
     enthaelt selbst 'G' und 'R' und wuerde eine Symbol-Presence-Pruefung
     zufaellig gruen faerben.
     """
-    body = sms_text.split(": ", 1)[1] if ": " in sms_text else sms_text
+    # #3174: der Kopf traegt keinen Doppelpunkt mehr -- er wird woertlich
+    # abgetrennt (zwei Woerter, beide kuerzelartig: 'GR20', 'Test').
+    kopf = "GR20 Test "
+    assert sms_text.startswith(kopf), sms_text
+    body = sms_text[len(kopf):]
     out = set()
     for token in body.split():
         m = _TOKEN_SYMBOL.match(token)

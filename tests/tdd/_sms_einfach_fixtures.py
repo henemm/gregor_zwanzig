@@ -98,7 +98,7 @@ def sms_texte(monkeypatch, modi: dict | None = None, *, standard: str = "raw") -
 def token(text: str, symbol: str) -> str | None:
     """Das Token von ``symbol`` (z.B. ``CT``) im SMS-Text -- exakt, ``W`` trifft
     nie ``WD:``. ``None``, wenn das Token fehlt."""
-    rumpf = text.split(": ", 1)[1] if ": " in text else text
+    rumpf = text.split(" ", 1)[1] if " " in text else ""  # #3174: Praefix ohne ':'
     for tok in rumpf.split(" "):
         if re.match(rf"^{re.escape(symbol)}(?=[:\d\-?])", tok):
             return tok
@@ -150,7 +150,7 @@ def zeile(forecast_kwargs: dict, specs, *, max_length: int = 160) -> str:
 
 
 def tokens_von(text: str) -> list[str]:
-    return text.split(": ", 1)[1].split(" ")
+    return text.split(" ")[1:]  # #3174: Praefix ohne ':'
 
 
 def spec(symbol: str, modus: str, metric_id: str, **kw):

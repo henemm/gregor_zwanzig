@@ -143,8 +143,8 @@ def test_format_sms_v2_wire_format():
     formatter = SMSTripFormatter()
     sms = formatter.format_sms(segments, stage_name="GR20 E1", ampel=AMPEL_ALLGEMEIN)
 
-    assert sms.startswith("GR20 E1: "), (
-        f"v2.0 §2: Stage-Prefix 'GR20 E1: ' erwartet: {sms!r}"
+    assert sms.startswith("GR20 E1 ") and "GR20 E1:" not in sms, (
+        f"v2.0 §2 (#3174): Stage-Prefix 'GR20 E1 ' ohne Doppelpunkt erwartet: {sms!r}"
     )
     assert "\n" not in sms, f"v2.0 §3: keine Newlines erlaubt: {sms!r}"
     assert "|" not in sms, f"v2.0 §3: kein '|'-Trenner erlaubt: {sms!r}"

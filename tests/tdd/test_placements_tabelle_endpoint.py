@@ -195,12 +195,12 @@ def _trip_symbole(metric_id: str) -> tuple[str, ...]:
 
 def _trip_fehlt_in_sms(sms: str, metric_id: str, rumpf: str | None = None) -> bool:
     """``rumpf``: Text hinter dem (vom Test woertlich bekannten) Kopf; ohne
-    Angabe gilt der Kopf ``E<n>: `` der Standard-Etappe."""
+    Angabe gilt der Kopf ``E<n> `` der Standard-Etappe (#3174: ohne ``:``)."""
     from output.renderers.sms_trip import SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC
 
     alle = set(SMS_SYMBOL_BY_METRIC.values()) | {
         s for syms in SMS_MULTI_SYMBOLS_BY_METRIC.values() for s in syms}
-    token = (sms.split(": ", 1)[1] if rumpf is None else rumpf).split(" ")
+    token = (sms.split(" ", 1)[1] if rumpf is None else rumpf).split(" ")
 
     def _symbol(tok: str) -> str | None:
         treffer = [s for s in alle if tok.startswith(s)]
@@ -596,7 +596,7 @@ def _trip_kuerzel_in_sms(sms: str) -> set[str]:
     alle = set(SMS_SYMBOL_BY_METRIC.values()) | {
         s for syms in SMS_MULTI_SYMBOLS_BY_METRIC.values() for s in syms}
     out = set()
-    for tok in sms.split(": ", 1)[1].split(" "):
+    for tok in sms.split(" ")[1:]:  # #3174: Kopf ``E<n>`` ohne ``:``
         treffer = [s for s in alle if tok.startswith(s)]
         if treffer and not tok.startswith("!"):
             out.add(max(treffer, key=len).rstrip(":"))
@@ -675,7 +675,7 @@ def _markiert(antwort) -> set[str]:
 
 
 @pytest.mark.parametrize("etappe,kopf", [
-    ("Tag 1: SU7", "Tag 1: SU7: "), ("W: G5 R1", "W: G5 R1: "),
+    ("Tag 1: SU7", "Tag 1: SU7 "), ("W: G5 R1", "W: G5 R1 "),  # #3174: Kopf ohne ``:``
 ])
 def test_f001_etappenname_mit_trennzeichen_verfaelscht_nichts(client, etappe, kopf):
     """Der Kopf der Trip-SMS ist der Etappenname; steht darin ``: `` oder ein
@@ -743,7 +743,7 @@ def test_f004_verschmolzenes_token_steht_bei_beiden_haelften(client):
               {"metric_id": "wind"}, {"metric_id": "wind_chill_day_low"},
               {"metric_id": "temperature_day_low"}]})
     antwort = _ok(client, "t-f004", "route")
-    token = antwort["sms_example"]["text"].split(": ", 1)[1].split(" ")
+    token = antwort["sms_example"]["text"].split(" ")[1:]  # #3174: Kopf ohne ``:``
     bereich = {"D": next(t for t in token if re.fullmatch(r"D-?\d+/-?\d+", t)),
                "FD": next(t for t in token if re.fullmatch(r"FD-?\d+/-?\d+", t))}
     assert not any(re.match(r"F?L-?\d", t) for t in token), "Vorbedingung: kein eigenes L/FL-Token"

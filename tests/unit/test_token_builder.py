@@ -167,7 +167,7 @@ def test_token_order_positional_per_sms_format_v2():
 
     # Find positions of single-letter / multi-letter tokens. Strip leading
     # "{stage_name}: " prefix to look at the token sequence only.
-    body = rendered.split(":", 1)[1] if ":" in rendered else rendered
+    body = rendered.split(" ", 1)[1]  # #3174: Praefix ohne ':' (Kuerzel tragen selbst ':')
 
     # Tokens we care about (each will appear as "N12", "D24", "R0.2@..", etc.
     # or as the null form "N-", "R-", ...). Find by symbol-prefix anchored
@@ -338,7 +338,7 @@ def test_render_truncation_priority():
     # Amtliche Vigilance (VR:/VT:) bleibt stehen.
     assert "VR:M@14VT:H@17" in rendered, rendered
     # Listenanfang bleibt, Listenende (Gewitter morgen, Schnee) faellt.
-    assert rendered.startswith("Stage1: N- D12/24 "), rendered
+    assert rendered.startswith("Stage1 N- D12/24 "), rendered
     import re
     assert "TH+:" not in rendered, rendered
     assert not re.search(r"(?:(?<=\s)|^)SD\d", rendered), (
@@ -376,8 +376,8 @@ def test_stage_name_umlauts_replaced():
     """
     line = _build_default_line(stage_name="Übergangsjoch")
     rendered = line.render(160)
-    assert rendered.startswith("Uebergangs:"), (
-        f"Stage-Name nicht korrekt sanitized; expected 'Uebergangs:' prefix in {rendered!r}"
+    assert rendered.startswith("Uebergangs "), (
+        f"Stage-Name nicht korrekt sanitized; expected 'Uebergangs ' prefix in {rendered!r}"
     )
 
 
@@ -388,15 +388,15 @@ def test_stage_name_truncated_to_ten_chars():
     """
     line = _build_default_line(stage_name="VeryLongStageName")
     rendered = line.render(160)
-    assert rendered.startswith("VeryLongSt:"), (
-        f"Stage-Name nicht auf 10 Zeichen gekuerzt; expected 'VeryLongSt:' prefix in {rendered!r}"
+    assert rendered.startswith("VeryLongSt "), (
+        f"Stage-Name nicht auf 10 Zeichen gekuerzt; expected 'VeryLongSt ' prefix in {rendered!r}"
     )
 
 
 # ---------------------------------------------------------------------------
 # Issue #945: _sanitize_stage_name() edge cases (via _build_default_line).
 # _sanitize_stage_name is not exported, so we exercise it through the public
-# build path and inspect the rendered stage-name prefix (renderer adds ": ").
+# build path and inspect the rendered stage-name prefix (renderer adds " ", #3174).
 # ---------------------------------------------------------------------------
 
 
@@ -407,8 +407,8 @@ def test_stage_name_without_km():
     """
     line = _build_default_line(stage_name="Alpenpass")
     rendered = line.render(160)
-    assert rendered.startswith("Alpenpass:"), (
-        f"Name ohne km falsch behandelt; expected 'Alpenpass:' prefix in {rendered!r}"
+    assert rendered.startswith("Alpenpass "), (
+        f"Name ohne km falsch behandelt; expected 'Alpenpass ' prefix in {rendered!r}"
     )
 
 
@@ -419,8 +419,8 @@ def test_stage_name_km_at_start():
     """
     line = _build_default_line(stage_name="km0-11 Teilstueck")
     rendered = line.render(160)
-    assert rendered.startswith("km0-11:"), (
-        f"km-am-Anfang falsch behandelt; expected 'km0-11:' prefix in {rendered!r}"
+    assert rendered.startswith("km0-11 "), (
+        f"km-am-Anfang falsch behandelt; expected 'km0-11 ' prefix in {rendered!r}"
     )
 
 
@@ -431,23 +431,23 @@ def test_stage_name_multiple_km():
     """
     line = _build_default_line(stage_name="Weg km0-11 km15-20")
     rendered = line.render(160)
-    assert rendered.startswith("Weg km0-11:"), (
-        f"Mehrfach-km falsch behandelt; expected 'Weg km0-11:' prefix in {rendered!r}"
+    assert rendered.startswith("Weg km0-11 "), (
+        f"Mehrfach-km falsch behandelt; expected 'Weg km0-11 ' prefix in {rendered!r}"
     )
 
 
 def test_stage_name_km_with_colon():
     """
     'Etappe km0-11:' → rstrip(':') entfernt den Doppelpunkt am km-Token-Ende,
-    der Renderer fügt genau EINEN Doppelpunkt nach dem Stage-Namen hinzu.
+    der Renderer setzt danach nur ein Leerzeichen (#3174: kein Doppelpunkt).
     """
     line = _build_default_line(stage_name="Etappe km0-11:")
     rendered = line.render(160)
-    assert rendered.startswith("Etappe km0-11:"), (
-        f"km-mit-Doppelpunkt falsch behandelt; expected 'Etappe km0-11:' prefix in {rendered!r}"
+    assert rendered.startswith("Etappe km0-11 "), (
+        f"km-mit-Doppelpunkt falsch behandelt; expected 'Etappe km0-11 ' prefix in {rendered!r}"
     )
-    # Kein doppelter Doppelpunkt: nach 'km0-11' folgt genau EIN ':'.
-    assert "km0-11::" not in rendered, (
+    # #3174: nach 'km0-11' folgt kein Doppelpunkt mehr, nur das Leerzeichen.
+    assert "km0-11:" not in rendered, (
         f"Doppelter Doppelpunkt nach km-Token: {rendered!r}"
     )
 
@@ -463,6 +463,6 @@ def test_stage_name_km_space():
     assert rendered.startswith("Abschnitt"), (
         f"km-mit-Leerzeichen crasht/verändert Prefix falsch: {rendered!r}"
     )
-    assert rendered.startswith("Abschnitt km:"), (
-        f"km-Leerzeichen-Format: erwartet 'Abschnitt km:' prefix in {rendered!r}"
+    assert rendered.startswith("Abschnitt km "), (
+        f"km-Leerzeichen-Format: erwartet 'Abschnitt km ' prefix in {rendered!r}"
     )

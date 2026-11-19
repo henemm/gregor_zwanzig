@@ -85,7 +85,7 @@ def test_ac1_tf_erscheint_genau_einmal_an_der_layout_position(monkeypatch):
     Stunde -- nicht das Gehzeit-Minimum (08-12 Uhr, dort 13): Mutation "Gehzeit-
     statt Tagesfenster" -> ``TF13@8``, rot."""
     for kanal, text in _texte_a_b(monkeypatch).items():
-        rumpf = text.split(": ", 1)[1].split(" ")
+        rumpf = text.split(" ")[1:]  # #3174: Praefix ohne ':'
         treffer = [t for t in rumpf if re.fullmatch(r"TF-?\d+@\d+", t)]
         assert treffer == ["TF-3@6"], (
             f"AC-1 ({kanal}): erwartet genau EIN Token 'TF-3@6', gefunden "
@@ -191,7 +191,7 @@ def _zeile(forecast_kwargs: dict, specs, *, max_length: int = 160) -> str:
 
 
 def _tokens(text: str) -> list[str]:
-    return text.split(": ", 1)[1].split(" ")
+    return text.split(" ")[1:]  # #3174: Praefix ohne ':'
 
 
 def test_ac2_nullform_und_luecke():
@@ -233,15 +233,15 @@ def test_ac2_orakel_unterscheidet_nullform_und_negativen_wert():
     Zahlen. Nullform = kein Modus ablesbar, ``-3@6`` = Zahl (raw)."""
     from tests.helpers.einstellung_auslieferung_orakel import _sms_treffer, parse_sms_artig
 
-    treffer = _sms_treffer("E1: TF- TF-3@6")
+    treffer = _sms_treffer("E1 TF- TF-3@6")
     werte = [wert for _, mid, wert in treffer if mid == "wind_chill"]
     assert werte == ["-", "-3@6"], (
         f"AC-2: der Parser muss 'TF-' und 'TF-3@6' getrennt lesen (erwartet "
         f"['-', '-3@6'] fuer wind_chill), erhalten {treffer}"
     )
-    _, modi = parse_sms_artig("E1: TF-3@6")
+    _, modi = parse_sms_artig("E1 TF-3@6")
     assert modi.get("wind_chill") == "raw"
-    _, modi_null = parse_sms_artig("E1: TF-")
+    _, modi_null = parse_sms_artig("E1 TF-")
     assert modi_null.get("wind_chill") is None
 
 
@@ -252,7 +252,7 @@ def test_ac2_grammatik_minus_vor_zahl_auch_ohne_tf():
     Grammatik gegen ein zurueckgedrehtes optionales Minus."""
     from tests.helpers.einstellung_auslieferung_orakel import _sms_treffer
 
-    werte = [w for _, mid, w in _sms_treffer("E1: FL-3 FD-") if mid.startswith("wind_chill_day")]
+    werte = [w for _, mid, w in _sms_treffer("E1 FL-3 FD-") if mid.startswith("wind_chill_day")]
     assert werte == ["-3", "-"], f"Grammatik: {werte}"
 
 

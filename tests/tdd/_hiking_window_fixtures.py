@@ -487,7 +487,7 @@ def sms_token_value(sms: str, symbol: str) -> Optional[str]:
     ``fullmatch`` auf dem einzelnen Token schliesst Praefix-Verwechslungen aus:
     'FK1' ist kein 'K'-Token.
     """
-    body = sms.split(": ", 1)[1] if ": " in sms else sms
+    body = sms.split(" ", 1)[1] if " " in sms else ""  # #3174: Praefix ohne ':'
     tokens = body.split(" ")
     pattern = re.compile(rf"{re.escape(symbol)}({_HALF})(?:/({_HALF}))?$")
     for token in tokens:

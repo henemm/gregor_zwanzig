@@ -136,7 +136,7 @@ def _sms(trip_or_dc, report_type: str = "evening", *, warnung: int | None = None
 
 def _symbole(sms: str) -> list[str]:
     """Token-Symbole der SMS in Ausgabefolge (ohne Warnblock ``!..``)."""
-    body = sms.split(": ", 1)[1]
+    body = sms.split(" ", 1)[1]  # #3174: Praefix ohne ':'
     return [re.match(r"([A-Z]+\+?)", tok).group(1) for tok in body.split()
             if re.match(r"[A-Z]", tok)]
 
@@ -159,8 +159,8 @@ def _metrik_folge(sms: str) -> list[str]:
 SMS_FOLGE = ["cloud_total", "precipitation", "gust", "wind", "temperature"]
 
 SOLL_FOLGE = {
-    "morning": "E1: CT:SCT@4 R2.0@4 G45@4 W- D15/15",
-    "evening": "E1: CT:SCT@4 R2.0@4 G45@4 W- N15 D15/15",
+    "morning": "E1 CT:SCT@4 R2.0@4 G45@4 W- D15/15",
+    "evening": "E1 CT:SCT@4 R2.0@4 G45@4 W- N15 D15/15",
 }
 
 
@@ -180,8 +180,8 @@ def test_ac2_sms_folgt_sms_auswahl(report_type):
 
 
 SOLL_NIE = {
-    "morning": "E1: G45@4 D15/15 PR60%@4 W- WD:W TH:M@4 TH+:- CT:SCT@4 R2.0@4 UV5@4 HU-",
-    "evening": "E1: G45@4 N15 D15/15 PR60%@4 W- WD:W TH:M@4 TH+:- CT:SCT@4 R2.0@4 UV5@4 HU-",
+    "morning": "E1 G45@4 D15/15 PR60%@4 W- WD:W TH:M@4 TH+:- CT:SCT@4 R2.0@4 UV5@4 HU-",
+    "evening": "E1 G45@4 N15 D15/15 PR60%@4 W- WD:W TH:M@4 TH+:- CT:SCT@4 R2.0@4 UV5@4 HU-",
 }
 
 
@@ -207,16 +207,16 @@ def test_ac2_email_auswahl_leckt_nicht_in_sms_ohne_sms_ebene(report_type):
 def test_ac2_kanal_ebene_leer_keine_metrik(report_type):
     """AC-2: leere SMS-Ebene -> keine Metrik-Tokens (bewusste Leerauswahl bleibt leer)."""
     sms = _sms(_trip(_trip_dict([])), report_type)
-    assert sms == "E1: ", sms
+    assert sms == "E1", sms
 
 
 # ---------------------------------------------------------------------------
 # AC-3: Roh / Einfach / ohne Angabe
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("fmt,soll", [("raw", "E1: CT70@4 G45@4"),
-                                      ("symbol", "E1: CT:SCT@4 G45@4"),
-                                      (None, "E1: CT:SCT@4 G45@4")],
+@pytest.mark.parametrize("fmt,soll", [("raw", "E1 CT70@4 G45@4"),
+                                      ("symbol", "E1 CT:SCT@4 G45@4"),
+                                      (None, "E1 CT:SCT@4 G45@4")],
                          ids=["roh", "einfach", "ohne_angabe"])
 def test_ac3_bewoelkung_roh_einfach_ohne_angabe(fmt, soll):
     """AC-3: Bewoelkung Roh = Prozentzahl (CT70), Einfach = Stufe (CT:SCT); ohne
@@ -233,8 +233,8 @@ def test_ac3_kanal_format_gewinnt_gegen_grundauswahl():
                  for i, m in enumerate(GRUNDAUSWAHL)]
     a = _sms(_trip(_trip_dict([_ohne_angabe("cloud_total", 0), _mc("gust", 1)], grund=grund_roh)))
     b = _sms(_trip(_trip_dict([_mc("cloud_total", 0, "raw"), _mc("gust", 1)])))
-    assert a == "E1: CT:SCT@4 G45@4", a
-    assert b == "E1: CT70@4 G45@4", b
+    assert a == "E1 CT:SCT@4 G45@4", a
+    assert b == "E1 CT70@4 G45@4", b
 
 
 @pytest.mark.parametrize("mid,sym,roh_wert", [("cloud_total", "CT", "70"),
@@ -248,8 +248,8 @@ def test_ac3_alle_vier_format_metriken_roh_und_einfach(mid, sym, roh_wert):
     roh = _sms(_trip(_trip_dict([_mc(mid, 0, "raw")], grund=grund)))
     einfach = _sms(_trip(_trip_dict([_mc(mid, 0, "symbol")], grund=grund)))
     ohne = _sms(_trip(_trip_dict([_ohne_angabe(mid, 0)], grund=grund)))
-    assert re.fullmatch(rf"E1: {sym}{roh_wert}@\d+", roh), roh
-    assert re.fullmatch(rf"E1: {sym}:[A-Z]+@\d+", einfach), einfach
+    assert re.fullmatch(rf"E1 {sym}{roh_wert}@\d+", roh), roh
+    assert re.fullmatch(rf"E1 {sym}:[A-Z]+@\d+", einfach), einfach
     assert ohne == einfach, (ohne, einfach)
 
 
@@ -268,7 +268,7 @@ def test_ac4_abgewaehlte_metriken_ohne_wert(report_type):
                   _mc("wind_direction", 4, enabled=False)]
     a = _sms(_trip(_trip_dict(mit_abwahl)), report_type)
     b = _sms(_trip(_trip_dict(_liste(["gust", "precipitation"]))), report_type)
-    assert a == "E1: G45@4 R2.0@4", a
+    assert a == "E1 G45@4 R2.0@4", a
     assert a == b
 
 
@@ -277,7 +277,7 @@ def test_ac4_grundauswahl_metrik_nicht_in_sms_liste(report_type):
     """AC-4: Groessen der Grundauswahl, die die SMS-Liste nicht nennt, bleiben aus
     der SMS draussen (auch die Null-Form ``HU-`` erscheint nicht)."""
     sms = _sms(_trip(_trip_dict(_liste(["wind", "gust"]))), report_type)
-    assert sms == "E1: W- G45@4", sms
+    assert sms == "E1 W- G45@4", sms
     assert "HU" not in _symbole(sms) and "UV" not in _symbole(sms)
 
 
@@ -295,8 +295,8 @@ def test_ac5_warnblock_hinten_bei_zwei_folgen(report_type):
     der Warnblock ``!TS:M@10`` steht in beiden Faellen am Ende."""
     a = _sms(_trip(_trip_dict(_liste(FOLGE_A))), report_type, warnung=3)
     b = _sms(_trip(_trip_dict(_liste(FOLGE_B))), report_type, warnung=3)
-    assert a == "E1: TH:M@4 TH+:- G45@4 R2.0@4 CT:SCT@4 !TS:M@10", a
-    assert b == "E1: CT:SCT@4 R2.0@4 G45@4 TH:M@4 TH+:- !TS:M@10", b
+    assert a == "E1 TH:M@4 TH+:- G45@4 R2.0@4 CT:SCT@4 !TS:M@10", a
+    assert b == "E1 CT:SCT@4 R2.0@4 G45@4 TH:M@4 TH+:- !TS:M@10", b
 
 
 @pytest.mark.parametrize("sms_liste", [[], [_mc("thunder", 0, enabled=False), _mc("gust", 1)]],
@@ -347,7 +347,7 @@ def test_ac6_premium_gleich_sms_trotz_abweichender_premium_ebene(monkeypatch):
     for _uid, mit_tr in _zwei_nutzer(monkeypatch, data):
         sms = mit_tr.sendungen("sms")[0]["body"]
         premium = mit_tr.sendungen("premium_sms")[0]["body"]
-        assert sms == "E1: R2.0@4 G45@4 CT:SCT@4", sms
+        assert sms == "E1 R2.0@4 G45@4 CT:SCT@4", sms
         assert premium == sms, (premium, sms)
         assert len(premium) <= 153
 
@@ -365,7 +365,7 @@ def test_ac8_trip_zwei_nutzer_je_eigene_sms(reihenfolge):
                           _mc("gust", 2)]), frisches_profil())
     folge = [("a", a), ("b", b)] if reihenfolge == "ab" else [("b", b), ("a", a)]
     ist = {name: _sms(t) for name, t in folge}
-    assert ist == {"a": "E1: G45@4 CT70@4", "b": "E1: CT:SCT@4 R2.0@4 G45@4"}, ist
+    assert ist == {"a": "E1 G45@4 CT70@4", "b": "E1 CT:SCT@4 R2.0@4 G45@4"}, ist
 
 
 # ---------------------------------------------------------------------------
@@ -405,7 +405,7 @@ def test_ac9_trip_sms_folgt_resolver_nicht_altpfad(report_type):
     assert [m.metric_id for m in abw.get_metrics_for_channel("sms", report_type)] == [
         "humidity", "uv_index", "cloud_total"], "Vorbedingung: Altpfad weicht ab"
     sms = _sms(abw, report_type)
-    assert sms == "E1: G45@4 R2.0@4 CT:SCT@4", sms
+    assert sms == "E1 G45@4 R2.0@4 CT:SCT@4", sms
 
 
 # ---------------------------------------------------------------------------
@@ -429,7 +429,7 @@ def test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht(kanal, soll_warnung, me
     """AC-10: Warnstufe 3 (orange). Kanal-Schwelle LOW -> Warnblock, HIGH -> keiner;
     ein ``sms_threshold`` je Metrik aendert die SMS nicht (#2792 E1)."""
     sms = _sms(_schwellen_trip(kanal, metrik_schwelle), warnung=3)
-    basis = "E1: TH:M@4 TH+:- G45@4 R2.0@4 CT:SCT@4"
+    basis = "E1 TH:M@4 TH+:- G45@4 R2.0@4 CT:SCT@4"
     assert sms == (basis + " !TS:M@10" if soll_warnung else basis), sms
 
 

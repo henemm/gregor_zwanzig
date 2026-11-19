@@ -96,6 +96,12 @@ class TestAC1BuildTokenLine:
             f"token_line darf keinen Space vor ':' enthalten (Issue #245), "
             f"war: {rendered!r}"
         )
+        # #3174: Kopf ohne Doppelpunkt -- ein mitgeschnittenes Leerzeichen
+        # zeigte sich jetzt als doppeltes Leerzeichen vor dem ersten Token.
+        assert "  " not in rendered, (
+            f"token_line darf kein doppeltes Leerzeichen enthalten (#245/#3174), "
+            f"war: {rendered!r}"
+        )
 
     def test_stage_name_with_leading_space_no_space_after_first_colon(self):
         """GIVEN stage_name mit führendem Space (nach Colon-Entfernung am Anfang)
@@ -121,7 +127,7 @@ class TestAC2Regression:
     def test_normal_stage_name_has_correct_colon_prefix(self):
         """GIVEN stage_name ohne Doppelpunkt
         WHEN build_token_line aufgerufen
-        THEN beginnt render() mit 'StageName: ' (kein zusätzlicher Space).
+        THEN beginnt render() mit 'StageName ' (#3174: ohne Doppelpunkt, kein zusätzlicher Space).
         """
         forecast = _minimal_forecast()
         token_line = build_token_line(
@@ -131,7 +137,7 @@ class TestAC2Regression:
             stage_name="GR20 E1", ampel=AMPEL_ALLGEMEIN,
         )
         rendered = token_line.render()
-        assert rendered.startswith("GR20 E1: "), (
+        assert rendered.startswith("GR20 E1 ") and not rendered.startswith("GR20 E1  "), (
             f"Normaler Stage-Name soll unverändert als Prefix erscheinen, war: {rendered!r}"
         )
         assert " :" not in rendered, (

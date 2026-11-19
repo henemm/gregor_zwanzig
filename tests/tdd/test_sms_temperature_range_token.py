@@ -310,7 +310,7 @@ class TestAC16RangeTokenIsAtomicUnderTruncation:
     Ein fester 160er-Lauf taugt hier NICHT als Nachweis: die Kuerzungsschleife
     laeuft weiter, bis das Budget passt, und ueberspringt den verraeterischen
     Zwischenzustand je nach Zeilenlaenge zufaellig. Der Durchlauf ueber ALLE
-    Budgets macht ihn sichtbar (heute z.B. bei 45 Zeichen: 'E7: N9 D27 ...').
+    Budgets macht ihn sichtbar (heute z.B. bei 45 Zeichen: 'E7 N9 D27 ...').
     """
 
     def test_no_budget_leaves_half_a_range(self):

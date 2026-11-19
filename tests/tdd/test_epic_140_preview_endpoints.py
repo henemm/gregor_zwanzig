@@ -197,11 +197,11 @@ class TestT5SmsTokenPipeline:
                 f"war: {token_line!r}"
             )
 
-    def test_ac1_token_line_contains_stage_colon_prefix(self, client):
-        """AC-1: token_line enthält 'StageName: ' gefolgt von Forecast-Token.
+    def test_ac1_token_line_contains_stage_prefix_without_colon(self, client):
+        """AC-1: token_line beginnt mit dem Stage-Prefix, gefolgt von Forecast-Token.
 
-        Spec §3.1: Header ist '{Name}: '. Danach folgt min. ein Forecast-Token
-        (N, D, R, PR, W, G, TH:, TH+:).
+        Spec §3.1: Header ist '{Name} ' (#3174: ohne Doppelpunkt). Danach folgt
+        min. ein Forecast-Token (N, D, R, PR, W, G, TH:, TH+:).
         """
         resp = client.get(
             "/api/preview/gr221-mallorca/sms",
@@ -211,18 +211,19 @@ class TestT5SmsTokenPipeline:
         if resp.status_code == 200:
             data = resp.json()
             token_line = data["token_line"]
-            assert ": " in token_line, (
-                f"token_line muss 'Name: '-Prefix enthalten (sms_format.md §3.1), "
-                f"war: {token_line!r}"
+            worte = token_line.split(" ")
+            assert len(worte) >= 2 and not worte[0].endswith(":"), (
+                f"token_line muss mit 'Name '-Prefix ohne Doppelpunkt beginnen "
+                f"(sms_format.md §3.1, #3174), war: {token_line!r}"
             )
-            after_prefix = token_line.split(": ", 1)[1] if ": " in token_line else ""
             has_forecast = any(
-                after_prefix.startswith(tok)
+                wort.startswith(tok)
+                for wort in worte[1:]
                 for tok in ("N", "K", "D", "FN", "FK", "FD", "R", "PR", "W", "G", "TH", "C")
             )
             assert has_forecast, (
                 f"Nach dem Stage-Prefix muss ein Forecast-Token stehen "
-                f"(N/K/D/FN/FK/FD/R/PR/W/G/TH/C, sms_format.md §2), Rest war: {after_prefix!r}"
+                f"(N/K/D/FN/FK/FD/R/PR/W/G/TH/C, sms_format.md §2), war: {token_line!r}"
             )
 
     def test_ac2_token_line_max_160_chars_via_service(self, service):

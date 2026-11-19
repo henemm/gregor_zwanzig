@@ -480,6 +480,6 @@ def test_debug_cli_trip_bericht_loest_die_trip_ampel_auf(tmp_path, capsys):
                               Settings(dry_run=True, channel="console", report_type="evening"),
                               FixtureProvider(str(fixtures)), DebugBuffer())
         assert rc == 0
-        zeilen[vorlage] = next(z for z in capsys.readouterr().out.splitlines() if ": N" in z)
+        zeilen[vorlage] = next(z for z in capsys.readouterr().out.splitlines() if f"{f'CLI {vorlage}'[:10]} N" in z)  # #3174: Kopf (Trip-Name, 10 Zeichen) ohne ':'
     assert " G- " in zeilen["skitouren"], zeilen
     assert " G30@12 " in zeilen["allgemein"], zeilen
