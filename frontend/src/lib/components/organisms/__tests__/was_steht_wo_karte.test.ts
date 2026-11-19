@@ -132,7 +132,7 @@ function orte(anzahl: number, extra: J = {}): J {
 		fixed_rows: [],
 		rows: [
 			{ metric_id: 'wind', name: 'Wind-O', position: 0, parent: null, cells: {
-				email: z('on', { format: 'raw', example: '43 km/h' }), telegram: z('on', { format: 'raw', example: 'Wind 43 km/h' }), sms: z('on', { example: 'W 43 km/h' }),
+				email: z('on', { format: 'raw', example: '43 km/h' }), telegram: z('on', { format: 'raw', example: 'Wind 43 km/h' }), sms: z('on', { example: 'W43@16' }),
 				hourly: z('on', { format: 'raw', example: '28' }), outlook: z('on', { format: 'raw', example: '60 km/h' }) } },
 			{ metric_id: 'sunshine', name: 'Sonne-O', position: 1, parent: null, cells: {
 				email: z('on', { format: 'raw', example: '5.0 h' }), telegram: z('on', { format: 'raw' }), sms: z('on', { mark: 'passt_nicht_mehr' }),
@@ -141,8 +141,8 @@ function orte(anzahl: number, extra: J = {}): J {
 				email: z('on', { example: '7' }), telegram: z('on'), sms: z('locked', { reason: 'kein_kuerzel' }), hourly: z('on'), outlook: z('off') } }
 		],
 		sms_example: anzahl > 1
-			? { text: 'Orte 18.11.: A W 43 km/h +2; B W 44 km/h +2; C W 45 km/h +2', length: 61, max_length: 153 }
-			: { text: 'Ortsname-1 18.11.: W 43 km/h', length: 28, max_length: 153 },
+			? { text: 'O1 W43@16 O2 W44@16 O3 W45@16', length: 29, max_length: 160 }
+			: { text: 'O1 W43@16', length: 9, max_length: 160 },
 		outlook_reports: ['evening'],
 		blocks: { hourly: true, telegram_style: 'rich', outlook: { morning: false, evening: true } },
 		legend: { metrics: [{ metric_id: 'wind', kuerzel: 'W', meaning: 'Wind km/h' }, { metric_id: 'sunshine', kuerzel: 'SU', meaning: 'Sonne-Bedeutung' }], fixed: LEGENDE_FEST },
@@ -239,16 +239,18 @@ describe('Marken und SMS-Beispiel (AC-27, AC-28)', () => {
 		const sms = text(eins(t, 'data-testid="was-steht-wo-sms"').innen);
 		assert.equal(sms, 'SMS-Beispiel: Etappe-X: N14 W30 · 17 von 160 Zeichen Die letzten 2 Metriken passen nicht mehr in die SMS. Zieh nach oben, was dir in der SMS wichtig ist.');
 	});
-	test('drei Orte: Grenze aus der Antwort (153), Fassung für mehrere Orte mit „+N“ je Ort', async () => {
+	test('drei Orte: Grenze aus der Antwort (160), Fassung für mehrere Orte ohne „+N“ je Ort (#3172)', async () => {
 		const o = await karte(orte(3), { context: 'vergleich' });
 		const sms = text(eins(o, 'data-testid="was-steht-wo-sms"').innen);
-		assert.match(sms, /^SMS-Beispiel: Orte 18\.11\.: A W 43 km\/h \+2; B .* · 61 von 153 Zeichen /);
-		assert.match(sms, /Bei 3 Orten passt die letzte Metrik nicht mehr in die SMS\. Dafür steht „\+2“ je Ort\. Zieh nach oben/);
+		assert.match(sms, /^SMS-Beispiel: O1 W43@16 O2 W44@16 O3 W45@16 · 29 von 160 Zeichen /);
+		assert.match(sms, /Bei 3 Orten passt die letzte Metrik nicht mehr in die SMS\. Zieh nach oben/);
+		// #3172: die Orte-SMS kennt keinen Rest-Zähler „+N“ je Ort mehr -- kein Satz dazu.
+		assert.doesNotMatch(sms, /je Ort/);
 	});
-	test('ein Ort: Fassung wie Trip, SMS beginnt mit dem Namen des Orts aus der Antwort', async () => {
+	test('ein Ort: Fassung wie Trip, SMS beginnt mit O1 (keine Ortsnamen, #3172)', async () => {
 		const o = await karte(orte(1), { context: 'vergleich' });
 		const sms = text(eins(o, 'data-testid="was-steht-wo-sms"').innen);
-		assert.match(sms, /^SMS-Beispiel: Ortsname-1 18\.11\.: /);
+		assert.match(sms, /^SMS-Beispiel: O1 W43@16 · 9 von 160 Zeichen /);
 		assert.match(sms, /Die letzte Metrik passt nicht mehr in die SMS\./);
 		assert.doesNotMatch(sms, /Orten/);
 	});
@@ -356,7 +358,7 @@ describe('Englisch (AC-33)', () => {
 		try {
 			const h = await karte(orte(3), { context: 'vergleich' });
 			const s = text(h);
-			for (const w of ['What goes where', 'One table for everything.', 'Email', 'Overview', 'Hourly view', 'email only', 'and Premium SMS', 'SMS example:', '61 of 153 characters',
+			for (const w of ['What goes where', 'One table for everything.', 'Email', 'Overview', 'Hourly view', 'email only', 'and Premium SMS', 'SMS example:', '29 of 160 characters',
 				'Abbreviations explained', 'Switch whole blocks on and off', 'Settings per channel', 'Premium SMS'])
 				assert.ok(s.includes(w), `fehlt: ${w}`);
 			for (const w of ['Was steht wo', 'Übersicht', 'Stundenverlauf', 'Zeichen', 'Kürzel erklärt', 'Einstellungen je Kanal']) assert.ok(!s.includes(w), `deutsch: ${w}`);

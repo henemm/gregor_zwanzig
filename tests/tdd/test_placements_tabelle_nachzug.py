@@ -8,8 +8,8 @@ Nr. 11, 12; AC-14, AC-16, AC-17, AC-31.
   Legende -- auch Orte, deren Grundauswahl nie eingestellt wurde.
 * Punkt 3: ``placements`` im GET ist der gespeicherte Stand; unveraendert
   zurueckgeschrieben verliert er nichts (reservierte und kuenftige Felder).
-* Punkt 4: Kuerzel ``NS24+`` hat eine Bedeutung; ``sms_example.overflow`` ist
-  seit #3172 (ADR-0125) fuer Orte wie fuer Trip ``None`` -- die Orte-SMS
+* Punkt 4: Kuerzel ``NS24+`` hat eine Bedeutung; ``sms_example.overflow``
+  entfaellt seit #3172 (ADR-0125) fuer Orte wie fuer Trip -- die Orte-SMS
   kuerzt still vom Listenende, ein Rest-Zaehler ``+N`` existiert nicht mehr.
 
 Kern-Schicht: echte Dateien, echte Renderer, fester Beispiel-Datensatz, kein
@@ -248,7 +248,7 @@ def _ortsteile(versand: str, orte: list[str]) -> list[str]:
 
 @pytest.mark.parametrize("fall", ["drei_ueberlauf", "drei_ohne_ueberlauf", "ein_ort"])
 def test_orte_sms_example_meldet_rest_zaehler(client, fall):
-    """#3172 (ADR-0125): ``overflow`` ist fuer Orte ``None`` wie beim Trip; die
+    """#3172 (ADR-0125): kein Feld ``overflow`` mehr, wie beim Trip; die
     SMS kuerzt still vom Listenende, kein Ortsteil traegt ``+N``, und alle
     gezeigten Orte tragen gleich viele Token."""
     from tests.tdd.test_placements_tabelle_endpoint import ORTSNAMEN
@@ -263,7 +263,7 @@ def test_orte_sms_example_meldet_rest_zaehler(client, fall):
     antwort = _ok(client, "o-p4", "vergleich")
     versand = antwort["sms_example"]["text"]
     teile = _ortsteile(versand, list(ORTSNAMEN[:anzahl]))
-    assert antwort["sms_example"]["overflow"] is None
+    assert "overflow" not in antwort["sms_example"]
     for teil in teile:
         assert not re.search(r"(?:^| )[+?]\d+(?= |$)", teil), f"Zaehler im Ortsteil: {teil!r}"
     zahl = {len(t.split(" ")) - 1 for t in teile}
@@ -280,7 +280,7 @@ VIELE_ORTE = ("Innsbruck", "Lienz", "Kufstein", "Imst", "Landeck", "Reutte", "Sc
 def test_orte_entfallene_orte_zaehlen_nicht_im_rest_zaehler(client, anzahl):
     """Passen nicht alle Orte, endet die SMS auf ``+k Orte`` -- erst wenn je Ort
     nur noch die erste Listenzeile steht (#3172, ADR-0125); gezeigte plus
-    entfallene Orte ergeben alle; ``overflow`` ist ``None``."""
+    entfallene Orte ergeben alle; kein Feld ``overflow``."""
     kennung = f"o-p4-viele-{anzahl}"
     _orte(NUTZER_A, kennung, anzahl=anzahl, namen=VIELE_ORTE,
           placements={"version": 1, "rows": []})
@@ -289,7 +289,7 @@ def test_orte_entfallene_orte_zaehlen_nicht_im_rest_zaehler(client, anzahl):
     entfallen = re.search(r" \+(\d+) Orte$", versand)
     teile = _ortsteile(versand, list(VIELE_ORTE[:anzahl]))
     assert len(teile) + (int(entfallen.group(1)) if entfallen else 0) == anzahl, versand
-    assert antwort["sms_example"]["overflow"] is None
+    assert "overflow" not in antwort["sms_example"]
     if entfallen:
         assert all(len(t.split(" ")) == 2 for t in teile), versand
     if anzahl == 30:
@@ -300,7 +300,7 @@ def test_orte_entfallene_orte_zaehlen_nicht_im_rest_zaehler(client, anzahl):
 
 def test_trip_sms_example_ohne_rest_zaehler(client):
     _trip(NUTZER_A, "t-p4", placements={"version": 1, "rows": []})
-    assert _ok(client, "t-p4", "route")["sms_example"]["overflow"] is None
+    assert "overflow" not in _ok(client, "t-p4", "route")["sms_example"]
 
 
 def test_orte_ohne_ort_hat_kein_sms_beispiel(client):

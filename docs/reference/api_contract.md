@@ -1452,10 +1452,8 @@ placements = { version: 1,
                                  example: string|null,    // Beispielwert aus dem Renderer (nur bei state "on")
                                  ampel: "green"|"yellow"|"orange"|"red"|null,  // HTML-Ampelpunkt
                                  mark: "passt_nicht_mehr"|"nur_tageswert"|null } } } ],
-  sms_example: { text, length, max_length,           // max_length = Kuerzungsgrenze des Versandwegs: Trip 160 (format_sms), Orte CHANNEL_LIMITS sms 153
-                 overflow: { locations: int,          // Orte: Zahl der Orte, deren SMS-Teil einen Rest-Zähler "+N" trägt (N Metrik-Zellen verdrängt)
-                             per_location: [int|null, ...] }  // je in der SMS gezeigtem Ort (SMS-Folge) N bzw. null; abgelesen an der Renderer-Form,
-                           | null }                   //   nicht nachgerechnet; entfallene Orte ("+k Orte") fehlen. Trip: null
+  sms_example: { text, length, max_length }          // max_length = Kuerzungsgrenze des Versandwegs: 160 fuer Trip und Orte (#3172);
+                                                       //   `overflow` (Rest-Zaehler "+N" je Ort) entfaellt seit #3172
                | null,                                // null: Orte-Abo ohne Ort
   outlook_reports: ["morning"|"evening", ...],         // aufgelöst, inkl. Vorbelegung
   blocks: { outlook: {morning: bool, evening: bool}, telegram_style,
@@ -5340,6 +5338,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 
 ## Changelog
 
+- 2026-11-19: Issue #3172 (ADR-0125) — `GET /api/briefings/{id}/placements`: `sms_example.overflow` entfällt (die Orte-SMS trägt keinen Rest-Zähler `+N` je Ort mehr); `sms_example.max_length` ist für Orte 160 wie beim Trip; Legende der Orte mit festem Eintrag `O1` (`key: "ort_nummer"`, Bedeutung aus dem Server-Katalog).
 - 2026-11-19: Issue #3154 (Epic #3122, Spec Teil A Nr. 8, AC-11) — Erstes Speichern der Tabelle „Was steht wo“ ändert die Ausgabe nicht: `PUT /api/briefings/{id}/placements?kind=route` fragt den Kern (`GET …/placements/erstanlage`, neu, nur für Go) und schreibt beim ersten Speichern eines Trips mit `show_outlook: false` (nicht Kompakt) `report_config.show_stability = false` im selben Vorgang mit; Kern-Fehler 502, nichts geschrieben. Umrechnung `placements_from_legacy`: bei Kompakt-Format wird `show_outlook` für `outlook_reports` nicht ausgewertet (die Kompakt-Mail zeigte den Ausblick unabhängig davon); `GET` zeigt ihn entsprechend.
 - 2026-11-19: Issue #3154 (Epic #3122) — `GET /api/briefings/{id}/placements`: `rows` führt jede Metrik der Grundauswahl beider Briefing-Typen, auch eine nur morgens oder nur abends gewählte (`morning_enabled`/`evening_enabled`), genau wie `placements`. Beispielwerte und Marken gelten weiter für das gerenderte Briefing; eine dort nicht gewählte Metrik bekommt keine Marke. Keine DTO-Änderung.
 - 2026-11-18: Issue #3101 (Epic #3047, ADR-0121 Nachtrag 4) — Ein Vokabular in allen Kanal-Listen: Der Kanal-Listen-Resolver liefert für Orte die Listen `email`, `telegram`, `sms`, `premium_sms` (samt Layout-Kanälen) mit Katalog-ID (`metric_id` = `temperature`) und `aggregation` statt Renderer-Kennung (`temp_max`). Die Übersetzung in die Renderer-Kennung geschieht erst direkt vor dem Renderer (`compare_metric_ids.renderer_kennung`, Gegenrichtung `katalog_paar`). Der Alt/Neu-Vergleich der Platzierungen (`placements`) vergleicht über die Katalog-ID; die Tabelle „Was steht wo“ liest Ausblick-Spalten aus denselben Zeilen wie der Renderer. Keine DTO-, Daten- oder Ausgabeänderung. Section 16.

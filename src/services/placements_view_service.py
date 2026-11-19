@@ -197,10 +197,10 @@ def _antwort(kind, abo: _Abo, vm, placements, gespeichert, muster: _Muster, lang
         "columns": _spalten(abo, vm),
         "fixed_rows": [WARNUNGEN] if abo.warnungen else [],
         "rows": zeilen,
-        # Issue #3172 (ADR-0125): kein Rest-Zaehler mehr, auch nicht fuer Orte.
+        # Issue #3172 (ADR-0125): kein Rest-Zaehler "+N" je Ort mehr -- das
+        # Feld ``overflow`` entfaellt (kein Leser).
         "sms_example": None if muster.sms is None else {
-            "text": muster.sms, "length": len(muster.sms), "max_length": max_laenge,
-            "overflow": None},
+            "text": muster.sms, "length": len(muster.sms), "max_length": max_laenge},
         "outlook_reports": list(vm.outlook_reports),
         "blocks": {**abo.bloecke, "outlook": {
             rt: rt in vm.outlook_reports for rt in ("morning", "evening")}},
