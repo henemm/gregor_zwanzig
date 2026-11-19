@@ -22,7 +22,7 @@ import re as _re
 from typing import Optional
 
 from app.ampel import ampel_seite, resolve_ampel
-from app.metric_catalog import get_metric, kurzform_kuerzel
+from app.metric_catalog import get_metric
 from app.models import Corridor, MetricConfig, UnifiedWeatherDisplayConfig
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
@@ -54,7 +54,7 @@ from output.renderers.email.undelivered_hint import (
 )
 from utils.geo import degrees_to_compass
 from utils.timezone import (
-    local_dt, local_fmt, local_stamp, location_tz, resolve_location_tz, tz_abbrev,
+    local_dt, local_fmt, local_stamp, location_tz, tz_abbrev,
 )
 from output.renderers.email.outlook import render_outlook_plain
 from output.metric_format import format_value
@@ -64,7 +64,6 @@ from output.renderers.alert.official_alerts import (
     _word_boundary_truncate,
     build_official_alert_notices,
     official_alert_source_label,
-    official_alerts_to_sms_entries,
     render_official_alert_telegram,
     render_official_alerts_plain,
 )
@@ -453,9 +452,8 @@ def render_comparison_text(
                         # Aufrufstellen und duerfen nicht auseinanderlaufen
                         # (AC-4). Stufe und Traeger stammen aus DEMSELBEN `dp`.
                         # KANAL: die Compare-SMS erreicht diese Schleife nie --
-                        # sie baut ihre Zelle ueber `_sms_metric_cell()` ->
-                        # `_fmt_overview_cell(..., include_origin=False)`
-                        # (PO-Entscheidung, dort aktiv abgewaehlt).
+                        # sie schreibt seit #3172 die Token-Zeile (`TH:M@15`,
+                        # ohne Herkunft, `output/renderers/orte_sms.py`).
                         text = fmt_word_cell(
                             m["fmt"], getattr(dp, m["key"], None), lang,
                             getattr(dp, "hail_flag", None),
@@ -705,11 +703,8 @@ def _fmt_overview_cell(
     Kopie derselben Fallunterscheidung bekommen (#1481).
 
     Issue #1680 S1: ``include_origin`` schaltet die Herkunft der Gewitterstufe
-    zu. 🔴 Default ``False``, weil dieselbe Funktion AUCH die SMS-Zelle baut
-    und die PO-Entscheidung dort ausdruecklich KEINE Herkunft vorsieht -- ohne
-    diesen Schalter leckte der Zusatz automatisch in die SMS, wuerde dort vom
-    GSM-7-Filter zu "-" entstellt und verdraengte ueber den "+N"-Mechanismus
-    hintere Metriken.
+    zu. Default ``False``; die Orte-SMS nutzt diese Funktion seit #3172 nicht
+    mehr (Token-Zeile, ``output/renderers/orte_sms.py``).
 
     Issue #3039: ``friendly`` (Einfach aus ``channel_layouts``) schaltet fuer
     ``metric_id`` die Einfachform zu; ``sms`` beschraenkt sie auf die
@@ -743,96 +738,6 @@ _RENDERER_TO_CATALOG_METRIC_ID: dict[str, str] = {
     renderer_id: _METRIC_ID_BY_FRONTEND_KEY[frontend_key]
     for frontend_key, renderer_id in FRONTEND_TO_RENDERER_METRIC_ID.items()
 }
-
-# Issue #1362 S5b, Adversary-Fund Runde 4 (PO-Entscheidung 2026-07-30, echter
-# Staging-Nachweis): das Grad-Zeichen `°` gehoert NICHT zum GSM-7-Zeichensatz
-# (GSM 03.38) -- sobald es in der SMS steht, kodiert der Betreiber die GANZE
-# Nachricht in UCS-2 (67 statt 153 Zeichen je Teil bei Verkettung), eine
-# STILLE Kostenverdopplung. Nur der SMS-Pfad ist betroffen: `unit="°C"/"°"`
-# bleibt im Katalog (`metric_catalog.py`) unveraendert -- Mail und Telegram
-# lesen es weiterhin korrekt ueber `format_value`/`_PLAIN_ROWS` direkt. Die
-# Umwandlung sitzt bewusst NUR hier, wo die SMS-Zelle gebaut wird.
-#
-# Zweiter, beim Bau des GSM-7-Waechters gefundener Fall (nicht Teil der
-# PO-Meldung, gleiche Fehlerklasse): `ThunderLevel.NONE` ist ein echter Wert
-# (kein fehlender, der schon vorher herausgefiltert wuerde) und formatiert
-# ueber `_THUNDER_LEVEL_LABEL` auf den Halbgeviertstrich "—" (U+2014) --
-# ebenfalls GSM-7-fremd. Ersetzt durch den GSM-7-eigenen Bindestrich "-"
-# (0x2D), der optisch denselben Platzhalter-Charakter traegt.
-_SMS_GSM7_UNSAFE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
-    ("°", ""),
-    ("—", "-"),
-    # Issue #1670: der Platzhalter ist jetzt `metric_format.NO_VALUE` (EN DASH
-    # U+2013) -- ebenfalls GSM-7-fremd; die SMS bleibt zeichengleich "-".
-    ("–", "-"),
-    # Issue #1475 Nachbesserung: `_fmt_thunder` haengt den Hagel-Hinweis mit
-    # einem Mittelpunkt an -- der ist wie der Geviertstrich nicht GSM-7.
-    ("·", "-"),
-)
-
-
-def _sms_gsm7_safe(text: str) -> str:
-    """Ersetzt bekannte GSM-7-fremde Zeichen aus den geteilten
-    Werte-Formatierungsfunktionen (``_PLAIN_ROWS``) durch GSM-7-taugliche
-    Entsprechungen -- ausschliesslich fuer den SMS-Zellwert, NICHT fuer
-    Telegram/Mail (die denselben ``fmt``/``format_value`` unveraendert
-    nutzen)."""
-    for bad, good in _SMS_GSM7_UNSAFE_REPLACEMENTS:
-        text = text.replace(bad, good)
-    return text
-
-
-def _sms_metric_cell(
-    loc_result: LocationResult, metric_id: str, friendly: bool = False,
-    *, summary=None,
-) -> str | None:
-    """"Kuerzel Wert"-Zelle fuer ``metric_id`` (Issue #1362 Scheibe S5b, Spec
-    Implementation Details Punkt 3). Wert+Formatierung kommen aus derselben
-    Quelle wie der Klartext-Teil (``_PLAIN_ROWS``/``_metric_value``),
-    GSM-7-saniert ueber ``_sms_gsm7_safe`` (Adversary-Fund Runde 4); das
-    Kuerzel AUSSCHLIESSLICH aus dem zentralen Katalog
-    (``metric_catalog.kurzform_kuerzel`` -- dieselbe Rangfolge, die auch
-    ``/api/sms-symbols`` fuer die Editor-Marke benutzt), nie zur Laufzeit
-    abgeleitet.
-
-    Issue #2232: das Auswertungszeichen (``+`` fuer Hoechst-, ``-`` fuer
-    Tiefstwert, PO-Entscheidung 2026-07-29) ist ERSATZLOS entfallen. Es war
-    noetig, solange beide Richtungen dasselbe Kuerzel trugen; seit die
-    Kuerzel-Kennung ueber ``kuerzel_metric_id`` aufgeloest wird, tragen sie
-    eigene (``D``/``L``, ``FD``/``FL``) -- dieselben, die die Trip-SMS sendet.
-    Das spart zwei Zeichen je Zelle im 153-Zeichen-Budget.
-
-    ``None`` = kein Wert an diesem Ort ODER keine ``metric_id``/kein Kuerzel
-    bekannt -- die Zelle entfaellt dann und zaehlt im Zaehler ``?N`` des
-    Ortsteils (Issue #1405 S3, ``_sms_location_part``)."""
-    row = _PLAIN_ROWS_BY_ID.get(metric_id)
-    if row is None:
-        return None
-    _, _label, fmt = row
-    # ``summary`` (Issue #3047 B-L4): einmal je Ort berechnetes Tages-Aggregat;
-    # ohne es leitet ``_metric_value`` es je Zelle neu ab.
-    value = _metric_value(loc_result, metric_id, summary)
-    if value is None:
-        return None
-    catalog_id = _RENDERER_TO_CATALOG_METRIC_ID.get(metric_id)
-    code = kurzform_kuerzel(catalog_id) if catalog_id else ""
-    if not code:
-        return None
-    # Issue #1680 S1 (Spec D8): ``include_origin`` bleibt hier AKTIV ABGEWAEHLT
-    # auf dem Default ``False`` -- die SMS zeigt die Gewitterstufe, aber KEINE
-    # Herkunft. PO-Entscheidung, kein vergessener Anschluss. Drei Gruende:
-    # (1) 153 Zeichen Gesamtbudget und kein Spaltenbudget fuer einen zweiten
-    # ``·``-Abschnitt je Ort; (2) ``_sms_gsm7_safe`` entstellt den Trenner
-    # ``·`` zu ``-``, der Zusatz saehe entstellt aus; (3) der
-    # ``+N``-Mechanismus wuerde die vom Zusatz verdraengten hinteren Metriken
-    # nur noch zaehlen statt zeigen. Gilt ueber denselben Renderer auch fuer
-    # Premium-SMS, sobald der Ortsvergleich ihn bedient.
-    zelle = _fmt_overview_cell(
-        fmt, value, loc_result, metric_id=metric_id, friendly=friendly, sms=True,
-        summary=summary,
-    )
-    return f"{code} {_sms_gsm7_safe(zelle)}"
-
 
 def _ampel_stunde(loc_result: LocationResult, metric_id: str, value, *, ampel: dict | None) -> str:
     """Issue #3047 B-L3 (Konzept §5 P8, ADR-0097): ``@h``-Marke einer
@@ -1085,7 +990,7 @@ def _telegram_warn_text(loc_result, lang: Lang) -> str:
     # Ort) -- exakt dasselbe narrative Format wie das Trip-Telegram.
     # KEIN SMS-Kuerzel-Marker hier: Compare-Telegram soll wie
     # Trip-Telegram aussehen (ausgeschrieben, kein `!TH:H`); das Kuerzel
-    # bleibt exklusiv im SMS-Pfad (`_sms_location_part`).
+    # bleibt exklusiv im SMS-Pfad (`_location_sms_alert_marker`).
     # Issue #1332 F001 (Adversary HIGH): `trip=None` liefert je Ort ein
     # `scope_label` von "unbekannt" (kein Trip-Segment bekannt) -- dieser
     # Render-Pfad baut aber JE ORT einen eigenen Block, dessen
@@ -1222,169 +1127,72 @@ def _official_alert_sms_marker(
 
 def _sms_location_variants(
     loc_result, enabled_metrics: list[str] | None,
-    unresolved_count: int = 0, metric_formats: dict[str, bool] | None = None,
-    *, mit_name: bool = True,
+    metric_formats: dict[str, bool] | None = None,
+    *, mit_name: bool = True, ampel: dict | None = None,
 ) -> list[str]:
-    """Flache SMS-Darstellung EINES Ortes -- alle Formen, absteigend nach
-    Zellenzahl (Index d = d Zellen vom Listenende verdraengt).
+    """Formen EINES Ortsteils der SMS, absteigend nach Listenzeilen (Index d =
+    d Listenzeilen vom Listenende entfernt; letzte Form: keine Listenzeile).
 
-    #3047 Runde 7 p8: die Zellen werden EINMAL je Ort gebaut; die Auswahl im
-    Budget trifft ``_sms_pick_form`` (vorher ``budget``-Parameter, s. u.).
+    Issue #3172 (ADR-0125): je Ort die Token-Zeile der Trip-SMS
+    (``orte_sms.orte_token_formen`` ueber ``build_token_line``), Ortsteil
+    ``{Name}: {Token}``. ``-`` = geprueft und unauffaellig, ``?`` = kein Wert;
+    die Zaehler ``+N``/``?N`` der frueheren Zellform entfallen.
 
-    Orte ohne abrufbare Daten (``error``) werden als ``"<Name> n/a"``
-    dargestellt statt weggefiltert: ein weggefilterter Ort waere weder sichtbar
-    noch im ``+k`` gezaehlt — die SMS behauptete dann einen vollstaendigen
-    Vergleich ueber weniger Orte, als er hat (#1269). ``render_compare_telegram``
-    haelt Fehler-Orte aus demselben Grund als "Fehler: …"-Block sichtbar; die
-    SMS-Form ist nur knapper (``CHANNEL_LIMITS["sms"]["max_chars"]``). Die
-    Fehlerursache selbst traegt die SMS bewusst nicht — sie steht in der
-    E-Mail/Telegram-Fassung.
-
-    ASCII "n/a" statt eines Gedankenstrichs, weil ein Ort ohne Werte sonst wie
-    ein Ort mit leerem Wert aussieht.
-
-    Issue #1362 Scheibe S5b: die frueher feste Zwei-Zellen-Grenze
-    (``_SMS_METRICS_PER_LOCATION``) entfaellt. Statt einer festen Anzahl
-    entscheidet ``budget`` (Zeichen, die dieser Ortsteil hoechstens belegen
-    darf -- ``None`` = unbegrenzt), WIE VIELE der ausgewaehlten Groessen
-    tatsaechlich erscheinen: Zellen werden in Nutzer-Reihenfolge aufgebaut und
-    bei Platzmangel GANZ von HINTEN entfernt (Kuerzungsprinzip aus
-    ``tokens/render.py:_truncate``, nie mitten in Kuerzel/Wert), bis der
-    Ortsteil ins Budget passt. Verdraengte Zellen werden als ``+N`` ausgewiesen
-    (Spec Implementation Details Punkt 3) -- nie stillschweigend weggelassen.
-    Groessen OHNE Wert an diesem Ort zaehlen dabei NICHT als verdraengt: sie
-    waren nie Kandidat fuer einen Platz. Issue #1405 S3: sie (plus die
-    unmappbaren Eintraege, ``unresolved_count``) erscheinen als eigener
-    Zaehler ``?N`` nach ``+N`` und vor dem ``!``-Marker (sms_format.md §5b),
-    fester Bestandteil jeder Budget-Pruefung; ohne Luecke kein Zeichen mehr.
-
-    Issue #1332: traegt ein Ort eine amtliche Warnung >= orange, haengt ein
-    `!`-Kuerzel-Marker an (geteilter Kern ``official_alerts_to_sms_entries``,
-    kein zweiter Katalog). Der Marker wird NIE verdraengt -- er ist Teil der
-    festen Bestandteile jeder Budget-Pruefung, die Metrik-Zellen weichen ihm
-    (Sicherheit vor Optik, Design-Leitprinzip).
-
-    Issue #1378 (AC-10): die Zeitzone kommt aus dem EINEN Aufloeser
-    (``resolve_location_tz``) -- ``SavedLocation.timezone`` mit Vorrang, sonst
-    aus den Koordinaten. ``@Stunde`` entfaellt weiterhin ersatzlos, wenn sich
-    ueberhaupt keine Zeitzone bestimmen laesst (bewusste SMS-Budget-Konvention,
-    ``CHANNEL_LIMITS["sms"]["max_chars"]`` -- kein Platzhalter, s. Spec Known
-    Limitations).
+    Orte ohne abrufbare Daten (``error``) bleiben als ``"<Name> n/a"``
+    sichtbar statt weggefiltert (#1269): ein weggefilterter Ort waere weder
+    sichtbar noch im ``+k Orte`` gezaehlt. Amtliche Warnungen stehen als
+    ``!``-Block am Ende des Ortsteils und fallen beim Kuerzen nie weg (#1332).
 
     #3122 B5: ``mit_name=False`` (genau ein Ort) laesst den Ortsnamen weg --
-    er steht dann schon im Kopf ``{Ort} TT.MM.:``.
+    er steht dann schon im Kopf ``{Ort} TT.MM.:``. ``ampel=None`` = Standard-
+    Vorlage (``resolve_ampel({})``).
     """
-    name = loc_result.location.name
-    if loc_result.error is not None:
-        return [f"{name} n/a"]
-    marker = _location_sms_alert_marker(loc_result)
+    from output.renderers.orte_sms import orte_token_formen
 
-    dedup_ids = list(dict.fromkeys(
-        enabled_metrics if enabled_metrics is not None else _NIE_EINGESTELLT_IDS
-    ))
-    summary = _daily_summary(loc_result) if loc_result.hourly_data else None
-    cells = [
-        c for c in (
-            _sms_metric_cell(
-                loc_result, mid, bool((metric_formats or {}).get(mid)), summary=summary,
-            )
-            for mid in dedup_ids
-        )
-        if c is not None
-    ]
-    # Issue #1405 S3 (sms_format.md §5b): fehlende Werte + unmappbare
-    # Eintraege als `?N` -- fester Bestandteil wie der Warn-Marker.
-    # Issue #3047 B-L4: "nie eingestellt" (None) zaehlt fehlende Werte nicht
-    # (nichts gewaehlt; die Mail zeigt dafuer ebenfalls keinen Hinweis).
-    fehlend = len(dedup_ids) - len(cells) if enabled_metrics is not None else 0
-    missing = fehlend + unresolved_count
-
-    def _assemble(kept_cells: list[str], demoted: int) -> str:
-        text_parts = ([name] if mit_name else []) + kept_cells
-        if demoted > 0:
-            text_parts.append(f"+{demoted}")
-        if missing > 0:
-            text_parts.append(f"?{missing}")
-        if marker:
-            text_parts.append(marker)
-        return " ".join(text_parts)
-
-    # Formen von "alle Zellen" bis "keine Zelle" (Kuerzung vom Listenende).
-    return [_assemble(cells[:len(cells) - d], d) for d in range(len(cells) + 1)]
-
-
-def _sms_location_part(
-    loc_result, enabled_metrics: list[str] | None, budget: "int | None",
-    unresolved_count: int = 0, metric_formats: dict[str, bool] | None = None,
-) -> str:
-    """Ortsteil im Budget (s. ``_sms_location_variants``): die zellenreichste
-    Form, die ``budget`` einhaelt, sonst die Form ohne Zelle."""
-    forms = _sms_location_variants(loc_result, enabled_metrics, unresolved_count, metric_formats)
-    return _sms_pick_form(forms, budget, 0)
-
-
-def _sms_pick_form(forms: list[str], budget: "int | None", floor: int) -> str:
-    """Zellenreichste Form mit ``len <= budget``; mindestens ``floor`` Zellen
-    bleiben stehen (Form mit Index ``len(forms)-1-floor`` ist die kuerzeste)."""
-    last = max(len(forms) - 1 - floor, 0)
-    for form in forms[:last]:
-        if budget is None or len(form) <= budget:
-            return form
-    return forms[last]
+    return orte_token_formen(
+        loc_result, enabled_metrics, metric_formats, mit_name=mit_name,
+        ampel=resolve_ampel({}) if ampel is None else ampel,
+    )
 
 
 def _location_sms_alert_marker(loc_result) -> str:
-    """`!`-Marker der amtlichen Warnungen EINES Ortes ("" ohne Warnung/Fehlerort)."""
-    if loc_result.error is not None:
-        return ""
-    tz = resolve_location_tz(loc_result.location)
-    # Issue #1461 S3b-2b (AC-17): derselbe Wechsel wie im Compare-Telegram
-    # (oben) -- der Vorgabewert von `official_alerts_to_sms_entries()` faellt
-    # sonst auf `MIN_SMS_LEVEL` (orange) zurueck. `min_level` explizit auf die
-    # Startschwelle "gering" gesetzt, keine zweite Zahlenreihe.
-    entries = official_alerts_to_sms_entries(
-        loc_result.official_alerts, tz,
-        min_level=alert_urgency.min_official_level_for_threshold("LOW"),
-    )
-    return _official_alert_sms_marker(entries)
+    """`!`-Marker der amtlichen Warnungen EINES Ortes ("" ohne Warnung/Fehlerort).
+
+    Issue #1461 S3b-2b (AC-17): Startschwelle "gering" -- dieselben Eintraege
+    wie im Warnblock der Token-Zeile (``orte_sms.orte_warn_eintraege``)."""
+    from output.renderers.orte_sms import orte_warn_eintraege
+
+    return _official_alert_sms_marker(orte_warn_eintraege(loc_result))
 
 
 def _sms_fit_locations(
     head: str, forms: list[list[str]], gewarnt: set[int], max_chars: int,
 ) -> str | None:
-    """Issue #3047 AC-23 (B-K3, Konzept WV6; Tech-Lead-Entscheidung p8,
-    ADR-0095: ein Vergleich braucht mehrere Orte). Einpassung von hinten:
+    """Issue #3047 AC-23 / #3172 (ADR-0125 Nr. 4). Einpassung von hinten:
 
-    1. zuerst die Wetterzellen ALLER gezeigten Orte vom Listenende (gleiches
-       Zeichen-Budget je Ort), bis je Ort nur noch die erste Listenzeile bleibt;
-    2. erst dann entfallen ganze Orte vom Ende als `` +k Orte`` -- Orte OHNE
-       amtliche Warnung zuerst (Warnungen fallen zuletzt weg);
-    3. sind nur Orte mit Warnung (oder ein einziger Ort) uebrig, weichen auch
-       ihre ersten Zellen dem ``!``-Marker.
+    1. gesucht wird die groesste Zeilenzahl k, bei der alle gezeigten Orte mit
+       je k Listenzeilen (bzw. allen, wenn ein Ort weniger hat) passen --
+       alle Orte tragen gleich viele Zeilen, gekuerzt vom Listenende;
+    2. erst wenn auch k = 1 nicht passt, entfallen ganze Orte vom Ende als
+       `` +k Orte`` -- Orte OHNE amtliche Warnung zuerst;
+    3. sind nur Orte mit Warnung (oder ein einziger Ort) uebrig, darf auch
+       die erste Listenzeile fallen (k = 0, der ``!``-Block bleibt).
 
-    ``forms[i]`` = Formen des Ortes i (``_sms_location_variants``). ``None`` =
-    nicht einmal ein Ort ohne Zelle passt (Degenerationsfall beim Aufrufer)."""
+    ``forms[i]`` = Formen des Ortes i (``_sms_location_variants``, Index d =
+    d Zeilen entfernt). ``None`` = nicht einmal ein Ort ohne Zeile passt
+    (Degenerationsfall beim Aufrufer)."""
     n = len(forms)
     shown = list(range(n))
     while shown:
         notice = _sms_location_overflow_notice(n - len(shown))
-        floor = 0 if len(shown) == 1 or all(i in gewarnt for i in shown) else 1
-
-        def _body(budget: "int | None") -> str:
-            parts = (_sms_pick_form(forms[i], budget, floor) for i in shown)
-            return (f"{head} " + "; ".join(parts) + notice).rstrip()
-
-        if len(_body(-1)) <= max_chars:
-            # Die Laenge waechst monoton mit dem Budget: groesstes passendes suchen.
-            budgets = sorted({len(f) for i in shown for f in forms[i]})
-            lo, hi = 0, len(budgets) - 1
-            while lo < hi:
-                mid = (lo + hi + 1) // 2
-                if len(_body(budgets[mid])) <= max_chars:
-                    lo = mid
-                else:
-                    hi = mid - 1
-            return _body(budgets[lo]) if len(_body(budgets[lo])) <= max_chars else _body(-1)
+        meiste = max(len(forms[i]) - 1 for i in shown)
+        # Ohne jede Listenzeile (leere SMS-Liste) ist k = 0 die einzige Form.
+        floor = 0 if len(shown) == 1 or all(i in gewarnt for i in shown) else min(1, meiste)
+        for k in range(meiste, floor - 1, -1):
+            parts = (forms[i][max(len(forms[i]) - 1 - k, 0)] for i in shown)
+            body = (f"{head} " + "; ".join(parts) + notice).rstrip()
+            if len(body) <= max_chars:
+                return body
         ohne = [i for i in shown if i not in gewarnt]
         shown.remove(ohne[-1] if ohne else shown[-1])
     return None
@@ -1396,13 +1204,19 @@ def render_compare_sms(
     enabled_metrics: list[str] | None = None,
     unresolved_count: int = 0,
     metric_formats: dict[str, bool] | None = None,
+    ampel: dict | None = None,
 ) -> str:
     """Orts-Vergleich als flache SMS (Issue #1270), Kern: ``_render_compare_sms_body``.
+
+    Issue #3172 (ADR-0125): je Ort die Token-Zeile der Trip-SMS; ``ampel`` ist
+    die aufgeloeste Abo-Ampel (Hervorhebung ``@h``), ``None`` = Standard-
+    Vorlage. ``unresolved_count`` (unmappbare Eintraege) erzeugt kein Zeichen
+    mehr -- die Mail weist sie aus; der Parameter bleibt fuer die Aufrufer.
 
     Issue #3047 B-L2 (sms_format.md §3.4d): ist an einem Ort ein amtlicher
     Warndienst ausgefallen, endet die SMS mit dem Marker ``X?``. Er ist fester
     Bestandteil wie im Trip (faellt nie weg): das Budget des Kerns wird um ihn
-    verkleinert, die Metrik-/Orts-Kuerzung weicht ihm."""
+    verkleinert, die Zeilen-/Orts-Kuerzung weicht ihm."""
     max_chars = CHANNEL_LIMITS["sms"]["max_chars"]
     marker = (
         f" {_UNAVAILABLE_SYMBOL}"
@@ -1411,8 +1225,8 @@ def render_compare_sms(
     if max_chars is not None:
         max_chars -= len(marker)
     return _render_compare_sms_body(
-        result, enabled_metrics=enabled_metrics, unresolved_count=unresolved_count,
-        metric_formats=metric_formats, max_chars=max_chars,
+        result, enabled_metrics=enabled_metrics, metric_formats=metric_formats,
+        max_chars=max_chars, ampel=resolve_ampel({}) if ampel is None else ampel,
     ) + marker
 
 
@@ -1420,31 +1234,22 @@ def _render_compare_sms_body(
     result: ComparisonResult,
     *,
     enabled_metrics: list[str] | None,
-    unresolved_count: int,
     metric_formats: dict[str, bool] | None,
     max_chars: int | None,
+    ampel: dict,
 ) -> str:
-    """Rendert einen Orts-Vergleich als flache SMS (Issue #1270).
+    """Rendert einen Orts-Vergleich als flache SMS (Issue #1270, #3172).
 
     ``metric_formats`` (Issue #3039): ``{renderer_id: einfach}`` aus
-    ``channel_layouts``; Einfach wirkt nur fuer die GSM-7-sicheren Formen
-    (``SMS_FORMAT_MODE_METRIC_IDS``). ``None`` = heutiger Festzustand.
+    ``channel_layouts``; Einfach wirkt wie im Trip (``CT:SCT@13``).
 
-    Issue #1405 S3: ``unresolved_count`` (unmappbare gewaehlte Eintraege)
-    erhoeht den Zaehler ``?N`` jedes Ortsteils (sms_format.md §5b).
+    Reine Funktion, kein Score/Rang (AC-3). Budget ``max_chars`` aus
+    ``CHANNEL_LIMITS["sms"]`` (verkettungssicherer GSM-7-Wert, #1362 S5b).
 
-    Reine Funktion, kein Score/Rang (AC-3). Budget aus
-    ``CHANNEL_LIMITS["sms"]``: ``max_table_cols`` = 0 (keine Tabelle, flache
-    Zeile), ``max_chars`` (verkettungssicherer GSM-7-Wert -- Herleitung s.
-    Konstante in ``channel_layout.py``, Adversary-Fund #1362 S5b Runde 5).
-
-    Ueberlauf folgt der Hauskonvention aus ``alert/render.py:507-535``
-    (ADR-0011:42, "SMS-Laengen-Budget mit `+k`-Ueberlauf"): Kopf immer; erst
-    werden die Zellen aller Orte vom Listenende gekuerzt, erst danach entfallen
-    Orte und werden als ` +k Orte` AUSGEWIESEN (``_sms_fit_locations``, #3047 p8). Ein stiller Abbruch
-    waere eine luegende Ausgabe (vgl. #1269) — die SMS behauptete sonst einen
-    vollstaendigen Vergleich, den sie nicht zeigt. Endgarantie:
-    ``len <= max_chars`` (Aufrufer: ``CHANNEL_LIMITS["sms"]`` abzueglich Marker).
+    Ueberlauf (ADR-0011:42, #1269): Kopf immer; erst werden die Listenzeilen
+    aller Orte vom Listenende gekuerzt, erst danach entfallen Orte und werden
+    als ` +k Orte` AUSGEWIESEN (``_sms_fit_locations``). Endgarantie:
+    ``len <= max_chars``.
     """
     locations = location_render_order(result.locations)
     # #3122 B5: Kopf aus ``_sms_kopf``; ohne Daten (kein Ort oder alle Orte
@@ -1458,8 +1263,8 @@ def _render_compare_sms_body(
         return "Orte: keine Daten"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
 
     forms = [
-        _sms_location_variants(loc, enabled_metrics, unresolved_count, metric_formats,
-                               mit_name=not ein_ort)
+        _sms_location_variants(loc, enabled_metrics, metric_formats,
+                               mit_name=not ein_ort, ampel=ampel)
         for loc in locations
     ]
     head = _sms_kopf(locations, result.target_date, forms, max_chars)
@@ -1470,14 +1275,14 @@ def _render_compare_sms_body(
     body = _sms_fit_locations(head, forms, gewarnt, max_chars)
     if body is not None:
         return body
-    # Degenerationsfall: schon der erste Ort ohne Zelle sprengt das Budget.
-    # "Ueberschrift + nichts" ist verboten — dann lieber EIN gekuerzter Ort.
-    # Gekuerzt wird der Ortsblock ALLEIN (nicht Kopf+Block), weil eine
-    # Wortgrenzen-Kuerzung ueber den Kopf hinweg bei einem einzigen ueberlangen
-    # Ortsnamen genau auf der Kopf-Grenze schnitte und wieder "Ueberschrift +
-    # nichts" ergaebe. `_word_boundary_truncate` faellt bei einem Wort > Budget
-    # auf den harten Schnitt zurueck: ein unkenntlicher Ort ist ehrlicher als
-    # ein verschwiegener.
+    # Degenerationsfall: schon der erste Ort ohne Listenzeile sprengt das
+    # Budget. "Ueberschrift + nichts" ist verboten -- dann lieber EIN
+    # gekuerzter Ort. Gekuerzt wird der Ortsblock ALLEIN (nicht Kopf+Block),
+    # weil eine Wortgrenzen-Kuerzung ueber den Kopf hinweg bei einem einzigen
+    # ueberlangen Ortsnamen genau auf der Kopf-Grenze schnitte.
+    # `_word_boundary_truncate` faellt bei einem Wort > Budget auf den harten
+    # Schnitt zurueck: ein unkenntlicher Ort ist ehrlicher als ein
+    # verschwiegener.
     first = forms[0][-1]
     marker = _sms_location_overflow_notice(len(forms) - 1)
     budget = max_chars - len(head) - 1 - len(marker)
@@ -1519,13 +1324,7 @@ def _sms_kopf(locations: list, target_date, forms: list[list[str]],
 
 def _sms_location_overflow_notice(omitted: int) -> str:
     """Orts-Ueberlauf-Hinweis (#1269) am NACHRICHTENENDE: zaehlt weggelassene
-    ORTE. Adversary-Fund (#1362 Scheibe S5b): trifft er auf den neuen
-    Metrik-Ueberlauf im Ortsblock (``+N`` OHNE Wortzusatz -- dort aus dem
-    Zusammenhang lesbar, s. ``_sms_location_part``), ergibt ``... +3 +4`` zwei
-    Zahlen ohne erkennbaren Bezug. Dieser Hinweis traegt deshalb den Zusatz
-    "Orte" (kurz gehalten, PO-Vorgabe: Platz kostet -- Orts-Ueberlauf tritt nur
-    bei vielen Orten auf, dort sind die 5 Extra-Zeichen vertretbar). Leer, wenn
-    nichts entfaellt."""
+    ORTE, mit dem Zusatz "Orte" (#1362 S5b). Leer, wenn nichts entfaellt."""
     if omitted <= 0:
         return ""
     return f" +{omitted} Orte"

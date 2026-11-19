@@ -34,4 +34,4 @@ Brenner
 ----
 Keine Wetterdaten verfügbar.
 ----
-Orte 29.10.: Innsbruck D 11C R 2.4 mm TH - PT Regen +6 ?1; Lienz D 12C R 5.4 mm +8 ?1; Kufstein D 13C R 8.4 mm TH - +7 ?1; Brenner n/a X?
+Orte 29.10.: Innsbruck: D11 R- TH:- PT:R; Lienz: D12 R1.8@13 TH:M@14+HL PT:R; Kufstein: D13 R2.8@13 TH:- PT:M; Brenner n/a X?

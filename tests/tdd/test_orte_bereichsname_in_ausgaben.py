@@ -176,7 +176,7 @@ def test_ac35_drei_orte_heissen_orte_in_allen_kanaelen(mit, lang):
         assert tx["klartext"].splitlines()[0] == KOPF[lang], tx["klartext"][:200]
         assert tx["telegram"].splitlines()[0] == f"{KOPF[lang]} — Kette Basis", tx["telegram"][:200]
         for kanal in ("sms", "premium_sms"):
-            assert tx[kanal].startswith("Orte 08.07.: Innsbruck "), tx[kanal]
+            assert tx[kanal].startswith("Orte 08.07.: Innsbruck: "), tx[kanal]
             for name in ("Innsbruck", "Bozen", "Lienz"):
                 assert name in tx[kanal], f"{kanal}: {name} fehlt: {tx[kanal]}"
         _keine_bereichsnamen(tx, lang)
@@ -233,7 +233,8 @@ def test_ac36_ein_ort_uebersicht_und_texte_ohne_mehrzahl(mit, lang):
             assert not treffer, f"{kanal} ({lang}) setzt mehrere Orte voraus: {treffer}"
         assert tx["telegram"].splitlines()[0] == f"{KOPF[lang]} — Kette Basis"
         for kanal in ("sms", "premium_sms"):
-            assert tx[kanal].startswith("Tecklenburg 08.07.: D 11C"), tx[kanal]
+            # #3172 (ADR-0125): Token-Zeile der Trip-SMS, Name nur im Kopf.
+            assert tx[kanal].startswith("Tecklenburg 08.07.: D11"), tx[kanal]
             assert tx[kanal].count("Tecklenburg") == 1, f"{kanal}: Ortsname doppelt: {tx[kanal]}"
         _keine_bereichsnamen(tx, lang)
     assert uids[0] != uids[1]
@@ -274,7 +275,7 @@ def test_sms_mehrere_orte_einer_ohne_daten_bleibt_sichtbar():
         sms = _sms_aus(DREI)
     finally:
         FEHLER["orte"] = set()
-    assert sms.startswith("Orte 08.07.: Innsbruck "), sms
+    assert sms.startswith("Orte 08.07.: Innsbruck: "), sms
     assert "Bozen n/a" in sms, sms
 
 
@@ -292,7 +293,8 @@ def test_sms_mehrere_orte_alle_ohne_daten():
 # SMS-Kopf bei genau einem Ort: Grenzen des Ortsnamens, Ort ohne Wertzelle
 # ---------------------------------------------------------------------------
 
-_ZELLE = re.compile(r"(?:^| )[A-Z]{1,3} -?\d")
+#: #3172 (ADR-0125): ein Wert-Token der Token-Zeile (``D12``, ``W-``, ``TH:-``).
+_ZELLE = re.compile(r"(?:^| )[A-Z]{1,3}:?(?:-?\d|-|\?)")
 
 
 def _sms_ein_ort(name: str, enabled_metrics=None) -> str:
@@ -340,7 +342,8 @@ def test_sms_ein_ort_ohne_wertzelle_ohne_haengenden_trenner():
     """Ein Ort, bewusst leere Auswahl bzw. gewaehlte Groesse ohne Wert: kein
     haengendes Leerzeichen und kein Trenner nach dem Kopf."""
     assert _sms_ein_ort("Tecklenburg", enabled_metrics=[]) == "Tecklenburg 08.07.:"
-    assert _sms_ein_ort("Tecklenburg", enabled_metrics=["snow_depth_cm"]) == "Tecklenburg 08.07.: ?1"
+    # #3172 (ADR-0125): gewaehlte Groesse ohne Wert = ``?`` am Kuerzel (statt ``?1``).
+    assert _sms_ein_ort("Tecklenburg", enabled_metrics=["snow_depth_cm"]) == "Tecklenburg 08.07.: SD?"
 
 
 def test_sms_ein_ort_ohne_wertzelle_ungekuerzt_ohne_haengendes_leerzeichen():
@@ -348,6 +351,7 @@ def test_sms_ein_ort_ohne_wertzelle_ungekuerzt_ohne_haengendes_leerzeichen():
     Ort ohne Wertzelle endet direkt auf dem Kopf, ohne Leerzeichen (Adversary
     F002). Echter Renderer-Kern, keine Attrappe."""
     from app.user import ComparisonResult, LocationResult
+    from app.ampel import resolve_ampel
     from output.renderers.comparison import _render_compare_sms_body
 
     loc = SavedLocation(id="loc-x", name="Tecklenburg", lat=47.0, lon=11.0, elevation_m=1000)
@@ -357,8 +361,8 @@ def test_sms_ein_ort_ohne_wertzelle_ungekuerzt_ohne_haengendes_leerzeichen():
                         hourly_data=[_dp(9, werte), _dp(12, werte), _dp(15, werte)])
     res = ComparisonResult(locations=[lr], time_window=(9, 16), target_date=TARGET_DATE,
                            created_at=datetime(2026, 7, 8, 4, 0))
-    sms = _render_compare_sms_body(res, enabled_metrics=[], unresolved_count=0,
-                                   metric_formats=None, max_chars=None)
+    sms = _render_compare_sms_body(res, enabled_metrics=[], metric_formats=None,
+                                   max_chars=None, ampel=resolve_ampel({}))
     assert sms == "Tecklenburg 08.07.:", repr(sms)
 
 

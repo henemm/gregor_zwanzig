@@ -124,6 +124,7 @@ def compare_email_rendern(kontext: dict, *, lang: Lang = "de", undelivered=None)
 def compare_kanaltexte_rendern(kontext: dict, *, lang: Lang = "de") -> tuple[str, str]:
     """(SMS-Text, Telegram-Text). Telegram-Stil "kurzform" = derselbe Text wie
     die SMS (Issue #2422 S5, AC-28), sonst der Telegram-Renderer."""
+    from app.ampel import resolve_ampel
     from output.renderers.comparison import render_compare_sms, render_compare_telegram
     from services.compare_alert_channels import effective_compare_telegram_style
 
@@ -132,6 +133,8 @@ def compare_kanaltexte_rendern(kontext: dict, *, lang: Lang = "de") -> tuple[str
         result, enabled_metrics=opts.enabled_metrics_by_channel["sms"],
         unresolved_count=opts.unresolved_by_channel.get("sms", 0),
         metric_formats=opts.metric_formats("sms"),
+        # Issue #3172 (ADR-0125): Hervorhebung `@h` nach der Abo-Ampel wie im Trip.
+        ampel=resolve_ampel(preset),
     )
     if effective_compare_telegram_style(preset) == "kurzform":
         return sms, sms

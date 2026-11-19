@@ -234,7 +234,9 @@ def test_ac4_sms_bei_standard_folgt_mail_tabelle():
     sms = render_compare_sms(_result(), enabled_metrics=None)
     assert len(sms) <= 160, len(sms)
     erster_ort = sms.split(": ", 1)[1].split("; ")[0]
-    kuerzel = re.findall(r"(?<= )([A-Z]{1,2}) (?=[-\w])", erster_ort)
+    # #3172 (ADR-0125): Token-Zeile ``Aachen: D10/20 W? R? ...`` -> Kuerzel.
+    token = erster_ort.split(": ", 1)[1].split(" ")
+    kuerzel = [re.match(r"[A-Z]+", t).group(0) for t in token]
     assert kuerzel[:4] == _SMS_NONE_KUERZEL_FOLGE, sms
     assert "SU" not in kuerzel[:4], f"alte Sechserliste: {sms}"
 

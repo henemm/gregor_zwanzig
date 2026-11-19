@@ -138,7 +138,7 @@ def wertezeilen(tg: str, ort: str = "Innsbruck") -> list[list[str]]:
 
 def _sms_ort(sms: str, name: str) -> str:
     teile = sms.split(": ", 1)[1].split("; ")
-    treffer = [t for t in teile if t.startswith(name + " ")]
+    treffer = [t for t in teile if t.startswith(name + ": ")]
     assert treffer, f"Ort {name} fehlt in der SMS: {sms}"
     return treffer[0]
 
@@ -198,13 +198,15 @@ def test_bl4_nie_eingestellt_sms_folgt_mail(mit):
         sms = text(snap, "sms")
         assert len(sms) <= 160, len(sms)
         ort = _sms_ort(sms, "Innsbruck")
-        kuerzel = re.findall(r"(?<= )([A-Z]{1,2}) (?=[-\w])", ort)
+        # #3172 (ADR-0125): Kuerzel der Token-Zeile (``D12/22``, ``R1.5@11``).
+        kuerzel = [re.match(r"[A-Z]+", t).group(0) for t in ort.split(": ", 1)[1].split(" ")]
         # Mail-Folge: Temp max (D), Wind (W), Regen (R), Regenwahrsch. (PR) ...
         assert kuerzel[:3] == ["D", "W", "R"], f"B-L4 SMS-Festsatz statt Mail-Folge: {ort}"
         assert "SU" not in kuerzel[:3] and "SD" not in kuerzel[:3], ort
-        # Kuerzung vom Listenende (AC-23): der Rest ist ausgewiesen, nicht verschwiegen.
-        assert re.search(r" \+\d+", ort), f"Ueberlauf nicht ausgewiesen: {ort}"
-        assert not re.search(r" \?\d", ort), f"?N bei nie eingestellt: {ort}"
+        # Kuerzung vom Listenende (AC-23) still wie im Trip: die hinteren Zeilen
+        # der Mail-Folge (Boeen, Windrichtung) fehlen, kein Zaehler +N/?N.
+        assert "G" not in kuerzel and "WD" not in kuerzel, ort
+        assert not re.search(r" [+?]\d", ort), f"Zaehler in der SMS: {ort}"
         assert text(snap, "premium_sms") == sms
 
 

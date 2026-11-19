@@ -175,11 +175,14 @@ def tg_ausblick_zellen(block: list[str]) -> dict[str, str] | None:
 
 
 def sms_kuerzel(sms: str, name: str) -> list[str]:
-    """Kuerzel-Folge eines Ortes in der SMS (``G 38 km/h R 2.4 mm ...``)."""
-    teile = sms.split(": ", 1)[1].split("; ")
-    ort = next(t for t in teile if t.split(" ", 1)[0] == name)
-    alle = "|".join(sorted(KUERZEL.values(), key=len, reverse=True))
-    return re.findall(rf"(?<= )({alle}) (?=[-\w])", ort)
+    """Kuerzel-Folge eines Ortes in der SMS (#3172, Token-Zeile der Trip-SMS:
+    ``Kronplatz: G30@8(38@16) R- CT78@16``). Ein Ort ohne Token steht nur
+    mit seinem Namen da."""
+    teile = re.sub(r"( \+\d+ Orte)?( X\?)?$", "", sms.split(": ", 1)[1]).split("; ")
+    ort = next(t for t in teile if t == name or t.startswith(name + ": "))
+    token = ort[len(name) + 2:].split(" ") if ort != name else []
+    kuerzel = (re.match(r"[A-Z]+", t) for t in token)
+    return [k.group(0) for k in kuerzel if k and k.group(0) in KUERZEL.values()]
 
 
 def uebersicht_beschriftungen(html: str) -> list[str]:

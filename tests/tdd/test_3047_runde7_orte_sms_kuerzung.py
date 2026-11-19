@@ -1,6 +1,9 @@
 """#3047 Runde 7, Paket p8: Orte-SMS/Premium-SMS kuerzen zuerst die Zellen
 ALLER Orte, erst dann ganze Orte (AC-23, ADR-0095).
 
+#3172 (ADR-0125): die Orte-SMS schreibt die Token-Zeile der Trip-SMS; alle
+gezeigten Orte tragen gleich viele Listenzeilen, der Zaehler ``+N`` entfaellt.
+
 SPEC: docs/specs/modules/feat_3047_einstellung_gleich_mail_pruefkatalog.md,
 "Nachtrag Runde 7" (AC-23; Tech-Lead-Entscheidung p8: ein Vergleich braucht
 mehrere Orte -- jeder Kanal beantwortet jede Frage, ADR-0095).
@@ -35,7 +38,8 @@ ORTE = [("loc-ibk", "Innsbruck"), ("loc-bz", "Bozen"), ("loc-kuf", "Kufstein"),
         ("loc-kl", "Klagenfurt"), ("loc-sp", "St. Poelten"), ("loc-ei", "Eisenstadt")]
 
 #: Mail-Tabellenfolge bei "nie eingestellt" (CV2), als SMS-Kuerzel von Hand.
-MAIL_KUERZEL = ["D", "W", "R", "PR", "TH", "SU", "CT", "UV", "VS", "SD", "NS", "L", "G", "WD"]
+#: #3172: der Tagestiefstwert ``L`` steht im Bereich ``D10/20`` der ersten Zeile.
+MAIL_KUERZEL = ["D", "W", "R", "PR", "TH", "SU", "CT", "UV", "VS", "SD", "NS", "G", "WD"]
 
 #: Ausdrueckliche lange Liste, Folge bewusst != Katalogfolge, Kuerzel von Hand.
 LANGE_LISTE = [("gust", "G"), ("uv_index", "UV"), ("temperature", "D"),
@@ -149,9 +153,21 @@ def _teile(sms: str) -> list[str]:
     return rumpf.split("; ")
 
 
+def _name(ortsteil: str) -> str:
+    return ortsteil.split(": ", 1)[0]
+
+
 def _kuerzel(ortsteil: str) -> list[str]:
-    alle = "|".join(ALLE_KUERZEL)
-    return re.findall(rf"(?<= )({alle}) (?=[-\w])", ortsteil)
+    """Kuerzel der Token eines Ortsteils (#3172: ``D10/20``, ``TH:M@12``,
+    ``NS24+0`` -> ``D``, ``TH``, ``NS``), bis zum Warnblock ``!``."""
+    out = []
+    for token in ortsteil.split(": ", 1)[1].split(" "):
+        if token.startswith("!"):
+            break
+        treffer = re.match(r"[A-Z]+", token)
+        if treffer and treffer.group(0) in ALLE_KUERZEL:
+            out.append(treffer.group(0))
+    return out
 
 
 def _pruefe(snap, namen: list[str], soll: list[str], *, alle_orte: bool) -> list[str]:
@@ -159,18 +175,18 @@ def _pruefe(snap, namen: list[str], soll: list[str], *, alle_orte: bool) -> list
     assert len(sms) <= 160, (len(sms), sms)
     assert snap.sendungen("premium_sms")[-1]["body"] == sms
     teile = _teile(sms)
-    gezeigt = [t.split(" ")[0] for t in teile]
+    gezeigt = [_name(t) for t in teile]
     if alle_orte:
         assert " Orte" not in sms, f"Ort faellt weg, obwohl Zellen kuerzbar sind: {sms}"
-        assert gezeigt == [n.split(" ")[0] for n in namen], sms
+        assert gezeigt == namen, sms
     for teil in teile:
         ist = _kuerzel(teil)
         assert ist and ist[0] == soll[0], f"erste Listenzeile fehlt: {teil!r} in {sms}"
         assert ist == soll[:len(ist)], f"nicht vom Listenende gekuerzt: {ist} vs {soll}"
-    if any(re.search(r" \+\d+$", t) for t in teile):
-        # Gekuerzt wird nur so weit wie noetig: die SMS ist danach fast voll
-        # (eine weitere Zelle je Ort haette nicht mehr gepasst).
-        assert len(sms) >= 160 - 7 - 15 * len(teile), (len(sms), sms)
+    # #3172 (ADR-0125 Nr. 4): alle gezeigten Orte tragen gleich viele Zeilen,
+    # kein Zaehler ``+N`` mehr im Ortsteil.
+    assert len({len(_kuerzel(t)) for t in teile}) == 1, f"ungleiche Zeilenzahl: {sms}"
+    assert not any(re.search(r" [+?]\d+(?: |$)", t) for t in teile), sms
     return teile
 
 
@@ -179,10 +195,8 @@ def test_nie_eingestellt_alle_orte_sichtbar(mit, anzahl):
     namen = [n for _, n in ORTE[:anzahl]]
     for uid, snap in zwei_nutzer(mit, preset(anzahl, None)):
         teile = _pruefe(snap, namen, MAIL_KUERZEL, alle_orte=True)
-        # Gleiches Budget je Ort: keiner der Orte steht voll, waehrend ein
-        # anderer auf weniger als die Haelfte seiner Zellen faellt.
-        zahl = [len(_kuerzel(t)) for t in teile]
-        assert max(zahl) - min(zahl) <= 2, (zahl, teile)
+        # #3172: gleiche Zeilenzahl je Ort (in ``_pruefe``), mehr als eine Zeile.
+        assert len(_kuerzel(teile[0])) > 1, teile
 
 
 def test_lange_ausdrueckliche_liste_drei_orte(mit):
@@ -204,8 +218,9 @@ def test_viele_orte_fallen_erst_nach_der_ersten_zeile_weg(mit):
         teile = _pruefe(snap, [], soll, alle_orte=False)
         assert len(teile) + int(treffer.group(1)) == 12, sms
         assert len(teile) >= 3, f"zu frueh Orte verworfen: {sms}"
-        gezeigt = [t.split(" ")[0] for t in teile]
-        assert gezeigt == [n.split(" ")[0] for _, n in ORTE[:len(teile)]], sms
+        assert all(len(_kuerzel(t)) == 1 for t in teile), f"Orte vor der ersten Zeile weg: {sms}"
+        gezeigt = [_name(t) for t in teile]
+        assert gezeigt == [n for _, n in ORTE[:len(teile)]], sms
 
 
 def test_viele_orte_warnung_eines_hinteren_ortes_faellt_zuletzt_weg(mit):
@@ -220,10 +235,10 @@ def test_viele_orte_warnung_eines_hinteren_ortes_faellt_zuletzt_weg(mit):
         treffer = re.search(r" \+(\d+) Orte$", sms)
         assert treffer, sms
         teile = _pruefe(snap, [], soll, alle_orte=False)
-        gezeigt = [t.split(" ")[0] for t in teile]
-        assert gezeigt[-2:] == ["St.", "Eisenstadt"], sms
+        gezeigt = [_name(t) for t in teile]
+        assert gezeigt[-2:] == ["St. Poelten", "Eisenstadt"], sms
         for teil in teile[-2:]:
             assert "!TS" in teil, f"Warnung fehlt: {sms}"
-        ohne = [n.split(" ")[0] for _, n in ORTE[:10]]
+        ohne = [n for _, n in ORTE[:10]]
         assert gezeigt[:-2] == ohne[:len(gezeigt) - 2], sms
         assert len(teile) + int(treffer.group(1)) == 12, sms

@@ -290,7 +290,7 @@
     },
     "sms": {
      "ampel": null,
-     "example": "D 19C L 15C",
+     "example": "D15/19",
      "format": null,
      "mark": null,
      "reason": null,
@@ -338,7 +338,7 @@
     },
     "sms": {
      "ampel": null,
-     "example": "R 3.4 mm",
+     "example": "R1.0@15(1.3@16)",
      "format": null,
      "mark": null,
      "reason": null,
@@ -386,7 +386,7 @@
     },
     "sms": {
      "ampel": null,
-     "example": "G 62 km/h",
+     "example": "G41@9(62@16)",
      "format": null,
      "mark": null,
      "reason": null,
@@ -648,17 +648,10 @@
   }
  ],
  "sms_example": {
-  "length": 148,
+  "length": 150,
   "max_length": 153,
-  "overflow": {
-   "locations": 3,
-   "per_location": [
-    4,
-    3,
-    4
-   ]
-  },
-  "text": "Orte 14.07.: Innsbruck D 19C L 15C R 3.4 mm G 62 km/h +4; Lienz D 20C L 16C R 3.4 mm G 63 km/h PR 70% +3; Kufstein D 21C L 17C R 3.4 mm G 64 km/h +4"
+  "overflow": null,
+  "text": "Orte 14.07.: Innsbruck: D15/19 R1.0@15(1.3@16) G41@9(62@16); Lienz: D16/20 R1.0@15(1.3@16) G42@9(63@16); Kufstein: D17/21 R1.0@15(1.3@16) G43@9(64@16)"
  },
  "stored": false
 }

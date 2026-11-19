@@ -777,7 +777,8 @@ BRIEFING_ZEILE_VORHER = (
 #: Renderer ``render_compare_sms`` mit ``temp_max``/``temp_min``. #3122 B5:
 #: bei genau einem Ort steht der Ortsname im Kopf ("Vergleich 27.07.: Andermatt
 #: D 16C L 6C" -> "Andermatt 27.07.: D 16C L 6C"); die Kuerzel bleiben gleich.
-VERGLEICH_ZEILE_VORHER = "Andermatt 27.07.: D 16C L 6C"
+#: #3172 (ADR-0125): Token-Zeile der Trip-SMS -- Tiefst-/Hoechstwert als Bereich unter ``D``.
+VERGLEICH_ZEILE_VORHER = "Andermatt 27.07.: D6/16"
 
 
 def test_automatische_ausgaben_nach_t_umstellung():

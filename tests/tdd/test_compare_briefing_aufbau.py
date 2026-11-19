@@ -696,9 +696,12 @@ def _fragezaehler(teil: str) -> int:
 def test_f001_sms_zeigt_unmappbare_auswahl_in_vorschau_und_versand(env):
     """F001 (M12): Given ein Ortsvergleich, dessen SMS-Auswahl eine Groesse
     ohne Renderer-Zuordnung traegt (``unresolved_by_channel["sms"] == 1``,
-    #1405 S3) / When Vorschau und Versand laufen / Then zeigt jeder Ortsteil
-    der SMS den Zaehler ``?1`` (sms_format.md §5b) -- in der Vorschau, im
-    Versand und in der Telegram-Kurzform (= SMS-Text), identisch."""
+    #1405 S3) / When Vorschau und Versand laufen / Then ist die SMS in der
+    Vorschau, im Versand und in der Telegram-Kurzform (= SMS-Text) identisch.
+
+    #3172 (ADR-0125): der Zaehler ``?N`` ist abgeloest -- die unmappbare
+    Auswahl erzeugt in der SMS kein Zeichen mehr (die Mail weist sie aus);
+    jeder Ortsteil ist die Token-Zeile ``{Name}: D22``."""
     from services.report_config_resolver import resolve_compare_render_options
 
     preset = _preset_ablegen(
@@ -719,13 +722,14 @@ def test_f001_sms_zeigt_unmappbare_auswahl_in_vorschau_und_versand(env):
     for quelle, payload in (("Vorschau", vorschau), ("Versand", versand)):
         for kanal in ("sms", "telegram"):
             text = payload[kanal]
-            # Wire-Form "Vergleich TT.MM.: <Ort> ...; <Ort> ..." (sms_format.md)
+            # Wire-Form "Orte TT.MM.: <Ort>: <Token>; <Ort>: <Token>" (sms_format.md §5b)
             teile = [t.strip() for t in text.split(": ", 1)[-1].split(";") if t.strip()]
-            assert [t.split(" ", 1)[0] for t in teile] == ["Innsbruck", "Bozen"], text
+            assert [t.split(": ", 1)[0] for t in teile] == ["Innsbruck", "Bozen"], text
             for teil in teile:
-                assert _fragezaehler(teil) == 1, (
-                    f"F001/M12: {quelle}-{kanal} ohne Luecken-Zaehler ?1 in {teil!r}: {text!r}"
+                assert _fragezaehler(teil) == 0, (
+                    f"#3172: {quelle}-{kanal} mit abgeloestem Zaehler ?N in {teil!r}: {text!r}"
                 )
+                assert re.fullmatch(r"\w+: D\d+", teil), (quelle, kanal, teil)
     assert vorschau["sms"] == versand["sms"], "F001/M12: Vorschau-SMS != Versand-SMS"
     assert vorschau["telegram"] == versand["telegram"], "F001/M12: Kurzform weicht ab"
 

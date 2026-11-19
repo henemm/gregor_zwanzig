@@ -191,24 +191,37 @@ def telegram_zellen(nachricht: str) -> list[str]:
 
 def sms_tokens(nachricht: str) -> list[str]:
     """Die Leerzeichen-getrennten Tokens des ERSTEN Ortsteils einer
-    Compare-SMS (Kuerzel UND Wert), in Render-Reihenfolge."""
+    Compare-SMS (Kuerzel UND Wert, #3172: Token-Zeile ``W30@10(43@16)``), in
+    Render-Reihenfolge, ohne Ortsnamen."""
     _kopf, trenner, rumpf = nachricht.partition(": ")
     if not trenner:
         return []
-    return rumpf.split("; ")[0].split(" ")
+    erster = rumpf.split("; ")[0]
+    # Mehrere Orte: der Ortsteil beginnt mit "{Name}: " (#3172, ADR-0125).
+    _name, trenner, token = erster.partition(": ")
+    return (token if trenner else erster).split(" ")
+
+
+def _token_kuerzel(token: str) -> str | None:
+    """Kurzform-Kuerzel eines Tokens -- laengstes passendes Symbol der
+    Orte-SMS (``NS24+0`` -> ``NS24+``, ``TH:-`` -> ``TH:``, ``D15/19`` -> ``D``)."""
+    from output.renderers.orte_sms import orte_kuerzel_je_metrik
+
+    treffer = [s for s in orte_kuerzel_je_metrik() if token.startswith(s)]
+    return max(treffer, key=len) if treffer else None
 
 
 def sms_index(nachricht: str, kuerzel: str) -> int | None:
-    """Position des Kuerzel-Tokens in der Compare-SMS — ueber EXAKTE
-    Token-Gleichheit, nicht ueber Teilstring-Suche.
+    """Position des Tokens mit dem Kuerzel ``kuerzel`` im ersten Ortsteil --
+    ueber das EXAKTE Kuerzel des Tokens (laengster Symbol-Praefix), nicht ueber
+    Teilstring-Suche.
 
     Begruendung (Muster ``_first_index_starting_with()`` in
-    ``test_channel_metric_matrix.py``): die Compare-Kuerzel sind teilweise
-    Praefixe voneinander ("N" ist Wortanfang von "NL"/"NS", "C" von "CT"/
-    "CL"/"CH"/"CM"). Eine ``in``-Suche schluege am falschen Token an und die
-    Reihenfolge-Aussage waere Zufall. ``None`` = Kuerzel nicht in der
-    Nachricht (z.B. vom Zeichen-Budget verdraengt)."""
-    treffer = [i for i, tok in enumerate(sms_tokens(nachricht)) if tok == kuerzel]
+    ``test_channel_metric_matrix.py``): die Kuerzel sind teilweise Praefixe
+    voneinander ("D" von "DP", "C" von "CT"/"CL"). ``None`` = Kuerzel nicht in
+    der Nachricht (z.B. vom Zeichen-Budget verdraengt)."""
+    treffer = [i for i, tok in enumerate(sms_tokens(nachricht))
+               if _token_kuerzel(tok) == kuerzel]
     assert len(treffer) <= 1, (
         f"Kuerzel {kuerzel!r} kommt {len(treffer)}-mal im ersten Ortsteil vor "
         f"— die Positionsaussage waere mehrdeutig.\n{nachricht!r}"
@@ -217,22 +230,23 @@ def sms_index(nachricht: str, kuerzel: str) -> int | None:
 
 
 def sms_kuerzel(loc_result, metric_id: str) -> str:
-    """Das SMS-Kuerzel-Token, unter dem ``metric_id`` in der Compare-SMS
-    erscheint (inkl. Auswertungszeichen ``+``/``-``, #1362 S5b).
+    """Das Kurzform-Kuerzel, unter dem ``metric_id`` in der Compare-SMS
+    erscheint (#3172: Token-Zeile der Trip-SMS, ``W``, ``TH:``, ``NS24+``).
 
-    Bewusst aus dem Produktiv-Baustein ``_sms_metric_cell()`` gelesen: er ist
-    hier reiner ORTSFINDER fuer eine Reihenfolge-Aussage und selbst
-    reihenfolge-blind (er kennt genau eine Groesse). Die Zusicherung dieser
-    Achse — dass die Zell-FOLGE der Nutzerliste folgt — entsteht dadurch
-    nicht; sie entsteht aus dem paarweisen Vergleich zweier Renderlaeufe.
-    Ein zweites, hier getipptes Kuerzel-Vokabular waere die vierte Handkopie
-    (s. comparison.py:640-660) und liefe der Katalog-Aenderung hinterher."""
-    from output.renderers.comparison import _sms_metric_cell
+    Bewusst aus dem Produktiv-Baustein ``orte_sms.orte_token_reihen`` gelesen,
+    mit ``metric_id`` als EINZIGER Groesse: er ist hier reiner ORTSFINDER fuer
+    eine Reihenfolge-Aussage. Die Zusicherung dieser Achse -- dass die
+    Token-FOLGE der Nutzerliste folgt -- entsteht aus dem paarweisen
+    Vergleich zweier Renderlaeufe. Ein hier getipptes Kuerzel-Vokabular liefe
+    der Katalog-Aenderung hinterher."""
+    from app.ampel import resolve_ampel
+    from output.renderers.orte_sms import orte_token_reihen
 
-    zelle = _sms_metric_cell(loc_result, metric_id)
-    assert zelle is not None, (
-        f"{metric_id!r} hat an diesem Ort keinen SMS-Wert — die Fixture muss "
-        "jede geprueften Groesse befuellen, sonst misst der Test das Fehlen "
+    tokens = orte_token_reihen(loc_result, [metric_id], None, ampel=resolve_ampel({}))[0]
+    listen = [t for t in tokens if t.category in ("forecast", "wintersport")]
+    assert len(listen) == 1 and listen[0].value != "?", (
+        f"{metric_id!r} hat an diesem Ort keinen SMS-Wert ({listen}) — die Fixture "
+        "muss jede gepruefte Groesse befuellen, sonst misst der Test das Fehlen "
         "statt der Reihenfolge"
     )
-    return zelle.split(" ", 1)[0]
+    return listen[0].symbol

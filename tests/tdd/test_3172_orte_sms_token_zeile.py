@@ -325,7 +325,7 @@ def test_ac4_ohne_platzmangel_alle_orte_mit_allen_zeilen():
     orte = _viele_orte(2)
     sms = _sms(_kontext(_vergleich(orte), {"active_metrics": AC1_AUSWAHL}))
     for teil in _ortsteile(sms):
-        assert _token(teil) == ["D15", "W-", "G-", "R-", "PR-", "TH:-"], sms
+        assert _token(teil) == ["D15/15", "W-", "G-", "R-", "PR-", "TH:-"], sms
 
 
 # ---------------------------------------------------------------------------

@@ -529,18 +529,20 @@ def _orte_sms(cloud_fmt: str | None) -> list[dict]:
 
 
 def _orte_kuerzel_folge(ortsteil: str) -> list[str]:
-    alle = "|".join(sorted(ORTE_KUERZEL.values(), key=len, reverse=True))
-    return re.findall(rf"(?<= )({alle}) (?=[-\w])", ortsteil)
+    """#3172 (ADR-0125): Kuerzel der Token-Zeile (``CT:SCT@11`` -> ``CT``)."""
+    kuerzel = (re.match(r"[A-Z]+", t) for t in ortsteil.split(": ", 1)[1].split(" "))
+    return [k.group(0) for k in kuerzel if k and k.group(0) in ORTE_KUERZEL.values()]
 
 
 def _orte_wolke(ortsteil: str) -> str:
-    m = re.search(r"(?<= )CT (\S+)", ortsteil)
+    m = re.search(r"(?<= )CT(\S+)", ortsteil)
     assert m, ortsteil
     return m.group(1)
 
 
-#: Wolkenzelle Orte-SMS (Innsbruck, cloud_avg 35): Roh = Prozent, Einfach = Stufe.
-ORTE_WOLKE = {"raw": "35%", "simplified": "SCT"}
+#: Wolken-Token Orte-SMS (Innsbruck, Stundenspitze 35 % um 11 Uhr): Roh = Zahl,
+#: Einfach = Stufe (#3172: Token-Zeile wie im Trip, ``CT:SCT@11``).
+ORTE_WOLKE = {"raw": "35@11", "simplified": ":SCT@11"}
 
 
 @pytest.mark.parametrize("cloud_fmt", ["raw", "simplified"], ids=["roh", "einfach"])
@@ -595,7 +597,7 @@ def test_ac8_orte_zwei_nutzer_je_eigene_sms(mit, reihenfolge):
     pb = preset({"sms": _orte_liste([
         {"metric_id": "cloud_total", "enabled": True, "format": "simplified"},
         {"metric_id": "precipitation", "enabled": True}])})
-    soll = {"a": (["G", "CT"], "35%"), "b": (["CT", "R"], "SCT")}
+    soll = {"a": (["G", "CT"], "35@11"), "b": (["CT", "R"], ":SCT@11")}
     folge = [("a", pa), ("b", pb)] if reihenfolge == "ab" else [("b", pb), ("a", pa)]
     for name, p in folge:
         for _uid, snap in zwei_nutzer(mit, p):

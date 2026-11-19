@@ -31,6 +31,8 @@ from app.user import ComparisonResult, LocationResult, SavedLocation  # noqa: E4
 from output.renderers.channel_layout import CHANNEL_LIMITS  # noqa: E402
 
 _HAGEL_HINWEIS = "Hagel: ja"
+#: #3172: Hagel-Suffix am ``TH:``-Token der Token-Zeile (sms_format.md §5).
+_SMS_HAGEL = "TH:H@14+HL"
 
 
 def _hourly(*, hail_flag) -> list[ForecastDataPoint]:
@@ -60,19 +62,21 @@ def _result_ein_ort_true_ein_ort_none() -> ComparisonResult:
 # =============================================================================
 
 def test_ac7d_compare_sms_zeigt_hagel_hinweis_nur_beim_true_ort():
+    """#3172 (ADR-0125): die Orte-SMS schreibt die Token-Zeile der Trip-SMS --
+    der Hagel-Hinweis ist dort der Suffix ``+HL`` am Gewitter-Token."""
     from output.renderers.comparison import render_compare_sms
 
     result = _result_ein_ort_true_ein_ort_none()
     sms = render_compare_sms(result, enabled_metrics=["thunder_max"])
 
     vor_ruhigort, *rest = sms.split("Ruhigort")
-    assert _HAGEL_HINWEIS in vor_ruhigort, (
+    assert _SMS_HAGEL in vor_ruhigort, (
         f"Der Ortsvergleich-SMS-Kanal muss beim Ort mit hail_flag=True den "
-        f"Hinweis '{_HAGEL_HINWEIS}' zeigen (Textabschnitt vor 'Ruhigort'). "
+        f"Hinweis '{_SMS_HAGEL}' zeigen (Textabschnitt vor 'Ruhigort'). "
         f"SMS: {sms!r}"
     )
     if rest:
-        assert _HAGEL_HINWEIS not in rest[0], (
+        assert "+HL" not in rest[0], (
             f"Der Ort mit hail_flag=None darf KEINEN Hagel-Zusatz zeigen. "
             f"Abschnitt: {rest[0]!r}"
         )

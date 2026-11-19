@@ -320,7 +320,8 @@ def test_ac7_eintrag_ohne_einfach_angabe_zeigt_die_zahl(mit):
         html_zeile = _html_zeile(lauf.snap.sendungen("email")[-1]["body"], "Böen")
         assert "19 km/h" in html_zeile and _AMPEL_PUNKT not in html_zeile
         assert _telegram_zelle(_text(lauf.snap, "telegram"), "Innsbruck", "Böen") == "19 km/h"
-        assert re.search(r"\bCT 35\b", _text(lauf.snap, "sms")), _text(lauf.snap, "sms")
+        # #3172 (ADR-0125): Token-Zeile -- Roh = Zahl der Stundenspitze (``CT35@11``).
+        assert re.search(r" CT35@\d+\b", _text(lauf.snap, "sms")), _text(lauf.snap, "sms")
 
 
 def test_ac8_einfach_bei_metrik_ohne_zweite_darstellung_wie_roh(mit):
@@ -349,9 +350,11 @@ def test_ac9_sms_einfach_nur_fuer_wolken_gsm7_und_hoechstens_160(mit):
     )}
     for lauf in _zwei(mit, _vorlage(layouts)):
         sms = _text(lauf.snap, "sms")
-        assert re.search(rf"Innsbruck CT {_WOLKEN_STUFE}\b", sms), (
+        # #3172 (ADR-0125): Token-Zeile, Einfach als Stufe ``CT:SCT@11``.
+        assert re.search(rf"Innsbruck: CT:{_WOLKEN_STUFE}@\d+", sms), (
             f"SMS: Wolken muessen bei Einfach als Stufe erscheinen\n{sms}")
-        assert re.search(r"\bG 19\b", sms) and re.search(r"\bG 23\b", sms), (
+        # Boeen haben keine Einfachform: Zahl bzw. Leerwert unter Gelb, nie Stufe.
+        assert re.search(r"(?:: | )G(?:-|\d+@)", sms) and "G:" not in sms, (
             f"SMS: Boeen bleiben trotz Einfach eine Zahl\n{sms}")
         assert len(sms) <= 160, f"SMS zu lang ({len(sms)}): {sms}"
         assert_gsm7_clean(sms, "Vergleichs-SMS mit channel_layouts")
@@ -364,9 +367,9 @@ def test_ac10_premium_sms_text_gleich_sms_text_mit_kanal_einstellungen(mit):
     for lauf in _zwei(mit, _vorlage(layouts)):
         sms = _text(lauf.snap, "sms")
         assert _text(lauf.snap, "premium_sms") == sms
-        assert re.search(rf"CT {_WOLKEN_STUFE}\b", sms), (
+        assert re.search(rf"CT:{_WOLKEN_STUFE}@\d+", sms), (
             f"Vorbedingung: SMS muss die Kanal-Einstellung tragen\n{sms}")
-        assert sms.index("SU ") < sms.index("CT ") < sms.index("G "), sms
+        assert sms.index(" SU") < sms.index(" CT:") < sms.index(" G"), sms
 
 
 # ---------------------------------------------------------------------------

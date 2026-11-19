@@ -21,19 +21,28 @@ Mock/``patch()``, kein Versand.
 from __future__ import annotations
 from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
+import re
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
 
 from output.renderers import comparison as comparison_mod
-from output.renderers.comparison import _sms_metric_cell
+from output.renderers.comparison import render_compare_sms
 from output.tokens import builder as builder_mod
 from output.tokens.builder import build_token_line
 from output.tokens.dto import (
     DailyForecast, HourlyValue, MetricSpec, NormalizedForecast,
 )
 
-from app.user import LocationResult, SavedLocation
+from app.models import ForecastDataPoint
+from app.user import ComparisonResult, LocationResult, SavedLocation
+
+
+def _stunde(**werte) -> list[ForecastDataPoint]:
+    """Ein Stundenwert (#3172: die Orte-SMS liest Wind/Regen wie der Trip aus
+    den Stundenwerten des Ortes)."""
+    return [ForecastDataPoint(ts=datetime(2026, 7, 27, 12, tzinfo=timezone.utc), **werte)]
 
 # Issue #1409: Prueflinge relativ zur eigenen Testdatei aufloesen -- sonst misst
 # ein Worktree-Lauf die unveraenderte Hauptrepo-Kopie und meldet falsches Gruen.
@@ -61,9 +70,11 @@ _FAELLE = [
     # die vier Groessen, die diese Scheibe ohnehin anfasst.
     # Issue #2792 S1c-4b (E1): Wert ab Gelb der Ampel „allgemein" (30 km/h),
     # sonst bliebe der Trip-Token „W-" und das Kuerzel waere nicht abtastbar.
-    ("Wind", {"wind_hourly": (HourlyValue(12, 35),)}, "wind_max", {"wind_max": 35.0}),
+    ("Wind", {"wind_hourly": (HourlyValue(12, 35),)}, "wind_max",
+     {"wind_max": 35.0, "hourly_data": _stunde(wind10m_kmh=35.0)}),
     ("Niederschlag",
-     {"rain_hourly": (HourlyValue(12, 3.0),)}, "precip_sum", {"precip_sum_mm": 3.0}),
+     {"rain_hourly": (HourlyValue(12, 3.0),)}, "precip_sum",
+     {"precip_sum_mm": 3.0, "hourly_data": _stunde(precip_1h_mm=3.0)}),
 ]
 
 
@@ -94,18 +105,25 @@ def _trip_kuerzel_ermitteln(trip_feld: dict) -> str:
 
 def _vergleich_kuerzel(renderer_id: str, loc_feld: dict) -> str:
     """Das Kuerzel, das die VERGLEICHS-SMS fuer dieselbe Groesse sendet --
-    aus der echten Zellenerzeugung, nicht aus einer Nachbildung."""
+    aus der echten Orte-SMS (#3172: Token-Zeile), nicht aus einer Nachbildung."""
     loc = LocationResult(
         location=SavedLocation(id="a", name="Andermatt", lat=47.0, lon=11.0,
                                elevation_m=600),
         **loc_feld,
     )
-    zelle = _sms_metric_cell(loc, renderer_id)
-    assert zelle, (
-        f"Testaufbau: der Ortsvergleich rendert fuer {renderer_id!r} keine "
-        "SMS-Zelle (kein Wert oder kein Kuerzel)."
+    sms = render_compare_sms(ComparisonResult(
+        locations=[loc], time_window=(0, 23), target_date=date(2026, 7, 27),
+        created_at=datetime(2026, 7, 27, 6, 0)), enabled_metrics=[renderer_id])
+    token = sms.partition(": ")[2].split()
+    if not token:
+        return ""  # keine Zeile (z.B. verfaelschte Aufloesung ohne Kurzform-Kuerzel)
+    assert len(token) == 1, f"Testaufbau: genau ein Token erwartet: {sms!r}"
+    kuerzel = re.match(r"[A-Z]+", token[0]).group(0)
+    assert token[0][len(kuerzel):].lstrip(":") not in ("-", "?"), (
+        f"Testaufbau: der Ortsvergleich rendert fuer {renderer_id!r} keinen "
+        f"Wert: {sms!r}"
     )
-    return zelle.split(" ", 1)[0]
+    return kuerzel
 
 
 def test_waechter_prueft_den_code_dieses_arbeitsbaums():

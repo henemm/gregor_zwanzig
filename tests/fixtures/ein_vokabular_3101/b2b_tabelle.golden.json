@@ -203,7 +203,7 @@
     },
     "sms": {
      "ampel": null,
-     "example": "G 62 km/h",
+     "example": "G41@9(62@16)",
      "format": null,
      "mark": null,
      "reason": null,
@@ -299,7 +299,7 @@
     },
     "sms": {
      "ampel": null,
-     "example": "FL 12C",
+     "example": "FL12",
      "format": null,
      "mark": null,
      "reason": null,
@@ -347,7 +347,7 @@
     },
     "sms": {
      "ampel": null,
-     "example": "CT 70%",
+     "example": "CT84@16",
      "format": null,
      "mark": null,
      "reason": null,
@@ -395,9 +395,9 @@
     },
     "sms": {
      "ampel": null,
-     "example": "R 3.4 mm",
+     "example": null,
      "format": null,
-     "mark": null,
+     "mark": "passt_nicht_mehr",
      "reason": null,
      "state": "on"
     },
@@ -561,17 +561,10 @@
   }
  ],
  "sms_example": {
-  "length": 147,
+  "length": 120,
   "max_length": 153,
-  "overflow": {
-   "locations": 3,
-   "per_location": [
-    3,
-    3,
-    3
-   ]
-  },
-  "text": "Orte 14.07.: Innsbruck G 62 km/h FL 12C CT 70% R 3.4 mm +3; Lienz G 63 km/h FL 13C CT 70% R 3.4 mm +3; Kufstein G 64 km/h FL 14C CT 70% R 3.4 mm +3"
+  "overflow": null,
+  "text": "Orte 14.07.: Innsbruck: G41@9(62@16) FL12 CT84@16; Lienz: G42@9(63@16) FL13 CT84@16; Kufstein: G43@9(64@16) FL14 CT84@16"
  },
  "stored": true
 }

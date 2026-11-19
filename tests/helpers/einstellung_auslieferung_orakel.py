@@ -932,19 +932,27 @@ _SMS_KUERZEL_KEY = {v[4]: k for k, v in COMPARE_METRIKEN.items()}
 
 
 def compare_parse_sms(text: str, orte: list[str]) -> dict[str, list[str]]:
-    """SMS-Vergleichstext ``Vergleich TT.MM.: Ort K W; Ort2 K W`` ->
-    {Ort: [Schluessel in Zellenfolge]}. Ein Ort, den das Zeichenbudget
-    verdraengt hat (``+N Orte``), fehlt im Ergebnis."""
+    """SMS-Vergleichstext ``Orte TT.MM.: Ort: D10/20 W-; Ort2: ...`` (#3172,
+    Token-Zeile der Trip-SMS) -> {Ort: [Schluessel in Token-Folge]}. Ein Ort,
+    den das Zeichenbudget verdraengt hat (``+N Orte``), fehlt im Ergebnis.
+    Ein Token ohne Wert (``W?``) zaehlt nicht als Zelle; der Bereich
+    ``D10/20`` zeigt Hoechst- und Tiefstwert (in dieser Folge)."""
     _, _, rest = text.partition(": ")
+    rest = re.sub(r"( \+\d+ Orte)?( X\?)?$", "", rest)
     ergebnis: dict[str, list[str]] = {}
     for segment in rest.split("; "):
         for ort in orte:
-            if segment == ort or segment.startswith(ort + " "):
-                ergebnis[ort] = [
-                    _SMS_KUERZEL_KEY[k]
-                    for k in re.findall(r"(?:^|\s)([A-Z]{1,2}) -?\d", segment[len(ort):])
-                    if k in _SMS_KUERZEL_KEY
-                ]
+            if segment != ort and not segment.startswith(ort + ": "):
+                continue
+            schluessel: list[str] = []
+            for token in segment[len(ort) + 2:].split(" "):
+                m = re.match(r"([A-Z]+)(.*)$", token)
+                if not m or m.group(1) not in _SMS_KUERZEL_KEY or m.group(2).lstrip(":") == "?":
+                    continue
+                schluessel.append(_SMS_KUERZEL_KEY[m.group(1)])
+                if m.group(1) == "D" and "/" in m.group(2):
+                    schluessel.append(_SMS_KUERZEL_KEY["L"])
+            ergebnis[ort] = schluessel
     return ergebnis
 
 

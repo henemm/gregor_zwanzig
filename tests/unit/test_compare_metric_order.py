@@ -134,12 +134,16 @@ _SMS_LABEL_TOKENS = set(_SMS_CODE.values())
 
 
 def _sms_labels(msg: str) -> list[str]:
-    """Kurz-Labels des ERSTEN Ortsteils der SMS, in Render-Reihenfolge."""
+    """Kurz-Labels des ERSTEN Ortsteils der SMS, in Render-Reihenfolge.
+
+    #3172 (ADR-0125): Token-Zeile der Trip-SMS (``Aachen: CT? D20 SU5 W?``),
+    das Kuerzel ist der Buchstaben-Anfang des Tokens."""
     _, sep, body = msg.partition(": ")
     if not sep:
         return []
-    first_location = body.split("; ")[0]
-    return [t for t in first_location.split(" ") if t in _SMS_LABEL_TOKENS]
+    first_location = body.split("; ")[0].split(": ", 1)[-1]
+    kuerzel = (re.match(r"[A-Z]+", t) for t in first_location.split(" "))
+    return [k.group(0) for k in kuerzel if k and k.group(0) in _SMS_LABEL_TOKENS]
 
 
 def _telegram_labels(msg: str) -> list[str]:

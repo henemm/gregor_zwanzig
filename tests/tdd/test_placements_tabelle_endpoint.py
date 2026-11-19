@@ -210,19 +210,36 @@ def _trip_fehlt_in_sms(sms: str, metric_id: str, rumpf: str | None = None) -> bo
     return not any(s in vorhanden for s in _trip_symbole(metric_id))
 
 
+def _orte_symbole() -> set[str]:
+    from output.renderers.sms_trip import SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC
+
+    return set(SMS_SYMBOL_BY_METRIC.values()) | {
+        s for syms in SMS_MULTI_SYMBOLS_BY_METRIC.values() for s in syms}
+
+
 def _orte_fehlt_in_sms(sms: str, metric_id: str, teil: str | None = None) -> bool:
-    """Ein Ort-Teil der Orte-SMS: ``Name K1 Wert K2 Wert ...`` (bei genau einem
-    Ort steht der Name im Kopf ``{Ort} TT.MM.:``, #3122 B5); die Metrik
-    fehlt, wenn keines ihrer Kuerzel im ersten Ort-Teil steht. ``teil``: die
-    Zellen des ersten Orts, vom Test ueber woertliche Raender bestimmt.
-    Gefuehlte Temperatur steht in der Orte-SMS als ``FL``/``FD`` (Tiefst/Hoechst)."""
-    from app.metric_catalog import kurzform_kuerzel
+    """Ein Ort-Teil der Orte-SMS (#3172, Token-Zeile der Trip-SMS:
+    ``Name: D15/19 W30@10(43@16) ...``; bei genau einem Ort steht der Name im
+    Kopf ``{Ort} TT.MM.:``, #3122 B5); die Metrik fehlt, wenn keines ihrer
+    Kuerzel im ersten Ort-Teil steht (laengstes passendes Symbol je Token).
+    ``teil``: die Token des ersten Orts, vom Test ueber woertliche Raender
+    bestimmt. Temperatur steht als ``D``/``L`` (Bereich ``D15/19``), gefuehlte
+    Temperatur als ``FL``/``FD``."""
+    from output.renderers.sms_trip import SMS_MULTI_SYMBOLS_BY_METRIC, SMS_SYMBOL_BY_METRIC
 
     if teil is None:
         teil = sms.split(": ", 1)[1].split("; ")[0]
-    kuerzel = {"temperature": ("D", "L"), "wind_chill": ("FL", "FD")}.get(
-        metric_id, (kurzform_kuerzel(metric_id),))
-    return not any(re.search(rf"(^| ){re.escape(k)} ", teil) for k in kuerzel if k)
+        if sms.startswith("Orte "):
+            teil = teil.split(": ", 1)[1]
+    alle = _orte_symbole()
+    vorhanden = set()
+    for tok in teil.split(" "):
+        treffer = [s for s in alle if tok.startswith(s)]
+        if treffer:
+            vorhanden.add(max(treffer, key=len))
+    kuerzel = {"temperature": ("D", "L"), "wind_chill": ("FL", "FD")}.get(metric_id) or (
+        SMS_MULTI_SYMBOLS_BY_METRIC.get(metric_id) or (SMS_SYMBOL_BY_METRIC.get(metric_id),))
+    return not any(k in vorhanden for k in kuerzel if k)
 
 
 def _sms_an(antwort) -> list[str]:
@@ -586,14 +603,19 @@ def _trip_kuerzel_in_sms(sms: str) -> set[str]:
 
 
 def _orte_kuerzel_in_sms(sms: str) -> set[str]:
-    """Metrik-Kuerzel der Orte-SMS: Woerter, die ein Kuerzel aus der
-    Kuerzel-Tabelle des Orte-Renderers sind."""
-    from app.metric_catalog import kurzform_kuerzel
-    from output.renderers.comparison import _RENDERER_TO_CATALOG_METRIC_ID
-
-    codes = {kurzform_kuerzel(c) for c in _RENDERER_TO_CATALOG_METRIC_ID.values()} - {""}
-    worte = re.split(r"[ ;]+", sms.split(": ", 1)[1])
-    return {w for w in worte if w in codes}
+    """Metrik-Kuerzel der Orte-SMS (#3172: Token-Zeile wie im Trip, laengstes
+    passendes Symbol, ohne Doppelpunkt, Warnblock ausgenommen). Ein Bereich
+    ``D15/19`` sendet Tageshoechst UND -tiefst (``D``/``L``)."""
+    alle = _orte_symbole()
+    out = set()
+    for tok in re.split(r"[ ;]+", sms.split(": ", 1)[1]):
+        treffer = [s for s in alle if tok.startswith(s)]
+        if treffer and not tok.startswith("!"):
+            symbol = max(treffer, key=len)
+            out.add(symbol.rstrip(":"))
+            if symbol in ("D", "FD") and "/" in tok:
+                out.add({"D": "L", "FD": "FL"}[symbol])
+    return out
 
 
 @pytest.mark.parametrize("lang", ["de", "en"])
@@ -685,16 +707,17 @@ def test_f002_ortsname_mit_trennzeichen_verfaelscht_nichts(client, anzahl):
     antwort = _ok(client, kennung, "vergleich")
     versand = _orte_versand_sms(NUTZER_A, kennung)
     # #3122 B5: Kopf "Orte TT.MM.:", bei genau einem Ort "{Ort} TT.MM.:".
-    kopf = "Wind 5: B; C 14.07.: " if anzahl == 1 else "Orte 14.07.: Wind 5: B; C "
+    # #3172 (ADR-0125): Ortsteil ``{Name}: {Token}`` wie das Etappen-Praefix.
+    kopf = "Wind 5: B; C 14.07.: " if anzahl == 1 else "Orte 14.07.: Wind 5: B; C: "
     assert versand.startswith(kopf), versand
-    teil = versand[len(kopf):].split("; Lienz ")[0]
+    teil = versand[len(kopf):].split("; Lienz: ")[0]
 
     assert antwort["sms_example"]["text"] == versand
     fehlend = {m for m in _sms_an(antwort) if _orte_fehlt_in_sms(versand, m, teil)}
     assert fehlend and len(fehlend) < len(_sms_an(antwort)), "weder alles noch nichts darf fehlen"
     assert _markiert(antwort) == fehlend
     wind = _zeile(antwort, "wind")["cells"]
-    assert wind["sms"]["example"] == "W 43 km/h"
+    assert wind["sms"]["example"] == "W30@10(43@16)"  # #3172: Token der Token-Zeile
     assert wind["telegram"]["example"] == "Wind 43 km/h", "Ortsname ist keine Wind-Zelle"
 
 

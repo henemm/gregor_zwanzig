@@ -71,13 +71,41 @@ def _sms_orte(sms: str) -> list[str]:
     kopf, nach_kopf = sms.split(": ", 1)
     teile = [t.strip() for t in nach_kopf.split("; ")]
     if not kopf.startswith("Orte "):
-        return [f"{kopf.rsplit(' ', 1)[0]} {teile[0]}"]
+        # #3172: Ortsteil wie bei mehreren Orten, ``{Name}: {Token}``.
+        return [f"{kopf.rsplit(' ', 1)[0]}: {teile[0]}"]
     return teile
 
 
 def _fragezaehler(teil: str) -> int | None:
+    """Der fruehere Zaehler ``?N`` (#1405 S3) -- seit #3172 (ADR-0125) abgeloest:
+    eine Groesse ohne Wert traegt ``?`` am eigenen Token, eine unmappbare
+    Auswahl erzeugt kein Zeichen. Bleibt als Abwesenheits-Pruefung."""
     m = re.search(r"(?:^|\s)\?(\d+)(?=\s|$)", teil)
     return int(m.group(1)) if m else None
+
+
+#: #3172: Renderer-Kennung -> Kuerzel der Token-Zeile (von Hand, sms_format.md).
+_KUERZEL = {"temp_max": "D", "wind_max": "W", "cloud_avg": "CT", "sunny_hours": "SU",
+            "precip_sum": "R", "pop_max": "PR", "uv_max": "UV", "temp_min": "L",
+            "gust_max": "G", OHNE_WERT: "SD"}
+
+
+def _token(teil: str) -> list[str]:
+    """Token eines Ortsteils ``Name: D20 W- SD?`` (ohne Namen)."""
+    return teil.split(": ", 1)[1].split(" ") if ": " in teil else []
+
+
+def _kuerzel_folge(teil: str) -> list[str]:
+    return [re.match(r"[A-Z]+", t).group(0) for t in _token(teil)]
+
+
+def _soll_folge(gewaehlt: list[str]) -> list[str]:
+    """Erwartete Kuerzel-Folge; Tiefst- und Hoechstwert stehen als EIN Bereich
+    unter ``D`` (``D10/20``, sms_format.md §3)."""
+    folge = [_KUERZEL[m] for m in gewaehlt]
+    if "D" in folge and "L" in folge:
+        folge.remove("L")
+    return folge
 
 
 def _telegram_ortsbloecke(text: str) -> dict[str, list[str]]:
@@ -209,10 +237,12 @@ def test_ac8_telegram_mengenerhalt_je_ort():
 
 
 def test_ac9_kurzform_telegram_traegt_den_sms_text_mit_zaehler(tmp_path, monkeypatch):
-    """Kurzform = ``_telegram_text = _sms_text`` -- im Versand gemessen (siehe AC-13)."""
+    """Kurzform = ``_telegram_text = _sms_text`` -- im Versand gemessen (siehe AC-13).
+    #3172 (ADR-0125): die unmappbare Auswahl erzeugt in der SMS kein Zeichen."""
     text, kanaele = _versand_mit_unmappbarem(tmp_path, monkeypatch, stil="kurzform")
     assert kanaele["telegram"] == kanaele["sms"], "Kurzform muss den SMS-Text senden"
-    assert _fragezaehler(_sms_orte(kanaele["telegram"])[0]) == 1
+    erster = _sms_orte(kanaele["telegram"])[0]
+    assert _fragezaehler(erster) is None and _token(erster), erster
 
 
 # ===========================================================================
@@ -227,17 +257,18 @@ def test_ac10_sms_zaehler_nur_an_orten_mit_luecke():
     teile = _sms_orte(sms)
     assert len(teile) == 3
     for teil in teile:
-        assert _fragezaehler(teil) == 1, f"Zaehler ?1 fehlt im Ortsteil: {teil!r}"
-        assert teil.rstrip().endswith("?1") or "?1 !" in teil, teil
+        # #3172 (ADR-0125): die Groesse ohne Wert traegt ``?`` am eigenen Token.
+        assert _token(teil)[-1] == "SD?", f"SD? fehlt im Ortsteil: {teil!r}"
+        assert _fragezaehler(teil) is None, f"abgeloester Zaehler ?N: {teil!r}"
 
 
 def test_ac11_sms_normalfall_ist_zeichen_fuer_zeichen_unveraendert():
     from output.renderers.comparison import render_compare_sms
 
     sms = render_compare_sms(_result(), enabled_metrics=["temp_max", "wind_max"])
+    # #3172 (ADR-0125): Token-Zeile der Trip-SMS.
     assert sms == (
-        "Orte 08.07.: Alpha D 20C W 10 km/h; Beta D 21C W 10 km/h; "
-        "Gamma D 22C W 10 km/h"
+        "Orte 08.07.: Alpha: D20 W-; Beta: D21 W-; Gamma: D22 W-"
     ), "Normalfall darf sich nicht veraendern (kein ?, kein zusaetzliches Leerzeichen)"
     assert "?" not in sms
 
@@ -248,21 +279,20 @@ def test_ac12_sms_sichtbar_plus_verdraengt_plus_fehlend_ergibt_gewaehlt():
     gewaehlt = ["temp_max", "wind_max", "cloud_avg", "sunny_hours", OHNE_WERT]
     sms = render_compare_sms(_result(), enabled_metrics=gewaehlt)
     for teil in _sms_orte(sms):
-        fehlend = _fragezaehler(teil) or 0
-        verdraengt = sum(int(n) for n in re.findall(r"\+(\d+)(?!\s*Orte)(?:\s|$)", teil))
-        sichtbar = len(re.findall(r"\b[A-Z]{1,3}\s+\d", teil))
-        assert fehlend >= 1, f"?N fehlt: {teil!r}"
-        assert sichtbar + verdraengt + fehlend == len(gewaehlt), (
-            f"{teil!r}: sichtbar {sichtbar} + verdraengt {verdraengt} + fehlend "
-            f"{fehlend} != gewaehlt {len(gewaehlt)}"
-        )
+        # #3172 (ADR-0125): jede gewaehlte Groesse steht als Token (mit Wert,
+        # ``-`` oder ``?``) -- verdraengt wird nur vom Listenende, ohne Zaehler.
+        ist = _kuerzel_folge(teil)
+        assert ist == _soll_folge(gewaehlt)[:len(ist)], f"{teil!r}: Luecke in der Mitte"
+        assert len(ist) == len(gewaehlt), f"{teil!r}: alles passt, nichts darf fehlen"
+        assert "SD?" in _token(teil), f"? fehlt: {teil!r}"
 
 
 def test_ac13_premium_sms_bekommt_denselben_text_wie_sms_inklusive_zaehler(tmp_path, monkeypatch):
     _text, kanaele = _versand_mit_unmappbarem(tmp_path, monkeypatch)
     assert kanaele["premium_sms"] == kanaele["sms"], "kein Kanal darf eine aeltere Fassung bekommen"
     for teil in _sms_orte(kanaele["premium_sms"]):
-        assert _fragezaehler(teil) == 1, f"Premium-SMS ohne ?1: {teil!r}"
+        # #3172 (ADR-0125): unmappbare Auswahl -> kein Zeichen in der SMS.
+        assert _fragezaehler(teil) is None and _token(teil), f"Premium-SMS: {teil!r}"
 
 
 def test_ac14_sms_laenge_gsm7_und_zaehler_wird_nie_verdraengt():
@@ -277,15 +307,19 @@ def test_ac14_sms_laenge_gsm7_und_zaehler_wird_nie_verdraengt():
     for teil in _sms_orte(sms):
         if teil.endswith("n/a") or re.search(r"\+\d+ Orte", teil):
             continue
-        assert _fragezaehler(teil) is not None, f"Zaehler verdraengt: {teil!r}"
+        # #3172 (ADR-0125): gekuerzt wird nur vom Listenende, ohne Zaehler.
+        ist = _kuerzel_folge(teil)
+        assert ist and ist == _soll_folge(viele)[:len(ist)], f"nicht vom Ende gekuerzt: {teil!r}"
+        assert _fragezaehler(teil) is None, teil
 
 
 def test_ac14_zaehler_ist_fester_teil_des_budgets():
-    """Adversary F001: der Zaehler ``?N`` muss in der Kuerzungsschleife
-    mitgerechnet sein -- sonst ragt der Ortsteil um `` ?N`` ueber sein Budget,
-    und die SMS verliert Ort bzw. Zaehler an die Notkuerzung. Die Ortsnamen-
-    Laenge wird durchgefahren, damit jede Restluecke im Budget einmal knapp
-    ist (ein fester Name traefe die kritische Laenge nur zufaellig)."""
+    """Adversary F001: jede Ortsnamen-Laenge bleibt im Budget, ohne den Ort an
+    die Notkuerzung zu verlieren. Die Ortsnamen-Laenge wird durchgefahren,
+    damit jede Restluecke im Budget einmal knapp ist (ein fester Name traefe
+    die kritische Laenge nur zufaellig). #3172 (ADR-0125): kein Zaehler
+    ``?N`` mehr -- die Groesse ohne Wert steht als ``SD?``, gekuerzt wird
+    vom Listenende."""
     from output.renderers.comparison import render_compare_sms
 
     gewaehlt = ["temp_max", "wind_max", "cloud_avg", "sunny_hours", "precip_sum",
@@ -295,19 +329,19 @@ def test_ac14_zaehler_ist_fester_teil_des_budgets():
         sms = render_compare_sms(_make_comparison_result([name]), enabled_metrics=gewaehlt)
         assert len(sms) <= 153, sms
         teile = _sms_orte(sms)
-        assert len(teile) == 1 and teile[0].startswith(name + " "), (
+        assert len(teile) == 1 and teile[0].startswith(name + ": "), (
             f"Ort fiel der Notkuerzung zum Opfer (Name {laenge}): {sms!r}"
         )
         teil = teile[0]
-        assert _fragezaehler(teil) == 1, f"Zaehler fehlt (Name {laenge}): {teil!r}"
-        verdraengt = sum(int(n) for n in re.findall(r"(?:^|\s)\+(\d+)(?=\s|$)", teil))
-        sichtbar = len(re.findall(r"\s[A-Z]{1,3}\s+\d", teil))
-        assert sichtbar + verdraengt + 1 == len(gewaehlt), teil
+        assert _fragezaehler(teil) is None, f"abgeloester Zaehler (Name {laenge}): {teil!r}"
+        ist = _kuerzel_folge(teil)
+        assert ist and ist == _soll_folge(gewaehlt)[:len(ist)], teil
 
 
 def test_ac12_reihenfolge_platzmangel_vor_fehlend_exakt():
-    """Adversary F005: Wire-Vertrag sms_format.md §5b -- ``+N`` (verdraengt)
-    steht VOR ``?N`` (fehlend), Zeichen fuer Zeichen."""
+    """Adversary F005: Wire-Vertrag sms_format.md §5b, Zeichen fuer Zeichen.
+    #3172 (ADR-0125): die Zaehler ``+N``/``?N`` sind abgeloest; die Groesse
+    ohne Wert steht als ``SD?`` an ihrem Listenplatz."""
     from output.renderers.comparison import render_compare_sms
 
     # #3122 B5: bei einem Ort steht der Name im Kopf und nur einmal in der SMS;
@@ -316,7 +350,7 @@ def test_ac12_reihenfolge_platzmangel_vor_fehlend_exakt():
     gewaehlt = ["temp_max", "wind_max", "cloud_avg", "sunny_hours", "precip_sum",
                 "pop_max", "uv_max", OHNE_WERT]
     sms = render_compare_sms(_make_comparison_result([name]), enabled_metrics=gewaehlt)
-    assert sms == f"{name} 08.07.: D 20C W 10 km/h CT 30% SU 5.0h +3 ?1", sms
+    assert sms == f"{name} 08.07.: D20 W- CT30@11 SU5 R- PR- UV4@11 SD?", sms
 
 
 def _sms_ueber_echten_eingang(display_config: dict):
@@ -339,18 +373,20 @@ def test_ac15_kanal_und_grundauswahl_mit_demselben_unmappbaren_zaehlen_einmal():
         "channel_active_metrics": {"sms": ["temp_max_c", "gibt_es_nicht_xyz"]},
     })
     assert opts.unresolved_by_channel == {"email": 1, "telegram": 1, "sms": 1}
-    assert [_fragezaehler(t) for t in _sms_orte(sms)] == [1, 1, 1], sms
+    # #3172 (ADR-0125): die unmappbare Auswahl erzeugt in der SMS kein Zeichen.
+    assert [_fragezaehler(t) for t in _sms_orte(sms)] == [None, None, None], sms
 
 
 def test_ac15_nur_kanal_eigener_unmappbarer_zaehlt_nur_in_diesem_kanal():
     """Adversary F004b: ein unmappbarer Schluessel NUR in der SMS-Auswahl
-    zaehlt in der SMS (``?1``), nicht in Mail/Telegram."""
+    zaehlt nur fuer die SMS, nicht in Mail/Telegram. #3172 (ADR-0125): in der
+    SMS selbst erzeugt er kein Zeichen mehr (kein ``?1``)."""
     opts, sms = _sms_ueber_echten_eingang({
         "active_metrics": ["temp_max_c", "wind_max_kmh"],
         "channel_active_metrics": {"sms": ["temp_max_c", "gibt_es_nicht_abc"]},
     })
     assert opts.unresolved_by_channel == {"email": 0, "telegram": 0, "sms": 1}
-    assert [_fragezaehler(t) for t in _sms_orte(sms)] == [1, 1, 1], sms
+    assert [_fragezaehler(t) for t in _sms_orte(sms)] == [None, None, None], sms
 
 
 def test_ac15_unmappbarer_schluessel_erhoeht_den_zaehler_an_jedem_ort():
@@ -359,8 +395,10 @@ def test_ac15_unmappbarer_schluessel_erhoeht_den_zaehler_an_jedem_ort():
     sms = render_compare_sms(
         _result(), enabled_metrics=["temp_max", "wind_max"], unresolved_count=1,
     )
+    # #3172 (ADR-0125): ``unresolved_count`` erzeugt in der SMS kein Zeichen.
     zaehler = [_fragezaehler(t) for t in _sms_orte(sms)]
-    assert zaehler == [1, 1, 1], zaehler
+    assert zaehler == [None, None, None], zaehler
+    assert sms == "Orte 08.07.: Alpha: D20 W-; Beta: D21 W-; Gamma: D22 W-", sms
 
 
 # ===========================================================================
@@ -420,7 +458,8 @@ def test_ac18_vorschau_und_versand_tragen_denselben_zaehler(tmp_path, monkeypatc
     opts = resolve_compare_render_options(_preset_mit_unmappbarem())
     assert opts.unresolved_by_channel == {"email": 1, "telegram": 1, "sms": 1}
     _text, kanaele = _versand_mit_unmappbarem(tmp_path, monkeypatch)
-    assert _fragezaehler(_sms_orte(kanaele["sms"])[0]) == opts.unresolved_by_channel["sms"]
+    # #3172 (ADR-0125): die SMS traegt den Zaehler nicht mehr (kein Zeichen).
+    assert _fragezaehler(_sms_orte(kanaele["sms"])[0]) is None, kanaele["sms"]
 
 
 def test_ac3_warn_in_der_auswahl_ist_keine_luecke():
@@ -462,7 +501,9 @@ def test_ac18_wirkort_mail_und_telegram_versand_gleich_vorschau(tmp_path, monkey
     assert _zahlen(_HINWEIS_VERGLEICH, vorschau["email_html"]) == [1], "HTML-Vorschau luegt"
     assert _zahlen(_HINWEIS_VERGLEICH, plain) == [1], "Klartext-Vorschau luegt"
     assert _zahlen(_HINWEIS_ORT, vorschau["telegram"]) == [1, 1], "Telegram-Vorschau luegt"
-    assert [_fragezaehler(t) for t in _sms_orte(vorschau["sms"])] == [1, 1], "SMS-Vorschau luegt"
+    # #3172 (ADR-0125): die SMS traegt keinen Zaehler mehr -- Vorschau wie Versand.
+    assert [_fragezaehler(t) for t in _sms_orte(vorschau["sms"])] == [None, None], vorschau["sms"]
+    assert vorschau["sms"] == mit.sendungen("sms")[0]["body"], "SMS-Vorschau luegt"
 
 
 def test_ac19_ein_baustein_ein_wortlaut():

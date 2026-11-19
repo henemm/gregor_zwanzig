@@ -18,6 +18,12 @@ Ist-Zustand (comparison.py:389-391, 461-482, 686-723):
 - 10 der 24 zugrundeliegenden Katalog-Groessen fuehren noch kein `sms_code`
   (AC-8).
 
+#3172 (ADR-0125): die Zellform ``Kuerzel Wert`` ist abgeloest -- die Orte-SMS
+schreibt die Token-Zeile der Trip-SMS (``D6/16 W- HU-``), gekuerzt still vom
+Listenende (kein ``+N``). Die Zusicherungen dieser Datei (Budget, nie mitten
+im Token geschnitten, Nutzer-Reihenfolge, keine leere SMS, Werte, ein Kuerzel
+je Auswertung) gelten unveraendert, jetzt gegen die Token-Zeile.
+
 Test-Politik (CLAUDE.md, Schicht "Kern"): rein deterministisch, KEINE Mocks
 (kein Mock()/patch()/MagicMock), kein Netz, kein Versand. Alle Pruefungen
 lesen den GERENDERTEN SMS-Text (Nutzersicht), nicht den Code-Pfad. Werte/
@@ -31,18 +37,15 @@ import dataclasses
 import re
 from datetime import date, datetime
 
+from app.ampel import resolve_ampel
 from app.metric_catalog import kurzform_kuerzel
 from app.models import ForecastDataPoint, ThunderLevel
 from app.user import ComparisonResult, LocationResult, SavedLocation
-from output.metric_format import format_value
 from output.renderers.channel_layout import CHANNEL_LIMITS
-from output.renderers.comparison import (
-    _PLAIN_ROWS_BY_ID, _RENDERER_TO_CATALOG_METRIC_ID, _sms_gsm7_safe,
-    render_compare_sms,
-)
+from output.renderers.comparison import _RENDERER_TO_CATALOG_METRIC_ID, render_compare_sms
 from output.renderers.compare_metric_catalog import get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
-from output.renderers.email.compare_html import _metric_value
+from output.renderers.orte_sms import orte_kuerzel_je_metrik, orte_token_reihen
 
 TARGET_DATE = date(2026, 7, 27)
 CREATED_AT = datetime(2026, 7, 27, 8, 0)
@@ -96,6 +99,7 @@ def _daily_points(
     *, dewpoint_c: float | None = None, pressure_msl_hpa: float | None = None,
     humidity_pct: int | None = None, cape_jkg: float | None = None,
     freezing_level_m: int | None = None, snowfall_limit_m: int | None = None,
+    uv_index: float | None = None, pop_pct: int | None = None,
 ) -> list[ForecastDataPoint]:
     """24 Stundenpunkte mit neutralen Basiswerten -- Traeger fuer die
     Klasse-B-Aggregate (Luftfeuchtigkeit/Taupunkt/Luftdruck/CAPE/Nullgrad-
@@ -111,7 +115,7 @@ def _daily_points(
             visibility_m=10000, dewpoint_c=dewpoint_c,
             pressure_msl_hpa=pressure_msl_hpa, humidity_pct=humidity_pct,
             cape_jkg=cape_jkg, freezing_level_m=freezing_level_m,
-            snowfall_limit_m=snowfall_limit_m,
+            snowfall_limit_m=snowfall_limit_m, uv_index=uv_index, pop_pct=pop_pct,
         ))
     return points
 
@@ -123,43 +127,40 @@ def _result(locations: list[LocationResult]) -> ComparisonResult:
     )
 
 
-def _sms_cell_text(loc_result: LocationResult, renderer_id: str) -> str | None:
-    """Erwartete SMS-Zelle ("Kuerzel Wert") fuer `renderer_id`, berechnet ueber
-    DIESELBEN Bausteine, die die Spec (Implementation Details Punkt 3) fuer die
-    Implementierung vorschreibt: `get_sms_code()` fuer das Kuerzel,
-    `_PLAIN_ROWS`/`_metric_value` fuer Wert+Formatierung (identisch zum
-    Klartext-Teil derselben Mail -- keine zweite Werte-/Formatierungsquelle).
-    Der Wert wird ueber die PRODUKTIONS-Funktion `_sms_gsm7_safe` GSM-7-saniert
-    (Adversary-Fund Runde 4, PO-Entscheidung 2026-07-30: kein Grad-Zeichen im
-    SMS-Pfad) -- kein zweites, im Test erratenes Zeichen-/Sanitierungs-
-    Vokabular. `None` = kein Wert ODER kein Kuerzel vorhanden (Zelle entfaellt).
+def _token_texte(loc_result: LocationResult, renderer_ids: list[str]) -> list[str]:
+    """Erwartete Token der Token-Zeile fuer genau diese Auswahl, aus dem
+    Produktiv-Baustein ``orte_sms.orte_token_reihen`` (alle Listenzeilen) --
+    keine zweite, im Test erfundene Formatierungsquelle (#3172, ADR-0125)."""
+    tokens = orte_token_reihen(loc_result, renderer_ids, None, ampel=resolve_ampel({}))[0]
+    return [t.render() for t in tokens if t.category in ("forecast", "wintersport")]
 
-    Issue #2232: das Auswertungszeichen (`+`/`-`, PO-Entscheidung 2026-07-29)
-    ist ERSATZLOS entfallen -- Hoechst- und Tiefstwert sind seitdem ueber ihr
-    EIGENES Kuerzel unterscheidbar (`D`/`L`, `FD`/`FL`, identisch zur
-    Trip-SMS). Die Kuerzel-Kennung kommt aus der Produktions-Tabelle
-    `_RENDERER_TO_CATALOG_METRIC_ID` (`kuerzel_metric_id ?? metric_id`), nicht
-    aus einer im Test nachgebauten Aufloesung."""
-    code = kurzform_kuerzel(_RENDERER_TO_CATALOG_METRIC_ID[renderer_id])
-    if not code:
+
+def _sms_cell_text(loc_result: LocationResult, renderer_id: str) -> str | None:
+    """Token EINER Groesse (``D16``, ``HU-``, ``FZ1200@2``); ``None`` = kein
+    Wert an diesem Ort (``?``) oder kein Token. Das Kuerzel kommt aus den
+    Symboltabellen der Trip-SMS (``D``/``L``, ``FD``/``FL``, #2232)."""
+    texte = _token_texte(loc_result, [renderer_id])
+    if len(texte) != 1 or texte[0].endswith("?"):
         return None
-    _, _label, fmt = _PLAIN_ROWS_BY_ID[renderer_id]
-    value = _metric_value(loc_result, renderer_id)
-    if value is None:
-        return None
-    return f"{code} {_sms_gsm7_safe(fmt(value))}"
+    return texte[0]
+
+
+def _kuerzel(token: str) -> str:
+    """Kuerzel eines Tokens -- laengstes passendes Symbol der Orte-SMS."""
+    return max((s for s in orte_kuerzel_je_metrik() if token.startswith(s)), key=len)
 
 
 def _location_part(sms: str, name: str) -> str:
-    """Teiltext EINES Ortes innerhalb der flachen, Semikolon-getrennten
-    Compare-SMS -- bis zum naechsten '; ' bzw. Stringende (analog
-    tests/tdd/test_compare_sms_official_alerts.py::_location_part).
+    """Teiltext EINES Ortes ``{Name}: {Token}`` innerhalb der flachen,
+    Semikolon-getrennten Compare-SMS -- bis zum naechsten '; ' bzw.
+    Stringende (analog tests/tdd/test_compare_sms_official_alerts.py).
 
     #3122 B5: bei genau einem Ort steht der Name im Kopf (``{Ort} TT.MM.: …``)
-    statt vor den Werten -- hier wieder als ``{Ort} …`` gelesen."""
+    statt vor den Werten -- hier wieder als ``{Ort}: …`` gelesen."""
     kopf = re.match(rf"{re.escape(name)} \d\d\.\d\d\.:(?: |$)", sms)
     if kopf:
-        return f"{name} {sms[kopf.end():]}".rstrip()
+        rest = sms[kopf.end():]
+        return f"{name}: {rest}" if rest else name
     idx = sms.index(name)
     rest = sms[idx:]
     end = rest.find("; ")
@@ -168,26 +169,15 @@ def _location_part(sms: str, name: str) -> str:
 
 def _valid_prefix_candidates(name: str, cells: list[str]) -> set[str]:
     """Jede STRUKTURELL gueltige Auspraegung des Ortsteils: der Ortsname,
-    gefolgt von einem PRAEFIX der Zellenliste (0..alle Zellen, in Reihenfolge,
-    ohne Luecke -- ganze Zellen, nie ein Teil-Kuerzel/-Wert), optional gefolgt
-    von einem `+N`-Ueberlaufhinweis, wobei N EXAKT die Zahl der nicht mehr
-    gezeigten Zellen ist (Spec Implementation Details Punkt 3: `"Andermatt D
-    16°C W 15km/h +2"`). Jede andere Auspraegung (abgeschnittenes Kuerzel/
-    Wert, uebersprungene Zelle, falsche Zaehlung) ist ungueltig.
+    gefolgt von einem PRAEFIX der Token-Liste (0..alle Token, in Reihenfolge,
+    ohne Luecke -- ganze Token, nie ein Teil-Kuerzel/-Wert). #3172 (ADR-0125):
+    ohne Zaehler ``+N`` (Kuerzung still vom Listenende wie im Trip).
 
-    Bewusst OHNE Annahme ueber den internen Zeichen-Budget-Grenzwert von
-    `_sms_location_part` -- das ist Implementierungsdetail (die "Naht"), die
+    Bewusst OHNE Annahme ueber den internen Zeichen-Budget-Grenzwert -- die
     Pruefung ist strukturell und budget-agnostisch."""
     candidates = {name}
-    running = name
-    for i, cell in enumerate(cells):
-        running = f"{running} {cell}"
-        candidates.add(running)
-        remaining = len(cells) - (i + 1)
-        if remaining > 0:
-            candidates.add(f"{running} +{remaining}")
-    if cells:
-        candidates.add(f"{name} +{len(cells)}")
+    for i in range(1, len(cells) + 1):
+        candidates.add(f"{name}: " + " ".join(cells[:i]))
     return candidates
 
 
@@ -215,7 +205,9 @@ def test_sms_cuts_whole_metrics_not_mid_token_when_selection_exceeds_budget():
     # urspruenglichen 14 Groessen reichten dafuer nicht mehr (145 Zeichen,
     # unter dem neuen Budget), deshalb zwei weitere (dewpoint_avg,
     # pressure_avg) ergaenzt.
-    name = "Andermatt Talstation"
+    # #3172: die Token-Zeile ist kuerzer als die alte Zellform -- ein langer
+    # Ortsname haelt die volle Darstellung ueber dem Budget.
+    name = "Andermatt Talstation an der Oberalppass-Strasse, Nordportal"
     loc = LocationResult(
         location=_loc("a", name),
         temp_max=16.4, temp_min=6.2, wind_max=15.0, gust_max=20.0,
@@ -225,6 +217,8 @@ def test_sms_cuts_whole_metrics_not_mid_token_when_selection_exceeds_budget():
         hourly_data=_daily_points(
             humidity_pct=70, freezing_level_m=1200,
             snowfall_limit_m=1300, dewpoint_c=8.0, pressure_msl_hpa=1013.0,
+            # #3172: UV und Regenwahrscheinlichkeit kommen aus den Stundenwerten.
+            uv_index=5.0, pop_pct=30,
         ),
     )
     enabled = [
@@ -238,13 +232,14 @@ def test_sms_cuts_whole_metrics_not_mid_token_when_selection_exceeds_budget():
         "snow_new_cm", "humidity_avg", "freezing_level", "cloud_avg",
         "sunny_hours", "snowfall_limit", "dewpoint_avg", "pressure_avg",
     ]
-    cells = [c for c in (_sms_cell_text(loc, mid) for mid in enabled) if c is not None]
-    assert len(cells) == len(enabled), (
+    cells = _token_texte(loc, enabled)
+    # Tiefst- und Hoechstwert stehen als EIN Bereichs-Token ``D6/16`` (#3172).
+    assert len(cells) == len(enabled) - 1 and not any(c.endswith("?") for c in cells), (
         f"Testaufbau defekt: erwartet einen Wert fuer alle {len(enabled)} "
-        f"gewaehlten Groessen, erhalten {len(cells)} Zellen ({cells!r}) -- "
-        "Fixture pruefen (fehlt ein sms_code oder ein Wert?)."
+        f"gewaehlten Groessen, erhalten {len(cells)} Token ({cells!r}) -- "
+        "Fixture pruefen (fehlt ein Wert?)."
     )
-    full_length_estimate = len(name) + sum(len(c) + 1 for c in cells)
+    full_length_estimate = len(name) + 2 + sum(len(c) + 1 for c in cells)
     assert full_length_estimate > SMS_LIMIT, (
         f"Testaufbau defekt: die volle, ungekuerzte Darstellung waere nur "
         f"{full_length_estimate} Zeichen lang -- das erzwingt keinen "
@@ -261,13 +256,10 @@ def test_sms_cuts_whole_metrics_not_mid_token_when_selection_exceeds_budget():
     candidates = _valid_prefix_candidates(name, cells)
     assert part in candidates, (
         f"Ortsteil {part!r} ist kein gueltiger Praefix der erwarteten "
-        f"Kuerzel-Zellenliste {cells!r} (mit optionalem korrektem "
-        "`+N`-Ueberlaufhinweis) -- entweder wurde mitten in einem Kuerzel/"
-        "Wert geschnitten, eine Zelle uebersprungen, oder es wird noch die "
-        "alte Telegram-Vollform statt des Katalog-Kuerzels verwendet "
-        "(Ist-Zustand: `_SMS_METRICS_PER_LOCATION = 2` kappt hart auf 2 "
-        f"Zellen mit Vollform-Labels). Ganze SMS: {sms!r}"
+        f"Token-Liste {cells!r} -- entweder wurde mitten in einem Token "
+        f"geschnitten oder ein Token uebersprungen. Ganze SMS: {sms!r}"
     )
+    assert part != f"{name}: " + " ".join(cells), "Testaufbau: kein Ueberlauf"
 
 
 # ---------------------------------------------------------------------------
@@ -277,11 +269,11 @@ def test_sms_cuts_whole_metrics_not_mid_token_when_selection_exceeds_budget():
 # ---------------------------------------------------------------------------
 
 def test_metric_overflow_and_location_overflow_are_both_present_and_distinguishable():
-    """Adversary-Fund: trifft der neue Metrik-Ueberlauf (`+N` im Ortsblock,
-    Zellen ohne Wortzusatz -- aus dem Zusammenhang lesbar) auf den
-    bestehenden Orts-Ueberlauf (`+k` am Nachrichtenende, #1269), ergibt
-    `"...+3 +4"` zwei Zahlen ohne erkennbaren Bezug. Der Orts-Ueberlauf
-    traegt deshalb den Wortzusatz " Orte"; der Metrik-Ueberlauf bleibt ohne.
+    """Adversary-Fund: Metrik-Kuerzung (im Ortsblock) und Orts-Ueberlauf (`+k
+    Orte` am Nachrichtenende, #1269) treffen zusammen. #3172 (ADR-0125): die
+    Metrik-Kuerzung zaehlt nicht mehr (kein `+N`), der Orts-Ueberlauf traegt
+    weiter den Wortzusatz " Orte"; Orte entfallen erst, wenn je Ort nur noch
+    die erste Listenzeile steht.
 
     Fixture: zwei Orte mit einer grossen 14-Groessen-Auswahl (Vorlaeufer der
     AC-3-Auswahl, absichtlich VOR deren Runde-5-Erweiterung eingefroren --
@@ -326,7 +318,7 @@ def test_metric_overflow_and_location_overflow_are_both_present_and_distinguisha
         "snow_new_cm", "humidity_avg", "freezing_level",
         "snowfall_limit",
     ]
-    cells = [c for c in (_sms_cell_text(loc_a, mid) for mid in enabled) if c is not None]
+    cells = _token_texte(loc_a, enabled)
     assert len(cells) == len(enabled), "Testaufbau defekt (s. AC-3-Zwilling)"
 
     # #3047 Runde 7 p8 (AC-23, Tech-Lead-Entscheidung ADR-0095): zwei Orte
@@ -361,6 +353,9 @@ def test_metric_overflow_and_location_overflow_are_both_present_and_distinguisha
     assert len(gezeigt) + int(location_overflow.group(1)) == 9, (
         f"Orts-Ueberlauf zaehlt falsch: {sms!r}"
     )
+    # Orte entfallen erst, wenn je Ort nur noch die erste Listenzeile steht.
+    for teil in gezeigt:
+        assert len(teil.split(": ", 1)[1].split(" ")) == 1, f"mehr als eine Zeile: {sms!r}"
 
     # Metrik-Ueberlauf: der ERSTE (einzige gezeigte) Ortsteil ist ein
     # gueltiger, nie mitten im Kuerzel/Wert geschnittener Praefix der
@@ -382,14 +377,11 @@ def test_metric_overflow_and_location_overflow_are_both_present_and_distinguisha
         "Orts-Ueberlauf-Wortzusatz -- beide Zaehler waeren dann nicht mehr "
         f"unterscheidbar. Ganze SMS: {sms!r}"
     )
-    # Testaufbau-Guard (robust gegen kuenftige SMS_LIMIT-Aenderungen, s.
-    # Adversary-Fund Runde 5): der Metrik-Ueberlauf selbst MUSS auftreten --
-    # sonst prueft dieser Test nur noch den Orts-Ueberlauf allein, nicht mehr
-    # das Zusammentreffen beider Zaehler.
-    assert re.search(r" \+\d+$", part), (
-        f"Testaufbau defekt: Ortsteil {part!r} zeigt keinen Metrik-Ueberlauf "
-        "mehr -- die Fixture braucht mehr/laengere Groessen, damit dieser "
-        f"Test beide Ueberlaeufe gleichzeitig pruefen kann. Ganze SMS: {sms!r}"
+    # Testaufbau-Guard: die Metrik-Kuerzung selbst MUSS auftreten -- sonst
+    # prueft dieser Test nur noch den Orts-Ueberlauf allein.
+    assert part != f"{name_a}: " + " ".join(cells), (
+        f"Testaufbau defekt: Ortsteil {part!r} zeigt alle Token -- keine "
+        f"Metrik-Kuerzung. Ganze SMS: {sms!r}"
     )
 
 
@@ -425,8 +417,8 @@ def test_user_order_governs_sms_cell_sequence_including_new_metric():
     part_a = _location_part(sms_a, name)
     part_b = _location_part(sms_b, name)
 
-    expected_a = f"{name} {cell_hu} {cell_temp}"
-    expected_b = f"{name} {cell_temp} {cell_hu}"
+    expected_a = f"{name}: {cell_hu} {cell_temp}"
+    expected_b = f"{name}: {cell_temp} {cell_hu}"
     assert part_a == expected_a, (
         f"Reihenfolge A (Luftfeuchtigkeit zuerst) liefert Ortsteil {part_a!r}, "
         f"erwartet {expected_a!r}."
@@ -505,7 +497,7 @@ def test_regression_original_six_metrics_values_unchanged_in_sms():
     loc = LocationResult(
         location=_loc("a", name),
         temp_max=16.4, wind_max=12.0, sunny_hours=5, cloud_avg=42,
-        snow_depth_cm=30.0, snow_new_cm=4.0,
+        snow_depth_cm=30.0, snow_new_cm=4.0, hourly_data=_daily_points(),
     )
     enabled = [
         "temp_max", "wind_max", "sunny_hours", "cloud_avg", "snow_depth_cm",
@@ -514,24 +506,17 @@ def test_regression_original_six_metrics_values_unchanged_in_sms():
     sms = render_compare_sms(_result([loc]), enabled_metrics=enabled)
     part = _location_part(sms, name)
 
-    expected_values = [
-        # Adversary-Fund Runde 4 (PO-Entscheidung 2026-07-30): der SMS-Pfad
-        # gibt kein Grad-Zeichen aus (GSM-7) -- _sms_gsm7_safe() ist dieselbe
-        # Produktionsfunktion, die auch die Implementierung anwendet.
-        _sms_gsm7_safe(format_value("temperature", 16.4, style="plain")),
-        format_value("wind", 12.0, style="plain"),
-        f"{format_value('sunshine', 5, style='bare')}h",
-        format_value("cloud_total", 42, style="plain"),
-        format_value("snow_depth", 30.0, style="plain"),
-        "4 cm",
-    ]
+    # #3172 (ADR-0125): Token-Zeile -- die Tageswerte der Mail stehen
+    # unveraendert als Zahl am Kuerzel (gerundet, ohne Einheit), Wind und
+    # Bewoelkung kommen wie im Trip aus den Stundenwerten.
+    expected_values = ["D16", "SU5", "SD30", "NS24+4", "W-"]
     for value in expected_values:
-        assert value in part, (
-            f"Ortsteil {part!r} enthaelt den erwarteten Wert {value!r} nicht "
+        assert value in part.split(" "), (
+            f"Ortsteil {part!r} enthaelt den erwarteten Token {value!r} nicht "
             "-- AC-7 verlangt unveraenderte WERTE fuer die heutigen sechs "
-            "Groessen auch im SMS-Kanal. Ist-Zustand: SMS zeigt nur die "
-            "ersten zwei Zellen (`_SMS_METRICS_PER_LOCATION = 2`)."
+            "Groessen auch im SMS-Kanal."
         )
+    assert re.search(r" CT50@\d+", part), part
 
 
 # ---------------------------------------------------------------------------
@@ -579,8 +564,8 @@ def test_every_compare_metric_has_nonempty_sms_code():
 # ---------------------------------------------------------------------------
 
 def test_ac1_hoechst_und_tiefsttemperatur_tragen_d_und_l_ohne_vorzeichen():
-    """AC-1: die Zelle fuer Tageshoechst traegt `D 24`, die fuer Tagestiefst
-    `L 9` -- nie `D+24`/`D-9`."""
+    """AC-1: Tageshoechst und -tiefst stehen unter `D`/`L` -- seit #3172 wie im
+    Trip als EIN Bereich `D9/24` (Tiefst/Hoechst) -- nie `D+24`/`D-9`."""
     name = "Innsbruck"
     loc = LocationResult(
         location=_loc("a", name), temp_max=24.0, temp_min=9.0,
@@ -590,13 +575,9 @@ def test_ac1_hoechst_und_tiefsttemperatur_tragen_d_und_l_ohne_vorzeichen():
     )
     part = _location_part(sms, name)
 
-    assert "D 24" in part, (
-        f"Der Ortsteil {part!r} zeigt fuer die Tageshoechsttemperatur nicht "
-        f"`D 24`. Ganze SMS: {sms!r}"
-    )
-    assert "L 9" in part, (
-        f"Der Ortsteil {part!r} zeigt fuer die Tagestiefsttemperatur nicht "
-        f"`L 9`. Ganze SMS: {sms!r}"
+    assert part == f"{name}: D9/24", (
+        f"Der Ortsteil {part!r} zeigt Tiefst/Hoechst nicht als Bereich "
+        f"`D9/24`. Ganze SMS: {sms!r}"
     )
     for verboten in ("D+", "D-"):
         assert verboten not in part, (
@@ -606,7 +587,8 @@ def test_ac1_hoechst_und_tiefsttemperatur_tragen_d_und_l_ohne_vorzeichen():
 
 
 def test_ac2_gefuehlte_hoechst_und_tiefsttemperatur_tragen_fd_und_fl():
-    """AC-2: die gefuehlten Zellen tragen `FD`/`FL`, niemals `TF+`/`TF-`."""
+    """AC-2: die gefuehlten Werte tragen `FD`/`FL` (seit #3172 als Bereich
+    `FD7/21` wie im Trip), niemals `TF+`/`TF-`."""
     name = "Innsbruck"
     loc = LocationResult(
         location=_loc("a", name), wind_chill_max=21.0, wind_chill_min=7.0,
@@ -616,9 +598,9 @@ def test_ac2_gefuehlte_hoechst_und_tiefsttemperatur_tragen_fd_und_fl():
     )
     part = _location_part(sms, name)
 
-    assert "FD 21" in part and "FL 7" in part, (
-        f"Der Ortsteil {part!r} zeigt nicht beide gefuehlten Zellen "
-        f"(`FD 21`, `FL 7`). Ganze SMS: {sms!r}"
+    assert part == f"{name}: FD7/21", (
+        f"Der Ortsteil {part!r} zeigt die gefuehlten Werte nicht als "
+        f"`FD7/21`. Ganze SMS: {sms!r}"
     )
     for verboten in ("TF+", "TF-", "TF "):
         assert verboten not in part, (
@@ -641,7 +623,7 @@ def test_ac1_ac2_beide_richtungen_bleiben_unterscheidbar():
         for mid in ("temp_max", "temp_min", "wind_chill_max", "wind_chill_min")
     ]
     assert all(zellen), f"Testaufbau defekt: nicht alle Zellen haben Werte ({zellen!r})"
-    kuerzel = [z.split(" ", 1)[0] for z in zellen]
+    kuerzel = [_kuerzel(z) for z in zellen]
     assert len(set(kuerzel)) == 4, (
         f"Die vier Zellen tragen nur {len(set(kuerzel))} verschiedene Kuerzel "
         f"({kuerzel!r}) -- Hoechst- und Tiefstwert waeren nicht zuordenbar."
@@ -660,7 +642,7 @@ def test_single_aggregation_metrics_carry_no_sign():
     name = "Andermatt"
     loc = LocationResult(
         location=_loc("a", name), uv_index_max=7.0, precip_sum_mm=0.3,
-        hourly_data=_daily_points(freezing_level_m=1200),
+        hourly_data=_daily_points(freezing_level_m=1200, uv_index=7.0),
     )
     enabled = ["uv_max", "precip_sum", "freezing_level"]
     cells = [_sms_cell_text(loc, mid) for mid in enabled]
@@ -670,7 +652,8 @@ def test_single_aggregation_metrics_carry_no_sign():
     part = _location_part(sms, name)
 
     for cell in cells:
-        assert "+" not in cell and "-" not in cell, (
+        # ``R-`` ist der Leerwert der Token-Zeile (Regen unter Gelb), kein Zeichen.
+        assert "+" not in cell and "-" not in cell.rstrip("-"), (
             f"Groesse mit nur einer Auswertung traegt faelschlich ein "
             f"Auswertungszeichen: {cell!r}."
         )

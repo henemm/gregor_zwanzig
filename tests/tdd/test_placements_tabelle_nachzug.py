@@ -8,8 +8,9 @@ Nr. 11, 12; AC-14, AC-16, AC-17, AC-31.
   Legende -- auch Orte, deren Grundauswahl nie eingestellt wurde.
 * Punkt 3: ``placements`` im GET ist der gespeicherte Stand; unveraendert
   zurueckgeschrieben verliert er nichts (reservierte und kuenftige Felder).
-* Punkt 4: Kuerzel ``NS`` hat eine Bedeutung; ``sms_example.overflow`` sagt,
-  bei wie vielen Orten ein Rest-Zaehler ``+N`` steht.
+* Punkt 4: Kuerzel ``NS24+`` hat eine Bedeutung; ``sms_example.overflow`` ist
+  seit #3172 (ADR-0125) fuer Orte wie fuer Trip ``None`` -- die Orte-SMS
+  kuerzt still vom Listenende, ein Rest-Zaehler ``+N`` existiert nicht mehr.
 
 Kern-Schicht: echte Dateien, echte Renderer, fester Beispiel-Datensatz, kein
 Mock. Orakel aus dem Versandweg, nicht aus der Antwort.
@@ -73,11 +74,11 @@ def test_orte_ohne_tabelle_marken_beispiele_und_legende(client, anzahl, grund):
     fehlend = {m for m in _sms_an(antwort) if _orte_fehlt_in_sms(versand, m)}
     assert fehlend, "Datensatz muss die SMS ueberlaufen lassen"
     assert _markiert(antwort) == fehlend
-    worte = set(versand.split(" "))
+    worte = set(re.split(r"[ ;]+", versand))
     for zeile in antwort["rows"]:
         sms = zeile["cells"]["sms"]
         if sms["state"] == "on" and zeile["metric_id"] not in fehlend:
-            # Temperatur: D- und L-Zelle stehen bei "nie eingestellt" getrennt
+            # Temperatur: Tiefst-/Hoechstwert stehen als Bereich ``D15/19`` (#3172)
             assert sms["example"] and set(sms["example"].split(" ")) <= worte, zeile["metric_id"]
     gesendet = _orte_kuerzel_in_sms(versand)
     in_legende = {e["kuerzel"] for e in antwort["legend"]["metrics"]}
@@ -203,7 +204,8 @@ def test_orte_legende_mit_neuschnee_hat_jede_bedeutung(client, lang):
     antwort = _ok(client, "o-ns", "vergleich")
     legende = antwort["legend"]["metrics"]
     gesendet = _orte_kuerzel_in_sms(antwort["sms_example"]["text"])
-    assert "NS" in gesendet, antwort["sms_example"]["text"]
+    # #3172 (ADR-0125): dieselben Symbole wie die Trip-SMS (``NS24+0``).
+    assert "NS24+" in gesendet, antwort["sms_example"]["text"]
     assert gesendet <= {e["kuerzel"] for e in legende}
     assert all(e["meaning"] for e in legende), legende
     _sprache(NUTZER_A, "de")
@@ -211,43 +213,46 @@ def test_orte_legende_mit_neuschnee_hat_jede_bedeutung(client, lang):
 
 @pytest.mark.parametrize("lang", ["de", "en"])
 def test_jedes_kuerzel_der_orte_sms_hat_eine_bedeutung(lang):
-    """Jede Auswertung, die die Orte-SMS mit Kuerzel sendet (Kuerzel wie
-    ``_sms_metric_cell``: ``kurzform_kuerzel`` der Katalog-ID), hat im Katalog
-    eine Bedeutung -- nicht nur die Faelle, die ein Beispiel-Abo trifft."""
-    from app.metric_catalog import kuerzel_bedeutung, kurzform_kuerzel
+    """Jede Auswertung, die die Orte-SMS mit Kuerzel sendet (#3172: Symbole der
+    Token-Zeile wie im Trip, ``orte_sms.orte_kuerzel_je_metrik``, ohne
+    Doppelpunkt), hat im Katalog eine Bedeutung -- nicht nur die Faelle, die
+    ein Beispiel-Abo trifft."""
+    from app.metric_catalog import kuerzel_bedeutung
     from output.renderers.comparison import _RENDERER_TO_CATALOG_METRIC_ID
+    from output.renderers.orte_sms import orte_kuerzel_je_metrik
 
-    ohne = [(rid, cid, kurzform_kuerzel(cid))
-            for rid, cid in _RENDERER_TO_CATALOG_METRIC_ID.items()
-            if kurzform_kuerzel(cid) and not kuerzel_bedeutung(cid, kurzform_kuerzel(cid), lang)]
+    je_kuerzel = orte_kuerzel_je_metrik()
+    paare = [(rid, cid, sym.rstrip(":")) for rid, cid in _RENDERER_TO_CATALOG_METRIC_ID.items()
+             for sym, q in je_kuerzel.items() if q == cid]
+    assert len({cid for _rid, cid, _k in paare}) >= 20, paare
+    ohne = [p for p in paare if not kuerzel_bedeutung(p[1], p[2], lang)]
     assert not ohne, ohne
 
 
 # ---------------------------------------------------------------------------
-# Punkt 4b: Rest-Zaehler +N je Ort in sms_example
+# Punkt 4b (abgeloest durch #3172, ADR-0125): kein Rest-Zaehler mehr
 # ---------------------------------------------------------------------------
 
-def _rest_zaehler_soll(versand: str, orte: list[str]) -> list:
-    """Orakel: je Ortsteil der Versand-SMS (Kopf ``Orte TT.MM.: ``,
-    Trenner ``; ``, die Testnamen enthalten keinen) die Zahl hinter ``+`` als
-    eigenes Wort, sonst ``None``. #3122 B5: bei genau einem Ort steht der Name
+def _ortsteile(versand: str, orte: list[str]) -> list[str]:
+    """Ortsteile der Versand-SMS (Kopf ``Orte TT.MM.: ``, Trenner ``; ``, die
+    Testnamen enthalten keinen). #3122 B5: bei genau einem Ort steht der Name
     im Kopf (``{Ort} TT.MM.: ``), der einzige Ortsteil traegt ihn nicht."""
     kopf, rumpf = versand.split(": ", 1)
     rumpf = re.sub(r" \+\d+ Orte$", "", rumpf)
-    ein_ort = len(orte) == 1
-    if ein_ort:
+    if len(orte) == 1:
         assert kopf.split(" ")[0] == orte[0], versand
-    out = []
-    for teil in rumpf.split("; "):
-        if not ein_ort:
-            assert teil.split(" ")[0] in orte, teil
-        treffer = re.findall(r"(?:^| )\+(\d+)(?= |$)", teil)
-        out.append(int(treffer[0]) if treffer else None)
-    return out
+        return [rumpf]
+    teile = rumpf.split("; ")
+    for teil in teile:
+        assert teil.split(": ", 1)[0] in orte, teil
+    return teile
 
 
 @pytest.mark.parametrize("fall", ["drei_ueberlauf", "drei_ohne_ueberlauf", "ein_ort"])
 def test_orte_sms_example_meldet_rest_zaehler(client, fall):
+    """#3172 (ADR-0125): ``overflow`` ist fuer Orte ``None`` wie beim Trip; die
+    SMS kuerzt still vom Listenende, kein Ortsteil traegt ``+N``, und alle
+    gezeigten Orte tragen gleich viele Token."""
     from tests.tdd.test_placements_tabelle_endpoint import ORTSNAMEN
 
     if fall == "drei_ohne_ueberlauf":
@@ -259,14 +264,14 @@ def test_orte_sms_example_meldet_rest_zaehler(client, fall):
         _orte(NUTZER_A, "o-p4", anzahl=anzahl, placements={"version": 1, "rows": []})
     antwort = _ok(client, "o-p4", "vergleich")
     versand = antwort["sms_example"]["text"]
-    soll = _rest_zaehler_soll(versand, list(ORTSNAMEN[:anzahl]))
-    ueberlauf = antwort["sms_example"]["overflow"]
-    assert ueberlauf["per_location"] == soll
-    assert ueberlauf["locations"] == sum(1 for n in soll if n)
+    teile = _ortsteile(versand, list(ORTSNAMEN[:anzahl]))
+    assert antwort["sms_example"]["overflow"] is None
+    for teil in teile:
+        assert not re.search(r"(?:^| )[+?]\d+(?= |$)", teil), f"Zaehler im Ortsteil: {teil!r}"
+    zahl = {len(t.split(": ", 1)[-1].split(" ")) for t in teile}
+    assert len(zahl) == 1, f"ungleiche Zeilenzahl je Ort: {versand!r}"
     if fall == "drei_ohne_ueberlauf":
-        assert ueberlauf["locations"] == 0
-    else:
-        assert ueberlauf["locations"] >= 1
+        assert zahl == {1}, versand
 
 
 VIELE_ORTE = ("Innsbruck", "Lienz", "Kufstein", "Imst", "Landeck", "Reutte", "Schwaz",
@@ -275,21 +280,22 @@ VIELE_ORTE = ("Innsbruck", "Lienz", "Kufstein", "Imst", "Landeck", "Reutte", "Sc
 
 @pytest.mark.parametrize("anzahl", [8, 9])
 def test_orte_entfallene_orte_zaehlen_nicht_im_rest_zaehler(client, anzahl):
-    """Passen nicht alle Orte, endet die SMS auf ``+k Orte``; ``per_location``
-    nennt nur die gezeigten Orte, ``locations`` nur die mit ``+N``."""
+    """Passen nicht alle Orte, endet die SMS auf ``+k Orte`` -- erst wenn je Ort
+    nur noch die erste Listenzeile steht (#3172, ADR-0125); gezeigte plus
+    entfallene Orte ergeben alle; ``overflow`` ist ``None``."""
     kennung = f"o-p4-viele-{anzahl}"
     _orte(NUTZER_A, kennung, anzahl=anzahl, namen=VIELE_ORTE,
           placements={"version": 1, "rows": []})
     antwort = _ok(client, kennung, "vergleich")
     versand = antwort["sms_example"]["text"]
     entfallen = re.search(r" \+(\d+) Orte$", versand)
-    assert entfallen, f"Vorbedingung: SMS ohne '+k Orte': {versand!r}"
-    soll = _rest_zaehler_soll(versand, list(VIELE_ORTE[:anzahl]))
-    assert len(soll) + int(entfallen.group(1)) == anzahl
-    ueberlauf = antwort["sms_example"]["overflow"]
-    assert ueberlauf["per_location"] == soll
-    assert len(ueberlauf["per_location"]) < anzahl
-    assert ueberlauf["locations"] == sum(1 for n in soll if n)
+    teile = _ortsteile(versand, list(VIELE_ORTE[:anzahl]))
+    assert len(teile) + (int(entfallen.group(1)) if entfallen else 0) == anzahl, versand
+    assert antwort["sms_example"]["overflow"] is None
+    if entfallen:
+        assert all(len(t.split(": ", 1)[1].split(" ")) == 1 for t in teile), versand
+    if anzahl == 9:
+        assert entfallen, f"Vorbedingung: 9 Orte passen nicht: {versand!r}"
 
 
 def test_trip_sms_example_ohne_rest_zaehler(client):
