@@ -664,7 +664,8 @@ test.describe('Karte „Was steht wo“', () => {
 			await expect(karte).toContainText('What goes where');
 			await expect(karte).toContainText('Abbreviations explained');
 			for (const w of ['Was steht wo', 'Übersicht', 'Zeichen', 'Kürzel erklärt', 'Einstellungen je Kanal']) await expect(karte).not.toContainText(w);
-			await expect(karte.getByTestId('was-steht-wo-sms-text')).toHaveText(/ W \d+ km\/h/);
+			// #3172 (ADR-0125): Token-Zeile der Trip-SMS, Wind als `W30@10(43@16)`, `W-` oder `W?`.
+			await expect(karte.getByTestId('was-steht-wo-sms-text')).toHaveText(/ W(?:\d+@\d+(?:\(\d+@\d+\))?|-|\?)(?: |;|$)/);
 			const breiten = await en.evaluate(() => ({ seite: document.documentElement.scrollWidth, fenster: window.innerWidth }));
 			expect(breiten.seite, 'Seite scrollt seitlich').toBeLessThanOrEqual(breiten.fenster);
 			for (const s of SPALTEN.vergleich) {
