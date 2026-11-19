@@ -288,6 +288,7 @@ X-GZ-Lang:      de | en
 | Übersicht, Unterzeile (`vergleich.uebersicht.titel.one/.other`) | `Alle Orte · gewählte Metriken` | `Gewählte Metriken` |
 | Stundenverlauf, Titel (`vergleich.stunden.titel.one/.other`) | `Stundenverlauf · alle Orte` | `Stundenverlauf` |
 | Fuß (`vergleich.fuss.abo_zeile.one/.other`) | `{n} Orte · Vorlage {vorlage}` | `1 Ort · Vorlage {vorlage}` |
+| Umfang einer amtlichen Warnung (`warnung.umfang.alle_orte`, Code `official_alerts.py`) | `alle Orte` (EN `all locations`) | der Ortsname selbst, nie „alle Orte“ (#3153 AC-2, Abo mit genau einem Ort) |
 | Knopf (`vergleich.fuss.app_oeffnen`) | `In der App öffnen →` (EN `Open in app →`) | dasselbe |
 
 Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail. Der Befehlsblock nennt „Briefing für heute/morgen jetzt senden“ statt „Vergleich …“, der Hinweis auf gewählte Größen ohne Wert endet auf „in der Übersicht“, die leere Mail sagt „Keine Wetterdaten verfügbar.“
