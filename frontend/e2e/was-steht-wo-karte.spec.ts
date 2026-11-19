@@ -50,6 +50,14 @@ const tabellenUrl = (kind: HubKind, id: string) => `${tabellenPfad(id)}?kind=${k
 
 type Abo = { kind: HubKind; id: string; ortNamen: string[]; aufraeumen: () => Promise<void> };
 
+/** Ortsnamen je Abo eindeutig (WS-16: zwei Nutzer, verschiedene Ortskennungen; die Kennung wird aus dem
+ *  Namen gebildet) UND kurz: der Name steht je Ort in der Orte-SMS (153 Zeichen). Mit langen Namen passt bei
+ *  drei Orten nur noch die erste Listenzeile hinein, und WS-2/WS-8 verlieren ihre Voraussetzung (mehrere
+ *  Metriken im SMS-Beispiel). Lauf-Kennung zufällig (3 Zeichen), Zähler je Abo (2 Zeichen): feste Länge, z. B.
+ *  `E2E-GZ-Wab307-0` (15 Zeichen). Zwei Nutzer im selben Fall bekommen verschiedene Zählerstände. */
+const LAUF = Math.random().toString(36).slice(2, 5).padEnd(3, '0');
+let seedZaehler = 0;
+
 /** Abo mit Grundauswahl einer Vorlage (Trip: Alpen-Trekking, Orte: Allgemein mit vielen Metriken).
  *  `oben`/`dc`: zusätzliche Felder auf oberster Ebene bzw. in `display_config` (Altfelder, #3154). */
 async function seed(request: APIRequestContext, fall: Fall, opts: { ohne?: string[]; placements?: Json; oben?: Json; dc?: Json } = {}): Promise<Abo> {
@@ -64,7 +72,8 @@ async function seed(request: APIRequestContext, fall: Fall, opts: { ohne?: strin
 		return { kind: 'route', id: hub.id, ortNamen: [], aufraeumen: hub.aufraeumen };
 	}
 	const orte = [];
-	for (let i = 0; i < fall.orte; i++) orte.push(await createTestLocation(request, { name: `WSW-Ort-${Date.now() % 100000}-${i}`, lat: 47.1 + i * 0.1, lon: 11.2 + i * 0.1 }));
+	const kennung = `W${LAUF}${(seedZaehler++ % 1296).toString(36).padStart(2, '0')}`;
+	for (let i = 0; i < fall.orte; i++) orte.push(await createTestLocation(request, { name: `${kennung}-${i}`, lat: 47.1 + i * 0.1, lon: 11.2 + i * 0.1 }));
 	const hub = await seedHub(request, 'vergleich', {
 		extra: { ...opts.oben, location_ids: orte.map((o) => o.id), display_config: { ampel, active_metrics: auswahl.map((metric_id) => ({ metric_id, aggregation: 'max' })), ...extraDc } }
 	});
@@ -757,14 +766,24 @@ test.describe('Karte „Was steht wo“', () => {
 				await expect(sw, `${f}: Wert bleibt sichtbar`).toHaveAttribute('aria-checked', vorherAnzeige[f]!);
 			}
 			await expect(karte.getByText(GRUND, { exact: false }), 'Grund steht an den drei Schaltern').toHaveCount(3);
-			// Ein Klick auf einen gesperrten Schalter schreibt nichts.
+			// Ein Klick auf einen gesperrten Schalter schreibt nichts. Statt fester Wartezeit: danach eine sicher
+			// speichernde Geste (Format „Ausführlich“) in derselben Seite — ihr PUT muss der erste seit dem Klick
+			// sein, und die gespeicherten Blöcke sind unverändert (auch ein verzögert zusammengelegtes Speichern
+			// des gesperrten Klicks fiele hier auf). Danach zurück auf „Kompakt“.
 			let puts = 0;
 			page.on('request', (r) => {
 				if (r.method() === 'PUT' && new URL(r.url()).pathname === `/api/trips/${abo.id}`) puts++;
 			});
 			await karte.getByTestId('was-steht-wo-show_stage_stats').click({ force: true });
-			await page.waitForTimeout(1_500);
-			expect(puts, 'gesperrter Schalter speichert nicht').toBe(0);
+			const folge = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/trips/${abo.id}`, { timeout: 20_000 });
+			await karte.getByTestId('was-steht-wo-email-format-full').click();
+			expect((await folge).status()).toBe(200);
+			expect(puts, 'gesperrter Schalter speichert nicht (nur der PUT der Format-Geste)').toBe(1);
+			expect(await felder(), 'gespeicherte Werte nach dem gesperrten Klick unverändert').toEqual(vorher);
+			const wieder = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/trips/${abo.id}`, { timeout: 20_000 });
+			await karte.getByTestId('was-steht-wo-email-format-compact').click();
+			expect((await wieder).status()).toBe(200);
+			for (const f of BLOECKE) await expect(karte.getByTestId(`was-steht-wo-${f}`), `${f}: wieder gesperrt`).toHaveAttribute('aria-disabled', 'true');
 			const t = await stand(page.request, 'route', abo.id);
 			expect(t.report_config.email_format).toBe('compact');
 			expect(await felder(), 'gespeicherte Werte unverändert').toEqual(vorher);
