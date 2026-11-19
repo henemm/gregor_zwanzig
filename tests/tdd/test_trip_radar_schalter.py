@@ -428,6 +428,71 @@ def test_ac3_schalter_aus_in_stillen_stunden_kein_protokolleintrag():
         _clean_user(ctrl)
 
 
+# ════════════ Staging-Debug-Trigger respektiert den Schalter (Test 8) ═════════
+
+
+def _debug_trigger(monkeypatch, smtp_calls: list, schalter) -> tuple[dict, list]:
+    """Ruft die ECHTE Route ``POST /api/debug/trigger-radar-alert`` (Staging-
+    Guard aktiv) fuer einen Nutzer-Trip auf Platte auf; der Schalter steht in
+    der gespeicherten Datei. Versand faengt der SMTP-Transportrand ab (Muster
+    aus ``test_debug_radar_segmentwahl.py``)."""
+    import smtplib
+    import time
+    from datetime import date as date_type
+
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from api.routers import debug as debug_router
+    from tests.helpers.nowcast_gate_fixtures import make_trip
+    from tests.tdd.test_debug_radar_segmentwahl import _RecordingSMTP
+
+    monkeypatch.setattr(smtplib, "SMTP", _RecordingSMTP(smtp_calls))
+    monkeypatch.setattr(time, "sleep", lambda *a, **k: None)
+    monkeypatch.setenv("GZ_ENV", "staging")
+    monkeypatch.setenv("GZ_SMTP_HOST", "smtp.example.invalid")
+    monkeypatch.setenv("GZ_SMTP_USER", "test-user")
+    monkeypatch.setenv("GZ_SMTP_PASS", "test-pass")
+
+    app = FastAPI()
+    app.include_router(debug_router.router)
+
+    uid = _uid("debug")
+    _clean_user(uid)
+    trip_id = "trip-2800-debug"
+    try:
+        # Vergangene Etappe: die Route faellt per Test-Seam auf das erste Segment.
+        trip = make_trip(trip_id, stage_date=date_type(2026, 8, 1), lat=64.1466, lon=-21.9426,
+                         arrival_start="08:00", arrival_end="16:00")
+        save_trip(trip, user_id=uid)
+        _schalter_auf_platte(uid, trip_id, schalter)
+        resp = TestClient(app).post("/api/debug/trigger-radar-alert", params={"user_id": uid})
+        assert resp.status_code == 200, f"Status {resp.status_code}: {resp.text}"
+        return resp.json(), smtp_calls
+    finally:
+        _clean_user(uid)
+
+
+def test_debug_trigger_schalter_aus_meldet_disabled_ohne_versand(monkeypatch):
+    """Test 8 / AC-3 (Staging-Gegenprobe): Trip mit ``radar_alert_enabled=false``
+    -> der Debug-Trigger antwortet ``disabled`` und versucht keinen Versand."""
+    body, calls = _debug_trigger(monkeypatch, [], False)
+
+    assert body == {"status": "disabled", "trip_id": "trip-2800-debug"}, (
+        f"Debug-Trigger ignoriert den Schalter: {body!r}"
+    )
+    assert calls == [], f"Schalter aus, trotzdem Versandversuch: {calls!r}"
+
+
+def test_debug_trigger_ohne_feld_versendet_wie_bisher(monkeypatch):
+    """Gegenprobe: Bestandstrip ohne Feld (None = an) -> der Debug-Trigger
+    versendet unveraendert an das Test-Postfach."""
+    body, calls = _debug_trigger(monkeypatch, [], _KEIN_WERT)
+
+    assert body.get("status") == "sent", f"erwartet 'sent', war {body!r}"
+    assert calls and all(c["to"] == ("gregor-test@henemm.com",) for c in calls), calls
+
+
 # ═════════════════════ Loader-Roundtrip (AC-7, Python) ═══════════════════════
 
 
