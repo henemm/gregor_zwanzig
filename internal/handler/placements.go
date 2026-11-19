@@ -14,6 +14,12 @@ package handler
 //       Objekt, Inhalt ungeprueft, ADR-0077). Read-Modify-Write schreibt nur
 //       dieses Feld (store.SaveBriefingPlacements). If-Match wie beim Abo:
 //       veralteter Stand -> 412 precondition_failed, nichts wird geschrieben.
+//       Issue #3154 F002: bei kind=route fragt der PUT unter derselben Sperre
+//       den Kern (GET .../placements/erstanlage), ob das Speichern die
+//       Grosswetterlage einschalten wuerde (erstes Speichern, show_outlook
+//       false, nicht Kompakt); dann schreibt er report_config.show_stability
+//       =false im selben Vorgang mit. Kern nicht erreichbar -> 502, nichts
+//       wird geschrieben (sonst aenderte sich die Ausgabe unbemerkt).
 //
 // Die Rumpfgrenze setzt die globale LimitBody-Middleware wie fuer alle Routen.
 
@@ -24,6 +30,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -100,8 +107,42 @@ func BriefingPlacementsGetHandler(s *store.Store, pythonURL string) http.Handler
 	}
 }
 
+// placementsErstanlageTimeout: Zeitgrenze der Begleitfeld-Abfrage beim Kern
+// (reine Umrechnung, kein Wetterabruf). Paket-`var` fuer Tests.
+var placementsErstanlageTimeout = 30 * time.Second
+
+// placementsStabilitaetAus fragt den Kern, ob das Speichern der Tabelle
+// report_config.show_stability=false mitschreiben muss (#3154 F002). Die
+// Regel kennt allein die Umrechnung placements_from_legacy; Orte haben keine
+// Grosswetterlage und fragen nicht. Zweiter Wert false = Antwort geschrieben.
+func placementsStabilitaetAus(w http.ResponseWriter, r *http.Request, pythonURL, kind, id string) (bool, bool) {
+	if kind != briefingKindRoute {
+		return false, true
+	}
+	query := appendUserID(url.Values{"kind": {kind}}.Encode(), middleware.UserIDFromContext(r.Context()))
+	ziel := pythonURL + "/api/briefings/" + url.PathEscape(id) + "/placements/erstanlage?" + query
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, ziel, nil)
+	if bailIf(w, r, err != nil, http.StatusInternalServerError, "proxy_error") {
+		return false, false
+	}
+	resp, err := (&http.Client{Timeout: placementsErstanlageTimeout}).Do(req)
+	if bailIf(w, r, err != nil, http.StatusBadGateway, "upstream_unreachable") {
+		return false, false
+	}
+	defer resp.Body.Close()
+	var antwort struct {
+		ShowStabilityOff *bool `json:"show_stability_off"`
+	}
+	dekodiert := json.NewDecoder(resp.Body).Decode(&antwort)
+	if bailIf(w, r, resp.StatusCode != http.StatusOK || dekodiert != nil || antwort.ShowStabilityOff == nil,
+		http.StatusBadGateway, "upstream_unreachable") {
+		return false, false
+	}
+	return *antwort.ShowStabilityOff, true
+}
+
 // BriefingPlacementsPutHandler: PUT /api/briefings/{id}/placements.
-func BriefingPlacementsPutHandler(s *store.Store) http.HandlerFunc {
+func BriefingPlacementsPutHandler(s *store.Store, pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, kind, id, ok := placementsZiel(w, r)
 		if !ok {
@@ -129,7 +170,11 @@ func BriefingPlacementsPutHandler(s *store.Store) http.HandlerFunc {
 		if !ok {
 			return
 		}
-		if err := s.SaveBriefingPlacements(id, kind == briefingKindVergleich, placements); err != nil {
+		stabilitaetAus, ok := placementsStabilitaetAus(w, r, pythonURL, kind, id)
+		if !ok {
+			return
+		}
+		if err := s.SaveBriefingPlacements(id, kind == briefingKindVergleich, placements, stabilitaetAus); err != nil {
 			if errors.Is(err, store.ErrNotFound) {
 				WriteError(w, r, http.StatusNotFound, "not_found", nil)
 				return
