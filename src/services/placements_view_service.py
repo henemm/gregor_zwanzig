@@ -577,15 +577,17 @@ def _orte_muster(preset: dict, orte: list, vm, lang: str) -> _Muster:
     )
 
 
-def _orte_sms_formen(ort, opts) -> list[str]:
+def _orte_sms_formen(ort, opts, *, ein_ort: bool) -> list[str]:
     """Formen eines Ortsteils der SMS, von "alle Zellen" (Index 0) bis "keine"
     (Index d = d Zellen verdraengt, Ortsteil endet auf ``+d``) -- dieselbe
-    Funktion und dieselben Angaben wie ``render_compare_sms``."""
+    Funktion und dieselben Angaben wie ``render_compare_sms``. #3122 B5: bei
+    genau einem Ort steht der Name im Kopf (``{Ort} TT.MM.:``), der Ortsteil
+    traegt ihn dann nicht (``mit_name`` wie im Renderer)."""
     from output.renderers.comparison import _sms_location_variants
 
     return _sms_location_variants(
         ort, opts.enabled_metrics_by_channel["sms"], opts.unresolved_by_channel.get("sms", 0),
-        opts.metric_formats("sms"))
+        opts.metric_formats("sms"), mit_name=not ein_ort)
 
 
 def _orte_rest_zaehler(sms: str, kontext: dict) -> list:
@@ -595,9 +597,10 @@ def _orte_rest_zaehler(sms: str, kontext: dict) -> list:
     Ort (``+k Orte``) oder ein hart gekuerzter steht nicht darin."""
     from output.renderers.email.compare_html import location_render_order
 
+    orte = location_render_order(kontext["result"].locations)
     out = []
-    for ort in location_render_order(kontext["result"].locations):
-        formen = _orte_sms_formen(ort, kontext["opts"])
+    for ort in orte:
+        formen = _orte_sms_formen(ort, kontext["opts"], ein_ort=len(orte) == 1)
         d = next((d for d, form in enumerate(formen)
                   if re.search(r"(?:: |; )" + re.escape(form) + r"(?=;|\s|$)", sms)), None)
         if d is not None:
@@ -634,10 +637,11 @@ def _orte_sms_werte(sms: str, kontext: dict, ids: list[str]) -> dict:
     from output.renderers.email.compare_html import location_render_order
 
     opts = kontext["opts"]
-    ort = location_render_order(kontext["result"].locations)[0]
+    orte = location_render_order(kontext["result"].locations)
+    ort = orte[0]
     sms_liste = list(dict.fromkeys(_orte_sms_liste(opts.enabled_metrics_by_channel["sms"])))
     formen = opts.metric_formats("sms") or {}
-    varianten = _orte_sms_formen(ort, opts)
+    varianten = _orte_sms_formen(ort, opts, ein_ort=len(orte) == 1)
     verdraengt = next((d for d, form in enumerate(varianten) if form in sms), len(varianten) - 1)
     zellen = [(rid, zelle) for rid in sms_liste
               if (zelle := _sms_metric_cell(ort, rid, bool(formen.get(rid))))]

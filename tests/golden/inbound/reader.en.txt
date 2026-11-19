@@ -29,4 +29,4 @@ Please check that the trip name is correct.
 ----- telegram_mehrdeutig -----
 [Error]
 
-Ambiguous: Golden Trip (Trip), Golden Vergleich (comparison). Reply with name, e.g. 'Golden Trip pause'.
+Ambiguous: Golden Trip (Trip), Golden Vergleich (locations). Reply with name, e.g. 'Golden Trip pause'.

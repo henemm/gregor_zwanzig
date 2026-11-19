@@ -355,7 +355,7 @@ def test_ac5_heute_per_sms_bei_ausgeschoepftem_tageslimit_absage(mit):
     assert res.success is False
     text = _antworttext(res)
     # SMS ist Kurzform-Kanal -> englische Antwort (#2417): Label "Comparison".
-    assert "Comparison" in text and UEBERGANGSANTWORT not in text, text
+    assert "Locations subscription" in text and UEBERGANGSANTWORT not in text, text
 
 
 # ═══════════════════════════ AC-6 ════════════════════════════════════════════
@@ -524,7 +524,7 @@ def test_ac8_report_fehlercode_eigener_text_mit_label_ortsvergleich(monkeypatch,
     text = _antworttext(res)
     assert res.success is False, text
     assert mit.kanaele == [], mit
-    assert "Ortsvergleich" in text, f"AC-8 {code}: Label 'Ortsvergleich' fehlt: {text!r}"
+    assert "Orte-Abo" in text, f"AC-8 {code}: Label 'Orte-Abo' fehlt (#3122 B5): {text!r}"
     assert not re.search(r"\bTrip\b", text), f"AC-8 {code}: Trip-Label im Text: {text!r}"
     assert UEBERGANGSANTWORT not in text and "Web-App" not in text, text
 
@@ -549,13 +549,13 @@ def test_ac8_heute_morgen_fehlercode_mit_label_ortsvergleich(monkeypatch, mit, c
     body = res.confirmation_body
     assert res.success is False, text
     assert mit.kanaele == [], mit
-    assert "Ortsvergleich" in text, f"AC-8 {befehl}/{code}: Label fehlt: {text!r}"
+    assert "Orte-Abo" in text, f"AC-8 {befehl}/{code}: Label fehlt: {text!r}"
     # Der Betreff traegt das Label IMMER -- die Zusicherungen am BODY allein
     # pruefen, dass der Code-Text aus der Vergleichs-Fassung der Tabelle kommt.
     assert not re.search(r"\bTrip\b", body), f"AC-8 {befehl}/{code}: Trip im Body: {body!r}"
     assert "Etappe" not in body, f"AC-8 {befehl}/{code}: Etappen-Text im Body: {body!r}"
     if code in _CODES_MIT_OBJEKT_IM_BODY:
-        assert "Ortsvergleich" in body, f"AC-8 {befehl}/{code}: Label fehlt im Body: {body!r}"
+        assert "Orte-Abo" in body, f"AC-8 {befehl}/{code}: Label fehlt im Body: {body!r}"
     assert UEBERGANGSANTWORT not in text, text
 
 

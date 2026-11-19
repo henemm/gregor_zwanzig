@@ -977,8 +977,9 @@ _ON_DEMAND_FAILURE_EN = {
                             "- briefing not sent. Check the connection.",
     "already_in_progress": "{label} ({d}): already being sent - please wait a moment.",
     "no_stage": "{label} ({d}): no stage planned",
-    "invalid_preset": "{label} ({d}): comparison not loadable or its places were deleted.",
 }
+#: #3122 B5: Ergebnisse, deren Kurzform aus dem Katalog kommt (Bereichsname "Orte").
+_ON_DEMAND_FAILURE_KATALOG = ("invalid_preset",)
 
 
 def _on_demand_failure_body(outcome: str, label: str, target_date: date,
@@ -988,7 +989,8 @@ def _on_demand_failure_body(outcome: str, label: str, target_date: date,
 
     outcome: "no_stage" | "no_weather" | "no_channels" | "channels_unreachable"
     | "already_in_progress" (alles außer "sent"). ``en``: #2417 Abschnitt H.
-    ``objekt`` (#2282 S2): "Trip" oder "Ortsvergleich" — dieselbe Tabelle.
+    ``objekt`` (#2282 S2): "Trip" oder ein Orte-Abo (#3122 B5: jeder andere
+    Wert, intern "vergleich") — dieselbe Tabelle.
     ``lang`` (#2673): Langform-Text ``inbound.fehler.versand.<outcome>`` in der
     Kontosprache; die Kurzform (``en``) bleibt die Platzform-Tabelle oben.
     Eigene Texte fuer ``channels_unreachable`` (#1403 AC-4, nicht mit
@@ -996,14 +998,18 @@ def _on_demand_failure_body(outcome: str, label: str, target_date: date,
     unbekannte Ergebnisse fallen auf ``no_stage``.
     """
     human_date = f"{target_date:%d.%m.%Y}"
+    art = "trip" if objekt == "Trip" else "vergleich"
     if en:
+        if outcome in _ON_DEMAND_FAILURE_KATALOG:
+            return t(f"inbound.fehler.versand_kurz.{outcome}", "en", label=label, datum=human_date)
         vorlage = _ON_DEMAND_FAILURE_EN.get(outcome, _ON_DEMAND_FAILURE_EN["no_stage"])
-        o = "trip" if objekt == "Trip" else "comparison"
-        return vorlage.format(label=label, d=human_date, o=o)
-    schluessel = outcome if outcome in _ON_DEMAND_FAILURE_EN else "no_stage"
+        return vorlage.format(label=label, d=human_date, o=t(f"inbound.objekt.{art}", "en"))
+    bekannt = (*_ON_DEMAND_FAILURE_EN, *_ON_DEMAND_FAILURE_KATALOG)
+    schluessel = outcome if outcome in bekannt else "no_stage"
     datum = fmt_date(target_date, "en") if lang == "en" else human_date
-    obj = t("inbound.objekt.trip" if objekt == "Trip" else "inbound.objekt.vergleich", lang)
-    return t(f"inbound.fehler.versand.{schluessel}", lang, label=label, datum=datum, objekt=obj)
+    return t(f"inbound.fehler.versand.{schluessel}", lang, label=label, datum=datum,
+             objekt=t(f"inbound.objekt.{art}", lang),
+             dieses_objekt=t(f"inbound.objekt.{art}_dieses", lang))
 
 
 # ---------------------------------------------------------------------------
@@ -1596,7 +1602,7 @@ class TripCommandProcessor:
             titel = self._m(f"antwort.tag.{key}")
             body = (self._m("antwort.briefing_gesendet", tag=titel)
                     if outcome == "sent" else _on_demand_failure_body(
-                        outcome, titel, zieltag, en=self._en, objekt="Ortsvergleich",
+                        outcome, titel, zieltag, en=self._en, objekt="vergleich",
                         lang=self._lang))
         fehlend = [*erg.get("fehlende_orte", []), *erg.get("orte_ohne_wetter", [])]
         if fehlend:

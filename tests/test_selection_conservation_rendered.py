@@ -56,7 +56,7 @@ def _result():
 # Auswertungs-Helfer (Nutzersicht: was steht im Text)
 # ---------------------------------------------------------------------------
 
-_HINWEIS_VERGLEICH = re.compile(r"\+(\d+) gewählte Wettergrößen ohne Wert in diesem Vergleich")
+_HINWEIS_VERGLEICH = re.compile(r"\+(\d+) gewählte Wettergrößen ohne Wert in der Übersicht")
 _HINWEIS_ORT = re.compile(r"\+(\d+) gewählte Wettergrößen ohne Wert an diesem Ort")
 
 
@@ -65,9 +65,14 @@ def _zahlen(muster: re.Pattern, text: str) -> list[int]:
 
 
 def _sms_orte(sms: str) -> list[str]:
-    """Ortsteile der SMS: ``Vergleich 08.07.: A ...; B ...; C ...``."""
-    nach_kopf = sms.split(": ", 1)[1]
-    return [t.strip() for t in nach_kopf.split("; ")]
+    """Ortsteile der SMS: ``Orte 08.07.: A ...; B ...; C ...``. #3122 B5: bei
+    genau einem Ort steht der Name im Kopf (``A 08.07.: ...``) -- hier wieder
+    als Ortsteil ``A ...`` gelesen."""
+    kopf, nach_kopf = sms.split(": ", 1)
+    teile = [t.strip() for t in nach_kopf.split("; ")]
+    if not kopf.startswith("Orte "):
+        return [f"{kopf.rsplit(' ', 1)[0]} {teile[0]}"]
+    return teile
 
 
 def _fragezaehler(teil: str) -> int | None:
@@ -125,7 +130,7 @@ def test_ac3_html_ohne_luecke_kein_hinweis_und_zeilen_unveraendert():
     from output.renderers.email.compare_html import render_compare_html
 
     html = render_compare_html(_result(), enabled_metrics=["temp_max", "wind_max"], preset=PRESET_ALLGEMEIN)
-    assert "ohne Wert in diesem Vergleich" not in html
+    assert "ohne Wert in der Übersicht" not in html
     assert "ohne Wert" not in html.replace("ohne Wert an", "")
     assert html.index("Temperatur") < html.index("Wind")
 
@@ -231,7 +236,7 @@ def test_ac11_sms_normalfall_ist_zeichen_fuer_zeichen_unveraendert():
 
     sms = render_compare_sms(_result(), enabled_metrics=["temp_max", "wind_max"])
     assert sms == (
-        "Vergleich 08.07.: Alpha D 20C W 10 km/h; Beta D 21C W 10 km/h; "
+        "Orte 08.07.: Alpha D 20C W 10 km/h; Beta D 21C W 10 km/h; "
         "Gamma D 22C W 10 km/h"
     ), "Normalfall darf sich nicht veraendern (kein ?, kein zusaetzliches Leerzeichen)"
     assert "?" not in sms
@@ -305,11 +310,13 @@ def test_ac12_reihenfolge_platzmangel_vor_fehlend_exakt():
     steht VOR ``?N`` (fehlend), Zeichen fuer Zeichen."""
     from output.renderers.comparison import render_compare_sms
 
-    name = "N" * 90
+    # #3122 B5: bei einem Ort steht der Name im Kopf und nur einmal in der SMS;
+    # 101 statt 90 Zeichen lassen den Werten dasselbe Budget wie zuvor.
+    name = "N" * 101
     gewaehlt = ["temp_max", "wind_max", "cloud_avg", "sunny_hours", "precip_sum",
                 "pop_max", "uv_max", OHNE_WERT]
     sms = render_compare_sms(_make_comparison_result([name]), enabled_metrics=gewaehlt)
-    assert sms == f"Vergleich 08.07.: {name} D 20C W 10 km/h CT 30% SU 5.0h +3 ?1", sms
+    assert sms == f"{name} 08.07.: D 20C W 10 km/h CT 30% SU 5.0h +3 ?1", sms
 
 
 def _sms_ueber_echten_eingang(display_config: dict):
@@ -422,8 +429,8 @@ def test_ac3_warn_in_der_auswahl_ist_keine_luecke():
     from output.renderers.comparison import render_compare_email
 
     html, text = render_compare_email(_result(), enabled_metrics=["warn", "temp_max"], preset=PRESET_ALLGEMEIN)
-    assert "ohne Wert in diesem Vergleich" not in html
-    assert "ohne Wert in diesem Vergleich" not in text
+    assert "ohne Wert in der Übersicht" not in html
+    assert "ohne Wert in der Übersicht" not in text
 
 
 def _vorschau(uid: str, preset_id: str) -> tuple[dict, str]:
@@ -464,7 +471,7 @@ def test_ac19_ein_baustein_ein_wortlaut():
     assert selection_gap_notice(0, scope="ort") == ""
     assert selection_gap_notice(2, scope="ort") == "… +2 gewählte Wettergrößen ohne Wert an diesem Ort"
     assert selection_gap_notice(3, scope="vergleich") == (
-        "… +3 gewählte Wettergrößen ohne Wert in diesem Vergleich"
+        "… +3 gewählte Wettergrößen ohne Wert in der Übersicht"
     )
 
 

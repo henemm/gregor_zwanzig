@@ -52,7 +52,7 @@ from output.metric_format import format_value
 # Issue #1356: die Uebersichts-Zeilen folgen jetzt der CV2_METRICS-Reihenfolge
 # (eine Quelle mit dem HTML-Teil). Reine Umsortierung, Zeilen/Werte gleich.
 GOLDEN = (
-    "ORTS-VERGLEICH\n"
+    "ORTE\n"  # #3122 B5 (vorher ORTS-VERGLEICH)
     "========================\n"
     "Datum: Mittwoch, 15.07.2026\n"
     "Erstellt: 12.07.2026 11:00 (CEST)\n"  # 09:00 UTC + 2 h (Europe/Berlin, #1378)
@@ -127,13 +127,13 @@ GOLDEN = (
     "\n"
     "── Antwort-Kommandos ──\n"  # #2420: geteilter Befehlsblock
     # #2282 S2: HEUTE/MORGEN/REPORT am Vergleich, eigener Wortlaut.
-    "  HEUTE                – Vergleich für heute jetzt senden\n"
-    "  MORGEN               – Vergleich für morgen jetzt senden\n"
+    "  HEUTE                – Briefing für heute jetzt senden\n"
+    "  MORGEN               – Briefing für morgen jetzt senden\n"
     "  PAUSE                – Briefings für Dauer unterbrechen\n"
     "  WEITER               – Briefings reaktivieren\n"
     "  HILFE                – Diese Hilfe anzeigen (auch HELP)\n"
     "  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)\n"
-    "  REPORT               – Vergleich jetzt an alle Kanäle senden\n"
+    "  REPORT               – Briefing jetzt an alle Kanäle senden\n"
     "\n"
     "---\n"
     "Gregor Zwanzig"

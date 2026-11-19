@@ -1,4 +1,4 @@
-LOCATION COMPARISON
+LOCATIONS
 ========================
 Date: Thursday, 29 Oct 2026
 Created: 29 Oct 2026 05:00 (CET)
@@ -93,7 +93,7 @@ Kufstein
 Brenner
    Error: Zeitueberschreitung beim Abruf
 
-… +1 selected weather value without data in this comparison
+… +1 selected weather value without data in the overview
 
 HOURLY VIEW
 ---------------
@@ -148,20 +148,20 @@ HELD BACK — as you set it up
 
 
 ── Reply commands ──
-  TODAY                – Send the comparison for today now
-  TOMORROW             – Send the comparison for tomorrow now
+  TODAY                – Send today's briefing now
+  TOMORROW             – Send tomorrow's briefing now
   PAUSE                – Pause briefings for a while
   RESUME               – Turn briefings back on
   HELP                 – Show this help
   CODES                – Show what the codes mean
-  REPORT               – Send the comparison to all channels now
+  REPORT               – Send the briefing to all channels now
 
 ---
 Gregor Zwanzig
 
 ===== ✂ =====
 
-LOCATION COMPARISON — Golden-Vergleich
+LOCATIONS — Golden-Vergleich
 Date: 29 Oct 2026
 
 ⚠️ Official warnings are currently unavailable — please check yourself.
@@ -190,7 +190,7 @@ Brenner
 
 ===== ✂ =====
 
-LOCATION COMPARISON
+LOCATIONS
 Date: 29 Oct 2026
 
 ⚠️ Official warnings are currently unavailable — please check yourself.
@@ -213,8 +213,8 @@ Brenner
 
 ===== ✂ =====
 
-No comparison data available.
+No weather data available.
 
 ===== ✂ =====
 
-Vergleich 29.10.: Innsbruck D 11C R 2.4 mm +8 ?1 !TS:M@11 HT:L@1; Lienz D 12C R 5.4 mm +8 ?1; Kufstein D 13C R 8.4 mm TH - +7 ?1 !FR:M; Brenner n/a X?
+Orte 29.10.: Innsbruck D 11C R 2.4 mm +8 ?1 !TS:M@11 HT:L@1; Lienz D 12C R 5.4 mm +8 ?1; Kufstein D 13C R 8.4 mm TH - +7 ?1 !FR:M; Brenner n/a X?

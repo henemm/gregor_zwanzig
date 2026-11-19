@@ -1,4 +1,4 @@
-ORTS-VERGLEICH
+ORTE
 ========================
 Datum: Donnerstag, 29.10.2026
 Erstellt: 29.10.2026 05:00 (CET)
@@ -93,7 +93,7 @@ Kufstein
 Brenner
    Fehler: Zeitueberschreitung beim Abruf
 
-… +1 gewählte Wettergrößen ohne Wert in diesem Vergleich
+… +1 gewählte Wettergrößen ohne Wert in der Übersicht
 
 STUNDENVERLAUF
 ---------------
@@ -148,20 +148,20 @@ ZURÜCKGEHALTEN — so hast du es eingestellt
 
 
 ── Antwort-Kommandos ──
-  HEUTE                – Vergleich für heute jetzt senden
-  MORGEN               – Vergleich für morgen jetzt senden
+  HEUTE                – Briefing für heute jetzt senden
+  MORGEN               – Briefing für morgen jetzt senden
   PAUSE                – Briefings für Dauer unterbrechen
   WEITER               – Briefings reaktivieren
   HILFE                – Diese Hilfe anzeigen (auch HELP)
   KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
-  REPORT               – Vergleich jetzt an alle Kanäle senden
+  REPORT               – Briefing jetzt an alle Kanäle senden
 
 ---
 Gregor Zwanzig
 
 ===== ✂ =====
 
-ORTS-VERGLEICH — Golden-Vergleich
+ORTE — Golden-Vergleich
 Datum: 29.10.2026
 
 ⚠️ Amtliche Warnungen aktuell nicht abrufbar — bitte selbst pruefen.
@@ -190,7 +190,7 @@ Brenner
 
 ===== ✂ =====
 
-ORTS-VERGLEICH
+ORTE
 Datum: 29.10.2026
 
 ⚠️ Amtliche Warnungen aktuell nicht abrufbar — bitte selbst pruefen.
@@ -213,8 +213,8 @@ Brenner
 
 ===== ✂ =====
 
-Keine Vergleichsdaten verfügbar.
+Keine Wetterdaten verfügbar.
 
 ===== ✂ =====
 
-Vergleich 29.10.: Innsbruck D 11C R 2.4 mm +8 ?1 !TS:M@11 HT:L@1; Lienz D 12C R 5.4 mm +8 ?1; Kufstein D 13C R 8.4 mm TH - +7 ?1 !FR:M; Brenner n/a X?
+Orte 29.10.: Innsbruck D 11C R 2.4 mm +8 ?1 !TS:M@11 HT:L@1; Lienz D 12C R 5.4 mm +8 ?1; Kufstein D 13C R 8.4 mm TH - +7 ?1 !FR:M; Brenner n/a X?
