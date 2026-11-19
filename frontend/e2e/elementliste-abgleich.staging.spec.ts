@@ -38,6 +38,7 @@ import {
 	HUB_ANKER_KOPF,
 	HUB_ANKER_FLAECHE,
 	zaehleAnker,
+	warteAufHubAnker,
 	type HubAnker,
 	istGegenrichtung,
 	werteGegenrichtungAus,
@@ -87,7 +88,11 @@ async function texteUnterHub(page: Page): Promise<{ anker: HubAnker; texte: stri
 	await page.evaluate(oeffneDetails, { selektor: GEGENRICHTUNG_WURZEL, alle: true });
 	await page.waitForTimeout(200);
 	// Fix-Loop 3 (F002): Rohwerte je Anker; entscheiden tut pruefeHubAnker (über werteGegenrichtungAus).
-	const anker = await page.evaluate(zaehleAnker, { kopf: HUB_ANKER_KOPF, flaeche: HUB_ANKER_FLAECHE });
+	// #2973: bei langsamer Staging-Antwort fehlt ein Anker kurz; bis ~5 s warten, dann erst Texte lesen.
+	const anker = await warteAufHubAnker(
+		async () => await page.evaluate(zaehleAnker, { kopf: HUB_ANKER_KOPF, flaeche: HUB_ANKER_FLAECHE }),
+		(ms) => page.waitForTimeout(ms)
+	);
 	const { texte } = await page.evaluate(sichtbareTexte, { selektor: GEGENRICHTUNG_WURZEL, alle: true });
 	return { anker, texte };
 }
