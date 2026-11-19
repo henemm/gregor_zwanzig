@@ -1,7 +1,9 @@
 // Fix-Loop 1 Issue #2794 S3a Teil-PR 3, Adversary-Finding F005 (AC-21):
-// Nur das Orts-Briefing zeigt den Schalter „Radar-Regen", und Speichern setzt
-// `radar_alert_enabled`; der Trip zeigt ihn nicht und schreibt kein
+// Das Orts-Briefing zeigt den Schalter „Radar-Regen", und Speichern setzt
 // `radar_alert_enabled`.
+// Trip-Teil abgelöst durch #2800 (S8, feat_2800_trip_radar_alarm AC-6): der Trip zeigt den
+// Schalter jetzt ebenfalls und schreibt `radar_alert_enabled` in seinen PUT-Rumpf (früher:
+// „der Trip zeigt ihn nicht und schreibt kein `radar_alert_enabled`").
 //
 // Gemessen dort, wo es WIRKT:
 //   - Gesendeter Rumpf: der echte Vergleichs-Speicher-Baustein `vergleichNutzlast`
@@ -78,11 +80,13 @@ describe('F005/AC-21: Radar-Regen speichern (nur Orts-Briefing)', () => {
 		assert.equal(n.radar_alert_enabled, false);
 	});
 
-	test('Trip: keiner der beiden PUT-Teile schreibt radar_alert_enabled, auch bei radarAn im Stand', () => {
+	// abgelöst durch #2800: früher „Trip: keiner der beiden PUT-Teile schreibt radar_alert_enabled".
+	test('Trip: der Trip-Rumpf schreibt radar_alert_enabled aus dem Stand, das Wetter-Fragment nicht (#2800)', () => {
 		const v = vorlagen();
 		const stand = { ...standAusAbo('route', TRIP, v), radarAn: true };
 		const n = tripNutzlast({ client: null as never, stand: () => stand, vorlagen: () => v, abo: () => TRIP });
-		assert.ok(!alleSchluessel(n).includes('radar_alert_enabled'), `Trip schreibt Radar: ${JSON.stringify(n)}`);
+		assert.equal((n.tripFelder as Record<string, unknown>).radar_alert_enabled, true, `Trip schreibt Radar nicht: ${JSON.stringify(n.tripFelder)}`);
+		assert.ok(!alleSchluessel(n.weatherConfig).includes('radar_alert_enabled'), `Radar im display_config-Fragment: ${JSON.stringify(n.weatherConfig)}`);
 	});
 });
 
@@ -130,7 +134,8 @@ describe('F-A2/AC-21: Radar lesen und Umlegen als Aenderung erkennen', () => {
 	});
 });
 
-describe('F005/AC-21: Radar-Schalter nur im Orts-Briefing sichtbar', () => {
+// abgelöst durch #2800: früher „Radar-Schalter nur im Orts-Briefing sichtbar" (Trip: mitRadar false).
+describe('F005/AC-21 + #2800: Radar-Schalter in Trip und Orts-Briefing sichtbar', () => {
 	async function mitRadarFuer(context: 'route' | 'vergleich'): Promise<unknown> {
 		const { u } = await umgebungFuer(WETTER_TAB, { context });
 		const { ast, quelle } = svelteAst(WETTER_TAB);
@@ -141,8 +146,8 @@ describe('F005/AC-21: Radar-Schalter nur im Orts-Briefing sichtbar', () => {
 		return werte(ausdruck!, u);
 	}
 
-	test('WetterTab (Trip): mitRadar ist false', async () => {
-		assert.equal(await mitRadarFuer('route'), false, 'der Trip zeigt den Radar-Schalter');
+	test('WetterTab (Trip): mitRadar ist true (#2800)', async () => {
+		assert.equal(await mitRadarFuer('route'), true, 'der Trip zeigt den Radar-Schalter nicht (#2800 AC-6)');
 	});
 
 	test('WetterTab (Orts-Briefing): mitRadar ist true', async () => {

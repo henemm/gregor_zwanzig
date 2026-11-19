@@ -13,9 +13,10 @@
 // Festgelegte API (ampelSchreiben.ts), Typen aus ampelModell.ts:
 //   abweichungsMenge(vorlage: Ampel, aufgeloest: Ampel, auswahl: string[]): Ampel
 //       {template: vorlage.template, metrics?: nur abweichende Felder je Metrik, thunder?: nur abweichende Farben}
-//   tripSpeicherPayload({vorlage, aufgeloest, auswahl, displayConfig, reportConfig, warnFelder, warnungenAn, tagesfenster: {start, end}})
+//   tripSpeicherPayload({vorlage, aufgeloest, auswahl, displayConfig, reportConfig, warnFelder, warnungenAn, radarAn, tagesfenster: {start, end}})
 //       -> { weatherConfig: {ampel, metrics, ...unveraenderte display_config-Schluessel erlaubt},   // PUT /api/trips/{id}/weather-config
-//            tripFelder: {official_alerts_enabled, official_warnings, report_config} }             // Trip-Felder (siehe Befund im Bericht)
+//            tripFelder: {official_alerts_enabled, official_warnings, radar_alert_enabled, report_config} } // Trip-Felder
+//       (radarAn / radar_alert_enabled: abgelöst durch #2800, vorher schrieb der Trip kein Radar-Feld)
 //   vergleichSpeicherPayload({vorlage, aufgeloest, auswahl, displayConfig, aggregationFuer, warnFelder, warnungenAn, radarAn, tagesfenster})
 //       -> { display_config: {...displayConfig, ampel, active_metrics}, official_alerts_enabled, official_warnings,
 //            radar_alert_enabled, day_window_start_hour, day_window_end_hour }                     // enqueueHubWrite (PUT /api/compare/presets/{id})
@@ -148,7 +149,7 @@ const TRIP_DC = {
 };
 const TRIP_RC = { enabled: true, morning_enabled: true, morning_time: '06:00:00', evening_time: '18:00:00', send_email: true, day_window_start_hour: 4, day_window_end_hour: 19 };
 
-async function tripFall(auswahlAenderung: (a: string[]) => string[], warnungenAn = true): Promise<{ p: Json; menge: Json; auswahl: string[]; u: Json }> {
+async function tripFall(auswahlAenderung: (a: string[]) => string[], warnungenAn = true, radarAn = true): Promise<{ p: Json; menge: Json; auswahl: string[]; u: Json }> {
 	const u = await umgebung();
 	const v = u.vorlagen.wandern;
 	const aufgeloest = u.m.verschmelzen(v, TRIP_DC.ampel);
@@ -161,6 +162,7 @@ async function tripFall(auswahlAenderung: (a: string[]) => string[], warnungenAn
 		reportConfig: structuredClone(TRIP_RC),
 		warnFelder: { official_alerts_enabled: true, official_warnings: { enabled: false, sources: ['dwd'] } },
 		warnungenAn,
+		radarAn, // #2800: der Trip schreibt den Radar-Schalter mit (wie vergleichSpeicherPayload)
 		tagesfenster: { start: 6, end: 20 }
 	};
 	const p = u.s.tripSpeicherPayload(eingabe);
@@ -205,8 +207,9 @@ describe('AC-37/AC-38: Trip-Payload (metrics[] + ampel + Warnungen + Tagesfenste
 	});
 
 	test('ac21_ac20_trip_felder_tagesfenster_in_report_config_und_warnungen_doppelt', async () => {
-		const { p, u } = await tripFall((a) => a, false);
-		assert.deepEqual(Object.keys(p.tripFelder).sort(), ['official_alerts_enabled', 'official_warnings', 'report_config']);
+		const { p, u } = await tripFall((a) => a, false, false);
+		// radar_alert_enabled prüft seit #2800 der eigene Test darunter (feat_2794 AC-21 abgelöst durch #2800).
+		assert.deepEqual(Object.keys(p.tripFelder).filter((k) => k !== 'radar_alert_enabled').sort(), ['official_alerts_enabled', 'official_warnings', 'report_config']);
 		assert.deepEqual(p.tripFelder.report_config, { ...TRIP_RC, day_window_start_hour: 6, day_window_end_hour: 20 }, 'report_config: Zustellungs-Felder veraendert oder Tagesfenster fehlt');
 		assert.deepEqual(
 			{ official_alerts_enabled: p.tripFelder.official_alerts_enabled, official_warnings: p.tripFelder.official_warnings },
@@ -214,6 +217,15 @@ describe('AC-37/AC-38: Trip-Payload (metrics[] + ampel + Warnungen + Tagesfenste
 		);
 		assert.equal(p.tripFelder.official_alerts_enabled, false);
 		assert.equal(p.tripFelder.official_warnings.enabled, false);
+	});
+
+	test('feat2800_trip_felder_tragen_radar_alert_enabled_aus_dem_stand', async () => {
+		// #2800 AC-6 (löst feat_2794 AC-21 ab): der Trip-Rumpf schreibt den Radar-Schalter mit.
+		const aus = (await tripFall((a) => a, false, false)).p;
+		assert.deepEqual(Object.keys(aus.tripFelder).sort(), ['official_alerts_enabled', 'official_warnings', 'radar_alert_enabled', 'report_config']);
+		assert.equal(aus.tripFelder.radar_alert_enabled, false, '#2800: Radar aus im Stand wird nicht als false geschrieben');
+		const an = (await tripFall((a) => a, false, true)).p;
+		assert.equal(an.tripFelder.radar_alert_enabled, true, '#2800: Radar an im Stand wird nicht als true geschrieben');
 	});
 });
 

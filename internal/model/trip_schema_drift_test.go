@@ -259,3 +259,29 @@ func TestTripSchemaDrift_DisplayConfigAmpelBleibtErhalten(t *testing.T) {
 		t.Fatalf("display_config.ampel nach Go-Roundtrip = %v", out.DisplayConfig["ampel"])
 	}
 }
+
+// #2800 (S8, AC-7): radar_alert_enabled (Trip-Radar-Schalter) steht in der
+// gemeinsamen Fixture und ueberlebt den Go-Roundtrip mit demselben Wert —
+// fuer true UND false. Python-Pendant:
+// test_radar_alert_enabled_ueberlebt_python_roundtrip.
+func TestTripSchemaDrift_RadarAlertEnabledBleibtErhalten(t *testing.T) {
+	var fixture map[string]interface{}
+	if err := json.Unmarshal(driftFixture(t), &fixture); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := fixture["radar_alert_enabled"]; !ok {
+		t.Errorf("Fixture fuehrt radar_alert_enabled nicht — Drift-Gate waere fuer das Feld blind")
+	}
+	for _, want := range []bool{true, false} {
+		fixture["radar_alert_enabled"] = want
+		raw, _ := json.Marshal(fixture)
+		var out map[string]interface{}
+		if err := json.Unmarshal(goRoundtrip(t, raw), &out); err != nil {
+			t.Fatal(err)
+		}
+		got, ok := out["radar_alert_enabled"]
+		if !ok || got != want {
+			t.Errorf("radar_alert_enabled=%v nach Go-Roundtrip: present=%v value=%v", want, ok, got)
+		}
+	}
+}

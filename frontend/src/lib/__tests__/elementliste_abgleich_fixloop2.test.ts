@@ -1,5 +1,5 @@
 // Issue #2913 Scheibe (c), Fix-Loop 2 — Elementlisten-Abgleich: EN-Muster (C5), Kontodaten-Chips (C5),
-// freigegebene Abweichungen (Trip-Radar, AC-3/#2800), Sprachprüfung (C3). Reine Logik, ohne Browser.
+// freigegebene Abweichungen (Trip-Radar-Freigabe abgelöst durch #2800 AC-9), Sprachprüfung (C3). Reine Logik, ohne Browser.
 // Spec: docs/specs/modules/feat_2913_scheibe_c_wetter_rest.md
 //
 //   cd frontend && npm test -- src/lib/__tests__/elementliste_abgleich_fixloop2.test.ts
@@ -126,8 +126,66 @@ describe('C5: Kontodaten-Chips — Präfix + Vorhandensein, nicht Menge/Reihenfo
 	});
 });
 
-describe('Freigegebene Abweichung: Trip-Radar (AC-3, #2800)', () => {
+// abgelöst durch #2800 (feat_2800_trip_radar_alarm AC-9): die Freigabe „Trip ohne Radar" (feat_2913 AC-3)
+// entfällt, der Trip-Reiter Wetter hat die Radar-Zeile. Der Freigabe-MECHANISMUS bleibt geprüft, aber an
+// einer Muster-Freigabe (gleiche Form wie die entfernte), nicht mehr an der echten Datei.
+describe('Trip-Radar: keine freigegebene Abweichung mehr (#2800 AC-9)', () => {
 	const freigaben = leseFreigaben(FREIGABEN_TEXT);
+	const radarTitel = el('rt', 4, 'Radar-Regen', { abschnitt: 'warnungen-radar', i18n_key: 'wetter.radar.titel' });
+	const radarText = el('rb', 5, 'Alarm …', { abschnitt: 'warnungen-radar', i18n_key: 'wetter.radar.beschreibung' });
+	const warn = el('w', 1, 'Amtliche Warnungen', { abschnitt: 'warnungen-radar', i18n_key: 'alarme.gruppe.amtlich' });
+	const alle = [radarTitel, radarText, warn];
+	const ab = (): Ergebnis => ({ status: 'abweichend', grund: 'Text nicht sichtbar', ist: 'nicht gefunden' });
+	const ELEMENTE = (JSON.parse(readFileSync(join(REPO, 'docs/context/einstellungen_neu/elementliste.json'), 'utf8')) as { elemente: ListenElement[] }).elemente;
+
+	test('Datei: jede Freigabe mit Grund und Spec-Verweis (Liste darf leer sein)', () => {
+		assert.ok(freigaben.length <= 5, 'Liste klein halten');
+		for (const f of freigaben) assert.match(f.spec, /docs\/specs\/.+AC-\d+/);
+		assert.throws(() => leseFreigaben('{"freigaben":[{"ctx":"trip","reiter":"wetter","abschnitt":"x","i18n_keys":["a"],"grund":"","spec":"s"}]}'), /grund/);
+	});
+	test('Datei: keine Freigabe deckt die Trip-Radar-Zeile mehr ab', () => {
+		const trip = freigaben.filter(
+			(f) => f.ctx === 'trip' && f.reiter === 'wetter' && f.abschnitt === 'warnungen-radar' && f.i18n_keys.some((k) => k.startsWith('wetter.radar.'))
+		);
+		assert.deepEqual(trip, [], `#2800 AC-9: Freigabe „Trip ohne Radar" besteht noch: ${JSON.stringify(trip)}`);
+	});
+	test('fehlende Trip-Radarzeilen ⇒ abweichend (nicht mehr freigegeben); Warnungen ebenso', () => {
+		const erg = new Map<string, Ergebnis>(alle.map((e) => [e.id, ab()]));
+		const r = wendeFreigabenAn(alle, erg, freigaben);
+		assert.equal(r.get('rt')!.status, 'abweichend', '#2800 AC-9: fehlender Radar-Titel im Trip wird noch freigegeben');
+		assert.equal(r.get('rb')!.status, 'abweichend', '#2800 AC-9: fehlender Radar-Text im Trip wird noch freigegeben');
+		assert.equal(r.get('w')!.status, 'abweichend');
+	});
+	test('Elementliste verlangt im Trip-Kontext die Radar-Zeile (Titel + „deine Etappe") in jedem Zustand', () => {
+		const tripRadar = ELEMENTE.filter((e) => e.ctx === 'trip' && e.reiter === 'wetter' && e.abschnitt === 'warnungen-radar');
+		const zustaende = [...new Set(tripRadar.map((e) => e.zustand))];
+		assert.ok(zustaende.length >= 1, 'Messaufbau: keine Trip-Elemente in warnungen-radar');
+		for (const z of zustaende) {
+			const imZustand = tripRadar.filter((e) => e.zustand === z);
+			assert.ok(imZustand.some((e) => e.i18n_key === 'wetter.radar.titel'), `Zustand ${z}: Radar-Titel fehlt`);
+			assert.ok(
+				imZustand.some((e) => e.i18n_key === 'wetter.radar.beschreibung' && /deine Etappe/.test(e.text_de)),
+				`Zustand ${z}: Radar-Text „deine Etappe" fehlt`
+			);
+		}
+	});
+});
+
+describe('Freigabe-Mechanismus (Muster-Freigabe, unabhängig von der echten Datei)', () => {
+	const freigaben = leseFreigaben(
+		JSON.stringify({
+			freigaben: [
+				{
+					ctx: 'trip',
+					reiter: 'wetter',
+					abschnitt: 'warnungen-radar',
+					i18n_keys: ['wetter.radar.titel', 'wetter.radar.beschreibung'],
+					grund: 'Muster-Abweichung (#9999)',
+					spec: 'docs/specs/modules/muster.md AC-1'
+				}
+			]
+		})
+	);
 	const radarTitel = el('rt', 4, 'Radar-Regen', { abschnitt: 'warnungen-radar', i18n_key: 'wetter.radar.titel' });
 	const radarText = el('rb', 5, 'Alarm …', { abschnitt: 'warnungen-radar', i18n_key: 'wetter.radar.beschreibung' });
 	const warn = el('w', 1, 'Amtliche Warnungen', { abschnitt: 'warnungen-radar', i18n_key: 'alarme.gruppe.amtlich' });
@@ -135,20 +193,15 @@ describe('Freigegebene Abweichung: Trip-Radar (AC-3, #2800)', () => {
 	const alle = [radarTitel, radarText, warn, orteRadar];
 	const ab = (): Ergebnis => ({ status: 'abweichend', grund: 'Text nicht sichtbar', ist: 'nicht gefunden' });
 
-	test('Datei: jede Freigabe mit Grund und Spec-Verweis', () => {
-		assert.ok(freigaben.length >= 1 && freigaben.length <= 5, 'Liste klein halten');
-		for (const f of freigaben) assert.match(f.spec, /docs\/specs\/.+AC-\d+/);
-		assert.throws(() => leseFreigaben('{"freigaben":[{"ctx":"trip","reiter":"wetter","abschnitt":"x","i18n_keys":["a"],"grund":"","spec":"s"}]}'), /grund/);
-	});
-	test('fehlende Trip-Radarzeilen ⇒ freigegeben mit Grund; Warnungen und Orte-Radar bleiben abweichend', () => {
+	test('gedeckte Elemente ⇒ freigegeben mit Grund und Spec; nicht gedeckte bleiben abweichend', () => {
 		const erg = new Map<string, Ergebnis>(alle.map((e) => [e.id, ab()]));
 		const r = wendeFreigabenAn(alle, erg, freigaben);
 		assert.equal(r.get('rt')!.status, 'freigegeben');
 		assert.equal(r.get('rb')!.status, 'freigegeben');
-		assert.match(r.get('rt')!.grund ?? '', /#2800/);
-		assert.match(r.get('rt')!.grund ?? '', /AC-3/);
+		assert.match(r.get('rt')!.grund ?? '', /#9999/);
+		assert.match(r.get('rt')!.grund ?? '', /AC-1/);
 		assert.equal(r.get('w')!.status, 'abweichend');
-		assert.equal(r.get('ort')!.status, 'abweichend', 'Orte-Radar ist nicht freigegeben');
+		assert.equal(r.get('ort')!.status, 'abweichend', 'anderer Kontext ist nicht freigegeben');
 	});
 	test('F004: dieselben Schlüssel in einem anderen Abschnitt oder Reiter werden NICHT freigegeben', () => {
 		const anderswo = { ...radarTitel, id: 'a1', abschnitt: 'metriken' };
