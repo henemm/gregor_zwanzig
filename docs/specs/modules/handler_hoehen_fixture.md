@@ -75,6 +75,8 @@ Neue Datei `internal/handler/hoehen_fixture_test.go` (ohne Build-Tag, damit sie 
 
 Änderung in `docs/reference/gates_und_ratschen.md` (um Zeile 218): Der Satz zur Duldung im Handler-Paket (Folgebefund #3158) wird ersetzt durch: Der Höhen-Nachschlag der Handler-Tests läuft gegen einen lokalen Fixture-Server (`hoehenDienstAuf`); es gibt keine Ausnahme mehr.
 
+Abweichung bei der Umsetzung (Phase 7 festgehalten): Die Helfer-Selbsttests zu AC-3 bis AC-5 liegen in der eigenen Datei `internal/handler/hoehen_fixture_wirkung_test.go` (Build-Tag `!integration`, wie `netzsperre_wirkung_test.go`), weil sie die Sperre voraussetzen, die nur im Kern-Build installiert ist. Der Doku-Nachweis zu AC-6 liegt in `tests/test_netzsperre_doku_hoehen_fixture.py` (`# doc-compliance-test`). Beide Dateien sind reine Tests; Produktionscode ist unverändert (LoC-Delta 0).
+
 ## Expected Behavior
 
 - **Input:** Handler-Aufruf mit Koordinaten (Dezimal, DMS, per Content-Type-Variante) ohne Höhenangabe, bei aktivem `hoehenDienstAuf(t, 1234.6)`.
@@ -134,3 +136,4 @@ Kern-Schicht (deterministisch, ohne Netz, Go-Tests im Handler-Paket; kein Mock-T
 ## Changelog
 
 - 2026-11-19: Initial spec created (Issue #3158)
+- 2026-11-19: Implementation Details um die zwei zusätzlichen Testdateien ergänzt (Validierung)
