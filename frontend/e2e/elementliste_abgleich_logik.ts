@@ -544,23 +544,66 @@ export function erwartung(e: ListenElement, sprache: Sprache): RegExp | null {
 /** Zahl-Text, den `{zahl}` in der Gegenrichtung erklärt (Vorzeichen, Dezimal-, Tausender-, Uhrzeit-Trenner). */
 const ZAHL_TEXT = '[-−+]?\\d+(?:[.,:]\\d+)*';
 
-/** Wie `musterAlsRegExp`, aber `{zahl}` passt nur auf Zahl-Text; andere Platzhalter bleiben beliebig. */
-function gegenMuster(muster: string): RegExp {
+/**
+ * `{metrik}` der Gegenrichtung (#3011): genau einer der bekannten Namen (normalisiert, wörtlich escaped);
+ * leere Menge ⇒ `(?!)`, passt nie (fail-closed: unbekannte Texte erscheinen als `zusaetzlich`).
+ */
+function metrikText(metrikNamen: string[]): string {
+	const namen = [...new Set(metrikNamen.map(normalisiere).filter((n) => n !== ''))];
+	return namen.length === 0 ? '(?!)' : '(?:' + namen.map(esc).join('|') + ')';
+}
+
+/**
+ * Wie `musterAlsRegExp`, aber `{zahl}` passt nur auf Zahl-Text und `{metrik}` nur auf einen bekannten
+ * Metriknamen (#3011); andere Platzhalter bleiben beliebig.
+ */
+function gegenMuster(muster: string, metrik: string): RegExp {
 	const teile = normalisiere(muster).split(/(\{[^}]+\})/);
-	const quelle = teile.map((t, i) => (i % 2 === 0 ? esc(t) : t === '{zahl}' ? ZAHL_TEXT : '.+?')).join('');
+	const platzhalter = (t: string) => (t === '{zahl}' ? ZAHL_TEXT : t === '{metrik}' ? metrik : '.+?');
+	const quelle = teile.map((t, i) => (i % 2 === 0 ? esc(t) : platzhalter(t))).join('');
 	return new RegExp('^' + quelle + '$');
 }
 
 /**
  * Erwartung der Gegenrichtung (#2913 Fix-Loop 4): wie `erwartung`, nur erklärt `{zahl}` keinen beliebigen
- * Text (sonst wird ein Eintrag `muster: "{zahl}"` zu `^.+?$` und erklärt jeden Live-Text). Die Hinrichtung
- * nutzt weiter `erwartung`.
+ * Text (sonst wird ein Eintrag `muster: "{zahl}"` zu `^.+?$` und erklärt jeden Live-Text), und `{metrik}`
+ * nur einen bekannten Metriknamen (#3011, `metrik` aus `metrikText`). Die Hinrichtung nutzt weiter `erwartung`.
  */
-function erwartungGegenrichtung(e: ListenElement, sprache: Sprache): RegExp | null {
+function erwartungGegenrichtung(e: ListenElement, sprache: Sprache, metrik: string): RegExp | null {
 	const vorlage = sprache === 'en' ? e.text_en : e.muster;
 	if (sprache === 'en' && (e.luecke || !vorlage)) return null;
-	if (vorlage && HAT_PLATZHALTER.test(vorlage)) return gegenMuster(vorlage);
+	if (vorlage && HAT_PLATZHALTER.test(vorlage)) return gegenMuster(vorlage, metrik);
 	return erwartung(e, sprache);
+}
+
+/**
+ * Metriknamen aus der Antwort von GET /api/metrics (Kategorie → [{label, label_de, label_en, …}]): alle
+ * nicht-leeren Labels. Ungültige Antwort ⇒ [] (nie geraten).
+ */
+export function metrikNamenAusRegister(antwort: unknown): string[] {
+	if (!istObjekt(antwort)) return [];
+	const out = new Set<string>();
+	for (const metriken of Object.values(antwort)) {
+		if (!Array.isArray(metriken)) continue;
+		for (const m of metriken) {
+			if (!istObjekt(m)) continue;
+			for (const feld of ['label', 'label_de', 'label_en']) if (nichtLeer(m[feld])) out.add(m[feld].trim());
+		}
+	}
+	return [...out];
+}
+
+/** DE-Metriknamen der Elementliste: Wert von `{metrik}` in `text_de` aller Einträge mit `{metrik}` im Muster. */
+export function metrikNamenAusListe(liste: ListenElement[]): string[] {
+	const out = new Set<string>();
+	for (const e of liste) {
+		if (!e.muster || !e.muster.includes('{metrik}')) continue;
+		const teile = normalisiere(e.muster).split(/(\{[^}]+\})/);
+		const quelle = teile.map((t, i) => (i % 2 === 0 ? esc(t) : t === '{metrik}' ? '(.+?)' : '.+?')).join('');
+		const treffer = new RegExp('^' + quelle + '$').exec(normalisiere(e.text_de));
+		for (const wert of treffer?.slice(1) ?? []) if (nichtLeer(wert)) out.add(wert.trim());
+	}
+	return [...out];
 }
 
 /** Freigegebene Abweichung: Elemente eines Abschnitts (per Katalogschlüssel), die laut Spec fehlen dürfen. */
@@ -689,12 +732,15 @@ export function findeZusaetzliche(
 	liste: ListenElement[],
 	ausnahmen: Ausnahme[],
 	kontoTexte: string[],
-	sprache: Sprache
+	sprache: Sprache,
+	metrikNamen: string[] = []
 ): ZusaetzlichEintrag[] {
 	const { ctx, reiter } = befund;
+	// #3011: `{metrik}` erklärt nur Register-Namen (metrikNamen) und DE-Namen der Elementliste.
+	const metrik = metrikText([...metrikNamen, ...metrikNamenAusListe(liste)]);
 	const regeln = liste
 		.filter((e) => e.ctx === ctx && e.zustand === 'normal' && (e.reiter === reiter || REITERUEBERGREIFEND.has(e.abschnitt)))
-		.map((e) => erwartungGegenrichtung(e, sprache))
+		.map((e) => erwartungGegenrichtung(e, sprache, metrik))
 		.filter((re): re is RegExp => re !== null);
 	const konto = new Set(kontoTexte.map(normalisiere));
 	const out = new Map<string, ZusaetzlichEintrag>();
@@ -719,12 +765,13 @@ export function werteGegenrichtungAus(
 	liste: ListenElement[],
 	ausnahmen: Ausnahme[],
 	kontoTexte: string[],
-	sprache: Sprache
+	sprache: Sprache,
+	metrikNamen: string[] = []
 ): { zusaetzlich: ZusaetzlichEintrag[]; ohneHub: OhneHubEintrag | null } {
 	const { ctx, reiter } = befund;
 	const grund = pruefeHubAnker(befund.anker);
 	if (grund !== null) return { zusaetzlich: [], ohneHub: { ctx, reiter, grund } };
-	return { zusaetzlich: findeZusaetzliche({ ctx, reiter, texte: befund.texte }, liste, ausnahmen, kontoTexte, sprache), ohneHub: null };
+	return { zusaetzlich: findeZusaetzliche({ ctx, reiter, texte: befund.texte }, liste, ausnahmen, kontoTexte, sprache, metrikNamen), ohneHub: null };
 }
 
 /** Besitzer einer Abweichung: ein Element (id), ein ganzer Abschnitt oder ein zusätzlicher Text (Text/Muster). */
@@ -740,16 +787,21 @@ const PFLICHT_JE_ART: Record<string, string[]> = { element: ['id'], abschnitt: [
 
 /**
  * Besitzer aus dem JSON-Text ({"besitzer": [...]}); Grund und gültiger Verweis sind Pflicht. Mit `elemente`
- * (Elementliste) muss jeder element-Besitzer auf eine bekannte ID zeigen.
+ * (Elementliste) muss jeder element-Besitzer auf eine bekannte ID zeigen und jeder abschnitt-Besitzer auf
+ * ein vorhandenes Tripel (ctx, reiter, abschnitt) (#3008 F001).
  */
 export function leseBesitzer(text: string, elemente?: ListenElement[]): Besitzer[] {
 	const liste = (JSON.parse(text) as { besitzer?: unknown }).besitzer;
 	if (!Array.isArray(liste)) throw new Error('Besitzer: Feld „besitzer“ fehlt');
 	const ids = elemente ? new Set(elemente.map((e) => e.id)) : null;
+	const tripel = elemente ? new Set(elemente.map((e) => `${e.ctx}|${e.reiter}|${e.abschnitt}`)) : null;
 	return liste.map((b: unknown, i) => {
 		if (!istObjekt(b)) throw new Error(`Besitzer ${i}: Eintrag ist kein Objekt`);
 		const geprueft = pruefeBesitzer(b, i);
 		if (ids && geprueft.art === 'element' && !ids.has(geprueft.id)) throw new Error(`Besitzer ${i}: Element „${geprueft.id}“ steht nicht in der Elementliste`);
+		if (tripel && geprueft.art === 'abschnitt' && !tripel.has(`${geprueft.ctx}|${geprueft.reiter}|${geprueft.abschnitt}`)) {
+			throw new Error(`Besitzer ${i}: Abschnitt „${geprueft.abschnitt}“ (${geprueft.ctx}/${geprueft.reiter}) steht nicht in der Elementliste`);
+		}
 		return geprueft;
 	});
 }

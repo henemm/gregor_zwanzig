@@ -165,4 +165,25 @@ describe('#3011 Gegenrichtung: {metrik} nur auf bekannte Metriknamen', () => {
 		assert.deepEqual(zusaetzlich(['+ Wind direction'], 'en'), ['+ Wind direction']);
 		assert.deepEqual(zusaetzlich(['+ Quatsch', '+ Windrichtung', 'Quatsch aus dem Briefing nehmen'], 'de'), ['+ Quatsch', 'Quatsch aus dem Briefing nehmen']);
 	});
+
+	test('AC-7 (F001): Gesamtmenge leer (Register leer, Liste ohne Namen) ⇒ {metrik} erklärt nichts (fail-closed)', () => {
+		const plus = LISTE.find((e) => e.muster === '+ {metrik}' && e.ctx === 'trip' && e.reiter === 'wetter' && e.zustand === 'normal');
+		const raus = LISTE.find((e) => e.muster === '{metrik} aus dem Briefing nehmen' && e.ctx === 'trip' && e.reiter === 'wetter' && e.zustand === 'normal');
+		assert.ok(plus && raus);
+		// text_de ohne Metrikwert: die Liste liefert keinen Namen, die Menge bleibt leer.
+		const ohneNamen: ListenElement[] = [
+			{ ...plus, text_de: '' },
+			{ ...raus, text_de: '' }
+		];
+		assert.deepEqual(L.metrikNamenAusListe(ohneNamen), [], 'Vorbedingung: Liste liefert keinen Namen');
+		const de = L.findeZusaetzliche({ ctx: 'trip', reiter: 'wetter', texte: ['+ Quatsch', 'Quatsch aus dem Briefing nehmen'] }, ohneNamen, [], [], 'de', []);
+		assert.deepEqual(de.map((z: { text: string }) => z.text).sort(), ['+ Quatsch', 'Quatsch aus dem Briefing nehmen']);
+		const en = L.findeZusaetzliche({ ctx: 'trip', reiter: 'wetter', texte: ['+ Nonsense', 'Remove Nonsense from the briefing'] }, ohneNamen, [], [], 'en', []);
+		assert.deepEqual(en.map((z: { text: string }) => z.text).sort(), ['+ Nonsense', 'Remove Nonsense from the briefing']);
+	});
+
+	test('AC-5 (F002): Metriknamen werden normalisiert (Mehrfach-, Rand-Leerraum)', () => {
+		assert.deepEqual(zusaetzlich(['+ Wind direction', '+ Nonsense'], 'en', ['  Wind  direction ']), ['+ Nonsense']);
+		assert.deepEqual(zusaetzlich(['Remove Wind direction from the briefing'], 'en', ['Wind direction']), []);
+	});
 });
