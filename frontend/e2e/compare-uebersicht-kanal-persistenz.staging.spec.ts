@@ -1,139 +1,103 @@
-// gz-eigenstaendig: channel_active_metrics der transponierten Vergleichs-Uebersicht (Go-Merge ersetzt das Ganze), Hub-Mount CompareTabs.svelte -- erlaubte Compare-Eigenheit; Trip-Pendant: kanal-abwahl-bleibt-reversibel.staging.spec.ts
-// E2E (Staging) — #1703 Scheibe 8: Persistenz und Wirkung der kanal-eigenen
-// Metrikauswahl der Vergleichs-Uebersichtstabelle.
-// ACs: AC-S8-4, AC-S8-6, AC-S8-10, AC-S8-11.
+// gz-eigenstaendig: Kanal-Spalten der transponierten Vergleichs-Uebersicht (Orte = Spalten) in der Karte „Was steht wo“ -- erlaubte Compare-Eigenheit; Trip-Pendant: layout-tab-route.spec.ts, kanal-abwahl-bleibt-reversibel.staging.spec.ts
+// E2E (Staging) — #1703 Scheibe 8: kanal-eigene Uebersichts-Auswahl ueberlebt Speichern und Neuladen.
+// ACs: AC-S8-4, AC-S8-6, AC-S8-10, AC-S8-11, Rollback. Spec: docs/specs/modules/feat_1703_s8_compare_kanal_tabs.md
 //
-// 🔴 EINZIGER WAECHTER dreier offline unbewachter Zeilen in CompareTabs.svelte:
-// 710 (Einsammeln in den Speicher-Schnappschuss), 737 (Hydrieren nach dem
-// Neuladen), 782 (Rollback nach fehlgeschlagenem PUT). Kein Kern-Test erreicht
-// sie — sie brauchen den echten Hub-Mount, den echten Go-Merge
-// (`config_merge.go` ersetzt `channel_active_metrics` als GANZES und loescht
-// nie einen Schluessel) und ein echtes Neuladen. Faellt diese Datei weg,
-// faellt die Absicherung dieser drei Zeilen ersatzlos mit.
+// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 13/14): die Kanal-Reiter sind aus dem Reiter Zustellung
+// entfernt; die Wirkung heisst heute: Haken je Kanal-Spalte der Karte „Was steht wo“ (Reiter Wetter), gespeichert in
+// `display_config.placements` — `channel_active_metrics` ist Altfeld und bleibt unberuehrt.
 //
-// Spec: docs/specs/modules/feat_1703_s8_compare_kanal_tabs.md § Testauflage
-// (Buendel `compare-uebersicht-persistiert-je-kanal`).
-// Aufbau, Selektoren, #1423-Warteregel, Ausfuehrbefehl: ./compare-uebersicht-kanal.helpers.ts
+// Ausfuehren (lokal gegen ci-stack.sh mit der Haupt-Config, oder gegen Staging, aus frontend/):
+//   npx playwright test --project=tests e2e/compare-uebersicht-kanal-persistenz.staging.spec.ts
 
 import { test, expect } from '@playwright/test';
-import { cleanupTracked } from './helpers';
-import {
-	aktiveMetriken, ausMetriken, ausSchalten, createUebersichtPreset, einSchalten,
-	gespeicherteKanalAuswahl, klickUndSpeichere, oeffneUebersicht, waehleKanal, zuGrundauswahl
-} from './compare-uebersicht-kanal.helpers';
+import { folge, gespeichertAn, haken, oeffneKarte, seedAbo, stand, tabelle, tabelleGespeichert, zeile } from './was-steht-wo.helpers';
 
-/** Vier Groessen mit je einer Auswertung — klein genug, um einen Kanal in vier
- *  Klicks vollstaendig zu leeren (AC-S8-11). */
-const M = ['wind_max_kmh', 'precip_sum_mm', 'pop_max_pct', 'uv_index_max'];
-const fehlt = (weg: string) => M.filter((m) => m !== weg);
+const KANAELE = ['email', 'telegram', 'sms'] as const;
 
 test.describe('#1703 S8: Kanal-eigene Uebersichts-Auswahl ueberlebt Speichern und Neuladen', () => {
-	test.afterAll(async ({ request }) => await cleanupTracked(request));
+	test.beforeEach(async ({ page }) => {
+		await page.setViewportSize({ width: 1440, height: 900 });
+	});
 
-	test('AC-S8-10/AC-S8-4: drei nacheinander editierte Kanaele bleiben ALLE erhalten, und eine globale Abwahl im E-Mail-Reiter schreibt bis in den gespeicherten SMS-Stand durch', async ({
-		page, request
-	}) => {
-		const presetId = await createUebersichtPreset(request, `1703-s8-drei-kanaele-${Date.now()}`, M);
-		const f = await oeffneUebersicht(page, presetId);
+	test('AC-S8-10/AC-S8-4: drei nacheinander editierte Kanaele bleiben ALLE erhalten, eine globale Abwahl schreibt durch', async ({ page }) => {
+		const abo = await seedAbo(page.request, 'vergleich');
+		try {
+			let karte = await oeffneKarte(page, 'vergleich', abo.id);
+			const zeilen = await folge(karte);
+			expect(zeilen.length, 'Messaufbau: mindestens vier Zeilen').toBeGreaterThanOrEqual(4);
+			const altfeld = (await stand(page.request, 'vergleich', abo.id)).display_config.channel_active_metrics ?? null;
+			for (const [i, k] of KANAELE.entries()) {
+				const gespeichert = tabelleGespeichert(page, abo.id);
+				await haken(karte, zeilen[i], k).click();
+				await gespeichert;
+			}
+			await page.reload();
+			karte = await oeffneKarte(page, 'vergleich', abo.id);
+			const p = (await tabelle(page.request, 'vergleich', abo.id)).placements;
+			for (const [i, k] of KANAELE.entries()) {
+				await expect(haken(karte, zeilen[i], k), `AC-S8-10: ${k} verloren`).not.toBeChecked();
+				expect(gespeichertAn(p, zeilen[i], k), `AC-S8-10: ${k} nicht gespeichert`).toBe(false);
+			}
+			expect((await stand(page.request, 'vergleich', abo.id)).display_config.channel_active_metrics ?? null, 'Altfeld unberuehrt').toEqual(altfeld);
 
-		// AC-S8-10: je Kanal eine ANDERE Abwahl. Wuerde nur der zuletzt sichtbare
-		// Reiter serialisiert (M4), ersetzte der Go-Merge den ganzen
-		// `channel_active_metrics`-Block und die beiden anderen Kanaele gingen
-		// lautlos verloren (BUG-DATALOSS-GR221-Muster).
-		await waehleKanal(f, 'email');
-		await ausSchalten(f, 'wind_max_kmh');
-		await waehleKanal(f, 'telegram');
-		await ausSchalten(f, 'precip_sum_mm');
-		await waehleKanal(f, 'sms');
-		await ausSchalten(f, 'pop_max_pct');
-		for (const [kanal, weg] of [['email', 'wind_max_kmh'], ['telegram', 'precip_sum_mm'], ['sms', 'pop_max_pct']] as const) {
-			expect(
-				await gespeicherteKanalAuswahl(request, presetId, kanal),
-				`AC-S8-10 FAIL: gespeicherter Stand des Kanals "${kanal}" — nie mitgesendet oder von einem spaeteren PUT ueberschrieben`
-			).toEqual(fehlt(weg));
+			const put = page.waitForResponse((r) => r.request().method() === 'PUT' && r.url().includes(`/api/compare/presets/${abo.id}`), { timeout: 20_000 });
+			await page.locator(`[data-testid="wetter-zeile-entfernen-${zeilen[3]}"]:visible`).first().click();
+			expect((await put).ok()).toBeTruthy();
+			await page.reload();
+			karte = await oeffneKarte(page, 'vergleich', abo.id);
+			await expect(zeile(karte, zeilen[3]), 'AC-S8-4: global abgewaehlt').toHaveCount(0);
+			expect(((await tabelle(page.request, 'vergleich', abo.id)).placements.rows as Array<{ metric_id: string }>).map((r) => r.metric_id), 'AC-S8-4: aus der gespeicherten Tabelle').not.toContain(zeilen[3]);
+		} finally {
+			await abo.aufraeumen();
 		}
-
-		// Neuladen: jeder Reiter hydriert seinen EIGENEN Stand (Zeile 737).
-		const g = await oeffneUebersicht(page, presetId);
-		await expect.poll(() => aktiveMetriken(g), {
-			message: 'AC-S8-10 FAIL: E-Mail-Reiter nach dem Neuladen', timeout: 10_000
-		}).toEqual(fehlt('wind_max_kmh'));
-		await waehleKanal(g, 'telegram');
-		expect(await aktiveMetriken(g), 'AC-S8-10 FAIL: Telegram-Reiter nach dem Neuladen').toEqual(fehlt('precip_sum_mm'));
-		await waehleKanal(g, 'sms');
-		expect(await aktiveMetriken(g), 'AC-S8-10 FAIL: SMS-Reiter nach dem Neuladen').toEqual(fehlt('pop_max_pct'));
-
-		// AC-S8-4: der Nutzer steht im E-MAIL-Reiter und waehlt GLOBAL ab. Die
-		// Anzeige verriete nichts (sie filtert ohnehin gegen die Grundauswahl) —
-		// nur der GESPEICHERTE SMS-Stand zeigt, ob die Durchschreibung lief (M3).
-		// #2794 S3a: die Grundauswahl steht im Reiter Wetter (Reiterwechsel per Klick).
-		await waehleKanal(g, 'email');
-		await zuGrundauswahl(g);
-		await klickUndSpeichere(g, g.grundauswahl.locator('input[data-metric-key="uv_index_max"]'));
-		expect(
-			await gespeicherteKanalAuswahl(request, presetId, 'sms'),
-			'AC-S8-4 FAIL: "uv_index_max" steht nach der GLOBALEN Abwahl noch im gespeicherten SMS-Kanal — ohne die ' +
-				'ADR-0050-Regel-3-Durchschreibung traegt der Server einen widerspruechlichen Stand'
-		).toEqual(['wind_max_kmh', 'precip_sum_mm']);
-
-		const h = await oeffneUebersicht(page, presetId);
-		await waehleKanal(h, 'sms');
-		expect(await aktiveMetriken(h), 'AC-S8-4 FAIL: SMS-Reiter nach Abwahl + Neuladen').toEqual(['wind_max_kmh', 'precip_sum_mm']);
-		expect(
-			await ausMetriken(h),
-			'AC-S8-4 FAIL: nur die kanal-eigene Abwahl gehoert in die Aus-Gruppe — eine GLOBAL abgewaehlte Groesse ' +
-				'ist nirgends mehr erreichbar (ADR-0050 Regel 1)'
-		).toEqual(['pop_max_pct']);
 	});
 
-	test('AC-S8-11/AC-S8-6: ein bewusst geleerter SMS-Reiter bleibt leer (kein Rueckfall auf die Grundauswahl), ein wieder eingeschalteter Wert bleibt aktiv', async ({
-		page, request
-	}) => {
-		const presetId = await createUebersichtPreset(request, `1703-s8-leerauswahl-${Date.now()}`, M);
-		const f = await oeffneUebersicht(page, presetId);
-		await waehleKanal(f, 'sms');
-		for (const m of M) await ausSchalten(f, m);
-		expect(
-			await gespeicherteKanalAuswahl(request, presetId, 'sms'),
-			'AC-S8-11 FAIL: die bewusste Leerauswahl muss als [] gespeichert sein. `null` hiesse "Schluessel ' +
-				'weggelassen" — der Go-Merge liesse dann den ALTEN Stand stehen (M5)'
-		).toEqual([]);
-
-		const g = await oeffneUebersicht(page, presetId);
-		await waehleKanal(g, 'sms');
-		// Positiver Anker ZUERST: erst damit ist die leere aktive Liste darunter
-		// eine Aussage und kein "noch nicht geladen" (#1423-Lehre).
-		expect(await ausMetriken(g), 'AC-S8-11 FAIL: Aus-Gruppe nach dem Neuladen').toEqual(M);
-		expect(
-			await aktiveMetriken(g),
-			'AC-S8-11 FAIL: der SMS-Reiter faellt nach dem Neuladen auf die Grundauswahl zurueck — "bewusst leer" ' +
-				'ist nicht von "nie eingestellt" unterschieden worden'
-		).toEqual([]);
-
-		// AC-S8-6: auch die Umkehrung ueberlebt Speichern + Neuladen.
-		await einSchalten(g, 'pop_max_pct');
-		const h = await oeffneUebersicht(page, presetId);
-		await waehleKanal(h, 'sms');
-		expect(await aktiveMetriken(h), 'AC-S8-6 FAIL: wieder eingeschaltete Groesse nach dem Neuladen nicht aktiv').toEqual(['pop_max_pct']);
+	test('AC-S8-11/AC-S8-6: eine bewusst geleerte SMS-Spalte bleibt leer, ein wieder eingeschalteter Wert steht allein', async ({ page }) => {
+		const abo = await seedAbo(page.request, 'vergleich');
+		try {
+			let karte = await oeffneKarte(page, 'vergleich', abo.id);
+			const zeilen = await folge(karte);
+			const bedienbar: string[] = [];
+			for (const m of zeilen) {
+				const h = haken(karte, m, 'sms');
+				if ((await h.count()) && (await h.isEnabled()) && (await h.isChecked())) bedienbar.push(m);
+			}
+			expect(bedienbar.length, 'Messaufbau').toBeGreaterThan(1);
+			for (const m of bedienbar) {
+				const gespeichert = tabelleGespeichert(page, abo.id);
+				await haken(karte, m, 'sms').click();
+				await gespeichert;
+			}
+			await page.reload();
+			karte = await oeffneKarte(page, 'vergleich', abo.id);
+			for (const m of bedienbar) await expect(haken(karte, m, 'sms'), `AC-S8-11: ${m} faellt auf die Grundauswahl zurueck`).not.toBeChecked();
+			const gespeichert = tabelleGespeichert(page, abo.id);
+			await haken(karte, bedienbar[0], 'sms').click();
+			await gespeichert;
+			await page.reload();
+			karte = await oeffneKarte(page, 'vergleich', abo.id);
+			await expect(haken(karte, bedienbar[0], 'sms')).toBeChecked();
+			for (const m of bedienbar.slice(1)) await expect(haken(karte, m, 'sms'), `AC-S8-6: ${m} mit eingeschaltet`).not.toBeChecked();
+		} finally {
+			await abo.aufraeumen();
+		}
 	});
 
-	test('Rollback (CompareTabs.svelte:782): scheitert der PUT, faellt auch die Kanal-Ebene auf den zuletzt gespeicherten Stand zurueck', async ({
-		page, request
-	}) => {
-		const presetId = await createUebersichtPreset(request, `1703-s8-rollback-${Date.now()}`, M);
-		await page.route('**/api/compare/presets/**', async (route) => {
-			if (route.request().method() !== 'PUT') return route.continue();
-			await route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"E2E-Simulation"}' });
-		});
-		const f = await oeffneUebersicht(page, presetId);
-		await waehleKanal(f, 'sms');
-		await f.reihenfolge.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="pop_max_pct"]')
-			.getByRole('button', { name: 'Aus', exact: true }).click();
-		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'error', { timeout: 25_000 });
-		await expect.poll(() => aktiveMetriken(f), {
-			message: 'FAIL: nach gescheitertem Speichern muss die Kanal-Ebene auf den Serverstand zurueckfallen — ' +
-				'sonst zeigt der Editor eine Auswahl, die nirgends gespeichert ist',
-			timeout: 15_000
-		}).toEqual(M);
+	test('Rollback: scheitert der PUT der Tabelle, springt der Haken auf den gespeicherten Stand zurueck und eine Meldung steht da', async ({ page }) => {
+		const abo = await seedAbo(page.request, 'vergleich');
+		try {
+			const karte = await oeffneKarte(page, 'vergleich', abo.id);
+			const m = (await folge(karte))[0];
+			await expect(haken(karte, m, 'email')).toBeChecked();
+			await page.route(`**/api/briefings/${abo.id}/placements**`, (route) =>
+				route.request().method() === 'PUT' ? route.fulfill({ status: 500, json: { error: 'boom' } }) : route.continue()
+			);
+			await haken(karte, m, 'email').click();
+			await expect(karte.getByTestId('was-steht-wo-meldung'), 'Meldung bei gescheitertem Speichern').toBeVisible({ timeout: 15_000 });
+			await expect(haken(karte, m, 'email'), 'Haken springt auf den gespeicherten Stand').toBeChecked({ timeout: 15_000 });
+			expect((await tabelle(page.request, 'vergleich', abo.id)).stored, 'nichts gespeichert').toBe(false);
+		} finally {
+			await abo.aufraeumen();
+		}
 	});
 });

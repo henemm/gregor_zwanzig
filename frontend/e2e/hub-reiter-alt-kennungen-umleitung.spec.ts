@@ -182,7 +182,7 @@ const HUBS = [
 // toBeInViewport greift im kurzen Fenster davor (falsches Grün) — darum werden die
 // Katalog-Abrufe künstlich verzögert (Rennen erzwungen, unabhängig von der
 // Ladegeschwindigkeit) und erst der ENDZUSTAND geprüft.
-const KATALOG = /\/api\/(metrics|sms-symbols|templates|metric-presets)$/;
+const KATALOG = /\/api\/(metrics|sms-symbols|templates|metric-presets|auth\/profile)$/;
 const KATALOG_VERZUG_MS = 1_500;
 
 async function katalogVerzoegern(page: Page): Promise<void> {
@@ -195,10 +195,10 @@ async function katalogVerzoegern(page: Page): Promise<void> {
 	);
 }
 
-/** Anker: /api/sms-symbols lädt in beiden Kontexten (Trip über load(), Vergleich
- *  über den eigenen Effekt in WeatherMetricsTab.svelte). */
+/** Anker: der Reiter Zustellung laedt das Profil (Kanal-Tabelle) nach dem Sprung. #3154: die
+ *  Metrik-Oberflaeche (und mit ihr /api/sms-symbols) steht nicht mehr im Reiter Zustellung. */
 function katalogGeladen(page: Page) {
-	return page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/api/sms-symbols'), {
+	return page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/api/auth/profile'), {
 		timeout: 20_000
 	});
 }
@@ -241,7 +241,8 @@ for (const hub of HUBS) {
 						return `${u.searchParams.get('tab')}${u.hash}`;
 					})
 					.toBe('zustellung#versand');
-				const abschnitt = page.locator('[data-testid="versand-abschnitt"]:visible').first();
+				// #2795 S3b 1b / #3154: Sprungziel #versand ist die Karte der Briefing-Zeiten.
+				const abschnitt = page.locator('#versand[data-abschnitt="briefing-zeiten"]:visible').first();
 				await expect(abschnitt).toBeVisible({ timeout: 15_000 });
 				await geladen;
 				await positionStabil(abschnitt);
@@ -366,7 +367,7 @@ test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
 			await expect(
 				gast.locator('[data-testid="compare-detail-panel-zustellung"]:visible').first()
 			).toBeVisible({ timeout: 15_000 });
-			const abschnitt = gast.locator('[data-testid="versand-abschnitt"]:visible').first();
+			const abschnitt = gast.locator('#versand[data-abschnitt="briefing-zeiten"]:visible').first();
 			await expect(abschnitt).toBeVisible({ timeout: 15_000 });
 			await geladen;
 			await positionStabil(abschnitt);

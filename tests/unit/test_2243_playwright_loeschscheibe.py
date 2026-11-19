@@ -92,7 +92,7 @@ LEBENDE_FAELLE = {
         "AC-2: Grundauswahl-Sektion zeigt Metrik-Toggle-Buttons",
         "AC-3: Preset-Leiste zeigt Preset-Pills",
         "AC-4: Klick auf \"Wandern\"-Preset",
-        "AC-5: Format-Toggle Roh/Einfach umschaltbar",
+        # AC-5 (Roh/Einfach im Kanal-Block) mit #3154 gestrichen, Ersatz was-steht-wo-karte WS-3.
         "AC-5b (#2049)",
         "AC-6: Metrik-Toggle löst Auto-Save-PUT",
         "AC-7: Grundauswahl-Zustand nach Auto-Save und Reload",
@@ -267,7 +267,7 @@ def test_ac7_positivliste_eintraege_und_alle_existieren():
 def test_ac7_ratschen_unveraendert():
     text = CI_YML.read_text("utf-8")
     assert re.search(r"^\s*E2E_MIN_SPECS: 86\b", text, re.M)
-    assert re.search(r"^\s*E2E_MIN_EXECUTED_HAUPT: 756\b", text, re.M)  # 716 + 1 (#2961 F003) + 4 (#2953) + 4 (#3007) + 13 (#3122 B3a) + 18 (#3122 B3b)
+    assert re.search(r"^\s*E2E_MIN_EXECUTED_HAUPT: 761\b", text, re.M)  # 716 + 1 (#2961 F003) + 4 (#2953) + 4 (#3007) + 13 (#3122 B3a) + 18 (#3122 B3b) + 5 (#3154: WS-13/WS-14/WS-16 je Trip/Orte, WS-15, minus kurzform S3/S4)
 
 
 def test_ac7_positivlisten_kopf_nennt_geloeschte_specs_nicht_mehr():

@@ -177,6 +177,8 @@
 	const sms = $derived(antwort ? smsAus(antwort, $t, $tn) : null);
 	const legende = $derived(antwort ? legendeAus(antwort, $t) : []);
 	const einOrt = $derived(antwort?.location_count === 1);
+	/** #3154: Etappen-Kennzahlen, Vortag-Vergleich, Nacht-Stundentabelle wirken in der Kompakt-Mail nicht. */
+	const nurAusfuehrlich = $derived(aktFelder?.email_format === 'compact');
 	const kurzstilGesperrt = $derived(!telegramVerbunden && aktFelder?.telegram_style !== 'kurzform');
 </script>
 
@@ -230,9 +232,11 @@
 			{/each}
 		</Einstellungszeile>
 		{#if k.tripBloecke}
+			<!-- #3154: die drei Blöcke wirken nur in der ausführlichen E-Mail (Kompakt-Renderer liest sie nicht) —
+			     bei „Kompakt“ gesperrt mit Grund, gespeicherter Wert bleibt stehen. -->
 			{#each TRIP_BLOECKE as b (b.feld)}
-				<Einstellungszeile titel={$t(b.titel)} hinweis={$t(b.hinweis)}>
-					<Switch checked={aktFelder[b.feld]} tap testid="was-steht-wo-{b.feld}" aria-label={$t(b.titel)} onchange={(an) => feld(b.feld, an)} />
+				<Einstellungszeile titel={$t(b.titel)} hinweis={nurAusfuehrlich ? `${$t(b.hinweis)}. ${$t('wetter.wsw.bloecke.nur_ausfuehrlich')}` : $t(b.hinweis)}>
+					<Switch checked={aktFelder[b.feld]} disabled={nurAusfuehrlich} tap testid="was-steht-wo-{b.feld}" aria-label={$t(b.titel)} onchange={(an) => feld(b.feld, an)} />
 				</Einstellungszeile>
 			{/each}
 		{/if}

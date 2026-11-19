@@ -47,6 +47,8 @@ test.describe('Ortsvergleich-Ausblick in der Karte „Was steht wo“ (#1406 A, 
 			await page.reload();
 			karte = await oeffneKarte(page, 'vergleich', abo.id);
 			await expect(haken(karte, m, 'outlook'), `${bestand ? 'Bestand' : 'neu'}: nach dem Neuladen wieder angehakt`).not.toBeChecked();
+			if (bestand) await page.screenshot({ path: '../docs/artifacts/feat-1848-a2-outlook-kennungen/ac-4-existing-preset-untouched.png' });
+			else await page.screenshot({ path: '../docs/artifacts/feat-1848-a2-outlook-kennungen/ac-4-persisted-after-reload.png' });
 		}
 	});
 
@@ -68,6 +70,7 @@ test.describe('Ortsvergleich-Ausblick in der Karte „Was steht wo“ (#1406 A, 
 			.toBe(false);
 		await page.reload();
 		await expect(haken(await oeffneKarte(page, 'vergleich', abo.id), m, 'outlook')).not.toBeChecked();
+		await page.screenshot({ path: '../docs/artifacts/feat-1848-a2-outlook-kennungen/adv-1-rapid-toggle-consistent.png' });
 	});
 
 	test('Adversary (#1406 A): alle Ausblick-Groessen abgewaehlt — jede Zeile bleibt da und ist zurueckholbar', async ({ page }) => {
@@ -91,5 +94,6 @@ test.describe('Ortsvergleich-Ausblick in der Karte „Was steht wo“ (#1406 A, 
 		await haken(karte, alle[0], 'outlook').click();
 		await gespeichert;
 		expect(gespeichertAn((await tabelle(page.request, 'vergleich', abo.id)).placements, alle[0], 'outlook'), 'Rueckweg wirkt').toBe(true);
+		await page.screenshot({ path: '../docs/artifacts/feat-1406a-ausblick-geteiltes-element/adv-2-empty-then-reselect.png' });
 	});
 });

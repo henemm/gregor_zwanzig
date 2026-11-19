@@ -13,6 +13,7 @@
 //   cloud_mid, cloud_high, visibility, sunshine
 
 import { test, expect } from '@playwright/test';
+import { knopf, oeffneKarte, seedAbo, tabelle, tabelleGespeichert } from './was-steht-wo.helpers';
 
 const TRIP_ID = 'e2e-epic138-metrics';
 
@@ -157,88 +158,29 @@ test.describe('Epic #138 — Wetter-Metriken-Editor Tab', () => {
 	// "thunder" ist has_friendly_format=true UND default_enabled=true → im
 	// wm2-reihenfolge-row von Anfang an sichtbar, kein Preset-Klick nötig.
 	//
-	// 🔴 Issue #2049: der Locator zielt auf den KANAL-Block (Stundentabelle der
-	// Mail). WeatherV2Reihenfolge wird auf derselben Seite ein zweites Mal im
-	// 3-Tages-Vorschau-Block gerendert — deshalb ist er hier ausdrücklich auf
-	// `wm2-reihenfolge` gescopt. Für die Vorschau gilt eine EIGENE
-	// Fähigkeitsliste (Test AC-5b darunter); `thunder` hat dort bewusst keinen
-	// Umschalter.
-	test('AC-5: Format-Toggle Roh/Einfach umschaltbar', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-zustellung').click(); // #2794 S3a: Layout/Kanal im Reiter Zustellung
-		const row = page
-			.getByTestId('weather-metrics-kanal-reihenfolge')
-			.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="thunder"]');
-		await expect(row).toBeVisible();
-		const rawBtn = row.getByRole('tab', { name: 'Roh' });
-		const einfachBtn = row.getByRole('tab', { name: 'Einfach' });
-		await rawBtn.click();
-		await expect(rawBtn).toHaveAttribute('data-active', 'true');
-		await expect(einfachBtn).toHaveAttribute('data-active', 'false');
-	});
-
-	// AC-5b / Issue #2049 (AC-3 + AC-14): der Roh/Einfach-Umschalter im Block
-	// „3-Tages-Vorschau" ist WIRKSAM — bis #2049 war er eine Attrappe (No-Op-
-	// Handler, immer leere Übersetzungstabelle), ein Klick veränderte nichts.
-	//
-	// Der Vorgänger-Test darüber konnte das strukturell nicht sehen: er klickte
-	// nur „Roh" (die Ausgangsstellung) und prüfte nur den Schalterzustand, also
-	// eine reine Frontend-Eigenschaft. Hier wird stattdessen „Einfach" geklickt
-	// und die WIRKUNG geprüft — der abgesetzte PUT trägt das neue Feld
-	// `display_config.outlook_metric_formats`. Ohne wirksamen Handler entsteht
-	// dieses Feld nie.
-	//
-	// Trägermetrik `gust`: im Ausblick fähig (Wortstufe über
-	// format_wind_strength) UND default_enabled, steht also ohne Preset-Klick
-	// in der Vorschau-Liste.
-	test('AC-5b (#2049): Vorschau-Umschalter auf „Einfach" schreibt outlook_metric_formats', async ({
-		page
-	}) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-zustellung').click(); // #2794 S3a: Ausblick im Reiter Zustellung
-
-		const ausblick = page.getByTestId('weather-metrics-ausblick');
-		await expect(ausblick).toBeVisible();
-
-		// AC-3: die Vorschau hat eine EIGENE Fähigkeitsliste — `thunder` zeigt
-		// roh bereits das Stufenwort und bekommt hier keinen Umschalter, obwohl
-		// `indicatorCapable()` (Kanal-Block, Test darüber) ihn dort anbietet.
-		const thunderRow = ausblick.locator(
-			'[data-testid="wm2-reihenfolge-row"][data-metric-id="thunder"]'
-		);
-		if ((await thunderRow.count()) > 0) {
-			await expect(thunderRow.getByRole('tab', { name: 'Einfach' })).toHaveCount(0);
+	// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 13/14): Kanal-Block und „3-Tages-Vorschau“
+	// der Metrik-Oberflaeche sind aus dem Reiter Zustellung entfernt; Roh/Einfach schaltet im Hub die Karte
+	// „Was steht wo“ je Stelle. AC-5 (Roh/Einfach im Kanal-Block umschaltbar) ist gestrichen — Ersatz
+	// was-steht-wo-karte.spec.ts WS-3 (Umschalten, Neuladen, andere Stellen unveraendert, drei Faelle).
+	// AC-5b laeuft an der Ausblick-Spalte der Karte.
+	test('AC-5b (#2049): Ausblick-Umschalter auf „Einfach" wird gespeichert, thunder hat dort keinen', async ({ page }) => {
+		const abo = await seedAbo(page.request, 'route');
+		try {
+			const karte = await oeffneKarte(page, 'route', abo.id);
+			// AC-3: die Vorschau hat eine EIGENE Faehigkeitsliste — `thunder` bekommt dort keinen Umschalter.
+			await expect(knopf(karte, 'thunder', 'outlook')).toHaveCount(0);
+			const k = knopf(karte, 'gust', 'outlook');
+			await expect(k).toBeVisible();
+			const neu = (await k.getAttribute('data-wert')) === 'raw' ? 'simplified' : 'raw';
+			const gespeichert = tabelleGespeichert(page, abo.id);
+			await k.click();
+			await gespeichert;
+			await expect(k).toHaveAttribute('data-wert', neu);
+			const row = ((await tabelle(page.request, 'route', abo.id)).placements.rows as Array<{ metric_id: string; formats?: Record<string, string> }>).find((r) => r.metric_id === 'gust');
+			expect(row?.formats?.outlook, 'die Form reist als Stelle outlook in placements').toBe(neu);
+		} finally {
+			await abo.aufraeumen();
 		}
-
-		const row = ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="gust"]');
-		await expect(row).toBeVisible();
-		const einfachBtn = row.getByRole('tab', { name: 'Einfach' });
-		await expect(einfachBtn).toBeVisible();
-
-		const putPromise = page.waitForRequest(
-			(req) => req.method() === 'PUT' && req.url().includes('/weather-config')
-		);
-		await einfachBtn.click();
-
-		// 1. Wirkung: das neue Feld reist zum Backend.
-		const putReq = await putPromise;
-		const body = JSON.parse(putReq.postData() || '{}') as {
-			outlook_metric_formats?: Record<string, boolean>;
-			outlook_metrics?: unknown;
-		};
-		expect(body.outlook_metric_formats?.gust).toBe(true);
-		// AC-1: `outlook_metrics` bleibt eine reine Kennungsliste — die
-		// Darstellungsform liegt in einem PARALLELEN Feld, nicht in einer
-		// Objektform (#1848 A2 bleibt in Kraft).
-		if (Array.isArray(body.outlook_metrics)) {
-			for (const eintrag of body.outlook_metrics) {
-				expect(typeof eintrag).toBe('string');
-			}
-		}
-
-		// 2. Sichtbare Zustandsänderung in genau dieser Zeile.
-		await expect(einfachBtn).toHaveAttribute('data-active', 'true');
-		await expect(row.getByRole('tab', { name: 'Roh' })).toHaveAttribute('data-active', 'false');
 	});
 
 	// AC-6 (Fix #964, ex #536): Metrik-Änderung löst Auto-Save-PUT mit bucket/order-Feldern aus.

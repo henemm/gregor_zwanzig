@@ -183,6 +183,7 @@
 	"wetter.wsw.bloecke.vortag_hinweis": "was sich seit dem letzten Briefing geändert hat, nur in der E-Mail",
 	"wetter.wsw.bloecke.nacht": "Nacht-Stundentabelle",
 	"wetter.wsw.bloecke.nacht_hinweis": "die Stunden der Nacht am Etappenziel, nur in der E-Mail",
+	"wetter.wsw.bloecke.nur_ausfuehrlich": "Wirkt nur in der ausführlichen E-Mail.",
 	"wetter.wsw.kanal.titel": "Einstellungen je Kanal",
 	"wetter.wsw.kanal.email_format": "E-Mail: Format",
 	"wetter.wsw.kanal.email_format_hinweis": "Ausführlich mit Tabellen und Farben, oder Kompakt als reiner Text für schwache Verbindungen.",

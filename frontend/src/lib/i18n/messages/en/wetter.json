@@ -183,6 +183,7 @@
 	"wetter.wsw.bloecke.vortag_hinweis": "what has changed since the last briefing, email only",
 	"wetter.wsw.bloecke.nacht": "Night hourly table",
 	"wetter.wsw.bloecke.nacht_hinweis": "the night hours at the end of the stage, email only",
+	"wetter.wsw.bloecke.nur_ausfuehrlich": "Only applies to the detailed email.",
 	"wetter.wsw.kanal.titel": "Settings per channel",
 	"wetter.wsw.kanal.email_format": "Email: format",
 	"wetter.wsw.kanal.email_format_hinweis": "Detailed with tables and colours, or compact as plain text for weak connections.",

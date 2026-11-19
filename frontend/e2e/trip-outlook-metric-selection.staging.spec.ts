@@ -46,6 +46,7 @@ test.describe('Trip-Ausblick in der Karte „Was steht wo“ (#1720, #3154)', ()
 		karte = await oeffneKarte(page, 'route', abo.id);
 		await expect(haken(karte, m, 'outlook')).not.toBeChecked();
 		expect(fehler, 'keine Konsolenfehler').toEqual([]);
+		await page.screenshot({ path: '../docs/artifacts/feat-1720-vorschau-metriken/ac-6-abwahl-ueberlebt-reload.png' });
 	});
 
 	test('AC-6 (#1720 S2): der Trip-Ausblick traegt KEINEN Hinweis "Erscheint nur in der E-Mail"', async ({ page }) => {
@@ -56,6 +57,7 @@ test.describe('Trip-Ausblick in der Karte „Was steht wo“ (#1720, #3154)', ()
 		await expect(kopf, 'Vorbedingung: Spalte Ausblick').toHaveCount(1);
 		await expect(kopf, 'die Auswahl wirkt in E-Mail und Telegram').toContainText('E-Mail und Telegram');
 		await expect(karte.getByText('Erscheint nur in der E-Mail', { exact: false })).toHaveCount(0);
+		await page.screenshot({ path: '../docs/artifacts/feat-1720-vorschau-metriken/ac-7-kein-email-hinweis.png' });
 	});
 
 	test('AC-13 (#1720 S1): genau ein Ausblick-Schalter (je Briefing), keiner sonst im Hub', async ({ page }) => {
@@ -67,6 +69,7 @@ test.describe('Trip-Ausblick in der Karte „Was steht wo“ (#1720, #3154)', ()
 		await page.getByTestId('trip-detail-tab-zustellung').first().click();
 		await expect(page.getByTestId('zustellung-uebergang').first()).toBeVisible({ timeout: 15_000 });
 		await expect(page.locator('[data-testid="report-show-outlook"], [data-testid^="was-steht-wo-ausblick-"]'), 'Reiter Zustellung ohne Ausblick-Schalter').toHaveCount(0);
+		await page.screenshot({ path: '../docs/artifacts/feat-1720-vorschau-metriken/ac-13-kein-zweiter-schalter.png', fullPage: true });
 	});
 
 	test('AC-10 (#710): der Ausblick-Katalog bietet "Vorhersage-Genauigkeit" nicht an', async ({ page }) => {

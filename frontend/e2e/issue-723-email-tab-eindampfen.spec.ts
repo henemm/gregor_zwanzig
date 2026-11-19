@@ -23,8 +23,8 @@
 // #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 14, AC-30): die Karte „E-Mail-Inhalt“ steht
 // nicht mehr im Reiter Zustellung. E-Mail-Format, Etappen-Kennzahlen, Vortag-Vergleich und der
 // 3-Tages-Ausblick (je Briefing) stehen genau einmal in der Karte „Was steht wo“ im Reiter Wetter; die Fälle
-// laufen dort. Die Sperre der Bausteine im Kompakt-Format (alt AC-4) hat die Karte nicht — AC-4 prüft statt-
-// dessen, dass das Kompakt-Format gespeichert wird und das Neuladen übersteht.
+// laufen dort. AC-4: im Kompakt-Format sind Etappen-Kennzahlen, Vortag-Vergleich und Nacht-Stundentabelle
+// gesperrt (sie wirken in der Kompakt-Mail nicht); der Ausblick bleibt bedienbar (er wirkt auch in Kompakt).
 
 import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
@@ -148,8 +148,8 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 		}
 	});
 
-	// ── AC-4: Kompakt-Format wird gespeichert (#3154: Karte, ohne Bausteinsperre) ─
-	test('AC-4: Format=Kompakt wird gespeichert und überlebt Reload', async ({ page, request }) => {
+	// ── AC-4: Kompakt-Modus sperrt die Bausteine, die nur in der ausführlichen Mail wirken ──
+	test('AC-4: Format=Kompakt → 3 Bausteine disabled', async ({ page, request }) => {
 		const id = tripId('ac4');
 		await createTrip(request, id, {
 			enabled: true,
@@ -164,8 +164,13 @@ test.describe('Issue #723: E-Mail-Inhalt-Tab eingedampft', () => {
 			const body = (await put).request().postDataJSON();
 			expect(body.report_config.email_format).toBe('compact');
 			expect(((await (await request.get(`/api/trips/${id}`)).json()).report_config).email_format).toBe('compact');
+			for (const tid of ['was-steht-wo-show_stage_stats', 'was-steht-wo-show_yesterday_comparison', 'was-steht-wo-show_night_block']) {
+				await expect(karte.getByTestId(tid), `${tid}: bei Kompakt gesperrt`).toHaveAttribute('aria-disabled', 'true');
+			}
 			await page.reload();
-			await expect((await openKarte(page, id)).getByTestId('was-steht-wo-email-format-compact')).toHaveAttribute('aria-checked', 'true');
+			const neu = await openKarte(page, id);
+			await expect(neu.getByTestId('was-steht-wo-email-format-compact')).toHaveAttribute('aria-checked', 'true');
+			await expect(neu.getByTestId('was-steht-wo-show_stage_stats'), 'nach Neuladen weiter gesperrt').toHaveAttribute('aria-disabled', 'true');
 		} finally {
 			await deleteTrip(request, id);
 		}

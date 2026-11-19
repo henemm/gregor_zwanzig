@@ -11,8 +11,11 @@
 // (Uebersicht/Stundenverlauf/Ausblick) mit denselben `wm2-*`-Testids — alles
 // hier haengt am Block `[data-testid="layout-tab"][data-context="vergleich"]`.
 //
-// #2794 S3a: Grundauswahl (Reiter Wetter) und Kanal-Karte (Reiter Zustellung) liegen in
-// getrennten Reitern — siehe `KanalFlaeche.reiter`, `zuGrundauswahl`, `zuKanalKarte`.
+// #2794 S3a: Grundauswahl (Schritt Wetter) und Kanal-Karte (Schritt Zustellung) liegen in getrennten
+// Schritten — siehe `KanalFlaeche.reiter`.
+// #3154 (#3122 B3b): im Hub gibt es die Kanal-Karte nicht mehr (Karte „Was steht wo“ im Reiter Wetter,
+// Helfer e2e/was-steht-wo.helpers.ts); die Hub-Helfer sind entfernt. Hier bleibt nur, was die Anlege-Seite
+// /compare/new nutzt (compare-neu-kanal-anlegen.staging.spec.ts).
 //
 // Alle Buendel ausfuehren (aus frontend/, NACH Merge + Staging-Deploy) —
 // die Config nimmt Hub- UND Anlege-Pfad auf:
@@ -21,17 +24,8 @@
 //   npx playwright test --config=e2e/playwright.compare-uebersicht-kanal.staging.config.ts
 
 import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
-import { createTestLocation, registerForCleanup } from './helpers';
 
 export type KanalId = 'email' | 'telegram' | 'sms';
-
-/** Nur Groessen mit EINER Auswertung — ihre Grundauswahl-Zeile ist die einfache
- *  Kaestchen-Zeile mit `input[data-metric-key]` (Temperatur/gefuehlte Temperatur
- *  waeren mehroptionale Gruppen, #1411). NEUN > Telegram-Budget 7 (AC-S8-13). */
-export const EINFACHE_METRIKEN = [
-	'wind_max_kmh', 'gust_max_kmh', 'precip_sum_mm', 'pop_max_pct', 'thunder_level_max',
-	'sunny_hours_h', 'cloud_avg_pct', 'uv_index_max', 'visibility_min_m'
-];
 
 /** Kappungs-Aussage je Kanal (ltChannels.ts::ltCapNoteText) — zugleich Beleg,
  *  dass ein Reiterwechsel angekommen und gerendert ist. */
@@ -40,24 +34,6 @@ const KANAL_HINWEIS: Record<KanalId, RegExp> = {
 	telegram: /^Telegram: \d+ Metriken · /,
 	sms: /Fließtext, \d+ Zeichen$/
 };
-
-/** Eigener Test-Vergleich (nie ein fremder!) mit fest gesetzter Grundauswahl. */
-export async function createUebersichtPreset(
-	request: APIRequestContext, name: string, activeMetrics: string[]
-): Promise<string> {
-	const loc = await createTestLocation(request, { name: `${name}-ort` });
-	const res = await request.post('/api/compare/presets', {
-		data: {
-			name: `E2E-GZ-${name}`, location_ids: [loc.id], schedule: 'manual', profil: 'wandern',
-			hour_from: 7, hour_to: 18, empfaenger: ['urlauber@example.com'],
-			display_config: { active_metrics: activeMetrics }
-		}
-	});
-	expect(res.ok(), `Preset-Anlage fehlgeschlagen: HTTP ${res.status()}`).toBeTruthy();
-	const body = await res.json();
-	registerForCleanup('preset', body.id);
-	return body.id as string;
-}
 
 /** #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): die Grundauswahl steht im Reiter
  *  `wetter`, die Kanal-Karte (Layout/Reihenfolge) im Reiter `zustellung`. Im Hub ist
@@ -81,44 +57,6 @@ export interface KanalFlaeche {
 	reiter: (ziel: KanalReiter) => Promise<void>;
 }
 
-/** Reiterwechsel im Vergleichs-Hub und Bereitschaft des Ziel-Inhalts. */
-async function hubReiter(page: Page, ziel: KanalReiter): Promise<void> {
-	await page.getByTestId(`compare-detail-tab-${ziel}`).click();
-	const panel = page.getByTestId(`compare-detail-panel-${ziel}`);
-	await expect(panel).toBeVisible({ timeout: 15_000 });
-	if (ziel === 'wetter') {
-		await panel.getByTestId('weather-metrics-vergleich-list').waitFor({ state: 'attached', timeout: 25_000 });
-	} else {
-		await panel
-			.locator('[data-testid="layout-tab"][data-context="vergleich"]')
-			.getByTestId('weather-metrics-vergleich-reihenfolge')
-			.waitFor({ state: 'attached', timeout: 25_000 });
-	}
-}
-
-/** Oeffnet die Kanal-Karte (Reiter Zustellung) und wartet das Katalog-Laden ab (s. Kopf). */
-export async function oeffneUebersicht(page: Page, presetId: string): Promise<KanalFlaeche> {
-	await page.setViewportSize({ width: 1440, height: 900 });
-	await page.goto(`/compare/${presetId}?tab=zustellung`);
-	await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 20_000 });
-	await hubReiter(page, 'zustellung');
-	const panel = page.getByTestId('compare-detail-panel-zustellung');
-	const layout = panel.locator('[data-testid="layout-tab"][data-context="vergleich"]');
-	const reihenfolge = layout.getByTestId('weather-metrics-vergleich-reihenfolge');
-	const grundauswahl = page.getByTestId('compare-detail-panel-wetter').getByTestId('weather-metrics-vergleich-list');
-	return { page, panel, layout, reihenfolge, grundauswahl, reiter: (ziel) => hubReiter(page, ziel) };
-}
-
-/** In den Reiter Wetter (Grundauswahl). */
-export async function zuGrundauswahl(f: KanalFlaeche): Promise<void> {
-	await f.reiter('wetter');
-}
-
-/** Zurueck in den Reiter Zustellung (Kanal-Karte). */
-export async function zuKanalKarte(f: KanalFlaeche): Promise<void> {
-	await f.reiter('zustellung');
-}
-
 /** Aktive, sortierbare Liste des offenen Kanal-Reiters. */
 export function aktiveMetriken(f: KanalFlaeche): Promise<(string | null)[]> {
 	return f.reihenfolge.locator('[data-testid="wm2-reihenfolge-row"]')
@@ -137,26 +75,7 @@ export async function waehleKanal(f: KanalFlaeche, kanal: KanalId): Promise<void
 	await expect(f.layout.getByTestId('lt-cap-note')).toHaveText(KANAL_HINWEIS[kanal], { timeout: 10_000 });
 }
 
-/** Klick, der speichern MUSS: wartet den echten PUT ab. Der Speicher-Anzeiger
- *  taugt nicht — er steht schon VOR der Geste auf "idle". Erst danach ist ein
- *  GET auf den gespeicherten Stand belastbar. */
-export async function klickUndSpeichere(f: KanalFlaeche, ziel: Locator): Promise<void> {
-	const antwort = f.page.waitForResponse(
-		(r) => r.request().method() === 'PUT' && r.url().includes('/api/compare/presets/'), { timeout: 25_000 }
-	);
-	await ziel.click();
-	expect((await antwort).ok(), 'PUT auf den Vergleich fehlgeschlagen').toBeTruthy();
-}
-
-/** "Aus in diesem Kanal" (kanal-eigene Abwahl, NICHT die Grundauswahl). */
-export async function ausSchalten(f: KanalFlaeche, metrik: string): Promise<void> {
-	await klickUndSpeichere(f, f.reihenfolge
-		.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${metrik}"]`)
-		.getByRole('button', { name: 'Aus', exact: true }));
-	await expect.poll(() => ausMetriken(f), { timeout: 10_000 }).toContain(metrik);
-}
-
-/** Wie `ausSchalten`, aber OHNE Speicher-Erwartung — fuer die Anlege-Seite
+/** „Aus in diesem Kanal“ OHNE Speicher-Erwartung — fuer die Anlege-Seite
  *  `/compare/new`: dort gibt es kein PUT je Geste, der Vergleich existiert noch
  *  gar nicht. Gespeichert wird dort genau einmal, per POST beim „Briefing
  *  aktivieren" (compare-neu-kanal-anlegen.staging.spec.ts). Die Zusicherung
@@ -167,14 +86,6 @@ export async function ausSchaltenOhneSpeichern(f: KanalFlaeche, metrik: string):
 		.locator(`[data-testid="wm2-reihenfolge-row"][data-metric-id="${metrik}"]`)
 		.getByRole('button', { name: 'Aus', exact: true }).click();
 	await expect.poll(() => ausMetriken(f), { timeout: 10_000 }).toContain(metrik);
-}
-
-/** Gegenstueck: aus der Aus-Gruppe zurueck in die aktive Liste (AC-S8-5). */
-export async function einSchalten(f: KanalFlaeche, metrik: string): Promise<void> {
-	await klickUndSpeichere(f, f.reihenfolge
-		.locator(`[data-testid="wm2-aus-row"][data-metric-id="${metrik}"]`)
-		.getByRole('button', { name: 'Ein', exact: true }));
-	await expect.poll(() => aktiveMetriken(f), { timeout: 10_000 }).toContain(metrik);
 }
 
 let katalogPaare: Map<string, string> | null = null;

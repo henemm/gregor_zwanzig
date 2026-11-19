@@ -117,6 +117,8 @@ const NEU_FREIGEGEBEN = new Set([
 	'wetter.wsw.bloecke.vortag_hinweis',
 	'wetter.wsw.bloecke.nacht',
 	'wetter.wsw.bloecke.nacht_hinweis',
+	// #3154: Grund der Kompakt-Sperre (Etappen-Kennzahlen, Vortag-Vergleich, Nacht-Stundentabelle).
+	'wetter.wsw.bloecke.nur_ausfuehrlich',
 	'wetter.wsw.kanal.titel',
 	'wetter.wsw.kanal.email_format',
 	'wetter.wsw.kanal.email_format_hinweis',

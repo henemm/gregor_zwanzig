@@ -24,6 +24,10 @@
 //   WS-13 Trip/Orte: die umgezogenen Einstellungen fehlen im Reiter Zustellung und stehen genau einmal in der Karte.
 //   WS-14 Trip/Orte: Speichern im Reiter Zustellung (bei Orten auch die Pausieren-Karte im Übergangsblock) und
 //         in der Karte lässt gespeicherte Altfelder stehen; das Abo eines zweiten Nutzers bleibt unberührt.
+//   WS-16 Trip/Orte: „Vorschau laden“ des Beispiel-Alarms im Übergangsblock lädt die Alarm-Vorschau DIESES Abos
+//         (eigene Kennung, eigene Regel bzw. eigene Orte), ein zweiter Nutzer sieht nichts Fremdes (Adversary F004).
+//   WS-15 Trip: E-Mail-Format „Kompakt“ sperrt Etappen-Kennzahlen, Vortag-Vergleich und Nacht-Stundentabelle (sie
+//         wirken in der Kompakt-Mail nicht), gespeicherte Werte bleiben; „Ausführlich“ gibt sie mit altem Wert frei.
 //
 //   cd frontend && npx playwright test e2e/was-steht-wo-karte.spec.ts --workers=1 --trace off
 
@@ -60,7 +64,7 @@ async function seed(request: APIRequestContext, fall: Fall, opts: { ohne?: strin
 		return { kind: 'route', id: hub.id, ortNamen: [], aufraeumen: hub.aufraeumen };
 	}
 	const orte = [];
-	for (let i = 0; i < fall.orte; i++) orte.push(await createTestLocation(request, { name: `WSW-Ort-${i}`, lat: 47.1 + i * 0.1, lon: 11.2 + i * 0.1 }));
+	for (let i = 0; i < fall.orte; i++) orte.push(await createTestLocation(request, { name: `WSW-Ort-${Date.now() % 100000}-${i}`, lat: 47.1 + i * 0.1, lon: 11.2 + i * 0.1 }));
 	const hub = await seedHub(request, 'vergleich', {
 		extra: { ...opts.oben, location_ids: orte.map((o) => o.id), display_config: { ampel, active_metrics: auswahl.map((metric_id) => ({ metric_id, aggregation: 'max' })), ...extraDc } }
 	});
@@ -671,6 +675,115 @@ test.describe('Karte „Was steht wo“', () => {
 		} finally {
 			await zweit.aufraeumen();
 			await admin.aufraeumen();
+		}
+	});
+
+	for (const fall of [FAELLE[0], FAELLE[1]]) {
+		test(`WS-16 (${fall.name}): Beispiel-Alarm im Übergangsblock lädt die Vorschau dieses Abos, zweiter Nutzer sieht nichts Fremdes`, async ({ browser, page }) => {
+			test.setTimeout(300_000);
+			await page.setViewportSize(DESKTOP);
+			const abo = await seed(page.request, fall);
+			const zweit = await zweitNutzer(browser, page, { sprache: 'de', ip: `10.31.24.${fall.kind === 'route' ? 1 : 2}` });
+			const fremd = await seed(zweit.seite.request, fall);
+			try {
+				const name = (await stand(page.request, abo.kind, abo.id)).name as string;
+				const ortIds = fall.kind === 'vergleich' ? ((await stand(page.request, abo.kind, abo.id)).location_ids as string[]) : [];
+				const pruefe = async (seite: Page, a: Abo) => {
+					const z = await oeffneZustellung(seite, a.kind, a.id);
+					const karte = z.getByTestId(ZT.uebergang).getByTestId('alert-preview-card');
+					await expect(karte.getByTestId('alert-preview-unsaved'), 'kein ungespeicherter Zustand').toHaveCount(0);
+					const anfrage = seite.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/alert-preview'), { timeout: 20_000 });
+					await karte.getByTestId('alert-preview-load-btn').click();
+					const r = await anfrage;
+					const antwort = await r.response();
+					return { karte, pfad: new URL(r.url()).pathname, rumpf: r.postDataJSON() as Json, status: antwort?.status() };
+				};
+				const a = await pruefe(page, abo);
+				expect(a.pfad, 'Vorschau des richtigen Abos').toBe(`/api/briefings/${abo.id}/alert-preview`);
+				expect(a.status).toBe(200);
+				const changes = a.rumpf.changes as Json[];
+				expect(changes.length, 'Regeln des Abos kommen an').toBeGreaterThan(0);
+				if (fall.kind === 'route') {
+					const eigene = ((await stand(page.request, abo.kind, abo.id)).alert_rules as Json[]).filter((r) => r.enabled).map((r) => r.threshold).sort();
+					expect(eigene.length, 'Messaufbau: das Abo hat Regeln').toBeGreaterThan(0);
+					expect(changes.map((c) => c.threshold).sort(), 'die Regeln dieses Abos').toEqual(eigene);
+				} else expect([...new Set(changes.map((c) => c.location_id))].sort(), 'die eigenen Orte').toEqual([...ortIds].sort());
+				await expect(a.karte.getByTestId('alert-preview-error')).toHaveCount(0);
+				await expect(a.karte.getByTestId('alert-preview-subject')).not.toBeEmpty({ timeout: 130_000 });
+
+				// Zweiter Nutzer: eigene Vorschau, nichts vom Abo des ersten Nutzers.
+				const b = await pruefe(zweit.seite, fremd);
+				expect(b.pfad).toBe(`/api/briefings/${fremd.id}/alert-preview`);
+				await expect(b.karte.getByTestId('alert-preview-subject')).not.toBeEmpty({ timeout: 130_000 });
+				await expect(b.karte, 'fremder Abo-Name in der Vorschau').not.toContainText(name);
+				if (fall.kind === 'vergleich') for (const o of ortIds) expect(JSON.stringify(b.rumpf)).not.toContain(o);
+				const quer = await zweit.seite.request.post(`/api/briefings/${abo.id}/alert-preview?kind=${abo.kind}`, { data: a.rumpf });
+				expect(quer.status(), 'fremde Vorschau gesperrt').toBe(404);
+			} finally {
+				await fremd.aufraeumen().catch(() => {});
+				await zweit.aufraeumen();
+				await abo.aufraeumen();
+			}
+		});
+	}
+
+	test('WS-15 (Trip): Kompakt sperrt die drei Mail-Blöcke, gespeicherte Werte bleiben, Ausführlich gibt sie frei', async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const abo = await seed(page.request, FAELLE[0], {
+			oben: { report_config: { enabled: true, morning_enabled: true, morning_time: '07:00:00', email_format: 'full', show_stage_stats: true, show_yesterday_comparison: false } }
+		});
+		const BLOECKE = ['show_stage_stats', 'show_yesterday_comparison', 'show_night_block'];
+		const GRUND = 'Wirkt nur in der ausführlichen E-Mail.';
+		const felder = async () => {
+			const t = await stand(page.request, 'route', abo.id);
+			return { stage: t.report_config.show_stage_stats, vortag: t.report_config.show_yesterday_comparison, nacht: t.display_config.show_night_block ?? null };
+		};
+		try {
+			let karte = await oeffneKarte(page, abo);
+			const vorherAnzeige: Record<string, string | null> = {};
+			for (const f of BLOECKE) {
+				await expect(karte.getByTestId(`was-steht-wo-${f}`)).not.toHaveAttribute('aria-disabled', 'true');
+				vorherAnzeige[f] = await karte.getByTestId(`was-steht-wo-${f}`).getAttribute('aria-checked');
+			}
+			await expect(karte.getByText(GRUND)).toHaveCount(0);
+			const vorher = await felder();
+
+			const put = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/trips/${abo.id}`, { timeout: 20_000 });
+			await karte.getByTestId('was-steht-wo-email-format-compact').click();
+			expect((await put).status()).toBe(200);
+			for (const f of BLOECKE) {
+				const sw = karte.getByTestId(`was-steht-wo-${f}`);
+				await expect(sw, `${f}: bei Kompakt gesperrt`).toHaveAttribute('aria-disabled', 'true');
+				await expect(sw, `${f}: Wert bleibt sichtbar`).toHaveAttribute('aria-checked', vorherAnzeige[f]!);
+			}
+			await expect(karte.getByText(GRUND, { exact: false }), 'Grund steht an den drei Schaltern').toHaveCount(3);
+			// Ein Klick auf einen gesperrten Schalter schreibt nichts.
+			let puts = 0;
+			page.on('request', (r) => {
+				if (r.method() === 'PUT' && new URL(r.url()).pathname === `/api/trips/${abo.id}`) puts++;
+			});
+			await karte.getByTestId('was-steht-wo-show_stage_stats').click({ force: true });
+			await page.waitForTimeout(1_500);
+			expect(puts, 'gesperrter Schalter speichert nicht').toBe(0);
+			const t = await stand(page.request, 'route', abo.id);
+			expect(t.report_config.email_format).toBe('compact');
+			expect(await felder(), 'gespeicherte Werte unverändert').toEqual(vorher);
+
+			await page.reload();
+			karte = await oeffneKarte(page, abo);
+			for (const f of BLOECKE) await expect(karte.getByTestId(`was-steht-wo-${f}`), `${f}: nach Neuladen gesperrt`).toHaveAttribute('aria-disabled', 'true');
+			const zurueck = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/trips/${abo.id}`, { timeout: 20_000 });
+			await karte.getByTestId('was-steht-wo-email-format-full').click();
+			expect((await zurueck).status()).toBe(200);
+			for (const f of BLOECKE) {
+				const sw = karte.getByTestId(`was-steht-wo-${f}`);
+				await expect(sw, `${f}: wieder bedienbar`).not.toHaveAttribute('aria-disabled', 'true');
+				await expect(sw, `${f}: alter Wert`).toHaveAttribute('aria-checked', vorherAnzeige[f]!);
+			}
+			await expect(karte.getByText(GRUND)).toHaveCount(0);
+			expect(await felder()).toEqual(vorher);
+		} finally {
+			await abo.aufraeumen();
 		}
 	});
 

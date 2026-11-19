@@ -3,25 +3,27 @@
 // Spec: docs/specs/modules/fix_1721_nachtausgabe.md — AC-1, AC-2, AC-3, AC-6, AC-8.
 // (AC-4/5/7 = zugestellte Staging-Mail + briefing_mail_validator.py, siehe Testplan Punkt 2.)
 //
-// SCHREIBT NUR — in der RED-Phase NICHT ausgefuehrt (Marker `staging`).
-// Ausfuehren erst NACH GREEN, gegen Staging, aus frontend/.
+// #3154 (#3122 B3b, Spec feat_3122_was_steht_wo.md Teil B Nr. 12/14): der Schalter steht nicht mehr im Reiter
+// Zustellung, sondern als „Nacht-Stundentabelle“ unter „Ganze Blöcke ein- und ausschalten“ der Karte „Was steht wo“
+// (Reiter Wetter, nur Trip); er schreibt weiter `display_config.show_night_block` (PUT auf den Trip). Die Kuerzel
+// erklaert das Feld „Kürzel erklärt“ der Karte.
+//
+// Ausfuehren (lokal gegen ci-stack.sh mit der Haupt-Config, oder gegen Staging, aus frontend/):
+//   npx playwright test --project=tests e2e/trip-night-block-schalter.staging.spec.ts
 
 import { test, expect, type Page } from '@playwright/test';
 import { createTestComparePreset, createTestLocation, createTestTrip } from './helpers';
+import { oeffneKarte } from './was-steht-wo.helpers';
 import { wegwerfPasswort } from './stagingZugang';
 
-const SCHALTER = 'wm-night-block-toggle';
+const SCHALTER = 'was-steht-wo-show_night_block';
 
 async function oeffneWetterMetriken(page: Page, tripId: string) {
-	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Abschnitt nachtblock und die
-	// Kürzel-Legende der Kanal-Karte stehen im Reiter Zustellung.
-	await page.goto(`/trips/${tripId}?tab=zustellung`);
-	const tabBtn = page.getByTestId('trip-detail-tab-zustellung');
-	await expect(tabBtn).toBeVisible({ timeout: 15000 });
-	await tabBtn.click();
-	const tab = page.getByTestId('weather-metrics-tab');
-	await expect(tab).toBeVisible({ timeout: 15000 });
-	return tab;
+	return oeffneKarte(page, 'route', tripId);
+}
+
+function schalterGespeichertTrip(page: Page, tripId: string) {
+	return page.waitForResponse((r) => new URL(r.url()).pathname === `/api/trips/${tripId}` && r.request().method() === 'PUT', { timeout: 15000 });
 }
 
 async function nachtBlockImStand(request: import('@playwright/test').APIRequestContext, tripId: string) {
@@ -40,16 +42,12 @@ test.describe('Nacht-Stundentabelle-Schalter (#1721, Staging)', () => {
 		const trip = await createTestTrip(request, { name: '1721-ac1-trip' });
 		const tab = await oeffneWetterMetriken(page, trip.id);
 		const schalter = tab.getByTestId(SCHALTER);
-		await expect(schalter, 'AC-1: Schalter fehlt im Trip-Reiter').toBeVisible({ timeout: 10000 });
-		await expect(tab.getByText('Nacht-Stundentabelle in der Mail zeigen')).toBeVisible();
+		await expect(schalter, 'AC-1: Schalter fehlt in der Karte des Trips').toBeVisible({ timeout: 10000 });
+		await expect(tab.getByText('Nacht-Stundentabelle', { exact: true })).toBeVisible();
 
-		const loc = await createTestLocation(request, { name: '1721-ac1-ort' });
+		const loc = await createTestLocation(request, { name: `1721-ac1-ort-${Date.now()}` });
 		const preset = await createTestComparePreset(request, { name: '1721-ac1-vergleich', locationIds: [loc.id] });
-		await page.goto(`/compare/${preset.id}?tab=zustellung`);
-		await page.getByTestId('compare-detail-tab-zustellung').click();
-		const panel = page.getByTestId('compare-detail-panel-zustellung');
-		await expect(panel).toBeVisible({ timeout: 15000 });
-		await expect(panel.getByTestId('weather-metrics-tab-vergleich')).toBeVisible({ timeout: 15000 });
+		const panel = await oeffneKarte(page, 'vergleich', preset.id);
 		await expect(
 			panel.getByTestId(SCHALTER),
 			'AC-1: der Schalter darf im Ortsvergleich nicht gerendert werden'
@@ -63,7 +61,7 @@ test.describe('Nacht-Stundentabelle-Schalter (#1721, Staging)', () => {
 		const trip = await createTestTrip(request, { name: '1721-ac2-alt' });
 		expect(await nachtBlockImStand(request, trip.id), 'Vorbedingung: Alt-Trip ohne Feld').toBeUndefined();
 		const tab = await oeffneWetterMetriken(page, trip.id);
-		await expect(tab.getByTestId(SCHALTER)).toBeChecked({ timeout: 10000 });
+		await expect(tab.getByTestId(SCHALTER)).toHaveAttribute('aria-checked', 'true', { timeout: 10000 });
 	});
 
 	test('AC-3: ausschalten, speichern, neu laden: bleibt aus (Stand per API gegengelesen)', async ({
@@ -73,19 +71,16 @@ test.describe('Nacht-Stundentabelle-Schalter (#1721, Staging)', () => {
 		const trip = await createTestTrip(request, { name: '1721-ac3-aus' });
 		const tab = await oeffneWetterMetriken(page, trip.id);
 		const schalter = tab.getByTestId(SCHALTER);
-		await expect(schalter).toBeChecked({ timeout: 10000 });
+		await expect(schalter).toHaveAttribute('aria-checked', 'true', { timeout: 10000 });
 
-		const gespeichert = page.waitForResponse(
-			(r) => r.url().includes(`/api/trips/${trip.id}/weather-config`) && r.request().method() === 'PUT',
-			{ timeout: 15000 }
-		);
+		const gespeichert = schalterGespeichertTrip(page, trip.id);
 		await schalter.click();
 		await gespeichert;
 		expect(await nachtBlockImStand(request, trip.id)).toBe(false);
 
 		await page.reload();
 		const tab2 = await oeffneWetterMetriken(page, trip.id);
-		await expect(tab2.getByTestId(SCHALTER), 'AC-3 FAIL: Schalter nach Neuladen wieder an').not.toBeChecked({
+		await expect(tab2.getByTestId(SCHALTER), 'AC-3 FAIL: Schalter nach Neuladen wieder an').toHaveAttribute('aria-checked', 'false', {
 			timeout: 10000
 		});
 	});
@@ -97,10 +92,7 @@ test.describe('Nacht-Stundentabelle-Schalter (#1721, Staging)', () => {
 	}) => {
 		const tripA = await createTestTrip(request, { name: '1721-ac6-a' });
 		const tab = await oeffneWetterMetriken(page, tripA.id);
-		const gespeichert = page.waitForResponse(
-			(r) => r.url().includes(`/api/trips/${tripA.id}/weather-config`) && r.request().method() === 'PUT',
-			{ timeout: 15000 }
-		);
+		const gespeichert = schalterGespeichertTrip(page, tripA.id);
 		await tab.getByTestId(SCHALTER).click();
 		await gespeichert;
 		expect(await nachtBlockImStand(request, tripA.id)).toBe(false);
@@ -138,9 +130,9 @@ test.describe('Nacht-Stundentabelle-Schalter (#1721, Staging)', () => {
 		});
 		expect(put.ok()).toBeTruthy();
 		const tab = await oeffneWetterMetriken(page, trip.id);
-		const legende = tab.getByTestId('metric-kuerzel-legend');
-		await expect(legende).toBeVisible({ timeout: 10000 });
-		await expect(legende, 'AC-8 FAIL: Legende erklaert FN nicht').toContainText('FN');
-		await expect(legende).toContainText(/Gef(ü|ue)hlte Tiefsttemperatur Nacht/i); // #2955: Mockup-Name
+		await tab.getByTestId('was-steht-wo-legende-auf').click();
+		const eintrag = tab.getByTestId('was-steht-wo-legende').locator('[data-legende="FN"]');
+		await expect(eintrag, 'AC-8 FAIL: Legende erklaert FN nicht').toBeVisible({ timeout: 10000 });
+		expect(((await eintrag.locator('dd').textContent()) ?? '').trim().length, 'AC-8 FAIL: FN ohne Bedeutung').toBeGreaterThan(0);
 	});
 });
