@@ -58,7 +58,10 @@ Helfer `frontend/e2e/ganzseitenaufnahme.ts` auf, keine lokalen Kopien. Er hebt d
 Seite auf (`main` und `h-screen`) und setzt zusätzlich `min-width: 0`. Ohne diese Zeile wächst `<main>` als
 Flex-Element auf seine Inhaltsbreite (bei 390 px rund 530 px statt 390 px). Der Helfer prüft deshalb die
 Breite des PNG gegen den Viewport und lässt zu breite Aufnahmen fehlschlagen; Selbsttest:
-`frontend/e2e/ganzseitenaufnahme-selbsttest.spec.ts`.
+`frontend/e2e/ganzseitenaufnahme-selbsttest.spec.ts`. Seit #3013 blendet er während der Aufnahme alle
+sichtbaren `position: fixed`-Elemente aus (Marker `data-gz-aufnahme-fixed`, Rückbau im `finally`), damit
+die mobile Navigation nicht mitten im Bild schwebt; sticky bleibt sichtbar, offene Dialoge verschwinden
+mit (für Dialoge ein Viewport-Foto nehmen).
 
 ## Product Owner Pattern
 
