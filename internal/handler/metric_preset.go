@@ -39,6 +39,8 @@ type createPresetRequest struct {
 	Ampel map[string]interface{} `json:"ampel,omitempty"`
 	// Issue #2794 S3a: Art route|vergleich, fehlend = route.
 	Kind string `json:"kind,omitempty"`
+	// Issue #3189: Herkunft (optional, nur beim Anlegen; leer = verworfen).
+	Herkunft *model.PresetHerkunft `json:"herkunft,omitempty"`
 }
 
 // systemVorlagenNamen sind die Namen der 7 Systemvorlagen (Python-SSOT
@@ -287,6 +289,7 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 			Metrics:     normalizeMetricsPayload(req.Metrics, req.FriendlyIDs),
 			CreatedAt:   time.Now().UTC(),
 			Ampel:       req.Ampel,
+			Herkunft:    model.NormalizePresetHerkunft(req.Herkunft),
 		}
 		presets = append(presets, preset)
 

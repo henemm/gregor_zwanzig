@@ -20,6 +20,7 @@
 	"wetter.vorlage.verlust.other": "Deine {count} Abweichungen von „{alt}“ gehen verloren.",
 	"wetter.vorlage.aktiv_marker": "· aktiv",
 	"wetter.vorlage.eigene_unterzeile": "eigene",
+	"wetter.vorlage.eigene_aus_herkunft": "aus {name} gespeichert",
 	"wetter.vorlage.stichworte.alpen_trekking": "Gewitter, Böen, Nullgradgrenze",
 	"wetter.vorlage.stichworte.wandern": "Regen, Sonne, UV",
 	"wetter.vorlage.stichworte.skitouren": "Neuschnee, Schneehöhe, Sicht",

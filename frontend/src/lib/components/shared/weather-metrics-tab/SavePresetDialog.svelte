@@ -22,9 +22,11 @@
 		onSaved: (preset: MetricPreset) => void;
 		/** Client-seitige Eindeutigkeitspruefung (case-insensitive, getrimmt), Issue #690. */
 		existingNames?: string[];
+		/** #3189: Trip bzw. Orts-Vergleich, aus dem gespeichert wird (fehlt im Anlege-Modus). */
+		herkunft?: { id: string; name: string };
 	}
 
-	let { open = $bindable(false), kind, ampel, onClose, onSaved, existingNames = [] }: Props = $props();
+	let { open = $bindable(false), kind, ampel, onClose, onSaved, existingNames = [], herkunft }: Props = $props();
 
 	let name = $state('');
 	let description = $state('');
@@ -61,7 +63,7 @@
 		saving = true;
 		error = null;
 		try {
-			const body = eigeneVorlagePayload({ name, beschreibung: description, alsStandard: isDefault, kind, ampel });
+			const body = eigeneVorlagePayload({ name, beschreibung: description, alsStandard: isDefault, kind, ampel, herkunft });
 			const preset = await api.post<MetricPreset>('/api/metric-presets', body);
 			onSaved(preset);
 			open = false;

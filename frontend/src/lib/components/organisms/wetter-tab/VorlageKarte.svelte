@@ -29,8 +29,10 @@
 		onGespeichert: (preset: MetricPreset) => void;
 		/** #3111 AC-6: Zahl der Orte (nur Orte), waehlt „für diesen Ort“ bzw. „für diese Orte“. */
 		ortAnzahl?: number;
+		/** #3189: Herkunft fuer „Als eigene Vorlage speichern“ (Trip bzw. Orts-Vergleich; fehlt im Anlege-Modus). */
+		herkunft?: { id: string; name: string };
 	}
-	let { context, vorlageId, liste, eigene, abweichungen, metrikName, aboAmpel, onUebernehmen, onEigene, onZuruecksetzen, onGespeichert, ortAnzahl }: Props = $props();
+	let { context, vorlageId, liste, eigene, abweichungen, metrikName, aboAmpel, onUebernehmen, onEigene, onZuruecksetzen, onGespeichert, ortAnzahl, herkunft }: Props = $props();
 
 	// #3111 AC-6 (Mockup Fassung 4): Bestätigung zweiteilig, fetter Titel plus EIN Rumpf-Text.
 	const ERSETZT: Record<Kontext, () => MessageKey> = {
@@ -57,9 +59,14 @@
 	function optionName(v: VorlageEintrag): string {
 		return v.id === vorlageId ? `${name(v)} ${$t('wetter.vorlage.aktiv_marker')}` : name(v);
 	}
-	/** #3111 AC-5: Unterzeile eigener Vorlagen „eigene“ (+ Beschreibung). */
+	/** #3111 AC-5 / #3189 AC-4: Unterzeile „eigene“ + Beschreibung, sonst + Herkunft, sonst nur „eigene“. */
 	function eigeneUnterzeile(e: EigeneVorlage): string {
-		return [$t('wetter.vorlage.eigene_unterzeile'), ...(e.beschreibung ? [e.beschreibung] : [])].join(' · ');
+		const zusatz = e.beschreibung
+			? [e.beschreibung]
+			: e.herkunftName
+				? [$t('wetter.vorlage.eigene_aus_herkunft', { name: e.herkunftName })]
+				: [];
+		return [$t('wetter.vorlage.eigene_unterzeile'), ...zusatz].join(' · ');
 	}
 	/** #3111 AC-6: Rumpf der Bestätigung als ein Text: Ersetzt-Satz, ggf. Verlust-Satz, Bleibt-Satz. */
 	const rumpf = $derived(
@@ -144,7 +151,7 @@
 	{/if}
 </div>
 
-<SavePresetDialog bind:open={dialogOffen} kind={context} ampel={aboAmpel} existingNames={eigene.map((e) => e.name)} onClose={() => (dialogOffen = false)} onSaved={gespeichertMelden} />
+<SavePresetDialog bind:open={dialogOffen} kind={context} ampel={aboAmpel} existingNames={eigene.map((e) => e.name)} {herkunft} onClose={() => (dialogOffen = false)} onSaved={gespeichertMelden} />
 
 <style>
 	.wt-karte {

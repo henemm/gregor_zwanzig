@@ -137,6 +137,15 @@ func migrateMetricPreset(rp map[string]interface{}) model.MetricPreset {
 	if a, ok := rp["ampel"].(map[string]interface{}); ok {
 		p.Ampel = a
 	}
+	// Issue #3189 (AC-2): Herkunft durchreichen, sonst ginge sie beim
+	// naechsten Speichern verloren. Bestand ohne Feld bleibt nil.
+	if h, ok := rp["herkunft"].(map[string]interface{}); ok {
+		id, _ := h["id"].(string)
+		name, _ := h["name"].(string)
+		if id != "" && name != "" {
+			p.Herkunft = &model.PresetHerkunft{ID: id, Name: name}
+		}
+	}
 	return p
 }
 

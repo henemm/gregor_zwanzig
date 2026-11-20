@@ -696,6 +696,8 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.vorlage.stichworte.allgemein',
 	'wetter.dialog.name_platzhalter',
 	'wetter.dialog.beschreibung_platzhalter',
+	// #3189 AC-4: Unterzeile „aus {name} gespeichert“ eigener Vorlagen.
+	'wetter.vorlage.eigene_aus_herkunft',
 	// #2955 (AC-2): Gewitter-Satz „mittel oder hoch“, wenn schon „mittel“ die Alarmstufe erreicht.
 	'wetter.gewitter.mittel_ab',
 	// #3006: Erklaersatz des geteilten Reiters Uebersicht (Mockup Fassung 3, `.sectionh`; Titel = aktionen.reiter.uebersicht); die Koepfe

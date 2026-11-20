@@ -30,7 +30,7 @@
 	import WasStehtWoKarte from './WasStehtWoKarte.svelte';
 	import { alarmZaehler, altSchluesselAusKatalog, ausgebbarTeilen, briefingAngebot, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
 	import type { AlarmAb, AltSchluessel, Farbe, Kontext } from '../../shared/wetter-tab/ampelModell.ts';
-	import { eigeneVorlageAus, ladeWetterDaten, ortAnzahlVon, type WetterDaten } from '../../shared/wetter-tab/wetterTabLaden.ts';
+	import { eigeneVorlageAus, ladeWetterDaten, ortAnzahlVon, vorlageHerkunft, type WetterDaten } from '../../shared/wetter-tab/wetterTabLaden.ts';
 	import { SPEICHERER, anlegeSpeicherer, type SpeicherOptionen } from '../../shared/wetter-tab/wetterTabSpeicherung.ts';
 	import * as Z from '../../shared/wetter-tab/wetterZustand.ts';
 
@@ -77,6 +77,8 @@
 	const aboId = $derived(String((trip ?? preset)?.id ?? ''));
 	// #3111 AC-6: Zahl der Orte für die Vorlagen-Bestätigung („für diesen Ort“ / „für diese Orte“).
 	const ortAnzahl = $derived(ortAnzahlVon(preset as { location_ids?: unknown } | undefined));
+	// #3189 AC-1/AC-5: Herkunft eigener Vorlagen (Trip bzw. Orts-Vergleich), nie im Anlege-Modus.
+	const herkunft = $derived(vorlageHerkunft((trip ?? preset) as { id?: unknown; name?: unknown } | undefined, createMode));
 
 	const abo = (): Z.AboSicht => (trip ?? preset ?? {}) as Z.AboSicht;
 	const uebernahme: Record<Kontext, (a: unknown) => void> = {
@@ -270,6 +272,7 @@
 			onZuruecksetzen={() => vorlageSetzen(Z.mitVorlage(stand!, stand!.vorlageId, vorlagen, context, altSchluessel))}
 			onGespeichert={vorlageGespeichert}
 			{ortAnzahl}
+			{herkunft}
 		/>
 		<div class="wt-karte wt-metriken" data-abschnitt="metriken">
 			<AlarmAbKopf {zaehler} onAlle={(s: AlarmAb) => aendern(Z.mitAlarmAbFuerAlle(stand!, s, daten!.eig))} />
