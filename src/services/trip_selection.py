@@ -178,20 +178,28 @@ def _rueckfrage_text(kandidaten: list[tuple[str, str]], channel: str,
     ``channel == "premium_sms"`` werden die NAMEN zuerst GSM-7-sicher
     gefaltet (F003) und dann gekuerzt (Boden 4 Zeichen), nie die Anzahl der
     Kandidaten oder die Woerter Trip/Vergleich (AC-15). Telegram bleibt
-    unveraendert (kein 160-Zeichen-Limit, volle Namen)."""
+    unveraendert (kein Zeichen-Limit, volle Namen). Budget ist das
+    Kanal-Limit ``CHANNEL_LIMITS["premium_sms"]["max_chars"]`` (153, Bug
+    #3200), damit die zentrale Versand-Kuerzung den Antwort-Hinweis nicht
+    abschneidet."""
     if channel != "premium_sms":
         return _rueckfrage_mit_laenge(kandidaten, None, lang)
+
+    # Lokaler Import: output.renderers/__init__ importiert ueber command_block
+    # wieder trip_command_processor -> trip_selection (Zirkelimport).
+    from output.renderers.channel_layout import CHANNEL_LIMITS
 
     en: Lang = "en"  # Premium-SMS ist immer englisch (wie resolve_active_target)
     sicher = [(k, _gsm7_sicher(n)) for k, n in kandidaten]
     laengen = [len(n) for _, n in sicher if n]
     max_laenge = max(laengen, default=4)
     eindeutig = [lg for lg in range(max_laenge, 3, -1) if _namen_eindeutig(sicher, lg)]
+    budget = CHANNEL_LIMITS["premium_sms"]["max_chars"]
     for laenge in eindeutig:
         text = _rueckfrage_mit_laenge(sicher, laenge, en)
-        if len(text) <= 160:
+        if len(text) <= budget:
             return text
-    # Bug #2615 (AC-7): Eindeutigkeit hat Vorrang vor 160 Zeichen -- dann die
+    # Bug #2615 (AC-7): Eindeutigkeit hat Vorrang vor dem Budget -- dann die
     # kuerzeste eindeutige Laenge; identische Namen: bisherige Kuerzung.
     return _rueckfrage_mit_laenge(sicher, eindeutig[-1] if eindeutig else 4, en)
 

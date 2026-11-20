@@ -26,11 +26,11 @@ issue: 3200
 - Seiten oder Nummern-Antwort, damit bei spät eindeutigen Namen alle Kandidaten erreichbar bleiben: das wäre eine Produktentscheidung (Issue-Absatz „Zusätzlich“); bleibt Known Limitation.
 
 ## Acceptance Criteria
-**AC-1:** Given ein Nutzer hat mehrere Trips/Vergleiche mit langen Namen, deren eindeutige Kürzung eine Premium-Rückfrage von 154–160 Zeichen ergäbe, When er per Premium-SMS einen mehrdeutigen Befehl sendet, Then ist die Rückfrage höchstens 153 Zeichen lang, endet nicht mit `~` und enthält alle Kandidaten sowie den vollständigen Antwort-Hinweis.
+- **AC-1:** Given ein Nutzer hat mehrere Trips/Vergleiche mit langen Namen, deren eindeutige Kürzung eine Premium-Rückfrage von 154–160 Zeichen ergäbe, When er per Premium-SMS einen mehrdeutigen Befehl sendet, Then ist die Rückfrage höchstens 153 Zeichen lang, endet nicht mit `~` und enthält alle Kandidaten sowie den vollständigen Antwort-Hinweis.
 
-**AC-2:** Given dieselbe Lage, When der Befehl über Telegram kommt, Then bleibt die Rückfrage ungekürzt mit vollen Namen.
+- **AC-2:** Given dieselbe Lage, When der Befehl über Telegram kommt, Then bleibt die Rückfrage ungekürzt mit vollen Namen.
 
-**AC-3:** Given Namen, die erst nach mehr Zeichen eindeutig werden, als in 153 Zeichen passen, When die Premium-Rückfrage gebaut wird, Then wird weiterhin die kürzeste eindeutige Länge gewählt (keine Mehrdeutigkeit durch Kürzung).
+- **AC-3:** Given Namen, die erst nach mehr Zeichen eindeutig werden, als in 153 Zeichen passen, When die Premium-Rückfrage gebaut wird, Then wird weiterhin die kürzeste eindeutige Länge gewählt (keine Mehrdeutigkeit durch Kürzung).
 
 ## Manuelle Test-Schritte
 1. Zwei Nutzer, je ein Trip + zwei Vergleiche mit langen Namen; mehrdeutigen Befehl „pause“ über den echten Premium-Eingang senden.

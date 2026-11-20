@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/fast/fix-3200-rueckfrage-153.md
-spec_sha256: fd0928cc6e9bb5284e61e96e8e155004c47e7eff33db02e1670e6e0b1d8728d5
-spec_frozen_sha256: 05ec77107b4958d6996954c909053a75271f898a8055a355a8ecbbb9b3ed6f19
+spec_sha256: 8cfc41b8ba33dc4dd25736cc463075dc1508e3533a85c2c81f5243e64dce63fa
+spec_frozen_sha256: bad61858cb1a2bec0e1ed0eb8bad92a92c21d728ccfd7fe093c4a859a51db984
 ---
 
 # PO-Briefing: fix-3200-rueckfrage-153
@@ -12,19 +12,19 @@ spec_frozen_sha256: 05ec77107b4958d6996954c909053a75271f898a8055a355a8ecbbb9b3ed
 
 ## Was gebaut wird
 
-Die Premium-SMS-Rückfrage bei mehrdeutigem Befehl wird auf 153 Zeichen zugeschnitten, sodass Kandidaten und Antwort-Hinweis vollständig ankommen.
+Die Rückfrage bei mehrdeutigen Premium-SMS-Befehlen passt künftig in 153 Zeichen und kommt mit allen Kandidaten samt Antwort-Hinweis an.
 
 ## Definition of Done
 
-Eine mehrdeutige Premium-SMS-Anfrage liefert eine Rückfrage mit höchstens 153 Zeichen, ohne abgeschnittenes Ende, mit allen Kandidaten und vollständigem Hinweis; Telegram bleibt unverändert.
+Eine mehrdeutige Premium-SMS-Anfrage liefert eine Rückfrage von höchstens 153 Zeichen ohne abgeschnittenes Ende; Telegram-Rückfragen behalten ihre vollen Namen.
 
 ## Wie geprüft wird
 
-Automatische Tests prüfen Länge, Vollständigkeit, Telegram-Unverändertheit und Eindeutigkeit der Kürzung; nicht geprüft wird die Lage bei spät eindeutigen Namen.
+Automatische Tests prüfen Länge, Vollständigkeit, Telegram-Unverändertheit und Eindeutigkeit der Kürzung; nicht geprüft werden Fälle, in denen Namen erst sehr spät eindeutig werden.
 
 ## Kritische Anmerkungen
 
-- Spät eindeutige Namen passen weiterhin nie in 153 Zeichen; Kandidaten fallen weg. Seiten-/Nummernantwort bewusst ausgeklammert, bleibt bekannte Einschränkung.
+- Seiten- oder Nummernantwort aus dem Issue-Zusatz bewusst weggelassen: Bei spät eindeutigen Namen bleiben Kandidaten unerreichbar (bekannte Einschränkung).
 
 ## Freigabe-Frage
 

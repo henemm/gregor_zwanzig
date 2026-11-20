@@ -254,6 +254,57 @@ def test_ac7_telegram_bleibt_bei_vollen_namen():
     assert "Zillertal Nord" in text and "Zillertal Süd" in text
 
 
+# #3200 F001: die Grenze 153 exakt bewachen (153 passt, 154 nicht). Die
+# ungekuerzte englische Fassung (Telegram-Pfad, lang="en") hat dieselbe Form
+# wie die Premium-Rueckfrage mit voller Laenge und belegt die Ausgangslaenge
+# unabhaengig vom Budget.
+_GRENZE_153 = [
+    ("vergleich", "Karwendel Hoehenwege"),
+    ("vergleich", "Chiemsee Runden"),
+    ("vergleich", "Dolomiten Hoch"),
+]
+_GRENZE_154 = [
+    ("vergleich", "Karwendel Hoehenwege"),
+    ("vergleich", "Chiemsee Runden"),
+    ("vergleich", "Dolomiten Hoehe"),
+]
+
+
+def test_3200_rueckfrage_mit_genau_153_zeichen_behaelt_volle_namen():
+    from services.trip_selection import _rueckfrage_text
+
+    voll = _rueckfrage_text(_GRENZE_153, "telegram", "en")
+    assert len(voll) == 153, (len(voll), voll)
+    text = _rueckfrage_text(_GRENZE_153, "premium_sms")
+    assert text == voll, f"153 Zeichen passen ins Budget, trotzdem gekuerzt: {text!r}"
+    assert _angezeigte_namen(text) == [n for _, n in _GRENZE_153], text
+
+
+def test_3200_rueckfrage_mit_154_zeichen_wird_auf_naechste_eindeutige_laenge_gekuerzt():
+    from services.trip_selection import _rueckfrage_text
+
+    voll = _rueckfrage_text(_GRENZE_154, "telegram", "en")
+    assert len(voll) == 154, (len(voll), voll)
+    text = _rueckfrage_text(_GRENZE_154, "premium_sms")
+    assert len(text) == 152, (len(text), text)
+    assert _angezeigte_namen(text) == [
+        "Karwendel Hoehenweg", "Chiemsee Runden", "Dolomiten Hoehe"], text
+    assert "e.g. 'Karwendel Hoehenweg pause'." in text, text
+
+
+# #3200 F002 / AC-3: passt keine eindeutige Laenge in 153, nimmt der Fallback
+# die KUERZESTE eindeutige Laenge (hier 6: "Hoehe0".."Hoehe9"; bei 5 waeren
+# alle gleich "Hoehe"), nicht die laengste.
+def test_3200_fallback_nimmt_kuerzeste_eindeutige_laenge_wenn_nichts_in_153_passt():
+    from services.trip_selection import _rueckfrage_text
+
+    kandidaten = [("vergleich", f"Hoehe{i} Nordroute") for i in range(10)]
+    text = _rueckfrage_text(kandidaten, "premium_sms")
+    namen = _angezeigte_namen(text)
+    assert namen == [f"Hoehe{i}" for i in range(10)], text
+    assert len(text) > 153, (len(text), text)  # Eindeutigkeit vor Laenge
+
+
 # ---------------------------------------------------------------------------
 # AC-8: Antwort-Parser löst eindeutiges Präfix (>= 4 Zeichen) auf
 # ---------------------------------------------------------------------------
