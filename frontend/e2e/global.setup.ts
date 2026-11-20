@@ -7,7 +7,19 @@ import { prepareAuthState } from './authStateProbe.ts';
 const authFile = 'playwright/.auth/admin.json';
 const TRIP_ID = 'e2e-cockpit-test';
 
-setup('authenticate and seed test data', async ({ page, baseURL }) => {
+setup('authenticate and seed test data', async ({ page, baseURL }, testInfo) => {
+	// Issue #3137: die Haupt-Suite laeuft immer seriell (playwright.config.ts,
+	// workers: 1). Ein `--workers`-Override > 1 wird VOR jedem Netzzugriff
+	// abgewiesen, weil sich parallele Faelle gegenseitig verfaelschen.
+	if (testInfo.config.workers > 1) {
+		throw new Error(
+			`E2E-Haupt-Suite darf nur seriell laufen (angefordert: ${testInfo.config.workers} Worker). ` +
+				'Grund: alle Tests teilen dasselbe Admin-Konto, dieselben Seed-IDs (e2e-loc-*) und ' +
+				'dieselbe Datenwurzel; parallele Laeufe verfaelschen sich gegenseitig, z. B. die Sprache ' +
+				'(ein Sprach-Umschalter stellt das Konto auf Englisch). ' +
+				'Abhilfe: ohne --workers starten oder mit --workers=1.'
+		);
+	}
 	// Issue #1265 Teil D: harter Abbruch VOR jeder Datenanlage, falls die
 	// Base-URL auf Produktion zeigt.
 	assertNotProdBaseURL(baseURL ?? '');
