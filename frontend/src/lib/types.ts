@@ -66,6 +66,8 @@ export interface Stage {
 	date: string;
 	waypoints: Waypoint[];
 	start_time?: string;
+	/** Issue #3197 (ADR-0108): eigenes Grundtempo der Etappe in km/h (0,5..60); fehlt = Trip-Tempo. */
+	grundtempo_kmh?: number;
 	/**
 	 * Transientes Wizard-Flag (Step 2 / Sub-Spec #162):
 	 * `true` wenn der User das Datum manuell ueberschrieben hat — Auto-Datierung

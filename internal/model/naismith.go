@@ -115,6 +115,29 @@ func ResolveTempo(trip *Trip) ActivitySpeeds {
 	return TempoSpeeds(DeriveTempo(trip.Activity))
 }
 
+// ValidGrundtempo prüft 0.5 <= v <= 60 km/h (Issue #3197).
+func ValidGrundtempo(v float64) bool {
+	return v >= MinGrundtempoKmh && v <= MaxGrundtempoKmh
+}
+
+// ResolveStageTempo — Tempo einer Etappe (Issue #3197, ADR-0108): die
+// Fortbewegung kommt immer vom Trip, das Grundtempo von der Etappe, falls
+// gültig, sonst vom Trip. Querverweis: Python stage_speeds, TS stageTempo.
+func ResolveStageTempo(trip *Trip, stage *Stage) ActivitySpeeds {
+	if trip == nil || stage == nil || stage.GrundtempoKmh == nil || !ValidGrundtempo(*stage.GrundtempoKmh) {
+		return ResolveTempo(trip)
+	}
+	t := DeriveTempo(trip.Activity)
+	if trip.Tempo != nil {
+		t = *trip.Tempo
+	}
+	if !ValidTempo(t) {
+		return TempoSpeeds(t)
+	}
+	t.GrundtempoKmh = *stage.GrundtempoKmh
+	return TempoSpeeds(t)
+}
+
 // DAVHours — Gehzeit nach DAV (DIN 33466), Issue #3196:
 // t_h = km / v, t_v = Hm_auf/R_auf + Hm_ab/R_ab, t = max + min/2.
 // Querverweis: Python dav_hours, TS davHours.

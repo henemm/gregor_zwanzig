@@ -114,8 +114,8 @@ describe('#3197 etappenZeile (AC-1, AC-2, AC-7)', () => {
 	for (const lang of ['de', 'en'] as const) {
 		test(`${lang}: S1 folgt dem Trip (4:12), S2 eigenes Tempo (5:36), beide mit Knopf`, () => {
 			const t = katalog(lang);
-			const z1 = L.etappenZeile(etappe('S1'), 0, lang, t, TRIP_TEMPO) as Record<string, unknown>;
-			const z2 = L.etappenZeile(etappe('S2'), 1, lang, t, TRIP_TEMPO) as Record<string, unknown>;
+			const z1 = L.etappenZeile(etappe('S1'), 0, lang, t, TRIP_TEMPO) as unknown as Record<string, unknown>;
+			const z2 = L.etappenZeile(etappe('S2'), 1, lang, t, TRIP_TEMPO) as unknown as Record<string, unknown>;
 			assert.equal(z1.meta, trFor(lang, 'trip.hub.etappe_gehzeit', { dauer: '4:12' }));
 			assert.equal(z2.meta, trFor(lang, 'trip.hub.etappe_gehzeit', { dauer: '5:36' }), 'S2 rechnet nicht mit eigenem Tempo');
 			assert.equal(z2.eigenesTempo, true, 'S2 nicht als „eigenes Tempo" gekennzeichnet');
@@ -129,7 +129,7 @@ describe('#3197 etappenZeile (AC-1, AC-2, AC-7)', () => {
 		const t = katalog('de');
 		const ohne = etappen().map((s) => ({ ...s, grundtempo_kmh: undefined }));
 		for (const [i, s] of ohne.entries()) {
-			const z = L.etappenZeile(s as Stage, i, 'de', t, TRIP_TEMPO) as Record<string, unknown>;
+			const z = L.etappenZeile(s as Stage, i, 'de', t, TRIP_TEMPO) as unknown as Record<string, unknown>;
 			assert.equal(z.meta, 'Gehzeit 4:12');
 			assert.ok(!z.eigenesTempo);
 			assert.equal(z.tempoAendern, true);
@@ -137,14 +137,14 @@ describe('#3197 etappenZeile (AC-1, AC-2, AC-7)', () => {
 	});
 
 	test('ungültiger Etappenwert: Gehzeit wie Trip, kein Kennzeichen', () => {
-		const z = L.etappenZeile({ ...etappe('S2'), grundtempo_kmh: 61 }, 1, 'de', katalog('de'), TRIP_TEMPO) as Record<string, unknown>;
+		const z = L.etappenZeile({ ...etappe('S2'), grundtempo_kmh: 61 }, 1, 'de', katalog('de'), TRIP_TEMPO) as unknown as Record<string, unknown>;
 		assert.equal(z.meta, 'Gehzeit 4:12');
 		assert.ok(!z.eigenesTempo);
 	});
 
 	test('AC-7: Pausentag (keine Wegpunkte) — keine Gehzeit, kein Knopf, auch mit gespeichertem Etappen-Tempo', () => {
 		const pause = { id: 'P', name: 'Ruhetag', date: '2026-07-03', waypoints: [], grundtempo_kmh: 3 } as Stage;
-		const z = L.etappenZeile(pause, 2, 'de', katalog('de'), TRIP_TEMPO) as Record<string, unknown>;
+		const z = L.etappenZeile(pause, 2, 'de', katalog('de'), TRIP_TEMPO) as unknown as Record<string, unknown>;
 		assert.equal(z.meta, undefined, 'Pausentag zeigt Gehzeit');
 		assert.ok(!z.tempoAendern, 'Pausentag zeigt Knopf „Tempo ändern"');
 		assert.ok(!z.eigenesTempo, 'Pausentag als „eigenes Tempo" gekennzeichnet');
@@ -200,7 +200,7 @@ describe('#3197 ohneEtappenTempo (AC-4)', () => {
 		const { grundtempo_kmh: _weg, ...rest } = s2 as Stage & { grundtempo_kmh?: number };
 		assert.deepEqual(neu, rest);
 		assert.equal(s2.grundtempo_kmh, 3, 'Eingabe mutiert');
-		const z = L.etappenZeile(neu, 1, 'de', katalog('de'), TRIP_TEMPO) as Record<string, unknown>;
+		const z = L.etappenZeile(neu, 1, 'de', katalog('de'), TRIP_TEMPO) as unknown as Record<string, unknown>;
 		assert.equal(z.meta, 'Gehzeit 4:12');
 		assert.ok(!z.eigenesTempo);
 	});

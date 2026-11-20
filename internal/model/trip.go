@@ -109,6 +109,9 @@ type Stage struct {
 	Date      string     `json:"date"`
 	Waypoints []Waypoint `json:"waypoints"`
 	StartTime *string    `json:"start_time,omitempty"`
+	// Issue #3197 (ADR-0108): eigenes Grundtempo dieser Etappe in km/h
+	// (0.5..60). nil = Trip-Tempo gilt; Fortbewegung bleibt trip-weit.
+	GrundtempoKmh *float64 `json:"grundtempo_kmh,omitempty"`
 }
 
 type Trip struct {

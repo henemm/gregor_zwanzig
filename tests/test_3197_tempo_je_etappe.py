@@ -189,3 +189,28 @@ def test_self_heal_nutzt_etappen_tempo():
     assert _segment_enden(trip, "S2") == ["11:20", "13:36"]
     enden = [s.end_time.astimezone(ORT).strftime("%H:%M") for s in _segments_for_stage(trip, s2)[:2]]
     assert enden == ["11:20", "13:36"]
+
+
+# --- Fix-Loop 1, F005 (AC-8): Lade-Filter am Wirkort -------------------------
+
+@pytest.mark.parametrize("kmh", [61, 0.4, "3", True])
+def test_ungueltiger_dateiwert_verschwindet_beim_speichern(tmp_path, kmh):
+    """Datei traegt an S2 einen ungueltigen Wert: reines Laden schreibt die
+    Datei nicht um, der Loader liefert None; Speichern ueber den Loader-
+    Schreibpfad entfernt den Wert aus der Datei, S2 rechnet mit dem Trip-Tempo."""
+    from app.loader import load_trip
+
+    pfad = tmp_path / "users" / "u3197a" / "briefings" / "t3197.json"
+    pfad.parent.mkdir(parents=True)
+    pfad.write_text(json.dumps(_trip_dict(S2={"grundtempo_kmh": kmh})), encoding="utf-8")
+    vorher = pfad.read_bytes()
+
+    trip = load_trip("t3197", data_dir=tmp_path, user_id="u3197a")
+    assert pfad.read_bytes() == vorher, "reines Laden hat die Datei umgeschrieben"
+    assert next(s for s in trip.stages if s.id == "S2").grundtempo_kmh is None
+
+    save_trip(trip, "u3197a", data_dir=tmp_path)
+    disk = json.loads(pfad.read_text(encoding="utf-8"))
+    nach_id = {st["id"]: st for st in disk["stages"]}
+    assert "grundtempo_kmh" not in nach_id["S2"], f"ungueltiger Wert {kmh!r} blieb in der Datei"
+    assert _ankuenfte(disk)["S2"] == FALL["erwartet"]["S1"]["ankuenfte"]

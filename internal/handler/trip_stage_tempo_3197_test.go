@@ -115,11 +115,9 @@ func TestStageTempo3197_Ungueltig422(t *testing.T) {
 			r := briefingVergleichEtagRouter(s)
 			w := doReq(r, http.MethodPut, "/api/trips/t3",
 				`{"stages":`+stagesJSON3197("", `,"grundtempo_kmh":`+wert)+`}`, "", "userA")
-			if w.Code != http.StatusUnprocessableEntity && w.Code != http.StatusBadRequest {
+			// Fix-Loop 1 (F001, AC-8): auch kein Zahlwert ("3", true) -> exakt 422.
+			if w.Code != http.StatusUnprocessableEntity {
 				t.Errorf("erwartet 422, bekommen %d: %s", w.Code, w.Body.String())
-			}
-			if w.Code == http.StatusBadRequest && wert != `"3"` && wert != "true" {
-				t.Errorf("Zahl ausserhalb des Bereichs muss 422 sein, nicht 400")
 			}
 			tr := ladeTempoTrip(t, s, "userA", "t3")
 			if tr.Stages[1].GrundtempoKmh != nil || ank3197(tr.Stages[1]) != "08:00,10:30,12:12" {
@@ -131,7 +129,7 @@ func TestStageTempo3197_Ungueltig422(t *testing.T) {
 			w := doReq(CreateTripHandler(s), http.MethodPost, "/api/trips",
 				`{"id":"neu","name":"Neu","tempo":{"fortbewegung":"fuss","grundtempo_kmh":4},"stages":`+
 					stagesJSON3197("", `,"grundtempo_kmh":`+wert)+`}`, "", "userA")
-			if w.Code != http.StatusUnprocessableEntity && w.Code != http.StatusBadRequest {
+			if w.Code != http.StatusUnprocessableEntity {
 				t.Errorf("erwartet 422, bekommen %d", w.Code)
 			}
 			if tr, _ := s.WithUser("userA").LoadTrip("neu"); tr != nil {

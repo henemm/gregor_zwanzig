@@ -24,9 +24,11 @@
 	// Issue #3007: Etappen-Liste im Hub aus dem geteilten Baustein Listenzeile (wie Orte, ADR-0097).
 	import Listenzeile from '$lib/components/molecules/Listenzeile.svelte';
 	import { etappenZeile, etappenAufteilung } from './etappenListe.ts';
-	import { computeArrivalTimes, STANDARD_TEMPO } from '$lib/utils/naismith';
+	import { computeArrivalTimes, STANDARD_TEMPO, stageTempo, verwirfEtappenTempo, ohneEtappenTempo } from '$lib/utils/naismith';
 	// Issue #3196: Fortbewegung + Grundtempo oben im Reiter (geteilt mit dem Anlegen).
 	import TempoKarte from '$lib/components/shared/TempoKarte.svelte';
+	// Issue #3197: dieselbe Karte mit `nurGrundtempo` für „Tempo ändern" einer Etappe.
+	import TempoKarteInhalt from '$lib/components/organisms/tempo-karte/TempoKarteInhalt.svelte';
 	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
 	import type { Stage, Tempo, Trip, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
@@ -202,10 +204,16 @@
 		stages.find((s) => !isPauseStage(s))?.id ?? stages[0]?.id ?? ''
 	);
 	let activeWaypointId = $state<string | null>(null);
+	// #3007 (AC-13): Klick/Enter auf eine Etappenzeile klappt den Editor dieser Etappe auf, erneut zu.
+	let offeneEtappeId = $state<string | null>(null);
 
-	const activeStage = $derived(stages.find((s) => s.id === activeStageId) ?? null);
+	// #3197: im Listenmodus zeigt der aufgeklappte Editor die Etappe der offenen Zeile (Ankünfte mit
+	// deren Etappen-Tempo); ohne offene Zeile wie bisher die aktive Etappe.
+	const activeStage = $derived(
+		stages.find((s) => s.id === offeneEtappeId) ?? stages.find((s) => s.id === activeStageId) ?? null
+	);
 	const activeIsPause = $derived(activeStage ? isPauseStage(activeStage) : false);
-	const activeStageIndex = $derived(stages.findIndex((s) => s.id === activeStageId));
+	const activeStageIndex = $derived(activeStage ? stages.indexOf(activeStage) : -1);
 	const prevStage = $derived(activeStageIndex > 0 ? stages[activeStageIndex - 1] : null);
 	const nextStage = $derived(
 		activeStageIndex >= 0 && activeStageIndex < stages.length - 1
@@ -217,8 +225,29 @@
 	// (Rumpf { stages, tempo } — ein zweiter Vorgang am Controller würde den ersten ersetzen).
 	let tempoLokal = $state<Tempo | null>(null);
 	const tempoAktiv = $derived<Tempo>(tempoLokal ?? tempo ?? STANDARD_TEMPO);
+	// Issue #3197 (AC-6): Zahl der Etappen, deren eigenes Tempo der letzte Wechsel der
+	// Fortbewegung verworfen hat (Hinweis nur bei > 0).
+	let zurueckgesetztAnzahl = $state(0);
 	function tempoAendern(neu: Tempo): void {
+		zurueckgesetztAnzahl = 0; // F004: Hinweis gilt nur bis zur nächsten Tempo-Aktion
+		if (neu.fortbewegung !== tempoAktiv.fortbewegung) {
+			const verworfen = verwirfEtappenTempo(stages);
+			if (verworfen.anzahl > 0) stages = verworfen.stages;
+			zurueckgesetztAnzahl = verworfen.anzahl;
+		}
 		tempoLokal = neu;
+		scheduleSave();
+	}
+	// Issue #3197: „Tempo ändern" je Etappe — offene Karte (Etappen-ID) und Überschreibung.
+	let tempoEtappeId = $state<string | null>(null);
+	function etappenTempoSetzen(stageId: string, neu: Tempo): void {
+		stages = stages.map((s) => (s.id === stageId ? { ...s, grundtempo_kmh: neu.grundtempo_kmh } : s));
+		zurueckgesetztAnzahl = 0;
+		scheduleSave();
+	}
+	function etappenTempoZuruecknehmen(stageId: string): void {
+		stages = stages.map((s) => (s.id === stageId ? ohneEtappenTempo(s) : s));
+		zurueckgesetztAnzahl = 0;
 		scheduleSave();
 	}
 	/** Rumpf eines Etappen-Speicherns: `tempo` nur, wenn der Nutzer es geändert hat. */
@@ -228,7 +257,7 @@
 	// Gehzeiten je Wegpunkt nach DAV mit dem aktuellen Tempo (sofort, vor dem Speichern).
 	const arrivals = $derived(
 		activeStage
-			? computeArrivalTimes(activeStage, activeStage.start_time, tempoAktiv)
+			? computeArrivalTimes(activeStage, activeStage.start_time, stageTempo(activeStage, tempoAktiv))
 			: []
 	);
 
@@ -573,8 +602,6 @@
 		activeWaypointId = null;
 		addModeHint = false;
 	}
-	// #3007 (AC-13): Klick/Enter auf eine Etappenzeile klappt den Editor dieser Etappe auf, erneut zu.
-	let offeneEtappeId = $state<string | null>(null);
 	const offenId = $derived(offeneEtappeId !== null && stages.some((s) => s.id === offeneEtappeId) ? offeneEtappeId : null);
 	const offenIndex = $derived(offenId === null ? -1 : stages.findIndex((s) => s.id === offenId));
 	const zeilenAufteilung = $derived(etappenAufteilung(stages, offenIndex));
@@ -817,6 +844,10 @@
 								risk={stageRisk[stage.id]}
 								open={expandedStageId === stage.id}
 								tempo={tempoAktiv}
+								tempoOffen={tempoEtappeId === stage.id}
+								ontempoaendern={() => { tempoEtappeId = tempoEtappeId === stage.id ? null : stage.id; }}
+								onetappentempo={(neu) => etappenTempoSetzen(stage.id, neu)}
+								ontriptempo={() => etappenTempoZuruecknehmen(stage.id)}
 								isFirst={i === 0}
 								onDateChange={(d) => handleDateChange(stage.id, d)}
 								onStartTimeChange={(t) => handleStartTimeChange(stage.id, t)}
@@ -1028,12 +1059,38 @@
 		data-stage-id={stage.id}
 		onclick={() => zeileUmschalten(stage.id)}
 		offen={offenId === stage.id}
-	/>
+	>
+		<!-- Issue #3197: Kennzeichen „eigenes Tempo" und Knopf „Tempo ändern" (Pausentag ohne). -->
+		{#if zeile.eigenesTempo}<span class="etappen-eigenes-tempo" data-testid="etappen-eigenes-tempo">{$t('trip.tempo.eigenes_tempo')}</span>{/if}
+		{#if zeile.tempoAendern}
+			<button
+				type="button"
+				class="etappen-tempo-knopf"
+				data-testid="etappen-tempo-aendern"
+				aria-expanded={tempoEtappeId === stage.id}
+				onclick={(e) => { e.stopPropagation(); tempoEtappeId = tempoEtappeId === stage.id ? null : stage.id; }}
+				onkeydown={(e) => e.stopPropagation()}
+			>{$t('trip.hub.tempo_aendern')}</button>
+		{/if}
+	</Listenzeile>
+	{#if zeile.tempoAendern && tempoEtappeId === stage.id}
+		<div class="etappen-zeile-tempo" data-testid="etappen-tempo-karte">
+			<TempoKarteInhalt
+				tempo={stageTempo(stage, tempoAktiv)}
+				nurGrundtempo
+				onchange={(neu) => etappenTempoSetzen(stage.id, neu)}
+				ontriptempo={() => etappenTempoZuruecknehmen(stage.id)}
+			/>
+		</div>
+	{/if}
 {/snippet}
 
 <!-- Issue #3196 (Soll-Bild viewEtappen): Tempo-Karte direkt unter dem Bereichskopf des Reiters. -->
 {#snippet tempoKarte()}
 	<div class="etappen-tempo"><TempoKarte tempo={tempoAktiv} onchange={tempoAendern} /></div>
+	{#if zurueckgesetztAnzahl > 0}
+		<p class="etappen-tempo-hinweis" role="status" data-testid="etappen-tempo-zurueckgesetzt">{$tn('trip.tempo.etappen_zurueckgesetzt', zurueckgesetztAnzahl)}</p>
+	{/if}
 {/snippet}
 
 {#snippet etappenListe()}
@@ -1076,6 +1133,35 @@
 	/* #3196: Tempo-Karte unter dem Bereichskopf, Abstand wie Kopf → Liste. */
 	.etappen-tempo {
 		margin-top: var(--g-s-4);
+	}
+	/* #3197: Hinweis nach Fortbewegungswechsel, Kennzeichen und Etappen-Tempo-Karte. */
+	.etappen-tempo-hinweis {
+		margin: var(--g-s-3) 0 0;
+		font-size: var(--g-size-12-5px);
+		color: var(--g-ink-2);
+	}
+	.etappen-eigenes-tempo {
+		font-size: var(--g-size-12-5px);
+		font-weight: 600;
+		color: var(--g-ink-2);
+	}
+	.etappen-tempo-knopf {
+		min-height: var(--g-tap-min);
+		padding: 0 var(--g-s-3);
+		border: 1px solid var(--g-rule);
+		border-radius: var(--g-r-2);
+		background: var(--g-card);
+		color: var(--g-ink);
+		font: inherit;
+		font-size: var(--g-size-13px);
+		cursor: pointer;
+	}
+	.etappen-tempo-knopf:focus-visible {
+		outline: var(--g-size-2px) solid var(--g-accent);
+		outline-offset: var(--g-size-2px);
+	}
+	.etappen-zeile-tempo {
+		padding: 0 var(--g-s-5) var(--g-size-14px);
 	}
 	/* #3006: Kopf über dem Etappen-Band mit dem Rand der Reiterfläche (HubReiterflaeche
 	   28/40 bzw. 20/16 px, max. 1480 px) — er steht damit genau dort, wo der Vergleich seinen

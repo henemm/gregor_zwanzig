@@ -106,6 +106,9 @@ class Stage:
     date: date
     waypoints: List[Waypoint]
     start_time: Optional[time] = None  # Startzeit der Etappe (default: 08:00 in Business Logic)
+    # Issue #3197 (ADR-0108): eigenes Grundtempo dieser Etappe in km/h
+    # (0,5..60). None = Trip-Tempo gilt. Fortbewegung bleibt trip-weit.
+    grundtempo_kmh: Optional[float] = None
 
     @property
     def first_waypoint(self) -> Optional[Waypoint]:

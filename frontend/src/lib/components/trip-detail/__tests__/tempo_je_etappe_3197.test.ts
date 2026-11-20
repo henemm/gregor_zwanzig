@@ -55,8 +55,8 @@ const variante = async (ersetzungen: [string, string][]) =>
 	(await import(`${pathToFileURL(PANEL).href}?f8variante=${Buffer.from(JSON.stringify(ersetzungen)).toString('base64url')}`)).default;
 const kopf = () => createRawSnippet(() => ({ render: () => '<div data-testid="probe-kopf">Etappen</div>' }));
 const entity = (s: string) => s.replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-const text = (k: Knoten) => entity(rohText(k)).replace(/\s+/g, ' ').trim();
-const mitTestid = (b: Knoten, id: string) => alle(b, (n: Knoten) => n.attrs['data-testid'] === id);
+const text = (k: Knoten) => entity(rohText(k as never)).replace(/\s+/g, ' ').trim();
+const mitTestid = (b: Knoten, id: string) => alle(b as never, (n: Knoten) => n.attrs['data-testid'] === id);
 
 async function panelBaum(lang: 'de' | 'en', start: [string, string][] = [], extra: Record<string, unknown> = {}): Promise<Knoten> {
 	const K = await variante(start);

@@ -138,6 +138,29 @@ func randomShortID() string {
 	return hex.EncodeToString(b)
 }
 
+// etappenTempoUngueltig meldet, ob eine Etappe ein Grundtempo ausserhalb
+// 0.5..60 km/h traegt (Issue #3197). Kein Zahlwert scheitert schon beim
+// Dekodieren (422, writeTripDecodeError).
+func etappenTempoUngueltig(stages []model.Stage) bool {
+	for _, st := range stages {
+		if st.GrundtempoKmh != nil && !model.ValidGrundtempo(*st.GrundtempoKmh) {
+			return true
+		}
+	}
+	return false
+}
+
+// writeTripDecodeError: falscher Typ fuer stages[].grundtempo_kmh ("3", true)
+// -> 422 (Issue #3197, AC-8); jeder andere Dekodierfehler bleibt 400.
+func writeTripDecodeError(w http.ResponseWriter, r *http.Request, err error) {
+	var te *json.UnmarshalTypeError
+	if errors.As(err, &te) && te.Field == "stages.grundtempo_kmh" {
+		WriteError(w, r, http.StatusUnprocessableEntity, "invalid_params", nil)
+		return
+	}
+	WriteError(w, r, 400, "bad_request", nil)
+}
+
 // ensureStageIDs belegt leere Stage.ID-Felder mit einer generierten ID.
 // Issue #243: Verhindert dass leere Stage-IDs ins Backend gelangen und
 // Svelte each_key_duplicate-Fehler im Frontend ausloesen.
@@ -171,13 +194,17 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		var trip model.Trip
 		if err := json.NewDecoder(r.Body).Decode(&trip); err != nil {
-			WriteError(w, r, 400, "bad_request", nil)
+			writeTripDecodeError(w, r, err)
 			return
 		}
 
 		trip.Stages = ensureStageIDs(trip.Stages)
 		// Issue #3196 (F-A2-2): tempo wie im PUT pruefen; fehlend bleibt erlaubt (Ableitung).
 		if bailIf(w, r, trip.Tempo != nil && !model.ValidTempo(*trip.Tempo), http.StatusUnprocessableEntity, "invalid_params") {
+			return
+		}
+		// Issue #3197: Etappen-Grundtempo wie im PUT pruefen.
+		if bailIf(w, r, etappenTempoUngueltig(trip.Stages), http.StatusUnprocessableEntity, "invalid_params") {
 			return
 		}
 
@@ -388,7 +415,7 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 
 		var req tripUpdateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			WriteError(w, r, 400, "bad_request", nil)
+			writeTripDecodeError(w, r, err)
 			return
 		}
 		// Issue #2961: Wachstumsgrenzen vor jedem Merge (wachstumsgrenzen.go).
@@ -402,6 +429,12 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		if req.Stages != nil && etappenGrenzeVerletzt(w, r, *req.Stages) {
+			return
+		}
+		// Issue #3197: Etappen-Grundtempo ausserhalb 0.5..60 -> 422, nichts
+		// wird geschrieben. Die Etappen werden als Ganzes ersetzt: fehlt das
+		// Feld an einer Etappe, ist die Ueberschreibung zurueckgenommen.
+		if req.Stages != nil && bailIf(w, r, etappenTempoUngueltig(*req.Stages), http.StatusUnprocessableEntity, "invalid_params") {
 			return
 		}
 
