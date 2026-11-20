@@ -23,6 +23,11 @@
       "precipitation": {"enabled": false},
       "dewpoint": {"enabled": true},
       "temperature": {"alarm_ab": "orange"}
-    }, "thunder": {"hoch": "orange"}}, "expected": 5}
+    }, "thunder": {"hoch": "orange"}}, "expected": 5},
+    {"name": "windrichtung_modus_gleich_vorlage_zurueck", "ampel": {"template": "radtour", "metrics": {"wind_direction": {"modus": "gegenwind"}}}, "expected": 0},
+    {"name": "windrichtung_modus_aus_gleich_fehlendem_modus_zurueck", "ampel": {"template": "allgemein", "metrics": {"wind_direction": {"modus": "aus", "sektoren": []}}}, "expected": 0},
+    {"name": "windrichtung_modus_abweichend", "ampel": {"template": "radtour", "metrics": {"wind_direction": {"modus": "aus"}}}, "expected": 1},
+    {"name": "windrichtung_sektoren_hinzugefuegt", "ampel": {"template": "allgemein", "metrics": {"wind_direction": {"modus": "sektoren", "sektoren": ["N", "NO"]}}}, "expected": 1},
+    {"name": "windrichtung_modus_und_grenze_eine_metrik", "ampel": {"template": "radtour", "metrics": {"wind_direction": {"modus": "sektoren", "sektoren": ["W"], "upper": {"yellow": 15, "orange": 25, "red": 35}}}}, "expected": 1}
   ]
 }

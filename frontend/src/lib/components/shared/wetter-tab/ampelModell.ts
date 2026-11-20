@@ -52,6 +52,9 @@ const OBEN = ['yellow', 'orange', 'red'] as const; // aufsteigend: gelb < orange
 const ALARM_AB: readonly AlarmAb[] = ['never', 'yellow', 'orange', 'red'];
 const ALARM_AB_GEWITTER: readonly AlarmAb[] = ['never', 'orange', 'red'];
 const RANG: Record<string, number> = { yellow: 1, orange: 2, red: 3 };
+/** #3222 (ADR-0126): Windrichtung, gleiche Mengen wie Python `services.windrichtung`. */
+const WIND_MODI = ['aus', 'gegenwind', 'sektoren'];
+const WIND_SEKTOREN = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
 /** Gruppenfolge der Zeilen (Gesamt-Spec §4); welche Metrik in welche Gruppe gehoert, sagt `/api/metrics`. */
 const GRUPPEN_FOLGE = ['temperature', 'wind', 'precip_thunder', 'sky_visibility', 'snow_height'];
 
@@ -116,6 +119,8 @@ export function verschmelzen(vorlage: Ampel, abo?: Ampel | null): Ampel {
 		}
 		if (e.enabled !== undefined && e.enabled !== null) ziel.enabled = e.enabled;
 		if (e.alarm_ab !== undefined && e.alarm_ab !== null) ziel.alarm_ab = e.alarm_ab;
+		if (e.modus !== undefined && e.modus !== null) ziel.modus = e.modus;
+		if (e.sektoren !== undefined && e.sektoren !== null) ziel.sektoren = [...e.sektoren];
 	}
 	for (const [k, v] of Object.entries(abo.thunder ?? {})) {
 		if (v !== undefined && v !== null) (res.thunder as Record<string, AmpelFarbe>)[k] = v;
@@ -142,7 +147,16 @@ export function gleicheSeite(a: AmpelSeite | null | undefined, b: AmpelSeite | n
 function zeileWeichtAb(e: AmpelMetrik, v: AmpelMetrik): boolean {
 	const grenzen = (['lower', 'upper'] as const).some((k) => k in e && !gleicheSeite(e[k], v[k]));
 	const werte = (['enabled', 'alarm_ab'] as const).some((k) => e[k] !== undefined && e[k] !== null && e[k] !== v[k]);
-	return grenzen || werte;
+	return grenzen || werte || richtungWeichtAb(e, v);
+}
+
+/** #3222: `modus` (fehlend = "aus") und `sektoren` (Menge, fehlend = leer), Spiegel `_richtung_weicht_ab`. */
+function richtungWeichtAb(e: AmpelMetrik, v: AmpelMetrik): boolean {
+	const modus = e.modus !== undefined && e.modus !== null && e.modus !== (v.modus || 'aus');
+	const soll = new Set(v.sektoren ?? []);
+	const ist = new Set(e.sektoren ?? []);
+	const sektoren = e.sektoren !== undefined && e.sektoren !== null && (ist.size !== soll.size || [...ist].some((k) => !soll.has(k)));
+	return modus || sektoren;
 }
 
 /** Abweichungen einer Abo-Ampel gegen eine gegebene Vorlagen-Ampel (Spiegel `deviation_count`). */
@@ -216,7 +230,20 @@ function metrikFehler(mid: string, e: unknown): string[] {
 		fehler.push('wetter.grenzen.fehler_ungueltig');
 	}
 	if (e.enabled !== undefined && e.enabled !== null && typeof e.enabled !== 'boolean') fehler.push('wetter.grenzen.fehler_ungueltig');
+	if (windrichtungUngueltig(mid, e)) fehler.push('wetter.grenzen.fehler_ungueltig');
 	return fehler;
+}
+
+/** #3222: Regeln fuer `modus`/`sektoren` (Spiegel `_windrichtung_grund`, Trip-Kontext). */
+function windrichtungUngueltig(mid: string, e: Record<string, unknown>): boolean {
+	const modus = e.modus ?? null;
+	const sektoren = e.sektoren ?? null;
+	if (modus === null && sektoren === null) return false;
+	if (mid !== 'wind_direction') return true;
+	if (modus !== null && !WIND_MODI.includes(modus as string)) return true;
+	if (sektoren === null) return false;
+	if (!Array.isArray(sektoren) || sektoren.some((k) => !WIND_SEKTOREN.includes(k as string))) return true;
+	return new Set(sektoren).size !== sektoren.length || (sektoren.length > 0 && modus !== 'sektoren');
 }
 
 /** Ganze Ampel pruefen, regelgleich mit Python `validate_ampel` und Go `validateAmpel`.

@@ -158,6 +158,18 @@ describe('AC-17: Reihenfolge-Regeln der Grenzen (Fehlerschluessel statt Text)', 
 			assert.equal(f.length === 0, v.gueltig, `Vektor ${v.name}: Frontend ${f.length === 0 ? 'gueltig' : 'ungueltig'} (${JSON.stringify(f)}), erwartet ${v.gueltig}`);
 		}
 	});
+
+	// #3222 S1 (ADR-0126): Windrichtung modus/sektoren regelgleich mit Python und Go.
+	// Der Kontext-Fall (Gegenwind im Ortsvergleich) folgt mit dem Editor (S4).
+	test('windrichtung_regelgleich_mit_python_und_go_ueber_gemeinsame_faelle', async () => {
+		const { m } = await umgebung();
+		const faelle = (fixture('ampel_windrichtung_cases.json').faelle as Json[]).filter((f) => f.kontext === 'route');
+		assert.ok(faelle.length >= 10, `zu wenige Faelle: ${faelle.length}`);
+		for (const fall of faelle) {
+			const f = m.ampelFehler(structuredClone(fall.ampel));
+			assert.equal(f.length === 0, fall.grund === null, `Fall ${fall.name}: Frontend ${JSON.stringify(f)}, erwartet Grund ${fall.grund}`);
+		}
+	});
 });
 
 // ── AC-18: Gewitter-Regeln ───────────────────────────────────────────────────

@@ -260,7 +260,7 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		// Issue #2792 S1a: ungueltige Profil-Ampel nie speichern.
-		if bailIf(w, r, displayConfigAmpelUngueltig(preset.DisplayConfig), http.StatusBadRequest, "ampel_ungueltig") {
+		if bailIf(w, r, displayConfigAmpelUngueltig(preset.DisplayConfig, true), http.StatusBadRequest, "ampel_ungueltig") {
 			return
 		}
 
@@ -476,7 +476,7 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		// Issue #2792 S1a: ungueltige Profil-Ampel nie speichern.
-		if bailIf(w, r, patchAmpelUngueltig(bodyBytes), http.StatusBadRequest, "ampel_ungueltig") {
+		if bailIf(w, r, patchAmpelUngueltig(bodyBytes, true), http.StatusBadRequest, "ampel_ungueltig") {
 			return
 		}
 		updated, err := applyComparePresetPatch(original, id, bodyBytes, time.Now().UTC())

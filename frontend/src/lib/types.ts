@@ -384,6 +384,10 @@ export type AmpelMetrik = {
 	alarm_ab?: AmpelAlarmAb;
 	lower?: AmpelSeite | null;
 	upper?: AmpelSeite | null;
+	/** #3222 (ADR-0126): nur `wind_direction`; fehlt = "aus". */
+	modus?: 'aus' | 'gegenwind' | 'sektoren' | null;
+	/** #3222: markierte Herkunfts-Sektoren (N, NO, O, SO, S, SW, W, NW), nur bei modus "sektoren". */
+	sektoren?: string[] | null;
 };
 export type Ampel = {
 	template?: string;
