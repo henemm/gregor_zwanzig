@@ -142,6 +142,27 @@ def test_ac1_trip_nur_text_regenwahrscheinlichkeit_roh_ist_zahl(monkeypatch):
     assert zellen and all(re.fullmatch(r"\d+", z) for z in zellen), zellen
 
 
+def test_ac1_trip_nur_text_regenwahrscheinlichkeit_einfach_englisch_3156(monkeypatch):
+    """AC-1 + ADR-0104 (F004): Nutzersprache Englisch, Regenwahrscheinlichkeit
+    E-Mail Einfach -> die Nur-Text-Mail des echten Renderers zeigt die
+    englische Wortstufe aus dem Katalog, nicht die deutsche."""
+    from i18n import t
+
+    folge = list(BASIS_KATALOG) + ["rain_probability"]
+    data = trip(tabelle([zeile("rain_probability", email="simplified"),
+                         zeile("temperature")], outlook_reports=[]), folge=folge)
+    mitschrift = trip_senden(monkeypatch, data, "evening", mit_ausblick=False, language="en")
+    _html, plain = mail_teile(mitschrift)
+    zellen = _regen_zellen_text(plain)
+    assert zellen, "Vorbedingung: Spalte Regenwahrscheinlichkeit im Klartext"
+    # Seed: 60 % je Stunde -> Stufe "wahrscheinlich" (Skala 25/50/75), Wort aus dem Katalog.
+    englisch = t("api.skala.regen.wahrscheinlich", "en")
+    deutsch = t("api.skala.regen.wahrscheinlich", "de")
+    assert englisch != deutsch, "Vorbedingung: Katalog unterscheidet die Sprachen"
+    assert set(zellen) == {englisch}, zellen
+    assert deutsch not in plain.split(), f"deutsche Stufe in englischer Mail: {zellen}"
+
+
 def test_trip_telegram_regenwahrscheinlichkeit_einfach_ist_wortstufe(monkeypatch):
     """PO-Briefing-Zusatz: Trip-Telegram Regenwahrscheinlichkeit Einfach ->
     Wortstufe in Kurzuebersicht und Segmenttabelle; die E-Mail (Roh) bleibt

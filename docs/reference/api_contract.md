@@ -2928,8 +2928,9 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
   „Roh"** — unabhängig vom Katalog-Feld `default_format_mode` (dessen Rückfall für
   `cloud_total`/`sunshine`/`wind_direction` `symbol`/`scale` wäre); der Ausblick übernimmt
   diesen Kanal-Rückfall bewusst nicht, um bestehende Trips optisch unverändert zu lassen.
-  Fähig sind genau zehn Größen (`OUTLOOK_FRIENDLY_CAPABLE`,
-  `src/app/metric_catalog.py`): `wind_direction`, `cloud_total`, `cloud_low`, `cloud_mid`,
+  Fähig sind genau zehn Größen (`OUTLOOK_FRIENDLY_CAPABLE`, seit 2026-11-20 / #3156 nicht mehr
+  handgepflegt, sondern abgeleitet aus `STELLEN_ZWEI_FORMEN` in `src/app/metric_catalog.py`,
+  Stelle `outlook`; `_AMPEL_CAPABLE_METRIC_IDS` ist nur noch Alias): `wind_direction`, `cloud_total`, `cloud_low`, `cloud_mid`,
   `cloud_high`, `wind`, `gust`, `precipitation`, `rain_probability`, `sunshine`. Für alle
   anderen Größen (u.a. `thunder`, `temperature`, `wind_chill`, `cape`, `visibility`) zeigt
   der Ausblick unverändert die Rohform, unabhängig vom Feldwert. Wirkt in allen vier

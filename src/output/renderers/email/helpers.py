@@ -25,7 +25,7 @@ from zoneinfo import ZoneInfo
 
 from app.day_window import hour_in_window
 from app.metric_catalog import (
-    get_col_defs, get_metric, get_metric_by_col_key,
+    AMPEL_METRIC_IDS, get_col_defs, get_metric, get_metric_by_col_key,
 )
 from app.models import (
     ForecastDataPoint, NormalizedTimeseries, ThunderLevel,
@@ -908,6 +908,11 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
     if key == "pressure":
         return f"{val:.1f}" if val is not None else "–"
     if key == "pop":
+        # Issue #3156: Einfach im Text -> Wortstufe (Skala 25/50/75, wie
+        # Orte-Vergleich und Ausblick).
+        if mode == "simplified" and not html:
+            from services.weather_metrics import format_rain_probability_scale
+            return format_rain_probability_scale(val, lang=lang)
         # Issue #814: HTML-Ampel durch indicator_keys (use_friendly_format).
         if html and _use_ampel:
             return _ampel_dot_severity("rain_probability", val, ampel=ampel)
@@ -1393,7 +1398,9 @@ def build_format_modes(dc: UnifiedWeatherDisplayConfig) -> dict[str, str]:
 
 # Issue #814: Metrik-IDs die eine HTML-Ampel erhalten können.
 # Issue #2792 S1c-4b (AC-6): "cape" entfaellt — CAPE traegt keine eigene Farbe.
-_AMPEL_CAPABLE_METRIC_IDS = frozenset({"wind", "gust", "precipitation", "rain_probability"})
+# Issue #3156: Alias auf die Katalog-Menge (eine Quelle; Alarm-Pfad und
+# Validator importieren den Namen).
+_AMPEL_CAPABLE_METRIC_IDS = AMPEL_METRIC_IDS
 
 
 def build_html_indicator_keys(dc: UnifiedWeatherDisplayConfig) -> set[str]:

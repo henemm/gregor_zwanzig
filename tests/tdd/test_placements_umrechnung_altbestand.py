@@ -239,6 +239,23 @@ def test_fall3_nur_text_mail_folgt_der_html_mail():
     assert not any(a[0] == "nur_text_folgt_html" for a in _arten(orte))
 
 
+def test_fall3_regenwahrscheinlichkeit_einfach_nur_text_folgt_html_3156():
+    """#3156 F001: Die Regenwahrscheinlichkeit gehoert zur Ampelmenge des
+    Katalogs. Steht sie in der Trip-E-Mail auf Einfach, meldet die Umrechnung
+    die Nur-Text-Mail als der HTML-Mail folgend; auf Roh nicht."""
+    einfach = _trip(["rain_probability"])
+    einfach["metrics"][0]["use_friendly_format"] = True
+    umr = _umrechnen(einfach, "trip")
+    assert _zeilen(umr.placements)["rain_probability"]["formats"]["email"] == "simplified"
+    assert ("nur_text_folgt_html", "email", "rain_probability") in _arten(umr)
+
+    roh = _trip(["rain_probability"])
+    roh["metrics"][0]["use_friendly_format"] = False
+    umr_roh = _umrechnen(roh, "trip")
+    assert _zeilen(umr_roh.placements)["rain_probability"]["formats"]["email"] == "raw"
+    assert not any(a[0] == "nur_text_folgt_html" for a in _arten(umr_roh))
+
+
 def test_fall4_abweichende_wolkenform_der_sms_entfaellt():
     trip = _umrechnen(_trip(["cloud_total", "wind"], channel_layouts={"sms": [
         {"metric_id": "cloud_total", "format_mode": "raw"}, {"metric_id": "wind"}]}), "trip")

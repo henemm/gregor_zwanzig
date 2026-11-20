@@ -497,12 +497,16 @@ def resolve_hourly_metric_formats(stored: object) -> dict[str, bool] | None:
     """Orte-Stundenverlauf: ``display_config.hourly_metric_formats`` (#3097,
     ADR-0121 Nachtrag 3b) -> ``{kennung: bool}``; ``None`` = nie eingestellt.
 
-    Nur boolesche Werte zaehlen (wahr = Einfach, ausdruecklich falsch = Roh).
-    Die Faehigkeit filtert hier bewusst NICHT: ``_friendly_hour_text`` liefert
-    fuer Groessen ohne Einfachform ``None``, die Zelle bleibt dann Roh."""
+    Nur boolesche Werte zaehlen (wahr = Einfach, ausdruecklich falsch = Roh),
+    und nur fuer Groessen mit zwei Formen an der Stelle ``hourly`` der Quelle
+    ``zwei_formen_stellen`` (#3156): Sonnenstunden (gesperrt) und Windrichtung
+    (immer Kompass) fallen heraus."""
+    from app.metric_catalog import zwei_formen_stellen
+
     if not isinstance(stored, dict):
         return None
-    return {k: v for k, v in stored.items() if isinstance(k, str) and isinstance(v, bool)}
+    return {k: v for k, v in stored.items()
+            if isinstance(v, bool) and "hourly" in zwei_formen_stellen(k)}
 
 
 def _friendly_hour_text(

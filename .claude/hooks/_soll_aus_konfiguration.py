@@ -66,7 +66,9 @@ _SRC = Path(__file__).resolve().parents[2] / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from app.metric_catalog import _METRICS, OUTLOOK_FRIENDLY_CAPABLE, aggregation_label  # noqa: E402
+from app.metric_catalog import (  # noqa: E402
+    _METRICS, AMPEL_METRIC_IDS, OUTLOOK_FRIENDLY_CAPABLE, aggregation_label,
+)
 from i18n import t  # noqa: E402
 from output.renderers.compare_hourly_metric_ids import (  # noqa: E402
     FRONTEND_TO_HOURLY_METRIC_ID, HOURLY_DEFAULT_METRIC_IDS, HOURLY_EXCLUDED_METRIC_IDS,
@@ -75,7 +77,7 @@ from output.renderers.compare_hourly_metric_ids import (  # noqa: E402
 from output.renderers.channel_layout import _PRIMARY_SLOTS, METRIC_PRIORITY  # noqa: E402
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG  # noqa: E402
 from output.renderers.email.helpers import (  # noqa: E402
-    _AMPEL_CAPABLE_METRIC_IDS, _PILL_CATALOG_ORDER, NO_HOURLY_COLUMN_METRIC_IDS,
+    _PILL_CATALOG_ORDER, NO_HOURLY_COLUMN_METRIC_IDS,
 )
 from app.ampel_templates import AMPEL_TEMPLATES, DEFAULT_TEMPLATE  # noqa: E402
 
@@ -295,8 +297,10 @@ def _ausblick(gespeichert: object, grundauswahl: list[str] | None) -> list[str] 
 
 def _formen_stunden(liste: list[dict]) -> dict[str, dict]:
     """Spalte -> erlaubte Zellformen je Teil (``None`` = nicht pruefbar).
-    Gewollte Ausnahmen (Spec §2 Punkt 3): Ampel-faehige Groessen zeigen
-    Einfach im HTML als Ampelpunkt, im Klartext als Zahl (#814); Gewitter zeigt
+    Gewollte Ausnahmen (Spec §2 Punkt 3): Ampel-faehige Groessen
+    (``AMPEL_METRIC_IDS``: Wind, Boeen, Regen, Regen-W.) zeigen im HTML die
+    Ampel (``use_friendly_format``, #814), im Klartext folgt die Form dem
+    ``format_mode``: Einfach = Wortstufe, Roh = Zahl (#435, #3156); Gewitter zeigt
     roh schon das Stufenwort (Klartext in beiden Formen gleich); die
     verschmolzene Windrichtung hat keine eigene Spalte (#435)."""
     formen: dict[str, dict] = {}
@@ -304,9 +308,10 @@ def _formen_stunden(liste: list[dict]) -> dict[str, dict]:
         mid = e["metric_id"]
         if mid == "precip_type" or mid in NO_HOURLY_COLUMN_METRIC_IDS:
             continue
-        if mid in _AMPEL_CAPABLE_METRIC_IDS:
+        if mid in AMPEL_METRIC_IDS:
             html = (AMPEL,) if e.get("use_friendly_format", True) else (ZAHL,)
-            klartext: tuple | None = (ZAHL,)
+            # #3156: Klartext wie ``helpers.fmt_val`` (Einfach -> Wortstufe).
+            klartext: tuple | None = (WORT,) if _modus(e) == "simplified" else (ZAHL,)
         elif mid == "thunder":
             html, klartext = ((AMPEL,) if _modus(e) != "raw" else (ZAHL, WORT)), None
         else:
@@ -668,7 +673,7 @@ def _orte_formen(dc: dict, paare: list[tuple[str, str]] | None, lang: str) -> di
     formen: dict[str, dict] = {}
     for label, (m, _a) in zip(_uebersicht_labels(paare, lang), paare):
         if label in einfach:
-            html = (AMPEL,) if m in _AMPEL_CAPABLE_METRIC_IDS else (WORT, AMPEL)
+            html = (AMPEL,) if m in AMPEL_METRIC_IDS else (WORT, AMPEL)
             formen[label] = {"HTML": html, "Klartext": (WORT,)}
         elif m not in _ROH_WORT and m != "wind_direction":
             formen[label] = {"HTML": (ZAHL,), "Klartext": (ZAHL,)}

@@ -32,7 +32,7 @@ from dataclasses import dataclass
 from typing import Mapping, Optional, Sequence
 
 from app.metric_catalog import (
-    _METRICS_BY_ID, SMS_FORMAT_MODE_METRIC_IDS, standard_form, stellen_sperre,
+    _METRICS_BY_ID, AMPEL_METRIC_IDS, SMS_FORMAT_MODE_METRIC_IDS, standard_form, stellen_sperre,
     zwei_formen_stellen,
 )
 
@@ -309,15 +309,13 @@ def heutige_form(surface: str, stelle: str, metric_id: str, fmt: Optional[str]) 
     """Die Form, die der bisherige Pfad an ``stelle`` zeigt (Zeilen-Format ->
     raw|simplified). Fuer die E-Mail zaehlt die HTML-Mail; deren Ampelpunkt
     haengt beim Trip an ``use_friendly_format`` (ohne Angabe: Einfach)."""
-    from output.renderers.email.helpers import _AMPEL_CAPABLE_METRIC_IDS
-
     if fmt == "raw":
         return "raw"
     if fmt is not None:
         return "simplified"
     if stelle in ("outlook", "hourly") or surface != "trip":
         return "raw"
-    if stelle == "email" and metric_id in _AMPEL_CAPABLE_METRIC_IDS:
+    if stelle == "email" and metric_id in AMPEL_METRIC_IDS:
         return "simplified"
     return standard_form(metric_id)
 
@@ -490,12 +488,10 @@ def _regel_changes(surface, stelle, rt, alt, neu, kid) -> list[OutputChange]:
     """Die zwei Faelle, die das View-Model nicht als Abweichung zeigt:
     Nur-Text-Mail folgt der HTML-Mail (Trip, Ampel-Groessen auf Einfach) und
     die in der SMS abweichend gewaehlte Wolken-Form."""
-    from output.renderers.email.helpers import _AMPEL_CAPABLE_METRIC_IDS
-
     out = []
     if stelle == "email" and surface == "trip":
         out += [OutputChange(NUR_TEXT_FOLGT_HTML, "email", kid(m), None) for m, f in neu
-                if kid(m) in _AMPEL_CAPABLE_METRIC_IDS and f == "simplified"]
+                if kid(m) in AMPEL_METRIC_IDS and f == "simplified"]
     if stelle == "sms":
         for mid, fmt in alt:
             c = kid(mid)

@@ -754,6 +754,12 @@ Editor) dafür wiederholen.
 > wirkungslos (auf Staging gegengeprüft). Details:
 > `docs/specs/modules/fix_2049_ausblick_darstellungsform.md`.
 
+> **Nachtrag 2026-11-20 (Issue #3156, ADR-0124 Nr. 5):** Die Fähigkeitsliste des Ausblicks
+> (zehn Kennungen) ist nicht mehr handgepflegt, sondern abgeleitet aus `STELLEN_ZWEI_FORMEN`
+> (Stelle `outlook`) in `metric_catalog.py`. Die Menge bleibt dieselbe. Die früher getrennte
+> Liste `_AMPEL_CAPABLE_METRIC_IDS` ist nur noch Alias auf die Katalog-Ampelmenge. Die
+> Regenwahrscheinlichkeit zeigt Einfach jetzt auch in Nur-Text-Mail und Telegram (Wortstufe).
+
 > **Nachtrag 2026-11-17 (Issue #3122, ADR-0124):** (1) **Ist-Korrektur:** Die Aussage oben, der
 > Stundenverlauf bleibe ohne Bindung, gilt nicht mehr. Seit #3047 schneidet auch der
 > Orte-Stundenverlauf gegen die Grundauswahl (`resolve_hourly_metric_ids()` in

@@ -567,6 +567,110 @@ def test_trip_darstellung_ausblick_roh_statt_einfach_scheitert(tmp_path, darstel
     assert "SOLL: Darstellung Ausblick (HTML)" in aus, aus
 
 
+# ---- #3156 AC-9: Ampel-Groessen auf Einfach -> Klartext Wortstufe ---- #
+@pytest.fixture
+def ampel_einfach_mail(monkeypatch, tmp_path):
+    """Wind, Regen und Regen-W. mit ``format_mode: simplified``: der echte
+    Renderer schreibt im Klartext die Wortstufe (Regen-W. Skala 25/50/75),
+    das Validator-Soll muss dieselbe Form erwarten."""
+    daten = _trip_daten(_TRIP_FOLGE)
+    dc = daten["display_config"]
+    dc["metrics"].append({"metric_id": "rain_probability", "enabled": True, "bucket": "primary",
+                          "order": 4, "use_friendly_format": True})
+    for m in dc["metrics"]:
+        if m["metric_id"] in ("wind", "precipitation", "rain_probability"):
+            m.update(use_friendly_format=True, format_mode="simplified")
+    return _trip_eml(monkeypatch, daten), _konfig(tmp_path, "ampel_einfach", daten)
+
+
+def test_trip_ampel_einfach_klartext_wortstufe_positiv(tmp_path, ampel_einfach_mail):
+    eml, konfig = ampel_einfach_mail
+    text = next(t.get_payload(decode=True).decode() for t in email.message_from_bytes(eml).walk()
+                if t.get_content_type() == "text/plain")
+    assert re.search(r"(?m)^  \d\d +\d+ +[\d.]+ +[a-zäöüß]+ +[a-zäöüß]+ +"
+                     r"(sehr wahrscheinlich|unwahrscheinlich|wahrscheinlich|möglich)\s*$", text), (
+        "Testaufbau: Regen/Wind/Regen-W. Einfach muessen im Klartext als Wort erscheinen")
+    code, aus = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
+    assert code == 0, aus
+
+
+def test_trip_ampel_einfach_klartext_zahl_scheitert(tmp_path, ampel_einfach_mail):
+    """Regen-W. auf Einfach, der Klartext zeigt die Prozentzahl -> Exit 1."""
+    eml, konfig = ampel_einfach_mail
+    falsch = _aendere(eml, plain=lambda p: re.sub(
+        r"\b(sehr wahrscheinlich|unwahrscheinlich|wahrscheinlich|möglich)\b",
+        lambda t: "40".ljust(len(t.group(0))), p))
+    code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
+    assert code == 1, aus
+    assert ("SOLL: Darstellung Etappen-Stundentabelle (Klartext) 1: Spalte 'Rain%' soll "
+            "Symbol/Wort (Einfach) zeigen") in aus, aus
+    assert "Spalte 'Rain' soll" not in aus and "Spalte 'Wind' soll" not in aus, aus
+
+
+def _soll_modul():
+    """Das Soll-Modul der Validatoren direkt aus ``.claude/hooks`` (nur lesen)."""
+    import importlib.util
+
+    pfad = Path(__file__).resolve().parents[2] / ".claude" / "hooks" / "_soll_aus_konfiguration.py"
+    spec = importlib.util.spec_from_file_location("_soll_aus_konfiguration_3156", pfad)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+@pytest.mark.parametrize("freundlich, modus, html, klartext", [
+    (True, "simplified", ("ampel",), ("wort",)),
+    (True, "raw", ("ampel",), ("zahl",)),
+    (False, "simplified", ("zahl",), ("wort",)),
+    (False, "raw", ("zahl",), ("zahl",)),
+])
+def test_trip_stunden_soll_regenwahrscheinlichkeit_ampelzweig_3156(freundlich, modus, html,
+                                                                     klartext):
+    """#3156 F002: Die Regenwahrscheinlichkeit gehoert im Soll der Trip-
+    Stundenzeilen zum Ampel-Zweig -- HTML folgt ``use_friendly_format``
+    (Ampel bzw. Zahl), der Klartext dem ``format_mode`` (Einfach = Wortstufe,
+    Roh = Zahl). Exakter Vergleich: der allgemeine Einfach-Zweig liesse im
+    HTML auch das Wort zu bzw. zeigte bei Roh keine Ampel."""
+    soll = _soll_modul()
+    eintrag = {"metric_id": "rain_probability", "enabled": True, "bucket": "primary",
+               "order": 0, "use_friendly_format": freundlich, "format_mode": modus}
+    spalte = soll._REG["rain_probability"].col_label
+    formen = soll._formen_stunden([eintrag])
+    assert formen[spalte] == {"HTML": html, "Klartext": klartext}, formen
+
+
+def _ampel_zwei_formen() -> list[str]:
+    """Ampelgroessen aus der Quelle (``AMPEL_METRIC_IDS``), die laut Katalog
+    zwei Darstellungen kennen (nur dort wirkt Einfach)."""
+    from app.metric_catalog import AMPEL_METRIC_IDS, get_metric
+
+    return sorted(m for m in AMPEL_METRIC_IDS if len(get_metric(m).format_modes) > 1)
+
+
+def test_orte_soll_ampelmenge_enthaelt_regenwahrscheinlichkeit_3156():
+    """Vorbedingung F005: die Parametrisierung unten deckt die Regen-W. ab."""
+    assert "rain_probability" in _ampel_zwei_formen(), _ampel_zwei_formen()
+
+
+@pytest.mark.parametrize("metrik", _ampel_zwei_formen())
+@pytest.mark.parametrize("modus, html, klartext", [
+    ("simplified", ("ampel",), ("wort",)),
+    ("raw", ("zahl",), ("zahl",)),
+])
+def test_orte_soll_ampelgroessen_einfach_nur_ampelpunkt_3156(metrik, modus, html, klartext):
+    """#3156 F005: Im Soll der Orte-Vergleichstabelle zeigt eine Ampelgroesse
+    (aus ``AMPEL_METRIC_IDS``) auf Einfach im HTML NUR den Ampelpunkt -- das
+    Wort scheitert --, im Klartext die Wortstufe; Roh = Zahl in beiden Teilen.
+    Exakter Vergleich: der allgemeine Einfach-Zweig liesse (Wort, Ampel) zu."""
+    soll = _soll_modul()
+    dc = {"channel_layouts": {"email": [
+        {"metric_id": metrik, "enabled": True, "format_mode": modus}]}}
+    paare = [(metrik, "max")]
+    label = soll._uebersicht_labels(paare, "de")[0]
+    formen = soll._orte_formen(dc, paare, "de")
+    assert formen[label] == {"HTML": html, "Klartext": klartext}, formen
+
+
 # --------------------------------------------------------------------------- #
 # Nachlieferung J2: Fall A (``metrics`` fehlt bzw. ``[]``) und bewusst leer
 # --------------------------------------------------------------------------- #

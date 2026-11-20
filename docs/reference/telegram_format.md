@@ -1,10 +1,10 @@
 ---
 entity_id: telegram_format
 type: reference
-version: "1.7"
+version: "1.8"
 status: active
 created: 2026-10-21
-updated: 2026-11-19
+updated: 2026-11-20
 tags: [telegram, channel, renderer, inbound, reference]
 ---
 
@@ -56,7 +56,9 @@ Der Stil wird je Trip/Vergleich über `report_config.telegram_style` gewählt: `
 
 **Bezugszeitraum der Kurzübersicht (`rich`, Trip, #3047 Runde 7 B-L1):** Alle Zeilen der Kurzübersicht werden über das eingestellte Tagesfenster bewertet (Standard 4–19 Uhr, sonst `day_window_start_hour`/`_end_hour`, ADR-0035), aus derselben Punktmenge wie SMS und Mail: Gehzeit der Etappen ab Fensterbeginn, nach der Ankunft das Ziel bis Fensterende. Spitzenwert und `@{h}` stimmen damit mit der SMS überein (Fenster 10–19: `G 60@16` ⇔ SMS `G45@10(60@16)`, nie eine Stunde vor 10; Standard: `R 2.0@04` ⇔ SMS `R2.0@4`). Ausnahme wie in SMS und Mail-Kachel: Temperatur und gefühlte Temperatur zeigen die Gehzeit-Spanne (#1417), abends mit dem Nachtwert als Untergrenze. Die frühere Regel „nur Gewitter wechselt aufs Fenster, alle anderen Größen bleiben bei der Gehzeit“ (#1498) ist damit abgelöst (ADR-0095). Die Segment-Tabellen zeigen weiterhin die Gehzeit-Stunden der Etappe, dieselben Stunden wie die Etappentabelle der Mail.
 
-**Roh/Einfach je Zeile im Trip-Briefing (`rich`, #3063 Punkt 2, #3047 Runde 7 AC-22):** Kurzübersicht und Segment-Tabellen formatieren jede Zeile der Telegram-Liste nach ihrer Roh/Einfach-Wahl, mit derselben Regel wie die Mail (`build_format_modes` der Telegram-Liste an `fmt_val`). Beispiel Windrichtung: Roh `WD 250°`, Einfach `WD W` (Einfach und mit Wind gewählt: in der Windzeile `W 20 W`). Bewölkung: Roh `CT 70`, Einfach Wolkensymbol.
+**Roh/Einfach je Zeile im Trip-Briefing (`rich`, #3063 Punkt 2, #3047 Runde 7 AC-22):** Kurzübersicht und Segment-Tabellen formatieren jede Zeile der Telegram-Liste nach ihrer Roh/Einfach-Wahl, mit derselben Regel wie die Mail (`build_format_modes` der Telegram-Liste an `fmt_val`). Beispiel Windrichtung: Roh `WD 250°`, Einfach `WD W` (Einfach und mit Wind gewählt: in der Windzeile `W 20 W`). Bewölkung: Roh `CT 70`, Einfach Wolkensymbol. Regenwahrscheinlichkeit (seit #3156): Roh `PR 60`, Einfach die Wortstufe (Skala 25/50/75, z. B. `PR wahrscheinlich`).
+
+**Roh/Einfach im Orte-Telegram und Orte-Klartext (#3156, ADR-0124 Nr. 5):** Ein gespeichertes Einfach (`channel_layouts.telegram` bzw. `.email`) wirkt nur, wo `metric_catalog.STELLEN_ZWEI_FORMEN` für diese Metrik die Stelle nennt. Regenwahrscheinlichkeit zeigt damit auf Einfach die Wortstufe; Gewitter hat im Telegram nur eine Form und zeigt wie bisher das Stufenwort.
 
 **Quelle der Telegram-Liste (Trip, #3098, ADR-0121 Nachtrag 3c):** Menge, Folge und Roh/Einfach je Zeile kommen aus dem Kanal-Listen-Resolver (`resolve_channel_lists(...).telegram`), nicht mehr aus der Kanal-Kaskade im Renderer. Der Adapter `telegram_metric_configs` (`src/output/renderers/email/helpers.py`) übersetzt die Zeilen in die Darstellungsform des Renderers; die Telegram-Kanal-Ebene wird danach nicht erneut kaskadiert. Die zugestellte Nachricht bleibt unverändert (Golden `tests/golden/telegram_briefing/`). Das Orte-Telegram liest seit #3057 aus demselben Resolver.
 
@@ -146,6 +148,7 @@ das Menü ist botweit und bleibt deutsch (P7 #2669, Known Limitations); die Zeil
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 1.8 | 2026-11-20 | Roh/Einfach aus einer Quelle (#3156): Regenwahrscheinlichkeit hat Einfach (Wortstufe) in Trip- und Orte-Telegram; im Orte-Telegram entscheidet `STELLEN_ZWEI_FORMEN` je Stelle (Gewitter: nur eine Form, Ausgabe unverändert). |
 | 1.7 | 2026-11-19 | 3-Tages-Ausblick (#3155, B4 von #3122): Kopf „3-Tages-Ausblick“ / „3-day outlook“ statt „Ausblick“/„Outlook“ in Trip und Orte; Trip ohne Tabelle mit `show_outlook: false` (nicht Kompakt) zeigt im Telegram keinen Ausblick mehr (bewusste Änderung, eine steuernde Stelle). |
 | 1.6 | 2026-11-17 | Trip-Briefing (#3098, ADR-0121 Nachtrag 3c): Menge, Folge und Roh/Einfach der Telegram-Zeilen kommen aus dem Kanal-Listen-Resolver statt aus der Kanal-Kaskade im Renderer. Ausgabe unverändert. |
 | 1.5 | 2026-11-16 | Ortsvergleich-Briefing (#3047 Runde 7): „nie eingestellt“ folgt der Mail-Tabelle (B-L4); Hinweis „Warnungen nicht abrufbar“ (B-L2); Einfach bei Ampel-Größen mit `@{h}` nach der Ampel des Ortsvergleichs (B-L3). |
