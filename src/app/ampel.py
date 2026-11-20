@@ -250,6 +250,12 @@ AMPEL_LESER = frozenset({
 })
 
 
+# Issue #3228 (S2 von #3222): abgeleitete Ampelgroessen -- ihre Schwellen gelten
+# fuer einen abgeleiteten Wert (Windrichtung: ``wind_unerwuenscht_kmh``), nie
+# fuer den Spaltenwert (Grad). Daher NICHT in ``hat_ampel`` (Kurzkanaele, S3).
+AMPEL_ABGELEITET = frozenset({"wind_direction"})
+
+
 def hat_ampel(metric_id: Optional[str]) -> bool:
     """Traegt diese Metrik ueberhaupt eine Farbe? (die 9 Leser; CAPE seit
     S1c-4b nicht mehr, P1/AC-6)."""
@@ -274,7 +280,7 @@ def schwellen_aus_ampel(ampel: Mapping, metric_id: Optional[str]) -> dict:
     Eine leere Ampel (``{}`` bzw. ohne ``metrics``) ist ein Programmierfehler
     und scheitert laut, fuer jede Metrik (S1c-4b, AC-27)."""
     _pruefe_aufgeloest(ampel)
-    if metric_id not in AMPEL_LESER:
+    if metric_id not in AMPEL_LESER | AMPEL_ABGELEITET:
         return {}
     return _schwellen(ampel["metrics"].get(metric_id) or {})
 

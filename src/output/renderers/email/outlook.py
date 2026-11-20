@@ -447,8 +447,12 @@ def _metric_column_bg(col: dict, raw: object, *, ampel: dict) -> str:
     """
     from output.metric_format import severity_for
 
+    from app.ampel import AMPEL_ABGELEITET
+
     kind = col.get("kind")
-    if kind == "enum":
+    # Issue #3228: abgeleitete Groessen (Windrichtung) nie nach dem Spaltenwert
+    # (Grad) faerben; der Ausblick kennt den abgeleiteten Wert erst ab S3.
+    if kind == "enum" or col.get("metric_id") in AMPEL_ABGELEITET:
         return ""
     if kind == "ordinal":
         band = _thunder_band(raw, ampel=ampel)

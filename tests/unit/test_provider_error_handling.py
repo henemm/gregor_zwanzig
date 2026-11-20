@@ -169,7 +169,8 @@ class TestFormatterErrorRendering:
         formatter = TripReportFormatter()
 
         # Must not raise AttributeError
-        rows = formatter._extract_hourly_rows(error_data, None)
+        from app.ampel import resolve_ampel
+        rows = formatter._extract_hourly_rows(error_data, None, ampel=resolve_ampel(None))
         assert isinstance(rows, list)
 
 

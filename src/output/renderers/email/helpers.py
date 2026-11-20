@@ -759,6 +759,21 @@ def ampel_level(metric_id: str, value, *, ampel: dict) -> "Optional[str]":
     return severity_for(metric_id, value, ampel=ampel)
 
 
+_STUFEN_FOLGE = ("green", "yellow", "orange", "red")
+
+
+def mit_windrichtung(stufe: "Optional[str]", row: "dict | None", *, ampel: dict) -> "Optional[str]":
+    """Issue #3228: hoehere der beiden Stufen (``stufe`` und Windrichtungs-Ampel
+    aus ``row["_wind_unerwuenscht_kmh"]``), nicht addiert. Ohne Seitenkanal
+    bleibt ``stufe`` unveraendert."""
+    if not row or "_wind_unerwuenscht_kmh" not in row:
+        return stufe
+    from output.metric_format import severity_for
+    richtung = severity_for("wind_direction", row["_wind_unerwuenscht_kmh"], ampel=ampel)
+    return max((s for s in (stufe, richtung) if s is not None),
+               key=_STUFEN_FOLGE.index, default=None)
+
+
 # Mapping: fmt_val col_key → metric catalog id fuer Ampel-Lookup
 _AMPEL_KEY_TO_METRIC_ID = {
     "wind": "wind",
@@ -860,7 +875,13 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
             return format_wind_strength(val, lang=lang)
         # Issue #814: HTML-Ampel wird durch indicator_keys gesteuert (use_friendly_format),
         # nicht durch mode (build_format_modes liefert immer 'raw' für diese Metriken).
-        if html and _use_ampel:
+        if html and _use_ampel and key == "wind" and row and "_wind_dir_deg" in row \
+                and "_wind_unerwuenscht_kmh" in row:
+            # Issue #3228 (Merge): Punkt = hoehere Stufe aus Wind und Richtung.
+            from output.metric_format import severity_for
+            level = mit_windrichtung(severity_for("wind", val, ampel=ampel), row, ampel=ampel)
+            s = _ampel_dot_css(level) if level else "–"
+        elif html and _use_ampel:
             metric_id = _AMPEL_KEY_TO_METRIC_ID[key]
             s = _ampel_dot_severity(metric_id, val, ampel=ampel)
         else:

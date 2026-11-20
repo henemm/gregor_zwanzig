@@ -222,7 +222,8 @@ def test_ac1_schwellen_der_windrichtung_aus_abgeleiteter_ampel():
     assert "wind_direction" in getattr(ampel_mod, "AMPEL_ABGELEITET", frozenset()), (
         "AMPEL_ABGELEITET mit 'wind_direction' fehlt in app.ampel"
     )
-    assert ampel_mod.schwellen_aus_ampel(resolve_ampel(RADTOUR), "wind_direction") == {
+    radtour = resolve_ampel({"display_config": {"ampel": RADTOUR}})
+    assert ampel_mod.schwellen_aus_ampel(radtour, "wind_direction") == {
         "yellow": 10, "orange": 20, "red": 30,
     }
     assert hat_ampel("wind_direction") is False
@@ -231,9 +232,11 @@ def test_ac1_schwellen_der_windrichtung_aus_abgeleiteter_ampel():
 def test_ac1_stundenzeilen_tragen_den_gegenwind_als_seitenkanal():
     """Seitenkanal ``row["_wind_unerwuenscht_kmh"]`` (analog ``_wind_dir_deg``):
     bei Radtour und Nordkurs/Nordwind 25 km/h je Stunde 25.0. Zeilenbau ueber
-    ``_extract_hourly_rows(seg_data, dc)``, Ampel aus ``dc.ampel``."""
+    ``_extract_hourly_rows(seg_data, dc, ampel=...)``, Ampel = aufgeloeste
+    Abo-Ampel (Pflicht-Keyword, Ratsche test_profil_ampel_kette)."""
     seg = _etappe(NORD, 25, 0)
-    rows = TripReportFormatter()._extract_hourly_rows(seg, _dc(RADTOUR))
+    dc = _dc(RADTOUR)
+    rows = TripReportFormatter()._extract_hourly_rows(seg, dc, ampel=resolve_ampel(dc))
     assert rows, "Testdaten-Fehler: keine Zeilen"
     assert [r.get("_wind_unerwuenscht_kmh") for r in rows] == [25.0] * len(rows)
 
@@ -326,7 +329,8 @@ def test_ac6_alt_trip_zeilen_ohne_seitenkanal():
     strukturell unveraendert). Darf vorher gruen sein."""
     seg = _etappe(NORD, 25, 0)
     for ampel in ({"template": "wandern"}, RADTOUR_AUS):
-        rows = TripReportFormatter()._extract_hourly_rows(seg, _dc(ampel))
+        dc = _dc(ampel)
+        rows = TripReportFormatter()._extract_hourly_rows(seg, dc, ampel=resolve_ampel(dc))
         assert rows
         assert all("_wind_unerwuenscht_kmh" not in r for r in rows), ampel
 
@@ -445,3 +449,32 @@ def test_ac11_sms_premium_telegram_identisch_zu_modus_aus():
     assert mit.sms_text == aus.sms_text
     assert mit.premium_sms_text == aus.premium_sms_text
     assert mit.telegram_bubbles == aus.telegram_bubbles
+
+
+# ---------------------------------------------------------------------------
+# Regression: 3-Tages-Ausblick faerbt die Windrichtung nie nach Grad
+# ---------------------------------------------------------------------------
+
+def test_ausblick_windrichtung_350_grad_bei_radtour_ohne_hintergrund():
+    """Seit ``schwellen_aus_ampel`` die Windrichtung liest (AMPEL_ABGELEITET),
+    haette der Ausblick den GRADWERT gegen die km/h-Grenzen geprueft (350 Grad
+    >= 30 -> rot). Der Ausblick kennt den abgeleiteten Wert erst ab S3: die
+    Windrichtungs-Spalte bleibt ohne Hintergrund. Gegenprobe: die Windspalte
+    derselben Zeile (50 km/h, Radtour-Wind rot ab 45) ist gefaerbt,
+    der Messaufbau also scharf. Echter Aufruf, kein Mock."""
+    from output.renderers.email.outlook import build_outlook_row, render_outlook_table
+
+    ampel = resolve_ampel({"display_config": {"ampel": RADTOUR}})
+    wdir = {"metric_id": "wind_direction", "aggregation": "avg"}
+    wind = {"metric_id": "wind", "aggregation": "max"}
+    summary = SegmentWeatherSummary(wind_direction_avg_deg=350, wind_max_kmh=50.0)
+    row = build_outlook_row(summary, [], "Mo", _UTC, metrics=[wdir, wind],
+                            context="route", ampel=ampel)
+    html = render_outlook_table([row], show_acc=False, metrics=[wdir, wind], ampel=ampel)
+
+    styles = re.findall(r'<td style="([^"]*)"', html)
+    assert len(styles) == 3, f"Testdaten: Wochentag + 2 Spalten erwartet: {styles!r}"
+    assert "background:" not in styles[1], f"Windrichtung 350 Grad gefaerbt: {styles[1]!r}"
+    assert styles[2].startswith(f"background:{tone_css('red')[0]};"), (
+        f"Messaufbau: Windspalte 50 km/h muss rot sein, war {styles[2]!r}"
+    )

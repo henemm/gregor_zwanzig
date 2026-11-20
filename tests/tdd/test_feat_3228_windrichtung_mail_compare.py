@@ -145,3 +145,35 @@ def test_ac8_geerbter_gegenwind_im_ortsvergleich_keine_faerbung_kein_fehler():
     assert _uebersicht_windrichtung(html) == [None, None]
     norm = lambda s: re.sub(r"\d{2}:\d{2}", "HH:MM", s)  # noqa: E731
     assert norm(html) == norm(_render(RADTOUR_AUS))
+
+
+# ---------------------------------------------------------------------------
+# F001 (Adversary): gemischte Stunden -> Maximum ueber die Stunden
+# ---------------------------------------------------------------------------
+
+def test_ac5_uebersicht_gemischte_stunden_eine_nordstunde_faerbt_den_ort():
+    """AC-5 / Spec "Max der Stunden": Ort mit nur EINER Stunde 30 km/h Nordwind
+    (Sektor N markiert) und zwei Stunden Suedwind gleicher Staerke. Die
+    Uebersichtszelle Windrichtung ist orange (30 km/h >= 20), weil der
+    hoechste Stundenwert zaehlt, nicht der niedrigste (Suedstunden = 0 km/h)
+    oder ein Mittel. Gegenprobe: Ort nur mit Suedwind bleibt ungefaerbt."""
+    dps = [
+        ForecastDataPoint(ts=datetime(2026, 7, 23, h, 0), t2m_c=10.0, wind10m_kmh=30.0,
+                          gust_kmh=30.0, wind_direction_deg=deg, precip_1h_mm=0.0)
+        for h, deg in ((9, 180), (10, 0), (11, 180))
+    ]
+    gemischt = LocationResult(
+        location=SavedLocation(id="gemischt", name="Gemischt", lat=47.27, lon=11.39,
+                               elevation_m=574),
+        official_alerts=[], hourly_data=dps, wind_max=30.0, wind_direction_avg=180,
+    )
+    ergebnis = ComparisonResult(
+        locations=[gemischt, _ort("suedort", "Suedort", 180)],
+        time_window=(9, 12), target_date=date(2026, 7, 23),
+        created_at=datetime(2026, 7, 23, 4, 0),
+    )
+    html = render_compare_html(ergebnis, enabled_metrics=ENABLED,
+                               hourly_metrics=HOURLY, preset=SEKTOR_N)
+    assert _uebersicht_windrichtung(html) == ["orange", None], (
+        f"F001: eine Nordstunde muss den Ort faerben, war {_uebersicht_windrichtung(html)}"
+    )

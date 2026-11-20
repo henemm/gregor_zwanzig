@@ -187,7 +187,8 @@ def test_hourly_filter_selects_cest_correct_window():
     )
 
     formatter = TripReportFormatter()
-    rows = formatter._extract_hourly_rows(seg_data, dc)
+    from app.ampel import resolve_ampel
+    rows = formatter._extract_hourly_rows(seg_data, dc, ampel=resolve_ampel(dc))
 
     # t2m_c == UTC-Stunde; selektierte Stunden aus den Zeilen rekonstruieren
     selected_utc_hours = {int(r["temp"]) for r in rows if r.get("temp") is not None}

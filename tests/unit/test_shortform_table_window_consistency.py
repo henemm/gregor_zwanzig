@@ -129,7 +129,8 @@ class TestShortformMatchesTableWindow:
         fmt = TripReportFormatter()
         fmt._tz = _TZ
 
-        seg_rows = fmt._extract_hourly_rows(segments[0], dc)
+        from app.ampel import resolve_ampel
+        seg_rows = fmt._extract_hourly_rows(segments[0], dc, ampel=resolve_ampel(dc))
         night_rows = fmt._extract_night_rows(
             night_weather, arrival_hour=11, interval=2, dc=dc,
         )
