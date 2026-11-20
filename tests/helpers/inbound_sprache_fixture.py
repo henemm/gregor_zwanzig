@@ -17,6 +17,7 @@ die Form, die Telegram zustellt.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -219,6 +220,36 @@ def _funktions_texte(lang: str | None) -> dict[str, str]:
     }
 
 
+_SEITENVERWEIS = re.compile(r"\nmore: (HELP|CODES) (\d+)$")
+
+
+_ABSCHNITT = re.compile(r"[A-Z][a-z]+( after !)?:")
+
+
+def _premium_volltext(p, befehl: str, **kw) -> str:
+    """#3133: Premium antwortet seitenweise (<=153 Zeichen); fuer den Golden
+    zaehlt der vollstaendige Kurzform-Inhalt: alle Seiten (``HELP 2`` ...),
+    Verweiszeilen entfernt, Zeilenumbrueche aus Komma-Trennung wieder
+    zu einer Zeile gefuegt."""
+    erste = p(befehl, **kw)
+    kopf, _, rumpf = erste.partition("\n\n")
+    seiten, text = [rumpf], erste
+    while (m := _SEITENVERWEIS.search(text)) and len(seiten) < 20:
+        text = p(f"{befehl} {m.group(2)}", **kw)
+        seiten.append(text.partition("\n\n")[2])
+    seiten = [_SEITENVERWEIS.sub("", s) for s in seiten]
+    zeilen: list[str] = []
+    for teil in "\n".join(seiten).split("\n"):
+        # Ein Seitenumbruch/Eintragsumbruch nach "," oder "." gehoert zur
+        # selben Zeile, ausser ein neuer Abschnitt ("More:", "Alerts after !:").
+        if zeilen and zeilen[-1].endswith((",", ".")) and not _ABSCHNITT.match(teil):
+            zeilen[-1] += " " + teil
+        else:
+            zeilen.append(teil)
+    voll = "\n".join(zeilen)
+    return f"{kopf}\n\n{voll}"
+
+
 def kurz_texte(user_id: str, lang: str | None = None) -> dict[str, str]:
     """Kurzform (Premium-SMS und Telegram-Kurzstil) -- fuer jede Kontosprache
     byte-gleich (PO-Vorgabe, AC-3/AC-4)."""
@@ -230,8 +261,8 @@ def kurz_texte(user_id: str, lang: str | None = None) -> dict[str, str]:
     tg = lambda body, **kw: antwort(user_id, body, channel="telegram",  # noqa: E731
                                     englisch=True, **kw)
     f: dict[str, str] = {}
-    f["kurz_hilfe"] = p("HELP", trip_name="")
-    f["kurz_codes"] = p("CODES", trip_name="")
+    f["kurz_hilfe"] = _premium_volltext(p, "HELP", trip_name="")
+    f["kurz_codes"] = _premium_volltext(p, "CODES", trip_name="")
     f["kurz_status"] = p("STATUS")
     f["kurz_unbekannt"] = p("Hilfen")
     w: dict[str, str] = {}
@@ -243,7 +274,7 @@ def kurz_texte(user_id: str, lang: str | None = None) -> dict[str, str]:
     w["metrik_uv"] = p("UV")
     w["stunden"] = p("### dd_hours_today")
     w["report_typ"] = p("REPORT abends")
-    w["hilfe_vergleich"] = p("HELP", preset=preset)
+    w["hilfe_vergleich"] = _premium_volltext(p, "HELP", preset=preset)
     w["vergleich_status"] = p("STATUS", preset=preset)
     w["vergleich_pause"] = p("PAUSE 2d", preset=preset)
     w["vergleich_weiter"] = p("WEITER", preset=preset)

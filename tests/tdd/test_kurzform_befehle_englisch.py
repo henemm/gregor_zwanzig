@@ -50,6 +50,9 @@ from tests.tdd._befehl_e2e_fixtures import (
     lege_lage_an,
     lege_po_lage_nutzer_an,
     merkmal_fuer,
+    ohne_kuerzungskennzeichen,
+    premium_seiten,
+    premium_volltext,
     pruefe_premium_sms_englisch_und_gsm7,
     sende_email,
     sende_premium_sms,
@@ -348,7 +351,11 @@ def test_englisches_befehlswort_wirkt_wie_das_deutsche(monkeypatch, user_ids, en
         # Sprache haengt hier am Kanal/Wort (AC-4/AC-5/AC-6) -- das Merkmal
         # kommt deshalb direkt aus der Sprachregel, nicht aus dem deutschen Lauf.
         nutzer = lege_lage_an(user_ids, "L2")
-        text = _sende(kanal, settings, recorder, nutzer, en)
+        if kanal == "premium_sms":
+            # #3133: Premium seitenweise -- das Merkmal steht in der Vereinigung.
+            text = premium_volltext(premium_seiten(settings, recorder, nutzer, en))
+        else:
+            text = _sende(kanal, settings, recorder, nutzer, en)
         _assert_erkannt(text, kontext=f"AC-2 {en!r}/{kanal}")
         merkmal = merkmal_fuer(en, nutzer=nutzer, kanal=kanal_merkmal)
         for teil in (merkmal if isinstance(merkmal, tuple) else (merkmal,)):
@@ -609,6 +616,14 @@ def _pruefe_sms_sauberkeit(text: str, *, max_segmente: int, kontext: str) -> Non
     )
 
 
+def _pruefe_seiten_sauberkeit(seiten: list[str], *, kontext: str) -> None:
+    """#3133: jede Premium-Seite ist EINE SMS (<= 153 Zeichen, 1 Segment);
+    der Seitenverweis ist GSM-7-sauber und zaehlt mit."""
+    for i, seite in enumerate(seiten, 1):
+        assert len(seite) <= 153, f"{kontext} Seite {i}: {len(seite)} > 153:\n{seite}"
+        _pruefe_sms_sauberkeit(seite, max_segmente=1, kontext=f"{kontext} Seite {i}")
+
+
 def _wirkung_je_englischem_wort() -> dict[str, str]:
     paare = {
         (spec_feld(s, "wort_en") or ""): spec_feld(s, "wirkung_en")
@@ -634,7 +649,10 @@ def test_help_kurzform_ist_der_freigegebene_wortlaut(monkeypatch, user_ids, wort
     recorder = install_transport_fakes(monkeypatch)
     nutzer = lege_lage_an(user_ids, "L2")
 
-    text = _sende("premium_sms", basis_settings(), recorder, nutzer, wort)
+    # #3133: Premium-HELP seitenweise; der Wortlaut gilt fuer die Vereinigung,
+    # das Segment-Budget je Seite (eine Nachricht <= 153 Zeichen).
+    seiten = premium_seiten(basis_settings(), recorder, nutzer, wort)
+    text = premium_volltext(seiten)
 
     # #2420 AC-9: der freigegebene Wortlaut waechst um zwei Zeilen
     # (STARTDATE / REPORT). Ihre Lage in der Liste legt die Spec nicht fest,
@@ -661,7 +679,7 @@ def test_help_kurzform_ist_der_freigegebene_wortlaut(monkeypatch, user_ids, wort
             f"AC-8: Zeile {zeile!r} endet nicht mit wirkung_en "
             f"{wirkung[befehlswort]!r} aus _COMMAND_SPECS."
         )
-    _pruefe_sms_sauberkeit(text, max_segmente=3, kontext="AC-8 HELP")
+    _pruefe_seiten_sauberkeit(seiten, kontext="AC-8 HELP")
 
 
 @pytest.mark.parametrize("wort", ["help", "hilfe"])
@@ -679,7 +697,9 @@ def test_help_kurzform_ortsvergleich_ist_der_freigegebene_wortlaut(monkeypatch, 
     nutzer = lege_lage_an(user_ids, "L4")
     name = nutzer.presets[0]["name"]
 
-    text = _sende("premium_sms", basis_settings(), recorder, nutzer, f"{name} {wort}")
+    # #3133: auch die Vergleichs-HELP (158 Zeichen) kommt seitenweise.
+    seiten = premium_seiten(basis_settings(), recorder, nutzer, f"{name} {wort}")
+    text = premium_volltext(seiten)
 
     assert text == HELP_WORTLAUT_ORTSVERGLEICH, (
         f"AC-8 Vergleich: die versendete HELP weicht vom freigegebenen "
@@ -706,7 +726,7 @@ def test_help_kurzform_ortsvergleich_ist_der_freigegebene_wortlaut(monkeypatch, 
             assert zeile.endswith(f" - {wirkung[befehlswort]}"), (
                 f"AC-8 Vergleich: Zeile {zeile!r} nicht aus wirkung_en abgeleitet."
             )
-    _pruefe_sms_sauberkeit(text, max_segmente=3, kontext="AC-8 HELP Vergleich")
+    _pruefe_seiten_sauberkeit(seiten, kontext="AC-8 HELP Vergleich")
 
 
 def test_kurzhilfe_traegt_startdate_und_report_innerhalb_des_segmentbudgets(monkeypatch, user_ids):
@@ -725,7 +745,9 @@ def test_kurzhilfe_traegt_startdate_und_report_innerhalb_des_segmentbudgets(monk
     recorder = install_transport_fakes(monkeypatch)
     nutzer = lege_lage_an(user_ids, "L2")
 
-    text = _sende("premium_sms", basis_settings(), recorder, nutzer, "help")
+    # #3133: Premium seitenweise -- Inhalt ueber die Vereinigung, Budget je Seite.
+    seiten = premium_seiten(basis_settings(), recorder, nutzer, "help")
+    text = premium_volltext(seiten)
 
     zeilen = text.splitlines()
     assert "STARTDATE date - move start" in zeilen, f"AC-9: STARTDATE-Zeile fehlt:\n{text}"
@@ -735,16 +757,15 @@ def test_kurzhilfe_traegt_startdate_und_report_innerhalb_des_segmentbudgets(monk
     assert report[0].endswith(f" - {wirkung}"), (
         f"AC-9: REPORT-Zeile {report[0]!r} endet nicht mit wirkung_en {wirkung!r}"
     )
-    assert_gsm7_clean(text, context="AC-9 Kurzhilfe mit STARTDATE/REPORT")
-    assert len(text) <= 459, f"AC-9: {len(text)} Zeichen > 459:\n{text}"
-    assert sms_segments(text) <= 3, f"AC-9: {sms_segments(text)} Segmente:\n{text}"
+    _pruefe_seiten_sauberkeit(seiten, kontext="AC-9 Kurzhilfe mit STARTDATE/REPORT")
 
     # Vergleichs-Kurzhilfe: ohne STARTDATE (nur Trip); REPORT gilt seit
-    # #2282 S2 auch am Vergleich. Budget: EINE Premium-SMS (<= 160 Zeichen).
+    # #2282 S2 auch am Vergleich. Budget (#3133): je Seite EINE Premium-SMS.
     vergleich = lege_lage_an(user_ids, "L4")
     name = vergleich.presets[0]["name"]
-    text_v = _sende("premium_sms", basis_settings(), recorder, vergleich, f"{name} help")
-    assert len(text_v) <= 160, f"AC-9: Vergleichs-Kurzhilfe hat {len(text_v)} > 160 Zeichen"
+    seiten_v = premium_seiten(basis_settings(), recorder, vergleich, f"{name} help")
+    _pruefe_seiten_sauberkeit(seiten_v, kontext="AC-9 Vergleichs-Kurzhilfe")
+    text_v = premium_volltext(seiten_v)
     assert "STARTDATE" not in text_v and "REPORT" in text_v, (
         f"AC-9: Vergleichs-Kurzhilfe mit STARTDATE oder ohne REPORT:\n{text_v}"
     )
@@ -762,13 +783,17 @@ def test_codes_ist_der_freigegebene_wortlaut(monkeypatch, user_ids, wort):
     recorder = install_transport_fakes(monkeypatch)
     nutzer = lege_lage_an(user_ids, "L2")
 
-    text = _sende("premium_sms", basis_settings(), recorder, nutzer, wort)
+    # #3133: CODES seitenweise, geschnitten nur zwischen zwei Eintraegen --
+    # die Eintragsfolge aller Seiten ist der freigegebene Wortlaut.
+    seiten = premium_seiten(basis_settings(), recorder, nutzer, wort)
+    eintraege = premium_volltext(seiten).split("\n")
+    erwartet = [e for z in CODES_WORTLAUT.split("\n") for e in re.split(r"(?<=[,.]) ", z)]
 
-    assert text == CODES_WORTLAUT, (
+    assert eintraege == erwartet, (
         f"AC-9: die versendete CODES-Antwort weicht vom freigegebenen Wortlaut ab.\n"
-        f"--- erwartet ---\n{CODES_WORTLAUT}\n--- versendet ---\n{text}"
+        f"--- erwartet ---\n{CODES_WORTLAUT}\n--- versendet ---\n{seiten!r}"
     )
-    _pruefe_sms_sauberkeit(text, max_segmente=5, kontext="AC-9 CODES")
+    _pruefe_seiten_sauberkeit(seiten, kontext="AC-9 CODES")
 
 
 # ===========================================================================
@@ -937,6 +962,10 @@ def test_alle_erreichbaren_textarten_sind_englisch(monkeypatch, user_ids, fall, 
             f"AC-19: Telegram-Antwort auf unbekannten Befehl ohne Zusatz "
             f"{ENGLISH_ZUSATZ!r}:\n{text}"
         )
+    elif transport == "premium_sms":
+        # #3133 AC-11: nur der vor "~" angeschnittene Wortrest ist ausgenommen.
+        _assert_englisch(ohne_kuerzungskennzeichen(text), nutzer,
+                         kontext=f"AC-19 {fall} ({kanal})")
     else:
         _assert_englisch(text, nutzer, kontext=f"AC-19 {fall} ({kanal})")
     if transport == "premium_sms":
