@@ -1,0 +1,172 @@
+{
+  "_kommentar": "Issue #3196: gemeinsame Falltabelle fuer die Gehzeit nach DAV (DIN 33466). Gelesen von Go (internal/model), Python (tests/) und TS (frontend/tests). Raten R = R_ref * v / v_ref je Fortbewegung; t = max(t_h, t_v) + min(t_h, t_v) / 2. Erwartete Minuten sind von Hand nachgerechnet, nicht aus einem der drei Rechner erzeugt.",
+  "referenz": {
+    "fuss": {
+      "vorschlag_kmh": 4,
+      "r_auf": 300,
+      "r_ab": 500
+    },
+    "rad": {
+      "vorschlag_kmh": 20,
+      "r_auf": 600,
+      "r_ab": 1000
+    },
+    "mtb": {
+      "vorschlag_kmh": 12,
+      "r_auf": 500,
+      "r_ab": 1000
+    },
+    "ski": {
+      "vorschlag_kmh": 3,
+      "r_auf": 300,
+      "r_ab": 1500
+    }
+  },
+  "ableitung_activity": {
+    "": {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4
+    },
+    "wandern": {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4
+    },
+    "hiking": {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4
+    },
+    "trekking": {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4
+    },
+    "hochtour": {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4
+    },
+    "klettersteig": {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4
+    },
+    "skitour": {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4
+    },
+    "mtb": {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4
+    },
+    "fahrrad_15": {
+      "fortbewegung": "rad",
+      "grundtempo_kmh": 15
+    },
+    "fahrrad_20": {
+      "fortbewegung": "rad",
+      "grundtempo_kmh": 20
+    },
+    "fahrrad_25": {
+      "fortbewegung": "rad",
+      "grundtempo_kmh": 25
+    }
+  },
+  "faelle": [
+    {
+      "name": "AC-3 Rechenbeispiel",
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4,
+      "km": 8,
+      "hm_auf": 600,
+      "hm_ab": 600,
+      "minuten": 252.0
+    },
+    {
+      "name": "fuss flach",
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4,
+      "km": 10,
+      "hm_auf": 0,
+      "hm_ab": 0,
+      "minuten": 150.0
+    },
+    {
+      "name": "fuss 5 kmh skaliert Raten",
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 5,
+      "km": 8,
+      "hm_auf": 600,
+      "hm_ab": 600,
+      "minuten": 201.6
+    },
+    {
+      "name": "fuss nur Abstieg",
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4,
+      "km": 2,
+      "hm_auf": 0,
+      "hm_ab": 900,
+      "minuten": 123.0
+    },
+    {
+      "name": "rad Vorschlag",
+      "fortbewegung": "rad",
+      "grundtempo_kmh": 20,
+      "km": 30,
+      "hm_auf": 600,
+      "hm_ab": 0,
+      "minuten": 120.0
+    },
+    {
+      "name": "rad 15 skaliert",
+      "fortbewegung": "rad",
+      "grundtempo_kmh": 15,
+      "km": 30,
+      "hm_auf": 600,
+      "hm_ab": 1000,
+      "minuten": 220.0
+    },
+    {
+      "name": "rad 25 Abfahrt",
+      "fortbewegung": "rad",
+      "grundtempo_kmh": 25,
+      "km": 40,
+      "hm_auf": 0,
+      "hm_ab": 1000,
+      "minuten": 120.0
+    },
+    {
+      "name": "mtb Vorschlag",
+      "fortbewegung": "mtb",
+      "grundtempo_kmh": 12,
+      "km": 24,
+      "hm_auf": 500,
+      "hm_ab": 1000,
+      "minuten": 180.0
+    },
+    {
+      "name": "ski Vorschlag",
+      "fortbewegung": "ski",
+      "grundtempo_kmh": 3,
+      "km": 6,
+      "hm_auf": 900,
+      "hm_ab": 1500,
+      "minuten": 300.0
+    },
+    {
+      "name": "ski 6 kmh skaliert",
+      "fortbewegung": "ski",
+      "grundtempo_kmh": 6,
+      "km": 6,
+      "hm_auf": 900,
+      "hm_ab": 0,
+      "minuten": 120.0
+    },
+    {
+      "name": "nichts",
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4,
+      "km": 0,
+      "hm_auf": 0,
+      "hm_ab": 0,
+      "minuten": 0.0
+    }
+  ]
+}
