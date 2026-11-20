@@ -214,3 +214,71 @@ def test_ungueltiger_dateiwert_verschwindet_beim_speichern(tmp_path, kmh):
     nach_id = {st["id"]: st for st in disk["stages"]}
     assert "grundtempo_kmh" not in nach_id["S2"], f"ungueltiger Wert {kmh!r} blieb in der Datei"
     assert _ankuenfte(disk)["S2"] == FALL["erwartet"]["S1"]["ankuenfte"]
+
+
+# --- Fix-Loop 4, F005 (AC-8): Grenzwerte 0,5 und 60 am Lade-Wirkort ----------
+
+@pytest.mark.parametrize("kmh, gilt", [(0.5, True), (60, True), (0.4, False), (61, False)])
+def test_grenzwerte_beim_laden(tmp_path, kmh, gilt):
+    """Die Grenzen 0,5 und 60 km/h gehoeren zum gueltigen Bereich: der Loader
+    uebernimmt sie, die Datei behaelt sie nach dem Speichern, und S2 rechnet
+    mit genau diesem Tempo. 0,4 und 61 liegen knapp ausserhalb und werden
+    verworfen (S2 rechnet wie das Trip-Tempo)."""
+    from app.loader import load_trip
+    from core.naismith import stage_speeds, tempo_speeds
+
+    pfad = tmp_path / "users" / "u3197a" / "briefings" / "t3197.json"
+    pfad.parent.mkdir(parents=True)
+    pfad.write_text(json.dumps(_trip_dict(S2={"grundtempo_kmh": kmh})), encoding="utf-8")
+
+    trip = load_trip("t3197", data_dir=tmp_path, user_id="u3197a")
+    s2 = next(s for s in trip.stages if s.id == "S2")
+    if gilt:
+        assert s2.grundtempo_kmh == kmh
+        assert stage_speeds(trip, s2) == pytest.approx((kmh, 300.0 * kmh / 4, 500.0 * kmh / 4))
+    else:
+        assert s2.grundtempo_kmh is None
+        assert stage_speeds(trip, s2) == tempo_speeds(trip)
+
+    save_trip(trip, "u3197a", data_dir=tmp_path)
+    disk_s2 = next(st for st in json.loads(pfad.read_text(encoding="utf-8"))["stages"] if st["id"] == "S2")
+    if gilt:
+        assert disk_s2["grundtempo_kmh"] == kmh, f"gueltiger Grenzwert {kmh!r} ging beim Speichern verloren"
+    else:
+        assert "grundtempo_kmh" not in disk_s2
+
+
+# --- Fix-Loop 4, F007 (AC-8): stage_speeds prueft selbst ----------------------
+
+@pytest.mark.parametrize("kmh", [0.4, 61, True, 0, -3, "3"])
+def test_stage_speeds_prueft_den_etappenwert_selbst(kmh):
+    """Gelangt ein ungueltiger Wert am Loader vorbei an die Etappe (z. B. ein
+    direkt gebautes Stage-Objekt), gilt trotzdem das Trip-Tempo: stage_speeds
+    verlaesst sich nicht auf den Lade-Filter.
+
+    Trip-Tempo bewusst 5 km/h (nicht der Ersatzwert 4 km/h), damit ein
+    Durchreichen des ungueltigen Werts an speeds_for_tempo (dessen Ersatz
+    waere zu Fuss 4 km/h) vom Trip-Tempo unterscheidbar bleibt."""
+    import dataclasses
+
+    from core.naismith import stage_speeds, tempo_speeds
+
+    daten = _ohne_ueberschreibung()
+    daten["tempo"] = {"fortbewegung": "fuss", "grundtempo_kmh": 5}
+    trip = load_trip_from_dict(daten)
+    s2 = next(s for s in trip.stages if s.id == "S2")
+    roh = dataclasses.replace(s2, grundtempo_kmh=kmh)
+    assert roh.grundtempo_kmh is kmh, "Messaufbau: Wert nicht an der Etappe"
+    assert stage_speeds(trip, roh) == tempo_speeds(trip) == pytest.approx((5.0, 375.0, 625.0))
+
+
+@pytest.mark.parametrize("kmh", [0.5, 60])
+def test_stage_speeds_grenzwert_direkt(kmh):
+    """Gegenstueck zu F007: 0,5 und 60 an der Etappe werden direkt verwendet."""
+    import dataclasses
+
+    from core.naismith import stage_speeds
+
+    trip = load_trip_from_dict(_ohne_ueberschreibung())
+    s2 = dataclasses.replace(next(s for s in trip.stages if s.id == "S2"), grundtempo_kmh=kmh)
+    assert stage_speeds(trip, s2) == pytest.approx((kmh, 300.0 * kmh / 4, 500.0 * kmh / 4))

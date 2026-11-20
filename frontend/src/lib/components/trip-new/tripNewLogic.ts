@@ -3,7 +3,8 @@
 // (docs/design-requests/trip-anlegen-2026-06-06/screen-trip-new-v2.jsx).
 // Keine Seiteneffekte, keine Svelte-Imports — testbar mit node:test.
 
-import type { Trip, WeatherConfigMetric, ReportConfig, Waypoint, Tempo, Corridor, Ampel } from '$lib/types';
+import type { Trip, Stage, WeatherConfigMetric, ReportConfig, Waypoint, Tempo, Corridor, Ampel } from '$lib/types';
+import { verwirfEtappenTempo } from '../../utils/naismith.ts';
 import {
 	resolveAlertChannels,
 	resolveAlertChannelThresholds,
@@ -120,6 +121,8 @@ export interface CreateTripStage {
 	waypoints?: Waypoint[];
 	// Issue #675 — Startzeit je Etappe (HH:MM), nur setzen wenn vorhanden.
 	start_time?: string;
+	// Issue #3197 — eigenes Grundtempo der Etappe (km/h), nur wenn überschrieben.
+	grundtempo_kmh?: number;
 }
 
 export interface CreateTripChannels {
@@ -226,6 +229,49 @@ function addDaysISO(iso: string, days: number): string {
 	return `${yy}-${mm}-${dd}`;
 }
 
+// ── Stage-Brücke Anlege-Zustand ⇄ EditStagesPanelNew (Issue #658, #3197) ───
+// Der eingebettete Editor arbeitet auf Stage[] (String-IDs `s<id>`); der Anlege-Zustand
+// hält numerische IDs. Beide Richtungen tragen Wegpunkte UND das Etappen-Tempo
+// (`grundtempo_kmh`), damit „Tempo ändern" im Anlegen wie im Bearbeiten wirkt.
+
+/** Editor-Etappen aus dem Anlege-Zustand (beim Öffnen des Reiters Wegpunkte). */
+export function editorEtappenAusAnlage(stages: CreateTripStage[], startDate: string): Stage[] {
+	return stages.map((s, idx) => ({
+		id: `s${s.id}`,
+		name: s.name || `Etappe ${idx + 1}`,
+		date: startDate ? addDaysISO(startDate, idx) : '',
+		waypoints: s.waypoints ?? [],
+		...(s.grundtempo_kmh !== undefined ? { grundtempo_kmh: s.grundtempo_kmh } : {}),
+	}));
+}
+
+/** Editor-Edits per Index zurück in den Anlege-Zustand (Wegpunkte + Etappen-Tempo). */
+export function anlageAusEditorEtappen<T extends CreateTripStage>(stages: T[], editor: Stage[]): T[] {
+	if (editor.length === 0) return stages;
+	return stages.map((s, idx) => {
+		const es = editor[idx];
+		if (!es) return s;
+		const { grundtempo_kmh: _alt, ...rest } = s;
+		return {
+			...rest,
+			waypoints: es.waypoints,
+			...(es.grundtempo_kmh !== undefined ? { grundtempo_kmh: es.grundtempo_kmh } : {}),
+		} as T;
+	});
+}
+
+/** Tempo-Karte im Anlegen (AC-6, wie `tempoAendern` im Bearbeiten): wechselt die
+ *  Fortbewegung, werden alle Etappen-Überschreibungen verworfen und gezählt. */
+export function tempoImAnlegenWechseln<T extends CreateTripStage>(
+	stages: T[],
+	alt: Tempo,
+	neu: Tempo
+): { stages: T[]; anzahl: number } {
+	if (neu.fortbewegung === alt.fortbewegung) return { stages, anzahl: 0 };
+	const r = verwirfEtappenTempo(stages as unknown as Stage[]);
+	return { stages: r.stages as unknown as T[], anzahl: r.anzahl };
+}
+
 export function buildCreateTripPayload(state: CreateTripState): Trip {
 	const trip: Trip = {
 		id: newId(),
@@ -238,6 +284,8 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 			waypoints: s.waypoints ?? [],
 			// Issue #675 — Startzeit nur wenn explizit gesetzt (kein leerer String).
 			...(s.start_time ? { start_time: s.start_time } : {}),
+			// Issue #3197 — Etappen-Tempo nur wenn überschrieben (Feld fehlt sonst).
+			...(s.grundtempo_kmh !== undefined ? { grundtempo_kmh: s.grundtempo_kmh } : {}),
 		})),
 	};
 

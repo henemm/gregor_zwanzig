@@ -12,6 +12,7 @@ package handler
 // Ausfuehrung: go test ./internal/handler/ -run 'TestStageTempo3197' -v
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -139,6 +140,37 @@ func TestStageTempo3197_Ungueltig422(t *testing.T) {
 	}
 }
 
+// Fix-Loop 2 (Anlegen = Bearbeiten): der Anlege-POST mit grundtempo_kmh=3 an S2
+// speichert das Feld und rechnet arrival_calculated je Etappe; Nutzer B (gleiche
+// Trip-ID) bleibt unberuehrt.
+func TestStageTempo3197_PostSpeichertUndRechnetJeEtappe(t *testing.T) {
+	s := newTestStore(t)
+	seedStageTempoTrip(t, s, "userB", "neu")
+	w := doReq(CreateTripHandler(s), http.MethodPost, "/api/trips",
+		`{"id":"neu","name":"Neu","tempo":{"fortbewegung":"fuss","grundtempo_kmh":4},"stages":`+
+			stagesJSON3197("", `,"grundtempo_kmh":3`)+`}`, "", "userA")
+	if w.Code != http.StatusCreated && w.Code != http.StatusOK {
+		t.Fatalf("POST: %d %s", w.Code, w.Body.String())
+	}
+	tr := ladeTempoTrip(t, s, "userA", "neu")
+	if tr.Stages[1].GrundtempoKmh == nil || *tr.Stages[1].GrundtempoKmh != 3 {
+		t.Fatalf("S2: grundtempo_kmh beim Anlegen verloren: %v", tr.Stages[1].GrundtempoKmh)
+	}
+	if tr.Stages[0].GrundtempoKmh != nil {
+		t.Errorf("S1: grundtempo_kmh darf nicht entstehen")
+	}
+	if got := ank3197(tr.Stages[0]); got != "08:00,10:30,12:12" {
+		t.Errorf("S1 muss beim Trip-Tempo bleiben, bekommen %s", got)
+	}
+	if got := ank3197(tr.Stages[1]); got != "08:00,11:20,13:36" {
+		t.Errorf("S2 mit 3 km/h: erwartet 08:00,11:20,13:36, bekommen %s", got)
+	}
+	if b := ladeTempoTrip(t, s, "userB", "neu"); b.Stages[1].GrundtempoKmh != nil ||
+		ank3197(b.Stages[1]) != "08:00,10:30,12:12" {
+		t.Errorf("B: Trip durch A-POST veraendert: %s", ank3197(b.Stages[1]))
+	}
+}
+
 // Grenzen 0.5 und 60 sind gueltig.
 func TestStageTempo3197_GrenzenGueltig(t *testing.T) {
 	for _, wert := range []string{"0.5", "60"} {
@@ -149,6 +181,49 @@ func TestStageTempo3197_GrenzenGueltig(t *testing.T) {
 		if tr := ladeTempoTrip(t, s, "userA", "t4"); tr.Stages[1].GrundtempoKmh == nil {
 			t.Errorf("Grenzwert %s nicht gespeichert", wert)
 		}
+	}
+}
+
+// Fix-Loop 4 (F006, AC-5): PUT nur mit "tempo" (ohne "stages") aendert das
+// Trip-Tempo, darf aber vorhandene Etappen-Tempi nicht loeschen. Pruefung
+// ueber GET (was der Editor nach dem Speichern sieht) und den Plattenstand.
+func TestStageTempo3197_PutNurTempoBehaeltEtappenTempo(t *testing.T) {
+	s := newTestStore(t)
+	seedStageTempoTrip(t, s, "userA", "t5")
+	r := briefingVergleichEtagRouter(s)
+	putOK(t, r, "/api/trips/t5", "userA", `{"stages":`+stagesJSON3197("", `,"grundtempo_kmh":3`)+`}`)
+	putOK(t, r, "/api/trips/t5", "userA", `{"tempo":{"fortbewegung":"fuss","grundtempo_kmh":5}}`)
+
+	w := doReq(r, http.MethodGet, "/api/trips/t5", "", "", "userA")
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET: %d %s", w.Code, w.Body.String())
+	}
+	var got model.Trip
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("GET-Antwort nicht lesbar: %v", err)
+	}
+	if len(got.Stages) != 2 {
+		t.Fatalf("Etappen verloren: %d", len(got.Stages))
+	}
+	if got.Tempo == nil || got.Tempo.GrundtempoKmh != 5 {
+		t.Errorf("Trip-Tempo nicht uebernommen: %+v", got.Tempo)
+	}
+	if got.Stages[1].GrundtempoKmh == nil || *got.Stages[1].GrundtempoKmh != 3 {
+		t.Fatalf("S2: Etappen-Tempo durch PUT {tempo} geloescht: %v", got.Stages[1].GrundtempoKmh)
+	}
+	if got.Stages[0].GrundtempoKmh != nil {
+		t.Errorf("S1: grundtempo_kmh darf nicht entstehen")
+	}
+
+	tr := ladeTempoTrip(t, s, "userA", "t5")
+	if tr.Stages[1].GrundtempoKmh == nil || *tr.Stages[1].GrundtempoKmh != 3 {
+		t.Fatalf("Platte: S2-Etappen-Tempo verloren: %v", tr.Stages[1].GrundtempoKmh)
+	}
+	if a := ank3197(tr.Stages[1]); a != "08:00,11:20,13:36" {
+		t.Errorf("S2 muss mit 3 km/h weiterrechnen, bekommen %s", a)
+	}
+	if a := ank3197(tr.Stages[0]); a == "08:00,10:30,12:12" {
+		t.Errorf("S1 folgt dem Trip-Tempo 5 km/h nicht (noch 4 km/h): %s", a)
 	}
 }
 
