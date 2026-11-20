@@ -20,6 +20,7 @@
 	"wetter.vorlage.verlust.other": "Your {count} changes from “{alt}” will be lost.",
 	"wetter.vorlage.aktiv_marker": "· active",
 	"wetter.vorlage.eigene_unterzeile": "own",
+	"wetter.vorlage.eigene_aus_herkunft": "saved from {name}",
 	"wetter.vorlage.stichworte.alpen_trekking": "Thunderstorms, gusts, freezing level",
 	"wetter.vorlage.stichworte.wandern": "Rain, sun, UV",
 	"wetter.vorlage.stichworte.skitouren": "Fresh snow, snow depth, visibility",

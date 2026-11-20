@@ -163,7 +163,9 @@ const NEU_FREIGEGEBEN = new Set([
 	'wetter.vorlage.eigene_unterzeile',
 	...['alpen_trekking', 'wandern', 'skitouren', 'wintersport', 'radtour', 'wassersport', 'allgemein'].map((id) => `wetter.vorlage.stichworte.${id}`),
 	'wetter.dialog.name_platzhalter',
-	'wetter.dialog.beschreibung_platzhalter'
+	'wetter.dialog.beschreibung_platzhalter',
+	// #3189 (Spec feat_3189_vorlage_herkunft.md AC-4): Unterzeile „aus {name} gespeichert“ eigener Vorlagen.
+	'wetter.vorlage.eigene_aus_herkunft'
 ]);
 // #2913 Scheibe (c) Fix-Loop 2 (Bildprüfer Runde 1, Befund 1): Label wie im Mockup mit Doppelpunkt. Bewusst geändert,
 // mit genau dem erwarteten neuen Wert — jede andere Änderung bleibt rot.
@@ -239,6 +241,13 @@ describe('AC-21: wetter.json DE/EN — Bestandstexte unverändert gegenüber dem
 		assert.equal(de['wetter.kopf.fehler_verbindung'], 'Die Verbindung zum Server ist abgebrochen. Deine Einstellungen sind gespeichert und gehen nicht verloren.');
 		assert.equal(en['wetter.kopf.fehler'], 'The metrics could not be loaded.');
 		assert.equal(en['wetter.kopf.fehler_verbindung'], 'The connection to the server was lost. Your settings are saved and will not be lost.');
+	});
+	test('#3189 AC-4: wetter.vorlage.eigene_aus_herkunft in DE und EN, Platzhalter {name} in beiden', () => {
+		const lies = (lang: string) => JSON.parse(readFileSync(path.join(KOMP, '..', 'i18n', 'messages', lang, 'wetter.json'), 'utf8'));
+		const de = lies('de');
+		const en = lies('en');
+		assert.equal(de['wetter.vorlage.eigene_aus_herkunft'], 'aus {name} gespeichert');
+		assert.equal(en['wetter.vorlage.eigene_aus_herkunft'], 'saved from {name}');
 	});
 	test('DE und EN haben dieselben wetter.*-Schlüssel', () => {
 		const de = Object.keys(JSON.parse(readFileSync(path.join(KOMP, '..', 'i18n', 'messages', 'de', 'wetter.json'), 'utf8'))).sort();

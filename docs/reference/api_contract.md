@@ -2577,8 +2577,16 @@ type MetricPreset struct {
     Metrics     []DisplayMetric  `json:"metrics"`                 // List of selected metrics with format modes (keine horizons mehr)
     CreatedAt   time.Time        `json:"created_at"`              // Server-managed creation timestamp (UTC)
     Ampel       map[string]interface{} `json:"ampel,omitempty"`  // #2792 S1a: Profil-Ampel samt alarm_ab (Struktur §11 „Profil-Ampel"); fehlt = Vorlage allgemein
+    Herkunft    *PresetHerkunft  `json:"herkunft,omitempty"`      // #3189: {id, name} des Trips bzw. Orts-Vergleichs, aus dem gespeichert wurde; fehlt = unbekannt
+}
+
+type PresetHerkunft struct {
+    ID   string `json:"id"`   // Trip- bzw. Vergleichs-ID (reiner Verweis, wird nicht aufgeloest)
+    Name string `json:"name"` // Name zum Speicherzeitpunkt (eingefroren)
 }
 ```
+
+**Herkunft (#3189):** Optionales Feld `herkunft {id, name}`, gesetzt **nur beim Anlegen** (`POST`). Die Art (Trip/Orts-Vergleich) steckt in `kind` und wird nicht doppelt gespeichert. Der Name ist **eingefroren**: spätere Umbenennung oder Löschung des Trips/Vergleichs ändert ihn nicht. Server trimmt `id` und `name` und kappt `name` auf **200 Zeichen**; leere `id` oder leerer `name` verwirft das Feld ohne Fehler. Die `id` wird nicht gegen Trips/Vergleiche des Nutzers aufgelöst (reiner Verweis im eigenen Datenbestand). `PATCH` nimmt kein `herkunft` an und lässt es unverändert. Bestand ohne Feld bleibt gültig. Das Frontend zeigt im Vorlagen-Menü ohne Beschreibung „eigene · aus {name} gespeichert“ (EN „saved from {name}“); im Anlege-Modus wird keine Herkunft gesendet.
 
 **Ampel (#2792 S1a):** `POST` und `PATCH` nehmen optional `ampel` an (PATCH ersetzt den ganzen Unterbaum); ungueltig → 400 `ampel_ungueltig`. Eine eigene Vorlage speichert keine Zustellung (Empfaenger, Kanaele) und keine Etappen. Bestehende Vorlagen ohne `ampel` laden unveraendert.
 
@@ -2675,6 +2683,7 @@ Creates a new custom metric preset for the authenticated user.
 | is_default | boolean | Yes | If `true`, all other presets **derselben Art** of this user are set to `is_default=false` (höchstens eine Standardvorlage je Art) |
 | metrics | array | Yes | List of metric configurations (ohne horizons) |
 | ampel | object | No | Profil-Ampel samt `alarm_ab`; ungültig → 400 `ampel_ungueltig` |
+| herkunft | object | No | #3189: `{id, name}` des Trips bzw. Orts-Vergleichs; Name eingefroren, getrimmt, max. 200 Zeichen; leere `id`/`name` → Feld verworfen (kein Fehler); nur beim Anlegen |
 | friendly_ids | array | No | Legacy field (deprecated); ignored if `metrics` is properly structured |
 
 **Response 201 (Created):**
@@ -5339,6 +5348,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 
 ## Changelog
 
+- 2026-11-20: Issue #3189 — `MetricPreset.herkunft {id, name}` (optional, §15.5): `POST /api/metric-presets` übernimmt die Herkunft (Trip bzw. Orts-Vergleich), Name eingefroren, getrimmt, auf 200 Zeichen gekappt, leer = verworfen; `PATCH` lässt sie unverändert; Bestand ohne Feld bleibt gültig.
 - 2026-11-19: Issue #3172 (ADR-0125) — `GET /api/briefings/{id}/placements`: `sms_example.overflow` entfällt (die Orte-SMS trägt keinen Rest-Zähler `+N` je Ort mehr); `sms_example.max_length` ist für Orte 160 wie beim Trip; Legende der Orte mit festem Eintrag `O1` (`key: "ort_nummer"`, Bedeutung aus dem Server-Katalog).
 - 2026-11-19: Issue #3154 (Epic #3122, Spec Teil A Nr. 8, AC-11) — Erstes Speichern der Tabelle „Was steht wo“ ändert die Ausgabe nicht: `PUT /api/briefings/{id}/placements?kind=route` fragt den Kern (`GET …/placements/erstanlage`, neu, nur für Go) und schreibt beim ersten Speichern eines Trips mit `show_outlook: false` (nicht Kompakt) `report_config.show_stability = false` im selben Vorgang mit; Kern-Fehler 502, nichts geschrieben. Umrechnung `placements_from_legacy`: bei Kompakt-Format wird `show_outlook` für `outlook_reports` nicht ausgewertet (die Kompakt-Mail zeigte den Ausblick unabhängig davon); `GET` zeigt ihn entsprechend.
 - 2026-11-19: Issue #3154 (Epic #3122) — `GET /api/briefings/{id}/placements`: `rows` führt jede Metrik der Grundauswahl beider Briefing-Typen, auch eine nur morgens oder nur abends gewählte (`morning_enabled`/`evening_enabled`), genau wie `placements`. Beispielwerte und Marken gelten weiter für das gerenderte Briefing; eine dort nicht gewählte Metrik bekommt keine Marke. Keine DTO-Änderung.
