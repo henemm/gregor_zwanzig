@@ -205,7 +205,8 @@ describe('AC-1: Metrik-Namen aus dem Register, Kurzform und Kuerzel unveraendert
 		const alle = [...attr(eigen, 'title'), ...attr(eigen, 'aria-label'), ...attr(eigen, 'placeholder')]
 			.filter((a) => !a.startsWith('Zum Sortieren ziehen'))
 			.join(' | ');
-		for (const s of ['Short form in the email hourly table', 'Codes in SMS, Premium SMS and Telegram', 'Remove from briefing', 'Close', 'Metrics, order'])
+		// #3190: „Close“ (aria-label des Schließen-× im Speichern-Dialog) entfällt mit der Inline-Karte.
+		for (const s of ['Short form in the email hourly table', 'Codes in SMS, Premium SMS and Telegram', 'Remove from briefing', 'Metrics, order'])
 			hat(alle, s);
 		assert.deepEqual(deutscheReste(alle), []);
 		const baustein = deDannEn(() => bausteineRendern()).en;

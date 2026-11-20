@@ -2,7 +2,7 @@
 // Spec: docs/specs/modules/feat_2794_s3a_teil3_wetter.md — AC-42 (W5b), Mandantentrennung
 // Derselbe Test-Code fuer Trip (route) und Orts-Briefing (vergleich).
 //
-//   - Dialog: Name (Pflicht), Beschreibung, Schalter „Als Standard für neue {Trips|Orte}“, Hinweis
+//   - Dialog (seit #3190 Inline-Karte): Name (Pflicht), Beschreibung, Ankreuzfeld „Als Standard für neue {Trips|Orte}“, Hinweis
 //     „Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. …“, KEINE Zeithorizonte, KEINE Zusammenfassung.
 //   - gespeicherte Vorlage (GET /api/metric-presets) mit `ampel` des Abos und `kind` des Kontexts, ohne horizons;
 //     Erfolgsmeldung; erscheint unter „Eigene“ nur in der passenden Art.

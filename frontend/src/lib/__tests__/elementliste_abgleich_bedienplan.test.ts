@@ -199,10 +199,16 @@ describe('#2966 AC-6/AC-7: bedieneAbschnitt — Reload, Planreihenfolge, Schreib
 		assert.deepEqual(ops.protokoll, ['neuLaden', 'briefing', 'klick:wetter-grenzen-aendern-wind', 'lesen:grenzen-wind', 'klick:wetter-grenzen-aendern-wind', 'nachlauf']);
 		assert.deepEqual(r, { art: 'gelesen', befund: { marker: true, texte: ['Text grenzen-wind'] } });
 	});
-	test('Speichern-Fehler: Dialog öffnen, leer absenden, lesen, per Escape schließen', async () => {
+	// #3190: Inline-Karte — Escape wirkt nur bei Fokus in der Karte, der Abgleich schließt über „Abbrechen“.
+	test('Speichern-Fehler: Karte öffnen, leer absenden, lesen, über Abbrechen schließen', async () => {
 		const ops = fakeOps([]);
 		await L.bedieneAbschnitt('vorlage-speichern-fehler', LAGE, ops);
-		assert.deepEqual(ops.protokoll.slice(2), ['klick:wetter-vorlage-als-eigene', 'klick:save-preset-submit', 'lesen:vorlage-speichern-fehler', 'taste:Escape', 'nachlauf']);
+		assert.deepEqual(ops.protokoll.slice(2), ['klick:wetter-vorlage-als-eigene', 'klick:save-preset-submit', 'lesen:vorlage-speichern-fehler', 'klick:save-preset-cancel', 'nachlauf']);
+	});
+	test('Speichern: Karte öffnen, lesen, über Abbrechen schließen', async () => {
+		const ops = fakeOps([]);
+		await L.bedieneAbschnitt('vorlage-speichern', LAGE, ops);
+		assert.deepEqual(ops.protokoll.slice(2), ['klick:wetter-vorlage-als-eigene', 'lesen:vorlage-speichern', 'klick:save-preset-cancel', 'nachlauf']);
 	});
 	test('Metrik nicht im echten Briefing ⇒ nicht_pruefbar mit Grund, keine Bedienung', async () => {
 		const ops = fakeOps(['gust']);

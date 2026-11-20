@@ -19,10 +19,15 @@
 		templates: Template[];
 		userPresets: MetricPreset[];
 		onSelectPreset: (id: string) => void;
-		onOpenSaveDialog: () => void;
+		/** #3190: Umschalter der Speichern-Karte; bekommt den geklickten Knopf (Fokus-Rückgabe). */
+		onOpenSaveDialog: (ausloeser: HTMLElement) => void;
+		/** #3190: Speichern-Karte offen (aria-expanded am Auslöser). */
+		saveOpen?: boolean;
+		/** #3190: id der Speichern-Karte (aria-controls am Auslöser). */
+		saveCardId?: string;
 	}
 
-	let { selectedTemplate, dirty, templates, userPresets, onSelectPreset, onOpenSaveDialog }: Props = $props();
+	let { selectedTemplate, dirty, templates, userPresets, onSelectPreset, onOpenSaveDialog, saveOpen = false, saveCardId }: Props = $props();
 </script>
 
 <div class="preset-bar">
@@ -58,7 +63,7 @@
 	{#if dirty}
 		<div class="dirty-hint">
 			{$t('wertebereiche.preset.geaendert')}
-			<button type="button" class="save-link" onclick={onOpenSaveDialog}>
+			<button type="button" class="save-link" data-testid="weather-preset-save-link" aria-expanded={saveOpen} aria-controls={saveCardId} onclick={(e) => onOpenSaveDialog(e.currentTarget)}>
 				{$t('wertebereiche.preset.als_profil_speichern')}
 			</button>
 		</div>
