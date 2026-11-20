@@ -259,6 +259,10 @@ Randfälle (vierte Prüfung #3047, F001–F008a), alle nur mit `--konfig`:
   eigene WDir-Spalte) → jede Wind-Zelle der Etappen- und Nachttabelle trägt eine
   Kompassrichtung, im HTML auch neben dem Ampelpunkt, im Klartext („20 W");
   die Richtung je Stunde ist im HTML dieselbe wie im Klartext.
+- **Färbung der Windrichtung (seit #3228):** Wind- bzw. WDir-Zellen können nach Gegenwind oder
+  Sektor getönt sein (Details: `renderer_email_spec.md`, Abschnitt „Windrichtung: Färbung“). Die
+  Validatoren prüfen diese Tönung noch nicht; die Erweiterung folgt in #3232 (Nachweis gegen
+  zugestellte Staging-Mail).
 - **Metriken-Überblick nur mit Kachel (F008b):** der Überblick (Voll: HTML und
   Klartext, Kompakt) steht genau dann in der Mail, wenn eine Größe der
   E-Mail-Liste dieses Berichts eine Kachel trägt (weiße Liste `_PILL_CATALOG_ORDER`);

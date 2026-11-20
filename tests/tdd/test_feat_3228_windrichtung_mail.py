@@ -403,6 +403,31 @@ def test_ac9_zwei_nutzer_eigene_windrichtungs_einstellung(tmp_path):
     assert {z["bg"] for z in _wind(_report([seg], None, display_config=bert.display_config).email_html)} == {"yellow"}
 
 
+def test_ac6_gespeicherte_alt_konfiguration_bleibt_byte_gleich(tmp_path):
+    """AC-6 (Teil "gespeicherte Konfiguration unveraendert"): Alt-Trip des
+    Nutzers ``clara`` (Vorlage wandern, ``wind_direction`` ohne ``modus``) ueber
+    den echten Ladeweg ``load_trip(..., user_id=...)`` laden und rendern; danach
+    ist die Trip-Datei byte-gleich (keine neuen Felder, kein Zurueckschreiben)
+    und es ist keine weitere Datei entstanden. Die Mail entspricht ``modus: aus``."""
+    from app.loader import load_trip
+
+    alt = {"template": "wandern", "metrics": {"wind_direction": {"enabled": True}}}
+    _speichere_trip(tmp_path, "clara", alt)
+    pfad = next((tmp_path / "users" / "clara" / "briefings").glob("*.json"))
+    vorher = pfad.read_bytes()
+    dateien = sorted(p for p in tmp_path.rglob("*") if p.is_file())
+
+    trip = load_trip(pfad.stem, data_dir=tmp_path, user_id="clara")
+    assert "modus" not in trip.display_config.ampel["metrics"]["wind_direction"]
+    seg = _etappe(NORD, 25, 0)
+    report = _report([seg], None, display_config=trip.display_config, trip=trip)
+    aus = _report([seg], {**alt, "metrics": {"wind_direction": {"enabled": True, "modus": "aus"}}})
+    assert _ohne_uhrzeit(report.email_html) == _ohne_uhrzeit(aus.email_html)
+
+    assert pfad.read_bytes() == vorher, "AC-6: gespeicherte Trip-Datei wurde veraendert"
+    assert sorted(p for p in tmp_path.rglob("*") if p.is_file()) == dateien
+
+
 # ---------------------------------------------------------------------------
 # AC-10: Roh-Modus, eigene WDir-Spalte nach km/h, nicht nach Grad
 # ---------------------------------------------------------------------------

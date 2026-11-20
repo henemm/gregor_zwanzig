@@ -134,19 +134,19 @@ Bestehende Gates, die grün und unverändert bleiben müssen: `tests/tdd/test_is
 ## Acceptance Criteria
 
 - **AC-1:** Given ein Rad-Trip mit Vorlage `radtour` und einer nach Norden führenden Etappe / When die Briefing-Mail bei 25 km/h Wind aus Norden zugestellt wird / Then ist die Wind-Zelle der Etappe (mit der Windrichtung) in Orange gefärbt, entsprechend der Gegenwindkomponente von 25 km/h. (Bezug: Epic AC-1)
-  - Test: Zugestellte Staging-Mail des Rad-Trips (Briefing-Validator): Wind-/WDir-Zelle trägt die Ampelfarbe orange.
+  - Test: Zugestellte Staging-Mail des Rad-Trips (Briefing-Validator): Wind-/WDir-Zelle trägt die Ampelfarbe orange. (Validator-Nachweis in eigenem Issue #3232, Projektregel: Validator nie im Feature-Workflow)
 
 - **AC-2:** Given dieselbe Rad-Etappe nach Norden / When der Wind mit 25 km/h aus Süden weht (Rückenwind) oder rein von der Seite kommt (Ostwind) / Then bleibt die Windrichtungs-Färbung aus, und die Anzeige der Zelle ist unverändert. (Bezug: Epic AC-2)
-  - Test: Zugestellte Mail bei Südwind und bei Ostwind: Zelle ohne Richtungs-Ampelfarbe, Anzeige unverändert.
+  - Test: Zugestellte Mail bei Südwind und bei Ostwind: Zelle ohne Richtungs-Ampelfarbe, Anzeige unverändert. (Validator-Nachweis in eigenem Issue #3232, Projektregel: Validator nie im Feature-Workflow)
 
 - **AC-3:** Given dieselbe Etappe mit Gegenwind-Richtung / When die Windstärke nur 5 km/h beträgt (unter der gelben Grenze von 10 km/h) / Then bleibt die Zelle ungefärbt; bei 10 km/h wird sie gelb. (Bezug: Epic AC-3)
-  - Test: Zugestellte Mail bei 5 km/h Nordwind: keine Färbung; bei 10 km/h Nordwind: gelb.
+  - Test: Zugestellte Mail bei 5 km/h Nordwind: keine Färbung; bei 10 km/h Nordwind: gelb. (Validator-Nachweis in eigenem Issue #3232, Projektregel: Validator nie im Feature-Workflow)
 
 - **AC-4:** Given ein Rundkurs-Segment, dessen Start und Ende weniger als 300 m auseinanderliegen / When starker Wind (40 km/h) weht / Then wird die Windrichtung dieses Segments nicht gefärbt, weil keine Fahrtrichtung bestimmbar ist, während ein angrenzendes Streckensegment mit Gegenwind gefärbt bleibt. (Bezug: Epic AC-5)
-  - Test: Zugestellte Mail für Rundkurs-Segment bei 40 km/h Wind: keine Richtungsfärbung; angrenzendes Segment mit Gegenwind gefärbt.
+  - Test: Zugestellte Mail für Rundkurs-Segment bei 40 km/h Wind: keine Richtungsfärbung; angrenzendes Segment mit Gegenwind gefärbt. (Validator-Nachweis in eigenem Issue #3232, Projektregel: Validator nie im Feature-Workflow)
 
 - **AC-5:** Given ein Ortsvergleich mit markiertem Sektor N und ein Skiort mit 30 km/h Nordwind / When die Vergleichs-Mail zugestellt wird / Then ist die Windrichtungs-Zelle dieses Ortes entsprechend der Schwellen gefärbt, und ein Ort mit Südwind gleicher Stärke bleibt ungefärbt. (Bezug: Epic AC-6)
-  - Test: Zugestellte Staging-Mail des Ortsvergleichs (Vergleichstabelle, `email_spec_validator.py`): Zelle Skiort gefärbt, Vergleichsort ungefärbt.
+  - Test: Zugestellte Staging-Mail des Ortsvergleichs (Vergleichstabelle, `email_spec_validator.py`): Zelle Skiort gefärbt, Vergleichsort ungefärbt. (Validator-Nachweis in eigenem Issue #3232, Projektregel: Validator nie im Feature-Workflow)
 
 - **AC-6:** Given ein bestehender Trip ohne Feld `modus` in `ampel.metrics.wind_direction` (nicht Vorlage `radtour`) / When das Briefing nach dem Update zugestellt wird / Then ist die Mail inhaltlich identisch zu vorher, und die gespeicherte Konfiguration ist unverändert. (Bezug: Epic AC-8)
   - Test: Gerenderte Mail vor und nach der Änderung bei gleichen Wetterdaten ohne Unterschied; Modus-Matrix `test_issue_811_mode_matrix.py` grün und unverändert; gespeicherte Trip-Datei ohne neue Felder.

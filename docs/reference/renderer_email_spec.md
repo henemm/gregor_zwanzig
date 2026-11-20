@@ -392,6 +392,30 @@ Seit dem #888-Fix folgt die Tönung bei Ampel-Zellen dem Katalog-Ampel-Level, im
 Roh-Modus den bestehenden Legacy-Schwellen. Die frühere Absolutform „Roh ist Roh =
 gar kein Styling" ist damit überholt (Doku-Abgleich #985/#1198).
 
+### Windrichtung: Färbung nach Gegenwind bzw. Sektor (seit Issue #3228, 2026-11-20)
+
+Die Windrichtung ist eine abgeleitete Ampelgröße (ADR-0126). Gefärbt wird nicht nach der Gradzahl,
+sondern nach dem Wert `wind_unerwuenscht_kmh` je Stunde (Helfer `zeilen_wert_kmh` in
+`src/services/windrichtung.py`; Schwellen über `AMPEL_ABGELEITET` in `src/app/ampel.py`; die Ampel
+`hat_ampel` bleibt für Windrichtung `False`).
+
+- **Trip, Modus `gegenwind`** (Vorlage `radtour`): Gegenwindkomponente der Etappe, Fahrtpeilung = Luftlinie
+  Start → Ende. Unter 300 m Luftlinie (Rundkurs) gibt es keine Peilung und damit keine Färbung.
+- **Modus `sektoren`** (Trip und Ortsvergleich): volle Windstärke, wenn der Wind aus einem markierten
+  Sektor kommt; sonst 0.
+- **Ortsvergleich mit geerbtem `gegenwind`:** ohne Fahrtrichtung kein Wert, also keine Färbung.
+- **Standardfall (Kompass in der Wind-Zelle):** Die Zelle zeigt die höhere der beiden Stufen aus
+  Windstärke und Gegenwind/Sektor, nicht die Summe. Zellfarbe, Ampelpunkt und Zeilenpunkt nutzen dieselbe
+  Stufe (`mit_windrichtung` in `src/output/renderers/email/helpers.py`).
+- **Roh-Modus mit eigener WDir-Spalte:** die Spalte wird nach dem km/h-Wert gefärbt, nicht nach dem Grad.
+- **Ortsvergleich:** die Stufe der Windrichtungs-Zelle ist die des höchsten Stundenwerts
+  (`src/output/renderers/email/compare_html.py`, `_sev_windrichtung`).
+- **Ausblick-Spalte** (`outlook.py`): abgeleitete Ampelgrößen werden nie nach dem Gradwert gefärbt; die
+  Ausblick-Zelle bleibt bis zur Scheibe S3 ungefärbt.
+- Rückenwind, Seitenwind und Windstärken unter der gelben Grenze bleiben ungefärbt. Alt-Trips ohne
+  Feld `modus` bleiben unverändert.
+- Telegram, SMS und Premium-SMS bleiben in S2 unverändert; sie folgen in S3 (Epic #3222).
+
 ---
 
 ## Viewport-spezifisches Rendering (ab Issue #831)
