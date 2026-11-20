@@ -61,7 +61,7 @@ Die Katalog-Quelle `zwei_formen_stellen` legt fest, an welcher Stelle (E-Mail, T
 |--------|------|---------|
 | `docs/specs/modules/feat_3122_was_steht_wo.md` | spec | Übergeordnete freigegebene Spec (Teil A Nr. 4, Nr. 8, AC-5, AC-6, AC-11) |
 | `docs/adr/0124-was-steht-wo-eine-tabelle.md` | adr | Nr. 5: eine Quelle für Roh/Einfach |
-| `src/services/weather_metrics.py` `format_rain_probability_scale` | function | Wortstufe der Regenwahrscheinlichkeit (Schwellen 30/60/80 aus dem Katalog) |
+| `src/services/weather_metrics.py` `format_rain_probability_scale` | function | Wortstufe der Regenwahrscheinlichkeit (Grenzen 25/50/75; die Katalog-Schwellen 30/60/80 gelten nur für die Ampelfarbe) |
 | `src/services/placements.py` | module | Nutzt die Quelle bereits; Zielmuster |
 | `src/output/renderers/alert/hours.py`, `src/services/notification_service.py` | module | Importieren `_AMPEL_CAPABLE_METRIC_IDS` (Alarm-Pfad); Alias muss bleiben, Verhalten unverändert |
 | `frontend/.../outlookFriendlyCapability.ts` und Drift-Test | test | Ruft `OUTLOOK_FRIENDLY_CAPABLE` live; Alias bleibt bis #3154 |
@@ -107,7 +107,7 @@ Bestandsdaten (Prod, gemessen 2026-11-20): `hourly_metric_formats=true` bei eine
 
 Alle Tests laufen durch den echten Renderer mit echten Konfigurationen, ohne `Mock()`/`patch()`.
 
-- [ ] Test 1: GIVEN Trip mit rain_probability Einfach WHEN die Nur-Text-Mail gerendert wird THEN steht die Wortstufe (Schwellen 30/60/80), bei Roh die Zahl (bestehender xfail-Test wird grün, xfail entfernt).
+- [ ] Test 1: GIVEN Trip mit rain_probability Einfach WHEN die Nur-Text-Mail gerendert wird THEN steht die Wortstufe (bestehende Wortskala 25/50/75 wie im Orte-Vergleich und Ausblick), bei Roh die Zahl (bestehender xfail-Test wird grün, xfail entfernt).
 - [ ] Test 2: GIVEN dieselbe Konfiguration WHEN die HTML-Trip-Mail gerendert wird THEN ist die Ausgabe gegenüber dem Stand vorher byte-gleich (Ampelpunkt).
 - [ ] Test 3: GIVEN Orte-Abo mit rain_probability Einfach WHEN die HTML-Übersicht gerendert wird THEN steht ein Ampelpunkt statt Wortstufe, bei Roh die Zahl (bestehender xfail-Test wird grün).
 - [ ] Test 4: GIVEN Roh/Einfach-Matrix über jede Metrik und jede Stelle WHEN gerendert THEN unterscheidet sich die Ausgabe genau dort, wo `zwei_formen_stellen` zwei Formen nennt (Parametrisierung aus der Quelle, Fallliste gruen).
@@ -124,7 +124,7 @@ Alle Tests laufen durch den echten Renderer mit echten Konfigurationen, ohne `Mo
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein Trip mit Regenwahrscheinlichkeit auf Einfach in der E-Mail / When die Nur-Text-Mail erzeugt wird / Then steht dort die Wortstufe nach den Katalog-Schwellen 30/60/80 statt der Zahl, und mit Roh steht die Zahl.
+- **AC-1:** Given ein Trip mit Regenwahrscheinlichkeit auf Einfach in der E-Mail / When die Nur-Text-Mail erzeugt wird / Then steht dort die Wortstufe der bestehenden Regenwahrscheinlichkeits-Skala (unwahrscheinlich/möglich/wahrscheinlich/sehr wahrscheinlich, Grenzen 25/50/75, dieselbe wie Orte-Vergleich und Ausblick) statt der Zahl, und mit Roh steht die Zahl.
   - Test: Echte Nur-Text-Mail aus dem Renderer, je einmal Roh und Einfach, Vergleich der Zelle der Regenwahrscheinlichkeit.
 - **AC-2:** Given derselbe Trip mit Regenwahrscheinlichkeit auf Einfach / When die HTML-Mail erzeugt wird / Then zeigt sie weiterhin den Ampelpunkt und ist gegenüber dem Stand vor der Änderung unverändert.
   - Test: HTML-Ausgabe vor und nach Änderung bytegleich, Ampelpunkt in der Zelle vorhanden.
@@ -159,3 +159,4 @@ Alle Tests laufen durch den echten Renderer mit echten Konfigurationen, ohne `Mo
 ## Changelog
 
 - 2026-11-20: Initial spec created
+- 2026-11-20 (Phase 5): Wortstufen-Grenzen präzisiert: bestehende Skala `format_rain_probability_scale` (25/50/75), damit jeder Kanal dieselben Wörter zeigt; 30/60/80 sind die Ampelfarb-Schwellen. Keine Verhaltensänderung gegenüber der Freigabe-Absicht (Wortstufe wie bei Orte).
