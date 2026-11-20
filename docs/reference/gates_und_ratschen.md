@@ -273,6 +273,8 @@ nur mit Begründung im PR.
 eine grüne Grundmenge voraussetzen, die eine Stichprobenmessung (30,6 % rot) widerlegt hat.
 Stand nach #1771 S3 (2026-08-14): 45 Dateien / 224 Testfälle; **Stand 2026-10-30 (#2347 S4) laut `.github/workflows/ci.yml`: `E2E_MIN_SPECS: 72` Dateien (`grep -c '^e2e/' .github/ci_e2e_specs.txt`), `E2E_MIN_EXECUTED_HAUPT: 609` Testfälle** (per `npx playwright test --list` über die Positivliste ohne `bug-703` gemessen, `Total: 609 tests in 72 files` inkl. `global.setup`; 599 nach Teil A, +8 Ersatzfälle aus Teil D: AN-13, AN-14, AW-5c, SC-1b je kind, +2 aus Teil E: AN-15 je kind; dort ist jeder Zuwachs einzeln kommentiert).
 
+**Die Haupt-Suite läuft immer seriell (#3137):** `workers: 1` in `frontend/playwright.config.ts` gilt auch lokal ohne `CI`, weil alle Fälle dasselbe Admin-Konto, dieselben Seed-IDs (`e2e-loc-*`) und dieselbe Datenwurzel teilen (parallel verfälscht z. B. ein Sprach-Umschalter die Sprache anderer Fälle); `e2e/global.setup.ts` bricht bei `--workers` > 1 mit Grund und Abhilfe ab.
+
 Aufnahme nur nach **Filter A** (strukturell) + **Filter B** (3× hintereinander grün) + **Filter C**
 (die Datei darf beim Laufen keine *versionierte* Datei verändern — 3 Specs schrieben Screenshots ohne
 `../` nach `frontend/docs/artifacts/`, das die Ignore-Regel `docs/artifacts/` nicht abdeckt).

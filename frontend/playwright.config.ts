@@ -17,9 +17,13 @@ export default defineConfig({
 	// Testfehlern/Abbrüchen) — löscht alle E2E-GZ--Präfix-Objekte.
 	globalTeardown: './e2e/global.teardown.ts',
 	timeout: 30_000,
-	// #1771 Scheibe 2: workers: 1 in CI -- Tests teilen dieselbe Datenwurzel
-	// und Seed-IDs (`e2e-loc-*`), Parallel-Laeufe wuerden sich stoeren.
-	workers: process.env.CI ? 1 : undefined,
+	// #1771 Scheibe 2 + #3137: immer genau ein Worker, auch lokal ohne CI.
+	// Alle Tests teilen dasselbe Admin-Konto, dieselben Seed-IDs (`e2e-loc-*`)
+	// und dieselbe Datenwurzel; parallele Worker stoeren sich gegenseitig
+	// (z. B. stellt ein Sprach-Umschalter die Kontosprache auf Englisch,
+	// waehrend ein anderer Fall deutsche Texte erwartet). Der Waechter in
+	// e2e/global.setup.ts bricht bei `--workers` > 1 ab.
+	workers: 1,
 	retries: 0,
 	use: {
 		baseURL: 'http://localhost:4173',
