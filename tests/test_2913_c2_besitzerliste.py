@@ -123,7 +123,13 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # #2968 (EN-Zuordner, 19.11.) räumt alle 446 Verweise #2968 ab: 442 entfallen (Lücke geschlossen, EN
     # eindeutig bzw. als Alternativen geführt, Grenzen-Beschriftung „gelb >“ über Regel e, zusaetzlich jetzt
     # erklärt), vier englische Live-Texte der bewussten Abweichung → #2795.
-    soll = {"#2967": 247, "#2966": 0, "#2913-d": 0, "#2795": 318, "#2797": 8, "#2968": 0, "#3022": 62, "#3111": 156}
+    # #3192 (20.11.): 156 #3111-Einträge abgeräumt, DE-Abgleich auf Mockup-Lage hat alle gefunden. 52 entfallen
+    # (EN nach Neuerzeugung der Elementliste aus dem Katalog), 100 EN-Lücken → #3194 (EN-Sollwert nicht automatisch
+    # zuordenbar), 4 EN-Lücken „eigene · aus GR221 gespeichert“ → #3151 (Mockup-Beispieldaten).
+    soll = {
+        "#2967": 247, "#2966": 0, "#2913-d": 0, "#2795": 318, "#2797": 8, "#2968": 0, "#3022": 62,
+        "#3111": 0, "#3194": 100, "#3151": 4,
+    }
     ist = _verweise(daten)
     assert {k: ist.get(k, 0) for k in soll} == soll
 

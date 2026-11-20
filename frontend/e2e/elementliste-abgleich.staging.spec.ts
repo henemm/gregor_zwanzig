@@ -49,7 +49,21 @@ import {
 	bedieneAbschnitt,
 	mitAufraeumen,
 	ordneAbschnitte,
-	wetterPruefMetriken,
+	eingabeText,
+	seitenIdFuer,
+	wetterPruefPayload,
+	eigeneVorlagePayload,
+	pruefReste,
+	wetterTripId,
+	WETTER_DATENSAETZE,
+	WETTER_NAME,
+	WETTER_TRIP_ID,
+	EIGENE_VORLAGE_NAME,
+	ABGLEICH_TRIP_ID,
+	ABGLEICH_NAMEN,
+	MOCKUP_LAGE,
+	type WetterIds,
+	type WetterPruefQuelle,
 	type BedienOps,
 	type Ergebnis,
 	type ListenElement,
@@ -112,13 +126,18 @@ function sichtbareTexte(arg: { selektor: string; alle: boolean }): { marker: boo
 	const wurzeln = treffer.length > 0 ? treffer.filter((w) => !treffer.some((a) => a !== w && a.contains(w))) : arg.alle ? [] : [document.body];
 	const MIT_LABEL = new Set(['switch', 'group', 'textbox']);
 	const n = (s: string | null) => String(s ?? '').replace(/\s+/g, ' ').trim();
+	const eingabe = (window as unknown as { __gzEingabeText?: (e: { tag: string; ariaLabel: string | null; placeholder: string | null; value: string }) => string }).__gzEingabeText;
+	if (typeof eingabe !== 'function') throw new Error('sichtbareTexte: window.__gzEingabeText fehlt (addInitScript mit eingabeText nicht gelaufen)');
 	const texte: string[] = [];
 	for (const wurzel of wurzeln) {
 		for (const el of [wurzel, ...Array.from(wurzel.querySelectorAll('*'))]) {
 			if (el.closest('script,style,[aria-hidden="true"]') || !el.checkVisibility()) continue;
-			if (el instanceof HTMLInputElement) {
-				const t = n(el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.value);
-				if (t) texte.push(t);
+			// #3192 (AC-4), Fix-Loop F001: Eingabefelder (INPUT, TEXTAREA) entscheidet allein eingabeText aus der
+			// Logik (per addInitScript im Fenster); für alle anderen Elemente liefert sie ''.
+			const wert = (el as { value?: unknown }).value;
+			const t = n(eingabe({ tag: el.tagName, ariaLabel: el.getAttribute('aria-label'), placeholder: el.getAttribute('placeholder'), value: typeof wert === 'string' ? wert : '' }));
+			if (t) {
+				texte.push(t);
 				continue;
 			}
 			const label = el.getAttribute('aria-label');
@@ -156,12 +175,12 @@ async function navigiereImBrowser(page: Page, pfad: string): Promise<void> {
 async function pruefDaten(api: APIRequestContext, ids: Record<string, string | null>): Promise<() => Promise<void>> {
 	const aufraeumen: Array<() => Promise<unknown>> = [];
 	if (!ids.trip) {
-		const id = 'e2e-gz-2913-abgleich';
+		const id = ABGLEICH_TRIP_ID;
 		await api.delete(`/api/trips/${id}`).catch(() => {});
 		const r = await api.post('/api/trips', {
 			data: {
 				id,
-				name: 'E2E-GZ #2913 Elementlisten-Abgleich',
+				name: ABGLEICH_NAMEN[0],
 				// #2913 c2: Region wie im Mockup, damit die Eyebrow „Trip · Mallorca“ prüfbar ist (nicht nur „Trip“).
 				region: 'Mallorca',
 				stages: [
@@ -183,7 +202,7 @@ async function pruefDaten(api: APIRequestContext, ids: Record<string, string | n
 		}
 	}
 	if (!ids.orte) {
-		const ort = await api.post('/api/locations', { data: { name: 'E2E-GZ #2913 Ort', lat: 51.96, lon: 7.63 } });
+		const ort = await api.post('/api/locations', { data: { name: ABGLEICH_NAMEN[1], lat: 51.96, lon: 7.63 } });
 		if (ort.ok()) {
 			const ortId = String((await ort.json()).id);
 			aufraeumen.push(() => api.delete(`/api/locations/${ortId}`));
@@ -192,7 +211,7 @@ async function pruefDaten(api: APIRequestContext, ids: Record<string, string | n
 				// Region bewusst nicht „Münsterland“: das ist im Mockup der Name des Vergleichs (Brotkrumen, Titel); die
 				// Region steht live zusätzlich unter dem Titel und würde sonst als Name gefunden (falsche Reihenfolge).
 				data: {
-					name: 'E2E-GZ #2913 Orte-Abgleich',
+					name: ABGLEICH_NAMEN[2],
 					location_ids: [ortId],
 					schedule: 'daily',
 					profil: 'wandern',
@@ -221,70 +240,106 @@ function alsListe(x: unknown): Record<string, unknown>[] {
 	return (feld ?? []) as Record<string, unknown>[];
 }
 
-const WETTER_NAME = 'E2E-GZ #2966 Wetter-Prüfung';
-const WETTER_TRIP_ID = 'e2e-gz-2966-wetter';
-/** Aktive Vorlage des Wetter-Prüf-Datensatzes (auch der Standard, falls es sie nicht gibt). */
-const WETTER_VORLAGE = 'allgemein';
-const KEINE_WETTER_IDS: Record<string, string | null> = { trip: null, orte: null };
+// #3192 (AC-1): je Kontext zwei Prüf-Datensätze; welcher je Abschnitt gilt, entscheidet seitenIdFuer (Logik).
+const KEINE_WETTER_IDS: WetterIds = { trip: null, orte: null };
+
+/** `allowed_sides` je Metrik aus /api/metrics (nach Kategorie gruppiert); Fehlschlag ⇒ {} (dann keine Overrides). */
+async function metrikSeiten(api: APIRequestContext): Promise<Record<string, { allowed_sides: string | null }>> {
+	const r = await api.get('/api/metrics').catch(() => null);
+	const antwort: unknown = r?.ok() ? await r.json().catch(() => null) : null;
+	const out: Record<string, { allowed_sides: string | null }> = {};
+	for (const gruppe of Object.values((antwort ?? {}) as Record<string, unknown>)) {
+		if (!Array.isArray(gruppe)) continue;
+		for (const m of gruppe as Record<string, unknown>[]) {
+			if (typeof m?.id === 'string') out[m.id] = { allowed_sides: typeof m.allowed_sides === 'string' ? m.allowed_sides : null };
+		}
+	}
+	return out;
+}
 
 /**
- * #2966 (AC-8): eigener Wetter-Prüf-Datensatz (Trip und Orts-Vergleich) mit allen Metriken im Briefing, damit
- * jeder Grenzen-Dialog bedienbar ist. Reste eines abgebrochenen Laufs werden vorher entfernt; die
- * Aufräumschritte landen in `aufraeumen` und laufen im finally des Tests (auch nach einem Fehler).
+ * #2966 (AC-8), #3192 (AC-1 bis AC-3): Wetter-Prüf-Datensätze auf Mockup-Lage — je Kontext „mit Abweichung“
+ * (gültiger Grenzen-Override je Briefing-Metrik, Gewitter über `thunder`) und „ohne Abweichung“ (nur Vorlage
+ * und Metrik-Auswahl); Trip aktiv `alpen-trekking`, Orts-Vergleich `allgemein` mit drei Orten; dazu je Art
+ * eine eigene Vorlage. Reste eines abgebrochenen Laufs werden vorher entfernt; die Aufräumschritte landen in
+ * `aufraeumen` und laufen im finally des Tests (auch nach einem Fehler). Der GR221-Seed bleibt unberührt
+ * (nur eigene IDs und Namen mit Präfix E2E-GZ werden gelöscht).
  */
-async function wetterPruefDaten(api: APIRequestContext, liste: ListenElement[], aufraeumen: Array<() => Promise<unknown>>): Promise<Record<string, string | null>> {
-	const ids: Record<string, string | null> = { trip: null, orte: null };
-	await api.delete(`/api/trips/${WETTER_TRIP_ID}`).catch(() => {});
+async function wetterPruefDaten(api: APIRequestContext, liste: ListenElement[], aufraeumen: Array<() => Promise<unknown>>): Promise<WetterIds> {
+	const ids: WetterIds = { trip: {}, orte: {} };
+	for (const id of [WETTER_TRIP_ID, ...WETTER_DATENSAETZE.map(wetterTripId)]) await api.delete(`/api/trips/${id}`).catch(() => {});
 	for (const p of alsListe(await (await api.get('/api/compare/presets')).json().catch(() => []))) {
-		if (p.name === WETTER_NAME) await api.delete(`/api/compare/presets/${encodeURIComponent(String(p.id))}`).catch(() => {});
+		if (String(p.name ?? '').startsWith(WETTER_NAME)) await api.delete(`/api/compare/presets/${encodeURIComponent(String(p.id))}`).catch(() => {});
 	}
 	for (const o of alsListe(await (await api.get('/api/locations')).json().catch(() => []))) {
-		if (o.name === WETTER_NAME) await api.delete(`/api/locations/${encodeURIComponent(String(o.id))}`).catch(() => {});
+		if (String(o.name ?? '').startsWith(WETTER_NAME)) await api.delete(`/api/locations/${encodeURIComponent(String(o.id))}`).catch(() => {});
 	}
-	const trip = await api.post('/api/trips', {
-		data: {
-			id: WETTER_TRIP_ID,
-			name: WETTER_NAME,
-			region: 'Mallorca',
-			stages: [
-				{
-					id: `${WETTER_TRIP_ID}-stage-1`,
-					name: 'Etappe 1',
-					date: new Date().toISOString().slice(0, 10),
-					waypoints: [
-						{ id: `${WETTER_TRIP_ID}-wp-1`, name: 'Start', lat: 39.6, lon: 2.5, elevation_m: 100 },
-						{ id: `${WETTER_TRIP_ID}-wp-2`, name: 'Ziel', lat: 39.7, lon: 2.6, elevation_m: 600 }
-					]
-				}
-			],
-			display_config: { preset_name: WETTER_VORLAGE, metrics: wetterPruefMetriken(liste, 'trip').map((m) => ({ metric_id: m, enabled: true })) }
-		}
-	});
-	if (trip.ok()) {
-		ids.trip = WETTER_TRIP_ID;
-		aufraeumen.push(() => api.delete(`/api/trips/${WETTER_TRIP_ID}`));
+	for (const p of alsListe(await (await api.get('/api/metric-presets')).json().catch(() => []))) {
+		if (p.name === EIGENE_VORLAGE_NAME) await api.delete(`/api/metric-presets/${encodeURIComponent(String(p.id))}`).catch(() => {});
 	}
-	const ort = await api.post('/api/locations', { data: { name: WETTER_NAME, lat: 51.96, lon: 7.63 } });
-	if (ort.ok()) {
+	// Payloads (Metrik-Auswahl, Overrides, Beschreibung) baut die Logik (wetterPruefPayload, eigeneVorlagePayload; unit-getestet).
+	const quelle: WetterPruefQuelle = {
+		liste,
+		vorlagen: alsListe(await (await api.get('/api/templates')).json().catch(() => [])),
+		eig: await metrikSeiten(api),
+		ortIds: [],
+		datum: new Date().toISOString().slice(0, 10)
+	};
+
+	for (const d of WETTER_DATENSAETZE) {
+		const id = wetterTripId(d);
+		const trip = await api.post('/api/trips', { data: wetterPruefPayload('trip', d, quelle) });
+		if (trip.ok()) {
+			ids.trip![d] = id;
+			aufraeumen.push(() => api.delete(`/api/trips/${id}`));
+		} else console.error(`Wetter-Prüf-Trip (${d}) nicht anlegbar: HTTP ${trip.status()} ${await trip.text().catch(() => '')}`);
+	}
+
+	// Drei eigene Prüf-Orte (Mockup: „für diese Orte“), geteilt von beiden Vergleichs-Datensätzen.
+	for (let i = 0; i < MOCKUP_LAGE.orte.orte; i++) {
+		const ort = await api.post('/api/locations', { data: { name: `${WETTER_NAME} Ort ${i + 1}`, lat: 51.96 + i * 0.05, lon: 7.63 + i * 0.05 } });
+		if (!ort.ok()) continue;
 		const ortId = String((await ort.json()).id);
+		quelle.ortIds.push(ortId);
 		aufraeumen.push(() => api.delete(`/api/locations/${ortId}`));
-		const v = await api.post('/api/compare/presets', {
-			data: {
-				name: WETTER_NAME,
-				location_ids: [ortId],
-				schedule: 'manual',
-				profil: 'wandern',
-				// Objektform: Katalog-Zeichenketten verwirft der Vergleich (leere Auswahl).
-				display_config: { preset_name: WETTER_VORLAGE, active_metrics: wetterPruefMetriken(liste, 'orte').map((m) => ({ metric_id: m, aggregation: 'max' })) }
-			}
-		});
-		if (v.ok()) {
-			const vid = String((await v.json()).id);
-			ids.orte = vid;
-			aufraeumen.unshift(() => api.delete(`/api/compare/presets/${vid}`));
+	}
+	if (quelle.ortIds.length === MOCKUP_LAGE.orte.orte) {
+		for (const d of WETTER_DATENSAETZE) {
+			const v = await api.post('/api/compare/presets', { data: wetterPruefPayload('orte', d, quelle) });
+			if (v.ok()) {
+				const vid = String((await v.json()).id);
+				ids.orte![d] = vid;
+				aufraeumen.unshift(() => api.delete(`/api/compare/presets/${vid}`));
+			} else console.error(`Wetter-Prüf-Vergleich (${d}) nicht anlegbar: HTTP ${v.status()} ${await v.text().catch(() => '')}`);
 		}
+	} else console.error(`Wetter-Prüf-Orte: nur ${quelle.ortIds.length} von ${MOCKUP_LAGE.orte.orte} anlegbar`);
+
+	for (const kind of ['route', 'vergleich'] as const) {
+		const p = await api.post('/api/metric-presets', { data: eigeneVorlagePayload(kind) });
+		if (p.ok()) {
+			const pid = String((await p.json()).id);
+			aufraeumen.push(() => api.delete(`/api/metric-presets/${encodeURIComponent(pid)}`));
+		} else console.error(`Eigene Prüf-Vorlage (${kind}) nicht anlegbar: HTTP ${p.status()}`);
 	}
 	return ids;
+}
+
+/**
+ * Fix-Loop F002 (b): Leckprüfung nach dem Aufräumen — Bestand per API lesen, Reste filtert pruefReste (Logik,
+ * unit-getestet). Ein gescheiterter Abruf ist selbst ein Befund (nie still „kein Leck“).
+ */
+async function leckPruefung(api: APIRequestContext): Promise<string[]> {
+	const befunde: string[] = [];
+	const lies = async (pfad: string): Promise<Record<string, unknown>[]> => {
+		const r = await api.get(pfad).catch(() => null);
+		if (!r?.ok()) {
+			befunde.push(`Abruf ${pfad} für die Leckprüfung fehlgeschlagen: HTTP ${r?.status() ?? 'ohne Antwort'}`);
+			return [];
+		}
+		return alsListe(await r.json().catch(() => []));
+	};
+	const bestand = { trips: await lies('/api/trips'), vergleiche: await lies('/api/compare/presets'), orte: await lies('/api/locations'), vorlagen: await lies('/api/metric-presets') };
+	return [...befunde, ...pruefReste(bestand)];
 }
 
 /** Metriken mit Knopf „Grenzen ändern“ auf der geladenen Seite (= im Briefing, nicht reine Anzeige). */
@@ -344,6 +399,9 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 	const schreibBefunde: string[] = [];
 	const bedienAnfragen: { method: string; url: string }[] = [];
 	page.on('request', (r) => bedienAnfragen.push({ method: r.method(), url: r.url() }));
+	let leckBefunde: string[] = ['Leckprüfung nicht gelaufen'];
+	// Fix-Loop F001 (AC-4): die im Browser wirkende Eingabefeld-Regel IST eingabeText (per CDP, nicht CSP-betroffen).
+	await page.addInitScript(`window.__gzEingabeText = ${eingabeText.toString()};`);
 	let spracheZurueck: Awaited<ReturnType<typeof stelleSpracheWieder>> = { ok: false, meldung: 'Zurückstellen der Profilsprache nicht gelaufen' };
 	try {
 		const gesetzt = await api.put('/api/auth/profile', { data: { language: plan.sprache } });
@@ -415,7 +473,8 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 				const abschnitte = new Map<string, ListenElement[]>();
 				for (const e of el) abschnitte.set(e.abschnitt, [...(abschnitte.get(e.abschnitt) ?? []), e]);
 				// #2966: Bedien-Abschnitte erst nach der Gegenrichtung, je mit frischer Seite.
-				const lage = { ctx: k.ctx, vorlagen, aktiveVorlage: WETTER_VORLAGE };
+				// #3192 (AC-2): aktive Vorlage der Mockup-Lage je Kontext (Trip alpen-trekking, Orte allgemein).
+				const lage = { ctx: k.ctx, vorlagen, aktiveVorlage: (MOCKUP_LAGE as Record<string, { aktiv: string } | undefined>)[k.ctx]?.aktiv ?? 'allgemein' };
 				const zuBedienen: Array<[string, ListenElement[]]> = [];
 				for (const weg of ordneAbschnitte([...abschnitte.keys()], lage, alle)) {
 					const { abschnitt } = weg;
@@ -442,9 +501,10 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 				}
 				// #2966 (AC-6, AC-7): Script-Zustände per Bedienplan herstellen — nur öffnen, abbrechen, leer absenden.
 				for (const [abschnitt, liste] of zuBedienen) {
-					const seitenId = k.reiter === 'wetter' ? wetterIds[k.ctx] : id;
+					// #3192 (AC-1): Grenzen-Abschnitte auf dem Datensatz mit Abweichung, Vorlage-Abschnitte ohne.
+					const seitenId = k.reiter === 'wetter' ? seitenIdFuer(abschnitt, k.ctx, wetterIds) : id;
 					if (!seitenId) {
-						for (const [i, e] of alleNichtPruefbar(liste, `Wetter-Prüf-Datensatz (${k.ctx}) nicht anlegbar`)) ergebnisse.set(i, e);
+						for (const [i, e] of alleNichtPruefbar(liste, `Wetter-Prüf-Datensatz (${k.ctx}, Abschnitt ${abschnitt}) nicht anlegbar`)) ergebnisse.set(i, e);
 						continue;
 					}
 					const lauf = await bedieneAbschnitt(abschnitt, lage, seitenOps(page, () => seiteLaden(seitenId), bedienAnfragen));
@@ -463,6 +523,8 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 		await page.unrouteAll({ behavior: 'ignoreErrors' });
 		spracheZurueck = await stelleSpracheWieder((daten) => api.put('/api/auth/profile', { data: daten }), vorherSprache);
 		await aufraeumen();
+		// Fix-Loop F002 (b): nach beiden Aufräumschritten (Wetter-Prüfdaten in mitAufraeumen, pruefDaten hier).
+		leckBefunde = await leckPruefung(api);
 		await api.post('/api/auth/logout').catch(() => {});
 	}
 
@@ -473,5 +535,7 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 	expect(spracheZurueck.ok, spracheZurueck.ok ? '' : spracheZurueck.meldung).toBe(true);
 	// #2966 (AC-7): eine schreibende Anfrage während der Bedienung ist immer ein Fehlschlag.
 	expect(schreibBefunde, schreibBefunde.join('\n')).toEqual([]);
+	// Fix-Loop F002 (b): kein Prüf-Datensatz (Trip, Vergleich, Ort, eigene Vorlage) darf das Laufende überleben.
+	expect(leckBefunde, `Prüf-Reste nach dem Aufräumen:\n${leckBefunde.join('\n')}`).toEqual([]);
 	expect(ende.exit, ende.meldung).toBe(0);
 });

@@ -153,3 +153,162 @@ describe('#3192 AC-4 eingabeText (Platzhalter auch aus textarea)', () => {
 		assert.equal(et({ tag: 'DIV', ariaLabel: 'x', placeholder: 'y', value: 'z' }), '');
 	});
 });
+
+// Fix-Loop F001: die Staging-Spec gibt eingabeText per toString() in den Browser (addInitScript); die dort
+// wirkende Regel ist nur dann die getestete, wenn die Funktion selbstenthalten serialisierbar ist.
+describe('#3192 F001 eingabeText ist serialisierbar (Browser-Regel = getestete Regel)', () => {
+	type E = { tag: string; ariaLabel: string | null; placeholder: string | null; value: string };
+	const FAELLE: E[] = [
+		{ tag: 'TEXTAREA', ariaLabel: null, placeholder: 'Beschreibung', value: '' },
+		{ tag: 'TEXTAREA', ariaLabel: 'Notiz', placeholder: 'P', value: 'V' },
+		{ tag: 'TEXTAREA', ariaLabel: null, placeholder: null, value: 'Inhalt' },
+		{ tag: 'INPUT', ariaLabel: 'Name', placeholder: 'P', value: 'V' },
+		{ tag: 'INPUT', ariaLabel: null, placeholder: 'P', value: 'V' },
+		{ tag: 'INPUT', ariaLabel: null, placeholder: null, value: 'V' },
+		{ tag: 'INPUT', ariaLabel: '', placeholder: '', value: '' },
+		{ tag: 'DIV', ariaLabel: 'x', placeholder: 'y', value: 'z' },
+		{ tag: 'BUTTON', ariaLabel: 'Speichern', placeholder: null, value: '' },
+		{ tag: 'SELECT', ariaLabel: 'Wahl', placeholder: null, value: 'a' }
+	];
+	test('new Function(toString) liefert dieselben Ergebnisse wie eingabeText (inkl. TEXTAREA)', () => {
+		const original = fn<(e: E) => string>('eingabeText');
+		const quelle = original.toString();
+		const kopie = new Function(`return ${quelle}`)() as (e: E) => string;
+		assert.equal(typeof kopie, 'function');
+		for (const f of FAELLE) assert.equal(kopie(f), original(f), JSON.stringify(f));
+		assert.equal(kopie(FAELLE[0]), 'Beschreibung', 'TEXTAREA-Platzhalter auch im serialisierten Browser-Text');
+	});
+});
+
+describe('#3192 F002 (a) seitenIdFuer: Abschnitt -> Prüf-Datensatz-ID', () => {
+	const ids = { trip: { mit_abweichung: 'trip-mit', ohne_abweichung: 'trip-ohne' }, orte: { mit_abweichung: 'orte-mit', ohne_abweichung: 'orte-ohne' } };
+	const sid = (a: string, c: string, w: Record<string, unknown>) => fn<(a: string, c: string, w: Record<string, unknown>) => string | null>('seitenIdFuer')(a, c, w);
+	test('grenzen-* -> ID mit Abweichung (je Kontext)', () => {
+		assert.equal(sid('grenzen-wind', 'trip', ids), 'trip-mit');
+		assert.equal(sid('grenzen-thunder', 'orte', ids), 'orte-mit');
+	});
+	test('vorlage-* -> ID ohne Abweichung (je Kontext)', () => {
+		for (const a of ['vorlage-auswahl', 'vorlage-bestaetigung', 'vorlage-speichern', 'vorlage-speichern-fehler']) {
+			assert.equal(sid(a, 'trip', ids), 'trip-ohne', a);
+			assert.equal(sid(a, 'orte', ids), 'orte-ohne', a);
+		}
+	});
+	test('fehlender Kontext oder Datensatz -> null (nie ersetzen)', () => {
+		assert.equal(sid('grenzen-wind', 'trip', { trip: null, orte: null }), null);
+		assert.equal(sid('grenzen-wind', 'anderer', ids), null);
+		assert.equal(sid('grenzen-wind', 'trip', { trip: { ohne_abweichung: 'trip-ohne' } }), null);
+		assert.equal(sid('vorlage-auswahl', 'orte', { orte: { mit_abweichung: 'orte-mit' } }), null);
+	});
+});
+
+describe('#3192 F002 (b) pruefReste: nur Prüf-Objekte zählen als Leck', () => {
+	type B = { trips: Record<string, unknown>[]; vergleiche: Record<string, unknown>[]; orte: Record<string, unknown>[]; vorlagen: Record<string, unknown>[] };
+	const reste = (b: B) => fn<(b: B) => string[]>('pruefReste')(b);
+	const SEED: B = {
+		trips: [{ id: 'gr221-mallorca', name: 'Mallorca Frühling' }, { id: 'gr221', name: 'GR221' }],
+		vergleiche: [{ id: 'v1', name: 'Münsterland' }],
+		orte: [{ id: 'o1', name: 'Münster' }, { id: 'o2', name: 'Deià' }],
+		vorlagen: [{ id: 'p1', name: 'GR221', description: 'aus GR221 gespeichert' }, { id: 'p2', name: 'E2E-GZ andere Vorlage' }]
+	};
+	test('Prüfkonto-Seed allein -> kein Rest', () => {
+		assert.deepEqual(reste(SEED), []);
+	});
+	test('F004: Trip allein über ABGLEICH_TRIP_ID (fremder Name) ist ein Rest', () => {
+		const r = reste({ ...SEED, trips: [...SEED.trips, { id: 'e2e-gz-2913-abgleich', name: 'umbenannt' }] });
+		assert.equal(r.length, 1, r.join('\n'));
+		assert.ok(r[0].includes('e2e-gz-2913-abgleich'));
+		assert.equal((L as Record<string, unknown>).ABGLEICH_TRIP_ID, 'e2e-gz-2913-abgleich');
+	});
+	test('jede Art von Prüf-Rest wird gemeldet, Seed nie', () => {
+		const b: B = {
+			trips: [...SEED.trips, { id: 'e2e-gz-2966-wetter-mit', name: 'irgendwas' }, { id: 'x', name: 'E2E-GZ #2966 Wetter-Prüfung (ohne Abweichung)' }, { id: 'e2e-gz-2913-abgleich', name: 'E2E-GZ #2913 Elementlisten-Abgleich' }],
+			vergleiche: [...SEED.vergleiche, { id: 'v9', name: 'E2E-GZ #2966 Wetter-Prüfung (mit Abweichung)' }, { id: 'v8', name: 'E2E-GZ #2913 Orte-Abgleich' }],
+			orte: [...SEED.orte, { id: 'o9', name: 'E2E-GZ #2966 Wetter-Prüfung Ort 2' }, { id: 'o8', name: 'E2E-GZ #2913 Ort' }],
+			vorlagen: [...SEED.vorlagen, { id: 'p9', name: 'E2E-GZ #3192 eigene Vorlage' }]
+		};
+		const r = reste(b);
+		assert.equal(r.length, 8, r.join('\n'));
+		for (const id of ['e2e-gz-2966-wetter-mit', ' x ', 'e2e-gz-2913-abgleich', 'v9', 'v8', 'o9', 'o8', 'p9']) assert.ok(r.some((z) => z.includes(id.trim())), id);
+		for (const s of ['Mallorca Frühling', 'Münsterland', 'Deià', 'GR221“', 'E2E-GZ andere Vorlage']) assert.ok(!r.some((z) => z.includes(s)), s);
+	});
+});
+
+describe('#3192 F002 (c) Anlege-Payloads', () => {
+	type Q = { liste: unknown[]; vorlagen: Record<string, unknown>[]; eig: Record<string, { allowed_sides: string | null }>; ortIds: string[]; datum: string };
+	const payload = (ctx: 'trip' | 'orte', d: string, q: Q) => fn<(c: string, d: string, q: Q) => Record<string, any>>('wetterPruefPayload')(ctx, d, q);
+	const el = (ctx: string, abschnitt: string) => ({ id: `${ctx}-${abschnitt}`, ctx, reiter: 'wetter', abschnitt, zustand: 'normal', text: 'x' });
+	const Q: Q = {
+		liste: [el('trip', 'grenzen-wind'), el('trip', 'grenzen-temperature'), el('trip', 'grenzen-thunder'), el('orte', 'grenzen-wind'), el('orte', 'grenzen-sunshine'), el('trip', 'vorlage-auswahl')],
+		vorlagen: [
+			{ id: 'alpen-trekking', ampel: { metrics: { wind: { enabled: true }, rain: { enabled: true }, temperature: { enabled: false } } } },
+			{ id: 'allgemein', ampel: { metrics: { temperature: { enabled: true }, sunshine: { enabled: false }, cloud: { enabled: true } } } },
+			{ id: 'wandern', ampel: { metrics: { gust: { enabled: true } } } }
+		],
+		eig: EIG,
+		ortIds: ['o1', 'o2', 'o3'],
+		datum: '2026-11-20'
+	};
+	const keineGrenzen = (ampel: Record<string, unknown>) => {
+		assert.equal(ampel.thunder, undefined, 'kein thunder');
+		const m = (ampel.metrics ?? {}) as Record<string, { lower?: unknown; upper?: unknown }>;
+		for (const [id, e] of Object.entries(m)) assert.ok(!e?.lower && !e?.upper, `${id}: keine lower/upper`);
+	};
+
+	test('trip ohne_abweichung: genau die aktiven Metriken von alpen-trekking, Ampel nur Vorlage', () => {
+		const p = payload('trip', 'ohne_abweichung', Q);
+		assert.equal(p.id, 'e2e-gz-2966-wetter-ohne');
+		assert.ok(String(p.name).startsWith('E2E-GZ #2966 Wetter-Prüfung'));
+		assert.equal(p.display_config.preset_name, 'alpen-trekking');
+		assert.deepEqual(p.display_config.metrics.map((m: { metric_id: string }) => m.metric_id).sort(), ['rain', 'wind']);
+		assert.deepEqual(p.display_config.ampel, { template: 'alpen-trekking' });
+		keineGrenzen(p.display_config.ampel);
+		assert.equal(p.stages[0].date, '2026-11-20');
+	});
+	test('orte ohne_abweichung: genau die aktiven Metriken von allgemein, drei Orte, Ampel nur Vorlage', () => {
+		const p = payload('orte', 'ohne_abweichung', Q);
+		assert.deepEqual(p.display_config.active_metrics.map((m: { metric_id: string }) => m.metric_id).sort(), ['cloud', 'temperature']);
+		assert.deepEqual(p.display_config.ampel, { template: 'allgemein' });
+		keineGrenzen(p.display_config.ampel);
+		assert.deepEqual(p.location_ids, ['o1', 'o2', 'o3']);
+	});
+	test('mit_abweichung: Grenzen-Metriken der Liste und wetterOverrides', () => {
+		const t = payload('trip', 'mit_abweichung', Q);
+		assert.equal(t.id, 'e2e-gz-2966-wetter-mit');
+		assert.deepEqual(t.display_config.metrics.map((m: { metric_id: string }) => m.metric_id).sort(), ['temperature', 'thunder', 'wind']);
+		const erwartet = fn<(m: string[], e: typeof EIG) => Overrides>('wetterOverrides')(['wind', 'temperature', 'thunder'], EIG);
+		assert.deepEqual(t.display_config.ampel, { template: 'alpen-trekking', ...erwartet });
+		assert.ok(t.display_config.ampel.metrics.wind.upper && t.display_config.ampel.thunder);
+		const o = payload('orte', 'mit_abweichung', Q);
+		assert.deepEqual(o.display_config.active_metrics.map((m: { metric_id: string }) => m.metric_id).sort(), ['sunshine', 'wind']);
+		assert.equal(o.display_config.ampel.template, 'allgemein');
+		assert.ok(o.display_config.ampel.metrics.sunshine.lower && o.display_config.ampel.metrics.wind.upper);
+	});
+	test('F004 aktiveMetrikenDerVorlage: nur enabled === true zählt (fehlend, undefined, false, Wahrheitswert-Ersatz nicht)', () => {
+		// Echte Semantik von /api/templates (AMPEL_TEMPLATES): jede Metrik trägt enabled als bool; alles andere ist nie aktiv.
+		const akt = fn<(v: Record<string, unknown>[], id: string) => string[]>('aktiveMetrikenDerVorlage');
+		const vorlagen = [
+			{ id: 'v', ampel: { metrics: { an: { enabled: true }, aus: { enabled: false }, ohne: {}, undef: { enabled: undefined }, eins: { enabled: 1 }, text: { enabled: 'true' }, leer: null } } },
+			{ id: 'andere', ampel: { metrics: { fremd: { enabled: true } } } }
+		];
+		assert.deepEqual(akt(vorlagen, 'v'), ['an']);
+		assert.deepEqual(akt(vorlagen, 'fehlt'), [], 'unbekannte Vorlage: keine Metriken');
+		assert.deepEqual(akt([{ id: 'v' }], 'v'), [], 'Vorlage ohne ampel: keine Metriken');
+	});
+	test('F004 eigeneVorlagePayload: metrics nicht leer', () => {
+		const ev = fn<(k: string) => Record<string, unknown>>('eigeneVorlagePayload');
+		for (const kind of ['route', 'vergleich']) {
+			const m = ev(kind).metrics;
+			assert.ok(Array.isArray(m) && m.length > 0 && m.every((x) => typeof x === 'string' && x.length > 0), `${kind}: ${JSON.stringify(m)}`);
+		}
+	});
+	test('eigeneVorlagePayload: Prüf-Name, Beschreibung exakt „aus GR221 gespeichert“, Art übernommen', () => {
+		const ev = fn<(k: string) => Record<string, unknown>>('eigeneVorlagePayload');
+		for (const kind of ['route', 'vergleich']) {
+			const p = ev(kind);
+			assert.equal(p.name, 'E2E-GZ #3192 eigene Vorlage');
+			assert.equal(p.description, 'aus GR221 gespeichert');
+			assert.equal(p.kind, kind);
+			assert.equal(p.is_default, false);
+		}
+	});
+});

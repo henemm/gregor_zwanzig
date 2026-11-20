@@ -1,0 +1,7 @@
+
+Running 3 tests using 1 worker
+
+[1A[2K[1/3] [setup] › e2e/fix-1895-modus-rueckbau.staging.setup.ts:11:1 › authenticate via API (staging) — 1895_modus_rueckbau
+[1A[2K[2/3] [tests] › e2e/s3a2794-teil3-vorlage.spec.ts:159:2 › #3192 AC-8 (route): eigene Vorlage mit Beschreibung speichern, ohne Neuladen „eigene · <Beschreibung>“ im Menü
+[1A[2K[3/3] [tests] › e2e/s3a2794-teil3-vorlage.spec.ts:159:2 › #3192 AC-8 (vergleich): eigene Vorlage mit Beschreibung speichern, ohne Neuladen „eigene · <Beschreibung>“ im Menü
+[1A[2K  3 passed (3.6s)

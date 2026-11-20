@@ -4567,134 +4567,110 @@
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-cloud_total.4a7c5a72c0",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-cloud_total.71ce88b60a",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-gust.0dc303f500",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-gust.abb98e9e68",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-precipitation.2ccadbd2b0",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-precipitation.b389816c67",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-rain_probability.a5a9f8a085",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-rain_probability.bfab1e067e",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-sunshine.1cd3e56e4e",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-sunshine.2a4ba51362",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-temperature.022d440542",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-temperature.69a7c64336",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-temperature.b70276eb55",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-thunder.a8e8df0698",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-wind.3a6fb9f221",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-wind.cfd3d219ff",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.grenzen-wind.e3b0a93a9b",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.0e1025a5a8",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.luecken.-.vorlage-auswahl.289c2a0748",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.60a9ab706e",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.85799db8a4",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.8db33332d2",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "Mockup-Beispieldaten: Herkunftszeile der eigenen Vorlage („aus GR221 gespeichert“) enthält einen Trip-Namen aus dem Mockup; kein Katalogtext, EN-Sollwert nicht ableitbar. DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3151"
 		},
 		{
 			"art": "element",
@@ -4704,195 +4680,111 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.b57f75837e",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.c0c3c1b99b",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.c828fa37ef",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.fdd0abda68",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.luecken.-.vorlage-bestaetigung.a37c8ba993",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-bestaetigung.dc3fc81e5e",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-speichern.4698ffbdc9",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-speichern.539bcb744b",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-speichern.7e9d0b3def",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-speichern.ce497cd409",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Reihenfolge im Abschnitt",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Rumpf der Vorlagen-Bestätigung, im Katalog mit anderem Zuschnitt). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-cloud_total.e255a215dd",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-cloud_total.eed63e68f9",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-gust.59795d2897",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-gust.bd762ea8a7",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-precipitation.a244f76dcd",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-precipitation.db5e96485e",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-rain_probability.4fb90f9b81",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-rain_probability.88f5785e17",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-sunshine.4536efc8c5",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-sunshine.8d8195144d",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-temperature.0eaf1465d8",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-temperature.41c1fae3cd",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-temperature.b08d0d3251",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-thunder.4c3ad13864",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-wind.2390db8162",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-wind.740f1d75cf",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.grenzen-wind.8b8d01b7fe",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.02fa9a88a9",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.05e0b5d592",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.73a94296e4",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.7a418c5c87",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.7a87a1072c",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
@@ -4902,291 +4794,207 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.b973176a52",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
 			"id": "orte.wetter.normal.-.vorlage-auswahl.e965e7f4dc",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.ecbd79ec81",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.f4a14bdb8d",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-bestaetigung.24ed01f0a6",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "Mockup-Beispieldaten: Herkunftszeile der eigenen Vorlage („aus GR221 gespeichert“) enthält einen Trip-Namen aus dem Mockup; kein Katalogtext, EN-Sollwert nicht ableitbar. DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3151"
 		},
 		{
 			"art": "element",
 			"id": "orte.wetter.normal.-.vorlage-bestaetigung.27f10ecaba",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-speichern.5a99386342",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-speichern.7bf753d847",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-speichern.d2f4b2ae33",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Reihenfolge im Abschnitt",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-speichern.e9269ad043",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Rumpf der Vorlagen-Bestätigung, im Katalog mit anderem Zuschnitt). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-cloud_low.1a05988af4",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-cloud_low.a30d3b6f3e",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-freezing_level.106f817e21",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-freezing_level.5d1db38e85",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-freezing_level.b36dba8294",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-gust.d3bceaf440",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-gust.f7d0c92205",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-precipitation.8fa48d9cc8",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-precipitation.f4cad41754",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-rain_probability.45f85914c1",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-rain_probability.bf371af439",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.1828034a7c",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.99c610d59f",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-snowfall_limit.a8b0109a15",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-temperature.532c865d55",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-temperature.649b31b257",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-temperature.cd79b22b34",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-temperature_night.31a7f407c4",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-temperature_night.4c5de3e083",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-temperature_night.e0da51ba3f",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-thunder.66a1113e89",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-uv_index.5522873caf",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-uv_index.d63244d6e9",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-visibility.15a4982350",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-visibility.1a59727bd0",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-wind.242dba652a",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-wind.6498f67edc",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-wind.bf20daad0e",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-wind_chill.26fe27cb83",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-wind_chill.35aa420cae",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.grenzen-wind_chill.c5681d7ed6",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-auswahl.0a0186009f",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.luecken.-.vorlage-auswahl.0f1ef50ff0",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-auswahl.1b1dfc2075",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-auswahl.3ce3f4db83",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-auswahl.409e0a1d41",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-auswahl.5121793c2e",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-auswahl.5d4950244c",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "Mockup-Beispieldaten: Herkunftszeile der eigenen Vorlage („aus GR221 gespeichert“) enthält einen Trip-Namen aus dem Mockup; kein Katalogtext, EN-Sollwert nicht ableitbar. DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3151"
 		},
 		{
 			"art": "element",
@@ -5196,279 +5004,201 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-auswahl.8f670012a9",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-auswahl.b0edf83b7a",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-bestaetigung.17ae730d83",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.vorlage-bestaetigung.da46974681",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-speichern.0e26835627",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-speichern.99eb58e1be",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-speichern.bf72c3eefa",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Reihenfolge im Abschnitt",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.luecken.-.vorlage-speichern.dc9007cd4a",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Rumpf der Vorlagen-Bestätigung, im Katalog mit anderem Zuschnitt). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-cloud_low.6b51d53fbd",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-cloud_low.e00056addb",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-freezing_level.3c161400c0",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-freezing_level.9bd8e94833",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-freezing_level.cb4b23a864",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-gust.1a9aa3c7fa",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-gust.558c53879d",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-precipitation.2324a035b9",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-precipitation.7a60fbf310",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-rain_probability.c1c32b554d",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-rain_probability.fcc87ba724",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.6102c04a0e",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.90c8b9323c",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-snowfall_limit.fb3662c1f7",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-temperature.091e482cc6",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-temperature.10787589df",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-temperature.e38df53357",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-temperature_night.1c9bbb021f",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-temperature_night.546129e871",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-temperature_night.8df7f503e0",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-thunder.06dea6c028",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-uv_index.49b50f67a4",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-uv_index.e8cb0b84bb",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-visibility.37665250d2",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-visibility.b9b43795ef",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-wind.28c189998e",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-wind.f5911e5cb7",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-wind.fd6e1cae4b",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-wind_chill.55dd377fb7",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Hinweis und Abweichend-Satz stehen im Mockup in einem Textknoten). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-wind_chill.a2eea193cf",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.grenzen-wind_chill.ecd8f0b01b",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-auswahl.25d2b55c21",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-auswahl.5b7b600176",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (zweizeiliger Grenzen-Titel, im Mockup ein Textknoten aus Seite und Bedeutung). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "element",
 			"id": "trip.wetter.normal.-.vorlage-auswahl.606434af83",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-auswahl.670f5535b0",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-auswahl.b559ad3522",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-auswahl.bf12740658",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-auswahl.ea608a1196",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "Mockup-Beispieldaten: Herkunftszeile der eigenen Vorlage („aus GR221 gespeichert“) enthält einen Trip-Namen aus dem Mockup; kein Katalogtext, EN-Sollwert nicht ableitbar. DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3151"
 		},
 		{
 			"art": "element",
@@ -5478,51 +5208,9 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-auswahl.f1b65f5d5e",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-auswahl.fb8c97b641",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-bestaetigung.9e98a167ba",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.normal.-.vorlage-bestaetigung.ebdecee793",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-speichern.6c29d42ded",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Reihenfolge im Abschnitt",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-speichern.a8401ae8b1",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-speichern.ca65b75f34",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
-		},
-		{
-			"art": "element",
-			"id": "trip.wetter.normal.-.vorlage-speichern.fa3c2ed506",
-			"grund": "Dialog im Reiter Wetter weicht in Text/Aufbau vom Mockup ab (Grenzen ändern, Vorlage-Auswahl/-Bestätigung/-Speichern); Entscheidung Mockup vs. Spec feat_2794_s3a offen. Ursache: Text nicht sichtbar",
-			"verweis": "#3111"
+			"grund": "EN-Sollwert der #3111-Dialogtexte nicht automatisch zuordenbar (Rumpf der Vorlagen-Bestätigung, im Katalog mit anderem Zuschnitt). DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
+			"verweis": "#3194"
 		},
 		{
 			"art": "zusaetzlich",

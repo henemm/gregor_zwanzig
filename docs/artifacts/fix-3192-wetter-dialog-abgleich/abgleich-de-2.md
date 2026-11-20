@@ -1,0 +1,2234 @@
+# Elementlisten-Abgleich (Staging)
+
+| gefunden | abweichend | nicht_pruefbar | freigegeben | zusaetzlich | gesamt |
+|---|---|---|---|---|---|
+| 1363 | 487 | 198 | 0 | 173 | 2048 |
+
+| id | Kontext | Reiter | Zustand | Segment | Abschnitt | Nr. | Text | Status | Grund / Ist | Besitzer |
+|---|---|---|---|---|---|---|---|---|---|---|
+| trip.wetter.normal.-.kopf.aa178223ac | trip | wetter | normal | – | kopf | 1 | Trips / | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Trips / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Trips“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| trip.wetter.normal.-.kopf.ac0cbd7964 | trip | wetter | normal | – | kopf | 2 | GR221 Mallorca | gefunden |  | – |
+| trip.wetter.normal.-.kopf.facf8ab6fa | trip | wetter | normal | – | kopf | 3 | Weitere Aktionen | gefunden |  | – |
+| trip.wetter.normal.-.kopf.5d4b8e7c09 | trip | wetter | normal | – | kopf | 4 | Test schicken ▾ | gefunden |  | – |
+| trip.wetter.normal.-.kopf.736342726c | trip | wetter | normal | – | kopf | 5 | Trip · Mallorca | gefunden |  | – |
+| trip.wetter.normal.-.kopf.15736ec25a | trip | wetter | normal | – | kopf | 6 | GR221 Mallorca | gefunden |  | – |
+| trip.wetter.normal.-.kopf.13d5f81e5a | trip | wetter | normal | – | kopf | 7 | fertig | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Trip ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| trip.wetter.normal.-.kopf.6bd845aa45 | trip | wetter | normal | – | kopf | 8 | 23.–26. Februar 2026 · 4 Etappen · 31,5 km · ↑1.737 m | gefunden |  | – |
+| trip.wetter.normal.-.reiterleiste.d7facbfd5f | trip | wetter | normal | – | reiterleiste | 1 | Übersicht | gefunden |  | – |
+| trip.wetter.normal.-.reiterleiste.e53d054b38 | trip | wetter | normal | – | reiterleiste | 2 | Etappen | gefunden |  | – |
+| trip.wetter.normal.-.reiterleiste.e8f72e1252 | trip | wetter | normal | – | reiterleiste | 3 | 4 | gefunden |  | – |
+| trip.wetter.normal.-.reiterleiste.80df3c500f | trip | wetter | normal | – | reiterleiste | 4 | Wetter | gefunden |  | – |
+| trip.wetter.normal.-.reiterleiste.6165055427 | trip | wetter | normal | – | reiterleiste | 5 | Zustellung | gefunden |  | – |
+| trip.wetter.normal.-.abschnittskopf.6bcb913270 | trip | wetter | normal | – | abschnittskopf | 1 | Wetter | gefunden |  | – |
+| trip.wetter.normal.-.abschnittskopf.014cfaa802 | trip | wetter | normal | – | abschnittskopf | 2 | Was im Briefing steht, was für dich zu viel oder zu wenig ist und ab wann du einen Alarm bekommst. | gefunden |  | – |
+| trip.wetter.normal.-.vorlage.0224f13ca5 | trip | wetter | normal | – | vorlage | 1 | Vorlage | gefunden |  | – |
+| trip.wetter.normal.-.vorlage.b6b8686222 | trip | wetter | normal | – | vorlage | 2 | Alpen-Trekking | gefunden |  | – |
+| trip.wetter.normal.-.vorlage.df0c0ec4ee | trip | wetter | normal | – | vorlage | 3 | ▾ unverändert | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Text „▾ unverändert“ ist ein Knoten; live sind Auswahlpfeil „▾“ und Stand „unverändert“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| trip.wetter.normal.-.vorlage.f151e8024e | trip | wetter | normal | – | vorlage | 4 | Als eigene Vorlage speichern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.cf53f542a5 | trip | wetter | normal | – | metriken | 1 | Alarm ab für alle | gefunden |  | – |
+| trip.wetter.normal.-.metriken.28f17f24eb | trip | wetter | normal | – | metriken | 2 | 9 von 13 Metriken lösen einen Alarm aus. 3 können keinen auslösen (Vorboten und reine Anzeige). | gefunden |  | – |
+| trip.wetter.normal.-.metriken.6947a9cd5b | trip | wetter | normal | – | metriken | 3 | Nie | gefunden |  | – |
+| trip.wetter.normal.-.metriken.483faf5263 | trip | wetter | normal | – | metriken | 4 | Gelb | gefunden |  | – |
+| trip.wetter.normal.-.metriken.1ea656e451 | trip | wetter | normal | – | metriken | 5 | Orange | gefunden |  | – |
+| trip.wetter.normal.-.metriken.068fdea82a | trip | wetter | normal | – | metriken | 6 | Rot | gefunden |  | – |
+| trip.wetter.normal.-.metriken.15d174a12d | trip | wetter | normal | – | metriken | 7 | Temperatur | gefunden |  | – |
+| trip.wetter.normal.-.metriken.bba4178ad1 | trip | wetter | normal | – | metriken | 8 | Temperatur aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.d0a2ea7cb7 | trip | wetter | normal | – | metriken | 9 | Temperatur | gefunden |  | – |
+| trip.wetter.normal.-.metriken.adf50a694f | trip | wetter | normal | – | metriken | 10 | °C · Tageshöchst · Tagestief | gefunden |  | – |
+| trip.wetter.normal.-.metriken.b5e3d32ae7 | trip | wetter | normal | – | metriken | 11 | -10 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.fb9e08be6b | trip | wetter | normal | – | metriken | 12 | 2 | gefunden |  | – |
+| trip.wetter.normal.-.metriken.aa0a110601 | trip | wetter | normal | – | metriken | 13 | Alarm, wenn der Wert seit dem letzten Briefing über 30 °C steigt oder unter -3 °C fällt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 12 | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.0de20b0d87 | trip | wetter | normal | – | metriken | 14 | · grün: 2 bis 27 °C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.0272de7cff | trip | wetter | normal | – | metriken | 15 | Alarm ab | gefunden |  | – |
+| trip.wetter.normal.-.metriken.2688412443 | trip | wetter | normal | – | metriken | 16 | Nie | gefunden |  | – |
+| trip.wetter.normal.-.metriken.173dd8dc8f | trip | wetter | normal | – | metriken | 17 | Gelb | gefunden |  | – |
+| trip.wetter.normal.-.metriken.c2f83e617d | trip | wetter | normal | – | metriken | 18 | Orange | gefunden |  | – |
+| trip.wetter.normal.-.metriken.56164f7cb4 | trip | wetter | normal | – | metriken | 19 | Rot | gefunden |  | – |
+| trip.wetter.normal.-.metriken.889efc6d1f | trip | wetter | normal | – | metriken | 20 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.c3a5bfb37a | trip | wetter | normal | – | metriken | 21 | Tiefsttemperatur Nacht aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.1d276beb68 | trip | wetter | normal | – | metriken | 22 | Tiefsttemperatur Nacht | gefunden |  | – |
+| trip.wetter.normal.-.metriken.feb7424407 | trip | wetter | normal | – | metriken | 23 | °C · vor der Etappe | gefunden |  | – |
+| trip.wetter.normal.-.metriken.b13dc7c56e | trip | wetter | normal | – | metriken | 24 | Alarm, wenn der Wert seit dem letzten Briefing unter -3 °C fällt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | gefunden |  | – |
+| trip.wetter.normal.-.metriken.d7ed141ce3 | trip | wetter | normal | – | metriken | 25 | · grün: ab 0 °C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.bd0a9f39df | trip | wetter | normal | – | metriken | 26 | Alarm ab | gefunden |  | – |
+| trip.wetter.normal.-.metriken.17125723f8 | trip | wetter | normal | – | metriken | 27 | Nie | gefunden |  | – |
+| trip.wetter.normal.-.metriken.8c47b4e5ac | trip | wetter | normal | – | metriken | 28 | Gelb | gefunden |  | – |
+| trip.wetter.normal.-.metriken.9318a286fe | trip | wetter | normal | – | metriken | 29 | Orange | gefunden |  | – |
+| trip.wetter.normal.-.metriken.b120129555 | trip | wetter | normal | – | metriken | 30 | Rot | gefunden |  | – |
+| trip.wetter.normal.-.metriken.414705fdf5 | trip | wetter | normal | – | metriken | 31 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.4a8040cd7c | trip | wetter | normal | – | metriken | 32 | Gefühlte Temperatur aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.deed182658 | trip | wetter | normal | – | metriken | 33 | Gefühlte Temperatur | gefunden |  | – |
+| trip.wetter.normal.-.metriken.c37623324d | trip | wetter | normal | – | metriken | 34 | °C · Vorbote, kein Alarm | gefunden |  | – |
+| trip.wetter.normal.-.metriken.d0fc604251 | trip | wetter | normal | – | metriken | 35 | Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus. | gefunden |  | – |
+| trip.wetter.normal.-.metriken.2ff237032e | trip | wetter | normal | – | metriken | 36 | · grün: ab -2 °C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.c3c03f7575 | trip | wetter | normal | – | metriken | 37 | kein Alarm (Vorbote) | gefunden |  | – |
+| trip.wetter.normal.-.metriken.05cf5b6203 | trip | wetter | normal | – | metriken | 38 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.be714a7075 | trip | wetter | normal | – | metriken | 39 | Wind | gefunden |  | – |
+| trip.wetter.normal.-.metriken.6297ef8a0f | trip | wetter | normal | – | metriken | 40 | Wind aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.27921f3231 | trip | wetter | normal | – | metriken | 41 | Wind | gefunden |  | – |
+| trip.wetter.normal.-.metriken.ad8d66ff1c | trip | wetter | normal | – | metriken | 42 | km/h · Mittelwind | gefunden |  | – |
+| trip.wetter.normal.-.metriken.4d4b97636d | trip | wetter | normal | – | metriken | 43 | Alarm, wenn der Wert seit dem letzten Briefing über 45 km/h steigt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | gefunden |  | – |
+| trip.wetter.normal.-.metriken.9a569c50ce | trip | wetter | normal | – | metriken | 44 | · grün: bis 30 km/h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.2538f45c9d | trip | wetter | normal | – | metriken | 45 | Alarm ab | gefunden |  | – |
+| trip.wetter.normal.-.metriken.305c5ecde7 | trip | wetter | normal | – | metriken | 46 | Nie | gefunden |  | – |
+| trip.wetter.normal.-.metriken.3d5b652000 | trip | wetter | normal | – | metriken | 47 | Gelb | gefunden |  | – |
+| trip.wetter.normal.-.metriken.825ac8a1fa | trip | wetter | normal | – | metriken | 48 | Orange | gefunden |  | – |
+| trip.wetter.normal.-.metriken.f0a86fafbd | trip | wetter | normal | – | metriken | 49 | Rot | gefunden |  | – |
+| trip.wetter.normal.-.metriken.61ea22bf0f | trip | wetter | normal | – | metriken | 50 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.9cb21be19b | trip | wetter | normal | – | metriken | 51 | Böen aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.218a7b3300 | trip | wetter | normal | – | metriken | 52 | Böen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.a0021b57b5 | trip | wetter | normal | – | metriken | 53 | km/h · Spitze | gefunden |  | – |
+| trip.wetter.normal.-.metriken.2fcf94761f | trip | wetter | normal | – | metriken | 54 | Alarm ab | gefunden |  | – |
+| trip.wetter.normal.-.metriken.3093e8526d | trip | wetter | normal | – | metriken | 55 | Nie | gefunden |  | – |
+| trip.wetter.normal.-.metriken.f686578470 | trip | wetter | normal | – | metriken | 56 | Gelb | gefunden |  | – |
+| trip.wetter.normal.-.metriken.df08799d21 | trip | wetter | normal | – | metriken | 57 | Orange | gefunden |  | – |
+| trip.wetter.normal.-.metriken.adf2e90f01 | trip | wetter | normal | – | metriken | 58 | Rot | gefunden |  | – |
+| trip.wetter.normal.-.metriken.f0bb4428cd | trip | wetter | normal | – | metriken | 59 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.4759a282a5 | trip | wetter | normal | – | metriken | 60 | Niederschlag & Gewitter | gefunden |  | – |
+| trip.wetter.normal.-.metriken.d7115890c7 | trip | wetter | normal | – | metriken | 61 | Niederschlag aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.2b5773a9d8 | trip | wetter | normal | – | metriken | 62 | Niederschlag | gefunden |  | – |
+| trip.wetter.normal.-.metriken.8c287f53c8 | trip | wetter | normal | – | metriken | 63 | mm · Summe | gefunden |  | – |
+| trip.wetter.normal.-.metriken.c3c936a613 | trip | wetter | normal | – | metriken | 64 | Alarm, wenn der Wert seit dem letzten Briefing über 5 mm steigt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | gefunden |  | – |
+| trip.wetter.normal.-.metriken.8da6f72bfb | trip | wetter | normal | – | metriken | 65 | · grün: bis 1 mm | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.3e82ff5c32 | trip | wetter | normal | – | metriken | 66 | Alarm ab | gefunden |  | – |
+| trip.wetter.normal.-.metriken.585c0b307f | trip | wetter | normal | – | metriken | 67 | Nie | gefunden |  | – |
+| trip.wetter.normal.-.metriken.6fac7541c2 | trip | wetter | normal | – | metriken | 68 | Gelb | gefunden |  | – |
+| trip.wetter.normal.-.metriken.45cbc37433 | trip | wetter | normal | – | metriken | 69 | Orange | gefunden |  | – |
+| trip.wetter.normal.-.metriken.770e391499 | trip | wetter | normal | – | metriken | 70 | Rot | gefunden |  | – |
+| trip.wetter.normal.-.metriken.14fe763d42 | trip | wetter | normal | – | metriken | 71 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.8884cd0ddf | trip | wetter | normal | – | metriken | 72 | Gewitter aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.6b78572420 | trip | wetter | normal | – | metriken | 73 | Gewitter | gefunden |  | – |
+| trip.wetter.normal.-.metriken.0b868e654d | trip | wetter | normal | – | metriken | 74 | Stufe | gefunden |  | – |
+| trip.wetter.normal.-.metriken.4275f32e4f | trip | wetter | normal | – | metriken | 75 | keins | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.c6b112e838 | trip | wetter | normal | – | metriken | 76 | mittel | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.b8633b218d | trip | wetter | normal | – | metriken | 77 | hoch | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.94d30ab180 | trip | wetter | normal | – | metriken | 78 | Alarm, wenn die Gewitter-Stufe seit dem letzten Briefing auf mittel oder hoch steigt (Orange). Entwarnung, wenn sie wieder fällt. | gefunden |  | – |
+| trip.wetter.normal.-.metriken.badde69218 | trip | wetter | normal | – | metriken | 79 | Alarm ab | gefunden |  | – |
+| trip.wetter.normal.-.metriken.95c0e5c567 | trip | wetter | normal | – | metriken | 80 | Nie | gefunden |  | – |
+| trip.wetter.normal.-.metriken.d69a50b680 | trip | wetter | normal | – | metriken | 81 | Orange | gefunden |  | – |
+| trip.wetter.normal.-.metriken.13190fcf41 | trip | wetter | normal | – | metriken | 82 | Rot | gefunden |  | – |
+| trip.wetter.normal.-.metriken.bff847e383 | trip | wetter | normal | – | metriken | 83 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.18a2c25593 | trip | wetter | normal | – | metriken | 84 | Regenwahrscheinlichkeit aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.84b74c9c8e | trip | wetter | normal | – | metriken | 85 | Regenwahrscheinlichkeit | gefunden |  | – |
+| trip.wetter.normal.-.metriken.a47caaefbc | trip | wetter | normal | – | metriken | 86 | % · Vorbote, kein Alarm | gefunden |  | – |
+| trip.wetter.normal.-.metriken.5ac1eafd03 | trip | wetter | normal | – | metriken | 87 | Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus. | gefunden |  | – |
+| trip.wetter.normal.-.metriken.2c54a609fa | trip | wetter | normal | – | metriken | 88 | · grün: bis 30 % | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.749bfe3e0f | trip | wetter | normal | – | metriken | 89 | kein Alarm (Vorbote) | gefunden |  | – |
+| trip.wetter.normal.-.metriken.e38d3f92ec | trip | wetter | normal | – | metriken | 90 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.9492467f7f | trip | wetter | normal | – | metriken | 91 | Himmel & Sicht | gefunden |  | – |
+| trip.wetter.normal.-.metriken.56a7250b73 | trip | wetter | normal | – | metriken | 92 | Sichtweite aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.8868e21e7d | trip | wetter | normal | – | metriken | 93 | Sichtweite | gefunden |  | – |
+| trip.wetter.normal.-.metriken.e45aff65ba | trip | wetter | normal | – | metriken | 94 | m · Minimum | gefunden |  | – |
+| trip.wetter.normal.-.metriken.a8fc019541 | trip | wetter | normal | – | metriken | 95 | Alarm, wenn der Wert seit dem letzten Briefing unter 300 m fällt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | gefunden |  | – |
+| trip.wetter.normal.-.metriken.eefadd349d | trip | wetter | normal | – | metriken | 96 | · grün: ab 1000 m | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.f73c3b288d | trip | wetter | normal | – | metriken | 97 | Alarm ab | gefunden |  | – |
+| trip.wetter.normal.-.metriken.062207da24 | trip | wetter | normal | – | metriken | 98 | Nie | gefunden |  | – |
+| trip.wetter.normal.-.metriken.a3d265b9ab | trip | wetter | normal | – | metriken | 99 | Gelb | gefunden |  | – |
+| trip.wetter.normal.-.metriken.9ff2ad091d | trip | wetter | normal | – | metriken | 100 | Orange | gefunden |  | – |
+| trip.wetter.normal.-.metriken.1c59bd63ae | trip | wetter | normal | – | metriken | 101 | Rot | gefunden |  | – |
+| trip.wetter.normal.-.metriken.52149dcb86 | trip | wetter | normal | – | metriken | 102 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.18d0ac648d | trip | wetter | normal | – | metriken | 103 | Tiefe Wolken aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.76877f04d4 | trip | wetter | normal | – | metriken | 104 | Tiefe Wolken | gefunden |  | – |
+| trip.wetter.normal.-.metriken.ee25f1a44b | trip | wetter | normal | – | metriken | 105 | % · Gipfel in Wolken | gefunden |  | – |
+| trip.wetter.normal.-.metriken.3ff3d2ab06 | trip | wetter | normal | – | metriken | 106 | Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus. | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 105 | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.26131ed3a6 | trip | wetter | normal | – | metriken | 107 | kein Alarm | gefunden |  | – |
+| trip.wetter.normal.-.metriken.2a093ff1d8 | trip | wetter | normal | – | metriken | 108 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.7f15beb9bb | trip | wetter | normal | – | metriken | 109 | UV-Index aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.218616e5de | trip | wetter | normal | – | metriken | 110 | UV-Index | gefunden |  | – |
+| trip.wetter.normal.-.metriken.cb9b69f002 | trip | wetter | normal | – | metriken | 111 | Maximum | gefunden |  | – |
+| trip.wetter.normal.-.metriken.fb6a655170 | trip | wetter | normal | – | metriken | 112 | Kein Alarm. Die Farbe erscheint nur im Briefing. | gefunden |  | – |
+| trip.wetter.normal.-.metriken.1493aac12c | trip | wetter | normal | – | metriken | 113 | · grün: bis 6 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.normal.-.metriken.818481d57e | trip | wetter | normal | – | metriken | 114 | Alarm ab | gefunden |  | – |
+| trip.wetter.normal.-.metriken.292af527bd | trip | wetter | normal | – | metriken | 115 | Nie | gefunden |  | – |
+| trip.wetter.normal.-.metriken.f200d482c3 | trip | wetter | normal | – | metriken | 116 | Gelb | gefunden |  | – |
+| trip.wetter.normal.-.metriken.f3901c04c2 | trip | wetter | normal | – | metriken | 117 | Orange | gefunden |  | – |
+| trip.wetter.normal.-.metriken.9bd6430471 | trip | wetter | normal | – | metriken | 118 | Rot | gefunden |  | – |
+| trip.wetter.normal.-.metriken.6442a5526e | trip | wetter | normal | – | metriken | 119 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.d9057cd973 | trip | wetter | normal | – | metriken | 120 | Schnee & Höhe | gefunden |  | – |
+| trip.wetter.normal.-.metriken.8208115cd3 | trip | wetter | normal | – | metriken | 121 | Nullgradgrenze aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.f8364b7cf3 | trip | wetter | normal | – | metriken | 122 | Nullgradgrenze | gefunden |  | – |
+| trip.wetter.normal.-.metriken.426c2fbac1 | trip | wetter | normal | – | metriken | 123 | m · m über höchster Stelle | gefunden |  | – |
+| trip.wetter.normal.-.metriken.010fd3d0a2 | trip | wetter | normal | – | metriken | 124 | Alarm ab | gefunden |  | – |
+| trip.wetter.normal.-.metriken.cde050baab | trip | wetter | normal | – | metriken | 125 | Nie | gefunden |  | – |
+| trip.wetter.normal.-.metriken.88af1fe163 | trip | wetter | normal | – | metriken | 126 | Gelb | gefunden |  | – |
+| trip.wetter.normal.-.metriken.7bef3bfa76 | trip | wetter | normal | – | metriken | 127 | Orange | gefunden |  | – |
+| trip.wetter.normal.-.metriken.536130211b | trip | wetter | normal | – | metriken | 128 | Rot | gefunden |  | – |
+| trip.wetter.normal.-.metriken.d884921581 | trip | wetter | normal | – | metriken | 129 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.f258b0d66a | trip | wetter | normal | – | metriken | 130 | Schneefallgrenze aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.normal.-.metriken.3afbda298c | trip | wetter | normal | – | metriken | 131 | Schneefallgrenze | gefunden |  | – |
+| trip.wetter.normal.-.metriken.341c818df3 | trip | wetter | normal | – | metriken | 132 | m · m über höchster Stelle | gefunden |  | – |
+| trip.wetter.normal.-.metriken.815a98f310 | trip | wetter | normal | – | metriken | 133 | Alarm ab | gefunden |  | – |
+| trip.wetter.normal.-.metriken.0d7b084364 | trip | wetter | normal | – | metriken | 134 | Nie | gefunden |  | – |
+| trip.wetter.normal.-.metriken.6a7519a370 | trip | wetter | normal | – | metriken | 135 | Gelb | gefunden |  | – |
+| trip.wetter.normal.-.metriken.74eaf68ea5 | trip | wetter | normal | – | metriken | 136 | Orange | gefunden |  | – |
+| trip.wetter.normal.-.metriken.fffe44fc5f | trip | wetter | normal | – | metriken | 137 | Rot | gefunden |  | – |
+| trip.wetter.normal.-.metriken.244d61145c | trip | wetter | normal | – | metriken | 138 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.normal.-.metriken.58d144ffbd | trip | wetter | normal | – | metriken | 139 | Nicht im Briefing: | gefunden |  | – |
+| trip.wetter.normal.-.metriken.5949e11838 | trip | wetter | normal | – | metriken | 140 | + Windrichtung | gefunden |  | – |
+| trip.wetter.normal.-.metriken.967e230fcd | trip | wetter | normal | – | metriken | 141 | + Bewölkung | gefunden |  | – |
+| trip.wetter.normal.-.metriken.86cfb76e57 | trip | wetter | normal | – | metriken | 142 | + Sonnenstunden | gefunden |  | – |
+| trip.wetter.normal.-.metriken.27ff9134be | trip | wetter | normal | – | metriken | 143 | + Neuschnee | gefunden |  | – |
+| trip.wetter.normal.-.metriken.f14740bf4d | trip | wetter | normal | – | metriken | 144 | + Schneehöhe | gefunden |  | – |
+| trip.wetter.normal.-.metriken.26e938d25b | trip | wetter | normal | – | metriken | 145 | + Taupunkt | gefunden |  | – |
+| trip.wetter.normal.-.metriken.15c7ee9287 | trip | wetter | normal | – | metriken | 146 | + Luftfeuchte | gefunden |  | – |
+| trip.wetter.normal.-.metriken.f431360e0b | trip | wetter | normal | – | metriken | 147 | + Luftdruck | gefunden |  | – |
+| trip.wetter.normal.-.warnungen-radar.d3cf3bf2a5 | trip | wetter | normal | – | warnungen-radar | 1 | Amtliche Warnungen | gefunden |  | – |
+| trip.wetter.normal.-.warnungen-radar.cd3aca598a | trip | wetter | normal | – | warnungen-radar | 2 | im Briefing und als Alarm, sobald sie dein Gebiet betreffen | gefunden |  | – |
+| trip.wetter.normal.-.warnungen-radar.e2b435138e | trip | wetter | normal | – | warnungen-radar | 3 | Amtliche Warnungen | gefunden |  | – |
+| trip.wetter.normal.-.warnungen-radar.9c1d806b54 | trip | wetter | normal | – | warnungen-radar | 4 | Radar-Regen | gefunden |  | – |
+| trip.wetter.normal.-.warnungen-radar.a97a4eb10e | trip | wetter | normal | – | warnungen-radar | 5 | Alarm, wenn in der nächsten Stunde Regen auf deine Etappe zukommt | gefunden |  | – |
+| trip.wetter.normal.-.warnungen-radar.de435c1629 | trip | wetter | normal | – | warnungen-radar | 6 | Radar-Regen | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.81ef468ad7 | trip | wetter | normal | – | was-steht-wo | 1 | Was steht wo | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.08e5ac4522 | trip | wetter | normal | – | was-steht-wo | 2 | Eine Tabelle für alles. Jede Zeile ist eine Metrik aus der Auswahl oben. Jede Spalte ist eine Stelle, an der eine Metrik erscheinen kann: die drei Kanäle und der 3-Tages-Ausblick. Der Ausblick gibt es nur für Metriken, die auch in der E-Mail stehen. Ein Haken heißt: erscheint dort. Hier wählst du nur ab. Die Reihenfolge ziehst du einmal, sie gilt überall. Roh zeigt die Zahl, Einfach ein Symbol oder ein Wort. Wo eine Metrik beide Formen hat, stellst du das je Stelle ein. Die SMS bleibt bei ihren Kürzeln. Neue Metriken kommen oben über „+“ dazu. | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.ba61df6c55 | trip | wetter | normal | – | was-steht-wo | 3 | Metrik | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.e7fcf954d5 | trip | wetter | normal | – | was-steht-wo | 4 | E-Mail | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.bd2b654158 | trip | wetter | normal | – | was-steht-wo | 5 | Stundentabelle | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.a4f5b13019 | trip | wetter | normal | – | was-steht-wo | 6 | Telegram | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.ff0f02a6f0 | trip | wetter | normal | – | was-steht-wo | 7 | Nachricht | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.0ffa982181 | trip | wetter | normal | – | was-steht-wo | 8 | SMS | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.578c800d78 | trip | wetter | normal | – | was-steht-wo | 9 | und Premium-SMS | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.6ad2bef9fb | trip | wetter | normal | – | was-steht-wo | 10 | 3-Tages-Ausblick | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.d9f4a9475f | trip | wetter | normal | – | was-steht-wo | 11 | E-Mail und Telegram | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.2e1aaaecce | trip | wetter | normal | – | was-steht-wo | 12 | Amtliche Warnungen | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.f43699b4e7 | trip | wetter | normal | – | was-steht-wo | 13 | immer dabei: in E-Mail und Telegram zuerst, in der SMS am Ende | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.cf55e1cdcb | trip | wetter | normal | – | was-steht-wo | 14 | Temperatur | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.cc176b2d19 | trip | wetter | normal | – | was-steht-wo | 15 | Temperatur in E-Mail | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.f4ad0a7532 | trip | wetter | normal | – | was-steht-wo | 16 | Temp 14.4 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.55874a5787 | trip | wetter | normal | – | was-steht-wo | 17 | Temperatur in Telegram | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.dfe6a3d4ab | trip | wetter | normal | – | was-steht-wo | 18 | T 9.6-15.2 | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.4302be9c88 | trip | wetter | normal | – | was-steht-wo | 19 | Temperatur in SMS | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.cf447c4e3f | trip | wetter | normal | – | was-steht-wo | 20 | D10/15 | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.39e8721da1 | trip | wetter | normal | – | was-steht-wo | 21 | Temperatur im 3-Tages-Ausblick | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.e9da9328a3 | trip | wetter | normal | – | was-steht-wo | 22 | Tiefsttemperatur Nacht | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.65b3fa5dc3 | trip | wetter | normal | – | was-steht-wo | 23 | Tiefsttemperatur Nacht in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 22 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.be4a4c634f | trip | wetter | normal | – | was-steht-wo | 24 | Tiefsttemperatur Nacht in Telegram | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.b8a9873130 | trip | wetter | normal | – | was-steht-wo | 25 | Tiefsttemperatur Nacht in SMS | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.b86af2b93d | trip | wetter | normal | – | was-steht-wo | 26 | N10 | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.6d07775f7b | trip | wetter | normal | – | was-steht-wo | 27 | Tiefsttemperatur Nacht im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 26 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.ffef91f0b5 | trip | wetter | normal | – | was-steht-wo | 28 | Gefühlte Temperatur | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 27 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.2a06739e89 | trip | wetter | normal | – | was-steht-wo | 29 | Gefühlte Temperatur in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 28 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.aaab2d252c | trip | wetter | normal | – | was-steht-wo | 30 | Feels 11.0 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.1ef4671874 | trip | wetter | normal | – | was-steht-wo | 31 | Gefühlte Temperatur in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 30 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.39652c3f23 | trip | wetter | normal | – | was-steht-wo | 32 | TF 6.8-11.7 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 31 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.5eeb0a4764 | trip | wetter | normal | – | was-steht-wo | 33 | Gefühlte Temperatur in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 32 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.181a405ca7 | trip | wetter | normal | – | was-steht-wo | 34 | TF- FN7 FD7/12 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 33 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.671f3cfb84 | trip | wetter | normal | – | was-steht-wo | 35 | Gefühlte Temperatur im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 34 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.f236a8d492 | trip | wetter | normal | – | was-steht-wo | 36 | Wind | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 35 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.d732f7fdc1 | trip | wetter | normal | – | was-steht-wo | 37 | Wind in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 36 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.d1cb284046 | trip | wetter | normal | – | was-steht-wo | 38 | Darstellung Wind in E-Mail: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 37 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.f6e94d1bef | trip | wetter | normal | – | was-steht-wo | 39 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 38 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.aad966b652 | trip | wetter | normal | – | was-steht-wo | 40 | Wind 36 | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.571e682b60 | trip | wetter | normal | – | was-steht-wo | 41 | Wind in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 40 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.054d6ce92e | trip | wetter | normal | – | was-steht-wo | 42 | Darstellung Wind in Telegram: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 41 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.1e25103268 | trip | wetter | normal | – | was-steht-wo | 43 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 42 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.ae476674e2 | trip | wetter | normal | – | was-steht-wo | 44 | W 20-38@15 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 43 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.979263e16f | trip | wetter | normal | – | was-steht-wo | 45 | Wind in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 44 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.169b56e4eb | trip | wetter | normal | – | was-steht-wo | 46 | W30@10(38@15) | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 45 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.6a1776b0d1 | trip | wetter | normal | – | was-steht-wo | 47 | Wind im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 46 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.b3780dddd7 | trip | wetter | normal | – | was-steht-wo | 48 | Darstellung Wind im 3-Tages-Ausblick: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 47 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.ef6d7b171a | trip | wetter | normal | – | was-steht-wo | 49 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 48 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.94bb202e07 | trip | wetter | normal | – | was-steht-wo | 50 | Böen | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.b2fdfe0cb9 | trip | wetter | normal | – | was-steht-wo | 51 | Böen in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 50 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.afa1dcbd29 | trip | wetter | normal | – | was-steht-wo | 52 | Darstellung Böen in E-Mail: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 51 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.858975fbdd | trip | wetter | normal | – | was-steht-wo | 53 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 52 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.cea52df026 | trip | wetter | normal | – | was-steht-wo | 54 | Gust 50 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.30615e6789 | trip | wetter | normal | – | was-steht-wo | 55 | Böen in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 54 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.9298864cbe | trip | wetter | normal | – | was-steht-wo | 56 | Darstellung Böen in Telegram: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 55 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.4a92497310 | trip | wetter | normal | – | was-steht-wo | 57 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 56 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.96e9dac191 | trip | wetter | normal | – | was-steht-wo | 58 | G 30-52@15 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 57 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.34fcd66165 | trip | wetter | normal | – | was-steht-wo | 59 | Böen in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 58 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.694ca83ad4 | trip | wetter | normal | – | was-steht-wo | 60 | G36@7(52@15) | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 59 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.2b863025e3 | trip | wetter | normal | – | was-steht-wo | 61 | Böen im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 60 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.84f9df5151 | trip | wetter | normal | – | was-steht-wo | 62 | Darstellung Böen im 3-Tages-Ausblick: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 61 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.edc408fa0f | trip | wetter | normal | – | was-steht-wo | 63 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 62 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.ccd9919465 | trip | wetter | normal | – | was-steht-wo | 64 | Niederschlag | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 63 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.4d47c959c5 | trip | wetter | normal | – | was-steht-wo | 65 | Niederschlag in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 64 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.4e93126d22 | trip | wetter | normal | – | was-steht-wo | 66 | Darstellung Niederschlag in E-Mail: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 65 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.e7f2fa532b | trip | wetter | normal | – | was-steht-wo | 67 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 66 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.b64161a73a | trip | wetter | normal | – | was-steht-wo | 68 | Rain 0.4 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.8df820d26f | trip | wetter | normal | – | was-steht-wo | 69 | Niederschlag in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 68 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.39cb604d71 | trip | wetter | normal | – | was-steht-wo | 70 | Darstellung Niederschlag in Telegram: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 69 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.a60e0378c0 | trip | wetter | normal | – | was-steht-wo | 71 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 70 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.ce222b2e67 | trip | wetter | normal | – | was-steht-wo | 72 | R 0.0-0.4 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 71 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.db172d4595 | trip | wetter | normal | – | was-steht-wo | 73 | Niederschlag in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 72 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.01b76334ad | trip | wetter | normal | – | was-steht-wo | 74 | R- | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.735cfb8163 | trip | wetter | normal | – | was-steht-wo | 75 | Niederschlag im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 74 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.ffd305e72f | trip | wetter | normal | – | was-steht-wo | 76 | Darstellung Niederschlag im 3-Tages-Ausblick: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 75 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.3c3806c7fd | trip | wetter | normal | – | was-steht-wo | 77 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 76 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.197ee75f7c | trip | wetter | normal | – | was-steht-wo | 78 | Gewitter | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.5fca37d0e4 | trip | wetter | normal | – | was-steht-wo | 79 | Gewitter in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 78 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.e3a16d4e5c | trip | wetter | normal | – | was-steht-wo | 80 | Darstellung Gewitter in E-Mail: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 79 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.dd2b007f7b | trip | wetter | normal | – | was-steht-wo | 81 | Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 80 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.518d7a7fc6 | trip | wetter | normal | – | was-steht-wo | 82 | Thdr ● gelb | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.69e17a0ee0 | trip | wetter | normal | – | was-steht-wo | 83 | Gewitter in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 82 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.a19fef638f | trip | wetter | normal | – | was-steht-wo | 84 | Darstellung Gewitter in Telegram: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 83 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.324307a1c7 | trip | wetter | normal | – | was-steht-wo | 85 | Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 84 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.1708e3620c | trip | wetter | normal | – | was-steht-wo | 86 | TH leicht | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.3a5ecacf85 | trip | wetter | normal | – | was-steht-wo | 87 | Gewitter in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 86 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.a2425b8911 | trip | wetter | normal | – | was-steht-wo | 88 | TH:L@13 TH+:- | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 87 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.2639cac8f5 | trip | wetter | normal | – | was-steht-wo | 89 | Gewitter im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 88 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.0c2d16176c | trip | wetter | normal | – | was-steht-wo | 90 | Darstellung Gewitter im 3-Tages-Ausblick: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 89 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.27330a1157 | trip | wetter | normal | – | was-steht-wo | 91 | Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 90 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.0ecba7e90e | trip | wetter | normal | – | was-steht-wo | 92 | Regenwahrscheinlichkeit | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 91 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.e0ef947dab | trip | wetter | normal | – | was-steht-wo | 93 | Regenwahrscheinlichkeit in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 92 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.6d0ecc4454 | trip | wetter | normal | – | was-steht-wo | 94 | Rain% 60 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.7ae0f3be7b | trip | wetter | normal | – | was-steht-wo | 95 | Regenwahrscheinlichkeit in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 94 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.e178570480 | trip | wetter | normal | – | was-steht-wo | 96 | PR 10-60@14 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 95 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.ab4fda07b6 | trip | wetter | normal | – | was-steht-wo | 97 | Regenwahrscheinlichkeit in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 96 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.5b1d3a47ce | trip | wetter | normal | – | was-steht-wo | 98 | PR60%@14 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 97 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.1076ee907c | trip | wetter | normal | – | was-steht-wo | 99 | Regenwahrscheinlichkeit im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 98 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.a7ec83c24c | trip | wetter | normal | – | was-steht-wo | 100 | Sichtweite | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 99 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.56b5e9fe82 | trip | wetter | normal | – | was-steht-wo | 101 | Sichtweite in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 100 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.b08f4f0dd9 | trip | wetter | normal | – | was-steht-wo | 102 | Visib 4.0 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.f5f94af14d | trip | wetter | normal | – | was-steht-wo | 103 | Sichtweite in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 102 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.c5a16c951c | trip | wetter | normal | – | was-steht-wo | 104 | VS 4.0-15 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 103 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.7b95ceb59c | trip | wetter | normal | – | was-steht-wo | 105 | nur Tageswert | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 104 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.d789becfe0 | trip | wetter | normal | – | was-steht-wo | 106 | Sichtweite in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 105 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.2b6b53b0ef | trip | wetter | normal | – | was-steht-wo | 107 | VS- | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 106 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.d6ea7eaa09 | trip | wetter | normal | – | was-steht-wo | 108 | Sichtweite im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 107 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.dd2ed81880 | trip | wetter | normal | – | was-steht-wo | 109 | Tiefe Wolken | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 108 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.d2597e285c | trip | wetter | normal | – | was-steht-wo | 110 | Tiefe Wolken in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 109 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.c38119454f | trip | wetter | normal | – | was-steht-wo | 111 | Darstellung Tiefe Wolken in E-Mail: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 110 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.b991e96a1a | trip | wetter | normal | – | was-steht-wo | 112 | Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 111 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.af5cd2b87e | trip | wetter | normal | – | was-steht-wo | 113 | CldLow 🌥️ | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.dda22bd755 | trip | wetter | normal | – | was-steht-wo | 114 | Tiefe Wolken in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 113 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.14242dc3a3 | trip | wetter | normal | – | was-steht-wo | 115 | Darstellung Tiefe Wolken in Telegram: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 114 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.1b0c8bb89a | trip | wetter | normal | – | was-steht-wo | 116 | Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 115 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.dea4c8d16d | trip | wetter | normal | – | was-steht-wo | 117 | CL 🌤️-🌥️@15 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.0a447bd6c7 | trip | wetter | normal | – | was-steht-wo | 118 | nur Tageswert | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 117 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.0409524f71 | trip | wetter | normal | – | was-steht-wo | 119 | Tiefe Wolken in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 118 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.f311afaafc | trip | wetter | normal | – | was-steht-wo | 120 | CL:BKN@15 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.d0b5deea00 | trip | wetter | normal | – | was-steht-wo | 121 | Tiefe Wolken im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 120 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.2863a5acf7 | trip | wetter | normal | – | was-steht-wo | 122 | Darstellung Tiefe Wolken im 3-Tages-Ausblick: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 121 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.6f1ec480b4 | trip | wetter | normal | – | was-steht-wo | 123 | Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 122 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.90f2a5068c | trip | wetter | normal | – | was-steht-wo | 124 | UV-Index | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.f91df897ff | trip | wetter | normal | – | was-steht-wo | 125 | UV-Index in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 124 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.de75e4ed79 | trip | wetter | normal | – | was-steht-wo | 126 | UV 3.5 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 125 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.876f52bf3d | trip | wetter | normal | – | was-steht-wo | 127 | UV-Index in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 126 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.14357b86ea | trip | wetter | normal | – | was-steht-wo | 128 | UV 0.0-4.0 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 127 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.939052e6ca | trip | wetter | normal | – | was-steht-wo | 129 | nur Tageswert | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 128 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.b7f3a57311 | trip | wetter | normal | – | was-steht-wo | 130 | UV-Index in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 129 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.09e5f6480f | trip | wetter | normal | – | was-steht-wo | 131 | UV- | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.e3f7778940 | trip | wetter | normal | – | was-steht-wo | 132 | UV-Index im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 131 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.cd73da4089 | trip | wetter | normal | – | was-steht-wo | 133 | Nullgradgrenze | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 132 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.219d7cf2fd | trip | wetter | normal | – | was-steht-wo | 134 | Nullgradgrenze in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 133 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.9a32c6d790 | trip | wetter | normal | – | was-steht-wo | 135 | 0°Line 2120 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.50b17159d2 | trip | wetter | normal | – | was-steht-wo | 136 | Nullgradgrenze in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 135 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.7a67af2493 | trip | wetter | normal | – | was-steht-wo | 137 | FZ 2100-2320@04 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.d7c032318b | trip | wetter | normal | – | was-steht-wo | 138 | nur Tageswert | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 137 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.497667aadb | trip | wetter | normal | – | was-steht-wo | 139 | Nullgradgrenze in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 138 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.5ae228075c | trip | wetter | normal | – | was-steht-wo | 140 | FZ2100@15 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 139 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.1717f8f261 | trip | wetter | normal | – | was-steht-wo | 141 | Nullgradgrenze im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 140 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.75e921f067 | trip | wetter | normal | – | was-steht-wo | 142 | Schneefallgrenze | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 141 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.8322d69784 | trip | wetter | normal | – | was-steht-wo | 143 | Schneefallgrenze in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 142 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.c75cd1c277 | trip | wetter | normal | – | was-steht-wo | 144 | SnowL 1820 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.3517890956 | trip | wetter | normal | – | was-steht-wo | 145 | Schneefallgrenze in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 144 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.100f9c4cf0 | trip | wetter | normal | – | was-steht-wo | 146 | SL 1800-2020@04 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.428ad3f6de | trip | wetter | normal | – | was-steht-wo | 147 | nur Tageswert | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 146 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.666c9528d6 | trip | wetter | normal | – | was-steht-wo | 148 | Schneefallgrenze in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 147 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.d86ceb03df | trip | wetter | normal | – | was-steht-wo | 149 | SL1780 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 148 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.029d682a5d | trip | wetter | normal | – | was-steht-wo | 150 | Schneefallgrenze im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 149 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.0351e7c4d6 | trip | wetter | normal | – | was-steht-wo | 151 | SMS-Beispiel: · 123 von 160 Zeichen | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.d87ab5e268 | trip | wetter | normal | – | was-steht-wo | 152 | GR221 E2: D10/15 N10 TF- FN7 FD7/12 W30@10(38@15) G36@7(52@15) R- TH:L@13 TH+:- PR60%@14 VS- CL:BKN@15 UV- FZ2100@15 SL1780 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.f0a400d82a | trip | wetter | normal | – | was-steht-wo | 153 | Ganze Blöcke ein- und ausschalten | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.8878544b72 | trip | wetter | normal | – | was-steht-wo | 154 | 3-Tages-Ausblick | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.ebd8a6a959 | trip | wetter | normal | – | was-steht-wo | 155 | Tageswerte der nächsten drei Etappen, in E-Mail und Telegram. Vorbelegt: nur im Abend-Briefing. | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.56c629259d | trip | wetter | normal | – | was-steht-wo | 156 | Morgen-Briefing | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.66a8ab4cd2 | trip | wetter | normal | – | was-steht-wo | 157 | Ausblick im Morgen-Briefing | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.fcc3457451 | trip | wetter | normal | – | was-steht-wo | 158 | Abend-Briefing | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.normal.-.was-steht-wo.dbf0d0af42 | trip | wetter | normal | – | was-steht-wo | 159 | Ausblick im Abend-Briefing | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.9ff5b7cb60 | trip | wetter | normal | – | was-steht-wo | 160 | Etappen-Kennzahlen | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.9040c1ae1c | trip | wetter | normal | – | was-steht-wo | 161 | Länge, Höhenmeter und Gehzeit je Etappe, nur in der E-Mail | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.e042efaf7e | trip | wetter | normal | – | was-steht-wo | 162 | Etappen-Kennzahlen | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.a1de7fbe77 | trip | wetter | normal | – | was-steht-wo | 163 | Vortag-Vergleich | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.58491116f4 | trip | wetter | normal | – | was-steht-wo | 164 | was sich seit dem letzten Briefing geändert hat, nur in der E-Mail | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.8b3176d812 | trip | wetter | normal | – | was-steht-wo | 165 | Vortag-Vergleich | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.ea39cd7d4d | trip | wetter | normal | – | was-steht-wo | 166 | Nacht-Stundentabelle | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.579a342833 | trip | wetter | normal | – | was-steht-wo | 167 | die Stunden der Nacht am Etappenziel, nur in der E-Mail | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.40d9a28003 | trip | wetter | normal | – | was-steht-wo | 168 | Nacht-Stundentabelle | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.94e89916fe | trip | wetter | normal | – | was-steht-wo | 169 | Einstellungen je Kanal | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.93475e777c | trip | wetter | normal | – | was-steht-wo | 170 | E-Mail: Format | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.959bf35d5f | trip | wetter | normal | – | was-steht-wo | 171 | Ausführlich mit Tabellen und Farben, oder Kompakt als reiner Text für schwache Verbindungen. | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.58c24dd907 | trip | wetter | normal | – | was-steht-wo | 172 | Ausführlich (HTML) | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.3420621592 | trip | wetter | normal | – | was-steht-wo | 173 | Kompakt (Nur-Text) | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.9a24534d59 | trip | wetter | normal | – | was-steht-wo | 174 | Telegram: Kurzstil | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.2cb6decb40 | trip | wetter | normal | – | was-steht-wo | 175 | Telegram bekommt denselben kurzen Text wie die SMS, ohne Knöpfe. Gilt für Briefing und Alarme. Die Telegram-Spalte ruht dann, es gilt die SMS-Spalte. | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.5e234f031e | trip | wetter | normal | – | was-steht-wo | 176 | Telegram im Kurzstil | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.97ab51f27c | trip | wetter | normal | – | was-steht-wo | 177 | Premium-SMS | gefunden |  | – |
+| trip.wetter.normal.-.was-steht-wo.88ebee6188 | trip | wetter | normal | – | was-steht-wo | 178 | Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später. | gefunden |  | – |
+| trip.wetter.normal.-.anpassen.38bed98a49 | trip | wetter | normal | – | anpassen | 1 | Anpassen | gefunden |  | – |
+| trip.wetter.normal.-.anpassen.859a1efa6c | trip | wetter | normal | – | anpassen | 2 | Tagesfenster | gefunden |  | – |
+| trip.wetter.normal.-.anpassen.08b52bd428 | trip | wetter | normal | – | anpassen | 3 | Welche Stunden bewertet werden | gefunden |  | – |
+| trip.wetter.normal.-.anpassen.f11c451073 | trip | wetter | normal | – | anpassen | 4 | von | gefunden |  | – |
+| trip.wetter.normal.-.anpassen.50d425ce8f | trip | wetter | normal | – | anpassen | 5 | bis | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature.03cdb369a4 | trip | wetter | normal | – | grenzen-temperature | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature.091e482cc6 | trip | wetter | normal | – | grenzen-temperature | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature.f284e7983f | trip | wetter | normal | – | grenzen-temperature | 3 | rot < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature.b226bc419d | trip | wetter | normal | – | grenzen-temperature | 4 | -10 | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| trip.wetter.normal.-.grenzen-temperature.e24da0eaae | trip | wetter | normal | – | grenzen-temperature | 5 | orange < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature.8dea6e05cc | trip | wetter | normal | – | grenzen-temperature | 6 | gelb < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature.7186601a32 | trip | wetter | normal | – | grenzen-temperature | 7 | 2 | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature.10787589df | trip | wetter | normal | – | grenzen-temperature | 8 | obenzu viel | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature.988aef2a41 | trip | wetter | normal | – | grenzen-temperature | 9 | gelb > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature.82c614f604 | trip | wetter | normal | – | grenzen-temperature | 10 | orange > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature.0a233c4c8f | trip | wetter | normal | – | grenzen-temperature | 11 | rot > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature.e38df53357 | trip | wetter | normal | – | grenzen-temperature | 12 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature_night.6e3c8ad081 | trip | wetter | normal | – | grenzen-temperature_night | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature_night.546129e871 | trip | wetter | normal | – | grenzen-temperature_night | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature_night.2ca70ff21c | trip | wetter | normal | – | grenzen-temperature_night | 3 | rot < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature_night.4b1b9556fd | trip | wetter | normal | – | grenzen-temperature_night | 4 | -8 | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| trip.wetter.normal.-.grenzen-temperature_night.62e7721321 | trip | wetter | normal | – | grenzen-temperature_night | 5 | orange < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature_night.be9ef8696e | trip | wetter | normal | – | grenzen-temperature_night | 6 | gelb < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature_night.e94fa2c972 | trip | wetter | normal | – | grenzen-temperature_night | 7 | 0 | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature_night.8df7f503e0 | trip | wetter | normal | – | grenzen-temperature_night | 8 | obenzu viel | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature_night.7d72bf816c | trip | wetter | normal | – | grenzen-temperature_night | 9 | gelb > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature_night.ebaa524787 | trip | wetter | normal | – | grenzen-temperature_night | 10 | orange > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature_night.dd05169329 | trip | wetter | normal | – | grenzen-temperature_night | 11 | rot > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-temperature_night.1c9bbb021f | trip | wetter | normal | – | grenzen-temperature_night | 12 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind_chill.71cc03e720 | trip | wetter | normal | – | grenzen-wind_chill | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind_chill.ecd8f0b01b | trip | wetter | normal | – | grenzen-wind_chill | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind_chill.03d3e171b1 | trip | wetter | normal | – | grenzen-wind_chill | 3 | rot < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind_chill.1b2b078aaa | trip | wetter | normal | – | grenzen-wind_chill | 4 | -15 | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| trip.wetter.normal.-.grenzen-wind_chill.3cb4642fd2 | trip | wetter | normal | – | grenzen-wind_chill | 5 | orange < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind_chill.5a07368f78 | trip | wetter | normal | – | grenzen-wind_chill | 6 | gelb < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind_chill.a2eea193cf | trip | wetter | normal | – | grenzen-wind_chill | 7 | obenzu viel | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind_chill.ecb8575dba | trip | wetter | normal | – | grenzen-wind_chill | 8 | gelb > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind_chill.db1cd31ed1 | trip | wetter | normal | – | grenzen-wind_chill | 9 | orange > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind_chill.a9d9a52e98 | trip | wetter | normal | – | grenzen-wind_chill | 10 | rot > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind_chill.55dd377fb7 | trip | wetter | normal | – | grenzen-wind_chill | 11 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind.ca182edfae | trip | wetter | normal | – | grenzen-wind | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind.fd6e1cae4b | trip | wetter | normal | – | grenzen-wind | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind.34bfa419ee | trip | wetter | normal | – | grenzen-wind | 3 | rot < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind.d0ec881ee2 | trip | wetter | normal | – | grenzen-wind | 4 | orange < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind.129667b5d4 | trip | wetter | normal | – | grenzen-wind | 5 | gelb < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind.28c189998e | trip | wetter | normal | – | grenzen-wind | 6 | obenzu viel | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind.16d2cf019b | trip | wetter | normal | – | grenzen-wind | 7 | gelb > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind.f1b3bc8fa0 | trip | wetter | normal | – | grenzen-wind | 8 | 30 | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind.60329d04b3 | trip | wetter | normal | – | grenzen-wind | 9 | orange > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind.7cdbf7eb97 | trip | wetter | normal | – | grenzen-wind | 10 | rot > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-wind.f5911e5cb7 | trip | wetter | normal | – | grenzen-wind | 11 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-gust.747a00ac34 | trip | wetter | normal | – | grenzen-gust | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-gust.1a9aa3c7fa | trip | wetter | normal | – | grenzen-gust | 2 | obenzu viel | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-gust.23f49d8e18 | trip | wetter | normal | – | grenzen-gust | 3 | gelb > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-gust.77696c7774 | trip | wetter | normal | – | grenzen-gust | 4 | 35 | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-gust.28fa2a2be4 | trip | wetter | normal | – | grenzen-gust | 5 | orange > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-gust.e5178cf331 | trip | wetter | normal | – | grenzen-gust | 6 | rot > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-gust.558c53879d | trip | wetter | normal | – | grenzen-gust | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-precipitation.4752d70d9c | trip | wetter | normal | – | grenzen-precipitation | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-precipitation.2324a035b9 | trip | wetter | normal | – | grenzen-precipitation | 2 | obenzu viel | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-precipitation.95aea47dbf | trip | wetter | normal | – | grenzen-precipitation | 3 | gelb > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-precipitation.54425abe52 | trip | wetter | normal | – | grenzen-precipitation | 4 | 1 | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-precipitation.89676ad435 | trip | wetter | normal | – | grenzen-precipitation | 5 | orange > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-precipitation.7b4f9d0330 | trip | wetter | normal | – | grenzen-precipitation | 6 | rot > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-precipitation.7a60fbf310 | trip | wetter | normal | – | grenzen-precipitation | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-thunder.62283074ac | trip | wetter | normal | – | grenzen-thunder | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-thunder.b031a22318 | trip | wetter | normal | – | grenzen-thunder | 2 | mittel | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-thunder.61edcf2c40 | trip | wetter | normal | – | grenzen-thunder | 3 | gelb | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-thunder.9dfeea760b | trip | wetter | normal | – | grenzen-thunder | 4 | orange | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-thunder.9f920d796f | trip | wetter | normal | – | grenzen-thunder | 5 | rot | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-thunder.c387bbca8f | trip | wetter | normal | – | grenzen-thunder | 6 | hoch | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-thunder.c6c2cbf12f | trip | wetter | normal | – | grenzen-thunder | 7 | orange | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-thunder.d445105980 | trip | wetter | normal | – | grenzen-thunder | 8 | rot | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-thunder.06dea6c028 | trip | wetter | normal | – | grenzen-thunder | 9 | „keins“ ist immer grün. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-rain_probability.fb7cdf9914 | trip | wetter | normal | – | grenzen-rain_probability | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-rain_probability.fcc87ba724 | trip | wetter | normal | – | grenzen-rain_probability | 2 | obenzu viel | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-rain_probability.789294a276 | trip | wetter | normal | – | grenzen-rain_probability | 3 | gelb > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-rain_probability.70e0e85557 | trip | wetter | normal | – | grenzen-rain_probability | 4 | 30 | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-rain_probability.5b66695b58 | trip | wetter | normal | – | grenzen-rain_probability | 5 | orange > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-rain_probability.1793ff8413 | trip | wetter | normal | – | grenzen-rain_probability | 6 | rot > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-rain_probability.c1c32b554d | trip | wetter | normal | – | grenzen-rain_probability | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-visibility.f23bd9b200 | trip | wetter | normal | – | grenzen-visibility | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-visibility.37665250d2 | trip | wetter | normal | – | grenzen-visibility | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-visibility.cf8b6f719b | trip | wetter | normal | – | grenzen-visibility | 3 | rot < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-visibility.0925e896f2 | trip | wetter | normal | – | grenzen-visibility | 4 | 100 | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-visibility.25343e150d | trip | wetter | normal | – | grenzen-visibility | 5 | orange < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-visibility.ed8842f12c | trip | wetter | normal | – | grenzen-visibility | 6 | gelb < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-visibility.b9b43795ef | trip | wetter | normal | – | grenzen-visibility | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-cloud_low.a83c614053 | trip | wetter | normal | – | grenzen-cloud_low | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-cloud_low.6b51d53fbd | trip | wetter | normal | – | grenzen-cloud_low | 2 | obenzu viel | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-cloud_low.68030ba4d9 | trip | wetter | normal | – | grenzen-cloud_low | 3 | gelb > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-cloud_low.af83b3bc95 | trip | wetter | normal | – | grenzen-cloud_low | 4 | 50 | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-cloud_low.638eca5345 | trip | wetter | normal | – | grenzen-cloud_low | 5 | orange > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-cloud_low.057d9d2ad4 | trip | wetter | normal | – | grenzen-cloud_low | 6 | rot > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-cloud_low.e00056addb | trip | wetter | normal | – | grenzen-cloud_low | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-uv_index.e041cb4e9f | trip | wetter | normal | – | grenzen-uv_index | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-uv_index.49b50f67a4 | trip | wetter | normal | – | grenzen-uv_index | 2 | obenzu viel | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-uv_index.eb11f2a878 | trip | wetter | normal | – | grenzen-uv_index | 3 | gelb > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-uv_index.3c86670db5 | trip | wetter | normal | – | grenzen-uv_index | 4 | 6 | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-uv_index.7cd068ca8f | trip | wetter | normal | – | grenzen-uv_index | 5 | orange > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-uv_index.574fdc1933 | trip | wetter | normal | – | grenzen-uv_index | 6 | rot > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-uv_index.e8cb0b84bb | trip | wetter | normal | – | grenzen-uv_index | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-freezing_level.47d231d91c | trip | wetter | normal | – | grenzen-freezing_level | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-freezing_level.3c161400c0 | trip | wetter | normal | – | grenzen-freezing_level | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-freezing_level.6b34c0f604 | trip | wetter | normal | – | grenzen-freezing_level | 3 | rot < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-freezing_level.4a072dced9 | trip | wetter | normal | – | grenzen-freezing_level | 4 | -300 | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| trip.wetter.normal.-.grenzen-freezing_level.34a8a8d9ec | trip | wetter | normal | – | grenzen-freezing_level | 5 | orange < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-freezing_level.a5777aa55b | trip | wetter | normal | – | grenzen-freezing_level | 6 | 0 | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-freezing_level.a228ac59aa | trip | wetter | normal | – | grenzen-freezing_level | 7 | gelb < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-freezing_level.9bd8e94833 | trip | wetter | normal | – | grenzen-freezing_level | 8 | obenzu viel | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-freezing_level.c48316b1b7 | trip | wetter | normal | – | grenzen-freezing_level | 9 | gelb > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-freezing_level.62e87516a1 | trip | wetter | normal | – | grenzen-freezing_level | 10 | orange > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-freezing_level.2008240090 | trip | wetter | normal | – | grenzen-freezing_level | 11 | rot > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-freezing_level.cb4b23a864 | trip | wetter | normal | – | grenzen-freezing_level | 12 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-snowfall_limit.fa6f3f031b | trip | wetter | normal | – | grenzen-snowfall_limit | 1 | Fertig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-snowfall_limit.6102c04a0e | trip | wetter | normal | – | grenzen-snowfall_limit | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-snowfall_limit.9b506bad00 | trip | wetter | normal | – | grenzen-snowfall_limit | 3 | rot < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-snowfall_limit.41c0d1b7bf | trip | wetter | normal | – | grenzen-snowfall_limit | 4 | -500 | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| trip.wetter.normal.-.grenzen-snowfall_limit.1b3b6c9158 | trip | wetter | normal | – | grenzen-snowfall_limit | 5 | orange < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-snowfall_limit.e30153eef5 | trip | wetter | normal | – | grenzen-snowfall_limit | 6 | 0 | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-snowfall_limit.1edbd900aa | trip | wetter | normal | – | grenzen-snowfall_limit | 7 | gelb < | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-snowfall_limit.fb3662c1f7 | trip | wetter | normal | – | grenzen-snowfall_limit | 8 | obenzu viel | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-snowfall_limit.d8bd83fc23 | trip | wetter | normal | – | grenzen-snowfall_limit | 9 | gelb > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-snowfall_limit.271c0ad5a7 | trip | wetter | normal | – | grenzen-snowfall_limit | 10 | orange > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-snowfall_limit.cbba9fa931 | trip | wetter | normal | – | grenzen-snowfall_limit | 11 | rot > | gefunden |  | – |
+| trip.wetter.normal.-.grenzen-snowfall_limit.90c8b9323c | trip | wetter | normal | – | grenzen-snowfall_limit | 12 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.6951150f27 | trip | wetter | normal | – | vorlage-auswahl | 1 | Vorlagen | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.5b7b600176 | trip | wetter | normal | – | vorlage-auswahl | 2 | Alpen-Trekking · aktiv | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.b559ad3522 | trip | wetter | normal | – | vorlage-auswahl | 3 | 14 Metriken · Gewitter, Böen, Nullgradgrenze | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.c13c2d2c7b | trip | wetter | normal | – | vorlage-auswahl | 4 | Wandern | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.fb8c97b641 | trip | wetter | normal | – | vorlage-auswahl | 5 | 10 Metriken · Regen, Sonne, UV | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.27ad1894a1 | trip | wetter | normal | – | vorlage-auswahl | 6 | Skitouren | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.bf12740658 | trip | wetter | normal | – | vorlage-auswahl | 7 | 13 Metriken · Neuschnee, Schneehöhe, Sicht | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.1accabcd58 | trip | wetter | normal | – | vorlage-auswahl | 8 | Wintersport | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.ea608a1196 | trip | wetter | normal | – | vorlage-auswahl | 9 | 11 Metriken · Schnee, Kälte | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.f44a3af674 | trip | wetter | normal | – | vorlage-auswahl | 10 | Radtour | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.25d2b55c21 | trip | wetter | normal | – | vorlage-auswahl | 11 | 12 Metriken · Wind, Regen, gefühlte Temperatur | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.57b9c0308e | trip | wetter | normal | – | vorlage-auswahl | 12 | Wassersport | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.f1b65f5d5e | trip | wetter | normal | – | vorlage-auswahl | 13 | 10 Metriken · Wind beidseitig, Gewitter | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.63d887a34d | trip | wetter | normal | – | vorlage-auswahl | 14 | Allgemein | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.670f5535b0 | trip | wetter | normal | – | vorlage-auswahl | 15 | 8 Metriken · Standard-Ampel | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.cfde1a2564 | trip | wetter | normal | – | vorlage-auswahl | 16 | Eigene | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.eda27b7726 | trip | wetter | normal | – | vorlage-auswahl | 17 | Mallorca Frühling | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-auswahl.606434af83 | trip | wetter | normal | – | vorlage-auswahl | 18 | eigene · aus GR221 gespeichert | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-bestaetigung.9e98a167ba | trip | wetter | normal | – | vorlage-bestaetigung | 1 | „Wandern“ übernehmen? | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-bestaetigung.ebdecee793 | trip | wetter | normal | – | vorlage-bestaetigung | 2 | Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips. Zustellung, Etappen und Orte bleiben unverändert. | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-bestaetigung.ca84b97a96 | trip | wetter | normal | – | vorlage-bestaetigung | 3 | Übernehmen | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-bestaetigung.0ba1631f2c | trip | wetter | normal | – | vorlage-bestaetigung | 4 | Abbrechen | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-speichern.5c5bbe4e85 | trip | wetter | normal | – | vorlage-speichern | 1 | Als eigene Vorlage speichern | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-speichern.92b0f6b5b5 | trip | wetter | normal | – | vorlage-speichern | 2 | Name | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-speichern.a8401ae8b1 | trip | wetter | normal | – | vorlage-speichern | 3 | z.B. Mallorca Frühling | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-speichern.ca65b75f34 | trip | wetter | normal | – | vorlage-speichern | 4 | Beschreibung (optional) | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-speichern.fa3c2ed506 | trip | wetter | normal | – | vorlage-speichern | 5 | wofür die Vorlage gedacht ist | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-speichern.64d9edf116 | trip | wetter | normal | – | vorlage-speichern | 6 | Als Standard für neue Trips | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-speichern.5ef414cc9f | trip | wetter | normal | – | vorlage-speichern | 7 | Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu. | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-speichern.432bbede7b | trip | wetter | normal | – | vorlage-speichern | 8 | Speichern | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-speichern.6c29d42ded | trip | wetter | normal | – | vorlage-speichern | 9 | Abbrechen | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-speichern-fehler.ce4e7a4892 | trip | wetter | normal | – | vorlage-speichern-fehler | 1 | Gib der Vorlage einen Namen. | gefunden |  | – |
+| trip.wetter.normal.-.test-menue.b617aa7177 | trip | wetter | normal | – | test-menue | 1 | Morgen-Briefing | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.test-menue.7728aede31 | trip | wetter | normal | – | test-menue | 2 | Abend-Briefing | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.test-menue.f509eeb836 | trip | wetter | normal | – | test-menue | 3 | E-Mail | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.test-menue.662e20e15b | trip | wetter | normal | – | test-menue | 4 | an 2 Empfänger | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.test-menue.6cd2f54f6b | trip | wetter | normal | – | test-menue | 5 | Telegram | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.test-menue.72e9d9e569 | trip | wetter | normal | – | test-menue | 6 | @henning | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.test-menue.72d442346d | trip | wetter | normal | – | test-menue | 7 | SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.test-menue.98ab218538 | trip | wetter | normal | – | test-menue | 8 | +49 171 … | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.test-menue.e38aa2c997 | trip | wetter | normal | – | test-menue | 9 | Premium-SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.test-menue.0cb12dc240 | trip | wetter | normal | – | test-menue | 10 | inReach · über Satellit | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.test-menue.27299e5367 | trip | wetter | normal | – | test-menue | 11 | Alle eingerichteten Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.test-menue.2408421303 | trip | wetter | normal | – | test-menue | 12 | Test-Alarm | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.test-menue.da133729bc | trip | wetter | normal | – | test-menue | 13 | Beispiel-Alarm mit echten Werten an alle Alarm-Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.kebab-menue.3ddfaee2b0 | trip | wetter | normal | – | kebab-menue | 1 | Pausieren | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.kebab-menue.f0103e4b42 | trip | wetter | normal | – | kebab-menue | 2 | Archivieren … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.kebab-menue.d340a82be5 | trip | wetter | normal | – | kebab-menue | 3 | Löschen … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.kebab-menue.2b10517947 | trip | wetter | normal | – | kebab-menue | 4 | Pausieren, Archivieren, Löschen | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.kebab-bestaetigung-archivieren.9286efdc7f | trip | wetter | normal | – | kebab-bestaetigung-archivieren | 1 | Archivieren? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.kebab-bestaetigung-archivieren.04782b3070 | trip | wetter | normal | – | kebab-bestaetigung-archivieren | 2 | „GR221 Mallorca“ verschwindet aus der Liste. Es kommen keine Briefings und Alarme mehr. Du kannst es im Archiv reaktivieren. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.kebab-bestaetigung-archivieren.2b44665515 | trip | wetter | normal | – | kebab-bestaetigung-archivieren | 3 | Archivieren | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.kebab-bestaetigung-archivieren.d6941a11a9 | trip | wetter | normal | – | kebab-bestaetigung-archivieren | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.kebab-bestaetigung-loeschen.925234afca | trip | wetter | normal | – | kebab-bestaetigung-loeschen | 1 | Löschen? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.kebab-bestaetigung-loeschen.ac2e68acbd | trip | wetter | normal | – | kebab-bestaetigung-loeschen | 2 | „GR221 Mallorca“ wird endgültig gelöscht. Briefings und Alarme hören sofort auf. Das lässt sich nicht rückgängig machen. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.kebab-bestaetigung-loeschen.92059a4f76 | trip | wetter | normal | – | kebab-bestaetigung-loeschen | 3 | Endgültig löschen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.normal.-.kebab-bestaetigung-loeschen.ea74f07c69 | trip | wetter | normal | – | kebab-bestaetigung-loeschen | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kopf.3cd3444b0d | trip | wetter | laedt | – | kopf | 1 | Trips / | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Trips / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Trips“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| trip.wetter.laedt.-.kopf.8d380d0b89 | trip | wetter | laedt | – | kopf | 2 | GR221 Mallorca | gefunden |  | – |
+| trip.wetter.laedt.-.kopf.63166401c2 | trip | wetter | laedt | – | kopf | 3 | Weitere Aktionen | gefunden |  | – |
+| trip.wetter.laedt.-.kopf.1c68384dfa | trip | wetter | laedt | – | kopf | 4 | Test schicken ▾ | gefunden |  | – |
+| trip.wetter.laedt.-.kopf.38224f6dbe | trip | wetter | laedt | – | kopf | 5 | Trip · Mallorca | gefunden |  | – |
+| trip.wetter.laedt.-.kopf.f390b2e094 | trip | wetter | laedt | – | kopf | 6 | GR221 Mallorca | gefunden |  | – |
+| trip.wetter.laedt.-.kopf.a864de237e | trip | wetter | laedt | – | kopf | 7 | fertig | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Trip ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| trip.wetter.laedt.-.kopf.c8bba9d371 | trip | wetter | laedt | – | kopf | 8 | 23.–26. Februar 2026 · 4 Etappen · 31,5 km · ↑1.737 m | gefunden |  | – |
+| trip.wetter.laedt.-.reiterleiste.577d2d8992 | trip | wetter | laedt | – | reiterleiste | 1 | Übersicht | gefunden |  | – |
+| trip.wetter.laedt.-.reiterleiste.b545739cca | trip | wetter | laedt | – | reiterleiste | 2 | Etappen | gefunden |  | – |
+| trip.wetter.laedt.-.reiterleiste.54baef5c02 | trip | wetter | laedt | – | reiterleiste | 3 | 4 | gefunden |  | – |
+| trip.wetter.laedt.-.reiterleiste.f579cf2550 | trip | wetter | laedt | – | reiterleiste | 4 | Wetter | gefunden |  | – |
+| trip.wetter.laedt.-.reiterleiste.4d1480b003 | trip | wetter | laedt | – | reiterleiste | 5 | Zustellung | gefunden |  | – |
+| trip.wetter.laedt.-.abschnittskopf.af919500d2 | trip | wetter | laedt | – | abschnittskopf | 1 | Wetter | gefunden |  | – |
+| trip.wetter.laedt.-.abschnittskopf.e026fc1ad5 | trip | wetter | laedt | – | abschnittskopf | 2 | Was im Briefing steht, was für dich zu viel oder zu wenig ist und ab wann du einen Alarm bekommst. | gefunden |  | – |
+| trip.wetter.laedt.-.laden.7432972881 | trip | wetter | laedt | – | laden | 1 | Lade Metriken … | gefunden |  | – |
+| trip.wetter.laedt.-.test-menue.42fd3de57f | trip | wetter | laedt | – | test-menue | 1 | Morgen-Briefing | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.test-menue.99a0e8f878 | trip | wetter | laedt | – | test-menue | 2 | Abend-Briefing | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.test-menue.6c40d22c82 | trip | wetter | laedt | – | test-menue | 3 | E-Mail | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.test-menue.26aee6ad6f | trip | wetter | laedt | – | test-menue | 4 | an 2 Empfänger | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.test-menue.6ee2da79c3 | trip | wetter | laedt | – | test-menue | 5 | Telegram | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.test-menue.7ce3d48745 | trip | wetter | laedt | – | test-menue | 6 | @henning | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.test-menue.f3b6c57806 | trip | wetter | laedt | – | test-menue | 7 | SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.test-menue.841e601fd5 | trip | wetter | laedt | – | test-menue | 8 | +49 171 … | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.test-menue.b51cb1c113 | trip | wetter | laedt | – | test-menue | 9 | Premium-SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.test-menue.68e9bd15e4 | trip | wetter | laedt | – | test-menue | 10 | inReach · über Satellit | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.test-menue.2c57673720 | trip | wetter | laedt | – | test-menue | 11 | Alle eingerichteten Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.test-menue.fac1d110a0 | trip | wetter | laedt | – | test-menue | 12 | Test-Alarm | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.test-menue.6217302dbd | trip | wetter | laedt | – | test-menue | 13 | Beispiel-Alarm mit echten Werten an alle Alarm-Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kebab-menue.693675aca6 | trip | wetter | laedt | – | kebab-menue | 1 | Pausieren | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kebab-menue.e63b3f2309 | trip | wetter | laedt | – | kebab-menue | 2 | Archivieren … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kebab-menue.7bf93a5461 | trip | wetter | laedt | – | kebab-menue | 3 | Löschen … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kebab-menue.3afb40e41a | trip | wetter | laedt | – | kebab-menue | 4 | Pausieren, Archivieren, Löschen | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kebab-bestaetigung-archivieren.df890a557e | trip | wetter | laedt | – | kebab-bestaetigung-archivieren | 1 | Archivieren? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kebab-bestaetigung-archivieren.c525ceabe4 | trip | wetter | laedt | – | kebab-bestaetigung-archivieren | 2 | „GR221 Mallorca“ verschwindet aus der Liste. Es kommen keine Briefings und Alarme mehr. Du kannst es im Archiv reaktivieren. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kebab-bestaetigung-archivieren.4ab612658e | trip | wetter | laedt | – | kebab-bestaetigung-archivieren | 3 | Archivieren | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kebab-bestaetigung-archivieren.5cd217b047 | trip | wetter | laedt | – | kebab-bestaetigung-archivieren | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kebab-bestaetigung-loeschen.b2a13a3178 | trip | wetter | laedt | – | kebab-bestaetigung-loeschen | 1 | Löschen? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kebab-bestaetigung-loeschen.0e04b4d801 | trip | wetter | laedt | – | kebab-bestaetigung-loeschen | 2 | „GR221 Mallorca“ wird endgültig gelöscht. Briefings und Alarme hören sofort auf. Das lässt sich nicht rückgängig machen. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kebab-bestaetigung-loeschen.73c99e1652 | trip | wetter | laedt | – | kebab-bestaetigung-loeschen | 3 | Endgültig löschen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.laedt.-.kebab-bestaetigung-loeschen.3c7ff810f4 | trip | wetter | laedt | – | kebab-bestaetigung-loeschen | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kopf.d4d6c0ca4d | trip | wetter | fehler | – | kopf | 1 | Trips / | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Trips / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Trips“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| trip.wetter.fehler.-.kopf.f505b75c7b | trip | wetter | fehler | – | kopf | 2 | GR221 Mallorca | gefunden |  | – |
+| trip.wetter.fehler.-.kopf.8f300eb204 | trip | wetter | fehler | – | kopf | 3 | Weitere Aktionen | gefunden |  | – |
+| trip.wetter.fehler.-.kopf.2c3eebb572 | trip | wetter | fehler | – | kopf | 4 | Test schicken ▾ | gefunden |  | – |
+| trip.wetter.fehler.-.kopf.86a247bd28 | trip | wetter | fehler | – | kopf | 5 | Trip · Mallorca | gefunden |  | – |
+| trip.wetter.fehler.-.kopf.0e86286caa | trip | wetter | fehler | – | kopf | 6 | GR221 Mallorca | gefunden |  | – |
+| trip.wetter.fehler.-.kopf.b363d7d60a | trip | wetter | fehler | – | kopf | 7 | fertig | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Trip ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| trip.wetter.fehler.-.kopf.f2a19b02e0 | trip | wetter | fehler | – | kopf | 8 | 23.–26. Februar 2026 · 4 Etappen · 31,5 km · ↑1.737 m | gefunden |  | – |
+| trip.wetter.fehler.-.reiterleiste.36cb1f4ca1 | trip | wetter | fehler | – | reiterleiste | 1 | Übersicht | gefunden |  | – |
+| trip.wetter.fehler.-.reiterleiste.9545d2c833 | trip | wetter | fehler | – | reiterleiste | 2 | Etappen | gefunden |  | – |
+| trip.wetter.fehler.-.reiterleiste.5f61d6b0e7 | trip | wetter | fehler | – | reiterleiste | 3 | 4 | gefunden |  | – |
+| trip.wetter.fehler.-.reiterleiste.6321f655ee | trip | wetter | fehler | – | reiterleiste | 4 | Wetter | gefunden |  | – |
+| trip.wetter.fehler.-.reiterleiste.da6568cdec | trip | wetter | fehler | – | reiterleiste | 5 | Zustellung | gefunden |  | – |
+| trip.wetter.fehler.-.abschnittskopf.b8e54e2d6a | trip | wetter | fehler | – | abschnittskopf | 1 | Wetter | gefunden |  | – |
+| trip.wetter.fehler.-.abschnittskopf.743ed3ce2b | trip | wetter | fehler | – | abschnittskopf | 2 | Was im Briefing steht, was für dich zu viel oder zu wenig ist und ab wann du einen Alarm bekommst. | gefunden |  | – |
+| trip.wetter.fehler.-.warnung.179b27aa33 | trip | wetter | fehler | – | warnung | 1 | Die Metriken konnten nicht geladen werden. | gefunden |  | – |
+| trip.wetter.fehler.-.warnung.abef561e26 | trip | wetter | fehler | – | warnung | 2 | Die Verbindung zum Server ist abgebrochen. Deine Einstellungen sind gespeichert und gehen nicht verloren. | gefunden |  | – |
+| trip.wetter.fehler.-.warnung.41fd4f149f | trip | wetter | fehler | – | warnung | 3 | Erneut laden | gefunden |  | – |
+| trip.wetter.fehler.-.test-menue.cacfc95d39 | trip | wetter | fehler | – | test-menue | 1 | Morgen-Briefing | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.test-menue.54cef135b9 | trip | wetter | fehler | – | test-menue | 2 | Abend-Briefing | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.test-menue.2569080d90 | trip | wetter | fehler | – | test-menue | 3 | E-Mail | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.test-menue.4cffca9dbe | trip | wetter | fehler | – | test-menue | 4 | an 2 Empfänger | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.test-menue.b8226794f2 | trip | wetter | fehler | – | test-menue | 5 | Telegram | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.test-menue.8204037867 | trip | wetter | fehler | – | test-menue | 6 | @henning | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.test-menue.01522fbe02 | trip | wetter | fehler | – | test-menue | 7 | SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.test-menue.c68513c462 | trip | wetter | fehler | – | test-menue | 8 | +49 171 … | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.test-menue.7d8b960784 | trip | wetter | fehler | – | test-menue | 9 | Premium-SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.test-menue.cbc5e046a5 | trip | wetter | fehler | – | test-menue | 10 | inReach · über Satellit | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.test-menue.127be4173f | trip | wetter | fehler | – | test-menue | 11 | Alle eingerichteten Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.test-menue.744d70bdb7 | trip | wetter | fehler | – | test-menue | 12 | Test-Alarm | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.test-menue.434e9b9deb | trip | wetter | fehler | – | test-menue | 13 | Beispiel-Alarm mit echten Werten an alle Alarm-Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kebab-menue.70969c0ca4 | trip | wetter | fehler | – | kebab-menue | 1 | Pausieren | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kebab-menue.8e5e5913f4 | trip | wetter | fehler | – | kebab-menue | 2 | Archivieren … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kebab-menue.06ca065b50 | trip | wetter | fehler | – | kebab-menue | 3 | Löschen … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kebab-menue.2d8eb61044 | trip | wetter | fehler | – | kebab-menue | 4 | Pausieren, Archivieren, Löschen | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kebab-bestaetigung-archivieren.abdc11fee7 | trip | wetter | fehler | – | kebab-bestaetigung-archivieren | 1 | Archivieren? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kebab-bestaetigung-archivieren.55e6ab9ac5 | trip | wetter | fehler | – | kebab-bestaetigung-archivieren | 2 | „GR221 Mallorca“ verschwindet aus der Liste. Es kommen keine Briefings und Alarme mehr. Du kannst es im Archiv reaktivieren. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kebab-bestaetigung-archivieren.cb83452db4 | trip | wetter | fehler | – | kebab-bestaetigung-archivieren | 3 | Archivieren | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kebab-bestaetigung-archivieren.247b50af32 | trip | wetter | fehler | – | kebab-bestaetigung-archivieren | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kebab-bestaetigung-loeschen.8e0a728c56 | trip | wetter | fehler | – | kebab-bestaetigung-loeschen | 1 | Löschen? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kebab-bestaetigung-loeschen.e10a310e04 | trip | wetter | fehler | – | kebab-bestaetigung-loeschen | 2 | „GR221 Mallorca“ wird endgültig gelöscht. Briefings und Alarme hören sofort auf. Das lässt sich nicht rückgängig machen. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kebab-bestaetigung-loeschen.561eea14f6 | trip | wetter | fehler | – | kebab-bestaetigung-loeschen | 3 | Endgültig löschen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.fehler.-.kebab-bestaetigung-loeschen.2286edd5ef | trip | wetter | fehler | – | kebab-bestaetigung-loeschen | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kopf.bfca5341dd | trip | wetter | luecken | – | kopf | 1 | Trips / | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Trips / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Trips“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| trip.wetter.luecken.-.kopf.479809d591 | trip | wetter | luecken | – | kopf | 2 | GR221 Mallorca | gefunden |  | – |
+| trip.wetter.luecken.-.kopf.64267c2684 | trip | wetter | luecken | – | kopf | 3 | Weitere Aktionen | gefunden |  | – |
+| trip.wetter.luecken.-.kopf.301d044e17 | trip | wetter | luecken | – | kopf | 4 | Test schicken ▾ | gefunden |  | – |
+| trip.wetter.luecken.-.kopf.2075c278ab | trip | wetter | luecken | – | kopf | 5 | Trip · Mallorca | gefunden |  | – |
+| trip.wetter.luecken.-.kopf.2347bed0b8 | trip | wetter | luecken | – | kopf | 6 | GR221 Mallorca | gefunden |  | – |
+| trip.wetter.luecken.-.kopf.378627256d | trip | wetter | luecken | – | kopf | 7 | fertig | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Trip ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| trip.wetter.luecken.-.kopf.8fecfee0e5 | trip | wetter | luecken | – | kopf | 8 | 23.–26. Februar 2026 · 4 Etappen · 31,5 km · ↑1.737 m | gefunden |  | – |
+| trip.wetter.luecken.-.reiterleiste.3ee12cd29a | trip | wetter | luecken | – | reiterleiste | 1 | Übersicht | gefunden |  | – |
+| trip.wetter.luecken.-.reiterleiste.f6c9cb3e64 | trip | wetter | luecken | – | reiterleiste | 2 | Etappen | gefunden |  | – |
+| trip.wetter.luecken.-.reiterleiste.d20bd38160 | trip | wetter | luecken | – | reiterleiste | 3 | 4 | gefunden |  | – |
+| trip.wetter.luecken.-.reiterleiste.8185863142 | trip | wetter | luecken | – | reiterleiste | 4 | Wetter | gefunden |  | – |
+| trip.wetter.luecken.-.reiterleiste.afc91dc2ad | trip | wetter | luecken | – | reiterleiste | 5 | Zustellung | gefunden |  | – |
+| trip.wetter.luecken.-.abschnittskopf.7103a2ef62 | trip | wetter | luecken | – | abschnittskopf | 1 | Wetter | gefunden |  | – |
+| trip.wetter.luecken.-.abschnittskopf.579ce0f634 | trip | wetter | luecken | – | abschnittskopf | 2 | Was im Briefing steht, was für dich zu viel oder zu wenig ist und ab wann du einen Alarm bekommst. | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage.bdc76afbfb | trip | wetter | luecken | – | vorlage | 1 | Vorlage | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage.cf48186abc | trip | wetter | luecken | – | vorlage | 2 | Alpen-Trekking | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage.12ebbbb75e | trip | wetter | luecken | – | vorlage | 3 | ▾ unverändert | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Text „▾ unverändert“ ist ein Knoten; live sind Auswahlpfeil „▾“ und Stand „unverändert“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| trip.wetter.luecken.-.vorlage.1ad9ba9b7d | trip | wetter | luecken | – | vorlage | 4 | Als eigene Vorlage speichern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.6d4ca84a5f | trip | wetter | luecken | – | metriken | 1 | Alarm ab für alle | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.e31bccc51b | trip | wetter | luecken | – | metriken | 2 | 9 von 13 Metriken lösen einen Alarm aus. 3 können keinen auslösen (Vorboten und reine Anzeige). | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.13b9e460d7 | trip | wetter | luecken | – | metriken | 3 | Nie | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.3140e08b7f | trip | wetter | luecken | – | metriken | 4 | Gelb | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.e8dfaa830b | trip | wetter | luecken | – | metriken | 5 | Orange | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.31d29cefa7 | trip | wetter | luecken | – | metriken | 6 | Rot | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.872d23d920 | trip | wetter | luecken | – | metriken | 7 | Temperatur | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.69b5674663 | trip | wetter | luecken | – | metriken | 8 | Temperatur aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.9e06e4a951 | trip | wetter | luecken | – | metriken | 9 | Temperatur | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.8975baa9f4 | trip | wetter | luecken | – | metriken | 10 | °C · Tageshöchst · Tagestief | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.9219232cab | trip | wetter | luecken | – | metriken | 11 | -10 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.082df8b372 | trip | wetter | luecken | – | metriken | 12 | 2 | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.604bdf9cf7 | trip | wetter | luecken | – | metriken | 13 | Alarm, wenn der Wert seit dem letzten Briefing über 30 °C steigt oder unter -3 °C fällt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 12 | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.bc3732e8b9 | trip | wetter | luecken | – | metriken | 14 | · grün: 2 bis 27 °C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.4b8115475f | trip | wetter | luecken | – | metriken | 15 | Alarm ab | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.97192177a9 | trip | wetter | luecken | – | metriken | 16 | Nie | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.a3680268db | trip | wetter | luecken | – | metriken | 17 | Gelb | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.91d0f41cef | trip | wetter | luecken | – | metriken | 18 | Orange | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.f0619a6c3f | trip | wetter | luecken | – | metriken | 19 | Rot | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.33b6deb271 | trip | wetter | luecken | – | metriken | 20 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.c6f5914e7a | trip | wetter | luecken | – | metriken | 21 | Tiefsttemperatur Nacht aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.c5ce66b875 | trip | wetter | luecken | – | metriken | 22 | Tiefsttemperatur Nacht | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.b74212d575 | trip | wetter | luecken | – | metriken | 23 | °C · vor der Etappe | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.967e790841 | trip | wetter | luecken | – | metriken | 24 | Alarm, wenn der Wert seit dem letzten Briefing unter -3 °C fällt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.5beb7de00f | trip | wetter | luecken | – | metriken | 25 | · grün: ab 0 °C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.6bae32ad5e | trip | wetter | luecken | – | metriken | 26 | Alarm ab | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.90039211ff | trip | wetter | luecken | – | metriken | 27 | Nie | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.8423eb6122 | trip | wetter | luecken | – | metriken | 28 | Gelb | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.4407694e9f | trip | wetter | luecken | – | metriken | 29 | Orange | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.40befc2d2d | trip | wetter | luecken | – | metriken | 30 | Rot | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.80dda4a2ee | trip | wetter | luecken | – | metriken | 31 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.8671db954f | trip | wetter | luecken | – | metriken | 32 | Gefühlte Temperatur aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.c3827bbada | trip | wetter | luecken | – | metriken | 33 | Gefühlte Temperatur | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.0933641381 | trip | wetter | luecken | – | metriken | 34 | °C · Vorbote, kein Alarm | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.2013c4b3a6 | trip | wetter | luecken | – | metriken | 35 | Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus. | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.18dcc82968 | trip | wetter | luecken | – | metriken | 36 | · grün: ab -2 °C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.478b8120f3 | trip | wetter | luecken | – | metriken | 37 | kein Alarm (Vorbote) | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.6416587fe0 | trip | wetter | luecken | – | metriken | 38 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.776b50ddb8 | trip | wetter | luecken | – | metriken | 39 | Wind | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.005076feb9 | trip | wetter | luecken | – | metriken | 40 | Wind aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.80f9927fed | trip | wetter | luecken | – | metriken | 41 | Wind | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.35289cfb03 | trip | wetter | luecken | – | metriken | 42 | km/h · Mittelwind | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.24e3227975 | trip | wetter | luecken | – | metriken | 43 | Alarm, wenn der Wert seit dem letzten Briefing über 45 km/h steigt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.541047e3a5 | trip | wetter | luecken | – | metriken | 44 | · grün: bis 30 km/h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.90b92a2846 | trip | wetter | luecken | – | metriken | 45 | Alarm ab | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.24c3df4efa | trip | wetter | luecken | – | metriken | 46 | Nie | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.a8e9ad6f70 | trip | wetter | luecken | – | metriken | 47 | Gelb | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.c3e2d6f608 | trip | wetter | luecken | – | metriken | 48 | Orange | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.21fe3ede20 | trip | wetter | luecken | – | metriken | 49 | Rot | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.8c44fe7a83 | trip | wetter | luecken | – | metriken | 50 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.edd7afb7f3 | trip | wetter | luecken | – | metriken | 51 | Böen aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.ab4081bcb7 | trip | wetter | luecken | – | metriken | 52 | Böen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.d57219beb7 | trip | wetter | luecken | – | metriken | 53 | km/h · Spitze | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.298ec6fa0b | trip | wetter | luecken | – | metriken | 54 | Alarm ab | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.921bae7aaf | trip | wetter | luecken | – | metriken | 55 | Nie | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.cb38f9f7b2 | trip | wetter | luecken | – | metriken | 56 | Gelb | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.7a435337e9 | trip | wetter | luecken | – | metriken | 57 | Orange | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.3e0bc0c0d5 | trip | wetter | luecken | – | metriken | 58 | Rot | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.ead72d289d | trip | wetter | luecken | – | metriken | 59 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.f3beca001b | trip | wetter | luecken | – | metriken | 60 | Niederschlag & Gewitter | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.3905f9896a | trip | wetter | luecken | – | metriken | 61 | Niederschlag aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.8bcbbf0f68 | trip | wetter | luecken | – | metriken | 62 | Niederschlag | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.1be92278cc | trip | wetter | luecken | – | metriken | 63 | mm · Summe | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.055dc8ea45 | trip | wetter | luecken | – | metriken | 64 | Alarm, wenn der Wert seit dem letzten Briefing über 5 mm steigt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.5c90dbe662 | trip | wetter | luecken | – | metriken | 65 | · grün: bis 1 mm | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.86e672e0bf | trip | wetter | luecken | – | metriken | 66 | Alarm ab | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.2a912c7f79 | trip | wetter | luecken | – | metriken | 67 | Nie | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.194402a401 | trip | wetter | luecken | – | metriken | 68 | Gelb | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.4d3a6a3a53 | trip | wetter | luecken | – | metriken | 69 | Orange | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.366051cfb2 | trip | wetter | luecken | – | metriken | 70 | Rot | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.210fd7ac85 | trip | wetter | luecken | – | metriken | 71 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.9a1b4a1d63 | trip | wetter | luecken | – | metriken | 72 | Gewitter aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.078f752731 | trip | wetter | luecken | – | metriken | 73 | Gewitter | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.f889fc9cc3 | trip | wetter | luecken | – | metriken | 74 | Stufe | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.f240843cbb | trip | wetter | luecken | – | metriken | 75 | keins | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.ea276f4a11 | trip | wetter | luecken | – | metriken | 76 | mittel | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.9c72037100 | trip | wetter | luecken | – | metriken | 77 | hoch | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.d39dfaeb92 | trip | wetter | luecken | – | metriken | 78 | Alarm, wenn die Gewitter-Stufe seit dem letzten Briefing auf mittel oder hoch steigt (Orange). Entwarnung, wenn sie wieder fällt. | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.c7e882606b | trip | wetter | luecken | – | metriken | 79 | Alarm ab | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.c9b3967877 | trip | wetter | luecken | – | metriken | 80 | Nie | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.5e4170d7d2 | trip | wetter | luecken | – | metriken | 81 | Orange | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.e959f6e87f | trip | wetter | luecken | – | metriken | 82 | Rot | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.4b115eeceb | trip | wetter | luecken | – | metriken | 83 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.721cb8163e | trip | wetter | luecken | – | metriken | 84 | Regenwahrscheinlichkeit aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.ec958ad3cb | trip | wetter | luecken | – | metriken | 85 | Regenwahrscheinlichkeit | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.d8f4fff92a | trip | wetter | luecken | – | metriken | 86 | % · Vorbote, kein Alarm | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.e3419eff02 | trip | wetter | luecken | – | metriken | 87 | Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus. | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.1fc616ff8f | trip | wetter | luecken | – | metriken | 88 | · grün: bis 30 % | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.eb04120a7f | trip | wetter | luecken | – | metriken | 89 | kein Alarm (Vorbote) | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.d0c849f5da | trip | wetter | luecken | – | metriken | 90 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.9bb5280882 | trip | wetter | luecken | – | metriken | 91 | Himmel & Sicht | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.14a239e17d | trip | wetter | luecken | – | metriken | 92 | Sichtweite aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.ef8a3a65c1 | trip | wetter | luecken | – | metriken | 93 | Sichtweite | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.11de8533f2 | trip | wetter | luecken | – | metriken | 94 | m · Minimum | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.7331dc519f | trip | wetter | luecken | – | metriken | 95 | Alarm, wenn der Wert seit dem letzten Briefing unter 300 m fällt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.1e676fd92e | trip | wetter | luecken | – | metriken | 96 | · grün: ab 1000 m | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.b3bfb128e9 | trip | wetter | luecken | – | metriken | 97 | Alarm ab | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.a865aadb53 | trip | wetter | luecken | – | metriken | 98 | Nie | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.0f42796e34 | trip | wetter | luecken | – | metriken | 99 | Gelb | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.8983467b26 | trip | wetter | luecken | – | metriken | 100 | Orange | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.ffaa7249f0 | trip | wetter | luecken | – | metriken | 101 | Rot | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.00c9fc2242 | trip | wetter | luecken | – | metriken | 102 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.2f00ab4e29 | trip | wetter | luecken | – | metriken | 103 | Tiefe Wolken aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.3cee04efc6 | trip | wetter | luecken | – | metriken | 104 | Tiefe Wolken | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.248b60a428 | trip | wetter | luecken | – | metriken | 105 | % · Gipfel in Wolken | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.c9ea9cebb4 | trip | wetter | luecken | – | metriken | 106 | Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus. | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 105 | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.a6d9f82d75 | trip | wetter | luecken | – | metriken | 107 | kein Alarm | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.eea19a274c | trip | wetter | luecken | – | metriken | 108 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.681ee94ce4 | trip | wetter | luecken | – | metriken | 109 | UV-Index aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.478e9c34e1 | trip | wetter | luecken | – | metriken | 110 | UV-Index | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.2136f3ba62 | trip | wetter | luecken | – | metriken | 111 | Maximum | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.030d2bf949 | trip | wetter | luecken | – | metriken | 112 | Kein Alarm. Die Farbe erscheint nur im Briefing. | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.0accaa00ba | trip | wetter | luecken | – | metriken | 113 | · grün: bis 6 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| trip.wetter.luecken.-.metriken.5135f9e27a | trip | wetter | luecken | – | metriken | 114 | Alarm ab | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.23954d0bb1 | trip | wetter | luecken | – | metriken | 115 | Nie | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.dcb4b41e0c | trip | wetter | luecken | – | metriken | 116 | Gelb | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.861ba421e1 | trip | wetter | luecken | – | metriken | 117 | Orange | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.675d183762 | trip | wetter | luecken | – | metriken | 118 | Rot | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.cb1dec047e | trip | wetter | luecken | – | metriken | 119 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.bc7f76d0b6 | trip | wetter | luecken | – | metriken | 120 | Schnee & Höhe | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.a9c965ef1f | trip | wetter | luecken | – | metriken | 121 | Nullgradgrenze aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.c1127c292c | trip | wetter | luecken | – | metriken | 122 | Nullgradgrenze | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.38a4c2d8f7 | trip | wetter | luecken | – | metriken | 123 | m · m über höchster Stelle | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.84c1e253ab | trip | wetter | luecken | – | metriken | 124 | Alarm ab | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.ad7968eda8 | trip | wetter | luecken | – | metriken | 125 | Nie | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.cc6dab662b | trip | wetter | luecken | – | metriken | 126 | Gelb | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.3b7dd32063 | trip | wetter | luecken | – | metriken | 127 | Orange | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.e7a07a1036 | trip | wetter | luecken | – | metriken | 128 | Rot | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.a62481cc4e | trip | wetter | luecken | – | metriken | 129 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.b0bf57427b | trip | wetter | luecken | – | metriken | 130 | Schneefallgrenze aus dem Briefing nehmen | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.d5d2b10768 | trip | wetter | luecken | – | metriken | 131 | Schneefallgrenze | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.9cf8e4015f | trip | wetter | luecken | – | metriken | 132 | m · m über höchster Stelle | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.af1f01945b | trip | wetter | luecken | – | metriken | 133 | Alarm ab | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.14e916f52c | trip | wetter | luecken | – | metriken | 134 | Nie | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.3e9280bb20 | trip | wetter | luecken | – | metriken | 135 | Gelb | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.289de1be17 | trip | wetter | luecken | – | metriken | 136 | Orange | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.518a6ffa7c | trip | wetter | luecken | – | metriken | 137 | Rot | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.e0acdb466a | trip | wetter | luecken | – | metriken | 138 | Grenzen ändern | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.3c0546d3b2 | trip | wetter | luecken | – | metriken | 139 | Nicht im Briefing: | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.79b698c158 | trip | wetter | luecken | – | metriken | 140 | + Windrichtung | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.9ca4d3406f | trip | wetter | luecken | – | metriken | 141 | + Bewölkung | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.7e73dc7a6a | trip | wetter | luecken | – | metriken | 142 | + Sonnenstunden | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.02ade68475 | trip | wetter | luecken | – | metriken | 143 | + Neuschnee | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.2167aefca2 | trip | wetter | luecken | – | metriken | 144 | + Schneehöhe | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.e2930c9a4f | trip | wetter | luecken | – | metriken | 145 | + Taupunkt | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.975bbc3d70 | trip | wetter | luecken | – | metriken | 146 | + Luftfeuchte | gefunden |  | – |
+| trip.wetter.luecken.-.metriken.8519506575 | trip | wetter | luecken | – | metriken | 147 | + Luftdruck | gefunden |  | – |
+| trip.wetter.luecken.-.warnungen-radar.964a58ac38 | trip | wetter | luecken | – | warnungen-radar | 1 | Amtliche Warnungen | gefunden |  | – |
+| trip.wetter.luecken.-.warnungen-radar.f62f5e9eee | trip | wetter | luecken | – | warnungen-radar | 2 | im Briefing und als Alarm, sobald sie dein Gebiet betreffen | gefunden |  | – |
+| trip.wetter.luecken.-.warnungen-radar.efdc246c74 | trip | wetter | luecken | – | warnungen-radar | 3 | Amtliche Warnungen | gefunden |  | – |
+| trip.wetter.luecken.-.warnungen-radar.0219e4b607 | trip | wetter | luecken | – | warnungen-radar | 4 | Radar-Regen | gefunden |  | – |
+| trip.wetter.luecken.-.warnungen-radar.0e6923eb5d | trip | wetter | luecken | – | warnungen-radar | 5 | Alarm, wenn in der nächsten Stunde Regen auf deine Etappe zukommt | gefunden |  | – |
+| trip.wetter.luecken.-.warnungen-radar.262aaaac4e | trip | wetter | luecken | – | warnungen-radar | 6 | Radar-Regen | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.4cd4eba60d | trip | wetter | luecken | – | was-steht-wo | 1 | Was steht wo | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.8ab772086d | trip | wetter | luecken | – | was-steht-wo | 2 | Eine Tabelle für alles. Jede Zeile ist eine Metrik aus der Auswahl oben. Jede Spalte ist eine Stelle, an der eine Metrik erscheinen kann: die drei Kanäle und der 3-Tages-Ausblick. Der Ausblick gibt es nur für Metriken, die auch in der E-Mail stehen. Ein Haken heißt: erscheint dort. Hier wählst du nur ab. Die Reihenfolge ziehst du einmal, sie gilt überall. Roh zeigt die Zahl, Einfach ein Symbol oder ein Wort. Wo eine Metrik beide Formen hat, stellst du das je Stelle ein. Die SMS bleibt bei ihren Kürzeln. Neue Metriken kommen oben über „+“ dazu. | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.82f4f46301 | trip | wetter | luecken | – | was-steht-wo | 3 | Metrik | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.04356263a6 | trip | wetter | luecken | – | was-steht-wo | 4 | E-Mail | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.32bf7e5690 | trip | wetter | luecken | – | was-steht-wo | 5 | Stundentabelle | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.138fbe108f | trip | wetter | luecken | – | was-steht-wo | 6 | Telegram | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.b55b6e29e5 | trip | wetter | luecken | – | was-steht-wo | 7 | Nachricht | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.ef8032968b | trip | wetter | luecken | – | was-steht-wo | 8 | SMS | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.11b027138d | trip | wetter | luecken | – | was-steht-wo | 9 | und Premium-SMS | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.fc415b752f | trip | wetter | luecken | – | was-steht-wo | 10 | 3-Tages-Ausblick | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.366c636d58 | trip | wetter | luecken | – | was-steht-wo | 11 | E-Mail und Telegram | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.e440b38936 | trip | wetter | luecken | – | was-steht-wo | 12 | Amtliche Warnungen | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.cb4ee4640e | trip | wetter | luecken | – | was-steht-wo | 13 | immer dabei: in E-Mail und Telegram zuerst, in der SMS am Ende | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.6ce01cfc04 | trip | wetter | luecken | – | was-steht-wo | 14 | Temperatur | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.663067d1b8 | trip | wetter | luecken | – | was-steht-wo | 15 | Temperatur in E-Mail | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.ee3d703c86 | trip | wetter | luecken | – | was-steht-wo | 16 | Temp 14.4 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.9f6e3d0dd7 | trip | wetter | luecken | – | was-steht-wo | 17 | Temperatur in Telegram | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.951bc4aaa1 | trip | wetter | luecken | – | was-steht-wo | 18 | T 9.6-15.2 | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.e5ad4e70f7 | trip | wetter | luecken | – | was-steht-wo | 19 | Temperatur in SMS | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.479542fefa | trip | wetter | luecken | – | was-steht-wo | 20 | D10/15 | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.c494140c82 | trip | wetter | luecken | – | was-steht-wo | 21 | Temperatur im 3-Tages-Ausblick | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.48b061f22b | trip | wetter | luecken | – | was-steht-wo | 22 | Tiefsttemperatur Nacht | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.0461a1fba7 | trip | wetter | luecken | – | was-steht-wo | 23 | Tiefsttemperatur Nacht in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 22 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.9605f606fd | trip | wetter | luecken | – | was-steht-wo | 24 | Tiefsttemperatur Nacht in Telegram | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.5bdb119777 | trip | wetter | luecken | – | was-steht-wo | 25 | Tiefsttemperatur Nacht in SMS | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.9e3eefa3f7 | trip | wetter | luecken | – | was-steht-wo | 26 | N10 | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.f49481c342 | trip | wetter | luecken | – | was-steht-wo | 27 | Tiefsttemperatur Nacht im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 26 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.07e4e8936a | trip | wetter | luecken | – | was-steht-wo | 28 | Gefühlte Temperatur | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 27 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.f97112117f | trip | wetter | luecken | – | was-steht-wo | 29 | Gefühlte Temperatur in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 28 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.367ca5c95f | trip | wetter | luecken | – | was-steht-wo | 30 | Feels 11.0 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.b4aa640a79 | trip | wetter | luecken | – | was-steht-wo | 31 | Gefühlte Temperatur in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 30 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.37b6b84cb8 | trip | wetter | luecken | – | was-steht-wo | 32 | TF 6.8-11.7 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 31 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.ce008339d4 | trip | wetter | luecken | – | was-steht-wo | 33 | Gefühlte Temperatur in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 32 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.5bc3c99d45 | trip | wetter | luecken | – | was-steht-wo | 34 | TF- FN7 FD7/12 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 33 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.053017900a | trip | wetter | luecken | – | was-steht-wo | 35 | Gefühlte Temperatur im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 34 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.eade428ef7 | trip | wetter | luecken | – | was-steht-wo | 36 | Wind | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 35 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.b75a7a4a06 | trip | wetter | luecken | – | was-steht-wo | 37 | Wind in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 36 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.57f1c73764 | trip | wetter | luecken | – | was-steht-wo | 38 | Darstellung Wind in E-Mail: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 37 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.b4c6059a26 | trip | wetter | luecken | – | was-steht-wo | 39 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 38 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.e315ac8448 | trip | wetter | luecken | – | was-steht-wo | 40 | Wind 36 | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.7def98c784 | trip | wetter | luecken | – | was-steht-wo | 41 | Wind in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 40 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.631de80cdf | trip | wetter | luecken | – | was-steht-wo | 42 | Darstellung Wind in Telegram: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 41 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.e2392d8be4 | trip | wetter | luecken | – | was-steht-wo | 43 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 42 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.5fb8f4feea | trip | wetter | luecken | – | was-steht-wo | 44 | W 20-38@15 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 43 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.717b14ab94 | trip | wetter | luecken | – | was-steht-wo | 45 | Wind in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 44 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.0e06742b44 | trip | wetter | luecken | – | was-steht-wo | 46 | W30@10(38@15) | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 45 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.526b36a579 | trip | wetter | luecken | – | was-steht-wo | 47 | Wind im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 46 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.ef33e934af | trip | wetter | luecken | – | was-steht-wo | 48 | Darstellung Wind im 3-Tages-Ausblick: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 47 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.b3ddfb6f52 | trip | wetter | luecken | – | was-steht-wo | 49 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 48 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.5af613ec91 | trip | wetter | luecken | – | was-steht-wo | 50 | Böen | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.f13ec92358 | trip | wetter | luecken | – | was-steht-wo | 51 | Böen in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 50 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.ef8d4ee766 | trip | wetter | luecken | – | was-steht-wo | 52 | Darstellung Böen in E-Mail: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 51 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.fe967fd93e | trip | wetter | luecken | – | was-steht-wo | 53 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 52 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.b3371cef38 | trip | wetter | luecken | – | was-steht-wo | 54 | Gust 50 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.c4d918ad32 | trip | wetter | luecken | – | was-steht-wo | 55 | Böen in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 54 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.9352533cdb | trip | wetter | luecken | – | was-steht-wo | 56 | Darstellung Böen in Telegram: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 55 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.cf32961a09 | trip | wetter | luecken | – | was-steht-wo | 57 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 56 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.e359902b80 | trip | wetter | luecken | – | was-steht-wo | 58 | G 30-52@15 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 57 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.41282ecee0 | trip | wetter | luecken | – | was-steht-wo | 59 | Böen in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 58 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.b7c100c22a | trip | wetter | luecken | – | was-steht-wo | 60 | G36@7(52@15) | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 59 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.6080476bf0 | trip | wetter | luecken | – | was-steht-wo | 61 | Böen im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 60 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.acc3998a86 | trip | wetter | luecken | – | was-steht-wo | 62 | Darstellung Böen im 3-Tages-Ausblick: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 61 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.8b68e11fc1 | trip | wetter | luecken | – | was-steht-wo | 63 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 62 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.c8a00f6322 | trip | wetter | luecken | – | was-steht-wo | 64 | Niederschlag | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 63 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.45387f4a46 | trip | wetter | luecken | – | was-steht-wo | 65 | Niederschlag in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 64 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.3578cc5d7a | trip | wetter | luecken | – | was-steht-wo | 66 | Darstellung Niederschlag in E-Mail: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 65 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.7bacb1c388 | trip | wetter | luecken | – | was-steht-wo | 67 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 66 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.9d8a46f79c | trip | wetter | luecken | – | was-steht-wo | 68 | Rain 0.4 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.3af4cea2df | trip | wetter | luecken | – | was-steht-wo | 69 | Niederschlag in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 68 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.2d780666bd | trip | wetter | luecken | – | was-steht-wo | 70 | Darstellung Niederschlag in Telegram: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 69 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.47a67978d3 | trip | wetter | luecken | – | was-steht-wo | 71 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 70 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.315dedad27 | trip | wetter | luecken | – | was-steht-wo | 72 | R 0.0-0.4 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 71 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.ad5f65b05a | trip | wetter | luecken | – | was-steht-wo | 73 | Niederschlag in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 72 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.ff195fcb07 | trip | wetter | luecken | – | was-steht-wo | 74 | R- | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.68d03a0ea5 | trip | wetter | luecken | – | was-steht-wo | 75 | Niederschlag im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 74 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.e1e480bdca | trip | wetter | luecken | – | was-steht-wo | 76 | Darstellung Niederschlag im 3-Tages-Ausblick: Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 75 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.3c66fcec59 | trip | wetter | luecken | – | was-steht-wo | 77 | Roh | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 76 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.a905bfb299 | trip | wetter | luecken | – | was-steht-wo | 78 | Gewitter | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.6b5e3694e5 | trip | wetter | luecken | – | was-steht-wo | 79 | Gewitter in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 78 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.b6775bc052 | trip | wetter | luecken | – | was-steht-wo | 80 | Darstellung Gewitter in E-Mail: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 79 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.49047297c9 | trip | wetter | luecken | – | was-steht-wo | 81 | Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 80 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.53eca783db | trip | wetter | luecken | – | was-steht-wo | 82 | Thdr ● gelb | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.84a4eaf6e9 | trip | wetter | luecken | – | was-steht-wo | 83 | Gewitter in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 82 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.b3d4327a9c | trip | wetter | luecken | – | was-steht-wo | 84 | Darstellung Gewitter in Telegram: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 83 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.4b083707a1 | trip | wetter | luecken | – | was-steht-wo | 85 | Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 84 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.a3aa9e456e | trip | wetter | luecken | – | was-steht-wo | 86 | TH leicht | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.70b53940cb | trip | wetter | luecken | – | was-steht-wo | 87 | Gewitter in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 86 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.29edcf20e3 | trip | wetter | luecken | – | was-steht-wo | 88 | TH:L@13 TH+:- | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 87 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.d7c474d960 | trip | wetter | luecken | – | was-steht-wo | 89 | Gewitter im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 88 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.1b8eaa037c | trip | wetter | luecken | – | was-steht-wo | 90 | Darstellung Gewitter im 3-Tages-Ausblick: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 89 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.78c2622d47 | trip | wetter | luecken | – | was-steht-wo | 91 | Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 90 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.1dbecc5fac | trip | wetter | luecken | – | was-steht-wo | 92 | Regenwahrscheinlichkeit | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 91 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.1a10c8f08a | trip | wetter | luecken | – | was-steht-wo | 93 | Regenwahrscheinlichkeit in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 92 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.d6bdf2da16 | trip | wetter | luecken | – | was-steht-wo | 94 | Rain% 60 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.a539b2fef5 | trip | wetter | luecken | – | was-steht-wo | 95 | Regenwahrscheinlichkeit in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 94 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.e0da171136 | trip | wetter | luecken | – | was-steht-wo | 96 | PR 10-60@14 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 95 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.cfa5990336 | trip | wetter | luecken | – | was-steht-wo | 97 | Regenwahrscheinlichkeit in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 96 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.5278cb3df0 | trip | wetter | luecken | – | was-steht-wo | 98 | PR60%@14 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 97 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.097aaf26dd | trip | wetter | luecken | – | was-steht-wo | 99 | Regenwahrscheinlichkeit im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 98 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.9cd8097849 | trip | wetter | luecken | – | was-steht-wo | 100 | Sichtweite | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 99 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.29152bd268 | trip | wetter | luecken | – | was-steht-wo | 101 | Sichtweite in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 100 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.008116eddf | trip | wetter | luecken | – | was-steht-wo | 102 | Visib 4.0 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.61d101d131 | trip | wetter | luecken | – | was-steht-wo | 103 | Sichtweite in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 102 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.9fbbb5232e | trip | wetter | luecken | – | was-steht-wo | 104 | VS 4.0-15 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 103 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.07e440c17a | trip | wetter | luecken | – | was-steht-wo | 105 | nur Tageswert | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 104 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.abbb53b064 | trip | wetter | luecken | – | was-steht-wo | 106 | Sichtweite in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 105 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.b8a76e6f16 | trip | wetter | luecken | – | was-steht-wo | 107 | VS- | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 106 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.aaebdd7ef1 | trip | wetter | luecken | – | was-steht-wo | 108 | Sichtweite im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 107 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.74b55986a8 | trip | wetter | luecken | – | was-steht-wo | 109 | Tiefe Wolken | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 108 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.fd9b445398 | trip | wetter | luecken | – | was-steht-wo | 110 | Tiefe Wolken in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 109 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.e30798539e | trip | wetter | luecken | – | was-steht-wo | 111 | Darstellung Tiefe Wolken in E-Mail: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 110 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.e5f9f1b7ed | trip | wetter | luecken | – | was-steht-wo | 112 | Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 111 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.87390fca67 | trip | wetter | luecken | – | was-steht-wo | 113 | CldLow 🌥️ | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.44036e0f11 | trip | wetter | luecken | – | was-steht-wo | 114 | Tiefe Wolken in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 113 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.0fcf6179fb | trip | wetter | luecken | – | was-steht-wo | 115 | Darstellung Tiefe Wolken in Telegram: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 114 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.2657a9e2cc | trip | wetter | luecken | – | was-steht-wo | 116 | Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 115 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.739c57d495 | trip | wetter | luecken | – | was-steht-wo | 117 | CL 🌤️-🌥️@15 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.4edac1d3b6 | trip | wetter | luecken | – | was-steht-wo | 118 | nur Tageswert | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 117 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.17200ebbb3 | trip | wetter | luecken | – | was-steht-wo | 119 | Tiefe Wolken in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 118 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.4328c53248 | trip | wetter | luecken | – | was-steht-wo | 120 | CL:BKN@15 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.70dc0ff42e | trip | wetter | luecken | – | was-steht-wo | 121 | Tiefe Wolken im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 120 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.5171ca086b | trip | wetter | luecken | – | was-steht-wo | 122 | Darstellung Tiefe Wolken im 3-Tages-Ausblick: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 121 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.f0d824e863 | trip | wetter | luecken | – | was-steht-wo | 123 | Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 122 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.3f8c1ae82f | trip | wetter | luecken | – | was-steht-wo | 124 | UV-Index | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.3186953fc1 | trip | wetter | luecken | – | was-steht-wo | 125 | UV-Index in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 124 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.0718db9d27 | trip | wetter | luecken | – | was-steht-wo | 126 | UV 3.5 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 125 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.1ee9f869bd | trip | wetter | luecken | – | was-steht-wo | 127 | UV-Index in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 126 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.adee6b29cc | trip | wetter | luecken | – | was-steht-wo | 128 | UV 0.0-4.0 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 127 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.92542bc293 | trip | wetter | luecken | – | was-steht-wo | 129 | nur Tageswert | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 128 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.7034160d39 | trip | wetter | luecken | – | was-steht-wo | 130 | UV-Index in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 129 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.22e904d3a9 | trip | wetter | luecken | – | was-steht-wo | 131 | UV- | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.5b59147418 | trip | wetter | luecken | – | was-steht-wo | 132 | UV-Index im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 131 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.f464678195 | trip | wetter | luecken | – | was-steht-wo | 133 | Nullgradgrenze | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 132 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.91f85bd760 | trip | wetter | luecken | – | was-steht-wo | 134 | Nullgradgrenze in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 133 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.1a9856cb87 | trip | wetter | luecken | – | was-steht-wo | 135 | 0°Line 2120 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.acc956f134 | trip | wetter | luecken | – | was-steht-wo | 136 | Nullgradgrenze in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 135 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.e0dfe33472 | trip | wetter | luecken | – | was-steht-wo | 137 | FZ 2100-2320@04 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.3d600e87a8 | trip | wetter | luecken | – | was-steht-wo | 138 | nur Tageswert | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 137 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.8fa03e5d87 | trip | wetter | luecken | – | was-steht-wo | 139 | Nullgradgrenze in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 138 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.b15d32f2a6 | trip | wetter | luecken | – | was-steht-wo | 140 | FZ2100@15 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 139 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.ee9554069b | trip | wetter | luecken | – | was-steht-wo | 141 | Nullgradgrenze im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 140 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.fd0d2f8f1d | trip | wetter | luecken | – | was-steht-wo | 142 | Schneefallgrenze | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 141 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.5b63b1519c | trip | wetter | luecken | – | was-steht-wo | 143 | Schneefallgrenze in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 142 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.ce374fd457 | trip | wetter | luecken | – | was-steht-wo | 144 | SnowL 1820 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.935f7b9dec | trip | wetter | luecken | – | was-steht-wo | 145 | Schneefallgrenze in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 144 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.f8ae0308ce | trip | wetter | luecken | – | was-steht-wo | 146 | SL 1800-2020@04 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.65187f0d07 | trip | wetter | luecken | – | was-steht-wo | 147 | nur Tageswert | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 146 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.15976f903b | trip | wetter | luecken | – | was-steht-wo | 148 | Schneefallgrenze in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 147 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.85a16be695 | trip | wetter | luecken | – | was-steht-wo | 149 | SL1780 | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 148 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.d4875bda43 | trip | wetter | luecken | – | was-steht-wo | 150 | Schneefallgrenze im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 149 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.23ff31ea23 | trip | wetter | luecken | – | was-steht-wo | 151 | SMS-Beispiel: · 123 von 160 Zeichen | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.1ddc24b9ba | trip | wetter | luecken | – | was-steht-wo | 152 | GR221 E2: D10/15 N10 TF- FN7 FD7/12 W30@10(38@15) G36@7(52@15) R- TH:L@13 TH+:- PR60%@14 VS- CL:BKN@15 UV- FZ2100@15 SL1780 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.fa45633c2e | trip | wetter | luecken | – | was-steht-wo | 153 | Ganze Blöcke ein- und ausschalten | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.7b05630ea6 | trip | wetter | luecken | – | was-steht-wo | 154 | 3-Tages-Ausblick | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.aa0939563d | trip | wetter | luecken | – | was-steht-wo | 155 | Tageswerte der nächsten drei Etappen, in E-Mail und Telegram. Vorbelegt: nur im Abend-Briefing. | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.8fbb89f11d | trip | wetter | luecken | – | was-steht-wo | 156 | Morgen-Briefing | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.0ff7584343 | trip | wetter | luecken | – | was-steht-wo | 157 | Ausblick im Morgen-Briefing | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.6db8ab1244 | trip | wetter | luecken | – | was-steht-wo | 158 | Abend-Briefing | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| trip.wetter.luecken.-.was-steht-wo.e7accca76b | trip | wetter | luecken | – | was-steht-wo | 159 | Ausblick im Abend-Briefing | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.5729d9a90c | trip | wetter | luecken | – | was-steht-wo | 160 | Etappen-Kennzahlen | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.1dab965957 | trip | wetter | luecken | – | was-steht-wo | 161 | Länge, Höhenmeter und Gehzeit je Etappe, nur in der E-Mail | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.27b512d7b4 | trip | wetter | luecken | – | was-steht-wo | 162 | Etappen-Kennzahlen | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.d614bfc061 | trip | wetter | luecken | – | was-steht-wo | 163 | Vortag-Vergleich | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.5877929dbf | trip | wetter | luecken | – | was-steht-wo | 164 | was sich seit dem letzten Briefing geändert hat, nur in der E-Mail | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.26c7eccd1a | trip | wetter | luecken | – | was-steht-wo | 165 | Vortag-Vergleich | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.2f73ffe04b | trip | wetter | luecken | – | was-steht-wo | 166 | Nacht-Stundentabelle | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.fbd7d75f04 | trip | wetter | luecken | – | was-steht-wo | 167 | die Stunden der Nacht am Etappenziel, nur in der E-Mail | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.3e8a44d8f8 | trip | wetter | luecken | – | was-steht-wo | 168 | Nacht-Stundentabelle | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.3069f658f6 | trip | wetter | luecken | – | was-steht-wo | 169 | Einstellungen je Kanal | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.4199ce804b | trip | wetter | luecken | – | was-steht-wo | 170 | E-Mail: Format | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.ee7c4b8089 | trip | wetter | luecken | – | was-steht-wo | 171 | Ausführlich mit Tabellen und Farben, oder Kompakt als reiner Text für schwache Verbindungen. | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.0527cf7638 | trip | wetter | luecken | – | was-steht-wo | 172 | Ausführlich (HTML) | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.b1fc6cef8f | trip | wetter | luecken | – | was-steht-wo | 173 | Kompakt (Nur-Text) | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.6afb1c6dd9 | trip | wetter | luecken | – | was-steht-wo | 174 | Telegram: Kurzstil | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.b18bd1c0e4 | trip | wetter | luecken | – | was-steht-wo | 175 | Telegram bekommt denselben kurzen Text wie die SMS, ohne Knöpfe. Gilt für Briefing und Alarme. Die Telegram-Spalte ruht dann, es gilt die SMS-Spalte. | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.059d13a2b5 | trip | wetter | luecken | – | was-steht-wo | 176 | Telegram im Kurzstil | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.5877c44f43 | trip | wetter | luecken | – | was-steht-wo | 177 | Premium-SMS | gefunden |  | – |
+| trip.wetter.luecken.-.was-steht-wo.1dba5d12dd | trip | wetter | luecken | – | was-steht-wo | 178 | Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später. | gefunden |  | – |
+| trip.wetter.luecken.-.anpassen.f693601aa8 | trip | wetter | luecken | – | anpassen | 1 | Anpassen | gefunden |  | – |
+| trip.wetter.luecken.-.anpassen.f8d0f48ece | trip | wetter | luecken | – | anpassen | 2 | Tagesfenster | gefunden |  | – |
+| trip.wetter.luecken.-.anpassen.27632e4d9b | trip | wetter | luecken | – | anpassen | 3 | Welche Stunden bewertet werden | gefunden |  | – |
+| trip.wetter.luecken.-.anpassen.4caa466668 | trip | wetter | luecken | – | anpassen | 4 | von | gefunden |  | – |
+| trip.wetter.luecken.-.anpassen.3b74235c89 | trip | wetter | luecken | – | anpassen | 5 | bis | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature.ee68252e5a | trip | wetter | luecken | – | grenzen-temperature | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature.649b31b257 | trip | wetter | luecken | – | grenzen-temperature | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature.68101ff364 | trip | wetter | luecken | – | grenzen-temperature | 3 | rot < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature.98d1a95b14 | trip | wetter | luecken | – | grenzen-temperature | 4 | -10 | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| trip.wetter.luecken.-.grenzen-temperature.7a63a3ab6b | trip | wetter | luecken | – | grenzen-temperature | 5 | orange < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature.bc570780cb | trip | wetter | luecken | – | grenzen-temperature | 6 | gelb < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature.f3fbcd8a07 | trip | wetter | luecken | – | grenzen-temperature | 7 | 2 | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature.cd79b22b34 | trip | wetter | luecken | – | grenzen-temperature | 8 | obenzu viel | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature.51678af89b | trip | wetter | luecken | – | grenzen-temperature | 9 | gelb > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature.647cdea711 | trip | wetter | luecken | – | grenzen-temperature | 10 | orange > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature.58fe34eff3 | trip | wetter | luecken | – | grenzen-temperature | 11 | rot > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature.532c865d55 | trip | wetter | luecken | – | grenzen-temperature | 12 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature_night.aeba2e4058 | trip | wetter | luecken | – | grenzen-temperature_night | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature_night.e0da51ba3f | trip | wetter | luecken | – | grenzen-temperature_night | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature_night.586d040b15 | trip | wetter | luecken | – | grenzen-temperature_night | 3 | rot < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature_night.2943379a52 | trip | wetter | luecken | – | grenzen-temperature_night | 4 | -8 | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| trip.wetter.luecken.-.grenzen-temperature_night.961a9ae5c8 | trip | wetter | luecken | – | grenzen-temperature_night | 5 | orange < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature_night.ce6e1fc1d8 | trip | wetter | luecken | – | grenzen-temperature_night | 6 | gelb < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature_night.fa6cdf7956 | trip | wetter | luecken | – | grenzen-temperature_night | 7 | 0 | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature_night.4c5de3e083 | trip | wetter | luecken | – | grenzen-temperature_night | 8 | obenzu viel | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature_night.90c901891c | trip | wetter | luecken | – | grenzen-temperature_night | 9 | gelb > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature_night.bd3157c29d | trip | wetter | luecken | – | grenzen-temperature_night | 10 | orange > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature_night.39d96526a2 | trip | wetter | luecken | – | grenzen-temperature_night | 11 | rot > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-temperature_night.31a7f407c4 | trip | wetter | luecken | – | grenzen-temperature_night | 12 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind_chill.f2f3a81099 | trip | wetter | luecken | – | grenzen-wind_chill | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind_chill.35aa420cae | trip | wetter | luecken | – | grenzen-wind_chill | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind_chill.51e9961ee0 | trip | wetter | luecken | – | grenzen-wind_chill | 3 | rot < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind_chill.14b729df90 | trip | wetter | luecken | – | grenzen-wind_chill | 4 | -15 | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| trip.wetter.luecken.-.grenzen-wind_chill.bc1c5b0d3a | trip | wetter | luecken | – | grenzen-wind_chill | 5 | orange < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind_chill.4bdbb96a7e | trip | wetter | luecken | – | grenzen-wind_chill | 6 | gelb < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind_chill.c5681d7ed6 | trip | wetter | luecken | – | grenzen-wind_chill | 7 | obenzu viel | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind_chill.25cb1466ca | trip | wetter | luecken | – | grenzen-wind_chill | 8 | gelb > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind_chill.8885c3b4e2 | trip | wetter | luecken | – | grenzen-wind_chill | 9 | orange > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind_chill.be436e5e73 | trip | wetter | luecken | – | grenzen-wind_chill | 10 | rot > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind_chill.26fe27cb83 | trip | wetter | luecken | – | grenzen-wind_chill | 11 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind.2e1b6fdf27 | trip | wetter | luecken | – | grenzen-wind | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind.bf20daad0e | trip | wetter | luecken | – | grenzen-wind | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind.9a1bfecb3a | trip | wetter | luecken | – | grenzen-wind | 3 | rot < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind.bbaf36cf9f | trip | wetter | luecken | – | grenzen-wind | 4 | orange < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind.6678b98840 | trip | wetter | luecken | – | grenzen-wind | 5 | gelb < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind.6498f67edc | trip | wetter | luecken | – | grenzen-wind | 6 | obenzu viel | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind.76d2384a8d | trip | wetter | luecken | – | grenzen-wind | 7 | gelb > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind.bbeeadc8fc | trip | wetter | luecken | – | grenzen-wind | 8 | 30 | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind.77ebf05ed4 | trip | wetter | luecken | – | grenzen-wind | 9 | orange > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind.4f9a172fbe | trip | wetter | luecken | – | grenzen-wind | 10 | rot > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-wind.242dba652a | trip | wetter | luecken | – | grenzen-wind | 11 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-gust.e4534320ab | trip | wetter | luecken | – | grenzen-gust | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-gust.d3bceaf440 | trip | wetter | luecken | – | grenzen-gust | 2 | obenzu viel | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-gust.382c1f5848 | trip | wetter | luecken | – | grenzen-gust | 3 | gelb > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-gust.7f1644dc4b | trip | wetter | luecken | – | grenzen-gust | 4 | 35 | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-gust.9928eb6366 | trip | wetter | luecken | – | grenzen-gust | 5 | orange > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-gust.dd5c0ab339 | trip | wetter | luecken | – | grenzen-gust | 6 | rot > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-gust.f7d0c92205 | trip | wetter | luecken | – | grenzen-gust | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-precipitation.2bcfc2b13a | trip | wetter | luecken | – | grenzen-precipitation | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-precipitation.f4cad41754 | trip | wetter | luecken | – | grenzen-precipitation | 2 | obenzu viel | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-precipitation.f3ede97eef | trip | wetter | luecken | – | grenzen-precipitation | 3 | gelb > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-precipitation.b8aa2bc891 | trip | wetter | luecken | – | grenzen-precipitation | 4 | 1 | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-precipitation.ff039487aa | trip | wetter | luecken | – | grenzen-precipitation | 5 | orange > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-precipitation.8a81d8d70d | trip | wetter | luecken | – | grenzen-precipitation | 6 | rot > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-precipitation.8fa48d9cc8 | trip | wetter | luecken | – | grenzen-precipitation | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-thunder.0f0ce6fdbd | trip | wetter | luecken | – | grenzen-thunder | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-thunder.c5fd3c8158 | trip | wetter | luecken | – | grenzen-thunder | 2 | mittel | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-thunder.e76478f25a | trip | wetter | luecken | – | grenzen-thunder | 3 | gelb | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-thunder.861c67b68a | trip | wetter | luecken | – | grenzen-thunder | 4 | orange | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-thunder.eab1842c0f | trip | wetter | luecken | – | grenzen-thunder | 5 | rot | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-thunder.3c6e241252 | trip | wetter | luecken | – | grenzen-thunder | 6 | hoch | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-thunder.551bcf8841 | trip | wetter | luecken | – | grenzen-thunder | 7 | orange | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-thunder.67a8d1c6e5 | trip | wetter | luecken | – | grenzen-thunder | 8 | rot | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-thunder.66a1113e89 | trip | wetter | luecken | – | grenzen-thunder | 9 | „keins“ ist immer grün. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-rain_probability.2c5522e33f | trip | wetter | luecken | – | grenzen-rain_probability | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-rain_probability.bf371af439 | trip | wetter | luecken | – | grenzen-rain_probability | 2 | obenzu viel | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-rain_probability.8ce844f194 | trip | wetter | luecken | – | grenzen-rain_probability | 3 | gelb > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-rain_probability.fb39e053d4 | trip | wetter | luecken | – | grenzen-rain_probability | 4 | 30 | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-rain_probability.d9f21456d4 | trip | wetter | luecken | – | grenzen-rain_probability | 5 | orange > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-rain_probability.afe386e1e1 | trip | wetter | luecken | – | grenzen-rain_probability | 6 | rot > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-rain_probability.45f85914c1 | trip | wetter | luecken | – | grenzen-rain_probability | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-visibility.17a27de6fd | trip | wetter | luecken | – | grenzen-visibility | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-visibility.15a4982350 | trip | wetter | luecken | – | grenzen-visibility | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-visibility.4c43a5c0de | trip | wetter | luecken | – | grenzen-visibility | 3 | rot < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-visibility.597fef0bdc | trip | wetter | luecken | – | grenzen-visibility | 4 | 100 | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-visibility.09313d1126 | trip | wetter | luecken | – | grenzen-visibility | 5 | orange < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-visibility.db8cf216db | trip | wetter | luecken | – | grenzen-visibility | 6 | gelb < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-visibility.1a59727bd0 | trip | wetter | luecken | – | grenzen-visibility | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-cloud_low.3cc5ba1ce0 | trip | wetter | luecken | – | grenzen-cloud_low | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-cloud_low.1a05988af4 | trip | wetter | luecken | – | grenzen-cloud_low | 2 | obenzu viel | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-cloud_low.57236abdf7 | trip | wetter | luecken | – | grenzen-cloud_low | 3 | gelb > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-cloud_low.04fd16ce02 | trip | wetter | luecken | – | grenzen-cloud_low | 4 | 50 | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-cloud_low.f595d797ce | trip | wetter | luecken | – | grenzen-cloud_low | 5 | orange > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-cloud_low.cae8788077 | trip | wetter | luecken | – | grenzen-cloud_low | 6 | rot > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-cloud_low.a30d3b6f3e | trip | wetter | luecken | – | grenzen-cloud_low | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-uv_index.b12b9fcbe3 | trip | wetter | luecken | – | grenzen-uv_index | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-uv_index.5522873caf | trip | wetter | luecken | – | grenzen-uv_index | 2 | obenzu viel | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-uv_index.8bcb03bcf9 | trip | wetter | luecken | – | grenzen-uv_index | 3 | gelb > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-uv_index.ab28d7c8ea | trip | wetter | luecken | – | grenzen-uv_index | 4 | 6 | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-uv_index.b641177766 | trip | wetter | luecken | – | grenzen-uv_index | 5 | orange > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-uv_index.1d8ea8756b | trip | wetter | luecken | – | grenzen-uv_index | 6 | rot > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-uv_index.d63244d6e9 | trip | wetter | luecken | – | grenzen-uv_index | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-freezing_level.2995531dba | trip | wetter | luecken | – | grenzen-freezing_level | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-freezing_level.106f817e21 | trip | wetter | luecken | – | grenzen-freezing_level | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-freezing_level.a291084161 | trip | wetter | luecken | – | grenzen-freezing_level | 3 | rot < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-freezing_level.d6635aac0a | trip | wetter | luecken | – | grenzen-freezing_level | 4 | -300 | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| trip.wetter.luecken.-.grenzen-freezing_level.33fc60b588 | trip | wetter | luecken | – | grenzen-freezing_level | 5 | orange < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-freezing_level.36aac20b61 | trip | wetter | luecken | – | grenzen-freezing_level | 6 | 0 | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-freezing_level.b5f241a64d | trip | wetter | luecken | – | grenzen-freezing_level | 7 | gelb < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-freezing_level.5d1db38e85 | trip | wetter | luecken | – | grenzen-freezing_level | 8 | obenzu viel | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-freezing_level.5ba06a44f6 | trip | wetter | luecken | – | grenzen-freezing_level | 9 | gelb > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-freezing_level.f4070295e6 | trip | wetter | luecken | – | grenzen-freezing_level | 10 | orange > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-freezing_level.163e7601d4 | trip | wetter | luecken | – | grenzen-freezing_level | 11 | rot > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-freezing_level.b36dba8294 | trip | wetter | luecken | – | grenzen-freezing_level | 12 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-snowfall_limit.d69856a6b7 | trip | wetter | luecken | – | grenzen-snowfall_limit | 1 | Fertig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-snowfall_limit.1828034a7c | trip | wetter | luecken | – | grenzen-snowfall_limit | 2 | untenzu wenig | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-snowfall_limit.9e4e4be5c5 | trip | wetter | luecken | – | grenzen-snowfall_limit | 3 | rot < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-snowfall_limit.78e4802877 | trip | wetter | luecken | – | grenzen-snowfall_limit | 4 | -500 | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| trip.wetter.luecken.-.grenzen-snowfall_limit.a0279e70ab | trip | wetter | luecken | – | grenzen-snowfall_limit | 5 | orange < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-snowfall_limit.50ad263095 | trip | wetter | luecken | – | grenzen-snowfall_limit | 6 | 0 | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-snowfall_limit.2a74b70260 | trip | wetter | luecken | – | grenzen-snowfall_limit | 7 | gelb < | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-snowfall_limit.a8b0109a15 | trip | wetter | luecken | – | grenzen-snowfall_limit | 8 | obenzu viel | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-snowfall_limit.22052359ba | trip | wetter | luecken | – | grenzen-snowfall_limit | 9 | gelb > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-snowfall_limit.b6056277f7 | trip | wetter | luecken | – | grenzen-snowfall_limit | 10 | orange > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-snowfall_limit.cc580d7a27 | trip | wetter | luecken | – | grenzen-snowfall_limit | 11 | rot > | gefunden |  | – |
+| trip.wetter.luecken.-.grenzen-snowfall_limit.99c610d59f | trip | wetter | luecken | – | grenzen-snowfall_limit | 12 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“. | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.3b99a39062 | trip | wetter | luecken | – | vorlage-auswahl | 1 | Vorlagen | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.5121793c2e | trip | wetter | luecken | – | vorlage-auswahl | 2 | Alpen-Trekking · aktiv | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.1b1dfc2075 | trip | wetter | luecken | – | vorlage-auswahl | 3 | 14 Metriken · Gewitter, Böen, Nullgradgrenze | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.5b98a6f3fa | trip | wetter | luecken | – | vorlage-auswahl | 4 | Wandern | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.b0edf83b7a | trip | wetter | luecken | – | vorlage-auswahl | 5 | 10 Metriken · Regen, Sonne, UV | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.5676f6a504 | trip | wetter | luecken | – | vorlage-auswahl | 6 | Skitouren | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.3ce3f4db83 | trip | wetter | luecken | – | vorlage-auswahl | 7 | 13 Metriken · Neuschnee, Schneehöhe, Sicht | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.b51184f543 | trip | wetter | luecken | – | vorlage-auswahl | 8 | Wintersport | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.5d4950244c | trip | wetter | luecken | – | vorlage-auswahl | 9 | 11 Metriken · Schnee, Kälte | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.a880464e5f | trip | wetter | luecken | – | vorlage-auswahl | 10 | Radtour | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.8f670012a9 | trip | wetter | luecken | – | vorlage-auswahl | 11 | 12 Metriken · Wind, Regen, gefühlte Temperatur | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.f761e9c5f1 | trip | wetter | luecken | – | vorlage-auswahl | 12 | Wassersport | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.0a0186009f | trip | wetter | luecken | – | vorlage-auswahl | 13 | 10 Metriken · Wind beidseitig, Gewitter | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.d5540b9398 | trip | wetter | luecken | – | vorlage-auswahl | 14 | Allgemein | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.409e0a1d41 | trip | wetter | luecken | – | vorlage-auswahl | 15 | 8 Metriken · Standard-Ampel | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.6ee3bf7e90 | trip | wetter | luecken | – | vorlage-auswahl | 16 | Eigene | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.72bcb169cc | trip | wetter | luecken | – | vorlage-auswahl | 17 | Mallorca Frühling | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-auswahl.0f1ef50ff0 | trip | wetter | luecken | – | vorlage-auswahl | 18 | eigene · aus GR221 gespeichert | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-bestaetigung.17ae730d83 | trip | wetter | luecken | – | vorlage-bestaetigung | 1 | „Wandern“ übernehmen? | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-bestaetigung.da46974681 | trip | wetter | luecken | – | vorlage-bestaetigung | 2 | Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips. Zustellung, Etappen und Orte bleiben unverändert. | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-bestaetigung.f1bfa64f3c | trip | wetter | luecken | – | vorlage-bestaetigung | 3 | Übernehmen | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-bestaetigung.d4369b036b | trip | wetter | luecken | – | vorlage-bestaetigung | 4 | Abbrechen | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-speichern.2dfe6a540c | trip | wetter | luecken | – | vorlage-speichern | 1 | Als eigene Vorlage speichern | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-speichern.60fd73ad9b | trip | wetter | luecken | – | vorlage-speichern | 2 | Name | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-speichern.dc9007cd4a | trip | wetter | luecken | – | vorlage-speichern | 3 | z.B. Mallorca Frühling | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-speichern.0e26835627 | trip | wetter | luecken | – | vorlage-speichern | 4 | Beschreibung (optional) | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-speichern.99eb58e1be | trip | wetter | luecken | – | vorlage-speichern | 5 | wofür die Vorlage gedacht ist | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-speichern.f77c676d0b | trip | wetter | luecken | – | vorlage-speichern | 6 | Als Standard für neue Trips | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-speichern.17d0c442c6 | trip | wetter | luecken | – | vorlage-speichern | 7 | Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu. | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-speichern.98457b8255 | trip | wetter | luecken | – | vorlage-speichern | 8 | Speichern | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-speichern.bf72c3eefa | trip | wetter | luecken | – | vorlage-speichern | 9 | Abbrechen | gefunden |  | – |
+| trip.wetter.luecken.-.vorlage-speichern-fehler.f9b7a87505 | trip | wetter | luecken | – | vorlage-speichern-fehler | 1 | Gib der Vorlage einen Namen. | gefunden |  | – |
+| trip.wetter.luecken.-.test-menue.144602ead1 | trip | wetter | luecken | – | test-menue | 1 | Morgen-Briefing | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.c0cd3f0631 | trip | wetter | luecken | – | test-menue | 2 | Abend-Briefing | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.b5389587bf | trip | wetter | luecken | – | test-menue | 3 | E-Mail | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.ac82f01db2 | trip | wetter | luecken | – | test-menue | 4 | an 2 Empfänger | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.f002bbb070 | trip | wetter | luecken | – | test-menue | 5 | Telegram | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.333dca8857 | trip | wetter | luecken | – | test-menue | 6 | gesperrt: Telegram-Chat fehlt. | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.3120e9fb09 | trip | wetter | luecken | – | test-menue | 7 | Im Konto verbinden → | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.97c3636693 | trip | wetter | luecken | – | test-menue | 8 | SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.cbc132a84a | trip | wetter | luecken | – | test-menue | 9 | gesperrt: Nummer noch nicht bestätigt. | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.4c521e5cd1 | trip | wetter | luecken | – | test-menue | 10 | Im Konto bestätigen → | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.2195931f1f | trip | wetter | luecken | – | test-menue | 11 | Premium-SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.fecf10af8b | trip | wetter | luecken | – | test-menue | 12 | gesperrt: Schick eine Nachricht vom Gerät, dann ist die Rückadresse wieder gültig. | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.fc689c80b8 | trip | wetter | luecken | – | test-menue | 13 | Im Konto prüfen → | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.49cda429bf | trip | wetter | luecken | – | test-menue | 14 | Alle eingerichteten Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.c6bc61082c | trip | wetter | luecken | – | test-menue | 15 | Test-Alarm | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.test-menue.9bf3ac2d19 | trip | wetter | luecken | – | test-menue | 16 | Beispiel-Alarm mit echten Werten an alle Alarm-Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kebab-menue.18aeeceb2e | trip | wetter | luecken | – | kebab-menue | 1 | Pausieren | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kebab-menue.3532020cb1 | trip | wetter | luecken | – | kebab-menue | 2 | Archivieren … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kebab-menue.1fbef93188 | trip | wetter | luecken | – | kebab-menue | 3 | Löschen … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kebab-menue.7fdd78666f | trip | wetter | luecken | – | kebab-menue | 4 | Pausieren, Archivieren, Löschen | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kebab-bestaetigung-archivieren.8d07b2a6e9 | trip | wetter | luecken | – | kebab-bestaetigung-archivieren | 1 | Archivieren? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kebab-bestaetigung-archivieren.aa70633288 | trip | wetter | luecken | – | kebab-bestaetigung-archivieren | 2 | „GR221 Mallorca“ verschwindet aus der Liste. Es kommen keine Briefings und Alarme mehr. Du kannst es im Archiv reaktivieren. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kebab-bestaetigung-archivieren.6527d5e9c1 | trip | wetter | luecken | – | kebab-bestaetigung-archivieren | 3 | Archivieren | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kebab-bestaetigung-archivieren.acb6b664ca | trip | wetter | luecken | – | kebab-bestaetigung-archivieren | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kebab-bestaetigung-loeschen.282568a0fc | trip | wetter | luecken | – | kebab-bestaetigung-loeschen | 1 | Löschen? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kebab-bestaetigung-loeschen.f7da7ba033 | trip | wetter | luecken | – | kebab-bestaetigung-loeschen | 2 | „GR221 Mallorca“ wird endgültig gelöscht. Briefings und Alarme hören sofort auf. Das lässt sich nicht rückgängig machen. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kebab-bestaetigung-loeschen.4a82abf10d | trip | wetter | luecken | – | kebab-bestaetigung-loeschen | 3 | Endgültig löschen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| trip.wetter.luecken.-.kebab-bestaetigung-loeschen.a4df742254 | trip | wetter | luecken | – | kebab-bestaetigung-loeschen | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kopf.cf67d35b49 | orte | wetter | normal | – | kopf | 1 | Orte / | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Orte / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Orte“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.normal.-.kopf.e073244c40 | orte | wetter | normal | – | kopf | 2 | Münsterland | gefunden |  | – |
+| orte.wetter.normal.-.kopf.8c35f02ef3 | orte | wetter | normal | – | kopf | 3 | Weitere Aktionen | gefunden |  | – |
+| orte.wetter.normal.-.kopf.3363230671 | orte | wetter | normal | – | kopf | 4 | Test schicken ▾ | gefunden |  | – |
+| orte.wetter.normal.-.kopf.ae56edb880 | orte | wetter | normal | – | kopf | 5 | Orte · Münsterland | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| orte.wetter.normal.-.kopf.e443d8d8bd | orte | wetter | normal | – | kopf | 6 | Münsterland | gefunden |  | – |
+| orte.wetter.normal.-.kopf.a7b33b9a93 | orte | wetter | normal | – | kopf | 7 | Entwurf | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.normal.-.kopf.696e8f34bc | orte | wetter | normal | – | kopf | 8 | Aktivieren | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: „Aktivieren“ erscheint nur im Entwurf; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.normal.-.kopf.0e2ce0d40d | orte | wetter | normal | – | kopf | 9 | 3 Orte · Morgen-Briefing 07:00 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts Seit Mockup Fassung 4 steht „Vergleichstabelle“ nicht mehr in der Zeile (ADR-0124 Nr. 10: der Bereich heißt „Orte“); die App nennt sie noch, Rückbau mit dem Bau zu #3122.) |
+| orte.wetter.normal.-.reiterleiste.a4f9b7b520 | orte | wetter | normal | – | reiterleiste | 1 | Übersicht | gefunden |  | – |
+| orte.wetter.normal.-.reiterleiste.16834a34cf | orte | wetter | normal | – | reiterleiste | 2 | Orte | gefunden |  | – |
+| orte.wetter.normal.-.reiterleiste.0b604bc6be | orte | wetter | normal | – | reiterleiste | 3 | 3 | gefunden |  | – |
+| orte.wetter.normal.-.reiterleiste.0b7e8d7cdb | orte | wetter | normal | – | reiterleiste | 4 | Wetter | gefunden |  | – |
+| orte.wetter.normal.-.reiterleiste.69489536d4 | orte | wetter | normal | – | reiterleiste | 5 | Zustellung | gefunden |  | – |
+| orte.wetter.normal.-.abschnittskopf.e742f73d7e | orte | wetter | normal | – | abschnittskopf | 1 | Wetter | gefunden |  | – |
+| orte.wetter.normal.-.abschnittskopf.f3d1024d07 | orte | wetter | normal | – | abschnittskopf | 2 | Was im Briefing steht, was für dich zu viel oder zu wenig ist und ab wann du einen Alarm bekommst. | gefunden |  | – |
+| orte.wetter.normal.-.vorlage.563ccf9f4c | orte | wetter | normal | – | vorlage | 1 | Vorlage | gefunden |  | – |
+| orte.wetter.normal.-.vorlage.3fada7f944 | orte | wetter | normal | – | vorlage | 2 | Allgemein | gefunden |  | – |
+| orte.wetter.normal.-.vorlage.0db8518e85 | orte | wetter | normal | – | vorlage | 3 | ▾ unverändert | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Text „▾ unverändert“ ist ein Knoten; live sind Auswahlpfeil „▾“ und Stand „unverändert“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.normal.-.vorlage.ebe7ad474e | orte | wetter | normal | – | vorlage | 4 | Als eigene Vorlage speichern | gefunden |  | – |
+| orte.wetter.normal.-.metriken.3dd1f97539 | orte | wetter | normal | – | metriken | 1 | Alarm ab für alle | gefunden |  | – |
+| orte.wetter.normal.-.metriken.fe2128e36a | orte | wetter | normal | – | metriken | 2 | 5 von 8 Metriken lösen einen Alarm aus. 3 können keinen auslösen (Vorboten und reine Anzeige). | gefunden |  | – |
+| orte.wetter.normal.-.metriken.528edf3fdc | orte | wetter | normal | – | metriken | 3 | Nie | gefunden |  | – |
+| orte.wetter.normal.-.metriken.e4ad5ae038 | orte | wetter | normal | – | metriken | 4 | Gelb | gefunden |  | – |
+| orte.wetter.normal.-.metriken.462f459bff | orte | wetter | normal | – | metriken | 5 | Orange | gefunden |  | – |
+| orte.wetter.normal.-.metriken.b40af4a561 | orte | wetter | normal | – | metriken | 6 | Rot | gefunden |  | – |
+| orte.wetter.normal.-.metriken.ff2a0f130d | orte | wetter | normal | – | metriken | 7 | Temperatur | gefunden |  | – |
+| orte.wetter.normal.-.metriken.3c79dfba38 | orte | wetter | normal | – | metriken | 8 | Temperatur aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.normal.-.metriken.7af717c6ea | orte | wetter | normal | – | metriken | 9 | Temperatur | gefunden |  | – |
+| orte.wetter.normal.-.metriken.b4cdfe632f | orte | wetter | normal | – | metriken | 10 | °C · Tageshöchst · Tagestief | gefunden |  | – |
+| orte.wetter.normal.-.metriken.7990f3bacc | orte | wetter | normal | – | metriken | 11 | -15 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.normal.-.metriken.88a9436a71 | orte | wetter | normal | – | metriken | 12 | 0 | gefunden |  | – |
+| orte.wetter.normal.-.metriken.f6ef663909 | orte | wetter | normal | – | metriken | 13 | Alarm, wenn der Wert seit dem letzten Briefing über 31 °C steigt oder unter -5 °C fällt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 12 | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.normal.-.metriken.f028a64103 | orte | wetter | normal | – | metriken | 14 | · grün: 0 bis 28 °C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.normal.-.metriken.9afd882a98 | orte | wetter | normal | – | metriken | 15 | Alarm ab | gefunden |  | – |
+| orte.wetter.normal.-.metriken.9c21c2fdfb | orte | wetter | normal | – | metriken | 16 | Nie | gefunden |  | – |
+| orte.wetter.normal.-.metriken.07b446d63a | orte | wetter | normal | – | metriken | 17 | Gelb | gefunden |  | – |
+| orte.wetter.normal.-.metriken.79bb5d8ad8 | orte | wetter | normal | – | metriken | 18 | Orange | gefunden |  | – |
+| orte.wetter.normal.-.metriken.51586f67af | orte | wetter | normal | – | metriken | 19 | Rot | gefunden |  | – |
+| orte.wetter.normal.-.metriken.5d290274fc | orte | wetter | normal | – | metriken | 20 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.normal.-.metriken.f6873fde09 | orte | wetter | normal | – | metriken | 21 | Wind | gefunden |  | – |
+| orte.wetter.normal.-.metriken.020afac908 | orte | wetter | normal | – | metriken | 22 | Wind aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.normal.-.metriken.716d925fe5 | orte | wetter | normal | – | metriken | 23 | Wind | gefunden |  | – |
+| orte.wetter.normal.-.metriken.9c59560fa3 | orte | wetter | normal | – | metriken | 24 | km/h · Mittelwind | gefunden |  | – |
+| orte.wetter.normal.-.metriken.b108540f2e | orte | wetter | normal | – | metriken | 25 | Alarm, wenn der Wert seit dem letzten Briefing über 50 km/h steigt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | gefunden |  | – |
+| orte.wetter.normal.-.metriken.9a2ba6179d | orte | wetter | normal | – | metriken | 26 | · grün: bis 30 km/h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.normal.-.metriken.c684b25deb | orte | wetter | normal | – | metriken | 27 | Alarm ab | gefunden |  | – |
+| orte.wetter.normal.-.metriken.25e2272aa2 | orte | wetter | normal | – | metriken | 28 | Nie | gefunden |  | – |
+| orte.wetter.normal.-.metriken.49f4ff119e | orte | wetter | normal | – | metriken | 29 | Gelb | gefunden |  | – |
+| orte.wetter.normal.-.metriken.66e80c57db | orte | wetter | normal | – | metriken | 30 | Orange | gefunden |  | – |
+| orte.wetter.normal.-.metriken.9acb22a066 | orte | wetter | normal | – | metriken | 31 | Rot | gefunden |  | – |
+| orte.wetter.normal.-.metriken.08ce9219e2 | orte | wetter | normal | – | metriken | 32 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.normal.-.metriken.38d3bf9917 | orte | wetter | normal | – | metriken | 33 | Böen aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.normal.-.metriken.9637124f9c | orte | wetter | normal | – | metriken | 34 | Böen | gefunden |  | – |
+| orte.wetter.normal.-.metriken.40f922a5fd | orte | wetter | normal | – | metriken | 35 | km/h · Spitze | gefunden |  | – |
+| orte.wetter.normal.-.metriken.d99b9cea22 | orte | wetter | normal | – | metriken | 36 | · grün: bis 30 km/h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.normal.-.metriken.9f38d658e8 | orte | wetter | normal | – | metriken | 37 | Alarm ab | gefunden |  | – |
+| orte.wetter.normal.-.metriken.64535da9f8 | orte | wetter | normal | – | metriken | 38 | Nie | gefunden |  | – |
+| orte.wetter.normal.-.metriken.fe86fc5291 | orte | wetter | normal | – | metriken | 39 | Gelb | gefunden |  | – |
+| orte.wetter.normal.-.metriken.3fbee7e6fa | orte | wetter | normal | – | metriken | 40 | Orange | gefunden |  | – |
+| orte.wetter.normal.-.metriken.d1717795c4 | orte | wetter | normal | – | metriken | 41 | Rot | gefunden |  | – |
+| orte.wetter.normal.-.metriken.3db71243b1 | orte | wetter | normal | – | metriken | 42 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.normal.-.metriken.955b85d41d | orte | wetter | normal | – | metriken | 43 | Niederschlag & Gewitter | gefunden |  | – |
+| orte.wetter.normal.-.metriken.870b4ef036 | orte | wetter | normal | – | metriken | 44 | Niederschlag aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.normal.-.metriken.cc6b282aab | orte | wetter | normal | – | metriken | 45 | Niederschlag | gefunden |  | – |
+| orte.wetter.normal.-.metriken.65653ac0a1 | orte | wetter | normal | – | metriken | 46 | mm · Summe | gefunden |  | – |
+| orte.wetter.normal.-.metriken.4909052716 | orte | wetter | normal | – | metriken | 47 | Alarm, wenn der Wert seit dem letzten Briefing über 5 mm steigt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | gefunden |  | – |
+| orte.wetter.normal.-.metriken.705f035e44 | orte | wetter | normal | – | metriken | 48 | · grün: bis 1 mm | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.normal.-.metriken.9c9634f08a | orte | wetter | normal | – | metriken | 49 | Alarm ab | gefunden |  | – |
+| orte.wetter.normal.-.metriken.f749ab7d4f | orte | wetter | normal | – | metriken | 50 | Nie | gefunden |  | – |
+| orte.wetter.normal.-.metriken.e70a91a9ba | orte | wetter | normal | – | metriken | 51 | Gelb | gefunden |  | – |
+| orte.wetter.normal.-.metriken.2d40e18ed7 | orte | wetter | normal | – | metriken | 52 | Orange | gefunden |  | – |
+| orte.wetter.normal.-.metriken.1604ea2802 | orte | wetter | normal | – | metriken | 53 | Rot | gefunden |  | – |
+| orte.wetter.normal.-.metriken.b616ee2dbd | orte | wetter | normal | – | metriken | 54 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.normal.-.metriken.51973f7d38 | orte | wetter | normal | – | metriken | 55 | Gewitter aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.normal.-.metriken.b0aa49dfd8 | orte | wetter | normal | – | metriken | 56 | Gewitter | gefunden |  | – |
+| orte.wetter.normal.-.metriken.488105fffd | orte | wetter | normal | – | metriken | 57 | Stufe | gefunden |  | – |
+| orte.wetter.normal.-.metriken.4263279d85 | orte | wetter | normal | – | metriken | 58 | keins | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.normal.-.metriken.4e66d649d3 | orte | wetter | normal | – | metriken | 59 | mittel | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.normal.-.metriken.d6c2a3ba81 | orte | wetter | normal | – | metriken | 60 | hoch | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.normal.-.metriken.aaaa8fb304 | orte | wetter | normal | – | metriken | 61 | Alarm, wenn die Gewitter-Stufe seit dem letzten Briefing auf mittel oder hoch steigt (Orange). Entwarnung, wenn sie wieder fällt. | gefunden |  | – |
+| orte.wetter.normal.-.metriken.135fd5c015 | orte | wetter | normal | – | metriken | 62 | Alarm ab | gefunden |  | – |
+| orte.wetter.normal.-.metriken.55f685f594 | orte | wetter | normal | – | metriken | 63 | Nie | gefunden |  | – |
+| orte.wetter.normal.-.metriken.7c4b2beb82 | orte | wetter | normal | – | metriken | 64 | Orange | gefunden |  | – |
+| orte.wetter.normal.-.metriken.585d5bb09e | orte | wetter | normal | – | metriken | 65 | Rot | gefunden |  | – |
+| orte.wetter.normal.-.metriken.7b57245b11 | orte | wetter | normal | – | metriken | 66 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.normal.-.metriken.2a7d03cb8a | orte | wetter | normal | – | metriken | 67 | Regenwahrscheinlichkeit aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.normal.-.metriken.f8b2022ce5 | orte | wetter | normal | – | metriken | 68 | Regenwahrscheinlichkeit | gefunden |  | – |
+| orte.wetter.normal.-.metriken.1274c279d4 | orte | wetter | normal | – | metriken | 69 | % · Vorbote, kein Alarm | gefunden |  | – |
+| orte.wetter.normal.-.metriken.ba85715ecc | orte | wetter | normal | – | metriken | 70 | Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus. | gefunden |  | – |
+| orte.wetter.normal.-.metriken.f6d83b80bf | orte | wetter | normal | – | metriken | 71 | · grün: bis 30 % | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.normal.-.metriken.8e00340566 | orte | wetter | normal | – | metriken | 72 | kein Alarm (Vorbote) | gefunden |  | – |
+| orte.wetter.normal.-.metriken.245cf98015 | orte | wetter | normal | – | metriken | 73 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.normal.-.metriken.120cd9f303 | orte | wetter | normal | – | metriken | 74 | Himmel & Sicht | gefunden |  | – |
+| orte.wetter.normal.-.metriken.60f92fae35 | orte | wetter | normal | – | metriken | 75 | Bewölkung aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.normal.-.metriken.e4c72d320b | orte | wetter | normal | – | metriken | 76 | Bewölkung | gefunden |  | – |
+| orte.wetter.normal.-.metriken.f60bc29b2d | orte | wetter | normal | – | metriken | 77 | % · Vorbote, kein Alarm | gefunden |  | – |
+| orte.wetter.normal.-.metriken.b5b69b4942 | orte | wetter | normal | – | metriken | 78 | Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus. | gefunden |  | – |
+| orte.wetter.normal.-.metriken.db9b56a362 | orte | wetter | normal | – | metriken | 79 | kein Alarm (Vorbote) | gefunden |  | – |
+| orte.wetter.normal.-.metriken.7e26f4798e | orte | wetter | normal | – | metriken | 80 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.normal.-.metriken.859054c3ba | orte | wetter | normal | – | metriken | 81 | Sonnenstunden aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.normal.-.metriken.47e755e36b | orte | wetter | normal | – | metriken | 82 | Sonnenstunden | gefunden |  | – |
+| orte.wetter.normal.-.metriken.60b35c0aeb | orte | wetter | normal | – | metriken | 83 | h · zu wenig ist schlecht | gefunden |  | – |
+| orte.wetter.normal.-.metriken.0e6e9d3c26 | orte | wetter | normal | – | metriken | 84 | Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus. | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 83 | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.normal.-.metriken.f7aed5cfa4 | orte | wetter | normal | – | metriken | 85 | · grün: ab 3 h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.normal.-.metriken.d888960f33 | orte | wetter | normal | – | metriken | 86 | kein Alarm | gefunden |  | – |
+| orte.wetter.normal.-.metriken.bb40d93d08 | orte | wetter | normal | – | metriken | 87 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.normal.-.metriken.a126d6ff51 | orte | wetter | normal | – | metriken | 88 | Nicht im Briefing: | gefunden |  | – |
+| orte.wetter.normal.-.metriken.492d97999c | orte | wetter | normal | – | metriken | 89 | + Windrichtung | gefunden |  | – |
+| orte.wetter.normal.-.metriken.0a546fd303 | orte | wetter | normal | – | metriken | 90 | + Sichtweite | gefunden |  | – |
+| orte.wetter.normal.-.metriken.3bba2231cf | orte | wetter | normal | – | metriken | 91 | + UV-Index | gefunden |  | – |
+| orte.wetter.normal.-.metriken.635e62dc2c | orte | wetter | normal | – | metriken | 92 | + Gefühlte Temperatur | gefunden |  | – |
+| orte.wetter.normal.-.metriken.5d49a6af03 | orte | wetter | normal | – | metriken | 93 | + Taupunkt | gefunden |  | – |
+| orte.wetter.normal.-.metriken.d6473aad3e | orte | wetter | normal | – | metriken | 94 | + Luftfeuchte | gefunden |  | – |
+| orte.wetter.normal.-.metriken.bbb2c868f4 | orte | wetter | normal | – | metriken | 95 | + Tiefe Wolken | gefunden |  | – |
+| orte.wetter.normal.-.metriken.84e1f4a304 | orte | wetter | normal | – | metriken | 96 | + Nullgradgrenze | gefunden |  | – |
+| orte.wetter.normal.-.metriken.6dd7111c89 | orte | wetter | normal | – | metriken | 97 | + Neuschnee | gefunden |  | – |
+| orte.wetter.normal.-.metriken.40ec0427f7 | orte | wetter | normal | – | metriken | 98 | + Schneehöhe | gefunden |  | – |
+| orte.wetter.normal.-.warnungen-radar.40bdd8749c | orte | wetter | normal | – | warnungen-radar | 1 | Amtliche Warnungen | gefunden |  | – |
+| orte.wetter.normal.-.warnungen-radar.663c95983a | orte | wetter | normal | – | warnungen-radar | 2 | im Briefing und als Alarm, sobald sie dein Gebiet betreffen | gefunden |  | – |
+| orte.wetter.normal.-.warnungen-radar.28be8983ca | orte | wetter | normal | – | warnungen-radar | 3 | Amtliche Warnungen | gefunden |  | – |
+| orte.wetter.normal.-.warnungen-radar.9363829a19 | orte | wetter | normal | – | warnungen-radar | 4 | Radar-Regen | gefunden |  | – |
+| orte.wetter.normal.-.warnungen-radar.1fe191218b | orte | wetter | normal | – | warnungen-radar | 5 | Alarm, wenn in der nächsten Stunde Regen auf deine Orte zukommt | gefunden |  | – |
+| orte.wetter.normal.-.warnungen-radar.bc99a7b4ed | orte | wetter | normal | – | warnungen-radar | 6 | Radar-Regen | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.c0283d2e3e | orte | wetter | normal | – | was-steht-wo | 1 | Was steht wo | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.d06653efdd | orte | wetter | normal | – | was-steht-wo | 2 | Eine Tabelle für alles. Jede Zeile ist eine Metrik aus der Auswahl oben. Jede Spalte ist eine Stelle, an der eine Metrik erscheinen kann: die drei Kanäle, der Stundenverlauf und der 3-Tages-Ausblick. Stundenverlauf und Ausblick gibt es nur für Metriken, die auch in der E-Mail stehen. Ein Haken heißt: erscheint dort. Hier wählst du nur ab. Die Reihenfolge ziehst du einmal, sie gilt überall. Roh zeigt die Zahl, Einfach ein Symbol oder ein Wort. Wo eine Metrik beide Formen hat, stellst du das je Stelle ein. Die SMS bleibt bei ihren Kürzeln. Neue Metriken kommen oben über „+“ dazu. | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.1f69118616 | orte | wetter | normal | – | was-steht-wo | 3 | Metrik | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.3c8fd502f4 | orte | wetter | normal | – | was-steht-wo | 4 | E-Mail | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.af9a634638 | orte | wetter | normal | – | was-steht-wo | 5 | Übersicht | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.7c7dca4725 | orte | wetter | normal | – | was-steht-wo | 6 | Telegram | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.af446c2dfa | orte | wetter | normal | – | was-steht-wo | 7 | Nachricht | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.75cc1c717e | orte | wetter | normal | – | was-steht-wo | 8 | SMS | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.fc1946e839 | orte | wetter | normal | – | was-steht-wo | 9 | und Premium-SMS | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.d30df8417e | orte | wetter | normal | – | was-steht-wo | 10 | Stundenverlauf | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.be27b3d86c | orte | wetter | normal | – | was-steht-wo | 11 | nur E-Mail | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.23384520ce | orte | wetter | normal | – | was-steht-wo | 12 | 3-Tages-Ausblick | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.f314ce2780 | orte | wetter | normal | – | was-steht-wo | 13 | E-Mail und Telegram | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.4f4ac4ab67 | orte | wetter | normal | – | was-steht-wo | 14 | Amtliche Warnungen | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.5a4c47d287 | orte | wetter | normal | – | was-steht-wo | 15 | immer dabei: in E-Mail und Telegram zuerst, in der SMS am Ende | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.af7e4756c8 | orte | wetter | normal | – | was-steht-wo | 16 | Temperatur | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.24817d1859 | orte | wetter | normal | – | was-steht-wo | 17 | Temperatur in E-Mail | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.047c9c1c02 | orte | wetter | normal | – | was-steht-wo | 18 | 13°C / 4°C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.380f493ee7 | orte | wetter | normal | – | was-steht-wo | 19 | Temperatur in Telegram | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.a08d5761e0 | orte | wetter | normal | – | was-steht-wo | 20 | Temp max 13°C · Temp min 4°C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.8ba5e61a49 | orte | wetter | normal | – | was-steht-wo | 21 | Temperatur in SMS | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.4a5876d961 | orte | wetter | normal | – | was-steht-wo | 22 | D 13C L 4C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.fe2a58abdd | orte | wetter | normal | – | was-steht-wo | 23 | Temperatur im Stundenverlauf | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.4c369d7455 | orte | wetter | normal | – | was-steht-wo | 24 | Temperatur im 3-Tages-Ausblick | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.e8717aacaa | orte | wetter | normal | – | was-steht-wo | 25 | Wind | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.6377da3fd8 | orte | wetter | normal | – | was-steht-wo | 26 | Wind in E-Mail | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.9d253eefe9 | orte | wetter | normal | – | was-steht-wo | 27 | Darstellung Wind in E-Mail: Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.d46db4a40f | orte | wetter | normal | – | was-steht-wo | 28 | Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.9b43705814 | orte | wetter | normal | – | was-steht-wo | 29 | 30 km/h | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.3174167dda | orte | wetter | normal | – | was-steht-wo | 30 | Wind in Telegram | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.2a793034a5 | orte | wetter | normal | – | was-steht-wo | 31 | Darstellung Wind in Telegram: Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.e49084ba98 | orte | wetter | normal | – | was-steht-wo | 32 | Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.a1cf1239c3 | orte | wetter | normal | – | was-steht-wo | 33 | Wind 30 km/h | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.92e81447eb | orte | wetter | normal | – | was-steht-wo | 34 | Wind in SMS | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.e683367ebe | orte | wetter | normal | – | was-steht-wo | 35 | W 30 km/h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.0f88411344 | orte | wetter | normal | – | was-steht-wo | 36 | Wind im Stundenverlauf | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.27b04376d2 | orte | wetter | normal | – | was-steht-wo | 37 | Darstellung Wind im Stundenverlauf: Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.2f9bd6c4ea | orte | wetter | normal | – | was-steht-wo | 38 | Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.d61b1917eb | orte | wetter | normal | – | was-steht-wo | 39 | Wind im 3-Tages-Ausblick | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.7aceec0015 | orte | wetter | normal | – | was-steht-wo | 40 | Darstellung Wind im 3-Tages-Ausblick: Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.3e459e0df0 | orte | wetter | normal | – | was-steht-wo | 41 | Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.01c9a21d09 | orte | wetter | normal | – | was-steht-wo | 42 | Böen | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.2bfae310b1 | orte | wetter | normal | – | was-steht-wo | 43 | Böen in E-Mail | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.bb74633054 | orte | wetter | normal | – | was-steht-wo | 44 | Darstellung Böen in E-Mail: Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.c2894f42f7 | orte | wetter | normal | – | was-steht-wo | 45 | Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.db9ecab5f7 | orte | wetter | normal | – | was-steht-wo | 46 | Böen in Telegram | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.f693435419 | orte | wetter | normal | – | was-steht-wo | 47 | Darstellung Böen in Telegram: Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.163b04aabc | orte | wetter | normal | – | was-steht-wo | 48 | Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.60517544e3 | orte | wetter | normal | – | was-steht-wo | 49 | Böen 51 km/h | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.5ff658f340 | orte | wetter | normal | – | was-steht-wo | 50 | Böen in SMS | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.9a7a0c0e8e | orte | wetter | normal | – | was-steht-wo | 51 | G 51 km/h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.404d7e0db2 | orte | wetter | normal | – | was-steht-wo | 52 | Böen im Stundenverlauf | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.ae04ec8c0e | orte | wetter | normal | – | was-steht-wo | 53 | Darstellung Böen im Stundenverlauf: Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.96059c0bcc | orte | wetter | normal | – | was-steht-wo | 54 | Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.c0ed112f2d | orte | wetter | normal | – | was-steht-wo | 55 | Böen im 3-Tages-Ausblick | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.3f7240558c | orte | wetter | normal | – | was-steht-wo | 56 | Darstellung Böen im 3-Tages-Ausblick: Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.819b9479a5 | orte | wetter | normal | – | was-steht-wo | 57 | Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.af22ee9990 | orte | wetter | normal | – | was-steht-wo | 58 | Niederschlag | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.c87b636547 | orte | wetter | normal | – | was-steht-wo | 59 | Niederschlag in E-Mail | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.4cc717b6e3 | orte | wetter | normal | – | was-steht-wo | 60 | Darstellung Niederschlag in E-Mail: Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.a0aa40a096 | orte | wetter | normal | – | was-steht-wo | 61 | Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.5cfa0c220e | orte | wetter | normal | – | was-steht-wo | 62 | 1.8 mm | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.99c10d2641 | orte | wetter | normal | – | was-steht-wo | 63 | Niederschlag in Telegram | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.b6f518a6c6 | orte | wetter | normal | – | was-steht-wo | 64 | Darstellung Niederschlag in Telegram: Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.1cae451f9c | orte | wetter | normal | – | was-steht-wo | 65 | Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.1b03244eee | orte | wetter | normal | – | was-steht-wo | 66 | Regen 1.8 mm | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.b91c385f39 | orte | wetter | normal | – | was-steht-wo | 67 | Niederschlag in SMS | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.159acbd100 | orte | wetter | normal | – | was-steht-wo | 68 | R 1.8 mm | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.c1002612c1 | orte | wetter | normal | – | was-steht-wo | 69 | passt nicht mehr | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.1b4d9a4674 | orte | wetter | normal | – | was-steht-wo | 70 | Niederschlag im Stundenverlauf | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.603317a67d | orte | wetter | normal | – | was-steht-wo | 71 | Darstellung Niederschlag im Stundenverlauf: Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.8befa6a039 | orte | wetter | normal | – | was-steht-wo | 72 | Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.1a682632b6 | orte | wetter | normal | – | was-steht-wo | 73 | Niederschlag im 3-Tages-Ausblick | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.6d56ebef7d | orte | wetter | normal | – | was-steht-wo | 74 | Darstellung Niederschlag im 3-Tages-Ausblick: Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.e48858969e | orte | wetter | normal | – | was-steht-wo | 75 | Roh | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.26608f0d5c | orte | wetter | normal | – | was-steht-wo | 76 | Gewitter | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.f0b073a8ce | orte | wetter | normal | – | was-steht-wo | 77 | Gewitter in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 76 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.4b672c6615 | orte | wetter | normal | – | was-steht-wo | 78 | Darstellung Gewitter in E-Mail: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 77 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.676a1c7015 | orte | wetter | normal | – | was-steht-wo | 79 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.d9226e1c08 | orte | wetter | normal | – | was-steht-wo | 80 | Gewitter in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 79 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.68d290248b | orte | wetter | normal | – | was-steht-wo | 81 | Darstellung Gewitter in Telegram: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 80 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.17868401ac | orte | wetter | normal | – | was-steht-wo | 82 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.391abe4f74 | orte | wetter | normal | – | was-steht-wo | 83 | Gewitter – | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.68ebf04ab1 | orte | wetter | normal | – | was-steht-wo | 84 | Gewitter in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 83 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.dd6f447827 | orte | wetter | normal | – | was-steht-wo | 85 | TH - | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.ddd3162e9e | orte | wetter | normal | – | was-steht-wo | 86 | passt nicht mehr | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 85 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.0755c48b07 | orte | wetter | normal | – | was-steht-wo | 87 | Gewitter im Stundenverlauf | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 86 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.3b904cc7ea | orte | wetter | normal | – | was-steht-wo | 88 | Darstellung Gewitter im Stundenverlauf: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 87 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.6c801b612a | orte | wetter | normal | – | was-steht-wo | 89 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.c8bc5b3f7d | orte | wetter | normal | – | was-steht-wo | 90 | Gewitter im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 89 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.52aeb7cd11 | orte | wetter | normal | – | was-steht-wo | 91 | Darstellung Gewitter im 3-Tages-Ausblick: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 90 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.41ab6b700e | orte | wetter | normal | – | was-steht-wo | 92 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.27f30ab340 | orte | wetter | normal | – | was-steht-wo | 93 | Regenwahrscheinlichkeit | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 92 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.1b824204c1 | orte | wetter | normal | – | was-steht-wo | 94 | Regenwahrscheinlichkeit in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 93 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.9485f56a3c | orte | wetter | normal | – | was-steht-wo | 95 | 60% | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.ac907961bc | orte | wetter | normal | – | was-steht-wo | 96 | Regenwahrscheinlichkeit in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 95 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.ec86c36e9f | orte | wetter | normal | – | was-steht-wo | 97 | Regenwahrscheinlichkeit 60% | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 96 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.14a9756e6c | orte | wetter | normal | – | was-steht-wo | 98 | Regenwahrscheinlichkeit in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 97 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.0a9552c69d | orte | wetter | normal | – | was-steht-wo | 99 | PR 60% | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.d78aa1386d | orte | wetter | normal | – | was-steht-wo | 100 | passt nicht mehr | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 99 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.53f9123b6c | orte | wetter | normal | – | was-steht-wo | 101 | Regenwahrscheinlichkeit im Stundenverlauf | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 100 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.9cfc652918 | orte | wetter | normal | – | was-steht-wo | 102 | Regenwahrscheinlichkeit im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 101 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.c5affe67fd | orte | wetter | normal | – | was-steht-wo | 103 | Bewölkung | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 102 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.11dc297cb8 | orte | wetter | normal | – | was-steht-wo | 104 | Bewölkung in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 103 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.3f9efa6fc5 | orte | wetter | normal | – | was-steht-wo | 105 | Darstellung Bewölkung in E-Mail: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 104 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.9538650fd8 | orte | wetter | normal | – | was-steht-wo | 106 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.09df624d50 | orte | wetter | normal | – | was-steht-wo | 107 | Bewölkung in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 106 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.73e7206f38 | orte | wetter | normal | – | was-steht-wo | 108 | Darstellung Bewölkung in Telegram: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 107 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.5872b7b399 | orte | wetter | normal | – | was-steht-wo | 109 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.ac276a188e | orte | wetter | normal | – | was-steht-wo | 110 | Wolken 70% | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 109 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.0345c36823 | orte | wetter | normal | – | was-steht-wo | 111 | Bewölkung in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 110 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.ab1d5e65d9 | orte | wetter | normal | – | was-steht-wo | 112 | CT 70% | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.237b1302f0 | orte | wetter | normal | – | was-steht-wo | 113 | passt nicht mehr | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 112 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.be5a3cfd9b | orte | wetter | normal | – | was-steht-wo | 114 | Bewölkung im Stundenverlauf | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 113 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.05d89071a5 | orte | wetter | normal | – | was-steht-wo | 115 | Darstellung Bewölkung im Stundenverlauf: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 114 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.9288337891 | orte | wetter | normal | – | was-steht-wo | 116 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.117cf396ca | orte | wetter | normal | – | was-steht-wo | 117 | Bewölkung im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 116 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.18d4890450 | orte | wetter | normal | – | was-steht-wo | 118 | Darstellung Bewölkung im 3-Tages-Ausblick: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 117 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.78893e1e92 | orte | wetter | normal | – | was-steht-wo | 119 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.723d0d5791 | orte | wetter | normal | – | was-steht-wo | 120 | Sonnenstunden | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.3ce8e57e0f | orte | wetter | normal | – | was-steht-wo | 121 | Sonnenstunden in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 120 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.6c8063c2e4 | orte | wetter | normal | – | was-steht-wo | 122 | Darstellung Sonnenstunden in E-Mail: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 121 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.2c16929c5b | orte | wetter | normal | – | was-steht-wo | 123 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.76702cef12 | orte | wetter | normal | – | was-steht-wo | 124 | 3.0 h | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 123 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.d85f415519 | orte | wetter | normal | – | was-steht-wo | 125 | Sonnenstunden in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 124 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.d5c68d60c6 | orte | wetter | normal | – | was-steht-wo | 126 | Darstellung Sonnenstunden in Telegram: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 125 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.3184389153 | orte | wetter | normal | – | was-steht-wo | 127 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.6dc746f8a3 | orte | wetter | normal | – | was-steht-wo | 128 | Sonne 3.0h | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 127 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.40b9c5aa65 | orte | wetter | normal | – | was-steht-wo | 129 | Sonnenstunden in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 128 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.e956721912 | orte | wetter | normal | – | was-steht-wo | 130 | SU 3.0h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.6ec149ce04 | orte | wetter | normal | – | was-steht-wo | 131 | passt nicht mehr | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 130 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.0aa9a89b81 | orte | wetter | normal | – | was-steht-wo | 132 | kein Stundenwert | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 131 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.d1f92a2b6a | orte | wetter | normal | – | was-steht-wo | 133 | Sonnenstunden im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 132 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.c3ed5443a3 | orte | wetter | normal | – | was-steht-wo | 134 | Darstellung Sonnenstunden im 3-Tages-Ausblick: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 133 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.6149752790 | orte | wetter | normal | – | was-steht-wo | 135 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.5ad6413f5b | orte | wetter | normal | – | was-steht-wo | 136 | SMS-Beispiel: · 143 von 160 Zeichen | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.02afd22255 | orte | wetter | normal | – | was-steht-wo | 137 | Orte 18.11.: Münster D 13C L 4C W 30 km/h G 51 km/h +5; Telgte D 12C L 3C W 33 km/h G 57 km/h +5; Tecklenburg D 11C L 2C W 36 km/h G 63 km/h +5 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.67732d3b54 | orte | wetter | normal | – | was-steht-wo | 138 | Bei 3 Orten passen die letzten 5 Metriken nicht mehr in die SMS. Dafür steht „+5“ je Ort. Zieh nach oben, was dir in der SMS wichtig ist. | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.2e1d6272c1 | orte | wetter | normal | – | was-steht-wo | 139 | Ganze Blöcke ein- und ausschalten | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.022afc2af5 | orte | wetter | normal | – | was-steht-wo | 140 | Stundenverlauf | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.b937470fe1 | orte | wetter | normal | – | was-steht-wo | 141 | Stunden-Tabelle je Ort unter der Übersicht, nur in der E-Mail. | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.cbefa0b477 | orte | wetter | normal | – | was-steht-wo | 142 | Stundenverlauf | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.7184682dd5 | orte | wetter | normal | – | was-steht-wo | 143 | 3-Tages-Ausblick | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.e811c40fc1 | orte | wetter | normal | – | was-steht-wo | 144 | Tageswerte der nächsten drei Tage, in E-Mail und Telegram. Vorbelegt: nur im Abend-Briefing. | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.07da03c12f | orte | wetter | normal | – | was-steht-wo | 145 | Morgen-Briefing | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.c1fe52610c | orte | wetter | normal | – | was-steht-wo | 146 | Ausblick im Morgen-Briefing | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.8c0fa072f5 | orte | wetter | normal | – | was-steht-wo | 147 | Abend-Briefing | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.normal.-.was-steht-wo.0f7a5b7f48 | orte | wetter | normal | – | was-steht-wo | 148 | Ausblick im Abend-Briefing | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.fb63a34037 | orte | wetter | normal | – | was-steht-wo | 149 | Einstellungen je Kanal | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.2973df31b7 | orte | wetter | normal | – | was-steht-wo | 150 | Telegram: Kurzstil | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.259d860fd5 | orte | wetter | normal | – | was-steht-wo | 151 | Telegram bekommt denselben kurzen Text wie die SMS, ohne Knöpfe. Gilt für Briefing und Alarme. Die Telegram-Spalte ruht dann, es gilt die SMS-Spalte. | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.acb4749759 | orte | wetter | normal | – | was-steht-wo | 152 | Telegram im Kurzstil | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.6de8819ef1 | orte | wetter | normal | – | was-steht-wo | 153 | Premium-SMS | gefunden |  | – |
+| orte.wetter.normal.-.was-steht-wo.74a08e820e | orte | wetter | normal | – | was-steht-wo | 154 | Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später. | gefunden |  | – |
+| orte.wetter.normal.-.anpassen.973d4f1d4f | orte | wetter | normal | – | anpassen | 1 | Anpassen | gefunden |  | – |
+| orte.wetter.normal.-.anpassen.d189143962 | orte | wetter | normal | – | anpassen | 2 | Tagesfenster | gefunden |  | – |
+| orte.wetter.normal.-.anpassen.701472feaf | orte | wetter | normal | – | anpassen | 3 | Welche Stunden bewertet werden | gefunden |  | – |
+| orte.wetter.normal.-.anpassen.489b26ab0b | orte | wetter | normal | – | anpassen | 4 | von | gefunden |  | – |
+| orte.wetter.normal.-.anpassen.c7f96e3c3a | orte | wetter | normal | – | anpassen | 5 | bis | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-temperature.eee0b30fab | orte | wetter | normal | – | grenzen-temperature | 1 | Fertig | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-temperature.41c1fae3cd | orte | wetter | normal | – | grenzen-temperature | 2 | untenzu wenig | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-temperature.e64e1c2bf9 | orte | wetter | normal | – | grenzen-temperature | 3 | rot < | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-temperature.0db8d42970 | orte | wetter | normal | – | grenzen-temperature | 4 | -15 | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| orte.wetter.normal.-.grenzen-temperature.b94a539dce | orte | wetter | normal | – | grenzen-temperature | 5 | orange < | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-temperature.8437b687d4 | orte | wetter | normal | – | grenzen-temperature | 6 | gelb < | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-temperature.4879524a43 | orte | wetter | normal | – | grenzen-temperature | 7 | 0 | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-temperature.b08d0d3251 | orte | wetter | normal | – | grenzen-temperature | 8 | obenzu viel | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-temperature.401cc1b8ad | orte | wetter | normal | – | grenzen-temperature | 9 | gelb > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-temperature.21d65fa0ba | orte | wetter | normal | – | grenzen-temperature | 10 | orange > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-temperature.c7cbfb4bb0 | orte | wetter | normal | – | grenzen-temperature | 11 | rot > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-temperature.0eaf1465d8 | orte | wetter | normal | – | grenzen-temperature | 12 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-wind.02e4ebbb6c | orte | wetter | normal | – | grenzen-wind | 1 | Fertig | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-wind.740f1d75cf | orte | wetter | normal | – | grenzen-wind | 2 | untenzu wenig | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-wind.8f41de4fb9 | orte | wetter | normal | – | grenzen-wind | 3 | rot < | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-wind.8bef112e3b | orte | wetter | normal | – | grenzen-wind | 4 | orange < | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-wind.433a6b4f2c | orte | wetter | normal | – | grenzen-wind | 5 | gelb < | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-wind.8b8d01b7fe | orte | wetter | normal | – | grenzen-wind | 6 | obenzu viel | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-wind.6e4773bbad | orte | wetter | normal | – | grenzen-wind | 7 | gelb > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-wind.1ef00cbf2a | orte | wetter | normal | – | grenzen-wind | 8 | 30 | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-wind.acb9ffec20 | orte | wetter | normal | – | grenzen-wind | 9 | orange > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-wind.06ec90df6b | orte | wetter | normal | – | grenzen-wind | 10 | rot > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-wind.2390db8162 | orte | wetter | normal | – | grenzen-wind | 11 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-gust.fedf2b056b | orte | wetter | normal | – | grenzen-gust | 1 | Fertig | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-gust.bd762ea8a7 | orte | wetter | normal | – | grenzen-gust | 2 | obenzu viel | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-gust.f596889d87 | orte | wetter | normal | – | grenzen-gust | 3 | gelb > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-gust.28c2989831 | orte | wetter | normal | – | grenzen-gust | 4 | 30 | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-gust.2ab61dce87 | orte | wetter | normal | – | grenzen-gust | 5 | orange > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-gust.7c5122477c | orte | wetter | normal | – | grenzen-gust | 6 | rot > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-gust.59795d2897 | orte | wetter | normal | – | grenzen-gust | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-precipitation.ab27bee5ff | orte | wetter | normal | – | grenzen-precipitation | 1 | Fertig | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-precipitation.db5e96485e | orte | wetter | normal | – | grenzen-precipitation | 2 | obenzu viel | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-precipitation.0591bc3691 | orte | wetter | normal | – | grenzen-precipitation | 3 | gelb > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-precipitation.d63daa4bce | orte | wetter | normal | – | grenzen-precipitation | 4 | 1 | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-precipitation.ae29ea6f5c | orte | wetter | normal | – | grenzen-precipitation | 5 | orange > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-precipitation.26c5fc6f62 | orte | wetter | normal | – | grenzen-precipitation | 6 | rot > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-precipitation.a244f76dcd | orte | wetter | normal | – | grenzen-precipitation | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-thunder.c4331193e7 | orte | wetter | normal | – | grenzen-thunder | 1 | Fertig | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-thunder.37f31dd662 | orte | wetter | normal | – | grenzen-thunder | 2 | mittel | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-thunder.d16e2f3afe | orte | wetter | normal | – | grenzen-thunder | 3 | gelb | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-thunder.c9eede33d5 | orte | wetter | normal | – | grenzen-thunder | 4 | orange | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-thunder.487ce430ba | orte | wetter | normal | – | grenzen-thunder | 5 | rot | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-thunder.90ef3dcdc1 | orte | wetter | normal | – | grenzen-thunder | 6 | hoch | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-thunder.510203ae76 | orte | wetter | normal | – | grenzen-thunder | 7 | orange | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-thunder.4ae20b85a6 | orte | wetter | normal | – | grenzen-thunder | 8 | rot | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-thunder.4c3ad13864 | orte | wetter | normal | – | grenzen-thunder | 9 | „keins“ ist immer grün. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-rain_probability.94014a0074 | orte | wetter | normal | – | grenzen-rain_probability | 1 | Fertig | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-rain_probability.88f5785e17 | orte | wetter | normal | – | grenzen-rain_probability | 2 | obenzu viel | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-rain_probability.f44fa81064 | orte | wetter | normal | – | grenzen-rain_probability | 3 | gelb > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-rain_probability.c1a99ba8f4 | orte | wetter | normal | – | grenzen-rain_probability | 4 | 30 | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-rain_probability.de7a568c0d | orte | wetter | normal | – | grenzen-rain_probability | 5 | orange > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-rain_probability.767b5d2c02 | orte | wetter | normal | – | grenzen-rain_probability | 6 | rot > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-rain_probability.4fb90f9b81 | orte | wetter | normal | – | grenzen-rain_probability | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-cloud_total.cca3b7e47e | orte | wetter | normal | – | grenzen-cloud_total | 1 | Fertig | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-cloud_total.eed63e68f9 | orte | wetter | normal | – | grenzen-cloud_total | 2 | obenzu viel | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-cloud_total.a3d1725cb2 | orte | wetter | normal | – | grenzen-cloud_total | 3 | gelb > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-cloud_total.b9dd803f2f | orte | wetter | normal | – | grenzen-cloud_total | 4 | 60 | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-cloud_total.3fda1d80e1 | orte | wetter | normal | – | grenzen-cloud_total | 5 | orange > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-cloud_total.18043498ee | orte | wetter | normal | – | grenzen-cloud_total | 6 | rot > | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-cloud_total.e255a215dd | orte | wetter | normal | – | grenzen-cloud_total | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-sunshine.490447dcec | orte | wetter | normal | – | grenzen-sunshine | 1 | Fertig | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-sunshine.8d8195144d | orte | wetter | normal | – | grenzen-sunshine | 2 | untenzu wenig | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-sunshine.dba5f92419 | orte | wetter | normal | – | grenzen-sunshine | 3 | rot < | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-sunshine.27be2a3e6f | orte | wetter | normal | – | grenzen-sunshine | 4 | orange < | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-sunshine.09f613f074 | orte | wetter | normal | – | grenzen-sunshine | 5 | 1 | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-sunshine.428d9ce340 | orte | wetter | normal | – | grenzen-sunshine | 6 | gelb < | gefunden |  | – |
+| orte.wetter.normal.-.grenzen-sunshine.4536efc8c5 | orte | wetter | normal | – | grenzen-sunshine | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.548cbbdee8 | orte | wetter | normal | – | vorlage-auswahl | 1 | Vorlagen | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.0c3a74b5cd | orte | wetter | normal | – | vorlage-auswahl | 2 | Alpen-Trekking | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.02fa9a88a9 | orte | wetter | normal | – | vorlage-auswahl | 3 | 14 Metriken · Gewitter, Böen, Nullgradgrenze | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.1ff91c94cb | orte | wetter | normal | – | vorlage-auswahl | 4 | Wandern | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.b973176a52 | orte | wetter | normal | – | vorlage-auswahl | 5 | 10 Metriken · Regen, Sonne, UV | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.8bb0fbb34c | orte | wetter | normal | – | vorlage-auswahl | 6 | Skitouren | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.ecbd79ec81 | orte | wetter | normal | – | vorlage-auswahl | 7 | 13 Metriken · Neuschnee, Schneehöhe, Sicht | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.fc496bfd0d | orte | wetter | normal | – | vorlage-auswahl | 8 | Wintersport | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.7a418c5c87 | orte | wetter | normal | – | vorlage-auswahl | 9 | 11 Metriken · Schnee, Kälte | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.9098441f9b | orte | wetter | normal | – | vorlage-auswahl | 10 | Radtour | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.f4a14bdb8d | orte | wetter | normal | – | vorlage-auswahl | 11 | 12 Metriken · Wind, Regen, gefühlte Temperatur | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.2d45b14e28 | orte | wetter | normal | – | vorlage-auswahl | 12 | Wassersport | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.7a87a1072c | orte | wetter | normal | – | vorlage-auswahl | 13 | 10 Metriken · Wind beidseitig, Gewitter | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.05e0b5d592 | orte | wetter | normal | – | vorlage-auswahl | 14 | Allgemein · aktiv | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.73a94296e4 | orte | wetter | normal | – | vorlage-auswahl | 15 | 8 Metriken · Standard-Ampel | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.05e3a37612 | orte | wetter | normal | – | vorlage-auswahl | 16 | Eigene | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-auswahl.827b20495b | orte | wetter | normal | – | vorlage-auswahl | 17 | Mallorca Frühling | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Mockup-Beispieldaten: eigene Vorlage „Mallorca Frühling“ des Mockup-Kontos fehlt im Staging-Prüfkonto. Ursache: Text nicht sichtbar) |
+| orte.wetter.normal.-.vorlage-auswahl.e965e7f4dc | orte | wetter | normal | – | vorlage-auswahl | 18 | eigene · aus GR221 gespeichert | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-bestaetigung.24ed01f0a6 | orte | wetter | normal | – | vorlage-bestaetigung | 1 | „Alpen-Trekking“ übernehmen? | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-bestaetigung.27f10ecaba | orte | wetter | normal | – | vorlage-bestaetigung | 2 | Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen für diese Orte. Zustellung, Etappen und Orte bleiben unverändert. | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-bestaetigung.172f41be1b | orte | wetter | normal | – | vorlage-bestaetigung | 3 | Übernehmen | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-bestaetigung.abb9c08a7d | orte | wetter | normal | – | vorlage-bestaetigung | 4 | Abbrechen | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-speichern.1a92f7f2dc | orte | wetter | normal | – | vorlage-speichern | 1 | Als eigene Vorlage speichern | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-speichern.e2ef245ba2 | orte | wetter | normal | – | vorlage-speichern | 2 | Name | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-speichern.7bf753d847 | orte | wetter | normal | – | vorlage-speichern | 3 | z.B. Mallorca Frühling | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-speichern.5a99386342 | orte | wetter | normal | – | vorlage-speichern | 4 | Beschreibung (optional) | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-speichern.e9269ad043 | orte | wetter | normal | – | vorlage-speichern | 5 | wofür die Vorlage gedacht ist | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-speichern.aad6d8bf72 | orte | wetter | normal | – | vorlage-speichern | 6 | Als Standard für neue Orte | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-speichern.93b3b57a7b | orte | wetter | normal | – | vorlage-speichern | 7 | Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu. | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-speichern.ee1de03468 | orte | wetter | normal | – | vorlage-speichern | 8 | Speichern | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-speichern.d2f4b2ae33 | orte | wetter | normal | – | vorlage-speichern | 9 | Abbrechen | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-speichern-fehler.b0d41769a8 | orte | wetter | normal | – | vorlage-speichern-fehler | 1 | Gib der Vorlage einen Namen. | gefunden |  | – |
+| orte.wetter.normal.-.test-menue.ddfc28269e | orte | wetter | normal | – | test-menue | 1 | E-Mail | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.test-menue.82975d6c82 | orte | wetter | normal | – | test-menue | 2 | an 2 Empfänger | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.test-menue.212eb83323 | orte | wetter | normal | – | test-menue | 3 | Telegram | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.test-menue.eabc433ec6 | orte | wetter | normal | – | test-menue | 4 | @henning | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.test-menue.799599454e | orte | wetter | normal | – | test-menue | 5 | SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.test-menue.3107ebe591 | orte | wetter | normal | – | test-menue | 6 | +49 171 … | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.test-menue.bac5240aab | orte | wetter | normal | – | test-menue | 7 | Premium-SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.test-menue.c61f0ed9e7 | orte | wetter | normal | – | test-menue | 8 | inReach · über Satellit | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.test-menue.3f96b3887a | orte | wetter | normal | – | test-menue | 9 | Alle eingerichteten Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.test-menue.93d2c22721 | orte | wetter | normal | – | test-menue | 10 | Test-Alarm | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.test-menue.8d78517062 | orte | wetter | normal | – | test-menue | 11 | Beispiel-Alarm mit echten Werten an alle Alarm-Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kebab-menue.14ed10da31 | orte | wetter | normal | – | kebab-menue | 1 | Aktivieren | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kebab-menue.8740f1eb76 | orte | wetter | normal | – | kebab-menue | 2 | Archivieren … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kebab-menue.6a2c6c8fea | orte | wetter | normal | – | kebab-menue | 3 | Löschen … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kebab-menue.73fe77fbcf | orte | wetter | normal | – | kebab-menue | 4 | Pausieren, Archivieren, Löschen | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kebab-bestaetigung-archivieren.d78e18e59b | orte | wetter | normal | – | kebab-bestaetigung-archivieren | 1 | Archivieren? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kebab-bestaetigung-archivieren.26eea47181 | orte | wetter | normal | – | kebab-bestaetigung-archivieren | 2 | „Münsterland“ verschwindet aus der Liste. Es kommen keine Briefings und Alarme mehr. Du kannst es im Archiv reaktivieren. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kebab-bestaetigung-archivieren.a7ea84c95d | orte | wetter | normal | – | kebab-bestaetigung-archivieren | 3 | Archivieren | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kebab-bestaetigung-archivieren.fdefa22d71 | orte | wetter | normal | – | kebab-bestaetigung-archivieren | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kebab-bestaetigung-loeschen.ee1d76837c | orte | wetter | normal | – | kebab-bestaetigung-loeschen | 1 | Löschen? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kebab-bestaetigung-loeschen.54b8396d34 | orte | wetter | normal | – | kebab-bestaetigung-loeschen | 2 | „Münsterland“ wird endgültig gelöscht. Briefings und Alarme hören sofort auf. Das lässt sich nicht rückgängig machen. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kebab-bestaetigung-loeschen.9f9ba31a45 | orte | wetter | normal | – | kebab-bestaetigung-loeschen | 3 | Endgültig löschen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.normal.-.kebab-bestaetigung-loeschen.a98e431472 | orte | wetter | normal | – | kebab-bestaetigung-loeschen | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kopf.eb43f72416 | orte | wetter | laedt | – | kopf | 1 | Orte / | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Orte / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Orte“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.laedt.-.kopf.72c9e6cf76 | orte | wetter | laedt | – | kopf | 2 | Münsterland | gefunden |  | – |
+| orte.wetter.laedt.-.kopf.057cfeca34 | orte | wetter | laedt | – | kopf | 3 | Weitere Aktionen | gefunden |  | – |
+| orte.wetter.laedt.-.kopf.828af79b4f | orte | wetter | laedt | – | kopf | 4 | Test schicken ▾ | gefunden |  | – |
+| orte.wetter.laedt.-.kopf.846b836a70 | orte | wetter | laedt | – | kopf | 5 | Orte · Münsterland | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| orte.wetter.laedt.-.kopf.3fcc60a0e6 | orte | wetter | laedt | – | kopf | 6 | Münsterland | gefunden |  | – |
+| orte.wetter.laedt.-.kopf.649494b243 | orte | wetter | laedt | – | kopf | 7 | Entwurf | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.laedt.-.kopf.85460241a3 | orte | wetter | laedt | – | kopf | 8 | Aktivieren | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: „Aktivieren“ erscheint nur im Entwurf; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.laedt.-.kopf.4614f543dc | orte | wetter | laedt | – | kopf | 9 | 3 Orte · Morgen-Briefing 07:00 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts Seit Mockup Fassung 4 steht „Vergleichstabelle“ nicht mehr in der Zeile (ADR-0124 Nr. 10: der Bereich heißt „Orte“); die App nennt sie noch, Rückbau mit dem Bau zu #3122.) |
+| orte.wetter.laedt.-.reiterleiste.acb9ec77da | orte | wetter | laedt | – | reiterleiste | 1 | Übersicht | gefunden |  | – |
+| orte.wetter.laedt.-.reiterleiste.23f7f28429 | orte | wetter | laedt | – | reiterleiste | 2 | Orte | gefunden |  | – |
+| orte.wetter.laedt.-.reiterleiste.13ac048eff | orte | wetter | laedt | – | reiterleiste | 3 | 3 | gefunden |  | – |
+| orte.wetter.laedt.-.reiterleiste.ba9d1590fc | orte | wetter | laedt | – | reiterleiste | 4 | Wetter | gefunden |  | – |
+| orte.wetter.laedt.-.reiterleiste.da4e9af200 | orte | wetter | laedt | – | reiterleiste | 5 | Zustellung | gefunden |  | – |
+| orte.wetter.laedt.-.abschnittskopf.85ca311eb0 | orte | wetter | laedt | – | abschnittskopf | 1 | Wetter | gefunden |  | – |
+| orte.wetter.laedt.-.abschnittskopf.cf459ff99f | orte | wetter | laedt | – | abschnittskopf | 2 | Was im Briefing steht, was für dich zu viel oder zu wenig ist und ab wann du einen Alarm bekommst. | gefunden |  | – |
+| orte.wetter.laedt.-.laden.6bed8da96c | orte | wetter | laedt | – | laden | 1 | Lade Metriken … | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3022 (Echter Befund: im Zustand „lädt“ zeigt der Orte-Reiter Wetter den Seitenlader statt Wetter-Kopf und „Lade Metriken …“ (gleiche Ursache wie Reiter Zustellung). Ursache: Text nicht sichtbar) |
+| orte.wetter.laedt.-.test-menue.bc8b2c1f54 | orte | wetter | laedt | – | test-menue | 1 | E-Mail | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.test-menue.87cb557971 | orte | wetter | laedt | – | test-menue | 2 | an 2 Empfänger | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.test-menue.9b25c862b7 | orte | wetter | laedt | – | test-menue | 3 | Telegram | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.test-menue.850c37b8c1 | orte | wetter | laedt | – | test-menue | 4 | @henning | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.test-menue.aafecb4554 | orte | wetter | laedt | – | test-menue | 5 | SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.test-menue.1b323c121c | orte | wetter | laedt | – | test-menue | 6 | +49 171 … | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.test-menue.75a6faf067 | orte | wetter | laedt | – | test-menue | 7 | Premium-SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.test-menue.9dc3e56a73 | orte | wetter | laedt | – | test-menue | 8 | inReach · über Satellit | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.test-menue.ad2da81024 | orte | wetter | laedt | – | test-menue | 9 | Alle eingerichteten Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.test-menue.e9bf6f45a7 | orte | wetter | laedt | – | test-menue | 10 | Test-Alarm | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.test-menue.d1d59e9917 | orte | wetter | laedt | – | test-menue | 11 | Beispiel-Alarm mit echten Werten an alle Alarm-Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kebab-menue.44296f98c4 | orte | wetter | laedt | – | kebab-menue | 1 | Aktivieren | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kebab-menue.e129902b72 | orte | wetter | laedt | – | kebab-menue | 2 | Archivieren … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kebab-menue.079063a09f | orte | wetter | laedt | – | kebab-menue | 3 | Löschen … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kebab-menue.9fcd43dbff | orte | wetter | laedt | – | kebab-menue | 4 | Pausieren, Archivieren, Löschen | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kebab-bestaetigung-archivieren.0615e0c6d8 | orte | wetter | laedt | – | kebab-bestaetigung-archivieren | 1 | Archivieren? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kebab-bestaetigung-archivieren.1b4ab6fb58 | orte | wetter | laedt | – | kebab-bestaetigung-archivieren | 2 | „Münsterland“ verschwindet aus der Liste. Es kommen keine Briefings und Alarme mehr. Du kannst es im Archiv reaktivieren. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kebab-bestaetigung-archivieren.40f1bf9f5b | orte | wetter | laedt | – | kebab-bestaetigung-archivieren | 3 | Archivieren | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kebab-bestaetigung-archivieren.1d16cfb6c5 | orte | wetter | laedt | – | kebab-bestaetigung-archivieren | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kebab-bestaetigung-loeschen.a4725cb837 | orte | wetter | laedt | – | kebab-bestaetigung-loeschen | 1 | Löschen? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kebab-bestaetigung-loeschen.14147a7498 | orte | wetter | laedt | – | kebab-bestaetigung-loeschen | 2 | „Münsterland“ wird endgültig gelöscht. Briefings und Alarme hören sofort auf. Das lässt sich nicht rückgängig machen. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kebab-bestaetigung-loeschen.a8eb61eb46 | orte | wetter | laedt | – | kebab-bestaetigung-loeschen | 3 | Endgültig löschen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.laedt.-.kebab-bestaetigung-loeschen.38422a5b93 | orte | wetter | laedt | – | kebab-bestaetigung-loeschen | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kopf.bb678a85ba | orte | wetter | fehler | – | kopf | 1 | Orte / | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Orte / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Orte“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.fehler.-.kopf.a191fc26da | orte | wetter | fehler | – | kopf | 2 | Münsterland | gefunden |  | – |
+| orte.wetter.fehler.-.kopf.03d813d744 | orte | wetter | fehler | – | kopf | 3 | Weitere Aktionen | gefunden |  | – |
+| orte.wetter.fehler.-.kopf.f6fcbee3ee | orte | wetter | fehler | – | kopf | 4 | Test schicken ▾ | gefunden |  | – |
+| orte.wetter.fehler.-.kopf.673fbd4452 | orte | wetter | fehler | – | kopf | 5 | Orte · Münsterland | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| orte.wetter.fehler.-.kopf.3ad0644fdd | orte | wetter | fehler | – | kopf | 6 | Münsterland | gefunden |  | – |
+| orte.wetter.fehler.-.kopf.10f27c820f | orte | wetter | fehler | – | kopf | 7 | Entwurf | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.fehler.-.kopf.1c305978a5 | orte | wetter | fehler | – | kopf | 8 | Aktivieren | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: „Aktivieren“ erscheint nur im Entwurf; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.fehler.-.kopf.0625c47673 | orte | wetter | fehler | – | kopf | 9 | 3 Orte · Morgen-Briefing 07:00 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts Seit Mockup Fassung 4 steht „Vergleichstabelle“ nicht mehr in der Zeile (ADR-0124 Nr. 10: der Bereich heißt „Orte“); die App nennt sie noch, Rückbau mit dem Bau zu #3122.) |
+| orte.wetter.fehler.-.reiterleiste.8b30b1d2ec | orte | wetter | fehler | – | reiterleiste | 1 | Übersicht | gefunden |  | – |
+| orte.wetter.fehler.-.reiterleiste.ef3736f566 | orte | wetter | fehler | – | reiterleiste | 2 | Orte | gefunden |  | – |
+| orte.wetter.fehler.-.reiterleiste.e7c659b5f6 | orte | wetter | fehler | – | reiterleiste | 3 | 3 | gefunden |  | – |
+| orte.wetter.fehler.-.reiterleiste.6230a8fc36 | orte | wetter | fehler | – | reiterleiste | 4 | Wetter | gefunden |  | – |
+| orte.wetter.fehler.-.reiterleiste.ff2ad6e23c | orte | wetter | fehler | – | reiterleiste | 5 | Zustellung | gefunden |  | – |
+| orte.wetter.fehler.-.abschnittskopf.abe818d8b9 | orte | wetter | fehler | – | abschnittskopf | 1 | Wetter | gefunden |  | – |
+| orte.wetter.fehler.-.abschnittskopf.72ee6300eb | orte | wetter | fehler | – | abschnittskopf | 2 | Was im Briefing steht, was für dich zu viel oder zu wenig ist und ab wann du einen Alarm bekommst. | gefunden |  | – |
+| orte.wetter.fehler.-.warnung.be872fe303 | orte | wetter | fehler | – | warnung | 1 | Die Metriken konnten nicht geladen werden. | gefunden |  | – |
+| orte.wetter.fehler.-.warnung.f7465bf359 | orte | wetter | fehler | – | warnung | 2 | Die Verbindung zum Server ist abgebrochen. Deine Einstellungen sind gespeichert und gehen nicht verloren. | gefunden |  | – |
+| orte.wetter.fehler.-.warnung.be573d802a | orte | wetter | fehler | – | warnung | 3 | Erneut laden | gefunden |  | – |
+| orte.wetter.fehler.-.test-menue.443bdc8c61 | orte | wetter | fehler | – | test-menue | 1 | E-Mail | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.test-menue.64ee7ebc25 | orte | wetter | fehler | – | test-menue | 2 | an 2 Empfänger | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.test-menue.d4c2331b06 | orte | wetter | fehler | – | test-menue | 3 | Telegram | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.test-menue.2f76c0a84c | orte | wetter | fehler | – | test-menue | 4 | @henning | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.test-menue.e86c0fd0f6 | orte | wetter | fehler | – | test-menue | 5 | SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.test-menue.1cccf67e27 | orte | wetter | fehler | – | test-menue | 6 | +49 171 … | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.test-menue.9b9a517087 | orte | wetter | fehler | – | test-menue | 7 | Premium-SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.test-menue.f009c6760e | orte | wetter | fehler | – | test-menue | 8 | inReach · über Satellit | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.test-menue.8460c60f3c | orte | wetter | fehler | – | test-menue | 9 | Alle eingerichteten Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.test-menue.59ca2b8c8a | orte | wetter | fehler | – | test-menue | 10 | Test-Alarm | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.test-menue.6d5b990371 | orte | wetter | fehler | – | test-menue | 11 | Beispiel-Alarm mit echten Werten an alle Alarm-Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kebab-menue.c91bcca8cf | orte | wetter | fehler | – | kebab-menue | 1 | Aktivieren | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kebab-menue.fedbcc26a3 | orte | wetter | fehler | – | kebab-menue | 2 | Archivieren … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kebab-menue.bcfac5f660 | orte | wetter | fehler | – | kebab-menue | 3 | Löschen … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kebab-menue.da689c4a2e | orte | wetter | fehler | – | kebab-menue | 4 | Pausieren, Archivieren, Löschen | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kebab-bestaetigung-archivieren.3dd241995e | orte | wetter | fehler | – | kebab-bestaetigung-archivieren | 1 | Archivieren? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kebab-bestaetigung-archivieren.dfeb05ad72 | orte | wetter | fehler | – | kebab-bestaetigung-archivieren | 2 | „Münsterland“ verschwindet aus der Liste. Es kommen keine Briefings und Alarme mehr. Du kannst es im Archiv reaktivieren. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kebab-bestaetigung-archivieren.6b80164b59 | orte | wetter | fehler | – | kebab-bestaetigung-archivieren | 3 | Archivieren | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kebab-bestaetigung-archivieren.daa25569a1 | orte | wetter | fehler | – | kebab-bestaetigung-archivieren | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kebab-bestaetigung-loeschen.e28ee3985a | orte | wetter | fehler | – | kebab-bestaetigung-loeschen | 1 | Löschen? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kebab-bestaetigung-loeschen.27b5ee69a0 | orte | wetter | fehler | – | kebab-bestaetigung-loeschen | 2 | „Münsterland“ wird endgültig gelöscht. Briefings und Alarme hören sofort auf. Das lässt sich nicht rückgängig machen. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kebab-bestaetigung-loeschen.8f2b2809da | orte | wetter | fehler | – | kebab-bestaetigung-loeschen | 3 | Endgültig löschen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.fehler.-.kebab-bestaetigung-loeschen.2c6343a325 | orte | wetter | fehler | – | kebab-bestaetigung-loeschen | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kopf.f353d25f5a | orte | wetter | luecken | – | kopf | 1 | Orte / | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Pfad „Orte / <Name>“ ist ein Textknoten; live sind Elternteil-Link „Orte“ und Trenner „/“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.luecken.-.kopf.d991a3f8d2 | orte | wetter | luecken | – | kopf | 2 | Münsterland | gefunden |  | – |
+| orte.wetter.luecken.-.kopf.d19d08baf2 | orte | wetter | luecken | – | kopf | 3 | Weitere Aktionen | gefunden |  | – |
+| orte.wetter.luecken.-.kopf.ae7c03bf70 | orte | wetter | luecken | – | kopf | 4 | Test schicken ▾ | gefunden |  | – |
+| orte.wetter.luecken.-.kopf.5b805a5374 | orte | wetter | luecken | – | kopf | 5 | Orte · Münsterland | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| orte.wetter.luecken.-.kopf.a04f868b79 | orte | wetter | luecken | – | kopf | 6 | Münsterland | gefunden |  | – |
+| orte.wetter.luecken.-.kopf.9f9b041132 | orte | wetter | luecken | – | kopf | 7 | Entwurf | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill folgt dem Zustand des Datensatzes; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.luecken.-.kopf.8faaba4255 | orte | wetter | luecken | – | kopf | 8 | Aktivieren | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: „Aktivieren“ erscheint nur im Entwurf; der Prüf-Vergleich ist aktiv; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.luecken.-.kopf.0ff6feddaa | orte | wetter | luecken | – | kopf | 9 | 3 Orte · Morgen-Briefing 07:00 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile (Anzahl Orte mit Einzahl/Mehrzahl, Briefing-Zeit) folgt den Daten; kein Katalogtext für die ganze Zeile (EN-Lücke); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts Seit Mockup Fassung 4 steht „Vergleichstabelle“ nicht mehr in der Zeile (ADR-0124 Nr. 10: der Bereich heißt „Orte“); die App nennt sie noch, Rückbau mit dem Bau zu #3122.) |
+| orte.wetter.luecken.-.reiterleiste.44b6a32da9 | orte | wetter | luecken | – | reiterleiste | 1 | Übersicht | gefunden |  | – |
+| orte.wetter.luecken.-.reiterleiste.5fad621664 | orte | wetter | luecken | – | reiterleiste | 2 | Orte | gefunden |  | – |
+| orte.wetter.luecken.-.reiterleiste.dcef62555d | orte | wetter | luecken | – | reiterleiste | 3 | 3 | gefunden |  | – |
+| orte.wetter.luecken.-.reiterleiste.9f7414b686 | orte | wetter | luecken | – | reiterleiste | 4 | Wetter | gefunden |  | – |
+| orte.wetter.luecken.-.reiterleiste.22a73377f9 | orte | wetter | luecken | – | reiterleiste | 5 | Zustellung | gefunden |  | – |
+| orte.wetter.luecken.-.abschnittskopf.1d77a0a895 | orte | wetter | luecken | – | abschnittskopf | 1 | Wetter | gefunden |  | – |
+| orte.wetter.luecken.-.abschnittskopf.8e1d1f4091 | orte | wetter | luecken | – | abschnittskopf | 2 | Was im Briefing steht, was für dich zu viel oder zu wenig ist und ab wann du einen Alarm bekommst. | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage.710b4dee39 | orte | wetter | luecken | – | vorlage | 1 | Vorlage | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage.e62995e381 | orte | wetter | luecken | – | vorlage | 2 | Allgemein | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage.838528f726 | orte | wetter | luecken | – | vorlage | 3 | ▾ unverändert | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Mockup-Text „▾ unverändert“ ist ein Knoten; live sind Auswahlpfeil „▾“ und Stand „unverändert“ eigene Elemente; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| orte.wetter.luecken.-.vorlage.6f710e01ed | orte | wetter | luecken | – | vorlage | 4 | Als eigene Vorlage speichern | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.14ac7275fb | orte | wetter | luecken | – | metriken | 1 | Alarm ab für alle | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.32c94f25a9 | orte | wetter | luecken | – | metriken | 2 | 5 von 8 Metriken lösen einen Alarm aus. 3 können keinen auslösen (Vorboten und reine Anzeige). | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.4d6fed7c8a | orte | wetter | luecken | – | metriken | 3 | Nie | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.6ffd56a1a5 | orte | wetter | luecken | – | metriken | 4 | Gelb | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.b70d0ae91e | orte | wetter | luecken | – | metriken | 5 | Orange | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.36f80161b2 | orte | wetter | luecken | – | metriken | 6 | Rot | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.7352429ff8 | orte | wetter | luecken | – | metriken | 7 | Temperatur | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.c04688bd68 | orte | wetter | luecken | – | metriken | 8 | Temperatur aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.e91fe9e7fb | orte | wetter | luecken | – | metriken | 9 | Temperatur | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.cdaf2c1376 | orte | wetter | luecken | – | metriken | 10 | °C · Tageshöchst · Tagestief | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.6e28593da6 | orte | wetter | luecken | – | metriken | 11 | -15 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.luecken.-.metriken.f0ba1532cf | orte | wetter | luecken | – | metriken | 12 | 0 | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.0128151003 | orte | wetter | luecken | – | metriken | 13 | Alarm, wenn der Wert seit dem letzten Briefing über 31 °C steigt oder unter -5 °C fällt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 12 | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.luecken.-.metriken.3597b65398 | orte | wetter | luecken | – | metriken | 14 | · grün: 0 bis 28 °C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.luecken.-.metriken.71833762c0 | orte | wetter | luecken | – | metriken | 15 | Alarm ab | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.1f15a43643 | orte | wetter | luecken | – | metriken | 16 | Nie | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.8fa9333dde | orte | wetter | luecken | – | metriken | 17 | Gelb | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.735d7b50c1 | orte | wetter | luecken | – | metriken | 18 | Orange | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.f8802871fd | orte | wetter | luecken | – | metriken | 19 | Rot | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.4ff5ba4ad6 | orte | wetter | luecken | – | metriken | 20 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.504a8d04dc | orte | wetter | luecken | – | metriken | 21 | Wind | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.fa91363c07 | orte | wetter | luecken | – | metriken | 22 | Wind aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.d95cfb164a | orte | wetter | luecken | – | metriken | 23 | Wind | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.bcbba56141 | orte | wetter | luecken | – | metriken | 24 | km/h · Mittelwind | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.5648c828f9 | orte | wetter | luecken | – | metriken | 25 | Alarm, wenn der Wert seit dem letzten Briefing über 50 km/h steigt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.5213cca937 | orte | wetter | luecken | – | metriken | 26 | · grün: bis 30 km/h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.luecken.-.metriken.06d3bf774a | orte | wetter | luecken | – | metriken | 27 | Alarm ab | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.9fa72190f3 | orte | wetter | luecken | – | metriken | 28 | Nie | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.7cdf3a888a | orte | wetter | luecken | – | metriken | 29 | Gelb | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.86d3cfcbff | orte | wetter | luecken | – | metriken | 30 | Orange | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.59005c0918 | orte | wetter | luecken | – | metriken | 31 | Rot | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.986c01c679 | orte | wetter | luecken | – | metriken | 32 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.98a49bfdab | orte | wetter | luecken | – | metriken | 33 | Böen aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.49be2e464b | orte | wetter | luecken | – | metriken | 34 | Böen | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.b73a24589b | orte | wetter | luecken | – | metriken | 35 | km/h · Spitze | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.cc8469d336 | orte | wetter | luecken | – | metriken | 36 | · grün: bis 30 km/h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.luecken.-.metriken.28457d76a3 | orte | wetter | luecken | – | metriken | 37 | Alarm ab | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.ed6c690c07 | orte | wetter | luecken | – | metriken | 38 | Nie | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.f4ff95dcf0 | orte | wetter | luecken | – | metriken | 39 | Gelb | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.7bed63beae | orte | wetter | luecken | – | metriken | 40 | Orange | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.bda0262072 | orte | wetter | luecken | – | metriken | 41 | Rot | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.0eb48ba0b8 | orte | wetter | luecken | – | metriken | 42 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.0a0da1aa83 | orte | wetter | luecken | – | metriken | 43 | Niederschlag & Gewitter | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.c7bac7a4f0 | orte | wetter | luecken | – | metriken | 44 | Niederschlag aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.43a8b6e174 | orte | wetter | luecken | – | metriken | 45 | Niederschlag | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.4832efec6b | orte | wetter | luecken | – | metriken | 46 | mm · Summe | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.72016c1051 | orte | wetter | luecken | – | metriken | 47 | Alarm, wenn der Wert seit dem letzten Briefing über 5 mm steigt (Orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.962a5bf285 | orte | wetter | luecken | – | metriken | 48 | · grün: bis 1 mm | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.luecken.-.metriken.3952a49a02 | orte | wetter | luecken | – | metriken | 49 | Alarm ab | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.6f23f915b2 | orte | wetter | luecken | – | metriken | 50 | Nie | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.e47375b836 | orte | wetter | luecken | – | metriken | 51 | Gelb | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.400fbf27e6 | orte | wetter | luecken | – | metriken | 52 | Orange | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.a40ae8e7ff | orte | wetter | luecken | – | metriken | 53 | Rot | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.ba1552ce2e | orte | wetter | luecken | – | metriken | 54 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.016111859d | orte | wetter | luecken | – | metriken | 55 | Gewitter aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.8917f656dd | orte | wetter | luecken | – | metriken | 56 | Gewitter | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.3a6653521b | orte | wetter | luecken | – | metriken | 57 | Stufe | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.84b1474098 | orte | wetter | luecken | – | metriken | 58 | keins | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.luecken.-.metriken.654743f61e | orte | wetter | luecken | – | metriken | 59 | mittel | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.luecken.-.metriken.5345dabfe8 | orte | wetter | luecken | – | metriken | 60 | hoch | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.luecken.-.metriken.d327e95b53 | orte | wetter | luecken | – | metriken | 61 | Alarm, wenn die Gewitter-Stufe seit dem letzten Briefing auf mittel oder hoch steigt (Orange). Entwarnung, wenn sie wieder fällt. | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.f653c93eb5 | orte | wetter | luecken | – | metriken | 62 | Alarm ab | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.f4b6343f06 | orte | wetter | luecken | – | metriken | 63 | Nie | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.14e5c170e8 | orte | wetter | luecken | – | metriken | 64 | Orange | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.5349fae3b9 | orte | wetter | luecken | – | metriken | 65 | Rot | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.6c9576cf2e | orte | wetter | luecken | – | metriken | 66 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.ea4b0d4c64 | orte | wetter | luecken | – | metriken | 67 | Regenwahrscheinlichkeit aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.180baf2340 | orte | wetter | luecken | – | metriken | 68 | Regenwahrscheinlichkeit | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.fad259c745 | orte | wetter | luecken | – | metriken | 69 | % · Vorbote, kein Alarm | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.7edce8aa96 | orte | wetter | luecken | – | metriken | 70 | Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus. | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.1a6e136069 | orte | wetter | luecken | – | metriken | 71 | · grün: bis 30 % | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.luecken.-.metriken.6659023b87 | orte | wetter | luecken | – | metriken | 72 | kein Alarm (Vorbote) | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.aace5dc726 | orte | wetter | luecken | – | metriken | 73 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.383efe2eec | orte | wetter | luecken | – | metriken | 74 | Himmel & Sicht | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.2b24d9dadf | orte | wetter | luecken | – | metriken | 75 | Bewölkung aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.8fdfdd58e4 | orte | wetter | luecken | – | metriken | 76 | Bewölkung | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.c6ae68b296 | orte | wetter | luecken | – | metriken | 77 | % · Vorbote, kein Alarm | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.4d787480d5 | orte | wetter | luecken | – | metriken | 78 | Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus. | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.29ddda892c | orte | wetter | luecken | – | metriken | 79 | kein Alarm (Vorbote) | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.6a1d0f2e58 | orte | wetter | luecken | – | metriken | 80 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.2e72d196fb | orte | wetter | luecken | – | metriken | 81 | Sonnenstunden aus dem Briefing nehmen | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.b2e0eccd53 | orte | wetter | luecken | – | metriken | 82 | Sonnenstunden | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.579992df9e | orte | wetter | luecken | – | metriken | 83 | h · zu wenig ist schlecht | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.89895e2d3f | orte | wetter | luecken | – | metriken | 84 | Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus. | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 83 | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.luecken.-.metriken.c84a020e12 | orte | wetter | luecken | – | metriken | 85 | · grün: ab 3 h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke (Text weicht vom Mockup ab oder ist ungebaut)) |
+| orte.wetter.luecken.-.metriken.b9fa3314ee | orte | wetter | luecken | – | metriken | 86 | kein Alarm | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.942d875baf | orte | wetter | luecken | – | metriken | 87 | Grenzen ändern | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.80bb85cbc3 | orte | wetter | luecken | – | metriken | 88 | Nicht im Briefing: | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.f0d2723dac | orte | wetter | luecken | – | metriken | 89 | + Windrichtung | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.30ef4c4ea3 | orte | wetter | luecken | – | metriken | 90 | + Sichtweite | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.d0c1876764 | orte | wetter | luecken | – | metriken | 91 | + UV-Index | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.02d0bbebb4 | orte | wetter | luecken | – | metriken | 92 | + Gefühlte Temperatur | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.9fdcc422d7 | orte | wetter | luecken | – | metriken | 93 | + Taupunkt | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.6335aa95f8 | orte | wetter | luecken | – | metriken | 94 | + Luftfeuchte | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.167bcab1da | orte | wetter | luecken | – | metriken | 95 | + Tiefe Wolken | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.9779878c69 | orte | wetter | luecken | – | metriken | 96 | + Nullgradgrenze | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.a77348e826 | orte | wetter | luecken | – | metriken | 97 | + Neuschnee | gefunden |  | – |
+| orte.wetter.luecken.-.metriken.80f779ee0c | orte | wetter | luecken | – | metriken | 98 | + Schneehöhe | gefunden |  | – |
+| orte.wetter.luecken.-.warnungen-radar.7566743551 | orte | wetter | luecken | – | warnungen-radar | 1 | Amtliche Warnungen | gefunden |  | – |
+| orte.wetter.luecken.-.warnungen-radar.900366a09b | orte | wetter | luecken | – | warnungen-radar | 2 | im Briefing und als Alarm, sobald sie dein Gebiet betreffen | gefunden |  | – |
+| orte.wetter.luecken.-.warnungen-radar.567725532f | orte | wetter | luecken | – | warnungen-radar | 3 | Amtliche Warnungen | gefunden |  | – |
+| orte.wetter.luecken.-.warnungen-radar.2a438ddc4a | orte | wetter | luecken | – | warnungen-radar | 4 | Radar-Regen | gefunden |  | – |
+| orte.wetter.luecken.-.warnungen-radar.1a0e3347f2 | orte | wetter | luecken | – | warnungen-radar | 5 | Alarm, wenn in der nächsten Stunde Regen auf deine Orte zukommt | gefunden |  | – |
+| orte.wetter.luecken.-.warnungen-radar.871641e6be | orte | wetter | luecken | – | warnungen-radar | 6 | Radar-Regen | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.485355f201 | orte | wetter | luecken | – | was-steht-wo | 1 | Was steht wo | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.dfe804a779 | orte | wetter | luecken | – | was-steht-wo | 2 | Eine Tabelle für alles. Jede Zeile ist eine Metrik aus der Auswahl oben. Jede Spalte ist eine Stelle, an der eine Metrik erscheinen kann: die drei Kanäle, der Stundenverlauf und der 3-Tages-Ausblick. Stundenverlauf und Ausblick gibt es nur für Metriken, die auch in der E-Mail stehen. Ein Haken heißt: erscheint dort. Hier wählst du nur ab. Die Reihenfolge ziehst du einmal, sie gilt überall. Roh zeigt die Zahl, Einfach ein Symbol oder ein Wort. Wo eine Metrik beide Formen hat, stellst du das je Stelle ein. Die SMS bleibt bei ihren Kürzeln. Neue Metriken kommen oben über „+“ dazu. | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.cf6c646cb4 | orte | wetter | luecken | – | was-steht-wo | 3 | Metrik | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.cb24f3d33a | orte | wetter | luecken | – | was-steht-wo | 4 | E-Mail | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.8dab281e5f | orte | wetter | luecken | – | was-steht-wo | 5 | Übersicht | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.a40605592e | orte | wetter | luecken | – | was-steht-wo | 6 | Telegram | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.19f41b0b22 | orte | wetter | luecken | – | was-steht-wo | 7 | Nachricht | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.acca9dfb2f | orte | wetter | luecken | – | was-steht-wo | 8 | SMS | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.3ed81a10aa | orte | wetter | luecken | – | was-steht-wo | 9 | und Premium-SMS | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.9a607dc1ce | orte | wetter | luecken | – | was-steht-wo | 10 | Stundenverlauf | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.02c8cc8137 | orte | wetter | luecken | – | was-steht-wo | 11 | nur E-Mail | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.3341fa9110 | orte | wetter | luecken | – | was-steht-wo | 12 | 3-Tages-Ausblick | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.3575584e9b | orte | wetter | luecken | – | was-steht-wo | 13 | E-Mail und Telegram | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.713e7eb911 | orte | wetter | luecken | – | was-steht-wo | 14 | Amtliche Warnungen | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.a51bbd66ed | orte | wetter | luecken | – | was-steht-wo | 15 | immer dabei: in E-Mail und Telegram zuerst, in der SMS am Ende | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.1afbbf2b59 | orte | wetter | luecken | – | was-steht-wo | 16 | Temperatur | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.70d040b932 | orte | wetter | luecken | – | was-steht-wo | 17 | Temperatur in E-Mail | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.34b1f04621 | orte | wetter | luecken | – | was-steht-wo | 18 | 13°C / 4°C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.eb15e635e2 | orte | wetter | luecken | – | was-steht-wo | 19 | Temperatur in Telegram | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.4f76a4f137 | orte | wetter | luecken | – | was-steht-wo | 20 | Temp max 13°C · Temp min 4°C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.c8f031749e | orte | wetter | luecken | – | was-steht-wo | 21 | Temperatur in SMS | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.c0a741bd56 | orte | wetter | luecken | – | was-steht-wo | 22 | D 13C L 4C | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.6136b48385 | orte | wetter | luecken | – | was-steht-wo | 23 | Temperatur im Stundenverlauf | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.384f495921 | orte | wetter | luecken | – | was-steht-wo | 24 | Temperatur im 3-Tages-Ausblick | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.2610008e96 | orte | wetter | luecken | – | was-steht-wo | 25 | Wind | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.e1a7cb97bb | orte | wetter | luecken | – | was-steht-wo | 26 | Wind in E-Mail | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.a64b607f6d | orte | wetter | luecken | – | was-steht-wo | 27 | Darstellung Wind in E-Mail: Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.a243410105 | orte | wetter | luecken | – | was-steht-wo | 28 | Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.871a434406 | orte | wetter | luecken | – | was-steht-wo | 29 | 30 km/h | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.da14d12336 | orte | wetter | luecken | – | was-steht-wo | 30 | Wind in Telegram | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.2270ee6c13 | orte | wetter | luecken | – | was-steht-wo | 31 | Darstellung Wind in Telegram: Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.0cc15ae5ad | orte | wetter | luecken | – | was-steht-wo | 32 | Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.af3dce8402 | orte | wetter | luecken | – | was-steht-wo | 33 | Wind 30 km/h | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.3e4a4231d6 | orte | wetter | luecken | – | was-steht-wo | 34 | Wind in SMS | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.bcc645f9ef | orte | wetter | luecken | – | was-steht-wo | 35 | W 30 km/h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.e3c0ee0010 | orte | wetter | luecken | – | was-steht-wo | 36 | Wind im Stundenverlauf | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.2b9da49bfb | orte | wetter | luecken | – | was-steht-wo | 37 | Darstellung Wind im Stundenverlauf: Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.14fd9aeb6f | orte | wetter | luecken | – | was-steht-wo | 38 | Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.5b00ec637a | orte | wetter | luecken | – | was-steht-wo | 39 | Wind im 3-Tages-Ausblick | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.999931c787 | orte | wetter | luecken | – | was-steht-wo | 40 | Darstellung Wind im 3-Tages-Ausblick: Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.f3e9bf7849 | orte | wetter | luecken | – | was-steht-wo | 41 | Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.3a1c8aa61a | orte | wetter | luecken | – | was-steht-wo | 42 | Böen | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.32e3ddf799 | orte | wetter | luecken | – | was-steht-wo | 43 | Böen in E-Mail | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.9b2166d4b0 | orte | wetter | luecken | – | was-steht-wo | 44 | Darstellung Böen in E-Mail: Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.f2faf56fd6 | orte | wetter | luecken | – | was-steht-wo | 45 | Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.344c7b385c | orte | wetter | luecken | – | was-steht-wo | 46 | Böen in Telegram | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.734c71d741 | orte | wetter | luecken | – | was-steht-wo | 47 | Darstellung Böen in Telegram: Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.f6d4006256 | orte | wetter | luecken | – | was-steht-wo | 48 | Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.79d92fd7bd | orte | wetter | luecken | – | was-steht-wo | 49 | Böen 51 km/h | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.b41a36877d | orte | wetter | luecken | – | was-steht-wo | 50 | Böen in SMS | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.5eb66462a6 | orte | wetter | luecken | – | was-steht-wo | 51 | G 51 km/h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.b66f91aa50 | orte | wetter | luecken | – | was-steht-wo | 52 | Böen im Stundenverlauf | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.c367fa3592 | orte | wetter | luecken | – | was-steht-wo | 53 | Darstellung Böen im Stundenverlauf: Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.52ebcc7f26 | orte | wetter | luecken | – | was-steht-wo | 54 | Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.73f6f5f6fd | orte | wetter | luecken | – | was-steht-wo | 55 | Böen im 3-Tages-Ausblick | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.d7cb9e6652 | orte | wetter | luecken | – | was-steht-wo | 56 | Darstellung Böen im 3-Tages-Ausblick: Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.757d4c0624 | orte | wetter | luecken | – | was-steht-wo | 57 | Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.0ae5d91320 | orte | wetter | luecken | – | was-steht-wo | 58 | Niederschlag | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.468ea818a1 | orte | wetter | luecken | – | was-steht-wo | 59 | Niederschlag in E-Mail | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.6f8f8ba73f | orte | wetter | luecken | – | was-steht-wo | 60 | Darstellung Niederschlag in E-Mail: Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.5c53a6371f | orte | wetter | luecken | – | was-steht-wo | 61 | Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.aea9b1c1d3 | orte | wetter | luecken | – | was-steht-wo | 62 | 1.8 mm | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.ce93543431 | orte | wetter | luecken | – | was-steht-wo | 63 | Niederschlag in Telegram | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.735c1a3c97 | orte | wetter | luecken | – | was-steht-wo | 64 | Darstellung Niederschlag in Telegram: Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.18fd92c21d | orte | wetter | luecken | – | was-steht-wo | 65 | Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.4c5b137771 | orte | wetter | luecken | – | was-steht-wo | 66 | Regen 1.8 mm | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.d1c05e5aa4 | orte | wetter | luecken | – | was-steht-wo | 67 | Niederschlag in SMS | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.3c3d8fdfb3 | orte | wetter | luecken | – | was-steht-wo | 68 | R 1.8 mm | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.c4b01297e1 | orte | wetter | luecken | – | was-steht-wo | 69 | passt nicht mehr | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.cf3e6db59b | orte | wetter | luecken | – | was-steht-wo | 70 | Niederschlag im Stundenverlauf | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.fb9fb7b706 | orte | wetter | luecken | – | was-steht-wo | 71 | Darstellung Niederschlag im Stundenverlauf: Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.77f217b5fc | orte | wetter | luecken | – | was-steht-wo | 72 | Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.54b5311e01 | orte | wetter | luecken | – | was-steht-wo | 73 | Niederschlag im 3-Tages-Ausblick | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.5f3b60afb8 | orte | wetter | luecken | – | was-steht-wo | 74 | Darstellung Niederschlag im 3-Tages-Ausblick: Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.3190e1c3d2 | orte | wetter | luecken | – | was-steht-wo | 75 | Roh | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.1de8f2b672 | orte | wetter | luecken | – | was-steht-wo | 76 | Gewitter | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.1b33890aae | orte | wetter | luecken | – | was-steht-wo | 77 | Gewitter in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 76 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.9ceede4266 | orte | wetter | luecken | – | was-steht-wo | 78 | Darstellung Gewitter in E-Mail: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 77 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.98af8dc322 | orte | wetter | luecken | – | was-steht-wo | 79 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.4283b45574 | orte | wetter | luecken | – | was-steht-wo | 80 | Gewitter in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 79 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.b08ec8afef | orte | wetter | luecken | – | was-steht-wo | 81 | Darstellung Gewitter in Telegram: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 80 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.08b1995a96 | orte | wetter | luecken | – | was-steht-wo | 82 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.257308ec10 | orte | wetter | luecken | – | was-steht-wo | 83 | Gewitter – | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.4ac1c06747 | orte | wetter | luecken | – | was-steht-wo | 84 | Gewitter in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 83 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.a19b47c123 | orte | wetter | luecken | – | was-steht-wo | 85 | TH - | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.9789d28db6 | orte | wetter | luecken | – | was-steht-wo | 86 | passt nicht mehr | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 85 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.37e9fabe28 | orte | wetter | luecken | – | was-steht-wo | 87 | Gewitter im Stundenverlauf | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 86 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.4aae504e2e | orte | wetter | luecken | – | was-steht-wo | 88 | Darstellung Gewitter im Stundenverlauf: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 87 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.594f17b236 | orte | wetter | luecken | – | was-steht-wo | 89 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.f79d8cc2ae | orte | wetter | luecken | – | was-steht-wo | 90 | Gewitter im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 89 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.4652f74356 | orte | wetter | luecken | – | was-steht-wo | 91 | Darstellung Gewitter im 3-Tages-Ausblick: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 90 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.65192fb89c | orte | wetter | luecken | – | was-steht-wo | 92 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.1917c946b9 | orte | wetter | luecken | – | was-steht-wo | 93 | Regenwahrscheinlichkeit | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 92 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.f0988258cd | orte | wetter | luecken | – | was-steht-wo | 94 | Regenwahrscheinlichkeit in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 93 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.4fe905410a | orte | wetter | luecken | – | was-steht-wo | 95 | 60% | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.b7a0ba840e | orte | wetter | luecken | – | was-steht-wo | 96 | Regenwahrscheinlichkeit in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 95 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.c7eb162f44 | orte | wetter | luecken | – | was-steht-wo | 97 | Regenwahrscheinlichkeit 60% | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 96 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.e9e6f6b4f9 | orte | wetter | luecken | – | was-steht-wo | 98 | Regenwahrscheinlichkeit in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 97 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.73ba8950a0 | orte | wetter | luecken | – | was-steht-wo | 99 | PR 60% | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.171d0ad6ae | orte | wetter | luecken | – | was-steht-wo | 100 | passt nicht mehr | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 99 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.edb9724317 | orte | wetter | luecken | – | was-steht-wo | 101 | Regenwahrscheinlichkeit im Stundenverlauf | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 100 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.c72833912e | orte | wetter | luecken | – | was-steht-wo | 102 | Regenwahrscheinlichkeit im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 101 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.af90595706 | orte | wetter | luecken | – | was-steht-wo | 103 | Bewölkung | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 102 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.dfdfbcbb2a | orte | wetter | luecken | – | was-steht-wo | 104 | Bewölkung in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 103 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.f863cbde92 | orte | wetter | luecken | – | was-steht-wo | 105 | Darstellung Bewölkung in E-Mail: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 104 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.2e5a64ca59 | orte | wetter | luecken | – | was-steht-wo | 106 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.44f3fc44c3 | orte | wetter | luecken | – | was-steht-wo | 107 | Bewölkung in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 106 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.fc8dec27cc | orte | wetter | luecken | – | was-steht-wo | 108 | Darstellung Bewölkung in Telegram: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 107 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.6c5c8fd5f6 | orte | wetter | luecken | – | was-steht-wo | 109 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.3bafc04217 | orte | wetter | luecken | – | was-steht-wo | 110 | Wolken 70% | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 109 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.8c41dc0707 | orte | wetter | luecken | – | was-steht-wo | 111 | Bewölkung in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 110 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.d647ed7321 | orte | wetter | luecken | – | was-steht-wo | 112 | CT 70% | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.bba9c8f7ee | orte | wetter | luecken | – | was-steht-wo | 113 | passt nicht mehr | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 112 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.55b113056b | orte | wetter | luecken | – | was-steht-wo | 114 | Bewölkung im Stundenverlauf | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 113 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.d567b3f664 | orte | wetter | luecken | – | was-steht-wo | 115 | Darstellung Bewölkung im Stundenverlauf: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 114 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.daedd6a089 | orte | wetter | luecken | – | was-steht-wo | 116 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.45e9a88714 | orte | wetter | luecken | – | was-steht-wo | 117 | Bewölkung im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 116 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.c98c4f271a | orte | wetter | luecken | – | was-steht-wo | 118 | Darstellung Bewölkung im 3-Tages-Ausblick: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 117 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.62b2e18c30 | orte | wetter | luecken | – | was-steht-wo | 119 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.2b15a3039e | orte | wetter | luecken | – | was-steht-wo | 120 | Sonnenstunden | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.3b52008232 | orte | wetter | luecken | – | was-steht-wo | 121 | Sonnenstunden in E-Mail | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 120 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.4e5779b656 | orte | wetter | luecken | – | was-steht-wo | 122 | Darstellung Sonnenstunden in E-Mail: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 121 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.289dcf0cb3 | orte | wetter | luecken | – | was-steht-wo | 123 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.9bcb45b9ff | orte | wetter | luecken | – | was-steht-wo | 124 | 3.0 h | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 123 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.eee66e3e2e | orte | wetter | luecken | – | was-steht-wo | 125 | Sonnenstunden in Telegram | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 124 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.55c3c4ac9d | orte | wetter | luecken | – | was-steht-wo | 126 | Darstellung Sonnenstunden in Telegram: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 125 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.d23b500c86 | orte | wetter | luecken | – | was-steht-wo | 127 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.0b63fe69f5 | orte | wetter | luecken | – | was-steht-wo | 128 | Sonne 3.0h | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 127 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.0d7f90a430 | orte | wetter | luecken | – | was-steht-wo | 129 | Sonnenstunden in SMS | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 128 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.d2d4b7c3b1 | orte | wetter | luecken | – | was-steht-wo | 130 | SU 3.0h | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.bc1dfddabf | orte | wetter | luecken | – | was-steht-wo | 131 | passt nicht mehr | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 130 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.c165914f91 | orte | wetter | luecken | – | was-steht-wo | 132 | kein Stundenwert | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 131 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.2947628adb | orte | wetter | luecken | – | was-steht-wo | 133 | Sonnenstunden im 3-Tages-Ausblick | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 132 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.7d4d019e8f | orte | wetter | luecken | – | was-steht-wo | 134 | Darstellung Sonnenstunden im 3-Tages-Ausblick: Einfach | abweichend | Reihenfolge im Abschnitt · ist: vor Element Nr. 133 | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.0bb899379d | orte | wetter | luecken | – | was-steht-wo | 135 | Einfach | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.b399ddf54b | orte | wetter | luecken | – | was-steht-wo | 136 | SMS-Beispiel: · 143 von 160 Zeichen | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.e34f252e2a | orte | wetter | luecken | – | was-steht-wo | 137 | Orte 18.11.: Münster D 13C L 4C W 30 km/h G 51 km/h +5; Telgte D 12C L 3C W 33 km/h G 57 km/h +5; Tecklenburg D 11C L 2C W 36 km/h G 63 km/h +5 | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.0a232227f9 | orte | wetter | luecken | – | was-steht-wo | 138 | Bei 3 Orten passen die letzten 5 Metriken nicht mehr in die SMS. Dafür steht „+5“ je Ort. Zieh nach oben, was dir in der SMS wichtig ist. | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.c4df5479b8 | orte | wetter | luecken | – | was-steht-wo | 139 | Ganze Blöcke ein- und ausschalten | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.2cb1b6e3df | orte | wetter | luecken | – | was-steht-wo | 140 | Stundenverlauf | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.cd7dcce215 | orte | wetter | luecken | – | was-steht-wo | 141 | Stunden-Tabelle je Ort unter der Übersicht, nur in der E-Mail. | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.cd2c229615 | orte | wetter | luecken | – | was-steht-wo | 142 | Stundenverlauf | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.7566ae3836 | orte | wetter | luecken | – | was-steht-wo | 143 | 3-Tages-Ausblick | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.967b43ab85 | orte | wetter | luecken | – | was-steht-wo | 144 | Tageswerte der nächsten drei Tage, in E-Mail und Telegram. Vorbelegt: nur im Abend-Briefing. | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.d340a54105 | orte | wetter | luecken | – | was-steht-wo | 145 | Morgen-Briefing | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.b411ea38ed | orte | wetter | luecken | – | was-steht-wo | 146 | Ausblick im Morgen-Briefing | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.34ba991d33 | orte | wetter | luecken | – | was-steht-wo | 147 | Abend-Briefing | abweichend | Text nicht sichtbar · ist: nicht gefunden | #3122 (Tabelle „Was steht wo“ (ADR-0124, ersetzt die Karte „Inhalt je Kanal und Fläche“) ist noch nicht gebaut.) |
+| orte.wetter.luecken.-.was-steht-wo.1b59211d4f | orte | wetter | luecken | – | was-steht-wo | 148 | Ausblick im Abend-Briefing | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.6572e12205 | orte | wetter | luecken | – | was-steht-wo | 149 | Einstellungen je Kanal | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.5d14dae9fb | orte | wetter | luecken | – | was-steht-wo | 150 | Telegram: Kurzstil | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.fecf2c52d6 | orte | wetter | luecken | – | was-steht-wo | 151 | Telegram bekommt denselben kurzen Text wie die SMS, ohne Knöpfe. Gilt für Briefing und Alarme. Die Telegram-Spalte ruht dann, es gilt die SMS-Spalte. | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.f010271b4f | orte | wetter | luecken | – | was-steht-wo | 152 | Telegram im Kurzstil | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.79387168e5 | orte | wetter | luecken | – | was-steht-wo | 153 | Premium-SMS | gefunden |  | – |
+| orte.wetter.luecken.-.was-steht-wo.c4410ad734 | orte | wetter | luecken | – | was-steht-wo | 154 | Bekommt vorerst denselben Text wie die SMS. Eine eigene Auswahl kommt später. | gefunden |  | – |
+| orte.wetter.luecken.-.anpassen.35bd85f380 | orte | wetter | luecken | – | anpassen | 1 | Anpassen | gefunden |  | – |
+| orte.wetter.luecken.-.anpassen.946e5e605b | orte | wetter | luecken | – | anpassen | 2 | Tagesfenster | gefunden |  | – |
+| orte.wetter.luecken.-.anpassen.0ea63215cc | orte | wetter | luecken | – | anpassen | 3 | Welche Stunden bewertet werden | gefunden |  | – |
+| orte.wetter.luecken.-.anpassen.3c7014d22d | orte | wetter | luecken | – | anpassen | 4 | von | gefunden |  | – |
+| orte.wetter.luecken.-.anpassen.871e54ec2f | orte | wetter | luecken | – | anpassen | 5 | bis | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-temperature.faf1d7e247 | orte | wetter | luecken | – | grenzen-temperature | 1 | Fertig | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-temperature.b70276eb55 | orte | wetter | luecken | – | grenzen-temperature | 2 | untenzu wenig | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-temperature.f7698ff818 | orte | wetter | luecken | – | grenzen-temperature | 3 | rot < | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-temperature.86be83be13 | orte | wetter | luecken | – | grenzen-temperature | 4 | -15 | abweichend | Text nicht sichtbar · ist: nicht gefunden | – |
+| orte.wetter.luecken.-.grenzen-temperature.99d1cf67ac | orte | wetter | luecken | – | grenzen-temperature | 5 | orange < | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-temperature.264e103ea0 | orte | wetter | luecken | – | grenzen-temperature | 6 | gelb < | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-temperature.dbcb219d1a | orte | wetter | luecken | – | grenzen-temperature | 7 | 0 | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-temperature.022d440542 | orte | wetter | luecken | – | grenzen-temperature | 8 | obenzu viel | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-temperature.e5c5b68ff8 | orte | wetter | luecken | – | grenzen-temperature | 9 | gelb > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-temperature.b1be753b84 | orte | wetter | luecken | – | grenzen-temperature | 10 | orange > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-temperature.8d115b1bea | orte | wetter | luecken | – | grenzen-temperature | 11 | rot > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-temperature.69a7c64336 | orte | wetter | luecken | – | grenzen-temperature | 12 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-wind.ad39cda27f | orte | wetter | luecken | – | grenzen-wind | 1 | Fertig | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-wind.3a6fb9f221 | orte | wetter | luecken | – | grenzen-wind | 2 | untenzu wenig | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-wind.d8c0abf86b | orte | wetter | luecken | – | grenzen-wind | 3 | rot < | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-wind.c4f404a58f | orte | wetter | luecken | – | grenzen-wind | 4 | orange < | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-wind.173de5b07e | orte | wetter | luecken | – | grenzen-wind | 5 | gelb < | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-wind.e3b0a93a9b | orte | wetter | luecken | – | grenzen-wind | 6 | obenzu viel | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-wind.11e1c5c579 | orte | wetter | luecken | – | grenzen-wind | 7 | gelb > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-wind.84a3ba935e | orte | wetter | luecken | – | grenzen-wind | 8 | 30 | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-wind.c0c1a8700b | orte | wetter | luecken | – | grenzen-wind | 9 | orange > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-wind.e13a42c7b0 | orte | wetter | luecken | – | grenzen-wind | 10 | rot > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-wind.cfd3d219ff | orte | wetter | luecken | – | grenzen-wind | 11 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-gust.88dfc490a4 | orte | wetter | luecken | – | grenzen-gust | 1 | Fertig | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-gust.0dc303f500 | orte | wetter | luecken | – | grenzen-gust | 2 | obenzu viel | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-gust.268a926a83 | orte | wetter | luecken | – | grenzen-gust | 3 | gelb > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-gust.4dd2562f5a | orte | wetter | luecken | – | grenzen-gust | 4 | 30 | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-gust.72cfcfb347 | orte | wetter | luecken | – | grenzen-gust | 5 | orange > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-gust.207d01cb71 | orte | wetter | luecken | – | grenzen-gust | 6 | rot > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-gust.abb98e9e68 | orte | wetter | luecken | – | grenzen-gust | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-precipitation.9172cf4dd6 | orte | wetter | luecken | – | grenzen-precipitation | 1 | Fertig | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-precipitation.b389816c67 | orte | wetter | luecken | – | grenzen-precipitation | 2 | obenzu viel | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-precipitation.d9df15dec3 | orte | wetter | luecken | – | grenzen-precipitation | 3 | gelb > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-precipitation.9c5c1f8e12 | orte | wetter | luecken | – | grenzen-precipitation | 4 | 1 | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-precipitation.92748ad513 | orte | wetter | luecken | – | grenzen-precipitation | 5 | orange > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-precipitation.f352695023 | orte | wetter | luecken | – | grenzen-precipitation | 6 | rot > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-precipitation.2ccadbd2b0 | orte | wetter | luecken | – | grenzen-precipitation | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-thunder.03c1bbc703 | orte | wetter | luecken | – | grenzen-thunder | 1 | Fertig | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-thunder.ad0399e720 | orte | wetter | luecken | – | grenzen-thunder | 2 | mittel | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-thunder.c937daefaa | orte | wetter | luecken | – | grenzen-thunder | 3 | gelb | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-thunder.fea4cf7393 | orte | wetter | luecken | – | grenzen-thunder | 4 | orange | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-thunder.a9b8a4a31b | orte | wetter | luecken | – | grenzen-thunder | 5 | rot | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-thunder.503f1d907f | orte | wetter | luecken | – | grenzen-thunder | 6 | hoch | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-thunder.014178df0b | orte | wetter | luecken | – | grenzen-thunder | 7 | orange | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-thunder.596022af2e | orte | wetter | luecken | – | grenzen-thunder | 8 | rot | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-thunder.a8e8df0698 | orte | wetter | luecken | – | grenzen-thunder | 9 | „keins“ ist immer grün. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-rain_probability.bf03f53864 | orte | wetter | luecken | – | grenzen-rain_probability | 1 | Fertig | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-rain_probability.a5a9f8a085 | orte | wetter | luecken | – | grenzen-rain_probability | 2 | obenzu viel | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-rain_probability.9fa96ccb34 | orte | wetter | luecken | – | grenzen-rain_probability | 3 | gelb > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-rain_probability.c1ed6ab99d | orte | wetter | luecken | – | grenzen-rain_probability | 4 | 30 | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-rain_probability.891bc7e219 | orte | wetter | luecken | – | grenzen-rain_probability | 5 | orange > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-rain_probability.248d38a8b5 | orte | wetter | luecken | – | grenzen-rain_probability | 6 | rot > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-rain_probability.bfab1e067e | orte | wetter | luecken | – | grenzen-rain_probability | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-cloud_total.78798cb6cd | orte | wetter | luecken | – | grenzen-cloud_total | 1 | Fertig | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-cloud_total.71ce88b60a | orte | wetter | luecken | – | grenzen-cloud_total | 2 | obenzu viel | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-cloud_total.82cfd6ab13 | orte | wetter | luecken | – | grenzen-cloud_total | 3 | gelb > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-cloud_total.83da138637 | orte | wetter | luecken | – | grenzen-cloud_total | 4 | 60 | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-cloud_total.e9e01ccaa2 | orte | wetter | luecken | – | grenzen-cloud_total | 5 | orange > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-cloud_total.aef90891ac | orte | wetter | luecken | – | grenzen-cloud_total | 6 | rot > | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-cloud_total.4a7c5a72c0 | orte | wetter | luecken | – | grenzen-cloud_total | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-sunshine.1a5ba640d0 | orte | wetter | luecken | – | grenzen-sunshine | 1 | Fertig | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-sunshine.1cd3e56e4e | orte | wetter | luecken | – | grenzen-sunshine | 2 | untenzu wenig | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-sunshine.efd26bfc04 | orte | wetter | luecken | – | grenzen-sunshine | 3 | rot < | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-sunshine.097b2db687 | orte | wetter | luecken | – | grenzen-sunshine | 4 | orange < | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-sunshine.9bf6e52157 | orte | wetter | luecken | – | grenzen-sunshine | 5 | 1 | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-sunshine.e5ea1bcdb4 | orte | wetter | luecken | – | grenzen-sunshine | 6 | gelb < | gefunden |  | – |
+| orte.wetter.luecken.-.grenzen-sunshine.2a4ba51362 | orte | wetter | luecken | – | grenzen-sunshine | 7 | Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“. | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.778675147e | orte | wetter | luecken | – | vorlage-auswahl | 1 | Vorlagen | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.33d718a0b1 | orte | wetter | luecken | – | vorlage-auswahl | 2 | Alpen-Trekking | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.b57f75837e | orte | wetter | luecken | – | vorlage-auswahl | 3 | 14 Metriken · Gewitter, Böen, Nullgradgrenze | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.6e33a6a900 | orte | wetter | luecken | – | vorlage-auswahl | 4 | Wandern | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.fdd0abda68 | orte | wetter | luecken | – | vorlage-auswahl | 5 | 10 Metriken · Regen, Sonne, UV | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.89047acf80 | orte | wetter | luecken | – | vorlage-auswahl | 6 | Skitouren | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.c828fa37ef | orte | wetter | luecken | – | vorlage-auswahl | 7 | 13 Metriken · Neuschnee, Schneehöhe, Sicht | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.98351725dd | orte | wetter | luecken | – | vorlage-auswahl | 8 | Wintersport | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.8db33332d2 | orte | wetter | luecken | – | vorlage-auswahl | 9 | 11 Metriken · Schnee, Kälte | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.54127b1601 | orte | wetter | luecken | – | vorlage-auswahl | 10 | Radtour | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.0e1025a5a8 | orte | wetter | luecken | – | vorlage-auswahl | 11 | 12 Metriken · Wind, Regen, gefühlte Temperatur | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.42abd3511d | orte | wetter | luecken | – | vorlage-auswahl | 12 | Wassersport | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.60a9ab706e | orte | wetter | luecken | – | vorlage-auswahl | 13 | 10 Metriken · Wind beidseitig, Gewitter | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.85799db8a4 | orte | wetter | luecken | – | vorlage-auswahl | 14 | Allgemein · aktiv | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.c0c3c1b99b | orte | wetter | luecken | – | vorlage-auswahl | 15 | 8 Metriken · Standard-Ampel | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.e583f21154 | orte | wetter | luecken | – | vorlage-auswahl | 16 | Eigene | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-auswahl.9a9818d548 | orte | wetter | luecken | – | vorlage-auswahl | 17 | Mallorca Frühling | abweichend | Text nicht sichtbar · ist: nicht gefunden | #2967 (Mockup-Beispieldaten: eigene Vorlage „Mallorca Frühling“ des Mockup-Kontos fehlt im Staging-Prüfkonto. Ursache: Text nicht sichtbar) |
+| orte.wetter.luecken.-.vorlage-auswahl.289c2a0748 | orte | wetter | luecken | – | vorlage-auswahl | 18 | eigene · aus GR221 gespeichert | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-bestaetigung.dc3fc81e5e | orte | wetter | luecken | – | vorlage-bestaetigung | 1 | „Alpen-Trekking“ übernehmen? | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-bestaetigung.a37c8ba993 | orte | wetter | luecken | – | vorlage-bestaetigung | 2 | Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen für diese Orte. Zustellung, Etappen und Orte bleiben unverändert. | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-bestaetigung.8e8354bbdb | orte | wetter | luecken | – | vorlage-bestaetigung | 3 | Übernehmen | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-bestaetigung.37841f48a5 | orte | wetter | luecken | – | vorlage-bestaetigung | 4 | Abbrechen | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-speichern.b0960bdfd0 | orte | wetter | luecken | – | vorlage-speichern | 1 | Als eigene Vorlage speichern | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-speichern.7ffea4687c | orte | wetter | luecken | – | vorlage-speichern | 2 | Name | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-speichern.539bcb744b | orte | wetter | luecken | – | vorlage-speichern | 3 | z.B. Mallorca Frühling | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-speichern.7e9d0b3def | orte | wetter | luecken | – | vorlage-speichern | 4 | Beschreibung (optional) | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-speichern.4698ffbdc9 | orte | wetter | luecken | – | vorlage-speichern | 5 | wofür die Vorlage gedacht ist | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-speichern.e212bd0ffb | orte | wetter | luecken | – | vorlage-speichern | 6 | Als Standard für neue Orte | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-speichern.b313eaba85 | orte | wetter | luecken | – | vorlage-speichern | 7 | Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu. | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-speichern.ca0eb51826 | orte | wetter | luecken | – | vorlage-speichern | 8 | Speichern | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-speichern.ce497cd409 | orte | wetter | luecken | – | vorlage-speichern | 9 | Abbrechen | gefunden |  | – |
+| orte.wetter.luecken.-.vorlage-speichern-fehler.a37e1d70ec | orte | wetter | luecken | – | vorlage-speichern-fehler | 1 | Gib der Vorlage einen Namen. | gefunden |  | – |
+| orte.wetter.luecken.-.test-menue.12f6f78fcc | orte | wetter | luecken | – | test-menue | 1 | E-Mail | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.bd1d3554dd | orte | wetter | luecken | – | test-menue | 2 | an 2 Empfänger | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.d3762506c3 | orte | wetter | luecken | – | test-menue | 3 | Telegram | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.2c126c95ee | orte | wetter | luecken | – | test-menue | 4 | gesperrt: Telegram-Chat fehlt. | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.a9fec88efe | orte | wetter | luecken | – | test-menue | 5 | Im Konto verbinden → | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.70bbd60147 | orte | wetter | luecken | – | test-menue | 6 | SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.796f5e5cdc | orte | wetter | luecken | – | test-menue | 7 | gesperrt: Nummer noch nicht bestätigt. | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.344504eb8c | orte | wetter | luecken | – | test-menue | 8 | Im Konto bestätigen → | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.38151c1ea6 | orte | wetter | luecken | – | test-menue | 9 | Premium-SMS | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.726ec744eb | orte | wetter | luecken | – | test-menue | 10 | gesperrt: Schick eine Nachricht vom Gerät, dann ist die Rückadresse wieder gültig. | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.12fa3e96ba | orte | wetter | luecken | – | test-menue | 11 | Im Konto prüfen → | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.ca9d7bed68 | orte | wetter | luecken | – | test-menue | 12 | Alle eingerichteten Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.b5faf152a9 | orte | wetter | luecken | – | test-menue | 13 | Test-Alarm | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.test-menue.68ed67ff23 | orte | wetter | luecken | – | test-menue | 14 | Beispiel-Alarm mit echten Werten an alle Alarm-Kanäle | nicht_pruefbar | Script-Zustand „test-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kebab-menue.dd68bfe160 | orte | wetter | luecken | – | kebab-menue | 1 | Aktivieren | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kebab-menue.d051bb01df | orte | wetter | luecken | – | kebab-menue | 2 | Archivieren … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kebab-menue.e801dad0f1 | orte | wetter | luecken | – | kebab-menue | 3 | Löschen … | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kebab-menue.f708cd0f75 | orte | wetter | luecken | – | kebab-menue | 4 | Pausieren, Archivieren, Löschen | nicht_pruefbar | Script-Zustand „kebab-menue“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kebab-bestaetigung-archivieren.8c1213abf7 | orte | wetter | luecken | – | kebab-bestaetigung-archivieren | 1 | Archivieren? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kebab-bestaetigung-archivieren.243b0b515c | orte | wetter | luecken | – | kebab-bestaetigung-archivieren | 2 | „Münsterland“ verschwindet aus der Liste. Es kommen keine Briefings und Alarme mehr. Du kannst es im Archiv reaktivieren. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kebab-bestaetigung-archivieren.a41a9dc95a | orte | wetter | luecken | – | kebab-bestaetigung-archivieren | 3 | Archivieren | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kebab-bestaetigung-archivieren.0789fe0af4 | orte | wetter | luecken | – | kebab-bestaetigung-archivieren | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-archivieren“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kebab-bestaetigung-loeschen.24e1a031d5 | orte | wetter | luecken | – | kebab-bestaetigung-loeschen | 1 | Löschen? | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kebab-bestaetigung-loeschen.d312fe3efd | orte | wetter | luecken | – | kebab-bestaetigung-loeschen | 2 | „Münsterland“ wird endgültig gelöscht. Briefings und Alarme hören sofort auf. Das lässt sich nicht rückgängig machen. | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kebab-bestaetigung-loeschen.1b82a93397 | orte | wetter | luecken | – | kebab-bestaetigung-loeschen | 3 | Endgültig löschen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+| orte.wetter.luecken.-.kebab-bestaetigung-loeschen.1ca5f108a6 | orte | wetter | luecken | – | kebab-bestaetigung-loeschen | 4 | Abbrechen | nicht_pruefbar | Script-Zustand „kebab-bestaetigung-loeschen“: kein Bedienplan im Abgleich hinterlegt | #2797 (Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar) |
+
+## Zusätzlich (live sichtbar, ohne Eintrag)
+
+| id | Kontext | Reiter | Text | Besitzer |
+|---|---|---|---|---|
+| zus:trip/wetter/d82b7e45c15b | trip | wetter | Trips | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Elternteil-Link der Brotkrumen, im Mockup Teil des Textknotens „Trips /“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:trip/wetter/42099b4af021 | trip | wetter | / | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Trenner der Brotkrumen, im Mockup Teil des Textknotens „Trips /“ bzw. „Orte /“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:trip/wetter/79b7de792fd6 | trip | wetter | Mallorca | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Region des Prüf-Trips, inline bearbeitbar unter dem Titel (feat_1273_s2); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:trip/wetter/d1b56e430147 | trip | wetter | Trekking | #2796 (Profil-Zeile (Profil-Optionen) entfällt erst, wenn die Vorlage das Profil ersetzt: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108), aus c2 umgehängt; Spec docs/specs/modules/feat_2913_c2_seitenkopf.md) |
+| zus:trip/wetter/a4c4c20aa532 | trip | wetter | Skitour | #2796 (Profil-Zeile (Profil-Optionen) entfällt erst, wenn die Vorlage das Profil ersetzt: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108), aus c2 umgehängt; Spec docs/specs/modules/feat_2913_c2_seitenkopf.md) |
+| zus:trip/wetter/9c3fc620be1f | trip | wetter | Hochtour | #2796 (Profil-Zeile (Profil-Optionen) entfällt erst, wenn die Vorlage das Profil ersetzt: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108), aus c2 umgehängt; Spec docs/specs/modules/feat_2913_c2_seitenkopf.md) |
+| zus:trip/wetter/5039d9b5982e | trip | wetter | Klettersteig | #2796 (Profil-Zeile (Profil-Optionen) entfällt erst, wenn die Vorlage das Profil ersetzt: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108), aus c2 umgehängt; Spec docs/specs/modules/feat_2913_c2_seitenkopf.md) |
+| zus:trip/wetter/6c3fb8fa770e | trip | wetter | MTB | #2796 (Profil-Zeile (Profil-Optionen) entfällt erst, wenn die Vorlage das Profil ersetzt: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108), aus c2 umgehängt; Spec docs/specs/modules/feat_2913_c2_seitenkopf.md) |
+| zus:trip/wetter/ebb440144dd9 | trip | wetter | Fahrrad (15 km/h) | #2796 (Profil-Zeile (Profil-Optionen) entfällt erst, wenn die Vorlage das Profil ersetzt: Scheibe S4, Datenmodell+Migration (#2796, ADR-0108), aus c2 umgehängt; Spec docs/specs/modules/feat_2913_c2_seitenkopf.md) |
+| zus:trip/wetter/6a1781ba3dce | trip | wetter | Gespeichert | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Speicher-Anzeige des Hub-Kopfs (#2284 S2) nach dem Anlegen des Prüf-Datensatzes; im Mockup ein kurzzeitiger Hinweis ohne festen Text; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:trip/wetter/13cadede9fef | trip | wetter | ▾ | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Auswahlpfeil der Vorlage-Karte, im Mockup Teil des Textknotens „▾ unverändert“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:trip/wetter/55e516ef6d97 | trip | wetter | 1 Abweichung | – |
+| zus:trip/wetter/ef1d4bb6bfef | trip | wetter | Auf "Alpen-Trekking" zurücksetzen | #2967 (Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt) |
+| zus:trip/wetter/6a4e6e729f96 | trip | wetter | − | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Knopftext „−“ der Metrik-Zeile; im Mockup derselbe Knopf (mockup-hub-fassung4.html Z. 469), die Elementliste führt nur seine Beschriftung für Screenreader; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:trip/wetter/69f28afb6e28 | trip | wetter | grün: 2 bis 27 °C | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:trip/wetter/003c0d4cf611 | trip | wetter | grün: ab 0 °C | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:trip/wetter/0bc1e6998989 | trip | wetter | Tages-Tiefsttemperatur (Gehzeit) | #2967 (Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt) |
+| zus:trip/wetter/5baa433df2d4 | trip | wetter | °C · nur Anzeige, keine Ampel | #2967 (Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt) |
+| zus:trip/wetter/d8938dcc77a2 | trip | wetter | keine Ampel, nur Anzeige | #2967 (Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt) |
+| zus:trip/wetter/cf0aed4b5893 | trip | wetter | Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten je Liste ein. | #2967 (Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt) |
+| zus:trip/wetter/92d65eb55d64 | trip | wetter | Tages-Höchsttemperatur (Gehzeit) | #2967 (Mockup-Beispieldaten: Metrik-Zeile bzw. Zähler der Kontovorlage im Staging-Prüfkonto, die das Mockup-Beispiel (GR221 / Alpen-Trekking) nicht zeigt) |
+| zus:trip/wetter/f457394fe268 | trip | wetter | grün: ab -2 °C | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:trip/wetter/f9a9e721a201 | trip | wetter | Gefühlte Tiefsttemperatur Nacht | – |
+| zus:trip/wetter/b7a06860cdb0 | trip | wetter | Gefühlte Tages-Tiefsttemperatur (Gehzeit) | – |
+| zus:trip/wetter/9e6bde1a9872 | trip | wetter | Gefühlte Tages-Höchsttemperatur (Gehzeit) | – |
+| zus:trip/wetter/8cc9424cb3ce | trip | wetter | grün: bis 30 km/h | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:trip/wetter/a1b90d1b7ddb | trip | wetter | grün: bis 1 mm | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:trip/wetter/2981702998ff | trip | wetter | grün: bis 30 % | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:trip/wetter/db35b8a59539 | trip | wetter | grün: ab 1000 m | – |
+| zus:trip/wetter/382942f313e8 | trip | wetter | grün: bis 6 | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:trip/wetter/49da50a519dc | trip | wetter | D14/18 N14 | – |
+| zus:trip/wetter/46735ca2aeb3 | trip | wetter | 12/25 | – |
+| zus:trip/wetter/72fa5855fe92 | trip | wetter | keine eigene Spalte | – |
+| zus:trip/wetter/1a5179122082 | trip | wetter | kein Tageswert | – |
+| zus:trip/wetter/f10f7d14c735 | trip | wetter | 61 km/h | – |
+| zus:trip/wetter/72a72cd70526 | trip | wetter | 70 % | – |
+| zus:trip/wetter/a02e685f69ca | trip | wetter | R 0.0-1.0@15 | – |
+| zus:trip/wetter/caac3ae42c6f | trip | wetter | R1.0@15 | – |
+| zus:trip/wetter/9a5fd3921c1f | trip | wetter | 3.4 mm | – |
+| zus:trip/wetter/b4c3d324a6bb | trip | wetter | FN12 | – |
+| zus:trip/wetter/5c8d5febad74 | trip | wetter | FD12/16 | – |
+| zus:trip/wetter/960e53b53281 | trip | wetter | TH mittel | – |
+| zus:trip/wetter/65a7fa0b4837 | trip | wetter | TH:L@14(M@15) TH+:- | – |
+| zus:trip/wetter/238894d543d9 | trip | wetter | 10200 m | – |
+| zus:trip/wetter/7a5bfb98d515 | trip | wetter | FZ 3300 | – |
+| zus:trip/wetter/bee1024924f9 | trip | wetter | UV 0.0-7.0@13 | – |
+| zus:trip/wetter/4830178f4cb4 | trip | wetter | UV6@12(7@13) | – |
+| zus:trip/wetter/309412064299 | trip | wetter | SL 2900 | – |
+| zus:trip/wetter/aeadf9070d57 | trip | wetter | 🌤️ | – |
+| zus:trip/wetter/da5c5c92c67d | trip | wetter | CL 🌤️-⛅@15 | – |
+| zus:trip/wetter/10ba84d9b56b | trip | wetter | CL:SCT@15 | – |
+| zus:trip/wetter/06bf2b9d7767 | trip | wetter | SMS-Beispiel: · | – |
+| zus:trip/wetter/8c2e35afc66e | trip | wetter | Port d'And D14/18 W30@10(41@15) G35@7(59@15) PR70%@13 R1.0@15 TF- FN12 FD12/16 TH:L@14(M@15) TH+:- VS- FZ3300@4 UV6@12(7@13) SL2900 CL:SCT@15 N14 | – |
+| zus:trip/wetter/1f883f4cef6b | trip | wetter | 145 von 160 Zeichen | – |
+| zus:trip/wetter/fd4cd2242585 | trip | wetter | Kürzel erklärt | – |
+| zus:trip/wetter/d160e0986aca | trip | wetter | L | – |
+| zus:trip/wetter/88663f0b6e52 | trip | wetter | Tagestiefstwert | – |
+| zus:trip/wetter/50c9e8d5fc98 | trip | wetter | D | – |
+| zus:trip/wetter/34dc45218f48 | trip | wetter | Tageshöchstwert | – |
+| zus:trip/wetter/e2415cb7f63d | trip | wetter | W | – |
+| zus:trip/wetter/6b30bf6334a4 | trip | wetter | Wind km/h | – |
+| zus:trip/wetter/a36a6718f545 | trip | wetter | G | – |
+| zus:trip/wetter/55af20415ead | trip | wetter | PR | – |
+| zus:trip/wetter/afa0709c3759 | trip | wetter | Regenwahrscheinlichkeit % | – |
+| zus:trip/wetter/06576556d1ad | trip | wetter | R | – |
+| zus:trip/wetter/38fcb1dbc26d | trip | wetter | Regen mm | – |
+| zus:trip/wetter/f136a6c6e6aa | trip | wetter | TF | – |
+| zus:trip/wetter/5178ab54457a | trip | wetter | gefühlt | – |
+| zus:trip/wetter/63a5f58a3b19 | trip | wetter | FN | – |
+| zus:trip/wetter/51626fabd2e8 | trip | wetter | N gefühlt | – |
+| zus:trip/wetter/287762483392 | trip | wetter | FL | – |
+| zus:trip/wetter/57cfaafb99c3 | trip | wetter | L gefühlt | – |
+| zus:trip/wetter/280c80844f01 | trip | wetter | FD | – |
+| zus:trip/wetter/366e90c14b80 | trip | wetter | D gefühlt | – |
+| zus:trip/wetter/a482167f2a1c | trip | wetter | TH | – |
+| zus:trip/wetter/591fb237eb89 | trip | wetter | TH+ | – |
+| zus:trip/wetter/59bf83ca7835 | trip | wetter | Gewitter Folge-Etappe | – |
+| zus:trip/wetter/b8a1e1dc56df | trip | wetter | VS | – |
+| zus:trip/wetter/696b3e46c7d5 | trip | wetter | Sicht | – |
+| zus:trip/wetter/6ed3a2182678 | trip | wetter | FZ | – |
+| zus:trip/wetter/d334a5083b29 | trip | wetter | Nullgradgrenze m | – |
+| zus:trip/wetter/edd7d8b48471 | trip | wetter | UV | – |
+| zus:trip/wetter/89677cad3796 | trip | wetter | SL | – |
+| zus:trip/wetter/6addc7d9ccb0 | trip | wetter | Schneefallgrenze m | – |
+| zus:trip/wetter/466aee172dcb | trip | wetter | CL | – |
+| zus:trip/wetter/76f160c4a8a2 | trip | wetter | Bewölkung tief | – |
+| zus:trip/wetter/b51a60734da6 | trip | wetter | N | – |
+| zus:trip/wetter/b9d7615009b0 | trip | wetter | Nacht | – |
+| zus:trip/wetter/e18f5b24b18d | trip | wetter | @14 | – |
+| zus:trip/wetter/afb94f996e02 | trip | wetter | ab 14 Uhr gelb oder schlechter | – |
+| zus:trip/wetter/af7023a700ec | trip | wetter | !TS:H@14 | – |
+| zus:trip/wetter/44296a69b159 | trip | wetter | amtliche Warnung: Gewitter, Stufe hoch, ab 14 Uhr | – |
+| zus:trip/wetter/5e2ea8166ba9 | trip | wetter | Stufe gelb | – |
+| zus:trip/wetter/c63ae6dd4fc9 | trip | wetter | M | – |
+| zus:trip/wetter/20d94c5e35eb | trip | wetter | Stufe orange | – |
+| zus:trip/wetter/7cf184f4c67a | trip | wetter | H | – |
+| zus:trip/wetter/da76b9ae9458 | trip | wetter | Stufe rot | – |
+| zus:trip/wetter/d9fc9e7f4a5d | trip | wetter | WG | – |
+| zus:trip/wetter/0a166bcf6d11 | trip | wetter | Warnung Wind | – |
+| zus:trip/wetter/fdd2b6874d7f | trip | wetter | RA | – |
+| zus:trip/wetter/ef86e097bced | trip | wetter | Warnung Starkregen | – |
+| zus:trip/wetter/f885ce9d93d7 | trip | wetter | AV4 | – |
+| zus:trip/wetter/fae1c4e1ddb6 | trip | wetter | Lawinenstufe | – |
+| zus:trip/wetter/669877b41e3f | trip | wetter | X? | – |
+| zus:trip/wetter/5dbf6fd11191 | trip | wetter | Warnquelle nicht erreichbar | – |
+| zus:trip/wetter/f7ea2d2697ce | trip | wetter | :00 | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:orte/wetter/42099b4af021 | orte | wetter | / | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Trenner der Brotkrumen, im Mockup Teil des Textknotens „Trips /“ bzw. „Orte /“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:orte/wetter/ee3b02fecb65 | orte | wetter | Orte · Westfalen | – |
+| zus:orte/wetter/16a766caf92d | orte | wetter | Aktiv | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Status-Pill des Prüf-Datensatzes (aktiv); Mockup zeigt „fertig“ bzw. „Entwurf“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:orte/wetter/6dfd6ce0f3a0 | orte | wetter | 3 Orte · Vergleichstabelle · Morgen-Briefing 07:00 | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Meta-Zeile des Prüf-Vergleichs (Anzahl Orte, Briefing-Zeit); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:orte/wetter/8c8219433e21 | orte | wetter | Westfalen | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Region des Prüf-Vergleichs, inline bearbeitbar unter dem Titel (feat_1273_s2); Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:orte/wetter/6a1781ba3dce | orte | wetter | Gespeichert | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Speicher-Anzeige des Hub-Kopfs (#2284 S2) nach dem Anlegen des Prüf-Datensatzes; im Mockup ein kurzzeitiger Hinweis ohne festen Text; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:orte/wetter/13cadede9fef | orte | wetter | ▾ | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Auswahlpfeil der Vorlage-Karte, im Mockup Teil des Textknotens „▾ unverändert“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:orte/wetter/672d90e7e6bb | orte | wetter | unverändert | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Stand der Vorlage-Karte, im Mockup Teil des Textknotens „▾ unverändert“; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:orte/wetter/6a4e6e729f96 | orte | wetter | − | #2913 (Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: Knopftext „−“ der Metrik-Zeile; im Mockup derselbe Knopf (mockup-hub-fassung4.html Z. 469), die Elementliste führt nur seine Beschriftung für Screenreader; Kopf-Inhalt belegt durch e2e/hub-kopf-c2-mockup.staging.spec.ts) |
+| zus:orte/wetter/69f28afb6e28 | orte | wetter | grün: 0 bis 28 °C | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:orte/wetter/8cc9424cb3ce | orte | wetter | grün: bis 30 km/h | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:orte/wetter/a1b90d1b7ddb | orte | wetter | grün: bis 1 mm | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:orte/wetter/2981702998ff | orte | wetter | grün: bis 30 % | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:orte/wetter/0fedb827cf02 | orte | wetter | Kein Alarm. Die Farbe erscheint nur im Briefing. | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:orte/wetter/f77cd460b659 | orte | wetter | grün: ab 3 h | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |
+| zus:orte/wetter/128a031ac818 | orte | wetter | 19°C | – |
+| zus:orte/wetter/b0fd704d3141 | orte | wetter | Temp max 19°C | – |
+| zus:orte/wetter/025012a4a966 | orte | wetter | D19 | – |
+| zus:orte/wetter/9fd7073fb547 | orte | wetter | 15° | – |
+| zus:orte/wetter/46735ca2aeb3 | orte | wetter | 10/24 | – |
+| zus:orte/wetter/b9d41654ea71 | orte | wetter | W30@10(43@16) | – |
+| zus:orte/wetter/77bf7f9c928b | orte | wetter | G41@9(62@16) | – |
+| zus:orte/wetter/ba205d204c54 | orte | wetter | R1.0@15(1.3@16) | – |
+| zus:orte/wetter/1fdf0d90c37a | orte | wetter | · | – |
+| zus:orte/wetter/5b25d800071d | orte | wetter | Gewitter mittel | – |
+| zus:orte/wetter/0e467cbe4304 | orte | wetter | – | – |
+| zus:orte/wetter/aacace738272 | orte | wetter | leicht @14 (mittel @15) | – |
+| zus:orte/wetter/72a72cd70526 | orte | wetter | 70 % | – |
+| zus:orte/wetter/06bf2b9d7767 | orte | wetter | SMS-Beispiel: · | – |
+| zus:orte/wetter/51c1dd14e9c9 | orte | wetter | O1 D19 W30@10(43@16) G41@9(62@16) R1.0@15(1.3@16) O2 D20 W31@10(44@16) G42@9(63@16) R1.0@15(1.3@16) O3 D21 W32@10(45@16) G43@9(64@16) R1.0@15(1.3@16) | – |
+| zus:orte/wetter/1f883f4cef6b | orte | wetter | 149 von 160 Zeichen | – |
+| zus:orte/wetter/5e1d597f02fc | orte | wetter | Bei 3 Orten passen die letzten 4 Metriken nicht mehr in die SMS. Zieh nach oben, was dir in der SMS wichtig ist. | – |
+| zus:orte/wetter/fd4cd2242585 | orte | wetter | Kürzel erklärt | – |
+| zus:orte/wetter/50c9e8d5fc98 | orte | wetter | D | – |
+| zus:orte/wetter/34dc45218f48 | orte | wetter | Tageshöchstwert | – |
+| zus:orte/wetter/e2415cb7f63d | orte | wetter | W | – |
+| zus:orte/wetter/6b30bf6334a4 | orte | wetter | Wind km/h | – |
+| zus:orte/wetter/a36a6718f545 | orte | wetter | G | – |
+| zus:orte/wetter/06576556d1ad | orte | wetter | R | – |
+| zus:orte/wetter/38fcb1dbc26d | orte | wetter | Regen mm | – |
+| zus:orte/wetter/a482167f2a1c | orte | wetter | TH | – |
+| zus:orte/wetter/55af20415ead | orte | wetter | PR | – |
+| zus:orte/wetter/afa0709c3759 | orte | wetter | Regenwahrscheinlichkeit % | – |
+| zus:orte/wetter/adca1294358f | orte | wetter | CT | – |
+| zus:orte/wetter/03cc6468ec09 | orte | wetter | Bewölkung gesamt | – |
+| zus:orte/wetter/9fcb8e351fa8 | orte | wetter | SU | – |
+| zus:orte/wetter/e18f5b24b18d | orte | wetter | @14 | – |
+| zus:orte/wetter/afb94f996e02 | orte | wetter | ab 14 Uhr gelb oder schlechter | – |
+| zus:orte/wetter/af7023a700ec | orte | wetter | !TS:H@14 | – |
+| zus:orte/wetter/44296a69b159 | orte | wetter | amtliche Warnung: Gewitter, Stufe hoch, ab 14 Uhr | – |
+| zus:orte/wetter/d160e0986aca | orte | wetter | L | – |
+| zus:orte/wetter/5e2ea8166ba9 | orte | wetter | Stufe gelb | – |
+| zus:orte/wetter/c63ae6dd4fc9 | orte | wetter | M | – |
+| zus:orte/wetter/20d94c5e35eb | orte | wetter | Stufe orange | – |
+| zus:orte/wetter/7cf184f4c67a | orte | wetter | H | – |
+| zus:orte/wetter/da76b9ae9458 | orte | wetter | Stufe rot | – |
+| zus:orte/wetter/d9fc9e7f4a5d | orte | wetter | WG | – |
+| zus:orte/wetter/0a166bcf6d11 | orte | wetter | Warnung Wind | – |
+| zus:orte/wetter/fdd2b6874d7f | orte | wetter | RA | – |
+| zus:orte/wetter/ef86e097bced | orte | wetter | Warnung Starkregen | – |
+| zus:orte/wetter/f885ce9d93d7 | orte | wetter | AV4 | – |
+| zus:orte/wetter/fae1c4e1ddb6 | orte | wetter | Lawinenstufe | – |
+| zus:orte/wetter/669877b41e3f | orte | wetter | X? | – |
+| zus:orte/wetter/5dbf6fd11191 | orte | wetter | Warnquelle nicht erreichbar | – |
+| zus:orte/wetter/e4f1cde1e642 | orte | wetter | O1 | – |
+| zus:orte/wetter/43af46277188 | orte | wetter | Ort 1 in der Reihenfolge des Abos | – |
+| zus:orte/wetter/f7ea2d2697ce | orte | wetter | :00 | #2967 (Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking) |

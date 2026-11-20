@@ -112,7 +112,7 @@ Der Staging-Abgleich misst die Wetter-Dialoge (Grenzen ändern, Vorlage wählen,
 - **AC-5:** Given die #3111-Texte tragen noch kein Englisch in der Elementliste / When die Elementliste neu erzeugt wird / Then enthalten sie `text_en`, der Pin `ALT_SHA` ist mit Begründung nachgezogen, und Anzahl 2646 sowie Mockup-Hash sind unverändert.
   - Test: `elementliste_uebersicht_2969.test.ts` grün mit neuem Pin und dokumentierter Begründung.
 
-- **AC-6:** Given der Staging-Abgleich ist in Deutsch und Englisch gelaufen / When die Besitzerliste ausgewertet wird / Then sind alle als gefunden belegten `#3111`-Einträge entfernt, jeder verbleibende Eintrag ist begründet umgehängt (#3151 Beispielzahlen der Vorlagen-Unterzeilen, #3189 Herkunftszeile, #3190 Speichern-Dialog), kein Eintrag bleibt an #3111, der Zählwächter stimmt, und der EN-Zuordnungstest ist grün.
+- **AC-6:** Given der Staging-Abgleich ist in Deutsch und Englisch gelaufen / When die Besitzerliste ausgewertet wird / Then sind alle als gefunden belegten `#3111`-Einträge entfernt, jeder verbleibende Eintrag ist begründet umgehängt (#3151 Mockup-Beispieldaten, #3189 Herkunftszeile, #3190 Speichern-Dialog, #3194 EN-Sollwert zusammengesetzter Dialogtexte nicht automatisch zuordenbar), kein Eintrag bleibt an #3111, der Zählwächter stimmt, und der EN-Zuordnungstest ist grün.
   - Test: `tests/test_2913_c2_besitzerliste.py` und `elementliste_en_zuordnung_2968` grün; Abgleichsbericht DE/EN ohne offene `#3111`-Treffer.
 
 - **AC-7:** Given der Abgleich bedient die Wetter-Dialoge auf den neuen Datensätzen / When während der Bedienung eine Schreibanfrage ausgelöst wird / Then gilt das weiterhin als Fehlschlag des Abgleichs (lesend, #2966 AC-7); das Anlegen und Aufräumen der Prüf-Datensätze liegt außerhalb der Bedienung.
@@ -131,3 +131,4 @@ Der Staging-Abgleich misst die Wetter-Dialoge (Grenzen ändern, Vorlage wählen,
 ## Changelog
 
 - 2026-11-20: Initial spec created
+- 2026-11-20: AC-6 Umhängeziel #3194 ergänzt (EN-Sollwerte zusammengesetzter Dialogtexte nicht automatisch zuordenbar; Kind-Issue von #2913)
