@@ -39,5 +39,16 @@
      "ampel": {"metrics": {"gust": {"modus": "aus"}}}},
     {"name": "sektoren_an_anderer_metrik_abgelehnt", "kontext": "vergleich", "grund": "nur_windrichtung",
      "ampel": {"metrics": {"wind": {"sektoren": []}}}}
+  ],
+  "_abweichung": "Adversary F001: Sektoren-Vergleich je Zeile isoliert (gleicher modus, nur sektoren verschieden). Keine Vorlage traegt modus=sektoren, daher Vorlagen-Zeile hier direkt. Gelesen von pytest (app.ampel._richtung_weicht_ab) und node --test (zaehleAbweichungenGegen).",
+  "abweichung": [
+    {"name": "andere_sektoren_weicht_ab", "vorlage": {"modus": "sektoren", "sektoren": ["N", "NO"]},
+     "abo": {"modus": "sektoren", "sektoren": ["N", "O"]}, "abweicht": true},
+    {"name": "mehr_sektoren_weicht_ab", "vorlage": {"modus": "sektoren", "sektoren": ["N", "NO"]},
+     "abo": {"modus": "sektoren", "sektoren": ["N", "NO", "NW"]}, "abweicht": true},
+    {"name": "gleiche_sektoren_andere_reihenfolge_zurueck", "vorlage": {"modus": "sektoren", "sektoren": ["N", "NO"]},
+     "abo": {"modus": "sektoren", "sektoren": ["NO", "N"]}, "abweicht": false},
+    {"name": "leere_sektoren_gleich_fehlenden_zurueck", "vorlage": {},
+     "abo": {"modus": "aus", "sektoren": []}, "abweicht": false}
   ]
 }

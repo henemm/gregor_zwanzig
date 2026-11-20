@@ -274,6 +274,19 @@ def test_abweichungszahl_modus_und_sektoren():
     assert deviation_count(sektoren) == 1
 
 
+ABWEICHUNG = json.loads((_HERE.parent / "fixtures" / "ampel_windrichtung_cases.json")
+                        .read_text(encoding="utf-8"))["abweichung"]
+
+
+@pytest.mark.parametrize("fall", ABWEICHUNG, ids=[f["name"] for f in ABWEICHUNG])
+def test_sektoren_vergleich_als_menge_bei_gleichem_modus(fall):
+    """Adversary F001: der Sektoren-Zweig allein (modus gleich) entscheidet.
+    Keine Vorlage traegt modus=sektoren, daher Zeilenvergleich direkt; derselbe
+    Fall laeuft im Frontend ueber ``zaehleAbweichungenGegen``."""
+    from app.ampel import _richtung_weicht_ab
+    assert _richtung_weicht_ab(fall["abo"], fall["vorlage"]) is fall["abweicht"]
+
+
 # --- Speichern: Read-Modify-Write, Bestand bleibt ----------------------------
 
 def test_python_speichern_behaelt_modus_sektoren_und_alle_anderen_felder(tmp_path):

@@ -170,6 +170,18 @@ describe('AC-17: Reihenfolge-Regeln der Grenzen (Fehlerschluessel statt Text)', 
 			assert.equal(f.length === 0, fall.grund === null, `Fall ${fall.name}: Frontend ${JSON.stringify(f)}, erwartet Grund ${fall.grund}`);
 		}
 	});
+
+	// Adversary F001: Sektoren-Vergleich bei gleichem modus (Menge, Reihenfolge egal), gleiche Faelle wie pytest.
+	test('windrichtung_sektoren_abweichung_regelgleich_mit_python', async () => {
+		const { m } = await umgebung();
+		const faelle = fixture('ampel_windrichtung_cases.json').abweichung as Json[];
+		assert.ok(faelle.length >= 3, `zu wenige Faelle: ${faelle.length}`);
+		for (const fall of faelle) {
+			const vorlage = { metrics: { wind_direction: structuredClone(fall.vorlage) }, thunder: {} };
+			const n = m.zaehleAbweichungenGegen(vorlage, { metrics: { wind_direction: structuredClone(fall.abo) } });
+			assert.equal(n, fall.abweicht ? 1 : 0, `Fall ${fall.name}: Frontend zaehlt ${n}`);
+		}
+	});
 });
 
 // ── AC-18: Gewitter-Regeln ───────────────────────────────────────────────────
