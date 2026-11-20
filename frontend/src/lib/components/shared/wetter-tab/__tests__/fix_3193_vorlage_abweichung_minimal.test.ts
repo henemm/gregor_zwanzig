@@ -55,6 +55,8 @@ type Reiter = {
 	uebernehmen: (id: string) => void;
 	zuruecksetzen: () => void;
 	geplant: () => number;
+	/** Ampel, die die Komponente als `aboAmpel` an die VorlageKarte gibt (Dialog „Als eigene Vorlage speichern“). */
+	aboAmpel: () => Ampel;
 };
 
 /** Reiter laden (Instanz-Pruefstand). `geplant()` zaehlt, wie oft der Speicherer einen Schreibvorgang plant. */
@@ -126,7 +128,12 @@ async function reiter(context: Kontext, abo: Record<string, unknown>): Promise<R
 			frisch();
 			(werte(attr('onZuruecksetzen'), u) as () => void)();
 		},
-		geplant: () => geplant
+		geplant: () => geplant,
+		aboAmpel: () => {
+			frisch();
+			u.aboAmpel = werte(herleitung('aboAmpel'), u);
+			return werte(attributAusdruck(karte, quelle, 'aboAmpel')!, u) as Ampel;
+		}
 	};
 }
 
@@ -252,6 +259,31 @@ for (const context of ['route', 'vergleich'] as const) {
 		});
 	});
 }
+
+// Fix-Loop 1 (Adversary F001): „Als eigene Vorlage speichern“ bekommt `aboAmpel` — dieselbe Basis wie
+// Zaehler und Speicherweg. Gemessen an der Prop der VorlageKarte: die eingeschalteten Metriken der
+// Ampel sind genau die Auswahl nach „Übernehmen“ (Trip: abgeleitete Kinder an; Vergleich: das nicht
+// ausgebbare temperature_night neutral, d. h. aus, weil E6 es aus der Auswahl nimmt).
+describe('Test 7: eigene Vorlage (aboAmpel) misst gegen die Vorlage im Kontext', () => {
+	test('trip_uebernehmen_wandern_aboampel_mit_abgeleiteten_kindern', async () => {
+		const r = await reiter('route', aboNachVorlage('route', 'alpen-trekking'));
+		r.uebernehmen('wandern');
+		const a = r.aboAmpel();
+		assert.equal(a.template, 'wandern');
+		assert.equal(a.metrics?.temperature_day_low?.enabled, true, 'abgeleitetes Kind fehlt in der eigenen Vorlage');
+		assert.equal(a.metrics?.temperature_day_high?.enabled, true, 'abgeleitetes Kind fehlt in der eigenen Vorlage');
+		assert.deepEqual(aktiveMetriken(a).sort(), [...r.u.stand.auswahl].sort());
+	});
+	test('vergleich_uebernehmen_wandern_aboampel_temperature_night_neutral', async () => {
+		const r = await reiter('vergleich', aboNachVorlage('vergleich', 'alpen-trekking'));
+		r.uebernehmen('wandern');
+		assert.ok(!r.u.stand.auswahl.includes('temperature_night'), 'Messaufbau: E6 filtert temperature_night nicht');
+		const a = r.aboAmpel();
+		assert.equal(a.template, 'wandern');
+		assert.equal(a.metrics?.temperature_night?.enabled, false, 'nicht ausgebbare Größe in der eigenen Vorlage eingeschaltet');
+		assert.deepEqual(aktiveMetriken(a).sort(), [...r.u.stand.auswahl].sort());
+	});
+});
 
 describe('Test 6: Vergleichs-Katalog unbekannt — Basis bleibt die Rohvorlage', () => {
 	test('vergleich_ohne_katalog_kein_absturz', () => {

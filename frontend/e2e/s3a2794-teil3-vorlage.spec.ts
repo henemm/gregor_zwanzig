@@ -11,12 +11,32 @@
 //
 //   cd frontend && npx playwright test --config playwright.2794-s3a3.staging.config.ts s3a2794-teil3-vorlage
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type APIRequestContext } from '@playwright/test';
 import { HUB_KINDS, type HubKind } from './helpers';
 import {
-	DESKTOP, WT, abweichungen, aktiveDerVorlage, auswahlImStand, fremdeFelder, istWetterSchreiben,
+	DESKTOP, WT, abgeleiteteKinder, abweichungen, aktiveDerVorlage, auswahlImStand, fremdeFelder, istWetterSchreiben,
 	oeffneWetter, seedWetter, stand, vorlagen, warteAufSpeichern, type Json
 } from './s3a2794-teil3.helpers';
+
+/** Was der Vergleich ausgeben kann: `metric_id`s aus `/api/compare/metrics` (Trip: alles). */
+const AUSGEBBAR: Record<HubKind, (request: APIRequestContext) => Promise<(id: string) => boolean>> = {
+	route: async () => () => true,
+	vergleich: async (request) => {
+		const r = await request.get('/api/compare/metrics');
+		expect(r.ok(), `GET /api/compare/metrics HTTP ${r.status()}`).toBeTruthy();
+		const ids = new Set(((await r.json()) as { metrics: { metric_id?: string }[] }).metrics.map((m) => m.metric_id));
+		return (id) => ids.has(id);
+	}
+};
+
+/** Auswahl nach „Übernehmen“/„Zurücksetzen“ (#3193 AC-7, angeglichen an #3047 E6/E7): Trip mit den
+ *  abgeleiteten Kindern, die p5c ausdruecklich in `metrics[]` schreibt; Vergleich nur ausgebbare Groessen
+ *  (`temperature_night` fehlt dort gewollt). Die Abweichung `ampel.metrics` bleibt davon unberuehrt leer. */
+async function auswahlNachVorlage(request: APIRequestContext, kind: HubKind, v: Json): Promise<string[]> {
+	const aktiv = aktiveDerVorlage(v);
+	const ausgebbar = await AUSGEBBAR[kind](request);
+	return [...new Set([...aktiv, ...abgeleiteteKinder(kind, aktiv)])].filter(ausgebbar).sort();
+}
 
 /** 3 Abweichungen von Alpen-Trekking: zwei Alarmstufen, eine Gewitterfarbe. */
 const DREI = { metrics: { gust: { alarm_ab: 'red' }, uv_index: { alarm_ab: 'red' } }, thunder: { mittel: 'red' } };
@@ -100,7 +120,7 @@ for (const kind of HUB_KINDS) {
 			expect(nachher.display_config.ampel.template).toBe('wandern');
 			expect(nachher.display_config.ampel.metrics ?? {}, 'alte Abweichungen ueberleben').toEqual({});
 			expect(nachher.display_config.ampel.thunder ?? {}).toEqual({});
-			expect(auswahlImStand(kind, nachher)).toEqual([...aktiveDerVorlage(v.wandern)].sort());
+			expect(auswahlImStand(kind, nachher)).toEqual(await auswahlNachVorlage(page.request, kind, v.wandern));
 			expect(fremdeFelder(kind, nachher), 'AC-11: Zustellung/Etappen/Orte veraendert').toEqual(fremdeFelder(kind, vorher));
 		} finally {
 			await hub.aufraeumen();
@@ -148,7 +168,7 @@ for (const kind of HUB_KINDS) {
 			const s = await stand(page.request, kind, hub.id);
 			expect(s.display_config.ampel.template).toBe('alpen-trekking');
 			expect(s.display_config.ampel.metrics ?? {}).toEqual({});
-			expect(auswahlImStand(kind, s)).toEqual([...aktiveDerVorlage(v['alpen-trekking'])].sort());
+			expect(auswahlImStand(kind, s)).toEqual(await auswahlNachVorlage(page.request, kind, v['alpen-trekking']));
 		} finally {
 			await hub.aufraeumen();
 		}

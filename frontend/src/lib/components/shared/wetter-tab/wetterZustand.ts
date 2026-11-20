@@ -111,30 +111,58 @@ export function standAusAbo(
 	};
 }
 
-/** Abweichungsmenge des Stands gegen seine Vorlage (was gespeichert wird). */
-export function mengeVon(s: WetterStand, vorlagen: VorlagenAmpeln): Ampel {
-	return abweichungsMenge(vorlagen[s.vorlageId], s.ampel, s.auswahl);
+/** Vorlage mit ausdruecklichem `enabled` je Groesse (sonst unveraendert). */
+function mitEnabled(v: Ampel, ids: string[], an: (id: string) => boolean): Ampel {
+	if (!ids.length) return v;
+	return verschmelzen(v, { template: v.template, metrics: Object.fromEntries(ids.map((id) => [id, { enabled: an(id) }])) });
 }
 
-/** Vorlage, wie der Kontext sie ausgibt (#3047 p15): im Trip gelten die Kinder eines gewaehlten
- *  Elters als gewaehlt (Python-Ableitung, p5c), im Vergleich bleibt sie unveraendert. */
-function vorlageImKontext(context: Kontext, v: Ampel): Ampel {
-	const aktiv = aktiveMetriken(v);
-	const kinder = AUSWAHL_ABLEITUNG[context](aktiv).filter((id) => !aktiv.includes(id));
-	if (!kinder.length) return v;
-	return verschmelzen(v, { template: v.template, metrics: Object.fromEntries(kinder.map((id) => [id, { enabled: true }])) });
-}
+/** Wie der Kontext die Vorlage ausgibt (#3193, Tabelle statt Weiche):
+ *  - route: die Kinder eines gewaehlten Elters gelten als gewaehlt (Python-Ableitung, p5c/p15);
+ *  - vergleich: nicht ausgebbare Groessen (nicht im Katalog) sind neutral, ihr `enabled` folgt der
+ *    Auswahl (#3047 E6: weggefiltert oder gesperrt erhalten ist keine Abweichung). Ohne bekannten
+ *    Katalog bleibt die Rohvorlage (analog `nurAusgebbar`). */
+const BASIS_IM_KONTEXT: Record<Kontext, (v: Ampel, auswahl: string[], alt: AltSchluessel) => Ampel> = {
+	route: (v) => {
+		const aktiv = aktiveMetriken(v);
+		const kinder = AUSWAHL_ABLEITUNG.route(aktiv).filter((id) => !aktiv.includes(id));
+		return mitEnabled(v, kinder, () => true);
+	},
+	vergleich: (v, auswahl, alt) => {
+		const katalog = new Set(vergleichsKatalogIds(alt));
+		if (!katalog.size) return v;
+		const neutral = [...new Set([...Object.keys(v.metrics ?? {}), ...auswahl])].filter((id) => !katalog.has(id));
+		return mitEnabled(v, neutral, (id) => auswahl.includes(id));
+	}
+};
 
-/** Zahl der Abweichungen, wie der Picker sie zeigt (AC-28: sofort nach jeder Eingabe). Gemessen
- *  gegen die Vorlage im Kontext: ein abgeleitetes Kind ist keine Abweichung, sein „−“ schon (p15). */
-export function abweichungenVon(s: WetterStand, vorlagen: VorlagenAmpeln, context: Kontext): number {
-	const roh = vorlagen[s.vorlageId];
-	if (!roh) return 0;
-	const v = vorlageImKontext(context, roh);
+/** Die EINE Vergleichsbasis „Vorlage im Kontext“ (#3193): Zaehler, Menge und Speicherweg messen
+ *  ausschliesslich gegen sie. `aufgeloest` traegt die Zeilen der Basis, die der Stand noch nicht hat
+ *  (ein abgeleitetes Kind ohne eigene Zeile ist keine Abweichung, sein „−“ schon). */
+export function vorlageImKontext(
+	s: WetterStand,
+	vorlagen: VorlagenAmpeln,
+	context: Kontext,
+	alt: AltSchluessel = {}
+): { vorlage: Ampel; aufgeloest: Ampel } {
+	const vorlage = BASIS_IM_KONTEXT[context](vorlagen[s.vorlageId], s.auswahl, alt);
 	const aufgeloest = klon(s.ampel);
 	aufgeloest.metrics = aufgeloest.metrics ?? {};
-	for (const [id, e] of Object.entries(v.metrics ?? {})) if (!(id in aufgeloest.metrics)) aufgeloest.metrics[id] = klon(e);
-	return zaehleAbweichungenGegen(v, abweichungsMenge(v, aufgeloest, s.auswahl));
+	for (const [id, e] of Object.entries(vorlage.metrics ?? {})) if (!(id in aufgeloest.metrics)) aufgeloest.metrics[id] = klon(e);
+	return { vorlage, aufgeloest };
+}
+
+/** Abweichungsmenge des Stands gegen die Vorlage im Kontext (was gespeichert wird). */
+export function mengeVon(s: WetterStand, vorlagen: VorlagenAmpeln, context: Kontext, alt: AltSchluessel = {}): Ampel {
+	const b = vorlageImKontext(s, vorlagen, context, alt);
+	return abweichungsMenge(b.vorlage, b.aufgeloest, s.auswahl);
+}
+
+/** Zahl der Abweichungen, wie der Picker sie zeigt (AC-28: sofort nach jeder Eingabe): genau die
+ *  Menge, die auch gespeichert wird (#3193). */
+export function abweichungenVon(s: WetterStand, vorlagen: VorlagenAmpeln, context: Kontext, alt: AltSchluessel = {}): number {
+	if (!vorlagen[s.vorlageId]) return 0;
+	return zaehleAbweichungenGegen(vorlageImKontext(s, vorlagen, context, alt).vorlage, mengeVon(s, vorlagen, context, alt));
 }
 
 /** Vorlage uebernehmen oder zuruecksetzen: Auswahl, Grenzen, Alarmstufen der Vorlage (AC-11/12);
