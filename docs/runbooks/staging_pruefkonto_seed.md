@@ -74,5 +74,23 @@ Optionen: `--basis-url URL` (nur `https://staging.gregor20.henemm.com`), `--inte
   Mail-Adresse, endet der Lauf mit Exit 1 vor dem ersten Schreibzugriff (nie ein leerer Empfänger).
 - **Gespeicherte Form:** die Go-API speichert das Morgen-Briefing als `07:00:00`; das Skript
   vergleicht mit genau dieser Form, damit der zweite Lauf den Vergleich nicht neu schreibt.
+- **Kanalauswahl (#3151, Mockup `mockup-hub-fassung4.html` Z.373-374):** Trip und Vergleich
+  bekommen Briefing per E-Mail und Telegram (SMS, Premium-SMS aus), Alarme auf allen vier
+  Kanälen mit Dringlichkeits-Schwellen E-Mail/Telegram `LOW` (gering), SMS `MODERATE` (mittel),
+  Premium-SMS `HIGH` (hoch). Trip: `report_config`, `alert_channels`, `alert_channel_thresholds`;
+  Vergleich: `send_*` und `alert_channels` ausdrücklich (sonst leitet die Go-API es aus den
+  Briefing-Schaltern ab). Die drei Unterobjekte werden je Kanal gemerged: fremde Schlüssel und
+  Felder bleiben, ein zweiter Lauf schreibt nichts.
+- **Kein echter Versand trotz Alarmen auf allen Kanälen und täglichem Vergleich:** auf Staging
+  (`GZ_ENV=staging`) leitet `Settings.with_user_profile` jeden Versand über `for_testing()`
+  (`src/app/config.py`): E-Mail über Stalwart statt Resend (Konto-Adresse = Test-Postfach,
+  Zweitadresse `.invalid`), SMS und Premium-SMS nur mit `GZ_SEVEN_SANDBOX_KEY` (Sperre
+  `seven_io_base._guard_test_mode_sandbox_key`, Live-Schlüssel auskommentiert), Telegram nur mit
+  dem Test-Bot und nur an die Test-Chat-ID (`telegram._guard_test_mode_bot_token`,
+  `_guard_test_mode_target_chat`); die Chat-ID des Seeds ist fiktiv. Der Trip liegt in der
+  Vergangenheit. Darum bleibt der Vergleich auf `schedule: daily`; fiele einer dieser Belege weg,
+  gehört er auf `manual`.
+- **Danach Abgleich DE und EN** (je ca. 8 Min., nicht parallel mit demselben Konto); die Berichte
+  sind Grundlage der Neuklassifizierung der Besitzerliste (#3151).
 - Die Rückadresse der Premium-SMS wird bei Bedarf neu gelernt (Stempel = Laufzeit), damit sie
   „frisch“ bleibt; die Datumswerte im Mockup-Text sind Beispielwerte.

@@ -92,6 +92,16 @@ _ORTE = (("gz2967-muenster", "Münster", 51.9607, 7.6261, 60),
          ("gz2967-telgte", "Telgte", 51.9819, 7.7856, 52),
          ("gz2967-tecklenburg", "Tecklenburg", 52.2196, 7.8126, 235))
 
+# #3151: Kanalauswahl laut Mockup (mockup-hub-fassung4.html Z.373-374, ``st[ctx].sw.ch``):
+# Briefing E-Mail + Telegram, Alarme auf allen vier Kanaelen; Dringlichkeit
+# „gering/mittel/hoch" = LOW/MODERATE/HIGH (src/services/alert_urgency.py).
+ALARM_SCHWELLEN = {"email": "LOW", "telegram": "LOW", "sms": "MODERATE", "premium_sms": "HIGH"}
+_BRIEFING_KANAELE = {"send_email": True, "send_telegram": True, "send_sms": False,
+                     "send_premium_sms": False}
+_ALARM_KANAELE = ("email", "telegram", "sms", "premium_sms")
+# Unterobjekte, die feldweise (je Kanalschluessel) gemerged werden; Fremdschluessel bleiben.
+_KANAL_UNTEROBJEKTE = ("report_config", "alert_channels", "alert_channel_thresholds")
+
 _WERKZEUG = Path(__file__).resolve().parents[1] / ".claude" / "tools" / "staging_befehl_pruefen.py"
 
 
@@ -187,6 +197,16 @@ def _enthaelt(ist, soll) -> bool:
     return ist == soll
 
 
+def _merge(ist: dict, soll: dict) -> dict:
+    """Read-Modify-Write: Soll-Felder ueber ``ist``; die Kanal-Unterobjekte werden je
+    Schluessel gemerged (fremde Kanalschluessel und Fremdfelder bleiben, nie Replace)."""
+    neu = {**ist, **soll}
+    for feld in _KANAL_UNTEROBJEKTE:
+        if isinstance(soll.get(feld), dict):
+            neu[feld] = {**(ist.get(feld) or {}), **soll[feld]}
+    return neu
+
+
 def _kennung(antwort) -> str:
     """Nur unverdaechtige Fehlerkennungen der API (z. B. ``chat_id_already_linked``)."""
     if not isinstance(antwort, dict):
@@ -212,6 +232,21 @@ def soll_trip() -> dict:
             _wegpunkt(sid, 1, *von), _wegpunkt(sid, 2, f"Anstieg {von[0]}", *mitte),
             _wegpunkt(sid, 3, *bis)]})
     return {"id": TRIP_ID, "name": TRIP_NAME, "region": "Mallorca", "stages": etappen}
+
+
+def soll_kanalauswahl_trip() -> dict:
+    """#3151: nur die Soll-Teilobjekte; Flachfelder (send_*) leitet der Go-Store ab."""
+    return {"report_config": dict(_BRIEFING_KANAELE),
+            "alert_channels": {k: True for k in _ALARM_KANAELE},
+            "alert_channel_thresholds": dict(ALARM_SCHWELLEN)}
+
+
+def soll_kanalauswahl_vergleich() -> dict:
+    """#3151: send_* top-level, ``alert_channels`` explizit (sonst leitet der Store es
+    aus den Flags ab: SMS/Premium waeren aus)."""
+    return {**_BRIEFING_KANAELE,
+            "alert_channels": {k: True for k in _ALARM_KANAELE},
+            "alert_channel_thresholds": dict(ALARM_SCHWELLEN)}
 
 
 def soll_wetter() -> dict:
@@ -242,12 +277,19 @@ def pruefe_email_bestaetigt(profil: dict) -> None:
 def soll_vergleich(location_ids: list[str], empfaenger: list[str]) -> dict:
     # Go speichert Briefing-Zeiten als "HH:MM:SS" (ValidateQuarterHourSlotTime) und
     # verlangt schedule daily|weekly|manual (validateComparePreset).
+    # schedule daily ist versandsicher (#3151 AC-5): auf Staging (GZ_ENV=staging) leitet
+    # Settings.with_user_profile jeden Versand ueber for_testing() (src/app/config.py):
+    # Mail ueber Stalwart statt Resend an Test-Postfach bzw. .invalid, SMS/Premium-SMS
+    # nur mit GZ_SEVEN_SANDBOX_KEY (seven_io_base._guard_test_mode_sandbox_key),
+    # Telegram nur Test-Bot und nur Test-Chat (telegram._guard_test_mode_*); die
+    # Kanalziele des Seeds sind fiktiv. pruefe_kein_live_versand bricht sonst ab.
     return {"name": VERGLEICH_NAME, "location_ids": location_ids, "profil": "allgemein",
             "schedule": "daily", "morning_enabled": True, "morning_time": "07:00:00",
             "empfaenger": empfaenger,
             "display_config": {"region": "Westfalen", "ampel": {"template": "allgemein"},
                                "active_metrics": [{"metric_id": m, "aggregation": a}
-                                                  for m, a in _ORTE_METRIKEN]}}
+                                                  for m, a in _ORTE_METRIKEN]},
+            **soll_kanalauswahl_vergleich()}
 
 
 class PruefkontoSeed:
@@ -290,7 +332,7 @@ class PruefkontoSeed:
             return self._rufe("POST", sammlung, soll)[1]
         if _enthaelt(ist, soll):
             return ist
-        return self._rufe("PUT", f"{sammlung}/{soll['id']}", {**ist, **soll})[1]
+        return self._rufe("PUT", f"{sammlung}/{soll['id']}", _merge(ist, soll))[1]
 
     def sichere_wetter(self, trip: dict) -> dict:
         ist = trip.get("display_config") or {}
@@ -323,7 +365,8 @@ class PruefkontoSeed:
         ist = self._rufe("GET", f"/api/compare/presets/{vid}")[1]
         if not _enthaelt(ist, soll):
             dc = {**(ist.get("display_config") or {}), **soll["display_config"]}
-            self._rufe("PUT", f"/api/compare/presets/{vid}", {**ist, **soll, "display_config": dc})
+            self._rufe("PUT", f"/api/compare/presets/{vid}",
+                       {**_merge(ist, soll), "display_config": dc})
         return vid
 
     # --- Kanaele ----------------------------------------------------------------
@@ -373,7 +416,7 @@ def fuehre_seed(seed: PruefkontoSeed, nutzer: str, passwort: str) -> tuple[str, 
     pruefe_email_bestaetigt(profil)  # vor jedem Schreibzugriff
     empfaenger = soll_empfaenger(profil)  # vor jedem Schreibzugriff
     seed.sichere_tarif()  # vor den Datensaetzen: sonst Free-Quote (409 quota_exceeded)
-    trip = seed.sichere_datensatz("/api/trips", soll_trip())
+    trip = seed.sichere_datensatz("/api/trips", {**soll_trip(), **soll_kanalauswahl_trip()})
     seed.sichere_vorlage(seed.sichere_wetter(trip))
     orte = [seed.sichere_datensatz("/api/locations", {
         "id": oid, "name": name, "lat": lat, "lon": lon, "elevation_m": hoehe,

@@ -1,0 +1,274 @@
+........................................................................ [ 61%]
+.............................................                            [100%]
+==================================== PASSES ====================================
+_____________________ test_ac4_zweiter_lauf_aendert_nichts _____________________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=ecb286a5
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=ecb286a5
+____ test_ac4_f001_zweiter_lauf_ohne_schreibzugriff_trotz_go_normalisierung ____
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=4a31bedc
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=4a31bedc
+________ test_ac5_fremde_datensaetze_bleiben_und_rmw_erhaelt_zusatzfeld ________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=0243c42c
+_________________ test_ac10_zweiter_nutzer_bleibt_unveraendert _________________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=525a29c1
+_ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://gregor20.henemm.com] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+__ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://example.org] __
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+_ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[http://localhost:8090] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+_ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[http://staging.gregor20.henemm.com] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+_ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://staging.gregor20.henemm.com:8443] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+_ test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[http://localhost:8090] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Loopback-Ziel muss http://localhost:8091 sein - Abbruch vor jedem Aufruf
+_ test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[https://gregor20.henemm.com] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Loopback-Ziel muss http://localhost:8091 sein - Abbruch vor jedem Aufruf
+_ test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[http://10.0.0.5:8091] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Loopback-Ziel muss http://localhost:8091 sein - Abbruch vor jedem Aufruf
+_ test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[https://staging.gregor20.henemm.com] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Loopback-Ziel muss http://localhost:8091 sein - Abbruch vor jedem Aufruf
+_______ test_ac7_ac13_fehlender_env_schluessel_exit2[GZ_PRUEFKONTO_USER] _______
+----------------------------- Captured stderr call -----------------------------
+FEHLER: .env-Schluessel fehlen: GZ_PRUEFKONTO_USER
+_______ test_ac7_ac13_fehlender_env_schluessel_exit2[GZ_PRUEFKONTO_PASS] _______
+----------------------------- Captured stderr call -----------------------------
+FEHLER: .env-Schluessel fehlen: GZ_PRUEFKONTO_PASS
+_______ test_ac7_ac13_fehlender_env_schluessel_exit2[CORE_SHARED_SECRET] _______
+----------------------------- Captured stderr call -----------------------------
+FEHLER: .env-Schluessel fehlen: GZ_CORE_SHARED_SECRET
+_______________ test_ac14_zweiter_lauf_kein_scharfer_kanalaufruf _______________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=04688924
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=04688924
+_______________ test_ac14_ratebremse_429_exit1_ohne_wiederholung _______________
+----------------------------- Captured stderr call -----------------------------
+FEHLER: SeedFehler: POST /api/internal/premium-sms-learn -> HTTP 429 (link_code_rate_limited)
+__________ test_ac15a_zweiter_nutzer_ohne_kanaele_bleibt_unverbunden ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=40184882
+___________ test_ac15b_chat_id_kollision_exit1_nichts_ueberschrieben ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=eb422e77
+----------------------------- Captured stderr call -----------------------------
+FEHLER: SeedFehler: POST /api/internal/telegram-connect -> HTTP 409 (chat_id_already_linked)
+_________ test_ac13_f003_env_nur_mit_gz_praefix_laeuft_mit_core_header _________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=b158572f
+______ test_ac10_f003_login_mit_nutzer_default_exit1_ohne_schreibzugriff _______
+----------------------------- Captured stderr call -----------------------------
+FEHLER: SeedFehler: Profil ohne echte Nutzer-id - Abbruch (nie 'default')
+________ test_ac5_f003_vergleich_rmw_erhaelt_display_config_zusatzfeld _________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=d56149c6
+__________ test_ac13_f003a_core_secret_nie_an_oeffentliche_basis_url ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=56c0ff25
+___________ test_ac14_f003b_veraltete_rueckadresse_wird_neu_gelernt ____________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=eb7d7c71
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=eb7d7c71
+_________ test_ac2_f003c_abweichende_vorlage_wird_per_merge_korrigiert _________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=ced8c896
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=ced8c896
+___________ test_ac5_fl3_vergleich_rmw_erhaelt_top_level_zusatzfeld ____________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=99bb3d0b
+__________ test_ac11_fl3_gleiche_nummer_unbestaetigt_wird_bestaetigt ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=d60ab6bd
+__________ test_ac4_fl3_zusaetzliche_etappe_wird_auf_vier_korrigiert ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=dd996d59
+______________ test_login_laeuft_mit_pruefkonto_nicht_mit_gz_auth ______________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=e74af73d
+_____ test_fr41_andere_bestaetigte_sms_nummer_wird_auf_sollnummer_gesetzt ______
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=77bb2167
+____________ test_fr41_andere_frische_rueckadresse_wird_neu_gelernt ____________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=11686ad3
+__________ test_fr41_andere_telegram_chat_id_wird_auf_soll_verbunden ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=37701899
+_ test_fr42_gleichnamige_vergleichsvorlage_bleibt_route_vorlage_wird_angelegt __
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=7bfa7f36
+_______ test_ac11_fl5_fiktive_kanalwerte_sind_fest_und_erkennbar_fiktiv ________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=40f32cdd
+__ test_3151_ac2_fremdfelder_und_fremder_kanal_bleiben_nur_soll_wird_gesetzt ___
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=ba344c9d
+_ test_3151_ac3_zweiter_lauf_schreibfrei_trotz_go_ableitung_von_alert_channels _
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=86cec06e
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=86cec06e
+_______ test_3151_ac4_zweiter_nutzer_mit_kanalfeldern_bleibt_byte_gleich _______
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=5ee5de2e
+=========================== short test summary info ============================
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac1_trip_gr221_mit_mockup_etappen_und_flags
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac2_genau_eine_eigene_vorlage_mallorca_fruehling
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac3_ortsvergleich_muensterland
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac4_zweiter_lauf_aendert_nichts
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac4_f001_zweiter_lauf_ohne_schreibzugriff_trotz_go_normalisierung
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac5_fremde_datensaetze_bleiben_und_rmw_erhaelt_zusatzfeld
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac10_zweiter_nutzer_bleibt_unveraendert
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://gregor20.henemm.com]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://example.org]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[http://localhost:8090]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[http://staging.gregor20.henemm.com]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://staging.gregor20.henemm.com:8443]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[http://localhost:8090]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[https://gregor20.henemm.com]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[http://10.0.0.5:8091]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[https://staging.gregor20.henemm.com]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_erfolg_gibt_beide_ids_aus_die_existieren
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_login_abgelehnt_exit1_ohne_ids
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_serverfehler_beim_anlegen_exit1
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_ac13_fehlender_env_schluessel_exit2[GZ_PRUEFKONTO_USER]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_ac13_fehlender_env_schluessel_exit2[GZ_PRUEFKONTO_PASS]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_ac13_fehlender_env_schluessel_exit2[CORE_SHARED_SECRET]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_secret_erscheint_nie_in_ausgabe[None]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_secret_erscheint_nie_in_ausgabe[stoerung1]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_secret_erscheint_nie_in_ausgabe[stoerung2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_secret_erscheint_nie_in_ausgabe[stoerung3]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_alle_vier_kanaele_wie_mockup
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac14_zweiter_lauf_kein_scharfer_kanalaufruf
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac14_ratebremse_429_exit1_ohne_wiederholung
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15a_zweiter_nutzer_ohne_kanaele_bleibt_unverbunden
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15b_chat_id_kollision_exit1_nichts_ueberschrieben
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15c_trockenlauf_meldet_fremden_nutzer_kein_scharfer_lernaufruf
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_f002_konto_ohne_mailadresse_exit1_kein_leerer_empfaenger
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_e_mail_unbestaetigt_exit1_ohne_schreibzugriff
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_f003_env_nur_mit_gz_praefix_laeuft_mit_core_header
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac10_f003_login_mit_nutzer_default_exit1_ohne_schreibzugriff
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_f003_transportfehler_mit_secret_im_text_wird_bereinigt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac5_f003_vergleich_rmw_erhaelt_display_config_zusatzfeld
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_f003_fehlerkennung_mit_sonderzeichen_wird_nicht_ausgegeben
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac5_f001_free_konto_mit_voller_quote_laeuft_durch
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[GZ_SEVEN_API_KEY=live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[GZ_SEVEN_API_KEY='live-schluessel-2967'-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[export GZ_SEVEN_API_KEY=live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[gz_seven_api_key=live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[ GZ_SEVEN_API_KEY = live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[export\tGz_Seven_Api_Key=live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[# GZ_SEVEN_API_KEY=live-schluessel-2967-0]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[GZ_SEVEN_API_KEY=-0]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_f003a_core_secret_nie_an_oeffentliche_basis_url
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac14_f003b_veraltete_rueckadresse_wird_neu_gelernt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac2_f003c_abweichende_vorlage_wird_per_merge_korrigiert
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac5_fl3_vergleich_rmw_erhaelt_top_level_zusatzfeld
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl3_gleiche_nummer_unbestaetigt_wird_bestaetigt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac4_fl3_zusaetzliche_etappe_wird_auf_vier_korrigiert
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac1_fl3_wegpunkthoehen_ergeben_mockup_anstieg
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_zugang_nur_aus_pruefkonto_schluesseln_gz_auth_allein_reicht_nicht
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_login_laeuft_mit_pruefkonto_nicht_mit_gz_auth
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr41_andere_bestaetigte_sms_nummer_wird_auf_sollnummer_gesetzt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr41_andere_frische_rueckadresse_wird_neu_gelernt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr41_andere_telegram_chat_id_wird_auf_soll_verbunden
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr42_gleichnamige_vergleichsvorlage_bleibt_route_vorlage_wird_angelegt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr42_orte_metriken_mit_sollaggregation
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_email_verified_fehlt_oder_none_exit1_ohne_schreibzugriff[fehlt]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_email_verified_fehlt_oder_none_exit1_ohne_schreibzugriff[none]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_fiktive_kanalwerte_sind_fest_und_erkennbar_fiktiv
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf[rate_limited]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf[already_linked]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf[would_skip]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf[None]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_link_code_leer_exit1_ohne_lernaufruf[antwort0]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_link_code_leer_exit1_ohne_lernaufruf[antwort1]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_link_code_leer_exit1_ohne_lernaufruf[antwort2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac1_soll_funktionen_liefern_exakte_werte_ohne_netz
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac1_seed_setzt_kanalauswahl_an_trip_und_vergleich
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac2_fremdfelder_und_fremder_kanal_bleiben_nur_soll_wird_gesetzt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac3_zweiter_lauf_schreibfrei_trotz_go_ableitung_von_alert_channels
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac4_zweiter_nutzer_mit_kanalfeldern_bleibt_byte_gleich
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_kein_eintrag_mehr_mit_verweis_2913_c2
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_tempo_karte_haengt_an_2796
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Trekking]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Skitour]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Hochtour]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Klettersteig]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Fahrrad ({zahl} km/h)]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-MTB]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Ski touring]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Mountaineering]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Via ferrata]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Bike ({zahl} km/h)]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Allgemein]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Wandern]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Wintersport]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Sommer-Trekking]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-\xb7 Wandern]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-General]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Hiking]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Winter sports]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Summer trekking]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-\xb7 Hiking]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_acht_menue_eintraege_bleiben_bei_2797
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_eintraege_anderer_scheiben_unveraendert
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_umgehaengte_eintraege_mindestens_profil_plus_tempo
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_jeder_eintrag_hat_grund_und_gueltigen_verweis
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[trip-Name bearbeiten]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[trip-Region bearbeiten]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[trip-Edit name]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[trip-Edit region]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[orte-Name bearbeiten]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[orte-Region bearbeiten]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[orte-Edit name]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[orte-Edit region]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_bisherige_ausnahmen_bleiben
+PASSED tests/test_3007_besitzerliste.py::test_ac20_kein_listen_abschnitt_mehr
+PASSED tests/test_3007_besitzerliste.py::test_ac20_kein_sammel_eintrag_text_mehr
+PASSED tests/test_3007_besitzerliste.py::test_ac20_kopf_eintraege_nur_paarweise
+PASSED tests/test_3007_besitzerliste.py::test_ac20_tempo_abschnitt_bleibt_bei_2796
+PASSED tests/test_3007_besitzerliste.py::test_ac16_tempo_aendern_elemente_haengen_an_2796
+117 passed in 1.16s
