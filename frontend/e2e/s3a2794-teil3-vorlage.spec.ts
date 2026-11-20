@@ -20,7 +20,11 @@ import {
 
 /** 3 Abweichungen von Alpen-Trekking: zwei Alarmstufen, eine Gewitterfarbe. */
 const DREI = { metrics: { gust: { alarm_ab: 'red' }, uv_index: { alarm_ab: 'red' } }, thunder: { mittel: 'red' } };
-const KONTEXT_WORT: Record<HubKind, string> = { route: 'Trips', vergleich: 'Orts-Briefings' };
+// #3111 AC-6 (Mockup Fassung 4): Rumpf der Bestätigung je Kontext (Orte: Einzahl oder Mehrzahl nach Ortezahl).
+const ERSETZT: Record<HubKind, RegExp> = {
+	route: /Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips\./,
+	vergleich: /Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen für dies(en Ort|e Orte)\./
+};
 const ANDERE: Record<HubKind, HubKind> = { route: 'vergleich', vergleich: 'route' };
 
 for (const kind of HUB_KINDS) {
@@ -72,10 +76,9 @@ for (const kind of HUB_KINDS) {
 			await reiter.getByTestId(WT.picker).click();
 			await page.getByTestId(WT.vorlageOption('wandern')).click();
 			const dialog = page.getByTestId(WT.wechselDialog);
-			await expect(dialog).toContainText(
-				`‚${v.wandern.label}‘ übernehmen? Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses ${KONTEXT_WORT[kind]}.`
-			);
-			await expect(dialog).toContainText(`Deine 3 Abweichungen von ‚${v['alpen-trekking'].label}‘ gehen verloren.`);
+			await expect(dialog.locator('b')).toHaveText(`„${v.wandern.label}“ übernehmen?`);
+			await expect(dialog).toContainText(ERSETZT[kind]);
+			await expect(dialog).toContainText(`Deine 3 Abweichungen von „${v['alpen-trekking'].label}“ gehen verloren.`);
 			await expect(dialog).toContainText('Zustellung, Etappen und Orte bleiben unverändert.');
 			await dialog.getByTestId(WT.wechselAbbrechen).click();
 			await expect(dialog).toHaveCount(0);
@@ -135,7 +138,7 @@ for (const kind of HUB_KINDS) {
 			await warteAufSpeichern(page, kind, hub.id);
 
 			const knopf = reiter.getByTestId(WT.zuruecksetzen);
-			await expect(knopf).toHaveText(`Auf ‚${v['alpen-trekking'].label}‘ zurücksetzen`);
+			await expect(knopf).toHaveText(`Auf „${v['alpen-trekking'].label}“ zurücksetzen`);
 			const speichern = warteAufSpeichern(page, kind, hub.id);
 			await knopf.click();
 			await speichern;

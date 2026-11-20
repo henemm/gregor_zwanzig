@@ -54,7 +54,6 @@ export const WT = {
 	grenzenAendern: (id: string) => `wetter-grenzen-aendern-${id}`, // Text „Grenzen ändern" / „Fertig"
 	grenze: (id: string, seite: 'lower' | 'upper', farbe: 'yellow' | 'orange' | 'red') => `wetter-grenze-${id}-${seite}-${farbe}`,
 	grenzenHinweis: (id: string) => `wetter-grenzen-hinweis-${id}`,
-	grenzenAbweichend: (id: string) => `wetter-grenzen-abweichend-${id}`,
 	grenzenFehler: (id: string) => `wetter-grenzen-fehler-${id}`,
 	gewitterStufe: (stufe: 'mittel' | 'hoch') => `wetter-gewitter-${stufe}`, // Farbwahl je Stufe
 	gewitterFarbe: (stufe: 'mittel' | 'hoch', farbe: string) => `wetter-gewitter-${stufe}-${farbe}`,

@@ -28,9 +28,9 @@
 	import type { RadarZiel } from './warnungenRadarZeilen.ts';
 	import AnpassenKarte from './AnpassenKarte.svelte';
 	import WasStehtWoKarte from './WasStehtWoKarte.svelte';
-	import { alarmZaehler, altSchluesselAusKatalog, ausgebbarTeilen, briefingAngebot, eigeneVorlageAmpel, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
+	import { alarmZaehler, altSchluesselAusKatalog, ausgebbarTeilen, briefingAngebot, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
 	import type { AlarmAb, AltSchluessel, Farbe, Kontext } from '../../shared/wetter-tab/ampelModell.ts';
-	import { ladeWetterDaten, type WetterDaten } from '../../shared/wetter-tab/wetterTabLaden.ts';
+	import { eigeneVorlageAus, ladeWetterDaten, ortAnzahlVon, type WetterDaten } from '../../shared/wetter-tab/wetterTabLaden.ts';
 	import { SPEICHERER, anlegeSpeicherer, type SpeicherOptionen } from '../../shared/wetter-tab/wetterTabSpeicherung.ts';
 	import * as Z from '../../shared/wetter-tab/wetterZustand.ts';
 
@@ -75,6 +75,8 @@
 	// #3122 B3b: Karte „Was steht wo“ (Grundauswahl „−“/„+“ schreibt ihre Zeile im selben Speichervorgang mit).
 	let karte = $state<WasStehtWoKarte | undefined>();
 	const aboId = $derived(String((trip ?? preset)?.id ?? ''));
+	// #3111 AC-6: Zahl der Orte für die Vorlagen-Bestätigung („für diesen Ort“ / „für diese Orte“).
+	const ortAnzahl = $derived(ortAnzahlVon(preset as { location_ids?: unknown } | undefined));
 
 	const abo = (): Z.AboSicht => (trip ?? preset ?? {}) as Z.AboSicht;
 	const uebernahme: Record<Kontext, (a: unknown) => void> = {
@@ -199,7 +201,7 @@
 	}
 	function vorlageGespeichert(p: MetricPreset): void {
 		if (!daten) return;
-		const neu = { id: p.id, name: p.name, ampel: eigeneVorlageAmpel(p, daten.vorlagen) };
+		const neu = eigeneVorlageAus(p, daten.vorlagen);
 		if ((p.kind ?? context) === context) daten = { ...daten, eigene: [neu, ...daten.eigene] };
 	}
 
@@ -267,6 +269,7 @@
 			onEigene={eigeneUebernehmen}
 			onZuruecksetzen={() => vorlageSetzen(Z.mitVorlage(stand!, stand!.vorlageId, vorlagen, context, altSchluessel))}
 			onGespeichert={vorlageGespeichert}
+			{ortAnzahl}
 		/>
 		<div class="wt-karte wt-metriken" data-abschnitt="metriken">
 			<AlarmAbKopf {zaehler} onAlle={(s: AlarmAb) => aendern(Z.mitAlarmAbFuerAlle(stand!, s, daten!.eig))} />

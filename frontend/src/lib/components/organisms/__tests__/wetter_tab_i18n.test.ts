@@ -149,7 +149,21 @@ const NEU_FREIGEGEBEN = new Set([
 	// #2955 (Spec wetter_metrik_inhalte.md AC-2): Gewitter-Satz „mittel oder hoch“, wenn schon „mittel“ die Alarmstufe erreicht.
 	'wetter.gewitter.mittel_ab',
 	// #2966 (Spec feat_2966_abgleich_haken.md AC-3): Warnung als zwei Absätze, Sätze 2 und 3.
-	'wetter.kopf.fehler_verbindung'
+	'wetter.kopf.fehler_verbindung',
+	// #3111 (Spec feat_3111_wetter_dialoge_mockup.md AC-1 bis AC-7): Wetter-Dialoge nach Mockup Fassung 4.
+	'wetter.grenzen.unten_1',
+	'wetter.grenzen.unten_2',
+	'wetter.grenzen.oben_1',
+	'wetter.grenzen.oben_2',
+	'wetter.vorlage.frage_titel',
+	'wetter.vorlage.ersetzt_route',
+	'wetter.vorlage.ersetzt_vergleich',
+	'wetter.vorlage.ersetzt_vergleich_ein',
+	'wetter.vorlage.aktiv_marker',
+	'wetter.vorlage.eigene_unterzeile',
+	...['alpen_trekking', 'wandern', 'skitouren', 'wintersport', 'radtour', 'wassersport', 'allgemein'].map((id) => `wetter.vorlage.stichworte.${id}`),
+	'wetter.dialog.name_platzhalter',
+	'wetter.dialog.beschreibung_platzhalter'
 ]);
 // #2913 Scheibe (c) Fix-Loop 2 (Bildprüfer Runde 1, Befund 1): Label wie im Mockup mit Doppelpunkt. Bewusst geändert,
 // mit genau dem erwarteten neuen Wert — jede andere Änderung bleibt rot.
@@ -163,20 +177,41 @@ const GEAENDERT_FREIGEGEBEN: Record<string, Record<string, string>> = {
 		// #2966 AC-3: Satz 1; Sätze 2 und 3 wortgleich in wetter.kopf.fehler_verbindung.
 		'wetter.kopf.fehler': 'Die Metriken konnten nicht geladen werden.',
 		// #3122 B3b (AC-32, einstellungen_neu.md §5 Punkt 6): Meldung nach „+“ seit ADR-0124.
-		'wetter.nicht_im_briefing.hinzugefuegt': '{metrik} ist jetzt im Briefing und in jedem Kanal angehakt. Unter ‚Was steht wo‘ kannst du sie für einzelne Kanäle abwählen.'
+		'wetter.nicht_im_briefing.hinzugefuegt': '{metrik} ist jetzt im Briefing und in jedem Kanal angehakt. Unter ‚Was steht wo‘ kannst du sie für einzelne Kanäle abwählen.',
+		// #3111 (Mockup Fassung 4): „…“ statt ‚…‘, Label mit „(optional)“.
+		'wetter.vorlage.verlust.one': 'Deine 1 Abweichung von „{alt}“ geht verloren.',
+		'wetter.vorlage.verlust.other': 'Deine {count} Abweichungen von „{alt}“ gehen verloren.',
+		'wetter.gewitter.keins_gruen': '„keins“ ist immer grün.',
+		'wetter.grenzen.hinweis': 'Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze.',
+		'wetter.grenzen.abweichend': 'Abweichend von der Vorlage „{vorlage}“.',
+		'wetter.dialog.beschreibung': 'Beschreibung (optional)'
 	},
 	en: {
 		'wetter.nicht_im_briefing.titel': 'Not in the briefing:',
 		'wetter.vorlage.zuruecksetzen': 'Reset to “{vorlage}”',
 		'wetter.alarm_ab.zaehler': '{ausloesend} of {ausgewaehlt} metrics trigger an alert. {ohne} cannot trigger one (precursors and display only).',
 		'wetter.kopf.fehler': 'The metrics could not be loaded.',
-		'wetter.nicht_im_briefing.hinzugefuegt': '{metrik} is now in the briefing and ticked in every channel. Under ‘What goes where’ you can deselect it for individual channels.'
+		'wetter.nicht_im_briefing.hinzugefuegt': '{metrik} is now in the briefing and ticked in every channel. Under ‘What goes where’ you can deselect it for individual channels.',
+		'wetter.vorlage.verlust.one': 'Your 1 change from “{alt}” will be lost.',
+		'wetter.vorlage.verlust.other': 'Your {count} changes from “{alt}” will be lost.',
+		'wetter.gewitter.keins_gruen': '“none” is always green.',
+		'wetter.grenzen.hinweis': 'Green is everything between “yellow lower” and “yellow upper”. An empty field means: no limit on this side.',
+		'wetter.grenzen.abweichend': 'Changed from the template “{vorlage}”.',
+		'wetter.dialog.beschreibung': 'Description (optional)'
 	}
 };
 
 // #3172 (ADR-0125): die Orte-SMS trägt keinen Rest-Zähler „+N“ je Ort mehr -- der Hinweissatz dazu entfällt
 // ersatzlos. Bewusst entfernt; jede andere Entfernung bleibt rot.
-const ENTFERNT_FREIGEGEBEN = new Set(['wetter.wsw.sms.plus_je_ort']);
+// #3111 (Mockup Fassung 4): einzeilige Grenzen-Titel und einteilige Rückfrage entfallen, ersetzt durch
+// unten_1/_2, oben_1/_2 bzw. frage_titel + ersetzt_*.
+const ENTFERNT_FREIGEGEBEN = new Set([
+	'wetter.wsw.sms.plus_je_ort',
+	'wetter.grenzen.unten',
+	'wetter.grenzen.oben',
+	'wetter.vorlage.frage_route',
+	'wetter.vorlage.frage_vergleich'
+]);
 
 describe('AC-21: wetter.json DE/EN — Bestandstexte unverändert gegenüber dem Abzweigpunkt von origin/main', () => {
 	for (const lang of ['de', 'en']) {

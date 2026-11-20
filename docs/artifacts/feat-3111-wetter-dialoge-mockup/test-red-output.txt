@@ -1,0 +1,1439 @@
+TAP version 13
+# Subtest: \#3111 AC-1: Grenzen-Gruppentitel zweizeilig (zwei Textknoten mit <br>)
+    # Subtest: Titel „unten/oben“ steht als zwei Zeilen mit <br> (de)
+    not ok 1 - Titel „unten/oben“ steht als zwei Zeilen mit <br> (de)
+      ---
+      duration_ms: 288.382644
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:106:3'
+      failureType: 'testCodeFailure'
+      error: 'Titel muss „Zeile1<br>Zeile2“ sein, war: unten / zu wenig'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: 'unten / zu wenig'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:111:34)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: Titel „unten/oben“ steht als zwei Zeilen mit <br> (en)
+    not ok 2 - Titel „unten/oben“ steht als zwei Zeilen mit <br> (en)
+      ---
+      duration_ms: 3.788919
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:106:3'
+      failureType: 'testCodeFailure'
+      error: 'Titel muss „Zeile1<br>Zeile2“ sein, war: lower / too little'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: 'lower / too little'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:111:34)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 1 - \#3111 AC-1: Grenzen-Gruppentitel zweizeilig (zwei Textknoten mit <br>)
+  ---
+  duration_ms: 293.196493
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:104:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3111 AC-2: Hinweis und Abweichend-Satz im selben Absatz, „…“-Anführungszeichen
+    # Subtest: DE: ein einziger eigener Text des Hinweis-Elements enthält Hinweis UND Abweichend-Satz (so liest der Abgleich)
+    not ok 1 - DE: ein einziger eigener Text des Hinweis-Elements enthält Hinweis UND Abweichend-Satz (so liest der Abgleich)
+      ---
+      duration_ms: 2.654215
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:123:2'
+      failureType: 'testCodeFailure'
+      error: 'eigener Text des Absatzes ist nicht „Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Alpen-Trekking“.“, sondern: ["Grün ist alles zwischen ‚gelb unten‘ und ‚gelb oben‘. Ein leeres Feld heißt: auf dieser Seite keine Grenze."]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:127:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: DE: ohne Abweichung fehlt der Abweichend-Satz, der Hinweis bleibt mit „…“
+    not ok 2 - DE: ohne Abweichung fehlt der Abweichend-Satz, der Hinweis bleibt mit „…“
+      ---
+      duration_ms: 4.272658
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:129:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        The expression evaluated to a falsy value:
+        
+          assert.ok(eigeneTexte(h).includes(GRENZEN_TEXT.de.ohne))
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:132:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: EN: Abweichend-Satz im selben Absatz wie der Hinweis, englisch
+    not ok 3 - EN: Abweichend-Satz im selben Absatz wie der Hinweis, englisch
+      ---
+      duration_ms: 1.239912
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:136:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        The input did not match the regular expression /Alpen-Trekking/. Input:
+        
+        'Green is everything between ‘yellow lower’ and ‘yellow upper’. An empty field means: no limit on this side.'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: 'Green is everything between ‘yellow lower’ and ‘yellow upper’. An empty field means: no limit on this side.'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:142:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Gewitter: „keins“ ist immer grün mit „…“ und Abweichend-Satz im selben Absatz (Mockup Z. 458)
+    not ok 4 - Gewitter: „keins“ ist immer grün mit „…“ und Abweichend-Satz im selben Absatz (Mockup Z. 458)
+      ---
+      duration_ms: 1.254252
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:145:2'
+      failureType: 'testCodeFailure'
+      error: '["mittel","gelb","orange","rot","hoch","orange","rot","‚keins‘ ist immer grün.","Abweichend von der Vorlage ‚Alpen-Trekking‘."]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:148:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 2 - \#3111 AC-2: Hinweis und Abweichend-Satz im selben Absatz, „…“-Anführungszeichen
+  ---
+  duration_ms: 9.846119
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:122:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3111 AC-3: „· aktiv“ als Text an der aktiven Vorlage
+    # Subtest: de: aktive Vorlage „Alpen-Trekking · aktiv“, keine andere trägt den Zusatz
+    not ok 1 - de: aktive Vorlage „Alpen-Trekking · aktiv“, keine andere trägt den Zusatz
+      ---
+      duration_ms: 90.011102
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:182:3'
+      failureType: 'testCodeFailure'
+      error: '["Alpen-Trekking","14 Metriken · <thunder> · <gust> · <freezing_level>"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:184:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: en: aktive Vorlage „Alpine trekking · active“, keine andere trägt den Zusatz
+    not ok 2 - en: aktive Vorlage „Alpine trekking · active“, keine andere trägt den Zusatz
+      ---
+      duration_ms: 2.875226
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:182:3'
+      failureType: 'testCodeFailure'
+      error: '["Alpine trekking","14 metrics · <thunder> · <gust> · <freezing_level>"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:184:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Zusatz wandert mit der aktiven Vorlage (Wandern aktiv)
+    not ok 3 - Zusatz wandert mit der aktiven Vorlage (Wandern aktiv)
+      ---
+      duration_ms: 3.129235
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:189:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        The expression evaluated to a falsy value:
+        
+          assert.ok(eigeneTexte(elementMit(h, 'wetter-vorlage-option-wandern')).includes('Wandern · aktiv'))
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:191:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 3 - \#3111 AC-3: „· aktiv“ als Text an der aktiven Vorlage
+  ---
+  duration_ms: 97.044386
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:180:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3111 AC-4: Kurzbeschreibung = Zahl aus Daten + kuratierte Stichworte; unbekannte ID: Ableitung
+    # Subtest: DE, route: bekannte Systemvorlagen mit Katalog-Stichworten, unbekannte ID mit Ableitung
+    not ok 1 - DE, route: bekannte Systemvorlagen mit Katalog-Stichworten, unbekannte ID mit Ableitung
+      ---
+      duration_ms: 2.658255
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:198:3'
+      failureType: 'testCodeFailure'
+      error: '["14 Metriken · <thunder> · <gust> · <freezing_level>"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:200:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: DE, vergleich: bekannte Systemvorlagen mit Katalog-Stichworten, unbekannte ID mit Ableitung
+    not ok 2 - DE, vergleich: bekannte Systemvorlagen mit Katalog-Stichworten, unbekannte ID mit Ableitung
+      ---
+      duration_ms: 1.944843
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:198:3'
+      failureType: 'testCodeFailure'
+      error: '["14 Metriken · <thunder> · <gust> · <freezing_level>"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:200:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: EN: Zahl aus Daten, Stichworte englisch aus dem Katalog
+    not ok 3 - EN: Zahl aus Daten, Stichworte englisch aus dem Katalog
+      ---
+      duration_ms: 1.836133
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:205:2'
+      failureType: 'testCodeFailure'
+      error: 'bekannte Vorlage nutzt die kuratierten Stichworte, nicht die Ableitung'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '14 metrics · <thunder> · <gust> · <freezing_level>'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:210:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 4 - \#3111 AC-4: Kurzbeschreibung = Zahl aus Daten + kuratierte Stichworte; unbekannte ID: Ableitung
+  ---
+  duration_ms: 6.922694
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:196:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3111 AC-5: Unterzeile eigener Vorlagen „eigene“ (+ Beschreibung)
+    # Subtest: DE: „eigene · für den Frühling“ bzw. nur „eigene“
+    not ok 1 - DE: „eigene · für den Frühling“ bzw. nur „eigene“
+      ---
+      duration_ms: 1.752533
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:215:2'
+      failureType: 'testCodeFailure'
+      error: '["Mallorca Frühling"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:217:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: EN: „own · …“ bzw. „own“
+    not ok 2 - EN: „own · …“ bzw. „own“
+      ---
+      duration_ms: 0.979181
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:220:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        The expression evaluated to a falsy value:
+        
+          assert.ok(eigeneTexte(elementMit(h, 'wetter-vorlage-eigene-e1')).includes('own · für den Frühling'))
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:222:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 5 - \#3111 AC-5: Unterzeile eigener Vorlagen „eigene“ (+ Beschreibung)
+  ---
+  duration_ms: 3.029736
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:214:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3111 AC-6: Bestätigung zweiteilig, Übernehmen vor Abbrechen
+    # Subtest: DE Trip, mit Abweichungen: fetter Titel + EIN Rumpf-Text in Mockup-Reihenfolge
+    not ok 1 - DE Trip, mit Abweichungen: fetter Titel + EIN Rumpf-Text in Mockup-Reihenfolge
+      ---
+      duration_ms: 18.035417
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:229:2'
+      failureType: 'testCodeFailure'
+      error: 'fetter Titel „„Wandern“ übernehmen?“ fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<div class="wt-frage svelte-6jucpp" role="alertdialog" data-testid="wetter-vorlage-wechsel-dialog" data-abschnitt="vorlage-bestaetigung"><p class="svelte-6jucpp">‚Wandern‘ übernehmen? Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips. Deine 2 Abweichungen von ‚Alpen-Trekking‘ gehen verloren. Zustellung, Etappen und Orte bleiben unverändert.</p> <div class="wt-reihe svelte-6jucpp"><button data-slot="btn" data-variant="accent" data-size="tap" class="" type="button" data-testid="wetter-vorlage-wechsel-uebernehmen">Übernehmen</button> <button data-slot="btn" data-variant="ghost" data-size="tap" class="" type="button" data-testid="wetter-vorlage-wechsel-abbrechen">Abbrechen</button></div></div>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:232:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: DE Trip ohne Abweichung: Rumpf ohne Verlust-Satz
+    not ok 2 - DE Trip ohne Abweichung: Rumpf ohne Verlust-Satz
+      ---
+      duration_ms: 1.536093
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:241:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        The expression evaluated to a falsy value:
+        
+          assert.ok(eigeneTexte(elementMit(h, 'wetter-vorlage-wechsel-dialog')).includes('Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips. Zustellung, Etappen und Orte bleiben unverändert.'))
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:243:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: DE Orte: Rumpf nennt „für diesen Ort“ bzw. „für diese Orte“, nicht „Orts-Briefings“
+    not ok 3 - DE Orte: Rumpf nennt „für diesen Ort“ bzw. „für diese Orte“, nicht „Orts-Briefings“
+      ---
+      duration_ms: 1.041913
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:245:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        The input did not match the regular expression /<b>„Wandern“ übernehmen\?<\/b>/. Input:
+        
+        '<div class="wt-frage svelte-6jucpp" role="alertdialog" data-testid="wetter-vorlage-wechsel-dialog" data-abschnitt="vorlage-bestaetigung"><p class="svelte-6jucpp">‚Wandern‘ übernehmen? Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Orts-Briefings.  Zustellung, Etappen und Orte bleiben unverändert.</p> <div class="wt-reihe svelte-6jucpp"><button data-slot="btn" data-variant="accent" data-size="tap" class="" type="button" data-testid="wetter-vorlage-wechsel-uebernehmen">Übernehmen</button> <button data-slot="btn" data-variant="ghost" data-size="tap" class="" type="button" data-testid="wetter-vorlage-wechsel-abbrechen">Abbrechen</button></div></div>'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<div class="wt-frage svelte-6jucpp" role="alertdialog" data-testid="wetter-vorlage-wechsel-dialog" data-abschnitt="vorlage-bestaetigung"><p class="svelte-6jucpp">‚Wandern‘ übernehmen? Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Orts-Briefings.  Zustellung, Etappen und Orte bleiben unverändert.</p> <div class="wt-reihe svelte-6jucpp"><button data-slot="btn" data-variant="accent" data-size="tap" class="" type="button" data-testid="wetter-vorlage-wechsel-uebernehmen">Übernehmen</button> <button data-slot="btn" data-variant="ghost" data-size="tap" class="" type="button" data-testid="wetter-vorlage-wechsel-abbrechen">Abbrechen</button></div></div>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:248:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: EN Trip: Titel und Rumpf getrennt, englisch
+    not ok 4 - EN Trip: Titel und Rumpf getrennt, englisch
+      ---
+      duration_ms: 1.075472
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:252:2'
+      failureType: 'testCodeFailure'
+      error: 'fetter Titel mit englischem Vorlagennamen'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<div class="wt-frage svelte-6jucpp" role="alertdialog" data-testid="wetter-vorlage-wechsel-dialog" data-abschnitt="vorlage-bestaetigung"><p class="svelte-6jucpp">Use ‘Hiking’? This replaces the metric selection, traffic-light limits and alert levels of this trip. Your 1 change from ‘Alpine trekking’ will be lost. Delivery, stages and locations stay unchanged.</p> <div class="wt-reihe svelte-6jucpp"><button data-slot="btn" data-variant="accent" data-size="tap" class="" type="button" data-testid="wetter-vorlage-wechsel-uebernehmen">Use template</button> <button data-slot="btn" data-variant="ghost" data-size="tap" class="" type="button" data-testid="wetter-vorlage-wechsel-abbrechen">Cancel</button></div></div>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:255:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Übernehmen steht vor Abbrechen
+    ok 5 - Übernehmen steht vor Abbrechen
+      ---
+      duration_ms: 1.001552
+      type: 'test'
+      ...
+    1..5
+not ok 6 - \#3111 AC-6: Bestätigung zweiteilig, Übernehmen vor Abbrechen
+  ---
+  duration_ms: 23.019457
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:227:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3111 AC-7: Dialog „Als eigene Vorlage speichern“
+    # Subtest: DE (route): Label „Beschreibung (optional)“, beide Platzhalter, Speichern vor Abbrechen
+    not ok 1 - DE (route): Label „Beschreibung (optional)“, beide Platzhalter, Speichern vor Abbrechen
+      ---
+      duration_ms: 1.098503
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:273:3'
+      failureType: 'testCodeFailure'
+      error: '["Als eigene Vorlage speichern","×","Name","Beschreibung","Als Standard für neue Trips","Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.","Abbrechen","Speichern"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:277:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: EN (route): Label mit „optional“, englische Platzhalter, Speichern vor Abbrechen
+    not ok 2 - EN (route): Label mit „optional“, englische Platzhalter, Speichern vor Abbrechen
+      ---
+      duration_ms: 0.905422
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:285:3'
+      failureType: 'testCodeFailure'
+      error: '["Save as your own template","×","Name","Description","Default for new trips","Saved are the metric selection, traffic-light limits and alert levels. Delivery, stages and locations are not included.","Cancel","Save"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:288:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: DE (vergleich): Label „Beschreibung (optional)“, beide Platzhalter, Speichern vor Abbrechen
+    not ok 3 - DE (vergleich): Label „Beschreibung (optional)“, beide Platzhalter, Speichern vor Abbrechen
+      ---
+      duration_ms: 0.632282
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:273:3'
+      failureType: 'testCodeFailure'
+      error: '["Als eigene Vorlage speichern","×","Name","Beschreibung","Als Standard für neue Orte","Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.","Abbrechen","Speichern"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:277:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: EN (vergleich): Label mit „optional“, englische Platzhalter, Speichern vor Abbrechen
+    not ok 4 - EN (vergleich): Label mit „optional“, englische Platzhalter, Speichern vor Abbrechen
+      ---
+      duration_ms: 0.646062
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:285:3'
+      failureType: 'testCodeFailure'
+      error: '["Save as your own template","×","Name","Description","Default for new locations","Saved are the metric selection, traffic-light limits and alert levels. Delivery, stages and locations are not included.","Cancel","Save"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:288:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 7 - \#3111 AC-7: Dialog „Als eigene Vorlage speichern“
+  ---
+  duration_ms: 3.518518
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/components/organisms/__tests__/feat_3111_wetter_dialoge_mockup.test.ts:271:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3111 Katalog: neue Schlüssel in DE und EN
+    # Subtest: wetter.grenzen.unten_1: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 1 - wetter.grenzen.unten_1: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 1.393723
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.grenzen.unten_1
+        + actual - expected
+        
+        + undefined
+        - 'unten'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'unten'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: wetter.grenzen.unten_2: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 2 - wetter.grenzen.unten_2: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.198951
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.grenzen.unten_2
+        + actual - expected
+        
+        + undefined
+        - 'zu wenig'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zu wenig'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: wetter.grenzen.oben_1: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 3 - wetter.grenzen.oben_1: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.1716
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.grenzen.oben_1
+        + actual - expected
+        
+        + undefined
+        - 'oben'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'oben'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.grenzen.oben_2: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 4 - wetter.grenzen.oben_2: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.08353
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.grenzen.oben_2
+        + actual - expected
+        
+        + undefined
+        - 'zu viel'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zu viel'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.aktiv_marker: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 5 - wetter.vorlage.aktiv_marker: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.14177
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.vorlage.aktiv_marker
+        + actual - expected
+        
+        + undefined
+        - '· aktiv'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: '· aktiv'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.stichworte.alpen_trekking: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 6 - wetter.vorlage.stichworte.alpen_trekking: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.082281
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.vorlage.stichworte.alpen_trekking
+        + actual - expected
+        
+        + undefined
+        - 'Gewitter, Böen, Nullgradgrenze'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Gewitter, Böen, Nullgradgrenze'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.stichworte.wandern: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 7 - wetter.vorlage.stichworte.wandern: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.08298
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.vorlage.stichworte.wandern
+        + actual - expected
+        
+        + undefined
+        - 'Regen, Sonne, UV'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Regen, Sonne, UV'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.stichworte.skitouren: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 8 - wetter.vorlage.stichworte.skitouren: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.12949
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.vorlage.stichworte.skitouren
+        + actual - expected
+        
+        + undefined
+        - 'Neuschnee, Schneehöhe, Sicht'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Neuschnee, Schneehöhe, Sicht'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.stichworte.wintersport: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 9 - wetter.vorlage.stichworte.wintersport: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.310732
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.vorlage.stichworte.wintersport
+        + actual - expected
+        
+        + undefined
+        - 'Schnee, Kälte'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Schnee, Kälte'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.stichworte.radtour: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 10 - wetter.vorlage.stichworte.radtour: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.278891
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.vorlage.stichworte.radtour
+        + actual - expected
+        
+        + undefined
+        - 'Wind, Regen, gefühlte Temperatur'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Wind, Regen, gefühlte Temperatur'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.stichworte.wassersport: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 11 - wetter.vorlage.stichworte.wassersport: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.147601
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.vorlage.stichworte.wassersport
+        + actual - expected
+        
+        + undefined
+        - 'Wind beidseitig, Gewitter'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Wind beidseitig, Gewitter'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.stichworte.allgemein: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 12 - wetter.vorlage.stichworte.allgemein: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.089661
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.vorlage.stichworte.allgemein
+        + actual - expected
+        
+        + undefined
+        - 'Standard-Ampel'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Standard-Ampel'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.frage_titel: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 13 - wetter.vorlage.frage_titel: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.13324
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.vorlage.frage_titel
+        + actual - expected
+        
+        + undefined
+        - '„{neu}“ übernehmen?'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: '„{neu}“ übernehmen?'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.ersetzt_route: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 14 - wetter.vorlage.ersetzt_route: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.088779
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.vorlage.ersetzt_route
+        + actual - expected
+        
+        + undefined
+        - 'Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips.'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips.'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.dialog.name_platzhalter: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 15 - wetter.dialog.name_platzhalter: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.07885
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.dialog.name_platzhalter
+        + actual - expected
+        
+        + undefined
+        - 'z.B. Mallorca Frühling'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'z.B. Mallorca Frühling'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.dialog.beschreibung_platzhalter: DE wortgetreu, EN vorhanden und ungleich DE
+    not ok 16 - wetter.dialog.beschreibung_platzhalter: DE wortgetreu, EN vorhanden und ungleich DE
+      ---
+      duration_ms: 0.077209
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:54:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        DE wetter.dialog.beschreibung_platzhalter
+        + actual - expected
+        
+        + undefined
+        - 'wofür die Vorlage gedacht ist'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wofür die Vorlage gedacht ist'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:55:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Bestätigung für Orte: ersetzt_vergleich nennt „für diesen Ort“ bzw. „für diese Orte“ (Mockup Z. 488), nicht „Orts-Briefings“
+    not ok 17 - Bestätigung für Orte: ersetzt_vergleich nennt „für diesen Ort“ bzw. „für diese Orte“ (Mockup Z. 488), nicht „Orts-Briefings“
+      ---
+      duration_ms: 0.17873
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:61:2'
+      failureType: 'testCodeFailure'
+      error: 'ersetzt_vergleich fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:62:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: alle 7 Systemvorlagen tragen kuratierte Stichworte (Schlüsselmenge = Namensmenge)
+    not ok 18 - alle 7 Systemvorlagen tragen kuratierte Stichworte (Schlüsselmenge = Namensmenge)
+      ---
+      duration_ms: 0.940032
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:66:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + []
+        - [
+        -   'allgemein',
+        -   'alpen_trekking',
+        -   'radtour',
+        -   'skitouren',
+        -   'wandern',
+        -   'wassersport',
+        -   'wintersport'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'allgemein'
+        1: 'alpen_trekking'
+        2: 'radtour'
+        3: 'skitouren'
+        4: 'wandern'
+        5: 'wassersport'
+        6: 'wintersport'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:70:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..18
+not ok 8 - \#3111 Katalog: neue Schlüssel in DE und EN
+  ---
+  duration_ms: 5.750982
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:52:1'
+  failureType: 'subtestsFailed'
+  error: '18 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3111 Katalog: geänderte Bestandstexte
+    # Subtest: wetter.dialog.beschreibung: DE wortgetreu nach Mockup
+    not ok 1 - wetter.dialog.beschreibung: DE wortgetreu nach Mockup
+      ---
+      duration_ms: 0.209292
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:76:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'Beschreibung'
+        - 'Beschreibung (optional)'
+                       ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Beschreibung (optional)'
+      actual: 'Beschreibung'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:77:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: wetter.grenzen.hinweis: DE wortgetreu nach Mockup
+    not ok 2 - wetter.grenzen.hinweis: DE wortgetreu nach Mockup
+      ---
+      duration_ms: 0.183201
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:76:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'Grün ist alles zwischen ‚gelb unten‘ und ‚gelb oben‘. Ein leeres Feld heißt: auf dieser Seite keine Grenze.'
+        - 'Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze.'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze.'
+      actual: 'Grün ist alles zwischen ‚gelb unten‘ und ‚gelb oben‘. Ein leeres Feld heißt: auf dieser Seite keine Grenze.'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:77:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.grenzen.abweichend: DE wortgetreu nach Mockup
+    not ok 3 - wetter.grenzen.abweichend: DE wortgetreu nach Mockup
+      ---
+      duration_ms: 0.08572
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:76:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'Abweichend von der Vorlage ‚{vorlage}‘.'
+        - 'Abweichend von der Vorlage „{vorlage}“.'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Abweichend von der Vorlage „{vorlage}“.'
+      actual: 'Abweichend von der Vorlage ‚{vorlage}‘.'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:77:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.gewitter.keins_gruen: DE wortgetreu nach Mockup
+    not ok 4 - wetter.gewitter.keins_gruen: DE wortgetreu nach Mockup
+      ---
+      duration_ms: 0.0757
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:76:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + '‚keins‘ ist immer grün.'
+        - '„keins“ ist immer grün.'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: '„keins“ ist immer grün.'
+      actual: '‚keins‘ ist immer grün.'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:77:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.verlust.one: DE wortgetreu nach Mockup
+    not ok 5 - wetter.vorlage.verlust.one: DE wortgetreu nach Mockup
+      ---
+      duration_ms: 0.07944
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:76:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'Deine 1 Abweichung von ‚{alt}‘ geht verloren.'
+        - 'Deine 1 Abweichung von „{alt}“ geht verloren.'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Deine 1 Abweichung von „{alt}“ geht verloren.'
+      actual: 'Deine 1 Abweichung von ‚{alt}‘ geht verloren.'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:77:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.verlust.other: DE wortgetreu nach Mockup
+    not ok 6 - wetter.vorlage.verlust.other: DE wortgetreu nach Mockup
+      ---
+      duration_ms: 0.122099
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:76:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'Deine {count} Abweichungen von ‚{alt}‘ gehen verloren.'
+        - 'Deine {count} Abweichungen von „{alt}“ gehen verloren.'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Deine {count} Abweichungen von „{alt}“ gehen verloren.'
+      actual: 'Deine {count} Abweichungen von ‚{alt}‘ gehen verloren.'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:77:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: EN „Beschreibung (optional)“ trägt „optional“
+    not ok 7 - EN „Beschreibung (optional)“ trägt „optional“
+      ---
+      duration_ms: 0.207471
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:80:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        The input did not match the regular expression /\(optional\)/i. Input:
+        
+        'Description'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: 'Description'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:81:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..7
+not ok 9 - \#3111 Katalog: geänderte Bestandstexte
+  ---
+  duration_ms: 1.142032
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:74:1'
+  failureType: 'subtestsFailed'
+  error: '7 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3111 Katalog: keine ‚…‘-Anführungszeichen mehr in den betroffenen DE-Texten
+    # Subtest: wetter.grenzen.hinweis
+    not ok 1 - wetter.grenzen.hinweis
+      ---
+      duration_ms: 0.226451
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:92:3'
+      failureType: 'testCodeFailure'
+      error: 'wetter.grenzen.hinweis enthält noch ‚…‘: Grün ist alles zwischen ‚gelb unten‘ und ‚gelb oben‘. Ein leeres Feld heißt: auf dieser Seite keine Grenze.'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: 'Grün ist alles zwischen ‚gelb unten‘ und ‚gelb oben‘. Ein leeres Feld heißt: auf dieser Seite keine Grenze.'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:94:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: wetter.grenzen.abweichend
+    not ok 2 - wetter.grenzen.abweichend
+      ---
+      duration_ms: 0.15618
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:92:3'
+      failureType: 'testCodeFailure'
+      error: 'wetter.grenzen.abweichend enthält noch ‚…‘: Abweichend von der Vorlage ‚{vorlage}‘.'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: 'Abweichend von der Vorlage ‚{vorlage}‘.'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:94:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.gewitter.keins_gruen
+    not ok 3 - wetter.gewitter.keins_gruen
+      ---
+      duration_ms: 0.06794
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:92:3'
+      failureType: 'testCodeFailure'
+      error: 'wetter.gewitter.keins_gruen enthält noch ‚…‘: ‚keins‘ ist immer grün.'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '‚keins‘ ist immer grün.'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:94:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.verlust.one
+    not ok 4 - wetter.vorlage.verlust.one
+      ---
+      duration_ms: 0.05718
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:92:3'
+      failureType: 'testCodeFailure'
+      error: 'wetter.vorlage.verlust.one enthält noch ‚…‘: Deine 1 Abweichung von ‚{alt}‘ geht verloren.'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: 'Deine 1 Abweichung von ‚{alt}‘ geht verloren.'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:94:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.verlust.other
+    not ok 5 - wetter.vorlage.verlust.other
+      ---
+      duration_ms: 0.052471
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:92:3'
+      failureType: 'testCodeFailure'
+      error: 'wetter.vorlage.verlust.other enthält noch ‚…‘: Deine {count} Abweichungen von ‚{alt}‘ gehen verloren.'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: 'Deine {count} Abweichungen von ‚{alt}‘ gehen verloren.'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:94:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.frage_titel
+    ok 6 - wetter.vorlage.frage_titel
+      ---
+      duration_ms: 0.0433
+      type: 'test'
+      ...
+    # Subtest: wetter.vorlage.frage_route
+    not ok 7 - wetter.vorlage.frage_route
+      ---
+      duration_ms: 0.071791
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:92:3'
+      failureType: 'testCodeFailure'
+      error: 'wetter.vorlage.frage_route enthält noch ‚…‘: ‚{neu}‘ übernehmen? Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips.'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '‚{neu}‘ übernehmen? Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips.'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:94:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wetter.vorlage.frage_vergleich
+    not ok 8 - wetter.vorlage.frage_vergleich
+      ---
+      duration_ms: 0.057401
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:92:3'
+      failureType: 'testCodeFailure'
+      error: 'wetter.vorlage.frage_vergleich enthält noch ‚…‘: ‚{neu}‘ übernehmen? Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Orts-Briefings.'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '‚{neu}‘ übernehmen? Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Orts-Briefings.'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:94:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..8
+not ok 10 - \#3111 Katalog: keine ‚…‘-Anführungszeichen mehr in den betroffenen DE-Texten
+  ---
+  duration_ms: 0.902242
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/modular-foraging-lynx/frontend/src/lib/i18n/__tests__/feat_3111_wetter_dialoge_katalog.test.ts:85:1'
+  failureType: 'subtestsFailed'
+  error: '7 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3111 Katalog: Parität DE/EN
+    # Subtest: DE und EN tragen dieselben Schlüssel
+    ok 1 - DE und EN tragen dieselben Schlüssel
+      ---
+      duration_ms: 0.374191
+      type: 'test'
+      ...
+    1..1
+ok 11 - \#3111 Katalog: Parität DE/EN
+  ---
+  duration_ms: 0.425471
+  type: 'suite'
+  ...
+1..11
+# tests 57
+# suites 11
+# pass 3
+# fail 54
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 913.991051
