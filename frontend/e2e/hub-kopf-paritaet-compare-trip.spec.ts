@@ -547,7 +547,7 @@ test.describe('HS S1b — Profil in der Zeile unter dem Titel bei beiden Arten',
 	};
 	for (const vp of BREITEN) {
 		for (const kind of HUB_KINDS) {
-			test(`HS-5 (${kind}, ${vp.width} px): „— ✎ · ${PROFIL[kind].label}" — Profil direkt hinter dem Region-Stift`, async ({ page }) => {
+			test(`HS-5 (${kind}, ${vp.width} px): „— ✎" ohne ${PROFIL[kind].label} — kein Profil hinter dem Region-Stift (#2796, #3196)`, async ({ page }) => {
 				await page.setViewportSize(vp);
 				const ohneRegion = kind === 'route' ? { region: '' } : { display_config: { region: '' } };
 				const hub = await seed(page.request, kind, 'aktiv', { ...ohneRegion, ...PROFIL[kind].extra });
@@ -555,13 +555,10 @@ test.describe('HS S1b — Profil in der Zeile unter dem Titel bei beiden Arten',
 					await openHub(page, kind, hub.id);
 					const stift = page.getByTestId(`${HUB_SEL[kind].kopf}-region-edit-toggle`).filter({ visible: true }).first();
 					await expect(stift.locator('xpath=preceding-sibling::span[1]'), 'Region-Platzhalter').toHaveText('—');
-					if (kind === 'route') {
-						await expect(hinterStift(page, kind), `AC-6: Profil fehlt hinter dem Stift (${kind})`).toHaveText(`· ${PROFIL[kind].label}`);
-					} else {
-						// #2796 S4a (ADR-0108 P3): beim Orts-Vergleich steht kein Profilname mehr hinter der Region.
-						const n = hinterStift(page, kind);
-						if (await n.count()) await expect(n, '#2796 AC-1: Profilname hinter dem Stift').not.toContainText(PROFIL[kind].label);
-					}
+					// #2796 S4a (ADR-0108 P3): beim Orts-Vergleich steht kein Profilname mehr hinter der Region;
+					// #3196 AC-1: auch im Trip-Kopf keine Aktivität mehr (Tempo lebt im Reiter Etappen).
+					const n = hinterStift(page, kind);
+					if (await n.count()) await expect(n, `Profilname hinter dem Stift (${kind})`).not.toContainText(PROFIL[kind].label);
 				} finally {
 					await hub.aufraeumen();
 				}
@@ -583,7 +580,7 @@ test.describe('HS S1b — Profil in der Zeile unter dem Titel bei beiden Arten',
 
 // AC-11: Status-Text und Profil folgen der Nutzersprache (Zweitnutzer, Muster HP-13).
 for (const kind of HUB_KINDS) {
-	testMitZustellbaremZiel(`HS-7 (${kind}): Status-Schild „Pausiert"/„Paused" und Profil folgen der Nutzersprache (de → en)`, async ({ page }) => {
+	testMitZustellbaremZiel(`HS-7 (${kind}): Status-Schild „Pausiert"/„Paused" folgt der Nutzersprache, kein Profil im Kopf (de → en)`, async ({ page }) => {
 		const orte =
 			kind === 'vergleich'
 				? [await createTestLocation(page.request, { name: 'HS7-A' }), await createTestLocation(page.request, { name: 'HS7-B' })]
@@ -600,9 +597,8 @@ for (const kind of HUB_KINDS) {
 				const s = await schildMessen(page);
 				expect(s.text.toLowerCase(), `${lang}: Status-Text`).toBe(ERWARTET[lang].status);
 				const zusatz = page.getByTestId(`${HUB_SEL[kind].kopf}-region-edit-toggle`).filter({ visible: true }).first().locator('xpath=following-sibling::*[1]');
-				if (kind === 'route') await expect(zusatz, `${lang}: Profil-Zusatz`).toHaveText(`· ${ERWARTET[lang].profil}`);
-				// #2796 S4a: kein Profilname mehr im Kopf des Orts-Vergleichs.
-				else if (await zusatz.count()) await expect(zusatz, `${lang}: Profilname im Orte-Kopf`).not.toContainText(ERWARTET[lang].profil);
+				// #2796 S4a / #3196 AC-1: kein Profil- bzw. Aktivitätsname mehr im Kopf, bei beiden Arten.
+				if (await zusatz.count()) await expect(zusatz, `${lang}: Profilname im Kopf`).not.toContainText(ERWARTET[lang].profil);
 			}
 		} finally {
 			await page.request.put('/api/auth/profile', { data: { language: 'de' } }).catch(() => {});

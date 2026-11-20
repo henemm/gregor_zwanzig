@@ -73,6 +73,7 @@
   "alert_quiet_to": "06:00",
   "shortcode": "DG",
   "activity": "wandern",
+  "tempo": {"fortbewegung": "fuss", "grundtempo_kmh": 4},
   "region": "korsika",
   "paused_at": "2026-10-02T08:00:00Z",
   "archived_at": "2026-10-03T08:00:00Z",

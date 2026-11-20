@@ -39,9 +39,11 @@ const START: Record<HubKind, { profil: string; region: string; extra: Record<str
 
 type Stand = Record<string, unknown>;
 
-// #2796 S4a (ADR-0108 P3): nur der Trip hat noch eine Profil-/Aktivitätsauswahl im Kopf;
-// beim Orts-Vergleich ersetzt die Vorlage das Profil (orte-kopf-vorlage-statt-profil-2796.spec.ts).
-const MIT_PROFIL: readonly HubKind[] = HUB_KINDS.filter((k) => k === 'route');
+// #2796 S4a (ADR-0108 P3): beim Orts-Vergleich ersetzt die Vorlage das Profil
+// (orte-kopf-vorlage-statt-profil-2796.spec.ts). #3196 (ADR-0108 Nr. 3): auch der Trip hat keine
+// Aktivitätsauswahl mehr im Kopf (Tempo-Karte im Reiter Etappen, trip-hub-kopf-region-aktivitaet
+// AC-4/AC-5) — KB-3/KB-8 laufen damit für keinen kind mehr, KB-4/KB-6 prüfen nur Name und Region.
+const MIT_PROFIL: readonly HubKind[] = [];
 
 function seedKopf(page: Page, kind: HubKind): Promise<SeededHub> {
 	return seedHub(page.request, kind, { extra: START[kind].extra });

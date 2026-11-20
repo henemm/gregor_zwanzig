@@ -15,8 +15,8 @@
 // Gemessen: der SERVER-Stand im Ersatz-Server (Go-Merge) nach dem Speichern ueber
 // den ECHTEN Reiter (Instanz-Skript + echtes `api`). Frischer Stand, kein Konflikt.
 //
-// Issue #2284 S2 (AC-17): Kopf (Name, NEU Region) und Aktivitaet ueber
-// `TripHeader.onSaveField` (Pruefstand `kopfReiter`/`aktivitaetReiter`).
+// Issue #2284 S2 (AC-17): Kopf (Name, NEU Region) ueber `TripHeader.onSaveField`
+// (Pruefstand `kopfReiter`); Tempo seit #3196 ueber den Reiter Etappen (`tempoReiter`).
 //
 // Ausfuehren:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -278,7 +278,7 @@ describe('Versand (AC-14, AC-17)', () => {
 	});
 });
 
-describe('Kopf, Aktivitaet, Etappen (AC-15)', () => {
+describe('Kopf, Tempo, Etappen (AC-15)', () => {
 	test('Name', async () => {
 		const a = P.neuerAufbau();
 		const k = await P.kopfReiter(a);
@@ -286,11 +286,13 @@ describe('Kopf, Aktivitaet, Etappen (AC-15)', () => {
 		assert.equal(stand().name, 'Neuer Name');
 	});
 
-	test('Aktivitaet', async () => {
+	// #3196: Tempo (Reiter Etappen) statt Aktivitaet (Kopf); activity bleibt als Altfeld.
+	test('Tempo (#3196)', async () => {
 		const a = P.neuerAufbau();
-		const t = await P.aktivitaetReiter(a);
-		await t.aendern('skitour');
-		assert.equal(stand().activity, 'skitour');
+		const t = await P.tempoReiter(a);
+		await t.aendern({ fortbewegung: 'rad', grundtempo_kmh: 18 });
+		assert.deepEqual(stand().tempo, { fortbewegung: 'rad', grundtempo_kmh: 18 });
+		assert.equal(stand().activity, 'trekking');
 	});
 
 	test('Etappen', async () => {
@@ -303,9 +305,9 @@ describe('Kopf, Aktivitaet, Etappen (AC-15)', () => {
 });
 
 // Issue #2284 S2 (AC-2, AC-3, AC-6, AC-17): Region ist neues Eigenfeld des Kopfs
-// (`TripHeader.onSaveField('region', …)`); Name/Region/Aktivitaet nacheinander lassen
+// (`TripHeader.onSaveField('region', …)`); Name/Region nacheinander lassen
 // jedes andere Feld des Trips unveraendert.
-describe('#2284 S2: Kopf-Region und die Kopf-Folge Name ⇒ Region ⇒ Aktivitaet', () => {
+describe('#2284 S2: Kopf-Region und die Kopf-Folge Name ⇒ Region', () => {
 	test('Region setzen', async () => {
 		const a = P.neuerAufbau();
 		const k = await P.kopfReiter(a);
@@ -322,14 +324,13 @@ describe('#2284 S2: Kopf-Region und die Kopf-Folge Name ⇒ Region ⇒ Aktivitae
 		assert.equal(k.geschlossen.region, 1);
 	});
 
-	test('AC-6: nacheinander Name, Region, Aktivitaet — danach ist ALLES uebrige unveraendert', async () => {
+	test('AC-6: nacheinander Name, Region — danach ist ALLES uebrige unveraendert', async () => {
 		const a = P.neuerAufbau();
 		const vorher = stand();
 		const k = await P.kopfReiter(a);
 		await k.umbenennen('Neuer Name');
 		await k.regionAendern('Alpen Nord');
-		await k.aktivitaetAendern('skitour');
-		assert.deepEqual(stand(), { ...vorher, name: 'Neuer Name', region: 'Alpen Nord', activity: 'skitour' });
+		assert.deepEqual(stand(), { ...vorher, name: 'Neuer Name', region: 'Alpen Nord' });
 		pythonEigenesUnveraendert();
 	});
 });

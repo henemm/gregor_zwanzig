@@ -956,6 +956,21 @@ Sicherung als `tar.gz` je Nutzer; Sperre und atomares Schreiben wie `migrate_279
 
 ---
 
+## Trip-Tempo: Fortbewegung und Grundtempo nachtragen (#3196)
+
+Ergänzt je Trip unter `<root>/<uid>/briefings/*.json` (nur Trips, nicht Ortsvergleiche) das Feld `tempo` aus dem Altfeld `activity` (`fahrrad_15/20/25` → Rad 15/20/25 km/h, alles andere → zu Fuß 4 km/h; nie MTB oder Ski). Die Arrival-Zeiten (`arrival_calculated`) werden mit der neuen DAV-Gehzeit neu berechnet, damit die bewerteten Stunden je Wegpunkt dazu passen. `activity` und alle anderen Felder bleiben unverändert. Wiederholbar (zweiter Lauf schreibt nichts). Ausführung **nach** dem Prod-Deploy, je Umgebung erst Probelauf, dann `--execute`:
+
+```bash
+uv run python3 scripts/migrate_3196_trip_tempo.py --root /var/lib/gregor-staging/users            # Staging, Probelauf
+uv run python3 scripts/migrate_3196_trip_tempo.py --root /var/lib/gregor-staging/users --execute  # Staging, Sicherung + Schreiben
+uv run python3 scripts/migrate_3196_trip_tempo.py --root /var/lib/gregor/users                    # Prod, Probelauf
+uv run python3 scripts/migrate_3196_trip_tempo.py --root /var/lib/gregor/users --execute          # Prod, Sicherung + Schreiben
+```
+
+Sicherung als `tar.gz` je Nutzer unter `.backups/migrate-3196-<uid>-<timestamp>.tar.gz` (Standard `--backup-dir`: `<root>/../.backups`). Sicherung kommt vor dem Schreiben; schlägt sie fehl, wird nichts geschrieben. Exit 1 = offene Dateien (zwischen Planung und Schreiben geändert), Lauf wiederholen. Die Gehzeiten aller Bestandstrips ändern sich einmalig (PO-Entscheidung 2026-11-20). Spec: `docs/specs/modules/feat_3196_trip_tempo_etappen.md`, ADR-0108.
+
+---
+
 ## E-Mail-Bestätigung rückwirkend nachtragen (#2304, S1 aus #2271/#2146)
 
 Einmaliger Nachtrag-Lauf, der Bestandskonten ohne `email_verified_at` (angelegt, bevor der

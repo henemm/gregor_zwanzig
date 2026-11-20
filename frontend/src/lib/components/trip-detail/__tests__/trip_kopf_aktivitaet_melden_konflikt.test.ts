@@ -76,20 +76,24 @@ describe('AC-10: Kopf (Name) — 412 zeigt „Nochmal speichern"', () => {
 	});
 });
 
-describe('AC-10: Aktivitaet — 412 zeigt „Nochmal speichern"', () => {
-	test('412 beim Aendern der Aktivitaet: Controller `conflict`, nichts geschrieben', async () => {
+// Issue #3196: die Aktivitaet im Kopf ist ersetzt durch Fortbewegung + Grundtempo im Reiter
+// Etappen; derselbe Konfliktschutz gilt dort (gleicher Controller, Rumpf { stages, tempo }).
+const SKI = { fortbewegung: 'ski', grundtempo_kmh: 3 };
+
+describe('AC-10 / #3196: Tempo — 412 zeigt „Nochmal speichern"', () => {
+	test('412 beim Aendern des Tempos: Controller `conflict`, nichts geschrieben', async () => {
 		const a = P.neuerAufbau();
-		const t = await P.aktivitaetReiter(a);
-		await t.aendern('skitour');
+		const t = await P.tempoReiter(a);
+		await t.aendern(SKI);
 
 		assert.equal(puts().at(-1)!.status, 412);
-		assert.equal(a.ctl.state, 'conflict', 'AC-10: Konfliktanzeige statt stillem Scheitern (heute: kein try/catch, Controller unbeteiligt)');
-		assert.notEqual(stand().activity, 'skitour');
+		assert.equal(a.ctl.state, 'conflict', 'AC-10: Konfliktanzeige statt stillem Scheitern');
+		assert.notDeepEqual(stand().tempo, SKI);
 		assert.deepEqual((stand().display_config as Record<string, unknown>).metrics, FREMDE_METRIKEN);
 		assert.equal(a.updates.length, 0);
 	});
 
-	for (const [feld, wert] of [['name', 'Neuer Name'], ['region', 'Alpen Nord'], ['profile', 'skitour']] as const) {
+	for (const [feld, wert] of [['name', 'Neuer Name'], ['region', 'Alpen Nord']] as const) {
 		test(`onSaveField wirft bei 412 nicht (${feld}) — kein unbehandelter Promise-Fehler im Klick-Handler`, async () => {
 			const a = P.neuerAufbau();
 			const k = await P.kopfReiter(a);
@@ -99,15 +103,16 @@ describe('AC-10: Aktivitaet — 412 zeigt „Nochmal speichern"', () => {
 		});
 	}
 
-	test('„Nochmal speichern" wiederholt die Aktivitaetsaenderung; Fremdaenderung bleibt', async () => {
+	test('„Nochmal speichern" wiederholt die Tempoaenderung; Fremdaenderung und activity bleiben', async () => {
 		const a = P.neuerAufbau();
-		const t = await P.aktivitaetReiter(a);
-		await t.aendern('skitour');
+		const t = await P.tempoReiter(a);
+		await t.aendern(SKI);
 		assert.equal(a.ctl.state, 'conflict', 'Vorbedingung');
 
 		await a.ctl.retryConflict();
 
-		assert.equal(stand().activity, 'skitour');
+		assert.deepEqual(stand().tempo, SKI);
+		assert.equal(stand().activity, 'trekking', 'activity bleibt als Altfeld stehen (AC-12)');
 		assert.deepEqual((stand().display_config as Record<string, unknown>).metrics, FREMDE_METRIKEN);
 		assert.equal(a.ctl.state, 'idle');
 	});
@@ -184,7 +189,7 @@ describe('#2284 S2 AC-9: Region (neues Eigenfeld) — 412 zeigt „Nochmal speic
 	});
 });
 
-describe('#2284 S2 AC-9: ein Eintrag je Kopf-Feld (kopf-name / kopf-region / kopf-profil)', () => {
+describe('#2284 S2 AC-9: ein Eintrag je Kopf-Feld (kopf-name / kopf-region)', () => {
 	test('Name UND Region im Konflikt: ein Retry schreibt beide (kein gemeinsamer Eintrag)', async () => {
 		const a = P.neuerAufbau();
 		const k = await P.kopfReiter(a);
@@ -200,23 +205,23 @@ describe('#2284 S2 AC-9: ein Eintrag je Kopf-Feld (kopf-name / kopf-region / kop
 		assert.equal(k.geschlossen.region, 1);
 	});
 
-	test('Name UND Aktivitaet im Konflikt: ein Retry schreibt beide', async () => {
+	test('Name UND Tempo im Konflikt: ein Retry schreibt beide (#3196)', async () => {
 		const a = P.neuerAufbau();
 		const k = await P.kopfReiter(a);
+		const t = await P.tempoReiter(a);
 		await k.umbenennen('Neuer Name');
-		await k.aktivitaetAendern('skitour');
+		await t.aendern(SKI);
 		await a.ctl.retryConflict();
 		assert.equal(stand().name, 'Neuer Name');
-		assert.equal(stand().activity, 'skitour');
+		assert.deepEqual(stand().tempo, SKI);
 	});
 
-	test('die Eintraege tragen genau die Schluessel kopf-name, kopf-region, kopf-profil', async () => {
+	test('die Eintraege tragen genau die Schluessel kopf-name, kopf-region (kein kopf-profil mehr, #3196)', async () => {
 		const a = P.neuerAufbau();
 		const k = await P.kopfReiter(a);
 		await k.umbenennen('Neuer Name');
 		await k.regionAendern('Alpen Nord');
-		await k.aktivitaetAendern('skitour');
-		assert.deepEqual(konfliktSchluessel(a.ctl), ['kopf-name', 'kopf-region', 'kopf-profil']);
+		assert.deepEqual(konfliktSchluessel(a.ctl), ['kopf-name', 'kopf-region']);
 	});
 
 	test('zweimal dasselbe Feld im Konflikt: EIN Eintrag, der neueste Wert gewinnt', async () => {
@@ -248,7 +253,7 @@ describe('#2284 S2 AC-8 (Kern-Anteil): Serverfehler 500 — onSaveField wirft, F
 		}) as typeof globalThis.fetch;
 	}
 
-	for (const [feld, wert] of [['name', 'Neuer Name'], ['region', 'Alpen Nord'], ['profile', 'skitour']] as const) {
+	for (const [feld, wert] of [['name', 'Neuer Name'], ['region', 'Alpen Nord']] as const) {
 		test(`${feld}: Ablehnung mit error „Serverfehler", kein schliessen(), kein Konflikt, Server unveraendert`, async () => {
 			const a = P.neuerAufbau();
 			const k = await P.kopfReiter(a);

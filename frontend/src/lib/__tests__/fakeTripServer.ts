@@ -111,6 +111,7 @@ const GO_TRIP_FELDER = new Set([
 	'alert_quiet_to',
 	'region',
 	'activity',
+	'tempo', // Issue #3196: ganzes Objekt ersetzt (Go: existing.Tempo = req.Tempo)
 	'official_alerts_enabled',
 	'official_alert_triggers_enabled',
 	'official_warnings',

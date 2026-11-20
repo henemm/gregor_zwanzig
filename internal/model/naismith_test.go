@@ -17,25 +17,26 @@ const arrivalEps = 1e-9
 // strPtr ist ein lokaler Helper für *string-Felder (StartTime).
 func strPtr(s string) *string { return &s }
 
-// TestNaismithHours prüft die angepasste Naismith-Formel als SUMME (nicht max!).
-// AC-3 / AC-6: dist/4 + ascent/300 + descent/500.
-func TestNaismithHours(t *testing.T) {
-	sp := ActivitySpeed("") // Wanderer-Default
+// TestDAVHoursZuFuss prüft die Gehzeit nach DAV (Issue #3196, ersetzt die
+// frühere Naismith-Summe): t = max(t_h, t_v) + min(t_h, t_v) / 2 mit
+// t_h = dist/4, t_v = ascent/300 + descent/500.
+func TestDAVHoursZuFuss(t *testing.T) {
+	sp := ResolveTempo(&Trip{Activity: ""}) // zu Fuß 4 km/h
 	cases := []struct {
-		name                       string
+		name                      string
 		distKm, ascentM, descentM float64
-		want                       float64
+		want                      float64
 	}{
 		{"flat_4km", 4, 0, 0, 1.0},       // 4 km ÷ 4 km/h = 1 h
 		{"ascent_300m", 0, 300, 0, 1.0},  // 300 m ÷ 300 m/h = 1 h
 		{"descent_500m", 0, 0, 500, 1.0}, // 500 m ÷ 500 m/h = 1 h
-		{"summe", 4, 300, 500, 3.0},      // Summe, NICHT max() (max wäre 1.0)
+		{"dav", 4, 300, 500, 2.5},        // t_h 1, t_v 2 -> 2 + 1/2 (Summe wäre 3)
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := naismithHours(c.distKm, c.ascentM, c.descentM, sp)
+			got := DAVHours(c.distKm, c.ascentM, c.descentM, sp)
 			if diff := got - c.want; diff > arrivalEps || diff < -arrivalEps {
-				t.Fatalf("naismithHours(%v,%v,%v) = %v, want %v",
+				t.Fatalf("DAVHours(%v,%v,%v) = %v, want %v",
 					c.distKm, c.ascentM, c.descentM, got, c.want)
 			}
 		})
@@ -54,7 +55,7 @@ func TestComputeStageArrivals_Flat(t *testing.T) {
 			{ID: "W2", Name: "Ziel", Lat: 47.036, Lon: 11.0, ElevationM: 1000},
 		},
 	}
-	ComputeStageArrivals(stage, ActivitySpeed(""))
+	ComputeStageArrivals(stage, ResolveTempo(&Trip{Activity: ""}))
 
 	if stage.Waypoints[0].ArrivalCalculated == nil ||
 		*stage.Waypoints[0].ArrivalCalculated != "08:00" {
@@ -77,7 +78,7 @@ func TestComputeStageArrivals_DefaultStart(t *testing.T) {
 			{ID: "W1", Name: "Start", Lat: 47.0, Lon: 11.0, ElevationM: 1000},
 		},
 	}
-	ComputeStageArrivals(stage, ActivitySpeed(""))
+	ComputeStageArrivals(stage, ResolveTempo(&Trip{Activity: ""}))
 
 	if stage.Waypoints[0].ArrivalCalculated == nil {
 		t.Fatal("wp[0] ArrivalCalculated == nil, want Default 08:00")
@@ -98,7 +99,7 @@ func TestComputeStageArrivals_Ascent(t *testing.T) {
 			{ID: "W2", Name: "Gipfel", Lat: 47.0, Lon: 11.0, ElevationM: 1300},
 		},
 	}
-	ComputeStageArrivals(stage, ActivitySpeed(""))
+	ComputeStageArrivals(stage, ResolveTempo(&Trip{Activity: ""}))
 
 	if stage.Waypoints[1].ArrivalCalculated == nil {
 		t.Fatal("wp[1] ArrivalCalculated == nil, want gesetzt")
@@ -116,7 +117,7 @@ func TestComputeStageArrivals_Pause(t *testing.T) {
 		Waypoints: []Waypoint{},
 	}
 	// Darf nicht paniken.
-	ComputeStageArrivals(stage, ActivitySpeed(""))
+	ComputeStageArrivals(stage, ResolveTempo(&Trip{Activity: ""}))
 
 	if len(stage.Waypoints) != 0 {
 		t.Fatalf("Pausentag soll 0 Wegpunkte behalten, hat %d", len(stage.Waypoints))
@@ -136,7 +137,7 @@ func TestComputeStageArrivals_Monotonic(t *testing.T) {
 			{ID: "W3", Name: "Ziel", Lat: 47.072, Lon: 11.0, ElevationM: 1300},
 		},
 	}
-	ComputeStageArrivals(stage, ActivitySpeed(""))
+	ComputeStageArrivals(stage, ResolveTempo(&Trip{Activity: ""}))
 
 	prev := -1
 	for i, wp := range stage.Waypoints {
@@ -177,7 +178,7 @@ func TestFormatHHMM_WrapsPastMidnight(t *testing.T) {
 			{ID: "W2", Name: "Fern", Lat: 47.9, Lon: 11.0, ElevationM: 1000},
 		},
 	}
-	ComputeStageArrivals(stage, ActivitySpeed(""))
+	ComputeStageArrivals(stage, ResolveTempo(&Trip{Activity: ""}))
 
 	if stage.Waypoints[1].ArrivalCalculated == nil {
 		t.Fatal("wp[1] ArrivalCalculated == nil, want gewickelten Wert")
@@ -204,7 +205,7 @@ func TestParseStartMinutes_RejectsNonsense(t *testing.T) {
 			{ID: "W1", Name: "Start", Lat: 47.0, Lon: 11.0, ElevationM: 1000},
 		},
 	}
-	ComputeStageArrivals(stage, ActivitySpeed(""))
+	ComputeStageArrivals(stage, ResolveTempo(&Trip{Activity: ""}))
 
 	if stage.Waypoints[0].ArrivalCalculated == nil {
 		t.Fatal("wp[0] ArrivalCalculated == nil, want Default 08:00")

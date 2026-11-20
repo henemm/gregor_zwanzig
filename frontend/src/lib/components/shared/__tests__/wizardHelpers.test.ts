@@ -11,7 +11,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-	mapActivityToProfile,
 	formatStageNumber,
 	isPauseStage,
 	addDays,
@@ -19,25 +18,8 @@ import {
 	newId
 } from '../wizardHelpers.ts';
 
-test('mapActivityToProfile: trekking → summer_trekking', () => {
-	assert.equal(mapActivityToProfile('trekking'), 'summer_trekking');
-});
-
-test('mapActivityToProfile: skitour → wintersport', () => {
-	assert.equal(mapActivityToProfile('skitour'), 'wintersport');
-});
-
-test('mapActivityToProfile: hochtour → summer_trekking', () => {
-	assert.equal(mapActivityToProfile('hochtour'), 'summer_trekking');
-});
-
-test('mapActivityToProfile: klettersteig → summer_trekking', () => {
-	assert.equal(mapActivityToProfile('klettersteig'), 'summer_trekking');
-});
-
-test('mapActivityToProfile: mtb → allgemein', () => {
-	assert.equal(mapActivityToProfile('mtb'), 'allgemein');
-});
+// Issue #3196 (F-A3-4): die Profil-Zuordnung ist entfallen (kein produktiver Aufrufer); die
+// Vorbelegung nach Fortbewegung wird am Wirkort geprueft (tempo_verdrahtung_3196_fixloop2, F006).
 
 test('formatStageNumber: index 0 → T01', () => {
 	assert.equal(formatStageNumber(0), 'T01');

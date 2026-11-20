@@ -1,15 +1,16 @@
 """
-Python mirror of internal/model/naismith.go — Issue #802.
+Python mirror of internal/model/naismith.go — Issue #802, #3196.
 
-Compute-on-Save: berechnet arrival_calculated für jeden Wegpunkt einer Etappe
-nach Naismith's Rule (SUMME, nicht MAX). Bit-genau zu Go — gleiche Fixtures,
-gleiche Ergebnisse.
+Compute-on-Save: berechnet arrival_calculated für jeden Wegpunkt einer Etappe.
+Issue #3196: Gehzeit nach DAV (DIN 33466) statt Naismith-Summe, Tempo aus dem
+Trip-Feld ``tempo`` (Fortbewegung + Grundtempo). Bit-genau zu Go — gleiche
+Falltabelle (tests/fixtures/naismith_dav_paritaet.json), gleiche Ergebnisse.
 """
 from __future__ import annotations
 
 import dataclasses
 import math
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Any, Tuple, Union
 
 from utils.geo import haversine_km
 
@@ -18,19 +19,68 @@ if TYPE_CHECKING:
 
 _DEFAULT_START = "08:00"
 
+Speeds = Tuple[float, float, float]
 
-def activity_speeds(activity: str) -> Tuple[float, float, float]:
-    """Liefert (flat_kmh, ascent_mh, descent_mh) für eine Aktivität.
+# Issue #3196: Referenzwerte je Fortbewegung (Vorschlags-Grundtempo km/h,
+# Aufstiegs-/Abstiegsrate Hm/h bei genau diesem Tempo). Spiegelt Go
+# model.FortbewegungRef (EINE Quelle dort) und TS FORTBEWEGUNG_REF.
+_REFERENZ = {
+    "fuss": (4.0, 300.0, 500.0),
+    "rad": (20.0, 600.0, 1000.0),
+    "mtb": (12.0, 500.0, 1000.0),
+    "ski": (3.0, 300.0, 1500.0),
+}
+# Grenzen eines plausiblen Grundtempos (wie Go Min/MaxGrundtempoKmh). Die
+# Untergrenze verhindert OverflowError bei winzigen Altwerten (Fix-Loop 2, F001).
+_MIN_GRUNDTEMPO_KMH = 0.5
+_MAX_GRUNDTEMPO_KMH = 60.0
+_RAD_ALTWERTE = {"fahrrad_15": 15, "fahrrad_20": 20, "fahrrad_25": 25}
 
-    Spiegelt Go ActivitySpeed() — Wanderer-Default und Fahrrad-Stufen identisch.
+
+def derive_tempo(activity: "str | None") -> dict:
+    """Leitet ``tempo`` aus dem Altfeld ``activity`` ab (Lazy-Migration).
+
+    fahrrad_15/20/25 → rad mit 15/20/25 km/h, alles andere → fuss 4 km/h.
+    Nie mtb oder ski (Spec #3196, AC-2). Spiegelt Go DeriveTempo.
     """
-    if activity == "fahrrad_15":
-        return (15.0, 600.0, 1000.0)
-    if activity == "fahrrad_20":
-        return (20.0, 600.0, 1000.0)
-    if activity == "fahrrad_25":
-        return (25.0, 600.0, 1000.0)
-    return (4.0, 300.0, 500.0)
+    kmh = _RAD_ALTWERTE.get(activity or "")
+    if kmh is not None:
+        return {"fortbewegung": "rad", "grundtempo_kmh": kmh}
+    return {"fortbewegung": "fuss", "grundtempo_kmh": 4}
+
+
+def valid_tempo(tempo: Any) -> bool:
+    """Bekannte Fortbewegung und 0.5 <= Grundtempo <= 60 km/h (wie Go ValidTempo)."""
+    if not isinstance(tempo, dict) or tempo.get("fortbewegung") not in _REFERENZ:
+        return False
+    v = tempo.get("grundtempo_kmh")
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return False
+    return _MIN_GRUNDTEMPO_KMH <= v <= _MAX_GRUNDTEMPO_KMH
+
+
+def speeds_for_tempo(tempo: Any) -> Speeds:
+    """(flat_kmh, ascent_mh, descent_mh) aus einem Tempo: R = R_ref · v / v_ref.
+
+    Ungültiges Tempo → zu Fuß mit Vorschlagswert (wie Go TempoSpeeds).
+    """
+    if not valid_tempo(tempo):
+        tempo = {"fortbewegung": "fuss", "grundtempo_kmh": 4}
+    v_ref, r_auf, r_ab = _REFERENZ[tempo["fortbewegung"]]
+    v = float(tempo["grundtempo_kmh"])
+    f = v / v_ref
+    return (v, r_auf * f, r_ab * f)
+
+
+def tempo_speeds(trip: Any) -> Speeds:
+    """Einzige Auflösungsstelle des Trip-Tempos (Spiegel Go ResolveTempo).
+
+    Gespeichertes ``trip.tempo`` vor Ableitung aus dem Altfeld ``activity``.
+    """
+    tempo = getattr(trip, "tempo", None)
+    if tempo is None:
+        tempo = derive_tempo(getattr(trip, "activity", "") or "")
+    return speeds_for_tempo(tempo)
 
 
 def _parse_start_minutes(start_time: "str | None") -> int:
@@ -78,28 +128,38 @@ def _round(x: float) -> int:
     return math.floor(x + 0.5)
 
 
-def _naismith_hours(
-    dist_km: float, asc_m: float, desc_m: float, sp: Tuple[float, float, float]
-) -> float:
-    """Naismith als SUMME (nicht MAX). Spiegelt Go naismithHours."""
-    return dist_km / sp[0] + asc_m / sp[1] + desc_m / sp[2]
+def dav_hours(dist_km: float, asc_m: float, desc_m: float, sp: Speeds) -> float:
+    """Gehzeit nach DAV (DIN 33466), Spiegel Go DAVHours (Issue #3196).
+
+    t_h = km / v, t_v = Hm_auf/R_auf + Hm_ab/R_ab, t = max + min / 2.
+    """
+    t_h = dist_km / sp[0]
+    t_v = asc_m / sp[1] + desc_m / sp[2]
+    return max(t_h, t_v) + min(t_h, t_v) / 2
 
 
-def compute_stage_arrivals(stage: "Stage", activity: str) -> "Stage":
+def compute_stage_arrivals(stage: "Stage", tempo: "Union[Speeds, str]") -> "Stage":
     """Berechnet arrival_calculated für jeden Wegpunkt — funktional, neue Stage.
 
     Stage und Waypoint sind frozen=True → dataclasses.replace für neue Objekte.
     Spiegelt Go ComputeStageArrivals bit-genau.
 
+    ``tempo``: Tempoparameter aus ``tempo_speeds(trip)``. Ein String wird als
+    Altwert ``activity`` gelesen und über ``derive_tempo`` abgeleitet.
+
     - 0 Wegpunkte: Stage unverändert zurück.
     - start_time: datetime.time → "HH:MM"; None → Default "08:00".
     - wp[0].arrival_calculated = formatHHMM(round(start_minutes)).
-    - wp[i].arrival_calculated = kumulativer Zeitfortschritt via Naismith.
+    - wp[i].arrival_calculated = kumulativer Zeitfortschritt nach DAV je
+      Wegpunkt-Paar.
     """
     if not stage.waypoints:
         return stage
 
-    sp = activity_speeds(activity)
+    if isinstance(tempo, str):
+        sp = speeds_for_tempo(derive_tempo(tempo))
+    else:
+        sp = tempo
 
     # stage.start_time ist ein datetime.time oder None
     if stage.start_time is not None:
@@ -132,7 +192,7 @@ def compute_stage_arrivals(stage: "Stage", activity: str) -> "Stage":
             d_elev = float((wp.elevation_m or 0) - (prev.elevation_m or 0))
             asc = max(0.0, d_elev)
             desc = max(0.0, -d_elev)
-            cur += _naismith_hours(dist, asc, desc, sp) * 60.0
+            cur += dav_hours(dist, asc, desc, sp) * 60.0
             new_wp = dataclasses.replace(wp, arrival_calculated=_format_hhmm(_round(cur)))
             new_waypoints.append(new_wp)
 

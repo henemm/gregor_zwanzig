@@ -109,8 +109,8 @@ Diese Scheibe:
 | `AlarmeTab.svelte:604` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
 | `VersandTab.svelte:369` | Markup-Baum Trip (`VTLaufzeitRoute`, Premium-SMS; Mehrtages-Trend seit #3155 entfallen) |
 | `VersandTab.svelte:401` | Markup-Baum Vergleich (`VTLaufzeitVergleich`, kein Mehrtages-Trend, eigener Premium-SMS-Schalter seit #2293 S2) — zwei komplette, unterschiedliche Komponenten-Bäume |
-| `WeatherMetricsTab.svelte:1466` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
-| `WeatherMetricsTab.svelte:2008` | Schalter „Nacht-Stundentabelle in der Mail zeigen“ nur im Trip (#1721): die Nacht-Stundentabelle gibt es nur in der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre, Spec `fix_1721_nachtausgabe.md`) |
+| `WeatherMetricsTab.svelte:1459` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
+| `WeatherMetricsTab.svelte:2001` | Schalter „Nacht-Stundentabelle in der Mail zeigen“ nur im Trip (#1721): die Nacht-Stundentabelle gibt es nur in der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre, Spec `fix_1721_nachtausgabe.md`) |
 | `versand-tab/vtBriefingChannelsText.ts:22` | SMS-Zeichenbudget: Trip 160 / Vergleich 153 (unterschiedliches Layout) |
 | `versand-tab/vtBriefingChannelsText.ts:29` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
 | `alarme-tab/alarmeTabSections.ts:27` | Radar-Abschnitt nur im Vergleich |

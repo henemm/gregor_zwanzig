@@ -1,6 +1,12 @@
 // TDD RED — Issue #2284 Scheibe S2: Trip-Hub-Kopf auf den geteilten Baustein
 // `SubscriptionHeader`, Speicher-Chip im Baustein.
 //
+// Issue #3196 (ADR-0108 Nr. 3, Spec docs/specs/modules/feat_3196_trip_tempo_etappen.md):
+// die Aktivitaet hat den Kopf verlassen. AC-4/AC-5 pruefen jetzt die Tempo-Karte
+// (Fortbewegung + Grundtempo) im Reiter Etappen; die Aktivitaets-Faelle von AC-6,
+// AC-8, AC-9 und AC-12 entfallen bzw. pruefen nur noch Name und Region. Der Text
+// unten beschreibt den Stand von #2284 S2.
+//
 // Spec: docs/specs/modules/feat_2284_s2_trip_kopf.md
 //   § Acceptance Criteria AC-1 bis AC-6, AC-8 bis AC-13
 //   (AC-7 = Go-Handler-Test, AC-14/15 = unveraenderte Bestands-Specs,
@@ -55,21 +61,11 @@ import { feldEingabe, oeffneEtappenEditor } from './helpers';
 const DESKTOP = { width: 1280, height: 900 };
 const MOBILE = { width: 375, height: 667 };
 
-const ACTIVITIES = [
-	'trekking',
-	'skitour',
-	'hochtour',
-	'klettersteig',
-	'mtb',
-	'fahrrad_15',
-	'fahrrad_20',
-	'fahrrad_25'
-] as const;
-
 type TripStand = Record<string, unknown> & {
 	name?: string;
 	region?: string;
 	activity?: string;
+	tempo?: { fortbewegung: string; grundtempo_kmh: number };
 	shortcode?: string;
 };
 
@@ -168,21 +164,6 @@ async function failPuts(page: Page, urlPattern: string, status: number, body: Re
 	});
 }
 
-function selectedTiles(page: Page) {
-	return page.locator('[data-testid^="trip-profil-option-"][data-selected="true"]');
-}
-
-type Praefix = 'trip' | 'compare-hub';
-
-/** Handy-Knopf der Aktivitaet (Entscheidung 14, Spec v1.1). */
-function profilKnopf(page: Page, p: Praefix = 'trip') {
-	return page.getByTestId(`${p}-profil-knopf`);
-}
-
-/** Optionen der Handy-Auswahl (eigene testids, nicht die Kachel-testids). */
-function auswahlOptionen(page: Page, p: Praefix = 'trip') {
-	return page.locator(`[data-testid^="${p}-profil-auswahl-option-"]`);
-}
 
 /** Tippflaeche ≥ 44 px in beiden Richtungen (Bounding-Box im Browser). */
 async function tippflaeche44(page: Page, testid: string | ReturnType<Page['getByTestId']>, name: string) {
@@ -418,119 +399,54 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 		}
 	});
 
-	// ─── AC-4 ────────────────────────────────────────────────────────────────
-	test('AC-4: 8 Aktivitaets-Kacheln im Kopf, Trekking gewaehlt, kein edit-activity-dropdown; Skitour persistent', async ({
+	// ─── AC-4 (#3196, ADR-0108 Nr. 3) ───────────────────────────────────────
+	// Die Aktivitaet hat den Kopf verlassen: keine Kacheln, kein Handy-Knopf, keine Auswahl.
+	// Fortbewegung + Grundtempo stehen als Tempo-Karte oben im Reiter Etappen und werden mit
+	// den Etappen ueber denselben Speicherweg geschrieben (Rumpf { stages, tempo }).
+	for (const [breite, vp] of [['Desktop 1280', DESKTOP], ['Handy 375', MOBILE]] as const) {
+		test(`AC-4 (#3196, ${breite}): kein Profil-Element im Trip-Kopf; Tempo-Karte im Reiter Etappen, zu Fuss 4 vorgewaehlt`, async ({
+			page
+		}) => {
+			await page.setViewportSize(vp);
+			const id = await seedTrip(page, 'ac4-tempo');
+			try {
+				await openTripHub(page, id, 'etappen');
+				await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible({ timeout: 10_000 });
+				expect(await page.locator('[data-testid^="trip-profil"]').count(), 'Profil-Elemente im Trip-Kopf').toBe(0);
+				const karte = page.getByTestId('tempo-karte').filter({ visible: true });
+				await expect(karte).toHaveCount(1, { timeout: 10_000 });
+				await expect(page.getByTestId('tempo-fortbewegung-fuss').filter({ visible: true })).toHaveAttribute('aria-pressed', 'true');
+				await expect(page.getByTestId('tempo-grundtempo').filter({ visible: true })).toHaveValue('4');
+				// Trefferflaeche der Segmente ≥ 44 px liefert der Baustein per ::before (app.css, segmented).
+				for (const f of ['fuss', 'rad', 'mtb', 'ski']) {
+					await expect(page.getByTestId(`tempo-fortbewegung-${f}`).filter({ visible: true })).toBeVisible();
+				}
+			} finally {
+				await deleteTrip(page, id);
+			}
+		});
+	}
+
+	test('AC-4 (#3196): Fortbewegung Ski waehlen → Grundtempo 3, gespeichert als tempo, activity bleibt, nach Reload gewaehlt', async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
-		const id = await seedTrip(page, 'ac4');
+		const id = await seedTrip(page, 'ac4-ski');
 		try {
 			await openTripHub(page, id, 'etappen');
-			await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible({ timeout: 10_000 });
-
-			await expect(page.locator('[data-testid^="trip-profil-option-"]')).toHaveCount(8);
-			for (const a of ACTIVITIES) {
-				await expect(page.getByTestId(`trip-profil-option-${a}`)).toBeVisible();
-			}
-			await expect(page.getByTestId('trip-profil-option-trekking')).toHaveAttribute('data-selected', 'true');
-			await expect(selectedTiles(page)).toHaveCount(1);
-			await expect(
-				page.getByTestId('edit-activity-dropdown'),
-				'AC-4: die Aktivitaets-Auswahlliste im Etappen-Reiter muss entfallen'
-			).toHaveCount(0);
-			// v1.1 (Mutation k): der Handy-Knopf steht im selben Markup (genau einmal),
-			// ist am Desktop aber unsichtbar — Umschaltung per CSS-Breakpoint.
-			await expect(profilKnopf(page), 'AC-4: Kacheln und Knopf liegen im selben Markup').toHaveCount(1);
-			await expect(profilKnopf(page), 'AC-4: am Desktop ist der Handy-Knopf sichtbar').toBeHidden();
-
-			await page.getByTestId('trip-profil-option-skitour').click();
-			await expect(page.getByTestId('trip-profil-option-skitour')).toHaveAttribute('data-selected', 'true');
-			await expect(selectedTiles(page)).toHaveCount(1);
-			await expect.poll(async () => (await getTrip(page, id)).activity, { timeout: 8_000 }).toBe('skitour');
+			const puts = collectTripPuts(page, id);
+			await page.getByTestId('tempo-fortbewegung-ski').filter({ visible: true }).click();
+			await expect(page.getByTestId('tempo-grundtempo').filter({ visible: true })).toHaveValue('3');
+			await expect
+				.poll(async () => (await getTrip(page, id)).tempo, { timeout: 8_000 })
+				.toEqual({ fortbewegung: 'ski', grundtempo_kmh: 3 });
+			expect((await getTrip(page, id)).activity, 'activity bleibt als Altfeld stehen').toBe('trekking');
+			expect(puts.map((b) => Object.keys(b).sort()), 'ein Rumpf { stages, tempo }, kein activity').toEqual([['stages', 'tempo']]);
 
 			await page.reload();
-			await expect(page.getByTestId('trip-profil-option-skitour')).toHaveAttribute('data-selected', 'true', {
+			await expect(page.getByTestId('tempo-fortbewegung-ski').filter({ visible: true })).toHaveAttribute('aria-pressed', 'true', {
 				timeout: 15_000
 			});
-			await expect(selectedTiles(page)).toHaveCount(1);
-		} finally {
-			await deleteTrip(page, id);
-		}
-	});
-
-	test('AC-4: Trip ohne gespeicherte Aktivitaet zeigt alle 8 Kacheln ungewaehlt', async ({ page }) => {
-		await page.setViewportSize(DESKTOP);
-		const id = await seedTrip(page, 'ac4-leer', { activity: undefined });
-		try {
-			expect((await getTrip(page, id)).activity ?? '', 'Vorbedingung: Trip ohne Aktivitaet').toBe('');
-			await openTripHub(page, id);
-			await expect(page.locator('[data-testid^="trip-profil-option-"]')).toHaveCount(8, { timeout: 10_000 });
-			await expect(selectedTiles(page)).toHaveCount(0);
-		} finally {
-			await deleteTrip(page, id);
-		}
-	});
-
-	// ─── AC-4 mobil (Spec v1.1, Entscheidung 14) ─────────────────────────────
-	test('AC-4 (Trip, Handy 375): genau ein Knopf „Trekking", keine sichtbare Kachel; Auswahl → Skitour sofort + persistent', async ({
-		page
-	}) => {
-		await page.setViewportSize(MOBILE);
-		const id = await seedTrip(page, 'ac4-m');
-		try {
-			await openTripHub(page, id);
-			const knopf = profilKnopf(page);
-			await expect(knopf, 'AC-4: auf dem Handy fehlt der Aktivitaets-Knopf').toBeVisible({ timeout: 10_000 });
-			await expect(knopf).toHaveCount(1);
-			await expect(knopf, 'AC-4: Knopftext = gewaehlte Aktivitaet').toContainText('Trekking');
-			await expect(knopf).toHaveAttribute('data-selected-value', 'trekking');
-			// Kacheln liegen im selben Markup (8), sind auf dem Handy aber unsichtbar.
-			await expect(page.locator('[data-testid^="trip-profil-option-"]')).toHaveCount(8);
-			for (const a of ACTIVITIES) {
-				await expect(page.getByTestId(`trip-profil-option-${a}`), `AC-4: Kachel ${a} auf dem Handy sichtbar`).toBeHidden();
-			}
-			await tippflaeche44(page, knopf, 'trip-profil-knopf');
-
-			await knopf.click();
-			const auswahl = page.getByTestId('trip-profil-auswahl');
-			await expect(auswahl, 'AC-4: Tippen auf den Knopf oeffnet die Auswahl nicht').toBeVisible({ timeout: 5_000 });
-			await expect(auswahlOptionen(page)).toHaveCount(8);
-			for (const a of ACTIVITIES) {
-				const opt = page.getByTestId(`trip-profil-auswahl-option-${a}`);
-				await expect(opt).toBeVisible();
-				await tippflaeche44(page, opt, `trip-profil-auswahl-option-${a}`);
-			}
-
-			await page.getByTestId('trip-profil-auswahl-option-skitour').click();
-			await expect(auswahl, 'AC-4: die Wahl schliesst die Auswahl nicht').toBeHidden({ timeout: 5_000 });
-			await expect(knopf, 'AC-4: der Knopf zeigt die neue Aktivitaet nicht sofort').toContainText('Skitour');
-			await expect(knopf).not.toContainText('Trekking');
-			await expect(knopf).toHaveAttribute('data-selected-value', 'skitour');
-			await expect
-				.poll(async () => (await getTrip(page, id)).activity, {
-					message: 'AC-4: die Wahl ueber den Knopf wurde nicht gespeichert (Mutation j)',
-					timeout: 8_000
-				})
-				.toBe('skitour');
-
-			await page.reload();
-			await expect(profilKnopf(page)).toContainText('Skitour', { timeout: 15_000 });
-			await expect(profilKnopf(page)).toHaveAttribute('data-selected-value', 'skitour');
-		} finally {
-			await deleteTrip(page, id);
-		}
-	});
-
-	test('AC-4 (Trip, Handy 375): ohne gespeicherte Aktivitaet zeigt der Knopf „Aktivität wählen"', async ({ page }) => {
-		await page.setViewportSize(MOBILE);
-		const id = await seedTrip(page, 'ac4-m-leer', { activity: undefined });
-		try {
-			expect((await getTrip(page, id)).activity ?? '', 'Vorbedingung: Trip ohne Aktivitaet').toBe('');
-			await openTripHub(page, id);
-			const knopf = profilKnopf(page);
-			await expect(knopf).toBeVisible({ timeout: 10_000 });
-			await expect(knopf).toContainText('Aktivität wählen');
-			for (const a of ['Trekking', 'Skitour']) await expect(knopf).not.toContainText(a);
 		} finally {
 			await deleteTrip(page, id);
 		}
@@ -538,7 +454,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 
 	// #2796 S4a (ADR-0108 P3) — UMGEDREHT: der Orts-Vergleich hat im Kopf weder Profil-Knopf
 	// noch -Kacheln mehr (die Vorlage ersetzt das Profil); Volltest DE/EN:
-	// orte-kopf-vorlage-statt-profil-2796.spec.ts. Der Trip behält Knopf und Kacheln (oben).
+	// orte-kopf-vorlage-statt-profil-2796.spec.ts. Seit #3196 gilt das auch fuer den Trip (oben).
 	for (const [breite, vp] of [['Handy 375', MOBILE], ['Desktop 1280', DESKTOP]] as const) {
 		test(`AC-4 (Vergleich, ${breite}): kein Profil-Knopf, keine Profil-Kacheln, keine Auswahl (#2796)`, async ({ page }) => {
 			await page.setViewportSize(vp);
@@ -554,7 +470,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 	}
 
 	// ─── AC-5 ────────────────────────────────────────────────────────────────
-	test('AC-5: Aktivitaet im Kopf wechseln → Ankunftszeiten im Etappen-Reiter aendern sich ohne Neuladen/Reiterwechsel', async ({
+	test('AC-5 (#3196): Fortbewegung in der Tempo-Karte wechseln → Ankunftszeiten aendern sich ohne Neuladen/Reiterwechsel', async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
@@ -572,12 +488,11 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 				(window as unknown as { __gz2284ac5?: number }).__gz2284ac5 = 1;
 			});
 
-			// Siehe Kopfkommentar: Skitour = gleiches Tempo wie Trekking, daher Fahrrad.
-			await page.getByTestId('trip-profil-option-fahrrad_20').click();
+			await page.getByTestId('tempo-fortbewegung-rad').filter({ visible: true }).click();
 
 			await expect
 				.poll(async () => (await ankunft.innerText()).trim(), {
-					message: 'AC-5: die Ankunftszeit muss sich nach dem Aktivitaetswechsel reaktiv aendern',
+					message: 'AC-5: die Ankunftszeit muss sich nach dem Wechsel der Fortbewegung reaktiv aendern',
 					timeout: 8_000
 				})
 				.not.toBe(vorher);
@@ -625,32 +540,17 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			await page.getByTestId('trip-region-save').click();
 			expect((await antwort).ok()).toBeTruthy();
 
-			// Aktivitaet — Skitour: gleiches Tempo-Modell, damit abgeleitete
-			// Ankunftszeiten den Vergleich der uebrigen Felder nicht verwischen.
-			antwort = putOk();
-			await page.getByTestId('trip-profil-option-skitour').click();
-			expect((await antwort).ok()).toBeTruthy();
-
-			// v1.1: Aktivitaet auf dem Handy ueber den Knopf (Hochtour: gleiches
-			// Tempo-Modell 4 km/h wie Skitour, s. lib/utils/naismith.ts).
-			await page.setViewportSize(MOBILE);
-			await profilKnopf(page).click();
-			await expect(page.getByTestId('trip-profil-auswahl')).toBeVisible({ timeout: 5_000 });
-			antwort = putOk();
-			await page.getByTestId('trip-profil-auswahl-option-hochtour').click();
-			expect((await antwort).ok(), 'AC-6: die Wahl ueber den Knopf sendet keinen PUT').toBeTruthy();
-
 			expect(
 				puts.map((b) => Object.keys(b).sort()),
 				'AC-6: exakte Schluesselmenge je PUT (kein Spread des Seiten-Trips)'
-			).toEqual([['name'], ['region'], ['activity'], ['activity']]);
-			expect(puts.map((b) => Object.values(b)[0])).toEqual(['AC-6 Name', 'AC-6 Region', 'skitour', 'hochtour']);
+			).toEqual([['name'], ['region']]);
+			expect(puts.map((b) => Object.values(b)[0])).toEqual(['AC-6 Name', 'AC-6 Region']);
 
 			const danach = await getTrip(page, id);
 			expect(danach.name).toBe('AC-6 Name');
 			expect(danach.region).toBe('AC-6 Region');
-			expect(danach.activity).toBe('hochtour');
-			for (const feld of ['stages', 'report_config', 'corridors', 'display_config', 'alert_rules', 'weather_config'] as const) {
+			expect(danach.activity, '#3196: der Kopf schreibt keine Aktivitaet mehr').toBe('trekking');
+			for (const feld of ['stages', 'report_config', 'corridors', 'display_config', 'alert_rules', 'weather_config', 'tempo'] as const) {
 				expect(danach[feld], `AC-6: ${feld} wurde durch einen Kopf-PUT veraendert`).toEqual(ausgang[feld]);
 			}
 		} finally {
@@ -708,62 +608,10 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 		}
 	});
 
-	test('AC-8 (Aktivitaet): PUT 500 → Fehlermeldung role=alert, bisherige Kachel bleibt einzige Auswahl', async ({
-		page
-	}) => {
-		await page.setViewportSize(DESKTOP);
-		const id = await seedTrip(page, 'ac8-akt');
-		try {
-			await openTripHub(page, id);
-			await failPuts(page, `**/api/trips/${id}`, 500, { error: 'Serverfehler' });
-
-			await page.getByTestId('trip-profil-option-skitour').click();
-
-			const err = page.getByTestId('trip-profil-save-error');
-			await expect(err).toBeVisible({ timeout: 8_000 });
-			await expect(err).toHaveAttribute('role', 'alert');
-			await expect(err).toHaveText('Serverfehler');
-			await expect(page.getByTestId('trip-profil-option-trekking')).toHaveAttribute('data-selected', 'true');
-			await expect(selectedTiles(page)).toHaveCount(1);
-			expect((await getTrip(page, id)).activity).toBe('trekking');
-		} finally {
-			await deleteTrip(page, id);
-		}
-	});
-
-	test('AC-8 (Aktivitaet, Handy 375): Knopf-Wahl mit PUT 500 → Fehlermeldung role=alert, Knopftext unveraendert', async ({
-		page
-	}) => {
-		await page.setViewportSize(MOBILE);
-		const id = await seedTrip(page, 'ac8-akt-m');
-		try {
-			await openTripHub(page, id);
-			const knopf = profilKnopf(page);
-			await expect(knopf).toContainText('Trekking', { timeout: 10_000 });
-			await failPuts(page, `**/api/trips/${id}`, 500, { error: 'Serverfehler' });
-
-			await knopf.click();
-			await expect(page.getByTestId('trip-profil-auswahl')).toBeVisible({ timeout: 5_000 });
-			await page.getByTestId('trip-profil-auswahl-option-skitour').click();
-
-			const err = page.getByTestId('trip-profil-save-error');
-			await expect(err, 'AC-8: der Fehler beim Knopf-Speichern wird verschluckt (Mutation m)').toBeVisible({
-				timeout: 8_000
-			});
-			await expect(err).toHaveAttribute('role', 'alert');
-			await expect(err).toHaveText('Serverfehler');
-			await expect(err).toHaveCount(1);
-			await expect(knopf, 'AC-8: der Knopf zeigt trotz Fehler die neue Aktivitaet').toContainText('Trekking');
-			await expect(knopf).not.toContainText('Skitour');
-			await expect(knopf).toHaveAttribute('data-selected-value', 'trekking');
-			expect((await getTrip(page, id)).activity).toBe('trekking');
-		} finally {
-			await deleteTrip(page, id);
-		}
-	});
+	// #3196: die beiden AC-8-Faelle der Aktivitaet (Kachel/Handy-Knopf) entfallen mit den Kacheln.
 
 	// ─── AC-9 ────────────────────────────────────────────────────────────────
-	test('AC-9: 412 bei Name/Region/Aktivitaet → je ein Konflikt-Eintrag, „Nochmal speichern" sendet je nur das Eigenfeld, Reiter bleiben', async ({
+	test('AC-9: 412 bei Name/Region → je ein Konflikt-Eintrag, „Nochmal speichern" sendet je nur das Eigenfeld, Reiter bleiben', async ({
 		page
 	}) => {
 		test.setTimeout(90_000);
@@ -795,14 +643,11 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			await page.getByTestId('trip-region-edit').fill('AC-9 Region');
 			await page.getByTestId('trip-region-save').click();
 
-			await page.getByTestId('trip-profil-option-skitour').click();
-
 			// Felder offen, keine eigene Fehlermeldung.
 			await expect(page.getByTestId('trip-name-edit')).toBeVisible();
 			await expect(page.getByTestId('trip-region-edit')).toBeVisible();
 			await expect(page.getByTestId('trip-name-save-error')).toHaveCount(0);
 			await expect(page.getByTestId('trip-region-save-error')).toHaveCount(0);
-			await expect(page.getByTestId('trip-profil-save-error')).toHaveCount(0);
 			await expect(saveIndicator(page)).toHaveAttribute('data-state', 'conflict');
 			const retry = saveIndicator(page).getByRole('button', { name: 'Nochmal speichern' });
 			await expect(retry).toBeVisible();
@@ -839,21 +684,21 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			freigeben();
 
 			await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 15_000 });
-			// Ein Eintrag je Feld (kopf-name / kopf-region / kopf-profil): teilen zwei
+			// Ein Eintrag je Feld (kopf-name / kopf-region; kopf-profil entfaellt mit #3196): teilen zwei
 			// Felder einen Schluessel, verdraengt der juengere den aelteren und dessen
 			// PUT fehlt hier.
 			// Spec v1.2 (AC-9-Klarstellung, Mutation s): der Chip geht schon nach dem
 			// ERSTEN erfolgreichen Retry-PUT auf `idle` (saveStatusStore.svelte.ts:232-236,
 			// #1433-Bestand), die uebrigen Retry-PUTs folgen danach. Die PUT-Liste wird
 			// deshalb per Zeitgrenze (5 s) abgewartet statt sofort gelesen — verlangt
-			// werden weiterhin ALLE DREI Retry-PUTs, je mit dem richtigen Koerper.
+			// werden weiterhin ALLE Retry-PUTs (seit #3196 zwei), je mit dem richtigen Koerper.
 			await expect
 				.poll(() => puts.map((b) => JSON.stringify(b)).sort(), {
-					message: 'AC-9: der Retry muss genau je einen PUT {name}, {region}, {activity} mit dem Eigenwert senden',
+					message: 'AC-9: der Retry muss genau je einen PUT {name}, {region} mit dem Eigenwert senden',
 					timeout: 5_000
 				})
 				.toEqual(
-					[{ activity: 'skitour' }, { name: 'AC-9 Name' }, { region: 'AC-9 Region' }].map((b) => JSON.stringify(b)).sort()
+					[{ name: 'AC-9 Name' }, { region: 'AC-9 Region' }].map((b) => JSON.stringify(b)).sort()
 				);
 			await page.unroute(muster);
 
@@ -861,10 +706,9 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			await expect(page.getByTestId('trip-region-edit')).toBeHidden({ timeout: 8_000 });
 			await expect(page.getByTestId('trip-detail-h1')).toContainText('AC-9 Name');
 			await expect(regionLine(page, 'trip')).toContainText('AC-9 Region');
-			await expect(page.getByTestId('trip-profil-option-skitour')).toHaveAttribute('data-selected', 'true');
 
 			const stand = await getTrip(page, id);
-			expect([stand.name, stand.region, stand.activity]).toEqual(['AC-9 Name', 'AC-9 Region', 'skitour']);
+			expect([stand.name, stand.region]).toEqual(['AC-9 Name', 'AC-9 Region']);
 			// Nach vollem Retry-Erfolg duerfen die Reiter den Server-Stand neu zeigen
 			// (s. Kommentar oben) — bewusst keine Pruefung der aktiven Etappe mehr hier.
 		} finally {
@@ -933,16 +777,13 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 	// #2347 S2 je kind in hub-save-chip.spec.ts (SC-5, SC-6).
 
 	// ─── AC-12 ───────────────────────────────────────────────────────────────
-	test('AC-12: offline sind Region-Stift und alle Aktivitaets-Kacheln gesperrt', async ({ page, context }) => {
+	test('AC-12: offline ist der Region-Stift gesperrt (#3196: keine Aktivitaets-Kacheln mehr)', async ({ page, context }) => {
 		await page.setViewportSize(DESKTOP);
 		const id = await seedTrip(page, 'ac12');
 		try {
 			await openTripHub(page, id);
-			const kacheln = page.locator('[data-testid^="trip-profil-option-"]');
-			// Positivkontrolle mit Netz: dieselben Elemente sind bedienbar.
-			await expect(kacheln).toHaveCount(8, { timeout: 10_000 });
-			await expect(page.getByTestId('trip-region-edit-toggle')).toBeEnabled();
-			for (const a of ACTIVITIES) await expect(page.getByTestId(`trip-profil-option-${a}`)).toBeEnabled();
+			// Positivkontrolle mit Netz: derselbe Stift ist bedienbar.
+			await expect(page.getByTestId('trip-region-edit-toggle')).toBeEnabled({ timeout: 10_000 });
 
 			await context.setOffline(true);
 			try {
@@ -950,52 +791,6 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 					page.getByTestId('trip-region-edit-toggle'),
 					'AC-12: der Region-Stift ist ohne Netz bedienbar'
 				).toBeDisabled({ timeout: 8_000 });
-				for (const a of ACTIVITIES) {
-					await expect(
-						page.getByTestId(`trip-profil-option-${a}`),
-						`AC-12: die Kachel ${a} ist ohne Netz bedienbar`
-					).toBeDisabled();
-				}
-			} finally {
-				await context.setOffline(false);
-			}
-		} finally {
-			await deleteTrip(page, id);
-		}
-	});
-
-	// ─── AC-12 mobil (Spec v1.1) ─────────────────────────────────────────────
-	test('AC-12 (Handy 375): offline ist der Aktivitaets-Knopf gesperrt, Tippen oeffnet die Auswahl nicht', async ({
-		page,
-		context
-	}) => {
-		await page.setViewportSize(MOBILE);
-		const id = await seedTrip(page, 'ac12-m');
-		try {
-			await openTripHub(page, id);
-			const knopf = profilKnopf(page);
-			// Positivkontrolle mit Netz: Knopf bedienbar.
-			await expect(knopf).toBeVisible({ timeout: 10_000 });
-			await expect(knopf).toBeEnabled();
-			await expect(page.getByTestId('trip-region-edit-toggle')).toBeEnabled();
-
-			await context.setOffline(true);
-			try {
-				await expect(knopf, 'AC-12: der Aktivitaets-Knopf ist ohne Netz bedienbar (Mutation l)').toBeDisabled({
-					timeout: 8_000
-				});
-				await expect(page.getByTestId('trip-region-edit-toggle')).toBeDisabled();
-				for (const a of ACTIVITIES) {
-					await expect(
-						page.getByTestId(`trip-profil-auswahl-option-${a}`),
-						`AC-12: die Auswahl-Option ${a} ist ohne Netz bedienbar`
-					).toBeDisabled();
-				}
-				await knopf.click({ force: true });
-				await expect(
-					page.getByTestId('trip-profil-auswahl'),
-					'AC-12: Tippen auf den gesperrten Knopf oeffnet die Auswahl'
-				).toBeHidden();
 			} finally {
 				await context.setOffline(false);
 			}
@@ -1045,7 +840,13 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 	// aufgeblähten Trip-Kopf aufgebraucht werden kann. Die Fälle unterscheiden sich untereinander
 	// nur durch die Höhe von header.trip-header (Name bricht seit #2878 um), nicht durch #3006.
 	const AC13_BEREICHSKOPF_3006 = 103;
-	const AC13_GRENZE = AC13_BASIS_VOR_S2 + AC13_BEREICHSKOPF_3006 + 2;
+	// #3196 (freigegebene Spec, ADR-0108 Nr. 2): die Tempo-Karte steht oben im Reiter Etappen unter dem
+	// Bereichskopf — auf dem Handy einzeilig (Segmente + Zahl + Einheit) 66 px hoch plus 16 px Abstand =
+	// 82 px, in allen drei Faellen gleich (lokaler CI-Stack 2026-11-20). Die Liste beginnt weiter ueber der
+	// Navigation (375x667: 542 px < 597 px). Grenze und Bereichskopf-Messung wachsen genau um diesen Betrag.
+	const AC13_TEMPO_KARTE_3196 = 82;
+	const AC13_UEBER_DER_LISTE = AC13_BEREICHSKOPF_3006 + AC13_TEMPO_KARTE_3196;
+	const AC13_GRENZE = AC13_BASIS_VOR_S2 + AC13_UEBER_DER_LISTE + 2;
 
 	for (const fall of [
 		{ label: '375x667 langer Name', size: { width: 375, height: 667 }, name: null },
@@ -1113,7 +914,6 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 
 				const bar = page.getByTestId('trip-detail-breadcrumb-bar');
 				const ziele: Array<{ name: string; loc: ReturnType<Page['getByTestId']> }> = [
-					{ name: 'trip-profil-knopf', loc: profilKnopf(page) },
 					{ name: 'trip-region-edit-toggle', loc: page.getByTestId('trip-region-edit-toggle') },
 					{ name: 'trip-name-edit-toggle', loc: page.getByTestId('trip-name-edit-toggle') },
 					// Issue #2278: Lebenszyklus-Menue + Primaerknopf "Senden" ersetzen die Einzelknoepfe der Breadcrumb-Leiste
@@ -1135,15 +935,15 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 				// still an einen aufgeblähten Trip-Kopf weitergeben; beidseitig 2 px Toleranz.
 				expect(
 					mass.bereichskopf,
-					`AC-13/#3006: Bereichskopf über der Liste ist ${mass.bereichskopf} px statt ${AC13_BEREICHSKOPF_3006} px (- 2 px Toleranz)`
-				).toBeGreaterThanOrEqual(AC13_BEREICHSKOPF_3006 - 2);
+					`AC-13/#3006/#3196: Bereichskopf + Tempo-Karte über der Liste ist ${mass.bereichskopf} px statt ${AC13_UEBER_DER_LISTE} px (- 2 px Toleranz)`
+				).toBeGreaterThanOrEqual(AC13_UEBER_DER_LISTE - 2);
 				expect(
 					mass.bereichskopf,
-					`AC-13/#3006: Bereichskopf über der Liste ist ${mass.bereichskopf} px statt ${AC13_BEREICHSKOPF_3006} px (+ 2 px Toleranz)`
-				).toBeLessThanOrEqual(AC13_BEREICHSKOPF_3006 + 2);
+					`AC-13/#3006/#3196: Bereichskopf + Tempo-Karte über der Liste ist ${mass.bereichskopf} px statt ${AC13_UEBER_DER_LISTE} px (+ 2 px Toleranz)`
+				).toBeLessThanOrEqual(AC13_UEBER_DER_LISTE + 2);
 				expect(
 					mass.listeOben,
-					`AC-13: die Etappen-Liste liegt tiefer als vor S2 (${mass.listeOben} px > ${AC13_BASIS_VOR_S2} px + ${AC13_BEREICHSKOPF_3006} px Bereichskopf #3006 + 2 px Toleranz)`
+					`AC-13: die Etappen-Liste liegt tiefer als vor S2 (${mass.listeOben} px > ${AC13_BASIS_VOR_S2} px + ${AC13_BEREICHSKOPF_3006} px Bereichskopf #3006 + ${AC13_TEMPO_KARTE_3196} px Tempo-Karte #3196 + 2 px Toleranz)`
 				).toBeLessThanOrEqual(AC13_GRENZE);
 				expect(
 					mass.listeOben,

@@ -130,9 +130,13 @@ type Trip struct {
 	AlertQuietTo         *string    `json:"alert_quiet_to,omitempty"`
 	Shortcode            string     `json:"shortcode,omitempty"`
 	Activity             string     `json:"activity,omitempty"`
-	Region               string     `json:"region,omitempty"`
-	PausedAt             *time.Time `json:"paused_at,omitempty"`
-	ArchivedAt           *time.Time `json:"archived_at,omitempty"`
+	// Tempo — Issue #3196 (ADR-0108 Nr. 2): Fortbewegung + Grundtempo,
+	// Quelle der Gehzeit. nil = Altdatei, wird beim Lesen aus Activity
+	// abgeleitet (store.normalizeTrip). Activity bleibt als Altfeld stehen.
+	Tempo      *Tempo     `json:"tempo,omitempty"`
+	Region     string     `json:"region,omitempty"`
+	PausedAt   *time.Time `json:"paused_at,omitempty"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 	// OfficialAlertsEnabled — Issue #1087, Pointer-Muster analog #1040:
 	// nil = Feld fehlte (Altdaten/Default aktiv), false = strukturell kein
 	// Fetch amtlicher Warnungen fuer diesen Trip.

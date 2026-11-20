@@ -183,3 +183,17 @@ def test_radar_alert_enabled_none_wird_nicht_geschrieben():
     trip, out = _roundtrip(probe)
     assert getattr(trip, "radar_alert_enabled", "FEHLT") is None
     assert "radar_alert_enabled" not in out
+
+
+def test_tempo_ueberlebt_python_roundtrip():
+    """#3196: ``tempo`` (Fortbewegung + Grundtempo) steht in der gemeinsamen
+    Fixture, ist im Python-Modell benannt (nicht im extra-Auffangnetz) und
+    kommt nach Laden+Schreiben unveraendert zurueck; ``activity`` bleibt.
+    Go-Pendant: TestTripSchemaDrift_TempoBleibtErhalten."""
+    fixture = _load_fixture()
+    assert "tempo" in fixture, "Fixture fuehrt tempo nicht — Drift-Gate waere fuer das Feld blind"
+    probe = dict(fixture, tempo={"fortbewegung": "mtb", "grundtempo_kmh": 11.5})
+    trip, out = _roundtrip(probe)
+    assert "tempo" not in trip.extra, "tempo landet in trip.extra — Python modelliert das Feld nicht"
+    assert out.get("tempo") == {"fortbewegung": "mtb", "grundtempo_kmh": 11.5}
+    assert out.get("activity") == fixture["activity"]

@@ -58,20 +58,21 @@ describe('#2837 S1b F002 — TripHeader leitet den Status aus der Prop now ab (A
 	}
 });
 
-describe('#2837 S1b F001 — Profil-Zusatz nur für bekannte Aktivitäten (AC-6, AC-7)', () => {
+// Issue #3196 (ADR-0108 Nr. 3): der Aktivitäts-Zusatz im Kopf entfällt ersatzlos — auch für
+// bekannte Aktivitäten. Das Tempo steht im Reiter Etappen (TempoKarte).
+describe('#3196 — kein Aktivitäts-Zusatz hinter dem Region-Stift', () => {
 	const hinterStift = (w: Knoten): Knoten | undefined => {
 		const stift = einzig(w, 'trip-region-edit-toggle');
 		const zeile = stift.eltern!;
 		return zeile.kinder[zeile.kinder.indexOf(stift) + 1];
 	};
-	test('Messaufbau: bekannte Aktivität trekking ⇒ „· Trekking" hinter dem Region-Stift', () => {
-		const z = hinterStift(kopf(T.tripLaufend(), T.JETZT));
-		assert.equal(z && text(z), `· ${trFor('de', 'trip.aktivitaet.trekking')}`);
-	});
-	test('unbekannte Aktivität (nicht in der Optionsliste) ⇒ kein „·"-Zusatz, kein Rohwert', () => {
-		const w = kopf(T.tripLaufend({ activity: 'unbekannt-xyz' }), T.JETZT);
-		const z = hinterStift(w);
-		assert.ok(!z || !text(z).startsWith('·'), `Zusatz „${z && text(z)}" hinter dem Region-Stift`);
-		assert.ok(!text(w).includes('unbekannt-xyz'), 'Rohwert der Aktivität steht im Kopf');
-	});
+	for (const activity of ['trekking', 'fahrrad_20', 'unbekannt-xyz']) {
+		test(`activity „${activity}" ⇒ kein „·"-Zusatz, kein Aktivitätsname, kein Rohwert`, () => {
+			const w = kopf(T.tripLaufend({ activity }), T.JETZT);
+			const z = hinterStift(w);
+			assert.ok(!z || !text(z).startsWith('·'), `Zusatz „${z && text(z)}" hinter dem Region-Stift`);
+			assert.ok(!text(w).includes(activity), 'Rohwert der Aktivität steht im Kopf');
+			for (const name of ['Trekking', 'Fahrrad']) assert.ok(!text(w).includes(name), `Aktivitätsname „${name}" steht im Kopf`);
+		});
+	}
 });

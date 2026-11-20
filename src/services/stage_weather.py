@@ -47,7 +47,10 @@ def _segments_for_stage(trip: "Trip", stage) -> list:
         return []
     from app.trip import Trip as _Trip
 
-    scoped_trip = _Trip(id=trip.id, name=trip.name, stages=[stage], activity=trip.activity)
+    scoped_trip = _Trip(
+        id=trip.id, name=trip.name, stages=[stage], activity=trip.activity,
+        tempo=trip.tempo,  # Issue #3196: Tempo im Scoped-Trip mitgeben
+    )
     return convert_trip_to_segments(scoped_trip, stage.date)
 
 

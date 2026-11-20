@@ -255,7 +255,9 @@ const EINGEFROREN: readonly string[] = [
 	// 🔴 Issue #2792 S1a: die beiden Markup-Zweige um 10 Zeilen nach unten
 	// (Ampel-Zustand, Anwenden, Nutzlast im Script-Teil); Bedingungen
 	// unveraendert, nachgemessen, Inhalt unten gefesselt.
-	'WeatherMetricsTab.svelte:1466',
+	// #3196: beide -7 (Vorlagen-Vorbelegung haengt an der Fortbewegung: Tabelle von 11 auf 4 Eintraege),
+	// Bedingungen unveraendert, nachgemessen, Inhalt unten gefesselt.
+	'WeatherMetricsTab.svelte:1459',
 	// #2794 S3a: Schalter Nacht-Stundentabelle +4 verschoben, Text unveraendert.
 	// #2931 (Rueckbau DayWindowCard/Tagesfenster-Abschnitt): alle sechs WeatherMetricsTab-
 	// Eintraege nach oben verschoben (-7/-7/-7/-7/-20/-89: entfallene Prop onDayWindowChange,
@@ -263,9 +265,9 @@ const EINGEFROREN: readonly string[] = [
 	// #3047 H1: +1 (Prop `grundauswahl` am Stundenverlauf-Mount im Vergleichs-Zweig
 	// oberhalb), #3061/#3047 J5: null-Grundauswahl der Ausblick-Einbettung oberhalb
 	// zeilenneutral zusammengefuehrt (+0), Bedingung unveraendert, nachgemessen, unten gefesselt.
-	// #3190: +18 (Speichern-Karte vom Seitenende unter die Profil-Karte oberhalb verschoben, dazu
+	// #3196: -7, s. o.; #3190: +18 (Speichern-Karte unter die Profil-Karte oberhalb verschoben,
 	// Umschalter-Props am Auslöser), Bedingung unveraendert, nachgemessen, unten gefesselt.
-	'WeatherMetricsTab.svelte:2008',
+	'WeatherMetricsTab.svelte:2001',
 	// #2655 (F6): beide nur verschoben (Katalog-Import, Satz je Kontext aus
 	// dem Katalog statt Konkatenation); Bedingungen unveraendert, nachgemessen.
 	'versand-tab/vtBriefingChannelsText.ts:22',
@@ -410,12 +412,12 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		folgt: ".get<MetricCatalog>('/api/metrics')"
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:1466', // #2792 S1a: +10, #3047 N1-N3: +12, Text unveraendert
+		eintrag: 'WeatherMetricsTab.svelte:1459', // #2792 S1a: +10, #3047 N1-N3: +12, #3196: -7, Text unveraendert
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:2008', // #2792 S1a: +10, #2794 S3a: +4, #3047 H1: +1, #3061/#3047 J5: +0, #3047 N1-N3: +13, #3190: +18, Text unveraendert
+		eintrag: 'WeatherMetricsTab.svelte:2001', // #2792 S1a: +10, #2794 S3a: +4, #3047 H1: +1, #3061/#3047 J5: +0, #3047 N1-N3: +13, #3196: -7, #3190: +18, Text unveraendert
 		zeile: "{#if !createMode && context === 'route'}",
 		folgt: 'Issue #1721: Nacht-Stundentabelle der Trip-Mail'
 	}

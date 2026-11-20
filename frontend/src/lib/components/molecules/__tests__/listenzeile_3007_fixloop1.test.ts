@@ -3,7 +3,7 @@
 //
 // Gemessen wird dort, wo es WIRKT:
 //   F001 (AC-11)  der ECHTE Reiter EditStagesPanelNew mit einer Fahrrad-Aktivität, serverseitig
-//                 gerendert: die Gehzeit der Zeile folgt dem Tempo der Aktivität (activityToSpeed),
+//                 gerendert: die Gehzeit der Zeile folgt dem Tempo des Trips (deriveTempo, #3196),
 //                 Soll unabhängig aus computeArrivalTimes.
 //   F003 (AC-13)  (a) SSR des ECHTEN Reiters mit aufgeklappter Etappe 3 (Startwert per
 //                 startzustandHook): nur Zeile 3 trägt aria-expanded="true", der Editor steht direkt
@@ -39,7 +39,7 @@ reg(path.join(KOMP, 'organisms/__tests__/startzustandHook.mjs'));
 const { render } = await import('svelte/server');
 const { locale } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/i18n/index.ts')).href);
 const { baum, alle, text: rohText } = await import('../../shared/hub-kopf/__tests__/htmlBaum.ts');
-const { computeArrivalTimes, activityToSpeed } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/utils/naismith.ts')).href);
+const { computeArrivalTimes, deriveTempo } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/utils/naismith.ts')).href);
 const { umgebungFuer, werte, ohneTypen } = await import('../../shared/__tests__/svelteInstanzPruefstand.ts');
 type Knoten = import('../../shared/hub-kopf/__tests__/htmlBaum.ts').Knoten;
 
@@ -68,7 +68,7 @@ const ETAPPEN = [
 ];
 
 /** Gehzeit h:mm unabhängig: letzte minus erste Ankunft der vorhandenen Rechnung beim Tempo. */
-function gehzeit(stage: any, tempo: number): string {
+function gehzeit(stage: any, tempo: any): string {
 	const arr: string[] = computeArrivalTimes(stage, stage.start_time, tempo);
 	const min = (s: string) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3));
 	let d = min(arr[arr.length - 1]) - min(arr[0]);
@@ -80,17 +80,17 @@ const gehzeitDE = (dauer: string) => DE['trip.hub.etappe_gehzeit'].replace(/\{\w
 // ═══ F001 (AC-11): Tempo der Aktivität im echten Reiter ═══════════════════════════════════
 describe('#3007 F001: Gehzeit im Reiter folgt der Aktivität (AC-11)', () => {
 	for (const aktivitaet of ['fahrrad_20', 'fahrrad_15'] as const) {
-		test(`${aktivitaet}: Gehzeit der Zeile = Rechnung mit activityToSpeed(${aktivitaet}), nicht Wandertempo`, async () => {
+		test(`${aktivitaet}: Gehzeit der Zeile = Rechnung mit dem Tempo (Rad aus ${aktivitaet}, #3196), nicht Wandertempo`, async () => {
 			const P = await lade(ESP);
-			const b = baum(render(P, { props: { stages: ETAPPEN, tripId: 't1', listeZuerst: true, activityType: aktivitaet } }).body);
+			const b = baum(render(P, { props: { stages: ETAPPEN, tripId: 't1', listeZuerst: true, tempo: deriveTempo(aktivitaet) } }).body);
 			const zeilen = mitTestid(b, 'etappen-liste-zeile');
 			assert.equal(zeilen.length, ETAPPEN.length, 'Messaufbau: Zeilenzahl');
 			for (const i of [0, 2]) {
-				const tempo = activityToSpeed(aktivitaet);
+				const tempo = deriveTempo(aktivitaet);
 				const soll = gehzeit(ETAPPEN[i], tempo);
-				const wandern = gehzeit(ETAPPEN[i], activityToSpeed(undefined));
+				const wandern = gehzeit(ETAPPEN[i], deriveTempo(undefined));
 				assert.notEqual(soll, wandern, 'Messaufbau: Fahrrad- und Wandertempo ergeben dieselbe Gehzeit');
-				assert.deepEqual(mitSlot(zeilen[i], 'listenzeile-meta').map(text), [gehzeitDE(soll)], `Etappe ${i + 1}: Gehzeit nicht mit Tempo ${tempo} km/h`);
+				assert.deepEqual(mitSlot(zeilen[i], 'listenzeile-meta').map(text), [gehzeitDE(soll)], `Etappe ${i + 1}: Gehzeit nicht mit Tempo ${tempo.grundtempo_kmh} km/h`);
 			}
 		});
 	}

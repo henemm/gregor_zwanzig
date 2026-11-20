@@ -5,13 +5,12 @@ import (
 	"math"
 )
 
-// Issue #296-BE — Naismith-Ankunftszeiten.
-// Berechnet pro Wegpunkt eine Ankunftszeit ("HH:MM") nach angepasster
-// Naismith's Rule. Spec: docs/specs/modules/issue_296_be_naismith_arrival.md
+// Issue #296-BE — Ankunftszeiten je Wegpunkt ("HH:MM").
+// Issue #3196: Gehzeit nach DAV (DIN 33466) statt Naismith-Summe, Tempo aus
+// Trip.Tempo (Fortbewegung + Grundtempo). Spec:
+// docs/specs/modules/feat_3196_trip_tempo_etappen.md
 //
-// Tempo-Konstanten gespiegelt aus src/app/models.py EtappenConfig (Single
-// Source dort): speed_flat_kmh=4.0, speed_ascent_mh=300.0,
-// speed_descent_mh=500.0. Bei Änderung dort: hier nachziehen.
+// Zu-Fuß-Referenz (4 km/h, 300/500 Hm/h) = src/app/models.py EtappenConfig.
 const (
 	speedFlatKmh   = 4.0
 	speedAscentMh  = 300.0
@@ -24,35 +23,105 @@ const (
 	defaultStartTime = "08:00"
 )
 
-// ActivitySpeeds bündelt die drei Tempoparameter einer Aktivität.
-// Issue #674: Fahrrad-Stufen (15/20/25 km/h) + Wanderer-Default (4/300/500).
-// Querverweis TS: frontend/src/lib/utils/naismith.ts::activityToSpeed.
+// ActivitySpeeds bündelt die drei Tempoparameter (Grundtempo + Raten).
+// Issue #3196: wird nur noch über ResolveTempo erzeugt (einzige Quelle).
+// Querverweis TS: frontend/src/lib/utils/naismith.ts::tripTempo,
+// Python: src/core/naismith.py::tempo_speeds.
 type ActivitySpeeds struct {
 	FlatKmh   float64
 	AscentMh  float64
 	DescentMh float64
 }
 
-// ActivitySpeed liefert die Tempoparameter für eine Trip.Activity.
-// Unbekannte oder leere Werte → Wanderer-Default (gespiegelt aus EtappenConfig).
-// Fahrrad-Höhenmeter: 600/1000 Hm/h (doppelt so schnell wie Wanderer).
-func ActivitySpeed(activity string) ActivitySpeeds {
+// Tempo — Issue #3196 (ADR-0108 Nr. 2): gespeicherte Fortbewegung und
+// Grundtempo eines Trips. Auf-/Abstiegsraten folgen dem Grundtempo im festen
+// Verhältnis je Fortbewegung (FortbewegungRef).
+type Tempo struct {
+	Fortbewegung  string  `json:"fortbewegung"`
+	GrundtempoKmh float64 `json:"grundtempo_kmh"`
+}
+
+// TempoRef — Referenzwerte einer Fortbewegung: Vorschlags-Grundtempo und die
+// Auf-/Abstiegsraten (Hm/h) bei genau diesem Tempo.
+type TempoRef struct {
+	VorschlagKmh float64
+	RAuf         float64
+	RAb          float64
+}
+
+// FortbewegungRef — EINE Quelle der Gehzeit-Konstanten (Issue #3196).
+// Gespiegelt in src/core/naismith.py (_REFERENZ) und
+// frontend/src/lib/utils/naismith.ts (FORTBEWEGUNG_REF); bewacht durch die
+// gemeinsame Falltabelle tests/fixtures/naismith_dav_paritaet.json.
+var FortbewegungRef = map[string]TempoRef{
+	"fuss": {VorschlagKmh: speedFlatKmh, RAuf: speedAscentMh, RAb: speedDescentMh},
+	"rad":  {VorschlagKmh: 20, RAuf: 600, RAb: 1000},
+	"mtb":  {VorschlagKmh: 12, RAuf: 500, RAb: 1000},
+	"ski":  {VorschlagKmh: 3, RAuf: 300, RAb: 1500},
+}
+
+// MinGrundtempoKmh/MaxGrundtempoKmh — Grenzen eines plausiblen Grundtempos
+// (Handler-422; Oberfläche min=0.5). Die Untergrenze verhindert, dass ein
+// winziger Wert (z. B. 1e-320) die Gehzeit unendlich macht (Fix-Loop 2, F001).
+const (
+	MinGrundtempoKmh = 0.5
+	MaxGrundtempoKmh = 60.0
+)
+
+// ValidTempo prüft Fortbewegung (bekannt) und Grundtempo (0.5 <= v <= 60).
+func ValidTempo(t Tempo) bool {
+	if _, ok := FortbewegungRef[t.Fortbewegung]; !ok {
+		return false
+	}
+	return t.GrundtempoKmh >= MinGrundtempoKmh && t.GrundtempoKmh <= MaxGrundtempoKmh
+}
+
+// DeriveTempo leitet das Tempo aus dem Altfeld Trip.Activity ab (Lazy-
+// Migration): fahrrad_15/20/25 → rad mit 15/20/25 km/h, alles andere → fuss
+// 4 km/h. Nie mtb oder ski (Spec #3196, AC-2).
+func DeriveTempo(activity string) Tempo {
 	switch activity {
 	case "fahrrad_15":
-		return ActivitySpeeds{FlatKmh: 15.0, AscentMh: 600.0, DescentMh: 1000.0}
+		return Tempo{Fortbewegung: "rad", GrundtempoKmh: 15}
 	case "fahrrad_20":
-		return ActivitySpeeds{FlatKmh: 20.0, AscentMh: 600.0, DescentMh: 1000.0}
+		return Tempo{Fortbewegung: "rad", GrundtempoKmh: 20}
 	case "fahrrad_25":
-		return ActivitySpeeds{FlatKmh: 25.0, AscentMh: 600.0, DescentMh: 1000.0}
+		return Tempo{Fortbewegung: "rad", GrundtempoKmh: 25}
 	default:
-		return ActivitySpeeds{FlatKmh: speedFlatKmh, AscentMh: speedAscentMh, DescentMh: speedDescentMh}
+		return Tempo{Fortbewegung: "fuss", GrundtempoKmh: speedFlatKmh}
 	}
 }
 
-// naismithHours: angepasste Naismith's Rule als SUMME (nicht max!).
-// Querverweis: src/core/segment_builder.py compute_hiking_time.
-func naismithHours(distKm, ascentM, descentM float64, sp ActivitySpeeds) float64 {
-	return distKm/sp.FlatKmh + ascentM/sp.AscentMh + descentM/sp.DescentMh
+// TempoSpeeds rechnet ein Tempo in Grundtempo + Raten um:
+// R = R_ref · v / v_ref. Ungültiges Tempo → zu Fuß mit Vorschlagswert.
+func TempoSpeeds(t Tempo) ActivitySpeeds {
+	if !ValidTempo(t) {
+		t = Tempo{Fortbewegung: "fuss", GrundtempoKmh: speedFlatKmh}
+	}
+	ref := FortbewegungRef[t.Fortbewegung]
+	f := t.GrundtempoKmh / ref.VorschlagKmh
+	return ActivitySpeeds{FlatKmh: t.GrundtempoKmh, AscentMh: ref.RAuf * f, DescentMh: ref.RAb * f}
+}
+
+// ResolveTempo — einzige Auflösungsstelle des Tempos eines Trips (Issue
+// #3196): gespeichertes Tempo vor Ableitung aus dem Altfeld Activity.
+func ResolveTempo(trip *Trip) ActivitySpeeds {
+	if trip == nil {
+		return TempoSpeeds(DeriveTempo(""))
+	}
+	if trip.Tempo != nil {
+		return TempoSpeeds(*trip.Tempo)
+	}
+	return TempoSpeeds(DeriveTempo(trip.Activity))
+}
+
+// DAVHours — Gehzeit nach DAV (DIN 33466), Issue #3196:
+// t_h = km / v, t_v = Hm_auf/R_auf + Hm_ab/R_ab, t = max + min/2.
+// Querverweis: Python dav_hours, TS davHours.
+func DAVHours(distKm, ascentM, descentM float64, sp ActivitySpeeds) float64 {
+	th := distKm / sp.FlatKmh
+	tv := ascentM/sp.AscentMh + descentM/sp.DescentMh
+	return math.Max(th, tv) + math.Min(th, tv)/2
 }
 
 // haversineKm berechnet die Großkreis-Distanz in km zwischen zwei lat/lon.
@@ -102,9 +171,10 @@ func formatHHMM(totalMin int) string {
 
 // ComputeStageArrivals setzt Waypoint.ArrivalCalculated für jeden Wegpunkt.
 // Start = stage.StartTime (parse "HH:MM") oder Default "08:00".
-// arrival[0] = Start; arrival[i] = arrival[i-1] + naismithHours(dist, asc, desc).
+// arrival[0] = Start; arrival[i] = arrival[i-1] + DAVHours(dist, asc, desc)
+// je Wegpunkt-Paar (Issue #3196, vorher Naismith-Summe).
 // Pausentag (0 Wegpunkte): keine Berechnung, kein Feld.
-// sp: Tempoparameter aus ActivitySpeed(trip.Activity).
+// sp: Tempoparameter aus ResolveTempo(trip).
 // measuredSlackKm spiegelt _MEASURED_SLACK_KM der Python-Regel: 10 m Zugabe,
 // die die Rundung gespeicherter Werte abfaengt -- nicht mehr.
 const measuredSlackKm = 0.01
@@ -176,7 +246,7 @@ func ComputeStageArrivals(stage *Stage, sp ActivitySpeeds) {
 		dElev := float64(wp.ElevationM - prev.ElevationM)
 		asc := math.Max(0, dElev)
 		desc := math.Max(0, -dElev)
-		cur += naismithHours(dist, asc, desc, sp) * 60.0
+		cur += DAVHours(dist, asc, desc, sp) * 60.0
 		v := formatHHMM(int(math.Round(cur)))
 		stage.Waypoints[i].ArrivalCalculated = &v
 	}

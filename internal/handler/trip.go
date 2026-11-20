@@ -176,6 +176,10 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		trip.Stages = ensureStageIDs(trip.Stages)
+		// Issue #3196 (F-A2-2): tempo wie im PUT pruefen; fehlend bleibt erlaubt (Ableitung).
+		if bailIf(w, r, trip.Tempo != nil && !model.ValidTempo(*trip.Tempo), http.StatusUnprocessableEntity, "invalid_params") {
+			return
+		}
 
 		// Issue #1280 (Adversary F002): Write-Normalisierung auch im
 		// Anlege-Pfad — der Anlege-Wizard (TripNewEditor.svelte) POSTet direkt
@@ -303,14 +307,16 @@ type tripUpdateRequest struct {
 	// Issue #2211: die 7 Skalar-Optionals sind drei-zustaendig (Optional[T]):
 	// Key fehlt = behalten, null = leeren, Wert = setzen. Alle anderen Felder
 	// (Name, Listen, Maps, Structs) behalten bei null weiter den Bestand.
-	AlertCooldownMinutes         Optional[int]    `json:"alert_cooldown_minutes"`
-	AlertQuietFrom               Optional[string] `json:"alert_quiet_from"`
-	AlertQuietTo                 Optional[string] `json:"alert_quiet_to"`
-	Region                       Optional[string] `json:"region"`
-	Activity                     Optional[string] `json:"activity"`
-	OfficialAlertsEnabled        Optional[bool]   `json:"official_alerts_enabled"`
-	RadarAlertEnabled            Optional[bool]   `json:"radar_alert_enabled"` // Issue #2800
-	OfficialAlertTriggersEnabled Optional[bool]   `json:"official_alert_triggers_enabled"`
+	AlertCooldownMinutes Optional[int]    `json:"alert_cooldown_minutes"`
+	AlertQuietFrom       Optional[string] `json:"alert_quiet_from"`
+	AlertQuietTo         Optional[string] `json:"alert_quiet_to"`
+	Region               Optional[string] `json:"region"`
+	Activity             Optional[string] `json:"activity"`
+	// Tempo — Issue #3196: nil = im Body nicht gesendet -> Bestand bleibt.
+	Tempo                        *model.Tempo   `json:"tempo,omitempty"`
+	OfficialAlertsEnabled        Optional[bool] `json:"official_alerts_enabled"`
+	RadarAlertEnabled            Optional[bool] `json:"radar_alert_enabled"` // Issue #2800
+	OfficialAlertTriggersEnabled Optional[bool] `json:"official_alert_triggers_enabled"`
 	// OfficialWarnings — Issue #1258, RMW-Kontrakt analog OfficialAlertTriggersEnabled
 	// (nil = im Body nicht gesendet -> bestehender Wert bleibt erhalten).
 	OfficialWarnings *model.OfficialWarningsConfig `json:"official_warnings,omitempty"`
@@ -397,6 +403,17 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		}
 		if req.Stages != nil && etappenGrenzeVerletzt(w, r, *req.Stages) {
 			return
+		}
+
+		// Issue #3196: tempo (Fortbewegung + Grundtempo) -- fehlt = behalten,
+		// gesetzt = nur dieses Feld ersetzen; ungueltig -> 422, nichts wird
+		// geschrieben. arrival_calculated rechnet SaveTrip mit dem neuen Tempo.
+		if req.Tempo != nil {
+			if bailIf(w, r, !model.ValidTempo(*req.Tempo), http.StatusUnprocessableEntity, "invalid_params") {
+				return
+			}
+			t := *req.Tempo
+			existing.Tempo = &t
 		}
 
 		if req.Name != nil {

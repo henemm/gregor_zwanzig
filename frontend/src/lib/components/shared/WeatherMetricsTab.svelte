@@ -12,7 +12,7 @@
 	import { api } from '$lib/api.js';
 	import { baueWetterMetrikenSpeicherung, baueTripSpeicherung } from './tripSpeicherung.ts';
 	import { pickEigenfelder, WETTER_DISPLAY_KEYS, WETTER_REPORT_KEYS } from './pickEigenfelder.ts';
-	import type { Trip, MetricPreset, Horizons, ReportConfig, WeatherConfigMetric, ComparePreset } from '$lib/types';
+	import type { Trip, MetricPreset, Horizons, ReportConfig, WeatherConfigMetric, ComparePreset, Fortbewegung } from '$lib/types';
 	// Issue #2276 S4: Speicherweg des vergleich-Zweigs (kein Laufzeit-Import
 	// aus compare/, AC-9) — geteilte kombinierte Wetter-Metriken/Layout-
 	// Orchestrierung.
@@ -659,24 +659,17 @@
 		}
 	});
 
-	// Issue #932: Activity-Typ → Template vorauswählen (nur createMode, einmalig).
-	const ACTIVITY_TO_TEMPLATE: Record<string, string> = {
-		trekking: 'alpen-trekking',
-		hochtour: 'alpen-trekking',
-		klettersteig: 'alpen-trekking',
-		mountaineering: 'alpen-trekking',
-		ski_touring: 'skitouren',
-		skitour: 'skitouren',
-		hiking: 'wandern',
-		fahrrad_15: 'radtour',
-		fahrrad_20: 'radtour',
-		fahrrad_25: 'radtour',
+	// Issue #932, #3196: Fortbewegung → Template vorauswählen (nur createMode).
+	const FORTBEWEGUNG_TO_TEMPLATE: Record<Fortbewegung, string> = {
+		fuss: 'alpen-trekking',
+		rad: 'radtour',
 		mtb: 'radtour',
+		ski: 'skitouren',
 	};
 
 	$effect(() => {
-		if (!createMode || !trip?.activity || isDirty || templates.length === 0) return;
-		const tmplId = ACTIVITY_TO_TEMPLATE[trip.activity];
+		if (!createMode || !trip?.tempo || isDirty || templates.length === 0) return;
+		const tmplId = FORTBEWEGUNG_TO_TEMPLATE[trip.tempo.fortbewegung];
 		if (tmplId && templates.some(t => t.id === tmplId)) {
 			applyPreset(tmplId);
 		}

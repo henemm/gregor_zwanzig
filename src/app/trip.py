@@ -202,7 +202,10 @@ class Trip:
     alert_quiet_from: Optional[str] = None  # Issue #181: quiet hours start "HH:MM"
     alert_quiet_to: Optional[str] = None  # Issue #181: quiet hours end "HH:MM"
     shortcode: str = ""  # Bug #775: GZ#XXXX — per-user eindeutig, ASCII, immun gegen Q-Encoding
-    activity: str = ""  # Issue #802: Aktivitätstyp (z.B. "fahrrad_20") für Segment-Tempo
+    activity: str = ""  # Issue #802: Altfeld (z.B. "fahrrad_20"), seit #3196 nur Ableitungsquelle
+    # Issue #3196 (ADR-0108 Nr. 2): {"fortbewegung": "fuss"|"rad"|"mtb"|"ski",
+    # "grundtempo_kmh": float}. None = Altdaten -> Loader leitet aus activity ab.
+    tempo: Optional[dict] = None
     region: str = ""  # Issue #805: Go-Feld region (z.B. "GR20") — roundtrip-erhalten
     archived_at: Optional[str] = None  # Issue #805: Go-Feld archived_at (ISO-String) — roundtrip-erhalten
     paused_at: Optional[str] = None  # Issue #995: Go-Feld paused_at (ISO-String) — Trip-Detail-Pause, roundtrip-erhalten

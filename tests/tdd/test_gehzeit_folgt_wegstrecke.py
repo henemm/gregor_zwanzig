@@ -18,7 +18,7 @@ from datetime import date, time
 import pytest
 
 from app.trip import Stage, Waypoint
-from core.naismith import activity_speeds, compute_stage_arrivals
+from core.naismith import compute_stage_arrivals, derive_tempo, speeds_for_tempo
 from utils.geo import haversine_km
 
 # Zwei Punkte auf demselben Breitengrad -- die Luftlinie ist gut ueber 1 km,
@@ -61,7 +61,7 @@ def _luftlinie_km() -> float:
 
 
 def _flat_kmh() -> float:
-    return activity_speeds("")[0]
+    return speeds_for_tempo(derive_tempo(""))[0]
 
 
 def test_ac1_vermessene_etappe_rechnet_mit_der_wegstrecke():
@@ -165,6 +165,7 @@ def test_ac5_paritaet_erwartungswerte_fuer_die_go_seite():
 
     result = compute_stage_arrivals(stage, "")
 
-    # 8,0 km / 4 km/h = 120 min; 300 Hm Aufstieg / 300 m/h = 60 min => 180 min.
+    # 8,0 km / 4 km/h = 120 min; 300 Hm Aufstieg / 300 m/h = 60 min;
+    # DAV (#3196): 120 + 60/2 = 150 min => 10:30.
     assert result.waypoints[0].arrival_calculated == "08:00"
-    assert result.waypoints[1].arrival_calculated == "11:00"
+    assert result.waypoints[1].arrival_calculated == "10:30"

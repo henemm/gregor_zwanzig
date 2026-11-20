@@ -175,8 +175,9 @@ class TestTripCreationAndSegments:
 
         # Dauer ergibt sich rein aus der Naismith-Formel (Distanz/Tempo +
         # Hoehe/Steig-Tempo) -- unabhaengig vom Kalenderdatum/DST.
-        assert seg1.duration_hours == pytest.approx(4.95, abs=0.01)
-        assert seg2.duration_hours == pytest.approx(1.317, abs=0.01)
+        # #3196: Gehzeit nach DAV (max + min/2): S1->S2 t_v 4,15 h + t_h 0,81 h / 2.
+        assert seg1.duration_hours == pytest.approx(4.55, abs=0.01)
+        assert seg2.duration_hours == pytest.approx(1.217, abs=0.01)  # t_h 1,13 h + t_v 0,18 h / 2
 
 
 # ---------------------------------------------------------------------------

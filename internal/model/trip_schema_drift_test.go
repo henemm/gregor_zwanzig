@@ -285,3 +285,29 @@ func TestTripSchemaDrift_RadarAlertEnabledBleibtErhalten(t *testing.T) {
 		}
 	}
 }
+
+// #3196: tempo (Fortbewegung + Grundtempo) steht in der gemeinsamen Fixture
+// und ueberlebt den Go-Roundtrip mit demselben Wert; activity bleibt stehen.
+// Python-Pendant: test_tempo_ueberlebt_python_roundtrip.
+func TestTripSchemaDrift_TempoBleibtErhalten(t *testing.T) {
+	var fixture map[string]interface{}
+	if err := json.Unmarshal(driftFixture(t), &fixture); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := fixture["tempo"]; !ok {
+		t.Errorf("Fixture fuehrt tempo nicht — Drift-Gate waere fuer das Feld blind")
+	}
+	fixture["tempo"] = map[string]interface{}{"fortbewegung": "mtb", "grundtempo_kmh": 11.5}
+	raw, _ := json.Marshal(fixture)
+	var out map[string]interface{}
+	if err := json.Unmarshal(goRoundtrip(t, raw), &out); err != nil {
+		t.Fatal(err)
+	}
+	tm, ok := out["tempo"].(map[string]interface{})
+	if !ok || tm["fortbewegung"] != "mtb" || tm["grundtempo_kmh"] != 11.5 {
+		t.Errorf("tempo nach Go-Roundtrip: %v", out["tempo"])
+	}
+	if out["activity"] != fixture["activity"] {
+		t.Errorf("activity nach Go-Roundtrip veraendert: %v", out["activity"])
+	}
+}

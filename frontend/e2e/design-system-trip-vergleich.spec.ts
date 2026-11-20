@@ -80,7 +80,6 @@ import {
 	tippeDatum,
 	tippeUhrzeit,
 	tripGpxHochladen,
-	waehleOption,
 	type HubKind,
 	oeffneEtappenEditor
 } from './helpers';
@@ -1068,21 +1067,23 @@ test('DS-1 Jahr angefangen und Neueintippen (1280 px): „202" ⇒ „Startdatum
 	await expect(etappenReiter).toHaveAttribute('aria-disabled', 'true');
 });
 
-test('DS-4 Aktivität Standard (1280 px): „Wandern (Standard)" zurückwählen und anlegen ⇒ ohne Aktivität gespeichert', async ({ page }) => {
+// #3196 (ADR-0108): statt der Aktivitäts-Auswahl die Tempo-Karte; ohne Eingriff gilt „zu Fuß, 4 km/h".
+test('DS-4 Tempo Standard (1280 px): ohne Eingriff anlegen ⇒ tempo zu Fuß 4 gespeichert, keine Aktivität', async ({ page }) => {
 	await page.setViewportSize(DESKTOP);
 	await setzeSprache(page, 'de');
 	try {
 		await anlegenPflicht(page, 'route', { name: `E2E-GZ-DS4-std-${Date.now()}` });
 		await page.getByTestId('trip-new-tab-route').click();
-		const ausloeser = page.getByTestId('activity-dropdown');
-		await waehleOption(page, ausloeser, 'Hochtour');
-		await expect(ausloeser).toHaveText('Hochtour');
-		await waehleOption(page, ausloeser, 'Wandern (Standard)');
-		await expect(ausloeser).toHaveText('Wandern (Standard)');
+		const karte = page.locator('.tn-desktop').getByTestId('tempo-karte');
+		await expect(karte).toBeVisible({ timeout: 10_000 });
+		await expect(karte.getByTestId('tempo-fortbewegung-fuss')).toHaveAttribute('aria-pressed', 'true');
+		await expect(karte.getByTestId('tempo-grundtempo')).toHaveValue('4');
 		const knopf = ANLEGE_SEL.route.standardwerte(page);
 		await expect(knopf).toBeEnabled({ timeout: 15_000 });
 		const id = await postId(page, '/api/trips', () => knopf.click());
-		expect((await tripStand(page, id)).activity ?? '', 'Standard = keine Aktivität').toBe('');
+		const stand = await tripStand(page, id);
+		expect(stand.tempo, 'Standard-Tempo').toEqual({ fortbewegung: 'fuss', grundtempo_kmh: 4 });
+		expect(stand.activity ?? '', 'die Anlage schreibt keine Aktivität mehr').toBe('');
 	} finally {
 		await cleanupTracked(page.request);
 	}
@@ -1183,7 +1184,9 @@ for (const breite of BREITEN) {
 
 // ─── DS-4 (AC-4) ────────────────────────────────────────────────────────────
 
-test('DS-4 Aktivität: Auswahl beim Trip-Anlegen ist eine listbox, per Maus und Tastatur bedienbar, Fokus sichtbar, gespeichert', async ({
+// #3196 (ADR-0108): die Tempo-Karte beim Anlegen — Segment-Gruppe per Maus und Tastatur bedienbar,
+// Fokus sichtbar, Grundtempo änderbar, gespeichert als `tempo`.
+test('DS-4 Tempo: Karte beim Trip-Anlegen ist eine Segment-Gruppe, per Maus und Tastatur bedienbar, Fokus sichtbar, gespeichert', async ({
 	page
 }) => {
 	await page.setViewportSize(DESKTOP);
@@ -1191,33 +1194,34 @@ test('DS-4 Aktivität: Auswahl beim Trip-Anlegen ist eine listbox, per Maus und 
 	try {
 		await anlegenPflicht(page, 'route', { name: `E2E-GZ-DS4-${Date.now()}` });
 		await page.getByTestId('trip-new-tab-route').click();
-		const ausloeser = page.getByTestId('activity-dropdown');
-		await expect(ausloeser).toBeVisible({ timeout: 10_000 });
-		const liste = page.getByRole('listbox');
-		// Maus
-		await ausloeser.click();
-		await expect(liste, 'Auswahl öffnet keine listbox').toBeVisible({ timeout: 5_000 });
-		await liste.getByRole('option', { name: 'Hochtour' }).click();
-		await expect(liste).toBeHidden();
-		await expect(ausloeser).toContainText('Hochtour');
-		// Tastatur: Enter öffnet, Pfeil runter, Enter wählt
-		await ausloeser.focus();
+		const karte = page.locator('.tn-desktop').getByTestId('tempo-karte');
+		await expect(karte).toBeVisible({ timeout: 10_000 });
+		await expect(karte.getByRole('group', { name: 'Fortbewegung' })).toBeVisible();
+		// Maus: Rad ⇒ Grundtempo-Vorschlag 20
+		await karte.getByTestId('tempo-fortbewegung-rad').click();
+		await expect(karte.getByTestId('tempo-fortbewegung-rad')).toHaveAttribute('aria-pressed', 'true');
+		await expect(karte.getByTestId('tempo-fortbewegung-fuss')).toHaveAttribute('aria-pressed', 'false');
+		await expect(karte.getByTestId('tempo-grundtempo')).toHaveValue('20');
+		// Tastatur: Tab auf das nächste Segment (MTB), Enter wählt
+		await karte.getByTestId('tempo-fortbewegung-rad').focus();
+		await page.keyboard.press('Tab');
+		const mtb = karte.getByTestId('tempo-fortbewegung-mtb');
+		await expect(mtb).toBeFocused();
 		await page.keyboard.press('Enter');
-		await expect(liste).toBeVisible();
-		await page.keyboard.press('ArrowDown');
-		await page.keyboard.press('Enter');
-		await expect(liste).toBeHidden();
-		await expect(ausloeser).toContainText('Klettersteig');
-		await expect(ausloeser).toBeFocused();
-		const fokus = await ausloeser.evaluate((el) => {
+		await expect(mtb).toHaveAttribute('aria-pressed', 'true');
+		await expect(karte.getByTestId('tempo-grundtempo')).toHaveValue('12');
+		const fokus = await mtb.evaluate((el) => {
 			const s = getComputedStyle(el);
 			return { sichtbar: el.matches(':focus-visible'), stil: s.outlineStyle, breite: s.outlineWidth };
 		});
 		expect(fokus.sichtbar && fokus.stil !== 'none' && fokus.breite !== '0px', `Fokus nicht sichtbar: ${JSON.stringify(fokus)}`).toBe(true);
+		// Grundtempo frei überschreiben
+		await karte.getByTestId('tempo-grundtempo').fill('14');
+		await karte.getByTestId('tempo-grundtempo').press('Tab');
 		const knopf = ANLEGE_SEL.route.standardwerte(page);
 		await expect(knopf).toBeEnabled({ timeout: 15_000 });
 		const id = await postId(page, '/api/trips', () => knopf.click());
-		expect((await tripStand(page, id)).activity, 'gespeicherte Aktivität').toBe('klettersteig');
+		expect((await tripStand(page, id)).tempo, 'gespeichertes Tempo').toEqual({ fortbewegung: 'mtb', grundtempo_kmh: 14 });
 	} finally {
 		await cleanupTracked(page.request);
 	}

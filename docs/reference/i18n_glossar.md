@@ -36,6 +36,8 @@
 | Versand | delivery | Abschnitt des Reiters Zustellung (Anker `#versand`), kein Reiter mehr seit #2794 S3a; „Versandkanal" = *delivery channel* |
 | Layout | layout | bleibt |
 | Korridor | corridor | bleibt |
+| Fortbewegung | mode of travel | Karte im Reiter Etappen (#3196); Werte „zu Fuß“/*On foot*, „Rad“/*Bike*, MTB, Ski. Protokoll-Token `fuss`/`rad`/`mtb`/`ski` nie übersetzen |
+| Grundtempo | base pace | km/h je Trip (#3196); Auf-/Abstieg folgen dem Grundtempo und werden nicht angezeigt |
 | Orte | locations | Name des Bereichs für neue Texte (ADR-0124 Nr. 10, PO 2026-11-17), auch bei einem einzelnen Ort; als Titel *Locations*. Kein Text setzt mehrere Orte voraus: bei einem Ort nicht „alle Orte“ und nicht „1 Orte“ |
 | Standardwerte | defaults | „Standardwerte speichern" = *Save as defaults* |
 | Verlässlichkeit | confidence | Nur Meta-Hinweis, keine Metrik (#710) |

@@ -24,9 +24,11 @@
 	// Issue #3007: Etappen-Liste im Hub aus dem geteilten Baustein Listenzeile (wie Orte, ADR-0097).
 	import Listenzeile from '$lib/components/molecules/Listenzeile.svelte';
 	import { etappenZeile, etappenAufteilung } from './etappenListe.ts';
-	import { computeArrivalTimes, activityToSpeed } from '$lib/utils/naismith';
+	import { computeArrivalTimes, STANDARD_TEMPO } from '$lib/utils/naismith';
+	// Issue #3196: Fortbewegung + Grundtempo oben im Reiter (geteilt mit dem Anlegen).
+	import TempoKarte from '$lib/components/shared/TempoKarte.svelte';
 	import { interpolateWaypoint } from '$lib/utils/waypointEditor';
-	import type { ActivityType, Stage, Trip, Waypoint } from '$lib/types';
+	import type { Stage, Tempo, Trip, Waypoint } from '$lib/types';
 	import { api } from '$lib/api.js';
 	import { baueTripSpeicherung } from '$lib/components/shared/tripSpeicherung';
 	import { erstelleEtappenStand } from '$lib/components/shared/etappenSpeicherstand';
@@ -58,7 +60,8 @@
 		stages: Stage[];
 		tripId?: string;
 		showSave?: boolean;
-		activityType?: ActivityType;
+		/** Issue #3196: Tempo des Trips (gespeichert oder aus activity abgeleitet). */
+		tempo?: Tempo;
 		onTripUpdate?: (updated: Trip) => void;
 		/** Issue #758: SaveStatus controller from +page.svelte. When provided, removes explicit save button. */
 		saveController?: SaveStatus;
@@ -71,7 +74,7 @@
 		 *  bestehenden Editor dieser Etappe darunter auf. Standard aus (Anlegen-Editor unverändert). */
 		listeZuerst?: boolean;
 	}
-	let { stages = $bindable(), tripId, showSave = true, activityType, onTripUpdate, saveController, bottomReservePx, kopf, listeZuerst = false }: Props = $props();
+	let { stages = $bindable(), tripId, showSave = true, tempo, onTripUpdate, saveController, bottomReservePx, kopf, listeZuerst = false }: Props = $props();
 
 	let saving = $state(false);
 	let saveSuccess = $state(false);
@@ -137,7 +140,7 @@
 		saving = true;
 		saveError = null;
 		try {
-			const updatedTrip = await etappenStand.direktClient.put<Trip>(`/api/trips/${tripId}`, { stages: payload });
+			const updatedTrip = await etappenStand.direktClient.put<Trip>(`/api/trips/${tripId}`, etappenRumpf(payload));
 			saveSuccess = true;
 			setTimeout(() => { saveSuccess = false; }, 3000);
 			onTripUpdate?.(updatedTrip);
@@ -177,7 +180,7 @@
 	function buildStagesSave(): SaveFn {
 		// Rumpf als Funktion: `stages` wird erst beim Ausloesen gelesen (R6-F001).
 		return baueTripSpeicherung<Trip>(
-			etappenStand.autoSaveClient, tripId!, () => ({ stages }), (updatedTrip) => onTripUpdate?.(updatedTrip), 'etappen'
+			etappenStand.autoSaveClient, tripId!, () => etappenRumpf(), (updatedTrip) => onTripUpdate?.(updatedTrip), 'etappen'
 		);
 	}
 	function scheduleSave(): void {
@@ -209,10 +212,23 @@
 			? stages[activeStageIndex + 1]
 			: null
 	);
-	// Issue #674 — Speed aus activityType ableiten (Fahrrad/Wanderer-Default).
+	// Issue #3196: Tempo-Karte im Reiter. Bis zur ersten Änderung gilt das Trip-Tempo (Prop);
+	// danach der lokale Stand, der mit den Etappen über DENSELBEN Speicherweg geschrieben wird
+	// (Rumpf { stages, tempo } — ein zweiter Vorgang am Controller würde den ersten ersetzen).
+	let tempoLokal = $state<Tempo | null>(null);
+	const tempoAktiv = $derived<Tempo>(tempoLokal ?? tempo ?? STANDARD_TEMPO);
+	function tempoAendern(neu: Tempo): void {
+		tempoLokal = neu;
+		scheduleSave();
+	}
+	/** Rumpf eines Etappen-Speicherns: `tempo` nur, wenn der Nutzer es geändert hat. */
+	function etappenRumpf(payload: Stage[] = stages): { stages: Stage[]; tempo?: Tempo } {
+		return tempoLokal ? { stages: payload, tempo: tempoLokal } : { stages: payload };
+	}
+	// Gehzeiten je Wegpunkt nach DAV mit dem aktuellen Tempo (sofort, vor dem Speichern).
 	const arrivals = $derived(
 		activeStage
-			? computeArrivalTimes(activeStage, activeStage.start_time, activityToSpeed(activityType))
+			? computeArrivalTimes(activeStage, activeStage.start_time, tempoAktiv)
 			: []
 	);
 
@@ -743,7 +759,7 @@
 		<!-- #3006: Bereichskopf als erstes IN der Reiterfläche (wie Orte); `{/if}` direkt vor der
 		     Liste, damit ohne Kopf kein Leerraum entsteht (Golden f9_trip_flaechen bleibt gleich). -->
 		<HubReiterflaeche testid="etappen-mobil-reiterflaeche">
-		{#if kopf}<div class="etappen-kopf">{@render kopf()}</div>{/if}<div class="mobile-stages" data-testid="mobile-stages-list">
+		{#if kopf}<div class="etappen-kopf">{@render kopf()}{@render tempoKarte()}</div>{/if}<div class="mobile-stages" data-testid="mobile-stages-list">
 			<div class="desktop-hint" data-testid="desktop-hint">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
 				<p><strong>{$t('trip.etappen_editor.desktop_stark')}</strong> {$t('trip.etappen_editor.desktop_text')}</p>
@@ -800,7 +816,7 @@
 								index={i}
 								risk={stageRisk[stage.id]}
 								open={expandedStageId === stage.id}
-								{activityType}
+								tempo={tempoAktiv}
 								isFirst={i === 0}
 								onDateChange={(d) => handleDateChange(stage.id, d)}
 								onStartTimeChange={(t) => handleStartTimeChange(stage.id, t)}
@@ -819,7 +835,7 @@
 	{#if listeZuerst}
 		{@render etappenListe()}
 	{:else}
-	{#if kopf}<div class="etappen-kopf-oben">{@render kopf()}</div>{/if}{@render etappenBand()}
+	{#if kopf}<div class="etappen-kopf-oben">{@render kopf()}{@render tempoKarte()}</div>{/if}{@render etappenBand()}
 	{@render etappenEditor(false)}
 	{/if}
 
@@ -1003,7 +1019,7 @@
 <!-- #3007 (Mockup Fassung 3, viewEtappen): Hub-Listenmodus — Kopf, dann je Etappe eine Listenzeile
      „E{n} · Start → Ziel“, „x km · ↑y m“, „Gehzeit h:mm“; die Zeile klappt den Editor darunter auf. -->
 {#snippet etappenListenzeile(stage: Stage, i: number)}
-	{@const zeile = etappenZeile(stage, i, $locale, $t, activityToSpeed(activityType))}
+	{@const zeile = etappenZeile(stage, i, $locale, $t, tempoAktiv)}
 	<Listenzeile
 		titel={zeile.titel}
 		zweitzeile={zeile.zweitzeile}
@@ -1015,9 +1031,14 @@
 	/>
 {/snippet}
 
+<!-- Issue #3196 (Soll-Bild viewEtappen): Tempo-Karte direkt unter dem Bereichskopf des Reiters. -->
+{#snippet tempoKarte()}
+	<div class="etappen-tempo"><TempoKarte tempo={tempoAktiv} onchange={tempoAendern} /></div>
+{/snippet}
+
 {#snippet etappenListe()}
 	<HubReiterflaeche testid="etappen-liste-reiterflaeche">
-		{#if kopf}{@render kopf()}{/if}<!-- #3007 Fix-Runde 5 (V-2, AC-14, Fehlerklasse #1389/#1390): die Kaskaden-Rückfrage
+		{#if kopf}{@render kopf()}{@render tempoKarte()}{/if}<!-- #3007 Fix-Runde 5 (V-2, AC-14, Fehlerklasse #1389/#1390): die Kaskaden-Rückfrage
 		     steht einmal über der Liste statt im aufgeklappten Editor — sie bleibt sichtbar, wenn der Nutzer
 		     die Etappe zuklappt oder eine andere aufklappt, solange das Speichern zurückgestellt ist. -->
 		{#if cascade && cascadeVisible}<div class="etappen-liste-kaskade">{@render cascadeBanner()}</div>{/if}<div class="etappen-liste-rahmen" bind:this={listeRahmen}>
@@ -1051,6 +1072,10 @@
 	/* #3006: Abstand Kopf → Liste wie beim Vergleich (.hub-orte-kopf in CompareTabs). */
 	.etappen-kopf {
 		margin-bottom: var(--g-s-4);
+	}
+	/* #3196: Tempo-Karte unter dem Bereichskopf, Abstand wie Kopf → Liste. */
+	.etappen-tempo {
+		margin-top: var(--g-s-4);
 	}
 	/* #3006: Kopf über dem Etappen-Band mit dem Rand der Reiterfläche (HubReiterflaeche
 	   28/40 bzw. 20/16 px, max. 1480 px) — er steht damit genau dort, wo der Vergleich seinen

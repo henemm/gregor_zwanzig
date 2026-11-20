@@ -328,7 +328,7 @@ describe('#2837 S1 Parität — die Unterkante des Kopfs trägt nur der HubKopf 
 // Unterzeile bei beiden Arten. Beide Seiten echt gerendert (Prüfstände f9/f10).
 // Pflicht-Mutationen, hier gefangen:
 //   Vergleich wieder eigenes/gefülltes Schild   → „AC-1/AC-8 … gleiche Attribute" rot
-//   profileLabel im Trip weglassen              → „AC-6 … Trekking" rot
+//   (#3196: der Trip-Profil-Zusatz entfällt — Wächter „kein Aktivitätsname" bei beiden Arten)
 // RED HEUTE: Der Vergleich rendert CompareStatusPill (keine Testid, kein data-slot=pill, Text
 // „pausiert"/„draft" aus listen.status.*), der Trip trägt kein data-status und kein Profil.
 // Wächter (heute schon grün, bewusst): AC-7 (kein Zusatz ohne Aktivität), AC-10 (Laufzeit-Hinweis).
@@ -388,12 +388,17 @@ describe('#2837 S1b — Profil in der Zeile unter dem Titel bei beiden Arten (AC
 		const zeile = stift.eltern!;
 		return zeile.kinder[zeile.kinder.indexOf(stift) + 1];
 	};
-	test('AC-6: Trip mit Aktivität trekking zeigt „· Trekking" direkt hinter dem Region-Stift', () => {
-		locale.set('de');
-		const trip = hinterStift(seite('route'), 'route');
-		assert.ok(trip, 'Trip: hinter dem Region-Stift steht nichts — profileLabel fehlt');
-		assert.equal(text(trip), `· ${trFor('de', 'trip.aktivitaet.trekking')}`, 'Trip: Profil-Zusatz falsch oder fehlt');
-	});
+	// #3196 (ADR-0108 Nr. 3): die Aktivitäts-Chips und der Zusatz im Trip-Kopf entfallen —
+	// Parität zum Vergleich (#2796 S4a): hinter dem Region-Stift steht bei beiden kein Profilname.
+	for (const lang of ['de', 'en'] as const) {
+		test(`#3196 (${lang}): Trip mit Aktivität trekking — kein Aktivitätsname hinter dem Region-Stift`, () => {
+			locale.set(lang);
+			const trip = hinterStift(seite('route'), 'route');
+			assert.equal(T.tripLaufend().activity, 'trekking', 'Messaufbau: Trip mit gespeicherter Aktivität');
+			assert.ok(!trip || !text(trip).startsWith('·'), `Trip: Zusatz hinter dem Stift „${trip && text(trip)}"`);
+			assert.ok(!trip || !text(trip).includes('Trekking'), `Trip: Aktivitätsname hinter dem Stift „${trip && text(trip)}"`);
+		});
+	}
 	test('#2796 S4a AC-1: Vergleich mit profil „wintersport" — kein Profilname hinter dem Region-Stift', () => {
 		locale.set('de');
 		const vergleich = hinterStift(seite('vergleich'), 'vergleich');
@@ -402,11 +407,6 @@ describe('#2837 S1b — Profil in der Zeile unter dem Titel bei beiden Arten (AC
 			!vergleich || !text(vergleich).includes(C.helfer.presetProfileLabel('wintersport')),
 			`Vergleich: Profilname hinter dem Stift „${vergleich && text(vergleich)}"`
 		);
-	});
-	test('AC-6/AC-11: Profil-Zusatz des Trips folgt der Nutzersprache (en)', () => {
-		locale.set('en');
-		const trip = hinterStift(seite('route'), 'route');
-		assert.equal(trip && text(trip), `· ${trFor('en', 'trip.aktivitaet.trekking')}`);
 	});
 	test('AC-7 (Wächter): Trip ohne Aktivität und Vergleich ohne Profil — kein Profil-Zusatz hinter dem Stift', () => {
 		const trip = hinterStift(seite('route', T.tripLaufend({ activity: undefined })), 'route');
@@ -420,7 +420,7 @@ describe('#2837 S1b — Profil in der Zeile unter dem Titel bei beiden Arten (AC
 // #2796 S4a (ADR-0108 P3), Adversary F2: Wächter auf Seitenebene (echtes SSR beider Hub-Seiten,
 // nicht nur der Baustein): der Orts-Vergleich übergibt dem Kopf KEINE Profil-Auswahl mehr —
 // keine Kachel, kein Knopf, keine Auswahl, kein Profilname hinter der Region, auch mit
-// gespeichertem `profil` —, der Trip-Kopf behält Kacheln, Knopf und Auswahl (AC-3).
+// gespeichertem `profil` —; seit #3196 gilt dasselbe für den Trip-Kopf.
 describe('#2796 S4a — Profil-Auswahl im Kopf: Orts-Vergleich ohne, Trip mit', () => {
 	const profilIds = (w: Knoten, praefix: string): string[] =>
 		alle(w, (n) => (n.attrs['data-testid'] ?? '').startsWith(`${praefix}-profil`)).map((n) => n.attrs['data-testid']);
@@ -436,11 +436,12 @@ describe('#2796 S4a — Profil-Auswahl im Kopf: Orts-Vergleich ohne, Trip mit', 
 			assert.ok(!hinter || !text(hinter).includes(trFor(lang, 'bausteine.profil.wandern' as never)), `Profilname hinter dem Stift: ${hinter && text(hinter)}`);
 		});
 	}
-	test('Trip-Kopf behält Aktivitäts-Kacheln, Knopf und Auswahl', () => {
+	// #3196 (ADR-0108 Nr. 3): auch der Trip-Kopf hat keine Profil-Auswahl mehr — Fortbewegung
+	// und Grundtempo stehen im Reiter Etappen (Tempo-Karte).
+	test('Trip-Kopf ohne Aktivitäts-Kacheln, Knopf und Auswahl (#3196)', () => {
 		locale.set('de');
-		const ids = profilIds(seite('route'), 'trip');
-		for (const id of ['trip-profil-knopf', 'trip-profil-auswahl', 'trip-profil-option-trekking']) {
-			assert.ok(ids.includes(id), `${id} fehlt im Trip-Kopf: ${ids.join(', ')}`);
-		}
+		const w = seite('route');
+		assert.ok(mitTestid(w, 'trip-region-edit-toggle').length >= 1, 'Messaufbau: Trip-Kopf gerendert');
+		assert.deepEqual(profilIds(w, 'trip'), []);
 	});
 });

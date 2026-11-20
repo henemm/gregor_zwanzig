@@ -21,7 +21,7 @@ from datetime import date, time
 import pytest
 
 from app.trip import Stage, Waypoint
-from core.naismith import activity_speeds, compute_stage_arrivals
+from core.naismith import compute_stage_arrivals, derive_tempo, speeds_for_tempo
 from utils.geo import haversine_km
 
 _LAT = 46.6500
@@ -51,7 +51,7 @@ def _minutes(hhmm: str) -> int:
 
 
 def _flat_kmh() -> float:
-    return activity_speeds("")[0]
+    return speeds_for_tempo(derive_tempo(""))[0]
 
 
 def _luft(lon1: float, lon2: float) -> float:

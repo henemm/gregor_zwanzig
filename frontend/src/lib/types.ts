@@ -24,10 +24,20 @@ export interface Group {
 	order: number;
 }
 
-// Issue #674 — Fahrrad-Aktivitätstypen (drei Geschwindigkeitsstufen).
+// Issue #674 — Altfeld `activity` (seit #3196 nur Ableitungsquelle für `tempo`,
+// die Oberfläche schreibt es nicht mehr).
 export type ActivityType =
 	| 'trekking' | 'skitour' | 'hochtour' | 'klettersteig' | 'mtb'
 	| 'fahrrad_15' | 'fahrrad_20' | 'fahrrad_25';
+
+// Issue #3196 (ADR-0108 Nr. 2) — Fortbewegung und Grundtempo eines Trips.
+// Protokoll-Token, nie übersetzen; Anzeige über den Katalog `trip.tempo.*`.
+export type Fortbewegung = 'fuss' | 'rad' | 'mtb' | 'ski';
+
+export interface Tempo {
+	fortbewegung: Fortbewegung;
+	grundtempo_kmh: number;
+}
 
 export interface Waypoint {
 	id: string;
@@ -139,24 +149,6 @@ type _ActivityProfileOptionsCoverage =
 	ActivityProfile extends (typeof ACTIVITY_PROFILE_OPTIONS)[number]['value'] ? true : never;
 const _activityProfileCoverageCheck: _ActivityProfileOptionsCoverage = true;
 void _activityProfileCoverageCheck;
-
-// Issue #2284 S2 — Aktivität des Trips als Kachelreihe im Hub-Kopf. Labels wie
-// zuvor in der Auswahlliste des Etappen-Reiters.
-export const ACTIVITY_TYPE_OPTIONS = [
-	{ value: 'trekking',     label: 'Trekking' },
-	{ value: 'skitour',      label: 'Skitour' },
-	{ value: 'hochtour',     label: 'Hochtour' },
-	{ value: 'klettersteig', label: 'Klettersteig' },
-	{ value: 'mtb',          label: 'MTB' },
-	{ value: 'fahrrad_15',   label: 'Fahrrad (15 km/h)' },
-	{ value: 'fahrrad_20',   label: 'Fahrrad (20 km/h)' },
-	{ value: 'fahrrad_25',   label: 'Fahrrad (25 km/h)' },
-] as const satisfies ReadonlyArray<{ value: ActivityType; label: string }>;
-
-type _ActivityTypeOptionsCoverage =
-	ActivityType extends (typeof ACTIVITY_TYPE_OPTIONS)[number]['value'] ? true : never;
-const _activityTypeCoverageCheck: _ActivityTypeOptionsCoverage = true;
-void _activityTypeCoverageCheck;
 
 export interface Aggregation {
 	profile?: ActivityProfile;
@@ -403,7 +395,9 @@ export interface Trip {
 	id: string;
 	name: string;
 	shortcode?: string;
-	activity?: ActivityType;
+	activity?: ActivityType; // Altfeld (#3196), nur Ableitungsquelle
+	/** Issue #3196: Fortbewegung + Grundtempo — Quelle der Gehzeit. */
+	tempo?: Tempo;
 	region?: string;
 	stages: Stage[];
 	avalanche_regions?: string[];

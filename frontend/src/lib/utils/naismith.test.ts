@@ -13,7 +13,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { naismithHours, computeArrivalTimes } from './naismith.ts';
+import { davHours, tempoSpeeds, computeArrivalTimes } from './naismith.ts';
 
 import type { Stage, Waypoint } from '../types.ts';
 
@@ -43,24 +43,27 @@ function stage(id: string, waypoints: Waypoint[], start_time?: string): Stage {
 const DELTA_4KM_LAT = 0.035973;
 
 // =============================================================================
-// AC-6: naismithHours — SUMME (dist/4 + ascent/300 + descent/500)
+// Issue #3196: Gehzeit nach DAV (ersetzt die Naismith-Summe) — zu Fuß 4 km/h,
+// t = max(t_h, t_v) + min(t_h, t_v) / 2, t_v = auf/300 + ab/500.
 // =============================================================================
 
-test('AC-6: naismithHours(4,0,0) === 1 (4 km flach / 4 km/h)', () => {
-	assert.equal(naismithHours(4, 0, 0), 1);
+const ZU_FUSS = tempoSpeeds({ fortbewegung: 'fuss', grundtempo_kmh: 4 });
+
+test('DAV: davHours(4,0,0) === 1 (4 km flach / 4 km/h)', () => {
+	assert.equal(davHours(4, 0, 0, ZU_FUSS), 1);
 });
 
-test('AC-6: naismithHours(0,300,0) === 1 (300 Höhenmeter Aufstieg / 300 m/h)', () => {
-	assert.equal(naismithHours(0, 300, 0), 1);
+test('DAV: davHours(0,300,0) === 1 (300 Höhenmeter Aufstieg / 300 m/h)', () => {
+	assert.equal(davHours(0, 300, 0, ZU_FUSS), 1);
 });
 
-test('AC-6: naismithHours(0,0,500) === 1 (500 Höhenmeter Abstieg / 500 m/h)', () => {
-	assert.equal(naismithHours(0, 0, 500), 1);
+test('DAV: davHours(0,0,500) === 1 (500 Höhenmeter Abstieg / 500 m/h)', () => {
+	assert.equal(davHours(0, 0, 500, ZU_FUSS), 1);
 });
 
-test('AC-6: naismithHours summiert alle drei Terme (nicht max)', () => {
-	// 4 km flach (1 h) + 300 m auf (1 h) + 500 m ab (1 h) = 3 h
-	assert.equal(naismithHours(4, 300, 500), 3);
+test('DAV: davHours kombiniert max + min/2 (nicht Summe)', () => {
+	// t_h = 1 h, t_v = 1 h + 1 h = 2 h → 2 + 1/2 = 2,5 h (Summe wäre 3 h)
+	assert.equal(davHours(4, 300, 500, ZU_FUSS), 2.5);
 });
 
 // =============================================================================

@@ -65,7 +65,7 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['vergleich.anlegen.sperre_orte', 'erst Vergleich benennen', 'name the comparison first'],
 	['vergleich.anlegen.sperre_wetter', 'erst mind. 2 Orte auswählen', 'select at least 2 locations first'],
 
-	// ── trip.* — Status, Kopf, Aktivitaet ─────────────────────────────────────
+	// ── trip.* — Status, Kopf, Tempo ─────────────────────────────────────
 	['trip.status.draft', 'Entwurf', 'Draft'],
 	['trip.status.planned', 'Geplant', 'Planned'],
 	['trip.status.active', 'Aktiv', 'Active'],
@@ -73,18 +73,15 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.status.finished', 'Fertig', 'Finished'],
 	['trip.status.archived', 'Archiviert', 'Archived'],
 	// trip.kopf.* (Handy-Kennzahlenzeile #416) entfällt mit #2980 AC-19 (ADR-0118) samt Katalogschlüsseln.
-	['trip.aktivitaet.trekking', 'Trekking', 'Trekking'],
-	['trip.aktivitaet.skitour', 'Skitour', 'Ski touring'],
-	['trip.aktivitaet.hochtour', 'Hochtour', 'Mountaineering'],
-	['trip.aktivitaet.klettersteig', 'Klettersteig', 'Via ferrata'],
-	['trip.aktivitaet.mtb', 'MTB', 'MTB'],
-	['trip.aktivitaet.fahrrad_15', 'Fahrrad (15 km/h)', 'Bike (15 km/h)'],
-	['trip.aktivitaet.fahrrad_20', 'Fahrrad (20 km/h)', 'Bike (20 km/h)'],
-	['trip.aktivitaet.fahrrad_25', 'Fahrrad (25 km/h)', 'Bike (25 km/h)'],
-	['trip.aktivitaet.standard', 'Wandern (Standard)', 'Hiking (default)'],
-	['trip.aktivitaet.alpen_trekking', 'Alpen-Trekking', 'Alpine trekking'],
-	['trip.aktivitaet.wandern', 'Wandern', 'Hiking'],
-	['trip.aktivitaet.skitouren', 'Skitouren', 'Ski touring trips'],
+	// #3196 (ADR-0108): trip.aktivitaet.* entfallen mit den Kopf-Kacheln; Tempo-Karte im Reiter Etappen.
+	['trip.tempo.fortbewegung', 'Fortbewegung', 'Mode of travel'],
+	['trip.tempo.grundtempo', 'Grundtempo (km/h)', 'Base pace (km/h)'],
+	['trip.tempo.hinweis', 'Gilt für alle Etappen.', 'Applies to all stages.'],
+	['trip.tempo.fuss', 'zu Fuß', 'On foot'],
+	['trip.tempo.rad', 'Rad', 'Bike'],
+	['trip.tempo.mtb', 'MTB', 'MTB'],
+	['trip.tempo.ski', 'Ski', 'Ski'],
+	['trip.tempo.einheit', 'km/h', 'km/h'],
 
 	// ── trip.hub.* — Seite /trips/[id], Reiterleiste ──────────────────────────
 	['trip.hub.briefing_gesendet', 'Briefing gesendet!', 'Briefing sent'],
@@ -327,7 +324,6 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.anlegen.region_beispiel', 'z.B. Karnische Alpen', 'e.g. Karnische Alpen'],
 	['trip.anlegen.start_hinweis', 'Etappe 1 startet am <datum> — jede folgende Etappe +1 Tag.', 'Stage 1 starts on <datum> — each following stage +1 day.'],
 	['trip.anlegen.start_hinweis_kurz', 'Etappe 1 startet am <datum> — jede folgende +1 Tag', 'Stage 1 starts on <datum> — each following one +1 day'],
-	['trip.anlegen.aktivitaetstyp', 'Aktivitätstyp', 'Activity type'],
 	['trip.anlegen.gpx_hinweis', 'GPX-Dateien lädst du im nächsten Schritt hoch — eine Datei pro Etappe.', 'You upload GPX files in the next step — one file per stage.'],
 	['trip.anlegen.name_fehlt', 'Trip-Name fehlt', 'Trip name missing'],
 	['trip.anlegen.datum_fehlt', 'Startdatum fehlt', 'Start date missing'],
