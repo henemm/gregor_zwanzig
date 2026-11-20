@@ -350,8 +350,8 @@ async function briefingAufSeite(page: Page): Promise<string[]> {
 
 /**
  * #2966: Browser-Operationen für `bedieneAbschnitt` (Ablauf und Tripwire liegen in der Logik). Vor einer Taste
- * wird der Fokus gelöst: SavePresetDialog stoppt Tastenereignisse aus dem Dialog, Escape erreicht sonst das
- * Fenster nicht, wenn der Fokus nach „Speichern“ im Dialog liegt.
+ * wird der Fokus gelöst, damit die Taste das Fenster erreicht. Die Speichern-Karte (#3190) beendet Escape bei
+ * Fokus in der Karte selbst; der Bedienplan schließt sie darum über „Abbrechen“ (save-preset-cancel).
  */
 function seitenOps(page: Page, neuLaden: () => Promise<void>, anfragen: { method: string; url: string }[]): BedienOps {
 	return {

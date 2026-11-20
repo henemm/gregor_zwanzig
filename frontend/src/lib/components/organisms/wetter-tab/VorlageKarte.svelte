@@ -8,6 +8,7 @@
 	import { Btn } from '$lib/components/atoms';
 	import { locale, t, tn, type MessageKey } from '$lib/i18n';
 	import SavePresetDialog from '../../shared/weather-metrics-tab/SavePresetDialog.svelte';
+	import { pickerSchliesstPerTaste, speicherKarteAusloeser } from '$lib/utils/vorlageSpeichernKarte.js';
 	import type { Kontext } from '../../shared/wetter-tab/ampelModell.ts';
 	import { vorlageKurzbeschreibung, type EigeneVorlage, type VorlageEintrag } from '../../shared/wetter-tab/wetterTabLaden.ts';
 	// #2981: Systemvorlagen-Namen sprachabhaengig aus dem Katalog (Fallback Server-Label, dann ID).
@@ -29,8 +30,10 @@
 		onGespeichert: (preset: MetricPreset) => void;
 		/** #3111 AC-6: Zahl der Orte (nur Orte), waehlt „für diesen Ort“ bzw. „für diese Orte“. */
 		ortAnzahl?: number;
+		/** #3189: Herkunft fuer „Als eigene Vorlage speichern“ (Trip bzw. Orts-Vergleich; fehlt im Anlege-Modus). */
+		herkunft?: { id: string; name: string };
 	}
-	let { context, vorlageId, liste, eigene, abweichungen, metrikName, aboAmpel, onUebernehmen, onEigene, onZuruecksetzen, onGespeichert, ortAnzahl }: Props = $props();
+	let { context, vorlageId, liste, eigene, abweichungen, metrikName, aboAmpel, onUebernehmen, onEigene, onZuruecksetzen, onGespeichert, ortAnzahl, herkunft }: Props = $props();
 
 	// #3111 AC-6 (Mockup Fassung 4): Bestätigung zweiteilig, fetter Titel plus EIN Rumpf-Text.
 	const ERSETZT: Record<Kontext, () => MessageKey> = {
@@ -42,6 +45,11 @@
 	let wahl = $state<{ id: string; name: string; eigen: boolean } | null>(null);
 	let dialogOffen = $state(false);
 	let gespeichert = $state<string | null>(null);
+	// #3190: Speichern-Karte als Umschalter (aria-expanded/aria-controls); Fokus kehrt nach dem Schließen
+	// auf den Auslöser zurück (gemerkt beim Klick, das Btn-Atom reicht keine Referenz durch). Logik geteilt
+	// mit dem Alt-Editor (WeatherMetricsTab): $lib/utils/vorlageSpeichernKarte.ts.
+	const kartenId = $props.id();
+	const ausloeser = speicherKarteAusloeser();
 
 	const label = $derived(vorlageAnzeigename($locale, vorlageId, liste.find((v) => v.id === vorlageId)?.label));
 	/** Anzeigename einer Systemvorlage; reaktiv auf den Sprachwechsel ueber `$locale`. */
@@ -57,9 +65,14 @@
 	function optionName(v: VorlageEintrag): string {
 		return v.id === vorlageId ? `${name(v)} ${$t('wetter.vorlage.aktiv_marker')}` : name(v);
 	}
-	/** #3111 AC-5: Unterzeile eigener Vorlagen „eigene“ (+ Beschreibung). */
+	/** #3111 AC-5 / #3189 AC-4: Unterzeile „eigene“ + Beschreibung, sonst + Herkunft, sonst nur „eigene“. */
 	function eigeneUnterzeile(e: EigeneVorlage): string {
-		return [$t('wetter.vorlage.eigene_unterzeile'), ...(e.beschreibung ? [e.beschreibung] : [])].join(' · ');
+		const zusatz = e.beschreibung
+			? [e.beschreibung]
+			: e.herkunftName
+				? [$t('wetter.vorlage.eigene_aus_herkunft', { name: e.herkunftName })]
+				: [];
+		return [$t('wetter.vorlage.eigene_unterzeile'), ...zusatz].join(' · ');
 	}
 	/** #3111 AC-6: Rumpf der Bestätigung als ein Text: Ersetzt-Satz, ggf. Verlust-Satz, Bleibt-Satz. */
 	const rumpf = $derived(
@@ -78,12 +91,22 @@
 		if (wahl) (wahl.eigen ? onEigene : onUebernehmen)(wahl.id);
 		schliessen();
 	}
+	// #3190: Escape in der Speichern-Karte endet dort (SavePresetDialog); hier nur noch der Picker.
 	function taste(e: KeyboardEvent): void {
-		if (pickerOffen && !dialogOffen && e.key === 'Escape') schliessen();
+		if (pickerSchliesstPerTaste(e.key, pickerOffen)) schliessen();
+	}
+	function umschalten(e: MouseEvent): void {
+		gespeichert = null;
+		dialogOffen = ausloeser.umschalten(e.currentTarget as HTMLElement, dialogOffen);
+	}
+	function dialogZu(): void {
+		dialogOffen = false;
+		ausloeser.zurueck();
 	}
 	function gespeichertMelden(p: MetricPreset): void {
 		gespeichert = p.name;
 		onGespeichert(p);
+		ausloeser.zurueck();
 	}
 </script>
 
@@ -134,7 +157,7 @@
 		{/if}
 	</div>
 	<div class="wt-reihe wt-aktionen">
-		<Btn variant="ghost" size="tap" data-testid="wetter-vorlage-als-eigene" onclick={() => ((gespeichert = null), (dialogOffen = true))}>{$t('wetter.vorlage.speichern')}</Btn>
+		<Btn variant="ghost" size="tap" data-testid="wetter-vorlage-als-eigene" aria-expanded={dialogOffen} aria-controls={kartenId} onclick={umschalten}>{$t('wetter.vorlage.speichern')}</Btn>
 		{#if abweichungen > 0}
 			<Btn variant="ghost" size="tap" data-testid="wetter-vorlage-zuruecksetzen" onclick={onZuruecksetzen}>{$t('wetter.vorlage.zuruecksetzen', { vorlage: label })}</Btn>
 		{/if}
@@ -144,7 +167,8 @@
 	{/if}
 </div>
 
-<SavePresetDialog bind:open={dialogOffen} kind={context} ampel={aboAmpel} existingNames={eigene.map((e) => e.name)} onClose={() => (dialogOffen = false)} onSaved={gespeichertMelden} />
+<!-- #3190: Inline-Karte direkt unter der Vorlage-Karte (vor der Metrik-Karte in WetterTabInhalt). -->
+<SavePresetDialog id={kartenId} bind:open={dialogOffen} kind={context} ampel={aboAmpel} existingNames={eigene.map((e) => e.name)} {herkunft} onClose={dialogZu} onSaved={gespeichertMelden} />
 
 <style>
 	.wt-karte {

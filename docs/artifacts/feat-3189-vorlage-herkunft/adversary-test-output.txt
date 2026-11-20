@@ -1,0 +1,4 @@
+PASSED tests/test_3189_api_contract_herkunft.py::test_dto_traegt_feld_herkunft_mit_id_und_name
+PASSED tests/test_3189_api_contract_herkunft.py::test_regeln_nur_beim_anlegen_patch_unveraendert_eingefroren_200
+PASSED tests/test_3189_api_contract_herkunft.py::test_post_tabelle_nennt_herkunft
+3 passed in 0.49s

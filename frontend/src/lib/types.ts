@@ -374,7 +374,12 @@ export interface MetricPreset {
 	ampel?: Ampel | null;
 	/** Issue #2794 S3a: Art der eigenen Vorlage. */
 	kind?: 'route' | 'vergleich';
+	/** Issue #3189: Trip bzw. Orts-Vergleich, aus dem die Vorlage gespeichert wurde (Name eingefroren). */
+	herkunft?: PresetHerkunft;
 }
+
+/** Issue #3189: Herkunft einer eigenen Vorlage (Abo-ID + Name zum Speicherzeitpunkt). */
+export type PresetHerkunft = { id: string; name: string };
 
 // Issue #2794 S3a (Teil-PR 3): Profil-Ampel (Spiegel von src/app/ampel.py).
 // Als `type` (nicht `interface`), damit sie zu `Record<string, unknown>` passt.

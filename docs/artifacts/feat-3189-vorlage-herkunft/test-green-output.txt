@@ -1,0 +1,39 @@
+feat-3189-vorlage-herkunft — Phase 6 GREEN (2026-11-20)
+
+== go test ./internal/handler/ ./internal/store/ ./internal/model/ ==
+ok  	github.com/henemm/gregor-api/internal/handler	136.757s
+ok  	github.com/henemm/gregor-api/internal/store	2.622s
+ok  	github.com/henemm/gregor-api/internal/model	0.018s
+
+== go test -count=1 -run Herkunft3189 -v ./internal/handler/ ./internal/store/ ==
+--- PASS: TestHerkunft3189_AC1_PostSpeichertHerkunftEingefrorenUndPatchLaesstSieStehen (0.00s)
+--- PASS: TestHerkunft3189_AC3_NameGetrimmtGekapptLeerVerworfen (0.00s)
+--- PASS: TestHerkunft3189_AC5_PostOhneHerkunftErzeugtKeinFeld (0.00s)
+--- PASS: TestHerkunft3189_AC3_ZweiNutzerGetrennt (0.00s)
+ok  	github.com/henemm/gregor-api/internal/handler	0.017s
+--- PASS: TestHerkunft3189_AC2_StoreRoundTripAltbestandUndHerkunft (0.00s)
+--- PASS: TestHerkunft3189_AC2_RoundTripJeNutzerGetrennt (0.00s)
+ok  	github.com/henemm/gregor-api/internal/store	0.009s
+Go #3189: 6 pass, 0 fail
+
+== go vet ./internal/... ==
+OK (keine Meldungen)
+
+== frontend: node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/organisms/__tests__/*.test.ts src/lib/i18n/__tests__/*.test.ts ==
+ok 11 - #3189 AC-1/AC-5: eigeneVorlagePayload schreibt herkunft nur mit Namen
+ok 12 - #3189 AC-5: vorlageHerkunft — aus Trip bzw. Orts-Vergleich, nie im Anlege-Modus
+ok 13 - #3189 AC-1: eigeneVorlageAus übernimmt den Herkunftsnamen
+ok 14 - #3189 AC-4: Unterzeile eigener Vorlagen nach Priorität
+# tests 544
+# pass 544
+# fail 0
+
+== npx svelte-check --threshold error ==
+COMPLETED 2266 FILES 34 ERRORS 83 WARNINGS 54 FILES_WITH_PROBLEMS
+Keiner der 34 Fehler liegt in einer geaenderten Datei (VorlageKarte, WetterTabInhalt, SavePresetDialog,
+wetterTabLaden, ampelSchreiben, types.ts); alle in fremden Dateien (u. a. CompareNewEditor.svelte, *.test.ts) = Altbestand.
+Nachpruefung: grep -cE "VorlageKarte|WetterTabInhalt|SavePresetDialog|wetterTabLaden|ampelSchreiben|lib/types\.ts" auf die
+svelte-check-Ausgabe = 0 (grep -c "Error" = 0, weil die Maschinenausgabe "ERROR" schreibt; Summe laut COMPLETED-Zeile: 34).
+
+== AC-7: uv run pytest tests/test_3189_api_contract_herkunft.py -v ==
+============================== 3 passed in 0.50s ===============================

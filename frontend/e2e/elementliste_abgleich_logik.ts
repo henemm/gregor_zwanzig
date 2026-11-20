@@ -404,6 +404,7 @@ export type BedienPlan = { art: 'ohne_bedienung' } | { art: 'plan'; schritte: Be
 const LESEN: BedienSchritt = { aktion: 'lesen' };
 const VORLAGE_PICKER = 'wetter-vorlage-picker';
 const ALS_EIGENE = 'wetter-vorlage-als-eigene';
+const SPEICHERN_ABBRECHEN = 'save-preset-cancel';
 
 /** Reine Funktion: wie der Abschnitt hergestellt wird. Script-Abschnitt ohne Plan ⇒ nie still, immer mit Grund. */
 export function bedienPlan(abschnitt: string, lage: BedienLage): BedienPlan {
@@ -433,13 +434,15 @@ export function bedienPlan(abschnitt: string, lage: BedienLage): BedienPlan {
 			]
 		};
 	}
+	// #3190: die Speichern-Karte ist inline; Escape schließt sie nur bei Fokus in der Karte. Die Taste-Bedienung
+	// löst den Fokus vorher (seitenOps), darum schließt der Plan über „Abbrechen“ (save-preset-cancel).
 	if (abschnitt === 'vorlage-speichern') {
-		return { art: 'plan', schritte: [{ aktion: 'klick', testid: ALS_EIGENE }, LESEN, { aktion: 'schliessen', taste: 'Escape' }] };
+		return { art: 'plan', schritte: [{ aktion: 'klick', testid: ALS_EIGENE }, LESEN, { aktion: 'schliessen', testid: SPEICHERN_ABBRECHEN }] };
 	}
 	if (abschnitt === 'vorlage-speichern-fehler') {
 		return {
 			art: 'plan',
-			schritte: [{ aktion: 'klick', testid: ALS_EIGENE }, { aktion: 'klick', testid: 'save-preset-submit' }, LESEN, { aktion: 'schliessen', taste: 'Escape' }]
+			schritte: [{ aktion: 'klick', testid: ALS_EIGENE }, { aktion: 'klick', testid: 'save-preset-submit' }, LESEN, { aktion: 'schliessen', testid: SPEICHERN_ABBRECHEN }]
 		};
 	}
 	return { art: 'nicht_herstellbar', grund: `Script-Zustand „${abschnitt}“: kein Bedienplan im Abgleich hinterlegt` };

@@ -114,10 +114,17 @@ for (const [name, viewport, finger] of [['desktop', DESKTOP, false], ['mobil', M
 				await reiter.getByTestId(WT.alsEigene).click();
 				const dialog = page.getByTestId(WT.dialog);
 				await expect(dialog).toBeVisible();
-				await expect(dialog.locator(NATIV), `AC-40 ${kind}-${name}: native Controls im Dialog`).toHaveCount(0);
+				// #3190: das Ankreuzfeld „Als Standard …“ ist das Haken-Atom (Kontrollkästchen IM Baustein, ADR-0112);
+				// es zählt nicht als natives Control der Karte, seine Tippfläche ist das ganze <label>.
+				const nativ = await dialog.locator(NATIV).evaluateAll((els) => els.filter((e) => !e.closest('[data-slot="haken"]')).length);
+				expect(nativ, `AC-40 ${kind}-${name}: native Controls im Dialog`).toBe(0);
 				expect(kontrastBericht(`Dialog ${kind}-${name}`, kontrastVerstoesse(await messeKontrast(dialog)))).toEqual([]);
 				expect(await zuKleineZiele(dialog), `AC-40 ${kind}-${name}: Touch-Ziele im Dialog`).toEqual([]);
+				const haken = await dialog.getByTestId(WT.dialogStandard).boundingBox();
+				expect(haken?.height ?? 0, `#3190 ${kind}-${name}: Ankreuzfeld-Tippfläche`).toBeGreaterThanOrEqual(44);
+				// #3190: Fokus liegt nach dem Öffnen im Namensfeld (in der Karte) ⇒ Escape schließt die Karte.
 				await page.keyboard.press('Escape');
+				await expect(dialog).toHaveCount(0);
 			}
 			expect(rahmenJe.vergleich, 'AC-40: Panel-Rahmen Trip ≠ Orts-Briefing').toEqual(rahmenJe.route);
 		} finally {
