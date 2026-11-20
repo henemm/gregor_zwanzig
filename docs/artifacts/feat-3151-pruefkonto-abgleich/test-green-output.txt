@@ -1,0 +1,3207 @@
+........................................................................ [ 93%]
+.....                                                                    [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:128
+  /home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/tests/conftest.py:128: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+_____________________ test_ac4_zweiter_lauf_aendert_nichts _____________________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=edefb1f7
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=edefb1f7
+____ test_ac4_f001_zweiter_lauf_ohne_schreibzugriff_trotz_go_normalisierung ____
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=d6dfc74d
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=d6dfc74d
+________ test_ac5_fremde_datensaetze_bleiben_und_rmw_erhaelt_zusatzfeld ________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=4276032e
+_________________ test_ac10_zweiter_nutzer_bleibt_unveraendert _________________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=63443114
+_ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://gregor20.henemm.com] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+__ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://example.org] __
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+_ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[http://localhost:8090] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+_ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[http://staging.gregor20.henemm.com] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+_ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://staging.gregor20.henemm.com:8443] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+_ test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[http://localhost:8090] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Loopback-Ziel muss http://localhost:8091 sein - Abbruch vor jedem Aufruf
+_ test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[https://gregor20.henemm.com] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Loopback-Ziel muss http://localhost:8091 sein - Abbruch vor jedem Aufruf
+_ test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[http://10.0.0.5:8091] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Loopback-Ziel muss http://localhost:8091 sein - Abbruch vor jedem Aufruf
+_ test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[https://staging.gregor20.henemm.com] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Loopback-Ziel muss http://localhost:8091 sein - Abbruch vor jedem Aufruf
+_______ test_ac7_ac13_fehlender_env_schluessel_exit2[GZ_PRUEFKONTO_USER] _______
+----------------------------- Captured stderr call -----------------------------
+FEHLER: .env-Schluessel fehlen: GZ_PRUEFKONTO_USER
+_______ test_ac7_ac13_fehlender_env_schluessel_exit2[GZ_PRUEFKONTO_PASS] _______
+----------------------------- Captured stderr call -----------------------------
+FEHLER: .env-Schluessel fehlen: GZ_PRUEFKONTO_PASS
+_______ test_ac7_ac13_fehlender_env_schluessel_exit2[CORE_SHARED_SECRET] _______
+----------------------------- Captured stderr call -----------------------------
+FEHLER: .env-Schluessel fehlen: GZ_CORE_SHARED_SECRET
+_______________ test_ac14_zweiter_lauf_kein_scharfer_kanalaufruf _______________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=d41f38fa
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=d41f38fa
+_______________ test_ac14_ratebremse_429_exit1_ohne_wiederholung _______________
+----------------------------- Captured stderr call -----------------------------
+FEHLER: SeedFehler: POST /api/internal/premium-sms-learn -> HTTP 429 (link_code_rate_limited)
+__________ test_ac15a_zweiter_nutzer_ohne_kanaele_bleibt_unverbunden ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=3e00c13a
+___________ test_ac15b_chat_id_kollision_exit1_nichts_ueberschrieben ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=707dd413
+----------------------------- Captured stderr call -----------------------------
+FEHLER: SeedFehler: POST /api/internal/telegram-connect -> HTTP 409 (chat_id_already_linked)
+_________ test_ac13_f003_env_nur_mit_gz_praefix_laeuft_mit_core_header _________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=476166fd
+______ test_ac10_f003_login_mit_nutzer_default_exit1_ohne_schreibzugriff _______
+----------------------------- Captured stderr call -----------------------------
+FEHLER: SeedFehler: Profil ohne echte Nutzer-id - Abbruch (nie 'default')
+________ test_ac5_f003_vergleich_rmw_erhaelt_display_config_zusatzfeld _________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=c315fecb
+__________ test_ac13_f003a_core_secret_nie_an_oeffentliche_basis_url ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=a63d3485
+___________ test_ac14_f003b_veraltete_rueckadresse_wird_neu_gelernt ____________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=b28f78d2
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=b28f78d2
+_________ test_ac2_f003c_abweichende_vorlage_wird_per_merge_korrigiert _________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=c8c7dc7a
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=c8c7dc7a
+___________ test_ac5_fl3_vergleich_rmw_erhaelt_top_level_zusatzfeld ____________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=2fa73c34
+__________ test_ac11_fl3_gleiche_nummer_unbestaetigt_wird_bestaetigt ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=0cd1cd76
+__________ test_ac4_fl3_zusaetzliche_etappe_wird_auf_vier_korrigiert ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=78ca1993
+______________ test_login_laeuft_mit_pruefkonto_nicht_mit_gz_auth ______________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=eae7aee2
+_____ test_fr41_andere_bestaetigte_sms_nummer_wird_auf_sollnummer_gesetzt ______
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=8fa70104
+____________ test_fr41_andere_frische_rueckadresse_wird_neu_gelernt ____________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=c09ebf04
+__________ test_fr41_andere_telegram_chat_id_wird_auf_soll_verbunden ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=0dde27c0
+_ test_fr42_gleichnamige_vergleichsvorlage_bleibt_route_vorlage_wird_angelegt __
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=167b17e8
+_______ test_ac11_fl5_fiktive_kanalwerte_sind_fest_und_erkennbar_fiktiv ________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=7c188c26
+__ test_3151_ac2_fremdfelder_und_fremder_kanal_bleiben_nur_soll_wird_gesetzt ___
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=c6f7e7be
+_ test_3151_ac3_zweiter_lauf_schreibfrei_trotz_go_ableitung_von_alert_channels _
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=6407401d
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=6407401d
+_______ test_3151_ac4_zweiter_nutzer_mit_kanalfeldern_bleibt_byte_gleich _______
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=f8d29aaa
+=========================== short test summary info ============================
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac1_trip_gr221_mit_mockup_etappen_und_flags
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac2_genau_eine_eigene_vorlage_mallorca_fruehling
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac3_ortsvergleich_muensterland
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac4_zweiter_lauf_aendert_nichts
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac4_f001_zweiter_lauf_ohne_schreibzugriff_trotz_go_normalisierung
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac5_fremde_datensaetze_bleiben_und_rmw_erhaelt_zusatzfeld
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac10_zweiter_nutzer_bleibt_unveraendert
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://gregor20.henemm.com]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://example.org]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[http://localhost:8090]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[http://staging.gregor20.henemm.com]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://staging.gregor20.henemm.com:8443]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[http://localhost:8090]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[https://gregor20.henemm.com]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[http://10.0.0.5:8091]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[https://staging.gregor20.henemm.com]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_erfolg_gibt_beide_ids_aus_die_existieren
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_login_abgelehnt_exit1_ohne_ids
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_serverfehler_beim_anlegen_exit1
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_ac13_fehlender_env_schluessel_exit2[GZ_PRUEFKONTO_USER]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_ac13_fehlender_env_schluessel_exit2[GZ_PRUEFKONTO_PASS]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_ac13_fehlender_env_schluessel_exit2[CORE_SHARED_SECRET]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_secret_erscheint_nie_in_ausgabe[None]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_secret_erscheint_nie_in_ausgabe[stoerung1]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_secret_erscheint_nie_in_ausgabe[stoerung2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_secret_erscheint_nie_in_ausgabe[stoerung3]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_alle_vier_kanaele_wie_mockup
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac14_zweiter_lauf_kein_scharfer_kanalaufruf
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac14_ratebremse_429_exit1_ohne_wiederholung
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15a_zweiter_nutzer_ohne_kanaele_bleibt_unverbunden
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15b_chat_id_kollision_exit1_nichts_ueberschrieben
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15c_trockenlauf_meldet_fremden_nutzer_kein_scharfer_lernaufruf
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_f002_konto_ohne_mailadresse_exit1_kein_leerer_empfaenger
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_e_mail_unbestaetigt_exit1_ohne_schreibzugriff
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_f003_env_nur_mit_gz_praefix_laeuft_mit_core_header
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac10_f003_login_mit_nutzer_default_exit1_ohne_schreibzugriff
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_f003_transportfehler_mit_secret_im_text_wird_bereinigt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac5_f003_vergleich_rmw_erhaelt_display_config_zusatzfeld
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_f003_fehlerkennung_mit_sonderzeichen_wird_nicht_ausgegeben
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac5_f001_free_konto_mit_voller_quote_laeuft_durch
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[GZ_SEVEN_API_KEY=live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[GZ_SEVEN_API_KEY=<Testwert>-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[export GZ_SEVEN_API_KEY=live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[gz_seven_api_key=live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[ GZ_SEVEN_API_KEY = live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[export\tGz_Seven_Api_Key=live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[# GZ_SEVEN_API_KEY=live-schluessel-2967-0]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[GZ_SEVEN_API_KEY=-0]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_f003a_core_secret_nie_an_oeffentliche_basis_url
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac14_f003b_veraltete_rueckadresse_wird_neu_gelernt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac2_f003c_abweichende_vorlage_wird_per_merge_korrigiert
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac5_fl3_vergleich_rmw_erhaelt_top_level_zusatzfeld
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl3_gleiche_nummer_unbestaetigt_wird_bestaetigt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac4_fl3_zusaetzliche_etappe_wird_auf_vier_korrigiert
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac1_fl3_wegpunkthoehen_ergeben_mockup_anstieg
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_zugang_nur_aus_pruefkonto_schluesseln_gz_auth_allein_reicht_nicht
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_login_laeuft_mit_pruefkonto_nicht_mit_gz_auth
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr41_andere_bestaetigte_sms_nummer_wird_auf_sollnummer_gesetzt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr41_andere_frische_rueckadresse_wird_neu_gelernt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr41_andere_telegram_chat_id_wird_auf_soll_verbunden
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr42_gleichnamige_vergleichsvorlage_bleibt_route_vorlage_wird_angelegt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr42_orte_metriken_mit_sollaggregation
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_email_verified_fehlt_oder_none_exit1_ohne_schreibzugriff[fehlt]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_email_verified_fehlt_oder_none_exit1_ohne_schreibzugriff[none]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_fiktive_kanalwerte_sind_fest_und_erkennbar_fiktiv
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf[rate_limited]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf[already_linked]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf[would_skip]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf[None]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_link_code_leer_exit1_ohne_lernaufruf[antwort0]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_link_code_leer_exit1_ohne_lernaufruf[antwort1]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_link_code_leer_exit1_ohne_lernaufruf[antwort2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac1_soll_funktionen_liefern_exakte_werte_ohne_netz
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac1_seed_setzt_kanalauswahl_an_trip_und_vergleich
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac2_fremdfelder_und_fremder_kanal_bleiben_nur_soll_wird_gesetzt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac3_zweiter_lauf_schreibfrei_trotz_go_ableitung_von_alert_channels
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac4_zweiter_nutzer_mit_kanalfeldern_bleibt_byte_gleich
+=== Teil D pytest (Besitzerliste + Seed) ===
+........................................................................ [ 61%]
+.............................................                            [100%]
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:128
+  /home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/tests/conftest.py:128: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+==================================== PASSES ====================================
+_____________________ test_ac4_zweiter_lauf_aendert_nichts _____________________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=664821a0
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=664821a0
+____ test_ac4_f001_zweiter_lauf_ohne_schreibzugriff_trotz_go_normalisierung ____
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=a4686a5f
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=a4686a5f
+________ test_ac5_fremde_datensaetze_bleiben_und_rmw_erhaelt_zusatzfeld ________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=324eb310
+_________________ test_ac10_zweiter_nutzer_bleibt_unveraendert _________________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=905d144b
+_ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://gregor20.henemm.com] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+__ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://example.org] __
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+_ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[http://localhost:8090] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+_ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[http://staging.gregor20.henemm.com] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+_ test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://staging.gregor20.henemm.com:8443] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Basis-URL ist nicht Staging (https://staging.gregor20.henemm.com) - Abbruch vor dem Login
+_ test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[http://localhost:8090] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Loopback-Ziel muss http://localhost:8091 sein - Abbruch vor jedem Aufruf
+_ test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[https://gregor20.henemm.com] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Loopback-Ziel muss http://localhost:8091 sein - Abbruch vor jedem Aufruf
+_ test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[http://10.0.0.5:8091] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Loopback-Ziel muss http://localhost:8091 sein - Abbruch vor jedem Aufruf
+_ test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[https://staging.gregor20.henemm.com] _
+----------------------------- Captured stderr call -----------------------------
+FEHLER: Loopback-Ziel muss http://localhost:8091 sein - Abbruch vor jedem Aufruf
+_______ test_ac7_ac13_fehlender_env_schluessel_exit2[GZ_PRUEFKONTO_USER] _______
+----------------------------- Captured stderr call -----------------------------
+FEHLER: .env-Schluessel fehlen: GZ_PRUEFKONTO_USER
+_______ test_ac7_ac13_fehlender_env_schluessel_exit2[GZ_PRUEFKONTO_PASS] _______
+----------------------------- Captured stderr call -----------------------------
+FEHLER: .env-Schluessel fehlen: GZ_PRUEFKONTO_PASS
+_______ test_ac7_ac13_fehlender_env_schluessel_exit2[CORE_SHARED_SECRET] _______
+----------------------------- Captured stderr call -----------------------------
+FEHLER: .env-Schluessel fehlen: GZ_CORE_SHARED_SECRET
+_______________ test_ac14_zweiter_lauf_kein_scharfer_kanalaufruf _______________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=db72d0a4
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=db72d0a4
+_______________ test_ac14_ratebremse_429_exit1_ohne_wiederholung _______________
+----------------------------- Captured stderr call -----------------------------
+FEHLER: SeedFehler: POST /api/internal/premium-sms-learn -> HTTP 429 (link_code_rate_limited)
+__________ test_ac15a_zweiter_nutzer_ohne_kanaele_bleibt_unverbunden ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=a7166f61
+___________ test_ac15b_chat_id_kollision_exit1_nichts_ueberschrieben ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=48727e2c
+----------------------------- Captured stderr call -----------------------------
+FEHLER: SeedFehler: POST /api/internal/telegram-connect -> HTTP 409 (chat_id_already_linked)
+_________ test_ac13_f003_env_nur_mit_gz_praefix_laeuft_mit_core_header _________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=1973c209
+______ test_ac10_f003_login_mit_nutzer_default_exit1_ohne_schreibzugriff _______
+----------------------------- Captured stderr call -----------------------------
+FEHLER: SeedFehler: Profil ohne echte Nutzer-id - Abbruch (nie 'default')
+________ test_ac5_f003_vergleich_rmw_erhaelt_display_config_zusatzfeld _________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=7947026e
+__________ test_ac13_f003a_core_secret_nie_an_oeffentliche_basis_url ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=2f0bda2a
+___________ test_ac14_f003b_veraltete_rueckadresse_wird_neu_gelernt ____________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=400306b9
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=400306b9
+_________ test_ac2_f003c_abweichende_vorlage_wird_per_merge_korrigiert _________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=3a73e85a
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=3a73e85a
+___________ test_ac5_fl3_vergleich_rmw_erhaelt_top_level_zusatzfeld ____________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=eff33b8b
+__________ test_ac11_fl3_gleiche_nummer_unbestaetigt_wird_bestaetigt ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=30e297d3
+__________ test_ac4_fl3_zusaetzliche_etappe_wird_auf_vier_korrigiert ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=1c2bf856
+______________ test_login_laeuft_mit_pruefkonto_nicht_mit_gz_auth ______________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=52161b5f
+_____ test_fr41_andere_bestaetigte_sms_nummer_wird_auf_sollnummer_gesetzt ______
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=4c0f5821
+____________ test_fr41_andere_frische_rueckadresse_wird_neu_gelernt ____________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=1077c31c
+__________ test_fr41_andere_telegram_chat_id_wird_auf_soll_verbunden ___________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=1222539a
+_ test_fr42_gleichnamige_vergleichsvorlage_bleibt_route_vorlage_wird_angelegt __
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=eaec2efc
+_______ test_ac11_fl5_fiktive_kanalwerte_sind_fest_und_erkennbar_fiktiv ________
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=78cf05cd
+__ test_3151_ac2_fremdfelder_und_fremder_kanal_bleiben_nur_soll_wird_gesetzt ___
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=577f4cff
+_ test_3151_ac3_zweiter_lauf_schreibfrei_trotz_go_ableitung_von_alert_channels _
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=171778d4
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=171778d4
+_______ test_3151_ac4_zweiter_nutzer_mit_kanalfeldern_bleibt_byte_gleich _______
+----------------------------- Captured stdout call -----------------------------
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=ab8db22b
+=========================== short test summary info ============================
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_kein_eintrag_mehr_mit_verweis_2913_c2
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_tempo_karte_haengt_an_2796
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Trekking]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Skitour]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Hochtour]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Klettersteig]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Fahrrad ({zahl} km/h)]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-MTB]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Ski touring]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Mountaineering]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Via ferrata]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[trip-Bike ({zahl} km/h)]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Allgemein]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Wandern]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Wintersport]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Sommer-Trekking]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-\xb7 Wandern]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-General]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Hiking]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Winter sports]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-Summer trekking]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_profil_texte_haengen_an_2796[orte-\xb7 Hiking]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_acht_menue_eintraege_bleiben_bei_2797
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_eintraege_anderer_scheiben_unveraendert
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_umgehaengte_eintraege_mindestens_profil_plus_tempo
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_jeder_eintrag_hat_grund_und_gueltigen_verweis
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[trip-Name bearbeiten]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[trip-Region bearbeiten]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[trip-Edit name]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[trip-Edit region]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[orte-Name bearbeiten]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[orte-Region bearbeiten]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[orte-Edit name]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_ausnahme_name_region_bearbeiten_mit_spec_verweis[orte-Edit region]
+PASSED tests/test_2913_c2_besitzerliste.py::test_ac12_bisherige_ausnahmen_bleiben
+PASSED tests/test_3007_besitzerliste.py::test_ac20_kein_listen_abschnitt_mehr
+PASSED tests/test_3007_besitzerliste.py::test_ac20_kein_sammel_eintrag_text_mehr
+PASSED tests/test_3007_besitzerliste.py::test_ac20_kopf_eintraege_nur_paarweise
+PASSED tests/test_3007_besitzerliste.py::test_ac20_tempo_abschnitt_bleibt_bei_2796
+PASSED tests/test_3007_besitzerliste.py::test_ac16_tempo_aendern_elemente_haengen_an_2796
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac1_trip_gr221_mit_mockup_etappen_und_flags
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac2_genau_eine_eigene_vorlage_mallorca_fruehling
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac3_ortsvergleich_muensterland
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac4_zweiter_lauf_aendert_nichts
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac4_f001_zweiter_lauf_ohne_schreibzugriff_trotz_go_normalisierung
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac5_fremde_datensaetze_bleiben_und_rmw_erhaelt_zusatzfeld
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac10_zweiter_nutzer_bleibt_unveraendert
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://gregor20.henemm.com]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://example.org]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[http://localhost:8090]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[http://staging.gregor20.henemm.com]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac6_prod_oder_fremde_basis_url_exit2_ohne_aufruf[https://staging.gregor20.henemm.com:8443]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[http://localhost:8090]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[https://gregor20.henemm.com]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[http://10.0.0.5:8091]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac12_unzulaessiges_loopback_ziel_exit2_ohne_aufruf[https://staging.gregor20.henemm.com]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_erfolg_gibt_beide_ids_aus_die_existieren
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_login_abgelehnt_exit1_ohne_ids
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_serverfehler_beim_anlegen_exit1
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_ac13_fehlender_env_schluessel_exit2[GZ_PRUEFKONTO_USER]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_ac13_fehlender_env_schluessel_exit2[GZ_PRUEFKONTO_PASS]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_ac13_fehlender_env_schluessel_exit2[CORE_SHARED_SECRET]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_secret_erscheint_nie_in_ausgabe[None]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_secret_erscheint_nie_in_ausgabe[stoerung1]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_secret_erscheint_nie_in_ausgabe[stoerung2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_secret_erscheint_nie_in_ausgabe[stoerung3]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_alle_vier_kanaele_wie_mockup
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac14_zweiter_lauf_kein_scharfer_kanalaufruf
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac14_ratebremse_429_exit1_ohne_wiederholung
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15a_zweiter_nutzer_ohne_kanaele_bleibt_unverbunden
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15b_chat_id_kollision_exit1_nichts_ueberschrieben
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15c_trockenlauf_meldet_fremden_nutzer_kein_scharfer_lernaufruf
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_f002_konto_ohne_mailadresse_exit1_kein_leerer_empfaenger
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_e_mail_unbestaetigt_exit1_ohne_schreibzugriff
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_f003_env_nur_mit_gz_praefix_laeuft_mit_core_header
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac10_f003_login_mit_nutzer_default_exit1_ohne_schreibzugriff
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_f003_transportfehler_mit_secret_im_text_wird_bereinigt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac5_f003_vergleich_rmw_erhaelt_display_config_zusatzfeld
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_f003_fehlerkennung_mit_sonderzeichen_wird_nicht_ausgegeben
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac5_f001_free_konto_mit_voller_quote_laeuft_durch
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[GZ_SEVEN_API_KEY=live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[GZ_SEVEN_API_KEY=<Testwert>-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[export GZ_SEVEN_API_KEY=live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[gz_seven_api_key=live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[ GZ_SEVEN_API_KEY = live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[export\tGz_Seven_Api_Key=live-schluessel-2967-2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[# GZ_SEVEN_API_KEY=live-schluessel-2967-0]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac7_f002_aktiver_live_sms_schluessel_exit2_ohne_aufruf[GZ_SEVEN_API_KEY=-0]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac13_f003a_core_secret_nie_an_oeffentliche_basis_url
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac14_f003b_veraltete_rueckadresse_wird_neu_gelernt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac2_f003c_abweichende_vorlage_wird_per_merge_korrigiert
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac5_fl3_vergleich_rmw_erhaelt_top_level_zusatzfeld
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl3_gleiche_nummer_unbestaetigt_wird_bestaetigt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac4_fl3_zusaetzliche_etappe_wird_auf_vier_korrigiert
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac1_fl3_wegpunkthoehen_ergeben_mockup_anstieg
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_zugang_nur_aus_pruefkonto_schluesseln_gz_auth_allein_reicht_nicht
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_login_laeuft_mit_pruefkonto_nicht_mit_gz_auth
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr41_andere_bestaetigte_sms_nummer_wird_auf_sollnummer_gesetzt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr41_andere_frische_rueckadresse_wird_neu_gelernt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr41_andere_telegram_chat_id_wird_auf_soll_verbunden
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr42_gleichnamige_vergleichsvorlage_bleibt_route_vorlage_wird_angelegt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_fr42_orte_metriken_mit_sollaggregation
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_email_verified_fehlt_oder_none_exit1_ohne_schreibzugriff[fehlt]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_email_verified_fehlt_oder_none_exit1_ohne_schreibzugriff[none]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_fiktive_kanalwerte_sind_fest_und_erkennbar_fiktiv
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf[rate_limited]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf[already_linked]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf[would_skip]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac15_fl5_trockenlauf_ohne_would_learn_kein_scharfer_aufruf[None]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_link_code_leer_exit1_ohne_lernaufruf[antwort0]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_link_code_leer_exit1_ohne_lernaufruf[antwort1]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_ac11_fl5_link_code_leer_exit1_ohne_lernaufruf[antwort2]
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac1_soll_funktionen_liefern_exakte_werte_ohne_netz
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac1_seed_setzt_kanalauswahl_an_trip_und_vergleich
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac2_fremdfelder_und_fremder_kanal_bleiben_nur_soll_wird_gesetzt
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac3_zweiter_lauf_schreibfrei_trotz_go_ableitung_von_alert_channels
+PASSED tests/tdd/test_staging_pruefkonto_mockupdaten.py::test_3151_ac4_zweiter_nutzer_mit_kanalfeldern_bleibt_byte_gleich
+=== Teil D node --test elementliste*.test.ts ===
+TAP version 13
+# Subtest: AC-13: Bericht enthält jedes Element mit Status; nichts wird still übersprungen
+    # Subtest: jedes Listenelement erscheint genau einmal im Bericht
+    ok 1 - jedes Listenelement erscheint genau einmal im Bericht
+      ---
+      duration_ms: 1.176263
+      type: 'test'
+      ...
+    # Subtest: nicht_pruefbar ohne Grund wird abgelehnt
+    ok 2 - nicht_pruefbar ohne Grund wird abgelehnt
+      ---
+      duration_ms: 0.19748
+      type: 'test'
+      ...
+    # Subtest: Markdown-Bericht nennt jedes Element und die Zähler
+    ok 3 - Markdown-Bericht nennt jedes Element und die Zähler
+      ---
+      duration_ms: 0.348052
+      type: 'test'
+      ...
+    # Subtest: Staging-Spec stellt nicht herstellbare Zustände per Route-Abfangen her
+    ok 4 - Staging-Spec stellt nicht herstellbare Zustände per Route-Abfangen her
+      ---
+      duration_ms: 0.267
+      type: 'test'
+      ...
+    1..4
+ok 1 - AC-13: Bericht enthält jedes Element mit Status; nichts wird still übersprungen
+  ---
+  duration_ms: 2.714835
+  type: 'suite'
+  ...
+# Subtest: AC-14: --strict und --scope
+    # Subtest: ohne --strict immer Exit 0, auch bei Abweichungen
+    ok 1 - ohne --strict immer Exit 0, auch bei Abweichungen
+      ---
+      duration_ms: 0.23408
+      type: 'test'
+      ...
+    # Subtest: --strict: Abweichung oder nicht_pruefbar ⇒ Exit ≠ 0
+    ok 2 - --strict: Abweichung oder nicht_pruefbar ⇒ Exit ≠ 0
+      ---
+      duration_ms: 0.153701
+      type: 'test'
+      ...
+    # Subtest: --strict: alles gefunden ⇒ Exit 0
+    ok 3 - --strict: alles gefunden ⇒ Exit 0
+      ---
+      duration_ms: 0.13158
+      type: 'test'
+      ...
+    # Subtest: --scope reiter bzw. reiter/zustand filtert die Elemente
+    ok 4 - --scope reiter bzw. reiter/zustand filtert die Elemente
+      ---
+      duration_ms: 0.316831
+      type: 'test'
+      ...
+    # Subtest: unbekannter Scope ist ein Fehler, kein leerer grüner Lauf
+    ok 5 - unbekannter Scope ist ein Fehler, kein leerer grüner Lauf
+      ---
+      duration_ms: 1.108471
+      type: 'test'
+      ...
+    # Subtest: Optionen aus Argumenten oder Umgebung
+    ok 6 - Optionen aus Argumenten oder Umgebung
+      ---
+      duration_ms: 0.375011
+      type: 'test'
+      ...
+    1..6
+ok 2 - AC-14: --strict und --scope
+  ---
+  duration_ms: 2.630505
+  type: 'suite'
+  ...
+# Subtest: AC-15: Schutz vor Produktion, nicht im PR-CI
+    # Subtest: assertNotProdBaseURL wirft bei Prod, läuft bei Staging
+    ok 1 - assertNotProdBaseURL wirft bei Prod, läuft bei Staging
+      ---
+      duration_ms: 0.23434
+      type: 'test'
+      ...
+    # Subtest: Config zielt standardmäßig auf Staging; Spec ruft den Prod-Schutz vor dem ersten Seitenaufruf
+    ok 2 - Config zielt standardmäßig auf Staging; Spec ruft den Prod-Schutz vor dem ersten Seitenaufruf
+      ---
+      duration_ms: 1.171414
+      type: 'test'
+      ...
+    # Subtest: kein CI-Workflow ruft die Abgleich-Config oder -Spec auf
+    ok 3 - kein CI-Workflow ruft die Abgleich-Config oder -Spec auf
+      ---
+      duration_ms: 1.046682
+      type: 'test'
+      ...
+    1..3
+ok 3 - AC-15: Schutz vor Produktion, nicht im PR-CI
+  ---
+  duration_ms: 2.577155
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-6: bedienPlan — Grenzen-Dialog je Metrik
+    # Subtest: trip: grenzen-wind mit Wind im Briefing ⇒ klick (Ändern) · lesen · schliessen (Fertig)
+    ok 1 - trip: grenzen-wind mit Wind im Briefing ⇒ klick (Ändern) · lesen · schliessen (Fertig)
+      ---
+      duration_ms: 1.343162
+      type: 'test'
+      ...
+    # Subtest: orte: grenzen-wind mit Wind im Briefing ⇒ klick (Ändern) · lesen · schliessen (Fertig)
+    ok 2 - orte: grenzen-wind mit Wind im Briefing ⇒ klick (Ändern) · lesen · schliessen (Fertig)
+      ---
+      duration_ms: 0.154449
+      type: 'test'
+      ...
+    # Subtest: Metrik nicht im Briefing des Prüf-Datensatzes ⇒ nicht_herstellbar mit echtem Grund (Metrik-ID genannt)
+    ok 3 - Metrik nicht im Briefing des Prüf-Datensatzes ⇒ nicht_herstellbar mit echtem Grund (Metrik-ID genannt)
+      ---
+      duration_ms: 0.216
+      type: 'test'
+      ...
+    # Subtest: der Plan hängt an der Metrik: grenzen-thunder öffnet thunder, nicht wind
+    ok 4 - der Plan hängt an der Metrik: grenzen-thunder öffnet thunder, nicht wind
+      ---
+      duration_ms: 0.11555
+      type: 'test'
+      ...
+    1..4
+ok 4 - \#2966 AC-6: bedienPlan — Grenzen-Dialog je Metrik
+  ---
+  duration_ms: 2.556324
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-6: bedienPlan — Vorlage-Dialoge (nichts wird übernommen oder gespeichert)
+    # Subtest: vorlage-auswahl ⇒ Picker öffnen, lesen, schließen; keine Option geklickt
+    ok 1 - vorlage-auswahl ⇒ Picker öffnen, lesen, schließen; keine Option geklickt
+      ---
+      duration_ms: 0.24361
+      type: 'test'
+      ...
+    # Subtest: vorlage-bestaetigung ⇒ Picker, eine ANDERE Systemvorlage, lesen, Abbrechen; nie Übernehmen
+    ok 2 - vorlage-bestaetigung ⇒ Picker, eine ANDERE Systemvorlage, lesen, Abbrechen; nie Übernehmen
+      ---
+      duration_ms: 0.20308
+      type: 'test'
+      ...
+    # Subtest: vorlage-bestaetigung ohne andere Systemvorlage ⇒ nicht_herstellbar mit Grund
+    ok 3 - vorlage-bestaetigung ohne andere Systemvorlage ⇒ nicht_herstellbar mit Grund
+      ---
+      duration_ms: 0.166191
+      type: 'test'
+      ...
+    # Subtest: vorlage-speichern ⇒ „Als eigene Vorlage speichern“ öffnen, lesen, schließen; nie absenden
+    ok 4 - vorlage-speichern ⇒ „Als eigene Vorlage speichern“ öffnen, lesen, schließen; nie absenden
+      ---
+      duration_ms: 0.31098
+      type: 'test'
+      ...
+    # Subtest: vorlage-speichern-fehler ⇒ öffnen, LEER absenden, lesen, schließen; kein Namensfeld befüllt
+    ok 5 - vorlage-speichern-fehler ⇒ öffnen, LEER absenden, lesen, schließen; kein Namensfeld befüllt
+      ---
+      duration_ms: 2.066743
+      type: 'test'
+      ...
+    1..5
+ok 5 - \#2966 AC-6: bedienPlan — Vorlage-Dialoge (nichts wird übernommen oder gespeichert)
+  ---
+  duration_ms: 3.345317
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-6: bedienPlan — nie still übergangen
+    # Subtest: Abschnitte ohne Bedienung (Kopf, laden, warnung, metriken) ⇒ ohne_bedienung
+    ok 1 - Abschnitte ohne Bedienung (Kopf, laden, warnung, metriken) ⇒ ohne_bedienung
+      ---
+      duration_ms: 0.291711
+      type: 'test'
+      ...
+    # Subtest: unbekannter Script-Abschnitt ⇒ nicht_herstellbar mit Grund, nie ohne_bedienung
+    ok 2 - unbekannter Script-Abschnitt ⇒ nicht_herstellbar mit Grund, nie ohne_bedienung
+      ---
+      duration_ms: 0.18617
+      type: 'test'
+      ...
+    # Subtest: jeder Abschnitt der Elementliste: Plan mit genau einem „lesen“, ohne_bedienung nur außerhalb SCRIPT_ABSCHNITT, sonst Grund
+    ok 3 - jeder Abschnitt der Elementliste: Plan mit genau einem „lesen“, ohne_bedienung nur außerhalb SCRIPT_ABSCHNITT, sonst Grund
+      ---
+      duration_ms: 1.235452
+      type: 'test'
+      ...
+    # Subtest: mit allen Metriken im Briefing ist jeder Wetter-Script-Abschnitt herstellbar (Plan)
+    ok 4 - mit allen Metriken im Briefing ist jeder Wetter-Script-Abschnitt herstellbar (Plan)
+      ---
+      duration_ms: 0.720702
+      type: 'test'
+      ...
+    1..4
+ok 6 - \#2966 AC-6: bedienPlan — nie still übergangen
+  ---
+  duration_ms: 2.596094
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-7: Schreib-Tripwire
+    # Subtest: nur lesende Anfragen ⇒ kein Befund
+    ok 1 - nur lesende Anfragen ⇒ kein Befund
+      ---
+      duration_ms: 0.228651
+      type: 'test'
+      ...
+    # Subtest: PUT während der Bedienung ⇒ Befund nennt Methode und Pfad
+    ok 2 - PUT während der Bedienung ⇒ Befund nennt Methode und Pfad
+      ---
+      duration_ms: 0.15144
+      type: 'test'
+      ...
+    # Subtest: POST während der Bedienung ⇒ Befund nennt Methode und Pfad
+    ok 3 - POST während der Bedienung ⇒ Befund nennt Methode und Pfad
+      ---
+      duration_ms: 0.15086
+      type: 'test'
+      ...
+    # Subtest: PATCH während der Bedienung ⇒ Befund nennt Methode und Pfad
+    ok 4 - PATCH während der Bedienung ⇒ Befund nennt Methode und Pfad
+      ---
+      duration_ms: 0.082021
+      type: 'test'
+      ...
+    # Subtest: DELETE während der Bedienung ⇒ Befund nennt Methode und Pfad
+    ok 5 - DELETE während der Bedienung ⇒ Befund nennt Methode und Pfad
+      ---
+      duration_ms: 0.08798
+      type: 'test'
+      ...
+    # Subtest: post während der Bedienung ⇒ Befund nennt Methode und Pfad
+    ok 6 - post während der Bedienung ⇒ Befund nennt Methode und Pfad
+      ---
+      duration_ms: 0.07522
+      type: 'test'
+      ...
+    1..6
+ok 7 - \#2966 AC-7: Schreib-Tripwire
+  ---
+  duration_ms: 0.939383
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-6/AC-7: bedieneAbschnitt — Reload, Planreihenfolge, Schreib-Tripwire
+    # Subtest: Grenzen: erst neu laden, dann Ändern · lesen · Fertig, dann Nachlauf; Ergebnis ist der gelesene Bereich
+    ok 1 - Grenzen: erst neu laden, dann Ändern · lesen · Fertig, dann Nachlauf; Ergebnis ist der gelesene Bereich
+      ---
+      duration_ms: 0.445641
+      type: 'test'
+      ...
+    # Subtest: Speichern-Fehler: Dialog öffnen, leer absenden, lesen, per Escape schließen
+    ok 2 - Speichern-Fehler: Dialog öffnen, leer absenden, lesen, per Escape schließen
+      ---
+      duration_ms: 0.17877
+      type: 'test'
+      ...
+    # Subtest: Metrik nicht im echten Briefing ⇒ nicht_pruefbar mit Grund, keine Bedienung
+    ok 3 - Metrik nicht im echten Briefing ⇒ nicht_pruefbar mit Grund, keine Bedienung
+      ---
+      duration_ms: 0.16557
+      type: 'test'
+      ...
+    # Subtest: schreibende Anfrage während der Bedienung ⇒ Schreibbefund; Anfragen beim Neuladen zählen nicht
+    ok 4 - schreibende Anfrage während der Bedienung ⇒ Schreibbefund; Anfragen beim Neuladen zählen nicht
+      ---
+      duration_ms: 0.22012
+      type: 'test'
+      ...
+    # Subtest: verzögerte Speicherung im Nachlauf ⇒ Schreibbefund
+    ok 5 - verzögerte Speicherung im Nachlauf ⇒ Schreibbefund
+      ---
+      duration_ms: 0.20245
+      type: 'test'
+      ...
+    # Subtest: Fehler in einem Schritt ⇒ nicht_pruefbar mit Grund, Nachlauf läuft trotzdem; Schreibbefund geht vor
+    ok 6 - Fehler in einem Schritt ⇒ nicht_pruefbar mit Grund, Nachlauf läuft trotzdem; Schreibbefund geht vor
+      ---
+      duration_ms: 0.954992
+      type: 'test'
+      ...
+    1..6
+ok 8 - \#2966 AC-6/AC-7: bedieneAbschnitt — Reload, Planreihenfolge, Schreib-Tripwire
+  ---
+  duration_ms: 2.396025
+  type: 'suite'
+  ...
+# Subtest: \#2966: ordneAbschnitte — vorab mit allen Metriken des Prüf-Datensatzes
+    # Subtest: Trip/Orte Wetter: jeder grenzen-/vorlage-Abschnitt wird bedient, Kopf gelesen, test-menue nicht herstellbar
+    ok 1 - Trip/Orte Wetter: jeder grenzen-/vorlage-Abschnitt wird bedient, Kopf gelesen, test-menue nicht herstellbar
+      ---
+      duration_ms: 6.498872
+      type: 'test'
+      ...
+    1..1
+ok 9 - \#2966: ordneAbschnitte — vorab mit allen Metriken des Prüf-Datensatzes
+  ---
+  duration_ms: 6.589143
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-8: mitAufraeumen — Aufräumen auch nach Fehlern
+    # Subtest: Fehler in der Arbeit: alle Aufräumschritte laufen, der Fehler bleibt
+    ok 1 - Fehler in der Arbeit: alle Aufräumschritte laufen, der Fehler bleibt
+      ---
+      duration_ms: 0.553402
+      type: 'test'
+      ...
+    # Subtest: Fehler beim Anlegen nach dem ersten Datensatz: der angelegte wird trotzdem gelöscht
+    ok 2 - Fehler beim Anlegen nach dem ersten Datensatz: der angelegte wird trotzdem gelöscht
+      ---
+      duration_ms: 0.19437
+      type: 'test'
+      ...
+    # Subtest: Erfolg: Ergebnis der Arbeit, danach aufgeräumt
+    ok 3 - Erfolg: Ergebnis der Arbeit, danach aufgeräumt
+      ---
+      duration_ms: 0.157591
+      type: 'test'
+      ...
+    1..3
+ok 10 - \#2966 AC-8: mitAufraeumen — Aufräumen auch nach Fehlern
+  ---
+  duration_ms: 1.278393
+  type: 'suite'
+  ...
+# Subtest: \#2966 AC-10: Besitzer-Einträge \#2966 abgeräumt, Restabweichungen neu zugeordnet
+    # Subtest: elementliste_besitzer.json ist gültig und enthält keinen Verweis \#2966 mehr
+    ok 1 - elementliste_besitzer.json ist gültig und enthält keinen Verweis \#2966 mehr
+      ---
+      duration_ms: 6.394381
+      type: 'test'
+      ...
+    1..1
+ok 11 - \#2966 AC-10: Besitzer-Einträge \#2966 abgeräumt, Restabweichungen neu zugeordnet
+  ---
+  duration_ms: 6.474233
+  type: 'suite'
+  ...
+# Subtest: C5: EN-Erwartung mit Platzhalter ist ein Muster
+    # Subtest: „Alert when rain is coming towards {orte} …“ passt auf beliebige Orte, aber nicht auf Deutsch
+    ok 1 - „Alert when rain is coming towards {orte} …“ passt auf beliebige Orte, aber nicht auf Deutsch
+      ---
+      duration_ms: 0.799862
+      type: 'test'
+      ...
+    # Subtest: EN ohne Platzhalter bleibt exakt (Zahlen frei)
+    ok 2 - EN ohne Platzhalter bleibt exakt (Zahlen frei)
+      ---
+      duration_ms: 0.190861
+      type: 'test'
+      ...
+    1..2
+ok 12 - C5: EN-Erwartung mit Platzhalter ist ein Muster
+  ---
+  duration_ms: 1.678283
+  type: 'suite'
+  ...
+# Subtest: C5: Generator — Chips als Muster, keine DE-Werte im EN
+    # Subtest: Chip „+ Windrichtung“ → Muster „+ {metrik}“ mit EN-Muster, kein Lückenposten
+    ok 1 - Chip „+ Windrichtung“ → Muster „+ {metrik}“ mit EN-Muster, kein Lückenposten
+      ---
+      duration_ms: 0.275581
+      type: 'test'
+      ...
+    # Subtest: nur Rolle chip, nur mit Präfix und Namen
+    ok 2 - nur Rolle chip, nur mit Präfix und Namen
+      ---
+      duration_ms: 0.097641
+      type: 'test'
+      ...
+    # Subtest: Musterabgleich setzt keine deutschen Werte in den EN-Text
+    ok 3 - Musterabgleich setzt keine deutschen Werte in den EN-Text
+      ---
+      duration_ms: 23.133713
+      type: 'test'
+      ...
+    # Subtest: eingecheckte Liste: kein EN-Text enthält den deutschen Füllwert eines Musters
+    ok 4 - eingecheckte Liste: kein EN-Text enthält den deutschen Füllwert eines Musters
+      ---
+      duration_ms: 23.459915
+      type: 'test'
+      ...
+    1..4
+ok 13 - C5: Generator — Chips als Muster, keine DE-Werte im EN
+  ---
+  duration_ms: 47.299
+  type: 'suite'
+  ...
+# Subtest: C5: Kontodaten-Chips — Präfix + Vorhandensein, nicht Menge/Reihenfolge
+    # Subtest: DE: exakt sichtbarer Chip gefunden, fehlender nicht_pruefbar mit Grund, Reihenfolge egal
+    ok 1 - DE: exakt sichtbarer Chip gefunden, fehlender nicht_pruefbar mit Grund, Reihenfolge egal
+      ---
+      duration_ms: 6.799442
+      type: 'test'
+      ...
+    # Subtest: ohne jeden Chip: alle Chip-Elemente abweichend (nicht still grün)
+    ok 2 - ohne jeden Chip: alle Chip-Elemente abweichend (nicht still grün)
+      ---
+      duration_ms: 0.244321
+      type: 'test'
+      ...
+    # Subtest: ohne Abschnitt-Haken: Chips abweichend
+    ok 3 - ohne Abschnitt-Haken: Chips abweichend
+      ---
+      duration_ms: 6.297822
+      type: 'test'
+      ...
+    # Subtest: EN: Muster vorhanden ⇒ Chip-Zeile gefunden, Einzelchips nicht_pruefbar; Chips zählen nicht in die Reihenfolge
+    ok 4 - EN: Muster vorhanden ⇒ Chip-Zeile gefunden, Einzelchips nicht_pruefbar; Chips zählen nicht in die Reihenfolge
+      ---
+      duration_ms: 0.531741
+      type: 'test'
+      ...
+    # Subtest: istKontoChip nur für chip mit Platzhalter-Muster
+    ok 5 - istKontoChip nur für chip mit Platzhalter-Muster
+      ---
+      duration_ms: 0.147979
+      type: 'test'
+      ...
+    1..5
+ok 14 - C5: Kontodaten-Chips — Präfix + Vorhandensein, nicht Menge/Reihenfolge
+  ---
+  duration_ms: 14.438727
+  type: 'suite'
+  ...
+# Subtest: Trip-Radar: keine freigegebene Abweichung mehr (\#2800 AC-9)
+    # Subtest: Datei: jede Freigabe mit Grund und Spec-Verweis (Liste darf leer sein)
+    ok 1 - Datei: jede Freigabe mit Grund und Spec-Verweis (Liste darf leer sein)
+      ---
+      duration_ms: 0.438261
+      type: 'test'
+      ...
+    # Subtest: Datei: keine Freigabe deckt die Trip-Radar-Zeile mehr ab
+    ok 2 - Datei: keine Freigabe deckt die Trip-Radar-Zeile mehr ab
+      ---
+      duration_ms: 5.64793
+      type: 'test'
+      ...
+    # Subtest: fehlende Trip-Radarzeilen ⇒ abweichend (nicht mehr freigegeben); Warnungen ebenso
+    ok 3 - fehlende Trip-Radarzeilen ⇒ abweichend (nicht mehr freigegeben); Warnungen ebenso
+      ---
+      duration_ms: 0.25111
+      type: 'test'
+      ...
+    # Subtest: Elementliste verlangt im Trip-Kontext die Radar-Zeile (Titel + „deine Etappe") in jedem Zustand
+    ok 4 - Elementliste verlangt im Trip-Kontext die Radar-Zeile (Titel + „deine Etappe") in jedem Zustand
+      ---
+      duration_ms: 0.51309
+      type: 'test'
+      ...
+    1..4
+ok 15 - Trip-Radar: keine freigegebene Abweichung mehr (\#2800 AC-9)
+  ---
+  duration_ms: 7.010944
+  type: 'suite'
+  ...
+# Subtest: Freigabe-Mechanismus (Muster-Freigabe, unabhängig von der echten Datei)
+    # Subtest: gedeckte Elemente ⇒ freigegeben mit Grund und Spec; nicht gedeckte bleiben abweichend
+    ok 1 - gedeckte Elemente ⇒ freigegeben mit Grund und Spec; nicht gedeckte bleiben abweichend
+      ---
+      duration_ms: 0.217321
+      type: 'test'
+      ...
+    # Subtest: F004: dieselben Schlüssel in einem anderen Abschnitt oder Reiter werden NICHT freigegeben
+    ok 2 - F004: dieselben Schlüssel in einem anderen Abschnitt oder Reiter werden NICHT freigegeben
+      ---
+      duration_ms: 0.10357
+      type: 'test'
+      ...
+    # Subtest: gefunden bleibt gefunden, nicht_pruefbar bleibt nicht_pruefbar
+    ok 3 - gefunden bleibt gefunden, nicht_pruefbar bleibt nicht_pruefbar
+      ---
+      duration_ms: 0.09792
+      type: 'test'
+      ...
+    # Subtest: Bericht zählt freigegeben getrennt; strict besteht damit, nicht aber mit abweichend
+    ok 4 - Bericht zählt freigegeben getrennt; strict besteht damit, nicht aber mit abweichend
+      ---
+      duration_ms: 0.584561
+      type: 'test'
+      ...
+    # Subtest: freigegeben ohne Grund wird abgelehnt
+    ok 5 - freigegeben ohne Grund wird abgelehnt
+      ---
+      duration_ms: 0.15113
+      type: 'test'
+      ...
+    1..5
+ok 16 - Freigabe-Mechanismus (Muster-Freigabe, unabhängig von der echten Datei)
+  ---
+  duration_ms: 1.369133
+  type: 'suite'
+  ...
+# Subtest: F005: Profilsprache zurückstellen — vorheriger Wert, nie still
+    # Subtest: setzt genau die Sprache VOR dem Lauf (Lauf in en, vorher de ⇒ PUT de)
+    ok 1 - setzt genau die Sprache VOR dem Lauf (Lauf in en, vorher de ⇒ PUT de)
+      ---
+      duration_ms: 0.2791
+      type: 'test'
+      ...
+    # Subtest: vorher en ⇒ PUT en
+    ok 2 - vorher en ⇒ PUT en
+      ---
+      duration_ms: 0.10792
+      type: 'test'
+      ...
+    # Subtest: HTTP-Fehler ⇒ ok false, Meldung nennt Sprache und Status, console.error
+    ok 3 - HTTP-Fehler ⇒ ok false, Meldung nennt Sprache und Status, console.error
+      ---
+      duration_ms: 3.293846
+      type: 'test'
+      ...
+    # Subtest: Ausnahme (Netz) ⇒ ok false mit Meldung, wird nicht verschluckt
+    ok 4 - Ausnahme (Netz) ⇒ ok false mit Meldung, wird nicht verschluckt
+      ---
+      duration_ms: 0.249101
+      type: 'test'
+      ...
+    1..4
+ok 17 - F005: Profilsprache zurückstellen — vorheriger Wert, nie still
+  ---
+  duration_ms: 4.067057
+  type: 'suite'
+  ...
+# Subtest: C3: Sprache der Seite
+    # Subtest: html lang passt ⇒ kein Grund; Abweichung ⇒ Grund
+    ok 1 - html lang passt ⇒ kein Grund; Abweichung ⇒ Grund
+      ---
+      duration_ms: 0.145561
+      type: 'test'
+      ...
+    # Subtest: wiederherzustellende Profilsprache: en bleibt en, sonst de
+    ok 2 - wiederherzustellende Profilsprache: en bleibt en, sonst de
+      ---
+      duration_ms: 0.06789
+      type: 'test'
+      ...
+    1..2
+ok 18 - C3: Sprache der Seite
+  ---
+  duration_ms: 0.285451
+  type: 'suite'
+  ...
+# Subtest: AC-1: Fremdtext wird zusaetzlich, eigene Liste, eigener Zähler, plan.elemente unverändert
+    # Subtest: Fremdtext erscheint in bericht.zusaetzlich, Zähler +1, Listeneinträge unberührt
+    ok 1 - Fremdtext erscheint in bericht.zusaetzlich, Zähler +1, Listeneinträge unberührt
+      ---
+      duration_ms: 6.667734
+      type: 'test'
+      ...
+    # Subtest: ohne Fremdtext bleibt die Zusätzlich-Liste leer
+    ok 2 - ohne Fremdtext bleibt die Zusätzlich-Liste leer
+      ---
+      duration_ms: 0.279691
+      type: 'test'
+      ...
+    # Subtest: Markdown nennt Zähler zusaetzlich und eine Zusätzlich-Tabelle mit Text und ID
+    ok 3 - Markdown nennt Zähler zusaetzlich und eine Zusätzlich-Tabelle mit Text und ID
+      ---
+      duration_ms: 0.560971
+      type: 'test'
+      ...
+    1..3
+ok 19 - AC-1: Fremdtext wird zusaetzlich, eigene Liste, eigener Zähler, plan.elemente unverändert
+  ---
+  duration_ms: 8.242675
+  type: 'suite'
+  ...
+# Subtest: AC-2: stabile ID zus:<ctx>/<reiter>/<hash>, Zahlen normalisiert
+    # Subtest: „3 Etappen“ und „7 Etappen“ ergeben dieselbe ID
+    ok 1 - „3 Etappen“ und „7 Etappen“ ergeben dieselbe ID
+      ---
+      duration_ms: 0.195681
+      type: 'test'
+      ...
+    # Subtest: anderer Text ⇒ anderer Hash; anderer ctx/Reiter ⇒ andere ID
+    ok 2 - anderer Text ⇒ anderer Hash; anderer ctx/Reiter ⇒ andere ID
+      ---
+      duration_ms: 0.517591
+      type: 'test'
+      ...
+    # Subtest: findeZusaetzliche vergibt dieselbe ID über zwei Läufe
+    ok 3 - findeZusaetzliche vergibt dieselbe ID über zwei Läufe
+      ---
+      duration_ms: 0.377072
+      type: 'test'
+      ...
+    1..3
+ok 20 - AC-2: stabile ID zus:<ctx>/<reiter>/<hash>, Zahlen normalisiert
+  ---
+  duration_ms: 1.329292
+  type: 'suite'
+  ...
+# Subtest: AC-3: Text eines Eintrags (Reiter, kopf, reiterleiste) ist erklärt — DE/EN, Reihenfolge, Duplikat, ctx
+    # Subtest: DE: Reiter-, Muster-, Kopf- und Reiterleisten-Text, vertauscht und doppelt ⇒ nichts zusaetzlich
+    ok 1 - DE: Reiter-, Muster-, Kopf- und Reiterleisten-Text, vertauscht und doppelt ⇒ nichts zusaetzlich
+      ---
+      duration_ms: 0.31333
+      type: 'test'
+      ...
+    # Subtest: EN: Katalogtexte sind erklärt
+    ok 2 - EN: Katalogtexte sind erklärt
+      ---
+      duration_ms: 0.274129
+      type: 'test'
+      ...
+    # Subtest: Mehrfach vorkommender Fremdtext ergibt genau einen Eintrag
+    ok 3 - Mehrfach vorkommender Fremdtext ergibt genau einen Eintrag
+      ---
+      duration_ms: 0.28713
+      type: 'test'
+      ...
+    # Subtest: ctx-Wechsel: Kopf-Text von trip ist unter orte (ohne Kopf-Eintrag) zusaetzlich
+    ok 4 - ctx-Wechsel: Kopf-Text von trip ist unter orte (ohne Kopf-Eintrag) zusaetzlich
+      ---
+      duration_ms: 0.32926
+      type: 'test'
+      ...
+    # Subtest: Text eines anderen Reiters (nicht kopf/reiterleiste) erklärt nicht
+    ok 5 - Text eines anderen Reiters (nicht kopf/reiterleiste) erklärt nicht
+      ---
+      duration_ms: 0.16964
+      type: 'test'
+      ...
+    1..5
+ok 21 - AC-3: Text eines Eintrags (Reiter, kopf, reiterleiste) ist erklärt — DE/EN, Reihenfolge, Duplikat, ctx
+  ---
+  duration_ms: 1.691763
+  type: 'suite'
+  ...
+# Subtest: AC-4: Konto-Texte und Ausnahmen erklären; Ausnahme ohne Grund/Spec bricht ab
+    # Subtest: sammleKontoTexte liest Trip-, Etappen- und Ortsnamen
+    ok 1 - sammleKontoTexte liest Trip-, Etappen- und Ortsnamen
+      ---
+      duration_ms: 0.343891
+      type: 'test'
+      ...
+    # Subtest: Konto-Text ist erklärt, auch als Preset-/Ortsname
+    ok 2 - Konto-Text ist erklärt, auch als Preset-/Ortsname
+      ---
+      duration_ms: 0.246141
+      type: 'test'
+      ...
+    # Subtest: gültige Ausnahme (Text bzw. Muster, mit Grund und Spec) erklärt
+    ok 3 - gültige Ausnahme (Text bzw. Muster, mit Grund und Spec) erklärt
+      ---
+      duration_ms: 0.334631
+      type: 'test'
+      ...
+    # Subtest: Ausnahme mit ctx/Reiter gilt nicht in einem anderen Reiter
+    ok 4 - Ausnahme mit ctx/Reiter gilt nicht in einem anderen Reiter
+      ---
+      duration_ms: 0.17626
+      type: 'test'
+      ...
+    # Subtest: Ausnahme ohne Grund oder ohne Spec ⇒ Parser-Fehler
+    ok 5 - Ausnahme ohne Grund oder ohne Spec ⇒ Parser-Fehler
+      ---
+      duration_ms: 0.374601
+      type: 'test'
+      ...
+    1..5
+ok 22 - AC-4: Konto-Texte und Ausnahmen erklären; Ausnahme ohne Grund/Spec bricht ab
+  ---
+  duration_ms: 4.138918
+  type: 'suite'
+  ...
+# Subtest: AC-6: Besitzer für element, abschnitt und zusaetzlich (Text/Muster)
+    # Subtest: gedeckte Einträge tragen Besitzer und Verweis; Status und Zähler bleiben
+    ok 1 - gedeckte Einträge tragen Besitzer und Verweis; Status und Zähler bleiben
+      ---
+      duration_ms: 0.737361
+      type: 'test'
+      ...
+    # Subtest: Markdown hat eine Besitzer-Spalte mit dem Verweis
+    ok 2 - Markdown hat eine Besitzer-Spalte mit dem Verweis
+      ---
+      duration_ms: 0.439911
+      type: 'test'
+      ...
+    1..2
+ok 23 - AC-6: Besitzer für element, abschnitt und zusaetzlich (Text/Muster)
+  ---
+  duration_ms: 1.257183
+  type: 'suite'
+  ...
+# Subtest: AC-7: leseBesitzer lehnt Einträge ohne Grund, ohne oder mit ungültigem Verweis ab
+    # Subtest: Grund fehlt ⇒ Fehler, der den Eintrag nennt
+    ok 1 - Grund fehlt ⇒ Fehler, der den Eintrag nennt
+      ---
+      duration_ms: 0.207791
+      type: 'test'
+      ...
+    # Subtest: Verweis fehlt ⇒ Fehler
+    ok 2 - Verweis fehlt ⇒ Fehler
+      ---
+      duration_ms: 0.13877
+      type: 'test'
+      ...
+    # Subtest: Verweis ungültig ⇒ Fehler
+    ok 3 - Verweis ungültig ⇒ Fehler
+      ---
+      duration_ms: 0.23067
+      type: 'test'
+      ...
+    # Subtest: gültige Verweise werden angenommen
+    ok 4 - gültige Verweise werden angenommen
+      ---
+      duration_ms: 0.19735
+      type: 'test'
+      ...
+    # Subtest: unbekannte Ziel-Art ⇒ Fehler
+    ok 5 - unbekannte Ziel-Art ⇒ Fehler
+      ---
+      duration_ms: 0.09926
+      type: 'test'
+      ...
+    # Subtest: Fix-Loop 2 (Befund 2): Prototyp-Namen als Art ⇒ saubere Parser-Meldung mit Eintrag, kein TypeError
+    ok 6 - Fix-Loop 2 (Befund 2): Prototyp-Namen als Art ⇒ saubere Parser-Meldung mit Eintrag, kein TypeError
+      ---
+      duration_ms: 0.218151
+      type: 'test'
+      ...
+    1..6
+ok 24 - AC-7: leseBesitzer lehnt Einträge ohne Grund, ohne oder mit ungültigem Verweis ab
+  ---
+  duration_ms: 1.231942
+  type: 'suite'
+  ...
+# Subtest: AC-8: Freigabe zählt bei --abnahme als Besitzer
+    # Subtest: echte elementliste_freigaben.json lässt sich lesen (Liste darf leer sein)
+    ok 1 - echte elementliste_freigaben.json lässt sich lesen (Liste darf leer sein)
+      ---
+      duration_ms: 0.199381
+      type: 'test'
+      ...
+    # Subtest: freigegebener Eintrag ⇒ Exit 0, ohne Freigabe ⇒ Exit 1
+    ok 2 - freigegebener Eintrag ⇒ Exit 0, ohne Freigabe ⇒ Exit 1
+      ---
+      duration_ms: 0.298901
+      type: 'test'
+      ...
+    1..2
+ok 25 - AC-8: Freigabe zählt bei --abnahme als Besitzer
+  ---
+  duration_ms: 0.570802
+  type: 'suite'
+  ...
+# Subtest: AC-9: --abnahme — Kreuzprobe über abweichend, nicht_pruefbar, zusaetzlich
+    # Subtest: alle drei mit Besitzer ⇒ Exit 0
+    ok 1 - alle drei mit Besitzer ⇒ Exit 0
+      ---
+      duration_ms: 0.23668
+      type: 'test'
+      ...
+    # Subtest: herrenlos abweichend allein ⇒ Exit ≠ 0
+    ok 2 - herrenlos abweichend allein ⇒ Exit ≠ 0
+      ---
+      duration_ms: 0.191889
+      type: 'test'
+      ...
+    # Subtest: herrenlos nicht_pruefbar allein ⇒ Exit ≠ 0
+    ok 3 - herrenlos nicht_pruefbar allein ⇒ Exit ≠ 0
+      ---
+      duration_ms: 0.128921
+      type: 'test'
+      ...
+    # Subtest: herrenlos zusaetzlich allein ⇒ Exit ≠ 0
+    ok 4 - herrenlos zusaetzlich allein ⇒ Exit ≠ 0
+      ---
+      duration_ms: 0.11518
+      type: 'test'
+      ...
+    # Subtest: ohne jeden Besitzer ⇒ Exit ≠ 0
+    ok 5 - ohne jeden Besitzer ⇒ Exit ≠ 0
+      ---
+      duration_ms: 0.126841
+      type: 'test'
+      ...
+    # Subtest: gefunden braucht keinen Besitzer
+    ok 6 - gefunden braucht keinen Besitzer
+      ---
+      duration_ms: 0.546591
+      type: 'test'
+      ...
+    1..6
+ok 26 - AC-9: --abnahme — Kreuzprobe über abweichend, nicht_pruefbar, zusaetzlich
+  ---
+  duration_ms: 1.488223
+  type: 'suite'
+  ...
+# Subtest: AC-10: --strict unverändert, zusaetzlich allein ohne --abnahme kein Exit ≠ 0, Optionen
+    # Subtest: strict: nur zusaetzlich ⇒ Exit 0; abweichend ⇒ ≠ 0; freigegeben zählt nicht
+    ok 1 - strict: nur zusaetzlich ⇒ Exit 0; abweichend ⇒ ≠ 0; freigegeben zählt nicht
+      ---
+      duration_ms: 0.204989
+      type: 'test'
+      ...
+    # Subtest: ohne beide Flags immer Exit 0
+    ok 2 - ohne beide Flags immer Exit 0
+      ---
+      duration_ms: 0.132269
+      type: 'test'
+      ...
+    # Subtest: leseOptionen: --abnahme aus Argumenten und ELEMENTLISTE_ABNAHME
+    ok 3 - leseOptionen: --abnahme aus Argumenten und ELEMENTLISTE_ABNAHME
+      ---
+      duration_ms: 0.141841
+      type: 'test'
+      ...
+    # Subtest: flagsAlsUmgebung und Starter reichen --abnahme durch; planeAbgleich liest es
+    ok 4 - flagsAlsUmgebung und Starter reichen --abnahme durch; planeAbgleich liest es
+      ---
+      duration_ms: 9.404659
+      type: 'test'
+      ...
+    # Subtest: abschluss meldet abnahme und nutzt ihren Exit
+    ok 5 - abschluss meldet abnahme und nutzt ihren Exit
+      ---
+      duration_ms: 0.211
+      type: 'test'
+      ...
+    1..5
+ok 27 - AC-10: --strict unverändert, zusaetzlich allein ohne --abnahme kein Exit ≠ 0, Optionen
+  ---
+  duration_ms: 10.282819
+  type: 'suite'
+  ...
+# Subtest: AC-11: Rot-Probe Profil-Zeile — herrenlos Exit 1, mit Besitzer Exit 0
+    # Subtest: Profil-Zeile des Seitenkopfs ist zusaetzlich; Besitzer macht den Lauf grün
+    ok 1 - Profil-Zeile des Seitenkopfs ist zusaetzlich; Besitzer macht den Lauf grün
+      ---
+      duration_ms: 0.281361
+      type: 'test'
+      ...
+    1..1
+ok 28 - AC-11: Rot-Probe Profil-Zeile — herrenlos Exit 1, mit Besitzer Exit 0
+  ---
+  duration_ms: 0.36405
+  type: 'suite'
+  ...
+# Subtest: Fix-Loop 1: Besitzer-Bindung, Hash-Normalisierung, Parser-Härte
+    # Subtest: F002: Abschnitts-Besitzer gilt nur für denselben ctx und Reiter
+    ok 1 - F002: Abschnitts-Besitzer gilt nur für denselben ctx und Reiter
+      ---
+      duration_ms: 0.254242
+      type: 'test'
+      ...
+    # Subtest: F002: gefunden und freigegeben bekommen nie einen Besitzer
+    ok 2 - F002: gefunden und freigegeben bekommen nie einen Besitzer
+      ---
+      duration_ms: 0.17487
+      type: 'test'
+      ...
+    # Subtest: F003: „Etappe 3“ und „Etappe“ ergeben verschiedene IDs (Zahl wird {zahl}, nicht entfernt)
+    ok 3 - F003: „Etappe 3“ und „Etappe“ ergeben verschiedene IDs (Zahl wird {zahl}, nicht entfernt)
+      ---
+      duration_ms: 0.19444
+      type: 'test'
+      ...
+    # Subtest: F004: null- bzw. Nicht-Objekt-Eintrag ⇒ Fehler mit Index
+    ok 4 - F004: null- bzw. Nicht-Objekt-Eintrag ⇒ Fehler mit Index
+      ---
+      duration_ms: 0.194341
+      type: 'test'
+      ...
+    # Subtest: F004: element-Besitzer mit unbekannter ID ⇒ Fehler mit Index und ID, bekannte ID gilt
+    ok 5 - F004: element-Besitzer mit unbekannter ID ⇒ Fehler mit Index und ID, bekannte ID gilt
+      ---
+      duration_ms: 0.18394
+      type: 'test'
+      ...
+    1..5
+ok 29 - Fix-Loop 1: Besitzer-Bindung, Hash-Normalisierung, Parser-Härte
+  ---
+  duration_ms: 1.169013
+  type: 'suite'
+  ...
+# Subtest: AC-5: Gegenrichtung liest nur [data-seite="hub"], nur normal/ohne Segment
+    # Subtest: Wurzel-Selektor ist [data-seite="hub"], nie body
+    ok 1 - Wurzel-Selektor ist [data-seite="hub"], nie body
+      ---
+      duration_ms: 0.10579
+      type: 'test'
+      ...
+    # Subtest: Kombi-Filter: nur Zustand normal ohne Segment
+    ok 2 - Kombi-Filter: nur Zustand normal ohne Segment
+      ---
+      duration_ms: 0.09379
+      type: 'test'
+      ...
+    # Subtest: Staging-Spec nutzt Wurzel, Kombi-Filter, Gegenrichtung und Besitzer-Datei (doc-compliance-test)
+    ok 3 - Staging-Spec nutzt Wurzel, Kombi-Filter, Gegenrichtung und Besitzer-Datei (doc-compliance-test)
+      ---
+      duration_ms: 0.346181
+      type: 'test'
+      ...
+    1..3
+ok 30 - AC-5: Gegenrichtung liest nur [data-seite="hub"], nur normal/ohne Segment
+  ---
+  duration_ms: 0.643011
+  type: 'suite'
+  ...
+# Subtest: Fix-Loop 2 (Befund 1): Gegenrichtung ohne Hub-Marker ist sichtbar und unter --abnahme rot
+    # Subtest: ohne Marker: kein zusaetzlich, aber ein Befund „Hub-Marker fehlt“ mit ctx und Reiter
+    ok 1 - ohne Marker: kein zusaetzlich, aber ein Befund „Hub-Marker fehlt“ mit ctx und Reiter
+      ---
+      duration_ms: 0.275391
+      type: 'test'
+      ...
+    # Subtest: mit Marker: kein Befund, zusaetzlich wie findeZusaetzliche
+    ok 2 - mit Marker: kein Befund, zusaetzlich wie findeZusaetzliche
+      ---
+      duration_ms: 0.170049
+      type: 'test'
+      ...
+    # Subtest: Bericht: ohne_hub steht im Bericht und im Markdown, Elementliste bleibt vollständig
+    ok 3 - Bericht: ohne_hub steht im Bericht und im Markdown, Elementliste bleibt vollständig
+      ---
+      duration_ms: 0.235501
+      type: 'test'
+      ...
+    # Subtest: Exit (Fix-Loop 3, F001/AC-10): nur --abnahme ≠ 0; --strict allein und ohne Flags 0; abschluss nennt den Befund
+    ok 4 - Exit (Fix-Loop 3, F001/AC-10): nur --abnahme ≠ 0; --strict allein und ohne Flags 0; abschluss nennt den Befund
+      ---
+      duration_ms: 0.15596
+      type: 'test'
+      ...
+    # Subtest: Fix-Loop 3 (F001): --strict mit ohne_hub UND abweichend bleibt rot (strict-Regel unverändert)
+    ok 5 - Fix-Loop 3 (F001): --strict mit ohne_hub UND abweichend bleibt rot (strict-Regel unverändert)
+      ---
+      duration_ms: 0.10153
+      type: 'test'
+      ...
+    # Subtest: mit Marker und ohne Abweichung: Exit 0 unter --strict und --abnahme
+    ok 6 - mit Marker und ohne Abweichung: Exit 0 unter --strict und --abnahme
+      ---
+      duration_ms: 0.144991
+      type: 'test'
+      ...
+    1..6
+ok 31 - Fix-Loop 2 (Befund 1): Gegenrichtung ohne Hub-Marker ist sichtbar und unter --abnahme rot
+  ---
+  duration_ms: 1.245281
+  type: 'suite'
+  ...
+# Subtest: Fix-Loop 3 (F002): Gegenrichtung braucht Kopf UND Reiterfläche, sonst ohne_hub mit dem fehlenden Anker
+    # Subtest: Selektoren: Kopf = Hub mit Abschnitt kopf, Fläche = Hub ohne Abschnitt kopf
+    ok 1 - Selektoren: Kopf = Hub mit Abschnitt kopf, Fläche = Hub ohne Abschnitt kopf
+      ---
+      duration_ms: 0.120431
+      type: 'test'
+      ...
+    # Subtest: pruefeHubAnker: beide vorhanden ⇒ null; je fehlender Anker ein Grund, der ihn nennt
+    ok 2 - pruefeHubAnker: beide vorhanden ⇒ null; je fehlender Anker ein Grund, der ihn nennt
+      ---
+      duration_ms: 0.11931
+      type: 'test'
+      ...
+    # Subtest: werteGegenrichtungAus: Kopf da, Reiterfläche fehlt ⇒ kein zusaetzlich, ohne_hub nennt die Reiterfläche
+    ok 3 - werteGegenrichtungAus: Kopf da, Reiterfläche fehlt ⇒ kein zusaetzlich, ohne_hub nennt die Reiterfläche
+      ---
+      duration_ms: 0.131729
+      type: 'test'
+      ...
+    # Subtest: werteGegenrichtungAus: Reiterfläche da, Kopf fehlt ⇒ ohne_hub nennt den Kopf
+    ok 4 - werteGegenrichtungAus: Reiterfläche da, Kopf fehlt ⇒ ohne_hub nennt den Kopf
+      ---
+      duration_ms: 0.100731
+      type: 'test'
+      ...
+    # Subtest: Staging-Spec zählt beide Anker im Browser und reicht sie durch (doc-compliance-test)
+    ok 5 - Staging-Spec zählt beide Anker im Browser und reicht sie durch (doc-compliance-test)
+      ---
+      duration_ms: 0.271021
+      type: 'test'
+      ...
+    # Subtest: HubKopf trägt den Kopf-Anker, TripTabs/CompareTabs die Flächen-Wurzel ohne Abschnitt kopf (doc-compliance-test)
+    ok 6 - HubKopf trägt den Kopf-Anker, TripTabs/CompareTabs die Flächen-Wurzel ohne Abschnitt kopf (doc-compliance-test)
+      ---
+      duration_ms: 8.122816
+      type: 'test'
+      ...
+    1..6
+ok 32 - Fix-Loop 3 (F002): Gegenrichtung braucht Kopf UND Reiterfläche, sonst ohne_hub mit dem fehlenden Anker
+  ---
+  duration_ms: 9.035808
+  type: 'suite'
+  ...
+# Subtest: Echte Besitzer-Datei elementliste_besitzer.json ist gültig
+    # Subtest: Datei existiert, Besitzer und Ausnahmen parsen ohne Fehler
+    ok 1 - Datei existiert, Besitzer und Ausnahmen parsen ohne Fehler
+      ---
+      duration_ms: 4.972479
+      type: 'test'
+      ...
+    1..1
+ok 33 - Echte Besitzer-Datei elementliste_besitzer.json ist gültig
+  ---
+  duration_ms: 5.04168
+  type: 'suite'
+  ...
+# Subtest: AC-13: unsichtbare Marker an den geteilten Komponenten (doc-compliance-test)
+    # Subtest: HubKopf: data-seite="hub" und data-abschnitt="kopf" an der Wurzel
+    ok 1 - HubKopf: data-seite="hub" und data-abschnitt="kopf" an der Wurzel
+      ---
+      duration_ms: 2.233524
+      type: 'test'
+      ...
+    # Subtest: trip-detail/TripTabs.svelte: data-seite="hub" an der Wurzel, styleloser Wrapper reiterleiste um MTabBar
+    ok 2 - trip-detail/TripTabs.svelte: data-seite="hub" an der Wurzel, styleloser Wrapper reiterleiste um MTabBar
+      ---
+      duration_ms: 0.228861
+      type: 'test'
+      ...
+    # Subtest: compare/CompareTabs.svelte: data-seite="hub" an der Wurzel, styleloser Wrapper reiterleiste um MTabBar
+    ok 3 - compare/CompareTabs.svelte: data-seite="hub" an der Wurzel, styleloser Wrapper reiterleiste um MTabBar
+      ---
+      duration_ms: 0.23265
+      type: 'test'
+      ...
+    # Subtest: VorlageKarte: data-abschnitt="vorlage"
+    ok 4 - VorlageKarte: data-abschnitt="vorlage"
+      ---
+      duration_ms: 0.514261
+      type: 'test'
+      ...
+    # Subtest: WetterTabInhalt: data-abschnitt="laden" und "warnung"
+    ok 5 - WetterTabInhalt: data-abschnitt="laden" und "warnung"
+      ---
+      duration_ms: 0.836771
+      type: 'test'
+      ...
+    1..5
+ok 34 - AC-13: unsichtbare Marker an den geteilten Komponenten (doc-compliance-test)
+  ---
+  duration_ms: 4.240108
+  type: 'suite'
+  ...
+# Subtest: Fix-Loop 4: {zahl}-Muster erklärt in der Gegenrichtung nur Zahl-Text (AC-1, AC-3, AC-11, AC-12)
+    # Subtest: de trip/wetter: Text ohne Ziffern ist zusaetzlich
+    ok 1 - de trip/wetter: Text ohne Ziffern ist zusaetzlich
+      ---
+      duration_ms: 6.861324
+      type: 'test'
+      ...
+    # Subtest: de trip/wetter: erfundener Text mit Ziffern ist zusaetzlich
+    ok 2 - de trip/wetter: erfundener Text mit Ziffern ist zusaetzlich
+      ---
+      duration_ms: 9.625608
+      type: 'test'
+      ...
+    # Subtest: de trip/etappen: Text ohne Ziffern ist zusaetzlich
+    ok 3 - de trip/etappen: Text ohne Ziffern ist zusaetzlich
+      ---
+      duration_ms: 1.524533
+      type: 'test'
+      ...
+    # Subtest: de trip/etappen: erfundener Text mit Ziffern ist zusaetzlich
+    ok 4 - de trip/etappen: erfundener Text mit Ziffern ist zusaetzlich
+      ---
+      duration_ms: 1.342013
+      type: 'test'
+      ...
+    # Subtest: de orte/wetter: Text ohne Ziffern ist zusaetzlich
+    ok 5 - de orte/wetter: Text ohne Ziffern ist zusaetzlich
+      ---
+      duration_ms: 3.328836
+      type: 'test'
+      ...
+    # Subtest: de orte/wetter: erfundener Text mit Ziffern ist zusaetzlich
+    ok 6 - de orte/wetter: erfundener Text mit Ziffern ist zusaetzlich
+      ---
+      duration_ms: 4.021988
+      type: 'test'
+      ...
+    # Subtest: en trip/wetter: Text ohne Ziffern ist zusaetzlich
+    ok 7 - en trip/wetter: Text ohne Ziffern ist zusaetzlich
+      ---
+      duration_ms: 5.967402
+      type: 'test'
+      ...
+    # Subtest: en trip/wetter: erfundener Text mit Ziffern ist zusaetzlich
+    ok 8 - en trip/wetter: erfundener Text mit Ziffern ist zusaetzlich
+      ---
+      duration_ms: 6.427273
+      type: 'test'
+      ...
+    # Subtest: en trip/etappen: Text ohne Ziffern ist zusaetzlich
+    ok 9 - en trip/etappen: Text ohne Ziffern ist zusaetzlich
+      ---
+      duration_ms: 1.544714
+      type: 'test'
+      ...
+    # Subtest: en trip/etappen: erfundener Text mit Ziffern ist zusaetzlich
+    ok 10 - en trip/etappen: erfundener Text mit Ziffern ist zusaetzlich
+      ---
+      duration_ms: 1.146753
+      type: 'test'
+      ...
+    # Subtest: en orte/wetter: Text ohne Ziffern ist zusaetzlich
+    ok 11 - en orte/wetter: Text ohne Ziffern ist zusaetzlich
+      ---
+      duration_ms: 5.700191
+      type: 'test'
+      ...
+    # Subtest: en orte/wetter: erfundener Text mit Ziffern ist zusaetzlich
+    ok 12 - en orte/wetter: erfundener Text mit Ziffern ist zusaetzlich
+      ---
+      duration_ms: 9.416598
+      type: 'test'
+      ...
+    # Subtest: de trip/wetter: reiner Zahl-Text („4“, „-10“) bleibt erklärt
+    ok 13 - de trip/wetter: reiner Zahl-Text („4“, „-10“) bleibt erklärt
+      ---
+      duration_ms: 5.44074
+      type: 'test'
+      ...
+    # Subtest: de orte/wetter: reiner Zahl-Text („4“, „-10“) bleibt erklärt
+    ok 14 - de orte/wetter: reiner Zahl-Text („4“, „-10“) bleibt erklärt
+      ---
+      duration_ms: 4.894519
+      type: 'test'
+      ...
+    # Subtest: Fixture: Eintrag muster "{zahl}" erklärt „12“, „-3“, „4,5“, aber nicht „abc“
+    ok 15 - Fixture: Eintrag muster "{zahl}" erklärt „12“, „-3“, „4,5“, aber nicht „abc“
+      ---
+      duration_ms: 0.17691
+      type: 'test'
+      ...
+    # Subtest: Fixture EN: text_en "{zahl}" erklärt „12“, aber nicht „abc“
+    ok 16 - Fixture EN: text_en "{zahl}" erklärt „12“, aber nicht „abc“
+      ---
+      duration_ms: 0.142801
+      type: 'test'
+      ...
+    # Subtest: Fixture: andere Platzhalter bleiben beliebig ({zeit} erklärt „Versand um morgen früh“)
+    ok 17 - Fixture: andere Platzhalter bleiben beliebig ({zeit} erklärt „Versand um morgen früh“)
+      ---
+      duration_ms: 0.10465
+      type: 'test'
+      ...
+    # Subtest: Hinrichtung unverändert: erwartung() für muster "{zahl}" passt weiter auf jeden Wert
+    ok 18 - Hinrichtung unverändert: erwartung() für muster "{zahl}" passt weiter auf jeden Wert
+      ---
+      duration_ms: 0.10383
+      type: 'test'
+      ...
+    1..18
+ok 35 - Fix-Loop 4: {zahl}-Muster erklärt in der Gegenrichtung nur Zahl-Text (AC-1, AC-3, AC-11, AC-12)
+  ---
+  duration_ms: 68.36271
+  type: 'suite'
+  ...
+# Subtest: \#3011 Metriknamen-Quellen
+    # Subtest: metrikNamenAusRegister: label/label_de/label_en aller Kategorien
+    ok 1 - metrikNamenAusRegister: label/label_de/label_en aller Kategorien
+      ---
+      duration_ms: 0.694361
+      type: 'test'
+      ...
+    # Subtest: metrikNamenAusRegister: leere Labels zählen nicht, ungültige Antwort ⇒ []
+    ok 2 - metrikNamenAusRegister: leere Labels zählen nicht, ungültige Antwort ⇒ []
+      ---
+      duration_ms: 0.707462
+      type: 'test'
+      ...
+    # Subtest: metrikNamenAusListe: reine DE-Namen aus den {metrik}-Einträgen der echten Liste
+    ok 3 - metrikNamenAusListe: reine DE-Namen aus den {metrik}-Einträgen der echten Liste
+      ---
+      duration_ms: 3.725638
+      type: 'test'
+      ...
+    # Subtest: metrikNamenAusListe: Einträge ohne {metrik} liefern keinen Namen
+    ok 4 - metrikNamenAusListe: Einträge ohne {metrik} liefern keinen Namen
+      ---
+      duration_ms: 0.245049
+      type: 'test'
+      ...
+    1..4
+ok 36 - \#3011 Metriknamen-Quellen
+  ---
+  duration_ms: 6.276862
+  type: 'suite'
+  ...
+# Subtest: \#3011 Gegenrichtung: {metrik} nur auf bekannte Metriknamen
+    # Subtest: AC-5 (DE, trip): „+ Quatsch“ ⇒ zusaetzlich, „+ Windrichtung“ erklärt
+    ok 1 - AC-5 (DE, trip): „+ Quatsch“ ⇒ zusaetzlich, „+ Windrichtung“ erklärt
+      ---
+      duration_ms: 8.058265
+      type: 'test'
+      ...
+    # Subtest: AC-5 (EN, trip): „+ Nonsense“ ⇒ zusaetzlich, „+ Wind direction“ erklärt
+    ok 2 - AC-5 (EN, trip): „+ Nonsense“ ⇒ zusaetzlich, „+ Wind direction“ erklärt
+      ---
+      duration_ms: 11.886252
+      type: 'test'
+      ...
+    # Subtest: AC-5 (DE, orte): „+ Quatsch“ ⇒ zusaetzlich, „+ Windrichtung“ erklärt
+    ok 3 - AC-5 (DE, orte): „+ Quatsch“ ⇒ zusaetzlich, „+ Windrichtung“ erklärt
+      ---
+      duration_ms: 8.375446
+      type: 'test'
+      ...
+    # Subtest: AC-5: genau EIN Name — „+ Windrichtung Quatsch“ ist kein Metrikname ⇒ zusaetzlich
+    ok 4 - AC-5: genau EIN Name — „+ Windrichtung Quatsch“ ist kein Metrikname ⇒ zusaetzlich
+      ---
+      duration_ms: 14.157787
+      type: 'test'
+      ...
+    # Subtest: AC-5: Metrikname mit Regex-Sonderzeichen wird wörtlich genommen
+    ok 5 - AC-5: Metrikname mit Regex-Sonderzeichen wird wörtlich genommen
+      ---
+      duration_ms: 20.870299
+      type: 'test'
+      ...
+    # Subtest: AC-5: werteGegenrichtungAus reicht die Metriknamen durch
+    ok 6 - AC-5: werteGegenrichtungAus reicht die Metriknamen durch
+      ---
+      duration_ms: 17.377553
+      type: 'test'
+      ...
+    # Subtest: AC-5: volle Kette Register-Antwort ∪ Listen-Namen — echte Namen erklärt, Fremdtext zusaetzlich
+    ok 7 - AC-5: volle Kette Register-Antwort ∪ Listen-Namen — echte Namen erklärt, Fremdtext zusaetzlich
+      ---
+      duration_ms: 12.447273
+      type: 'test'
+      ...
+    # Subtest: AC-6 (DE): „Quatsch aus dem Briefing nehmen“ ⇒ zusaetzlich, „Temperatur aus dem Briefing nehmen“ erklärt
+    ok 8 - AC-6 (DE): „Quatsch aus dem Briefing nehmen“ ⇒ zusaetzlich, „Temperatur aus dem Briefing nehmen“ erklärt
+      ---
+      duration_ms: 5.05597
+      type: 'test'
+      ...
+    # Subtest: AC-6 (EN): „Remove Nonsense from the briefing“ ⇒ zusaetzlich, „Remove Temperature from the briefing“ erklärt
+    ok 9 - AC-6 (EN): „Remove Nonsense from the briefing“ ⇒ zusaetzlich, „Remove Temperature from the briefing“ erklärt
+      ---
+      duration_ms: 4.45496
+      type: 'test'
+      ...
+    # Subtest: AC-7: leere Registermenge ⇒ EN-Registername und „+ Quatsch“ zusaetzlich, DE-Listenname erklärt
+    ok 10 - AC-7: leere Registermenge ⇒ EN-Registername und „+ Quatsch“ zusaetzlich, DE-Listenname erklärt
+      ---
+      duration_ms: 4.808089
+      type: 'test'
+      ...
+    # Subtest: AC-7: ohne Parameter metrikNamen gilt dasselbe (Vorgabe leere Menge, nie still erklärt)
+    ok 11 - AC-7: ohne Parameter metrikNamen gilt dasselbe (Vorgabe leere Menge, nie still erklärt)
+      ---
+      duration_ms: 3.275366
+      type: 'test'
+      ...
+    # Subtest: AC-7 (F001): Gesamtmenge leer (Register leer, Liste ohne Namen) ⇒ {metrik} erklärt nichts (fail-closed)
+    ok 12 - AC-7 (F001): Gesamtmenge leer (Register leer, Liste ohne Namen) ⇒ {metrik} erklärt nichts (fail-closed)
+      ---
+      duration_ms: 0.569152
+      type: 'test'
+      ...
+    # Subtest: AC-5 (F002): Metriknamen werden normalisiert (Mehrfach-, Rand-Leerraum)
+    ok 13 - AC-5 (F002): Metriknamen werden normalisiert (Mehrfach-, Rand-Leerraum)
+      ---
+      duration_ms: 4.253078
+      type: 'test'
+      ...
+    1..13
+ok 37 - \#3011 Gegenrichtung: {metrik} nur auf bekannte Metriknamen
+  ---
+  duration_ms: 116.207562
+  type: 'suite'
+  ...
+# Subtest: \#3192 AC-1 datensatzFuerAbschnitt
+    # Subtest: grenzen-* -> mit_abweichung
+    ok 1 - grenzen-* -> mit_abweichung
+      ---
+      duration_ms: 25.666759
+      type: 'test'
+      ...
+    # Subtest: vorlage-* -> ohne_abweichung
+    ok 2 - vorlage-* -> ohne_abweichung
+      ---
+      duration_ms: 1.356032
+      type: 'test'
+      ...
+    1..2
+ok 38 - \#3192 AC-1 datensatzFuerAbschnitt
+  ---
+  duration_ms: 27.674893
+  type: 'suite'
+  ...
+# Subtest: \#3192 AC-1 wetterOverrides
+    # Subtest: nur erlaubte Seiten je Metrik
+    ok 1 - nur erlaubte Seiten je Metrik
+      ---
+      duration_ms: 0.295659
+      type: 'test'
+      ...
+    # Subtest: Werte je Seite streng aufsteigend, lower.yellow < upper.yellow
+    ok 2 - Werte je Seite streng aufsteigend, lower.yellow < upper.yellow
+      ---
+      duration_ms: 0.184069
+      type: 'test'
+      ...
+    # Subtest: Gewitter als thunder: hoch nie gelb, hoch >= mittel
+    ok 3 - Gewitter als thunder: hoch nie gelb, hoch >= mittel
+      ---
+      duration_ms: 0.575761
+      type: 'test'
+      ...
+    # Subtest: ohne Gewitter-Metrik kein thunder
+    ok 4 - ohne Gewitter-Metrik kein thunder
+      ---
+      duration_ms: 0.13468
+      type: 'test'
+      ...
+    1..4
+ok 39 - \#3192 AC-1 wetterOverrides
+  ---
+  duration_ms: 15.8357
+  type: 'suite'
+  ...
+# Subtest: \#3192 AC-2 wechselZiel und MOCKUP_LAGE
+    # Subtest: MOCKUP_LAGE
+    ok 1 - MOCKUP_LAGE
+      ---
+      duration_ms: 0.25992
+      type: 'test'
+      ...
+    # Subtest: trip -> wandern, orte -> alpen-trekking
+    ok 2 - trip -> wandern, orte -> alpen-trekking
+      ---
+      duration_ms: 0.1827
+      type: 'test'
+      ...
+    # Subtest: Ziel fehlt -> nicht_herstellbar mit Grund, der die ID nennt
+    ok 3 - Ziel fehlt -> nicht_herstellbar mit Grund, der die ID nennt
+      ---
+      duration_ms: 0.18737
+      type: 'test'
+      ...
+    # Subtest: kein Mockup-Ziel -> erste Vorlage != aktiv; keine andere -> nicht_herstellbar
+    ok 4 - kein Mockup-Ziel -> erste Vorlage != aktiv; keine andere -> nicht_herstellbar
+      ---
+      duration_ms: 0.264259
+      type: 'test'
+      ...
+    1..4
+ok 40 - \#3192 AC-2 wechselZiel und MOCKUP_LAGE
+  ---
+  duration_ms: 1.185012
+  type: 'suite'
+  ...
+# Subtest: \#3192 AC-2 bedienPlan nutzt das Mockup-Ziel
+    # Subtest: trip: wetter-vorlage-option-wandern
+    ok 1 - trip: wetter-vorlage-option-wandern
+      ---
+      duration_ms: 0.296211
+      type: 'test'
+      ...
+    # Subtest: orte (aktiv allgemein): wetter-vorlage-option-alpen-trekking
+    ok 2 - orte (aktiv allgemein): wetter-vorlage-option-alpen-trekking
+      ---
+      duration_ms: 0.14601
+      type: 'test'
+      ...
+    # Subtest: trip ohne wandern in der Liste -> nicht_herstellbar
+    ok 3 - trip ohne wandern in der Liste -> nicht_herstellbar
+      ---
+      duration_ms: 0.212881
+      type: 'test'
+      ...
+    1..3
+ok 41 - \#3192 AC-2 bedienPlan nutzt das Mockup-Ziel
+  ---
+  duration_ms: 12.871774
+  type: 'suite'
+  ...
+# Subtest: \#3192 AC-4 eingabeText (Platzhalter auch aus textarea)
+    # Subtest: TEXTAREA liefert Platzhalter
+    ok 1 - TEXTAREA liefert Platzhalter
+      ---
+      duration_ms: 0.145029
+      type: 'test'
+      ...
+    # Subtest: INPUT: aria-label vor Platzhalter vor Wert
+    ok 2 - INPUT: aria-label vor Platzhalter vor Wert
+      ---
+      duration_ms: 0.07524
+      type: 'test'
+      ...
+    # Subtest: andere Tags -> leer
+    ok 3 - andere Tags -> leer
+      ---
+      duration_ms: 0.054951
+      type: 'test'
+      ...
+    1..3
+ok 42 - \#3192 AC-4 eingabeText (Platzhalter auch aus textarea)
+  ---
+  duration_ms: 0.415832
+  type: 'suite'
+  ...
+# Subtest: \#3192 F001 eingabeText ist serialisierbar (Browser-Regel = getestete Regel)
+    # Subtest: new Function(toString) liefert dieselben Ergebnisse wie eingabeText (inkl. TEXTAREA)
+    ok 1 - new Function(toString) liefert dieselben Ergebnisse wie eingabeText (inkl. TEXTAREA)
+      ---
+      duration_ms: 0.172181
+      type: 'test'
+      ...
+    1..1
+ok 43 - \#3192 F001 eingabeText ist serialisierbar (Browser-Regel = getestete Regel)
+  ---
+  duration_ms: 0.246481
+  type: 'suite'
+  ...
+# Subtest: \#3192 F002 (a) seitenIdFuer: Abschnitt -> Prüf-Datensatz-ID
+    # Subtest: grenzen-* -> ID mit Abweichung (je Kontext)
+    ok 1 - grenzen-* -> ID mit Abweichung (je Kontext)
+      ---
+      duration_ms: 0.12342
+      type: 'test'
+      ...
+    # Subtest: vorlage-* -> ID ohne Abweichung (je Kontext)
+    ok 2 - vorlage-* -> ID ohne Abweichung (je Kontext)
+      ---
+      duration_ms: 0.07885
+      type: 'test'
+      ...
+    # Subtest: fehlender Kontext oder Datensatz -> null (nie ersetzen)
+    ok 3 - fehlender Kontext oder Datensatz -> null (nie ersetzen)
+      ---
+      duration_ms: 0.077199
+      type: 'test'
+      ...
+    1..3
+ok 44 - \#3192 F002 (a) seitenIdFuer: Abschnitt -> Prüf-Datensatz-ID
+  ---
+  duration_ms: 0.35241
+  type: 'suite'
+  ...
+# Subtest: \#3192 F002 (b) pruefReste: nur Prüf-Objekte zählen als Leck
+    # Subtest: Prüfkonto-Seed allein -> kein Rest
+    ok 1 - Prüfkonto-Seed allein -> kein Rest
+      ---
+      duration_ms: 0.29096
+      type: 'test'
+      ...
+    # Subtest: F004: Trip allein über ABGLEICH_TRIP_ID (fremder Name) ist ein Rest
+    ok 2 - F004: Trip allein über ABGLEICH_TRIP_ID (fremder Name) ist ein Rest
+      ---
+      duration_ms: 0.107491
+      type: 'test'
+      ...
+    # Subtest: jede Art von Prüf-Rest wird gemeldet, Seed nie
+    ok 3 - jede Art von Prüf-Rest wird gemeldet, Seed nie
+      ---
+      duration_ms: 0.191171
+      type: 'test'
+      ...
+    1..3
+ok 45 - \#3192 F002 (b) pruefReste: nur Prüf-Objekte zählen als Leck
+  ---
+  duration_ms: 0.668141
+  type: 'suite'
+  ...
+# Subtest: \#3192 F002 (c) Anlege-Payloads
+    # Subtest: trip ohne_abweichung: genau die aktiven Metriken von alpen-trekking, Ampel nur Vorlage
+    ok 1 - trip ohne_abweichung: genau die aktiven Metriken von alpen-trekking, Ampel nur Vorlage
+      ---
+      duration_ms: 0.382202
+      type: 'test'
+      ...
+    # Subtest: orte ohne_abweichung: genau die aktiven Metriken von allgemein, drei Orte, Ampel nur Vorlage
+    ok 2 - orte ohne_abweichung: genau die aktiven Metriken von allgemein, drei Orte, Ampel nur Vorlage
+      ---
+      duration_ms: 0.139461
+      type: 'test'
+      ...
+    # Subtest: mit_abweichung: Grenzen-Metriken der Liste und wetterOverrides
+    ok 3 - mit_abweichung: Grenzen-Metriken der Liste und wetterOverrides
+      ---
+      duration_ms: 0.23683
+      type: 'test'
+      ...
+    # Subtest: F004 aktiveMetrikenDerVorlage: nur enabled === true zählt (fehlend, undefined, false, Wahrheitswert-Ersatz nicht)
+    ok 4 - F004 aktiveMetrikenDerVorlage: nur enabled === true zählt (fehlend, undefined, false, Wahrheitswert-Ersatz nicht)
+      ---
+      duration_ms: 7.217294
+      type: 'test'
+      ...
+    # Subtest: F004 eigeneVorlagePayload: metrics nicht leer
+    ok 5 - F004 eigeneVorlagePayload: metrics nicht leer
+      ---
+      duration_ms: 0.163861
+      type: 'test'
+      ...
+    # Subtest: eigeneVorlagePayload: Prüf-Name, Beschreibung exakt „aus GR221 gespeichert“, Art übernommen
+    ok 6 - eigeneVorlagePayload: Prüf-Name, Beschreibung exakt „aus GR221 gespeichert“, Art übernommen
+      ---
+      duration_ms: 0.11367
+      type: 'test'
+      ...
+    1..6
+ok 46 - \#3192 F002 (c) Anlege-Payloads
+  ---
+  duration_ms: 8.420794
+  type: 'suite'
+  ...
+# Subtest: F002: planeAbgleich — Prod-Schutz, Optionen, Scope, Kombinationen (vor jedem Seitenaufruf)
+    # Subtest: Prod-Base-URL wirft, Staging läuft
+    ok 1 - Prod-Base-URL wirft, Staging läuft
+      ---
+      duration_ms: 4.800909
+      type: 'test'
+      ...
+    # Subtest: ohne Base-URL gilt Staging (nie still Prod)
+    ok 2 - ohne Base-URL gilt Staging (nie still Prod)
+      ---
+      duration_ms: 1.523044
+      type: 'test'
+      ...
+    # Subtest: ohne Scope: alle Elemente der echten Liste, jede Kombination genau einmal
+    ok 3 - ohne Scope: alle Elemente der echten Liste, jede Kombination genau einmal
+      ---
+      duration_ms: 3.070227
+      type: 'test'
+      ...
+    # Subtest: Scope aus der Umgebung filtert; Strict und Sprache werden übernommen
+    ok 4 - Scope aus der Umgebung filtert; Strict und Sprache werden übernommen
+      ---
+      duration_ms: 0.902592
+      type: 'test'
+      ...
+    # Subtest: unbekannter Scope bzw. Sprache ⇒ Fehler, kein leerer grüner Lauf
+    ok 5 - unbekannter Scope bzw. Sprache ⇒ Fehler, kein leerer grüner Lauf
+      ---
+      duration_ms: 0.42734
+      type: 'test'
+      ...
+    1..5
+ok 47 - F002: planeAbgleich — Prod-Schutz, Optionen, Scope, Kombinationen (vor jedem Seitenaufruf)
+  ---
+  duration_ms: 13.664636
+  type: 'suite'
+  ...
+# Subtest: F002: Route-Abfangen-Plan je Zustand — nie still übersprungen
+    # Subtest: normal ohne Eingriff, lädt hängt, Ladefehler 500, unbekannter Zustand nicht herstellbar mit Grund
+    ok 1 - normal ohne Eingriff, lädt hängt, Ladefehler 500, unbekannter Zustand nicht herstellbar mit Grund
+      ---
+      duration_ms: 4.595109
+      type: 'test'
+      ...
+    # Subtest: Konto mit Lücken: Routenplan fängt nur lesende Konto-Abrufe (GET) ab, Navigation im Browser
+    ok 2 - Konto mit Lücken: Routenplan fängt nur lesende Konto-Abrufe (GET) ab, Navigation im Browser
+      ---
+      duration_ms: 0.28081
+      type: 'test'
+      ...
+    # Subtest: Konto mit Lücken: Profil-Antwort ⇒ Telegram fehlt, SMS unbestätigt, Premium-SMS-Rückadresse verfallen, E-Mail bleibt
+    ok 3 - Konto mit Lücken: Profil-Antwort ⇒ Telegram fehlt, SMS unbestätigt, Premium-SMS-Rückadresse verfallen, E-Mail bleibt
+      ---
+      duration_ms: 0.688601
+      type: 'test'
+      ...
+    # Subtest: Konto mit Lücken: Seitendaten (__data.json, devalue-Format) ⇒ profile umgelenkt, alles andere unverändert
+    ok 4 - Konto mit Lücken: Seitendaten (__data.json, devalue-Format) ⇒ profile umgelenkt, alles andere unverändert
+      ---
+      duration_ms: 23.439905
+      type: 'test'
+      ...
+    # Subtest: Konto mit Lücken: ohne abgefangenen Konto-Abruf ⇒ nicht_pruefbar mit konkretem Grund, sonst geprüft
+    ok 5 - Konto mit Lücken: ohne abgefangenen Konto-Abruf ⇒ nicht_pruefbar mit konkretem Grund, sonst geprüft
+      ---
+      duration_ms: 0.437321
+      type: 'test'
+      ...
+    # Subtest: das Abfang-Muster trifft die Datenabrufe, nicht Login oder Seiten
+    ok 6 - das Abfang-Muster trifft die Datenabrufe, nicht Login oder Seiten
+      ---
+      duration_ms: 0.22138
+      type: 'test'
+      ...
+    # Subtest: jeder Zustand der echten Liste hat einen Plan
+    ok 7 - jeder Zustand der echten Liste hat einen Plan
+      ---
+      duration_ms: 0.529731
+      type: 'test'
+      ...
+    # Subtest: Seitenpfade je Kontext
+    ok 8 - Seitenpfade je Kontext
+      ---
+      duration_ms: 0.085171
+      type: 'test'
+      ...
+    1..8
+ok 48 - F002: Route-Abfangen-Plan je Zustand — nie still übersprungen
+  ---
+  duration_ms: 30.679998
+  type: 'suite'
+  ...
+# Subtest: F002: Bewertung je Abschnitt
+    # Subtest: mit Abschnitt-Haken und richtiger Reihenfolge ⇒ gefunden (Muster greift)
+    ok 1 - mit Abschnitt-Haken und richtiger Reihenfolge ⇒ gefunden (Muster greift)
+      ---
+      duration_ms: 0.613322
+      type: 'test'
+      ...
+    # Subtest: ohne Abschnitt-Haken ⇒ abweichend, nie gefunden
+    ok 2 - ohne Abschnitt-Haken ⇒ abweichend, nie gefunden
+      ---
+      duration_ms: 0.19259
+      type: 'test'
+      ...
+    # Subtest: falsche Reihenfolge bzw. fehlender Text ⇒ abweichend mit Grund
+    ok 3 - falsche Reihenfolge bzw. fehlender Text ⇒ abweichend mit Grund
+      ---
+      duration_ms: 0.15971
+      type: 'test'
+      ...
+    # Subtest: Script-Abschnitt ohne Haken ⇒ nicht_pruefbar mit Grund; EN-Lücke ⇒ nicht_pruefbar
+    ok 4 - Script-Abschnitt ohne Haken ⇒ nicht_pruefbar mit Grund; EN-Lücke ⇒ nicht_pruefbar
+      ---
+      duration_ms: 0.31372
+      type: 'test'
+      ...
+    # Subtest: alleNichtPruefbar setzt jeden mit Grund
+    ok 5 - alleNichtPruefbar setzt jeden mit Grund
+      ---
+      duration_ms: 0.14205
+      type: 'test'
+      ...
+    1..5
+ok 49 - F002: Bewertung je Abschnitt
+  ---
+  duration_ms: 1.590293
+  type: 'suite'
+  ...
+# Subtest: F002: Bericht schreiben und Abschluss
+    # Subtest: schreibeBericht legt JSON und Markdown mit jedem Element an
+    ok 1 - schreibeBericht legt JSON und Markdown mit jedem Element an
+      ---
+      duration_ms: 1.257812
+      type: 'test'
+      ...
+    # Subtest: abschluss: ohne Strict Exit 0, mit Strict ≠ 0 bei Lücken; unvollständiger Bericht wirft
+    ok 2 - abschluss: ohne Strict Exit 0, mit Strict ≠ 0 bei Lücken; unvollständiger Bericht wirft
+      ---
+      duration_ms: 0.227271
+      type: 'test'
+      ...
+    1..2
+ok 50 - F002: Bericht schreiben und Abschluss
+  ---
+  duration_ms: 1.557243
+  type: 'suite'
+  ...
+# Subtest: F003: Starter übersetzt CLI-Flags und reicht den Exit-Code durch
+    # Subtest: --strict, --scope, --sprache ⇒ Umgebung
+    ok 1 - --strict, --scope, --sprache ⇒ Umgebung
+      ---
+      duration_ms: 0.22939
+      type: 'test'
+      ...
+    # Subtest: unbekannte Option oder fehlender Wert ⇒ Fehler
+    ok 2 - unbekannte Option oder fehlender Wert ⇒ Fehler
+      ---
+      duration_ms: 1.758414
+      type: 'test'
+      ...
+    # Subtest: Login nur GZ_AUTH_* aus dem .env-Text, nur wenn nicht schon gesetzt
+    ok 3 - Login nur GZ_AUTH_* aus dem .env-Text, nur wenn nicht schon gesetzt
+      ---
+      duration_ms: 2.431127
+      type: 'test'
+      ...
+    # Subtest: Starter startet genau die Staging-Config
+    ok 4 - Starter startet genau die Staging-Config
+      ---
+      duration_ms: 0.07953
+      type: 'test'
+      ...
+    # Subtest: Starter-Prozess: unbekannte Option ⇒ Exit 2, ohne Playwright zu starten
+    ok 5 - Starter-Prozess: unbekannte Option ⇒ Exit 2, ohne Playwright zu starten
+      ---
+      duration_ms: 153.518852
+      type: 'test'
+      ...
+    # Subtest: Starter-Prozess reicht den Exit-Code des gestarteten Kommandos durch
+        # Subtest: Kommando endet mit 0 ⇒ Starter 0; Flags kommen als Umgebung, Staging-Config im frontend-Ordner
+        ok 1 - Kommando endet mit 0 ⇒ Starter 0; Flags kommen als Umgebung, Staging-Config im frontend-Ordner
+          ---
+          duration_ms: 206.633315
+          type: 'test'
+          ...
+        # Subtest: Kommando endet mit 1 bzw. 3 ⇒ Starter endet genauso
+        ok 2 - Kommando endet mit 1 bzw. 3 ⇒ Starter endet genauso
+          ---
+          duration_ms: 304.33986
+          type: 'test'
+          ...
+        # Subtest: Kommando stirbt per Signal ⇒ Starter endet mit 1, nie 0
+        ok 3 - Kommando stirbt per Signal ⇒ Starter endet mit 1, nie 0
+          ---
+          duration_ms: 126.422841
+          type: 'test'
+          ...
+        1..3
+    ok 6 - Starter-Prozess reicht den Exit-Code des gestarteten Kommandos durch
+      ---
+      duration_ms: 637.638086
+      type: 'suite'
+      ...
+    1..6
+ok 51 - F003: Starter übersetzt CLI-Flags und reicht den Exit-Code durch
+  ---
+  duration_ms: 795.930868
+  type: 'suite'
+  ...
+# Subtest: AC-15: die Config bricht mit Prod-URL beim Laden ab (echter Ladevorgang im Unterprozess)
+    # Subtest: Prod-URL ⇒ Abbruch mit Meldung
+    ok 1 - Prod-URL ⇒ Abbruch mit Meldung
+      ---
+      duration_ms: 603.545881
+      type: 'test'
+      ...
+    # Subtest: Staging-URL ⇒ Config lädt
+    ok 2 - Staging-URL ⇒ Config lädt
+      ---
+      duration_ms: 372.44744
+      type: 'test'
+      ...
+    1..2
+ok 52 - AC-15: die Config bricht mit Prod-URL beim Laden ab (echter Ladevorgang im Unterprozess)
+  ---
+  duration_ms: 976.229391
+  type: 'suite'
+  ...
+# Subtest: Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) wirken
+    # Subtest: ladeRegeln liest Freigaben, Besitzer und Ausnahmen (nicht leer)
+    ok 1 - ladeRegeln liest Freigaben, Besitzer und Ausnahmen (nicht leer)
+      ---
+      duration_ms: 5.909501
+      type: 'test'
+      ...
+    # Subtest: ladeRegeln bricht bei element-Besitzer mit unbekannter ID ab und nennt den Eintrag
+    ok 2 - ladeRegeln bricht bei element-Besitzer mit unbekannter ID ab und nennt den Eintrag
+      ---
+      duration_ms: 1.514953
+      type: 'test'
+      ...
+    # Subtest: echte Besitzer-Datei lädt gegen die echte Elementliste
+    ok 3 - echte Besitzer-Datei lädt gegen die echte Elementliste
+      ---
+      duration_ms: 13.593726
+      type: 'test'
+      ...
+    # Subtest: werteLaufAus mit --abnahme: herrenloser Fremdtext ⇒ Exit 1 (abnahme wird durchgereicht)
+    ok 4 - werteLaufAus mit --abnahme: herrenloser Fremdtext ⇒ Exit 1 (abnahme wird durchgereicht)
+      ---
+      duration_ms: 3.646777
+      type: 'test'
+      ...
+    # Subtest: werteLaufAus wendet die Besitzer der Datei an ⇒ Exit 0, Besitzer im geschriebenen Bericht
+    ok 5 - werteLaufAus wendet die Besitzer der Datei an ⇒ Exit 0, Besitzer im geschriebenen Bericht
+      ---
+      duration_ms: 2.495943
+      type: 'test'
+      ...
+    # Subtest: werteLaufAus nur --strict: zusaetzlich allein ⇒ Exit 0; ohne Flags Exit 0
+    ok 6 - werteLaufAus nur --strict: zusaetzlich allein ⇒ Exit 0; ohne Flags Exit 0
+      ---
+      duration_ms: 4.188327
+      type: 'test'
+      ...
+    # Subtest: Fix-Loop 2/3 (Befund 1, F001): werteLaufAus mit Kombi ohne Hub-Marker ⇒ im Bericht; nur --abnahme Exit 1, --strict und ohne Flags 0
+    ok 7 - Fix-Loop 2/3 (Befund 1, F001): werteLaufAus mit Kombi ohne Hub-Marker ⇒ im Bericht; nur --abnahme Exit 1, --strict und ohne Flags 0
+      ---
+      duration_ms: 6.972133
+      type: 'test'
+      ...
+    # Subtest: werteLaufAus wendet Freigaben an (Muster-Freigaben-Datei, abgelöst durch \#2800)
+    ok 8 - werteLaufAus wendet Freigaben an (Muster-Freigaben-Datei, abgelöst durch \#2800)
+      ---
+      duration_ms: 1.715474
+      type: 'test'
+      ...
+    # Subtest: ladeKontoTexte fragt Trip, Vergleich, Orte, Vorlagen ab und sammelt die Namen; Fehlantwort liefert nichts
+    ok 9 - ladeKontoTexte fragt Trip, Vergleich, Orte, Vorlagen ab und sammelt die Namen; Fehlantwort liefert nichts
+      ---
+      duration_ms: 1.175292
+      type: 'test'
+      ...
+    # Subtest: Staging-Spec reicht Regeln, Konto-Texte und Plan vollständig durch (doc-compliance-test)
+    ok 10 - Staging-Spec reicht Regeln, Konto-Texte und Plan vollständig durch (doc-compliance-test)
+      ---
+      duration_ms: 0.82002
+      type: 'test'
+      ...
+    # Subtest: \#2966: Staging-Spec verdrahtet Bedienung, Tripwire und Aufräumen (doc-compliance-test)
+    ok 11 - \#2966: Staging-Spec verdrahtet Bedienung, Tripwire und Aufräumen (doc-compliance-test)
+      ---
+      duration_ms: 0.783012
+      type: 'test'
+      ...
+    # Subtest: Hub-Anker werden je Selektor gezählt, nicht fest verdrahtet oder vertauscht (doc-compliance-test, F003)
+    ok 12 - Hub-Anker werden je Selektor gezählt, nicht fest verdrahtet oder vertauscht (doc-compliance-test, F003)
+      ---
+      duration_ms: 0.739021
+      type: 'test'
+      ...
+    1..12
+ok 53 - Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) wirken
+  ---
+  duration_ms: 44.384434
+  type: 'suite'
+  ...
+# Subtest: \#3192 F003: Staging-Spec setzt die Logik dort ein, wo sie wirkt (doc-compliance-test)
+    # Subtest: F001: addInitScript gibt eingabeText.toString() in den Browser, vor jedem Seitenaufruf (doc-compliance-test)
+    ok 1 - F001: addInitScript gibt eingabeText.toString() in den Browser, vor jedem Seitenaufruf (doc-compliance-test)
+      ---
+      duration_ms: 0.787842
+      type: 'test'
+      ...
+    # Subtest: F001: sichtbareTexte ruft window.__gzEingabeText mit dem echten Tag auf, ohne Inline-Regel (doc-compliance-test)
+    ok 2 - F001: sichtbareTexte ruft window.__gzEingabeText mit dem echten Tag auf, ohne Inline-Regel (doc-compliance-test)
+      ---
+      duration_ms: 0.606632
+      type: 'test'
+      ...
+    # Subtest: F002 (a): seitenId der Bedienung kommt aus seitenIdFuer mit dem echten Abschnitt (doc-compliance-test)
+    ok 3 - F002 (a): seitenId der Bedienung kommt aus seitenIdFuer mit dem echten Abschnitt (doc-compliance-test)
+      ---
+      duration_ms: 0.534591
+      type: 'test'
+      ...
+    # Subtest: F002 (c): wetterPruefPayload für beide Datensätze und beide Arten, eigene Vorlage unverändert (doc-compliance-test)
+    ok 4 - F002 (c): wetterPruefPayload für beide Datensätze und beide Arten, eigene Vorlage unverändert (doc-compliance-test)
+      ---
+      duration_ms: 0.739771
+      type: 'test'
+      ...
+    # Subtest: F002 (b): jede Anlage registriert ihr Aufräumen (doc-compliance-test)
+    ok 5 - F002 (b): jede Anlage registriert ihr Aufräumen (doc-compliance-test)
+      ---
+      duration_ms: 0.42534
+      type: 'test'
+      ...
+    # Subtest: F002 (b): Leckprüfung nach dem Aufräumen, Abruf-Fehler als Befund, expect nicht neutralisiert (doc-compliance-test)
+    ok 6 - F002 (b): Leckprüfung nach dem Aufräumen, Abruf-Fehler als Befund, expect nicht neutralisiert (doc-compliance-test)
+      ---
+      duration_ms: 0.363481
+      type: 'test'
+      ...
+    1..6
+ok 54 - \#3192 F003: Staging-Spec setzt die Logik dort ein, wo sie wirkt (doc-compliance-test)
+  ---
+  duration_ms: 3.699348
+  type: 'suite'
+  ...
+# Subtest: AC-12: Hash-Check Mockup ↔ elementliste.json (ohne Browser)
+    # Subtest: Hash in der JSON entspricht dem SHA-256 der Mockup-Datei
+    ok 1 - Hash in der JSON entspricht dem SHA-256 der Mockup-Datei
+      ---
+      duration_ms: 13.829556
+      type: 'test'
+      ...
+    # Subtest: pruefeHashAktuell: Original grün, veränderte Kopie rot
+    ok 2 - pruefeHashAktuell: Original grün, veränderte Kopie rot
+      ---
+      duration_ms: 26.104299
+      type: 'test'
+      ...
+    1..2
+ok 55 - AC-12: Hash-Check Mockup ↔ elementliste.json (ohne Browser)
+  ---
+  duration_ms: 40.713427
+  type: 'suite'
+  ...
+# Subtest: AC-9: alle Kombinationen Kontext × Zustand × Reiter, Tabelle „Was steht wo“, ohne Mockup-Rahmen
+    # Subtest: jede Soll-Kombination hat mindestens ein Element
+    ok 1 - jede Soll-Kombination hat mindestens ein Element
+      ---
+      duration_ms: 20.568349
+      type: 'test'
+      ...
+    # Subtest: kein Eintrag trägt ein Kanal-Segment, die ersetzte Karte „Inhalt je Kanal und Fläche“ ist weg (ADR-0124)
+    ok 2 - kein Eintrag trägt ein Kanal-Segment, die ersetzte Karte „Inhalt je Kanal und Fläche“ ist weg (ADR-0124)
+      ---
+      duration_ms: 6.354413
+      type: 'test'
+      ...
+    # Subtest: Tabelle „Was steht wo“: nur im Wetter-Reiter, nur normal und Konto mit Lücken, für Trip und Orte
+    ok 3 - Tabelle „Was steht wo“: nur im Wetter-Reiter, nur normal und Konto mit Lücken, für Trip und Orte
+      ---
+      duration_ms: 12.017283
+      type: 'test'
+      ...
+    # Subtest: Stellen der Tabelle: E-Mail, Telegram, SMS und 3-Tages-Ausblick überall; Stundenverlauf nur bei Orte
+    ok 4 - Stellen der Tabelle: E-Mail, Telegram, SMS und 3-Tages-Ausblick überall; Stundenverlauf nur bei Orte
+      ---
+      duration_ms: 8.704248
+      type: 'test'
+      ...
+    # Subtest: keine Texte aus .frame, data-fb oder .tag
+    ok 5 - keine Texte aus .frame, data-fb oder .tag
+      ---
+      duration_ms: 13.898307
+      type: 'test'
+      ...
+    # Subtest: beide Kontexte und alle vier Kanäle sind vertreten (Kanal-Tabelle im Reiter Zustellung)
+    ok 6 - beide Kontexte und alle vier Kanäle sind vertreten (Kanal-Tabelle im Reiter Zustellung)
+      ---
+      duration_ms: 6.045791
+      type: 'test'
+      ...
+    1..6
+ok 56 - AC-9: alle Kombinationen Kontext × Zustand × Reiter, Tabelle „Was steht wo“, ohne Mockup-Rahmen
+  ---
+  duration_ms: 68.046749
+  type: 'suite'
+  ...
+# Subtest: AC-10: Schema je Eintrag, eindeutige IDs, dynamische Texte als ein Element mit Muster
+    # Subtest: jeder Eintrag hat alle Felder mit passenden Typen
+    ok 1 - jeder Eintrag hat alle Felder mit passenden Typen
+      ---
+      duration_ms: 21.796751
+      type: 'test'
+      ...
+    # Subtest: IDs sind eindeutig
+    ok 2 - IDs sind eindeutig
+      ---
+      duration_ms: 10.901941
+      type: 'test'
+      ...
+    # Subtest: Reihenfolge: ordnung ist je Kombination und Abschnitt eindeutig
+    ok 3 - Reihenfolge: ordnung ist je Kombination und Abschnitt eindeutig
+      ---
+      duration_ms: 15.27283
+      type: 'test'
+      ...
+    # Subtest: dynamische Texte: je Kombination und Abschnitt kein Text doppelt, der sich nur in Zahlen unterscheidet
+    ok 4 - dynamische Texte: je Kombination und Abschnitt kein Text doppelt, der sich nur in Zahlen unterscheidet
+      ---
+      duration_ms: 8.493156
+      type: 'test'
+      ...
+    # Subtest: es gibt Elemente mit Muster, und jedes Muster enthält einen Platzhalter
+    ok 5 - es gibt Elemente mit Muster, und jedes Muster enthält einen Platzhalter
+      ---
+      duration_ms: 9.915369
+      type: 'test'
+      ...
+    1..5
+ok 57 - AC-10: Schema je Eintrag, eindeutige IDs, dynamische Texte als ein Element mit Muster
+  ---
+  duration_ms: 66.617117
+  type: 'suite'
+  ...
+# Subtest: AC-11: EN aus dem Katalog — exakter Treffer, Muster, sonst Lücke (nie erfunden)
+    # Subtest: Katalog ist flach und zweisprachig geladen
+    ok 1 - Katalog ist flach und zweisprachig geladen
+      ---
+      duration_ms: 0.14277
+      type: 'test'
+      ...
+    # Subtest: exakter Treffer: EN-Wert desselben Schlüssels
+    ok 2 - exakter Treffer: EN-Wert desselben Schlüssels
+      ---
+      duration_ms: 8.680058
+      type: 'test'
+      ...
+    # Subtest: Musterabgleich: Platzhalter-Text aus dem Katalog liefert das EN-Muster (Platzhalter bleiben, \#2913 C5)
+    ok 3 - Musterabgleich: Platzhalter-Text aus dem Katalog liefert das EN-Muster (Platzhalter bleiben, \#2913 C5)
+      ---
+      duration_ms: 3.352056
+      type: 'test'
+      ...
+    # Subtest: kein Treffer: luecke = true, kein erfundenes EN
+    ok 4 - kein Treffer: luecke = true, kein erfundenes EN
+      ---
+      duration_ms: 5.618881
+      type: 'test'
+      ...
+    # Subtest: in der erzeugten Liste: Lücke ⇔ kein EN; Treffer ⇔ Schlüssel im Katalog
+    ok 5 - in der erzeugten Liste: Lücke ⇔ kein EN; Treffer ⇔ Schlüssel im Katalog
+      ---
+      duration_ms: 6.636133
+      type: 'test'
+      ...
+    # Subtest: der Reitername „Zustellung“ ist in der Liste kein Lückenposten
+    ok 6 - der Reitername „Zustellung“ ist in der Liste kein Lückenposten
+      ---
+      duration_ms: 5.834372
+      type: 'test'
+      ...
+    1..6
+ok 58 - AC-11: EN aus dem Katalog — exakter Treffer, Muster, sonst Lücke (nie erfunden)
+  ---
+  duration_ms: 30.469148
+  type: 'suite'
+  ...
+# Subtest: AC-19: Kopf-Einträge — IDs unverändert
+ok 59 - AC-19: Kopf-Einträge — IDs unverändert
+  ---
+  duration_ms: 12.045803
+  type: 'test'
+  ...
+# Subtest: AC-19: Kopf-Einträge — keine Lücke, i18n_key/text_de/text_en gesetzt und gleich dem Katalog
+ok 60 - AC-19: Kopf-Einträge — keine Lücke, i18n_key/text_de/text_en gesetzt und gleich dem Katalog
+  ---
+  duration_ms: 20.80896
+  type: 'test'
+  ...
+# Subtest: \#3008 F001: Besitzerliste gegen die Elementliste (Kern)
+    # Subtest: AC-1: echter Bestand — leseBesitzer wirft nicht und liefert alle Besitzer-Einträge
+    ok 1 - AC-1: echter Bestand — leseBesitzer wirft nicht und liefert alle Besitzer-Einträge
+      ---
+      duration_ms: 8.068786
+      type: 'test'
+      ...
+    # Subtest: AC-1 (F001 wörtlich): jede Element-ID mit Verweis „\#2913“ steht in der Elementliste
+    ok 2 - AC-1 (F001 wörtlich): jede Element-ID mit Verweis „\#2913“ steht in der Elementliste
+      ---
+      duration_ms: 1.195563
+      type: 'test'
+      ...
+    # Subtest: AC-2: Kopie mit erfundener Element-ID ⇒ Fehler nennt die ID
+    ok 3 - AC-2: Kopie mit erfundener Element-ID ⇒ Fehler nennt die ID
+      ---
+      duration_ms: 4.185608
+      type: 'test'
+      ...
+    # Subtest: AC-3: Kopie mit erfundenem Abschnitt ⇒ Fehler nennt den Abschnitt
+    ok 4 - AC-3: Kopie mit erfundenem Abschnitt ⇒ Fehler nennt den Abschnitt
+      ---
+      duration_ms: 4.594849
+      type: 'test'
+      ...
+    # Subtest: AC-3: Abschnitt existiert, aber nicht in diesem Reiter ⇒ Fehler (Tripel zählt, nicht der Name allein)
+    ok 5 - AC-3: Abschnitt existiert, aber nicht in diesem Reiter ⇒ Fehler (Tripel zählt, nicht der Name allein)
+      ---
+      duration_ms: 5.361361
+      type: 'test'
+      ...
+    # Subtest: AC-3: Kopie mit erfundenem ctx im Abschnitts-Besitzer ⇒ Fehler
+    ok 6 - AC-3: Kopie mit erfundenem ctx im Abschnitts-Besitzer ⇒ Fehler
+      ---
+      duration_ms: 3.507657
+      type: 'test'
+      ...
+    # Subtest: AC-3: alle Abschnitts-Besitzer des echten Bestands nennen ein vorhandenes Tripel
+    ok 7 - AC-3: alle Abschnitts-Besitzer des echten Bestands nennen ein vorhandenes Tripel
+      ---
+      duration_ms: 1.516023
+      type: 'test'
+      ...
+    1..7
+ok 61 - \#3008 F001: Besitzerliste gegen die Elementliste (Kern)
+  ---
+  duration_ms: 29.275556
+  type: 'suite'
+  ...
+# Subtest: F006: EN-Schutzregeln des Generators
+    # Subtest: Wortlaut-Hälfte: „°C · vor der Etappe“ passt nicht zufällig auf „{count} Etappe“
+    ok 1 - Wortlaut-Hälfte: „°C · vor der Etappe“ passt nicht zufällig auf „{count} Etappe“
+      ---
+      duration_ms: 49.665055
+      type: 'test'
+      ...
+    # Subtest: Wortlaut-Hälfte erlaubt echte Muster („Etappe T3 auswählen“)
+    ok 2 - Wortlaut-Hälfte erlaubt echte Muster („Etappe T3 auswählen“)
+      ---
+      duration_ms: 0.48913
+      type: 'test'
+      ...
+    # Subtest: Wertlänge: eingesetzter Wert über 40 Zeichen ⇒ Lücke; bis 40 Zeichen ⇒ Treffer
+    ok 3 - Wertlänge: eingesetzter Wert über 40 Zeichen ⇒ Lücke; bis 40 Zeichen ⇒ Treffer
+      ---
+      duration_ms: 0.415892
+      type: 'test'
+      ...
+    # Subtest: Normalisierung: Leerraum am Rand und doppelte Leerzeichen hindern den exakten Treffer nicht
+    ok 4 - Normalisierung: Leerraum am Rand und doppelte Leerzeichen hindern den exakten Treffer nicht
+      ---
+      duration_ms: 0.11247
+      type: 'test'
+      ...
+    # Subtest: leerer EN-Wert ist kein Treffer (exakt und Muster)
+    ok 5 - leerer EN-Wert ist kein Treffer (exakt und Muster)
+      ---
+      duration_ms: 0.159149
+      type: 'test'
+      ...
+    # Subtest: reines Platzhalter-Muster passt nicht auf alles (Mindest-Wortlaut)
+    ok 6 - reines Platzhalter-Muster passt nicht auf alles (Mindest-Wortlaut)
+      ---
+      duration_ms: 0.240631
+      type: 'test'
+      ...
+    # Subtest: EN mit Platzhalter, den DE nicht liefert, wird nicht verwendet (nichts erfinden)
+    ok 7 - EN mit Platzhalter, den DE nicht liefert, wird nicht verwendet (nichts erfinden)
+      ---
+      duration_ms: 0.197191
+      type: 'test'
+      ...
+    1..7
+ok 62 - F006: EN-Schutzregeln des Generators
+  ---
+  duration_ms: 54.760384
+  type: 'suite'
+  ...
+# Subtest: \#2968 Schnittstelle
+    # Subtest: ladeBekannte liest beide Schnappschüsse (Metriknamen, Token, Eigennamen)
+    ok 1 - ladeBekannte liest beide Schnappschüsse (Metriknamen, Token, Eigennamen)
+      ---
+      duration_ms: 1.116662
+      type: 'test'
+      ...
+    1..1
+ok 63 - \#2968 Schnittstelle
+  ---
+  duration_ms: 5.725971
+  type: 'suite'
+  ...
+# Subtest: \#2968 AC-1 Regel a: Muster mit aufgelösten Werten ohne Wortlaut-Hälfte
+    # Subtest: „Regenwahrscheinlichkeit in SMS“ ⇒ wetter.wsw.zelle.sms, EN-Muster, keine Lücke
+    ok 1 - „Regenwahrscheinlichkeit in SMS“ ⇒ wetter.wsw.zelle.sms, EN-Muster, keine Lücke
+      ---
+      duration_ms: 8.122216
+      type: 'test'
+      ...
+    # Subtest: Gegenbeispiel: unbekannter Wert bei kurzem Wortlaut ⇒ Lücke
+    ok 2 - Gegenbeispiel: unbekannter Wert bei kurzem Wortlaut ⇒ Lücke
+      ---
+      duration_ms: 2.650127
+      type: 'test'
+      ...
+    # Subtest: Regel d: Metrikname zählt nur über den Schnappschuss (Parameter `bekannte`)
+    ok 3 - Regel d: Metrikname zählt nur über den Schnappschuss (Parameter `bekannte`)
+      ---
+      duration_ms: 0.32761
+      type: 'test'
+      ...
+    # Subtest: Zahl mit Einheit ist ein aufgelöster Wert, ein deutscher Satz nicht
+    ok 4 - Zahl mit Einheit ist ein aufgelöster Wert, ein deutscher Satz nicht
+      ---
+      duration_ms: 0.21031
+      type: 'test'
+      ...
+    1..4
+ok 64 - \#2968 AC-1 Regel a: Muster mit aufgelösten Werten ohne Wortlaut-Hälfte
+  ---
+  duration_ms: 11.588382
+  type: 'suite'
+  ...
+# Subtest: \#2968 AC-2 Regel a rekursiv (Tiefe ≤ 2)
+    # Subtest: „Darstellung Böen in Telegram: Roh“ ⇒ bausteine.darstellung.name mit Platzhaltern
+    ok 1 - „Darstellung Böen in Telegram: Roh“ ⇒ bausteine.darstellung.name mit Platzhaltern
+      ---
+      duration_ms: 0.411981
+      type: 'test'
+      ...
+    # Subtest: Gegenbeispiel: unbekannter innerer Wert ⇒ Lücke
+    ok 2 - Gegenbeispiel: unbekannter innerer Wert ⇒ Lücke
+      ---
+      duration_ms: 0.33956
+      type: 'test'
+      ...
+    # Subtest: Tiefe 3 im echten Katalog ⇒ Lücke
+    ok 3 - Tiefe 3 im echten Katalog ⇒ Lücke
+      ---
+      duration_ms: 0.268011
+      type: 'test'
+      ...
+    # Subtest: Tiefe 2 ⇒ Treffer, Tiefe 3 ⇒ Lücke (eindeutiger Mini-Katalog)
+    ok 4 - Tiefe 2 ⇒ Treffer, Tiefe 3 ⇒ Lücke (eindeutiger Mini-Katalog)
+      ---
+      duration_ms: 0.32118
+      type: 'test'
+      ...
+    1..4
+ok 65 - \#2968 AC-2 Regel a rekursiv (Tiefe ≤ 2)
+  ---
+  duration_ms: 1.711653
+  type: 'suite'
+  ...
+# Subtest: \#2968 AC-3 Regel b: Segmente an „ · “
+    # Subtest: „km/h · Mittelwind“ ⇒ aufgelöst, EN der Segmente mit „ · “ verbunden
+    ok 1 - „km/h · Mittelwind“ ⇒ aufgelöst, EN der Segmente mit „ · “ verbunden
+      ---
+      duration_ms: 0.534992
+      type: 'test'
+      ...
+    # Subtest: führendes „· grün: bis 30 km/h“ ⇒ aufgelöst, EN trägt das „· “ mit
+    ok 2 - führendes „· grün: bis 30 km/h“ ⇒ aufgelöst, EN trägt das „· “ mit
+      ---
+      duration_ms: 0.228851
+      type: 'test'
+      ...
+    # Subtest: Gegenbeispiel: ein unbekanntes Segment macht die ganze Zeile zur Lücke
+    ok 3 - Gegenbeispiel: ein unbekanntes Segment macht die ganze Zeile zur Lücke
+      ---
+      duration_ms: 0.258701
+      type: 'test'
+      ...
+    1..3
+ok 66 - \#2968 AC-3 Regel b: Segmente an „ · “
+  ---
+  duration_ms: 1.145653
+  type: 'suite'
+  ...
+# Subtest: \#2968 AC-4 Schutzfall „°C · vor der Etappe“
+    # Subtest: Ist-Katalog: „vor der Etappe“ steht exakt im Katalog ⇒ Treffer über das Segment, nie über „{count} Etappe“
+    ok 1 - Ist-Katalog: „vor der Etappe“ steht exakt im Katalog ⇒ Treffer über das Segment, nie über „{count} Etappe“
+      ---
+      duration_ms: 3.488086
+      type: 'test'
+      ...
+    # Subtest: ohne „vor der Etappe“ im Katalog ⇒ Lücke, obwohl „{count} Etappe“ bleibt
+    ok 2 - ohne „vor der Etappe“ im Katalog ⇒ Lücke, obwohl „{count} Etappe“ bleibt
+      ---
+      duration_ms: 10.73548
+      type: 'test'
+      ...
+    1..2
+ok 67 - \#2968 AC-4 Schutzfall „°C · vor der Etappe“
+  ---
+  duration_ms: 14.380418
+  type: 'suite'
+  ...
+# Subtest: \#2968 AC-5 Regel c: sprachneutral
+    # Subtest: „60%“ ⇒ sprachneutral, text_en = DE-Muster „{zahl}%“
+    ok 1 - „60%“ ⇒ sprachneutral, text_en = DE-Muster „{zahl}%“
+      ---
+      duration_ms: 0.248131
+      type: 'test'
+      ...
+    # Subtest: „+49 171 123“ ⇒ sprachneutral, text_en = DE-Muster „+{zahl} {zahl} {zahl}“
+    ok 2 - „+49 171 123“ ⇒ sprachneutral, text_en = DE-Muster „+{zahl} {zahl} {zahl}“
+      ---
+      duration_ms: 0.1129
+      type: 'test'
+      ...
+    # Subtest: „°C“ ⇒ sprachneutral, text_en = DE-Muster „°C“
+    ok 3 - „°C“ ⇒ sprachneutral, text_en = DE-Muster „°C“
+      ---
+      duration_ms: 0.099592
+      type: 'test'
+      ...
+    # Subtest: „N10“ ⇒ sprachneutral, text_en = DE-Muster „N{zahl}“
+    ok 4 - „N10“ ⇒ sprachneutral, text_en = DE-Muster „N{zahl}“
+      ---
+      duration_ms: 0.14225
+      type: 'test'
+      ...
+    # Subtest: „Münster“ ⇒ sprachneutral, text_en = DE-Muster „Münster“
+    ok 5 - „Münster“ ⇒ sprachneutral, text_en = DE-Muster „Münster“
+      ---
+      duration_ms: 0.11755
+      type: 'test'
+      ...
+    # Subtest: „Gewitter“ ist nie sprachneutral (Katalogtreffer, kein DE als EN)
+    ok 6 - „Gewitter“ ist nie sprachneutral (Katalogtreffer, kein DE als EN)
+      ---
+      duration_ms: 0.09856
+      type: 'test'
+      ...
+    # Subtest: „Gewitter“ ohne Katalogwert ⇒ Lücke, obwohl es ein Metrikname im Schnappschuss ist
+    ok 7 - „Gewitter“ ohne Katalogwert ⇒ Lücke, obwohl es ein Metrikname im Schnappschuss ist
+      ---
+      duration_ms: 12.410394
+      type: 'test'
+      ...
+    # Subtest: deutsches Wort ohne Katalogtreffer ⇒ Lücke, nie sprachneutral
+    ok 8 - deutsches Wort ohne Katalogtreffer ⇒ Lücke, nie sprachneutral
+      ---
+      duration_ms: 0.23292
+      type: 'test'
+      ...
+    # Subtest: „Münster Hauptbahnhof“ (nicht in der Eigennamen-Liste) ⇒ Lücke, nie sprachneutral
+    ok 9 - „Münster Hauptbahnhof“ (nicht in der Eigennamen-Liste) ⇒ Lücke, nie sprachneutral
+      ---
+      duration_ms: 0.18715
+      type: 'test'
+      ...
+    # Subtest: Eigenname zählt nur über die Liste (Parameter `bekannte`)
+    ok 10 - Eigenname zählt nur über die Liste (Parameter `bekannte`)
+      ---
+      duration_ms: 0.159671
+      type: 'test'
+      ...
+    1..10
+ok 68 - \#2968 AC-5 Regel c: sprachneutral
+  ---
+  duration_ms: 14.104856
+  type: 'suite'
+  ...
+# Subtest: \#2968 AC-5 Eigennamen-Schnappschuss
+    # Subtest: jeder Eintrag: normalisiert, mit Quelle, steht im Mockup, ist kein DE-Katalogwert
+    ok 1 - jeder Eintrag: normalisiert, mit Quelle, steht im Mockup, ist kein DE-Katalogwert
+      ---
+      duration_ms: 5.68447
+      type: 'test'
+      ...
+    1..1
+ok 69 - \#2968 AC-5 Eigennamen-Schnappschuss
+  ---
+  duration_ms: 5.76082
+  type: 'suite'
+  ...
+# Subtest: \#2968 AC-6 Abgleich: sprachneutral im EN-Lauf
+    # Subtest: „60%“: andere Zahl passt, fremder Text nicht
+    ok 1 - „60%“: andere Zahl passt, fremder Text nicht
+      ---
+      duration_ms: 0.341201
+      type: 'test'
+      ...
+    # Subtest: „+49 171 123“: andere Ziffern passen, Buchstaben statt Zahl nicht
+    ok 2 - „+49 171 123“: andere Ziffern passen, Buchstaben statt Zahl nicht
+      ---
+      duration_ms: 0.20205
+      type: 'test'
+      ...
+    # Subtest: „Münster“: wörtlich, kein anderer Ort
+    ok 3 - „Münster“: wörtlich, kein anderer Ort
+      ---
+      duration_ms: 0.1308
+      type: 'test'
+      ...
+    1..3
+ok 70 - \#2968 AC-6 Abgleich: sprachneutral im EN-Lauf
+  ---
+  duration_ms: 0.786711
+  type: 'suite'
+  ...
+# Subtest: \#2968 AC-8/AC-9 Messgröße und Besitzer über die eingecheckte Elementliste
+    # Subtest: Lücken ≤ 352 (gemessen, nur Senkung)
+    ok 1 - Lücken ≤ 352 (gemessen, nur Senkung)
+      ---
+      duration_ms: 0.14269
+      type: 'test'
+      ...
+    # Subtest: sprachneutrale Einträge: vorhanden, keine Lücke, text_en = DE-Muster
+    ok 2 - sprachneutrale Einträge: vorhanden, keine Lücke, text_en = DE-Muster
+      ---
+      duration_ms: 0.410781
+      type: 'test'
+      ...
+    # Subtest: jede Lücke hat einen Besitzer (Element-ID oder Abschnitt) mit Verweis ≠ \#2968
+    ok 3 - jede Lücke hat einen Besitzer (Element-ID oder Abschnitt) mit Verweis ≠ \#2968
+      ---
+      duration_ms: 13.009265
+      type: 'test'
+      ...
+    # Subtest: kein Besitzer-Eintrag verweist auf \#2968
+    ok 4 - kein Besitzer-Eintrag verweist auf \#2968
+      ---
+      duration_ms: 1.648083
+      type: 'test'
+      ...
+    1..4
+ok 71 - \#2968 AC-8/AC-9 Messgröße und Besitzer über die eingecheckte Elementliste
+  ---
+  duration_ms: 15.38024
+  type: 'suite'
+  ...
+# Subtest: \#2968 AC-11 Regel e: Katalogwert + Zeichen
+    # Subtest: „gelb >“ ⇒ aufgelöst, EN = EN des Katalogwerts mit demselben Zeichen
+    ok 1 - „gelb >“ ⇒ aufgelöst, EN = EN des Katalogwerts mit demselben Zeichen
+      ---
+      duration_ms: 0.379259
+      type: 'test'
+      ...
+    # Subtest: „rot <“ ⇒ „red <“
+    ok 2 - „rot <“ ⇒ „red <“
+      ---
+      duration_ms: 0.21777
+      type: 'test'
+      ...
+    # Subtest: Gegenbeispiel: unbekanntes Wort + Zeichen („Hagelschauer >“) ⇒ Lücke
+    ok 3 - Gegenbeispiel: unbekanntes Wort + Zeichen („Hagelschauer >“) ⇒ Lücke
+      ---
+      duration_ms: 0.154121
+      type: 'test'
+      ...
+    # Subtest: Gegenbeispiel: Katalogwert + Wort („Fertig Telgte“) ⇒ Lücke
+    ok 4 - Gegenbeispiel: Katalogwert + Wort („Fertig Telgte“) ⇒ Lücke
+      ---
+      duration_ms: 0.197382
+      type: 'test'
+      ...
+    # Subtest: Gegenbeispiel: Katalogwert + Wort („gelb Wind“) ⇒ Lücke
+    ok 5 - Gegenbeispiel: Katalogwert + Wort („gelb Wind“) ⇒ Lücke
+      ---
+      duration_ms: 0.121291
+      type: 'test'
+      ...
+    # Subtest: Gegenbeispiel: Katalogwert + Wort („Fertig Münster“) ⇒ Lücke
+    ok 6 - Gegenbeispiel: Katalogwert + Wort („Fertig Münster“) ⇒ Lücke
+      ---
+      duration_ms: 0.11885
+      type: 'test'
+      ...
+    # Subtest: Gegenbeispiel: zwei Wörter vor dem Zeichen („gelb sehr >“) ⇒ Lücke
+    ok 7 - Gegenbeispiel: zwei Wörter vor dem Zeichen („gelb sehr >“) ⇒ Lücke
+      ---
+      duration_ms: 0.142981
+      type: 'test'
+      ...
+    1..7
+ok 72 - \#2968 AC-11 Regel e: Katalogwert + Zeichen
+  ---
+  duration_ms: 1.554622
+  type: 'suite'
+  ...
+# Subtest: \#2968 F003 Reihenfolge: Katalogtreffer vor sprachneutral
+    # Subtest: „Wind“ ist Katalogwert UND Token ⇒ Katalogtreffer, nicht sprachneutral
+    ok 1 - „Wind“ ist Katalogwert UND Token ⇒ Katalogtreffer, nicht sprachneutral
+      ---
+      duration_ms: 6.367403
+      type: 'test'
+      ...
+    1..1
+ok 73 - \#2968 F003 Reihenfolge: Katalogtreffer vor sprachneutral
+  ---
+  duration_ms: 6.431302
+  type: 'suite'
+  ...
+# Subtest: \#2968 F002/AC-13 Erzeugungsweg baueElemente (ohne Browser)
+    # Subtest: Reiter etappen, Abschnitt liste: Etappentitel ⇒ trip.hub.etappe_titel
+    ok 1 - Reiter etappen, Abschnitt liste: Etappentitel ⇒ trip.hub.etappe_titel
+      ---
+      duration_ms: 10.69376
+      type: 'test'
+      ...
+    # Subtest: derselbe Text in anderem Abschnitt ⇒ kein Listenzeilen-Schlüssel
+    ok 2 - derselbe Text in anderem Abschnitt ⇒ kein Listenzeilen-Schlüssel
+      ---
+      duration_ms: 0.337201
+      type: 'test'
+      ...
+    # Subtest: Reiter orte, Abschnitt liste: „Stadt · 60 m“ ⇒ vergleich.hub.ort_gruppe_hoehe; anderswo Lücke
+    ok 3 - Reiter orte, Abschnitt liste: „Stadt · 60 m“ ⇒ vergleich.hub.ort_gruppe_hoehe; anderswo Lücke
+      ---
+      duration_ms: 0.551861
+      type: 'test'
+      ...
+    # Subtest: Reiter orte, Abschnitt liste: Ortsname ⇒ vergleich.hub.ort_name; im Reiter etappen nicht
+    ok 4 - Reiter orte, Abschnitt liste: Ortsname ⇒ vergleich.hub.ort_name; im Reiter etappen nicht
+      ---
+      duration_ms: 0.29113
+      type: 'test'
+      ...
+    # Subtest: sprachneutraler Text „60%“ ⇒ Eintrag sprachneutral: true, Muster {zahl}%
+    ok 5 - sprachneutraler Text „60%“ ⇒ Eintrag sprachneutral: true, Muster {zahl}%
+      ---
+      duration_ms: 0.14744
+      type: 'test'
+      ...
+    # Subtest: „Fertig“ ⇒ Eintrag text_en_alternativen mit Done und Finished
+    ok 6 - „Fertig“ ⇒ Eintrag text_en_alternativen mit Done und Finished
+      ---
+      duration_ms: 0.127231
+      type: 'test'
+      ...
+    # Subtest: normaler Katalogtreffer ⇒ weder sprachneutral noch text_en_alternativen
+    ok 7 - normaler Katalogtreffer ⇒ weder sprachneutral noch text_en_alternativen
+      ---
+      duration_ms: 0.16268
+      type: 'test'
+      ...
+    # Subtest: Lücke mit Zahl ⇒ Muster mit {zahl} (ohne Katalogtreffer)
+    ok 8 - Lücke mit Zahl ⇒ Muster mit {zahl} (ohne Katalogtreffer)
+      ---
+      duration_ms: 0.182241
+      type: 'test'
+      ...
+    # Subtest: ordnung fortlaufend in DOM-Reihenfolge; Zahlvarianten werden EIN Element
+    ok 9 - ordnung fortlaufend in DOM-Reihenfolge; Zahlvarianten werden EIN Element
+      ---
+      duration_ms: 0.27258
+      type: 'test'
+      ...
+    # Subtest: Listenzeile greift nur ohne allgemeinen Schlüssel: „entfernen“ bleibt vergleich.hub.ort_entfernen
+    ok 10 - Listenzeile greift nur ohne allgemeinen Schlüssel: „entfernen“ bleibt vergleich.hub.ort_entfernen
+      ---
+      duration_ms: 0.105969
+      type: 'test'
+      ...
+    # Subtest: Chip-Rolle ⇒ CHIP_SCHLUESSEL; dieselbe Zeile als Text nicht
+    ok 11 - Chip-Rolle ⇒ CHIP_SCHLUESSEL; dieselbe Zeile als Text nicht
+      ---
+      duration_ms: 0.13969
+      type: 'test'
+      ...
+    1..11
+ok 74 - \#2968 F002/AC-13 Erzeugungsweg baueElemente (ohne Browser)
+  ---
+  duration_ms: 13.279505
+  type: 'suite'
+  ...
+# Subtest: \#2968 AC-12 Regel f: mehrdeutiges EN als Alternativen
+    # Subtest: Generator: „Fertig“ trägt beide EN-Kandidaten (Done, Finished)
+    ok 1 - Generator: „Fertig“ trägt beide EN-Kandidaten (Done, Finished)
+      ---
+      duration_ms: 0.13268
+      type: 'test'
+      ...
+    # Subtest: eindeutiger DE-Text trägt keine Alternativen
+    ok 2 - eindeutiger DE-Text trägt keine Alternativen
+      ---
+      duration_ms: 0.101791
+      type: 'test'
+      ...
+    # Subtest: Abgleich: Erwartung passt auf „Done“ und „Finished“, nicht auf „Ready“
+    ok 3 - Abgleich: Erwartung passt auf „Done“ und „Finished“, nicht auf „Ready“
+      ---
+      duration_ms: 0.22015
+      type: 'test'
+      ...
+    # Subtest: eingecheckte Liste: „Fertig“ im Grenzen-Dialog erwartet auch „Done“
+    ok 4 - eingecheckte Liste: „Fertig“ im Grenzen-Dialog erwartet auch „Done“
+      ---
+      duration_ms: 5.321661
+      type: 'test'
+      ...
+    1..4
+ok 75 - \#2968 AC-12 Regel f: mehrdeutiges EN als Alternativen
+  ---
+  duration_ms: 5.882481
+  type: 'suite'
+  ...
+# Subtest: \#2968 AC-8 Restlücken nur in den Klassen Mockup≠App / ungebaut / Kontodaten
+    # Subtest: keine Restlücke der Klasse „Zusammensetzung im Code“ oder anderer Klassen
+    ok 1 - keine Restlücke der Klasse „Zusammensetzung im Code“ oder anderer Klassen
+      ---
+      duration_ms: 11.073861
+      type: 'test'
+      ...
+    1..1
+ok 76 - \#2968 AC-8 Restlücken nur in den Klassen Mockup≠App / ungebaut / Kontodaten
+  ---
+  duration_ms: 11.138221
+  type: 'suite'
+  ...
+# Subtest: \#2968 AC-10 Lücken je Grund und Doku
+    # Subtest: Zusammenfassung zählt jede Lücke genau einmal, je Klasse und Besitzer, keine ohne Besitzer
+    ok 1 - Zusammenfassung zählt jede Lücke genau einmal, je Klasse und Besitzer, keine ohne Besitzer
+      ---
+      duration_ms: 4.681229
+      type: 'test'
+      ...
+    # Subtest: Gegenprobe: ohne Besitzer-Einträge landet jede Lücke in „ohne Besitzer“
+    ok 2 - Gegenprobe: ohne Besitzer-Einträge landet jede Lücke in „ohne Besitzer“
+      ---
+      duration_ms: 0.274001
+      type: 'test'
+      ...
+    # Subtest: gates_und_ratschen.md beschreibt die Zuordner-Regeln a bis d im Abschnitt Elementliste
+    ok 3 - gates_und_ratschen.md beschreibt die Zuordner-Regeln a bis d im Abschnitt Elementliste
+      ---
+      duration_ms: 1.198012
+      type: 'test'
+      ...
+    1..3
+ok 77 - \#2968 AC-10 Lücken je Grund und Doku
+  ---
+  duration_ms: 6.260813
+  type: 'suite'
+  ...
+# Subtest: \#2973 warteAufHubAnker
+    # Subtest: AC-1: Anker erst beim dritten Zählen ⇒ vollständiger Befund nach drei Zählungen und zwei Pausen
+    ok 1 - AC-1: Anker erst beim dritten Zählen ⇒ vollständiger Befund nach drei Zählungen und zwei Pausen
+      ---
+      duration_ms: 1.142883
+      type: 'test'
+      ...
+    # Subtest: AC-2: Anker fehlt immer, 4 Versuche ⇒ 4 Zählungen, unvollständiger Befund, fail-closed
+    ok 2 - AC-2: Anker fehlt immer, 4 Versuche ⇒ 4 Zählungen, unvollständiger Befund, fail-closed
+      ---
+      duration_ms: 0.24612
+      type: 'test'
+      ...
+    # Subtest: AC-2: Vorgabe sind 10 Versuche
+    ok 3 - AC-2: Vorgabe sind 10 Versuche
+      ---
+      duration_ms: 0.249751
+      type: 'test'
+      ...
+    # Subtest: AC-3: beide Anker sofort da ⇒ genau eine Zählung, kein Warten
+    ok 4 - AC-3: beide Anker sofort da ⇒ genau eine Zählung, kein Warten
+      ---
+      duration_ms: 0.171
+      type: 'test'
+      ...
+    # Subtest: AC-4: texteUnterHub wartet über warteAufHubAnker, bevor es die Texte liest (doc-compliance-test)
+    ok 5 - AC-4: texteUnterHub wartet über warteAufHubAnker, bevor es die Texte liest (doc-compliance-test)
+      ---
+      duration_ms: 0.305131
+      type: 'test'
+      ...
+    1..5
+ok 78 - \#2973 warteAufHubAnker
+  ---
+  duration_ms: 2.913556
+  type: 'suite'
+  ...
+# Subtest: AC-19: Listen-Einträge Etappen/Orte — 76 IDs unverändert
+ok 79 - AC-19: Listen-Einträge Etappen/Orte — 76 IDs unverändert
+  ---
+  duration_ms: 7.725875
+  type: 'test'
+  ...
+# Subtest: AC-19: Listen-Einträge — keine Lücke, i18n_key/text_de/text_en gesetzt und aus dem Katalog
+ok 80 - AC-19: Listen-Einträge — keine Lücke, i18n_key/text_de/text_en gesetzt und aus dem Katalog
+  ---
+  duration_ms: 6.577313
+  type: 'test'
+  ...
+# Subtest: \#3192: „12 Metriken“ bekommt die Mehrzahl-Form, nie die Einzahl
+ok 81 - \#3192: „12 Metriken“ bekommt die Mehrzahl-Form, nie die Einzahl
+  ---
+  duration_ms: 14.312307
+  type: 'test'
+  ...
+# Subtest: \#3192: Vorlagen-Unterzeile „N Metriken · Stichworte“ = Mehrzahl + Katalog-Stichworte
+ok 82 - \#3192: Vorlagen-Unterzeile „N Metriken · Stichworte“ = Mehrzahl + Katalog-Stichworte
+  ---
+  duration_ms: 2.734684
+  type: 'test'
+  ...
+# Subtest: \#3192: pluralPasst wählt `.one` nur für 1, `.other` nur für andere Zahlen
+ok 83 - \#3192: pluralPasst wählt `.one` nur für 1, `.other` nur für andere Zahlen
+  ---
+  duration_ms: 0.12575
+  type: 'test'
+  ...
+# Subtest: AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+ok 84 - AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+  ---
+  duration_ms: 7.818746
+  type: 'test'
+  ...
+# Subtest: AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+ok 85 - AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+  ---
+  duration_ms: 13.357005
+  type: 'test'
+  ...
+# Subtest: AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+ok 86 - AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+  ---
+  duration_ms: 19.109786
+  type: 'test'
+  ...
+# Subtest: AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+ok 87 - AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+  ---
+  duration_ms: 1.985795
+  type: 'test'
+  ...
+# Subtest: AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+ok 88 - AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+  ---
+  duration_ms: 32.647023
+  type: 'test'
+  ...
+1..88
+# tests 354
+# suites 77
+# pass 354
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2894.171758

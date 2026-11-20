@@ -1,0 +1,16 @@
+AUFRUF POST /api/auth/login -> 200
+AUFRUF GET /api/auth/profile -> 200
+AUFRUF POST /api/auth/staging-seed -> 200
+AUFRUF GET /api/trips/gz2967-gr221-mallorca -> 200
+AUFRUF GET /api/metric-presets -> 200
+AUFRUF GET /api/locations/gz2967-muenster -> 200
+AUFRUF GET /api/locations/gz2967-telgte -> 200
+AUFRUF GET /api/locations/gz2967-tecklenburg -> 200
+AUFRUF GET /api/compare/presets -> 200
+AUFRUF GET /api/compare/presets/cp-48200c3e1497b062 -> 200
+AUFRUF GET /api/auth/profile -> 200
+SCHREIBAUFRUFE (ohne Login): 1 ['POST /api/auth/staging-seed']
+DATEN-SCHREIBAUFRUFE: 0 []
+ELEMENTLISTE_TRIP_ID=gz2967-gr221-mallorca
+ELEMENTLISTE_ORTE_ID=cp-48200c3e1497b062
+exit=0
