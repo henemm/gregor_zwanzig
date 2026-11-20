@@ -4,4 +4,15 @@ Commands (German works too):
 TODAY - today's stage weather
 TOMORROW - tomorrow's stage weather
 NOW - rain/storm next 2h
-more: HELP 2
+STORMS - storm risk today
+ROUTE km - rain areas ahead
+RESTDAY n - shift stages n days
+STATUS - today + next stages
+PAUSE 2D - no briefings 2 days/12H
+SKIP - skip next briefing
+STOP - end briefings
+RESUME - restart briefings
+CODES - code meanings
+STARTDATE date - move start
+REPORT evening - send now
+Send a code (e.g. R) for its values.

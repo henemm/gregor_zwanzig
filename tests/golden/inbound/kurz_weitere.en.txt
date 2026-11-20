@@ -54,7 +54,8 @@ TODAY - today
 TOMORROW - tomorrow
 PAUSE - no briefings until RESUME
 RESUME - restart briefings
-more: HELP 2
+CODES - code meanings
+REPORT - all
 ----- vergleich_status -----
 [[Golden Vergleich] Command not available]
 
