@@ -519,3 +519,119 @@ describe('Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) 
 		assert.ok(!/HUB_ANKER|GEGENRICHTUNG_WURZEL/.test(quelle), 'Zählfunktion nutzt Modul-Closures');
 	});
 });
+
+// #3192 Fix-Loop F003 (Adversary Runde 3): Aufrufstellen der Live-Spec für F001/F002. Die Wirkung der Funktionen
+// (eingabeText, seitenIdFuer, wetterPruefPayload, eigeneVorlagePayload, pruefReste) prüft
+// elementliste_abgleich_mockuplage_3192.test.ts; hier wird geprüft, dass die Spec sie dort einsetzt, wo sie wirken.
+describe('#3192 F003: Staging-Spec setzt die Logik dort ein, wo sie wirkt (doc-compliance-test)', () => {
+	const SPEC = () => readFileSync(join(FRONTEND, 'e2e/elementliste-abgleich.staging.spec.ts'), 'utf8');
+	/** Quelltext einer Top-Level-Funktion der Spec (bis zur ersten schließenden Klammer am Zeilenanfang). */
+	const funktion = (spec: string, name: string): string => {
+		const start = spec.search(new RegExp(`^(?:async )?function ${name}\\(`, 'm'));
+		assert.ok(start >= 0, `Funktion ${name} fehlt in der Spec`);
+		const ende = spec.indexOf('\n}\n', start);
+		assert.ok(ende > start, `Ende von ${name} nicht gefunden`);
+		return spec.slice(start, ende + 2);
+	};
+	const testRumpf = (spec: string): string => {
+		const start = spec.indexOf("test('Elementliste gegen Staging");
+		assert.ok(start >= 0, 'Test-Rumpf fehlt');
+		return spec.slice(start);
+	};
+
+	test('F001: addInitScript gibt eingabeText.toString() in den Browser, vor jedem Seitenaufruf (doc-compliance-test)', () => {
+		// doc-compliance-test: Verdrahtung der Live-Spec; Serialisierbarkeit und Regel prüft der Unit-Test von eingabeText.
+		const spec = SPEC();
+		const rumpf = testRumpf(spec);
+		const init = rumpf.search(/await page\.addInitScript\(`window\.__gzEingabeText = \$\{eingabeText\.toString\(\)\};`\);/);
+		assert.ok(init >= 0, 'addInitScript mit eingabeText.toString() fehlt im Test');
+		for (const aufruf of [/await mitAufraeumen\(/, /await seiteLaden\(id\);/, /await page\.goto\(/, /await navigiereImBrowser\(page/]) {
+			const i = rumpf.search(aufruf);
+			assert.ok(i > init, `addInitScript muss vor ${aufruf} stehen`);
+		}
+		assert.equal((spec.match(/__gzEingabeText\s*=/g) ?? []).length, 1, 'genau eine Zuweisung von __gzEingabeText (keine Ersatzregel)');
+		assert.match(spec, /^\s*eingabeText,$/m, 'Spec importiert eingabeText aus der Logik');
+		assert.ok(!/function eingabeText\b/.test(spec), 'Spec darf keine eigene eingabeText-Funktion haben');
+	});
+
+	test('F001: sichtbareTexte ruft window.__gzEingabeText mit dem echten Tag auf, ohne Inline-Regel (doc-compliance-test)', () => {
+		// doc-compliance-test: sichtbareTexte läuft nur im Browser (kein DOM-Parser im Projekt); geprüft wird ihr Quelltext.
+		const f = funktion(SPEC(), 'sichtbareTexte');
+		assert.match(f, /const eingabe = \(window as unknown as \{ __gzEingabeText\?: [^\n]*\}\)\.__gzEingabeText;/);
+		assert.match(f, /if \(typeof eingabe !== 'function'\) throw new Error\(/, 'fehlende Fensterfunktion muss werfen (nie still zurückfallen)');
+		assert.match(
+			f,
+			/eingabe\(\{ tag: el\.tagName, ariaLabel: el\.getAttribute\('aria-label'\), placeholder: el\.getAttribute\('placeholder'\), value: typeof wert === 'string' \? wert : '' \}\)/
+		);
+		assert.match(f, /const wert = \(el as \{ value\?: unknown \}\)\.value;/);
+		assert.match(f, /if \(t\) \{\s*texte\.push\(t\);\s*continue;\s*\}/);
+		for (const inline of [/HTMLTextAreaElement/, /HTMLInputElement/, /'TEXTAREA'/, /'INPUT'/, /getAttribute\('placeholder'\)\s*\|\|/]) {
+			assert.ok(!inline.test(f), `sichtbareTexte spiegelt die Eingabe-Regel inline: ${inline}`);
+		}
+	});
+
+	test('F002 (a): seitenId der Bedienung kommt aus seitenIdFuer mit dem echten Abschnitt (doc-compliance-test)', () => {
+		// doc-compliance-test: Verdrahtung; die Zuordnung Abschnitt -> Datensatz prüft der Unit-Test von seitenIdFuer.
+		const rumpf = testRumpf(SPEC());
+		assert.match(rumpf, /for \(const \[abschnitt, liste\] of zuBedienen\) \{[\s\S]*?const seitenId = k\.reiter === 'wetter' \? seitenIdFuer\(abschnitt, k\.ctx, wetterIds\) : id;/);
+		assert.equal((rumpf.match(/\bseitenId\s*=/g) ?? []).length, 1, 'seitenId wird genau einmal belegt');
+		assert.match(rumpf, /const lauf = await bedieneAbschnitt\(abschnitt, lage, seitenOps\(page, \(\) => seiteLaden\(seitenId\), bedienAnfragen\)\);/);
+		assert.ok(!/datensatzFuerAbschnitt\(/.test(rumpf), 'Spec umgeht seitenIdFuer');
+	});
+
+	test('F002 (c): wetterPruefPayload für beide Datensätze und beide Arten, eigene Vorlage unverändert (doc-compliance-test)', () => {
+		// doc-compliance-test: Verdrahtung; Inhalt der Payloads prüft der Unit-Test von wetterPruefPayload/eigeneVorlagePayload.
+		const spec = SPEC();
+		const f = funktion(spec, 'wetterPruefDaten');
+		assert.match(f, /for \(const d of WETTER_DATENSAETZE\) \{\s*const id = wetterTripId\(d\);\s*const trip = await api\.post\('\/api\/trips', \{ data: wetterPruefPayload\('trip', d, quelle\) \}\);/);
+		assert.match(f, /for \(const d of WETTER_DATENSAETZE\) \{\s*const v = await api\.post\('\/api\/compare\/presets', \{ data: wetterPruefPayload\('orte', d, quelle\) \}\);/);
+		assert.equal((f.match(/wetterPruefPayload\(/g) ?? []).length, 2, 'genau zwei Aufrufe (trip, orte)');
+		assert.match(f, /for \(const kind of \['route', 'vergleich'\] as const\) \{\s*const p = await api\.post\('\/api\/metric-presets', \{ data: eigeneVorlagePayload\(kind\) \}\);/);
+		assert.ok(!/description\s*:/.test(spec), 'Spec überschreibt die Beschreibung der eigenen Vorlage');
+		assert.ok(!/\.\.\.\s*eigeneVorlagePayload\(|\.\.\.\s*wetterPruefPayload\(/.test(spec), 'Payload wird in der Spec überschrieben');
+		assert.ok(!/const WETTER_DATENSAETZE\b/.test(spec), 'Spec definiert die Datensätze nicht selbst');
+	});
+
+	test('F002 (b): jede Anlage registriert ihr Aufräumen (doc-compliance-test)', () => {
+		// doc-compliance-test: Verdrahtung; den Ablauf (finally, auch nach Fehler) prüft der Unit-Test von mitAufraeumen.
+		const spec = SPEC();
+		const w = funktion(spec, 'wetterPruefDaten');
+		assert.match(w, /if \(trip\.ok\(\)\) \{\s*ids\.trip!\[d\] = id;\s*aufraeumen\.push\(\(\) => api\.delete\(`\/api\/trips\/\$\{id\}`\)\);/);
+		assert.match(w, /const ortId = String\(\(await ort\.json\(\)\)\.id\);\s*quelle\.ortIds\.push\(ortId\);\s*aufraeumen\.push\(\(\) => api\.delete\(`\/api\/locations\/\$\{ortId\}`\)\);/);
+		assert.match(w, /const vid = String\(\(await v\.json\(\)\)\.id\);\s*ids\.orte!\[d\] = vid;\s*aufraeumen\.unshift\(\(\) => api\.delete\(`\/api\/compare\/presets\/\$\{vid\}`\)\);/);
+		assert.match(w, /const pid = String\(\(await p\.json\(\)\)\.id\);\s*aufraeumen\.push\(\(\) => api\.delete\(`\/api\/metric-presets\/\$\{encodeURIComponent\(pid\)\}`\)\);/);
+		const p = funktion(spec, 'pruefDaten');
+		assert.match(p, /if \(r\.ok\(\)\) \{\s*ids\.trip = id;\s*aufraeumen\.push\(\(\) => api\.delete\(`\/api\/trips\/\$\{id\}`\)\);/);
+		assert.match(p, /const ortId = String\(\(await ort\.json\(\)\)\.id\);\s*aufraeumen\.push\(\(\) => api\.delete\(`\/api\/locations\/\$\{ortId\}`\)\);/);
+		assert.match(p, /const vid = String\(\(await v\.json\(\)\)\.id\);\s*ids\.orte = vid;\s*aufraeumen\.unshift\(\(\) => api\.delete\(`\/api\/compare\/presets\/\$\{vid\}`\)\);/);
+		assert.match(p, /for \(const f of aufraeumen\) await f\(\)\.catch\(\(\) => \{\}\);/);
+		// Je Anlage (api.post) genau eine Registrierung.
+		for (const [name, f] of [['wetterPruefDaten', w], ['pruefDaten', p]] as const) {
+			const anlagen = (f.match(/await api\.post\(/g) ?? []).length;
+			const registriert = (f.match(/aufraeumen\.(?:push|unshift)\(\(\) => api\.delete\(/g) ?? []).length;
+			assert.equal(registriert, anlagen, `${name}: ${anlagen} Anlagen, ${registriert} Aufräum-Registrierungen`);
+		}
+	});
+
+	test('F002 (b): Leckprüfung nach dem Aufräumen, Abruf-Fehler als Befund, expect nicht neutralisiert (doc-compliance-test)', () => {
+		// doc-compliance-test: Verdrahtung; welche Objekte Reste sind, prüft der Unit-Test von pruefReste.
+		const spec = SPEC();
+		const rumpf = testRumpf(spec);
+		const fin = rumpf.indexOf('} finally {');
+		const auf = rumpf.indexOf('await aufraeumen();', fin);
+		const leck = rumpf.indexOf('leckBefunde = await leckPruefung(api);', fin);
+		const logout = rumpf.indexOf("await api.post('/api/auth/logout')", fin);
+		assert.ok(fin > 0 && rumpf.indexOf('await mitAufraeumen(') < fin, 'mitAufraeumen (Wetter-Prüfdaten) endet vor dem finally');
+		assert.ok(auf > fin && leck > auf && logout > leck, `Reihenfolge finally ${fin} < aufraeumen ${auf} < leckPruefung ${leck} < logout ${logout}`);
+		assert.match(rumpf, /let leckBefunde: string\[\] = \['Leckprüfung nicht gelaufen'\];/);
+		// Neben dem Startwert (Deklaration oben) genau eine Zuweisung: das Ergebnis der Leckprüfung.
+		assert.equal((rumpf.match(/\bleckBefunde\s*=(?!=)/g) ?? []).length, 1, 'leckBefunde nur Startwert und Ergebnis der Leckprüfung');
+		assert.ok(!/leckBefunde\.(?:length\s*=|splice|pop|shift)/.test(rumpf), 'leckBefunde wird geleert');
+		const exp = rumpf.search(/expect\(leckBefunde, `Prüf-Reste nach dem Aufräumen:\\n\$\{leckBefunde\.join\('\\n'\)\}`\)\.toEqual\(\[\]\);/);
+		assert.ok(exp > logout, 'expect(leckBefunde).toEqual([]) fehlt oder steht vor der Leckprüfung');
+		const l = funktion(spec, 'leckPruefung');
+		assert.match(l, /if \(!r\?\.ok\(\)\) \{\s*befunde\.push\(`Abruf \$\{pfad\}/);
+		for (const pfad of ['/api/trips', '/api/compare/presets', '/api/locations', '/api/metric-presets']) assert.ok(l.includes(`await lies('${pfad}')`), `Leckprüfung liest ${pfad} nicht`);
+		assert.match(l, /return \[\.\.\.befunde, \.\.\.pruefReste\(bestand\)\];/);
+	});
+});

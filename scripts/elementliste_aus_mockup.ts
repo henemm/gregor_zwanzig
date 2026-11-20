@@ -212,11 +212,27 @@ function wertAufgeloest(w: string, katalog: Katalog, b: Bekannte, tiefe: number)
 	return tiefe < MAX_TIEFE && musterAufgeloest(v, katalog, b, tiefe + 1) !== null;
 }
 
+/**
+ * #3192: Plural-Schlüssel (`x.one`/`x.other`, implizites `{count}`) passen nur zur Zahl im Text. Im DE-Katalog
+ * steht dieselbe Form teils unter `.one` und `.other` („{count} Metriken“); ohne diese Prüfung gewann der
+ * alphabetisch erste Schlüssel `.one` und das EN-Soll wurde Einzahl („12 Metriken“ ⇒ „{count} metric“).
+ * `.one` gilt nur für den Wert 1, `.other` nur für andere Zahlen; ein nicht-numerischer Wert lässt beide zu.
+ */
+export function pluralPasst(key: string, namen: string[], werte: string[]): boolean {
+	const form = key.endsWith('.one') ? 'one' : key.endsWith('.other') ? 'other' : null;
+	const i = namen.indexOf('count');
+	if (form === null || i < 0) return true;
+	const w = norm(werte[i] ?? '');
+	if (!/^\d+$/.test(w)) return true;
+	return form === 'one' ? Number(w) === 1 : Number(w) !== 1;
+}
+
 /** Regel a: erstes Katalogmuster, dessen eingesetzte Werte alle aufgelöst sind (ohne Wortlaut-Hälfte). */
 function musterAufgeloest(t: string, katalog: Katalog, b: Bekannte, tiefe: number): MusterEintrag | null {
 	for (const m of index(katalog).muster) {
 		const treffer = t.match(m.re);
-		if (treffer && treffer.slice(1).every((w) => wertAufgeloest(w, katalog, b, tiefe))) return m;
+		if (!treffer || !pluralPasst(m.key, m.namen, treffer.slice(1))) continue;
+		if (treffer.slice(1).every((w) => wertAufgeloest(w, katalog, b, tiefe))) return m;
 	}
 	return null;
 }
@@ -229,7 +245,7 @@ function musterAufgeloest(t: string, katalog: Katalog, b: Bekannte, tiefe: numbe
 function musterTreffer(t: string, katalog: Katalog, b: Bekannte): MusterEintrag | null {
 	for (const m of index(katalog).muster) {
 		const treffer = t.match(m.re);
-		if (!treffer) continue;
+		if (!treffer || !pluralPasst(m.key, m.namen, treffer.slice(1))) continue;
 		const werte = treffer.slice(1);
 		if (werte.every((w) => wertAufgeloest(w, katalog, b, 1))) return m;
 		if (m.literal * 2 >= t.length && werte.every((w) => w.length <= 40)) return m;

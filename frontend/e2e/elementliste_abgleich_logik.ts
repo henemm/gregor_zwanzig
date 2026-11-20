@@ -419,8 +419,10 @@ export function bedienPlan(abschnitt: string, lage: BedienLage): BedienPlan {
 		return { art: 'plan', schritte: [{ aktion: 'klick', testid: VORLAGE_PICKER }, LESEN, { aktion: 'schliessen', testid: VORLAGE_PICKER }] };
 	}
 	if (abschnitt === 'vorlage-bestaetigung') {
-		const andere = lage.vorlagen.find((v) => v !== lage.aktiveVorlage);
-		if (!andere) return { art: 'nicht_herstellbar', grund: `Script-Zustand „${abschnitt}“: keine andere Systemvorlage als „${lage.aktiveVorlage}“ für die Wechsel-Frage` };
+		// #3192 (AC-2): Wechselziel der Mockup-Lage je Kontext; „erste andere“ nur ohne Mockup-Ziel.
+		const z = wechselZiel(lage.ctx, lage.vorlagen, lage.aktiveVorlage);
+		if (z.art === 'nicht_herstellbar') return { art: 'nicht_herstellbar', grund: `Script-Zustand „${abschnitt}“: ${z.grund}` };
+		const andere = z.id;
 		return {
 			art: 'plan',
 			schritte: [
@@ -441,6 +443,184 @@ export function bedienPlan(abschnitt: string, lage: BedienLage): BedienPlan {
 		};
 	}
 	return { art: 'nicht_herstellbar', grund: `Script-Zustand „${abschnitt}“: kein Bedienplan im Abgleich hinterlegt` };
+}
+
+/**
+ * #3192 (AC-2): Datenlage des Mockups je Kontext — aktive Systemvorlage, Wechselziel der Bestätigung,
+ * beim Orts-Vergleich die Zahl der Orte („für diese Orte“).
+ */
+export const MOCKUP_LAGE = {
+	trip: { aktiv: 'alpen-trekking', ziel: 'wandern' },
+	orte: { aktiv: 'allgemein', ziel: 'alpen-trekking', orte: 3 }
+};
+
+export type WechselZiel = { art: 'ziel'; id: string } | { art: 'nicht_herstellbar'; grund: string };
+/** #3192 (AC-2): Wechselziel der Vorlagen-Bestätigung; fehlt das Mockup-Ziel, nie still ersetzen. */
+export function wechselZiel(ctx: string, vorlagen: string[], aktiv: string): WechselZiel {
+	const mockup = (MOCKUP_LAGE as Record<string, { ziel: string } | undefined>)[ctx];
+	if (mockup) {
+		if (vorlagen.includes(mockup.ziel)) return { art: 'ziel', id: mockup.ziel };
+		return { art: 'nicht_herstellbar', grund: `Wechselziel „${mockup.ziel}“ der Mockup-Lage (${ctx}) fehlt in der Vorlagenliste` };
+	}
+	const andere = vorlagen.find((v) => v !== aktiv);
+	if (!andere) return { art: 'nicht_herstellbar', grund: `keine andere Systemvorlage als „${aktiv}“ für die Wechsel-Frage` };
+	return { art: 'ziel', id: andere };
+}
+
+/** #3192 (AC-1): Prüf-Datensatz je Abschnitt — Grenzen-Dialoge mit Abweichung, alles andere ohne. */
+export function datensatzFuerAbschnitt(abschnitt: string): 'mit_abweichung' | 'ohne_abweichung' {
+	return abschnitt.startsWith('grenzen-') ? 'mit_abweichung' : 'ohne_abweichung';
+}
+
+type AmpelSeite = { red: number; orange: number; yellow: number };
+export type AmpelMetrik = { lower?: AmpelSeite; upper?: AmpelSeite };
+/**
+ * #3192 (AC-1): gültiger Grenzen-Override je Metrik gemäß `allowed_sides` (lower aufsteigend rot<orange<gelb,
+ * upper aufsteigend gelb<orange<rot, lower unter upper); Gewitter (`level`) über `thunder`.
+ */
+export function wetterOverrides(
+	metriken: string[],
+	eig: Record<string, { allowed_sides: string | null } | undefined>
+): { metrics: Record<string, AmpelMetrik>; thunder?: { mittel: string; hoch: string } } {
+	const metrics: Record<string, AmpelMetrik> = {};
+	let thunder: { mittel: string; hoch: string } | undefined;
+	for (const id of metriken) {
+		const seiten = eig[id]?.allowed_sides ?? null;
+		if (seiten === 'level') {
+			thunder = { mittel: 'yellow', hoch: 'orange' };
+			continue;
+		}
+		const e: AmpelMetrik = {};
+		if (seiten === 'both' || seiten === 'lower') e.lower = { red: 1, orange: 2, yellow: 3 };
+		if (seiten === 'both' || seiten === 'upper') e.upper = { yellow: 10, orange: 20, red: 30 };
+		if (e.lower || e.upper) metrics[id] = e;
+	}
+	return thunder ? { metrics, thunder } : { metrics };
+}
+
+/**
+ * #3192 (AC-4): Text eines Eingabefelds (INPUT und TEXTAREA). Selbstenthalten (keine Verweise auf den
+ * Modul-Scope): die Staging-Spec gibt genau diese Funktion per `eingabeText.toString()` in den Browser,
+ * `sichtbareTexte` ruft sie dort auf (Fix-Loop F001: die wirkende Regel IST die getestete).
+ */
+export function eingabeText(el: { tag: string; ariaLabel: string | null; placeholder: string | null; value: string }): string {
+	if (el.tag !== 'INPUT' && el.tag !== 'TEXTAREA') return '';
+	return el.ariaLabel || el.placeholder || el.value;
+}
+
+/** #3192 (AC-1), Fix-Loop F002: je Kontext zwei Wetter-Prüf-Datensätze. */
+export type WetterDatensatz = 'mit_abweichung' | 'ohne_abweichung';
+export const WETTER_DATENSAETZE: WetterDatensatz[] = ['mit_abweichung', 'ohne_abweichung'];
+export type WetterIds = Record<string, Partial<Record<WetterDatensatz, string>> | null>;
+/** Prüf-Namen und -IDs der Wetter-Prüf-Datensätze (Präfix E2E-GZ; der Prüfkonto-Seed trägt nie diese Namen). */
+export const WETTER_NAME = 'E2E-GZ #2966 Wetter-Prüfung';
+export const WETTER_TRIP_ID = 'e2e-gz-2966-wetter';
+/** #3192 (AC-3): eigene Vorlage je Art wie im Mockup („eigene · aus GR221 gespeichert“), eindeutiger Prüf-Name. */
+export const EIGENE_VORLAGE_NAME = 'E2E-GZ #3192 eigene Vorlage';
+export const EIGENE_VORLAGE_BESCHREIBUNG = 'aus GR221 gespeichert';
+/** Prüf-Datensätze aus `pruefDaten` (nur angelegt, wenn dem Konto Trip bzw. Orts-Vergleich fehlen). */
+export const ABGLEICH_TRIP_ID = 'e2e-gz-2913-abgleich';
+export const ABGLEICH_NAMEN = ['E2E-GZ #2913 Elementlisten-Abgleich', 'E2E-GZ #2913 Ort', 'E2E-GZ #2913 Orte-Abgleich'];
+
+export function wetterTripId(d: WetterDatensatz): string {
+	return `${WETTER_TRIP_ID}-${d === 'mit_abweichung' ? 'mit' : 'ohne'}`;
+}
+export function wetterName(d: WetterDatensatz): string {
+	return `${WETTER_NAME} (${d === 'mit_abweichung' ? 'mit' : 'ohne'} Abweichung)`;
+}
+
+/**
+ * Fix-Loop F002 (a): Seiten-ID eines Bedien-Abschnitts im Reiter Wetter — Grenzen-Abschnitte auf dem Datensatz
+ * mit Abweichung, Vorlage-Abschnitte ohne (über datensatzFuerAbschnitt); fehlt der Datensatz, null (nie ersetzen).
+ */
+export function seitenIdFuer(abschnitt: string, ctx: string, wetterIds: WetterIds): string | null {
+	return wetterIds[ctx]?.[datensatzFuerAbschnitt(abschnitt)] ?? null;
+}
+
+/** Aktive Metriken (`ampel.metrics[*].enabled === true`) einer Systemvorlage aus der Antwort von /api/templates. */
+export function aktiveMetrikenDerVorlage(vorlagen: Record<string, unknown>[], vid: string): string[] {
+	const m = ((vorlagen.find((v) => v.id === vid)?.ampel ?? {}) as { metrics?: Record<string, { enabled?: boolean }> }).metrics ?? {};
+	return Object.entries(m).filter(([, e]) => e?.enabled === true).map(([id]) => id);
+}
+
+export type WetterPruefQuelle = {
+	liste: ListenElement[];
+	/** Antwort von /api/templates (Liste). */
+	vorlagen: Record<string, unknown>[];
+	/** `allowed_sides` je Metrik aus /api/metrics. */
+	eig: Record<string, { allowed_sides: string | null } | undefined>;
+	/** Orts-IDs des Vergleichs (nur ctx orte). */
+	ortIds: string[];
+	/** Datum der Etappe (YYYY-MM-DD, nur ctx trip). */
+	datum: string;
+};
+
+/**
+ * Fix-Loop F002 (c): Anlege-Payload eines Wetter-Prüf-Datensatzes. „ohne Abweichung“: Metrik-Auswahl = aktive
+ * Metriken der Vorlage und Ampel nur mit Vorlage (sonst zählt die Auswahl als Abweichung und die Bestätigung
+ * zeigt den Verlust-Satz); „mit Abweichung“: alle Grenzen-Metriken der Liste im Briefing, dazu gültige Overrides.
+ */
+export function wetterPruefPayload(ctx: 'trip' | 'orte', d: WetterDatensatz, q: WetterPruefQuelle): Record<string, unknown> {
+	const vorlage = MOCKUP_LAGE[ctx].aktiv;
+	const metriken = d === 'mit_abweichung' ? wetterPruefMetriken(q.liste, ctx) : aktiveMetrikenDerVorlage(q.vorlagen, vorlage);
+	const ampel = d === 'mit_abweichung' ? { template: vorlage, ...wetterOverrides(metriken, q.eig) } : { template: vorlage };
+	if (ctx === 'trip') {
+		const id = wetterTripId(d);
+		return {
+			id,
+			name: wetterName(d),
+			region: 'Mallorca',
+			stages: [
+				{
+					id: `${id}-stage-1`,
+					name: 'Etappe 1',
+					date: q.datum,
+					waypoints: [
+						{ id: `${id}-wp-1`, name: 'Start', lat: 39.6, lon: 2.5, elevation_m: 100 },
+						{ id: `${id}-wp-2`, name: 'Ziel', lat: 39.7, lon: 2.6, elevation_m: 600 }
+					]
+				}
+			],
+			display_config: { preset_name: vorlage, metrics: metriken.map((m) => ({ metric_id: m, enabled: true })), ampel }
+		};
+	}
+	return {
+		name: wetterName(d),
+		location_ids: q.ortIds,
+		schedule: 'manual',
+		profil: 'wandern',
+		// Objektform: Katalog-Zeichenketten verwirft der Vergleich (leere Auswahl).
+		display_config: { active_metrics: metriken.map((m) => ({ metric_id: m, aggregation: 'max' })), ampel }
+	};
+}
+
+/** Fix-Loop F002 (c): eigene Prüf-Vorlage je Art wie im Mockup („eigene · aus GR221 gespeichert“). */
+export function eigeneVorlagePayload(kind: 'route' | 'vergleich'): Record<string, unknown> {
+	return { name: EIGENE_VORLAGE_NAME, description: EIGENE_VORLAGE_BESCHREIBUNG, kind, metrics: ['temperature', 'wind'], friendly_ids: [], is_default: false };
+}
+
+export type KontoBestand = {
+	trips: Record<string, unknown>[];
+	vergleiche: Record<string, unknown>[];
+	orte: Record<string, unknown>[];
+	vorlagen: Record<string, unknown>[];
+};
+
+/**
+ * Fix-Loop F002 (b): Prüf-Reste nach dem Aufräumen — Objekte mit den Prüf-Namen bzw. -IDs dieses Abgleichs.
+ * Nur exakte Prüf-Namen/Präfixe zählen; Seed-Daten des Prüfkontos (z. B. „Mallorca Frühling“, GR221,
+ * Münsterland) sind nie ein Rest. Rückgabe: lesbare Liste, leer = kein Leck.
+ */
+export function pruefReste(b: KontoBestand): string[] {
+	const name = (o: Record<string, unknown>) => String(o.name ?? '');
+	const id = (o: Record<string, unknown>) => String(o.id ?? '');
+	const istPruefName = (o: Record<string, unknown>) => name(o).startsWith(WETTER_NAME) || ABGLEICH_NAMEN.includes(name(o));
+	const reste: string[] = [];
+	for (const t of b.trips) if (istPruefName(t) || id(t).startsWith(WETTER_TRIP_ID) || id(t) === ABGLEICH_TRIP_ID) reste.push(`Trip ${id(t)} „${name(t)}“`);
+	for (const v of b.vergleiche) if (istPruefName(v)) reste.push(`Orts-Vergleich ${id(v)} „${name(v)}“`);
+	for (const o of b.orte) if (istPruefName(o)) reste.push(`Ort ${id(o)} „${name(o)}“`);
+	for (const p of b.vorlagen) if (name(p) === EIGENE_VORLAGE_NAME) reste.push(`Vorlage ${id(p)} „${name(p)}“`);
+	return reste;
 }
 
 /** #2966: Weg je Abschnitt vor der Bedienung — lesen, später bedienen (vorab mit allen Metriken) oder nicht herstellbar. */
