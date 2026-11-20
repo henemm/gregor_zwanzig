@@ -150,8 +150,13 @@ for (const kind of HUB_KINDS) {
 			await dialog.getByTestId(WT.dialogBeschreibung).fill('E2E einzeilig');
 			const haken = dialog.getByRole('checkbox', { name: STANDARD_TEXT[kind] });
 			await expect(haken).not.toBeChecked();
-			// ganzer Text klickbar (label.chk im Mockup)
-			await dialog.getByTestId(WT.dialogStandard).getByText(STANDARD_TEXT[kind], { exact: true }).click();
+			// ganzer Text klickbar (label.chk im Mockup): das unsichtbare Kontrollkästchen des Haken-Atoms liegt bewusst
+			// über dem ganzen <label> (Tippfläche ≥ 44 px), es fängt den Klick. Wie ein Nutzer klicken wir daher auf die
+			// sichtbare Fläche über dem Text — Mittelpunkt des Text-Spans, gezielt per Maus, ohne force (Actionability bleibt).
+			const text = dialog.getByTestId(WT.dialogStandard).getByText(STANDARD_TEXT[kind], { exact: true });
+			const tb = await box(text);
+			const labelBox = await box(dialog.getByTestId(WT.dialogStandard));
+			await dialog.getByTestId(WT.dialogStandard).click({ position: { x: tb.x - labelBox.x + tb.width / 2, y: tb.y - labelBox.y + tb.height / 2 } });
 			await expect(haken).toBeChecked();
 
 			const post = page.waitForResponse((r) => r.request().method() === 'POST' && new URL(r.url()).pathname === '/api/metric-presets');

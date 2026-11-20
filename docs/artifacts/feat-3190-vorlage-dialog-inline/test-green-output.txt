@@ -124231,3 +124231,101 @@ ok 2328 - AC-3/AC-5: Versand-Ergebnis folgt der Sprache zum Aufrufzeitpunkt
 # skipped 3
 # todo 1
 # duration_ms 702581.811491
+=== Fix-Loop 2 2026-11-20T15:31:40Z Staging s3a2794-teil3-vorlage-inline ===
+rc=0
+
+Running 5 tests using 1 worker
+
+[1A[2K[1/5] [setup] › e2e/fix-1895-modus-rueckbau.staging.setup.ts:11:1 › authenticate via API (staging) — 1895_modus_rueckbau
+[1A[2K[2/5] [tests] › e2e/s3a2794-teil3-vorlage-inline.spec.ts:35:2 › #3190 (route): Inline-Karte öffnen, umschalten, Escape/Abbrechen mit Fokus-Rückgabe, Picker-Escape unabhängig
+[1A[2K[3/5] [tests] › e2e/s3a2794-teil3-vorlage-inline.spec.ts:138:2 › #3190 AC-5 (route): Speichern mit Beschreibung und angekreuztem Standard (Klick auf den Text)
+[1A[2K[4/5] [tests] › e2e/s3a2794-teil3-vorlage-inline.spec.ts:35:2 › #3190 (vergleich): Inline-Karte öffnen, umschalten, Escape/Abbrechen mit Fokus-Rückgabe, Picker-Escape unabhängig
+[1A[2K[5/5] [tests] › e2e/s3a2794-teil3-vorlage-inline.spec.ts:138:2 › #3190 AC-5 (vergleich): Speichern mit Beschreibung und angekreuztem Standard (Klick auf den Text)
+[1A[2K  5 passed (5.6s)
+=== Fix-Loop 2 2026-11-20T15:31:47Z Staging s3a2794-teil3-design ===
+rc=1
+
+Running 3 tests using 1 worker
+
+[1A[2K[1/3] [setup] › e2e/fix-1895-modus-rueckbau.staging.setup.ts:11:1 › authenticate via API (staging) — 1895_modus_rueckbau
+[1A[2K[2/3] [tests] › e2e/s3a2794-teil3-design.spec.ts:111:2 › AC-40 desktop (Maus) › AC-40 (desktop): beide Kontexte ohne native Controls, Kontrast, Touch-Ziele, gleicher Panel-Rahmen
+[1A[2K  1) [tests] › e2e/s3a2794-teil3-design.spec.ts:111:2 › AC-40 desktop (Maus) › AC-40 (desktop): beide Kontexte ohne native Controls, Kontrast, Touch-Ziele, gleicher Panel-Rahmen 
+
+    Error: AC-40 route-desktop: Touch-Ziele < 44 px
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+    [32m- Expected  -  1[39m
+    [31m+ Received  + 23[39m
+
+    [32m- Array [][39m
+    [31m+ Array [[39m
+    [31m+   "BUTTON: 56×22 „EinfachEinf.“",[39m
+    [31m+   "BUTTON: 32×22 „RohRoh“",[39m
+    [31m+   "BUTTON: 32×22 „RohRoh“",[39m
+    [31m+   "BUTTON: 56×22 „EinfachEinf.“",[39m
+    [31m+   "BUTTON: 32×22 „RohRoh“",[39m
+    [31m+   "BUTTON: 32×22 „RohRoh“",[39m
+    [31m+   "BUTTON: 56×22 „EinfachEinf.“",[39m
+    [31m+   "BUTTON: 32×22 „RohRoh“",[39m
+    [31m+   "BUTTON: 32×22 „RohRoh“",[39m
+    [31m+   "BUTTON: 56×22 „EinfachEinf.“",[39m
+    [31m+   "BUTTON: 32×22 „RohRoh“",[39m
+    [31m+   "BUTTON: 32×22 „RohRoh“",[39m
+    [31m+   "BUTTON: 56×22 „EinfachEinf.“",[39m
+    [31m+   "BUTTON: 56×22 „EinfachEinf.“",[39m
+    [31m+   "BUTTON: 32×22 „RohRoh“",[39m
+    [31m+   "BUTTON: 56×22 „EinfachEinf.“",[39m
+    [31m+   "BUTTON: 56×22 „EinfachEinf.“",[39m
+    [31m+   "BUTTON: 56×22 „EinfachEinf.“",[39m
+    [31m+   "BUTTON: 32×22 „RohRoh“",[39m
+    [31m+   "was-steht-wo-email-format-full: 143×19 „Ausführlich (HTML)“",[39m
+    [31m+   "was-steht-wo-email-format-compact: 142×19 „Kompakt (Nur-Text)“",[39m
+    [31m+ ][39m
+
+      101 | 	const verstoesse = kontrastVerstoesse(await messeKontrast(reiter));
+      102 | 	expect(kontrastBericht(`Reiter Wetter ${wo}`, verstoesse), `AC-40 ${wo}: Kontrast < 4,5:1`).toEqual([]);
+    > 103 | 	expect(await zuKleineZiele(reiter), `AC-40 ${wo}: Touch-Ziele < 44 px`).toEqual([]);
+          | 	                                                                        ^
+      104 | 	await test.info().attach(`wetter-${wo}.png`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
+      105 | 	return reiter;
+      106 | }
+        at pruefeReiter (/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/s3a2794-teil3-design.spec.ts:103:74)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/s3a2794-teil3-design.spec.ts:118:20
+
+    Error Context: test-results/s3a2794-teil3-design-AC-40-9167c-Ziele-gleicher-Panel-Rahmen-tests/error-context.md
+
+
+[1A[2K[3/3] [tests] › e2e/s3a2794-teil3-design.spec.ts:111:2 › AC-40 mobil (Finger) › AC-40 (mobil): beide Kontexte ohne native Controls, Kontrast, Touch-Ziele, gleicher Panel-Rahmen
+[1A[2K  2) [tests] › e2e/s3a2794-teil3-design.spec.ts:111:2 › AC-40 mobil (Finger) › AC-40 (mobil): beide Kontexte ohne native Controls, Kontrast, Touch-Ziele, gleicher Panel-Rahmen 
+
+    Error: AC-40 route-mobil: Touch-Ziele < 44 px
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+    [32m- Expected  - 1[39m
+    [31m+ Received  + 4[39m
+
+    [32m- Array [][39m
+    [31m+ Array [[39m
+    [31m+   "was-steht-wo-email-format-full: 143×36 „Ausführlich (HTML)“",[39m
+    [31m+   "was-steht-wo-email-format-compact: 142×36 „Kompakt (Nur-Text)“",[39m
+    [31m+ ][39m
+
+      101 | 	const verstoesse = kontrastVerstoesse(await messeKontrast(reiter));
+      102 | 	expect(kontrastBericht(`Reiter Wetter ${wo}`, verstoesse), `AC-40 ${wo}: Kontrast < 4,5:1`).toEqual([]);
+    > 103 | 	expect(await zuKleineZiele(reiter), `AC-40 ${wo}: Touch-Ziele < 44 px`).toEqual([]);
+          | 	                                                                        ^
+      104 | 	await test.info().attach(`wetter-${wo}.png`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' });
+      105 | 	return reiter;
+      106 | }
+        at pruefeReiter (/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/s3a2794-teil3-design.spec.ts:103:74)
+        at /home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/s3a2794-teil3-design.spec.ts:118:20
+
+    Error Context: test-results/s3a2794-teil3-design-AC-40-b9be3-Ziele-gleicher-Panel-Rahmen-tests/error-context.md
+
+
+[1A[2K  2 failed
+    [tests] › e2e/s3a2794-teil3-design.spec.ts:111:2 › AC-40 desktop (Maus) › AC-40 (desktop): beide Kontexte ohne native Controls, Kontrast, Touch-Ziele, gleicher Panel-Rahmen 
+    [tests] › e2e/s3a2794-teil3-design.spec.ts:111:2 › AC-40 mobil (Finger) › AC-40 (mobil): beide Kontexte ohne native Controls, Kontrast, Touch-Ziele, gleicher Panel-Rahmen 
+  1 passed (4.7s)

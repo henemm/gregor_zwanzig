@@ -19,6 +19,13 @@ import { HUB_KINDS, kontrastBericht, kontrastVerstoesse, messeKontrast, type Hub
 import { DESKTOP, MOBIL, WT, oeffneWetter, seedWetter } from './s3a2794-teil3.helpers';
 
 const NATIV = 'select, input[type="checkbox"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"], input[type="week"]';
+// Native Controls außerhalb sanktionierter Atome. Das Haken-Atom (`<label data-slot="haken">`, #3122 B3a, ADR-0112) kapselt
+// sein Kontrollkästchen bewusst (Tastatur/Screenreader ohne Zutun) und zählt nicht — weder in der Karte „Was steht wo“
+// (#3122 B3b, seit 0e62c4875) noch im Ankreuzfeld der Vorlage-Karte (#3190). Gegenprobe: ein nacktes
+// `<input type="checkbox">` ohne umschließendes `[data-slot="haken"]` (oder ein `<select>`) im Reiter zählt weiter und macht AC-40 rot.
+async function nativeAusserhalbAtome(wurzel: Locator): Promise<number> {
+	return wurzel.locator(NATIV).evaluateAll((els) => els.filter((e) => !e.closest('[data-slot="haken"]')).length);
+}
 const ZIELE = 'button, [role="radio"], [role="switch"], [role="tab"], a[href]';
 
 // Elemente mit `data-tap="true"` (Atom Switch mit `tap`) und kompakte Segmente (#2913) bleiben sichtbar 36×20 und vergrößern die
@@ -90,7 +97,7 @@ async function pruefeReiter(page: Page, kind: HubKind, id: string, wo: string): 
 	const reiter = await oeffneWetter(page, kind, id);
 	await reiter.getByTestId(WT.anpassenAuf).click();
 	await reiter.getByTestId(WT.zeile('gust')).getByTestId(WT.grenzenAendern('gust')).click();
-	await expect(reiter.locator(NATIV), `AC-40 ${wo}: native Controls im Reiter`).toHaveCount(0);
+	expect(await nativeAusserhalbAtome(reiter), `AC-40 ${wo}: native Controls im Reiter`).toBe(0);
 	const verstoesse = kontrastVerstoesse(await messeKontrast(reiter));
 	expect(kontrastBericht(`Reiter Wetter ${wo}`, verstoesse), `AC-40 ${wo}: Kontrast < 4,5:1`).toEqual([]);
 	expect(await zuKleineZiele(reiter), `AC-40 ${wo}: Touch-Ziele < 44 px`).toEqual([]);
@@ -114,10 +121,8 @@ for (const [name, viewport, finger] of [['desktop', DESKTOP, false], ['mobil', M
 				await reiter.getByTestId(WT.alsEigene).click();
 				const dialog = page.getByTestId(WT.dialog);
 				await expect(dialog).toBeVisible();
-				// #3190: das Ankreuzfeld „Als Standard …“ ist das Haken-Atom (Kontrollkästchen IM Baustein, ADR-0112);
-				// es zählt nicht als natives Control der Karte, seine Tippfläche ist das ganze <label>.
-				const nativ = await dialog.locator(NATIV).evaluateAll((els) => els.filter((e) => !e.closest('[data-slot="haken"]')).length);
-				expect(nativ, `AC-40 ${kind}-${name}: native Controls im Dialog`).toBe(0);
+				// #3190: das Ankreuzfeld „Als Standard …“ ist das Haken-Atom; seine Tippfläche ist das ganze <label>.
+				expect(await nativeAusserhalbAtome(dialog), `AC-40 ${kind}-${name}: native Controls im Dialog`).toBe(0);
 				expect(kontrastBericht(`Dialog ${kind}-${name}`, kontrastVerstoesse(await messeKontrast(dialog)))).toEqual([]);
 				expect(await zuKleineZiele(dialog), `AC-40 ${kind}-${name}: Touch-Ziele im Dialog`).toEqual([]);
 				const haken = await dialog.getByTestId(WT.dialogStandard).boundingBox();

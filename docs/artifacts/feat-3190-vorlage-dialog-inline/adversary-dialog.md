@@ -33,6 +33,10 @@ Datum: 2026-11-20 13:16
 **Adversary:** Fix-Loop 1 geprüft. F001: geteilte Logik vorlageSpeichernKarte.ts, Alt-Editor hat Umschalter, aria-expanded/aria-controls an der PresetBar, Fokus-Rückgabe bei Close und Saved: behoben. F003: Escape-Guard `karteSchliesstPerTaste` behoben (stopPropagation bleibt, Picker-Escape unberührt). Zeilen-Zusammenziehen in WeatherMetricsTab.svelte: keine Wächter-Umgehung, der Wächter prüft weiter Text der Zeile und seine Nummer wurde zusätzlich 2005→2008 nachgeführt (context_herkunft_zweige_eingefroren.test.ts:268/418), nur Stilfrage (LOW, F004: zwei Anweisungen pro Zeile). Goldens: nur Auslöser-Attribute + Dialogblock. Mutationen (sha identisch): aria-expanded an PresetBar weg: 4 rot; Lib-Guard saving weg: 1 rot; Lib-zurueck weg: 2 rot; Lib-toggle: 1 rot. ÜBERLEBT: Fokus-Rückgabe im Alt-Editor weg (onClose/onSaved in WeatherMetricsTab) und saving-Guard-Aufruf in SavePresetDialog.taste durch `close()` ersetzt: nur die reinen Funktionen sind getestet, nicht die Verdrahtung (F002 bleibt für diese Stellen, LOW, nur Staging-E2E).
 **Implementierer:** keine Antwort (Prüflauf).
 
+### Runde 4
+**Adversary:** (A) AC-5-Klick: Klick ohne force auf das Label an der Textmitte; das Haken-Input liegt bewusst über dem ganzen Label (Tippfläche), die Actionability-Prüfung bleibt, der Klick trifft wie beim Nutzer die sichtbare Fläche: ehrlicher Nutzerklick, keine Umgehung; Prüfung `toBeChecked` folgt. (B) nativeAusserhalbAtome: nimmt nur Inputs mit Vorfahr [data-slot="haken"] aus; Mini-Mutation gedanklich gegen den Selektor: ein nacktes input[type=checkbox], select oder date außerhalb des Atoms hat keinen solchen Vorfahren und bleibt in der Zählung, AC-40 rot; Reiter und Dialog jetzt einheitlich. Keine Aufweichung. Rest rot wegen #3212 gehört nicht zu #3190.
+**Implementierer:** keine Antwort (Prüflauf).
+
 ## Herkunft der Vorbedingungen
 
 kein Sprachprofil konfiguriert (`precondition_origins.default_lang`)
@@ -388,6 +392,66 @@ Checklist: 12/12 points proven
 - blob:33ecac7e74cd4d5766506cd526c7999e39389c1c  frontend/e2e/elementliste_abgleich_logik.ts
 - blob:0ba71267581e7977d7ae3e74f24b44f518ffc7cc  frontend/e2e/s3a2794-teil3-design.spec.ts
 - blob:db97429cfae9e1eddd7c2229bcc16c6c2f4c61b4  frontend/e2e/s3a2794-teil3-dialog.spec.ts
+- blob:5b6d10357f6e54d813ff3202824fa9ff23bf8a3a  frontend/src/app.css
+- blob:e27d3a2aa8a90bbc19f86b8a773e484c1568906d  frontend/src/lib/__tests__/bausteine_waechter_regeln.ts
+- blob:a1415faf43451f543415a95f84a79b9f2b97d02e  frontend/src/lib/__tests__/elementliste_abgleich_bedienplan.test.ts
+- blob:2f1cd46f4dcf2937d4aff5a082e1f108c3f05818  frontend/src/lib/__tests__/elementliste_abgleich_verdrahtung.test.ts
+- blob:442991f81913eae0c2d2b4fa5f2d236d81a68079  frontend/src/lib/__tests__/harte_farben_waechter.test.ts
+- blob:462ce8e8a4e4f334298c481ba58d2862e65b6850  frontend/src/lib/components/atoms/Haken.svelte
+- blob:c44d2883805ee9d1f8890618f2c721b68158108c  frontend/src/lib/components/organisms/wetter-tab/VorlageKarte.svelte
+- blob:a811b94d706f4c15e679494161cbd3dd78a16cc7  frontend/src/lib/components/shared/WeatherMetricsTab.svelte
+- blob:44d0f0d8bb8b07cc14f82fd2e0351a35b02c7d15  frontend/src/lib/components/shared/__tests__/context_herkunft_zweige_eingefroren.test.ts
+- blob:a15972578d73c43edb04d1636d52cdb4ffde2af7  frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte
+- blob:56c43e18169e122172810ab7ae6c8a3c4888db56  frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte
+- blob:39a5f0e6dc2880313c33cc1573e044c0284afe60  frontend/src/lib/components/shared/weather-metrics-tab/__tests__/vorlage_speichern_karte_3190.test.ts
+- blob:8a81beedab6568f587ffa32753946b49ee3c7b37  frontend/src/lib/components/shared/weather-metrics-tab/__tests__/wertebereiche_sprache.test.ts
+- blob:76ff0bfff5fbc093f5f20988f232c94bdd31d954  frontend/src/lib/utils/vorlageSpeichernKarte.ts
+- blob:47125906db7d1b46339139217335b15797523d61  tests/golden/f5_wertebereiche/route_voll.de.html
+
+
+Confirmation: Runde 4 Klick
+  Code reference: frontend/e2e/s3a2794-teil3-vorlage-inline.spec.ts:153
+  Evidence: Label-Klick an Textmitte ohne force, Staging 5/5 gruen laut Koordinator.
+  Status: CONFIRMED
+
+Confirmation: Runde 4 Selektor
+  Code reference: frontend/e2e/s3a2794-teil3-design.spec.ts:26
+  Evidence: Ausnahme nur fuer Inputs im [data-slot="haken"]; nackte native Controls zaehlen weiter.
+  Status: CONFIRMED
+
+## Geprüfte Dateien
+
+- sha256:5d7ae014a663c98a1ace569bed7ea6db143712499d646a093c1e003e6533710f  docs/specs/modules/rework_2276_s6h_ac2_endbilanz.md
+- sha256:ac45dd1da9919f7c46ba08f3cf611a0ab5e5841e29d7101b2c2e4677eeeec5d4  frontend/e2e/elementliste-abgleich.staging.spec.ts
+- sha256:12b9a7f12c90b77df35967a0da8e238223ac4a57d52e8f1b8820b542d11baea6  frontend/e2e/elementliste_abgleich_logik.ts
+- sha256:146399ec56882938de4017b673122add60d90ea383584c7b61c757053ffce4fe  frontend/e2e/s3a2794-teil3-design.spec.ts
+- sha256:acedbde36bd29912cab45b29b107657a734c3b36b1daf115e20fc7d806a69efd  frontend/e2e/s3a2794-teil3-dialog.spec.ts
+- sha256:c7646b40567e958dec676ed200622e80024d6a74d1efc1888dba2aa83dda4aa9  frontend/e2e/s3a2794-teil3-vorlage-inline.spec.ts
+- sha256:a675f3ed9e758a866e3e63c9a2c7e31b56890d363007fa32f325ceeaf7f24ec4  frontend/src/app.css
+- sha256:96f4acf957622303307705a989148d4cac4a840a90ff4995ca4b91b6e4d3ec6d  frontend/src/lib/__tests__/bausteine_waechter_regeln.ts
+- sha256:92b7402dce9eeb489cb014a2a1a2a37a97e0141337d78f0bd45ddbcfb5b460a4  frontend/src/lib/__tests__/elementliste_abgleich_bedienplan.test.ts
+- sha256:806c940525ca8482bae365ad804a936647e0230a4f04ba9bb9f541342e53fc7a  frontend/src/lib/__tests__/elementliste_abgleich_verdrahtung.test.ts
+- sha256:aaeaead8d0e4b9c7a9761acd9a0da177b4342f7511ab3d0ccb6c20fc0a7bd76f  frontend/src/lib/__tests__/harte_farben_waechter.test.ts
+- sha256:9c284c023707b163a2f10e1951fb6c6d34b5403db285d55cd61ece97b3e45cd1  frontend/src/lib/components/atoms/Haken.svelte
+- sha256:7d2276aa35d3829323331227ebff904418298864fa56b228e8880aa4abccad7f  frontend/src/lib/components/organisms/wetter-tab/VorlageKarte.svelte
+- sha256:2bd266a1ceab847e37ddd25f297d9438b193ad5bc2e6e6168b7d4bd132412bdf  frontend/src/lib/components/shared/WeatherMetricsTab.svelte
+- sha256:ddac339590ca302635d29057fdaab02d41c1d2a6decd75fd85e01bd7e3f41492  frontend/src/lib/components/shared/__tests__/context_herkunft_zweige_eingefroren.test.ts
+- sha256:af0489bb129927ce0f872f9dd12518855928e15155684a93d3289dd20d4cb405  frontend/src/lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte
+- sha256:f06f70ffb2b80cb0983ae79e15993a5f06bde4da55ce9edc1f3223394344ef40  frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte
+- sha256:5f55f701f03460bb796e332e6926fd60aede2474eb88f188076f94eccdbf73cb  frontend/src/lib/components/shared/weather-metrics-tab/__tests__/vorlage_speichern_karte_3190.test.ts
+- sha256:9c9423d3b7c97911b8bdf8a1bdc433e8a4a8b156db996c5e709210796dfa985b  frontend/src/lib/components/shared/weather-metrics-tab/__tests__/wertebereiche_sprache.test.ts
+- sha256:b3f18ce359b983bc839c4750b7f11787f0bc0acc7d7dc8c3c21399ddd0813744  frontend/src/lib/utils/vorlageSpeichernKarte.ts
+- sha256:2fbd5a117fb10fba3b621f94fc091735b805164433f92abd7f26c706bda67910  tests/golden/f5_wertebereiche/route_voll.de.html
+
+## Prüfbasis
+
+- base: c710ab7ff9939538fe47e9dc6211dd41c1a1834b
+- blob:bfb19916c0980764bfbd4219645dcfcf65d2acb1  docs/specs/modules/rework_2276_s6h_ac2_endbilanz.md
+- blob:21626913992de16d316d67424c11abb10351912d  frontend/e2e/elementliste-abgleich.staging.spec.ts
+- blob:33ecac7e74cd4d5766506cd526c7999e39389c1c  frontend/e2e/elementliste_abgleich_logik.ts
+- blob:fd8bbda4a071a3cea8c55cd3291acf707b71274c  frontend/e2e/s3a2794-teil3-design.spec.ts
+- blob:db97429cfae9e1eddd7c2229bcc16c6c2f4c61b4  frontend/e2e/s3a2794-teil3-dialog.spec.ts
+- blob:4e783a3c14944838ec6ade4930a7a05e7d924e6d  frontend/e2e/s3a2794-teil3-vorlage-inline.spec.ts
 - blob:5b6d10357f6e54d813ff3202824fa9ff23bf8a3a  frontend/src/app.css
 - blob:e27d3a2aa8a90bbc19f86b8a773e484c1568906d  frontend/src/lib/__tests__/bausteine_waechter_regeln.ts
 - blob:a1415faf43451f543415a95f84a79b9f2b97d02e  frontend/src/lib/__tests__/elementliste_abgleich_bedienplan.test.ts
