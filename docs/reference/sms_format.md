@@ -387,7 +387,7 @@ Die Telegram-Kurzform (`telegram_style="kurzform"`, Schalter „Telegram im SMS-
 Der Abweichungs-Alarm (Trip und Ortsvergleich; `alert/render.py::render_sms`) trägt am bestehenden Ereignis-Token die Zeitspanne der betroffenen Stunden als `HH-HH` (Ortszeit, z. B. `14-16`). Die Stufen-Tokens (z. B. `TH:M->H`) bleiben unverändert; die Spanne ist **additiv**.
 
 - **Bindestrich:** ASCII-Bindestrich `-`, nie Gedankenstrich — ein `–` kippt die SMS auf UCS-2 (70 Zeichen, #1796). Der Gedankenstrich in „betroffen HH:MM–HH:MM" gilt nur für E-Mail und Telegram.
-- **Keine Stundenzeilen:** SMS und Premium-SMS (gleicher Text, `premium_sms_format.md`) tragen nur die Spanne, keine Einzelwerte. Länge weiter ≤ 160 Zeichen.
+- **Keine Stundenzeilen:** SMS und Premium-SMS (gleicher Text, `premium_sms_format.md`) tragen nur die Spanne, keine Einzelwerte. Länge: SMS ≤ 160 Zeichen, Premium-SMS ≤ 153 (#3100, `premium_sms_format.md` §1).
 - **Ohne Stundenreihe** (kein Anker, keine frische Reihe) entfällt die Spanne, der Text ist byte-gleich zu vorher.
 - Auswahl der betroffenen Stunden (`src/output/renderers/alert/hours.py`): Metrik mit Stufe = Stufenwechsel, Metrik ohne Stufe = Stundendifferenz ≥ Alarmschwelle; Spanne = erste bis letzte betroffene Stunde. Nur Daten, keine Empfehlung.
 
@@ -852,7 +852,7 @@ Diese Token-Zeile ist die **einzige verbindliche Repräsentation** der Wetterzus
 
 | Channel | Verwendung |
 |---------|-----------|
-| SMS / Satellit | 1:1 die Token-Zeile (≤160 Zeichen) |
+| SMS / Satellit | 1:1 die Token-Zeile (≤160 Zeichen; Premium-SMS ≤153, `premium_sms_format.md`) |
 | E-Mail Subject | Auszug: `{Etappe} – {ReportType} – {MainRisk} – D{val} W{val} G{val} TH:{level}` |
 | E-Mail Body | Token-Zeile als erstes, danach human-readable Summary + Tabellen |
 | Push-Notification | Auszug der Token-Zeile (Titel) + Long-Form (Body) |

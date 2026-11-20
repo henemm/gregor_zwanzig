@@ -101,7 +101,7 @@ Gross-/Kleinschreibung ist egal. Der Befehl muss in der **ersten nicht-leeren Ze
 Jeder Befehl hat seit Issue #2417 ein englisches Wort, das auf allen drei Kanälen wirkt — deutsch funktioniert weiterhin. Die **Antwortsprache** folgt aber nicht der Eingabesprache, sondern dem Kanal/Ziel:
 
 - **E-Mail** antwortet immer deutsch.
-- **Premium-SMS** antwortet immer englisch.
+- **Premium-SMS** antwortet immer englisch. Jede Antwort ist genau eine Nachricht von höchstens 153 Zeichen; HILFE/HELP und KUERZEL/CODES sind seitenweise (Folgeseite z. B. `HELP 2`), Details in `docs/reference/premium_sms_format.md` §4 (#3133).
 - **Telegram** folgt dem `telegram_style` des aufgelösten Ziels (Trip oder Ortsvergleich): `kurzform` → englisch, sonst deutsch.
 - Bei **zielosen Befehlen** (`HILFE`/`HELP`, `KUERZEL`/`CODES`, ohne aufgelösten Trip/Ortsvergleich) folgt Telegram dem gesendeten Wort: `HELP`/`CODES` antworten englisch, `HILFE`/`KUERZEL` deutsch.
 - Ein **unbekannter Befehl** bekommt auf Telegram deutschen Text mit dem Zusatz „English: send HELP"; auf Premium-SMS ist er immer englisch.
