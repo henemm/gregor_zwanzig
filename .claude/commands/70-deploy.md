@@ -16,6 +16,18 @@ BROKEN, Selftest-Exit ≠ 0) — dann eskalieren mit konkretem Befund statt weit
   AMBIGUOUS mit ausdruecklichem PO-OK)
 - Arbeitsbaum sauber, Branch auf `origin/main` (der Rebase-Waechter blockt sonst den Commit)
 
+## Status für die Seitenleiste (#2873)
+
+Die Herdr-Seitenleiste zeigt den Deploy-Stand nur, wenn er gemeldet wird. `WF` ist
+`python3 <plugin>/core/hooks/workflow.py` (Pfad wie in den Plugin-Befehlen, nicht im Worktree):
+
+- **beim Start dieses Befehls:** `$WF deploy-status running`
+- **nach Schritt 4b mit Exit 0** (bzw. bei der Doku-Ausnahme ohne Prod-Deploy): `$WF deploy-status done`
+- **bei jedem Abbruch an einem Hard Gate** (Staging BROKEN, Deploy-Skript ≠ 0, Selftest ≠ 0):
+  `$WF deploy-status failed`
+
+Nach `finish` (Archiv) mit Issue-Nummer: `$WF deploy-status done <N>`.
+
 ## Schritt 1 — Branch pushen, PR mergen (PO-go 2026-08-05: kein Direkt-Push auf main)
 
 ```bash
@@ -93,7 +105,8 @@ ActiveEnterTimestamp`, `/api/health`.
 
 ## Schritt 5 — Abschluss
 
-1. `workflow.py write-log success`, dann `workflow.py finish`
+1. `workflow.py deploy-status done` (Seitenleiste, siehe oben), `workflow.py write-log success`,
+   dann `workflow.py finish`
 2. Ergebnis-Kommentar ans Issue: was live ist, was nachgewiesen wurde, **was offen blieb**,
    abgeleitete Meldungen
 3. `gh issue close <N>` — **nur** wenn 4b Exit 0 lieferte **und** wirklich alles erledigt ist.
