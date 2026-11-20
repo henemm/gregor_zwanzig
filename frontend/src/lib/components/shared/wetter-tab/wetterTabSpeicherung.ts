@@ -19,7 +19,7 @@ import { baueWetterMetrikenSpeicherung, mitKonfliktSchluessel } from '../tripSpe
 import { tripSpeicherPayload, vergleichSpeicherPayload } from './ampelSchreiben.ts';
 import type { AltSchluessel, VorlagenAmpeln } from './ampelModell.ts';
 import type { WarnFelder } from './amtlicheWarnungen.ts';
-import type { AboSicht, WetterStand } from './wetterZustand.ts';
+import { vorlageImKontext, type AboSicht, type WetterStand } from './wetterZustand.ts';
 
 /** Besitzer des Speicher-Platzes im Controller (nie die Reiterkennung `wetter`, s. Owner-Waechter). */
 export const WETTER_OWNER = 'wetter-ampel';
@@ -65,10 +65,11 @@ export type Speicherer = { melden(): void };
 export function tripNutzlast(o: SpeicherOptionen) {
 	const s = o.stand();
 	const abo = o.abo();
-	const v = o.vorlagen();
+	// #3193: gespeichert wird die Abweichung gegen die Vorlage im Kontext (wie der Zaehler).
+	const basis = vorlageImKontext(s, o.vorlagen(), 'route', o.altSchluessel);
 	const teile = tripSpeicherPayload({
-		vorlage: v[s.vorlageId],
-		aufgeloest: s.ampel,
+		vorlage: basis.vorlage,
+		aufgeloest: basis.aufgeloest,
 		auswahl: s.auswahl,
 		displayConfig: (abo.display_config ?? {}) as Parameters<typeof tripSpeicherPayload>[0]['displayConfig'],
 		reportConfig: abo.report_config ?? {},
@@ -84,9 +85,10 @@ export function tripNutzlast(o: SpeicherOptionen) {
 export function vergleichNutzlast(o: SpeicherOptionen) {
 	const s = o.stand();
 	const abo = o.abo();
+	const basis = vorlageImKontext(s, o.vorlagen(), 'vergleich', o.altSchluessel);
 	const voll = vergleichSpeicherPayload({
-		vorlage: o.vorlagen()[s.vorlageId],
-		aufgeloest: s.ampel,
+		vorlage: basis.vorlage,
+		aufgeloest: basis.aufgeloest,
 		auswahl: s.auswahl,
 		displayConfig: (abo.display_config ?? {}) as Parameters<typeof vergleichSpeicherPayload>[0]['displayConfig'],
 		aggregationFuer: o.aggregationFuer ?? (() => 'max'),

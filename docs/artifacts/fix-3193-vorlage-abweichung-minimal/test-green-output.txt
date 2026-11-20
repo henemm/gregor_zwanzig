@@ -1,0 +1,59 @@
+== GREEN fix-3193-vorlage-abweichung-minimal (2026-11-20) ==
+
+== 1. Kern-Test (cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts) ==
+ok 1 - Messaufbau (vorlagen_und_katalog_tragen_den_befund)
+ok 2 - Test 1 (route): 14/14 ok (uebernehmen/zuruecksetzen x alpen-trekking, wandern, skitouren, wintersport, radtour, wassersport, allgemein)
+ok 3 - Test 1 (vergleich): 14/14 ok (dieselben 7 Vorlagen x uebernehmen/zuruecksetzen)
+ok 4 - Tests 2/3: trip_minus_temperature_day_low_genau_eine_abweichung, vergleich_minus_gust_genau_eine_abweichung
+ok 5 - Test 4: vergleich_bestand_temperature_night_bleibt_gesperrt_und_zaehlt_nicht
+ok 6 - Test 5 (route): rausch_bestand_laedt_mit_null_und_schreibt_nichts, rausch_weg_nach_alarmstufe_uebrige_felder_erhalten
+ok 7 - Test 5 (vergleich): rausch_bestand_laedt_mit_null_und_schreibt_nichts, rausch_weg_nach_alarmstufe_uebrige_felder_erhalten
+ok 8 - Test 6: vergleich_ohne_katalog_kein_absturz
+# tests 37
+# suites 8
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+
+== 2. Gesamtlauf (cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test 'src/lib/**/__tests__/*.test.ts') ==
+# tests 8354
+# suites 1758
+# pass 8350
+# fail 0
+# cancelled 0
+# skipped 3
+# todo 1
+# duration_ms 315801.451121
+
+== 3. npx svelte-check --threshold error ==
+COMPLETED 2277 FILES 34 ERRORS 83 WARNINGS 54 FILES_WITH_PROBLEMS
+Keiner der 34 Fehler liegt in wetterZustand.ts, wetterTabSpeicherung.ts, WetterTabInhalt.svelte oder dem neuen Kern-Test (geprueft per --output machine | grep).
+
+== 4. tsc-Typcheck frontend/e2e/s3a2794-teil3-vorlage.spec.ts (Konfiguration e2e/tsconfig.check.json, nur diese Datei) ==
+src/lib/components/trip-detail/metricsEditor.ts(8,34): error TS2307: Cannot find module '$lib/types' or its corresponding type declarations.
+-> vorbestehend: SvelteKit-Alias $lib in metricsEditor.ts (ueber den Import in s3a2794-teil3.helpers.ts); in der geaenderten Spec selbst kein Fehler.
+
+== Fix-Loop 1 (Adversary F001: Basis in aboAmpel unbewacht) ==
+Neu im Kern-Test: describe 'Test 7: eigene Vorlage (aboAmpel) misst gegen die Vorlage im Kontext'
+  ok - trip_uebernehmen_wandern_aboampel_mit_abgeleiteten_kindern
+  ok - vergleich_uebernehmen_wandern_aboampel_temperature_night_neutral
+Kern-Test fix_3193: # pass 39  # fail 0
+
+Mutations-Gegenprobe (externe Sicherungskopie, keine git-Befehle):
+  sha256 vorher  2971dd5ce2d270459d4e13525369bfe48077060c850ed66456f980dad4d37ad5  WetterTabInhalt.svelte
+  Mutation: aboAmpel = verschmelzen(vorlagen[stand.vorlageId], Z.mengeVon(...))  (Basis entfernt)
+    not ok 1 - trip_uebernehmen_wandern_aboampel_mit_abgeleiteten_kindern
+    not ok 2 - vergleich_uebernehmen_wandern_aboampel_temperature_night_neutral
+    # pass 37  # fail 2
+  wiederhergestellt aus Kopie, sha256 nachher 2971dd5ce2d270459d4e13525369bfe48077060c850ed66456f980dad4d37ad5 (identisch)
+
+Gesamtlauf nach Fix-Loop 1 ('src/lib/**/__tests__/*.test.ts'):
+# tests 8356
+# suites 1759
+# pass 8352
+# fail 0
+# cancelled 0
+# skipped 3
+# todo 1

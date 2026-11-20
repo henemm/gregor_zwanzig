@@ -106,7 +106,7 @@
 		};
 	}
 	const melden = () => (createMode ? anlegeSpeicherer(optionen(), context) : SPEICHERER[context](optionen())).melden();
-	const signatur = (s: Z.WetterStand) => JSON.stringify([Z.mengeVon(s, daten!.vorlagen), s.auswahl, s.warnungenAn, s.radarAn, s.tagesfenster]);
+	const signatur = (s: Z.WetterStand) => JSON.stringify([Z.mengeVon(s, daten!.vorlagen, context, altSchluessel), s.auswahl, s.warnungenAn, s.radarAn, s.tagesfenster]);
 
 	async function laden(): Promise<void> {
 		phase = 'laedt';
@@ -214,8 +214,8 @@
 
 	const anzeige = $derived(stand ? Z.mitEntwurf(stand, entwurf, true) : null);
 	const vorlagen = $derived(daten?.vorlagen ?? {});
-	const abweichungen = $derived(anzeige && daten ? Z.abweichungenVon(anzeige, vorlagen, context) : 0);
-	const anzeigeMenge = $derived(anzeige && daten ? Z.mengeVon(anzeige, vorlagen) : null);
+	const abweichungen = $derived(anzeige && daten ? Z.abweichungenVon(anzeige, vorlagen, context, altSchluessel) : 0);
+	const anzeigeMenge = $derived(anzeige && daten ? Z.mengeVon(anzeige, vorlagen, context, altSchluessel) : null);
 	// #3047 E6: nur ausgebbare Groessen sind Zeilen; gespeicherte, nicht ausgebbare stehen gesperrt mit Grund.
 	const teile = $derived(anzeige ? ausgebbarTeilen(context, anzeige.auswahl, katalogIds) : { zeilen: [], gesperrt: [] });
 	const gruppen = $derived(anzeige && daten ? zeilenGruppen(teile.zeilen, daten.eig) : []);
@@ -226,7 +226,8 @@
 			? briefingAngebot(context, daten.eig, anzeige.auswahl, katalogIds).map((id) => ({ id, name: name(id) }))
 			: []
 	);
-	const aboAmpel = $derived(stand && daten ? verschmelzen(vorlagen[stand.vorlageId], Z.mengeVon(stand, vorlagen)) : {});
+	// #3193: dieselbe Basis wie Zaehler und Speicherweg (die Kinder leitet `mitEigenerVorlage` beim Anwenden wieder ab).
+	const aboAmpel = $derived(stand && daten ? verschmelzen(Z.vorlageImKontext(stand, vorlagen, context, altSchluessel).vorlage, Z.mengeVon(stand, vorlagen, context, altSchluessel)) : {});
 	const vorlageLabel = $derived(daten?.liste.find((v) => v.id === stand?.vorlageId)?.label ?? stand?.vorlageId ?? '');
 
 	/** Weicht die Zeile in Grenzen (bzw. Gewitterfarben) von der Vorlage ab? */

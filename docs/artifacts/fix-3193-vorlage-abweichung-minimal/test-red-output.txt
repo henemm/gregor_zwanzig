@@ -1,0 +1,1238 @@
+TAP version 13
+# Subtest: Messaufbau
+    # Subtest: vorlagen_und_katalog_tragen_den_befund
+    ok 1 - vorlagen_und_katalog_tragen_den_befund
+      ---
+      duration_ms: 2.018146
+      type: 'test'
+      ...
+    1..1
+ok 1 - Messaufbau
+  ---
+  duration_ms: 3.6716
+  type: 'suite'
+  ...
+# Subtest: Test 1 (route): Übernehmen und Zurücksetzen speichern keine Abweichung (AC-1/AC-2)
+    # Subtest: route_uebernehmen_alpen-trekking_null_abweichungen_und_leere_ampel
+    not ok 1 - route_uebernehmen_alpen-trekking_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 169.89388
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/alpen-trekking: gespeicherte Abweichung nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_high: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_night: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'alpen-trekking'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'alpen-trekking'
+      actual:
+        template: 'alpen-trekking'
+        metrics:
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+          wind_chill_night:
+            enabled: true
+          wind_chill_day_low:
+            enabled: true
+          wind_chill_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:166:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_zuruecksetzen_alpen-trekking_null_abweichungen_und_leere_ampel
+    not ok 2 - route_zuruecksetzen_alpen-trekking_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 73.087476
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/alpen-trekking: gespeicherte Abweichung nach Zurücksetzen nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_high: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_night: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'alpen-trekking'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'alpen-trekking'
+      actual:
+        template: 'alpen-trekking'
+        metrics:
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+          wind_chill_night:
+            enabled: true
+          wind_chill_day_low:
+            enabled: true
+          wind_chill_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:174:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_uebernehmen_wandern_null_abweichungen_und_leere_ampel
+    not ok 3 - route_uebernehmen_wandern_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 47.980881
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/wandern: gespeicherte Abweichung nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'wandern'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'wandern'
+      actual:
+        template: 'wandern'
+        metrics:
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:166:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_zuruecksetzen_wandern_null_abweichungen_und_leere_ampel
+    not ok 4 - route_zuruecksetzen_wandern_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 47.21981
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/wandern: gespeicherte Abweichung nach Zurücksetzen nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'wandern'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'wandern'
+      actual:
+        template: 'wandern'
+        metrics:
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:174:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_uebernehmen_skitouren_null_abweichungen_und_leere_ampel
+    not ok 5 - route_uebernehmen_skitouren_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 36.363032
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/skitouren: gespeicherte Abweichung nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_high: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_night: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'skitouren'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'skitouren'
+      actual:
+        template: 'skitouren'
+        metrics:
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+          wind_chill_night:
+            enabled: true
+          wind_chill_day_low:
+            enabled: true
+          wind_chill_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:166:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_zuruecksetzen_skitouren_null_abweichungen_und_leere_ampel
+    not ok 6 - route_zuruecksetzen_skitouren_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 32.586983
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/skitouren: gespeicherte Abweichung nach Zurücksetzen nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_high: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_night: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'skitouren'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'skitouren'
+      actual:
+        template: 'skitouren'
+        metrics:
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+          wind_chill_night:
+            enabled: true
+          wind_chill_day_low:
+            enabled: true
+          wind_chill_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:174:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_uebernehmen_wintersport_null_abweichungen_und_leere_ampel
+    not ok 7 - route_uebernehmen_wintersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 25.430363
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/wintersport: gespeicherte Abweichung nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_high: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_night: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'wintersport'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'wintersport'
+      actual:
+        template: 'wintersport'
+        metrics:
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+          wind_chill_night:
+            enabled: true
+          wind_chill_day_low:
+            enabled: true
+          wind_chill_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:166:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_zuruecksetzen_wintersport_null_abweichungen_und_leere_ampel
+    not ok 8 - route_zuruecksetzen_wintersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 24.893573
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/wintersport: gespeicherte Abweichung nach Zurücksetzen nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_high: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_night: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'wintersport'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'wintersport'
+      actual:
+        template: 'wintersport'
+        metrics:
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+          wind_chill_night:
+            enabled: true
+          wind_chill_day_low:
+            enabled: true
+          wind_chill_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:174:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_uebernehmen_radtour_null_abweichungen_und_leere_ampel
+    not ok 9 - route_uebernehmen_radtour_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 24.433252
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/radtour: gespeicherte Abweichung nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_high: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_night: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'radtour'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'radtour'
+      actual:
+        template: 'radtour'
+        metrics:
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+          wind_chill_night:
+            enabled: true
+          wind_chill_day_low:
+            enabled: true
+          wind_chill_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:166:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_zuruecksetzen_radtour_null_abweichungen_und_leere_ampel
+    not ok 10 - route_zuruecksetzen_radtour_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 23.722211
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/radtour: gespeicherte Abweichung nach Zurücksetzen nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_high: {
+        +       enabled: true
+        +     },
+        +     wind_chill_day_low: {
+        +       enabled: true
+        +     },
+        +     wind_chill_night: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'radtour'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'radtour'
+      actual:
+        template: 'radtour'
+        metrics:
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+          wind_chill_night:
+            enabled: true
+          wind_chill_day_low:
+            enabled: true
+          wind_chill_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:174:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_uebernehmen_wassersport_null_abweichungen_und_leere_ampel
+    not ok 11 - route_uebernehmen_wassersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 45.093694
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/wassersport: gespeicherte Abweichung nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'wassersport'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'wassersport'
+      actual:
+        template: 'wassersport'
+        metrics:
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:166:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_zuruecksetzen_wassersport_null_abweichungen_und_leere_ampel
+    not ok 12 - route_zuruecksetzen_wassersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 23.136598
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/wassersport: gespeicherte Abweichung nach Zurücksetzen nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'wassersport'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'wassersport'
+      actual:
+        template: 'wassersport'
+        metrics:
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:174:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_uebernehmen_allgemein_null_abweichungen_und_leere_ampel
+    not ok 13 - route_uebernehmen_allgemein_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 27.789049
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/allgemein: gespeicherte Abweichung nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     },
+        +     temperature_night: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'allgemein'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'allgemein'
+      actual:
+        template: 'allgemein'
+        metrics:
+          temperature_night:
+            enabled: true
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:166:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route_zuruecksetzen_allgemein_null_abweichungen_und_leere_ampel
+    not ok 14 - route_zuruecksetzen_allgemein_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 35.99601
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        route/allgemein: gespeicherte Abweichung nach Zurücksetzen nicht leer
+        + actual - expected
+        
+          {
+        +   metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     },
+        +     temperature_night: {
+        +       enabled: true
+        +     }
+        +   },
+            template: 'allgemein'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'allgemein'
+      actual:
+        template: 'allgemein'
+        metrics:
+          temperature_night:
+            enabled: true
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:174:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..14
+not ok 2 - Test 1 (route): Übernehmen und Zurücksetzen speichern keine Abweichung (AC-1/AC-2)
+  ---
+  duration_ms: 639.063007
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:159:2'
+  failureType: 'subtestsFailed'
+  error: '14 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: Test 1 (vergleich): Übernehmen und Zurücksetzen speichern keine Abweichung (AC-1/AC-2)
+    # Subtest: vergleich_uebernehmen_alpen-trekking_null_abweichungen_und_leere_ampel
+    not ok 1 - vergleich_uebernehmen_alpen-trekking_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 43.68411
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich/alpen-trekking: Picker zeigt nicht „unverändert“
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:165:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_zuruecksetzen_alpen-trekking_null_abweichungen_und_leere_ampel
+    not ok 2 - vergleich_zuruecksetzen_alpen-trekking_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 39.97811
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich/alpen-trekking: Zurücksetzen-Knopf bliebe stehen
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:173:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_uebernehmen_wandern_null_abweichungen_und_leere_ampel
+    not ok 3 - vergleich_uebernehmen_wandern_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 22.406156
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich/wandern: Picker zeigt nicht „unverändert“
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:165:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_zuruecksetzen_wandern_null_abweichungen_und_leere_ampel
+    not ok 4 - vergleich_zuruecksetzen_wandern_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 37.197974
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich/wandern: Zurücksetzen-Knopf bliebe stehen
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:173:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_uebernehmen_skitouren_null_abweichungen_und_leere_ampel
+    not ok 5 - vergleich_uebernehmen_skitouren_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 20.487731
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich/skitouren: Picker zeigt nicht „unverändert“
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:165:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_zuruecksetzen_skitouren_null_abweichungen_und_leere_ampel
+    not ok 6 - vergleich_zuruecksetzen_skitouren_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 31.004398
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich/skitouren: Zurücksetzen-Knopf bliebe stehen
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:173:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_uebernehmen_wintersport_null_abweichungen_und_leere_ampel
+    not ok 7 - vergleich_uebernehmen_wintersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 23.879331
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich/wintersport: Picker zeigt nicht „unverändert“
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:165:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_zuruecksetzen_wintersport_null_abweichungen_und_leere_ampel
+    not ok 8 - vergleich_zuruecksetzen_wintersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 24.27857
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich/wintersport: Zurücksetzen-Knopf bliebe stehen
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:173:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_uebernehmen_radtour_null_abweichungen_und_leere_ampel
+    not ok 9 - vergleich_uebernehmen_radtour_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 22.060416
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich/radtour: Picker zeigt nicht „unverändert“
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:165:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_zuruecksetzen_radtour_null_abweichungen_und_leere_ampel
+    not ok 10 - vergleich_zuruecksetzen_radtour_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 25.261063
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich/radtour: Zurücksetzen-Knopf bliebe stehen
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:173:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_uebernehmen_wassersport_null_abweichungen_und_leere_ampel
+    not ok 11 - vergleich_uebernehmen_wassersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 21.108903
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:161:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich/wassersport: Picker zeigt nicht „unverändert“
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:165:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_zuruecksetzen_wassersport_null_abweichungen_und_leere_ampel
+    not ok 12 - vergleich_zuruecksetzen_wassersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 26.095686
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:168:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich/wassersport: Zurücksetzen-Knopf bliebe stehen
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:173:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_uebernehmen_allgemein_null_abweichungen_und_leere_ampel
+    ok 13 - vergleich_uebernehmen_allgemein_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 24.951174
+      type: 'test'
+      ...
+    # Subtest: vergleich_zuruecksetzen_allgemein_null_abweichungen_und_leere_ampel
+    ok 14 - vergleich_zuruecksetzen_allgemein_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 37.011614
+      type: 'test'
+      ...
+    1..14
+not ok 3 - Test 1 (vergleich): Übernehmen und Zurücksetzen speichern keine Abweichung (AC-1/AC-2)
+  ---
+  duration_ms: 400.461243
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:159:2'
+  failureType: 'subtestsFailed'
+  error: '12 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: Tests 2/3: bewusstes „−“ bleibt genau eine Abweichung (AC-3)
+    # Subtest: trip_minus_temperature_day_low_genau_eine_abweichung
+    not ok 1 - trip_minus_temperature_day_low_genau_eine_abweichung
+      ---
+      duration_ms: 33.820167
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:181:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          {
+            metrics: {
+        +     temperature_day_high: {
+        +       enabled: true
+        -     temperature_day_low: {
+        -       enabled: false
+              }
+            },
+            template: 'wandern'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'wandern'
+        metrics:
+          temperature_day_low:
+            enabled: false
+      actual:
+        template: 'wandern'
+        metrics:
+          temperature_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:187:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_minus_gust_genau_eine_abweichung
+    not ok 2 - vergleich_minus_gust_genau_eine_abweichung
+      ---
+      duration_ms: 34.953378
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:189:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        2 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 2
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:194:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 4 - Tests 2/3: bewusstes „−“ bleibt genau eine Abweichung (AC-3)
+  ---
+  duration_ms: 69.080956
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:180:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: Test 4: Vergleichs-Bestand mit gesperrtem temperature_night (AC-4/AC-6)
+    # Subtest: vergleich_bestand_temperature_night_bleibt_gesperrt_und_zaehlt_nicht
+    ok 1 - vergleich_bestand_temperature_night_bleibt_gesperrt_und_zaehlt_nicht
+      ---
+      duration_ms: 33.868705
+      type: 'test'
+      ...
+    1..1
+ok 5 - Test 4: Vergleichs-Bestand mit gesperrtem temperature_night (AC-4/AC-6)
+  ---
+  duration_ms: 34.084685
+  type: 'suite'
+  ...
+# Subtest: Test 5 (route): Bestandsdaten mit Rausch (AC-4/AC-5)
+    # Subtest: route_rausch_bestand_laedt_mit_null_und_schreibt_nichts
+    ok 1 - route_rausch_bestand_laedt_mit_null_und_schreibt_nichts
+      ---
+      duration_ms: 36.966923
+      type: 'test'
+      ...
+    # Subtest: route_rausch_weg_nach_alarmstufe_uebrige_felder_erhalten
+    not ok 2 - route_rausch_weg_nach_alarmstufe_uebrige_felder_erhalten
+      ---
+      duration_ms: 30.596939
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:233:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        route: Rausch-Einträge noch in der Nutzlast
+        + actual - expected
+        
+          {
+            metrics: {
+              gust: {
+                alarm_ab: 'red'
+              },
+        +     temperature_day_high: {
+        +       enabled: true
+        +     },
+        +     temperature_day_low: {
+        +       enabled: true
+        +     }
+            },
+            template: 'wandern'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        template: 'wandern'
+        metrics:
+          gust:
+            alarm_ab: 'red'
+      actual:
+        template: 'wandern'
+        metrics:
+          gust:
+            alarm_ab: 'red'
+          temperature_day_low:
+            enabled: true
+          temperature_day_high:
+            enabled: true
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:241:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 6 - Test 5 (route): Bestandsdaten mit Rausch (AC-4/AC-5)
+  ---
+  duration_ms: 67.904482
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:226:2'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: Test 5 (vergleich): Bestandsdaten mit Rausch (AC-4/AC-5)
+    # Subtest: vergleich_rausch_bestand_laedt_mit_null_und_schreibt_nichts
+    not ok 1 - vergleich_rausch_bestand_laedt_mit_null_und_schreibt_nichts
+      ---
+      duration_ms: 24.973044
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:228:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        vergleich: Rausch-Bestand zeigt Abweichungen
+        
+        1 !== 0
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 0
+      actual: 1
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:230:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich_rausch_weg_nach_alarmstufe_uebrige_felder_erhalten
+    not ok 2 - vergleich_rausch_weg_nach_alarmstufe_uebrige_felder_erhalten
+      ---
+      duration_ms: 25.977695
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:233:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        2 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 2
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:239:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 7 - Test 5 (vergleich): Bestandsdaten mit Rausch (AC-4/AC-5)
+  ---
+  duration_ms: 51.465119
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/wetter-tab/__tests__/fix_3193_vorlage_abweichung_minimal.test.ts:226:2'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: Test 6: Vergleichs-Katalog unbekannt — Basis bleibt die Rohvorlage
+    # Subtest: vergleich_ohne_katalog_kein_absturz
+    ok 1 - vergleich_ohne_katalog_kein_absturz
+      ---
+      duration_ms: 0.763311
+      type: 'test'
+      ...
+    1..1
+ok 8 - Test 6: Vergleichs-Katalog unbekannt — Basis bleibt die Rohvorlage
+  ---
+  duration_ms: 0.882462
+  type: 'suite'
+  ...
+1..8
+# tests 37
+# suites 8
+# pass 6
+# fail 31
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2739.819305

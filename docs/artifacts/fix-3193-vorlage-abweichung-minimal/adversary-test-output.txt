@@ -1,0 +1,307 @@
+TAP version 13
+# Subtest: Messaufbau
+    # Subtest: vorlagen_und_katalog_tragen_den_befund
+    ok 1 - vorlagen_und_katalog_tragen_den_befund
+      ---
+      duration_ms: 0.797162
+      type: 'test'
+      ...
+    1..1
+ok 1 - Messaufbau
+  ---
+  duration_ms: 1.538681
+  type: 'suite'
+  ...
+# Subtest: Test 1 (route): Übernehmen und Zurücksetzen speichern keine Abweichung (AC-1/AC-2)
+    # Subtest: route_uebernehmen_alpen-trekking_null_abweichungen_und_leere_ampel
+    ok 1 - route_uebernehmen_alpen-trekking_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 134.008784
+      type: 'test'
+      ...
+    # Subtest: route_zuruecksetzen_alpen-trekking_null_abweichungen_und_leere_ampel
+    ok 2 - route_zuruecksetzen_alpen-trekking_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 53.956494
+      type: 'test'
+      ...
+    # Subtest: route_uebernehmen_wandern_null_abweichungen_und_leere_ampel
+    ok 3 - route_uebernehmen_wandern_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 32.944825
+      type: 'test'
+      ...
+    # Subtest: route_zuruecksetzen_wandern_null_abweichungen_und_leere_ampel
+    ok 4 - route_zuruecksetzen_wandern_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 33.418256
+      type: 'test'
+      ...
+    # Subtest: route_uebernehmen_skitouren_null_abweichungen_und_leere_ampel
+    ok 5 - route_uebernehmen_skitouren_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 28.290989
+      type: 'test'
+      ...
+    # Subtest: route_zuruecksetzen_skitouren_null_abweichungen_und_leere_ampel
+    ok 6 - route_zuruecksetzen_skitouren_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 29.01062
+      type: 'test'
+      ...
+    # Subtest: route_uebernehmen_wintersport_null_abweichungen_und_leere_ampel
+    ok 7 - route_uebernehmen_wintersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 28.542459
+      type: 'test'
+      ...
+    # Subtest: route_zuruecksetzen_wintersport_null_abweichungen_und_leere_ampel
+    ok 8 - route_zuruecksetzen_wintersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 27.917308
+      type: 'test'
+      ...
+    # Subtest: route_uebernehmen_radtour_null_abweichungen_und_leere_ampel
+    ok 9 - route_uebernehmen_radtour_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 26.718906
+      type: 'test'
+      ...
+    # Subtest: route_zuruecksetzen_radtour_null_abweichungen_und_leere_ampel
+    ok 10 - route_zuruecksetzen_radtour_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 35.875288
+      type: 'test'
+      ...
+    # Subtest: route_uebernehmen_wassersport_null_abweichungen_und_leere_ampel
+    ok 11 - route_uebernehmen_wassersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 31.150493
+      type: 'test'
+      ...
+    # Subtest: route_zuruecksetzen_wassersport_null_abweichungen_und_leere_ampel
+    ok 12 - route_zuruecksetzen_wassersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 24.565992
+      type: 'test'
+      ...
+    # Subtest: route_uebernehmen_allgemein_null_abweichungen_und_leere_ampel
+    ok 13 - route_uebernehmen_allgemein_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 25.505464
+      type: 'test'
+      ...
+    # Subtest: route_zuruecksetzen_allgemein_null_abweichungen_und_leere_ampel
+    ok 14 - route_zuruecksetzen_allgemein_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 29.539
+      type: 'test'
+      ...
+    1..14
+ok 2 - Test 1 (route): Übernehmen und Zurücksetzen speichern keine Abweichung (AC-1/AC-2)
+  ---
+  duration_ms: 542.593253
+  type: 'suite'
+  ...
+# Subtest: Test 1 (vergleich): Übernehmen und Zurücksetzen speichern keine Abweichung (AC-1/AC-2)
+    # Subtest: vergleich_uebernehmen_alpen-trekking_null_abweichungen_und_leere_ampel
+    ok 1 - vergleich_uebernehmen_alpen-trekking_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 40.343445
+      type: 'test'
+      ...
+    # Subtest: vergleich_zuruecksetzen_alpen-trekking_null_abweichungen_und_leere_ampel
+    ok 2 - vergleich_zuruecksetzen_alpen-trekking_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 26.948168
+      type: 'test'
+      ...
+    # Subtest: vergleich_uebernehmen_wandern_null_abweichungen_und_leere_ampel
+    ok 3 - vergleich_uebernehmen_wandern_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 25.215474
+      type: 'test'
+      ...
+    # Subtest: vergleich_zuruecksetzen_wandern_null_abweichungen_und_leere_ampel
+    ok 4 - vergleich_zuruecksetzen_wandern_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 21.610639
+      type: 'test'
+      ...
+    # Subtest: vergleich_uebernehmen_skitouren_null_abweichungen_und_leere_ampel
+    ok 5 - vergleich_uebernehmen_skitouren_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 23.689162
+      type: 'test'
+      ...
+    # Subtest: vergleich_zuruecksetzen_skitouren_null_abweichungen_und_leere_ampel
+    ok 6 - vergleich_zuruecksetzen_skitouren_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 22.00046
+      type: 'test'
+      ...
+    # Subtest: vergleich_uebernehmen_wintersport_null_abweichungen_und_leere_ampel
+    ok 7 - vergleich_uebernehmen_wintersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 24.822455
+      type: 'test'
+      ...
+    # Subtest: vergleich_zuruecksetzen_wintersport_null_abweichungen_und_leere_ampel
+    ok 8 - vergleich_zuruecksetzen_wintersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 21.732951
+      type: 'test'
+      ...
+    # Subtest: vergleich_uebernehmen_radtour_null_abweichungen_und_leere_ampel
+    ok 9 - vergleich_uebernehmen_radtour_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 33.578667
+      type: 'test'
+      ...
+    # Subtest: vergleich_zuruecksetzen_radtour_null_abweichungen_und_leere_ampel
+    ok 10 - vergleich_zuruecksetzen_radtour_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 25.335365
+      type: 'test'
+      ...
+    # Subtest: vergleich_uebernehmen_wassersport_null_abweichungen_und_leere_ampel
+    ok 11 - vergleich_uebernehmen_wassersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 24.415904
+      type: 'test'
+      ...
+    # Subtest: vergleich_zuruecksetzen_wassersport_null_abweichungen_und_leere_ampel
+    ok 12 - vergleich_zuruecksetzen_wassersport_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 23.277243
+      type: 'test'
+      ...
+    # Subtest: vergleich_uebernehmen_allgemein_null_abweichungen_und_leere_ampel
+    ok 13 - vergleich_uebernehmen_allgemein_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 21.7958
+      type: 'test'
+      ...
+    # Subtest: vergleich_zuruecksetzen_allgemein_null_abweichungen_und_leere_ampel
+    ok 14 - vergleich_zuruecksetzen_allgemein_null_abweichungen_und_leere_ampel
+      ---
+      duration_ms: 26.405857
+      type: 'test'
+      ...
+    1..14
+ok 3 - Test 1 (vergleich): Übernehmen und Zurücksetzen speichern keine Abweichung (AC-1/AC-2)
+  ---
+  duration_ms: 362.081336
+  type: 'suite'
+  ...
+# Subtest: Tests 2/3: bewusstes „−“ bleibt genau eine Abweichung (AC-3)
+    # Subtest: trip_minus_temperature_day_low_genau_eine_abweichung
+    ok 1 - trip_minus_temperature_day_low_genau_eine_abweichung
+      ---
+      duration_ms: 28.626589
+      type: 'test'
+      ...
+    # Subtest: vergleich_minus_gust_genau_eine_abweichung
+    ok 2 - vergleich_minus_gust_genau_eine_abweichung
+      ---
+      duration_ms: 27.486387
+      type: 'test'
+      ...
+    1..2
+ok 4 - Tests 2/3: bewusstes „−“ bleibt genau eine Abweichung (AC-3)
+  ---
+  duration_ms: 56.350177
+  type: 'suite'
+  ...
+# Subtest: Test 4: Vergleichs-Bestand mit gesperrtem temperature_night (AC-4/AC-6)
+    # Subtest: vergleich_bestand_temperature_night_bleibt_gesperrt_und_zaehlt_nicht
+    ok 1 - vergleich_bestand_temperature_night_bleibt_gesperrt_und_zaehlt_nicht
+      ---
+      duration_ms: 20.378079
+      type: 'test'
+      ...
+    1..1
+ok 5 - Test 4: Vergleichs-Bestand mit gesperrtem temperature_night (AC-4/AC-6)
+  ---
+  duration_ms: 20.507979
+  type: 'suite'
+  ...
+# Subtest: Test 5 (route): Bestandsdaten mit Rausch (AC-4/AC-5)
+    # Subtest: route_rausch_bestand_laedt_mit_null_und_schreibt_nichts
+    ok 1 - route_rausch_bestand_laedt_mit_null_und_schreibt_nichts
+      ---
+      duration_ms: 29.397139
+      type: 'test'
+      ...
+    # Subtest: route_rausch_weg_nach_alarmstufe_uebrige_felder_erhalten
+    ok 2 - route_rausch_weg_nach_alarmstufe_uebrige_felder_erhalten
+      ---
+      duration_ms: 20.074237
+      type: 'test'
+      ...
+    1..2
+ok 6 - Test 5 (route): Bestandsdaten mit Rausch (AC-4/AC-5)
+  ---
+  duration_ms: 49.675989
+  type: 'suite'
+  ...
+# Subtest: Test 5 (vergleich): Bestandsdaten mit Rausch (AC-4/AC-5)
+    # Subtest: vergleich_rausch_bestand_laedt_mit_null_und_schreibt_nichts
+    ok 1 - vergleich_rausch_bestand_laedt_mit_null_und_schreibt_nichts
+      ---
+      duration_ms: 21.45328
+      type: 'test'
+      ...
+    # Subtest: vergleich_rausch_weg_nach_alarmstufe_uebrige_felder_erhalten
+    ok 2 - vergleich_rausch_weg_nach_alarmstufe_uebrige_felder_erhalten
+      ---
+      duration_ms: 19.675568
+      type: 'test'
+      ...
+    1..2
+ok 7 - Test 5 (vergleich): Bestandsdaten mit Rausch (AC-4/AC-5)
+  ---
+  duration_ms: 41.295276
+  type: 'suite'
+  ...
+# Subtest: Test 7: eigene Vorlage (aboAmpel) misst gegen die Vorlage im Kontext
+    # Subtest: trip_uebernehmen_wandern_aboampel_mit_abgeleiteten_kindern
+    ok 1 - trip_uebernehmen_wandern_aboampel_mit_abgeleiteten_kindern
+      ---
+      duration_ms: 23.418442
+      type: 'test'
+      ...
+    # Subtest: vergleich_uebernehmen_wandern_aboampel_temperature_night_neutral
+    ok 2 - vergleich_uebernehmen_wandern_aboampel_temperature_night_neutral
+      ---
+      duration_ms: 20.332918
+      type: 'test'
+      ...
+    1..2
+ok 8 - Test 7: eigene Vorlage (aboAmpel) misst gegen die Vorlage im Kontext
+  ---
+  duration_ms: 43.92303
+  type: 'suite'
+  ...
+# Subtest: Test 6: Vergleichs-Katalog unbekannt — Basis bleibt die Rohvorlage
+    # Subtest: vergleich_ohne_katalog_kein_absturz
+    ok 1 - vergleich_ohne_katalog_kein_absturz
+      ---
+      duration_ms: 0.34107
+      type: 'test'
+      ...
+    1..1
+ok 9 - Test 6: Vergleichs-Katalog unbekannt — Basis bleibt die Rohvorlage
+  ---
+  duration_ms: 0.40091
+  type: 'suite'
+  ...
+1..9
+# tests 39
+# suites 9
+# pass 39
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2415.025383
