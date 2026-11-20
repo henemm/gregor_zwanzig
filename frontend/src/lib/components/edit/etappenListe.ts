@@ -7,17 +7,19 @@
 import type { Stage, Tempo } from '$lib/types';
 import type { Lang, MessageKey } from '$lib/i18n';
 import { computeHeaderStats } from '../email-preview/headerStats.ts';
-import { computeArrivalTimes } from '../../utils/naismith.ts';
+import { computeArrivalTimes, istGueltigesGrundtempo, stageTempo } from '../../utils/naismith.ts';
 import { isPauseStage } from '../shared/wizardHelpers.ts';
 
-// Knopf „Tempo ändern“ folgt mit #2796; die Elementliste führt seinen Schlüssel schon:
-// i18n-dynamic: trip.hub.tempo_aendern
 type Katalog = (key: MessageKey, params?: Record<string, string | number>) => string;
 
 export interface EtappenZeile {
 	titel: string;
 	zweitzeile?: string;
 	meta?: string;
+	/** Issue #3197: Etappe trägt ein gültiges eigenes Grundtempo. */
+	eigenesTempo?: boolean;
+	/** Issue #3197: Knopf „Tempo ändern“ (nur Etappe mit Wegpunkten, Pausentag ohne). */
+	tempoAendern?: boolean;
 }
 
 function zahl(lang: Lang, wert: number, nachkomma: number): string {
@@ -53,8 +55,9 @@ function kennzahlen(stage: Stage, lang: Lang, t: Katalog): string | undefined {
 	return aufstieg > 0 ? `↑${hoch} m` : undefined;
 }
 
-/** Zeileninhalt der Etappe an Position `index` (0-basiert). Pausentag: nur Titel. */
-export function etappenZeile(stage: Stage, index: number, lang: Lang, t: Katalog, tempo: Tempo): EtappenZeile {
+/** Zeileninhalt der Etappe an Position `index` (0-basiert). Pausentag: nur Titel.
+ *  `tempo` ist das Trip-Tempo; die Gehzeit rechnet mit dem Etappen-Tempo (#3197). */
+export function etappenZeile(stage: Stage, index: number, lang: Lang, t: Katalog, tripTempo: Tempo): EtappenZeile {
 	const n = index + 1;
 	const wps = stage.waypoints ?? [];
 	if (isPauseStage(stage) || wps.length < 2) {
@@ -62,9 +65,15 @@ export function etappenZeile(stage: Stage, index: number, lang: Lang, t: Katalog
 		return { titel: t('trip.hub.etappe_titel_name', { n, name }) };
 	}
 	const titel = t('trip.hub.etappe_titel', { n, start: wps[0].name, ziel: wps[wps.length - 1].name });
-	const dauer = gehzeitMinuten(stage, tempo);
+	const dauer = gehzeitMinuten(stage, stageTempo(stage, tripTempo));
 	const meta = dauer === null ? undefined : t('trip.hub.etappe_gehzeit', { dauer: dauerText(dauer) });
-	return { titel, zweitzeile: kennzahlen(stage, lang, t), meta };
+	return {
+		titel,
+		zweitzeile: kennzahlen(stage, lang, t),
+		meta,
+		eigenesTempo: istGueltigesGrundtempo(stage.grundtempo_kmh),
+		tempoAendern: true
+	};
 }
 
 /** Fix-Runde 3 (#3007, Adversary F002): Aufteilung der Listenzeilen um den offenen Editor.

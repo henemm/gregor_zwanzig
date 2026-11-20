@@ -60,6 +60,9 @@
 		buildCreateTripPayload,
 		ergaenzeStandardwerteReportConfig,
 		ergaenzeVersandStandard,
+		editorEtappenAusAnlage,
+		anlageAusEditorEtappen,
+		tempoImAnlegenWechseln,
 	} from './tripNewLogic.ts';
 	import { canFinishMitStandardwerten } from '$lib/components/shared/anlegeLockEngine';
 	import StandardwerteSpeichernKnopf from '$lib/components/shared/StandardwerteSpeichernKnopf.svelte';
@@ -114,7 +117,7 @@
 	// #2999 AC-6: steht „Dieses Datum gibt es nicht.", entfällt „Startdatum fehlt" (keine Doppelmeldung).
 	let datumUngueltig = $state(false);
 
-	interface StageLocal { id: number; name: string; gpx: { file: string; km: number; asc: number } | null; waypoints: Waypoint[] }
+	interface StageLocal { id: number; name: string; gpx: { file: string; km: number; asc: number } | null; waypoints: Waypoint[]; grundtempo_kmh?: number }
 	let stages = $state<StageLocal[]>(
 		seed.stageNames
 			? seed.stageNames.map((n, i) => ({ id: i + 1, name: n, gpx: null, waypoints: [] }))
@@ -158,6 +161,17 @@
 	const activeAlertMetrics = $derived(deriveActiveAlertMetricsForTrip(weatherMetrics, metricsCatalog));
 	// Issue #3196 — Fortbewegung + Grundtempo; neuer Trip startet zu Fuß mit 4 km/h.
 	let selectedTempo = $state<Tempo>({ ...STANDARD_TEMPO });
+	// Issue #3197 (AC-6, wie im Bearbeiten): Wechsel der Fortbewegung verwirft die
+	// Etappen-Überschreibungen; der Hinweis nennt, wie viele Etappen betroffen waren.
+	let etappenZurueckgesetzt = $state(0);
+	// Die Tempo-Karte steht im Reiter Etappen; die Editor-Etappen sind dort bereits
+	// zurückgeschrieben (switchTab) und werden beim Betreten von Wegpunkte neu gebaut.
+	function handleTempoChange(neu: Tempo): void {
+		const r = tempoImAnlegenWechseln(stages, selectedTempo, neu);
+		stages = r.stages;
+		etappenZurueckgesetzt = r.anzahl;
+		selectedTempo = neu;
+	}
 
 	// Visited-Flags (Tab-Besuch setzt done)
 	let wtVisited = $state(seed.wtVisited ?? false);
@@ -312,30 +326,14 @@
 	// erst beim finalen POST. String-ID = `s<numerische id>` (stabile Brücke).
 	let editorStages = $state<Stage[]>([]);
 
+	// Issue #3197: Brücke in tripNewLogic.ts — trägt Wegpunkte UND Etappen-Tempo.
 	function buildEditorStages(): Stage[] {
-		return stages.map((s, idx) => ({
-			id: `s${s.id}`,
-			name: s.name || `Etappe ${idx + 1}`,
-			date: stageDateISO(startDate, idx),
-			waypoints: s.waypoints ?? [],
-		}));
+		return editorEtappenAusAnlage(stages, startDate);
 	}
 
-	function stageDateISO(start: string, offset: number): string {
-		if (!start) return '';
-		const parts = start.split('-').map(Number);
-		const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-		dt.setUTCDate(dt.getUTCDate() + offset);
-		return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
-	}
-
-	// Editor-Mutationen (Wegpunkt-Edits) per Index in den kanonischen State zurück.
+	// Editor-Mutationen (Wegpunkt-Edits, Etappen-Tempo) per Index in den kanonischen State zurück.
 	function syncEditorBack(): void {
-		if (editorStages.length === 0) return;
-		stages = stages.map((s, idx) => {
-			const es = editorStages[idx];
-			return es ? { ...s, waypoints: es.waypoints } : s;
-		});
+		stages = anlageAusEditorEtappen(stages, editorStages);
 	}
 
 	// ── Route-Tab-Handlers ────────────────────────────────────────────────────
@@ -541,7 +539,9 @@
 				name,
 				region: region || undefined,
 				startDate,
-				stages: stages.map(s => ({ id: s.id, name: s.name, waypoints: s.waypoints })),
+				// Issue #3197 (F001): EIN Pfad für den Etappen-Rumpf — buildCreateTripPayload
+				// übernimmt Name, Wegpunkte und Etappen-Tempo; kein eigener Spread hier.
+				stages,
 				weatherMetrics,
 				channels,
 				// #1743 AC-21: Standard-Versandeinstellungen entstehen im Speicherweg,
@@ -696,8 +696,7 @@
 					     Etappen). Nur auf Desktop-Viewport, damit sie nur einmal im DOM existiert. -->
 					{#if !isMobileViewport}
 					<div style="margin-top: 12px;">
-						<TempoKarte tempo={selectedTempo} onchange={(neu) => { selectedTempo = neu; }} />
-					</div>
+						<TempoKarte tempo={selectedTempo} onchange={handleTempoChange} />{#if etappenZurueckgesetzt > 0}{@render tempoHinweis()}{/if}</div>
 					{/if}
 
 					<div style="margin-top: 12px; padding: 12px 16px; border-radius: var(--g-r-2); background: var(--g-accent-tint); border: 1px solid var(--g-accent-rule);">
@@ -1028,8 +1027,7 @@
 					<!-- Issue #3196 — Tempo-Karte statt Aktivitäts-Dropdown, nur auf Mobile-Viewport. -->
 					{#if isMobileViewport}
 					<div style="margin-bottom: 20px;">
-						<TempoKarte tempo={selectedTempo} onchange={(neu) => { selectedTempo = neu; }} />
-					</div>
+						<TempoKarte tempo={selectedTempo} onchange={handleTempoChange} />{#if etappenZurueckgesetzt > 0}{@render tempoHinweis()}{/if}</div>
 					{/if}
 
 					<div style="padding: 12px 14px; border-radius: var(--g-r-2); background: var(--g-accent-tint); border: 1px solid var(--g-accent-rule); margin-bottom: 20px;">
@@ -1287,6 +1285,11 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<!-- Issue #3197 (AC-6): Hinweis nach Wechsel der Fortbewegung, wie im Reiter Etappen. -->
+{#snippet tempoHinweis()}
+	<p role="status" data-testid="etappen-tempo-zurueckgesetzt" style="margin: 8px 0 0; font-size: var(--g-size-12-5px); color: var(--g-ink-2);">{$tn('trip.tempo.etappen_zurueckgesetzt', etappenZurueckgesetzt)}</p>
+{/snippet}
 
 <style>
 	/* ── Issue #661: Responsive Mobile/Desktop Switching ────────────────────

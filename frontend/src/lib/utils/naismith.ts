@@ -90,6 +90,37 @@ export function tripTempo(trip: { tempo?: Tempo | null; activity?: string | null
 	return tempoSpeeds(tempoVonTrip(trip));
 }
 
+/** Gültiges Etappen-Grundtempo: endliche Zahl in 0.5..60 km/h (Issue #3197, wie Go ValidGrundtempo). */
+export function istGueltigesGrundtempo(v: unknown): v is number {
+	return typeof v === 'number' && Number.isFinite(v) && v >= MIN_GRUNDTEMPO_KMH && v <= MAX_GRUNDTEMPO_KMH;
+}
+
+/** Tempo einer Etappe (Issue #3197, ADR-0108; Spiegel Go ResolveStageTempo, Python stage_speeds):
+ *  Fortbewegung immer vom Trip, Grundtempo von der Etappe, falls gültig, sonst vom Trip. */
+export function stageTempo(stage: Pick<Stage, 'grundtempo_kmh'> | null | undefined, tripTempo: Tempo): Tempo {
+	const v = stage?.grundtempo_kmh;
+	if (!istGueltigesGrundtempo(v)) return { ...tripTempo };
+	return { fortbewegung: tripTempo.fortbewegung, grundtempo_kmh: v };
+}
+
+/** Wechsel der Fortbewegung (AC-6): entfernt `grundtempo_kmh` aus jeder Etappe (Eingabe bleibt
+ *  unberührt) und zählt, wie viele Etappen das Feld trugen. */
+export function verwirfEtappenTempo(stages: Stage[]): { stages: Stage[]; anzahl: number } {
+	let anzahl = 0;
+	const neu = stages.map((s) => {
+		if (!('grundtempo_kmh' in s)) return s;
+		if (s.grundtempo_kmh !== undefined) anzahl += 1;
+		return ohneEtappenTempo(s);
+	});
+	return { stages: neu, anzahl };
+}
+
+/** „Trip-Tempo verwenden" (AC-4): dieselbe Etappe ohne `grundtempo_kmh`. */
+export function ohneEtappenTempo(stage: Stage): Stage {
+	const { grundtempo_kmh: _weg, ...rest } = stage;
+	return rest;
+}
+
 /** Wechsel der Fortbewegung setzt das Grundtempo auf den Vorschlagswert (AC-4). */
 export function wechsleFortbewegung(_tempo: Tempo, neu: Fortbewegung): Tempo {
 	return { fortbewegung: neu, grundtempo_kmh: FORTBEWEGUNG_REF[neu].vorschlagKmh };

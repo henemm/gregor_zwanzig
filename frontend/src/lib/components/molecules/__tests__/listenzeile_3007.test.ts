@@ -28,7 +28,7 @@
 //   „x km · ↑y m“ (computeHeaderStats, Zahlen locale-formatiert wie TripHeader), Meta „Gehzeit h:mm“
 //   (Katalog; Dauer aus computeArrivalTimes/deriveTempo). Grundzustand: alle aria-expanded="false",
 //   kein Etappen-Band, keine Reiterfläche, kein Karten-/Profil-Editor. Ohne `listeZuerst` und im
-//   Mobil-Zweig unverändert. Kein „Tempo ändern“.
+//   Mobil-Zweig unverändert. Seit #3197: „Tempo ändern“ je Etappe mit Wegpunkten, Pausentag ohne.
 // ─────────────────────────────────────────────────────────────────────────────────────
 //
 //   cd frontend && npm test -- src/lib/components/molecules/__tests__/listenzeile_3007.test.ts
@@ -309,7 +309,7 @@ describe('#3007 Etappen: Liste im Hub (AC-10 bis AC-13, AC-15 bis AC-18)', () =>
 			assert.deepEqual(z2.meta, [], 'Pausentag zeigt Gehzeit');
 			if (lang === 'en') assert.ok(!z1.meta[0].startsWith('Gehzeit'), 'EN zeigt deutsches „Gehzeit“');
 		});
-		test(`AC-13/AC-16 (${lang}): Grundzustand nur Liste — zu, kein Band, keine Fläche, kein Tempo-Knopf`, async () => {
+		test(`AC-13/AC-16 (${lang}): Grundzustand nur Liste — zu, kein Band, keine Fläche; Tempo-Knopf nur mit Wegpunkten (#3197)`, async () => {
 			const b = await etappenListe(lang);
 			const zeilen = mitTestid(einzigeListe(b, `Etappen ${lang}`), 'etappen-liste-zeile');
 			assert.equal(zeilen.length, ETAPPEN.length, 'Messaufbau: Zeilenzahl');
@@ -319,8 +319,12 @@ describe('#3007 Etappen: Liste im Hub (AC-10 bis AC-13, AC-15 bis AC-18)', () =>
 				assert.equal(zk.attrs['aria-expanded'], 'false', 'Etappenzeile im Grundzustand offen');
 			}
 			for (const id of ['etappen-strip-wrapper', 'etappen-reiterflaeche']) assert.equal(mitTestid(b, id).length, 0, `${id} im Grundzustand sichtbar`);
-			const t = text(b);
-			assert.ok(!t.includes('Tempo ändern') && !/change pace/i.test(t), '„Tempo ändern“ steht im Reiter');
+			// #3197 (AC-1, AC-7): „Tempo ändern“ ist jetzt Pflicht je Etappe mit Wegpunkten, Pausentag ohne.
+			const knopfText = lang === 'de' ? 'Tempo ändern' : EN['trip.hub.tempo_aendern'];
+			const [k1, k2, k3] = zeilen.map(text);
+			assert.ok(k1.includes(knopfText), `Etappe 1: „${knopfText}“ fehlt (#3197)`);
+			assert.ok(k3.includes(knopfText), `Etappe 3: „${knopfText}“ fehlt (#3197)`);
+			assert.ok(!k2.includes(knopfText), 'Pausentag zeigt „Tempo ändern“');
 		});
 	}
 	test('AC-15: ohne listeZuerst (Anlegen-Editor) unverändert — Band da, keine Liste', async () => {

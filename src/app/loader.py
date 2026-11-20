@@ -484,6 +484,13 @@ def load_trip(
     return _parse_trip(data.get("trip", data))
 
 
+def _stage_grundtempo_from_data(value: Any) -> Optional[float]:
+    """Issue #3197: Etappen-Grundtempo nur, wenn gültig (0,5..60 km/h), sonst None."""
+    from core.naismith import valid_grundtempo
+
+    return value if valid_grundtempo(value) else None
+
+
 def _tempo_from_data(data: Dict[str, Any]) -> dict:
     """Issue #3196: gespeichertes ``tempo`` oder Ableitung aus ``activity``.
 
@@ -547,6 +554,8 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
             date=date.fromisoformat(stage_data["date"]),
             waypoints=waypoints,
             start_time=start_time_val,
+            # Issue #3197: ungueltiger Wert wird ignoriert (Trip-Tempo gilt).
+            grundtempo_kmh=_stage_grundtempo_from_data(stage_data.get("grundtempo_kmh")),
         )
         stages.append(stage)
 
@@ -1881,6 +1890,8 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             # #991 AC-5: kanonisches HH:MM (Go naismith.go:24, Frontend
             # DEFAULT_START_TIME) statt .isoformat() mit Sekunden.
             stage_dict["start_time"] = stage.start_time.strftime("%H:%M")
+        if stage.grundtempo_kmh is not None:  # Issue #3197: nur wenn gesetzt
+            stage_dict["grundtempo_kmh"] = stage.grundtempo_kmh
         stages_data.append(stage_dict)
 
     data = {
@@ -2189,15 +2200,14 @@ def _read_existing_locked(path: Path) -> dict:
 def _write_trip_locked(trip: Trip, path: Path, existing: dict) -> None:
     """Compute-on-Save + RMW-Merge + atomarer Schreibvorgang (Sperre gehalten)."""
     import dataclasses
-    from core.naismith import compute_stage_arrivals, tempo_speeds
+    from core.naismith import compute_stage_arrivals, stage_speeds
 
     # Issue #802: Compute-on-Save — arrival_calculated für jede Stage
     # berechnen (bit-genau zu Go store.SaveTrip). Issue #3196: Tempo statt
-    # activity, Gehzeit nach DAV.
-    speeds = tempo_speeds(trip)
+    # activity, Gehzeit nach DAV. Issue #3197: Tempo je Etappe aufgelöst.
     trip = dataclasses.replace(
         trip,
-        stages=[compute_stage_arrivals(s, speeds) for s in trip.stages],
+        stages=[compute_stage_arrivals(s, stage_speeds(trip, s)) for s in trip.stages],
     )
     python_data = _trip_to_dict(trip)
     # Issue #1250 Scheibe 7a (AC-26): jede Python-save_trip-Schreiboperation

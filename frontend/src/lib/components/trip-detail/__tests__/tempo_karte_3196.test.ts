@@ -56,10 +56,11 @@ test('AC-9 DE: Fortbewegung, Grundtempo, Hinweis; kein Aufstieg/Abstieg sichtbar
 	const h = html(TempoKarte, { tempo: { fortbewegung: 'fuss', grundtempo_kmh: 4 } });
 	assert.match(h, /Fortbewegung/);
 	assert.match(h, /Grundtempo/);
-	assert.match(h, /Gilt für alle Etappen\./);
+	assert.match(h, /Gilt für alle Etappen/);
 	assert.match(h, /zu Fuß/);
 	assert.doesNotMatch(h, /Aufstieg|Abstieg|Hm\/h/);
-	assert.doesNotMatch(h, /überschreibbar/, 'Zusatz „je Etappe überschreibbar“ erst mit #3197');
+	// #3197: der Zusatz „je Etappe überschreibbar“ wird in
+	// tempo_je_etappe_3197.test.ts (Trip-Karte ohne nurGrundtempo) verlangt.
 });
 
 test('AC-9 EN: Mode of travel, Base pace', () => {

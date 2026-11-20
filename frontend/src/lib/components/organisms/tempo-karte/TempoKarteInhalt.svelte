@@ -9,11 +9,15 @@
 	import { FORTBEWEGUNGEN, MIN_GRUNDTEMPO_KMH, MAX_GRUNDTEMPO_KMH, wechsleFortbewegung } from '$lib/utils/naismith';
 	import { t, type MessageKey } from '$lib/i18n';
 
+	// Issue #3197: `nurGrundtempo` = Karte „Tempo ändern" einer Etappe — ohne Fortbewegung (bleibt
+	// trip-weit, ADR-0108), mit der Aktion „Trip-Tempo verwenden" (`ontriptempo`).
 	interface Props {
 		tempo: Tempo;
 		onchange?: (tempo: Tempo) => void;
+		nurGrundtempo?: boolean;
+		ontriptempo?: () => void;
 	}
-	let { tempo, onchange }: Props = $props();
+	let { tempo, onchange, nurGrundtempo = false, ontriptempo }: Props = $props();
 
 	const NAME: Record<Fortbewegung, MessageKey> = {
 		fuss: 'trip.tempo.fuss',
@@ -34,7 +38,7 @@
 </script>
 
 <div class="tempo-karte" data-testid="tempo-karte">
-	<div class="tempo-feld">
+	{#if !nurGrundtempo}<div class="tempo-feld">
 		<span class="tempo-label">{$t('trip.tempo.fortbewegung')}</span>
 		<div data-slot="segmented" data-variant="kompakt" role="group" aria-label={$t('trip.tempo.fortbewegung')}>
 			{#each FORTBEWEGUNGEN as f (f)}
@@ -48,7 +52,7 @@
 				>
 			{/each}
 		</div>
-	</div>
+	</div>{/if}
 	<label class="tempo-feld">
 		<span class="tempo-label">{$t('trip.tempo.grundtempo')}</span>
 		<input
@@ -65,7 +69,13 @@
 		<!-- Handy: Beschriftung nur für Screenreader, die Einheit steht sichtbar hinter der Zahl. -->
 		<span class="tempo-einheit" aria-hidden="true">{$t('trip.tempo.einheit')}</span>
 	</label>
-	<span class="tempo-hinweis">{$t('trip.tempo.hinweis')}</span>
+	{#if nurGrundtempo}
+		<button type="button" class="tempo-trip-verwenden" data-testid="tempo-trip-verwenden" onclick={() => ontriptempo?.()}
+			>{$t('trip.tempo.trip_tempo_verwenden')}</button
+		>
+	{:else}
+		<span class="tempo-hinweis">{$t('trip.tempo.hinweis')}</span>
+	{/if}
 </div>
 
 <style>
@@ -108,6 +118,16 @@
 		font-size: var(--g-size-12-5px);
 		color: var(--g-ink-2);
 		max-width: var(--g-size-420px);
+	}
+	.tempo-trip-verwenden {
+		min-height: var(--g-tap-min);
+		padding: 0 var(--g-s-3);
+		border: 1px solid var(--g-rule);
+		border-radius: var(--g-r-2);
+		background: var(--g-card);
+		color: var(--g-ink);
+		font: inherit;
+		cursor: pointer;
 	}
 	.tempo-einheit {
 		display: none;

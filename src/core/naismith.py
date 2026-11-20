@@ -49,14 +49,18 @@ def derive_tempo(activity: "str | None") -> dict:
     return {"fortbewegung": "fuss", "grundtempo_kmh": 4}
 
 
+def valid_grundtempo(v: Any) -> bool:
+    """Zahl (kein bool) mit 0.5 <= v <= 60 km/h (wie Go ValidGrundtempo)."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return False
+    return _MIN_GRUNDTEMPO_KMH <= v <= _MAX_GRUNDTEMPO_KMH
+
+
 def valid_tempo(tempo: Any) -> bool:
     """Bekannte Fortbewegung und 0.5 <= Grundtempo <= 60 km/h (wie Go ValidTempo)."""
     if not isinstance(tempo, dict) or tempo.get("fortbewegung") not in _REFERENZ:
         return False
-    v = tempo.get("grundtempo_kmh")
-    if isinstance(v, bool) or not isinstance(v, (int, float)):
-        return False
-    return _MIN_GRUNDTEMPO_KMH <= v <= _MAX_GRUNDTEMPO_KMH
+    return valid_grundtempo(tempo.get("grundtempo_kmh"))
 
 
 def speeds_for_tempo(tempo: Any) -> Speeds:
@@ -81,6 +85,27 @@ def tempo_speeds(trip: Any) -> Speeds:
     if tempo is None:
         tempo = derive_tempo(getattr(trip, "activity", "") or "")
     return speeds_for_tempo(tempo)
+
+
+def _trip_tempo(trip: Any) -> dict:
+    tempo = getattr(trip, "tempo", None)
+    if tempo is None:
+        tempo = derive_tempo(getattr(trip, "activity", "") or "")
+    return tempo
+
+
+def stage_speeds(trip: Any, stage: Any) -> Speeds:
+    """Tempo einer Etappe (Issue #3197, ADR-0108; Spiegel Go ResolveStageTempo).
+
+    Fortbewegung immer vom Trip; Grundtempo = ``stage.grundtempo_kmh``, falls
+    gültig, sonst das Trip-Grundtempo. Ungültiges Trip-Tempo → wie
+    ``tempo_speeds`` (zu Fuß, Vorschlagswert).
+    """
+    tempo = _trip_tempo(trip)
+    v = getattr(stage, "grundtempo_kmh", None)
+    if not valid_grundtempo(v) or not valid_tempo(tempo):
+        return speeds_for_tempo(tempo)
+    return speeds_for_tempo({"fortbewegung": tempo["fortbewegung"], "grundtempo_kmh": v})
 
 
 def _parse_start_minutes(start_time: "str | None") -> int:

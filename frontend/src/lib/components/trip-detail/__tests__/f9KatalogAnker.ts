@@ -76,12 +76,17 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	// #3196 (ADR-0108): trip.aktivitaet.* entfallen mit den Kopf-Kacheln; Tempo-Karte im Reiter Etappen.
 	['trip.tempo.fortbewegung', 'Fortbewegung', 'Mode of travel'],
 	['trip.tempo.grundtempo', 'Grundtempo (km/h)', 'Base pace (km/h)'],
-	['trip.tempo.hinweis', 'Gilt für alle Etappen.', 'Applies to all stages.'],
+	// #3197: Hinweis um „je Etappe überschreibbar“ ergänzt; Tempo je Etappe.
+	['trip.tempo.hinweis', 'Gilt für alle Etappen, je Etappe überschreibbar.', 'Applies to all stages, can be overridden per stage.'],
 	['trip.tempo.fuss', 'zu Fuß', 'On foot'],
 	['trip.tempo.rad', 'Rad', 'Bike'],
 	['trip.tempo.mtb', 'MTB', 'MTB'],
 	['trip.tempo.ski', 'Ski', 'Ski'],
 	['trip.tempo.einheit', 'km/h', 'km/h'],
+	['trip.tempo.trip_tempo_verwenden', 'Trip-Tempo verwenden', 'Use trip pace'],
+	['trip.tempo.eigenes_tempo', 'eigenes Tempo', 'own pace'],
+	['trip.tempo.etappen_zurueckgesetzt.one', 'Fortbewegung gewechselt: das eigene Tempo von <count> Etappe wurde zurückgesetzt.', 'Mode of travel changed: the own pace of <count> stage was reset.'],
+	['trip.tempo.etappen_zurueckgesetzt.other', 'Fortbewegung gewechselt: das eigene Tempo von <count> Etappen wurde zurückgesetzt.', 'Mode of travel changed: the own pace of <count> stages was reset.'],
 
 	// ── trip.hub.* — Seite /trips/[id], Reiterleiste ──────────────────────────
 	['trip.hub.briefing_gesendet', 'Briefing gesendet!', 'Briefing sent'],

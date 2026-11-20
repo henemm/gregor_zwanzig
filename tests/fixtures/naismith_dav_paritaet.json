@@ -188,15 +188,160 @@
     }
   ],
   "gueltigkeit": [
-    {"fortbewegung": "fuss", "grundtempo_kmh": 0.5, "gueltig": true},
-    {"fortbewegung": "ski", "grundtempo_kmh": 0.5, "gueltig": true},
-    {"fortbewegung": "rad", "grundtempo_kmh": 60, "gueltig": true},
-    {"fortbewegung": "mtb", "grundtempo_kmh": 12, "gueltig": true},
-    {"fortbewegung": "fuss", "grundtempo_kmh": 0.4, "gueltig": false},
-    {"fortbewegung": "ski", "grundtempo_kmh": 1e-320, "gueltig": false},
-    {"fortbewegung": "fuss", "grundtempo_kmh": 0, "gueltig": false},
-    {"fortbewegung": "fuss", "grundtempo_kmh": -3, "gueltig": false},
-    {"fortbewegung": "rad", "grundtempo_kmh": 60.5, "gueltig": false},
-    {"fortbewegung": "auto", "grundtempo_kmh": 4, "gueltig": false}
-  ]
+    {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 0.5,
+      "gueltig": true
+    },
+    {
+      "fortbewegung": "ski",
+      "grundtempo_kmh": 0.5,
+      "gueltig": true
+    },
+    {
+      "fortbewegung": "rad",
+      "grundtempo_kmh": 60,
+      "gueltig": true
+    },
+    {
+      "fortbewegung": "mtb",
+      "grundtempo_kmh": 12,
+      "gueltig": true
+    },
+    {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 0.4,
+      "gueltig": false
+    },
+    {
+      "fortbewegung": "ski",
+      "grundtempo_kmh": 1e-320,
+      "gueltig": false
+    },
+    {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 0,
+      "gueltig": false
+    },
+    {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": -3,
+      "gueltig": false
+    },
+    {
+      "fortbewegung": "rad",
+      "grundtempo_kmh": 60.5,
+      "gueltig": false
+    },
+    {
+      "fortbewegung": "auto",
+      "grundtempo_kmh": 4,
+      "gueltig": false
+    }
+  ],
+  "etappen_ueberschreibung": {
+    "_kommentar": "Issue #3197: Grundtempo je Etappe (ADR-0108). Trip zu Fuss 4 km/h, Etappe S2 ueberschreibt auf 3 km/h, S1 folgt dem Trip. Raten skalieren R = R_ref * v / v_ref, also 3 km/h -> R_auf 225, R_ab 375. S2 von Hand: A->B 4 km/600 Hm auf: t_h 80 min, t_v 160 min -> 160 + 40 = 200 min (11:20); B->C 4 km/600 Hm ab: t_h 80 min, t_v 96 min -> 96 + 40 = 136 min (13:36). S1 wie Trip: 08:00/10:30/12:12. Gelesen von Go, Python und TS.",
+    "tempo": {
+      "fortbewegung": "fuss",
+      "grundtempo_kmh": 4
+    },
+    "stages": [
+      {
+        "id": "S1",
+        "name": "Tag 1",
+        "date": "2026-07-01",
+        "waypoints": [
+          {
+            "id": "S1A",
+            "name": "S1A",
+            "lat": 47.0,
+            "lon": 11.0,
+            "elevation_m": 1000,
+            "distance_from_start_km": 0.0
+          },
+          {
+            "id": "S1B",
+            "name": "S1B",
+            "lat": 47.0,
+            "lon": 11.0,
+            "elevation_m": 1600,
+            "distance_from_start_km": 4.0
+          },
+          {
+            "id": "S1C",
+            "name": "S1C",
+            "lat": 47.0,
+            "lon": 11.0,
+            "elevation_m": 1000,
+            "distance_from_start_km": 8.0
+          }
+        ]
+      },
+      {
+        "id": "S2",
+        "name": "Tag 2",
+        "date": "2026-07-02",
+        "grundtempo_kmh": 3,
+        "waypoints": [
+          {
+            "id": "S2A",
+            "name": "S2A",
+            "lat": 47.0,
+            "lon": 11.0,
+            "elevation_m": 1000,
+            "distance_from_start_km": 0.0
+          },
+          {
+            "id": "S2B",
+            "name": "S2B",
+            "lat": 47.0,
+            "lon": 11.0,
+            "elevation_m": 1600,
+            "distance_from_start_km": 4.0
+          },
+          {
+            "id": "S2C",
+            "name": "S2C",
+            "lat": 47.0,
+            "lon": 11.0,
+            "elevation_m": 1000,
+            "distance_from_start_km": 8.0
+          }
+        ]
+      }
+    ],
+    "erwartet": {
+      "S1": {
+        "flat_kmh": 4,
+        "r_auf": 300,
+        "r_ab": 500,
+        "gehzeit_min": 252,
+        "ankuenfte": [
+          "08:00",
+          "10:30",
+          "12:12"
+        ]
+      },
+      "S2": {
+        "flat_kmh": 3,
+        "r_auf": 225,
+        "r_ab": 375,
+        "gehzeit_min": 336,
+        "ankuenfte": [
+          "08:00",
+          "11:20",
+          "13:36"
+        ]
+      }
+    },
+    "ungueltige_werte": [
+      0,
+      0.4,
+      60.5,
+      61,
+      -3,
+      1e-320
+    ],
+    "_ungueltig_kommentar": "Ein gespeicherter Etappenwert ausserhalb 0.5..60 wird beim Laden/Rechnen ignoriert: die Etappe rechnet mit dem Trip-Tempo (S2 dann wie S1: 08:00/10:30/12:12). Die API lehnt ihn beim Speichern mit 422 ab."
+  }
 }

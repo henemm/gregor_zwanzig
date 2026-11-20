@@ -197,8 +197,8 @@ def convert_trip_to_segments(trip: "Trip", target_date: date) -> List[TripSegmen
 
     # Self-Heal: if all arrival_calculated are None, compute via Naismith.
     if all(wp.arrival_calculated is None for wp in stage.waypoints):
-        from core.naismith import compute_stage_arrivals, tempo_speeds
-        stage = compute_stage_arrivals(stage, tempo_speeds(trip))  # Issue #3196
+        from core.naismith import compute_stage_arrivals, stage_speeds
+        stage = compute_stage_arrivals(stage, stage_speeds(trip, stage))  # Issue #3196, #3197
 
     segments: List[TripSegment] = []
     # Issue #1468 (E2): die eingestellten Fenstergrenzen der Tour, unveraendert

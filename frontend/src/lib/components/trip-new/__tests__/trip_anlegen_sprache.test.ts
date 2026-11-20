@@ -61,7 +61,7 @@ describe('AC-3: /trips/new englisch (Desktop und mobil)', () => {
 		// #3196: statt der Aktivitäts-Auswahl die Tempo-Karte (Fortbewegung + Grundtempo, Vorgabe zu Fuß 4).
 		// #2794 Teil-PR 4a: „Target ranges" kam aus dem versteckt gemounteten Korridor-Editor (entfernt).
 		// #2794 S3a 4b: alter Reitername „Weather metrics" ersetzt durch den Reiter „Weather".
-		for (const t of ['New trip', 'No name yet', 'Nothing set up yet', 'Route', 'Stages & GPX', 'Check waypoints', 'Weather', 'Alerts', 'optional', 'Trip basics', 'Trip name', 'Region', 'optional · max 50', 'Start date', 'Stage 1 starts on 1 Jul — each following stage +1 day.', 'Mode of travel', 'On foot', 'Bike', 'Base pace (km/h)', 'Applies to all stages.', 'You upload GPX files in the next step — one file per stage.', 'Trip name missing', 'Start date missing', 'Create stages →', 'Set up alerts to save', 'Save trip', 'Enter trip name', 'New trip', 'Trips'])
+		for (const t of ['New trip', 'No name yet', 'Nothing set up yet', 'Route', 'Stages & GPX', 'Check waypoints', 'Weather', 'Alerts', 'optional', 'Trip basics', 'Trip name', 'Region', 'optional · max 50', 'Start date', 'Stage 1 starts on 1 Jul — each following stage +1 day.', 'Mode of travel', 'On foot', 'Bike', 'Base pace (km/h)', 'Applies to all stages, can be overridden per stage.','You upload GPX files in the next step — one file per stage.', 'Trip name missing', 'Start date missing', 'Create stages →', 'Set up alerts to save', 'Save trip', 'Enter trip name', 'New trip', 'Trips'])
 			hat(s, t);
 		for (const t of ['title="Locked — trip name + start date first"', 'placeholder="e.g. Karnischer Höhenweg 2026"', 'placeholder="e.g. Karnische Alpen"']) hat(en, t);
 		assert.deepEqual(deutscheReste(s), []);

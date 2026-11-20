@@ -319,9 +319,9 @@ func (s *Store) SaveTrip(trip *model.Trip) error {
 	// Issue #802: Compute-on-Save — arrival_calculated für alle Stages setzen,
 	// zentral an einer Stelle (alle Go-Schreiber rufen SaveTrip).
 	// Issue #3196: Tempo (Fortbewegung + Grundtempo) statt Activity, DAV.
-	speeds := model.ResolveTempo(trip)
+	// Issue #3197: Tempo je Etappe aufgelöst (Etappen-Grundtempo).
 	for i := range trip.Stages {
-		model.ComputeStageArrivals(&trip.Stages[i], speeds)
+		model.ComputeStageArrivals(&trip.Stages[i], model.ResolveStageTempo(trip, &trip.Stages[i]))
 	}
 
 	// Issue #1250 Scheibe 7a (AC-26): jede Go-SaveTrip-Schreiboperation ist

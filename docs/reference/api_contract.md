@@ -1277,6 +1277,17 @@ mehr. Fehlt `tempo`, leiten Go (`store.normalizeTrip`) und Python (Loader) es be
 `klettersteig`, `skitour`, `mtb` …) → `fuss` 4 km/h; nie `mtb` oder `ski`. Bestand:
 `scripts/migrate_3196_trip_tempo.py`.
 
+**Tempo je Etappe (Issue #3197, ADR-0108):** optionales Etappen-Feld `stages[].grundtempo_kmh` (absolut
+km/h, gültig 0,5 bis 60). Es überschreibt nur das Grundtempo dieser Etappe; die Fortbewegung bleibt
+trip-weit. Auflösung je Etappe: Go `ResolveStageTempo(trip, stage)`, Python `stage_speeds(trip, stage)`,
+TS `stageTempo(stage, tripTempo)`; Falltabelle `tests/fixtures/naismith_dav_paritaet.json` Abschnitt
+`etappen_ueberschreibung`. `arrival_calculated` wird beim Speichern je Etappe mit diesem Tempo berechnet.
+Geschrieben nur, wenn gesetzt (`omitempty`). `PUT /api/trips/{id}` und `POST /api/trips` mit `stages`:
+Wert außerhalb 0,5 bis 60 oder kein Zahlwert → `422` (`invalid_params`), nichts wird
+geschrieben. Die Etappenliste wird als Ganzes ersetzt: fehlt das Feld an einer Etappe, ist die
+Überschreibung zurückgenommen. Ein ungültiger gespeicherter Wert wird beim Laden ignoriert (Trip-Tempo gilt).
+Der Wechsel der Fortbewegung in der Oberfläche entfernt alle Etappenwerte.
+
 ### Shortcode (Bug #775)
 
 Das Feld `shortcode` dient als eindeutiger, pro Nutzer stabiler Routing-Identifier für Inbound-E-Mail-Replies.
@@ -1294,6 +1305,7 @@ type Stage struct {
     Date      string     `json:"date"`                  // YYYY-MM-DD
     Waypoints []Waypoint `json:"waypoints"`
     StartTime *string    `json:"start_time,omitempty"`  // HH:MM (Issue #675)
+    GrundtempoKmh *float64 `json:"grundtempo_kmh,omitempty"` // Issue #3197: eigenes Grundtempo 0,5..60 km/h
 }
 ```
 
@@ -1335,9 +1347,10 @@ Editor-Save (`SaveTrip`) den beim Import gesetzten Wert wieder verwirft (Präzed
 `suggestion_reason`).
 
 **Berechnung `arrival_calculated`:**
-- Frontend: `computeArrivalTimes(stage, startTime, tripTempo(trip))` → gibt Array von HH:MM-Strings (DAV, Issue #3196)
-- Backend (Go): `ComputeStageArrivals(stage, ResolveTempo(trip))` → mutiert Waypoints mit berechneter Zeit
-- Python: `compute_stage_arrivals(stage, tempo_speeds(trip))` (Loader-Save, Self-Heal in `trip_segments.py`)
+Das tatsächlich genutzte Tempo ist seit #3197 je Etappe aufgelöst (Trip-Tempo, außer `stages[].grundtempo_kmh` ist gesetzt):
+- Frontend: `computeArrivalTimes(stage, startTime, stageTempo(stage, tripTempo(trip)))` → Array von HH:MM-Strings (DAV, Issue #3196/#3197)
+- Backend (Go): `ComputeStageArrivals(stage, ResolveStageTempo(trip, stage))` → mutiert Waypoints mit berechneter Zeit (`SaveTrip`)
+- Python: `compute_stage_arrivals(stage, stage_speeds(trip, stage))` (Loader-Save, Self-Heal in `trip_segments.py`)
 
 **Segment-Startzeit-Prioritätskette (Issue #1004, SSoT):** `Waypoint.time_window` ist
 ausschließlich ein GPX-Import-Artefakt ohne jeden manuellen Schreibpfad im Produkt und hat
@@ -5361,6 +5374,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 
 ## Changelog
 
+- 2026-11-20: Issue #3197 (ADR-0108) — Etappen-Feld `stages[].grundtempo_kmh` (optional, 0,5 bis 60 km/h): überschreibt nur das Grundtempo dieser Etappe, Fortbewegung bleibt trip-weit; `arrival_calculated` je Etappe mit diesem Tempo. PUT/POST: außerhalb des Bereichs oder kein Zahlwert → 422 (`invalid_params`); fehlt das Feld, gilt das Trip-Tempo (Zurücknehmen entfernt es). Ungültige gespeicherte Werte werden beim Laden ignoriert. Keine Migration.
 - 2026-11-20: Issue #3196 (ADR-0108 Nr. 2/5) — Trip-Feld `tempo {fortbewegung, grundtempo_kmh}` (Abschnitt „Tempo“): `PUT /api/trips/{id}` (Key fehlt = Bestand, gesetzt = nur dieses Feld, `arrival_calculated` neu), `POST /api/trips` prüft `tempo` (422 bei ungültigem Wert). Gehzeit-Formel wechselt auf DAV (DIN 33466): `ComputeStageArrivals`, `compute_stage_arrivals` und `computeArrivalTimes` rechnen identisch über die gemeinsame Falltabelle `tests/fixtures/naismith_dav_paritaet.json`. Bestandstrips ohne `tempo` werden beim Lesen aus `activity` abgeleitet; `scripts/migrate_3196_trip_tempo.py` schreibt `tempo` und rechnet `arrival_calculated` einmalig neu (PO-Entscheidung 2026-11-20: Gehzeiten aller Bestandstrips ändern sich bewusst). `activity` bleibt auf der Platte, wird von der Oberfläche nicht mehr geschrieben.
 - 2026-11-20: Issue #3189 — `MetricPreset.herkunft {id, name}` (optional, §15.5): `POST /api/metric-presets` übernimmt die Herkunft (Trip bzw. Orts-Vergleich), Name eingefroren, getrimmt, auf 200 Zeichen gekappt, leer = verworfen; `PATCH` lässt sie unverändert; Bestand ohne Feld bleibt gültig.
 - 2026-11-20: Issue #3196 (ADR-0108 Nr. 2/5) — Neues Trip-Feld `tempo = {fortbewegung: "fuss"|"rad"|"mtb"|"ski", grundtempo_kmh}`; Gehzeit und `arrival_calculated` nach DAV (DIN 33466) statt Naismith-Summe, Raten folgen dem Grundtempo. `PUT /api/trips/{id}` merged `tempo` optional (fehlt = Bestand), ungültig → 422 `invalid_params`. `activity` bleibt Altfeld; fehlt `tempo`, wird es beim Lesen abgeleitet (Go `normalizeTrip`, Python-Loader). Abschnitt „Tempo" ersetzt „Activity Types". Migration `scripts/migrate_3196_trip_tempo.py`.

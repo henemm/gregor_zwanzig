@@ -9,12 +9,14 @@
 	// Orte-Tab (ADR-0024 — Sortier-Infrastruktur wird geteilt, nicht kopiert).
 	// F7: Tap auf die Karte klappt die Wegpunkt-Zeilen auf (auf/zu via `open`).
 	import { Pill } from '$lib/components/atoms';
-	import { t } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
+	import { etappenZeile } from '$lib/components/edit/etappenListe';
+	import TempoKarteInhalt from '$lib/components/organisms/tempo-karte/TempoKarteInhalt.svelte';
 	import { isPauseStage, formatStageNumber } from '$lib/components/shared/wizardHelpers';
 	import StageDateField from '$lib/components/edit/StageDateField.svelte';
 	import StageTimeField from '$lib/components/edit/StageTimeField.svelte';
 	import { riskToPill, type StageRisk } from '$lib/utils/stageRisk';
-	import { computeArrivalTimes } from '$lib/utils/naismith';
+	import { computeArrivalTimes, stageTempo } from '$lib/utils/naismith';
 	import { computeHeaderStats } from '$lib/components/email-preview/headerStats';
 	import type { Stage, Tempo } from '$lib/types';
 
@@ -33,6 +35,14 @@
 		onStartTimeChange?: ((hhmm: string) => void) | undefined;
 		/** #2496 F1: erste Etappe → „· Trip-Start"-Marker. */
 		isFirst?: boolean;
+		/** Issue #3197: gesetzt → Knopf „Tempo ändern" (Etappe mit Wegpunkten) schaltet die Karte. */
+		ontempoaendern?: (() => void) | undefined;
+		/** Issue #3197: Etappen-Tempo-Karte dieser Etappe offen (Zustand hält das Panel). */
+		tempoOffen?: boolean;
+		/** Issue #3197: neues Etappen-Grundtempo (derselbe Handler wie Desktop). */
+		onetappentempo?: ((tempo: Tempo) => void) | undefined;
+		/** Issue #3197: „Trip-Tempo verwenden" (derselbe Handler wie Desktop). */
+		ontriptempo?: (() => void) | undefined;
 	}
 	let {
 		stage,
@@ -42,8 +52,16 @@
 		tempo = undefined,
 		onDateChange = undefined,
 		onStartTimeChange = undefined,
-		isFirst = false
+		isFirst = false,
+		ontempoaendern = undefined,
+		tempoOffen = false,
+		onetappentempo = undefined,
+		ontriptempo = undefined
 	}: Props = $props();
+
+	// Issue #3197: Gehzeit, Kennzeichen und Knopf aus derselben Quelle wie die Desktop-Liste
+	// (etappenZeile: Pausentag bzw. < 2 Wegpunkte ohne Gehzeit und ohne Knopf).
+	const zeile = $derived(tempo ? etappenZeile(stage, index, $locale, $t, tempo) : null);
 
 	const isPause = $derived(isPauseStage(stage));
 	const stageLabel = $derived(formatStageNumber(index));
@@ -51,8 +69,9 @@
 
 	// ETAs der Wegpunkt-Zeilen (F7) — dieselbe Naismith-Quelle wie die
 	// Desktop-Sidebar; pro Etappe ab deren Startzeit.
+	// Issue #3197: mit dem Tempo dieser Etappe (eigenes Grundtempo vor Trip-Tempo).
 	const arrivals = $derived(
-		computeArrivalTimes(stage, stage.start_time, tempo)
+		computeArrivalTimes(stage, stage.start_time, tempo ? stageTempo(stage, tempo) : tempo)
 	);
 
 	const stats = $derived(
@@ -112,6 +131,43 @@
 				{#if stats.km !== null}{$t('bausteine.etappe.km', { km: stats.km.toFixed(1) })}{/if}{#if stats.km !== null && stats.ascent !== null} · {/if}{#if stats.ascent !== null}↑{Math.round(stats.ascent)}{/if}
 				{#if stats.wpCount > 0} · {$t('bausteine.etappe.wegpunkte', { anzahl: stats.wpCount })}{/if}
 			</div>
+			<!-- Issue #3197: Gehzeit mit Etappen-Tempo, Kennzeichen, Knopf „Tempo ändern" und die Karte
+			     (nurGrundtempo). Taps hier dürfen den Karten-Toggle der Zeile nicht auslösen. -->
+			{#if zeile?.meta || zeile?.tempoAendern}
+				<div
+					class="tempo-zeile"
+					role="presentation"
+					onclick={(e) => e.stopPropagation()}
+					onkeydown={(e) => e.stopPropagation()}
+				>
+					{#if zeile.meta}<span class="gehzeit" data-testid="stage-cardm-gehzeit">{zeile.meta}</span>{/if}
+					{#if zeile.eigenesTempo}<span class="eigenes-tempo" data-testid="stage-cardm-eigenes-tempo">{$t('trip.tempo.eigenes_tempo')}</span>{/if}
+					{#if zeile.tempoAendern && ontempoaendern}
+						<button
+							type="button"
+							class="tempo-knopf"
+							data-testid="mobile-etappen-tempo-aendern"
+							aria-expanded={tempoOffen}
+							onclick={() => ontempoaendern?.()}
+						>{$t('trip.hub.tempo_aendern')}</button>
+					{/if}
+				</div>
+				{#if tempoOffen && zeile.tempoAendern && tempo}
+					<div
+						class="tempo-karte-mobil"
+						role="presentation"
+						onclick={(e) => e.stopPropagation()}
+						onkeydown={(e) => e.stopPropagation()}
+					>
+						<TempoKarteInhalt
+							tempo={stageTempo(stage, tempo)}
+							nurGrundtempo
+							onchange={(neu) => onetappentempo?.(neu)}
+							ontriptempo={() => ontriptempo?.()}
+						/>
+					</div>
+				{/if}
+			{/if}
 		{/if}
 		{#if open && !isPause && stage.waypoints.length > 0}
 			<div class="wp-rows" data-testid="stage-cardm-wp-rows">
@@ -200,6 +256,42 @@
 		font-size: var(--g-text-xs);
 		color: var(--g-ink-3);
 		margin-top: var(--g-s-1);
+	}
+	/* #3197: Gehzeit-Zeile mit „Tempo ändern" und Etappen-Tempo-Karte. */
+	.tempo-zeile {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--g-s-2);
+		margin-top: var(--g-s-2);
+	}
+	.gehzeit {
+		font-family: var(--g-font-mono);
+		font-size: var(--g-text-xs);
+		color: var(--g-ink-2);
+	}
+	.eigenes-tempo {
+		font-size: var(--g-text-xs);
+		font-weight: 600;
+		color: var(--g-ink-2);
+	}
+	.tempo-knopf {
+		min-height: 44px;
+		padding: 0 var(--g-s-3);
+		border: 1px solid var(--g-rule);
+		border-radius: var(--g-r-2);
+		background: var(--g-card);
+		color: var(--g-ink);
+		font: inherit;
+		font-size: var(--g-text-xs);
+		cursor: pointer;
+	}
+	.tempo-knopf:focus-visible {
+		outline: 2px solid var(--g-accent);
+		outline-offset: 2px;
+	}
+	.tempo-karte-mobil {
+		margin-top: var(--g-s-2);
 	}
 	.risk {
 		flex-shrink: 0;
