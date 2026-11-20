@@ -62,6 +62,8 @@ from tests.tdd._befehl_e2e_fixtures import (
     lege_lage_an,
     lege_po_lage_nutzer_an,
     merkmal_fuer,
+    premium_seiten,
+    premium_volltext,
     pruefe_premium_sms_englisch_und_gsm7,
     sende_premium_sms,
     sms_segments,
@@ -273,6 +275,8 @@ def test_matrix_vollabdeckung_premium_sms(monkeypatch, user_ids, klasse, lage, e
     if erwartet == ERGEBNIS_HILFE:
         _ohne_fehlertexte(text)
         pruefe_premium_sms_englisch_und_gsm7(text, nutzer, kontext=f"Hilfe {lage}")
+        # #3133: Premium-HILFE kommt seitenweise; geprueft wird die Vereinigung.
+        text = premium_volltext(premium_seiten(settings, recorder, nutzer, fall))
         for wort in merkmal_fuer("hilfe", nutzer=nutzer, kanal="premium_sms"):
             assert wort in text, (
                 f"Hilfe-Antwort in Lage {lage} fehlt Befehlswort {wort!r}: {text!r}"
@@ -329,25 +333,26 @@ def test_matrix_vollabdeckung_premium_sms(monkeypatch, user_ids, klasse, lage, e
 # ---------------------------------------------------------------------------
 
 def test_kurzhilfe_hoechstens_drei_segmente(monkeypatch, user_ids):
-    """AC-11: die 'hilfe'-Antwort per Premium-SMS ist GSM-7-sauber und
-    braucht hoechstens 3 Segmente, gemessen am TATSAECHLICH gesendeten Text."""
+    """AC-11 -- fuer Premium-SMS ABGELOEST durch #3133: jede 'hilfe'-Seite
+    ist GSM-7-sauber und EIN Segment (<= 153 Zeichen), gemessen am
+    TATSAECHLICH gesendeten Text; die Hilfe kommt mehrseitig."""
     recorder = install_transport_fakes(monkeypatch)
     nutzer = lege_lage_an(user_ids, "L2")
     settings = basis_settings()
 
-    sende_premium_sms(settings, recorder, nutzer, "hilfe")
+    seiten = premium_seiten(settings, recorder, nutzer, "hilfe")
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    text = _letzte_sms(recorder)["text"]
-    # Team-Lead-Befund: sonst koennte z.B. eine kurze Fehlermeldung
-    # (zufaellig GSM-7-sauber und kurz) faelschlich als Kurzhilfe durchgehen.
-    _ohne_fehlertexte(text)
-    assert_gsm7_clean(text, context="Premium-SMS-Kurzhilfe (AC-11)")
-    segmente = sms_segments(text)
-    assert segmente <= 3, (
-        f"Premium-SMS-Hilfe braucht {segmente} Segmente statt <=3 "
-        f"({len(text)} Zeichen): {text!r}"
-    )
+    assert len(seiten) >= 2, f"Premium-HILFE nicht geseitet: {seiten!r}"
+    for text in seiten:
+        # Team-Lead-Befund: sonst koennte z.B. eine kurze Fehlermeldung
+        # (zufaellig GSM-7-sauber und kurz) faelschlich als Kurzhilfe durchgehen.
+        _ohne_fehlertexte(text)
+        assert_gsm7_clean(text, context="Premium-SMS-Kurzhilfe (AC-11)")
+        assert len(text) <= 153 and sms_segments(text) == 1, (
+            f"Premium-SMS-Hilfeseite braucht {sms_segments(text)} Segmente "
+            f"({len(text)} Zeichen): {text!r}"
+        )
 
 
 def test_hilfe_premium_sms_verwendet_kurzhilfe_statt_langhilfe(monkeypatch, user_ids):
@@ -362,10 +367,10 @@ def test_hilfe_premium_sms_verwendet_kurzhilfe_statt_langhilfe(monkeypatch, user
     nutzer = lege_lage_an(user_ids, "L2")
     settings = basis_settings()
 
-    sende_premium_sms(settings, recorder, nutzer, "hilfe")
+    # #3133: Premium-HILFE seitenweise -- geprueft wird die Vereinigung.
+    text = premium_volltext(premium_seiten(settings, recorder, nutzer, "hilfe"))
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    text = _letzte_sms(recorder)["text"]
     # Team-Lead-Befund: unknown_command_body() zaehlt in "Verfuegbar: ..."
     # ebenfalls alle 12 Grosswoerter auf -- ohne diese Pruefung waere eine
     # versehentliche Fehlerantwort hier faelschlich gruen.
@@ -402,10 +407,10 @@ def test_ac29_vergleichshilfe_bietet_pause_ohne_dauerangabe(monkeypatch, user_id
     settings = basis_settings()
     name = nutzer.presets[0]["name"]
 
-    sende_premium_sms(settings, recorder, nutzer, f"{name} hilfe")
+    # #3133: Vergleichs-HILFE (158 Zeichen) seitenweise -- Vereinigung pruefen.
+    text = premium_volltext(premium_seiten(settings, recorder, nutzer, f"{name} hilfe"))
 
     recorder.pruefe_keine_unbekannten_aufrufe()
-    text = _letzte_sms(recorder)["text"]
     # Team-Lead-Befund: unknown_command_body()'s "Verfuegbar: ..., PAUSE, ..."
     # enthaelt "PAUSE" OHNE Dauerangabe -- ohne diese Pruefung wuerde ein
     # Routing-Fehlschlag (z.B. Namens-Aufloesung bricht, Antwort wird

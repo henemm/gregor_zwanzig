@@ -53,13 +53,15 @@ MAX_SEITEN = 20
 NUMMERN = ("4917000313301", "4917000313302")
 _MSG_ID = itertools.count(3133000)
 
-#: Befehlswort und Verweis je Nutzersprache (AC-6).
+#: Befehlswort und Verweis (AC-6, Spec v1.1): fuer ALLE Konten englisch
+#: (ADR-0104 Nr. 5) -- de und en byte-gleich.
 WORT = {
-    ("hilfe", "de"): "HILFE", ("hilfe", "en"): "HELP",
-    ("kuerzel", "de"): "KUERZEL", ("kuerzel", "en"): "CODES",
+    ("hilfe", "de"): "HELP", ("hilfe", "en"): "HELP",
+    ("kuerzel", "de"): "CODES", ("kuerzel", "en"): "CODES",
 }
-VERWEIS = {"de": "mehr: {wort} {n}", "en": "more: {wort} {n}"}
-BEREICH = {"de": "HILFE: Seiten 1-{n}", "en": "HELP: pages 1-{n}"}
+VERWEIS = {"de": "more: {wort} {n}", "en": "more: {wort} {n}"}
+BEREICH = {"de": "HELP: pages 1-{n}", "en": "HELP: pages 1-{n}"}
+UNBEKANNT = "Unknown command. HELP lists all commands, CODES the codes."
 
 
 # ---------------------------------------------------------------------------
@@ -263,6 +265,27 @@ def test_ac3_vergleichshilfe_seiten(monkeypatch, mit):
     assert not any("RESTDAY" in s for s in seiten), seiten
 
 
+@pytest.mark.parametrize("lang,befehl", [("de", "KUERZEL"), ("en", "CODES")])
+def test_ac3_ac4_vergleichs_codes_seiten(monkeypatch, mit, lang, befehl):
+    """F001: die Seitenzahl wird auch im Vergleichs-Dispatch bei KUERZEL/CODES
+    ausgewertet -- sonst kaeme auf ``<Name> CODES 2`` erneut Seite 1."""
+    uid = nutzer_anlegen("premium")
+    _sprache(uid, lang)
+    orte_anlegen(uid)
+    p = preset()
+    preset_ablegen(uid, copy.deepcopy(p))
+    seiten = _alle_seiten(monkeypatch, mit, uid, befehl, lang, praefix=f"{p['name']} ")
+    assert len(seiten) >= 2, f"Vergleichs-{befehl} muss geseitet sein: {seiten!r}"
+    assert seiten[1] != seiten[0], "Seite 2 darf nicht Seite 1 wiederholen"
+    assert "more:" not in seiten[-1] and "mehr:" not in seiten[-1], seiten[-1]
+    eintraege = []
+    for zeile in codes_text(True, vergleich=True).split("\n"):
+        _kopf, _sep, rest = zeile.partition(": ")
+        eintraege += [fold_ascii(teil.strip().rstrip(".")) for teil in re.split(r", |\. ", rest)
+                      if teil.strip().rstrip(".")]
+    _pruefe_vollstaendig(seiten, eintraege, f"Vergleichs-{befehl}")
+
+
 # ---------------------------------------------------------------------------
 # AC-4 / AC-6: KUERZEL / CODES
 # ---------------------------------------------------------------------------
@@ -337,14 +360,28 @@ def test_ac9_telegram_unbekannter_befehl_unveraendert():
 # AC-10: unbekannter Befehl auf Premium
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("lang,wort", [("de", "HILFE"), ("en", "HELP")])
-def test_ac10_unbekannter_befehl_premium_kurz_mit_verweis(monkeypatch, mit, lang, wort):
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_ac10_unbekannter_befehl_premium_kurz_mit_verweis(monkeypatch, mit, lang):
+    """Spec v1.1: fuer de- und en-Konten dieselbe englische Fassung mit HELP."""
     uid = _nutzer(lang)
     text = _antwort(monkeypatch, mit, uid, "FOOBAR")
     _pruefe_laenge(text, "unbekannter Befehl")
-    assert re.search(rf"\b{wort}\b", text), text
+    assert text == UNBEKANNT, text
+    assert re.search(r"\bHELP\b", text), text
     assert not text.endswith("~"), f"eigene Fassung, nicht vom Sicherheitsnetz gekuerzt: {text!r}"
     assert "mehr:" not in text and "more:" not in text, text
+
+
+@pytest.mark.parametrize("befehl", ["HILFE", "KUERZEL"])
+def test_ac6_seiten_fuer_de_und_en_byte_gleich(monkeypatch, mit, befehl):
+    """Spec v1.1 AC-6: jede Premium-Seite (inkl. Verweis) ist fuer ein
+    deutsches und ein englisches Konto byte-gleich (ADR-0104 Nr. 5)."""
+    de, en = _nutzer("de"), _nutzer("en")
+    seiten_de = _alle_seiten(monkeypatch, mit, de, befehl, "de")
+    seiten_en = _alle_seiten(monkeypatch, mit, en, befehl, "en")
+    assert len(seiten_de) >= 2, seiten_de
+    assert seiten_de == seiten_en, (seiten_de, seiten_en)
+    assert "mehr:" not in "".join(seiten_de), seiten_de
 
 
 # ---------------------------------------------------------------------------
@@ -442,8 +479,9 @@ def test_ac15_zwei_nutzer_je_eigene_seite(monkeypatch, mit):
     _pruefe_laenge(tb[0], "Nutzer B")
     empf = {s["empfaenger"] for s in mit.sendungen("premium_sms")}
     assert empf == {premium_rueckadresse(a), premium_rueckadresse(b)}, empf
-    assert "mehr: HILFE 3" in ta[0] or "mehr:" not in ta[0], ta
-    assert "mehr:" not in tb[0], f"englischer Nutzer bekommt englischen Verweis: {tb!r}"
+    # Spec v1.1: Verweis fuer alle Konten englisch, Seite 2 byte-gleich.
+    assert ta[0].endswith("more: HELP 3"), ta
+    assert ta[0] == tb[0], (ta, tb)
 
 
 def test_ac16_ziellos_mit_seitenzahl(monkeypatch, mit):

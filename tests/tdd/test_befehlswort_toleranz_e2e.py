@@ -165,6 +165,11 @@ def test_variante_wird_wie_die_nackte_form_beantwortet(monkeypatch, user_ids, ka
     recorder.pruefe_keine_unbekannten_aufrufe()
     text_nackt = _text(kanal, recorder, nutzer_nackt)
     merkmal_nackt = merkmal_fuer(fall, nutzer=nutzer_nackt, kanal=kanal)
+    # #3133: Premium-HILFE kommt seitenweise; Seite 1 traegt nur den Anfang
+    # der Befehlsliste -- die Variante muss dann exakt dieselbe Seite liefern.
+    seitenweise = kanal == "premium_sms" and fall == "hilfe"
+    if seitenweise:
+        merkmal_nackt = ("Commands (German works too):", "TODAY", "more: HELP 2")
     assert not _ist_unbekannt_antwort(text_nackt), (
         f"Testfundament fehlerhaft, KEIN AC-20-Befund: die nackte Form "
         f"{fall!r} selbst wird schon als unbekannter Befehl behandelt: {text_nackt!r}"
@@ -180,6 +185,9 @@ def test_variante_wird_wie_die_nackte_form_beantwortet(monkeypatch, user_ids, ka
     recorder.pruefe_keine_unbekannten_aufrufe()
     text_variante = _text(kanal, recorder, nutzer_variante)
     merkmal_variante = merkmal_fuer(fall, nutzer=nutzer_variante, kanal=kanal)
+    if seitenweise:
+        merkmal_variante = merkmal_nackt
+        assert text_variante == text_nackt, (text_variante, text_nackt)
 
     assert not _ist_unbekannt_antwort(text_variante), (
         f"[{kanal}] Variante {variante!r} wird als unbekannter Befehl "

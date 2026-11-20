@@ -446,13 +446,57 @@ _VERBOTENE_SMS_ZEICHEN = ("–", "→", "°", "⛈")
 _EMOJI_RE = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF]")
 
 
+#: #3133 AC-5/AC-6: Seitenverweis am Ende einer Premium-Seite ("more: HELP 2",
+#: "more: CODES 3") -- fuer alle Konten englisch (ADR-0104 Nr. 5).
+_SEITENVERWEIS_RE = re.compile(r"\nmore: (?:HELP|CODES) (\d+)$")
+
+
+def ohne_kuerzungskennzeichen(text: str) -> str:
+    """#3133 AC-11: ohne das Kuerzungskennzeichen ``~`` am Ende
+    (GSM-7-Erweiterungszeichen) samt dem davor angeschnittenen Wortrest
+    (z. B. ein halber Etappenname, der sonst nicht als Nutzername erkannt wird)."""
+    return re.sub(r"\S*~$", "", text)
+
+
+def ohne_premium_seitenmechanik(text: str) -> str:
+    """#3133: Premium-Text ohne Seitenverweis und ohne Kuerzungskennzeichen --
+    nur zum Zusammensetzen der Seiten zum Volltext."""
+    return ohne_kuerzungskennzeichen(_SEITENVERWEIS_RE.sub("", text))
+
+
+def premium_seiten(settings: Settings, recorder: "Recorder", nutzer: "BefehlNutzer",
+                   befehl: str) -> list[str]:
+    """#3133: ``befehl`` und jede per Verweis angebotene Folgeseite
+    (``<befehl> 2`` ...) durch den echten Eingang; je Anfrage genau EINE SMS."""
+    seiten: list[str] = []
+    text = befehl
+    while len(seiten) < 20:
+        vorher = len(recorder.premium_sms_out)
+        sende_premium_sms(settings, recorder, nutzer, text)
+        neu = [e["text"] for e in recorder.premium_sms_out[vorher:]
+               if e["to"] == nutzer.premium_sms_reply_to]
+        assert len(neu) == 1, f"{text!r}: genau eine Premium-SMS erwartet: {neu!r}"
+        seiten.append(neu[0])
+        treffer = _SEITENVERWEIS_RE.search(neu[0])
+        if treffer is None:
+            return seiten
+        text = f"{befehl} {treffer.group(1)}"
+    raise AssertionError(f"{befehl!r}: Seitenkette endet nicht: {seiten!r}")
+
+
+def premium_volltext(seiten: list[str]) -> str:
+    """#3133: alle Seiten ohne Verweis, wieder zeilenweise zusammengefuegt."""
+    return "\n".join(ohne_premium_seitenmechanik(s) for s in seiten)
+
+
 def gsm7_befunde_systemtext(text: str, nutzer: "BefehlNutzer") -> list[str]:
     """AC-19 v1.1: der vom SYSTEM erzeugte Premium-SMS-Text ist GSM-7-sauber
     (kein ``–``/``→``/``°``/``⛈``, keine Emojis). Nutzer-Namen sind
-    ausgenommen und werden vorher entfernt."""
+    ausgenommen und werden vorher entfernt; ebenso das Kuerzungskennzeichen
+    ``~`` (#3133 AC-11). Der Seitenverweis wird mitgeprueft."""
     from tests.tdd._gsm7_charset import _first_non_gsm7_char
 
-    rein = ohne_nutzernamen(text, nutzer)
+    rein = ohne_kuerzungskennzeichen(ohne_nutzernamen(text, nutzer))
     befunde = [z for z in _VERBOTENE_SMS_ZEICHEN if z in rein]
     befunde += _EMOJI_RE.findall(rein)
     fremd = _first_non_gsm7_char(rein)
@@ -466,7 +510,9 @@ def pruefe_premium_sms_englisch_und_gsm7(text: str, nutzer: "BefehlNutzer", *,
     """AC-4 + AC-19 (v1.1): jede Premium-SMS-Antwort ist durchgehend englisch
     und ihr Systemtext GSM-7-sauber."""
     assert text.strip(), f"{kontext}: leere Premium-SMS."
-    deutsch = deutsche_signale(text, nutzer)
+    # #3133 AC-11: angeschnittener Wortrest vor "~" ist kein Produkttext;
+    # der (englische) Seitenverweis wird mitgeprueft.
+    deutsch = deutsche_signale(ohne_kuerzungskennzeichen(text), nutzer)
     assert not deutsch, (
         f"{kontext}: Premium-SMS nicht durchgehend englisch -- deutsche Woerter "
         f"{sorted(set(deutsch))!r}:\n{text}"

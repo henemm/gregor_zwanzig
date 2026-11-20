@@ -2272,10 +2272,13 @@ class NotificationService:
         if not self._sms_gate_reserve("premium_sms", "reply", now, {}, {}):
             logger.error("Premium-SMS confirmation blocked: SMS-Tageslimit erreicht")
             return
+        # #3133: genau EINE Nachricht <= 153 Zeichen -- falten, dann messen,
+        # bei Ueberlaenge hart kuerzen mit Kennzeichen "~" (Sicherheitsnetz).
+        from services.premium_sms_pages import kuerzen
         try:
             self._premium_sms_output(settings).send(
                 subject=result.confirmation_subject,
-                body=result.confirmation_body,
+                body=kuerzen(result.confirmation_body or ""),
             )
             logger.info(f"Premium-SMS confirmation sent: {result.confirmation_subject}")
         except Exception as e:

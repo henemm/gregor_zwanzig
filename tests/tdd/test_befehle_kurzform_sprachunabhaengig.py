@@ -20,9 +20,9 @@ from tests.helpers.inbound_sprache_fixture import (
     FEST, _nutzer, email_texte, golden_pfad, nutzer_anlegen, telegram_texte,
     trip_anlegen, vergleich_anlegen,
 )
+from i18n import t
 from tests.tdd._befehl_e2e_fixtures import (
-    _first_non_gsm7_char, basis_settings, install_transport_fakes, sende_premium_sms,
-    sms_segments,
+    _first_non_gsm7_char, basis_settings, install_transport_fakes, premium_seiten, premium_volltext, sende_premium_sms, sms_segments,
 )
 
 SIGNALWORT = re.compile(r"[äöüÄÖÜß]|\b(nicht|bitte|keine|Befehl|Etappe|Verfügbar|Hilfe)\b")
@@ -62,6 +62,14 @@ def _premium_antwort(netz, uid: str, text: str) -> str:
     return neu[0]["text"]
 
 
+def _eintraege(golden: str, text: str) -> list[str]:
+    """#3133: HELP je Zeile, CODES je Kuerzel-Eintrag -- die Schnittstellen,
+    an denen Premium-Seiten getrennt werden duerfen."""
+    if text == "HELP":
+        return golden.split("\n")
+    return [e for z in golden.split("\n") for e in re.split(r"(?<=[,.]) ", z)]
+
+
 def _lage(uid: str, lang: str | None, *, vergleiche: bool = False) -> None:
     """Trip; mit ``vergleiche`` zusaetzlich zwei aktive Ortsvergleiche
     (Mehrdeutigkeit fuer Trip-und-Vergleich-Befehle wie PAUSE)."""
@@ -81,7 +89,24 @@ def _lage(uid: str, lang: str | None, *, vergleiche: bool = False) -> None:
 def test_ac3_ac4_premium_sms_antwort_byte_gleich_zur_kurzform(netz, lang, text, golden):
     uid = f"p10-kurz-{lang}-{text.lower()}"
     _lage(uid, lang, vergleiche=text == "PAUSE")
+    if text in ("HELP", "CODES"):
+        # #3133: Premium seitenweise; Inhalt aller Seiten ist die bisherige
+        # Kurzform, der Verweis fuer de und en derselbe englische ("more: HELP 2").
+        seiten = premium_seiten(basis_settings(), netz, _nutzer(uid), text)
+        assert all(len(s) <= 153 and sms_segments(s) == 1 for s in seiten), seiten
+        for n, seite in enumerate(seiten[:-1], 2):
+            assert seite.endswith(f"\nmore: {text} {n}"), seite
+            assert not SIGNALWORT.search(seite), seite
+        assert premium_volltext(seiten).split("\n") == _eintraege(_rumpf(golden()), text)
+        return
     antwort = _premium_antwort(netz, uid, text)
+    if text == "Hilfen":
+        # #3133 AC-10: unbekannter Befehl per Premium -- eine englische
+        # Kurzfassung fuer de und en (loest den alten Golden ab).
+        assert antwort == t("inbound.unbekannt.premium", "en"), antwort
+        assert len(antwort) <= 153 and _first_non_gsm7_char(antwort) is None, antwort
+        assert not SIGNALWORT.search(antwort), antwort
+        return
     assert antwort == _rumpf(golden())
     assert _first_non_gsm7_char(antwort) is None, antwort
     assert sms_segments(antwort) <= 3 or text in ("HELP", "CODES"), antwort
@@ -124,7 +149,9 @@ def test_ac4_kuerzel_bedeutung_englisch_und_positivkontrolle_email(netz):
     for lang in ("de", "en"):
         uid = f"p10-codes-{lang}"
         _lage(uid, lang)
-        antworten[lang] = (_premium_antwort(netz, uid, "CODES"),
+        # #3133: alle Seiten, byte-gleich inkl. (englischem) Seitenverweis.
+        seiten = premium_seiten(basis_settings(), netz, _nutzer(uid), "CODES")
+        antworten[lang] = ("\n".join(seiten),
                            email_texte(netz, basis_settings(), uid, "STATUS")[0])
     assert antworten["de"][0] == antworten["en"][0]
     bedeutung = get_metric("humidity").kuerzel_bedeutung_en["HU"]

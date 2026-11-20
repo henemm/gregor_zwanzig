@@ -1,10 +1,10 @@
 ---
 entity_id: premium_sms_format
 type: reference
-version: "1.3"
+version: "1.4"
 status: active
 created: 2026-10-21
-updated: 2026-11-19
+updated: 2026-11-20
 tags: [premium-sms, garmin, inreach, sms, channel, inbound, reference]
 ---
 
@@ -26,7 +26,8 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 | Länge Trip-Briefing | ≤ 153 Zeichen (`CHANNEL_LIMITS["premium_sms"]`, #3100; vorher 160). Ist der SMS-Text länger, kürzt derselbe Formatter vom Listenende (`sms_format.md` §6); die amtliche Warnung bleibt erhalten |
 | Länge Vergleich/sonst | `CHANNEL_LIMITS["premium_sms"]` = 153 Zeichen, 0 Tabellenspalten (Vorsorge, damit kein Pfad auf die Telegram-Grenzen 4096 zurückfällt) |
 | Zeichensatz | ASCII/GSM-7 über `fold_ascii()` (ADR-0022): Umlaut-Digraphen, dann `anyascii`; nicht faltbar → `?`. Ein GSM-7-fremdes Zeichen schaltete auf UCS-2 und halbierte das Budget |
-| Ad-hoc-Verlauf (Befehl) | Kurzform `sms_format.md` §5a, immer **genau eine** Nachricht (`_KURZFORM_KANAELE = ("premium_sms", "sms")`) |
+| Ad-hoc-Verlauf (Befehl) | Kurzform `sms_format.md` §5a, immer **genau eine** Nachricht (`_KURZFORM_KANAELE = ("premium_sms", "sms")`); Grenze für `premium_sms` 153 (`CHANNEL_LIMITS`, #3133), für `sms` weiter 160 |
+| Befehlsantworten | **genau eine** Nachricht ≤ 153 Zeichen nach `fold_ascii()` (#3133). HILFE/HELP und KUERZEL/CODES seitenweise, alle übrigen Antworten zentral gekürzt (s. §4 „Antwortlänge") |
 | Mehrteilig | nein — jede Sendung ist ein einzelner seven.io-Aufruf |
 
 > **Hinweis (2026-11-17, [ADR-0124](../adr/0124-was-steht-wo-eine-tabelle.md) Nr. 8, Issue #3122):** „Unverändert der SMS-Text“ ist vom PO vorerst bestätigt: In der Tabelle „Was steht wo“ (Reiter Wetter) hat die Premium-SMS keine eigene Spalte, sie folgt der Spalte SMS. Eine eigene Auswahl für die Premium-SMS kommt erst mit S9 (#2801). Bis dahin gilt das hier Beschriebene.
@@ -94,6 +95,28 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 - **Befehl:** Text vor `inreachlink.com` (ohne Code) → `TripCommandProcessor`
   (`channel="premium_sms"`); ohne Namen wird das Ziel (Trip/Vergleich) aufgelöst, mehrdeutig →
   Hinweisantwort. Antwort per Premium-SMS an die gelernte Rückadresse.
+- **Antwortlänge (#3133, PO-Entscheidung 2026-11-20):** jede Befehlsantwort ist genau **eine**
+  Nachricht von höchstens 153 Zeichen; jede Antwort belegt genau einen Kontingentplatz
+  (`premium_sms_reply`, ADR-0116). Keine automatische Aufteilung, kein Rest per Mail.
+  - **Seiten:** `HILFE`/`HELP` (Trip und Orte) und `KUERZEL`/`CODES` kommen seitenweise
+    (`src/services/premium_sms_pages.py`, `paginate`/`seiten`). Geschnitten wird nur zwischen ganzen
+    Einträgen (Befehlszeile bzw. Kürzel-Eintrag); der Verweis auf die nächste Seite steht am Ende
+    und zählt ins Budget, die letzte Seite trägt keinen. Folgeseite per Seitenzahl:
+    `HILFE 2`, `KUERZEL 3` (auch mit vorangestelltem Namen und im ziellosen Zweig).
+  - **Verweis für alle Konten englisch** (ADR-0104 Nr. 5, PO-Entscheidung 2026-11-20; Katalog
+    `inbound.seite.*`, auf Premium immer `en`): „more: HELP 2" / „more: CODES 2". Jede Seite ist für
+    de- und en-Konten byte-gleich. Deutsche Befehlswörter (`HILFE 2`, `KUERZEL 2`) werden weiter
+    verstanden. Die de-Katalogtexte stehen nur für die Katalog-Parität und sind auf Premium unbenutzt.
+  - **Ungültige Seitenzahl:** nicht numerisch oder ≤ 0 → Seite 1; größer als die Seitenzahl N →
+    „HELP: pages 1-N" bzw. „CODES: pages 1-N" (alle Konten).
+  - **Unbekannter Befehl:** eine englische Kurzfassung für alle Konten, „Unknown command. HELP
+    lists all commands, CODES the codes." (`inbound.unbekannt.premium`), keine Seiten.
+  - **Sicherheitsnetz:** `send_command_reply_premium_sms` faltet jeden Text (`fold_ascii`) und kürzt
+    über 153 Zeichen hart mit `~` als letztem Zeichen (GSM-7-Erweiterungszeichen, im Budget). Trifft
+    datenabhängige Antworten (STATUS, JETZT, STRECKE, Mehrdeutig-Hinweis o. Ä.); Inhalt geht dann
+    verloren, das `~` zeigt es an.
+  - Das Seitenargument steht bewusst **nicht** in `_COMMAND_SPECS`; Telegram- und E-Mail-Wortlaut
+    von HELP/CODES/unbekanntem Befehl bleiben unverändert.
 - **Koordinaten (#2327, ADR-0102):** Garmin hängt hinter den Link die Position an, z. B.
   `Heute inreachlink.com/gS5ySf-2sYCWmJQksXnjeHw  (46.6370, 12.7678)`. `extract_position` liest
   die **letzte** Klammer `(<lat>, <lon>)` mit Dezimalpunkt (tolerant gegen Leerzeichen, negative
@@ -118,8 +141,9 @@ Der Premium-SMS-Kanal ist Kurzform-Kanal (`_KURZFORM_KANAELE = ("premium_sms", "
 (ADR-0104, Präzisierung 2026-10-31; ADR-0042 Platzgrenze).
 
 **Was bleibt:** Token-Zeile, Kürzel, `sms_code`, `compact_label`, `col_label`, das Zeichenbudget von
-160 Zeichen in GSM-7 (Premium-SMS-Trip-Briefing 153, #3100). Die Antworten auf Rückkanal-Befehle sind wie bisher englisch, unabhängig vom
-Konto.
+160 Zeichen in GSM-7 (Premium-SMS-Trip-Briefing und alle Premium-Befehlsantworten 153, #3100,
+#3133). Die Antworten auf Rückkanal-Befehle sind wie bisher englisch, unabhängig vom Konto, auch
+Seitenverweis, Bereichsantwort und Unbekannt-Hinweis (#3133).
 
 **Was sich ändert:** nur die Eingabe. Jedes Befehlswort wird in der deutschen oder englischen Form
 erkannt (`wort` und `wort_en` in `_COMMAND_SPECS`).
