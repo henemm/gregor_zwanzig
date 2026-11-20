@@ -1,9 +1,7 @@
 ----- unbekannt_schluessel -----
 [[Golden Trip] Unknown command]
 
-Unknown command.
-Commands: TODAY, TOMORROW, NOW, STORMS, ROUTE, RESTDAY, STATUS, PAUSE, SKIP, STOP, RESUME, HELP, CODES, STARTDATE, REPORT
-Weather codes: send a code (CODES lists them).
+Unknown command. HELP lists all commands, CODES the codes.
 ----- morgen -----
 [[Golden Trip] Tomorrow]
 
@@ -56,8 +54,7 @@ TODAY - today
 TOMORROW - tomorrow
 PAUSE - no briefings until RESUME
 RESUME - restart briefings
-CODES - code meanings
-REPORT - all
+more: HELP 2
 ----- vergleich_status -----
 [[Golden Vergleich] Command not available]
 
