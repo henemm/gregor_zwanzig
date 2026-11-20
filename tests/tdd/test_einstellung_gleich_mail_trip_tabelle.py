@@ -406,9 +406,8 @@ def test_ac5_regenwahrscheinlichkeit_html_einfach_ampelpunkt(monkeypatch):
     assert not any("border-radius:50%" in f[j].replace(" ", "") for f in tab.fragmente)
 
 
-@pytest.mark.xfail(strict=True, reason="#3122: Nur-Text-Mail kennt fuer die Regenwahrscheinlichkeit keine Wortstufe (Renderer-Nachzug, eigene Scheibe)")
 def test_ac5_regenwahrscheinlichkeit_nur_text_einfach_ist_wortstufe(monkeypatch):
-    """AC-5 (offen_feature): Regenwahrscheinlichkeit Einfach -> Wortstufe im Klartext."""
+    """AC-5 (#3156): Regenwahrscheinlichkeit Einfach -> Wortstufe im Klartext."""
     _html, plain = _regenwahrscheinlichkeit(monkeypatch, "simplified")
     zellen = klartext_tabellen(plain)["etappe"][0].spalte("rain_probability")
     assert not any(re.match(r"\d", z) for z in zellen), zellen

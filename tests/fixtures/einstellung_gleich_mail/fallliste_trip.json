@@ -4162,10 +4162,9 @@
       "test": "tests/tdd/test_einstellung_gleich_mail_trip_tabelle.py::test_ac5_regenwahrscheinlichkeit_nur_text_einfach_ist_wortstufe",
       "ac": "AC-5",
       "befund": "#3122 B1b",
-      "status": "offen_feature",
+      "status": "gruen",
       "zustand": "placements",
-      "sprache": "de",
-      "verweis": "#3122 (Renderer-Nachzug: Wortstufe der Regenwahrscheinlichkeit in der Nur-Text-Mail, Spec Teil A Nr. 4)"
+      "sprache": "de"
     },
     {
       "id": "T-3122-B1B-BESTAND-MAIL-ADAPTER",

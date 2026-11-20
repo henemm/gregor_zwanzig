@@ -1,0 +1,38 @@
+Pruefkatalog 3047
+Abend <DATUM>
+=====
+Kurzübersicht
+T 15.0
+W 20
+G 45@04
+WD 250°
+R 2.0@04
+CT 70
+UV 5.0@04
+PR 60@04
+
+… +1 weitere Wettergrößen nur als Tageswert
+(Telegram-Limit)
+=====
+Segment 1 · 0.0–12.0 km · ↑900 m ↓100 m
+<pre>
+Zt T    W  G  WD   R   CT UV
+08 15.0 20 45 250° 2.0 70 5.0
+09 15.0 20 45 250° 2.0 70 5.0
+10 15.0 20 45 250° 2.0 70 5.0
+11 15.0 20 45 250° 2.0 70 5.0
+12 15.0 20 45 250° 2.0 70 5.0
+</pre>
+=====
+3-Tages-Ausblick
+<WT> <TT.MM.>  Temp: 15/15  Wind: 20 km/h  Gust: 45 km/h
+WDir: 250 °  Rain: 48.0 mm  Cloud: 70 %  UV: 5
+Rain%: 60 %
+<WT> <TT.MM.>  Temp: 15/15  Wind: 20 km/h  Gust: 45 km/h
+WDir: 250 °  Rain: 48.0 mm  Cloud: 70 %  UV: 5
+Rain%: 60 %
+<WT> <TT.MM.>  Temp: 15/15  Wind: 20 km/h  Gust: 45 km/h
+WDir: 250 °  Rain: 48.0 mm  Cloud: 70 %  UV: 5
+Rain%: 60 %
+=====
+Aktionen

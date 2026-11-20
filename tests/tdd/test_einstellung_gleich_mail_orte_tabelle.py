@@ -362,12 +362,9 @@ def test_ac5_format_je_stelle_unabhaengig(mit):
             assert um[stelle] == z[stelle], f"Telegram-Umschalten aendert {stelle}"
 
 
-@pytest.mark.xfail(strict=True, reason="#3122 offen_feature: Regenwahrscheinlichkeit "
-                   "hat in der HTML-Uebersicht noch keinen Ampelpunkt (Spec Teil A Nr. 4)")
 def test_ac5_regenwahrscheinlichkeit_einfach_html_ampelpunkt(mit):
     """AC-5/Spec Nr. 4: Regenwahrscheinlichkeit auf Einfach zeigt in der
-    HTML-Uebersicht den Ampelpunkt (heute: Wortstufe). Renderer-Nachzug ist
-    eine eigene Scheibe."""
+    HTML-Uebersicht den Ampelpunkt (Renderer-Nachzug #3156)."""
     zeilen = [{"metric_id": "rain_probability", "places": AN, "formats": {"email": "simplified"}}]
     aus = senden(mit, preset(zeilen), slot="evening")
     _text, roh_html = html_vergleichszellen(aus["html"])["rain_probability"][0]

@@ -1,0 +1,32 @@
+ORTE — Katalog Orte Basis
+Datum: <DATUM>
+
+⚠️ Amtliche Warnungen aktuell nicht abrufbar — bitte selbst pruefen.
+
+Kronplatz
+   Böen 38 km/h · Temp max 11°C · Temp min 2°C · Wind 26 km/h · Sonne wechselhaft
+   3-Tages-Ausblick
+   <WT>  Gust: 40 km/h  Rain: 1.6 mm  Temp: 6/11
+   Sun: wechselhaft  Rain%: 70 %
+   <WT>  Gust: 40 km/h  Rain: 1.6 mm  Temp: 6/11
+   Sun: wechselhaft  Rain%: 70 %
+   <WT>  Gust: 40 km/h  Rain: 1.6 mm  Temp: 6/11
+   Sun: wechselhaft  Rain%: 70 %
+Sulden
+   Böen 39 km/h · Temp max 12°C · Temp min 3°C · Wind 26 km/h · Sonne freundlich
+   3-Tages-Ausblick
+   <WT>  Gust: 45 km/h  Rain: 3.6 mm  Temp: 7/12
+   Sun: wechselhaft  Rain%: 70 %
+   <WT>  Gust: 45 km/h  Rain: 3.6 mm  Temp: 7/12
+   Sun: wechselhaft  Rain%: 70 %
+   <WT>  Gust: 45 km/h  Rain: 3.6 mm  Temp: 7/12
+   Sun: wechselhaft  Rain%: 70 %
+Ahrntal
+   Böen 40 km/h · Temp max 13°C · Temp min 4°C · Wind 26 km/h · Sonne freundlich
+   3-Tages-Ausblick
+   <WT>  Gust: 50 km/h  Rain: 5.6 mm  Temp: 8/13
+   Sun: wechselhaft  Rain%: 70 %
+   <WT>  Gust: 50 km/h  Rain: 5.6 mm  Temp: 8/13
+   Sun: wechselhaft  Rain%: 70 %
+   <WT>  Gust: 50 km/h  Rain: 5.6 mm  Temp: 8/13
+   Sun: wechselhaft  Rain%: 70 %
