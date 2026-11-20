@@ -58,7 +58,7 @@ Das Mockup zeigt die Wetter-Dialogtexte (#3111) so, wie die App sie aus mehreren
 
 **Regel g: zusammengesetzt.** Neue exportierte Tabelle `ZUSAMMENGESETZT`: je Zeile eine Folge benannter Katalogschlüssel mit Fuge (A leer, B bis D ein Leerzeichen) und optionalem Platzhalter `{vorlage}`. Zeilen: A1 `oben_1`+`oben_2`, A2 `unten_1`+`unten_2`; B `hinweis`+`abweichend`; C `keins_gruen`+`abweichend`; D1 `ersetzt_route`+`bleibt`, D2 `ersetzt_vergleich`+`bleibt`.
 
-Matching in `zusammengesetztEn(t, katalog)`: DE-Werte der Folge mit der Fuge verketten, `{vorlage}` als Wertgruppe lesen (Wert bleibt wie bei `musterTreffer` unaufgelöst), gegen `norm(t)` vollständig abgleichen. Treffer nur, wenn JEDER Schlüssel in DE und EN existiert (Prinzip „kein EN-Wert, kein Treffer“). EN = EN-Werte mit derselben Fuge, `{vorlage}` bleibt Platzhalter. Eintrag: `i18n_key` = erster Schlüssel der Folge, `muster` = DE-Gesamtmuster, `luecke: false`. Einhängen in `ermittleEn` nach den Regeln a–f und vor `luecke()`; ältere Regeln ändern sich nicht.
+Matching in `zusammengesetztEn(t, katalog)`: DE-Werte der Folge mit der Fuge verketten, `{vorlage}` als Wertgruppe lesen (Wert bleibt wie bei `musterTreffer` unaufgelöst), gegen `norm(t)` vollständig abgleichen. Treffer nur, wenn JEDER Schlüssel in DE und EN existiert (Prinzip „kein EN-Wert, kein Treffer“). EN = EN-Werte mit derselben Fuge, `{vorlage}` bleibt Platzhalter. Eintrag: `i18n_key` = erster Schlüssel der Folge, `muster` = DE-Gesamtmuster mit `{vorlage}`, wenn die Folge einen Platzhalter trägt (B, C), sonst `null` wie bei Regel b und der sprachneutralen Regel (`muster` steht im Erzeuger nur für Texte mit Platzhalter; Festlegung in GREEN, 20.11.), `luecke: false`. Einhängen in `ermittleEn` nach den Regeln a–f und vor `luecke()`; ältere Regeln ändern sich nicht.
 
 **Neuerzeugung und Besitzer.** Elementliste per `cd frontend && node --experimental-strip-types ../scripts/elementliste_aus_mockup.ts` neu erzeugen (Mockup-Hash bleibt). Besitzer-Einträge, die danach keine Lücke mehr sind, werden entfernt; es bleiben die echten Restfälle (erwartet 8: 2 Eigenname, 6 EN-Zusatztexte; exakte Zahl nach Neuerzeugung festschreiben). Der Zählwächter erhält die Restzahl und einen Chronik-Kommentar.
 
@@ -126,3 +126,4 @@ Neue Datei `frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts
 ## Changelog
 
 - 2026-11-20: Initial spec created
+- 2026-11-20: Implementation Details präzisiert: `muster` nur bei Platzhalter-Folgen (B, C) gesetzt, bei A/D `null` (Erzeuger-Konvention, wie Regel b)

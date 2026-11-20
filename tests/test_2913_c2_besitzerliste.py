@@ -130,9 +130,12 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # (179 entfallen, 2 EN-Lücken „Mallorca Frühling“ brauchen einen Besitzer ≠ #2968 → #3194), 66 umgehängt:
     # Kanalzeile → #3202 (23), Grünbereich/Metriken/Kein-Alarm/„:00“ → #3203 (19), Anzeige-Metriken Trip → #3204
     # (10), Vorlagen-Auswahl Orte/Zurücksetzen → #3205 (4), gesperrt → #3122 (+4), nur-EN-Zusatztexte → #3194 (+6).
+    # #3194 (20.11., Regel g „zusammengesetzt“ im EN-Zuordner): 100 Dialogtext-Lücken (Grenzen-Titel 54,
+    # Grünhinweis/Gewitter-Hinweis + abweichend 42, Bestätigungs-Rumpf 4) aus Katalog-Schlüsselfolgen zugeordnet
+    # und abgeräumt; Rest 8: „Mallorca Frühling“ (2, Kontodaten) und 6 nur-EN-Zusatztexte (Metrik-Register, Einheit+Hinweis).
     soll = {
         "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 318, "#2797": 8, "#2968": 0, "#3022": 62,
-        "#3111": 0, "#3194": 108, "#3151": 4, "#3122": 14, "#3202": 23, "#3203": 19, "#3204": 10,
+        "#3111": 0, "#3194": 8, "#3151": 4, "#3122": 14, "#3202": 23, "#3203": 19, "#3204": 10,
         "#3205": 4, "#3145": 0,
     }
     ist = _verweise(daten)
