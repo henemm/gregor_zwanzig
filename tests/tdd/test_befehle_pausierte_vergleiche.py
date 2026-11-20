@@ -226,7 +226,8 @@ def test_ac7_gekuerzte_namen_sind_paarweise_verschieden_und_passen_in_160():
     assert len(namen) == 4, text
     assert len({n.lower() for n in namen}) == 4, f"nicht unterscheidbar: {text!r}"
     assert all(len(n) >= 4 for n in namen), text
-    assert len(text) <= 160, (len(text), text)
+    # #3200: Budget ist das Premium-Limit 153 (CHANNEL_LIMITS), nicht 160.
+    assert len(text) <= 153, (len(text), text)
 
 
 def test_ac7_gleiche_vier_zeichen_anfaenge_mit_umlauten():
@@ -241,7 +242,7 @@ def test_ac7_gleiche_vier_zeichen_anfaenge_mit_umlauten():
     namen = _angezeigte_namen(text)
     assert len(namen) == 3, text
     assert len({n.lower() for n in namen}) == 3, f"nicht unterscheidbar: {text!r}"
-    assert len(text) <= 160, text
+    assert len(text) <= 153, text
 
 
 def test_ac7_telegram_bleibt_bei_vollen_namen():
@@ -337,10 +338,12 @@ def test_ac8_roundtrip_rueckfrage_dann_gekuerzte_antwort_pausiert_richtigen(
     sent1, calls1 = _via_premium_sms(monkeypatch, uid, "pause")
     assert calls1 == [] and len(sent1) == 1
     text = sent1[0]
-    # Die Kürzlänge füllt das 160er-Budget aus, daher schneidet die zentrale
-    # 153er-Kürzung (#3133) nur den Beispiel-Hinweis am Ende ab. Die Kandidatenliste
-    # selbst muss vollständig ankommen: kein ``~`` vor dem Hinweis.
+    # #3200: Die Kürzlänge richtet sich nach dem Premium-Budget 153, daher kommt
+    # die Rückfrage samt Beispiel-Hinweis vollständig an (kein ``~`` mehr).
     assert len(text) <= 153, text
+    assert "~" not in text and text.endswith(" pause'."), (
+        f"Rückfrage samt Antwort-Hinweis muss vollständig ankommen: {text!r}"
+    )
     liste = text.split(". Reply", 1)[0]
     assert "~" not in liste and liste.count("(locations)") == 3, (
         f"Kandidatenliste muss vollständig (ohne Kürzungs-~) ankommen: {text!r}"
