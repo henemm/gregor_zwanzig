@@ -52,7 +52,7 @@ LAT, LON = 42.0, 9.0
 
 #: Nutzer-sichtbare Kennzeichen (feste Zeichenketten, kein Produkt-Resolver).
 WARN_TEXT = ("Amtliche Warnung", "Official warning")
-AUSBLICK_KOMPAKT = ("Naechste Etappen", "Next stages")
+AUSBLICK_KOMPAKT = ("3-Tages-Ausblick", "3-day outlook")
 
 
 def _alarm():
@@ -146,7 +146,7 @@ def _hat_ausblick(s: dict) -> dict[str, bool]:
     from tests.helpers.einstellung_gleich_mail_trip import html_ausblick
     plain = s["plain_text_body"]
     return {"html": html_ausblick(s["body"]) is not None,
-            "klartext": "Nächste Etappen" in plain or "Next stages" in plain}
+            "klartext": "3-Tages-Ausblick" in plain or "3-day outlook" in plain}
 
 
 # --- B-TM3: Schalter amtliche Warnungen (W20) ------------------------------

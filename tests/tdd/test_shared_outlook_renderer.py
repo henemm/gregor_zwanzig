@@ -282,7 +282,7 @@ def test_plain_trip_output_unchanged():
     ]
     plain = _render_plain(rows)
 
-    start = plain.index("Nächste Etappen")
+    start = plain.index("3-Tages-Ausblick")
     end = plain.index("── Antwort-Kommandos ──")
     expected_block = plain[start:end].strip("\n")
 

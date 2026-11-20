@@ -108,7 +108,7 @@ def ausblick_html(html: str) -> Optional[list[str]]:
 
 def ausblick_text(text: str) -> Optional[list[str]]:
     """Ausblick-Spalten im Klartext/Kompakt; ``None`` = Block fehlt ganz --
-    auch die Ueberschrift "Naechste Etappen" (sonst bliebe ein leerer Block
+    auch die Ueberschrift "3-Tages-Ausblick" (sonst bliebe ein leerer Block
     ohne Spalten unbemerkt)."""
     tab = klartext_ausblick(text, AUSBLICK_TAGE)
     if tab is None:
@@ -137,7 +137,7 @@ def telegram_koepfe(mit) -> list[str]:
 def telegram_ausblick(mit) -> Optional[str]:
     """Die Ausblick-Bubble (Titel ``Ausblick``) oder None."""
     for b in telegram_bubbles(mit):
-        if b.splitlines() and b.splitlines()[0] in ("Ausblick", "Outlook"):
+        if b.splitlines() and b.splitlines()[0] in ("3-Tages-Ausblick", "3-day outlook"):
             return b
     return None
 

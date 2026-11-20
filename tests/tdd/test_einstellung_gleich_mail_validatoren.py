@@ -263,7 +263,7 @@ def test_trip_klartext_ausblick_fehlt_scheitert(tmp_path, trip_mail):
     from i18n import t
 
     eml, konfig = trip_mail
-    falsch = _aendere(eml, plain=lambda p: _ohne_block(p, t("mail.ausblick.naechste_etappen", "de")))
+    falsch = _aendere(eml, plain=lambda p: _ohne_block(p, t("mail.ausblick.name", "de")))
     code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
     assert code == 1, aus
     assert "SOLL: Ausblick fehlt im Klartext-Teil" in aus, aus
@@ -1379,7 +1379,12 @@ def test_r7_orte_ausblick_tageszeile_fehlt_scheitert(tmp_path, orte_mail):
 
 
 def _letzter_ausblick_weg(h: str) -> str:
-    treffer = list(re.finditer(r"<div[^>]*>\s*<div[^>]*>\s*<span[^>]*>AUSBLICK</span>.*?</table>\s*</div>", h, re.S))
+    from i18n import t
+
+    # #3155: Etikett aus dem Katalog ("3-Tages-Ausblick", vorher "AUSBLICK").
+    etikett = re.escape(t("vergleich.ausblick.eyebrow", "de"))
+    treffer = list(re.finditer(rf"<div[^>]*>\s*<div[^>]*>\s*<span[^>]*>{etikett}</span>.*?</table>\s*</div>",
+                               h, re.S))
     return h[:treffer[-1].start()] + h[treffer[-1].end():]
 
 
@@ -1761,7 +1766,7 @@ def test_r7b_trip_kompakt_warnungen_an_erster_stelle(monkeypatch, tmp_path):
     code, text = _lauf(tmp_path, TRIP, eml, "--konfig", konfig)
     assert code == 0, text
     falsch = _aendere(eml, plain=lambda p: _warnblock_nach_hinten(
-        p, f"== {t('mail.kompakt.warnungen', 'de')} ==", "Naechste Etappen"))
+        p, f"== {t('mail.kompakt.warnungen', 'de')} ==", t("mail.ausblick.name", "de")))
     code, text = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
     assert code == 1 and "SOLL: Amtliche Warnungen (Kompakt) stehen nicht an erster Stelle" in text, text
 

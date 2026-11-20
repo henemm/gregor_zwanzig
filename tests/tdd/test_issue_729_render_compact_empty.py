@@ -128,5 +128,5 @@ class TestAC3NonEmptyUnchanged:
         _html, plain = _render_email("compact")
         assert plain.isascii(), "compact-Body muss ASCII bleiben"
         assert "Metriken" in plain, "Metriken-Überblick fehlt — regulärer Pfad beschädigt"
-        assert "Naechste Etappen" in plain, "Ausblick fehlt — regulärer Pfad beschädigt"
+        assert "3-Tages-Ausblick" in plain, "Ausblick fehlt — regulärer Pfad beschädigt"
         assert "Data:" in plain, "Provider-Footer fehlt — regulärer Pfad beschädigt"

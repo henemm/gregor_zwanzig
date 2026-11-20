@@ -1,6 +1,6 @@
 {
   "mail.ausblick.spalte_tag": "Tag",
-  "mail.ausblick.eyebrow": "Ausblick · nächste 3 Tage",
+  "mail.ausblick.eyebrow": "3-Tages-Ausblick",
   "mail.ausblick.gesendet": "gesendet {wochentag} · {zeit}",
   "mail.nacht.am_ziel": "Nacht am Ziel ({hoehe}m)",
   "mail.nacht.ankunft": "Ankunft {zeit} → Morgen 06:00",
@@ -72,8 +72,8 @@
   "mail.profil.wandern": "WANDERN",
   "mail.profil.summer_trekking": "ALPINE TOUR",
   "mail.profil.allgemein": "WETTER-BRIEFING",
-  "mail.ausblick.naechste_etappen": "Nächste Etappen",
-  "mail.ausblick.titel": "Ausblick",
+  "mail.ausblick.name": "3-Tages-Ausblick",
+  "mail.ausblick.titel": "3-Tages-Ausblick",
   "mail.acc.hoch": "hoch",
   "mail.acc.mittel": "mittel",
   "mail.acc.niedrig": "niedrig",

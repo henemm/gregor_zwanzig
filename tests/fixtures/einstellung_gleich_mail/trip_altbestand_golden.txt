@@ -41,7 +41,7 @@ Ankunft 12:00 → Morgen 06:00
   * Temperatur/Nullgradgrenze: Minimum im 2h-Block
 
 
-Nächste Etappen
+3-Tages-Ausblick
 Mo  Etappe 1                   Temp 15/15  Wind 20 km/h  Gust 45 km/h  WDir 250 °  Rain 48.0 mm  Rain% 60 %  Thdr ⚡mittel@4  Cloud 70 %  ACC –
 Di  Etappe 2                   Temp 15/15  Wind 20 km/h  Gust 45 km/h  WDir 250 °  Rain 48.0 mm  Rain% 60 %  Thdr ⚡mittel@4  Cloud 70 %  ACC –
 Mi  Etappe 3                   Temp 15/15  Wind 20 km/h  Gust 45 km/h  WDir 250 °  Rain 48.0 mm  Rain% 60 %  Thdr ⚡mittel@4  Cloud 70 %  ACC –

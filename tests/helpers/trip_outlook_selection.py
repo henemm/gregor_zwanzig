@@ -39,8 +39,8 @@ REFERENCE_LEGEND = REFERENCE_DIR / "outlook_legend.html"
 REFERENCE_PLAIN = REFERENCE_DIR / "outlook_block.txt"
 
 TZ = ZoneInfo("Europe/Berlin")
-OUTLOOK_EYEBROW = "Ausblick · nächste 3 Tage"
-PLAIN_OUTLOOK_HEADING = "Nächste Etappen"
+OUTLOOK_EYEBROW = "3-Tages-Ausblick"
+PLAIN_OUTLOOK_HEADING = "3-Tages-Ausblick"
 
 # Legende des Legacy-Zweigs (html.py:1360-1366); #9a978d ist ihr Anker.
 # 🔴 #2136/ADR-0068 (Adversary F001): dieser Block ist im Produktivcode

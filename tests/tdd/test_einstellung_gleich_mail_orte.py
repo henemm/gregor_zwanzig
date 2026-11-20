@@ -998,3 +998,131 @@ def test_baue_orte_eml_liefert_vollstaendige_mail():
     html = msg.get_body(preferencelist=("html",)).get_content()
     assert html_vergleichstabelle(html)[1] == ["wind", "temperature", "precipitation"]
     assert klartext_vergleichstabelle(plain)[1]["Kronplatz"] == ["wind", "temperature", "precipitation"]
+
+
+# ---------------------------------------------------------------------------
+# #3155 (B4 von #3122): eine steuernde Stelle, ein Name -- Orte, je Briefing,
+# Ausgabe (HTML, Nur-Text, Telegram; Orte kennt keine Kompakt-Mail) und
+# Sprache. SPEC: docs/specs/modules/feat_3155_ein_name_ausblick.md (AC-2,
+# AC-3, AC-4, AC-8, AC-10, AC-11, AC-13).
+#
+# Fallfelder: ``konfig`` (Schluessel in ``_B4_KONFIG``), ``briefing``,
+# ``sprache``, ``format``, ``soll`` (an/aus). Die "Anlage-Marke" ist die
+# Vorbelegung, die die Orte-Anlage kuenftig schreibt (Spec Entscheidung 5):
+# ``display_config.placements`` OHNE ``rows``, nur ``outlook_reports`` -- das
+# Abo bleibt im Altpfad (Auswahl, Formate), nur der Ausblick wird gesteuert.
+# ---------------------------------------------------------------------------
+
+from tests.helpers.ausblick_name import (  # noqa: E402
+    NAME, alte_namen_in, html_textknoten, name_steht, orte_telegram_koepfe, textzeilen,
+)
+
+_B4_AUSBLICK = ["precipitation", "wind", "temperature"]
+
+
+def _b4_preset(*, placements=None, **top) -> dict:
+    """Orte-Abo (Morgen- und Abend-Briefing, Telegram an) mit eingestellter
+    Ausblick-Auswahl und -Form (Anlege-Assistent): Folge ungleich Katalog,
+    Wind auf Einfach."""
+    p = preset_dict("ac7_ausblick")
+    p.update(id="orte-b4", send_telegram=True, morning_enabled=True, evening_enabled=True)
+    dc = p["display_config"]
+    dc["outlook_metrics"] = list(_B4_AUSBLICK)
+    dc["outlook_metric_formats"] = {"wind": True}
+    if placements is not None:
+        dc["placements"] = placements
+    p.update(top)
+    return p
+
+
+def _b4_marke(reports) -> dict:
+    return {"version": 1, "outlook_reports": list(reports)}
+
+
+def _b4_tabelle(reports) -> dict:
+    return {"version": 1, "rows": [{"metric_id": m} for m in _B4_AUSBLICK],
+            "outlook_reports": list(reports)}
+
+
+_B4_KONFIG = {
+    # AC-8: Anlage-Marke (ohne ``rows``) -- nur Abend / nur Morgen / beide aus.
+    "marke_abend": lambda: _b4_preset(placements=_b4_marke(["evening"])),
+    "marke_morgen": lambda: _b4_preset(placements=_b4_marke(["morning"])),
+    "marke_leer": lambda: _b4_preset(placements=_b4_marke([])),
+    # AC-2/AC-3: mit Tabelle -- nur Abend / beide Schalter aus.
+    "tabelle_abend": lambda: _b4_preset(placements=_b4_tabelle(["evening"])),
+    "tabelle_aus": lambda: _b4_preset(placements=_b4_tabelle([])),
+    # AC-4: Bestand ``outlook_enabled: false`` -> nirgends.
+    "alt_aus": lambda: _b4_preset(outlook_enabled=False),
+    # AC-13: Bestand ohne Tabelle und ohne Marke bleibt: Ausblick in jedem
+    # eingeschalteten Briefing (Spec Nr. 8, heutiges Verhalten).
+    "alt_an": lambda: _b4_preset(outlook_enabled=True),
+}
+
+
+def _b4_senden(fall: dict):
+    return sende_orte_mail(_B4_KONFIG[fall["konfig"]](), language=fall.get("sprache"),
+                           briefing=fall.get("briefing"))
+
+
+def _b4_ausblick_da(fall: dict, mail) -> bool:
+    lang = fall.get("sprache") or "de"
+    fmt = fall["format"]
+    if fmt == "html":
+        return html_ausblick(mail.html, lang) != {}
+    if fmt == "telegram":
+        assert mail.telegram is not None, f"{fall['id']}: Vorbedingung Telegram-Sendung"
+        return orte_telegram_koepfe(mail.telegram) != []
+    return klartext_ausblick(mail.plain, lang) != {}
+
+
+@pytest.mark.parametrize("fall", _faelle("test_b4_orte_ausblick_je_briefing"))
+def test_b4_orte_ausblick_je_briefing(fall):
+    """AC-2/AC-3/AC-4/AC-8 (#3155): der Orte-Ausblick steht in einem Briefing
+    genau dann, wenn die eine Stelle ihn dort einschaltet (Tabelle oder
+    Anlage-Marke), in HTML-Mail, Nur-Text-Mail und Telegram gleich. Wo er
+    steht, zeigt er die im Anlege-Assistenten gewaehlte Auswahl, Folge und
+    Form (Altpfad bleibt, AC-8)."""
+    mail = _b4_senden(fall)
+    ist = _b4_ausblick_da(fall, mail)
+    soll = fall["soll"] == "an"
+    assert ist is soll, (
+        f"{fall['id']}: Ausblick {'fehlt' if soll else 'steht trotzdem'} "
+        f"({fall['konfig']}, {fall['briefing']}, {fall['format']}, {fall['sprache']})")
+    if soll and fall["format"] in ("html", "klartext") and fall["konfig"].startswith("marke"):
+        pruefe_ausblick(mail, fall["format"], lang=fall["sprache"])
+
+
+def _b4_texte(fall: dict, mail) -> list[str]:
+    if fall["format"] == "html":
+        return html_textknoten(mail.html)
+    if fall["format"] == "telegram":
+        return textzeilen(mail.telegram or "")
+    return textzeilen(mail.plain)
+
+
+@pytest.mark.parametrize("fall", _faelle("test_b4_orte_ausblick_heisst_ueberall_gleich"))
+def test_b4_orte_ausblick_heisst_ueberall_gleich(fall):
+    """AC-10 (#3155): der Orte-Ausblick heisst in HTML-Mail, Nur-Text-Mail und
+    Telegram "3-Tages-Ausblick" bzw. "3-day outlook" -- im Telegram traegt
+    JEDER Ortsblock diesen Kopf."""
+    mail = _b4_senden(fall)
+    lang = fall["sprache"]
+    assert _b4_ausblick_da(fall, mail), f"{fall['id']}: Vorbedingung Ausblick"
+    if fall["format"] == "telegram":
+        koepfe = orte_telegram_koepfe(mail.telegram)
+        assert koepfe and set(koepfe) == {NAME[lang]}, (
+            f"{fall['id']}: Telegram-Koepfe {koepfe} != {NAME[lang]!r}")
+        return
+    assert name_steht(_b4_texte(fall, mail), lang), f"{fall['id']}: Blocktitel {NAME[lang]!r} fehlt"
+
+
+@pytest.mark.parametrize("fall", _faelle("test_b4_orte_keine_alten_ausblick_namen"))
+def test_b4_orte_keine_alten_ausblick_namen(fall):
+    """AC-11 (#3155): keine Orte-Ausgabe nennt den Ausblick "Ausblick"/
+    "Outlook" (auch nicht als Eyebrow), "Mehrtages-Trend" oder
+    "3-Tages-Vorschau"."""
+    mail = _b4_senden(fall)
+    assert _b4_ausblick_da(fall, mail), f"{fall['id']}: Vorbedingung Ausblick"
+    funde = alte_namen_in(_b4_texte(fall, mail))
+    assert not funde, f"{fall['id']}: alte Namen in der Ausgabe: {funde}"

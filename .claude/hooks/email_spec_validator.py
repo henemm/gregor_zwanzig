@@ -1346,23 +1346,96 @@ def _soll_teil(teil: str, uebersicht, orte, stunden, ausblick, soll: dict) -> Li
         fehler.append(f"SOLL: Stundenverlauf ({teil}) erscheint, obwohl er laut Konfiguration aus ist")
     fehler += _soll_listen(f"Stundenverlauf ({teil}) Ort", stunden, soll["stunden"])
     if ausblick and not soll["ausblick_an"]:
-        fehler.append(f"SOLL: Ausblick ({teil}) erscheint, obwohl er laut Konfiguration aus ist")
+        fehler.append(_ausblick_aus_meldung(teil, soll))
     elif soll["ausblick"] is not None:
         fehler += _soll_listen(f"Ausblick ({teil}) Zeile", ausblick, soll["ausblick"][
             "html" if teil == "HTML" else "klartext"])
     return fehler
 
 
-def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
+_BRIEFING_WORT = {"morning": "Morgen", "evening": "Abend"}
+_BRIEFINGS = ("morning", "evening")
+
+
+def _briefings_text(reports) -> str:
+    return " und ".join(f"{_BRIEFING_WORT.get(r, r)}-Briefing" for r in reports)
+
+
+def _ausblick_aus_meldung(teil: str, soll: dict) -> str:
+    """#3155 AC-12: Ausblick in einem Briefing, in dem er laut Konfiguration
+    nicht steht -- nennt das Briefing der Mail und das eingestellte."""
+    report, eingestellt = soll.get("report"), soll.get("ausblick_briefings")
+    if report and eingestellt and report not in eingestellt:
+        return (f"SOLL: Ausblick ({teil}) erscheint im {_briefings_text([report])}, laut "
+                f"Konfiguration steht er nur im {_briefings_text(eingestellt)}")
+    return f"SOLL: Ausblick ({teil}) erscheint, obwohl er laut Konfiguration aus ist"
+
+
+def _briefing_der_mail(plain: str, lang: str, soll: dict) -> "str | None":
+    """#3155: Briefing (morning/evening) einer Orte-Mail. Die Mail traegt keinen
+    Briefing-Kopf; ablesbar ist es am Slot (nur ein Briefing eingeschaltet)
+    bzw. am Zieltag (Morgen = Erstellungstag, Abend = Folgetag,
+    ``compare_slot_scheduler``). ``None`` = nicht ablesbar (``--briefing``)."""
+    from datetime import date
+
+    versatz = soll.get("zieltag_versatz") or set()
+    if len(versatz) == 1:  # nur ein Slot eingeschaltet (Werte 0/1)
+        return _BRIEFINGS[min(versatz)]
+    ziel = _kopfdatum(plain, _t("vergleich.kopf.datum", lang, datum="").strip())
+    erstellt = _kopfdatum(plain, _t("vergleich.kopf.erstellt_zeile", lang, zeit="").strip())
+    if not ziel or not erstellt:
+        return None
+    ist = (date.fromisoformat(ziel) - date.fromisoformat(erstellt)).days
+    return _BRIEFINGS[ist] if ist in (0, 1) else None
+
+
+def _soll_briefing(plain: str, lang: str, soll: dict, briefing: "str | None") -> Tuple[dict, List[str]]:
+    """#3155 AC-12: Soll fuer das Briefing der Mail -- ``ausblick_an`` gilt nur,
+    wenn der Ausblick in diesem Briefing eingestellt ist (eine Regel,
+    ``_soll_aus_konfiguration.ausblick_briefings``)."""
+    b = briefing or _briefing_der_mail(plain, lang, soll)
+    eingestellt = tuple(soll.get("ausblick_briefings") or ())
+    fehler = []
+    if b is None and eingestellt not in ((), _BRIEFINGS):
+        fehler.append("SOLL: Briefing (Morgen/Abend) nicht aus der Mail ablesbar -- der Ausblick "
+                      f"steht laut Konfiguration nur im {_briefings_text(eingestellt)}; "
+                      "--briefing morning|evening angeben")
+    return {**soll, "report": b,
+            "ausblick_an": _soll_modul().ausblick_im_briefing(soll, b)}, fehler
+
+
+def _soll_ausblick_name_orte(body: str, plain: str, lang: str, soll: dict) -> List[str]:
+    """#3155 AC-12 (ADR-0124 Nr. 15): der Block heisst in der Sprache der Mail
+    "3-Tages-Ausblick"/"3-day outlook" (HTML-Etikett ``vergleich.ausblick.eyebrow``,
+    Klartext ``vergleich.ausblick.titel``); ein frueherer Name als Blocktitel
+    ist ein Fehler, ein laut Konfiguration erwarteter Ausblick braucht seinen
+    Titel in beiden Teilen."""
+    m = _soll_modul()
+    fehler = []
+    for teil, text, html, name in (
+            ("HTML", body, True, _t("vergleich.ausblick.eyebrow", lang)),
+            ("Klartext", plain, False, _t("vergleich.ausblick.titel", lang))):
+        for alt in m.alte_ausblick_namen(text, lang, html):
+            fehler.append(f"SOLL: Ausblick-Block ({teil}) heisst '{alt}' statt '{name}'")
+        if soll["ausblick_an"] and not m.name_im_text(text, name, html):
+            fehler.append(f"SOLL: Ausblick-Block ({teil}) fehlt (kein Titel '{name}'), laut "
+                          f"Konfiguration steht er im {_briefings_text(soll.get('ausblick_briefings') or ())}")
+    return fehler
+
+
+def pruefe_soll(msg, soll: dict, lang: str = "de", briefing: "str | None" = None) -> List[str]:
     """Issue #3047 AC-19/AC-20: Zeilenfolge der Vergleichstabelle, Ortsfolge,
     Spalten des Stundenverlaufs je Ort und Ausblick-Kopf, im HTML- UND im
     Klartext-Teil, gegen das Soll aus dem gespeicherten Preset. Reihenfolge nur
-    gegen die gespeicherte Konfiguration, nie gegen eine feste Folge."""
+    gegen die gespeicherte Konfiguration, nie gegen eine feste Folge.
+    #3155 AC-12: Ausblick nur im eingestellten Briefing (``briefing`` bzw. aus
+    der Mail abgelesen), Blockname "3-Tages-Ausblick"."""
     if soll.get("kontext") != "orte":
         return ["SOLL: --konfig ist keine Orts-Vergleich-Konfiguration (Trip: briefing_mail_validator.py)"]
     body = _extract_html_body(msg)
     plain = next((p.get_payload(decode=True).decode(p.get_content_charset() or "utf-8")
                   for p in msg.walk() if p.get_content_type() == "text/plain"), "")
+    soll, briefing_fehler = _soll_briefing(plain, lang, soll, briefing)
     tag = _t("mail.ausblick.spalte_tag", lang)
     zeilen = extract_table_rows(body, lang)
     # #3047 F1: Namen und Beschriftungen aus dem HTML als Text vergleichen --
@@ -1378,7 +1451,7 @@ def pruefe_soll(msg, soll: dict, lang: str = "de") -> List[str]:
     # #3047 F001: Wochentag ("Sun") vor den Werten ist keine Spalte.
     ausblick = [[k for _p, k in _soll_modul().ausblick_kuerzel(z)] for z in ausblick_zeilen]
     fehlerorte = {b[0] for b in bloecke if b[1] is None}
-    fehler = []
+    fehler = briefing_fehler + _soll_ausblick_name_orte(body, plain, lang, soll)
     for name, h, p in (("Stundenverlauf", html[2], stunden), ("Ausblick", html[3], ausblick)):
         if bool(h) != bool(p):
             fehler.append(f"SOLL: {name} fehlt im {'Klartext' if h else 'HTML'}-Teil")
@@ -1601,6 +1674,7 @@ def run_validation(
     lang: str = "de",
     to_contains: "str | None" = None,
     konfig: "dict | None" = None,
+    briefing: "str | None" = None,
 ) -> Tuple[bool, List[str]]:
     """Run all validations and return (success, errors).
 
@@ -1619,7 +1693,8 @@ def run_validation(
     except Exception as e:
         return False, [f"FEHLER: E-Mail konnte nicht geladen werden: {e}"]
 
-    return validate_message(msg, min_locations=min_locations, warnungen=warnungen, konfig=konfig)
+    return validate_message(msg, min_locations=min_locations, warnungen=warnungen, konfig=konfig,
+                            briefing=briefing)
 
 
 # Issue #2663: Schluessel, an denen die Sprache des Inhalts erkennbar ist.
@@ -1628,10 +1703,12 @@ _LANG_MARKER_KEYS = ["vergleich.zeile.amtliche_warnungen", "vergleich.stunden.ze
 
 def validate_message(
     msg, min_locations: int = 3, warnungen: "list | None" = None,
-    konfig: "dict | None" = None,
+    konfig: "dict | None" = None, briefing: "str | None" = None,
 ) -> Tuple[bool, List[str]]:
     """Alle Pruefungen einer geparsten Compare-Mail in der Sprache ihres Kopfes
-    ``X-GZ-Lang`` (Issue #2663). Fehlt der Kopf: Fehler (Pflicht seit A2 #2681)."""
+    ``X-GZ-Lang`` (Issue #2663). Fehlt der Kopf: Fehler (Pflicht seit A2 #2681).
+    ``briefing`` (#3155, ``--briefing``): Morgen/Abend der Mail, sonst aus
+    Slot bzw. Zieltag abgelesen; wirkt nur mit ``konfig``."""
     import _mail_lang  # lazy: Validator bleibt ohne Hilfsmodul ladbar (Log-Tests)
 
     try:
@@ -1660,7 +1737,7 @@ def validate_message(
     fenster = (soll or {}).get("tagesfenster") if (soll or {}).get("kontext") == "orte" else None
     all_errors.extend(validate_hourly_table(body, lang=lang, fenster=fenster))
     if soll is not None:  # Issue #3047: nur mit --konfig, sonst unveraendert
-        all_errors.extend(pruefe_soll(msg, soll, lang))
+        all_errors.extend(pruefe_soll(msg, soll, lang, briefing))
 
     return len(all_errors) == 0, all_errors
 
@@ -1751,6 +1828,14 @@ def main():
              "{\"<id>\": \"<Name>\"}. Ohne Namen ist die Ortsfolge nicht pruefbar "
              "und der Lauf scheitert (#3047)",
     )
+    parser.add_argument(
+        "--briefing",
+        choices=("morning", "evening"),
+        default=None,
+        help="Briefing der Mail zur --konfig (#3155): der Ausblick muss genau dann "
+             "stehen, wenn er in diesem Briefing eingestellt ist. Ohne Angabe aus "
+             "Slot bzw. Zieltag abgelesen (Morgen = Erstellungstag, Abend = Folgetag)",
+    )
     _e2e_paths.sprach_argumente(parser)
     args = parser.parse_args()
 
@@ -1798,6 +1883,9 @@ def main():
         except (OSError, ValueError) as exc:
             print(f"FEHLER: --konfig {args.konfig!r} nicht lesbar: {exc}")
             sys.exit(2)
+    if args.briefing and konfig is None:  # #3155: ohne Soll wirkungslos, nie still
+        print("FEHLER: --briefing nur zusammen mit --konfig")
+        sys.exit(2)
     if args.orte:  # #3047 Punkt 4: Ortsnamen zum rohen Preset
         if konfig is None:
             print("FEHLER: --orte nur zusammen mit --konfig")
@@ -1818,7 +1906,7 @@ def main():
             print(f"FEHLER: --eml {args.eml!r} nicht lesbar: {exc}")
             sys.exit(2)
         success, errors = validate_message(msg, args.min_locations, warnungen=warnungen,
-                                           konfig=konfig)
+                                           konfig=konfig, briefing=args.briefing)
         # #2681: --lang/--to-contains gelten auch fuer die Datei.
         auswahl = _e2e_paths.eml_auswahl_fehler(msg, args.lang, args.to_contains)
         success, errors = success and not auswahl, auswahl + errors
@@ -1832,6 +1920,7 @@ def main():
             lang=args.lang or "de",
             to_contains=args.to_contains,
             konfig=konfig,
+            briefing=args.briefing,
         )
     for hinweis in warnungen:
         print(f"WARNUNG: {hinweis}", file=sys.stderr)

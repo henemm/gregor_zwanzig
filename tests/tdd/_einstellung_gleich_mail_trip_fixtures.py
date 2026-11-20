@@ -158,6 +158,8 @@ def render_trip_mit_ausblick(
     mit_ausblick: bool = True, day_comparison=None,
     mitschrift: Optional[Kanalmitschrift] = None,
     official_alerts: Optional[list] = None,
+    ausblick_nach_zeitplaner: bool = False,
+    stability_result=None,
 ) -> tuple[Kanalmitschrift, object, str]:
     """Wie ``render_trip_dict``, zusaetzlich mit drei Ausblick-Tageszeilen
     (``multi_day_trend``) und mit der ECHTEN ``user_id`` des Profils im Loader
@@ -168,7 +170,13 @@ def render_trip_mit_ausblick(
     ``mitschrift``: eine bereits installierte Mitschrift weiterverwenden
     (AC-12: zwei Nutzer, EIN Aufzeichner -- Kreuzpruefung der Empfaenger).
     ``official_alerts``: echte ``OfficialAlert``-Objekte am Etappen-Segment,
-    wie der Abruf sie dort ablegt (WV6: amtliche Warnungen zuerst)."""
+    wie der Abruf sie dort ablegt (WV6: amtliche Warnungen zuerst).
+    ``ausblick_nach_zeitplaner`` (#3155): die Ausblick-Zeilen entstehen nur,
+    wenn der Zeitplaner sie bauen wuerde -- dieselbe Entscheidung wie
+    ``trip_briefing_aufbau`` (``resolve_report_render_options(...)
+    .show_multi_day_trend``); ohne Angabe bisheriges Verhalten (``mit_ausblick``).
+    ``stability_result``: echtes ``StabilityResult`` fuer die Grosswetterlage
+    (#3155 AC-5), wie der Zeitplaner es in den Auftrag legt."""
     for k, v in TRANSPORT_ENV.items():
         monkeypatch.setenv(k, v)
     if mitschrift is None:
@@ -179,6 +187,11 @@ def render_trip_mit_ausblick(
     trip = load_trip(copy.deepcopy(data), user_id=uid)
     assert trip is not None, "Trip-JSON liess sich nicht laden"
     rc = trip.report_config
+    if ausblick_nach_zeitplaner:
+        from services.report_config_resolver import resolve_report_render_options
+
+        mit_ausblick = resolve_report_render_options(
+            rc, trip.display_config, report_type).show_multi_day_trend
     trend = ausblick_zeilen(trip, report_type, lang=language or "de") if mit_ausblick else None
     seg = segment()
     if official_alerts:
@@ -189,6 +202,7 @@ def render_trip_mit_ausblick(
         stage_stats={"distance_km": 12.0, "ascent_m": 900.0, "descent_m": 100.0,
                      "max_elevation_m": 1400},
         multi_day_trend=trend, day_comparison=day_comparison,
+        stability_result=stability_result,
         report_config=rc, display_config=trip.display_config,
         send_email=rc.send_email, send_sms=rc.send_sms,
         send_telegram=rc.send_telegram, send_premium_sms=rc.send_premium_sms,

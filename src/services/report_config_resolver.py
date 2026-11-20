@@ -125,9 +125,10 @@ def resolve_report_render_options(
     - `report_config is None` → alle Toggles an (bisheriges Default-Verhalten),
       `email_format="full"`.
     - `display_config is None` → `build_default_display_config()`.
-    - `show_multi_day_trend`: rc.multi_day_trend_reports, wenn rc gesetzt ist,
-      sonst dc.multi_day_trend_reports, sonst `["evening"]`
-      (Scheduler-Bestandslogik, `trip_report_scheduler.py:744-750`).
+    - `show_multi_day_trend`: mit rc die Regel der Umrechnung
+      (`_legacy_outlook_reports`, #3155: `show_outlook: false` und leere
+      `outlook_metrics` = aus, Kompakt nach `multi_day_trend_reports`), ohne
+      rc dc.multi_day_trend_reports, sonst `["evening"]`.
 
     Reine Funktion — mutiert weder `report_config` noch `display_config`.
     """
@@ -164,14 +165,22 @@ def _options_bisher(
             display_config=dc,
         )
 
-    trend_reports = report_config.multi_day_trend_reports
+    # #3155 (Spec B4 Nr. 1): der 3-Tages-Ausblick folgt auch ohne Tabelle der
+    # einen Regel der Umrechnung (``_legacy_outlook_reports``, samt Kompakt-
+    # Ausnahme) -- so wirkt er in allen vier Ausgaben gleich, und die Karte
+    # "Was steht wo" zeigt dieselben Schalter. ``show_outlook`` steuert danach
+    # nur noch die Grosswetterlage.
+    from services.placements import _legacy_outlook_reports
+
+    ausblick_reports, _stabilitaet_aus = _legacy_outlook_reports(
+        dc, "trip", report_config, None, None)
     return ReportRenderOptions(
         email_format=report_config.email_format,
         show_outlook=report_config.show_outlook,
         show_stage_stats=report_config.show_stage_stats,
         show_stability=report_config.show_stability,
         show_compact_summary=report_config.show_compact_summary,
-        show_multi_day_trend=report_type in trend_reports,
+        show_multi_day_trend=report_type in ausblick_reports,
         show_yesterday_comparison=report_config.show_yesterday_comparison,
         display_config=dc,
     )

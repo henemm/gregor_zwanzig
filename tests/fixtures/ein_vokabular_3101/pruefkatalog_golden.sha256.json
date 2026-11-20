@@ -1,8 +1,8 @@
 {
- "orte_altbestand.golden.html": "41b3a70102fa27277b8a8ba7815c80dafc89fa670a05f289db207058c4df0683",
+ "orte_altbestand.golden.html": "feb0f812aa54f8ac516b2a7b6d827845830653aff55301a5af4de304e28f671c",
  "orte_altbestand.golden.txt": "ca3ce1a6c27ed03f9b07de3cf93a21709c7a416d3ace47c6debe6243bce555de",
- "orte_altbestand_ohne_grundauswahl.golden.html": "53159e4ca683c81bb846d77f7d75b2a27b7a7b39a1042e26fca30a3a61f857d3",
+ "orte_altbestand_ohne_grundauswahl.golden.html": "cefa5cf65792a90d6ce2412685405ad51669057c9db573410e342e2662bc49f0",
  "orte_altbestand_ohne_grundauswahl.golden.txt": "bed559d7ffc12cf5c255dc34647c9a6c5b339f3d7004a1a7940208e4e1373b0b",
- "trip_altbestand_golden.html": "134fabfadc3bdb8e67aa7ad714020e03353294a1354f82e39b7d474c55e8d031",
- "trip_altbestand_golden.txt": "d109464de96a209721594b5df39a86f0b6222bf0afe9b300fb39cfeebb49e49f"
+ "trip_altbestand_golden.html": "fb2574a5d76eb99bd5ad27d8d1ceb26d1873674b3f41a1ed94732534ceb390b5",
+ "trip_altbestand_golden.txt": "2bb3c5a53c005f94f929a71d97fd5435020d080563d0eefedbe2007739fd1769"
 }

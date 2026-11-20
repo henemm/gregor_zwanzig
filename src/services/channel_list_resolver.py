@@ -34,8 +34,8 @@ KANAELE = ("email", "telegram", "sms", "premium_sms")
 _FORMATE = ("raw", "simplified")
 
 #: #3122 B1a: Abos ohne ``placements`` lesen ihre Kanal-Listen ueber den
-#: bisherigen Pfad (``False``). B3 legt den Schalter um: dann laufen sie ueber
-#: die Umrechnung ``placements_from_legacy`` und den neuen Eingang.
+#: bisherigen Pfad (``False``). B6 (#3157) legt den Schalter um: dann laufen
+#: sie ueber die Umrechnung ``placements_from_legacy`` und den neuen Eingang.
 ALTBESTAND_UEBER_UMRECHNUNG = False
 
 
@@ -144,7 +144,8 @@ def resolve_channel_lists(
         return placements_view(display_config, surface, report_type, stored, **ansicht)
     bisher = _abo_schalter(
         legacy_view(display_config, surface, report_type, ausblick=ausblick), surface,
-        outlook_enabled=outlook_enabled, hourly_enabled=hourly_enabled)
+        outlook_enabled=outlook_enabled, hourly_enabled=hourly_enabled,
+        marke=_ausblick_marke(display_config, enabled_reports), report_type=report_type)
     if not (with_rows or ALTBESTAND_UEBER_UMRECHNUNG):
         return bisher
     umgerechnet = read_placements(legacy_placements(
@@ -156,15 +157,33 @@ def resolve_channel_lists(
     return dataclasses.replace(bisher, rows=neu.rows, outlook_reports=neu.outlook_reports)
 
 
+def _ausblick_marke(display_config, enabled_reports) -> Optional[tuple[str, ...]]:
+    """#3155 (Spec B4 Nr. 5): Briefings des Ausblicks aus der Anlage-Marke
+    (``placements`` ohne ``rows``) ueber die eine Regel
+    ``resolve_outlook_reports``; ``None`` = keine Marke."""
+    from services.placements import anlage_outlook_reports, resolve_outlook_reports
+
+    marke = anlage_outlook_reports(display_config)
+    return None if marke is None else resolve_outlook_reports(marke, enabled_reports)
+
+
 def _abo_schalter(view: MailViewModel, surface: str, *, outlook_enabled: Optional[bool],
-                  hourly_enabled: Optional[bool]) -> MailViewModel:
+                  hourly_enabled: Optional[bool], marke: Optional[Sequence[str]] = None,
+                  report_type: Optional[str] = None) -> MailViewModel:
     """#3122 B1b: Block-Schalter eines Orte-Abos im bisherigen Pfad -- ``False``
     heisst "Block entfaellt" (``()``); ``None`` (nicht angegeben) laesst die
-    Listen unveraendert. Die Ausgaben lesen nur noch das View-Model."""
+    Listen unveraendert. Die Ausgaben lesen nur noch das View-Model.
+    #3155: ``marke`` (Briefings aus der Anlage-Marke) -- der Ausblick entfaellt
+    in jedem Briefing, das nicht darin steht (``report_type=None``: irgendein
+    Briefing)."""
     if surface != "compare":
         return view
+    marke_aus = marke is not None and (
+        not marke if report_type is None else report_type not in marke)
     aus = {k: () for k, an in (("outlook", outlook_enabled), ("hourly", hourly_enabled))
            if an is False}
+    if marke_aus:
+        aus["outlook"] = ()
     return dataclasses.replace(view, **aus) if aus else view
 
 

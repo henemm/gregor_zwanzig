@@ -528,7 +528,7 @@ def test_ac6_deviation_alert_plain_content_sorted_with_km():
         f"Stundentabellen-Muster (mehrere HH:00-Zeilen) in der Alert-Mail:\n{plain}"
     )
     for forbidden in (
-        "Nächste Etappen", "Nacht am Ziel", "Vergleich zum Vortag",
+        "3-Tages-Ausblick", "Nacht am Ziel", "Vergleich zum Vortag",
         "== Metriken-Ueberblick ==", "Gewitter möglich",
     ):
         assert forbidden not in plain, (

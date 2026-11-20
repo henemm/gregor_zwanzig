@@ -31,7 +31,8 @@ const TAB = join(here, '..', 'WeatherMetricsTab.svelte');
 
 const HINT_TESTID = 'compare-layout-outlook-email-only-hint';
 const PROP = 'showEmailOnlyHint';
-const TRIP_TITLE = '3-Tages-Vorschau';
+// #3155 (Spec feat_3155 Nr. 7): wertebereiche.ausblick.titel heisst jetzt „3-Tages-Ausblick".
+const TRIP_TITLE = '3-Tages-Ausblick';
 
 function parseComponent(path: string): any {
 	return parse(quelleMitKatalog(readFileSync(path, 'utf-8')), { modern: true });

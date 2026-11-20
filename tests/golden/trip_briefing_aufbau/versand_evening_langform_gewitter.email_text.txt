@@ -89,7 +89,7 @@ Ankunft 21:51 → Morgen 06:00
   * Temperatur/Nullgradgrenze: Minimum im 2h-Block
 
 
-Nächste Etappen
+3-Tages-Ausblick
 Sa  Kamm 3                     Temp -5/2  Feels -/-  Wind 50 km/h  Gust 75 km/h  Rain 17.8 mm  Thdr ⚡mittel@11  Cloud 47 %  Visib 7000 m  Sun 13.0 h  SnowH 45 cm  NewSn –  ACC –
     ↳ Gewitter möglich · Regen 18 mm · Böen bis 50 km/h
 

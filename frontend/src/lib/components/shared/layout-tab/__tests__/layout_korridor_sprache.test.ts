@@ -177,8 +177,9 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 			'Detailed (HTML)',
 			'Compact (plain text)',
 			'In compact mode, the metrics overview + outlook are always shown. The content blocks below are disabled.',
-			'Outlook',
-			'Weather pattern header, next stages and forecast confidence at the end of the email.',
+			// #3155 (Spec feat_3155 Nr. 8): der Haken show_outlook traegt Name und Text der Grosswetterlage.
+			'Weather pattern',
+			'Assessment of weather stability, e.g. “stable high pressure”.',
 			'Stage figures',
 			'Distance, ascent/descent and maximum altitude of the stage as a number grid.',
 			'Comparison with yesterday',
@@ -197,8 +198,9 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 			Object.fromEntries(Object.keys(CONTENT_MODULE_DESCRIPTIONS).map((k) => [k, { ...CONTENT_MODULE_DESCRIPTIONS[k] }]))
 		);
 		assert.deepEqual(Object.keys(en), Object.keys(de));
-		assert.equal(de.show_outlook.label, 'Ausblick');
-		assert.equal(en.show_outlook.label, 'Outlook');
+		// #3155 (Spec feat_3155 Nr. 8): show_outlook heisst wie die Grosswetterlage.
+		assert.equal(de.show_outlook.label, 'Großwetterlage');
+		assert.equal(en.show_outlook.label, 'Weather pattern');
 		assert.equal(en.show_quick_take_tags.label, 'Quick-take chips');
 		assert.equal(en.show_quick_take_tags.description, 'Coloured keyword pills at the top, e.g. “Dry”, “Windy”.');
 		assert.equal(en.show_stability.label, 'Weather pattern');

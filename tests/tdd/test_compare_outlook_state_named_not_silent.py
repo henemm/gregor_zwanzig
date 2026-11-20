@@ -313,9 +313,11 @@ def test_ac5_found_state_unchanged_no_state_text_no_warning(caplog):
     unveraendert die Ausblick-Tabelle (kein neuer Zustandstext), UND es
     entsteht KEIN WARNING fuer diesen Ort."""
     from output.renderers.comparison import render_comparison_text
-    from output.renderers.email.compare_html import (
-        OUTLOOK_HEADING, render_compare_html,
-    )
+    from output.renderers.email.compare_html import render_compare_html
+
+    # #3155: der fruehere Hardcode ``OUTLOOK_HEADING`` ist entfallen; der
+    # Blockname steht von Hand (ein Name, Spec B4 Nr. 6).
+    OUTLOOK_HEADING = "3-Tages-Ausblick"
 
     with caplog.at_level(logging.DEBUG, logger=_ENGINE_LOGGER):
         result = _run_engine_with_fetch([_location()], _multi_day_fetch)

@@ -56,7 +56,7 @@
 | Stand | as of | „Stand 12:30" = *as of 12:30* |
 | Zeitfenster | time window | |
 | Tagesfenster | day window | |
-| Ausblick (3 Tage) | outlook (3-day) | **Bis zum Bau im Bestand** (#3122); für neue Texte gilt „3-Tages-Ausblick“ (Abschnitt „Reiter Wetter: Tabelle ‚Was steht wo‘“) |
+| Ausblick (3 Tage) | outlook (3-day) | **Veraltet seit #3155:** Ausgabe und Oberfläche nennen den Block nur noch „3-Tages-Ausblick“ (Zeile oben); „Ausblick“ allein nicht mehr für Texte |
 | Legende | legend | |
 | Hinweis | note | |
 | Wetterlage | weather pattern | Stabilitäts-Satz „Wetterlage: STABIL" = *Weather pattern: STABLE* (#2665) |

@@ -105,7 +105,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Geplantes Briefing · Kanäle', 'Briefing-Zeitplan', 'Nächstes Briefing', 'Läuft mit der Trip', 'Bis auf Weiteres', 'Telegram im SMS-Kurzstil', 'Kein Kanal aktiv.', 'bald verfügbar', 'Mehrtages-Trend', 'zuletzt gemeldet am 20.09.2026'])
+		for (const s of ['Geplantes Briefing · Kanäle', 'Briefing-Zeitplan', 'Nächstes Briefing', 'Läuft mit der Trip', 'Bis auf Weiteres', 'Telegram im SMS-Kurzstil', 'Kein Kanal aktiv.', 'bald verfügbar', 'zuletzt gemeldet am 20.09.2026'])
 			assert.ok(alle.includes(s), s);
 	});
 });
@@ -128,15 +128,18 @@ describe('AC-1: Versand-Reiter englisch in Trip und Ortsvergleich, Kanalnamen un
 			assert.deepEqual(deutscheReste(en), []);
 		});
 	}
-	test('Trip: Einleitung, Unterzeilen, Trend, Laufzeit und Kurzstil-Schalter englisch', () => {
-		const { en } = deDannEn(() => sichtbar(kanaeleRendern('route', PROFILE.alles_gekoppelt) + tabRendern('route')));
+	test('Trip: Einleitung, Unterzeilen, Laufzeit und Kurzstil-Schalter englisch', () => {
+		const { de, en } = deDannEn(() => sichtbar(kanaeleRendern('route', PROFILE.alles_gekoppelt) + tabRendern('route')));
 		hat(en, 'The trip briefing is a stage table — email carries all columns, Telegram the first 7, SMS has no grid, plain text.');
 		hat(en, 'Layout · full table');
 		hat(en, 'Layout · 7 columns');
 		hat(en, 'Layout · no grid, 160 characters');
 		hat(en, 'Telegram in SMS compact style');
-		hat(en, 'Multi-day trend');
-		hat(en, 'in the morning briefing');
+		// #3155 (Spec feat_3155 Entscheidung 4/7, AC-7/AC-11): die Karte „Mehrtages-Trend"
+		// ist aus dem Versand-Reiter entfernt -- der Ausblick wird allein in der Karte
+		// „Was steht wo" gesteuert; weder ihr Titel noch ihre Unterzeile stehen noch da.
+		for (const alt of ['Mehrtages-Trend', '3–7-Tage-Ausblick', 'Sonntags ·']) assert.ok(!de.includes(alt), `de: „${alt}" steht noch im Versand-Reiter`);
+		for (const alt of ['Multi-day trend', '3–7-day outlook']) assert.ok(!en.includes(alt), `en: „${alt}" steht noch im Versand-Reiter`);
 		hat(en, 'Runs with the trip · ends 31.10.2026');
 		hat(en, 'Open stages →');
 	});

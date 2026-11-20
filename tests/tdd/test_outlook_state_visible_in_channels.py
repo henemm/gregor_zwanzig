@@ -274,13 +274,13 @@ def test_ac8_morning_briefing_shows_the_outlook_like_the_evening_one():
     evening = _render("evening", trend=trend)
 
     for rep, label in ((morning, "Morgen"), (evening, "Abend")):
-        assert "Nächste Etappen" in rep.email_plain, (
+        assert "3-Tages-Ausblick" in rep.email_plain, (
             f"{label}-Briefing zeigt keinen Ausblick-Block:\n{rep.email_plain}"
         )
         assert "Folgeetappe" in rep.email_plain, (
             f"{label}-Briefing zeigt den Ausblick ohne Etappen-Inhalt."
         )
-        assert "Ausblick · nächste 3 Tage" in rep.email_html
+        assert "3-Tages-Ausblick" in rep.email_html
         assert "Ausblick" in _telegram_text(rep)
 
 

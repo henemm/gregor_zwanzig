@@ -109,13 +109,13 @@ def test_ausblick_klartext_fester_zweig_englisch():
     from output.renderers.email.outlook import render_outlook_plain
 
     text = render_outlook_plain(list(STAGES.values()), lang="en", ampel=AMPEL_ALLGEMEIN)
-    assert text.split("\n")[1] == "Next stages"
+    assert text.split("\n")[1] == "3-day outlook"
     assert ("Thdr ⚡medium@13 (high @15) · Lightning density, Model runs · Hail: yes"
             in text), text
     assert "Thdr light@12" in text and "Thdr ⚡high" in text, text
     for deutsch in ("mittel", "leicht", "hoch", "Hagel", "Blitzdichte"):
         assert deutsch not in text, (deutsch, text)
-    assert render_outlook_plain(list(STAGES.values()), ampel=AMPEL_ALLGEMEIN).split("\n")[1] == "Nächste Etappen"
+    assert render_outlook_plain(list(STAGES.values()), ampel=AMPEL_ALLGEMEIN).split("\n")[1] == "3-Tages-Ausblick"
 
 
 @pytest.mark.parametrize("metrics", [None, [{"metric_id": "thunder", "aggregation": "max"}]],

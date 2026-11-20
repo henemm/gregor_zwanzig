@@ -169,8 +169,8 @@ const NEU_IN_F6 = [
 	'versand.zeitplan.kein_kanal_text', 'versand.zeitplan.vergleich_intro', 'versand.zeitplan.morgen',
 	'versand.zeitplan.morgen_sub', 'versand.zeitplan.abend', 'versand.zeitplan.abend_sub',
 	'versand.zeitplan.aktiv', 'versand.zeitplan.uhrzeit', 'versand.zeitplan.morgens', 'versand.zeitplan.abends',
-	'versand.zeitplan.trend', 'versand.zeitplan.trend_sub', 'versand.zeitplan.im_morgen',
-	'versand.zeitplan.im_abend', 'versand.laufzeit.titel', 'versand.laufzeit.route',
+	// #3155: versand.zeitplan.trend/_trend_sub/im_morgen/im_abend entfallen mit der Karte „Mehrtages-Trend".
+	'versand.laufzeit.titel', 'versand.laufzeit.route',
 	'versand.laufzeit.route_sub', 'versand.laufzeit.etappen_oeffnen', 'versand.laufzeit.offen',
 	'versand.laufzeit.bis_datum', 'versand.laufzeit.ohne_ende', 'versand.naechstes.titel',
 	'versand.naechstes.pausiert', 'versand.naechstes.pausiert_bis', 'versand.naechstes.beendet.route',
@@ -209,7 +209,8 @@ const NEU_IN_F8 = [
 	'layout.mail_inhalt.etappen_kennzahlen', 'layout.mail_inhalt.etappen_kennzahlen_text',
 	'layout.mail_inhalt.quick_take', 'layout.mail_inhalt.quick_take_text',
 	'layout.mail_inhalt.metriken_ueberblick', 'layout.mail_inhalt.metriken_ueberblick_text',
-	'layout.mail_inhalt.ausblick', 'layout.mail_inhalt.ausblick_text', 'layout.mail_inhalt.grosswetterlage',
+	// #3155: layout.mail_inhalt.ausblick/_text entfallen (Haken traegt die Grosswetterlage-Texte).
+	'layout.mail_inhalt.grosswetterlage',
 	'layout.mail_inhalt.grosswetterlage_text', 'layout.mail_inhalt.zusammenfassung',
 	'layout.mail_inhalt.zusammenfassung_text', 'layout.mail_inhalt.vortag_vergleich',
 	'layout.mail_inhalt.vortag_vergleich_text', 'layout.gpx.titel', 'layout.gpx.import_titel',

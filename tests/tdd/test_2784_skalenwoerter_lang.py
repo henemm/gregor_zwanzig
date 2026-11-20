@@ -127,8 +127,8 @@ def test_ac5_ausblick_gewitterzelle_bleibt_deutsch():
     sprachunabhaengig deutsch (Regressions-Waechter, keine stille Umkehr)."""
     trend = _trend(date(2026, 10, 30))
     trend[0]["thunder"] = "MED"
-    de = _bubble(build_texts(lang="de", multi_day_trend=trend), "Ausblick").splitlines()[1]
-    en = _bubble(build_texts(lang="en", multi_day_trend=trend), "Outlook").splitlines()[1]
+    de = _bubble(build_texts(lang="de", multi_day_trend=trend), "3-Tages-Ausblick").splitlines()[1]
+    en = _bubble(build_texts(lang="en", multi_day_trend=trend), "3-day outlook").splitlines()[1]
     assert de.endswith("⚡mittel") and en.endswith("⚡mittel"), (de, en)
 
 

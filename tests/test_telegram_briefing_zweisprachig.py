@@ -215,7 +215,7 @@ def _stage(d: date) -> dict:
 
 
 @pytest.mark.parametrize("lang, kopf, datum", [
-    ("de", "Ausblick", "Do 30.10."), ("en", "Outlook", "Thu 30 Oct"),
+    ("de", "3-Tages-Ausblick", "Do 30.10."), ("en", "3-day outlook", "Thu 30 Oct"),
 ])
 def test_ac8_ausblick_datum_aus_i18n_kern(lang, kopf, datum):
     zeilen = _outlook_lines([_stage(date(2025, 10, 30))], lang=lang, ampel=AMPEL_ALLGEMEIN)
@@ -225,7 +225,7 @@ def test_ac8_ausblick_datum_aus_i18n_kern(lang, kopf, datum):
 
 def test_ac8_ausblick_in_der_englischen_briefing_bubble():
     texts = build_texts(lang="en")
-    assert _bubble(texts, "Outlook").split("\n")[1].startswith("Fri 30 Oct  ")
+    assert _bubble(texts, "3-day outlook").split("\n")[1].startswith("Fri 30 Oct  ")
 
 
 # --- AC-9 -------------------------------------------------------------------
@@ -298,7 +298,7 @@ def test_f002_legacy_ausblick_protokoll_kuerzel_r_w_sprachgleich():
     # Fix-Loop 1 (F008): die Klammer zeigt wieder den Hoechstwert der
     # hervorgehobenen Stunden -> W35@9(45@14); Regen beginnt erst bei 6.0@15.
     zeile = "Di  12/15°C  R6.0@15  W35@9(45@14)  ⚡–"
-    for lang, kopf in (("de", "Ausblick"), ("en", "Outlook")):
+    for lang, kopf in (("de", "3-Tages-Ausblick"), ("en", "3-day outlook")):
         assert _outlook_lines([_stage_mit_stundenwerten()], None, lang=lang, ampel=AMPEL_ALLGEMEIN) == [kopf, zeile]
 
 
@@ -310,4 +310,4 @@ def test_f003_ausblick_zustand_ohne_trend_traegt_kopf_in_nutzersprache(lang):
                         outlook_state=OutlookState.UNAVAILABLE)
     ausblick = texts[-2]
     assert ausblick.split("\n", 1)[0] == t("telegram.kopf.ausblick", lang)
-    assert ausblick.split("\n", 1)[0] == {"de": "Ausblick", "en": "Outlook"}[lang]
+    assert ausblick.split("\n", 1)[0] == {"de": "3-Tages-Ausblick", "en": "3-day outlook"}[lang]

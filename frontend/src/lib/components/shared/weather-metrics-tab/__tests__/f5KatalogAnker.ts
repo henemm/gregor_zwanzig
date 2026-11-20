@@ -73,7 +73,8 @@ export const F5_ANKER: [schluessel: string, de: string, en: string][] = [
 	['wertebereiche.gesperrt.hinweis_sms', 'Wird gerade umgebaut – deine Werte sind übernommen.', 'Being rebuilt – your values have been carried over.'],
 	// 04 Schwellwerte (WeatherMetricsTab)
 	['wertebereiche.schwelle.titel', '04 — Schwellwerte', '04 — Thresholds'],
-	['wertebereiche.schwelle.hinweis', 'Gelten für SMS-Token, Telegram-Kurzform und den E-Mail-Ausblick/Trend-Block', 'Apply to SMS tokens, Telegram compact style and the email outlook/trend block'],
+	// #3155 (Spec feat_3155 Nr. 7): der Block heisst mit dem einen Namen.
+	['wertebereiche.schwelle.hinweis', 'Gelten für SMS-Token, Telegram-Kurzform und den 3-Tages-Ausblick der E-Mail', "Apply to SMS tokens, Telegram compact style and the email's 3-day outlook"],
 	['wertebereiche.schwelle.wind', 'Wind (km/h)', 'Wind (km/h)'],
 	['wertebereiche.schwelle.boeen', 'Böen (km/h)', 'Gusts (km/h)'],
 	['wertebereiche.schwelle.niederschlag', 'Niederschlag (mm)', 'Precipitation (mm)'],
@@ -97,7 +98,7 @@ export const F5_ANKER: [schluessel: string, de: string, en: string][] = [
 	['wertebereiche.auswertung.avg', 'Mittel', 'Average'],
 	['wertebereiche.auswertung.sum', 'Summe', 'Total'],
 	// 3-Tages-Vorschau (Titel an OutlookLayoutControls)
-	['wertebereiche.ausblick.titel', '3-Tages-Vorschau', '3-day preview'],
+	['wertebereiche.ausblick.titel', '3-Tages-Ausblick', '3-day outlook'], // #3155 Entscheidung 7
 	// Amtliche Warnungen (Snippet officialAlertsToggle, beide Kontexte)
 	['wertebereiche.warnungen.checkbox', 'Amtliche Warnungen im Bericht', 'Official warnings in the report'],
 	['wertebereiche.warnungen.text', 'Amtliche Wetterwarnungen (z. B. Unwetterwarnung) im E-Mail-Briefing anzeigen.', 'Show official weather warnings (e.g. severe weather warning) in the email briefing.'],

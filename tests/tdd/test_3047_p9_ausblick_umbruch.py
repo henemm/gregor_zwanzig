@@ -88,7 +88,7 @@ def _lang_preset() -> dict:
 
 
 def _ausblick_block(block: list[str], lang: str) -> list[str]:
-    kopf = {"de": "Ausblick", "en": "Outlook"}[lang]
+    kopf = {"de": "3-Tages-Ausblick", "en": "3-day outlook"}[lang]
     assert kopf in block, f"Vorbedingung: Ausblick fehlt im Ortsblock: {block}"
     return block[block.index(kopf) + 1:]
 
@@ -139,7 +139,7 @@ def test_p9_trip_telegram_ausblick_bricht_nur_zwischen_werten_um(monkeypatch):
     for erg in ergebnisse:
         assert erg["ausgang"] == "sent", f"Vorbedingung: Bericht versendet: {erg['ausgang']}"
         bubbles = [s["body"] for s in erg["telegram"]]
-        ausblick = [b for b in bubbles if b.splitlines()[0] in ("Ausblick", "Outlook")]
+        ausblick = [b for b in bubbles if b.splitlines()[0] in ("3-Tages-Ausblick", "3-day outlook")]
         assert len(ausblick) == 1, f"Vorbedingung: genau eine Ausblick-Bubble: {bubbles}"
         zeilen = ausblick[0].splitlines()[1:]
         assert _tageskoepfe(zeilen) >= 1, f"Vorbedingung: Ausblick-Tag fehlt: {zeilen}"

@@ -19,11 +19,20 @@
 // Vertrag (Spec: „reiner Ergaenzer in tripNewLogic.ts"):
 //   ergaenzeStandardwerteReportConfig(rc: ReportConfig | undefined): ReportConfig
 //   — ergaenzt fehlende Felder, ueberschreibt nichts Gesetztes, schreibt
-//     `multi_day_trend_reports: []` wie der Versand-Reiter.
+//     `multi_day_trend_reports` wie der Versand-Reiter.
 //
-// Mutationen, die hier rot werden muessen (Spec AC-6):
+// #3155 (Spec feat_3155_ein_name_ausblick.md, Entscheidung 4, AC-7; Ober-Spec
+// feat_3122 Nr. 6 / AC-9): die Karte „Mehrtages-Trend" entfaellt; die Anlage
+// belegt den 3-Tages-Ausblick nach der EINEN Regel vor: allein das Morgen-
+// Briefing eingeschaltet -> ["morning"], sonst ["evening"]; ein vorhandener
+// Wert gewinnt. Keine Trend-Felder (`multi_day_trend_morning/_evening`) mehr.
+// Die Vorbelegung gilt NUR bei der Anlage; das Speichern eines bestehenden Trips
+// setzt die Liste nie neu (Tech-Lead-Entscheidung, AC-13).
+//
+// Mutationen, die hier rot werden muessen (Spec AC-6, #3155 AC-7):
 //   „Ergaenzer laesst den Mail-Baustein weg", „Ergaenzer setzt
-//   multi_day_trend_reports nicht".
+//   multi_day_trend_reports nicht", „Vorbelegung immer ['evening']",
+//   „Vorbelegung ueberschreibt einen gespeicherten Wert".
 //
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
 //     --test src/lib/components/trip-new/__tests__/standardwerte_payload_paritaet_trip.test.ts
@@ -33,6 +42,7 @@ import assert from 'node:assert/strict';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as logik from '../tripNewLogic.ts';
+import { baueReportConfigPayload, ladeReportZustand } from '../../shared/versand-tab/reportConfigPayload.ts';
 import { effekteVon, type Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
 import {
 	TRIP_EDITOR,
@@ -96,7 +106,7 @@ describe('AC-6: Ergaenzer == unveraendertes Durchklicken (Versand-Reiter + Mail-
 	test('Messaufbau: Referenz aus den echten Reitern enthaelt Briefing-, Kanal- und Mail-Felder', async () => {
 		const ref = await durchgeklickt(VOR_VERSAND);
 		assert.equal(ref.day_window_start_hour, 4, 'Tagesfenster des Wetter-Reiters geht verloren');
-		assert.deepEqual(ref.multi_day_trend_reports, []);
+		assert.deepEqual(ref.multi_day_trend_reports, ['evening']);
 	});
 
 	test('Trip ohne Versand-Besuch: Ergaenzer liefert exakt die report_config des Durchklickens (Deep-Equal)', async () => {
@@ -104,11 +114,107 @@ describe('AC-6: Ergaenzer == unveraendertes Durchklicken (Versand-Reiter + Mail-
 		assert.deepEqual(klon(ergaenzer()(klon(VOR_VERSAND))), ref);
 	});
 
-	test('kein Mehrtages-Trend im Abend-Briefing: multi_day_trend_reports ist explizit []', () => {
+	test('#3155 AC-7: Morgen- und Abend-Briefing an -> 3-Tages-Ausblick nur abends (multi_day_trend_reports ["evening"])', () => {
 		const rc = ergaenzer()(klon(VOR_VERSAND));
-		assert.ok('multi_day_trend_reports' in rc, 'Feld fehlt — Python-Lese-Default ["evening"] wuerde greifen');
-		assert.deepEqual(rc.multi_day_trend_reports, []);
+		assert.ok('multi_day_trend_reports' in rc, 'Feld fehlt — die Vorbelegung muss ausdruecklich geschrieben werden');
+		assert.deepEqual(rc.multi_day_trend_reports, ['evening']);
 	});
+
+	test('#3155 AC-7: nur Morgen-Briefing an -> 3-Tages-Ausblick im Morgen-Briefing (["morning"]), Ergaenzer == Durchklicken', async () => {
+		const nurMorgen = { ...VOR_VERSAND, morning_enabled: true, evening_enabled: false };
+		const ref = await durchgeklickt(nurMorgen);
+		assert.deepEqual(ref.multi_day_trend_reports, ['morning'], 'Versand-Reiter belegt den Ausblick nicht nach der Regel vor');
+		const rc = ergaenzer()(klon(nurMorgen));
+		assert.deepEqual(rc.multi_day_trend_reports, ['morning']);
+		assert.deepEqual(klon(rc), ref);
+	});
+
+	test('#3155 AC-7: nur Abend-Briefing an -> ["evening"]', async () => {
+		const nurAbend = { ...VOR_VERSAND, morning_enabled: false, evening_enabled: true };
+		assert.deepEqual((await durchgeklickt(nurAbend)).multi_day_trend_reports, ['evening']);
+		assert.deepEqual(ergaenzer()(klon(nurAbend)).multi_day_trend_reports, ['evening']);
+	});
+
+	for (const vorhanden of [['morning', 'evening'], ['morning'], []]) {
+		test(`#3155 AC-7: vorhandener Wert gewinnt (${JSON.stringify(vorhanden)})`, async () => {
+			const gesetzt = { ...VOR_VERSAND, multi_day_trend_reports: vorhanden };
+			assert.deepEqual((await durchgeklickt(gesetzt)).multi_day_trend_reports, vorhanden, 'Versand-Reiter ueberschreibt die gespeicherte Einstellung');
+			assert.deepEqual(ergaenzer()(klon(gesetzt)).multi_day_trend_reports, vorhanden, 'Ergaenzer ueberschreibt die gespeicherte Einstellung');
+		});
+	}
+
+	test('#3155: keine Trend-Felder der entfallenen Karte im neuen report_config', async () => {
+		const ref = await durchgeklickt(VOR_VERSAND);
+		const rc = ergaenzer()(klon(VOR_VERSAND));
+		for (const feld of ['multi_day_trend_morning', 'multi_day_trend_evening']) {
+			assert.ok(!(feld in ref), `Versand-Reiter schreibt noch ${feld}`);
+			assert.ok(!(feld in rc), `Ergaenzer schreibt noch ${feld}`);
+		}
+	});
+
+	// Tech-Lead-Entscheidung #3155 (AC-13, Known Limitation „spaetere Aenderungen aendern eine
+	// Vorbelegung nicht"): die Vorbelegung gilt NUR bei der Anlage. Speichern eines BESTEHENDEN
+	// Trips (Speicherweg baueReportConfigPayload mit geladenem Blob, wie Golden D) setzt
+	// multi_day_trend_reports nie neu: fehlt die Liste, bleibt es beim Stand vor B4 (fehlend
+	// bzw. []), nie ["morning"]/["evening"].
+	for (const [fall, aenderung] of [
+		['ohne Aenderung', {}],
+		['mit geaenderter Morgen-Zeit', { morning_time: '08:00' }]
+	] as const) {
+		test(`#3155 AC-13: bestehender Trip nur mit Morgen, ohne Liste — Speichern ${fall} schreibt keine Vorbelegung`, () => {
+			const bestand = {
+				trip_id: 'bestand-3155', enabled: true, morning_enabled: true, evening_enabled: false,
+				morning_time: '06:00:00', evening_time: '20:00:00', send_email: true
+			};
+			const zustand = { ...ladeReportZustand(klon(bestand)), ...aenderung };
+			const nach = baueReportConfigPayload({ snapshot: klon(bestand), live: klon(bestand), zustand });
+			const wert = nach.multi_day_trend_reports;
+			assert.ok(
+				wert === undefined || (Array.isArray(wert) && wert.length === 0),
+				`bestehender Trip bekommt beim Speichern eine Ausblick-Vorbelegung: ${JSON.stringify(wert)}`
+			);
+		});
+	}
+
+	test('#3155 AC-13: bestehender Trip mit gespeicherter Liste — Speichern laesst sie unveraendert', () => {
+		for (const liste of [['morning'], ['evening'], ['morning', 'evening'], []]) {
+			const bestand = { enabled: true, morning_enabled: true, evening_enabled: true, send_email: true, multi_day_trend_reports: liste };
+			const nach = baueReportConfigPayload({ snapshot: klon(bestand), live: klon(bestand), zustand: ladeReportZustand(klon(bestand)) });
+			assert.deepEqual(nach.multi_day_trend_reports, liste);
+		}
+	});
+
+	// Adversary F001 (Fix-Loop 1): in der Anlage traegt der LEBENDE Blob die eigene
+	// Vorbelegung des vorigen $effect-Laufs (VersandTab.svelte: `live` = reportConfig
+	// nach dem letzten Lauf). Schaltet der Nutzer danach von „beide Briefings" auf
+	// „nur Morgen", muss die Vorbelegung neu nach der Regel entstehen -- die alte
+	// Vorbelegung aus `live` darf nicht als „gespeicherter Wert" gewinnen.
+	for (const [fall, snapshot] of [
+		['ohne Schnappschuss', undefined],
+		['Schnappschuss = Blob vor dem Versand-Besuch', VOR_VERSAND]
+	] as const) {
+		test(`#3155 AC-7 (F001): Anlage beide Briefings -> nur Morgen, verkettet (${fall}) -> ["morning"]`, () => {
+			const beide = { ...ladeReportZustand(klon(VOR_VERSAND)), morning_enabled: true, evening_enabled: true };
+			const lauf1 = baueReportConfigPayload({
+				snapshot: snapshot ? klon(snapshot) : undefined,
+				live: klon(VOR_VERSAND),
+				zustand: beide,
+				ausblickVorbelegung: true
+			});
+			assert.deepEqual(lauf1.multi_day_trend_reports, ['evening'], 'Messaufbau: erster Lauf belegt nicht abends vor');
+			const lauf2 = baueReportConfigPayload({
+				snapshot: snapshot ? klon(snapshot) : undefined,
+				live: klon(lauf1),
+				zustand: { ...beide, evening_enabled: false },
+				ausblickVorbelegung: true
+			});
+			assert.deepEqual(
+				lauf2.multi_day_trend_reports,
+				['morning'],
+				'Vorbelegung des vorigen Laufs (im lebenden Blob) bleibt nach Umschalten auf „nur Morgen" stehen'
+			);
+		});
+	}
 
 	test('Mail-Baustein ist enthalten (email_format, show_*, daily_summary_metrics wie die Mail-Karte)', async () => {
 		const ref = await durchgeklickt(VOR_VERSAND);
@@ -187,6 +293,8 @@ describe('AC-6/AC-9/AC-11 an der Wirkstelle: Klick im echten Trip-Editor', () =>
 		assert.equal(posts.length, 1, `erwartet genau einen POST, gesehen ${posts.length}`);
 		assert.equal(posts[0].url, '/api/trips');
 		assert.deepEqual(posts[0].body.report_config, ref);
+		// #3155 AC-7: der neue Trip traegt die Ausblick-Vorbelegung (Morgen + Abend an -> abends).
+		assert.deepEqual(posts[0].body.report_config.multi_day_trend_reports, ['evening']);
 	});
 	test('Klick landet auf der Detailseite des neuen Trips', async () => {
 		const { ziele, klick } = await editorMitKlickSpion();

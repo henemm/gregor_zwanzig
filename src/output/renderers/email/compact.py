@@ -119,8 +119,8 @@ def _stability_text(label: str, lang: Lang) -> str:
     return _ascii(t("mail.stabilitaet.unbekannt", lang, label=label))
 
 
-def _naechste_etappen(lang: Lang) -> str:
-    return _ascii(t("mail.ausblick.naechste_etappen", lang))
+def _ausblick_name(lang: Lang) -> str:
+    return _ascii(t("mail.ausblick.name", lang))
 
 
 def render_compact(
@@ -258,7 +258,7 @@ def render_compact(
     # unveraendert in die bisherigen Zweige.
     if outlook_metrics != []:
         if multi_day_trend:
-            lines.append(_naechste_etappen(lang))
+            lines.append(_ausblick_name(lang))
             if outlook_metrics is not None:
                 # Label-Wert-Muster wie render_outlook_plain() (outlook.py:333)
                 # -- kein drittes Format. Bei 1..N frei gewaehlten Spalten
@@ -297,7 +297,7 @@ def render_compact(
         elif outlook_state is not None and outlook_state != _OutlookState.FOUND:
             # Fix #1486: benannter Zustand statt stiller Leerstelle. ascii_safe,
             # weil der Compact-Body durchgaengig ASCII ist ("!!" statt "⚠️").
-            lines.append(_naechste_etappen(lang))
+            lines.append(_ausblick_name(lang))
             lines.append(_ascii(render_outlook_state_plain(
                 outlook_state, outlook_horizon_days, ascii_safe=True, lang=lang,
             )))

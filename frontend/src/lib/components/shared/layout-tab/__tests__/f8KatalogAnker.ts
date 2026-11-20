@@ -94,8 +94,8 @@ export const F8_ANKER: [schluessel: string, de: string, en: string][] = [
 	['layout.mail_inhalt.quick_take_text', 'Farbige Schlagwort-Pillen oben, z. B. „Trocken", „Windig".', 'Coloured keyword pills at the top, e.g. “Dry”, “Windy”.'],
 	['layout.mail_inhalt.metriken_ueberblick', 'Metriken-Überblick', 'Metrics overview'],
 	['layout.mail_inhalt.metriken_ueberblick_text', 'Ersetzt Quick-Take-Chips und Tages-Summe durch eine farbige Pille je aktiver Metrik.', 'Replaces quick-take chips and the daily summary with one coloured pill per active metric.'],
-	['layout.mail_inhalt.ausblick', 'Ausblick', 'Outlook'],
-	['layout.mail_inhalt.ausblick_text', 'Großwetterlage-Kopf, nächste Etappen und Vorhersage-Sicherheit am Mail-Ende.', 'Weather pattern header, next stages and forecast confidence at the end of the email.'],
+	// #3155 (Spec feat_3155 Entscheidung 8): layout.mail_inhalt.ausblick/_text entfallen --
+	// der Haken show_outlook traegt die Texte der Grosswetterlage.
 	['layout.mail_inhalt.grosswetterlage', 'Großwetterlage', 'Weather pattern'],
 	['layout.mail_inhalt.grosswetterlage_text', 'Einordnung der Wetterstabilität, z. B. „stabile Hochdrucklage".', 'Assessment of weather stability, e.g. “stable high pressure”.'],
 	['layout.mail_inhalt.zusammenfassung', 'Zusammenfassung', 'Summary'],

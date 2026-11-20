@@ -70,10 +70,7 @@ export const F6_ANKER: [schluessel: string, de: string, en: string][] = [
 	['versand.zeitplan.uhrzeit', 'Uhrzeit', 'Time'],
 	['versand.zeitplan.morgens', 'Morgens <zeit>', 'Morning <zeit>'],
 	['versand.zeitplan.abends', 'Abends <zeit>', 'Evening <zeit>'],
-	['versand.zeitplan.trend', 'Mehrtages-Trend', 'Multi-day trend'],
-	['versand.zeitplan.trend_sub', 'Sonntags · 3–7-Tage-Ausblick (optional)', 'Sundays · 3–7-day outlook (optional)'],
-	['versand.zeitplan.im_morgen', 'im Morgen-Briefing', 'in the morning briefing'],
-	['versand.zeitplan.im_abend', 'im Abend-Briefing', 'in the evening briefing'],
+	// #3155: versand.zeitplan.trend/_sub/im_morgen/im_abend entfallen mit der Karte „Mehrtages-Trend".
 	// Laufzeit (VTLaufzeitRoute / VTLaufzeitVergleich)
 	['versand.laufzeit.titel', 'Laufzeit', 'Duration'],
 	['versand.laufzeit.route', 'Läuft mit der Trip · endet <ende>', 'Runs with the trip · ends <ende>'],

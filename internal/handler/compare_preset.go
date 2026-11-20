@@ -286,6 +286,9 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			// Issue #3047 E1: Grundauswahl (active_metrics) ausdruecklich mit.
 			preset.DisplayConfig = vergleichDisplayConfigAusVorlage(std)
 		}
+		// Issue #3155 (Spec B4 Nr. 5/10): Vorbelegung des 3-Tages-Ausblicks als
+		// Marke -- erst hier stehen Slot-Felder und display_config fest.
+		ausblickMarkeNeuanlage(&preset)
 
 		// Issue #2961: Wachstumsgrenzen der freien Maps.
 		if presetGrenzenVerletzt(w, r, nil, preset) {
@@ -306,6 +309,38 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusCreated, preset)
+	}
+}
+
+// ausblickMarkeNeuanlage legt bei der Orte-Anlage die Vorbelegung des
+// 3-Tages-Ausblicks an (Issue #3155, Spec B4 Nr. 5 und Nr. 10):
+//
+//	display_config.placements = {"version": 1, "outlook_reports": [...]}
+//
+// Bewusst OHNE "rows": das Abo bleibt im Altpfad (Ausblick-Metriken und
+// -Formate aus dem Anlege-Assistenten wirken weiter), gesteuert wird nur, in
+// welchem Briefing der Ausblick steht. Regel (Ober-Spec Nr. 6, dieselbe wie
+// resolve_outlook_reports im Python-Kern): allein das Morgen-Briefing an ->
+// ["morning"], sonst ["evening"]; outlook_enabled=false -> [] (leere Liste =
+// aus). Mitgeschickte placements bleiben unangetastet.
+func ausblickMarkeNeuanlage(preset *model.ComparePreset) {
+	if preset.DisplayConfig == nil {
+		preset.DisplayConfig = map[string]interface{}{}
+	}
+	if _, mitgeschickt := preset.DisplayConfig["placements"]; mitgeschickt {
+		return
+	}
+	reports := []string{"evening"}
+	morgen := preset.MorningEnabled != nil && *preset.MorningEnabled
+	abend := preset.EveningEnabled != nil && *preset.EveningEnabled
+	switch {
+	case preset.OutlookEnabled != nil && !*preset.OutlookEnabled:
+		reports = []string{}
+	case morgen && !abend:
+		reports = []string{"morning"}
+	}
+	preset.DisplayConfig["placements"] = map[string]interface{}{
+		"version": 1, "outlook_reports": reports,
 	}
 }
 

@@ -467,7 +467,7 @@ class TestAC7HeaderAndTrendPreserved:
         assert "Befehle:" in body, f"Befehls-Hinweis nicht gefunden:\n{body}"
 
     def test_trend_block_present(self):
-        """AC-7: Mehrtages-Trend-Block ('Nächste Etappen') bleibt erhalten."""
+        """AC-7: Mehrtages-Trend-Block ('3-Tages-Ausblick') bleibt erhalten."""
         seg = _make_segment()
         trend = [dict(
             weekday="Mo", name="Etappe X",
@@ -475,7 +475,7 @@ class TestAC7HeaderAndTrendPreserved:
             wind_dir="W", wind_kmh=20, thunder="NONE", note=None,
         )]
         body = _render_telegram([seg], [_make_rows_sunny()], multi_day_trend=trend)
-        assert "Nächste Etappen" in body, f"Trend-Block nicht gefunden:\n{body}"
+        assert "3-Tages-Ausblick" in body, f"Trend-Block nicht gefunden:\n{body}"
 
 
 # ---------------------------------------------------------------------------

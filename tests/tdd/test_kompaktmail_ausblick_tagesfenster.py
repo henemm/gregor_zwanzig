@@ -72,7 +72,7 @@ _TZ = ZoneInfo("UTC")
 _HEUTE = date(2026, 8, 20)      # Etappe des Briefings (heutiger Tag)
 _MORGEN = date(2026, 8, 21)     # kuenftige Etappe = Ausblick-Zeile
 _WOCHENTAG = "Di"
-_AUSBLICK_UEBERSCHRIFT = "Naechste Etappen"
+_AUSBLICK_UEBERSCHRIFT = "3-Tages-Ausblick"
 _KOMPAKT = TripReportConfig(email_format="compact")
 
 # Die VIER Zutaten der Fusion in ihrer deutschen Beschriftung (AC-6). Keine

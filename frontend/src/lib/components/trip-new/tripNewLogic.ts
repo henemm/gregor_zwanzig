@@ -296,9 +296,17 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 // (morning/evening_time, *_enabled, send_*) entstehen deshalb beim POST, nicht
 // per Mount-Effekt. Gesetzte Werte gewinnen (`ladeReportZustand` liest den Blob),
 // unbekannte Bestandsfelder bleiben erhalten. Rein: die Eingabe bleibt unveraendert.
+// #3155 (Spec feat_3155 Nr. 4/9): Anlage -- fehlt `multi_day_trend_reports`,
+// belegt der Baustein den 3-Tages-Ausblick nach der Regel vor (allein Morgen an
+// -> ['morning'], sonst ['evening']); ein vorhandener Wert gewinnt.
 export function ergaenzeVersandStandard(rc: ReportConfig | undefined): ReportConfig {
 	const basis = { ...((rc ?? {}) as Record<string, unknown>) };
-	return baueReportConfigPayload({ snapshot: basis, live: basis, zustand: ladeReportZustand(basis) }) as ReportConfig;
+	return baueReportConfigPayload({
+		snapshot: basis,
+		live: basis,
+		zustand: ladeReportZustand(basis),
+		ausblickVorbelegung: true
+	}) as ReportConfig;
 }
 
 // ── „Mit Standardwerten speichern" (Issue #2521 S3, AC-6) ───────────────────
@@ -307,7 +315,7 @@ export function ergaenzeVersandStandard(rc: ReportConfig | undefined): ReportCon
 // und in derselben Reihenfolge (erst VersandTab, dann MailInhaltCard auf dem
 // lebenden Blob). Gesetzte Werte gewinnen (Lade-Funktionen lesen den Blob),
 // unbekannte Bestandsfelder bleiben erhalten; `multi_day_trend_reports` ist
-// wie beim Durchklicken `[]`. Rein: die Eingabe wird nicht veraendert.
+// wie beim Durchklicken vorbelegt (#3155). Rein: die Eingabe wird nicht veraendert.
 export function ergaenzeStandardwerteReportConfig(rc: ReportConfig | undefined): ReportConfig {
 	const basis = { ...((rc ?? {}) as Record<string, unknown>) };
 	const nachVersand = ergaenzeVersandStandard(rc) as Record<string, unknown>;
@@ -323,8 +331,6 @@ export function ergaenzeStandardwerteReportConfig(rc: ReportConfig | undefined):
 			evening_enabled: false,
 			morning_time: '07:00',
 			evening_time: '18:00',
-			multi_day_trend_morning: false,
-			multi_day_trend_evening: false,
 			send_email: true,
 			send_telegram: false,
 			send_sms: false,

@@ -746,8 +746,50 @@ def _soll_klartext_koepfe(plain: str, lang: str, namen=()) -> tuple[list, list, 
     for m in _ZEIT_KOPF_RE.finditer(plain):
         spalten = (m.group(1) or "").split()
         (nacht if 0 <= nacht_pos < m.start() else etappe).append(spalten)
-    zeilen = _block_zeilen(plain, _ml().erwartet("mail.ausblick.naechste_etappen", lang))
+    zeilen = _block_zeilen(plain, _ml().erwartet("mail.ausblick.name", lang))
     return etappe, nacht, [_ausblick_kuerzel(z, mit_name=True, namen=namen) for z in zeilen]
+
+
+_BRIEFING_WORT = {"morning": "Morgen", "evening": "Abend"}
+
+
+def _briefings_text(reports) -> str:
+    return " und ".join(f"{_BRIEFING_WORT.get(r, r)}-Briefing" for r in reports)
+
+
+def _ausblick_aus_meldung(teil: str, s: dict) -> str:
+    """#3155 AC-12: Ausblick in einem Briefing, in dem er laut Konfiguration
+    nicht steht -- nennt das Briefing der Mail und das eingestellte."""
+    report, eingestellt = s.get("report"), s.get("ausblick_briefings")
+    if eingestellt and report not in eingestellt:
+        return (f"SOLL: Ausblick ({teil}) erscheint im {_briefings_text([report])}, laut "
+                f"Konfiguration steht er nur im {_briefings_text(eingestellt)}")
+    return f"SOLL: Ausblick ({teil}) erscheint, obwohl er laut Konfiguration aus ist"
+
+
+def _soll_ausblick_name(teile: dict, s: dict, lang: str) -> list[str]:
+    """#3155 AC-12 (ADR-0124 Nr. 15): der Block heisst in der Sprache der Mail
+    (``X-GZ-Lang``) "3-Tages-Ausblick"/"3-day outlook" -- HTML-Eyebrow
+    ``mail.ausblick.eyebrow``, Klartext ``mail.ausblick.name``, Kompakt dessen
+    ASCII-Form. Ein frueherer Name als Blocktitel ist ein Fehler. Steht laut
+    Konfiguration ein Ausblick in diesem Briefing, muss sein Titel in jedem
+    Teil stehen (auch mit Zustandshinweis statt Tabelle); ausgenommen die
+    letzte Etappe (keine folgenden Etappen, ``ausblick_zeilen_trip`` = 0).
+    ``teile``: Teilname -> (Text, ist HTML)."""
+    m = _soll_modul()
+    plain = next((text for text, html in teile.values() if not html), "")
+    pflicht = s["ausblick_an"] and m.ausblick_zeilen_trip(
+        s.get("etappen_daten") or [], _maildatum(plain)) != 0
+    fehler = []
+    for teil, (text, html) in teile.items():
+        name = (_ml().erwartet("mail.ausblick.eyebrow", lang) if html
+                else m.ausblick_name(lang, ascii_=teil == "Kompakt"))
+        for alt in m.alte_ausblick_namen(text, lang, html):
+            fehler.append(f"SOLL: Ausblick-Block ({teil}) heisst '{alt}' statt '{name}'")
+        if pflicht and not m.name_im_text(text, name, html):
+            fehler.append(f"SOLL: Ausblick-Block ({teil}) fehlt (kein Titel '{name}'), laut "
+                          f"Konfiguration steht er im {_briefings_text(s.get('ausblick_briefings') or ())}")
+    return fehler
 
 
 def _soll_vergleich(was: str, koepfe: list, soll: list | None) -> list[str]:
@@ -767,7 +809,7 @@ def _soll_tabellen(teil: str, etappe: list, nacht: list, ausblick: list, s: dict
         fehler.append(f"SOLL: Nachttabelle ({teil}) erscheint, obwohl show_night_block aus ist")
     fehler += _soll_vergleich(f"Nachttabelle ({teil})", nacht, s["stunden"])
     if ausblick and not s["ausblick_an"]:
-        fehler.append(f"SOLL: Ausblick ({teil}) erscheint, obwohl er laut Konfiguration aus ist")
+        fehler.append(_ausblick_aus_meldung(teil, s))
     elif s["ausblick"] is not None:
         fehler += _soll_vergleich(f"Ausblick ({teil}) Zeile", ausblick, s["ausblick"][
             "html" if teil == "HTML" else "klartext"])
@@ -791,12 +833,15 @@ def _soll_ueberblick(html: str, plain: str, s: dict, lang: str) -> list[str]:
 
 def _soll_kompakt(text: str, s: dict, lang: str) -> list[str]:
     """Kompaktformat: Reihenfolge der Ausblick-Tokens je Tageszeile."""
-    ueberschrift = _ml().erwartet("mail.ausblick.naechste_etappen", lang).translate(_FOLD)
+    ueberschrift = _ml().erwartet("mail.ausblick.name", lang).translate(_FOLD)
     zeilen = [_ausblick_kuerzel(z) for z in _block_zeilen(text, ueberschrift)]
-    # PO-Entscheidung #722: Kompakt ignoriert ``show_outlook`` (Runde 7).
+    # PO-Entscheidung #722: Kompakt ignoriert ``show_outlook`` (Runde 7); seit
+    # #3155 steckt diese Ausnahme in der einen Regel (``ausblick_briefings``).
     if zeilen and not s.get("ausblick_an_kompakt", s["ausblick_an"]):
-        return ["SOLL: Ausblick (Kompakt) erscheint, obwohl er laut Konfiguration aus ist"]
+        return [_ausblick_aus_meldung("Kompakt", s)] + _soll_ausblick_name(
+            {"Kompakt": (text, False)}, s, lang)
     fehler = _soll_zeilenzahl({"Kompakt": len(zeilen)}, s, text)
+    fehler += _soll_ausblick_name({"Kompakt": (text, False)}, s, lang)
     if s["ausblick"] is None or s["ausblick"]["fest"]:
         return fehler
     fehler += _soll_vergleich("Ausblick (Kompakt) Zeile", zeilen, s["ausblick"]["klartext"])
@@ -902,7 +947,7 @@ def _klartext_zellen(plain: str, lang: str, namen=()) -> dict[str, list]:
             tabelle.append([(k, zeile[p:grenzen[j + 1]]) for j, (p, k) in enumerate(kopf)])
         (arten["Nachttabelle"] if 0 <= nacht_pos < m.start() else arten["Etappen-Stundentabelle"]).append(tabelle)
     arten["Ausblick"].append(_ausblick_zellen(
-        _block_zeilen(plain, _ml().erwartet("mail.ausblick.naechste_etappen", lang)), mit_name=True,
+        _block_zeilen(plain, _ml().erwartet("mail.ausblick.name", lang)), mit_name=True,
         namen=namen))
     return arten
 
@@ -1118,13 +1163,21 @@ def _soll_ampel(html: str, plain: str, s: dict, lang: str) -> list[str]:
     return fehler
 
 
-def _soll_report(msg: Message, soll: dict) -> dict:
-    """Soll des Reports (Morgen/Abend), den die Mail laut Kopf/Betreff traegt."""
+def _briefing_der_mail(msg: Message) -> str | None:
+    """Briefing (morning/evening), das die Mail laut Kopf/Betreff traegt; ``None``
+    = nicht ablesbar."""
     teile = {p.get_content_type(): _part_text(p) for p in msg.walk()
              if p.get_content_type() in ("text/html", "text/plain")}
     report = _REPORT_RE.search(teile.get("text/plain", "") or teile.get("text/html", "")
                                or _decode_subject(msg["Subject"]))
-    return soll["je_report"][_REPORT_ART[report.group(1).lower()] if report else "evening"]
+    return _REPORT_ART[report.group(1).lower()] if report else None
+
+
+def _soll_report(msg: Message, soll: dict) -> dict:
+    """Soll des Reports (Morgen/Abend), den die Mail laut Kopf/Betreff traegt
+    (nicht ablesbar: Abend, bisheriges Verhalten; ``pruefe_soll`` meldet es, wenn
+    der Ausblick davon abhaengt)."""
+    return soll["je_report"][_briefing_der_mail(msg) or "evening"]
 
 
 def _tabellen_erwartet(msg: Message, soll: dict | None) -> tuple[bool, bool]:
@@ -1152,6 +1205,11 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
     html, plain = teile.get("text/html", ""), teile.get("text/plain", "")
     s = _soll_report(msg, soll)
     fehler = []
+    je = soll["je_report"]
+    if _briefing_der_mail(msg) is None and je["morning"]["ausblick_an"] != je["evening"]["ausblick_an"]:
+        # #3155 AC-12: ob der Ausblick stehen muss, haengt am Briefing.
+        fehler.append("SOLL: Briefing (Morgen/Abend) nicht aus der Mail ablesbar -- der Ausblick "
+                      f"steht laut Konfiguration nur im {_briefings_text(s.get('ausblick_briefings') or ())}")
     if msg["X-GZ-Format"] != s["email_format"]:
         fehler.append(f"SOLL: Format '{msg['X-GZ-Format']}' statt '{s['email_format']}' (email_format)")
     if msg["X-GZ-Format"] == "compact":
@@ -1169,6 +1227,7 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
                                 "Klartext": len(koepfe_plain[2])}, s, plain)
     fehler += _soll_tabellen("HTML", *koepfe_html, s)
     fehler += _soll_tabellen("Klartext", *koepfe_plain, s)
+    fehler += _soll_ausblick_name({"HTML": (html, True), "Klartext": (plain, False)}, s, lang)
     # #3047 N7: keine Ueberschrift ohne Tabelle ("Segment 1"/"Nacht am Ziel"
     # bei bewusst leerer Auswahl) -- dann muss der ganze Abschnitt entfallen.
     fehler += _verwaist_html(html, lang) + _verwaist_klartext(plain, lang)

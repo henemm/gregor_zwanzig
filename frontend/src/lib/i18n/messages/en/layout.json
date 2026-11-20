@@ -60,8 +60,6 @@
 	"layout.mail_inhalt.quick_take_text": "Coloured keyword pills at the top, e.g. “Dry”, “Windy”.",
 	"layout.mail_inhalt.metriken_ueberblick": "Metrics overview",
 	"layout.mail_inhalt.metriken_ueberblick_text": "Replaces quick-take chips and the daily summary with one coloured pill per active metric.",
-	"layout.mail_inhalt.ausblick": "Outlook",
-	"layout.mail_inhalt.ausblick_text": "Weather pattern header, next stages and forecast confidence at the end of the email.",
 	"layout.mail_inhalt.grosswetterlage": "Weather pattern",
 	"layout.mail_inhalt.grosswetterlage_text": "Assessment of weather stability, e.g. “stable high pressure”.",
 	"layout.mail_inhalt.zusammenfassung": "Summary",

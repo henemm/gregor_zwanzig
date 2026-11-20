@@ -23,7 +23,8 @@ test('CONTENT_MODULE_DESCRIPTIONS erklaert die Bausteine inkl. show_outlook', ()
 });
 
 test('die drei angezeigten Schalter tragen die Labels der Karte', () => {
-	assert.equal(CONTENT_MODULE_DESCRIPTIONS.show_outlook.label, 'Ausblick');
+	// #3155 (Spec feat_3155 Nr. 8): der Haken show_outlook traegt den Namen der Grosswetterlage.
+	assert.equal(CONTENT_MODULE_DESCRIPTIONS.show_outlook.label, 'Großwetterlage');
 	assert.equal(CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.label, 'Etappen-Kennzahlen');
 	assert.equal(CONTENT_MODULE_DESCRIPTIONS.show_yesterday_comparison.label, 'Vortag-Vergleich');
 });

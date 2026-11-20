@@ -322,6 +322,16 @@ def heutige_form(surface: str, stelle: str, metric_id: str, fmt: Optional[str]) 
     return standard_form(metric_id)
 
 
+def anlage_outlook_reports(display_config: object) -> Optional[tuple[str, ...]]:
+    """#3155 (Spec B4 Nr. 5): ``outlook_reports`` aus ``display_config.placements``
+    -- auch OHNE ``rows`` (Marke der Orte-Anlage, das Abo bleibt im Altpfad).
+    ``None``: keine Marke (kein ``placements`` oder keine lesbare Liste)."""
+    roh = _feld(display_config, "placements")
+    if not isinstance(roh, dict):
+        return None
+    return _read_reports(roh.get("outlook_reports"))
+
+
 def _legacy_outlook_reports(
     dc: object, surface: str, report_config: object,
     enabled_reports: Optional[Sequence[str]], outlook_enabled: Optional[bool],
@@ -329,6 +339,11 @@ def _legacy_outlook_reports(
     if surface != "trip":
         if outlook_enabled is False or _feld(dc, "outlook_metrics") == []:
             return [], False
+        marke = anlage_outlook_reports(dc)
+        if marke is not None:
+            # #3155: die Anlage-Marke steuert den Ausblick je Briefing ueber
+            # dieselbe Regel wie die Tabelle.
+            return list(resolve_outlook_reports(marke, enabled_reports)), False
         return [r for r in BRIEFINGS if enabled_reports is None or r in enabled_reports], False
     # #3154 F003: die Kompakt-Mail wertet ``show_outlook`` nicht aus (der
     # Schalter war dort gesperrt); sie zeigt den Ausblick wie bisher nach

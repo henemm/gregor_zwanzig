@@ -12,7 +12,5 @@
   "telegram_style": "kurzform",
   "email_format": "compact",
   "change_threshold_wind_kmh": 25,
-  "multi_day_trend_morning": false,
-  "multi_day_trend_evening": false,
   "multi_day_trend_reports": []
 }

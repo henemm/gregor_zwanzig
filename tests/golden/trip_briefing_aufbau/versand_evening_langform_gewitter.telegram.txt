@@ -92,7 +92,7 @@ Zt T   TF W  G  R   TH   CT
 
 <<<BUBBLE>>>
 
-Ausblick
+3-Tages-Ausblick
 Sa 31.10.  Temp: -5/2  Feels: -/-  Wind: 50 km/h
 Gust: 75 km/h  Rain: 17.8 mm  Thdr: ⚡mittel@11
 Cloud: 47 %  Visib: 7000 m  Sun: 13.0 h  SnowH: 45 cm

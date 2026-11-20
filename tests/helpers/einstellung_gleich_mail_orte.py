@@ -194,13 +194,27 @@ class OrteMail:
     html: str
     plain: str
     empfaenger: list
+    #: #3155: Telegram-Text derselben Sendung (``None`` = kein Telegram
+    #: versendet, z. B. ``send_telegram`` aus).
+    telegram: Optional[str] = None
+
+
+#: #3155: Briefing-Typ -> Tagesversatz wie im Slot-Scheduler (Morgen = 0,
+#: Abend = 1; ``_compare_slot`` leitet den Typ daraus ab).
+_VERSATZ = {None: 0, "morning": 0, "evening": 1}
 
 
 def sende_orte_mail(preset_json: dict, *, uid: Optional[str] = None,
                     language: Optional[str] = None,
-                    warnungen: Optional[dict] = None) -> OrteMail:
+                    warnungen: Optional[dict] = None,
+                    briefing: Optional[str] = None) -> OrteMail:
     """Preset roh ablegen, ueber den echten Loader lesen, ueber
-    ``send_one_compare_preset`` mit ``mail_sink(plain_body=...)`` versenden."""
+    ``send_one_compare_preset`` mit ``mail_sink(plain_body=...)`` versenden.
+
+    #3155: ``briefing`` (``"morning"``/``"evening"``) waehlt den Slot ueber
+    den Tagesversatz wie der Slot-Scheduler; ``None`` = bisheriges Verhalten
+    (Versatz 0, Morgen). Telegram wird ueber ``telegram_sink`` mitgeschnitten
+    (nur wenn das Preset Telegram sendet)."""
     from freezegun import freeze_time
 
     from app.config import Settings
@@ -212,6 +226,8 @@ def sende_orte_mail(preset_json: dict, *, uid: Optional[str] = None,
     orte_anlegen(uid)
     pfad = preset_ablegen(uid, preset_json)
     gesendet: list[dict] = []
+    telegram: list[str] = []
+    versatz = _VERSATZ[briefing]
 
     def sink(*, subject: str, body: str, plain_body: str) -> None:
         gesendet.append({"subject": subject, "html": body, "plain": plain_body})
@@ -224,12 +240,15 @@ def sende_orte_mail(preset_json: dict, *, uid: Optional[str] = None,
         _top, empfaenger = send_one_compare_preset(
             preset, settings, uid, str(get_data_root()),
             all_locations_cache=load_all_locations(user_id=uid),
-            target_date=ZIELTAG, tage_ab_ortstag=0, mail_sink=sink,
+            target_date=ZIELTAG + timedelta(days=versatz), tage_ab_ortstag=versatz,
+            mail_sink=sink, telegram_sink=telegram.append,
         )
     assert len(gesendet) == 1, f"Vorbedingung: genau eine Mail erwartet, {len(gesendet)} gesendet"
+    assert len(telegram) <= 1, f"Vorbedingung: hoechstens eine Telegram-Sendung, {len(telegram)}"
     m = gesendet[0]
     return OrteMail(uid, json.loads(pfad.read_text(encoding="utf-8")), m["subject"],
-                    m["html"], m["plain"], list(empfaenger))
+                    m["html"], m["plain"], list(empfaenger),
+                    telegram[0] if telegram else None)
 
 
 def baue_orte_eml(preset_json: dict, *, uid: Optional[str] = None,

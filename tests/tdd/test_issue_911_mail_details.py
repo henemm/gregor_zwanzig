@@ -593,31 +593,28 @@ class TestAC8OutlookACCColumn:
 
 
 # ---------------------------------------------------------------------------
-# AC-9: Eyebrow "Ausblick · nächste 3 Tage" über dem Ausblick
+# AC-9: Eyebrow "3-Tages-Ausblick" über dem Ausblick
 # ---------------------------------------------------------------------------
 
 class TestAC9OutlookEyebrow:
     """AC-9: Given Ausblick-Abschnitt, When gerendert,
-    Then steht darüber 'Ausblick · nächste 3 Tage'."""
+    Then steht darüber '3-Tages-Ausblick'."""
 
     def test_outlook_eyebrow_present(self):
-        """Eyebrow 'Ausblick · nächste 3 Tage' (oder ähnlich) fehlt aktuell."""
+        """Eyebrow '3-Tages-Ausblick' (oder ähnlich) fehlt aktuell."""
         trend = [
             _trend_stage(weekday="Di", name="E1", confidence_pct=80),
             _trend_stage(weekday="Mi", name="E2", confidence_pct=65),
         ]
         html = _render(trend=trend)
 
-        # Vorlage: <EmailEyebrow>Ausblick · nächste 3 Tage</EmailEyebrow>
+        # Vorlage: <EmailEyebrow>3-Tages-Ausblick</EmailEyebrow>
         # Aktuell: laut Spec AC-6 (#899) wurde der Ausblick-Eyebrow ENTFERNT
         # → dieser Test muss rot sein bis er wieder eingebaut wird
-        has_eyebrow = (
-            "Ausblick" in html
-            and "nächste" in html
-            and ("3 Tage" in html or "3&nbsp;Tage" in html)
-        )
+        # #3155: die Eyebrow traegt den einen Namen „3-Tages-Ausblick".
+        has_eyebrow = "3-Tages-Ausblick" in html
         assert has_eyebrow, (
-            "Eyebrow 'Ausblick · nächste 3 Tage' fehlt über dem Ausblick-Block. "
+            "Eyebrow '3-Tages-Ausblick' fehlt über dem Ausblick-Block. "
             "Aktuell wurde dieser Eyebrow in AC-6 (#899) entfernt — "
             "muss laut #911 wiederhergestellt werden."
         )
@@ -628,10 +625,10 @@ class TestAC9OutlookEyebrow:
             _trend_stage(weekday="Di", name="E1", confidence_pct=80),
         ]
         html = _render(trend=trend)
-        pos_eyebrow = html.find("nächste 3 Tage")
+        pos_eyebrow = html.find("3-Tages-Ausblick")  # #3155: ein Name
         pos_di = html.find("Di")  # Wochentag des ersten Trends
         if pos_eyebrow == -1:
-            pytest.fail("Eyebrow 'nächste 3 Tage' fehlt — muss noch implementiert werden")
+            pytest.fail("Eyebrow '3-Tages-Ausblick' fehlt — muss noch implementiert werden")
         assert pos_eyebrow < pos_di, (
             f"Eyebrow (pos={pos_eyebrow}) muss vor dem Trend-Inhalt (Di pos={pos_di}) stehen"
         )
