@@ -19,8 +19,13 @@
 		bedienbar?: boolean;
 		onAenderung?: (an: boolean) => void;
 		testid?: string;
+		/**
+		 * #3190: sichtbarer, klickbarer Text neben dem Kästchen (nur an/aus; Mockup `label.chk`).
+		 * Dann benennt der Text das Kästchen (kein aria-label) und `testid` sitzt am selben <label>.
+		 */
+		beschriftung?: string;
 	}
-	let { zustand, name, grund, bedienbar = true, onAenderung, testid }: Props = $props();
+	let { zustand, name, grund, bedienbar = true, onAenderung, testid, beschriftung }: Props = $props();
 
 	const nameMitGrund = $derived(grund ? $t('bausteine.haken.name_mit_grund', { name, grund }) : name);
 
@@ -33,9 +38,10 @@
 </script>
 
 {#if zustand === 'an' || zustand === 'aus'}
-	<label class="hk" data-slot="haken" data-zustand={zustand} data-testid={testid}>
-		<input type="checkbox" aria-label={name} checked={zustand === 'an'} disabled={!bedienbar} onchange={aendern} />
+	<label class="hk" class:hk-beschriftet={!!beschriftung} data-slot="haken" data-zustand={zustand} data-testid={testid}>
+		<input type="checkbox" aria-label={beschriftung ? undefined : name} checked={zustand === 'an'} disabled={!bedienbar} onchange={aendern} />
 		<span class="hk-box" aria-hidden="true"></span>
+		{#if beschriftung}<span class="hk-text">{beschriftung}</span>{/if}
 	</label>
 {:else if zustand === 'fest'}
 	<span class="hk-fest" data-slot="haken" data-zustand={zustand} data-testid={testid} role="img" aria-label={nameMitGrund} title={grund}>
@@ -61,6 +67,19 @@
 	.hk {
 		position: relative;
 		cursor: pointer;
+	}
+	/* #3190: Kästchen mit Text (Mockup label.chk) — der ganze Text ist Teil der Tippfläche, ≥ --g-tap-min hoch. */
+	.hk.hk-beschriftet {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--g-s-2);
+		width: auto;
+		height: auto;
+		min-height: var(--g-tap-min);
+	}
+	.hk-text {
+		font-size: var(--g-size-14px);
+		color: var(--g-ink);
 	}
 	.hk input {
 		position: absolute;
@@ -145,6 +164,10 @@
 		.hk {
 			width: var(--g-tap-min);
 			height: var(--g-tap-min);
+		}
+		.hk.hk-beschriftet {
+			width: auto;
+			height: auto;
 		}
 	}
 </style>

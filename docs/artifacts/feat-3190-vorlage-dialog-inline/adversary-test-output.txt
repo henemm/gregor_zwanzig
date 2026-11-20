@@ -1,0 +1,309 @@
+TAP version 13
+# Subtest: \#3190 Haken mit Beschriftung: ein <label>, Text klickbar
+    # Subtest: an + beschriftung → genau ein <label> mit Kontrollkästchen und sichtbarem Text
+    ok 1 - an + beschriftung → genau ein <label> mit Kontrollkästchen und sichtbarem Text
+      ---
+      duration_ms: 1.991175
+      type: 'test'
+      ...
+    # Subtest: aus + beschriftung → genau ein <label> mit Kontrollkästchen und sichtbarem Text
+    ok 2 - aus + beschriftung → genau ein <label> mit Kontrollkästchen und sichtbarem Text
+      ---
+      duration_ms: 0.359831
+      type: 'test'
+      ...
+    # Subtest: Beschriftung ist sichtbarer Text, nicht aria-hidden
+    ok 3 - Beschriftung ist sichtbarer Text, nicht aria-hidden
+      ---
+      duration_ms: 0.448302
+      type: 'test'
+      ...
+    # Subtest: ohne beschriftung: kein zusätzlicher Text im Label, Markup wie bisher
+    ok 4 - ohne beschriftung: kein zusätzlicher Text im Label, Markup wie bisher
+      ---
+      duration_ms: 0.229572
+      type: 'test'
+      ...
+    1..4
+ok 1 - \#3190 Haken mit Beschriftung: ein <label>, Text klickbar
+  ---
+  duration_ms: 4.038591
+  type: 'suite'
+  ...
+# Subtest: \#3190 AC-1/AC-8: Inline-Karte statt modalem Overlay
+    # Subtest: route: kein role=dialog, kein aria-modal, kein Scrim, kein ×, kein tabindex=-1
+    ok 1 - route: kein role=dialog, kein aria-modal, kein Scrim, kein ×, kein tabindex=-1
+      ---
+      duration_ms: 920.363934
+      type: 'test'
+      ...
+    # Subtest: route: Wurzel div.wt-karte mit role=group, aria-labelledby auf den Titel, Testid und Abschnitt
+    ok 2 - route: Wurzel div.wt-karte mit role=group, aria-labelledby auf den Titel, Testid und Abschnitt
+      ---
+      duration_ms: 9.188184
+      type: 'test'
+      ...
+    # Subtest: vergleich: kein role=dialog, kein aria-modal, kein Scrim, kein ×, kein tabindex=-1
+    ok 3 - vergleich: kein role=dialog, kein aria-modal, kein Scrim, kein ×, kein tabindex=-1
+      ---
+      duration_ms: 13.248576
+      type: 'test'
+      ...
+    # Subtest: vergleich: Wurzel div.wt-karte mit role=group, aria-labelledby auf den Titel, Testid und Abschnitt
+    ok 4 - vergleich: Wurzel div.wt-karte mit role=group, aria-labelledby auf den Titel, Testid und Abschnitt
+      ---
+      duration_ms: 10.250778
+      type: 'test'
+      ...
+    # Subtest: geschlossen: nichts gerendert
+    ok 5 - geschlossen: nichts gerendert
+      ---
+      duration_ms: 12.960485
+      type: 'test'
+      ...
+    1..5
+ok 2 - \#3190 AC-1/AC-8: Inline-Karte statt modalem Overlay
+  ---
+  duration_ms: 967.094101
+  type: 'suite'
+  ...
+# Subtest: \#3190 AC-2/AC-8: Felder und Ankreuzfeld aus Bausteinen
+    # Subtest: route/de: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+    ok 1 - route/de: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+      ---
+      duration_ms: 503.334145
+      type: 'test'
+      ...
+    # Subtest: route/en: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+    ok 2 - route/en: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+      ---
+      duration_ms: 21.953409
+      type: 'test'
+      ...
+    # Subtest: vergleich/de: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+    ok 3 - vergleich/de: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+      ---
+      duration_ms: 418.826473
+      type: 'test'
+      ...
+    # Subtest: vergleich/en: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+    ok 4 - vergleich/en: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+      ---
+      duration_ms: 139.33784
+      type: 'test'
+      ...
+    # Subtest: Name und Beschreibung: <input>, Beschreibung maxlength=120, beide mit <label for>
+    ok 5 - Name und Beschreibung: <input>, Beschreibung maxlength=120, beide mit <label for>
+      ---
+      duration_ms: 62.329649
+      type: 'test'
+      ...
+    # Subtest: Knöpfe sind Btn-Atome: Speichern accent, Abbrechen ghost, beide size=tap
+    ok 6 - Knöpfe sind Btn-Atome: Speichern accent, Abbrechen ghost, beide size=tap
+      ---
+      duration_ms: 26.218301
+      type: 'test'
+      ...
+    1..6
+ok 3 - \#3190 AC-2/AC-8: Felder und Ankreuzfeld aus Bausteinen
+  ---
+  duration_ms: 1176.249791
+  type: 'suite'
+  ...
+# Subtest: \#3190 AC-3/AC-4: Reihenfolge nach Mockup
+    # Subtest: Titel, Name, Beschreibung, Ankreuzfeld, Hinweis, Speichern, Abbrechen
+    ok 1 - Titel, Name, Beschreibung, Ankreuzfeld, Hinweis, Speichern, Abbrechen
+      ---
+      duration_ms: 0.786182
+      type: 'test'
+      ...
+    # Subtest: Namensfehler: Fehlerzeile direkt unter Name, vor der Beschreibung; Feld mit aria-invalid und aria-describedby
+    ok 2 - Namensfehler: Fehlerzeile direkt unter Name, vor der Beschreibung; Feld mit aria-invalid und aria-describedby
+      ---
+      duration_ms: 22.662231
+      type: 'test'
+      ...
+    1..2
+ok 4 - \#3190 AC-3/AC-4: Reihenfolge nach Mockup
+  ---
+  duration_ms: 23.615764
+  type: 'suite'
+  ...
+# Subtest: \#3190 AC-1: Auslöser schaltet um und zeigt auf die Karte
+    # Subtest: route offen: Karte steht direkt nach der Vorlage-Karte; Auslöser aria-expanded=true, aria-controls = id der Karte
+    ok 1 - route offen: Karte steht direkt nach der Vorlage-Karte; Auslöser aria-expanded=true, aria-controls = id der Karte
+      ---
+      duration_ms: 94.91494
+      type: 'test'
+      ...
+    # Subtest: route zu: Auslöser aria-expanded=false, keine Karte
+    ok 2 - route zu: Auslöser aria-expanded=false, keine Karte
+      ---
+      duration_ms: 47.270039
+      type: 'test'
+      ...
+    # Subtest: vergleich offen: Karte steht direkt nach der Vorlage-Karte; Auslöser aria-expanded=true, aria-controls = id der Karte
+    ok 3 - vergleich offen: Karte steht direkt nach der Vorlage-Karte; Auslöser aria-expanded=true, aria-controls = id der Karte
+      ---
+      duration_ms: 2.221955
+      type: 'test'
+      ...
+    # Subtest: vergleich zu: Auslöser aria-expanded=false, keine Karte
+    ok 4 - vergleich zu: Auslöser aria-expanded=false, keine Karte
+      ---
+      duration_ms: 1.527435
+      type: 'test'
+      ...
+    1..4
+ok 5 - \#3190 AC-1: Auslöser schaltet um und zeigt auf die Karte
+  ---
+  duration_ms: 146.195748
+  type: 'suite'
+  ...
+# Subtest: \#3190 AC-10: WeatherMetricsTab (Alt-Editor)
+    # Subtest: sections: Profil-Karte (grundauswahl) nur in „alles“/„wetter“, nicht in „zustellung“
+    ok 1 - sections: Profil-Karte (grundauswahl) nur in „alles“/„wetter“, nicht in „zustellung“
+      ---
+      duration_ms: 0.19033
+      type: 'test'
+      ...
+    # Subtest: mit grundauswahl und offener Karte: Karte nach der Profil-Karte und vor der Grundauswahl
+    ok 2 - mit grundauswahl und offener Karte: Karte nach der Profil-Karte und vor der Grundauswahl
+      ---
+      duration_ms: 27.525766
+      type: 'test'
+      ...
+    1..2
+ok 6 - \#3190 AC-10: WeatherMetricsTab (Alt-Editor)
+  ---
+  duration_ms: 27.905866
+  type: 'suite'
+  ...
+# Subtest: \#3190 F003/AC-6: Escape in der Karte
+    # Subtest: Escape schließt, solange nicht gespeichert wird
+    ok 1 - Escape schließt, solange nicht gespeichert wird
+      ---
+      duration_ms: 0.738992
+      type: 'test'
+      ...
+    # Subtest: Escape während des Speicherns ist wirkungslos (Abbrechen ist dann gesperrt)
+    ok 2 - Escape während des Speicherns ist wirkungslos (Abbrechen ist dann gesperrt)
+      ---
+      duration_ms: 0.192252
+      type: 'test'
+      ...
+    # Subtest: andere Tasten schließen nie
+    ok 3 - andere Tasten schließen nie
+      ---
+      duration_ms: 0.12107
+      type: 'test'
+      ...
+    1..3
+ok 7 - \#3190 F003/AC-6: Escape in der Karte
+  ---
+  duration_ms: 2.830348
+  type: 'suite'
+  ...
+# Subtest: \#3190 F002/AC-7: Escape am Fenster schließt nur die offene Vorlagen-Auswahl
+    # Subtest: Auswahl offen + Escape ⇒ schließen; zu oder andere Taste ⇒ nichts
+    ok 1 - Auswahl offen + Escape ⇒ schließen; zu oder andere Taste ⇒ nichts
+      ---
+      duration_ms: 0.16957
+      type: 'test'
+      ...
+    1..1
+ok 8 - \#3190 F002/AC-7: Escape am Fenster schließt nur die offene Vorlagen-Auswahl
+  ---
+  duration_ms: 0.253951
+  type: 'suite'
+  ...
+# Subtest: \#3190 F002/AC-8: Fokus ins Namensfeld beim Öffnen
+    # Subtest: offen ⇒ Namensfeld bekommt den Fokus, nichts wird zurückgesetzt
+    ok 1 - offen ⇒ Namensfeld bekommt den Fokus, nichts wird zurückgesetzt
+      ---
+      duration_ms: 3.188728
+      type: 'test'
+      ...
+    # Subtest: offen, Feld noch nicht da ⇒ kein Fehler, kein Zurücksetzen
+    ok 2 - offen, Feld noch nicht da ⇒ kein Fehler, kein Zurücksetzen
+      ---
+      duration_ms: 0.162601
+      type: 'test'
+      ...
+    # Subtest: geschlossen ⇒ zurücksetzen, kein Fokus
+    ok 3 - geschlossen ⇒ zurücksetzen, kein Fokus
+      ---
+      duration_ms: 0.25874
+      type: 'test'
+      ...
+    1..3
+ok 9 - \#3190 F002/AC-8: Fokus ins Namensfeld beim Öffnen
+  ---
+  duration_ms: 3.85882
+  type: 'suite'
+  ...
+# Subtest: \#3190 F001/AC-1/AC-6/AC-10: Auslöser schaltet um und bekommt den Fokus zurück
+    # Subtest: Klick öffnet, zweiter Klick schließt
+    ok 1 - Klick öffnet, zweiter Klick schließt
+      ---
+      duration_ms: 0.296851
+      type: 'test'
+      ...
+    # Subtest: nach Abbrechen/Escape/Speichern geht der Fokus auf den zuletzt geklickten Auslöser
+    ok 2 - nach Abbrechen/Escape/Speichern geht der Fokus auf den zuletzt geklickten Auslöser
+      ---
+      duration_ms: 0.298761
+      type: 'test'
+      ...
+    # Subtest: ohne Element (z. B. Aufruf ohne Klick) bleibt der gemerkte Auslöser
+    ok 3 - ohne Element (z. B. Aufruf ohne Klick) bleibt der gemerkte Auslöser
+      ---
+      duration_ms: 0.255281
+      type: 'test'
+      ...
+    1..3
+ok 10 - \#3190 F001/AC-1/AC-6/AC-10: Auslöser schaltet um und bekommt den Fokus zurück
+  ---
+  duration_ms: 1.019714
+  type: 'suite'
+  ...
+# Subtest: \#3190 F001/AC-10: Auslöser im Alt-Editor (WeatherV2PresetBar)
+    # Subtest: Karte offen: aria-expanded=true, aria-controls zeigt auf die Karte
+    ok 1 - Karte offen: aria-expanded=true, aria-controls zeigt auf die Karte
+      ---
+      duration_ms: 1.925525
+      type: 'test'
+      ...
+    # Subtest: Karte zu: aria-expanded=false, aria-controls zeigt auf die Karte
+    ok 2 - Karte zu: aria-expanded=false, aria-controls zeigt auf die Karte
+      ---
+      duration_ms: 1.196593
+      type: 'test'
+      ...
+    # Subtest: WeatherMetricsTab verdrahtet Auslöser und Karte: aria-controls = id der Karte, aria-expanded=true
+    ok 3 - WeatherMetricsTab verdrahtet Auslöser und Karte: aria-controls = id der Karte, aria-expanded=true
+      ---
+      duration_ms: 87.996779
+      type: 'test'
+      ...
+    # Subtest: WeatherMetricsTab Karte zu: aria-expanded=false
+    ok 4 - WeatherMetricsTab Karte zu: aria-expanded=false
+      ---
+      duration_ms: 3.79859
+      type: 'test'
+      ...
+    1..4
+ok 11 - \#3190 F001/AC-10: Auslöser im Alt-Editor (WeatherV2PresetBar)
+  ---
+  duration_ms: 95.16402
+  type: 'suite'
+  ...
+1..11
+# tests 37
+# suites 11
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3826.980098
