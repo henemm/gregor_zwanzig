@@ -1347,9 +1347,10 @@ Editor-Save (`SaveTrip`) den beim Import gesetzten Wert wieder verwirft (Präzed
 `suggestion_reason`).
 
 **Berechnung `arrival_calculated`:**
-- Frontend: `computeArrivalTimes(stage, startTime, tripTempo(trip))` → gibt Array von HH:MM-Strings (DAV, Issue #3196)
-- Backend (Go): `ComputeStageArrivals(stage, ResolveTempo(trip))` → mutiert Waypoints mit berechneter Zeit
-- Python: `compute_stage_arrivals(stage, tempo_speeds(trip))` (Loader-Save, Self-Heal in `trip_segments.py`)
+Das tatsächlich genutzte Tempo ist seit #3197 je Etappe aufgelöst (Trip-Tempo, außer `stages[].grundtempo_kmh` ist gesetzt):
+- Frontend: `computeArrivalTimes(stage, startTime, stageTempo(stage, tripTempo(trip)))` → Array von HH:MM-Strings (DAV, Issue #3196/#3197)
+- Backend (Go): `ComputeStageArrivals(stage, ResolveStageTempo(trip, stage))` → mutiert Waypoints mit berechneter Zeit (`SaveTrip`)
+- Python: `compute_stage_arrivals(stage, stage_speeds(trip, stage))` (Loader-Save, Self-Heal in `trip_segments.py`)
 
 **Segment-Startzeit-Prioritätskette (Issue #1004, SSoT):** `Waypoint.time_window` ist
 ausschließlich ein GPX-Import-Artefakt ohne jeden manuellen Schreibpfad im Produkt und hat

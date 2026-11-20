@@ -416,6 +416,8 @@ EINE Listenzeile für die Reiter Etappen (Trip) und Orte (Orts-Briefing): links 
 
 **Inhalte Etappen:** `edit/etappenListe.ts` (reine Funktionen): Titel „E{n} · Start → Ziel“, Zweitzeile „x km · ↑y m“, Meta „Gehzeit h:mm“ aus derselben Rechnung wie die Ankunftszeiten der Wegpunkte. Die Karte „Fortbewegung · Grundtempo“ (#3196, `shared/TempoKarte.svelte` als Hülle um `organisms/tempo-karte/TempoKarteInhalt.svelte`, ADR-0108) steht oben im Reiter, vor der Liste; sie speichert mit dem Etappen-Autosave. Die Gehzeit (Meta) folgt dem Grundtempo nach DAV.
 
+**Tempo je Etappe (#3197, ADR-0108):** Jede Etappe mit Wegpunkten hat den Knopf „Tempo ändern“. Er öffnet dieselbe Karte `TempoKarteInhalt` mit Prop `nurGrundtempo` (nur Grundtempo-Feld und „Trip-Tempo verwenden“, Fortbewegung bleibt trip-weit); Desktop im Reiter, mobil in `mobile/StageCardM.svelte`. Eine Etappe mit eigenem Tempo ist gekennzeichnet; ihre Gehzeit (Meta) und die Ankünfte rechnen mit `stageTempo(stage, tripTempo)`. Der Wechsel der Fortbewegung in `EditStagesPanelNew` setzt alle Etappen-Grundtempi zurück und zeigt die Anzahl als Hinweis (nur wenn betroffen).
+
 **Zweitzeile der Etappe (Regel):**
 - Beide Angaben da: „x km · ↑y m“.
 - Nur eine da: nur diese, ohne verwaistes „·“ (z. B. „x km“ oder „↑y m“).
