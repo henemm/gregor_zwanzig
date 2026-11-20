@@ -339,24 +339,22 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 
-	// #2796 S4a (ADR-0108 P3): nur der Trip hat noch eine Profil-/Aktivitätsauswahl im Kopf.
-	if (kind === 'route') test(`SC-6 (${kind}): Profil/Aktivität im Kopf wählen (PUT verzögert) ⇒ Chip saving ⇒ idle am selben Controller, genau ein Chip`, async ({
+	// #3196 (ADR-0108 Nr. 3): die Aktivität hat den Kopf verlassen; SC-6 misst jetzt die Tempo-Karte
+	// im Reiter Etappen (nur Trip) — sie speichert über denselben Controller wie die Etappen.
+	if (kind === 'route') test(`SC-6 (${kind}): Fortbewegung in der Tempo-Karte wählen (PUT verzögert) ⇒ Chip saving ⇒ idle am selben Controller, genau ein Chip`, async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
-		// Seed-Wert muss vom Zielwert HUB_SEL[kind].profilWert verschieden sein, sonst
-		// ist der Klick keine Änderung (seedHub('vergleich') trägt profil 'wandern').
-		const ausgang = kind === 'route' ? 'trekking' : 'allgemein';
-		const hub = await seedHub(page.request, kind, { extra: { [sel.profilFeld]: ausgang } });
+		const hub = await seedHub(page.request, kind, { extra: { activity: 'trekking' } });
 		try {
 			const pfad = hubApiPath(kind, hub.id);
-			expect(sel.profilWert, 'Vorbedingung: Zielwert ≠ Seed-Wert').not.toBe(ausgang);
-			await openHub(page, kind, hub.id);
-			const kachel = page.getByTestId(`${sel.kopf}-profil-option-${sel.profilWert}`);
-			await expect(kachel).toBeVisible({ timeout: 15_000 });
+			await page.goto(`/trips/${hub.id}?tab=etappen`);
+			const knopf = page.getByTestId('tempo-fortbewegung-ski').filter({ visible: true });
+			await expect(knopf).toBeVisible({ timeout: 15_000 });
+			await expect(page.getByTestId('tempo-fortbewegung-fuss').filter({ visible: true })).toHaveAttribute('aria-pressed', 'true');
 			await verzoegerePuts(page, pfad);
 
-			await kachel.click();
+			await knopf.click();
 
 			await expect(chip(page)).toHaveAttribute('data-state', 'saving', { timeout: 5_000 });
 			await expect(chip(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });

@@ -68,6 +68,55 @@ func TestTempo3196_PutMitTempoMergedNurDiesesFeld(t *testing.T) {
 	}
 }
 
+// Fix-Loop 3, F-A2-2: der Anlege-POST prueft tempo wie der PUT. Ungueltig -> 422 und
+// nichts gespeichert; fehlendes tempo bleibt erlaubt und wird aus activity abgeleitet.
+func TestTempo3196_PostPrueftTempo(t *testing.T) {
+	post := func(s *store.Store, body string) int {
+		return doReq(CreateTripHandler(s), http.MethodPost, "/api/trips", body, "", "userA").Code
+	}
+	for _, tempo := range []string{
+		`{"fortbewegung":"auto","grundtempo_kmh":4}`,
+		`{"fortbewegung":"fuss","grundtempo_kmh":0}`,
+		`{"fortbewegung":"fuss","grundtempo_kmh":0.4}`,
+		`{"fortbewegung":"rad","grundtempo_kmh":61}`,
+	} {
+		t.Run(tempo, func(t *testing.T) {
+			s := newTestStore(t)
+			if code := post(s, `{"id":"neu","name":"Neu","tempo":`+tempo+`}`); code != http.StatusUnprocessableEntity {
+				t.Fatalf("erwartet 422, bekommen %d", code)
+			}
+			if tr, _ := s.WithUser("userA").LoadTrip("neu"); tr != nil {
+				t.Errorf("abgelehnter Trip trotzdem gespeichert: %+v", tr.Tempo)
+			}
+		})
+	}
+	s := newTestStore(t)
+	if code := post(s, `{"id":"gut","name":"Gut","tempo":{"fortbewegung":"ski","grundtempo_kmh":2.5}}`); code != http.StatusCreated && code != http.StatusOK {
+		t.Fatalf("gueltiges tempo: erwartet 201, bekommen %d", code)
+	}
+	if tr := ladeTempoTrip(t, s, "userA", "gut"); tr.Tempo == nil || tr.Tempo.Fortbewegung != "ski" || tr.Tempo.GrundtempoKmh != 2.5 {
+		t.Errorf("gueltiges tempo nicht gespeichert: %+v", tr.Tempo)
+	}
+	if code := post(s, `{"id":"alt","name":"Alt","activity":"fahrrad_20"}`); code != http.StatusCreated && code != http.StatusOK {
+		t.Fatalf("ohne tempo: erwartet 201, bekommen %d", code)
+	}
+	if tr := ladeTempoTrip(t, s, "userA", "alt"); tr.Tempo == nil || tr.Tempo.Fortbewegung != "rad" || tr.Tempo.GrundtempoKmh != 20 {
+		t.Errorf("fehlendes tempo nicht aus activity abgeleitet: %+v", tr.Tempo)
+	}
+}
+
+// Fix-Loop 2, F001: die Untergrenze 0.5 km/h selbst ist gueltig (Oberflaeche min=0.5).
+func TestTempo3196_PutUntergrenzeGueltig(t *testing.T) {
+	s := newTestStore(t)
+	seedTempoTrip(t, s, "userA", "t1u")
+	r := briefingVergleichEtagRouter(s)
+	putOK(t, r, "/api/trips/t1u", "userA", `{"tempo":{"fortbewegung":"fuss","grundtempo_kmh":0.5}}`)
+	tr := ladeTempoTrip(t, s, "userA", "t1u")
+	if tr.Tempo == nil || tr.Tempo.GrundtempoKmh != 0.5 {
+		t.Fatalf("0.5 km/h nicht uebernommen: %+v", tr.Tempo)
+	}
+}
+
 // PUT ohne tempo laesst das gespeicherte tempo unveraendert.
 func TestTempo3196_PutOhneTempoBehaeltBestand(t *testing.T) {
 	for _, body := range []string{`{}`, `{"name":"Neu"}`, `{"activity":"wandern"}`} {
@@ -92,6 +141,9 @@ func TestTempo3196_PutUngueltigesTempo422(t *testing.T) {
 		`{"tempo":{"fortbewegung":"fuss","grundtempo_kmh":-3}}`,
 		`{"tempo":{"fortbewegung":"rad","grundtempo_kmh":500}}`,
 		`{"tempo":{"fortbewegung":"","grundtempo_kmh":4}}`,
+		// Fix-Loop 2, F001: Untergrenze 0.5 km/h (sonst OverflowError im Python-Rechner).
+		`{"tempo":{"fortbewegung":"fuss","grundtempo_kmh":0.4}}`,
+		`{"tempo":{"fortbewegung":"ski","grundtempo_kmh":1e-320}}`,
 	}
 	for _, body := range bodies {
 		t.Run(body, func(t *testing.T) {

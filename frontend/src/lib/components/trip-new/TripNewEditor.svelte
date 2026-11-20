@@ -40,9 +40,8 @@
 	import MInput from '$lib/components/mobile/MInput.svelte';
 	import MField from '$lib/components/mobile/MField.svelte';
 	import Toast from '$lib/components/mobile/Toast.svelte';
-	import Select from '$lib/components/ui/select/Select.svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import type { Trip, ReportConfig, WeatherConfigMetric, Stage, Waypoint, ActivityType, AlertMetric, SensLevel, Corridor, AlertMetricChannelEntry, Ampel } from '$lib/types';
+	import type { Trip, ReportConfig, WeatherConfigMetric, Stage, Waypoint, Tempo, AlertMetric, SensLevel, Corridor, AlertMetricChannelEntry, Ampel } from '$lib/types';
 	import {
 		type TabId,
 		type CreateTripState,
@@ -65,23 +64,11 @@
 	import { canFinishMitStandardwerten } from '$lib/components/shared/anlegeLockEngine';
 	import StandardwerteSpeichernKnopf from '$lib/components/shared/StandardwerteSpeichernKnopf.svelte';
 	import DatumFeld from '$lib/components/molecules/DatumFeld.svelte';
-	import { t, tn, locale, type MessageKey } from '$lib/i18n';
+	import { t, tn, locale } from '$lib/i18n';
 
-	// i18n F9: Aktivitaetsliste des Anlegens (Kennungen unveraendert, Namen je Sprache).
-	const AKTIVITAETEN: { value: string; key: MessageKey }[] = [
-		{ value: '', key: 'trip.aktivitaet.standard' },
-		{ value: 'trekking', key: 'trip.aktivitaet.alpen_trekking' },
-		{ value: 'hiking', key: 'trip.aktivitaet.wandern' },
-		{ value: 'ski_touring', key: 'trip.aktivitaet.skitouren' },
-		{ value: 'hochtour', key: 'trip.aktivitaet.hochtour' },
-		{ value: 'klettersteig', key: 'trip.aktivitaet.klettersteig' },
-		{ value: 'mtb', key: 'trip.aktivitaet.mtb' },
-		{ value: 'fahrrad_15', key: 'trip.aktivitaet.fahrrad_15' },
-		{ value: 'fahrrad_20', key: 'trip.aktivitaet.fahrrad_20' },
-		{ value: 'fahrrad_25', key: 'trip.aktivitaet.fahrrad_25' }
-	];
-	// #2881 Lieferung B: Optionen des Auswahl-Bausteins (bits-ui Select), Sprachwechsel ohne Neuladen.
-	const aktivitaetOptionen = $derived(AKTIVITAETEN.map((a) => ({ value: a.value, label: $t(a.key) })));
+	// Issue #3196: Anlegen = Bearbeiten — dieselbe Tempo-Karte wie im Reiter Etappen.
+	import TempoKarte from '$lib/components/shared/TempoKarte.svelte';
+	import { STANDARD_TEMPO } from '$lib/utils/naismith';
 
 	// ── Test-Seam (Issue #1738, Muster `profileOverride` aus #1510) ──────────
 	// Der gesamte Anlege-Zustand lebt in internem `$state`; `isMobileViewport`
@@ -169,8 +156,8 @@
 		loadRouteExtraMetricDefs().then((d) => { routeExtraDefs = d; }).catch(() => { routeExtraDefs = []; });
 	});
 	const activeAlertMetrics = $derived(deriveActiveAlertMetricsForTrip(weatherMetrics, metricsCatalog));
-	// Issue #674 — Aktivitätstyp aus WeatherMetricsTab übernehmen (Fahrrad/Wanderer).
-	let selectedActivity = $state<ActivityType | undefined>(undefined);
+	// Issue #3196 — Fortbewegung + Grundtempo; neuer Trip startet zu Fuß mit 4 km/h.
+	let selectedTempo = $state<Tempo>({ ...STANDARD_TEMPO });
 
 	// Visited-Flags (Tab-Besuch setzt done)
 	let wtVisited = $state(seed.wtVisited ?? false);
@@ -203,7 +190,7 @@
 		id: '__new__',
 		name: name || $t('trip.anlegen.neuer_trip'),
 		stages: buildEditorStages(),
-		activity: selectedActivity,
+		tempo: selectedTempo,
 		display_config: { channels, metrics: weatherMetrics } as unknown as Trip['display_config'],
 		report_config: reportConfig,
 	});
@@ -562,7 +549,7 @@
 				reportConfig: mitStandardwerten ? ergaenzeStandardwerteReportConfig(reportConfig) : ergaenzeVersandStandard(reportConfig),
 				alarm,
 				corridors,
-				activity: selectedActivity,
+				tempo: selectedTempo,
 				ampel: wetterAmpel,
 				// C3: derselbe Eigentuemer wie official_warnings.enabled (ueber `alarm`), AC-20.
 				officialAlertsEnabled: alarm.officialWarningsEnabled,
@@ -705,16 +692,12 @@
 						{/if}
 					</Field>
 
-					<!-- Issue #932 — Aktivitätstyp (verschoben aus Metriken-Tab). -->
-					<!-- Nur auf Desktop-Viewport rendern, damit das Dropdown nur einmal im DOM existiert. -->
+					<!-- Issue #3196 — Tempo-Karte statt Aktivitäts-Dropdown (dieselbe wie im Reiter
+					     Etappen). Nur auf Desktop-Viewport, damit sie nur einmal im DOM existiert. -->
 					{#if !isMobileViewport}
-					<Field label={$t('trip.anlegen.aktivitaetstyp')} side={$t('trip.anlegen.optional')}>
-						<Select data-testid="activity-dropdown" aria-label={$t('trip.anlegen.aktivitaetstyp')}
-							options={aktivitaetOptionen}
-							value={selectedActivity ?? ''}
-							onValueChange={(v) => { selectedActivity = (v as ActivityType) || undefined; }}
-							style="width: 100%; max-width: 320px;" />
-					</Field>
+					<div style="margin-top: 12px;">
+						<TempoKarte tempo={selectedTempo} onchange={(neu) => { selectedTempo = neu; }} />
+					</div>
 					{/if}
 
 					<div style="margin-top: 12px; padding: 12px 16px; border-radius: var(--g-r-2); background: var(--g-accent-tint); border: 1px solid var(--g-accent-rule);">
@@ -894,8 +877,8 @@
 				</div>
 
 				<!-- Eingebetteter Wegpunkt-Editor: kein tripId → kein PUT, kein Save-Bar -->
-				<!-- Issue #674 — activityType für korrekte Naismith-Ankunftszeiten im Editor -->
-				<EditStagesPanelNew bind:stages={editorStages} showSave={false} activityType={selectedActivity} />
+				<!-- Issue #3196 — Tempo für die Ankunftszeiten im Editor (DAV) -->
+				<EditStagesPanelNew bind:stages={editorStages} showSave={false} tempo={selectedTempo} />
 
 				<!-- Footer (1:1 TN_WegpunkteTab) -->
 				<div style="padding: 20px 40px; border-top: 1px solid var(--g-rule); background: var(--g-card); display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
@@ -1042,16 +1025,11 @@
 						<DatumFeld value={startDate} onchange={makeDateHandler()} required leerMelden groesse="gross" testid="trip-new-date-input" ariaLabel={$t('trip.startdatum')} />
 					</MField>
 
-					<!-- Issue #932 — Aktivitätstyp (verschoben aus Metriken-Tab). -->
-					<!-- Nur auf Mobile-Viewport rendern, damit das Dropdown nur einmal im DOM existiert. -->
+					<!-- Issue #3196 — Tempo-Karte statt Aktivitäts-Dropdown, nur auf Mobile-Viewport. -->
 					{#if isMobileViewport}
-					<MField label={$t('trip.anlegen.aktivitaetstyp')} side={$t('trip.anlegen.optional')}>
-						<Select data-testid="activity-dropdown" aria-label={$t('trip.anlegen.aktivitaetstyp')}
-							options={aktivitaetOptionen}
-							value={selectedActivity ?? ''}
-							onValueChange={(v) => { selectedActivity = (v as ActivityType) || undefined; }}
-							style="width: 100%;" />
-					</MField>
+					<div style="margin-bottom: 20px;">
+						<TempoKarte tempo={selectedTempo} onchange={(neu) => { selectedTempo = neu; }} />
+					</div>
 					{/if}
 
 					<div style="padding: 12px 14px; border-radius: var(--g-r-2); background: var(--g-accent-tint); border: 1px solid var(--g-accent-rule); margin-bottom: 20px;">
@@ -1183,7 +1161,7 @@
 							{$t('trip.anlegen.wegpunkte_auto')}
 						</div>
 					</div>
-					<EditStagesPanelNew bind:stages={editorStages} showSave={false} bottomReservePx={mobileFooterHeightPx || undefined} />
+					<EditStagesPanelNew bind:stages={editorStages} showSave={false} tempo={selectedTempo} bottomReservePx={mobileFooterHeightPx || undefined} />
 				</div>
 
 			{/if}

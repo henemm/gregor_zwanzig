@@ -46,7 +46,6 @@ import {
 	hubApiPath,
 	LISTE_SEL,
 	openHub,
-	waehleOption,
 	type AnlegeReiterZustand,
 	type HubKind
 } from './helpers';
@@ -101,13 +100,15 @@ const AN_SEL: Record<
 			(((r.display_config as Rumpf | undefined)?.metrics as Array<{ metric_id?: string; enabled?: boolean }> | undefined) ?? []).some(
 				(m) => m.metric_id === 'snow_depth' && m.enabled === true
 			),
-		// #2881 Lieferung B: Aktivität ist der Auswahl-Baustein (bits-ui Select) — gewählt wird über die
-		// Beschriftung von ANLEGE_SEL.route.profilWert (hochtour = „Hochtour"), geprüft am Auslöser.
+		// #3196 (ADR-0108): statt der Aktivitäts-Auswahl die Tempo-Karte — gewählt wird die
+		// Fortbewegung „Ski" (Vorgabe „zu Fuß"), geprüft an aria-pressed und dem Grundtempo-Vorschlag 3.
 		profilWaehlen: async (page) => {
-			await waehleOption(page, page.locator('.tn-desktop').getByTestId('activity-dropdown'), 'Hochtour');
+			await page.locator('.tn-desktop').getByTestId('tempo-fortbewegung-ski').click();
 		},
 		erwarteProfil: async (page) => {
-			await expect(page.locator('.tn-desktop').getByTestId('activity-dropdown')).toHaveText('Hochtour');
+			const karte = page.locator('.tn-desktop');
+			await expect(karte.getByTestId('tempo-fortbewegung-ski')).toHaveAttribute('aria-pressed', 'true');
+			await expect(karte.getByTestId('tempo-grundtempo')).toHaveValue('3');
 		}
 	},
 	vergleich: {

@@ -1,48 +1,113 @@
-// naismith.ts — clientseitige Live-Berechnung der Naismith-Ankunftszeiten.
-// Issue #296-FE. Spec: docs/specs/modules/issue_296_fe_profile_editor.md §1 (AC-5, AC-6)
+// naismith.ts — clientseitige Live-Berechnung der Ankunftszeiten je Wegpunkt.
+// Issue #296-FE (Grundgerüst), Issue #3196 (Gehzeit nach DAV, Tempo am Trip).
+// Spec: docs/specs/modules/feat_3196_trip_tempo_etappen.md
 //
-// Konstanten + Formel gespiegelt aus:
-//   - src/app/models.py EtappenConfig (Single Source: speed_flat_kmh=4.0,
-//     speed_ascent_mh=300.0, speed_descent_mh=500.0)
-//   - internal/model/naismith.go (naismithHours, ComputeStageArrivals, Wrap über
-//     Mitternacht statt Clamp 23:59 — #1667 S2)
-// Bei Änderung dort: hier nachziehen, damit Editor-Anzeige (vor Save) ==
-// persistierter Wert (nach Save) == Pipeline-Zeit.
+// Konstanten + Formel gespiegelt aus internal/model/naismith.go (EINE Quelle:
+// FortbewegungRef, DAVHours, ResolveTempo, ComputeStageArrivals, Wrap über
+// Mitternacht statt Clamp 23:59 — #1667 S2) und src/core/naismith.py.
+// Bewacht durch die gemeinsame Falltabelle tests/fixtures/naismith_dav_paritaet.json,
+// damit Editor-Anzeige (vor Save) == persistierter Wert (nach Save) == Pipeline-Zeit.
 //
 // Distanz: gemeinsame haversineKm aus headerStats.ts (DRY, kein eigener Haversine).
 
 import { haversineKm, stageHasFullTrackDistance } from '../components/email-preview/headerStats.ts';
-import type { ActivityType, Stage } from '../types';
+import type { Fortbewegung, Stage, Tempo } from '../types';
 
-const SPEED_FLAT_KMH = 4.0;
-const SPEED_ASCENT_MH = 300.0;
-const SPEED_DESCENT_MH = 500.0;
+/** Referenzwerte je Fortbewegung: Vorschlags-Grundtempo (km/h) und Raten (Hm/h) bei diesem Tempo. */
+export const FORTBEWEGUNG_REF: Record<Fortbewegung, { vorschlagKmh: number; rAuf: number; rAb: number }> = {
+	fuss: { vorschlagKmh: 4, rAuf: 300, rAb: 500 },
+	rad: { vorschlagKmh: 20, rAuf: 600, rAb: 1000 },
+	mtb: { vorschlagKmh: 12, rAuf: 500, rAb: 1000 },
+	ski: { vorschlagKmh: 3, rAuf: 300, rAb: 1500 }
+};
+
+/** Reihenfolge der Auswahl in der Tempo-Karte. */
+export const FORTBEWEGUNGEN: readonly Fortbewegung[] = ['fuss', 'rad', 'mtb', 'ski'];
+
+/** Grenzen eines plausiblen Grundtempos (wie Go Min/MaxGrundtempoKmh; Fix-Loop 2, F001). */
+export const MIN_GRUNDTEMPO_KMH = 0.5;
+export const MAX_GRUNDTEMPO_KMH = 60;
+
+/** Start-Tempo eines neuen Trips (zu Fuß, Vorschlagswert). */
+export const STANDARD_TEMPO: Tempo = { fortbewegung: 'fuss', grundtempo_kmh: 4 };
 
 const DEFAULT_START_TIME = '08:00';
 const DAY_MINUTES = 24 * 60; // Wrap-Modul analog naismith.go::formatHHMM (#1667 S2)
 
+/** Grundtempo plus die daraus folgenden Raten (Spiegel Go ActivitySpeeds). */
+export interface TempoSpeeds {
+	fortbewegung: Fortbewegung;
+	grundtempo_kmh: number;
+	flatKmh: number;
+	ascentMh: number;
+	descentMh: number;
+}
+
+/** Gültig: bekannte Fortbewegung und 0.5 <= Grundtempo <= 60 km/h (wie Go ValidTempo). */
+export function istGueltigesTempo(t: Tempo | null | undefined): t is Tempo {
+	if (!t || !(t.fortbewegung in FORTBEWEGUNG_REF)) return false;
+	const v = t.grundtempo_kmh;
+	return typeof v === 'number' && Number.isFinite(v) && v >= MIN_GRUNDTEMPO_KMH && v <= MAX_GRUNDTEMPO_KMH;
+}
+
 /**
- * Liefert die Flachgeschwindigkeit (km/h) für eine Aktivität.
- * Issue #674: Fahrrad-Stufen 15/20/25 km/h; alle anderen → Wanderer-Default 4.0.
- * Querverweis Go: internal/model/naismith.go::ActivitySpeed.
+ * Leitet das Tempo aus dem Altfeld `activity` ab (Lazy-Migration, Spiegel Go DeriveTempo):
+ * fahrrad_15/20/25 → Rad 15/20/25 km/h, alles andere → zu Fuß 4 km/h. Nie MTB oder Ski.
  */
-export function activityToSpeed(activity?: ActivityType): number {
+export function deriveTempo(activity?: string | null): Tempo {
 	switch (activity) {
-		case 'fahrrad_25': return 25.0;
-		case 'fahrrad_20': return 20.0;
-		case 'fahrrad_15': return 15.0;
-		default: return SPEED_FLAT_KMH; // 4.0 — Wandern, MTB, Ski, alle anderen
+		case 'fahrrad_15': return { fortbewegung: 'rad', grundtempo_kmh: 15 };
+		case 'fahrrad_20': return { fortbewegung: 'rad', grundtempo_kmh: 20 };
+		case 'fahrrad_25': return { fortbewegung: 'rad', grundtempo_kmh: 25 };
+		default: return { ...STANDARD_TEMPO };
 	}
 }
 
-/** Angepasste Naismith's Rule (SUMME, nicht max!). distKm + Höhenmeter → Stunden. */
-function naismithHoursInternal(distKm: number, ascentM: number, descentM: number, speedFlat = SPEED_FLAT_KMH): number {
-	return distKm / speedFlat + ascentM / SPEED_ASCENT_MH + descentM / SPEED_DESCENT_MH;
+/** Tempo eines Trips: gespeichertes `tempo` vor Ableitung aus `activity`. Ein gespeichertes, aber
+ *  ungültiges Tempo zeigt den Wert, mit dem alle Rechner rechnen (zu Fuß 4 km/h, wie tempoSpeeds,
+ *  Go TempoSpeeds, Python speeds_for_tempo) — Anzeige = Rechnung (#3196 F-A3-5). */
+export function tempoVonTrip(trip: { tempo?: Tempo | null; activity?: string | null } | null | undefined): Tempo {
+	if (trip?.tempo) return istGueltigesTempo(trip.tempo) ? trip.tempo : { ...STANDARD_TEMPO };
+	return deriveTempo(trip?.activity);
 }
 
-/** @deprecated Verwende naismithHoursInternal intern. Exportiert für Abwärts-Kompatibilität (Tests). */
-export function naismithHours(distKm: number, ascentM: number, descentM: number): number {
-	return naismithHoursInternal(distKm, ascentM, descentM);
+/** Raten zu einem Tempo: R = R_ref · v / v_ref. Ungültig → zu Fuß 4 km/h. */
+export function tempoSpeeds(tempo: Tempo | null | undefined): TempoSpeeds {
+	const t = istGueltigesTempo(tempo) ? tempo : STANDARD_TEMPO;
+	const ref = FORTBEWEGUNG_REF[t.fortbewegung];
+	const f = t.grundtempo_kmh / ref.vorschlagKmh;
+	return {
+		fortbewegung: t.fortbewegung,
+		grundtempo_kmh: t.grundtempo_kmh,
+		flatKmh: t.grundtempo_kmh,
+		ascentMh: ref.rAuf * f,
+		descentMh: ref.rAb * f
+	};
+}
+
+/** Einzige Auflösungsstelle des Trip-Tempos (Spiegel Go ResolveTempo, Python tempo_speeds). */
+export function tripTempo(trip: { tempo?: Tempo | null; activity?: string | null } | null | undefined): TempoSpeeds {
+	return tempoSpeeds(tempoVonTrip(trip));
+}
+
+/** Wechsel der Fortbewegung setzt das Grundtempo auf den Vorschlagswert (AC-4). */
+export function wechsleFortbewegung(_tempo: Tempo, neu: Fortbewegung): Tempo {
+	return { fortbewegung: neu, grundtempo_kmh: FORTBEWEGUNG_REF[neu].vorschlagKmh };
+}
+
+/**
+ * Gehzeit nach DAV (DIN 33466), Spiegel Go DAVHours:
+ * t_h = km / v, t_v = Hm_auf / R_auf + Hm_ab / R_ab, t = max + min / 2.
+ */
+export function davHours(
+	distKm: number,
+	ascentM: number,
+	descentM: number,
+	sp: Pick<TempoSpeeds, 'flatKmh' | 'ascentMh' | 'descentMh'>
+): number {
+	const th = distKm / sp.flatKmh;
+	const tv = ascentM / sp.ascentMh + descentM / sp.descentMh;
+	return Math.max(th, tv) + Math.min(th, tv) / 2;
 }
 
 /** Parst "HH:MM" in Minuten ab Mitternacht; unsinnige Zeit → Default. (naismith.go::parseStartMinutes) */
@@ -74,7 +139,7 @@ function parseStartMinutes(startTime?: string): number {
  *
  * Kein negativsicherer Modulo (((x % m) + m) % m) nötig: totalMin ist
  * konstruktiv >= 0 (Startzeit >= 0 plus kumulierte, nie negative
- * Naismith-Minuten). Bitte nicht "sicherheitshalber" umbauen.
+ * Gehzeit-Minuten). Bitte nicht "sicherheitshalber" umbauen.
  *
  * `export` seit #1667 S2 für den Cross-Language-Paritätstest
  * (naismith_wrap_parity.test.ts), der die drei Kopien gegeneinander prüft.
@@ -90,14 +155,14 @@ export function formatHHMM(totalMin: number): string {
  * Kumulative Ankunftszeiten pro Wegpunkt einer Stage als "HH:MM".
  * startTime "HH:MM" (default "08:00"). Distanz via haversineKm (headerStats).
  * Pausentag (0 Wegpunkte) → []. Erster Wegpunkt = startTime.
- * speedFlatKmh: optional, default SPEED_FLAT_KMH (4.0). Nutze activityToSpeed().
- * Spiegelt naismith.go::ComputeStageArrivals.
+ * tempo: Tempo des Trips (tempoVonTrip), default zu Fuß 4 km/h.
+ * Gehzeit je Wegpunkt-Paar nach DAV. Spiegelt naismith.go::ComputeStageArrivals.
  */
-export function computeArrivalTimes(stage: Stage, startTime?: string, speedFlatKmh?: number): string[] {
+export function computeArrivalTimes(stage: Stage, startTime?: string, tempo?: Tempo): string[] {
 	const wps = stage.waypoints;
 	if (!wps || wps.length === 0) return [];
 
-	const speed = speedFlatKmh ?? SPEED_FLAT_KMH;
+	const sp = tempoSpeeds(tempo ?? STANDARD_TEMPO);
 	// #2110: Track-Distanz nur bei vollstaendig vermessener Stage, sonst Haversine.
 	const useTrack = stageHasFullTrackDistance(wps);
 	let cur = parseStartMinutes(startTime);
@@ -112,7 +177,7 @@ export function computeArrivalTimes(stage: Stage, startTime?: string, speedFlatK
 		const dElev = wp.elevation_m - prev.elevation_m;
 		const ascent = Math.max(0, dElev);
 		const descent = Math.max(0, -dElev);
-		cur += naismithHoursInternal(dist, ascent, descent, speed) * 60.0;
+		cur += davHours(dist, ascent, descent, sp) * 60.0;
 		arrivals.push(formatHHMM(Math.round(cur)));
 	}
 

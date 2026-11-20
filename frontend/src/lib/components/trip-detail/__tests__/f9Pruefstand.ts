@@ -295,7 +295,7 @@ export function historieRendern(): string {
 }
 
 export function etappenEditorRendern(fall: 'desktop' | 'kaskade_offen' | 'kaskade_fertig' | 'mobil'): string {
-	const props = { stages: structuredClone(ETAPPEN), tripId: 'gd-gr20', showSave: true, activityType: 'trekking' };
+	const props = { stages: structuredClone(ETAPPEN), tripId: 'gd-gr20', showSave: true, tempo: { fortbewegung: 'fuss' as const, grundtempo_kmh: 4 } };
 	const k = { desktop: P.desktop, kaskade_offen: P.kaskadeOffen, kaskade_fertig: P.kaskadeFertig, mobil: P.mobil }[fall];
 	if (fall === 'kaskade_offen') props.stages = props.stages.map((s, i) => ({ ...s, date: `2026-07-0${5 + i}` }));
 	return html(k, props);

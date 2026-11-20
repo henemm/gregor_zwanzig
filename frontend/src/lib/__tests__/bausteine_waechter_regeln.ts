@@ -506,6 +506,8 @@ export function bestandImBaum(srcWurzel: string): string[] {
 const SEITEN_SCOPE: string[] = [
 	// #2913 Teil 2 (AC-17, K-1): Reiter „Wetter“ (Trip und Orts-Briefing) als dünne Seite.
 	'lib/components/shared/WetterTab.svelte',
+	// #3196: Tempo-Karte (Fortbewegung + Grundtempo) als dünne Seite, Organismus tempo-karte/.
+	'lib/components/shared/TempoKarte.svelte',
 	// #3122 B3a: Vorschauseite der Bausteine Haken, RohEinfachKnopf und EinstellTabelle.
 	'routes/_design-system/einstelltabelle/+page.svelte'
 ];

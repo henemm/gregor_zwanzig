@@ -25,6 +25,8 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 _HERE = Path(__file__).resolve().parent
 _SKRIPT = _HERE.parent / "scripts" / "migrate_3196_trip_tempo.py"
 _FULL = json.loads((_HERE / "fixtures" / "trip_schema_full.json").read_text(encoding="utf-8"))
@@ -129,3 +131,39 @@ def test_zweiter_lauf_aendert_nichts(tmp_path):
     assert mod.main(["--root", str(root), "--backup-dir", str(tmp_path / "bak2"), "--execute"]) == 0
     for p, inhalt in nach_erstem.items():
         assert p.read_bytes() == inhalt, f"zweiter Lauf hat {p.name} veraendert"
+
+
+def _mit_alter_ankunft(id_: str, activity: str) -> dict:
+    """Etappe 8 km / 600 Hm auf / 600 Hm ab mit Ankunftszeiten nach dem ALTEN
+    Summenmodell (zu Fuss 5:12 statt 4:12 nach DAV)."""
+    d = _trip(id_, activity)
+    d["stages"] = [{
+        "id": "S1", "name": "Tag 1", "date": "2026-07-01", "start_time": "08:00",
+        "waypoints": [
+            {"id": "A", "name": "A", "lat": 47.0, "lon": 11.0, "elevation_m": 1000,
+             "distance_from_start_km": 0.0, "arrival_calculated": "08:00"},
+            {"id": "B", "name": "B", "lat": 47.0, "lon": 11.0, "elevation_m": 1600,
+             "distance_from_start_km": 4.0, "arrival_calculated": "11:00"},
+            {"id": "C", "name": "C", "lat": 47.0, "lon": 11.0, "elevation_m": 1000,
+             "distance_from_start_km": 8.0, "arrival_calculated": "13:12"},
+        ],
+    }]
+    return d
+
+
+@pytest.mark.parametrize("activity,erwartet", [
+    ("hochtour", ["08:00", "10:30", "12:12"]),    # zu Fuss 4 km/h nach DAV
+    ("fahrrad_20", ["08:00", "09:06", "09:48"]),  # Rad 20 km/h nach DAV
+])
+def test_execute_rechnet_ankuenfte_nach_dav(tmp_path, activity, erwartet):
+    """F-A2-3 (AC-10): nach --execute folgen die gespeicherten Ankunftszeiten der
+    DAV-Rechnung mit dem migrierten Tempo; alle uebrigen Felder bleiben gleich."""
+    root = tmp_path / "users"
+    pfad = root / "u1" / "briefings" / "alt.json"
+    pfad.parent.mkdir(parents=True)
+    vorher = _mit_alter_ankunft("alt", activity)
+    pfad.write_text(json.dumps(vorher, ensure_ascii=False, indent=2), encoding="utf-8")
+    assert _modul().main(["--root", str(root), "--backup-dir", str(tmp_path / "bak"), "--execute"]) == 0
+    nachher = _lies(pfad)
+    assert [wp["arrival_calculated"] for wp in nachher["stages"][0]["waypoints"]] == erwartet
+    assert _ohne_tempo_und_ankunft(nachher) == _ohne_tempo_und_ankunft(vorher)

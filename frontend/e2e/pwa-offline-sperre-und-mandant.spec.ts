@@ -275,12 +275,15 @@ test('AC-9: die ohne Netz gezeigte Trip-Ansicht sperrt ihre Bearbeitungsflaechen
 			).toBeDisabled();
 		}
 
-		// Trip-Kopf: die Aktivitaets-Kacheln schreiben sofort per PUT (#2284 S2 —
-		// vorher Auswahlliste im Etappen-Reiter).
-		await expect(page.getByTestId('trip-profil-option-skitour')).toBeVisible();
+		// #3196: die Tempo-Karte (Fortbewegung + Grundtempo) im Reiter Etappen schreibt sofort per PUT
+		// (vorher Aktivitaets-Kacheln im Kopf, #2284 S2).
+		await page.getByTestId('trip-detail-tab-etappen').first().click();
+		const ski = page.getByTestId('tempo-fortbewegung-ski').filter({ visible: true });
+		await expect(ski).toBeVisible();
+		await expect(ski, 'die Fortbewegungs-Auswahl ist ohne Netz bedienbar').toBeDisabled();
 		await expect(
-			page.getByTestId('trip-profil-option-skitour'),
-			'die Aktivitaets-Auswahl ist ohne Netz bedienbar'
+			page.getByTestId('tempo-grundtempo').filter({ visible: true }),
+			'das Grundtempo ist ohne Netz bedienbar'
 		).toBeDisabled();
 
 		// Alarm-Tab: dort schreibt JEDES Eingabefeld in die Trip-Konfiguration.
@@ -476,9 +479,11 @@ test('AC-10: der Bedienversuch an einer gesperrten Flaeche schickt keine schreib
 		for (const testid of HUB_SCHREIBENDE_KNOEPFE) {
 			await page.getByTestId(testid).click({ force: true });
 		}
-		// #2284 S2: Aktivitaet = Kachel im Trip-Kopf (vorher Auswahlliste im Etappen-Reiter).
+		// #3196: Fortbewegung = Tempo-Karte im Reiter Etappen (vorher Kachel im Trip-Kopf, #2284 S2).
+		await page.getByTestId('trip-detail-tab-etappen').first().click();
 		await page
-			.getByTestId('trip-profil-option-skitour')
+			.getByTestId('tempo-fortbewegung-ski')
+			.filter({ visible: true })
 			.click({ force: true })
 			.catch(() => {
 				// Eine gesperrte Kachel nimmt den Klick gar nicht an — das ist der

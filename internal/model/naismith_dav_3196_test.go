@@ -39,7 +39,27 @@ type davTabelle struct {
 		Fortbewegung  string  `json:"fortbewegung"`
 		GrundtempoKmh float64 `json:"grundtempo_kmh"`
 	} `json:"ableitung_activity"`
-	Faelle []davFall `json:"faelle"`
+	Faelle      []davFall `json:"faelle"`
+	Gueltigkeit []struct {
+		Fortbewegung  string  `json:"fortbewegung"`
+		GrundtempoKmh float64 `json:"grundtempo_kmh"`
+		Gueltig       bool    `json:"gueltig"`
+	} `json:"gueltigkeit"`
+}
+
+// Fix-Loop 2, F001: Grenzen eines plausiblen Grundtempos (0.5 <= v <= 60)
+// aus der gemeinsamen Falltabelle -- dieselbe lesen Python und TS.
+func TestDAV3196_ValidTempoGrenzen(t *testing.T) {
+	tab := ladeDAVTabelle(t)
+	if len(tab.Gueltigkeit) < 8 {
+		t.Fatalf("Gueltigkeitstabelle fehlt/zu klein: %d", len(tab.Gueltigkeit))
+	}
+	for _, g := range tab.Gueltigkeit {
+		got := ValidTempo(Tempo{Fortbewegung: g.Fortbewegung, GrundtempoKmh: g.GrundtempoKmh})
+		if got != g.Gueltig {
+			t.Errorf("ValidTempo(%s, %g): erwartet %v, bekommen %v", g.Fortbewegung, g.GrundtempoKmh, g.Gueltig, got)
+		}
+	}
 }
 
 func ladeDAVTabelle(t *testing.T) davTabelle {

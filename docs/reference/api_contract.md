@@ -1038,7 +1038,8 @@ type Trip struct {
     AlertQuietFrom          *string                `json:"alert_quiet_from,omitempty"`
     AlertQuietTo            *string                `json:"alert_quiet_to,omitempty"`
     Shortcode               string                 `json:"shortcode,omitempty"`
-    Activity                string                 `json:"activity,omitempty"`
+    Activity                string                 `json:"activity,omitempty"` // Altfeld, seit #3196 nur Ableitungsquelle für tempo
+    Tempo                   *Tempo                 `json:"tempo,omitempty"`    // Issue #3196: {fortbewegung, grundtempo_kmh}
     Region                  string                 `json:"region,omitempty"`
     PausedAt                *time.Time             `json:"paused_at,omitempty"`
     ArchivedAt              *time.Time             `json:"archived_at,omitempty"`
@@ -1241,29 +1242,40 @@ läuft. Der Python-Loader (`src/app/loader.py`) heilt zusätzlich `null` beim Le
 (`data.get("x") or []`) für Bestandsdateien, die noch nicht über `SaveTrip` neu geschrieben
 wurden. Bestandsdaten: `scripts/migrate_1244_null_lists.py`, s. `operations_playbook.md`.
 
-### Activity Types (Issue #674)
+### Tempo (Issue #3196, ADR-0108 Nr. 2) — ersetzt Activity Types (#674)
 
-Das Feld `activity` definiert die Art der Fortbewegung und damit die Geschwindigkeitsannahmen für Ankunftszeit-Berechnungen (Naismith-Formel).
+Das Trip-Feld `tempo` bestimmt die Gehzeit und damit `arrival_calculated` je Wegpunkt:
 
-| ActivityType | Flachgeschwindigkeit | Aufstieg [m/h] | Abstieg [m/h] | Verwendungsfall |
-|---|---|---|---|---|
-| `"trekking"` | 4.0 km/h | 300 | 500 | Standard-Wanderung (default) |
-| `"skitour"` | 3.5 km/h | 250 | 400 | Skitour ohne Trails |
-| `"hochtour"` | 3.0 km/h | 300 | 400 | Hochgebirgstouren mit Felsen/Schnee |
-| `"klettersteig"` | 2.0 km/h | 150 | 200 | Klettersteig-Passagen |
-| `"mtb"` | 4.0 km/h | 300 | 500 | Mountainbike (aktuell Wandertempo) |
-| `"fahrrad_15"` | **15.0 km/h** | **600** | **1000** | Tourenrad, moderate Tempo (Issue #674) |
-| `"fahrrad_20"` | **20.0 km/h** | **600** | **1000** | Tourenrad, zügig (Issue #674) |
-| `"fahrrad_25"` | **25.0 km/h** | **600** | **1000** | Tourenrad, schnell (Issue #674) |
-
-**Leeres oder unbekanntes Activity-Feld:** Fallback auf `"trekking"` (4.0 km/h, 300/500 m/h) für Backward Compatibility mit bestehenden Trips.
-
-**Naismith-Formel:**
-```
-Fahrzeit [h] = Distanz [km] / FlatKmh + Aufstieg [m] / AscentMh + Abstieg [m] / DescentMh
+```json
+"tempo": {"fortbewegung": "fuss" | "rad" | "mtb" | "ski", "grundtempo_kmh": 4}
 ```
 
-**Höhenmeter-Begründung für Fahrradtypen:** Radfahrer überwinden Steigungen effizienter als Fußgänger (bessere Kraftübertragung, Schwungtechnik bei Abfahrten). Die 600/1000-Raten entsprechen der doppelten Geschwindigkeit von Wanderern (300/500).
+| `fortbewegung` | Vorschlag km/h | R_ref Aufstieg [Hm/h] | R_ref Abstieg [Hm/h] |
+|---|---|---|---|
+| `"fuss"` | 4 | 300 | 500 |
+| `"rad"` | 20 | 600 | 1000 |
+| `"mtb"` | 12 | 500 | 1000 |
+| `"ski"` | 3 | 300 | 1500 |
+
+**Gehzeit nach DAV (DIN 33466)** je Wegpunkt-Paar: `t_h = km / v`, `t_v = Hm_auf / R_auf + Hm_ab / R_ab`,
+`t = max(t_h, t_v) + min(t_h, t_v) / 2`; die Raten folgen dem Grundtempo `R = R_ref · v / v_ref`.
+Konstanten: eine Quelle in Go (`internal/model/naismith.go` `FortbewegungRef`), gespiegelt in Python
+(`src/core/naismith.py`) und TS (`frontend/src/lib/utils/naismith.ts`), bewacht durch die gemeinsame
+Falltabelle `tests/fixtures/naismith_dav_paritaet.json`.
+
+**PUT `/api/trips/{id}`:** `tempo` fehlt → Bestand bleibt; gesetzt → nur dieses Feld wird ersetzt und
+`arrival_calculated` neu berechnet. Unbekannte Fortbewegung oder Grundtempo unter 0,5 bzw. über 60 km/h
+→ `422` (`invalid_params`), nichts wird geschrieben.
+
+**POST `/api/trips`:** dieselbe Prüfung — ungültiges `tempo` (unbekannte Fortbewegung, Grundtempo unter 0,5
+bzw. über 60 km/h) → `422` (`invalid_params`), nichts wird angelegt; fehlendes `tempo` ist erlaubt und wird
+aus `activity` abgeleitet. Rechner in Go, Python und TS behandeln ungültige Altwerte wie zu Fuß 4 km/h.
+
+**Altfeld `activity`:** bleibt auf der Platte (Rollback, Mischbetrieb), die Oberfläche schreibt es nicht
+mehr. Fehlt `tempo`, leiten Go (`store.normalizeTrip`) und Python (Loader) es beim Lesen ab:
+`fahrrad_15/20/25` → `rad` 15/20/25 km/h, alles andere (leer, `wandern`, `trekking`, `hochtour`,
+`klettersteig`, `skitour`, `mtb` …) → `fuss` 4 km/h; nie `mtb` oder `ski`. Bestand:
+`scripts/migrate_3196_trip_tempo.py`.
 
 ### Shortcode (Bug #775)
 
@@ -1323,9 +1335,9 @@ Editor-Save (`SaveTrip`) den beim Import gesetzten Wert wieder verwirft (Präzed
 `suggestion_reason`).
 
 **Berechnung `arrival_calculated`:**
-- Frontend: `computeArrivalTimes(stage, startTime, activityToSpeed(trip.activity))` → gibt Array von HH:MM-Strings
-- Backend (Go): `ComputeStageArrivals(stage, ActivitySpeed(trip.activity))` → mutiert Waypoints mit berechneter Zeit
-- TypeScript: `function activityToSpeed(activity?: ActivityType): number` — 15/20/25 für Fahrrad, 4.0 default
+- Frontend: `computeArrivalTimes(stage, startTime, tripTempo(trip))` → gibt Array von HH:MM-Strings (DAV, Issue #3196)
+- Backend (Go): `ComputeStageArrivals(stage, ResolveTempo(trip))` → mutiert Waypoints mit berechneter Zeit
+- Python: `compute_stage_arrivals(stage, tempo_speeds(trip))` (Loader-Save, Self-Heal in `trip_segments.py`)
 
 **Segment-Startzeit-Prioritätskette (Issue #1004, SSoT):** `Waypoint.time_window` ist
 ausschließlich ein GPX-Import-Artefakt ohne jeden manuellen Schreibpfad im Produkt und hat
@@ -1349,7 +1361,7 @@ wurde als wirkungslos entfernt (nie persistiert, Bestandstrips blieben ausgenomm
   "arrival_calculated": "09:00"
 }
 ```
-Bei `start_time = "08:00"`, `activity = "fahrrad_20"` und 20 km kumulierter Distanz
+Bei `start_time = "08:00"`, `tempo = {"fortbewegung": "rad", "grundtempo_kmh": 20}` und 20 km flacher kumulierter Distanz
 (aus den GPX-Punkten berechnet — KEIN persistiertes Waypoint-Feld im Go-Struct):
 20 km ÷ 20 km/h = 1 h → 09:00 ✓
 
@@ -5349,6 +5361,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 ## Changelog
 
 - 2026-11-20: Issue #3189 — `MetricPreset.herkunft {id, name}` (optional, §15.5): `POST /api/metric-presets` übernimmt die Herkunft (Trip bzw. Orts-Vergleich), Name eingefroren, getrimmt, auf 200 Zeichen gekappt, leer = verworfen; `PATCH` lässt sie unverändert; Bestand ohne Feld bleibt gültig.
+- 2026-11-20: Issue #3196 (ADR-0108 Nr. 2/5) — Neues Trip-Feld `tempo = {fortbewegung: "fuss"|"rad"|"mtb"|"ski", grundtempo_kmh}`; Gehzeit und `arrival_calculated` nach DAV (DIN 33466) statt Naismith-Summe, Raten folgen dem Grundtempo. `PUT /api/trips/{id}` merged `tempo` optional (fehlt = Bestand), ungültig → 422 `invalid_params`. `activity` bleibt Altfeld; fehlt `tempo`, wird es beim Lesen abgeleitet (Go `normalizeTrip`, Python-Loader). Abschnitt „Tempo" ersetzt „Activity Types". Migration `scripts/migrate_3196_trip_tempo.py`.
 - 2026-11-19: Issue #3172 (ADR-0125) — `GET /api/briefings/{id}/placements`: `sms_example.overflow` entfällt (die Orte-SMS trägt keinen Rest-Zähler `+N` je Ort mehr); `sms_example.max_length` ist für Orte 160 wie beim Trip; Legende der Orte mit festem Eintrag `O1` (`key: "ort_nummer"`, Bedeutung aus dem Server-Katalog).
 - 2026-11-19: Issue #3154 (Epic #3122, Spec Teil A Nr. 8, AC-11) — Erstes Speichern der Tabelle „Was steht wo“ ändert die Ausgabe nicht: `PUT /api/briefings/{id}/placements?kind=route` fragt den Kern (`GET …/placements/erstanlage`, neu, nur für Go) und schreibt beim ersten Speichern eines Trips mit `show_outlook: false` (nicht Kompakt) `report_config.show_stability = false` im selben Vorgang mit; Kern-Fehler 502, nichts geschrieben. Umrechnung `placements_from_legacy`: bei Kompakt-Format wird `show_outlook` für `outlook_reports` nicht ausgewertet (die Kompakt-Mail zeigte den Ausblick unabhängig davon); `GET` zeigt ihn entsprechend.
 - 2026-11-19: Issue #3154 (Epic #3122) — `GET /api/briefings/{id}/placements`: `rows` führt jede Metrik der Grundauswahl beider Briefing-Typen, auch eine nur morgens oder nur abends gewählte (`morning_enabled`/`evening_enabled`), genau wie `placements`. Beispielwerte und Marken gelten weiter für das gerenderte Briefing; eine dort nicht gewählte Metrik bekommt keine Marke. Keine DTO-Änderung.

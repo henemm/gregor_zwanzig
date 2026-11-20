@@ -26,7 +26,7 @@
 //   [data-abschnitt="liste"] mit je Etappe einer klickbaren Listenzeile testid `etappen-liste-zeile`:
 //   Titel „E{n} · <erster Wegpunkt> → <letzter Wegpunkt>“ (Pausentag: „E{n} · <Name>“), Zweitzeile
 //   „x km · ↑y m“ (computeHeaderStats, Zahlen locale-formatiert wie TripHeader), Meta „Gehzeit h:mm“
-//   (Katalog; Dauer aus computeArrivalTimes/activityToSpeed). Grundzustand: alle aria-expanded="false",
+//   (Katalog; Dauer aus computeArrivalTimes/deriveTempo). Grundzustand: alle aria-expanded="false",
 //   kein Etappen-Band, keine Reiterfläche, kein Karten-/Profil-Editor. Ohne `listeZuerst` und im
 //   Mobil-Zweig unverändert. Kein „Tempo ändern“.
 // ─────────────────────────────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ const { createRawSnippet } = await import('svelte');
 const { locale } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/i18n/index.ts')).href);
 const { baum, alle, text: rohText } = await import('../../shared/hub-kopf/__tests__/htmlBaum.ts');
 const { computeHeaderStats } = await import(pathToFileURL(path.join(KOMP, 'email-preview/headerStats.ts')).href);
-const { computeArrivalTimes, activityToSpeed } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/utils/naismith.ts')).href);
+const { computeArrivalTimes, deriveTempo } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/utils/naismith.ts')).href);
 type Knoten = import('../../shared/hub-kopf/__tests__/htmlBaum.ts').Knoten;
 
 afterEach(() => locale.set('de'));
@@ -271,7 +271,7 @@ function zahl(lang: Lang, v: number, nachkomma: number): string {
 }
 /** Unabhängig berechnete Gehzeit h:mm: letzte minus erste Ankunft der vorhandenen Rechnung. */
 function gehzeit(stage: any): string {
-	const arr: string[] = computeArrivalTimes(stage, stage.start_time, activityToSpeed(undefined));
+	const arr: string[] = computeArrivalTimes(stage, stage.start_time, deriveTempo(undefined));
 	const min = (s: string) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3));
 	let d = min(arr[arr.length - 1]) - min(arr[0]);
 	if (d < 0) d += 24 * 60;

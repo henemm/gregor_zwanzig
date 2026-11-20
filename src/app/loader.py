@@ -484,6 +484,20 @@ def load_trip(
     return _parse_trip(data.get("trip", data))
 
 
+def _tempo_from_data(data: Dict[str, Any]) -> dict:
+    """Issue #3196: gespeichertes ``tempo`` oder Ableitung aus ``activity``.
+
+    Spiegelt Go store.normalizeTrip: ein vorhandenes Tempo wird nie ersetzt,
+    ``activity`` bleibt unveraendert (Altfeld, ADR-0101).
+    """
+    from core.naismith import derive_tempo
+
+    tempo = data.get("tempo")
+    if isinstance(tempo, dict):
+        return dict(tempo)
+    return derive_tempo(data.get("activity") or "")
+
+
 def load_trip_from_dict(data: Dict[str, Any]) -> Trip:
     """Load a Trip from a dictionary."""
     return _parse_trip(data.get("trip", data))
@@ -698,6 +712,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     # statt pro Feld ein weiteres Einzelattribut anzubauen.
     KNOWN_TOP_LEVEL = {
         "id", "name", "stages", "avalanche_regions", "aggregation", "shortcode", "activity",
+        "tempo",  # Issue #3196: benanntes Feld, nicht im extra-Auffangnetz
         "region", "archived_at", "paused_at", "official_alerts_enabled",
         "radar_alert_enabled",
         "official_alert_triggers_enabled", "official_warnings", "weather_config",
@@ -740,7 +755,9 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         alert_quiet_from=data.get("alert_quiet_from"),
         alert_quiet_to=data.get("alert_quiet_to"),
         shortcode=data.get("shortcode", ""),
-        activity=data.get("activity", ""),  # Issue #802
+        activity=data.get("activity") or "",  # Issue #802
+        # Issue #3196: Lazy-Ableitung aus activity, wenn die Datei kein tempo traegt.
+        tempo=_tempo_from_data(data),
         region=data.get("region", ""),  # Issue #805
         archived_at=data.get("archived_at"),  # Issue #805
         paused_at=data.get("paused_at"),  # Issue #995: Go-Feld paused_at — roundtrip-erhalten
@@ -1882,6 +1899,9 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
     if trip.activity:
         data["activity"] = trip.activity
 
+    if trip.tempo is not None:  # Issue #3196
+        data["tempo"] = dict(trip.tempo)
+
     if trip.region:
         data["region"] = trip.region
 
@@ -2169,13 +2189,15 @@ def _read_existing_locked(path: Path) -> dict:
 def _write_trip_locked(trip: Trip, path: Path, existing: dict) -> None:
     """Compute-on-Save + RMW-Merge + atomarer Schreibvorgang (Sperre gehalten)."""
     import dataclasses
-    from core.naismith import compute_stage_arrivals
+    from core.naismith import compute_stage_arrivals, tempo_speeds
 
     # Issue #802: Compute-on-Save — arrival_calculated für jede Stage
-    # berechnen (bit-genau zu Go store.SaveTrip).
+    # berechnen (bit-genau zu Go store.SaveTrip). Issue #3196: Tempo statt
+    # activity, Gehzeit nach DAV.
+    speeds = tempo_speeds(trip)
     trip = dataclasses.replace(
         trip,
-        stages=[compute_stage_arrivals(s, trip.activity) for s in trip.stages],
+        stages=[compute_stage_arrivals(s, speeds) for s in trip.stages],
     )
     python_data = _trip_to_dict(trip)
     # Issue #1250 Scheibe 7a (AC-26): jede Python-save_trip-Schreiboperation

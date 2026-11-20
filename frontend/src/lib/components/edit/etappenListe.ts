@@ -1,10 +1,10 @@
 // Issue #3007 (Epic #2913): Inhalte der Etappen-Listenzeile im Hub (Mockup Fassung 3, viewEtappen
 // Z. 577-587): „E{n} · Start → Ziel“, Zweitzeile „x km · ↑y m“, Meta „Gehzeit h:mm“.
 // Reine Funktionen ohne DOM; Texte über die übergebene Katalogfunktion (`$t`) in der Nutzersprache.
-// Gehzeit aus der vorhandenen Rechnung des Editors (computeArrivalTimes/activityToSpeed), damit sie
+// Gehzeit aus der vorhandenen Rechnung des Editors (computeArrivalTimes mit dem Trip-Tempo, DAV #3196), damit sie
 // mit den Ankunftszeiten der Wegpunkte übereinstimmt (AC-11).
 // Spec: docs/specs/modules/feat_3007_etappen_orte_listen.md (AC-10 bis AC-12).
-import type { Stage } from '$lib/types';
+import type { Stage, Tempo } from '$lib/types';
 import type { Lang, MessageKey } from '$lib/i18n';
 import { computeHeaderStats } from '../email-preview/headerStats.ts';
 import { computeArrivalTimes } from '../../utils/naismith.ts';
@@ -28,8 +28,8 @@ function zahl(lang: Lang, wert: number, nachkomma: number): string {
 const minuten = (hhmm: string): number => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3));
 
 /** Gehzeit in Minuten: letzte minus erste Ankunft (über Mitternacht fortgezählt); null ohne Strecke. */
-export function gehzeitMinuten(stage: Stage, tempoKmh: number): number | null {
-	const ankunft = computeArrivalTimes(stage, stage.start_time, tempoKmh);
+export function gehzeitMinuten(stage: Stage, tempo: Tempo): number | null {
+	const ankunft = computeArrivalTimes(stage, stage.start_time, tempo);
 	if (ankunft.length < 2) return null;
 	const d = minuten(ankunft[ankunft.length - 1]) - minuten(ankunft[0]);
 	return d < 0 ? d + 24 * 60 : d;
@@ -54,7 +54,7 @@ function kennzahlen(stage: Stage, lang: Lang, t: Katalog): string | undefined {
 }
 
 /** Zeileninhalt der Etappe an Position `index` (0-basiert). Pausentag: nur Titel. */
-export function etappenZeile(stage: Stage, index: number, lang: Lang, t: Katalog, tempoKmh: number): EtappenZeile {
+export function etappenZeile(stage: Stage, index: number, lang: Lang, t: Katalog, tempo: Tempo): EtappenZeile {
 	const n = index + 1;
 	const wps = stage.waypoints ?? [];
 	if (isPauseStage(stage) || wps.length < 2) {
@@ -62,7 +62,7 @@ export function etappenZeile(stage: Stage, index: number, lang: Lang, t: Katalog
 		return { titel: t('trip.hub.etappe_titel_name', { n, name }) };
 	}
 	const titel = t('trip.hub.etappe_titel', { n, start: wps[0].name, ziel: wps[wps.length - 1].name });
-	const dauer = gehzeitMinuten(stage, tempoKmh);
+	const dauer = gehzeitMinuten(stage, tempo);
 	const meta = dauer === null ? undefined : t('trip.hub.etappe_gehzeit', { dauer: dauerText(dauer) });
 	return { titel, zweitzeile: kennzahlen(stage, lang, t), meta };
 }

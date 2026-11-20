@@ -1,15 +1,13 @@
 // Gemeinsame Helper fuer den Trip-Wizard (Epic #136 Master-Spec).
 // Quelle: docs/specs/modules/epic_136_trip_wizard.md §1.3, §3.2, §3.3
 
-import type { ActivityType, Stage } from '$lib/types';
+import type { Stage } from '$lib/types';
 
 /**
  * Kanonische Aggregations-Profile aus `docs/specs/modules/activity_profile.md`.
  *
- * Hinweis: `'wandern'` wird aktuell von keinem `mapActivityToProfile`-Output
- * produziert (kein UI-`ActivityType` mappt darauf). Der Wert bleibt im Union,
- * weil das Backend ihn akzeptiert und kuenftige Aktivitaeten (z.B. ein
- * dediziertes "Tageswanderung"-Profil) ihn liefern koennten.
+ * Issue #3196 (F-A3-4): die fruehere Zuordnung Aktivitaet → Profil ist entfallen; die
+ * wirksame Vorbelegung haengt an der Fortbewegung (WeatherMetricsTab, FORTBEWEGUNG_TO_TEMPLATE).
  */
 export type AggregationProfile = 'wintersport' | 'wandern' | 'summer_trekking' | 'allgemein';
 
@@ -98,28 +96,4 @@ export function maskPhone(raw?: string | null): string {
 	const net = digits.slice(2, 5); // Netz/Vorwahl, z.B. "151"
 	const last4 = digits.slice(-4); // letzte 4 sichtbar
 	return `${plus}${cc} ${net} ••• ${last4}`;
-}
-
-/**
- * Mapping UI-Aktivitaet → kanonisches Aggregations-Profil
- * (siehe Master-Spec §1.3).
- */
-export function mapActivityToProfile(activity: ActivityType): AggregationProfile {
-	switch (activity) {
-		case 'skitour':
-			return 'wintersport';
-		case 'trekking':
-			return 'summer_trekking';
-		case 'hochtour':
-			return 'summer_trekking';
-		case 'klettersteig':
-			return 'summer_trekking';
-		case 'mtb':
-			return 'allgemein';
-		// Issue #674 — Fahrrad-Varianten → allgemein (identisch zu mtb)
-		case 'fahrrad_15':
-		case 'fahrrad_20':
-		case 'fahrrad_25':
-			return 'allgemein';
-	}
 }

@@ -13,6 +13,7 @@
 	// Metrik-Oberflaeche + Wertebereiche-Ansicht (CorridorEditor) im Reiter wetter.
 	import WetterTab from '$lib/components/shared/WetterTab.svelte';
 	import type { Trip, Stage } from '$lib/types';
+	import { tempoVonTrip } from '$lib/utils/naismith';
 	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
 	import Bereichskopf from '$lib/components/molecules/Bereichskopf.svelte';
@@ -53,8 +54,8 @@
 
 	// Lokale Kopie der Etappen für den Stages-Tab (EditStagesSection braucht $bindable).
 	let localStages = $state<Stage[]>(trip?.stages ?? []);
-	// Issue #2284 S2: die Aktivität wird im Hub-Kopf geändert — hier reaktiv lesen.
-	const activityType = $derived(trip?.activity);
+	// Issue #3196: Tempo des Trips (gespeichert oder aus dem Altfeld activity abgeleitet).
+	const tempo = $derived(tempoVonTrip(trip));
 
 	// Issue #302 — Auto-Badges aus Trip ableiten (Etappenanzahl).
 	// Explizite Werte in der `badges` Prop ueberschreiben die Auto-Ableitung.
@@ -218,7 +219,7 @@
 						<Bereichskopf titel={$t('trip.hub.kopf.etappen_titel')} erklaerung={$t('trip.hub.kopf.etappen_erklaer')} testid="etappen" />
 					{/snippet}
 					{#if trip}
-						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} kopf={etappenKopf} listeZuerst />
+						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} {tempo} kopf={etappenKopf} listeZuerst />
 					{:else}
 						<!-- #3007 Fix-Runde 5 (V-1, AC-17): auch beim Laden genau ein (leerer) Listen-Container. -->
 						<HubReiterflaeche testid="etappen-laden-reiterflaeche">{@render etappenKopf()}<div class="etappen-laden-liste"><Card padding={0} data-abschnitt="liste"></Card></div></HubReiterflaeche>

@@ -14,9 +14,9 @@
 	import StageDateField from '$lib/components/edit/StageDateField.svelte';
 	import StageTimeField from '$lib/components/edit/StageTimeField.svelte';
 	import { riskToPill, type StageRisk } from '$lib/utils/stageRisk';
-	import { computeArrivalTimes, activityToSpeed } from '$lib/utils/naismith';
+	import { computeArrivalTimes } from '$lib/utils/naismith';
 	import { computeHeaderStats } from '$lib/components/email-preview/headerStats';
-	import type { Stage, ActivityType } from '$lib/types';
+	import type { Stage, Tempo } from '$lib/types';
 
 	interface Props {
 		stage: Stage;
@@ -25,8 +25,8 @@
 		risk?: StageRisk | undefined;
 		/** F7: aufgeklappt → Wegpunkt-Zeilen sichtbar. */
 		open?: boolean;
-		/** Aktivität für die ETA-Berechnung der Wegpunkt-Zeilen. */
-		activityType?: ActivityType | undefined;
+		/** Issue #3196: Tempo des Trips für die ETA-Berechnung der Wegpunkt-Zeilen (DAV). */
+		tempo?: Tempo | undefined;
 		/** #2496 F1: gesetzt → Kartenkopf rendert ein inline-Datumsfeld. */
 		onDateChange?: ((iso: string) => void) | undefined;
 		/** #2496 F4: gesetzt → Kartenkopf rendert ein inline-Startzeitfeld. */
@@ -39,7 +39,7 @@
 		index,
 		risk = undefined,
 		open = false,
-		activityType = undefined,
+		tempo = undefined,
 		onDateChange = undefined,
 		onStartTimeChange = undefined,
 		isFirst = false
@@ -52,7 +52,7 @@
 	// ETAs der Wegpunkt-Zeilen (F7) — dieselbe Naismith-Quelle wie die
 	// Desktop-Sidebar; pro Etappe ab deren Startzeit.
 	const arrivals = $derived(
-		computeArrivalTimes(stage, stage.start_time, activityToSpeed(activityType))
+		computeArrivalTimes(stage, stage.start_time, tempo)
 	);
 
 	const stats = $derived(

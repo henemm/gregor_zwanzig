@@ -43,11 +43,12 @@ const MOBIL = { width: 375, height: 812 };
 // Viewport des Altfalls #2283 AC-13 (Spec-Zuordnung Zeile 41).
 const MOBIL_SENDEN = { width: 390, height: 844 };
 
-// Wertevorrat des Profils je kind (Selektor-Unterschied): Trip `activity`
-// mit 8 Werten (ACTIVITY_TYPE_OPTIONS). Vergleich: seit #2796 S4a (ADR-0108 P3) keine
-// Profil-Auswahl mehr im Kopf — die Vorlage ersetzt das Profil (leerer Vorrat).
+// Wertevorrat des Profils je kind. Vergleich: seit #2796 S4a (ADR-0108 P3) keine Profil-Auswahl
+// mehr im Kopf (die Vorlage ersetzt das Profil). Trip: seit #3196 (ADR-0108 Nr. 3) ebenfalls
+// keine — Fortbewegung + Grundtempo stehen in der Tempo-Karte im Reiter Etappen. Beide leer:
+// der Kopf beider Hubs prüft jetzt „kein Knopf, keine Auswahl, keine Kachel“.
 const PROFIL_WERTE: Record<HubKind, readonly string[]> = {
-	route: ['trekking', 'skitour', 'hochtour', 'klettersteig', 'mtb', 'fahrrad_15', 'fahrrad_20', 'fahrrad_25'],
+	route: [],
 	vergleich: []
 };
 const MIT_PROFIL = (kind: HubKind): boolean => PROFIL_WERTE[kind].length > 0;

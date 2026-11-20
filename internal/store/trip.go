@@ -76,6 +76,14 @@ func normalizeTrip(trip *model.Trip) {
 	// Issue #1981: Alt-Vokabular in metric_alert_levels auch beim Laden
 	// uebersetzen (Save-Pfad ruft es zusaetzlich, idempotent).
 	migrateMetricAlertLevels(trip.DisplayConfig)
+
+	// Issue #3196: Lazy-Ableitung des Tempos aus dem Altfeld Activity, wenn
+	// die Datei noch kein tempo traegt. Activity bleibt unveraendert stehen
+	// (ADR-0101, Mischbetrieb); ein gespeichertes Tempo wird nie ersetzt.
+	if trip.Tempo == nil {
+		t := model.DeriveTempo(trip.Activity)
+		trip.Tempo = &t
+	}
 }
 
 // deriveFlatFields leitet additive, nicht-autoritative flache Slot-/Kanal-
@@ -310,7 +318,8 @@ func (s *Store) SaveTrip(trip *model.Trip) error {
 
 	// Issue #802: Compute-on-Save — arrival_calculated für alle Stages setzen,
 	// zentral an einer Stelle (alle Go-Schreiber rufen SaveTrip).
-	speeds := model.ActivitySpeed(trip.Activity)
+	// Issue #3196: Tempo (Fortbewegung + Grundtempo) statt Activity, DAV.
+	speeds := model.ResolveTempo(trip)
 	for i := range trip.Stages {
 		model.ComputeStageArrivals(&trip.Stages[i], speeds)
 	}

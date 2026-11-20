@@ -16,7 +16,7 @@ const (
 
 func kmPtr(v float64) *float64 { return &v }
 
-func hikerSpeeds() ActivitySpeeds { return ActivitySpeed("") }
+func hikerSpeeds() ActivitySpeeds { return ResolveTempo(&Trip{Activity: ""}) }
 
 func stageWith(wps []Waypoint) *Stage {
 	start := "08:00"
@@ -139,7 +139,8 @@ func TestArrivals_2082_UnmeasuredStageUnchanged(t *testing.T) {
 }
 
 // Fester Paritaets-Anker: identische Erwartungswerte auf beiden Seiten.
-// 8,0 km / 4 km/h = 120 min; 300 Hm / 300 m/h = 60 min => 180 min ab 08:00.
+// 8,0 km / 4 km/h = 120 min; 300 Hm / 300 m/h = 60 min; DAV (#3196):
+// 120 + 60/2 = 150 min ab 08:00 => 10:30.
 func TestArrivals_2082_ParityAnchor(t *testing.T) {
 	stage := stageWith([]Waypoint{
 		{ID: "G1", Lat: testLat, Lon: testLonA, ElevationM: 1800, DistanceFromStartKm: kmPtr(0)},
@@ -150,7 +151,7 @@ func TestArrivals_2082_ParityAnchor(t *testing.T) {
 	if got := *stage.Waypoints[0].ArrivalCalculated; got != "08:00" {
 		t.Fatalf("Startzeit: got %s, want 08:00", got)
 	}
-	if got := *stage.Waypoints[1].ArrivalCalculated; got != "11:00" {
-		t.Fatalf("Paritaet gebrochen: got %s, want 11:00", got)
+	if got := *stage.Waypoints[1].ArrivalCalculated; got != "10:30" {
+		t.Fatalf("Paritaet gebrochen: got %s, want 10:30", got)
 	}
 }

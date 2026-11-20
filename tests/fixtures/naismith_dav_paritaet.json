@@ -1,5 +1,5 @@
 {
-  "_kommentar": "Issue #3196: gemeinsame Falltabelle fuer die Gehzeit nach DAV (DIN 33466). Gelesen von Go (internal/model), Python (tests/) und TS (frontend/tests). Raten R = R_ref * v / v_ref je Fortbewegung; t = max(t_h, t_v) + min(t_h, t_v) / 2. Erwartete Minuten sind von Hand nachgerechnet, nicht aus einem der drei Rechner erzeugt.",
+  "_kommentar": "Issue #3196: gemeinsame Falltabelle fuer die Gehzeit nach DAV (DIN 33466). Gelesen von Go (internal/model), Python (tests/) und TS (frontend/tests). Raten R = R_ref * v / v_ref je Fortbewegung; t = max(t_h, t_v) + min(t_h, t_v) / 2. Erwartete Minuten sind von Hand nachgerechnet, nicht aus einem der drei Rechner erzeugt. 'gueltigkeit': Grenzen eines plausiblen Grundtempos 0.5 <= v <= 60 km/h (Fix-Loop 2, F001); ungueltige Werte rechnen in allen drei Sprachen wie zu Fuss 4 km/h.",
   "referenz": {
     "fuss": {
       "vorschlag_kmh": 4,
@@ -167,6 +167,36 @@
       "hm_auf": 0,
       "hm_ab": 0,
       "minuten": 0.0
+    },
+    {
+      "name": "ungueltig 0.4 kmh faellt auf zu Fuss 4 zurueck",
+      "fortbewegung": "rad",
+      "grundtempo_kmh": 0.4,
+      "km": 8,
+      "hm_auf": 600,
+      "hm_ab": 600,
+      "minuten": 252.0
+    },
+    {
+      "name": "ungueltig winzig (1e-320) faellt auf zu Fuss 4 zurueck",
+      "fortbewegung": "ski",
+      "grundtempo_kmh": 1e-320,
+      "km": 8,
+      "hm_auf": 600,
+      "hm_ab": 600,
+      "minuten": 252.0
     }
+  ],
+  "gueltigkeit": [
+    {"fortbewegung": "fuss", "grundtempo_kmh": 0.5, "gueltig": true},
+    {"fortbewegung": "ski", "grundtempo_kmh": 0.5, "gueltig": true},
+    {"fortbewegung": "rad", "grundtempo_kmh": 60, "gueltig": true},
+    {"fortbewegung": "mtb", "grundtempo_kmh": 12, "gueltig": true},
+    {"fortbewegung": "fuss", "grundtempo_kmh": 0.4, "gueltig": false},
+    {"fortbewegung": "ski", "grundtempo_kmh": 1e-320, "gueltig": false},
+    {"fortbewegung": "fuss", "grundtempo_kmh": 0, "gueltig": false},
+    {"fortbewegung": "fuss", "grundtempo_kmh": -3, "gueltig": false},
+    {"fortbewegung": "rad", "grundtempo_kmh": 60.5, "gueltig": false},
+    {"fortbewegung": "auto", "grundtempo_kmh": 4, "gueltig": false}
   ]
 }

@@ -4,11 +4,11 @@
 //
 // Gemessen ueber die ECHTE Trip-Seite und die ECHTEN Reiter-Skripte (alle sieben
 // Schreibwege: Alarme, Versand, Wertebereiche, Wetter-Metriken (Katalog + nur Inhalt),
-// Kopf, Aktivitaet, Etappen); Pruefling ist der abgelehnte PUT-Rumpf — der Seitenstand
+// Kopf, Tempo, Etappen); Pruefling ist der abgelehnte PUT-Rumpf — der Seitenstand
 // muss genau diese Felder tragen.
 //
-// Issue #2284 S2 (AC-9, AC-17): Kopf und Aktivitaet laufen ueber `TripHeader.onSaveField`
-// (Pruefstand `kopfReiter`/`aktivitaetReiter`); Region kommt als Eigenfeld dazu.
+// Issue #2284 S2 (AC-9, AC-17): der Kopf laeuft ueber `TripHeader.onSaveField`
+// (Pruefstand `kopfReiter`); Region kommt als Eigenfeld dazu; Tempo seit #3196 ueber `tempoReiter`.
 //
 // Ausfuehren:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -94,12 +94,13 @@ describe('jeder Schreiber: 412 ⇒ `trip` der Seite traegt die abgelehnte Nutzla
 		assert.equal(seite.trip().name, 'Neuer Name');
 	});
 
-	test('Aktivitaet', async () => {
+	// #3196: Tempo (Reiter Etappen) statt Aktivitaet (Kopf).
+	test('Tempo (Reiter Etappen, #3196)', async () => {
 		const { seite, neu } = await seiteMit();
-		const t = await P.aktivitaetReiter(neu());
-		await t.aendern('skitour');
+		const t = await P.tempoReiter(neu());
+		await t.aendern({ fortbewegung: 'ski', grundtempo_kmh: 3 });
 		assert.equal(abgelehnt().length, 1);
-		assert.equal(seite.trip().activity, 'skitour');
+		assert.deepEqual(seite.trip().tempo, { fortbewegung: 'ski', grundtempo_kmh: 3 });
 	});
 
 	// #2284 S2: Region ist neues Eigenfeld des Kopfs (TripHeader.onSaveField('region', …)).

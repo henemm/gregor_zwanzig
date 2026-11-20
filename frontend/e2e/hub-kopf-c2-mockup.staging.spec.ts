@@ -194,47 +194,10 @@ for (const kind of HUB_KINDS) {
 		await expect(sichtbar(page, HUB_KOPF_SEL.breadcrumb)).toContainText(neu);
 	});
 
-	// #2796 S4a (ADR-0108 P3): Profil-Kacheln nur noch im Trip-Kopf; der Orts-Vergleich prüft
-	// in orte-kopf-vorlage-statt-profil-2796.spec.ts, dass dort keine mehr stehen.
-	if (kind === 'route') test(`c2 ${kind}: AC-9 Profil bleibt nach Name-Speichern und Neuladen unverändert (gespeichert + im Kopf gewählt)`, async ({ page }) => {
-		await page.setViewportSize(VIEWPORTS.desktop);
-		await sprache(page, 'de');
-		const id = await seed(page, kind);
-		const { kopf, profilFeld } = HUB_SEL[kind];
-		const vorher = (await (await page.request.get(hubApiPath(kind, id))).json())[profilFeld];
-		expect(vorher, 'AC-9: Seed trägt ein Profil').toBeTruthy();
-		await openHub(page, kind, id);
-		await sichtbar(page, `${kopf}-name-edit-toggle`).click();
-		await sichtbar(page, `${kopf}-name-edit`).fill(`E2E-GZ-c2-profil-${Date.now()}`);
-		await sichtbar(page, `${kopf}-name-save`).click();
-		await expect(page.locator('h1:visible').first()).toContainText('E2E-GZ-c2-profil-');
-		await page.reload();
-		await expect(sichtbar(page, `${kopf}-profil-option-${vorher}`), 'AC-9: Profil nach Neuladen weiter gewählt').toHaveAttribute('data-selected', 'true');
-		const nachher = (await (await page.request.get(hubApiPath(kind, id))).json())[profilFeld];
-		expect(nachher, 'AC-9: gespeichertes Profil unverändert').toBe(vorher);
-	});
-
-	// AC-15: Profil-Zeile/-Chip bleibt im Ruhezustand sichtbar — seit #2796 S4a nur noch beim Trip
-	// (beim Orts-Vergleich entfallen, orte-kopf-vorlage-statt-profil-2796.spec.ts).
-	for (const [vp, groesse] of Object.entries(VIEWPORTS) as Array<[keyof typeof VIEWPORTS, { width: number; height: number }]>) {
-		if (kind === 'route') test(`c2 ${kind} ${vp}: AC-15 Profil im Ruhezustand sichtbar`, async ({ page }) => {
-			await page.setViewportSize(groesse);
-			await sprache(page, 'de');
-			const id = await seed(page, kind);
-			const { kopf, profilFeld } = HUB_SEL[kind];
-			const profil = (await (await page.request.get(hubApiPath(kind, id))).json())[profilFeld];
-			await openHub(page, kind, id);
-			if (vp === 'desktop') {
-				const gewaehlt = sichtbar(page, `${kopf}-profil-option-${profil}`);
-				await expect(gewaehlt, 'AC-15: Profil-Chip sichtbar').toBeVisible();
-				await expect(gewaehlt).toHaveAttribute('data-selected', 'true');
-			} else {
-				const knopf = page.locator(`[data-testid="${kopf}-profil-knopf"]:visible`).first();
-				await expect(knopf, 'AC-15: Profil-Knopf sichtbar (Handy)').toBeVisible();
-				await expect(knopf).toHaveAttribute('data-selected-value', profil);
-			}
-		});
-	}
+	// #3196 (ADR-0108 Nr. 3): auch der Trip-Kopf hat keine Profil-Kacheln/-Knopf mehr (Fortbewegung +
+	// Grundtempo in der Tempo-Karte im Reiter Etappen, trip-hub-kopf-region-aktivitaet AC-4/AC-5).
+	// Die Trip-Faelle c2 AC-9 (Profil bleibt nach Name-Speichern) und AC-15 (Profil im Ruhezustand)
+	// entfallen damit fuer beide Hubs.
 
 	// AC-5 (Entwurf): Aktivieren neben der Pill, Klick führt zum Ziel, Pill wechselt nach Aktivierung durch Daten.
 	test(`c2 ${kind}: AC-5 Entwurf bietet „Aktivieren“ an, Sprungziel stimmt, Pill wechselt auf aktiv`, async ({ page }) => {

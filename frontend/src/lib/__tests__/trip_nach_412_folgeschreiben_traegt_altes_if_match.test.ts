@@ -141,15 +141,16 @@ describe('AC-18: jeder weitere Schreiber traegt das alte If-Match (Reiter B, Kop
 		assert.equal(a.updates.length, 0, '§4.1: bei 412 darf `trip` im lokalen Zustand nicht ersetzt werden');
 	});
 
-	test('Aktivitaet: altes If-Match, 412, nichts geschrieben, lokaler trip nicht ersetzt', async () => {
+	// #3196: Tempo (Reiter Etappen) statt Aktivitaet (Kopf).
+	test('Tempo: altes If-Match, 412, nichts geschrieben, lokaler trip nicht ersetzt', async () => {
 		const { alterEtag } = await konfliktHerstellen();
 		const a = P.neuerAufbau();
-		const t = await P.aktivitaetReiter(a);
-		await t.aendern('skitour');
+		const t = await P.tempoReiter(a);
+		await t.aendern({ fortbewegung: 'ski', grundtempo_kmh: 3 });
 		const p = puts().at(-1)!;
 		assert.equal(p.ifMatch, alterEtag);
 		assert.equal(p.status, 412);
-		assert.notEqual(server.stand(P.TRIP_ID).activity, 'skitour');
+		assert.notDeepEqual(server.stand(P.TRIP_ID).tempo, { fortbewegung: 'ski', grundtempo_kmh: 3 });
 		assert.equal(a.updates.length, 0);
 	});
 

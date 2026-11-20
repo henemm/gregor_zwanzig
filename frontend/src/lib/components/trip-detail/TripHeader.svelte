@@ -13,22 +13,10 @@
 	import { formatDateRange } from '$lib/utils/tripHero';
 	import { computeTripStats } from '$lib/utils/tripStats';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
-	import { ACTIVITY_TYPE_OPTIONS, type Trip } from '$lib/types';
+	import type { Trip } from '$lib/types';
 	import { baueTripSpeicherung, speichereKopfFeld } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import { t, tn, locale, type MessageKey } from '$lib/i18n';
-
-	// i18n F9: Aktivitaetsnamen je Sprache (Kennungen unveraendert).
-	const AKTIVITAET: Record<string, MessageKey> = {
-		trekking: 'trip.aktivitaet.trekking',
-		skitour: 'trip.aktivitaet.skitour',
-		hochtour: 'trip.aktivitaet.hochtour',
-		klettersteig: 'trip.aktivitaet.klettersteig',
-		mtb: 'trip.aktivitaet.mtb',
-		fahrrad_15: 'trip.aktivitaet.fahrrad_15',
-		fahrrad_20: 'trip.aktivitaet.fahrrad_20',
-		fahrrad_25: 'trip.aktivitaet.fahrrad_25'
-	};
+	import { t, tn, locale } from '$lib/i18n';
 
 	interface Props {
 		trip: Trip;
@@ -55,15 +43,18 @@
 		sendLabel, onSend, sendDisabled = false, actions = [], onSelect, mobil = false, onSheetOpen, meldungen
 	}: Props = $props();
 
-	// Issue #2284 S2 — Name, Region und Aktivität speichert der geteilte Baustein
+	// Issue #2284 S2 — Name und Region speichert der geteilte Baustein
 	// über diese Funktion. Rumpf = NUR das Eigenfeld (kein Spread des Seiten-Trips,
 	// Fehlerklasse #2375/#2381); Schlüssel je Feld, damit ein 412-Konflikt je Feld
 	// genau einen „Nochmal speichern"-Eintrag hat (#1433). Ausgänge: Erfolg ⇒
 	// onTripUpdate + schliessen; 412 ⇒ erfüllt ohne schliessen (Retry schließt);
 	// sonst wirft es und der Baustein zeigt die Meldung.
 	async function onSaveField(field: 'name' | 'region' | 'profile', value: string, schliessen: () => void): Promise<void> {
-		const rumpf = field === 'name' ? { name: value } : field === 'region' ? { region: value } : { activity: value };
-		const schluessel = field === 'name' ? 'kopf-name' : field === 'region' ? 'kopf-region' : 'kopf-profil';
+		// Issue #3196 (ADR-0108 Nr. 3): die Aktivitäts-Chips entfallen — der Kopf bietet kein
+		// Profilfeld mehr an, `profile` kommt nicht mehr an. Das Tempo steht im Reiter Etappen.
+		if (field === 'profile') return;
+		const rumpf = field === 'name' ? { name: value } : { region: value };
+		const schluessel = field === 'name' ? 'kopf-name' : 'kopf-region';
 		const speichern = baueTripSpeicherung<Trip>(api, trip.id, rumpf, (updated) => {
 			onTripUpdate?.(updated);
 			schliessen();
@@ -85,9 +76,6 @@
 		const m = new Intl.NumberFormat(loc, { maximumFractionDigits: 0 }).format(Math.round(stats.ascentM));
 		return [dateRange, $tn('listen.anzahl.etappen', trip.stages?.length ?? 0), `${km} km`, `↑${m} m`].filter((x) => x !== '');
 	});
-	const aktivitaeten = $derived(ACTIVITY_TYPE_OPTIONS.map((o) => ({ value: o.value, label: $t(AKTIVITAET[o.value]) })));
-	// #2837 S1b: Profil in der Titel-Unterzeile wie beim Vergleich („— ✎ · Trekking"); ohne Aktivität kein Zusatz.
-	const profileLabel = $derived(aktivitaeten.find((o) => o.value === trip.activity)?.label);
 	// #2837 S1b: Zustand für das geteilte StatusSchild.
 	const tripStatus = $derived(deriveTripStatus(trip, now));
 	// #2913 c2: „Aktivieren" im Entwurf — ein Trip wird aktiv, sobald seine Etappen Daten tragen,
@@ -114,9 +102,6 @@
 		leisteTestid="trip-detail-breadcrumb-bar"
 		name={trip.name}
 		region={trip.region}
-		profile={trip.activity}
-		profileOptions={aktivitaeten}
-		{profileLabel}
 		regionMaxLength={60}
 		testidPrefix="trip"
 		titleTestid="trip-detail-h1"

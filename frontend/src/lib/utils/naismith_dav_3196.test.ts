@@ -22,7 +22,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { davHours, tripTempo, deriveTempo, wechsleFortbewegung, computeArrivalTimes } from './naismith.ts';
+import { davHours, tripTempo, deriveTempo, wechsleFortbewegung, computeArrivalTimes, istGueltigesTempo } from './naismith.ts';
 import type { Stage, Tempo } from '../types.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -83,4 +83,13 @@ test('AC-3: Etappe 8 km ↑600 ↓600 zu Fuß 4 km/h = 4:12 (08:00 → 12:12)', 
 	} as unknown as Stage;
 	const arr = computeArrivalTimes(stage, '08:00', { fortbewegung: 'fuss', grundtempo_kmh: 4 });
 	assert.deepEqual(arr, ['08:00', '10:30', '12:12']);
+});
+
+// Fix-Loop 2, F001: Grenzen 0.5 <= v <= 60 aus derselben Tabelle wie Go und Python.
+test('F001: Gueltigkeitstabelle (Untergrenze 0.5, Obergrenze 60)', () => {
+	assert.ok(Array.isArray(TABELLE.gueltigkeit) && TABELLE.gueltigkeit.length >= 8, 'Gueltigkeitstabelle fehlt');
+	for (const g of TABELLE.gueltigkeit) {
+		const got = istGueltigesTempo({ fortbewegung: g.fortbewegung, grundtempo_kmh: g.grundtempo_kmh } as Tempo);
+		assert.equal(got, g.gueltig, `istGueltigesTempo(${g.fortbewegung}, ${g.grundtempo_kmh})`);
+	}
 });

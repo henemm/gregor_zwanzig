@@ -12,8 +12,8 @@
 // Seed vorbeirutscht. Exakte Schluesselmengen: sowohl ein ZUVIEL als auch ein
 // ZUWENIG (vergessener Eigen-Schluessel) faellt auf.
 //
-// Erwartet gruen schon heute: Kopf, Aktivitaet, Etappen (sind bereits Teilfeld).
-// Issue #2284 S2: Kopf/Aktivitaet/Region laufen ueber `TripHeader.onSaveField`
+// Erwartet gruen schon heute: Kopf, Tempo, Etappen (sind bereits Teilfeld).
+// Issue #2284 S2: Kopf/Region laufen ueber `TripHeader.onSaveField` (Tempo seit #3196 ueber Etappen)
 // (Pruefstand `kopfReiter`, AC-17) — RED, bis der Kopf die Funktion deklariert.
 //
 // Ausfuehren:
@@ -193,7 +193,7 @@ describe('AC-14: Versand — nur Versand-Schluessel, kein Tagesfenster, kein E-M
 	});
 });
 
-describe('AC-15: Kopf, Aktivitaet, Etappen — nur das eigene Feld (heute schon so)', () => {
+describe('AC-15: Kopf, Tempo, Etappen — nur das eigene Feld (heute schon so)', () => {
 	test('Kopf: { name }', async () => {
 		const a = P.neuerAufbau();
 		const k = await P.kopfReiter(a);
@@ -201,11 +201,13 @@ describe('AC-15: Kopf, Aktivitaet, Etappen — nur das eigene Feld (heute schon 
 		assert.deepEqual(rumpf(0), { name: 'Neuer Name' });
 	});
 
-	test('Aktivitaet: { activity }', async () => {
+	// #3196: Tempo-Karte im Reiter Etappen — Rumpf des Reiters { stages, tempo }, nie activity.
+	test('Tempo: { stages, tempo } (#3196)', async () => {
 		const a = P.neuerAufbau();
-		const t = await P.aktivitaetReiter(a);
-		await t.aendern('skitour');
-		assert.deepEqual(rumpf(0), { activity: 'skitour' });
+		const t = await P.tempoReiter(a);
+		await t.aendern({ fortbewegung: 'ski', grundtempo_kmh: 3 });
+		assert.deepEqual(P.sortiert(rumpf(0)), ['stages', 'tempo']);
+		assert.deepEqual((rumpf(0) as { tempo: unknown }).tempo, { fortbewegung: 'ski', grundtempo_kmh: 3 });
 	});
 
 	test('Etappen: { stages }', async () => {
@@ -234,15 +236,13 @@ describe('#2284 S2 AC-6: Kopf-Region — nur das Eigenfeld, auch beim Leeren', (
 		assert.deepEqual(rumpf(0), { region: '' });
 	});
 
-	test('Folge Name ⇒ Region ⇒ Aktivitaet: drei PUTs mit je genau einem Schluessel', async () => {
+	test('Folge Name ⇒ Region: zwei PUTs mit je genau einem Schluessel', async () => {
 		const a = P.neuerAufbau();
 		const k = await P.kopfReiter(a);
 		await k.umbenennen('Neuer Name');
 		await k.regionAendern('Alpen Nord');
-		await k.aktivitaetAendern('skitour');
-		assert.equal(puts().length, 3);
+		assert.equal(puts().length, 2);
 		assert.deepEqual(rumpf(0), { name: 'Neuer Name' });
 		assert.deepEqual(rumpf(1), { region: 'Alpen Nord' });
-		assert.deepEqual(rumpf(2), { activity: 'skitour' });
 	});
 });

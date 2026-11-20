@@ -74,6 +74,8 @@ export function vollerTrip(id = TRIP_ID): Record<string, unknown> {
 		id,
 		name: 'Trip 1433',
 		activity: 'trekking',
+		// #3196: Go liefert tempo immer (gespeichert oder aus activity abgeleitet).
+		tempo: { fortbewegung: 'fuss', grundtempo_kmh: 4 },
 		region: 'Korsika',
 		stages: [
 			{
@@ -410,14 +412,14 @@ export async function versandReiter(a: Aufbau): Promise<{
  * `SubscriptionHeader` als Prop `onSaveField` uebergibt:
  *
  *   async function onSaveField(
- *     field: 'name' | 'region' | 'profile',   // Feldnamen des Bausteins; 'profile' = Aktivitaet
+ *     field: 'name' | 'region' | 'profile',   // 'profile' seit #3196 ohne Wirkung (keine Chips mehr)
  *     value: string,
  *     schliessen: () => void
  *   ): Promise<void>
  *
  * - Rumpf NUR das Eigenfeld: name ⇒ `{ name }`, region ⇒ `{ region }` (Leeren = `{ region: "" }`,
- *   der Schluessel bleibt im JSON), profile ⇒ `{ activity }`. Kein Spread von `trip`.
- * - Konflikt-Schluessel je Feld: `kopf-name` / `kopf-region` / `kopf-profil` (Entscheidung 9),
+ *   der Schluessel bleibt im JSON). Kein Spread von `trip`.
+ * - Konflikt-Schluessel je Feld: `kopf-name` / `kopf-region` (Entscheidung 9),
  *   ueber `baueTripSpeicherung(..., schluessel)` und `speichereOderMeldeKonflikt(fn, saveController)`.
  * - Drei Ausgaenge (S1-Vertrag des Bausteins): gespeichert ⇒ `onTripUpdate(antwort)` + `schliessen()`;
  *   412 ⇒ am Controller gemeldet, Promise erfuellt OHNE `schliessen()` (erst der erfolgreiche
@@ -427,7 +429,9 @@ export async function versandReiter(a: Aufbau): Promise<{
  * Der Pruefstand erreicht die Funktion wie zuvor `makeNameSaveHandler`: ueber die AST-Auswertung
  * des echten Instanz-Skripts (`inst.u.onSaveField`) — kein neuer Export noetig.
  */
-export type KopfFeld = 'name' | 'region' | 'profile';
+// Issue #3196 (ADR-0108 Nr. 3): die Aktivitaet hat den Kopf verlassen ('profile' entfaellt);
+// Fortbewegung + Grundtempo schreibt der Reiter Etappen (`tempoReiter` unten).
+export type KopfFeld = 'name' | 'region';
 
 export interface KopfReiter {
 	inst: Instanz;
@@ -437,13 +441,12 @@ export interface KopfReiter {
 	speichereFeld(field: KopfFeld, value: string): Promise<void>;
 	umbenennen(name: string): Promise<void>;
 	regionAendern(region: string): Promise<void>;
-	aktivitaetAendern(wert: string): Promise<void>;
 }
 
-/** Kopf (TripHeader): Name, Region und Aktivitaet ueber `onSaveField` (s. o.). */
+/** Kopf (TripHeader): Name und Region ueber `onSaveField` (s. o.). */
 export async function kopfReiter(a: Aufbau): Promise<KopfReiter> {
 	const inst = await bauen(DATEI.kopf, { ...gemeinsam(a), now: new Date('2026-10-02T08:00:00Z') });
-	const geschlossen: Record<KopfFeld, number> = { name: 0, region: 0, profile: 0 };
+	const geschlossen: Record<KopfFeld, number> = { name: 0, region: 0 };
 	const speichereFeld = async (field: KopfFeld, value: string): Promise<void> => {
 		const fn = inst.u.onSaveField as
 			| ((f: KopfFeld, v: string, schliessen: () => void) => Promise<void>)
@@ -458,16 +461,32 @@ export async function kopfReiter(a: Aufbau): Promise<KopfReiter> {
 		geschlossen,
 		speichereFeld,
 		umbenennen: (name) => speichereFeld('name', name),
-		regionAendern: (region) => speichereFeld('region', region),
-		aktivitaetAendern: (wert) => speichereFeld('profile', wert)
+		regionAendern: (region) => speichereFeld('region', region)
 	};
 }
 
-/** Aktivitaet: seit #2284 S2 eine Kachel im Kopf — derselbe Weg `TripHeader.onSaveField('profile', …)`.
- *  Kein try/catch mehr: bei 412 erfuellt sich das Promise (Vertrag), jede Ablehnung ist ein Befund. */
-export async function aktivitaetReiter(a: Aufbau): Promise<KopfReiter & { aendern(wert: string): Promise<void> }> {
-	const k = await kopfReiter(a);
-	return { ...k, aendern: (wert) => k.aktivitaetAendern(wert) };
+/** Issue #3196: Tempo-Karte im Reiter Etappen — `EditStagesPanelNew.tempoAendern(neu)` merkt den
+ *  Stand vor und plant das Speichern am Controller (Rumpf `{ stages, tempo }`); `aendern` wartet,
+ *  bis der Controller fertig ist. Bei 412 meldet der Controller den Konflikt (Retry-Eintrag 'etappen'). */
+export async function tempoReiter(a: Aufbau): Promise<{
+	inst: Instanz;
+	aendern(tempo: { fortbewegung: string; grundtempo_kmh: number }): Promise<void>;
+}> {
+	const inst = await bauen(DATEI.etappen, {
+		...gemeinsam(a),
+		tripId: a.trip.id,
+		stages: a.trip.stages,
+		tempo: a.trip.tempo
+	});
+	return {
+		inst,
+		async aendern(tempo) {
+			const fn = inst.u.tempoAendern as ((t: unknown) => void) | undefined;
+			if (typeof fn !== 'function') throw new Error('Messaufbau: EditStagesPanelNew.tempoAendern nicht herleitbar');
+			fn(tempo);
+			await fertig(a.ctl);
+		}
+	};
 }
 
 /** Etappen (EditStagesPanelNew): Speichern ueber den Controller. */
@@ -479,7 +498,7 @@ export async function etappenReiter(a: Aufbau): Promise<{
 		...gemeinsam(a),
 		tripId: a.trip.id,
 		stages: a.trip.stages,
-		activityType: a.trip.activity
+		tempo: a.trip.tempo
 	});
 	return {
 		inst,

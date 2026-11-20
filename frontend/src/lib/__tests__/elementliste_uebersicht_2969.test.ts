@@ -43,8 +43,13 @@ const ausnahmen = (): Ausnahme[] => logik.leseAusnahmen(readFileSync(BESITZER, '
 // 44 Einträge bekamen text_en (luecke true → false), dabei i18n_key/muster der Katalogzuordnung; die
 // Unterzeile „N Metriken · …“ nutzt die Mehrzahl-Form (Plural-Wahl im Erzeuger, #3192).
 // Anzahl 2646, IDs und Mockup-Hash unverändert.
+// #3196 (20.11.): Pin erneut nachgezogen (vorher 8886ab45…57ae28817). Die Katalogschlüssel trip.aktivitaet.*
+// entfallen mit den Aktivitäts-Kacheln, neu sind trip.tempo.* (Tempo-Karte). Neu erzeugt: 12 Einträge wechseln
+// nur den Schlüssel (Alpen-Trekking/Skitouren → wetter.vorlage.name.*, MTB → trip.tempo.mtb), 16 Lücken der
+// Tempo-Karte im Reiter Etappen (Fortbewegung, zu Fuß, Rad, Ski) bekommen Schlüssel und text_en.
+// Anzahl 2646, IDs und Mockup-Hash unverändert.
 const ALT_ANZAHL = 2646;
-const ALT_SHA = '8886ab451a9304b7936b92fdb9ae4f58a09a36704c1dd31a823633a57ae28817';
+const ALT_SHA = '0afd879c0de88cdfff286c1cc3b609bcb5474efd26be028c41e18ae736304f3d';
 const MOCKUP_HASH = 'sha256:d1fcdf63fb3b9fdc166f537f89af5e0f66992b62541b78176fc2504a491edb40';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {

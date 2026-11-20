@@ -126,10 +126,13 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 
 	// #2980 AC-19 (ADR-0118): die Handy-Kennzahlenzeile (Tag/ETAPPE/START IN, #416) entfällt in
 	// beiden Sprachen; geprüft bleiben Zahlenformat und Aktivitäten.
-	test('Kopf: ohne Kennzahlenzeile (#2980), Zahlenformat en-GB, Aktivitaeten englisch', () => {
+	// #3196 (ADR-0108 Nr. 3): keine Aktivitaets-Kacheln mehr im Kopf (Tempo-Karte im Reiter Etappen).
+	test('Kopf: ohne Kennzahlenzeile (#2980), Zahlenformat en-GB, ohne Aktivitaeten (#3196)', () => {
 		const { de, en } = deDannEn(() => sichtbar(P.kopfRendern()));
-		for (const s of ['↑1.527 m', 'Skitour', 'Hochtour']) hat(de, s);
-		for (const s of ['↑1,527 m', 'Ski touring', 'Mountaineering', 'Via ferrata', 'Bike (15 km/h)', 'Rename', 'Cancel', 'Save']) hat(en, s);
+		for (const s of ['↑1.527 m']) hat(de, s);
+		for (const s of ['Skitour', 'Hochtour']) hatNicht(de, s);
+		for (const s of ['↑1,527 m', 'Rename', 'Cancel', 'Save']) hat(en, s);
+		for (const s of ['Ski touring', 'Mountaineering', 'Via ferrata', 'Bike (15 km/h)']) hatNicht(en, s);
 		for (const s of ['START IN', 'ETAPPE 2/3']) hatNicht(de, s);
 		for (const s of ['STARTS IN', 'STAGE 2/3', 'DAY Day 2']) hatNicht(en, s);
 		hatNicht(en, 'Tg');

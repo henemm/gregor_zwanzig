@@ -55,7 +55,7 @@ func sliceEq(a, b []string) bool {
 // TestNaismith802_A: fahrrad_20, [500,1100,1100,500] → ["08:00","09:00","09:00","09:36"]
 func TestNaismith802_A(t *testing.T) {
 	stage := fixture802Stage("A", "08:00", "fahrrad_20", []int{500, 1100, 1100, 500})
-	ComputeStageArrivals(stage, ActivitySpeed("fahrrad_20"))
+	ComputeStageArrivals(stage, ResolveTempo(&Trip{Activity: "fahrrad_20"}))
 	got := arrivals802(stage)
 	want := []string{"08:00", "09:00", "09:00", "09:36"}
 	if !sliceEq(got, want) {
@@ -66,7 +66,7 @@ func TestNaismith802_A(t *testing.T) {
 // TestNaismith802_B: fahrrad_20, [500,505] → ["08:00","08:01"] (Rundung half-up)
 func TestNaismith802_B(t *testing.T) {
 	stage := fixture802Stage("B", "08:00", "fahrrad_20", []int{500, 505})
-	ComputeStageArrivals(stage, ActivitySpeed("fahrrad_20"))
+	ComputeStageArrivals(stage, ResolveTempo(&Trip{Activity: "fahrrad_20"}))
 	got := arrivals802(stage)
 	want := []string{"08:00", "08:01"}
 	if !sliceEq(got, want) {
@@ -81,7 +81,7 @@ func TestNaismith802_B(t *testing.T) {
 // Python-Kontrakt tests/tdd/test_issue_802_fahrrad_segment_zeit.py::_CONTRACT["C"].
 func TestNaismith802_C(t *testing.T) {
 	stage := fixture802Stage("C", "08:00", "fahrrad_20", []int{500, 10500})
-	ComputeStageArrivals(stage, ActivitySpeed("fahrrad_20"))
+	ComputeStageArrivals(stage, ResolveTempo(&Trip{Activity: "fahrrad_20"}))
 	got := arrivals802(stage)
 	want := []string{"08:00", "00:40"}
 	if !sliceEq(got, want) {
@@ -92,7 +92,7 @@ func TestNaismith802_C(t *testing.T) {
 // TestNaismith802_W: "", [500,800,300] → ["08:00","09:00","10:00"] (Wanderer-SUMME)
 func TestNaismith802_W(t *testing.T) {
 	stage := fixture802Stage("W", "08:00", "", []int{500, 800, 300})
-	ComputeStageArrivals(stage, ActivitySpeed(""))
+	ComputeStageArrivals(stage, ResolveTempo(&Trip{Activity: ""}))
 	got := arrivals802(stage)
 	want := []string{"08:00", "09:00", "10:00"}
 	if !sliceEq(got, want) {

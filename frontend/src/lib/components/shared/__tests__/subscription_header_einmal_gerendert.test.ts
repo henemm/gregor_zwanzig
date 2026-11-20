@@ -219,8 +219,12 @@ describe('#2284 S2 AC-10/AC-4 — TripHeader mountet den Baustein: alles genau e
 	// ihr „genau einmal" wird deshalb auf SEITEN-Ebene gezählt (strenger: ganze Seite):
 	// shared/hub-kopf/__tests__/hub_kopf_seiten_paritaet.test.ts („AC-6 … Status genau einmal",
 	// „Zusatz trip-detail-status-supplement genau einmal, in der Titelzeile").
+	// #3196 (ADR-0108 Nr. 3): der Trip-Kopf traegt keine Aktivitaets-Kacheln und keinen
+	// Handy-Knopf mehr (Fortbewegung + Grundtempo stehen im Reiter Etappen); der Baustein
+	// kann sie weiterhin (oben, Baustein-Satz), die Huelle reicht sie nur nicht mehr durch.
+	const OHNE_PROFIL = (id: string) => !id.startsWith('trip-profil-');
 	const HUELLE_IDS = [
-		...TRIP_KOPF_IDS,
+		...TRIP_KOPF_IDS.filter(OHNE_PROFIL),
 		// #2913 c2: Eyebrow und Meta-Zeile des Mockups (vormals trip-detail-meta) aus dem HubKopf.
 		'hub-kopf-eyebrow',
 		'hub-kopf-meta'
@@ -248,52 +252,13 @@ describe('#2284 S2 AC-10/AC-4 — TripHeader mountet den Baustein: alles genau e
 		assert.equal(zaehle(await tripHeaderHtml(TRIP, false), 'save-indicator'), 0);
 	});
 
-	test('AC-4: acht Aktivitäts-Kacheln in fester Reihenfolge mit den Beschriftungen des bisherigen Etappen-Reiters', async () => {
-		const body = await tripHeaderHtml(TRIP);
-		const kacheln = [...body.matchAll(/<button[^>]*data-testid="trip-profil-option-([^"]+)"[^>]*>([\s\S]*?)<\/button>/g)].map(
-			(m) => ({ value: m[1], label: m[2].replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]+>/g, '').trim() })
-		);
-		assert.deepEqual(kacheln, TRIP_AKTIVITAETEN);
-	});
-
-	test('AC-4: gespeicherte Aktivität „trekking" ist die einzige gewählte Kachel', async () => {
-		const body = await tripHeaderHtml(TRIP);
-		// nur Kacheln zählen (die Handy-Auswahl hat eigene testids, #2284 S2 v1.1)
-		const gewaehlt = [...body.matchAll(/<button[^>]*data-selected="true"[^>]*>/g)]
-			.map((m) => /data-testid="([^"]+)"/.exec(m[0])?.[1])
-			.filter((id) => id?.startsWith('trip-profil-option-'));
-		assert.deepEqual(gewaehlt, ['trip-profil-option-trekking']);
-	});
-
-	test('AC-4: Trip ohne gespeicherte Aktivität — alle Kacheln ungewählt', async () => {
-		const body = await tripHeaderHtml({ ...TRIP, activity: undefined });
-		assert.equal((body.match(/data-testid="trip-profil-option-/g) ?? []).length, 8, 'Vorbedingung: 8 Kacheln');
-		assert.equal((body.match(/data-selected="true"/g) ?? []).length, 0);
-	});
-
-	// #2284 S2 v1.1 — die Hülle reicht die Aktivitäts-Beschriftungen durch: der
-	// Handy-Knopf zeigt das Label der gespeicherten Aktivität bzw. neutral.
-	const knopfText = (body: string): string | null => {
-		const m = /<button[^>]*data-testid="trip-profil-knopf"[^>]*>([\s\S]*?)<\/button>/.exec(body);
-		return m ? m[1].replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : null;
-	};
-
-	test('AC-4 (Handy-Knopf): gespeicherte Aktivität „trekking" ⇒ Knopftext „Trekking"', async () => {
-		const t = knopfText(await tripHeaderHtml(TRIP));
-		assert.ok(t !== null, 'AC-4: der Trip-Kopf rendert keinen Knopf trip-profil-knopf');
-		assert.ok(t.includes('Trekking'), `AC-4: Knopftext „${t}"`);
-	});
-
-	test('AC-4 (Handy-Knopf): „fahrrad_20" ⇒ Knopftext „Fahrrad (20 km/h)"', async () => {
-		const t = knopfText(await tripHeaderHtml({ ...TRIP, activity: 'fahrrad_20' }));
-		assert.ok(t !== null, 'AC-4: der Trip-Kopf rendert keinen Knopf trip-profil-knopf');
-		assert.ok(t.includes('Fahrrad (20 km/h)'), `AC-4: Knopftext „${t}"`);
-		assert.ok(!t.includes('Trekking'), `AC-4: Knopftext zeigt die erste Option: „${t}"`);
-	});
-
-	test('AC-4 (Handy-Knopf): ohne Aktivität ⇒ „Aktivität wählen"', async () => {
-		const t = knopfText(await tripHeaderHtml({ ...TRIP, activity: undefined }));
-		assert.ok(t !== null, 'AC-4: der Trip-Kopf rendert keinen Knopf trip-profil-knopf');
-		assert.ok(t.includes('Aktivität wählen'), `AC-4: neutraler Knopftext fehlt: „${t}"`);
+	test('#3196: keine Aktivitäts-Kacheln, kein Handy-Knopf im Trip-Kopf (auch mit gespeicherter Aktivität)', async () => {
+		for (const activity of ['trekking', 'fahrrad_20', undefined]) {
+			const body = await tripHeaderHtml({ ...TRIP, activity });
+			for (const id of TRIP_KOPF_IDS.filter((i) => !OHNE_PROFIL(i))) {
+				assert.equal(zaehle(body, id), 0, `${id} (activity=${activity}): Aktivität hat den Kopf verlassen`);
+			}
+			assert.equal((body.match(/data-testid="trip-profil-/g) ?? []).length, 0);
+		}
 	});
 });

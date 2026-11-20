@@ -3,7 +3,7 @@
 // (docs/design-requests/trip-anlegen-2026-06-06/screen-trip-new-v2.jsx).
 // Keine Seiteneffekte, keine Svelte-Imports — testbar mit node:test.
 
-import type { Trip, WeatherConfigMetric, ReportConfig, Waypoint, ActivityType, Corridor, Ampel } from '$lib/types';
+import type { Trip, WeatherConfigMetric, ReportConfig, Waypoint, Tempo, Corridor, Ampel } from '$lib/types';
 import {
 	resolveAlertChannels,
 	resolveAlertChannelThresholds,
@@ -138,8 +138,8 @@ export interface CreateTripState {
 	reportConfig?: ReportConfig;
 	// Issue #2277 S1 — Alarm-Schatten-State des geteilten AlarmeTab (createMode).
 	alarm?: CreateTripAlarmState;
-	// Issue #674 — Aktivitätstyp (Fahrrad/Wanderer) für Naismith-Berechnung.
-	activity?: ActivityType;
+	// Issue #3196 — Fortbewegung + Grundtempo aus der Tempo-Karte (ersetzt activity).
+	tempo?: Tempo;
 	// Issue #2277 S2a — Wertebereiche-Schatten-State des geteilten CorridorEditor
 	// (createMode, context="route"). `undefined` solange der Reiter nie eine
 	// gültige Zeile gemeldet hat; buildCreateTripPayload() setzt trotzdem immer
@@ -245,9 +245,9 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 		trip.region = state.region.trim();
 	}
 
-	// Issue #674 — Aktivitätstyp persistieren (Fahrrad/Wanderer).
-	if (state.activity) {
-		trip.activity = state.activity;
+	// Issue #3196 — Tempo persistieren; activity schreibt die Oberfläche nicht mehr.
+	if (state.tempo) {
+		trip.tempo = { ...state.tempo };
 	}
 
 	// display_config: metriken + kanäle (channels als extra-Feld, additiv)

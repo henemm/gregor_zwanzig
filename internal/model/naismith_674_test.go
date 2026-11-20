@@ -9,26 +9,26 @@ import "testing"
 //
 // KEINE MOCKS — echte Structs, echte Berechnung.
 //
-// RED-Ursache: ActivitySpeed(string) gibt es nicht → Compile-Fehler.
+// Seit #3196 über ResolveTempo (activity als Altfeld abgeleitet).
 
-// TestActivitySpeed_Fahrrad25 prüft AC-6: ActivitySpeed("fahrrad_25")
-// liefert FlatKmh=25, AscentMh=600, DescentMh=1000.
+// TestActivitySpeed_Fahrrad25: fahrrad_25 → Rad 25 km/h; seit #3196 folgen
+// die Raten dem Grundtempo (Referenz Rad 20 = 600/1000) → 750/1250.
 func TestActivitySpeed_Fahrrad25(t *testing.T) {
-	s := ActivitySpeed("fahrrad_25") // nicht vorhanden → Compile-Fehler = RED
+	s := ResolveTempo(&Trip{Activity: "fahrrad_25"})
 	if s.FlatKmh != 25.0 {
 		t.Fatalf("FlatKmh = %v, want 25.0", s.FlatKmh)
 	}
-	if s.AscentMh != 600.0 {
-		t.Fatalf("AscentMh = %v, want 600.0", s.AscentMh)
+	if s.AscentMh != 750.0 {
+		t.Fatalf("AscentMh = %v, want 750.0", s.AscentMh)
 	}
-	if s.DescentMh != 1000.0 {
-		t.Fatalf("DescentMh = %v, want 1000.0", s.DescentMh)
+	if s.DescentMh != 1250.0 {
+		t.Fatalf("DescentMh = %v, want 1250.0", s.DescentMh)
 	}
 }
 
 // TestActivitySpeed_Fahrrad20 prüft AC-6 für fahrrad_20.
 func TestActivitySpeed_Fahrrad20(t *testing.T) {
-	s := ActivitySpeed("fahrrad_20")
+	s := ResolveTempo(&Trip{Activity: "fahrrad_20"})
 	if s.FlatKmh != 20.0 {
 		t.Fatalf("FlatKmh = %v, want 20.0", s.FlatKmh)
 	}
@@ -39,19 +39,19 @@ func TestActivitySpeed_Fahrrad20(t *testing.T) {
 
 // TestActivitySpeed_Fahrrad15 prüft AC-6 für fahrrad_15.
 func TestActivitySpeed_Fahrrad15(t *testing.T) {
-	s := ActivitySpeed("fahrrad_15")
+	s := ResolveTempo(&Trip{Activity: "fahrrad_15"})
 	if s.FlatKmh != 15.0 {
 		t.Fatalf("FlatKmh = %v, want 15.0", s.FlatKmh)
 	}
-	if s.AscentMh != 600.0 {
-		t.Fatalf("AscentMh = %v, want 600.0", s.AscentMh)
+	if s.AscentMh != 450.0 {
+		t.Fatalf("AscentMh = %v, want 450.0 (600 · 15/20)", s.AscentMh)
 	}
 }
 
-// TestActivitySpeed_Default prüft AC-6: ActivitySpeed("") liefert Wanderer-Default
+// TestActivitySpeed_Default prüft AC-6: ResolveTempo(&Trip{Activity: ""}) liefert Wanderer-Default
 // (FlatKmh=4, AscentMh=300, DescentMh=500).
 func TestActivitySpeed_Default(t *testing.T) {
-	s := ActivitySpeed("")
+	s := ResolveTempo(&Trip{Activity: ""})
 	if s.FlatKmh != 4.0 {
 		t.Fatalf("FlatKmh = %v, want 4.0 (Wanderer-Default)", s.FlatKmh)
 	}
@@ -65,7 +65,7 @@ func TestActivitySpeed_Default(t *testing.T) {
 
 // TestActivitySpeed_UnknownActivity prüft: unbekannter Aktivitätswert → Wanderer-Default.
 func TestActivitySpeed_UnknownActivity(t *testing.T) {
-	s := ActivitySpeed("paragliding") // unbekannt → Default
+	s := ResolveTempo(&Trip{Activity: "paragliding"}) // unbekannt → Default
 	if s.FlatKmh != 4.0 {
 		t.Fatalf("FlatKmh = %v, want 4.0 (Default für unbekannte Aktivität)", s.FlatKmh)
 	}
@@ -85,7 +85,7 @@ func TestComputeStageArrivals_Fahrrad20_Flat(t *testing.T) {
 			{ID: "W2", Name: "Ziel", Lat: 42.17987, Lon: 9.0, ElevationM: 200}, // ~20 km
 		},
 	}
-	speeds := ActivitySpeed("fahrrad_20")
+	speeds := ResolveTempo(&Trip{Activity: "fahrrad_20"})
 	ComputeStageArrivals(stage, speeds) // neue Signatur → Compile-Fehler = RED
 
 	if stage.Waypoints[1].ArrivalCalculated == nil {
@@ -99,7 +99,8 @@ func TestComputeStageArrivals_Fahrrad20_Flat(t *testing.T) {
 
 // TestComputeStageArrivals_Fahrrad15_Ascent prüft AC-3:
 // Trip activity="fahrrad_15", +600 m Aufstieg ~0 km Horizontal, start_time="08:00"
-// → wp[1].ArrivalCalculated == "09:00" (600 m ÷ 600 Hm/h = 1 h).
+// → wp[1].ArrivalCalculated == "09:20" (600 m ÷ 450 Hm/h = 80 min; #3196:
+// Rate folgt dem Grundtempo 15 km/h).
 func TestComputeStageArrivals_Fahrrad15_Ascent(t *testing.T) {
 	stage := &Stage{
 		ID: "S674-3", Name: "Berg-Etappe", Date: "2026-06-09",
@@ -109,15 +110,15 @@ func TestComputeStageArrivals_Fahrrad15_Ascent(t *testing.T) {
 			{ID: "W2", Name: "Gipfel", Lat: 42.0, Lon: 9.0, ElevationM: 800}, // +600 m, ~0 km
 		},
 	}
-	speeds := ActivitySpeed("fahrrad_15")
+	speeds := ResolveTempo(&Trip{Activity: "fahrrad_15"})
 	ComputeStageArrivals(stage, speeds)
 
 	if stage.Waypoints[1].ArrivalCalculated == nil {
 		t.Fatal("wp[1] ArrivalCalculated == nil, want gesetzt")
 	}
 	got := *stage.Waypoints[1].ArrivalCalculated
-	if got != "09:00" {
-		t.Fatalf("wp[1] arrival = %q, want 09:00 (600 m ÷ 600 Hm/h = 1 h)", got)
+	if got != "09:20" {
+		t.Fatalf("wp[1] arrival = %q, want 09:20 (600 m ÷ 450 Hm/h = 80 min)", got)
 	}
 }
 
@@ -133,7 +134,7 @@ func TestComputeStageArrivals_WandererDefault_Unchanged(t *testing.T) {
 			{ID: "W2", Name: "Ziel", Lat: 47.036, Lon: 11.0, ElevationM: 1000},
 		},
 	}
-	speeds := ActivitySpeed("") // leer → Wanderer-Default
+	speeds := ResolveTempo(&Trip{Activity: ""}) // leer → Wanderer-Default
 	ComputeStageArrivals(stage, speeds)
 
 	if stage.Waypoints[1].ArrivalCalculated == nil {
@@ -163,8 +164,8 @@ func TestFahrrad20_FasterThanWanderer(t *testing.T) {
 	stageWander := makeStage("wander")
 	stageFahrrad := makeStage("fahrrad")
 
-	ComputeStageArrivals(stageWander, ActivitySpeed(""))
-	ComputeStageArrivals(stageFahrrad, ActivitySpeed("fahrrad_20"))
+	ComputeStageArrivals(stageWander, ResolveTempo(&Trip{Activity: ""}))
+	ComputeStageArrivals(stageFahrrad, ResolveTempo(&Trip{Activity: "fahrrad_20"}))
 
 	wander := *stageWander.Waypoints[1].ArrivalCalculated
 	fahrrad := *stageFahrrad.Waypoints[1].ArrivalCalculated

@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 from app.loader import load_trip_from_dict, save_trip
-from core.naismith import dav_hours, derive_tempo, tempo_speeds
+from core.naismith import dav_hours, derive_tempo, tempo_speeds, valid_tempo
 
 _HERE = Path(__file__).resolve().parent
 TABELLE = json.loads((_HERE / "fixtures" / "naismith_dav_paritaet.json").read_text(encoding="utf-8"))
@@ -131,3 +131,52 @@ def test_save_trip_ohne_tempo_rechnet_mit_ableitung(tmp_path):
     # B->C 4 km/↓600: t_h 0:12, t_v 0:36 -> 0:42 => 09:48
     arrivals = [wp["arrival_calculated"] for wp in disk["stages"][0]["waypoints"]]
     assert arrivals == ["08:00", "09:06", "09:48"]
+
+
+# --- Fix-Loop 2, F001: Untergrenze 0.5 km/h (gleiche Tabelle wie Go und TS) ---
+
+@pytest.mark.parametrize("fall", TABELLE["gueltigkeit"],
+                         ids=lambda g: f"{g['fortbewegung']}-{g['grundtempo_kmh']}")
+def test_valid_tempo_grenzen(fall):
+    tempo = {"fortbewegung": fall["fortbewegung"], "grundtempo_kmh": fall["grundtempo_kmh"]}
+    assert valid_tempo(tempo) is fall["gueltig"]
+
+
+@pytest.mark.parametrize("kmh", [True, False, "4", None])
+def test_valid_tempo_kein_zahlwert(kmh):
+    """F-A2-5: ein Wahrheitswert (oder Text/None) ist kein Grundtempo -- ``True``
+    gaelte sonst als 1 km/h. Nur Python: Go lehnt bool schon beim Dekodieren ab,
+    daher nicht in der gemeinsamen Falltabelle."""
+    assert valid_tempo({"fortbewegung": "fuss", "grundtempo_kmh": kmh}) is False
+
+
+@pytest.mark.parametrize("kmh", [1e-320, 0.4])
+def test_save_trip_mit_unplausiblem_altwert_crasht_nicht(tmp_path, kmh):
+    """F001: ein unplausibles Grundtempo aus Altdaten bricht den Rechner nicht
+    (vorher OverflowError in _round(inf)), sondern rechnet wie zu Fuss 4 km/h
+    -- wie Go TempoSpeeds und TS tempoSpeeds (AC-6 Paritaet)."""
+    trip = load_trip_from_dict(_trip_dict(tempo={"fortbewegung": "ski", "grundtempo_kmh": kmh}))
+    pfad = save_trip(trip, "u3196", data_dir=tmp_path)
+    disk = json.loads(pfad.read_text(encoding="utf-8"))
+    arrivals = [wp["arrival_calculated"] for wp in disk["stages"][0]["waypoints"]]
+    assert arrivals == ["08:00", "10:30", "12:12"]
+
+
+# --- Fix-Loop 2, F005 (AC-11): Etappen-Wetter rechnet mit dem gespeicherten Tempo ---
+
+def test_etappen_wetter_segmente_folgen_dem_gespeicherten_tempo():
+    """Etappe OHNE gespeicherte Ankunft, Tempo Rad 20 weicht von der Ableitung
+    aus activity (leer -> zu Fuss 4) ab: die Segmentzeiten des Etappen-Wetters
+    folgen dem Tempo (09:06/09:48 Ortszeit), nicht der Ableitung (10:30/12:12)."""
+    from zoneinfo import ZoneInfo
+
+    from services.stage_weather import _segments_for_stage
+
+    trip = load_trip_from_dict(_trip_dict(tempo={"fortbewegung": "rad", "grundtempo_kmh": 20}))
+    stage = trip.stages[0]
+    assert all(wp.arrival_calculated is None for wp in stage.waypoints), "Messaufbau: Ankunft schon gespeichert"
+    segmente = _segments_for_stage(trip, stage)
+    assert len(segmente) >= 2
+    ort = ZoneInfo("Europe/Vienna")  # 47 N / 11 E, Juli = UTC+2
+    enden = [s.end_time.astimezone(ort).strftime("%H:%M") for s in segmente[:2]]
+    assert enden == ["09:06", "09:48"]
