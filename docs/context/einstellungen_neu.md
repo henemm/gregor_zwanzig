@@ -259,6 +259,7 @@ Zeilen, die ADR-0124 berührt (W7 bis W10, W16, WV5, WV8, WV10, V6), nennen in d
 - **Sonnenstunden** sind umgekehrt (weniger ist schlechter). Für den **Taupunkt** gilt eine Schwüle-Skala. **Luftfeuchte** bekommt keine eigene Ampel (über den Taupunkt bewertet).
 - Die **Schneehöhe** hängt von der Vorlage ab (Skitour: wenig ist schlecht).
 - **Keine Ampel** bekommen: Luftdruck, Windrichtung, Niederschlagsart, mittlere und hohe Wolken. Sie bleiben reine Anzeige.
+  Ausnahme seit #3222 (ADR-0126): die Windrichtung wird bewertet, wenn ihr Modus „Gegenwind" (nur Trip) oder „Himmelsrichtungen" gesetzt ist; die Grenzen gelten dann für die Gegenwindkomponente bzw. den Wind aus den markierten Richtungen in km/h. Vorlage Radtour: „Gegenwind", 10 / 20 / 30 km/h, Alarm ab Orange; alle anderen Vorlagen: aus.
 - **CAPE** bekommt keine eigene Zeile mehr, es geht in der Gewitter-Zeile auf (A6). Es geht **wie heute** über die geeichte Leiter je Modell und Gebiet in die Gewitterstufe ein; eigene CAPE-Farbe und CAPE-Alarm entfallen (ADR-0106 P1, PO 2026-11-04). Gewitter „leicht“ ist immer gelb und alarmiert nie (ADR-0106 P2).
 - **Vorboten** (ADR-0010: `humidity`, `dewpoint`, `rain_probability`, `cloud_total`, `pressure`, `wind_chill`) werden gefärbt, lösen aber **keinen Alarm** aus. Ihre Zeile zeigt „kein Alarm (Vorbote)“.
 
@@ -409,7 +410,7 @@ Alle Sätze kommen in den Katalog, mit EN-Fassung.
 | Luftfeuchte (`humidity`) | aus | – | – | kein Alarm (Vorbote) |
 | Wind (`wind`) | **an** | – / – / – | 20 / 30 / 45 | Orange |
 | Böen (`gust`) | **an** | – | 35 / 50 / 65 | Orange |
-| Windrichtung (`wind_direction`) | **an** | – | – | kein Alarm |
+| Windrichtung als Gegenwind (`wind_direction`) | **an** | – | 10 / 20 / 30 | Orange |
 | Niederschlag (`precipitation`) | **an** | – | 0,5 / 2 / 5 | Orange |
 | Regenwahrscheinlichkeit (`rain_probability`) | **an** | – | 30 / 50 / 70 | kein Alarm (Vorbote) |
 | Gewitter (`thunder`) | **an** | mittel = orange | hoch = rot | Orange |

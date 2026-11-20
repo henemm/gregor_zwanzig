@@ -118,7 +118,7 @@ _ZEILEN: dict[str, list[tuple]] = {
         ("humidity", False, X, X, NIE),
         ("wind", True, X, (20, 30, 45), OR),
         ("gust", True, X, (35, 50, 65), OR),
-        ("wind_direction", True, X, X, NIE),
+        ("wind_direction", True, X, (10, 20, 30), OR),  # Gegenwind km/h (#3222)
         ("precipitation", True, X, (0.5, 2, 5), OR),
         ("rain_probability", True, X, (30, 50, 70), NIE),
         ("thunder", True, X, X, OR),
@@ -178,6 +178,11 @@ _ZEILEN: dict[str, list[tuple]] = {
     ],
 }
 
+# Issue #3222 (ADR-0126): Windrichtungs-Modus je Vorlage; fehlt er, gilt "aus"
+# (Bestand unveraendert). Grenzen der Zeile gelten dann fuer die Gegenwind-
+# komponente in km/h.
+_WIND_MODUS: dict[str, str] = {"radtour": "gegenwind"}
+
 # Gewitterzeile je Vorlage: (mittel, hoch). Nur Wassersport weicht ab.
 _GEWITTER: dict[str, tuple[str, str]] = {tid: ("orange", "red") for tid in _ZEILEN}
 _GEWITTER["wassersport"] = ("red", "red")
@@ -193,6 +198,8 @@ def _vorlage(tid: str) -> dict:
         }
         for mid, an, unten, oben, alarm in _ZEILEN[tid]
     }
+    if tid in _WIND_MODUS:
+        metrics["wind_direction"]["modus"] = _WIND_MODUS[tid]
     mittel, hoch = _GEWITTER[tid]
     return {"template": tid, "metrics": metrics, "thunder": {"mittel": mittel, "hoch": hoch}}
 
