@@ -1,0 +1,160 @@
+TAP version 13
+# Subtest: Test 1 / AC-1, AC-2, AC-6: Roh/Einfach-Knopf meldet seine 44-px-Tippfläche (data-tap)
+    # Subtest: einzelner Knopf (raw und simplified) trägt data-tap="true"
+    not ok 1 - einzelner Knopf (raw und simplified) trägt data-tap="true"
+      ---
+      duration_ms: 73.625446
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:104:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: Roh/Einfach-Knopf (raw) ohne data-tap — der Wächter misst nur die 32×22-Pille
+        
+        null !== 'true'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'true'
+      actual: ~
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:110:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: Karte im Kontext route: jeder Roh/Einfach-Knopf trägt data-tap="true"
+    not ok 2 - Karte im Kontext route: jeder Roh/Einfach-Knopf trägt data-tap="true"
+      ---
+      duration_ms: 2609.414057
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:114:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: Knopf ohne data-tap: <button type="button" class="rek svelte-1norkye" data-slot="roh-einfach" data-wert="simplified" aria-label="Darstellung Boe-T in E-Mail: Einfach">
+        
+        null !== 'true'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'true'
+      actual: ~
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:119:36)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Karte im Kontext vergleich: jeder Roh/Einfach-Knopf trägt data-tap="true"
+    not ok 3 - Karte im Kontext vergleich: jeder Roh/Einfach-Knopf trägt data-tap="true"
+      ---
+      duration_ms: 2.937944
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:114:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: Knopf ohne data-tap: <button type="button" class="rek svelte-1norkye" data-slot="roh-einfach" data-wert="raw" aria-label="Darstellung Wind-O in E-Mail: Roh">
+        
+        null !== 'true'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'true'
+      actual: ~
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:119:36)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 1 - Test 1 / AC-1, AC-2, AC-6: Roh/Einfach-Knopf meldet seine 44-px-Tippfläche (data-tap)
+  ---
+  duration_ms: 2687.145009
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:103:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-1/AC-2: unsichtbare Tippfläche per ::before auf ALLEN Breiten
+    # Subtest: eine Regel .rek…::before außerhalb jeder @media-Bedingung nutzt max(100%, var(--g-tap-min)) für Breite und Höhe
+    not ok 1 - eine Regel .rek…::before außerhalb jeder @media-Bedingung nutzt max(100%, var(--g-tap-min)) für Breite und Höhe
+      ---
+      duration_ms: 43.440567
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:127:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: keine ::before-Regel am Roh/Einfach-Knopf für alle Breiten (Desktop ohne Tippfläche)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:132:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    1..1
+not ok 2 - AC-1/AC-2: unsichtbare Tippfläche per ::before auf ALLEN Breiten
+  ---
+  duration_ms: 43.561677
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:124:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: Test 2 / AC-3: Segmented „E-Mail: Format“ in Mockup-Variante kompakt
+    # Subtest: Trip-Karte: Segmented was-steht-wo-email-format hat data-variant="kompakt" und kein data-size="sm"
+    not ok 1 - Trip-Karte: Segmented was-steht-wo-email-format hat data-variant="kompakt" und kein data-size="sm"
+      ---
+      duration_ms: 3.199044
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:143:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: E-Mail-Format-Segmented nicht kompakt (Tippfläche 19 px Desktop / 36 px Mobil)
+        
+        null !== 'kompakt'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'kompakt'
+      actual: ~
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:148:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
+not ok 3 - Test 2 / AC-3: Segmented „E-Mail: Format“ in Mockup-Variante kompakt
+  ---
+  duration_ms: 3.405575
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/fix_3212_was_steht_wo_tippflaeche.test.ts:142:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..3
+# tests 5
+# suites 3
+# pass 0
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3732.367671
