@@ -233,7 +233,7 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		// Issue #2792 S1a: ungueltige Profil-Ampel nie speichern.
-		if bailIf(w, r, displayConfigAmpelUngueltig(trip.DisplayConfig), 400, "ampel_ungueltig") {
+		if bailIf(w, r, displayConfigAmpelUngueltig(trip.DisplayConfig, false), 400, "ampel_ungueltig") {
 			return
 		}
 		// Issue #3047 E3: metrics[]-Eintrag ohne metric_id nie speichern.
@@ -470,7 +470,7 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		if req.DisplayConfig != nil {
 			// Issue #2792 S1a: Ampel pruefen, bevor irgendetwas gemergt wird;
 			// mergeConfigMap ersetzt den Unterbaum "ampel" als Ganzes (Spec §1).
-			if bailIf(w, r, displayConfigAmpelUngueltig(*req.DisplayConfig), 400, "ampel_ungueltig") {
+			if bailIf(w, r, displayConfigAmpelUngueltig(*req.DisplayConfig, false), 400, "ampel_ungueltig") {
 				return
 			}
 			// Issue #3047 E3: gleiche metrics[]-Pruefung wie /weather-config.

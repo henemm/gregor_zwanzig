@@ -54,6 +54,8 @@ def _vorlagen_aus_doku() -> dict:
             "lower": _grenzen(unten, ("red", "orange", "yellow")),
             "upper": _grenzen(oben, ("yellow", "orange", "red")),
             "alarm_ab": _alarm(alarm)}
+        if "als Gegenwind" in z.split("|")[1]:  # #3222 (ADR-0126): Windrichtungs-Modus
+            vorlagen[cur]["metrics"][mid]["modus"] = "gegenwind"
     return vorlagen
 
 

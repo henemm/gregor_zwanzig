@@ -1,0 +1,124 @@
+TAP version 13
+# Subtest: AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+ok 1 - AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+  ---
+  duration_ms: 8.544141
+  type: 'test'
+  ...
+# Subtest: AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+ok 2 - AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+  ---
+  duration_ms: 13.562431
+  type: 'test'
+  ...
+# Subtest: AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+ok 3 - AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+  ---
+  duration_ms: 23.024282
+  type: 'test'
+  ...
+# Subtest: AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+ok 4 - AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+  ---
+  duration_ms: 1.782939
+  type: 'test'
+  ...
+# Subtest: AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+ok 5 - AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+  ---
+  duration_ms: 36.632994
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1 A1: „obenzu viel“ ⇒ EN = oben_1 + oben_2 ohne Fuge (aus dem Katalog)
+ok 6 - \#3194 AC-1 A1: „obenzu viel“ ⇒ EN = oben_1 + oben_2 ohne Fuge (aus dem Katalog)
+  ---
+  duration_ms: 11.956731
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1 A2: „untenzu wenig“ ⇒ EN = unten_1 + unten_2 ohne Fuge (aus dem Katalog)
+ok 7 - \#3194 AC-1 A2: „untenzu wenig“ ⇒ EN = unten_1 + unten_2 ohne Fuge (aus dem Katalog)
+  ---
+  duration_ms: 2.00119
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1 B: Grünhinweis + „Abweichend von der Vorlage „Allgemein““ ⇒ EN-Hinweis + EN-abweichend
+ok 8 - \#3194 AC-1 B: Grünhinweis + „Abweichend von der Vorlage „Allgemein““ ⇒ EN-Hinweis + EN-abweichend
+  ---
+  duration_ms: 5.23976
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1 C: „keins“-Hinweis + „Abweichend …“ ⇒ EN keins_gruen + EN-abweichend
+ok 9 - \#3194 AC-1 C: „keins“-Hinweis + „Abweichend …“ ⇒ EN keins_gruen + EN-abweichend
+  ---
+  duration_ms: 0.4338
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1 D1: Bestätigungs-Rumpf Trip ⇒ ersetzt_route + bleibt
+ok 10 - \#3194 AC-1 D1: Bestätigungs-Rumpf Trip ⇒ ersetzt_route + bleibt
+  ---
+  duration_ms: 0.30027
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1 D2: Bestätigungs-Rumpf Orte ⇒ ersetzt_vergleich + bleibt, keine Vermischung mit Trip
+ok 11 - \#3194 AC-1 D2: Bestätigungs-Rumpf Orte ⇒ ersetzt_vergleich + bleibt, keine Vermischung mit Trip
+  ---
+  duration_ms: 0.317741
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-1: Reihenfolge bleibt — EN beginnt mit dem EN des ersten Schlüssels
+ok 12 - \#3194 AC-1: Reihenfolge bleibt — EN beginnt mit dem EN des ersten Schlüssels
+  ---
+  duration_ms: 0.266441
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-2: zwei Vorlagennamen treffen dasselbe EN-Muster, der Name wird nicht ins EN kopiert
+ok 13 - \#3194 AC-2: zwei Vorlagennamen treffen dasselbe EN-Muster, der Name wird nicht ins EN kopiert
+  ---
+  duration_ms: 0.77983
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-3: falsche Fuge, fehlender Teil, fremder Zusatz, vertauschte oder gemischte Folge ⇒ Lücke
+ok 14 - \#3194 AC-3: falsche Fuge, fehlender Teil, fremder Zusatz, vertauschte oder gemischte Folge ⇒ Lücke
+  ---
+  duration_ms: 1.59655
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-3: Schlüssel ohne EN-Wert ⇒ Lücke, kein EN ohne Katalogquelle
+ok 15 - \#3194 AC-3: Schlüssel ohne EN-Wert ⇒ Lücke, kein EN ohne Katalogquelle
+  ---
+  duration_ms: 24.528802
+  type: 'test'
+  ...
+# Subtest: \#3194: Tabelle ZUSAMMENGESETZT ist exportiert und deklarativ (mind. A1, A2, B, C, D1, D2)
+ok 16 - \#3194: Tabelle ZUSAMMENGESETZT ist exportiert und deklarativ (mind. A1, A2, B, C, D1, D2)
+  ---
+  duration_ms: 0.141189
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-4: Regeln a–f bleiben — Einzelschlüssel weiter exakt, „gelb >“ weiter Regel e
+ok 17 - \#3194 AC-4: Regeln a–f bleiben — Einzelschlüssel weiter exakt, „gelb >“ weiter Regel e
+  ---
+  duration_ms: 0.28743
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-7: baueElemente zweimal ⇒ byte-identische Ausgabe, zusammengesetzte Texte keine Lücke
+ok 18 - \#3194 AC-7: baueElemente zweimal ⇒ byte-identische Ausgabe, zusammengesetzte Texte keine Lücke
+  ---
+  duration_ms: 2.59884
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-4/5: erzeugte elementliste.json trägt für A–D keine Lücke mehr, EN aus dem Katalog
+ok 19 - \#3194 AC-4/5: erzeugte elementliste.json trägt für A–D keine Lücke mehr, EN aus dem Katalog
+  ---
+  duration_ms: 8.032191
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 263.814924

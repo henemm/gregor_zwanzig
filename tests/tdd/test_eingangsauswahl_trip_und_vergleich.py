@@ -343,6 +343,8 @@ class TestAC15Kuerzung:
     ]
 
     def test_premium_sms_rueckfrage_hoechstens_160_mit_allen_kandidaten(self):
+        """#3200: Grenze auf das Premium-Budget 153 angehoben (CHANNEL_LIMITS),
+        Testname bleibt als Spec-Verweis stabil."""
         from services.trip_selection import resolve_active_target
 
         trip = _trip_obj("Korsika Fernwanderweg GR20 komplett Nord-Süd", 0)
@@ -353,9 +355,55 @@ class TestAC15Kuerzung:
             assert n in tg.text, f"Telegram darf nicht kürzen: {n!r} fehlt"
 
         sms = resolve_active_target([trip], presets, _now(), channel="premium_sms")
-        assert _gsm7_len(sms.text) <= 160, f"{_gsm7_len(sms.text)} Zeichen: {sms.text!r}"
+        assert _gsm7_len(sms.text) <= 153, f"{_gsm7_len(sms.text)} Zeichen: {sms.text!r}"
         for n in self.NAMEN + [trip.name]:
             assert n[:4] in sms.text, f"Kandidat {n!r} fehlt in der gekürzten Rückfrage"
+
+
+# ---------------------------------------------------------------------------
+# #3200 AC-1/AC-2: Rückfrage im Band 154–160 (altes 160er-Budget) muss nach
+# der zentralen 153er-Kürzung (#3133) vollständig ankommen -- durch den echten
+# Premium-Eingang, zwei Nutzer (Mandantentrennung), Telegram ungekürzt.
+# ---------------------------------------------------------------------------
+
+_3200_TRIP = "Korsika Fernwanderweg Nord"
+_3200_VERGLEICHE = ["Hamburg Hafenrunde Nordseekueste", "München Nord Isarauen Wanderung"]
+
+
+def test_3200_premium_rueckfrage_im_band_154_160_kommt_vollstaendig_an(monkeypatch, user_ids):
+    from services.trip_selection import _gsm7_sicher
+
+    ua, ub = user_ids(), user_ids()
+    for uid in (ua, ub):
+        _nutzer_mit_tier(uid)
+    _trip(ua, _3200_TRIP, start_offset_days=-1)
+    for n in _3200_VERGLEICHE:
+        _preset(ua, n)
+    # Nutzer B: andere Namen, darf in A's Rückfrage nie auftauchen.
+    _trip(ub, "Bergtour Beta", start_offset_days=-1)
+    _preset(ub, "Beta Vergleich")
+
+    sent, calls = _via_premium_sms(monkeypatch, ua, "pause")
+
+    assert calls == [] and len(sent) == 1, sent
+    text = sent[0]
+    assert len(text) <= 153, f"{len(text)} Zeichen: {text!r}"
+    assert not text.endswith("~"), f"Rückfrage von der 153er-Kürzung abgeschnitten: {text!r}"
+    assert "~" not in text, text
+    assert "Reply with name, e.g. '" in text and text.endswith(" pause'."), (
+        f"Antwort-Hinweis unvollständig: {text!r}"
+    )
+    assert text.count("(locations)") == 2 and text.count("(Trip)") == 1, text
+    for n in [_3200_TRIP] + _3200_VERGLEICHE:
+        assert _gsm7_sicher(n)[:4] in text, f"Kandidat {n!r} fehlt: {text!r}"
+    assert "Beta" not in text, f"Fremde Daten von Nutzer B in der Rückfrage: {text!r}"
+
+    # AC-2: Telegram bleibt ungekürzt mit vollen Namen.
+    tg_sent, tg_calls = _via_telegram(monkeypatch, ua, "pause")
+    assert tg_calls == [] and len(tg_sent) == 1, tg_sent
+    for n in [_3200_TRIP] + _3200_VERGLEICHE:
+        assert n in tg_sent[0], f"Telegram darf nicht kürzen: {n!r} fehlt in {tg_sent[0]!r}"
+    assert "Beta" not in tg_sent[0]
 
 
 # ---------------------------------------------------------------------------

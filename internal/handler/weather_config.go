@@ -95,7 +95,7 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		// Issue #2792 S1a: ungueltige Profil-Ampel nie speichern.
-		if bailIf(w, r, displayConfigAmpelUngueltig(cfg), 400, "ampel_ungueltig") {
+		if bailIf(w, r, displayConfigAmpelUngueltig(cfg, false), 400, "ampel_ungueltig") {
 			return
 		}
 		// Issue #3047 E3: metrics[]-Eintrag ohne metric_id nie speichern

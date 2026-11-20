@@ -114,12 +114,16 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
     lists all commands, CODES the codes." (`inbound.unbekannt.premium`), keine Seiten.
   - **Sicherheitsnetz:** `send_command_reply_premium_sms` (`notification_service.py`) faltet jeden Text
     (`fold_ascii`) und kürzt über 153 Zeichen hart mit `~` als letztem Zeichen (im Budget). Trifft
-    datenabhängige Antworten (STATUS, JETZT, STRECKE, Mehrdeutig-Hinweis o. Ä.); Inhalt geht dann
-    verloren, das `~` zeigt es an.
-  - **Bekannte Lücke Mehrdeutig-Rückfrage (#3200):** Der Rückfragetext für mehrdeutige Ziele
-    (`antwort.mehrdeutig`) wird noch mit der 160-Zeichen-Grenze gebaut. Die Sendung kürzt ihn zwar
-    hart auf 153 mit `~`, eine lange Namensliste kann aber dadurch abgeschnitten werden. Behebung
-    als Folge-Issue #3200 (noch offen).
+    datenabhängige Antworten (STATUS, JETZT, STRECKE o. Ä.; die Mehrdeutig-Rückfrage nur im Grenzfall
+    unten); Inhalt geht dann verloren, das `~` zeigt es an.
+  - **Mehrdeutig-Rückfrage (#3200, behoben 2026-11-20):** Der Rückfragetext für mehrdeutige Ziele
+    (`antwort.mehrdeutig`, `_rueckfrage_text` in `src/services/trip_selection.py`) wird mit dem
+    Kanal-Budget `CHANNEL_LIMITS["premium_sms"]` (153) gebaut, nicht mehr mit 160. Die Namen werden
+    also so kurz gekürzt, dass Kandidaten und Antwort-Hinweis vollständig in 153 Zeichen passen; der
+    zentrale Versand kürzt sie dann nicht mehr mit `~`. Rest-Limitation (bewusst hingenommen,
+    Eindeutigkeit vor Länge): Werden Namen erst bei mehr Zeichen eindeutig, als in 153 passen, bleibt
+    die kürzeste eindeutige Länge; dann kürzt der Versand mit `~` und die Liste kann abgeschnitten
+    sein. Telegram-Rückfrage bleibt ungekürzt mit vollen Namen.
   - Das Seitenargument steht bewusst **nicht** in `_COMMAND_SPECS`; Telegram- und E-Mail-Wortlaut
     von HELP/CODES/unbekanntem Befehl bleiben unverändert.
   - **Ablösung (#2417):** Für `premium_sms` ersetzen die Seiten die früheren Segmentgrenzen aus

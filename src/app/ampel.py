@@ -21,6 +21,7 @@ from typing import Any, Optional
 from app.ampel_templates import AMPEL_TEMPLATES, DEFAULT_TEMPLATE
 from app.models import ThunderLevel
 from app.profile import ActivityProfile
+from services.windrichtung import MODI as _WIND_MODI, SEKTOREN as _WIND_SEKTOREN
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,32 @@ def _seite(werte: Any, keys: tuple, wo: str, fehler: list[str]) -> list:
     return gesetzt
 
 
-def _pruefe_metrik(mid: str, e: Any, fehler: list[str]) -> None:
+def _windrichtung_grund(mid: str, e: Mapping, vergleich: bool) -> Optional[str]:
+    """Issue #3222 (ADR-0126): ``modus``/``sektoren`` nur an ``wind_direction``.
+    Grund-Code gleich Go ``ampelWindrichtungGrund`` (gleiche Pruefreihenfolge)."""
+    modus, sektoren = e.get("modus"), e.get("sektoren")
+    if modus is None and sektoren is None:
+        return None
+    if mid != "wind_direction":
+        return "nur_windrichtung"
+    if modus is not None and (not isinstance(modus, str) or modus not in _WIND_MODI):
+        return "modus_unbekannt"
+    if modus == "gegenwind" and vergleich:
+        return "gegenwind_nur_trip"  # Orte haben keine Bewegungsrichtung
+    if sektoren is None:
+        return None
+    if not isinstance(sektoren, list):
+        return "sektoren_keine_liste"
+    if any(not isinstance(k, str) or k not in _WIND_SEKTOREN for k in sektoren):
+        return "sektor_unbekannt"
+    if len(set(sektoren)) != len(sektoren):
+        return "sektor_doppelt"
+    if sektoren and modus != "sektoren":
+        return "sektoren_ohne_sektormodus"
+    return None
+
+
+def _pruefe_metrik(mid: str, e: Any, fehler: list[str], vergleich: bool = False) -> None:
     if not isinstance(e, Mapping):
         fehler.append(f"{mid}: kein Objekt")
         return
@@ -75,6 +101,9 @@ def _pruefe_metrik(mid: str, e: Any, fehler: list[str]) -> None:
         fehler.append("thunder.alarm_ab: nie gelb")
     if e.get("enabled") is not None and not isinstance(e.get("enabled"), bool):
         fehler.append(f"{mid}.enabled: kein Wahrheitswert")
+    grund = _windrichtung_grund(mid, e, vergleich)
+    if grund:
+        fehler.append(f"{mid}.{grund}")
 
 
 def _pruefe_gewitter(th: Any, fehler: list[str]) -> None:
@@ -90,8 +119,9 @@ def _pruefe_gewitter(th: Any, fehler: list[str]) -> None:
         fehler.append("thunder.hoch: schwaecher als mittel")
 
 
-def validate_ampel(ampel: Any) -> list[str]:
-    """Fehlerliste (leer = gueltig). Gleiche Regeln wie Go ``validateAmpel``."""
+def validate_ampel(ampel: Any, kontext: str = "route") -> list[str]:
+    """Fehlerliste (leer = gueltig). Gleiche Regeln wie Go ``validateAmpelIm``;
+    ``kontext`` "route" (Trip) oder "vergleich" (Ortsvergleich: kein Gegenwind)."""
     if ampel is None:
         return []
     if not isinstance(ampel, Mapping):
@@ -104,7 +134,7 @@ def validate_ampel(ampel: Any) -> list[str]:
         fehler.append("metrics: kein Objekt")
     elif metrics:
         for mid, e in metrics.items():
-            _pruefe_metrik(mid, e, fehler)
+            _pruefe_metrik(mid, e, fehler, kontext == "vergleich")
     if ampel.get("thunder") is not None:
         _pruefe_gewitter(ampel["thunder"], fehler)
     return fehler
@@ -182,9 +212,9 @@ def _verschmelzen(tid: str, abo: Optional[Mapping]) -> dict:
         for k in ("lower", "upper"):
             if k in e:  # null = Seite bewusst offen
                 ziel[k] = copy.deepcopy(e[k]) or {}
-        for k in ("enabled", "alarm_ab"):
+        for k in ("enabled", "alarm_ab", "modus", "sektoren"):  # #3222: Windrichtung
             if e.get(k) is not None:
-                ziel[k] = e[k]
+                ziel[k] = copy.deepcopy(e[k])
     res["thunder"].update({k: v for k, v in (abo.get("thunder") or {}).items() if v is not None})
     return res
 
@@ -258,11 +288,19 @@ def _ohne_offene(seite: Any) -> dict:
     return {k: v for k, v in (seite or {}).items() if v is not None}
 
 
+def _richtung_weicht_ab(e: Mapping, v: Mapping) -> bool:
+    """#3222: ``modus`` (fehlend = "aus") und ``sektoren`` (Menge, fehlend = leer)."""
+    modus = e.get("modus") is not None and e["modus"] != (v.get("modus") or "aus")
+    sektoren = e.get("sektoren") is not None and set(e["sektoren"]) != set(v.get("sektoren") or ())
+    return modus or sektoren
+
+
 def deviation_count(ampel: Optional[Mapping]) -> int:
     """Anzahl Metriken (plus Gewitter), die von der Vorlage abweichen.
 
     Issue #2794 S3a (AC-28): je Metrik zaehlen Grenzen, ``enabled`` (Metrik
-    hinzugefuegt/entfernt) und ``alarm_ab``, hoechstens einmal je Metrik; die
+    hinzugefuegt/entfernt), ``alarm_ab`` und (#3222) ``modus``/``sektoren``,
+    hoechstens einmal je Metrik; die
     Gewitterfarbe zaehlt einmal. Ein Wert gleich dem Vorlagenwert zaehlt nicht.
     Metrik ohne Vorlagen-Zeile: Vorlage gilt als aus, ``alarm_ab`` = never
     (wie ``_verschmelzen``). Paritaet zum Frontend-Spiegel ueber
@@ -276,7 +314,7 @@ def deviation_count(ampel: Optional[Mapping]) -> int:
         v = vorlage["metrics"].get(mid, ohne_zeile)
         grenzen = any(k in e and _ohne_offene(e[k]) != _ohne_offene(v.get(k)) for k in ("lower", "upper"))
         werte = any(e.get(k) is not None and e[k] != v.get(k) for k in ("enabled", "alarm_ab"))
-        if grenzen or werte:
+        if grenzen or werte or _richtung_weicht_ab(e, v):
             n += 1
     gewitter = {**vorlage["thunder"], **_ohne_offene(ampel.get("thunder"))}
     return n + (gewitter != vorlage["thunder"])

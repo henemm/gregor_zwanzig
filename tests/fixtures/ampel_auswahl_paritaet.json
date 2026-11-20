@@ -1332,11 +1332,12 @@
               "yellow": null
             },
             "upper": {
-              "yellow": null,
-              "orange": null,
-              "red": null
+              "yellow": 10,
+              "orange": 20,
+              "red": 30
             },
-            "alarm_ab": "never"
+            "alarm_ab": "orange",
+            "modus": "gegenwind"
           },
           "precipitation": {
             "enabled": true,

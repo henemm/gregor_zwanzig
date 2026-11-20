@@ -296,7 +296,55 @@ export function ermittleEn(textDe: string, katalog: Katalog, bekannte: Bekannte 
 	const m = musterTreffer(t, katalog, bekannte);
 	if (m) return { i18n_key: m.key, text_en: katalog.en[m.key], muster: m.de, luecke: false };
 	if (istSprachneutral(t, bekannte)) return neutral(t);
-	return zeichenEn(t, katalog) ?? segmenteEn(t, katalog, bekannte) ?? luecke();
+	const bisher = zeichenEn(t, katalog) ?? segmenteEn(t, katalog, bekannte);
+	if (bisher && !bisher.luecke) return bisher;
+	// #3194 Regel g: erst nach a–f und nur für bisherige Lücken — ältere Zuordnungen bleiben unverändert.
+	return zusammengesetztEn(t, katalog) ?? luecke();
+}
+
+/**
+ * #3194 Regel g „zusammengesetzt“: Texte, die die App aus mehreren Katalogschlüsseln zusammensetzt
+ * (GrenzenEditor: Titel `_1`+`_2` ohne Fuge, Hinweis + „Abweichend …“; VorlageKarte: Rumpf `ersetzt_*` + `bleibt`).
+ * Je Zeile eine benannte Schlüsselfolge mit Fuge. Neue Folgen nur hier eintragen, nie EN-Text.
+ */
+export type ZusammengesetztZeile = { name: string; schluessel: string[]; fuge: string };
+
+export const ZUSAMMENGESETZT: readonly ZusammengesetztZeile[] = [
+	{ name: 'A1 Grenzen-Titel oben', schluessel: ['wetter.grenzen.oben_1', 'wetter.grenzen.oben_2'], fuge: '' },
+	{ name: 'A2 Grenzen-Titel unten', schluessel: ['wetter.grenzen.unten_1', 'wetter.grenzen.unten_2'], fuge: '' },
+	{ name: 'B Grünhinweis + abweichend', schluessel: ['wetter.grenzen.hinweis', 'wetter.grenzen.abweichend'], fuge: ' ' },
+	{ name: 'C Gewitter-Hinweis + abweichend', schluessel: ['wetter.gewitter.keins_gruen', 'wetter.grenzen.abweichend'], fuge: ' ' },
+	{ name: 'D1 Rumpf Trip', schluessel: ['wetter.vorlage.ersetzt_route', 'wetter.vorlage.bleibt'], fuge: ' ' },
+	{ name: 'D2 Rumpf Orte', schluessel: ['wetter.vorlage.ersetzt_vergleich', 'wetter.vorlage.bleibt'], fuge: ' ' }
+];
+
+const REGEX_ZEICHEN = /[.*+?^${}()|[\]\\]/g;
+
+/**
+ * Regel g: Treffer nur, wenn der Text exakt der mit der Fuge verketteten DE-Folge entspricht (Platzhalter
+ * wie `{vorlage}` als beliebiger Wert) und JEDER Schlüssel in DE und EN existiert. EN = EN-Werte mit derselben
+ * Fuge, Platzhalter bleiben stehen. `i18n_key` = erster Schlüssel, `muster` = DE-Gesamtmuster (nur mit Platzhalter).
+ */
+export function zusammengesetztEn(textDe: string, katalog: Katalog): EnErgebnis | null {
+	const t = norm(textDe);
+	for (const zeile of ZUSAMMENGESETZT) {
+		const deWerte = zeile.schluessel.map((k) => katalog.de[k]);
+		const enWerte = zeile.schluessel.map((k) => katalog.en[k]);
+		if (deWerte.some((w) => typeof w !== 'string' || w.trim() === '')) continue;
+		if (enWerte.some((w) => typeof w !== 'string' || w.trim() === '')) continue;
+		const deMuster = deWerte.join(zeile.fuge);
+		const namen = [...deMuster.matchAll(PLATZHALTER)].map((m) => m[1]);
+		const enMuster = enWerte.join(zeile.fuge);
+		if ([...enMuster.matchAll(PLATZHALTER)].some((m) => !namen.includes(m[1]))) continue; // EN nicht füllbar
+		const quelle = deMuster
+			.split(PLATZHALTER)
+			.filter((_, i) => i % 2 === 0)
+			.map((s) => s.replace(REGEX_ZEICHEN, '\\$&'))
+			.join('(.+?)');
+		if (!new RegExp('^' + quelle + '$', 'u').test(t)) continue;
+		return { i18n_key: zeile.schluessel[0], text_en: enMuster, muster: namen.length > 0 ? deMuster : null, luecke: false };
+	}
+	return null;
 }
 
 /**

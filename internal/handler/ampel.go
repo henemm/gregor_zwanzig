@@ -5,8 +5,8 @@ package handler
 // wie Python app.ampel.validate_ampel: unten rot < orange < gelb, oben
 // gelb < orange < rot (jeweils ueber die gesetzten Werte), untere Grenzen nie
 // ueber den oberen, alarm_ab aus der Menge, Gewitter "hoch" nie gelb und nie
-// schwaecher als "mittel", Gewitter-alarm_ab nie gelb (#2793). Abgelehnt wird
-// mit Code "ampel_ungueltig".
+// schwaecher als "mittel", Gewitter-alarm_ab nie gelb (#2793), Windrichtung
+// modus/sektoren (#3222). Abgelehnt wird mit Code "ampel_ungueltig".
 
 import "encoding/json"
 
@@ -18,6 +18,57 @@ var ampelAlarmAb = map[string]bool{"never": true, "yellow": true, "orange": true
 // Issue #2793 S2a (ADR-0106 P2): Gewitter-alarm_ab nie "yellow" — „leicht" ist
 // fest gelb und alarmiert nie. Gleiche Regel wie Python ALARM_AB_GEWITTER.
 var ampelAlarmAbGewitter = map[string]bool{"never": true, "orange": true, "red": true}
+
+// Issue #3222 (ADR-0126): Windrichtung modus/sektoren; gleiche Mengen wie
+// Python services.windrichtung.MODI/SEKTOREN (deutsche Protokoll-Token).
+var ampelWindModi = map[string]bool{"aus": true, "gegenwind": true, "sektoren": true}
+var ampelWindSektoren = map[string]bool{"N": true, "NO": true, "O": true, "SO": true,
+	"S": true, "SW": true, "W": true, "NW": true}
+
+// ampelWindrichtungGrund liefert "" (gueltig) oder den Grund-Code der
+// Ablehnung, gleich Python app.ampel._windrichtung_grund (gleiche Reihenfolge).
+// vergleich=true: Ortsvergleich, dort ist "gegenwind" unzulaessig (Orte haben
+// keine Bewegungsrichtung).
+func ampelWindrichtungGrund(mid string, e map[string]interface{}, vergleich bool) string {
+	modus, sektoren := e["modus"], e["sektoren"]
+	if modus == nil && sektoren == nil {
+		return ""
+	}
+	if mid != "wind_direction" {
+		return "nur_windrichtung"
+	}
+	m, _ := modus.(string)
+	if modus != nil && !ampelWindModi[m] {
+		return "modus_unbekannt"
+	}
+	if m == "gegenwind" && vergleich {
+		return "gegenwind_nur_trip"
+	}
+	if sektoren == nil {
+		return ""
+	}
+	liste, ok := sektoren.([]interface{})
+	if !ok {
+		return "sektoren_keine_liste"
+	}
+	gesehen := map[string]bool{}
+	doppelt := false
+	for _, x := range liste {
+		k, ok := x.(string)
+		if !ok || !ampelWindSektoren[k] {
+			return "sektor_unbekannt"
+		}
+		doppelt = doppelt || gesehen[k]
+		gesehen[k] = true
+	}
+	if doppelt {
+		return "sektor_doppelt"
+	}
+	if len(liste) > 0 && m != "sektoren" {
+		return "sektoren_ohne_sektormodus"
+	}
+	return ""
+}
 
 // ampelSeite liefert die gesetzten Werte einer Seite in Schluessel-Reihenfolge;
 // ok=false bei falschem Typ oder nicht streng aufsteigender Reihenfolge.
@@ -47,7 +98,7 @@ func ampelSeite(v interface{}, keys []string) ([]float64, bool) {
 	return gesetzt, true
 }
 
-func ampelMetrikGueltig(mid string, v interface{}) bool {
+func ampelMetrikGueltig(mid string, v interface{}, vergleich bool) bool {
 	e, ok := v.(map[string]interface{})
 	if !ok {
 		return false
@@ -73,7 +124,7 @@ func ampelMetrikGueltig(mid string, v interface{}) bool {
 			return false
 		}
 	}
-	return true
+	return ampelWindrichtungGrund(mid, e, vergleich) == ""
 }
 
 func ampelGewitterGueltig(v interface{}) bool {
@@ -89,8 +140,14 @@ func ampelGewitterGueltig(v interface{}) bool {
 	return mittel == "" || hoch == "" || ampelRang[hoch] >= ampelRang[mittel]
 }
 
-// validateAmpel prueft eine Ampel; nil (keine Ampel = Vorlage) ist gueltig.
+// validateAmpel prueft eine Ampel im Trip-Kontext (auch eigene Vorlagen).
 func validateAmpel(v interface{}) bool {
+	return validateAmpelIm(v, false)
+}
+
+// validateAmpelIm prueft eine Ampel; nil (keine Ampel = Vorlage) ist gueltig.
+// vergleich=true: Ortsvergleich (Windrichtung ohne "gegenwind", #3222).
+func validateAmpelIm(v interface{}, vergleich bool) bool {
 	if v == nil {
 		return true
 	}
@@ -109,7 +166,7 @@ func validateAmpel(v interface{}) bool {
 			return false
 		}
 		for mid, e := range metrics {
-			if !ampelMetrikGueltig(mid, e) {
+			if !ampelMetrikGueltig(mid, e, vergleich) {
 				return false
 			}
 		}
@@ -122,20 +179,21 @@ func validateAmpel(v interface{}) bool {
 
 // displayConfigAmpelUngueltig: true, wenn eine eingehende display_config eine
 // ungueltige Ampel traegt. Geprueft wird nur, was der Client sendet — eine
-// gespeicherte Alt-Ampel blockiert keine anderen Aenderungen.
-func displayConfigAmpelUngueltig(dc map[string]interface{}) bool {
+// gespeicherte Alt-Ampel blockiert keine anderen Aenderungen. vergleich=true
+// fuer Ortsvergleich-Schreibwege (#3222).
+func displayConfigAmpelUngueltig(dc map[string]interface{}, vergleich bool) bool {
 	a, da := dc["ampel"]
-	return da && !validateAmpel(a)
+	return da && !validateAmpelIm(a, vergleich)
 }
 
 // patchAmpelUngueltig liest display_config.ampel aus einem JSON-Patch-Rumpf.
 // Ein nicht lesbarer Rumpf zaehlt hier nicht (das meldet der Merge-Kernel).
-func patchAmpelUngueltig(patch []byte) bool {
+func patchAmpelUngueltig(patch []byte, vergleich bool) bool {
 	var p struct {
 		DisplayConfig map[string]interface{} `json:"display_config"`
 	}
 	if err := json.Unmarshal(patch, &p); err != nil {
 		return false
 	}
-	return displayConfigAmpelUngueltig(p.DisplayConfig)
+	return displayConfigAmpelUngueltig(p.DisplayConfig, vergleich)
 }

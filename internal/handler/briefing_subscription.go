@@ -259,7 +259,7 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		// Issue #2792 S1a: ungueltige Profil-Ampel nie speichern.
-		if bailIf(w, r, patchAmpelUngueltig(patch), http.StatusBadRequest, "ampel_ungueltig") {
+		if bailIf(w, r, patchAmpelUngueltig(patch, true), http.StatusBadRequest, "ampel_ungueltig") {
 			return
 		}
 
