@@ -27,7 +27,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from app.ampel import hat_ampel, resolve_ampel, vorlage_label_schluessel
-from app.metric_catalog import aggregation_label, get_metric
+from app.metric_catalog import AMPEL_METRIC_IDS, aggregation_label, get_metric
 from app.models import Corridor, ThunderLevel
 from app.profile import ActivityProfile
 from app.thunder_scale import thunder_label
@@ -758,7 +758,8 @@ def _fmt_metric(value, decimals, unit: str) -> str:
 
 # Issue #3039: Groessen mit Einfachform, deren Einfach-Zelle im HTML der
 # Ampelpunkt aus `fmt_val` ist (wie im Trip, `indicator_keys`).
-_FRIENDLY_AMPEL_METRIC_IDS = frozenset({"wind", "gust", "precipitation"})
+# Issue #3156: die Katalog-Menge (eine Quelle, inkl. Regenwahrscheinlichkeit).
+_FRIENDLY_AMPEL_METRIC_IDS = AMPEL_METRIC_IDS
 
 
 def _friendly_overview_html(
@@ -766,7 +767,7 @@ def _friendly_overview_html(
 ) -> str | None:
     """Einfach-Zelle einer Uebersichtszeile der HTML-Mail (Issue #3039) oder
     ``None`` (= Roh). Wiederverwendung wie im Trip: Ampelpunkt fuer Wind/Boeen/
-    Niederschlag und Gewitter ueber ``fmt_val``; Wort/Symbol der uebrigen
+    Niederschlag/Regenwahrscheinlichkeit und Gewitter ueber ``fmt_val``; Wort/Symbol der uebrigen
     Groessen ueber dieselbe Kette wie der Ausblick (``_friendly_outlook_text``)."""
     from output.renderers.compare_outlook_metric_ids import _friendly_outlook_text
     from output.renderers.email.helpers import fmt_val
@@ -1136,6 +1137,9 @@ def _hour_einfach_text(
     metric_id = m.get("metric_id")
     if value is None or not (formats or {}).get(metric_id):
         return None
+    # #3156: Diese Liste entscheidet nur die FORM im Stundenverlauf (Ampel vs.
+    # Wort). OB Einfach wirkt, entscheidet ``resolve_hourly_metric_formats``
+    # aus ``zwei_formen_stellen``; Niederschlag/Regen-W. bleiben hier bewusst Wort.
     if html and metric_id in ("wind", "gust"):
         from output.renderers.email.helpers import fmt_val
 

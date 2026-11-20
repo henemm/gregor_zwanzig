@@ -94,12 +94,14 @@ def test_f001_telegram_einfach_in_versand_und_vorschau_mail_roh_bleibt_zahl(mit)
 
 
 # ---------------------------------------------------------------------------
-# F002 -- nur EIN format_mode: Einfach wird ignoriert, auch wenn der Ausblick
-# fuer diese Groesse eine Wortform kennt (rain_probability)
+# F002 -- Regenwahrscheinlichkeit: bis #3156 wurde Einfach verworfen (nur EIN
+# format_mode). Seit dem Renderer-Nachzug (#3156, ADR-0124 Nr. 5) entscheidet
+# ``zwei_formen_stellen``: Einfach wirkt in Telegram, Klartext und HTML; die
+# SMS bleibt unveraendert (AC-8).
 # ---------------------------------------------------------------------------
 
 
-def test_f002_einfach_bei_regenwahrscheinlichkeit_bleibt_roh(mit):
+def test_f002_einfach_bei_regenwahrscheinlichkeit_wirkt_sms_bleibt(mit):
     kennungen = GRUNDAUSWAHL + ["rain_probability"]
     paare = [(k, _AGG[k]) for k in kennungen]
     roh = _grundauswahl(_vorlage({k: _voll(kennungen) for k in ("email", "telegram", "sms")}), paare)
@@ -108,14 +110,16 @@ def test_f002_einfach_bei_regenwahrscheinlichkeit_bleibt_roh(mit):
         for k in ("email", "telegram", "sms")
     }), paare)
     a_roh, _ = _zwei(mit, roh)
+    assert _telegram_zelle(_text(a_roh.snap, "telegram"), "Innsbruck", "Regenwahrscheinlichkeit") == "10%"
     for lauf in _zwei(mit, einf):
-        assert _text(lauf.snap, "telegram") == _text(a_roh.snap, "telegram")
-        assert _telegram_zelle(_text(lauf.snap, "telegram"), "Innsbruck", "Regenwahrscheinlichkeit") == "10%"
-        for ort, soll in (("Innsbruck", "10%"), ("Bozen", "20%")):
-            assert _plain_wert(_text(lauf.snap, "email"), ort, "Regenwahrscheinlichkeit") == soll
+        # 10 % / 20 % -> Wortstufe "unwahrscheinlich" (Skala 25/50/75).
+        tg = _text(lauf.snap, "telegram")
+        assert _telegram_zelle(tg, "Innsbruck", "Regenwahrscheinlichkeit") == "unwahrscheinlich", tg
+        for ort in ("Innsbruck", "Bozen"):
+            assert _plain_wert(_text(lauf.snap, "email"), ort, "Regenwahrscheinlichkeit") == "unwahrscheinlich"
         html = lauf.snap.sendungen("email")[-1]["body"]
-        assert _html_zeile(html, "Regenwahrscheinlichkeit") == _html_zeile(
-            a_roh.snap.sendungen("email")[-1]["body"], "Regenwahrscheinlichkeit")
+        assert _AMPEL_PUNKT in _html_zeile(html, "Regenwahrscheinlichkeit")
+        assert _text(lauf.snap, "sms") == _text(a_roh.snap, "sms")
 
 
 # ---------------------------------------------------------------------------

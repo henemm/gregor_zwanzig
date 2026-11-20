@@ -248,7 +248,10 @@ def test_resolver_liefert_hourly_format():
     dc = _preset(["wind", "temperature", "precipitation"],
                  {"wind": True, "temperature": False})["display_config"]
     formate = {z.metric_id: z.format for z in resolve_channel_lists(dc, "compare").hourly}
-    assert formate == {"wind": "simplified", "temperature": "raw", "precipitation": None}, formate
+    # #3156: ein gespeichertes Format zaehlt nur, wo die Quelle
+    # (``zwei_formen_stellen``) im Stundenverlauf zwei Formen nennt --
+    # Temperatur hat dort eine Form, ihr ``False`` entfaellt (Ausgabe Roh).
+    assert formate == {"wind": "simplified", "temperature": None, "precipitation": None}, formate
 
 
 def test_validator_vorschau_vertrag_traegt_hourly_metric_formats():

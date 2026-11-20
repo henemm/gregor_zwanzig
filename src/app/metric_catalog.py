@@ -470,6 +470,10 @@ _METRICS: list[MetricDefinition] = [
         display_thresholds={"yellow": 30.0, "orange": 60.0, "red": 80.0},
         highlight_threshold=80.0,
         risk_thresholds={"medium": 80},
+        # Issue #3156: Einfach (Wortstufe im Text, Ampelpunkt im HTML) laut
+        # STELLEN_ZWEI_FORMEN; Standard bleibt die Zahl.
+        format_modes=("raw", "simplified"),
+        default_format_mode="raw",
         sms_code="PR", decimals=0, cmp="über", is_precursor=True, alert_label="Regen%",
     ),
     # === FORECAST CONFIDENCE (Issue #121) ===
@@ -1130,27 +1134,10 @@ def normalize_outlook_metric_ids(stored: object) -> Optional[list[str]]:
     return kennungen
 
 
-# Issue #2049: die Groessen, die im 3-Tages-Ausblick eine Einfach-Form haben.
-# EINE Quelle fuer BEIDE Seiten: das Frontend macht die Sichtbarkeit des
-# Roh/Einfach-Umschalters daran fest (`outlookFriendlyCapability.ts`, gegen
-# diese Liste per Drift-Test verglichen), das Backend die Formatierungs-
-# verzweigung (`compare_outlook_metric_ids._friendly_outlook_text`). Damit kann
-# keine Groesse einen sichtbaren, aber wirkungslosen Umschalter zeigen (AC-4) --
-# genau der Bug, der #2049 ausgeloest hat.
-#
-# NICHT enthalten und warum (Spec "Metrik-Matrix"): `thunder` zeigt roh bereits
-# das Stufenwort · `temperature`/`wind_chill` haben produktweit keine
-# Einfach-Form · `cape` kommt im Ausblick strukturell nicht vor
-# (`selectable=False`) · `visibility` bewusst nicht (#814 AC-5).
-OUTLOOK_FRIENDLY_CAPABLE: frozenset = frozenset({
-    "wind_direction", "cloud_total", "cloud_low", "cloud_mid", "cloud_high",
-    "wind", "gust", "precipitation", "rain_probability", "sunshine",
-})
-
-
 def outlook_friendly_capable(metric_id: object) -> bool:
-    """Hat diese Groesse im Ausblick eine Einfach-Form? (Issue #2049, AC-3)"""
-    return isinstance(metric_id, str) and metric_id in OUTLOOK_FRIENDLY_CAPABLE
+    """Hat diese Groesse im Ausblick eine Einfach-Form? (Issue #2049, AC-3;
+    seit #3156 allein aus ``STELLEN_ZWEI_FORMEN``, Stelle ``outlook``)."""
+    return "outlook" in zwei_formen_stellen(metric_id)
 
 
 def normalize_outlook_metric_formats(stored: object) -> Optional[dict[str, bool]]:
@@ -1166,7 +1153,7 @@ def normalize_outlook_metric_formats(stored: object) -> Optional[dict[str, bool]
 
     Verworfen wird alles, was einen wirkungslosen Zustand einschleppen wuerde:
     nicht-boolesche Werte (der Umschalter kennt nur zwei Stellungen) und
-    Kennungen ausserhalb von ``OUTLOOK_FRIENDLY_CAPABLE`` -- fuer die gibt es
+    Kennungen ohne Ausblick-Stelle in ``STELLEN_ZWEI_FORMEN`` -- fuer die gibt es
     im Ausblick gar keinen Umschalter, ein gespeichertes Flag koennte also nur
     aus einem Fehler stammen und nie etwas bewirken.
     """
@@ -1179,10 +1166,10 @@ def normalize_outlook_metric_formats(stored: object) -> Optional[dict[str, bool]
 # Issue #3122 (Spec feat_3122_was_steht_wo, Teil A Nr. 4): EINE Quelle fuer
 # "an welchen Stellen der Tabelle 'Was steht wo' hat diese Metrik zwei Formen
 # (Roh/Einfach)". Nur dort gibt es einen Umschalter, nur dort wirkt ein
-# gespeichertes Format; die SMS hat nie eine Wahl. Die alten Faehigkeits-
-# Listen (``format_modes``, ``OUTLOOK_FRIENDLY_CAPABLE``, Renderer-Listen)
-# bestehen bis zum Renderer-Nachzug (B1b) weiter; ihre Deckung mit dieser
-# Tabelle sichert tests/tdd/test_katalog_stellen_formen.py.
+# gespeichertes Format; die SMS hat nie eine Wahl. Seit dem Renderer-Nachzug
+# (#3156) fragt der Renderpfad allein diese Tabelle (bzw. die daraus
+# abgeleiteten ``OUTLOOK_FRIENDLY_CAPABLE``/``AMPEL_METRIC_IDS``); die Deckung
+# sichert tests/tdd/test_katalog_stellen_formen.py.
 _VIER_STELLEN: frozenset = frozenset({"email", "telegram", "hourly", "outlook"})
 _OHNE_STUNDENVERLAUF: frozenset = frozenset({"email", "telegram", "outlook"})
 STELLEN_ZWEI_FORMEN: dict[str, frozenset] = {
@@ -1219,6 +1206,20 @@ def zwei_formen_stellen(metric_id: object) -> frozenset:
     if not isinstance(metric_id, str):
         return frozenset()
     return STELLEN_ZWEI_FORMEN.get(metric_id, frozenset())
+
+
+# Issue #2049/#3156: die Groessen mit Einfach-Form im 3-Tages-Ausblick --
+# abgeleiteter Alias der Quelle (Stelle ``outlook``), bleibt fuer den
+# Frontend-Drift-Test (`outlookFriendlyCapability.ts`) bis #3154.
+OUTLOOK_FRIENDLY_CAPABLE: frozenset = frozenset(
+    m for m, stellen in STELLEN_ZWEI_FORMEN.items() if "outlook" in stellen)
+
+# Issue #3156 (ADR-0124 Nr. 5): Groessen, deren Einfach-Form in der HTML-Mail
+# der Ampelpunkt ist -- zwei Formen an der E-Mail-Stelle UND Ampel-Schwellen.
+# Gewitter hat keine Schwellen (eigener Zweig, Stufenwort im Text).
+AMPEL_METRIC_IDS: frozenset = frozenset(
+    m.id for m in _METRICS
+    if "email" in zwei_formen_stellen(m.id) and m.display_thresholds)
 
 
 def standard_form(metric_id: str) -> str:

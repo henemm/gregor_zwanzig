@@ -1,0 +1,93 @@
+ORTE
+========================
+Datum: <WT>, <DATUM>
+Erstellt: <ZEIT>
+
+⚠️ Amtliche Warnungen aktuell nicht abrufbar — bitte selbst pruefen.
+
+--------------------------------------------------
+Kronplatz
+   Böen: 38 km/h
+   Niederschlag: 2.4 mm
+   Temperatur Maximum: 11°C
+   Temperatur Minimum: 2°C
+   Sonnenstunden: wechselhaft
+   Regenwahrscheinlichkeit: 70%
+
+Sulden
+   Böen: 39 km/h
+   Niederschlag: 5.4 mm
+   Temperatur Maximum: 12°C
+   Temperatur Minimum: 3°C
+   Sonnenstunden: freundlich
+   Regenwahrscheinlichkeit: 70%
+
+Ahrntal
+   Böen: 40 km/h
+   Niederschlag: 8.4 mm
+   Temperatur Maximum: 13°C
+   Temperatur Minimum: 4°C
+   Sonnenstunden: freundlich
+   Regenwahrscheinlichkeit: 70%
+
+STUNDENVERLAUF
+---------------
+Kronplatz (CET)
+   08:00  Gust 30  Rain ·  Temp 6°  Rain% 15%
+   09:00  Gust 31  Rain ·  Temp 6°  Rain% 15%
+   10:00  Gust 32  Rain ·  Temp 7°  Rain% 15%
+   11:00  Gust 33  Rain ·  Temp 8°  Rain% 15%
+   12:00  Gust 34  Rain ·  Temp 8°  Rain% 15%
+   13:00  Gust 35  Rain 0.8  Temp 8°  Rain% 70%
+   14:00  Gust 36  Rain 0.8  Temp 9°  Rain% 70%
+   15:00  Gust 37  Rain 0.8  Temp 10°  Rain% 70%
+   16:00  Gust 38  Rain ·  Temp 10°  Rain% 15%
+3-Tages-Ausblick
+<WT>  Gust 40 km/h  Rain 1.6 mm  Temp 6/11  Sun wechselhaft  Rain% 70 %
+<WT>  Gust 40 km/h  Rain 1.6 mm  Temp 6/11  Sun wechselhaft  Rain% 70 %
+<WT>  Gust 40 km/h  Rain 1.6 mm  Temp 6/11  Sun wechselhaft  Rain% 70 %
+
+Sulden (CET)
+   08:00  Gust 35  Rain ·  Temp 7°  Rain% 15%
+   09:00  Gust 36  Rain ·  Temp 8°  Rain% 15%
+   10:00  Gust 37  Rain ·  Temp 8°  Rain% 15%
+   11:00  Gust 38  Rain ·  Temp 8°  Rain% 15%
+   12:00  Gust 39  Rain ·  Temp 9°  Rain% 15%
+   13:00  Gust 40  Rain 1.8  Temp 10°  Rain% 70%
+   14:00  Gust 41  Rain 1.8  Temp 10°  Rain% 70%
+   15:00  Gust 42  Rain 1.8  Temp 10°  Rain% 70%
+   16:00  Gust 43  Rain ·  Temp 11°  Rain% 15%
+3-Tages-Ausblick
+<WT>  Gust 45 km/h  Rain 3.6 mm  Temp 7/12  Sun wechselhaft  Rain% 70 %
+<WT>  Gust 45 km/h  Rain 3.6 mm  Temp 7/12  Sun wechselhaft  Rain% 70 %
+<WT>  Gust 45 km/h  Rain 3.6 mm  Temp 7/12  Sun wechselhaft  Rain% 70 %
+
+Ahrntal (CET)
+   08:00  Gust 40  Rain ·  Temp 8°  Rain% 15%
+   09:00  Gust 41  Rain ·  Temp 8°  Rain% 15%
+   10:00  Gust 42  Rain ·  Temp 9°  Rain% 15%
+   11:00  Gust 43  Rain ·  Temp 10°  Rain% 15%
+   12:00  Gust 44  Rain ·  Temp 10°  Rain% 15%
+   13:00  Gust 45  Rain 2.8  Temp 10°  Rain% 70%
+   14:00  Gust 46  Rain 2.8  Temp 11°  Rain% 70%
+   15:00  Gust 47  Rain 2.8  Temp 12°  Rain% 70%
+   16:00  Gust 48  Rain ·  Temp 12°  Rain% 15%
+3-Tages-Ausblick
+<WT>  Gust 50 km/h  Rain 5.6 mm  Temp 8/13  Sun wechselhaft  Rain% 70 %
+<WT>  Gust 50 km/h  Rain 5.6 mm  Temp 8/13  Sun wechselhaft  Rain% 70 %
+<WT>  Gust 50 km/h  Rain 5.6 mm  Temp 8/13  Sun wechselhaft  Rain% 70 %
+
+Einheiten: Gust km/h · Rain mm · Temp °C · Rain% %
+Spalten: Gust = Böen · Rain = Niederschlag · Temp = Temperatur · Rain% = Regenwahrscheinlichkeit · Sun = Sonnenstunden
+
+── Antwort-Kommandos ──
+  HEUTE                – Briefing für heute jetzt senden
+  MORGEN               – Briefing für morgen jetzt senden
+  PAUSE                – Briefings für Dauer unterbrechen
+  WEITER               – Briefings reaktivieren
+  HILFE                – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
+  REPORT               – Briefing jetzt an alle Kanäle senden
+
+---
+Gregor Zwanzig

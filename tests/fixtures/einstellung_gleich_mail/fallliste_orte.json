@@ -3203,8 +3203,7 @@
       "test": "tests/tdd/test_einstellung_gleich_mail_orte_tabelle.py::test_ac5_regenwahrscheinlichkeit_einfach_html_ampelpunkt",
       "ac": "AC-5",
       "befund": "#3122 B1b Tabelle 'Was steht wo'",
-      "status": "offen_feature",
-      "verweis": "#3122 Spec Teil A Nr. 4: Regenwahrscheinlichkeit auf Einfach zeigt in der HTML-Uebersicht noch die Wortstufe statt des Ampelpunkts; Renderer-Nachzug ist eine eigene Scheibe"
+      "status": "gruen"
     },
     {
       "id": "O-3122-AC7-SONNE-STUNDENVERLAUF-GESPERRT",

@@ -6,8 +6,8 @@ Teil A Nr. 4 (Tabelle "zwei Formen je Stelle") und Nr. 5 (gesperrte Stellen).
 Kern-Schicht, ohne Netz, ohne Mock. Das Soll der Tabelle steht hier von Hand
 (abgeschrieben aus der Spec), nicht aus dem Katalog erzeugt. Die alten,
 verstreuten Listen bleiben in dieser Scheibe bestehen; ihre Deckung mit der
-neuen Quelle ist hier festgehalten, die Abweichungen der freigegebenen
-Spec-Tabelle stehen als benannte, erwartete Differenz.
+neuen Quelle ist hier festgehalten. Seit dem Renderer-Nachzug (#3156) folgen
+die Faehigkeitsabfragen im Renderpfad der Quelle ohne Differenz.
 """
 from __future__ import annotations
 
@@ -58,34 +58,40 @@ def test_zwei_formen_unbekannte_metrik_ist_leer():
 
 
 def test_ausblick_spalte_deckt_sich_mit_outlook_friendly_capable():
-    """Die Ausblick-Spalte der neuen Quelle und die alte Ausblick-Liste sind
-    deckungsgleich (keine erwartete Differenz)."""
+    """Renderer folgt der Quelle (#3156): die Ausblick-Faehigkeit ist aus der
+    Ausblick-Spalte abgeleitet; der Alias ``OUTLOOK_FRIENDLY_CAPABLE`` (Frontend-
+    Drift-Test bis #3154) ist deckungsgleich."""
     k = _katalog()
     neu = {m for m in ALLE_IDS if "outlook" in k.zwei_formen_stellen(m)}
     assert neu == set(k.OUTLOOK_FRIENDLY_CAPABLE)
+    assert neu == {m for m in ALLE_IDS if k.outlook_friendly_capable(m)}
 
 
-def test_email_spalte_gegen_format_modes_nur_benannte_differenz():
-    """``format_modes`` (alte Faehigkeits-Abfrage) gegen die E-Mail-Spalte:
-    einzige erwartete Differenz ist die Regenwahrscheinlichkeit, die mit der
-    Spec zwei Formen bekommt (PO-Freigabe 2026-11-17). Gewitter hatte schon
-    zwei Formen und behaelt sie nur in der E-Mail."""
+def test_email_spalte_gleich_format_modes():
+    """Renderer folgt der Quelle (#3156): ``format_modes`` kennt zwei Formen
+    genau dort, wo die E-Mail-Spalte zwei Formen nennt -- keine Differenz mehr
+    (die Regenwahrscheinlichkeit hat Einfach, PO-Freigabe 2026-11-17).
+    Gewitter hat zwei Formen nur in der E-Mail, nicht in Telegram."""
     k = _katalog()
     alt = {m.id for m in get_all_metrics() if len(m.format_modes) > 1}
     neu = {m for m in ALLE_IDS if "email" in k.zwei_formen_stellen(m)}
-    assert neu - alt == {"rain_probability"}
-    assert alt - neu == set()
+    assert neu == alt
     telegram = {m for m in ALLE_IDS if "telegram" in k.zwei_formen_stellen(m)}
     assert alt - telegram == {"thunder"}, "Gewitter: zwei Formen nur in der E-Mail"
 
 
-def test_stundenverlauf_spalte_gegen_hourly_friendly_benannte_differenz():
-    """Der heutige Orte-Stundenverlauf folgt der Ausblick-Liste. Neu: Sonnen-
-    stunden gesperrt (kein Stundenwert), Windrichtung immer Kompass."""
+def test_stundenverlauf_filtert_nach_stundenverlauf_spalte():
+    """Renderer folgt der Quelle (#3156): der Orte-Stundenverlauf uebernimmt
+    ein gespeichertes Einfach nur fuer Metriken mit zwei Formen an der Stelle
+    ``hourly``; Sonnenstunden (gesperrt) und Windrichtung (immer Kompass)
+    fallen heraus."""
+    from output.renderers.compare_outlook_metric_ids import resolve_hourly_metric_formats
+
     k = _katalog()
-    neu = {m for m in ALLE_IDS if "hourly" in k.zwei_formen_stellen(m)}
-    assert set(k.OUTLOOK_FRIENDLY_CAPABLE) - neu == {"sunshine", "wind_direction"}
-    assert neu <= set(k.OUTLOOK_FRIENDLY_CAPABLE)
+    gespeichert = {m: True for m in ALLE_IDS}
+    aus = resolve_hourly_metric_formats(gespeichert)
+    assert set(aus) == {m for m in ALLE_IDS if "hourly" in k.zwei_formen_stellen(m)}
+    assert not {"sunshine", "wind_direction"} & set(aus)
 
 
 @pytest.mark.parametrize("metric_id", ALLE_IDS)

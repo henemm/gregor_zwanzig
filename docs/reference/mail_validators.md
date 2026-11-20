@@ -154,8 +154,8 @@ das Soll ab — nur aus der Datei und dem statischen Register (`col_label`,
   `email_format`, Ausblick an/aus. Dazu die **Darstellung Roh/Einfach je
   Spalte** (Stunden-, Nacht-, Ausblick-Tabelle, HTML und Klartext): Roh = Zahl,
   Einfach = Symbol/Wort oder Ampelpunkt. Gewollte Ausnahmen (Spec §2 Punkt 3):
-  Wind/Böen/Regen/Regen-W. zeigen Einfach im HTML als Ampelpunkt, im Klartext
-  als Zahl (#814); Gewitter zeigt roh schon das Stufenwort (im Klartext und im
+  Wind/Böen/Regen/Regen-W. zeigen Einfach im HTML als Ampelpunkt (#814), im
+  Klartext als Wortstufe (Regen-W. Skala 25/50/75, #435/#3156); Gewitter zeigt roh schon das Stufenwort (im Klartext und im
   Ausblick ungeprüft); Visibility/Temperatur haben im Ausblick keine
   Einfach-Form (immer Zahl); die verschmolzene Windrichtung hat keine eigene
   Spalte (#435). Die Meldung nennt Tabelle und Spalte („Darstellung

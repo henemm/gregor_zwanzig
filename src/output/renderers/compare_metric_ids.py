@@ -361,15 +361,23 @@ def katalog_paar(renderer_id: object) -> tuple[str, str] | None:
     return None
 
 
-def _friendly_effective(kennung: str, entry: dict) -> bool:
+#: Kanaele, die eine Stelle der Tabelle "Was steht wo" sind (#3156).
+_STELLEN_KANAELE = frozenset({"email", "telegram"})
+
+
+def _friendly_effective(kennung: str, entry: dict, channel: str) -> bool:
     """Roh/Einfach eines Kanal-Eintrags (Issue #3039, Spec Punkt 4): fehlt
     ``use_friendly_format``, gilt Roh (Praezedenz ``outlook_metric_formats``,
-    bewusst NICHT der Katalog-Standard). Einfach wirkt nur bei Metriken mit
-    mehr als einem ``format_mode``; sonst wird ``True`` ignoriert."""
+    bewusst NICHT der Katalog-Standard). Einfach wirkt in E-Mail und Telegram
+    nur, wo ``zwei_formen_stellen`` diese Stelle nennt (#3156, ADR-0124 Nr. 5);
+    sonst wird ``True`` ignoriert. SMS/Premium-SMS: unveraendert die
+    bisherige Regel (die Kuerzelform liest ``orte_sms`` selbst, AC-8)."""
     if entry.get("use_friendly_format") is not True:
         return False
-    from app.metric_catalog import get_metric
+    from app.metric_catalog import get_metric, zwei_formen_stellen
 
+    if channel in _STELLEN_KANAELE:
+        return channel in zwei_formen_stellen(kennung)
     try:
         return len(get_metric(kennung).format_modes) > 1
     except KeyError:
@@ -421,7 +429,7 @@ def resolve_channel_layout_rows(
         covered.update(renderer_ids)
         if entry.get("enabled") is False:
             continue
-        friendly = _friendly_effective(kennung, entry)
+        friendly = _friendly_effective(kennung, entry, channel)
         for renderer_id in renderer_ids:
             if allowed is not None and renderer_id not in allowed:
                 continue

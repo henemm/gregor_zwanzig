@@ -60,7 +60,8 @@ from pathlib import Path
 from typing import Callable, Iterable, Iterator, Mapping, Optional
 
 from app.metric_catalog import (
-    _METRICS, SMS_MULTI_SYMBOLS_BY_METRIC, get_all_metrics,
+    _METRICS, AMPEL_METRIC_IDS, OUTLOOK_FRIENDLY_CAPABLE, SMS_MULTI_SYMBOLS_BY_METRIC,
+    get_all_metrics,
 )
 from output.renderers.channel_layout import METRIC_PRIORITY
 from output.renderers.compare_hourly_metric_ids import HOURLY_EXCLUSION_REASON
@@ -319,10 +320,8 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     # Registrierung wandert deshalb unten zum Laufzeit-Eintrag (Muster
     # METRIC_PRIORITY/HOURLY_EXCLUSION_REASON).
     ("src/app/metric_catalog.py", "COMPACT_LABEL_EXCEPTIONS", "schluessel"),
-    # Issue #2049: OUTLOOK_FRIENDLY_CAPABLE ist die Soll-Menge fuer den
-    # Roh/Einfach-Umschalter im 3-Tages-Ausblick -- geteilte Quelle mit dem
-    # Frontend (Drift-Test gegen outlookFriendlyCapability.ts).
-    ("src/app/metric_catalog.py", "OUTLOOK_FRIENDLY_CAPABLE", "element"),
+    # Issue #3156: OUTLOOK_FRIENDLY_CAPABLE ist kein Literal mehr, sondern aus
+    # STELLEN_ZWEI_FORMEN abgeleitet -- Laufzeit-Eintrag unten.
     # Issue #2422 S6 (B2): SMS_FORMAT_MODE_METRIC_IDS ist die EINE Quelle fuer
     # "diese Groesse hat in der SMS zwei Formen (Roh/Einfach)" -- speist
     # SMS-Builder, SMS-Reiter im Editor (/api/metrics sms_format_capable) und das
@@ -359,14 +358,14 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     (_R + "compare_outlook_metric_ids.py", "_FRIENDLY_CLOUD_IDS", "element"),
     (_R + "email/compare_html.py", "_HOUR_FMT_OVERRIDES", "schluessel"),
     (_R + "email/compare_html.py", "_HOUR_SEV_OVERRIDES", "schluessel"),
-    # Issue #3039: Groessen, deren Einfach-Zelle im Ortsvergleich-HTML der
-    # Ampelpunkt aus ``fmt_val`` ist (Teilmenge, wie ``indicator_keys`` im Trip).
-    (_R + "email/compare_html.py", "_FRIENDLY_AMPEL_METRIC_IDS", "element"),
+    # Issue #3156: ``compare_html._FRIENDLY_AMPEL_METRIC_IDS`` und
+    # ``helpers._AMPEL_CAPABLE_METRIC_IDS`` sind keine eigenen Listen mehr,
+    # sondern Aliase auf ``metric_catalog.AMPEL_METRIC_IDS`` (Laufzeit-Eintrag
+    # unten) -- ausgetragen.
     (_R + "email/helpers.py", "NO_HOURLY_COLUMN_METRIC_IDS", "element"),
     # #2136: die sechs festen Ausblick-Groessen (Pfad 1, keine Auswahl).
     (_R + "email/helpers.py", "OUTLOOK_FIXED_METRIC_IDS", "element"),
     (_R + "email/helpers.py", "_AMPEL_KEY_TO_METRIC_ID", "wert"),
-    (_R + "email/helpers.py", "_AMPEL_CAPABLE_METRIC_IDS", "element"),
     (_R + "email/helpers.py", "_PILL_CATALOG_ORDER", "element"),
     (_R + "email/helpers.py", "_PILL_CLASS1", "element"),
     (_R + "email/helpers.py", "_PILL_CLASS2", "element"),
@@ -477,6 +476,21 @@ REGISTERED_LISTS["compare_hourly_metric_ids.HOURLY_EXCLUSION_REASON"] = (
 REGISTERED_LISTS["metric_catalog.SMS_MULTI_SYMBOLS_BY_METRIC"] = RegisteredList(
     ist=lambda: set(SMS_MULTI_SYMBOLS_BY_METRIC),
     ort="src/app/metric_catalog.py:778",
+)
+
+# Issue #3156 (ADR-0124 Nr. 5): zwei aus ``STELLEN_ZWEI_FORMEN`` ABGELEITETE
+# Mengen (Comprehension, fuer ``_seiten()`` unsichtbar) -- Laufzeit-Eintraege
+# nach dem Muster oben. ``AMPEL_METRIC_IDS`` ersetzt die frueheren Literale
+# ``compare_html._FRIENDLY_AMPEL_METRIC_IDS`` und
+# ``helpers._AMPEL_CAPABLE_METRIC_IDS`` (beide jetzt Aliase);
+# ``OUTLOOK_FRIENDLY_CAPABLE`` bleibt Alias fuer den Frontend-Drift-Test (#3154).
+REGISTERED_LISTS["metric_catalog.AMPEL_METRIC_IDS"] = RegisteredList(
+    ist=lambda: set(AMPEL_METRIC_IDS),
+    ort="src/app/metric_catalog.py:1220",
+)
+REGISTERED_LISTS["metric_catalog.OUTLOOK_FRIENDLY_CAPABLE"] = RegisteredList(
+    ist=lambda: set(OUTLOOK_FRIENDLY_CAPABLE),
+    ort="src/app/metric_catalog.py:1214",
 )
 
 # Issue #2794 S3a (AC-27): Eigenschaften des Reiters Wetter je Groesse. Jede
