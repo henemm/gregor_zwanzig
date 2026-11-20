@@ -226,15 +226,20 @@ export type EigeneVorlageEingabe = {
 	alsStandard: boolean;
 	kind: 'route' | 'vergleich';
 	ampel: Ampel;
+	/** #3189: Trip bzw. Orts-Vergleich, aus dem gespeichert wird; fehlt im Anlege-Modus. */
+	herkunft?: { id: string; name: string };
 };
 
 /** Body fuer POST /api/metric-presets: aufgeloeste Abo-Ampel + Art, ohne Zeithorizonte und Zusammenfassung. */
 export function eigeneVorlagePayload(e: EigeneVorlageEingabe) {
 	const beschreibung = (e.beschreibung ?? '').trim();
 	const ampel = klon(e.ampel);
+	// #3189 AC-1/AC-5: Herkunft nur mit nicht leerem Namen.
+	const herkunftName = (e.herkunft?.name ?? '').trim();
 	return {
 		name: (e.name ?? '').trim(),
 		...(beschreibung ? { description: beschreibung } : {}),
+		...(e.herkunft && herkunftName ? { herkunft: { id: e.herkunft.id, name: herkunftName } } : {}),
 		is_default: e.alsStandard === true,
 		kind: e.kind,
 		ampel,

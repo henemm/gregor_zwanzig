@@ -61,6 +61,8 @@ from tests.tdd._befehl_e2e_fixtures import (
     install_transport_fakes,
     lege_lage_an,
     lege_po_lage_nutzer_an,
+    premium_seiten,
+    premium_volltext,
     sende_email,
     sende_premium_sms,
     sende_telegram_text,
@@ -310,10 +312,15 @@ def test_codes_vollstaendig_gegen_ausgabe_register(monkeypatch, user_ids):
     ``SMS_SYMBOL_BY_METRIC``/``SMS_MULTI_SYMBOLS_BY_METRIC``/
     ``HAZARD_SMS_SYMBOLS`` und jedes Token-Symbol aus ``builder.py`` (ausser
     ``DBG``), jedes mit einer Bedeutung, die Formatzeichen, und braucht
-    hoechstens 5 Segmente. Soll-Menge zur Laufzeit gerechnet."""
+    hoechstens 5 Segmente. Soll-Menge zur Laufzeit gerechnet.
+    #3133: Premium-CODES kommt seitenweise (je Seite EINE SMS <= 153);
+    geprueft wird die Vereinigung aller Seiten, Eintraege durch Leerzeichen
+    verbunden wie im freigegebenen Wortlaut."""
     recorder = install_transport_fakes(monkeypatch)
     nutzer = lege_po_lage_nutzer_an(user_ids)
-    text = _premium_antwort(basis_settings(), recorder, nutzer, "CODES")
+    seiten = premium_seiten(basis_settings(), recorder, nutzer, "CODES")
+    assert all(len(s) <= 153 and sms_segments(s) == 1 for s in seiten), seiten
+    text = premium_volltext(seiten).replace("\n", " ")
 
     soll = _soll_codes_ac9()
     assert len(soll) > 30, f"Soll-Menge verdaechtig klein ({len(soll)}): {sorted(soll)}"
@@ -334,8 +341,6 @@ def test_codes_vollstaendig_gegen_ausgabe_register(monkeypatch, user_ids):
             f"AC-9 FAIL: Formatzeichen {format_zeichen!r} wird nicht erklaert: {text!r}"
         )
     assert "Alerts" in text, f"AC-9 FAIL: kein Abschnitt 'Alerts': {text!r}"
-    segmente = sms_segments(text)
-    assert segmente <= 5, f"AC-9 FAIL: CODES braucht {segmente} Segmente (max 5)."
 
 
 # ═══════════════════════════════════════════════════════════════════════════

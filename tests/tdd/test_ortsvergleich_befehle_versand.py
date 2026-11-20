@@ -799,7 +799,12 @@ def test_ac11_hilfe_am_vergleich_nennt_report_heute_morgen(mit):
     _vergleich(uid)
 
     deutsch = _befehl(uid, "hilfe", kanal="telegram").confirmation_body
-    englisch = _befehl(uid, "hilfe", kanal="premium_sms").confirmation_body
+    # #3133: Premium-Hilfe seitenweise ("more: HELP 2", fuer alle Konten) -- alle Seiten pruefen.
+    seiten = [_befehl(uid, "hilfe", kanal="premium_sms").confirmation_body]
+    while seiten[-1].endswith(f"more: HELP {len(seiten) + 1}") and len(seiten) < 10:
+        seiten.append(_befehl(uid, f"hilfe {len(seiten) + 1}",
+                              kanal="premium_sms").confirmation_body)
+    englisch = "\n".join(seiten)
 
     for wort in ("REPORT", "HEUTE", "MORGEN"):
         assert wort in deutsch, f"AC-11: Vergleichs-Hilfe ohne {wort}: {deutsch!r}"

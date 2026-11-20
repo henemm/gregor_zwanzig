@@ -322,20 +322,29 @@ def test_ac8_find_compare_preset_mehrdeutiges_praefix_ist_none(user_ids):
 def test_ac8_roundtrip_rueckfrage_dann_gekuerzte_antwort_pausiert_richtigen(
     monkeypatch, user_ids,
 ):
-    """Bug aus Nutzersicht: Premium-SMS-Rückfrage kürzt auf 4 Zeichen, die
-    Antwort mit genau diesem Namen muss den richtigen Vergleich pausieren."""
+    """Bug aus Nutzersicht: Premium-SMS-Rückfrage kürzt die Namen, die
+    Antwort mit genau diesem Namen muss den richtigen Vergleich pausieren.
+    #3133: Premium-Antworten werden hart auf 153 Zeichen gekürzt (``~``);
+    das Szenario hält die Rückfrage darunter (kurze, früh eindeutige Namen
+    der pausierten Presets), damit sie vollständig ankommt."""
     uid = user_ids()
     _nutzer_mit_tier(uid)
     _trip(uid, "Korsika", start_offset_days=-1)
     ziel = _preset(uid, "Hamburg Hafenrunde Nordseekueste")
     andere = _preset(uid, "München Nord Isarauen Wanderung")
-    for i in range(3):
-        _preset(uid, f"Zusatzvergleich Nummer {i} lang", paused_at="2026-10-01T08:00:00Z",
-                schedule="manual")
+    _preset(uid, "Zp", paused_at="2026-10-01T08:00:00Z", schedule="manual")
 
     sent1, calls1 = _via_premium_sms(monkeypatch, uid, "pause")
     assert calls1 == [] and len(sent1) == 1
     text = sent1[0]
+    # Die Kürzlänge füllt das 160er-Budget aus, daher schneidet die zentrale
+    # 153er-Kürzung (#3133) nur den Beispiel-Hinweis am Ende ab. Die Kandidatenliste
+    # selbst muss vollständig ankommen: kein ``~`` vor dem Hinweis.
+    assert len(text) <= 153, text
+    liste = text.split(". Reply", 1)[0]
+    assert "~" not in liste and liste.count("(locations)") == 3, (
+        f"Kandidatenliste muss vollständig (ohne Kürzungs-~) ankommen: {text!r}"
+    )
     namen = _angezeigte_namen(text)
     kurz = next(n for n in namen if n.lower().startswith("hamb"))
     assert len(kurz) < len("Hamburg Hafenrunde Nordseekueste"), (

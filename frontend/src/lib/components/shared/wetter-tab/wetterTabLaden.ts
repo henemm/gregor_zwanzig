@@ -20,7 +20,8 @@ export interface LeseClient {
 
 export type VorlageEintrag = { id: string; label: string; anzahl: number; stichworte: string[] };
 /** #3111 AC-5: `beschreibung` (aus `MetricPreset.description`) ergänzt die Unterzeile „eigene". */
-export type EigeneVorlage = { id: string; name: string; ampel: Ampel; beschreibung?: string };
+/** #3189: `herkunftName` = Name des Trips/Orts-Vergleichs zum Speicherzeitpunkt. */
+export type EigeneVorlage = { id: string; name: string; ampel: Ampel; beschreibung?: string; herkunftName?: string };
 
 export type WetterDaten = {
 	eig: Record<string, MetrikEigenschaften>;
@@ -82,7 +83,24 @@ export function vorlageKurzbeschreibung(
 
 /** Eine eigene Vorlage im Reiter: Ampel aufgeloest, Beschreibung (#3111 AC-5) mitgenommen. Laden und frisch Gespeichert. */
 export function eigeneVorlageAus(p: MetricPreset, vorlagen: VorlagenAmpeln): EigeneVorlage {
-	return { id: p.id, name: p.name, ampel: eigeneVorlageAmpel(p, vorlagen), ...(p.description ? { beschreibung: p.description } : {}) };
+	return {
+		id: p.id,
+		name: p.name,
+		ampel: eigeneVorlageAmpel(p, vorlagen),
+		...(p.description ? { beschreibung: p.description } : {}),
+		...(p.herkunft?.name ? { herkunftName: p.herkunft.name } : {})
+	};
+}
+
+/**
+ * #3189 AC-1/AC-5: Herkunft einer neu gespeicherten Vorlage aus dem Abo (Trip bzw. Orts-Vergleich,
+ * derselbe Code): `{id, name}`; im Anlege-Modus oder ohne ID/Namen `undefined`.
+ */
+export function vorlageHerkunft(abo: { id?: unknown; name?: unknown } | null | undefined, createMode: boolean): { id: string; name: string } | undefined {
+	if (createMode || !abo) return undefined;
+	const id = typeof abo.id === 'string' ? abo.id.trim() : '';
+	const name = typeof abo.name === 'string' ? abo.name.trim() : '';
+	return id && name ? { id, name } : undefined;
 }
 
 /** Eigene Vorlagen der Art `kind`, jede mit ihrer vollstaendigen Ampel (Fallback §6 a). */

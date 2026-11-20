@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.48"
+version: "2.49"
 status: active
 created: 2025-12-27
-updated: 2026-11-19
+updated: 2026-11-20
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -387,7 +387,7 @@ Die Telegram-Kurzform (`telegram_style="kurzform"`, Schalter „Telegram im SMS-
 Der Abweichungs-Alarm (Trip und Ortsvergleich; `alert/render.py::render_sms`) trägt am bestehenden Ereignis-Token die Zeitspanne der betroffenen Stunden als `HH-HH` (Ortszeit, z. B. `14-16`). Die Stufen-Tokens (z. B. `TH:M->H`) bleiben unverändert; die Spanne ist **additiv**.
 
 - **Bindestrich:** ASCII-Bindestrich `-`, nie Gedankenstrich — ein `–` kippt die SMS auf UCS-2 (70 Zeichen, #1796). Der Gedankenstrich in „betroffen HH:MM–HH:MM" gilt nur für E-Mail und Telegram.
-- **Keine Stundenzeilen:** SMS und Premium-SMS (gleicher Text, `premium_sms_format.md`) tragen nur die Spanne, keine Einzelwerte. Länge weiter ≤ 160 Zeichen.
+- **Keine Stundenzeilen:** SMS und Premium-SMS (gleicher Text, `premium_sms_format.md`) tragen nur die Spanne, keine Einzelwerte. Länge: SMS ≤ 160 Zeichen, Premium-SMS ≤ 153 (#3100, `premium_sms_format.md` §1).
 - **Ohne Stundenreihe** (kein Anker, keine frische Reihe) entfällt die Spanne, der Text ist byte-gleich zu vorher.
 - Auswahl der betroffenen Stunden (`src/output/renderers/alert/hours.py`): Metrik mit Stufe = Stufenwechsel, Metrik ohne Stufe = Stundendifferenz ≥ Alarmschwelle; Spanne = erste bis letzte betroffene Stunde. Nur Daten, keine Empfehlung.
 
@@ -632,6 +632,13 @@ VS 0.3@10 5.0@11 12.5@12 8.2@13 3.1@14 +2h not shown
 Ein Verlauf ergibt immer **genau eine** Nachricht — keine Aufteilung auf
 mehrere Premium-SMS.
 
+**Grenze je Kanal (seit v2.49, Issue #3133):** Die 160 oben gelten für `sms`.
+Für `premium_sms` liest die Kürzung die Grenze aus
+`CHANNEL_LIMITS["premium_sms"]` = **153** (dieselbe Regel, nur früher gekürzt).
+Alle übrigen Premium-SMS-Befehlsantworten folgen ebenfalls „genau eine
+Nachricht ≤ 153": HILFE/KUERZEL seitenweise, sonstige Antworten zentral mit
+`~` gekürzt — Einzelheiten `premium_sms_format.md` §4 „Antwortlänge".
+
 ---
 
 ## 5b. Orte-SMS: Token-Zeile je Ort (seit v2.47, Issue #3172, ADR-0125)
@@ -845,7 +852,7 @@ Diese Token-Zeile ist die **einzige verbindliche Repräsentation** der Wetterzus
 
 | Channel | Verwendung |
 |---------|-----------|
-| SMS / Satellit | 1:1 die Token-Zeile (≤160 Zeichen) |
+| SMS / Satellit | 1:1 die Token-Zeile (≤160 Zeichen; Premium-SMS ≤153, `premium_sms_format.md`) |
 | E-Mail Subject | Auszug: `{Etappe} – {ReportType} – {MainRisk} – D{val} W{val} G{val} TH:{level}` |
 | E-Mail Body | Token-Zeile als erstes, danach human-readable Summary + Tabellen |
 | Push-Notification | Auszug der Token-Zeile (Titel) + Long-Form (Body) |
@@ -912,6 +919,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.46 | 2026-11-17 | §5b: Kopf der Orte-SMS `Orte TT.MM.:` statt `Vergleich TT.MM.:`, bei genau einem Ort `{Ort} TT.MM.:` ohne Wiederholung des Namens; „keine Daten“ als `Orte: keine Daten` bzw. `{Ort}: keine Daten` (#3122 B5, ADR-0124 Nr. 10, Nachtrag Nr. 1). Sprachfest wie zuvor. |
 | 2.47 | 2026-11-19 | **§5b neu: Orte-SMS in der Token-Zeile der Trip-SMS (Issue #3172, ADR-0125, PO-Entscheidungen 2026-11-19).** Je Ort `O{n} {Token}` aus `build_token_line` (dieselben Kürzel, Wert-Syntax und Abo-Ampel wie der Trip), kein Kopf, kein Datum, keine Ortsnamen, Orte durch ein Leerzeichen getrennt; `-` = unauffällig, `?` = kein Wert; `N`/`FN`/`TH+:` entfallen bei Orten. Grenze 160 wie die Trip-SMS, Premium-SMS über 153 Zeichen neu gekürzt. Die Zellform (`W 13 km/h`), die Zähler `?N`/`+N`, der Kopf `Orte TT.MM.:` und „keine Daten“ sind abgelöst. §6: alle gezeigten Orte tragen gleich viele Listenzeilen, erst dann ` +k Orte`. Gilt für SMS, Premium-SMS und Telegram-Kurzstil der Orte. Spec: `docs/specs/modules/feat_3172_orte_sms_token_zeile.md`. |
 | 2.48 | 2026-11-19 | **Trip-SMS ohne Doppelpunkt nach dem Präfix (Issue #3174, PO-Auswahl „Beide ohne“ 2026-11-19, ADR-0125 Nr. 2).** Kopf `{Name}` statt `{Name}:` — `E3 N12 D17 …`, `GR221 km0-11 …`, `Ballone …`; ohne Token steht nur das Präfix. Ein Zeichen mehr Platz für Werte (§6 misst denselben Text). Kürzel-Doppelpunkte (`TH:`, `WD:`, `PT:`, `VR:`/`VT:` …) bleiben. Gilt für SMS, Premium-SMS und Telegram-Kurzstil des Trips; damit schreiben Trip und Orte (`O1 …`, v2.47) wieder eine Form. Betrifft §2, §3.1, §5, §5b, §6, §7, §8. Spec: `docs/specs/modules/feat_3174_trip_sms_ohne_doppelpunkt.md`. |
+| 2.49 | 2026-11-20 | **§5a: Premium-SMS-Grenze 153 statt 160 (Issue #3133).** Die Kürzung des Ad-hoc-Verlaufs liest die Grenze kanalabhängig aus `CHANNEL_LIMITS` (`premium_sms` 153, `sms` unverändert 160). Premium-Befehlsantworten sind je genau eine Nachricht ≤ 153 (HILFE/KUERZEL seitenweise, Rest mit `~` gekürzt), s. `premium_sms_format.md` §4. Spec: `docs/specs/modules/fix_3133_premium_antwort_laenge.md`. |
 | 2.41 | 2026-11-16 | §6: Orts-Überlauf im Ortsvergleich — ein Ort mit amtlicher Warnung fällt nie in ` +k Orte`, er bleibt mit Marker sichtbar; zuerst werden die Zellen aller gezeigten Orte vom Listenende gekürzt (gleiches Budget je Ort), dann entfallen Orte ohne Warnung (#3047 Runde 7, AC-23). |
 
 **Quellen für v2.0:**

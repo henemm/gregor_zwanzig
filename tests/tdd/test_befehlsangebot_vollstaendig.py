@@ -37,8 +37,9 @@ from tests.tdd._befehl_e2e_fixtures import (
     install_transport_fakes,
     lege_lage_an,
     merkmal_fuer,
+    premium_seiten,
+    premium_volltext,
     sende_email,
-    sende_premium_sms,
     sende_telegram_text,
     spec_feld,
     user_ids,
@@ -77,13 +78,12 @@ def _kurzhilfe_text_ueber_premium_sms(monkeypatch, new_user_id) -> str:
     """Die HELP-Antwort, die der ECHTE Premium-SMS-Journal-Eingang
     tatsaechlich versendet (#2417 Kurzform englisch: nicht mehr ueber die
     Hilfsfunktion ``premium_sms_kurzhilfe()``, deren Name/Existenz die neue
-    Spec nicht festlegt)."""
+    Spec nicht festlegt). #3133: seitenweise -- alle Seiten ohne Verweis."""
     recorder = install_transport_fakes(monkeypatch)
     nutzer = lege_lage_an(new_user_id, "L2")
-    sende_premium_sms(basis_settings(), recorder, nutzer, "help")
+    seiten = premium_seiten(basis_settings(), recorder, nutzer, "help")
     recorder.pruefe_keine_unbekannten_aufrufe()
-    assert recorder.premium_sms_out, "Keine Premium-SMS auf 'help' versendet."
-    return recorder.premium_sms_out[-1]["text"]
+    return premium_volltext(seiten)
 
 
 # ---------------------------------------------------------------------------

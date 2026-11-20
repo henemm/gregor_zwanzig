@@ -126,9 +126,14 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # #3192 (20.11.): 156 #3111-Einträge abgeräumt, DE-Abgleich auf Mockup-Lage hat alle gefunden. 52 entfallen
     # (EN nach Neuerzeugung der Elementliste aus dem Katalog), 100 EN-Lücken → #3194 (EN-Sollwert nicht automatisch
     # zuordenbar), 4 EN-Lücken „eigene · aus GR221 gespeichert“ → #3151 (Mockup-Beispieldaten).
+    # #3151 (20.11.): 247 #2967 nach Seed mit Kanalauswahl und Abgleich DE+EN neu klassifiziert: 181 aufgelöst
+    # (179 entfallen, 2 EN-Lücken „Mallorca Frühling“ brauchen einen Besitzer ≠ #2968 → #3194), 66 umgehängt:
+    # Kanalzeile → #3202 (23), Grünbereich/Metriken/Kein-Alarm/„:00“ → #3203 (19), Anzeige-Metriken Trip → #3204
+    # (10), Vorlagen-Auswahl Orte/Zurücksetzen → #3205 (4), gesperrt → #3122 (+4), nur-EN-Zusatztexte → #3194 (+6).
     soll = {
-        "#2967": 247, "#2966": 0, "#2913-d": 0, "#2795": 318, "#2797": 8, "#2968": 0, "#3022": 62,
-        "#3111": 0, "#3194": 100, "#3151": 4,
+        "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 318, "#2797": 8, "#2968": 0, "#3022": 62,
+        "#3111": 0, "#3194": 108, "#3151": 4, "#3122": 14, "#3202": 23, "#3203": 19, "#3204": 10,
+        "#3205": 4, "#3145": 0,
     }
     ist = _verweise(daten)
     assert {k: ist.get(k, 0) for k in soll} == soll

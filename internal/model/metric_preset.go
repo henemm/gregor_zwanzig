@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // Horizons drueckt aus, fuer welche Tage relativ zum Report-Datum
 // (today / tomorrow / day_after) eine Metrik in der HTML-Tabelle angezeigt
@@ -58,4 +61,35 @@ type MetricPreset struct {
 	// beim Anwenden ins Abo kopiert. nil = Vorlage "allgemein" (Bestand).
 	// Keine Zustellungsfelder (Empfaenger, Kanaele, Etappen).
 	Ampel map[string]interface{} `json:"ampel,omitempty"`
+	// Issue #3189: Herkunft (Trip bzw. Orts-Vergleich, aus dem die Vorlage
+	// gespeichert wurde). Name zum Speicherzeitpunkt eingefroren, nur beim
+	// Anlegen gesetzt; die Art steckt in Kind. nil = unbekannt (Bestand).
+	Herkunft *PresetHerkunft `json:"herkunft,omitempty"`
+}
+
+// PresetHerkunft verweist auf Trip/Orts-Vergleich des Nutzers (Issue #3189).
+// Die ID wird nicht aufgeloest, sie ist reiner Verweis im eigenen Bestand.
+type PresetHerkunft struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// PresetHerkunftMaxName ist die Kappungsgrenze des Herkunftsnamens (Zeichen).
+const PresetHerkunftMaxName = 200
+
+// NormalizePresetHerkunft trimmt id/name, kappt den Namen auf 200 Zeichen und
+// liefert nil, wenn id oder name leer sind (Issue #3189, AC-3).
+func NormalizePresetHerkunft(h *PresetHerkunft) *PresetHerkunft {
+	if h == nil {
+		return nil
+	}
+	id := strings.TrimSpace(h.ID)
+	name := strings.TrimSpace(h.Name)
+	if id == "" || name == "" {
+		return nil
+	}
+	if r := []rune(name); len(r) > PresetHerkunftMaxName {
+		name = string(r[:PresetHerkunftMaxName])
+	}
+	return &PresetHerkunft{ID: id, Name: name}
 }

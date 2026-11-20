@@ -288,7 +288,20 @@ _SHOW_COLUMNS_INFO_LOCATION = (
 )
 _SHOW_CONFIG_LOCATION = "src/services/trip_command_processor.py::_show_config::0"
 # #2673: `_show_help`/`_show_help_for_kind` bauen ihren Text nicht mehr selbst
-# (`hilfe_langform`) -- der Scanner meldet sie nicht mehr, Ausnahmen entfernt.
+# (`hilfe_langform`) -- der Scanner meldete sie nicht mehr. #3133: die neuen
+# Premium-Seiten-Rueckgaben in `_show_help_for_kind`/`_show_codes` sind reine
+# Text-Antworten und stehen wieder hier.
+_SHOW_HELP_KIND_SEITE_LOCATIONS = (
+    "src/services/trip_command_processor.py::_show_help_for_kind::0",
+    "src/services/trip_command_processor.py::_show_help_for_kind::1",
+    "src/services/trip_command_processor.py::_show_codes::0",
+)
+_SEITEN_ANTWORT_JUSTIFICATION = (
+    "#3133: Premium-Seiten HELP/CODES, reine Text-Antwort ohne Wetterabruf, "
+    "ohne Schreiben und ohne Fehlerausgang -- der Text entsteht allein aus "
+    "Katalog/_COMMAND_SPECS; eine zu hohe Seitenzahl liefert die Bereichsantwort "
+    "als Text, kein Fehlerpfad (Praezedenz _show_status)"
+)
 _SHOW_STATUS_LOCATION = "src/services/trip_command_processor.py::_show_status::0"
 _TEXT_ANTWORT_JUSTIFICATION = (
     "Reine Text-Antwort aus der Trip-Konfiguration ohne Wetterabruf, ohne "
@@ -1636,8 +1649,10 @@ INTENTIONAL_CONSTANT_SUCCESS: dict[str, str] = {
     _WEBHOOK_ACK_LOCATION: _WEBHOOK_ACK_JUSTIFICATION,
     _SHOW_COLUMNS_INFO_LOCATION: _PUBLIC_HOST_INFO_JUSTIFICATION,
     _SHOW_CONFIG_LOCATION: _PUBLIC_HOST_INFO_JUSTIFICATION,
-    # #1405 S4a (AC-15/AC-18): Klasse-C-Funktion (Hilfe seit #2673 ohne Fund).
+    # #1405 S4a (AC-15/AC-18): Klasse-C-Funktion (_show_status).
     _SHOW_STATUS_LOCATION: _TEXT_ANTWORT_JUSTIFICATION,
+    # #3133: Premium-Seiten HELP/CODES (reine Text-Antworten).
+    **{loc: _SEITEN_ANTWORT_JUSTIFICATION for loc in _SHOW_HELP_KIND_SEITE_LOCATIONS},
 }
 
 
@@ -3351,6 +3366,8 @@ _APPROVED_EXCEPTIONS = {
     _SHOW_CONFIG_LOCATION,
     # #1405 S4a (AC-18): Spec-Entscheidung feat_1405_s4a_befehlsantwort_erfolg_wirkung.
     _SHOW_STATUS_LOCATION,
+    # #3133: Spec fix_3133_premium_antwort_laenge (freigegeben).
+    *_SHOW_HELP_KIND_SEITE_LOCATIONS,
 }
 
 

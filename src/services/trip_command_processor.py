@@ -1297,8 +1297,7 @@ class TripCommandProcessor:
             return CommandResult(
                 success=False, command="unknown",
                 confirmation_subject=self._m("unbekannt.betreff"),
-                confirmation_body=unknown_command_body(
-                    self._m("unbekannt.format"), en=self._en, lang=self._lang),
+                confirmation_body=self._unbekannt_text(msg, self._m("unbekannt.format")),
                 trip_name=msg.trip_name,
             )
 
@@ -1356,9 +1355,9 @@ class TripCommandProcessor:
 
         # hilfe braucht keinen Trip-Lookup
         if key == "hilfe":
-            return self._show_help()
+            return self._show_help(seite=value, channel=msg.channel)
         if key == "kuerzel":
-            return self._show_codes()
+            return self._show_codes(seite=value, channel=msg.channel)
 
         # Issue #1001 Adversary-Finding F002: "columns" (Aktionen-Bubble-Button
         # "📊 Spalten") braucht ebenfalls keinen Trip-Lookup — Spalten-Konfiguration
@@ -1377,10 +1376,9 @@ class TripCommandProcessor:
             return CommandResult(
                 success=False, command=key,
                 confirmation_subject=self._m("unbekannt.betreff_ziel", trip_name=msg.trip_name),
-                confirmation_body=unknown_command_body(
-                    "Unknown command." if self._en
-                    else self._m("unbekannt.kein_befehl", wort=key),
-                    en=self._en, lang=self._lang),
+                confirmation_body=self._unbekannt_text(
+                    msg, "Unknown command." if self._en
+                    else self._m("unbekannt.kein_befehl", wort=key)),
                 trip_name=msg.trip_name,
             )
 
@@ -1522,9 +1520,9 @@ class TripCommandProcessor:
         if key == "query" and value and value.lower() in _QUERY_KEYS:
             key = value.lower()
         if key == "hilfe":
-            return self._show_help_for_kind("vergleich")
+            return self._show_help_for_kind("vergleich", seite=value, channel=msg.channel)
         if key == "kuerzel":
-            return self._show_codes(kind="vergleich")
+            return self._show_codes(kind="vergleich", seite=value, channel=msg.channel)
         if key in ("report", "heute", "morgen"):
             return self._compare_versand(msg, key, preset_id, name)
         if key == "pause":
@@ -1534,13 +1532,18 @@ class TripCommandProcessor:
         wort = key if key is not None else (_erstes_wort(msg.body) or msg.body.strip())
         return self._compare_unavailable(wort, name)
 
-    def _show_help_for_kind(self, kind: str) -> CommandResult:
+    def _show_help_for_kind(self, kind: str, *, seite: Optional[str] = None,
+                            channel: Optional[str] = None) -> CommandResult:
         """Hilfe, gefiltert auf die kind-Menge aus ``_COMMAND_SPECS`` (Abschnitt
-        7, AC-12) — einzige Quelle, keine zweite handgepflegte Liste."""
+        7, AC-12) — einzige Quelle, keine zweite handgepflegte Liste.
+        #3133: auf ``premium_sms`` seitenweise (je Seite <= 153 Zeichen)."""
         if self._en:
+            body = hilfe_kurzform(kind)
+            if channel == "premium_sms":
+                body = self._premium_seite(body.split("\n"), seite, "hilfe")
             return CommandResult(
                 success=True, command="hilfe", confirmation_subject="Help",
-                confirmation_body=hilfe_kurzform(kind),
+                confirmation_body=body,
             )
         return CommandResult(
             success=True, command="hilfe",
@@ -1548,17 +1551,44 @@ class TripCommandProcessor:
             confirmation_body=hilfe_langform(kind, lang=self._lang),
         )
 
-    def _show_codes(self, kind: str = "route") -> CommandResult:
+    def _show_codes(self, kind: str = "route", *, seite: Optional[str] = None,
+                    channel: Optional[str] = None) -> CommandResult:
         """CODES/KUERZEL (#2417 AC-3/AC-9/AC-10) -- ziellos, Sprache laut
         Kanal/Wort, Text vollstaendig aus ``codes_text``. Bug #2454 AC-6/AC-7:
         ``kind`` steuert, ob "TF" erscheint (nur im aufgeloesten
-        Ortsvergleich, ``kind="vergleich"``)."""
+        Ortsvergleich, ``kind="vergleich"``). #3133: Premium seitenweise,
+        geschnitten nur zwischen zwei Kuerzel-Eintraegen."""
+        # #2673: Langform-en bekommt die englischen Bedeutungen (Kuerzel gleich).
+        body = codes_text(self._etappe_en, vergleich=(kind == "vergleich"))
+        if channel == "premium_sms":
+            eintraege = [e for z in body.split("\n") for e in re.split(r"(?<=[,.]) ", z)]
+            body = self._premium_seite(eintraege, seite, "kuerzel")
         return CommandResult(
             success=True, command="kuerzel",
             confirmation_subject=self._m("hilfe.kuerzel_betreff"),
-            # #2673: Langform-en bekommt die englischen Bedeutungen (Kuerzel gleich).
-            confirmation_body=codes_text(self._etappe_en, vergleich=(kind == "vergleich")),
+            confirmation_body=body,
         )
+
+    def _premium_seite(self, zeilen: list[str], seite: Optional[str], wort: str) -> str:
+        """#3133: Seite ``seite`` als eine Premium-SMS. Verweis und
+        Bereichsantwort ueber ``_m`` -- auf Premium (Kurzform-Kanal) fuer alle
+        Konten englisch (ADR-0104 Nr. 5); die de-Katalogtexte sind dort unbenutzt
+        und stehen nur fuer die Katalog-Paritaet."""
+        from services.premium_sms_pages import seiten, seitenzahl
+
+        alle = seiten(zeilen, verweis_fn=lambda n: self._m(f"seite.mehr_{wort}", n=n))
+        nr = seitenzahl(seite)
+        if nr > len(alle):
+            return self._m(f"seite.bereich_{wort}", n=len(alle))
+        return alle[nr - 1]
+
+    def _unbekannt_text(self, msg: InboundMessage, prefix: str) -> str:
+        """Fehlertext unbekannter Befehl; Premium (#3133) eine kurze englische
+        Fassung fuer alle Konten (ADR-0104 Nr. 5) mit Verweis auf HELP/CODES,
+        sonst unveraendert ``unknown_command_body``."""
+        if msg.channel == "premium_sms":
+            return self._m("unbekannt.premium")
+        return unknown_command_body(prefix, en=self._en, lang=self._lang)
 
     def _compare_ortstag(self, preset_id: str, msg: InboundMessage) -> date:
         """Ortstag des Presets zum Eingangszeitpunkt (dieselbe Rechnung wie
@@ -1934,7 +1964,7 @@ class TripCommandProcessor:
             # #2417 AC-5: Telegram-Kurzform bekommt die sprachneutrale Kurzform.
             if _ist_kurzform_kanal(channel) or self._en:
                 body = self._format_drilldown_kurzform(
-                    res, definition, tz, folgetag=(day_token == "tomorrow"),
+                    res, definition, tz, folgetag=(day_token == "tomorrow"), channel=channel,
                 )
             else:
                 body = self._format_drilldown(
@@ -2019,7 +2049,7 @@ class TripCommandProcessor:
         else:
             if kurzform:
                 body = self._format_drilldown_kurzform(
-                    res, metric, tz, folgetag=(day_token == "tomorrow"),
+                    res, metric, tz, folgetag=(day_token == "tomorrow"), channel=channel,
                 )
             else:
                 body = self._format_drilldown(
@@ -2226,7 +2256,7 @@ class TripCommandProcessor:
         return "\n".join(lines)
 
     def _format_drilldown_kurzform(
-        self, res, metric, tz, *, folgetag: bool = False,
+        self, res, metric, tz, *, folgetag: bool = False, channel: Optional[str] = None,
     ) -> str:
         """Derselbe Verlauf wie ``_format_drilldown``, kurzformtauglich.
 
@@ -2265,6 +2295,11 @@ class TripCommandProcessor:
             spanne = f"{von}" if len(pts) == 1 else f"{von}-{local_hour(pts[-1].ts, tz)}"
             tokens.append(f"{text}@{spanne}")
         stunden = [len(pts) for _text, pts in gruppen]
+        # #3133 AC-13: Premium-SMS 153 (CHANNEL_LIMITS), sonst unveraendert 160.
+        # Lokaler Import: ``output.renderers`` importiert dieses Modul (Zyklus).
+        from output.renderers.channel_layout import CHANNEL_LIMITS
+        grenze = (CHANNEL_LIMITS["premium_sms"]["max_chars"] if channel == "premium_sms"
+                  else _KURZFORM_MAX_ZEICHEN)
 
         gezeigt = len(tokens)
         while True:
@@ -2273,7 +2308,7 @@ class TripCommandProcessor:
             if entfallen:
                 teile.append(f"+{entfallen}h not shown")
             zeile = fold_ascii(" ".join(teile))
-            if gezeigt == 0 or len(zeile) <= _KURZFORM_MAX_ZEICHEN:
+            if gezeigt == 0 or len(zeile) <= grenze:
                 return zeile
             gezeigt -= 1
 
@@ -2885,7 +2920,8 @@ class TripCommandProcessor:
             trip_name=trip.name,
         )
 
-    def _show_help(self) -> CommandResult:
+    def _show_help(self, *, seite: Optional[str] = None,
+                   channel: Optional[str] = None) -> CommandResult:
         """Listet alle verfügbaren Befehle mit Syntax (Issue #731: abruf-zentriert).
 
         Issue #2134: beide Blöcke sind ABGELEITET — die Steuerbefehle aus
@@ -2895,7 +2931,7 @@ class TripCommandProcessor:
         erscheinen. Kanalunabhängig identisch — auch per E-Mail (PO-Vorgabe 2).
         #2417 AC-8: auf Kurzform-Kanaelen die englische HELP-Kurzform.
         """
-        return self._show_help_for_kind("route")
+        return self._show_help_for_kind("route", seite=seite, channel=channel)
 
     def _show_columns_info(self) -> CommandResult:
         """Antwort auf den Aktionen-Bubble-Button "📊 Spalten" (Issue #1001 F002).

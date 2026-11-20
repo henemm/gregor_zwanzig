@@ -101,6 +101,13 @@ def _vergleich_wie_go(body):
         wert = body.get(feld)
         if isinstance(wert, str) and len(wert) == 5:
             body[feld] = wert + ":00"
+    # #3151: materializeAlertChannels (internal/store/compare_preset.go:55-71): fehlt
+    # alert_channels, leitet der Store es aus den Flachfeldern ab (E-Mail immer an).
+    if body.get("alert_channels") is None:
+        body["alert_channels"] = {"email": True,
+                                  "telegram": bool(body.get("send_telegram")),
+                                  "sms": bool(body.get("send_sms")),
+                                  "premium_sms": bool(body.get("send_premium_sms"))}
     return body
 
 
@@ -276,8 +283,21 @@ class _Fake:
                        and (v.get("kind") or "route") == art for v in ablage.values()):
                     return 409, {"error": "name_exists"}
                 body = {**body, "id": body.get("id") or "mp-" + secrets.token_hex(3)}
+            if (teile[1] == "trips" and methode in ("PUT", "PATCH") and len(teile) == 3
+                    and teile[2] in ablage):
+                body = self._trip_merge_wie_go(ablage[teile[2]], body)
             return self._crud(ablage, methode, teile[2:], body, uid)
         return 404, {"error": "not_found"}
+
+    @staticmethod
+    def _trip_merge_wie_go(ist, body):
+        """#3151: internal/handler/trip.go:437-535: report_config, alert_channels und
+        alert_channel_thresholds werden je Schluessel gemerged (fehlender Schluessel bleibt)."""
+        body = copy.deepcopy(body)
+        for feld in ("report_config", "alert_channels", "alert_channel_thresholds"):
+            if isinstance(body.get(feld), dict):
+                body[feld] = {**copy.deepcopy(ist.get(feld) or {}), **body[feld]}
+        return body
 
     def _crud(self, ablage, methode, rest, body, uid):
         if not rest:
@@ -1141,3 +1161,135 @@ def test_ac11_fl5_link_code_leer_exit1_ohne_lernaufruf(fake, capsys, antwort):
     assert "premium-sms-link-code ohne Code" in aus.err, aus.err
     assert server.zaehle("/api/internal/premium-sms-learn") == 0
     assert _ausgabe_ids(aus.out) == (None, None)
+
+
+# --- #3151: Kanalauswahl, Alarm-Kanaele und Schwellen laut Mockup ------------------
+# Festgelegte Schnittstelle (Tech-Lead-Entscheidung in RED), Modul-Ebene im Seed-Skript:
+#   ALARM_SCHWELLEN: dict {"email": "LOW", "telegram": "LOW", "sms": "MODERATE",
+#                          "premium_sms": "HIGH"}
+#   soll_kanalauswahl_trip() -> {"report_config": {send_email/telegram/sms/premium_sms},
+#       "alert_channels": {4 Kanaele True}, "alert_channel_thresholds": ALARM_SCHWELLEN-Kopie}
+#   soll_kanalauswahl_vergleich() -> {"send_email", "send_telegram", "send_sms",
+#       "send_premium_sms" (top-level), "alert_channels" (alle 4 explizit),
+#       "alert_channel_thresholds"}
+# Beide ohne Argumente, rein, geben bei jedem Aufruf frische Kopien zurueck.
+
+SCHWELLEN_3151 = {"email": "LOW", "telegram": "LOW", "sms": "MODERATE", "premium_sms": "HIGH"}
+BRIEFING_3151 = {"send_email": True, "send_telegram": True, "send_sms": False,
+                 "send_premium_sms": False}
+ALARM_ALLE_3151 = {"email": True, "telegram": True, "sms": True, "premium_sms": True}
+
+
+def test_3151_ac1_soll_funktionen_liefern_exakte_werte_ohne_netz():
+    mod = _modul()
+    assert mod.ALARM_SCHWELLEN == SCHWELLEN_3151
+    assert mod.soll_kanalauswahl_trip() == {"report_config": BRIEFING_3151,
+                                            "alert_channels": ALARM_ALLE_3151,
+                                            "alert_channel_thresholds": SCHWELLEN_3151}
+    assert mod.soll_kanalauswahl_vergleich() == {**BRIEFING_3151,
+                                                 "alert_channels": ALARM_ALLE_3151,
+                                                 "alert_channel_thresholds": SCHWELLEN_3151}
+    # frische Kopien: Aufrufer duerfen nichts Geteiltes veraendern
+    mod.soll_kanalauswahl_trip()["alert_channels"]["email"] = False
+    mod.soll_kanalauswahl_vergleich()["alert_channel_thresholds"]["sms"] = "X"
+    assert mod.soll_kanalauswahl_trip()["alert_channels"]["email"] is True
+    assert mod.soll_kanalauswahl_vergleich()["alert_channel_thresholds"]["sms"] == "MODERATE"
+
+
+def _kanal_ist(daten, trip):
+    kern = {"alert_channels": daten.get("alert_channels"),
+            "alert_channel_thresholds": daten.get("alert_channel_thresholds")}
+    if trip:
+        return {"report_config": {k: (daten.get("report_config") or {}).get(k)
+                                  for k in BRIEFING_3151}, **kern}
+    return {**{k: daten.get(k) for k in BRIEFING_3151}, **kern}
+
+
+def test_3151_ac1_seed_setzt_kanalauswahl_an_trip_und_vergleich(fake, capsys):
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    trip_id, orte_id = _ausgabe_ids(capsys.readouterr().out)
+    assert _kanal_ist(_seed_trip(server, trip_id), True) == {
+        "report_config": BRIEFING_3151, "alert_channels": ALARM_ALLE_3151,
+        "alert_channel_thresholds": SCHWELLEN_3151}
+    assert _kanal_ist(_seed_daten(server)["compare"][orte_id], False) == {
+        **BRIEFING_3151, "alert_channels": ALARM_ALLE_3151,
+        "alert_channel_thresholds": SCHWELLEN_3151}
+
+
+def test_3151_ac2_fremdfelder_und_fremder_kanal_bleiben_nur_soll_wird_gesetzt(fake, capsys):
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    trip_id, orte_id = _ausgabe_ids(capsys.readouterr().out)
+    trip = _seed_trip(server, trip_id)
+    vgl = _seed_daten(server)["compare"][orte_id]
+    # Fremdes + verstellte Sollwerte in Trip und Vergleich
+    trip.setdefault("report_config", {}).update({"morning_time": "06:30:00", "send_telegram": False,
+                                                 "zusatz_kanal": "bleibt"})
+    trip["alert_channels"] = {**(trip.get("alert_channels") or {}), "sms": False, "zusatz_kanal": True}
+    trip["alert_channel_thresholds"] = {**(trip.get("alert_channel_thresholds") or {}),
+                                        "sms": "LOW", "zusatz_kanal": "HIGH"}
+    vgl.update({"send_telegram": False, "zusatz_3151": {"bleibt": True}})
+    vgl["alert_channels"] = {**(vgl.get("alert_channels") or {}), "premium_sms": False,
+                             "zusatz_kanal": True}
+    vgl["alert_channel_thresholds"] = {**(vgl.get("alert_channel_thresholds") or {}),
+                                       "premium_sms": "LOW", "zusatz_kanal": "HIGH"}
+    assert _lauf(mod, server, env) == 0
+    trip = _seed_trip(server, trip_id)
+    vgl = _seed_daten(server)["compare"][orte_id]
+    assert trip["report_config"].get("send_telegram") is True
+    assert trip.get("alert_channels", {}).get("sms") is True
+    assert trip.get("alert_channel_thresholds", {}).get("sms") == "MODERATE"
+    assert trip["report_config"]["morning_time"] == "06:30:00"
+    assert trip["report_config"]["zusatz_kanal"] == "bleibt"
+    assert trip["alert_channels"]["zusatz_kanal"] is True
+    assert trip["alert_channel_thresholds"]["zusatz_kanal"] == "HIGH"
+    assert vgl["send_telegram"] is True
+    assert vgl["alert_channels"]["premium_sms"] is True
+    assert vgl.get("alert_channel_thresholds", {}).get("premium_sms") == "HIGH"
+    assert vgl["zusatz_3151"] == {"bleibt": True}
+    assert vgl["alert_channels"]["zusatz_kanal"] is True
+    assert vgl["alert_channel_thresholds"]["zusatz_kanal"] == "HIGH"
+
+
+def test_3151_ac3_zweiter_lauf_schreibfrei_trotz_go_ableitung_von_alert_channels(fake):
+    mod = _modul()
+    server, env = fake
+    assert _lauf(mod, server, env) == 0
+    (trip,) = _seed_daten(server)["trips"].values()
+    (vgl,) = _seed_daten(server)["compare"].values()
+    # Voraussetzung: Kanalauswahl steht (sonst waere "schreibfrei" trivial)
+    assert vgl.get("alert_channel_thresholds") == SCHWELLEN_3151
+    assert trip.get("alert_channels") == ALARM_ALLE_3151
+    vorher = server.zustand()
+    server.aufrufe.clear()
+    assert _lauf(mod, server, env) == 0
+    assert _datenschreiber(server) == []
+    assert server.zustand() == vorher
+
+
+def test_3151_ac4_zweiter_nutzer_mit_kanalfeldern_bleibt_byte_gleich(fake):
+    mod = _modul()
+    server, env = fake
+    b = server.neues_konto("nutzer-b", "b@example.invalid")
+    b["daten"]["trips"]["b-trip"] = {
+        "id": "b-trip", "name": "B", "stages": [],
+        "report_config": {"send_email": True, "send_telegram": False, "send_sms": True,
+                          "send_premium_sms": False},
+        "alert_channels": {"email": True, "telegram": False, "sms": False, "premium_sms": False},
+        "alert_channel_thresholds": {"email": "HIGH", "sms": "HIGH"}}
+    b["daten"]["compare"]["b-vgl"] = {
+        "id": "b-vgl", "name": "BV", "location_ids": [], "schedule": "daily",
+        "send_email": True, "send_telegram": False, "send_sms": False, "send_premium_sms": False,
+        "alert_channels": {"email": True, "telegram": False, "sms": False, "premium_sms": False},
+        "alert_channel_thresholds": {"email": "HIGH"}}
+    vorher = server.zustand("nutzer-b")
+    vorher_default = server.zustand("default")
+    assert _lauf(mod, server, env) == 0
+    # Seed hat die Kanalauswahl beim Pruefkonto gesetzt (nicht trivial)
+    (vgl,) = _seed_daten(server)["compare"].values()
+    assert vgl.get("alert_channel_thresholds") == SCHWELLEN_3151
+    assert server.zustand("nutzer-b") == vorher
+    assert server.zustand("default") == vorher_default
