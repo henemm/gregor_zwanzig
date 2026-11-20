@@ -159,4 +159,4 @@ Alle Tests laufen durch den echten Renderer mit echten Konfigurationen, ohne `Mo
 ## Changelog
 
 - 2026-11-20: Initial spec created
-- 2026-11-20 (Phase 5): Wortstufen-Grenzen präzisiert: bestehende Skala `format_rain_probability_scale` (25/50/75), damit jeder Kanal dieselben Wörter zeigt; 30/60/80 sind die Ampelfarb-Schwellen. Keine Verhaltensänderung gegenüber der Freigabe-Absicht (Wortstufe wie bei Orte).
+- 2026-11-20 (Phase 5): Wortstufen-Grenzen präzisiert: bestehende Skala `format_rain_probability_scale` (25/50/75), damit jeder Kanal dieselben Wörter zeigt; 30/60/80 sind die Ampelfarb-Schwellen. PO-Entscheid 2026-11-20: überall 25/50/75.

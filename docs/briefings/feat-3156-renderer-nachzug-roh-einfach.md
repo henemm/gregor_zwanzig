@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/feat_3156_renderer_nachzug_roh_einfach.md
-spec_sha256: 4540a38f21c2bbcd5df55414aaeee7c0150d33fd88009de0b57a760887a31755
-spec_frozen_sha256: b237d64bdd162945711e22dd326fe29feec1e106e144c5daaba7c31d197cffbd
+spec_sha256: f872276c9042cd3e13195d22740fa9f201ea00499172cb3fb72b33fe83c48050
+spec_frozen_sha256: 1aa219a164c273b433711ee18cb4d58d99da4f74f1538122ebfbf7dc4223034b
 ---
 
 # PO-Briefing: feat-3156-renderer-nachzug-roh-einfach
@@ -25,7 +25,7 @@ Tests erzeugen echte Mails in Roh und Einfach und belegen unveränderte SMS und 
 ## Kritische Anmerkungen
 
 - Gewollte Änderung: Je ein Orte-Bestandsabo (Mail, Telegram) wechselt bei Regenwahrscheinlichkeit von Zahl auf Stufenwort beziehungsweise Ampel.
-- Trip-Telegram ändert sich bei Regenwahrscheinlichkeit ebenfalls, hat aber keinen eigenen Test.
+- Stufenwörter nutzen die bestehende Skala (25/50/75 Prozent), überall dieselben Wörter; die Ampelfarben behalten ihre eigenen Schwellen.
 
 ## Freigabe-Frage
 
