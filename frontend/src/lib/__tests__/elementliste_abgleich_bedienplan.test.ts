@@ -44,7 +44,8 @@ function befund(anfragen: { method: string; url: string }[]): string | null {
 
 const WETTER = LISTE.filter((e) => e.reiter === 'wetter');
 const ALLE_METRIKEN = [...new Set(WETTER.map((e) => e.abschnitt).filter((a) => a.startsWith('grenzen-')).map((a) => a.slice('grenzen-'.length)))];
-const lage = (ctx: string, extra: Partial<Lage> = {}): Lage => ({ ctx, briefing: ALLE_METRIKEN, vorlagen: ['standard', 'alpin'], aktiveVorlage: 'standard', ...extra });
+// #3192 (AC-2): die Vorlagenliste trägt die Mockup-Wechselziele (Trip „wandern“, Orte „alpen-trekking“).
+const lage = (ctx: string, extra: Partial<Lage> = {}): Lage => ({ ctx, briefing: ALLE_METRIKEN, vorlagen: ['allgemein', 'alpen-trekking', 'wandern'], aktiveVorlage: 'allgemein', ...extra });
 const aktionen = (p: PlanErgebnis) => (p.art === 'plan' ? p.schritte.map((s) => s.aktion) : []);
 const istPlan = (p: PlanErgebnis): p is { art: 'plan'; schritte: Schritt[] } => p.art === 'plan';
 const ERLAUBT = new Set(['klick', 'lesen', 'schliessen']);
@@ -87,7 +88,7 @@ describe('#2966 AC-6: bedienPlan — Vorlage-Dialoge (nichts wird übernommen od
 		assert.ok(istPlan(p), JSON.stringify(p));
 		assert.deepEqual(aktionen(p), ['klick', 'klick', 'lesen', 'schliessen']);
 		assert.equal(p.schritte[0].testid, 'wetter-vorlage-picker');
-		assert.equal(p.schritte[1].testid, 'wetter-vorlage-option-alpin', 'muss eine nicht aktive Systemvorlage wählen');
+		assert.equal(p.schritte[1].testid, 'wetter-vorlage-option-alpen-trekking', 'muss das Mockup-Wechselziel (nicht die aktive Vorlage) wählen, #3192');
 		assert.equal(p.schritte[3].testid, 'wetter-vorlage-wechsel-abbrechen');
 		assert.ok(!p.schritte.some((s) => s.testid === 'wetter-vorlage-wechsel-uebernehmen'), 'Übernehmen ist verboten');
 	});
@@ -189,7 +190,7 @@ function fakeOps(briefing: string[], bei: Record<string, Anfrage | Error> = {}):
 		nachlauf: () => schritt('nachlauf')
 	};
 }
-const LAGE = { ctx: 'trip', vorlagen: ['allgemein', 'alpin'], aktiveVorlage: 'allgemein' };
+const LAGE = { ctx: 'trip', vorlagen: ['allgemein', 'alpen-trekking', 'wandern'], aktiveVorlage: 'allgemein' };
 
 describe('#2966 AC-6/AC-7: bedieneAbschnitt — Reload, Planreihenfolge, Schreib-Tripwire', () => {
 	test('Grenzen: erst neu laden, dann Ändern · lesen · Fertig, dann Nachlauf; Ergebnis ist der gelesene Bereich', async () => {

@@ -153,4 +153,40 @@ for (const kind of HUB_KINDS) {
 			await hub.aufraeumen();
 		}
 	});
+
+	// #3192 AC-8 (#3111 Adversary F004): frisch gespeicherte eigene Vorlage steht ohne Neuladen im Menü,
+	// Unterzeile „eigene · <Beschreibung>“ (Mockup Fassung 4). Schreibend, eigener Datensatz, Aufräumen im finally.
+	test(`#3192 AC-8 (${kind}): eigene Vorlage mit Beschreibung speichern, ohne Neuladen „eigene · <Beschreibung>“ im Menü`, async ({ page }) => {
+		await page.setViewportSize(DESKTOP);
+		const hub = await seedWetter(page.request, kind, { vorlageId: 'alpen-trekking' });
+		const name = `E2E-GZ-F004-${kind}-${Date.now()}`;
+		const beschreibung = `F004 Beschreibung ${kind}`;
+		let presetId: string | null = null;
+		try {
+			const reiter = await oeffneWetter(page, kind, hub.id);
+			await reiter.getByTestId(WT.alsEigene).click();
+			const dialog = page.getByTestId(WT.dialog);
+			await dialog.getByTestId(WT.dialogName).fill(name);
+			await dialog.getByTestId(WT.dialogBeschreibung).fill(beschreibung);
+			const post = page.waitForResponse((r) => r.request().method() === 'POST' && new URL(r.url()).pathname === '/api/metric-presets');
+			await dialog.getByTestId(WT.dialogSpeichern).click();
+			const antwort = await post;
+			expect(antwort.ok(), `POST /api/metric-presets: ${antwort.status()}`).toBeTruthy();
+			presetId = String(((await antwort.json()) as Json).id);
+			await expect(page.getByTestId(WT.dialogErfolg)).toBeVisible({ timeout: 15_000 });
+
+			// ohne page.reload(): Menü öffnen und die neue Zeile lesen
+			await reiter.getByTestId(WT.picker).click();
+			const zeile = page.getByTestId(WT.eigeneOption(presetId));
+			await expect(zeile).toContainText(name);
+			await expect(zeile).toContainText(`eigene · ${beschreibung}`);
+			await page.keyboard.press('Escape');
+		} finally {
+			if (presetId) await page.request.delete(`/api/metric-presets/${presetId}`).catch(() => {});
+			else
+				for (const p of (await (await page.request.get('/api/metric-presets')).json().catch(() => [])) as Json[])
+					if (p.name === name) await page.request.delete(`/api/metric-presets/${p.id}`).catch(() => {});
+			await hub.aufraeumen();
+		}
+	});
 }

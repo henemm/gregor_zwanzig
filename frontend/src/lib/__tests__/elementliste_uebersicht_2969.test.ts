@@ -38,8 +38,13 @@ type Ausnahme = { ctx?: string; reiter?: string; text?: string; muster?: string;
 const ausnahmen = (): Ausnahme[] => logik.leseAusnahmen(readFileSync(BESITZER, 'utf8')) as Ausnahme[];
 
 // Stand vor #2969: 2646 Einträge, Prüfsumme über JSON.stringify der Einträge (Reihenfolge und Felder).
+// #3192 (20.11.): Pin bewusst nachgezogen (vorher b146a7ed…7658946). Die Elementliste wurde neu erzeugt,
+// damit die #3111-Dialogtexte (Vorlagen-Auswahl/-Bestätigung/-Speichern) ihr text_en aus dem Katalog tragen:
+// 44 Einträge bekamen text_en (luecke true → false), dabei i18n_key/muster der Katalogzuordnung; die
+// Unterzeile „N Metriken · …“ nutzt die Mehrzahl-Form (Plural-Wahl im Erzeuger, #3192).
+// Anzahl 2646, IDs und Mockup-Hash unverändert.
 const ALT_ANZAHL = 2646;
-const ALT_SHA = 'b146a7ed86904dea7d63c0ade74e0a550c24b417131362ecc6bd76eac7658946';
+const ALT_SHA = '8886ab451a9304b7936b92fdb9ae4f58a09a36704c1dd31a823633a57ae28817';
 const MOCKUP_HASH = 'sha256:d1fcdf63fb3b9fdc166f537f89af5e0f66992b62541b78176fc2504a491edb40';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {
