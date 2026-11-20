@@ -751,6 +751,16 @@ DE-Katalogwert ist; Test `elementliste_en_zuordnung_2968.test.ts`). Der Generato
 verbleibenden EN-Lücken je Grund und Besitzer (`lueckenJeGrund`); jede Restlücke braucht einen Besitzer in
 `elementliste_besitzer.json`.
 
+**Regel g** (zusammengesetzt, #3194, Spec `docs/specs/modules/feat_3194_elementliste_en_zusammengesetzt.md`):
+greift erst nach den Regeln a–f und nur für bisherige Lücken. Die exportierte Tabelle `ZUSAMMENGESETZT` nennt
+je Zeile eine Folge benannter Katalogschlüssel mit Fuge, so wie die App sie zusammensetzt (Grenzen-Titel
+`wetter.grenzen.oben_1`+`oben_2` bzw. `unten_1`+`unten_2` ohne Fuge; `wetter.grenzen.hinweis` bzw.
+`wetter.gewitter.keins_gruen` + `wetter.grenzen.abweichend` mit Leerzeichen; Rumpf `wetter.vorlage.ersetzt_route`
+bzw. `ersetzt_vergleich` + `bleibt` mit Leerzeichen). Treffer nur, wenn der Text exakt die verkettete DE-Folge
+ist (`{vorlage}` = beliebiger Wert) und **jeder** Schlüssel DE und EN hat; `text_en` = EN-Folge mit derselben
+Fuge, Platzhalter bleiben stehen, `i18n_key` = erster Schlüssel, `muster` = DE-Gesamtmuster (nur mit Platzhalter).
+Neue Folgen nur als Tabellenzeile, nie als EN-Text.
+
 ## Aktive Hooks in `.claude/settings.json` — Kurzreferenz (Stand 2026-10-21)
 
 Vollständige Liste der im Repo verdrahteten Hooks. Alle stehen in der geschützten Form

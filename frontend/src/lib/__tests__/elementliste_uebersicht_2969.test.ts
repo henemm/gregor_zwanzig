@@ -48,8 +48,12 @@ const ausnahmen = (): Ausnahme[] => logik.leseAusnahmen(readFileSync(BESITZER, '
 // nur den Schlüssel (Alpen-Trekking/Skitouren → wetter.vorlage.name.*, MTB → trip.tempo.mtb), 16 Lücken der
 // Tempo-Karte im Reiter Etappen (Fortbewegung, zu Fuß, Rad, Ski) bekommen Schlüssel und text_en.
 // Anzahl 2646, IDs und Mockup-Hash unverändert.
+// #3194 (20.11.): Pin erneut nachgezogen (vorher 0afd879c…736304f3d). Regel g „zusammengesetzt“ im EN-Zuordner:
+// genau 100 bisherige Lücken der Wetter-Dialogtexte (Grenzen-Titel, Hinweis + abweichend, Bestätigungs-Rumpf)
+// bekommen i18n_key, text_en (und bei {vorlage} muster); alle übrigen Einträge byte-gleich (Diff je ID geprüft).
+// Anzahl 2646, IDs und Mockup-Hash unverändert.
 const ALT_ANZAHL = 2646;
-const ALT_SHA = '0afd879c0de88cdfff286c1cc3b609bcb5474efd26be028c41e18ae736304f3d';
+const ALT_SHA = '9e1449ed60be3deade5fc9463c3b5d6163f04a86150e388a43560be7458fa5d9';
 const MOCKUP_HASH = 'sha256:d1fcdf63fb3b9fdc166f537f89af5e0f66992b62541b78176fc2504a491edb40';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {

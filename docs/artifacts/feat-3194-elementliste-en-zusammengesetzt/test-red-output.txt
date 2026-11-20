@@ -1,0 +1,344 @@
+TAP version 13
+# Subtest: \#3194 AC-1 A1: „obenzu viel“ ⇒ EN = oben_1 + oben_2 ohne Fuge (aus dem Katalog)
+not ok 1 - \#3194 AC-1 A1: „obenzu viel“ ⇒ EN = oben_1 + oben_2 ohne Fuge (aus dem Katalog)
+  ---
+  duration_ms: 12.162135
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:53:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Lücke statt Zuordnung für „obenzu viel“
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    erwarteTreffer (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:39:9)
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:56:2)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: \#3194 AC-1 A2: „untenzu wenig“ ⇒ EN = unten_1 + unten_2 ohne Fuge (aus dem Katalog)
+not ok 2 - \#3194 AC-1 A2: „untenzu wenig“ ⇒ EN = unten_1 + unten_2 ohne Fuge (aus dem Katalog)
+  ---
+  duration_ms: 2.119268
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:59:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Lücke statt Zuordnung für „untenzu wenig“
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    erwarteTreffer (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:39:9)
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:62:2)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: \#3194 AC-1 B: Grünhinweis + „Abweichend von der Vorlage „Allgemein““ ⇒ EN-Hinweis + EN-abweichend
+not ok 3 - \#3194 AC-1 B: Grünhinweis + „Abweichend von der Vorlage „Allgemein““ ⇒ EN-Hinweis + EN-abweichend
+  ---
+  duration_ms: 5.074099
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:65:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Lücke statt Zuordnung für „Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „Allgemein“.“
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    erwarteTreffer (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:39:9)
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:67:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#3194 AC-1 C: „keins“-Hinweis + „Abweichend …“ ⇒ EN keins_gruen + EN-abweichend
+not ok 4 - \#3194 AC-1 C: „keins“-Hinweis + „Abweichend …“ ⇒ EN keins_gruen + EN-abweichend
+  ---
+  duration_ms: 0.276992
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:71:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Lücke statt Zuordnung für „„keins“ ist immer grün. Abweichend von der Vorlage „Allgemein“.“
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    erwarteTreffer (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:39:9)
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:73:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#3194 AC-1 D1: Bestätigungs-Rumpf Trip ⇒ ersetzt_route + bleibt
+not ok 5 - \#3194 AC-1 D1: Bestätigungs-Rumpf Trip ⇒ ersetzt_route + bleibt
+  ---
+  duration_ms: 0.292122
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:77:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Lücke statt Zuordnung für „Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips. Zustellung, Etappen und Orte bleiben unverändert.“
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    erwarteTreffer (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:39:9)
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:79:2)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#3194 AC-1 D2: Bestätigungs-Rumpf Orte ⇒ ersetzt_vergleich + bleibt, keine Vermischung mit Trip
+not ok 6 - \#3194 AC-1 D2: Bestätigungs-Rumpf Orte ⇒ ersetzt_vergleich + bleibt, keine Vermischung mit Trip
+  ---
+  duration_ms: 0.222821
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:82:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Lücke statt Zuordnung für „Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen für diese Orte. Zustellung, Etappen und Orte bleiben unverändert.“
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    erwarteTreffer (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:39:9)
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:84:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#3194 AC-1: Reihenfolge bleibt — EN beginnt mit dem EN des ersten Schlüssels
+not ok 7 - \#3194 AC-1: Reihenfolge bleibt — EN beginnt mit dem EN des ersten Schlüssels
+  ---
+  duration_ms: 0.254311
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:88:1'
+  failureType: 'testCodeFailure'
+  error: 'vertauschte Folge: null'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:90:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#3194 AC-2: zwei Vorlagennamen treffen dasselbe EN-Muster, der Name wird nicht ins EN kopiert
+not ok 8 - \#3194 AC-2: zwei Vorlagennamen treffen dasselbe EN-Muster, der Name wird nicht ins EN kopiert
+  ---
+  duration_ms: 0.615343
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:97:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    wetter.grenzen.hinweis: „Allgemein“ blieb Lücke
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:104:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#3194 AC-3: falsche Fuge, fehlender Teil, fremder Zusatz, vertauschte oder gemischte Folge ⇒ Lücke
+ok 9 - \#3194 AC-3: falsche Fuge, fehlender Teil, fremder Zusatz, vertauschte oder gemischte Folge ⇒ Lücke
+  ---
+  duration_ms: 1.111404
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-3: Schlüssel ohne EN-Wert ⇒ Lücke, kein EN ohne Katalogquelle
+not ok 10 - \#3194 AC-3: Schlüssel ohne EN-Wert ⇒ Lücke, kein EN ohne Katalogquelle
+  ---
+  duration_ms: 0.502573
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:132:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Vorbedingung: vollständiger Katalog trifft
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:135:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#3194: Tabelle ZUSAMMENGESETZT ist exportiert und deklarativ (mind. A1, A2, B, C, D1, D2)
+not ok 11 - \#3194: Tabelle ZUSAMMENGESETZT ist exportiert und deklarativ (mind. A1, A2, B, C, D1, D2)
+  ---
+  duration_ms: 0.179671
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:148:1'
+  failureType: 'testCodeFailure'
+  error: 'ZUSAMMENGESETZT fehlt oder ist keine Liste'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:150:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#3194 AC-4: Regeln a–f bleiben — Einzelschlüssel weiter exakt, „gelb >“ weiter Regel e
+ok 12 - \#3194 AC-4: Regeln a–f bleiben — Einzelschlüssel weiter exakt, „gelb >“ weiter Regel e
+  ---
+  duration_ms: 0.278351
+  type: 'test'
+  ...
+# Subtest: \#3194 AC-7: baueElemente zweimal ⇒ byte-identische Ausgabe, zusammengesetzte Texte keine Lücke
+not ok 13 - \#3194 AC-7: baueElemente zweimal ⇒ byte-identische Ausgabe, zusammengesetzte Texte keine Lücke
+  ---
+  duration_ms: 2.765341
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:168:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+      [
+    +   true,
+    +   true,
+    +   true
+    -   false,
+    -   false,
+    -   false
+      ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: false
+    1: false
+    2: false
+  actual:
+    0: true
+    1: true
+    2: true
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:187:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#3194 AC-4/5: erzeugte elementliste.json trägt für A–D keine Lücke mehr, EN aus dem Katalog
+not ok 14 - \#3194 AC-4/5: erzeugte elementliste.json trägt für A–D keine Lücke mehr, EN aus dem Katalog
+  ---
+  duration_ms: 7.533796
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:192:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    100 zusammengesetzte Einträge noch Lücke/falsch, z. B. „untenzu wenig“
+    
+    100 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 100
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_zusammengesetzt_3194.test.ts:207:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 2
+# fail 12
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 256.105909
