@@ -42,7 +42,7 @@ from output.renderers.briefing_typ import briefing_typ
 from output.renderers.email.helpers import (
     _AMPEL_DOT_COLORS,
     _HAIL_RING_COLOR,
-    ampel_level,
+    ampel_level, mit_windrichtung,
     build_confidence_hint, build_metrics_summary_pills, build_origin_footer,
     build_column_legend,
     build_segment_label, build_units_legend,
@@ -234,7 +234,9 @@ def _row_risk(r: dict, *, ampel: dict) -> str:
         vis_m = None
 
     gust_sev = severity_for("gust", _safe_float(r.get("gust")), ampel=ampel)
-    wind_sev = severity_for("wind", _safe_float(r.get("wind")), ampel=ampel)
+    # Issue #3228: Windrichtung (Seitenkanal) hebt die Windstufe, nie addiert.
+    wind_sev = mit_windrichtung(
+        severity_for("wind", _safe_float(r.get("wind")), ampel=ampel), r, ampel=ampel)
     precip_sev = severity_for("precipitation", _safe_float(r.get("precip")), ampel=ampel)
     pop_sev = severity_for("rain_probability", _safe_float(r.get("pop")), ampel=ampel)
     visibility_sev = severity_for("visibility", vis_m, ampel=ampel)
@@ -655,6 +657,10 @@ def _render_html_table(
                 metric_id = _FALLBACK_COL_KEY_TO_METRIC_ID[key]
                 level = severity_for(metric_id, numeric, ampel=ampel)
                 cell_bg = _ampel_cell_bg(level)
+            # Issue #3228 (Roh-Modus): eigene WDir-Spalte nach dem abgeleiteten
+            # km/h-Wert (Seitenkanal), nie nach der Gradzahl.
+            elif key == "wind_dir":
+                cell_bg = _ampel_cell_bg(mit_windrichtung(None, r, ampel=ampel))
             # Gewitter ist seit Issue #1491 eine reguläre 4-stufige
             # Ampel-Spalte (wie Wind/Böen/Regen/Regenwahrsch./CAPE) — die
             # Tönung kommt aus derselben Quelle (`thunder_ampel_band`,
@@ -683,6 +689,10 @@ def _render_html_table(
             # <td> selbst (Vorbild _otd()-Muster), kein Span/Negativ-Margin-Trick
             # mehr — füllt die Zelle auch in Clients ohne <style>-Block vollflächig.
             # Issue #902: Inline-Border (Outlook-fest), identisch zur Time-Zelle.
+            # Issue #3228 (Merge): Wind-Zelle mit Kompass = hoehere Stufe.
+            if key == "wind" and "_wind_dir_deg" in r and "_wind_unerwuenscht_kmh" in r:
+                cell_bg = _ampel_cell_bg(mit_windrichtung(
+                    severity_for("wind", numeric, ampel=ampel), r, ampel=ampel))
             if cell_bg and cell_bg != "transparent":
                 tds += (
                     f'<td style="{_td_grid}background:{cell_bg};padding:6px;" '

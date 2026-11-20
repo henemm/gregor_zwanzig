@@ -49,6 +49,8 @@ from output.renderers.email.outlook import (
 from output.metric_format import (
     NO_VALUE, format_value, severity_for,
 )
+from output.renderers.email.helpers import mit_windrichtung
+from services.windrichtung import zeilen_wert_kmh
 from utils.geo import degrees_to_compass
 from utils.timezone import (
     UTC, local_dt, local_hour, local_stamp, location_tz, tz_abbrev,
@@ -152,6 +154,24 @@ def _sev_visibility(v: float, *, ampel: dict) -> str:
     """v in Metern -- niedrige Sicht ist kritischer (<2000/<1000/<500m via
     severity_for statt der bisherigen <5000/<3000/<1000m)."""
     return _to_compare(severity_for("visibility", v, ampel=ampel))
+
+
+def _sev_windrichtung(loc: LocationResult, *, ampel: dict) -> Optional[str]:
+    """Issue #3228: Windrichtungs-Zelle des Ortes nach dem hoechsten
+    ``wind_unerwuenscht_kmh`` der Stunden (live aus ``hourly_data``). Orte
+    haben keine Fahrtrichtung: geerbtes ``gegenwind`` ergibt keinen Wert."""
+    werte = [w for dp in loc.hourly_data or ()
+             if (w := zeilen_wert_kmh(ampel, dp)) is not None]
+    return _to_compare(severity_for("wind_direction", max(werte), ampel=ampel)) if werte else None
+
+
+def _sev_mit_richtung(sev_level: Optional[str], dp, *, ampel: dict) -> Optional[str]:
+    """Issue #3228 (Merge): Wind-Zelle mit Kompass = hoehere der beiden Stufen."""
+    wert = zeilen_wert_kmh(ampel, dp)
+    if wert is None:
+        return sev_level
+    return _to_compare(mit_windrichtung(
+        _COMPARE_TO_LEVEL.get(sev_level), {"_wind_unerwuenscht_kmh": wert}, ampel=ampel))
 
 
 
@@ -361,7 +381,7 @@ CV2_ZEILEN = [
     # Issue #1324: zehn weitere additive Zeilen (keine Severity-Faerbung, s.
     # Spec Known Limitations). Klasse A (Renderer-ID = LocationResult-Feld):
     {"key": "wind_direction_avg", "metric_id": "wind_direction",
-     "aggregation": "avg"},
+     "aggregation": "avg", "sev_loc": _sev_windrichtung},  # #3228
     {"key": "wind_chill_min", "metric_id": "wind_chill", "aggregation": "min"},
     {"key": "wind_chill_max", "metric_id": "wind_chill", "aggregation": "max"},
     {"key": "cloud_low_avg", "metric_id": "cloud_low", "aggregation": "avg"},
@@ -446,7 +466,7 @@ def _mit_ampel(zeilen: list[dict], *, ampel: dict) -> list[dict]:
     """Zeilen-Kopien, deren "sev" an DIESE Ampel gebunden ist (Issue #2792
     S1c-1, AC-20): je Rendern neu, keine Zustandsuebernahme zwischen Abos."""
     return [
-        {**z, "sev": partial(z["sev"], ampel=ampel)} if "sev" in z else dict(z)
+        {**z, **{k: partial(z[k], ampel=ampel) for k in ("sev", "sev_loc") if k in z}}
         for z in zeilen
     ]
 
@@ -819,6 +839,8 @@ def _render_overview_row(
         )
         sev_fn = m.get("sev")
         sev_level = sev_fn(value) if (sev_fn and value is not None) else None
+        if m.get("sev_loc") and value is not None:  # #3228: Wert je Ort
+            sev_level = m["sev_loc"](loc)
         bg, fg, weight = "transparent", G_INK, "500"
         if sev_level and sev_level != "ok":
             # Issue #1214 Scheibe 2: Zell-Toenung ueber die zentrale tone_css-
@@ -1207,6 +1229,8 @@ def _render_hour_row(
                 text = f"{text} {compass}"
         sev_fn = m.get("sev")
         sev_level = sev_fn(value) if (sev_fn and value is not None) else None
+        if merge_wind_dir and m["key"] == "wind10m_kmh":
+            sev_level = _sev_mit_richtung(sev_level, dp, ampel=ampel)  # #3228
         cells += _hour_td(text, *_sev_cell_style(sev_level))
     return f'<tr style="border-bottom:1px solid #f0ece1;">{cells}</tr>'
 

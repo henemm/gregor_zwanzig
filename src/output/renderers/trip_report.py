@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 from utils.timezone import local_dt, local_fmt, local_hour
 
 from app.ampel import resolve_ampel
+from services.windrichtung import segment_peilung_deg, zeilen_wert_kmh
 from app.metric_catalog import build_default_display_config, get_col_defs, get_metric, get_metric_by_col_key
 from app.models import (
     ExposedSection,
@@ -186,7 +187,9 @@ class TripReportFormatter:
         trip_id = "".join(c for c in trip_id if c.isalnum() or c == "-")
 
         # Extract hourly data for each segment
-        seg_tables = [self._extract_hourly_rows(s, dc) for s in segments]
+        # Issue #2792 S1c-4b / #3228: EINE Aufloesung der Abo-Ampel (Mail-Zeilen + SMS).
+        _ampel = resolve_ampel(_dc_uncollapsed)
+        seg_tables = [self._extract_hourly_rows(s, dc, ampel=_ampel) for s in segments]
 
         # Night rows (both report types — Issue #1313, gated via dc.show_night_block)
         night_rows = []
@@ -334,7 +337,7 @@ class TripReportFormatter:
                 for rt, kanaele in (_dc_uncollapsed.per_report_layouts or {}).items()
             } or None,
         })
-        seg_tables_telegram = [self._extract_hourly_rows(s, _dc_telegram) for s in segments]
+        seg_tables_telegram = [self._extract_hourly_rows(s, _dc_telegram, ampel=_ampel) for s in segments]
         # Adversary F004 (S2-Fix-Runde): dc=_dc_telegram statt dc=_dc_uncollapsed
         # -- render_telegram_bubbles() liest dc NICHT nur fuer die
         # Spalten-/Zeilenermittlung (render_for_channel(), idempotent gegen
@@ -482,7 +485,7 @@ class TripReportFormatter:
             day_window_end_hour=_dw_end,
             sms_alert_min_level=_sms_alert_min_level,
             # Issue #2792 S1c-4b: Ampel aus derselben dc wie die Mail.
-            ampel=resolve_ampel(_dc_uncollapsed),
+            ampel=_ampel,
         )
         sms_text = SMSTripFormatter().format_sms(
             segments, tz=self._tz, max_length=160, **_sms_kwargs,
@@ -529,8 +532,12 @@ class TripReportFormatter:
 
     def _extract_hourly_rows(
         self, seg_data: SegmentWeatherData, dc: UnifiedWeatherDisplayConfig,
+        *, ampel: dict,
     ) -> list[dict]:
-        """Extract hourly data points within segment time window."""
+        """Extract hourly data points within segment time window.
+
+        ``ampel`` (Issue #3228): aufgeloeste Abo-Ampel fuer den Seitenkanal
+        ``_wind_unerwuenscht_kmh``; Pflicht ohne Default."""
         # WEATHER-04: Error-Segment hat keine Timeseries
         if seg_data.has_error or seg_data.timeseries is None:
             return []
@@ -538,13 +545,21 @@ class TripReportFormatter:
         start_h = seg_data.segment.start_time.hour
         # Issue #1599: Anzeige-Ende statt Alarm-Obergrenze (Ziel-Segment).
         end_h = display_end_time(seg_data.segment).hour
+        # Issue #3228: Fahrtpeilung einmal je Segment (Windrichtung).
+        peilung = segment_peilung_deg(seg_data.segment)
         rows = []
         for dp in seg_data.timeseries.data:
             h = dp.ts.hour
             # Bug #399: Mitternachts-Übergang (start_h > end_h, z. B. 23…01).
             include = (start_h <= h <= end_h) if start_h <= end_h else (h >= start_h or h <= end_h)
             if include:
-                rows.append(self._dp_to_row(dp, dc))
+                row = self._dp_to_row(dp, dc)
+                # Issue #3228: Seitenkanal fuer die Windrichtungs-Ampel (km/h),
+                # nur wenn Modus != aus und ein Wert bestimmbar ist.
+                unerwuenscht = zeilen_wert_kmh(ampel, dp, peilung)
+                if unerwuenscht is not None:
+                    row["_wind_unerwuenscht_kmh"] = unerwuenscht
+                rows.append(row)
         return rows
 
     def _extract_night_rows(

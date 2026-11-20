@@ -63,6 +63,18 @@ def wind_unerwuenscht_kmh(
     return gegenwind_kmh(wind_kmh, herkunft_deg, peilung_deg)
 
 
+def zeilen_wert_kmh(ampel: Optional[dict], dp: Any,
+                    peilung_deg: Optional[float] = None) -> Optional[float]:
+    """Issue #3228: ``wind_unerwuenscht_kmh`` einer Stunde aus der AUFGELOESTEN
+    Ampel (``ampel.metrics.wind_direction``) und einem Datenpunkt; gemeinsame
+    Quelle fuer Briefing- und Vergleichs-Mail. ``None`` = keine Faerbung."""
+    e = ((ampel or {}).get("metrics") or {}).get("wind_direction") or {}
+    return wind_unerwuenscht_kmh(
+        e.get("modus"), e.get("sektoren"), getattr(dp, "wind10m_kmh", None),
+        getattr(dp, "wind_direction_deg", None), peilung_deg,
+    )
+
+
 def segment_peilung_deg(segment: Any) -> Optional[float]:
     """Fahrtpeilung eines Segments als Luftlinie ``start_point`` -> ``end_point``;
     ``None`` ohne Punkte oder unter ``MIN_LUFTLINIE_KM`` (z. B. Rundkurs)."""

@@ -48,6 +48,7 @@ Nur aus /home/hem/gregor_zwanzig_staging: aus jedem anderen Checkout bricht
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import uuid
 from datetime import date, datetime, timezone
@@ -76,8 +77,9 @@ from output.renderers.alert.project import onset_event_from_fields  # noqa: E402
 from output.renderers.alert.render import render_email as render_alert_email  # noqa: E402
 from output.renderers.alert.render import render_subject as render_alert_subject  # noqa: E402
 from output.renderers.email import render_email  # noqa: E402
-from output.renderers.email.helpers import dp_to_row  # noqa: E402
 from output.renderers.comparison import render_compare_email  # noqa: E402
+from output.renderers.compare_hourly_metric_ids import resolve_hourly_metrics  # noqa: E402
+from output.renderers.trip_report import TripReportFormatter  # noqa: E402
 from output.tokens.dto import TokenLine  # noqa: E402
 from services.notification_service import NotificationService  # noqa: E402
 from services.official_alerts.models import OfficialAlert  # noqa: E402
@@ -158,7 +160,11 @@ def send_official_alert_mail(settings: Settings, token: str, lang: str = "de") -
 # seit #1432 zu Recht meldet. `is_day=1` gehoert dazu, weil der Emoji-Pfad
 # (get_weather_emoji) DNI nur bei bekanntem Tag-Flag auswertet; alle vier
 # Stunden liegen im Juli zwischen 10 und 16 Uhr Ortszeit, also am Tag.
-_BRIEFING_CLEAR_SKY_DNI = {8: 780.0, 10: 870.0, 12: 850.0, 14: 700.0}  # UTC-Stunde
+# Issue #3228: die Rad-Etappen (SEG 2..5, s. ``RAD_ETAPPEN``) laufen am
+# Nachmittag weiter (15..18 UTC = 17..20 Uhr Ortszeit, Sonne sinkt); 19 UTC
+# (21 Uhr) liegt nach Sonnenuntergang (``is_day=0``, keine Direktstrahlung).
+_BRIEFING_CLEAR_SKY_DNI = {8: 780.0, 10: 870.0, 12: 850.0, 14: 700.0,  # UTC-Stunde
+                           15: 610.0, 16: 490.0, 17: 340.0, 18: 170.0, 19: 0.0}
 _BRIEFING_CLOUD_DIRECT_DAMPING = 0.8
 
 
@@ -175,6 +181,8 @@ def _briefing_dps() -> list[ForecastDataPoint]:
             pop_pct=15, cloud_total_pct=c, thunder_level=ThunderLevel.NONE,
             visibility_m=20000, freezing_level_m=3000,
             is_day=1, dni_wm2=_briefing_dni(h, c),
+            # Issue #3228: Wind aus SSW bei Kurs nach SO -- schwach, keine Faerbung.
+            wind_direction_deg=200.0,
         )
         for h, t, w, c, p in (
             (8, 14.0, 10.0, 30, 0.0),
@@ -183,6 +191,81 @@ def _briefing_dps() -> list[ForecastDataPoint]:
             (14, 19.0, 13.0, 38, 0.0),
         )
     ]
+
+
+# ---------------------------------------------------------------------------
+# Issue #3228 (Windrichtung in der Mail, Spec feat_3228_windrichtung_mail.md):
+# Rad-Trip mit Ampel-Vorlage ``radtour`` (Windrichtung ``modus: gegenwind``,
+# Windstaerke 20/30/45, Gegenwind 10/20/30 km/h). Vorbild der Faelle:
+# tests/tdd/test_feat_3228_windrichtung_mail.py. Geometrie als Luftlinie
+# Start -> Ende: Nordkurs ~5,5 km, Rundkurs ~110 m (< 300 m, keine Fahrtrichtung).
+# Je Etappe: (Segment-ID, Start, Ende, Peilung fuer den Validator, Stunden),
+# Stunde = (UTC-Stunde, km/h, Herkunft Grad). Erwartung je Wind-Zelle
+# (Soll ``windrichtung_soll``): SEG 2 Nordwind 25 -> orange (AC-1); SEG 3 Suedwind 25
+# und Ostwind 25 -> gelb nur aus der Windstaerke, Nordwind 5 -> ungefaerbt
+# (AC-2/AC-3); SEG 4 Rundkurs Nordwind 40 -> orange nur aus der Windstaerke,
+# SEG 5 Nordkurs Nordwind 40 -> rot (AC-4).
+# ---------------------------------------------------------------------------
+RAD_AMPEL = {"template": "radtour"}
+_NORD = ((46.60, 13.70), (46.65, 13.70))
+_RUNDKURS = ((46.650, 13.70), (46.651, 13.70))
+RAD_ETAPPEN = (
+    (2, *_NORD, 0.0, ((14, 25.0, 0.0), (15, 25.0, 0.0))),
+    (3, *_NORD, 0.0, ((15, 25.0, 180.0), (16, 25.0, 90.0), (17, 5.0, 0.0))),
+    (4, *_RUNDKURS, None, ((17, 40.0, 0.0), (18, 40.0, 0.0))),
+    (5, *_NORD, 0.0, ((18, 40.0, 0.0), (19, 40.0, 0.0))),
+)
+
+
+def windrichtung_soll() -> dict:
+    """Soll der Windrichtungs-Pruefung im Briefing-Validator (JSON): Ampel des
+    Rad-Trips und Fahrtpeilung je Etappe (``None`` = Rundkurs)."""
+    return {"ampel": RAD_AMPEL, "peilung": {str(sid): p for sid, _s, _e, p, _h in RAD_ETAPPEN}}
+
+
+def _rad_segment(seg_id: int, start: tuple, ende: tuple,
+                 stunden: tuple) -> SegmentWeatherData:
+    dps = [
+        ForecastDataPoint(
+            ts=datetime(2026, 7, 13, h, 0, tzinfo=UTC),
+            t2m_c=18.0, wind10m_kmh=kmh, gust_kmh=kmh + 5, wind_direction_deg=deg,
+            precip_1h_mm=0.0, pop_pct=10, cloud_total_pct=30,
+            thunder_level=ThunderLevel.NONE, visibility_m=20000,
+            freezing_level_m=3000, is_day=1 if h < 19 else 0,
+            dni_wm2=_briefing_dni(h, 30),
+        )
+        for h, kmh, deg in stunden
+    ]
+    seg = TripSegment(
+        segment_id=seg_id,
+        start_point=GPXPoint(lat=start[0], lon=start[1], elevation_m=1200.0),
+        end_point=GPXPoint(lat=ende[0], lon=ende[1], elevation_m=1250.0),
+        start_time=dps[0].ts, end_time=dps[-1].ts,
+        duration_hours=float(len(dps) - 1), distance_km=6.0,
+        ascent_m=50.0, descent_m=0.0,
+    )
+    meta = ForecastMeta(provider=Provider.OPENMETEO, model="gate-3228-fixture", grid_res_km=1.3)
+    agg = SegmentWeatherSummary(
+        temp_min_c=18.0, temp_max_c=18.0, temp_avg_c=18.0,
+        wind_max_kmh=max(d.wind10m_kmh for d in dps),
+        gust_max_kmh=max(d.gust_kmh for d in dps), precip_sum_mm=0.0,
+        cloud_avg_pct=30, humidity_avg_pct=55, thunder_level_max=ThunderLevel.NONE,
+    )
+    return SegmentWeatherData(
+        segment=seg, timeseries=NormalizedTimeseries(meta=meta, data=dps),
+        aggregated=agg, fetched_at=datetime.now(UTC), provider="openmeteo",
+    )
+
+
+def _rad_display_config():
+    """Standard-Anzeige mit Vorlage ``radtour``; Windrichtung an und (Katalog-
+    Standard ``scale``) als Kompass in der Wind-Zelle verschmolzen."""
+    dc = build_default_display_config()
+    dc.ampel = dict(RAD_AMPEL)
+    for mc in dc.metrics:
+        if mc.metric_id in ("wind", "wind_direction"):
+            mc.enabled = True
+    return dc
 
 
 def build_briefing_mail(token: str, lang: str = "de") -> tuple[str, str, str]:
@@ -216,14 +299,21 @@ def build_briefing_mail(token: str, lang: str = "de") -> tuple[str, str, str]:
         official_alerts=[alert],
     )
 
-    dc = build_default_display_config()
-    seg_tables = [[dp_to_row(dp, dc, tz=VIENNA) for dp in dps]]
+    # Issue #3228: Rad-Trip (Vorlage radtour) -- die Stundenzeilen entstehen
+    # ueber den echten Zeilenbau des Briefings (``_extract_hourly_rows`` samt
+    # Gegenwind-Seitenkanal), nicht ueber eine Nachbildung im Skript.
+    dc = _rad_display_config()
+    segments = [seg_data] + [_rad_segment(sid, s, e, h) for sid, s, e, _p, h in RAD_ETAPPEN]
+    zeilenbau = TripReportFormatter()
+    zeilenbau._tz = VIENNA  # Ortszeit der Zeilen wie in format_email(tz=...)
+    ampel = resolve_ampel(dc)
+    seg_tables = [zeilenbau._extract_hourly_rows(s, dc, ampel=ampel) for s in segments]
     tl = TokenLine(
         trip_name=f"GATE1233 {token}", report_type="morning",
         stage_name="Etappe 1: Gate-Test-Strecke",
     )
     html, plain = render_email(
-        tl, segments=[seg_data], seg_tables=seg_tables,
+        tl, segments=segments, seg_tables=seg_tables,
         display_config=dc, tz=VIENNA, friendly_keys=set(),
         email_format="full", lang=lang,
         compact_summary="Wechselhaft mit einzelnen Gewittern am Nachmittag.",
@@ -261,7 +351,8 @@ def send_briefing_mail(settings: Settings, token: str, lang: str = "de") -> bool
 _VIENNA_SUMMER_OFFSET_H = 2
 
 
-def _compare_hourly_data(base_temp: float) -> list[ForecastDataPoint]:
+def _compare_hourly_data(base_temp: float, wind_kmh: float = 12.0,
+                         wind_deg: float = 270.0) -> list[ForecastDataPoint]:
     # Die Schleife laeuft ueber die ANGEZEIGTEN Ortsstunden 09..16; der
     # Zeitstempel wird daraus zurueckgerechnet. So steht die Absicht im Code,
     # statt dass ein roher Stundenbereich stillschweigend die Anzeige bestimmt.
@@ -273,13 +364,30 @@ def _compare_hourly_data(base_temp: float) -> list[ForecastDataPoint]:
             # der Mail sichtbaren Werte bleiben damit exakt dieselben wie vor
             # #1378 (Plausibilitaets-Pruefung des Validators, Tagesmaximum
             # base_temp + 4.2 K passt weiter zu `temp_max` der Ortszeile).
-            t2m_c=base_temp + (local_h - 9) * 0.6, wind10m_kmh=12.0, gust_kmh=20.0,
+            t2m_c=base_temp + (local_h - 9) * 0.6, wind10m_kmh=wind_kmh,
+            gust_kmh=wind_kmh + 8.0, wind_direction_deg=wind_deg,
             wind_chill_c=base_temp + (local_h - 9) * 0.6 - 1.0,
             precip_1h_mm=0.0, pop_pct=10, uv_index=4.0,
             thunder_level=ThunderLevel.NONE, visibility_m=20000,
         )
         for local_h in range(9, 17)
     ]
+
+
+# Issue #3228 (Spec feat_3228_windrichtung_mail.md, AC-5): Ortsvergleich mit
+# markiertem Sektor N (Grenzen 10/20/40 km/h) auf Vorlage „allgemein" (Wind
+# 30/50/70). Gatehausen Nord: 30 km/h aus N -> Windrichtungs-Zelle orange,
+# Wind-Zelle orange statt gelb; Gatehausen Mitte: 30 km/h aus S -> ungefaerbt
+# bzw. nur Windstaerke gelb; Gatehausen Sued: 12 km/h aus W -> ungefaerbt.
+# Vorbild: tests/tdd/test_feat_3228_windrichtung_mail_compare.py.
+COMPARE_AMPEL = {"template": "allgemein", "metrics": {"wind_direction": {
+    "enabled": True, "modus": "sektoren", "sektoren": ["N"],
+    "upper": {"yellow": 10, "orange": 20, "red": 40}}}}
+
+
+def compare_windrichtung_soll() -> dict:
+    """Soll der Windrichtungs-Pruefung im Vergleichs-Validator (JSON)."""
+    return {"ampel": COMPARE_AMPEL}
 
 
 def build_compare_mail(token: str, lang: str = "de") -> tuple[str, str, str]:
@@ -301,19 +409,19 @@ def build_compare_mail(token: str, lang: str = "de") -> tuple[str, str, str]:
 
     results = [
         LocationResult(
-            location=loc1, score=0, temp_max=24.0, wind_max=16.0,
-            sunny_hours=6, cloud_avg=30,
-            hourly_data=_compare_hourly_data(20.0),
+            location=loc1, score=0, temp_max=24.0, wind_max=30.0,
+            sunny_hours=6, cloud_avg=30, wind_direction_avg=0,
+            hourly_data=_compare_hourly_data(20.0, 30.0, 0.0),
             official_alerts=[alert],
         ),
         LocationResult(
-            location=loc2, score=0, temp_max=22.0, wind_max=14.0,
-            sunny_hours=5, cloud_avg=40,
-            hourly_data=_compare_hourly_data(18.0),
+            location=loc2, score=0, temp_max=22.0, wind_max=30.0,
+            sunny_hours=5, cloud_avg=40, wind_direction_avg=180,
+            hourly_data=_compare_hourly_data(18.0, 30.0, 180.0),
         ),
         LocationResult(
             location=loc3, score=0, temp_max=19.0, wind_max=18.0,
-            sunny_hours=4, cloud_avg=55,
+            sunny_hours=4, cloud_avg=55, wind_direction_avg=270,
             hourly_data=_compare_hourly_data(15.0),
         ),
     ]
@@ -323,10 +431,13 @@ def build_compare_mail(token: str, lang: str = "de") -> tuple[str, str, str]:
     html, plain = render_compare_email(
         result, profile=ActivityProfile.ALLGEMEIN,
         preset_name=f"GATE1233 Compare {token}", lang=lang,
+        # Issue #3228: Windrichtung als Kompass in der Wind-Zelle des
+        # Stundenverlaufs (Merge), zusaetzlich zur Vorgabe-Auswahl.
+        hourly_metrics=[*resolve_hourly_metrics(None), "wind_direction_deg"],
         # Issue #2792 S1c-4b: ``preset`` ist Pflicht. Die Gate-Testmail hat
-        # kein Abo -- bewusst Vorlage „allgemein"; ``schedule: manual`` haelt
-        # den Fuss „Naechster Versand" wie bisher bei „–".
-        preset={"schedule": "manual", "display_config": {"ampel": {"template": "allgemein"}}},
+        # kein Abo -- Vorlage „allgemein" (#3228: plus Sektor N);
+        # ``schedule: manual`` haelt den Fuss „Naechster Versand" wie bisher bei „–".
+        preset={"schedule": "manual", "display_config": {"ampel": COMPARE_AMPEL}},
     )
     subject = f"[GATE1233 {token}] Orts-Vergleich"
     return subject, html, plain
@@ -449,10 +560,13 @@ def main(argv: list[str] | None = None, herkunft=classify_origin) -> int:
     if "briefing" in targets:
         sent = send_briefing_mail(settings, token, lang)
         print(f"(b) Trip-Briefing (full) + WarnBlock gesendet: {sent}")
+        # Issue #3228: Soll der Windrichtungs-Pruefung fuer den Validator.
+        print(f"    Soll Windrichtung: {json.dumps(windrichtung_soll())}")
         ok = ok and sent
     if "compare" in targets:
         sent = send_compare_mail(settings, token, lang)
         print(f"(c) Orts-Vergleich + WarnBlock gesendet: {sent}")
+        print(f"    Soll Windrichtung: {json.dumps(compare_windrichtung_soll())}")
         ok = ok and sent
     if "radar" in targets:
         sent = send_radar_alert_mail(settings, token, lang)
