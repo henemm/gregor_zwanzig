@@ -14,7 +14,7 @@ Verschwinden von 'WC' selbst.
 Alte Referenz eingefroren per echtem Lauf (Muster tests/golden/): mit dem
 damaligen Stand liefert ``format_email().sms_text`` fuer die unten
 gebaute Fixture exakt
-``"E7: N11 D3/20 FN9 FD1/18 WC1"`` -- Werte aus
+``"E7 N11 D3/20 FN9 FD1/18 WC1"`` -- Werte aus
 ``tests/tdd/_min_temp_felt_fixtures.py`` (K/FK ohne eigenstaendiges Kuerzel,
 weil Tages-Tief UND -Hoch gewaehlt sind -> Bereichs-Token D3/20 bzw. FD1/18,
 Issue #1824 A). 'WC1' traegt den Gehzeit-Tiefstwert (FELT_HIKE_MIN_C=1.0)
@@ -63,7 +63,7 @@ _METRIC_IDS = (
 # Issue #2792 S1c-4b (Nachtrag VS, E1): 'TF' zeigt den Tiefstwert nur ab Gelb
 # der Ampel („allgemein": gefuehlt gelb unter 0 °C); 1 °C -> Nullform 'TF-'.
 # Token-Menge und Positionen bleiben unveraendert.
-_ERWARTET_OHNE_WC = "E7: D3/20 N11 FD1/18 FN9 TF-"
+_ERWARTET_OHNE_WC = "E7 D3/20 N11 FD1/18 FN9 TF-"
 
 
 def _sms() -> str:

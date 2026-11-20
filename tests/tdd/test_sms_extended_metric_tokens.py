@@ -388,11 +388,11 @@ def test_ac11_golden_byte_identity_without_the_14_new_metrics():
     # und G20 liegen darunter (frueher R0.3@6(1.8@15) W15@11(22@14)
     # G20@11(35@14)).
     assert evening == (
-        "Etappe 3 B: N- D8/19 FD-3/5 R1.8@15 PR35%@10(80%@16) "
+        "Etappe 3 B N- D8/19 FD-3/5 R1.8@15 PR35%@10(80%@16) "
         "W- G35@14 TH:M@15"
     ), f"Byte-Identitaet gebrochen (evening): {evening!r}"
     assert morning == (
-        "Etappe 3 B: D8/19 FD-3/5 R1.8@15 PR35%@10(80%@16) "
+        "Etappe 3 B D8/19 FD-3/5 R1.8@15 PR35%@10(80%@16) "
         "W- G35@14 TH:M@15"
     ), f"Byte-Identitaet gebrochen (morning): {morning!r}"
 

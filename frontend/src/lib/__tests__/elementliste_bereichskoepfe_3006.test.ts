@@ -33,8 +33,11 @@ interface Eintrag {
 	text_en: string | null;
 	luecke: boolean;
 }
+// Übersicht-Bereichskopf gehört #2969, eigener Test (elementliste_uebersicht_2969.test.ts).
 const kopfEintraege = (): Eintrag[] =>
-	(JSON.parse(readFileSync(LISTE, 'utf8')).elemente as Eintrag[]).filter((e) => e.abschnitt === 'abschnittskopf');
+	(JSON.parse(readFileSync(LISTE, 'utf8')).elemente as (Eintrag & { reiter: string })[]).filter(
+		(e) => e.abschnitt === 'abschnittskopf' && e.reiter !== 'uebersicht'
+	);
 
 // Stand vor #3006 (IDs dürfen sich nicht ändern). Ausnahme #3122: Mockup Fassung 4 (ADR-0124 Nr. 10, der Bereich
 // heißt „Orte“) hat im Reiter Orte einen neuen Erklärtext; die vier Einträge dazu (je Zustand einer) tragen

@@ -699,6 +699,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     KNOWN_TOP_LEVEL = {
         "id", "name", "stages", "avalanche_regions", "aggregation", "shortcode", "activity",
         "region", "archived_at", "paused_at", "official_alerts_enabled",
+        "radar_alert_enabled",
         "official_alert_triggers_enabled", "official_warnings", "weather_config",
         "display_config", "report_config", "alert_rules", "corridors", "alert_cooldown_minutes",
         "alert_quiet_from", "alert_quiet_to", "trip",
@@ -744,6 +745,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         archived_at=data.get("archived_at"),  # Issue #805
         paused_at=data.get("paused_at"),  # Issue #995: Go-Feld paused_at — roundtrip-erhalten
         official_alerts_enabled=data.get("official_alerts_enabled"),  # Issue #1087
+        radar_alert_enabled=data.get("radar_alert_enabled"),  # Issue #2800
         official_alert_triggers_enabled=data.get("official_alert_triggers_enabled"),  # Issue #1088
         # Issue #1258: explizit durchreichen (auch als None) -> unterscheidet
         # geladenen Bestandstrip (noch nicht migriert) von einer Neuanlage.
@@ -1893,6 +1895,10 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
     # (Read-Modify-Write, BUG-DATALOSS-GR221), nicht wie ein falsy-Wert wegfallen.
     if trip.official_alerts_enabled is not None:
         data["official_alerts_enabled"] = trip.official_alerts_enabled
+
+    # Issue #2800: analog #1087 — RMW, False muss persistieren, None = nicht schreiben.
+    if trip.radar_alert_enabled is not None:
+        data["radar_alert_enabled"] = trip.radar_alert_enabled
 
     # Issue #1088: analog #1087 — RMW, False muss persistieren.
     if trip.official_alert_triggers_enabled is not None:

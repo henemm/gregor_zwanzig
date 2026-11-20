@@ -60,15 +60,15 @@ const PFLICHT: Pflicht[] = [
 	P('AC-10', '^unverändert', '^{*} Abweichungen', '{*} Metriken'),
 	ODER('AC-10', ['^{*} Abweichung'], ['^1 Abweichung']),
 	GETEILT('AC-10', '^Eigene', '^Vorlagen'),
-	ODER(
+	// #3111 AC-6 (Mockup Fassung 4): Bestätigung zweiteilig (Titel + Rumpf), „…“ statt ‚…‘, Orte statt Orts-Briefing.
+	P(
 		'AC-11',
-		['‚{*}‘ übernehmen? Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses {*}.'],
-		[
-			'‚{*}‘ übernehmen? Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips.',
-			'‚{*}‘ übernehmen? Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Orts-Briefings.'
-		]
+		'^„{*}“ übernehmen?',
+		'^Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips.',
+		'^Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen für diese Orte.',
+		'^Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen für diesen Ort.'
 	),
-	P('AC-11', 'Deine {*} Abweichungen von ‚{*}‘ gehen verloren.', 'Zustellung, Etappen und Orte bleiben unverändert.'),
+	P('AC-11', 'Deine {*} Abweichungen von „{*}“ gehen verloren.', 'Zustellung, Etappen und Orte bleiben unverändert.'),
 	GETEILT('AC-11', '^Übernehmen', '^Abbrechen'),
 	// #2913 c2 (Spec feat_2913_c2_seitenkopf.md AC-8, Mockup): doppelte Anführungszeichen „…“ statt ‚…‘.
 	P('AC-12', 'Auf „{*}“ zurücksetzen'),
@@ -78,11 +78,12 @@ const PFLICHT: Pflicht[] = [
 	GETEILT('AC-14', '^Nie', '^Gelb', '^Orange', '^Rot'),
 	P('AC-15', 'grün: {*} bis {*}', 'grün: ab {*}', 'grün: bis {*}', 'immer grün (keine Grenze gesetzt)'),
 	P('AC-15', 'kein Alarm (Vorbote)', '^kein Alarm', '^Grenzen ändern'),
-	P('AC-16', 'Grün ist alles zwischen ‚gelb unten‘ und ‚gelb oben‘. Ein leeres Feld heißt: auf dieser Seite keine Grenze.'),
-	P('AC-16', 'Abweichend von der Vorlage ‚{*}‘.'),
+	// #3111 AC-2 (Mockup Fassung 4): „…“ statt ‚…‘.
+	P('AC-16', 'Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze.'),
+	P('AC-16', 'Abweichend von der Vorlage „{*}“.'),
 	GETEILT('AC-16', '^Fertig'),
 	P('AC-16', 'Alarm, wenn der Wert seit dem letzten Briefing über {*} {*} steigt', 'dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht.', 'oder unter {*} {*} fällt'),
-	P('AC-18', '‚keins‘ ist immer grün.', 'keine Ampel, nur Anzeige'),
+	P('AC-18', '„keins“ ist immer grün.', 'keine Ampel, nur Anzeige'),
 	P('AC-18', 'Alarm, wenn die Gewitter-Stufe seit dem letzten Briefing auf {*} steigt ({*}). Entwarnung, wenn sie wieder fällt.'),
 	P('AC-18', 'Mit diesen Farben erreicht Gewitter nie {*}, daher kein Alarm.'),
 	P('AC-18', 'Kein Alarm. Die Farbe erscheint nur im Briefing.', 'Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus.'),

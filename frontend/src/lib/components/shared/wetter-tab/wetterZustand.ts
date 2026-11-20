@@ -50,6 +50,14 @@ export type AboSicht = Record<string, unknown> & {
 
 const STANDARD_FENSTER: Tagesfenster = { start: 4, end: 19 };
 
+/** Radar-Schalter lesen (#2800): am Trip gilt ein fehlendes Feld als an (Bestandstrips laufen
+ *  seit #822 ohne Schalter), am Orts-Briefing als aus (`compare_radar_alert.py`). Dokumentierte
+ *  Default-Asymmetrie, siehe api_contract.md. */
+const RADAR_LESEN: Record<Kontext, (wert: unknown) => boolean> = {
+	route: (wert) => wert !== false,
+	vergleich: (wert) => wert === true
+};
+
 /** Gueltige Stunde wie Python (`type(x) is int`, 0-23). */
 function stunde(x: unknown): x is number {
 	return typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= 23;
@@ -98,7 +106,7 @@ export function standAusAbo(
 		ampel,
 		auswahl: quellen.alsVorlage ? nurAusgebbar(context, auswahl, alt) : auswahl,
 		warnungenAn: amtlicheWarnungenAn(abo as WarnFelder),
-		radarAn: abo?.radar_alert_enabled === true,
+		radarAn: RADAR_LESEN[context](abo?.radar_alert_enabled),
 		tagesfenster: tagesfensterLesen(context, abo)
 	};
 }

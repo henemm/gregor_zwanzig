@@ -152,7 +152,9 @@ Aktive Feature-Settings im Body: `ss01`, `cv11` (Inter-Stylistic-Sets). Für Zah
 | Token | Größe | Anwendung |
 |---|---|---|
 | `--g-text-xs` | 11 px | Eyebrow, Caps-Labels |
+| `--g-text-12px` | 12 px | Zwischenstufe Kleinschrift: Metadaten, Untertitel, Erklärtext (#3010) |
 | `--g-text-sm` | 13 px | Caption, Tabellen-Body |
+| `--g-text-16px` | 16 px | Zwischenstufe Zoom-Schutz: mobile Eingabefelder, verhindert iOS-Zoom (#3010) |
 | `--g-text-md` | 15 px | Body |
 | `--g-text-lg` | 17 px | Body-Lead, Pull-Quote |
 | `--g-text-xl` | 20 px | Heading H4 |
@@ -160,6 +162,8 @@ Aktive Feature-Settings im Body: `ss01`, `cv11` (Inter-Stylistic-Sets). Für Zah
 | `--g-text-3xl` | 32 px | Title H2 |
 | `--g-text-4xl` | 44 px | Display H1 |
 | `--g-text-5xl` | 60 px | Display Hero |
+
+`font-size` kommt ausschließlich aus `--g-text-*`; Abstands-Tokens `--g-s-*` als Schriftgröße meldet der Bausteine-Wächter („Schriftgröße aus Abstands-Token“, ADR-0112).
 
 ### Tracking
 | Token | Wert | Anwendung |

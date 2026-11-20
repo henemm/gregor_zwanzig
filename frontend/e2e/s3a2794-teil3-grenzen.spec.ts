@@ -45,15 +45,14 @@ for (const kind of HUB_KINDS) {
 
 			for (const f of ['yellow', 'orange', 'red'] as const) await expect(zeile.getByTestId(WT.grenze('gust', 'upper', f))).toBeVisible();
 			for (const f of ['yellow', 'orange', 'red'] as const) await expect(zeile.getByTestId(WT.grenze('gust', 'lower', f)), 'AC-16: untere Seite bei „nur oben“').toHaveCount(0);
-			await expect(zeile.getByTestId(WT.grenzenHinweis('gust'))).toContainText(
-				'Grün ist alles zwischen ‚gelb unten‘ und ‚gelb oben‘. Ein leeres Feld heißt: auf dieser Seite keine Grenze.'
-			);
-			await expect(zeile.getByTestId(WT.grenzenAbweichend('gust')), 'Abweichungs-Satz ohne Abweichung').toHaveCount(0);
+			// #3111 AC-2: Abweichend-Satz steht im selben Absatz wie der Hinweis (Mockup Fassung 4), nur bei Abweichung.
+			const HINWEIS = 'Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze.';
+			await expect(zeile.getByTestId(WT.grenzenHinweis('gust')), 'Abweichungs-Satz ohne Abweichung').toHaveText(HINWEIS);
 
 			await zeile.getByTestId(WT.grenze('gust', 'upper', 'orange')).fill('50');
 			await expect(zeile.getByTestId(WT.erklaersatz('gust'))).toContainText('über 50 km/h');
 			await expect(reiter.getByTestId(WT.pickerStatus)).toHaveText('1 Abweichung');
-			await expect(zeile.getByTestId(WT.grenzenAbweichend('gust'))).toHaveText(`Abweichend von der Vorlage ‚${v.wandern.label}‘.`);
+			await expect(zeile.getByTestId(WT.grenzenHinweis('gust'))).toHaveText(`${HINWEIS} Abweichend von der Vorlage „${v.wandern.label}“.`);
 
 			const speichern = warteAufSpeichern(page, kind, hub.id);
 			await zeile.getByTestId(WT.grenzenAendern('gust')).click();

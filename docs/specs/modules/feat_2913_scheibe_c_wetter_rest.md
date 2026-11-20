@@ -155,6 +155,7 @@ Fertig ist Scheibe (c), wenn die vier Abschnitte „Nicht im Briefing“, Amtlic
   - Test: Staging-E2E schaltet, speichert, lädt neu und prüft Zustand und unveränderte Nachbarfelder; Unit-Render prüft Rolle, ARIA und Tapfläche.
 
 - **AC-3:** Given der Wetter-Reiter eines Orts-Briefings / When die Karte Warnungen/Radar angezeigt wird / Then gibt es eine zweite Zeile „Radar-Regen“ mit dem Schalter `wetter-radar-schalter` (Schalter-Atom, speichert `radar_alert_enabled` wie bisher); Given der Wetter-Reiter eines Trips / When dieselbe Karte angezeigt wird / Then gibt es keine Radar-Zeile und keinen Radar-Schalter, bis #2800 geliefert ist.
+  - **Trip-Teil abgelöst durch #2800** (Spec `feat_2800_trip_radar_alarm.md` AC-6, AC-9): der Trip zeigt die Radar-Zeile mit „deine Etappe“; die Elementlisten-Freigabe „Trip ohne Radar“ ist entfernt.
   - Test: Unit-Render mit `context="vergleich"` und `context="route"`; Staging-E2E schaltet Radar im Orts-Briefing und prüft Persistenz sowie Abwesenheit beim Trip.
 
 - **AC-4:** Given der Wetter-Reiter / When die Karte „Anpassen“ am Seitenende angezeigt wird / Then ist sie ein Aufklapper (`details`/`summary`, Zeichen „＋“ zugeklappt und „－“ aufgeklappt, `aria-expanded` entsprechend) mit den Ankern `wetter-anpassen-karte` und `wetter-anpassen-aufklappen`, ein Klick klappt den Inhalt auf und wieder zu, und zugeklappt ist der Inhalt nicht sichtbar.
@@ -173,6 +174,7 @@ Fertig ist Scheibe (c), wenn die vier Abschnitte „Nicht im Briefing“, Amtlic
   - Test: Staging-E2E in DE und EN prüft sichtbare Texte; Unit-Test vergleicht die Schlüsselmengen beider Kataloge.
 
 - **AC-9:** Given Trip und Orts-Briefing / When ihre Wetter-Reiter verglichen werden / Then nutzen beide dieselben Atome, Moleküle und Organismen über `WetterTabInhalt` mit `context="route"|"vergleich"`, es gibt keine Compare-eigene Komponente, und beide Kontexte zeigen „Nicht im Briefing“, Warnungen und „Anpassen“ identisch (Radar nur im Vergleich, siehe AC-3).
+  - **„Radar nur im Vergleich“ abgelöst durch #2800** (Spec `feat_2800_trip_radar_alarm.md` AC-6): beide Kontexte zeigen die Radar-Zeile, der Text unterscheidet sich („deine Etappe“ / „deine Orte“).
   - Test: Unit-Test `wetter_tab_ort.test.ts` (gleicher Importpfad) und Staging-E2E in beiden Kontexten.
 
 - **AC-10:** Given die drei bestehenden E2E-Abläufe `speicherung-ueberlebt-neuladen`, `daywindow-shared-both-contexts`, `daywindow-schedule-control` und die Helfer-Map `tagVon`/`tagBis` / When sie nach dem Umbau laufen / Then bedienen sie das Tagesfenster über die zwei Uhrzeitfelder statt über Auswahlfelder, ohne dass Zusicherungen entfernt oder abgeschwächt wurden, und sind grün.

@@ -74,6 +74,7 @@ export function tripNutzlast(o: SpeicherOptionen) {
 		reportConfig: abo.report_config ?? {},
 		warnFelder: abo as WarnFelder,
 		warnungenAn: s.warnungenAn,
+		radarAn: s.radarAn,
 		tagesfenster: s.tagesfenster
 	});
 	return { ...teile, weatherConfig: { ...teile.weatherConfig, ...mitPlacements(o) } };

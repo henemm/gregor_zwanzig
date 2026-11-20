@@ -123,7 +123,7 @@
 	.wt-zeile :global([data-slot='btn'][data-tap='true']) {
 		height: var(--g-size-28px);
 		min-height: var(--g-size-28px);
-		font-size: var(--g-s-3);
+		font-size: var(--g-text-12px);
 	}
 	.wt-rm :global([data-slot='btn']) {
 		width: var(--g-size-28px);
@@ -142,7 +142,7 @@
 	}
 	.wt-name small,
 	.wt-lbl {
-		font-size: var(--g-s-3);
+		font-size: var(--g-text-12px);
 		color: var(--g-ink-3);
 	}
 	.wt-nur {
@@ -160,7 +160,7 @@
 	   „Temperatur“ 4 statt 3 Zeilen; mit 1,4 bleibt die Zeile in der Toleranz (≤ 124 px). */
 	.wt-why {
 		margin: 0;
-		font-size: var(--g-s-3);
+		font-size: var(--g-text-12px);
 		line-height: 1.4;
 		color: var(--g-ink-2);
 	}

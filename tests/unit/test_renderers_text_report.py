@@ -227,8 +227,8 @@ def test_renders_token_line_from_token_line_arg():
     token_line = _wintersport_token_line(stage_name="Stubaier")
     body = render_text_report(token_line, **_common_kwargs())
 
-    assert "Stubaier:" in body, (
-        f"Token-Zeile mit Stage-Prefix 'Stubaier:' nicht im Output: {body!r}"
+    assert "\nStubaier N" in body and "Stubaier:" not in body, (
+        f"Token-Zeile mit Stage-Prefix 'Stubaier ' (#3174: ohne ':') nicht im Output: {body!r}"
     )
 
 

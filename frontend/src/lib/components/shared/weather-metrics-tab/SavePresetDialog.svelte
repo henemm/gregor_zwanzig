@@ -102,11 +102,11 @@
 			<div class="spd-body">
 				<label class="spd-feld">
 					<span>{$t('wetter.dialog.name')}</span>
-					<input data-testid="save-preset-name" type="text" bind:value={name} maxlength="40" />
+					<input data-testid="save-preset-name" type="text" bind:value={name} maxlength="40" placeholder={$t('wetter.dialog.name_platzhalter')} />
 				</label>
 				<label class="spd-feld">
 					<span>{$t('wetter.dialog.beschreibung')}</span>
-					<textarea data-testid="save-preset-description" bind:value={description} maxlength="120" rows="2"></textarea>
+					<textarea data-testid="save-preset-description" bind:value={description} maxlength="120" rows="2" placeholder={$t('wetter.dialog.beschreibung_platzhalter')}></textarea>
 				</label>
 				<button type="button" class="spd-standard" role="switch" aria-checked={isDefault} data-testid="save-preset-is-default" onclick={() => (isDefault = !isDefault)}>
 					<span class="spd-track" class:an={isDefault}><span class="spd-knopf"></span></span>
@@ -119,8 +119,9 @@
 			</div>
 
 			<div class="spd-fuss">
-				<button type="button" class="spd-btn" onclick={close} disabled={saving}>{$t('aktionen.abbrechen')}</button>
+				<!-- #3111 AC-7 (Mockup Fassung 4): Speichern vor Abbrechen. -->
 				<button type="button" class="spd-btn spd-btn--primaer" data-testid="save-preset-submit" disabled={saving} onclick={submit}>{$t('aktionen.speichern')}</button>
+				<button type="button" class="spd-btn" onclick={close} disabled={saving}>{$t('aktionen.abbrechen')}</button>
 			</div>
 		</div>
 	</div>

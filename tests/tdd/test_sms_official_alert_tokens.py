@@ -268,12 +268,12 @@ def test_ac3_yellow_warning_appears_at_trip_default():
 # waren nie eine Renderer-Zusage.
 # Issue #1824 (A): Tiefst- UND Hoechstwert sind gewaehlt, deshalb steht die
 # Temperatur als EIN Bereichs-Token ('D18/18') statt als 'K18 D18'.
-GOLDEN_NO_ALERTS = "E5: N18 D18/18 R- PR- W- G- TH:- TH+:-"
+GOLDEN_NO_ALERTS = "E5 N18 D18/18 R- PR- W- G- TH:- TH+:-"
 # Issue #2792 S1c-4b (E1, AC-19 e): Hervorhebung ab Gelb der Ampel
 # „allgemein" -- R0.4 (unter 1 mm) und Wind 18/28 (unter 30) bleiben
 # unerwaehnt (frueher R0.4@11(2.5@16) W18@11(28@16) nach DEFAULTS).
 GOLDEN_WET_NO_ALERTS = (
-    "E5: N18 D18/18 R2.5@16 PR60%@11(80%@16) W- "
+    "E5 N18 D18/18 R2.5@16 PR60%@11(80%@16) W- "
     "G30@11(45@16) TH:M@16 TH+:-"
 )
 
@@ -611,7 +611,7 @@ def test_f002_colliding_unknown_same_symbol_in_both_sms_paths(hazard: str):
 # ein Byte veraendern (AC-3).
 # ---------------------------------------------------------------------------
 GOLDEN_TWO_ALERTS_MIXED_LEVEL = (
-    "E5: N18 D18/18 R- PR- W- G- TH:- TH+:- !TS:H@14 WG:M@14"
+    "E5 N18 D18/18 R- PR- W- G- TH:- TH+:- !TS:H@14 WG:M@14"
 )
 
 

@@ -768,7 +768,7 @@ def test_kein_befehlswort_kollidiert_mit_verknuepfungscode():
 #: unveraendert. Nachtrag VS: Sicht 8 km liegt ueber Gelb (2 km) -> ``VS-``;
 #: FZ hat keinen Ampel-Leser und bleibt.
 BRIEFING_ZEILE_VORHER = (
-    "Heute: N5 D5/28@23 FN1 FD1/24 R- PR40%@0 W- G30@0 TH:M@0 TH+:- "
+    "Heute N5 D5/28@23 FN1 FD1/24 R- PR40%@0 W- G30@0 TH:M@0 TH+:- "
     "HU- DP6@0 WD:SW PT:R CT60@0 CL40@0 CM20@0 CH10@0 VS- SU12 HP1013 "
     "FZ2200@0"
 )

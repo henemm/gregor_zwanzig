@@ -291,9 +291,19 @@ describe('AC-7: leseBesitzer lehnt Einträge ohne Grund, ohne oder mit ungültig
 });
 
 // ---------------------------------------------------------------- AC-8
-describe('AC-8: Freigabe (echte elementliste_freigaben.json) zählt bei --abnahme als Besitzer', () => {
+// abgelöst durch #2800 (AC-9): die echte elementliste_freigaben.json darf leer sein (Freigabe „Trip ohne
+// Radar" entfällt); geprüft wird mit einer Muster-Freigabe derselben Form. Dass die echte Datei sich lesen
+// lässt, bleibt als eigener Fall.
+describe('AC-8: Freigabe zählt bei --abnahme als Besitzer', () => {
+	test('echte elementliste_freigaben.json lässt sich lesen (Liste darf leer sein)', () => {
+		assert.ok(Array.isArray(logik.leseFreigaben(readFileSync(join(KONTEXT, 'elementliste_freigaben.json'), 'utf8'))));
+	});
 	test('freigegebener Eintrag ⇒ Exit 0, ohne Freigabe ⇒ Exit 1', () => {
-		const freigaben = logik.leseFreigaben(readFileSync(join(KONTEXT, 'elementliste_freigaben.json'), 'utf8'));
+		const freigaben = logik.leseFreigaben(
+			JSON.stringify({
+				freigaben: [{ ctx: 'trip', reiter: 'wetter', abschnitt: 'warnungen-radar', i18n_keys: ['wetter.radar.titel'], grund: 'Muster-Abweichung', spec: 'docs/specs/modules/muster.md AC-1' }]
+			})
+		);
 		const f = freigaben[0];
 		const e = el('fg.1', { ctx: f.ctx, reiter: f.reiter, abschnitt: f.abschnitt, i18n_key: f.i18n_keys[0] });
 		const roh = new Map([['fg.1', { status: 'abweichend' as const, ist: 'fehlt' }]]);

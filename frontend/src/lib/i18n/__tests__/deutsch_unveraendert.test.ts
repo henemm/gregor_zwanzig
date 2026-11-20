@@ -550,8 +550,8 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.vorlage.abweichungen.one',
 	'wetter.vorlage.abweichungen.other',
 	'wetter.vorlage.metrikzahl',
-	'wetter.vorlage.frage_route',
-	'wetter.vorlage.frage_vergleich',
+	// #3111 (Mockup Fassung 4): 'wetter.vorlage.frage_route'/'frage_vergleich' entfallen -- Bestätigung
+	// zweiteilig aus frage_titel und ersetzt_* (siehe Block #3111 unten).
 	'wetter.vorlage.verlust.one',
 	'wetter.vorlage.verlust.other',
 	'wetter.vorlage.bleibt',
@@ -596,8 +596,7 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.gewitter.fehler_hoch_schwaecher',
 	'wetter.grenzen.aendern',
 	'wetter.grenzen.fertig',
-	'wetter.grenzen.unten',
-	'wetter.grenzen.oben',
+	// #3111 (Mockup Fassung 4): 'wetter.grenzen.unten'/'oben' entfallen -- Titel zweizeilig aus unten_1/_2, oben_1/_2.
 	'wetter.grenzen.hinweis',
 	'wetter.grenzen.abweichend',
 	'wetter.grenzen.fehler_oben',
@@ -613,6 +612,8 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.radar.titel',
 	'wetter.radar.beschreibung',
 	'wetter.radar.deine_orte',
+	// #2800 (S8): Radar-Hinweis im Trip.
+	'wetter.radar.deine_etappe',
 	'wetter.anpassen.titel',
 	'wetter.anpassen.tagesfenster',
 	'wetter.anpassen.von',
@@ -674,6 +675,27 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.vorlage.name.allgemein',
 	// #3047 Runde 7 (AC-26, Befund E6): Grund fuer gespeicherte, im Orts-Vergleich nicht ausgebbare Groessen.
 	'wetter.gesperrt.grund',
+	// #3111 (Mockup Fassung 4): Wetter-Dialoge -- Grenzen-Titel zweizeilig, Bestätigung zweiteilig,
+	// „· aktiv“, Unterzeile eigener Vorlagen, kuratierte Stichworte, Platzhalter im Speichern-Dialog.
+	'wetter.grenzen.unten_1',
+	'wetter.grenzen.unten_2',
+	'wetter.grenzen.oben_1',
+	'wetter.grenzen.oben_2',
+	'wetter.vorlage.frage_titel',
+	'wetter.vorlage.ersetzt_route',
+	'wetter.vorlage.ersetzt_vergleich',
+	'wetter.vorlage.ersetzt_vergleich_ein',
+	'wetter.vorlage.aktiv_marker',
+	'wetter.vorlage.eigene_unterzeile',
+	'wetter.vorlage.stichworte.alpen_trekking',
+	'wetter.vorlage.stichworte.wandern',
+	'wetter.vorlage.stichworte.skitouren',
+	'wetter.vorlage.stichworte.wintersport',
+	'wetter.vorlage.stichworte.radtour',
+	'wetter.vorlage.stichworte.wassersport',
+	'wetter.vorlage.stichworte.allgemein',
+	'wetter.dialog.name_platzhalter',
+	'wetter.dialog.beschreibung_platzhalter',
 	// #2955 (AC-2): Gewitter-Satz „mittel oder hoch“, wenn schon „mittel“ die Alarmstufe erreicht.
 	'wetter.gewitter.mittel_ab',
 	// #3006: Erklaersatz des geteilten Reiters Uebersicht (Mockup Fassung 3, `.sectionh`; Titel = aktionen.reiter.uebersicht); die Koepfe

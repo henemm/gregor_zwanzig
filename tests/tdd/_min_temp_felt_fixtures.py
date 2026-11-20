@@ -202,8 +202,8 @@ TEMP_SYMBOLS = ("N", "L", "D", "FN", "FL", "FD")
 
 
 def sms_body(sms: str) -> str:
-    """SMS ohne Etappen-Praefix ('E7: ' -> Rest)."""
-    return sms.split(": ", 1)[1] if ": " in sms else sms
+    """SMS ohne Etappen-Praefix ('E7 ' -> Rest; #3174: kein Doppelpunkt)."""
+    return sms.split(" ", 1)[1] if " " in sms else ""
 
 
 # Issue #1824 (A): sind Tiefst- UND Hoechstwert gewaehlt, steht die Temperatur

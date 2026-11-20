@@ -436,8 +436,9 @@ class TestAC9_RenderLineUnchangedByAdditiveFunction:
         # Hoechstwert mit Stunde (wie vor S1c-4b, z. B. '(845.0@14)'); nur AB WANN
         # hervorgehoben wird, folgt der Ampel. Die laengeren Klammern verdraengen
         # per DROP_ORDER 'NS24+...' -- neu gemessen.
+        # #3174: Kopf ohne Doppelpunkt (``Etappe N-15 ...``), Token unveraendert.
         baseline = (
-            "Etappe: N-15 D-12/28 FN-21 FD-18/24 TF-18@6 R2.0@6(845.0@14) "
+            "Etappe N-15 D-12/28 FN-21 FD-18/24 TF-18@6 R2.0@6(845.0@14) "
             "PR35%@8(98%@14) W35@6(1420@16) G40@6(2080@16) TH:L@8(H@12) "
             "TH+:M@10 SD2450000000000"
         )
@@ -479,6 +480,6 @@ def test_vorschau_zeigt_bei_aktivem_wind_chill_einen_echten_tf_wert():
     from services.validator_render_service import render_sms_fidelity_preview
 
     zeile = render_sms_fidelity_preview(["wind_chill"])["line"]
-    tokens = zeile.split(": ", 1)[1].split(" ")
+    tokens = zeile.split(" ")[1:]  # #3174: Kopf ``Etappe`` ohne ``:``
     assert "TF-" not in tokens, zeile
     assert any(re.fullmatch(r"TF-?\d+@\d+", t) for t in tokens), zeile

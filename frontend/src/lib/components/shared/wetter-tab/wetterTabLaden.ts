@@ -11,6 +11,7 @@
 import type { Ampel, MetricPreset } from '../../../types.ts';
 import { aktiveMetriken, eigenschaftenAusKatalog, eigeneVorlageAmpel, vorlagenAusTemplates } from './ampelModell.ts';
 import type { Kontext, MetrikEigenschaften, VorlagenAmpeln } from './ampelModell.ts';
+import type { MessageKey } from '../../../i18n/index.ts';
 
 /** Der Teil von `api`, den der Lader braucht. */
 export interface LeseClient {
@@ -18,7 +19,8 @@ export interface LeseClient {
 }
 
 export type VorlageEintrag = { id: string; label: string; anzahl: number; stichworte: string[] };
-export type EigeneVorlage = { id: string; name: string; ampel: Ampel };
+/** #3111 AC-5: `beschreibung` (aus `MetricPreset.description`) ergänzt die Unterzeile „eigene". */
+export type EigeneVorlage = { id: string; name: string; ampel: Ampel; beschreibung?: string };
 
 export type WetterDaten = {
 	eig: Record<string, MetrikEigenschaften>;
@@ -50,11 +52,50 @@ export function vorlagenListe(templates: TemplateAntwort[], vorlagen: VorlagenAm
 		});
 }
 
+/**
+ * #3111 AC-4 (Mockup Fassung 4): kuratierte Stichworte je bekannter Systemvorlage (Katalogschluessel).
+ * Loest feat_2794_s3a AC-10 fuer bekannte IDs ab; unbekannte IDs behalten die Ableitung.
+ */
+const STICHWORTE: Readonly<Record<string, MessageKey>> = {
+	'alpen-trekking': 'wetter.vorlage.stichworte.alpen_trekking',
+	wandern: 'wetter.vorlage.stichworte.wandern',
+	skitouren: 'wetter.vorlage.stichworte.skitouren',
+	wintersport: 'wetter.vorlage.stichworte.wintersport',
+	radtour: 'wetter.vorlage.stichworte.radtour',
+	wassersport: 'wetter.vorlage.stichworte.wassersport',
+	allgemein: 'wetter.vorlage.stichworte.allgemein'
+};
+
+/**
+ * Kurzbeschreibung einer Systemvorlage: Metrikzahl aus den Daten, dazu die kuratierten Stichworte
+ * aus dem Katalog; fuer unbekannte IDs die Namen der ersten aktiven Metriken (Fallback).
+ */
+export function vorlageKurzbeschreibung(
+	v: VorlageEintrag,
+	uebersetze: (key: MessageKey, params?: Record<string, string | number>) => string,
+	metrikName: (id: string) => string
+): string {
+	const zahl = uebersetze('wetter.vorlage.metrikzahl', { count: v.anzahl });
+	const key = STICHWORTE[v.id];
+	return [zahl, ...(key ? [uebersetze(key)] : v.stichworte.map(metrikName))].join(' · ');
+}
+
+/** Eine eigene Vorlage im Reiter: Ampel aufgeloest, Beschreibung (#3111 AC-5) mitgenommen. Laden und frisch Gespeichert. */
+export function eigeneVorlageAus(p: MetricPreset, vorlagen: VorlagenAmpeln): EigeneVorlage {
+	return { id: p.id, name: p.name, ampel: eigeneVorlageAmpel(p, vorlagen), ...(p.description ? { beschreibung: p.description } : {}) };
+}
+
 /** Eigene Vorlagen der Art `kind`, jede mit ihrer vollstaendigen Ampel (Fallback §6 a). */
 export function eigeneVorlagen(antwort: unknown, kind: Kontext, vorlagen: VorlagenAmpeln): EigeneVorlage[] {
 	return presetListe(antwort)
 		.filter((p) => p?.id && artVon(p) === kind)
-		.map((p) => ({ id: p.id, name: p.name, ampel: eigeneVorlageAmpel(p, vorlagen) }));
+		.map((p) => eigeneVorlageAus(p, vorlagen));
+}
+
+/** #3111 AC-6: Zahl der Orte eines Orts-Briefings (`location_ids`); ohne Liste `undefined`. */
+export function ortAnzahlVon(abo: { location_ids?: unknown } | null | undefined): number | undefined {
+	const ids = abo?.location_ids;
+	return Array.isArray(ids) ? ids.length : undefined;
 }
 
 /** Laedt Katalog, Vorlagen und eigene Vorlagen; wirft, wenn einer der drei Abrufe scheitert. */

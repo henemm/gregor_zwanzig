@@ -203,7 +203,7 @@ _KUERZEL = {"humidity": {"HU"}, "dewpoint": {"DP"}, "pressure": {"HP"},
 
 
 def _symbole(sms: str) -> list[str]:
-    body = sms.split(": ", 1)[1]
+    body = sms.partition(" ")[2]  # #3174: Praefix ohne ':' (Zeile ohne Token: nur Praefix)
     return [re.match(r"([A-Z]+\+?)", tok).group(1) for tok in body.split() if re.match(r"[A-Z]", tok)]
 
 
@@ -218,7 +218,7 @@ def _listenplaetze(sms: str, liste: list[str]) -> list[int]:
 
 def _metrik_und_warnblock(text: str) -> tuple[list[str], str]:
     """(Kopf + Metrik-Tokens, Warnblock ab dem ersten ``!``-Token bis Textende)."""
-    kopf, _, rest = text.partition(": ")
+    kopf, _, rest = text.partition(" ")  # #3174: Praefix ohne ':'
     tokens = rest.split()
     start = next((i for i, t in enumerate(tokens) if t.startswith("!")), len(tokens))
     return [kopf, *tokens[:start]], " ".join(tokens[start:])

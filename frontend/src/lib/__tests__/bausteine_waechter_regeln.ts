@@ -280,8 +280,10 @@ const FARB_EIGENSCHAFT =
 
 /** Gründe, warum eine CSS-Deklaration nicht nur über Tokens läuft (leer = in Ordnung). */
 function tokenGruende(eigenschaft: string, wertRoh: string): string[] {
-	const wert = wertRoh.replace(/var\(\s*--g-[\w-]+\s*\)/g, 'TOKEN');
 	const gruende: string[] = [];
+	// #3010: font-size nur aus Schrift-Tokens (--g-text-*), nie aus dem Abstands-Raster --g-s-*.
+	if (eigenschaft === 'font-size' && /var\(\s*--g-s-/.test(wertRoh)) gruende.push('Schriftgröße aus Abstands-Token, nur --g-text-*');
+	const wert = wertRoh.replace(/var\(\s*--g-[\w-]+\s*\)/g, 'TOKEN');
 	if (/#[0-9a-fA-F]{3,8}\b/.test(wert)) gruende.push('Hex-Farbe');
 	if (/\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix)\(/i.test(wert)) gruende.push('Farbfunktion');
 	if (FARB_EIGENSCHAFT.test(eigenschaft) && FARBNAMEN.test(wert)) gruende.push('Farbname');

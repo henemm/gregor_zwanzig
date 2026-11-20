@@ -11,14 +11,14 @@
  "premium_sms": [
   {
    "subject": "[TEST] [Golden Trip] Etappe 3 — Abend",
-   "body": "E3: N-5 TF- W- G30@4 R- CT:SCT@4 VS- SU16 SD45",
+   "body": "E3 N-5 TF- W- G30@4 R- CT:SCT@4 VS- SU16 SD45",
    "plain_text_body": ""
   }
  ],
  "sms": [
   {
    "subject": "[TEST] [Golden Trip] Etappe 3 — Abend",
-   "body": "E3: N-5 TF- W- G30@4 R- CT:SCT@4 VS- SU16 SD45",
+   "body": "E3 N-5 TF- W- G30@4 R- CT:SCT@4 VS- SU16 SD45",
    "plain_text_body": ""
   }
  ],

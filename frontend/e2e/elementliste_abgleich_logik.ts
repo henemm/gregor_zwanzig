@@ -688,6 +688,27 @@ export function pruefeHubAnker(anker: HubAnker): string | null {
 	return fehlt.length === 0 ? null : `Hub-Marker fehlt: ${fehlt.join(' und ')} nicht auf der Seite: Gegenrichtung nicht prüfbar`;
 }
 
+/**
+ * #2973: Hub-Anker erscheinen bei langsamer Staging-Antwort verzögert. Zählt per `zaehle()`, bis
+ * `pruefeHubAnker` null meldet oder die Versuche aufgebraucht sind (Vorgabe 10 × 500 ms ≈ 5 s); zwischen
+ * den Versuchen `warte(abstandMs)`, nach dem letzten nicht. Gibt den letzten Befund zurück; die Entscheidung
+ * (fail-closed) bleibt bei pruefeHubAnker über werteGegenrichtungAus.
+ */
+export async function warteAufHubAnker(
+	zaehle: () => Promise<HubAnker>,
+	warte: (ms: number) => Promise<void>,
+	opt: { versuche?: number; abstandMs?: number } = {}
+): Promise<HubAnker> {
+	const versuche = Math.max(1, opt.versuche ?? 10);
+	const abstandMs = opt.abstandMs ?? 500;
+	let anker = await zaehle();
+	for (let i = 1; i < versuche && pruefeHubAnker(anker) !== null; i++) {
+		await warte(abstandMs);
+		anker = await zaehle();
+	}
+	return anker;
+}
+
 /** Gegenrichtung nur im Zustand normal und ohne Kanal-Segment (Desktop-Lauf). */
 export function istGegenrichtung(k: Kombi): boolean {
 	return k.zustand === 'normal' && (k.segment ?? null) === null;

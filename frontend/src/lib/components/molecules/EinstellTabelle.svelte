@@ -195,7 +195,7 @@
 	.et-name small {
 		display: block;
 		color: var(--g-ink-3);
-		font-size: var(--g-s-3);
+		font-size: var(--g-text-12px);
 		font-weight: 400;
 	}
 	.et-fest {

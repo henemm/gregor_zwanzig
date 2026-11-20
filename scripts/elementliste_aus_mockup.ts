@@ -7,7 +7,8 @@
 // Das Mockup baut seine Oberfläche erst per Script; das statische HTML enthält die Elemente nicht.
 // Darum rendert Playwright die Datei per file:// und stellt jede Kombination her:
 //   Kontext (Trip, Orte) × Zustand (normal, lädt, Ladefehler, Konto mit Lücken)
-//   × Reiter (Wetter, Zustellung, Etappen bzw. Orte)
+//   × Reiter (Wetter, Zustellung, Etappen bzw. Orte, Übersicht)
+// Vom Reiter Übersicht nur der Bereichskopf (Titel, Erklärsatz); die Inhaltskarte ist Mockup-Notiz (#2969).
 // Der Ein-Ort-Kontext des Mockups (data-ctx="ort1") wird nicht gelesen: Der Staging-Abgleich kennt nur
 // die Kontexte trip und orte.
 // dazu die reinen Script-Zustände (Grenzen bearbeiten = openEdit, Vorlagen-Auswahl = pickerOpen,
@@ -634,6 +635,12 @@ export async function erzeugeElementliste(opt: { mockupPfad: string; messagesDir
 				await page.click(`#tabs [data-tab="${zweiter}"]`);
 				await aufklappen();
 				gruppen.push({ ctx, reiter: zweiter, zustand, segment: null, roh: await lies(['#content']) });
+
+				// --- Übersicht: nur der Bereichskopf ist Soll. Die Karte „Im Mockup nicht ausgearbeitet.“ ist
+				// Mockup-Notiz (viewUebersicht, Inhalt „unverändert“), kein Produkttext (#2969).
+				await frisch(ctx, zustand);
+				await page.click('#tabs [data-tab="uebersicht"]');
+				gruppen.push({ ctx, reiter: 'uebersicht', zustand, segment: null, roh: await lies(['#content'], { nur: 'abschnittskopf' }) });
 			}
 		}
 		await context.close();

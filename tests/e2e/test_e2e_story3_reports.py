@@ -286,7 +286,7 @@ class TestReportFormatting:
         sms = formatter.format_sms(weather, ampel=AMPEL_ALLGEMEIN)
 
         assert len(sms) <= 160, f"SMS too long: {len(sms)} chars: {sms}"
-        assert sms.startswith("Etappe:")
+        assert sms.startswith("Etappe ") and not sms.startswith("Etappe:")  # #3174
         for token in ("N", "D", "R", "PR", "W", "G", "TH:", "TH+:"):
             assert token in sms, f"v2.0-Token '{token}' fehlt im SMS: {sms}"
 
