@@ -1216,9 +1216,8 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
   Orte-Anzahl mit `compare-hub-orte-anzahl-desktop`/`-mobil`). Seit S2 nutzt ihn auch der Trip-Hub:
   `TripHeader.svelte` ist nur noch Hülle (Status-/Meta-Zeile, Mobil-Kacheln) und mountet den Baustein
   mit `titleTestid="trip-detail-h1"`, Snippet `namePrefix` (Shortcode) und Eyebrow nur Datumsbereich.
-  Die Aktivität des Trips ist eine Kachelreihe im Kopf (`ACTIVITY_TYPE_OPTIONS`; auf dem Handy ein
-  Aktivitäts-Knopf „Aktivität wählen ▾" statt Kacheln), nicht mehr eine
-  Auswahlliste im Etappen-Reiter; Konflikt-Schlüssel `kopf-name`/`kopf-region`/`kopf-profil`.
+  Die Aktivitäts-Kacheln im Kopf sind seit #3196 (ADR-0108) entfallen; das Tempo (Fortbewegung und
+  Grundtempo) steht im Etappen-Reiter (`shared/TempoKarte.svelte`). Konflikt-Schlüssel `kopf-name`/`kopf-region`/`kopf-profil`.
   Trip-Speicherweg: `speichereKopfFeld` in `shared/tripSpeicherung.ts` (412 ⇒ Konfliktbehandlung).
   Titelgröße (v1.3): mobil in beiden Hubs 20 px einzeilig mit Ellipsis; Desktop über Prop `titleSize`
   (Trip 38 px, Vergleich 30 px). Etappenliste mobil nicht tiefer als vorher (≤474 px).

@@ -1,0 +1,483 @@
+TAP version 13
+# Subtest: \#3190 Haken mit Beschriftung: ein <label>, Text klickbar
+    # Subtest: an + beschriftung → genau ein <label> mit Kontrollkästchen und sichtbarem Text
+    not ok 1 - an + beschriftung → genau ein <label> mit Kontrollkästchen und sichtbarem Text
+      ---
+      duration_ms: 5.012828
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/atoms/__tests__/haken_beschriftung_3190.test.ts:33:3'
+      failureType: 'testCodeFailure'
+      error: 'Beschriftung nicht im <label>: <input type="checkbox" aria-label="Als Standard für neue Trips" checked="" class="svelte-18owyyq"/> <span class="hk-box svelte-18owyyq" aria-hidden="true"></span>'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/atoms/__tests__/haken_beschriftung_3190.test.ts:38:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: aus + beschriftung → genau ein <label> mit Kontrollkästchen und sichtbarem Text
+    not ok 2 - aus + beschriftung → genau ein <label> mit Kontrollkästchen und sichtbarem Text
+      ---
+      duration_ms: 0.34088
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/atoms/__tests__/haken_beschriftung_3190.test.ts:33:3'
+      failureType: 'testCodeFailure'
+      error: 'Beschriftung nicht im <label>: <input type="checkbox" aria-label="Als Standard für neue Trips" class="svelte-18owyyq"/> <span class="hk-box svelte-18owyyq" aria-hidden="true"></span>'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/atoms/__tests__/haken_beschriftung_3190.test.ts:38:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: Beschriftung ist sichtbarer Text, nicht aria-hidden
+    not ok 3 - Beschriftung ist sichtbarer Text, nicht aria-hidden
+      ---
+      duration_ms: 6.569303
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/atoms/__tests__/haken_beschriftung_3190.test.ts:45:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        The expression evaluated to a falsy value:
+        
+          assert.ok(text(h).includes('Default for new locations'))
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/atoms/__tests__/haken_beschriftung_3190.test.ts:49:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: ohne beschriftung: kein zusätzlicher Text im Label, Markup wie bisher
+    ok 4 - ohne beschriftung: kein zusätzlicher Text im Label, Markup wie bisher
+      ---
+      duration_ms: 0.392661
+      type: 'test'
+      ...
+    1..4
+not ok 1 - \#3190 Haken mit Beschriftung: ein <label>, Text klickbar
+  ---
+  duration_ms: 13.549354
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/atoms/__tests__/haken_beschriftung_3190.test.ts:31:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3190 AC-1/AC-8: Inline-Karte statt modalem Overlay
+    # Subtest: route: kein role=dialog, kein aria-modal, kein Scrim, kein ×, kein tabindex=-1
+    not ok 1 - route: kein role=dialog, kein aria-modal, kein Scrim, kein ×, kein tabindex=-1
+      ---
+      duration_ms: 314.418716
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:94:3'
+      failureType: 'testCodeFailure'
+      error: 'Karte ist kein modaler Dialog'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<div class="spd-scrim svelte-3ad8z3" role="presentation"><div data-testid="save-preset-dialog" data-abschnitt="vorlage-speichern" class="spd-dialog svelte-3ad8z3" role="dialog" aria-modal="true" aria-labelledby="spd-titel" tabindex="-1"><div class="spd-kopf svelte-3ad8z3"><div id="spd-titel" class="spd-titel svelte-3ad8z3">Als eigene Vorlage speichern</div> <button type="button" class="spd-x svelte-3ad8z3" aria-label="Schliessen">×</button></div> <div class="spd-body svelte-3ad8z3"><label class="spd-feld svelte-3ad8z3"><span>Name</span> <input data-testid="save-preset-name" type="text" value="" maxlength="40" placeholder="z.B. Mallorca Frühling" class="svelte-3ad8z3"/></label> <label class="spd-feld svelte-3ad8z3"><span>Beschreibung (optional)</span> <textarea data-testid="save-preset-description" maxlength="120" rows="2" placeholder="wofür die Vorlage gedacht ist" class="svelte-3ad8z3"></textarea></label> <button type="button" class="spd-standard svelte-3ad8z3" role="switch" aria-checked="false" data-testid="save-preset-is-default"><span class="spd-track svelte-3ad8z3"><span class="spd-knopf svelte-3ad8z3"></span></span> <span>Als Standard für neue Trips</span></button> <p class="spd-hinweis svelte-3ad8z3" data-testid="save-preset-hinweis">Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.</p> </div> <div class="spd-fuss svelte-3ad8z3"><button type="button" class="spd-btn spd-btn--primaer svelte-3ad8z3" data-testid="save-preset-submit">Speichern</button> <button type="button" class="spd-btn svelte-3ad8z3">Abbrechen</button></div></div></div>'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:97:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: route: Wurzel div.wt-karte mit role=group, aria-labelledby auf den Titel, Testid und Abschnitt
+    not ok 2 - route: Wurzel div.wt-karte mit role=group, aria-labelledby auf den Titel, Testid und Abschnitt
+      ---
+      duration_ms: 1.381821
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:105:3'
+      failureType: 'testCodeFailure'
+      error: 'Karten-Optik über wt-karte'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: 'spd-dialog svelte-3ad8z3'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:110:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich: kein role=dialog, kein aria-modal, kein Scrim, kein ×, kein tabindex=-1
+    not ok 3 - vergleich: kein role=dialog, kein aria-modal, kein Scrim, kein ×, kein tabindex=-1
+      ---
+      duration_ms: 0.588551
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:94:3'
+      failureType: 'testCodeFailure'
+      error: 'Karte ist kein modaler Dialog'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<div class="spd-scrim svelte-3ad8z3" role="presentation"><div data-testid="save-preset-dialog" data-abschnitt="vorlage-speichern" class="spd-dialog svelte-3ad8z3" role="dialog" aria-modal="true" aria-labelledby="spd-titel" tabindex="-1"><div class="spd-kopf svelte-3ad8z3"><div id="spd-titel" class="spd-titel svelte-3ad8z3">Als eigene Vorlage speichern</div> <button type="button" class="spd-x svelte-3ad8z3" aria-label="Schliessen">×</button></div> <div class="spd-body svelte-3ad8z3"><label class="spd-feld svelte-3ad8z3"><span>Name</span> <input data-testid="save-preset-name" type="text" value="" maxlength="40" placeholder="z.B. Mallorca Frühling" class="svelte-3ad8z3"/></label> <label class="spd-feld svelte-3ad8z3"><span>Beschreibung (optional)</span> <textarea data-testid="save-preset-description" maxlength="120" rows="2" placeholder="wofür die Vorlage gedacht ist" class="svelte-3ad8z3"></textarea></label> <button type="button" class="spd-standard svelte-3ad8z3" role="switch" aria-checked="false" data-testid="save-preset-is-default"><span class="spd-track svelte-3ad8z3"><span class="spd-knopf svelte-3ad8z3"></span></span> <span>Als Standard für neue Orte</span></button> <p class="spd-hinweis svelte-3ad8z3" data-testid="save-preset-hinweis">Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.</p> </div> <div class="spd-fuss svelte-3ad8z3"><button type="button" class="spd-btn spd-btn--primaer svelte-3ad8z3" data-testid="save-preset-submit">Speichern</button> <button type="button" class="spd-btn svelte-3ad8z3">Abbrechen</button></div></div></div>'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:97:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich: Wurzel div.wt-karte mit role=group, aria-labelledby auf den Titel, Testid und Abschnitt
+    not ok 4 - vergleich: Wurzel div.wt-karte mit role=group, aria-labelledby auf den Titel, Testid und Abschnitt
+      ---
+      duration_ms: 1.313432
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:105:3'
+      failureType: 'testCodeFailure'
+      error: 'Karten-Optik über wt-karte'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: 'spd-dialog svelte-3ad8z3'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:110:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: geschlossen: nichts gerendert
+    ok 5 - geschlossen: nichts gerendert
+      ---
+      duration_ms: 2.291614
+      type: 'test'
+      ...
+    1..5
+not ok 2 - \#3190 AC-1/AC-8: Inline-Karte statt modalem Overlay
+  ---
+  duration_ms: 321.056338
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:92:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3190 AC-2/AC-8: Felder und Ankreuzfeld aus Bausteinen
+    # Subtest: route/de: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+    not ok 1 - route/de: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+      ---
+      duration_ms: 0.978671
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:139:4'
+      failureType: 'testCodeFailure'
+      error: 'Beschreibung ist einzeilig'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<div data-testid="save-preset-dialog" data-abschnitt="vorlage-speichern" class="spd-dialog svelte-3ad8z3" role="dialog" aria-modal="true" aria-labelledby="spd-titel" tabindex="-1"><div class="spd-kopf svelte-3ad8z3"><div id="spd-titel" class="spd-titel svelte-3ad8z3">Als eigene Vorlage speichern</div> <button type="button" class="spd-x svelte-3ad8z3" aria-label="Schliessen">×</button></div> <div class="spd-body svelte-3ad8z3"><label class="spd-feld svelte-3ad8z3"><span>Name</span> <input data-testid="save-preset-name" type="text" value="" maxlength="40" placeholder="z.B. Mallorca Frühling" class="svelte-3ad8z3"/></label> <label class="spd-feld svelte-3ad8z3"><span>Beschreibung (optional)</span> <textarea data-testid="save-preset-description" maxlength="120" rows="2" placeholder="wofür die Vorlage gedacht ist" class="svelte-3ad8z3"></textarea></label> <button type="button" class="spd-standard svelte-3ad8z3" role="switch" aria-checked="false" data-testid="save-preset-is-default"><span class="spd-track svelte-3ad8z3"><span class="spd-knopf svelte-3ad8z3"></span></span> <span>Als Standard für neue Trips</span></button> <p class="spd-hinweis svelte-3ad8z3" data-testid="save-preset-hinweis">Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.</p> </div> <div class="spd-fuss svelte-3ad8z3"><button type="button" class="spd-btn spd-btn--primaer svelte-3ad8z3" data-testid="save-preset-submit">Speichern</button> <button type="button" class="spd-btn svelte-3ad8z3">Abbrechen</button></div></div>'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:142:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route/en: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+    not ok 2 - route/en: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+      ---
+      duration_ms: 0.60804
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:139:4'
+      failureType: 'testCodeFailure'
+      error: 'Beschreibung ist einzeilig'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<div data-testid="save-preset-dialog" data-abschnitt="vorlage-speichern" class="spd-dialog svelte-3ad8z3" role="dialog" aria-modal="true" aria-labelledby="spd-titel" tabindex="-1"><div class="spd-kopf svelte-3ad8z3"><div id="spd-titel" class="spd-titel svelte-3ad8z3">Save as your own template</div> <button type="button" class="spd-x svelte-3ad8z3" aria-label="Close">×</button></div> <div class="spd-body svelte-3ad8z3"><label class="spd-feld svelte-3ad8z3"><span>Name</span> <input data-testid="save-preset-name" type="text" value="" maxlength="40" placeholder="e.g. Mallorca spring" class="svelte-3ad8z3"/></label> <label class="spd-feld svelte-3ad8z3"><span>Description (optional)</span> <textarea data-testid="save-preset-description" maxlength="120" rows="2" placeholder="what the template is meant for" class="svelte-3ad8z3"></textarea></label> <button type="button" class="spd-standard svelte-3ad8z3" role="switch" aria-checked="false" data-testid="save-preset-is-default"><span class="spd-track svelte-3ad8z3"><span class="spd-knopf svelte-3ad8z3"></span></span> <span>Default for new trips</span></button> <p class="spd-hinweis svelte-3ad8z3" data-testid="save-preset-hinweis">Saved are the metric selection, traffic-light limits and alert levels. Delivery, stages and locations are not included.</p> </div> <div class="spd-fuss svelte-3ad8z3"><button type="button" class="spd-btn spd-btn--primaer svelte-3ad8z3" data-testid="save-preset-submit">Save</button> <button type="button" class="spd-btn svelte-3ad8z3">Cancel</button></div></div>'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:142:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich/de: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+    not ok 3 - vergleich/de: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+      ---
+      duration_ms: 0.590712
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:139:4'
+      failureType: 'testCodeFailure'
+      error: 'Beschreibung ist einzeilig'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<div data-testid="save-preset-dialog" data-abschnitt="vorlage-speichern" class="spd-dialog svelte-3ad8z3" role="dialog" aria-modal="true" aria-labelledby="spd-titel" tabindex="-1"><div class="spd-kopf svelte-3ad8z3"><div id="spd-titel" class="spd-titel svelte-3ad8z3">Als eigene Vorlage speichern</div> <button type="button" class="spd-x svelte-3ad8z3" aria-label="Schliessen">×</button></div> <div class="spd-body svelte-3ad8z3"><label class="spd-feld svelte-3ad8z3"><span>Name</span> <input data-testid="save-preset-name" type="text" value="" maxlength="40" placeholder="z.B. Mallorca Frühling" class="svelte-3ad8z3"/></label> <label class="spd-feld svelte-3ad8z3"><span>Beschreibung (optional)</span> <textarea data-testid="save-preset-description" maxlength="120" rows="2" placeholder="wofür die Vorlage gedacht ist" class="svelte-3ad8z3"></textarea></label> <button type="button" class="spd-standard svelte-3ad8z3" role="switch" aria-checked="false" data-testid="save-preset-is-default"><span class="spd-track svelte-3ad8z3"><span class="spd-knopf svelte-3ad8z3"></span></span> <span>Als Standard für neue Orte</span></button> <p class="spd-hinweis svelte-3ad8z3" data-testid="save-preset-hinweis">Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.</p> </div> <div class="spd-fuss svelte-3ad8z3"><button type="button" class="spd-btn spd-btn--primaer svelte-3ad8z3" data-testid="save-preset-submit">Speichern</button> <button type="button" class="spd-btn svelte-3ad8z3">Abbrechen</button></div></div>'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:142:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich/en: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+    not ok 4 - vergleich/en: kein <textarea>, kein role=switch; Ankreuzfeld mit sichtbarem Text im <label>
+      ---
+      duration_ms: 0.668011
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:139:4'
+      failureType: 'testCodeFailure'
+      error: 'Beschreibung ist einzeilig'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<div data-testid="save-preset-dialog" data-abschnitt="vorlage-speichern" class="spd-dialog svelte-3ad8z3" role="dialog" aria-modal="true" aria-labelledby="spd-titel" tabindex="-1"><div class="spd-kopf svelte-3ad8z3"><div id="spd-titel" class="spd-titel svelte-3ad8z3">Save as your own template</div> <button type="button" class="spd-x svelte-3ad8z3" aria-label="Close">×</button></div> <div class="spd-body svelte-3ad8z3"><label class="spd-feld svelte-3ad8z3"><span>Name</span> <input data-testid="save-preset-name" type="text" value="" maxlength="40" placeholder="e.g. Mallorca spring" class="svelte-3ad8z3"/></label> <label class="spd-feld svelte-3ad8z3"><span>Description (optional)</span> <textarea data-testid="save-preset-description" maxlength="120" rows="2" placeholder="what the template is meant for" class="svelte-3ad8z3"></textarea></label> <button type="button" class="spd-standard svelte-3ad8z3" role="switch" aria-checked="false" data-testid="save-preset-is-default"><span class="spd-track svelte-3ad8z3"><span class="spd-knopf svelte-3ad8z3"></span></span> <span>Default for new locations</span></button> <p class="spd-hinweis svelte-3ad8z3" data-testid="save-preset-hinweis">Saved are the metric selection, traffic-light limits and alert levels. Delivery, stages and locations are not included.</p> </div> <div class="spd-fuss svelte-3ad8z3"><button type="button" class="spd-btn spd-btn--primaer svelte-3ad8z3" data-testid="save-preset-submit">Save</button> <button type="button" class="spd-btn svelte-3ad8z3">Cancel</button></div></div>'
+      operator: 'doesNotMatch'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:142:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Name und Beschreibung: <input>, Beschreibung maxlength=120, beide mit <label for>
+    not ok 5 - Name und Beschreibung: <input>, Beschreibung maxlength=120, beide mit <label for>
+      ---
+      duration_ms: 3.403527
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:154:2'
+      failureType: 'testCodeFailure'
+      error: 'save-preset-name ohne id (für <label for>)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:164:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Knöpfe sind Btn-Atome: Speichern accent, Abbrechen ghost, beide size=tap
+    not ok 6 - Knöpfe sind Btn-Atome: Speichern accent, Abbrechen ghost, beide size=tap
+      ---
+      duration_ms: 12.752413
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:171:2'
+      failureType: 'testCodeFailure'
+      error: 'kein Btn-Atom'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<button type="button" class="spd-btn spd-btn--primaer svelte-3ad8z3" data-testid="save-preset-submit">Speichern</button>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:182:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..6
+not ok 3 - \#3190 AC-2/AC-8: Felder und Ankreuzfeld aus Bausteinen
+  ---
+  duration_ms: 22.909841
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:130:1'
+  failureType: 'subtestsFailed'
+  error: '6 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3190 AC-3/AC-4: Reihenfolge nach Mockup
+    # Subtest: Titel, Name, Beschreibung, Ankreuzfeld, Hinweis, Speichern, Abbrechen
+    ok 1 - Titel, Name, Beschreibung, Ankreuzfeld, Hinweis, Speichern, Abbrechen
+      ---
+      duration_ms: 2.117333
+      type: 'test'
+      ...
+    # Subtest: Namensfehler: Fehlerzeile direkt unter Name, vor der Beschreibung; Feld mit aria-invalid und aria-describedby
+    not ok 2 - Namensfehler: Fehlerzeile direkt unter Name, vor der Beschreibung; Feld mit aria-invalid und aria-describedby
+      ---
+      duration_ms: 69.385225
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:209:2'
+      failureType: 'testCodeFailure'
+      error: 'Fehlerzeile gehört zwischen Name und Beschreibung: {"name":492,"fehler":1370,"beschreibung":713}'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:217:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 4 - \#3190 AC-3/AC-4: Reihenfolge nach Mockup
+  ---
+  duration_ms: 73.909544
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:192:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3190 AC-1: Auslöser schaltet um und zeigt auf die Karte
+    # Subtest: route offen: Karte steht direkt nach der Vorlage-Karte; Auslöser aria-expanded=true, aria-controls = id der Karte
+    not ok 1 - route offen: Karte steht direkt nach der Vorlage-Karte; Auslöser aria-expanded=true, aria-controls = id der Karte
+      ---
+      duration_ms: 1381.817509
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:235:3'
+      failureType: 'testCodeFailure'
+      error: 'Karte folgt direkt der Vorlage-Karte'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<div class="spd-scrim svelte-3ad8z3" role="presentation"><div data-testid="save-preset-dialog" data-abschnitt="vorlage-speichern" class="spd-dialog svelte-3ad8z3" role="dialog" aria-modal="true" aria-labelledby="spd-titel" tabindex="-1"><div class="spd-kopf svelte-3ad8z3"><div id="spd-titel" class="spd-titel svelte-3ad8z3">Als eigene Vorlage speichern</div> <button type="button" class="spd-x svelte-3ad8z3" aria-label="Schliessen">×</button></div> <div class="spd-body svelte-3ad8z3"><label class="spd-feld svelte-3ad8z3"><span>Name</span> <input data-testid="save-preset-name" type="text" value="" maxlength="40" placeholder="z.B. Mallorca Frühling" class="svelte-3ad8z3"/></label> <label class="spd-feld svelte-3ad8z3"><span>Beschreibung (optional)</span> <textarea data-testid="save-preset-description" maxlength="120" rows="2" placeholder="wofür die Vorlage gedacht ist" class="svelte-3ad8z3"></textarea></label> <button type="button" class="spd-standard svelte-3ad8z3" role="switch" aria-checked="false" data-testid="save-preset-is-default"><span class="spd-track svelte-3ad8z3"><span class="spd-knopf svelte-3ad8z3"></span></span> <span>Als Standard für neue Trips</span></button> <p class="spd-hinweis svelte-3ad8z3" data-testid="save-preset-hinweis">Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.</p> </div> <div class="spd-fuss svelte-3ad8z3"><button type="button" class="spd-btn spd-btn--primaer svelte-3ad8z3" data-testid="save-preset-submit">Speichern</button> <button type="button" class="spd-btn svelte-3ad8z3">Abbrechen</button></div></div></div>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:242:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: route zu: Auslöser aria-expanded=false, keine Karte
+    not ok 2 - route zu: Auslöser aria-expanded=false, keine Karte
+      ---
+      duration_ms: 71.004698
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:249:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        null !== 'false'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'false'
+      actual: ~
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:252:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich offen: Karte steht direkt nach der Vorlage-Karte; Auslöser aria-expanded=true, aria-controls = id der Karte
+    not ok 3 - vergleich offen: Karte steht direkt nach der Vorlage-Karte; Auslöser aria-expanded=true, aria-controls = id der Karte
+      ---
+      duration_ms: 16.150339
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:235:3'
+      failureType: 'testCodeFailure'
+      error: 'Karte folgt direkt der Vorlage-Karte'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<div class="spd-scrim svelte-3ad8z3" role="presentation"><div data-testid="save-preset-dialog" data-abschnitt="vorlage-speichern" class="spd-dialog svelte-3ad8z3" role="dialog" aria-modal="true" aria-labelledby="spd-titel" tabindex="-1"><div class="spd-kopf svelte-3ad8z3"><div id="spd-titel" class="spd-titel svelte-3ad8z3">Als eigene Vorlage speichern</div> <button type="button" class="spd-x svelte-3ad8z3" aria-label="Schliessen">×</button></div> <div class="spd-body svelte-3ad8z3"><label class="spd-feld svelte-3ad8z3"><span>Name</span> <input data-testid="save-preset-name" type="text" value="" maxlength="40" placeholder="z.B. Mallorca Frühling" class="svelte-3ad8z3"/></label> <label class="spd-feld svelte-3ad8z3"><span>Beschreibung (optional)</span> <textarea data-testid="save-preset-description" maxlength="120" rows="2" placeholder="wofür die Vorlage gedacht ist" class="svelte-3ad8z3"></textarea></label> <button type="button" class="spd-standard svelte-3ad8z3" role="switch" aria-checked="false" data-testid="save-preset-is-default"><span class="spd-track svelte-3ad8z3"><span class="spd-knopf svelte-3ad8z3"></span></span> <span>Als Standard für neue Orte</span></button> <p class="spd-hinweis svelte-3ad8z3" data-testid="save-preset-hinweis">Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.</p> </div> <div class="spd-fuss svelte-3ad8z3"><button type="button" class="spd-btn spd-btn--primaer svelte-3ad8z3" data-testid="save-preset-submit">Speichern</button> <button type="button" class="spd-btn svelte-3ad8z3">Abbrechen</button></div></div></div>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:242:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: vergleich zu: Auslöser aria-expanded=false, keine Karte
+    not ok 4 - vergleich zu: Auslöser aria-expanded=false, keine Karte
+      ---
+      duration_ms: 6.176941
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:249:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        null !== 'false'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'false'
+      actual: ~
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:252:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 5 - \#3190 AC-1: Auslöser schaltet um und zeigt auf die Karte
+  ---
+  duration_ms: 1475.582839
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:233:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3190 AC-10: WeatherMetricsTab (Alt-Editor)
+    # Subtest: sections: Profil-Karte (grundauswahl) nur in „alles“/„wetter“, nicht in „zustellung“
+    ok 1 - sections: Profil-Karte (grundauswahl) nur in „alles“/„wetter“, nicht in „zustellung“
+      ---
+      duration_ms: 0.19371
+      type: 'test'
+      ...
+    # Subtest: mit grundauswahl und offener Karte: Karte nach der Profil-Karte und vor der Grundauswahl
+    not ok 2 - mit grundauswahl und offener Karte: Karte nach der Profil-Karte und vor der Grundauswahl
+      ---
+      duration_ms: 13.855005
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:269:2'
+      failureType: 'testCodeFailure'
+      error: 'Karte steht nicht unmittelbar unter der Profil-Karte, sondern weiter unten (55666 > 1761)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:277:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 6 - \#3190 AC-10: WeatherMetricsTab (Alt-Editor)
+  ---
+  duration_ms: 14.164726
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/organisms/__tests__/feat_3190_vorlage_dialog_inline.test.ts:263:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..6
+# tests 23
+# suites 6
+# pass 4
+# fail 19
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2895.969009

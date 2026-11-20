@@ -116,6 +116,8 @@ Schichten: Frontend (`frontend/src`), Go-API (`internal`), Python-Core (`src`). 
 - Aktivitäts-Chips in `TripHeader` (Desktop und mobil) entfallen ersatzlos; die Kopf-Parität Trip/Orte bleibt gewahrt (`hub_kopf_seiten_paritaet`).
 - Anlegen: Das Aktivitäts-Dropdown wird durch dieselbe `TempoKarte` ersetzt; neuer Trip startet mit `fuss` 4. Die Vorlagen-Vorbelegung (`ACTIVITY_TO_TEMPLATE`, `mapActivityToProfile`) hängt an der Fortbewegung (`fuss` → Wandern/Alpen-Trekking-Vorbelegung wie bisher für Trekking, `rad` → Radtour, `ski` → Skitouren, `mtb` → Radtour).
 - Alle neuen Nutzertexte nur über den Katalog (DE/EN); Protokoll-Token werden nicht übersetzt.
+- Umsetzung der Karte (ADR-0108): Die Inhalte liegen im Organismus `frontend/src/lib/components/organisms/tempo-karte/TempoKarteInhalt.svelte` (neu); `shared/TempoKarte.svelte` ist nur die Hülle, die Anlegen und Bearbeiten gemeinsam nutzen.
+- Die Vorlagen-Zuordnung (Fortbewegung → Vorlage) liegt in `shared/WeatherMetricsTab.svelte` (Konstante `FORTBEWEGUNG_TO_TEMPLATE`, Vorbelegung im Anlegen-Modus), nicht in `wizardHelpers.ts`.
 
 ## Test Plan
 
@@ -214,4 +216,5 @@ Fertig ist #3196, wenn jeder Trip ein gespeichertes Tempo (Fortbewegung + Grundt
 
 ## Changelog
 
+- 2026-11-20: Doku nachgezogen nach Umsetzung: Implementation Details (Karte als Organismus, Vorlagen-Zuordnung in WeatherMetricsTab), `api_contract.md` (Tempo-Abschnitt und Changelog), `operations_playbook.md` (Migrationsabschnitt #3196), `frontend_components.md`, `architecture.md`, `i18n_glossar.md`, ADR-0108 (Status Akzeptiert)
 - 2026-11-20: Initial spec created (v1.0, draft, wartet auf PO-Freigabe der ACs)

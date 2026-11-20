@@ -498,7 +498,8 @@ describe('Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) 
 		assert.match(spec, /const lauf = await bedieneAbschnitt\(abschnitt, lage, seitenOps\(page, \(\) => seiteLaden\(seitenId\), bedienAnfragen\)\);/);
 		assert.match(spec, /if \(lauf\.art === 'schreibbefund'\) \{\s*schreibBefunde\.push\(/);
 		assert.match(spec, /expect\(schreibBefunde, schreibBefunde\.join\('\\n'\)\)\.toEqual\(\[\]\);/);
-		// Escape erreicht das Fenster nur ohne Fokus im Dialog (SavePresetDialog stoppt Tastenereignisse).
+		// Tasten gehen ans Fenster, ohne Fokus in einer Karte (Picker-Escape). Die Speichern-Karte (#3190) schließt
+		// der Bedienplan über „Abbrechen“, nicht per Taste (elementliste_abgleich_bedienplan.test.ts).
 		assert.match(spec, /taste: async \(taste\) => \{\s*await page\.evaluate\(\(\) => \(document\.activeElement as HTMLElement \| null\)\?\.blur\(\)\);\s*await page\.keyboard\.press\(taste\);/);
 		for (const umgehung of [/\bbedienPlan\(/, /\bschreibBefund\(/, /page\.off\('request'/]) assert.ok(!umgehung.test(spec), `Spec umgeht die Logik: ${umgehung}`);
 	});

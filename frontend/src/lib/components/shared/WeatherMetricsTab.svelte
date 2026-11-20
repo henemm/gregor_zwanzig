@@ -32,7 +32,7 @@
 	// OutputLayoutEditor.svelte, ltChannels.ts u.a.) und wurden NICHT von C1
 	// eingefuehrt; sie umzuziehen haette CompareEditor.svelte (Legacy) beruehrt,
 	// was ausserhalb des C1-Scopes liegt (CLAUDE.md: "NICHT anfassen").
-	import SavePresetDialog from './weather-metrics-tab/SavePresetDialog.svelte';
+	import SavePresetDialog from './weather-metrics-tab/SavePresetDialog.svelte'; import { speicherKarteAusloeser } from '$lib/utils/vorlageSpeichernKarte.js'; // #3190 (zeilenneutral: eingefrorene Datei:Zeile-Liste)
 	// v2 Sub-Komponenten (neu, standalone, keine Abhängigkeit von OutputLayoutEditor)
 	import WeatherV2PresetBar from './weather-metrics-tab/WeatherV2PresetBar.svelte';
 	import WeatherV2Grundauswahl from './weather-metrics-tab/WeatherV2Grundauswahl.svelte';
@@ -308,7 +308,7 @@
 	const SMS_THRESHOLD_METRIC_IDS = ['precipitation', 'rain_probability', 'wind', 'gust', 'thunder', 'snow_depth', 'snowfall_limit'];
 	let smsThresholds = $state<Record<string, string>>({});
 	let savedSnapshot = $state('');
-	let showSavePresetDialog = $state(false);
+	let showSavePresetDialog = $state(false); let speicherKarteId = $state<string | undefined>(); const speicherAusloeser = speicherKarteAusloeser(); // #3190 AC-10: Umschalter + Fokus-Rückgabe wie im Reiter Wetter (zeilenneutral)
 	let pendingPreset: string | null = $state(null);
 	let profile = $state<{ mail_to?: string; telegram_chat_id?: string; sms_to?: string; sms_verified?: boolean; pending_sms_to?: string } | null>(null); // #2406
 	// Issue #736: E-Mail-Inhalt-Karte im Inhalt-Reiter (analog BriefingScheduleTab).
@@ -1696,9 +1696,27 @@
 						{templates}
 						{userPresets}
 						onSelectPreset={onSelectPreset}
-						onOpenSaveDialog={() => (showSavePresetDialog = true)}
+						onOpenSaveDialog={(knopf) => (showSavePresetDialog = speicherAusloeser.umschalten(knopf, showSavePresetDialog))}
+						saveOpen={showSavePresetDialog}
+						saveCardId={speicherKarteId}
 					/>
 				</Card>
+
+				<!-- #3190: Inline-Karte „Als eigene Vorlage speichern“ direkt unter der Profil-Karte
+				     (vorher am Seitenende). #2794 S3a Teil 3 (W5b): der Reiter Wetter (shared/wetter-tab)
+				     uebergibt die aufgeloeste Abo-Ampel, hier die Auswahl. -->
+				<SavePresetDialog
+					bind:id={speicherKarteId}
+					bind:open={showSavePresetDialog}
+					kind={context}
+					ampel={{
+						template: (ampelAngewendet?.template as string | undefined) ?? 'allgemein',
+						metrics: Object.fromEntries(buckets.primary.map((id) => [id, { enabled: true }]))
+					}}
+					existingNames={userPresets.map(p => p.name)}
+					onClose={() => ((showSavePresetDialog = false), speicherAusloeser.zurueck())}
+					onSaved={(p) => (onPresetSaved(p), speicherAusloeser.zurueck())}
+				/>
 
 				<!-- 02 Grundauswahl -->
 				<Card padding={18}>
@@ -2005,19 +2023,7 @@
 		     + Bottom-Sheet (#618) ist mit der Live-Vorschau ersatzlos entfernt. -->
 
 		<!-- Dialoge & Overlays -->
-		<!-- #2794 S3a Teil 3 (W5b): Dialog auf die Ampel umgestellt; der Reiter Wetter
-		     (shared/wetter-tab) uebergibt die aufgeloeste Abo-Ampel, hier die Auswahl. -->
-		<SavePresetDialog
-			bind:open={showSavePresetDialog}
-			kind={context}
-			ampel={{
-				template: (ampelAngewendet?.template as string | undefined) ?? 'allgemein',
-				metrics: Object.fromEntries(buckets.primary.map((id) => [id, { enabled: true }]))
-			}}
-			existingNames={userPresets.map(p => p.name)}
-			onClose={() => (showSavePresetDialog = false)}
-			onSaved={onPresetSaved}
-		/>
+		<!-- #3190: „Als eigene Vorlage speichern“ ist eine Inline-Karte unter der Profil-Karte (oben). -->
 
 		{#if pendingPreset}
 			<div class="confirm-overlay" role="dialog" aria-modal="true" data-testid="preset-confirm">

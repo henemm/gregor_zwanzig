@@ -414,7 +414,7 @@ EINE Listenzeile für die Reiter Etappen (Trip) und Orte (Orts-Briefing): links 
 
 **Orte (Orts-Briefing):** Zweitzeile „Gruppe · Höhe m“ (fehlt eine der beiden Angaben, nur die andere), Aktion „entfernen“ als Textknopf, Ziehgriff (`DragHandle`, beschriftet) zum Umsortieren. Kein Rang-Badge.
 
-**Inhalte Etappen:** `edit/etappenListe.ts` (reine Funktionen): Titel „E{n} · Start → Ziel“, Zweitzeile „x km · ↑y m“, Meta „Gehzeit h:mm“ aus derselben Rechnung wie die Ankunftszeiten der Wegpunkte. Der Knopf „Tempo ändern“ folgt mit #2796.
+**Inhalte Etappen:** `edit/etappenListe.ts` (reine Funktionen): Titel „E{n} · Start → Ziel“, Zweitzeile „x km · ↑y m“, Meta „Gehzeit h:mm“ aus derselben Rechnung wie die Ankunftszeiten der Wegpunkte. Die Karte „Fortbewegung · Grundtempo“ (#3196, `shared/TempoKarte.svelte` als Hülle um `organisms/tempo-karte/TempoKarteInhalt.svelte`, ADR-0108) steht oben im Reiter, vor der Liste; sie speichert mit dem Etappen-Autosave. Die Gehzeit (Meta) folgt dem Grundtempo nach DAV.
 
 **Zweitzeile der Etappe (Regel):**
 - Beide Angaben da: „x km · ↑y m“.

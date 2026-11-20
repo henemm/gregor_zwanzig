@@ -509,11 +509,17 @@ const SEITEN_SCOPE: string[] = [
 	// #3196: Tempo-Karte (Fortbewegung + Grundtempo) als dünne Seite, Organismus tempo-karte/.
 	'lib/components/shared/TempoKarte.svelte',
 	// #3122 B3a: Vorschauseite der Bausteine Haken, RohEinfachKnopf und EinstellTabelle.
-	'routes/_design-system/einstelltabelle/+page.svelte'
+	'routes/_design-system/einstelltabelle/+page.svelte',
+	// #3190: Karte „Als eigene Vorlage speichern“ (Reiter Wetter) nur aus Btn, Input, Haken.
+	'lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte'
 ];
 
 /** Freigegebene Kompositionen außerhalb der Baustein-Ordner (Import-Ausnahme für Regel (a)). */
-const FREIGEGEBENE_KOMPOSITIONEN: string[] = [];
+const FREIGEGEBENE_KOMPOSITIONEN: string[] = [
+	// #3190: reine Logik (Payload, Namensprüfung) ohne Markup, kein Baustein-Ersatz — SavePresetDialog
+	// (SEITEN_SCOPE) nutzt sie wie der Organismus WetterTabInhalt.
+	'lib/components/shared/wetter-tab/ampelSchreiben.ts'
+];
 
 /** Heutige Seiten/Komponenten außerhalb der Baustein-Ordner (Stand 2026-11-10). Darf nur sinken. */
 const BESTAND: string[] = [
@@ -600,7 +606,6 @@ const BESTAND: string[] = [
 	'lib/components/shared/versand-tab/VTSchedulePlan.svelte',
 	'lib/components/shared/weather-metrics-tab/AggregationMetricRow.svelte',
 	'lib/components/shared/weather-metrics-tab/MultiSymbolMetricRow.svelte',
-	'lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte',
 	'lib/components/shared/weather-metrics-tab/ThresholdMetricRow.svelte',
 	'lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte',
 	'lib/components/shared/weather-metrics-tab/WeatherV2PresetBar.svelte',
@@ -719,7 +724,8 @@ const BESTAND: string[] = [
 /** Obergrenze des Bestands (feste Zahl, nicht die Länge): neue Dateien gehen in SEITEN_SCOPE. */
 // #2794 S3a Teil-PR 4a: 204 → 199 (CorridorEditor, CorridorEditorMobile, MetricCheckbox,
 // MetricGroup, HorizonChip entfernt).
-const BESTAND_OBERGRENZE = 197; // #3047 Runde 7 (p11): AlarmeScheduleTab.svelte entfernt
+// #3047 Runde 7 (p11): AlarmeScheduleTab.svelte entfernt (→ 197).
+const BESTAND_OBERGRENZE = 196; // #3190: SavePresetDialog.svelte nach SEITEN_SCOPE (Inline-Karte aus Bausteinen)
 
 /** Token-Verstöße je Baustein-Datei (Ist-Stand 2026-11-10, ADR-0112). Darf nur sinken. */
 const AUSNAHMEN: Ausnahmen = {

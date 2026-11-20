@@ -265,8 +265,9 @@ const EINGEFROREN: readonly string[] = [
 	// #3047 H1: +1 (Prop `grundauswahl` am Stundenverlauf-Mount im Vergleichs-Zweig
 	// oberhalb), #3061/#3047 J5: null-Grundauswahl der Ausblick-Einbettung oberhalb
 	// zeilenneutral zusammengefuehrt (+0), Bedingung unveraendert, nachgemessen, unten gefesselt.
-	// #3196: -7, s. o.
-	'WeatherMetricsTab.svelte:1983',
+	// #3196: -7, s. o.; #3190: +18 (Speichern-Karte unter die Profil-Karte oberhalb verschoben,
+	// Umschalter-Props am Auslöser), Bedingung unveraendert, nachgemessen, unten gefesselt.
+	'WeatherMetricsTab.svelte:2001',
 	// #2655 (F6): beide nur verschoben (Katalog-Import, Satz je Kontext aus
 	// dem Katalog statt Konkatenation); Bedingungen unveraendert, nachgemessen.
 	'versand-tab/vtBriefingChannelsText.ts:22',
@@ -416,7 +417,7 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:1983', // #2792 S1a: +10, #2794 S3a: +4, #3047 H1: +1, #3061/#3047 J5: +0, #3047 N1-N3: +13, #3196: -7, Text unveraendert
+		eintrag: 'WeatherMetricsTab.svelte:2001', // #2792 S1a: +10, #2794 S3a: +4, #3047 H1: +1, #3061/#3047 J5: +0, #3047 N1-N3: +13, #3196: -7, #3190: +18, Text unveraendert
 		zeile: "{#if !createMode && context === 'route'}",
 		folgt: 'Issue #1721: Nacht-Stundentabelle der Trip-Mail'
 	}
