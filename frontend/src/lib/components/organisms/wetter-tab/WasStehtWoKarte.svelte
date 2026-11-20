@@ -245,8 +245,8 @@
 		{#if k.tripBloecke}
 			<Einstellungszeile titel={$t('wetter.wsw.kanal.email_format')} hinweis={$t('wetter.wsw.kanal.email_format_hinweis')}>
 				<Segmented
+					variant="kompakt"
 					rolle="radio"
-					size="sm"
 					testid="was-steht-wo-email-format"
 					ariaLabel={$t('wetter.wsw.kanal.email_format')}
 					items={[

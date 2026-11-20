@@ -29,6 +29,7 @@
 		class="rek"
 		data-slot="roh-einfach"
 		data-wert={wert}
+		data-tap="true"
 		data-testid={testid}
 		aria-label={$t('bausteine.darstellung.name', { name, form })}
 		onclick={() => onAenderung?.(wert === 'raw' ? 'simplified' : 'raw')}
@@ -41,6 +42,7 @@
 
 <style>
 	.rek {
+		position: relative;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -52,6 +54,17 @@
 		background: none;
 		font: inherit;
 		cursor: pointer;
+	}
+	/* #3212: unsichtbare Tippfläche ≥ --g-tap-min auf allen Breiten (Muster Btn data-tap, app.css);
+	   die sichtbare Pille bleibt 32×22 / 56×22 (Mockup Fassung 4 `.mini`). */
+	.rek::before {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: max(100%, var(--g-tap-min));
+		height: max(100%, var(--g-tap-min));
+		transform: translate(-50%, -50%);
 	}
 	.rek-pille {
 		padding: var(--g-size-3px) var(--g-size-6px);
