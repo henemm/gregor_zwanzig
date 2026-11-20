@@ -1,0 +1,518 @@
+TAP version 13
+# Subtest: \#3192 AC-1 datensatzFuerAbschnitt
+    # Subtest: grenzen-* -> mit_abweichung
+    not ok 1 - grenzen-* -> mit_abweichung
+      ---
+      duration_ms: 1.625042
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:49:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        datensatzFuerAbschnitt fehlt in elementliste_abgleich_logik.ts
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:32:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:50:13)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+      ...
+    # Subtest: vorlage-* -> ohne_abweichung
+    not ok 2 - vorlage-* -> ohne_abweichung
+      ---
+      duration_ms: 1.456122
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:53:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        datensatzFuerAbschnitt fehlt in elementliste_abgleich_logik.ts
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:32:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:54:13)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    1..2
+not ok 1 - \#3192 AC-1 datensatzFuerAbschnitt
+  ---
+  duration_ms: 3.857614
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:48:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3192 AC-1 wetterOverrides
+    # Subtest: nur erlaubte Seiten je Metrik
+    not ok 1 - nur erlaubte Seiten je Metrik
+      ---
+      duration_ms: 0.383512
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:63:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        wetterOverrides fehlt in elementliste_abgleich_logik.ts
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:32:9)
+        bau (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:60:20)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:64:13)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+      ...
+    # Subtest: Werte je Seite streng aufsteigend, lower.yellow < upper.yellow
+    not ok 2 - Werte je Seite streng aufsteigend, lower.yellow < upper.yellow
+      ---
+      duration_ms: 0.17959
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:71:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        wetterOverrides fehlt in elementliste_abgleich_logik.ts
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:32:9)
+        bau (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:60:20)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:72:40)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+      ...
+    # Subtest: Gewitter als thunder: hoch nie gelb, hoch >= mittel
+    not ok 3 - Gewitter als thunder: hoch nie gelb, hoch >= mittel
+      ---
+      duration_ms: 0.35518
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:78:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        wetterOverrides fehlt in elementliste_abgleich_logik.ts
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:32:9)
+        bau (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:60:20)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:79:13)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: ohne Gewitter-Metrik kein thunder
+    not ok 4 - ohne Gewitter-Metrik kein thunder
+      ---
+      duration_ms: 0.23267
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:82:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        wetterOverrides fehlt in elementliste_abgleich_logik.ts
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:32:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:83:13)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 2 - \#3192 AC-1 wetterOverrides
+  ---
+  duration_ms: 1.363331
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:59:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3192 AC-2 wechselZiel und MOCKUP_LAGE
+    # Subtest: MOCKUP_LAGE
+    not ok 1 - MOCKUP_LAGE
+      ---
+      duration_ms: 1.127561
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:94:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+        + undefined
+        - {
+        -   orte: {
+        -     aktiv: 'allgemein',
+        -     orte: 3,
+        -     ziel: 'alpen-trekking'
+        -   },
+        -   trip: {
+        -     aktiv: 'alpen-trekking',
+        -     ziel: 'wandern'
+        -   }
+        - }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        trip:
+          aktiv: 'alpen-trekking'
+          ziel: 'wandern'
+        orte:
+          aktiv: 'allgemein'
+          ziel: 'alpen-trekking'
+          orte: 3
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:95:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: trip -> wandern, orte -> alpen-trekking
+    not ok 2 - trip -> wandern, orte -> alpen-trekking
+      ---
+      duration_ms: 0.192561
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:100:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        wechselZiel fehlt in elementliste_abgleich_logik.ts
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:32:9)
+        ziel (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:92:54)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:101:20)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+      ...
+    # Subtest: Ziel fehlt -> nicht_herstellbar mit Grund, der die ID nennt
+    not ok 3 - Ziel fehlt -> nicht_herstellbar mit Grund, der die ID nennt
+      ---
+      duration_ms: 0.31909
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:104:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        wechselZiel fehlt in elementliste_abgleich_logik.ts
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:32:9)
+        ziel (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:92:54)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:105:13)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: kein Mockup-Ziel -> erste Vorlage != aktiv; keine andere -> nicht_herstellbar
+    not ok 4 - kein Mockup-Ziel -> erste Vorlage != aktiv; keine andere -> nicht_herstellbar
+      ---
+      duration_ms: 0.291701
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:109:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        wechselZiel fehlt in elementliste_abgleich_logik.ts
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:32:9)
+        ziel (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:92:54)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:110:20)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 3 - \#3192 AC-2 wechselZiel und MOCKUP_LAGE
+  ---
+  duration_ms: 2.191333
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:89:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3192 AC-2 bedienPlan nutzt das Mockup-Ziel
+    # Subtest: trip: wetter-vorlage-option-wandern
+    ok 1 - trip: wetter-vorlage-option-wandern
+      ---
+      duration_ms: 0.3543
+      type: 'test'
+      ...
+    # Subtest: orte (aktiv allgemein): wetter-vorlage-option-alpen-trekking
+    ok 2 - orte (aktiv allgemein): wetter-vorlage-option-alpen-trekking
+      ---
+      duration_ms: 0.225598
+      type: 'test'
+      ...
+    # Subtest: trip ohne wandern in der Liste -> nicht_herstellbar
+    not ok 3 - trip ohne wandern in der Liste -> nicht_herstellbar
+      ---
+      duration_ms: 0.170311
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:134:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'plan'
+        - 'nicht_herstellbar'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'nicht_herstellbar'
+      actual: 'plan'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:136:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 4 - \#3192 AC-2 bedienPlan nutzt das Mockup-Ziel
+  ---
+  duration_ms: 0.93465
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:117:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3192 AC-4 eingabeText (Platzhalter auch aus textarea)
+    # Subtest: TEXTAREA liefert Platzhalter
+    not ok 1 - TEXTAREA liefert Platzhalter
+      ---
+      duration_ms: 0.208031
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:144:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        eingabeText fehlt in elementliste_abgleich_logik.ts
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:32:9)
+        et (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:143:3)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:145:16)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+      ...
+    # Subtest: INPUT: aria-label vor Platzhalter vor Wert
+    not ok 2 - INPUT: aria-label vor Platzhalter vor Wert
+      ---
+      duration_ms: 0.159139
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:147:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        eingabeText fehlt in elementliste_abgleich_logik.ts
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:32:9)
+        et (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:143:3)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:148:16)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+      ...
+    # Subtest: andere Tags -> leer
+    not ok 3 - andere Tags -> leer
+      ---
+      duration_ms: 0.12221
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:152:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        eingabeText fehlt in elementliste_abgleich_logik.ts
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:32:9)
+        et (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:143:3)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:153:16)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 5 - \#3192 AC-4 eingabeText (Platzhalter auch aus textarea)
+  ---
+  duration_ms: 1.508152
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/__tests__/elementliste_abgleich_mockuplage_3192.test.ts:141:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..5
+# tests 16
+# suites 5
+# pass 2
+# fail 14
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 267.362261
