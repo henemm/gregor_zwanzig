@@ -1,0 +1,24 @@
+=== node --test src/lib/**/__tests__/*.test.ts ===
+# tests 8463
+# pass 8459
+# fail 0
+# skipped 3
+# todo 1
+=== pytest tests/test_2913_c2_besitzerliste.py ===
+35 passed in 0.74s
+=== tsc e2e/s3b2795-zustellung-kanalzeile.spec.ts (0 Zeilen = fehlerfrei) ===
+0
+=== svelte-check ===
+1795247248238 COMPLETED 2287 FILES 34 ERRORS 83 WARNINGS 54 FILES_WITH_PROBLEMS
+
+=== Fix-Loop 2 (F002): Mutation sms_allowed=false ungekürzt -> 2 rot (DE/EN), zurückgesetzt, sha256 identisch ===
+=== zustellung-tab Tests ===
+# tests 148
+# pass 148
+# fail 0
+=== node --test src/lib/**/__tests__/*.test.ts ===
+# tests 8465
+# pass 8461
+# fail 0
+# skipped 3
+# todo 1

@@ -363,8 +363,8 @@ const PILL={fertig:['fertig','neutral'],aktiv:['aktiv','good'],entwurf:['Entwurf
 function tg(c){return `<span class="tag" title="neu aus dem Abgleich">${c}</span>`;}
 // Konto-Zustand je Kanal: normal = alles eingerichtet, „Konto mit Lücken“ zeigt Sperren und Hinweise
 function konto(){const l=zst==='luecken';return {
-  'E-Mail':{ok:true,dot:'ok',st:'bestätigt',to:'henning@… · +1 Empfänger',menu:'an 2 Empfänger'},
-  'Telegram':l?{ok:false,dot:'off',st:'nicht verbunden',why:'Telegram-Chat fehlt.',fix:'verbinden'}:{ok:true,dot:'ok',st:'verbunden',to:'@henning',menu:'@henning'},
+  'E-Mail':{ok:true,dot:'ok',st:'bestätigt',to:'henning@…',menu:'an 2 Empfänger'},
+  'Telegram':l?{ok:false,dot:'off',st:'nicht verbunden',why:'Telegram-Chat fehlt.',fix:'verbinden'}:{ok:true,dot:'ok',st:'verbunden',menu:'@henning'},
   'SMS':l?{ok:false,dot:'warn',st:'unbestätigt · +49 171 …',why:'Nummer noch nicht bestätigt.',fix:'bestätigen'}:{ok:true,dot:'ok',st:'bestätigt',to:'+49 171 …',menu:'+49 171 …'},
   'Premium-SMS':l?{ok:false,dot:'warn',st:'inReach · Rückadresse verfallen',why:'Schick eine Nachricht vom Gerät, dann ist die Rückadresse wieder gültig.',fix:'prüfen',lock:'Rückadresse verfallen'}:{ok:true,dot:'ok',st:'inReach · Rückadresse gelernt 28.10. · zuletzt gemeldet 1.11. 18:04',menu:'inReach · über Satellit'}
 };}

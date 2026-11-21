@@ -1,0 +1,1159 @@
+TAP version 13
+# Subtest: AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+ok 1 - AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+  ---
+  duration_ms: 7.886888
+  type: 'test'
+  ...
+# Subtest: AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+ok 2 - AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+  ---
+  duration_ms: 14.402818
+  type: 'test'
+  ...
+# Subtest: AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+ok 3 - AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+  ---
+  duration_ms: 16.275516
+  type: 'test'
+  ...
+# Subtest: AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+ok 4 - AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+  ---
+  duration_ms: 1.675377
+  type: 'test'
+  ...
+# Subtest: AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+ok 5 - AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+  ---
+  duration_ms: 71.047416
+  type: 'test'
+  ...
+# Subtest: \#3202 AC-3 adresseGekuerzt — Lokalteil + „@…“, nie Volltext, nie Fehler
+    # Subtest: adresseGekuerzt("henning@example.com") = "henning@…"
+    ok 1 - adresseGekuerzt("henning@example.com") = "henning@…"
+      ---
+      duration_ms: 54.152571
+      type: 'test'
+      ...
+    # Subtest: adresseGekuerzt("a@x.de") = "a@…"
+    ok 2 - adresseGekuerzt("a@x.de") = "a@…"
+      ---
+      duration_ms: 0.781128
+      type: 'test'
+      ...
+    # Subtest: adresseGekuerzt("vorname.nachname+reise@example.org") = "vorname.nachname+reise@…"
+    ok 3 - adresseGekuerzt("vorname.nachname+reise@example.org") = "vorname.nachname+reise@…"
+      ---
+      duration_ms: 0.896349
+      type: 'test'
+      ...
+    # Subtest: adresseGekuerzt("") = ""
+    ok 4 - adresseGekuerzt("") = ""
+      ---
+      duration_ms: 2.335387
+      type: 'test'
+      ...
+    # Subtest: adresseGekuerzt("ohne-klammeraffe.example.com") = ""
+    ok 5 - adresseGekuerzt("ohne-klammeraffe.example.com") = ""
+      ---
+      duration_ms: 2.452017
+      type: 'test'
+      ...
+    1..5
+ok 6 - \#3202 AC-3 adresseGekuerzt — Lokalteil + „@…“, nie Volltext, nie Fehler
+  ---
+  duration_ms: 61.610029
+  type: 'suite'
+  ...
+# Subtest: \#3202 AC-3 nummerGekuerzt — „+<Landesvorwahl> <3 Ziffern> …“, nie Volltext, nie Fehler
+    # Subtest: nummerGekuerzt("+491711234567") = "+49 171 …"
+    ok 1 - nummerGekuerzt("+491711234567") = "+49 171 …"
+      ---
+      duration_ms: 8.595587
+      type: 'test'
+      ...
+    # Subtest: nummerGekuerzt("+49 171 0000000") = "+49 171 …"
+    ok 2 - nummerGekuerzt("+49 171 0000000") = "+49 171 …"
+      ---
+      duration_ms: 4.309163
+      type: 'test'
+      ...
+    # Subtest: nummerGekuerzt("+14155550123") = "+1 415 …"
+    ok 3 - nummerGekuerzt("+14155550123") = "+1 415 …"
+      ---
+      duration_ms: 1.833137
+      type: 'test'
+      ...
+    # Subtest: nummerGekuerzt("+79161234567") = "+7 916 …"
+    ok 4 - nummerGekuerzt("+79161234567") = "+7 916 …"
+      ---
+      duration_ms: 0.711368
+      type: 'test'
+      ...
+    # Subtest: nummerGekuerzt("+353871234567") = "+353 871 …"
+    ok 5 - nummerGekuerzt("+353871234567") = "+353 871 …"
+      ---
+      duration_ms: 0.453159
+      type: 'test'
+      ...
+    # Subtest: nummerGekuerzt("+41 79 123 45 67") = "+41 791 …"
+    ok 6 - nummerGekuerzt("+41 79 123 45 67") = "+41 791 …"
+      ---
+      duration_ms: 0.405131
+      type: 'test'
+      ...
+    # Subtest: nummerGekuerzt("0171 1234567") = "017 …"
+    ok 7 - nummerGekuerzt("0171 1234567") = "017 …"
+      ---
+      duration_ms: 4.295613
+      type: 'test'
+      ...
+    # Subtest: nummerGekuerzt("0171-1234567") = "017 …"
+    ok 8 - nummerGekuerzt("0171-1234567") = "017 …"
+      ---
+      duration_ms: 1.865878
+      type: 'test'
+      ...
+    # Subtest: nummerGekuerzt("+4917") = "+49 17 …"
+    ok 9 - nummerGekuerzt("+4917") = "+49 17 …"
+      ---
+      duration_ms: 0.44187
+      type: 'test'
+      ...
+    # Subtest: nummerGekuerzt("12") = "12 …"
+    ok 10 - nummerGekuerzt("12") = "12 …"
+      ---
+      duration_ms: 0.42748
+      type: 'test'
+      ...
+    # Subtest: nummerGekuerzt("") = ""
+    ok 11 - nummerGekuerzt("") = ""
+      ---
+      duration_ms: 2.921966
+      type: 'test'
+      ...
+    # Subtest: lange Nummern erscheinen nie im Volltext (auch nicht ihre Endziffern)
+    ok 12 - lange Nummern erscheinen nie im Volltext (auch nicht ihre Endziffern)
+      ---
+      duration_ms: 16.760774
+      type: 'test'
+      ...
+    1..12
+ok 7 - \#3202 AC-3 nummerGekuerzt — „+<Landesvorwahl> <3 Ziffern> …“, nie Volltext, nie Fehler
+  ---
+  duration_ms: 43.628546
+  type: 'suite'
+  ...
+# Subtest: \#3202 AC-1/AC-5 Kanalzeile Normalzustand im Trip (DE)
+    # Subtest: E-Mail „bestätigt · henning@…“ ohne volle Adresse und ohne Empfängerzusatz
+    ok 1 - E-Mail „bestätigt · henning@…“ ohne volle Adresse und ohne Empfängerzusatz
+      ---
+      duration_ms: 531.450953
+      type: 'test'
+      ...
+    # Subtest: SMS „bestätigt · +49 171 …“ ohne volle Nummer
+    ok 2 - SMS „bestätigt · +49 171 …“ ohne volle Nummer
+      ---
+      duration_ms: 1.792897
+      type: 'test'
+      ...
+    # Subtest: Telegram nur „verbunden“, nie die Chat-ID
+    ok 3 - Telegram nur „verbunden“, nie die Chat-ID
+      ---
+      duration_ms: 2.079367
+      type: 'test'
+      ...
+    # Subtest: Telegram: auch das Modell trägt die Chat-ID nicht mehr als Ziel
+    ok 4 - Telegram: auch das Modell trägt die Chat-ID nicht mehr als Ziel
+      ---
+      duration_ms: 3.381015
+      type: 'test'
+      ...
+    # Subtest: AC-5 Premium-SMS frisch: nur Status, ohne Rückadresse
+    ok 5 - AC-5 Premium-SMS frisch: nur Status, ohne Rückadresse
+      ---
+      duration_ms: 1.507578
+      type: 'test'
+      ...
+    1..5
+ok 8 - \#3202 AC-1/AC-5 Kanalzeile Normalzustand im Trip (DE)
+  ---
+  duration_ms: 540.457731
+  type: 'suite'
+  ...
+# Subtest: \#3202 AC-4 Kanalzeile Zustand „Lücken“ (DE)
+    # Subtest: SMS „unbestätigt · +49 171 …“
+    ok 1 - SMS „unbestätigt · +49 171 …“
+      ---
+      duration_ms: 1.545888
+      type: 'test'
+      ...
+    # Subtest: Premium „inReach · Rückadresse verfallen“ ohne Rückadresse
+    ok 2 - Premium „inReach · Rückadresse verfallen“ ohne Rückadresse
+      ---
+      duration_ms: 1.062758
+      type: 'test'
+      ...
+    # Subtest: Telegram „nicht verbunden“
+    ok 3 - Telegram „nicht verbunden“
+      ---
+      duration_ms: 1.228518
+      type: 'test'
+      ...
+    1..3
+ok 9 - \#3202 AC-4 Kanalzeile Zustand „Lücken“ (DE)
+  ---
+  duration_ms: 3.926744
+  type: 'suite'
+  ...
+# Subtest: \#3202 SMS ohne Tarif (sms_allowed false): Ziel gekürzt, nie Volltext
+    # Subtest: DE: „nicht verbunden · +49 171 …“ im Modell und in der sichtbaren Zeile
+    ok 1 - DE: „nicht verbunden · +49 171 …“ im Modell und in der sichtbaren Zeile
+      ---
+      duration_ms: 1.442998
+      type: 'test'
+      ...
+    # Subtest: EN: „not connected · +49 171 …“
+    ok 2 - EN: „not connected · +49 171 …“
+      ---
+      duration_ms: 6.021411
+      type: 'test'
+      ...
+    1..2
+ok 10 - \#3202 SMS ohne Tarif (sms_allowed false): Ziel gekürzt, nie Volltext
+  ---
+  duration_ms: 7.568359
+  type: 'suite'
+  ...
+# Subtest: \#3202 AC-2 keine Empfängerzahl in Trip und Orts-Vergleich
+    # Subtest: auch wenn ein Aufrufer eine Empfängerzahl mitgibt, bleibt die E-Mail-Zeile „bestätigt · henning@…“
+    ok 1 - auch wenn ein Aufrufer eine Empfängerzahl mitgibt, bleibt die E-Mail-Zeile „bestätigt · henning@…“
+      ---
+      duration_ms: 10.355576
+      type: 'test'
+      ...
+    # Subtest: der Kanalstatus hängt nur am Profil, nicht am Kontext (Trip und Orts-Vergleich gleich)
+    ok 2 - der Kanalstatus hängt nur am Profil, nicht am Kontext (Trip und Orts-Vergleich gleich)
+      ---
+      duration_ms: 1.679378
+      type: 'test'
+      ...
+    1..2
+ok 11 - \#3202 AC-2 keine Empfängerzahl in Trip und Orts-Vergleich
+  ---
+  duration_ms: 12.136082
+  type: 'suite'
+  ...
+# Subtest: \#3202 AC-6 Kanalzeile Englisch
+    # Subtest: Normalzustand EN: „confirmed · henning@…“, „confirmed · +49 171 …“, „connected“
+    ok 1 - Normalzustand EN: „confirmed · henning@…“, „confirmed · +49 171 …“, „connected“
+      ---
+      duration_ms: 1.110228
+      type: 'test'
+      ...
+    # Subtest: Lücken EN: „unconfirmed · +49 171 …“, „inReach · reply address expired“, „not connected“
+    ok 2 - Lücken EN: „unconfirmed · +49 171 …“, „inReach · reply address expired“, „not connected“
+      ---
+      duration_ms: 1.010088
+      type: 'test'
+      ...
+    # Subtest: EN: E-Mail-Zeile ohne Empfängerzahl, auch bei mitgegebener Zahl
+    ok 3 - EN: E-Mail-Zeile ohne Empfängerzahl, auch bei mitgegebener Zahl
+      ---
+      duration_ms: 4.931824
+      type: 'test'
+      ...
+    1..3
+ok 12 - \#3202 AC-6 Kanalzeile Englisch
+  ---
+  duration_ms: 7.192349
+  type: 'suite'
+  ...
+# Subtest: F004: Nutzlast des Kanal-Stils
+    # Subtest: f004_trip_report_config_mit_trend_liste_ohne_fremde_schluessel
+    ok 1 - f004_trip_report_config_mit_trend_liste_ohne_fremde_schluessel
+      ---
+      duration_ms: 1.172678
+      type: 'test'
+      ...
+    # Subtest: f004_trip_nach_server_merge_bleiben_fremdfelder_und_der_trend_kommt_wieder
+    ok 2 - f004_trip_nach_server_merge_bleiben_fremdfelder_und_der_trend_kommt_wieder
+      ---
+      duration_ms: 0.30615
+      type: 'test'
+      ...
+    # Subtest: f004_orte_nur_display_config_telegram_style
+    ok 3 - f004_orte_nur_display_config_telegram_style
+      ---
+      duration_ms: 0.29195
+      type: 'test'
+      ...
+    1..3
+ok 13 - F004: Nutzlast des Kanal-Stils
+  ---
+  duration_ms: 2.598707
+  type: 'suite'
+  ...
+# Subtest: F004 (vergleich): Read-Modify-Write gegen den Go-Merge-Pruefstand
+    # Subtest: f004_orte_kurzstil_aendert_nur_telegram_style
+    ok 1 - f004_orte_kurzstil_aendert_nur_telegram_style
+      ---
+      duration_ms: 27.919738
+      type: 'test'
+      ...
+    1..1
+ok 14 - F004 (vergleich): Read-Modify-Write gegen den Go-Merge-Pruefstand
+  ---
+  duration_ms: 28.032749
+  type: 'suite'
+  ...
+# Subtest: F001: Kurzstil-Aenderung verdraengt keine wartende Zeit-/Kanal-Aenderung
+    # Subtest: f001_zeit_dann_stil_beide_aenderungen_kommen_beim_server_an
+    ok 1 - f001_zeit_dann_stil_beide_aenderungen_kommen_beim_server_an
+      ---
+      duration_ms: 23.355266
+      type: 'test'
+      ...
+    # Subtest: f001_stil_dann_zeit_beide_aenderungen_kommen_beim_server_an
+    ok 2 - f001_stil_dann_zeit_beide_aenderungen_kommen_beim_server_an
+      ---
+      duration_ms: 13.508889
+      type: 'test'
+      ...
+    1..2
+ok 15 - F001: Kurzstil-Aenderung verdraengt keine wartende Zeit-/Kanal-Aenderung
+  ---
+  duration_ms: 37.365007
+  type: 'suite'
+  ...
+# Subtest: p12 Trip: Reiter Zustellung zeigt, was der Versand tut
+    # Subtest: tl7_briefing_email_gleich_versand_a_report_ohne_send_email
+    ok 1 - tl7_briefing_email_gleich_versand_a_report_ohne_send_email
+      ---
+      duration_ms: 1.024768
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_a_report_ohne_send_email
+    ok 2 - tl2_stille_gleich_alarm_a_report_ohne_send_email
+      ---
+      duration_ms: 0.155899
+      type: 'test'
+      ...
+    # Subtest: tl7_briefing_email_gleich_versand_b_ohne_report_config
+    ok 3 - tl7_briefing_email_gleich_versand_b_ohne_report_config
+      ---
+      duration_ms: 0.087599
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_b_ohne_report_config
+    ok 4 - tl2_stille_gleich_alarm_b_ohne_report_config
+      ---
+      duration_ms: 3.474055
+      type: 'test'
+      ...
+    # Subtest: tl7_briefing_email_gleich_versand_a_send_email_aus
+    ok 5 - tl7_briefing_email_gleich_versand_a_send_email_aus
+      ---
+      duration_ms: 0.15758
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_a_send_email_aus
+    ok 6 - tl2_stille_gleich_alarm_a_send_email_aus
+      ---
+      duration_ms: 0.10587
+      type: 'test'
+      ...
+    # Subtest: tl7_briefing_email_gleich_versand_b_send_email_an
+    ok 7 - tl7_briefing_email_gleich_versand_b_send_email_an
+      ---
+      duration_ms: 0.106499
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_b_send_email_an
+    ok 8 - tl2_stille_gleich_alarm_b_send_email_an
+      ---
+      duration_ms: 0.12239
+      type: 'test'
+      ...
+    # Subtest: tl7_briefing_email_gleich_versand_a_stille_nur_von
+    ok 9 - tl7_briefing_email_gleich_versand_a_stille_nur_von
+      ---
+      duration_ms: 0.24891
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_a_stille_nur_von
+    ok 10 - tl2_stille_gleich_alarm_a_stille_nur_von
+      ---
+      duration_ms: 0.323829
+      type: 'test'
+      ...
+    # Subtest: tl7_briefing_email_gleich_versand_b_stille_nur_bis
+    ok 11 - tl7_briefing_email_gleich_versand_b_stille_nur_bis
+      ---
+      duration_ms: 0.168178
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_b_stille_nur_bis
+    ok 12 - tl2_stille_gleich_alarm_b_stille_nur_bis
+      ---
+      duration_ms: 0.07754
+      type: 'test'
+      ...
+    # Subtest: tl7_briefing_email_gleich_versand_a_stille_paar
+    ok 13 - tl7_briefing_email_gleich_versand_a_stille_paar
+      ---
+      duration_ms: 0.06963
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_a_stille_paar
+    ok 14 - tl2_stille_gleich_alarm_a_stille_paar
+      ---
+      duration_ms: 0.054789
+      type: 'test'
+      ...
+    1..14
+ok 16 - p12 Trip: Reiter Zustellung zeigt, was der Versand tut
+  ---
+  duration_ms: 7.504789
+  type: 'suite'
+  ...
+# Subtest: p12 Orte: Reiter Zustellung zeigt, was Versand und Alarm tun
+    # Subtest: tl1_slots_gleich_versand_a_abend_nie_eingestellt
+    ok 1 - tl1_slots_gleich_versand_a_abend_nie_eingestellt
+      ---
+      duration_ms: 7.857738
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_a_abend_nie_eingestellt
+    ok 2 - tl2_stille_gleich_alarm_a_abend_nie_eingestellt
+      ---
+      duration_ms: 0.109119
+      type: 'test'
+      ...
+    # Subtest: tl3_kurzstil_gleich_telegram_a_abend_nie_eingestellt
+    ok 3 - tl3_kurzstil_gleich_telegram_a_abend_nie_eingestellt
+      ---
+      duration_ms: 0.119289
+      type: 'test'
+      ...
+    # Subtest: tl1_slots_gleich_versand_b_abend_an
+    ok 4 - tl1_slots_gleich_versand_b_abend_an
+      ---
+      duration_ms: 0.08765
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_b_abend_an
+    ok 5 - tl2_stille_gleich_alarm_b_abend_an
+      ---
+      duration_ms: 0.06072
+      type: 'test'
+      ...
+    # Subtest: tl3_kurzstil_gleich_telegram_b_abend_an
+    ok 6 - tl3_kurzstil_gleich_telegram_b_abend_an
+      ---
+      duration_ms: 0.074609
+      type: 'test'
+      ...
+    # Subtest: tl1_slots_gleich_versand_a_kurzstil
+    ok 7 - tl1_slots_gleich_versand_a_kurzstil
+      ---
+      duration_ms: 0.075159
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_a_kurzstil
+    ok 8 - tl2_stille_gleich_alarm_a_kurzstil
+      ---
+      duration_ms: 0.06302
+      type: 'test'
+      ...
+    # Subtest: tl3_kurzstil_gleich_telegram_a_kurzstil
+    ok 9 - tl3_kurzstil_gleich_telegram_a_kurzstil
+      ---
+      duration_ms: 0.05207
+      type: 'test'
+      ...
+    # Subtest: tl1_slots_gleich_versand_b_stil_nie_eingestellt
+    ok 10 - tl1_slots_gleich_versand_b_stil_nie_eingestellt
+      ---
+      duration_ms: 0.0641
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_b_stil_nie_eingestellt
+    ok 11 - tl2_stille_gleich_alarm_b_stil_nie_eingestellt
+      ---
+      duration_ms: 0.055569
+      type: 'test'
+      ...
+    # Subtest: tl3_kurzstil_gleich_telegram_b_stil_nie_eingestellt
+    ok 12 - tl3_kurzstil_gleich_telegram_b_stil_nie_eingestellt
+      ---
+      duration_ms: 0.057509
+      type: 'test'
+      ...
+    # Subtest: tl1_slots_gleich_versand_a_stille_nur_von
+    ok 13 - tl1_slots_gleich_versand_a_stille_nur_von
+      ---
+      duration_ms: 0.110291
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_a_stille_nur_von
+    ok 14 - tl2_stille_gleich_alarm_a_stille_nur_von
+      ---
+      duration_ms: 0.0708
+      type: 'test'
+      ...
+    # Subtest: tl3_kurzstil_gleich_telegram_a_stille_nur_von
+    ok 15 - tl3_kurzstil_gleich_telegram_a_stille_nur_von
+      ---
+      duration_ms: 0.049339
+      type: 'test'
+      ...
+    # Subtest: tl1_slots_gleich_versand_b_stille_paar
+    ok 16 - tl1_slots_gleich_versand_b_stille_paar
+      ---
+      duration_ms: 0.0722
+      type: 'test'
+      ...
+    # Subtest: tl2_stille_gleich_alarm_b_stille_paar
+    ok 17 - tl2_stille_gleich_alarm_b_stille_paar
+      ---
+      duration_ms: 0.05024
+      type: 'test'
+      ...
+    # Subtest: tl3_kurzstil_gleich_telegram_b_stille_paar
+    ok 18 - tl3_kurzstil_gleich_telegram_b_stille_paar
+      ---
+      duration_ms: 0.047459
+      type: 'test'
+      ...
+    # Subtest: messaufbau_faelle_decken_beide_werte
+    ok 19 - messaufbau_faelle_decken_beide_werte
+      ---
+      duration_ms: 2.199536
+      type: 'test'
+      ...
+    1..19
+ok 17 - p12 Orte: Reiter Zustellung zeigt, was Versand und Alarm tun
+  ---
+  duration_ms: 11.673974
+  type: 'suite'
+  ...
+# Subtest: AC-14: je Kanal eine Zeile mit Statuspunkt, Statustext und Ziel
+    # Subtest: ac14_vier_kanaele_in_fester_reihenfolge
+    ok 1 - ac14_vier_kanaele_in_fester_reihenfolge
+      ---
+      duration_ms: 58.210565
+      type: 'test'
+      ...
+    # Subtest: ac14_alles_verbunden_statustexte_und_ziele
+    ok 2 - ac14_alles_verbunden_statustexte_und_ziele
+      ---
+      duration_ms: 0.932828
+      type: 'test'
+      ...
+    1..2
+ok 18 - AC-14: je Kanal eine Zeile mit Statuspunkt, Statustext und Ziel
+  ---
+  duration_ms: 59.853082
+  type: 'suite'
+  ...
+# Subtest: AC-15: Telegram nicht verbunden — Briefing gesperrt, Alarm-Zelle „gesperrt: {Grund}“, Konto-Link „verbinden“
+    # Subtest: ac15_telegram_ohne_chat_gesperrt_mit_grund_und_link
+    ok 1 - ac15_telegram_ohne_chat_gesperrt_mit_grund_und_link
+      ---
+      duration_ms: 0.980458
+      type: 'test'
+      ...
+    # Subtest: ac15_dringlichkeit_strich_bei_gesperrtem_kanal_auch_wenn_alarm_gespeichert_an
+    ok 2 - ac15_dringlichkeit_strich_bei_gesperrtem_kanal_auch_wenn_alarm_gespeichert_an
+      ---
+      duration_ms: 1.892077
+      type: 'test'
+      ...
+    1..2
+ok 19 - AC-15: Telegram nicht verbunden — Briefing gesperrt, Alarm-Zelle „gesperrt: {Grund}“, Konto-Link „verbinden“
+  ---
+  duration_ms: 3.017726
+  type: 'suite'
+  ...
+# Subtest: AC-16: Sperrgruende und Konto-Verb je Lage
+    # Subtest: ac16_sms_unbestaetigt_link_bestaetigen
+    ok 1 - ac16_sms_unbestaetigt_link_bestaetigen
+      ---
+      duration_ms: 3.159776
+      type: 'test'
+      ...
+    # Subtest: ac16_email_adresse_fehlt
+    ok 2 - ac16_email_adresse_fehlt
+      ---
+      duration_ms: 0.787199
+      type: 'test'
+      ...
+    # Subtest: ac16_sms_tarif_zu_niedrig
+    ok 3 - ac16_sms_tarif_zu_niedrig
+      ---
+      duration_ms: 2.247747
+      type: 'test'
+      ...
+    # Subtest: ac16_jeder_gesperrte_kanal_hat_grund_und_link
+    ok 4 - ac16_jeder_gesperrte_kanal_hat_grund_und_link
+      ---
+      duration_ms: 8.834267
+      type: 'test'
+      ...
+    1..4
+ok 20 - AC-16: Sperrgruende und Konto-Verb je Lage
+  ---
+  duration_ms: 15.405868
+  type: 'suite'
+  ...
+# Subtest: AC-19/AC-20/AC-21: Premium-SMS (sicherheitsrelevant)
+    # Subtest: ac19_rueckadresse_gueltig_bedienbar_mit_statuszeile
+    ok 1 - ac19_rueckadresse_gueltig_bedienbar_mit_statuszeile
+      ---
+      duration_ms: 0.754199
+      type: 'test'
+      ...
+    # Subtest: ac20_rueckadresse_verfallen_beide_zellen_gesperrt
+    ok 2 - ac20_rueckadresse_verfallen_beide_zellen_gesperrt
+      ---
+      duration_ms: 0.63979
+      type: 'test'
+      ...
+    # Subtest: ac20_verfallen_wird_nicht_als_alarm_kanal_gezaehlt
+    ok 3 - ac20_verfallen_wird_nicht_als_alarm_kanal_gezaehlt
+      ---
+      duration_ms: 0.883278
+      type: 'test'
+      ...
+    # Subtest: ac20_nie_gemeldet_ebenfalls_gesperrt
+    ok 4 - ac20_nie_gemeldet_ebenfalls_gesperrt
+      ---
+      duration_ms: 3.686685
+      type: 'test'
+      ...
+    # Subtest: ac21_tarif_wird_geprueft_profil_ohne_tarifauskunft
+    ok 5 - ac21_tarif_wird_geprueft_profil_ohne_tarifauskunft
+      ---
+      duration_ms: 2.219228
+      type: 'test'
+      ...
+    # Subtest: ac21_tarif_unter_premium
+    ok 6 - ac21_tarif_unter_premium
+      ---
+      duration_ms: 0.553391
+      type: 'test'
+      ...
+    1..6
+ok 21 - AC-19/AC-20/AC-21: Premium-SMS (sicherheitsrelevant)
+  ---
+  duration_ms: 8.935268
+  type: 'suite'
+  ...
+# Subtest: AC-13: Zaehler nur „an UND verbunden“, Kopf Singular/Plural
+    # Subtest: ac13_kopf_1_kanal_2_kanaele
+    ok 1 - ac13_kopf_1_kanal_2_kanaele
+      ---
+      duration_ms: 12.706403
+      type: 'test'
+      ...
+    # Subtest: ac13_plural_auch_bei_0
+    ok 2 - ac13_plural_auch_bei_0
+      ---
+      duration_ms: 0.527181
+      type: 'test'
+      ...
+    # Subtest: ac13_gesperrter_kanal_zaehlt_nicht_mit_auch_wenn_gespeichert_an
+    ok 3 - ac13_gesperrter_kanal_zaehlt_nicht_mit_auch_wenn_gespeichert_an
+      ---
+      duration_ms: 0.888569
+      type: 'test'
+      ...
+    1..3
+ok 22 - AC-13: Zaehler nur „an UND verbunden“, Kopf Singular/Plural
+  ---
+  duration_ms: 14.261599
+  type: 'suite'
+  ...
+# Subtest: AC-11/AC-12: Warnboxen getrennt, nur bei 0
+    # Subtest: ac11_kein_briefing_kanal_warnbox
+    ok 1 - ac11_kein_briefing_kanal_warnbox
+      ---
+      duration_ms: 3.056605
+      type: 'test'
+      ...
+    # Subtest: ac12_kein_alarm_kanal_warnbox_unabhaengig
+    ok 2 - ac12_kein_alarm_kanal_warnbox_unabhaengig
+      ---
+      duration_ms: 1.150708
+      type: 'test'
+      ...
+    1..2
+ok 23 - AC-11/AC-12: Warnboxen getrennt, nur bei 0
+  ---
+  duration_ms: 4.336404
+  type: 'suite'
+  ...
+# Subtest: AC-17: Dringlichkeit „–“ bei Alarm aus, Segment gering · mittel · hoch bei Alarm an, fehlend = LOW
+    # Subtest: ac17_strich_wenn_alarm_aus
+    ok 1 - ac17_strich_wenn_alarm_aus
+      ---
+      duration_ms: 3.120276
+      type: 'test'
+      ...
+    # Subtest: ac17_segment_wenn_alarm_an_mit_lokalisierten_optionen
+    ok 2 - ac17_segment_wenn_alarm_an_mit_lokalisierten_optionen
+      ---
+      duration_ms: 2.746407
+      type: 'test'
+      ...
+    # Subtest: ac17_fehlender_oder_unbekannter_wert_gilt_als_gering
+    ok 3 - ac17_fehlender_oder_unbekannter_wert_gilt_als_gering
+      ---
+      duration_ms: 3.387156
+      type: 'test'
+      ...
+    # Subtest: ac35_optionen_englisch_datenwert_unuebersetzt
+    ok 4 - ac35_optionen_englisch_datenwert_unuebersetzt
+      ---
+      duration_ms: 10.896824
+      type: 'test'
+      ...
+    1..4
+ok 24 - AC-17: Dringlichkeit „–“ bei Alarm aus, Segment gering · mittel · hoch bei Alarm an, fehlend = LOW
+  ---
+  duration_ms: 20.436881
+  type: 'suite'
+  ...
+# Subtest: Stand aus dem gespeicherten Abo (Trip und Orts-Briefing)
+    # Subtest: ac2_trip_stand_zeiten_schalter_kanaele
+    ok 1 - ac2_trip_stand_zeiten_schalter_kanaele
+      ---
+      duration_ms: 0.621188
+      type: 'test'
+      ...
+    # Subtest: ac4_trip_0645_wird_als_0645_gelesen
+    ok 2 - ac4_trip_0645_wird_als_0645_gelesen
+      ---
+      duration_ms: 1.216098
+      type: 'test'
+      ...
+    # Subtest: ac2_vorgabe_0700_1800_wenn_zeit_fehlt
+    ok 3 - ac2_vorgabe_0700_1800_wenn_zeit_fehlt
+      ---
+      duration_ms: 0.69253
+      type: 'test'
+      ...
+    # Subtest: ac23_preset_send_email_fehlt_gilt_als_an
+    ok 4 - ac23_preset_send_email_fehlt_gilt_als_an
+      ---
+      duration_ms: 4.848283
+      type: 'test'
+      ...
+    # Subtest: ac4_preset_stand_zeiten_kanaele_laufzeit
+    ok 5 - ac4_preset_stand_zeiten_kanaele_laufzeit
+      ---
+      duration_ms: 1.138288
+      type: 'test'
+      ...
+    # Subtest: ac24_stille_stunden_an_aus
+    ok 6 - ac24_stille_stunden_an_aus
+      ---
+      duration_ms: 0.507269
+      type: 'test'
+      ...
+    # Subtest: ac26_cooldown_zeigt_gespeicherten_wert_standard_120
+    ok 7 - ac26_cooldown_zeigt_gespeicherten_wert_standard_120
+      ---
+      duration_ms: 3.983224
+      type: 'test'
+      ...
+    # Subtest: ac17_trip_ohne_alert_channels_erbt_briefing_kanaele
+    ok 8 - ac17_trip_ohne_alert_channels_erbt_briefing_kanaele
+      ---
+      duration_ms: 0.782848
+      type: 'test'
+      ...
+    1..8
+ok 25 - Stand aus dem gespeicherten Abo (Trip und Orts-Briefing)
+  ---
+  duration_ms: 14.081669
+  type: 'suite'
+  ...
+# Subtest: AC-8 (Oberflaechen-Teil): Uhrzeit nur im Viertelstunden-Raster
+    # Subtest: ac8_rasterzeiten_gueltig
+    ok 1 - ac8_rasterzeiten_gueltig
+      ---
+      duration_ms: 2.229757
+      type: 'test'
+      ...
+    # Subtest: ac8_0650_meldung_im_wortlaut
+    ok 2 - ac8_0650_meldung_im_wortlaut
+      ---
+      duration_ms: 0.970209
+      type: 'test'
+      ...
+    # Subtest: ac8_unsinnige_eingaben_sind_fehler
+    ok 3 - ac8_unsinnige_eingaben_sind_fehler
+      ---
+      duration_ms: 6.77513
+      type: 'test'
+      ...
+    1..3
+ok 26 - AC-8 (Oberflaechen-Teil): Uhrzeit nur im Viertelstunden-Raster
+  ---
+  duration_ms: 10.149706
+  type: 'suite'
+  ...
+# Subtest: AC-2/AC-3: Unterzeilen der Briefing-Karten je Kontext
+    # Subtest: ac2_trip_unterzeilen
+    ok 1 - ac2_trip_unterzeilen
+      ---
+      duration_ms: 5.021823
+      type: 'test'
+      ...
+    # Subtest: ac3_orte_unterzeilen
+    ok 2 - ac3_orte_unterzeilen
+      ---
+      duration_ms: 1.786457
+      type: 'test'
+      ...
+    1..2
+ok 27 - AC-2/AC-3: Unterzeilen der Briefing-Karten je Kontext
+  ---
+  duration_ms: 6.96728
+  type: 'suite'
+  ...
+# Subtest: AC-9/AC-10: Laufzeit
+    # Subtest: ac9_trip_satz_mit_daten_der_etappen
+    ok 1 - ac9_trip_satz_mit_daten_der_etappen
+      ---
+      duration_ms: 2.519177
+      type: 'test'
+      ...
+    # Subtest: ac10_orte_ohne_enddatum_bis_auf_weiteres
+    ok 2 - ac10_orte_ohne_enddatum_bis_auf_weiteres
+      ---
+      duration_ms: 0.553409
+      type: 'test'
+      ...
+    # Subtest: ac10_orte_mit_enddatum_bis_datum
+    ok 3 - ac10_orte_mit_enddatum_bis_datum
+      ---
+      duration_ms: 0.479119
+      type: 'test'
+      ...
+    1..3
+ok 28 - AC-9/AC-10: Laufzeit
+  ---
+  duration_ms: 3.702446
+  type: 'suite'
+  ...
+# Subtest: AC-35: Modelltexte folgen der Sprache
+    # Subtest: ac35_englisch_kein_deutscher_text
+    ok 1 - ac35_englisch_kein_deutscher_text
+      ---
+      duration_ms: 0.902149
+      type: 'test'
+      ...
+    1..1
+ok 29 - AC-35: Modelltexte folgen der Sprache
+  ---
+  duration_ms: 0.954459
+  type: 'suite'
+  ...
+# Subtest: AC-32/AC-33 (route): nur geaenderte Felder, Teil versand vs. Teil alarme
+    # Subtest: ac32_route_unveraendert_keine_nutzlast
+    ok 1 - ac32_route_unveraendert_keine_nutzlast
+      ---
+      duration_ms: 36.940886
+      type: 'test'
+      ...
+    # Subtest: ac4_ac32_route_nur_morgenzeit_0645
+    ok 2 - ac4_ac32_route_nur_morgenzeit_0645
+      ---
+      duration_ms: 2.495656
+      type: 'test'
+      ...
+    # Subtest: ac32_route_nur_dringlichkeit_nur_alarm_teil
+    ok 3 - ac32_route_nur_dringlichkeit_nur_alarm_teil
+      ---
+      duration_ms: 3.127765
+      type: 'test'
+      ...
+    # Subtest: ac17_route_alarm_kanal_an_sendet_alert_channels_vollstaendig
+    ok 4 - ac17_route_alarm_kanal_an_sendet_alert_channels_vollstaendig
+      ---
+      duration_ms: 2.723385
+      type: 'test'
+      ...
+    # Subtest: ac33_route_briefing_kanal_ist_versand_teil
+    ok 5 - ac33_route_briefing_kanal_ist_versand_teil
+      ---
+      duration_ms: 1.415288
+      type: 'test'
+      ...
+    # Subtest: ac33_route_beide_teile_bei_gemischter_aenderung
+    ok 6 - ac33_route_beide_teile_bei_gemischter_aenderung
+      ---
+      duration_ms: 2.272406
+      type: 'test'
+      ...
+    # Subtest: ac24_route_stille_stunden_zeit_und_aus
+    ok 7 - ac24_route_stille_stunden_zeit_und_aus
+      ---
+      duration_ms: 0.943868
+      type: 'test'
+      ...
+    # Subtest: ac26_route_cooldown
+    ok 8 - ac26_route_cooldown
+      ---
+      duration_ms: 3.691915
+      type: 'test'
+      ...
+    # Subtest: ac27_route_alert_metric_channels_nie_auch_nicht_bei_vollem_wechsel
+    ok 9 - ac27_route_alert_metric_channels_nie_auch_nicht_bei_vollem_wechsel
+      ---
+      duration_ms: 13.71601
+      type: 'test'
+      ...
+    1..9
+ok 30 - AC-32/AC-33 (route): nur geaenderte Felder, Teil versand vs. Teil alarme
+  ---
+  duration_ms: 68.84052
+  type: 'suite'
+  ...
+# Subtest: AC-32/AC-33 (vergleich): nur geaenderte Felder, Teil versand vs. Teil alarme
+    # Subtest: ac32_vergleich_unveraendert_keine_nutzlast
+    ok 1 - ac32_vergleich_unveraendert_keine_nutzlast
+      ---
+      duration_ms: 2.193697
+      type: 'test'
+      ...
+    # Subtest: ac4_ac32_vergleich_nur_morgenzeit_0645
+    ok 2 - ac4_ac32_vergleich_nur_morgenzeit_0645
+      ---
+      duration_ms: 0.885479
+      type: 'test'
+      ...
+    # Subtest: ac32_vergleich_nur_dringlichkeit_nur_alarm_teil
+    ok 3 - ac32_vergleich_nur_dringlichkeit_nur_alarm_teil
+      ---
+      duration_ms: 0.721789
+      type: 'test'
+      ...
+    # Subtest: ac17_vergleich_alarm_kanal_an_sendet_alert_channels_vollstaendig
+    ok 4 - ac17_vergleich_alarm_kanal_an_sendet_alert_channels_vollstaendig
+      ---
+      duration_ms: 0.781969
+      type: 'test'
+      ...
+    # Subtest: ac33_vergleich_briefing_kanal_ist_versand_teil
+    ok 5 - ac33_vergleich_briefing_kanal_ist_versand_teil
+      ---
+      duration_ms: 0.7404
+      type: 'test'
+      ...
+    # Subtest: ac33_vergleich_beide_teile_bei_gemischter_aenderung
+    ok 6 - ac33_vergleich_beide_teile_bei_gemischter_aenderung
+      ---
+      duration_ms: 1.659379
+      type: 'test'
+      ...
+    # Subtest: ac24_vergleich_stille_stunden_zeit_und_aus
+    ok 7 - ac24_vergleich_stille_stunden_zeit_und_aus
+      ---
+      duration_ms: 4.747442
+      type: 'test'
+      ...
+    # Subtest: ac26_vergleich_cooldown
+    ok 8 - ac26_vergleich_cooldown
+      ---
+      duration_ms: 12.382352
+      type: 'test'
+      ...
+    # Subtest: ac27_vergleich_alert_metric_channels_nie_auch_nicht_bei_vollem_wechsel
+    ok 9 - ac27_vergleich_alert_metric_channels_nie_auch_nicht_bei_vollem_wechsel
+      ---
+      duration_ms: 11.810983
+      type: 'test'
+      ...
+    1..9
+ok 31 - AC-32/AC-33 (vergleich): nur geaenderte Felder, Teil versand vs. Teil alarme
+  ---
+  duration_ms: 36.318577
+  type: 'suite'
+  ...
+# Subtest: AC-23: E-Mail-Briefing der Orte als send_email
+    # Subtest: ac23_orte_email_aus_und_wieder_an
+    ok 1 - ac23_orte_email_aus_und_wieder_an
+      ---
+      duration_ms: 4.711072
+      type: 'test'
+      ...
+    # Subtest: ac23_trip_email_unter_report_config
+    ok 2 - ac23_trip_email_unter_report_config
+      ---
+      duration_ms: 0.833319
+      type: 'test'
+      ...
+    1..2
+ok 32 - AC-23: E-Mail-Briefing der Orte als send_email
+  ---
+  duration_ms: 5.647441
+  type: 'suite'
+  ...
+# Subtest: AC-10: Laufzeit der Orte als end_date
+    # Subtest: ac10_bis_datum_und_zurueck
+    ok 1 - ac10_bis_datum_und_zurueck
+      ---
+      duration_ms: 0.943688
+      type: 'test'
+      ...
+    # Subtest: ac10_trip_schreibt_nie_end_date
+    ok 2 - ac10_trip_schreibt_nie_end_date
+      ---
+      duration_ms: 0.744398
+      type: 'test'
+      ...
+    1..2
+ok 33 - AC-10: Laufzeit der Orte als end_date
+  ---
+  duration_ms: 1.773917
+  type: 'suite'
+  ...
+# Subtest: AC-32/AC-33 (vergleich): EIN Speicherer gegen den Go-Merge-Pruefstand
+    # Subtest: ac32_nur_morgenzeit_ein_put_fremdfelder_unveraendert
+    ok 1 - ac32_nur_morgenzeit_ein_put_fremdfelder_unveraendert
+      ---
+      duration_ms: 23.029627
+      type: 'test'
+      ...
+    # Subtest: ac32_nur_dringlichkeit_ein_put_nur_alarm_teil
+    ok 2 - ac32_nur_dringlichkeit_ein_put_nur_alarm_teil
+      ---
+      duration_ms: 7.907409
+      type: 'test'
+      ...
+    # Subtest: ac33_gemischte_aenderung_zwei_puts_getrennte_teile
+    ok 3 - ac33_gemischte_aenderung_zwei_puts_getrennte_teile
+      ---
+      duration_ms: 7.384419
+      type: 'test'
+      ...
+    # Subtest: ac8_rasterfremde_zeit_wird_nicht_gesendet
+    ok 4 - ac8_rasterfremde_zeit_wird_nicht_gesendet
+      ---
+      duration_ms: 4.123466
+      type: 'test'
+      ...
+    # Subtest: ac23_send_email_aus_im_preset
+    ok 5 - ac23_send_email_aus_im_preset
+      ---
+      duration_ms: 3.843454
+      type: 'test'
+      ...
+    1..5
+ok 34 - AC-32/AC-33 (vergleich): EIN Speicherer gegen den Go-Merge-Pruefstand
+  ---
+  duration_ms: 46.576211
+  type: 'suite'
+  ...
+# Subtest: AC-4/AC-33 (route): Trip-Speicherweg PUT /api/trips/{id}
+    # Subtest: ac4_trip_morgenzeit_put_auf_trip_mit_report_config_teilfeld
+    ok 1 - ac4_trip_morgenzeit_put_auf_trip_mit_report_config_teilfeld
+      ---
+      duration_ms: 0.962809
+      type: 'test'
+      ...
+    # Subtest: ac8_trip_rasterfremde_zeit_kein_put
+    ok 2 - ac8_trip_rasterfremde_zeit_kein_put
+      ---
+      duration_ms: 2.488836
+      type: 'test'
+      ...
+    1..2
+ok 35 - AC-4/AC-33 (route): Trip-Speicherweg PUT /api/trips/{id}
+  ---
+  duration_ms: 3.567095
+  type: 'suite'
+  ...
+# Subtest: F002: Trip mit ausgeschaltetem Gesamtschalter — Morgen einschalten kommt an
+    # Subtest: f002_enabled_false_morgen_an_sendet_enabled_true_und_slot_ist_danach_aktiv
+    ok 1 - f002_enabled_false_morgen_an_sendet_enabled_true_und_slot_ist_danach_aktiv
+      ---
+      duration_ms: 1.176448
+      type: 'test'
+      ...
+    # Subtest: f002_beide_aus_setzt_gesamtschalter_false
+    ok 2 - f002_beide_aus_setzt_gesamtschalter_false
+      ---
+      duration_ms: 0.793889
+      type: 'test'
+      ...
+    1..2
+ok 36 - F002: Trip mit ausgeschaltetem Gesamtschalter — Morgen einschalten kommt an
+  ---
+  duration_ms: 2.045847
+  type: 'suite'
+  ...
+# Subtest: F005: Einzelschalter Morgen allein / Abend allein
+    # Subtest: f005_route_nur_morgen_aus_und_wieder_an
+    ok 1 - f005_route_nur_morgen_aus_und_wieder_an
+      ---
+      duration_ms: 3.733035
+      type: 'test'
+      ...
+    # Subtest: f005_route_nur_abend_aus_und_wieder_an
+    ok 2 - f005_route_nur_abend_aus_und_wieder_an
+      ---
+      duration_ms: 1.305139
+      type: 'test'
+      ...
+    # Subtest: f005_vergleich_nur_morgen_aus_und_wieder_an
+    ok 3 - f005_vergleich_nur_morgen_aus_und_wieder_an
+      ---
+      duration_ms: 0.680409
+      type: 'test'
+      ...
+    # Subtest: f005_vergleich_nur_abend_aus_und_wieder_an
+    ok 4 - f005_vergleich_nur_abend_aus_und_wieder_an
+      ---
+      duration_ms: 0.944058
+      type: 'test'
+      ...
+    1..4
+ok 37 - F005: Einzelschalter Morgen allein / Abend allein
+  ---
+  duration_ms: 6.87023
+  type: 'suite'
+  ...
+# Subtest: F003: Speicherfehler — Basis bleibt, der naechste Vorgang sendet dieselbe Differenz
+    # Subtest: f003_route_nach_fehler_wird_dieselbe_aenderung_erneut_gesendet
+    ok 1 - f003_route_nach_fehler_wird_dieselbe_aenderung_erneut_gesendet
+      ---
+      duration_ms: 1.498868
+      type: 'test'
+      ...
+    # Subtest: f003_vergleich_nach_fehler_wird_dieselbe_aenderung_erneut_gesendet
+    ok 2 - f003_vergleich_nach_fehler_wird_dieselbe_aenderung_erneut_gesendet
+      ---
+      duration_ms: 0.925818
+      type: 'test'
+      ...
+    1..2
+ok 38 - F003: Speicherfehler — Basis bleibt, der naechste Vorgang sendet dieselbe Differenz
+  ---
+  duration_ms: 2.503336
+  type: 'suite'
+  ...
+1..38
+# tests 153
+# suites 33
+# pass 153
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1820.543677

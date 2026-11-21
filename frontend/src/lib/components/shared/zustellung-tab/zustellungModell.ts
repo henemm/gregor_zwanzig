@@ -106,8 +106,42 @@ function gesperrt(
 /** Satzpunkt am Ende entfernen (Hinweis „Telegram-Chat fehlt.“ → Sperrgrund „Telegram-Chat fehlt“). */
 const ohnePunkt = (s: string) => s.replace(/\.$/, '');
 
+// ── Kuerzung fuer die Kanalzeile (#3202, Mockup Fassung 4) ──────────────────
+// Nur die Kanalzeile kuerzt; Kontosettings und Versand-Dialoge zeigen weiterhin den Volltext.
+
+/** „henning@example.com“ → „henning@…“; Lokalteil nie weiter gekuerzt; ohne „@“ oder leer → ''. */
+export function adresseGekuerzt(mail: string | null | undefined): string {
+	const s = (mail ?? '').trim();
+	const at = s.indexOf('@');
+	return at > 0 ? `${s.slice(0, at)}@…` : '';
+}
+
+// Landesvorwahlen mit 1 bzw. 2 Ziffern (ITU-T E.164); alle uebrigen haben 3 Ziffern.
+const VORWAHL_1 = new Set(['1', '7']);
+const VORWAHL_2 = new Set([
+	'20', '27', '30', '31', '32', '33', '34', '36', '39', '40', '41', '43', '44', '45', '46', '47', '48', '49',
+	'51', '52', '53', '54', '55', '56', '57', '58', '60', '61', '62', '63', '64', '65', '66', '81', '82', '84',
+	'86', '90', '91', '92', '93', '94', '95', '98'
+]);
+
+/** „+491711234567“ → „+49 171 …“; ohne „+“ die ersten 3 Ziffern + „ …“; leer → ''. Nie der Volltext. */
+export function nummerGekuerzt(nr: string | null | undefined): string {
+	const s = (nr ?? '').trim();
+	const ziffern = s.replace(/\D/g, '');
+	if (!ziffern) return '';
+	if (!s.startsWith('+')) return `${ziffern.slice(0, 3)} …`;
+	const vorwahl = VORWAHL_1.has(ziffern[0])
+		? ziffern.slice(0, 1)
+		: VORWAHL_2.has(ziffern.slice(0, 2))
+			? ziffern.slice(0, 2)
+			: ziffern.slice(0, 3);
+	const rest = ziffern.slice(vorwahl.length, vorwahl.length + 3);
+	return rest ? `+${vorwahl} ${rest} …` : `+${vorwahl} …`;
+}
+
 function premiumStatus(p: ZustellungProfil): KanalStatus {
-	const ziel = p.premium_sms_reply_to ?? '';
+	// #3202 (Mockup Fassung 4): die Premium-Zeile zeigt nur den Status, nie die Rueckadresse.
+	const ziel = '';
 	const nichtVerbunden = tr('zustellung.status.nicht_verbunden');
 	// Tarif-Gate zuerst, fail-closed ohne Tarifauskunft (premiumSmsAlarmGate.ts, AC-21).
 	const gate = derivePremiumSmsAlarmGate(p);
@@ -139,7 +173,9 @@ function premiumStatus(p: ZustellungProfil): KanalStatus {
 	return gesperrt('premium_sms', { ton: 'off', statusText: nichtVerbunden, ziel, grund, sperre: grund, verb: 'pruefen' });
 }
 
-/** Kanalstatus aller vier Zeilen aus der EINEN Profil-Antwort (AC-14 bis AC-21). */
+/** Kanalstatus aller vier Zeilen aus der EINEN Profil-Antwort (AC-14 bis AC-21).
+ *  #3202: Ziele gekuerzt (Mockup Fassung 4). Keine Empfaengerzahl: `preset.empfaenger` ist seit #1452
+ *  wirkungslos, versendet wird nur an die Konto-Adresse (PO-Korrektur 21.11.2026). */
 export function kanalStatus(profil: ZustellungProfil | null | undefined): Record<KanalId, KanalStatus> {
 	const p: ZustellungProfil = profil ?? {};
 	const nichtVerbunden = tr('zustellung.status.nicht_verbunden');
@@ -148,16 +184,18 @@ export function kanalStatus(profil: ZustellungProfil | null | undefined): Record
 	if (!p.mail_to) {
 		const grund = tr('zustellung.grund.email_fehlt');
 		email = gesperrt('email', { ton: 'off', statusText: nichtVerbunden, ziel: '', grund, sperre: ohnePunkt(grund), verb: 'verbinden' });
-	} else if (p.email_verified) {
-		email = bedienbar('email', 'ok', tr('zustellung.status.bestaetigt'), p.mail_to);
 	} else {
+		const ziel = adresseGekuerzt(p.mail_to);
 		// Unbestaetigte Adresse wird beliefert (Bestandsverhalten), daher bedienbar mit Warnpunkt.
-		email = bedienbar('email', 'warn', tr('zustellung.status.unbestaetigt'), p.mail_to);
+		email = p.email_verified
+			? bedienbar('email', 'ok', tr('zustellung.status.bestaetigt'), ziel)
+			: bedienbar('email', 'warn', tr('zustellung.status.unbestaetigt'), ziel);
 	}
 
 	let telegram: KanalStatus;
 	if (p.telegram_chat_id) {
-		telegram = bedienbar('telegram', 'ok', tr('zustellung.status.verbunden'), p.telegram_chat_id);
+		// #3202 (PO-Entscheidung 20.11.2026): nur „verbunden“, nie die Chat-ID, kein Telegram-Name.
+		telegram = bedienbar('telegram', 'ok', tr('zustellung.status.verbunden'), '');
 	} else {
 		const grund = tr('zustellung.grund.telegram_fehlt');
 		telegram = gesperrt('telegram', { ton: 'off', statusText: nichtVerbunden, ziel: '', grund, sperre: ohnePunkt(grund), verb: 'verbinden' });
@@ -168,18 +206,18 @@ export function kanalStatus(profil: ZustellungProfil | null | undefined): Record
 	const nummer = p.sms_to || p.pending_sms_to || '';
 	if (p.sms_allowed === false) {
 		const grund = tr('zustellung.grund.sms_tarif');
-		sms = gesperrt('sms', { ton: 'off', statusText: nichtVerbunden, ziel: nummer, grund, sperre: grund, verb: 'pruefen' });
+		sms = gesperrt('sms', { ton: 'off', statusText: nichtVerbunden, ziel: nummerGekuerzt(nummer), grund, sperre: grund, verb: 'pruefen' });
 	} else if (!nummer) {
 		const grund = tr('zustellung.grund.sms_fehlt');
 		sms = gesperrt('sms', { ton: 'off', statusText: nichtVerbunden, ziel: '', grund, sperre: ohnePunkt(grund), verb: 'verbinden' });
 	} else if (p.sms_to && p.sms_verified === true) {
-		sms = bedienbar('sms', 'ok', tr('zustellung.status.bestaetigt'), p.sms_to);
+		sms = bedienbar('sms', 'ok', tr('zustellung.status.bestaetigt'), nummerGekuerzt(p.sms_to));
 	} else {
 		const grund = tr('zustellung.grund.sms_unbestaetigt');
 		sms = gesperrt('sms', {
 			ton: 'warn',
 			statusText: tr('zustellung.status.unbestaetigt'),
-			ziel: nummer,
+			ziel: nummerGekuerzt(nummer),
 			grund,
 			sperre: ohnePunkt(grund),
 			verb: 'bestaetigen'

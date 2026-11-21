@@ -1,18 +1,17 @@
 // TDD RED — Issue #3202 (Epic #2913): Kanalzeile im Reiter Zustellung nach Mockup Fassung 4.
 // Spec: docs/specs/modules/feat_3202_kanalzeile_mockup.md — AC-1, AC-2, AC-3, AC-4, AC-5, AC-6 (Kern-Schicht;
 // Nutzersicht im Browser, Staging-Abgleich und Zwei-Nutzer-Lauf folgen in den E2E-Specs).
-// PO-Entscheidungen 20.11.2026: Telegram nur „verbunden“ (kein Name, nie Chat-ID); „+N Empfänger“ nur im
-// Orts-Vergleich; Kürzung E-Mail `lokalteil@…`, Telefon `+<Landesvorwahl> <3 Ziffern> …`; Premium ohne Rückadresse.
+// PO-Entscheidungen 20./21.11.2026: Telegram nur „verbunden“ (kein Name, nie Chat-ID); keine Empfängerzahl
+// (auch nicht im Orts-Vergleich); Kürzung E-Mail `lokalteil@…`, Telefon `+<Landesvorwahl> <3 Ziffern> …`; Premium ohne Rückadresse.
 //
 // Vertrag (shared/zustellung-tab/zustellungModell.ts):
 //   adresseGekuerzt(mail: string): string     „henning@example.com“ -> „henning@…“; ohne „@“ oder leer -> ''
 //   nummerGekuerzt(nr: string): string         „+491711234567“ -> „+49 171 …“; ohne „+“ erste 3 Ziffern + „ …“
-//   kanalStatus(profil, empfaengerZusatz?: number)
-//       empfaengerZusatz = Zahl ZUSÄTZLICHER Empfänger (Orts-Vergleich: preset.empfaenger ohne Konto-Adresse;
-//       Trip: immer 0 bzw. weggelassen). Zusatz „· +N Empfänger“ nur in der E-Mail-Zeile und nur bei N > 0.
+//   kanalStatus(profil)  — keine Empfängerzahl (PO-Korrektur 21.11.2026, Spec v1.1 AC-2: preset.empfaenger
+//       ist seit #1452 wirkungslos). Eine von außen mitgegebene Zahl darf keine Zeile verändern.
 // Geprüft wird die SICHTBARE Statuszeile der echten KanalTabelle (Server-Render, svelte/server), gespeist aus
-// dem echten kanalStatus und dem echten Katalog DE/EN — dort, wo die Zeile wirkt. Ob der Zusatz im Modell oder
-// in der Tabelle angehängt wird, lässt der Test offen; entscheidend ist der Text, den der Nutzer liest.
+// dem echten kanalStatus und dem echten Katalog DE/EN — dort, wo die Zeile wirkt; entscheidend ist der Text,
+// den der Nutzer liest.
 // Alle Adressen und Nummern sind erfunden (example.com, Fantasienummern).
 //
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks \
@@ -172,11 +171,6 @@ describe('#3202 AC-1/AC-5 Kanalzeile Normalzustand im Trip (DE)', () => {
 		assert.equal(z.email, 'bestätigt · henning@…');
 	});
 
-	test('Trip mit empfaengerZusatz 0 zeigt keinen Zusatz', async () => {
-		const z = await zeilen(profilNormal(), 0);
-		assert.equal(z.email, 'bestätigt · henning@…');
-	});
-
 	test('SMS „bestätigt · +49 171 …“ ohne volle Nummer', async () => {
 		const z = await zeilen(profilNormal());
 		assert.equal(z.sms, 'bestätigt · +49 171 …');
@@ -222,24 +216,42 @@ describe('#3202 AC-4 Kanalzeile Zustand „Lücken“ (DE)', () => {
 	});
 });
 
-// ── AC-2: Empfängerzusatz nur im Orts-Vergleich ──────────────────────────────
+// ── AC-1/AC-3: SMS im Tarif gesperrt — Nummer trotzdem gekürzt (Adversary F002) ─
 
-describe('#3202 AC-2 „+N Empfänger“ nur bei zusätzlichen Empfängern (Orts-Vergleich)', () => {
-	test('ein zusätzlicher Empfänger: „bestätigt · henning@… · +1 Empfänger“', async () => {
-		const z = await zeilen(profilNormal(), 1);
-		assert.equal(z.email, 'bestätigt · henning@… · +1 Empfänger');
+describe('#3202 SMS ohne Tarif (sms_allowed false): Ziel gekürzt, nie Volltext', () => {
+	const gesperrt = () => profilNormal({ sms_allowed: false, sms_to: '+491719876543', sms_verified: true });
+
+	test('DE: „nicht verbunden · +49 171 …“ im Modell und in der sichtbaren Zeile', async () => {
+		const m = await zustellungModell();
+		assert.equal(m.kanalStatus(gesperrt()).sms.ziel, '+49 171 …');
+		const z = await zeilen(gesperrt());
+		assert.equal(z.sms, 'nicht verbunden · +49 171 …');
+		assert.ok(!z.sms.includes('9876543'), z.sms);
 	});
 
-	test('zwei zusätzliche Empfänger: „· +2 Empfänger“', async () => {
-		const z = await zeilen(profilNormal(), 2);
-		assert.equal(z.email, 'bestätigt · henning@… · +2 Empfänger');
+	test('EN: „not connected · +49 171 …“', async () => {
+		locale.set('en');
+		const z = await zeilen(gesperrt());
+		assert.equal(z.sms, 'not connected · +49 171 …');
+	});
+});
+
+// ── AC-2: keine Empfängerzahl, nirgends (PO-Korrektur 21.11.2026) ────────────
+// `preset.empfaenger` ist seit #1452 wirkungslos (versendet wird nur an die Konto-Adresse); eine Zahl wäre falsch.
+
+describe('#3202 AC-2 keine Empfängerzahl in Trip und Orts-Vergleich', () => {
+	test('auch wenn ein Aufrufer eine Empfängerzahl mitgibt, bleibt die E-Mail-Zeile „bestätigt · henning@…“', async () => {
+		const ohne = await zeilen(profilNormal());
+		const mit = await zeilen(profilNormal(), 2);
+		assert.equal(ohne.email, 'bestätigt · henning@…');
+		assert.deepEqual(mit, ohne, 'eine mitgegebene Zahl darf keine Zeile verändern');
+		for (const z of Object.values(mit)) assert.ok(!/Empfänger|\+\d+ /.test(z.replace('+49 171 …', '')), `Empfängerzahl sichtbar: ${z}`);
 	});
 
-	test('Zusatz nur in der E-Mail-Zeile, die anderen Kanäle bleiben gleich', async () => {
-		const z = await zeilen(profilNormal(), 2);
-		assert.equal(z.sms, 'bestätigt · +49 171 …');
-		assert.equal(z.telegram, 'verbunden');
-		assert.ok(!z.premium_sms.includes('Empfänger'), z.premium_sms);
+	test('der Kanalstatus hängt nur am Profil, nicht am Kontext (Trip und Orts-Vergleich gleich)', async () => {
+		const m = await zustellungModell();
+		assert.equal(m.kanalStatus.length, 1, 'kanalStatus nimmt nur das Profil, keinen Empfänger-Parameter');
+		assert.equal(typeof m.zusaetzlicheEmpfaenger, 'undefined', 'kein Empfänger-Zähler im Modell (toter Code)');
 	});
 });
 
@@ -263,11 +275,10 @@ describe('#3202 AC-6 Kanalzeile Englisch', () => {
 		assert.equal(z.telegram, 'not connected');
 	});
 
-	test('Empfängerzusatz EN aus dem Katalog (kein deutsches Wort)', async () => {
+	test('EN: E-Mail-Zeile ohne Empfängerzahl, auch bei mitgegebener Zahl', async () => {
 		locale.set('en');
 		const z = await zeilen(profilNormal(), 2);
-		assert.ok(z.email.startsWith('confirmed · henning@… · +2 '), z.email);
-		assert.ok(/recipient/i.test(z.email), `englisches Wort fehlt: ${z.email}`);
-		assert.ok(!z.email.includes('Empfänger'), `deutsches Wort in EN: ${z.email}`);
+		assert.equal(z.email, 'confirmed · henning@…');
+		assert.ok(!/recipient|Empfänger/i.test(Object.values(z).join(' ')), JSON.stringify(z));
 	});
 });

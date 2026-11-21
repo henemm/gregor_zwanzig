@@ -120,3 +120,4 @@ Gleiches im Normalzustand: Ist-Premium hängt `ziel` (Rückadresse) hinter den S
 1. Telegram: nur „verbunden“, kein Telegram-Name (keine neuen personenbezogenen Daten). Mockup-Abweichung `@name` bewusst → Elementliste-Ausnahme mit Begründung.
 2. Empfängerzahl „+N Empfänger“ nur wo zusätzliche Empfänger existieren (Orts-Vergleich); beim Trip entfällt der Zusatz.
 3. Kürzungsregel (Tech-Lead): E-Mail `lokalteil@…`, Telefon `+<Landesvorwahl> <3 Ziffern> …` (Mockup-Beispiel), Premium im Normalzustand ohne Rückadresse (wie Mockup).
+4. **Korrektur 21.11. (PO):** „+N Empfänger“ entfällt ÜBERALL (auch Orts-Vergleich) — `preset.empfaenger` ist seit #1452 inert (scheduler_dispatch_service.py:845, compare_preset.go:144), Anzeige wäre falsch. Mockup Fassung 4 wird an Entscheidungen 1 und 4 angeglichen (Telegram ohne `@name`, E-Mail ohne „+1 Empfänger“), Elementliste neu erzeugen; keine Besitzer-Umhängung nach #3194.
