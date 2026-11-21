@@ -511,6 +511,91 @@ export function eingabeText(el: { tag: string; ariaLabel: string | null; placeho
 	return el.ariaLabel || el.placeholder || el.value;
 }
 
+/** #3203: Knoten, wie ihn `sichtbareTextBloecke` liest (Teilmenge des DOM-Node). */
+export type AbgleichKnoten = {
+	nodeType: number;
+	nodeValue: string | null;
+	tagName?: string;
+	childNodes: ArrayLike<AbgleichKnoten>;
+	hasAttribute?(name: string): boolean;
+	getAttribute?(name: string): string | null;
+	value?: unknown;
+};
+
+/**
+ * #3203 (AC-1 bis AC-3), Fix-Loop 1: sichtbare Texte unter `wurzel` in Dokumentreihenfolge, je Element wie
+ * bisher (eigene Textknoten), aber Sichtbarkeit statt Überspringen von `aria-hidden`:
+ * - Ein Element samt Teilbaum zählt nicht bei `display: none`, Attribut `hidden` oder als SCRIPT/STYLE/svg;
+ *   Text unter `visibility: hidden` zählt nicht.
+ * - Element mit eigenem (nicht leeren) Textknoten: EIN Block aus seinem eigenen Text und dem Text seiner
+ *   `aria-hidden="true"`-Kinder (z. B. Trennpunkt „·“ vor „grün: …“), in Dokumentreihenfolge. Andere
+ *   Kind-Elemente (Zähler, Badges, Hervorhebungen) bleiben eigene Texte wie bisher, nie verklebt.
+ * - Text, der nur unter `aria-hidden` steht und weder Buchstaben noch Ziffern hat („–“, „－“, „:“, „✓“), ist
+ *   Dekoration und zählt nicht als eigener Text; Skala-Zahlen und Stufenwörter zählen.
+ * - Mit `eingabe` (Staging-Abgleich): je Element vorher der Eingabefeld-Text (`eingabeText`) bzw. das aria-label
+ *   von Knöpfen und role=switch/group/textbox, wie bisher (unter `aria-hidden` wie bisher nicht); ohne `eingabe`
+ *   nur die Textblöcke.
+ * Selbstenthalten (keine Modul-Verweise): die Staging-Spec gibt die Funktion per `toString()` in den Browser.
+ */
+export function sichtbareTextBloecke(
+	wurzel: AbgleichKnoten,
+	stil: (el: AbgleichKnoten) => { display: string; visibility: string },
+	eingabe?: (e: { tag: string; ariaLabel: string | null; placeholder: string | null; value: string }) => string
+): string[] {
+	const norm = (s: string | null | undefined): string => String(s ?? '').replace(/\s+/g, ' ').trim();
+	const attr = (el: AbgleichKnoten, name: string): string | null =>
+		typeof el.getAttribute === 'function' ? el.getAttribute(name) : typeof el.hasAttribute === 'function' && el.hasAttribute(name) ? '' : null;
+	const ausgeschlossen = (el: AbgleichKnoten): boolean => {
+		const tag = String(el.tagName ?? '').toLowerCase();
+		return tag === 'script' || tag === 'style' || tag === 'svg' || attr(el, 'hidden') !== null || stil(el).display === 'none';
+	};
+	const ariaVerborgen = (el: AbgleichKnoten): boolean => el.nodeType === 1 && attr(el, 'aria-hidden') === 'true';
+	const zeichen = /[\p{L}\p{N}]/u;
+	const ganzerText = (k: AbgleichKnoten): string => {
+		if (k.nodeType === 3) return k.nodeValue ?? '';
+		if (k.nodeType !== 1 || ausgeschlossen(k) || stil(k).visibility === 'hidden') return '';
+		let t = '';
+		for (const kind of Array.from(k.childNodes)) t += ganzerText(kind);
+		return t;
+	};
+	const MIT_LABEL = ['switch', 'group', 'textbox'];
+	const texte: string[] = [];
+	const lauf = (el: AbgleichKnoten, verborgen: boolean, unsichtbar: boolean): void => {
+		if (el.nodeType !== 1 || ausgeschlossen(el)) return;
+		const ohneSicht = unsichtbar || stil(el).visibility === 'hidden';
+		const aria = verborgen || ariaVerborgen(el);
+		const kinder = Array.from(el.childNodes);
+		if (eingabe && !aria) {
+			const wert = el.value;
+			const t = norm(eingabe({ tag: String(el.tagName ?? ''), ariaLabel: attr(el, 'aria-label'), placeholder: attr(el, 'placeholder'), value: typeof wert === 'string' ? wert : '' }));
+			if (t) {
+				texte.push(t);
+				for (const kind of kinder) lauf(kind, aria, ohneSicht);
+				return;
+			}
+			const label = attr(el, 'aria-label');
+			if (label && (el.tagName === 'BUTTON' || MIT_LABEL.includes(attr(el, 'role') ?? ''))) texte.push(norm(label));
+		}
+		const eigen = kinder.some((k) => k.nodeType === 3 && norm(k.nodeValue) !== '');
+		const verbunden = new Set<AbgleichKnoten>();
+		if (eigen && !ohneSicht) {
+			let block = '';
+			for (const k of kinder) {
+				if (k.nodeType === 3) block += k.nodeValue ?? '';
+				else if (!aria && ariaVerborgen(k)) {
+					block += ganzerText(k);
+					verbunden.add(k);
+				}
+			}
+			const b = norm(block);
+			if (b && (!aria || zeichen.test(b))) texte.push(b);
+		}
+		for (const kind of kinder) if (!verbunden.has(kind)) lauf(kind, aria, ohneSicht);
+	};
+	lauf(wurzel, false, false);
+	return texte;
+}
+
 /** #3192 (AC-1), Fix-Loop F002: je Kontext zwei Wetter-Prüf-Datensätze. */
 export type WetterDatensatz = 'mit_abweichung' | 'ohne_abweichung';
 export const WETTER_DATENSAETZE: WetterDatensatz[] = ['mit_abweichung', 'ohne_abweichung'];

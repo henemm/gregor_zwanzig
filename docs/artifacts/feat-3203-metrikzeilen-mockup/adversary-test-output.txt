@@ -1,0 +1,607 @@
+TAP version 13
+# Subtest: \#3203 AC-1: sichtbarer Text unter aria-hidden zählt
+    # Subtest: Skala-Zahlen der Temperatur-Leiste (-15, -10, …) sind einzelne Texte
+    ok 1 - Skala-Zahlen der Temperatur-Leiste (-15, -10, …) sind einzelne Texte
+      ---
+      duration_ms: 1.776893
+      type: 'test'
+      ...
+    # Subtest: Gewitter-Stufenwörter keins/mittel/hoch in Reihenfolge
+    ok 2 - Gewitter-Stufenwörter keins/mittel/hoch in Reihenfolge
+      ---
+      duration_ms: 0.580701
+      type: 'test'
+      ...
+    # Subtest: Skala-Zahlen stehen vor dem Alarm-Satz (Dokumentreihenfolge, Reihenfolge-Prüfung AC-1/AC-2)
+    ok 3 - Skala-Zahlen stehen vor dem Alarm-Satz (Dokumentreihenfolge, Reihenfolge-Prüfung AC-1/AC-2)
+      ---
+      duration_ms: 0.15393
+      type: 'test'
+      ...
+    # Subtest: aria-hidden="false" und fehlendes aria-hidden ändern nichts
+    ok 4 - aria-hidden="false" und fehlendes aria-hidden ändern nichts
+      ---
+      duration_ms: 0.12437
+      type: 'test'
+      ...
+    1..4
+ok 1 - \#3203 AC-1: sichtbarer Text unter aria-hidden zählt
+  ---
+  duration_ms: 3.391014
+  type: 'suite'
+  ...
+# Subtest: \#3203 AC-2: Trennpunkt und grün-Text sind EIN Text
+    # Subtest: „·“ (aria-hidden) neben „grün: 2 bis 27 °C“ ergibt „· grün: 2 bis 27 °C“
+    ok 1 - „·“ (aria-hidden) neben „grün: 2 bis 27 °C“ ergibt „· grün: 2 bis 27 °C“
+      ---
+      duration_ms: 0.251041
+      type: 'test'
+      ...
+    # Subtest: Ergebnis passt auf das Elementlisten-Muster „· grün: {von} bis {bis} {einheit}“
+    ok 2 - Ergebnis passt auf das Elementlisten-Muster „· grün: {von} bis {bis} {einheit}“
+      ---
+      duration_ms: 0.387421
+      type: 'test'
+      ...
+    # Subtest: Element ohne eigenen Text (p.wt-why) verschmilzt seine Kinder nicht
+    ok 3 - Element ohne eigenen Text (p.wt-why) verschmilzt seine Kinder nicht
+      ---
+      duration_ms: 0.20959
+      type: 'test'
+      ...
+    1..3
+ok 2 - \#3203 AC-2: Trennpunkt und grün-Text sind EIN Text
+  ---
+  duration_ms: 2.150663
+  type: 'suite'
+  ...
+# Subtest: \#3203 AC-2/AC-3 (F004): verbundener Block ohne Doppelzählung und ohne versteckten Text
+    # Subtest: aria-hidden-Kind MIT Buchstaben neben Eigentext zählt nur im verbundenen Block, nicht zusätzlich einzeln
+    ok 1 - aria-hidden-Kind MIT Buchstaben neben Eigentext zählt nur im verbundenen Block, nicht zusätzlich einzeln
+      ---
+      duration_ms: 0.142352
+      type: 'test'
+      ...
+    # Subtest: visibility:hidden unter einem verbundenen aria-hidden-Kind gelangt nicht in den Block
+    ok 2 - visibility:hidden unter einem verbundenen aria-hidden-Kind gelangt nicht in den Block
+      ---
+      duration_ms: 0.18483
+      type: 'test'
+      ...
+    1..2
+ok 3 - \#3203 AC-2/AC-3 (F004): verbundener Block ohne Doppelzählung und ohne versteckten Text
+  ---
+  duration_ms: 0.563731
+  type: 'suite'
+  ...
+# Subtest: \#3203 AC-3: Verstecktes und reine Icons erzeugen kein Rauschen
+    # Subtest: display:none (am Element und am Vorfahr) zählt nicht
+    ok 1 - display:none (am Element und am Vorfahr) zählt nicht
+      ---
+      duration_ms: 0.183591
+      type: 'test'
+      ...
+    # Subtest: visibility:hidden (am Element und am Vorfahr) zählt nicht
+    ok 2 - visibility:hidden (am Element und am Vorfahr) zählt nicht
+      ---
+      duration_ms: 0.11998
+      type: 'test'
+      ...
+    # Subtest: Attribut hidden zählt nicht
+    ok 3 - Attribut hidden zählt nicht
+      ---
+      duration_ms: 0.13773
+      type: 'test'
+      ...
+    # Subtest: reines SVG/Icon unter aria-hidden liefert keinen Text
+    ok 4 - reines SVG/Icon unter aria-hidden liefert keinen Text
+      ---
+      duration_ms: 0.103909
+      type: 'test'
+      ...
+    # Subtest: Icon neben Text: nur der Text zählt
+    ok 5 - Icon neben Text: nur der Text zählt
+      ---
+      duration_ms: 0.079159
+      type: 'test'
+      ...
+    # Subtest: script und style liefern keinen Text
+    ok 6 - script und style liefern keinen Text
+      ---
+      duration_ms: 0.09525
+      type: 'test'
+      ...
+    # Subtest: nur Leerraum ergibt keinen Block
+    ok 7 - nur Leerraum ergibt keinen Block
+      ---
+      duration_ms: 0.06938
+      type: 'test'
+      ...
+    1..7
+ok 4 - \#3203 AC-3: Verstecktes und reine Icons erzeugen kein Rauschen
+  ---
+  duration_ms: 0.926971
+  type: 'suite'
+  ...
+# Subtest: \#3203: Browser-Regel = getestete Regel
+    # Subtest: new Function(toString) liefert dieselben Ergebnisse (selbstenthalten serialisierbar)
+    ok 1 - new Function(toString) liefert dieselben Ergebnisse (selbstenthalten serialisierbar)
+      ---
+      duration_ms: 0.924101
+      type: 'test'
+      ...
+    # Subtest: Staging-Spec überspringt aria-hidden nicht mehr und nutzt sichtbareTextBloecke (doc-compliance-test)
+    ok 2 - Staging-Spec überspringt aria-hidden nicht mehr und nutzt sichtbareTextBloecke (doc-compliance-test)
+      ---
+      duration_ms: 0.36441
+      type: 'test'
+      ...
+    1..2
+ok 5 - \#3203: Browser-Regel = getestete Regel
+  ---
+  duration_ms: 1.382762
+  type: 'suite'
+  ...
+# Subtest: \#3203 Fix-Loop 1: bisheriges Verhalten je Element, Sammel-Schleife testbar
+    # Subtest: Zähler/Badge (ohne aria-hidden) bleibt eigener Text, wird nicht an den Reiternamen geklebt
+    ok 1 - Zähler/Badge (ohne aria-hidden) bleibt eigener Text, wird nicht an den Reiternamen geklebt
+      ---
+      duration_ms: 0.1548
+      type: 'test'
+      ...
+    # Subtest: Hervorhebung im Satz bleibt getrennt wie bisher („Amtliche Warnungen“ + Hinweis)
+    ok 2 - Hervorhebung im Satz bleibt getrennt wie bisher („Amtliche Warnungen“ + Hinweis)
+      ---
+      duration_ms: 0.08331
+      type: 'test'
+      ...
+    # Subtest: verbundenes aria-hidden-Kind wird nicht doppelt gezählt
+    ok 3 - verbundenes aria-hidden-Kind wird nicht doppelt gezählt
+      ---
+      duration_ms: 0.11515
+      type: 'test'
+      ...
+    # Subtest: reine Zeichen unter aria-hidden („–“, „－“, „:“, „✓“) sind Dekoration; Zahlen und Wörter zählen
+    ok 4 - reine Zeichen unter aria-hidden („–“, „－“, „:“, „✓“) sind Dekoration; Zahlen und Wörter zählen
+      ---
+      duration_ms: 0.334201
+      type: 'test'
+      ...
+    # Subtest: dasselbe Zeichen ohne aria-hidden zählt wie bisher
+    ok 5 - dasselbe Zeichen ohne aria-hidden zählt wie bisher
+      ---
+      duration_ms: 0.097201
+      type: 'test'
+      ...
+    # Subtest: mit eingabe: Eingabefeld-Text und aria-label von Knopf/switch in Dokumentreihenfolge
+    ok 6 - mit eingabe: Eingabefeld-Text und aria-label von Knopf/switch in Dokumentreihenfolge
+      ---
+      duration_ms: 0.1954
+      type: 'test'
+      ...
+    # Subtest: ohne eingabe: keine aria-label und keine Eingaben (nur Textblöcke)
+    ok 7 - ohne eingabe: keine aria-label und keine Eingaben (nur Textblöcke)
+      ---
+      duration_ms: 0.09997
+      type: 'test'
+      ...
+    # Subtest: svg wird auch mit eingabe ausgeschlossen (kein Text, keine Beschriftung darin)
+    ok 8 - svg wird auch mit eingabe ausgeschlossen (kein Text, keine Beschriftung darin)
+      ---
+      duration_ms: 0.09506
+      type: 'test'
+      ...
+    # Subtest: unter aria-hidden keine aria-label und keine Eingaben (wie bisher)
+    ok 9 - unter aria-hidden keine aria-label und keine Eingaben (wie bisher)
+      ---
+      duration_ms: 0.11204
+      type: 'test'
+      ...
+    # Subtest: display:none am Vorfahr schließt auch Eingaben und aria-label aus
+    ok 10 - display:none am Vorfahr schließt auch Eingaben und aria-label aus
+      ---
+      duration_ms: 0.083841
+      type: 'test'
+      ...
+    # Subtest: Staging-Spec gibt eingabeText an sichtbareTextBloecke und hat keine eigene Element-Schleife (doc-compliance-test)
+    ok 11 - Staging-Spec gibt eingabeText an sichtbareTextBloecke und hat keine eigene Element-Schleife (doc-compliance-test)
+      ---
+      duration_ms: 0.21709
+      type: 'test'
+      ...
+    1..11
+ok 6 - \#3203 Fix-Loop 1: bisheriges Verhalten je Element, Sammel-Schleife testbar
+  ---
+  duration_ms: 1.822603
+  type: 'suite'
+  ...
+# Subtest: F002: planeAbgleich — Prod-Schutz, Optionen, Scope, Kombinationen (vor jedem Seitenaufruf)
+    # Subtest: Prod-Base-URL wirft, Staging läuft
+    ok 1 - Prod-Base-URL wirft, Staging läuft
+      ---
+      duration_ms: 5.803128
+      type: 'test'
+      ...
+    # Subtest: ohne Base-URL gilt Staging (nie still Prod)
+    ok 2 - ohne Base-URL gilt Staging (nie still Prod)
+      ---
+      duration_ms: 1.568463
+      type: 'test'
+      ...
+    # Subtest: ohne Scope: alle Elemente der echten Liste, jede Kombination genau einmal
+    ok 3 - ohne Scope: alle Elemente der echten Liste, jede Kombination genau einmal
+      ---
+      duration_ms: 2.128572
+      type: 'test'
+      ...
+    # Subtest: Scope aus der Umgebung filtert; Strict und Sprache werden übernommen
+    ok 4 - Scope aus der Umgebung filtert; Strict und Sprache werden übernommen
+      ---
+      duration_ms: 3.791846
+      type: 'test'
+      ...
+    # Subtest: unbekannter Scope bzw. Sprache ⇒ Fehler, kein leerer grüner Lauf
+    ok 5 - unbekannter Scope bzw. Sprache ⇒ Fehler, kein leerer grüner Lauf
+      ---
+      duration_ms: 0.819912
+      type: 'test'
+      ...
+    1..5
+ok 7 - F002: planeAbgleich — Prod-Schutz, Optionen, Scope, Kombinationen (vor jedem Seitenaufruf)
+  ---
+  duration_ms: 18.413226
+  type: 'suite'
+  ...
+# Subtest: F002: Route-Abfangen-Plan je Zustand — nie still übersprungen
+    # Subtest: normal ohne Eingriff, lädt hängt, Ladefehler 500, unbekannter Zustand nicht herstellbar mit Grund
+    ok 1 - normal ohne Eingriff, lädt hängt, Ladefehler 500, unbekannter Zustand nicht herstellbar mit Grund
+      ---
+      duration_ms: 0.245131
+      type: 'test'
+      ...
+    # Subtest: Konto mit Lücken: Routenplan fängt nur lesende Konto-Abrufe (GET) ab, Navigation im Browser
+    ok 2 - Konto mit Lücken: Routenplan fängt nur lesende Konto-Abrufe (GET) ab, Navigation im Browser
+      ---
+      duration_ms: 0.323631
+      type: 'test'
+      ...
+    # Subtest: Konto mit Lücken: Profil-Antwort ⇒ Telegram fehlt, SMS unbestätigt, Premium-SMS-Rückadresse verfallen, E-Mail bleibt
+    ok 3 - Konto mit Lücken: Profil-Antwort ⇒ Telegram fehlt, SMS unbestätigt, Premium-SMS-Rückadresse verfallen, E-Mail bleibt
+      ---
+      duration_ms: 0.659141
+      type: 'test'
+      ...
+    # Subtest: Konto mit Lücken: Seitendaten (__data.json, devalue-Format) ⇒ profile umgelenkt, alles andere unverändert
+    ok 4 - Konto mit Lücken: Seitendaten (__data.json, devalue-Format) ⇒ profile umgelenkt, alles andere unverändert
+      ---
+      duration_ms: 22.967604
+      type: 'test'
+      ...
+    # Subtest: Konto mit Lücken: ohne abgefangenen Konto-Abruf ⇒ nicht_pruefbar mit konkretem Grund, sonst geprüft
+    ok 5 - Konto mit Lücken: ohne abgefangenen Konto-Abruf ⇒ nicht_pruefbar mit konkretem Grund, sonst geprüft
+      ---
+      duration_ms: 0.428481
+      type: 'test'
+      ...
+    # Subtest: das Abfang-Muster trifft die Datenabrufe, nicht Login oder Seiten
+    ok 6 - das Abfang-Muster trifft die Datenabrufe, nicht Login oder Seiten
+      ---
+      duration_ms: 0.229809
+      type: 'test'
+      ...
+    # Subtest: jeder Zustand der echten Liste hat einen Plan
+    ok 7 - jeder Zustand der echten Liste hat einen Plan
+      ---
+      duration_ms: 0.545731
+      type: 'test'
+      ...
+    # Subtest: Seitenpfade je Kontext
+    ok 8 - Seitenpfade je Kontext
+      ---
+      duration_ms: 0.09872
+      type: 'test'
+      ...
+    1..8
+ok 8 - F002: Route-Abfangen-Plan je Zustand — nie still übersprungen
+  ---
+  duration_ms: 25.940767
+  type: 'suite'
+  ...
+# Subtest: F002: Bewertung je Abschnitt
+    # Subtest: mit Abschnitt-Haken und richtiger Reihenfolge ⇒ gefunden (Muster greift)
+    ok 1 - mit Abschnitt-Haken und richtiger Reihenfolge ⇒ gefunden (Muster greift)
+      ---
+      duration_ms: 0.680201
+      type: 'test'
+      ...
+    # Subtest: ohne Abschnitt-Haken ⇒ abweichend, nie gefunden
+    ok 2 - ohne Abschnitt-Haken ⇒ abweichend, nie gefunden
+      ---
+      duration_ms: 0.186829
+      type: 'test'
+      ...
+    # Subtest: falsche Reihenfolge bzw. fehlender Text ⇒ abweichend mit Grund
+    ok 3 - falsche Reihenfolge bzw. fehlender Text ⇒ abweichend mit Grund
+      ---
+      duration_ms: 0.183091
+      type: 'test'
+      ...
+    # Subtest: Script-Abschnitt ohne Haken ⇒ nicht_pruefbar mit Grund; EN-Lücke ⇒ nicht_pruefbar
+    ok 4 - Script-Abschnitt ohne Haken ⇒ nicht_pruefbar mit Grund; EN-Lücke ⇒ nicht_pruefbar
+      ---
+      duration_ms: 0.30989
+      type: 'test'
+      ...
+    # Subtest: alleNichtPruefbar setzt jeden mit Grund
+    ok 5 - alleNichtPruefbar setzt jeden mit Grund
+      ---
+      duration_ms: 0.11845
+      type: 'test'
+      ...
+    1..5
+ok 9 - F002: Bewertung je Abschnitt
+  ---
+  duration_ms: 1.624882
+  type: 'suite'
+  ...
+# Subtest: F002: Bericht schreiben und Abschluss
+    # Subtest: schreibeBericht legt JSON und Markdown mit jedem Element an
+    ok 1 - schreibeBericht legt JSON und Markdown mit jedem Element an
+      ---
+      duration_ms: 1.332901
+      type: 'test'
+      ...
+    # Subtest: abschluss: ohne Strict Exit 0, mit Strict ≠ 0 bei Lücken; unvollständiger Bericht wirft
+    ok 2 - abschluss: ohne Strict Exit 0, mit Strict ≠ 0 bei Lücken; unvollständiger Bericht wirft
+      ---
+      duration_ms: 0.2346
+      type: 'test'
+      ...
+    1..2
+ok 10 - F002: Bericht schreiben und Abschluss
+  ---
+  duration_ms: 1.654492
+  type: 'suite'
+  ...
+# Subtest: F003: Starter übersetzt CLI-Flags und reicht den Exit-Code durch
+    # Subtest: --strict, --scope, --sprache ⇒ Umgebung
+    ok 1 - --strict, --scope, --sprache ⇒ Umgebung
+      ---
+      duration_ms: 0.240041
+      type: 'test'
+      ...
+    # Subtest: unbekannte Option oder fehlender Wert ⇒ Fehler
+    ok 2 - unbekannte Option oder fehlender Wert ⇒ Fehler
+      ---
+      duration_ms: 0.142661
+      type: 'test'
+      ...
+    # Subtest: Login nur GZ_AUTH_* aus dem .env-Text, nur wenn nicht schon gesetzt
+    ok 3 - Login nur GZ_AUTH_* aus dem .env-Text, nur wenn nicht schon gesetzt
+      ---
+      duration_ms: 0.451731
+      type: 'test'
+      ...
+    # Subtest: Starter startet genau die Staging-Config
+    ok 4 - Starter startet genau die Staging-Config
+      ---
+      duration_ms: 0.096879
+      type: 'test'
+      ...
+    # Subtest: Starter-Prozess: unbekannte Option ⇒ Exit 2, ohne Playwright zu starten
+    ok 5 - Starter-Prozess: unbekannte Option ⇒ Exit 2, ohne Playwright zu starten
+      ---
+      duration_ms: 221.094133
+      type: 'test'
+      ...
+    # Subtest: Starter-Prozess reicht den Exit-Code des gestarteten Kommandos durch
+        # Subtest: Kommando endet mit 0 ⇒ Starter 0; Flags kommen als Umgebung, Staging-Config im frontend-Ordner
+        ok 1 - Kommando endet mit 0 ⇒ Starter 0; Flags kommen als Umgebung, Staging-Config im frontend-Ordner
+          ---
+          duration_ms: 99.60548
+          type: 'test'
+          ...
+        # Subtest: Kommando endet mit 1 bzw. 3 ⇒ Starter endet genauso
+        ok 2 - Kommando endet mit 1 bzw. 3 ⇒ Starter endet genauso
+          ---
+          duration_ms: 210.113947
+          type: 'test'
+          ...
+        # Subtest: Kommando stirbt per Signal ⇒ Starter endet mit 1, nie 0
+        ok 3 - Kommando stirbt per Signal ⇒ Starter endet mit 1, nie 0
+          ---
+          duration_ms: 105.198369
+          type: 'test'
+          ...
+        1..3
+    ok 6 - Starter-Prozess reicht den Exit-Code des gestarteten Kommandos durch
+      ---
+      duration_ms: 415.172478
+      type: 'suite'
+      ...
+    1..6
+ok 11 - F003: Starter übersetzt CLI-Flags und reicht den Exit-Code durch
+  ---
+  duration_ms: 637.510145
+  type: 'suite'
+  ...
+# Subtest: AC-15: die Config bricht mit Prod-URL beim Laden ab (echter Ladevorgang im Unterprozess)
+    # Subtest: Prod-URL ⇒ Abbruch mit Meldung
+    ok 1 - Prod-URL ⇒ Abbruch mit Meldung
+      ---
+      duration_ms: 370.248346
+      type: 'test'
+      ...
+    # Subtest: Staging-URL ⇒ Config lädt
+    ok 2 - Staging-URL ⇒ Config lädt
+      ---
+      duration_ms: 340.964463
+      type: 'test'
+      ...
+    1..2
+ok 12 - AC-15: die Config bricht mit Prod-URL beim Laden ab (echter Ladevorgang im Unterprozess)
+  ---
+  duration_ms: 711.44884
+  type: 'suite'
+  ...
+# Subtest: Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) wirken
+    # Subtest: ladeRegeln liest Freigaben, Besitzer und Ausnahmen (nicht leer)
+    ok 1 - ladeRegeln liest Freigaben, Besitzer und Ausnahmen (nicht leer)
+      ---
+      duration_ms: 2.106683
+      type: 'test'
+      ...
+    # Subtest: ladeRegeln bricht bei element-Besitzer mit unbekannter ID ab und nennt den Eintrag
+    ok 2 - ladeRegeln bricht bei element-Besitzer mit unbekannter ID ab und nennt den Eintrag
+      ---
+      duration_ms: 0.668611
+      type: 'test'
+      ...
+    # Subtest: echte Besitzer-Datei lädt gegen die echte Elementliste
+    ok 3 - echte Besitzer-Datei lädt gegen die echte Elementliste
+      ---
+      duration_ms: 6.355411
+      type: 'test'
+      ...
+    # Subtest: werteLaufAus mit --abnahme: herrenloser Fremdtext ⇒ Exit 1 (abnahme wird durchgereicht)
+    ok 4 - werteLaufAus mit --abnahme: herrenloser Fremdtext ⇒ Exit 1 (abnahme wird durchgereicht)
+      ---
+      duration_ms: 1.928613
+      type: 'test'
+      ...
+    # Subtest: werteLaufAus wendet die Besitzer der Datei an ⇒ Exit 0, Besitzer im geschriebenen Bericht
+    ok 5 - werteLaufAus wendet die Besitzer der Datei an ⇒ Exit 0, Besitzer im geschriebenen Bericht
+      ---
+      duration_ms: 1.004621
+      type: 'test'
+      ...
+    # Subtest: werteLaufAus nur --strict: zusaetzlich allein ⇒ Exit 0; ohne Flags Exit 0
+    ok 6 - werteLaufAus nur --strict: zusaetzlich allein ⇒ Exit 0; ohne Flags Exit 0
+      ---
+      duration_ms: 1.620092
+      type: 'test'
+      ...
+    # Subtest: Fix-Loop 2/3 (Befund 1, F001): werteLaufAus mit Kombi ohne Hub-Marker ⇒ im Bericht; nur --abnahme Exit 1, --strict und ohne Flags 0
+    ok 7 - Fix-Loop 2/3 (Befund 1, F001): werteLaufAus mit Kombi ohne Hub-Marker ⇒ im Bericht; nur --abnahme Exit 1, --strict und ohne Flags 0
+      ---
+      duration_ms: 3.163314
+      type: 'test'
+      ...
+    # Subtest: werteLaufAus wendet Freigaben an (Muster-Freigaben-Datei, abgelöst durch \#2800)
+    ok 8 - werteLaufAus wendet Freigaben an (Muster-Freigaben-Datei, abgelöst durch \#2800)
+      ---
+      duration_ms: 0.941622
+      type: 'test'
+      ...
+    # Subtest: ladeKontoTexte fragt Trip, Vergleich, Orte, Vorlagen ab und sammelt die Namen; Fehlantwort liefert nichts
+    ok 9 - ladeKontoTexte fragt Trip, Vergleich, Orte, Vorlagen ab und sammelt die Namen; Fehlantwort liefert nichts
+      ---
+      duration_ms: 0.556642
+      type: 'test'
+      ...
+    # Subtest: Staging-Spec reicht Regeln, Konto-Texte und Plan vollständig durch (doc-compliance-test)
+    ok 10 - Staging-Spec reicht Regeln, Konto-Texte und Plan vollständig durch (doc-compliance-test)
+      ---
+      duration_ms: 0.45677
+      type: 'test'
+      ...
+    # Subtest: \#2966: Staging-Spec verdrahtet Bedienung, Tripwire und Aufräumen (doc-compliance-test)
+    ok 11 - \#2966: Staging-Spec verdrahtet Bedienung, Tripwire und Aufräumen (doc-compliance-test)
+      ---
+      duration_ms: 0.38525
+      type: 'test'
+      ...
+    # Subtest: Hub-Anker werden je Selektor gezählt, nicht fest verdrahtet oder vertauscht (doc-compliance-test, F003)
+    ok 12 - Hub-Anker werden je Selektor gezählt, nicht fest verdrahtet oder vertauscht (doc-compliance-test, F003)
+      ---
+      duration_ms: 0.3795
+      type: 'test'
+      ...
+    1..12
+ok 13 - Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) wirken
+  ---
+  duration_ms: 20.010678
+  type: 'suite'
+  ...
+# Subtest: \#3192 F003: Staging-Spec setzt die Logik dort ein, wo sie wirkt (doc-compliance-test)
+    # Subtest: F001: addInitScript gibt eingabeText.toString() in den Browser, vor jedem Seitenaufruf (doc-compliance-test)
+    ok 1 - F001: addInitScript gibt eingabeText.toString() in den Browser, vor jedem Seitenaufruf (doc-compliance-test)
+      ---
+      duration_ms: 0.369711
+      type: 'test'
+      ...
+    # Subtest: F001: sichtbareTexte ruft window.__gzEingabeText mit dem echten Tag auf, ohne Inline-Regel (doc-compliance-test)
+    ok 2 - F001: sichtbareTexte ruft window.__gzEingabeText mit dem echten Tag auf, ohne Inline-Regel (doc-compliance-test)
+      ---
+      duration_ms: 0.883651
+      type: 'test'
+      ...
+    # Subtest: F002 (a): seitenId der Bedienung kommt aus seitenIdFuer mit dem echten Abschnitt (doc-compliance-test)
+    ok 3 - F002 (a): seitenId der Bedienung kommt aus seitenIdFuer mit dem echten Abschnitt (doc-compliance-test)
+      ---
+      duration_ms: 0.285771
+      type: 'test'
+      ...
+    # Subtest: F002 (c): wetterPruefPayload für beide Datensätze und beide Arten, eigene Vorlage unverändert (doc-compliance-test)
+    ok 4 - F002 (c): wetterPruefPayload für beide Datensätze und beide Arten, eigene Vorlage unverändert (doc-compliance-test)
+      ---
+      duration_ms: 0.414491
+      type: 'test'
+      ...
+    # Subtest: F002 (b): jede Anlage registriert ihr Aufräumen (doc-compliance-test)
+    ok 5 - F002 (b): jede Anlage registriert ihr Aufräumen (doc-compliance-test)
+      ---
+      duration_ms: 0.469201
+      type: 'test'
+      ...
+    # Subtest: F002 (b): Leckprüfung nach dem Aufräumen, Abruf-Fehler als Befund, expect nicht neutralisiert (doc-compliance-test)
+    ok 6 - F002 (b): Leckprüfung nach dem Aufräumen, Abruf-Fehler als Befund, expect nicht neutralisiert (doc-compliance-test)
+      ---
+      duration_ms: 0.388211
+      type: 'test'
+      ...
+    1..6
+ok 14 - \#3192 F003: Staging-Spec setzt die Logik dort ein, wo sie wirkt (doc-compliance-test)
+  ---
+  duration_ms: 2.983075
+  type: 'suite'
+  ...
+# Subtest: AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+ok 15 - AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+  ---
+  duration_ms: 8.094752
+  type: 'test'
+  ...
+# Subtest: AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+ok 16 - AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+  ---
+  duration_ms: 15.689463
+  type: 'test'
+  ...
+# Subtest: AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+ok 17 - AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+  ---
+  duration_ms: 17.667356
+  type: 'test'
+  ...
+# Subtest: AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+ok 18 - AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+  ---
+  duration_ms: 1.920303
+  type: 'test'
+  ...
+# Subtest: AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+ok 19 - AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+  ---
+  duration_ms: 96.058106
+  type: 'test'
+  ...
+1..19
+# tests 82
+# suites 15
+# pass 82
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1677.446258

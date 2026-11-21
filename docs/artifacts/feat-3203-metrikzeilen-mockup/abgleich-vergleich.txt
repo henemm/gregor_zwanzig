@@ -1,0 +1,25 @@
+#3203 Fix-Loop 1: Staging-Abgleich vorher/nachher (alle Reiter, Prüfkonto-Seed, staging.gregor20.henemm.com)
+vorher  = Stand HEAD 99142b20a (Adversary-Lauf, Berichte scratchpad/adv3203/vorher-{de,en})
+nachher = Fix-Loop 1 (Sammel-Regel je Element, nur aria-hidden-Kinder verbunden; Besitzer #3194/#3241), Lauf n2 21.11.
+
+DE  vorher  gefunden 1825 · abweichend 639 · nicht_pruefbar 198 · zusaetzlich 220
+DE  nachher gefunden 1877 · abweichend 587 · nicht_pruefbar 198 · zusaetzlich 204
+    abweichend->gefunden 60 (alter Besitzer #3203: 52, #3122: 8) · gefunden->abweichend 8 (siehe unten)
+    herrenlose Einträge vorher 35, nachher 35, neu 0 · Zusatztexte neu 0, weg 16 · herrenlose Zusatztexte neu 0
+    Besitzer #3203 nachher: 0
+
+EN  vorher  gefunden 1779 · abweichend 547 · nicht_pruefbar 336 · zusaetzlich 247
+EN  nachher gefunden 1829 · abweichend 497 · nicht_pruefbar 336 · zusaetzlich 232
+    abweichend->gefunden 58 (alter Besitzer #3203: 50, #3122: 8) · gefunden->abweichend 8 (siehe unten)
+    herrenlose Einträge vorher 35, nachher 35, neu 0 · Zusatztexte neu 1 („· green: up to 6“, mit Besitzer #3194), weg 16
+    herrenlose Zusatztexte vorher 163, nachher 162, neu 0 · Besitzer #3203 nachher: 0
+
+gefunden->abweichend (je Sprache 8, alle Besitzer #3122, Abschnitt was-steht-wo, Trip und Orte × normal/luecken):
+    „Ausblick im Morgen-Briefing“ / „Ausblick im Abend-Briefing“ (Reihenfolge). Gegenstück: „Morgen-Briefing“ /
+    „Abend-Briefing“ wechseln abweichend->gefunden (vorher „Text nicht sichtbar“). Ursache: WasStehtWoKarte.svelte
+    rendert den Schalter (aria-label „Ausblick im …“) VOR dem sichtbaren, aria-hidden Titel; das Mockup hat den Titel
+    zuerst. Bisher war der Titel für den Abgleich unsichtbar; jetzt ist die echte Reihenfolge-Abweichung sichtbar.
+    Saldo je Sprache 0, Besitzer unverändert #3122.
+
+Vorlauf n1 (DE) zeigte einmalig 72 grenzen-* Einträge „nicht_pruefbar“ (Knopf „Grenzen ändern“ beim Lesen noch
+nicht da, Datenlage) — in n1-EN und n2-DE nicht wiederholt, nicht durch die Änderung verursacht.

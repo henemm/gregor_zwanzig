@@ -56,9 +56,15 @@ const ausnahmen = (): Ausnahme[] => logik.leseAusnahmen(readFileSync(BESITZER, '
 // Fassung 4 an die PO-Entscheidungen angeglichen (Kanalzeile Telegram „verbunden“ ohne @name, E-Mail ohne
 // „+1 Empfänger“), Liste neu erzeugt: genau 14 Einträge der Kanaltabelle (Zustellung, ordnung 8 und 15, je
 // Trip/Orte und Zustand) wechseln Text und damit ID; alle übrigen Einträge byte-gleich (Diff geprüft). Anzahl 2646.
+// #3203 (21.11.): Pin erneut nachgezogen (vorher 65265ff3…2088d569, Mockup-Hash 112bf2f6…479d18c6). Mockup
+// Fassung 4 an den Live-Vorbotensatz angeglichen (PO 21.11.: Tiefe Wolken Trip / Sonnenstunden Orte sind keine
+// Vorboten → „Kein Alarm. Die Farbe erscheint nur im Briefing.“), Liste neu erzeugt: genau 4 Einträge (Reiter
+// Wetter, metriken, Trip ordnung 106 und Orte ordnung 84, je Zustand normal/luecken) wechseln Text, Schlüssel
+// und ID; die Trip-Folgezeile ordnung 112 (gleicher Text, je Zustand) wechselt nur die ID (Vorkommens-Zähler). Alle
+// übrigen Einträge byte-gleich (Diff geprüft). Anzahl 2646.
 const ALT_ANZAHL = 2646;
-const ALT_SHA = '65265ff375afed03db3c4a4224723ede65e38ac809b7980f15442afa2088d569';
-const MOCKUP_HASH = 'sha256:112bf2f645853eeed82c0a69fd98d6ffeef04dd454f03eaac4095b97479d18c6';
+const ALT_SHA = '11ce7550a4e8d7f03e60df58dcc1526cede2c7eeebeb6cc23700b6518eda1986';
+const MOCKUP_HASH = 'sha256:e8d3efb5375527887c7be7081c2aa892324738f7a7f552ee9bfa06e301e8b095';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {
 	const e = uebersicht();

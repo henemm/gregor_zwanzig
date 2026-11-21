@@ -557,17 +557,24 @@ describe('#3192 F003: Staging-Spec setzt die Logik dort ein, wo sie wirkt (doc-c
 
 	test('F001: sichtbareTexte ruft window.__gzEingabeText mit dem echten Tag auf, ohne Inline-Regel (doc-compliance-test)', () => {
 		// doc-compliance-test: sichtbareTexte läuft nur im Browser (kein DOM-Parser im Projekt); geprüft wird ihr Quelltext.
+		// #3203 Fix-Loop 1 (F003): die Element-Schleife (und damit der eingabe-Aufruf je Element) ist aus der Spec in
+		// sichtbareTextBloecke der Logik gewandert; sichtbareTexte reicht eingabe nur noch durch. Das Verhalten
+		// (Eingabefeld-Text, aria-label, Reihenfolge) prüft e2e/elementliste_abgleich_logik.test.ts direkt.
 		const f = funktion(SPEC(), 'sichtbareTexte');
 		assert.match(f, /const eingabe = \(window as unknown as \{ __gzEingabeText\?: [^\n]*\}\)\.__gzEingabeText;/);
 		assert.match(f, /if \(typeof eingabe !== 'function'\) throw new Error\(/, 'fehlende Fensterfunktion muss werfen (nie still zurückfallen)');
+		assert.match(f, /sammle\(wurzel, stil, eingabe\)/, 'sichtbareTexte gibt eingabe nicht an die Sammel-Regel weiter');
+		const logik = funktion(readFileSync(join(FRONTEND, 'e2e/elementliste_abgleich_logik.ts'), 'utf8').replace(/^export /gm, ''), 'sichtbareTextBloecke');
 		assert.match(
-			f,
-			/eingabe\(\{ tag: el\.tagName, ariaLabel: el\.getAttribute\('aria-label'\), placeholder: el\.getAttribute\('placeholder'\), value: typeof wert === 'string' \? wert : '' \}\)/
+			logik,
+			/eingabe\(\{ tag: String\(el\.tagName \?\? ''\), ariaLabel: attr\(el, 'aria-label'\), placeholder: attr\(el, 'placeholder'\), value: typeof wert === 'string' \? wert : '' \}\)/
 		);
-		assert.match(f, /const wert = \(el as \{ value\?: unknown \}\)\.value;/);
-		assert.match(f, /if \(t\) \{\s*texte\.push\(t\);\s*continue;\s*\}/);
-		for (const inline of [/HTMLTextAreaElement/, /HTMLInputElement/, /'TEXTAREA'/, /'INPUT'/, /getAttribute\('placeholder'\)\s*\|\|/]) {
-			assert.ok(!inline.test(f), `sichtbareTexte spiegelt die Eingabe-Regel inline: ${inline}`);
+		assert.match(logik, /const wert = el\.value;/);
+		assert.match(logik, /if \(t\) \{\s*texte\.push\(t\);/);
+		for (const quelle of [f, logik]) {
+			for (const inline of [/HTMLTextAreaElement/, /HTMLInputElement/, /'TEXTAREA'/, /'INPUT'/, /getAttribute\('placeholder'\)\s*\|\|/]) {
+				assert.ok(!inline.test(quelle), `Eingabe-Regel inline gespiegelt: ${inline}`);
+			}
 		}
 	});
 

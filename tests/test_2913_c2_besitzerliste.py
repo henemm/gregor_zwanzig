@@ -136,9 +136,20 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # #3202 (21.11., Spec feat_3202_kanalzeile_mockup.md): Kanalzeile gekürzt wie Mockup Fassung 4, alle 23 Einträge
     # abgeräumt; Mockup angeglichen (Telegram „verbunden“ ohne @name, E-Mail ohne „+1 Empfänger“, PO 20./21.11.)
     # und Elementliste neu erzeugt — keine Ausnahme, keine Umhängung.
+    # #3203 (21.11., Spec feat_3203_metrikzeilen_mockup.md): alle 19 Einträge abgeräumt. Abgleich zählt sichtbaren
+    # Text unter aria-hidden (Skala, Gewitter-Stufen, „· grün: …“, Reihenfolge), Mockup-Vorbotensatz an Live
+    # angeglichen und Elementliste neu erzeugt (PO 21.11.); „:00“ ist Ausnahme (Stundenraster, feat_2913_scheibe_c_wetter_rest).
+    # Die zwei Abschnitt-Einträge metriken deckten nebenbei 16 EN-Lücken (Metriknamen aus dem Register, Einheit+
+    # Hinweis, Grünbereich ohne Einheit) ab; sie bekommen je einen Element-Besitzer #3194 (gleiche Klasse wie dessen
+    # nur-EN-Zusatztexte): #3194 8 → 24. Fix-Loop 1 (EN-Staging-Abgleich 21.11.): weitere 6 EN-Einträge „mm · Summe“/
+    # „m · Minimum“ (EN-Live-Text ohne EN-Listeneintrag) und der Zusatztext „· green: up to {zahl}“ → #3194 (24 → 31);
+    # 32 EN-Chips „+ {metrik}“ (EN-Abgleich prüft nur das Muster) → neues Issue #3241.
+    # Fix-Loop 1b: Besitzer zeigen nie auf geschlossene Issues. #3194 ist geschlossen: alle nur-EN-Restfälle
+    # (29) → #3241 (erweitert, 32 + 29 = 61); „Mallorca Frühling“ (2, Kontoname im Prüfkonto, kein
+    # Übersetzungsfall) → #3009 (Abnahme, offen). #3194 damit 0.
     soll = {
         "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 318, "#2797": 8, "#2968": 0, "#3022": 62,
-        "#3111": 0, "#3194": 8, "#3151": 4, "#3122": 14, "#3202": 0, "#3203": 19, "#3204": 10,
+        "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 2, "#3151": 4, "#3122": 14, "#3202": 0, "#3203": 0, "#3204": 10,
         "#3205": 4, "#3145": 0,
     }
     ist = _verweise(daten)
