@@ -73,9 +73,17 @@ const ausnahmen = (): Ausnahme[] => logik.leseAusnahmen(readFileSync(BESITZER, '
 // getrennt); die Trip-Vorlage „Mallorca Frühling“ steht nur noch in der Trip-Auswahl. Liste neu erzeugt: genau
 // 4 Einträge entfallen (Orte, vorlage-auswahl, Zustände normal/luecken, je Name und Unterzeile „eigene · aus
 // GR221 gespeichert“); alle übrigen Einträge byte-gleich, Reihenfolge gleich (Diff je ID geprüft). Anzahl 2686.
-const ALT_ANZAHL = 2686;
-const ALT_SHA = '5bec7350ea09e4458841736d89981e79983953190bec4aeaa83ac6adf371ae3f';
-const MOCKUP_HASH = 'sha256:24f6c2a420cddac018c1cf58e1893430dba2d20477e1374d400a1cea5765b1b8';
+// #3250: drei gefühlte Anzeige-Metriken ergänzt (21.11.; vorher 5bec7350…6adf371ae3f, Mockup-Hash
+// 24f6c2a4…765b1b8, Anzahl 2686). Mockup Fassung 4 zeigt Gefühlte Tiefsttemperatur Nacht, Gefühlte
+// Tages-Tiefst-/Höchsttemperatur (Gehzeit) im Trip als aktive Nur-Anzeige-Zeilen (Gruppe Temperatur nach
+// Gefühlte Temperatur, Reihenfolge wie _REITER_WETTER). Liste neu erzeugt: 66 neue Einträge, nur Trip/Wetter
+// (je Zustand normal/luecken Name, Untertitel, Zeilenmitte, Erklärsatz, „kein Alarm“, Entfernen-Knopf und die
+// Zeilen in „Was steht wo“ (Name + 4 Haken)); der Zähler „9 von 15 … 5“ wird „9 von 18 … 8“ (gleiche ID); die
+// übrigen Trip/Wetter-Einträge ändern nur ordnung. Orte, Zustellung und alle übrigen Einträge byte-gleich, keine
+// ID entfallen (Diff je ID geprüft). Anzahl 2752.
+const ALT_ANZAHL = 2752;
+const ALT_SHA = 'bb07d0b72a14ccb4450a346d1074c9fd91ef959c9ecc39f4a07f49baf10e8904';
+const MOCKUP_HASH = 'sha256:c2347e0876a30710b2d56f6c1561b13668cb48089802558eaeaec0de30d8e6be';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {
 	const e = uebersicht();

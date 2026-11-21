@@ -1,0 +1,305 @@
+TAP version 13
+# Subtest: \#3250 AC-1/AC-2: Gruppe Temperatur im Mockup (Trip) wie in der App
+    # Subtest: Katalog kennt alle drei Namen (Vorbedingung)
+    ok 1 - Katalog kennt alle drei Namen (Vorbedingung)
+      ---
+      duration_ms: 0.682941
+      type: 'test'
+      ...
+    # Subtest: Reihenfolge der Gruppe Temperatur inkl. gefühlter Anzeige-Zeilen (Zustand normal)
+    not ok 2 - Reihenfolge der Gruppe Temperatur inkl. gefühlter Anzeige-Zeilen (Zustand normal)
+      ---
+      duration_ms: 1.82079
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:83:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Gruppe Temperatur im Mockup weicht von der App-Reihenfolge ab
+        + actual - expected
+        
+          [
+            'Temperatur',
+            'Tiefsttemperatur Nacht',
+            'Tages-Tiefsttemperatur (Gehzeit)',
+            'Tages-Höchsttemperatur (Gehzeit)',
+            'Gefühlte Temperatur',
+        -   'Gefühlte Tiefsttemperatur Nacht',
+        -   'Gefühlte Tages-Tiefsttemperatur (Gehzeit)',
+        -   'Gefühlte Tages-Höchsttemperatur (Gehzeit)'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'Temperatur'
+        1: 'Tiefsttemperatur Nacht'
+        2: 'Tages-Tiefsttemperatur (Gehzeit)'
+        3: 'Tages-Höchsttemperatur (Gehzeit)'
+        4: 'Gefühlte Temperatur'
+        5: 'Gefühlte Tiefsttemperatur Nacht'
+        6: 'Gefühlte Tages-Tiefsttemperatur (Gehzeit)'
+        7: 'Gefühlte Tages-Höchsttemperatur (Gehzeit)'
+      actual:
+        0: 'Temperatur'
+        1: 'Tiefsttemperatur Nacht'
+        2: 'Tages-Tiefsttemperatur (Gehzeit)'
+        3: 'Tages-Höchsttemperatur (Gehzeit)'
+        4: 'Gefühlte Temperatur'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:97:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: Reihenfolge der Gruppe Temperatur inkl. gefühlter Anzeige-Zeilen (Zustand luecken)
+    not ok 3 - Reihenfolge der Gruppe Temperatur inkl. gefühlter Anzeige-Zeilen (Zustand luecken)
+      ---
+      duration_ms: 0.820999
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:83:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Gruppe Temperatur im Mockup weicht von der App-Reihenfolge ab
+        + actual - expected
+        
+          [
+            'Temperatur',
+            'Tiefsttemperatur Nacht',
+            'Tages-Tiefsttemperatur (Gehzeit)',
+            'Tages-Höchsttemperatur (Gehzeit)',
+            'Gefühlte Temperatur',
+        -   'Gefühlte Tiefsttemperatur Nacht',
+        -   'Gefühlte Tages-Tiefsttemperatur (Gehzeit)',
+        -   'Gefühlte Tages-Höchsttemperatur (Gehzeit)'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'Temperatur'
+        1: 'Tiefsttemperatur Nacht'
+        2: 'Tages-Tiefsttemperatur (Gehzeit)'
+        3: 'Tages-Höchsttemperatur (Gehzeit)'
+        4: 'Gefühlte Temperatur'
+        5: 'Gefühlte Tiefsttemperatur Nacht'
+        6: 'Gefühlte Tages-Tiefsttemperatur (Gehzeit)'
+        7: 'Gefühlte Tages-Höchsttemperatur (Gehzeit)'
+      actual:
+        0: 'Temperatur'
+        1: 'Tiefsttemperatur Nacht'
+        2: 'Tages-Tiefsttemperatur (Gehzeit)'
+        3: 'Tages-Höchsttemperatur (Gehzeit)'
+        4: 'Gefühlte Temperatur'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:97:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Namen tragen die englischen Katalognamen (AC-2, EN-Abgleich)
+    not ok 4 - Namen tragen die englischen Katalognamen (AC-2, EN-Abgleich)
+      ---
+      duration_ms: 0.50057
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:101:2'
+      failureType: 'testCodeFailure'
+      error: '„Gefühlte Tiefsttemperatur Nacht“ fehlt in der Elementliste'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:105:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 1 - \#3250 AC-1/AC-2: Gruppe Temperatur im Mockup (Trip) wie in der App
+  ---
+  duration_ms: 4.588575
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:74:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3250 AC-3: Nur-Anzeige-Form wie Windrichtung und \#3204
+    # Subtest: wind_chill_night: Untertitel „°C · nur Anzeige, keine Ampel“, Zeilenmitte, Erklärsatz, ohne Grenzen und Alarm-Auswahl
+    not ok 1 - wind_chill_night: Untertitel „°C · nur Anzeige, keine Ampel“, Zeilenmitte, Erklärsatz, ohne Grenzen und Alarm-Auswahl
+      ---
+      duration_ms: 0.599881
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:113:3'
+      failureType: 'testCodeFailure'
+      error: 'Metrik-Zeile „Gefühlte Tiefsttemperatur Nacht“ fehlt in der Elementliste (Trip, Reiter Wetter, Metriken). Mockup TRIP_METRICS ergänzen und Elementliste neu erzeugen.'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        zeile (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:68:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:114:14)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+      ...
+    # Subtest: wind_chill_day_low: Untertitel „°C · nur Anzeige, keine Ampel“, Zeilenmitte, Erklärsatz, ohne Grenzen und Alarm-Auswahl
+    not ok 2 - wind_chill_day_low: Untertitel „°C · nur Anzeige, keine Ampel“, Zeilenmitte, Erklärsatz, ohne Grenzen und Alarm-Auswahl
+      ---
+      duration_ms: 0.33752
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:113:3'
+      failureType: 'testCodeFailure'
+      error: 'Metrik-Zeile „Gefühlte Tages-Tiefsttemperatur (Gehzeit)“ fehlt in der Elementliste (Trip, Reiter Wetter, Metriken). Mockup TRIP_METRICS ergänzen und Elementliste neu erzeugen.'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        zeile (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:68:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:114:14)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: wind_chill_day_high: Untertitel „°C · nur Anzeige, keine Ampel“, Zeilenmitte, Erklärsatz, ohne Grenzen und Alarm-Auswahl
+    not ok 3 - wind_chill_day_high: Untertitel „°C · nur Anzeige, keine Ampel“, Zeilenmitte, Erklärsatz, ohne Grenzen und Alarm-Auswahl
+      ---
+      duration_ms: 0.281551
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:113:3'
+      failureType: 'testCodeFailure'
+      error: 'Metrik-Zeile „Gefühlte Tages-Höchsttemperatur (Gehzeit)“ fehlt in der Elementliste (Trip, Reiter Wetter, Metriken). Mockup TRIP_METRICS ergänzen und Elementliste neu erzeugen.'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        zeile (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:68:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:114:14)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 2 - \#3250 AC-3: Nur-Anzeige-Form wie Windrichtung und \#3204
+  ---
+  duration_ms: 1.634832
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:111:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3250 AC-4: Zähler über der Metrikliste (Trip)
+    # Subtest: Zählersatz „9 von 18 Metriken lösen einen Alarm aus. 8 können keinen auslösen …“ (Zustand normal)
+    not ok 1 - Zählersatz „9 von 18 Metriken lösen einen Alarm aus. 8 können keinen auslösen …“ (Zustand normal)
+      ---
+      duration_ms: 0.472399
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:134:3'
+      failureType: 'testCodeFailure'
+      error: 'Zähler lautet „9 von 15 Metriken lösen einen Alarm aus. 5 können keinen auslösen (Vorboten und reine Anzeige).“, erwartet Beginn „9 von 18 Metriken lösen einen Alarm aus. 8 können keinen auslösen“'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:137:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: Zählersatz „9 von 18 Metriken lösen einen Alarm aus. 8 können keinen auslösen …“ (Zustand luecken)
+    not ok 2 - Zählersatz „9 von 18 Metriken lösen einen Alarm aus. 8 können keinen auslösen …“ (Zustand luecken)
+      ---
+      duration_ms: 0.265
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:134:3'
+      failureType: 'testCodeFailure'
+      error: 'Zähler lautet „9 von 15 Metriken lösen einen Alarm aus. 5 können keinen auslösen (Vorboten und reine Anzeige).“, erwartet Beginn „9 von 18 Metriken lösen einen Alarm aus. 8 können keinen auslösen“'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:137:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 3 - \#3250 AC-4: Zähler über der Metrikliste (Trip)
+  ---
+  duration_ms: 1.022601
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3250_elementliste_gefuehlte_anzeigen.test.ts:132:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3250 AC-5: Orts-Vergleich bietet die gefühlten Anzeige-Metriken nicht an (ADR-0011)
+    # Subtest: keine Zeile, kein Chip, kein Text der drei Metriken in Orte
+    ok 1 - keine Zeile, kein Chip, kein Text der drei Metriken in Orte
+      ---
+      duration_ms: 1.426871
+      type: 'test'
+      ...
+    1..1
+ok 4 - \#3250 AC-5: Orts-Vergleich bietet die gefühlten Anzeige-Metriken nicht an (ADR-0011)
+  ---
+  duration_ms: 1.536921
+  type: 'suite'
+  ...
+1..4
+# tests 10
+# suites 4
+# pass 2
+# fail 8
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 221.136186
