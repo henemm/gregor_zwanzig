@@ -331,7 +331,12 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     # Roh/Einfach je Stelle der Tabelle "Was steht wo" und die Fenstergroessen
     # ohne Stundenwert (gesperrte Stellen). Deckung mit den alten Listen:
     # tests/tdd/test_katalog_stellen_formen.py.
-    ("src/app/metric_catalog.py", "STELLEN_ZWEI_FORMEN", "schluessel"),
+    # Issue #3260 S1b (ADR-0127): STELLEN_ZWEI_FORMEN ist jetzt aus
+    # STELLEN_FORMEN abgeleitet; die Form je Stelle, die Wortskala und die
+    # Stunden-Marke sind die Katalog-Quellen.
+    ("src/app/metric_catalog.py", "STELLEN_FORMEN", "schluessel"),
+    ("src/app/metric_catalog.py", "WORTSKALA", "schluessel"),
+    ("src/app/metric_catalog.py", "STUNDEN_MARKE", "element"),
     ("src/app/metric_catalog.py", "FENSTER_METRIC_IDS", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['alpen-trekking']['metrics']", "element"),
     ("src/app/metric_catalog.py", "WEATHER_TEMPLATES['wandern']['metrics']", "element"),
@@ -352,10 +357,8 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     # (compare_html) fuehrt keine eigene mehr und importiert sie nicht.
     (_R + "compare_hourly_metric_ids.py", "HOURLY_DEFAULT_METRIC_IDS", "element"),
     (_R + "compare_metric_ids.py", "RENDERER_TO_TRIP_METRIC_ID", "wert"),
-    # Issue #2049: die vier Wolken-Kennungen, fuer die
-    # `_friendly_outlook_text` eine Einfach-Form kennt -- Teilmenge von
-    # OUTLOOK_FRIENDLY_CAPABLE, eigenstaendig registriert (eigene Fundstelle).
-    (_R + "compare_outlook_metric_ids.py", "_FRIENDLY_CLOUD_IDS", "element"),
+    # Issue #2049: `_FRIENDLY_CLOUD_IDS` entfiel mit #3260 S1b (Form aus dem
+    # Katalog, ADR-0127).
     (_R + "email/compare_html.py", "_HOUR_FMT_OVERRIDES", "schluessel"),
     (_R + "email/compare_html.py", "_HOUR_SEV_OVERRIDES", "schluessel"),
     # Issue #3156: ``compare_html._FRIENDLY_AMPEL_METRIC_IDS`` und
