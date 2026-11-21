@@ -1,0 +1,78 @@
+TAP version 13
+# Subtest: \#3205 AC-2: Trip-Vorlagenauswahl führt die eigene Trip-Vorlage weiter
+    # Subtest: Trip, Zustand luecken: „Mallorca Frühling“ steht unter „Eigene“
+    ok 1 - Trip, Zustand luecken: „Mallorca Frühling“ steht unter „Eigene“
+      ---
+      duration_ms: 1.069371
+      type: 'test'
+      ...
+    # Subtest: Trip, Zustand normal: „Mallorca Frühling“ steht unter „Eigene“
+    ok 2 - Trip, Zustand normal: „Mallorca Frühling“ steht unter „Eigene“
+      ---
+      duration_ms: 0.55936
+      type: 'test'
+      ...
+    1..2
+ok 1 - \#3205 AC-2: Trip-Vorlagenauswahl führt die eigene Trip-Vorlage weiter
+  ---
+  duration_ms: 2.435813
+  type: 'suite'
+  ...
+# Subtest: \#3205 AC-1: Orte-Vorlagenauswahl zeigt nur Vorlagen der Art Vergleich
+    # Subtest: Orte, Zustand luecken: keine eigene Trip-Vorlage „Mallorca Frühling“
+    ok 1 - Orte, Zustand luecken: keine eigene Trip-Vorlage „Mallorca Frühling“
+      ---
+      duration_ms: 2.153602
+      type: 'test'
+      ...
+    # Subtest: Orte, Zustand normal: keine eigene Trip-Vorlage „Mallorca Frühling“
+    ok 2 - Orte, Zustand normal: keine eigene Trip-Vorlage „Mallorca Frühling“
+      ---
+      duration_ms: 0.441442
+      type: 'test'
+      ...
+    1..2
+ok 2 - \#3205 AC-1: Orte-Vorlagenauswahl zeigt nur Vorlagen der Art Vergleich
+  ---
+  duration_ms: 2.759582
+  type: 'suite'
+  ...
+# Subtest: AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+ok 3 - AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+  ---
+  duration_ms: 14.863606
+  type: 'test'
+  ...
+# Subtest: AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+ok 4 - AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+  ---
+  duration_ms: 13.992154
+  type: 'test'
+  ...
+# Subtest: AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+ok 5 - AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+  ---
+  duration_ms: 18.163887
+  type: 'test'
+  ...
+# Subtest: AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+ok 6 - AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+  ---
+  duration_ms: 2.148542
+  type: 'test'
+  ...
+# Subtest: AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+ok 7 - AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+  ---
+  duration_ms: 34.154135
+  type: 'test'
+  ...
+1..7
+# tests 9
+# suites 2
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 277.900609

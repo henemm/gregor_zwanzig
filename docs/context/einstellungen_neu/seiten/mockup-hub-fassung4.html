@@ -356,7 +356,10 @@ const CTX={
 // Englische Spaltenköpfe der Mail-Tabelle laut metric_catalog.py (col_label)
 const COLL={wind_direction:'WDir',temperature:'Temp',temperature_night:'Night',wind_chill:'Feels',wind:'Wind',gust:'Gust',precipitation:'Rain',thunder:'Thdr',rain_probability:'Rain%',visibility:'Visib',cloud_total:'Cloud',cloud_low:'CldLow',uv_index:'UV',sunshine:'Sun',freezing_level:'0°Line',snowfall_limit:'SnowL',humidity:'Humid',dewpoint:'Dew'};
 const VORLAGEN=[['Alpen-Trekking','14 Metriken · Gewitter, Böen, Nullgradgrenze'],['Wandern','10 Metriken · Regen, Sonne, UV'],['Skitouren','13 Metriken · Neuschnee, Schneehöhe, Sicht'],['Wintersport','11 Metriken · Schnee, Kälte'],['Radtour','12 Metriken · Wind, Regen, gefühlte Temperatur'],['Wassersport','10 Metriken · Wind beidseitig, Gewitter'],['Allgemein','8 Metriken · Standard-Ampel']];
-const EIGENE=[['Mallorca Frühling','eigene · aus GR221 gespeichert']];
+// Eigene Vorlagen je Art (#3205, PO 08.11./21.11.): Trip-Vorlagen nur im Trip, Vergleich-Vorlagen nur bei Orten.
+const EIGENE=[['Mallorca Frühling','eigene · aus GR221 gespeichert','trip']];
+const ART=()=>ctx==='trip'?'trip':'vergleich';
+const eigeneJeArt=()=>EIGENE.filter(e=>e[2]===ART());
 const SIDES={temperature:'both',temperature_night:'both',wind_chill:'both',wind:'both',gust:'up',precipitation:'up',rain_probability:'up',visibility:'down',cloud_low:'up',cloud_total:'up',uv_index:'up',freezing_level:'both',snowfall_limit:'both',sunshine:'down'};
 let ctx='trip', tab='wetter', openEdit=null, pickerOpen=false, pending=null;
 let zst='normal', testSlot='morgen', kebabConfirm=null, saveOpen=false, saveErr='', saveName='', laufzeit='Bis auf Weiteres';
@@ -490,7 +493,7 @@ function viewWetter(){
       ${pending?`<div class="confirm"><b>„${pending}“ übernehmen?</b><span>Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen ${ctx==='trip'?'dieses Trips':EIN()?'für diesen Ort':'für diese Orte'}.${devs?` Deine ${devs} Abweichung${devs>1?'en':''} von „${c.vorlage}“ gehen verloren.`:''} Zustellung, Etappen und Orte bleiben unverändert.</span>
         <span style="display:flex;gap:8px"><button class="btn sm accent" type="button" data-apply="1">Übernehmen</button><button class="btn sm ghost" type="button" data-cancel="1">Abbrechen</button></span></div>`:''}
       <div class="vg">Vorlagen</div>${VORLAGEN.map(([n,d])=>`<button type="button" data-vorlage="${n}" class="${n===c.vorlage?'cur':''}"><span>${n}${n===c.vorlage?' · aktiv':''}</span><small>${d}</small></button>`).join('')}
-      <div class="vg">Eigene</div>${EIGENE.map(([n,d])=>`<button type="button" data-vorlage="${n}"><span>${n}</span><small>${d}</small></button>`).join('')}
+      <div class="vg">Eigene</div>${eigeneJeArt().map(([n,d])=>`<button type="button" data-vorlage="${n}"><span>${n}</span><small>${d}</small></button>`).join('')}
     </div>`:'';
   const saveDlg=saveOpen?`<div class="card"><div class="dialog">
       <b>Als eigene Vorlage speichern ${tg('W5b')}</b>
@@ -750,8 +753,8 @@ document.addEventListener('click',e=>{
   if(t.dataset.savecancel){saveOpen=false;saveErr='';renderContent();return;}
   if(t.dataset.savego){const n=(document.getElementById('vName').value||'').trim();saveName=n;
     if(!n){saveErr='Gib der Vorlage einen Namen.';renderContent();return;}
-    if(VORLAGEN.concat(EIGENE).some(([x])=>x.toLowerCase()===n.toLowerCase())){saveErr=`Eine Vorlage „${n}“ gibt es schon. Wähle einen anderen Namen.`;renderContent();return;}
-    EIGENE.push([n,'eigene · eben gespeichert']);saveOpen=false;saveErr='';renderContent();flash('Vorlage „'+n+'“ gespeichert. Du findest sie unter „Eigene“.');return;}
+    if(VORLAGEN.concat(eigeneJeArt()).some(([x])=>x.toLowerCase()===n.toLowerCase())){saveErr=`Eine Vorlage „${n}“ gibt es schon. Wähle einen anderen Namen.`;renderContent();return;}
+    EIGENE.push([n,'eigene · eben gespeichert',ART()]);saveOpen=false;saveErr='';renderContent();flash('Vorlage „'+n+'“ gespeichert. Du findest sie unter „Eigene“.');return;}
   if(t.dataset.tab){tab=t.dataset.tab;openEdit=null;pickerOpen=false;pending=null;render();return;}
   if(t.dataset.picker){pickerOpen=!pickerOpen;pending=null;renderContent();return;}
   if(t.dataset.vorlage){if(t.dataset.vorlage===CTX[ctx].vorlage){pickerOpen=false;renderContent();return;}pending=t.dataset.vorlage;renderContent();return;}
