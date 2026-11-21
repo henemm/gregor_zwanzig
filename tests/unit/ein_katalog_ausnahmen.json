@@ -151,17 +151,15 @@
       "ID_SAMMLUNG": 1
     },
     "src/output/renderers/compare_outlook_metric_ids.py": {
-      "ID_SAMMLUNG": 2,
-      "ID_VERZWEIGUNG": 5,
-      "VERARBEITUNG_AUSSEN": 11
+      "VERARBEITUNG_AUSSEN": 3
     },
     "src/output/renderers/comparison.py": {
       "VERARBEITUNG_AUSSEN": 5
     },
     "src/output/renderers/email/compare_html.py": {
-      "ID_SAMMLUNG": 3,
+      "ID_SAMMLUNG": 2,
       "ID_VERZWEIGUNG": 1,
-      "VERARBEITUNG_AUSSEN": 10
+      "VERARBEITUNG_AUSSEN": 8
     },
     "src/output/renderers/email/helpers.py": {
       "ID_SAMMLUNG": 10,
@@ -176,7 +174,7 @@
       "VERARBEITUNG_AUSSEN": 1
     },
     "src/output/renderers/email/outlook.py": {
-      "VERARBEITUNG_AUSSEN": 2
+      "VERARBEITUNG_AUSSEN": 1
     },
     "src/output/renderers/email/plain.py": {
       "ID_SAMMLUNG": 1,
@@ -255,5 +253,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 457
+  "hoechststand": 438
 }

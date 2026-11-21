@@ -47,7 +47,7 @@ from output.renderers.email.outlook import (
     _outlook_row, _thunder_band, render_outlook_table,
 )
 from output.metric_format import (
-    NO_VALUE, format_value, precip_type_label, severity_for,
+    NO_VALUE, darstellung, format_value, precip_type_label, severity_for,
 )
 from output.renderers.email.helpers import mit_windrichtung
 from services.windrichtung import zeilen_wert_kmh
@@ -1145,31 +1145,16 @@ def _hour_einfach_text(
     *, html: bool, ampel: dict,
 ) -> str | None:
     """Einfach-Zelle einer Stundenverlauf-Spalte (Issue #3097) oder ``None``
-    (= Roh). EIN Zweig fuer HTML und Klartext: Wind/Boeen im HTML als
-    Ampelpunkt wie in der Vergleichstabelle, sonst Wort/Symbol ueber
-    ``_friendly_hour_text`` (Niederschlag Stunden-Skala). ``formats`` ist
-    ``{kennung: bool}`` aus ``display_config.hourly_metric_formats``."""
-    from output.renderers.compare_outlook_metric_ids import _friendly_hour_text
-
+    (= Roh). ``formats`` ist ``{kennung: bool}`` (wahr = Einfach). Die Form
+    (HTML Ampelpunkt in der Farbe der Abo-Ampel bzw. Symbol, Klartext Wort/
+    Symbol, Niederschlag Stunden-Skala) waehlt seit #3260 S1b allein
+    ``metric_format.darstellung`` aus dem Katalog -- keine Kennungsliste hier."""
     metric_id = m.get("metric_id")
     if value is None or not (formats or {}).get(metric_id):
         return None
-    # #3156: Diese Liste entscheidet nur die FORM im Stundenverlauf (Ampel vs.
-    # Wort). OB Einfach wirkt, entscheidet ``resolve_hourly_metric_formats``
-    # aus ``zwei_formen_stellen``; Niederschlag/Regen-W. bleiben hier bewusst Wort.
-    if html and metric_id in ("wind", "gust"):
-        from output.renderers.email.helpers import fmt_val
-
-        col_key = get_metric(metric_id).col_key
-        return fmt_val(
-            col_key, value, html=True, format_modes={col_key: "raw"},
-            indicator_keys={col_key}, lang=lang, ampel=ampel,
-        )
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return _friendly_hour_text(metric_id, number, lang)
+    zelle = darstellung(metric_id, value, stelle="hourly", ausgabeart="html" if html else "text",
+                        fmt="simplified", ampel=ampel, lang=lang)
+    return zelle.html if html else zelle.text
 
 
 def _render_hour_row(

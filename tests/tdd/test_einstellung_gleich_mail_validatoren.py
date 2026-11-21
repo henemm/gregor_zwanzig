@@ -558,9 +558,12 @@ def test_trip_darstellung_roh_als_symbol_scheitert(tmp_path, darstellung_mail):
 def test_trip_darstellung_ausblick_roh_statt_einfach_scheitert(tmp_path, darstellung_mail):
     """Punkt 5: Ausblick-Wind auf Einfach, HTML und Klartext zeigen die Zahl."""
     eml, konfig = darstellung_mail
+    # #3260 S1b: die HTML-Einfach-Zelle ist jetzt der Ampelpunkt (Markup) --
+    # die Verfaelschung ersetzt deshalb den GANZEN Zellinhalt durch die Zahl.
     falsch = _aendere(eml, plain=lambda p: re.sub(r"Wind \S+  Gust", "Wind 20 km/h  Gust", p),
-                      html=lambda h: re.sub(r"(<tr>\s*<td[^>]*>(?:Di|Mi|Do)</td>\s*<td[^>]*>)[^<]*",
-                                            r"\g<1>20 km/h", h))
+                      html=lambda h: re.sub(
+                          r"(<tr>\s*<td[^>]*>(?:Di|Mi|Do)</td>\s*<td[^>]*>).*?(</td>)",
+                          r"\g<1>20 km/h\g<2>", h, flags=re.DOTALL))
     code, aus = _lauf(tmp_path, TRIP, falsch, "--konfig", konfig)
     assert code == 1, aus
     assert "SOLL: Darstellung Ausblick (Klartext)" in aus and "'Wind'" in aus, aus

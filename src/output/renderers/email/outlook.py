@@ -160,14 +160,18 @@ def render_outlook_table(
         gew_index = thunder_column_index(columns)
         body = ""
         for stage in rows:
-            cells = stage.get("cells") or []
+            # #3260 S1b: die HTML-Fassung der Zellen (escaped bzw. Ampelpunkt);
+            # Zeilen ohne sie (Altbau) zeigen den escapten Text.
+            cells = stage.get("cells_html")
+            if cells is None:
+                cells = [_html.escape(c) for c in stage.get("cells") or []]
             # Issue #1849: Ampel-Hintergruende parallel zu den Zellentexten.
             cell_bg = stage.get("cell_bg") or []
             texte = [cells[i] if i < len(cells) else NO_VALUE for i in range(len(columns))]
             if gew_index is not None:
-                texte[gew_index] = thunder_cell_html(
+                texte[gew_index] = _html.escape(thunder_cell_html(
                     format_trend_tokens(stage, lang=lang, ampel=ampel), stage, lang=lang,
-                )
+                ))
             # #2098 Befund B: ACC HINTER den gewaehlten Spalten -- am
             # `outlook_columns()`/`cells`-Mechanismus vorbei, damit
             # `confidence` nie eine waehlbare Metrik wird (ADR-0005/#710).
@@ -180,8 +184,7 @@ def render_outlook_table(
             body += (
                 '<tr>' + _otd(_html.escape(str(stage.get("weekday", NO_VALUE))))
                 + "".join(
-                    _otd(_html.escape(text),
-                         bg=cell_bg[i] if i < len(cell_bg) else "")
+                    _otd(text, bg=cell_bg[i] if i < len(cell_bg) else "")
                     for i, text in enumerate(texte)
                 )
                 + acc_td
@@ -774,7 +777,7 @@ def _outlook_row(
 
     if metrics is not None:
         from output.renderers.compare_outlook_metric_ids import (
-            format_outlook_range_cell, format_outlook_value, outlook_columns,
+            format_outlook_range_cell, outlook_columns, outlook_zellen,
         )
 
         # Issue #1475 Nachbesserung (Punkt 5b, Aufrufstelle 4): der Hagel-Wert
@@ -823,7 +826,12 @@ def _outlook_row(
         # Issue #1849: Zellentext UND Zell-Hintergrund entstehen aus DEMSELBEN
         # Rohwert -- eine zweite Rohwert-Aufloesung koennte fuer die
         # Gewitterspalte am oben (#1841) aufgeloesten Tagesfenster vorbeigehen.
+        # #3260 S1b: je Ausgabeart eine Fassung derselben Zelle -- ``cells``
+        # (Nur-Text, Telegram), ``cells_html`` (escaped bzw. Ampelpunkt) und
+        # ``cells_ascii`` (Kompakt-Mail); die Form waehlt ``darstellung``.
         cells: list[str] = []
+        cells_html: list[str] = []
+        cells_ascii: list[str] = []
         cell_bg: list[str] = []
         for col in outlook_columns(metrics, outlook_metric_formats):
             ordinal = col.get("kind") == "ordinal"
@@ -834,21 +842,29 @@ def _outlook_row(
             if "field_min" in col or "field_max" in col:
                 raw_min = _hiking_or_summary(summary, col.get("field_min"), hiking_extrema)
                 raw_max = _hiking_or_summary(summary, col.get("field_max"), hiking_extrema)
-                cells.append(format_outlook_range_cell(raw_min, raw_max, col))
+                spanne = format_outlook_range_cell(raw_min, raw_max, col)
+                cells.append(spanne)
+                cells_html.append(_html.escape(spanne))
+                cells_ascii.append(spanne)
                 cell_bg.append(_metric_column_bg(col, raw_max, ampel=ampel))
                 continue
             raw = (
                 _thunder_value if ordinal
                 else _hiking_or_summary(summary, col.get("field"), hiking_extrema)
             )
-            cells.append(format_outlook_value(
+            zellen = outlook_zellen(
                 raw,
                 {**col, "hail": _hail,
                  "signals": _thunder_signals if ordinal else _signals},
-                lang=lang,
-            ))
+                lang=lang, ampel=ampel,
+            )
+            cells.append(zellen["text"])
+            cells_html.append(zellen["html"])
+            cells_ascii.append(zellen["ascii"])
             cell_bg.append(_metric_column_bg(col, raw, ampel=ampel))
         row["cells"] = cells
+        row["cells_html"] = cells_html
+        row["cells_ascii"] = cells_ascii
         row["cell_bg"] = cell_bg
 
     return row

@@ -1,6 +1,7 @@
 """#3097 (Phase 3b von #3047, Epic #3058): Roh/Einfach je Zeile im Orte-Stundenverlauf (W11).
 
-SPEC: docs/specs/modules/feat_3097_orte_stundenverlauf_darstellung.md (AC-1 bis AC-7, AC-9, AC-11)
+SPEC: docs/specs/modules/feat_3097_orte_stundenverlauf_darstellung.md (AC-1 bis AC-7, AC-9, AC-11);
+Einfachformen Regen im HTML abgeloest durch feat_3260_s1b_form_je_stelle (Ampelpunkt).
 
 Kette wie im Betrieb (``sende_orte_mail``: rohes Preset-JSON -> echter Loader ->
 ``send_one_compare_preset``); Naht nur an Wetter-Engine und Transport. Soll von
@@ -160,7 +161,9 @@ def test_ac5_stundenverlauf_einfach_laesst_vergleichstabelle_unveraendert():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("metrik,form", [
-    ("gust", "punkt"), ("cloud_total", "symbol"), ("rain_probability", "wort"),
+    # #3260 S1b (loest #3097 ab): Regenwahrscheinlichkeit Einfach ist im HTML
+    # der Ampelpunkt wie Wind/Boeen (Tabelle feat_3122 Nr. 4), Klartext Wort.
+    ("gust", "punkt"), ("cloud_total", "symbol"), ("rain_probability", "punkt"),
 ])
 def test_einfachformen_je_groesse(metrik, form):
     mail = sende_orte_mail(_preset([metrik, "temperature"], {metrik: True},
@@ -169,11 +172,11 @@ def test_einfachformen_je_groesse(metrik, form):
         zellen = tab[metrik]
         assert zellen and not any(_zahl(t) for t, _ in zellen), f"{metrik}: {zellen}"
         if form == "punkt":
-            assert all(PUNKT in f for _t, f in zellen)
-        elif form == "wort":
-            assert all(t in REGEN_WORTE for t, _ in zellen), zellen
+            assert all(PUNKT in f and t == "" for t, f in zellen), zellen
     for tab in klartext_stunden(mail.plain):
         assert not any(_zahl(z) for z in tab[metrik]), f"Klartext {metrik}: {tab[metrik]}"
+        if metrik == "rain_probability":
+            assert all(z in REGEN_WORTE for z in tab[metrik]), tab[metrik]
 
 
 # ---------------------------------------------------------------------------
@@ -198,9 +201,15 @@ def test_ac6_niederschlag_stundenskala(monkeypatch):
     monkeypatch.setattr(helfer, "_ergebnis_je_ort", mit_niederschlag)
     mail = sende_orte_mail(_preset(["precipitation", "temperature"], {"precipitation": True}))
     soll = [STUNDEN_SKALA[werte[i % len(werte)]] for i in range(9)]
+    # #3260 S1b (loest den HTML-Teil von #3097 AC-6 ab): im HTML der Ampelpunkt
+    # in der Farbe der Abo-Ampel (Vorlage allgemein, Grenzen 1/5/10 mm von
+    # Hand), die Stunden-Skala steht nur noch im Klartext.
+    farbe = {0.0: "#15803d", 0.4: "#15803d", 3.0: "#d69500", 12.0: "#a8104a"}
+    soll_farben = [farbe[werte[i % len(werte)]] for i in range(9)]
     for tab in html_stunden(mail.html):
-        ist = [t for t, _ in tab["precipitation"]]
-        assert ist == soll[:len(ist)], f"HTML Niederschlag Stundenskala: {ist} != {soll}"
+        ist = [re.search(r"background:(#[0-9a-f]{6})", f).group(1) if PUNKT in f else t
+               for t, f in tab["precipitation"]]
+        assert ist == soll_farben[:len(ist)], f"HTML Niederschlag Ampelpunkt: {ist} != {soll_farben}"
     for tab in klartext_stunden(mail.plain):
         ist = tab["precipitation"]
         assert ist == soll[:len(ist)], f"Klartext Niederschlag Stundenskala: {ist} != {soll}"

@@ -399,7 +399,7 @@ def test_ac3_verfaelschte_form_macht_den_vergleich_rot():
 
 #: Ampelgrenzen (gelb, orange, rot) der Vorlagen, von Hand (ampel_templates).
 GRENZEN = {
-    "allgemein": {"precipitation": (1, 5, 15), "rain_probability": (30, 60, 80)},
+    "allgemein": {"precipitation": (1, 5, 10), "rain_probability": (30, 60, 80)},
     "radtour": {"precipitation": (0.5, 2, 5), "rain_probability": (30, 50, 70)},
 }
 

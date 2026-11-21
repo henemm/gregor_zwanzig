@@ -21,6 +21,8 @@ Neuimplementierung derselben Band-Logik wie ``helpers._level_from_thresholds``
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
+from html import escape as _html_escape
 from typing import Iterable, Optional
 
 from app.metric_catalog import get_metric
@@ -69,6 +71,10 @@ __all__ = [
     "PRECIP_TYPE_LABEL_DE",
     "thunder_ampel_band",
     "max_thunder",
+    # Issue #3260 S1b: die EINE Darstellung je Zelle.
+    "Zelle",
+    "darstellung",
+    "stunden_marke_erlaubt",
 ]
 
 # Issue #1670: EIN "kein Wert"-Platzhalter fuer Trip- UND Compare-Mail.
@@ -275,15 +281,190 @@ def cloud_emoji(pct: Optional[float]) -> str:
     """
     if pct is None:
         return _NO_VALUE
-    if pct <= 10:
-        return "☀️"
-    if pct <= 30:
-        return "🌤️"
-    if pct <= 70:
-        return "⛅"
-    if pct <= 90:
-        return "🌥️"
-    return "☁️"
+    return _wolken_stufe(pct)[1]
+
+
+def _wolken_stufe(pct: float) -> tuple:
+    """Zeile der Katalog-Skala ``WOLKEN_STUFEN`` (#3260: EINE Skala fuer
+    Wolken-Symbol und ASCII-Wortstufe)."""
+    from app.metric_catalog import WOLKEN_STUFEN
+
+    return next(s for s in WOLKEN_STUFEN if s[0] is None or pct <= s[0])
+
+
+# ---------------------------------------------------------------------------
+# Issue #3260 S1b: Ampelpunkt-Markup und die EINE Darstellungsfunktion
+# ---------------------------------------------------------------------------
+
+# Issue #759: 4-stufiger Ampelpunkt fuer Wind/Boen/Regen/Regenwahrscheinlichkeit.
+# Issue #1222: Kreis-Emojis durch gestylte CSS-Dots ersetzt (kein Emoji mehr
+# in E-Mails). Palette (fill, ring) je Level, Ring an _risk_dot (html.py)
+# angelehnt, um Gelb/Amber erweitert. Fix #1801 S2: groesserer Punktabstand
+# orange<->rot (Karminrot statt Violett, PO-Entscheid 2026-08-14).
+# #3260: zog aus ``email/helpers.py`` hierher; helpers re-exportiert.
+_AMPEL_DOT_COLORS = {
+    "green":  ("#15803d", "rgba(21,128,61,0.18)"),
+    "yellow": ("#d69500", "rgba(214,149,0,0.20)"),
+    "orange": ("#d4530a", "rgba(212,83,10,0.20)"),
+    "red":    ("#a8104a", "rgba(168,16,74,0.22)"),
+}
+
+# Issue #1475 Nachbesserung (Punkt 2b): Farbe des zweiten, aeusseren Rings, der
+# ausschliesslich Hagel kennzeichnet. Bewusst Violett (G_ALERT_L4) — die einzige
+# Farbe der Palette, die in KEINER Ampelstufe vorkommt.
+_HAIL_RING_COLOR = "rgba(109,40,217,0.55)"
+
+
+def _ampel_dot_css(level: str, hail: bool = False) -> str:
+    """CSS-Dot (Ring-Optik) fuer eine Ampelstufe — Vorbild `_risk_dot` (html.py).
+
+    Issue #1475 Nachbesserung: bei ``hail=True`` bekommt der Punkt EINEN
+    zusaetzlichen, aeusseren box-shadow-Layer (Doppelring) — rein deskriptives
+    Hagel-Kennzeichen, ohne Handlungsempfehlung (ADR-0007). Bei ``hail=False``
+    bleibt die Ausgabe zeichengleich zum bisherigen Stand.
+    """
+    fill, ring = _AMPEL_DOT_COLORS[level]
+    shadow = f"0 0 0 3px {ring}"
+    if hail:
+        shadow = f"{shadow}, 0 0 0 6px {_HAIL_RING_COLOR}"
+    return (
+        f'<span style="display:inline-block;width:10px;height:10px;'
+        f'border-radius:50%;background:{fill};'
+        f'box-shadow:{shadow};"></span>'
+    )
+
+
+@dataclass(frozen=True)
+class Zelle:
+    """Eine dargestellte Zelle (Spec feat_3260_s1b Nr. 2)."""
+
+    text: str               # Klartext-/Telegram-/ASCII-taugliche Fassung
+    html: str               # fertiger HTML-Zellinhalt (escaped Text oder Punkt)
+    form: str               # zahl | wort | symbol | ampelpunkt | kompass
+    stufe: Optional[str]    # green|yellow|orange|red aus der Abo-Ampel
+
+
+_STUFEN_FOLGE = ("green", "yellow", "orange", "red")
+
+
+def _als_zahl(wert) -> Optional[float]:
+    try:
+        return float(wert)
+    except (TypeError, ValueError):
+        return None
+
+
+def _stufe(metric_id: str, wert, *, ampel: Optional[dict],
+           gegenwind_kmh: Optional[float]) -> Optional[str]:
+    """Ampelstufe aus der Abo-Ampel; Gewitter ueber ``thunder_color``,
+    Windrichtung (Gegenwind) hebt an, addiert nie (#3228). Ohne Ampel
+    (``None``, reine Textfassung) keine Stufe."""
+    from app.ampel import thunder_color
+
+    if ampel is None:
+        return None
+    if metric_id == "thunder":
+        try:
+            return thunder_color(None if wert is None else ThunderLevel(wert), ampel)
+        except ValueError:
+            return None
+    stufe = severity_for(metric_id, _als_zahl(wert), ampel=ampel)
+    if gegenwind_kmh is None:
+        return stufe
+    richtung = severity_for("wind_direction", gegenwind_kmh, ampel=ampel)
+    return max((s for s in (stufe, richtung) if s is not None),
+               key=_STUFEN_FOLGE.index, default=None)
+
+
+def _wortskalen() -> dict:
+    """Name aus ``metric_catalog.WORTSKALA`` -> Wortfunktion ``(wert, lang)``."""
+    from i18n import t
+    from services import weather_metrics as wm
+
+    from app.thunder_scale import thunder_label
+
+    return {
+        "wind_strength": lambda v, lang: wm.format_wind_strength(_als_zahl(v), lang=lang),
+        "precip_intensity": lambda v, lang: wm.format_precip_intensity(_als_zahl(v), lang=lang),
+        "precip_daily_sum": lambda v, lang: wm.format_precip_daily_sum(_als_zahl(v), lang=lang),
+        "rain_probability": lambda v, lang: wm.format_rain_probability_scale(
+            _als_zahl(v), lang=lang),
+        "sunshine": lambda v, lang: wm.format_sunshine_scale(_als_zahl(v), lang=lang),
+        "wolken": lambda v, lang: t(_wolken_stufe(_als_zahl(v))[2], lang),
+        "gewitter": lambda v, lang: thunder_label(v, lang=lang),
+    }
+
+
+def _wort(metric_id: str, wert, wertart: str, lang: str) -> str:
+    from app.metric_catalog import WORTSKALA
+
+    skalen = WORTSKALA.get(metric_id, {})
+    name = skalen.get(wertart) or next(iter(skalen.values()), None)
+    if name is None:
+        return _zahl_text(metric_id, wert)
+    return _wortskalen()[name](wert, lang)
+
+
+def _symbol(metric_id: str, wert, wertart: str, lang: str) -> str:
+    from app.metric_catalog import WORTSKALA
+
+    if WORTSKALA.get(metric_id, {}).get(wertart) == "wolken":
+        return cloud_emoji(_als_zahl(wert))
+    from services.weather_metrics import get_weather_emoji
+
+    return get_weather_emoji(is_day=None, dni_wm2=_als_zahl(wert), wmo_code=None, cloud_pct=None)
+
+
+def _kompass(metric_id: str, wert, wertart: str, lang: str) -> str:
+    from utils.geo import degrees_to_compass
+
+    return degrees_to_compass(_als_zahl(wert)) or str(wert)
+
+
+def _zahl_text(metric_id: str, wert, wertart: str = "stunde", lang: str = "de") -> str:
+    zahl = _als_zahl(wert)
+    return str(wert) if zahl is None else format_value(metric_id, zahl, style="plain")
+
+
+_FORM_TEXT = {"zahl": _zahl_text, "wort": _wort, "symbol": _symbol, "kompass": _kompass,
+              "ampelpunkt": _wort}
+
+
+def darstellung(
+    metric_id: str, wert, *, stelle: str, ausgabeart: str, fmt: Optional[str],
+    ampel: Optional[dict], wertart: str = "stunde", lang: str = "de",
+    hagel: Optional[bool] = None, gegenwind_kmh: Optional[float] = None,
+) -> Zelle:
+    """Die EINE Darstellung eines Metrik-Werts (ADR-0127 Nr. 2, #3260 S1b).
+
+    Die Form kommt allein aus ``metric_catalog.form(metric_id, stelle,
+    ausgabeart, fmt)``, die Stufe aus der uebergebenen Abo-Ampel
+    (``resolve_ampel``), das Wort aus ``WORTSKALA`` je Wertart. Kein Aufrufer
+    waehlt die Form selbst; ``Zelle.text`` traegt bei einem Ampelpunkt die
+    Wortstufe (Textfassung derselben Aussage). ``ampel=None`` nur fuer reine
+    Textfassungen ohne Stufe -- ein Ampelpunkt ohne Ampel scheitert laut."""
+    from app.metric_catalog import form as katalog_form
+
+    form = katalog_form(metric_id, stelle, ausgabeart, fmt)
+    if form == "ampelpunkt" and ampel is None:
+        raise ValueError(f"darstellung({metric_id!r}): Ampelpunkt braucht die Abo-Ampel")  # i18n-log
+    if wert is None:
+        return Zelle(_NO_VALUE, _NO_VALUE, form, None)
+    stufe = _stufe(metric_id, wert, ampel=ampel, gegenwind_kmh=gegenwind_kmh)
+    text = _FORM_TEXT[form](metric_id, wert, wertart, lang)
+    if form == "ampelpunkt":
+        html = _ampel_dot_css(stufe, hail=hagel is True) if stufe else _NO_VALUE
+    else:
+        html = _html_escape(text)
+    return Zelle(text, html, form, stufe)
+
+
+def stunden_marke_erlaubt(metric_id: object) -> bool:
+    """Traegt Einfach im Orte-Telegram die Stunden-Marke ``@h``? (Katalog
+    ``STUNDEN_MARKE``)."""
+    from app.metric_catalog import STUNDEN_MARKE
+
+    return metric_id in STUNDEN_MARKE
 
 
 

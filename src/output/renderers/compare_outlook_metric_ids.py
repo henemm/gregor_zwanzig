@@ -449,48 +449,23 @@ def _merge_min_max_pairs(columns: list[dict]) -> list[dict]:
     return merged
 
 
-_FRIENDLY_CLOUD_IDS = ("cloud_total", "cloud_low", "cloud_mid", "cloud_high")
-
-
 def _friendly_outlook_text(
     metric_id: object, number: float, lang: Lang = "de",
 ) -> str | None:
-    """Wort-/Symbolform einer Ausblick-Groesse oder ``None`` (Issue #2049).
+    """Einfach-Form eines TAGESwerts (Ausblick, Orte-Uebersicht) oder ``None``
+    (= die Groesse hat dort keine Einfach-Form, Issue #2049).
 
-    Wiederverwendung statt Parallel-Logik (AC-10): Himmelsrichtung, Wolken-
-    symbol und Wind-/Boeen-Wortstufe kommen aus den bestehenden Helfern, die
-    dieselbe Aussage anderswo im Produkt schon treffen. Neu sind allein die
-    drei Skalen, fuer die es bisher gar keine Wortform gab -- und die
-    Niederschlags-Skala ist bewusst die TAGESSUMMEN-Skala, nicht die
-    Stundenskala ``format_precip_intensity`` (AC-9).
+    Seit #3260 S1b (ADR-0127 Nr. 2) kommen Form und Wort allein aus
+    ``metric_format.darstellung`` (Katalog ``form``/``WORTSKALA``, Wertart
+    ``tag``: Niederschlag nach der Tagessummen-Skala); die if-Kette je Kennung
+    ist entfallen. Textfassung (Klartext/Telegram)."""
+    from output.metric_format import darstellung
 
-    Die Schluesselmenge dieser Verzweigung ist ``OUTLOOK_FRIENDLY_CAPABLE``
-    (app.metric_catalog) -- dieselbe Liste, an der das Frontend die
-    Sichtbarkeit des Umschalters festmacht (AC-4).
-
-    ``lang`` (Issue #2750): die vier Wortskalen in Nutzersprache; ohne
-    ``lang`` deutsch. Himmelsrichtung und Wolkensymbol bleiben unberuehrt.
-    """
-    from output.metric_format import cloud_emoji
-    from services.weather_metrics import (
-        format_precip_daily_sum, format_rain_probability_scale,
-        format_sunshine_scale, format_wind_strength,
-    )
-    from utils.geo import degrees_to_compass
-
-    if metric_id == "wind_direction":
-        return degrees_to_compass(number)
-    if metric_id in _FRIENDLY_CLOUD_IDS:
-        return cloud_emoji(number)
-    if metric_id in ("wind", "gust"):
-        return format_wind_strength(number, lang=lang)
-    if metric_id == "precipitation":
-        return format_precip_daily_sum(number, lang=lang)
-    if metric_id == "rain_probability":
-        return format_rain_probability_scale(number, lang=lang)
-    if metric_id == "sunshine":
-        return format_sunshine_scale(number, lang=lang)
-    return None
+    if not isinstance(metric_id, str):
+        return None
+    zelle = darstellung(metric_id, number, stelle="outlook", ausgabeart="text",
+                        fmt="simplified", ampel=None, wertart="tag", lang=lang)
+    return None if zelle.form == "zahl" else zelle.text
 
 
 def resolve_hourly_metric_formats(stored: object) -> dict[str, bool] | None:
@@ -509,26 +484,29 @@ def resolve_hourly_metric_formats(stored: object) -> dict[str, bool] | None:
             if isinstance(v, bool) and "hourly" in zwei_formen_stellen(k)}
 
 
-def _friendly_hour_text(
-    metric_id: object, number: float, lang: Lang = "de",
-) -> str | None:
-    """Wort-/Symbolform eines STUNDENwerts oder ``None`` (= Roh, #3097).
+def outlook_zellen(
+    value: object, column: dict, *, lang: Lang = "de", ampel: dict,
+) -> dict[str, str]:
+    """Eine Ausblick-Zelle je Ausgabeart (#3260 S1b, Spec Nr. 4): ``text``
+    (Nur-Text, Telegram), ``html`` (fertiger, escapter Zellinhalt, bei Einfach
+    ggf. der Ampelpunkt) und ``ascii`` (Kompakt-Mail). Die Form waehlt allein
+    ``metric_format.darstellung`` aus dem Katalog."""
+    import html as _html
 
-    Niederschlag nach der Stunden-Skala ``format_precip_intensity`` (AC-6),
-    nicht nach der Tagessummen-Skala des Ausblicks; alles uebrige wie im
-    Ausblick (``_friendly_outlook_text``). Temperatur, Gewitter u. a. ohne
-    Einfachform liefern ``None`` (AC-7)."""
-    if metric_id == "precipitation":
-        from services.weather_metrics import format_precip_intensity
-
-        return format_precip_intensity(number, lang=lang)
-    return _friendly_outlook_text(metric_id, number, lang)
+    text = format_outlook_value(value, column, lang=lang)
+    aus = {"text": text, "html": _html.escape(text), "ascii": text}
+    for art in ("html", "ascii"):
+        zelle = _einfach_zelle(value, column, lang=lang, ausgabeart=art, ampel=ampel)
+        if zelle is not None:
+            aus[art] = zelle.html if art == "html" else zelle.text
+    return aus
 
 
 def format_outlook_value(
     value: object, column: dict, *, lang: Lang = "de",
 ) -> str:
-    """Zellentext einer Ausblick-Spalte.
+    """Zellentext (Nur-Text/Telegram) einer Ausblick-Spalte; die HTML- und
+    ASCII-Fassung liefert ``outlook_zellen``.
 
     Nicht-numerische Groessen nutzen DIESELBEN deutschen Labels wie die
     Uebersichtstabelle derselben Mail (``_fmt_thunder``/``_fmt_precip_type``)
@@ -546,6 +524,41 @@ def format_outlook_value(
     ``lang`` (Issue #2750): Wortskalen, Gewitter- und Niederschlagsart-Wort
     in Nutzersprache; ohne ``lang`` deutsch (byte-gleich zum Bestand).
     """
+    zelle = _einfach_zelle(value, column, lang=lang, ausgabeart="text", ampel=None)
+    return zelle.text if zelle is not None else _outlook_text(value, column, lang=lang)
+
+
+def _einfach_zelle(value: object, column: dict, *, lang: Lang, ausgabeart: str,
+                   ampel: dict | None):
+    """#3260 S1b (loest #2049 AC-6 ab): Einfach waehlt die Form je Ausgabeart
+    allein ``darstellung`` -- HTML Ampelpunkt bzw. Symbol, Nur-Text und
+    Telegram Wort/Symbol, Kompakt (ASCII) Wort statt Emoji-Kurzname.
+    ``None`` = Roh bzw. nicht numerisch (eigene Zellformatierung)."""
+    from output.metric_format import darstellung
+
+    metric_id = column.get("metric_id")
+    if (value is None or column.get("friendly") is not True
+            or column.get("kind") in ("ordinal", "enum") or not isinstance(metric_id, str)):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    zelle = darstellung(metric_id, number, stelle="outlook", ausgabeart=ausgabeart,
+                        fmt="simplified", ampel=ampel, wertart="tag", lang=lang)
+    if zelle.form != "zahl":
+        return zelle
+    logger.warning(
+        "format_outlook_value: %r ist als Einfach markiert, hat hier aber "  # i18n-log
+        "keine Wortform — Rueckfall auf die Rohzahl. Faehigkeitsliste "
+        "(metric_catalog.OUTLOOK_FRIENDLY_CAPABLE) und Formtabelle "
+        "(metric_catalog.STELLEN_FORMEN) sind auseinandergelaufen (#2049 AC-4).",
+        metric_id,
+    )
+    return None
+
+
+def _outlook_text(value: object, column: dict, *, lang: Lang) -> str:
     from output.renderers.email.compare_html import _fmt_precip_type, _fmt_thunder
 
     if value is None:
@@ -560,22 +573,6 @@ def format_outlook_value(
         number = float(value)
     except (TypeError, ValueError):
         return str(value)
-    # #2049: "Einfach" heisst im Ausblick DIESELBE Zeichenkette in allen vier
-    # Ausgabeorten -- `stage["cells"]` ist ein geteilter Kanal fuer HTML und
-    # Text, ein HTML-Ampelpunkt erschiene in Klartext und Telegram als
-    # Quelltext (AC-6). Die Ampel traegt die HTML-Zelle ohnehin als
-    # Hintergrundtoenung (`_metric_column_bg`, unabhaengig von diesem Flag).
-    if column.get("friendly") is True:
-        friendly = _friendly_outlook_text(column.get("metric_id"), number, lang)
-        if friendly is not None:
-            return friendly
-        logger.warning(
-            "format_outlook_value: %r ist als Einfach markiert, hat hier aber "  # i18n-log
-            "keine Wortform — Rueckfall auf die Rohzahl. Faehigkeitsliste "
-            "(metric_catalog.OUTLOOK_FRIENDLY_CAPABLE) und Verzweigung "
-            "(_friendly_outlook_text) sind auseinandergelaufen (#2049 AC-4).",
-            column.get("metric_id"),
-        )
     decimals = column.get("decimals") or 0
     text = f"{number:.{int(decimals)}f}"
     unit = column.get("unit") or ""

@@ -32,7 +32,7 @@
   "api.fehler.abruf_kontingent_erschoepft": "Your weather request quota for today is used up, and no cached data is available for this request. It resets at midnight (UTC). Scheduled briefings and alerts continue as usual.",
   "api.fehler.etappenwetter_teilweise": "Some stages have no weather data today because your weather request quota is used up. It resets at midnight (UTC).",
   "api.fehler.vergleich_parameter_ungueltig": "Invalid value for {parameter}: allowed is {erlaubt}.",
-  "api.fehler.unbekannt":"The request could not be processed.",
+  "api.fehler.unbekannt": "The request could not be processed.",
   "api.fehler.wetterdienst_fehler": "The weather service is currently unavailable. Please try again later.",
   "api.skala.wind.schwach": "weak",
   "api.skala.wind.maessig": "moderate",
@@ -49,5 +49,10 @@
   "api.skala.sonne.truebe": "overcast",
   "api.skala.sonne.wechselhaft": "changeable",
   "api.skala.sonne.freundlich": "fair",
-  "api.skala.sonne.sonnig": "sunny"
+  "api.skala.sonne.sonnig": "sunny",
+  "api.skala.wolken.klar": "clear",
+  "api.skala.wolken.heiter": "mostly clear",
+  "api.skala.wolken.wolkig": "partly cloudy",
+  "api.skala.wolken.stark_bewoelkt": "mostly cloudy",
+  "api.skala.wolken.bedeckt": "overcast"
 }
