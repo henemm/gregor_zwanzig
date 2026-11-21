@@ -36,7 +36,7 @@ from tests.helpers.katalog_verarbeitung_scan import (
 )
 
 #: Festgeschriebener Hoechststand (Regel d). Wird nur gesenkt, nie erhoeht.
-HOECHSTSTAND = 457
+HOECHSTSTAND = 438
 
 #: Arten ohne Fund im heutigen Bestand. Ihre Wirksamkeit belegen allein die
 #: Gegenproben unten (Go haelt heute keinen festen Messwert-Vergleich).

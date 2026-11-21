@@ -142,6 +142,12 @@ ANKER: dict[str, tuple[str, str]] = {
     "api.skala.sonne.wechselhaft": ("wechselhaft", "changeable"),
     "api.skala.sonne.freundlich": ("freundlich", "fair"),
     "api.skala.sonne.sonnig": ("sonnig", "sunny"),
+    # #3260 S1b: Wortstufe der Bewoelkung (Kompakt-Mail, ASCII statt Emoji).
+    "api.skala.wolken.klar": ("klar", "clear"),
+    "api.skala.wolken.heiter": ("heiter", "mostly clear"),
+    "api.skala.wolken.wolkig": ("wolkig", "partly cloudy"),
+    "api.skala.wolken.stark_bewoelkt": ("stark bewölkt", "mostly cloudy"),
+    "api.skala.wolken.bedeckt": ("bedeckt", "overcast"),
 }
 
 

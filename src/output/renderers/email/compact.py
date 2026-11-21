@@ -271,7 +271,9 @@ def render_compact(
                 gew_index = thunder_column_index(columns)
                 for stage in multi_day_trend:
                     weekday = stage.get("weekday", "")
-                    cells = stage.get("cells") or []
+                    # #3260 S1b: ASCII-Fassung (Bewoelkung Wortstufe statt
+                    # Emoji-Kurzname); Altbau-Zeilen ohne sie: Text.
+                    cells = stage.get("cells_ascii") or stage.get("cells") or []
                     texte = [cells[i] if i < len(cells) else "–"
                              for i in range(len(columns))]
                     if gew_index is not None:

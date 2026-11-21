@@ -7,6 +7,7 @@ status: draft
 version: "1.0"
 workflow: feat-3097-orte-stundenverlauf-darstellung
 tags: [orte, stundenverlauf, darstellung, roh-einfach, w11, epic-3058, issue-3097]
+superseded_by: feat_3260_s1b_form_je_stelle
 ---
 
 > **Hinweis (2026-11-17, [ADR-0124](../../adr/0124-was-steht-wo-eine-tabelle.md), Issue #3122):** Diese Spec ist gebaut (`hourly_metric_formats`) und gilt bis zum Bau zu #3122. Die hier vorgesehene Verlagerung nach `channel_layouts.hourly` mit #3060 entfällt in dieser Form: ADR-0124 schneidet das gespeicherte Format mit dem Bau neu. Roh/Einfach bleibt je Stelle getrennt (ADR-0124 Nr. 5, nur bei Metriken mit zwei Formen); der Stundenverlauf selbst folgt dann der E-Mail-Auswahl (Nr. 4). ACs unverändert.
@@ -111,6 +112,7 @@ Phase 3b von #3047 (Epic #3058). Im Stundenverlauf der Orts-Vergleich-Mail (HTML
   - Test: Zwei Konfigurationen rendern, die sich nur im jeweils anderen Feld unterscheiden, und Stundentabelle bzw. Vergleichstabelle auf Unveraendertheit pruefen (`test_w11_darstellung_je_zeile`, Gegenprobe).
 
 - **AC-6:** Given die Metrik Niederschlag steht im Stundenverlauf auf Einfach / When die Mail erzeugt wird / Then erscheint pro Stunde eine Intensitaets-Angabe nach Stunden-Skala (trocken, leicht, maessig, stark), und ein Stundenwert wird nicht nach der Tagessummen-Skala eingestuft
+  > **Abgelöst (2026-11-21, [feat_3260_s1b_form_je_stelle](feat_3260_s1b_form_je_stelle.md) AC-1):** Niederschlag und Regenwahrscheinlichkeit zeigen auf Einfach in der HTML-Stundentabelle den Ampelpunkt in der Farbe der Abo-Ampel; die Wortstufe (Stunden-Skala) steht nur noch im Klartext.
   - Test: Stundenwerte an den Skalengrenzen (z. B. 0 mm, 0,4 mm, 2 mm, 6 mm pro Stunde) rendern und die Worte pruefen; ein Wert, der als Tagessumme "wenig" waere, zeigt als Stundenwert die hoehere Stufe.
 
 - **AC-7:** Given die Metriken Temperatur und Gewitter im Stundenverlauf / When der Nutzer den Stundenverlauf-Editor oeffnet / Then zeigen diese Zeilen keinen Roh/Einfach-Umschalter, die Mail zeigt sie weiter als Zahl bzw. Text, auch wenn ein Eintrag im Feld steht

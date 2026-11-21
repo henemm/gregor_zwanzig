@@ -49,5 +49,10 @@
   "api.skala.sonne.truebe": "trübe",
   "api.skala.sonne.wechselhaft": "wechselhaft",
   "api.skala.sonne.freundlich": "freundlich",
-  "api.skala.sonne.sonnig": "sonnig"
+  "api.skala.sonne.sonnig": "sonnig",
+  "api.skala.wolken.klar": "klar",
+  "api.skala.wolken.heiter": "heiter",
+  "api.skala.wolken.wolkig": "wolkig",
+  "api.skala.wolken.stark_bewoelkt": "stark bewölkt",
+  "api.skala.wolken.bedeckt": "bedeckt"
 }

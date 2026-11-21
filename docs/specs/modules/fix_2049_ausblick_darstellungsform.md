@@ -7,6 +7,7 @@ status: implemented
 version: "1.0"
 tags: [ausblick, darstellungsform, roh-einfach, issue-2049]
 workflow: fix-2049-vorschau-einfach
+superseded_by: feat_3260_s1b_form_je_stelle
 ---
 
 # #2049 — Roh/Einfach-Umschalter im 3-Tages-Ausblick wird wirksam
@@ -266,6 +267,7 @@ angeboten (s. Metrik-Matrix).
   über die Hintergrundtönung der Zelle sichtbar.
   - Test: Unit, HTML-Ausgabe auf Abwesenheit eines Ampel-Icons/-Markers geprüft, während
     `_metric_column_bg` weiterhin ein Tönungs-Attribut liefert.
+  > **Abgelöst (2026-11-21, [feat_3260_s1b_form_je_stelle](feat_3260_s1b_form_je_stelle.md) AC-2):** In der HTML-Mail zeigen Wind, Böen, Niederschlag und Regenwahrscheinlichkeit auf Einfach den Ampelpunkt (kein Wort); Nur-Text, Kompakt-Mail und Telegram behalten die Wortstufe, die Kompakt-Mail bei Bewölkung die Wortstufe statt eines Emoji-Kurznamens.
 
 ### Block D — Drei neue Wortskalen
 
