@@ -394,11 +394,6 @@ class TestAC6ChannelConsistency:
         assert "10:00" in report.email_plain and "12:00" in report.email_plain
         assert "08:00" not in report.email_plain
 
-    @pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — TripReport.signal_text nicht mehr vorhanden")
-    def test_signal_local_header(self, report):
-        """OBSOLET: Signal-Kanal und TripReport.signal_text wurden in Bug #610 entfernt."""
-        pass
-
     def test_telegram_local_header(self, report):
         """#397-Eigenschaft: Telegram zeigt LOKALE Stunden, nicht UTC.
 

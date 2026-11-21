@@ -34,16 +34,10 @@ test.describe('Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #
 		await resetTripState(request);
 	});
 
-	test('AC-1: TripOverview + Hero + linke + rechte Spalte sichtbar', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		// Overview-Tab ist Default
-		await expect(page.getByTestId('trip-overview')).toBeVisible();
-		// Hero bleibt innerhalb von TripOverview gerendert
-		await expect(page.getByTestId('trip-hero')).toBeVisible();
-		// Beide Spalten existieren
-		await expect(page.getByTestId('trip-overview-left-column')).toBeVisible();
-		await expect(page.getByTestId('trip-overview-right-column')).toBeVisible();
-	});
+	// #3207 (tote Tests mitentfernen): AC-1 (trip-overview, trip-hero, linke/rechte
+	// Spalte) und AC-16 (trip-hero-*) sind entfernt — TripOverview/Hero sind durch
+	// HubOverview + Hub-Kopf abgelöst (#487, #1435 E3a, #2347 S2), 0 Treffer für
+	// diese testids in frontend/src. Nachfolger: hub-kopf-aufbau.spec.ts.
 
 	test('AC-2: FullProfile + StageList in DOM-Reihenfolge', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
@@ -302,15 +296,6 @@ test.describe('Epic #135 Step 4 — Trip-Detail Overview, linke Spalte (#156 + #
 		// Kein "undefined"-Text im Overview-Bereich
 		const overviewText = await page.getByTestId('trip-overview').innerText();
 		expect(overviewText).not.toContain('undefined');
-	});
-
-	test('AC-16: Step-3 TestIDs bleiben sichtbar (Regression-Guard)', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		await expect(page.getByTestId('trip-hero')).toBeVisible();
-		await expect(page.getByTestId('trip-hero-title')).toBeVisible();
-		await expect(page.getByTestId('trip-hero-stat-active-stage')).toBeVisible();
-		await expect(page.getByTestId('trip-hero-stat-next-briefing')).toBeVisible();
-		await expect(page.getByTestId('trip-hero-stat-days')).toBeVisible();
 	});
 
 	test('AC-17: Step-1 Tab-Liste + Step-2 Breadcrumb sichtbar', async ({ page }) => {
