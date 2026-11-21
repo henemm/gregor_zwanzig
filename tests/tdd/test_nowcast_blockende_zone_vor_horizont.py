@@ -78,7 +78,10 @@ _TZ = ZoneInfo("Europe/Vienna")
 # beobachteten Trockenuebergang danach.
 _ZONE_MINUTEN = (166, 168, 170, 172, 174, 176)  # 13:21 … 13:31
 _RANDFALL_MINUTE = 178                          # 13:33
-_AC8_MINUTE = 170                               # 13:25
+# #3254: das Ende ist die Deckungsgrenze des letzten nassen Frames, im
+# 2-Minuten-Raster also der folgende Trockenframe (+2 Min).
+_RASTER_MIN = 2
+_AC8_MINUTE = 168                               # 13:23, gedeckt bis 13:25
 
 
 def _frames(raster: dict[int, float]) -> list[RadarFrame]:
@@ -166,7 +169,8 @@ def test_ac1_beobachtetes_ende_kurz_vor_dem_horizont_bleibt_belegtes_ende(nass_b
     `13:21 … 13:31` liegt und auf den nur noch trockene Frames folgen
     WHEN `_derive_wet_block_end` fuer jeden dieser sechs Werte einzeln
     ausgewertet wird
-    THEN ist das Ende in JEDEM Fall exakt `T` und der Horizont-Waechter
+    THEN ist das Ende in JEDEM Fall exakt die Deckungsgrenze `T + 2 Min`
+    (der folgende Trockenframe, #3254) und der Horizont-Waechter
     `False` — die Quelle hat den Trockenuebergang beobachtet, das Ende ist
     bekannt und keine Untergrenze.
 
@@ -176,12 +180,12 @@ def test_ac1_beobachtetes_ende_kurz_vor_dem_horizont_bleibt_belegtes_ende(nass_b
     RED heute: der Horizont-Zweig greift, sobald `ts + 15 Min` den Horizont
     erreicht, ohne den naechsten (trockenen) Frame-Nachbarn einzurechnen —
     Rueckgabe `(13:35, True)`, also bis zu 14 Minuten Regen zu viel."""
-    erwartet_ende = _NOW + timedelta(minutes=nass_bis)
+    erwartet_ende = _NOW + timedelta(minutes=nass_bis + _RASTER_MIN)
 
     end_ts, ongoing = _blockende(_zwei_minuten_raster(nass_bis))
 
     assert (end_ts, ongoing) == (erwartet_ende, False), (
-        f"RED: letzter nasser Frame {erwartet_ende:%H:%M}, danach trocken im "
+        f"RED: Deckungsgrenze des letzten nassen Frames {erwartet_ende:%H:%M}, danach trocken im "
         f"2-Minuten-Raster bis zum Horizont {_HORIZON:%H:%M} — erwartet "
         f"({erwartet_ende:%H:%M}, False), bekam ({end_ts:%H:%M}, {ongoing!r})"
     )
@@ -197,7 +201,8 @@ def test_ac2_trockenframe_exakt_auf_dem_horizont_beendet_den_block():
     13:33 und einem tatsaechlich vorhandenen, TROCKENEN Frame exakt auf dem
     Horizont (13:35)
     WHEN `_derive_wet_block_end` ausgewertet wird
-    THEN ist das Ende 13:33 und der Horizont-Waechter `False`.
+    THEN ist das Ende 13:35 (Deckungsgrenze des Frames 13:33 = der
+    Trockenframe auf dem Horizont, #3254) und der Horizont-Waechter `False`.
 
     Bewusst ein eigener Test statt eines siebten Parameters oben: dieser Fall
     wird davon, den Nachbarn in die Deckungsgrenze einzurechnen, allein NICHT
@@ -210,7 +215,7 @@ def test_ac2_trockenframe_exakt_auf_dem_horizont_beendet_den_block():
 
     RED heute: Rueckgabe `(13:35, True)` — zwei Minuten Regen zu viel, und
     ein beobachtetes Ende erscheint als Untergrenze."""
-    erwartet_ende = _NOW + timedelta(minutes=_RANDFALL_MINUTE)
+    erwartet_ende = _NOW + timedelta(minutes=_RANDFALL_MINUTE + _RASTER_MIN)
     raster = _zwei_minuten_raster(_RANDFALL_MINUTE)
 
     assert raster[_NOWCAST_HORIZON_MIN] == 0.0, (
@@ -275,7 +280,8 @@ def test_ac5_nachbar_jenseits_des_horizonts_bleibt_untergrenze():
 
 
 def test_ac8_zone_erreicht_beide_textformen_als_bekanntes_ende():
-    """AC-8 GIVEN den Aufbau aus AC-1 mit `T = 13:25` (= 15:25 Ortszeit Wien)
+    """AC-8 GIVEN den Aufbau aus AC-1 mit `T = 13:23`, gedeckt bis 13:25
+    (= 15:25 Ortszeit Wien, #3254)
     WHEN das `OnsetEvent` ueber die ECHTE Kette gebaut wird
     (`_derive_result` -> `event_end_display` -> `OnsetEvent`) und daraus die
     Langform (`_onset_end_suffix`) sowie die Kurzform (`_sms_onset_ende`)

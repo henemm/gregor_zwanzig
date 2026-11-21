@@ -99,8 +99,9 @@ def test_ac3_zehn_minuten_luecke_beendet_den_block_nicht():
     `_MAX_FRAME_COVERAGE`-Deckung von 15 Minuten)
     WHEN das Ende abgeleitet wird
     THEN wird der Block durch die Luecke NICHT faelschlich beendet: das Ende
-    liegt beim letzten tatsaechlich nassen Frame NACH der Luecke (Minute 50),
-    nicht bei der Luecke selbst (Minute 30).
+    liegt an der Deckungsgrenze des letzten tatsaechlich nassen Frames NACH
+    der Luecke (Frame 50, gedeckt bis 55; #3254), nicht bei der Luecke
+    selbst (Frame 30, gedeckt bis 40).
 
     Ein fehlender Frame ist keine Beobachtung — ihn wie einen Trockenframe zu
     behandeln wuerde die Dauer systematisch zu kurz melden.
@@ -112,12 +113,12 @@ def test_ac3_zehn_minuten_luecke_beendet_den_block_nicht():
         f"Vorbedingung: Beginn bei Minute 20 erwartet, bekam "
         f"{result.onset_minutes}"
     )
-    assert result.event_end_minutes == 50, (
-        f"RED: eine 10-Minuten-Luecke liegt innerhalb der Deckung und darf den "
-        f"Block nicht beenden — erwartet Minute 50, bekam "
+    assert result.event_end_minutes == 55, (
+        f"Eine 10-Minuten-Luecke liegt innerhalb der Deckung und darf den "
+        f"Block nicht beenden — erwartet Minute 55 (#3254), bekam "
         f"{result.event_end_minutes!r}"
     )
-    assert result.event_end_minutes != 30, (
+    assert result.event_end_minutes > 40, (
         "Der Block wurde an der Datenluecke beendet — eine fehlende "
         "Beobachtung ist keine Trockenmeldung."
     )

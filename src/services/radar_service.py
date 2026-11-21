@@ -373,8 +373,12 @@ def _derive_wet_block_end(
 
     Die drei Abbruchgruende im Einzelnen:
       * Trockenframe (`precip_mm_h < _DRY_THRESHOLD_MM_H`): eine
-        QUELLENAUSSAGE "hier hat es aufgehoert" -- der Block endet real, am
-        letzten tatsaechlich nassen Frame. Nicht ueberbruecken, sonst
+        QUELLENAUSSAGE "hier hat es aufgehoert" -- der Block endet real, an
+        der DECKUNGSGRENZE des letzten tatsaechlich nassen Frames
+        (`min(ts + _MAX_FRAME_COVERAGE, naechster Frame, horizon)`), nicht an
+        dessen Zeitstempel: der ist der ANFANG des nassen Abschnitts, und ein
+        Ein-Abschnitt-Schauer endete sonst zur Beginn-Uhrzeit
+        (`R@16:45@16:45`, Issue #3254). Nicht ueberbruecken, sonst
         verschmelzen zwei getrennte Ereignisse zu einer ueberlangen Dauer.
       * Luecke groesser als die Deckung eines Frames (`_MAX_FRAME_COVERAGE`):
         keine Beobachtung, aber DANACH wieder eine -- das Ende liegt an der
@@ -398,11 +402,15 @@ def _derive_wet_block_end(
         if existing is None or frame.precip_mm_h > existing:
             by_ts[frame.timestamp] = frame.precip_mm_h
 
-    last_wet_ts = onset_ts
+    # Issue #3254: EINE Ende-Konvention fuer alle Zweige -- die
+    # Deckungsgrenze des letzten nassen Frames (dieselbe wie Luecken-,
+    # Horizont- und Laufend-Zweig). Startwert ist die Deckung des
+    # Beginn-Frames, damit auch die Rest-Rueckgabe unten nie den Beginn
+    # selbst als Ende meldet.
+    last_wet_end = _frame_coverage_end(onset_ts, all_ts_sorted, horizon)
     for ts, rate in sorted(by_ts.items()):
         if rate < _DRY_THRESHOLD_MM_H:
-            return last_wet_ts, False
-        last_wet_ts = ts
+            return last_wet_end, False
 
         # Deckung DIESES Frames -- dieselbe Rechnung wie in
         # `_accumulate_precip_mm`: eigener naechster Nachbar aus der
@@ -428,12 +436,25 @@ def _derive_wet_block_end(
             # Luecke groesser als die Deckung -- danach folgt zwar wieder eine
             # Beobachtung, aber die dazwischenliegende Zeit ist unbeobachtet.
             return coverage_end, False
+        # Nahtlos anschliessender Nachbar: die Deckung endet an ihm.
+        last_wet_end = next_ts
 
     # Unerreichbar, solange `all_ts_sorted` aus denselben `frames` stammt: ein
     # nahtlos anschliessender naechster Frame innerhalb des Fensters ist auch
-    # ein Schleifen-Element. Ohne nassen Frame (leeres Fenster) bleibt der
-    # Beginn selbst das Ende.
-    return last_wet_ts, False
+    # ein Schleifen-Element. Ohne nassen Frame (leeres Fenster) gilt die
+    # Deckungsgrenze des Beginn-Frames (#3254), nie der Beginn selbst.
+    return last_wet_end, False
+
+
+def _frame_coverage_end(ts: datetime, all_ts_sorted: list, horizon: datetime) -> datetime:
+    """Deckungsgrenze EINES Frames (Issue #3254): naechster Nachbar aus der
+    vollstaendigen Frame-Liste, gedeckelt auf `_MAX_FRAME_COVERAGE`, nie ueber
+    `horizon` hinaus -- dieselbe Rechnung wie in `_accumulate_precip_mm`."""
+    next_idx = bisect.bisect_right(all_ts_sorted, ts)
+    coverage_end = min(ts + _MAX_FRAME_COVERAGE, horizon)
+    if next_idx < len(all_ts_sorted):
+        return min(coverage_end, all_ts_sorted[next_idx])
+    return coverage_end
 
 
 def _laufendes_frame(frames: list, now: datetime):

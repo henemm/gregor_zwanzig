@@ -85,9 +85,10 @@ def test_ac1_durchgehender_block_endet_am_letzten_nassen_frame():
     durchgaengig nassen Block (`precip_mm_h >= 0.1`) von Minute 20 bis
     Minute 80, danach trocken
     WHEN `_derive_result` daraus `event_end_minutes` ableitet
-    THEN entspricht `event_end_minutes` dem Zeitpunkt des LETZTEN nassen
-    Frames vor dem Trockenuebergang (Minute 80) — nicht dem Horizontende
-    (180) und nicht dem Beginn (20).
+    THEN entspricht `event_end_minutes` der Deckungsgrenze des LETZTEN
+    nassen Frames vor dem Trockenuebergang (Frame 80, gedeckt bis zum
+    Trockenframe 85; #3254: Ende = Abschnitts-ENDE, nicht -Anfang) — nicht
+    dem Horizontende (180) und nicht dem Beginn (20).
 
     RED heute: `NowcastResult` kennt `event_end_minutes` nicht."""
     result = _result(_fuenf_minuten_raster(20, 80))
@@ -96,8 +97,9 @@ def test_ac1_durchgehender_block_endet_am_letzten_nassen_frame():
         f"Vorbedingung verletzt: Beginn nicht bei Minute 20, sondern "
         f"{result.onset_minutes}"
     )
-    assert result.event_end_minutes == 80, (
-        f"RED: Blockende muss am letzten nassen Frame (Minute 80) liegen, "
+    assert result.event_end_minutes == 85, (
+        f"Blockende muss an der Deckungsgrenze des letzten nassen Frames "
+        f"(Minute 85, #3254) liegen, "
         f"bekam {result.event_end_minutes!r}"
     )
     assert result.event_end_minutes != 180, (
@@ -135,7 +137,7 @@ def test_ac1_helfer_derive_wet_block_end_liefert_ende_und_waechter():
     WHEN der in der Spec vorgeschriebene Helfer `_derive_wet_block_end(
     frames, all_ts_sorted, onset_ts, horizon)` direkt aufgerufen wird
     THEN liefert er das Tupel `(end_ts, ongoing_beyond_horizon)` mit dem
-    Zeitstempel des letzten nassen Frames und `False`.
+    Deckungsgrenze des letzten nassen Frames (#3254) und `False`.
 
     Der Helfer ist bewusst ein GESCHWISTER von `_accumulate_precip_mm`
     (Summieren in bekanntem Fenster) und nicht dessen Erweiterung —
@@ -151,7 +153,7 @@ def test_ac1_helfer_derive_wet_block_end_liefert_ende_und_waechter():
 
     end_ts, ongoing = _derive_wet_block_end(frames, all_ts_sorted, onset_ts, horizon)
 
-    assert end_ts == _NOW + timedelta(minutes=80), (
+    assert end_ts == _NOW + timedelta(minutes=85), (
         f"Helfer liefert das falsche Blockende: {end_ts!r}"
     )
     assert ongoing is False, (
@@ -179,10 +181,11 @@ def test_ac2_zwei_getrennte_bloecke_verschmelzen_nicht():
     """AC-2 GIVEN zwei getrennte nasse Bloecke in DERSELBEN Zeitreihe
     (nass Minute 10-30, trocken Minute 35-50, wieder nass Minute 55-70)
     WHEN `_derive_result` Beginn und Ende ableitet
-    THEN endet der Block beim ersten Trockenuebergang nach Minute 30 — das
+    THEN endet der Block beim ersten Trockenuebergang (Minute 35, Deckungs-
+    grenze des letzten nassen Frames 30, #3254) — das
     zweite, spaetere Ereignis wird NICHT eingerechnet.
 
-    Ein Zusammenziehen wuerde die Dauer ueberschaetzen (60 statt 20 Minuten)
+    Ein Zusammenziehen wuerde die Dauer ueberschaetzen (65 statt 25 Minuten)
     und dem Nutzer durchgehenden Regen behaupten, wo die Quelle eine
     Trockenphase zeigt.
 
@@ -193,8 +196,8 @@ def test_ac2_zwei_getrennte_bloecke_verschmelzen_nicht():
         f"Vorbedingung: Beginn bei Minute 10 erwartet, bekam "
         f"{result.onset_minutes}"
     )
-    assert result.event_end_minutes == 30, (
-        f"RED: das Ende des ERSTEN Blocks muss bei Minute 30 liegen, bekam "
+    assert result.event_end_minutes == 35, (
+        f"Das Ende des ERSTEN Blocks muss bei Minute 35 liegen (#3254), bekam "
         f"{result.event_end_minutes!r}"
     )
     assert result.event_end_minutes < 55, (
@@ -211,14 +214,15 @@ def test_ac2_zwei_getrennte_bloecke_verschmelzen_nicht():
 def test_ac2_dauer_ergibt_sich_aus_beginn_und_ende():
     """AC-2 (abgeleitete Dauer) GIVEN denselben Aufbau
     WHEN die Dauer als `event_end_minutes - onset_minutes` gebildet wird
-    THEN ergibt sie 20 Minuten (nicht 60) — und es gibt KEIN gespeichertes
+    THEN ergibt sie 25 Minuten (nicht 65; #3254: Ende = Deckungsgrenze) —
+    und es gibt KEIN gespeichertes
     `event_duration_minutes`-Feld, das als zweite Quelle der Wahrheit
     auseinanderlaufen koennte (Spec, Implementation Details).
 
     RED heute: `NowcastResult` kennt `event_end_minutes` nicht."""
     result = _result(_zwei_bloecke())
 
-    assert result.event_end_minutes - result.onset_minutes == 20, (
+    assert result.event_end_minutes - result.onset_minutes == 25, (
         f"Dauer falsch: {result.onset_minutes} -> {result.event_end_minutes!r}"
     )
     assert not hasattr(result, "event_duration_minutes"), (

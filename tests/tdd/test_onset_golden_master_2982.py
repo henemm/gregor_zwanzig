@@ -25,6 +25,12 @@ Diese Tests sind VOR dem Umbau gruen (sie frieren ihn ein) und muessen
 NACH dem Umbau unveraendert gruen sein. Die Golden-Datei wird nie
 nachgezogen, um einen roten Fall gruen zu machen.
 
+Einzige bewusste Nachfuehrung: #3254 (freigegebene Spec
+``fix_3254_regenende_deckungsgrenze.md``) -- in den beiden Replay-Faellen
+verschiebt sich NUR die Ende-Uhrzeit um 5 Min auf die Deckungsgrenze des
+letzten nassen Frames (00:40 -> 00:45, 23:10 -> 23:15); alle anderen Zeichen
+unveraendert.
+
 Kein Mock: echte Renderer, echte Bauwege, gestellte Uhr (freezegun).
 """
 from __future__ import annotations

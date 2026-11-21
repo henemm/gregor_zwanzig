@@ -91,7 +91,8 @@ def test_ac6_block_ueber_mitternacht_wird_vollstaendig_abgeleitet():
     abbilden (jetzt 23:40 Ortszeit; nass von 23:50 bis 00:40 des Folgetags,
     danach trocken)
     WHEN `_derive_result` Beginn und Ende ableitet
-    THEN steht der Beginn bei 10 Minuten und das Ende bei 60 Minuten — die
+    THEN steht der Beginn bei 10 Minuten und das Ende bei 65 Minuten
+    (Deckungsgrenze des letzten nassen Frames 00:40, #3254) — die
     Ableitung stolpert nicht ueber die Tagesgrenze.
 
     RED heute: `NowcastResult` kennt `event_end_minutes` nicht."""
@@ -102,8 +103,8 @@ def test_ac6_block_ueber_mitternacht_wird_vollstaendig_abgeleitet():
     assert result.onset_minutes == 10, (
         f"Vorbedingung: Beginn bei Minute 10, bekam {result.onset_minutes}"
     )
-    assert result.event_end_minutes == 60, (
-        f"RED: Ende bei Minute 60 (00:40 Ortszeit) erwartet, bekam "
+    assert result.event_end_minutes == 65, (
+        f"Ende bei Minute 65 (00:45 Ortszeit, #3254) erwartet, bekam "
         f"{result.event_end_minutes!r}"
     )
 

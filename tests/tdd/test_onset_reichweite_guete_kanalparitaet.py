@@ -35,7 +35,8 @@ kein `patch()` von Verhalten, kein externes Netz, kein echter SMS-Versand.
 Frame-Aufbau (feste absolute Zeitstempel, von Hand hergeleitet):
   * durchgehend nass (3.0 mm/h) von +20 bis +150 Min im 10-Minuten-Raster
     -> Beginn bei +20 (diesseits `RADAR_ONSET_THRESHOLD_MIN`=55, der Alarm
-    feuert), Ende bei +150 (letzter nasser Frame vor dem Trockenuebergang,
+    feuert), Ende bei +160 (Deckungsgrenze des letzten nassen Frames +150 =
+    der Trockenframe, #3254;
     jenseits der 60-Minuten-Guete-Grenze -> Guete-Zeile ausgeloest).
   * ein Trockenframe bei +160 beendet den Block (`event_ongoing_beyond_
     horizon=False` -- die Reichweite wird deshalb NICHT durch E5
@@ -118,7 +119,7 @@ class _FesterBlockMitReichweite:
 
     @property
     def erwartetes_ende_utc(self) -> datetime:
-        return self.start + timedelta(minutes=ENDE_MIN)
+        return self.start + timedelta(minutes=TROCKEN_MIN)  # #3254
 
     @property
     def erwartete_reichweite_utc(self) -> datetime:
