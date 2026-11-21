@@ -257,10 +257,11 @@ class _FrameQuelle:
     """Echter, aufrufbarer `frame_source` (kein Mock): je Koordinate zwei
     nasse Frames bei `+m` und `+m+10` Minuten nach der gestellten Uhr, danach
     ein trockener bei `+m+20`. Von Hand hergeleitet:
-      * Beginn = `+m` (z. B. 14:05), letzter nasser Frame `+m+10` = Ende
-        (14:15) -> Ende-Token `@14:15` direkt am Beginn (#2051 S1);
+      * Beginn = `+m` (z. B. 14:05), Ende = Deckungsgrenze des letzten
+        nassen Frames `+m+10`, also der Trockenframe `+m+20` (14:25, #3254)
+        -> Ende-Token `@14:25` direkt am Beginn (#2051 S1);
       * Menge 0.2 mm/h x 20 Min = 0.07 mm < 0.1 mm -> KEINE Mengenangabe
-        (`_SMS_ONSET_MENGE_MIN_MM`), das Token bleibt `R@14:05@14:15`.
+        (`_SMS_ONSET_MENGE_MIN_MM`), das Token bleibt `R@14:05@14:25`.
     Koordinaten ohne Eintrag bleiben trocken (loesen nicht aus)."""
 
     def __init__(self, minuten_je_ort: dict[str, int], orte: list[SavedLocation]) -> None:
@@ -370,7 +371,7 @@ AC1_OHNE_ENDE = "1:R@14:05 3:R@14:40"
 # Derselbe Alarm aus echten Radar-Frames: die Frames tragen ein Ende (s.
 # `_FrameQuelle`), die Spec behaelt die bestehende Token-Form „inklusive
 # Ende-/Guete-/Pruefmarker" — jedes Orts-Token traegt sein eigenes Ende.
-AC1_AUS_FRAMES = "1:R@14:05@14:15 3:R@14:40@14:50"
+AC1_AUS_FRAMES = "1:R@14:05@14:25 3:R@14:40@15:00"
 
 
 @freeze_time(GEFRORENE_UHR)
@@ -379,7 +380,7 @@ def test_ac1_sms_nennt_jeden_ausloesenden_ort_mit_ortsnummer(data_root, wire):
     1-3), Zermatt beginnt 14:05, Verbier 14:40, Chamonix bleibt trocken
     WHEN der echte Alarmlauf (`CompareRadarAlertService`) die SMS versendet
     THEN nennt der Text jeden ausloesenden Ort mit seiner Ortsnummer:
-    `1:R@14:05@14:15 3:R@14:40@14:50` (= AC-1 `1:R@14:05 3:R@14:40` plus das
+    `1:R@14:05@14:25 3:R@14:40@15:00` (= AC-1 `1:R@14:05 3:R@14:40` plus das
     aus den Frames bekannte Ende je Ort) — ohne Ortsnamen-Kopf, ohne `km0-0`.
     Die woertliche Form ohne Ende pruefen AC-7/AC-10 ueber die Vorschau.
 
@@ -387,7 +388,7 @@ def test_ac1_sms_nennt_jeden_ausloesenden_ort_mit_ortsnummer(data_root, wire):
     `compare_radar_alert.py` die Positionen aus `preset["location_ids"]`
     berechnet UND bis ins SMS-Rendering reicht.
 
-    RED heute: `Zermatt: R@14:05@14:15` (nur der fuehrende Ort)."""
+    RED heute: `Zermatt: R@14:05@14:25` (nur der fuehrende Ort)."""
     uid = _uid("ac1")
     _ortsvergleich_lauf(wire, uid, DREI_ORTE, {"Zermatt": 5, "Verbier": 40})
 
@@ -409,10 +410,10 @@ def test_ac2_premium_sms_und_telegram_kurzstil_identisch_zur_sms(data_root, wire
     """AC-2 GIVEN dieselbe Lage, Kanaele SMS + Premium-SMS + Telegram-Kurzstil
     WHEN der echte Alarmlauf versendet
     THEN tragen Premium-SMS und Telegram-Kurzstil exakt denselben Text wie
-    die SMS (`1:R@14:05@14:15 3:R@14:40@14:50`), jeweils hoechstens 140
+    die SMS (`1:R@14:05@14:25 3:R@14:40@15:00`), jeweils hoechstens 140
     Zeichen.
 
-    RED heute: alle drei tragen `Zermatt: R@14:05@14:15`."""
+    RED heute: alle drei tragen `Zermatt: R@14:05@14:25`."""
     uid = _uid("ac2")
     _ortsvergleich_lauf(wire, uid, DREI_ORTE, {"Zermatt": 5, "Verbier": 40})
 
@@ -509,10 +510,10 @@ def test_ac4_englischer_nutzer_telegram_englisch(data_root, wire):
 def test_ac4_englischer_nutzer_sms_identisch_zum_deutschen(data_root, wire):
     """AC-4 (SMS) GIVEN ein Nutzer mit Sprache Englisch und dieselbe Lage
     WHEN der echte Alarmlauf die SMS versendet
-    THEN ist sie zeichengleich zu AC-1 (`1:R@14:05@14:15 3:R@14:40@14:50`):
+    THEN ist sie zeichengleich zu AC-1 (`1:R@14:05@14:25 3:R@14:40@15:00`):
     Protokoll-Token (`R`, `@`, Ortsnummer) werden nie uebersetzt.
 
-    RED heute: `Zermatt: R@14:05@14:15`."""
+    RED heute: `Zermatt: R@14:05@14:25`."""
     uid = _uid("ac4sms")
     _setze_sprache(uid, "en")
     _ortsvergleich_lauf(wire, uid, DREI_ORTE, {"Zermatt": 5, "Verbier": 40})
@@ -588,15 +589,15 @@ def test_ac6_reihenfolge_nach_beginn_in_kurzform(data_root, wire):
     Verbier (Pos 3) 14:10 — Beginn gegen die Preset-Reihenfolge, Chamonix und
     Verbier gleichauf
     WHEN der echte Alarmlauf SMS, Premium-SMS und Telegram-Kurzstil versendet
-    THEN lautet jede Kurzform `2:R@14:10@14:20 3:R@14:10@14:20 1:R@14:40@14:50`
+    THEN lautet jede Kurzform `2:R@14:10@14:30 3:R@14:10@14:30 1:R@14:40@15:00`
     (Ortsnummern-Folge 2, 3, 1).
 
-    RED heute: `Zermatt: R@14:40@14:50` — nur der Preset-Erste, obwohl er
+    RED heute: `Zermatt: R@14:40@15:00` — nur der Preset-Erste, obwohl er
     als Letzter beginnt."""
     uid = _uid("ac6k")
     _ortsvergleich_lauf(wire, uid, DREI_ORTE, {"Zermatt": 40, "Chamonix": 10, "Verbier": 10})
 
-    erwartet = "2:R@14:10@14:20 3:R@14:10@14:20 1:R@14:40@14:50"
+    erwartet = "2:R@14:10@14:30 3:R@14:10@14:30 1:R@14:40@15:00"
     for kanal, texte in (("SMS", wire.sms()), ("Premium-SMS", wire.premium()),
                          ("Telegram-Kurzstil", wire.telegram_texts())):
         assert texte == [erwartet], f"{kanal}: erwartet {erwartet!r}, war {texte!r}"
@@ -706,7 +707,7 @@ def test_ac8_ein_ort_ortsvergleich_und_trip_byte_identisch(data_root, wire):
     und ein Trip-Radar-Alarm (immer ein Ort)
     WHEN gerendert/versendet
     THEN bleibt die Kurzform byte-identisch zur bisherigen: `Zermatt: R@14:05`
-    (Vorschau-Eingabe ohne Ende), `Zermatt: R@14:05@14:15` (echter Lauf aus
+    (Vorschau-Eingabe ohne Ende), `Zermatt: R@14:05@14:25` (echter Lauf aus
     Frames, gemessen vor dem Umbau) bzw. `km 5-18: R@14:35` (Trip) — ohne
     Ortsnummer, ohne `+k`, auch wenn Positionen vorliegen."""
     from output.renderers.alert.model import AlertMessage, OnsetEvent
@@ -715,7 +716,7 @@ def test_ac8_ein_ort_ortsvergleich_und_trip_byte_identisch(data_root, wire):
 
     uid = _uid("ac8")
     _ortsvergleich_lauf(wire, uid, DREI_ORTE, {"Zermatt": 5})
-    ein_ort = "Zermatt: R@14:05@14:15"
+    ein_ort = "Zermatt: R@14:05@14:25"
     assert wire.sms() == [ein_ort], f"Ein-Ort-Compare veraendert: {wire.sms()!r}"
     assert wire.premium() == [ein_ort]
     assert wire.telegram_texts() == [ein_ort]

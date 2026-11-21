@@ -255,10 +255,11 @@ def test_ac5_email_langform_nennt_die_untergrenze_bei_gesetztem_waechter():
         {m: (5.0 if m >= 30 else 0.0)
          for m in range(0, _NOWCAST_HORIZON_MIN + 1, 5)}
     )
-    # Nass von Minute 30 bis 90, danach trocken -> die Quelle sagt selbst, wo
-    # es aufhoert: bekanntes Ende bei 90 Min (19:30 Ortszeit).
+    # Nass von Minute 30 bis 85, danach trocken -> die Quelle sagt selbst, wo
+    # es aufhoert: bekanntes Ende bei 90 Min (19:30 Ortszeit) = Deckungsgrenze
+    # des letzten nassen Frames 85 (#3254: Abschnitts-ENDE, nicht -Anfang).
     ohne_waechter = _abgeleitetes_ergebnis(
-        {m: (5.0 if 30 <= m <= 90 else 0.0)
+        {m: (5.0 if 30 <= m <= 85 else 0.0)
          for m in range(0, _NOWCAST_HORIZON_MIN + 1, 5)}
     )
 

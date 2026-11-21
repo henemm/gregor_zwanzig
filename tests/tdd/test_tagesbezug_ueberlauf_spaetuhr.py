@@ -93,8 +93,8 @@ def test_langform_ereignisende_faellt_auf_den_folgetag(
     """AC-12 (Mechanismus Langform-Ende) GIVEN dieselbe gestellte Uhr, bei der
     das Ereignis-Ende auf den Folgetag faellt
     WHEN beide Flaechen in der Langform gerendert werden
-    THEN nennen beide dasselbe, aus dem letzten nassen Frame hergeleitete
-    Ende-Paar.
+    THEN nennen beide dasselbe, aus der Deckungsgrenze des letzten nassen
+    Frames hergeleitete Ende-Paar (#3254).
 
     Eigener Fall statt Zusatz-Assertion im Reichweiten-Test: Ende und
     Reichweite entstehen aus zwei verschiedenen Feldern

@@ -41,7 +41,7 @@ getrennt ausgewiesen -- Freigabe ist nicht dasselbe wie Entwurfsentscheidung:
 `R` = Rain, `TH` = Thunder, und deshalb `now` statt "jetzt". Nur die
 Langformen (E-Mail, Telegram-Langform) sprechen Deutsch. Jedes neue Wort in
 der Kurzform ist englisch, auch wenn dieselbe Aussage in der E-Mail deutsch
-lautet: Langform `letzter Regen gegen 12:30`, Kurzform `R2.0 now@12:30`.
+lautet: Langform `letzter Regen gegen 12:45`, Kurzform `R2.0 now@12:45`.
 """
 from __future__ import annotations
 from app.ampel import resolve_ampel
@@ -81,10 +81,10 @@ _AT_LAUF = _AT + timedelta(minutes=8)    # 10:08 UTC = 12:08 Ortszeit
 TZ_ORT = ZoneInfo("Europe/Paris")
 # Die beiden Ende-Zeiten sind an der GEMERGTEN Ableitung
 # `_derive_wet_block_end()` (#2051 S1) gemessen, nicht aus der Lage
-# geschaetzt -- sie folgen zwei verschiedenen Konventionen, und das ist dort
-# Absicht: bei bekanntem Ende zaehlt das letzte NASSE Frame, bei der
-# Untergrenze die Reichweite seiner Deckung.
-ENDE_LOKAL = "12:30"       # Lage A: letztes nasses Frame (Slot +30)
+# geschaetzt. Seit #3254 gilt EINE Konvention: das Ende ist die
+# Deckungsgrenze des letzten nassen Frames -- beim bekannten Ende wie bei der
+# Untergrenze.
+ENDE_LOKAL = "12:45"       # Lage A: Deckungsgrenze des letzten nassen Frames (Slot +30 +15)
 HORIZONT_LOKAL = "14:45"   # Lage B: Deckungsende des letzten Frames (Slot +150 +15)
 BEGINN_LOKAL = "12:45"     # Lage E: kuenftiger Beginn (Slot +45)
 # Lage C endet IN der laufenden Viertelstunde. Genannt wird die Deckungsgrenze
@@ -318,19 +318,21 @@ def test_ac3_laufendes_gewitter_wird_ebenfalls_als_laufend_gemeldet():
 def test_ac4_laufendes_ereignis_nennt_das_voraussichtliche_ende():
     """AC-4: auf die laufende nasse Strecke folgt bei Slot +45 Min ein
     trockenes Frame -- der Trockenuebergang ist damit BEOBACHTET und das Ende
-    bekannt. Genannt wird das letzte NASSE Frame (Slot +30), so leitet
-    `_derive_wet_block_end()` (#2051 S1, gemergt) es ab; an dieser Ableitung
-    ist der Erwartungswert gemessen, nicht aus der Lage geschaetzt.
+    bekannt. Genannt wird die Deckungsgrenze des letzten NASSEN Frames
+    (Slot +30, gedeckt bis Slot +45; #3254), so leitet
+    `_derive_wet_block_end()` es ab; an dieser Ableitung ist der
+    Erwartungswert gemessen, nicht aus der Lage geschaetzt.
 
     Gegenrichtung mitgeprueft (Muster #2051 AC-20): weder die Langform
     "Regen mindestens bis" noch das Kurznachrichten-Praefix ` >` duerfen
-    vorkommen. Beide sagen "hoert FRUEHESTENS um 12:45 auf" -- die Umkehrung.
+    vorkommen. Beide sagen "hoert FRUEHESTENS um ... auf" -- die Umkehrung.
     Ohne diese Haelfte waere ein Renderer, der IMMER die Untergrenzen-Form
     baut, hier wie in AC-5 gruen."""
     lauf = _test_lauf("ac4", _laeuft_mit_ende())
     text = _kanaltext(lauf) + "\n" + "\n".join(lauf.sms)
     assert ENDE_FORM in text, (
-        f"AC-4: das bekannte Ende ({ENDE_FORM!r}, letztes nasses Frame) "
+        f"AC-4: das bekannte Ende ({ENDE_FORM!r}, Deckungsgrenze des letzten "
+        f"nassen Frames) "
         f"fehlt.\n{text}"
     )
     assert UNTERGRENZE_WORTLAUT not in text and " >" not in text, (
@@ -815,7 +817,8 @@ def test_ac14_jetzt_antwort_meldet_das_laufende_ereignis_als_laufend():
     # der Untergrenzen-Waechter `event_ongoing_beyond_horizon`. S2b legt nur
     # `already_running` daneben -- kein zweites Ende-Feld.
     result.already_running = True
-    result.event_end_minutes = 22   # 10:08 + 22 Min = 10:30 UTC = 12:30 Ortszeit
+    # Lage A (#3254: Deckungsgrenze des letzten nassen Frames).
+    result.event_end_minutes = 37   # 10:08 + 37 Min = 10:45 UTC = 12:45 Ortszeit
     with freeze_time(_AT_LAUF):
         text = RadarNowcastService().format_now_text(
             result, tz=TZ_ORT, include_source=False,
@@ -892,7 +895,7 @@ def test_ac15_briefing_kurzfristzeile_weist_das_ereignis_als_laufend_aus():
         try:
             text = format_starkregen_hint(
                 "Starker Regen", None, tz=TZ_ORT,
-                already_running=True, event_end_minutes=22,
+                already_running=True, event_end_minutes=37,  # Lage A, #3254
             )
         except TypeError as e:
             text = f"<TypeError: {e}>"

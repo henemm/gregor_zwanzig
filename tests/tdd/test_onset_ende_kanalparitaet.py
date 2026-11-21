@@ -87,8 +87,9 @@ _GEFRORENE_UHR = "2026-08-22 12:00:00+00:00"
 _JETZT_UTC = datetime.fromisoformat(_GEFRORENE_UHR)
 
 # Nasser Block: +20 bis +80 Minuten im 10-Minuten-Raster, danach TROCKEN.
-# Das erwartete Ende ist damit von Hand hergeleitet (letzter nasser Frame vor
-# dem Trockenuebergang) und NICHT aus der Implementierung abgeschrieben.
+# Das erwartete Ende ist damit von Hand hergeleitet (Deckungsgrenze des
+# letzten nassen Frames = der Trockenframe bei +90, #3254) und NICHT aus der
+# Implementierung abgeschrieben.
 ONSET_MIN = 20          # < RADAR_ONSET_THRESHOLD_MIN (55) -> der Alarm feuert
 ENDE_MIN = 80
 TROCKEN_MIN = 90
@@ -114,7 +115,7 @@ class _FesterNasserBlock:
 
     @property
     def erwartetes_ende_utc(self) -> datetime:
-        return self.start + timedelta(minutes=ENDE_MIN)
+        return self.start + timedelta(minutes=TROCKEN_MIN)  # #3254
 
     def __call__(self, lat: float, lon: float) -> list:
         from providers.brightsky import RadarFrame
