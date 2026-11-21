@@ -871,12 +871,13 @@ def _ausblick_koepfe(body: str, lang: str = "de") -> list:
 
 
 def _find_location_hour_table(body: str, location_name: str, occurrence: int = 0,
-                              lang: str = "de"):
+                              lang: str = "de", roh: bool = False):
     """Findet die Stundentabelle eines Ortes ueber den vorausgehenden
     "ORT <Name>"-Kopf (_render_location_section, Issue #1108) -- ersetzt die
     alte CSS-Klassen-Erkennung. `occurrence` waehlt bei gleichnamigen Orten
     (Adversary F002) das N-te Vorkommen des Namens statt immer nur das erste.
-    Rueckgabe: (Spaltenkoepfe, Datenzeilen) oder None, wenn kein Ort-Kopf
+    Rueckgabe: (Spaltenkoepfe, Datenzeilen) -- mit ``roh`` (#3228) das rohe
+    Tabellen-HTML samt Zell-Attributen -- oder None, wenn kein Ort-Kopf
     dieses Vorkommens bzw. keine folgende Tabelle gefunden wird."""
     koepfe = _ortskoepfe(body, lang)
     matches = [m for m in koepfe if m.group(2) == location_name]
@@ -903,7 +904,7 @@ def _find_location_hour_table(body: str, location_name: str, occurrence: int = 0
     for table_match in re.finditer(r'<table[^>]*>(.*?)</table>', section, re.DOTALL):
         rows = _extract_rows_from_table_html(table_match.group(1))
         if rows and rows[0] and rows[0][0].strip() == time_label:
-            return rows[0], rows[1:]
+            return table_match.group(1) if roh else (rows[0], rows[1:])
     return None
 
 
@@ -1621,6 +1622,41 @@ def _soll_ampel_orte(body: str, lang: str, soll: dict) -> List[str]:
     return fehler
 
 
+def pruefe_windrichtung_orte(body: str, soll_w: dict, lang: str = "de") -> List[str]:
+    """Issue #3228 (AC-5): Toenung je Ort gegen die ausdruecklich erwartete
+    Stufe des Solls (``send_gate_test_mails.compare_windrichtung_soll``:
+    ``orte`` = Name -> [Windrichtungs-Zeile der Vergleichstabelle, Wind-Zelle
+    jeder Stunde]); die Stufe wird hier nicht nachgerechnet."""
+    m, fehler = _soll_modul(), []
+    zeilen = [re.findall(r"<t[hd]([^>]*)>(.*?)</t[hd]>", r, re.DOTALL)
+              for r in _TR_RE.findall(_uebersicht_html(body, lang) or "")]
+    text = lambda z: unescape(re.sub(r"<[^>]+>", "", z).strip())  # noqa: E731
+    orte = [text(i) for _a, i in zeilen[0][1:]] if zeilen else []
+    wdir = next((z[1:] for z in zeilen if z and text(z[0][1]) == m._REG["wind_direction"].label(lang)), [])
+    wind = m._REG["wind"].col_label
+    for name, (richtung, stunden) in (soll_w.get("orte") or {}).items():
+        ist = m.zellstufe(dict(zip(orte, wdir)).get(name))
+        if ist != richtung:
+            fehler.append(f"SOLL: Windrichtung Vergleichstabelle Ort '{name}': {ist} statt {richtung}")
+        tabelle = _find_location_hour_table(body, name, lang=lang, roh=True)
+        if tabelle is None:
+            fehler.append(f"SOLL: Windrichtung Stundenverlauf Ort '{name}': Stundentabelle fehlt")
+            continue
+        kopf = [text(k) for k in re.findall(r"<th[^>]*>(.*?)</th>", tabelle, re.DOTALL)]
+        reihen = [z for z in (re.findall(r"<td([^>]*)>(.*?)</td>", r, re.DOTALL)
+                              for r in _TR_RE.findall(tabelle)) if z]
+        # #3232: Stundenverlauf als Liste, damit die Meldung die Stunde nennt.
+        ist_h = [m.zellstufe(dict(zip(kopf, z)).get(wind)) for z in reihen]
+        soll_h = list(stunden) if isinstance(stunden, list) else [stunden] * len(ist_h)
+        if not ist_h or ist_h != soll_h:
+            abw = [f"{text(z[0][1])}: {i} statt {e}" for z, i, e in zip(reihen, ist_h, soll_h) if i != e]
+            if len(ist_h) != len(soll_h) or not ist_h:
+                abw.append(f"{len(ist_h)} Stunden statt {len(soll_h) or 'mind. 1'}")
+            fehler.append(f"SOLL: Windrichtung Stundenverlauf Ort '{name}': Wind-Zelle "
+                          + "; ".join(abw))
+    return fehler
+
+
 def _uebersicht_html_zellen(body: str, lang: str) -> List[list]:
     """Zeilen der Uebersichtstabelle als [(Beschriftung, rohe Zelle), ...]."""
     inner = _uebersicht_html(body, lang)
@@ -1675,6 +1711,7 @@ def run_validation(
     to_contains: "str | None" = None,
     konfig: "dict | None" = None,
     briefing: "str | None" = None,
+    windrichtung: "dict | None" = None,
 ) -> Tuple[bool, List[str]]:
     """Run all validations and return (success, errors).
 
@@ -1694,7 +1731,7 @@ def run_validation(
         return False, [f"FEHLER: E-Mail konnte nicht geladen werden: {e}"]
 
     return validate_message(msg, min_locations=min_locations, warnungen=warnungen, konfig=konfig,
-                            briefing=briefing)
+                            briefing=briefing, windrichtung=windrichtung)
 
 
 # Issue #2663: Schluessel, an denen die Sprache des Inhalts erkennbar ist.
@@ -1704,11 +1741,13 @@ _LANG_MARKER_KEYS = ["vergleich.zeile.amtliche_warnungen", "vergleich.stunden.ze
 def validate_message(
     msg, min_locations: int = 3, warnungen: "list | None" = None,
     konfig: "dict | None" = None, briefing: "str | None" = None,
+    windrichtung: "dict | None" = None,
 ) -> Tuple[bool, List[str]]:
     """Alle Pruefungen einer geparsten Compare-Mail in der Sprache ihres Kopfes
     ``X-GZ-Lang`` (Issue #2663). Fehlt der Kopf: Fehler (Pflicht seit A2 #2681).
     ``briefing`` (#3155, ``--briefing``): Morgen/Abend der Mail, sonst aus
-    Slot bzw. Zieltag abgelesen; wirkt nur mit ``konfig``."""
+    Slot bzw. Zieltag abgelesen; wirkt nur mit ``konfig``. ``windrichtung``
+    (#3228, ``--windrichtung``): Soll der Windrichtungs-Toenung je Ort."""
     import _mail_lang  # lazy: Validator bleibt ohne Hilfsmodul ladbar (Log-Tests)
 
     try:
@@ -1736,6 +1775,8 @@ def validate_message(
     all_errors.extend(validate_format(body, lang=lang, einfach=(soll or {}).get("uebersicht_einfach")))
     fenster = (soll or {}).get("tagesfenster") if (soll or {}).get("kontext") == "orte" else None
     all_errors.extend(validate_hourly_table(body, lang=lang, fenster=fenster))
+    if windrichtung is not None:  # Issue #3228: nur mit --windrichtung
+        all_errors.extend(pruefe_windrichtung_orte(body, windrichtung, lang))
     if soll is not None:  # Issue #3047: nur mit --konfig, sonst unveraendert
         all_errors.extend(pruefe_soll(msg, soll, lang, briefing))
 
@@ -1836,6 +1877,13 @@ def main():
              "stehen, wenn er in diesem Briefing eingestellt ist. Ohne Angabe aus "
              "Slot bzw. Zieltag abgelesen (Morgen = Erstellungstag, Abend = Folgetag)",
     )
+    parser.add_argument(
+        "--windrichtung",
+        metavar="JSON",
+        default=None,
+        help="Soll der Windrichtungs-Toenung je Ort (Ausgabe 'Soll Windrichtung' "
+             "von scripts/send_gate_test_mails.py, #3228)",
+    )
     _e2e_paths.sprach_argumente(parser)
     args = parser.parse_args()
 
@@ -1898,6 +1946,13 @@ def main():
         preset = konfig["preset"] if isinstance(konfig.get("preset"), dict) else konfig
         konfig = {"preset": preset, "orte": {**(konfig.get("orte") or {}), **namen}}
     args.min_locations = _min_orte(args.min_locations, konfig)
+    windrichtung = None
+    if args.windrichtung is not None:  # #3232 AC-5: frueh pruefen, Exit 2 statt Exit 1
+        try:
+            windrichtung = _soll_modul().windrichtung_soll_parsen(args.windrichtung, "orte")
+        except ValueError as exc:
+            print(f"FEHLER: --windrichtung ungueltig: {exc}")
+            sys.exit(2)
     if args.eml:
         # Issue #2663: Mail aus Datei statt IMAP (Fixtures ohne Netz pruefbar).
         try:
@@ -1906,7 +1961,8 @@ def main():
             print(f"FEHLER: --eml {args.eml!r} nicht lesbar: {exc}")
             sys.exit(2)
         success, errors = validate_message(msg, args.min_locations, warnungen=warnungen,
-                                           konfig=konfig, briefing=args.briefing)
+                                           konfig=konfig, briefing=args.briefing,
+                                           windrichtung=windrichtung)
         # #2681: --lang/--to-contains gelten auch fuer die Datei.
         auswahl = _e2e_paths.eml_auswahl_fehler(msg, args.lang, args.to_contains)
         success, errors = success and not auswahl, auswahl + errors
@@ -1921,6 +1977,7 @@ def main():
             to_contains=args.to_contains,
             konfig=konfig,
             briefing=args.briefing,
+            windrichtung=windrichtung,
         )
     for hinweis in warnungen:
         print(f"WARNUNG: {hinweis}", file=sys.stderr)

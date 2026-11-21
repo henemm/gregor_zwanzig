@@ -541,8 +541,9 @@ def test_documented_invocations_still_accepted_by_cli():
     calls = _documented_invocations()
     # #2681: /e2e-verify dokumentiert den Aufruf seither je Sprache (--lang de,
     # --lang en --to-contains "+en@") -- drei Dokumente, fuenf Aufrufe.
-    assert len(calls) == 5, (
-        f"Erwartet werden die fuenf dokumentierten Aufrufe, gefunden: {calls}"
+    # #3232: dazu je Sprache der Aufruf mit --windrichtung -- sieben Aufrufe.
+    assert len(calls) == 7, (
+        f"Erwartet werden die sieben dokumentierten Aufrufe, gefunden: {calls}"
     )
 
     for doc_name, args in calls:
