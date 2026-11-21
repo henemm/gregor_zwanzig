@@ -712,6 +712,12 @@ lokal im Editor-State und lösen genau EINEN `POST /api/trips` bzw.
 `CompareNewEditor.svelte::handleActivate`) — nicht `/api/subscriptions` (entfernt,
 liefert 404).
 
+Der Anlege-Editor des Orts-Vergleichs hat keine Aktivitätsprofil-Auswahl mehr (Kacheln
+am Computer, Knopf am Handy entfallen, #3198). Maßgeblich ist die im Reiter Wetter gewählte
+Vorlage; die Nutzlast trägt `display_config.ampel.template` und konstant `profil: "allgemein"`
+(Logik in `compare-new/compareNewVorlage.ts` und `compare/compareEditorSave.ts`). Das
+Orts-Profil (Ort anlegen/bearbeiten, Ortsgruppe, Filter) bleibt unverändert.
+
 `/trips/new` hat seit Issue #2277 Scheibe S2a einen eigenen Reiter
 **„Wertebereiche"** (seit S3a Teil-PR 2, Epic #2791, im Reiter **„Wetter"** gebündelt;
 Anlege-Ketten Route · Etappen · Wegpunkte · Wetter · Zustellung bzw. Vergleich · Orte ·
