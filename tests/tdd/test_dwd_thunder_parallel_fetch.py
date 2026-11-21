@@ -235,6 +235,19 @@ def _abruf(zeit: _Zeit):
     )
 
 
+def _raster_vorab_erzeugen(zeit: _Zeit) -> None:
+    """#3217 AC-2: erzeugt die Raster aller Kombinationen, die `_abruf(zeit)`
+    anfragen kann (jeder Lauf aus `zeit.laeufe`, jede Groesse, Offset 0 als
+    Anker von `grau_gsp` bis `_ANZAHL_ZEITPUNKTE`), VOR dem Abruf. Schluessel
+    exakt wie im Handler: `_raster(_wert(param, lauf, ttt))`. Danach enthaelt
+    eine normale Antwort keine Rechenarbeit im Server mehr."""
+    for lauf_index, lauf in enumerate(zeit.laeufe):
+        for off in range(0, _ANZAHL_ZEITPUNKTE + 1):
+            ttt = zeit.ttt(lauf_index, off)
+            for param in dwd.THUNDER_PARAMS:
+                _raster(_wert(param, lauf, ttt))
+
+
 def _journal_zeilen(path: str) -> list:
     datei = get_data_root() / "diagnostics" / "enrichment_calls.jsonl"
     if not datei.exists():
@@ -369,6 +382,9 @@ def test_ac3_haengender_download_kostet_hoechstens_den_timeout_und_wird_nicht_wi
     # Zaehlung der Neu-Erzeugungen.
     with _RASTER_LOCK:
         _RASTER_CACHE_BYTES.clear()
+    # #3217 AC-2: alle Raster vorab erzeugen -- vor `neu_vorher` und vor t0,
+    # damit weder die Zaehlung noch die Dauer-Messung sie enthaelt.
+    _raster_vorab_erzeugen(zeit)
 
     t0 = time.monotonic()
     with _dwd_server(monkeypatch, regel=regel) as server:
