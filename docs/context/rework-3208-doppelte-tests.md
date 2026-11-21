@@ -189,3 +189,53 @@ Alle Wiederherstellungen bit-gleich (SHA-256), Kontroll-Lauf jeweils grün; `git
 
 Reproduktion (für den Nachher-Lauf in /50-implement): `python3 docs/artifacts/rework-3208-doppelte-tests/mutate.py nachher docs/artifacts/rework-3208-doppelte-tests/mutation-nachher.txt`
 (Phase `nachher` lässt die gelöschte Wegstrecken-Datei automatisch weg; Sicherungen per `mkdtemp` außerhalb des Repos).
+
+## GREEN: Mutationsnachweis „nachher" (2026-11-21, nach dem Umbau)
+
+Gleiches Skript wie vorher, Phase `nachher` (Wegstrecken-Datei entfällt aus dem Lauf). Rohprotokoll:
+`docs/artifacts/rework-3208-doppelte-tests/mutation-nachher.txt`. Jede Wiederherstellung per SHA-256 gegen
+das Original geprüft, Kontroll-Lauf danach jeweils grün (exit 0); `git status --short src/` leer.
+
+| Mutation | vorher | nachher | gefangen von (bleibender Test) | wiederhergestellt grün |
+|---|---|---|---|---|
+| G1a gemessene Strecke ignoriert | ROT (27) | ROT (26) | etappenregel ac4, ac5, **ac8_paritaet**; 3196; 3197 | ja (106 passed) |
+| G1b-abschnitt Rückfall je Abschnitt | ROT (3) | ROT (3) | etappenregel ac1, ac5, **ac3b_luecke_am_etappenende** | ja |
+| G1b-monotonie Monotonie-Prüfung aus | GRÜN | GRÜN | — (vorher schon redundant durch die Plausibilitätsprüfung, siehe Befund RED; kein Abdeckungsverlust) | ja |
+| G1b-rückfall-aus Monotonie + Plausibilität aus | ROT (4) | ROT (3) | etappenregel ac1, ac2[gleich], **ac2[kleiner]** | ja |
+| G1c-grundtempo v × 1,25 | ROT (52) | ROT (52) | etappenregel ac8_paritaet; **802 ac2**; 3196; 3197 | ja |
+| G1c-gewicht min/3 statt min/2 | ROT (35) | ROT (35) | etappenregel ac8_paritaet; 3196; 3197 | ja |
+| G1d Aufstiegsrate zu Fuß 350 | ROT (40) | ROT (39) | **etappenregel ac8_paritaet**; **802 ac3[W]**; 3196; 3197 | ja |
+| G3a Premium liest Premium-Liste | ROT (10) | ROT (9) | **3100 ac1** (6×), ac3, ac4 | ja (72 passed) |
+| G3b Kürzel Niederschlag Q statt R | ROT (38) | ROT (38) | 3099 ac2–ac10, u. a. **ac2_sms_folge_niederschlag_boe_bewoelkung** | ja |
+
+Die Rückgänge der Rot-Zahl (G1a −1, G1b-rückfall-aus −1, G1d −1, G3a −1) sind genau die entfernten Fälle
+(wegstrecke ac1/ac5 → etappenregel ac4/ac8; wegstrecke ac4 → ac2[kleiner]; 802 ac4 → ac3[W]; 3099 ac6 → 3100 ac1);
+G1a und G1d zählen netto nur −1, weil die neue ac8 die wegfallende wegstrecke ac5 ersetzt. Keine Mutation, die
+vorher rot war, ist nachher grün.
+
+### Collect-Differenz vorher/nachher
+
+`collect-vorher.txt` 208 Tests → `collect-nachher.txt` 203 Tests (dieselben 7 bestehenden Dateien; die
+Wegstrecken-Datei entfällt), keine Collect-Fehler. Differenz exakt nach Plan:
+- weg: `test_gehzeit_folgt_wegstrecke.py` ac1–ac5 (5), `test_issue_802_fahrrad_segment_zeit.py::test_ac3_python_naismith_matches_fixed_contract[A]`,
+  `::test_ac4_wanderer_default_naismith_sum`, `test_3099_sms_resolver.py::test_ac6_premium_gleich_sms_trotz_abweichender_premium_ebene` (8)
+- neu: `test_gehzeit_etappenregel.py::test_ac3b_luecke_am_etappenende_entwertet_die_etappe`,
+  `::test_ac8_paritaet_erwartungswerte_fuer_die_go_seite`, `test_3099_sms_resolver.py::test_ac2_sms_folge_niederschlag_boe_bewoelkung` (3)
+- netto −5 (Wegstrecke −3, 802 −2, 3099 ±0).
+
+### Geprüft, keine echte Dopplung (bleibt unverändert)
+- **G2 Kanal-Layout** (429, 434, `test_reports_pro_typ.py`, 3057): ähnliche Muster auf verschiedenen Ebenen
+  (Kanal vs. Bericht) mit anderen Fixtures; 3057 ac1 ist ein Orakel über alle Kombinationen. Weder identisch
+  noch Teilmenge, kein Umbau (siehe Analysis).
+- **3196 vs. 3197** (`test_save_trip_schreibt_tempo_und_rechnet_dav` vs. `test_bestand_ohne_ueberschreibung_unveraendert`):
+  3196 belegt den Vorrang des gespeicherten Tempos vor `activity="fahrrad_20"` und den Erhalt von `activity`,
+  3197 prüft ohne `activity` zusätzlich `stage_speeds == tempo_speeds` und S2. Nur der Zahlenwert ist gleich;
+  beide bleiben (Spec, Einzelentscheidung 2).
+
+### Verwaiste Verweise
+Suche nach `test_gehzeit_folgt_wegstrecke`, `test_ac4_wanderer_default_naismith_sum`,
+`test_ac6_premium_gleich_sms_trotz_abweichender_premium_ebene` über tests/, docs/, internal/, frontend/, .claude/:
+umgestellt in beiden Falllisten (auf `test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms`,
+`AC-1`, Befund „ersetzt #3099 AC-6 (#3208)"), in `docs/context/feat-3100-premium-sms-fallliste.md` und in
+`docs/specs/_archive/tests/issue_802_fahrrad_segment_zeit_tests.md`. Verbleibend nur der von der Spec verlangte
+Herkunfts-Kommentar im Kopf von `test_gehzeit_etappenregel.py` sowie dieses Dokument, Spec und Artefakte.
