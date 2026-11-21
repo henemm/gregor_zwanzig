@@ -90,8 +90,9 @@ def test_ac7_ableitung_reicht_ueber_das_tagesfenster_hinaus():
     Minute 20 (20:05 Ortszeit) bis Minute 150 (22:15 Ortszeit), also weit
     ueber ein Tagesfenster-Ende von 20:00 hinaus
     WHEN das Ende abgeleitet wird
-    THEN steht `event_end_minutes` bei 150 — die Ableitung kennt das
-    Tagesfenster nicht und kappt nichts.
+    THEN steht `event_end_minutes` bei 155 (Deckungsgrenze des letzten
+    nassen Frames 150, #3254) — die Ableitung kennt das Tagesfenster nicht
+    und kappt nichts.
 
     RED heute: `NowcastResult` kennt `event_end_minutes` nicht."""
     raster = {m: (1.0 if 20 <= m <= 150 else 0.0) for m in range(0, 181, 5)}
@@ -101,8 +102,8 @@ def test_ac7_ableitung_reicht_ueber_das_tagesfenster_hinaus():
     assert result.onset_minutes == 20, (
         f"Vorbedingung: Beginn bei Minute 20, bekam {result.onset_minutes}"
     )
-    assert result.event_end_minutes == 150, (
-        f"RED: ungekapptes Ende bei Minute 150 erwartet, bekam "
+    assert result.event_end_minutes == 155, (
+        f"Ungekapptes Ende bei Minute 155 (#3254) erwartet, bekam "
         f"{result.event_end_minutes!r}"
     )
     assert result.event_ongoing_beyond_horizon is False, (
