@@ -1,0 +1,853 @@
+TAP version 13
+# Subtest: \#3202 AC-3 adresseGekuerzt — Lokalteil + „@…“, nie Volltext, nie Fehler
+    # Subtest: adresseGekuerzt("henning@example.com") = "henning@…"
+    not ok 1 - adresseGekuerzt("henning@example.com") = "henning@…"
+      ---
+      duration_ms: 34.697369
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:129:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert adresseGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:130:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: adresseGekuerzt("a@x.de") = "a@…"
+    not ok 2 - adresseGekuerzt("a@x.de") = "a@…"
+      ---
+      duration_ms: 1.671169
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:129:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert adresseGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:130:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: adresseGekuerzt("vorname.nachname+reise@example.org") = "vorname.nachname+reise@…"
+    not ok 3 - adresseGekuerzt("vorname.nachname+reise@example.org") = "vorname.nachname+reise@…"
+      ---
+      duration_ms: 0.794429
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:129:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert adresseGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:130:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: adresseGekuerzt("") = ""
+    not ok 4 - adresseGekuerzt("") = ""
+      ---
+      duration_ms: 3.239547
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:129:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert adresseGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:130:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: adresseGekuerzt("ohne-klammeraffe.example.com") = ""
+    not ok 5 - adresseGekuerzt("ohne-klammeraffe.example.com") = ""
+      ---
+      duration_ms: 2.739587
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:129:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert adresseGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:130:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..5
+not ok 1 - \#3202 AC-3 adresseGekuerzt — Lokalteil + „@…“, nie Volltext, nie Fehler
+  ---
+  duration_ms: 44.323918
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:120:1'
+  failureType: 'subtestsFailed'
+  error: '5 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3202 AC-3 nummerGekuerzt — „+<Landesvorwahl> <3 Ziffern> …“, nie Volltext, nie Fehler
+    # Subtest: nummerGekuerzt("+491711234567") = "+49 171 …"
+    not ok 1 - nummerGekuerzt("+491711234567") = "+49 171 …"
+      ---
+      duration_ms: 1.747638
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:151:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert nummerGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:152:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nummerGekuerzt("+49 171 0000000") = "+49 171 …"
+    not ok 2 - nummerGekuerzt("+49 171 0000000") = "+49 171 …"
+      ---
+      duration_ms: 2.516607
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:151:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert nummerGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:152:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nummerGekuerzt("+14155550123") = "+1 415 …"
+    not ok 3 - nummerGekuerzt("+14155550123") = "+1 415 …"
+      ---
+      duration_ms: 1.962668
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:151:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert nummerGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:152:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nummerGekuerzt("+79161234567") = "+7 916 …"
+    not ok 4 - nummerGekuerzt("+79161234567") = "+7 916 …"
+      ---
+      duration_ms: 1.963697
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:151:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert nummerGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:152:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nummerGekuerzt("+353871234567") = "+353 871 …"
+    not ok 5 - nummerGekuerzt("+353871234567") = "+353 871 …"
+      ---
+      duration_ms: 0.69759
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:151:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert nummerGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:152:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nummerGekuerzt("+41 79 123 45 67") = "+41 791 …"
+    not ok 6 - nummerGekuerzt("+41 79 123 45 67") = "+41 791 …"
+      ---
+      duration_ms: 0.863948
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:151:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert nummerGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:152:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nummerGekuerzt("0171 1234567") = "017 …"
+    not ok 7 - nummerGekuerzt("0171 1234567") = "017 …"
+      ---
+      duration_ms: 1.818488
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:151:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert nummerGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:152:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nummerGekuerzt("0171-1234567") = "017 …"
+    not ok 8 - nummerGekuerzt("0171-1234567") = "017 …"
+      ---
+      duration_ms: 1.207998
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:151:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert nummerGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:152:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nummerGekuerzt("+4917") = "+49 17 …"
+    not ok 9 - nummerGekuerzt("+4917") = "+49 17 …"
+      ---
+      duration_ms: 0.871619
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:151:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert nummerGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:152:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nummerGekuerzt("12") = "12 …"
+    not ok 10 - nummerGekuerzt("12") = "12 …"
+      ---
+      duration_ms: 3.377796
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:151:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert nummerGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:152:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: nummerGekuerzt("") = ""
+    not ok 11 - nummerGekuerzt("") = ""
+      ---
+      duration_ms: 4.598985
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:151:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert nummerGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:152:14)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: lange Nummern erscheinen nie im Volltext (auch nicht ihre Endziffern)
+    not ok 12 - lange Nummern erscheinen nie im Volltext (auch nicht ihre Endziffern)
+      ---
+      duration_ms: 1.701218
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:157:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: zustellungModell.ts exportiert nummerGekuerzt() noch nicht
+        + actual - expected
+        
+        + 'undefined'
+        - 'function'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'function'
+      actual: 'undefined'
+      operator: 'strictEqual'
+      stack: |-
+        fn (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:114:9)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:158:13)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..12
+not ok 2 - \#3202 AC-3 nummerGekuerzt — „+<Landesvorwahl> <3 Ziffern> …“, nie Volltext, nie Fehler
+  ---
+  duration_ms: 24.077211
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:136:1'
+  failureType: 'subtestsFailed'
+  error: '12 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3202 AC-1/AC-5 Kanalzeile Normalzustand im Trip (DE)
+    # Subtest: E-Mail „bestätigt · henning@…“ ohne volle Adresse und ohne Empfängerzusatz
+    not ok 1 - E-Mail „bestätigt · henning@…“ ohne volle Adresse und ohne Empfängerzusatz
+      ---
+      duration_ms: 295.200224
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:170:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'bestätigt · henning@example.com'
+        - 'bestätigt · henning@…'
+                               ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'bestätigt · henning@…'
+      actual: 'bestätigt · henning@example.com'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:172:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Trip mit empfaengerZusatz 0 zeigt keinen Zusatz
+    not ok 2 - Trip mit empfaengerZusatz 0 zeigt keinen Zusatz
+      ---
+      duration_ms: 5.146554
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:175:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'bestätigt · henning@example.com'
+        - 'bestätigt · henning@…'
+                               ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'bestätigt · henning@…'
+      actual: 'bestätigt · henning@example.com'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:177:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: SMS „bestätigt · +49 171 …“ ohne volle Nummer
+    not ok 3 - SMS „bestätigt · +49 171 …“ ohne volle Nummer
+      ---
+      duration_ms: 1.693689
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:180:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'bestätigt · +491711234567'
+        - 'bestätigt · +49 171 …'
+                          ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'bestätigt · +49 171 …'
+      actual: 'bestätigt · +491711234567'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:182:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Telegram nur „verbunden“, nie die Chat-ID
+    not ok 4 - Telegram nur „verbunden“, nie die Chat-ID
+      ---
+      duration_ms: 1.986248
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:185:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'verbunden · 987654321'
+        - 'verbunden'
+                    ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'verbunden'
+      actual: 'verbunden · 987654321'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:187:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Telegram: auch das Modell trägt die Chat-ID nicht mehr als Ziel
+    not ok 5 - Telegram: auch das Modell trägt die Chat-ID nicht mehr als Ziel
+      ---
+      duration_ms: 0.714309
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:190:2'
+      failureType: 'testCodeFailure'
+      error: 'Chat-ID im Ziel: 987654321'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:193:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: AC-5 Premium-SMS frisch: nur Status, ohne Rückadresse
+    not ok 6 - AC-5 Premium-SMS frisch: nur Status, ohne Rückadresse
+      ---
+      duration_ms: 1.941728
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:196:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        hinter dem Premium-Status darf nichts angehängt sein
+        + actual - expected
+        
+        + 'inReach · Rückadresse gelernt 01.11.2026 · zuletzt gemeldet 18:04 · wanderer-3202@inreach.example.com'
+        - 'inReach · Rückadresse gelernt 01.11.2026 · zuletzt gemeldet 18:04'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'inReach · Rückadresse gelernt 01.11.2026 · zuletzt gemeldet 18:04'
+      actual: 'inReach · Rückadresse gelernt 01.11.2026 · zuletzt gemeldet 18:04 · wanderer-3202@inreach.example.com'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:201:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..6
+not ok 3 - \#3202 AC-1/AC-5 Kanalzeile Normalzustand im Trip (DE)
+  ---
+  duration_ms: 307.092759
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:169:1'
+  failureType: 'subtestsFailed'
+  error: '6 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3202 AC-4 Kanalzeile Zustand „Lücken“ (DE)
+    # Subtest: SMS „unbestätigt · +49 171 …“
+    not ok 1 - SMS „unbestätigt · +49 171 …“
+      ---
+      duration_ms: 1.954987
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:209:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'unbestätigt · +49 171 0000000'
+        - 'unbestätigt · +49 171 …'
+                                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'unbestätigt · +49 171 …'
+      actual: 'unbestätigt · +49 171 0000000'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:211:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Premium „inReach · Rückadresse verfallen“ ohne Rückadresse
+    not ok 2 - Premium „inReach · Rückadresse verfallen“ ohne Rückadresse
+      ---
+      duration_ms: 2.380478
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:214:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'inReach · Rückadresse verfallen · wanderer-3202@inreach.example.com'
+        - 'inReach · Rückadresse verfallen'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'inReach · Rückadresse verfallen'
+      actual: 'inReach · Rückadresse verfallen · wanderer-3202@inreach.example.com'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:216:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Telegram „nicht verbunden“
+    ok 3 - Telegram „nicht verbunden“
+      ---
+      duration_ms: 5.483382
+      type: 'test'
+      ...
+    1..3
+not ok 4 - \#3202 AC-4 Kanalzeile Zustand „Lücken“ (DE)
+  ---
+  duration_ms: 10.152797
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:208:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3202 AC-2 „+N Empfänger“ nur bei zusätzlichen Empfängern (Orts-Vergleich)
+    # Subtest: ein zusätzlicher Empfänger: „bestätigt · henning@… · +1 Empfänger“
+    not ok 1 - ein zusätzlicher Empfänger: „bestätigt · henning@… · +1 Empfänger“
+      ---
+      duration_ms: 2.200568
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:228:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'bestätigt · henning@example.com'
+        - 'bestätigt · henning@… · +1 Empfänger'
+                               ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'bestätigt · henning@… · +1 Empfänger'
+      actual: 'bestätigt · henning@example.com'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:230:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: zwei zusätzliche Empfänger: „· +2 Empfänger“
+    not ok 2 - zwei zusätzliche Empfänger: „· +2 Empfänger“
+      ---
+      duration_ms: 1.590448
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:233:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'bestätigt · henning@example.com'
+        - 'bestätigt · henning@… · +2 Empfänger'
+                               ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'bestätigt · henning@… · +2 Empfänger'
+      actual: 'bestätigt · henning@example.com'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:235:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Zusatz nur in der E-Mail-Zeile, die anderen Kanäle bleiben gleich
+    not ok 3 - Zusatz nur in der E-Mail-Zeile, die anderen Kanäle bleiben gleich
+      ---
+      duration_ms: 1.339858
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:238:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'bestätigt · +491711234567'
+        - 'bestätigt · +49 171 …'
+                          ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'bestätigt · +49 171 …'
+      actual: 'bestätigt · +491711234567'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:240:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 5 - \#3202 AC-2 „+N Empfänger“ nur bei zusätzlichen Empfängern (Orts-Vergleich)
+  ---
+  duration_ms: 5.390854
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:227:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3202 AC-6 Kanalzeile Englisch
+    # Subtest: Normalzustand EN: „confirmed · henning@…“, „confirmed · +49 171 …“, „connected“
+    not ok 1 - Normalzustand EN: „confirmed · henning@…“, „confirmed · +49 171 …“, „connected“
+      ---
+      duration_ms: 4.299234
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:249:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'confirmed · henning@example.com'
+        - 'confirmed · henning@…'
+                               ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'confirmed · henning@…'
+      actual: 'confirmed · henning@example.com'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:252:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Lücken EN: „unconfirmed · +49 171 …“, „inReach · reply address expired“, „not connected“
+    not ok 2 - Lücken EN: „unconfirmed · +49 171 …“, „inReach · reply address expired“, „not connected“
+      ---
+      duration_ms: 1.991387
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:258:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'unconfirmed · +49 171 0000000'
+        - 'unconfirmed · +49 171 …'
+                                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'unconfirmed · +49 171 …'
+      actual: 'unconfirmed · +49 171 0000000'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:261:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Empfängerzusatz EN aus dem Katalog (kein deutsches Wort)
+    not ok 3 - Empfängerzusatz EN aus dem Katalog (kein deutsches Wort)
+      ---
+      duration_ms: 1.408408
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:266:2'
+      failureType: 'testCodeFailure'
+      error: 'confirmed · henning@example.com'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:269:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 6 - \#3202 AC-6 Kanalzeile Englisch
+  ---
+  duration_ms: 7.94508
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/src/lib/components/shared/zustellung-tab/__tests__/feat3202_kanalzeile_mockup.test.ts:248:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..6
+# tests 32
+# suites 6
+# pass 1
+# fail 31
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1124.004452

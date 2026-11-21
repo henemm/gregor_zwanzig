@@ -52,9 +52,13 @@ const ausnahmen = (): Ausnahme[] => logik.leseAusnahmen(readFileSync(BESITZER, '
 // genau 100 bisherige Lücken der Wetter-Dialogtexte (Grenzen-Titel, Hinweis + abweichend, Bestätigungs-Rumpf)
 // bekommen i18n_key, text_en (und bei {vorlage} muster); alle übrigen Einträge byte-gleich (Diff je ID geprüft).
 // Anzahl 2646, IDs und Mockup-Hash unverändert.
+// #3202 (21.11.): Pin erneut nachgezogen (vorher 9e1449ed…7458fa5d9, Mockup-Hash d1fcdf63…491edb40). Mockup
+// Fassung 4 an die PO-Entscheidungen angeglichen (Kanalzeile Telegram „verbunden“ ohne @name, E-Mail ohne
+// „+1 Empfänger“), Liste neu erzeugt: genau 14 Einträge der Kanaltabelle (Zustellung, ordnung 8 und 15, je
+// Trip/Orte und Zustand) wechseln Text und damit ID; alle übrigen Einträge byte-gleich (Diff geprüft). Anzahl 2646.
 const ALT_ANZAHL = 2646;
-const ALT_SHA = '9e1449ed60be3deade5fc9463c3b5d6163f04a86150e388a43560be7458fa5d9';
-const MOCKUP_HASH = 'sha256:d1fcdf63fb3b9fdc166f537f89af5e0f66992b62541b78176fc2504a491edb40';
+const ALT_SHA = '65265ff375afed03db3c4a4224723ede65e38ac809b7980f15442afa2088d569';
+const MOCKUP_HASH = 'sha256:112bf2f645853eeed82c0a69fd98d6ffeef04dd454f03eaac4095b97479d18c6';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {
 	const e = uebersicht();

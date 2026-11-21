@@ -15,24 +15,6 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.f72bd03de9",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.2ef6fce469",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.normal.-.kanaele.62eaa87d31",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
 			"id": "trip.zustellung.normal.-.stille-stunden.44e4d2a466",
 			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
 			"verweis": "#2795"
@@ -54,24 +36,6 @@
 			"id": "trip.zustellung.laedt.-.briefing-zeiten.76c35674bb",
 			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
 			"verweis": "#2795"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.7a49476562",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.aa5b7ef86b",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.laedt.-.kanaele.e1d5001092",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
 		},
 		{
 			"art": "element",
@@ -99,24 +63,6 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.2f81bccdfd",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.0310a54a53",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.fehler.-.kanaele.6f9c0d8fb4",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
 			"id": "trip.zustellung.fehler.-.stille-stunden.9df43c250b",
 			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
 			"verweis": "#2795"
@@ -141,33 +87,15 @@
 		},
 		{
 			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.5f76db1eb1",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
 			"id": "trip.zustellung.luecken.-.kanaele.cc6ff9b965",
 			"grund": "Zeile „gesperrt“ der Kanalliste (Zustand Lücken) live nicht vorhanden (#3151-Abgleich 20.11.)",
 			"verweis": "#3122"
 		},
 		{
 			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.230491dce3",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
 			"id": "trip.zustellung.luecken.-.kanaele.bc74105dda",
 			"grund": "Zeile „gesperrt“ der Kanalliste (Zustand Lücken) live nicht vorhanden (#3151-Abgleich 20.11.)",
 			"verweis": "#3122"
-		},
-		{
-			"art": "element",
-			"id": "trip.zustellung.luecken.-.kanaele.848a60df31",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
 		},
 		{
 			"art": "element",
@@ -192,24 +120,6 @@
 			"id": "orte.zustellung.normal.-.briefing-zeiten.4fce26a639",
 			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
 			"verweis": "#2795"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.4be85a90a9",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.b906821a1a",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.normal.-.kanaele.f61394f4f3",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
 		},
 		{
 			"art": "element",
@@ -351,7 +261,7 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.zustellung.laedt.-.kanaele.0b4d56f4bc",
+			"id": "orte.zustellung.laedt.-.kanaele.ff74005db4",
 			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
 			"verweis": "#3022"
 		},
@@ -393,7 +303,7 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.zustellung.laedt.-.kanaele.b6ed9ecae6",
+			"id": "orte.zustellung.laedt.-.kanaele.9cd1175c45",
 			"grund": "Echter Befund: hängt der Metrik-Katalog, bleibt der Orte-Reiter Zustellung leer (Trip zeigt sofort)",
 			"verweis": "#3022"
 		},
@@ -591,24 +501,6 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.13a2ebbc86",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.66e7e075f6",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.fehler.-.kanaele.5f756b948a",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
 			"id": "orte.zustellung.fehler.-.stille-stunden.5bb6488a9b",
 			"grund": "Bewusste Abweichung (Tech-Lead-Entscheidung 15.11.): im Mockup reine aria-label der Eingabe (unsichtbar); live ausführlicher und ohne Kartenkontext eindeutig („Uhrzeit Morgen-Briefing“, „Stille Stunden von/bis“, WCAG 2.4.6). Bleibt so.",
 			"verweis": "#2795"
@@ -633,33 +525,15 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.a9e436d3e5",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
 			"id": "orte.zustellung.luecken.-.kanaele.52b1cdb91b",
 			"grund": "Zeile „gesperrt“ der Kanalliste (Zustand Lücken) live nicht vorhanden (#3151-Abgleich 20.11.)",
 			"verweis": "#3122"
 		},
 		{
 			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.11d07ab5db",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "element",
 			"id": "orte.zustellung.luecken.-.kanaele.262a0f67c0",
 			"grund": "Zeile „gesperrt“ der Kanalliste (Zustand Lücken) live nicht vorhanden (#3151-Abgleich 20.11.)",
 			"verweis": "#3122"
-		},
-		{
-			"art": "element",
-			"id": "orte.zustellung.luecken.-.kanaele.11600a0e2f",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
 		},
 		{
 			"art": "element",
@@ -1213,20 +1087,6 @@
 			"text": "No alert. The colour only appears in the briefing.",
 			"grund": "Hinweis „Kein Alarm. Die Farbe erscheint nur im Briefing.“ live zusätzlich, im Mockup ohne Eintrag (#3151-Abgleich 20.11.)",
 			"verweis": "#3203"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"muster": "bestätigt · {adresse}",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
-		},
-		{
-			"art": "zusaetzlich",
-			"reiter": "zustellung",
-			"muster": "confirmed · {adresse}",
-			"grund": "Kanalzeile Zustellung weicht vom Mockup ab (Adresse/Nummer ungekürzt, Chat-ID statt Telegram-Name, ohne „+1 Empfänger“, Zustand Lücken ohne unbestätigt/verfallen) (#3151-Abgleich 20.11.)",
-			"verweis": "#3202"
 		},
 		{
 			"art": "zusaetzlich",

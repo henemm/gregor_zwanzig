@@ -101,11 +101,14 @@ describe('AC-14: je Kanal eine Zeile mit Statuspunkt, Statustext und Ziel', () =
 		const m = await zustellungModell();
 		const st = m.kanalStatus(profilAllesVerbunden());
 		assert.equal(st.email.statusText, 'bestätigt');
-		assert.equal(st.email.ziel, 'henning@example.com');
+		// #3202 (Spec feat_3202_kanalzeile_mockup.md, PO-Entscheidung 20.11.2026): die Kanalzeile zeigt
+		// gekürzte Ziele wie im Mockup Fassung 4 — E-Mail `lokalteil@…`, Nummer `+<Vorwahl> <3 Ziffern> …`,
+		// Telegram ohne Chat-ID. Die Zusicherung bleibt exakt (assert.equal auf den ganzen Wert).
+		assert.equal(st.email.ziel, 'henning@…');
 		assert.equal(st.telegram.statusText, 'verbunden');
-		assert.equal(st.telegram.ziel, '4711');
+		assert.equal(st.telegram.ziel, '');
 		assert.equal(st.sms.statusText, 'bestätigt');
-		assert.equal(st.sms.ziel, '+49171000000');
+		assert.equal(st.sms.ziel, '+49 171 …');
 		for (const k of KANAELE) {
 			assert.equal(st[k].verbunden, true, `${k}: verbunden erwartet`);
 			assert.equal(st[k].ton, 'ok', `${k}: Statuspunkt ok erwartet`);

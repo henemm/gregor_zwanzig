@@ -133,9 +133,12 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # #3194 (20.11., Regel g „zusammengesetzt“ im EN-Zuordner): 100 Dialogtext-Lücken (Grenzen-Titel 54,
     # Grünhinweis/Gewitter-Hinweis + abweichend 42, Bestätigungs-Rumpf 4) aus Katalog-Schlüsselfolgen zugeordnet
     # und abgeräumt; Rest 8: „Mallorca Frühling“ (2, Kontodaten) und 6 nur-EN-Zusatztexte (Metrik-Register, Einheit+Hinweis).
+    # #3202 (21.11., Spec feat_3202_kanalzeile_mockup.md): Kanalzeile gekürzt wie Mockup Fassung 4, alle 23 Einträge
+    # abgeräumt; Mockup angeglichen (Telegram „verbunden“ ohne @name, E-Mail ohne „+1 Empfänger“, PO 20./21.11.)
+    # und Elementliste neu erzeugt — keine Ausnahme, keine Umhängung.
     soll = {
         "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 318, "#2797": 8, "#2968": 0, "#3022": 62,
-        "#3111": 0, "#3194": 8, "#3151": 4, "#3122": 14, "#3202": 23, "#3203": 19, "#3204": 10,
+        "#3111": 0, "#3194": 8, "#3151": 4, "#3122": 14, "#3202": 0, "#3203": 19, "#3204": 10,
         "#3205": 4, "#3145": 0,
     }
     ist = _verweise(daten)
