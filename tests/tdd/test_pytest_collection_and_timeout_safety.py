@@ -105,7 +105,8 @@ _STAGING_DIALER_FILES = (
     "tests/tdd/test_issue_1010_1006_stille_fehler.py",
     "tests/tdd/test_issue_1020_tmp_cookie_perms.py",
     "tests/tdd/test_issue_1068_tier_model_display.py",
-    "tests/tdd/test_issue_496_layout.py",
+    # #3207: tests/tdd/test_issue_496_layout.py entfernt (tot, ADR-0109 Nr. 6
+    # "Keine Vorschau": channel-consequence-*/channel-preview-block weg).
     "tests/tdd/test_issue_576_token_values.py",
     "tests/tdd/test_issue_577_atoms_values.py",
     "tests/tdd/test_issue_675_stage_start_time.py",
