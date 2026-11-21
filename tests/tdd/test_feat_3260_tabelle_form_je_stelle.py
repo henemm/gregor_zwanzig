@@ -546,3 +546,61 @@ def test_ac5_zwei_nutzer_nur_a_sieht_den_ampelpunkt(mit, reihenfolge):  # noqa: 
         for teil in ("html", "plain", "telegram"):
             assert fremd not in mails[eigen][teil], f"{teil} von {eigen} nennt {fremd}"
 
+
+# ---------------------------------------------------------------------------
+# Adversary F003/F005: Skalengrenzen von Hand
+# ---------------------------------------------------------------------------
+
+#: Tagessummen-Skala Niederschlag (T2: 0 / <=5 / <=20 / >20 mm), von Hand.
+#: 3 mm und 12 mm truegen nach der Stunden-Skala (2/10) eine hoehere Stufe.
+TAGESSUMME = [(0, "trocken"), (3, "leicht"), (5, "leicht"), (5.1, "mäßig"),
+              (12, "mäßig"), (20, "mäßig"), (20.1, "stark"), (40, "stark")]
+
+
+@pytest.mark.parametrize("wert,wort", TAGESSUMME)
+def test_f003_ausblick_niederschlag_folgt_der_tagessummen_skala(wert, wort):
+    """Ausblick-Zelle Niederschlag auf Einfach (Text, Kompakt) = Wortstufe der
+    Tagessumme, nicht der Stunden-Skala."""
+    from app.ampel import resolve_ampel
+    from output.renderers.compare_outlook_metric_ids import outlook_zellen
+
+    spalte = {"metric_id": "precipitation", "friendly": True, "unit": "mm", "decimals": 1}
+    zellen = outlook_zellen(wert, spalte, ampel=resolve_ampel(None))
+    assert zellen["text"] == zellen["ascii"] == wort, (wert, zellen)
+
+
+#: Wolken-Grenzen (einschliesslich): <=10 / <=30 / <=70 / <=90 / darueber, von Hand.
+WOLKEN = [(0, "☀️", "klar", "clear"), (10, "☀️", "klar", "clear"),
+          (10.5, "🌤️", "heiter", "mostly clear"), (30, "🌤️", "heiter", "mostly clear"),
+          (30.5, "⛅", "wolkig", "partly cloudy"), (70, "⛅", "wolkig", "partly cloudy"),
+          (70.5, "🌥️", "stark bewölkt", "mostly cloudy"),
+          (90, "🌥️", "stark bewölkt", "mostly cloudy"),
+          (90.5, "☁️", "bedeckt", "overcast"), (100, "☁️", "bedeckt", "overcast")]
+
+
+@pytest.mark.parametrize("pct,symbol,wort_de,wort_en", WOLKEN)
+def test_f005_wolken_symbol_und_wortstufe_an_jeder_grenze(pct, symbol, wort_de, wort_en):
+    """Symbol (Text/HTML) und ASCII-Wortstufe teilen dieselben Grenzen."""
+    from output.metric_format import darstellung
+
+    def zelle(ausgabeart, lang="de"):
+        return darstellung("cloud_total", pct, stelle="outlook", ausgabeart=ausgabeart,
+                           fmt="simplified", ampel=None, wertart="tag", lang=lang)
+
+    assert zelle("text").text == symbol and zelle("html").html == symbol
+    assert zelle("ascii").text == wort_de
+    assert zelle("ascii", "en").text == wort_en
+
+
+def test_f005_ampelpunkt_ohne_abo_ampel_scheitert_laut():
+    """Ein Ampelpunkt ohne Abo-Ampel ist ein Programmierfehler (kein stilles
+    „allgemein“); die Textfassung derselben Zelle geht ohne Ampel."""
+    from output.metric_format import darstellung
+
+    with pytest.raises(ValueError):
+        darstellung("precipitation", 3.0, stelle="hourly", ausgabeart="html",
+                    fmt="simplified", ampel=None)
+    text = darstellung("precipitation", 3.0, stelle="hourly", ausgabeart="text",
+                       fmt="simplified", ampel=None)
+    assert (text.form, text.text, text.stufe) == ("wort", "mäßig", None)
+

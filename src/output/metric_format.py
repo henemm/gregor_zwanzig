@@ -344,9 +344,6 @@ class Zelle:
     stufe: Optional[str]    # green|yellow|orange|red aus der Abo-Ampel
 
 
-_STUFEN_FOLGE = ("green", "yellow", "orange", "red")
-
-
 def _als_zahl(wert) -> Optional[float]:
     try:
         return float(wert)
@@ -354,11 +351,9 @@ def _als_zahl(wert) -> Optional[float]:
         return None
 
 
-def _stufe(metric_id: str, wert, *, ampel: Optional[dict],
-           gegenwind_kmh: Optional[float]) -> Optional[str]:
-    """Ampelstufe aus der Abo-Ampel; Gewitter ueber ``thunder_color``,
-    Windrichtung (Gegenwind) hebt an, addiert nie (#3228). Ohne Ampel
-    (``None``, reine Textfassung) keine Stufe."""
+def _stufe(metric_id: str, wert, *, ampel: Optional[dict]) -> Optional[str]:
+    """Ampelstufe aus der Abo-Ampel; Gewitter ueber ``thunder_color``. Ohne
+    Ampel (``None``, reine Textfassung) keine Stufe."""
     from app.ampel import thunder_color
 
     if ampel is None:
@@ -368,12 +363,7 @@ def _stufe(metric_id: str, wert, *, ampel: Optional[dict],
             return thunder_color(None if wert is None else ThunderLevel(wert), ampel)
         except ValueError:
             return None
-    stufe = severity_for(metric_id, _als_zahl(wert), ampel=ampel)
-    if gegenwind_kmh is None:
-        return stufe
-    richtung = severity_for("wind_direction", gegenwind_kmh, ampel=ampel)
-    return max((s for s in (stufe, richtung) if s is not None),
-               key=_STUFEN_FOLGE.index, default=None)
+    return severity_for(metric_id, _als_zahl(wert), ampel=ampel)
 
 
 def _wortskalen() -> dict:
@@ -433,7 +423,6 @@ _FORM_TEXT = {"zahl": _zahl_text, "wort": _wort, "symbol": _symbol, "kompass": _
 def darstellung(
     metric_id: str, wert, *, stelle: str, ausgabeart: str, fmt: Optional[str],
     ampel: Optional[dict], wertart: str = "stunde", lang: str = "de",
-    hagel: Optional[bool] = None, gegenwind_kmh: Optional[float] = None,
 ) -> Zelle:
     """Die EINE Darstellung eines Metrik-Werts (ADR-0127 Nr. 2, #3260 S1b).
 
@@ -456,10 +445,10 @@ def darstellung(
         raise ValueError(f"darstellung({metric_id!r}): Ampelpunkt braucht die Abo-Ampel")  # i18n-log
     if wert is None:
         return Zelle(_NO_VALUE, _NO_VALUE, form, None)
-    stufe = _stufe(metric_id, wert, ampel=ampel, gegenwind_kmh=gegenwind_kmh)
+    stufe = _stufe(metric_id, wert, ampel=ampel)
     text = _FORM_TEXT[form](metric_id, wert, wertart, lang)
     if form == "ampelpunkt":
-        html = _ampel_dot_css(stufe, hail=hagel is True) if stufe else _NO_VALUE
+        html = _ampel_dot_css(stufe) if stufe else _NO_VALUE
     else:
         html = _html_escape(text)
     return Zelle(text, html, form, stufe)

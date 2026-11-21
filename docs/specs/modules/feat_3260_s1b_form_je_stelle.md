@@ -89,6 +89,8 @@ Siehe Source; Tests unter `tests/tdd/`, `tests/unit/`.
 
 Sonnenstunden bleiben je Stelle verschieden (T7). Die Altform ohne `placements` behält ihren dokumentierten Rest bis zur Migration.
 
+Noch nicht über `darstellung` (Schritt 3/6): Sonnen-Symbol der Trip-Stundentabelle (`helpers.fmt_val` → `get_weather_emoji`), Windrichtung im Orte-Stundenverlauf (`compare_html._render_hour_row` → `degrees_to_compass`) und die Gewitter-Punktfarbe der Trip-E-Mail (`fmt_val`, Zweig `thunder`); alle drei Stellen zählt die Ratsche (`VERARBEITUNG_AUSSEN` bzw. `ID_VERZWEIGUNG` in `email/helpers.py` und `email/compare_html.py`).
+
 ## Architektur-Entscheidung (ADR)
 
 ADR-0127 (Umsetzung), ADR-0124 Nr. 4 (Tabelle).
