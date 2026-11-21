@@ -186,7 +186,9 @@ const GEAENDERT_FREIGEGEBEN: Record<string, Record<string, string>> = {
 		'wetter.gewitter.keins_gruen': '„keins“ ist immer grün.',
 		'wetter.grenzen.hinweis': 'Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze.',
 		'wetter.grenzen.abweichend': 'Abweichend von der Vorlage „{vorlage}“.',
-		'wetter.dialog.beschreibung': 'Beschreibung (optional)'
+		'wetter.dialog.beschreibung': 'Beschreibung (optional)',
+		// #3204 (Spec feat_3204_anzeige_metriken_mockup.md, AC-3): Erklärsatz wortgleich zum Mockup Fassung 4.
+		'wetter.erklaer.anzeige': 'Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten unter „Was steht wo“ ein.'
 	},
 	en: {
 		'wetter.nicht_im_briefing.titel': 'Not in the briefing:',
@@ -199,7 +201,9 @@ const GEAENDERT_FREIGEGEBEN: Record<string, Record<string, string>> = {
 		'wetter.gewitter.keins_gruen': '“none” is always green.',
 		'wetter.grenzen.hinweis': 'Green is everything between “yellow lower” and “yellow upper”. An empty field means: no limit on this side.',
 		'wetter.grenzen.abweichend': 'Changed from the template “{vorlage}”.',
-		'wetter.dialog.beschreibung': 'Description (optional)'
+		'wetter.dialog.beschreibung': 'Description (optional)',
+		// #3204 (AC-3): Abschnittsname wetter.wsw.titel statt „for each list“.
+		'wetter.erklaer.anzeige': 'Display only: no traffic light and no alert. You set raw or simple below under ‘What goes where’.'
 	}
 };
 

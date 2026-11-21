@@ -1,0 +1,170 @@
+TAP version 13
+# Subtest: \#3204 AC-1: Gruppe Temperatur im Mockup (Trip) wie in der App
+    # Subtest: Katalog kennt beide Namen (Vorbedingung)
+    ok 1 - Katalog kennt beide Namen (Vorbedingung)
+      ---
+      duration_ms: 0.66414
+      type: 'test'
+      ...
+    # Subtest: Reihenfolge Temperatur, Nacht, Tages-Tief, Tages-Hoch, Gefühlte (Zustand normal)
+    ok 2 - Reihenfolge Temperatur, Nacht, Tages-Tief, Tages-Hoch, Gefühlte (Zustand normal)
+      ---
+      duration_ms: 0.90529
+      type: 'test'
+      ...
+    # Subtest: Reihenfolge Temperatur, Nacht, Tages-Tief, Tages-Hoch, Gefühlte (Zustand luecken)
+    ok 3 - Reihenfolge Temperatur, Nacht, Tages-Tief, Tages-Hoch, Gefühlte (Zustand luecken)
+      ---
+      duration_ms: 1.680832
+      type: 'test'
+      ...
+    # Subtest: Namen tragen die englischen Katalognamen (EN-Abgleich)
+    ok 4 - Namen tragen die englischen Katalognamen (EN-Abgleich)
+      ---
+      duration_ms: 0.264499
+      type: 'test'
+      ...
+    1..4
+ok 1 - \#3204 AC-1: Gruppe Temperatur im Mockup (Trip) wie in der App
+  ---
+  duration_ms: 4.265106
+  type: 'suite'
+  ...
+# Subtest: \#3204 AC-2/AC-3: Nur-Anzeige-Form wie Windrichtung, Erklärsatz wortgleich zum Mockup
+    # Subtest: temperature_day_low: Untertitel „°C · nur Anzeige, keine Ampel“, Zeilenmitte, Erklärsatz, ohne Grenzen und Alarm-Auswahl
+    ok 1 - temperature_day_low: Untertitel „°C · nur Anzeige, keine Ampel“, Zeilenmitte, Erklärsatz, ohne Grenzen und Alarm-Auswahl
+      ---
+      duration_ms: 1.468622
+      type: 'test'
+      ...
+    # Subtest: temperature_day_high: Untertitel „°C · nur Anzeige, keine Ampel“, Zeilenmitte, Erklärsatz, ohne Grenzen und Alarm-Auswahl
+    ok 2 - temperature_day_high: Untertitel „°C · nur Anzeige, keine Ampel“, Zeilenmitte, Erklärsatz, ohne Grenzen und Alarm-Auswahl
+      ---
+      duration_ms: 0.200061
+      type: 'test'
+      ...
+    1..2
+ok 2 - \#3204 AC-2/AC-3: Nur-Anzeige-Form wie Windrichtung, Erklärsatz wortgleich zum Mockup
+  ---
+  duration_ms: 1.875622
+  type: 'suite'
+  ...
+# Subtest: \#3204 AC-4: Orts-Vergleich bietet Tages-Tief/-Hoch nicht an (ADR-0011)
+    # Subtest: keine Zeile, kein Chip, kein Text der Gehzeit-Metriken in Orte
+    ok 1 - keine Zeile, kein Chip, kein Text der Gehzeit-Metriken in Orte
+      ---
+      duration_ms: 0.923291
+      type: 'test'
+      ...
+    1..1
+ok 3 - \#3204 AC-4: Orts-Vergleich bietet Tages-Tief/-Hoch nicht an (ADR-0011)
+  ---
+  duration_ms: 1.111002
+  type: 'suite'
+  ...
+# Subtest: AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+ok 4 - AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+  ---
+  duration_ms: 8.047298
+  type: 'test'
+  ...
+# Subtest: AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+ok 5 - AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+  ---
+  duration_ms: 18.42266
+  type: 'test'
+  ...
+# Subtest: AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+ok 6 - AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+  ---
+  duration_ms: 32.994796
+  type: 'test'
+  ...
+# Subtest: AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+ok 7 - AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+  ---
+  duration_ms: 1.740811
+  type: 'test'
+  ...
+# Subtest: AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+ok 8 - AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+  ---
+  duration_ms: 44.435787
+  type: 'test'
+  ...
+# Subtest: \#3204 AC-3: Erklärsatz der Nur-Anzeige-Zeilen verweist auf „Was steht wo“ (Mockup-Wortlaut)
+    # Subtest: temperature_day_low: ist Nur-Anzeige (Vorbedingung aus dem Metrik-Register)
+    ok 1 - temperature_day_low: ist Nur-Anzeige (Vorbedingung aus dem Metrik-Register)
+      ---
+      duration_ms: 3.407214
+      type: 'test'
+      ...
+    # Subtest: temperature_day_low DE: wortgleich zum Mockup
+    ok 2 - temperature_day_low DE: wortgleich zum Mockup
+      ---
+      duration_ms: 383.709175
+      type: 'test'
+      ...
+    # Subtest: temperature_day_low EN: nennt den englischen Abschnittsnamen „What goes where“ statt „for each list“
+    ok 3 - temperature_day_low EN: nennt den englischen Abschnittsnamen „What goes where“ statt „for each list“
+      ---
+      duration_ms: 1.07593
+      type: 'test'
+      ...
+    # Subtest: temperature_day_high: ist Nur-Anzeige (Vorbedingung aus dem Metrik-Register)
+    ok 4 - temperature_day_high: ist Nur-Anzeige (Vorbedingung aus dem Metrik-Register)
+      ---
+      duration_ms: 0.126819
+      type: 'test'
+      ...
+    # Subtest: temperature_day_high DE: wortgleich zum Mockup
+    ok 5 - temperature_day_high DE: wortgleich zum Mockup
+      ---
+      duration_ms: 1.329192
+      type: 'test'
+      ...
+    # Subtest: temperature_day_high EN: nennt den englischen Abschnittsnamen „What goes where“ statt „for each list“
+    ok 6 - temperature_day_high EN: nennt den englischen Abschnittsnamen „What goes where“ statt „for each list“
+      ---
+      duration_ms: 0.75062
+      type: 'test'
+      ...
+    # Subtest: wind_direction: ist Nur-Anzeige (Vorbedingung aus dem Metrik-Register)
+    ok 7 - wind_direction: ist Nur-Anzeige (Vorbedingung aus dem Metrik-Register)
+      ---
+      duration_ms: 0.10663
+      type: 'test'
+      ...
+    # Subtest: wind_direction DE: wortgleich zum Mockup
+    ok 8 - wind_direction DE: wortgleich zum Mockup
+      ---
+      duration_ms: 0.771972
+      type: 'test'
+      ...
+    # Subtest: wind_direction EN: nennt den englischen Abschnittsnamen „What goes where“ statt „for each list“
+    ok 9 - wind_direction EN: nennt den englischen Abschnittsnamen „What goes where“ statt „for each list“
+      ---
+      duration_ms: 0.70351
+      type: 'test'
+      ...
+    # Subtest: DE-Katalog nennt den Abschnitt mit seinem Titel wetter.wsw.titel
+    ok 10 - DE-Katalog nennt den Abschnitt mit seinem Titel wetter.wsw.titel
+      ---
+      duration_ms: 0.282431
+      type: 'test'
+      ...
+    1..10
+ok 9 - \#3204 AC-3: Erklärsatz der Nur-Anzeige-Zeilen verweist auf „Was steht wo“ (Mockup-Wortlaut)
+  ---
+  duration_ms: 394.523237
+  type: 'suite'
+  ...
+1..9
+# tests 22
+# suites 4
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1408.93017

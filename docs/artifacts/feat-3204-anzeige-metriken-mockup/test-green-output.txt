@@ -1,0 +1,429 @@
+TAP version 13
+# Subtest: AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+ok 1 - AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+  ---
+  duration_ms: 18.538778
+  type: 'test'
+  ...
+# Subtest: AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+ok 2 - AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+  ---
+  duration_ms: 34.487254
+  type: 'test'
+  ...
+# Subtest: AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+ok 3 - AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+  ---
+  duration_ms: 30.06196
+  type: 'test'
+  ...
+# Subtest: AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+ok 4 - AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+  ---
+  duration_ms: 2.259052
+  type: 'test'
+  ...
+# Subtest: AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+ok 5 - AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+  ---
+  duration_ms: 89.594929
+  type: 'test'
+  ...
+# Subtest: \#3204 AC-3: Erklärsatz der Nur-Anzeige-Zeilen verweist auf „Was steht wo“ (Mockup-Wortlaut)
+    # Subtest: temperature_day_low: ist Nur-Anzeige (Vorbedingung aus dem Metrik-Register)
+    ok 1 - temperature_day_low: ist Nur-Anzeige (Vorbedingung aus dem Metrik-Register)
+      ---
+      duration_ms: 2.224323
+      type: 'test'
+      ...
+    # Subtest: temperature_day_low DE: wortgleich zum Mockup
+    ok 2 - temperature_day_low DE: wortgleich zum Mockup
+      ---
+      duration_ms: 343.069929
+      type: 'test'
+      ...
+    # Subtest: temperature_day_low EN: nennt den englischen Abschnittsnamen „What goes where“ statt „for each list“
+    ok 3 - temperature_day_low EN: nennt den englischen Abschnittsnamen „What goes where“ statt „for each list“
+      ---
+      duration_ms: 2.107972
+      type: 'test'
+      ...
+    # Subtest: temperature_day_high: ist Nur-Anzeige (Vorbedingung aus dem Metrik-Register)
+    ok 4 - temperature_day_high: ist Nur-Anzeige (Vorbedingung aus dem Metrik-Register)
+      ---
+      duration_ms: 0.140599
+      type: 'test'
+      ...
+    # Subtest: temperature_day_high DE: wortgleich zum Mockup
+    ok 5 - temperature_day_high DE: wortgleich zum Mockup
+      ---
+      duration_ms: 8.782179
+      type: 'test'
+      ...
+    # Subtest: temperature_day_high EN: nennt den englischen Abschnittsnamen „What goes where“ statt „for each list“
+    ok 6 - temperature_day_high EN: nennt den englischen Abschnittsnamen „What goes where“ statt „for each list“
+      ---
+      duration_ms: 3.423003
+      type: 'test'
+      ...
+    # Subtest: wind_direction: ist Nur-Anzeige (Vorbedingung aus dem Metrik-Register)
+    ok 7 - wind_direction: ist Nur-Anzeige (Vorbedingung aus dem Metrik-Register)
+      ---
+      duration_ms: 0.135351
+      type: 'test'
+      ...
+    # Subtest: wind_direction DE: wortgleich zum Mockup
+    ok 8 - wind_direction DE: wortgleich zum Mockup
+      ---
+      duration_ms: 0.922931
+      type: 'test'
+      ...
+    # Subtest: wind_direction EN: nennt den englischen Abschnittsnamen „What goes where“ statt „for each list“
+    ok 9 - wind_direction EN: nennt den englischen Abschnittsnamen „What goes where“ statt „for each list“
+      ---
+      duration_ms: 0.672101
+      type: 'test'
+      ...
+    # Subtest: DE-Katalog nennt den Abschnitt mit seinem Titel wetter.wsw.titel
+    ok 10 - DE-Katalog nennt den Abschnitt mit seinem Titel wetter.wsw.titel
+      ---
+      duration_ms: 0.29126
+      type: 'test'
+      ...
+    1..10
+ok 6 - \#3204 AC-3: Erklärsatz der Nur-Anzeige-Zeilen verweist auf „Was steht wo“ (Mockup-Wortlaut)
+  ---
+  duration_ms: 363.224189
+  type: 'suite'
+  ...
+# Subtest: AC-21: wetter.json DE/EN — Bestandstexte unverändert gegenüber dem Abzweigpunkt von origin/main
+    # Subtest: de/wetter.json: Bestandsschlüssel byte-gleich, nur freigegebene Schlüssel neu
+    ok 1 - de/wetter.json: Bestandsschlüssel byte-gleich, nur freigegebene Schlüssel neu
+      ---
+      duration_ms: 15.662247
+      type: 'test'
+      ...
+    # Subtest: en/wetter.json: Bestandsschlüssel byte-gleich, nur freigegebene Schlüssel neu
+    ok 2 - en/wetter.json: Bestandsschlüssel byte-gleich, nur freigegebene Schlüssel neu
+      ---
+      duration_ms: 26.222557
+      type: 'test'
+      ...
+    # Subtest: \#2966 AC-3: Warnung in zwei Schlüsseln, Wortlaut DE und EN festgeschrieben
+    ok 3 - \#2966 AC-3: Warnung in zwei Schlüsseln, Wortlaut DE und EN festgeschrieben
+      ---
+      duration_ms: 0.479061
+      type: 'test'
+      ...
+    # Subtest: \#3189 AC-4: wetter.vorlage.eigene_aus_herkunft in DE und EN, Platzhalter {name} in beiden
+    ok 4 - \#3189 AC-4: wetter.vorlage.eigene_aus_herkunft in DE und EN, Platzhalter {name} in beiden
+      ---
+      duration_ms: 0.443321
+      type: 'test'
+      ...
+    # Subtest: DE und EN haben dieselben wetter.*-Schlüssel
+    ok 5 - DE und EN haben dieselben wetter.*-Schlüssel
+      ---
+      duration_ms: 1.676321
+      type: 'test'
+      ...
+    1..5
+ok 7 - AC-21: wetter.json DE/EN — Bestandstexte unverändert gegenüber dem Abzweigpunkt von origin/main
+  ---
+  duration_ms: 45.274884
+  type: 'suite'
+  ...
+# Subtest: AC-21: keine hartcodierten Nutzertexte in den neuen Bausteinen
+    # Subtest: atoms/Skelett.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+    ok 1 - atoms/Skelett.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+      ---
+      duration_ms: 4.717114
+      type: 'test'
+      ...
+    # Subtest: molecules/Einstellungszeile.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+    ok 2 - molecules/Einstellungszeile.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+      ---
+      duration_ms: 0.943241
+      type: 'test'
+      ...
+    # Subtest: molecules/ChipLeiste.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+    ok 3 - molecules/ChipLeiste.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+      ---
+      duration_ms: 0.50261
+      type: 'test'
+      ...
+    # Subtest: shared/WetterTab.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+    ok 4 - shared/WetterTab.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+      ---
+      duration_ms: 0.926202
+      type: 'test'
+      ...
+    # Subtest: organisms/wetter-tab/WetterTabInhalt.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+    ok 5 - organisms/wetter-tab/WetterTabInhalt.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+      ---
+      duration_ms: 7.232428
+      type: 'test'
+      ...
+    1..5
+ok 8 - AC-21: keine hartcodierten Nutzertexte in den neuen Bausteinen
+  ---
+  duration_ms: 17.091847
+  type: 'suite'
+  ...
+# Subtest: AC-41: Katalog wetter in DE und EN
+    # Subtest: s3a2794_t3_katalog_de_en_gleiche_schluessel_und_platzhalter
+    ok 1 - s3a2794_t3_katalog_de_en_gleiche_schluessel_und_platzhalter
+      ---
+      duration_ms: 1.887402
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t3_katalog_schluesselform_und_werte
+    ok 2 - s3a2794_t3_katalog_schluesselform_und_werte
+      ---
+      duration_ms: 2.480462
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t3_katalog_in_beiden_index_dateien_vereinigt
+    ok 3 - s3a2794_t3_katalog_in_beiden_index_dateien_vereinigt
+      ---
+      duration_ms: 41.715801
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t3_englisch_ist_uebersetzt
+    ok 4 - s3a2794_t3_englisch_ist_uebersetzt
+      ---
+      duration_ms: 0.82895
+      type: 'test'
+      ...
+    1..4
+ok 9 - AC-41: Katalog wetter in DE und EN
+  ---
+  duration_ms: 47.742467
+  type: 'suite'
+  ...
+# Subtest: Pflichttexte der Spec wortgetreu im DE-Katalog (doc-compliance)
+    # Subtest: AC-9: ^Wetter + Was im Briefing steht, was für dich zu viel oder zu wenig ist und ab wann du einen Alarm bekommst.
+    ok 1 - AC-9: ^Wetter + Was im Briefing steht, was für dich zu viel oder zu wenig ist und ab wann du einen Alarm bekommst.
+      ---
+      duration_ms: 1.012881
+      type: 'test'
+      ...
+    # Subtest: AC-9: Lade Metriken …
+    ok 2 - AC-9: Lade Metriken …
+      ---
+      duration_ms: 0.284351
+      type: 'test'
+      ...
+    # Subtest: AC-9: ^Die Metriken konnten nicht geladen werden. + ^Die Verbindung zum Server ist abgebrochen. Deine Einstellungen sind gespeichert und gehen nicht verloren.
+    ok 3 - AC-9: ^Die Metriken konnten nicht geladen werden. + ^Die Verbindung zum Server ist abgebrochen. Deine Einstellungen sind gespeichert und gehen nicht verloren.
+      ---
+      duration_ms: 0.37634
+      type: 'test'
+      ...
+    # Subtest: AC-9: ^Erneut laden
+    ok 4 - AC-9: ^Erneut laden
+      ---
+      duration_ms: 4.495855
+      type: 'test'
+      ...
+    # Subtest: AC-10: ^unverändert + ^{*} Abweichungen + {*} Metriken
+    ok 5 - AC-10: ^unverändert + ^{*} Abweichungen + {*} Metriken
+      ---
+      duration_ms: 0.49443
+      type: 'test'
+      ...
+    # Subtest: AC-10: ^{*} Abweichung ODER ^1 Abweichung
+    ok 6 - AC-10: ^{*} Abweichung ODER ^1 Abweichung
+      ---
+      duration_ms: 3.254874
+      type: 'test'
+      ...
+    # Subtest: AC-10: ^Eigene + ^Vorlagen
+    ok 7 - AC-10: ^Eigene + ^Vorlagen
+      ---
+      duration_ms: 2.685972
+      type: 'test'
+      ...
+    # Subtest: AC-11: ^„{*}“ übernehmen? + ^Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips. + ^Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen für diese Orte. + ^Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen für diesen Ort.
+    ok 8 - AC-11: ^„{*}“ übernehmen? + ^Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses Trips. + ^Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen für diese Orte. + ^Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen für diesen Ort.
+      ---
+      duration_ms: 1.146121
+      type: 'test'
+      ...
+    # Subtest: AC-11: Deine {*} Abweichungen von „{*}“ gehen verloren. + Zustellung, Etappen und Orte bleiben unverändert.
+    ok 9 - AC-11: Deine {*} Abweichungen von „{*}“ gehen verloren. + Zustellung, Etappen und Orte bleiben unverändert.
+      ---
+      duration_ms: 0.743121
+      type: 'test'
+      ...
+    # Subtest: AC-11: ^Übernehmen + ^Abbrechen
+    ok 10 - AC-11: ^Übernehmen + ^Abbrechen
+      ---
+      duration_ms: 5.552656
+      type: 'test'
+      ...
+    # Subtest: AC-12: Auf „{*}“ zurücksetzen
+    ok 11 - AC-12: Auf „{*}“ zurücksetzen
+      ---
+      duration_ms: 0.44009
+      type: 'test'
+      ...
+    # Subtest: AC-14: Alarm ab für alle
+    ok 12 - AC-14: Alarm ab für alle
+      ---
+      duration_ms: 0.243591
+      type: 'test'
+      ...
+    # Subtest: AC-14: {*} von {*} Metriken lösen einen Alarm aus. {*} können keinen auslösen (Vorboten und reine Anzeige).
+    ok 13 - AC-14: {*} von {*} Metriken lösen einen Alarm aus. {*} können keinen auslösen (Vorboten und reine Anzeige).
+      ---
+      duration_ms: 0.441481
+      type: 'test'
+      ...
+    # Subtest: AC-14: Keine der gewählten Metriken kann einen Alarm auslösen. Nimm z.B. Wind, Böen oder Gewitter dazu.
+    ok 14 - AC-14: Keine der gewählten Metriken kann einen Alarm auslösen. Nimm z.B. Wind, Böen oder Gewitter dazu.
+      ---
+      duration_ms: 1.334852
+      type: 'test'
+      ...
+    # Subtest: AC-14: ^Nie + ^Gelb + ^Orange + ^Rot
+    ok 15 - AC-14: ^Nie + ^Gelb + ^Orange + ^Rot
+      ---
+      duration_ms: 2.697774
+      type: 'test'
+      ...
+    # Subtest: AC-15: grün: {*} bis {*} + grün: ab {*} + grün: bis {*} + immer grün (keine Grenze gesetzt)
+    ok 16 - AC-15: grün: {*} bis {*} + grün: ab {*} + grün: bis {*} + immer grün (keine Grenze gesetzt)
+      ---
+      duration_ms: 0.791781
+      type: 'test'
+      ...
+    # Subtest: AC-15: kein Alarm (Vorbote) + ^kein Alarm + ^Grenzen ändern
+    ok 17 - AC-15: kein Alarm (Vorbote) + ^kein Alarm + ^Grenzen ändern
+      ---
+      duration_ms: 0.48852
+      type: 'test'
+      ...
+    # Subtest: AC-16: Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze.
+    ok 18 - AC-16: Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze.
+      ---
+      duration_ms: 0.38869
+      type: 'test'
+      ...
+    # Subtest: AC-16: Abweichend von der Vorlage „{*}“.
+    ok 19 - AC-16: Abweichend von der Vorlage „{*}“.
+      ---
+      duration_ms: 0.388621
+      type: 'test'
+      ...
+    # Subtest: AC-16: ^Fertig
+    ok 20 - AC-16: ^Fertig
+      ---
+      duration_ms: 1.620272
+      type: 'test'
+      ...
+    # Subtest: AC-16: Alarm, wenn der Wert seit dem letzten Briefing über {*} {*} steigt + dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. + oder unter {*} {*} fällt
+    ok 21 - AC-16: Alarm, wenn der Wert seit dem letzten Briefing über {*} {*} steigt + dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht. + oder unter {*} {*} fällt
+      ---
+      duration_ms: 0.80262
+      type: 'test'
+      ...
+    # Subtest: AC-18: „keins“ ist immer grün. + keine Ampel, nur Anzeige
+    ok 22 - AC-18: „keins“ ist immer grün. + keine Ampel, nur Anzeige
+      ---
+      duration_ms: 0.35157
+      type: 'test'
+      ...
+    # Subtest: AC-18: Alarm, wenn die Gewitter-Stufe seit dem letzten Briefing auf {*} steigt ({*}). Entwarnung, wenn sie wieder fällt.
+    ok 23 - AC-18: Alarm, wenn die Gewitter-Stufe seit dem letzten Briefing auf {*} steigt ({*}). Entwarnung, wenn sie wieder fällt.
+      ---
+      duration_ms: 0.527011
+      type: 'test'
+      ...
+    # Subtest: AC-18: Mit diesen Farben erreicht Gewitter nie {*}, daher kein Alarm.
+    ok 24 - AC-18: Mit diesen Farben erreicht Gewitter nie {*}, daher kein Alarm.
+      ---
+      duration_ms: 0.39737
+      type: 'test'
+      ...
+    # Subtest: AC-18: Kein Alarm. Die Farbe erscheint nur im Briefing. + Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus.
+    ok 25 - AC-18: Kein Alarm. Die Farbe erscheint nur im Briefing. + Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus.
+      ---
+      duration_ms: 0.40458
+      type: 'test'
+      ...
+    # Subtest: AC-18: Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten unter „Was steht wo“ ein. + Für {*} ist keine Grenze gesetzt, daher kein Alarm.
+    ok 26 - AC-18: Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten unter „Was steht wo“ ein. + Für {*} ist keine Grenze gesetzt, daher kein Alarm.
+      ---
+      duration_ms: 0.579729
+      type: 'test'
+      ...
+    # Subtest: AC-19: {*} ist jetzt im Briefing und in jedem Kanal angehakt. Unter ‚Was steht wo‘ kannst du sie für einzelne Kanäle abwählen.
+    ok 27 - AC-19: {*} ist jetzt im Briefing und in jedem Kanal angehakt. Unter ‚Was steht wo‘ kannst du sie für einzelne Kanäle abwählen.
+      ---
+      duration_ms: 0.523101
+      type: 'test'
+      ...
+    # Subtest: AC-19: Nicht im Briefing + {*} aus dem Briefing nehmen
+    ok 28 - AC-19: Nicht im Briefing + {*} aus dem Briefing nehmen
+      ---
+      duration_ms: 0.3971
+      type: 'test'
+      ...
+    # Subtest: AC-20: im Briefing und als Alarm, sobald sie dein Gebiet betreffen
+    ok 29 - AC-20: im Briefing und als Alarm, sobald sie dein Gebiet betreffen
+      ---
+      duration_ms: 0.30883
+      type: 'test'
+      ...
+    # Subtest: AC-21: Radar-Regen + Alarm, wenn in der nächsten Stunde Regen auf {*} zukommt + ^Anpassen
+    ok 30 - AC-21: Radar-Regen + Alarm, wenn in der nächsten Stunde Regen auf {*} zukommt + ^Anpassen
+      ---
+      duration_ms: 0.61267
+      type: 'test'
+      ...
+    # Subtest: AC-42: Als eigene Vorlage speichern + Gib der Vorlage einen Namen.
+    ok 31 - AC-42: Als eigene Vorlage speichern + Gib der Vorlage einen Namen.
+      ---
+      duration_ms: 0.38861
+      type: 'test'
+      ...
+    # Subtest: AC-42: Als Standard für neue {*} ODER Als Standard für neue Trips + Als Standard für neue Orte
+    ok 32 - AC-42: Als Standard für neue {*} ODER Als Standard für neue Trips + Als Standard für neue Orte
+      ---
+      duration_ms: 0.654189
+      type: 'test'
+      ...
+    # Subtest: AC-42: Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.
+    ok 33 - AC-42: Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.
+      ---
+      duration_ms: 0.43057
+      type: 'test'
+      ...
+    # Subtest: AC-42: Eine Vorlage ‚{*}‘ gibt es schon. Wähle einen anderen Namen.
+    ok 34 - AC-42: Eine Vorlage ‚{*}‘ gibt es schon. Wähle einen anderen Namen.
+      ---
+      duration_ms: 0.8179
+      type: 'test'
+      ...
+    # Subtest: AC-42: Vorlage ‚{*}‘ gespeichert. Du findest sie unter ‚Eigene‘.
+    ok 35 - AC-42: Vorlage ‚{*}‘ gespeichert. Du findest sie unter ‚Eigene‘.
+      ---
+      duration_ms: 0.568461
+      type: 'test'
+      ...
+    1..35
+ok 10 - Pflichttexte der Spec wortgetreu im DE-Katalog (doc-compliance)
+  ---
+  duration_ms: 37.845216
+  type: 'suite'
+  ...
+1..10
+# tests 64
+# suites 5
+# pass 64
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1380.703033
