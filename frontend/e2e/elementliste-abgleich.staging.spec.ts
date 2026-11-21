@@ -50,6 +50,7 @@ import {
 	mitAufraeumen,
 	ordneAbschnitte,
 	eingabeText,
+	sichtbareTextBloecke,
 	seitenIdFuer,
 	wetterPruefPayload,
 	eigeneVorlagePayload,
@@ -124,29 +125,21 @@ function oeffneDetails(arg: { selektor: string; alle: boolean }): void {
 function sichtbareTexte(arg: { selektor: string; alle: boolean }): { marker: boolean; texte: string[] } {
 	const treffer = arg.alle ? Array.from(document.querySelectorAll(arg.selektor)) : [document.querySelector(arg.selektor)].filter((x): x is Element => x !== null);
 	const wurzeln = treffer.length > 0 ? treffer.filter((w) => !treffer.some((a) => a !== w && a.contains(w))) : arg.alle ? [] : [document.body];
-	const MIT_LABEL = new Set(['switch', 'group', 'textbox']);
-	const n = (s: string | null) => String(s ?? '').replace(/\s+/g, ' ').trim();
 	const eingabe = (window as unknown as { __gzEingabeText?: (e: { tag: string; ariaLabel: string | null; placeholder: string | null; value: string }) => string }).__gzEingabeText;
 	if (typeof eingabe !== 'function') throw new Error('sichtbareTexte: window.__gzEingabeText fehlt (addInitScript mit eingabeText nicht gelaufen)');
+	// #3203 (Fix-Loop 1, F003): die ganze Sammel-Regel (Sichtbarkeit, Eingaben, aria-label, Textblöcke) ist
+	// sichtbareTextBloecke aus der Logik (per addInitScript im Fenster, dort per node --test bewacht).
+	type Sammler = (w: Element, stil: (e: Element) => { display: string; visibility: string }, ein: typeof eingabe) => string[];
+	const sammle = (window as unknown as { __gzSichtbareTextBloecke?: Sammler }).__gzSichtbareTextBloecke;
+	if (typeof sammle !== 'function') throw new Error('sichtbareTexte: window.__gzSichtbareTextBloecke fehlt (addInitScript mit sichtbareTextBloecke nicht gelaufen)');
+	// Anzeige wie bisher über checkVisibility (auch Vorfahren oberhalb der Wurzel, content-visibility);
+	// display:contents hat keine eigene Box, seine Kinder bleiben sichtbar.
+	const stil = (e: Element) => {
+		const s = getComputedStyle(e);
+		return { display: s.display === 'contents' || e.checkVisibility() ? s.display : 'none', visibility: s.visibility };
+	};
 	const texte: string[] = [];
-	for (const wurzel of wurzeln) {
-		for (const el of [wurzel, ...Array.from(wurzel.querySelectorAll('*'))]) {
-			if (el.closest('script,style,[aria-hidden="true"]') || !el.checkVisibility()) continue;
-			// #3192 (AC-4), Fix-Loop F001: Eingabefelder (INPUT, TEXTAREA) entscheidet allein eingabeText aus der
-			// Logik (per addInitScript im Fenster); für alle anderen Elemente liefert sie ''.
-			const wert = (el as { value?: unknown }).value;
-			const t = n(eingabe({ tag: el.tagName, ariaLabel: el.getAttribute('aria-label'), placeholder: el.getAttribute('placeholder'), value: typeof wert === 'string' ? wert : '' }));
-			if (t) {
-				texte.push(t);
-				continue;
-			}
-			const label = el.getAttribute('aria-label');
-			if (label && (el.tagName === 'BUTTON' || MIT_LABEL.has(el.getAttribute('role') ?? ''))) texte.push(n(label));
-			let eigen = '';
-			for (const k of Array.from(el.childNodes)) if (k.nodeType === 3) eigen += k.nodeValue;
-			if (n(eigen)) texte.push(n(eigen));
-		}
-	}
+	for (const wurzel of wurzeln) texte.push(...sammle(wurzel, stil, eingabe));
 	return { marker: treffer.length > 0, texte };
 }
 
@@ -402,6 +395,8 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 	let leckBefunde: string[] = ['Leckprüfung nicht gelaufen'];
 	// Fix-Loop F001 (AC-4): die im Browser wirkende Eingabefeld-Regel IST eingabeText (per CDP, nicht CSP-betroffen).
 	await page.addInitScript(`window.__gzEingabeText = ${eingabeText.toString()};`);
+	// #3203: die im Browser wirkende Sichtbarkeitsregel IST sichtbareTextBloecke (keine Kopie in dieser Spec).
+	await page.addInitScript(`window.__gzSichtbareTextBloecke = ${sichtbareTextBloecke.toString()};`);
 	let spracheZurueck: Awaited<ReturnType<typeof stelleSpracheWieder>> = { ok: false, meldung: 'Zurückstellen der Profilsprache nicht gelaufen' };
 	try {
 		const gesetzt = await api.put('/api/auth/profile', { data: { language: plan.sprache } });

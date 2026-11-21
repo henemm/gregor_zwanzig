@@ -425,7 +425,7 @@ function renderKebab(){
 
 function why(m,r){
   if(m[11]) return 'Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten unter „Was steht wo“ ein.';
-  if(m[7]===null) return 'Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus.';
+  if(m[7]===null) return m[2].includes('Vorbote')?'Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus.':'Kein Alarm. Die Farbe erscheint nur im Briefing.';
   if(r.alarm==='nie') return 'Kein Alarm. Die Farbe erscheint nur im Briefing.';
   const lvl={gelb:'Gelb',orange:'Orange',rot:'Rot'}[r.alarm];
   if(m[10]){const st=[['mittel',r.mittel],['hoch',r.hoch]].filter(([,c])=>({gelb:1,orange:2,rot:3}[c])>=({gelb:1,orange:2,rot:3}[r.alarm])).map(([n])=>n);return st.length?`Alarm, wenn die Gewitter-Stufe seit dem letzten Briefing auf ${st.join(' oder ')} steigt (${lvl}). Entwarnung, wenn sie wieder fällt.`:`Mit diesen Farben erreicht Gewitter nie ${lvl}, daher kein Alarm.`;}

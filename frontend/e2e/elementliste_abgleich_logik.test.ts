@@ -140,6 +140,19 @@ describe('#3203 AC-2: Trennpunkt und grün-Text sind EIN Text', () => {
 	});
 });
 
+describe('#3203 AC-2/AC-3 (F004): verbundener Block ohne Doppelzählung und ohne versteckten Text', () => {
+	test('aria-hidden-Kind MIT Buchstaben neben Eigentext zählt nur im verbundenen Block, nicht zusätzlich einzeln', () => {
+		const w = E('span', {}, {}, 'Dauer ', E('span', HIDDEN, {}, 'Std'), ' gesamt');
+		assert.deepEqual(fn()(w, STIL), ['Dauer Std gesamt']);
+	});
+	test('visibility:hidden unter einem verbundenen aria-hidden-Kind gelangt nicht in den Block', () => {
+		const w = E('span', {}, {}, 'Wert ',
+			E('span', HIDDEN, {}, 'sichtbar', E('span', {}, { visibility: 'hidden' }, 'WEG1')),
+			E('span', HIDDEN, { visibility: 'hidden' }, 'WEG2'));
+		assert.deepEqual(fn()(w, STIL), ['Wert sichtbar']);
+	});
+});
+
 describe('#3203 AC-3: Verstecktes und reine Icons erzeugen kein Rauschen', () => {
 	test('display:none (am Element und am Vorfahr) zählt nicht', () => {
 		const w = E('div', {}, { display: 'block' },
@@ -198,5 +211,73 @@ describe('#3203: Browser-Regel = getestete Regel', () => {
 		assert.match(spec, /^\s*sichtbareTextBloecke,$/m, 'Spec importiert sichtbareTextBloecke aus der Logik');
 		assert.match(spec, /sichtbareTextBloecke\.toString\(\)/, 'sichtbareTextBloecke wird nicht per toString() in den Browser gegeben');
 		assert.ok(!/function sichtbareTextBloecke\b/.test(spec), 'Spec darf keine eigene Kopie der Regel haben');
+	});
+});
+
+// Fix-Loop 1 (Adversary F001/F003): keine neuen Abweichungen in anderen Reitern. Bisheriges Verhalten je Element
+// bleibt; verbunden wird nur ein aria-hidden-Kind mit dem eigenen Text seines Elements. Die vorher ungetestete
+// Browser-Schleife (Eingaben, aria-label, svg-Ausschluss, Doppelzählung) ist jetzt Teil von sichtbareTextBloecke.
+describe('#3203 Fix-Loop 1: bisheriges Verhalten je Element, Sammel-Schleife testbar', () => {
+	type Ein = (e: { tag: string; ariaLabel: string | null; placeholder: string | null; value: string }) => string;
+	type Sammler = (wurzel: Knoten, stil: (el: Knoten) => Stil, eingabe?: Ein) => string[];
+	const sammle = () => fn() as unknown as Sammler;
+	const EIN: Ein = (e) => ((e.tag === 'INPUT' || e.tag === 'TEXTAREA') ? e.ariaLabel || e.placeholder || e.value : '');
+	const INPUT = (attr: Record<string, string>, value: string): Knoten => ({ ...E('input', attr), value } as Knoten);
+
+	test('Zähler/Badge (ohne aria-hidden) bleibt eigener Text, wird nicht an den Reiternamen geklebt', () => {
+		const reiter = E('a', {}, { display: 'flex' }, 'Etappen', E('span', {}, {}, '4'));
+		assert.deepEqual(sammle()(reiter, STIL), ['Etappen', '4']);
+	});
+	test('Hervorhebung im Satz bleibt getrennt wie bisher („Amtliche Warnungen“ + Hinweis)', () => {
+		const zeile = E('div', {}, { display: 'block' }, E('b', {}, {}, 'Amtliche Warnungen'), ' immer dabei');
+		assert.deepEqual(sammle()(zeile, STIL), ['immer dabei', 'Amtliche Warnungen']);
+	});
+	test('verbundenes aria-hidden-Kind wird nicht doppelt gezählt', () => {
+		const gruen = E('span', {}, {}, E('span', HIDDEN, {}, '·'), ' grün: ab 3 h');
+		const b = sammle()(gruen, STIL);
+		assert.deepEqual(b, ['· grün: ab 3 h']);
+		assert.ok(!b.includes('·'));
+	});
+	test('reine Zeichen unter aria-hidden („–“, „－“, „:“, „✓“) sind Dekoration; Zahlen und Wörter zählen', () => {
+		const w = E('div', {}, { display: 'block' },
+			E('span', HIDDEN, {}, '–'), E('span', HIDDEN, {}, '－'), E('span', HIDDEN, {}, ':'), E('span', HIDDEN, {}, '✓'),
+			E('span', HIDDEN, {}, '-15'), E('span', HIDDEN, {}, 'mittel'));
+		assert.deepEqual(sammle()(w, STIL), ['-15', 'mittel']);
+	});
+	test('dasselbe Zeichen ohne aria-hidden zählt wie bisher', () => {
+		assert.deepEqual(sammle()(E('div', {}, { display: 'block' }, E('span', {}, {}, '–')), STIL), ['–']);
+	});
+	test('mit eingabe: Eingabefeld-Text und aria-label von Knopf/switch in Dokumentreihenfolge', () => {
+		const w = E('div', {}, { display: 'block' },
+			E('label', {}, {}, 'Name'),
+			INPUT({ 'aria-label': 'Trip-Name' }, 'GR221'),
+			E('button', { 'aria-label': 'Entfernen' }, {}, E('svg', HIDDEN, {}, E('text', {}, {}, 'x'))),
+			E('div', { role: 'switch', 'aria-label': 'Alarm an' }, {}),
+			E('span', { 'aria-label': 'kein Knopf' }, {}, 'Text'));
+		assert.deepEqual(sammle()(w, STIL, EIN), ['Name', 'Trip-Name', 'Entfernen', 'Alarm an', 'Text']);
+	});
+	test('ohne eingabe: keine aria-label und keine Eingaben (nur Textblöcke)', () => {
+		const w = E('div', {}, { display: 'block' }, INPUT({ placeholder: 'Ort' }, ''), E('button', { 'aria-label': 'Entfernen' }, {}));
+		assert.deepEqual(sammle()(w, STIL), []);
+	});
+	test('svg wird auch mit eingabe ausgeschlossen (kein Text, keine Beschriftung darin)', () => {
+		const w = E('div', {}, { display: 'block' }, E('svg', {}, {}, E('text', {}, {}, 'Legende'), E('g', { role: 'group', 'aria-label': 'Achse' }, {})), E('span', {}, {}, 'da'));
+		assert.deepEqual(sammle()(w, STIL, EIN), ['da']);
+	});
+	test('unter aria-hidden keine aria-label und keine Eingaben (wie bisher)', () => {
+		const w = E('div', HIDDEN, { display: 'block' }, E('button', { 'aria-label': 'Schließen' }, {}), INPUT({ placeholder: 'x' }, ''));
+		assert.deepEqual(sammle()(w, STIL, EIN), []);
+	});
+	test('display:none am Vorfahr schließt auch Eingaben und aria-label aus', () => {
+		const w = E('div', {}, { display: 'none' }, E('button', { 'aria-label': 'Weg' }, {}), INPUT({}, 'weg'));
+		assert.deepEqual(sammle()(w, STIL, EIN), []);
+	});
+	test('Staging-Spec gibt eingabeText an sichtbareTextBloecke und hat keine eigene Element-Schleife (doc-compliance-test)', () => {
+		// doc-compliance-test: Verdrahtung im Browser (kein DOM-Parser im Projekt), Wirkung belegt der Staging-Lauf.
+		const spec = readFileSync(join(HERE, 'elementliste-abgleich.staging.spec.ts'), 'utf8');
+		const rumpf = spec.match(/function sichtbareTexte\([\s\S]*?\n\}\n/)?.[0] ?? '';
+		assert.match(rumpf, /sammle\(wurzel, stil, eingabe\)/, 'sichtbareTexte ruft die Logik nicht mit eingabe auf');
+		assert.ok(!/querySelectorAll\('\*'\)/.test(rumpf), 'sichtbareTexte hat wieder eine eigene Element-Schleife');
+		assert.ok(!/childNodes/.test(rumpf), 'sichtbareTexte liest Textknoten selbst statt über die Logik');
 	});
 });
