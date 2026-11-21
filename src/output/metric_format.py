@@ -307,6 +307,24 @@ PRECIP_TYPE_LABEL_DE: dict[PrecipType, str] = {
 }
 
 
+# Issue #3139: EINE Wortquelle fuer die Niederschlagsart in Trip-Mail,
+# Telegram und Orts-Vergleich (Katalog ``vergleich.niederschlagsart.*``).
+_PRECIP_TYPE_KEYS = frozenset({"RAIN", "SNOW", "MIXED", "FREEZING_RAIN"})
+
+
+def precip_type_label(v, *, lang: str = "de") -> str:
+    """Niederschlagsart (Enum oder roher String) -> Wort in ``lang``.
+
+    ``None`` oder unbekannter Wert liefert ``NO_VALUE``."""
+    if v is None:
+        return NO_VALUE
+    key = (v.value if hasattr(v, "value") else str(v)).upper()
+    if key not in _PRECIP_TYPE_KEYS:
+        return NO_VALUE
+    from i18n import t
+    return t(f"vergleich.niederschlagsart.{key.lower()}", lang)
+
+
 # Einzige Quelle Stufe -> Ampelband (Issue #1491, ADR-0025). Konsumenten
 # (Trip-Stundentabelle und Ortsvergleich) leiten Kreisfarbe UND Zell-Toenung
 # aus dieser einen Zuordnung ab statt eigener Kopien.

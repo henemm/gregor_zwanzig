@@ -47,7 +47,7 @@ from output.renderers.email.outlook import (
     _outlook_row, _thunder_band, render_outlook_table,
 )
 from output.metric_format import (
-    NO_VALUE, format_value, severity_for,
+    NO_VALUE, format_value, precip_type_label, severity_for,
 )
 from output.renderers.email.helpers import mit_windrichtung
 from services.windrichtung import zeilen_wert_kmh
@@ -268,19 +268,14 @@ def _sev_rain_safe(v, *, ampel: dict) -> str:
     return _sev_rain(v or 0.0, ampel=ampel)
 
 
-# Compare-eigene Woerter (Katalog ``vergleich.niederschlagsart.*``, Issue #2666).
-_PRECIP_TYPE_KEYS = frozenset({"RAIN", "SNOW", "MIXED", "FREEZING_RAIN"})
-
+# Woerter aus dem Katalog ``vergleich.niederschlagsart.*`` (Issue #2666);
+# seit #3139 geteilt ueber ``output.metric_format.precip_type_label``.
 
 def _fmt_precip_type(v, *, lang: Lang = "de") -> str:
     """Niederschlagsart-TAGESWERT (Issue #1324): PrecipType-Enum -> Wort in
-    ``lang``, analog ``_fmt_thunder``."""
-    if v is None:
-        return NO_VALUE
-    key = v.value if hasattr(v, "value") else str(v)
-    if key not in _PRECIP_TYPE_KEYS:
-        return NO_VALUE
-    return t(f"vergleich.niederschlagsart.{key.lower()}", lang)
+    ``lang``, analog ``_fmt_thunder``. Wortquelle: ``precip_type_label``
+    (Issue #3139)."""
+    return precip_type_label(v, lang=lang)
 
 
 def fmt_word_cell(fmt, value, lang: Lang, hail=None, signals=None) -> str:
