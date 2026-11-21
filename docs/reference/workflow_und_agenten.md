@@ -93,6 +93,8 @@ Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implement
 
 Jede neue Pflicht-Regel, jedes neue Gate, jeder neue Pflicht-Validator muss beim Einführen entweder **eine bestehende Regel ersetzen** oder ein **Prüfdatum (+90 Tage)** tragen. Am Prüfdatum: kein nachweisbarer Fang → Rückbau. Prüfdaten-Tabelle: `docs/reference/gates_und_ratschen.md`. Wirkmodell: `docs/analysis/backlog-spirale-2026-07.md`.
 
+**Tote Tests mitentfernen (#3207, Prüfdatum 2027-02-19):** Wird eine Funktion abgelöst (Kanal, Oberfläche, Befehl, Reiter, Komponente), werden die Tests, die nur sie prüfen, im selben Umbau entfernt, mit Beleg im PR je Datei/Fall: (a) Ziel fehlt per grep in `src`, `api`, `internal`, `frontend/src`, (b) Ablöse-Beleg (ADR/Issue/Spec), (c) Nachfolgetest benannt. Abwesenheits-Wächter, Umgebungs-/Bug-Skips und Migrationstests bleiben. Reine Prozessregel, kein Gate; Fang-Maß am Prüfdatum: Zahl der seither neu entstandenen toten Tests bzw. im selben Umbau mitentfernten Tests.
+
 ## Messaging
 
 Diese Instanz heißt `gregor`. Siehe `~/.claude/CLAUDE.md` → „Inter-Instance Messaging".

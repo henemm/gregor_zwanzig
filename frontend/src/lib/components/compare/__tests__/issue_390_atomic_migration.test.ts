@@ -25,31 +25,13 @@ const PAGE = join(ROOT, 'src/routes/compare/+page.svelte');
 
 // ── AC-1 + AC-5: +page.svelte — ChipBtn → Pill ────────────────────────────
 //
-// OBSOLET durch Issue #439: routes/compare/+page.svelte ist nicht mehr der
-// interaktive Vergleichsrechner, sondern eine Tabellen-Übersicht aller Orts-
-// Vergleiche. Es gibt keine Mobile-Chip-Row mehr und keinen direkten Pill-
-// Import; die alten interaktiven Composites (LocationsRail, PresetHeader,
-// CompareMatrix etc.) leben weiter, aber gehören nicht mehr in /compare.
-// Die folgenden Tests werden als historische Dokumentation belassen und mit
-// test.skip markiert — die zugrundeliegenden Composites bleiben unverändert.
-
-test.skip('AC-1: +page.svelte importiert Pill aus atoms (obsolet durch #439)', () => {
-	const src = readFileSync(PAGE, 'utf-8');
-	assert.match(
-		src,
-		/import\s*\{[^}]*\bPill\b[^}]*\}\s*from\s*['"][^'"]*ui\/pill[^'"]*['"]/,
-		'+page.svelte muss Pill aus $lib/components/ui/pill importieren'
-	);
-});
-
-test.skip('AC-1: Mobile Chip-Row nutzt <Pill> statt inline-Button-Klassen (obsolet durch #439)', () => {
-	const src = readFileSync(PAGE, 'utf-8');
-	const chipRowBlock = src.match(
-		/data-testid="compare-mobile-chip-row"[\s\S]*?(?=<\/div>\s*<Btn|<Btn\s+data-testid="compare-mobile-open-sheet")/
-	)?.[0] ?? '';
-	assert.ok(chipRowBlock.length > 0, 'compare-mobile-chip-row Block nicht gefunden');
-	assert.match(chipRowBlock, /<Pill/, 'Chip-Row muss <Pill>-Element enthalten');
-});
+// Issue #439: routes/compare/+page.svelte ist nicht mehr der interaktive
+// Vergleichsrechner, sondern eine Tabellen-Übersicht aller Orts-Vergleiche.
+// Es gibt keine Mobile-Chip-Row mehr (compare-mobile-chip-row: 0 Treffer in
+// frontend/src). Die drei AC-1-Tests (Pill-Import, <Pill> in der Chip-Row,
+// aria-pressed der Chip-Buttons) waren seither test.skip und sind mit #3207
+// entfernt (abgelöste Funktion ⇒ Tests mitentfernen). Es bleibt der
+// Abwesenheits-Wächter AC-5.
 
 test('AC-5: Alte inline-Button-Klassen aus Mobile Chip-Row entfernt', () => {
 	const src = readFileSync(PAGE, 'utf-8');
@@ -60,15 +42,6 @@ test('AC-5: Alte inline-Button-Klassen aus Mobile Chip-Row entfernt', () => {
 		/rounded-full border border-border bg-muted/,
 		'Alte inline Chip-Button-Klassen (rounded-full border border-border bg-muted) muessen entfernt sein'
 	);
-});
-
-test.skip('AC-1: Mobile Chip-Buttons haben aria-pressed (obsolet durch #439)', () => {
-	const src = readFileSync(PAGE, 'utf-8');
-	const chipRowBlock = src.match(
-		/data-testid="compare-mobile-chip-row"[\s\S]*?(?=<Btn\s+data-testid="compare-mobile-open-sheet")/
-	)?.[0] ?? '';
-	assert.ok(chipRowBlock.length > 0, 'compare-mobile-chip-row Block nicht gefunden');
-	assert.match(chipRowBlock, /aria-pressed/, 'Chip-Buttons muessen aria-pressed haben');
 });
 
 // ── AC-2 + AC-5: PresetHeader.svelte-Tests entfernt ───────────────────────

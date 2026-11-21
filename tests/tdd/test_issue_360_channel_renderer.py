@@ -24,8 +24,6 @@ import json
 from datetime import date, datetime, time, timezone
 from pathlib import Path
 
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -152,23 +150,6 @@ def test_ac1_signal_five_primary_all_in_table():
 
 
 # ===========================================================================
-# AC-2: Signal, 9 primary -> 5 in table, 4 in detail, demoted_count == 4
-# ===========================================================================
-
-
-@pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — Signal-spezifisches Limit (6 Spalten) nicht mehr relevant")
-def test_ac2_signal_nine_primary_caps_at_five():
-    """GIVEN eine Trip mit 9 aktiven primary-Metriken
-    WHEN render_for_channel("signal", dc, "morning") läuft
-    THEN enthält table_columns genau 5 Einträge (Zeit + 5 = 6 Spalten),
-         detail_metrics die übrigen 4 und demoted_count == 4.
-
-    OBSOLET: Signal-Kanal wurde in Bug #610 (Schritt 2/2) entfernt.
-    """
-    pass
-
-
-# ===========================================================================
 # AC-3: Email, gleicher dc -> alle primary in table, demoted_count == 0
 # ===========================================================================
 
@@ -206,29 +187,6 @@ def test_ac4_sms_pushes_everything_to_detail():
 
     assert layout.table_columns == []
     assert layout.demoted_count == 9
-
-
-# ===========================================================================
-# AC-5: render_narrow("signal", ... 9 primary) -> jede Body-Zeile <=26 Zeichen,
-#       Body endet mit ·-getrennter Detail-Zeile
-# ===========================================================================
-
-
-@pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — Signal-26-Zeichen-Constraint nicht mehr relevant")
-def test_ac5_render_narrow_signal_line_width_and_detail_trailer():
-    """OBSOLET: Signal-Kanal wurde in Bug #610 (Schritt 2/2) entfernt."""
-    pass
-
-
-# ===========================================================================
-# AC-6: format_email(...) befüllt report.signal_text, != email_plain
-# ===========================================================================
-
-
-@pytest.mark.skip(reason="Signal-Kanal entfernt (Bug #610 Schritt 2/2) — TripReport.signal_text Feld entfernt")
-def test_ac6_format_email_populates_signal_text():
-    """OBSOLET: Signal-Kanal und TripReport.signal_text wurden in Bug #610 (Schritt 2/2) entfernt."""
-    pass
 
 
 # ===========================================================================

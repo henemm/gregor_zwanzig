@@ -122,35 +122,10 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 	});
 
 	// -------------------------------------------------------------------------
-	// Übersicht-Tab: 4 DetailCards im 2x2-Grid
-
-	// Superseded by Issue #409 — TripOverview nutzt FullProfile + StageList + rechte Spalte statt DetailCards.
-	test.skip('AC-4a: Übersicht zeigt DetailCard Reports (data-testid="detail-card-reports")', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		const card = page.getByTestId('detail-card-reports');
-		await expect(card).toBeVisible();
-	});
-
-	// Superseded by Issue #409 — TripOverview nutzt FullProfile + StageList + rechte Spalte statt DetailCards.
-	test.skip('AC-4b: Übersicht zeigt DetailCard Alarmregeln (data-testid="detail-card-alarmregeln")', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		const card = page.getByTestId('detail-card-alarmregeln');
-		await expect(card).toBeVisible();
-	});
-
-	// Superseded by Issue #409 — TripOverview nutzt FullProfile + StageList + rechte Spalte statt DetailCards.
-	test.skip('AC-4c: Übersicht zeigt DetailCard Route (data-testid="detail-card-route")', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		const card = page.getByTestId('detail-card-route');
-		await expect(card).toBeVisible();
-	});
-
-	// Superseded by Issue #409 — TripOverview nutzt FullProfile + StageList + rechte Spalte statt DetailCards.
-	test.skip('AC-4d: Übersicht zeigt DetailCard Datenstand (data-testid="detail-card-datenstand")', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}`);
-		const card = page.getByTestId('detail-card-datenstand');
-		await expect(card).toBeVisible();
-	});
+	// Übersicht-Tab: die vier DetailCards (AC-4a–d, detail-card-*) sind mit #409
+	// abgelöst (Übersicht = FullProfile + StageList, HubOverview.svelte) und waren
+	// seither test.skip; mit #3207 entfernt (0 Treffer für detail-card- in
+	// frontend/src). Nachfolger: trip-detail-overview-left.spec.ts AC-2 bis AC-10.
 
 	// -------------------------------------------------------------------------
 	// Danger-Zone — entfernt 2026-07-13: danger-zone-Konzept abgebaut, s.
