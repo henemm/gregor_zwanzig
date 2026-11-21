@@ -147,9 +147,12 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # Fix-Loop 1b: Besitzer zeigen nie auf geschlossene Issues. #3194 ist geschlossen: alle nur-EN-Restfälle
     # (29) → #3241 (erweitert, 32 + 29 = 61); „Mallorca Frühling“ (2, Kontoname im Prüfkonto, kein
     # Übersetzungsfall) → #3009 (Abnahme, offen). #3194 damit 0.
+    # #3204 (21.11., Spec feat_3204_anzeige_metriken_mockup.md): alle 10 Einträge abgeräumt. Mockup Fassung 4
+    # zeigt Tages-Tief/-Hoch (Gehzeit) als Nur-Anzeige-Zeilen wie die App, App-Erklärsatz folgt dem Mockup
+    # („unter „Was steht wo““); Elementliste neu erzeugt — keine Ausnahme, keine Umhängung.
     soll = {
         "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 318, "#2797": 8, "#2968": 0, "#3022": 62,
-        "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 2, "#3151": 4, "#3122": 14, "#3202": 0, "#3203": 0, "#3204": 10,
+        "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 2, "#3151": 4, "#3122": 14, "#3202": 0, "#3203": 0, "#3204": 0,
         "#3205": 4, "#3145": 0,
     }
     ist = _verweise(daten)
