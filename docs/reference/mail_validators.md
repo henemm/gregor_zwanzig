@@ -180,9 +180,11 @@ der Hülle. Fehlen sie, scheitert der Lauf mit „SOLL: Ortsfolge nicht prüfbar
 (Exit 1), statt die Ortsfolge still zu überspringen.
 
 **Hülle (Orte):** `{"preset": {...}, "orte": {"<Kennung>": "<Name>"}}` — `orte`
-ist ein Objekt Kennung → Name, keine Liste. Eine Liste (oder ein anderer Typ)
-bricht mit einer klaren Fehlermeldung (`ValueError` aus `soll_aus_daten`) ab,
-nicht mit einem `TypeError` (#3218).
+ist ein Objekt Kennung → Name, keine Liste. Die Hüllen-Prüfung läuft beim Start
+des Validators **immer**, sobald `--konfig` gesetzt ist, also auch mit `--orte`
+und `--min-locations`. Eine falsche Hülle (Liste oder anderer Typ) endet mit
+Exit 2 und der Meldung „FEHLER: --konfig … Huelle: 'orte' muss ein Objekt
+{\"<Kennung>\": \"<Name>\"} sein" statt mit einem Traceback (#3218).
 
 **Quelle der Darstellung Roh/Einfach (#3218):** Trägt das Abo die Tabelle
 `display_config.placements` (Zeilenliste `rows`), gilt für die Darstellung
