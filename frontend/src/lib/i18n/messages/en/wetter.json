@@ -81,7 +81,7 @@
 	"wetter.erklaer.gewitter_nie": "With these colours thunderstorms never reach {stufe}, so no alert.",
 	"wetter.erklaer.nie": "No alert. The colour only appears in the briefing.",
 	"wetter.erklaer.vorbote": "Only coloured in the briefing. Precursors do not trigger alerts.",
-	"wetter.erklaer.anzeige": "Display only: no traffic light and no alert. You set raw or simple below for each list.",
+	"wetter.erklaer.anzeige": "Display only: no traffic light and no alert. You set raw or simple below under ‘What goes where’.",
 	"wetter.erklaer.ohne_grenze": "No limit is set for {stufe}, so no alert.",
 	"wetter.gewitter.keins": "none",
 	"wetter.gewitter.mittel": "moderate",

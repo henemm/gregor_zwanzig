@@ -3611,89 +3611,9 @@
 			"art": "zusaetzlich",
 			"ctx": "trip",
 			"reiter": "wetter",
-			"text": "Tages-Tiefsttemperatur (Gehzeit)",
-			"grund": "Anzeige-Metriken im Trip (Gehzeit-Temperaturen, „nur Anzeige, keine Ampel“) live zusätzlich, im Mockup nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3204"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"text": "°C · nur Anzeige, keine Ampel",
-			"grund": "Anzeige-Metriken im Trip (Gehzeit-Temperaturen, „nur Anzeige, keine Ampel“) live zusätzlich, im Mockup nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3204"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"text": "keine Ampel, nur Anzeige",
-			"grund": "Anzeige-Metriken im Trip (Gehzeit-Temperaturen, „nur Anzeige, keine Ampel“) live zusätzlich, im Mockup nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3204"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"text": "Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten je Liste ein.",
-			"grund": "Anzeige-Metriken im Trip (Gehzeit-Temperaturen, „nur Anzeige, keine Ampel“) live zusätzlich, im Mockup nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3204"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"text": "Tages-Höchsttemperatur (Gehzeit)",
-			"grund": "Anzeige-Metriken im Trip (Gehzeit-Temperaturen, „nur Anzeige, keine Ampel“) live zusätzlich, im Mockup nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3204"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "wetter",
 			"muster": "Reset to \"{vorlage}\"",
 			"grund": "Zurücksetzen-Zeile „Auf \"Alpen-Trekking\" zurücksetzen“ live zusätzlich, in der Elementliste ohne Eintrag (#3151-Abgleich 20.11.)",
 			"verweis": "#3205"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"text": "Daytime low (walking hours)",
-			"grund": "Anzeige-Metriken im Trip (Gehzeit-Temperaturen, „nur Anzeige, keine Ampel“) live zusätzlich, im Mockup nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3204"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"text": "°C · display only, no traffic light",
-			"grund": "Anzeige-Metriken im Trip (Gehzeit-Temperaturen, „nur Anzeige, keine Ampel“) live zusätzlich, im Mockup nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3204"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"text": "no traffic light, display only",
-			"grund": "Anzeige-Metriken im Trip (Gehzeit-Temperaturen, „nur Anzeige, keine Ampel“) live zusätzlich, im Mockup nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3204"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"text": "Display only: no traffic light and no alert. You set raw or simple below for each list.",
-			"grund": "Anzeige-Metriken im Trip (Gehzeit-Temperaturen, „nur Anzeige, keine Ampel“) live zusätzlich, im Mockup nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3204"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"text": "Daytime high (walking hours)",
-			"grund": "Anzeige-Metriken im Trip (Gehzeit-Temperaturen, „nur Anzeige, keine Ampel“) live zusätzlich, im Mockup nicht vorhanden (#3151-Abgleich 20.11.)",
-			"verweis": "#3204"
 		},
 		{
 			"art": "zusaetzlich",

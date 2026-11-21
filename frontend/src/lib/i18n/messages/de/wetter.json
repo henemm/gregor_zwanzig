@@ -81,7 +81,7 @@
 	"wetter.erklaer.gewitter_nie": "Mit diesen Farben erreicht Gewitter nie {stufe}, daher kein Alarm.",
 	"wetter.erklaer.nie": "Kein Alarm. Die Farbe erscheint nur im Briefing.",
 	"wetter.erklaer.vorbote": "Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus.",
-	"wetter.erklaer.anzeige": "Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten je Liste ein.",
+	"wetter.erklaer.anzeige": "Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten unter „Was steht wo“ ein.",
 	"wetter.erklaer.ohne_grenze": "Für {stufe} ist keine Grenze gesetzt, daher kein Alarm.",
 	"wetter.gewitter.keins": "keins",
 	"wetter.gewitter.mittel": "mittel",

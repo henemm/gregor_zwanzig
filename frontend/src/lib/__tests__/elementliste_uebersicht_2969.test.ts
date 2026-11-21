@@ -62,9 +62,15 @@ const ausnahmen = (): Ausnahme[] => logik.leseAusnahmen(readFileSync(BESITZER, '
 // Wetter, metriken, Trip ordnung 106 und Orte ordnung 84, je Zustand normal/luecken) wechseln Text, Schlüssel
 // und ID; die Trip-Folgezeile ordnung 112 (gleicher Text, je Zustand) wechselt nur die ID (Vorkommens-Zähler). Alle
 // übrigen Einträge byte-gleich (Diff geprüft). Anzahl 2646.
-const ALT_ANZAHL = 2646;
-const ALT_SHA = '11ce7550a4e8d7f03e60df58dcc1526cede2c7eeebeb6cc23700b6518eda1986';
-const MOCKUP_HASH = 'sha256:e8d3efb5375527887c7be7081c2aa892324738f7a7f552ee9bfa06e301e8b095';
+// #3204: zwei Anzeige-Metriken ergänzt (21.11.; vorher 11ce7550…eda1986, Mockup-Hash e8d3efb5…5e8b095, Anzahl
+// 2646). Mockup Fassung 4 zeigt Tages-Tief/-Hoch (Gehzeit) im Trip als aktive Nur-Anzeige-Zeilen (Gruppe
+// Temperatur nach Tiefsttemperatur Nacht), der Erklärsatz nennt „Was steht wo“. Liste neu erzeugt: je Zustand
+// normal/luecken neu Name, Untertitel, Zeilenmitte, Erklärsatz, „kein Alarm“, Entfernen-Knopf und die Zeilen in
+// „Was steht wo“ (Name + 4 Haken) beider Metriken; der Zähler „9 von 13 … 3“ wird „9 von 15 … 5“. Orte und alle
+// übrigen Einträge unverändert (Diff geprüft). Anzahl 2690.
+const ALT_ANZAHL = 2690;
+const ALT_SHA = '61d486a366f85a57598c317a4385d85fcd361a05df309c08420748de2843e329';
+const MOCKUP_HASH = 'sha256:eb4b34429611f1a354cb9924e866c5f181012a093c37ac44c95e4a9538f2d1c4';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {
 	const e = uebersicht();
