@@ -1172,22 +1172,123 @@ def normalize_outlook_metric_formats(stored: object) -> Optional[dict[str, bool]
 # sichert tests/tdd/test_katalog_stellen_formen.py.
 _VIER_STELLEN: frozenset = frozenset({"email", "telegram", "hourly", "outlook"})
 _OHNE_STUNDENVERLAUF: frozenset = frozenset({"email", "telegram", "outlook"})
-STELLEN_ZWEI_FORMEN: dict[str, frozenset] = {
-    "wind": _VIER_STELLEN,
-    "gust": _VIER_STELLEN,
-    "precipitation": _VIER_STELLEN,
-    "rain_probability": _VIER_STELLEN,
-    "cloud_total": _VIER_STELLEN,
-    "cloud_low": _VIER_STELLEN,
-    "cloud_mid": _VIER_STELLEN,
-    "cloud_high": _VIER_STELLEN,
-    # Sonnenstunden: im Stundenverlauf gesperrt (kein Stundenwert).
-    "sunshine": _OHNE_STUNDENVERLAUF,
-    # Windrichtung: im Stundenverlauf immer Kompass (eine Form, nicht gesperrt).
-    "wind_direction": _OHNE_STUNDENVERLAUF,
-    # Gewitter: Ampelpunkt nur in der HTML-Mail (PO-Freigabe 2026-11-17).
-    "thunder": frozenset({"email"}),
+
+
+# Issue #3260 S1b (ADR-0127 Nr. 1, Spec feat_3260_s1b_form_je_stelle Nr. 1):
+# nicht nur OB eine Stelle zwei Formen hat, sondern WELCHE Form je Stelle,
+# Ausgabeart und Modus gilt. Formen: ``zahl | wort | symbol | ampelpunkt |
+# kompass``. Ausgabearten: ``html | text | ascii`` (ascii = Kompakt-Mail;
+# fehlt eine Ausgabeart, gilt ``text``). Die Darstellung baut allein
+# ``output.metric_format.darstellung`` aus dieser Tabelle.
+@dataclass(frozen=True)
+class FormPaar:
+    """Form bei Roh (``raw``) und bei Einfach (``simplified``); ``tag`` =
+    abweichende Einfach-Form fuer einen Tageswert (Wertart ``tag``)."""
+
+    raw: str
+    simplified: str
+    tag: Optional[str] = None
+
+    def fuer(self, fmt: object, wertart: object = "stunde") -> str:
+        if fmt != "simplified":
+            return self.raw
+        return self.tag if (wertart == "tag" and self.tag) else self.simplified
+
+
+def _je_stelle(stellen: frozenset, **ausgaben: FormPaar) -> dict[str, dict[str, FormPaar]]:
+    return {stelle: dict(ausgaben) for stelle in stellen}
+
+
+_AMPEL_FORMEN = _je_stelle(_VIER_STELLEN, html=FormPaar("zahl", "ampelpunkt"),
+                           text=FormPaar("zahl", "wort"))
+# Bewoelkung: Symbol in HTML und Text; in der Kompakt-Mail (ASCII) die
+# Wortstufe -- nie ein Emoji-Kurzname wie ``:partly_sunny:`` (AC-4).
+_WOLKEN_FORMEN = _je_stelle(_VIER_STELLEN, html=FormPaar("zahl", "symbol"),
+                            text=FormPaar("zahl", "symbol"), ascii=FormPaar("zahl", "wort"))
+STELLEN_FORMEN: dict[str, dict[str, dict[str, FormPaar]]] = {
+    "wind": _AMPEL_FORMEN,
+    "gust": _AMPEL_FORMEN,
+    "precipitation": _AMPEL_FORMEN,
+    "rain_probability": _AMPEL_FORMEN,
+    "cloud_total": _WOLKEN_FORMEN,
+    "cloud_low": _WOLKEN_FORMEN,
+    "cloud_mid": _WOLKEN_FORMEN,
+    "cloud_high": _WOLKEN_FORMEN,
+    # Sonnenstunden (T7 "wie heute"): die Einfach-Form folgt der Wertart, nicht
+    # der Flaeche -- Stundenwert Symbol (Trip-E-Mail/-Telegram), Tageswert
+    # Wortstufe (Orte-Uebersicht, Orte-Telegram, Ausblick); im Stundenverlauf
+    # gesperrt (kein Stundenwert).
+    "sunshine": _je_stelle(_OHNE_STUNDENVERLAUF, text=FormPaar("zahl", "symbol", tag="wort")),
+    # Windrichtung: Roh = Grad, Einfach = Kompass; im Stundenverlauf immer
+    # Kompass (eine Form, nicht gesperrt).
+    "wind_direction": {
+        **_je_stelle(_OHNE_STUNDENVERLAUF, text=FormPaar("zahl", "kompass")),
+        "hourly": {"text": FormPaar("kompass", "kompass")},
+    },
+    # Gewitter: Ampelpunkt nur in der HTML-Mail (PO-Freigabe 2026-11-17),
+    # sonst ueberall das Stufenwort.
+    "thunder": {
+        "email": {"html": FormPaar("wort", "ampelpunkt"), "text": FormPaar("wort", "wort")},
+        **_je_stelle(frozenset({"telegram", "hourly", "outlook"}),
+                     text=FormPaar("wort", "wort")),
+    },
 }
+
+
+def form(metric_id: object, stelle: object, ausgabeart: object, fmt: object,
+         wertart: object = "stunde") -> str:
+    """Form von ``metric_id`` an ``stelle`` in ``ausgabeart`` bei ``fmt``
+    (``raw``/``simplified``) fuer einen Wert der ``wertart`` (``stunde``/
+    ``tag``). Unbekanntes ergibt ``zahl``; eine fehlende Ausgabeart faellt
+    auf ``text`` zurueck."""
+    ausgaben = STELLEN_FORMEN.get(metric_id, {}).get(stelle) if isinstance(metric_id, str) else None
+    if not ausgaben:
+        return "zahl"
+    paar = ausgaben.get(ausgabeart) or ausgaben.get("text")
+    return paar.fuer(fmt, wertart) if paar else "zahl"
+
+
+# Abgeleitet (nicht mehr von Hand): Stellen, an denen Roh und Einfach in
+# irgendeiner Ausgabeart verschieden sind.
+STELLEN_ZWEI_FORMEN: dict[str, frozenset] = {
+    mid: frozenset(stelle for stelle, ausgaben in stellen.items()
+                   if any(p.raw != p.simplified or (p.tag and p.tag != p.raw)
+                          for p in ausgaben.values()))
+    for mid, stellen in STELLEN_FORMEN.items()
+}
+
+# Wortskala je Metrik und Wertart (``stunde``/``tag``); die Namen loest
+# ``output.metric_format`` zu den Wortfunktionen auf (vormals if-Ketten in
+# den Renderern). Niederschlag: Stunden-Skala vs. Tagessummen-Skala (#2049).
+_WIND_SKALA = {"stunde": "wind_strength", "tag": "wind_strength"}
+_WOLKEN_SKALA = {"stunde": "wolken", "tag": "wolken"}
+WORTSKALA: dict[str, dict[str, str]] = {
+    "wind": _WIND_SKALA,
+    "gust": _WIND_SKALA,
+    "precipitation": {"stunde": "precip_intensity", "tag": "precip_daily_sum"},
+    "rain_probability": {"stunde": "rain_probability", "tag": "rain_probability"},
+    "sunshine": {"tag": "sunshine"},
+    "cloud_total": _WOLKEN_SKALA,
+    "cloud_low": _WOLKEN_SKALA,
+    "cloud_mid": _WOLKEN_SKALA,
+    "cloud_high": _WOLKEN_SKALA,
+    "thunder": {"stunde": "gewitter", "tag": "gewitter"},
+}
+
+# Bewoelkung in Prozent: Obergrenze (einschliesslich, ``None`` = Rest),
+# Symbol und Wortstufe (Katalog-Schluessel). EINE Skala fuer Symbol und Wort
+# (vormals nur in ``cloud_emoji``, Issue #1214 Scheibe 6).
+WOLKEN_STUFEN: tuple[tuple[Optional[float], str, str], ...] = (
+    (10, "☀️", "api.skala.wolken.klar"),
+    (30, "🌤️", "api.skala.wolken.heiter"),
+    (70, "⛅", "api.skala.wolken.wolkig"),
+    (90, "🌥️", "api.skala.wolken.stark_bewoelkt"),
+    (None, "☁️", "api.skala.wolken.bedeckt"),
+)
+
+# Orte-Telegram: Einfach traegt bei diesen Groessen die Stunden-Marke ``@h``
+# (Spec feat_3122 Nr. 4, letzter Satz); Leser ab Scheibe C.
+STUNDEN_MARKE: frozenset = frozenset({"wind", "gust", "precipitation", "rain_probability"})
 
 # Spec Teil A Nr. 5: Groessen, die ein Zeitfenster zusammenfassen (Nacht,
 # Tagestief/-hoch der Gehzeit) -- ohne Stundenwert, daher keine eigene Spalte

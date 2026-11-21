@@ -658,45 +658,12 @@ def build_column_legend(
     return format_column_legend(pairs, lang=lang)
 
 
-# Issue #759: 4-stufiger Ampelpunkt fuer Wind/Boen/Regen/Regenwahrscheinlichkeit.
-# Issue #1222: Kreis-Emojis 🟢🟡🟠🔴 durch gestylte CSS-Dots ersetzt (kein
-# Emoji mehr in E-Mails). Palette (fill, ring) je Level, Ring an _risk_dot
-# (html.py) angelehnt, um Gelb/Amber erweitert.
-# Fix #1801 S2: groesserer Punktabstand orange<->rot (ΔE76 16,4 -> 54,4).
-# green/yellow bleiben unveraendert -- nur orange/rot wandern (Karminrot statt
-# Violett, PO-Entscheid 2026-08-14).
-_AMPEL_DOT_COLORS = {
-    "green":  ("#15803d", "rgba(21,128,61,0.18)"),
-    "yellow": ("#d69500", "rgba(214,149,0,0.20)"),
-    "orange": ("#d4530a", "rgba(212,83,10,0.20)"),
-    "red":    ("#a8104a", "rgba(168,16,74,0.22)"),
-}
-
-
-# Issue #1475 Nachbesserung (Punkt 2b): Farbe des zweiten, aeusseren Rings, der
-# ausschliesslich Hagel kennzeichnet. Bewusst Violett (G_ALERT_L4) — die einzige
-# Farbe der Palette, die in KEINER Ampelstufe vorkommt, damit der Zusatzring
-# nicht mit einer hoeheren Gewitterstufe verwechselt werden kann.
-_HAIL_RING_COLOR = "rgba(109,40,217,0.55)"
-
-
-def _ampel_dot_css(level: str, hail: bool = False) -> str:
-    """CSS-Dot (Ring-Optik) fuer eine Ampelstufe — Vorbild `_risk_dot` (html.py).
-
-    Issue #1475 Nachbesserung: bei ``hail=True`` bekommt der Punkt EINEN
-    zusaetzlichen, aeusseren box-shadow-Layer (Doppelring) — rein deskriptives
-    Hagel-Kennzeichen, ohne Handlungsempfehlung (ADR-0007). Bei ``hail=False``
-    bleibt die Ausgabe zeichengleich zum bisherigen Stand.
-    """
-    fill, ring = _AMPEL_DOT_COLORS[level]
-    shadow = f"0 0 0 3px {ring}"
-    if hail:
-        shadow = f"{shadow}, 0 0 0 6px {_HAIL_RING_COLOR}"
-    return (
-        f'<span style="display:inline-block;width:10px;height:10px;'
-        f'border-radius:50%;background:{fill};'
-        f'box-shadow:{shadow};"></span>'
-    )
+# Issue #759/#1222/#1475/#1801: Ampelpunkt-Markup und Palette -- seit #3260
+# (ADR-0127 Nr. 2) im Verarbeitungsmodul; hier nur Re-Export fuer die
+# bestehenden Importe (``from ...helpers import _AMPEL_DOT_COLORS``).
+from output.metric_format import (  # noqa: E402,F401  (Re-Export)
+    _AMPEL_DOT_COLORS, _HAIL_RING_COLOR, _ampel_dot_css,
+)
 
 
 def ampel_dot(value, thresholds: dict) -> str:
@@ -876,12 +843,14 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         return f"{val:.1f}"
     if key in ("wind", "gust"):
         # Issue #435: simplified -> adjective only, kein km/h-Wert in Zelle.
+        # #3260 S1b: auch die Wortstufe traegt die verschmolzene Windrichtung
+        # (Tabelle: Windrichtung Einfach = Kompass in E-Mail und Telegram).
         if mode == "simplified" and not html:
             from services.weather_metrics import format_wind_strength
-            return format_wind_strength(val, lang=lang)
+            s = format_wind_strength(val, lang=lang)
         # Issue #814: HTML-Ampel wird durch indicator_keys gesteuert (use_friendly_format),
         # nicht durch mode (build_format_modes liefert immer 'raw' für diese Metriken).
-        if html and _use_ampel and key == "wind" and row and "_wind_dir_deg" in row \
+        elif html and _use_ampel and key == "wind" and row and "_wind_dir_deg" in row \
                 and "_wind_unerwuenscht_kmh" in row:
             # Issue #3228 (Merge): Punkt = hoehere Stufe aus Wind und Richtung.
             from output.metric_format import severity_for

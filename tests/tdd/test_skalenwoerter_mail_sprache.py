@@ -240,12 +240,24 @@ def _trip_ausblick_zellen(html: str, lang: str) -> str:
     return " | ".join(re.sub(r"<[^>]+>", "", z).strip() for z in zellen)
 
 
+def _klartext_ausblick(plain: str, lang: str) -> str:
+    """Klartext-Ausblick-Block (Ueberschrift in ``lang`` bis Leerzeile)."""
+    from i18n import t
+
+    kopf = t("mail.ausblick.name", lang)
+    if kopf not in plain:
+        return ""
+    return plain.split(kopf, 1)[1].split("\n\n", 1)[0]
+
+
 def test_ac5_englischer_trip_ausblick_zeigt_englische_skalenwoerter():
     """AC-5: Given ein Nutzer mit Sprache Englisch und Trip-Ausblick mit
     Boeen/Niederschlag im Modus "Einfach" / When der Zeitplaner das Briefing
-    versendet / Then zeigt die zugestellte Mail (HTML und Klartext) die
-    englischen Wortstufen und kein deutsches Skalenwort; ein Nutzer ohne
-    Sprachfeld erhaelt dieselbe Mail mit deutschen Wortstufen."""
+    versendet / Then zeigt der Klartext-Ausblick die englischen Wortstufen,
+    keine Mail-Fassung ein deutsches Skalenwort (HTML: Ampelpunkt, #3260 S1b);
+    ein Nutzer ohne Sprachfeld erhaelt die deutschen Wortstufen."""
+    # #3260 S1b: im HTML-Ausblick ist Einfach bei Boeen/Niederschlag der
+    # Ampelpunkt (sprachneutral); die Wortstufe steht im Klartext-Ausblick.
     html_en, plain_en = _trip_mail_fuer_nutzer("tdd-2750-en", {"language": "en"})
     zellen_en = _trip_ausblick_zellen(html_en, "en")
     assert zellen_en, "Der Ausblick fehlt in der englischen Trip-Mail."
@@ -254,12 +266,13 @@ def test_ac5_englischer_trip_ausblick_zeigt_englische_skalenwoerter():
             f"{teil}: deutsche Skalenwoerter {_deutsche_treffer(text)} in der "
             "englischen Trip-Mail."
         )
-    assert _englische_treffer(zellen_en), (
-        f"Keine englische Wortstufe im Ausblick: {zellen_en!r}"
+    ausblick_en = _klartext_ausblick(plain_en, "en")
+    assert _englische_treffer(ausblick_en), (
+        f"Keine englische Wortstufe im Klartext-Ausblick: {ausblick_en!r}"
     )
 
-    html_de, _ = _trip_mail_fuer_nutzer("tdd-2750-de", {})
-    zellen_de = _trip_ausblick_zellen(html_de, "de")
-    assert _deutsche_treffer(zellen_de), (
-        f"Deutscher Nutzer: keine deutsche Wortstufe im Ausblick: {zellen_de!r}"
+    _html_de, plain_de = _trip_mail_fuer_nutzer("tdd-2750-de", {})
+    ausblick_de = _klartext_ausblick(plain_de, "de")
+    assert _deutsche_treffer(ausblick_de), (
+        f"Deutscher Nutzer: keine deutsche Wortstufe im Ausblick: {ausblick_de!r}"
     )

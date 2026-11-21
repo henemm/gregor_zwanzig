@@ -104,6 +104,20 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | Sonnenstunden | Sunshine hours | Sun |
 | UV-Index | UV index | UV |
 
+### Wortstufe Bewölkung (`api.skala.wolken.*`, #3260)
+
+Kompakt-Mail (ASCII) bei Bewölkung auf Einfach, dieselben Grenzen wie das Wolken-Symbol (≤10/≤30/≤70/≤90/darüber %).
+
+| Deutsch | Englisch |
+|---|---|
+| klar | clear |
+| heiter | mostly clear |
+| wolkig | partly cloudy |
+| stark bewölkt | mostly cloudy |
+| bedeckt | overcast |
+
+„overcast" ist das Bewölkungswort für „bedeckt". Bekannte Überschneidung: die Sonnenstunden-Stufe „trübe" (`api.skala.sonne.truebe`) heißt englisch ebenfalls „overcast"; der Sonnenstunden-Text bleibt in #3260 Scheibe B unverändert.
+
 ## Konto und Anmeldung
 
 | Deutsch | Englisch |

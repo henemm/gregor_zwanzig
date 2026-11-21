@@ -109,8 +109,9 @@ def _gust_wortstufe(text, quelle: str) -> str:
 def test_ac5_wind_boeen_zeigt_dieselbe_wortstufe_in_allen_vier_ausgaben():
     """AC-5: Given ``outlook_metric_formats={"gust": True}`` / When das
     Briefing fuer E-Mail (HTML), E-Mail (Klartext), E-Mail (kompakt) und
-    Telegram gerendert wird / Then zeigen alle vier Ausgabeorte dieselbe
-    Wortstufe statt der km/h-Zahl."""
+    Telegram gerendert wird / Then zeigen Klartext, Kompakt und Telegram
+    dieselbe Wortstufe statt der km/h-Zahl und die HTML-Mail den Ampelpunkt
+    (seit #3260 S1b, Tabelle feat_3122 Nr. 4)."""
     from tests.helpers.trip_outlook_channels import (
         compact_outlook_block, telegram_outlook_bubble, trip, versendete_teile,
     )
@@ -146,9 +147,17 @@ def test_ac5_wind_boeen_zeigt_dieselbe_wortstufe_in_allen_vier_ausgaben():
         f"aus der Auswahl {AUSWAHL!r} plus der festen ACC-Spalte."
     )
 
+    # #3260 S1b (loest #2049 AC-5/AC-6 fuer HTML ab): die HTML-Zelle traegt auf
+    # Einfach den Ampelpunkt, kein Wort; Klartext, Kompakt und Telegram
+    # zeigen weiter dieselbe Wortstufe.
+    from tests.helpers.einstellung_gleich_mail_trip import html_ausblick
+
     html_zelle = zeilen[0][1] if len(zeilen[0]) > 1 else ""
+    tab = html_ausblick(html)
+    fragment = tab.fragmente[0][tab.spalten.index("gust")]
+    assert html_zelle == "" and "border-radius:50%" in fragment, (
+        f"HTML-Mail: Boeen-Zelle auf Einfach muss der Ampelpunkt sein, ist {html_zelle!r}")
     zellen = {
-        "HTML-Mail": html_zelle,
         "Klartext": _gust_wortstufe(plain_outlook_block(plain), "Klartext"),
         "Kompaktmail": _gust_wortstufe(
             compact_outlook_block(kompakt_body), "Kompaktmail"),
@@ -156,13 +165,8 @@ def test_ac5_wind_boeen_zeigt_dieselbe_wortstufe_in_allen_vier_ausgaben():
             telegram_outlook_bubble(bubbles), "Telegram"),
     }
 
-    import re
-    assert re.fullmatch(_WORTSTUFEN, zellen["HTML-Mail"] or ""), (
-        f"HTML-Mail: Die Boeen-Zelle lautet {zellen['HTML-Mail']!r} statt "
-        "einer Wortstufe (AC-5) -- 'Einfach' wirkt hier nicht."
-    )
     assert len(set(zellen.values())) == 1, (
-        "Die vier Ausgaben zeigen unterschiedliche Boeen-Zellen fuer denselben "
+        "Die drei Textausgaben zeigen unterschiedliche Boeen-Zellen fuer denselben "
         f"Tag: {zellen!r}. Sie stammen aus derselben Auswahl und muessen "
         "uebereinstimmen (AC-5, #1366-Fehlerklasse)."
     )
@@ -400,8 +404,8 @@ def test_ac6_einfach_zeigt_nur_wort_kein_ampelpunkt_im_text():
     """AC-6: Given Boeen ist auf 'Einfach' umgeschaltet, der Rohwert (44
     km/h) liegt im gelben Ampelband / When die Zelle formatiert wird /
     Then enthaelt der (escapte) Text ausschliesslich die Wortstufe -- kein
-    zusaetzliches Ampel-Zeichen -- waehrend ``_metric_column_bg`` fuer
-    denselben Rohwert weiterhin eine nicht-leere Toenung liefert."""
+    zusaetzliches Ampel-Zeichen --, die HTML-Fassung ist der Ampelpunkt
+    (#3260 S1b), und ``_metric_column_bg`` liefert weiterhin die Toenung."""
     import html as _html
 
     from output.renderers.email.outlook import _metric_column_bg
@@ -429,6 +433,15 @@ def test_ac6_einfach_zeigt_nur_wort_kein_ampelpunkt_im_text():
             f"({marker!r}) -- die Ampel darf laut AC-6 ausschliesslich ueber "
             "die Hintergrundtoenung sichtbar sein, nicht im Text."
         )
+
+    # #3260 S1b (loest #2049 AC-6 fuer HTML ab): die HTML-Fassung derselben
+    # Zelle ist der Ampelpunkt -- nur sie, Text/Kompakt bleiben beim Wort.
+    from output.renderers.compare_outlook_metric_ids import outlook_zellen
+
+    fassungen = outlook_zellen(44, column, ampel=resolve_ampel(None))
+    assert fassungen["text"] == fassungen["ascii"] == erwartet, fassungen
+    assert "border-radius:50%" in fassungen["html"] and erwartet not in fassungen["html"], (
+        f"HTML-Fassung auf Einfach ohne Ampelpunkt: {fassungen['html']!r}")
 
     bg = _metric_column_bg(column, 44, ampel=resolve_ampel(None))
     assert bg, (
@@ -560,7 +573,7 @@ def _compare_mail(formats):
         ) from exc
 
 
-def _compare_outlook_zelle(html: str) -> str:
+def _compare_outlook_zelle(html: str, *, roh: bool = False) -> str:
     """Die eine Wert-Zelle der ersten Ausblick-Tagesszeile (Spalte 2 = Böen).
 
     #2136/ADR-0068: die Kopfzeile traegt seither `MetricDefinition.col_label`
@@ -587,26 +600,29 @@ def _compare_outlook_zelle(html: str) -> str:
     assert zeilen and len(zeilen[0]) > 1, (
         f"Ausblick-Tabelle ohne verwertbare Datenzeile: {zeilen!r}"
     )
+    if roh:
+        return str(tabellen[0].find("tbody").find("tr").find_all("td")[1])
     return zeilen[0][1]
 
 
 def test_ac5_ortsvergleich_zeigt_wortstufe_in_html_und_klartext():
     """AC-5 (Ortsvergleich): Given ein Ortsvergleich mit
     ``outlook_metric_formats={"gust": True}`` / When die Vergleichs-Mail
-    gerendert wird / Then zeigen HTML-Ausblick UND Klartext-Ausblick die
-    Wortstufe statt der km/h-Zahl -- dieselbe Zeichenkette, aus derselben
-    Auswahl (der Pflicht-Validator liest nur HTML und ist im Klartext blind,
-    #1366)."""
+    gerendert wird / Then zeigt der HTML-Ausblick den Ampelpunkt (#3260 S1b)
+    und der Klartext-Ausblick die Wortstufe statt der km/h-Zahl (der
+    Pflicht-Validator liest nur HTML und ist im Klartext blind, #1366)."""
     from services.weather_metrics import format_wind_strength
 
     html, plain = _compare_mail({"gust": True})
     erwartet = format_wind_strength(25.0)
 
+    # #3260 S1b (loest #2049 AC-6 fuer HTML ab): HTML-Ausblick auf Einfach =
+    # Ampelpunkt, kein Wort; der Klartext zeigt die Wortstufe.
     zelle = _compare_outlook_zelle(html)
-    assert zelle == erwartet, (
-        f"HTML-Vergleichsmail: Die Boeen-Zelle lautet {zelle!r} statt der "
-        f"Wortstufe {erwartet!r} -- 'Einfach' wirkt im Ortsvergleich nicht "
-        "(Adversary-Finding F001)."
+    fragment = _compare_outlook_zelle(html, roh=True)
+    assert zelle == "" and "border-radius:50%" in fragment, (
+        f"HTML-Vergleichsmail: Die Boeen-Zelle lautet {zelle!r} statt des "
+        "Ampelpunkts -- 'Einfach' wirkt im Ortsvergleich nicht (F001)."
     )
 
     from tests.tdd.test_compare_outlook_metric_selection import (
@@ -776,7 +792,7 @@ def _dienst_preset(preset_id: str, loc_id: str, formats):
     return _compare_preset(preset_id, loc_id, display_config=dc)
 
 
-def _boeen_zelle_aus_dienst_mail(html: str) -> str:
+def _boeen_zelle_aus_dienst_mail(html: str) -> tuple[str, str]:
     """#2136/ADR-0068: Kopfzeile traegt `col_label` ("Gust"), abgeleitet."""
     from app.metric_catalog import get_metric
     from tests.tdd.test_compare_outlook_metric_selection import (
@@ -796,7 +812,8 @@ def _boeen_zelle_aus_dienst_mail(html: str) -> str:
     )
     zeilen = _body_rows(tabellen[0])
     assert zeilen and len(zeilen[0]) > 1, f"Keine Datenzeile: {zeilen!r}"
-    return zeilen[0][1]
+    # (Text, rohes Zell-HTML) -- seit #3260 S1b ist Einfach im HTML der Ampelpunkt.
+    return zeilen[0][1], str(tabellen[0].find("tbody").find("tr").find_all("td")[1])
 
 
 def test_f002_vorschaudienst_zeigt_die_umschaltung_in_der_erzeugten_mail(
@@ -823,11 +840,11 @@ def test_f002_vorschaudienst_zeigt_die_umschaltung_in_der_erzeugten_mail(
         lambda: ComparePreviewService().render_all_channels(
             preset["id"], user_id=user_id),
     )
-    zelle = _boeen_zelle_aus_dienst_mail(html)
-    assert zelle in _wind_wortstufen(), (
-        f"Die Boeen-Zelle der VORSCHAU lautet {zelle!r} statt einer Wortstufe "
-        f"aus {sorted(_wind_wortstufen())} -- die Roh/Einfach-Zuordnung "
-        "erreicht den Vorschau-Renderer nicht (F002)."
+    zelle, fragment = _boeen_zelle_aus_dienst_mail(html)
+    assert zelle == "" and "border-radius:50%" in fragment, (
+        f"Die Boeen-Zelle der VORSCHAU lautet {zelle!r} statt des Ampelpunkts "
+        "(#3260 S1b) -- die Roh/Einfach-Zuordnung erreicht den Vorschau-"
+        "Renderer nicht (F002)."
     )
 
 
@@ -857,12 +874,12 @@ def test_f002_versandpfad_zeigt_die_umschaltung_in_der_erzeugten_mail(
             all_locations_cache=[loc],
         ),
     )
-    zelle = _boeen_zelle_aus_dienst_mail(html)
-    assert zelle in _wind_wortstufen(), (
-        f"Die Boeen-Zelle der VERSANDMAIL lautet {zelle!r} statt einer "
-        f"Wortstufe aus {sorted(_wind_wortstufen())} -- die Roh/Einfach-"
-        "Zuordnung erreicht den Versandpfad nicht (F002). Der Empfaenger saehe "
-        "etwas anderes als die Vorschau."
+    zelle, fragment = _boeen_zelle_aus_dienst_mail(html)
+    assert zelle == "" and "border-radius:50%" in fragment, (
+        f"Die Boeen-Zelle der VERSANDMAIL lautet {zelle!r} statt des "
+        "Ampelpunkts (#3260 S1b) -- die Roh/Einfach-Zuordnung erreicht den "
+        "Versandpfad nicht (F002). Der Empfaenger saehe etwas anderes als die "
+        "Vorschau."
     )
 
 
@@ -898,7 +915,7 @@ def test_f003_bestandsvergleich_ohne_zuordnung_rendert_unveraendert_rohzahlen(
             all_locations_cache=[loc],
         ),
     )
-    zelle = _boeen_zelle_aus_dienst_mail(html)
+    zelle, _fragment = _boeen_zelle_aus_dienst_mail(html)
     assert zelle.endswith("km/h") and any(c.isdigit() for c in zelle), (
         f"Die Boeen-Zelle eines Bestands-Vergleichs lautet {zelle!r} statt "
         "einer Rohzahl mit Einheit -- die Neuerung wirkt ungefragt auf jeden "
