@@ -526,6 +526,46 @@ def _hat_tabelle(dc: object) -> bool:
     return read_placements(_feld(dc, "placements")) is not None
 
 
+#: Spec #3122 Nr. 5, von Hand: Fenster-Groessen (Tag/Nacht-Zeitfenster) haben
+#: keinen Stundenwert und beim Trip keine eigene E-Mail-Spalte.
+_FENSTER = frozenset({"temperature_night", "wind_chill_night", "temperature_day_low",
+                      "temperature_day_high", "wind_chill_day_low", "wind_chill_day_high"})
+#: Ohne Tageswert (kein Ausblick): die Fenster-Groessen und die nicht waehlbaren.
+_OHNE_TAGESWERT = _FENSTER | {"cape", "confidence", "temperature_cold"}
+#: Nicht waehlbar: Zeilen dazu haben in der Tabelle keine Wirkung (Nr. 1).
+_NICHT_WAEHLBAR = frozenset({"cape", "confidence", "temperature_cold"})
+_TABELLEN_STELLEN = ("email", "telegram", "sms", "hourly", "outlook")
+
+
+def _sperre(mid: str, stelle: str, surface: str) -> str | None:
+    """Spec #3122 Nr. 5 (von Hand): Grund, wenn ``mid`` an ``stelle`` gesperrt ist."""
+    if stelle == "hourly" and (mid in _FENSTER or mid == "sunshine"):
+        return "kein_stundenwert"
+    if stelle == "email" and surface == "trip" and mid in _FENSTER:
+        return "keine_eigene_spalte"
+    if stelle == "outlook" and mid in _OHNE_TAGESWERT:
+        return "kein_tageswert"
+    return None
+
+
+def _gespeicherte_zeilen(dc: object) -> list[tuple[str, dict]]:
+    """Spec #3122 Nr. 1 (von Hand): ``placements.rows`` als (metric_id, places)
+    in Listenfolge; erste Zeile je Metrik zaehlt, nur boolesche Haken bekannter
+    Stellen. Keine lesbare Zeilenliste = keine Tabelle (leer)."""
+    roh = dc.get("placements") if isinstance(dc, dict) else getattr(dc, "placements", None)
+    if not isinstance(roh, dict) or not isinstance(roh.get("rows"), list):
+        return []
+    zeilen: dict[str, dict] = {}
+    for z in roh["rows"]:
+        mid = z.get("metric_id") if isinstance(z, dict) else None
+        if not isinstance(mid, str) or mid in _NICHT_WAEHLBAR or mid in zeilen:
+            continue
+        p = z.get("places")
+        zeilen[mid] = ({s: v for s, v in p.items() if s in _TABELLEN_STELLEN and isinstance(v, bool)}
+                       if isinstance(p, dict) else {})
+    return list(zeilen.items())
+
+
 def _tabellen_folge(dc: object, grund_ids: list[str], stelle: str, surface: str) -> list[str]:
     """#3242: Katalog-IDs, die laut Tabelle an ``stelle`` gelten, in Zeilenfolge.
 
@@ -535,14 +575,10 @@ def _tabellen_folge(dc: object, grund_ids: list[str], stelle: str, surface: str)
     direkt hinter der Eltern-Zeile (hinter Geschwistern) mit deren Haken; Rest
     der Grundauswahl hinten, ueberall an. Sperre (``stellen_sperre``) entfernt,
     ausser ``keine_eigene_spalte``; Stundenverlauf/Ausblick nur bei E-Mail
-    strikt an; ``places[stelle] is False`` = aus."""
-    from app.metric_catalog import stellen_sperre
-    from services.placements import _feld, read_placements
-
-    gelesen = read_placements(_feld(dc, "placements"))
+    strikt an; ``places[stelle] is False`` = aus. Tabelle und Sperren von Hand
+    nach Spec #3122 Teil A Nr. 1/5 (ADR-0127: kein Produkt-Import)."""
     grund = list(dict.fromkeys(grund_ids))
-    zeilen = [(r.metric_id, dict(r.places)) for r in (gelesen.rows if gelesen else ())
-              if r.metric_id in grund]
+    zeilen = [(m, p) for m, p in _gespeicherte_zeilen(dc) if m in grund]
     for mid in grund:
         elter = _ELTERN.get(mid) if surface == "trip" else None
         ids = [m for m, _p in zeilen]
@@ -555,12 +591,12 @@ def _tabellen_folge(dc: object, grund_ids: list[str], stelle: str, surface: str)
     zeilen += [(m, {}) for m in grund if m not in {z for z, _p in zeilen}]
     folge = []
     for mid, places in zeilen:
-        email_sperre = stellen_sperre(mid, "email", surface)
+        email_sperre = _sperre(mid, "email", surface)
         email_an = email_sperre is None and places.get("email") is not False
         if stelle == "email":
             an = email_an or email_sperre == "keine_eigene_spalte"
         else:
-            an = (email_an and stellen_sperre(mid, stelle, surface) is None
+            an = (email_an and _sperre(mid, stelle, surface) is None
                   and places.get(stelle) is not False)
         if an:
             folge.append(mid)
