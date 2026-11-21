@@ -2,28 +2,17 @@ import { test, expect } from '@playwright/test';
 import { login } from './helpers.js';
 
 /**
- * TDD RED Tests — Epic #133 Step 7 — Marken-CTAs auf accent (Issue #219)
+ * Epic #133 Step 7 — Marken-CTAs (Issue #219)
  *
- * Diese Tests MÜSSEN vor der Implementierung ROT sein:
- * - Cockpit / Trips-Liste / Compare haben aktuell variant="primary"
- * - Erwartet wird variant="accent" → data-variant="accent" am DOM
+ * #3207 (tote Tests mitentfernen): AC-1 (Startseiten-CTA `cta-new-trip`, seit #294
+ * ohne Treffer in frontend/src) und AC-3 (Compare-Button „Vergleichen", seit dem
+ * Umbau von /compare zur Listen-Übersicht #439/#2278 ohne Pendant) sind entfernt.
+ * Es bleibt die geltende Zusicherung AC-2 (Hauptaktion = Ink, #2881).
  */
 
-test.describe('Epic #133 Step 7 — Marken-CTAs auf accent', () => {
+test.describe('Epic #133 Step 7 — Marken-CTAs', () => {
 	test.beforeEach(async ({ page }) => {
 		await login(page);
-	});
-
-	test('AC-1: Cockpit "Neuer Trip"-CTA hat variant="accent"', async ({ page }) => {
-		/**
-		 * GIVEN: User ist auf der Startseite /
-		 * WHEN:  getByTestId('cta-new-trip')
-		 * THEN:  data-variant="accent"
-		 */
-		await page.goto('/');
-		const cta = page.getByTestId('cta-new-trip');
-		await expect(cta).toBeVisible();
-		await expect(cta).toHaveAttribute('data-variant', 'accent');
 	});
 
 	// #2881 (R4, ADR-0111 Punkt 6 / ADR-0110 „Hauptaktion = Ink"): die Anlege-Aktion ist seither
@@ -38,17 +27,5 @@ test.describe('Epic #133 Step 7 — Marken-CTAs auf accent', () => {
 		const cta = page.getByRole('button', { name: 'Neuer Trip' });
 		await expect(cta).toBeVisible();
 		await expect(cta).toHaveAttribute('data-variant', 'primary');
-	});
-
-	test('AC-3: Compare "Vergleichen"-Button hat variant="accent"', async ({ page }) => {
-		/**
-		 * GIVEN: User ist auf /compare
-		 * WHEN:  getByRole('button', { name: /Vergleichen/i })
-		 * THEN:  data-variant="accent"
-		 */
-		await page.goto('/compare');
-		const cta = page.getByRole('button', { name: /Vergleichen/i });
-		await expect(cta).toBeVisible();
-		await expect(cta).toHaveAttribute('data-variant', 'accent');
 	});
 });

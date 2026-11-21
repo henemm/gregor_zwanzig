@@ -46,7 +46,7 @@ _TZ = ZoneInfo("Europe/Vienna")
 
 # ---------------------------------------------------------------------------
 # Fixture-Helper — echte Trip-/Segment-/DisplayConfig-Objekte (kein Mock).
-# Muster übernommen aus tests/tdd/test_issue_635_telegram_weather.py.
+# Muster übernommen aus dem in #3207 entfernten test_issue_635_telegram_weather.py.
 # ---------------------------------------------------------------------------
 
 

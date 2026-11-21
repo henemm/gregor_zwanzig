@@ -15,8 +15,6 @@ from datetime import datetime, timedelta, date, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import pytest
-
 from app.loader import get_briefings_dir, save_trip
 from app.trip import Stage, Trip, Waypoint
 from services.trip_command_processor import InboundMessage, TripCommandProcessor
@@ -104,21 +102,6 @@ def _render_html_minimal() -> str:
     )
 
 
-def _render_narrow_minimal(channel: str) -> str:
-    from src.output.renderers.narrow import render_narrow
-    seg = _make_segment_data()
-    dc = _make_dc()
-    return render_narrow(
-        channel,
-        segments=[seg],
-        seg_tables=[[]],
-        dc=dc,
-        report_type="morning",
-        tz=ZoneInfo("UTC"),
-        trip_name="GR20 Test",
-    )
-
-
 # ---------------------------------------------------------------------------
 # Test-Trip helpers for AC-5 / AC-6
 # ---------------------------------------------------------------------------
@@ -172,100 +155,11 @@ class TestAC3HtmlFooterCommands:
     Tests updated to reflect the new #884 design.
     """
 
-    def test_footer_contains_heute(self):
-        # Superseded by #884: HEUTE removed from kommandos block
-        # New block has PAUSE 2d, SKIP, STOP, STATUS, CONFIG, HELP
-        import pytest
-        pytest.skip("Superseded by #884 design: HEUTE removed from kommandos block; new block has PAUSE 2d/SKIP/STOP/STATUS/CONFIG/HELP")
-
-    def test_footer_contains_morgen(self):
-        # Superseded by #884: MORGEN removed from kommandos block
-        import pytest
-        pytest.skip("Superseded by #884 design: MORGEN removed from kommandos block; new block has PAUSE 2d/SKIP/STOP/STATUS/CONFIG/HELP")
-
     def test_footer_contains_status(self):
         html = _render_html_minimal()
         assert "STATUS" in html, (
             "render_html muss 'STATUS' als Antwort-Kommando enthalten (AC-3/#884)"
         )
-
-    def test_footer_contains_hilfe(self):
-        # Superseded by #884: HILFE replaced by HELP
-        import pytest
-        pytest.skip("Superseded by #884 design: HILFE replaced by HELP in new kommandos block")
-
-
-# ---------------------------------------------------------------------------
-# AC-4: render_narrow Telegram enthält Befehle; Signal nicht; Längenlimit
-# ---------------------------------------------------------------------------
-
-@pytest.mark.skip(
-    reason=(
-        "OBSOLET (Issue #1001): render_narrow() und der Text-Befehls-Footer/"
-        "cmd_hint-Block ('Befehle: report morning, ...') wurden als Teil des "
-        "Breaking Replace entfernt (Spec Source-Abschnitt: 'der Text-Befehls-"
-        "Foter-Block (Zeile 531-536) und die cmd_hint-Zeile'). Die Aktionen-"
-        "Bubble (Inline-Keyboard) ersetzt den Text-Hinweis; die Text-Befehle "
-        "selbst bleiben laut Spec funktionsfaehig (AC-6-Regression in #1001, "
-        "abgedeckt durch test_issue_1001_telegram_bubbles.py). Der Signal-Kanal "
-        "existiert zudem seit Issue #610 nicht mehr."
-    )
-)
-class TestAC4NarrowFooterCommands:
-    """AC-4 (superseded): Telegram-Kanal enthält Befehls-Hinweis; Signal-Kanal nicht."""
-
-    def test_telegram_contains_report_morning(self):
-        body = _render_narrow_minimal("telegram")
-        assert "report morning" in body, (
-            "render_narrow('telegram') muss 'report morning' enthalten (AC-4)"
-        )
-
-    def test_telegram_contains_hilfe(self):
-        body = _render_narrow_minimal("telegram")
-        assert "hilfe" in body, (
-            "render_narrow('telegram') muss 'hilfe' enthalten (AC-4)"
-        )
-
-    def test_signal_does_not_contain_commands(self):
-        body = _render_narrow_minimal("signal")
-        assert "report morning" not in body, (
-            "render_narrow('signal') darf KEINEN Befehls-Hinweis enthalten (AC-4)"
-        )
-
-    def test_telegram_within_char_limit(self):
-        from src.output.renderers.channel_layout import CHANNEL_LIMITS
-        body = _render_narrow_minimal("telegram")
-        max_chars = CHANNEL_LIMITS.get("telegram", {}).get("max_chars")
-        if max_chars is not None:
-            assert len(body) <= max_chars, (
-                f"render_narrow('telegram') überschreitet max_chars={max_chars} "
-                f"(tatsächlich: {len(body)}) (AC-4)"
-            )
-
-    def test_signal_within_char_limit(self):
-        from src.output.renderers.channel_layout import CHANNEL_LIMITS
-        body = _render_narrow_minimal("signal")
-        max_chars = CHANNEL_LIMITS.get("signal", {}).get("max_chars")
-        if max_chars is not None:
-            assert len(body) <= max_chars, (
-                f"render_narrow('signal') überschreitet max_chars={max_chars} "
-                f"(tatsächlich: {len(body)}) (AC-4)"
-            )
-
-    def test_telegram_no_line_starts_with_separator(self):
-        """F001: Kein Umbruch darf eine Zeile mit einem Trennzeichen beginnen.
-
-        Sichert dass der cmd_hint-Wortlaut beim Umbrechen via _wrap keine Zeile
-        mit '|', '·' oder ',' beginnen lässt.
-        """
-        body = _render_narrow_minimal("telegram")
-        separators = ("|", "·", ",")
-        for line in body.split("\n"):
-            stripped = line.lstrip()
-            for sep in separators:
-                assert not stripped.startswith(sep), (
-                    f"F001: Zeile beginnt mit Trennzeichen '{sep}': {line!r}"
-                )
 
 
 # ---------------------------------------------------------------------------

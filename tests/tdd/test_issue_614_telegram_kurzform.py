@@ -24,8 +24,6 @@ from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers (real domain objects, no mocks)
@@ -157,42 +155,6 @@ def test_ac1_loader_roundtrip_preserves_flag_and_other_fields():
     assert dc.night_interval_hours == 3
     # #1484: abgeleitete Eintraege zaehlen nicht als geladene Nutzer-Auswahl.
     assert len([mc for mc in dc.metrics if not mc.derived]) == 2
-
-
-# ---------------------------------------------------------------------------
-# AC-2 — Kurzform wird angehängt und trägt ALLE Metriken (keine Truncation)
-# ---------------------------------------------------------------------------
-
-@pytest.mark.skip(
-    reason=(
-        "OBSOLET (Issue #1001 AC-10): Der Text-Anhang-Mechanismus (SMS-Kurzform "
-        "als 'Tages-Max'-Block an telegram_text angehaengt) wurde durch #1001 "
-        "abgeloest — telegram_kurzform ist jetzt wirkungslos, die Kurzuebersicht-"
-        "Bubble mit ALLEN konfigurierten Metriken erscheint immer (kein Schalter). "
-        "Funktional aequivalenter Nachweis 'alle Metriken sichtbar, auch bei "
-        ">8 Spalten' liefert test_issue_1001_telegram_bubbles.py::"
-        "TestAC3KurzuebersichtAlleMetriken."
-    )
-)
-def test_ac2_kurzform_appended_with_all_metrics():
-    """AC-2 (superseded): siehe skip-reason."""
-
-
-# ---------------------------------------------------------------------------
-# AC-3 — Flag aus (Default) = unverändert, KEIN Kurzform-Block
-# ---------------------------------------------------------------------------
-
-@pytest.mark.skip(
-    reason=(
-        "OBSOLET (Issue #1001 AC-10): telegram_kurzform ist wirkungslos — es "
-        "gibt keinen 'an/aus'-Zweig mehr zu testen (Kurzuebersicht-Bubble "
-        "erscheint IMMER, unabhaengig vom Flag). Aequivalenter Nachweis liefert "
-        "test_issue_1001_telegram_bubbles.py::TestAC10KurzformFlagWirkungslos "
-        "(Bubble-Listen fuer beide Flag-Werte identisch)."
-    )
-)
-def test_ac3_disabled_no_kurzform_block():
-    """AC-3 (superseded): siehe skip-reason."""
 
 
 # ---------------------------------------------------------------------------

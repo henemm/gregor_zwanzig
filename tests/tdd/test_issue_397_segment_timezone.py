@@ -14,8 +14,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-import pytest
-
 # ---------------------------------------------------------------------------
 # Shared fixture factory
 # ---------------------------------------------------------------------------
@@ -177,30 +175,6 @@ def test_render_plain_segment_header_local_time_cest():
         f"render_plain-Kopfzeile darf UTC-Zeit {_UTC_START!r} NICHT enthalten.\n"
         f"Kopfzeile(n):\n{kopfzeilen}"
     )
-
-
-# ===========================================================================
-# AC-3: render_narrow Segment-Header zeigt lokale Zeit (Signal/Telegram)
-# ===========================================================================
-
-@pytest.mark.skip(
-    reason=(
-        "OBSOLET: render_narrow('signal', ...) getestet — Signal-Kanal wurde "
-        "in Bug #610 (Schritt 2/2) entfernt UND render_narrow() selbst wurde "
-        "in Issue #1001 (Multi-Bubble-Telegram-Redesign, Breaking Replace) "
-        "vollstaendig durch render_telegram_bubbles() ersetzt. Die neue "
-        "Segment-Mini-Header-Bubble zeigt bewusst KEINE Uhrzeit mehr (Spec: "
-        "'{Segment} · {km-Range} · {Höhen-Range}') — lokale Zeit steckt "
-        "stattdessen in der 'Zt'-Spalte der Segment-Tabelle, deren Werte "
-        "bereits vor dem Renderer via local_hour() gebaut werden (siehe "
-        "trip_report.py._extract_hourly_rows). Aequivalenter Nachweis fuer "
-        "Ortszeit-Korrektheit: test_render_plain_segment_header_local_time_cest "
-        "oben (E-Mail-Pfad, unveraendert)."
-    )
-)
-def test_render_narrow_segment_header_local_time_cest():
-    """AC-3 (superseded): siehe skip-reason — render_narrow()/Signal-Kanal
-    existieren nicht mehr."""
 
 
 # ===========================================================================

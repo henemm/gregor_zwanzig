@@ -16,8 +16,6 @@ from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -139,52 +137,6 @@ def test_ac1_sms_pr_token_format_contains_percent():
 
 
 # ---------------------------------------------------------------------------
-# AC-2: Telegram zeigt Rain% Label wenn rain_probability konfiguriert
-# ---------------------------------------------------------------------------
-
-@pytest.mark.skip(
-    reason=(
-        "OBSOLET (Issue #1001): _tg_extra_detail_line() (col_label-Detail-Zeile) "
-        "wurde als Teil des Breaking Replace fuer render_narrow() entfernt "
-        "(Bug #994 wird durch die Entfernung miterledigt, siehe Spec-Dependency "
-        "'fix_887_report_inkonsistenz.md | abgeloest'). Telegram verwendet jetzt "
-        "compact_label ('P%') als Single-Source ueberall (Tabellen-Header UND "
-        "Kurzuebersicht-Bubble) statt col_label ('Rain%') — bewusste PO-Entscheidung "
-        "in feat_1001_telegram_redesign.md Dependencies-Tabelle."
-    )
-)
-def test_ac2_telegram_shows_rain_pct_label_when_configured():
-    """AC-2 (superseded): siehe skip-reason."""
-
-
-@pytest.mark.skip(
-    reason=(
-        "OBSOLET (Issue #1001): Gegenteilige Anforderung — #1001 verwendet jetzt "
-        "bewusst compact_label ('P%') statt col_label ('Rain%'), siehe Dependency "
-        "'metric_catalog.compact_label ... bewusst statt SMS_SYMBOL_BY_METRIC'."
-    )
-)
-def test_ac2_telegram_uses_col_label_not_compact_label():
-    """AC-2 (superseded): siehe skip-reason."""
-
-
-# ---------------------------------------------------------------------------
-# AC-3: Telegram Detail-Zeile mit Rain% UND Gust wenn beide konfiguriert
-# ---------------------------------------------------------------------------
-
-@pytest.mark.skip(
-    reason=(
-        "OBSOLET (Issue #1001): col_label-Detail-Zeile ('Rain%'/'Gust') existiert "
-        "nicht mehr — durch die Kurzuebersicht-Bubble mit compact_label ('P%'/'G') "
-        "ersetzt. Aequivalenter Nachweis 'beide Metriken erscheinen' liefert "
-        "test_issue_1001_telegram_bubbles.py::TestAC3KurzuebersichtAlleMetriken."
-    )
-)
-def test_ac3_telegram_shows_rain_and_gust_when_both_configured():
-    """AC-3 (superseded): siehe skip-reason."""
-
-
-# ---------------------------------------------------------------------------
 # AC-4: pop_max_pct=None → kein Absturz
 # ---------------------------------------------------------------------------
 
@@ -253,20 +205,3 @@ def test_ac5_telegram_no_detail_line_when_only_temp_and_wind():
     assert "weitere Wettergrößen nur als Tageswert" not in result, (
         f"#1741 AC-2: Kappungshinweis erscheint trotz demoted_count==0:\n{result}"
     )
-
-
-# ---------------------------------------------------------------------------
-# AC-6: Kopfzeile zeigt weiter Regen-Kategorie (kein Regressionsverhalten)
-# ---------------------------------------------------------------------------
-
-@pytest.mark.skip(
-    reason=(
-        "OBSOLET (Issue #1001): Die textuelle Regen-Kategorie ('Regen'/'trocken'/"
-        "'etwas Regen') stammte aus _tg_segment_line(), die als Teil des Breaking "
-        "Replace entfernt wurde. #1001 zeigt Niederschlag stattdessen als "
-        "numerischen Wert (compact_label 'R', Min-Max-Range) in der "
-        "Kurzuebersicht-Bubble und als Tabellenspalte — keine Wort-Kategorie mehr."
-    )
-)
-def test_ac6_telegram_header_still_shows_regen_category():
-    """AC-6 (superseded): siehe skip-reason."""
