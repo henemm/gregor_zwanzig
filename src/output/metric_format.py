@@ -438,14 +438,20 @@ def darstellung(
     """Die EINE Darstellung eines Metrik-Werts (ADR-0127 Nr. 2, #3260 S1b).
 
     Die Form kommt allein aus ``metric_catalog.form(metric_id, stelle,
-    ausgabeart, fmt)``, die Stufe aus der uebergebenen Abo-Ampel
-    (``resolve_ampel``), das Wort aus ``WORTSKALA`` je Wertart. Kein Aufrufer
-    waehlt die Form selbst; ``Zelle.text`` traegt bei einem Ampelpunkt die
-    Wortstufe (Textfassung derselben Aussage). ``ampel=None`` nur fuer reine
-    Textfassungen ohne Stufe -- ein Ampelpunkt ohne Ampel scheitert laut."""
+    ausgabeart, fmt, wertart)`` (Sonnenstunden: Stundenwert Symbol, Tageswert
+    Wort), die Stufe aus der uebergebenen Abo-Ampel (``resolve_ampel``), das
+    Wort aus ``WORTSKALA`` je Wertart. Kein Aufrufer waehlt die Form selbst;
+    ``Zelle.text`` traegt bei einem Ampelpunkt die Wortstufe (Textfassung
+    derselben Aussage).
+
+    ``ampel=None`` ist nur fuer reine Textfassungen ohne Stufe erlaubt
+    (``Zelle.stufe`` bleibt ``None``). Verlangt der Katalog an dieser Stelle
+    einen Ampelpunkt und fehlt die Ampel, scheitert der Aufruf absichtlich laut
+    mit ``ValueError`` -- kein stiller Rueckfall auf eine Vorgabe-Ampel und
+    keine farblose Zelle (ADR-0106, „kein stilles allgemein")."""
     from app.metric_catalog import form as katalog_form
 
-    form = katalog_form(metric_id, stelle, ausgabeart, fmt)
+    form = katalog_form(metric_id, stelle, ausgabeart, fmt, wertart)
     if form == "ampelpunkt" and ampel is None:
         raise ValueError(f"darstellung({metric_id!r}): Ampelpunkt braucht die Abo-Ampel")  # i18n-log
     if wert is None:

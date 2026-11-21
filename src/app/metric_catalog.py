@@ -1182,13 +1182,17 @@ _OHNE_STUNDENVERLAUF: frozenset = frozenset({"email", "telegram", "outlook"})
 # ``output.metric_format.darstellung`` aus dieser Tabelle.
 @dataclass(frozen=True)
 class FormPaar:
-    """Form bei Roh (``raw``) und bei Einfach (``simplified``)."""
+    """Form bei Roh (``raw``) und bei Einfach (``simplified``); ``tag`` =
+    abweichende Einfach-Form fuer einen Tageswert (Wertart ``tag``)."""
 
     raw: str
     simplified: str
+    tag: Optional[str] = None
 
-    def fuer(self, fmt: object) -> str:
-        return self.simplified if fmt == "simplified" else self.raw
+    def fuer(self, fmt: object, wertart: object = "stunde") -> str:
+        if fmt != "simplified":
+            return self.raw
+        return self.tag if (wertart == "tag" and self.tag) else self.simplified
 
 
 def _je_stelle(stellen: frozenset, **ausgaben: FormPaar) -> dict[str, dict[str, FormPaar]]:
@@ -1210,13 +1214,11 @@ STELLEN_FORMEN: dict[str, dict[str, dict[str, FormPaar]]] = {
     "cloud_low": _WOLKEN_FORMEN,
     "cloud_mid": _WOLKEN_FORMEN,
     "cloud_high": _WOLKEN_FORMEN,
-    # Sonnenstunden (T7, bewusste Ausnahme): Stundenwert Symbol, Ausblick
-    # (Tageswert) Wortstufe; im Stundenverlauf gesperrt (kein Stundenwert).
-    "sunshine": {
-        **_je_stelle(frozenset({"email", "telegram"}), html=FormPaar("zahl", "symbol"),
-                     text=FormPaar("zahl", "symbol")),
-        "outlook": {"text": FormPaar("zahl", "wort")},
-    },
+    # Sonnenstunden (T7 "wie heute"): die Einfach-Form folgt der Wertart, nicht
+    # der Flaeche -- Stundenwert Symbol (Trip-E-Mail/-Telegram), Tageswert
+    # Wortstufe (Orte-Uebersicht, Orte-Telegram, Ausblick); im Stundenverlauf
+    # gesperrt (kein Stundenwert).
+    "sunshine": _je_stelle(_OHNE_STUNDENVERLAUF, text=FormPaar("zahl", "symbol", tag="wort")),
     # Windrichtung: Roh = Grad, Einfach = Kompass; im Stundenverlauf immer
     # Kompass (eine Form, nicht gesperrt).
     "wind_direction": {
@@ -1233,22 +1235,25 @@ STELLEN_FORMEN: dict[str, dict[str, dict[str, FormPaar]]] = {
 }
 
 
-def form(metric_id: object, stelle: object, ausgabeart: object, fmt: object) -> str:
+def form(metric_id: object, stelle: object, ausgabeart: object, fmt: object,
+         wertart: object = "stunde") -> str:
     """Form von ``metric_id`` an ``stelle`` in ``ausgabeart`` bei ``fmt``
-    (``raw``/``simplified``). Unbekanntes ergibt ``zahl``; eine fehlende
-    Ausgabeart faellt auf ``text`` zurueck."""
+    (``raw``/``simplified``) fuer einen Wert der ``wertart`` (``stunde``/
+    ``tag``). Unbekanntes ergibt ``zahl``; eine fehlende Ausgabeart faellt
+    auf ``text`` zurueck."""
     ausgaben = STELLEN_FORMEN.get(metric_id, {}).get(stelle) if isinstance(metric_id, str) else None
     if not ausgaben:
         return "zahl"
     paar = ausgaben.get(ausgabeart) or ausgaben.get("text")
-    return paar.fuer(fmt) if paar else "zahl"
+    return paar.fuer(fmt, wertart) if paar else "zahl"
 
 
 # Abgeleitet (nicht mehr von Hand): Stellen, an denen Roh und Einfach in
 # irgendeiner Ausgabeart verschieden sind.
 STELLEN_ZWEI_FORMEN: dict[str, frozenset] = {
     mid: frozenset(stelle for stelle, ausgaben in stellen.items()
-                   if any(p.raw != p.simplified for p in ausgaben.values()))
+                   if any(p.raw != p.simplified or (p.tag and p.tag != p.raw)
+                          for p in ausgaben.values()))
     for mid, stellen in STELLEN_FORMEN.items()
 }
 

@@ -41,7 +41,7 @@ Der Katalog führt künftig nicht nur, OB eine Metrik an einer Stelle zwei Forme
 1. **Formtabelle.** Formen: `zahl | wort | symbol | ampelpunkt | kompass`. Ausgabearten: `html | text | ascii` (ascii = Kompakt-Mail; fehlt sie, gilt `text`). Inhalt nach Tabelle feat_3122 Teil A Nr. 4 und T1/T7:
    - Wind, Böen, Niederschlag, Regenwahrscheinlichkeit, an E-Mail, Telegram, Stundenverlauf, Ausblick: Roh `zahl`; Einfach `ampelpunkt` in html, `wort` in text/ascii.
    - Bewölkung (gesamt, tief, mittel, hoch), vier Stellen: Roh `zahl`; Einfach `symbol` in html/text, `wort` in ascii (Wortstufe aus dem Katalog, DE/EN über den i18n-Katalog; nie ein Emoji-Kurzname wie `:partly_sunny:`; nicht die SMS-Stufen CLR…OVC, die mit Schritt 5 entfallen).
-   - Sonnenstunden (T7, bewusste Ausnahme): E-Mail und Telegram Einfach `symbol`, Ausblick Einfach `wort`; Stundenverlauf gesperrt.
+   - Sonnenstunden (T7 „wie heute“): die Einfach-Form folgt der Wertart, nicht der Fläche: Stundenwert `symbol` (Trip-E-Mail, Trip-Telegram), Tageswert `wort` (Orte-Übersicht, Orte-Telegram, Ausblick); im Katalog als Wertart-Dimension (`FormPaar.tag`, `form(..., wertart)`); Stundenverlauf gesperrt.
    - Windrichtung: E-Mail, Telegram, Ausblick Roh `zahl` (Grad), Einfach `kompass`; Stundenverlauf immer `kompass`.
    - Gewitter: E-Mail html Einfach `ampelpunkt`, sonst überall `wort` (Stufenwort).
    - Alle übrigen: `zahl`, eine Form.
@@ -96,3 +96,4 @@ ADR-0127 (Umsetzung), ADR-0124 Nr. 4 (Tabelle).
 ## Changelog
 
 - 2026-11-21: angelegt (Issue #3260 Schritt 1, Scheibe B).
+- 2026-11-21: Tech-Lead-Entscheid bei der Umsetzung: Sonnenstunden-Form über die Wertart (Stundenwert Symbol, Tageswert Wort) statt je Fläche; Bewölkungs-Wortstufe DE/EN im Glossar; Ampelpunkt ohne Abo-Ampel scheitert laut.
