@@ -357,6 +357,24 @@ def test_ac11_doku_beschreibt_huelle_und_restluecke():  # doc-compliance-test
     assert "#3242" in doku and "placements" in doku, "Restluecke Auswahl/Folge (#3242) fehlt"
 
 
+def test_ac11_validator_start_orte_liste_exit2_statt_traceback(tmp_path):
+    """Echter Validator-Prozess: Huelle ``orte`` als Liste endet mit
+    ``FEHLER`` und Exit 2 wie die Geschwister-Fehler, nie als Traceback."""
+    from tests.helpers.mail_lang_fixture import validator_lauf
+
+    preset = _orte({"active_metrics": _ORTE_GRUND})
+    konfig = tmp_path / "orte_liste.json"
+    konfig.write_text(json.dumps({"preset": preset, "orte": ["loc-a", "loc-b"]}),
+                      encoding="utf-8")
+    eml = b"Subject: x\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nx\r\n"
+    lauf, _log = validator_lauf(tmp_path, "email_spec_validator", eml,
+                                "--konfig", str(konfig))
+    aus = lauf.stdout + lauf.stderr
+    assert "Traceback" not in aus, aus
+    assert lauf.returncode == 2, aus
+    assert "FEHLER" in aus and "<Kennung>" in aus, aus
+
+
 # --------------------------------------------------------------------------- #
 # AC-12: Abnahme-Fall #3156 -- echte Mail, echter Validator, keine SOLL-Verletzung
 # --------------------------------------------------------------------------- #
@@ -374,6 +392,9 @@ def _abnahme_daten() -> dict:
     dc["placements"] = {"version": 1, "rows": [
         _zeile("gust"), _zeile("temperature"), _zeile("precipitation"), _zeile("wind"),
         _zeile("rain_probability", email="simplified"), _zeile("cloud_total")]}
+    # Auswahl/Folge deckungsgleich zur Tabelle, weil das Soll sie bis #3242 aus Altfeldern liest.
+    dc["outlook_metrics"] = ["gust", "temperature", "precipitation", "wind",
+                             "rain_probability", "cloud_total"]
     return daten
 
 
