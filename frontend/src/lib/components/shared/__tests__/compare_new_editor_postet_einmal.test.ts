@@ -79,7 +79,7 @@ describe('AC-5: Anlegen postet genau einmal, mit allen Eingaben, und navigiert',
 		const b = posts[0].koerper as Knoten;
 		assert.equal(b.name, 'Sardinien-Woche');
 		assert.deepEqual(b.location_ids, ['loc-a', 'loc-b', 'loc-c']);
-		assert.equal(b.profil, 'wintersport', 'Aktivitätsprofil fehlt im Payload (Rückfall „wandern"?)');
+		// #3198 (S4b-3): profil/Vorlage der Neuanlage misst compare-new/__tests__/anlegen_ohne_profil_3198.test.ts.
 		assert.equal((b.display_config as Knoten)?.region, 'Gallura', 'Region fehlt in display_config');
 		assert.equal(b.schedule, 'daily', 'Standard-Zeitplan des Anlegens');
 	});
