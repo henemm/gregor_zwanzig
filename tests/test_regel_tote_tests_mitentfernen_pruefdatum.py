@@ -8,10 +8,11 @@ Ausnahme vom generischen Dateiinhalt-Verbot (CLAUDE.md Test-Politik): hier
 IST die Dokumentationspflicht selbst der Pruefgegenstand, kein
 Verhaltensnachweis ueber Code -- daher ``# doc-compliance-test``.
 
-RED: `/50-implement` traegt die Regel in den Regel-Budget-Abschnitt von
+Prueft, dass die Regel im Regel-Budget-Abschnitt von
 ``docs/reference/workflow_und_agenten.md`` und die Zeile mit Pruefdatum
-2027-02-19 und Fang-Mass in die Pruefdaten-Tabelle von
-``docs/reference/gates_und_ratschen.md`` ein. Bis dahin absichtlich rot.
+2027-02-19 und Fang-Mass in der Pruefdaten-Tabelle von
+``docs/reference/gates_und_ratschen.md`` stehen; fehlt eins davon, wird der
+Test rot.
 """
 from __future__ import annotations
 
