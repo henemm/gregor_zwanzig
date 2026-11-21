@@ -261,7 +261,7 @@ describe('AC-7: Bearbeiten behaelt das gespeicherte profil', () => {
 		const edits = { ...compareFeldsatzStandard(), name: 'X', pickedIds: ['loc-a', 'loc-b'], activityProfile: null, activeMetricKeys: [] };
 		const { body } = buildComparePresetSavePayload(original, edits as never);
 		assert.equal((body as unknown as Knoten).profil, 'sommer_trekking');
-		assert.deepEqual({ ...(body as unknown as Knoten), display_config: undefined }.id, original.id, 'Identitaet des Bestands');
+		assert.deepEqual((body as unknown as Knoten).id, original.id, 'Identitaet des Bestands');
 	});
 });
 

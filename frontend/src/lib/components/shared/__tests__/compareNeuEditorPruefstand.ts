@@ -4,7 +4,7 @@
 // Das ECHTE Instanz-Skript von `compare-new/CompareNewEditor.svelte` wird ueber
 // `standardwerteEditorPruefstand.editorUmgebung` ausgewertet — OHNE `getContext`-Saat.
 // Startwerte kommen nur ueber die Props, die auch die Seite `/compare/new` setzt:
-//   * `stateOverride` (Reiter/Besuchs-Flags + Startwerte name/region/activityProfile/pickedIds),
+//   * `stateOverride` (Reiter/Besuchs-Flags + Startwerte name/region/pickedIds; #3198: kein Profil),
 //   * `vorlage` (einmalige Vorbelegung aus `/compare/new?from=<id>`),
 //   * `locations`.
 // Alle uebrigen Felder werden so geaendert, wie der Nutzer sie aendert: ueber die

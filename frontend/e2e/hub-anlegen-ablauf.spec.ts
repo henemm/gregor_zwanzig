@@ -81,7 +81,8 @@ const SCHRITT_TITEL: Record<HubKind, Record<string, string>> = {
  *   Feldpfad display_config.metrics), der Vergleich per Zeilen-Checkbox (Feldpfad
  *   display_config.active_metrics) — dieselbe Unterscheidung wie MS_SEL in
  *   hub-wetter-metriken-speichert-selbst.spec.ts.
- * - Profil: Trip Aktivität per Dropdown, Vergleich per Kachel (Kind-Kontraste „AN Profil").
+ * - Profil: Trip Tempo-Karte (#3196), Vergleich ohne Profil-Auswahl im Anlegen (#3198, die Vorlage
+ *   wählt man im Reiter Wetter) — AN-3 prüft dort, dass auch nach dem Schrittwechsel keine Kachel steht.
  */
 const AN_SEL: Record<
 	HubKind,
@@ -115,14 +116,12 @@ const AN_SEL: Record<
 		metrik: (page) => page.locator('.cm-desktop [data-testid="wetter-tab"][data-context="vergleich"]'),
 		metrikAn: (page) => metrikImReiter(page, 'cm'),
 		metrikImRumpf: (r) => JSON.stringify((r.display_config as Rumpf | undefined)?.active_metrics ?? []).includes('snow_depth'),
+		// #3198 (S4b-3, AC-1): keine Aktivitaetsprofil-Kacheln mehr im Anlege-Editor des Vergleichs.
 		profilWaehlen: async (page) => {
-			await page.getByTestId(`compare-editor-profile-${ANLEGE_SEL.vergleich.profilWert}`).click();
+			await expect(page.locator('[data-testid^="compare-editor-profile-"]')).toHaveCount(0);
 		},
 		erwarteProfil: async (page) => {
-			await expect(page.getByTestId(`compare-editor-profile-${ANLEGE_SEL.vergleich.profilWert}`)).toHaveAttribute(
-				'data-selected',
-				'true'
-			);
+			await expect(page.locator('[data-testid^="compare-editor-profile-"]')).toHaveCount(0);
 		}
 	}
 };

@@ -97,7 +97,7 @@ Technische Entscheidungen (Tech Lead, nicht neu zu verhandeln):
   - Test: Unit Bearbeiten-Pfad (`profil` aus `original.profil` durchgereicht, Vorher/Nachher-Vergleich des Vergleichs-Objekts).
 - **AC-8:** Given ein Nutzer legt einen Vergleich an und öffnet danach den Reiter Wertebereiche / When die Werte betrachtet werden / Then sind sie mit den Werten „Allgemein“ vorbelegt, unabhängig von der im Reiter Wetter gewählten Vorlage.
   - Test: Unit `anlege_vorbelegung` (Vorbelegung ohne Profil = Allgemein); E2E Wintersport wählen → Wertebereiche zeigen Allgemein-Werte.
-- **AC-9:** Given die Kataloge DE und EN / When sie geprüft werden / Then ist `vergleich.neu.profil_hinweis` in beiden Sprachen entfernt (samt Anker in `f10KatalogAnker.ts`); `vergleich.neu.aktivitaetsprofil` bleibt, weil „Ort bearbeiten“ (`LocationForm.svelte`, AC-6) ihn weiter als Beschriftung nutzt, es sind keine neuen Nutzertexte hinzugekommen, und die Katalog-Ratschen (Parität, Schlüssel haben Verwender) sind grün.
+- **AC-9:** Given die Kataloge DE und EN / When sie geprüft werden / Then sind `vergleich.neu.aktivitaetsprofil` und `vergleich.neu.profil_hinweis` in beiden Sprachen entfernt (samt Anker in `f10KatalogAnker.ts`), es sind keine neuen Nutzertexte hinzugekommen, und die Katalog-Ratschen (Parität, Schlüssel haben Verwender) sind grün.
   - Test: bestehende Katalog-Ratschen `katalog_schluessel_haben_verwender.test.ts` und Paritätstests; die Golden-Dateien (DE/EN) zeigen den Anlege-Editor ohne Profil-Block.
 - **AC-10:** Given zwei verschiedene Nutzer legen je einen Orts-Vergleich an / When beide speichern / Then liegt jeder Vergleich nur unter dem eigenen Nutzer, mit der jeweils gewählten Vorlage, und keiner sieht den des anderen.
   - Test: Staging-E2E mit zwei Nutzern (unterschiedliche Vorlage); Änderung berührt Mandantentrennung nicht, wird aber wegen des Speicherwegs abgesichert.
@@ -125,6 +125,7 @@ Technische Entscheidungen (Tech Lead, nicht neu zu verhandeln):
 - Der Trip-Pendant (`TripNewEditor`) ist nicht Teil dieses Issues; er behält seine Aktivitätsauswahl bis zu seiner eigenen S4b-Scheibe.
 - `profil` bleibt im Datenmodell gespeichert (Go verlangt es); neue Vergleiche tragen konstant „allgemein“, ältere ihren bisherigen Wert als Rückfall-Quelle.
 - Die Vorbelegung der Wertebereiche folgt der Vorlage nicht (AC-8); Bewertung kommt aus der Ampel.
+- AC-9 und AC-6 stehen beim Schlüssel `vergleich.neu.aktivitaetsprofil` im Widerspruch: „Ort bearbeiten“ (`LocationForm.svelte`) nutzt ihn als Beschriftung des Orts-Profils, das nach AC-6 unverändert bleiben muss. AC-6 hat Vorrang: Der Schlüssel bleibt in DE und EN, entfernt wird nur `vergleich.neu.profil_hinweis` (samt Anker). Im Anlege-Editor des Vergleichs wird keiner der beiden Schlüssel mehr verwendet. Prüfung von AC-9 daher: `profil_hinweis` weg, `aktivitaetsprofil` nur noch in `LocationForm.svelte` verwendet, Katalog-Ratschen grün.
 
 ## Out of Scope
 
@@ -144,4 +145,4 @@ Trip-Anlegen (`TripNewEditor`), Go-API (Create bleibt unverändert), Python-Core
 
 - 2026-11-21: Initial spec created (S4b-3, #3198)
 - 2026-11-21: Abschnitte Scope, Definition of Done, Test Plan für das CI-Spec-Gate ergänzt
-- 2026-11-21: TDD RED, Tech-Lead-Korrektur AC-9: `vergleich.neu.aktivitaetsprofil` hat mit `LocationForm.svelte` einen zweiten Verwender (Orts-Profil, AC-6) und bleibt; nur `profil_hinweis` entfällt. Feldsatz-Feld heißt `vorlageId`. RED-Tests: `frontend/src/lib/components/compare-new/__tests__/anlegen_ohne_profil_3198.test.ts`. Für `/50-implement`: `standardwerte_payload_paritaet_compare.test.ts` (Fälle „mit Profil wandern“ und F003 säen `activityProfile`) an die profilfreie Anlege-Kette anpassen, ebenso Goldens und E2E laut Test Plan.
+- 2026-11-21: Phase 6, Tech-Lead-Auflösung des Widerspruchs AC-9/AC-6 unter Known Limitations dokumentiert (`vergleich.neu.aktivitaetsprofil` bleibt wegen `LocationForm.svelte`); Feldsatz-Feld heißt `vorlageId`; RED-Tests `frontend/src/lib/components/compare-new/__tests__/anlegen_ohne_profil_3198.test.ts`.

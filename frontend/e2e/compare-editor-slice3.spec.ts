@@ -16,6 +16,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import { createTestLocation } from './helpers';
+import { vorlageImReiterWaehlen } from './s3a2794-teil3.helpers';
 
 // ── Create-Wizard-Klickpfad-Helper ──────────────────────────────────────────
 // #1329 Maßnahme B: zentralisiert über den geteilten Helfer (helpers.ts) —
@@ -31,14 +32,13 @@ async function createLoc(
 	return loc.id;
 }
 
-async function newWizard(page: Page, name: string, profil?: string): Promise<void> {
+// #3198 (S4b-3): keine Aktivitaetsprofil-Kacheln mehr — die Vorlage waehlt man im Reiter Wetter.
+async function newWizard(page: Page, name: string): Promise<void> {
 	await page.goto('/compare/new');
 	await page.waitForLoadState('networkidle');
 	await expect(page.locator('[data-testid="compare-editor"]:visible')).toBeVisible();
 	await page.locator('[data-testid="compare-editor-name"]').fill(name);
-	if (profil) {
-		await page.locator(`[data-testid="compare-editor-profile-${profil}"]:visible`).first().click();
-	}
+	await expect(page.locator('[data-testid^="compare-editor-profile-"]')).toHaveCount(0);
 }
 
 async function pickInOrteTab(page: Page, namen: string[]): Promise<void> {
@@ -66,7 +66,7 @@ async function openIdealwerte(page: Page): Promise<void> {
 /** Legt 2 Orte an und baut im Create-Wizard bis zum Idealwerte-Tab auf. */
 async function seedTwoAndOpenIdealwerte(
 	page: Page,
-	profil: string,
+	vorlage: string,
 	label: string
 ): Promise<{ idA: string; idB: string }> {
 	const suffix = Date.now();
@@ -74,9 +74,10 @@ async function seedTwoAndOpenIdealwerte(
 	const nameB = `E2E-GZ-${label}-B-${suffix}`;
 	const idA = await createLoc(page, nameA, 47.4, 13.0);
 	const idB = await createLoc(page, nameB, 47.1, 12.8);
-	await newWizard(page, `Slice3 ${label} ${suffix}`, profil);
+	await newWizard(page, `Slice3 ${label} ${suffix}`);
 	await pickInOrteTab(page, [nameA, nameB]);
 	await openIdealwerte(page);
+	await vorlageImReiterWaehlen(page, vorlage);
 	return { idA, idB };
 }
 
@@ -103,7 +104,7 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 		const locIdA = await createLoc(page, nameA, 47.4, 13.0, 'Hochkönig');
 		const locIdB = await createLoc(page, nameB, 47.1, 12.8);
 
-		await newWizard(page, 'Slice3 E2E ' + suffix, 'wintersport');
+		await newWizard(page, 'Slice3 E2E ' + suffix);
 		await pickInOrteTab(page, [nameA, nameB]);
 
 		// Picked-Liste sichtbar
@@ -179,10 +180,11 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 		await expect(zeile.locator('[data-testid^="wetter-grenze-"]').first()).toBeEditable();
 	});
 
-	// ── AC-7: SUMMER_TREKKING-Profil rendert seine Metrik-Zeilen ─────────────
+	// ── AC-7: Vorlage Alpen-Trekking rendert ihre Metrik-Zeilen ──────────────
 	// Issue #1231: Enum-Segmented-Control entfällt; geprüft: CorridorEditor-Zeilen da.
-	test('AC-7: SUMMER_TREKKING-Profil zeigt Metrik-Zeilen im Wertebereich-Editor', async ({ page }) => {
-		await seedTwoAndOpenIdealwerte(page, 'summer_trekking', 'Enum');
+	// #3198: Vorlage im Reiter Wetter statt Profil-Kachel (summer_trekking → alpen-trekking).
+	test('AC-7: Vorlage Alpen-Trekking zeigt Metrik-Zeilen im Wertebereich-Editor', async ({ page }) => {
+		await seedTwoAndOpenIdealwerte(page, 'alpen-trekking', 'Enum');
 		await expect(firstCorridorRow(page)).toBeVisible({ timeout: 5_000 });
 	});
 
@@ -232,6 +234,9 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 		const locationIds = (body.location_ids ?? []) as string[];
 		expect(locationIds).toContain(idA);
 		expect(locationIds).toContain(idB);
+		// #3198 (S4b-3, AC-4): gespeichert wird die im Reiter Wetter gewaehlte Vorlage; profil ist konstant.
+		expect((body.display_config as { ampel?: { template?: string } } | undefined)?.ampel?.template).toBe('wintersport');
+		expect(body.profil).toBe('allgemein');
 	});
 
 	// ── Alt versand-tab-vergleich AC-6 (#2347 S3b): Create-Flow — POST-Body enthält

@@ -92,12 +92,12 @@ const SOLL_TRIP: Record<string, Ergebnis[]> = {
 
 const SOLL_VERGLEICH: Record<string, Ergebnis[]> = {
 	// ── Desktop ──
-	'vergleich#0': ['ohne-navigation', 'orte'], // Profil waehlen (je Profil), „Orte hinzufuegen"
+	'vergleich#0': ['orte'], // „Orte hinzufuegen" (#3198: keine Profil-Kacheln mehr)
 	'orte#0': ['wetter'], // „Wetter-Metriken"
 	'wetter#0': ['zustellung'], // „Zustellung einrichten"
 	'zustellung#0': [],
 	// ── Handy-Inhalt ──
-	'vergleich#1': ['ohne-navigation'], // Profil waehlen
+	'vergleich#1': [], // #3198: keine Profil-Auswahl mehr
 	'orte#1': [],
 	'wetter#1': [],
 	'zustellung#1': [],

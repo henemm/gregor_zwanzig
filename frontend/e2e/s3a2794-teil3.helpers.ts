@@ -212,6 +212,17 @@ export async function oeffneWetter(page: Page, kind: HubKind, id: string): Promi
 }
 
 /** Picker-Status als Zahl (0 = „unverändert"). */
+/** #3198 (S4b-3): Vorlage im sichtbaren Reiter Wetter waehlen (Picker → Option → Uebernehmen).
+ *  Ersetzt im Anlege-Editor des Orts-Vergleichs die entfallenen Aktivitaetsprofil-Kacheln. */
+export async function vorlageImReiterWaehlen(page: Page, vorlageId: string): Promise<void> {
+	const reiter = page.locator(`[data-testid="${WT.tab}"]:visible`).first();
+	await expect(reiter.getByTestId(WT.laden)).toHaveCount(0, { timeout: 8_000 });
+	await tid(reiter, WT.picker).click();
+	await tid(reiter, WT.vorlageOption(vorlageId)).click();
+	await tid(reiter, WT.wechselUebernehmen).click();
+	await expect(reiter.getByTestId(WT.wechselDialog)).toHaveCount(0);
+}
+
 export async function abweichungen(reiter: Locator): Promise<number> {
 	const t = ((await reiter.getByTestId(WT.pickerStatus).first().innerText()) ?? '').trim();
 	if (/^unverändert$/i.test(t) || /^unchanged$/i.test(t)) return 0;

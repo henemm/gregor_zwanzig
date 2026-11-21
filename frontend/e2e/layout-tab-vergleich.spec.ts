@@ -35,7 +35,7 @@ async function openLayoutTab(page: Page, orteNamen: string[]): Promise<void> {
 	await expect(page.locator('[data-testid="compare-editor"]:visible')).toBeVisible();
 
 	await page.locator('[data-testid="compare-editor-name"]').fill('LayoutTab E2E ' + Date.now());
-	await page.locator('[data-testid="compare-editor-profile-wintersport"]:visible').first().click();
+	// #3198 (S4b-3): keine Aktivitaetsprofil-Kachel mehr; der Fall braucht keine bestimmte Vorlage.
 
 	await page.locator('[data-testid="compare-editor-tab-orte"]:visible').first().click();
 	const lib = page.locator('[data-testid="compare-step2-library"]:visible').first();

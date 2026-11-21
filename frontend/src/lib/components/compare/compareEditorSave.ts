@@ -31,6 +31,7 @@ import {
 	type CompareChannelActiveMetrics
 } from '../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
 import { baueDiff, type KanalMap } from '../shared/alarme-tab/alertMetricChannels.ts';
+import { STANDARD_VORLAGE } from '../shared/wetter-tab/ampelModell.ts';
 
 /** Issue #1895 S3b1: `{alert_metric_channels: Diff}` oder `{}` (kein Diff ⇒ Feld fehlt). */
 function kanalDiffFeld(basis: KanalMap | undefined, aktuell: KanalMap | undefined): { alert_metric_channels?: KanalMap } {
@@ -371,7 +372,11 @@ export function waehleEigenfelder(
 export interface NewComparePresetFields {
 	name: string;
 	pickedIds: string[];
-	activityProfile: ActivityProfile | null;
+	// Issue #3198 (S4b-3): wird beim Anlegen nicht mehr gelesen — `profil` ist
+	// konstant „allgemein“, maßgeblich ist die Vorlage (`vorlageId`, ADR-0108).
+	activityProfile?: ActivityProfile | null;
+	// Issue #3198: angezeigte Vorlage; reist als `display_config.ampel.template`.
+	vorlageId?: string;
 	schedule: 'daily_morning' | 'daily_evening' | 'weekly';
 	officialAlertsEnabled: boolean;
 	radarAlertEnabled: boolean;
@@ -464,7 +469,9 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 	return {
 		name: fields.name,
 		location_ids: fields.pickedIds,
-		profil: fields.activityProfile ?? 'wandern',
+		// Issue #3198 (S4b-3): Go verlangt ein gueltiges `profil`; „allgemein“ ist neutral,
+		// die Bewertung folgt der Vorlage (display_config.ampel.template unten).
+		profil: 'allgemein',
 		// fields.schedule ist 'daily_morning'|'daily_evening'|'weekly'; Preset-API erwartet 'daily'|'weekly'|'manual'
 		schedule: fields.schedule.startsWith('daily')
 			? 'daily'
@@ -524,6 +531,9 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		corridors: fields.corridors,
 		display_config: {
 			region: fields.region,
+			// Issue #3198: immer die angezeigte Vorlage — ohne Besuch des Reiters Wetter
+			// fuellt der Server die Metriken daraus (vorher Rueckfall auf das Profil).
+			ampel: { template: fields.vorlageId ?? STANDARD_VORLAGE },
 			...(Object.keys(fields.idealRanges).length > 0 ? { ideal_ranges: fields.idealRanges } : {}),
 			// Issue #1366 F002 (Fix-Runde 2, loest die S3B-Fassung dieses Kommentars
 			// ab): `null` ("Wetter-Metriken-Bereich nie geoeffnet/beruehrt") laesst
@@ -584,6 +594,8 @@ export interface CompareFeldsatz {
 	name: string;
 	region: string; // mapped: display_config.region
 	activityProfile: ActivityProfile | null;
+	// Issue #3198 (S4b-3): Vorlage der Neuanlage (Quelle der Abo-Sicht des Reiters Wetter).
+	vorlageId: string;
 	pickedIds: string[];
 	isEditMode: boolean;
 	// Issue #441: Idealwerte pro Metrik; leer = nicht in display_config.
@@ -644,6 +656,7 @@ export function compareFeldsatzStandard(): CompareFeldsatz {
 		name: '',
 		region: '',
 		activityProfile: null,
+		vorlageId: STANDARD_VORLAGE,
 		pickedIds: [],
 		isEditMode: false,
 		idealRanges: {},

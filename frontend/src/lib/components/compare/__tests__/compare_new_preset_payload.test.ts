@@ -35,7 +35,7 @@ function fullFields(): NewComparePresetFields {
 	return {
 		name: 'Skitouren Hochkönig',
 		pickedIds: ['loc-1', 'loc-2'],
-		activityProfile: 'wintersport',
+		vorlageId: 'wintersport', // #3198 (S4b-3): Vorlage statt Aktivitaetsprofil
 		schedule: 'daily_morning',
 		officialAlertsEnabled: true,
 		radarAlertEnabled: false,
@@ -84,6 +84,20 @@ describe('buildNewComparePresetPayload — Issue #1360 F002: top_n ersatzlos ent
 		assert.deepEqual(displayConfig.hourly_metrics, ['temp_c']);
 		assert.deepEqual(displayConfig.ideal_ranges, { wind_max_kmh: { min: 0, max: 30 } });
 		assert.deepEqual(displayConfig.metric_alert_levels, { wind_max_kmh: 'sensibel' });
+	});
+});
+
+describe('Issue #3198 (S4b-3): Neuanlage traegt die Vorlage, profil ist konstant', () => {
+	test('display_config.ampel.template = vorlageId, profil = „allgemein“', () => {
+		const payload = buildNewComparePresetPayload(fullFields());
+		assert.equal(payload.profil, 'allgemein');
+		assert.deepEqual((payload.display_config as Record<string, unknown>).ampel, { template: 'wintersport' });
+	});
+
+	test('ohne vorlageId gilt die Standardvorlage „allgemein“', () => {
+		const { vorlageId: _weg, ...ohne } = fullFields();
+		const payload = buildNewComparePresetPayload(ohne);
+		assert.deepEqual((payload.display_config as Record<string, unknown>).ampel, { template: 'allgemein' });
 	});
 });
 
