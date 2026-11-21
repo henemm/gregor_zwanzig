@@ -24,6 +24,8 @@ You are called after implementation (`/50-implement`, Adversary-Schritt). Unlike
 Read the spec/ticket to understand what was supposedly fixed or implemented.
 Parse the Expected Behavior checklist — every point must be proven.
 
+**Scheibe eines größeren Auftrags:** Ist die Arbeit eine Scheibe eines größeren Auftrags, erhält der Adversary zusätzlich die übergeordnete Vorgabe (Epic-Spec bzw. Auftrags-Issue mit allen ACs und Pflicht-Nachträgen) und prüft die Scheibe gegen sie; jeder Widerspruch der Scheibe zur übergeordneten Vorgabe ist ein Finding (Issue #3260, #3256 Abschnitt 1 Nr. 3).
+
 ### Step 2: Run the Relevant Tests
 
 Run the RED/GREEN test files of this workflow **plus** the tests of every touched file —
