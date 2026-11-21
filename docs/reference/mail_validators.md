@@ -212,6 +212,8 @@ Grundauswahl), -Stundenverlauf und -Ausblick; Orte ohne `active_metrics` nehmen
 die Standardzeilen. `channel_layouts`, `outlook_metrics`, `hourly_metrics` und
 die `metrics`-Folge wirken mit Tabelle nicht mehr; ohne Tabelle unverändert.
 
+**Bekannte Einschränkung (#3242):** Abgeleitete Größen mit Fenstercharakter (z. B. Nachttief) bleiben in der Trip-E-Mail auch bei ausgeschalteter Eltern-Zeile, wie im Produkt (`keine_eigene_spalte`); das Haken-Erbe von der Eltern-Zeile wirkt nur bei künftigen abgeleiteten Größen, die keine Fenstergrößen sind.
+
 Soll-Regel Ausblick (beide Kontexte): `[]` = Block aus; nie eingestellt = ganze
 Grundauswahl in der eingestellten Reihenfolge; sonst Schnitt mit der
 Grundauswahl, leerer Schnitt = volle Grundauswahl; ohne Grundauswahl die sieben
