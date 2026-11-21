@@ -179,6 +179,28 @@ die JSON-Antwort von `GET /api/locations` oder `{"<id>": "<Name>"}`) oder aus
 der Hülle. Fehlen sie, scheitert der Lauf mit „SOLL: Ortsfolge nicht prüfbar"
 (Exit 1), statt die Ortsfolge still zu überspringen.
 
+**Hülle (Orte):** `{"preset": {...}, "orte": {"<Kennung>": "<Name>"}}` — `orte`
+ist ein Objekt Kennung → Name, keine Liste. Die Hüllen-Prüfung läuft beim Start
+des Validators **immer**, sobald `--konfig` gesetzt ist, also auch mit `--orte`
+und `--min-locations`. Eine falsche Hülle (Liste oder anderer Typ) endet mit
+Exit 2 und der Meldung „FEHLER: --konfig … Huelle: 'orte' muss ein Objekt
+{\"<Kennung>\": \"<Name>\"} sein" statt mit einem Traceback (#3218).
+
+**Quelle der Darstellung Roh/Einfach (#3218):** Trägt das Abo die Tabelle
+`display_config.placements` (Zeilenliste `rows`), gilt für die Darstellung
+allein `rows[].formats` — wie im Renderer: Trip-Stundentabelle (`formats.email`,
+HTML inklusive Ampel-Ausnahme, Klartext), Orte-Vergleichstabelle
+(`formats.email`) und Ausblick Trip und Orte (`formats.outlook`). Es zählt die
+erste Zeile je `metric_id`; ein Wert gilt nur an einer Stelle mit zwei Formen
+(`zwei_formen_stellen`) und nur als `raw`/`simplified`; fehlt er oder ist er
+ungültig, gilt der Katalog-Standard (`standard_form`), Trip und Orte gleich.
+Eine abgeleitete Größe ohne eigene Zeile (z. B. Nachttief) liest die
+Eltern-Zeile (`_DERIVED_METRIC_RULES`). Die Altfelder (`use_friendly_format`,
+`format_mode`, `channel_layouts.email`, `outlook_metric_formats`) gelten nur
+ohne Tabelle; dort ist das Soll unverändert. **Restlücke:** Auswahl und
+Reihenfolge der Größen liest das Soll auch mit `placements` weiter aus den
+Altfeldern — eigenes Issue #3242.
+
 Soll-Regel Ausblick (beide Kontexte): `[]` = Block aus; nie eingestellt = ganze
 Grundauswahl in der eingestellten Reihenfolge; sonst Schnitt mit der
 Grundauswahl, leerer Schnitt = volle Grundauswahl; ohne Grundauswahl die sieben

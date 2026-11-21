@@ -40,6 +40,10 @@ Die Regeln sind das dokumentierte Produktverhalten:
   Ortsfolge = ``location_ids`` (#1359), Namen aus ``--orte``/Huelle, sonst
   ``orte_unpruefbar`` (nie still uebersprungen).
 * Darstellung Roh/Einfach je Spalte (Trip, ``formen_*``, Spec §2 Punkt 3).
+  #3218: mit Tabelle (``placements``) gilt allein ``rows[].formats`` (erste
+  Zeile je Kennung, nur ``raw|simplified`` an einer Stelle mit zwei Formen,
+  sonst Katalog-Standard; abgeleitete Groesse ohne Zeile: Eltern-Zeile laut
+  ``_DERIVED_METRIC_RULES``) -- Stundentabelle, Vergleichstabelle, Ausblick.
 * 3-Tages-Ausblick je Briefing (#3155, Spec B4 AC-12): OB der Ausblick im
   Morgen- bzw. Abend-Briefing steht, entscheidet EINE Regel des Produkts --
   bewusst die echten Funktionen aus ``services.placements`` (Tabelle:
@@ -66,8 +70,10 @@ _SRC = Path(__file__).resolve().parents[2] / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
+from app.loader import _DERIVED_METRIC_RULES  # noqa: E402
 from app.metric_catalog import (  # noqa: E402
-    _METRICS, AMPEL_METRIC_IDS, OUTLOOK_FRIENDLY_CAPABLE, aggregation_label,
+    _METRICS, AMPEL_METRIC_IDS, OUTLOOK_FRIENDLY_CAPABLE, aggregation_label, standard_form,
+    zwei_formen_stellen,
 )
 from i18n import t  # noqa: E402
 from output.renderers.compare_hourly_metric_ids import (  # noqa: E402
@@ -227,6 +233,57 @@ def _modus(e: dict) -> str:
     if modus in (None, "scale", "symbol"):
         return _REG[e["metric_id"]].default_format_mode if e.get("use_friendly_format", True) else "raw"
     return modus
+
+
+# --------------------------------------------------------------------------- #
+# Tabelle ``placements`` (#3218): Form je Stelle aus ``rows[].formats``
+# --------------------------------------------------------------------------- #
+#: Abgeleitete Groesse -> Eltern-Groesse (statisch, ``_DERIVED_METRIC_RULES``).
+_ELTERN = {kind: elter for kind, elter, _agg in _DERIVED_METRIC_RULES}
+
+
+def _tabellen_zeile(dc: dict, mid: str) -> dict | None:
+    """Erste Tabellenzeile mit ``metric_id`` (Duplikate ohne Wirkung)."""
+    zeilen = (dc.get("placements") or {}).get("rows") or []
+    return next((z for z in zeilen if isinstance(z, dict) and z.get("metric_id") == mid), None)
+
+
+def _form(dc: dict, mid: str, stelle: str) -> str:
+    """``raw|simplified`` laut Tabelle an ``stelle``; nur an Stellen mit zwei
+    Formen und nur gueltige Werte, sonst Katalog-Standard. Abgeleitete Groesse
+    ohne eigene Zeile: Form der Eltern-Zeile."""
+    if stelle not in zwei_formen_stellen(mid):
+        return standard_form(mid)
+    zeile = _tabellen_zeile(dc, mid)
+    if zeile is None and mid in _ELTERN:
+        zeile = _tabellen_zeile(dc, _ELTERN[mid])
+    formate = (zeile or {}).get("formats")
+    wert = formate.get(stelle) if isinstance(formate, dict) else None
+    return wert if isinstance(wert, str) and wert in ("raw", "simplified") else standard_form(mid)
+
+
+def _felder_aus_form(mid: str, form: str) -> dict:
+    """Altfelder einer Tabellenform; Einfach ohne Modus ``simplified`` (z. B.
+    Windrichtung) -> Katalog-Modus, damit ``_wind_verschmolzen`` greift."""
+    if form == "raw":
+        return {"format_mode": "raw", "use_friendly_format": False}
+    modus = "simplified" if "simplified" in _REG[mid].format_modes else _REG[mid].default_format_mode
+    return {"format_mode": modus, "use_friendly_format": True}
+
+
+def _mit_tabelle(liste: list[dict], dc: dict) -> list[dict]:
+    """Mit Tabelle ueberlagert ``formats.email`` die Altfelder der E-Mail-Liste."""
+    if not _hat_tabelle(dc):
+        return liste
+    return [{**e, **_felder_aus_form(e["metric_id"], _form(dc, e["metric_id"], "email"))}
+            for e in liste]
+
+
+def _ausblick_formate(dc: dict, ids: list[str] | None) -> object:
+    """Ausblick-Formen: mit Tabelle ``formats.outlook``, sonst ``outlook_metric_formats``."""
+    if ids is None or not _hat_tabelle(dc):
+        return dc.get("outlook_metric_formats")
+    return {m: _form(dc, m, "outlook") == "simplified" for m in ids}
 
 
 # --------------------------------------------------------------------------- #
@@ -492,7 +549,7 @@ def orte_ausblick_briefings(preset: dict) -> dict[str, bool]:
 def trip_soll(trip: dict, report: str = "evening") -> dict:
     """Soll eines Trip-Briefings fuer ``report`` (morning/evening)."""
     dc = _trip_display_config(trip)
-    liste = _trip_email_liste(dc, report)
+    liste = _mit_tabelle(_trip_email_liste(dc, report), dc)
     grund = _sortiert([e for e in _eintraege(dc.get("metrics"))
                        if _waehlbar(e.get("metric_id")) and _an(e, report)])
     grundauswahl = list(dict.fromkeys(
@@ -521,7 +578,7 @@ def trip_soll(trip: dict, report: str = "evening") -> dict:
         "ausblick_an_kompakt": ausblick_an,
         # #3155 (AC-12): in welchen Briefings der Ausblick laut Konfiguration steht.
         "ausblick_briefings": tuple(r for r in _REPORTS if briefings[r]),
-        "ausblick": None if ids == [] else _ausblick_spalten(ids, dc.get("outlook_metric_formats")),
+        "ausblick": None if ids == [] else _ausblick_spalten(ids, _ausblick_formate(dc, ids)),
         # #3047 Runde 7 (B-V1): Etappendaten verankern die Zahl der Ausblick-
         # Zeilen (``ausblick_zeilen_trip``) am Datum der Mail.
         "etappen_daten": [s["date"] for s in trip.get("stages") or []
@@ -621,6 +678,11 @@ def _orte_einfach(dc: dict, paare: list[tuple[str, str]] | None, lang: str) -> l
     """#3047 N4: Zeilen der Vergleichstabelle, die laut ``channel_layouts.email``
     Einfach zeigen (Ampelpunkt/Wort statt Zahl) -- dort ist ein fehlendes
     Zahlformat kein FORMAT-Fehler."""
+    if paare and _hat_tabelle(dc):
+        # #3218: mit Tabelle gilt ``formats.email`` (Altfeld ohne Wirkung).
+        einfach = {m for m, _a in paare
+                   if _form(dc, m, "email") == "simplified" and len(_REG[m].format_modes) > 1}
+        return [label for label, (m, _a) in zip(_uebersicht_labels(paare, lang), paare) if m in einfach]
     layouts = dc.get("channel_layouts")
     if not paare or not isinstance(layouts, dict) or not isinstance(layouts.get("email"), list):
         return []
@@ -897,7 +959,7 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
         # je Briefing der Mail (``ausblick_im_briefing``).
         "ausblick_briefings": briefings,
         "ausblick_an": bool(briefings) and (_hat_tabelle(dc) or ids != []),
-        "ausblick": None if ids == [] else _ausblick_spalten(ids, dc.get("outlook_metric_formats")),
+        "ausblick": None if ids == [] else _ausblick_spalten(ids, _ausblick_formate(dc, ids)),
         **_ortsfolge(ids_orte, ortsnamen),
     }
 
@@ -929,6 +991,11 @@ def soll_aus_daten(daten: dict, lang: str = "de", ortsnamen: dict | None = None)
     ``{"preset": {...}, "orte": {"<id>": "<Name>"}}`` kommen (Ortsfolge) oder
     als rohes Preset mit ``ortsnamen`` (aus ``lade_ortsnamen``, ``--orte``)."""
     if isinstance(daten.get("preset"), dict):
+        if daten.get("orte") is not None and not isinstance(daten["orte"], dict):
+            raise ValueError(
+                "Huelle: 'orte' muss ein Objekt {\"<Kennung>\": \"<Name>\"} sein, nicht "
+                f"{type(daten['orte']).__name__} -- erwartet "
+                "{\"preset\": {...}, \"orte\": {\"<Kennung>\": \"<Name>\"}}")
         return orte_soll(daten["preset"], lang, {**(daten.get("orte") or {}), **(ortsnamen or {})})
     if "location_ids" in daten or daten.get("kind") == "vergleich":
         return orte_soll(daten, lang, ortsnamen)
