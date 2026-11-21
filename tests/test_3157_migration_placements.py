@@ -26,7 +26,7 @@ import json
 import os
 import tarfile
 from collections import Counter
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -537,3 +537,134 @@ def test_ac10_problem_abos_bleiben_gesundes_wird_migriert(tmp_path):
     assert "Fehler" in z_kaputt, z_kaputt
     grund = z_kaputt.split("Fehler", 1)[1].strip(" :-()")
     assert len(grund) >= 3, f"Grund fehlt: {z_kaputt}"
+
+
+def _archiv_trip_ohne_configs(trip_id: str) -> dict:
+    """Archivierter Bestands-Trip wie im Prod-Probelauf (#3157 AC-11): OHNE
+    ``display_config`` und OHNE ``report_config``; laedt ueber ``load_trip``
+    mit Modell-Default (Profil-Grundauswahl)."""
+    return {
+        "id": trip_id, "name": f"Archiv {trip_id}", "kind": "route",
+        "stages": copy.deepcopy(_FULL_TRIP["stages"]),
+        "alert_rules": copy.deepcopy(_FULL_TRIP["alert_rules"]),
+        "tempo": copy.deepcopy(_FULL_TRIP["tempo"]),
+        "archived_at": "2026-09-01T10:00:00+00:00",
+        "accuracy_pct": 87, "alerts_count": 3, "briefings_count": 12,
+        "headline": "Archivierter Trip",
+    }
+
+
+def test_ac11_trip_ohne_display_und_report_config_wird_umgerechnet(tmp_path):
+    root = tmp_path / "data" / "users"
+    archiv = _ablegen(root, U_A, _archiv_trip_ohne_configs("archiv-ohne"))
+    normal = _ablegen(root, U_A, _trip_alt("normal"))
+    vorher = _lies(archiv)
+    soll = _umrechnung(archiv)
+    assert soll.show_stability_off is False, "Vorbedingung: ohne report_config keine Folge"
+    assert "unerklaert" not in _arten(archiv), "Vorbedingung: Umrechnung erklaert"
+
+    rc, bericht = _lauf(root, tmp_path / "bak", execute=True)
+
+    assert rc == 0, bericht
+    z = _zeile(bericht, U_A, "archiv-ohne")
+    assert "wird umgerechnet" in z, z
+    nachher = _lies(archiv)
+    assert nachher["display_config"] == {"placements": soll.placements}, \
+        "display_config darf nur placements tragen (= placements_from_legacy)"
+    assert "report_config" not in nachher, "report_config darf nicht entstehen"
+    assert {k: v for k, v in nachher.items() if k != "display_config"} == vorher, \
+        "uebrige Schluessel muessen inhaltsgleich bleiben"
+    assert "placements" in _lies(normal)["display_config"]
+
+    nach_erstem = archiv.read_bytes()
+    rc2, bericht2 = _lauf(root, tmp_path / "bak2", execute=True)
+
+    assert rc2 == 0, bericht2
+    assert archiv.read_bytes() == nach_erstem, "zweiter Lauf hat den Archiv-Trip veraendert"
+    assert "hat schon placements" in _zeile(bericht2, U_A, "archiv-ohne")
+
+
+def test_ac10_display_config_als_liste_bleibt_fehler(tmp_path):
+    root = tmp_path / "data" / "users"
+    abo = _archiv_trip_ohne_configs("dc-liste")
+    abo["display_config"] = ["wind", "gust"]
+    falsch = _ablegen(root, U_A, abo)
+    gesund = _ablegen(root, U_A, _trip_alt("gesund"))
+    vorher = falsch.read_bytes()
+
+    rc, bericht = _lauf(root, tmp_path / "bak", execute=True)
+
+    assert rc != 0, bericht
+    assert falsch.read_bytes() == vorher, "display_config-Liste wurde trotzdem geschrieben"
+    z = _zeile(bericht, U_A, "dc-liste")
+    assert "Fehler" in z and len(z.split("Fehler", 1)[1].strip(" :-()")) >= 3, z
+    assert "placements" in _lies(gesund)["display_config"]
+
+
+def test_ac10_probelauf_mit_fehler_abo_exit_ungleich_null_und_schreibt_nichts(tmp_path):
+    """Spec Expected Behavior: Exit ungleich 0, wenn ein Abo fehlerhaft ist --
+    auch im Probelauf (Betrieb sieht das Problem vor ``--execute``)."""
+    root = tmp_path / "data" / "users"
+    _ablegen(root, U_A, _trip_unerklaert("raetsel"))
+    _ablegen(root, U_B, '{"id": "kaputt", "kind": "route", "display_config": {', name="kaputt")
+    _ablegen(root, U_B, _trip_alt("gesund"))
+    vorher = _baum(tmp_path)
+
+    rc, bericht = _lauf(root, tmp_path / "bak", execute=False)
+
+    assert rc != 0, f"Probelauf mit Fehler-Abos muss Exit ungleich 0 liefern:\n{bericht}"
+    assert _baum(tmp_path) == vorher, "Probelauf hat Dateien oder Verzeichnisse veraendert"
+    assert "Fehler" in _zeile(bericht, U_A, "raetsel")
+    assert "Fehler" in _zeile(bericht, U_B, "kaputt")
+
+
+# ---------------------------------------------------------------------------
+# Schreiben: zwischen Planung und Schreiben geaendert / Sicherung scheitert
+# ---------------------------------------------------------------------------
+
+def test_datei_zwischen_planung_und_schreiben_geaendert_bleibt_offen_exit_1(tmp_path):
+    """Spec: Wurde die Datei zwischen Planung und Schreiben geaendert, bleibt sie
+    offen und der Lauf endet mit Exit 1. Planung und Schreiben sind getrennte
+    Phasen des Skripts (``planen`` / ``ausfuehren``); dazwischen schreibt hier
+    ein Dritter (wie die Go-API) in die Datei."""
+    root, pfade = _bestand(tmp_path)
+    mod = _modul()
+    plaene, _bericht, status, _arten = mod.planen(root.resolve())
+    assert status[mod.FEHLER] == 0, "Vorbedingung: kein Fehler-Abo"
+
+    fremd = _lies(pfade["a_trip"])
+    fremd["name"] = "Von der Go-API umbenannt"
+    pfade["a_trip"].write_text(json.dumps(fremd, ensure_ascii=False, indent=2), encoding="utf-8")
+    fremd_bytes = pfade["a_trip"].read_bytes()
+
+    err = io.StringIO()
+    with redirect_stdout(io.StringIO()), redirect_stderr(err):
+        probleme = mod.ausfuehren(plaene, tmp_path / "bak")
+
+    assert probleme >= 1, "offene Datei muss als Problem zaehlen (Exit 1)"
+    assert pfade["a_trip"].read_bytes() == fremd_bytes, "fremde Aenderung ueberschrieben"
+    assert pfade["a_trip"].name in err.getvalue(), \
+        f"Fehlermeldung nennt das offene Abo nicht:\n{err.getvalue()}"
+    assert "placements" in _lies(pfade["b_trip"])["display_config"], \
+        "unveraenderte Abos muessen trotzdem migriert werden"
+
+
+def test_sicherung_scheitert_mitten_im_archiv_kein_halbes_archiv(tmp_path):
+    """Scheitert die Sicherung, nachdem das Archiv angelegt wurde (eine geplante
+    Datei ist inzwischen weg), bleibt kein halbes Archiv liegen und fuer diesen
+    Nutzer wird nichts geschrieben; der andere Nutzer wird normal migriert."""
+    root, pfade = _bestand(tmp_path)
+    mod = _modul()
+    plaene, _bericht, _status, _arten = mod.planen(root.resolve())
+    a_orte_vorher = pfade["a_orte"].read_bytes()
+    pfade["a_trip"].unlink()  # zwischen Planung und Sicherung entfernt
+    backup = tmp_path / "bak"
+
+    with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+        probleme = mod.ausfuehren(plaene, backup)
+
+    assert probleme >= 1, "gescheiterte Sicherung muss als Problem zaehlen"
+    assert _archive(backup, U_A) == [], f"halbes Archiv liegt noch: {_archive(backup, U_A)}"
+    assert pfade["a_orte"].read_bytes() == a_orte_vorher, \
+        "Nutzer mit gescheiterter Sicherung wurde trotzdem geschrieben"
+    assert len(_archive(backup, U_B)) == 1, "anderer Nutzer muss gesichert werden"

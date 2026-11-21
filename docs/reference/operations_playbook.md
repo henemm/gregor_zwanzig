@@ -971,6 +971,21 @@ Sicherung als `tar.gz` je Nutzer unter `.backups/migrate-3196-<uid>-<timestamp>.
 
 ---
 
+## Was steht wo: Bestands-Abos ins Tabellenformat `placements` (#3157)
+
+Ergänzt je Abo unter `<root>/<uid>/briefings/*.json` (Trips und Orts-Vergleiche) die Tabelle `display_config.placements`, berechnet allein von `services.placements.placements_from_legacy`; bei `show_stability_off` zusätzlich `report_config.show_stability=false`. Alle anderen Felder, auch die Altfelder (`channel_layouts`, `outlook_metrics`, `show_outlook` …), bleiben inhaltsgleich (Entfernung erst mit #3237). Abos mit vorhandenem `placements` bleiben unangetastet; wiederholbar (zweiter Lauf schreibt nichts). Bericht je Abo: Nutzer, Abo-Id, Fläche, Status (`hat schon placements` | `wird umgerechnet` | `Fehler`) und Änderungsarten mit Anzahl, am Ende Summen. Ausführung **nach** dem Prod-Deploy als Dienstnutzer `claude-gregor`, je Umgebung erst Probelauf lesen, dann `--execute`; Ausgabe nur in nicht weltlesbare Dateien umleiten (z. B. `umask 077`, nie nach `/tmp`):
+
+```bash
+uv run python3 scripts/migrate_3157_placements.py --root /var/lib/gregor-staging/users            # Staging, Probelauf
+uv run python3 scripts/migrate_3157_placements.py --root /var/lib/gregor-staging/users --execute  # Staging, Sicherung + Schreiben
+uv run python3 scripts/migrate_3157_placements.py --root /var/lib/gregor/users                    # Prod, Probelauf
+uv run python3 scripts/migrate_3157_placements.py --root /var/lib/gregor/users --execute          # Prod, Sicherung + Schreiben
+```
+
+Sicherung als `tar.gz` je Nutzer unter `.backups/migrate-3157-<uid>-<timestamp>.tar.gz` (Standard `--backup-dir`: `<root>/../.backups`), vor dem ersten Schreiben; schlägt sie fehl, wird für diesen Nutzer nichts geschrieben. Sperre (`<id>.json.lock`, wie der Go-PUT) und atomares Schreiben wie `migrate_2792_profil_ampel.py`. Fail-closed: Änderungsart `unerklaert` oder nicht ladbares Abo → Abo unangetastet, `Fehler` mit Grund im Bericht. Exit 1 = Fehler-Abos, gescheiterte Sicherung oder zwischen Planung und Schreiben geänderte Dateien; Ursache klären bzw. Lauf wiederholen. Freigegebene Ausgabe-Änderungen: nur `nur_text_folgt_html` und `reihenfolge_wie_sms`. Danach zweiter Probelauf (kein Abo mehr „wird umgerechnet“) und `prod_selftest.py`. Spec: `docs/specs/modules/feat_3157_migration_placements.md`, ADR-0124.
+
+---
+
 ## E-Mail-Bestätigung rückwirkend nachtragen (#2304, S1 aus #2271/#2146)
 
 Einmaliger Nachtrag-Lauf, der Bestandskonten ohne `email_verified_at` (angelegt, bevor der
