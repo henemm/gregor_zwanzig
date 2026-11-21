@@ -41,7 +41,7 @@
   "vergleich": {
     "name": "",
     "location_ids": [],
-    "profil": "wandern",
+    "profil": "allgemein",
     "schedule": "daily",
     "official_alerts_enabled": true,
     "radar_alert_enabled": false,
@@ -69,7 +69,10 @@
     "empfaenger": [],
     "corridors": [],
     "display_config": {
-      "region": ""
+      "region": "",
+      "ampel": {
+        "template": "allgemein"
+      }
     }
   }
 }

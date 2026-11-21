@@ -29,6 +29,7 @@ const SOLL: Record<string, unknown> = {
 	name: '',
 	region: '',
 	activityProfile: null,
+	vorlageId: 'allgemein', // #3198 (S4b-3): Vorlage der Neuanlage = STANDARD_VORLAGE
 	pickedIds: [],
 	isEditMode: false,
 	idealRanges: {},

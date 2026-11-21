@@ -1,7 +1,7 @@
 // TDD RED — Issue #2727 (Epic #2345, DoD-1): compareWizardState ablösen.
 // Spec: docs/specs/modules/feat_2727_compare_wizardstate_abloesen.md — AC-5, AC-7 (+ Seite /compare/new)
 //
-// AC-5: `/compare/new` — Name, Region, Aktivitätsprofil und Orte eingetragen, „Briefing
+// AC-5: `/compare/new` — Name, Region und Orte eingetragen (#3198: kein Profil mehr), „Briefing
 // aktivieren" ⇒ GENAU EIN `POST /api/compare/presets` mit allen eingegebenen Werten, danach
 // navigiert der Editor per `goto` zum neuen Vergleich. Der Editor hält seinen Zustand selbst
 // (kein `getContext`), das Speichern ist eine lokale Funktion (kein `saveNewPreset` an einer Klasse).
@@ -57,19 +57,18 @@ afterEach(() => {
 const EINGABEN = {
 	name: 'Sardinien-Woche',
 	region: 'Gallura',
-	activityProfile: 'wintersport',
 	pickedIds: ['loc-a', 'loc-b', 'loc-c']
 };
 
 describe('AC-5: Anlegen postet genau einmal, mit allen Eingaben, und navigiert', () => {
-	test('Vorbedingung: name/region/activityProfile/pickedIds kommen über stateOverride an (ohne Context)', async () => {
+	test('Vorbedingung: name/region/pickedIds kommen über stateOverride an (ohne Context)', async () => {
 		const e = await vergleichEditor({ stateOverride: { ...ALLE_BESUCHT, ...EINGABEN }, locations: ORTE });
 		assert.equal(e.u.nameOk, true, VERTRAG_FEHLT_EDITOR);
 		assert.equal(e.u.orteOk, true, VERTRAG_FEHLT_EDITOR);
 		assert.equal(e.u.canActivateNow, true, 'VERTRAG FEHLT (#2727): „Briefing aktivieren" ist trotz Name, 3 Orten und allen Besuchen gesperrt');
 	});
 
-	test('„Briefing aktivieren" ⇒ genau ein POST /api/compare/presets; Körper trägt Name, Orte, Profil, Region', async () => {
+	test('„Briefing aktivieren" ⇒ genau ein POST /api/compare/presets; Körper trägt Name, Orte, Region', async () => {
 		const e = await vergleichEditor({ stateOverride: { ...ALLE_BESUCHT, ...EINGABEN }, locations: ORTE });
 		assert.equal(typeof e.u.handleActivate, 'function', 'Messaufbau: handleActivate nicht gebunden');
 		assert.equal(e.u.nameOk, true, VERTRAG_FEHLT_EDITOR);
@@ -79,7 +78,7 @@ describe('AC-5: Anlegen postet genau einmal, mit allen Eingaben, und navigiert',
 		const b = posts[0].koerper as Knoten;
 		assert.equal(b.name, 'Sardinien-Woche');
 		assert.deepEqual(b.location_ids, ['loc-a', 'loc-b', 'loc-c']);
-		assert.equal(b.profil, 'wintersport', 'Aktivitätsprofil fehlt im Payload (Rückfall „wandern"?)');
+		// #3198 (S4b-3): profil/Vorlage der Neuanlage misst compare-new/__tests__/anlegen_ohne_profil_3198.test.ts.
 		assert.equal((b.display_config as Knoten)?.region, 'Gallura', 'Region fehlt in display_config');
 		assert.equal(b.schedule, 'daily', 'Standard-Zeitplan des Anlegens');
 	});

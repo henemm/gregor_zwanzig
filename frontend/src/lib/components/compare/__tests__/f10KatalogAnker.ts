@@ -162,7 +162,6 @@ export const F10_ANKER: [schluessel: string, de: string, en: string][] = [
 	['vergleich.neu.optional_max', 'optional · max 60', 'optional · max 60'],
 	['vergleich.neu.region_beispiel', 'z.B. Hochkönig · Salzburger Land', 'e.g. Hochkönig · Salzburger Land'],
 	['vergleich.neu.aktivitaetsprofil', 'Aktivitätsprofil', 'Activity profile'],
-	['vergleich.neu.profil_hinweis', 'Bestimmt, welche Wetter-Metriken verglichen werden. Die Grenzen legst du im Reiter Wetter fest.', 'Determines which weather metrics are compared. You set the limits in the Weather tab.'], // #2794 S3a 4b (AC-33)
 	['vergleich.neu.name_fehlt', 'Name fehlt', 'Name missing'],
 	['vergleich.neu.orte_hinzufuegen', 'Orte hinzufügen →', 'Add locations →'],
 	['vergleich.neu.min_orte', 'min. 2 Orte auswählen', 'select at least 2 locations'],

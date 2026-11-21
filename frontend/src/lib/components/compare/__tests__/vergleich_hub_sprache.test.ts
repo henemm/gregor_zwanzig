@@ -322,9 +322,11 @@ describe('AC-7: Stundenverlauf (transponierte Uebersicht): Name aus dem Register
 		for (const n of ['Temperatur', 'Wind', 'Bewölkung', 'Sonnenstunden']) hat(e, n);
 	});
 	// #2880: mobil MField mit Hinweis rechts (vorher handgeschriebenes „Region (optional)")
-	test('Anlegen: Profil-Metriknamen und Profile englisch (metricLabel/Katalog)', () => {
+	test('Anlegen: Texte englisch, ohne Profil-Kacheln (#3198)', () => {
 		const { en: e } = deDannEn(() => sichtbar(P.ANLEGE_FAELLE.anlegen_vergleich.map(P.anlegenRendern).join('\n')));
-		for (const s of ['General', 'Winter sports', 'Hiking', 'Summer trekking', 'Basics', 'Comparison name', 'Activity profile', 'Add locations →', 'Name missing', 'Location comparisons', 'New comparison', 'Enter name', 'Cancel', 'Activate briefing', 'Region optional · max 60', 'No name yet', 'Nothing set up yet']) hat(e, s);
+		// #3198 (S4b-3): keine Profil-Kacheln mehr im Anlege-Editor.
+		for (const weg of ['Winter sports', 'Summer trekking', 'Activity profile']) assert.ok(!e.includes(weg), `„${weg}“ steht noch im Anlege-Editor`);
+		for (const s of ['Basics', 'Comparison name', 'Add locations →', 'Name missing', 'Location comparisons', 'New comparison', 'Enter name', 'Cancel', 'Activate briefing', 'Region optional · max 60', 'No name yet', 'Nothing set up yet']) hat(e, s);
 		// #2837 S2 (AC-3): der mobile Zurück-Pfeil trägt den Elternteil „Location comparisons"
 		// (vorher „Comparisons") — je Render Desktop-Pfad UND mobiler Zurück-Pfeil.
 		assert.ok((e.match(/Location comparisons/g) ?? []).length >= 2 * P.ANLEGE_FAELLE.anlegen_vergleich.length, 'mobiler Zurück-Pfeil ohne Elternteil „Location comparisons"');

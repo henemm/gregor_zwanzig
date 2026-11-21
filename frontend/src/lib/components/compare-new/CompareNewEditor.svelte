@@ -20,25 +20,14 @@
 	import { goto } from '$app/navigation';
 	import { Btn, Eyebrow, TopoBg, Dot } from '$lib/components/atoms';
 	import { Field } from '$lib/components/molecules';
-	import {
-		ACTIVITY_PROFILE_OPTIONS,
-		toCompareProfile,
-		type ActivityProfile,
-		type ComparePreset,
-		type Location,
-		type Group
-	} from '$lib/types';
+	import { type ComparePreset, type Location, type Group } from '$lib/types';
 	import {
 		buildNewComparePresetPayload,
 		compareFeldsatzStandard,
 		type CompareFeldsatz
 	} from '../compare/compareEditorSave.ts';
 	import { feldsatzAusVorlage } from './compareNewVorlage.ts';
-	import {
-		PROFILE_METRICS_WITH_SCALES,
-		type CompareMetricDef,
-		type ProfileKey
-	} from '$lib/components/shared/wetter-tab/corridorEditorState';
+	import type { CompareMetricDef } from '$lib/components/shared/wetter-tab/corridorEditorState';
 	// Issue #2794 S3a Teil-PR 4a (AC-44/AC-45): Vorbelegung der Wertebereiche als reine
 	// Funktion (vorher ein unsichtbar gemounteter CorridorEditor), ein Effekt unten.
 	import { vergleichVorbelegung, type VergleichVorbelegung } from '../shared/wetter-tab/anlegeVorbelegung.ts';
@@ -46,7 +35,7 @@
 	import { api } from '$lib/api.js';
 	// Issue #2659 (i18n F10): Texte aus dem Katalog; Reiter/Anlege-Kette und Sperr-Hinweise
 	// werden je Sprache abgeleitet (`$locale`), nichts auf Skript-Ebene eingefroren.
-	import { locale, t, tn, type MessageKey } from '$lib/i18n';
+	import { locale, t, tn } from '$lib/i18n';
 	import {
 		tailUnlocked,
 		tailDone,
@@ -108,7 +97,6 @@
 		zustellungVisited?: boolean;
 		name?: string;
 		region?: string;
-		activityProfile?: ActivityProfile | null;
 		pickedIds?: string[];
 	}
 	interface Props {
@@ -132,7 +120,6 @@
 			Object.entries({
 				name: seed.name,
 				region: seed.region,
-				activityProfile: seed.activityProfile,
 				pickedIds: seed.pickedIds
 			}).filter(([, wert]) => wert !== undefined)
 		)
@@ -171,15 +158,15 @@
 	// liest sie beim Zurueckkehren (sonst Profil-Standard; die Rueckabbildung ueber die Vergleichs-
 	// Schluessel verliert Metriken ausserhalb des Vergleichs-Katalogs).
 	let wetterAuswahl = $state<WetterAnlegeNutzlast['display_config']['active_metrics'] | undefined>(undefined);
+	// #3198 (S4b-3): keine Profil-Wahl mehr; die angezeigte Vorlage kommt aus `wiz.vorlageId`.
 	const wetterAbo = $derived({
-		profil: wiz.activityProfile,
 		display_config: {
 			...(wetterAuswahl
 				? { active_metrics: wetterAuswahl }
 				: wiz.activeMetricKeys
 					? { active_metrics: toStoredActiveMetrics(wiz.activeMetricKeys, alarmeCatalog) }
 					: {}),
-			...(wetterAmpel ? { ampel: wetterAmpel } : {})
+			ampel: wetterAmpel ?? { template: wiz.vorlageId }
 		},
 		official_alerts_enabled: wiz.officialAlertsEnabled,
 		official_warnings: { enabled: wiz.officialWarningsEnabled },
@@ -196,7 +183,9 @@
 		const k = await loadCompareSelectionEntries().catch(() => []);
 		wiz.activeMetricKeys = s.display_config.active_metrics.map((m) => auswahlSchluessel(m, k));
 		wetterAuswahl = s.display_config.active_metrics;
-		wetterAmpel = s.display_config.ampel;
+		const ampel = s.display_config.ampel as Ampel | undefined;
+		wetterAmpel = ampel;
+		wiz.vorlageId = ampel?.template ?? wiz.vorlageId; // #3198: gewaehlte Vorlage
 		wiz.officialAlertsEnabled = s.official_alerts_enabled;
 		wiz.officialWarningsEnabled = s.official_alerts_enabled;
 		wiz.radarAlertEnabled = s.radar_alert_enabled;
@@ -328,14 +317,6 @@
 	function makeContinueHandler(id: CompareNewTabId) {
 		return () => switchTab(id);
 	}
-	function selectProfile(value: ActivityProfile) {
-		wiz.activityProfile = value;
-	}
-	function profileMetricsLabel(value: ActivityProfile): string {
-		void $locale; // #2657 (i18n F8): Profil-Metriknamen folgen dem Sprachwechsel ohne Neuladen
-		const key = toCompareProfile(value) as ProfileKey;
-		return PROFILE_METRICS_WITH_SCALES[key].map((m) => m.label).join(' · ');
-	}
 
 	// ── Speichern (Issue #681 Create-Modus, seit #2727 lokal im Editor) ────────
 	// Legt das neue Preset via POST /api/compare/presets an und navigiert zum Hub.
@@ -344,7 +325,7 @@
 		const payload = buildNewComparePresetPayload({
 			name: wiz.name,
 			pickedIds: wiz.pickedIds,
-			activityProfile: wiz.activityProfile,
+			vorlageId: wiz.vorlageId, // Issue #3198: angezeigte Vorlage (profil ist konstant)
 			schedule: wiz.schedule,
 			officialAlertsEnabled: wiz.officialAlertsEnabled, // Issue #1040
 			radarAlertEnabled: wiz.radarAlertEnabled, // Issue #1041 Slice 2
@@ -559,23 +540,6 @@
 					<Field label={$t('trip.anlegen.region')} side={$t('vergleich.neu.optional_max')}>
 						<input data-testid="compare-editor-region" type="text" maxlength="60" placeholder={$t('vergleich.neu.region_beispiel')} bind:value={wiz.region} class="w-full border rounded px-3 py-2 text-base bg-[var(--g-card)] border-[var(--g-rule)]" />
 					</Field>
-					<Eyebrow style="margin-bottom: 12px; margin-top: 28px">{$t('vergleich.neu.aktivitaetsprofil')}</Eyebrow>
-					<div style:font-size="13px" style:color="var(--g-ink-3)" style:margin-bottom="14px">
-						{$t('vergleich.neu.profil_hinweis')}
-					</div>
-					<div style:display="grid" style:grid-template-columns="1fr 1fr" style:gap="10px">
-						{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
-							{@const sel = wiz.activityProfile === opt.value}
-							<button data-testid={`compare-editor-profile-${opt.value}`} data-selected={sel ? 'true' : 'false'} type="button" onclick={() => selectProfile(opt.value)}
-								style:text-align="left" style:cursor="pointer" style:padding="14px 16px"
-								style:background={sel ? 'var(--g-accent-tint)' : 'var(--g-card)'}
-								style:border={sel ? '1.5px solid var(--g-accent)' : '1px solid var(--g-rule)'}
-								style:border-radius="var(--g-r-3)" style:font-family="var(--g-font-sans)">
-								<div style:font-size="14px" style:font-weight="600" style:color={sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'} style:margin-bottom="4px">{$t(`bausteine.profil.${opt.value}` as MessageKey)}</div>
-								<div class="mono" style:font-size="11px" style:color="var(--g-ink-3)" style:margin-top="4px">{profileMetricsLabel(opt.value)}</div>
-							</button>
-						{/each}
-					</div>
 					<div style:margin-top="28px" style:padding-top="20px" style:border-top="1px solid var(--g-rule)" style:display="flex" style:justify-content="flex-end" style:align-items="center" style:gap="12px">
 						{#if !canContinue}<span class="mono" style:display="inline-flex" style:align-items="center" style:gap="6px" style:font-size="11px" style:color="var(--g-ink-3)"><Dot tone="neutral" size="xs" style="background: var(--g-ink-4);" />{$t('vergleich.neu.name_fehlt')}</span>{/if}
 						<Btn data-testid="compare-editor-continue-orte" variant="accent" size="md" disabled={!canContinue} onclick={() => canContinue && switchTab('orte')}>{$t('vergleich.neu.orte_hinzufuegen')}</Btn>
@@ -645,26 +609,6 @@
 			<MField label={$t('trip.anlegen.region')} side={$t('vergleich.neu.optional_max')}>
 				<input type="text" maxlength="60" placeholder={$t('vergleich.neu.region_beispiel')} bind:value={wiz.region}
 					style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;" />
-			</MField>
-			<MField label={$t('vergleich.neu.aktivitaetsprofil')}>
-				<div style="display: flex; flex-direction: column; gap: 8px;">
-					{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
-						{@const sel = wiz.activityProfile === opt.value}
-						{@const metricsList = profileMetricsLabel(opt.value).split(' · ')}
-						<button type="button" data-testid={`compare-editor-profile-mobile-${opt.value}`} onclick={() => selectProfile(opt.value)}
-							style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 12px 14px; background: {sel ? 'var(--g-accent-tint)' : 'var(--g-card)'}; border: {sel ? '1.5px solid var(--g-accent)' : '1px solid var(--g-rule)'}; border-radius: var(--g-r-3); cursor: pointer; text-align: left; font-family: var(--g-font-sans);">
-							<div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
-								<div style="font-size: 14px; font-weight: 600; color: {sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'};">{$t(`bausteine.profil.${opt.value}` as MessageKey)}</div>
-								<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{metricsList.slice(0, 4).join(' · ')}{metricsList.length > 4 ? ' …' : ''}</div>
-							</div>
-							{#if sel}
-								<span style="width: 20px; height: 20px; border-radius: 50%; background: var(--g-accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-									<svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="stroke: var(--g-on-accent)" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>
-								</span>
-							{/if}
-						</button>
-					{/each}
-				</div>
 			</MField>
 		{:else if activeTab === 'orte'}
 			<Step2Orte bind:pickedIds={wiz.pickedIds} {locations} groups={ceGroups} dense onOpenLibrary={() => { mobileLibraryOpen = true; }} />

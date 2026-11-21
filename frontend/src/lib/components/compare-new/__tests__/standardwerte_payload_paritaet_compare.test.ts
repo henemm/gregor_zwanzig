@@ -21,7 +21,7 @@
 // der tatsaechlich gesendete Create-Request (`POST /api/compare/presets`, Netzgrenze fetch); der
 // Referenzwert des Reiter-Besuchs wird ueber DIESELBE Payload-Funktion
 // (`buildNewComparePresetPayload`) in dasselbe Format gebracht, damit beide Seiten vergleichbar
-// sind. Name/Orte/Profil reisen ueber `stateOverride`; ein bereits geaenderter Wertebereich
+// sind. Name/Orte reisen ueber `stateOverride` (#3198: kein Profil mehr im Anlegen); ein bereits geaenderter Wertebereich
 // (AC-8) steht im Feldsatz des Editors, bevor der Schritt Wetter betreten wird.
 //
 // Netzgrenze: `globalThis.fetch`. GET /api/compare/metrics = LIVE-Katalog aus dem
@@ -112,15 +112,14 @@ function vorbelegungsEffekt(e: { ast: Knoten; quelle: string; u: Knoten }): () =
 }
 
 /** Wertebereiche nach UNVERAENDERTEM Besuch des Schritts Wetter (echter Editor-Effekt). */
-async function nachReiterBesuch(activityProfile: string | null): Promise<Wertebereiche> {
+async function nachReiterBesuch(): Promise<Wertebereiche> {
 	const e = await editorUmgebung(COMPARE_EDITOR, {
 		stateOverride: {
 			activeTab: 'wetter',
 			isMobileViewport: false,
 			metrikenVisited: true,
 			name: 'Ref',
-			pickedIds: ['loc0', 'loc1'],
-			activityProfile
+			pickedIds: ['loc0', 'loc1']
 		},
 		window: MATCH_MEDIA
 	});
@@ -133,7 +132,7 @@ async function nachReiterBesuch(activityProfile: string | null): Promise<Wertebe
 	return w;
 }
 
-/** Anlege-Editor ohne Context; Name/Orte/Profil ueber stateOverride. */
+/** Anlege-Editor ohne Context; Name/Orte ueber stateOverride. */
 async function anlegeEditor(eingaben: Knoten, besucht: { metriken?: boolean; ideals?: boolean } = {}) {
 	const e = await editorUmgebung(COMPARE_EDITOR, {
 		stateOverride: {
@@ -179,26 +178,23 @@ async function nachStandardwerteKlick(
 }
 
 describe('AC-7: Standardwerte == unveraenderter Wertebereiche-Besuch (vorbelegt, nicht leer)', () => {
-	test('Positivkontrolle: Profil-Vorbelegung ALLGEMEIN (kein Profil) unterscheidet sich von „wandern"', async () => {
-		assert.notDeepEqual(await nachReiterBesuch(null), await nachReiterBesuch('wandern'));
-	});
-
-	test('ohne gewaehltes Profil: Wertebereiche, aktive Metriken und Alarmstufen gleich dem Reiter-Besuch', async () => {
-		const ref = await nachReiterBesuch(null);
-		const { gesendet } = await nachStandardwerteKlick({ activityProfile: null });
+	test('Wertebereiche, aktive Metriken und Alarmstufen gleich dem Reiter-Besuch', async () => {
+		const ref = await nachReiterBesuch();
+		const { gesendet } = await nachStandardwerteKlick({});
 		assert.equal(gesendet.length, 1, `erwartet genau ein Speichern, gesehen ${gesendet.length}`);
 		assert.deepEqual(gesendet[0], alsKoerper(ref));
 	});
 
-	test('mit Profil „wandern": gleich dem Reiter-Besuch mit demselben Profil', async () => {
-		const ref = await nachReiterBesuch('wandern');
+	// #3198 (S4b-3): eine Rest-Saat `activityProfile` erreicht die Anlege-Kette nicht mehr.
+	test('Rest-Saat activityProfile „wandern" aendert die Standardwerte nicht (Allgemein)', async () => {
+		const ref = await nachReiterBesuch();
 		const { gesendet } = await nachStandardwerteKlick({ activityProfile: 'wandern' });
 		assert.equal(gesendet.length, 1);
 		assert.deepEqual(gesendet[0], alsKoerper(ref));
 	});
 
 	test('nicht leer: der Standardwerte-Weg speichert Wertebereiche', async () => {
-		const { gesendet } = await nachStandardwerteKlick({ activityProfile: null });
+		const { gesendet } = await nachStandardwerteKlick({});
 		assert.equal(gesendet.length, 1);
 		assert.ok((gesendet[0].corridors as unknown[]).length > 0, 'Vorbelegung uebersprungen: corridors leer');
 		assert.ok(Object.keys(gesendet[0].ideal_ranges as object).length > 0, 'Vorbelegung uebersprungen: ideal_ranges leer');
@@ -207,7 +203,7 @@ describe('AC-7: Standardwerte == unveraenderter Wertebereiche-Besuch (vorbelegt,
 
 describe('AC-8: besuchter, geaenderter Wertebereich bleibt erhalten', () => {
 	test('Nutzer hat im Wertebereiche-Reiter einen Bereich geaendert: Standardwerte ueberschreiben ihn nicht', async () => {
-		const ref = await nachReiterBesuch(null);
+		const ref = await nachReiterBesuch();
 		const corridors = klon(ref.corridors) as Array<{ metric: string; range: [number | null, number | null]; notify: boolean; mark: boolean }>;
 		corridors[0] = { ...corridors[0], range: [corridors[0].range[0], 999] };
 		const nutzer: Wertebereiche = {
@@ -216,18 +212,19 @@ describe('AC-8: besuchter, geaenderter Wertebereich bleibt erhalten', () => {
 			activeMetricKeys: ref.activeMetricKeys,
 			metricAlertLevels: ref.metricAlertLevels
 		};
-		const { gesendet } = await nachStandardwerteKlick({ activityProfile: null }, { metriken: true, ideals: true }, nutzer);
+		const { gesendet } = await nachStandardwerteKlick({}, { metriken: true, ideals: true }, nutzer);
 		assert.equal(gesendet.length, 1);
 		assert.deepEqual(gesendet[0], alsKoerper(nutzer), 'Profil-Vorbelegung hat die Nutzerwerte ueberschrieben');
 	});
 });
 
 // ── #2794 Teil-PR 4a, Fix-Loop 1 ─────────────────────────────────────────────
-describe('F003: Vorbelegung nur im Schritt Wetter, mit dem dann aktuellen Profil', () => {
-	test('Katalog geladen, Schritt Vergleich ⇒ nichts vorbelegt; Wechsel auf Wetter ⇒ vorbelegt mit dem jetzt gewaehlten Profil', async () => {
-		const ref = await nachReiterBesuch('wandern');
-		assert.notDeepEqual(ref, await nachReiterBesuch(null), 'Messaufbau: „wandern" muss anders vorbelegen als ohne Profil');
-		const e = await anlegeEditor({ name: 'F003', pickedIds: ['loc0', 'loc1'], activityProfile: null });
+// #3198 (S4b-3, AC-8): die Vorbelegung bleibt „Allgemein“, auch wenn im Reiter Wetter eine
+// andere Vorlage gewaehlt ist (`wiz.vorlageId`); die Bewertung kommt aus der Ampel (ADR-0108).
+describe('F003: Vorbelegung nur im Schritt Wetter, unabhaengig von der Vorlage (Allgemein)', () => {
+	test('Katalog geladen, Schritt Vergleich ⇒ nichts vorbelegt; Wechsel auf Wetter mit Vorlage Wintersport ⇒ Allgemein vorbelegt', async () => {
+		const ref = await nachReiterBesuch();
+		const e = await anlegeEditor({ name: 'F003', pickedIds: ['loc0', 'loc1'] });
 		const leer = auszug(e.u.wiz as Knoten);
 		await mountenUndWarten(e); // laedt den Katalog und laesst alle Effekte im Schritt „vergleich" laufen
 		assert.ok(Array.isArray(e.u.standardwerteKatalog), 'Messaufbau: Vergleichs-Katalog nicht geladen');
@@ -235,17 +232,17 @@ describe('F003: Vorbelegung nur im Schritt Wetter, mit dem dann aktuellen Profil
 		effekt();
 		await ruhe();
 		assert.deepEqual(auszug(e.u.wiz as Knoten), leer, 'F003 FAIL: ausserhalb des Schritts Wetter vorbelegt');
-		(e.u.wiz as Knoten).activityProfile = 'wandern';
+		(e.u.wiz as Knoten).vorlageId = 'wintersport';
 		e.u.activeTab = 'wetter';
 		effekt();
 		await ruhe();
-		assert.deepEqual(auszug(e.u.wiz as Knoten), ref, 'F003 FAIL: nicht mit dem beim Betreten gewaehlten Profil vorbelegt');
+		assert.deepEqual(auszug(e.u.wiz as Knoten), ref, 'F003 FAIL: Vorbelegung folgt nicht „Allgemein“ (AC-8, #3198)');
 	});
 });
 
 describe('F001: Standardwerte nach besuchtem Schritt Wetter belegen nicht vor', () => {
 	test('Schritt besucht, Wertebereiche leer ⇒ der Standardwerte-POST traegt keine Vorbelegung (Verhalten wie vor 4a)', async () => {
-		const { gesendet } = await nachStandardwerteKlick({ activityProfile: null }, { metriken: true });
+		const { gesendet } = await nachStandardwerteKlick({}, { metriken: true });
 		assert.equal(gesendet.length, 1, `erwartet genau ein Speichern, gesehen ${gesendet.length}`);
 		assert.deepEqual(gesendet[0].corridors ?? [], [], 'F001 FAIL: trotz besuchtem Schritt vorbelegt (corridors)');
 		assert.deepEqual(gesendet[0].ideal_ranges, {}, 'F001 FAIL: trotz besuchtem Schritt vorbelegt (ideal_ranges)');
@@ -258,7 +255,7 @@ describe('F001: Standardwerte nach besuchtem Schritt Wetter belegen nicht vor', 
 describe('F002: Ortsvergleich — Klick bei gesperrtem Gate speichert nichts', () => {
 	test('nur 1 Ort, Katalog geladen: Klick-Handler loest keinen POST aus und belegt nicht vor', async () => {
 		presetPosts.length = 0;
-		const e = await anlegeEditor({ name: 'Std', pickedIds: ['loc0'], activityProfile: null });
+		const e = await anlegeEditor({ name: 'Std', pickedIds: ['loc0'] });
 		assert.equal(e.u.nameOk, true, VERTRAG_FEHLT_EDITOR);
 		await mountenUndWarten(e);
 		derivedNeu(e);

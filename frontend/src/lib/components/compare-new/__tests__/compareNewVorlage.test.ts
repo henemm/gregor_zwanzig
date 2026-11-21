@@ -111,8 +111,19 @@ function belegt(preset: ComparePreset, locations: Location[] = ORTE): Feldsatz {
 test('AC-1 Region wird uebernommen', () => {
 	assert.equal(belegt(vorlage()).region, 'Korsika');
 });
-test('AC-1 Aktivitaetsprofil wird uebernommen', () => {
-	assert.equal(belegt(vorlage()).activityProfile, 'wandern');
+// #3198 (S4b-3, AC-5): das Profil steuert das Anlegen nicht mehr; uebernommen wird die
+// Vorlage der Quelle (ampel.template -> profil -> allgemein).
+test('AC-5 (#3198) Profil der Quelle wird nicht uebernommen, ihre Vorlage schon', () => {
+	const f = belegt(vorlage());
+	assert.equal(f.activityProfile, null);
+	assert.equal((f as Record<string, unknown>).vorlageId, 'wandern');
+});
+test('AC-5 (#3198) ampel.template der Quelle hat Vorrang vor dem Profil', () => {
+	const f = belegt(vorlage({ display_config: { region: 'Korsika', ampel: { template: 'wintersport' } } } as never));
+	assert.equal((f as Record<string, unknown>).vorlageId, 'wintersport');
+});
+test('AC-5 (#3198) Quelle ohne Vorlage und Profil ⇒ „allgemein“', () => {
+	assert.equal((belegt(vorlage({ profil: undefined } as never)) as Record<string, unknown>).vorlageId, 'allgemein');
 });
 test('AC-1 Orte (pickedIds) werden uebernommen', () => {
 	assert.deepEqual(belegt(vorlage()).pickedIds, ['a', 'b', 'c']);

@@ -1,4 +1,4 @@
-// gz-eigenstaendig: nur noch Anlege-Fälle des Ortsvergleichs ohne Trip-Pendant — Orte-Tab mobil (AC-6/AC-7), Vergleichs-Profilkachel mit gekürzter Metrik-Zeile (AC-13/AC-14; der Trip wählt die Aktivität per Dropdown, Pendant hub-kopf-bearbeiten KB-3), ⊘-Orte-Gate am Desktop-Fuß (AC-16) und die mobile CTA-Kette mit dem Zwischenstand „noch 1 Ort nötig" (AC-9..AC-12; ein einzelner Ort hat beim Trip kein Gegenstück, Etappen zählen GPX). Wortlaut je Pflichtschritt und gesperrte CTA ohne Namen (AC-8) prüft hub-anlegen-ablauf AN-14 je kind, die Desktop-Weiter-Füße (AC-17/AC-18) AN-15 je kind — #2347 S4 „Nachträge Teil E".
+// gz-eigenstaendig: nur noch Anlege-Fälle des Ortsvergleichs ohne Trip-Pendant — Orte-Tab mobil (AC-6/AC-7), kein Profil-Knopf mehr im Anlegen (#3198 AC-2; die Vorlage wählt man im Reiter Wetter), ⊘-Orte-Gate am Desktop-Fuß (AC-16) und die mobile CTA-Kette mit dem Zwischenstand „noch 1 Ort nötig" (AC-9..AC-12; ein einzelner Ort hat beim Trip kein Gegenstück, Etappen zählen GPX). Wortlaut je Pflichtschritt und gesperrte CTA ohne Namen (AC-8) prüft hub-anlegen-ablauf AN-14 je kind, die Desktop-Weiter-Füße (AC-17/AC-18) AN-15 je kind — #2347 S4 „Nachträge Teil E".
 //
 // E2E (Staging) — Issue #1256 Scheibe S8d: Mobile-Editor-Fidelity
 // (Restliste-Bündel R4 Mobile-Vervollständigung + C1 Desktop-Editor-create
@@ -169,29 +169,18 @@ test.describe('Issue #1256 S8d (AC-9..AC-12): kontextuelle Floating-CTA + Versan
 	});
 });
 
-test.describe('Issue #1256 S8d (AC-13/AC-14): Profil-Häkchen + gekürzte Metrik-Zeile', () => {
+// #3198 (S4b-3): die Profil-Kacheln (AC-13/AC-14) sind entfallen; die Vorlage waehlt man im Reiter Wetter.
+test.describe('Issue #3198 (AC-2): Anlege-Editor am Handy ohne Profil-Auswahl', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.setViewportSize(MOBILE);
 	});
 
-	test('Häkchen bei Auswahl; Metrik-Zeile endet mit „…" bei >4 Metriken (Wintersport)', async ({ page }) => {
+	test('kein Profil-Knopf und keine Profil-Kachel im Schritt Vergleich', async ({ page }) => {
 		await page.goto('/compare/new');
 		await page.waitForLoadState('networkidle');
-
-		// Wintersport hat 5 Metriken (SNOW_DEPTH, SNOW_NEW, SUNNY_HOURS, WIND_MAX,
-		// CLOUD_AVG) — der Desktop-Button teilt denselben wiz-State. Fix-Loop 2:
-		// compare-editor-profile-wintersport liegt im .cm-desktop-Zweig, der auf
-		// Mobile nur per position:fixed/1px-Overflow offscreen ist (nicht
-		// display:none) — dadurch bleibt der Button fuer Playwright zwar
-		// "visible", ist aber dauerhaft "outside of the viewport" und nicht
-		// klickbar (60s-Timeout). Eigener Mobile-Testid (CompareEditor.svelte)
-		// ersetzt den Klick auf das unerreichbare Desktop-Element.
-		const mobileCard = page.locator('[data-testid="compare-editor-profile-mobile-wintersport"]');
-		await mobileCard.click();
-
-		await expect(mobileCard).toBeVisible();
-		await expect(mobileCard.locator('svg path[d="M2 6l3 3 5-6"]')).toBeVisible();
-		await expect(mobileCard).toContainText('…');
+		await expect(page.getByTestId('compare-editor-name-mobile')).toBeVisible();
+		await expect(page.locator('[data-testid^="compare-editor-profile-"]')).toHaveCount(0);
+		await expect(page.locator('body')).not.toContainText('Aktivitätsprofil');
 	});
 });
 
