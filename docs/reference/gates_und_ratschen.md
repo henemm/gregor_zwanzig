@@ -770,8 +770,9 @@ Kern-Test `tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py`, Erkennung
 außerdem die Ampel-Vorlagen `src/app/ampel_templates.py`/`src/app/ampel.py`). Gescannt werden `src/`
 (ohne `src/analysis/`), `api/`, `frontend/src/` (ohne Tests, `e2e/`, generierte Dateien), `internal/`,
 `cmd/` (ohne `_test.go`) und `.claude/hooks/*.py`. Arten: `ID_SAMMLUNG`, `ID_VERZWEIGUNG`, `SCHWELLE`,
-`VERARBEITUNG_AUSSEN` (Python, AST), `FRONTEND_LISTE`/`FRONTEND_VERZWEIGUNG`, `GO_LISTE`/`GO_VERZWEIGUNG`
-(Klammer-Spannen nach Entfernen der Kommentare) und `VALIDATOR_IMPORT` (jeder importierte Name mit Metrik-Wissen:
+`VERARBEITUNG_AUSSEN` (Python, AST), `FRONTEND_LISTE`/`FRONTEND_VERZWEIGUNG`/`FRONTEND_SCHWELLE`,
+`GO_LISTE`/`GO_VERZWEIGUNG`/`GO_SCHWELLE` (Token-Strom nach Entfernen der Kommentare; Listen als Klammer-Spannen,
+Schwellen als `<`/`<=`/`>`/`>=` zwischen Messwert-Bezeichner bzw. Member-Ausdruck und Zahl, beide Seiten) und `VALIDATOR_IMPORT` (jeder importierte Name mit Metrik-Wissen:
 `app.metric_catalog`, `app.ampel_templates`, `app.ampel`, `app.*` mit `metric`/`compare` im Namen, `output.*`,
 `services.*`, auch verzögert in Funktionen; `app.config`, `i18n`, `app.models` zählen nicht). Kennungen kommen aus dem Register (`_METRICS`-Ids plus die
 Alarm-Identitäten `alert_metrics`/`change_alert_metric`), nie von Hand.
@@ -780,9 +781,18 @@ Alarm-Identitäten `alert_metrics`/`change_alert_metric`), nie von Hand.
 `hoechststand`. Rot, wenn (a) eine Datei/Art mehr Funde hat als gelistet (Meldung nennt jede Fundstelle
 mit Datei:Zeile, Art und Auszug), (b) weniger Funde als gelistet (Liste verkleinern, damit der Rückgang
 festgeschrieben ist), (c) die Summe der Liste `hoechststand` übersteigt, (d) `hoechststand` größer ist als
-die Konstante `HOECHSTSTAND` im Test. Startstand 2026-11-21: 447 Funde. Jede Scheibe von #3260 senkt die
+die Konstante `HOECHSTSTAND` im Test, (e) gegenüber `origin/main` (`git show origin/main:tests/unit/ein_katalog_ausnahmen.json`)
+`hoechststand` oder die Anzahl eines dort schon gelisteten Eintrags gestiegen ist — so hilft auch gemeinsames
+Anheben von Liste und Konstante nicht. Ist `origin/main` nicht lesbar (kein git, flacher CI-Klon, Datei dort noch
+nicht vorhanden), wird Regel e mit ausdrücklichem pytest-Skip-Grund übersprungen, nie still grün.
+Startstand 2026-11-21: 457 Funde (`GO_SCHWELLE` ohne Bestand; ihre Wirksamkeit belegen die Gegenproben). Jede Scheibe von #3260 senkt die
 Liste; am Ende von Schritt 6 ist sie leer. Grenzfälle werden durch Umbau oder Umbenennung aufgelöst,
 nie durch Nachsicht in der Erkennung.
+
+**Blinde Flecken (bekannt, musterbasiert):** Messwerte mit neutralem Namen (`x > 40`, `v`, `hours`), Schwellen
+über benannte Konstanten (`wind > STURM_AB`), Einzel-Nachschläge auf eine Kennung (`d["wind"]`, `.get("gust")`,
+TS/Go `obj['wind'] > 3`), per String-Verkettung oder zur Laufzeit gebaute Kennungen und Sammlungen sowie
+Vergleiche auf Aufrufe (`max(x) > 3`). Sie werden im Umbau mit erledigt, nicht durch Ausnahmen.
 
 **Neu erzeugen nach einem Abbau** (der Test schreibt nie):
 `uv run python -m tests.helpers.katalog_verarbeitung_scan --schreibe-ausnahmen`, danach `HOECHSTSTAND`
@@ -874,7 +884,7 @@ isoliert, Kollisionen zeigen sich als Merge-Konflikt im PR.
 | i18n-Paritätstests je Katalog (Frontend `paritaet_de_en.test.ts`, Python `test_i18n_*_katalog_paritaet.py`, Go `katalog_paritaet_test.go`; Epic #2644) | 2027-01-31 | eingeführt im Epic #2644 (Frontend laut Testkopf mit #2647); Kriterium: ein Schlüssel nur in `de` oder ein Platzhalter, der in einer Sprache fehlt |
 | Bausteine-Wächter `bausteine_waechter` (ADR-0112, #2913) — Regel (a) Aufbau für `SEITEN_SCOPE`, Regel (b) Tokens als Ratsche `AUSNAHMEN`, Neue-Datei-Regel mit `BESTAND`; ersetzt das Design-Gate (ADR-0111) | 2027-02-08 | offen — Start 2026-11-10: `SEITEN_SCOPE` leer, 204 Bestandsdateien, 39 Bausteine mit 396 Token-Verstößen (398 nach Verschärfung Fix-Loop 1). Löschbedingung: kein nachweisbarer Fang (kein Merge mit echtem Verstoß aufgehalten, kein fehlender Baustein durch ihn zuerst ins System gebracht) → Rückbau |
 | i18n-Token-Wächter `tests/test_metric_tokens_eingefroren.py` (Fixture `tests/fixtures/metric_tokens_frozen.json`, Epic #2644 P1) | 2027-01-31 | eingeführt im Epic #2644 (laut Konvention P1); Kriterium: eine Übersetzung oder Umbenennung von `col_label`, `compact_label` oder `sms_code`, die sonst still in Kanäle wanderte |
-| Ratsche „Ein Katalog, eine Verarbeitung“ `tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py` (ADR-0127, #3260); ersetzt die Entdeckungsstufe der Metrik-Listen-Ratsche (#1856) | 2027-02-19 | offen — Startstand 2026-11-21: 447 Funde in der Ausnahmeliste; Kriterium: eine neue zweite Liste, Verzweigung, feste Schwelle oder ein Validator-Produktimport, der ohne die Ratsche ausgeliefert worden wäre |
+| Ratsche „Ein Katalog, eine Verarbeitung“ `tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py` (ADR-0127, #3260); ersetzt die Entdeckungsstufe der Metrik-Listen-Ratsche (#1856) | 2027-02-19 | offen — Startstand 2026-11-21: 457 Funde in der Ausnahmeliste; Kriterium: eine neue zweite Liste, Verzweigung, feste Schwelle oder ein Validator-Produktimport, der ohne die Ratsche ausgeliefert worden wäre |
 
 **Weitere Prüfdaten, die nur im Code stehen** (Abgleich 2026-10-21 per
 `grep -rn "Prüfdatum\|Pruefdatum" tests .claude/hooks`; Fang-Beleg hier nicht erhoben):

@@ -10,7 +10,8 @@ Ampel-Vorlagen ``src/app/ampel_templates.py``/``src/app/ampel.py``). Arten:
 * ``ID_VERZWEIGUNG``     ``==``/``!=`` bzw. ``match``-``case`` auf eine Kennung
 * ``SCHWELLE``           ``<``/``<=``/``>``/``>=`` eines Messwerts mit einer Zahl
 * ``VERARBEITUNG_AUSSEN`` Definition/Aufruf/Verweis einer Verarbeitungsfunktion
-* ``FRONTEND_LISTE``/``FRONTEND_VERZWEIGUNG`` (TS/Svelte), ``GO_LISTE``/``GO_VERZWEIGUNG``
+* ``FRONTEND_LISTE``/``FRONTEND_VERZWEIGUNG``/``FRONTEND_SCHWELLE`` (TS/Svelte),
+  ``GO_LISTE``/``GO_VERZWEIGUNG``/``GO_SCHWELLE``
 * ``VALIDATOR_IMPORT``   Import von Metrik-Wissen in ``.claude/hooks/*.py``
 
 Alle Scan-Funktionen nehmen Wurzeln (Verzeichnisse ODER Dateien) und eine
@@ -31,11 +32,12 @@ import ast
 import bisect
 import json
 import re
+import subprocess
 import sys
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import Callable, Iterable, Iterator
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT / "src") not in sys.path:
@@ -63,10 +65,12 @@ FRONTEND_LISTE = "FRONTEND_LISTE"
 FRONTEND_VERZWEIGUNG = "FRONTEND_VERZWEIGUNG"
 GO_LISTE = "GO_LISTE"
 GO_VERZWEIGUNG = "GO_VERZWEIGUNG"
+FRONTEND_SCHWELLE = "FRONTEND_SCHWELLE"
+GO_SCHWELLE = "GO_SCHWELLE"
 VALIDATOR_IMPORT = "VALIDATOR_IMPORT"
 ARTEN = (ID_SAMMLUNG, ID_VERZWEIGUNG, SCHWELLE, VERARBEITUNG_AUSSEN,
-         FRONTEND_LISTE, FRONTEND_VERZWEIGUNG, GO_LISTE, GO_VERZWEIGUNG,
-         VALIDATOR_IMPORT)
+         FRONTEND_LISTE, FRONTEND_VERZWEIGUNG, FRONTEND_SCHWELLE,
+         GO_LISTE, GO_VERZWEIGUNG, GO_SCHWELLE, VALIDATOR_IMPORT)
 
 #: Erlaubte Orte (relativ zur Basis) — werden nicht gescannt.
 ERLAUBT_DATEIEN = frozenset({
@@ -258,21 +262,24 @@ _TOKEN_TS = re.compile(
     r"(?P<k>//[^\n]*|/\*.*?\*/|<!--.*?-->)"
     r"|(?P<s>'(?:[^'\\\n]|\\.)*'|\"(?:[^\"\\\n]|\\.)*\"|`(?:[^`\\]|\\.)*`)"
     r"|(?P<i>[A-Za-z_$][\w$]*)"
-    r"|(?P<o>===|!==|==|!=|=>|[{}\[\]():,;?=.])"
+    r"|(?P<n>\d+(?:\.\d+)?)"
+    r"|(?P<o>===|!==|==|!=|=>|<=|>=|[{}\[\]():,;?=.<>\-])"
     r"|(?P<x>\S)", re.DOTALL)
 _TOKEN_GO = re.compile(
     r"(?P<k>//[^\n]*|/\*.*?\*/)"
     r"|(?P<s>\"(?:[^\"\\\n]|\\.)*\"|`[^`]*`|'(?:[^'\\\n]|\\.)*')"
     r"|(?P<i>[A-Za-z_][\w]*)"
-    r"|(?P<o>==|!=|:=|[{}\[\]():,;?=.])"
+    r"|(?P<n>\d+(?:\.\d+)?)"
+    r"|(?P<o>==|!=|:=|<-|<=|>=|[{}\[\]():,;?=.<>\-])"
     r"|(?P<x>\S)", re.DOTALL)
 _OEFFNEN = {"(": ")", "[": "]", "{": "}"}
 _VERGLEICH = frozenset({"===", "!==", "==", "!="})
+_ORDNUNG = frozenset({"<", "<=", ">", ">="})
 
 
 @dataclass
 class _Token:
-    art: str      # "s" (String), "i" (Bezeichner), "o" (Satzzeichen)
+    art: str      # "s" (String), "i" (Bezeichner), "n" (Zahl), "o" (Satzzeichen)
     text: str     # String: Inhalt ohne Anfuehrungszeichen
     zeile: int
 
@@ -389,10 +396,66 @@ def _listen(tokens: list[_Token], verzweigungen: set[int],
     return zeilen
 
 
+def _operand_rueckwaerts(tokens: list[_Token], ende: int) -> str | None:
+    """Bezeichner/Member-Ausdruck, der bei ``ende`` endet (``a.b?.wind_kmh``)."""
+    if ende < 0 or tokens[ende].art != "i":
+        return None
+    teile, j = [tokens[ende].text], ende
+    while True:
+        if j >= 2 and tokens[j - 1].text == "." and tokens[j - 2].art == "i":
+            j -= 2
+        elif (j >= 3 and tokens[j - 1].text == "." and tokens[j - 2].text == "?"
+              and tokens[j - 3].art == "i"):
+            j -= 3
+        else:
+            return ".".join(reversed(teile))
+        teile.append(tokens[j].text)
+
+
+def _operand_vorwaerts(tokens: list[_Token], start: int) -> str | None:
+    teile: list[str] = []
+    j = start
+    while j < len(tokens) and tokens[j].art == "i":
+        teile.append(tokens[j].text)
+        if j + 2 < len(tokens) and tokens[j + 1].text == "." and tokens[j + 2].art == "i":
+            j += 2
+        elif (j + 3 < len(tokens) and tokens[j + 1].text == "?"
+              and tokens[j + 2].text == "." and tokens[j + 3].art == "i"):
+            j += 3
+        else:
+            break
+    if not teile or (j + 1 < len(tokens) and tokens[j + 1].text in ("(", "[")):
+        return None
+    return ".".join(teile)
+
+
+def _ist_messwert_text(text: str | None) -> bool:
+    return (text is not None and not text.endswith((".length", ".size"))
+            and MESSWERT_MUSTER.search(text) is not None)
+
+
+def _schwellen_indizes(tokens: list[_Token]) -> list[int]:
+    """``<``/``<=``/``>``/``>=`` zwischen Messwert-Bezeichner und Zahl (beide Seiten).
+    Aufrufe/Indizes (``max(x) > 3``, ``d["wind"] > 3``) zaehlen nicht."""
+    treffer = []
+    for i, tok in enumerate(tokens):
+        if tok.art != "o" or tok.text not in _ORDNUNG or i == 0:
+            continue
+        rechts = i + 2 if i + 2 < len(tokens) and tokens[i + 1].text == "-" else i + 1
+        if rechts < len(tokens) and tokens[rechts].art == "n" and _ist_messwert_text(
+                _operand_rueckwaerts(tokens, i - 1)):
+            treffer.append(i)
+        elif tokens[i - 1].art == "n" and i + 1 < len(tokens) and _ist_messwert_text(
+                _operand_vorwaerts(tokens, i + 1)):
+            treffer.append(i)
+    return treffer
+
+
 def _klammer_scan(dateien: list[tuple[Path, str]], *, go: bool) -> list[Fund]:
     """Zwei Durchgaenge: erst Konstanten aller Dateien, dann die Funde."""
     muster = _TOKEN_GO if go else _TOKEN_TS
-    liste, zweig = (GO_LISTE, GO_VERZWEIGUNG) if go else (FRONTEND_LISTE, FRONTEND_VERZWEIGUNG)
+    liste, zweig, schwelle = ((GO_LISTE, GO_VERZWEIGUNG, GO_SCHWELLE) if go
+                              else (FRONTEND_LISTE, FRONTEND_VERZWEIGUNG, FRONTEND_SCHWELLE))
     gelesen = []
     konstanten: dict[str, str] = {}
     for pfad, rel in dateien:
@@ -407,6 +470,8 @@ def _klammer_scan(dateien: list[tuple[Path, str]], *, go: bool) -> list[Fund]:
                   for z in _listen(tokens, verzweigungen, konstanten)]
         funde += [Fund(rel, tokens[i].zeile, zweig, _auszug(zeilen, tokens[i].zeile))
                   for i in sorted(verzweigungen)]
+        funde += [Fund(rel, tokens[i].zeile, schwelle, _auszug(zeilen, tokens[i].zeile))
+                  for i in _schwellen_indizes(tokens)]
     return funde
 
 
@@ -536,6 +601,42 @@ def vergleiche(funde: list[Fund], ausnahmen: dict, hoechststand_konstante: int) 
 
 def lade_ausnahmen(pfad: Path = AUSNAHMEN_PFAD) -> dict:
     return json.loads(pfad.read_text(encoding="utf-8"))
+
+
+MAIN_REF = "origin/main:tests/unit/ein_katalog_ausnahmen.json"
+
+
+def _git_show(ref: str) -> str:
+    return subprocess.run(["git", "-C", str(REPO_ROOT), "show", ref], check=True,
+                          capture_output=True, text=True, timeout=30).stdout
+
+
+def lade_main_ausnahmen(git_show: Callable[[str], str] = _git_show) -> tuple[dict | None, str]:
+    """Die Ausnahmeliste auf ``origin/main`` — oder ``(None, Grund)``, wenn sie
+    nicht lesbar ist (kein git, flacher Klon ohne ``origin/main``, Datei dort
+    noch nicht vorhanden, kaputtes JSON)."""
+    try:
+        return json.loads(git_show(MAIN_REF)), ""
+    except (OSError, subprocess.SubprocessError, ValueError) as fehler:
+        text = getattr(fehler, "stderr", "") or str(fehler)
+        return None, f"{MAIN_REF} nicht lesbar: {text.strip()[:200]}"
+
+
+def vergleiche_mit_main(ausnahmen: dict, main: dict) -> list[str]:
+    """Regel e: gegenueber ``origin/main`` darf weder ``hoechststand`` noch die
+    Anzahl eines dort bereits gelisteten Eintrags steigen (Liste und Konstante
+    zusammen anheben ist kein Ausweg)."""
+    befunde = []
+    if ausnahmen.get("hoechststand", 0) > main.get("hoechststand", 0):
+        befunde.append(f"(e) hoechststand {ausnahmen.get('hoechststand')} > origin/main "
+                       f"{main.get('hoechststand')}: die Liste schrumpft nur.")
+    for datei, arten in sorted(main.get("eintraege", {}).items()):
+        for art, erlaubt in sorted(arten.items()):
+            jetzt = ausnahmen.get("eintraege", {}).get(datei, {}).get(art, 0)
+            if jetzt > erlaubt:
+                befunde.append(f"(e) {datei} [{art}] gelistet {jetzt} > origin/main "
+                               f"{erlaubt}: die Liste schrumpft nur.")
+    return befunde
 
 
 def ausnahmen_aus(funde: Iterable[Fund]) -> dict:

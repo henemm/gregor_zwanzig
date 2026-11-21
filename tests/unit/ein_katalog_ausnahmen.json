@@ -57,6 +57,9 @@
     "frontend/src/lib/components/trip-detail/BucketSectionOff.svelte": {
       "FRONTEND_LISTE": 1
     },
+    "frontend/src/lib/components/trip-detail/StageDetailRow.svelte": {
+      "FRONTEND_SCHWELLE": 1
+    },
     "frontend/src/lib/components/trip-detail/TablePreview.svelte": {
       "FRONTEND_LISTE": 4
     },
@@ -75,11 +78,20 @@
     "frontend/src/lib/utils/alertMetricLabels.ts": {
       "FRONTEND_LISTE": 2
     },
+    "frontend/src/lib/utils/weatherEmoji.ts": {
+      "FRONTEND_SCHWELLE": 6
+    },
+    "frontend/src/lib/utils/weatherUtils.ts": {
+      "FRONTEND_SCHWELLE": 2
+    },
     "frontend/src/routes/_design-system/+page.svelte": {
       "FRONTEND_LISTE": 1
     },
     "frontend/src/routes/_design-system/einstelltabelle/beispieldaten.ts": {
       "FRONTEND_LISTE": 2
+    },
+    "frontend/src/routes/_home/cockpitHelpers.ts": {
+      "FRONTEND_SCHWELLE": 1
     },
     "frontend/src/routes/account/+page.server.ts": {
       "FRONTEND_LISTE": 7
@@ -243,5 +255,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 447
+  "hoechststand": 457
 }

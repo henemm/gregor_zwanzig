@@ -22,18 +22,25 @@ Metrik-Listen-Ratsche aus #1856).
 from __future__ import annotations
 
 import copy
+import json
+import subprocess
 from pathlib import Path
 
 import pytest
 
 from tests.helpers.katalog_verarbeitung_scan import (
-    ARTEN, FRONTEND_LISTE, GO_LISTE, ID_SAMMLUNG, ID_VERZWEIGUNG, SCHWELLE,
-    VALIDATOR_IMPORT, Fund, lade_ausnahmen, scanne_alles, scanne_frontend,
-    scanne_go, scanne_python, scanne_validatoren, vergleiche,
+    ARTEN, FRONTEND_LISTE, FRONTEND_SCHWELLE, GO_LISTE, GO_SCHWELLE, ID_SAMMLUNG,
+    ID_VERZWEIGUNG, MAIN_REF, SCHWELLE, VALIDATOR_IMPORT, Fund, lade_ausnahmen,
+    lade_main_ausnahmen, scanne_alles, scanne_frontend, scanne_go, scanne_python,
+    scanne_validatoren, vergleiche, vergleiche_mit_main,
 )
 
 #: Festgeschriebener Hoechststand (Regel d). Wird nur gesenkt, nie erhoeht.
-HOECHSTSTAND = 447
+HOECHSTSTAND = 457
+
+#: Arten ohne Fund im heutigen Bestand. Ihre Wirksamkeit belegen allein die
+#: Gegenproben unten (Go haelt heute keinen festen Messwert-Vergleich).
+OHNE_BESTAND = frozenset({GO_SCHWELLE})
 
 
 @pytest.fixture(scope="module")
@@ -68,8 +75,19 @@ def test_bestand_entspricht_der_ausnahmeliste(bestand, ausnahmen):
 def test_jede_art_findet_im_bestand_mindestens_eine_stelle(bestand):
     """AC-1: Nichtstun ist kein Bestehen — jede Erkennung arbeitet im echten Baum."""
     gefunden = {f.art for f in bestand}
-    fehlend = [art for art in ARTEN if art not in gefunden]
+    fehlend = [art for art in ARTEN if art not in gefunden and art not in OHNE_BESTAND]
     assert not fehlend, f"Erkennung ohne Fund im Bestand (ausgeschaltet?): {fehlend}"
+    assert not (OHNE_BESTAND & gefunden), (
+        f"{sorted(OHNE_BESTAND & gefunden)} hat jetzt Bestand: aus OHNE_BESTAND streichen")
+
+
+def test_liste_waechst_nicht_gegenueber_main(ausnahmen):
+    """Regel e: Liste und Konstante gemeinsam anheben ist kein Ausweg."""
+    main, grund = lade_main_ausnahmen()
+    if main is None:
+        pytest.skip(f"Regel e uebersprungen — {grund}")
+    befunde = vergleiche_mit_main(ausnahmen, main)
+    assert not befunde, "\n".join(befunde)
 
 
 def test_bekannte_fundstellen_der_bestandsaufnahme_werden_erkannt(bestand):
@@ -102,6 +120,10 @@ R = "src/output/renderers/neu_renderer.py"
 @pytest.mark.parametrize(("text", "zeile", "art"), [
     ('"""Renderer."""\n\nZWEITE = ("wind", "gust")\n', 3, ID_SAMMLUNG),
     ('def zelle(wind_kmh):\n    if wind_kmh > 40:\n        return "stark"\n    return ""\n',
+     2, SCHWELLE),
+    ('def zelle(wind_kmh):\n    if 40 < wind_kmh:\n        return "stark"\n    return ""\n',
+     2, SCHWELLE),
+    ('def zelle(wind_kmh):\n    if wind_kmh >= 40.0:\n        return "stark"\n    return ""\n',
      2, SCHWELLE),
     ('def zelle(metric_id):\n    if metric_id == "precipitation":\n        return 1\n',
      2, ID_VERZWEIGUNG),
@@ -147,6 +169,39 @@ def test_go_map_mit_zwei_kennungen_meldet_datei_und_zeile(tmp_path):
     _schreibe(tmp_path, rel,
               'package neu\n\nvar X = map[string]float64{"wind": 1, "gust": 2}\n')
     assert _kurz(scanne_go([tmp_path / "internal"], tmp_path)) == [(rel, 3, GO_LISTE)]
+
+
+@pytest.mark.parametrize("zeile", [
+    "if (wind_kmh > 40) { x = 1; }",
+    "if (40 < wind_kmh) { x = 1; }",
+    "if (row.gust_kmh >= -5.5) { x = 1; }",
+    "if (row?.precip_mm <= 2) { x = 1; }",
+])
+def test_frontend_schwelle_auf_messwert_meldet_datei_und_zeile(tmp_path, zeile):
+    """F002 (Frontend): fester Vergleich eines Messwerts, beide Seiten, Member-Ausdruck."""
+    rel = "frontend/src/lib/neu_schwelle.ts"
+    _schreibe(tmp_path, rel, f"// 40 < wind_kmh im Kommentar zaehlt nicht\n\n{zeile}\n")
+    assert _kurz(scanne_frontend([tmp_path / "frontend" / "src"], tmp_path)) == [
+        (rel, 3, FRONTEND_SCHWELLE)]
+
+
+def test_svelte_schwelle_im_markup_wird_erkannt(tmp_path):
+    rel = "frontend/src/lib/Neu.svelte"
+    _schreibe(tmp_path, rel, "<script>\n  let x = 1;\n</script>\n{#if cloud_pct > 80}<b/>{/if}\n")
+    assert _kurz(scanne_frontend([tmp_path / "frontend" / "src"], tmp_path)) == [
+        (rel, 4, FRONTEND_SCHWELLE)]
+
+
+@pytest.mark.parametrize("zeile", [
+    "\tif windKmh > 40 {\n\t\treturn\n\t}",
+    "\tif 40 < s.GustKmh {\n\t\treturn\n\t}",
+    "\tif temp <= -5 {\n\t\treturn\n\t}",
+])
+def test_go_schwelle_auf_messwert_meldet_datei_und_zeile(tmp_path, zeile):
+    """F002 (Go): heute ohne Bestand, die Gegenprobe belegt die Erkennung."""
+    rel = "internal/neu/schwelle.go"
+    _schreibe(tmp_path, rel, f"package neu\n\nfunc f() {{\n{zeile}\n}}\n")
+    assert _kurz(scanne_go([tmp_path / "internal"], tmp_path)) == [(rel, 4, GO_SCHWELLE)]
 
 
 def test_validator_mit_produktimport_meldet_den_import(tmp_path):
@@ -241,3 +296,58 @@ def test_harmlose_dateien_melden_nichts(tmp_path):
     assert scanne_python([tmp_path / "src"], tmp_path) == []
     assert scanne_frontend([tmp_path / "frontend" / "src"], tmp_path) == []
     assert scanne_go([tmp_path / "internal"], tmp_path) == []
+
+
+def test_harmlose_vergleiche_in_ts_und_go_melden_nichts(tmp_path):
+    """AC-6: Laenge, Zaehler, Fenster, Aufruf und Kanal-Sendung sind keine Schwelle."""
+    _schreibe(tmp_path, "frontend/src/lib/h2.ts",
+              "if (items.length > 2 && value.length > 0 && attempt < 3) {}\n"
+              "if (day_window_start >= 0 && Math.max(a, b) > 3) {}\n"
+              "const f = (x: Array<number>) => x;\n")
+    _schreibe(tmp_path, "internal/harmlos/h2.go",
+              "package harmlos\n\nfunc g(ch chan int, items []int) {\n"
+              "\tif len(items) > 2 {\n\t\tch <- 5\n\t}\n}\n")
+    assert scanne_frontend([tmp_path / "frontend" / "src"], tmp_path) == []
+    assert scanne_go([tmp_path / "internal"], tmp_path) == []
+
+
+# ------------------------------------------------------------- Regel e (main)
+
+def _main_liste(daten: dict):
+    return lambda ref: json.dumps(daten)
+
+
+def test_regel_e_hoechststand_ueber_main_macht_rot(ausnahmen):
+    main = copy.deepcopy(ausnahmen)
+    erhoeht = copy.deepcopy(ausnahmen)
+    erhoeht["hoechststand"] += 1
+    geladen, _ = lade_main_ausnahmen(_main_liste(main))
+    assert vergleiche_mit_main(ausnahmen, geladen) == []
+    befunde = vergleiche_mit_main(erhoeht, geladen)
+    assert len(befunde) == 1 and befunde[0].startswith("(e) hoechststand")
+
+
+def test_regel_e_hoehere_anzahl_als_main_macht_rot(ausnahmen):
+    datei = next(iter(ausnahmen["eintraege"]))
+    art = next(iter(ausnahmen["eintraege"][datei]))
+    erhoeht = copy.deepcopy(ausnahmen)
+    erhoeht["eintraege"][datei][art] += 1
+    geladen, _ = lade_main_ausnahmen(_main_liste(ausnahmen))
+    befunde = vergleiche_mit_main(erhoeht, geladen)
+    assert len(befunde) == 1 and befunde[0].startswith(f"(e) {datei} [{art}]")
+
+
+def test_regel_e_neuer_eintrag_ohne_main_pendant_bleibt_erlaubt(ausnahmen):
+    """Neue Eintraege faengt Regel a/d; e vergleicht nur bestehende Eintraege."""
+    erweitert = copy.deepcopy(ausnahmen)
+    erweitert["eintraege"]["src/neu.py"] = {SCHWELLE: 1}
+    geladen, _ = lade_main_ausnahmen(_main_liste(ausnahmen))
+    assert vergleiche_mit_main(erweitert, geladen) == []
+
+
+def test_regel_e_ohne_git_liefert_grund_statt_stillem_gruen():
+    def kein_git(ref):
+        raise subprocess.CalledProcessError(128, ["git", "show", ref],
+                                            stderr="fatal: invalid object name 'origin/main'")
+    geladen, grund = lade_main_ausnahmen(kein_git)
+    assert geladen is None and MAIN_REF in grund and "invalid object name" in grund
