@@ -4682,20 +4682,6 @@
 			"text": ":00",
 			"grund": "Tagesfenster im Stundenraster mit fester Minute 00 (Felder day_window_*_hour): die Uhrzeit-Auswahl zeigt die Minute als festen Text „:00“, das Mockup Fassung 4 freie Eingaben „06:00“/„20:00“; bewusste, freigegebene Abweichung (#3203)",
 			"spec": "docs/specs/modules/feat_2913_scheibe_c_wetter_rest.md"
-		},
-		{
-			"ctx": "trip",
-			"reiter": "wetter",
-			"muster": "Auf \"{vorlage}\" zurücksetzen",
-			"grund": "Zustandsunterschied, kein Code-Unterschied (#3205, Weg B): Zurücksetzen-Zeile erscheint nur bei Abweichungen von der Vorlage, im Mockup Fassung 4 Z. 511 (`devs>0`) wie live (VorlageKarte.svelte, `abweichungen > 0`). Das Prüfkonto-Trip steht live im Abweichungszustand, der Mockup-Normalzustand hat 0 Abweichungen; die Elementliste erfasst den Abweichungszustand nicht. Prüfdaten nicht umgestellt (Weg A), weil das weitere Einträge verschöbe (Picker „▾ N Abweichung(en)“, Abweichungsmarken).",
-			"spec": "docs/specs/modules/feat_3205_vorlagen_mockup.md"
-		},
-		{
-			"ctx": "trip",
-			"reiter": "wetter",
-			"muster": "Reset to \"{vorlage}\"",
-			"grund": "Zustandsunterschied, kein Code-Unterschied (#3205, Weg B): englische Zurücksetzen-Zeile (Katalog wetter.vorlage.zuruecksetzen) erscheint nur bei Abweichungen von der Vorlage, im Mockup Fassung 4 Z. 511 (`devs>0`) wie live (VorlageKarte.svelte, `abweichungen > 0`). Das Prüfkonto-Trip steht live im Abweichungszustand, der Mockup-Normalzustand hat 0 Abweichungen. Prüfdaten nicht umgestellt (Weg A), weil das weitere Einträge verschöbe.",
-			"spec": "docs/specs/modules/feat_3205_vorlagen_mockup.md"
 		}
 	]
 }

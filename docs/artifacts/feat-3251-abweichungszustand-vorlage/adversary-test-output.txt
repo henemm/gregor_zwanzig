@@ -1,0 +1,407 @@
+TAP version 13
+# Subtest: \#3203 AC-1: sichtbarer Text unter aria-hidden zählt
+    # Subtest: Skala-Zahlen der Temperatur-Leiste (-15, -10, …) sind einzelne Texte
+    ok 1 - Skala-Zahlen der Temperatur-Leiste (-15, -10, …) sind einzelne Texte
+      ---
+      duration_ms: 1.756182
+      type: 'test'
+      ...
+    # Subtest: Gewitter-Stufenwörter keins/mittel/hoch in Reihenfolge
+    ok 2 - Gewitter-Stufenwörter keins/mittel/hoch in Reihenfolge
+      ---
+      duration_ms: 0.542911
+      type: 'test'
+      ...
+    # Subtest: Skala-Zahlen stehen vor dem Alarm-Satz (Dokumentreihenfolge, Reihenfolge-Prüfung AC-1/AC-2)
+    ok 3 - Skala-Zahlen stehen vor dem Alarm-Satz (Dokumentreihenfolge, Reihenfolge-Prüfung AC-1/AC-2)
+      ---
+      duration_ms: 0.181491
+      type: 'test'
+      ...
+    # Subtest: aria-hidden="false" und fehlendes aria-hidden ändern nichts
+    ok 4 - aria-hidden="false" und fehlendes aria-hidden ändern nichts
+      ---
+      duration_ms: 0.12034
+      type: 'test'
+      ...
+    1..4
+ok 1 - \#3203 AC-1: sichtbarer Text unter aria-hidden zählt
+  ---
+  duration_ms: 3.320455
+  type: 'suite'
+  ...
+# Subtest: \#3203 AC-2: Trennpunkt und grün-Text sind EIN Text
+    # Subtest: „·“ (aria-hidden) neben „grün: 2 bis 27 °C“ ergibt „· grün: 2 bis 27 °C“
+    ok 1 - „·“ (aria-hidden) neben „grün: 2 bis 27 °C“ ergibt „· grün: 2 bis 27 °C“
+      ---
+      duration_ms: 1.252752
+      type: 'test'
+      ...
+    # Subtest: Ergebnis passt auf das Elementlisten-Muster „· grün: {von} bis {bis} {einheit}“
+    ok 2 - Ergebnis passt auf das Elementlisten-Muster „· grün: {von} bis {bis} {einheit}“
+      ---
+      duration_ms: 0.404139
+      type: 'test'
+      ...
+    # Subtest: Element ohne eigenen Text (p.wt-why) verschmilzt seine Kinder nicht
+    ok 3 - Element ohne eigenen Text (p.wt-why) verschmilzt seine Kinder nicht
+      ---
+      duration_ms: 0.202831
+      type: 'test'
+      ...
+    1..3
+ok 2 - \#3203 AC-2: Trennpunkt und grün-Text sind EIN Text
+  ---
+  duration_ms: 2.162123
+  type: 'suite'
+  ...
+# Subtest: \#3203 AC-2/AC-3 (F004): verbundener Block ohne Doppelzählung und ohne versteckten Text
+    # Subtest: aria-hidden-Kind MIT Buchstaben neben Eigentext zählt nur im verbundenen Block, nicht zusätzlich einzeln
+    ok 1 - aria-hidden-Kind MIT Buchstaben neben Eigentext zählt nur im verbundenen Block, nicht zusätzlich einzeln
+      ---
+      duration_ms: 0.161141
+      type: 'test'
+      ...
+    # Subtest: visibility:hidden unter einem verbundenen aria-hidden-Kind gelangt nicht in den Block
+    ok 2 - visibility:hidden unter einem verbundenen aria-hidden-Kind gelangt nicht in den Block
+      ---
+      duration_ms: 0.19226
+      type: 'test'
+      ...
+    1..2
+ok 3 - \#3203 AC-2/AC-3 (F004): verbundener Block ohne Doppelzählung und ohne versteckten Text
+  ---
+  duration_ms: 0.590452
+  type: 'suite'
+  ...
+# Subtest: \#3203 AC-3: Verstecktes und reine Icons erzeugen kein Rauschen
+    # Subtest: display:none (am Element und am Vorfahr) zählt nicht
+    ok 1 - display:none (am Element und am Vorfahr) zählt nicht
+      ---
+      duration_ms: 0.178841
+      type: 'test'
+      ...
+    # Subtest: visibility:hidden (am Element und am Vorfahr) zählt nicht
+    ok 2 - visibility:hidden (am Element und am Vorfahr) zählt nicht
+      ---
+      duration_ms: 0.095311
+      type: 'test'
+      ...
+    # Subtest: Attribut hidden zählt nicht
+    ok 3 - Attribut hidden zählt nicht
+      ---
+      duration_ms: 0.148839
+      type: 'test'
+      ...
+    # Subtest: reines SVG/Icon unter aria-hidden liefert keinen Text
+    ok 4 - reines SVG/Icon unter aria-hidden liefert keinen Text
+      ---
+      duration_ms: 0.107749
+      type: 'test'
+      ...
+    # Subtest: Icon neben Text: nur der Text zählt
+    ok 5 - Icon neben Text: nur der Text zählt
+      ---
+      duration_ms: 0.11516
+      type: 'test'
+      ...
+    # Subtest: script und style liefern keinen Text
+    ok 6 - script und style liefern keinen Text
+      ---
+      duration_ms: 0.08244
+      type: 'test'
+      ...
+    # Subtest: nur Leerraum ergibt keinen Block
+    ok 7 - nur Leerraum ergibt keinen Block
+      ---
+      duration_ms: 0.0691
+      type: 'test'
+      ...
+    1..7
+ok 4 - \#3203 AC-3: Verstecktes und reine Icons erzeugen kein Rauschen
+  ---
+  duration_ms: 0.939561
+  type: 'suite'
+  ...
+# Subtest: \#3203: Browser-Regel = getestete Regel
+    # Subtest: new Function(toString) liefert dieselben Ergebnisse (selbstenthalten serialisierbar)
+    ok 1 - new Function(toString) liefert dieselben Ergebnisse (selbstenthalten serialisierbar)
+      ---
+      duration_ms: 0.914742
+      type: 'test'
+      ...
+    # Subtest: Staging-Spec überspringt aria-hidden nicht mehr und nutzt sichtbareTextBloecke (doc-compliance-test)
+    ok 2 - Staging-Spec überspringt aria-hidden nicht mehr und nutzt sichtbareTextBloecke (doc-compliance-test)
+      ---
+      duration_ms: 0.361631
+      type: 'test'
+      ...
+    1..2
+ok 5 - \#3203: Browser-Regel = getestete Regel
+  ---
+  duration_ms: 1.352202
+  type: 'suite'
+  ...
+# Subtest: \#3203 Fix-Loop 1: bisheriges Verhalten je Element, Sammel-Schleife testbar
+    # Subtest: Zähler/Badge (ohne aria-hidden) bleibt eigener Text, wird nicht an den Reiternamen geklebt
+    ok 1 - Zähler/Badge (ohne aria-hidden) bleibt eigener Text, wird nicht an den Reiternamen geklebt
+      ---
+      duration_ms: 0.186369
+      type: 'test'
+      ...
+    # Subtest: Hervorhebung im Satz bleibt getrennt wie bisher („Amtliche Warnungen“ + Hinweis)
+    ok 2 - Hervorhebung im Satz bleibt getrennt wie bisher („Amtliche Warnungen“ + Hinweis)
+      ---
+      duration_ms: 0.08829
+      type: 'test'
+      ...
+    # Subtest: verbundenes aria-hidden-Kind wird nicht doppelt gezählt
+    ok 3 - verbundenes aria-hidden-Kind wird nicht doppelt gezählt
+      ---
+      duration_ms: 0.120731
+      type: 'test'
+      ...
+    # Subtest: reine Zeichen unter aria-hidden („–“, „－“, „:“, „✓“) sind Dekoration; Zahlen und Wörter zählen
+    ok 4 - reine Zeichen unter aria-hidden („–“, „－“, „:“, „✓“) sind Dekoration; Zahlen und Wörter zählen
+      ---
+      duration_ms: 0.335451
+      type: 'test'
+      ...
+    # Subtest: dasselbe Zeichen ohne aria-hidden zählt wie bisher
+    ok 5 - dasselbe Zeichen ohne aria-hidden zählt wie bisher
+      ---
+      duration_ms: 0.098791
+      type: 'test'
+      ...
+    # Subtest: mit eingabe: Eingabefeld-Text und aria-label von Knopf/switch in Dokumentreihenfolge
+    ok 6 - mit eingabe: Eingabefeld-Text und aria-label von Knopf/switch in Dokumentreihenfolge
+      ---
+      duration_ms: 0.17787
+      type: 'test'
+      ...
+    # Subtest: ohne eingabe: keine aria-label und keine Eingaben (nur Textblöcke)
+    ok 7 - ohne eingabe: keine aria-label und keine Eingaben (nur Textblöcke)
+      ---
+      duration_ms: 0.104051
+      type: 'test'
+      ...
+    # Subtest: svg wird auch mit eingabe ausgeschlossen (kein Text, keine Beschriftung darin)
+    ok 8 - svg wird auch mit eingabe ausgeschlossen (kein Text, keine Beschriftung darin)
+      ---
+      duration_ms: 0.11795
+      type: 'test'
+      ...
+    # Subtest: unter aria-hidden keine aria-label und keine Eingaben (wie bisher)
+    ok 9 - unter aria-hidden keine aria-label und keine Eingaben (wie bisher)
+      ---
+      duration_ms: 0.09929
+      type: 'test'
+      ...
+    # Subtest: display:none am Vorfahr schließt auch Eingaben und aria-label aus
+    ok 10 - display:none am Vorfahr schließt auch Eingaben und aria-label aus
+      ---
+      duration_ms: 0.07898
+      type: 'test'
+      ...
+    # Subtest: Staging-Spec gibt eingabeText an sichtbareTextBloecke und hat keine eigene Element-Schleife (doc-compliance-test)
+    ok 11 - Staging-Spec gibt eingabeText an sichtbareTextBloecke und hat keine eigene Element-Schleife (doc-compliance-test)
+      ---
+      duration_ms: 0.225861
+      type: 'test'
+      ...
+    1..11
+ok 6 - \#3203 Fix-Loop 1: bisheriges Verhalten je Element, Sammel-Schleife testbar
+  ---
+  duration_ms: 1.879624
+  type: 'suite'
+  ...
+# Subtest: \#3251 Vorbedingung: Katalog-Sollwerte vorhanden
+    # Subtest: DE/EN-Texte für Abweichungszahl und Zurücksetzen-Zeile stehen im Katalog
+    ok 1 - DE/EN-Texte für Abweichungszahl und Zurücksetzen-Zeile stehen im Katalog
+      ---
+      duration_ms: 0.537411
+      type: 'test'
+      ...
+    1..1
+ok 7 - \#3251 Vorbedingung: Katalog-Sollwerte vorhanden
+  ---
+  duration_ms: 1.223372
+  type: 'suite'
+  ...
+# Subtest: \#3251 AC-1: Elementliste führt den Abschnitt vorlage-abweichung
+    # Subtest: trip: Abschnitt vorhanden
+    ok 1 - trip: Abschnitt vorhanden
+      ---
+      duration_ms: 0.662231
+      type: 'test'
+      ...
+    # Subtest: trip: Picker-Stand „1 Abweichung“ ohne Auswahlpfeil, Zahl als Platzhalter (Katalog .other)
+    ok 2 - trip: Picker-Stand „1 Abweichung“ ohne Auswahlpfeil, Zahl als Platzhalter (Katalog .other)
+      ---
+      duration_ms: 0.345791
+      type: 'test'
+      ...
+    # Subtest: trip: Abgleich-Erwartung passt auf den live gemessenen Stand (DE und EN), nicht auf fremden Text
+    ok 3 - trip: Abgleich-Erwartung passt auf den live gemessenen Stand (DE und EN), nicht auf fremden Text
+      ---
+      duration_ms: 0.591222
+      type: 'test'
+      ...
+    # Subtest: trip: Zurücksetzen-Zeile auf „Alpen-Trekking“ mit Katalog-Schlüssel und EN-Sollwert
+    ok 4 - trip: Zurücksetzen-Zeile auf „Alpen-Trekking“ mit Katalog-Schlüssel und EN-Sollwert
+      ---
+      duration_ms: 0.24078
+      type: 'test'
+      ...
+    # Subtest: orte: Abschnitt vorhanden
+    ok 5 - orte: Abschnitt vorhanden
+      ---
+      duration_ms: 0.18264
+      type: 'test'
+      ...
+    # Subtest: orte: Picker-Stand „1 Abweichung“ ohne Auswahlpfeil, Zahl als Platzhalter (Katalog .other)
+    ok 6 - orte: Picker-Stand „1 Abweichung“ ohne Auswahlpfeil, Zahl als Platzhalter (Katalog .other)
+      ---
+      duration_ms: 0.20185
+      type: 'test'
+      ...
+    # Subtest: orte: Abgleich-Erwartung passt auf den live gemessenen Stand (DE und EN), nicht auf fremden Text
+    ok 7 - orte: Abgleich-Erwartung passt auf den live gemessenen Stand (DE und EN), nicht auf fremden Text
+      ---
+      duration_ms: 0.332321
+      type: 'test'
+      ...
+    # Subtest: orte: Zurücksetzen-Zeile auf „Allgemein“ mit Katalog-Schlüssel und EN-Sollwert
+    ok 8 - orte: Zurücksetzen-Zeile auf „Allgemein“ mit Katalog-Schlüssel und EN-Sollwert
+      ---
+      duration_ms: 0.222851
+      type: 'test'
+      ...
+    # Subtest: Normalzustand bleibt unverändert: Abschnitt `vorlage` zeigt weiter „▾ unverändert“ ohne Zurücksetzen-Zeile
+    ok 9 - Normalzustand bleibt unverändert: Abschnitt `vorlage` zeigt weiter „▾ unverändert“ ohne Zurücksetzen-Zeile
+      ---
+      duration_ms: 1.669143
+      type: 'test'
+      ...
+    1..9
+ok 8 - \#3251 AC-1: Elementliste führt den Abschnitt vorlage-abweichung
+  ---
+  duration_ms: 6.46805
+  type: 'suite'
+  ...
+# Subtest: \#3251 AC-2: Abgleich ordnet vorlage-abweichung dem Datensatz mit_abweichung zu
+    # Subtest: datensatzFuerAbschnitt("vorlage-abweichung") === "mit_abweichung"
+    ok 1 - datensatzFuerAbschnitt("vorlage-abweichung") === "mit_abweichung"
+      ---
+      duration_ms: 0.14674
+      type: 'test'
+      ...
+    # Subtest: grenzen-* bleibt mit_abweichung, übrige Abschnitte ohne_abweichung
+    ok 2 - grenzen-* bleibt mit_abweichung, übrige Abschnitte ohne_abweichung
+      ---
+      duration_ms: 0.09488
+      type: 'test'
+      ...
+    # Subtest: SCRIPT_ABSCHNITT erkennt vorlage-abweichung als Script-Zustand
+    ok 3 - SCRIPT_ABSCHNITT erkennt vorlage-abweichung als Script-Zustand
+      ---
+      duration_ms: 0.100341
+      type: 'test'
+      ...
+    # Subtest: abschnittHaken: vorlage-abweichung liest im App-Haken „vorlage“, andere Abschnitte unverändert
+    ok 4 - abschnittHaken: vorlage-abweichung liest im App-Haken „vorlage“, andere Abschnitte unverändert
+      ---
+      duration_ms: 0.0885
+      type: 'test'
+      ...
+    # Subtest: bedienPlan: vorlage-abweichung wird ohne Klick gelesen (Abweichung kommt aus dem Prüf-Datensatz)
+    ok 5 - bedienPlan: vorlage-abweichung wird ohne Klick gelesen (Abweichung kommt aus dem Prüf-Datensatz)
+      ---
+      duration_ms: 0.679032
+      type: 'test'
+      ...
+    1..5
+ok 9 - \#3251 AC-2: Abgleich ordnet vorlage-abweichung dem Datensatz mit_abweichung zu
+  ---
+  duration_ms: 1.242942
+  type: 'suite'
+  ...
+# Subtest: \#3251 AC-4: pauschale Ausnahmen aus \#3205 für die Zurücksetzen-Zeile sind gestrichen
+    # Subtest: keine Ausnahme mit Muster der Zurücksetzen-Zeile (DE/EN)
+    ok 1 - keine Ausnahme mit Muster der Zurücksetzen-Zeile (DE/EN)
+      ---
+      duration_ms: 0.128
+      type: 'test'
+      ...
+    1..1
+ok 10 - \#3251 AC-4: pauschale Ausnahmen aus \#3205 für die Zurücksetzen-Zeile sind gestrichen
+  ---
+  duration_ms: 0.17812
+  type: 'suite'
+  ...
+# Subtest: \#3251 Fix-Loop 2 (F001): Generator führt die Abweichungszahl als Katalog-Mehrzahl-Muster
+    # Subtest: ermittleEn liefert für „1 Abweichung“ die Einzahl (Ausgangslage)
+    ok 1 - ermittleEn liefert für „1 Abweichung“ die Einzahl (Ausgangslage)
+      ---
+      duration_ms: 0.081521
+      type: 'test'
+      ...
+    # Subtest: im Abschnitt vorlage-abweichung: .one → .other, Muster und EN-Soll aus dem Katalog
+    ok 2 - im Abschnitt vorlage-abweichung: .one → .other, Muster und EN-Soll aus dem Katalog
+      ---
+      duration_ms: 0.112541
+      type: 'test'
+      ...
+    # Subtest: andere Abschnitte und Nicht-Einzahl-Schlüssel bleiben unverändert
+    ok 3 - andere Abschnitte und Nicht-Einzahl-Schlüssel bleiben unverändert
+      ---
+      duration_ms: 3.829157
+      type: 'test'
+      ...
+    1..3
+ok 11 - \#3251 Fix-Loop 2 (F001): Generator führt die Abweichungszahl als Katalog-Mehrzahl-Muster
+  ---
+  duration_ms: 4.172947
+  type: 'suite'
+  ...
+# Subtest: AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+ok 12 - AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+  ---
+  duration_ms: 12.47715
+  type: 'test'
+  ...
+# Subtest: AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+ok 13 - AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+  ---
+  duration_ms: 21.018154
+  type: 'test'
+  ...
+# Subtest: AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+ok 14 - AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+  ---
+  duration_ms: 31.679221
+  type: 'test'
+  ...
+# Subtest: AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+ok 15 - AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+  ---
+  duration_ms: 1.596122
+  type: 'test'
+  ...
+# Subtest: AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+ok 16 - AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+  ---
+  duration_ms: 36.337558
+  type: 'test'
+  ...
+1..16
+# tests 53
+# suites 11
+# pass 53
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 334.635485
+...................................                                      [100%]
+...................................                                      [100%]

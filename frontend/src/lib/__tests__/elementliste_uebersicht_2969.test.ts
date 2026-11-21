@@ -81,8 +81,16 @@ const ausnahmen = (): Ausnahme[] => logik.leseAusnahmen(readFileSync(BESITZER, '
 // Zeilen in „Was steht wo“ (Name + 4 Haken)); der Zähler „9 von 15 … 5“ wird „9 von 18 … 8“ (gleiche ID); die
 // übrigen Trip/Wetter-Einträge ändern nur ordnung. Orte, Zustellung und alle übrigen Einträge byte-gleich, keine
 // ID entfallen (Diff je ID geprüft). Anzahl 2752.
-const ALT_ANZAHL = 2752;
-const ALT_SHA = 'bb07d0b72a14ccb4450a346d1074c9fd91ef959c9ecc39f4a07f49baf10e8904';
+// #3251: Abschnitt vorlage-abweichung (21.11.; vorher bb07d0b7…10e8904, Mockup-Hash unverändert, Anzahl 2752).
+// Der Generator wählt im Reiter Wetter (Zustand normal) eine Metrik ab (devs>0) und liest Picker-Zahl und
+// Zurücksetzen-Zeile. Liste neu erzeugt: genau 4 neue Einträge (Trip/Orte je „1 Abweichung“, Stand ohne
+// Auswahlpfeil wie live, und „Auf „{vorlage}“ zurücksetzen“); alle übrigen Einträge byte-gleich, keine ID
+// entfallen (Diff je ID geprüft). Anzahl 2756.
+const ALT_ANZAHL = 2756;
+// #3251 Fix-Loop 2 (21.11.; vorher 7d0365c3…3c8a4): die zwei Einträge „1 Abweichung“ führen die Zahl als
+// Katalog-Mehrzahl-Muster („{count} Abweichungen“ / „{count} changes“, Schlüssel .other), weil der Prüf-Datensatz
+// live 14 bzw. 8 Abweichungen zeigt. ID, text_de und alle übrigen Einträge byte-gleich (Diff je ID geprüft).
+const ALT_SHA = 'e31b8c1d520ad7a6e0cc589d547bb18cb6d918e65550085b78ff3f5cadac10d5';
 const MOCKUP_HASH = 'sha256:c2347e0876a30710b2d56f6c1561b13668cb48089802558eaeaec0de30d8e6be';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {

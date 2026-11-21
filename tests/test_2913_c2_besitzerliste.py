@@ -155,7 +155,10 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # mit dem Soll-Eintrag, ebenso die zwei #3151-Unterzeilen „eigene · aus GR221 gespeichert“ der Orte-Auswahl
     # (Besitzer auf entfallene IDs wären ein Fehler, F004): #3151 4 → 2. Die Zurücksetzen-Zeile (DE/EN) ist ein
     # Zustandsunterschied (Mockup Z. 511 `devs>0` = live `abweichungen > 0`, Prüfkonto-Trip mit Abweichung) und
-    # steht als begründete Ausnahme (Weg B) mit spec feat_3205_vorlagen_mockup.md, nicht mehr als Besitzer.
+    # stand als begründete Ausnahme (Weg B) mit spec feat_3205_vorlagen_mockup.md, nicht mehr als Besitzer.
+    # #3251 (21.11., Spec feat_3251_abweichungszustand_vorlage.md): diese Ausnahme ist gestrichen. Die Elementliste
+    # führt den Abweichungszustand als Script-Abschnitt vorlage-abweichung („▾ 1 Abweichung“, Zurücksetzen-Zeile),
+    # der Abgleich prüft ihn auf dem Prüf-Datensatz mit Abweichung. Zählwerte unverändert (keine Besitzer betroffen).
     soll = {
         "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 318, "#2797": 8, "#2968": 0, "#3022": 62,
         "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 2, "#3151": 2, "#3122": 14, "#3202": 0, "#3203": 0, "#3204": 0,

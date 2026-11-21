@@ -47,6 +47,7 @@ import {
 	metrikNamenAusRegister,
 	werteLaufAus,
 	bedieneAbschnitt,
+	abschnittHaken,
 	mitAufraeumen,
 	ordneAbschnitte,
 	eingabeText,
@@ -88,7 +89,8 @@ const BERICHT_DIR = process.env.ELEMENTLISTE_BERICHT_DIR ?? join(FRONTEND, 'test
  * es im Mockup tut (C1); aria-label auch von role=group/textbox, z. B. bits-ui TimeField (C2).
  */
 async function texteImBereich(page: Page, abschnitt: string): Promise<{ marker: boolean; texte: string[] }> {
-	const selektor = `[data-abschnitt="${abschnitt}"]`;
+	// #3251: Haken der App (vorlage-abweichung liegt in der Karte data-abschnitt="vorlage").
+	const selektor = `[data-abschnitt="${abschnittHaken(abschnitt)}"]`;
 	await page.evaluate(oeffneDetails, { selektor, alle: false });
 	await page.waitForTimeout(200);
 	return page.evaluate(sichtbareTexte, { selektor, alle: false });

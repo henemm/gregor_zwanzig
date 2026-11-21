@@ -41,3 +41,15 @@ test('Generator steuert Script-Zustände: Bearbeiten offen, Vorlagen-Auswahl, Sp
 	expect(texte).toMatch(/Telegram: Kurzstil/); // Tabelle „Was steht wo“, Einstellungen je Kanal
 	expect(texte).toMatch(/kein Stundenwert/); // Spalte Stundenverlauf, nur im Kontext Orte
 });
+
+// #3251 (Fix-Loop 2, F002): Der Abweichungszustand der Vorlagenkarte entsteht im Mockup nur nach dem Klick auf
+// „−“ (data-rm, devs>0). Fehlt der Klick im Generator, fehlt der Abschnitt vorlage-abweichung im Lauf.
+test('Generator stellt den Abweichungszustand der Vorlagenkarte her (Klick data-rm → vorlage-abweichung)', async () => {
+	const l = await erzeugeElementliste({ mockupPfad: MOCKUP, messagesDir: MESSAGES });
+	for (const [ctx, vorlage] of [['trip', 'Alpen-Trekking'], ['orte', 'Allgemein']]) {
+		const abw = l.elemente
+			.filter((e: { ctx: string; reiter: string; zustand: string; abschnitt: string }) => e.ctx === ctx && e.reiter === 'wetter' && e.zustand === 'normal' && e.abschnitt === 'vorlage-abweichung')
+			.map((e: { text_de: string }) => e.text_de);
+		expect(abw, `${ctx}: Abschnitt vorlage-abweichung`).toEqual(['1 Abweichung', `Auf „${vorlage}“ zurücksetzen`]);
+	}
+});
