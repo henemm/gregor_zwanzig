@@ -178,6 +178,7 @@ Es entsteht kein neuer Produktionscode. Es gibt keinen klassischen RED-Test: der
 - Die Ausbeute ist bewusst klein; die uebrigen Gruppen (Fix-Runden, Nowcast/Radar, Provider-Fallback, Fixloop, Sprachkatalog) sind als eigene Issues #3263 bis #3267 im Epic #1196 abgespalten.
 - Die Methode erfasst nur Dopplung per Funktion, Eingabe und Erwartung; rein semantische Aehnlichkeit mit anderen Fixtures wird nicht zusammengelegt.
 - Mutationen werden von Hand gesetzt (String-Ersetzung); ein automatischer Mutationslauf ist nicht Teil dieses Umbaus.
+- Teilmutation G1b-monotonie (nur Monotonie-Pruefung aus) war schon vor dem Umbau gruen, weil die Plausibilitaetspruefung sie in allen Testfaellen maskiert; G1b als Ganzes (Variante "Rueckfall aus") ist vorher und nachher rot, der Umbau verliert also keinen Schutz. Die bestehende Luecke (identische Koordinaten, leicht fallender km-Wert) schliesst Folge-Issue #3271 im Epic #1196.
 
 ## Architektur-Entscheidung (ADR)
 
