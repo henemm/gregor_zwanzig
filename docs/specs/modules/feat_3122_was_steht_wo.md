@@ -2,7 +2,7 @@
 entity_id: feat_3122_was_steht_wo
 type: feature
 created: 2026-11-17
-updated: 2026-11-17
+updated: 2026-11-21
 status: approved
 version: "1.0"
 tags: [issue-3122, adr-0124, epic-2791, epic-2795, was-steht-wo, resolver, speicherformat, orte, ausblick]
@@ -140,7 +140,7 @@ Der Resolver bekommt dafür neben `display_config` die Abo-Angaben, die er brauc
 - **Ausblick, Trip:** `outlook_reports` = `multi_day_trend_reports` (`report_config`, sonst `display_config`, sonst `["evening"]`). Bei `outlook_metrics: []` ist er aus. Bei `show_outlook: false` ist er aus und `show_stability` wird `false`, außer das E-Mail-Format ist Kompakt (dort war der Schalter gesperrt und ohne Wirkung).
 - **Ausblick, Orte:** bei `outlook_enabled: false` oder `outlook_metrics: []` aus, sonst in jedem eingeschalteten Briefing (heutiges Verhalten).
 - **Bewusste Änderungen der Ausgabe** (Preis aus ADR-0124, im Probelauf je Abo ausgewiesen): E-Mail und Telegram übernehmen die SMS-Reihenfolge; eine Ausblick- oder Stundenverlauf-Metrik, die nicht in der E-Mail steht, entfällt dort; die Nur-Text-Mail folgt bei Roh/Einfach der HTML-Mail; eine in der SMS abweichend gewählte Wolken-Form entfällt.
-- **Schreibende Migration (B6):** Skript nach dem Muster `scripts/migrate_2792_profil_ampel.py`: Probelauf mit Bericht, Sicherung je Nutzer, Sperre, Read-Modify-Write mit Merge (ADR-0101), idempotent. Sie schreibt `placements` und entfernt danach nur die umgerechneten Altfelder (`channel_layouts`, `channel_layouts_per_report`, `channel_active_metrics`, `outlook_metrics`, `outlook_metric_formats`, `hourly_metrics`, `hourly_metric_formats`, `show_outlook`, `multi_day_trend_reports`, `outlook_enabled`). Alles andere bleibt bytegleich.
+- **Schreibende Migration (B6):** Skript nach dem Muster `scripts/migrate_2792_profil_ampel.py`: Probelauf mit Bericht, Sicherung je Nutzer, Sperre, Read-Modify-Write mit Merge (ADR-0101), idempotent. Sie schreibt `placements` (bei `show_stability_off` zusätzlich `report_config.show_stability=false`); alles andere bleibt inhaltsgleich. Nachtrag 2026-11-21: Das Entfernen der Altfelder (`channel_layouts`, `channel_layouts_per_report`, `channel_active_metrics`, `outlook_metrics`, `outlook_metric_formats`, `hourly_metrics`, `hourly_metric_formats`, `show_outlook`, `multi_day_trend_reports`, `outlook_enabled`) ist verschoben, bis kein Leser mehr existiert (Frontend, Validator, Altpfad); Kind-Issue #3237 (setzt #3218 voraus). Bis dahin bleiben sie stehen. Umsetzung: `feat_3157_migration_placements.md`.
 
 **9. Endpoints (B2).** Unter der bestehenden Briefing-Route, für beide Flächen: `GET /api/briefings/{id}/placements?kind=route|vergleich` und `PUT` auf denselben Pfad. Go prüft den Nutzer, lädt das Abo und reicht an den Python-Core weiter.
 
@@ -220,6 +220,7 @@ Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail (Soll-Bi
 
 - **AC-11:** Given ein Bestands-Abo ohne gespeicherte Tabelle (Trip und Orte, mit und ohne eigene Kanal-Listen) / When die Tabelle live ist und das Briefing erzeugt wird / Then erscheint je Stelle dieselbe Menge an Metriken in derselben Form wie zuvor, die SMS ist bis auf eine abweichend gewählte Wolken-Form zeichengleich, und Abweichungen gibt es nur in den vier in Teil A Nr. 8 genannten Fällen.
   - Test: Golden-Dateien und Prüfkatalog; für jeden der vier Fälle ein benannter Fall mit erwarteter Änderung.
+  - Nachtrag 2026-11-21, Prod-Probelauf (lesend): 21 Abos; 1 hat schon die Tabelle, 20 im Altformat (14 Trips, 6 Orts-Vergleiche); 0 unerklärt, 0 Fehler. Vorkommende bewusste Änderungen nur zwei: (a) `nur_text_folgt_html` bei 13 Trips (47 Einträge): die Nur-Text-Fassung der E-Mail zeigt Werte künftig in derselben Form (Roh/Einfach) wie die HTML-Mail; (b) `reihenfolge_wie_sms` bei 1 Trip (2 Einträge) und 3 Orts-Vergleichen (10 Einträge): E-Mail und Telegram übernehmen die Reihenfolge der SMS. Alle übrigen Änderungsarten kommen in Prod nicht vor. Die Freigabe dieser Zahlen erfolgt mit der Freigabe der Spec #3157.
 
 - **AC-12:** Given Bestands-Trips mit `show_outlook: false`, mit `outlook_metrics: []`, mit Ausblick morgens und abends, und ein Orte-Abo mit `outlook_enabled: false` / When sie umgerechnet werden / Then ist der 3-Tages-Ausblick bei den ersten beiden und beim Orte-Abo aus, beim dritten in beiden Briefings an, und ein Trip mit `show_outlook: false` zeigt weiterhin keine Großwetterlage.
   - Test: Umrechnung und zugestellte Ausgabe je Fall, einschließlich Kompakt-Mail.
@@ -337,7 +338,7 @@ Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail (Soll-Bi
 | B3 | neu `frontend/src/lib/components/organisms/wetter-tab/WasStehtWoKarte.svelte` samt Bausteinen unter `molecules/` und `atoms/`, `WetterTabInhalt.svelte`, `shared/wetter-tab/wetterTabSpeicherung.ts`, `shared/weather-metrics-tab/weatherMetricsTabSections.ts`, `organisms/zustellung-tab/KanalStil.svelte`, Kataloge `i18n/messages/{de,en}/wetter.json` (Frontend); `docs/design-system/CHARTER.md` | Karte, Speichern, Übergangsblock kürzen, Texte |
 | B4 | `src/services/report_config_resolver.py`, `trip_report_scheduler.py`, `scheduler_dispatch_service.py`, `src/output/renderers/email/{html,plain,compact,outlook}.py`, `narrow.py`, Kataloge `src/i18n/messages/{de,en}/{mail,telegram,vergleich}.json` (Python-Core); beide Mail-Validatoren | eine steuernde Stelle, ein Name |
 | B5 | `src/output/renderers/email/compare_html.py`, `comparison.py`, Kataloge `src/i18n/messages/{de,en}/{vergleich,versand,warnung,alarm}.json` (Python-Core); `email_spec_validator.py`; `docs/reference/sms_format.md` | Name „Orte“, Ein-Ort-Texte, SMS-Anfang |
-| B6 | neu `scripts/migrate_3122_placements.py`; Rückbau in `src/app/models.py`, `src/app/loader.py`, `src/services/report_config_resolver.py` und den Altbausteinen des Frontends | Migration, Altpfade entfernen |
+| B6 | neu `scripts/migrate_3157_placements.py`; Rückbau in `src/app/models.py`, `src/app/loader.py`, `src/services/report_config_resolver.py` und den Altbausteinen des Frontends | Migration, Altpfade entfernen (Rückbau: Kind-Issue #3237) |
 
 ## Known Limitations
 
@@ -358,3 +359,4 @@ Die Tabelle „Übersicht“ steht auch bei genau einem Ort in der Mail (Soll-Bi
 
 - 2026-11-17: Erste Fassung (Teil A „Vertrag“ und Teil B „Oberfläche und Texte“), offene Punkte aus ADR-0124 und #3122 entschieden.
 - 2026-11-17: Vom PO freigegeben.
+- 2026-11-21: Nachtrag Prod-Probelauf (AC-11) und Verschiebung der Altfeld-Entfernung (Nr. 8, #3237).
