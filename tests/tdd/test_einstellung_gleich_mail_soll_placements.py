@@ -375,6 +375,26 @@ def test_ac11_validator_start_orte_liste_exit2_statt_traceback(tmp_path):
     assert "FEHLER" in aus and "<Kennung>" in aus, aus
 
 
+def test_ac11_validator_start_orte_liste_mit_ortsdatei_exit2_statt_traceback(tmp_path):
+    """Wie oben, aber zusaetzlich mit gueltiger ``--orte``-Namensdatei: die
+    Huellen-Pruefung greift vor dem Zusammenfuehren, kein Traceback."""
+    from tests.helpers.mail_lang_fixture import validator_lauf
+
+    preset = _orte({"active_metrics": _ORTE_GRUND})
+    konfig = tmp_path / "orte_liste.json"
+    konfig.write_text(json.dumps({"preset": preset, "orte": ["loc-a", "loc-b"]}),
+                      encoding="utf-8")
+    orte = tmp_path / "ortsnamen.json"
+    orte.write_text(json.dumps({"loc-a": "Ort A", "loc-b": "Ort B"}), encoding="utf-8")
+    eml = b"Subject: x\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nx\r\n"
+    lauf, _log = validator_lauf(tmp_path, "email_spec_validator", eml,
+                                "--konfig", str(konfig), "--orte", str(orte))
+    aus = lauf.stdout + lauf.stderr
+    assert "Traceback" not in aus, aus
+    assert lauf.returncode == 2, aus
+    assert "FEHLER" in aus and "<Kennung>" in aus, aus
+
+
 # --------------------------------------------------------------------------- #
 # AC-12: Abnahme-Fall #3156 -- echte Mail, echter Validator, keine SOLL-Verletzung
 # --------------------------------------------------------------------------- #

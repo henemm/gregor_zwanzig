@@ -122,7 +122,7 @@ Datei `tests/tdd/test_einstellung_gleich_mail_soll_placements.py`, ohne Mock; Ei
   - Test: `ausblick.formen` folgt der Tabelle in beiden Soll-Arten.
 
 - **AC-10:** Given ein Altbestand ohne Tabelle / When das Soll abgeleitet wird / Then ist die Ausgabe bytegleich zu vorher.
-  - Test: Vergleich der Soll-Ausgabe für alle `tests/fixtures/einstellung_gleich_mail/fallliste_*.json` mit gesicherter Vorher-Ausgabe.
+  - Test: Vergleich der Soll-Ausgabe für alle Trip-/Orte-Eingaben ohne Tabelle aus `tests/fixtures/einstellung_gleich_mail/` (die `fallliste_*.json` sind Fall-Kataloge ohne Konfiguration und liefern keine Eingaben) plus erzeugte Trip-Varianten mit der gesicherten Vorher-Ausgabe `soll_ohne_tabelle_vorher_3218.json`.
 
 - **AC-11:** Given eine `--konfig`-Datei, in der `orte` eine Liste statt `{"<Kennung>": "<Name>"}` ist / When der Validator startet / Then erscheint eine klare Fehlermeldung zur erwarteten Hülle statt eines `TypeError`; `docs/reference/mail_validators.md` beschreibt die Hülle und die Restlücke Auswahl/Folge (#3242).
   - Test: Aufruf von `soll_aus_daten` mit Listen-Hülle löst `ValueError` mit Hinweis auf die Hülle aus.
@@ -137,6 +137,7 @@ Datei `tests/tdd/test_einstellung_gleich_mail_soll_placements.py`, ohne Mock; Ei
 
 - Auswahl und Reihenfolge der Größen mit Tabelle prüft das Soll weiter aus Altfeldern (#3242).
 - Form des Orte-Stundenverlaufs wird nicht geprüft.
+- AC-13: Die Eltern-Vererbung ist mit dem heutigen Register nicht beobachtbar, weil keine abgeleitete Größe (`temperature_night`, `wind_chill_night`, `temperature_day_low/high`, `wind_chill_day_low/high`) und keiner ihrer Eltern (`temperature`, `wind_chill`) eine Stelle mit zwei Formen hat. Der Test sichert daher nur den Katalog-Standard ab; die Vererbung greift erst, wenn das Register dort zwei Formen einführt.
 
 ## Architektur-Entscheidung (ADR)
 

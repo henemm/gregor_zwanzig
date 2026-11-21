@@ -1943,9 +1943,11 @@ def main():
         except (OSError, ValueError) as exc:
             print(f"FEHLER: --orte {args.orte!r} nicht lesbar: {exc}")
             sys.exit(2)
-        preset = konfig["preset"] if isinstance(konfig.get("preset"), dict) else konfig
-        konfig = {"preset": preset, "orte": {**(konfig.get("orte") or {}), **namen}}
     try:  # #3218 AC-11: Huelle ``orte`` als Liste -> Exit 2 statt Traceback
+        if args.orte:  # Huellen-Pruefung vor dem Zusammenfuehren mit --orte
+            _soll_modul().soll_aus_daten(konfig)
+            preset = konfig["preset"] if isinstance(konfig.get("preset"), dict) else konfig
+            konfig = {"preset": preset, "orte": {**(konfig.get("orte") or {}), **namen}}
         args.min_locations = _min_orte(args.min_locations, konfig)
     except ValueError as exc:
         print(f"FEHLER: --konfig {args.konfig!r}: {exc}")
