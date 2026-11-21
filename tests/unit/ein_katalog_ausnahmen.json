@@ -1,0 +1,247 @@
+{
+  "eintraege": {
+    ".claude/hooks/_mail_trust.py": {
+      "VALIDATOR_IMPORT": 3
+    },
+    ".claude/hooks/_soll_aus_konfiguration.py": {
+      "VALIDATOR_IMPORT": 32
+    },
+    ".claude/hooks/email_spec_validator.py": {
+      "VALIDATOR_IMPORT": 4
+    },
+    "api/routers/compare.py": {
+      "SCHWELLE": 1
+    },
+    "frontend/src/lib/components/alerts-tab/alarmAbAnzeige.ts": {
+      "FRONTEND_LISTE": 3
+    },
+    "frontend/src/lib/components/alerts-tab/alertMetricTable.ts": {
+      "FRONTEND_LISTE": 3,
+      "FRONTEND_VERZWEIGUNG": 2
+    },
+    "frontend/src/lib/components/alerts-tab/alertPreviewHelpers.ts": {
+      "FRONTEND_LISTE": 1
+    },
+    "frontend/src/lib/components/compare/CompareHourlyLayoutControls.svelte": {
+      "FRONTEND_LISTE": 1
+    },
+    "frontend/src/lib/components/molecules/AlertRow.svelte": {
+      "FRONTEND_LISTE": 2
+    },
+    "frontend/src/lib/components/shared/WeatherMetricsTab.svelte": {
+      "FRONTEND_LISTE": 1
+    },
+    "frontend/src/lib/components/shared/mailInhaltKonstanten.ts": {
+      "FRONTEND_LISTE": 1
+    },
+    "frontend/src/lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte": {
+      "FRONTEND_LISTE": 1
+    },
+    "frontend/src/lib/components/shared/weather-metrics-tab/compareMetricOrder.ts": {
+      "FRONTEND_LISTE": 1
+    },
+    "frontend/src/lib/components/shared/weather-metrics-tab/outlookFriendlyCapability.ts": {
+      "FRONTEND_LISTE": 1
+    },
+    "frontend/src/lib/components/shared/weather-metrics-tab/wertebereicheAnzeige.ts": {
+      "FRONTEND_LISTE": 1
+    },
+    "frontend/src/lib/components/shared/wetter-tab/ampelModell.ts": {
+      "FRONTEND_LISTE": 2,
+      "FRONTEND_VERZWEIGUNG": 1
+    },
+    "frontend/src/lib/components/shared/wetter-tab/corridorEditorState.ts": {
+      "FRONTEND_LISTE": 3,
+      "FRONTEND_VERZWEIGUNG": 1
+    },
+    "frontend/src/lib/components/trip-detail/BucketSectionOff.svelte": {
+      "FRONTEND_LISTE": 1
+    },
+    "frontend/src/lib/components/trip-detail/TablePreview.svelte": {
+      "FRONTEND_LISTE": 4
+    },
+    "frontend/src/lib/components/trip-detail/metricsEditor.ts": {
+      "FRONTEND_LISTE": 10
+    },
+    "frontend/src/lib/components/ui/wicon/WIcon.svelte": {
+      "FRONTEND_VERZWEIGUNG": 2
+    },
+    "frontend/src/lib/types.ts": {
+      "FRONTEND_LISTE": 1
+    },
+    "frontend/src/lib/utils/alertMetricCatalogIds.ts": {
+      "FRONTEND_LISTE": 2
+    },
+    "frontend/src/lib/utils/alertMetricLabels.ts": {
+      "FRONTEND_LISTE": 2
+    },
+    "frontend/src/routes/_design-system/+page.svelte": {
+      "FRONTEND_LISTE": 1
+    },
+    "frontend/src/routes/_design-system/einstelltabelle/beispieldaten.ts": {
+      "FRONTEND_LISTE": 2
+    },
+    "frontend/src/routes/account/+page.server.ts": {
+      "FRONTEND_LISTE": 7
+    },
+    "internal/handler/ampel.go": {
+      "GO_VERZWEIGUNG": 2
+    },
+    "internal/handler/vergleich_grundauswahl.go": {
+      "GO_LISTE": 1
+    },
+    "internal/model/trip.go": {
+      "GO_LISTE": 4
+    },
+    "internal/provider/openmeteo/models.go": {
+      "GO_LISTE": 1
+    },
+    "internal/provider/openmeteo/provider.go": {
+      "GO_LISTE": 1
+    },
+    "internal/store/trip.go": {
+      "GO_LISTE": 1
+    },
+    "src/app/loader.py": {
+      "ID_SAMMLUNG": 8
+    },
+    "src/app/models.py": {
+      "ID_SAMMLUNG": 1
+    },
+    "src/core/segment_builder.py": {
+      "SCHWELLE": 3
+    },
+    "src/output/adapters/trip_result.py": {
+      "SCHWELLE": 4
+    },
+    "src/output/renderers/alert/hours.py": {
+      "ID_VERZWEIGUNG": 3,
+      "VERARBEITUNG_AUSSEN": 2
+    },
+    "src/output/renderers/alert/project.py": {
+      "ID_VERZWEIGUNG": 1
+    },
+    "src/output/renderers/alert/render.py": {
+      "ID_SAMMLUNG": 1
+    },
+    "src/output/renderers/channel_layout.py": {
+      "ID_SAMMLUNG": 2,
+      "ID_VERZWEIGUNG": 1
+    },
+    "src/output/renderers/compact_summary.py": {
+      "SCHWELLE": 6,
+      "VERARBEITUNG_AUSSEN": 15
+    },
+    "src/output/renderers/compare_hourly_metric_ids.py": {
+      "ID_SAMMLUNG": 4
+    },
+    "src/output/renderers/compare_metric_ids.py": {
+      "ID_SAMMLUNG": 1
+    },
+    "src/output/renderers/compare_outlook_metric_ids.py": {
+      "ID_SAMMLUNG": 2,
+      "ID_VERZWEIGUNG": 5,
+      "VERARBEITUNG_AUSSEN": 11
+    },
+    "src/output/renderers/comparison.py": {
+      "VERARBEITUNG_AUSSEN": 5
+    },
+    "src/output/renderers/email/compare_html.py": {
+      "ID_SAMMLUNG": 3,
+      "ID_VERZWEIGUNG": 1,
+      "VERARBEITUNG_AUSSEN": 10
+    },
+    "src/output/renderers/email/helpers.py": {
+      "ID_SAMMLUNG": 10,
+      "ID_VERZWEIGUNG": 27,
+      "SCHWELLE": 2,
+      "VERARBEITUNG_AUSSEN": 7
+    },
+    "src/output/renderers/email/html.py": {
+      "ID_SAMMLUNG": 4,
+      "ID_VERZWEIGUNG": 2,
+      "SCHWELLE": 2,
+      "VERARBEITUNG_AUSSEN": 1
+    },
+    "src/output/renderers/email/outlook.py": {
+      "VERARBEITUNG_AUSSEN": 2
+    },
+    "src/output/renderers/email/plain.py": {
+      "ID_SAMMLUNG": 1,
+      "VERARBEITUNG_AUSSEN": 2
+    },
+    "src/output/renderers/email/thunder_branch.py": {
+      "ID_VERZWEIGUNG": 1
+    },
+    "src/output/renderers/narrow.py": {
+      "ID_SAMMLUNG": 1,
+      "ID_VERZWEIGUNG": 7,
+      "VERARBEITUNG_AUSSEN": 16
+    },
+    "src/output/renderers/orte_sms.py": {
+      "SCHWELLE": 1
+    },
+    "src/output/renderers/sms_trip.py": {
+      "SCHWELLE": 15
+    },
+    "src/output/renderers/trip_report.py": {
+      "ID_VERZWEIGUNG": 5
+    },
+    "src/output/tokens/builder.py": {
+      "ID_SAMMLUNG": 2
+    },
+    "src/output/tokens/metrics.py": {
+      "SCHWELLE": 2
+    },
+    "src/providers/geosphere.py": {
+      "SCHWELLE": 5
+    },
+    "src/services/compare_alert.py": {
+      "ID_SAMMLUNG": 1
+    },
+    "src/services/comparison_scoring.py": {
+      "SCHWELLE": 46
+    },
+    "src/services/day_comparison.py": {
+      "ID_SAMMLUNG": 3,
+      "ID_VERZWEIGUNG": 2,
+      "SCHWELLE": 4
+    },
+    "src/services/parallel_fetch.py": {
+      "SCHWELLE": 1
+    },
+    "src/services/risk_engine.py": {
+      "SCHWELLE": 1,
+      "VERARBEITUNG_AUSSEN": 13
+    },
+    "src/services/trip_alert.py": {
+      "SCHWELLE": 1
+    },
+    "src/services/trip_command_processor.py": {
+      "ID_SAMMLUNG": 1,
+      "ID_VERZWEIGUNG": 2,
+      "SCHWELLE": 2,
+      "VERARBEITUNG_AUSSEN": 2
+    },
+    "src/services/trip_report_scheduler.py": {
+      "SCHWELLE": 2
+    },
+    "src/services/weather_change_detection.py": {
+      "ID_SAMMLUNG": 2
+    },
+    "src/services/weather_metrics.py": {
+      "SCHWELLE": 36,
+      "VERARBEITUNG_AUSSEN": 14
+    },
+    "src/services/weather_snapshot.py": {
+      "ID_SAMMLUNG": 1
+    },
+    "src/services/windrichtung.py": {
+      "VERARBEITUNG_AUSSEN": 1
+    },
+    "src/utils/geo.py": {
+      "VERARBEITUNG_AUSSEN": 1
+    }
+  },
+  "hoechststand": 447
+}
