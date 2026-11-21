@@ -197,9 +197,20 @@ ungültig, gilt der Katalog-Standard (`standard_form`), Trip und Orte gleich.
 Eine abgeleitete Größe ohne eigene Zeile (z. B. Nachttief) liest die
 Eltern-Zeile (`_DERIVED_METRIC_RULES`). Die Altfelder (`use_friendly_format`,
 `format_mode`, `channel_layouts.email`, `outlook_metric_formats`) gelten nur
-ohne Tabelle; dort ist das Soll unverändert. **Restlücke:** Auswahl und
-Reihenfolge der Größen liest das Soll auch mit `placements` weiter aus den
-Altfeldern — eigenes Issue #3242.
+ohne Tabelle; dort ist das Soll unverändert.
+
+**Auswahl und Reihenfolge mit Tabelle (#3242):** Mit `placements` folgen auch
+Auswahl und Folge der Tabelle (`_tabellen_folge`, statische Zweitregel ohne
+`resolve_*`): Zeilen der Grundauswahl in gespeicherter Folge, abgeleitete Größe
+ohne Zeile direkt hinter der Eltern-Zeile mit deren Haken, übrige Grundauswahl
+hinten (überall an), `rows: []` = ganze Grundauswahl; `places[stelle] is False`
+= aus; Sperre laut `stellen_sperre` entfällt, außer `keine_eigene_spalte`
+(Trip-Fenstergrößen bleiben in der E-Mail-Liste); Ausblick und Orte-Stundenverlauf
+nur bei E-Mail an. Gilt für Trip-Stundentabelle und -Ausblick sowie Orte-
+Vergleichstabelle (Katalog-ID aufgeweitet auf ihre Auswertungen der
+Grundauswahl), -Stundenverlauf und -Ausblick; Orte ohne `active_metrics` nehmen
+die Standardzeilen. `channel_layouts`, `outlook_metrics`, `hourly_metrics` und
+die `metrics`-Folge wirken mit Tabelle nicht mehr; ohne Tabelle unverändert.
 
 Soll-Regel Ausblick (beide Kontexte): `[]` = Block aus; nie eingestellt = ganze
 Grundauswahl in der eingestellten Reihenfolge; sonst Schnitt mit der

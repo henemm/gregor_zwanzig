@@ -520,6 +520,27 @@ def test_ac12_orte_hourly_enabled_false_stundenverlauf_aus(soll):
     assert s["stunden"] == [], s["stunden"]
 
 
+def test_f002_orte_windrichtung_hourly_an_keine_eigene_stundenspalte(soll):
+    """Adversary F002 (Regel 5: bestehende Filter ``_stuendlich``/
+    ``HOURLY_MERGE_ONLY``). GIVEN Orte mit Tabelle; Grundauswahl Wind,
+    Windrichtung, Sonnenstunden, Temperatur; Windrichtung mit E-Mail und hourly
+    ausdruecklich an, Sonnenstunden hourly an
+    WHEN das Soll abgeleitet wird
+    THEN der Stundenverlauf hat KEINE eigene WDir-Spalte (die Richtung steckt
+    nur in der Wind-Zelle) und keine Spalte fuer Sonnenstunden (kein
+    Stundenwert): Wind, Temp."""
+    preset = _orte({
+        "active_metrics": _grund(("wind", "max"), ("wind_direction", "avg"),
+                                 ("sunshine", "sum"), ("temperature", "max")),
+        "placements": _tabelle(_zeile("wind_direction", email=True, hourly=True),
+                               _zeile("wind"), _zeile("sunshine", hourly=True),
+                               _zeile("temperature")),
+    })
+    s = soll.orte_soll(preset, "de")
+    assert s["stunden"] == ["Wind", "Temp"], s["stunden"]
+    assert "WDir" not in s["stunden"], s["stunden"]
+
+
 # --------------------------------------------------------------------------- #
 # AC-13: Altbestand ohne Tabelle unveraendert
 # --------------------------------------------------------------------------- #
@@ -557,15 +578,23 @@ def test_ac13_trip_ohne_tabelle_folgt_weiter_altfeldern(soll):
 _VERBOTEN = ("resolve_rows", "resolve_channel_lists", "placements_view", "metrics_at", "_cell")
 
 
-def test_ac14_tabellen_folge_ruft_keine_produkt_aufloesung():  # doc-compliance-test
-    """AC-14. GIVEN der neue Helfer ``_tabellen_folge`` im Soll
-    WHEN sein Quelltext geprueft wird
-    THEN ruft er weder ``resolve_rows``, ``resolve_channel_lists``,
-    ``placements_view``, ``metrics_at`` noch ``_cell`` auf (die einzige
+#: Alle Helfer des neuen Tabellenpfads (#3242, Adversary F003).
+_NEUE_HELFER = ("_tabellen_folge", "_trip_aus_tabelle", "_orte_aus_tabelle",
+                "_orte_paare_aus_folge")
+
+
+@pytest.mark.parametrize("helfer", _NEUE_HELFER)
+def test_ac14_tabellenpfad_ruft_keine_produkt_aufloesung(helfer):  # doc-compliance-test
+    """AC-14. GIVEN die neuen Helfer des Tabellenpfads im Soll
+    (``_tabellen_folge``, ``_trip_aus_tabelle``, ``_orte_aus_tabelle``,
+    ``_orte_paare_aus_folge``)
+    WHEN ihr Quelltext geprueft wird
+    THEN ruft keiner ``resolve_rows``, ``resolve_channel_lists``,
+    ``placements_view``, ``metrics_at`` oder ``_cell`` auf (die einzige
     Ausnahme ``ausblick_briefings``, #3155, liegt ausserhalb)."""
     mod = _soll_modul()
-    assert hasattr(mod, "_tabellen_folge"), "Helfer _tabellen_folge fehlt im Soll-Modul"
-    quelltext = inspect.getsource(mod._tabellen_folge)
+    assert hasattr(mod, helfer), f"Helfer {helfer} fehlt im Soll-Modul"
+    quelltext = inspect.getsource(getattr(mod, helfer))
     treffer = [n for n in _VERBOTEN if re.search(r"(?<![\w.])" + re.escape(n) + r"\s*\(", quelltext)
                or re.search(r"\." + re.escape(n) + r"\s*\(", quelltext)]
-    assert not treffer, f"Spiegel-Verbot verletzt: {treffer}"
+    assert not treffer, f"Spiegel-Verbot verletzt in {helfer}: {treffer}"
