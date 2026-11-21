@@ -14,6 +14,10 @@ Diese Tests halten fest: Es gilt EINE Regel, die kanonische aus
 KEINE MOCKS fuer den Prueflig selbst; nur AC-5 tauscht bewusst die kanonische
 Regel aus, um die Ableitung nachzuweisen.
 """
+# #2042 (Gehzeit folgt der gemessenen Wegstrecke, Spec fix_2042_gehzeit_wegstrecke):
+# ehemals ``test_gehzeit_folgt_wegstrecke.py``, hier aufgegangen (#3208).
+# #2042 AC-1 -> ac4, AC-2 -> ac7, AC-4 -> ac2[kleiner]; #2042 AC-3 (Luecke am
+# Etappenende) -> ac3b, #2042 AC-5 (Go-Paritaet) -> ac8.
 from __future__ import annotations
 
 from datetime import date, time
@@ -31,10 +35,10 @@ _LON_C = 12.4600
 _ELEV = 1800
 
 
-def _wp(wp_id: str, lon: float, *, km: float | None) -> Waypoint:
+def _wp(wp_id: str, lon: float, *, km: float | None, elev: int = _ELEV) -> Waypoint:
     return Waypoint(
         id=wp_id, name=wp_id, lat=_LAT, lon=lon,
-        elevation_m=_ELEV, distance_from_start_km=km,
+        elevation_m=elev, distance_from_start_km=km,
     )
 
 
@@ -119,6 +123,30 @@ def test_ac3_ein_wegpunkt_ohne_messwert_entwertet_die_etappe():
     ), "Eine Luecke darf keine teilweise vermessene Etappe hinterlassen"
 
 
+def test_ac3b_luecke_am_etappenende_entwertet_die_etappe():
+    """AC-3b: Luecke am Etappenende wirft auch den vermessenen Abschnitt davor zurueck.
+
+    Uebernommen aus #2042 AC-3 (Wegstrecken-Testdatei, hier aufgegangen in
+    #3208). Dort galt der Rueckfall je Abschnitt; seit #2082 je Etappe. Anders
+    als ac3 (Luecke in der Mitte, geprueft am letzten Wegpunkt) liegt die
+    Luecke hier am Ende, geprueft wird der vermessene Abschnitt davor.
+    """
+    luft_ab = _luft(_LON_A, _LON_B)
+    stage = _stage([
+        _wp("G1", _LON_A, km=0.0),
+        _wp("G2", _LON_B, km=luft_ab * 2.0),
+        _wp("G3", _LON_C, km=None),               # Luecke am Ende
+    ])
+
+    result = compute_stage_arrivals(stage, "")
+    assert _verstrichen(result, 1) == pytest.approx(
+        _luftlinien_minuten((_LON_A, _LON_B)), abs=1.0
+    ), (
+        "Auch der vermessene Abschnitt muss zurueckfallen, sobald ein "
+        "Wegpunkt der Etappe keinen Messwert traegt (#2082)"
+    )
+
+
 def test_ac4_vermessene_plausible_etappe_rechnet_gemessen():
     """AC-4: Regressionswaechter fuer #2042 AC-1."""
     luft_ab = _luft(_LON_A, _LON_B)
@@ -170,3 +198,24 @@ def test_ac7_etappe_ohne_messwerte_bleibt_unveraendert():
     assert _verstrichen(result, 1) == pytest.approx(
         _luftlinien_minuten((_LON_A, _LON_B)), abs=1.0
     )
+
+
+def test_ac8_paritaet_erwartungswerte_fuer_die_go_seite():
+    """AC-8: feste Erwartungswerte, die der Go-Test spiegelt (Python-Haelfte).
+
+    Uebernommen aus #2042 AC-5 (Wegstrecken-Testdatei, hier aufgegangen in
+    #3208). Dieselben Eingaben stehen in
+    ``internal/model/naismith_gemessene_strecke_test.go``. Weichen die
+    Ergebnisse voneinander ab, ist die bit-genaue Spiegelung gebrochen.
+    """
+    stage = _stage([
+        _wp("G1", _LON_A, km=0.0, elev=1800),
+        _wp("G2", _LON_B, km=8.0, elev=2100),
+    ])
+
+    result = compute_stage_arrivals(stage, "")
+
+    # 8,0 km / 4 km/h = 120 min; 300 Hm Aufstieg / 300 m/h = 60 min;
+    # DAV (#3196): 120 + 60/2 = 150 min => 10:30.
+    assert result.waypoints[0].arrival_calculated == "08:00"
+    assert result.waypoints[1].arrival_calculated == "10:30"

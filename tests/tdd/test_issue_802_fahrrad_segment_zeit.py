@@ -45,8 +45,15 @@ def _stage(eles, start="08:00", **wpkw):
 
 
 # ── AC-3: Python-Naismith == fixer Kontrakt (bit-genau, Go-spiegelnd) ─────────
-@pytest.mark.parametrize("key", ["A", "B", "C", "W"])
+# Kontrakt "A" prueft test_ac1_save_trip_populates_arrival_calculated (gleiche
+# Funktion ueber save_trip, plus Persistenz), daher hier nicht doppelt (#3208).
+@pytest.mark.parametrize("key", ["B", "C", "W"])
 def test_ac3_python_naismith_matches_fixed_contract(key):
+    """AC-3: Python-Naismith gegen den fixen Kontrakt (B, C, W).
+
+    Kontrakt W deckt auch AC-4 (Wanderer-Default unveraendert); der fruehere
+    eigene AC-4-Test war identisch und ist hier aufgegangen (#3208).
+    """
     from core.naismith import compute_stage_arrivals
     activity, eles, expected = _CONTRACT[key]
     result = compute_stage_arrivals(_stage(eles), activity)  # funktional: neue Stage
@@ -54,24 +61,18 @@ def test_ac3_python_naismith_matches_fixed_contract(key):
     assert got == expected, f"Fixture {key}: {got} != {expected}"
 
 
-# ── AC-4: Wanderer-Default unverändert (Kontrakt W) ──────────────────────────
-def test_ac4_wanderer_default_naismith_sum():
-    from core.naismith import compute_stage_arrivals
-    _, eles, expected = _CONTRACT["W"]
-    result = compute_stage_arrivals(_stage(eles), "")
-    assert [wp.arrival_calculated for wp in result.waypoints] == expected
-
-
 # ── AC-1: save_trip befüllt arrival_calculated auf Disk ──────────────────────
 def test_ac1_save_trip_populates_arrival_calculated(tmp_path):
     from app.loader import save_trip, load_trip
-    trip = Trip(id="t802save", name="Save", stages=[_stage([500, 1100, 1100, 500])],
-                activity="fahrrad_20")
+    # Wertekontrakt A (Go-gespiegelt) zugleich AC-3-Fall A, #3208.
+    activity, eles, expected = _CONTRACT["A"]
+    trip = Trip(id="t802save", name="Save", stages=[_stage(eles)],
+                activity=activity)
     save_trip(trip, user_id="u1", data_dir=tmp_path)
     loaded = load_trip("t802save", user_id="u1", data_dir=tmp_path)
     arrivals = [wp.arrival_calculated for wp in loaded.stages[0].waypoints]
     assert all(a for a in arrivals), f"nicht alle befüllt: {arrivals}"
-    assert arrivals == ["08:00", "09:00", "09:00", "09:36"]
+    assert arrivals == expected
 
 
 def test_ac1_pause_stage_gets_no_arrival(tmp_path):

@@ -54,7 +54,7 @@ Start `08:00`, alle Wegpunkte lat=47.0 lon=11.0 (Distanz=0 → nur Höhe zählt)
 | `ac1_pause_stage_gets_no_arrival` | AC-1 | Etappe mit <2/0 Wegpunkten → kein arrival_calculated, kein Crash. |
 | `ac2_fahrrad20_flat_arrives_around_nine` | AC-2 | fahrrad_20, ~20 km flach → 2. Wegpunkt ~09:00 (nicht ~13:00). |
 | `ac3_python_naismith_matches_fixed_contract` | AC-3 | `compute_stage_arrivals` == fixer Kontrakt A/B/C/W (Python-Seite). |
-| `ac4_wanderer_default_naismith_sum` | AC-4 | activity="" → Wanderer-SUM, Kontrakt W. |
+| `ac3_python_naismith_matches_fixed_contract[W]` | AC-4 | activity="" → Wanderer-SUM, Kontrakt W (eigener AC-4-Test war identisch, in #3208 zusammengelegt). |
 | `ac5_backfill_populates_and_preserves` | AC-5 | Backfill befüllt Bestandstrip; Counts + time_window/override unberührt. |
 | `ac6_scheduler_reads_persisted_arrival` | AC-6 | Scheduler nutzt persistierte arrival_calculated für Segmentzeiten. |
 | `ac6_scheduler_interpolation_removed` | AC-6 | `_interpolate_arrival_time`/`_activity_speeds` nicht mehr importierbar. |

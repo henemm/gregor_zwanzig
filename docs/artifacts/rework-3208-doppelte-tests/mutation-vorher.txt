@@ -1,0 +1,252 @@
+# Mutationsnachweis #3208 -- Phase: vorher
+
+## G1a: gemessene Strecke ignoriert (immer Luftlinie)
+Ziel: src/core/naismith.py | Testdateien: tests/tdd/test_gehzeit_etappenregel.py tests/tdd/test_gehzeit_folgt_wegstrecke.py tests/tdd/test_issue_802_fahrrad_segment_zeit.py tests/test_3196_trip_tempo_dav.py tests/test_3197_tempo_je_etappe.py
+Ergebnis mutiert: exit=1 | 27 failed, 84 passed in 5.07s
+ROT (gefangen)
+  FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac4_vermessene_plausible_etappe_rechnet_gemessen
+  FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac5_gehzeit_leitet_aus_der_kanonischen_regel_ab
+  FAILED tests/tdd/test_gehzeit_folgt_wegstrecke.py::test_ac1_vermessene_etappe_rechnet_mit_der_wegstrecke
+  FAILED tests/tdd/test_gehzeit_folgt_wegstrecke.py::test_ac5_paritaet_erwartungswerte_fuer_die_go_seite
+  FAILED tests/test_3196_trip_tempo_dav.py::test_etappen_wetter_segmente_folgen_dem_gespeicherten_tempo
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_mit_unplausiblem_altwert_crasht_nicht[0.4]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_mit_unplausiblem_altwert_crasht_nicht[1e-320]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_ohne_tempo_rechnet_mit_ableitung
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_schreibt_tempo_und_rechnet_dav
+  FAILED tests/test_3197_tempo_je_etappe.py::test_bestand_ohne_ueberschreibung_unveraendert
+  FAILED tests/test_3197_tempo_je_etappe.py::test_kanal_segmente_aus_gespeichertem_trip
+  FAILED tests/test_3197_tempo_je_etappe.py::test_save_trip_rechnet_nur_die_ueberschriebene_etappe
+  FAILED tests/test_3197_tempo_je_etappe.py::test_self_heal_nutzt_etappen_tempo
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[0.4]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[61]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[-3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[0.4]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[0]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[1e-320]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[60.5]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[61]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[None]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_zuruecknehmen_entfernt_das_feld_gegen_den_plattenstand
+Nach Wiederherstellung aus Sicherung: exit=0 | 111 passed in 2.45s
+
+## G1b-abschnitt: Rueckfall je Abschnitt statt je Etappe (Luecke/Fall entwertet nur das Paar)
+Ziel: src/core/naismith.py | Testdateien: tests/tdd/test_gehzeit_etappenregel.py tests/tdd/test_gehzeit_folgt_wegstrecke.py tests/tdd/test_issue_802_fahrrad_segment_zeit.py tests/test_3196_trip_tempo_dav.py tests/test_3197_tempo_je_etappe.py
+Ergebnis mutiert: exit=1 | 3 failed, 108 passed in 2.26s
+ROT (gefangen)
+  FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac1_unplausibler_abschnitt_entwertet_die_ganze_etappe
+  FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac5_gehzeit_leitet_aus_der_kanonischen_regel_ab
+  FAILED tests/tdd/test_gehzeit_folgt_wegstrecke.py::test_ac3_rueckfall_gilt_je_etappe_nicht_je_abschnitt
+Nach Wiederherstellung aus Sicherung: exit=0 | 111 passed in 2.25s
+
+## G1b-monotonie: Monotonie-Pruefung aus (fallende/gleiche Werte gelten als vermessen)
+Ziel: src/services/trip_segments.py | Testdateien: tests/tdd/test_gehzeit_etappenregel.py tests/tdd/test_gehzeit_folgt_wegstrecke.py tests/tdd/test_issue_802_fahrrad_segment_zeit.py tests/test_3196_trip_tempo_dav.py tests/test_3197_tempo_je_etappe.py
+Ergebnis mutiert: exit=0 | 111 passed in 2.32s
+GRUEN (NICHT gefangen)
+Nach Wiederherstellung aus Sicherung: exit=0 | 111 passed in 2.30s
+
+## G1b-ruckfall-aus: Rueckfallregel ganz aus (Monotonie und Plausibilitaet)
+Ziel: src/services/trip_segments.py | Testdateien: tests/tdd/test_gehzeit_etappenregel.py tests/tdd/test_gehzeit_folgt_wegstrecke.py tests/tdd/test_issue_802_fahrrad_segment_zeit.py tests/test_3196_trip_tempo_dav.py tests/test_3197_tempo_je_etappe.py
+Ergebnis mutiert: exit=1 | 4 failed, 107 passed in 2.36s
+ROT (gefangen)
+  FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac1_unplausibler_abschnitt_entwertet_die_ganze_etappe
+  FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2_nicht_strikt_steigend_faellt_zurueck[gleich]
+  FAILED tests/tdd/test_gehzeit_etappenregel.py::test_ac2_nicht_strikt_steigend_faellt_zurueck[kleiner]
+  FAILED tests/tdd/test_gehzeit_folgt_wegstrecke.py::test_ac4_negative_differenz_faellt_auf_luftlinie_zurueck
+Nach Wiederherstellung aus Sicherung: exit=0 | 111 passed in 2.37s
+
+## G1c-grundtempo: Grundtempo in speeds_for_tempo um 25 % erhoeht
+Ziel: src/core/naismith.py | Testdateien: tests/tdd/test_gehzeit_etappenregel.py tests/tdd/test_gehzeit_folgt_wegstrecke.py tests/tdd/test_issue_802_fahrrad_segment_zeit.py tests/test_3196_trip_tempo_dav.py tests/test_3197_tempo_je_etappe.py
+Ergebnis mutiert: exit=1 | 52 failed, 59 passed in 2.66s
+ROT (gefangen)
+  FAILED tests/tdd/test_gehzeit_folgt_wegstrecke.py::test_ac5_paritaet_erwartungswerte_fuer_die_go_seite
+  FAILED tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac2_fahrrad20_flat_arrives_around_nine
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[AC-3
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[fuss
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[mtb
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[rad
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[ski
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[ungueltig
+  FAILED tests/test_3196_trip_tempo_dav.py::test_etappen_wetter_segmente_folgen_dem_gespeicherten_tempo
+  FAILED tests/test_3196_trip_tempo_dav.py::test_raten_folgen_dem_grundtempo[fuss]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_raten_folgen_dem_grundtempo[mtb]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_raten_folgen_dem_grundtempo[rad]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_raten_folgen_dem_grundtempo[ski]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_mit_unplausiblem_altwert_crasht_nicht[0.4]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_mit_unplausiblem_altwert_crasht_nicht[1e-320]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_ohne_tempo_rechnet_mit_ableitung
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_schreibt_tempo_und_rechnet_dav
+  FAILED tests/test_3197_tempo_je_etappe.py::test_bestand_ohne_ueberschreibung_unveraendert
+  FAILED tests/test_3197_tempo_je_etappe.py::test_grenzwerte_beim_laden[0.5-True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_grenzwerte_beim_laden[60-True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_kanal_segmente_aus_gespeichertem_trip
+  FAILED tests/test_3197_tempo_je_etappe.py::test_save_trip_rechnet_nur_die_ueberschriebene_etappe
+  FAILED tests/test_3197_tempo_je_etappe.py::test_self_heal_nutzt_etappen_tempo
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_gegen_falltabelle
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_grenzwert_direkt[0.5]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_grenzwert_direkt[60]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[-3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[0.4]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[0]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[61]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[0.4]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[61]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[-3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[0.4]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[0]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[1e-320]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[60.5]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[61]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[None]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_zuruecknehmen_entfernt_das_feld_gegen_den_plattenstand
+Nach Wiederherstellung aus Sicherung: exit=0 | 111 passed in 2.37s
+
+## G1c-gewicht: Gewicht des kleineren Anteils in dav_hours 1/3 statt 1/2
+Ziel: src/core/naismith.py | Testdateien: tests/tdd/test_gehzeit_etappenregel.py tests/tdd/test_gehzeit_folgt_wegstrecke.py tests/tdd/test_issue_802_fahrrad_segment_zeit.py tests/test_3196_trip_tempo_dav.py tests/test_3197_tempo_je_etappe.py
+Ergebnis mutiert: exit=1 | 35 failed, 76 passed in 2.42s
+ROT (gefangen)
+  FAILED tests/tdd/test_gehzeit_folgt_wegstrecke.py::test_ac5_paritaet_erwartungswerte_fuer_die_go_seite
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[AC-3
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[fuss
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[mtb
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[rad
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[ski
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[ungueltig
+  FAILED tests/test_3196_trip_tempo_dav.py::test_etappen_wetter_segmente_folgen_dem_gespeicherten_tempo
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_mit_unplausiblem_altwert_crasht_nicht[0.4]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_mit_unplausiblem_altwert_crasht_nicht[1e-320]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_ohne_tempo_rechnet_mit_ableitung
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_schreibt_tempo_und_rechnet_dav
+  FAILED tests/test_3197_tempo_je_etappe.py::test_bestand_ohne_ueberschreibung_unveraendert
+  FAILED tests/test_3197_tempo_je_etappe.py::test_kanal_segmente_aus_gespeichertem_trip
+  FAILED tests/test_3197_tempo_je_etappe.py::test_save_trip_rechnet_nur_die_ueberschriebene_etappe
+  FAILED tests/test_3197_tempo_je_etappe.py::test_self_heal_nutzt_etappen_tempo
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[0.4]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[61]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[-3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[0.4]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[0]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[1e-320]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[60.5]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[61]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[None]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_zuruecknehmen_entfernt_das_feld_gegen_den_plattenstand
+Nach Wiederherstellung aus Sicherung: exit=0 | 111 passed in 2.48s
+
+## G1d: Aufstiegsrate zu Fuss 350 statt 300 Hm/h
+Ziel: src/core/naismith.py | Testdateien: tests/tdd/test_gehzeit_etappenregel.py tests/tdd/test_gehzeit_folgt_wegstrecke.py tests/tdd/test_issue_802_fahrrad_segment_zeit.py tests/test_3196_trip_tempo_dav.py tests/test_3197_tempo_je_etappe.py
+Ergebnis mutiert: exit=1 | 40 failed, 71 passed in 2.54s
+ROT (gefangen)
+  FAILED tests/tdd/test_gehzeit_folgt_wegstrecke.py::test_ac5_paritaet_erwartungswerte_fuer_die_go_seite
+  FAILED tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac3_python_naismith_matches_fixed_contract[W]
+  FAILED tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac4_wanderer_default_naismith_sum
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[AC-3
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[fuss
+  FAILED tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[ungueltig
+  FAILED tests/test_3196_trip_tempo_dav.py::test_raten_folgen_dem_grundtempo[fuss]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_mit_unplausiblem_altwert_crasht_nicht[0.4]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_mit_unplausiblem_altwert_crasht_nicht[1e-320]
+  FAILED tests/test_3196_trip_tempo_dav.py::test_save_trip_schreibt_tempo_und_rechnet_dav
+  FAILED tests/test_3197_tempo_je_etappe.py::test_bestand_ohne_ueberschreibung_unveraendert
+  FAILED tests/test_3197_tempo_je_etappe.py::test_grenzwerte_beim_laden[0.5-True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_grenzwerte_beim_laden[60-True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_kanal_segmente_aus_gespeichertem_trip
+  FAILED tests/test_3197_tempo_je_etappe.py::test_save_trip_rechnet_nur_die_ueberschriebene_etappe
+  FAILED tests/test_3197_tempo_je_etappe.py::test_self_heal_nutzt_etappen_tempo
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_gegen_falltabelle
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_grenzwert_direkt[0.5]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_grenzwert_direkt[60]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[-3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[0.4]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[0]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[61]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[0.4]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[61]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[-3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[0.4]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[0]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[1e-320]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[3]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[60.5]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[61]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[None]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[True]
+  FAILED tests/test_3197_tempo_je_etappe.py::test_zuruecknehmen_entfernt_das_feld_gegen_den_plattenstand
+Nach Wiederherstellung aus Sicherung: exit=0 | 111 passed in 2.19s
+
+## G3a: Premium-SMS liest die Premium-Liste statt der SMS-Liste
+Ziel: src/output/renderers/trip_report.py | Testdateien: tests/tdd/test_3099_sms_resolver.py tests/tdd/test_3100_premium_sms_fallliste.py
+Ergebnis mutiert: exit=1 | 10 failed, 62 passed in 11.38s
+ROT (gefangen)
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac6_premium_gleich_sms_trotz_abweichender_premium_ebene
+  FAILED tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms[abweichend-heute]
+  FAILED tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms[abweichend-morgen]
+  FAILED tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms[leer-heute]
+  FAILED tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms[leer-morgen]
+  FAILED tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms[nie-heute]
+  FAILED tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms[nie-morgen]
+  FAILED tests/tdd/test_3100_premium_sms_fallliste.py::test_ac3_zwei_nutzer_je_eigene_premium_antwort[ab]
+  FAILED tests/tdd/test_3100_premium_sms_fallliste.py::test_ac3_zwei_nutzer_je_eigene_premium_antwort[ba]
+  FAILED tests/tdd/test_3100_premium_sms_fallliste.py::test_ac4_ueberlaenge_premium_kuerzt_vom_listenende_warnung_bleibt
+Nach Wiederherstellung aus Sicherung: exit=0 | 72 passed in 13.14s
+
+## G3b: SMS-Kuerzel Niederschlag 'Q' statt 'R'
+Ziel: src/app/metric_catalog.py | Testdateien: tests/tdd/test_3099_sms_resolver.py tests/tdd/test_3100_premium_sms_fallliste.py
+Ergebnis mutiert: exit=1 | 38 failed, 34 passed in 15.67s
+ROT (gefangen)
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht[hoch-HIGH-False]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht[hoch-LOW-True]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht[niedrig-HIGH-False]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht[niedrig-LOW-True]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht[ohne-HIGH-False]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht[ohne-LOW-True]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac2_email_auswahl_leckt_nicht_in_sms_ohne_sms_ebene[evening]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac2_email_auswahl_leckt_nicht_in_sms_ohne_sms_ebene[morning]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac2_kanal_ebene_leer_keine_metrik[evening]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac2_kanal_ebene_leer_keine_metrik[morning]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac2_kanal_ebene_nie_gesetzt_folgt_grundauswahl[evening]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac2_kanal_ebene_nie_gesetzt_folgt_grundauswahl[morning]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac2_sms_folgt_sms_auswahl[evening]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac2_sms_folgt_sms_auswahl[morning]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac3_alle_vier_format_metriken_roh_und_einfach[cloud_high-CH-20]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac3_alle_vier_format_metriken_roh_und_einfach[cloud_low-CL-40]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac3_alle_vier_format_metriken_roh_und_einfach[cloud_mid-CM-30]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac3_alle_vier_format_metriken_roh_und_einfach[cloud_total-CT-70]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac3_bewoelkung_roh_einfach_ohne_angabe[einfach]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac3_bewoelkung_roh_einfach_ohne_angabe[ohne_angabe]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac3_bewoelkung_roh_einfach_ohne_angabe[roh]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac3_kanal_format_gewinnt_gegen_grundauswahl
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac4_grundauswahl_metrik_nicht_in_sms_liste[evening]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac4_grundauswahl_metrik_nicht_in_sms_liste[morning]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac5_kuerzung_vom_listenende_warnblock_bleibt_hinten[listenfolge]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac5_kuerzung_vom_listenende_warnblock_bleibt_hinten[umgekehrt]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac5_warnblock_hinten_bei_zwei_folgen[evening]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac5_warnblock_hinten_bei_zwei_folgen[morning]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac6_premium_gleich_sms_trotz_abweichender_premium_ebene
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac7_orte_sms_versand_folge_und_format[einfach]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac7_orte_sms_versand_folge_und_format[roh]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac7_orte_telegram_kurzform_gleich_sms
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac8_orte_zwei_nutzer_je_eigene_sms[ab]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac8_orte_zwei_nutzer_je_eigene_sms[ba]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac8_trip_zwei_nutzer_je_eigene_sms[ab]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac8_trip_zwei_nutzer_je_eigene_sms[ba]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac9_trip_sms_folgt_resolver_nicht_altpfad[evening]
+  FAILED tests/tdd/test_3099_sms_resolver.py::test_ac9_trip_sms_folgt_resolver_nicht_altpfad[morning]
+Nach Wiederherstellung aus Sicherung: exit=0 | 72 passed in 9.43s

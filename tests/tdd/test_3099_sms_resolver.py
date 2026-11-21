@@ -210,6 +210,17 @@ def test_ac2_kanal_ebene_leer_keine_metrik(report_type):
     assert sms == "E1", sms
 
 
+def test_ac2_sms_folge_niederschlag_boe_bewoelkung():
+    """AC-2: SMS-Liste Niederschlag, Boe, Bewoelkung -> genau diese Folge.
+
+    Die Gleichheit Premium-SMS = SMS-Text (ehemals AC-6) bewacht
+    ``tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms``.
+    """
+    # Festwert aus ehemals AC-6 (#3099), #3208.
+    sms = _sms(_trip(_trip_dict(_liste(["precipitation", "gust", "cloud_total"]))))
+    assert sms == "E1 R2.0@4 G45@4 CT:SCT@4", sms
+
+
 # ---------------------------------------------------------------------------
 # AC-3: Roh / Einfach / ohne Angabe
 # ---------------------------------------------------------------------------
@@ -324,32 +335,6 @@ def test_ac5_kuerzung_vom_listenende_warnblock_bleibt_hinten(umgekehrt):
     erhalten = sorted(set(_listenplaetze(sms, liste)))
     assert erhalten and erhalten == list(range(len(erhalten))), sms
     assert len(erhalten) < len(liste), sms
-
-
-# ---------------------------------------------------------------------------
-# AC-6: Premium-SMS = SMS-Text trotz abweichender premium_sms-Ebene
-# ---------------------------------------------------------------------------
-
-def test_ac6_premium_gleich_sms_trotz_abweichender_premium_ebene(monkeypatch):
-    """AC-6: ``channel_layouts.premium_sms`` weicht von der SMS-Liste ab (der
-    Resolver-Zweig ``premium_sms`` ist anders) -- der gesendete Premium-Text ist
-    trotzdem der SMS-Text, hoechstens 153 Zeichen. Echter Versandweg, zwei Nutzer."""
-    from services.channel_list_resolver import resolve_channel_lists
-    from tests.tdd.test_3047_r7_kanaele_trip import _zwei_nutzer
-
-    sms_liste = _liste(["precipitation", "gust", "cloud_total"])
-    premium_liste = _liste(["humidity", "uv_index"])
-    data = _trip_dict(sms_liste, extra_layouts={"premium_sms": premium_liste})
-    data["report_config"]["telegram_style"] = "rich"
-    view = resolve_channel_lists(_trip(data).display_config, "trip", "evening")
-    assert [z.metric_id for z in view.premium_sms] != [z.metric_id for z in view.sms], \
-        "Vorbedingung: premium_sms-Zweig weicht ab"
-    for _uid, mit_tr in _zwei_nutzer(monkeypatch, data):
-        sms = mit_tr.sendungen("sms")[0]["body"]
-        premium = mit_tr.sendungen("premium_sms")[0]["body"]
-        assert sms == "E1 R2.0@4 G45@4 CT:SCT@4", sms
-        assert premium == sms, (premium, sms)
-        assert len(premium) <= 153
 
 
 # ---------------------------------------------------------------------------

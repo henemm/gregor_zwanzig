@@ -9,7 +9,7 @@ Issue #3100 (Epic #3058, Phase 3e von #3047), **gekürzter Umfang laut PO-Freiga
 | `tests/fixtures/einstellung_gleich_mail/fallliste_sms.json` | Vorbild (#3099); enthält schon 3 Premium-Fälle (`sms-premium-gleich-sms-text`, `sms-orte-versand-roh/einfach`, Format `sms+premium_sms`) |
 | `tests/fixtures/einstellung_gleich_mail/fallliste_trip.json` / `fallliste_orte.json` | verstreute Premium-Fälle: `R7-KAT-trip-premium-matrix`, `R7-KAT-trip-premium-gleich-sms-kuerzung`, `R7-KAT-orte-premium-gleich-sms`, `orte_premium_sms`-Fälle, `test_t3_premium_sms_folgt_sms_liste` |
 | `tests/tdd/test_einstellung_gleich_mail_fallliste.py` | Wächter: `TEILDATEIEN` (trip, orte, validatoren, editor, telegram, sms), `PY_TEST_GLOBS`, Kanal-Abdeckung (f) mit `premium_sms` je Kontext × Aspekt |
-| `tests/tdd/test_3099_sms_resolver.py` | Muster: `test_ac6_premium_gleich_sms_trotz_abweichender_premium_ebene` (Trip, echter Versand, zwei Nutzer), `test_ac7_orte_sms_versand_folge_und_format` (Orte), AC-11-Wächtertest |
+| `tests/tdd/test_3099_sms_resolver.py` | Muster: damaliger AC-6-Test Premium = SMS (Trip, echter Versand, zwei Nutzer; seit #3208 ersetzt durch `test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms`), `test_ac7_orte_sms_versand_folge_und_format` (Orte), AC-11-Wächtertest |
 | `tests/tdd/test_3047_r7_kanaele_trip.py::_zwei_nutzer` | Trip-Versandkette mit Aufzeichner an den Kanal-Ausgängen (kein Mock) |
 | `src/services/channel_list_resolver.py:158-162` | `premium_sms` fällt ohne eigene Ebene auf `sms` zurück (bleibt so) |
 | `src/services/inbound_sms_reader.py`, `trip_command_processor.py` | echter Eingangsweg der Premium-SMS (Garmin-Befehl → Antwort per Premium-SMS) |
@@ -49,7 +49,7 @@ Feature (reine Nachweis-Arbeit im Prüfkatalog; Produktionscode bleibt voraussic
 
 ### Befunde (17.11., direkt im Code gemessen)
 - Premium-Grenze ist 153 Zeichen (`src/output/renderers/channel_layout.py:57`), SMS 160. „Gleich“ heißt: Premium-Text == SMS-Text, solange dieser in 153 passt; darüber kürzt Premium nach derselben Regel (vom Listenende, amtliche Warnung bleibt), bereits belegt durch `R7-KAT-trip-premium-gleich-sms-kuerzung`.
-- **Versandkette** ist schon belegt: Trip `test_3099_sms_resolver.py::test_ac6_premium_gleich_sms_trotz_abweichender_premium_ebene` (Premium-Ebene weicht ab, Text trotzdem gleich, ≤153), Orte `test_ac7_orte_sms_versand_folge_und_format`, `test_compare_channel_layouts_3039.py::test_ac10_premium_sms_text_gleich_sms_text_mit_kanal_einstellungen`.
+- **Versandkette** ist schon belegt: Trip damals 3099 AC-6, seit #3208 `test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms` (Premium-Ebene weicht ab, Text trotzdem gleich, ≤153), Orte `test_ac7_orte_sms_versand_folge_und_format`, `test_compare_channel_layouts_3039.py::test_ac10_premium_sms_text_gleich_sms_text_mit_kanal_einstellungen`.
 - **Lücke = echter Empfangsweg:** Kein Test vergleicht die Antwort auf einen Garmin-Befehl (Eingang über `inbound_sms_reader`, Journal-GET → `trip_command_processor` → Premium-Antwort) mit dem SMS-Text desselben Trips/Vergleichs. `test_premium_sms_kommandopfad.py` prüft nur Kanal und Empfänger, nicht den Inhalt. Für Orte gibt es den Eingangsweg ebenfalls (`inbound_sms_reader.py:406-463`, `resolved_kind="vergleich"`).
 - Alarme: Premium-Alarmtext = SMS-Alarmtext ist durch Kanalparität (#1701, `test_compare_alert_channel_equivalence.py`, `test_onset_ende_kanalparitaet.py`) abgedeckt; Alarme lesen keine Metrikauswahl → nur als Verweis-Fall aufnehmen, keinen neuen Test.
 

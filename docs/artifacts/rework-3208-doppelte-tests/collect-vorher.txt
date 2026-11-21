@@ -1,0 +1,223 @@
+tests/tdd/test_gehzeit_etappenregel.py::test_ac1_unplausibler_abschnitt_entwertet_die_ganze_etappe
+tests/tdd/test_gehzeit_etappenregel.py::test_ac2_nicht_strikt_steigend_faellt_zurueck[gleich]
+tests/tdd/test_gehzeit_etappenregel.py::test_ac2_nicht_strikt_steigend_faellt_zurueck[kleiner]
+tests/tdd/test_gehzeit_etappenregel.py::test_ac3_ein_wegpunkt_ohne_messwert_entwertet_die_etappe
+tests/tdd/test_gehzeit_etappenregel.py::test_ac4_vermessene_plausible_etappe_rechnet_gemessen
+tests/tdd/test_gehzeit_etappenregel.py::test_ac5_gehzeit_leitet_aus_der_kanonischen_regel_ab
+tests/tdd/test_gehzeit_etappenregel.py::test_ac7_etappe_ohne_messwerte_bleibt_unveraendert
+tests/tdd/test_gehzeit_folgt_wegstrecke.py::test_ac1_vermessene_etappe_rechnet_mit_der_wegstrecke
+tests/tdd/test_gehzeit_folgt_wegstrecke.py::test_ac2_unvermessene_etappe_bleibt_unveraendert
+tests/tdd/test_gehzeit_folgt_wegstrecke.py::test_ac3_rueckfall_gilt_je_etappe_nicht_je_abschnitt
+tests/tdd/test_gehzeit_folgt_wegstrecke.py::test_ac4_negative_differenz_faellt_auf_luftlinie_zurueck
+tests/tdd/test_gehzeit_folgt_wegstrecke.py::test_ac5_paritaet_erwartungswerte_fuer_die_go_seite
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac3_python_naismith_matches_fixed_contract[A]
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac3_python_naismith_matches_fixed_contract[B]
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac3_python_naismith_matches_fixed_contract[C]
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac3_python_naismith_matches_fixed_contract[W]
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac4_wanderer_default_naismith_sum
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac1_save_trip_populates_arrival_calculated
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac1_pause_stage_gets_no_arrival
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac2_fahrrad20_flat_arrives_around_nine
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac7_save_idempotent_preserves_override
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac5_backfill_populates_and_preserves
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac6_scheduler_reads_persisted_arrival
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac6_scheduler_interpolation_removed
+tests/tdd/test_issue_802_fahrrad_segment_zeit.py::test_ac8_degenerate_waypoint_no_crash_no_hiking
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[AC-3 Rechenbeispiel]
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[fuss flach]
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[fuss 5 kmh skaliert Raten]
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[fuss nur Abstieg]
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[rad Vorschlag]
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[rad 15 skaliert]
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[rad 25 Abfahrt]
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[mtb Vorschlag]
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[ski Vorschlag]
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[ski 6 kmh skaliert]
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[nichts]
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[ungueltig 0.4 kmh faellt auf zu Fuss 4 zurueck]
+tests/test_3196_trip_tempo_dav.py::test_dav_hours_gegen_falltabelle[ungueltig winzig (1e-320) faellt auf zu Fuss 4 zurueck]
+tests/test_3196_trip_tempo_dav.py::test_raten_folgen_dem_grundtempo[fuss]
+tests/test_3196_trip_tempo_dav.py::test_raten_folgen_dem_grundtempo[mtb]
+tests/test_3196_trip_tempo_dav.py::test_raten_folgen_dem_grundtempo[rad]
+tests/test_3196_trip_tempo_dav.py::test_raten_folgen_dem_grundtempo[ski]
+tests/test_3196_trip_tempo_dav.py::test_derive_tempo_alle_altwerte[]
+tests/test_3196_trip_tempo_dav.py::test_derive_tempo_alle_altwerte[fahrrad_15]
+tests/test_3196_trip_tempo_dav.py::test_derive_tempo_alle_altwerte[fahrrad_20]
+tests/test_3196_trip_tempo_dav.py::test_derive_tempo_alle_altwerte[fahrrad_25]
+tests/test_3196_trip_tempo_dav.py::test_derive_tempo_alle_altwerte[hiking]
+tests/test_3196_trip_tempo_dav.py::test_derive_tempo_alle_altwerte[hochtour]
+tests/test_3196_trip_tempo_dav.py::test_derive_tempo_alle_altwerte[klettersteig]
+tests/test_3196_trip_tempo_dav.py::test_derive_tempo_alle_altwerte[mtb]
+tests/test_3196_trip_tempo_dav.py::test_derive_tempo_alle_altwerte[skitour]
+tests/test_3196_trip_tempo_dav.py::test_derive_tempo_alle_altwerte[trekking]
+tests/test_3196_trip_tempo_dav.py::test_derive_tempo_alle_altwerte[wandern]
+tests/test_3196_trip_tempo_dav.py::test_ableitung_tabelle_vollstaendig
+tests/test_3196_trip_tempo_dav.py::test_loader_leitet_tempo_beim_lesen_ab[fahrrad_20-want0]
+tests/test_3196_trip_tempo_dav.py::test_loader_leitet_tempo_beim_lesen_ab[hochtour-want1]
+tests/test_3196_trip_tempo_dav.py::test_loader_leitet_tempo_beim_lesen_ab[None-want2]
+tests/test_3196_trip_tempo_dav.py::test_loader_behaelt_gespeichertes_tempo
+tests/test_3196_trip_tempo_dav.py::test_save_trip_schreibt_tempo_und_rechnet_dav
+tests/test_3196_trip_tempo_dav.py::test_save_trip_ohne_tempo_rechnet_mit_ableitung
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_grenzen[fuss-0.5]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_grenzen[ski-0.5]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_grenzen[rad-60]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_grenzen[mtb-12]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_grenzen[fuss-0.4]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_grenzen[ski-1e-320]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_grenzen[fuss-0]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_grenzen[fuss--3]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_grenzen[rad-60.5]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_grenzen[auto-4]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_kein_zahlwert[True]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_kein_zahlwert[False]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_kein_zahlwert[4]
+tests/test_3196_trip_tempo_dav.py::test_valid_tempo_kein_zahlwert[None]
+tests/test_3196_trip_tempo_dav.py::test_save_trip_mit_unplausiblem_altwert_crasht_nicht[1e-320]
+tests/test_3196_trip_tempo_dav.py::test_save_trip_mit_unplausiblem_altwert_crasht_nicht[0.4]
+tests/test_3196_trip_tempo_dav.py::test_etappen_wetter_segmente_folgen_dem_gespeicherten_tempo
+tests/test_3197_tempo_je_etappe.py::test_stage_speeds_gegen_falltabelle
+tests/test_3197_tempo_je_etappe.py::test_loader_liest_etappen_grundtempo
+tests/test_3197_tempo_je_etappe.py::test_save_trip_rechnet_nur_die_ueberschriebene_etappe
+tests/test_3197_tempo_je_etappe.py::test_roundtrip_ohne_feldverlust
+tests/test_3197_tempo_je_etappe.py::test_zuruecknehmen_entfernt_das_feld_gegen_den_plattenstand
+tests/test_3197_tempo_je_etappe.py::test_zwei_nutzer_getrennt
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[0]
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[0.4]
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[60.5]
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[61]
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[-3]
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[1e-320]
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[True]
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[3]
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_etappenwert_wird_ignoriert[None]
+tests/test_3197_tempo_je_etappe.py::test_bestand_ohne_ueberschreibung_unveraendert
+tests/test_3197_tempo_je_etappe.py::test_kanal_segmente_aus_gespeichertem_trip
+tests/test_3197_tempo_je_etappe.py::test_self_heal_nutzt_etappen_tempo
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[61]
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[0.4]
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[3]
+tests/test_3197_tempo_je_etappe.py::test_ungueltiger_dateiwert_verschwindet_beim_speichern[True]
+tests/test_3197_tempo_je_etappe.py::test_grenzwerte_beim_laden[0.5-True]
+tests/test_3197_tempo_je_etappe.py::test_grenzwerte_beim_laden[60-True]
+tests/test_3197_tempo_je_etappe.py::test_grenzwerte_beim_laden[0.4-False]
+tests/test_3197_tempo_je_etappe.py::test_grenzwerte_beim_laden[61-False]
+tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[0.4]
+tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[61]
+tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[True]
+tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[0]
+tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[-3]
+tests/test_3197_tempo_je_etappe.py::test_stage_speeds_prueft_den_etappenwert_selbst[3]
+tests/test_3197_tempo_je_etappe.py::test_stage_speeds_grenzwert_direkt[0.5]
+tests/test_3197_tempo_je_etappe.py::test_stage_speeds_grenzwert_direkt[60]
+tests/tdd/test_3099_sms_resolver.py::test_ac2_sms_folgt_sms_auswahl[morning]
+tests/tdd/test_3099_sms_resolver.py::test_ac2_sms_folgt_sms_auswahl[evening]
+tests/tdd/test_3099_sms_resolver.py::test_ac2_kanal_ebene_nie_gesetzt_folgt_grundauswahl[morning]
+tests/tdd/test_3099_sms_resolver.py::test_ac2_kanal_ebene_nie_gesetzt_folgt_grundauswahl[evening]
+tests/tdd/test_3099_sms_resolver.py::test_ac2_email_auswahl_leckt_nicht_in_sms_ohne_sms_ebene[morning]
+tests/tdd/test_3099_sms_resolver.py::test_ac2_email_auswahl_leckt_nicht_in_sms_ohne_sms_ebene[evening]
+tests/tdd/test_3099_sms_resolver.py::test_ac2_kanal_ebene_leer_keine_metrik[morning]
+tests/tdd/test_3099_sms_resolver.py::test_ac2_kanal_ebene_leer_keine_metrik[evening]
+tests/tdd/test_3099_sms_resolver.py::test_ac3_bewoelkung_roh_einfach_ohne_angabe[roh]
+tests/tdd/test_3099_sms_resolver.py::test_ac3_bewoelkung_roh_einfach_ohne_angabe[einfach]
+tests/tdd/test_3099_sms_resolver.py::test_ac3_bewoelkung_roh_einfach_ohne_angabe[ohne_angabe]
+tests/tdd/test_3099_sms_resolver.py::test_ac3_kanal_format_gewinnt_gegen_grundauswahl
+tests/tdd/test_3099_sms_resolver.py::test_ac3_alle_vier_format_metriken_roh_und_einfach[cloud_total-CT-70]
+tests/tdd/test_3099_sms_resolver.py::test_ac3_alle_vier_format_metriken_roh_und_einfach[cloud_low-CL-40]
+tests/tdd/test_3099_sms_resolver.py::test_ac3_alle_vier_format_metriken_roh_und_einfach[cloud_mid-CM-30]
+tests/tdd/test_3099_sms_resolver.py::test_ac3_alle_vier_format_metriken_roh_und_einfach[cloud_high-CH-20]
+tests/tdd/test_3099_sms_resolver.py::test_ac4_abgewaehlte_metriken_ohne_wert[morning]
+tests/tdd/test_3099_sms_resolver.py::test_ac4_abgewaehlte_metriken_ohne_wert[evening]
+tests/tdd/test_3099_sms_resolver.py::test_ac4_grundauswahl_metrik_nicht_in_sms_liste[morning]
+tests/tdd/test_3099_sms_resolver.py::test_ac4_grundauswahl_metrik_nicht_in_sms_liste[evening]
+tests/tdd/test_3099_sms_resolver.py::test_ac5_warnblock_hinten_bei_zwei_folgen[morning]
+tests/tdd/test_3099_sms_resolver.py::test_ac5_warnblock_hinten_bei_zwei_folgen[evening]
+tests/tdd/test_3099_sms_resolver.py::test_ac5_warnblock_nicht_abwaehlbar[leer]
+tests/tdd/test_3099_sms_resolver.py::test_ac5_warnblock_nicht_abwaehlbar[gewitter_abgewaehlt]
+tests/tdd/test_3099_sms_resolver.py::test_ac5_kuerzung_vom_listenende_warnblock_bleibt_hinten[listenfolge]
+tests/tdd/test_3099_sms_resolver.py::test_ac5_kuerzung_vom_listenende_warnblock_bleibt_hinten[umgekehrt]
+tests/tdd/test_3099_sms_resolver.py::test_ac6_premium_gleich_sms_trotz_abweichender_premium_ebene
+tests/tdd/test_3099_sms_resolver.py::test_ac8_trip_zwei_nutzer_je_eigene_sms[ab]
+tests/tdd/test_3099_sms_resolver.py::test_ac8_trip_zwei_nutzer_je_eigene_sms[ba]
+tests/tdd/test_3099_sms_resolver.py::test_ac9_trip_sms_folgt_resolver_nicht_altpfad[morning]
+tests/tdd/test_3099_sms_resolver.py::test_ac9_trip_sms_folgt_resolver_nicht_altpfad[evening]
+tests/tdd/test_3099_sms_resolver.py::test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht[ohne-LOW-True]
+tests/tdd/test_3099_sms_resolver.py::test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht[ohne-HIGH-False]
+tests/tdd/test_3099_sms_resolver.py::test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht[niedrig-LOW-True]
+tests/tdd/test_3099_sms_resolver.py::test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht[niedrig-HIGH-False]
+tests/tdd/test_3099_sms_resolver.py::test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht[hoch-LOW-True]
+tests/tdd/test_3099_sms_resolver.py::test_ac10_kanal_schwelle_wirkt_metrik_schwelle_nicht[hoch-HIGH-False]
+tests/tdd/test_3099_sms_resolver.py::test_adapter_ids_nur_enabled
+tests/tdd/test_3099_sms_resolver.py::test_adapter_position_resolver_folge
+tests/tdd/test_3099_sms_resolver.py::test_adapter_format_none_ist_katalog_standard[ohne_angabe]
+tests/tdd/test_3099_sms_resolver.py::test_adapter_format_none_ist_katalog_standard[roh]
+tests/tdd/test_3099_sms_resolver.py::test_adapter_format_none_ist_katalog_standard[einfach]
+tests/tdd/test_3099_sms_resolver.py::test_adapter_format_nur_fuer_format_metriken
+tests/tdd/test_3099_sms_resolver.py::test_adapter_unbekannte_ids_wirkungslos
+tests/tdd/test_3099_sms_resolver.py::test_adapter_leere_liste
+tests/tdd/test_3099_sms_resolver.py::test_ac7_orte_sms_versand_folge_und_format[roh]
+tests/tdd/test_3099_sms_resolver.py::test_ac7_orte_sms_versand_folge_und_format[einfach]
+tests/tdd/test_3099_sms_resolver.py::test_ac7_orte_sms_vorschau_gleich_versand[roh]
+tests/tdd/test_3099_sms_resolver.py::test_ac7_orte_sms_vorschau_gleich_versand[einfach]
+tests/tdd/test_3099_sms_resolver.py::test_ac7_orte_telegram_kurzform_gleich_sms
+tests/tdd/test_3099_sms_resolver.py::test_ac8_orte_zwei_nutzer_je_eigene_sms[ab]
+tests/tdd/test_3099_sms_resolver.py::test_ac8_orte_zwei_nutzer_je_eigene_sms[ba]
+tests/tdd/test_3099_sms_resolver.py::test_ac11_waechter_kennt_fallliste_sms
+tests/tdd/test_3099_sms_resolver.py::test_ac11_fallliste_sms_faelle_und_achsen
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms[abweichend-heute]
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms[abweichend-morgen]
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms[leer-heute]
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms[leer-morgen]
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms[nie-heute]
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac1_trip_eingang_premium_gleich_sms[nie-morgen]
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac2_orte_eingang_premium_gleich_sms[roh]
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac2_orte_eingang_premium_gleich_sms[einfach]
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac3_zwei_nutzer_je_eigene_premium_antwort[ab]
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac3_zwei_nutzer_je_eigene_premium_antwort[ba]
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac4_ueberlaenge_premium_kuerzt_vom_listenende_warnung_bleibt
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac6_waechter_registriert_premium_fallliste
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac6_fehlende_premium_teildatei_scheitert_klar
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac6_premium_liste_schema_ids_und_verstreute_faelle
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac5_premium_liste_belegt_alle_achsen_mit_ausfuehrendem_test
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac5_fall_ohne_test_scheitert_klar
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac7_alarm_verweis_faelle
+tests/tdd/test_3100_premium_sms_fallliste.py::test_ac9_ausgabe_matrix_premium_zeile
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_abdeckungsmatrix_auswahl_und_reihenfolge
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_kanal_abdeckung_runde7
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_testverweise_auffindbar
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_paarweise_ueberdeckung
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_fertig_kein_rot_erwartet
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_template_literal_titel_alle_gefunden
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_ausnahmen_und_offene_features_tragen_verweis
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_schema_der_fallliste
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_zaehlung_ausgeben
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_vollstaendige_liste_ist_gruen
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_fehlende_teildatei_scheitert_klar
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_fehlende_telegram_teildatei_scheitert_klar
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_fehlende_premium_teildatei_scheitert_klar
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_geloeschter_fall_wird_benannt
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_ausnahme_zaehlt_als_abgedeckt
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_unbekannte_testfunktion_wird_gemeldet
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_testverweis_auch_bei_ausnahme_und_offen_feature
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_frontend_rot_erwartet_und_template_titel
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_paarluecke_und_ausschluss
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_rot_erwartet_und_fehlender_verweis
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_go_testfunktion
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_schema_verstoesse
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_kanal_abdeckung_runde7
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_runde7_verweise_pfad_param_go_datei_template
+tests/tdd/test_einstellung_gleich_mail_fallliste.py::test_selbsttest_zusammengesetztes_format
+
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/inherited-meandering-tome/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:128
+  /home/hem/gregor_zwanzig/.claude/worktrees/inherited-meandering-tome/tests/conftest.py:128: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+208 tests collected in 1.39s
