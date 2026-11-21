@@ -2,7 +2,9 @@
 
 This document defines how E-Mail reports are generated in Gregor Zwanzig.
 
-**Last Updated:** 2026-09-15 (Issue #2136/ADR-0068 — Pfad 1 des Ausblicks („Altform-Zweig")
+**Last Updated:** 2026-11-21 (Issue #3139 — Niederschlagsart `precip_type` zeigt das Wort der Nutzersprache statt Programmname, Zeile „Wort" in der Anzeige-Tabelle)
+
+**Vorher:** 2026-09-15 (Issue #2136/ADR-0068 — Pfad 1 des Ausblicks („Altform-Zweig")
 verliert seine hartkodierte Kürzel-Namensliste `N · D · R · PR · Wind · Böen · Gew`; Spaltenköpfe
 (HTML) und Klartext-Tokenpräfixe kommen jetzt aus `MetricDefinition.col_label` desselben
 zentralen Registers, das auch die Etappentabelle speist — dieselbe Quelle, mit der Pfad 2 seither
@@ -327,7 +329,8 @@ und weichen bei Niederschlag bewusst von den Stunden-Schwellen dieser Tabelle ab
 | **Severity-Ampel** 🟢🟡🟠🔴 | wind, gust, precip, pop | Ampelpunkt nach Profil-Ampel des Abos (seit #2792 S1c-4b) | Zahl + Einheit; bei gespeichertem `format_mode="simplified"` die Wortstufe (pop seit #3156: Skala 25/50/75 wie Orts-Vergleich und Ausblick) | Zahl + Einheit, **keine Markierung** | Zahl + Einheit | Nur HTML hat Ampel. Die Menge ist `metric_catalog.AMPEL_METRIC_IDS` (abgeleitet aus `STELLEN_ZWEI_FORMEN`, E-Mail-Stelle, plus Ampel-Schwellen; #3156); im Orts-Vergleich zeigt Einfach bei allen vier den Ampelpunkt. **CAPE trägt keine Farbe** (nackte Zahl, nie „–“) |
 | **Wetterbild-Piktogramm** | cloud_total, cloud_low, cloud_mid, cloud_high, sunshine | Emoji (☀️🌤️⛅🌥️☁️) | Emoji (gleich) | Zahl | Zahl | Emoji in Einfach (HTML+Plain), Zahl in Roh — unverändert seit #435 |
 | **Severity-Ampel** 🟢🟡🟠🔴 | thunder | Ampelpunkt (NONE=grün, LOW=gelb, MED=orange, HIGH=rot); **keine Aussage (`None`) = „–"** | deutsches Wort (kein / leicht / mittel / hoch) | deutsches Wort | deutsches Wort | Seit #1491 reguläre Ampel-Spalte: kein ⚡, kein „mögl." mehr. „–" heißt ausschließlich „keine Aussage", nie „keine Gefahr" (`thunder_ampel_band()` liefert für `None` bewusst `None`). Die Gewitter-Pille im Prosa-Block (Zeile 87) behält ihr ⚡ — sie ist nicht Teil der Spalte. 🔴 **Nur die Trip-Stundentabelle zeigt bei `NONE` einen grünen Punkt** — die Übersichtsmatrix des **Orts-Vergleichs** lässt `NONE` bewusst **unmarkiert** (`compare_html._sev_thunder` liefert dort `None`). Bewusste Unterscheidung, kein Versehen: die Trip-Tabelle listet jede Stunde und braucht die Aussage „geprüft, ruhig"; die Vergleichsmatrix zeigt Tageswerte und würde sonst flächig grün markiert. Ein Umbau, der `NONE` über die geteilte Bandzuordnung laufen lässt, kippt das still um (passiert in #1491, korrigiert in `99da3131`) |
-| **Zahl (kein Modus-Unterschied)** | visibility, temperature, wind_chill, dewpoint, humidity, pressure, uv_index, freezing_level, snowfall_limit, snow_depth, fresh_snow, precip_type | Zahl + Einheit | Zahl + Einheit | Zahl + Einheit | Zahl + Einheit | Unverändert in beiden Modi |
+| **Zahl (kein Modus-Unterschied)** | visibility, temperature, wind_chill, dewpoint, humidity, pressure, uv_index, freezing_level, snowfall_limit, snow_depth, fresh_snow | Zahl + Einheit | Zahl + Einheit | Zahl + Einheit | Zahl + Einheit | Unverändert in beiden Modi |
+| **Wort (kein Modus-Unterschied, seit #3139)** | precip_type | Wort der Nutzersprache (Regen / Schnee / Mischniederschlag / Eisregen; EN Rain / Snow / Mixed precipitation / Freezing rain) | gleich | gleich | gleich | Keine Ampel. Fehlender oder unbekannter Wert `–`. Quelle `precip_type_label()` in `src/output/metric_format.py`, geteilt mit Telegram und Orts-Vergleich |
 
 ### Best-Practice-Schwellen (Ampelpunkte für Severity-Metriken)
 
@@ -444,7 +447,7 @@ alle Mail-Arten; der Kopf `X-GZ-Lang` nennt sie (`de` oder `en`).
 
 **Was wechselt:** Betreff, Abschnitts- und Tabellenüberschriften, Hinweise und Legendenzeilen aus den
 Katalogbereichen `mail.*`, `vergleich.*`, `alarm.*` und `warnung.*` (`src/i18n/messages/{de,en}/`);
-Wettergrößen in voller Form über `label(lang)` aus dem Metrik-Register (`src/app/metric_catalog.py`).
+Wettergrößen in voller Form über `label(lang)` aus dem Metrik-Register (`src/app/metric_catalog.py`). Die Niederschlagsart (`precip_type`) ist ein Wort aus `vergleich.niederschlagsart.*` über `precip_type_label()` (`src/output/metric_format.py`, seit 2026-11-21, #3139); Trip-Mail und Orts-Vergleich nutzen dieselbe Quelle.
 
 **Was bleibt:** Spaltenkürzel `col_label` und `compact_label`, Kürzel und Token-Zeile, `sms_code`,
 Kanal- und Providernamen, Orte, Trip-Namen. Amtliche Warntexte bleiben in ihrer Quellsprache.

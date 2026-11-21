@@ -262,3 +262,57 @@ def test_ac6_orts_vergleich_unveraendert(key, lang):
     from output.renderers.email.compare_html import _fmt_precip_type
     assert _fmt_precip_type(PrecipType[key], lang=lang) == WORDS[lang][key]
     assert _fmt_precip_type(None, lang=lang) == NO_VALUE
+
+
+# ---------------------------------------------------------------------------
+# SMS / Premium-SMS (AC-10): Protokollkuerzel bleibt unveraendert
+# ---------------------------------------------------------------------------
+
+SMS_CODE = {"RAIN": "R", "SNOW": "S", "MIXED": "M", "FREEZING_RAIN": "G"}
+
+
+def _sms_text(precip_type) -> str:
+    """Echte SMS-Render-Kette (SMSTripFormatter.format_sms -> Token-Zeile).
+
+    Premium-SMS hat keinen eigenen Renderer: ``output/channels/premium_sms.py``
+    versendet denselben ``sms_text`` (Kanal-Paritaet, ADR-0095) -- dieser
+    Test deckt damit beide Kanaele ab. Der SMS-Renderer kennt bewusst keinen
+    Sprachparameter (Protokoll-Token werden nie uebersetzt, ADR-0104); die
+    Sprach-Unabhaengigkeit wird daher gegen den Wortschatz BEIDER Sprachen
+    geprueft.
+    """
+    from output.renderers.sms_trip import SMSTripFormatter
+    from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
+
+    return SMSTripFormatter().format_sms(
+        [_seg(_dp(precip_type))], stage_name="E1", report_type="evening",
+        tz=ZoneInfo("UTC"), ampel=AMPEL_ALLGEMEIN,
+    )
+
+
+@pytest.mark.parametrize("key", ["RAIN", "SNOW", "MIXED", "FREEZING_RAIN"])
+def test_ac10_sms_zeigt_protokollkuerzel_nicht_das_wort(key):
+    """AC-10: SMS/Premium-SMS tragen ``PT:<Buchstabe>``, nie Wort oder
+    Programmname -- fuer de und en identisch. Wuerde der SMS-Weg das lesbare
+    Wort (``Regen``/``Rain``) statt des Kuerzels ausgeben, fehlte ``PT:R``
+    und die Wort-Assertions schluegen an -> Test rot."""
+    text = _sms_text(PrecipType[key])
+    _no_program_name(text)
+    assert f"PT:{SMS_CODE[key]}" in text.split(), text
+    for lang in ("de", "en"):
+        for word in WORDS[lang].values():
+            assert word not in text, (lang, word, text)
+    for word in ("Regen", "Rain", "Schnee", "Snow"):
+        assert word not in text, text
+
+
+def test_ac10_sms_kuerzel_sprachunabhaengig_identisch():
+    """AC-10: das Kuerzel haengt nicht an der Nutzersprache -- die Mail in
+    de/en zeigt Woerter, die SMS dazu in beiden Faellen dasselbe Kuerzel."""
+    sms = {}
+    for lang in ("de", "en"):
+        mail_html, _ = _render_mail(PrecipType.RAIN, lang=lang)
+        assert WORDS[lang]["RAIN"] in mail_html  # Sprache wirkt in der Mail
+        sms[lang] = _sms_text(PrecipType.RAIN)
+    assert sms["de"] == sms["en"]
+    assert "PT:R" in sms["de"].split()

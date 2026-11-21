@@ -107,6 +107,8 @@ und Antworten stehen in der **Kontosprache** (`resolve_user_lang`). Ein englisch
 
 **Stufenwörter (#2784):** Gewitter-Stufe (z. B. „leicht" / „light"), Wind- und Regen-Adjektive folgen der Kontosprache in Fußzeile, Kurzübersicht, Segment-Tabellen des Briefings und in den Stundenzeilen des Änderungs-Alarms. Bewusst deutsch bleibt der Gewitterteil der Ausblick-Zeile (Entscheidung #2665). Kürzel (`TH`, `VS`, `FZ`) bleiben in jeder Sprache unverändert. Der Kopf der Zeitspalte in der Segment-Tabelle ist dagegen kein Kürzel, sondern Nutzertext und folgt der Kontosprache über den Katalogschlüssel `telegram.tabelle.zeit` (Deutsch „Zt“, Englisch „Hr“; zweistellig wegen der 32-Zeichen-Tabellenbreite, #3014).
 
+**Niederschlagsart (#3139, 2026-11-21):** Im Trip-Briefing steht die Niederschlagsart als Wort der Kontosprache (DE Regen / Schnee / Mischniederschlag / Eisregen, EN Rain / Snow / Mixed precipitation / Freezing rain), nie als Programmname. Gilt auch im Modus Roh, ohne Ampel; fehlender Wert `–`. Quelle: `precip_type_label()` in `src/output/metric_format.py`, Katalog `vergleich.niederschlagsart.*`. Das Protokollkürzel `PT:R/S/M/G` in SMS, Premium-SMS und Kurzform bleibt unübersetzt.
+
 **Kurzstil** (`telegram_style == "kurzform"`): die Kurzform bleibt in jeder Sprache unverändert, Kürzel
 und Befehlswörter eingeschlossen. Die Antwort ist englisch wie bisher; der Konto-Wert ändert nichts an
 der Token-Zeile.
@@ -148,6 +150,7 @@ das Menü ist botweit und bleibt deutsch (P7 #2669, Known Limitations); die Zeil
 
 | Version | Datum | Änderung |
 |---|---|---|
+| 1.9 | 2026-11-21 | Niederschlagsart (#3139): Trip-Telegram zeigt das Wort in der Kontosprache statt `PrecipType.RAIN`; Quelle `precip_type_label()` (geteilt mit Trip-Mail und Ortsvergleich). Kurzform und SMS unverändert. |
 | 1.8 | 2026-11-20 | Roh/Einfach aus einer Quelle (#3156): Regenwahrscheinlichkeit hat Einfach (Wortstufe) in Trip- und Orte-Telegram; im Orte-Telegram entscheidet `STELLEN_ZWEI_FORMEN` je Stelle (Gewitter: nur eine Form, Ausgabe unverändert). |
 | 1.7 | 2026-11-19 | 3-Tages-Ausblick (#3155, B4 von #3122): Kopf „3-Tages-Ausblick“ / „3-day outlook“ statt „Ausblick“/„Outlook“ in Trip und Orte; Trip ohne Tabelle mit `show_outlook: false` (nicht Kompakt) zeigt im Telegram keinen Ausblick mehr (bewusste Änderung, eine steuernde Stelle). |
 | 1.6 | 2026-11-17 | Trip-Briefing (#3098, ADR-0121 Nachtrag 3c): Menge, Folge und Roh/Einfach der Telegram-Zeilen kommen aus dem Kanal-Listen-Resolver statt aus der Kanal-Kaskade im Renderer. Ausgabe unverändert. |
