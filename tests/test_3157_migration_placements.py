@@ -185,7 +185,7 @@ def _umrechnung(pfad: Path):
             enabled_reports=tuple(rt for rt, an in (("morning", slots.morning_enabled),
                                                     ("evening", slots.evening_enabled)) if an),
             outlook_enabled=preset.get("outlook_enabled"))
-    trip = load_trip(str(pfad))
+    trip = load_trip(str(pfad), user_id=pfad.parent.parent.name)
     assert trip is not None, f"Vorbedingung: Trip {pfad.name} ladbar"
     rc = trip.report_config
     return placements_from_legacy(
