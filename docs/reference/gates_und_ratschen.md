@@ -761,6 +761,48 @@ ist (`{vorlage}` = beliebiger Wert) und **jeder** Schlüssel DE und EN hat; `tex
 Fuge, Platzhalter bleiben stehen, `i18n_key` = erster Schlüssel, `muster` = DE-Gesamtmuster (nur mit Platzhalter).
 Neue Folgen nur als Tabellenzeile, nie als EN-Text.
 
+## Ratsche „Ein Katalog, eine Verarbeitung“ (ADR-0127, #3260, seit 2026-11-21)
+
+Kern-Test `tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py`, Erkennung
+`tests/helpers/katalog_verarbeitung_scan.py`, Ausnahmeliste `tests/unit/ein_katalog_ausnahmen.json`
+(Spec `docs/specs/modules/feat_3260_s1a_ratsche_ein_katalog.md`). Metrik-Wissen gehört allein in
+`src/app/metric_catalog.py`, Metrik-Verarbeitung allein in `src/output/metric_format` (erlaubt sind
+außerdem die Ampel-Vorlagen `src/app/ampel_templates.py`/`src/app/ampel.py`). Gescannt werden `src/`
+(ohne `src/analysis/`), `api/`, `frontend/src/` (ohne Tests, `e2e/`, generierte Dateien), `internal/`,
+`cmd/` (ohne `_test.go`) und `.claude/hooks/*.py`. Arten: `ID_SAMMLUNG`, `ID_VERZWEIGUNG`, `SCHWELLE`,
+`VERARBEITUNG_AUSSEN` (Python, AST), `FRONTEND_LISTE`/`FRONTEND_VERZWEIGUNG`/`FRONTEND_SCHWELLE`,
+`GO_LISTE`/`GO_VERZWEIGUNG`/`GO_SCHWELLE` (Token-Strom nach Entfernen der Kommentare; Listen als Klammer-Spannen,
+Schwellen als `<`/`<=`/`>`/`>=` zwischen Messwert-Bezeichner bzw. Member-Ausdruck und Zahl, beide Seiten) und `VALIDATOR_IMPORT` (jeder importierte Name mit Metrik-Wissen:
+`app.metric_catalog`, `app.ampel_templates`, `app.ampel`, `app.*` mit `metric`/`compare` im Namen, `output.*`,
+`services.*`, auch verzögert in Funktionen; `app.config`, `i18n`, `app.models` zählen nicht). Kennungen kommen aus dem Register (`_METRICS`-Ids plus die
+Alarm-Identitäten `alert_metrics`/`change_alert_metric`), nie von Hand.
+
+**Regel: die Liste schrumpft nur.** Die Ausnahmeliste führt je Datei und Art eine Anzahl plus
+`hoechststand`. Rot, wenn (a) eine Datei/Art mehr Funde hat als gelistet (Meldung nennt jede Fundstelle
+mit Datei:Zeile, Art und Auszug), (b) weniger Funde als gelistet (Liste verkleinern, damit der Rückgang
+festgeschrieben ist), (c) die Summe der Liste `hoechststand` übersteigt, (d) `hoechststand` größer ist als
+die Konstante `HOECHSTSTAND` im Test, (e) gegenüber `origin/main` (`git show origin/main:tests/unit/ein_katalog_ausnahmen.json`)
+`hoechststand` oder die Anzahl eines dort schon gelisteten Eintrags gestiegen ist — so hilft auch gemeinsames
+Anheben von Liste und Konstante nicht. Ist `origin/main` nicht lesbar (kein git, flacher CI-Klon, Datei dort noch
+nicht vorhanden), wird Regel e mit ausdrücklichem pytest-Skip-Grund übersprungen, nie still grün.
+Startstand 2026-11-21: 457 Funde (`GO_SCHWELLE` ohne Bestand; ihre Wirksamkeit belegen die Gegenproben). Jede Scheibe von #3260 senkt die
+Liste; am Ende von Schritt 6 ist sie leer. Grenzfälle werden durch Umbau oder Umbenennung aufgelöst,
+nie durch Nachsicht in der Erkennung.
+
+**Blinde Flecken (bekannt, musterbasiert):** Messwerte mit neutralem Namen (`x > 40`, `v`, `hours`), Schwellen
+über benannte Konstanten (`wind > STURM_AB`), Einzel-Nachschläge auf eine Kennung (`d["wind"]`, `.get("gust")`,
+TS/Go `obj['wind'] > 3`), per String-Verkettung oder zur Laufzeit gebaute Kennungen und Sammlungen sowie
+Vergleiche auf Aufrufe (`max(x) > 3`). Sie werden im Umbau mit erledigt, nicht durch Ausnahmen.
+
+**Neu erzeugen nach einem Abbau** (der Test schreibt nie):
+`uv run python -m tests.helpers.katalog_verarbeitung_scan --schreibe-ausnahmen`, danach `HOECHSTSTAND`
+im Test auf den neuen `hoechststand` senken.
+
+**Regel-Budget:** ersetzt die Entdeckungsstufe (Stufe 1) der Metrik-Listen-Ratsche aus #1856
+(`tests/unit/test_metrik_listen_register_ratchet.py`, Prüfdatum 2026-11-15 abgelaufen); deren Stufe 2
+(Tippfehler-Prüfung registrierter Listen) bleibt bis zum Abbau der Listen. Prüfdatum der neuen Ratsche
+**2027-02-19**.
+
 ## Aktive Hooks in `.claude/settings.json` — Kurzreferenz (Stand 2026-10-21)
 
 Vollständige Liste der im Repo verdrahteten Hooks. Alle stehen in der geschützten Form
@@ -842,6 +884,7 @@ isoliert, Kollisionen zeigen sich als Merge-Konflikt im PR.
 | i18n-Paritätstests je Katalog (Frontend `paritaet_de_en.test.ts`, Python `test_i18n_*_katalog_paritaet.py`, Go `katalog_paritaet_test.go`; Epic #2644) | 2027-01-31 | eingeführt im Epic #2644 (Frontend laut Testkopf mit #2647); Kriterium: ein Schlüssel nur in `de` oder ein Platzhalter, der in einer Sprache fehlt |
 | Bausteine-Wächter `bausteine_waechter` (ADR-0112, #2913) — Regel (a) Aufbau für `SEITEN_SCOPE`, Regel (b) Tokens als Ratsche `AUSNAHMEN`, Neue-Datei-Regel mit `BESTAND`; ersetzt das Design-Gate (ADR-0111) | 2027-02-08 | offen — Start 2026-11-10: `SEITEN_SCOPE` leer, 204 Bestandsdateien, 39 Bausteine mit 396 Token-Verstößen (398 nach Verschärfung Fix-Loop 1). Löschbedingung: kein nachweisbarer Fang (kein Merge mit echtem Verstoß aufgehalten, kein fehlender Baustein durch ihn zuerst ins System gebracht) → Rückbau |
 | i18n-Token-Wächter `tests/test_metric_tokens_eingefroren.py` (Fixture `tests/fixtures/metric_tokens_frozen.json`, Epic #2644 P1) | 2027-01-31 | eingeführt im Epic #2644 (laut Konvention P1); Kriterium: eine Übersetzung oder Umbenennung von `col_label`, `compact_label` oder `sms_code`, die sonst still in Kanäle wanderte |
+| Ratsche „Ein Katalog, eine Verarbeitung“ `tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py` (ADR-0127, #3260); ersetzt die Entdeckungsstufe der Metrik-Listen-Ratsche (#1856) | 2027-02-19 | offen — Startstand 2026-11-21: 457 Funde in der Ausnahmeliste; Kriterium: eine neue zweite Liste, Verzweigung, feste Schwelle oder ein Validator-Produktimport, der ohne die Ratsche ausgeliefert worden wäre |
 | Prozessregel „tote Tests mitentfernen“: abgelöste Funktion ⇒ zugehörige Tests im selben Umbau entfernen, Beleg im PR (#3207, `workflow_und_agenten.md` Regel-Budget; kein Gate, nur Doku-Compliance-Test `tests/test_regel_tote_tests_mitentfernen_pruefdatum.py`) | 2027-02-19 | Einführung: Inventur #3207 fand tote Tests aus Signal, der alten Python-Oberfläche, Telegram-Altzeilen, Befehlsblock und alten Reitern. Fang-Maß am Prüfdatum: Zahl der seither neu entstandenen toten Tests bzw. im selben Umbau mitentfernten Tests |
 
 **Weitere Prüfdaten, die nur im Code stehen** (Abgleich 2026-10-21 per
@@ -857,7 +900,7 @@ isoliert, Kollisionen zeigen sich als Merge-Konflikt im PR.
 | `tests/unit/test_sms_token_symbol_register_ratchet.py` | 2026-10-30 |
 | `tests/tdd/test_data_root_hardcoding_ratchet.py` | 2026-11-07 |
 | `tests/tdd/test_fixture_wallclock_ratchet.py` | 2026-11-08 |
-| `tests/unit/test_metrik_listen_register_ratchet.py` (+ `tests/helpers/metrik_listen_scan.py`) | 2026-11-15 |
+| `tests/unit/test_metrik_listen_register_ratchet.py` (+ `tests/helpers/metrik_listen_scan.py`) | 2026-11-15 (Stufe 1 ersetzt durch die Ratsche „Ein Katalog, eine Verarbeitung“, #3260; Stufe 2 bleibt bis zum Abbau der Listen) |
 | `tests/test_output_timezone_guard.py` | 2026-11-18 |
 | `tests/test_pii_log_guard.py` | 2026-12-26 |
 
