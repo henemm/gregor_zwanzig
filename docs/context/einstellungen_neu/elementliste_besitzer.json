@@ -3553,30 +3553,6 @@
 		},
 		{
 			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.289c2a0748",
-			"grund": "Mockup-Beispieldaten: Herkunftszeile der eigenen Vorlage („aus GR221 gespeichert“) enthält einen Trip-Namen aus dem Mockup; kein Katalogtext, EN-Sollwert nicht ableitbar. DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
-			"verweis": "#3151"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.luecken.-.vorlage-auswahl.9a9818d548",
-			"grund": "eigene Vorlage „Mallorca Frühling“ fehlt in der Vorlagen-Auswahl des Orts-Vergleichs (im Trip vorhanden) (#3151-Abgleich 20.11.)",
-			"verweis": "#3205"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.827b20495b",
-			"grund": "eigene Vorlage „Mallorca Frühling“ fehlt in der Vorlagen-Auswahl des Orts-Vergleichs (im Trip vorhanden) (#3151-Abgleich 20.11.)",
-			"verweis": "#3205"
-		},
-		{
-			"art": "element",
-			"id": "orte.wetter.normal.-.vorlage-auswahl.e965e7f4dc",
-			"grund": "Mockup-Beispieldaten: Herkunftszeile der eigenen Vorlage („aus GR221 gespeichert“) enthält einen Trip-Namen aus dem Mockup; kein Katalogtext, EN-Sollwert nicht ableitbar. DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
-			"verweis": "#3151"
-		},
-		{
-			"art": "element",
 			"id": "trip.wetter.luecken.-.vorlage-auswahl.0f1ef50ff0",
 			"grund": "Mockup-Beispieldaten: Herkunftszeile der eigenen Vorlage („aus GR221 gespeichert“) enthält einen Trip-Namen aus dem Mockup; kein Katalogtext, EN-Sollwert nicht ableitbar. DE im Staging-Abgleich #3192 gefunden (Mockup-Lage); nur das Englisch fehlt.",
 			"verweis": "#3151"
@@ -3598,22 +3574,6 @@
 			"id": "trip.wetter.normal.-.vorlage-auswahl.eda27b7726",
 			"grund": "EN-Lücke: Name der eigenen Vorlage „Mallorca Frühling“ hat keinen Katalogtext (Kontodaten, DE gefunden) (#3151-Abgleich 20.11.); Kontoname im Prüfkonto, kein Übersetzungsfall — bleibt bis zur Abnahme DE+EN (#3009) bewusst stehen (#3203: von geschlossenem #3194 umgehängt)",
 			"verweis": "#3009"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"muster": "Auf \"{vorlage}\" zurücksetzen",
-			"grund": "Zurücksetzen-Zeile „Auf \"Alpen-Trekking\" zurücksetzen“ live zusätzlich, in der Elementliste ohne Eintrag (#3151-Abgleich 20.11.)",
-			"verweis": "#3205"
-		},
-		{
-			"art": "zusaetzlich",
-			"ctx": "trip",
-			"reiter": "wetter",
-			"muster": "Reset to \"{vorlage}\"",
-			"grund": "Zurücksetzen-Zeile „Auf \"Alpen-Trekking\" zurücksetzen“ live zusätzlich, in der Elementliste ohne Eintrag (#3151-Abgleich 20.11.)",
-			"verweis": "#3205"
 		},
 		{
 			"art": "zusaetzlich",
@@ -4722,6 +4682,20 @@
 			"text": ":00",
 			"grund": "Tagesfenster im Stundenraster mit fester Minute 00 (Felder day_window_*_hour): die Uhrzeit-Auswahl zeigt die Minute als festen Text „:00“, das Mockup Fassung 4 freie Eingaben „06:00“/„20:00“; bewusste, freigegebene Abweichung (#3203)",
 			"spec": "docs/specs/modules/feat_2913_scheibe_c_wetter_rest.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "wetter",
+			"muster": "Auf \"{vorlage}\" zurücksetzen",
+			"grund": "Zustandsunterschied, kein Code-Unterschied (#3205, Weg B): Zurücksetzen-Zeile erscheint nur bei Abweichungen von der Vorlage, im Mockup Fassung 4 Z. 511 (`devs>0`) wie live (VorlageKarte.svelte, `abweichungen > 0`). Das Prüfkonto-Trip steht live im Abweichungszustand, der Mockup-Normalzustand hat 0 Abweichungen; die Elementliste erfasst den Abweichungszustand nicht. Prüfdaten nicht umgestellt (Weg A), weil das weitere Einträge verschöbe (Picker „▾ N Abweichung(en)“, Abweichungsmarken).",
+			"spec": "docs/specs/modules/feat_3205_vorlagen_mockup.md"
+		},
+		{
+			"ctx": "trip",
+			"reiter": "wetter",
+			"muster": "Reset to \"{vorlage}\"",
+			"grund": "Zustandsunterschied, kein Code-Unterschied (#3205, Weg B): englische Zurücksetzen-Zeile (Katalog wetter.vorlage.zuruecksetzen) erscheint nur bei Abweichungen von der Vorlage, im Mockup Fassung 4 Z. 511 (`devs>0`) wie live (VorlageKarte.svelte, `abweichungen > 0`). Das Prüfkonto-Trip steht live im Abweichungszustand, der Mockup-Normalzustand hat 0 Abweichungen. Prüfdaten nicht umgestellt (Weg A), weil das weitere Einträge verschöbe.",
+			"spec": "docs/specs/modules/feat_3205_vorlagen_mockup.md"
 		}
 	]
 }

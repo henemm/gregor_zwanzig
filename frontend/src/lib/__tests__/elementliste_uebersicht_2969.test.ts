@@ -68,9 +68,14 @@ const ausnahmen = (): Ausnahme[] => logik.leseAusnahmen(readFileSync(BESITZER, '
 // normal/luecken neu Name, Untertitel, Zeilenmitte, Erklärsatz, „kein Alarm“, Entfernen-Knopf und die Zeilen in
 // „Was steht wo“ (Name + 4 Haken) beider Metriken; der Zähler „9 von 13 … 3“ wird „9 von 15 … 5“. Orte und alle
 // übrigen Einträge unverändert (Diff geprüft). Anzahl 2690.
-const ALT_ANZAHL = 2690;
-const ALT_SHA = '61d486a366f85a57598c317a4385d85fcd361a05df309c08420748de2843e329';
-const MOCKUP_HASH = 'sha256:eb4b34429611f1a354cb9924e866c5f181012a093c37ac44c95e4a9538f2d1c4';
+// #3205: Vorlagen je Art im Mockup (21.11.; vorher 61d486a3…843e329, Mockup-Hash eb4b3442…538f2d1c4, Anzahl
+// 2690). Mockup Fassung 4 führt eigene Vorlagen je Art wie die App (PO 08.11./21.11.: Trip und Orts-Vergleich
+// getrennt); die Trip-Vorlage „Mallorca Frühling“ steht nur noch in der Trip-Auswahl. Liste neu erzeugt: genau
+// 4 Einträge entfallen (Orte, vorlage-auswahl, Zustände normal/luecken, je Name und Unterzeile „eigene · aus
+// GR221 gespeichert“); alle übrigen Einträge byte-gleich, Reihenfolge gleich (Diff je ID geprüft). Anzahl 2686.
+const ALT_ANZAHL = 2686;
+const ALT_SHA = '5bec7350ea09e4458841736d89981e79983953190bec4aeaa83ac6adf371ae3f';
+const MOCKUP_HASH = 'sha256:24f6c2a420cddac018c1cf58e1893430dba2d20477e1374d400a1cea5765b1b8';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {
 	const e = uebersicht();

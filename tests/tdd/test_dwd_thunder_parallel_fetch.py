@@ -68,6 +68,7 @@ _ANZAHL_ZEITPUNKTE = 12
 
 # Aktion einer Regel: None = normal liefern; sonst eines von
 # ("status", code) | ("hang", sekunden) | ("garbage",) | ("abort",)
+# | ("slow", sekunden)  -- normale Antwort, aber um `sekunden` verzoegert (#3217)
 Regel = Callable[[str, str, int], Optional[tuple]]
 
 
@@ -92,6 +93,11 @@ def _erwartet(param: str, lauf: str, ttt: int) -> float:
 
 _RASTER_CACHE_BYTES: dict = {}
 _RASTER_LOCK = threading.Lock()
+# Zaehler: wie oft `_raster` ein Raster NEU erzeugen musste (Cache-Fehlgriff).
+# #3217: Erzeugt der Server waehrend des Abrufs ein Raster, liegt diese
+# Rechenarbeit innerhalb des Socket-Timeouts und macht AC-3 auf ausgelasteten
+# Runnern flaky.
+_RASTER_NEU_ERZEUGT = [0]
 
 
 def _raster(wert: float) -> bytes:
@@ -109,6 +115,7 @@ def _raster(wert: float) -> bytes:
         daten = bz2.compress(memfile.read())
     with _RASTER_LOCK:
         _RASTER_CACHE_BYTES[wert] = daten
+        _RASTER_NEU_ERZEUGT[0] += 1
     return daten
 
 
@@ -155,6 +162,8 @@ class _Handler(BaseHTTPRequestHandler):
             return
         if srv.verzoegerung_s:
             time.sleep(srv.verzoegerung_s)
+        if aktion and aktion[0] == "slow":
+            time.sleep(aktion[1])
         if aktion and aktion[0] == "abort":
             srv.protokolliere((ankunft, param, lauf, ttt, "abort"))
             self.close_connection = True
@@ -224,6 +233,19 @@ def _abruf(zeit: _Zeit):
     return dwd.DwdDirectProvider().fetch_thunder_signals_named(
         _KARNISCH, zeit.start, zeit.ende
     )
+
+
+def _raster_vorab_erzeugen(zeit: _Zeit) -> None:
+    """#3217 AC-2: erzeugt die Raster aller Kombinationen, die `_abruf(zeit)`
+    anfragen kann (jeder Lauf aus `zeit.laeufe`, jede Groesse, Offset 0 als
+    Anker von `grau_gsp` bis `_ANZAHL_ZEITPUNKTE`), VOR dem Abruf. Schluessel
+    exakt wie im Handler: `_raster(_wert(param, lauf, ttt))`. Danach enthaelt
+    eine normale Antwort keine Rechenarbeit im Server mehr."""
+    for lauf_index, lauf in enumerate(zeit.laeufe):
+        for off in range(0, _ANZAHL_ZEITPUNKTE + 1):
+            ttt = zeit.ttt(lauf_index, off)
+            for param in dwd.THUNDER_PARAMS:
+                _raster(_wert(param, lauf, ttt))
 
 
 def _journal_zeilen(path: str) -> list:
@@ -327,32 +349,55 @@ def test_ac2_budgetende_laesst_nur_hintere_zeitpunkte_und_groessen_fehlen(monkey
 
 @pytest.mark.timeout(30)
 def test_ac3_haengender_download_kostet_hoechstens_den_timeout_und_wird_nicht_wiederholt(monkeypatch):
-    """AC-3: Given ein Download haengt (Server antwortet 4 s nicht) und
-    THUNDER_REQUEST_TIMEOUT=0,5 s, When der Abruf laeuft, Then dauert er
-    hoechstens Timeout plus Rand, die URL wurde GENAU EINMAL angefragt
-    (kein Retry bei ReadTimeout), die Zelle ist None (nie 0), alle anderen
-    Zellen sind gefuellt. ROT heute: der Gewitterweg nutzt TIMEOUT=30 und
-    wiederholt ReadTimeout."""
-    monkeypatch.setattr(dwd, "THUNDER_REQUEST_TIMEOUT", 0.5, raising=False)
+    """AC-3 (#2554), stabilisiert durch #3217
+    (Spec docs/specs/modules/fix_3217_flaky_thunder_ac3.md, AC-1/AC-2/AC-3/AC-5).
+
+    Given ein Download haengt (Server antwortet 8 s nicht),
+    THUNDER_REQUEST_TIMEOUT=2,0 s und eine NORMALE Datei (`grau_gsp`+5) kommt
+    wie auf einem ausgelasteten Runner 0,6 s verspaetet, When der Abruf laeuft,
+    Then dauert er hoechstens Timeout + 3 s (5 s, unter der Haengerdauer), die
+    Haenger-URL wurde GENAU EINMAL angefragt (kein Retry bei ReadTimeout), die
+    Haenger-Zelle ist None (nie 0), alle anderen Zellen -- auch die verspaetete --
+    sind gefuellt, und der Server musste waehrend des Abrufs KEIN Raster neu
+    erzeugen (alle Raster vorab im Cache, AC-2 #3217).
+
+    #3217: Vorher lag die Raster-Erzeugung innerhalb eines 0,5-s-Socket-Timeouts;
+    auf ausgelasteten CI-Runnern lief eine normale Antwort darueber hinaus und
+    die Zelle blieb leer ("Zelle grau_gsp+5 leer")."""
+    monkeypatch.setattr(dwd, "THUNDER_REQUEST_TIMEOUT", 2.0, raising=False)
     zeit = _Zeit()
     haenger_off, haenger_param = 3, "cin_ml"
     haenger_ttt = zeit.ttt(0, haenger_off)
+    langsam_off, langsam_param = 5, "grau_gsp"
+    langsam_ttt = zeit.ttt(0, langsam_off)
 
     def regel(param, lauf, ttt):
         if param == haenger_param and lauf == zeit.laeufe[0] and ttt == haenger_ttt:
-            return ("hang", 4.0)
+            return ("hang", 8.0)
+        if param == langsam_param and lauf == zeit.laeufe[0] and ttt == langsam_ttt:
+            return ("slow", 0.6)
         return None
+
+    # Testisolation: kein warmer Cache aus vorherigen Tests verfaelscht die
+    # Zaehlung der Neu-Erzeugungen.
+    with _RASTER_LOCK:
+        _RASTER_CACHE_BYTES.clear()
+    # #3217 AC-2: alle Raster vorab erzeugen -- vor `neu_vorher` und vor t0,
+    # damit weder die Zaehlung noch die Dauer-Messung sie enthaelt.
+    _raster_vorab_erzeugen(zeit)
 
     t0 = time.monotonic()
     with _dwd_server(monkeypatch, regel=regel) as server:
+        neu_vorher = _RASTER_NEU_ERZEUGT[0]
         ergebnis = _abruf(zeit)
         dauer = time.monotonic() - t0
+        neu_waehrend = _RASTER_NEU_ERZEUGT[0] - neu_vorher
         abrufe = server.kopie()
 
     anzahl = [a for a in abrufe
               if a[1] == haenger_param and a[3] == haenger_ttt and a[2] == zeit.laeufe[0]]
     assert len(anzahl) == 1, f"Haenger-URL wurde {len(anzahl)}x angefragt (erwartet genau 1)"
-    assert dauer <= 0.5 + 2.5, f"Abruf dauerte {dauer:.2f}s, erwartet <= Timeout 0,5 s + Rand"
+    assert dauer <= 2.0 + 3.0, f"Abruf dauerte {dauer:.2f}s, erwartet <= Timeout 2,0 s + 3 s"
     assert ergebnis[haenger_param][haenger_off] is None, (
         f"Zelle des Haengers ist {ergebnis[haenger_param][haenger_off]!r}, erwartet None"
     )
@@ -362,6 +407,10 @@ def test_ac3_haengender_download_kostet_hoechstens_den_timeout_und_wird_nicht_wi
                 continue
             assert ergebnis[param].get(off) is not None, f"Zelle {param}+{off} leer"
     assert _keine_pool_threads_mehr(), "Pool-Thread laeuft nach dem Abruf weiter"
+    assert neu_waehrend == 0, (
+        f"Server erzeugte waehrend des Abrufs {neu_waehrend} Raster neu; "
+        "Rechenarbeit liegt im Socket-Timeout (#3217 AC-2: Raster vorab erzeugen)"
+    )
 
 
 # ---------------------------------------------------------------------------
