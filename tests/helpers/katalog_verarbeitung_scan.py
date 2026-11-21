@@ -11,7 +11,7 @@ Ampel-Vorlagen ``src/app/ampel_templates.py``/``src/app/ampel.py``). Arten:
 * ``SCHWELLE``           ``<``/``<=``/``>``/``>=`` eines Messwerts mit einer Zahl
 * ``VERARBEITUNG_AUSSEN`` Definition/Aufruf/Verweis einer Verarbeitungsfunktion
 * ``FRONTEND_LISTE``/``FRONTEND_VERZWEIGUNG`` (TS/Svelte), ``GO_LISTE``/``GO_VERZWEIGUNG``
-* ``VALIDATOR_IMPORT``   Produktimport in ``.claude/hooks/*.py``
+* ``VALIDATOR_IMPORT``   Import von Metrik-Wissen in ``.claude/hooks/*.py``
 
 Alle Scan-Funktionen nehmen Wurzeln (Verzeichnisse ODER Dateien) und eine
 ``basis`` fuer die relativen Pfade — so laufen die Gegenproben gegen ein
@@ -107,7 +107,7 @@ MESSWERT_MUSTER = re.compile(
     r"|speed|\bmm\b|dni",
     re.IGNORECASE)
 
-#: Module, deren Import in einem Validator ausdruecklich verboten ist.
+#: Module, deren Import in einem Validator verboten ist (dazu ``app.*metric*``/``app.*compare*``).
 VERBOTENE_MODULE = ("app.metric_catalog", "app.ampel_templates", "app.ampel",
                     "output", "services")
 
@@ -434,44 +434,39 @@ def scanne_go(wurzeln: Iterable[Path | str], basis: Path = REPO_ROOT) -> list[Fu
 
 # ------------------------------------------------------------- Validatoren
 
-def produkt_module(basis: Path = REPO_ROOT) -> frozenset[str]:
-    """Oberste Produktpakete: alles unter ``src/`` plus ``api`` und ``src``."""
-    namen = {"api", "src"}
-    for eintrag in (basis / "src").glob("*"):
-        if eintrag.is_dir() and not eintrag.name.startswith(("_", ".")):
-            namen.add(eintrag.name)
-        elif eintrag.suffix == ".py" and eintrag.stem != "__init__":
-            namen.add(eintrag.stem)
-    return frozenset(namen | {"app", "output", "services"})
-
-
-def _ist_produkt(modul: str, produkte: frozenset[str]) -> bool:
+def ist_metrik_import(modul: str) -> bool:
+    """Metrik-Wissen im Validator (Tech-Lead-Entscheid #3260): Katalog,
+    Ampel-Vorlagen, jedes ``app.*``-Modul mit ``metric``/``compare`` im Namen,
+    ``output.*`` und ``services.*``. ``app.config``, ``i18n``, ``app.models``,
+    ``app.user`` usw. zaehlen nicht. Ein vorangestelltes ``src.`` wird ignoriert."""
+    if modul.startswith("src."):
+        modul = modul[4:]
     if any(modul == m or modul.startswith(m + ".") for m in VERBOTENE_MODULE):
         return True
-    return modul.split(".", 1)[0] in produkte
+    teile = modul.split(".")
+    return (len(teile) > 1 and teile[0] == "app"
+            and any(w in teile[1] for w in ("metric", "compare")))
 
 
-def _validator_importe(baum: ast.AST, produkte: frozenset[str]) -> Iterator[int]:
+def _validator_importe(baum: ast.AST) -> Iterator[int]:
     """Je importiertem Namen eine Zeile — auch verzoegert in Funktionen."""
     for knoten in ast.walk(baum):
         if isinstance(knoten, ast.ImportFrom) and knoten.level == 0 and knoten.module:
-            if _ist_produkt(knoten.module, produkte):
+            if ist_metrik_import(knoten.module):
                 yield from (knoten.lineno for _ in knoten.names)
         elif isinstance(knoten, ast.Import):
-            yield from (knoten.lineno for a in knoten.names if _ist_produkt(a.name, produkte))
+            yield from (knoten.lineno for a in knoten.names if ist_metrik_import(a.name))
         elif (isinstance(knoten, ast.Call) and knoten.args
               and isinstance(knoten.args[0], ast.Constant)
               and isinstance(knoten.args[0].value, str)
               and ast.unparse(knoten.func) in ("importlib.import_module", "import_module",
                                                "__import__")
-              and _ist_produkt(knoten.args[0].value, produkte)):
+              and ist_metrik_import(knoten.args[0].value)):
             yield knoten.lineno
 
 
-def scanne_validatoren(wurzeln: Iterable[Path | str], basis: Path = REPO_ROOT,
-                       produkte: frozenset[str] | None = None) -> list[Fund]:
+def scanne_validatoren(wurzeln: Iterable[Path | str], basis: Path = REPO_ROOT) -> list[Fund]:
     """``.claude/hooks/*.py``: VALIDATOR_IMPORT. Verzeichnisse nur flach (``*.py``)."""
-    produkte = produkt_module(REPO_ROOT) if produkte is None else produkte
     funde: list[Fund] = []
     for wurzel in wurzeln:
         pfad = Path(wurzel)
@@ -482,7 +477,7 @@ def scanne_validatoren(wurzeln: Iterable[Path | str], basis: Path = REPO_ROOT,
             rel = _relativ(datei, basis)
             baum = ast.parse(quelltext, filename=str(datei))
             funde += [Fund(rel, z, VALIDATOR_IMPORT, _auszug(zeilen, z))
-                      for z in _validator_importe(baum, produkte)]
+                      for z in _validator_importe(baum)]
     return funde
 
 

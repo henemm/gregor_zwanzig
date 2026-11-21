@@ -1,28 +1,13 @@
 {
   "eintraege": {
-    ".claude/hooks/_mail_lang.py": {
-      "VALIDATOR_IMPORT": 2
-    },
     ".claude/hooks/_mail_trust.py": {
-      "VALIDATOR_IMPORT": 4
+      "VALIDATOR_IMPORT": 3
     },
     ".claude/hooks/_soll_aus_konfiguration.py": {
-      "VALIDATOR_IMPORT": 36
-    },
-    ".claude/hooks/briefing_mail_validator.py": {
-      "VALIDATOR_IMPORT": 1
-    },
-    ".claude/hooks/e2e_browser_test.py": {
-      "VALIDATOR_IMPORT": 1
+      "VALIDATOR_IMPORT": 32
     },
     ".claude/hooks/email_spec_validator.py": {
-      "VALIDATOR_IMPORT": 7
-    },
-    ".claude/hooks/official_alert_mail_validator.py": {
-      "VALIDATOR_IMPORT": 2
-    },
-    ".claude/hooks/radar_alert_mail_validator.py": {
-      "VALIDATOR_IMPORT": 1
+      "VALIDATOR_IMPORT": 4
     },
     "api/routers/compare.py": {
       "SCHWELLE": 1
@@ -258,5 +243,5 @@
       "VERARBEITUNG_AUSSEN": 1
     }
   },
-  "hoechststand": 462
+  "hoechststand": 447
 }

@@ -33,7 +33,7 @@ from tests.helpers.katalog_verarbeitung_scan import (
 )
 
 #: Festgeschriebener Hoechststand (Regel d). Wird nur gesenkt, nie erhoeht.
-HOECHSTSTAND = 462
+HOECHSTSTAND = 447
 
 
 @pytest.fixture(scope="module")
@@ -166,6 +166,18 @@ def test_validator_mit_handgeschriebener_erwartung_meldet_nichts(tmp_path):
               'import re\n_AMPEL_SPALTEN = ("wind", "gust", "precipitation")\n\n\n'
               'def pruefe(spalte, wert):\n    return spalte == "wind" and wert > 30\n')
     assert scanne_validatoren([tmp_path / ".claude" / "hooks"], tmp_path) == []
+
+
+def test_validator_import_zaehlt_nur_metrik_wissen(tmp_path):
+    """AC-4 (Tech-Lead-Entscheid): Konfiguration, Texte und Modelle sind kein
+    Metrik-Wissen; ``app.*metric*``/``app.*compare*`` und ``services.*`` schon."""
+    rel = ".claude/hooks/misch_validator.py"
+    _schreibe(tmp_path, rel,
+              "from app.config import Settings\nfrom i18n import t\n"
+              "from app.models import AlertMetric\nimport app.user\n"
+              "from app.compare_metrics import X\nimport services.placements\n")
+    assert _kurz(scanne_validatoren([tmp_path / ".claude" / "hooks"], tmp_path)) == [
+        (rel, 5, VALIDATOR_IMPORT), (rel, 6, VALIDATOR_IMPORT)]
 
 
 def test_erlaubte_orte_werden_nicht_gescannt(tmp_path):
