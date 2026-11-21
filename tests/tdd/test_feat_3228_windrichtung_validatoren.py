@@ -269,15 +269,18 @@ def test_sendeskript_soll_ist_json_tauglich(skript):
 # AC-11: /e2e-verify uebergibt das Soll an beide Validatoren (DE und EN)
 # --------------------------------------------------------------------------- #
 def test_e2e_verify_ruft_validatoren_mit_windrichtung():  # doc-compliance-test
-    aufrufe = [z for z in E2E_VERIFY_DOC.read_text(encoding="utf-8").splitlines()
+    zeilen = E2E_VERIFY_DOC.read_text(encoding="utf-8").splitlines()
+    aufrufe = [z for z in zeilen
                if z.startswith("uv run python3 .claude/hooks/")
-               and ("briefing_mail_validator.py" in z or "email_spec_validator.py" in z)
-               and "--subject-contains" in z]
-    assert len(aufrufe) >= 4, aufrufe
+               and ("briefing_mail_validator.py" in z or "email_spec_validator.py" in z)]
+    mit_soll = [z for z in aufrufe if "--windrichtung" in z]
     for validator in ("briefing_mail_validator.py", "email_spec_validator.py"):
         for lang in ("de", "en"):
-            passend = [z for z in aufrufe if validator in z and f"--lang {lang}" in z]
-            assert passend and all("--windrichtung" in z for z in passend), (validator, lang, passend)
+            passend = [z for z in mit_soll if validator in z and f"--lang {lang}" in z]
+            assert passend, (validator, lang, mit_soll)
+    # Das Soll gilt nur fuer die Gate-Mails des Sendeskripts (Token), nie fuer Tag-Betreff-Mails.
+    for z in mit_soll:
+        assert "--subject-contains <token>" in z and "<Tag-Betreff>" not in z, z
 
 
 # --------------------------------------------------------------------------- #
@@ -347,6 +350,46 @@ def test_briefing_meldung_nennt_stunde_je_zelle(briefing):
     assert len(treffer) == 1, fehler
     assert f"{stunden[0]} Toenung red/Punkt yellow statt yellow" in treffer[0], fehler
     assert f"{stunden[1]} " not in treffer[0].split("(je Stunde")[0], fehler
+
+
+def test_briefing_genau_eine_wind_zelle_verfaelscht_genau_eine_meldung(briefing):
+    """AC-2 (Befund 2): in Segment 2 (Soll orange, orange) wird NUR die Wind-Zelle der
+    ersten Stunde per String-Ersetzung auf red gefaerbt (Toenung im <td>-Attribut und
+    Ampelpunkt derselben Zelle) -> genau eine Meldung mit Segment, Stunde und
+    'red statt orange'; die zweite Stunde taucht nicht als Abweichung auf."""
+    from output.renderers.email.helpers import _AMPEL_DOT_COLORS
+
+    v, (subject, html, plain), soll = briefing
+    assert soll["wind_zellen"]["2"] == ["orange", "orange"]
+    block = _etappen_block(v, html, 2)
+    zeilen = [z for z in re.findall(r"<tr.*?</tr>", block, re.S) if "<td" in z]
+    stunden = [re.sub(r"<[^>]+>", "", re.findall(r"<td[^>]*>(.*?)</td>", z, re.S)[0]).strip()
+               for z in zeilen]
+    erste_zelle = re.findall(r'<td[^>]*data-label="Wind"[^>]*>.*?</td>', zeilen[0], re.S)[0]
+    orange_ton = f"background:{tone_css('orange')[0]};"
+    rot_ton = f"background:{tone_css('red')[0]};"
+    orange_punkt, rot_punkt = _AMPEL_DOT_COLORS["orange"][0], _AMPEL_DOT_COLORS["red"][0]
+    assert orange_ton in erste_zelle and orange_punkt in erste_zelle
+    neue_zelle = erste_zelle.replace(orange_ton, rot_ton, 1).replace(orange_punkt, rot_punkt, 1)
+    assert neue_zelle != erste_zelle
+    # Die zweite Stunde traegt dieselbe Zelle woertlich: ersetzt wird nur das ERSTE Vorkommen,
+    # und das liegt in der ersten Zeile (Stunde 1).
+    # Der Renderer stellt jede Stundentabelle zweimal ins HTML (Desktop/Handy, byte-gleich,
+    # #1432); der Validator liest die dedupte Tabelle, beide Fassungen werden gleich veraendert.
+    assert block.count(erste_zelle) == 2 and html.count(block) == 2
+    assert block.index(erste_zelle) == block.index(zeilen[0]) + zeilen[0].index(erste_zelle)
+    neuer_block = block.replace(erste_zelle, neue_zelle, 1)
+    assert neuer_block.count(neue_zelle) == 1 and neuer_block.count(erste_zelle) == 1
+    falsch = html.replace(block, neuer_block)
+    assert falsch != html
+    _ok, fehler = v.validate_message(_msg(subject, falsch, plain, "trip-briefing"), windrichtung=soll)
+    treffer = _windrichtung(fehler)
+    assert len(treffer) == 1, fehler
+    abweichungen = treffer[0].split("(je Stunde")[0]
+    assert "Segment 2:" in abweichungen and stunden[0] in abweichungen, treffer
+    assert "red statt orange" in abweichungen, treffer
+    assert abweichungen.count("statt") == 1, treffer  # nur eine Zelle weicht ab
+    assert stunden[0] != stunden[1]
 
 
 # --------------------------------------------------------------------------- #

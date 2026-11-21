@@ -261,8 +261,8 @@ Randfälle (vierte Prüfung #3047, F001–F008a), alle nur mit `--konfig`:
   die Richtung je Stunde ist im HTML dieselbe wie im Klartext.
 - **Färbung der Windrichtung (seit #3228):** Wind- bzw. WDir-Zellen können nach Gegenwind oder
   Sektor getönt sein (Details: `renderer_email_spec.md`, Abschnitt „Windrichtung: Färbung“). Die
-  Validatoren prüfen diese Tönung noch nicht; die Erweiterung folgt in #3232 (Nachweis gegen
-  zugestellte Staging-Mail).
+  Validatoren prüfen diese Tönung seit #3232 mit `--windrichtung` (Abschnitt „Windrichtungs-Färbung“
+  unten; Nachweis gegen zugestellte Gate-Mail).
 - **Metriken-Überblick nur mit Kachel (F008b):** der Überblick (Voll: HTML und
   Klartext, Kompakt) steht genau dann in der Mail, wenn eine Größe der
   E-Mail-Liste dieses Berichts eine Kachel trägt (weiße Liste `_PILL_CATALOG_ORDER`);
@@ -438,10 +438,14 @@ Verhalten unverändert.
 
 ```bash
 uv run python3 .claude/hooks/briefing_mail_validator.py --mail-type trip-briefing \
-    --subject-contains "<Tag-Betreff>" --windrichtung '<Soll Windrichtung Briefing>'
+    --subject-contains <token> --windrichtung '<Soll Windrichtung Briefing>'
 uv run python3 .claude/hooks/email_spec_validator.py --mail-type compare \
-    --subject-contains "<Tag-Betreff>" --windrichtung '<Soll Windrichtung Vergleich>'
+    --subject-contains <token> --windrichtung '<Soll Windrichtung Vergleich>'
 ```
+
+`<token>` und das Soll stammen aus der Ausgabe von `send_gate_test_mails.py` (`--only briefing`
+bzw. `--only compare`, Zeilen `Token fuer diesen Lauf: …` und `Soll Windrichtung: …`). Mails mit
+Tag-Betreff aus `staging_mail_pruefen.py` haben kein festes Soll; dort kein `--windrichtung`.
 
 Nachweis ohne Netz: `tests/tdd/test_feat_3228_windrichtung_validatoren.py`.
 

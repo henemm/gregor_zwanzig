@@ -173,17 +173,15 @@ nach `--ohne-cleanup`) und immer mit dem Tag-Betreff des Laufs, sonst greift der
 die neueste Mail im geteilten Postfach:
 
 ```bash
-uv run python3 .claude/hooks/briefing_mail_validator.py --lang de --mail-type trip-briefing --subject-contains "<Tag-Betreff>" --windrichtung '<Soll Windrichtung Briefing>'
-uv run python3 .claude/hooks/briefing_mail_validator.py --lang en --to-contains "+en@" --mail-type trip-briefing --subject-contains "<Tag-Betreff>" --windrichtung '<Soll Windrichtung Briefing>'
-uv run python3 .claude/hooks/email_spec_validator.py --lang de --mail-type compare --subject-contains "<Tag-Betreff>" --windrichtung '<Soll Windrichtung Vergleich>'
-uv run python3 .claude/hooks/email_spec_validator.py --lang en --to-contains "+en@" --mail-type compare --subject-contains "<Tag-Betreff>" --windrichtung '<Soll Windrichtung Vergleich>'
+uv run python3 .claude/hooks/briefing_mail_validator.py --lang de --mail-type trip-briefing --subject-contains "<Tag-Betreff>"
+uv run python3 .claude/hooks/briefing_mail_validator.py --lang en --to-contains "+en@" --mail-type trip-briefing --subject-contains "<Tag-Betreff>"
+uv run python3 .claude/hooks/email_spec_validator.py --lang de --mail-type compare --subject-contains "<Tag-Betreff>"
+uv run python3 .claude/hooks/email_spec_validator.py --lang en --to-contains "+en@" --mail-type compare --subject-contains "<Tag-Betreff>"
 ```
 
-`--windrichtung` (#3232) bekommt das JSON aus der Zeile `Soll Windrichtung: …`, die
-`send_gate_test_mails.py` je Mail druckt (Briefing: `wind_zellen`, Vergleich: `orte`). Das
-Soll steht ausdruecklich im Sendeskript und wird vom Validator nicht nachgerechnet. Ungueltiges
-JSON endet mit Exit 2 (`FEHLER: --windrichtung ungueltig: …`); ohne den Schalter bleibt die
-Pruefung wie bisher (andere Mailpfade, alte Gate-Mails).
+Diese Tag-Betreff-Mails stammen aus einem echten Staging-Trip und haben kein festes Soll;
+`--windrichtung` gehoert deshalb nicht an diese Aufrufe, sondern in den Abschnitt
+„Windrichtungs-Faerbung“ unten.
 
 Die Alarm-Pfade laufen nicht ueber das Werkzeug; hier ist der direkte Aufruf der regulaere Weg:
 
@@ -207,6 +205,32 @@ Subadresse `+en@` geht verloren und `--to-contains "+en@"` findet nie eine Mail 
 Briefing-Validator bei Alarm-/Vergleichsmails mit `--mail-type trip-briefing` aufrufen, sonst
 nimmt er die juengste Mail irgendeines Typs. Der Telegram-Live-Test (Schritt 3c) laeuft ebenfalls
 aus dem Staging-Checkout, mit `-m live` und den Werten aus dessen `.env`.
+
+### Windrichtungs-Faerbung (#3232, Pflicht, DE und EN)
+
+Das Soll fuer die Faerbung der Windrichtung (#3228) druckt nur `send_gate_test_mails.py`, als
+Zeile `Soll Windrichtung: …`, fuer die Gate-Mails `[GATE1233 <token>] Etappe 1 Morgen-Briefing`
+und `[GATE1233 <token>] Orts-Vergleich`. Regulaerer Weg je Sprache (aus dem Staging-Checkout,
+siehe oben): Mail senden, dann den Validator mit dem `<token>` der Zeile
+`Token fuer diesen Lauf: …` und dem JSON der Zeile `Soll Windrichtung: …` aufrufen
+(`--lang en` an die Subadresse `+en@`, wie bei den Alarm-Pfaden):
+
+```bash
+uv run python3 scripts/send_gate_test_mails.py --only briefing
+uv run python3 .claude/hooks/briefing_mail_validator.py --lang de --mail-type trip-briefing --subject-contains <token> --windrichtung '<Soll Windrichtung Briefing>'
+uv run python3 scripts/send_gate_test_mails.py --lang en --only briefing
+uv run python3 .claude/hooks/briefing_mail_validator.py --lang en --to-contains "+en@" --mail-type trip-briefing --subject-contains <token> --windrichtung '<Soll Windrichtung Briefing>'
+uv run python3 scripts/send_gate_test_mails.py --only compare
+uv run python3 .claude/hooks/email_spec_validator.py --lang de --mail-type compare --subject-contains <token> --windrichtung '<Soll Windrichtung Vergleich>'
+uv run python3 scripts/send_gate_test_mails.py --lang en --only compare
+uv run python3 .claude/hooks/email_spec_validator.py --lang en --to-contains "+en@" --mail-type compare --subject-contains <token> --windrichtung '<Soll Windrichtung Vergleich>'
+```
+
+Erwartung: je Aufruf Exit 0. `<Soll Windrichtung …>` ist das JSON aus der Ausgabe des
+Sendeskripts (Briefing: `wind_zellen`, Vergleich: `orte`); es steht ausdruecklich im
+Sendeskript und wird vom Validator nicht nachgerechnet. Ungueltiges JSON endet mit Exit 2
+(`FEHLER: --windrichtung ungueltig: …`); ohne den Schalter bleibt die Pruefung wie bisher
+(andere Mailpfade, alte Gate-Mails).
 
 Der Kopf `X-GZ-Lang` ist Pflicht: fehlt er, endet jeder Validator mit Exit 1. Die Auswahl
 nimmt nur Mails der gewaehlten Sprache **und** ihres Empfaengers (`de`: To ohne `+en@`,
