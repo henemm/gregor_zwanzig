@@ -150,9 +150,15 @@ def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
     # #3204 (21.11., Spec feat_3204_anzeige_metriken_mockup.md): alle 10 Einträge abgeräumt. Mockup Fassung 4
     # zeigt Tages-Tief/-Hoch (Gehzeit) als Nur-Anzeige-Zeilen wie die App, App-Erklärsatz folgt dem Mockup
     # („unter „Was steht wo““); Elementliste neu erzeugt — keine Ausnahme, keine Umhängung.
+    # #3205 (21.11., Spec feat_3205_vorlagen_mockup.md): alle 4 Einträge abgeräumt. Mockup Fassung 4 führt eigene
+    # Vorlagen je Art wie die App (PO 08.11./21.11.); die zwei Orte-Auswahl-Einträge „Mallorca Frühling“ entfallen
+    # mit dem Soll-Eintrag, ebenso die zwei #3151-Unterzeilen „eigene · aus GR221 gespeichert“ der Orte-Auswahl
+    # (Besitzer auf entfallene IDs wären ein Fehler, F004): #3151 4 → 2. Die Zurücksetzen-Zeile (DE/EN) ist ein
+    # Zustandsunterschied (Mockup Z. 511 `devs>0` = live `abweichungen > 0`, Prüfkonto-Trip mit Abweichung) und
+    # steht als begründete Ausnahme (Weg B) mit spec feat_3205_vorlagen_mockup.md, nicht mehr als Besitzer.
     soll = {
         "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 318, "#2797": 8, "#2968": 0, "#3022": 62,
-        "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 2, "#3151": 4, "#3122": 14, "#3202": 0, "#3203": 0, "#3204": 0,
+        "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 2, "#3151": 2, "#3122": 14, "#3202": 0, "#3203": 0, "#3204": 0,
         "#3205": 0, "#3145": 0,
     }
     ist = _verweise(daten)
