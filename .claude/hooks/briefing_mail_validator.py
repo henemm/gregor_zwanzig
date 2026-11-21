@@ -1137,6 +1137,43 @@ def _soll_kachelfolge(teile: dict, s: dict, lang: str) -> list[str]:
 _AMPEL_SPALTEN = ("wind", "gust", "precipitation", "rain_probability")
 
 
+def _etappen_tabellen_attrs(html: str, lang: str) -> list[tuple[list, list]]:
+    """Etappen-Stundentabellen (ohne Nacht) als (Spaltenkoepfe, Zeilen mit
+    ``(attrs, inhalt)`` je Zelle) -- die Toenung steht im ``<td>``-Attribut."""
+    nacht = _night_table_blocks(html, lang)
+    tabellen = [b for b in _table_blocks(html) if b not in nacht and (_th_tokens(b) or [""])[0] in ("Time", "Zeit")]
+    return [(_th_tokens(b), [z for z in (re.findall(r"<td([^>]*)>(.*?)</td>", r, re.S)
+                                         for r in _ROW_RE.findall(b)) if z]) for b in tabellen]
+
+
+def pruefe_windrichtung(html: str, soll_w: dict, lang: str = "de") -> list[str]:
+    """Issue #3228: Toenung und Ampelpunkt der Wind-Zelle (Kompass verschmolzen) je Stunde der
+    Rad-Etappen gegen die ausdruecklich erwartete Ampelstufe des Solls
+    (``send_gate_test_mails.windrichtung_soll``: ``wind_zellen`` = Segment-ID ->
+    Stufe je Stunde; Segment N = N-te Etappen-Stundentabelle). Die Stufe wird
+    hier nicht nachgerechnet. Positionsregel (#3232): Segment-ID N = N-te
+    Etappen-Stundentabelle ohne Nacht; IDs ausserhalb 1..Tabellenzahl sind ein
+    Fehler, nie stilles Ueberspringen."""
+    m = _soll_modul()
+    wind, tabellen, fehler = m._REG["wind"].col_label, _etappen_tabellen_attrs(html, lang), []
+    for sid, erwartet in (soll_w.get("wind_zellen") or {}).items():
+        if not 1 <= int(sid) <= len(tabellen):  # #3232 AC-7: nie still tabellen[-1]
+            fehler.append(f"SOLL: Windrichtung Segment {sid}: Etappen-Stundentabelle fehlt "
+                          f"(gueltig 1..{len(tabellen)})")
+            continue
+        th, zeilen = tabellen[int(sid) - 1]
+        ist = [m.zellstufe(dict(zip(th[1:], z[1:])).get(wind), punkt_pflicht=True) for z in zeilen]
+        if ist != erwartet:
+            # #3232: jede abweichende Zelle mit Stunde, gefunden und erwartet benannt.
+            stunde = [re.sub(r"<[^>]+>", "", z[0][1]).strip() for z in zeilen]
+            abw = [f"{h} {i} statt {e}" for h, i, e in zip(stunde, ist, erwartet) if i != e]
+            if len(ist) != len(erwartet):
+                abw.append(f"{len(ist)} Stunden statt {len(erwartet)}")
+            fehler.append(f"SOLL: Windrichtung Segment {sid}: Wind-Zelle {'; '.join(abw)} "
+                          f"(je Stunde {ist} statt {erwartet})")
+    return fehler
+
+
 def _soll_ampel(html: str, plain: str, s: dict, lang: str) -> list[str]:
     """Ampelfarbe der Etappen-Stundentabellen gegen die Ampel-Grenzen:
     Ampelpunkt gegen den Klartext-Wert derselben Stunde, Zahl-Zelle gegen ihre
@@ -1144,12 +1181,10 @@ def _soll_ampel(html: str, plain: str, s: dict, lang: str) -> list[str]:
     m = _soll_modul()
     spalten = {m._REG[x].col_label: x for x in _AMPEL_SPALTEN}
     klar = _klartext_zellen(plain, lang, s.get("etappen", ()))["Etappen-Stundentabelle"]
-    nacht, fehler = _night_table_blocks(html, lang), []
-    tabellen = [b for b in _table_blocks(html) if b not in nacht and (_th_tokens(b) or [""])[0] in ("Time", "Zeit")]
-    for i, block in enumerate(tabellen):
-        th, gemeldet = _th_tokens(block), set()
-        zeilen = [re.findall(r"<td([^>]*)>(.*?)</td>", r, re.S) for r in _ROW_RE.findall(block)]
-        for j, zellen in enumerate(z for z in zeilen if z):
+    fehler = []
+    for i, (th, zeilen) in enumerate(_etappen_tabellen_attrs(html, lang)):
+        gemeldet = set()
+        for j, zellen in enumerate(zeilen):
             werte = dict(klar[i][j]) if i < len(klar) and j < len(klar[i]) else {}
             for spalte, (attrs, inhalt) in zip(th[1:], zellen[1:]):
                 if spalte not in spalten or spalte in gemeldet:
@@ -1245,9 +1280,10 @@ def pruefe_soll(msg: Message, soll: dict, lang: str = "de") -> list[str]:
 # --------------------------------------------------------------------------- #
 def validate_message(
     msg: Message, max_bytes: int = _MAX_BYTES_DEFAULT, warnungen: list | None = None,
-    soll: dict | None = None,
+    soll: dict | None = None, windrichtung: dict | None = None,
 ) -> tuple[bool, list[str]]:
     """Faellt das Urteil ueber ein geparstes email.message.Message-Objekt.
+    ``windrichtung`` (#3228, ``--windrichtung``): Soll der Wind-Zellen-Toenung.
 
     Returnt (ok, errors). ok=True/errors=[] bei bestanden. Issue #2663: die
     Erwartungen gelten in der Sprache des Kopfes ``X-GZ-Lang``; fehlt er, ist
@@ -1293,6 +1329,13 @@ def validate_message(
     widerspruch = _ml().widerspruch(text, lang, _LANG_MARKER_KEYS)
     if widerspruch:
         return False, [widerspruch, *errors]
+    if windrichtung is not None and mail_format != "full":  # #3232 AC-6: laut statt still
+        ok, errors = False, errors + [
+            f"SOLL: Windrichtung nur im Format full pruefbar (X-GZ-Format={mail_format})"]
+    elif windrichtung is not None:
+        html = "".join(_part_text(p) for p in msg.walk() if p.get_content_type() == "text/html")
+        abweichung = pruefe_windrichtung(html, windrichtung, lang)
+        ok, errors = ok and not abweichung, errors + abweichung
     if soll is not None:  # Issue #3047: nur mit --konfig, sonst unveraendert
         abweichungen = pruefe_soll(msg, soll, lang)
         return ok and not abweichungen, errors + abweichungen
@@ -1428,13 +1471,14 @@ def run_validation(
     lang: str = "de",
     to_contains: str | None = None,
     soll: dict | None = None,
+    windrichtung: dict | None = None,
 ) -> tuple[bool, list[str]]:
     """Holt die (gefilterte) Mail und validiert sie (``soll``: #3047 --konfig)."""
     msg = fetch_latest_message(
         mail_type=mail_type, subject_contains=subject_contains, max_scan=max_scan,
         lang=lang, to_contains=to_contains,
     )
-    return validate_message(msg, max_bytes, warnungen=warnungen, soll=soll)
+    return validate_message(msg, max_bytes, warnungen=warnungen, soll=soll, windrichtung=windrichtung)
 
 
 def _write_validation_log(success: bool, errors: list, warnings: list | None = None) -> None:
@@ -1499,6 +1543,9 @@ def main() -> None:
     parser.add_argument("--konfig", metavar="PFAD", default=None,
                         help="Gespeichertes Trip-JSON des Nutzers: Auswahl und Reihenfolge "
                              "der Spalten muessen ihm entsprechen (#3047)")
+    parser.add_argument("--windrichtung", metavar="JSON", default=None,
+                        help="Soll der Wind-Zellen-Toenung (Ausgabe 'Soll Windrichtung' "
+                             "von scripts/send_gate_test_mails.py, #3228)")
     _e2e_paths.sprach_argumente(parser)
     args = parser.parse_args()
 
@@ -1507,13 +1554,22 @@ def main() -> None:
     print("=" * 70)
     print()
 
+    windrichtung = None
+    if args.windrichtung is not None:  # #3232 AC-5: frueh pruefen, Exit 2 statt Exit 1
+        try:
+            windrichtung = _soll_modul().windrichtung_soll_parsen(args.windrichtung, "wind_zellen")
+        except ValueError as exc:
+            print(f"FEHLER: --windrichtung ungueltig: {exc}")
+            sys.exit(2)
+
     warnungen: list = []
     try:
         # #3047: Soll aus der gespeicherten Konfiguration; ohne --konfig None.
         soll = _soll_modul().lade_soll(args.konfig, args.lang or "de") if args.konfig else None
         if args.eml:  # #2663: Mail aus Datei statt IMAP
             msg = email.message_from_bytes(Path(args.eml).read_bytes())
-            success, errors = validate_message(msg, args.max_bytes, warnungen=warnungen, soll=soll)
+            success, errors = validate_message(msg, args.max_bytes, warnungen=warnungen, soll=soll,
+                                               windrichtung=windrichtung)
             auswahl = _e2e_paths.eml_auswahl_fehler(msg, args.lang, args.to_contains)
             success, errors = success and not auswahl, auswahl + errors
         else:
@@ -1526,6 +1582,7 @@ def main() -> None:
                 lang=args.lang or "de",
                 to_contains=args.to_contains,
                 soll=soll,
+                windrichtung=windrichtung,
             )
     except Exception as e:  # IMAP / technischer Fehler
         print(f"⚠️  TECHNISCHER FEHLER: Mail konnte nicht geladen werden: {e}")

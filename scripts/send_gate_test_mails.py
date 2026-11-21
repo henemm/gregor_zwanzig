@@ -200,8 +200,9 @@ def _briefing_dps() -> list[ForecastDataPoint]:
 # tests/tdd/test_feat_3228_windrichtung_mail.py. Geometrie als Luftlinie
 # Start -> Ende: Nordkurs ~5,5 km, Rundkurs ~110 m (< 300 m, keine Fahrtrichtung).
 # Je Etappe: (Segment-ID, Start, Ende, Peilung fuer den Validator, Stunden),
-# Stunde = (UTC-Stunde, km/h, Herkunft Grad). Erwartung je Wind-Zelle
-# (Soll ``windrichtung_soll``): SEG 2 Nordwind 25 -> orange (AC-1); SEG 3 Suedwind 25
+# Stunde = (UTC-Stunde, km/h, Herkunft Grad, erwartete Stufe der Wind-Zelle).
+# Erwartung (Soll ``windrichtung_soll``, hoehere Stufe aus Windstaerke und
+# Gegenwind): SEG 2 Nordwind 25 -> orange (AC-1); SEG 3 Suedwind 25
 # und Ostwind 25 -> gelb nur aus der Windstaerke, Nordwind 5 -> ungefaerbt
 # (AC-2/AC-3); SEG 4 Rundkurs Nordwind 40 -> orange nur aus der Windstaerke,
 # SEG 5 Nordkurs Nordwind 40 -> rot (AC-4).
@@ -210,17 +211,21 @@ RAD_AMPEL = {"template": "radtour"}
 _NORD = ((46.60, 13.70), (46.65, 13.70))
 _RUNDKURS = ((46.650, 13.70), (46.651, 13.70))
 RAD_ETAPPEN = (
-    (2, *_NORD, 0.0, ((14, 25.0, 0.0), (15, 25.0, 0.0))),
-    (3, *_NORD, 0.0, ((15, 25.0, 180.0), (16, 25.0, 90.0), (17, 5.0, 0.0))),
-    (4, *_RUNDKURS, None, ((17, 40.0, 0.0), (18, 40.0, 0.0))),
-    (5, *_NORD, 0.0, ((18, 40.0, 0.0), (19, 40.0, 0.0))),
+    (2, *_NORD, 0.0, ((14, 25.0, 0.0, "orange"), (15, 25.0, 0.0, "orange"))),
+    (3, *_NORD, 0.0, ((15, 25.0, 180.0, "yellow"), (16, 25.0, 90.0, "yellow"),
+                      (17, 5.0, 0.0, "green"))),
+    (4, *_RUNDKURS, None, ((17, 40.0, 0.0, "orange"), (18, 40.0, 0.0, "orange"))),
+    (5, *_NORD, 0.0, ((18, 40.0, 0.0, "red"), (19, 40.0, 0.0, "red"))),
 )
 
 
 def windrichtung_soll() -> dict:
     """Soll der Windrichtungs-Pruefung im Briefing-Validator (JSON): Ampel des
-    Rad-Trips und Fahrtpeilung je Etappe (``None`` = Rundkurs)."""
-    return {"ampel": RAD_AMPEL, "peilung": {str(sid): p for sid, _s, _e, p, _h in RAD_ETAPPEN}}
+    Rad-Trips, Fahrtpeilung je Etappe (``None`` = Rundkurs) und erwartete
+    Stufe der Wind-Zelle je Stunde (``wind_zellen``, Segment-ID -> Liste;
+    Segment N = N-te Etappen-Stundentabelle der Mail)."""
+    return {"ampel": RAD_AMPEL, "peilung": {str(sid): p for sid, _s, _e, p, _h in RAD_ETAPPEN},
+            "wind_zellen": {str(sid): [st[3] for st in h] for sid, _s, _e, _p, h in RAD_ETAPPEN}}
 
 
 def _rad_segment(seg_id: int, start: tuple, ende: tuple,
@@ -234,7 +239,7 @@ def _rad_segment(seg_id: int, start: tuple, ende: tuple,
             freezing_level_m=3000, is_day=1 if h < 19 else 0,
             dni_wm2=_briefing_dni(h, 30),
         )
-        for h, kmh, deg in stunden
+        for h, kmh, deg, _stufe in stunden
     ]
     seg = TripSegment(
         segment_id=seg_id,
@@ -383,11 +388,17 @@ def _compare_hourly_data(base_temp: float, wind_kmh: float = 12.0,
 COMPARE_AMPEL = {"template": "allgemein", "metrics": {"wind_direction": {
     "enabled": True, "modus": "sektoren", "sektoren": ["N"],
     "upper": {"yellow": 10, "orange": 20, "red": 40}}}}
+#: Erwartete Stufe je Ort: (Windrichtungs-Zeile der Vergleichstabelle,
+#: Wind-Zelle des Stundenverlaufs, jede Stunde).
+COMPARE_WIND_STUFEN = {"Gatehausen Nord": ("orange", "orange"),
+                       "Gatehausen Mitte": ("green", "yellow"),
+                       "Gatehausen Sued": ("green", "green")}
 
 
 def compare_windrichtung_soll() -> dict:
-    """Soll der Windrichtungs-Pruefung im Vergleichs-Validator (JSON)."""
-    return {"ampel": COMPARE_AMPEL}
+    """Soll der Windrichtungs-Pruefung im Vergleichs-Validator (JSON):
+    ``orte`` = Ortsname -> [Stufe Windrichtungs-Zeile, Stufe Wind je Stunde]."""
+    return {"ampel": COMPARE_AMPEL, "orte": {n: list(s) for n, s in COMPARE_WIND_STUFEN.items()}}
 
 
 def build_compare_mail(token: str, lang: str = "de") -> tuple[str, str, str]:

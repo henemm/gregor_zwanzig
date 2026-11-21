@@ -278,3 +278,146 @@ def test_e2e_verify_ruft_validatoren_mit_windrichtung():  # doc-compliance-test
         for lang in ("de", "en"):
             passend = [z for z in aufrufe if validator in z and f"--lang {lang}" in z]
             assert passend and all("--windrichtung" in z for z in passend), (validator, lang, passend)
+
+
+# --------------------------------------------------------------------------- #
+# Adversary F003 (#3232): Segment-ID nur ASCII-Ziffern ("²" ist isdigit, int() scheitert)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("sid", ["²", "٣", "-1", " 2"])
+def test_cli_segment_id_nicht_ascii_ziffer_exit_2(emls, sid):
+    r = subprocess.run([sys.executable, str(BRIEFING_CLI), "--lang", "de", "--eml", str(emls["briefing"]),
+                        "--windrichtung", json.dumps({"wind_zellen": {sid: ["green"]}})],
+                       cwd=ROOT, capture_output=True, text=True, timeout=120)
+    ausgabe = r.stdout + r.stderr
+    assert r.returncode == 2, ausgabe
+    assert _UNGUELTIG_RE.search(ausgabe), ausgabe
+    assert "Traceback" not in ausgabe, ausgabe
+
+
+# --------------------------------------------------------------------------- #
+# Adversary F002 (#3232): zellstufe -- fehlende Wind-Spalte, Punkt widerspricht Toenung
+# --------------------------------------------------------------------------- #
+def test_briefing_fehlende_wind_spalte_meldet_fehlt(briefing):
+    """Wind-Spalte in Segment 3 umbenannt, Soll ueberall green -> Meldung 'fehlt',
+    nie still als green gewertet."""
+    v, (subject, html, plain), _soll = briefing
+    block = _etappen_block(v, html, 3)
+    neu = block.replace(">Wind</th>", ">Wynd</th>")
+    assert neu != block
+    zeilen = len([z for z in re.findall(r"<tr.*?</tr>", block, re.S) if "<td" in z])
+    _ok, fehler = v.validate_message(_msg(subject, html.replace(block, neu), plain, "trip-briefing"),
+                                     windrichtung={"wind_zellen": {"3": ["green"] * zeilen}})
+    treffer = _windrichtung(fehler)
+    assert len(treffer) == 1 and "Segment 3:" in treffer[0] and "fehlt" in treffer[0], fehler
+
+
+def test_briefing_punktfarbe_widerspricht_toenung(briefing):
+    """Toenung orange bleibt, Ampelpunkt einer Zelle wird rot -> genau eine Meldung
+    'Toenung orange/Punkt red' (Widerspruch nie still als Toenung gewertet)."""
+    from output.renderers.email.helpers import _AMPEL_DOT_COLORS
+
+    v, (subject, html, plain), soll = briefing
+    block = _etappen_block(v, html, 2)
+    zelle = next(z for z in re.findall(r'<td[^>]*data-label="Wind"[^>]*>.*?</td>', block, re.S)
+                 if f"background:{tone_css('orange')[0]};" in z and _PUNKT_RE.search(z))
+    orange, rot = _AMPEL_DOT_COLORS["orange"][0], _AMPEL_DOT_COLORS["red"][0]
+    assert orange in zelle
+    falsch = html.replace(block, block.replace(zelle, zelle.replace(orange, rot), 1))
+    _ok, fehler = v.validate_message(_msg(subject, falsch, plain, "trip-briefing"), windrichtung=soll)
+    treffer = _windrichtung(fehler)
+    assert len(treffer) == 1 and "Segment 2:" in treffer[0], fehler
+    assert "Toenung orange/Punkt red" in treffer[0], fehler
+
+
+# --------------------------------------------------------------------------- #
+# Adversary F004 (#3232): Meldung nennt je abweichender Zelle Stunde, gefunden, erwartet
+# --------------------------------------------------------------------------- #
+def test_briefing_meldung_nennt_stunde_je_zelle(briefing):
+    v, (subject, html, plain), soll = briefing
+    block = _etappen_block(v, html, 3)
+    zeilen = [z for z in re.findall(r"<tr.*?</tr>", block, re.S) if "<td" in z]
+    stunden = [re.sub(r"<[^>]+>", "", re.findall(r"<td[^>]*>(.*?)</td>", z, re.S)[0]).strip()
+               for z in zeilen]
+    gelb, rot = (f"background:{tone_css(s)[0]};" for s in ("yellow", "red"))
+    erste = zeilen[0]
+    assert gelb in erste
+    falsch = html.replace(block, block.replace(erste, erste.replace(gelb, rot), 1))
+    _ok, fehler = v.validate_message(_msg(subject, falsch, plain, "trip-briefing"), windrichtung=soll)
+    treffer = _windrichtung(fehler)
+    assert len(treffer) == 1, fehler
+    assert f"{stunden[0]} Toenung red/Punkt yellow statt yellow" in treffer[0], fehler
+    assert f"{stunden[1]} " not in treffer[0].split("(je Stunde")[0], fehler
+
+
+# --------------------------------------------------------------------------- #
+# Adversary F001 (#3232): --windrichtung kommt auf jedem Weg im Validator an
+# (CLI --eml, run_validation, CLI-IMAP-Weg). Nur der IMAP-Abruf wird durch die
+# lokale Mail ersetzt (Modul-Attribut), alles andere ist der echte Code.
+# --------------------------------------------------------------------------- #
+_SOLL_FUNK = {"briefing": "windrichtung_soll", "vergleich": "compare_windrichtung_soll"}
+_CLI = {"briefing": BRIEFING_CLI, "vergleich": VERGLEICH_CLI}
+
+
+@pytest.fixture(scope="module")
+def falsche_emls(skript, briefing, tmp_path_factory):
+    d = tmp_path_factory.mktemp("eml_3232_falsch")
+    subject, html, plain = skript.build_briefing_mail("t3232")
+    cs, ch, cp = skript.build_compare_mail("t3232")
+    pfade = {"briefing": d / "b_falsch.eml", "vergleich": d / "v_falsch.eml"}
+    pfade["briefing"].write_bytes(_msg(subject, _etappe_umfaerben(briefing[0], html, 2, "orange", "green"),
+                                       plain, "trip-briefing").as_bytes())
+    pfade["vergleich"].write_bytes(_msg(cs, _zelle_umfaerben(ch, "0 °", "orange", "transparent"),
+                                        cp, "compare").as_bytes())
+    return pfade
+
+
+@pytest.mark.parametrize("art", ["briefing", "vergleich"])
+def test_cli_eml_reicht_windrichtung_durch(skript, emls, falsche_emls, art):
+    soll = json.dumps(getattr(skript, _SOLL_FUNK[art])())
+
+    def lauf(pfad):
+        return subprocess.run([sys.executable, str(_CLI[art]), "--lang", "de", "--eml", str(pfad),
+                               "--windrichtung", soll],
+                              cwd=ROOT, capture_output=True, text=True, timeout=120)
+
+    gut, schlecht = lauf(emls[art]), lauf(falsche_emls[art])
+    assert "SOLL: Windrichtung" not in gut.stdout + gut.stderr, gut.stdout
+    assert schlecht.returncode == 1, schlecht.stdout + schlecht.stderr
+    assert "SOLL: Windrichtung" in schlecht.stdout, schlecht.stdout
+
+
+def _abruf_aus_datei(monkeypatch, mod, art, pfad):
+    msg = email.message_from_bytes(pfad.read_bytes())
+    name = "fetch_latest_message" if art == "briefing" else "_fetch_latest_message"
+    assert callable(getattr(mod, name))
+    monkeypatch.setattr(mod, name, lambda *a, **kw: msg)
+
+
+@pytest.mark.parametrize("art", ["briefing", "vergleich"])
+def test_run_validation_reicht_windrichtung_durch(skript, briefing, vergleich, falsche_emls,
+                                                  monkeypatch, art):
+    mod = briefing[0] if art == "briefing" else vergleich[0]
+    _abruf_aus_datei(monkeypatch, mod, art, falsche_emls[art])
+    soll = getattr(skript, _SOLL_FUNK[art])()
+    if art == "briefing":
+        _ok, fehler = mod.run_validation(mail_type="trip-briefing", lang="de", windrichtung=soll)
+    else:
+        _ok, fehler = mod.run_validation(3, lang="de", windrichtung=soll)
+    assert len(_windrichtung(fehler)) == 1, fehler
+
+
+@pytest.mark.parametrize("art", ["briefing", "vergleich"])
+def test_cli_imap_weg_reicht_windrichtung_durch(skript, briefing, vergleich, falsche_emls,
+                                                monkeypatch, capsys, art):
+    mod = briefing[0] if art == "briefing" else vergleich[0]
+    _abruf_aus_datei(monkeypatch, mod, art, falsche_emls[art])
+    # Kein Validator-Log aus dem Test ins geteilte Repo.
+    monkeypatch.setattr(mod, "_write_validation_log", lambda *a, **kw: None)
+    soll = json.dumps(getattr(skript, _SOLL_FUNK[art])())
+    monkeypatch.setattr(sys, "argv", [str(_CLI[art]), "--lang", "de", "--subject-contains", "t3232",
+                                      "--windrichtung", soll])
+    with pytest.raises(SystemExit) as ende:
+        mod.main()
+    ausgabe = capsys.readouterr().out
+    assert ende.value.code == 1, ausgabe
+    assert "SOLL: Windrichtung" in ausgabe, ausgabe

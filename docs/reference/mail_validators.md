@@ -412,6 +412,39 @@ uv run python3 .claude/hooks/email_spec_validator.py \
 Das Postfach ist geteilt: `--konfig` setzt voraus, dass die geprüfte Mail dem
 Nutzer des JSON gehört (Auswahl über `--to-contains`).
 
+## Windrichtungs-Färbung — `--windrichtung JSON` (seit #3232, Nachzug #3228)
+
+Beide Validatoren prüfen mit `--windrichtung` die Windrichtungs-Färbung aus #3228
+gegen ein **ausdrückliches Soll**. Das Soll druckt `scripts/send_gate_test_mails.py`
+je Gate-Mail als Zeile `Soll Windrichtung: {…}`. Der Validator rechnet die Stufe
+nicht nach (Schutz gegen Selbstbestätigung). Ohne den Schalter bleibt jedes
+Verhalten unverändert.
+
+- **Briefing** (`briefing_mail_validator.py`, Schlüssel `wind_zellen`):
+  Segment-ID (Zahl-Text) → erwartete Stufe der Wind-Zelle je Stunde. Geprüft werden
+  Tönung und Ampelpunkt. **Positionsregel:** Segment N = N-te Etappen-Stundentabelle
+  der Mail (ohne Nacht). IDs außerhalb 1..Tabellenzahl werden gemeldet, nie still
+  übersprungen. Nur Format `full`. Bei anderem `X-GZ-Format` meldet der Validator
+  `SOLL: Windrichtung nur im Format full pruefbar (X-GZ-Format=…)`. Im Ampel-Modus
+  setzt der Renderer zu jeder Tönung einen Punkt derselben Stufe. Fehlt er bei einer
+  Tönung ungleich green, lautet die Meldung `Toenung X/Punkt fehlt`.
+- **Vergleich** (`email_spec_validator.py`, Schlüssel `orte`): Ortsname →
+  `[Stufe Windrichtungs-Zeile der Vergleichstabelle, Stufe Wind-Zelle je Stunde]`.
+  Der Stundenverlauf wird als Liste verglichen, die Meldung nennt die Stunde.
+- Gemeinsame Hilfsfunktion `zellstufe()` und Eingabeprüfung
+  `windrichtung_soll_parsen()` in `_soll_aus_konfiguration.py`. Ungültige Eingabe
+  (kein JSON, kein Objekt, Schlüssel fehlt, nicht numerische Segment-ID) endet mit
+  `FEHLER: --windrichtung ungueltig: <Grund>` und **Exit 2**. Exit 1 bleibt „Spec verletzt“.
+
+```bash
+uv run python3 .claude/hooks/briefing_mail_validator.py --mail-type trip-briefing \
+    --subject-contains "<Tag-Betreff>" --windrichtung '<Soll Windrichtung Briefing>'
+uv run python3 .claude/hooks/email_spec_validator.py --mail-type compare \
+    --subject-contains "<Tag-Betreff>" --windrichtung '<Soll Windrichtung Vergleich>'
+```
+
+Nachweis ohne Netz: `tests/tdd/test_feat_3228_windrichtung_validatoren.py`.
+
 ## 1. `email_spec_validator.py` — Orts-Vergleich-Mail (ZWINGEND)
 
 **Geltungsbereich:** prüft **ausschließlich** den **Orts-Vergleich-Mail**-Pfad, seit

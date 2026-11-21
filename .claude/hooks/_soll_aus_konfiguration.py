@@ -991,6 +991,53 @@ def ampel_farbe(attrs: str, inhalt: str) -> str:
     return next((k for k, (bg, _fg) in _TONE_CSS.items() if k != "green" and bg.lower() == farbe), "green")
 
 
+def windrichtung_soll_parsen(text: str, schluessel: str) -> dict:
+    """#3232 AC-5: ``--windrichtung`` (JSON-Objekt) frueh pruefen; ``ValueError``
+    mit Grund bei ungueltiger Eingabe. ``schluessel``: ``wind_zellen`` (Briefing,
+    Segment-ID als Zahl-Text -> Liste der Stufen je Stunde) bzw. ``orte``
+    (Vergleich, Ortsname -> [Stufe Windrichtungs-Zeile, Stufe Wind je Stunde])."""
+    try:
+        soll = json.loads(text)
+    except ValueError as exc:
+        raise ValueError(f"kein JSON ({exc})") from None
+    if not isinstance(soll, dict):
+        raise ValueError(f"kein JSON-Objekt, sondern {type(soll).__name__}")
+    werte = soll.get(schluessel)
+    if not isinstance(werte, dict) or not werte:
+        raise ValueError(f"Schluessel '{schluessel}' fehlt oder ist kein nicht-leeres Objekt")
+    for k, v in werte.items():
+        if schluessel == "wind_zellen":
+            if not re.fullmatch(r"[0-9]+", k):  # nicht isdigit: "²" waere Ziffer, int() scheitert
+                raise ValueError(f"Segment-ID '{k}' ist nicht numerisch")
+            if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
+                raise ValueError(f"Segment {k}: Stufen je Stunde sind keine Liste von Texten")
+        elif not (isinstance(v, list) and len(v) == 2 and isinstance(v[0], str)
+                  and isinstance(v[1], (str, list))):
+            raise ValueError(f"Ort '{k}': erwartet [Stufe Windrichtungs-Zeile, Stufe Wind je Stunde]")
+    return soll
+
+
+def zellstufe(zelle: tuple[str, str] | None, punkt_pflicht: bool = False) -> str:
+    """#3228: Stufe einer Zelle ``(attrs, inhalt)`` aus Toenung UND Ampelpunkt;
+    widersprechen sie sich, beide benannt; ``None`` = Zelle fehlt.
+    ``punkt_pflicht`` (#3232, AC-8): Ampel-Modus mit Punkt-Anzeige (Trip-Briefing).
+    Dort setzt der Renderer zu jeder Toenung einen Ampelpunkt derselben Stufe
+    (``helpers.py``: ``_ampel_dot_css(level) if level else "–"``); fehlt er bei
+    einer Toenung ungleich green, lautet die Stufe ``Toenung X/Punkt fehlt``.
+    Ohne Pflicht (Vergleichs-Mail, reine Zelltoenung) zaehlt allein die Toenung;
+    ein vorhandener Punkt muss ihr trotzdem entsprechen."""
+    if zelle is None:
+        return "fehlt"
+    ton = ampel_farbe(zelle[0], "")
+    if re.search(r"border-radius:\s*50%", zelle[1]):  # derselbe Regex wie ampel_farbe
+        punkt = ampel_farbe("", zelle[1])
+    elif punkt_pflicht and ton != "green":
+        return f"Toenung {ton}/Punkt fehlt"
+    else:
+        punkt = ton
+    return ton if ton == punkt else f"Toenung {ton}/Punkt {punkt}"
+
+
 def ampel_abweichung(grenzen: dict, mid: str, text: str, ist: str) -> str | None:
     """``"<ist> statt <soll>"``, wenn die Farbe nicht zur angezeigten Zahl passt."""
     erlaubt = ampel_erlaubt(grenzen, mid, text)

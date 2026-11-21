@@ -173,11 +173,17 @@ nach `--ohne-cleanup`) und immer mit dem Tag-Betreff des Laufs, sonst greift der
 die neueste Mail im geteilten Postfach:
 
 ```bash
-uv run python3 .claude/hooks/briefing_mail_validator.py --lang de --mail-type trip-briefing --subject-contains "<Tag-Betreff>"
-uv run python3 .claude/hooks/briefing_mail_validator.py --lang en --to-contains "+en@" --mail-type trip-briefing --subject-contains "<Tag-Betreff>"
-uv run python3 .claude/hooks/email_spec_validator.py --lang de --mail-type compare --subject-contains "<Tag-Betreff>"
-uv run python3 .claude/hooks/email_spec_validator.py --lang en --to-contains "+en@" --mail-type compare --subject-contains "<Tag-Betreff>"
+uv run python3 .claude/hooks/briefing_mail_validator.py --lang de --mail-type trip-briefing --subject-contains "<Tag-Betreff>" --windrichtung '<Soll Windrichtung Briefing>'
+uv run python3 .claude/hooks/briefing_mail_validator.py --lang en --to-contains "+en@" --mail-type trip-briefing --subject-contains "<Tag-Betreff>" --windrichtung '<Soll Windrichtung Briefing>'
+uv run python3 .claude/hooks/email_spec_validator.py --lang de --mail-type compare --subject-contains "<Tag-Betreff>" --windrichtung '<Soll Windrichtung Vergleich>'
+uv run python3 .claude/hooks/email_spec_validator.py --lang en --to-contains "+en@" --mail-type compare --subject-contains "<Tag-Betreff>" --windrichtung '<Soll Windrichtung Vergleich>'
 ```
+
+`--windrichtung` (#3232) bekommt das JSON aus der Zeile `Soll Windrichtung: …`, die
+`send_gate_test_mails.py` je Mail druckt (Briefing: `wind_zellen`, Vergleich: `orte`). Das
+Soll steht ausdruecklich im Sendeskript und wird vom Validator nicht nachgerechnet. Ungueltiges
+JSON endet mit Exit 2 (`FEHLER: --windrichtung ungueltig: …`); ohne den Schalter bleibt die
+Pruefung wie bisher (andere Mailpfade, alte Gate-Mails).
 
 Die Alarm-Pfade laufen nicht ueber das Werkzeug; hier ist der direkte Aufruf der regulaere Weg:
 
