@@ -1,0 +1,189 @@
+Mutation: Klick [data-rm] im Generator entfernt, Elementliste neu erzeugt
+TAP version 13
+# Subtest: \#3251 Vorbedingung: Katalog-Sollwerte vorhanden
+    # Subtest: DE/EN-Texte für Abweichungszahl und Zurücksetzen-Zeile stehen im Katalog
+    ok 1 - DE/EN-Texte für Abweichungszahl und Zurücksetzen-Zeile stehen im Katalog
+      ---
+      duration_ms: 0.501632
+      type: 'test'
+      ...
+    1..1
+ok 1 - \#3251 Vorbedingung: Katalog-Sollwerte vorhanden
+  ---
+  duration_ms: 1.224232
+  type: 'suite'
+  ...
+# Subtest: \#3251 AC-1: Elementliste führt den Abschnitt vorlage-abweichung
+    # Subtest: trip: Abschnitt vorhanden
+    ok 1 - trip: Abschnitt vorhanden
+      ---
+      duration_ms: 0.47221
+      type: 'test'
+      ...
+    # Subtest: trip: Picker-Stand „1 Abweichung“ (EN „1 change“) ohne Auswahlpfeil
+    not ok 2 - trip: Picker-Stand „1 Abweichung“ (EN „1 change“) ohne Auswahlpfeil
+      ---
+      duration_ms: 0.66306
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3251_vorlage_abweichung.test.ts:75:3'
+      failureType: 'testCodeFailure'
+      error: '„1 Abweichung“ fehlt im Abschnitt „vorlage-abweichung“ (trip)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3251_vorlage_abweichung.test.ts:77:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip: Zurücksetzen-Zeile auf „Alpen-Trekking“ mit Katalog-Schlüssel und EN-Sollwert
+    not ok 3 - trip: Zurücksetzen-Zeile auf „Alpen-Trekking“ mit Katalog-Schlüssel und EN-Sollwert
+      ---
+      duration_ms: 0.24983
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3251_vorlage_abweichung.test.ts:83:3'
+      failureType: 'testCodeFailure'
+      error: 'Zurücksetzen-Zeile „Auf „Alpen-Trekking“ zurücksetzen“ fehlt im Abschnitt „vorlage-abweichung“ (trip)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3251_vorlage_abweichung.test.ts:86:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: orte: Abschnitt vorhanden
+    ok 4 - orte: Abschnitt vorhanden
+      ---
+      duration_ms: 0.19717
+      type: 'test'
+      ...
+    # Subtest: orte: Picker-Stand „1 Abweichung“ (EN „1 change“) ohne Auswahlpfeil
+    not ok 5 - orte: Picker-Stand „1 Abweichung“ (EN „1 change“) ohne Auswahlpfeil
+      ---
+      duration_ms: 0.1859
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3251_vorlage_abweichung.test.ts:75:3'
+      failureType: 'testCodeFailure'
+      error: '„1 Abweichung“ fehlt im Abschnitt „vorlage-abweichung“ (orte)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3251_vorlage_abweichung.test.ts:77:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: orte: Zurücksetzen-Zeile auf „Allgemein“ mit Katalog-Schlüssel und EN-Sollwert
+    not ok 6 - orte: Zurücksetzen-Zeile auf „Allgemein“ mit Katalog-Schlüssel und EN-Sollwert
+      ---
+      duration_ms: 1.674983
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3251_vorlage_abweichung.test.ts:83:3'
+      failureType: 'testCodeFailure'
+      error: 'Zurücksetzen-Zeile „Auf „Allgemein“ zurücksetzen“ fehlt im Abschnitt „vorlage-abweichung“ (orte)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3251_vorlage_abweichung.test.ts:86:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Normalzustand bleibt unverändert: Abschnitt `vorlage` zeigt weiter „▾ unverändert“ ohne Zurücksetzen-Zeile
+    ok 7 - Normalzustand bleibt unverändert: Abschnitt `vorlage` zeigt weiter „▾ unverändert“ ohne Zurücksetzen-Zeile
+      ---
+      duration_ms: 0.763011
+      type: 'test'
+      ...
+    1..7
+not ok 2 - \#3251 AC-1: Elementliste führt den Abschnitt vorlage-abweichung
+  ---
+  duration_ms: 4.693856
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3251_vorlage_abweichung.test.ts:67:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3251 AC-2: Abgleich ordnet vorlage-abweichung dem Datensatz mit_abweichung zu
+    # Subtest: datensatzFuerAbschnitt("vorlage-abweichung") === "mit_abweichung"
+    ok 1 - datensatzFuerAbschnitt("vorlage-abweichung") === "mit_abweichung"
+      ---
+      duration_ms: 0.229579
+      type: 'test'
+      ...
+    # Subtest: grenzen-* bleibt mit_abweichung, übrige Abschnitte ohne_abweichung
+    ok 2 - grenzen-* bleibt mit_abweichung, übrige Abschnitte ohne_abweichung
+      ---
+      duration_ms: 0.22514
+      type: 'test'
+      ...
+    # Subtest: SCRIPT_ABSCHNITT erkennt vorlage-abweichung als Script-Zustand
+    ok 3 - SCRIPT_ABSCHNITT erkennt vorlage-abweichung als Script-Zustand
+      ---
+      duration_ms: 0.157661
+      type: 'test'
+      ...
+    # Subtest: abschnittHaken: vorlage-abweichung liest im App-Haken „vorlage“, andere Abschnitte unverändert
+    ok 4 - abschnittHaken: vorlage-abweichung liest im App-Haken „vorlage“, andere Abschnitte unverändert
+      ---
+      duration_ms: 0.1281
+      type: 'test'
+      ...
+    # Subtest: bedienPlan: vorlage-abweichung wird ohne Klick gelesen (Abweichung kommt aus dem Prüf-Datensatz)
+    ok 5 - bedienPlan: vorlage-abweichung wird ohne Klick gelesen (Abweichung kommt aus dem Prüf-Datensatz)
+      ---
+      duration_ms: 0.752272
+      type: 'test'
+      ...
+    1..5
+ok 3 - \#3251 AC-2: Abgleich ordnet vorlage-abweichung dem Datensatz mit_abweichung zu
+  ---
+  duration_ms: 1.733082
+  type: 'suite'
+  ...
+# Subtest: \#3251 AC-4: pauschale Ausnahmen aus \#3205 für die Zurücksetzen-Zeile sind gestrichen
+    # Subtest: keine Ausnahme mit Muster der Zurücksetzen-Zeile (DE/EN)
+    ok 1 - keine Ausnahme mit Muster der Zurücksetzen-Zeile (DE/EN)
+      ---
+      duration_ms: 0.16472
+      type: 'test'
+      ...
+    1..1
+ok 4 - \#3251 AC-4: pauschale Ausnahmen aus \#3205 für die Zurücksetzen-Zeile sind gestrichen
+  ---
+  duration_ms: 0.22869
+  type: 'suite'
+  ...
+1..4
+# tests 14
+# suites 4
+# pass 10
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 272.635573

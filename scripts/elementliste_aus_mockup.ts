@@ -12,7 +12,8 @@
 // Der Ein-Ort-Kontext des Mockups (data-ctx="ort1") wird nicht gelesen: Der Staging-Abgleich kennt nur
 // die Kontexte trip und orte.
 // dazu die reinen Script-Zustände (Grenzen bearbeiten = openEdit, Vorlagen-Auswahl = pickerOpen,
-// Speichern-Dialog = saveOpen, Kebab-Bestätigung = kebabConfirm, Test-Menü). Die Zustandsvariablen
+// Speichern-Dialog = saveOpen, Kebab-Bestätigung = kebabConfirm, Test-Menü, Vorlagen-Abweichung = devs>0
+// nach Abwahl einer Metrik per data-rm, #3251). Die Zustandsvariablen
 // liegen im Mockup in einer Closure (IIFE) und sind von außen nicht erreichbar; sie werden deshalb
 // über dieselben Klicks hergestellt, die auch ein Mensch macht (data-ctx, data-zst, data-tab,
 // data-edit, data-picker, data-save, data-k).
@@ -396,6 +397,30 @@ export function listenzeileEn(reiter: string, abschnitt: string, textDe: string,
 	return allgemein;
 }
 
+/**
+ * #3251 (Fix-Loop 1, F001): Im Mockup ist „▾ 1 Abweichung“ EIN Textknoten, live (VorlageKarte.svelte) sind
+ * Auswahlpfeil „▾ “ und Stand („1 Abweichung“, Katalog wetter.vorlage.abweichungen.*) eigene Textblöcke. Der
+ * Abschnitt vorlage-abweichung führt darum den Stand ohne Pfeil; der Pfeil ist live bereits als „zusätzlich“
+ * belegt (Besitzer #2913). Andere Texte bleiben unverändert.
+ */
+export function ohneAuswahlpfeil(r: Roh): Roh {
+	return { ...r, text: r.text.replace(/^▾\s+/u, '') };
+}
+
+/**
+ * #3251 (Fix-Loop 2, F001): Die Abweichungszahl der Vorlagenkarte hängt live am Prüf-Datensatz mit Abweichung
+ * (gemessen 21.11.: Trip „14 Abweichungen“, Orte „8 Abweichungen“), im Mockup ist sie „1 Abweichung“. Der
+ * Soll-Eintrag führt darum die Zahl als Platzhalter in der Mehrzahl-Form des Katalogs (wie „{count} Metriken“):
+ * `.one` → `.other`, Muster und EN-Soll aus dem Katalog. Nur im Abschnitt vorlage-abweichung; text_de und ID
+ * bleiben der Mockup-Text.
+ */
+export function abweichungsZahlAlsMuster(abschnitt: string, en: EnErgebnis, katalog: Katalog): EnErgebnis {
+	if (abschnitt !== 'vorlage-abweichung' || !en.i18n_key?.endsWith('.one')) return en;
+	const mehrzahl = en.i18n_key.slice(0, -'.one'.length) + '.other';
+	if (!katalog.de[mehrzahl] || !katalog.en[mehrzahl]) return en;
+	return { ...en, i18n_key: mehrzahl, muster: katalog.de[mehrzahl], text_en: katalog.en[mehrzahl], luecke: false };
+}
+
 /** Katalogschlüssel der „+ Metrik“-Chips in „Nicht im Briefing“. */
 export const CHIP_SCHLUESSEL = 'wetter.nicht_im_briefing.hinzufuegen';
 
@@ -553,7 +578,7 @@ export function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEint
 					[g.ctx, g.reiter, g.zustand, g.segment ?? '-', abschnitt].join('.') +
 					'.' +
 					createHash('sha256').update(identitaet + '|' + nr).digest('hex').slice(0, 10);
-				const en = chipEn(r.rolle, r.text, katalog) ?? listenzeileEn(g.reiter, abschnitt, r.text, katalog, ermittleEn(r.text, katalog));
+				const en = abweichungsZahlAlsMuster(abschnitt, chipEn(r.rolle, r.text, katalog) ?? listenzeileEn(g.reiter, abschnitt, r.text, katalog, ermittleEn(r.text, katalog)), katalog);
 				// Muster: aus dem Katalog (Platzhalter) oder, ohne Katalogtreffer, Zahlen als {zahl}.
 				// Ein exakter Katalogtreffer ist fester Text (z. B. „3-Tages-Ausblick“), kein Muster.
 				const zahlMuster = !en.i18n_key && /\d/.test(r.text) ? r.text.replace(ZAHL, '{zahl}') : null;
@@ -666,6 +691,13 @@ export async function erzeugeElementliste(opt: { mockupPfad: string; messagesDir
 					wetter.push(...(await lies(['.vmenu'], { nur: 'vorlage-auswahl' })));
 					await page.click('.vmenu [data-vorlage]:not(.cur)');
 					wetter.push(...(await lies(['.vmenu .confirm'], { nur: 'vorlage-bestaetigung' })));
+				}
+				// #3251: Abweichungszustand der Vorlagenkarte (devs>0) — eine Metrik abwählen, dann Picker-Zahl
+				// und Zurücksetzen-Zeile lesen. Nur Zustand normal (Bedienzustand, kein globaler Seiten-Zustand).
+				await frisch(ctx, zustand);
+				if (zustand === 'normal' && (await da('[data-rm]'))) {
+					await page.click('[data-rm]');
+					wetter.push(...(await lies(['[data-picker] small', '[data-reset]'], { abschnitt: 'vorlage-abweichung' })).map(ohneAuswahlpfeil));
 				}
 				await frisch(ctx, zustand);
 				if (await da('[data-save]')) {

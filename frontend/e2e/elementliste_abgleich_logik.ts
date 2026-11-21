@@ -388,7 +388,16 @@ export function seitenPfad(ctx: string, id: string, reiter: string): string {
 }
 
 /** Abschnitte, die nur nach einer Bedienung erscheinen (Script-Zustände im Mockup). */
-export const SCRIPT_ABSCHNITT = /^(grenzen-|vorlage-auswahl|vorlage-bestaetigung|vorlage-speichern|test-menue|kebab-)/;
+export const SCRIPT_ABSCHNITT = /^(grenzen-|vorlage-auswahl|vorlage-bestaetigung|vorlage-speichern|vorlage-abweichung|test-menue|kebab-)/;
+
+/**
+ * #3251: Abschnitt-Haken (data-abschnitt) in der App, wenn er vom Namen in der Elementliste abweicht. Der
+ * Abweichungszustand der Vorlagenkarte ist in der App dieselbe Karte (data-abschnitt="vorlage"), nur auf
+ * dem Prüf-Datensatz mit Abweichung (datensatzFuerAbschnitt).
+ */
+export function abschnittHaken(abschnitt: string): string {
+	return abschnitt === 'vorlage-abweichung' ? 'vorlage' : abschnitt;
+}
 
 /**
  * #2966 (AC-6): Bedienplan je Abschnitt. Ein Schritt klickt ein testid, liest den Bereich oder schließt
@@ -416,6 +425,8 @@ export function bedienPlan(abschnitt: string, lage: BedienLage): BedienPlan {
 		const knopf = `wetter-grenzen-aendern-${id}`;
 		return { art: 'plan', schritte: [{ aktion: 'klick', testid: knopf }, LESEN, { aktion: 'schliessen', testid: knopf }] };
 	}
+	// #3251: kein Klick nötig — der Prüf-Datensatz mit Abweichung zeigt Abweichungszahl und Zurücksetzen-Zeile.
+	if (abschnitt === 'vorlage-abweichung') return { art: 'plan', schritte: [LESEN] };
 	if (abschnitt === 'vorlage-auswahl') {
 		return { art: 'plan', schritte: [{ aktion: 'klick', testid: VORLAGE_PICKER }, LESEN, { aktion: 'schliessen', testid: VORLAGE_PICKER }] };
 	}
@@ -470,9 +481,12 @@ export function wechselZiel(ctx: string, vorlagen: string[], aktiv: string): Wec
 	return { art: 'ziel', id: andere };
 }
 
-/** #3192 (AC-1): Prüf-Datensatz je Abschnitt — Grenzen-Dialoge mit Abweichung, alles andere ohne. */
+/**
+ * #3192 (AC-1): Prüf-Datensatz je Abschnitt — Grenzen-Dialoge und (#3251) der Abweichungszustand der
+ * Vorlagenkarte mit Abweichung, alles andere ohne.
+ */
 export function datensatzFuerAbschnitt(abschnitt: string): 'mit_abweichung' | 'ohne_abweichung' {
-	return abschnitt.startsWith('grenzen-') ? 'mit_abweichung' : 'ohne_abweichung';
+	return abschnitt.startsWith('grenzen-') || abschnitt === 'vorlage-abweichung' ? 'mit_abweichung' : 'ohne_abweichung';
 }
 
 type AmpelSeite = { red: number; orange: number; yellow: number };

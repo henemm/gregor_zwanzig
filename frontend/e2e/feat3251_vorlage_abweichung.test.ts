@@ -16,6 +16,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as L from './elementliste_abgleich_logik.ts';
+import * as G from '../../scripts/elementliste_aus_mockup.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..', '..');
@@ -70,11 +71,27 @@ describe('#3251 AC-1: Elementliste führt den Abschnitt vorlage-abweichung', () 
 			assert.ok(abschnitt(ctx).length > 0, `Abschnitt „${ABSCHNITT}“ (${ctx}, Wetter, normal) fehlt in der Elementliste`);
 		});
 
-		test(`${ctx}: Picker zeigt „▾ ${ABW_DE}“ (EN „${ABW_EN}“)`, () => {
+		// Fix-Loop 1 (F001): live sind Auswahlpfeil „▾“ und Stand eigene Textblöcke (VorlageKarte.svelte); der
+		// Soll-Eintrag führt den Stand ohne Pfeil. Fix-Loop 2 (F001): die Zahl hängt live am Prüf-Datensatz mit
+		// Abweichung (gemessen 21.11.: Trip „14 Abweichungen“, Orte „8 Abweichungen“), darum Zahl als Platzhalter
+		// in der Mehrzahl-Form des Katalogs; text_de bleibt der Mockup-Text.
+		test(`${ctx}: Picker-Stand „${ABW_DE}“ ohne Auswahlpfeil, Zahl als Platzhalter (Katalog .other)`, () => {
 			const picker = abschnitt(ctx).find((e) => e.text_de.includes(ABW_DE));
-			assert.ok(picker, `„▾ ${ABW_DE}“ fehlt im Abschnitt „${ABSCHNITT}“ (${ctx})`);
-			assert.ok(picker.text_de.includes('▾'), `Picker-Text ohne „▾“: ${picker.text_de}`);
-			assert.ok(picker.text_en?.includes(ABW_EN), `EN-Sollwert „${ABW_EN}“ fehlt am Picker-Eintrag (${ctx}): ${picker.text_en}`);
+			assert.ok(picker, `„${ABW_DE}“ fehlt im Abschnitt „${ABSCHNITT}“ (${ctx})`);
+			assert.equal(picker.text_de, ABW_DE);
+			assert.equal(picker.i18n_key, 'wetter.vorlage.abweichungen.other');
+			assert.equal(picker.muster, KAT_DE['wetter.vorlage.abweichungen.other']);
+			assert.equal(picker.text_en, KAT_EN['wetter.vorlage.abweichungen.other']);
+		});
+
+		test(`${ctx}: Abgleich-Erwartung passt auf den live gemessenen Stand (DE und EN), nicht auf fremden Text`, () => {
+			const picker = abschnitt(ctx).find((e) => e.text_de === ABW_DE)!;
+			const de = L.erwartung(picker as unknown as L.ListenElement, 'de')!;
+			const en = L.erwartung(picker as unknown as L.ListenElement, 'en')!;
+			for (const ist of ['14 Abweichungen', '8 Abweichungen']) assert.ok(de.test(ist), `DE passt nicht auf „${ist}“`);
+			for (const ist of ['14 changes', '8 changes']) assert.ok(en.test(ist), `EN passt nicht auf „${ist}“`);
+			for (const fremd of ['unverändert', 'Als eigene Vorlage speichern', '▾']) assert.ok(!de.test(fremd), `DE passt auf „${fremd}“`);
+			assert.ok(!en.test('unchanged'));
 		});
 
 		test(`${ctx}: Zurücksetzen-Zeile auf „${VORLAGE[ctx]}“ mit Katalog-Schlüssel und EN-Sollwert`, () => {
@@ -113,6 +130,19 @@ describe('#3251 AC-2: Abgleich ordnet vorlage-abweichung dem Datensatz mit_abwei
 	test('SCRIPT_ABSCHNITT erkennt vorlage-abweichung als Script-Zustand', () => {
 		assert.ok(L.SCRIPT_ABSCHNITT.test(ABSCHNITT));
 	});
+
+	// Fix-Loop 1 (F002): die App hat keinen eigenen Haken; der Abschnitt wird in der Vorlagenkarte gelesen.
+	test('abschnittHaken: vorlage-abweichung liest im App-Haken „vorlage“, andere Abschnitte unverändert', () => {
+		assert.equal(L.abschnittHaken(ABSCHNITT), 'vorlage');
+		for (const a of ['vorlage', 'vorlage-auswahl', 'vorlage-bestaetigung', 'grenzen-wind', 'metriken']) {
+			assert.equal(L.abschnittHaken(a), a, `Abschnitt ${a}`);
+		}
+	});
+
+	test('bedienPlan: vorlage-abweichung wird ohne Klick gelesen (Abweichung kommt aus dem Prüf-Datensatz)', () => {
+		const plan = L.bedienPlan(ABSCHNITT, { ctx: 'trip', briefing: [], vorlagen: [], aktiveVorlage: 'alpen-trekking' });
+		assert.deepEqual(plan, { art: 'plan', schritte: [{ aktion: 'lesen' }] });
+	});
 });
 
 describe('#3251 AC-4: pauschale Ausnahmen aus #3205 für die Zurücksetzen-Zeile sind gestrichen', () => {
@@ -126,5 +156,28 @@ describe('#3251 AC-4: pauschale Ausnahmen aus #3205 für die Zurücksetzen-Zeile
 				a.muster === RESET_EN,
 		);
 		assert.deepEqual(rest, [], 'Ausnahmen für die Zurücksetzen-Zeile stehen noch in der Besitzerliste');
+	});
+});
+
+describe('#3251 Fix-Loop 2 (F001): Generator führt die Abweichungszahl als Katalog-Mehrzahl-Muster', () => {
+	const katalog = G.ladeKatalog(join(REPO, 'frontend/src/lib/i18n/messages'));
+	const einzahl = G.ermittleEn(ABW_DE, katalog);
+
+	test('ermittleEn liefert für „1 Abweichung“ die Einzahl (Ausgangslage)', () => {
+		assert.equal(einzahl.i18n_key, 'wetter.vorlage.abweichungen.one');
+	});
+
+	test('im Abschnitt vorlage-abweichung: .one → .other, Muster und EN-Soll aus dem Katalog', () => {
+		const r = G.abweichungsZahlAlsMuster(ABSCHNITT, einzahl, katalog);
+		assert.equal(r.i18n_key, 'wetter.vorlage.abweichungen.other');
+		assert.equal(r.muster, KAT_DE['wetter.vorlage.abweichungen.other']);
+		assert.equal(r.text_en, KAT_EN['wetter.vorlage.abweichungen.other']);
+		assert.equal(r.luecke, false);
+	});
+
+	test('andere Abschnitte und Nicht-Einzahl-Schlüssel bleiben unverändert', () => {
+		assert.deepEqual(G.abweichungsZahlAlsMuster('vorlage', einzahl, katalog), einzahl);
+		const reset = G.ermittleEn('Auf „Allgemein“ zurücksetzen', katalog);
+		assert.deepEqual(G.abweichungsZahlAlsMuster(ABSCHNITT, reset, katalog), reset);
 	});
 });

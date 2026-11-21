@@ -1,0 +1,30 @@
+== #3251 Fix-Loop 2 (21.11.) ==
+== node: feat3251_vorlage_abweichung + elementliste_uebersicht_2969 ==
+ok 1 - \#3251 Vorbedingung: Katalog-Sollwerte vorhanden
+ok 2 - \#3251 AC-1: Elementliste führt den Abschnitt vorlage-abweichung
+ok 3 - \#3251 AC-2: Abgleich ordnet vorlage-abweichung dem Datensatz mit_abweichung zu
+ok 4 - \#3251 AC-4: pauschale Ausnahmen aus \#3205 für die Zurücksetzen-Zeile sind gestrichen
+ok 5 - \#3251 Fix-Loop 2 (F001): Generator führt die Abweichungszahl als Katalog-Mehrzahl-Muster
+ok 6 - AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
+ok 7 - AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
+ok 8 - AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
+ok 9 - AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
+ok 10 - AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
+# tests 24
+# pass 24
+# fail 0
+== node gesamt (npm test) ==
+# tests 11382
+# pass 11376
+# fail 0
+# todo 1
+== pytest tests/test_2913_c2_besitzerliste.py == exit 0, 35 passed
+...................................                                      [100%]
+== playwright.elementliste.mockup.config.ts (Generator) == 3 passed (1.1m); Mutation Klick [data-rm] entfernt -> Test Abweichungszustand failed
+== Staging-Abgleich DE --scope wetter (fx3251/de2) ==
+Elementlisten-Abgleich: gefunden 1477, abweichend 483, nicht_pruefbar 198, freigegeben 0, zusaetzlich 142 → Exit 0 → /tmp/claude-1000/-home-hem-gregor-zwanzig/7a8960eb-7126-4b2a-86ef-33b398712053/scratchpad/fx3251/de2/bericht.json, /tmp/claude-1000/-home-hem-gregor-zwanzig/7a8960eb-7126-4b2a-86ef-33b398712053/scratchpad/fx3251/de2/bericht.md
+| trip.wetter.normal.-.vorlage-abweichung.fa42aa4f7c | trip | wetter | normal | – | vorlage-abweichung | 1 | 1 Abweichung | gefunden |  | – |
+| trip.wetter.normal.-.vorlage-abweichung.f0d20e698f | trip | wetter | normal | – | vorlage-abweichung | 2 | Auf „Alpen-Trekking“ zurücksetzen | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-abweichung.e7ca0adbe5 | orte | wetter | normal | – | vorlage-abweichung | 1 | 1 Abweichung | gefunden |  | – |
+| orte.wetter.normal.-.vorlage-abweichung.42567001b2 | orte | wetter | normal | – | vorlage-abweichung | 2 | Auf „Allgemein“ zurücksetzen | gefunden |  | – |
+abweichend ohne Besitzer: 16 (vorher st3250/de: 16); zusaetzlich 142 (vorher 142)
