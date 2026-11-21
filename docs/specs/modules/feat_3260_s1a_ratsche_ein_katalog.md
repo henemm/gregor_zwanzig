@@ -54,6 +54,17 @@ Macht die PO-Vorgabe „nur ein Ort für Metrik-Wissen, nur ein Ort für Metrik-
 
 **Regel-Budget:** Die Ratsche ersetzt die Entdeckungsstufe der Metrik-Listen-Ratsche aus #1856 (Prüfdatum 2026-11-15 abgelaufen; deren Stufe 2, Tippfehler-Prüfung registrierter Listen, bleibt bis zum Abbau der Listen); Prüfdatum der neuen Ratsche 2027-02-19.
 
+**Abweichungen bei der Umsetzung (2026-11-21, Developer):**
+
+- **Kennungen:** neben den 32 `_METRICS`-Ids zählen die Alarm-Identitäten aus dem Register (`alert_metrics`-Werte und `change_alert_metric` je Metrik, z. B. `wind_gust`, `temperature_min`). Ohne sie bliebe die Alarm-Vokabular-Kopie in Go (`AlertableMetrics`, `DefaultDeltaThreshold`) unsichtbar. Soll weiterhin aus dem Register, nicht von Hand.
+- **TS/Go-Konstanten:** ein Bezeichner, der als Konstante an eine Kennung gebunden ist (TS `const X = 'wind'`, Go `const X [Typ] = "wind"` einzeln oder im `const ( … )`-Block), zählt in einer Klammer-Spanne wie das Literal. Verzweigungen bleiben literal (wie in Python).
+- **TS/Go-Verzweigung:** neben `===`/`==` auch `!==`/`!=` und das Literal links vom Vergleich (Gleichklang mit Python `==`/`!=`); bei `case "a", "b":` zählt jedes Literal der Liste. Verzweigungs-Literale zählen nicht zusätzlich für eine Klammer-Spanne (je Literal genau eine Art). Kennungen einer bereits gemeldeten Unter-Spanne zählen für die äußere nicht mehr. Unquotierte Objektschlüssel zählen nur nach `{`, `,`, `;` oder am Zeilenanfang (kein Ternär-Rauschen). Gemeldete Zeile einer Liste = Zeile der öffnenden Klammer.
+- **SCHWELLE-Muster:** `wind(?!ow)` statt `wind` und `(?<!at)temp` statt `temp` (sonst meldeten `day_window_*`, `window` und `attempt` falsch); ergänzt um `speed`, `\bmm\b`, `dni` (sonst blieben die Wind-Wortgrenzen `speed > 60/35/15` in `compact_summary.py`, `mm > 10` und `dni_wm2 >= 600` unsichtbar).
+- **VERARBEITUNG_AUSSEN:** gezählt werden Definition und jeder lesende Verweis (`Name`/`Attribute` im Lese-Kontext), also Aufrufe und Übergaben als Funktionswert (`partial(_friendly_overview_html, …)`). Namensliste: Spec-Ausgangsbestand plus aus `weather_metrics.py` `get_weather_emoji`, `_night_emoji`, `_dni_emoji`, `_cloud_pct_emoji`, `format_wind_strength`, `format_precip_intensity`, `format_precip_daily_sum`, `format_rain_probability_scale`, `format_sunshine_scale`, `degrees_to_compass`, `get_weather_symbol`; aus `compact_summary.py` `_format_clouds`, `_format_precipitation`, `_precip_adjective`, `_find_rain_pattern`, `_format_wind`, `_find_wind_peak`, `_format_thunder`; aus `narrow.py` `_thunder_severity`, `_day_window_thunder_severity`, `_tg_day_footer`, `_gelb`; aus `risk_engine.py` `_check_thunder`, `_check_catalog_metric`, `_check_confidence`, `_check_wind_exposition`. Gleichnamige Funktionen anderswo zählen mit (z. B. `src/utils/geo.py::degrees_to_compass`).
+- **VALIDATOR_IMPORT:** je importiertem Namen ein Fund (ein zusätzlicher Name in einer bestehenden Importzeile macht rot); Produktmodule = alle obersten Pakete unter `src/` plus `api`/`src`, auch `importlib.import_module("<produkt>")`. Damit zählen auch `app.config`- und `i18n`-Importe (Spec-Wortlaut „Importe von Namen aus Produktmodulen").
+- **Frontend-Ausnahmen:** zusätzlich `__tests__/`, `*.d.ts`, `generated/` und `*.generated.*`.
+- **Startstand:** 462 Funde (ID_SAMMLUNG 48, ID_VERZWEIGUNG 57, SCHWELLE 134, VERARBEITUNG_AUSSEN 102, FRONTEND_LISTE 51, FRONTEND_VERZWEIGUNG 6, GO_LISTE 8, GO_VERZWEIGUNG 2, VALIDATOR_IMPORT 54).
+
 **Adversary mit Epic-Spec:** `.claude/agents/implementation-validator.md` bekommt die Pflicht: Bei einer Scheibe eines größeren Auftrags erhält und prüft der Adversary zusätzlich die übergeordnete Vorgabe (Epic-Spec bzw. Auftrags-Issue mit allen ACs und Pflicht-Nachträgen) und meldet jeden Widerspruch der Scheibe zu ihr als Finding (#3256 Abschnitt 1 Nr. 3).
 
 ## Expected Behavior
@@ -98,3 +109,4 @@ ADR-0127.
 ## Changelog
 
 - 2026-11-21: angelegt (Issue #3260 Schritt 1, Scheibe A).
+- 2026-11-21: umgesetzt; Abweichungen der Erkennung (Alarm-Identitäten, TS/Go-Konstanten, `!=`-Verzweigung, SCHWELLE-Muster, Verweise statt nur Aufrufe, Import je Name) unter Implementation Details dokumentiert. Startstand 462 Funde.
