@@ -526,6 +526,53 @@ def _hat_tabelle(dc: object) -> bool:
     return read_placements(_feld(dc, "placements")) is not None
 
 
+def _tabellen_folge(dc: object, grund_ids: list[str], stelle: str, surface: str) -> list[str]:
+    """#3242: Katalog-IDs, die laut Tabelle an ``stelle`` gelten, in Zeilenfolge.
+
+    Statische Zweitregel (ADR-0124, Spec #3122 Nr. 2/3/5), bewusst ohne die
+    Aufloesung des Produkts (Spiegel-Verbot): Zeilen der Grundauswahl in
+    gespeicherter Folge; abgeleitete Groesse der Grundauswahl ohne eigene Zeile
+    direkt hinter der Eltern-Zeile (hinter Geschwistern) mit deren Haken; Rest
+    der Grundauswahl hinten, ueberall an. Sperre (``stellen_sperre``) entfernt,
+    ausser ``keine_eigene_spalte``; Stundenverlauf/Ausblick nur bei E-Mail
+    strikt an; ``places[stelle] is False`` = aus."""
+    from app.metric_catalog import stellen_sperre
+    from services.placements import _feld, read_placements
+
+    gelesen = read_placements(_feld(dc, "placements"))
+    grund = list(dict.fromkeys(grund_ids))
+    zeilen = [(r.metric_id, dict(r.places)) for r in (gelesen.rows if gelesen else ())
+              if r.metric_id in grund]
+    for mid in grund:
+        elter = _ELTERN.get(mid) if surface == "trip" else None
+        ids = [m for m, _p in zeilen]
+        if mid in ids or elter not in ids:
+            continue
+        idx = ids.index(elter)
+        while idx + 1 < len(ids) and _ELTERN.get(ids[idx + 1]) == elter:
+            idx += 1
+        zeilen.insert(idx + 1, (mid, zeilen[ids.index(elter)][1]))
+    zeilen += [(m, {}) for m in grund if m not in {z for z, _p in zeilen}]
+    folge = []
+    for mid, places in zeilen:
+        email_sperre = stellen_sperre(mid, "email", surface)
+        email_an = email_sperre is None and places.get("email") is not False
+        if stelle == "email":
+            an = email_an or email_sperre == "keine_eigene_spalte"
+        else:
+            an = (email_an and stellen_sperre(mid, stelle, surface) is None
+                  and places.get(stelle) is not False)
+        if an:
+            folge.append(mid)
+    return folge
+
+
+def _orte_paare_aus_folge(folge: list[str], grund: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """#3242: Katalog-ID -> ihre Auswertungen der Grundauswahl (Katalogfolge)."""
+    return [(k["metric_id"], k["aggregation"]) for mid in folge for k in COMPARE_METRIC_CATALOG
+            if k["metric_id"] == mid and (k["metric_id"], k["aggregation"]) in grund]
+
+
 def ausblick_im_briefing(soll: dict, briefing: str | None) -> bool:
     """Steht laut Soll ein Ausblick in der Mail des Briefings ``briefing``?
     ``None`` (Typ unbekannt): wie bisher ``ausblick_an`` (irgendein Briefing)."""
@@ -546,17 +593,31 @@ def orte_ausblick_briefings(preset: dict) -> dict[str, bool]:
                               outlook_enabled=preset.get("outlook_enabled"))
 
 
+def _trip_aus_tabelle(dc: dict, grund: list[dict]) -> tuple[list[dict], list[str]]:
+    """#3242: (E-Mail-Liste, Ausblick-IDs) allein aus der Tabelle; die Liste
+    behaelt die Grundauswahl-Eintraege, die Form setzt ``_mit_tabelle``."""
+    grund_ids = [e["metric_id"] for e in grund]
+    eintrag: dict[str, dict] = {}
+    for e in grund:
+        eintrag.setdefault(e["metric_id"], e)
+    liste = [eintrag[m] for m in _tabellen_folge(dc, grund_ids, "email", "trip")]
+    return _mit_tabelle(liste, dc), _tabellen_folge(dc, grund_ids, "outlook", "trip")
+
+
 def trip_soll(trip: dict, report: str = "evening") -> dict:
     """Soll eines Trip-Briefings fuer ``report`` (morning/evening)."""
     dc = _trip_display_config(trip)
-    liste = _mit_tabelle(_trip_email_liste(dc, report), dc)
     grund = _sortiert([e for e in _eintraege(dc.get("metrics"))
                        if _waehlbar(e.get("metric_id")) and _an(e, report)])
     grundauswahl = list(dict.fromkeys(
         e["metric_id"] for e in grund if _ausblickfaehig(e["metric_id"])))
     rc = trip.get("report_config") or {}
-    # Bewusst leer: alle Zeilen abgewaehlt -> der Ausblick entfaellt.
-    ids = _ausblick(dc.get("outlook_metrics"), grundauswahl) if grundauswahl else []
+    if _hat_tabelle(dc):
+        liste, ids = _trip_aus_tabelle(dc, grund)
+    else:
+        liste = _trip_email_liste(dc, report)
+        # Bewusst leer: alle Zeilen abgewaehlt -> der Ausblick entfaellt.
+        ids = _ausblick(dc.get("outlook_metrics"), grundauswahl) if grundauswahl else []
     # #3155 (AC-12): Ausblick je Briefing aus der EINEN Regel (Kompakt-Ausnahme
     # inklusive); im Altpfad zusaetzlich nur mit Spalten (bewusst leer).
     briefings, tabelle = trip_ausblick_briefings(trip)
@@ -907,6 +968,17 @@ def zieltag_versatz(preset: dict) -> set[int]:
 _ORTE_AMPEL = frozenset({"temperature", "wind", "gust", "precipitation", "rain_probability", "uv_index"})
 
 
+def _orte_aus_tabelle(dc: dict, grundpaare: list[tuple[str, str]] | None) -> tuple:
+    """#3242: (Vergleichstabelle-Paare, Ausblick-IDs, Stundenspalten) aus der
+    Tabelle; nie eingestellt (kein ``active_metrics``) = Standardzeilen."""
+    grund = orte_standardzeilen() if grundpaare is None else grundpaare
+    grund_ids = list(dict.fromkeys(m for m, _a in grund))
+    paare = _orte_paare_aus_folge(_tabellen_folge(dc, grund_ids, "email", "compare"), grund)
+    stunden = [_REG[m].col_label for m in _tabellen_folge(dc, grund_ids, "hourly", "compare")
+               if _stuendlich(m) and m not in HOURLY_MERGE_ONLY_METRIC_IDS]
+    return paare, _tabellen_folge(dc, grund_ids, "outlook", "compare"), stunden
+
+
 def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> dict:
     """Soll eines Orts-Vergleichs; ``ortsnamen`` (Kennung -> Name) fuer die Ortsfolge."""
     dc = preset.get("display_config") or {}
@@ -922,9 +994,11 @@ def orte_soll(preset: dict, lang: str = "de", ortsnamen: dict | None = None) -> 
         # rendert die Vorgabemenge wie eine explizite Liste (HTML = Klartext,
         # Temp als eine Spanne) -- kein fester Zweig mehr im Ortsvergleich.
         ids = list(_FEST)
+    stunden = _orte_stunden(dc, grundpaare)
+    if _hat_tabelle(dc):
+        paare, ids, stunden = _orte_aus_tabelle(dc, grundpaare)
     an = orte_ausblick_briefings(preset)
     briefings = tuple(r for r in _REPORTS if an[r])
-    stunden = _orte_stunden(dc, grundpaare)
     stunden_an = preset.get("hourly_enabled", True) is not False and stunden != []
     ids_orte = [i for i in preset.get("location_ids") or [] if isinstance(i, str)]
     # #3047 AC-28: Warnzeile nur bei eingeschalteten amtlichen Warnungen
