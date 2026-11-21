@@ -833,6 +833,12 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         or (indicator_keys is not None and key in indicator_keys)
     )
 
+    if key == "precip_type":
+        # Issue #3139: Wort statt Programmname (``PrecipType.RAIN``), in jedem
+        # Modus und ohne Ampel; eine Wortquelle mit dem Orts-Vergleich.
+        from output.metric_format import precip_type_label
+        return precip_type_label(val, lang=lang)
+
     if key == "thunder":
         # Issue #1491: Gewitter ist eine reguläre Ampel-Spalte wie Wind/Böen/
         # Regen/Regenwahrscheinlichkeit/CAPE. Roh-Modus UND die Text-Fassung
