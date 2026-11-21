@@ -1,0 +1,169 @@
+TAP version 13
+# Subtest: \#3205 AC-2: Trip-Vorlagenauswahl führt die eigene Trip-Vorlage weiter
+    # Subtest: Trip, Zustand luecken: „Mallorca Frühling“ steht unter „Eigene“
+    ok 1 - Trip, Zustand luecken: „Mallorca Frühling“ steht unter „Eigene“
+      ---
+      duration_ms: 0.81006
+      type: 'test'
+      ...
+    # Subtest: Trip, Zustand normal: „Mallorca Frühling“ steht unter „Eigene“
+    ok 2 - Trip, Zustand normal: „Mallorca Frühling“ steht unter „Eigene“
+      ---
+      duration_ms: 0.4013
+      type: 'test'
+      ...
+    1..2
+ok 1 - \#3205 AC-2: Trip-Vorlagenauswahl führt die eigene Trip-Vorlage weiter
+  ---
+  duration_ms: 1.890112
+  type: 'suite'
+  ...
+# Subtest: \#3205 AC-1: Orte-Vorlagenauswahl zeigt nur Vorlagen der Art Vergleich
+    # Subtest: Orte, Zustand luecken: keine eigene Trip-Vorlage „Mallorca Frühling“
+    not ok 1 - Orte, Zustand luecken: keine eigene Trip-Vorlage „Mallorca Frühling“
+      ---
+      duration_ms: 1.408492
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3205_elementliste_vorlagen_je_art.test.ts:60:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Eigene Trip-Vorlage „Mallorca Frühling“ erscheint in der Orte-Vorlagenauswahl (Zustand luecken); Mockup-Picker muss je Art filtern
+        + actual - expected
+        
+        + [
+        +   'orte.wetter.luecken.-.vorlage-auswahl.9a9818d548'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'orte.wetter.luecken.-.vorlage-auswahl.9a9818d548'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3205_elementliste_vorlagen_je_art.test.ts:69:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: Orte, Zustand normal: keine eigene Trip-Vorlage „Mallorca Frühling“
+    not ok 2 - Orte, Zustand normal: keine eigene Trip-Vorlage „Mallorca Frühling“
+      ---
+      duration_ms: 0.357912
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3205_elementliste_vorlagen_je_art.test.ts:60:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Eigene Trip-Vorlage „Mallorca Frühling“ erscheint in der Orte-Vorlagenauswahl (Zustand normal); Mockup-Picker muss je Art filtern
+        + actual - expected
+        
+        + [
+        +   'orte.wetter.normal.-.vorlage-auswahl.827b20495b'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'orte.wetter.normal.-.vorlage-auswahl.827b20495b'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3205_elementliste_vorlagen_je_art.test.ts:69:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 2 - \#3205 AC-1: Orte-Vorlagenauswahl zeigt nur Vorlagen der Art Vergleich
+  ---
+  duration_ms: 1.926322
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3205_elementliste_vorlagen_je_art.test.ts:58:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..2
+# tests 4
+# suites 2
+# pass 2
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 156.041567
+=== pytest ===
+.......................F...........                                      [100%]
+=================================== FAILURES ===================================
+______________ test_ac12_eintraege_anderer_scheiben_unveraendert _______________
+
+daten = {'zweck': "Besitzer und Ausnahmen für den Ganzseiten-Abgleich der Elementliste (frontend/e2e/elementliste_abgleich_log...': 'Mockup Fassung 4: Inhalt der Übersicht unverändert (viewUebersicht); Etappen-Code des Prüfkonto-Trips', ...}, ...]}
+
+    def test_ac12_eintraege_anderer_scheiben_unveraendert(daten):
+        # #2795 (Scheibe d, Reiter Zustellung) hat am 15.11. die 12 Sammel-Einträge #2913-d durch Element-
+        # und Text-Besitzer ersetzt (#2795 Übergangsblock/a11y, #2967 Kontodaten, #2968 EN-Lücke, #3022 Orte-Ladezustand).
+        # #2966 (Haken im Reiter Wetter) hat am 17.11. seine 35 Einträge abgeräumt; Restabweichungen werden nach
+        # dem Staging-Abnahmelauf neu zugeordnet (AC-10 der Spec feat_2966_abgleich_haken): Dialog-Abweichungen im
+        # Reiter Wetter → #3111 (156), Mockup-Beispieldaten → #2967 (+80), EN-Lücke → #2968 (+276), Orte-Ladezustand → #3022 (+3).
+        # #3122 (ADR-0124, Mockup Fassung 4, 17.11.): die zwei Abschnitts-Besitzer kanal-inhalt (#2795) heißen jetzt was-steht-wo und hängen an #3122.
+        # #3007 (Listen Etappen/Orte) räumt #2913-e ab; den Rest (nur Köpfe) prüft tests/test_3007_besitzerliste.py.
+        # #2968 (EN-Zuordner, 19.11.) räumt alle 446 Verweise #2968 ab: 442 entfallen (Lücke geschlossen, EN
+        # eindeutig bzw. als Alternativen geführt, Grenzen-Beschriftung „gelb >“ über Regel e, zusaetzlich jetzt
+        # erklärt), vier englische Live-Texte der bewussten Abweichung → #2795.
+        # #3192 (20.11.): 156 #3111-Einträge abgeräumt, DE-Abgleich auf Mockup-Lage hat alle gefunden. 52 entfallen
+        # (EN nach Neuerzeugung der Elementliste aus dem Katalog), 100 EN-Lücken → #3194 (EN-Sollwert nicht automatisch
+        # zuordenbar), 4 EN-Lücken „eigene · aus GR221 gespeichert“ → #3151 (Mockup-Beispieldaten).
+        # #3151 (20.11.): 247 #2967 nach Seed mit Kanalauswahl und Abgleich DE+EN neu klassifiziert: 181 aufgelöst
+        # (179 entfallen, 2 EN-Lücken „Mallorca Frühling“ brauchen einen Besitzer ≠ #2968 → #3194), 66 umgehängt:
+        # Kanalzeile → #3202 (23), Grünbereich/Metriken/Kein-Alarm/„:00“ → #3203 (19), Anzeige-Metriken Trip → #3204
+        # (10), Vorlagen-Auswahl Orte/Zurücksetzen → #3205 (4), gesperrt → #3122 (+4), nur-EN-Zusatztexte → #3194 (+6).
+        # #3194 (20.11., Regel g „zusammengesetzt“ im EN-Zuordner): 100 Dialogtext-Lücken (Grenzen-Titel 54,
+        # Grünhinweis/Gewitter-Hinweis + abweichend 42, Bestätigungs-Rumpf 4) aus Katalog-Schlüsselfolgen zugeordnet
+        # und abgeräumt; Rest 8: „Mallorca Frühling“ (2, Kontodaten) und 6 nur-EN-Zusatztexte (Metrik-Register, Einheit+Hinweis).
+        # #3202 (21.11., Spec feat_3202_kanalzeile_mockup.md): Kanalzeile gekürzt wie Mockup Fassung 4, alle 23 Einträge
+        # abgeräumt; Mockup angeglichen (Telegram „verbunden“ ohne @name, E-Mail ohne „+1 Empfänger“, PO 20./21.11.)
+        # und Elementliste neu erzeugt — keine Ausnahme, keine Umhängung.
+        # #3203 (21.11., Spec feat_3203_metrikzeilen_mockup.md): alle 19 Einträge abgeräumt. Abgleich zählt sichtbaren
+        # Text unter aria-hidden (Skala, Gewitter-Stufen, „· grün: …“, Reihenfolge), Mockup-Vorbotensatz an Live
+        # angeglichen und Elementliste neu erzeugt (PO 21.11.); „:00“ ist Ausnahme (Stundenraster, feat_2913_scheibe_c_wetter_rest).
+        # Die zwei Abschnitt-Einträge metriken deckten nebenbei 16 EN-Lücken (Metriknamen aus dem Register, Einheit+
+        # Hinweis, Grünbereich ohne Einheit) ab; sie bekommen je einen Element-Besitzer #3194 (gleiche Klasse wie dessen
+        # nur-EN-Zusatztexte): #3194 8 → 24. Fix-Loop 1 (EN-Staging-Abgleich 21.11.): weitere 6 EN-Einträge „mm · Summe“/
+        # „m · Minimum“ (EN-Live-Text ohne EN-Listeneintrag) und der Zusatztext „· green: up to {zahl}“ → #3194 (24 → 31);
+        # 32 EN-Chips „+ {metrik}“ (EN-Abgleich prüft nur das Muster) → neues Issue #3241.
+        # Fix-Loop 1b: Besitzer zeigen nie auf geschlossene Issues. #3194 ist geschlossen: alle nur-EN-Restfälle
+        # (29) → #3241 (erweitert, 32 + 29 = 61); „Mallorca Frühling“ (2, Kontoname im Prüfkonto, kein
+        # Übersetzungsfall) → #3009 (Abnahme, offen). #3194 damit 0.
+        # #3204 (21.11., Spec feat_3204_anzeige_metriken_mockup.md): alle 10 Einträge abgeräumt. Mockup Fassung 4
+        # zeigt Tages-Tief/-Hoch (Gehzeit) als Nur-Anzeige-Zeilen wie die App, App-Erklärsatz folgt dem Mockup
+        # („unter „Was steht wo““); Elementliste neu erzeugt — keine Ausnahme, keine Umhängung.
+        soll = {
+            "#2967": 0, "#2966": 0, "#2913-d": 0, "#2795": 318, "#2797": 8, "#2968": 0, "#3022": 62,
+            "#3111": 0, "#3194": 0, "#3241": 61, "#3009": 2, "#3151": 4, "#3122": 14, "#3202": 0, "#3203": 0, "#3204": 0,
+            "#3205": 0, "#3145": 0,
+        }
+        ist = _verweise(daten)
+>       assert {k: ist.get(k, 0) for k in soll} == soll
+E       AssertionError: assert {'#2967': 0, ...95': 318, ...} == {'#2967': 0, ...95': 318, ...}
+E         
+E         Omitting 17 identical items, use -vv to show
+E         Differing items:
+E         {'#3205': 4} != {'#3205': 0}
+E         Use -v to get more diff
+
+tests/test_2913_c2_besitzerliste.py:159: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_2913_c2_besitzerliste.py::test_ac12_eintraege_anderer_scheiben_unveraendert
