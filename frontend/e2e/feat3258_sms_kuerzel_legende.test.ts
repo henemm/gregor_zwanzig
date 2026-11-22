@@ -13,10 +13,12 @@
 //     herrenlos (AC-3, AC-4); `{zahl}` erklärt dabei nur Zahlen (Gegenprobe mit Buchstaben).
 //
 // Herkunft der Live-Texte (Testerwartung, keine erfundenen Werte):
-//   - Staging-Abgleich `--scope wetter`, DE und EN, Trip und Orte, abgelegt als
-//     docs/artifacts/fix-3192-wetter-dialog-abgleich/abgleich-{de,en}-2.json (Feld `zusaetzlich`,
-//     Besitzer leer). Daraus stammen die Legenden-Texte (Kürzel, Bedeutungen, feste Einträge) und die
-//     SMS-Beispielwerte FN12, FD12/16, „TF- FN12 FD12/16“ und die ganze Trip-SMS-Zeile.
+//   - Staging-Abgleich `--scope wetter`, DE und EN, Trip und Orte (Berichte
+//     docs/artifacts/fix-3192-wetter-dialog-abgleich/abgleich-{de,en}-2.json, nicht getrackt). Daraus
+//     deterministisch extrahiert und getrackt: e2e/fixtures/feat3258_live_legende_{de,en}.json (nur die
+//     Texte der Live-Legende je Kontext, Reiter Wetter, keine Konto- oder Personendaten). Die
+//     SMS-Beispielwerte FN12, FD12/16, „TF- FN12 FD12/16“ und die ganze Trip-SMS-Zeile stammen aus
+//     denselben Berichten und stehen unten als Konstanten.
 //   - Metrik-Bedeutungen: Server-Katalog `kuerzel_bedeutung_de/en` (src/app/metric_catalog.py), den
 //     die Live-Antwort `legend.metrics[].meaning` liefert (src/services/placements_view_service.py
 //     `_legende`). Ein lesender Abruf GET /api/briefings/{id}/placements mit dem Staging-Prüfkonto am
@@ -224,16 +226,16 @@ describe('#3258 Reihenfolge wie live (legendeAus): erst Metriken, dann feste Ein
 
 // --------------------------------------------------------------- Gegenrichtung des Abgleichs (AC-3, AC-4)
 
-type ZusaetzlichRoh = { ctx: string; reiter: string; text: string };
-const BERICHT: Record<L.Sprache, { zusaetzlich: ZusaetzlichRoh[] }> = {
-	de: lese('docs/artifacts/fix-3192-wetter-dialog-abgleich/abgleich-de-2.json'),
-	en: lese('docs/artifacts/fix-3192-wetter-dialog-abgleich/abgleich-en-2.json'),
+/** Getrackte Fixture je Sprache: Live-Texte der Legende je Kontext (Reiter Wetter), siehe Kopfkommentar. */
+const LIVE: Record<L.Sprache, Record<string, string[]>> = {
+	de: lese('frontend/e2e/fixtures/feat3258_live_legende_de.json'),
+	en: lese('frontend/e2e/fixtures/feat3258_live_legende_en.json'),
 };
 
-/** Live-Texte der Legende je Sprache und Kontext (aus dem Staging-Bericht; Bereich ab Titel bis Ende der Legende). */
+/** Live-Texte der Legende je Sprache und Kontext (Fixture; Bereich ab Titel bis Ende der Legende). */
 function liveLegende(sprache: L.Sprache, ctx: string): string[] {
 	const titel = sprache === 'de' ? TITEL_DE : TITEL_EN;
-	const texte = BERICHT[sprache].zusaetzlich.filter((z) => z.ctx === ctx && z.reiter === 'wetter').map((z) => z.text);
+	const texte = LIVE[sprache][ctx] ?? [];
 	const start = texte.indexOf(titel);
 	assert.ok(start >= 0, `Bericht ${sprache}/${ctx}: „${titel}“ fehlt (Quelle geändert?)`);
 	// Ende: letzter fester Eintrag (Warnquelle) bzw. bei Orten die O1-Bedeutung.

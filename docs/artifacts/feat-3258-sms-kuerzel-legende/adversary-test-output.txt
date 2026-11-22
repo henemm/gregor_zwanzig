@@ -3,567 +3,567 @@ TAP version 13
     # Subtest: Skala-Zahlen der Temperatur-Leiste (-15, -10, …) sind einzelne Texte
     ok 1 - Skala-Zahlen der Temperatur-Leiste (-15, -10, …) sind einzelne Texte
       ---
-      duration_ms: 1.909265
+      duration_ms: 1.765002
       type: 'test'
       ...
     # Subtest: Gewitter-Stufenwörter keins/mittel/hoch in Reihenfolge
     ok 2 - Gewitter-Stufenwörter keins/mittel/hoch in Reihenfolge
       ---
-      duration_ms: 0.62879
+      duration_ms: 0.547521
       type: 'test'
       ...
     # Subtest: Skala-Zahlen stehen vor dem Alarm-Satz (Dokumentreihenfolge, Reihenfolge-Prüfung AC-1/AC-2)
     ok 3 - Skala-Zahlen stehen vor dem Alarm-Satz (Dokumentreihenfolge, Reihenfolge-Prüfung AC-1/AC-2)
       ---
-      duration_ms: 0.15581
+      duration_ms: 0.180941
       type: 'test'
       ...
     # Subtest: aria-hidden="false" und fehlendes aria-hidden ändern nichts
     ok 4 - aria-hidden="false" und fehlendes aria-hidden ändern nichts
       ---
-      duration_ms: 0.177761
+      duration_ms: 0.13145
       type: 'test'
       ...
     1..4
 ok 1 - \#3203 AC-1: sichtbarer Text unter aria-hidden zählt
   ---
-  duration_ms: 3.648769
+  duration_ms: 3.437874
   type: 'suite'
   ...
 # Subtest: \#3203 AC-2: Trennpunkt und grün-Text sind EIN Text
     # Subtest: „·“ (aria-hidden) neben „grün: 2 bis 27 °C“ ergibt „· grün: 2 bis 27 °C“
     ok 1 - „·“ (aria-hidden) neben „grün: 2 bis 27 °C“ ergibt „· grün: 2 bis 27 °C“
       ---
-      duration_ms: 1.629855
+      duration_ms: 0.221489
       type: 'test'
       ...
     # Subtest: Ergebnis passt auf das Elementlisten-Muster „· grün: {von} bis {bis} {einheit}“
     ok 2 - Ergebnis passt auf das Elementlisten-Muster „· grün: {von} bis {bis} {einheit}“
       ---
-      duration_ms: 0.37181
+      duration_ms: 1.624452
       type: 'test'
       ...
     # Subtest: Element ohne eigenen Text (p.wt-why) verschmilzt seine Kinder nicht
     ok 3 - Element ohne eigenen Text (p.wt-why) verschmilzt seine Kinder nicht
       ---
-      duration_ms: 0.20728
+      duration_ms: 0.243981
       type: 'test'
       ...
     1..3
 ok 2 - \#3203 AC-2: Trennpunkt und grün-Text sind EIN Text
   ---
-  duration_ms: 2.523686
+  duration_ms: 2.380663
   type: 'suite'
   ...
 # Subtest: \#3203 AC-2/AC-3 (F004): verbundener Block ohne Doppelzählung und ohne versteckten Text
     # Subtest: aria-hidden-Kind MIT Buchstaben neben Eigentext zählt nur im verbundenen Block, nicht zusätzlich einzeln
     ok 1 - aria-hidden-Kind MIT Buchstaben neben Eigentext zählt nur im verbundenen Block, nicht zusätzlich einzeln
       ---
-      duration_ms: 0.17965
+      duration_ms: 0.19067
       type: 'test'
       ...
     # Subtest: visibility:hidden unter einem verbundenen aria-hidden-Kind gelangt nicht in den Block
     ok 2 - visibility:hidden unter einem verbundenen aria-hidden-Kind gelangt nicht in den Block
       ---
-      duration_ms: 0.172551
+      duration_ms: 0.20401
       type: 'test'
       ...
     1..2
 ok 3 - \#3203 AC-2/AC-3 (F004): verbundener Block ohne Doppelzählung und ohne versteckten Text
   ---
-  duration_ms: 0.584222
+  duration_ms: 0.628061
   type: 'suite'
   ...
 # Subtest: \#3203 AC-3: Verstecktes und reine Icons erzeugen kein Rauschen
     # Subtest: display:none (am Element und am Vorfahr) zählt nicht
     ok 1 - display:none (am Element und am Vorfahr) zählt nicht
       ---
-      duration_ms: 0.176751
+      duration_ms: 0.178811
       type: 'test'
       ...
     # Subtest: visibility:hidden (am Element und am Vorfahr) zählt nicht
     ok 2 - visibility:hidden (am Element und am Vorfahr) zählt nicht
       ---
-      duration_ms: 0.0931
+      duration_ms: 0.09694
       type: 'test'
       ...
     # Subtest: Attribut hidden zählt nicht
     ok 3 - Attribut hidden zählt nicht
       ---
-      duration_ms: 0.1512
+      duration_ms: 0.21603
       type: 'test'
       ...
     # Subtest: reines SVG/Icon unter aria-hidden liefert keinen Text
     ok 4 - reines SVG/Icon unter aria-hidden liefert keinen Text
       ---
-      duration_ms: 0.10714
+      duration_ms: 0.12269
       type: 'test'
       ...
     # Subtest: Icon neben Text: nur der Text zählt
     ok 5 - Icon neben Text: nur der Text zählt
       ---
-      duration_ms: 0.07878
+      duration_ms: 0.11982
       type: 'test'
       ...
     # Subtest: script und style liefern keinen Text
     ok 6 - script und style liefern keinen Text
       ---
-      duration_ms: 0.07865
+      duration_ms: 0.115901
       type: 'test'
       ...
     # Subtest: nur Leerraum ergibt keinen Block
     ok 7 - nur Leerraum ergibt keinen Block
       ---
-      duration_ms: 0.067271
+      duration_ms: 0.109091
       type: 'test'
       ...
     1..7
 ok 4 - \#3203 AC-3: Verstecktes und reine Icons erzeugen kein Rauschen
   ---
-  duration_ms: 0.965302
+  duration_ms: 1.135081
   type: 'suite'
   ...
 # Subtest: \#3203: Browser-Regel = getestete Regel
     # Subtest: new Function(toString) liefert dieselben Ergebnisse (selbstenthalten serialisierbar)
     ok 1 - new Function(toString) liefert dieselben Ergebnisse (selbstenthalten serialisierbar)
       ---
-      duration_ms: 0.947201
+      duration_ms: 1.167131
       type: 'test'
       ...
     # Subtest: Staging-Spec überspringt aria-hidden nicht mehr und nutzt sichtbareTextBloecke (doc-compliance-test)
     ok 2 - Staging-Spec überspringt aria-hidden nicht mehr und nutzt sichtbareTextBloecke (doc-compliance-test)
       ---
-      duration_ms: 0.362961
+      duration_ms: 0.526869
       type: 'test'
       ...
     1..2
 ok 5 - \#3203: Browser-Regel = getestete Regel
   ---
-  duration_ms: 1.384084
+  duration_ms: 1.803032
   type: 'suite'
   ...
 # Subtest: \#3203 Fix-Loop 1: bisheriges Verhalten je Element, Sammel-Schleife testbar
     # Subtest: Zähler/Badge (ohne aria-hidden) bleibt eigener Text, wird nicht an den Reiternamen geklebt
     ok 1 - Zähler/Badge (ohne aria-hidden) bleibt eigener Text, wird nicht an den Reiternamen geklebt
       ---
-      duration_ms: 0.201811
+      duration_ms: 0.24274
       type: 'test'
       ...
     # Subtest: Hervorhebung im Satz bleibt getrennt wie bisher („Amtliche Warnungen“ + Hinweis)
     ok 2 - Hervorhebung im Satz bleibt getrennt wie bisher („Amtliche Warnungen“ + Hinweis)
       ---
-      duration_ms: 0.10649
+      duration_ms: 0.165389
       type: 'test'
       ...
     # Subtest: verbundenes aria-hidden-Kind wird nicht doppelt gezählt
     ok 3 - verbundenes aria-hidden-Kind wird nicht doppelt gezählt
       ---
-      duration_ms: 0.098981
+      duration_ms: 0.134601
       type: 'test'
       ...
     # Subtest: reine Zeichen unter aria-hidden („–“, „－“, „:“, „✓“) sind Dekoration; Zahlen und Wörter zählen
     ok 4 - reine Zeichen unter aria-hidden („–“, „－“, „:“, „✓“) sind Dekoration; Zahlen und Wörter zählen
       ---
-      duration_ms: 0.331751
+      duration_ms: 0.48064
       type: 'test'
       ...
     # Subtest: dasselbe Zeichen ohne aria-hidden zählt wie bisher
     ok 5 - dasselbe Zeichen ohne aria-hidden zählt wie bisher
       ---
-      duration_ms: 0.09518
+      duration_ms: 0.136889
       type: 'test'
       ...
     # Subtest: mit eingabe: Eingabefeld-Text und aria-label von Knopf/switch in Dokumentreihenfolge
     ok 6 - mit eingabe: Eingabefeld-Text und aria-label von Knopf/switch in Dokumentreihenfolge
       ---
-      duration_ms: 0.197682
+      duration_ms: 0.26182
       type: 'test'
       ...
     # Subtest: ohne eingabe: keine aria-label und keine Eingaben (nur Textblöcke)
     ok 7 - ohne eingabe: keine aria-label und keine Eingaben (nur Textblöcke)
       ---
-      duration_ms: 0.09945
+      duration_ms: 0.138419
       type: 'test'
       ...
     # Subtest: svg wird auch mit eingabe ausgeschlossen (kein Text, keine Beschriftung darin)
     ok 8 - svg wird auch mit eingabe ausgeschlossen (kein Text, keine Beschriftung darin)
       ---
-      duration_ms: 0.09605
+      duration_ms: 0.137841
       type: 'test'
       ...
     # Subtest: unter aria-hidden keine aria-label und keine Eingaben (wie bisher)
     ok 9 - unter aria-hidden keine aria-label und keine Eingaben (wie bisher)
       ---
-      duration_ms: 0.096289
+      duration_ms: 0.124491
       type: 'test'
       ...
     # Subtest: display:none am Vorfahr schließt auch Eingaben und aria-label aus
     ok 10 - display:none am Vorfahr schließt auch Eingaben und aria-label aus
       ---
-      duration_ms: 0.08307
+      duration_ms: 0.11569
       type: 'test'
       ...
     # Subtest: Staging-Spec gibt eingabeText an sichtbareTextBloecke und hat keine eigene Element-Schleife (doc-compliance-test)
     ok 11 - Staging-Spec gibt eingabeText an sichtbareTextBloecke und hat keine eigene Element-Schleife (doc-compliance-test)
       ---
-      duration_ms: 0.259711
+      duration_ms: 0.34555
       type: 'test'
       ...
     1..11
 ok 6 - \#3203 Fix-Loop 1: bisheriges Verhalten je Element, Sammel-Schleife testbar
   ---
-  duration_ms: 2.123614
+  duration_ms: 2.695614
   type: 'suite'
   ...
 # Subtest: \#3258 Vorbedingung: Katalog-Sollwerte vorhanden
     # Subtest: Titel und feste Einträge stehen DE/EN im Katalog wetter.wsw.legende.*
     ok 1 - Titel und feste Einträge stehen DE/EN im Katalog wetter.wsw.legende.*
       ---
-      duration_ms: 0.624252
+      duration_ms: 0.543061
       type: 'test'
       ...
     1..1
 ok 7 - \#3258 Vorbedingung: Katalog-Sollwerte vorhanden
   ---
-  duration_ms: 1.426493
+  duration_ms: 1.282232
   type: 'suite'
   ...
 # Subtest: \#3258 AC-1/AC-2: Elementliste führt den Block „Kürzel erklärt“ im Abschnitt was-steht-wo
     # Subtest: trip: Titel „Kürzel erklärt“ mit Katalog-Schlüssel und EN-Soll „Abbreviations explained“
     ok 1 - trip: Titel „Kürzel erklärt“ mit Katalog-Schlüssel und EN-Soll „Abbreviations explained“
       ---
-      duration_ms: 6.200515
+      duration_ms: 0.925572
       type: 'test'
       ...
     # Subtest: trip: Legende steht hinter der SMS-Beispielzeile
     ok 2 - trip: Legende steht hinter der SMS-Beispielzeile
       ---
-      duration_ms: 4.02731
+      duration_ms: 0.60017
       type: 'test'
       ...
     # Subtest: trip: feste Beispielwarnungen mit Kürzel, DE-Text, Katalog-Schlüssel und EN-Soll aus dem Katalog
     ok 3 - trip: feste Beispielwarnungen mit Kürzel, DE-Text, Katalog-Schlüssel und EN-Soll aus dem Katalog
       ---
-      duration_ms: 12.15923
+      duration_ms: 0.452611
       type: 'test'
       ...
     # Subtest: trip: Spec-Beispiele „amtliche Warnung …“, „Warnung Wind“, „Warnung Starkregen“ mit EN-Soll
     ok 4 - trip: Spec-Beispiele „amtliche Warnung …“, „Warnung Wind“, „Warnung Starkregen“ mit EN-Soll
       ---
-      duration_ms: 0.370211
+      duration_ms: 0.245371
       type: 'test'
       ...
     # Subtest: trip: Metrik-Kürzel mit Bedeutung wie live (Server-Katalog)
     ok 5 - trip: Metrik-Kürzel mit Bedeutung wie live (Server-Katalog)
       ---
-      duration_ms: 0.261451
+      duration_ms: 0.243401
       type: 'test'
       ...
     # Subtest: orte: Titel „Kürzel erklärt“ mit Katalog-Schlüssel und EN-Soll „Abbreviations explained“
     ok 6 - orte: Titel „Kürzel erklärt“ mit Katalog-Schlüssel und EN-Soll „Abbreviations explained“
       ---
-      duration_ms: 0.285721
+      duration_ms: 0.229939
       type: 'test'
       ...
     # Subtest: orte: Legende steht hinter der SMS-Beispielzeile
     ok 7 - orte: Legende steht hinter der SMS-Beispielzeile
       ---
-      duration_ms: 0.374292
+      duration_ms: 0.328671
       type: 'test'
       ...
     # Subtest: orte: feste Beispielwarnungen mit Kürzel, DE-Text, Katalog-Schlüssel und EN-Soll aus dem Katalog
     ok 8 - orte: feste Beispielwarnungen mit Kürzel, DE-Text, Katalog-Schlüssel und EN-Soll aus dem Katalog
       ---
-      duration_ms: 0.495731
+      duration_ms: 0.25516
       type: 'test'
       ...
     # Subtest: orte: Spec-Beispiele „amtliche Warnung …“, „Warnung Wind“, „Warnung Starkregen“ mit EN-Soll
     ok 9 - orte: Spec-Beispiele „amtliche Warnung …“, „Warnung Wind“, „Warnung Starkregen“ mit EN-Soll
       ---
-      duration_ms: 0.2954
+      duration_ms: 0.292041
       type: 'test'
       ...
     # Subtest: orte: Metrik-Kürzel mit Bedeutung wie live (Server-Katalog)
     ok 10 - orte: Metrik-Kürzel mit Bedeutung wie live (Server-Katalog)
       ---
-      duration_ms: 1.660364
+      duration_ms: 0.18347
       type: 'test'
       ...
     # Subtest: orte: fester Eintrag O1 mit Bedeutung wie live, nach den Beispielwarnungen
     ok 11 - orte: fester Eintrag O1 mit Bedeutung wie live, nach den Beispielwarnungen
       ---
-      duration_ms: 0.18598
+      duration_ms: 0.166042
       type: 'test'
       ...
     # Subtest: trip: kein O1-Eintrag (nur die Orte-SMS nummeriert Orte)
     ok 12 - trip: kein O1-Eintrag (nur die Orte-SMS nummeriert Orte)
       ---
-      duration_ms: 2.237835
+      duration_ms: 0.21247
       type: 'test'
       ...
     1..12
 ok 8 - \#3258 AC-1/AC-2: Elementliste führt den Block „Kürzel erklärt“ im Abschnitt was-steht-wo
   ---
-  duration_ms: 31.570327
+  duration_ms: 4.744786
   type: 'suite'
   ...
 # Subtest: \#3258 Reihenfolge wie live (legendeAus): erst Metriken, dann feste Einträge, jedes Paar einmal
     # Subtest: trip: Metrik-Kürzel vor den festen Einträgen, feste Einträge in Katalog-Reihenfolge
     ok 1 - trip: Metrik-Kürzel vor den festen Einträgen, feste Einträge in Katalog-Reihenfolge
       ---
-      duration_ms: 0.327921
+      duration_ms: 0.347171
       type: 'test'
       ...
     # Subtest: trip: jedes Paar Kürzel→Bedeutung nur einmal
     ok 2 - trip: jedes Paar Kürzel→Bedeutung nur einmal
       ---
-      duration_ms: 0.357821
+      duration_ms: 0.34027
       type: 'test'
       ...
     # Subtest: orte: Metrik-Kürzel vor den festen Einträgen, feste Einträge in Katalog-Reihenfolge
     ok 3 - orte: Metrik-Kürzel vor den festen Einträgen, feste Einträge in Katalog-Reihenfolge
       ---
-      duration_ms: 0.777761
+      duration_ms: 0.63415
       type: 'test'
       ...
     # Subtest: orte: jedes Paar Kürzel→Bedeutung nur einmal
     ok 4 - orte: jedes Paar Kürzel→Bedeutung nur einmal
       ---
-      duration_ms: 0.174731
+      duration_ms: 0.17554
       type: 'test'
       ...
     1..4
 ok 9 - \#3258 Reihenfolge wie live (legendeAus): erst Metriken, dann feste Einträge, jedes Paar einmal
   ---
-  duration_ms: 2.225064
+  duration_ms: 1.655632
   type: 'suite'
   ...
 # Subtest: \#3258 AC-4: Texte der Legende sind im Abgleich nicht mehr herrenlos (DE und EN, Trip und Orte)
     # Subtest: de/trip: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
     ok 1 - de/trip: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
       ---
-      duration_ms: 33.038549
+      duration_ms: 19.895434
       type: 'test'
       ...
     # Subtest: de/orte: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
     ok 2 - de/orte: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
       ---
-      duration_ms: 17.695634
+      duration_ms: 16.10192
       type: 'test'
       ...
     # Subtest: en/trip: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
     ok 3 - en/trip: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
       ---
-      duration_ms: 24.372129
+      duration_ms: 10.811734
       type: 'test'
       ...
     # Subtest: en/orte: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
     ok 4 - en/orte: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
       ---
-      duration_ms: 13.324521
+      duration_ms: 7.891739
       type: 'test'
       ...
     1..4
 ok 10 - \#3258 AC-4: Texte der Legende sind im Abgleich nicht mehr herrenlos (DE und EN, Trip und Orte)
   ---
-  duration_ms: 88.679115
+  duration_ms: 54.895614
   type: 'suite'
   ...
 # Subtest: \#3258 AC-3: SMS-Beispielwerte als Zahl-Muster, Besitzer \#3258
     # Subtest: de/trip: FN12, FD12/16 und die ganze SMS-Zeile sind erklärt; dieselben Texte mit Buchstaben statt Zahlen nicht
     ok 1 - de/trip: FN12, FD12/16 und die ganze SMS-Zeile sind erklärt; dieselben Texte mit Buchstaben statt Zahlen nicht
       ---
-      duration_ms: 42.365292
+      duration_ms: 18.840583
       type: 'test'
       ...
     # Subtest: en/trip: FN12, FD12/16 und die ganze SMS-Zeile sind erklärt; dieselben Texte mit Buchstaben statt Zahlen nicht
     ok 2 - en/trip: FN12, FD12/16 und die ganze SMS-Zeile sind erklärt; dieselben Texte mit Buchstaben statt Zahlen nicht
       ---
-      duration_ms: 33.253891
+      duration_ms: 11.390044
       type: 'test'
       ...
     # Subtest: Besitzerliste: mindestens ein Muster-Eintrag mit {zahl}, verweis \#3258 und Grund „hängt vom Prüf-Datensatz ab“
     ok 3 - Besitzerliste: mindestens ein Muster-Eintrag mit {zahl}, verweis \#3258 und Grund „hängt vom Prüf-Datensatz ab“
       ---
-      duration_ms: 0.518231
+      duration_ms: 0.384191
       type: 'test'
       ...
     1..3
 ok 11 - \#3258 AC-3: SMS-Beispielwerte als Zahl-Muster, Besitzer \#3258
   ---
-  duration_ms: 76.426155
+  duration_ms: 30.832766
   type: 'suite'
   ...
 # Subtest: AC-12: Hash-Check Mockup ↔ elementliste.json (ohne Browser)
     # Subtest: Hash in der JSON entspricht dem SHA-256 der Mockup-Datei
     ok 1 - Hash in der JSON entspricht dem SHA-256 der Mockup-Datei
       ---
-      duration_ms: 12.259
+      duration_ms: 8.069549
       type: 'test'
       ...
     # Subtest: pruefeHashAktuell: Original grün, veränderte Kopie rot
     ok 2 - pruefeHashAktuell: Original grün, veränderte Kopie rot
       ---
-      duration_ms: 22.267304
+      duration_ms: 13.545656
       type: 'test'
       ...
     1..2
 ok 12 - AC-12: Hash-Check Mockup ↔ elementliste.json (ohne Browser)
   ---
-  duration_ms: 35.682336
+  duration_ms: 22.441767
   type: 'suite'
   ...
 # Subtest: AC-9: alle Kombinationen Kontext × Zustand × Reiter, Tabelle „Was steht wo“, ohne Mockup-Rahmen
     # Subtest: jede Soll-Kombination hat mindestens ein Element
     ok 1 - jede Soll-Kombination hat mindestens ein Element
       ---
-      duration_ms: 28.256649
+      duration_ms: 15.844288
       type: 'test'
       ...
     # Subtest: kein Eintrag trägt ein Kanal-Segment, die ersetzte Karte „Inhalt je Kanal und Fläche“ ist weg (ADR-0124)
     ok 2 - kein Eintrag trägt ein Kanal-Segment, die ersetzte Karte „Inhalt je Kanal und Fläche“ ist weg (ADR-0124)
       ---
-      duration_ms: 39.800137
+      duration_ms: 8.538589
       type: 'test'
       ...
     # Subtest: Tabelle „Was steht wo“: nur im Wetter-Reiter, nur normal und Konto mit Lücken, für Trip und Orte
     ok 3 - Tabelle „Was steht wo“: nur im Wetter-Reiter, nur normal und Konto mit Lücken, für Trip und Orte
       ---
-      duration_ms: 28.082829
+      duration_ms: 8.062759
       type: 'test'
       ...
     # Subtest: Stellen der Tabelle: E-Mail, Telegram, SMS und 3-Tages-Ausblick überall; Stundenverlauf nur bei Orte
     ok 4 - Stellen der Tabelle: E-Mail, Telegram, SMS und 3-Tages-Ausblick überall; Stundenverlauf nur bei Orte
       ---
-      duration_ms: 25.432952
+      duration_ms: 7.620598
       type: 'test'
       ...
     # Subtest: keine Texte aus .frame, data-fb oder .tag
     ok 5 - keine Texte aus .frame, data-fb oder .tag
       ---
-      duration_ms: 43.279285
+      duration_ms: 15.103818
       type: 'test'
       ...
     # Subtest: beide Kontexte und alle vier Kanäle sind vertreten (Kanal-Tabelle im Reiter Zustellung)
     ok 6 - beide Kontexte und alle vier Kanäle sind vertreten (Kanal-Tabelle im Reiter Zustellung)
       ---
-      duration_ms: 19.257187
+      duration_ms: 7.614359
       type: 'test'
       ...
     1..6
 ok 13 - AC-9: alle Kombinationen Kontext × Zustand × Reiter, Tabelle „Was steht wo“, ohne Mockup-Rahmen
   ---
-  duration_ms: 184.711829
+  duration_ms: 63.234085
   type: 'suite'
   ...
 # Subtest: AC-10: Schema je Eintrag, eindeutige IDs, dynamische Texte als ein Element mit Muster
     # Subtest: jeder Eintrag hat alle Felder mit passenden Typen
     ok 1 - jeder Eintrag hat alle Felder mit passenden Typen
       ---
-      duration_ms: 17.135521
+      duration_ms: 18.211472
       type: 'test'
       ...
     # Subtest: IDs sind eindeutig
     ok 2 - IDs sind eindeutig
       ---
-      duration_ms: 11.411687
+      duration_ms: 6.040878
       type: 'test'
       ...
     # Subtest: Reihenfolge: ordnung ist je Kombination und Abschnitt eindeutig
     ok 3 - Reihenfolge: ordnung ist je Kombination und Abschnitt eindeutig
       ---
-      duration_ms: 10.588566
+      duration_ms: 6.544159
       type: 'test'
       ...
     # Subtest: dynamische Texte: je Kombination und Abschnitt kein Text doppelt, der sich nur in Zahlen unterscheidet
     ok 4 - dynamische Texte: je Kombination und Abschnitt kein Text doppelt, der sich nur in Zahlen unterscheidet
       ---
-      duration_ms: 14.686116
+      duration_ms: 9.331881
       type: 'test'
       ...
     # Subtest: es gibt Elemente mit Muster, und jedes Muster enthält einen Platzhalter
     ok 5 - es gibt Elemente mit Muster, und jedes Muster enthält einen Platzhalter
       ---
-      duration_ms: 17.406701
+      duration_ms: 6.546388
       type: 'test'
       ...
     1..5
 ok 14 - AC-10: Schema je Eintrag, eindeutige IDs, dynamische Texte als ein Element mit Muster
   ---
-  duration_ms: 73.60659
+  duration_ms: 46.928665
   type: 'suite'
   ...
 # Subtest: AC-11: EN aus dem Katalog — exakter Treffer, Muster, sonst Lücke (nie erfunden)
     # Subtest: Katalog ist flach und zweisprachig geladen
     ok 1 - Katalog ist flach und zweisprachig geladen
       ---
-      duration_ms: 0.13489
+      duration_ms: 0.122809
       type: 'test'
       ...
     # Subtest: exakter Treffer: EN-Wert desselben Schlüssels
     ok 2 - exakter Treffer: EN-Wert desselben Schlüssels
       ---
-      duration_ms: 14.031733
+      duration_ms: 7.294658
       type: 'test'
       ...
     # Subtest: Musterabgleich: Platzhalter-Text aus dem Katalog liefert das EN-Muster (Platzhalter bleiben, \#2913 C5)
     ok 3 - Musterabgleich: Platzhalter-Text aus dem Katalog liefert das EN-Muster (Platzhalter bleiben, \#2913 C5)
       ---
-      duration_ms: 7.99774
+      duration_ms: 3.792835
       type: 'test'
       ...
     # Subtest: kein Treffer: luecke = true, kein erfundenes EN
     ok 4 - kein Treffer: luecke = true, kein erfundenes EN
       ---
-      duration_ms: 19.762537
+      duration_ms: 7.182499
       type: 'test'
       ...
     # Subtest: in der erzeugten Liste: Lücke ⇔ kein EN; Treffer ⇔ Schlüssel im Katalog
     ok 5 - in der erzeugten Liste: Lücke ⇔ kein EN; Treffer ⇔ Schlüssel im Katalog
       ---
-      duration_ms: 22.493004
+      duration_ms: 7.478289
       type: 'test'
       ...
     # Subtest: der Reitername „Zustellung“ ist in der Liste kein Lückenposten
     ok 6 - der Reitername „Zustellung“ ist in der Liste kein Lückenposten
       ---
-      duration_ms: 48.435387
+      duration_ms: 5.612125
       type: 'test'
       ...
     1..6
 ok 15 - AC-11: EN aus dem Katalog — exakter Treffer, Muster, sonst Lücke (nie erfunden)
   ---
-  duration_ms: 113.171545
+  duration_ms: 31.749688
   type: 'suite'
   ...
 # Subtest: AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
 ok 16 - AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog
   ---
-  duration_ms: 16.993392
+  duration_ms: 7.9795
   type: 'test'
   ...
 # Subtest: AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
 ok 17 - AC-2: Die Mockup-Notiz „Im Mockup nicht ausgearbeitet.“ ist kein Soll-Eintrag
   ---
-  duration_ms: 22.340603
+  duration_ms: 12.630496
   type: 'test'
   ...
 # Subtest: AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
 ok 18 - AC-3: Bisherige 2646 Einträge unverändert, Mockup-Hash unverändert
   ---
-  duration_ms: 41.776361
+  duration_ms: 22.842618
   type: 'test'
   ...
 # Subtest: AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
 ok 19 - AC-4: Keine Pauschal-Ausnahme für die Übersicht; Einzel-Ausnahmen je ctx mit Grund und Spec
   ---
-  duration_ms: 4.162189
+  duration_ms: 1.502741
   type: 'test'
   ...
 # Subtest: AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
 ok 20 - AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inhalt erklärt, unbekannter Text zusaetzlich
   ---
-  duration_ms: 72.429485
+  duration_ms: 35.963272
   type: 'test'
   ...
 1..20
@@ -574,5 +574,4 @@ ok 20 - AC-5: Gegenrichtung Übersicht — Kopf, Bereichskopf und bekannter Inha
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 1060.341551
-......................................                                   [100%]
+# duration_ms 560.089558

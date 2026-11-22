@@ -31,6 +31,7 @@ ok 5 - \#3258 AC-3: SMS-Beispielwerte als Zahl-Muster, Besitzer \#3258
 # tests 24
 # pass 24
 # fail 0
+(CI-Fix: Live-Texte aus getrackter Fixture e2e/fixtures/feat3258_live_legende_{de,en}.json; beide Läufe oben und unten ohne die nicht getrackten Berichte fix-3192…/abgleich-{de,en}-2.json im Arbeitsbaum)
 
 ### node gesamt: 'src/lib/**/__tests__/*.test.ts' e2e/*.test.ts
 # tests 8612

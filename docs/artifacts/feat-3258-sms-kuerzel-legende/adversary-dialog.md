@@ -1,6 +1,6 @@
 # Adversary Dialog — feat-3258-sms-kuerzel-legende
 Spec: docs/specs/modules/feat_3258_sms_kuerzel_legende.md
-Datum: 2026-11-22 07:07
+Datum: 2026-11-22 07:46
 
 ## Checkliste
 - [x] **Input:** Mockup Fassung 4 mit Legende; Staging-Prüfkonto (Trip und Orte), Sprache DE und EN.
@@ -111,6 +111,35 @@ Confirmation:
   Evidence: Kein Produktcode, Katalog oder Prüfdaten im Diff (Testdateien unter frontend/src nur Tests).
   Status: CONFIRMED
 
+**Adversary (Runde 3, CI-Fix, kurz):** Der Test `frontend/e2e/feat3258_sms_kuerzel_legende.test.ts` liest jetzt die getrackten Fixtures `frontend/e2e/fixtures/feat3258_live_legende_{de,en}.json` (Dateien untracked-neu, nicht ignoriert).
+(a) Treue: Jeder Fixture-Text (DE Trip 51, Orte 34; EN Trip 54, Orte 37) steht im Vorher-Bericht (stg3251) unter `zusaetzlich` im selben Kontext; keiner steht noch im Nachher-Bericht r2 (alle erklärt). Inhalt nur Legenden-Texte (Kürzel, Bedeutungen, feste Einträge, O1), keine Konto-, Mail- oder Personendaten. Die SMS-Beispielzeile im Test nennt „Port d'And“ (Etappe des Prüf-Datensatzes, erfundener Seed), kein Personenbezug.
+(b) Mutationen am Test: Besitzer-Eintrag `FN{zahl}` entfernt: Test AC-3 ROT (2 rot). Legenden-Mutation „Warnung Wind“ zu „Warnung Windx“ in elementliste.json (4 Treffer): 10 Tests ROT (AC-1/2, Reihenfolge, AC-4). sha256 vor und nach gleich (Besitzer 4da311d7…, Liste 4f1227f8…). Frischer Stand: 24 passed.
+(c) Das Verschieben des Ordners docs/artifacts/fix-3192-wetter-dialog-abgleich wurde vom bash_gate-Hook geblockt (#447/#448); nichts verschoben, nichts verändert. Ersatznachweis: Der Test liest nur Liste, Besitzerliste, Katalog und die zwei Fixtures; der Pfad fix-3192 steht nur im Kopfkommentar (Zeile 17).
+
+Confirmation:
+  AC: AC-3
+  Code reference: frontend/e2e/fixtures/feat3258_live_legende_de.json:1
+  Evidence: Fixture DE gleich den Live-Texten (Vorher-Bericht), nur Legenden-Texte; Besitzer-Mutation rot.
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-3
+  Code reference: frontend/e2e/fixtures/feat3258_live_legende_en.json:1
+  Evidence: Fixture EN gleich den Live-Texten (Vorher-Bericht), nur Legenden-Texte, keine Personendaten.
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-4
+  Code reference: frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:231
+  Evidence: Test liest die getrackten Fixtures, beide Mutationen rot, 24 passed.
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-1
+  Code reference: docs/artifacts/feat-3258-sms-kuerzel-legende/test-green-output.txt:1
+  Evidence: Neue grüne Ausgabe des Entwicklers liegt vor.
+  Status: CONFIRMED
+
 ## Herkunft der Vorbedingungen
 
 kein Sprachprofil konfiguriert (`precondition_origins.default_lang`). Keine Produktionsschreibstelle betroffen: Änderung betrifft nur Mockup, Generator, Listen und Tests.
@@ -120,19 +149,22 @@ kein Sprachprofil konfiguriert (`precondition_origins.default_lang`). Keine Prod
 ═══════════════════════════════════════
 VERDICT: VERIFIED
 ═══════════════════════════════════════
-Tests: 422 node passed + 38 pytest passed, 0 failed, 0 übersprungen
-Edge cases: Live DE/EN geprüft, 5 Mutationen alle rot, Probe zur Ursache F001
-Regressions: None found (0 Statuswechsel)
-Checklist: 10/10 points proven (AC-5 in der Lesart „keine neue Ursache“)
+Tests: feat3258 24 passed, 0 failed, 0 übersprungen (Runde 2: 422 node, 38 Python-Tests)
+Edge cases: Fixtures treu und frei von Personendaten, 2 Mutationen rot
+Regressions: None found
+Checklist: 10/10 points proven
 
 ## Geprüfte Dateien
 
+- sha256:073c433c47480c415b948540c383e618cb893348e61d0a56919757e389b9fce3  docs/artifacts/feat-3258-sms-kuerzel-legende/test-green-output.txt
 - sha256:d974b584e2f228a7ade9eab49d5551c229ae53a37414dea57e915993e7fd9d91  docs/context/einstellungen_neu/daten/kuerzel_bedeutung.json
 - sha256:4f1227f88fd14bb3d1670e875b7d6d1ec94024283ebb65bf9f994228a50daedf  docs/context/einstellungen_neu/elementliste.json
 - sha256:4da311d72884c61e49b7ad8939fe1dd25aaaa10280bb9b1fdd31cb23e4283782  docs/context/einstellungen_neu/elementliste_besitzer.json
 - sha256:c347e818e03ed26119a6a9fd3460258b3409e8c322914041df6dbb9503cdb972  docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html
 - sha256:5dde3d4748c0c39cc57930b6ec79c10024da909558e279a83866ed270dc8531d  frontend/e2e/elementliste_abgleich_logik.ts
-- sha256:922c26f99788d81c8150a53af1ccda9632f06a99f64b686df260edfb375c02ac  frontend/e2e/feat3258_sms_kuerzel_legende.test.ts
+- sha256:639b41bd5012ce9d0eb07c7f16290325d28389a366d2498c4d1a0c3d9c82084f  frontend/e2e/feat3258_sms_kuerzel_legende.test.ts
+- sha256:99c94aa9027bfda3851c47437c29b2a50819ce6362cc05b17bab3e13ed4ec90d  frontend/e2e/fixtures/feat3258_live_legende_de.json
+- sha256:47afa8c972061b0cfdfec7974fadcc6ca1aba3f11f7a9bbbc01e5e1a0017985a  frontend/e2e/fixtures/feat3258_live_legende_en.json
 - sha256:868483900daca343bb9f4ef31d211b1f2a6c394c8e499fe26d2385f3d7c41521  frontend/src/lib/__tests__/elementliste_aktuell.test.ts
 - sha256:289badee2b6663ed7e0b84b6fb6be97833b2c6a87c658a8aed93be5cfafba085  frontend/src/lib/__tests__/elementliste_uebersicht_2969.test.ts
 - sha256:b7b3fcb670d4c3d74cda84c3a00c950810d5ed42cf35d009469d11cd835059a9  scripts/elementliste_aus_mockup.ts
@@ -142,12 +174,15 @@ Checklist: 10/10 points proven (AC-5 in der Lesart „keine neue Ursache“)
 ## Prüfbasis
 
 - base: 43a5c0df154b842f8b27523a0448cfd69ae4ed62
+- blob:6a38ea5cc037502711228fdebac2984e973d329c  docs/artifacts/feat-3258-sms-kuerzel-legende/test-green-output.txt
 - blob:58c2cf1005c97a8d952db515822ba5be1282b73d  docs/context/einstellungen_neu/daten/kuerzel_bedeutung.json
 - blob:849d775d4a767bf62c49c65d7d2a8b2ca4224faf  docs/context/einstellungen_neu/elementliste.json
 - blob:5d5e7ec5a140da4eba80222d3a1d8277cd77467c  docs/context/einstellungen_neu/elementliste_besitzer.json
 - blob:2ee949c8cb0a8f1248079fd36d998b9a69c07515  docs/context/einstellungen_neu/seiten/mockup-hub-fassung4.html
 - blob:c6202bcddf63fe82845f3e0aaf6dcd1666b66c8a  frontend/e2e/elementliste_abgleich_logik.ts
-- blob:8e8e35c0adf3b11d6eaebf26c8f6f785ba89c57a  frontend/e2e/feat3258_sms_kuerzel_legende.test.ts
+- blob:ff2fa464cbdb5688abbb8b9a44d14b04fdeb36bc  frontend/e2e/feat3258_sms_kuerzel_legende.test.ts
+- blob:cb9b6e7621de04de69209a0d2949aaea87c9e697  frontend/e2e/fixtures/feat3258_live_legende_de.json
+- blob:6d298996b79890e6731b199baed00da86df58eff  frontend/e2e/fixtures/feat3258_live_legende_en.json
 - blob:a347d8ccd704aec94adb7af1169e67db20ed1eb0  frontend/src/lib/__tests__/elementliste_aktuell.test.ts
 - blob:f08129e325daa18852dd7a281d906cdb58b9c0cd  frontend/src/lib/__tests__/elementliste_uebersicht_2969.test.ts
 - blob:15c949f47dd9b9a932d2101f0de130491b6e3d0c  scripts/elementliste_aus_mockup.ts
