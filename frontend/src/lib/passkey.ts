@@ -13,6 +13,7 @@ import {
 	parseCreationOptionsFromJSON,
 	parseRequestOptionsFromJSON
 } from '@github/webauthn-json/browser-ponyfill';
+import { zielNachAnmeldung } from './utils/safeRedirect.ts';
 
 export function isWebAuthnSupported(): boolean {
 	return typeof window !== 'undefined' && !!window.PublicKeyCredential;
@@ -104,8 +105,10 @@ export async function loginWithPasskey(kennung: string): Promise<void> {
 	if (!finishRes.ok) {
 		throw new Error('invalid_credentials');
 	}
-	// Cookie is now set; reload so the SvelteKit root layout sees it.
-	window.location.assign('/');
+	// Cookie is now set; full navigation so the SvelteKit root layout sees it.
+	// Issue #3281: back to the allowed `redirect` of the login page (it may be
+	// a Go path under /api/, hence no client-side goto).
+	window.location.assign(zielNachAnmeldung(window.location.search));
 }
 
 /**
@@ -158,7 +161,7 @@ export async function loginWithDiscoverablePasskey(signal?: AbortSignal): Promis
 		body: JSON.stringify(body)
 	});
 	if (!finishRes.ok) throw new Error('invalid_credentials');
-	window.location.assign('/');
+	window.location.assign(zielNachAnmeldung(window.location.search));
 }
 
 /**

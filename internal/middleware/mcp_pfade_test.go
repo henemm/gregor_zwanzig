@@ -1,7 +1,8 @@
 package middleware
 
 // MCP-Konnektor „Gregor Wetter“ (Issue #3281, Scheibe 2): gezielte Ausnahmen
-// der Schutzschichten. Nur /token und /register sind Maschinenpfade; die
+// der Schutzschichten. Nur /token, /register und /api/mcp (Bearer-Token statt
+// Cookie, kein CSRF) sind Maschinenpfade; die
 // Zustimmung (POST /authorize) bleibt unter der Herkunftspruefung, darf aber
 // ein Formular sein. Die Anmeldepruefung laesst OAuth-, Metadaten- und
 // MCP-Pfade durch (der MCP-Pfad prueft das Bearer-Token selbst), sonst nichts.
@@ -13,13 +14,13 @@ import (
 	"testing"
 )
 
-func TestIsMachinePath_NurTokenUndRegister(t *testing.T) {
-	for _, p := range []string{"/api/mcp/oauth/token", "/api/mcp/oauth/register"} {
+func TestIsMachinePath_TokenRegisterUndMCP(t *testing.T) {
+	for _, p := range []string{"/api/mcp/oauth/token", "/api/mcp/oauth/register", "/api/mcp"} {
 		if !IsMachinePath(p) {
 			t.Errorf("%s muss Maschinenpfad sein", p)
 		}
 	}
-	for _, p := range []string{"/api/mcp/oauth/authorize", "/api/mcp", "/api/mcp/oauth/tokenx", "/api/mcp/oauth/"} {
+	for _, p := range []string{"/api/mcp/oauth/authorize", "/api/mcpx", "/api/mcp/", "/api/mcp/oauth/tokenx", "/api/mcp/oauth/"} {
 		if IsMachinePath(p) {
 			t.Errorf("%s darf kein Maschinenpfad sein", p)
 		}
@@ -51,7 +52,7 @@ func TestOriginGuard_ZustimmungBleibtGeschuetzt(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }))
 	for pfad, want := range map[string]int{
 		"/api/mcp/oauth/authorize": http.StatusForbidden,
-		"/api/mcp":                 http.StatusForbidden,
+		"/api/mcp":                 http.StatusOK,
 		"/api/mcp/oauth/token":     http.StatusOK,
 		"/api/mcp/oauth/register":  http.StatusOK,
 	} {

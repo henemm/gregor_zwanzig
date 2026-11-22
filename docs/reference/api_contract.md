@@ -211,7 +211,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/auth/export` | GET |
 | `/api/auth/forgot-password` | POST |
 | `/api/auth/google/callback` | GET |
-| `/api/auth/google/init` | GET |
+| `/api/auth/google/init` | GET — optional `?redirect=<relativer Pfad>` (#3281): zulässiges Ziel wird im Cookie `gz_oauth_redirect` (HttpOnly, 600 s) gemerkt, der Callback springt nach erfolgreicher Anmeldung dorthin statt auf `/` |
 | `/api/auth/login` | POST |
 | `/api/auth/logout` | POST |
 | `/api/auth/logout-all` | POST |
@@ -5387,7 +5387,7 @@ Abfrage-Schnittstelle für die Claude-App, **kein Kanal** (ADR-0095 unberührt).
 | `POST /api/mcp/oauth/register` | RFC 7591, JSON `{redirect_uris, client_name?, token_endpoint_auth_method?}`; nur `https://claude.ai/api/mcp/auth_callback` und Loopback (`http://localhost`/`127.0.0.1`, Port frei), sonst 400 `invalid_redirect_uri`; 201 mit `client_id` (`c_…`); 429 `too_many_requests` (20/h je IP, 500/Tag gesamt) |
 | `GET/POST /api/mcp/oauth/authorize` | Parameter `response_type=code`, `client_id` (DCR-Kennung oder CIMD-Adresse auf `claude.ai`), `redirect_uri`, `code_challenge` + `code_challenge_method=S256` (Pflicht), `state`, `scope`, `resource` (= `<Basis>/api/mcp`). Ungültige Anfrage: 400-HTML, nie Weiterleitung. Ohne Sitzung: 302 `/login?redirect=<authorize-Pfad>`. Ohne Freigabe/gesperrt: 403-HTML, kein Code. POST `aktion=erlauben` → 303 an `redirect_uri` mit `code`, `state`, `iss`; sonst `error=access_denied`. Zustimmungsseite mit CSP (`form-action 'self' <Ziel>`, `frame-ancestors 'none'`) |
 | `POST /api/mcp/oauth/token` | Formular. `grant_type=authorization_code` (`code`, `redirect_uri`, `client_id`, `code_verifier`; jeder Versuch verbraucht den Code, zweites Einlösen widerruft die Familie) oder `refresh_token` (Rotation; ein rotierter Token entwertet die Familie). 200 `{"access_token","token_type":"Bearer","expires_in":3600,"refresh_token","scope"}`, sonst 400 `invalid_grant`/`unsupported_grant_type`/`invalid_request`, 401 `invalid_client` |
-| `POST /api/mcp` | JSON-RPC 2.0 (auch Liste); ohne/ungültiges Token 401 mit `WWW-Authenticate: Bearer resource_metadata="<Basis>/.well-known/oauth-protected-resource/api/mcp"` (`, error="invalid_token"` bei vorgelegtem Token). Methoden `initialize` (Protokolle `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05`), `ping`, `tools/list`, `tools/call`; Benachrichtigungen → 202, kein JSON → 400 `-32700`, unbekannte Methode `-32601` |
+| `POST /api/mcp` | Maschinenpfad (keine Herkunftsprüfung, keine JSON-Pflicht der Schutzschicht); das Sitzungs-Cookie wirkt hier nie als Anmeldung. JSON-RPC 2.0 (auch Liste); ohne/ungültiges Token 401 mit `WWW-Authenticate: Bearer resource_metadata="<Basis>/.well-known/oauth-protected-resource/api/mcp"` (`, error="invalid_token"` bei vorgelegtem Token). Methoden `initialize` (Protokolle `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05`), `ping`, `tools/list`, `tools/call`; Benachrichtigungen → 202, kein JSON → 400 `-32700`, unbekannte Methode `-32601` |
 
 **Werkzeuge** (Namen und Felder unübersetzt, Beschreibungen und Fehlertexte in der Kontosprache aus `internal/i18n/messages/{de,en}/mcp.json`):
 

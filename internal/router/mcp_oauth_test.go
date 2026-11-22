@@ -344,3 +344,35 @@ func TestMCP_TokensNurAlsHashAufDerPlatte(t *testing.T) {
 		t.Errorf("Token-Ablage fehlt: %v", err)
 	}
 }
+
+// Nacharbeit (Tech Lead): /api/mcp ist Maschinenpfad. Die Claude-App darf
+// eine Herkunft mitschicken; das Sitzungs-Cookie wirkt dort nie als Anmeldung.
+func TestMCP_HerkunftClaudeAIMitTokenUndCookieOhneToken(t *testing.T) {
+	w := neueMCPWelt(t, "anna")
+	keks := w.konto(model.User{ID: "anna"})
+	tok, _ := w.verbinden(keks)
+	for _, methode := range []string{http.MethodPost, http.MethodGet, http.MethodDelete} {
+		req := httptest.NewRequest(methode, "/api/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Origin", "https://claude.ai")
+		req.Header.Set("Sec-Fetch-Site", "cross-site")
+		req.Header.Set("Authorization", "Bearer "+tok["access_token"].(string))
+		want := map[string]int{http.MethodPost: http.StatusOK, http.MethodGet: http.StatusMethodNotAllowed, http.MethodDelete: http.StatusMethodNotAllowed}[methode]
+		if rec := w.anfrage(req); rec.Code != want {
+			t.Errorf("%s mit Origin claude.ai und Token: %d, erwartet %d (%s)", methode, rec.Code, want, rec.Body.String())
+		}
+		req = httptest.NewRequest(methode, "/api/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Origin", "https://claude.ai")
+		req.AddCookie(keks)
+		if rec := w.anfrage(req); rec.Code != http.StatusUnauthorized {
+			t.Errorf("%s mit gueltigem Cookie ohne Bearer: %d, erwartet 401", methode, rec.Code)
+		}
+	}
+	// Die Zustimmung bleibt unter der Herkunftspruefung.
+	_, ch := pkcePaar()
+	_, c := w.registrieren(mcpCallback)
+	if rec := w.authorizePost(authorizeWerte(c["client_id"].(string), ch), "erlauben", keks, "https://claude.ai"); rec.Code != http.StatusForbidden {
+		t.Errorf("Zustimmung mit fremder Herkunft: %d", rec.Code)
+	}
+}

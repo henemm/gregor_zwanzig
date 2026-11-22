@@ -23,3 +23,20 @@ export function loginFormAktion(raw: string | null | undefined): string {
 	const ziel = safeRedirectPath(raw, '');
 	return ziel ? `?/login&redirect=${encodeURIComponent(ziel)}` : '?/login';
 }
+
+/**
+ * Issue #3281 — Link zu einem anderen Anmeldeweg (Google, Code-Anmeldung), der
+ * den erlaubten Rücksprung als `?redirect=` mitnimmt; sonst `pfad` unverändert.
+ */
+export function mitRuecksprung(pfad: string, raw: string | null | undefined): string {
+	const ziel = safeRedirectPath(raw, '');
+	return ziel ? `${pfad}?redirect=${encodeURIComponent(ziel)}` : pfad;
+}
+
+/**
+ * Issue #3281 — Ziel nach einer Anmeldung im Browser (Passkey): der erlaubte
+ * `redirect` aus der Abfrage der Seite (`location.search`), sonst `/`.
+ */
+export function zielNachAnmeldung(search: string): string {
+	return safeRedirectPath(new URLSearchParams(search).get('redirect'));
+}

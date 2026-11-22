@@ -5,6 +5,7 @@ import { apiBase as API } from '$lib/server/apiBase.js';
 import { SESSION_MAX_AGE_SECONDS } from '$lib/auth.js';
 import { cookieSicher } from '$lib/server/cookieSicherheit.js';
 import { trFor } from '$lib/i18n/index.js';
+import { safeRedirectPath } from '$lib/utils/safeRedirect.js';
 
 
 export const load: PageServerLoad = async ({ url }) => {
@@ -56,6 +57,8 @@ export const actions = {
 			}
 		}
 
-		redirect(302, '/');
+		// Issue #3281: zum erlaubten Ruecksprung der Anmeldeseite (Abfrage der
+		// Seitenadresse, das Formular postet ohne action dorthin), sonst `/`.
+		redirect(302, safeRedirectPath(url.searchParams.get('redirect')));
 	}
 } satisfies Actions;

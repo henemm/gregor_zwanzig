@@ -19,7 +19,7 @@
 				{$t('auth.magic.profil_hinweis')}
 			</div>
 			<a
-				href="/magic-link/verify?email={encodeURIComponent(form.email ?? '')}"
+				href="/magic-link/verify?email={encodeURIComponent(form.email ?? '')}{form.redirect ? `&redirect=${encodeURIComponent(form.redirect)}` : ''}"
 				class="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
 			>
 				{$t('auth.code.titel')}
