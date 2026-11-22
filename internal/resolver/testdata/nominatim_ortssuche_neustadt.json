@@ -1,0 +1,148 @@
+[
+ {
+  "place_id": 123860214,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "relation",
+  "osm_id": 62724,
+  "lat": "49.3536057",
+  "lon": "8.1360247",
+  "category": "boundary",
+  "type": "administrative",
+  "place_rank": 12,
+  "importance": 0.5509972100850539,
+  "addresstype": "town",
+  "name": "Neustadt an der Weinstraße",
+  "display_name": "Neustadt an der Weinstraße, Rheinland-Pfalz, Deutschland",
+  "address": {
+   "town": "Neustadt an der Weinstraße",
+   "state": "Rheinland-Pfalz",
+   "ISO3166-2-lvl4": "DE-RP",
+   "country": "Deutschland",
+   "country_code": "de"
+  },
+  "boundingbox": [
+   "49.2959810",
+   "49.4009799",
+   "8.0009672",
+   "8.3173792"
+  ]
+ },
+ {
+  "place_id": 419454962,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "relation",
+  "osm_id": 431323,
+  "lat": "50.0802150",
+  "lon": "14.4214725",
+  "category": "boundary",
+  "type": "cadastral",
+  "place_rank": 22,
+  "importance": 0.5351253935685435,
+  "addresstype": "cadastral",
+  "name": "Neustadt",
+  "display_name": "Neustadt, Stadtbezirk Prag 1, Prag, Tschechien",
+  "address": {
+   "cadastral": "Neustadt",
+   "city_district": "Stadtbezirk Prag 1",
+   "city": "Prag",
+   "ISO3166-2-lvl4": "CZ-10",
+   "country": "Tschechien",
+   "country_code": "cz"
+  },
+  "boundingbox": [
+   "50.0657291",
+   "50.0945016",
+   "14.4108898",
+   "14.4432339"
+  ]
+ },
+ {
+  "place_id": 132222419,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "node",
+  "osm_id": 297896658,
+  "lat": "50.0789658",
+  "lon": "14.4233288",
+  "category": "place",
+  "type": "suburb",
+  "place_rank": 19,
+  "importance": 0.5351253935685435,
+  "addresstype": "suburb",
+  "name": "Neustadt",
+  "display_name": "Neustadt, Stadtbezirk Prag 1, Prag, 111 21, Tschechien",
+  "address": {
+   "suburb": "Neustadt",
+   "city_district": "Stadtbezirk Prag 1",
+   "city": "Prag",
+   "ISO3166-2-lvl4": "CZ-10",
+   "postcode": "111 21",
+   "country": "Tschechien",
+   "country_code": "cz"
+  },
+  "boundingbox": [
+   "50.0589658",
+   "50.0989658",
+   "14.4033288",
+   "14.4433288"
+  ]
+ },
+ {
+  "place_id": 140102599,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "relation",
+  "osm_id": 1162990,
+  "lat": "52.5045772",
+  "lon": "9.4616921",
+  "category": "boundary",
+  "type": "administrative",
+  "place_rank": 16,
+  "importance": 0.48986029728240804,
+  "addresstype": "town",
+  "name": "Neustadt am Rübenberge",
+  "display_name": "Neustadt am Rübenberge, Region Hannover, Niedersachsen, Deutschland",
+  "address": {
+   "town": "Neustadt am Rübenberge",
+   "county": "Region Hannover",
+   "state": "Niedersachsen",
+   "ISO3166-2-lvl4": "DE-NI",
+   "country": "Deutschland",
+   "country_code": "de"
+  },
+  "boundingbox": [
+   "52.4387582",
+   "52.6771116",
+   "9.2378330",
+   "9.6612511"
+  ]
+ },
+ {
+  "place_id": 148841089,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "relation",
+  "osm_id": 382433,
+  "lat": "54.1029898",
+  "lon": "10.8186738",
+  "category": "boundary",
+  "type": "administrative",
+  "place_rank": 16,
+  "importance": 0.4884028158285721,
+  "addresstype": "town",
+  "name": "Neustadt in Holstein",
+  "display_name": "Neustadt in Holstein, Kreis Ostholstein, Schleswig-Holstein, 23730, Deutschland",
+  "address": {
+   "town": "Neustadt in Holstein",
+   "county": "Kreis Ostholstein",
+   "state": "Schleswig-Holstein",
+   "ISO3166-2-lvl4": "DE-SH",
+   "postcode": "23730",
+   "country": "Deutschland",
+   "country_code": "de"
+  },
+  "boundingbox": [
+   "54.0841782",
+   "54.1312323",
+   "10.7844868",
+   "10.8944978"
+  ]
+ }
+]
