@@ -113,6 +113,16 @@ ANKER: dict[str, tuple[str, str]] = {
     "api.fehler.wetterdienst_fehler": (
         "Der Wetterdienst ist gerade nicht erreichbar. Bitte versuche es später erneut.",
         "The weather service is currently unavailable. Please try again later."),
+    # Issue #3281: Zeitraum-Fehler des MCP-Wetter-Endpunkts.
+    "api.fehler.mcp_zeitpunkt_ungueltig": (
+        "Die Zeitangabe für {parameter} ist ungültig. Erwartet wird ISO 8601, zum Beispiel 2026-11-22T14:00.",
+        "The time given for {parameter} is invalid. Expected ISO 8601, for example 2026-11-22T14:00."),
+    "api.fehler.mcp_bis_vor_von": (
+        "Das Ende des Zeitraums (bis) muss nach dem Beginn (von) liegen.",
+        "The end of the period (bis) must be after its start (von)."),
+    "api.fehler.mcp_zeitraum_ausserhalb": (
+        "Der Zeitraum liegt außerhalb der Vorhersage, für ihn gibt es keine Stundenwerte.",
+        "The period lies outside the forecast; there are no hourly values for it."),
     "api.fehler.unbekannt": (
         "Die Anfrage konnte nicht verarbeitet werden.",
         "The request could not be processed."),
