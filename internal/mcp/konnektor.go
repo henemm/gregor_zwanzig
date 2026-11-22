@@ -73,7 +73,11 @@ func (h *Handler) Endpunkt(w http.ResponseWriter, r *http.Request) {
 	var antwort any
 	if roh[0] == '[' {
 		var liste []json.RawMessage
-		json.Unmarshal(roh, &liste)
+		if json.Unmarshal(roh, &liste) != nil || len(liste) == 0 {
+			// JSON-RPC 2.0, Abschnitt 6: ein leerer Batch ist eine ungueltige Anfrage.
+			jsonAntwort(w, http.StatusOK, rpcFehler(nil, -32600, "Invalid Request"))
+			return
+		}
 		var antworten []any
 		for _, n := range liste {
 			if a := s.antwortAuf(n); a != nil {

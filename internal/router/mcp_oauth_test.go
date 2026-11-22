@@ -345,6 +345,30 @@ func TestMCP_TokensNurAlsHashAufDerPlatte(t *testing.T) {
 	}
 }
 
+// F007 (Adversary #3282): /register haengt im Router an einer IP-Bremse von
+// 20 Registrierungen je Stunde; eine andere Adresse ist davon unberuehrt.
+func TestMCP_RegisterIPBremse(t *testing.T) {
+	w := neueMCPWelt(t)
+	anfrage := func(ip string) int {
+		req := httptest.NewRequest(http.MethodPost, "/api/mcp/oauth/register",
+			strings.NewReader(`{"client_name":"Claude","redirect_uris":["`+mcpCallback+`"]}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.RemoteAddr = ip + ":4711"
+		return w.anfrage(req).Code
+	}
+	for i := 0; i < 20; i++ {
+		if c := anfrage("192.0.2.10"); c != http.StatusCreated {
+			t.Fatalf("Registrierung %d: %d", i+1, c)
+		}
+	}
+	if c := anfrage("192.0.2.10"); c != http.StatusTooManyRequests {
+		t.Errorf("21. Registrierung derselben Adresse: %d (erwartet 429)", c)
+	}
+	if c := anfrage("192.0.2.11"); c != http.StatusCreated {
+		t.Errorf("andere Adresse gebremst: %d", c)
+	}
+}
+
 // Nacharbeit (Tech Lead): /api/mcp ist Maschinenpfad. Die Claude-App darf
 // eine Herkunft mitschicken; das Sitzungs-Cookie wirkt dort nie als Anmeldung.
 func TestMCP_HerkunftClaudeAIMitTokenUndCookieOhneToken(t *testing.T) {

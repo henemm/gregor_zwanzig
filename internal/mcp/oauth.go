@@ -30,6 +30,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -159,7 +160,22 @@ func (h *Handler) wwwAuthenticate(fehler bool) string {
 // loopback: http://localhost bzw. 127.0.0.1, jeder Port, ohne Nutzer-Info.
 func loopback(uri string) bool {
 	u, err := url.Parse(uri)
-	return err == nil && u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1") && u.User == nil
+	return err == nil && u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1") &&
+		u.User == nil && portGueltig(u)
+}
+
+// portGueltig: kein Port oder eine Zahl 1..65535; "localhost:" (leerer Port
+// nach dem Doppelpunkt) zaehlt nicht als ohne Port.
+func portGueltig(u *url.URL) bool {
+	if strings.HasSuffix(u.Host, ":") {
+		return false
+	}
+	p := u.Port()
+	if p == "" {
+		return true
+	}
+	n, err := strconv.Atoi(p)
+	return err == nil && n >= 1 && n <= 65535
 }
 
 // redirectErlaubt: darf ueberhaupt ein Code an diese Adresse gehen?
