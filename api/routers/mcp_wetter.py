@@ -103,6 +103,9 @@ def get_mcp_wetter(
     lon: float = Query(..., ge=-180, le=180),
     von: Optional[str] = Query(default=None, max_length=40),
     bis: Optional[str] = Query(default=None, max_length=40),
+    # Issue #1991 (wie /forecast): optionaler Hoehen-Override; ohne Angabe
+    # ermittelt Open-Meteo die Hoehe selbst aus dem DEM.
+    elevation_m: Optional[int] = Query(default=None),
 ):
     from app.config import Location, Settings
     from providers.base import get_provider
@@ -111,7 +114,7 @@ def get_mcp_wetter(
     start, ende, begrenzt = _zeitraum(von, bis, zone)
     try:
         reihe = get_provider("openmeteo").fetch_forecast(
-            Location(latitude=lat, longitude=lon), start=start, end=ende,
+            Location(latitude=lat, longitude=lon, elevation_m=elevation_m), start=start, end=ende,
             enrich_ensemble=False, enrich_snow=False,
         )
     except Exception as e:
