@@ -26,8 +26,11 @@
 	import { abmeldungLiegtVor, raeumeGeraetespeicher, vergissAbmeldung } from '$lib/pwa/geraetespeicher';
 	import { isWebAuthnSupported, loginWithPasskey, loginWithDiscoverablePasskey } from '$lib/passkey';
 	import { t } from '$lib/i18n';
+	import { loginFormAktion } from '$lib/utils/safeRedirect.js';
 
 	let { form, data }: { form: ActionData; data: { googleEnabled: boolean; sitzungAktiv?: boolean } } = $props();
+	// Issue #3281: der Ruecksprung (`redirect`) reist mit dem Formular mit.
+	const loginAktion = $derived(loginFormAktion($page.url.searchParams.get('redirect')));
 	const registered = $derived($page.url.searchParams.get('registered') === '1');
 	// Issue #1006 — Sitzung abgelaufen (zentraler 401-Redirect aus api.ts).
 	const sessionExpired = $derived($page.url.searchParams.get('expired') === '1');
@@ -263,7 +266,7 @@
 
 		<!-- Issue #2271: `action="?/login"` ist Pflicht — die Seite hat seit dem
 		     Resend-Formular zwei benannte Actions und keine `default` mehr. -->
-		<form method="POST" action="?/login" class="space-y-4">
+		<form method="POST" action={loginAktion} class="space-y-4">
 			<div class="space-y-2">
 				<!-- Issue #2194: Kennung ist die E-Mail-Adresse. `name`/`id` bleiben
 				     `username` (Vertrag mit Go-API, E2E-Selektoren); `type="text"`,

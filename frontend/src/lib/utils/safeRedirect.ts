@@ -12,3 +12,14 @@ export function safeRedirectPath(raw: string | null | undefined, fallback = '/')
 	if (HAS_BACKSLASH_OR_CONTROL_CHAR.test(raw)) return fallback;
 	return raw;
 }
+
+/**
+ * Issue #3281 — Ziel des Anmeldeformulars. `action="?/login"` ersetzt die
+ * Abfrage der Seite; ein `redirect` der Seitenadresse (z. B. Rücksprung zur
+ * Autorisierung des MCP-Konnektors) muss deshalb ausdrücklich mitreisen. Nur
+ * ein Wert, den `safeRedirectPath` akzeptiert, wird übernommen.
+ */
+export function loginFormAktion(raw: string | null | undefined): string {
+	const ziel = safeRedirectPath(raw, '');
+	return ziel ? `?/login&redirect=${encodeURIComponent(ziel)}` : '?/login';
+}

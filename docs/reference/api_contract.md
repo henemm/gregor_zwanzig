@@ -273,6 +273,10 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/locations/resolve` | POST |
 | `/api/locations/{id}` | DELETE, GET, PATCH, PUT |
 | `/api/locations/{id}/weather-config` | GET, PUT |
+| `/api/mcp` | POST (MCP JSON-RPC mit `Authorization: Bearer`), GET/DELETE → 401 ohne Token, sonst 405 — MCP-Konnektor „Gregor Wetter“ (#3281, ADR-0128, Abschnitt 27) |
+| `/api/mcp/oauth/authorize` | GET (Zustimmungsseite, ohne Sitzung 302 auf `/login?redirect=…`), POST (Formular, nur eigene Herkunft) — #3281 |
+| `/api/mcp/oauth/register` | POST — Dynamic Client Registration, öffentlich, 20/h je IP (#3281) |
+| `/api/mcp/oauth/token` | POST (`application/x-www-form-urlencoded`) — öffentlich (#3281) |
 | `/api/metric-presets` | GET, POST |
 | `/api/metric-presets/{id}` | DELETE, PATCH |
 | `/api/metrics` | GET | (Issue #2662: je Größe zusätzlich `label_de`, `label_en`, `alert_label`, `alert_label_en`; je Auswertung `label_en`; `label` bleibt deutsch. Issue #2946: je Größe `threshold_unit` = Einheit der Ampel-Grenzwerte, z. B. Sichtweite `m`) |
@@ -5372,8 +5376,29 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 | `POST /lang` (nur SvelteKit-Frontend, nicht Go) | Formfeld `lang`; setzt `gz_lang` für Besucher (Paket #2648) |
 | Fehlerobjekt (Zielbild ab #2675) | `{"code": "...", "message": "..."}`; bis dahin bleibt `{"error": "..."}` |
 
+## 27) MCP-Konnektor „Gregor Wetter“ (Issue #3281, ADR-0128)
+
+Abfrage-Schnittstelle für die Claude-App, **kein Kanal** (ADR-0095 unberührt). Zugang nur für Kennungen in `GZ_MCP_USER_IDS` (leer = niemand), nie für gesperrte Konten (ADR-0080); beides wird bei jedem Token-Gebrauch geprüft. Basis aller Adressen ist `GZ_PUBLIC_HOST`.
+
+| Pfad | Verhalten |
+|---|---|
+| `GET /.well-known/oauth-protected-resource[/api/mcp]` | RFC 9728: `{"resource": "<Basis>/api/mcp", "authorization_servers": ["<Basis>"], "scopes_supported": ["wetter","offline_access"], "bearer_methods_supported": ["header"]}`; SvelteKit reicht die Wurzelpfade unverändert an Go durch |
+| `GET /.well-known/oauth-authorization-server` | RFC 8414: `issuer`, Endpunkte unter `/api/mcp/oauth/`, nur `S256`, `token_endpoint_auth_methods_supported: ["none"]`, `client_id_metadata_document_supported: true`, `authorization_response_iss_parameter_supported: true` |
+| `POST /api/mcp/oauth/register` | RFC 7591, JSON `{redirect_uris, client_name?, token_endpoint_auth_method?}`; nur `https://claude.ai/api/mcp/auth_callback` und Loopback (`http://localhost`/`127.0.0.1`, Port frei), sonst 400 `invalid_redirect_uri`; 201 mit `client_id` (`c_…`); 429 `too_many_requests` (20/h je IP, 500/Tag gesamt) |
+| `GET/POST /api/mcp/oauth/authorize` | Parameter `response_type=code`, `client_id` (DCR-Kennung oder CIMD-Adresse auf `claude.ai`), `redirect_uri`, `code_challenge` + `code_challenge_method=S256` (Pflicht), `state`, `scope`, `resource` (= `<Basis>/api/mcp`). Ungültige Anfrage: 400-HTML, nie Weiterleitung. Ohne Sitzung: 302 `/login?redirect=<authorize-Pfad>`. Ohne Freigabe/gesperrt: 403-HTML, kein Code. POST `aktion=erlauben` → 303 an `redirect_uri` mit `code`, `state`, `iss`; sonst `error=access_denied`. Zustimmungsseite mit CSP (`form-action 'self' <Ziel>`, `frame-ancestors 'none'`) |
+| `POST /api/mcp/oauth/token` | Formular. `grant_type=authorization_code` (`code`, `redirect_uri`, `client_id`, `code_verifier`; jeder Versuch verbraucht den Code, zweites Einlösen widerruft die Familie) oder `refresh_token` (Rotation; ein rotierter Token entwertet die Familie). 200 `{"access_token","token_type":"Bearer","expires_in":3600,"refresh_token","scope"}`, sonst 400 `invalid_grant`/`unsupported_grant_type`/`invalid_request`, 401 `invalid_client` |
+| `POST /api/mcp` | JSON-RPC 2.0 (auch Liste); ohne/ungültiges Token 401 mit `WWW-Authenticate: Bearer resource_metadata="<Basis>/.well-known/oauth-protected-resource/api/mcp"` (`, error="invalid_token"` bei vorgelegtem Token). Methoden `initialize` (Protokolle `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05`), `ping`, `tools/list`, `tools/call`; Benachrichtigungen → 202, kein JSON → 400 `-32700`, unbekannte Methode `-32601` |
+
+**Werkzeuge** (Namen und Felder unübersetzt, Beschreibungen und Fehlertexte in der Kontosprache aus `internal/i18n/messages/{de,en}/mcp.json`):
+
+- `ort_suchen {text}` → `{"kandidaten": [{name, anzeigename, land, lat, lon, zeitzone}]}` (höchstens 5, Mengenbremse `aufloesen`).
+- `wetter {ort | lat+lon, von?, bis?}` → Antwort des Core-Endpunkts `GET /api/_internal/mcp/wetter` (`zeitzone`, `von`, `bis`, `begrenzt`, `einheiten`, `stunden[]` in Ortszeit mit Offset, u. a. `precip_1h_mm`, `pop_pct`, `sonnenminuten`) plus `ort {name?, land?, lat, lon, zeitzone}` und bei `begrenzt` ein `hinweis`. Mehrdeutiger Ort: `{"mehrdeutig": true, "kandidaten": [...], "hinweis"}` ohne Stundenwerte. Unbekannter Ort, ungültige Eingabe, Mengenbremse, erschöpftes Kontingent (`user_interactive`, ADR-0117) und Wetterdienst-Fehler: `isError: true` mit Katalogtext (bei Wartezeiten mit Sekunden bzw. Minuten).
+
+Ablage: `GZ_DATA_DIR/mcp/clients.json` (DCR-Clients) und `GZ_DATA_DIR/mcp/tokens.json` (nur sha256-Hashes); Codes und Client-Dokumente nur im Speicher.
+
 ## Changelog
 
+- 2026-11-22: Issue #3281 (ADR-0128) — MCP-Konnektor „Gregor Wetter“: OAuth 2.1 (`/api/mcp/oauth/{register,authorize,token}`, Metadaten unter `/.well-known/oauth-*`) und MCP-Endpunkt `POST /api/mcp` mit den Werkzeugen `ort_suchen` und `wetter` (Abschnitt 27). Neue Env `GZ_MCP_USER_IDS`.
 - 2026-11-20: Issue #3197 (ADR-0108) — Etappen-Feld `stages[].grundtempo_kmh` (optional, 0,5 bis 60 km/h): überschreibt nur das Grundtempo dieser Etappe, Fortbewegung bleibt trip-weit; `arrival_calculated` je Etappe mit diesem Tempo. PUT/POST: außerhalb des Bereichs oder kein Zahlwert → 422 (`invalid_params`); fehlt das Feld, gilt das Trip-Tempo (Zurücknehmen entfernt es). Ungültige gespeicherte Werte werden beim Laden ignoriert. Keine Migration.
 - 2026-11-20: Issue #3196 (ADR-0108 Nr. 2/5) — Trip-Feld `tempo {fortbewegung, grundtempo_kmh}` (Abschnitt „Tempo“): `PUT /api/trips/{id}` (Key fehlt = Bestand, gesetzt = nur dieses Feld, `arrival_calculated` neu), `POST /api/trips` prüft `tempo` (422 bei ungültigem Wert). Gehzeit-Formel wechselt auf DAV (DIN 33466): `ComputeStageArrivals`, `compute_stage_arrivals` und `computeArrivalTimes` rechnen identisch über die gemeinsame Falltabelle `tests/fixtures/naismith_dav_paritaet.json`. Bestandstrips ohne `tempo` werden beim Lesen aus `activity` abgeleitet; `scripts/migrate_3196_trip_tempo.py` schreibt `tempo` und rechnet `arrival_calculated` einmalig neu (PO-Entscheidung 2026-11-20: Gehzeiten aller Bestandstrips ändern sich bewusst). `activity` bleibt auf der Platte, wird von der Oberfläche nicht mehr geschrieben.
 - 2026-11-20: Issue #3189 — `MetricPreset.herkunft {id, name}` (optional, §15.5): `POST /api/metric-presets` übernimmt die Herkunft (Trip bzw. Orts-Vergleich), Name eingefroren, getrimmt, auf 200 Zeichen gekappt, leer = verworfen; `PATCH` lässt sie unverändert; Bestand ohne Feld bleibt gültig.

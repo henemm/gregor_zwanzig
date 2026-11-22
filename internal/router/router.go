@@ -1,6 +1,7 @@
 package router
 
 import (
+	"net/http"
 	"os"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/coreauth"
 	"github.com/henemm/gregor-api/internal/handler"
+	"github.com/henemm/gregor-api/internal/mcp"
 	authmw "github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/provider"
 	"github.com/henemm/gregor-api/internal/scheduler"
@@ -32,6 +34,10 @@ type Deps struct {
 	// Verknuepfungs-Code-Vergleiche, instanziiert in cmd/server/main.go.
 	PremiumSmsRateLimiter *handler.PremiumSmsRateLimiter
 	GitCommit             string
+	// Issue #3281: Ortssuche des MCP-Konnektors; nil => resolver.OrtSuchen
+	// (Nominatim ueber den abgeschotteten Client). Router-Tests setzen eine
+	// feste Kandidatenliste, damit sie netzfrei bleiben.
+	MCPOrtssuche mcp.Ortssuche
 }
 
 // Issue #2961: Rumpfgrenzen der globalen Schutzschicht.
@@ -292,6 +298,27 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/locations/resolve", bremsen.Aufloesen(handler.ResolveLocationHandler()))
 	// Issue #2961 (ADR-0117 Nachtrag): Vorhersage mit Mengenbremse je Nutzer.
 	r.Get("/api/forecast", bremsen.Vorhersage(handler.ForecastHandler(deps.WeatherProvider, deps.Config.PythonCoreURL)))
+	// Issue #3281 (ADR-0128): MCP-Konnektor „Gregor Wetter“ — OAuth 2.1 und
+	// MCP-Endpunkt. Oeffentliche Pfade (AuthMiddleware), /token und /register
+	// sind Maschinenpfade (request_guard.go), die Zustimmung bleibt unter
+	// OriginGuard. Zugang nur fuer GZ_MCP_USER_IDS; der Konnektor teilt die
+	// Mengenbremsen und das Tageskontingent mit /api/forecast.
+	mcpKonnektor := mcp.Neu(mcp.Optionen{
+		Basis: deps.Config.PublicHost, DataDir: deps.Config.DataDir, SessionSecret: deps.Config.SessionSecret,
+		Nutzer: deps.Store, Freigegeben: config.ParseMCPUserIDs(deps.Config.MCPUserIDs),
+		CoreURL: deps.Config.PythonCoreURL, Bremsen: bremsen, Ortssuche: deps.MCPOrtssuche,
+	})
+	r.Get("/.well-known/oauth-protected-resource", mcpKonnektor.MetadatenRessource)
+	r.Get("/.well-known/oauth-protected-resource/api/mcp", mcpKonnektor.MetadatenRessource)
+	r.Get("/.well-known/oauth-authorization-server", mcpKonnektor.MetadatenServer)
+	mcpRegisterLimiter := authmw.NewIPRateLimiter(20, time.Hour)
+	r.Post("/api/mcp/oauth/register", mcpRegisterLimiter.Middleware(http.HandlerFunc(mcpKonnektor.Registrieren)).ServeHTTP)
+	r.Get("/api/mcp/oauth/authorize", mcpKonnektor.Autorisieren)
+	r.Post("/api/mcp/oauth/authorize", mcpKonnektor.Autorisieren)
+	r.Post("/api/mcp/oauth/token", mcpKonnektor.Token)
+	r.Post("/api/mcp", mcpKonnektor.Endpunkt)
+	r.Get("/api/mcp", mcpKonnektor.OhnePost)
+	r.Delete("/api/mcp", mcpKonnektor.OhnePost)
 	r.Post("/api/locations", handler.CreateLocationHandler(deps.Store))
 	r.Put("/api/locations/{id}", handler.UpdateLocationHandler(deps.Store))
 	r.Patch("/api/locations/{id}", handler.PatchLocationHandler(deps.Store))

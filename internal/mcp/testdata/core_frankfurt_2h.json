@@ -1,0 +1,54 @@
+{
+ "lat": 50.1106444,
+ "lon": 8.6820917,
+ "zeitzone": "Europe/Berlin",
+ "von": "2026-11-22T13:00:00+01:00",
+ "bis": "2026-11-22T15:00:00+01:00",
+ "begrenzt": false,
+ "einheiten": {
+  "t2m_c": "°C",
+  "precip_1h_mm": "mm",
+  "pop_pct": "%",
+  "wind10m_kmh": "km/h",
+  "gust_kmh": "km/h",
+  "wind_direction_deg": "°",
+  "cloud_total_pct": "%",
+  "thunder_level": "",
+  "wmo_code": "WMO",
+  "snowfall_limit_m": "m",
+  "freezing_level_m": "m",
+  "sonnenminuten": "min"
+ },
+ "stunden": [
+  {
+   "zeit": "2026-11-22T13:00:00+01:00",
+   "t2m_c": -2.0,
+   "precip_1h_mm": 0.6,
+   "pop_pct": 84,
+   "wind10m_kmh": 15,
+   "gust_kmh": 23,
+   "wind_direction_deg": 180,
+   "cloud_total_pct": 31,
+   "thunder_level": "NONE",
+   "wmo_code": 0,
+   "snowfall_limit_m": 1500,
+   "freezing_level_m": 1800,
+   "sonnenminuten": 60
+  },
+  {
+   "zeit": "2026-11-22T14:00:00+01:00",
+   "t2m_c": -1.5,
+   "precip_1h_mm": 0.9,
+   "pop_pct": 91,
+   "wind10m_kmh": 16,
+   "gust_kmh": 24,
+   "wind_direction_deg": 195,
+   "cloud_total_pct": 42,
+   "thunder_level": "NONE",
+   "wmo_code": 1,
+   "snowfall_limit_m": 1600,
+   "freezing_level_m": 1900,
+   "sonnenminuten": 60
+  }
+ ]
+}
