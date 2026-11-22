@@ -53,6 +53,23 @@ func neueNominatimFixture(t *testing.T, status int) *nominatimFixture {
 		"Neustadt":          ladeTestdata(t, "nominatim_ortssuche_neustadt.json"),
 		// Sieben verschiedene Orte (Muenster + Frankfurt): mehr, als die
 		// Ortssuche je weitergeben darf.
+		// Synthetisch: zwei Fundstellen 3 km bzw. 10 km auseinander
+		// (0,027 bzw. 0,09 Grad Breite) und unbrauchbare Koordinaten.
+		"Nah": {
+			json.RawMessage(`{"name":"Nah A","lat":"47.000","lon":"11.0","address":{"country":"Oesterreich"}}`),
+			json.RawMessage(`{"name":"Nah B","lat":"47.027","lon":"11.0","address":{"country":"Oesterreich"}}`),
+		},
+		"Fern": {
+			json.RawMessage(`{"name":"Fern A","lat":"47.000","lon":"11.0","address":{"country":"Oesterreich"}}`),
+			json.RawMessage(`{"name":"Fern B","lat":"47.090","lon":"11.0","address":{"country":"Oesterreich"}}`),
+		},
+		"Kaputt": {
+			json.RawMessage(`{"name":"NaN","lat":"NaN","lon":"11.0"}`),
+			json.RawMessage(`{"name":"Nord","lat":"95.0","lon":"11.0"}`),
+			json.RawMessage(`{"name":"Ost","lat":"47.0","lon":"200.0"}`),
+			json.RawMessage(`{"name":"Leer","lat":"","lon":"11.0"}`),
+			json.RawMessage(`{"name":"Gut","lat":"47.0","lon":"11.0","address":{"country":"Oesterreich"}}`),
+		},
 		"Viele": append(ladeTestdata(t, "nominatim_ortssuche_muenster.json"),
 			ladeTestdata(t, "nominatim_ortssuche_frankfurt.json")...),
 	}
@@ -239,5 +256,32 @@ func TestOrtSuchen_LaeuftUeberAbgeschottetenClient(t *testing.T) {
 	}
 	if n := len(f.anfragen()); n != 0 {
 		t.Errorf("gesperrtes Ziel darf nicht erreicht werden, %d Anfragen", n)
+	}
+}
+
+func TestOrtSuchen_GrenzeGleicherOrt_DreiKmZusammenZehnKmGetrennt(t *testing.T) {
+	resolver.ErlaubeLoopbackVerbindung(t)
+	neueNominatimFixture(t, http.StatusOK)
+
+	nah, err := resolver.OrtSuchen(context.Background(), "Nah", "de")
+	if err != nil || len(nah) != 1 || nah[0].Name != "Nah A" {
+		t.Errorf("3 km: ein Ort (der erste) erwartet, bekam %v / %+v", err, nah)
+	}
+	fern, err := resolver.OrtSuchen(context.Background(), "Fern", "de")
+	if err != nil || len(fern) != 2 {
+		t.Errorf("10 km: zwei Orte erwartet, bekam %v / %+v", err, fern)
+	}
+}
+
+func TestOrtSuchen_UnbrauchbareKoordinatenWerdenVerworfen(t *testing.T) {
+	resolver.ErlaubeLoopbackVerbindung(t)
+	neueNominatimFixture(t, http.StatusOK)
+
+	kandidaten, err := resolver.OrtSuchen(context.Background(), "Kaputt", "de")
+	if err != nil {
+		t.Fatalf("Ortssuche fehlgeschlagen: %v", err)
+	}
+	if len(kandidaten) != 1 || kandidaten[0].Name != "Gut" {
+		t.Errorf("nur der Fund mit gueltigen Koordinaten darf bleiben: %+v", kandidaten)
 	}
 }

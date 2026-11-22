@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -28,6 +29,7 @@ type mcpCoreFixture struct {
 	wetter        []url.Values
 	reserveKaputt bool
 	wetterStatus  int
+	wetterBody    string
 }
 
 func neuerMCPCore(t *testing.T, abgelehnt ...string) *mcpCoreFixture {
@@ -36,7 +38,8 @@ func neuerMCPCore(t *testing.T, abgelehnt ...string) *mcpCoreFixture {
 	for _, u := range abgelehnt {
 		verweigert[u] = true
 	}
-	f := &mcpCoreFixture{wetterStatus: http.StatusOK}
+	f := &mcpCoreFixture{wetterStatus: http.StatusOK,
+		wetterBody: `{"zeitzone":"Europe/Berlin","begrenzt":false,"stunden":[{"zeit":"2026-11-22T14:00:00+01:00"}]}`}
 	f.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		defer f.mu.Unlock()
@@ -56,7 +59,7 @@ func neuerMCPCore(t *testing.T, abgelehnt ...string) *mcpCoreFixture {
 		case mcpWetterPfad:
 			f.wetter = append(f.wetter, r.URL.Query())
 			w.WriteHeader(f.wetterStatus)
-			w.Write([]byte(`{"zeitzone":"Europe/Berlin","begrenzt":false,"stunden":[{"zeit":"2026-11-22T14:00:00+01:00"}]}`))
+			w.Write([]byte(f.wetterBody))
 		default:
 			t.Errorf("unerwarteter Core-Pfad %s", r.URL.Path)
 			w.WriteHeader(http.StatusNotFound)
@@ -204,5 +207,127 @@ func TestMCPOrtssucheBremse_DreissigJeMinuteDannWartezeit(t *testing.T) {
 	// Fixture-Modus (aus=true) bremst nicht.
 	if ok, _ := NeueNutzerBremsen(true, false).ZulassenOrtssuche(context.Background(), "nutzer-a"); !ok {
 		t.Error("ausgeschaltete Bremsen duerfen nicht ablehnen")
+	}
+}
+
+func (f *mcpCoreFixture) setze(status int, body string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.wetterStatus, f.wetterBody = status, body
+}
+
+// F002: Eingabefehler werden vor jeder Buchung erkannt — weder Bremse noch
+// Kontingent noch Core-Abruf.
+func TestMCPWetter_UngueltigerZeitraum_OhneBuchungUndAbruf(t *testing.T) {
+	fest := time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)
+	defer SetBremsenUhr(func() time.Time { return fest })()
+	faelle := []struct {
+		name, von, bis, code string
+	}{
+		{"kein ISO", "morgen frueh", "", MCPCodeZeitpunktUngueltig},
+		{"bis kein ISO", "2026-11-22T14:00", "uebermorgen", MCPCodeZeitpunktUngueltig},
+		{"bis vor von", "2026-11-22T14:00:00+01:00", "2026-11-22T13:00:00+01:00", MCPCodeBisVorVon},
+		{"von gleich bis", "2026-11-22T14:30", "2026-11-22T14:30", MCPCodeBisVorVon},
+	}
+	for _, f := range faelle {
+		t.Run(f.name, func(t *testing.T) {
+			core := neuerMCPCore(t)
+			bremsen := NeueNutzerBremsen(false, false)
+			a := MCPWetterAnfrage{Lat: 50.1106444, Lon: 8.6820917, Von: f.von, Bis: f.bis}
+			_, err := MCPWetterAbrufen(context.Background(), bremsen, core.srv.URL, "nutzer-a", a)
+			var eingabe *MCPEingabeFehler
+			if !errors.Is(err, ErrMCPZeitraum) || !errors.As(err, &eingabe) || eingabe.Code != f.code {
+				t.Fatalf("ErrMCPZeitraum mit Code %q erwartet, bekam %v", f.code, err)
+			}
+			if r, w := core.zaehle(); r != 0 || w != 0 {
+				t.Errorf("Eingabefehler darf nicht buchen oder abrufen: %d/%d", r, w)
+			}
+			// Die Bremse hat keinen Treffer verbucht: volles Kontingent frei.
+			for i := 0; i < BremseAbrufJeMinute; i++ {
+				if ok, _ := bremsen.ZulassenVorhersage(context.Background(), "nutzer-a"); !ok {
+					t.Fatalf("Eingabefehler hat die Bremse belastet (Treffer %d abgelehnt)", i+1)
+				}
+			}
+		})
+	}
+}
+
+// Ohne Offset gilt die Ortszeit (Berlin): 13:30Z = 14:30 Ortszeit liegt NACH
+// 14:00 Ortszeit — als UTC gelesen laege es davor.
+func TestMCPWetter_ZeitOhneOffsetGiltAlsOrtszeit(t *testing.T) {
+	core := neuerMCPCore(t)
+	a := MCPWetterAnfrage{Lat: 50.1106444, Lon: 8.6820917,
+		Von: "2026-11-22T14:00", Bis: "2026-11-22T13:30:00Z"}
+	if _, err := MCPWetterAbrufen(context.Background(), nil, core.srv.URL, "nutzer-a", a); err != nil {
+		t.Fatalf("14:00 Berlin bis 13:30Z (= 14:30 Berlin) ist gueltig: %v", err)
+	}
+}
+
+func TestMCPWetter_UngueltigeKoordinaten_OhneBuchung(t *testing.T) {
+	for _, a := range []MCPWetterAnfrage{
+		{Lat: math.NaN(), Lon: 8}, {Lat: 91, Lon: 8}, {Lat: 50, Lon: -181},
+	} {
+		core := neuerMCPCore(t)
+		_, err := MCPWetterAbrufen(context.Background(), nil, core.srv.URL, "nutzer-a", a)
+		if !errors.Is(err, ErrMCPKoordinaten) {
+			t.Errorf("%v/%v: ErrMCPKoordinaten erwartet, bekam %v", a.Lat, a.Lon, err)
+		}
+		if r, w := core.zaehle(); r != 0 || w != 0 {
+			t.Errorf("ungueltige Koordinaten duerfen nicht buchen: %d/%d", r, w)
+		}
+	}
+}
+
+// F002: ein 4xx des Core ist ein Eingabefehler mit Code und Text des Core,
+// kein Stoerfall des Wetterdienstes.
+func TestMCPWetter_Core422_IstEingabefehlerMitCodeUndText(t *testing.T) {
+	core := neuerMCPCore(t)
+	core.setze(http.StatusUnprocessableEntity,
+		`{"detail":"Der Zeitraum liegt ausserhalb der Vorhersage.","code":"mcp_zeitraum_ausserhalb"}`)
+
+	_, err := MCPWetterAbrufen(context.Background(), nil, core.srv.URL, "nutzer-a", frankfurtAnfrage)
+	var eingabe *MCPEingabeFehler
+	if !errors.Is(err, ErrMCPZeitraum) || !errors.As(err, &eingabe) {
+		t.Fatalf("ErrMCPZeitraum erwartet, bekam %v", err)
+	}
+	if eingabe.Code != "mcp_zeitraum_ausserhalb" || eingabe.Detail != "Der Zeitraum liegt ausserhalb der Vorhersage." {
+		t.Errorf("Code/Text des Core nicht durchgereicht: %+v", eingabe)
+	}
+	if errors.Is(err, ErrMCPWetterdienst) {
+		t.Error("ein Eingabefehler ist kein Wetterdienst-Fehler")
+	}
+}
+
+func TestMCPWetter_CoreAntwortOhneJSON_IstWetterdienstFehler(t *testing.T) {
+	core := neuerMCPCore(t)
+	core.setze(http.StatusOK, "<html>kein json</html>")
+
+	roh, err := MCPWetterAbrufen(context.Background(), nil, core.srv.URL, "nutzer-a", frankfurtAnfrage)
+	if !errors.Is(err, ErrMCPWetterdienst) || roh != nil {
+		t.Errorf("ErrMCPWetterdienst ohne Daten erwartet, bekam %v / %s", err, roh)
+	}
+}
+
+// Konten aus der Quoten-Policy (Admin, Ausnahme-Liste) sind auch ohne Route
+// ungebremst — Kontext aus der echten QuotaPolicyMiddleware.
+func TestMCPOrtssucheBremse_AusnahmeKontoUngebremst(t *testing.T) {
+	fest := time.Date(2026, 11, 22, 12, 0, 0, 0, time.UTC)
+	defer SetBremsenUhr(func() time.Time { return fest })()
+	var ctx context.Context
+	mw := QuotaPolicyMiddleware(nil, map[string]struct{}{"nutzer-frei": {}})
+	mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { ctx = r.Context() })).
+		ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+	bremsen := NeueNutzerBremsen(false, false)
+
+	for i := 0; i <= BremseAufloesenJeMinute; i++ {
+		if ok, _ := bremsen.ZulassenOrtssuche(ctx, "nutzer-frei"); !ok {
+			t.Fatalf("Ausnahme-Konto bei Treffer %d gebremst", i+1)
+		}
+	}
+	for i := 0; i < BremseAufloesenJeMinute; i++ {
+		bremsen.ZulassenOrtssuche(ctx, "nutzer-normal")
+	}
+	if ok, _ := bremsen.ZulassenOrtssuche(ctx, "nutzer-normal"); ok {
+		t.Error("ein Konto ausserhalb der Policy muss gebremst werden")
 	}
 }

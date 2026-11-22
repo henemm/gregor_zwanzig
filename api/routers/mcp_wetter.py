@@ -17,6 +17,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
+from api.fehler import api_fehler
 from i18n import t
 from utils.timezone import local_dt, to_utc, tz_for_coords
 
@@ -50,34 +51,31 @@ def _einheiten() -> dict[str, str]:
     return einheiten
 
 
-def _ungueltig(parameter: str) -> HTTPException:
-    return HTTPException(status_code=422, detail={
-        "error": "invalid_params",
-        "detail": t("api.fehler.vergleich_parameter_ungueltig", "de",
-                    parameter=parameter, erlaubt="ISO 8601"),
-    })
-
-
 def _zeitpunkt(text: str, zone: tzinfo, parameter: str) -> datetime:
     """ISO-8601-Zeitpunkt; ohne Offset gilt die Ortszeit. Ergebnis in UTC."""
     try:
         zeitpunkt = datetime.fromisoformat(text)
     except ValueError:
-        raise _ungueltig(parameter) from None
+        raise api_fehler(422, "mcp_zeitpunkt_ungueltig", None, parameter=parameter) from None
     if zeitpunkt.tzinfo is None:
         zeitpunkt = zeitpunkt.replace(tzinfo=zone)
     return to_utc(zeitpunkt)
 
 
 def _zeitraum(von: Optional[str], bis: Optional[str], zone: tzinfo) -> tuple[datetime, datetime, bool]:
-    """Volle Stunden [start, ende) in UTC, hoechstens 7 Tage; begrenzt=True bei Kuerzung."""
-    start = _zeitpunkt(von, zone, "von") if von else datetime.now(timezone.utc)
-    start = start.replace(minute=0, second=0, microsecond=0)
-    ende = _zeitpunkt(bis, zone, "bis") if bis else start + STANDARDZEITRAUM
-    abgerundet = ende.replace(minute=0, second=0, microsecond=0)
-    ende = abgerundet if abgerundet == ende else abgerundet + _STUNDE
-    if ende <= start:
-        raise _ungueltig("bis")
+    """Volle Stunden [start, ende) in UTC, hoechstens 7 Tage; begrenzt=True bei Kuerzung.
+
+    bis muss nach von liegen (ungerundet, wie die Pruefung in Go)."""
+    beginn = _zeitpunkt(von, zone, "von") if von else datetime.now(timezone.utc)
+    schluss = _zeitpunkt(bis, zone, "bis") if bis else None
+    if schluss is not None and schluss <= beginn:
+        raise api_fehler(422, "mcp_bis_vor_von", None)
+    start = beginn.replace(minute=0, second=0, microsecond=0)
+    if schluss is None:
+        ende = start + STANDARDZEITRAUM
+    else:
+        abgerundet = schluss.replace(minute=0, second=0, microsecond=0)
+        ende = abgerundet if abgerundet == schluss else abgerundet + _STUNDE
     begrenzt = ende - start > HOECHSTZEITRAUM
     if begrenzt:
         ende = start + HOECHSTZEITRAUM
@@ -127,6 +125,9 @@ def get_mcp_wetter(
     settings = Settings()
     band = (settings.sunny_dni_min_wm2, settings.sunny_dni_max_wm2)
     stunden = [_stunde(p, zone, band) for p in reihe.data if start <= to_utc(p.ts) < ende]
+    if not stunden:
+        # Vergangenheit oder jenseits des Vorhersagehorizonts: Hinweis statt leerer Liste.
+        raise api_fehler(422, "mcp_zeitraum_ausserhalb", None)
     return {
         "lat": lat, "lon": lon, "zeitzone": str(zone),
         "von": local_dt(start, zone).isoformat(), "bis": local_dt(ende, zone).isoformat(),

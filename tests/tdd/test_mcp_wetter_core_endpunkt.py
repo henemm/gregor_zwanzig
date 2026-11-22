@@ -4,10 +4,10 @@ SPEC: docs/specs/modules/mcp_wetter_konnektor.md — AC-1/AC-2 (Datenebene), AC-
 
 Geprueft wird die echte Antwort von ``GET /api/_internal/mcp/wetter`` ueber die
 ASGI-App. Wetterdaten kommen aus dem offline ``FixtureProvider`` mit einem
-eigenen Tagesgang (``tests/fixtures/mcp_wetter/innsbruck.json``: 72 Stunden ab
+eigenen Tagesgang (``tests/fixtures/mcp_wetter/innsbruck.json``: 192 Stunden ab
 00 UTC des Testtags; Direktstrahlung je UTC-Stunde 6..17 =
 60/90/120/150/180/600/600/600/180/150/120/90 W/m², sonst 0; Stunde 47 ohne
-Strahlungswert). Die erwarteten Sonnenminuten sind von Hand aus dem
+Strahlungswert und ohne Nullgradgrenze). Die erwarteten Sonnenminuten sind von Hand aus dem
 DNI-Band 60..180 W/m² (Standard-Settings, linear) abgeschrieben:
 60 -> 0, 90 -> 15, 120 -> 30, 150 -> 45, >=180 -> 60.
 """
@@ -21,6 +21,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
+from freezegun import freeze_time
 
 from api.main import app
 from i18n import t
@@ -117,8 +118,11 @@ def test_sonnenminuten_je_stunde_ergeben_sonnenstunden_je_tag():
     je_tag: dict[str, int] = defaultdict(int)
     for i, stunde in enumerate(stunden):
         if i == 47:
-            # Kein Strahlungswert beim Anbieter -> kein erfundener Wert.
+            # Kein Strahlungswert beim Anbieter -> kein erfundener Wert, und
+            # ein fehlendes Rohfeld entfaellt (kein null).
             assert "sonnenminuten" not in stunde
+            assert "freezing_level_m" not in stunde
+            assert stunde["snowfall_limit_m"] == _rohdaten()[47]["snowfall_limit_m"]
             continue
         minuten = stunde["sonnenminuten"]
         assert isinstance(minuten, int) and 0 <= minuten <= 60
@@ -141,7 +145,59 @@ def test_zeitraum_ueber_sieben_tage_wird_begrenzt():
     assert body["begrenzt"] is True
     assert body["von"] == _ortszeit(basis)
     assert body["bis"] == _ortszeit(basis + timedelta(days=7))
-    assert len(body["stunden"]) <= 168
+    # Entscheidung: hoechstens 168 Stundeneintraege (7 x 24 h absolut).
+    assert len(body["stunden"]) == 168
+
+
+@freeze_time("2026-10-20T12:00:00Z")
+def test_begrenzung_ueber_die_zeitumstellung_168_stunden():
+    """F004: 21.10.-31.10.2026 in Berlin, Umstellung am 25.10. -> 168 Stunden absolut."""
+    resp = _abruf({**MUENSTER, "von": "2026-10-21T00:00", "bis": "2026-10-31T00:00"})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["begrenzt"] is True
+    assert body["von"] == "2026-10-21T00:00:00+02:00"
+    # 7 x 24 Stunden nach Mitternacht (Sommerzeit) enden um 23:00 Winterzeit.
+    assert body["bis"] == "2026-10-27T23:00:00+01:00"
+    zeiten = [s["zeit"] for s in body["stunden"]]
+    assert len(zeiten) == 168
+    assert zeiten[0].endswith("+02:00") and zeiten[-1].endswith("+01:00")
+    assert "2026-10-25T01:00:00+02:00" in zeiten and "2026-10-25T03:00:00+01:00" in zeiten
+    # Die doppelte Stunde 02:00 (+02:00, dann +01:00) ist hier nicht pruefbar:
+    # freezegun ersetzt datetime durch FakeDatetime, dessen astimezone() das
+    # fold-Bit verliert. Ausserhalb von freezegun liefert local_dt() beide.
+
+
+def test_bis_wird_auf_die_volle_stunde_aufgerundet():
+    jetzt = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    resp = _abruf({**FRANKFURT, "von": _ortszeit(jetzt),
+                   "bis": _ortszeit(jetzt + timedelta(minutes=90))})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["bis"] == _ortszeit(jetzt + timedelta(hours=2))
+    assert len(body["stunden"]) == 2
+
+
+def test_zeitraum_ausserhalb_der_vorhersage_422_mit_katalogtext():
+    """F001: kein leeres 200, sondern ein Hinweis."""
+    basis = _basis()
+    resp = _abruf({**FRANKFURT, "von": (basis - timedelta(days=10)).isoformat(),
+                   "bis": (basis - timedelta(days=9)).isoformat()})
+    assert resp.status_code == 422, resp.text
+    body = resp.json()
+    assert body["code"] == "mcp_zeitraum_ausserhalb"
+    assert body["detail"] == t("api.fehler.mcp_zeitraum_ausserhalb", "de")
+
+
+def test_ueberlange_zeitangabe_wird_abgewiesen():
+    """Parametergrenze 40 Zeichen, auch wenn der Text sonst gueltiges ISO 8601 waere."""
+    jetzt = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    lokal = jetzt.astimezone(BERLIN)
+    stunden = int(lokal.utcoffset() / timedelta(hours=1))
+    lang = lokal.strftime("%Y-%m-%dT%H:%M:%S.000000") + f"+{stunden:02d}:00:00.000000"
+    assert len(lang) == 42 and datetime.fromisoformat(lang) == jetzt
+    resp = _abruf({**FRANKFURT, "von": lang})
+    assert resp.status_code == 422, resp.text
 
 
 def test_zeitraum_bis_sieben_tage_bleibt_unbegrenzt():
@@ -164,14 +220,19 @@ def test_ohne_zeitraum_die_naechsten_24_stunden():
     assert body["stunden"][0]["zeit"] == _ortszeit(jetzt)
 
 
-@pytest.mark.parametrize("params", [
-    {"von": "morgen frueh"},
-    {"von": "2026-11-22T14:00:00+01:00", "bis": "2026-11-22T13:00:00+01:00"},
+@pytest.mark.parametrize(("params", "code", "text"), [
+    ({"von": "morgen frueh"}, "mcp_zeitpunkt_ungueltig",
+     t("api.fehler.mcp_zeitpunkt_ungueltig", "de", parameter="von")),
+    ({"von": "2026-11-22T14:00:00+01:00", "bis": "2026-11-22T13:00:00+01:00"},
+     "mcp_bis_vor_von", t("api.fehler.mcp_bis_vor_von", "de")),
+    # F003: von == bis ist kein Zeitraum, auch nicht innerhalb einer Stunde.
+    ({"von": "2026-11-22T14:30:00+01:00", "bis": "2026-11-22T14:30:00+01:00"},
+     "mcp_bis_vor_von", t("api.fehler.mcp_bis_vor_von", "de")),
 ])
-def test_ungueltiger_zeitraum_wird_abgewiesen(params):
+def test_ungueltiger_zeitraum_wird_abgewiesen(params, code, text):
     resp = _abruf({**FRANKFURT, **params})
     assert resp.status_code == 422, resp.text
-    assert "stunden" not in resp.text
+    assert resp.json() == {"code": code, "detail": text}
 
 
 def test_ohne_core_auth_abgelehnt():
