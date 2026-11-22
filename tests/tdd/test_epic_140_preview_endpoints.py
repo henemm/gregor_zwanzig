@@ -38,7 +38,9 @@ def _seed_trip_fixture(_isolate_data_root):
     from app import loader
 
     repo_root = Path(__file__).resolve().parents[2]
-    src = repo_root / "data/users/default/trips/gr221-mallorca.json"
+    # Issue #3209: committete Quelle statt der materialisierten Kopie im
+    # echten data/users-Baum (parallel zur seriellen Echtdaten-Gruppe lesbar).
+    src = repo_root / "tests/fixtures/data_root/users/default/trips/gr221-mallorca.json"
     dst = (
         Path(loader._DATA_ROOT)
         / "users"

@@ -41,6 +41,11 @@ _ALL_USERS = (_USER_A, _USER_B, _USER_AC8, _USER_AC9)
 # und räumt diesen Echt-Pfad NICHT mit auf — daher zusätzliches Cleanup hier.
 _REAL_DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
+# Issue #3209: das Modul beruehrt den ECHTEN data/users-Baum (Konstante oben)
+# -- unter xdist laeuft es in der seriellen Echtdaten-Gruppe; Datenwurzel-
+# Isolation und Per-Test-Waechter bleiben unveraendert aktiv.
+pytestmark = pytest.mark.xdist_group("echtdaten")
+
 
 def _make_trip(trip_id: str, report_config: TripReportConfig | None = None) -> Trip:
     """Trip mit Etappe heute — aktiv für 'morning'."""

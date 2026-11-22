@@ -259,7 +259,57 @@ Ports, die der Testprozess selbst gebunden hat, und sperrt auch `connect_ex`. Da
 Rohstring exakt, vor jeder Shell-Zerlegung (Fix-Loop 6: fünf Runden Zerlegung fanden je eine neue
 Umgehung). Jede Abweichung blockt: Zusatz-Flags, Präfix (`nohup`, `timeout`, `PYTEST_ADDOPTS=…`),
 `| tee`, `; echo`, Mehrzeilenform mit `\`, anderer Leerraum. Grenze: Ausgang aus Kindprozessen (curl, Go, Playwright) ist nicht
-erfasst. Läuft ca. 42 min.
+erfasst. Läuft ca. 42 min. Diese lokale Form bleibt **seriell**; eine lokale parallele Form ist #3278.
+
+## Parallele Kern-Suite in CI (#3209, seit 2026-11-22)
+
+Der CI-Job `test` läuft mit `pytest-xdist` auf 4 Workern: `-n 4 --dist loadgroup` (zusätzlich zu
+`--disable-socket --allow-unix-socket --allow-hosts=… --ignore=tests/red/ $TDD_EXCLUDES --tb=short -rfE`).
+Vorher ~30 min seriell, längster Pflicht-Check jedes PR. Die lokale sichere Offline-Form (Abschnitt
+oben) bleibt seriell, das Gate `broad_test_run_gate.py` sperrt `-n` lokal weiterhin (lokale parallele
+Form: #3278).
+
+**Regel: Echtbaum-Tests nur mit `real_data_root`** (bzw. `xdist_group("echtdaten")`). Ein Test, der den
+ECHTEN `data/users`-Baum des Repos liest oder schreibt (`Path("data/users")`, `Path("data") / "users"`,
+`REPO_ROOT / "data" / "users"`, `os.path.join("data", "users", …)`, `rmtree` fester user_ids darunter),
+gehört in die serielle Gruppe `echtdaten`:
+
+- `tests/conftest.py` (`pytest_collection_modifyitems`) hängt an jeden `real_data_root`-Test automatisch
+  `xdist_group("echtdaten")`; mit `--dist loadgroup` laufen alle Gruppen-Tests nacheinander in EINEM
+  Worker. Module, die den echten Baum nur nebenbei berühren, aber isoliert bleiben sollen, tragen
+  `pytestmark = pytest.mark.xdist_group("echtdaten")` (Isolation und Per-Test-Wächter bleiben aktiv).
+  Eine fremde `xdist_group` an einem `real_data_root`-Test bricht die Sammlung ab.
+- Reine Leser der Referenz-Fixtures lesen die committete Quelle `tests/fixtures/data_root/…`, nicht die
+  materialisierte Kopie unter `data/users/`.
+- pytest 9 + pytest-xdist 3.8: xdist setzt den Gruppen-Suffix `@<gruppe>` über `item._nodeid`, das seit
+  pytest 9 wirkungslos ist (jede Gruppe zerfiel still in Einzeltests). `tests/conftest.py`
+  (`_XdistGruppenSuffix`) setzt den Suffix deshalb selbst.
+
+**Wächter worker-fest, nicht lockerer („Gruppen-Journal").** Während ein Gruppen-Test läuft (Setup,
+Aufruf, Teardown), protokolliert sein Worker jeden Schreibzugriff auf den echten Baum vor der
+Ausführung per Python-Audit-Hook in ein Journal des Laufs (`<basetemp>/gz-echtdaten-journal.jsonl`);
+innere pytest-Läufe eines Gruppen-Tests erben es über `GZ_ECHTDATEN_JOURNALE`. Der Per-Test-Wächter
+eines Tests außerhalb der Gruppe vergleicht den Fingerprint je Datei und zieht nur Pfade ab, die ein
+ANDERER Prozess der Gruppe in seinem Zeitfenster journalisiert hat; jede andere Änderung bleibt rot,
+auch wenn die Gruppe gleichzeitig schreibt. Kind-Prozesse eines Workers (z. B. ein serieller innerer
+pytest-Lauf eines Tests außerhalb der Gruppe) lesen das Journal über `GZ_ECHTDATEN_BEOBACHTUNG` mit;
+ein Prozess, der selbst in ein Journal schreibt, darf es nie zur Entschuldigung lesen. Worker-Erkennung
+über `config.workerinput`, nicht über das vererbte `PYTEST_XDIST_WORKER`. Den Session-Vergleich macht unter xdist der Controller nach
+dem Ende aller Worker (Netto-Vergleich ohne Ausnahme). Die Materialisierung der Referenz-Fixtures läuft
+einmal unter Dateisperre (`data/cache/.gz-materialisierung.lock`) mit atomarem Schreiben. Ohne xdist gibt es
+kein Journal: jede Änderung ist wie bisher ein Fehler. Grenze: Schreibzugriffe von Kindprozessen, die
+`tests/conftest.py` nicht laden (Go, Shell), journalisiert niemand; ein solcher Gruppen-Test erzeugt
+schlimmstenfalls einen Fehlalarm bei einem parallelen Test, nie ein falsches Grün.
+
+**Ratsche** `tests/tdd/test_xdist_echtbaum_ratsche.py` (Logik `tests/helpers/echtbaum_ratsche.py`,
+`finde_echtbaum_verstoesse`): statische AST-Prüfung über alle `tests/**/test_*.py`; ein Echtbaum-Zugriff
+außerhalb der seriellen Gruppe (auch über Hilfsfunktion, Fixture oder Modulkonstante, die ein Test ohne
+Gruppe nutzt) macht den Test rot und nennt die Datei. Nachweise der Worker-Sicherheit (Wächter-Mutation
+seriell und parallel, Gruppenbildung, Materialisierung, Egress-Sperre je Worker):
+`tests/tdd/test_xdist_worker_sicherheit.py` mit Sonden unter `tests/probes_xdist/`.
+
+Timing-empfindliche Tests, die nur unter Parallelität wackeln, kommen in die Gruppe `echtdaten`;
+Zusicherungen werden nicht gelockert, der globale `timeout = 30` bleibt.
 
 ## CI-Ratschen
 
@@ -885,6 +935,7 @@ isoliert, Kollisionen zeigen sich als Merge-Konflikt im PR.
 | Bausteine-Wächter `bausteine_waechter` (ADR-0112, #2913) — Regel (a) Aufbau für `SEITEN_SCOPE`, Regel (b) Tokens als Ratsche `AUSNAHMEN`, Neue-Datei-Regel mit `BESTAND`; ersetzt das Design-Gate (ADR-0111) | 2027-02-08 | offen — Start 2026-11-10: `SEITEN_SCOPE` leer, 204 Bestandsdateien, 39 Bausteine mit 396 Token-Verstößen (398 nach Verschärfung Fix-Loop 1). Löschbedingung: kein nachweisbarer Fang (kein Merge mit echtem Verstoß aufgehalten, kein fehlender Baustein durch ihn zuerst ins System gebracht) → Rückbau |
 | i18n-Token-Wächter `tests/test_metric_tokens_eingefroren.py` (Fixture `tests/fixtures/metric_tokens_frozen.json`, Epic #2644 P1) | 2027-01-31 | eingeführt im Epic #2644 (laut Konvention P1); Kriterium: eine Übersetzung oder Umbenennung von `col_label`, `compact_label` oder `sms_code`, die sonst still in Kanäle wanderte |
 | Ratsche „Ein Katalog, eine Verarbeitung“ `tests/unit/test_ein_katalog_eine_verarbeitung_ratsche.py` (ADR-0127, #3260); ersetzt die Entdeckungsstufe der Metrik-Listen-Ratsche (#1856) | 2027-02-19 | offen — Startstand 2026-11-21: 457 Funde in der Ausnahmeliste; Kriterium: eine neue zweite Liste, Verzweigung, feste Schwelle oder ein Validator-Produktimport, der ohne die Ratsche ausgeliefert worden wäre |
+| Echtbaum-Ratsche `tests/tdd/test_xdist_echtbaum_ratsche.py` — Echtbaum-Zugriff nur in der seriellen Gruppe `echtdaten` (#3209, CI parallel) | 2027-02-20 | Einführung: 44 Testdateien außerhalb der Gruppe (u. a. 12 Leser materialisierter Kopien, ~30 Module mit Schreib-/Aufräumzugriffen am echten Baum); Kriterium: ein neuer Echtbaum-Zugriff ohne Gruppe, der unter xdist Fehlalarme oder Datenrennen ausgelöst hätte |
 | Prozessregel „tote Tests mitentfernen“: abgelöste Funktion ⇒ zugehörige Tests im selben Umbau entfernen, Beleg im PR (#3207, `workflow_und_agenten.md` Regel-Budget; kein Gate, nur Doku-Compliance-Test `tests/test_regel_tote_tests_mitentfernen_pruefdatum.py`) | 2027-02-19 | Einführung: Inventur #3207 fand tote Tests aus Signal, der alten Python-Oberfläche, Telegram-Altzeilen, Befehlsblock und alten Reitern. Fang-Maß am Prüfdatum: Zahl der seither neu entstandenen toten Tests bzw. im selben Umbau mitentfernten Tests |
 
 **Weitere Prüfdaten, die nur im Code stehen** (Abgleich 2026-10-21 per

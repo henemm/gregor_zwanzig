@@ -61,9 +61,18 @@ jobs:
         #    KI-Agent) durchkaemmen musste. addopts liefert -q; dazu:
         #    --tb=short (kompakte Tracebacks) und -rfE (Fehlschlag-Kurzliste
         #    ans Log-ENDE). Bei Bedarf volles Log lokal reproduzierbar.
+        #
+        # 5) Parallel (#3209): 4 xdist-Worker (Runner hat 4 Kerne), Verteilung
+        #    --dist loadgroup. Alle Tests am echten data/users-Baum
+        #    (real_data_root bzw. xdist_group("echtdaten")) laufen gemeinsam
+        #    nacheinander in EINEM Worker; die Echtbaum-Waechter sind
+        #    worker-fest (tests/conftest.py), die Ratsche
+        #    tests/tdd/test_xdist_echtbaum_ratsche.py haelt Neuzugaenge aus.
+        #    Die lokale sichere Offline-Form bleibt seriell (#3278).
         run: |
           TDD_EXCLUDES=$(grep -v '^#' .github/ci_tdd_excludes.txt | sed 's/^/--ignore=/' | tr '\n' ' ')
           uv run pytest \
+            -n 4 --dist loadgroup \
             --disable-socket --allow-unix-socket \
             --allow-hosts=127.0.0.1,::1,localhost \
             --ignore=tests/red/ \

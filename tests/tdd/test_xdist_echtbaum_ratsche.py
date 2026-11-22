@@ -67,6 +67,20 @@ VERSTOESSE = {
         "def test_raeumt():\n"
         f"    shutil.rmtree({OS_JOIN}, ignore_errors=True)\n"
     ),
+    # Fix-Loop 1 F003: absolute Repo-Wurzel statt relativem Pfad
+    "repo_wurzel": (
+        "import shutil\nfrom pathlib import Path\n\n"
+        "REPO_ROOT = Path(__file__).resolve().parents[2]\n\n"
+        "def test_raeumt():\n"
+        f"    shutil.rmtree(REPO_ROOT / {_D}\" / \"users\" / 'fester-user', ignore_errors=True)\n"
+    ),
+    # Fix-Loop F007: Repo-Wurzel als erstes Argument von os.path.join
+    "os_path_join_repo_wurzel": (
+        "import os, shutil\nfrom pathlib import Path\n\n"
+        "REPO_ROOT = Path(__file__).resolve().parents[2]\n\n"
+        "def test_raeumt():\n"
+        f"    shutil.rmtree(os.path.join(REPO_ROOT, {_D}\", \"users\", 'fester-user'), ignore_errors=True)\n"
+    ),
 }
 
 
@@ -111,6 +125,32 @@ def test_ac5_fremde_xdist_gruppe_ist_nicht_konform(tmp_path):
     inhalt = "import pytest\npytestmark = pytest.mark.xdist_group('andere')\n" + VERSTOESSE["geteilter_pfad"]
     _datei(tmp_path, "test_andere_gruppe.py", inhalt)
     assert _ratsche()(tmp_path) == ["test_andere_gruppe.py"]
+
+
+_HELFER = (
+    "import shutil\nimport pytest\nfrom pathlib import Path\n\n"
+    "def _aufraeumen(uid):\n"
+    f"    shutil.rmtree({REL_USERS} / uid, ignore_errors=True)\n\n"
+    "@pytest.mark.real_data_root\n"
+    "def test_markiert():\n"
+    "    _aufraeumen('a')\n\n"
+)
+
+
+def test_ac5_helfer_nur_von_markierten_tests_ist_konform(tmp_path):
+    """AC-5 / Fix-Loop 1 F003: ein Helfer mit Echtbaum-Zugriff, den nur
+    markierte Tests aufrufen, laeuft nur in der Gruppe -- konform."""
+    _datei(tmp_path, "test_helfer_ok.py", _HELFER)
+    assert _ratsche()(tmp_path) == []
+
+
+def test_ac5_helfer_auch_von_unmarkiertem_test_ist_verstoss(tmp_path):
+    """AC-5 / Fix-Loop 1 F003: ruft ZUSAETZLICH ein unmarkierter Test denselben
+    Helfer auf, ist die transitive Konformitaet verletzt -- ein markierter
+    Aufrufer allein entlastet nicht."""
+    inhalt = _HELFER + "def test_unmarkiert():\n    _aufraeumen('b')\n"
+    _datei(tmp_path, "test_helfer_gemischt.py", inhalt)
+    assert _ratsche()(tmp_path) == ["test_helfer_gemischt.py"]
 
 
 def test_ac5_unbeteiligte_datei_bleibt_gruen(tmp_path):

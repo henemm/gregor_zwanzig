@@ -52,6 +52,13 @@ from services.official_alerts.models import OfficialAlert
 # Pfadregel #1409: Pruefling relativ zur Testdatei, nicht ueber den Hauptrepo-Pfad.
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "users"
 
+# Issue #3209: das Modul beruehrt den ECHTEN data/users-Baum (Konstante oben)
+# -- unter xdist laeuft es in der seriellen Echtdaten-Gruppe; Datenwurzel-
+# Isolation und Per-Test-Waechter bleiben unveraendert aktiv.
+import pytest  # noqa: E402
+
+pytestmark = pytest.mark.xdist_group("echtdaten")
+
 # Klar getrennte Koordinaten (Toleranz der Testquelle: 0.05 Grad).
 COORD_HEUTE = (47.00, 11.00)
 COORD_MORGEN = (47.50, 11.50)

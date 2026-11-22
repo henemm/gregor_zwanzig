@@ -14,7 +14,9 @@ from app.models import EtappenConfig
 from core.gpx_parser import parse_gpx
 from services.gpx_processing import compute_full_segmentation
 
-DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "users" / "default" / "gpx"
+# Issue #3209: committete Quelle statt der materialisierten Kopie im echten
+# data/users-Baum (parallel zur seriellen Echtdaten-Gruppe lesbar).
+DATA_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "data_root" / "users" / "default" / "gpx"
 GPX_TAG4 = DATA_DIR / "2026-01-17_2753228656_Tag 4_ von Tossals Verds nach Lluc.gpx"
 
 START_TIME = datetime(2026, 1, 17, 8, 0, 0, tzinfo=timezone.utc)

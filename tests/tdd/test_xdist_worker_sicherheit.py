@@ -44,6 +44,8 @@ SONDEN_USER = (
     "probe-3209-ac3-unmarkiert",
     "probe-3209-ac3-markiert",
     "probe-3209-ac4-fenster",
+    "probe-3209-f001-spur",
+    "probe-3209-f004",
 )
 
 OFFLINE_FORM = [
@@ -168,6 +170,50 @@ def test_ac3_unmarkierter_schreiber_parallel_rot(probe_dir):
     assert not any("probe_ac3_markierter_schreiber" in z for z in fehlerzeilen), (
         "Der legitime real_data_root-Schreiber wurde faelschlich rot\n" + _ausgabe(proc)
     )
+
+
+def test_ac3_modul_fixture_spur_faengt_der_controller(probe_dir):
+    """AC-3 / Fix-Loop 1 F001: eine Modul-Fixture ohne ``real_data_root``
+    hinterlaesst eine Spur im echten Baum. Der Per-Test-Waechter sieht sie
+    strukturell nicht, die Session-Waechter der Worker sind unter xdist aus --
+    der Session-Waechter des CONTROLLERS muss den Lauf mit ``-n 2`` scheitern
+    lassen, obwohl der Test selbst gruen ist."""
+    proc = _innerer_lauf(
+        _sonden("probe_f001_modul_spur.py"), probe_dir, ["-n", "2", "--dist", "loadgroup"],
+    )
+    _xdist_lief_mit_zwei_workern(proc)
+    assert any(e["art"] == "f001_spur_gelegt" for e in _protokoll(probe_dir)), (
+        "Sonde lief nicht -- falsches Rot moeglich\n" + _ausgabe(proc)
+    )
+    assert "PASSED" in proc.stdout and "test_probe_f001" in proc.stdout, (
+        "Nachweis ungueltig: der Sondentest selbst muss gruen sein, sonst "
+        "faengt nicht der Controller\n" + _ausgabe(proc)
+    )
+    assert proc.returncode != 0, "bleibende Spur ging unter xdist durch\n" + _ausgabe(proc)
+    assert "xdist-Controller" in proc.stdout and "Issue #2226" in proc.stdout, _ausgabe(proc)
+
+
+def test_ac3_eigener_gruppen_journaleintrag_entschuldigt_nichts(probe_dir):
+    """AC-3 / Fix-Loop 1 F004: im SELBEN Worker laeuft nach einem
+    ``real_data_root``-Test, der den Teilbaum ``probe-3209-f004`` journalisiert
+    hat, ein unmarkierter Test, der in genau diesen Teilbaum schreibt. Der
+    Journal-Eintrag liegt im Zeitfenster, stammt aber aus demselben Prozess --
+    der Verstoss muss trotzdem rot werden (PID-Ausschluss)."""
+    proc = _innerer_lauf(
+        _sonden("probe_f004_a_gruppe.py", "probe_f004_b_nachzuegler.py"),
+        probe_dir, ["-n", "1", "--dist", "loadgroup"],
+    )
+    reihenfolge = [e["art"] for e in _protokoll(probe_dir)]
+    assert reihenfolge == ["f004_gruppe", "f004_nachzuegler"], (
+        f"Nachweis ungueltig: Reihenfolge {reihenfolge} (Gruppe muss zuerst "
+        "laufen, im selben Worker)\n" + _ausgabe(proc)
+    )
+    assert proc.returncode != 0, (
+        "eigener Journal-Eintrag hat den Verstoss entschuldigt\n" + _ausgabe(proc)
+    )
+    fehlerzeilen = [z for z in proc.stdout.splitlines() if z.startswith(("ERROR ", "FAILED "))]
+    assert any("probe_f004_b_nachzuegler" in z for z in fehlerzeilen), _ausgabe(proc)
+    assert "Issue #1265 Teil C" in proc.stdout, _ausgabe(proc)
 
 
 # ---------------------------------------------------------------------------

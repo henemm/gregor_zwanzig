@@ -35,7 +35,9 @@ import pytest
 # per pytest-Namenskonvention (test_alert_enabled) collectbar und mutiert
 # ungeschuetzt data/users/default/trips/*.json. Marker nimmt sie aus der
 # Standardselektion, ohne die dokumentierte manuelle Ausfuehrung zu aendern.
-pytestmark = pytest.mark.staging
+# Issue #3209: beruehrt den ECHTEN data/users-Baum (TRIP_JSON) -- unter xdist
+# in der seriellen Echtdaten-Gruppe.
+pytestmark = [pytest.mark.staging, pytest.mark.xdist_group("echtdaten")]
 
 TRIP_JSON = PROJECT_ROOT / "data" / "users" / "default" / "trips" / "gr221-mallorca.json"
 IMAP_HOST = os.getenv("GZ_IMAP_HOST", "mail.henemm.com")
