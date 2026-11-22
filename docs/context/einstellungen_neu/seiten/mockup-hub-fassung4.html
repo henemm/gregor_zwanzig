@@ -612,6 +612,52 @@ function budgetZeile(sm){
   const n=sm.cutIds.length;
   return `<div class="budget">SMS-Beispiel: <b>${esc(sm.line)}</b> · ${sm.len} von 160 Zeichen${n?`<span class="warn">${EIN()||!O()?`Die letzten ${n} Metriken passen nicht mehr in die SMS.`:`Bei ${PLACES().length} Orten passen die letzten ${n} Metriken nicht mehr in die SMS. Dafür steht „+${sm.cutIds.reduce((a,id)=>a+(OF[id].n||1),0)}“ je Ort.`} Zieh nach oben, was dir in der SMS wichtig ist.</span>`:''}</div>`;
 }
+// #3258: Block „Kürzel erklärt“ wie live (WasStehtWoKarte, legendeAus): erst je Metrik mit SMS-Haken Kürzel und
+// Bedeutung in Tabellenreihenfolge, dann die festen Einträge; jedes Paar nur einmal. Kürzel und Bedeutung der
+// Metriken wie die Server-Antwort legend.metrics (Trip: Symbole des Trip-SMS-Renderers, Orte: Auswertung der
+// Zeile, Temperatur = Tageshöchstwert), Bedeutung aus kuerzel_bedeutung_de. Feste Einträge: Katalog wetter.wsw.legende.*,
+// bei Orten zusätzlich O1 (Server-Katalog vergleich.sms.ort_nummer).
+const LEG_TRIP={
+ temperature_night:[['N','Nacht']],
+ temperature_day_low:[['L','Tagestiefstwert']],
+ temperature_day_high:[['D','Tageshöchstwert']],
+ wind_chill:[['TF','gefühlt']],
+ wind_chill_night:[['FN','N gefühlt']],
+ wind_chill_day_low:[['FL','L gefühlt']],
+ wind_chill_day_high:[['FD','D gefühlt']],
+ wind:[['W','Wind km/h']],
+ gust:[['G','Böen']],
+ wind_direction:[['WD','Windrichtung']],
+ precipitation:[['R','Regen mm']],
+ thunder:[['TH','Gewitter'],['TH+','Gewitter Folge-Etappe']],
+ rain_probability:[['PR','Regenwahrscheinlichkeit %']],
+ visibility:[['VS','Sicht']],
+ cloud_low:[['CL','Bewölkung tief']],
+ uv_index:[['UV','UV-Index']],
+ freezing_level:[['FZ','Nullgradgrenze m']],
+ snowfall_limit:[['SL','Schneefallgrenze m']]};
+const LEG_ORTE={
+ temperature:[['D','Tageshöchstwert']],
+ wind:[['W','Wind km/h']],
+ gust:[['G','Böen']],
+ precipitation:[['R','Regen mm']],
+ thunder:[['TH','Gewitter']],
+ rain_probability:[['PR','Regenwahrscheinlichkeit %']],
+ cloud_total:[['CT','Bewölkung gesamt']],
+ sunshine:[['SU','Sonnenstunden']]};
+const LEG_FEST=[['@14','ab 14 Uhr gelb oder schlechter'],['!TS:H@14','amtliche Warnung: Gewitter, Stufe hoch, ab 14 Uhr'],
+ ['L','Stufe gelb'],['M','Stufe orange'],['H','Stufe rot'],['WG','Warnung Wind'],['RA','Warnung Starkregen'],
+ ['AV4','Lawinenstufe'],['X?','Warnquelle nicht erreichbar']];
+function legendeBlock(){
+  const leg=O()?LEG_ORTE:LEG_TRIP;
+  const met=onMs().filter(m=>isSel('SMS',m[0])).flatMap(m=>leg[m[0]]||[]);
+  const fest=O()?[...LEG_FEST,['O1','Ort 1 in der Reihenfolge des Abos']]:LEG_FEST;
+  const gesehen=new Set();
+  const paare=[...met,...fest].filter(([k,b])=>{const s=k+'\u0000'+b; if(gesehen.has(s)) return false; gesehen.add(s); return true;});
+  return `<details class="adv"><summary>Kürzel erklärt</summary>
+    <dl style="display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;padding:0 20px 14px;font-size:12.5px">${paare.map(([k,b])=>`<dt style="font-family:var(--f-mono)">${esc(k)}</dt><dd style="margin:0">${esc(b)}</dd>`).join('')}</dl>
+  </details>`;
+}
 function blockEinst(){
   const s=S().sw, r=[];
   if(O()) r.push(`<div class="lrow"><div class="t"><b>Stundenverlauf</b><small>Stunden-Tabelle ${EIN()?'':'je Ort '}unter der Übersicht, nur in der E-Mail.</small></div><div class="r">${sw('std',s.std,'Stundenverlauf')}</div></div>`);
@@ -651,6 +697,7 @@ function wasStehtWo(){
     <div class="lrow" style="border-top:0"><div class="t"><b>Was steht wo</b><small>Eine Tabelle für alles. Jede Zeile ist eine Metrik aus der Auswahl oben. ${was} Ein Haken heißt: erscheint dort. Hier wählst du nur ab. Die Reihenfolge ziehst du einmal, sie gilt überall. Roh zeigt die Zahl, Einfach ein Symbol oder ein Wort. Wo eine Metrik beide Formen hat, stellst du das je Stelle ein. Die SMS bleibt bei ihren Kürzeln. Neue Metriken kommen oben über „+“ dazu.</small></div></div>
     ${head}${fix}${rows}
     ${budgetZeile(sm)}
+    ${legendeBlock()}
     <div class="sub">Ganze Blöcke ein- und ausschalten</div>
     ${blockEinst()}
     <div class="sub">Einstellungen je Kanal</div>

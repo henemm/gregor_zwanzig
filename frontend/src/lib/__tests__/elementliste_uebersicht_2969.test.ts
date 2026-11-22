@@ -86,12 +86,21 @@ const ausnahmen = (): Ausnahme[] => logik.leseAusnahmen(readFileSync(BESITZER, '
 // Zurücksetzen-Zeile. Liste neu erzeugt: genau 4 neue Einträge (Trip/Orte je „1 Abweichung“, Stand ohne
 // Auswahlpfeil wie live, und „Auf „{vorlage}“ zurücksetzen“); alle übrigen Einträge byte-gleich, keine ID
 // entfallen (Diff je ID geprüft). Anzahl 2756.
-const ALT_ANZAHL = 2756;
+const ALT_ANZAHL_3251 = 2756;
 // #3251 Fix-Loop 2 (21.11.; vorher 7d0365c3…3c8a4): die zwei Einträge „1 Abweichung“ führen die Zahl als
 // Katalog-Mehrzahl-Muster („{count} Abweichungen“ / „{count} changes“, Schlüssel .other), weil der Prüf-Datensatz
 // live 14 bzw. 8 Abweichungen zeigt. ID, text_de und alle übrigen Einträge byte-gleich (Diff je ID geprüft).
-const ALT_SHA = 'e31b8c1d520ad7a6e0cc589d547bb18cb6d918e65550085b78ff3f5cadac10d5';
-const MOCKUP_HASH = 'sha256:c2347e0876a30710b2d56f6c1561b13668cb48089802558eaeaec0de30d8e6be';
+// #3258: Legende „Kürzel erklärt“ (22.11.; vorher e31b8c1d…cadac10d5, Mockup-Hash c2347e08…30d8e6be, Anzahl
+// 2756). Mockup Fassung 4 zeigt unter der SMS-Beispielzeile den Aufklapper „Kürzel erklärt“ wie live (je aktiver
+// SMS-Metrik Kürzel und Bedeutung, dann die festen Einträge aus wetter.wsw.legende.*, bei Orten O1); der
+// Generator liest Kürzel (dt, sprachneutral) und Bedeutung (dd; EN aus wetter.wsw.legende.*, sonst aus dem
+// Server-Katalog-Schnappschuss daten/kuerzel_bedeutung.json, Fix-Loop 1 F002: keine EN-Lücke in der Legende).
+// Liste neu erzeugt: 184 neue Einträge, nur Abschnitt was-steht-wo im Reiter Wetter (Trip 55, Orte 37, je Zustand
+// normal/luecken); die folgenden Einträge desselben Abschnitts ändern nur ordnung. Keine ID entfallen, alle
+// übrigen Einträge byte-gleich (Diff je ID geprüft).
+const ALT_ANZAHL = ALT_ANZAHL_3251 + 184;
+const ALT_SHA = '95e04d795303ff82654aed38d16ec213f581ef4167b8a6aa5bb63b0a269b12a5';
+const MOCKUP_HASH = 'sha256:c347e818e03ed26119a6a9fd3460258b3409e8c322914041df6dbb9503cdb972';
 
 test('AC-1: 16 Übersicht-Einträge (Trip/Orte × 4 Zustände × Titel/Satz), Abschnitt abschnittskopf, DE/EN aus dem Katalog', () => {
 	const e = uebersicht();

@@ -421,6 +421,41 @@ export function abweichungsZahlAlsMuster(abschnitt: string, en: EnErgebnis, kata
 	return { ...en, i18n_key: mehrzahl, muster: katalog.de[mehrzahl], text_en: katalog.en[mehrzahl], luecke: false };
 }
 
+/** #3258: Katalog-Präfix der festen Legenden-Einträge (Kürzel erklärt). */
+export const LEGENDE_PRAEFIX = 'wetter.wsw.legende.';
+
+const bedeutungCache = new Map<string, Map<string, string>>();
+
+/**
+ * #3258 (Fix-Loop 1, F002): DE→EN der Kürzel-Bedeutungen aus dem Schnappschuss daten/kuerzel_bedeutung.json
+ * (Server-Katalog kuerzel_bedeutung_de/en und vergleich.sms.ort_nummer; Drift-Test
+ * tests/test_3258_kuerzel_bedeutung_schnappschuss.py). Kein Python-Aufruf zur Laufzeit.
+ */
+export function ladeKuerzelBedeutungen(datenDir: string = STANDARD_DATEN): Map<string, string> {
+	const vorhanden = bedeutungCache.get(datenDir);
+	if (vorhanden) return vorhanden;
+	const roh = JSON.parse(readFileSync(join(datenDir, 'kuerzel_bedeutung.json'), 'utf8')) as { bedeutungen: Array<{ de: string; en: string }> };
+	const m = new Map(roh.bedeutungen.map((p) => [norm(p.de), p.en] as [string, string]));
+	bedeutungCache.set(datenDir, m);
+	return m;
+}
+
+/**
+ * #3258: EN der Legende „Kürzel erklärt“. Kürzel sind Protokoll-Token und werden nie übersetzt (ADR-0104):
+ * EN = DE-Muster (sprachneutral). Eine Bedeutung trägt EN aus dem Katalog `wetter.wsw.legende.*` (feste
+ * Einträge), sonst aus dem Server-Katalog (`ladeKuerzelBedeutungen`, Metrik-Bedeutungen und O1); nie aus
+ * einem zufälligen Treffer im übrigen Frontend-Katalog („Böen“ → „Wind gusts“, live „gusts“). Ohne Treffer
+ * Lücke. null = keine Legenden-Rolle.
+ */
+export function legendeEn(rolle: string, textDe: string, katalog: Katalog, bedeutungen: Map<string, string> = ladeKuerzelBedeutungen()): EnErgebnis | null {
+	if (rolle === 'kuerzel') return neutral(norm(textDe));
+	if (rolle !== 'bedeutung') return null;
+	const en = ermittleEn(textDe, katalog);
+	if (en.i18n_key?.startsWith(LEGENDE_PRAEFIX)) return en;
+	const server = bedeutungen.get(norm(textDe));
+	return server ? { i18n_key: null, text_en: server, muster: null, luecke: false } : luecke();
+}
+
 /** Katalogschlüssel der „+ Metrik“-Chips in „Nicht im Briefing“. */
 export const CHIP_SCHLUESSEL = 'wetter.nicht_im_briefing.hinzufuegen';
 
@@ -498,6 +533,9 @@ function ausleseImBrowser(arg: AusleseArg): Roh[] {
 		if (el.closest('h1,h2,h3')) return 'ueberschrift';
 		if (el.closest('summary')) return 'aufklapper';
 		if (el.closest('[role="menuitem"]')) return 'menuepunkt';
+		// #3258: Legende „Kürzel erklärt“ (Definitionsliste): Kürzel und Bedeutung.
+		if (el.closest('dt')) return 'kuerzel';
+		if (el.closest('dd')) return 'bedeutung';
 		if (el.closest('[role="alert"],.warnbox,.err')) return 'hinweis';
 		if (el.closest('label,th,.eyebrow,.gh,.vg,.sub')) return 'beschriftung';
 		if (el.closest('.kz')) return 'kuerzel';
@@ -578,7 +616,7 @@ export function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEint
 					[g.ctx, g.reiter, g.zustand, g.segment ?? '-', abschnitt].join('.') +
 					'.' +
 					createHash('sha256').update(identitaet + '|' + nr).digest('hex').slice(0, 10);
-				const en = abweichungsZahlAlsMuster(abschnitt, chipEn(r.rolle, r.text, katalog) ?? listenzeileEn(g.reiter, abschnitt, r.text, katalog, ermittleEn(r.text, katalog)), katalog);
+				const en = abweichungsZahlAlsMuster(abschnitt, chipEn(r.rolle, r.text, katalog) ?? legendeEn(r.rolle, r.text, katalog) ?? listenzeileEn(g.reiter, abschnitt, r.text, katalog, ermittleEn(r.text, katalog)), katalog);
 				// Muster: aus dem Katalog (Platzhalter) oder, ohne Katalogtreffer, Zahlen als {zahl}.
 				// Ein exakter Katalogtreffer ist fester Text (z. B. „3-Tages-Ausblick“), kein Muster.
 				const zahlMuster = !en.i18n_key && /\d/.test(r.text) ? r.text.replace(ZAHL, '{zahl}') : null;

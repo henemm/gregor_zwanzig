@@ -30,7 +30,8 @@ import {
 	mockupHash,
 	pruefeHashAktuell,
 	ladeKatalog,
-	ermittleEn
+	ermittleEn,
+	ladeKuerzelBedeutungen
 } from '../../../../scripts/elementliste_aus_mockup.ts';
 
 const REPO = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..', '..', '..');
@@ -274,6 +275,10 @@ describe('AC-11: EN aus dem Katalog — exakter Treffer, Muster, sonst Lücke (n
 				// #2968 Regel c: sprachneutral ⇒ kein Schlüssel, EN = DE-Muster (Zahlen als {zahl}).
 				assert.equal(e.i18n_key, null, e.id);
 				assert.equal(e.text_en, e.text_de.replace(/\d+([.,]\d+)?/g, '{zahl}'), e.id);
+			} else if (e.i18n_key === null && e.rolle === 'bedeutung') {
+				// #3258: Bedeutung der Legende „Kürzel erklärt“ ohne Frontend-Schlüssel ⇒ EN aus dem Server-Katalog
+				// (Schnappschuss daten/kuerzel_bedeutung.json), nie erfunden.
+				assert.equal(e.text_en, ladeKuerzelBedeutungen().get(e.text_de), `${e.id}: Bedeutung ohne Server-Katalog-EN`);
 			} else if (e.i18n_key === null) {
 				// #2968 Regel b: Segmente ohne einzelnen Schlüssel, EN = Segment-EN mit „ · “ verbunden.
 				assert.ok(e.text_en && (e.text_en.includes(' · ') || e.text_en.startsWith('· ')), `${e.id}: Treffer ohne Schlüssel und ohne Segmente`);

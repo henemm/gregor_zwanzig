@@ -1023,11 +1023,20 @@ export function leseAusnahmen(text: string): Ausnahme[] {
 	});
 }
 
-/** Passt ein normalisierter Text auf Text bzw. Muster (`{name}` = beliebiger Wert) und ggf. ctx/Reiter? */
+/**
+ * Muster einer Ausnahme bzw. eines Besitzers als verankerte RegExp: `{zahl}` passt nur auf Zahl-Text (#3258,
+ * ein Zahl-Muster erklärt keinen beliebigen Text), jeder andere Platzhalter (`{name}`) auf einen beliebigen Wert.
+ */
+function zielMuster(muster: string): RegExp {
+	const teile = normalisiere(muster).split(/(\{[^}]+\})/);
+	return new RegExp('^' + teile.map((t, i) => (i % 2 === 0 ? esc(t) : t === '{zahl}' ? ZAHL_TEXT : '.+?')).join('') + '$');
+}
+
+/** Passt ein normalisierter Text auf Text bzw. Muster (siehe `zielMuster`) und ggf. ctx/Reiter? */
 function trifftZiel(ziel: { ctx?: string; reiter?: string; text?: string; muster?: string }, ctx: string, reiter: string, t: string): boolean {
 	if ((ziel.ctx !== undefined && ziel.ctx !== ctx) || (ziel.reiter !== undefined && ziel.reiter !== reiter)) return false;
 	if (nichtLeer(ziel.text) && normalisiere(ziel.text) === t) return true;
-	return nichtLeer(ziel.muster) && new RegExp('^' + musterAlsRegExp(ziel.muster).source + '$').test(t);
+	return nichtLeer(ziel.muster) && zielMuster(ziel.muster).test(t);
 }
 
 /** Alle `name`-Werte (Trip, Preset, Etappe, Ort) aus API-Antworten; IDs sind keine Konto-Texte. */
