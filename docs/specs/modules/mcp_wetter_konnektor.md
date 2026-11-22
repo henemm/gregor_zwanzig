@@ -3,7 +3,7 @@ entity_id: mcp_wetter_konnektor
 type: module
 created: 2026-11-22
 updated: 2026-11-22
-status: draft
+status: approved
 version: "1.0"
 tags: [mcp, oauth, wetter, go-api, python-core, adr-0128]
 workflow: mcp-wetter-3281
@@ -13,7 +13,7 @@ workflow: mcp-wetter-3281
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO, 2026-11-22, AskUserQuestion „Freigabe“)
 
 ## Purpose
 
@@ -187,3 +187,4 @@ Tests laufen gegen echte Handler/Router mit lokalem Fake-Nominatim-Server und ec
 ## Changelog
 
 - 2026-11-22: Initial spec created (Issue #3281, Workflow mcp-wetter-3281)
+- 2026-11-22: Freigabe durch PO
