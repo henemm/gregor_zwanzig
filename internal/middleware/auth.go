@@ -63,7 +63,10 @@ func AuthMiddleware(secret string, sessions SessionStore) func(http.Handler) htt
 				strings.HasPrefix(r.URL.Path, "/api/webhooks/telegram/") ||
 				// Issue #2439: Push-Eingang Befehle -- eng auf die beiden Praefixe.
 				strings.HasPrefix(r.URL.Path, "/api/webhooks/sms/") ||
-				strings.HasPrefix(r.URL.Path, "/api/webhooks/mail/") {
+				strings.HasPrefix(r.URL.Path, "/api/webhooks/mail/") ||
+				// Issue #3281 (ADR-0128): MCP-Konnektor. Der MCP-Pfad prueft
+				// das Bearer-Token selbst, /authorize die Sitzung selbst.
+				isMCPPublicPath(r.URL.Path) {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -109,6 +112,19 @@ func AuthMiddleware(secret string, sessions SessionStore) func(http.Handler) htt
 		})
 	}
 }
+
+// mcpPublicPaths: oeffentliche Pfade des MCP-Konnektors (exakt, keine Praefixe).
+var mcpPublicPaths = map[string]bool{
+	"/api/mcp":                                      true,
+	"/api/mcp/oauth/authorize":                      true,
+	"/api/mcp/oauth/token":                          true,
+	"/api/mcp/oauth/register":                       true,
+	"/.well-known/oauth-protected-resource":         true,
+	"/.well-known/oauth-protected-resource/api/mcp": true,
+	"/.well-known/oauth-authorization-server":       true,
+}
+
+func isMCPPublicPath(path string) bool { return mcpPublicPaths[path] }
 
 func UserIDFromContext(ctx context.Context) string {
 	uid, _ := ctx.Value(userIDContextKey).(string)

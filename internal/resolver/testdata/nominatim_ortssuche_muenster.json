@@ -1,0 +1,159 @@
+[
+ {
+  "place_id": 114752277,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "relation",
+  "osm_id": 62591,
+  "lat": "51.9625101",
+  "lon": "7.6251879",
+  "category": "boundary",
+  "type": "administrative",
+  "place_rank": 12,
+  "importance": 0.6763885992290051,
+  "addresstype": "city",
+  "name": "Münster",
+  "display_name": "Münster, Nordrhein-Westfalen, Deutschland",
+  "address": {
+   "city": "Münster",
+   "state": "Nordrhein-Westfalen",
+   "ISO3166-2-lvl4": "DE-NW",
+   "country": "Deutschland",
+   "country_code": "de"
+  },
+  "boundingbox": [
+   "51.8401448",
+   "52.0600251",
+   "7.4737853",
+   "7.7743634"
+  ]
+ },
+ {
+  "place_id": 121165555,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "relation",
+  "osm_id": 1952151,
+  "lat": "48.9154719",
+  "lon": "6.9037077",
+  "category": "boundary",
+  "type": "administrative",
+  "place_rank": 16,
+  "importance": 0.5833110818993866,
+  "addresstype": "village",
+  "name": "Münster",
+  "display_name": "Münster, Sarrebourg-Château-Salins, Moselle, Groß-Osten, Metropolitanes Frankreich, 57670, Frankreich",
+  "address": {
+   "village": "Münster",
+   "municipality": "Sarrebourg-Château-Salins",
+   "county": "Moselle",
+   "ISO3166-2-lvl6": "FR-57",
+   "state": "Groß-Osten",
+   "ISO3166-2-lvl4": "FR-GES",
+   "region": "Metropolitanes Frankreich",
+   "postcode": "57670",
+   "country": "Frankreich",
+   "country_code": "fr"
+  },
+  "boundingbox": [
+   "48.8961288",
+   "48.9209128",
+   "6.8640003",
+   "6.9284105"
+  ]
+ },
+ {
+  "place_id": 93402993,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "relation",
+  "osm_id": 1682559,
+  "lat": "47.2796142",
+  "lon": "7.3704192",
+  "category": "boundary",
+  "type": "administrative",
+  "place_rank": 16,
+  "importance": 0.4807552415105173,
+  "addresstype": "town",
+  "name": "Münster",
+  "display_name": "Münster, Bezirk Moutier, Jura, 2740, Schweiz",
+  "address": {
+   "town": "Münster",
+   "county": "Bezirk Moutier",
+   "state": "Jura",
+   "ISO3166-2-lvl4": "CH-JU",
+   "postcode": "2740",
+   "country": "Schweiz",
+   "country_code": "ch"
+  },
+  "boundingbox": [
+   "47.2477594",
+   "47.3059128",
+   "7.3069158",
+   "7.3969266"
+  ]
+ },
+ {
+  "place_id": 127952296,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "relation",
+  "osm_id": 962251,
+  "lat": "48.6179040",
+  "lon": "10.9008482",
+  "category": "boundary",
+  "type": "administrative",
+  "place_rank": 16,
+  "importance": 0.44050461830476045,
+  "addresstype": "city",
+  "name": "Münster",
+  "display_name": "Münster, Rain (Schwaben), Landkreis Donau-Ries, Bayern, 86692, Deutschland",
+  "address": {
+   "city": "Münster",
+   "municipality": "Rain (Schwaben)",
+   "county": "Landkreis Donau-Ries",
+   "state": "Bayern",
+   "ISO3166-2-lvl4": "DE-BY",
+   "postcode": "86692",
+   "country": "Deutschland",
+   "country_code": "de"
+  },
+  "boundingbox": [
+   "48.5841708",
+   "48.6515558",
+   "10.8788966",
+   "10.9314006"
+  ]
+ },
+ {
+  "place_id": 121710820,
+  "licence": "Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+  "osm_type": "relation",
+  "osm_id": 905906,
+  "lat": "48.0408618",
+  "lon": "7.1371568",
+  "category": "boundary",
+  "type": "administrative",
+  "place_rank": 16,
+  "importance": 0.5682119928559572,
+  "addresstype": "town",
+  "name": "Münster im Elsass",
+  "display_name": "Münster im Elsass, Colmar-Rappoltsweiler, Oberelsass, Collectivité européenne d'Alsace, Groß-Osten, Metropolitanes Frankreich, 68140, Frankreich",
+  "address": {
+   "town": "Münster im Elsass",
+   "municipality": "Colmar-Rappoltsweiler",
+   "county": "Oberelsass",
+   "ISO3166-2-lvl6": "FR-68",
+   "state_district": "Collectivité européenne d'Alsace",
+   "ISO3166-2-lvl5": "FR-6AE",
+   "state": "Groß-Osten",
+   "ISO3166-2-lvl4": "FR-GES",
+   "region": "Metropolitanes Frankreich",
+   "postcode": "68140",
+   "country": "Frankreich",
+   "country_code": "fr"
+  },
+  "boundingbox": [
+   "48.0286031",
+   "48.0646256",
+   "7.0964409",
+   "7.1665754"
+  ]
+ }
+]

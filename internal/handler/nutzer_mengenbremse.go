@@ -13,6 +13,7 @@ package handler
 // Neustarts sind nicht nutzergesteuert (Muster MailFloodLimiter).
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"sync"
@@ -125,14 +126,16 @@ func (b *NutzerBremse) zulassen(uid string) (bool, time.Duration) {
 	return true, 0
 }
 
-// retryAfterSekunden rundet auf volle Sekunden auf, mindestens 1.
-func retryAfterSekunden(d time.Duration) string {
+// wartenSekunden rundet auf volle Sekunden auf, mindestens 1.
+func wartenSekunden(d time.Duration) int {
 	s := int((d + time.Second - 1) / time.Second)
 	if s < 1 {
 		s = 1
 	}
-	return strconv.Itoa(s)
+	return s
 }
+
+func retryAfterSekunden(d time.Duration) string { return strconv.Itoa(wartenSekunden(d)) }
 
 func (b *NutzerBremse) ablehnen(w http.ResponseWriter, r *http.Request, warten time.Duration, variante string) {
 	w.Header().Set("Retry-After", retryAfterSekunden(warten))
@@ -233,6 +236,31 @@ func (n *NutzerBremsen) Vorschau(h http.HandlerFunc) http.HandlerFunc {
 // Minutenfenster, teilt die Gleichzeitigkeit mit den uebrigen Abrufwegen.
 func (n *NutzerBremsen) Vorhersage(h http.HandlerFunc) http.HandlerFunc {
 	return n.legeUm(n.vorhersage, h)
+}
+
+// ZulassenOrtssuche / ZulassenVorhersage: dieselben Bremsen wie
+// POST /api/locations/resolve bzw. GET /api/forecast, fuer Aufrufe ohne
+// eigene HTTP-Route (Werkzeuge des MCP-Konnektors, Issue #3281). Verbucht
+// einen Treffer; ok=false nennt die Wartezeit. nil oder aus: keine Bremse.
+func (n *NutzerBremsen) ZulassenOrtssuche(ctx context.Context, uid string) (bool, time.Duration) {
+	if n == nil {
+		return true, 0
+	}
+	return n.zulassenOhneRoute(ctx, n.aufloesen, uid)
+}
+
+func (n *NutzerBremsen) ZulassenVorhersage(ctx context.Context, uid string) (bool, time.Duration) {
+	if n == nil {
+		return true, 0
+	}
+	return n.zulassenOhneRoute(ctx, n.vorhersage, uid)
+}
+
+func (n *NutzerBremsen) zulassenOhneRoute(ctx context.Context, b *NutzerBremse, uid string) (bool, time.Duration) {
+	if n.aus || uid == "" || quotaUnlimited(ctx, uid) {
+		return true, 0
+	}
+	return b.zulassen(uid)
 }
 
 // Gpx: POST /api/gpx/parse.

@@ -71,6 +71,8 @@ INVENTORY: dict[str, IsolationKind] = {
     "www.googleapis.com": IsolationKind.TEST_ACCESS,
     "oauth2.googleapis.com": IsolationKind.TEST_ACCESS,
     "accounts.google.com": IsolationKind.TEST_ACCESS,
+    # Issue #3281: Client-Dokument der Claude-App (MCP-Konnektor, nur Go).
+    "claude.ai": IsolationKind.TEST_ACCESS,
     # Staging darf keine Produktions-Heartbeats gruen pingen.
     "uptime.betterstack.com": IsolationKind.BLOCKED,
 }

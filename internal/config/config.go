@@ -85,6 +85,10 @@ type Config struct {
 	// (Trips/Ortsvergleiche/Orte) ausgenommen sind, OHNE Admin-Rechte (z. B.
 	// das Staging-Testkonto). Leer = niemand ausgenommen (Produktion).
 	QuotaExemptUserIDs string `envconfig:"QUOTA_EXEMPT_USER_IDS" default:""`
+	// Issue #3281 (ADR-0128) — komma-getrennte Nutzerkennungen, die den
+	// MCP-Konnektor „Gregor Wetter“ verbinden duerfen (GZ_MCP_USER_IDS).
+	// Leer = niemand (fail-closed). Verleiht keine weiteren Rechte.
+	MCPUserIDs string `envconfig:"MCP_USER_IDS" default:""`
 	// Issue #2155 S2 (ADR-0079) — Maschinen-Token fuer GET
 	// /api/scheduler/status (Header X-GZ-Status-Token). Leer = Route fuer
 	// alle Anfragen gesperrt (fail-closed), kein Startfehler.
