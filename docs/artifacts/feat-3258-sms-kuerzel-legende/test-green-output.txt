@@ -1,0 +1,59 @@
+### #3258 GREEN: e2e/feat3258_sms_kuerzel_legende.test.ts
+    ok 1 - Titel und feste Einträge stehen DE/EN im Katalog wetter.wsw.legende.*
+ok 1 - \#3258 Vorbedingung: Katalog-Sollwerte vorhanden
+    ok 1 - trip: Titel „Kürzel erklärt“ mit Katalog-Schlüssel und EN-Soll „Abbreviations explained“
+    ok 2 - trip: Legende steht hinter der SMS-Beispielzeile
+    ok 3 - trip: feste Beispielwarnungen mit Kürzel, DE-Text, Katalog-Schlüssel und EN-Soll aus dem Katalog
+    ok 4 - trip: Spec-Beispiele „amtliche Warnung …“, „Warnung Wind“, „Warnung Starkregen“ mit EN-Soll
+    ok 5 - trip: Metrik-Kürzel mit Bedeutung wie live (Server-Katalog)
+    ok 6 - orte: Titel „Kürzel erklärt“ mit Katalog-Schlüssel und EN-Soll „Abbreviations explained“
+    ok 7 - orte: Legende steht hinter der SMS-Beispielzeile
+    ok 8 - orte: feste Beispielwarnungen mit Kürzel, DE-Text, Katalog-Schlüssel und EN-Soll aus dem Katalog
+    ok 9 - orte: Spec-Beispiele „amtliche Warnung …“, „Warnung Wind“, „Warnung Starkregen“ mit EN-Soll
+    ok 10 - orte: Metrik-Kürzel mit Bedeutung wie live (Server-Katalog)
+    ok 11 - orte: fester Eintrag O1 mit Bedeutung wie live, nach den Beispielwarnungen
+    ok 12 - trip: kein O1-Eintrag (nur die Orte-SMS nummeriert Orte)
+ok 2 - \#3258 AC-1/AC-2: Elementliste führt den Block „Kürzel erklärt“ im Abschnitt was-steht-wo
+    ok 1 - trip: Metrik-Kürzel vor den festen Einträgen, feste Einträge in Katalog-Reihenfolge
+    ok 2 - trip: jedes Paar Kürzel→Bedeutung nur einmal
+    ok 3 - orte: Metrik-Kürzel vor den festen Einträgen, feste Einträge in Katalog-Reihenfolge
+    ok 4 - orte: jedes Paar Kürzel→Bedeutung nur einmal
+ok 3 - \#3258 Reihenfolge wie live (legendeAus): erst Metriken, dann feste Einträge, jedes Paar einmal
+    ok 1 - de/trip: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
+    ok 2 - de/orte: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
+    ok 3 - en/trip: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
+    ok 4 - en/orte: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
+ok 4 - \#3258 AC-4: Texte der Legende sind im Abgleich nicht mehr herrenlos (DE und EN, Trip und Orte)
+    ok 1 - de/trip: FN12, FD12/16 und die ganze SMS-Zeile sind erklärt; dieselben Texte mit Buchstaben statt Zahlen nicht
+    ok 2 - en/trip: FN12, FD12/16 und die ganze SMS-Zeile sind erklärt; dieselben Texte mit Buchstaben statt Zahlen nicht
+    ok 3 - Besitzerliste: mindestens ein Muster-Eintrag mit {zahl}, verweis \#3258 und Grund „hängt vom Prüf-Datensatz ab“
+ok 5 - \#3258 AC-3: SMS-Beispielwerte als Zahl-Muster, Besitzer \#3258
+# tests 24
+# pass 24
+# fail 0
+
+### node gesamt: 'src/lib/**/__tests__/*.test.ts' e2e/*.test.ts
+# tests 8612
+# suites 1818
+# pass 8611
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 1
+
+### uv run pytest tests/test_2913_c2_besitzerliste.py tests/test_3258_kuerzel_bedeutung_schnappschuss.py tests/test_2968_metriknamen_schnappschuss.py -q -p no:warnings
+.........................................                                [100%]
+
+### Generator-Mockup-Lauf: npx playwright test --config playwright.elementliste.mockup.config.ts
+  ✓  1 e2e/elementliste-generator.mockup.spec.ts:21:1 › zwei Generator-Läufe: identische IDs und identisch mit der eingecheckten Liste (32.6s)
+  ✓  2 e2e/elementliste-generator.mockup.spec.ts:34:1 › Generator steuert Script-Zustände: Bearbeiten offen, Vorlagen-Auswahl, Speichern-Dialog, Kebab-Bestätigung (17.1s)
+  ✓  3 e2e/elementliste-generator.mockup.spec.ts:47:1 › Generator stellt den Abweichungszustand der Vorlagenkarte her (Klick data-rm → vorlage-abweichung) (15.4s)
+  3 passed (1.1m)
+
+### Fix-Loop 1: Live-Abgleich DE gegen Staging (--scope wetter, Ablage scratchpad/fx3258/de)
+Elementlisten-Abgleich: gefunden 1549, abweichend 595, nicht_pruefbar 198, freigegeben 0, zusaetzlich 57 → Exit 0 → /tmp/claude-1000/-home-hem-gregor-zwanzig/7a8960eb-7126-4b2a-86ef-33b398712053/scratchpad/fx3258/de/bericht.json, /tmp/claude-1000/-home-hem-gregor-zwanzig/7a8960eb-7126-4b2a-86ef-33b398712053/scratchpad/fx3258/de/bericht.md
+== fx3258 de {'gefunden': 1549, 'abweichend': 595, 'nicht_pruefbar': 198, 'freigegeben': 0, 'zusaetzlich': 57}
+  ohne Besitzer eintraege 16 zusaetzlich ohne 40
+Vergleich zu stg3251 (vorher, gleiche IDs):
+de neu: {('trip', 'normal', 'abweichend'): 39, ('trip', 'normal', 'gefunden'): 16, ('trip', 'luecken', 'abweichend'): 39, ('trip', 'luecken', 'gefunden'): 16, ('orte', 'normal', 'abweichend'): 17, ('orte', 'normal', 'gefunden'): 20, ('orte', 'luecken', 'abweichend'): 17, ('orte', 'luecken', 'gefunden'): 20}
+de wechsel: {}

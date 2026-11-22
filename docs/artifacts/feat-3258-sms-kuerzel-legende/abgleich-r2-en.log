@@ -1,0 +1,13 @@
+
+> frontend@0.0.1 elementliste:abgleich
+> node --experimental-strip-types ../scripts/elementliste_abgleich.ts --scope wetter --sprache en
+
+
+Running 1 test using 1 worker
+
+Elementlisten-Abgleich: gefunden 1539, abweichend 503, nicht_pruefbar 300, freigegeben 0, zusaetzlich 77 → Exit 0 → /tmp/claude-1000/-home-hem-gregor-zwanzig/7a8960eb-7126-4b2a-86ef-33b398712053/scratchpad/adv3258/r2-en/bericht.json, /tmp/claude-1000/-home-hem-gregor-zwanzig/7a8960eb-7126-4b2a-86ef-33b398712053/scratchpad/adv3258/r2-en/bericht.md
+  ✓  1 e2e/elementliste-abgleich.staging.spec.ts:370:1 › Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / nicht_pruefbar) (7.1m)
+
+  Slow test file: e2e/elementliste-abgleich.staging.spec.ts (7.1m)
+  Consider running tests from slow files in parallel. See: https://playwright.dev/docs/test-parallel
+  1 passed (7.1m)
