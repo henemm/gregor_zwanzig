@@ -137,6 +137,8 @@ Entscheidung (Tech Lead, Analyse `docs/context/perf-3209-pytest-laufzeit.md`): V
 - Lokaler Messwert (56 min, 51 % CPU-Auslastung) entstand unter Serverlast und ist mit CI nicht vergleichbar; Vorher/Nachher gilt ueber die CI-Jobdauer.
 - `--durations` ist in 13 freezegun-Dateien unbrauchbar (verstellte Uhr, absurde Werte); Einzelmessung dort per Wanduhr.
 - Timing-empfindliche Tests (`test_alert_run_fairness.py`, `test_radar_alarmlauf_fairness.py`, `unit/test_parallel_fetch_deadline.py`, `test_alert_preview_hours_budget.py`, `test_preview_trend_laeuft_nebenlaeufig.py`) sind unter 4 Workern anfaelliger; bei Parallel-Artefakt wandern sie in die serielle Gruppe, Zusicherungen werden nicht gelockert.
+- Unter xdist entschuldigt der Per-Test-Waechter eine Aenderung am echten Baum, wenn ein Prozess der Gruppe `echtdaten` denselben Pfad bzw. Teilbaum im selben Zeitfenster (Karenz 1 s) journalisiert hat. Ein unmarkierter Schreiber, der zeitgleich exakt dorthin schreibt, faellt daher erst im Controller-Netto-Vergleich (ohne Ausnahme) oder in der statischen Echtbaum-Ratsche auf; der serielle Lauf bleibt ohne Ausnahme strikt.
+- Zwei gleichzeitige pytest-Laeufe im selben Checkout (z. B. zwei Pruefagenten) sehen gegenseitig ihre Echtbaum-Schreibzugriffe und werden rot; das ist gewollte Waechter-Wirkung, kein Parallelisierungsfehler. In CI laeuft je Job ein Lauf.
 - Out of Scope: #3278 (lokale parallele Gate-Form), #3279 (Scanner-Ratschen-Cache, echte Wartezeiten), Behebung der Wackel-Issues #3054, #2911, #2898, #3108, #3053, #2889, #2940.
 
 ## Architektur-Entscheidung (ADR)
