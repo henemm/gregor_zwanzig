@@ -117,18 +117,34 @@ func (s sitzung) ortSuchen(args map[string]any) (string, bool) {
 	return jsonText(map[string]any{"kandidaten": k}), false
 }
 
-var zeitFormate = []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02T15:04", "2006-01-02T15:04Z07:00", "2006-01-02"}
+// eingabeTexte: Code eines handler.MCPEingabeFehler (Pruefung in Go oder
+// 4xx-Abweisung des Core) -> Katalogschluessel. Der Detail-Text des Core ist
+// deutsch und geht nie an Claude; unbekannte Codes -> eingabe_ungueltig.
+var eingabeTexte = map[string]string{
+	handler.MCPCodeZeitpunktUngueltig:   "mcp.fehler.zeitpunkt_ungueltig",
+	handler.MCPCodeBisVorVon:            "mcp.fehler.bis_vor_von",
+	handler.MCPCodeKoordinatenUngueltig: "mcp.fehler.koordinaten_ungueltig",
+	"mcp_zeitraum_ausserhalb":           "mcp.fehler.zeitraum_ausserhalb",
+	"invalid_params":                    "mcp.fehler.eingabe_ungueltig",
+}
 
-func zeitGueltig(v string) bool {
-	if len(v) > 40 {
-		return false
-	}
-	for _, f := range zeitFormate {
-		if _, err := time.Parse(f, v); err == nil {
-			return true
+// wetterFehler bildet einen Fehler von handler.MCPWetterAbrufen auf den
+// Katalogtext in der Kontosprache ab.
+func (s sitzung) wetterFehler(err error) string {
+	var warten *handler.MCPWartenFehler
+	var eingabe *handler.MCPEingabeFehler
+	switch {
+	case errors.As(err, &warten) && warten.Grund == handler.MCPGrundKontingent:
+		return s.t("mcp.fehler.kontingent", i18n.Args{"minuten": (warten.WartenS + 59) / 60})
+	case errors.As(err, &warten):
+		return s.t("mcp.fehler.bremse", i18n.Args{"sekunden": warten.WartenS})
+	case errors.As(err, &eingabe):
+		if key, ok := eingabeTexte[eingabe.Code]; ok {
+			return s.t(key, nil)
 		}
+		return s.t("mcp.fehler.eingabe_ungueltig", nil)
 	}
-	return false
+	return s.t("mcp.fehler.wetterdienst", nil)
 }
 
 // ortWaehlen: Koordinaten oder eindeutiger Ort. Ergebnis: Ort, oder ein
@@ -139,9 +155,7 @@ func (s sitzung) ortWaehlen(args map[string]any) (*resolver.OrtKandidat, string,
 	lon, hatLon := zahlArg(args, "lon")
 	switch {
 	case hatLat && hatLon:
-		if lat < -90 || lat > 90 || lon < -180 || lon > 180 {
-			return nil, s.t("mcp.fehler.koordinaten", nil), true
-		}
+		// Bereich und Zeitraum prueft handler.MCPWetterAbrufen (vor Bremse und Kontingent).
 		return &resolver.OrtKandidat{Name: ort, Lat: lat, Lon: lon}, "", false
 	case hatLat || hatLon || ort == "":
 		return nil, s.t("mcp.fehler.ort_fehlt", nil), true
@@ -167,25 +181,14 @@ type ortAusgabe struct {
 
 func (s sitzung) wetter(args map[string]any) (string, bool) {
 	von, bis := textArg(args, "von"), textArg(args, "bis")
-	for feld, wert := range map[string]string{"von": von, "bis": bis} {
-		if wert != "" && !zeitGueltig(wert) {
-			return s.t("mcp.fehler.zeit", i18n.Args{"feld": feld}), true
-		}
-	}
 	ort, text, fehler := s.ortWaehlen(args)
 	if ort == nil {
 		return text, fehler
 	}
 	roh, err := handler.MCPWetterAbrufen(s.ctx, s.h.o.Bremsen, s.h.o.CoreURL, s.uid,
 		handler.MCPWetterAnfrage{Lat: ort.Lat, Lon: ort.Lon, Von: von, Bis: bis})
-	var warten *handler.MCPWartenFehler
-	switch {
-	case errors.As(err, &warten) && warten.Grund == handler.MCPGrundKontingent:
-		return s.t("mcp.fehler.kontingent", i18n.Args{"minuten": (warten.WartenS + 59) / 60}), true
-	case errors.As(err, &warten):
-		return s.t("mcp.fehler.bremse", i18n.Args{"sekunden": warten.WartenS}), true
-	case err != nil:
-		return s.t("mcp.fehler.wetterdienst", nil), true
+	if err != nil {
+		return s.wetterFehler(err), true
 	}
 	var daten map[string]any
 	if json.Unmarshal(roh, &daten) != nil {

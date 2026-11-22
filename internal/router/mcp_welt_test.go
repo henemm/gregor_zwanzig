@@ -61,6 +61,8 @@ type mcpCore struct {
 	wetter   []url.Values
 	voll     map[string]bool
 	gestoert bool
+	// abweisung: 4xx-Rumpf, mit dem der Core den Wetterabruf ablehnt (leer = keiner).
+	abweisung string
 }
 
 func ladeCoreAufzeichnung(t *testing.T, name string) []byte {
@@ -95,6 +97,11 @@ func neuerMCPCoreServer(t *testing.T) *mcpCore {
 			w.Write([]byte(`{"allowed": true}`))
 		case "/api/_internal/mcp/wetter":
 			c.wetter = append(c.wetter, q)
+			if c.abweisung != "" {
+				w.WriteHeader(http.StatusUnprocessableEntity)
+				w.Write([]byte(c.abweisung))
+				return
+			}
 			if c.gestoert {
 				w.WriteHeader(http.StatusBadGateway)
 				w.Write([]byte(`{"detail":{"error":"provider_error"}}`))

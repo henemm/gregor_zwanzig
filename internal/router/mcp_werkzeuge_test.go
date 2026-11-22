@@ -10,8 +10,56 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/model"
 )
+
+// Eingabefehler aus der Pruefung in Go (vor Bremse und Kontingent) und aus
+// einer 4xx-Abweisung des Core: je Code ein Werkzeugfehler mit dem Katalogtext
+// in der Kontosprache, nie der deutsche Detail-Text des Core.
+func TestMCPWetter_EingabefehlerJeCodeInKontosprache(t *testing.T) {
+	const coreText = "Deutscher Core-Text, der nie bei Claude ankommt"
+	core := func(code string) string {
+		return `{"code":"` + code + `","detail":"` + coreText + `"}`
+	}
+	ort := map[string]any{"lat": 50.1, "lon": 8.6}
+	faelle := []struct {
+		name, abweisung, schluessel string
+		args                        map[string]any
+	}{
+		{"zeitpunkt (Go)", "", "mcp.fehler.zeitpunkt_ungueltig", map[string]any{"lat": 50.1, "lon": 8.6, "von": "morgen frueh"}},
+		{"bis vor von (Go)", "", "mcp.fehler.bis_vor_von", map[string]any{"lat": 50.1, "lon": 8.6, "von": "2026-11-23T10:00", "bis": "2026-11-23T08:00"}},
+		{"koordinaten (Go)", "", "mcp.fehler.koordinaten_ungueltig", map[string]any{"lat": 91.0, "lon": 8.6}},
+		{"zeitraum ausserhalb (Core)", core("mcp_zeitraum_ausserhalb"), "mcp.fehler.zeitraum_ausserhalb", ort},
+		{"zeitpunkt (Core)", core("mcp_zeitpunkt_ungueltig"), "mcp.fehler.zeitpunkt_ungueltig", ort},
+		{"bis vor von (Core)", core("mcp_bis_vor_von"), "mcp.fehler.bis_vor_von", ort},
+		{"koordinaten (Core)", core("mcp_koordinaten_ungueltig"), "mcp.fehler.koordinaten_ungueltig", ort},
+		{"invalid_params (Core)", core("invalid_params"), "mcp.fehler.eingabe_ungueltig", ort},
+		{"invalid_params (FastAPI)", `{"detail":[{"loc":["query","lat"],"msg":"` + coreText + `"}]}`, "mcp.fehler.eingabe_ungueltig", ort},
+		{"unbekannter Code (Core)", core("etwas_neues"), "mcp.fehler.eingabe_ungueltig", ort},
+	}
+	w := neueMCPWelt(t, "anna", "emma")
+	de, _ := w.verbinden(w.konto(model.User{ID: "anna", Language: "de"}))
+	en, _ := w.verbinden(w.konto(model.User{ID: "emma", Language: "en"}))
+	for _, f := range faelle {
+		w.core.mu.Lock()
+		w.core.abweisung = f.abweisung
+		w.core.mu.Unlock()
+		for lang, tok := range map[i18n.Lang]map[string]any{i18n.De: de, i18n.En: en} {
+			want := i18n.T(lang, f.schluessel, nil)
+			text, fehler := w.werkzeug(tok["access_token"].(string), "wetter", f.args)
+			if !fehler || text != want || text == f.schluessel {
+				t.Errorf("%s (%s): isError=%v, Text %q, erwartet %q", f.name, lang, fehler, text, want)
+			}
+			if strings.Contains(text, coreText) {
+				t.Errorf("%s (%s): Detail-Text des Core an Claude: %q", f.name, lang, text)
+			}
+		}
+		if i18n.T(i18n.De, f.schluessel, nil) == i18n.T(i18n.En, f.schluessel, nil) {
+			t.Errorf("%s: %s nicht uebersetzt", f.name, f.schluessel)
+		}
+	}
+}
 
 type wetterErgebnis struct {
 	Ort *struct {
