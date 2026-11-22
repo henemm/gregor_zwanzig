@@ -1,0 +1,990 @@
+TAP version 13
+# Subtest: \#3258 Vorbedingung: Katalog-Sollwerte vorhanden
+    # Subtest: Titel und feste Einträge stehen DE/EN im Katalog wetter.wsw.legende.*
+    ok 1 - Titel und feste Einträge stehen DE/EN im Katalog wetter.wsw.legende.*
+      ---
+      duration_ms: 0.558341
+      type: 'test'
+      ...
+    1..1
+ok 1 - \#3258 Vorbedingung: Katalog-Sollwerte vorhanden
+  ---
+  duration_ms: 1.232561
+  type: 'suite'
+  ...
+# Subtest: \#3258 AC-1/AC-2: Elementliste führt den Block „Kürzel erklärt“ im Abschnitt was-steht-wo
+    # Subtest: trip: Titel „Kürzel erklärt“ mit Katalog-Schlüssel und EN-Soll „Abbreviations explained“
+    not ok 1 - trip: Titel „Kürzel erklärt“ mit Katalog-Schlüssel und EN-Soll „Abbreviations explained“
+      ---
+      duration_ms: 0.970071
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:130:3'
+      failureType: 'testCodeFailure'
+      error: '„Kürzel erklärt“ fehlt im Abschnitt „was-steht-wo“ (trip, Wetter, normal)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:132:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: trip: Legende steht hinter der SMS-Beispielzeile
+    not ok 2 - trip: Legende steht hinter der SMS-Beispielzeile
+      ---
+      duration_ms: 0.505491
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:138:3'
+      failureType: 'testCodeFailure'
+      error: '„Kürzel erklärt“ fehlt (trip)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:143:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip: feste Beispielwarnungen mit Kürzel, DE-Text, Katalog-Schlüssel und EN-Soll aus dem Katalog
+    not ok 3 - trip: feste Beispielwarnungen mit Kürzel, DE-Text, Katalog-Schlüssel und EN-Soll aus dem Katalog
+      ---
+      duration_ms: 0.33022
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:147:3'
+      failureType: 'testCodeFailure'
+      error: 'Paar „@14“ → „ab 14 Uhr gelb oder schlechter“ fehlt in der Legende (trip)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:153:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip: Spec-Beispiele „amtliche Warnung …“, „Warnung Wind“, „Warnung Starkregen“ mit EN-Soll
+    not ok 4 - trip: Spec-Beispiele „amtliche Warnung …“, „Warnung Wind“, „Warnung Starkregen“ mit EN-Soll
+      ---
+      duration_ms: 0.53437
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:161:3'
+      failureType: 'testCodeFailure'
+      error: '„amtliche Warnung: Gewitter, Stufe hoch, ab 14 Uhr“ fehlt in der Legende (trip)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:170:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip: Metrik-Kürzel mit Bedeutung wie live (Server-Katalog)
+    not ok 5 - trip: Metrik-Kürzel mit Bedeutung wie live (Server-Katalog)
+      ---
+      duration_ms: 3.379095
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:175:3'
+      failureType: 'testCodeFailure'
+      error: 'Paar „TF“ → „gefühlt“ fehlt in der Legende (trip)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:178:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: orte: Titel „Kürzel erklärt“ mit Katalog-Schlüssel und EN-Soll „Abbreviations explained“
+    not ok 6 - orte: Titel „Kürzel erklärt“ mit Katalog-Schlüssel und EN-Soll „Abbreviations explained“
+      ---
+      duration_ms: 0.202461
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:130:3'
+      failureType: 'testCodeFailure'
+      error: '„Kürzel erklärt“ fehlt im Abschnitt „was-steht-wo“ (orte, Wetter, normal)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:132:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: orte: Legende steht hinter der SMS-Beispielzeile
+    not ok 7 - orte: Legende steht hinter der SMS-Beispielzeile
+      ---
+      duration_ms: 0.40922
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:138:3'
+      failureType: 'testCodeFailure'
+      error: '„Kürzel erklärt“ fehlt (orte)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:143:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: orte: feste Beispielwarnungen mit Kürzel, DE-Text, Katalog-Schlüssel und EN-Soll aus dem Katalog
+    not ok 8 - orte: feste Beispielwarnungen mit Kürzel, DE-Text, Katalog-Schlüssel und EN-Soll aus dem Katalog
+      ---
+      duration_ms: 0.21002
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:147:3'
+      failureType: 'testCodeFailure'
+      error: 'Paar „@14“ → „ab 14 Uhr gelb oder schlechter“ fehlt in der Legende (orte)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:153:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: orte: Spec-Beispiele „amtliche Warnung …“, „Warnung Wind“, „Warnung Starkregen“ mit EN-Soll
+    not ok 9 - orte: Spec-Beispiele „amtliche Warnung …“, „Warnung Wind“, „Warnung Starkregen“ mit EN-Soll
+      ---
+      duration_ms: 0.362492
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:161:3'
+      failureType: 'testCodeFailure'
+      error: '„amtliche Warnung: Gewitter, Stufe hoch, ab 14 Uhr“ fehlt in der Legende (orte)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:170:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: orte: Metrik-Kürzel mit Bedeutung wie live (Server-Katalog)
+    not ok 10 - orte: Metrik-Kürzel mit Bedeutung wie live (Server-Katalog)
+      ---
+      duration_ms: 0.19495
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:175:3'
+      failureType: 'testCodeFailure'
+      error: 'Paar „W“ → „Wind km/h“ fehlt in der Legende (orte)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:178:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: orte: fester Eintrag O1 mit Bedeutung wie live, nach den Beispielwarnungen
+    not ok 11 - orte: fester Eintrag O1 mit Bedeutung wie live, nach den Beispielwarnungen
+      ---
+      duration_ms: 0.19575
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:183:2'
+      failureType: 'testCodeFailure'
+      error: 'Paar „O1“ → „Ort 1 in der Reihenfolge des Abos“ fehlt in der Legende (orte)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:186:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: trip: kein O1-Eintrag (nur die Orte-SMS nummeriert Orte)
+    not ok 12 - trip: kein O1-Eintrag (nur die Orte-SMS nummeriert Orte)
+      ---
+      duration_ms: 0.17936
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:191:2'
+      failureType: 'testCodeFailure'
+      error: '„Kürzel erklärt“ fehlt (trip)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:193:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..12
+not ok 2 - \#3258 AC-1/AC-2: Elementliste führt den Block „Kürzel erklärt“ im Abschnitt was-steht-wo
+  ---
+  duration_ms: 8.122013
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:128:1'
+  failureType: 'subtestsFailed'
+  error: '12 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3258 Reihenfolge wie live (legendeAus): erst Metriken, dann feste Einträge, jedes Paar einmal
+    # Subtest: trip: Metrik-Kürzel vor den festen Einträgen, feste Einträge in Katalog-Reihenfolge
+    not ok 1 - trip: Metrik-Kürzel vor den festen Einträgen, feste Einträge in Katalog-Reihenfolge
+      ---
+      duration_ms: 0.29576
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:200:3'
+      failureType: 'testCodeFailure'
+      error: '„Kürzel erklärt“ fehlt (trip)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:202:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: trip: jedes Paar Kürzel→Bedeutung nur einmal
+    not ok 2 - trip: jedes Paar Kürzel→Bedeutung nur einmal
+      ---
+      duration_ms: 0.23856
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:213:3'
+      failureType: 'testCodeFailure'
+      error: '„Kürzel erklärt“ fehlt (trip)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:215:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: orte: Metrik-Kürzel vor den festen Einträgen, feste Einträge in Katalog-Reihenfolge
+    not ok 3 - orte: Metrik-Kürzel vor den festen Einträgen, feste Einträge in Katalog-Reihenfolge
+      ---
+      duration_ms: 0.17151
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:200:3'
+      failureType: 'testCodeFailure'
+      error: '„Kürzel erklärt“ fehlt (orte)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:202:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: orte: jedes Paar Kürzel→Bedeutung nur einmal
+    not ok 4 - orte: jedes Paar Kürzel→Bedeutung nur einmal
+      ---
+      duration_ms: 0.13587
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:213:3'
+      failureType: 'testCodeFailure'
+      error: '„Kürzel erklärt“ fehlt (orte)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:215:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 3 - \#3258 Reihenfolge wie live (legendeAus): erst Metriken, dann feste Einträge, jedes Paar einmal
+  ---
+  duration_ms: 0.977262
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:198:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3258 AC-4: Texte der Legende sind im Abgleich nicht mehr herrenlos (DE und EN, Trip und Orte)
+    # Subtest: de/trip: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
+    not ok 1 - de/trip: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
+      ---
+      duration_ms: 24.126988
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:278:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        51 herrenlose Legenden-Texte (de/trip)
+        + actual - expected
+        
+        + [
+        +   'Kürzel erklärt',
+        +   'L',
+        +   'Tagestiefstwert',
+        +   'D',
+        +   'Tageshöchstwert',
+        +   'W',
+        +   'Wind km/h',
+        +   'G',
+        +   'PR',
+        +   'Regenwahrscheinlichkeit %',
+        +   'R',
+        +   'Regen mm',
+        +   'TF',
+        +   'gefühlt',
+        +   'FN',
+        +   'N gefühlt',
+        +   'FL',
+        +   'L gefühlt',
+        +   'FD',
+        +   'D gefühlt',
+        +   'TH',
+        +   'TH+',
+        +   'Gewitter Folge-Etappe',
+        +   'VS',
+        +   'Sicht',
+        +   'FZ',
+        +   'Nullgradgrenze m',
+        +   'UV',
+        +   'SL',
+        +   'Schneefallgrenze m',
+        +   'CL',
+        +   'Bewölkung tief',
+        +   'N',
+        +   'Nacht',
+        +   '@14',
+        +   'ab 14 Uhr gelb oder schlechter',
+        +   '!TS:H@14',
+        +   'amtliche Warnung: Gewitter, Stufe hoch, ab 14 Uhr',
+        +   'Stufe gelb',
+        +   'M',
+        +   'Stufe orange',
+        +   'H',
+        +   'Stufe rot',
+        +   'WG',
+        +   'Warnung Wind',
+        +   'RA',
+        +   'Warnung Starkregen',
+        +   'AV4',
+        +   'Lawinenstufe',
+        +   'X?',
+        +   'Warnquelle nicht erreichbar'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'Kürzel erklärt'
+        1: 'L'
+        2: 'Tagestiefstwert'
+        3: 'D'
+        4: 'Tageshöchstwert'
+        5: 'W'
+        6: 'Wind km/h'
+        7: 'G'
+        8: 'PR'
+        9: 'Regenwahrscheinlichkeit %'
+        10: 'R'
+        11: 'Regen mm'
+        12: 'TF'
+        13: 'gefühlt'
+        14: 'FN'
+        15: 'N gefühlt'
+        16: 'FL'
+        17: 'L gefühlt'
+        18: 'FD'
+        19: 'D gefühlt'
+        20: 'TH'
+        21: 'TH+'
+        22: 'Gewitter Folge-Etappe'
+        23: 'VS'
+        24: 'Sicht'
+        25: 'FZ'
+        26: 'Nullgradgrenze m'
+        27: 'UV'
+        28: 'SL'
+        29: 'Schneefallgrenze m'
+        30: 'CL'
+        31: 'Bewölkung tief'
+        32: 'N'
+        33: 'Nacht'
+        34: '@14'
+        35: 'ab 14 Uhr gelb oder schlechter'
+        36: '!TS:H@14'
+        37: 'amtliche Warnung: Gewitter, Stufe hoch, ab 14 Uhr'
+        38: 'Stufe gelb'
+        39: 'M'
+        40: 'Stufe orange'
+        41: 'H'
+        42: 'Stufe rot'
+        43: 'WG'
+        44: 'Warnung Wind'
+        45: 'RA'
+        46: 'Warnung Starkregen'
+        47: 'AV4'
+        48: 'Lawinenstufe'
+        49: 'X?'
+        50: 'Warnquelle nicht erreichbar'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:282:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: de/orte: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
+    not ok 2 - de/orte: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
+      ---
+      duration_ms: 10.314456
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:278:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        34 herrenlose Legenden-Texte (de/orte)
+        + actual - expected
+        
+        + [
+        +   'Kürzel erklärt',
+        +   'D',
+        +   'Tageshöchstwert',
+        +   'W',
+        +   'Wind km/h',
+        +   'G',
+        +   'R',
+        +   'Regen mm',
+        +   'TH',
+        +   'PR',
+        +   'Regenwahrscheinlichkeit %',
+        +   'CT',
+        +   'Bewölkung gesamt',
+        +   'SU',
+        +   '@14',
+        +   'ab 14 Uhr gelb oder schlechter',
+        +   '!TS:H@14',
+        +   'amtliche Warnung: Gewitter, Stufe hoch, ab 14 Uhr',
+        +   'L',
+        +   'Stufe gelb',
+        +   'M',
+        +   'Stufe orange',
+        +   'H',
+        +   'Stufe rot',
+        +   'WG',
+        +   'Warnung Wind',
+        +   'RA',
+        +   'Warnung Starkregen',
+        +   'AV4',
+        +   'Lawinenstufe',
+        +   'X?',
+        +   'Warnquelle nicht erreichbar',
+        +   'O1',
+        +   'Ort 1 in der Reihenfolge des Abos'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'Kürzel erklärt'
+        1: 'D'
+        2: 'Tageshöchstwert'
+        3: 'W'
+        4: 'Wind km/h'
+        5: 'G'
+        6: 'R'
+        7: 'Regen mm'
+        8: 'TH'
+        9: 'PR'
+        10: 'Regenwahrscheinlichkeit %'
+        11: 'CT'
+        12: 'Bewölkung gesamt'
+        13: 'SU'
+        14: '@14'
+        15: 'ab 14 Uhr gelb oder schlechter'
+        16: '!TS:H@14'
+        17: 'amtliche Warnung: Gewitter, Stufe hoch, ab 14 Uhr'
+        18: 'L'
+        19: 'Stufe gelb'
+        20: 'M'
+        21: 'Stufe orange'
+        22: 'H'
+        23: 'Stufe rot'
+        24: 'WG'
+        25: 'Warnung Wind'
+        26: 'RA'
+        27: 'Warnung Starkregen'
+        28: 'AV4'
+        29: 'Lawinenstufe'
+        30: 'X?'
+        31: 'Warnquelle nicht erreichbar'
+        32: 'O1'
+        33: 'Ort 1 in der Reihenfolge des Abos'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:282:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: en/trip: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
+    not ok 3 - en/trip: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
+      ---
+      duration_ms: 15.190436
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:278:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        54 herrenlose Legenden-Texte (en/trip)
+        + actual - expected
+        
+        + [
+        +   'Abbreviations explained',
+        +   'L',
+        +   'day min',
+        +   'D',
+        +   'day max',
+        +   'W',
+        +   'wind km/h',
+        +   'G',
+        +   'gusts',
+        +   'PR',
+        +   'rain %',
+        +   'R',
+        +   'rain mm',
+        +   'TF',
+        +   'feels like',
+        +   'FN',
+        +   'N feels like',
+        +   'FL',
+        +   'L feels like',
+        +   'FD',
+        +   'D feels like',
+        +   'TH',
+        +   'thunder',
+        +   'TH+',
+        +   'next stage',
+        +   'VS',
+        +   'visibility',
+        +   'FZ',
+        +   '0C level m',
+        +   'UV',
+        +   'index',
+        +   'SL',
+        +   'snow line m',
+        +   'CL',
+        +   'clouds low',
+        +   'N',
+        +   'night',
+        +   '@14',
+        +   'yellow or worse from 2 pm',
+        +   '!TS:H@14',
+        +   'official warning: thunderstorm, level high, from 2 pm',
+        +   'level yellow',
+        +   'M',
+        +   'level orange',
+        +   'H',
+        +   'level red',
+        +   'WG',
+        +   'wind warning',
+        +   'RA',
+        +   'heavy rain warning',
+        +   'AV4',
+        +   'avalanche danger level',
+        +   'X?',
+        +   'warning source unreachable'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'Abbreviations explained'
+        1: 'L'
+        2: 'day min'
+        3: 'D'
+        4: 'day max'
+        5: 'W'
+        6: 'wind km/h'
+        7: 'G'
+        8: 'gusts'
+        9: 'PR'
+        10: 'rain %'
+        11: 'R'
+        12: 'rain mm'
+        13: 'TF'
+        14: 'feels like'
+        15: 'FN'
+        16: 'N feels like'
+        17: 'FL'
+        18: 'L feels like'
+        19: 'FD'
+        20: 'D feels like'
+        21: 'TH'
+        22: 'thunder'
+        23: 'TH+'
+        24: 'next stage'
+        25: 'VS'
+        26: 'visibility'
+        27: 'FZ'
+        28: '0C level m'
+        29: 'UV'
+        30: 'index'
+        31: 'SL'
+        32: 'snow line m'
+        33: 'CL'
+        34: 'clouds low'
+        35: 'N'
+        36: 'night'
+        37: '@14'
+        38: 'yellow or worse from 2 pm'
+        39: '!TS:H@14'
+        40: 'official warning: thunderstorm, level high, from 2 pm'
+        41: 'level yellow'
+        42: 'M'
+        43: 'level orange'
+        44: 'H'
+        45: 'level red'
+        46: 'WG'
+        47: 'wind warning'
+        48: 'RA'
+        49: 'heavy rain warning'
+        50: 'AV4'
+        51: 'avalanche danger level'
+        52: 'X?'
+        53: 'warning source unreachable'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:282:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: en/orte: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
+    not ok 4 - en/orte: jeder Live-Text der Legende ist Soll-Eintrag oder hat einen Besitzer
+      ---
+      duration_ms: 9.137244
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:278:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        37 herrenlose Legenden-Texte (en/orte)
+        + actual - expected
+        
+        + [
+        +   'Abbreviations explained',
+        +   'D',
+        +   'day max',
+        +   'W',
+        +   'wind km/h',
+        +   'G',
+        +   'gusts',
+        +   'R',
+        +   'rain mm',
+        +   'TH',
+        +   'thunder',
+        +   'PR',
+        +   'rain %',
+        +   'CT',
+        +   'clouds total',
+        +   'SU',
+        +   'sun h',
+        +   '@14',
+        +   'yellow or worse from 2 pm',
+        +   '!TS:H@14',
+        +   'official warning: thunderstorm, level high, from 2 pm',
+        +   'L',
+        +   'level yellow',
+        +   'M',
+        +   'level orange',
+        +   'H',
+        +   'level red',
+        +   'WG',
+        +   'wind warning',
+        +   'RA',
+        +   'heavy rain warning',
+        +   'AV4',
+        +   'avalanche danger level',
+        +   'X?',
+        +   'warning source unreachable',
+        +   'O1',
+        +   'Location 1 in the order of the subscription'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'Abbreviations explained'
+        1: 'D'
+        2: 'day max'
+        3: 'W'
+        4: 'wind km/h'
+        5: 'G'
+        6: 'gusts'
+        7: 'R'
+        8: 'rain mm'
+        9: 'TH'
+        10: 'thunder'
+        11: 'PR'
+        12: 'rain %'
+        13: 'CT'
+        14: 'clouds total'
+        15: 'SU'
+        16: 'sun h'
+        17: '@14'
+        18: 'yellow or worse from 2 pm'
+        19: '!TS:H@14'
+        20: 'official warning: thunderstorm, level high, from 2 pm'
+        21: 'L'
+        22: 'level yellow'
+        23: 'M'
+        24: 'level orange'
+        25: 'H'
+        26: 'level red'
+        27: 'WG'
+        28: 'wind warning'
+        29: 'RA'
+        30: 'heavy rain warning'
+        31: 'AV4'
+        32: 'avalanche danger level'
+        33: 'X?'
+        34: 'warning source unreachable'
+        35: 'O1'
+        36: 'Location 1 in the order of the subscription'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:282:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 4 - \#3258 AC-4: Texte der Legende sind im Abgleich nicht mehr herrenlos (DE und EN, Trip und Orte)
+  ---
+  duration_ms: 58.937053
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:275:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#3258 AC-3: SMS-Beispielwerte als Zahl-Muster, Besitzer \#3258
+    # Subtest: de/trip: FN12, FD12/16 und die ganze SMS-Zeile sind erklärt; dieselben Texte mit Buchstaben statt Zahlen nicht
+    not ok 1 - de/trip: FN12, FD12/16 und die ganze SMS-Zeile sind erklärt; dieselben Texte mit Buchstaben statt Zahlen nicht
+      ---
+      duration_ms: 7.016441
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:290:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        herrenlose SMS-Beispielwerte (de): ["FN12","FD12/16","Port d'And D14/18 W30@10(41@15) G35@7(59@15) PR70%@13 R1.0@15 TF- FN12 FD12/16 TH:L@14(M@15) TH+:- VS- FZ3300@4 UV6@12(7@13) SL2900 CL:SCT@15 N14"]
+        + actual - expected
+        
+        + [
+        +   'FN12',
+        +   'FD12/16',
+        +   "Port d'And D14/18 W30@10(41@15) G35@7(59@15) PR70%@13 R1.0@15 TF- FN12 FD12/16 TH:L@14(M@15) TH+:- VS- FZ3300@4 UV6@12(7@13) SL2900 CL:SCT@15 N14"
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'FN12'
+        1: 'FD12/16'
+        2: "Port d'And D14/18 W30@10(41@15) G35@7(59@15) PR70%@13 R1.0@15 TF- FN12 FD12/16 TH:L@14(M@15) TH+:- VS- FZ3300@4 UV6@12(7@13) SL2900 CL:SCT@15 N14"
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:292:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: en/trip: FN12, FD12/16 und die ganze SMS-Zeile sind erklärt; dieselben Texte mit Buchstaben statt Zahlen nicht
+    not ok 2 - en/trip: FN12, FD12/16 und die ganze SMS-Zeile sind erklärt; dieselben Texte mit Buchstaben statt Zahlen nicht
+      ---
+      duration_ms: 11.236637
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:290:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        herrenlose SMS-Beispielwerte (en): ["TF- FN12 FD12/16","FN12","FD12/16","Port d'And D14/18 W30@10(41@15) G35@7(59@15) PR70%@13 R1.0@15 TF- FN12 FD12/16 TH:L@14(M@15) TH+:- VS- FZ3300@4 UV6@12(7@13) SL2900 CL:SCT@15 N14"]
+        + actual - expected
+        
+        + [
+        +   'TF- FN12 FD12/16',
+        +   'FN12',
+        +   'FD12/16',
+        +   "Port d'And D14/18 W30@10(41@15) G35@7(59@15) PR70%@13 R1.0@15 TF- FN12 FD12/16 TH:L@14(M@15) TH+:- VS- FZ3300@4 UV6@12(7@13) SL2900 CL:SCT@15 N14"
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'TF- FN12 FD12/16'
+        1: 'FN12'
+        2: 'FD12/16'
+        3: "Port d'And D14/18 W30@10(41@15) G35@7(59@15) PR70%@13 R1.0@15 TF- FN12 FD12/16 TH:L@14(M@15) TH+:- VS- FZ3300@4 UV6@12(7@13) SL2900 CL:SCT@15 N14"
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:292:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Besitzerliste: mindestens ein Muster-Eintrag mit {zahl}, verweis \#3258 und Grund „hängt vom Prüf-Datensatz ab“
+    not ok 3 - Besitzerliste: mindestens ein Muster-Eintrag mit {zahl}, verweis \#3258 und Grund „hängt vom Prüf-Datensatz ab“
+      ---
+      duration_ms: 0.25652
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:300:2'
+      failureType: 'testCodeFailure'
+      error: 'kein zusaetzlich-Besitzer mit Muster {zahl} und verweis #3258'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:303:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 5 - \#3258 AC-3: SMS-Beispielwerte als Zahl-Muster, Besitzer \#3258
+  ---
+  duration_ms: 18.67635
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/misty-shimmying-feather/frontend/e2e/feat3258_sms_kuerzel_legende.test.ts:288:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..5
+# tests 24
+# suites 5
+# pass 1
+# fail 23
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 353.262854
