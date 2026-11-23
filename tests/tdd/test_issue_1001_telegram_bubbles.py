@@ -22,7 +22,6 @@ import os
 import re
 import shutil
 from datetime import date, datetime, timezone
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -830,7 +829,7 @@ def _f003_trip_and_log():
     import json as _json
     from datetime import timedelta
 
-    from app.loader import get_briefings_dir
+    from app.loader import get_briefings_dir, get_data_dir
 
     trips_dir = get_briefings_dir(_F003_USER)
     trips_dir.mkdir(parents=True, exist_ok=True)
@@ -848,7 +847,9 @@ def _f003_trip_and_log():
         },
         "alert_rules": [],
     }))
-    log_path = Path(f"data/users/{_F003_USER}/briefing_log.json")
+    # Issue #3209 Fix-Loop 2: dieselbe (isolierte) Basis, in die
+    # services.briefing_log schreibt -- nicht der echte data/users-Baum.
+    log_path = get_data_dir(_F003_USER) / "briefing_log.json"
     log_path.unlink(missing_ok=True)
     yield trip_path, log_path
     trip_path.unlink(missing_ok=True)

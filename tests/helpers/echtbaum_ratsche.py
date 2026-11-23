@@ -21,6 +21,9 @@ Erkannte Zugriffe auf den echten Baum:
   "users"`` ist KEIN Echtbaum-Zugriff.
 * ``os.path.join("data", "users", ...)`` bzw. ``os.path.join(<Repo-Wurzel>,
   "data", "users", ...)``
+* in allen Formen auch f-Strings, deren konstanter Anfang die Segmente
+  liefert (``Path(f"data/users/{uid}")``, ``Path(f"data") / f"users/{uid}"``,
+  ``os.path.join(f"data/users", uid)``) -- Fix-Loop 2.
 
 Konform ist ein Zugriff, wenn er in einem Geltungsbereich mit
 ``real_data_root`` oder ``xdist_group("echtdaten")`` steht (``pytestmark`` des
@@ -48,6 +51,31 @@ def _str(node: ast.AST) -> str | None:
     return None
 
 
+class _Anfang(str):
+    """Konstanter Anfang eines f-Strings, auf den ein Platzhalter folgt."""
+
+
+def _seg(node: ast.AST) -> str | None:
+    """Pfad-Segment als Text: String-Konstante, f-String ohne Platzhalter
+    vollstaendig, f-String mit Platzhalter als ``_Anfang`` (konstanter Teil vor
+    dem ersten Platzhalter, z. B. ``f"data/users/{uid}"`` -> ``"data/users/"``)."""
+    s = _str(node)
+    if s is not None:
+        return s
+    if isinstance(node, ast.JoinedStr):
+        teile: list[str] = []
+        for wert in node.values:
+            t = _str(wert)
+            if t is None:
+                break
+            teile.append(t)
+        anfang = "".join(teile)
+        if len(teile) == len(node.values):
+            return anfang
+        return _Anfang(anfang) if anfang else None
+    return None
+
+
 def _ist_path_aufruf(node: ast.AST) -> bool:
     if not isinstance(node, ast.Call):
         return False
@@ -57,7 +85,7 @@ def _ist_path_aufruf(node: ast.AST) -> bool:
 
 
 def _path_args(node: ast.Call) -> list[str | None]:
-    return [_str(a) for a in node.args]
+    return [_seg(a) for a in node.args]
 
 
 def _ist_repo_wurzel(node: ast.AST) -> bool:
@@ -91,7 +119,7 @@ def _segmente_beginnen_mit_data_users(segmente: list[str | None]) -> bool:
         if s is None:
             break
         teile.extend(p for p in s.split("/") if p)
-        if len(teile) >= 2:
+        if len(teile) >= 2 or isinstance(s, _Anfang):
             break
     return teile[:2] == ["data", "users"]
 
@@ -106,9 +134,9 @@ def _ist_echtbaum_zugriff(node: ast.AST) -> bool:
         wert = node.func.value
         if isinstance(wert, ast.Attribute) and wert.attr == "path":
             args = list(node.args)
-            if args and _str(args[0]) is None and _ist_repo_wurzel(args[0]):
+            if args and _seg(args[0]) is None and _ist_repo_wurzel(args[0]):
                 args = args[1:]
-            return _segmente_beginnen_mit_data_users([_str(a) for a in args])
+            return _segmente_beginnen_mit_data_users([_seg(a) for a in args])
         return False
 
     # Div-Ketten: nur am obersten Knoten der Kette pruefen
@@ -117,12 +145,12 @@ def _ist_echtbaum_zugriff(node: ast.AST) -> bool:
         basis, rest = kette[0], kette[1:]
         if _ist_path_aufruf(basis):
             return _segmente_beginnen_mit_data_users(
-                [*_path_args(basis), *[_str(r) for r in rest]]
+                [*_path_args(basis), *[_seg(r) for r in rest]]
             )
-        if _str(basis) is None and _ist_repo_wurzel(basis):
+        if _seg(basis) is None and _ist_repo_wurzel(basis):
             # Wurzel ueber mehrere Div-Glieder (Path(__file__).parent / ".." )
             # ueberspringen, bis die erste Konstante "data" folgt.
-            segmente = [_str(r) for r in rest]
+            segmente = [_seg(r) for r in rest]
             for i, s in enumerate(segmente):
                 if s is not None and s.split("/")[0] == "data":
                     return _segmente_beginnen_mit_data_users(segmente[i:])

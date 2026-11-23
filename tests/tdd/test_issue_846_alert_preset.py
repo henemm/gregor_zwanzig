@@ -89,14 +89,23 @@ def _data(segment_id: int | str = 1, **summary_kwargs) -> SegmentWeatherData:
     )
 
 
+def _user_dir(user_id: str) -> Path:
+    """Nutzerverzeichnis unter der (pro Test isolierten) Datenbasis -- dieselbe
+    Quelle, in die `services.alert_log` schreibt (Issue #3209 Fix-Loop 2:
+    nicht mehr der echte data/users-Baum)."""
+    from app.loader import get_data_dir
+    return get_data_dir(user_id)
+
+
 @pytest.fixture()
 def clean_user_dirs():
-    """Räumt die echten data/users/tdd-846-*-Verzeichnisse vor und nach dem Test."""
+    """Räumt die tdd-846-*-Verzeichnisse der isolierten Datenbasis vor und
+    nach dem Test."""
     created: list[str] = []
 
     def _register(user_id: str) -> str:
         created.append(user_id)
-        path = Path(f"data/users/{user_id}")
+        path = _user_dir(user_id)
         if path.exists():
             shutil.rmtree(path)
         return user_id
@@ -104,7 +113,7 @@ def clean_user_dirs():
     yield _register
 
     for user_id in created:
-        path = Path(f"data/users/{user_id}")
+        path = _user_dir(user_id)
         if path.exists():
             shutil.rmtree(path)
 
@@ -360,14 +369,14 @@ def test_ac7_standard_gust_below_threshold_no_alert_and_user_isolation(
     svc_a = TripAlertService(settings=settings, user_id=user_a)
     svc_a.check_and_send_alerts(trip_a, [old], fresh_weather=[new])
 
-    alert_log_a = Path(f"data/users/{user_a}/alert_log.json")
+    alert_log_a = _user_dir(user_a) / "alert_log.json"
     assert not alert_log_a.exists(), (
         "user_a darf bei Δ unter Schwelle keinen Alert-Log-Eintrag bekommen — "
         f"{alert_log_a} existiert unerwartet"
     )
 
     # user_b wurde nie angefasst → kein Verzeichnis/keine Daten.
-    user_b_dir = Path(f"data/users/{user_b}")
+    user_b_dir = _user_dir(user_b)
     assert not user_b_dir.exists() or not any(user_b_dir.iterdir()), (
         "user_b-Daten wurden durch den user_a-Lauf berührt — "
         "Mandantentrennung verletzt"

@@ -81,6 +81,30 @@ VERSTOESSE = {
         "def test_raeumt():\n"
         f"    shutil.rmtree(os.path.join(REPO_ROOT, {_D}\", \"users\", 'fester-user'), ignore_errors=True)\n"
     ),
+    # Fix-Loop 2 (CI-Befund test_trip_alert_channel_precedence): f-String-Pfade
+    "fstring_users_pfad": (
+        "from pathlib import Path\n\n"
+        "def test_schreibt():\n"
+        "    uid = 'fester-user'\n"
+        "    (Path(f" + _D + '/users/{uid}") / "user.json").write_text("{}")\n'
+    ),
+    "fstring_ohne_platzhalter": (
+        "from pathlib import Path\n\n"
+        "def test_liest():\n"
+        "    assert Path(f" + _D + '/users").exists() or True\n'
+    ),
+    "fstring_data_dann_users": (
+        "from pathlib import Path\n\n"
+        "def test_liest():\n"
+        "    uid = 'fester-user'\n"
+        "    assert (Path(f" + _D + '") / f"users/{uid}").exists() or True\n'
+    ),
+    "fstring_os_path_join": (
+        "import os, shutil\n\n"
+        "def test_raeumt():\n"
+        "    uid = 'fester-user'\n"
+        "    shutil.rmtree(os.path.join(f" + _D + '/users", uid), ignore_errors=True)\n'
+    ),
 }
 
 
@@ -160,6 +184,18 @@ def test_ac5_unbeteiligte_datei_bleibt_gruen(tmp_path):
         tmp_path, "test_sauber.py",
         "def test_tmp(tmp_path):\n"
         "    (tmp_path / 'data' / 'users').mkdir(parents=True)\n",
+    )
+    assert _ratsche()(tmp_path) == []
+
+
+def test_ac5_fstring_unter_tmp_path_bleibt_gruen(tmp_path):
+    """Fix-Loop 2: ein f-String-Pfad relativ zu ``tmp_path`` ist kein
+    Echtbaum-Zugriff."""
+    _datei(
+        tmp_path, "test_sauber_fstring.py",
+        "def test_tmp(tmp_path):\n"
+        "    uid = 'u'\n"
+        "    (tmp_path / f'data/users/{uid}').mkdir(parents=True)\n",
     )
     assert _ratsche()(tmp_path) == []
 
