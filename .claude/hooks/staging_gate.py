@@ -13,6 +13,9 @@ Mode A — Verdict schreiben (vom Staging Validator Agent aufgerufen):
     environment.
     Exit 0 bei VERIFIED/AMBIGUOUS, Exit 1 bei BROKEN.
     Datei wird NUR bei Exit 0 geschrieben (kein BROKEN-Artefakt).
+    Issue #3289: danach wird der Nachweis (Dateiinhalt unveraendert) als Git-Note
+    refs/notes/e2e-verified am Commit nach origin veroeffentlicht (Pull-Deploy).
+    Scheitert das, Exit 1. GZ_E2E_PUBLISH=0 schaltet nur das Veroeffentlichen ab.
 
 Mode B — Gate-Check (von deploy-gregor-prod.sh aufgerufen):
     python3 staging_gate.py --check [--e2e-path PATH] [--scope SCOPE] [--expected-commit REF]
@@ -582,7 +585,85 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
         # zwischen glob() und stat() verschwindet) darf das geschriebene Verdict
         # nie kippen (AC-4-Intention).
         pass
-    return 0
+    # Issue #3289: Nachweis zusaetzlich als Git-Note veroeffentlichen, damit der
+    # Server-Timer (Pull-Deploy) ihn sieht, egal wo er geschrieben wurde.
+    return publish_verdict_note(sha, e2e_path)
+
+
+# --- Issue #3289: Nachweis-Transport als Git-Note -----------------------------
+NOTES_REF = "refs/notes/e2e-verified"
+PUBLISH_VAR = "GZ_E2E_PUBLISH"
+PUBLISH_ATTEMPTS = 3
+
+
+def _git_run(args: list, cwd: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], capture_output=True, text=True, cwd=str(cwd))
+
+
+def _publish_once(sha: str, blob: str, git_dir: Path) -> "tuple[bool, str]":
+    """Ein Veroeffentlichungsversuch. Liefert (ok, Fehlertext).
+
+    Gearbeitet wird auf einer prozess-eigenen Hilfs-Ref, damit weder ein
+    paralleler Lauf (geteilte Refs aller Worktrees) noch das Hol-Skript des
+    Servers die Note zwischen Anlegen und Push wegnimmt. Gepusht wird OHNE
+    Force: fremde Notes anderer Commits bleiben erhalten; ein abgelehnter Push
+    (Remote inzwischen weiter) fuehrt zum naechsten Versuch mit frischem Fetch.
+    """
+    tmp_ref = f"{NOTES_REF}-publish-{os.getpid()}"
+    _git_run(["update-ref", "-d", tmp_ref], git_dir)
+    try:
+        remote = _git_run(["ls-remote", "--exit-code", "origin", NOTES_REF], git_dir)
+        if remote.returncode == 0:
+            fetched = _git_run(["fetch", "-q", "origin", f"+{NOTES_REF}:{tmp_ref}"], git_dir)
+            if fetched.returncode != 0:
+                return False, fetched.stderr.strip() or "fetch der Notes-Ref scheiterte"
+        elif remote.returncode != 2:
+            # rc 2 = Ref fehlt auf dem Remote (erste Note ueberhaupt); alles
+            # andere heisst: Remote nicht erreichbar o. ae. -> fail-closed.
+            return False, remote.stderr.strip() or f"ls-remote rc={remote.returncode}"
+        added = _git_run(["notes", f"--ref={tmp_ref}", "add", "-f", "-C", blob, sha], git_dir)
+        if added.returncode != 0:
+            return False, added.stderr.strip() or "git notes add scheiterte"
+        pushed = _git_run(["push", "-q", "origin", f"{tmp_ref}:{NOTES_REF}"], git_dir)
+        if pushed.returncode != 0:
+            return False, pushed.stderr.strip() or "push der Notes-Ref scheiterte"
+        # Lokale Notes-Ref auf den veroeffentlichten Stand bringen (nur Komfort).
+        _git_run(["update-ref", NOTES_REF, tmp_ref], git_dir)
+        return True, ""
+    finally:
+        _git_run(["update-ref", "-d", tmp_ref], git_dir)
+
+
+def publish_verdict_note(sha: str, e2e_path: Path) -> int:
+    """Haengt den Nachweis (Dateiinhalt byte-gleich, ``-C <blob>``) als Note an
+    ``sha`` und pusht ``refs/notes/e2e-verified`` nach ``origin``.
+
+    Fail-closed: scheitert die Veroeffentlichung, Exit 1 — sonst glaubte die
+    Sitzung, der Server werde ausliefern. ``GZ_E2E_PUBLISH=0`` schaltet nur das
+    Veroeffentlichen ab (fuer Tests, s. tests/conftest.py).
+    """
+    if os.environ.get(PUBLISH_VAR) == "0":
+        _log(f"{PUBLISH_VAR}=0: Nachweis nur lokal geschrieben, nicht veröffentlicht.")
+        return 0
+    git_dir = _verified_repo_dir()
+    hashed = _git_run(["hash-object", "-w", str(e2e_path)], git_dir)
+    if hashed.returncode != 0 or not hashed.stdout.strip():
+        _log(f"FEHLER: Nachweis für {sha[:8]} lokal geschrieben, aber NICHT veröffentlicht "
+             f"(hash-object: {hashed.stderr.strip()}).", stream=sys.stderr)
+        return 1
+    blob = hashed.stdout.strip()
+    fehler = ""
+    for versuch in range(1, PUBLISH_ATTEMPTS + 1):
+        ok, fehler = _publish_once(sha, blob, git_dir)
+        if ok:
+            _log(f"Nachweis als Git-Note {NOTES_REF} für {sha[:8]} auf origin veröffentlicht.")
+            return 0
+        _log(f"Veröffentlichung Versuch {versuch}/{PUBLISH_ATTEMPTS} gescheitert: {fehler}",
+             stream=sys.stderr)
+    _log(f"FEHLER: Nachweis für {sha[:8]} lokal geschrieben, aber NICHT veröffentlicht "
+         f"(Git-Note {NOTES_REF} nach origin). Der Server liefert ohne veröffentlichten "
+         f"Nachweis nicht aus. Letzter Fehler: {fehler}", stream=sys.stderr)
+    return 1
 
 
 def gate_check(e2e_path: Path | None, scope_override: str | None,

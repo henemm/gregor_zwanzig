@@ -273,7 +273,55 @@ Ausführlich (aus `CLAUDE.md` ausgelagert, #2640):
 | 4b | Post-Deploy-Selftest: `python3 .claude/hooks/prod_selftest.py` — nur Exit 0 fährt weiter |
 | 5 | `gh issue close <N>` — nur wenn 4b Exit 0 |
 
-**Ein Merge ist kein Prod-Deploy:** der CI-Job `deploy` liefert nur bei vorliegendem `/e2e-verify`-Nachweis aus (`scripts/ci_prod_gate.sh` → `PROD_GATE=open`); sonst bleibt er grün/übersprungen und Schritt 4 (`/70-deploy`) liefert aus (#2047 S2).
+**Ein Merge ist kein Prod-Deploy:** der CI-Job `deploy` liefert nur bei vorliegendem `/e2e-verify`-Nachweis aus (`scripts/ci_prod_gate.sh` → `PROD_GATE=open`); sonst bleibt er grün/übersprungen; dann liefert der Server-Timer aus, sobald der Nachweis als Git-Note vorliegt (Pull-Deploy, unten), oder Schritt 4 (`/70-deploy`) direkt vom Server (#2047 S2, #3289).
+
+### Pull-Deploy: Server liefert Prod selbst aus (#3289, ADR-0129)
+
+Damit ein Ticket auch von einer Sitzung außerhalb des Servers (iMac, Cloud) bis live läuft,
+liefert der Server Prod selbst aus, sobald `origin/main` einen gültigen Nachweis trägt.
+
+**Nachweis-Transport.** `staging_gate.py --write-verdict` schreibt den Nachweis wie bisher
+nach `.claude/e2e_verified/<sha>.json` und hängt ihn danach byte-gleich als Git-Note
+`refs/notes/e2e-verified` an den Commit; die Notes-Ref wird ohne Force nach `origin`
+gepusht (bei abgelehntem Push bis zu 3 Versuche mit frischem Fetch, fremde Notes bleiben).
+Scheitert das, Exit ≠ 0 („Nachweis … NICHT veröffentlicht“): der Nachweis gilt als nicht
+erbracht. `GZ_E2E_PUBLISH=0` schaltet nur das Veröffentlichen ab und ist für Tests bestimmt
+(`tests/conftest.py` setzt es für jeden Test; Tests pushen nie nach GitHub).
+
+**Holen auf dem Server.** `scripts/ci_prod_gate.sh` ruft vor dem Gate
+`scripts/e2e_nachweis_holen.py <repo>` auf: Notes-Ref holen, für `origin/main` und seine
+letzten 40 Vorfahren die Note als `.claude/e2e_verified/<sha>.json` ablegen, nur wenn
+`verified_commit` der Note zum Commit passt (fail-closed, inhaltsgleiche Datei bleibt
+unberührt). Gate, Vorfahren-Regel (#1382) und Selbsttest sind unverändert. Der CI-Job
+`deploy` und der Timer sehen damit denselben Nachweis.
+
+**Timer.** `henemm-infra/scripts/pull-deploy-gregor-prod.sh`, Cron `*/5`, eigenes `flock`,
+Log `/home/hem/backups/pull-deploy-gregor-prod.log`:
+
+| Lage | Verhalten | Heartbeat |
+|------|-----------|-----------|
+| `origin/main` == `deployed_commit` (`.claude/last_prod_deploy.json`) | nichts | ja |
+| Gate `closed` (Nachweis fehlt) | Logzeile „wartet auf Nachweis für <sha>“, beim nächsten Lauf neu prüfen | ja |
+| Gate `open` | `deploy-gregor-prod.sh`, danach `prod_selftest.py` | — |
+| Deploy und Selbsttest bestanden | Commit-Status `deploy/prod` = `success` (Beschreibung mit Live-SHA) | ja |
+| Deploy oder Selbsttest gescheitert | Status `failure`, **ein** Claude-MQ-Alarm `high` je SHA (`infra` → `gregor`), Exit ≠ 0, kein erneuter Versuch für diese SHA | nein |
+| SHA ist schon gescheitert (Statusdatei) | nichts, kein neuer Alarm | nein |
+
+Heartbeat nur bei fachlich sauberem Lauf (Readiness-Regel); solange eine SHA gescheitert ist,
+bleibt er aus und BetterStack meldet den Ausfall zusätzlich. Ein neuer Stand auf `main` hebt
+die Sperre auf.
+
+**Notausgänge.** `GZ_FORCE_REDEPLOY=1 bash /home/hem/henemm-infra/scripts/pull-deploy-gregor-prod.sh`
+versucht eine gescheiterte SHA bewusst erneut. Der direkte Weg vom Server
+(`deploy-gregor-prod.sh` + `prod_selftest.py`) bleibt erlaubt; Doppel-Deploy mit Timer oder
+CI-Job ist unschädlich (`flock`, idempotent über `last_prod_deploy.json`). `GZ_SKIP_E2E_GATE`
+öffnet weder CI-Gate noch Timer.
+
+**Rückmeldung an die Sitzung.** Außerhalb des Servers deployt `/70-deploy` nicht selbst,
+sondern fragt `gh api repos/henemm/gregor_zwanzig/commits/<sha>/status` nach `deploy/prod`:
+`success` = live und Selbsttest Exit 0 → Issue schließen; `failure` → Befund ans Issue, der
+Alarm kam bereits vom Server. `/e2e-verify` läuft dort per `ssh henemm` im Staging-Checkout
+`~/gregor_zwanzig_staging`.
 
 Wird ein Push nach `main` abgewiesen, ist das die Branch-Protection, kein Fehler. Ein PR ersetzt NICHT die Staging-Validierung — die Ampel bewacht Code-Gesundheit, Staging bewacht Verhalten.
 

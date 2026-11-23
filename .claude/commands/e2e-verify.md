@@ -351,6 +351,47 @@ einer Liste übergab, dessen Schlüssel landeten als nackte Zeichenketten im Nac
 (Exit 0, keine Meldung), und der Pflicht-Selftest stürzte Stunden später daran ab —
 zweimal am 2026-08-10 (#1653, #1677).
 
+**Veröffentlichung (#3289, ADR-0129):** `--write-verdict` hängt den Nachweis danach als
+Git-Note `refs/notes/e2e-verified` an den Commit und pusht sie nach `origin`; daran erkennt
+der Server-Timer, dass er Prod ausliefern darf. Scheitert die Veröffentlichung, endet der
+Befehl mit Exit ≠ 0 („Nachweis … NICHT veröffentlicht“) — dann gilt der Nachweis als nicht
+erbracht: Ursache (Netz, Push-Recht) beheben und den Befehl wiederholen.
+
+## Außerhalb des Servers (iMac, Cloud)
+
+Die Staging-Werkzeuge brauchen Server-Ressourcen (Staging-`.env`, Kern auf
+`127.0.0.1:8001`, Staging-Checkout, Test-Postfach). Außerhalb des Servers laufen die
+Schritte 1, 3a–3c, 4 und 5 deshalb per ssh im Staging-Checkout
+`~/gregor_zwanzig_staging`, der nach dem Staging-Deploy auf genau dem zu prüfenden Commit
+steht. Vorher prüfen, dass er auf dem Ziel-Commit steht:
+
+```bash
+ssh henemm 'cd ~/gregor_zwanzig_staging && git rev-parse HEAD'   # == eigener Ziel-Commit?
+ssh henemm 'cd ~/gregor_zwanzig_staging && python3 .claude/tools/staging_mail_pruefen.py --typ beide'
+```
+
+Den Nachweis schreibt `--write-verdict` ebenfalls dort (Findings-Datei per ssh-Heredoc in
+ein `mktemp -d`-Verzeichnis auf dem Server legen):
+
+```bash
+ssh henemm 'cd ~/gregor_zwanzig_staging && D=$(mktemp -d) && cat > "$D/f.json" && \
+  python3 .claude/hooks/staging_gate.py --write-verdict "VERIFIED: <Begründung>" \
+    --findings-json "$D/f.json" --langs de,en; rc=$?; rm -rf "$D"; exit $rc' < findings.json
+```
+
+Der Ablageort der Datei ist egal: maßgeblich ist die veröffentlichte Git-Note
+`e2e-verified` auf `origin`, die der Prod-Server vor seinem Gate holt. Kontrolle von der
+Sitzung aus:
+
+```bash
+git fetch origin '+refs/notes/e2e-verified:refs/notes/e2e-verified'
+git notes --ref e2e-verified show <ziel-sha>
+```
+
+Die Sitzung misst weiterhin selbst („wer attestiert, misst selbst“): sie startet die
+Werkzeuge per ssh und liest deren Ergebnis; keine Test-Postfach-Zugangsdaten auf dem
+eigenen Rechner. Danach weiter mit `/70-deploy` (Abschnitt „außerhalb des Servers“).
+
 ## VERBOTEN
 
 - Den lokalen Produktiv-API-Port (8090) beenden oder beschiessen.

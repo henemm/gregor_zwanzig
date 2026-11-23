@@ -205,6 +205,22 @@ def _core_auth_secret_configured():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _e2e_nachweis_nicht_veroeffentlichen():
+    """#3289: ``staging_gate.py --write-verdict`` veroeffentlicht den Nachweis als
+    Git-Note nach ``origin``. Tests duerfen nie nach GitHub pushen, und viele
+    Bestands-Tests rufen ``write_verdict`` in Repos ohne erreichbaren Remote auf.
+    Sicherheitsnetz: ``GZ_E2E_PUBLISH=0`` fuer jeden Test (auch fuer daraus
+    gestartete Subprozesse). Tests, die das Veroeffentlichen pruefen
+    (``tests/test_e2e_nachweis_transport.py``), bauen ihre Umgebung selbst ohne
+    ``GZ_*``-Variablen und gegen einen lokalen Wegwerf-Remote.
+
+    Bewusst ohne ``monkeypatch`` (Begruendung wie ``_core_auth_secret_configured``).
+    """
+    os.environ["GZ_E2E_PUBLISH"] = "0"
+    yield
+
+
 _REPO_DATA_USERS = root / "data" / "users"
 
 # Issue #1624: die frueher unter ``<repo>/data/users`` COMMITTETEN
@@ -429,7 +445,14 @@ def _materialisiere_echtdaten(
                 briefings_target = briefings_dir / trips_json.name
                 if briefings_target.exists():
                     continue
-                trip = json.loads(trips_json.read_text(encoding="utf-8"))
+                try:
+                    trip = json.loads(trips_json.read_text(encoding="utf-8"))
+                except FileNotFoundError:
+                    # Fremde, kurzlebige Testdaten eines parallelen Workers
+                    # (z. B. data/users/test_f001_<n>/) koennen zwischen glob
+                    # und Lesen verschwinden — keine Fixture-Quelle, ueberspringen
+                    # (CI-Lauf PR #3308: 9396 Setup-Errors durch dieses Rennen).
+                    continue
                 trip.setdefault("kind", "route")
                 briefings_dir.mkdir(parents=True, exist_ok=True)
                 _atomar_schreiben(
