@@ -7,8 +7,13 @@ Wegweiser, kein eigener Befehl. Maßgeblich für Ablauf und Freigabepunkte ist `
 
 | Quelle | Befehle |
 |---|---|
-| Plugin **agent-os-openspec** (Phasen-Skills, nicht in diesem Ordner) | `/00-intake`, `/00-bug`, `/01-feature`, `/10-context`, `/20-analyse`, `/30-write-spec`, `/40-tdd-red`, `/50-implement`, `/60-validate`, Verwaltung `/80-workflow`, `/82-test`, `/90-retro`, `/99-reset` |
+| Plugin **agent-os-openspec** (hier nur als generierte Kurzbefehle, siehe unten) | `/00-intake`, `/00-bug`, `/01-feature`, `/10-context`, `/20-analyse`, `/30-write-spec`, `/40-tdd-red`, `/50-implement`, `/60-validate`, Verwaltung `/80-workflow`, `/82-test`, `/90-retro`, `/99-reset` |
 | Dieser Ordner (projekteigen) | `/70-deploy` (ersetzt das generische Plugin-Template), `/e2e-verify`, `/next-ticket`, `/radar` |
+
+**Kurzbefehle:** `/00-intake` statt `/agent-os-openspec:00-intake` usw. Dateien mit Marker
+`openspec-alias` sind generiert, nie von Hand ändern. Auffrischen nach Plugin-Update:
+`python3 <plugin>/setup.py . --refresh-aliases`. Nie global in `~/.claude/commands` anlegen: das
+überdeckt das projekteigene `/70-deploy` (#1511).
 
 Hooks und `workflow.py` liefert ebenfalls das Plugin (`/home/hem/agent-os-openspec/core/hooks/`);
 `.claude/hooks/` enthält nur projekteigene Gates und Validatoren.
