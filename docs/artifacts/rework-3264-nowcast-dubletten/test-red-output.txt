@@ -1,0 +1,33 @@
+##### Lauf: vorher #####
+=== Basislauf Kern (unverändert) ===
+2 passed, 12 deselected in 1.75s
+=== M1: Grenze leicht/mäßig 'if mm_per_h < 1.0:' -> 'if mm_per_h < 3.0:' ===
+Ersetzungen: 1
+FAILED tests/tdd/test_feature_656_radar_nowcast.py::test_ac2_intensity_to_text_levels
+FAILED tests/tdd/test_feature_660_convective_stage.py::test_ac1_intensity_non_convective_unchanged
+2 failed, 12 deselected in 0.88s
+=== M2: Default 'is_convective: bool = False' -> True ===
+Ersetzungen: 1
+FAILED tests/tdd/test_feature_656_radar_nowcast.py::test_ac2_intensity_to_text_levels
+FAILED tests/tdd/test_feature_660_convective_stage.py::test_ac1_intensity_non_convective_unchanged
+2 failed, 12 deselected in 1.10s
+=== Basislauf Live (unverändert, -m live) ===
+1 passed, 11 deselected in 1.61s
+=== M3a: RADOLAN-Box '_RADOLAN_LAT_MIN = 47.0' -> 53.0 (Berlin faellt aus der Box) ===
+Ersetzungen: 1
+FAILED tests/tdd/test_feature_734_arome_france_nowcast.py::test_ac2_chain_routing_berlin_radar_atlantic_global
+1 failed, 11 deselected in 1.16s
+=== M3b: Global-Fallback 'return frames, "minutely_15"' -> "global" ===
+Ersetzungen: 1
+FAILED tests/tdd/test_feature_734_arome_france_nowcast.py::test_ac2_chain_routing_berlin_radar_atlantic_global
+1 failed, 11 deselected in 1.96s
+=== Wiederhergestellt ===
+byte-identisch zur Sicherung
+kein Diff gegen origin/main
+17 passed, 6 deselected, 3 xfailed in 2.81s
+=== collect (vier Dateien) ===
+tests/tdd/test_feature_656_radar_nowcast.py::test_ac2_intensity_to_text_levels
+tests/tdd/test_feature_660_convective_stage.py::test_ac1_intensity_non_convective_unchanged
+tests/tdd/test_feature_734_arome_france_nowcast.py::test_ac2_chain_routing_berlin_radar_atlantic_global
+tests/tdd/test_feature_761_icon_d2_nowcast.py::test_ac2_chain_routing_precedence
+26 tests collected in 1.59s
