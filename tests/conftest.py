@@ -445,7 +445,14 @@ def _materialisiere_echtdaten(
                 briefings_target = briefings_dir / trips_json.name
                 if briefings_target.exists():
                     continue
-                trip = json.loads(trips_json.read_text(encoding="utf-8"))
+                try:
+                    trip = json.loads(trips_json.read_text(encoding="utf-8"))
+                except FileNotFoundError:
+                    # Fremde, kurzlebige Testdaten eines parallelen Workers
+                    # (z. B. data/users/test_f001_<n>/) koennen zwischen glob
+                    # und Lesen verschwinden — keine Fixture-Quelle, ueberspringen
+                    # (CI-Lauf PR #3308: 9396 Setup-Errors durch dieses Rennen).
+                    continue
                 trip.setdefault("kind", "route")
                 briefings_dir.mkdir(parents=True, exist_ok=True)
                 _atomar_schreiben(
