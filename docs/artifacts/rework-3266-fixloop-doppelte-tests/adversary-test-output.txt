@@ -1,0 +1,24 @@
+##### Lauf: adversary #####
+=== Basislauf f1-Tests (unveraendert, -m 'not live') ===
+2 passed in 2.16s
+=== M1: FORECAST_THP "TH+:" -> "TX+:" (src/output/tokens/builder.py) ===
+Ersetzungen: 1
+FAILED tests/tdd/test_3047_r8py_luecken.py::test_f1_altbestand_leer_sms_folgt_register_wie_editor_gespeichert
+1 failed, 1 passed in 2.75s
+=== M2: Premium-SMS weicht von der SMS ab (src/output/renderers/trip_report.py, premium_sms_text: sms_text + " X") ===
+Ersetzungen: 1
+FAILED tests/tdd/test_3047_r8py_luecken.py::test_f1_altbestand_leer_sms_folgt_register_wie_editor_gespeichert
+1 failed, 1 passed in 3.10s
+=== Wiederhergestellt ===
+byte-identisch zur Sicherung
+kein Diff gegen origin/main unter src/
+197 passed in 67.23s (0:01:07)
+=== collect (14 Dateien + Fallliste) ===
+tests/tdd/test_s1c4b_fixloop1_findings.py::test_leere_ampel_ist_programmierfehler_valueerror[leer]
+tests/tdd/test_s1c4b_fixloop1_findings.py::test_leere_ampel_ist_programmierfehler_valueerror[metrics_leer]
+tests/tdd/test_s1c4b_fixloop1_findings.py::test_leere_ampel_ist_programmierfehler_valueerror[ohne_metrics]
+tests/tdd/test_3047_r8py_luecken.py::test_f1_altbestand_leer_sms_folgt_register_wie_editor_gespeichert
+tests/tdd/test_3047_r8py_luecken.py::test_f1_altbestand_leer_jeder_kanal_folgt_editor
+197 tests collected in 4.02s
+=== Vorkommen _SMS_KUERZEL / sms_roh in r8py ===
+0
