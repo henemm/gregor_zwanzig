@@ -460,9 +460,17 @@ for (const kind of HUB_KINDS) {
 				const vdc = dc(vorher);
 				const ndc = dc(nachher);
 				for (const key of Object.keys(vdc)) {
-					if (ms.dcEigen.has(key)) continue;
+					if (ms.dcEigen.has(key) || key === 'placements') continue;
 					expect(ndc[key], `display_config.${key} hat sich verändert`).toEqual(vdc[key]);
 				}
+				// #3237 (AC-1/AC-2): die Tabelle liegt seit der Anlage vor; „−“ nimmt im selben Vorgang genau die
+				// Zeile der abgewählten Metrik heraus (#3122 AC-32), alles andere an der Tabelle bleibt.
+				const pv = vdc.placements as Stand;
+				expect(((pv?.rows as Stand[] | undefined) ?? []).some((r) => r.metric_id === METRIK), 'Vorbedingung: Tabelle mit der Metrik seit der Anlage').toBe(true);
+				expect(ndc.placements, 'display_config.placements: nur die Zeile der abgewählten Metrik fehlt').toEqual({
+					...pv,
+					rows: (pv.rows as Stand[]).filter((r) => r.metric_id !== METRIK)
+				});
 				expect(ms.gewaehlt(nachher), 'nur die Metrikauswahl weicht ab').toBe(false);
 			} finally {
 				await hub.aufraeumen();

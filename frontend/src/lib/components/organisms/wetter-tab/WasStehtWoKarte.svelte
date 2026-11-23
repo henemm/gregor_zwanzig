@@ -152,15 +152,19 @@
 		if (!antwort?.stored || !lokal) return;
 		const weg = vorher.filter((m) => !nachher.includes(m));
 		if (!weg.length && nachher.every((m) => vorher.includes(m))) return;
-		aendern(S.mitGrundauswahl(lokal, vorher, nachher), weg.reduce((a, m) => S.antwortOhneZeile(a, m), antwort));
+		// #3237 Runde 13: kein eigener Tabellen-PUT — der PUT des Reiters trägt den Stand (placementsZumMitspeichern).
+		lokal = S.mitGrundauswahl(lokal, vorher, nachher);
+		antwort = weg.reduce((a, m) => S.antwortOhneZeile(a, m), antwort);
+		meldung = null;
+		tabelle.mitgefuehrt();
 	}
 	/** Für den PUT des Reiters: der vollständige Stand, nur wenn die Tabelle schon gespeichert ist. */
 	export function placementsZumMitspeichern(): Placements | undefined {
-		return antwort?.stored && lokal ? klon(lokal) : undefined;
+		return tabelle.zumMitsenden(Boolean(antwort?.stored));
 	}
-	/** Der Reiter hat gespeichert: Beispielwerte, Marken und feste Zeile neu holen. */
-	export function nachFremdemSpeichern(): void {
-		tabelle.nachFremdemSpeichern();
+	/** Der Reiter hat gespeichert (`gesendet` = placements dieses PUT): Beispielwerte, Marken, feste Zeile neu holen. */
+	export function nachFremdemSpeichern(gesendet: unknown): void {
+		tabelle.nachReiterSpeichern(gesendet);
 	}
 
 	// ── Anzeige ───────────────────────────────────────────────────────────────
