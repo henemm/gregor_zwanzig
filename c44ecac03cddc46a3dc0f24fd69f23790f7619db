@@ -1,0 +1,59 @@
+{
+  "verified_commit": "c44ecac03cddc46a3dc0f24fd69f23790f7619db",
+  "findings": [
+    {
+      "ac": "AC-1",
+      "status": "PASS",
+      "url": "staging_gate.py --write-verdict",
+      "evidence": "Note-Veroeffentlichung real: --write-verdict haengt Nachweis als refs/notes/e2e-verified an und pusht nach origin; Kontrolle per ls-remote/notes show im Anschluss",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "Staging-Smoke",
+      "status": "PASS",
+      "url": "/",
+      "evidence": "Staging /api/health commit c44ecac03 = HEAD, ROOT 200, HEALTH 200",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "Scope-backend-Mail-de",
+      "status": "PASS",
+      "url": "staging_mail_pruefen.py --typ beide",
+      "evidence": "Trip- und Compare-Mail (de) real zugestellt, Validatoren Exit 0, Wegwerf-Nutzer geloescht, Exit 0",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "Scope-backend-Mail-en",
+      "status": "PASS",
+      "url": "staging_mail_pruefen.py --typ beide --lang en",
+      "evidence": "Trip- und Compare-Mail (en, Subadresse +en@) real zugestellt, Validatoren Exit 0, Exit 0",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    },
+    {
+      "ac": "Timer-ACs",
+      "status": "NOT_VERIFIABLE_ON_STAGING",
+      "url": "-",
+      "evidence": "Pull-Timer auf dem Prod-Server laeuft erst nach Prod-Deploy; hier nicht pruefbar",
+      "workflow": "fix-3273-trip-grundauswahl-ohne-metrics"
+    }
+  ],
+  "verified_at": "2026-11-23T18:42:43.314848+00:00",
+  "environment": "staging",
+  "staging_verdict": "VERIFIED: Staging auf c44ecac03, Scope backend, Trip+Compare-Mail de/en Exit 0, Note-Veroeffentlichung real",
+  "scope": "backend",
+  "langs": [
+    "de",
+    "en"
+  ],
+  "verdicts": {
+    "fix-3273-trip-grundauswahl-ohne-metrics": {
+      "verdict": "VERIFIED: Staging auf c44ecac03, Scope backend, Trip+Compare-Mail de/en Exit 0, Note-Veroeffentlichung real",
+      "scope": "backend",
+      "langs": [
+        "de",
+        "en"
+      ],
+      "at": "2026-11-23T18:42:43.314848+00:00"
+    }
+  }
+}
