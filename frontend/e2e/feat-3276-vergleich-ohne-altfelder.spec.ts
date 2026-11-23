@@ -117,7 +117,7 @@ test.describe('#3276 — Ortsvergleich ohne Altfelder', () => {
 				}
 			});
 			await pageA.goto(`/compare/${idA}`);
-			await pageA.getByTestId('compare-editor-tab-zustellung').click();
+			await pageA.getByTestId('compare-detail-tab-zustellung').click();
 			const schalter = pageA.getByRole('switch').first();
 			await schalter.click();
 			await expect.poll(() => puts.length, { timeout: 15_000 }).toBeGreaterThan(0);
