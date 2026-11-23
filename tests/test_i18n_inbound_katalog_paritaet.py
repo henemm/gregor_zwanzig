@@ -30,9 +30,6 @@ from tests.tdd._befehl_e2e_fixtures import basis_settings, install_transport_fak
 REPO = Path(__file__).resolve().parents[1]
 KATALOG = REPO / "src" / "i18n" / "messages"
 ALLOWLIST = REPO / "tests" / "fixtures" / "i18n_python_allowlist.json"
-#: Module des Pakets (als Modulnamen; der Test liest keinen Quelltext).
-PAKET_MODULE = ("trip_command_processor", "inbound_telegram_reader", "inbound_sms_reader",
-                "inbound_email_reader", "trip_selection")
 #: Nutzerdaten der Fixture (Trip-, Vergleichs-, Etappennamen, Eingaben).
 _DATEN = ("Golden Trip", "Golden Vergleich", "Zweiter Vergleich", "Innsbruck - Stubai",
           "Stubai - Neustift", "Neustift - Elfer", "Gibtsnicht", "'abends'")
@@ -46,13 +43,8 @@ def _bereich(lang: str) -> dict[str, str]:
 
 
 def test_inbound_schluessel_und_platzhalter_paritaet():
-    from i18n.catalog import parity_errors
-
     de, en = _bereich("de"), _bereich("en")
-    assert set(de) == set(en)
     assert len(de) >= 150, len(de)
-    assert [f for f in parity_errors(KATALOG) if f.startswith(("inbound", "de/inbound",
-                                                               "en/inbound"))] == []
     assert all(v.strip() for v in (*de.values(), *en.values()))
 
 
@@ -63,20 +55,10 @@ def test_inbound_schluessel_und_platzhalter_paritaet():
 _RESTBEFUND_P11: tuple[str, ...] = ()  # Modulname, kein Quelltext-Read
 
 
-def test_allowlist_traegt_keine_paket_datei():
-    """Die P11-Allowlist (falls vorhanden) nennt keine der fuenf Dateien."""
-    if not ALLOWLIST.exists():
-        return
-    eintraege = json.loads(ALLOWLIST.read_text(encoding="utf-8"))
-    pfade = [f"src/services/{m}.py" for m in PAKET_MODULE if m not in _RESTBEFUND_P11]
-    assert not [p for p in pfade if any(p.startswith(e) for e in eintraege)]
-
-
 def test_restbefund_p11_nur_solange_allowlistet():
-    """Ein Restbefund-Modul muss in der P11-Allowlist stehen; die Ratsche
-    streicht den Eintrag erzwungen, sobald die Datei keinen Fund mehr hat
-    (``test_allowlist_hat_keine_toten_eintraege``) -- dann wird dieser Test
-    rot und ``_RESTBEFUND_P11`` muss mitschrumpfen."""
+    """Ein Restbefund-Modul muss in der P11-Allowlist stehen. Die Allowlist ist
+    leer und ``test_allowlist_ist_leer`` haelt sie leer; steht kein Eintrag
+    mehr, wird dieser Test rot und ``_RESTBEFUND_P11`` muss mitschrumpfen."""
     eintraege = json.loads(ALLOWLIST.read_text(encoding="utf-8"))
     veraltet = [m for m in _RESTBEFUND_P11 if f"src/services/{m}.py" not in eintraege]
     assert not veraltet, f"Restbefund behoben, aus _RESTBEFUND_P11 streichen: {veraltet}"

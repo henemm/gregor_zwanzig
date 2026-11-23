@@ -1,0 +1,83 @@
+##### Lauf: nachher #####
+=== Basislauf alle betroffenen Dateien (unveraendert, -m 'not live') ===
+233 passed in 5.34s
+=== M1a: api-Katalog: einseitiger Schluessel nur in de (src/i18n/messages/de/api.json) ===
+Ersetzungen: 1
+FAILED tests/unit/test_i18n_katalog_paritaet.py::test_echte_kataloge_paritaetisch
+FAILED tests/test_i18n_api_katalog_paritaet.py::test_katalog_traegt_genau_die_anker
+2 failed, 118 passed in 3.78s
+=== M1b: api-Katalog: Platzhalter {user_id} -> {nutzer} nur in en (src/i18n/messages/en/api.json) ===
+Ersetzungen: 1
+FAILED tests/unit/test_i18n_katalog_paritaet.py::test_echte_kataloge_paritaetisch
+FAILED tests/test_i18n_api_katalog_paritaet.py::test_ankertext_je_sprache[api.fehler.trip_nicht_gefunden]
+2 failed, 118 passed in 2.81s
+=== M1c: inbound-Katalog: einseitiger Schluessel nur in de (src/i18n/messages/de/inbound.json) ===
+Ersetzungen: 1
+FAILED tests/unit/test_i18n_katalog_paritaet.py::test_echte_kataloge_paritaetisch
+1 failed, 119 passed in 3.81s
+=== M1d: telegram-Katalog: einseitiger Schluessel nur in de (src/i18n/messages/de/telegram.json) ===
+Ersetzungen: 1
+FAILED tests/unit/test_i18n_katalog_paritaet.py::test_echte_kataloge_paritaetisch
+FAILED tests/test_telegram_briefing_zweisprachig.py::test_ac9_schluesselparitaet_telegram_katalog
+2 failed, 118 passed in 3.00s
+=== M1e: telegram-Katalog: fremdes Praefix in beiden Sprachen (allgemein.zz_mutation in telegram.json) ===
+Ersetzungen: 1
+Ersetzungen: 1
+FAILED tests/unit/test_i18n_katalog_paritaet.py::test_echte_kataloge_paritaetisch
+1 failed, 119 passed in 3.01s
+=== M2: Allowlist mit Eintraegen (narrow.py + Paket-Datei trip_command_processor.py) ===
+Ersetzungen: 1
+FAILED tests/test_i18n_keine_hartkodierten_nutzertexte_python.py::test_allowlist_ist_leer
+1 failed, 11 passed in 3.79s
+=== M3a: Alarm-SMS haengt von der Sprache ab (render_sms haengt bei englischem cooldown_display ' x' an) ===
+Ersetzungen: 1
+FAILED tests/test_alarm_zweisprachig.py::test_ac4_sms_in_jeder_sprache_byte_gleich[regen_einzel]
+FAILED tests/test_alarm_zweisprachig.py::test_ac4_sms_in_jeder_sprache_byte_gleich[regen_spaet]
+FAILED tests/test_alarm_zweisprachig.py::test_ac4_sms_in_jeder_sprache_byte_gleich[regen_buendel]
+FAILED tests/test_alarm_zweisprachig.py::test_ac4_sms_gekuerzt_unabhaengig_von_der_sprache[60]
+FAILED tests/test_alarm_zweisprachig.py::test_ac4_sms_gekuerzt_unabhaengig_von_der_sprache[30]
+FAILED tests/test_alarm_zweisprachig.py::test_ac7_reihenfolge_en_de_en[regen_einzel]
+FAILED tests/test_alarm_zweisprachig.py::test_ac7_reihenfolge_en_de_en[regen_spaet]
+FAILED tests/test_alarm_zweisprachig.py::test_ac7_reihenfolge_en_de_en[regen_buendel]
+8 failed, 63 passed in 1.38s
+=== M3b: Alarm-SMS ueberschreitet die Grenze (render_sms rendert mit limit + 200) ===
+Ersetzungen: 1
+FAILED tests/test_alarm_zweisprachig.py::test_ac4_sms_gekuerzt_unabhaengig_von_der_sprache[60]
+FAILED tests/test_alarm_zweisprachig.py::test_ac4_sms_gekuerzt_unabhaengig_von_der_sprache[30]
+2 failed, 69 passed in 1.42s
+=== M4: Vergleichs-SMS haengt vom Nutzer/der Sprache ab (Aufrufpfad tests/helpers/vergleichs_mail_fixture.py:143 haengt lang an) ===
+Ersetzungen: 1
+FAILED tests/test_vergleichs_mail_zweisprachig.py::test_ac4_sms_in_jeder_sprache_byte_gleich_und_in_der_grenze
+1 failed, 33 passed in 1.42s
+=== M5: englische Vergleichs-Mail mit deutschem Katalogtext (compare_html.py: app_oeffnen mit "de") ===
+Ersetzungen: 1
+FAILED tests/test_vergleichs_mail_zweisprachig.py::test_ac1_ueberschriften_englisch_aus_dem_katalog
+FAILED tests/test_vergleichs_mail_zweisprachig.py::test_ac1_kein_deutscher_katalogtext_in_der_englischen_ausgabe
+FAILED tests/test_vergleichs_mail_zweisprachig.py::test_ac6_reihenfolge_en_de_en_ohne_zustand
+FAILED tests/test_vergleichs_mail_zweisprachig.py::test_zwei_nutzer_zwei_sprachen
+4 failed, 30 passed in 1.69s
+=== Wiederhergestellt ===
+byte-identisch zur Sicherung
+kein Diff gegen origin/main unter src/, tests/fixtures/, tests/helpers/
+2196 passed in 23.02s
+=== collect (betroffene Dateien) ===
+tests/test_alarm_zweisprachig.py::test_ac4_sms_gekuerzt_unabhaengig_von_der_sprache[60]
+tests/test_alarm_zweisprachig.py::test_ac4_sms_gekuerzt_unabhaengig_von_der_sprache[30]
+233 tests collected in 0.77s
+
+##### Auswertung nachher #####
+Basislauf: 233 passed (vorher 239; -5 ganze Tests F1/F4/F5/F6/F10, -1 Fall F7 [140]).
+M1a (api, einseitiger Schluessel): rot durch Gegenseite A test_echte_kataloge_paritaetisch (+ test_katalog_traegt_genau_die_anker). Gefangen.
+M1b (api, Platzhalter en): rot durch Gegenseite A (+ test_ankertext_je_sprache[trip_nicht_gefunden]). Gefangen.
+M1c (inbound, einseitiger Schluessel): rot durch Gegenseite A. Gefangen (F2-Zeilen entbehrlich).
+M1d (telegram, einseitiger Schluessel): rot durch Gegenseite A (+ test_ac9 Restzeilen ueber en[k]-KeyError). Gefangen.
+M1e (telegram, fremdes Praefix beidseitig): rot durch Gegenseite A (Schluesselform). Gefangen (F3-Praefixzeile entbehrlich).
+M2 (Allowlist mit narrow.py + Paket-Datei): rot durch Gegenseite B test_allowlist_ist_leer. Gefangen (F4/F5/F6 entbehrlich).
+M3a (Alarm-SMS sprachabhaengig): rot durch test_ac4_sms_in_jeder_sprache_byte_gleich[*] und gekuerzt[60]/[30] (+ ac7). Gefangen.
+M3b (Alarm-SMS limit+200): rot durch test_ac4_sms_gekuerzt_unabhaengig_von_der_sprache[60]/[30]. Gefangen.
+M4 (Vergleichs-SMS nutzer-/sprachabhaengig): rot durch test_ac4_sms_in_jeder_sprache_byte_gleich_und_in_der_grenze. Gefangen (F8 entbehrlich).
+M5 (deutscher Katalogtext in EN-Vergleichsmail): rot durch test_ac1_kein_deutscher_katalogtext_in_der_englischen_ausgabe (+ ac1_ueberschriften, ac6 Golden, zwei_nutzer Golden). Gefangen (F9 entbehrlich).
+Wiederherstellung: alle Ziele byte-identisch zur Sicherung, kein Diff unter src/, tests/fixtures/, tests/helpers/.
+Endlauf betroffene Dateien + Namensverweis-Dateien: 2196 passed, 0 failed.
+collect: 233 Tests, keine entfernten Namen mehr; nur gekuerzt[60]/[30] erscheinen (bleiben gewollt). Keine Collect-Fehler.
+Ergebnis: keine Mutation verliert ihren Faenger; kein Teil musste zurueckgelegt werden.

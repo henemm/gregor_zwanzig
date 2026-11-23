@@ -27,7 +27,6 @@ from output.renderers.narrow import _tg_day_footer, render_telegram_incomplete_h
 from tests.helpers.telegram_briefing_fixture import TZ, _segment, build_texts
 
 REPO = Path(__file__).resolve().parents[1]
-ALLOWLIST = REPO / "tests" / "fixtures" / "i18n_python_allowlist.json"
 KATALOG = REPO / "src" / "i18n" / "messages"
 _FOOTER_IDS = ["thunder", "visibility", "freezing_level"]
 
@@ -92,10 +91,3 @@ def test_deutsche_gegenprobe_wird_erkannt():
 @pytest.mark.parametrize("vis_m, wort", [(5000, "fair"), (1000, "poor")])
 def test_sicht_stufen_englisch(vis_m, wort):
     assert f"Visibility {wort}" in _footer(vis_m)
-
-
-def test_kein_allowlist_eintrag_fuer_narrow_py():
-    if not ALLOWLIST.exists():
-        return  # P11 legt die Allowlist an; Treffer-Freiheit prueft der Test oben
-    eintraege = json.loads(ALLOWLIST.read_text(encoding="utf-8"))
-    assert not any("src/output/renderers/narrow.py" in str(e) for e in eintraege)

@@ -165,15 +165,6 @@ def _bereich(lang: str) -> dict[str, str]:
     return json.loads((KATALOG / lang / "api.json").read_text(encoding="utf-8"))
 
 
-def test_api_schluessel_und_platzhalter_paritaet():
-    from i18n.catalog import parity_errors
-
-    de, en = _bereich("de"), _bereich("en")
-    assert set(de) == set(en)
-    assert [f for f in parity_errors(KATALOG)
-            if f.startswith(("api", "de/api", "en/api"))] == []
-
-
 @pytest.mark.parametrize("key", sorted(ANKER))
 def test_ankertext_je_sprache(key):
     de, en = ANKER[key]
