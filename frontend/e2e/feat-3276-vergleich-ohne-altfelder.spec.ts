@@ -1,3 +1,4 @@
+// gz-eigenstaendig: prueft den Wegfall der Vergleichs-Altschluessel (channel_layouts, outlook_metrics u. a.) im Vergleich-POST/PUT; der Trip behaelt diese Felder bis #3297 und hat daher hier kein Gegenstueck
 // E2E (Staging / lokaler E2E-Stack) — Issue #3276 (Epic #3122, Spec-AC-38 zweiter Teil).
 // Spec: docs/specs/modules/feat_3276_vergleich_altfelder_entfernen.md (AC-1, AC-2, AC-3, AC-5)
 //
