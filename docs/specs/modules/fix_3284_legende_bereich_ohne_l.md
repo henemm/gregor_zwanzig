@@ -3,7 +3,7 @@ entity_id: fix_3284_legende_bereich_ohne_l
 type: bugfix
 created: 2026-11-23
 updated: 2026-11-23
-status: draft
+status: active
 version: "1.0"
 workflow: fix-3284-legende-l-doppelt
 tags: [was-steht-wo, sms, legende, kuerzel]
@@ -13,7 +13,7 @@ tags: [was-steht-wo, sms, legende, kuerzel]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (automatisch, Ampel grün, 2026-11-23)
 
 ## Purpose
 
